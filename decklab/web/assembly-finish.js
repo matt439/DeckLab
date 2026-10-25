@@ -86,6 +86,7 @@ function packUpdateBar(view, ticks, cards, other) {
   progress.spoken.textContent = [cards.length ? `Pulled ${pulled} of ${plural(total, "card")}` : null,
     other.length ? `${done} of ${plural(other.length, "other step")}` : null].filter(Boolean).join(" · ");
   progress.state.textContent = ticks.length && ticks.every(t => t.done) ? "All packed." : !ticks.length ? "Nothing to tick in this plan." : "";
+  packStepsProgress(view);
   if (!view.finish) return;
   view.finish.message.textContent = packFinishAdvice(view, cards).text;
   if (view.finish.button) {

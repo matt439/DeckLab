@@ -34,6 +34,7 @@ function packSwitcherFocus(view, target) {
     && !view.previewing && !view.saving && !view.reviewing && !document.querySelector("dialog[open]")
     && (ctx.panels.some(p => !p.node.hidden && p.node.contains(target)) || (!ctx.nav?.hidden && ctx.nav?.contains(target)));
   if (!current()) return;
+  packExpandStep(view, target);
   if (document.activeElement !== target) target.focus({ preventScroll: true });
   const reveal = () => {
     if (!current() || document.activeElement !== target) return;
@@ -98,7 +99,7 @@ function packOpenCard(view, trigger) {
   const index = entries.findIndex(entry => entry.trigger === trigger);
   const entry = entries[index];
   const panel = view.switcher.panels.find(p => p.node.contains(trigger));
-  if (!entry || !panel || panel.node.hidden) return;
+  if (!entry || !panel || panel.node.hidden || !packStepTargetShown(view, trigger)) return;
   const reply = openCardViewer(entries.map(({card, caption}) => ({card, caption})), index, { trigger });
   packViewerWatch(view, entry, reply);
 }
@@ -173,6 +174,7 @@ function packDisposeSwitcher(view) {
   const ctx = view.switcher;
   if (!ctx || ctx.disposed) return;
   ctx.disposed = true;
+  packDisposeSteps(view);
   ctx.media.removeEventListener?.("change", ctx.change); ctx.media.removeListener?.(ctx.change);
   packViewerForget(view); packingSwitchers.delete(view);
 }
@@ -195,8 +197,12 @@ function packInitSwitcher(view) {
     const panel = returning || ctx.panels.find(p => p.node.contains(focus));
     if (!wide && panel) ctx.active = packParticipantKey(panel.deck);
     ctx.wide = wide; packSwitcherProject(view);
+    packStepsResize(view, wide);
     if (navPanel && wide && !document.querySelector("dialog[open]")) {
       packSwitcherFocus(view, navPanel.heading);
+    } else if (panel && !panel.node.hidden && panel.node.contains(focus) && document.activeElement === focus) {
+      // Density changes move the same focused summary/task beneath different headers and bars.
+      packSwitcherFocus(view, focus);
     }
   };
   if (media.addEventListener) media.addEventListener("change", ctx.change); else media.addListener?.(ctx.change);

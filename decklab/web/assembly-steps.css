@@ -1,0 +1,18 @@
+/* One native disclosure per step: automatic completion folds only in casual density. */
+.pack-step-summary { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3);
+  min-height: var(--tap); cursor: pointer; list-style: none; }
+.pack-step-summary::-webkit-details-marker { display: none; }
+.pack-step-summary > h3 { min-width: 0; margin: 0; }
+.pack-step-chevron { flex: none; width: 8px; height: 8px; margin-right: var(--s-2);
+  border-right: 2px solid var(--ink-3); border-bottom: 2px solid var(--ink-3); transform: rotate(-45deg); }
+.pack-step[open] > summary .pack-step-chevron { transform: rotate(45deg); }
+.pack-step-body { display: grid; gap: var(--s-3); }
+.pack-step:not([open]) > .pack-step-body { display: none; }
+.pack-step[open] > .pack-step-body { margin-top: var(--s-2); }
+.pack-step-body > .sub { margin: 0; }
+.pack-step.is-done:not([open]) > summary { min-height: 56px; }
+.pack-step.is-done .pack-step-n { background: var(--accent) var(--icon-tick-on-accent) center / 18px no-repeat; }
+@media (min-width: 1000px) {
+  .pack-step.is-done:not([open]) > summary { min-height: var(--tap); }
+  .pack-step.is-done .pack-step-n { background-size: 14px; }
+}

@@ -190,9 +190,14 @@ class FeatureUiTests(unittest.TestCase):
             decks:[deck],rows:[],ready:false,counts_confirmed:true,unresolved:[],warnings:[],note:'A plan.',token_note:'',
             totals:{waiting:1,missing:1},tokens:[],token_plan:[],cards:{Elves:card('Elves'),Bolt:card('Bolt'),Forest:card('Forest')}};
           drawAssembly(data, routeToken); await packingSettle();
-          const steps = main.querySelectorAll('.pack-step').map(s => s.querySelector('h3').textContent);
-          same(steps, ['1Sleeves', '2Pull from storage (2 cards)', '3Move from other decks (1 card)',
-            '4Basic lands (20 cards)', '5Put back (1 card)']);
+          const steps = main.querySelectorAll('.pack-step');
+          same(steps.map(s => s.querySelector('.pack-step-n').textContent), ['1','2','3','4','5']);
+          assert(steps.every(s => s.querySelector('.pack-step-n').getAttribute('aria-hidden') === 'true'));
+          same(steps.map(s => s.querySelector('.pack-step-spoken').textContent),
+            ['Step 1. ', 'Step 2. ', 'Step 3. ', 'Step 4. ', 'Step 5. ']);
+          const titles = ['Sleeves', 'Pull from storage (2 cards)', 'Move from other decks (1 card)',
+            'Basic lands (20 cards)', 'Put back (1 card)'];
+          assert(steps.every((s, i) => s.querySelector('h3').textContent.endsWith(titles[i])));
           // Kept and still-waiting cards are folded, never ticks.
           const folds = main.querySelectorAll('.pack-fold');
           assert(folds[0].textContent.includes('Already in this deck (1 card)'));

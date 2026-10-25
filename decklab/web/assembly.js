@@ -76,6 +76,7 @@ function drawAssembly(data, token) {
   view.run = () => packRun(view);
   packInitChooser(view);
   packInitSwitcher(view);
+  packInitSteps(view);
   drawPackPicks(view);
   renderAssemblyPlan(view, data);
 }
@@ -167,6 +168,7 @@ async function packRun(view) {
       clear(view.results);
       view.sortControl.hidden = true;
       view.data = null;
+      packStepsStart(view, null);
       view.finish = null;
       view.bar = null;
       wirePackTicks(view);
@@ -312,7 +314,12 @@ function assemblyKit(deck, need, view = null) {
 function packStep(number, title, ...content) {
   const parts = content.flat(Infinity).filter(Boolean);
   if (!parts.length) return null;
-  return el("div", { class: "pack-step" }, el("h3", {}, el("span", { class: "pack-step-n", text: String(number) }), title), parts);
+  return el("details", { class: "pack-step" },
+    el("summary", { class: "pack-step-summary" },
+      el("h3", {}, el("span", { class: "pack-step-n", "aria-hidden": "true", text: String(number) }),
+        el("span", { class: "pack-step-spoken sr-only", text: `Step ${number}. ` }), title),
+      el("span", { class: "pack-step-chevron", "aria-hidden": "true" })),
+    el("div", { class: "pack-step-body" }, parts));
 }
 
 /** A deck's plan, step by step. */
@@ -338,14 +345,14 @@ function packDeck(view, deck) {
   const waiting = steps.filter(s => s.waiting || s.missing);
   const tokenLines = assemblyTokenTasks(deck.tokens, view.data.tokens);
   let n = 0;
-  const step = (title, ...content) => {
+  const step = (kind, title, ...content) => {
     const node = packStep(n + 1, title, ...content);
-    if (node) n += 1;
+    if (node) { packRegisterStep(view, deck, kind, n + 1, node); n += 1; }
     return node;
   };
-  const cardStep = (title, rows, ...intro) => {
+  const cardStep = (kind, title, rows, ...intro) => {
     const count = rows.reduce((total, row) => total + row.qty, 0);
-    return rows.length ? step(`${title} (${plural(count, "card")})`, ...intro, tiles(rows)) : null;
+    return rows.length ? step(kind, `${title} (${plural(count, "card")})`, ...intro, tiles(rows)) : null;
   };
   const kitNode = assemblyKit(deck, need, view);
   const keptNode = kept.length ? el("details", { class: "pack-fold" },
@@ -359,16 +366,16 @@ function packDeck(view, deck) {
       deck.completion?.already_built ? status("good", "Built") : null),
     packBulkControl(view, deck),
     packStandinsPart(view, deck),
-    step("Sleeves", kitNode, sleeves && need ? el("ul", { class: "pack-list" },
+    step("sleeves", "Sleeves", kitNode, sleeves && need ? el("ul", { class: "pack-list" },
       assemblyTick(`Get out ${need} ${assemblyKitName(sleeves)} sleeves`, 1, [sleeves.id || sleeves.value, need], "sleeves")) : null),
-    cardStep("Pull from storage", view.order === "storage" ? [...pulls, ...basics] : pulls),
-    cardStep("Move from other decks", moves, el("p", { class: "sub", text: "Change their sleeves as you move them." })),
-    view.order !== "storage" ? cardStep("Basic lands", basics) : null,
-    cardStep("Spare-card stand-ins", markers),
-    view.order !== "storage" ? step("Tokens", tokenLines && tokenLines.length ? el("ul", { class: "pack-list" }, tokenLines) : null) : null,
-    cardStep("Put back", returns, el("p", { class: "sub", text: "Take these out of the deck and put them back in storage, unsleeved." })),
-    view.order === "storage" ? step("Tokens", tokenLines && tokenLines.length ? el("ul", { class: "pack-list" }, tokenLines) : null) : null,
-    step("Pack", box ? el("ul", { class: "pack-list" },
+    cardStep("pull", "Pull from storage", view.order === "storage" ? [...pulls, ...basics] : pulls),
+    cardStep("move", "Move from other decks", moves, el("p", { class: "sub", text: "Change their sleeves as you move them." })),
+    view.order !== "storage" ? cardStep("basic", "Basic lands", basics) : null,
+    cardStep("standin", "Spare-card stand-ins", markers),
+    view.order !== "storage" ? step("tokens", "Tokens", tokenLines && tokenLines.length ? el("ul", { class: "pack-list" }, tokenLines) : null) : null,
+    cardStep("return", "Put back", returns, el("p", { class: "sub", text: "Take these out of the deck and put them back in storage, unsleeved." })),
+    view.order === "storage" ? step("tokens", "Tokens", tokenLines && tokenLines.length ? el("ul", { class: "pack-list" }, tokenLines) : null) : null,
+    step("box", "Pack", box ? el("ul", { class: "pack-list" },
       assemblyTick(`Pack into ${assemblyKitName(box)}`, 1, [box.id || box.value], "box")) : null),
     keptNode,
     remainingIntentPart(deck.remaining_intent),
@@ -384,6 +391,7 @@ function renderAssemblyPlan(view, data) {
   packClearBar(view);
   clear(view.results);
   view.data = data;
+  packStepsStart(view, data);
   view.bulk = [];
   view.finish = null;
   view.cards = data.cards || {};
