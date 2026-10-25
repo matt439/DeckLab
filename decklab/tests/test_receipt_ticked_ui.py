@@ -88,8 +88,7 @@ class ReceiptTickedTests(unittest.TestCase):
             clear(main);const v=drawReceipt(delivery(),routeToken),comp=v.comps[0];v.layout=layout;
             for(const row of comp.rows)rcptTick(v,comp,row,true);rcptSetFilter(v,'ticked');
             const untick=row=>{const control=row.tile.querySelector('.rcpt-tick');control.focus();
-              if(layout==='list'){assert.equal(control.tag,'input');control.checked=false;control.fire('change');}
-              else{assert.equal(control.tag,'button');control.click();}};
+              assert.equal(control.tag,'input');control.checked=false;control.fire('change');};
             untick(comp.rows[0]);assert(!comp.rows[0].ticked);assert(comp.rows[0].tile.hidden);
             assert.equal(document.activeElement,comp.rows[1].tile.querySelector('.rcpt-tick'));
             untick(comp.rows[1]);assert(comp.rows.every(r=>!r.ticked&&r.tile.hidden));
@@ -97,8 +96,7 @@ class ReceiptTickedTests(unittest.TestCase):
             assert.equal(empty.querySelector('p').textContent,'Nothing here is checked yet.');assert.equal(document.activeElement,show);
             show.click();assert.equal(v.filter,'all');assert(comp.rows.every(r=>!r.tile.hidden));
             for(const row of comp.rows){const control=row.tile.querySelector('.rcpt-tick');
-              if(layout==='list')assert.equal(control.getAttribute('checked'),null);
-              else assert.equal(control.getAttribute('aria-pressed'),'false');}
+              assert.equal(control.getAttribute('checked'),null);}
             assert.equal(v.layout,layout);same(rcptRequest(v).components[0].take,[]);
           }
         """,draw=False)

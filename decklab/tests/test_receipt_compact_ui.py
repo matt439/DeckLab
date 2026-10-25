@@ -17,9 +17,9 @@ class ReceiptCompactTests(unittest.TestCase):
           assert.equal(plain.tag,'button');assert.equal(compact.tag,'button');
           assert.equal(plain.querySelector('.thumb').getAttribute('width'),'40');
           assert.equal(plain.querySelector('.thumb').getAttribute('height'),'56');assert(plain.textContent.includes('Ordinary metadata'));
-          assert.equal(view.layout,'pictures');assert(view.comps[0].rows[0].tile.getAttribute('class').includes('card-tile'));
-          assert.equal(view.comps[0].rows[0].tile.querySelector('.rcpt-tick').tag,'button');
-          assert.equal(view.comps[0].rows[0].tile.querySelector('.rcpt-tick').getAttribute('aria-pressed'),'false');
+          assert.equal(view.layout,'pictures');assert(view.comps[0].rows[0].tile.querySelector('.card-tile'));
+          assert.equal(view.comps[0].rows[0].tile.querySelector('.rcpt-tick').tag,'input');
+          assert.equal(view.comps[0].rows[0].tile.querySelector('.rcpt-tick').getAttribute('checked'),null);
         """)
 
     def test_native_change_ticks_once_and_the_separate_inspection_button_contains_no_controls(self):
@@ -83,8 +83,9 @@ class ReceiptCompactTests(unittest.TestCase):
           const product=drawReceipt(p,routeToken);assert.equal(product.layout,'list');assert(!main.querySelector('.rcpt-row'));
           assert(main.querySelectorAll('.card-tile').length>0);assert(!main.querySelector('.rcpt-tick'));
           clear(main);local.set('receiptLayout','pictures');const pictures=drawReceipt(delivery(),routeToken);
-          const tick=pictures.comps[0].rows[0].tile.querySelector('.rcpt-tick');assert.equal(tick.tag,'button');
-          tick.click();assert(pictures.comps[0].rows[0].ticked);assert.equal(pictures.comps[0].rows[0].tile.querySelector('.rcpt-tick').getAttribute('aria-pressed'),'true');
+          const tick=pictures.comps[0].rows[0].tile.querySelector('.rcpt-tick');assert.equal(tick.tag,'input');
+          tick.checked=true;tick.fire('change');assert(pictures.comps[0].rows[0].ticked);
+          assert.notEqual(pictures.comps[0].rows[0].tile.querySelector('.rcpt-tick').getAttribute('checked'),null);
         """,draw=False)
 
     def test_layout_changes_leave_canonical_rows_and_partial_receipt_draft_scope_unchanged(self):

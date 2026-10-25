@@ -517,11 +517,11 @@ class ReceiptBoardTests(unittest.TestCase):
           const comp=view.comps[0];
           view.filter='todo';rcptRefreshAll(view);
           const first=comp.rows[0].tile.querySelector('.rcpt-tick');
-          assert.equal(first.getAttribute('aria-label'),'Check off Alpha');
-          first.focus();first.click();
+          assert.equal(first.getAttribute('aria-label'),'Check off 2 copies of Alpha');
+          first.focus();first.checked=true;first.fire('change');
           assert(comp.rows[0].tile.hidden);
           assert.equal(document.activeElement,comp.rows[1].tile.querySelector('.rcpt-tick'));
-          document.activeElement.click();
+          document.activeElement.checked=true;document.activeElement.fire('change');
           assert(main.textContent.includes('Everything here is checked.'));
           const show=comp.grid.querySelector('.rcpt-none').querySelector('button');
           assert.equal(document.activeElement,show);

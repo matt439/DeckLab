@@ -101,12 +101,36 @@
 .rcpt-grid .card-tile > .card-tile-chips { grid-column: 1; grid-row: 2; }
 .rcpt-grid .card-tile > .card-tile-state { position: static; grid-column: 2; grid-row: 2; justify-self: end; }
 
+/* Checking a Pictures tile is native label activation; Inspect is its separate sheet/viewer action. */
+.rcpt-check-tile { display: grid; grid-template-rows: 1fr auto; gap: var(--s-1); min-width: 0; }
+.rcpt-picture-label { cursor: pointer; }
+.rcpt-grid .rcpt-picture-label > .card-tile-state { display: grid; place-items: center; min-width: 52px; min-height: 52px; }
+.rcpt-picture-tick { appearance: auto; width: 28px; height: 28px; margin: 0; accent-color: var(--accent); cursor: pointer; }
+.rcpt-picture-inspect { min-height: 44px; justify-self: stretch; }
+.rcpt-picture-pending { display: inline-flex; align-items: center; gap: var(--s-1); }
+.rcpt-picture-pending::before { display: none; }
+.rcpt-picture-pending .rcpt-pending-swatch { display: inline-block; flex: none; width: 12px; height: 8px;
+  background: repeating-linear-gradient(45deg, var(--accent) 0 2px, transparent 2px 4px); }
+.rcpt-check-tile.is-pending-split > .rcpt-picture-label { outline: 1px dashed var(--accent-line); outline-offset: 2px; }
+.rcpt-check-tile > .rcpt-picture-label:focus-within { outline: 3px solid var(--focus); outline-offset: 3px; }
+.rcpt-picture-label .rcpt-picture-done { display: none; }
+@media (min-width: 1000px) {
+  .rcpt-grid .rcpt-picture-label > .card-tile-state { min-width: 44px; min-height: 44px; }
+  .rcpt-picture-tick { width: 18px; height: 18px; }
+}
+
 .rcpt-flag { cursor: help; }
 
 /* A card checked as received: darker than other pages' ticked tiles (cards-ui.css), so what's
    still to find in a mixed parcel stands out. */
 .rcpt-grid .card-tile.is-ticked .card-tile-img,
 .rcpt-grid .card-tile.is-ticked .card-tile-back { filter: brightness(.7); }
+@media (max-width: 999px) {
+  .rcpt-grid .rcpt-picture-label.is-ticked .card-tile-img,
+  .rcpt-grid .rcpt-picture-label.is-ticked .card-tile-back { opacity: .42; filter: none; }
+  .rcpt-picture-label .card-tile-pic:has(> :is(.card-tile-img, .card-tile-back)) > .rcpt-picture-done { display: block; position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -50%); width: 40px; height: 40px; background-size: 24px; pointer-events: none; }
+}
 
 /* List: the native tick is beside the inspection button, never inside it. Compact sizing is lab-only. */
 .rcpt-list { display: grid; grid-template-columns: minmax(0, 1fr); }

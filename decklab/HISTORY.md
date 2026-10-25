@@ -2,6 +2,16 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Native Receive Pictures checking and separate Inspect (2026-10-25; E11-S30 slice 12)
+
+Active Pictures now use one native checkbox inside a whole-tile label and a separate Inspect button for the existing guarded sheet/viewer. The opt-in shared card/token path contains phrasing content and its one input, with no nested interactive controls; default callers stay unchanged. Inspect is the sole per-row viewer trigger. Unique descriptions retain printing, unknown condition/language, attention and split facts. Rejected changes restore accepted state, pending split parts retain dashed/hatch cues, and close/filtered focus uses fresh controls. Read-only/off parts, products, remembered layout, canonical quantities and all receipt requests remain unchanged.
+
+Casual checks measure 28px in 52px cells; lab checks are 18px in 44px cells, and Inspect retains a 44px floor. Checked casual card images use .42 opacity and a decorative 40px tick disc; unknown/failed-image placeholders keep readable text and the native checked state. Extracted receipt-tiles.js keeps receipts.js below its source limit, with runtime/test registries updated.
+
+Validation: 344 targeted receipt/Shopping/shared/editor/deck/token/source checks passed. Synthetic Chromium checked 24 viewport/theme combinations with a five-row unequal split: 4 of 7 copies, unique descriptions, one input per label, no nested non-phrasing/interactive controls, four sole Inspect viewer triggers, expected targets/cues and no page overflow. Whole-label activation and native Space changed counts once; Inspect did not check, split Close returned to its new part, and Ticked untick focus advanced to the next check then Show all. All API writes were disabled; only disposable local drafts changed. Mouse/default DPR and keyboard only; no actual touch/coarse/Safari/device or speech acceptance. The source audit still fails only on pre-existing tokens.js (1,516 lines).
+
+Component arrival checks stay in their separate authoritative panel: string/boolean checks have no exact row association, and same-name printings/splits make an inferred inline association unsafe. Editing and final Record-bar presentation remain separate work.
+
 ## Casual Shopping grouping and single Add control (2026-10-25; E11-S30 slice 12)
 
 To buy now has functional By state/By shop controls at casual density. Grouping moves the original immediate rows and their viewers, research and guarded actions; shop grouping preserves each row's saved category and explicitly names unchecked shops. Matching marks and Long-term deck grouping/reveal stay independent. The lab retains state tables and restores the casual choice on return. The one existing Add button moves between a 44px round casual control and its header position, preserving permissions, busy state, open sheets and focus. New order remains the admin view's one primary.
