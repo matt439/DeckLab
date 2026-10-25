@@ -11,6 +11,7 @@ import threading
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
+CHECKOUT = REPO                  # this checkout, even while a test points REPO at a temporary one
 DECKLAB = REPO / "decklab"
 DATA = DECKLAB / "data"          # gitignored cache
 MAGIC = REPO / "magic"
@@ -80,6 +81,18 @@ def load():
     if extra:
         settings.update(_extra(extra))
     return settings
+
+
+def records_dir(root=None):
+    """Where the repo-relative research files that sources name (magic/buylists/..., magic/reports/...)
+    are looked for: config.json's records_repo, the household's own private repo, when root is this
+    checkout (or None); otherwise root itself, so a test's temporary repo never reads the real one."""
+    root = Path(REPO if root is None else root)
+    if root.resolve() == CHECKOUT.resolve():
+        setting = load().get("records_repo")
+        if isinstance(setting, str) and setting.strip():
+            return Path(setting.strip())
+    return root
 
 
 def _extra(path):

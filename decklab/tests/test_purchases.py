@@ -196,6 +196,29 @@ class PurchasesTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "relative repository path"):
             purchases.source_exists(self.root, "../magic/decks/casual/elves.md", inv=only)
 
+    def test_records_repo_holds_research_sources_for_this_checkout_only(self):
+        # A household keeps its buylists in a private repo of its own (config.json's records_repo).
+        with tempfile.TemporaryDirectory() as records:
+            note = Path(records) / "magic" / "buylists" / "private.md"
+            note.parent.mkdir(parents=True)
+            note.write_text("# Research\n", encoding="utf-8")
+            inv = inventory.current()
+            with mock.patch.object(config, "load", return_value={"records_repo": records}), \
+                    mock.patch.object(config, "CHECKOUT", self.root):
+                self.assertEqual(config.records_dir(), Path(records))
+                self.assertTrue(purchases.source_exists(config.REPO, "magic/buylists/private.md", inv=inv))
+                self.assertFalse(purchases.source_exists(config.REPO, "magic/buylists/absent.md", inv=inv))
+                # Another root (a test's repo) never reads the real records.
+                with tempfile.TemporaryDirectory() as other:
+                    self.assertEqual(config.records_dir(other), Path(other))
+                    self.assertFalse(purchases.source_exists(Path(other), "magic/buylists/private.md", inv=inv))
+                with self.assertRaisesRegex(ValueError, "relative repository path"):
+                    purchases.source_exists(config.REPO, "../private.md", inv=inv)
+            with mock.patch.object(config, "load", return_value={}), mock.patch.object(config, "CHECKOUT", self.root):
+                self.assertEqual(config.records_dir(), config.REPO)
+        # The real config.json's records_repo never reaches a test's repo.
+        self.assertEqual(config.records_dir(), self.root)
+
 
 if __name__ == "__main__":
     unittest.main()

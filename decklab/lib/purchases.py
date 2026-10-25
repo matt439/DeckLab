@@ -93,7 +93,8 @@ def source_exists(root, value, where="path", inv=None, *, retired=None):
     rewritten). When the deck is retired, its last deletion and preceding saved text keep the
     source valid; an arbitrary missing id or one without durable history does not. retired is
     an optional memo shared only within one validation pass. Any other path is looked for on
-    disk under root."""
+    disk under root, or under config.json's records_repo when root is this checkout
+    (config.records_dir)."""
     resolved = repo_path(root, value, where)
     found = paths.classify(value)
     if found is not None and found[0] == "deck":
@@ -103,6 +104,9 @@ def source_exists(root, value, where="path", inv=None, *, retired=None):
         deck_id = inventory.resolve_deck_id(deck_id, current)
         return current.deck(deck_id) is not None or (
             current.backend == "db" and _retired_source(deck_id, retired))
+    records = config.records_dir(root)
+    if Path(records).resolve() != Path(root).resolve():
+        return repo_path(records, value, where).is_file()
     return resolved.is_file()
 
 

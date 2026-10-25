@@ -815,7 +815,7 @@ def order_extra_copies(args):
 def _cancel_notes(old, removed=False):
     """List Markdown references to a removed order or a cancelled payload's old path."""
     from decklab.lib import config
-    repo = Path(config.REPO)
+    repo = config.records_dir()
     target = old.split("/", 1)[1]          # orders/<file>.csv, as a link from magic/<folder>/ ends
     linked = []
     for path in sorted((repo / "magic").rglob("*.md")):

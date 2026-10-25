@@ -21,7 +21,7 @@ It runs on one Windows PC and is used from phones, tablets and the PC's browser 
 
 ## Setup in short
 
-Deck Lab needs Python 3.14, PostgreSQL, a JDK and a Forge build (decklab/README.md, "Deck Lab's own Forge"). Copy `decklab/config.example.json` to `decklab/config.json` and fill in your own profiles; that file is gitignored, so real names and email addresses never enter the repo. The people and decks named in the docs and tests are made up.
+Deck Lab needs Python 3.14, PostgreSQL, a JDK and a Forge build (decklab/README.md, "Deck Lab's own Forge"). Copy `decklab/config.example.json` to `decklab/config.json` and fill in your own profiles; that file is gitignored, so real names and email addresses never enter the repo. A household's own buylists and reports (`magic/buylists/`, `magic/reports/`, which orders' and the watchlist's `source` fields name) live in a private repo of its own: set `records_repo` to that checkout's folder. The people and decks named in the docs and tests are made up.
 
 ## Licence and credits
 
