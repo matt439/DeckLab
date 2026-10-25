@@ -166,8 +166,8 @@ function colPriceStamp(value) {
   return badge;
 }
 
-/** The dense table: thumbnail (opens the viewer), the card (opens its sheet, or the viewer when read only),
- * printing, copies, the estimated price of one copy, condition, language and notes. On a phone the last four fold into a line under the name. */
+/** The lab table: card selection, identity/type, printing/finish, copies and recorded details,
+ * anonymous held counts, the estimated price of one copy and notes. The casual list is separate. */
 function colRowTable(cv, rows) {
   const sortable = (key, cls = "") => {
     const on = cv.sort.key === key;
@@ -179,12 +179,17 @@ function colRowTable(cv, rows) {
         drawColRowList(cv);
       } }));
   };
-  return el("div", { class: "table-wrap" }, el("table", { class: "data col-table" },
+  return el("div", { class: "table-wrap", role: "region", "aria-label": "Collection rows", tabindex: 0 },
+    el("table", { class: "data col-table" },
     el("thead", {}, el("tr", {},
       el("th", { scope: "col", class: "col-th-pic" }, el("span", { class: "sr-only", text: "Picture" })),
-      sortable("name"), sortable("set", "col-wide"), sortable("quantity", "num"), sortable("price", "num"),
-      sortable("condition", "col-wide"),
-      sortable("language", "col-wide"), el("th", { scope: "col", class: "col-notes col-th-notes", text: "Notes" }))),
+      sortable("name"),
+      el("th", { scope: "col", class: "col-column-colour col-th-colour", text: "Colour identity" }),
+      el("th", { scope: "col", class: "col-column-type col-th-type", text: "Type" }),
+      sortable("set", "col-wide"), el("th", { scope: "col", class: "col-th-finish", text: "Finish" }),
+      sortable("quantity", "num"), sortable("condition", "col-wide"), sortable("language", "col-wide"),
+      el("th", { scope: "col", class: "col-th-held", text: "In decks" }), sortable("price", "num"),
+      el("th", { scope: "col", class: "col-notes col-th-notes", text: "Notes" }))),
     el("tbody", {}, rows.map((row) => colRowLine(cv, row)))));
 }
 
@@ -215,27 +220,18 @@ function colRowLine(cv, row) {
     el("td", { class: "col-td-name" }, open ? el("button", { type: "button", class: "col-open col-mutate", "data-focus": `edit-${key}`,
       "aria-label": `View ${row.name} (${colPrinting(row)})`,
       "aria-current": key === cv.selectedKey ? "true" : null, onclick: open }, name) : name),
-    el("td", { class: "col-wide col-td-printing" }, colPrinting({ ...row, finish: "nonfoil" }), " · ", colFinishLabel(row)),
-    el("td", { class: "num col-td-qty" }, el("span", { text: String(row.quantity) }), colHeldNote(cv, row)),
-    colPriceCell(cv, row),
+    colIdentityCell(card), colTypeCell(card),
+    el("td", { class: "col-wide col-td-printing", text: colPrinting({ ...row, finish: "nonfoil" }) }),
+    el("td", { class: "col-td-finish" }, colFinishLabel(row)),
+    el("td", { class: "num col-td-qty" }, el("span", { text: String(row.quantity) })),
     el("td", { class: "col-wide col-td-condition" }, colDetail(row.condition, "condition")),
     el("td", { class: "col-wide col-td-language" }, colDetail(row.language, "language")),
+    colHeldCell(cv, row), colPriceCell(cv, row),
     el("td", { class: "col-notes col-td-notes", text: row.notes || "", title: row.notes || null }));
 }
 
 const COL_GUESS_WORDS = "A ? after \"in decks\" means the decks' lists don't say which of this card's printings"
   + " they hold, so the copies are counted against the cheapest: check the decks.";
-
-/** Under a row's copies: how many are in decks ("1 in a deck", "all in decks"), "in decks?" with a
- * title when the decks' lists name another printing (a guess), nothing when all are in storage. */
-function colHeldNote(cv, row) {
-  const { held, guess } = colHeld(cv, row);
-  if (!held) return null;
-  const all = held >= Number(row.quantity || 0);
-  const words = all ? "all in decks" : held === 1 ? "1 in a deck" : `${num(held)} in decks`;
-  return el("small", { class: `col-held${guess ? " col-held-guess" : ""}`, text: guess ? `${words}?` : words,
-    title: guess ? COL_GUESS_WORDS : null });
-}
 
 function colPriceCell(cv, row) {
   const price = colPrice(cv, row);
@@ -368,4 +364,30 @@ function colRowFilters(cv) {
     checkbox("In storage only", cv.storageOnly, (on) => { cv.storageOnly = on; cv.storageBox.checked = on; }, !cv.storage || !!cv.storage.error),
     el("label", { class: "field" }, el("span", { text: "Sort" }), sort)]);
   sheetActions(sheet, [{ text: "Done", onclick: () => sheet.close() }]);
+}
+
+
+/** Card identity is separate from its printed colours and the Find cards colour filter. */
+function colIdentityCell(card) {
+  const pieces = deckColourPieces(card?.color_identity), pips = pieces?.pips(16);
+  if (pips) pips.setAttribute("aria-label", `Colour identity: ${pieces.label.replace(/^Colours: /, "")}`);
+  return el("td", { class: "col-column-colour col-td-colour" }, pips || colUnknown("Colour identity not recorded"));
+}
+
+function colTypeCell(card) {
+  return el("td", { class: "col-column-type col-td-type" }, card?.type_line
+    ? el("span", { class: "col-type-text", text: card.type_line, title: card.type_line }) : colUnknown("Type not recorded"));
+}
+
+/** Storage holds counts, not the identities of the decks or products holding a printing. */
+function colHeldCell(cv, row) {
+  const cell = el("td", { class: "col-td-held" });
+  if (!cv.storage || cv.storage.error) return add(cell, [colUnknown("Copies in decks not known")]);
+  const { held, guess } = colHeld(cv, row);
+  if (held == null) return add(cell, [el("span", { text: "Not tracked", title: "Basic land: deck allocation not tracked" })]);
+  if (!held) return add(cell, [el("span", { text: "In storage" })]);
+  const words = `${num(held)} in decks${guess ? "?" : ""} \u00b7 ${num(Math.max(0, Number(row.quantity) - held))} free`;
+  return add(cell, [el("span", { class: `col-held${guess ? " col-held-guess" : ""}`,
+    title: colStorageWords(cv, row) + (guess ? `. ${COL_GUESS_WORDS}` : "") }, simNumbers(words)),
+    guess ? el("span", { class: "sr-only", text: "Printing allocation uncertain." }) : null]);
 }

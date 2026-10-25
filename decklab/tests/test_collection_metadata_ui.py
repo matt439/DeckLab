@@ -69,7 +69,7 @@ class CollectionMetadataUiTests(unittest.TestCase):
 
     def test_finish_labels_use_the_shared_neutral_chip_only_for_special_finishes(self):
         self.run_js("""
-          draw(); const cells = listed().map(tr => tr.querySelector('.col-td-printing'));
+          draw(); const cells = listed().map(tr => tr.querySelector('.col-td-finish'));
           assert(cells[0].textContent.includes('Non-foil'));
           assert.equal(cells[0].querySelector('.chip-foil'), null);
           for (const [index, words] of [[1, 'Foil'], [2, 'Etched']]) {

@@ -116,11 +116,9 @@
   .col-table .col-th-notes { width: 22%; }
   .col-cell-note { display: none; }
 }
-/* QHD: the list no wider than it needs (not 2,500 px with Copies far from Condition), and a gap between the
-   right-aligned price and Condition (the row's sixth cell). */
+/* QHD: the list no wider than it needs (not 2,500 px with Copies far from Condition). */
 @media (min-width: 1600px) {
   .col-row-list .table-wrap { max-width: 1400px; }
-  .col-table .col-th-condition, .col-table tbody td:nth-child(6) { padding-left: var(--s-6); }
 }
 
 /* The add and edit sheet. */
@@ -241,7 +239,8 @@ button.col-casual-open { cursor: pointer; }
   .col-preview { display: block; position: sticky; top: calc(var(--shell-top) + var(--s-3));
     max-height: calc(100dvh - var(--shell-top) - 2 * var(--s-3)); overflow: auto;
     background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-panel); padding: var(--s-4); }
-  .col-row-lab .table-wrap { overflow: auto; }
+  .col-row-lab .table-wrap { overflow: auto; max-height: calc(100dvh - var(--shell-top) - var(--s-6)); }
+  .col-row-lab .col-table thead th { top: 0; }
   .col-row-lab .col-table { min-width: 640px; }
   .col-row-lab :is(.col-th-pic, .col-td-pic) { display: none; }
 }
@@ -251,4 +250,49 @@ button.col-casual-open { cursor: pointer; }
 }
 @media (hover: hover) and (pointer: fine) {
   button.col-casual-open:hover { background: var(--hover); }
+}
+
+/* Table metadata stays on one line at the row token's density. The preview holds full text. */
+@media (min-width: 1000px) {
+  .col-row-lab { container: collection-table / inline-size; }
+  .col-row-lab .col-table :is(th, td) { white-space: nowrap; overflow-wrap: normal; }
+  .col-row-lab .col-table td { padding-top: 0; padding-bottom: 0; }
+  .col-row-lab .col-open { min-width: 0; min-height: var(--row-h); }
+  .col-row-lab .col-cell-name { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis;
+    font-size: var(--fs-row); white-space: nowrap; }
+  .col-row-lab .col-table td.num { font-family: var(--font-num); font-size: var(--fs-cell-num); font-weight: var(--fw-semibold); }
+  .col-row-lab .col-th-name { width: 10rem; }
+  .col-row-lab .col-th-colour { width: 6rem; }
+  .col-row-lab .col-th-type { width: 9rem; }
+  .col-row-lab .col-th-set { width: 5.5rem; }
+  .col-row-lab .col-th-finish { width: 4rem; }
+  .col-row-lab .col-th-quantity { width: 3.5rem; }
+  .col-row-lab .col-th-condition { width: 5rem; }
+  .col-row-lab .col-th-language { width: 4rem; }
+  .col-row-lab .col-th-held { width: 8rem; }
+  .col-row-lab .col-th-price { width: 5rem; }
+  .col-row-lab .col-th-notes { width: 9rem; }
+  .col-row-lab .col-type-text { display: block; overflow: hidden; text-overflow: ellipsis; }
+  .col-row-lab .col-held { display: inline; font-size: inherit; line-height: inherit; white-space: nowrap; }
+  .col-row-lab .col-td-held { font-family: var(--font); font-size: var(--fs-meta); }
+  .col-row-lab .col-table tbody tr[data-selected] > .col-td-name {
+    box-shadow: inset 2px 0 var(--accent), inset 0 1px 0 var(--accent-line), inset 0 -1px 0 var(--accent-line);
+  }
+}
+@container collection-table (max-width: 1100px) {
+  .col-column-colour { display: none; }
+}
+@container collection-table (max-width: 1000px) {
+  .col-column-type { display: none; }
+}
+@container collection-table (max-width: 900px) {
+  .col-row-lab :is(.col-th-language, .col-td-language) { display: none; }
+}
+@container collection-table (max-width: 800px) {
+  .col-row-lab .col-notes { display: none; }
+}
+
+/* The row's divider is included in the 36px mouse density; touch controls retain their 44px floor. */
+@media (min-width: 1000px) and (pointer: fine) {
+  .col-row-lab .col-open { min-height: calc(var(--row-h) - 1px); }
 }

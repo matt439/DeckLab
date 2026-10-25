@@ -2,6 +2,12 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## P1 Collection lab columns (2026-10-25; E11-S30 slice 11)
+
+The lab table now separates card identity, type, printing, finish, copies, condition, language, usage, per-copy price and notes. Identity uses the card's actual `color_identity`, preserving the distinct card-colour search predicate. Unknowns and untracked basic lands remain explicit; held/free counts retain printing uncertainty without inventing holder names. Container queries hide identity, type and language first. The named keyboard scroll region has its own sticky header, 36px mouse rows including dividers, and preferred widths that fit wide panes.
+
+Validation: 178 targeted Python/Node checks passed; an 83-check affected-module rerun passed after browser QA found and fixed header overlap and oversized preferred widths. Synthetic Chromium checked nine documented sizes plus 1000/1280 in both themes (22 combinations): no page overflow or header overlap, 36px fine-pointer rows, and keyboard Page Down retained the header. The 1000px edge keeps horizontal scrolling inside the table. Mouse/default DPR only; actual coarse input, Safari and devices remain unverified. No new API reads, canonical/hash changes, live writes or Forge games. The pre-existing `tokens.js` source-audit failure remains. J/K and Enter row navigation, Find cards presentation and named holder provenance remain later slice 11 work.
+
 ## P1 Shopping page frame (2026-10-25; E11-S30 slice 12, first part)
 
 Shopping now places its existing deliveries, follow-ups and shop research in a 560px list pane, with buying and missing-card views in the detail pane. It stacks through 1280px. Buying redraws retain delivery, active Undo and history nodes; empty/add/last-remove transitions retain the same frame. Parts of this page links now move keyboard focus to the destination without changing the Shopping route. Queue permissions/identity, aggregate shortfalls and receipt preview contracts retain their existing behavior.

@@ -74,7 +74,7 @@ class CollectionPricesUiTests(unittest.TestCase):
           const box = main.querySelector('#col-storage'), label = main.querySelector('.col-storage');
           assert(!label.hidden); assert(label.textContent.includes('In storage only (4 rows)'));
           const held = () => main.querySelectorAll('.col-held').map(e => e.textContent);
-          same(held(), ['1 in a deck?', 'all in decks']);
+          same(held(), ['1 in decks? · 1 free', '1 in decks · 0 free']);
           assert(main.querySelector('.col-held-guess').getAttribute('title').includes('cheapest'));
           // The title can't be reached on a phone: the note under the list says it too.
           assert(main.querySelector('.col-price-note').textContent.includes("don't say which of this card's printings"));
