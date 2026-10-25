@@ -13,6 +13,7 @@ can) sees the same tiles, read only. */
 "use strict";
 
 const RCPT_CONDITIONS = ["", "NM", "LP", "MP", "HP", "DMG"];
+const RCPT_FILTERS = ["all", "todo", "attention", "ticked"];
 const RCPT_LANGUAGES = ["", "en", "ja", "de", "fr", "it", "es", "pt", "ko", "ru", "zhs", "zht"];
 const RCPT_LANGUAGE_WORDS = { en: "English", ja: "Japanese", de: "German", fr: "French", it: "Italian", es: "Spanish",
   pt: "Portuguese", ko: "Korean", ru: "Russian", zhs: "Chinese (simplified)", zht: "Chinese (traditional)" };
@@ -264,9 +265,10 @@ function rcptChecksCard(view, comp) {
  * the grid starts near the top. */
 function rcptToolbar(view, comp) {
   const words = (wide, narrow) => [el("span", { class: "rcpt-wide", text: wide }), el("span", { class: "rcpt-narrow", text: narrow })];
-  comp.filterButtons = [["all", "All", "All"], ["todo", "Not checked", "To do"], ["attention", "Needs attention", "Attention"]]
+  comp.filterButtons = [["all", "All", "All"], ["todo", "Not checked", "To do"],
+    ["attention", "Needs attention", "Attention"], ["ticked", "Ticked", "Ticked"]]
     .map(([key, wide, narrow]) => el("button", { type: "button", "aria-pressed": String(view.filter === key), "data-filter": key,
-      onclick: () => { view.filter = key; rcptRefreshAll(view); } }, words(wide, narrow)));
+      onclick: () => rcptSetFilter(view, key) }, words(wide, narrow)));
   comp.layoutButtons = rcptLayoutButtons(view);
   const tools = rcptTools(view, comp, false);
   comp.fill = tools.fill; comp.fillButton = tools.fillButton;
@@ -330,6 +332,14 @@ function rcptToolsSheet(view, comp) {
   return sheet;
 }
 
+/** A view preference joins an existing draft without changing the checked selection or its preview. */
+function rcptSetFilter(view, key) {
+  if (!receiptActive(view) || view.done) return;
+  view.filter = RCPT_FILTERS.includes(key) ? key : "all";
+  rcptRefreshAll(view);
+  if (receiptEditable(view)) rcptSaveDraft(view);
+}
+
 /** Redraws every grid and toolbar state (a filter or layout change, a resumed draft). */
 function rcptRefreshAll(view) {
   for (const comp of view.comps) {
@@ -356,14 +366,15 @@ function rcptDrawGrid(view, comp) {
   rcptToolbarCounts(view, comp);
 }
 
-/** "Everything here is checked." with Show all, when the filter leaves nothing to show. */
+/** A filter-specific empty message with Show all, when the filter leaves nothing to show. */
 function rcptEmptyState(view, comp) {
   const old = comp.grid.querySelector(".rcpt-none");
   if (old) old.remove();
   if (comp.rows.some((row) => !row.tile.hidden)) return null;
   const none = el("div", { class: "empty rcpt-none" },
-    el("p", { text: view.filter === "todo" ? "Everything here is checked." : "Nothing here needs attention." }),
-    el("button", { type: "button", class: "btn", text: "Show all", onclick: () => { view.filter = "all"; rcptRefreshAll(view); } }));
+    el("p", { text: view.filter === "todo" ? "Everything here is checked."
+      : view.filter === "ticked" ? "Nothing here is checked yet." : "Nothing here needs attention." }),
+    el("button", { type: "button", class: "btn", text: "Show all", onclick: () => rcptSetFilter(view, "all") }));
   comp.grid.append(none);
   return none;
 }
@@ -553,6 +564,7 @@ function rcptAttention(view, comp, row) {
 
 function rcptShown(view, comp, row) {
   if (view.filter === "todo") return !row.ticked;
+  if (view.filter === "ticked") return row.ticked;
   if (view.filter === "attention") return rcptAttention(view, comp, row).length > 0;
   return true;
 }
@@ -650,7 +662,7 @@ function rcptRefreshTile(view, comp, row) {
 // ------------------------------------------------------------------ ticks and bulk tools
 
 /** Ticks or unticks a row. Ticking clears its "check on arrival" notes (when that's on); the sheet can put them
- * back. A tick that hides the tile (under Not checked) moves the focus to the next tile's tick, or to the empty
+ * back. A change that hides the tile under a filter moves the focus to the next tile's tick, or to the empty
  * state's Show all. */
 function rcptTick(view, comp, row, value) {
   if (!receiptEditable(view)) return;

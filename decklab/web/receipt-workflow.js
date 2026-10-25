@@ -71,7 +71,7 @@ function rcptBuildBar(view) {
   view.progress = el("span", { class: "rcpt-progress" });
   view.stale = el("span", { class: "rcpt-stale" });
   view.blanks = el("button", { type: "button", class: "rcpt-blanks", hidden: true, onclick: () => {
-    view.filter = "attention"; rcptRefreshAll(view);
+    rcptSetFilter(view, "attention");
     const first = view.comps.find((c) => c.selected && c.kind === "cards");
     if (first && first.section) first.section.scrollIntoView({ block: "start", behavior: "smooth" });
   } });
@@ -194,7 +194,7 @@ function rcptRowName(comp, row) {
 function rcptGoTo(view, item) {
   if (!receiptEditable(view)) return;
   if (item.comp && item.row) {
-    if (view.filter !== "all") { view.filter = "all"; rcptRefreshAll(view); }
+    if (view.filter !== "all") rcptSetFilter(view, "all");
     const tile = item.row.tile;
     if (tile) tile.scrollIntoView({ block: "center", behavior: "smooth" });
     rcptOpenSheet(view, item.comp, item.row);
@@ -499,7 +499,7 @@ function rcptDraftKey(view) { return `receipt:${view.profile}:${view.data.order}
 
 function rcptSaveDraft(view) {
   if (!view.drafting || view.done) return;
-  const draft = { v: 1, date: view.date, comps: {} };
+  const draft = { v: 1, date: view.date, filter: view.filter, comps: {} };
   for (const comp of view.comps) {
     draft.comps[comp.c.id] = { selected: comp.selected, intact: comp.intact, checks: comp.checks,
       rows: comp.kind === "product" ? [] : comp.rows.map((r) => ({ orig: r.orig, values: r.values, ticked: r.ticked, before: r.before,
@@ -592,6 +592,7 @@ function rcptOfferDraft(view) {
 
 function rcptApplyDraft(view, draft) {
   if (!receiptEditable(view)) return;
+  view.filter = RCPT_FILTERS.includes(draft.filter) ? draft.filter : "all";
   for (const comp of view.comps) {
     const saved = draft.comps[comp.c.id];
     comp.selected = view.comps.length === 1 ? true : Boolean(saved.selected);

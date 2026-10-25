@@ -2,6 +2,12 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Receive Ticked view filter (2026-10-25; E11-S30 slice 12)
+
+Receive now offers Ticked alongside All, Not checked and Attention, with its own empty message and Show all recovery. The view preference joins an existing version-1 local draft; older/malformed values restore All. Changing a filter does not manufacture a part-way draft, change bulk/request scope or invalidate a valid preview. Stale/done callbacks cannot change the view, and navigating to a hidden blocker persists All. Unticking a hidden row focuses the next visible check or Show all in both layouts.
+
+Validation: 120 targeted receipt/shared UI/source checks passed, including five focused Ticked scenarios. An initial command named two nonexistent modules; the corrected set is green. Synthetic Chromium checked 24 viewport/theme combinations: four filters remain contained, the two checked rows and 3-of-7 copy progress survive resizing, and no page overflow appears. Actual Space/checkbox activation and filtered focus passed in Pictures and List; explicit List draft resume restored Ticked and the checked copies. API writes were disabled; only disposable local drafts changed. Shared fine-pointer segment sizing remains unchanged; no coarse/touch/Safari/device acceptance is claimed. The pre-existing `tokens.js` source-length failure remains.
+
 ## Shopping saved metadata presentation (2026-10-25; E11-S30 slice 12)
 
 Casual queue rows now use the shared dated-check freshness badge for valid, non-future recorded calendar days. Missing, malformed and future dates remain factual without an invented age; the lab retains a compact exact ISO date in a semantic time element. Exact/any printing intent and neutral foil/etched pills stay visible, while concise card-viewer names lead to captions with the full saved printing, state, reference-price, check-date, stock and note evidence. Unknown prices stay unknown and zero remains valid. No live price or stock lookup is added.
