@@ -19,7 +19,7 @@ let document;
 class Node {
   constructor(tag) {
     Object.assign(this, listeners());
-    this.tag = tag; this.children = []; this.attrs = {}; this.dataset = {}; this.style = {};
+    this.tag = tag; this.children = []; this.attrs = {}; this.dataset = {}; this.style = {setProperty(name, value) { this[name] = String(value); }};
     this.parentNode = null; this.value = ""; this.hidden = false; this.disabled = false; this.scrollLeft = 0;
     this.box = { top: 0, bottom: 44, left: 0, right: 100, width: 100, height: 44 };
     const names = new Set();
@@ -110,7 +110,7 @@ const context = { Node, document, window, console, URL, URLSearchParams, assert,
 };
 vm.createContext(context);
 const scriptNames = allScripts ? [...fs.readFileSync(web + "/index.html", "utf8").matchAll(/<script src="\/([^"?]+)"/g)].map(m => m[1])
-  : ["core.js", "ui.js", "symbols.js", "cards-ui.js", "card-viewer.js", "library-tables.js", "editor.js", "deck-availability.js", "deck.js", "deck-header.js", "deck-overview.js", "deck-retirement.js", "deck-prices.js", "deck-sideboard.js", "deck-opponents.js", "deck-standins.js", "deck-swaps.js", "product-storage.js", "accessory-pictures.js", "assembly-sections.js", "assembly-sheets.js", "collection-guards.js", "receipts.js", "receipt-workflow.js", "commander-readiness.js", "commander-night.js", "deck-tools.js", "editor-screen.js", "editor-details.js", "editor-lines.js", "editor-cards.js", "editor-swaps.js", "editor-save.js", "wishlist.js", "shopping.js", "shopping-buying.js", "shopping-reprints.js", "shopping-orders.js", "shopping-order-edit.js", "shopping-order-rows.js", "shell.js", "app.js"];
+  : ["core.js", "ui.js", "symbols.js", "cards-ui.js", "card-viewer.js", "library-tables.js", "editor.js", "deck-availability.js", "deck.js", "deck-header.js", "deck-overview.js", "deck-retirement.js", "deck-prices.js", "deck-sideboard.js", "deck-opponents.js", "deck-standins.js", "deck-swaps.js", "product-storage.js", "accessory-pictures.js", "assembly-sections.js", "assembly-sheets.js", "collection-guards.js", "receipts.js", "receipt-layout.js", "receipt-workflow.js", "commander-readiness.js", "commander-night.js", "deck-tools.js", "editor-screen.js", "editor-details.js", "editor-lines.js", "editor-cards.js", "editor-swaps.js", "editor-save.js", "wishlist.js", "shopping.js", "shopping-buying.js", "shopping-reprints.js", "shopping-orders.js", "shopping-order-edit.js", "shopping-order-rows.js", "shell.js", "app.js"];
 for (const name of scriptNames) {
   let source = fs.readFileSync(web + "/" + name, "utf8");
   // Network start-up is outside these tests; all actual interaction functions

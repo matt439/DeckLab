@@ -2,6 +2,16 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Receive header and loaded-data guidance (2026-10-25; E11-S30 slice 12)
+
+Receive delivery now has order/date metadata, explicit card-copy progress and a 452px sticky lab guidance aside; narrow views stack it after the existing board. Whole products stay separate from loose-copy counts. The aside uses selected/ticked rows and already-loaded needs/kit data, caps repeated split hints, and keeps missing/basic-land destinations uncertain. It adds no data reads or allocation guarantees. The separate server preview, exact confirmation, frozen reviewed rows and apply/recovery workflow are unchanged.
+
+Short-window QA found that warning content makes the existing Record bar taller than its minimum token. The aside now uses its measured height and focus-scroll margins. A scoped observer tracks wrapping and disconnects for stale, detached or completed views; synchronous updates cover the fallback path. Record controls stay outside the frame. Read-only/completed views do not gain editing guidance.
+
+Validation: 234 targeted UI/source checks passed, including 11 new frame/observer cases. Synthetic Chromium checked nine documented viewport sizes plus 1000/1280 and 1000x330 in both themes (24 combinations): resumed copy progress and guidance remained consistent, 452px lab panes fit, and no page/aside overflow appeared. In the short lab, keyboard scrolling kept the aside above the actual bar; warning changes measured 71/99px clearance for roughly 70/98px bars. API writes were disabled; only disposable local check drafts changed. Mouse/default DPR and keyboard only; actual touch/Safari/device acceptance remains open. No live database/records, downloads or Forge games. The source audit still flags only pre-existing `tokens.js` (1,516 lines).
+
+Remaining: dense Receive rows/checkboxes, explicit row-count badge wording, editing and final Record-bar presentation. The unchanged post-record destination renderer still conflates unavailable data with storage; its separate correction follows this frame.
+
 ## Focused delivery Receive shortcut (2026-10-25; E11-S30 slice 12)
 
 With a delivery summary focused, R opens that delivery's Receive page. Enter and Space retain native expansion. The shortcut rechecks attachment, route/profile/root, current order identity, pending parts and current receipts permission; busy/stale, composing/repeated/modifier input and child-control events cannot navigate. It does not read or record an arrival. A linked screen-reader description explains the action separately from expansion; the R hint is visible only with fine hover input.

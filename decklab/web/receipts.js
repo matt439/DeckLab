@@ -108,8 +108,9 @@ function rcptNotesWithout(notes, test) {
 /** The delivery for a visitor who can't record arrivals (only an admin can): the same tiles, read only. A tap
  * opens the card viewer over the component's tiles. */
 function drawReceiptReadOnly(view, data) {
+  view.readOnly = true;
   setTitle(`${routeFor("receipt").title}: ${data.seller || data.order}`);
-  add(view.root, [rcptHead(data, "Delivery"),
+  add(view.root, [rcptHead(data, "Delivery", view),
     el("p", { class: "note receipt-read-only", text: "Only an admin can record a delivery's arrival, so this is read only." })]);
   data.components.forEach((c, index) => {
     const comp = rcptMakeComp(view, c, index);
@@ -128,23 +129,6 @@ function drawReceiptReadOnly(view, data) {
   });
   $("#main").append(view.root);
   return view;
-}
-
-/** The page's head: the crumb back to Shopping, the title, who sent it and when, and the order's notes (two lines
- * with More). */
-function rcptHead(data, title) {
-  const notes = data.notes ? el("p", { class: "rcpt-notes", text: data.notes }) : null;
-  const more = notes && data.notes.length > 140 ? el("button", { type: "button", class: "btn btn-quiet btn-inline rcpt-more",
-    "aria-expanded": "false", text: "More", onclick: (e) => {
-      const open = notes.classList.contains("is-open");
-      notes.classList.toggle("is-open", !open);
-      e.currentTarget.setAttribute("aria-expanded", String(!open));
-      e.currentTarget.textContent = open ? "More" : "Less";
-    } }) : null;
-  const sent = [data.seller || "Seller not recorded", data.ordered_on ? `ordered ${rcptDate(data.ordered_on)}` : null]
-    .filter(Boolean).join(" · ");
-  return [...pageHead({ crumb: ["#/shopping", routeFor("shopping").label], title: title || routeH1("receipt"),
-    description: sent }), notes, more];
 }
 
 /** A component's heading in plain words: "15 cards from Example Games", "13 token cards", "Goblin Horde (product)";
@@ -166,7 +150,7 @@ function drawReceipt(data, token) {
   if (!mayDo("receipts")) return drawReceiptReadOnly(view, data);
   setTitle(`${routeFor("receipt").title}: ${data.seller || data.order}`);
   const pending = data.components.filter((c) => c.status === "pending");
-  add(view.root, [rcptHead(data)]);
+  add(view.root, [rcptHead(data, null, view)]);
   if (!pending.length) {
     view.root.append(el("div", { class: "empty" }, el("p", { text: "Everything in this order has arrived." }),
       el("a", { class: "btn btn-primary", href: "#/shopping", text: "Back to Shopping" })));
@@ -182,7 +166,7 @@ function drawReceipt(data, token) {
     view.comps.push(comp);
   }
   view.board = el("div", { class: "rcpt-board" });
-  view.root.append(view.board);
+  rcptBuildLayout(view);
   const done = data.components.filter((c) => c.status !== "pending");
   if (done.length) {
     view.root.append(el("p", { class: "sub rcpt-done", text: `Already dealt with: ${done.map((c) =>
@@ -196,6 +180,7 @@ function drawReceipt(data, token) {
   rcptOfferDraft(view);
   $("#main").append(view.root);
   rcptSync(view);
+  rcptWatchBar(view);
   return view;
 }
 

@@ -118,6 +118,7 @@ function rcptSync(view) {
   view.primary.disabled = view.busy || view.reloadRequired || !any;
   const changed = view.preview && view.preview.key !== rcptRequestKey(view);
   view.stale.textContent = changed ? " · Changed since preview, preview again" : "";
+  rcptSyncLayout(view, p);
 }
 
 /** After any change: the bar, the draft, and the preview marked out of date. */
