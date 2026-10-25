@@ -1,12 +1,13 @@
 """Built decks reserving their token cards: the Token cards line (lib/decks/tokencards.py), how it's
 shared out over a space's rows (lib/tokens/reserve.py), what other decks then see (deck_tokens'
 held, row_uses' in_use, shared_rows), the deck page's Packed part and POST /api/deck/token-cards,
-and taking a deck apart dropping the line."""
+and taking a deck apart dropping the line; and the Tokens page's plan of every built deck's line
+(lib/tokens/optimise.py, GET/POST /api/tokens/plan)."""
 import unittest
 from unittest import mock
 
 from decklab.lib import cards, decks, inventory, tokens
-from decklab.lib.api import deck_page, token_cards
+from decklab.lib.api import deck_page, token_cards, token_plan
 from decklab.lib.api.common import ApiError
 from decklab.lib.decks import assembled
 from decklab.lib.decks.decklist import DeckFileError
@@ -171,6 +172,80 @@ class ReservationTests(TokensApiTestCase):
         kept = decks.parse_deck(built("D Deck", packed="").encode(), "d", "casual")
         packing.fill(kept, decks.load_deck("casual/a"))
         self.assertEqual(kept.get_field("Token cards"), "")  # a line already there is kept
+
+
+
+class PlanTests(ReservationTests):
+    """The plan over ROWS: Angel // The Monarch ×1, Insect // Goblin ×1, Zombie // Zombie Knight ×8."""
+
+    def setUp(self):
+        super().setUp()
+        patcher = mock.patch.object(token_plan, "_writer",
+                                    lambda data: {"id": data.get("profile"), "name": "Matt", "role": "admin"})
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def plan(self):
+        return {d["id"]: d for d in token_plan.plan_view()["decks"]}
+
+    def test_one_each_then_the_spares_shared_out(self):
+        self.write("decks/casual/a.md", built("A Deck"))
+        self.write("decks/casual/b.md", built("B Deck", packed="8 Zombie // Zombie Knight"))
+        self.write("decks/casual/c.md", built("C Deck", deck="1 Hornet Queen\n"))
+        plan = self.plan()
+        self.assertEqual(sorted(plan), ["casual/a", "casual/b", "casual/c"])     # the building Queen Deck isn't in it
+        self.assertEqual((plan["casual/a"]["after"], plan["casual/a"]["spares"]), ("4 Zombie // Zombie Knight", 3))
+        self.assertEqual((plan["casual/b"]["before"], plan["casual/b"]["after"]),
+                         ("8 Zombie // Zombie Knight", "4 Zombie // Zombie Knight"))
+        self.assertEqual(plan["casual/a"]["lines"], [{"text": "4 Zombie // Zombie Knight",
+                                                      "sides": ["Zombie side only, can be sleeved"]}])
+        self.assertEqual(plan["casual/a"]["packs"], [{"token": "Zombie", "card": "Zombie / Zombie Knight",
+                                                      "side": "front", "verdict": "check"}])
+        # Hornet Queen's Insect has deathtouch; the only Insect card says it hasn't: a stand-in.
+        self.assertEqual(plan["casual/c"]["packs"][0]["verdict"], "differs")
+        self.assertEqual(plan["casual/c"]["after"], "1 Insect // Goblin")
+
+    def test_both_faces_and_shortfalls(self):
+        self.write("tokens.csv", self.csv_text().replace("Angel,The Monarch,,,,,1,", "Angel,The Monarch,,,,,2,"))
+        self.write("decks/casual/court.md", built("Court", deck="1 Court of Grace\n"))
+        court = self.plan()["casual/court"]
+        self.assertEqual(court["after"], "2 Angel // The Monarch")
+        self.assertEqual(court["lines"][0]["sides"], ["both sides used"])
+        self.assertEqual(court["short"], ["Spirit"])
+        # Only one card: one of the two is short.
+        self.write("tokens.csv", self.csv_text().replace("Angel,The Monarch,,,,,2,", "Angel,The Monarch,,,,,1,"))
+        court = self.plan()["casual/court"]
+        self.assertEqual((court["after"], len(court["short"])), ("1 Angel // The Monarch", 2))
+
+    def test_single_sided_cards_go_first(self):
+        self.write("tokens.csv", self.csv_text() + "Zombie,,,,,,1,,,single-sided verified\n")
+        self.write("decks/casual/a.md", built("A Deck"))
+        self.write("decks/casual/b.md", built("B Deck"))
+        plan = self.plan()
+        self.assertEqual([p["card"] for p in plan["casual/a"]["packs"]], ["Zombie"])
+        self.assertEqual([p["card"] for p in plan["casual/b"]["packs"]], ["Zombie / Zombie Knight"])
+
+    def test_apply_saves_every_line_once(self):
+        self.write("decks/casual/a.md", built("A Deck"))
+        self.write("decks/casual/b.md", built("B Deck"))
+        view = token_plan.plan_view()
+        self.assertEqual(view["changes"], 2)
+        answer = self.call(token_plan.apply_plan, sha256=view["sha256"])
+        self.assertEqual(answer, {"saved": 2, "decks": ["casual/a", "casual/b"]})
+        saved = decks.parse_deck(inventory.current().deck("casual/a").text.encode(), "a", "casual")
+        self.assertEqual(decks.token_cards(saved), [Line(4, "Zombie", "Zombie Knight")])
+        with self.assertRaises(ApiError) as caught:             # the decks changed since that preview
+            self.call(token_plan.apply_plan, sha256=view["sha256"])
+        self.assertEqual(caught.exception.status, 409)
+        again = token_plan.plan_view()
+        self.assertEqual(again["changes"], 0)
+        self.assertEqual(self.call(token_plan.apply_plan, sha256=again["sha256"]), {"saved": 0, "decks": []})
+        with mock.patch.object(token_plan.guard, "allowed", lambda *a, **k: False):
+            self.write("decks/casual/a.md", built("A Deck", packed=""))
+            with self.assertRaises(ApiError) as caught:
+                self.call(token_plan.apply_plan, sha256=token_plan.plan_view()["sha256"])
+            self.assertEqual((caught.exception.status, str(caught.exception)),
+                             (403, "You can't change A Deck's token cards."))
 
 
 if __name__ == "__main__":

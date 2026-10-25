@@ -10,7 +10,7 @@ and accessory saves with a local picture (accessories.MAX_SAVE_BODY).
 
 def dispatch(handler, route, query):
     from decklab.lib.api import (accessories, activity, assembly, assembly_completion, assembly_standins, assembly_ticks, collection, collection_edit, cover, editor, history,
-                                 library_forge, opponents, play_records, precons, products, rankings, receipts, rename, retirement, shopping, shopping_order_changes, shopping_orders, shopping_queue, swaps, token_cards, tokens, visits)
+                                 library_forge, opponents, play_records, precons, products, rankings, receipts, rename, retirement, shopping, shopping_order_changes, shopping_orders, shopping_queue, swaps, token_cards, token_plan, tokens, visits)
     from decklab.lib.api.common import MAX_BODY
 
     gets = {
@@ -37,6 +37,7 @@ def dispatch(handler, route, query):
         ("product",): (products.product_state, ("stem",)),
         ("accessories",): (accessories.accessories_view, ()),
         ("tokens",): (tokens.tokens_view, ("space",)),
+        ("tokens", "plan"): (token_plan.plan_view, ("space",)),
         ("activity",): (activity.activity_view, ("before", "limit", "kind", "actor")),
         ("visits",): (visits.visits_view, ("days", "who")),
     }
@@ -61,6 +62,7 @@ def dispatch(handler, route, query):
         ("accessories", "save"): (accessories.save_accessory, accessories.MAX_SAVE_BODY),
         ("accessories", "assign"): accessories.assign_accessory,
         ("tokens", "save"): tokens.save_token,
+        ("tokens", "plan"): token_plan.apply_plan,
         ("collection", "save"): collection_edit.save_card,
         ("collection", "bulk"): (collection_edit.bulk_set, collection_edit.MAX_BULK_BODY),
         ("collection", "import", "preview"): (collection_edit.import_preview, collection_edit.MAX_IMPORT_BODY),

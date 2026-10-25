@@ -647,7 +647,8 @@ function drawTokens(data, token, space = HOME_SPACE) {
       description: "Token and reminder cards. A double-sided card counts once.",
       primary: view.canEdit ? el("button", { type: "button", class: "btn btn-primary tok-mutate", text: "Add a token card",
         "data-focus": "add", onclick: () => addToken(view) }) : null,
-      more: [{ label: "Refresh", onclick: () => refreshTokens(view) }] }),
+      more: [view.canEdit ? { label: "Plan packed token cards…", onclick: () => openTokenPlan(view) } : null,
+        { label: "Refresh", onclick: () => refreshTokens(view) }] }),
     tokSpacePicker(space),
     unsupported ? el("p", { class: "box box-info", text: `${spaceName(space)}'s tokens can't be shown until Deck Lab's server is updated.` })
       : !view.canEdit ? el("p", { class: "sub tok-read-only", text: space === HOME_SPACE
@@ -969,6 +970,75 @@ async function refreshTokens(view) {
   } finally {
     if (tokensActive(view)) setTokensBusy(view, false);
   }
+}
+
+/** "Plan packed token cards": every built deck's Token cards line worked out at once (GET /api/tokens/plan,
+ * lib/tokens/optimise.py: one card for each token a deck makes, the best match going furthest, then the
+ * spare cards shared out), each deck's line now and as planned, and Apply, which saves them all as one
+ * change (POST /api/tokens/plan with the preview's sha256: 409 when anything changed since). */
+function openTokenPlan(view) {
+  if (!tokensActive(view) || view.busy || !view.canEdit) return null;
+  const sheet = openSheet({ title: "Plan packed token cards", wide: true });
+  const path = `/api/tokens/plan${view.space && view.space !== HOME_SPACE ? `?space=${encodeURIComponent(view.space)}` : ""}`;
+  const load = () => {
+    clear(sheet.body).append(loadingBox("Working out the plan…"));
+    sheetActions(sheet, [{ text: "Cancel", onclick: () => sheet.close() }]);
+    return api(path).then((plan) => { if (!sheet.closed) tokPlanShow(view, sheet, plan, load); })
+      .catch((e) => {
+        if (!(e instanceof ApiError) || sheet.closed) throw e;
+        clear(sheet.body).append(errorBox("The plan couldn't be worked out", e, null));
+      });
+  };
+  load();
+  return sheet;
+}
+
+/** One built deck in the plan: its line as it is and as planned, the face each token gets, and what's short. */
+function tokPlanDeck(deck) {
+  const verdict = { check: " (details not recorded)", differs: " (a stand-in: tell your opponent)" };
+  const lines = (deck.lines || []).map((line) => line.text + (line.sides && line.sides.length ? ` (${line.sides.join("; ")})` : ""));
+  return el("li", { class: `tok-plan-deck${deck.changed ? " tok-plan-changed" : ""}` },
+    el("p", {}, el("b", { text: deck.title }), deck.changed ? null : el("span", { class: "sub", text: " (no change)" })),
+    el("p", { text: `Packs: ${lines.length ? lines.join("; ") : "no token cards"}` }),
+    deck.changed ? el("p", { class: "sub", text: `Now: ${deck.before === null ? "not recorded" : deck.before || "no token cards"}` }) : null,
+    (deck.packs || []).length ? el("ul", { class: "pack-plain" }, deck.packs.map((p) =>
+      el("li", { text: `${p.token}: ${p.card}${verdict[p.verdict] || ""}` }))) : null,
+    deck.spares ? el("p", { class: "sub", text: `${plural(deck.spares, "spare card")} shared out to it` }) : null,
+    (deck.short || []).length ? el("p", { class: "box box-warn", text: `No card left for ${deck.short.join(", ")}` }) : null);
+}
+
+function tokPlanShow(view, sheet, plan, reload) {
+  const decks = plan.decks || [];
+  const blocked = decks.filter((d) => d.changed && !d.editable);
+  clear(sheet.body).append(
+    el("p", { class: "sub", text: "One card for each token every built deck makes, chosen across all of them so your cards go "
+      + "as far as they can, then the spare cards shared out. A card a deck uses only one side of can be sleeved." }),
+    decks.length ? el("ul", { class: "pack-plain tok-plan" }, decks.map(tokPlanDeck))
+      : el("p", { text: "There are no built decks to plan for." }),
+    warningsBox(plan.warnings || [], "Worth checking") || "",
+    blocked.length ? el("p", { class: "box box-warn", text: `You can't change ${blocked.map((d) => d.title).join(" and ")}, so the plan can't be applied.` }) : "");
+  const message = el("p", { class: "box box-crit", hidden: true });
+  sheet.body.append(message);
+  const apply = () => {
+    sheetActions(sheet, [{ text: "Applying…", disabled: true }]);
+    apiWrite("/api/tokens/plan", tokBody(view, { sha256: plan.sha256 }))
+      .then((answer) => {
+        sheet.close();
+        toast(answer.saved ? `Packed token cards saved for ${plural(answer.saved, "deck")}` : "Nothing to change");
+        refreshTokens(view);
+      })
+      .catch((e) => {
+        if (!(e instanceof ApiError)) throw e;
+        if (e.status === 409) return reload().then(() => { if (!sheet.closed) { message.textContent = e.message; message.hidden = false; sheet.body.append(message); } });
+        message.textContent = e.message;
+        message.hidden = false;
+        tokPlanActions();
+      });
+  };
+  const tokPlanActions = () => sheetActions(sheet, [{ text: "Cancel", onclick: () => sheet.close() },
+    { text: plan.changes ? `Apply to ${plural(plan.changes, "deck")}` : "Nothing to change", kind: "primary", value: "apply",
+      disabled: !plan.changes || blocked.length > 0, onclick: apply }]);
+  tokPlanActions();
 }
 
 function addToken(view) {

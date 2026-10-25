@@ -2,6 +2,16 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Plan packed token cards (2026-10-25)
+
+Matt asked for a tool that optimises the token cards across every built deck. The Tokens page's More now has **Plan packed token cards…**. It shows each built deck's Token cards line as it is and as planned, with the card each token gets, the faces used ("can be sleeved"), the spares it got and the tokens left short. **Apply** then saves them all as one change (`deck.token_cards`, all or none).
+
+- **The plan** (`lib/tokens/optimise.py`): a minimum-cost maximum flow over every built deck's needs (`deck_tokens` with every row free) and the space's rows. As many tokens as possible get a card. Ties go first to the better match (exact or agrees, then check, then a stand-in that differs), then to the card the deck already packs, then to a single-sided card, which leaves double-sided cards for the decks that use both faces.
+- **The spares** (Matt's choice: one each, then share spares): each row's leftover cards are dealt one at a time, in id order, round the decks given that row. A row nobody was given goes round the decks it would serve.
+- **The API:** `GET /api/tokens/plan[?space=]` and `POST /api/tokens/plan {sha256}` (`lib/api/token_plan.py`). The apply works the plan out again and refuses (409) unless it matches the preview. It needs `deck.edit` on every deck it changes.
+- **Not done:** intact products still pack no token cards. The plan can't be tuned per deck: change a count on the deck page afterwards (a later plan resets it). Not checked in a browser.
+- **Tests:** `PlanTests` in `test_token_reservation`, plus a UI test in `test_feature_ui_tokens`.
+
 ## One side or both of a token card (2026-10-25)
 
 Matt sleeves a double-sided token card when a deck needs only one of its faces, and leaves it bare when both are needed. The pages now say which (`tokens.js` `tokFacesUsed` and `tokSides`, worked out on the page from the deck's `deck_tokens` needs, so the server's answers are unchanged):

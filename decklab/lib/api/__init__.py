@@ -171,6 +171,8 @@ called as before (from decklab.lib import api; api.<name>). Each part:
                      deck.save). Imported when first asked (feature_routes.dispatch)
     token_cards.py   POST /api/deck/token-cards: save_token_cards() sets a built deck's Token
                      cards line, the token cards it packs (one deck.save). Imported when first asked
+    token_plan.py    GET/POST /api/tokens/plan: plan_view(), apply_plan(), every built deck's Token cards
+                     line planned at once (lib/tokens/optimise.py), saved as one deck.token_cards
     shopping.py      shopping_overview(): the purchase queue, orders and checks (home's), and
                      resolve_check() (POST /api/shopping/check: a received delivery's check marked done)
     shopping_queue.py POST /api/shopping/queue: save_queue_state(), moving one queued card

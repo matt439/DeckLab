@@ -265,15 +265,35 @@ def create(inv, *, space, kind, slug, text, owners=frozenset()):
 def update_tables(inv, *, items):
     """Several decks' texts replaced at once, or none (DeckRefused listing every deck that
     changed since it was read, or is gone)."""
+    out, done = _save_many(inv, "deck.update_tables", "the tables were worked out", items, "table")
+    if not done:
+        return inv, Summary("Nothing to change")
+    return out, Summary(f"Updated the tables of {len(done)} deck{'s' if len(done) != 1 else ''}",
+                        {"decks": len(done)}, done)
+
+
+@register("deck.token_cards")
+def token_cards(inv, *, items):
+    """Several built decks' texts replaced at once with new Token cards lines (the Tokens page's
+    plan, lib/api/token_plan.py), or none, as deck.update_tables."""
+    out, done = _save_many(inv, "deck.token_cards", "the token cards were planned", items, "token cards")
+    if not done:
+        return inv, Summary("Nothing to change")
+    return out, Summary(f"Packed token cards in {len(done)} deck{'s' if len(done) != 1 else ''}",
+                        {"decks": len(done)}, done)
+
+
+def _save_many(inv, kind, when, items, field):
+    """(inventory, {path: [field]}): items ([{id, text, base_sha256}]) saved one after another,
+    each as deck.save would, refusing all of them when one changed since `when` or is gone."""
     ids = [item["id"] for item in items]
     twice = sorted({i for i in ids if ids.count(i) > 1})
     if twice:
-        raise Invalid(f"deck.update_tables names {', '.join(twice)} more than once")
+        raise Invalid(f"{kind} names {', '.join(twice)} more than once")
     changed = [item["id"] for item in items
                if inv.decks.get(item["id"]) is None or inv.decks[item["id"]].sha256 != item.get("base_sha256")]
     if changed:
-        raise DeckRefused(f"{', '.join(changed)} changed after the tables were worked out.", 409, "changed",
-                          changed)
+        raise DeckRefused(f"{', '.join(changed)} changed after {when}.", 409, "changed", changed)
     out, done = inv, {}
     for item in items:
         deck = _current(out, item["id"], item.get("base_sha256"))
@@ -283,11 +303,8 @@ def update_tables(inv, *, items):
         if text != deck.text:
             same_kit(deck.id, before, parsed)
             out = out.with_deck(deck.replace(text=text))
-            done[deck.path] = ["table"]
-    if not done:
-        return inv, Summary("Nothing to change")
-    return out, Summary(f"Updated the tables of {len(done)} deck{'s' if len(done) != 1 else ''}",
-                        {"decks": len(done)}, done)
+            done[deck.path] = [field]
+    return out, done
 
 
 @register("deck.delete")
