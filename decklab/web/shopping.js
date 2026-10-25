@@ -690,8 +690,13 @@ function shopSection(id, title, count, description, ...content) {
 function drawShopping(data) {
   if (typeof noteDeliveries === "function") noteDeliveries(data);     // the top bar's badge (shell.js)
   if (!data.to_buy) data.to_buy = [];
-  const view = { data, expanded: new Set(), queuePresentations: [], busy: false, stale: false, root: null, redraw: null,
+  const view = { data, expanded: new Set(), queuePresentations: [], queueOrder: "state", busy: false, stale: false, root: null, redraw: null,
     token: routeToken, profile: state.profile && state.profile.id };
+  view.addButton = mayDo("orders") && data.queue_revision ? el("button", { type: "button",
+    class: `btn ${isAdminProfile() ? "" : "btn-primary "}shop-queue-add shop-queue-write`,
+    "aria-label": "Add card to the purchase queue", onclick: () => shopQueueSheet(view) },
+    el("span", {class: "shop-queue-add-label", text: "Add card"})) : null;
+  view.addHome = view.addButton ? el("span", {class: "shop-add-home"}, view.addButton) : null;
   const queue = data.to_buy || [], orders = data.orders || [], checks = data.checks || [];
   const waiting = orders.filter((order) => (order.components || []).some((c) => c.status === "pending"));
   const history = orders.filter((order) => !waiting.includes(order));
@@ -723,6 +728,8 @@ function drawShopping(data) {
   const sideNode = el("div", { class: "shop-side shop-detail-pane" }, matchSlot, buySlot, missingSlot, deckSlot, longSlot);
   // Redraw only buying controls and their counts. Deliveries and pending follow-up Undo keep their nodes.
   view.redraw = () => {
+    shopReturnQueueAdd(view);
+    view.queueControls = view.queueAddSlot = null;
     view.queuePresentations = [];
     shopNormalizeChoice(view);
     const immediate = queue.filter((card) => card.state !== "long_term");
@@ -732,7 +739,7 @@ function drawShopping(data) {
     clear(buySlot);
     if (immediate.length) buySlot.append(shopSection("shop-to-buy", "To buy", immediate.length,
       "Cards we've decided to buy. Prices are the lowest seen when checked, not live stock.",
-      shopQueueGroups(immediate, view)));
+      shopQueueControls(view), shopQueueGroups(immediate, view)));
     clear(deckSlot);
     if (decks.length) deckSlot.append(shopSection("shop-decks", "Decks still missing cards", decks.length,
       "Not a shopping list: open a deck to see its missing cards and decide what to buy.", shopDecksMissing(decks, planned)));
@@ -768,8 +775,7 @@ function drawShopping(data) {
       primary: mayDo("orders") && data.queue_revision ? [
         isAdminProfile() ? el("button", { type: "button", class: "btn btn-primary shop-order-add shop-queue-write",
           text: "New order", onclick: () => shopOrderSheet(view) }) : null,
-        el("button", { type: "button", class: `btn ${isAdminProfile() ? "" : "btn-primary "}shop-queue-add shop-queue-write`,
-          text: "Add card", onclick: () => shopQueueSheet(view) }),
+        view.addHome,
       ] : null,
       more: [{ label: routeFor("wishlist").label, href: "#/wishlist" }, { label: "Refresh", onclick: () => route() }] }),
     warningsBox(data.warnings, "Some shopping records need attention"),
@@ -786,7 +792,9 @@ function drawShopping(data) {
     redraw();
     if (!emptyBox.hidden) layout.remove();
     else if (!layout.parentNode) layoutSlot.append(layout);
+    shopSyncQueueControls(view);
   };
+  shopSyncQueueControls(view);
   shopWatchQueueDensity(view);
   return view;
 }

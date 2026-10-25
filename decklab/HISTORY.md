@@ -2,6 +2,12 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Casual Shopping grouping and single Add control (2026-10-25; E11-S30 slice 12)
+
+To buy now has functional By state/By shop controls at casual density. Grouping moves the original immediate rows and their viewers, research and guarded actions; shop grouping preserves each row's saved category and explicitly names unchecked shops. Matching marks and Long-term deck grouping/reveal stay independent. The lab retains state tables and restores the casual choice on return. The one existing Add button moves between a 44px round casual control and its header position, preserving permissions, busy state, open sheets and focus. New order remains the admin view's one primary.
+
+Validation: 207 targeted Shopping/shared UI/source checks passed. The required scale check caught zero-font hiding in the initial round Add style; the final code uses the shared visually hidden label instead. Synthetic Chromium checked 24 viewport/theme combinations with all eight rows/17 copies, one Add node, retained shop preference, expected lab groups and no overflow. Native Enter/Space, actual Add-sheet close and viewer close focus survived density changes. Save/move/remove/conflict and delayed reprint retention are fixture-test evidence; all browser API writes were disabled. No actual queue/database writes, downloads or Forge games. Mouse/default DPR and keyboard only; coarse/touch/Safari/device acceptance stays open. The source audit still fails only on pre-existing `tokens.js` (1,516 lines).
+
 ## Shopping Planned deck swatches and optional identity data (2026-10-25; E11-S30 slice 12)
 
 Shopping's linked queue rows and Long-term deck headings now show optional canonical Planned/library identity swatches. Visible home choices are checked before reading target lists, with one request-local lookup per id and no library/Play-now fallback. Unknown identities omit the decoration; known colourless keeps its neutral swatch. Add uses current permitted choices, and colour metadata stays outside canonical queue fields, requests and revisions.

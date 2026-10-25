@@ -142,6 +142,7 @@ function shopQueueTableRecord(card, casual, showFor, view) {
 function shopQueuePresentation(groups, view, {showFor = true, group = "to-buy", headings = true} = {}) {
   const holder = el("div", {class: "shop-queue-presentation", tabindex: "-1", role: "group", "aria-label": "Purchase queue"});
   const cards = el("div", {class: headings ? "shop-queue-groups" : "shop-rows"});
+  const shopCards = el("div", {class: "shop-queue-groups shop-queue-by-shop"});
   const headers = [["name", "Card"], ["printing", "Printing"], ...(showFor ? [["for", "For"]] : []),
     ["qty", "Qty"], ["price", "Ref AUD"], ["shop", "Shop"], ["stock", "Stock"], ["checked", "Checked"], ["actions", "Actions"]];
   const table = el("table", {class: `data shop-queue-table${showFor ? "" : " shop-queue-no-for"}`},
@@ -149,7 +150,8 @@ function shopQueuePresentation(groups, view, {showFor = true, group = "to-buy", 
     el("thead", {}, el("tr", {}, headers.map(([key, text]) => el("th", {scope: "col", class: `shop-q-head-${key}`,
       "aria-label": key === "stock" ? "Stock when checked" : null, text})))));
   const wrap = el("div", {class: "shop-queue-table-wrap", tabindex: "0", role: "region", "aria-label": "Purchase queue table, scroll for more columns"}, table);
-  let lab = null;
+  let lab = null, order = null;
+  const savedOrder = new Map((view.data.to_buy || []).map((card, index) => [card, index]));
   const records = [], destinations = [];
   for (const [key, title, rows] of groups) {
     const list = headings ? el("div", {class: "shop-rows"}) : cards;
@@ -164,7 +166,9 @@ function shopQueuePresentation(groups, view, {showFor = true, group = "to-buy", 
   const addRows = (rows, destination = destinations[0]) => {
     for (const card of rows) {
       const casual = shopQueueRow(card, group, showFor, view, false, headings);
-      const record = {...shopQueueTableRecord(card, casual, showFor, view), destination};
+      const category = headings ? el("span", {class: "shop-queue-category", hidden: true}) : null;
+      if (category) casual.querySelector(".shop-queue-research").append(category);
+      const record = {...shopQueueTableRecord(card, casual, showFor, view), destination, card, category};
       records.push(record);
       if (lab != null) {
         record.project(lab);
@@ -173,9 +177,19 @@ function shopQueuePresentation(groups, view, {showFor = true, group = "to-buy", 
     }
   };
   for (const destination of destinations) addRows(destination.rows, destination);
+  const shops = new Map();
+  if (headings) {
+    const names = [...new Set(records.map(record => shopQueueShop(record.card)))].sort((a, b) => a ? b ? a.localeCompare(b) : -1 : 1);
+    for (const name of names) {
+      const list = el("div", {class: "shop-rows"}), count = records.filter(record => shopQueueShop(record.card) === name).length;
+      shops.set(name, list);
+      shopCards.append(el("section", {class: "shop-queue-group shop-queue-shop-group", "data-queue-shop": name},
+        el("h3", {}, name || "Not checked at any shop", el("span", {class: "shop-group-count", text: ` \u00b7 ${plural(count, "row")}`})), list));
+    }
+  }
   const project = () => {
-    const next = shopQueueLab();
-    if (next === lab) return;
+    const next = shopQueueLab(), nextOrder = !next && headings && view.queueOrder === "shop" ? "shop" : "state";
+    if (next === lab && nextOrder === order) return;
     const active = document.activeElement, focus = holder.contains(active) ? active : null;
     const focusRecord = records.find(record => record.casual.contains(focus) || record.tr.contains(focus) || record.extra?.contains(focus));
     const menuButton = focus?.closest?.(".shop-queue-actions")?.querySelector(".shop-category-move");
@@ -186,11 +200,21 @@ function shopQueuePresentation(groups, view, {showFor = true, group = "to-buy", 
       if (destination.heading) destination.body.append(destination.heading);
       for (const record of records.filter(item => item.destination === destination)) {
         record.project(next);
-        if (next) add(destination.body, [record.tr, record.extra]); else shopQueuePut(destination.list, record.casual);
+        if (record.category) {
+          record.category.hidden = nextOrder !== "shop";
+          record.category.textContent = nextOrder === "shop" ? SHOPPING_STATES[record.card.state] || `State: ${record.card.state || "not recorded"}` : "";
+        }
+        if (next) add(destination.body, [record.tr, record.extra]);
+        else if (nextOrder === "state") shopQueuePut(destination.list, record.casual);
       }
     }
-    holder.append(next ? wrap : cards);
+    if (nextOrder === "shop") {
+      const saved = [...records].sort((a, b) => savedOrder.get(a.card) - savedOrder.get(b.card));
+      for (const record of saved) shopQueuePut(shops.get(shopQueueShop(record.card)), record.casual);
+    }
+    holder.append(next ? wrap : nextOrder === "shop" ? shopCards : cards);
     lab = next;
+    order = nextOrder;
     const target = focus?.closest?.(".menu") ? menuButton : focus?.isConnected ? focus : focusRecord?.trigger || (focus ? holder : null);
     if (target?.isConnected) shopQueueFocus(target);
   };
@@ -199,6 +223,57 @@ function shopQueuePresentation(groups, view, {showFor = true, group = "to-buy", 
   project();
   wrap.addEventListener("scroll", () => { if (wrap.isConnected) closeMenus(); });
   return holder;
+}
+
+/** A view-local order choice: the same immediate purchase intent, not a filter or a new shop check. */
+function shopQueueControls(view) {
+  const slot = el("span", {class: "shop-add-casual"});
+  const choices = el("div", {class: "segmented", role: "group", "aria-label": "Group immediate purchase queue"},
+    [["state", "By state"], ["shop", "By shop"]].map(([value, text]) => el("button", {type: "button", text,
+      "data-queue-order": value, "aria-pressed": String((view.queueOrder || "state") === value), onclick: event => {
+        if (!event.currentTarget.isConnected || !shopQueueActive(view) || shopQueueLab() || view.queueOrder === value) return;
+        const chipFocused = view.matchSlot.contains(document.activeElement);
+        view.queueOrder = value;
+        view.queuePresentations.forEach(project => project());
+        shopApplyMatches(view);
+        shopSyncQueueControls(view);
+        if (chipFocused) view.matchSlot.querySelector("button")?.focus({preventScroll: true});
+      }})));
+  view.queueAddSlot = slot;
+  return view.queueControls = el("div", {class: "shop-queue-controls", hidden: shopQueueLab()}, choices, slot);
+}
+
+/** Return the single Add node before a write redraw removes its temporary casual parent. */
+function shopReturnQueueAdd(view) {
+  if (view.addButton && view.addHome && view.addButton.parentNode !== view.addHome) {
+    view.queueAddFocused = document.activeElement === view.addButton;
+    shopQueuePut(view.addHome, view.addButton);
+  }
+}
+
+/** Move Add only after layout mounting, retaining its current disabled state and original sheet handler. */
+function shopSyncQueueControls(view) {
+  if (!view.root || !shopQueueActive(view)) return;
+  const active = document.activeElement, lab = shopQueueLab();
+  const groupFocused = view.queueControls?.contains(active) && active !== view.addButton;
+  if (view.queueControls) {
+    view.queueControls.hidden = lab;
+    for (const button of view.queueControls.querySelectorAll("[data-queue-order]"))
+      button.setAttribute("aria-pressed", String(button.getAttribute("data-queue-order") === (view.queueOrder || "state")));
+  }
+  if (view.addButton) {
+    const round = !lab && view.queueAddSlot?.isConnected;
+    const target = round ? view.queueAddSlot : view.addHome;
+    view.addButton.classList.toggle("shop-queue-add-round", Boolean(round));
+    view.addButton.querySelector(".shop-queue-add-label")?.classList.toggle("sr-only", Boolean(round));
+    if (target && view.addButton.parentNode !== target) shopQueuePut(target, view.addButton);
+    if ((active === view.addButton || view.queueAddFocused) && view.addButton.isConnected) view.addButton.focus({preventScroll: true});
+    view.queueAddFocused = false;
+  }
+  if (lab && groupFocused) {
+    const heading = view.root.querySelector("#shop-to-buy");
+    heading?.setAttribute("tabindex", "-1"); heading?.focus({preventScroll: true});
+  }
 }
 
 /** Focus a newly saved row's visible control, including columns scrolled out of its table viewport. */
@@ -228,6 +303,7 @@ function shopWatchQueueDensity(view) {
     const chipFocused = view.matchSlot.contains(document.activeElement);
     view.queuePresentations.forEach(project => project());
     shopApplyMatches(view);
+    shopSyncQueueControls(view);
     if (chipFocused) view.matchSlot.querySelector("button")?.focus({preventScroll: true});
   };
   shopQueueDensityStop = stop;

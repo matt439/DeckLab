@@ -6,6 +6,17 @@
 .shop-section { min-width: 0; }
 .shop-page > .shop-section { margin-top: var(--s-6); }
 .shop-queue-slot:empty { display: none; }
+.shop-add-home { display: contents; }
+.shop-add-home:empty, .shop-add-casual:empty { display: none; }
+.shop-queue-controls { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--s-3); margin-bottom: var(--s-3); }
+.shop-queue-controls[hidden] { display: none; }
+.shop-queue-controls .segmented { width: 100%; max-width: 400px; min-width: 0; }
+.shop-queue-controls .segmented > button { flex: 1 1 0; min-width: 0; min-height: 44px; }
+.shop-queue-add-round { width: 44px; min-width: 44px; min-height: 44px; padding: 0; }
+.shop-queue-add-round::before { content: "+"; font: var(--fw-bold) var(--fs-row) / 1 var(--font); }
+.shop-queue-category { color: var(--ink-2); font-weight: var(--fw-bold); }
+.shop-queue-category[hidden] { display: none; }
+.shop-queue-shop-group > h3 { overflow-wrap: anywhere; }
 .shop-section-head { display: flex; align-items: center; gap: var(--s-3); margin-bottom: var(--s-2); }
 .shop-section-head h2 { margin: 0; font-size: var(--fs-lg); }
 .shop-count {
