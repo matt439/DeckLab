@@ -63,8 +63,9 @@ def database_files(dbname=None):
         found = export.inventory_files(c)
         c.rollback()
     if found is None:
-        raise ValueError("the database holds no inventory: restore the newest backup first "
-                         "(a decklab-*.dump from the NAS or decklab/data/backups/, with pg_restore)")
+        raise ValueError("the database holds no inventory: on a new install, run python -m decklab.db setup; "
+                         "otherwise restore the newest backup first (a decklab-*.dump from the backup "
+                         "folder or decklab/data/backups/, with pg_restore)")
     return found
 
 
@@ -83,7 +84,7 @@ def status_line(dbname=None):
     except ValueError:
         return "Inventory: not in the database yet (migration 0004 is pending)."
     if held is None:
-        what = "nothing imported"
+        what = "nothing yet (a new install: run python -m decklab.db setup)"
     elif held["revision"] is None:
         what = "rows but no revision row"
     else:
@@ -99,8 +100,9 @@ def decks_line(dbname=None):
     except ValueError:
         return "Decks: not in the database yet (migration 0006 is pending)."
     if decks is None or decks["revision"] is None:
-        return ("Decks: the database holds none (restore the newest backup: a decklab-*.dump from the NAS or "
-                "decklab/data/backups/, with pg_restore).")
+        return ("Decks: the database holds none (on a new install, run python -m decklab.db setup; otherwise "
+                "restore the newest backup: a decklab-*.dump from the backup folder or decklab/data/backups/, "
+                "with pg_restore).")
     with db.connect("ro", dbname=dbname, autocommit=True) as c:
         count, revisions = c.execute("select (select count(*) from deck), (select count(*) from deck_revision)"
                                      ).fetchone()

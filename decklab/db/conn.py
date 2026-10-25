@@ -9,6 +9,7 @@ psycopg is imported only inside the functions that need it, so the rest of Deck 
 test suite under the system Python, which has no psycopg) can import this module safely.
 """
 import os
+import shutil
 import sys
 from contextlib import contextmanager
 from datetime import datetime
@@ -27,8 +28,10 @@ DEFAULTS = {
     "host": "localhost",
     "port": 5432,
     "name": "decklab",
-    "pg_bin": r"C:\Program Files\PostgreSQL\18\bin",
-    "backup_dir": r"\\NAS\Backups\DeckLab",
+    "pg_bin": None,               # None: PG_BIN_DEFAULT, else the newest other version there, else PATH
+    # Where backup copies each dump. None (the default off Windows): no copy, the dumps stay in
+    # staging_dir only. Windows keeps the original household's NAS share as its default.
+    "backup_dir": r"\\NAS\Backups\DeckLab" if os.name == "nt" else None,
     "staging_dir": str(config.DATA / "backups"),
     "export_repo": str(config.REPO.parent / "DeckLabData"),
     "keep_daily": 14,
@@ -36,6 +39,7 @@ DEFAULTS = {
     "restore_check_days": 28,
     "stale_backup_hours": 36,
 }
+PG_BIN_DEFAULT = r"C:\Program Files\PostgreSQL\18\bin"
 NAME_ENV = "DECKLAB_DB_NAME"      # replaces "name" (the tests' throwaway databases)
 
 # Where change() may say a write came from.
@@ -88,11 +92,13 @@ def role_name(role):
         raise ValueError(f"unknown role {role!r}: use one of {', '.join(ROLES)} or super") from None
 
 
-def connect(role="app", dbname=None, autocommit=False, timeout=None, options=None):
+def connect(role="app", dbname=None, autocommit=False, timeout=None, options=None, password=None):
     """A new psycopg connection as role (a key of ROLES, or "super") to dbname (default: the
     settings' name), giving up after timeout seconds (default CONNECT_TIMEOUT; the server's
     requests use less). options: server settings for the session, as libpq's options string
-    ("-c lock_timeout=2000 ..."). The password comes from pgpass; none is ever passed in.
+    ("-c lock_timeout=2000 ..."). The password comes from pgpass. The one exception is
+    password, for setup's superuser login on a new install when pgpass has no line for it: typed
+    at a prompt, kept in memory for that run only, never printed or written.
     A host of localhost connects to 127.0.0.1 alone (hostaddr; host stays for pgpass's
     matching): libpq applies connect_timeout to each address a name resolves to, so ::1 then
     127.0.0.1 would double the wait while the server is down.
@@ -102,6 +108,8 @@ def connect(role="app", dbname=None, autocommit=False, timeout=None, options=Non
     user = role_name(role)
     dbname = dbname or s["name"]
     extra = {"options": options} if options else {}
+    if password is not None:
+        extra["password"] = password
     if str(s["host"]).strip().lower() == "localhost":
         extra["hostaddr"] = LOCALHOST_ADDR
     try:
@@ -165,16 +173,36 @@ def change(actor, source, message, reason=None, conn=None, via=None):
 
 
 def pg_bin(name):
-    """The path of one of PostgreSQL's programs (pg_dump.exe, pg_restore.exe, psql.exe ...)
-    in the settings' pg_bin folder. ".exe" is added on Windows when name has no suffix.
-    Raises FileNotFoundError, saying where it looked, when it isn't there."""
+    """The path of one of PostgreSQL's programs (pg_dump.exe, pg_restore.exe, psql.exe ...).
+    ".exe" is added on Windows when name has no suffix. With the settings' pg_bin set, only that
+    folder is looked in. Without it: PG_BIN_DEFAULT, then the newest other version under
+    Program Files\\PostgreSQL, then the PATH (Linux and macOS installs put them there).
+    Raises FileNotFoundError, saying where it looked, when it isn't found."""
     if os.name == "nt" and not Path(name).suffix:
         name += ".exe"
-    path = Path(settings()["pg_bin"]) / name
-    if not path.is_file():
-        raise FileNotFoundError(f"{name} isn't in {path.parent}: install PostgreSQL there, or set "
-                                f'"pg_bin" in config.json\'s "database" block')
-    return path
+    folder = settings().get("pg_bin")
+    if folder:
+        path = Path(folder) / name
+        if not path.is_file():
+            raise FileNotFoundError(f"{name} isn't in {path.parent}: install PostgreSQL there, or set "
+                                    f'"pg_bin" in config.json\'s "database" block')
+        return path
+    path = Path(PG_BIN_DEFAULT) / name
+    if path.is_file():
+        return path
+    root = Path(os.environ.get("ProgramFiles") or r"C:\Program Files") / "PostgreSQL"
+    try:
+        found = sorted((p for p in root.glob(f"*/bin/{name}") if p.is_file()),
+                       key=lambda p: [int(x) if x.isdigit() else 0 for x in p.parent.parent.name.split(".")])
+    except OSError:
+        found = []
+    if found:
+        return found[-1]
+    on_path = shutil.which(name)
+    if on_path:
+        return Path(on_path)
+    raise FileNotFoundError(f"{name} isn't in {PG_BIN_DEFAULT} or on the PATH: install PostgreSQL's "
+                            f'client programs, or set "pg_bin" in config.json\'s "database" block')
 
 
 def log(text):

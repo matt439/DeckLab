@@ -713,7 +713,7 @@ class PgInventoryTests(db_support.DbTestCase):
     # -------------------------------------------------------- importing
 
     def test_nothing_is_there_until_the_import(self):
-        with self.assertRaisesRegex(self.pg.NotImported, "holds no inventory: restore the newest backup"):
+        with self.assertRaisesRegex(self.pg.NotImported, "holds no inventory: on a new install, run python -m decklab.db setup.*restore the newest backup"):
             self.backend.load()
         with self.assertRaises(self.pg.NotImported):
             self.backend.apply(inventory.Op("test.nothing"), CLAUDE, "Nothing")

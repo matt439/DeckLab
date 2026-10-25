@@ -346,7 +346,8 @@ def run_backup(dest=None, say=say):
     settings' backup_dir, the NAS). The staging file stays either way (prune thins it out).
     Returns 0, or 1 when the dump or the copy failed (recorded with ok false)."""
     s = db.settings()
-    dest = Path(dest or s["backup_dir"])
+    dest = dest or s["backup_dir"]
+    dest = Path(dest) if dest else None
     started = datetime.now()
     local = Path(s["staging_dir"]) / dump_name(started)
     try:
@@ -365,6 +366,12 @@ def run_backup(dest=None, say=say):
         return 1
     size = local.stat().st_size
     rows = dump_detail(counts)
+    if dest is None:
+        record("dump", started, True, local, size, rows, digests=digests)
+        say(f"Backup made: {local} ({size:,} bytes, {sum(counts.values()):,} rows in {len(counts)} tables). "
+            'It stays on this computer only: set "backup_dir" in config.json\'s "database" block to copy '
+            "each dump to another disk too.")
+        return 0
     try:
         copy = copy_to(local, dest)
     except OSError as e:
@@ -406,6 +413,8 @@ def run_prune(say=say):
     s = db.settings()
     failed = False
     for label, folder in (("NAS", s["backup_dir"]), ("staging", s["staging_dir"])):
+        if not folder:
+            continue                        # no backup_dir: the dumps are in staging only
         if not Path(folder).is_dir():
             if label == "staging":
                 continue                    # nothing dumped here yet
@@ -450,14 +459,14 @@ def _scratch_drop(c, name):
 
 def run_restore_check(source=None, say=say):
     """The restore-check command: pg_restore the newest dump in source (default the NAS
-    folder) into <database>_restorecheck, compare every table's row count with the counts
+    folder, or the staging folder without one) into <database>_restorecheck, compare every table's row count with the counts
     recorded when it was dumped, and every public and audit table's content with the digests
     recorded with them (a dump recorded before phase 5 has none: counts only), then drop the
     scratch database. Returns 0, or 1 on any failure or difference (recorded either way)."""
     import psycopg
     from psycopg import sql
     s = db.settings()
-    source = Path(source or s["backup_dir"])
+    source = Path(source or s["backup_dir"] or s["staging_dir"])
     started = datetime.now()
     scratch = _scratch_name(s["name"])
 

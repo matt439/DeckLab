@@ -430,6 +430,20 @@ class StatusTests(ForgeCase):
         self.assertIsNone(forge.find_java(str(self.tmp / "missing.exe")))
         self.assertEqual(forge.find_java(sys.executable), Path(sys.executable))
 
+    def test_find_java_falls_back_to_java_home_then_the_path(self):
+        exe = "java.exe" if os.name == "nt" else "java"
+        home = self.tmp / "jdk"
+        (home / "bin").mkdir(parents=True)
+        (home / "bin" / exe).write_bytes(b"")
+        empty = {"ProgramFiles": str(self.tmp / "no-program-files")}
+        with mock.patch.dict(os.environ, {**empty, "JAVA_HOME": str(home)}):
+            self.assertEqual(forge.find_java(), home / "bin" / exe)
+        with mock.patch.dict(os.environ, empty), mock.patch.object(forge.install.shutil, "which",
+                                                                    return_value=str(home / "bin" / exe)):
+            os.environ.pop("JAVA_HOME", None)
+            expected = None if os.name == "nt" else (home / "bin" / exe).resolve()
+            self.assertEqual(forge.find_java(), expected)
+
 
 # ============================================================ command line
 

@@ -97,8 +97,26 @@ class SettingsTests(unittest.TestCase):
 
     def test_pg_bin_names_the_folder_it_looked_in(self):
         with mock.patch.object(db.config, "load", return_value={"database": {"pg_bin": "Z:/nowhere"}}):
-            with self.assertRaisesRegex(FileNotFoundError, "nowhere"):
-                db.pg_bin("pg_dump")
+            with mock.patch.object(db.shutil, "which", side_effect=AssertionError("looked on the PATH")):
+                with self.assertRaisesRegex(FileNotFoundError, "nowhere"):
+                    db.pg_bin("pg_dump")
+
+    def test_pg_bin_without_a_setting_finds_the_newest_install_then_the_path(self):
+        exe = ".exe" if os.name == "nt" else ""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            for version in ("9.6", "16", "17"):
+                (root / "PostgreSQL" / version / "bin").mkdir(parents=True)
+                (root / "PostgreSQL" / version / "bin" / f"pg_dump{exe}").write_bytes(b"")
+            with mock.patch.object(db.config, "load", return_value={}), \
+                    mock.patch.object(db, "PG_BIN_DEFAULT", str(root / "nowhere")), \
+                    mock.patch.dict(os.environ, {"ProgramFiles": str(root)}):
+                self.assertEqual(db.pg_bin("pg_dump"), root / "PostgreSQL" / "17" / "bin" / f"pg_dump{exe}")
+                with mock.patch.object(db.shutil, "which", return_value=str(root / "on-path")):
+                    self.assertEqual(db.pg_bin("pg_restore"), root / "on-path")
+                with mock.patch.object(db.shutil, "which", return_value=None):
+                    with self.assertRaisesRegex(FileNotFoundError, "PATH"):
+                        db.pg_bin("pg_restore")
 
 
 class MigrationFileTests(unittest.TestCase):
@@ -466,6 +484,40 @@ class SqlCommandTests(db_support.DbTestCase):
         self.assertIn("read-only", err.getvalue())
 
 
+class SuperuserPromptTests(unittest.TestCase):
+    """setup._superuser on a new install, where pgpass has no line for postgres (no server)."""
+
+    refused = db.DbUnavailable("can't reach PostgreSQL at localhost:5432 as postgres (database postgres): "
+                               "connection failed: fe_sendauth: no password supplied")
+
+    def test_pgpass_is_used_first_and_nothing_is_asked(self):
+        ask = mock.Mock(side_effect=AssertionError("asked"))
+        with mock.patch.object(db, "connect", return_value="conn") as connect:
+            self.assertEqual(setup._superuser(say=lambda _: None, ask=ask, interactive=True), "conn")
+        self.assertNotIn("password", connect.call_args.kwargs)
+
+    def test_a_terminal_asks_once_and_logs_in_with_it(self):
+        said = []
+        with mock.patch.object(db, "connect", side_effect=[self.refused, "conn"]) as connect:
+            got = setup._superuser(say=said.append, ask=lambda _: "typed-secret", interactive=True)
+        self.assertEqual(got, "conn")
+        self.assertEqual(connect.call_args.kwargs["password"], "typed-secret")
+        self.assertFalse(any("typed-secret" in line for line in said))
+        self.assertIn("not saved", said[0])
+
+    def test_without_a_terminal_it_says_how_to_fix_it(self):
+        with mock.patch.object(db, "connect", side_effect=self.refused):
+            with self.assertRaisesRegex(db.DbUnavailable, "superuser .*pgpass|pgpass"):
+                setup._superuser(say=lambda _: None, ask=mock.Mock(), interactive=False)
+
+    def test_other_failures_are_not_a_password_question(self):
+        down = db.DbUnavailable("can't reach PostgreSQL at localhost:5432 as postgres: connection refused")
+        ask = mock.Mock(side_effect=AssertionError("asked"))
+        with mock.patch.object(db, "connect", side_effect=down):
+            with self.assertRaisesRegex(db.DbUnavailable, "connection refused"):
+                setup._superuser(say=lambda _: None, ask=ask, interactive=True)
+
+
 class SetupTests(unittest.TestCase):
     """setup.run against a new database (the roles already exist, so pgpass isn't touched).
     No password ever reaches an assertion's message: a failing run must not print one."""
@@ -498,6 +550,11 @@ class SetupTests(unittest.TestCase):
         self.assertTrue(hashlib.sha256(pgpass.read_bytes()).hexdigest() == before, "setup changed pgpass")
         self.assertIn(f"{len(migrate.available())} migration(s) applied now", printed)
         self.assertIn("0 migration(s) applied now; profiles unchanged", printed)
+        # A new install starts with an empty inventory and deck library, once.
+        self.assertEqual(printed.count("Started an empty collection, deck library and shopping list"), 1)
+        from decklab.db import inv_inventory
+        self.assertEqual(inv_inventory.inventory_held(name)["revision"], "1")
+        self.assertEqual(inv_inventory.decks_held(name)["revision"], "1")
         assert_secured(self, name)
         with db.connect("ro", dbname=name, autocommit=True) as c:
             self.assertGreater(c.execute("select count(*) from profile").fetchone()[0], 0)

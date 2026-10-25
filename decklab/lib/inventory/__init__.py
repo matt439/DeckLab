@@ -96,9 +96,10 @@ EXPLICIT_ENV = "DECKLAB_STATE_EXPLICIT"         # state.EXPLICIT_ENV
 # What an operation that would change a deck, accessories.csv or a picture is refused with (and
 # what the in-op table refresh reports) while the backend can't save them: a database that holds
 # no decks (a fresh one, or a bad restore).
-DECK_SAVES_PAUSED = ("Deck, accessory and picture saves can't be made: the database holds no decks. Restore the "
-                     "newest backup (a decklab-*.dump from the NAS or decklab/data/backups/, with pg_restore), "
-                     "after python -m decklab.db migrate if migrations are pending.")
+DECK_SAVES_PAUSED = ("Deck, accessory and picture saves can't be made: the database holds no decks. On a new "
+                     "install, run python -m decklab.db setup, which starts an empty deck library; otherwise "
+                     "restore the newest backup (a decklab-*.dump from the backup folder or decklab/data/backups/, "
+                     "with pg_restore), after python -m decklab.db migrate if migrations are pending.")
 
 
 # ------------------------------------------------------------------ operations
