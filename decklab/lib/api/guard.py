@@ -54,6 +54,8 @@ The routes and what each checks:
                                                   stored owner's kit must be the profile's to see,
                                                   saving._require_kit_moves)
     POST /api/deck/cover                          deck.edit on the deck as stored (as a save of its text)
+    POST /api/deck/token-cards                    deck.edit on the deck as stored (as a save of its text), and
+                                                  its space's inventory (require_sees_inventory)
     POST /api/deck/check, /api/decklist/parse     nothing: dry runs, open to whoever sees the deck ("Try a change";
                                                   GET /api/deck/edit says editable False, with why_not)
     POST /api/deck/swaps                          nothing to write: a dry run, with GET's reading rule (the

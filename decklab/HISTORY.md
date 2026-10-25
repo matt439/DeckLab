@@ -2,6 +2,17 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Token cards reserved by built decks (2026-10-25)
+
+Built decks hold token cards now, as they hold playable cards. Until now one token row counted as owned for every deck that made that token.
+
+- **The warning (PR #7):** a token row that built decks (and intact products) want more cards of than it has gets a warning. It shows on the Tokens page ("Too few for N built decks", in To check and the row's sheet), beside the card in a deck page's Tokens part, and in `tokens check`. Decks still being built don't count.
+- **The Token cards line:** a built deck's `- **Token cards:** 2 Treasure (TFDN) 12; 1 Beast // Dog` header line (`lib/decks/tokencards.py`) names the cards in its box. `lib/tokens/reserve.py` shares each line out over the space's rows, deck by deck in id order. `deck_tokens(..., held)` leaves the other decks' cards out: a row fully packed elsewhere goes in the need's `in_use` ("All yours are packed in A Deck"), and a partly packed row offers what's left.
+- **Where it's written:** Finish building fills the line for a deck without one, with one free card for each token the deck has. The deck page's Tokens part shows what's packed and offers **Change packed token cards…** (POST `/api/deck/token-cards`, one `deck.save`). Taking a deck apart (`assembled.clear`) removes it. `deck push` writes it as given.
+- **Elsewhere:** the Tokens page's rows list the decks they're packed in (`packed`), and a deck that would use a row packed elsewhere shows it as "Packed in other decks". The warning counts each line's cards, and one card for each row a deck without a line uses. The Packing plan and the library's token lines see the reservations too.
+- **Not done:** intact products don't reserve token cards yet, and Finish building can't choose counts (change them on the deck page afterwards). Not checked in a browser.
+- **Tests:** `test_token_reservation`, plus additions to `test_tokens`, `test_api_tokens` and `test_collection_assembly`.
+
 ## P1 library (2026-10-25, E11-S30 slice 8)
 
 The eighth slice of the P1 visual redesign: the library's casual tiles and the lab's list beside a detail pane ([design/visual-design.md](design/visual-design.md) 4.1, 4.2, 4.4, 4.6, 4.10 and section 5, Library), with the Forge line Matt chose: each casual deck's field average, worked out on the PC and cached.

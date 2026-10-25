@@ -534,6 +534,56 @@ class TokensUiTests(unittest.TestCase):
           assert.equal(tokenStateChip('none').textContent, 'None owned');
         """)
 
+    def test_deck_page_packed_token_cards_and_their_sheet(self):
+        self.run_js(self.TOKENS + """
+          clear(main);
+          const packed = {written: true, expect: 'b'.repeat(64), tokens_sha256: 'a'.repeat(64),
+            lines: [{text: '2 Zombie // Zombie Knight', quantity: 2, rows: [{row: 0, front: 'Zombie', back: 'Zombie Knight', quantity: 2}]},
+                    {text: '1 Treasure', quantity: 1, rows: []}],
+            choices: [{row: 0, front: 'Zombie', back: 'Zombie Knight', set: '', number: '', quantity: 8, free: 6, packed: 2}]};
+          const used = need('Spirit', 'none', 'All yours are packed in Other Deck', {in_use: [{row: 4, front: 'Spirit',
+            back: '', side: 'front', quantity: 1, decks: ['Other Deck']}]});
+          const data = {summary: {id: 'casual/zed', player: 'user'}, tokens: {...deckTokensResult, packed,
+            needs: [...deckTokensResult.needs, used]}};
+          const section = tokensSection(data);
+          main.append(section);
+          const text = section.textContent;
+          for (const words of ['Packed: 2 Zombie // Zombie Knight; 1 Treasure (no token card matches)',
+                               'In use: Spirit ×1, packed in Other Deck', 'All yours are packed in Other Deck']) {
+            assert(text.includes(words), words);
+          }
+          const sent = [];
+          apiWrite = async (path, body) => { sent.push([path, body]); return {saved: true}; };
+          route = () => {};
+          button(section, 'Change packed token cards…').click();
+          const sheet = sheets()[sheets().length - 1];
+          assert(sheet.textContent.includes('Zombie / Zombie Knight: 8 cards, 2 in other decks'));
+          const input = sheet.querySelector('input');
+          assert.equal(input.value, '2');
+          input.value = '9';
+          button(sheet, 'Save').click(); await settle();
+          assert.equal(sent.length, 0);                          // more than other decks leave
+          assert(sheet.textContent.includes('Choose 0 to 6 for Zombie.'));
+          input.value = '3';
+          button(sheet, 'Save').click(); await settle();
+          same(sent, [['/api/deck/token-cards', {id: 'casual/zed', expect: 'b'.repeat(64), tokens_sha256: 'a'.repeat(64),
+            cards: [{row: 0, quantity: 3}]}]]);
+          // Nothing to choose from, or the line can't be read: no button.
+          assert(!button(tokensSection({...data, tokens: {...data.tokens, packed: {...packed, choices: []}}}),
+            'Change packed token cards…'));
+          const bad = tokensSection({...data, tokens: {...data.tokens, packed: {...packed, error: 'bad part'}}});
+          assert(bad.textContent.includes("The Token cards line can't be read: bad part"));
+          assert(!button(bad, 'Change packed token cards…'));
+          // The Tokens page: a row's packed decks and the warning's words when a deck packs several.
+          const row0 = {...zombie, packed: [{deck: 'casual/a', title: 'A Deck', link: 'casual/a', quantity: 8}],
+            shared: [{deck: 'casual/a', title: 'A Deck', link: 'casual/a', quantity: 8},
+                     {deck: 'casual/b', title: 'B Deck', link: 'casual/b', quantity: 1}]};
+          assert.equal(tokSharedWords(row0), 'Only 8 cards, but built decks pack 9: A Deck ×8 and B Deck.');
+          assert.equal(tokSharedWords({...row0, quantity: 1, shared: row0.shared.map(h => ({...h, quantity: 1}))}),
+            "Only 1 card, used by 2 built decks: A Deck and B Deck. They can't all have one packed.");
+          assert.equal(tokenStateChip('in_use').textContent, 'Packed in other decks');
+        """)
+
     def test_library_token_chips_only_when_something_is_wrong(self):
         self.run_js("""
           state.profile = {id:'matt',name:'Matt',plays_as:'user'}; state.profiles=[state.profile];

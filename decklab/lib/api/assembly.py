@@ -23,17 +23,30 @@ TOKEN_PLAN_NOTE = ("Both decks can use these cards. One card shows one face at a
                    "at home keep shared tokens in one pile on the table.")
 
 
-def _deck_tokens(deck_id, version, sections, inv, inc):
+def _deck_tokens(deck_id, version, sections, inv, inc, held=None):
     """tokens.cached_deck_tokens for one list, as the deck page and the plan
     show it: {"unavailable": ...} while the card index is missing or being
-    rebuilt, {"error": ...} (logged) when anything else goes wrong."""
+    rebuilt, {"error": ...} (logged) when anything else goes wrong. held is
+    what other built decks pack (tokens.reserve.held_elsewhere)."""
     try:
+        if held:
+            return tokens.cached_deck_tokens(deck_id, version, sections, inv, inc, held)
         return tokens.cached_deck_tokens(deck_id, version, sections, inv, inc)
     except RuntimeError:
         return {"unavailable": TOKEN_UNAVAILABLE}
     except Exception:           # the page still shows; the log has the details
         common._log(f"The tokens of {deck_id} ({version}) couldn't be worked out:\n" + traceback.format_exc())
         return {"error": TOKEN_FAILED}
+
+
+def held_tokens(inv, space=spaces.HOME):
+    """tokens.reserve.holds of a space's built decks, or {} (logged) when they can't be worked out:
+    the plan and pages then show every token card as free, as before reservations."""
+    try:
+        return tokens.reserve.holds(inv, space)
+    except Exception:
+        common._log("The packed token cards couldn't be worked out:\n" + traceback.format_exc())
+        return {}
 
 
 def _token_plan(participants, inv):
@@ -191,6 +204,7 @@ def _preview(selected, profile=False):
     inv = usage = None
     token_inv = tokens.read()
     token_inc, _ = tokens.incoming()
+    token_holds = held_tokens(token_inv)
     from . import guard
     owners = guard.accessory_readers()
     sees = owners is None or bool(owners)
@@ -248,8 +262,9 @@ def _preview(selected, profile=False):
                              "basic_returns": [{"name": name, "quantity": qty}
                                                for name, qty in sorted((current_basics - basics).items())],
                              "sleeves": sleeves, "kit": kit, "sleeves_need": kit["need"] if kit else None,
-                             "tokens": token_packing_keys(_deck_tokens(summary["id"], choice["version"], sections,
-                                                                       token_inv, token_inc), token_inv.rows),
+                             "tokens": token_packing_keys(_deck_tokens(
+                                 summary["id"], choice["version"], sections, token_inv, token_inc,
+                                 tokens.reserve.held_elsewhere(token_holds, summary["id"])), token_inv.rows),
                              "need": need, "current": held,
                              "basics": [{"name": name, "quantity": qty}
                                         for name, qty in sorted((basics - current_basics).items())],

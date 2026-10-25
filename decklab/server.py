@@ -139,6 +139,8 @@ inventory writes answer 503 with "reason": "database":
                                          visitor may not see)
     POST /api/deck/cover                 body {"profile", "id", "expect", "cover"}: set or clear the
                                          deck's Cover card line, one change (lib/api/cover.py)
+    POST /api/deck/token-cards           body {"profile", "id", "expect", "tokens_sha256", "cards"}: set a
+                                         built deck's Token cards line, one change (lib/api/token_cards.py)
     POST /api/decklist/parse             "Paste a list": known lines, unknown names, errors
     GET  /api/tables/stale               decks whose owned-vs-needed table is out of date (of the
                                          spaces the visitor may see)

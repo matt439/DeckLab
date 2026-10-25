@@ -76,6 +76,7 @@ from .needs import (COPY_WORDS, _COPY_RE, _UNLISTED, _any_token, _card_text, _co
 from .rows import (DETAILS_MAX, FIELDS, NAME_MAX, NOTES_MAX, NUMBER_MAX, QTY_MAX, _rules, csv_bytes, label,
                    validate_row)
 from . import ops  # noqa: F401,E402  (registers the tokens.* inventory operations)
+from . import reserve
 
 LABEL = inventory_paths.tokens(spaces.HOME)   # how messages name home's tokens.csv
 LEGACY_FIELDS = inventory_files.TOKEN_LEGACY_FIELDS
@@ -201,7 +202,7 @@ def _scrub(text, root, path=None, rel=None):
 
 # ------------------------------------------------------------------ a deck's tokens
 
-def deck_tokens(sections, inv=None, incoming_rows=None):
+def deck_tokens(sections, inv=None, incoming_rows=None, held=None):
     """The tokens, emblems and reminders a decklist's cards make, matched
     against the owned token cards (the one place their wording comes from):
 
@@ -218,9 +219,14 @@ def deck_tokens(sections, inv=None, incoming_rows=None):
     (read by default). key is a token's oracle id, or "name:<Name>" when
     Scryfall's link doesn't say which of several tokens it is. state is
     ready, check, differs, incoming or none (see STATES); no count of how many
-    a game needs is ever claimed. Raises RuntimeError when the card index
-    isn't ready."""
+    a game needs is ever claimed. held (reserve.held_elsewhere: {row index:
+    [{deck, title, quantity}]}) is what other built decks pack: those cards
+    aren't free, so a card's quantity is what's left of its row, and a row with
+    none left goes in the need's "in_use" ([{row, front, back, side, quantity,
+    decks: [title]}], present only when there's one) instead. Raises
+    RuntimeError when the card index isn't ready."""
     _index()
+    held = held or {}
     inv = read() if inv is None else inv
     if incoming_rows is None:
         incoming_rows, _ = incoming()
@@ -259,13 +265,22 @@ def deck_tokens(sections, inv=None, incoming_rows=None):
     for need in needs.values():
         need["sideboard_only"] = all(m["section"] == "Sideboard" for m in need["made_by"])
         need["cards"], need["stand_ins"], need["incoming"] = [], [], []
-        missing = []
+        missing, packed = [], []
         for i, row in enumerate(inv.rows):
             best = _best(need, row)
             if best is None:
                 continue
             side, face, verdict, why, gaps_ = best
             qty = int(row["quantity"])
+            if i in held:
+                taken = sum(h["quantity"] for h in held[i])
+                packed.extend(h["title"] for h in held[i] if h["title"] not in packed)
+                if taken >= qty:
+                    need.setdefault("in_use", []).append({
+                        "row": i, "front": row["front"], "back": row["back"], "side": side, "quantity": qty,
+                        "decks": list(dict.fromkeys(h["title"] for h in held[i]))})
+                    continue
+                qty -= taken
             item = {"row": i, "front": row["front"], "back": row["back"], "side": side, "quantity": qty}
             if verdict == "differs":
                 need["stand_ins"].append({**item, "why": why, "close": False})
@@ -293,7 +308,7 @@ def deck_tokens(sections, inv=None, incoming_rows=None):
             state = "none"
         need["state"] = state
         if state in ("none", "incoming", "differs"):
-            taken = {s["row"] for s in need["stand_ins"]}
+            taken = {s["row"] for s in need["stand_ins"]} | {u["row"] for u in need.get("in_use", [])}
             names = [need["name"], *need.get("face_names", [])]
             for i, row in enumerate(inv.rows):
                 if i in taken:
@@ -309,6 +324,9 @@ def deck_tokens(sections, inv=None, incoming_rows=None):
         order = ["P/T", "colour", *(k.lower() for k in need["keywords"])]
         missing.sort(key=lambda a: order.index(a) if a in order else len(order))
         need["words"] = _need_words(need, missing)
+        if packed:
+            need["words"] = (f"All yours are packed in {_and(packed)}" if state == "none" and need.get("in_use")
+                             else f"{need['words']} · more packed in {_and(packed)}")
         out.append(need)
 
     # The same physical row serving several needs of this deck.
@@ -394,8 +412,10 @@ def gaps(inv, incoming_rows, warnings, space=spaces.HOME):
     the tokens holders() of space need with nothing owned in inv (state none
     or incoming). link is the deck id to open, or None (see _holders)."""
     out = {}
+    all_holds = reserve.holds(inv, space, warnings)
     for deck_id, title, version, sections, link in _holders(warnings, space):
-        result = cached_deck_tokens(deck_id, version, sections, inv, incoming_rows)
+        result = _held_tokens(deck_id, version, sections, inv, incoming_rows,
+                              reserve.held_elsewhere(all_holds, deck_id))
         for need in result["needs"]:
             if need["state"] not in ("none", "incoming"):
                 continue
@@ -407,6 +427,13 @@ def gaps(inv, incoming_rows, warnings, space=spaces.HOME):
     return sorted(out.values(), key=lambda g: (STATES.index(g["state"]), cards.fold(g["name"]), g["key"]))
 
 
+def _held_tokens(deck_id, version, sections, inv, incoming_rows, held):
+    """cached_deck_tokens, with held only when other decks hold something."""
+    if held:
+        return cached_deck_tokens(deck_id, version, sections, inv, incoming_rows, held)
+    return cached_deck_tokens(deck_id, version, sections, inv, incoming_rows)
+
+
 _STATE_OF = {"exact": "ready", "agrees": "ready", "check": "check", "differs": "differs"}
 
 
@@ -414,11 +441,18 @@ def row_uses(inv, incoming_rows, warnings, space=spaces.HOME):
     """{row index: [{deck, title, link, token, side, state}]}: which of
     holders()' needs (space's) each owned row of inv serves (state ready or
     check) or stands in for (differs). link is the deck id to open, or None
-    (see _holders). Close-name hints aren't uses."""
+    (see _holders). Close-name hints aren't uses. A row other built decks pack
+    all of (their Token cards lines, reserve.holds) is a use with state in_use
+    for a deck that would grab it."""
     out = collections.defaultdict(list)
+    all_holds = reserve.holds(inv, space, warnings)
     for deck_id, title, version, sections, link in _holders(warnings, space):
-        result = cached_deck_tokens(deck_id, version, sections, inv, incoming_rows)
+        result = _held_tokens(deck_id, version, sections, inv, incoming_rows,
+                              reserve.held_elsewhere(all_holds, deck_id))
         for need in result["needs"]:
+            for u in need.get("in_use", []):
+                out[u["row"]].append({"deck": deck_id, "title": title, "link": link, "token": need["name"],
+                                      "side": u["side"], "state": "in_use"})
             for c in need["cards"]:
                 out[c["row"]].append({"deck": deck_id, "title": title, "link": link, "token": need["name"],
                                       "side": c["side"], "state": _STATE_OF[c["verdict"]]})
@@ -443,30 +477,47 @@ def _is_built(deck_id, built):
     return deck_id in built or deck_id.startswith("product/")
 
 
-def shared_rows(inv, uses, built):
-    """{row index: [{deck, title, link}]}: the rows of inv whose uses
-    (row_uses) name more built holders (built_ids, and intact products) than
-    the row has cards, each with those holders in the order uses names them.
-    Each built holder is taken to pack at least one card of a row it uses, so
-    such a row can't be in all of their boxes at once. A stand-in counts: it
-    is packed too. Decks still being built never count."""
+def shared_rows(inv, uses, built, all_holds=None):
+    """{row index: [{deck, title, link, quantity}]}: the rows of inv that
+    built holders (built_ids, and intact products) want more cards of than the
+    row has, each with those holders in the order uses (row_uses) names them,
+    then decks that pack the row without using it. A deck with a Token cards
+    line (all_holds, reserve.holds) wants what the line holds of the row, and
+    nothing of a row it doesn't list; any other built holder that uses the
+    row, a stand-in or an in_use one included, is taken to pack at least one
+    card of it. Decks still being built never count."""
+    all_holds = all_holds or {}
     out = {}
-    for i, items in uses.items():
+    for i, row in enumerate(inv.rows):
         holders = []
-        for use in items:
-            if _is_built(use["deck"], built) and all(h["deck"] != use["deck"] for h in holders):
-                holders.append({"deck": use["deck"], "title": use["title"], "link": use["link"]})
-        if i < len(inv.rows) and len(holders) > int(inv.rows[i]["quantity"]):
+        for use in uses.get(i, []):
+            if not _is_built(use["deck"], built) or any(h["deck"] == use["deck"] for h in holders):
+                continue
+            hold = all_holds.get(use["deck"])
+            qty = hold["rows"].get(i, 0) if hold is not None else 1
+            if qty:
+                holders.append({"deck": use["deck"], "title": use["title"], "link": use["link"], "quantity": qty})
+        for deck_id in sorted(all_holds):
+            qty = all_holds[deck_id]["rows"].get(i, 0)
+            if qty and all(h["deck"] != deck_id for h in holders):
+                holders.append({"deck": deck_id, "title": all_holds[deck_id]["title"], "link": deck_id,
+                                "quantity": qty})
+        if sum(h["quantity"] for h in holders) > int(row["quantity"]):
             out[i] = holders
     return out
 
 
 def shared_words(row, holders):
-    """"Only 2 cards, used by 3 built decks: A, B and C": the warning for a
-    row of shared_rows."""
+    """"Only 2 cards, used by 3 built decks: A, B and C" (or, when a deck packs
+    more than one, "Only 2 cards, but built decks pack 3: A ×2 and B"): the
+    warning for a row of shared_rows."""
     cards_ = int(row["quantity"])
-    return (f"Only {_plural(cards_, 'card')}, used by {len(holders)} built decks: "
-            f"{_and([h['title'] for h in holders])}")
+    if all(h.get("quantity", 1) == 1 for h in holders):
+        return (f"Only {_plural(cards_, 'card')}, used by {len(holders)} built decks: "
+                f"{_and([h['title'] for h in holders])}")
+    wanted = sum(h.get("quantity", 1) for h in holders)
+    names = [h["title"] + (f" ×{h['quantity']}" if h.get("quantity", 1) > 1 else "") for h in holders]
+    return f"Only {_plural(cards_, 'card')}, but built decks pack {wanted}: {_and(names)}"
 
 
 CACHE_SIZE = 64
@@ -484,19 +535,19 @@ def _sections_key(sections):
                          for s, lines in sections.items()})
 
 
-def cached_deck_tokens(deck_id, version, sections, inv, incoming_rows):
+def cached_deck_tokens(deck_id, version, sections, inv, incoming_rows, held=None):
     """deck_tokens(sections, inv, incoming_rows), kept for the 64 lists asked
     for most recently. The key is the deck and version, the list's own lines,
     the tokens file's sha256, the incoming payloads and the card index, so
     any change to them works it out again. Returns a copy."""
     data = _index().data
     key = (deck_id, version, _sections_key(sections), inv.sha256, _fingerprint(inv.rows),
-           _fingerprint(incoming_rows or []), data.get("built_at"), id(data))
+           _fingerprint(incoming_rows or []), _fingerprint(sorted((held or {}).items())), data.get("built_at"), id(data))
     with _cache_lock:
         if key in _cache:
             _cache.move_to_end(key)
             return copy.deepcopy(_cache[key])
-    result = deck_tokens(sections, inv, incoming_rows or [])
+    result = deck_tokens(sections, inv, incoming_rows or [], held) if held else deck_tokens(sections, inv, incoming_rows or [])
     with _cache_lock:
         _cache[key] = result
         _cache.move_to_end(key)
@@ -573,12 +624,17 @@ def _shared_warnings(inv, space, file_label):
     cards (shared_rows), or one line saying why they couldn't be worked out."""
     try:
         found = incoming()[0] if space == spaces.HOME else []
+        holds_warnings = []
+        all_holds = reserve.holds(inv, space, holds_warnings)
         uses = row_uses(inv, found, [], space)
-        shared = shared_rows(inv, uses, built_ids(space))
+        shared = shared_rows(inv, uses, built_ids(space), all_holds)
     except Exception as e:      # a deck that can't be read: the check itself still stands
         return [f"{file_label}: which built decks share token cards couldn't be worked out ({e})"]
-    return [f"{file_label} line {inv.lines[i]}: {shared_words(inv.rows[i], holders)}"
-            for i, holders in sorted(shared.items())]
+    return holds_warnings + [
+        f"{deck['title']}'s Token cards line names no token card of {file_label}: {text}"
+        for deck in all_holds.values() for text in deck["unmatched"]] + [
+        f"{file_label} line {inv.lines[i]}: {shared_words(inv.rows[i], holders)}"
+        for i, holders in sorted(shared.items())]
 
 
 

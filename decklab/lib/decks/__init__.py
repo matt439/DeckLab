@@ -75,6 +75,8 @@ Where things are (every name in the submodules is also decks.<name>):
 - deckfile.py: the DeckFile model and parse_deck()/read_deck_file();
 - edit.py: header fields, apply_edit(), Notes labels and set_table();
 - render.py: render_deck_file(), other_rate() and new_deck_text();
+- tokencards.py: a built deck's optional "Token cards" header line, the token cards it packs
+  (parse_token_cards, set_token_cards), which other decks then count as in use;
 - cover.py: the optional "Cover card" header line (parse_cover, set_cover) and the automatic
   cover (auto_cover_line), the card whose art stands for the deck in the library;
 - this file: everything that uses the folders (DECKS_DIR, and each person
@@ -108,8 +110,10 @@ from decklab.lib.config import MAGIC, REPO
 
 # The parts in their own files. Their names are all here too, so callers
 # keep using decks.<name>.
-from . import cover, deckfile, decklist, edit, render
+from . import cover, deckfile, decklist, edit, render, tokencards
 from .cover import (COVER_FIELD, COVER_SECTIONS, auto_cover_line, cover_field, format_cover, parse_cover, set_cover)
+from .tokencards import (TOKEN_CARDS_FIELD, TokenCardLine, format_token_cards, has_token_cards,
+                         parse_token_cards, set_token_cards, token_cards)
 from .opponents import USUAL_OPPONENTS_FIELD, parse_usual_opponents, set_usual_opponents
 from .deckfile import (
     _ABOUT, _AMOUNT_AFTER_RE, _AMOUNT_BEFORE_RE, _CONTEXT_START_RE, _CUR, _NUM, _ONE, _QUOTE_CUT_RE,
