@@ -56,6 +56,8 @@ The routes and what each checks:
     POST /api/deck/cover                          deck.edit on the deck as stored (as a save of its text)
     POST /api/deck/token-cards                    deck.edit on the deck as stored (as a save of its text), and
                                                   its space's inventory (require_sees_inventory)
+    POST /api/tokens/plan                         its space's inventory (require_sees_inventory), and
+                                                  deck.edit on every deck whose Token cards line it changes
     POST /api/deck/check, /api/decklist/parse     nothing: dry runs, open to whoever sees the deck ("Try a change";
                                                   GET /api/deck/edit says editable False, with why_not)
     POST /api/deck/swaps                          nothing to write: a dry run, with GET's reading rule (the

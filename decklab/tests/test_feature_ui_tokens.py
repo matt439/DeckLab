@@ -584,6 +584,43 @@ class TokensUiTests(unittest.TestCase):
           assert.equal(tokenStateChip('in_use').textContent, 'Packed in other decks');
         """)
 
+    def test_plan_packed_token_cards_previews_then_applies(self):
+        self.run_js(self.TOKENS + """
+          clear(main);
+          local.get = () => null; local.set = () => true;
+          const view = drawTokens(tokensData, routeToken);
+          const plan = {space: 'home', sha256: 'c'.repeat(64), tokens_sha256: 'a'.repeat(64), changes: 1, warnings: [],
+            decks: [{id: 'casual/a', title: 'A Deck', before: null, after: '4 Zombie // Zombie Knight', changed: true,
+                     editable: true, spares: 3, short: ['Spirit'],
+                     lines: [{text: '4 Zombie // Zombie Knight', sides: ['Zombie side only, can be sleeved']}],
+                     packs: [{token: 'Zombie', card: 'Zombie / Zombie Knight', side: 'front', verdict: 'check'}]},
+                    {id: 'casual/c', title: 'C Deck', before: '1 Insect // Goblin', after: '1 Insect // Goblin',
+                     changed: false, editable: true, spares: 0, short: [],
+                     lines: [{text: '1 Insect // Goblin', sides: []}],
+                     packs: [{token: 'Insect', card: 'Insect / Goblin', side: 'front', verdict: 'differs'}]}]};
+          const asked = [], sent = [];
+          api = async (path, opts) => { asked.push(path); return plan; };
+          apiWrite = async (path, body) => { sent.push([path, body]); return {saved: 1, decks: ['casual/a']}; };
+          refreshTokens = () => {};
+          const sheet = openTokenPlan(view);
+          await settle();
+          same(asked, ['/api/tokens/plan']);
+          const text = sheet.dialog.textContent;
+          for (const words of ['A Deck', 'Packs: 4 Zombie // Zombie Knight (Zombie side only, can be sleeved)',
+                               'Now: not recorded', 'Zombie: Zombie / Zombie Knight (details not recorded)',
+                               '3 spare cards shared out to it', 'No card left for Spirit', 'C Deck (no change)',
+                               'Insect: Insect / Goblin (a stand-in: tell your opponent)']) {
+            assert(text.includes(words), words);
+          }
+          button(sheet.dialog, 'Apply to 1 deck').click(); await settle();
+          same(sent, [['/api/tokens/plan', {sha256: 'c'.repeat(64)}]]);
+          // A deck the viewer can't change: no Apply.
+          plan.decks[0].editable = false;
+          const blocked = openTokenPlan(view); await settle();
+          assert(blocked.dialog.textContent.includes("You can't change A Deck, so the plan can't be applied."));
+          assert(button(blocked.dialog, 'Apply to 1 deck').disabled);
+        """)
+
     def test_double_sided_token_cards_say_whether_both_sides_are_used(self):
         self.run_js(self.TOKENS + """
           // One row, Zombie / Zombie Knight, used for both its faces: both sides are needed, so no sleeve.

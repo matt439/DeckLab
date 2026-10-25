@@ -77,6 +77,7 @@ from .rows import (DETAILS_MAX, FIELDS, NAME_MAX, NOTES_MAX, NUMBER_MAX, QTY_MAX
                    validate_row)
 from . import ops  # noqa: F401,E402  (registers the tokens.* inventory operations)
 from . import reserve
+from . import optimise  # noqa: E402
 
 LABEL = inventory_paths.tokens(spaces.HOME)   # how messages name home's tokens.csv
 LEGACY_FIELDS = inventory_files.TOKEN_LEGACY_FIELDS
@@ -425,6 +426,18 @@ def gaps(inv, incoming_rows, warnings, space=spaces.HOME):
             if all(d["id"] != deck_id for d in gap["decks"]):
                 gap["decks"].append({"id": deck_id, "title": title, "link": link})
     return sorted(out.values(), key=lambda g: (STATES.index(g["state"]), cards.fold(g["name"]), g["key"]))
+
+
+def plan_token_cards(space=spaces.HOME, warnings=None):
+    """optimise.plan for space: every built deck's Token cards line planned at once, from its
+    built version's needs with every row free. Raises RuntimeError when the card index isn't
+    ready."""
+    warnings = [] if warnings is None else warnings
+    inv = read(space=space)
+    built = built_ids(space)
+    found = [(deck_id, title, cached_deck_tokens(deck_id, version, sections, inv, [])["needs"])
+             for deck_id, title, version, sections, _ in _holders(warnings, space) if deck_id in built]
+    return optimise.plan(inv, found, space, warnings)
 
 
 def _held_tokens(deck_id, version, sections, inv, incoming_rows, held):
