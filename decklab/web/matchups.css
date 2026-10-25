@@ -98,6 +98,19 @@
 .mu-home-head h2 { margin: 0; }
 .mu-home > .empty { margin: var(--s-3) 0; }
 
+/* The selected list's field and latest test are separate from saved pairs, which may use other lists. */
+.mu-selected-summary { display: grid; gap: var(--s-3); margin-bottom: var(--s-4); }
+.mu-selected-panel { min-width: 0; padding: var(--s-4); border: 1px solid var(--border); border-radius: var(--r-panel); background: var(--surface); }
+.mu-selected-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s-2); }
+.mu-selected-head h3 { margin: 0; }
+.mu-selected-list { margin: var(--s-2) 0 var(--s-3); }
+.mu-selected-content > :last-child { margin-bottom: 0; }
+.mu-selected-summary .vt-test-item { flex-wrap: wrap; }
+.mu-selected-summary .vt-test-link { min-width: 0; }
+@media (min-width: 1000px) {
+  .mu-selected-summary { grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); }
+}
+
 /* One selected deck's opponents: casual cards below 1000 px, a real table in the mouse lab and
    a list of whole-row links in the touch lab. Both representations share one sorted data model. */
 .mu-home-body { max-width: 100rem; }
@@ -361,7 +374,7 @@
 }
 
 /* A commander the AI never casts makes the result uninformative; words remain, its figures fade. */
-.mu-opponent-row.is-muted .mu-barline, .mu-opponent-table tr.is-muted .wr { opacity: .55; }
+.mu-opponent-row.is-muted .mu-barline, .mu-opponent-table tr.is-muted .wr { opacity: .7; }
 
 /* Casual rankings give the shared hero figure its own full-width row, so % never drops below its number. */
 @media (max-width: 999px) {

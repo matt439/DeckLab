@@ -2,6 +2,12 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## P1 selected-list Matchups summaries (2026-10-25; E11-S30 slice 10)
+
+Matchups now names the selected deck's exact Planned or built Play-now list above its own saved Forge field summary and newest swap test. The field rating, flags and first-player edge come from the server; pair rates remain separate. Historical swaps keep the original tested cards. Bounded caching, foreground refresh, cancellation, timeouts and explicit retry preserve selection and focus during progress updates. All tests reaches its existing section and late content keeps that destination visible until manual scrolling.
+
+Validation: 371 targeted Python/Node/HTTP-fixture tests passed. Synthetic Chromium checks covered the nine documented viewport sizes in both themes, including selection changes, no page/panel overflow and the All tests destination after late field growth. A narrow freshness badge now wraps within its panel. Mouse input/default DPR only (some phone widths round up one CSS pixel); real-device, touch and Safari acceptance remain open. No live records or Forge games were used. The source audit still flags only the pre-existing 1,516-line `tokens.js`.
+
 ## P1 Matchups views and Rankings figures (2026-10-25; E11-S30 slice 10, first part)
 
 Matchups now shows one selected deck's saved opponents: a real six-column table with mouse input from 1000 px, cards at casual widths, and whole-row links for coarse input in the lab. One shared entry model preserves the best saved pair, exact perspective and destinations, old-list/engine wording, meaningless-result flags and the permission gate for unplayed matches. Uninformative figures fade and retain their words. The old matrix is removed.

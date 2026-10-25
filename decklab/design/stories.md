@@ -3802,7 +3802,9 @@ Slice 9's navigation and Last changed metadata built 2026-10-25: fresh server-vi
 
 Slice 10's first part built 2026-10-25: one selected deck's opponents as a mouse lab table, casual cards and coarse-input lab links, the simulations-mode chip, and shared Rankings figures. The shared entry model preserves pair choice, perspective, saved links and exception/permission handling. No field summary or residual is inferred from pair data.
 
-Gap: slice 9's touch/Safari acceptance; slice 10's selected-list field summary/latest swap and its device acceptance; then slices 11 to 15 (criteria 1 to 3 and 6). Device checks do not block coding. Section 6's question 4 is settled (Matt, 2026-10-25: only Building and Idea tiles show a status pill). The lab top bar's search is E11-S31.
+Slice 10's selected-list summary built 2026-10-25: exact Planned or built Play-now context, the server's field rating/flags/first-player edge and newest recorded swap. Bounded cached reads follow the selection and reject stale answers; historical tests retain their tested cards. All tests focuses its existing destination and late content keeps it visible until manual scrolling. `test_matchup_selected_summary_ui.py` covers lifecycle, failures and independent refresh; `test_deck_overview_ui.py` covers the incoming link and scroll-anchor behavior.
+
+Gap: slices 9 and 10's touch/Safari acceptance; then slices 11 to 15 (criteria 1 to 3 and 6). Device checks do not block coding. Section 6's question 4 is settled (Matt, 2026-10-25: only Building and Idea tiles show a status pill). The lab top bar's search is E11-S31.
 
 <a id="e11-s31"></a>
 

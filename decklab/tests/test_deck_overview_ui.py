@@ -106,3 +106,60 @@ class DeckOverviewUiTests(unittest.TestCase):
           assert(tests.textContent.includes('No tests yet'));
           page.summary.read_only = true; assert.equal(variantTestsSection(page), null);
         """)
+
+    def test_incoming_all_tests_link_jumps_only_while_its_deck_remains(self):
+        self.run_js("""
+          api = async () => ({tests: []});
+          const jumped = []; jumpTo = (id) => jumped.push(id);
+          location.hash = '#/deck?id=casual%2Ftest&v=target&tab=matchups&part=tests';
+          main.append(variantTestsSection(makePage())); flushTimers();
+          same(jumped, ['sec-tests']);
+          main.append(variantTestsSection(makePage())); routeToken++; flushTimers();
+          same(jumped, ['sec-tests']);
+          variantTestsSection(makePage()); flushTimers();
+          same(jumped, ['sec-tests']);
+        """)
+
+    def test_late_field_growth_keeps_the_jump_until_the_reader_scrolls(self):
+        self.run_js("""
+          let release, fieldContext;
+          api = (url) => url.startsWith('/api/field?') ? new Promise((resolve) => release = resolve)
+            : Promise.resolve(url === '/api/decks' ? {decks: []} : url.startsWith('/api/deck?')
+              ? {...makePage(), matchups: null} : {tests: []});
+          const actualDraw = fvDraw;
+          fvDraw = (ctx, answer) => { fieldContext = ctx; actualDraw(ctx, answer);
+            target.box.top += 300; target.box.bottom += 300; };
+          const settle = async () => { for (let i = 0; i < 8; i++) await Promise.resolve(); };
+          open('#/deck?id=casual%2Ftest&v=target&tab=matchups'); await settle();
+          const target = main.querySelector('#sec-tests'); target.box = {top: 200, bottom: 400, left: 0, right: 800};
+          const scrolls = []; window.scrollBy = (x, y) => scrolls.push(y);
+          jumpTo('sec-tests'); release({format: 'casual', opponents: []}); await settle();
+          assert(scrolls.includes(300), 'late content keeps the destination at its prior screen line');
+          window.fire('wheel'); const before = scrolls.length;
+          const refreshing = fvRefresh(fieldContext); release({format: 'casual', opponents: []}); await refreshing;
+          assert.equal(scrolls.length, before, 'manual scrolling releases the jump anchor');
+        """)
+
+    def test_late_opponent_library_keeps_the_tests_jump_in_place(self):
+        self.run_js("""
+          clear(main); state.library = null;
+          let release, target = null;
+          api = (url) => url === '/api/decks' ? new Promise((resolve) => release = resolve)
+            : Promise.resolve({tests: []});
+          const actualDraw = drawDeckMatchups;
+          drawDeckMatchups = (host, data, matchups) => {
+            actualDraw(host, data, matchups);
+            if (target && state.library) { target.box.top += 240; target.box.bottom += 240; }
+          };
+          const data = {...makePage(), matchups: {results: [], running: []}};
+          main.append(deckMatchupsPart(data), variantTestsSection(data));
+          target = main.querySelector('#sec-tests');
+          target.box = {top: 200, bottom: 400, left: 0, right: 800};
+          const scrolls = []; window.scrollBy = (x, y) => scrolls.push(y);
+          jumpTo('sec-tests');
+          release({decks: [data.summary, {id: 'casual/other', title: 'Other', kind: 'casual'}]});
+          for (let i = 0; i < 8; i++) await Promise.resolve();
+          assert(main.querySelector('#sec-matchups').textContent.includes('Not played yet against: Other.'));
+          assert(scrolls.includes(240), 'late opponent names keep the tests heading at its prior screen line');
+          assert.equal(document.activeElement, target);
+        """)

@@ -382,6 +382,12 @@ function variantTestsSection(data) {
   const body = el("div", { class: "vt-tests-body" }, loadingBox("Loading tests of changes..."));
   const section = el("section", { id: "sec-tests", class: "vt-tests", "aria-labelledby": "h-tests" },
     el("h2", { id: "h-tests", text: "Tests of changes" }), body);
+  const token = routeToken, viewer = state.profile?.id;
+  if (new URLSearchParams(location.hash.split("?")[1] || "").get("part") === "tests") {
+    setTimeout(() => {
+      if (token === routeToken && viewer === state.profile?.id && section.isConnected) jumpTo("sec-tests");
+    }, 0);
+  }
   api(`/api/variants?id=${encodeURIComponent(s.id)}&version=${version}`).then((answer) => {
     clear(body);
     const tests = answer.tests || [];

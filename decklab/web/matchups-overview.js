@@ -534,7 +534,8 @@ function drawMatchups(library, matchups, params, token) {
   if (needsLibrary(data)) lists.append(loadingBox("Updating the decks in Matchups."));
   else drawHome(lists, data, library, view);
   const watcher = followList(lists, token, data, updates, (fresh) => { data = fresh; }, (fresh) => drawHome(lists, fresh, library, view),
-    fresh => { if (view.mode === "rankings") muRefreshRankings(view, fresh); }, () => muCancelRankings(view), prepare);
+    fresh => { if (view.mode === "rankings") muRefreshRankings(view, fresh); else muRefreshSelectedSummary(view); },
+    () => { muCancelRankings(view); muCancelSelectedSummary(view); }, prepare);
   if (needsLibrary(data)) watcher.refresh();
   // The deck page's "Play a matchup" link (?a=&av=) opens the sheet with that deck picked.
   if (params.get("a") && gate.may) openPlaySheet(library, () => data, token, { a: params.get("a"), av: params.get("av"),
@@ -571,11 +572,13 @@ function drawHome(host, data, library, view) {
       } }))));
   section.append(head); host.append(section);
   if (view.mode === "rankings") {
+    muCancelSelectedSummary(view);
     view.token ??= routeToken; view.profile ??= state.profile?.id; view.rankings ||= new Map();
     view.rankingsHost = el("div", { class: "mu-rankings" }); section.append(view.rankingsHost);
     muRefreshRankings(view, data); return;
   }
   if (!formats.length) {
+    muCancelSelectedSummary(view);
     section.append(el("p", { class: "empty", text: "There are no two decks of one format to play yet." })); return;
   }
   const decks = matrixDecks(library, results, view.format), shown = results.filter(r => r.format === view.format);
@@ -605,6 +608,8 @@ function drawHome(host, data, library, view) {
   const deck = decks.find((d) => d.id === view.deck);
   const { entries, others } = matchupEntries(deck, decks, pairs, view.format, anyTodaysEngine(shown));
   add(body, [el("label", { class: "field mu-deck-field", for: select.id }, el("span", { text: "Show matchups for" }), select),
+    muSelectedSummary(view, library, data, deck),
+    el("p", { class: "sub", text: "Saved matchup rows below may use different lists or earlier engines. Open a row for its exact lists." }),
     el("div", { class: "mu-opponents" }, entries.length
       ? [matchupOpponentTable(entries), matchupOpponentLinks(entries)]
       : el("p", { class: "empty", text: `${deck.title} hasn't played a matchup yet.` })),

@@ -125,7 +125,8 @@ function deckMatchupsPart(data) {
   const updates = matchupRefreshStatus();
   section.append(content);
   let m = data.matchups;
-  const draw = () => drawDeckMatchups(content, data, m);
+  const place = (change) => typeof keepPlace === "function" ? keepPlace(change) : change();
+  const draw = () => place(() => drawDeckMatchups(content, data, m));
   const watch = () => {
     section.append(updates.node);
     watchMatchupUpdates({token, host: () => section, url, view: updates,
@@ -148,8 +149,8 @@ function deckMatchupsPart(data) {
       watch();
     }).catch((e) => {
       if (token !== routeToken) return;
-      clear(content).append(el("div", {class: "box box-warn"}, el("h3", {text: "Matchups can't be shown"}),
-        el("p", {text: e.message})));
+      place(() => clear(content).append(el("div", {class: "box box-warn"}, el("h3", {text: "Matchups can't be shown"}),
+        el("p", {text: e.message}))));
     });
   }
   return section;
@@ -175,7 +176,10 @@ function drawDeckMatchups(host, data, m) {
     api("/api/decks").then((library) => {
       if (token !== routeToken) return;           // the page was left: nothing to draw
       state.library = state.library || library;
-      if (host.isConnected) drawDeckMatchups(host, data, m);
+      if (host.isConnected) {
+        const redraw = () => drawDeckMatchups(host, data, m);
+        if (typeof keepPlace === "function") keepPlace(redraw); else redraw();
+      }
     }).catch(() => {});
   }
   // The tab's one primary action, for a viewer who may start runs (the field's Play is an outlined button).

@@ -53,20 +53,27 @@ function fieldSection(data) {
 /** Still the page this part was drawn for? */
 function fvHere(ctx) { return ctx.token === routeToken; }
 
+/** Late field content must not move a section the reader jumped to below it. */
+function fvKeepPlace(change) {
+  return typeof keepPlace === "function" ? keepPlace(change) : change();
+}
+
 async function fvRefresh(ctx) {
   clearTimeout(ctx.timer);
   if (!fvHere(ctx) || ctx.busy) return;
   try {
     const answer = await api(ctx.url);
     if (!fvHere(ctx) || ctx.busy) return;
-    fvDraw(ctx, answer);
+    fvKeepPlace(() => fvDraw(ctx, answer));
   } catch (e) {
     if (!fvHere(ctx) || ctx.busy) return;
-    clear(ctx.content).append(el("div", { class: "box box-warn" },
-      el("h3", { class: "box-head", text: "The field can't be shown" }),
-      el("p", { text: e.message || String(e) }),
-      el("div", { class: "actions" },
-        el("button", { type: "button", class: "btn", text: "Try again", onclick: () => fvRefresh(ctx) }))));
+    fvKeepPlace(() => {
+      clear(ctx.content).append(el("div", { class: "box box-warn" },
+        el("h3", { class: "box-head", text: "The field can't be shown" }),
+        el("p", { text: e.message || String(e) }),
+        el("div", { class: "actions" },
+          el("button", { type: "button", class: "btn", text: "Try again", onclick: () => fvRefresh(ctx) }))));
+    });
     return;
   }
   fvSchedule(ctx);

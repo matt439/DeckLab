@@ -22,7 +22,11 @@ SETUP = r"""
   const settle=async()=>{for(let n=0;n<30;n++)await Promise.resolve();};
   const held=()=>{let resolve,reject;const promise=new Promise((yes,no)=>{resolve=yes;reject=no;});return {promise,resolve,reject};};
   let read=async url=>url==='/api/decks'?library('after',true):answer('after',true);
-  api=async(url,options={})=>{requests.push({url,signal:options.signal});return read(url,options);};
+  api=async(url,options={})=>{
+    if(url.startsWith('/api/field?')){const p=new URL(url,'https://fixture.invalid').searchParams;
+      return {deck:{id:p.get('id'),version:p.get('version')},format:'Constructed',opponents:[]};}
+    if(url.startsWith('/api/variants?'))return {tests:[]};
+    requests.push({url,signal:options.signal});return read(url,options);};
   apiWrite=async()=>{writes++;throw new Error('Read-only fixture');};
   runGate=()=>({may:false,why:'Fixture only'});runsAllowed=()=>false;noteRuns=()=>{};
   const selected=()=>main.querySelector('#mu-deck-pick').querySelectorAll('option').find(option=>option.getAttribute('selected')!==null)?.getAttribute('value');

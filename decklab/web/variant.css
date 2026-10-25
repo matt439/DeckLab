@@ -101,3 +101,6 @@
   .vt-axis span { forced-color-adjust: auto; }
   .vt-diff-live .vt-diff-band { background: transparent; border-color: CanvasText; }
 }
+
+/* A deep link to saved tests clears the shell and the sticky deck tabs. */
+.vt-tests { scroll-margin-top: calc(var(--shell-top) + var(--tap) + var(--s-2)); }
