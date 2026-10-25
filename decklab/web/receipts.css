@@ -217,12 +217,13 @@
 .rcpt-decks { padding-left: var(--s-5); }
 .rcpt-decks li + li { margin-top: var(--s-1); }
 
-/* The bar, one row at every width: the progress over the arrival date on the left, the main button on the right. */
+/* One Record action, with its blocker reason and native arrival date beside it. The measured bar may grow. */
 .rcpt-bar { flex-wrap: nowrap; }
-.rcpt-bar .action-bar-status { display: flex; flex-direction: column; align-items: flex-start; gap: var(--s-1); }
+.rcpt-bar .action-bar-status { display: flex; flex: 1; flex-direction: column; align-items: flex-start; gap: var(--s-1); }
 .rcpt-bar .actions { flex: none; align-items: center; }
 .rcpt-status-line { line-height: var(--lh-tight); }
 .rcpt-progress { color: var(--ink); font-weight: var(--fw-semibold); font-variant-numeric: tabular-nums; }
+.rcpt-record-reason { max-width: 72ch; color: var(--ink-2); line-height: var(--lh-tight); overflow-wrap: anywhere; }
 .rcpt-stale { color: var(--warn-text); font-weight: var(--fw-semibold); }
 .rcpt-blanks {
   display: inline-flex; align-items: center; min-height: 24px; padding: 0;
@@ -231,12 +232,12 @@
 }
 .rcpt-blanks[hidden] { display: none; }
 .rcpt-blanks:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
-.rcpt-date { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--s-1) var(--s-2); color: var(--ink-2); font-size: var(--fs-sm); }
+.rcpt-date { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--s-1) var(--s-2); max-width: 100%; color: var(--ink-2); font-size: var(--fs-sm); }
 .rcpt-date select, .rcpt-date input { width: auto; }
 .rcpt-message:empty { display: none; }
 .rcpt-message { margin-top: var(--s-4); }
 @media (max-width: 599px) {
-  .rcpt-date select, .rcpt-date input { min-height: 36px; padding-top: 2px; padding-bottom: 2px; }
+  .rcpt-date select, .rcpt-date input { min-height: var(--field-h); max-width: 100%; padding-top: 2px; padding-bottom: 2px; }
   .rcpt-bar .btn-primary { max-width: 46vw; white-space: normal; line-height: var(--lh-tight); }
 }
 

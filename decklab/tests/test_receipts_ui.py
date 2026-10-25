@@ -1,5 +1,5 @@
 """The Receipts page's check-off board (receipts.js, decklab/UI-REVIEW.md WP6) in a small DOM double: nothing is
-received on open, ticks earn "Confirm: all N checked" (verified), the preview and the apply are separate and an
+received on open, Record arrival follows client blockers (verified), preview and apply are separate and an
 edit after the preview stops the apply, late answers are dropped, splits keep the order's totals, a token's back
 must be confirmed, a product needs its choice, the check survives a reload, members see it read only, the tiles
 open the card viewer as a group, and the success view says where the cards go."""
@@ -57,7 +57,7 @@ class ReceiptBoardTests(unittest.TestCase):
           let calls=0;apiWrite=async()=>{calls++;throw new Error('no write');};
           assert.equal(view.comps.length,1);assert(view.comps[0].selected);   // one part: chosen, no "This arrived" box
           assert(!main.textContent.includes('This arrived'));
-          assert.equal(view.primary.textContent,'Preview');
+          assert.equal(view.primary.textContent,'Record arrival');
           assert(main.textContent.includes('0/3 ✓'));assert(main.textContent.includes('1 check left'));
           await previewDelivery(view);assert.equal(calls,0);
           assert(body().includes('tick at least one card that arrived'));assert(body().includes('Check not ticked: Verify actual condition'));
@@ -153,7 +153,7 @@ class ReceiptBoardTests(unittest.TestCase):
           tickAll(view);
           // Every tile ticked, but Alpha's condition and language are still blank: not "all checked" yet, and the
           // note that says so stays (only the "check on arrival" part goes with the tick).
-          assert.equal(view.primary.textContent,'Preview');
+          assert.equal(view.primary.textContent,'Record arrival');
           assert(!view.blanks.hidden);assert(main.textContent.includes('2 with no condition or language'));
           assert.equal(view.comps[0].rows[0].values.notes,'condition and language not recorded');
           await previewDelivery(view);
@@ -166,7 +166,7 @@ class ReceiptBoardTests(unittest.TestCase):
           rcptFillBlanks(view,view.comps[0],'NM','en');
           assert.equal(view.comps[0].rows[0].values.notes,'');                  // true no more, so it goes too
           assert(view.blanks.hidden);
-          assert.equal(view.primary.textContent,'Confirm: all 3 checked');
+          assert.equal(view.primary.textContent,'Record arrival');assert.equal(view.primary.getAttribute('aria-disabled'),'false');
           await previewDelivery(view);
           assert.equal(calls.length,2);assert.equal(calls[1][0],'/api/receipt/preview');
           sent=calls[1][1];assert.equal(sent.received_on,'2026-10-08');assert.equal(sent.fingerprint,'a'.repeat(64));
@@ -211,14 +211,14 @@ class ReceiptBoardTests(unittest.TestCase):
           tickAll(view);let finish;apiWrite=()=>new Promise(resolve=>{finish=resolve;});
           const pending=previewDelivery(view);routeToken++;clear(main).append(el('p',{text:'Another page'}));
           finish(ready);await pending;assert.equal(main.textContent,'Another page');
-          assert.equal(view.preview,null);assert(!body().includes('Record arrival'));
+          assert.equal(view.preview,null);assert(!view.previewSheet);
         """)
 
     def test_a_change_of_profile_discards_a_late_result(self):
         self.run_js("""
           tickAll(view);let finish;apiWrite=()=>new Promise(resolve=>{finish=resolve;});
           const pending=previewDelivery(view);state.profile={id:'user1',name:'User1'};
-          finish(ready);await pending;assert.equal(view.preview,null);assert(!body().includes('Record arrival'));
+          finish(ready);await pending;assert.equal(view.preview,null);assert(!view.previewSheet);
         """)
 
     def test_success_says_where_the_cards_go_and_offers_no_second_receipt(self):

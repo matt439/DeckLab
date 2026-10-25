@@ -139,7 +139,7 @@ function rcptSyncLayout(view, progress) {
       text: item.text, onclick: () => { if (receiptEditable(view)) rcptGoTo(view, item); } }))))
       : el("p", { class: "sub", text: view.comps.some((comp) => comp.selected)
         ? "Ready for server preview." : "Select the parts that arrived." }),
-    progress.blanks ? el("p", { class: "sub", text: `${plural(progress.blanks, "checked card copy", "checked card copies")} still lack condition or language; the preview states what stays blank.` }) : null),
+    progress.blanks ? el("p", { class: "sub", text: `${plural(progress.blanks, "checked card copy", "checked card copies")} ${progress.blanks === 1 ? "still lacks" : "still lack"} condition or language; the preview states what stays blank.` }) : null),
     el("section", { class: "rcpt-guidance-where" }, el("h3", { text: "Where these go" }),
       destinations.length ? el("ul", { class: "rcpt-guidance-destinations" }, destinations)
         : el("p", { class: "sub", text: "Tick the cards that arrived to see guidance for those copies." })),

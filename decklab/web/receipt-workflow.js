@@ -75,9 +75,11 @@ function rcptBuildBar(view) {
     const first = view.comps.find((c) => c.selected && c.kind === "cards");
     if (first && first.section) first.section.scrollIntoView({ block: "start", behavior: "smooth" });
   } });
-  view.primary = el("button", { type: "button", class: "btn btn-primary", text: "Preview", onclick: () => previewDelivery(view) });
+  view.recordReason = el("span", { id: "rcpt-record-reason", class: "rcpt-record-reason", "aria-live": "polite" });
+  view.primary = el("button", { type: "button", class: "btn btn-primary", text: "Record arrival",
+    "aria-describedby": "rcpt-record-reason", onclick: () => rcptRecord(view) });
   // One row on a phone too: the progress over the date on the left, the main button on the right.
-  view.bar = actionBar({ status: [el("span", { class: "rcpt-status-line" }, view.progress, view.stale), view.blanks,
+  view.bar = actionBar({ status: [el("span", { class: "rcpt-status-line" }, view.progress, view.stale), view.recordReason, view.blanks,
     el("label", { class: "rcpt-date" }, el("span", { text: "Arrived" }), view.dateSelect, view.dateInput)],
   actions: [view.primary] });
   view.bar.node.classList.add("rcpt-bar");
@@ -99,26 +101,37 @@ function rcptProgress(view) {
   return { copies, ticked, checks, checksLeft, blanks, ready: ticked > 0 && !empty && !checksLeft && !blanks };
 }
 
-/** The bar's progress, the main button's words, and "Changed since preview". */
+/** The bar uses the same blockers as preview; blank details and unticked remainder never block recording. */
 function rcptSync(view) {
   if (!view.bar) return;
   const p = rcptProgress(view);
   const any = view.comps.some((c) => c.selected);
-  const undecided = view.comps.filter((c) => c.selected && c.kind === "product" && !c.intact);
+  const undecided = view.comps.filter((c) => c.selected && c.kind === "product" && !["yes", "no"].includes(c.intact));
   add(clear(view.progress), [!any ? "Tick “This arrived” on what came." : p.copies
     ? `${p.ticked}/${p.copies} ✓${p.checksLeft ? ` · ${plural(p.checksLeft, "check")} left` : ""}`
     : undecided.length ? `Choose what to do with ${undecided.map((c) => (c.c.product && c.c.product.name) || c.c.id).join(" and ")}.`
-      : "Ready to preview."]);
-  view.primary.textContent = p.ready && !view.comps.some((c) => c.selected && c.kind === "product" && !c.intact)
-    ? p.ticked === p.copies ? `Confirm: all ${p.ticked} checked` : `Confirm: ${p.ticked} selected checked` : "Preview";
+      : "Ready to review."]);
+  const blockers = rcptClientBlockers(view);
+  view.primary.setAttribute("aria-disabled", String(blockers.length > 0));
+  view.recordReason.textContent = view.reloadRequired ? "The delivery changed. Reload it before recording."
+    : blockers.length ? `${blockers[0].text}${blockers.length > 1 ? ` (${blockers.length} things to check.)` : ""}`
+      : "Review the exact changes before recording.";
   // Warn only about the copies being received; unticked copies remain pending.
   const showBlanks = any && p.blanks > 0 && p.ticked > 0 && !p.checksLeft;
   view.blanks.hidden = !showBlanks;
   view.blanks.textContent = showBlanks ? `${p.blanks} with no condition or language` : "";
-  view.primary.disabled = view.busy || view.reloadRequired || !any;
+  view.primary.disabled = !receiptEditable(view);
   const changed = view.preview && view.preview.key !== rcptRequestKey(view);
   view.stale.textContent = changed ? " · Changed since preview, preview again" : "";
   rcptSyncLayout(view, p);
+}
+
+/** A blocked primary stays reachable and takes focus to the first actionable blocker. */
+function rcptRecord(view) {
+  if (!receiptEditable(view)) return;
+  const blockers = rcptClientBlockers(view);
+  if (blockers.length) { rcptGoTo(view, blockers[0]); return; }
+  return previewDelivery(view);
 }
 
 /** After any change: the bar, the draft, and the preview marked out of date. */
@@ -155,15 +168,19 @@ function rcptRequestKey(view) { return JSON.stringify(rcptRequest(view)); }
  * a product with no storage choice, or a bad date. Unticked rows remain pending. */
 function rcptClientBlockers(view) {
   const out = [];
+  if (!view.comps.some(comp => comp.selected)) {
+    const first = view.comps[0]?.section;
+    out.push({ text: 'Tick "This arrived" on what came.', target: first?.querySelector("input") || first });
+  }
   for (const comp of view.comps) {
     if (!comp.selected) continue;
     if (comp.kind === "product") {
-      if (!comp.intact) out.push({ text: `${rcptTitle(comp.c, view.data)}: choose whether to keep it as its own deck(s) or break it up.`,
+      if (!["yes", "no"].includes(comp.intact)) out.push({ text: `${rcptTitle(comp.c, view.data)}: choose whether to keep it as its own deck(s) or break it up.`,
         target: comp.choice });
       continue;
     }
     const selected = comp.rows.filter(row => row.ticked);
-    if (!selected.length) out.push({ text: `${rcptTitle(comp.c, view.data)}: tick at least one card that arrived.`, target: comp.section });
+    if (!selected.length) out.push({ text: `${rcptTitle(comp.c, view.data)}: tick at least one card that arrived.`, comp, selection: true });
     if (comp.kind === "tokens") {
       for (const row of selected) {
         if (rcptBackOpen(row)) out.push({ text: `${rcptRowName(comp, row)}: say what its back is, or that it's blank.`, comp, row });
@@ -174,12 +191,19 @@ function rcptClientBlockers(view) {
     });
   }
   const today = view.data.today || rcptToday();
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(view.date.value || "")) out.push({ text: "Choose the date it arrived.", date: true });
+  if (!rcptValidDay(view.date.value)) out.push({ text: "Choose a valid arrival date.", date: true });
   else if (view.date.value > today) out.push({ text: "The arrival date can't be in the future.", date: true });
   else if (view.data.ordered_on && view.date.value < view.data.ordered_on) {
     out.push({ text: `It can't have arrived before it was ordered (${rcptDate(view.data.ordered_on)}).`, date: true });
   }
   return out;
+}
+
+/** Match the native date input's real calendar days without normalising an invalid saved value. */
+function rcptValidDay(value) {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value) || value.startsWith("0000-")) return false;
+  const day = new Date(`${value}T00:00:00Z`);
+  return Number.isFinite(day.getTime()) && day.toISOString().slice(0, 10) === value;
 }
 
 /** A row's name for a list of blockers: a token with its printing ("Ooze (TM11 5)"), so twins can be told apart. */
@@ -193,6 +217,15 @@ function rcptRowName(comp, row) {
 /** Takes the person to what a blocker names: the tile (its sheet), a check, the product's choice or the date. */
 function rcptGoTo(view, item) {
   if (!receiptEditable(view)) return;
+  if (item.selection) {
+    if (view.filter !== "all") rcptSetFilter(view, "all");
+    const target = item.comp.rows[0]?.tile?.querySelector(".rcpt-tick") || item.comp.section;
+    if (target) {
+      if (target === item.comp.section) target.setAttribute("tabindex", "-1");
+      target.scrollIntoView({ block: "center", behavior: "smooth" }); target.focus();
+    }
+    return;
+  }
   if (item.comp && item.row) {
     if (view.filter !== "all") rcptSetFilter(view, "all");
     const tile = item.row.tile;
@@ -212,12 +245,14 @@ function rcptGoTo(view, item) {
     return;
   }
   if (item.target) {
+    const target = item.target.getAttribute("role") === "group"
+      ? [...item.target.querySelectorAll("button")].find(button => !button.disabled) || item.target : item.target;
     // A section isn't focusable by itself: tabindex -1 lets the focus land on it.
-    if (/^(section|div)$/i.test(item.target.tagName || item.target.tag || "") && !item.target.getAttribute("tabindex")) {
-      item.target.setAttribute("tabindex", "-1");
+    if (/^(section|div)$/i.test(target.tagName || target.tag || "") && !target.getAttribute("tabindex")) {
+      target.setAttribute("tabindex", "-1");
     }
-    item.target.scrollIntoView({ block: "center", behavior: "smooth" });
-    item.target.focus();
+    target.scrollIntoView({ block: "center", behavior: "smooth" });
+    target.focus();
   }
 }
 
