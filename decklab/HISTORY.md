@@ -2,6 +2,14 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Dense Shopping queue tables (2026-10-25; E11-S30 slice 12)
+
+The lab now uses real grouped purchase-queue tables with Card, Printing, For, Qty, Ref AUD, Shop, Stock and Checked facts plus the existing guarded actions. Long-term keeps its deck groups and append-only Show all. Below 1000px the existing cards return. A density change moves the original viewer triggers, deck links, research and write controls; there is one attached representation, with current row identity/revision and focus preserved. Notes/reprint research expand in a full-width detail row, while saved words remain accessible when visually clipped.
+
+Browser QA corrected grid minimum sizing and inherited shared-table padding. Ordinary mouse rows are 36px including their divider, headers/groups 30px, and the 32px notes control stays within its row. Both actions fit their cell; the roughly 845px immediate fixture table scrolls inside a narrow pane and fits wider panes. Stock's short visible header retains its complete accessible name. Menus escape the scroll frame, stay within the window, and clear fixed coordinates on return to cards. Focused saved/moved controls scroll into view.
+
+Validation: 283 targeted Python/Node UI/source checks passed. Synthetic Chromium checked 24 viewport/theme combinations with all eight intent rows retained, exactly three selected-shop marks, no page overflow, contained action/notes targets and the expected 36/30px geometry. Actual 999/1000 transitions retained viewer and reprint-sheet close focus; short-window last-row menu hit testing, Escape/Tab and local sticky-header scrolling passed. Save/move/remove revision behavior and control identity have fixture-test coverage; no actual queue writes were made. Mouse/default DPR and keyboard only; actual coarse-pointer, touch, Safari and device acceptance remain open. All fixture API writes were disabled. No live database/records, downloads or Forge games. The source audit still flags only pre-existing `tokens.js` (1,516 lines).
+
 ## Preserve receipt destination uncertainty (2026-10-25; E11-S30 slice 12)
 
 Recorded results now use the same loaded-data destination classifier as pre-record guidance. Unavailable/missing/malformed metadata and untracked basic-land destinations get explicit panels instead of being called storage. Storage advice requires complete known deck metadata for a nonbasic card, after its loaded waiting quantities are accounted for. Split hints are deduplicated and capped to supplied copies; recorded results use the frozen reviewed selection, preserving partial scope and whole-product/token treatment. No request, preview/apply payload, permission or data-read changes.

@@ -364,6 +364,7 @@ function shopQueueMove(card, view) {
   })), { aria: `Move ${card.name} to another category`, buttonClass: "btn btn-quiet shop-category-move" });
   const button = menu.querySelector(".menu-button");
   button.setAttribute("data-queue-row", card.queue_row);
+  button.addEventListener("click", () => shopQueueMenuPosition(button, menu.querySelector(".menu")));
   const details = el("button", { type: "button", class: "btn btn-quiet shop-queue-edit shop-queue-write",
     "data-queue-row": card.queue_row, text: "Details…", "aria-label": `Change ${card.name}`,
     onclick: () => shopQueueSheet(view, card) });
@@ -563,7 +564,7 @@ async function shopSaveQueue(view, sheet, error, body, card) {
     if (!sheet.closed) sheet.dialog.querySelectorAll("button").forEach((button) => {
       button.disabled = view.stale && (button.textContent === "Save" || button.textContent === "Add card" || button.textContent === "Remove card");
     });
-    if (focusAfter && shopQueueActive(view)) focusAfter.focus({ preventScroll: true });
+    if (focusAfter && shopQueueActive(view)) shopQueueFocus(focusAfter);
   }
 }
 
@@ -597,8 +598,8 @@ async function shopMoveQueue(card, next, view, error) {
     shopQueueBusy(view, false);
     if (view.root.isConnected) {
       view.root.querySelectorAll(".shop-category-move").forEach((button) => { button.disabled = Boolean(view.stale); });
-      if (retry) retry.focus({ preventScroll: true });
-      else if (focusAfter && shopQueueActive(view)) focusAfter.focus({ preventScroll: true });
+      if (retry) shopQueueFocus(retry);
+      else if (focusAfter && shopQueueActive(view)) shopQueueFocus(focusAfter);
     }
   }
 }
@@ -642,12 +643,14 @@ function shopLongTerm(rows, view = null) {
   }
   return [...groups.entries()].map(([key, group]) => {
     const copies = group.rows.reduce((sum, r) => sum + (r.quantity || 0), 0);
-    const list = el("div", { class: "shop-rows" });
+    const list = view ? shopQueuePresentation([["long_term", "Long-term", []]], view, {showFor: false, group: "long-term", headings: false})
+      : el("div", { class: "shop-rows" });
+    let shownCount = 0;
     const draw = (all) => {
       const shown = all ? group.rows : group.rows.slice(0, SHOP_LONG_TERM_SHOWN);
-      const first = all ? list.children.length : 0;
-      if (!all) clear(list);
-      add(list, shown.slice(first).map((r) => shopQueueRow(r, "long-term", false, view)));
+      if (view) list.appendQueueRows(shown.slice(shownCount));
+      else add(list, shown.slice(shownCount).map((r) => shopQueueRow(r, "long-term", false)));
+      shownCount = shown.length;
     };
     const expanded = view && view.expanded.has(key);
     draw(expanded);
@@ -685,7 +688,7 @@ function shopSection(id, title, count, description, ...content) {
 function drawShopping(data) {
   if (typeof noteDeliveries === "function") noteDeliveries(data);     // the top bar's badge (shell.js)
   if (!data.to_buy) data.to_buy = [];
-  const view = { data, expanded: new Set(), busy: false, stale: false, root: null, redraw: null,
+  const view = { data, expanded: new Set(), queuePresentations: [], busy: false, stale: false, root: null, redraw: null,
     token: routeToken, profile: state.profile && state.profile.id };
   const queue = data.to_buy || [], orders = data.orders || [], checks = data.checks || [];
   const waiting = orders.filter((order) => (order.components || []).some((c) => c.status === "pending"));
@@ -718,6 +721,7 @@ function drawShopping(data) {
   const sideNode = el("div", { class: "shop-side shop-detail-pane" }, matchSlot, buySlot, missingSlot, deckSlot, longSlot);
   // Redraw only buying controls and their counts. Deliveries and pending follow-up Undo keep their nodes.
   view.redraw = () => {
+    view.queuePresentations = [];
     shopNormalizeChoice(view);
     const immediate = queue.filter((card) => card.state !== "long_term");
     const later = queue.filter((card) => card.state === "long_term");
@@ -781,5 +785,6 @@ function drawShopping(data) {
     if (!emptyBox.hidden) layout.remove();
     else if (!layout.parentNode) layoutSlot.append(layout);
   };
+  shopWatchQueueDensity(view);
   return view;
 }

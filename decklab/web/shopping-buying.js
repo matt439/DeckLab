@@ -65,10 +65,7 @@ function shopQueueGroups(rows, view) {
     ["waiting", "Waiting", rows.filter(row => ["waiting_for_stock", "waiting_for_reprint"].includes(row.state))],
     ["deferred", "Deferred", rows.filter(row => row.state === "deferred")],
     ["other", "State not recorded", rows.filter(row => !SHOP_QUEUE_STATES.includes(row.state))]];
-  return el("div", {class: "shop-queue-groups"}, groups.filter(([, , list]) => list.length).map(([key, title, list]) =>
-    el("section", {class: "shop-queue-group", "data-queue-group": key},
-      el("h3", {}, title, el("span", {class: "shop-group-count", text: ` \u00b7 ${plural(list.length, "row")}`})),
-      el("div", {class: "shop-rows"}, list.map(card => shopQueueRow(card, "to-buy", true, view, false, true))))));
+  return shopQueuePresentation(groups.filter(([, , list]) => list.length), view);
 }
 
 /** Every recorded stock/date fact stays on its canonical queue row, even without an image or price. */
