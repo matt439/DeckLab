@@ -189,6 +189,8 @@ button.deck-card { cursor: pointer; }
   margin-top: var(--s-2);
 }
 @media (min-width: 1281px) { .lib-split { grid-template-columns: minmax(0, 720px) minmax(0, 1fr); } }
+/* From 2,200 px the list is 880 px, for the larger type (tokens.css) and a less lopsided split. */
+@media (min-width: 2200px) { .lib-split { grid-template-columns: minmax(0, 880px) minmax(0, 1fr); } }
 .lib-split > .lib-list {
   padding: var(--s-1) var(--gutter-list) var(--s-4);
   border-radius: var(--r-panel);
@@ -262,6 +264,10 @@ button.deck-row { cursor: pointer; }
   .deck-row { grid-template-columns: 56px minmax(0, 1fr) minmax(0, 150px) minmax(0, 132px); }
   .deck-row-forge > .range-bar { display: block; }
 }
+@media (min-width: 2200px) {
+  .deck-row { grid-template-columns: 64px minmax(0, 1fr) minmax(0, 180px) minmax(0, 160px); }
+  .deck-row-art { width: 64px; height: 44px; }
+}
 
 /* The detail pane: the selected deck's overview, sticky under the top bar. */
 .lib-detail {
@@ -275,7 +281,9 @@ button.deck-row { cursor: pointer; }
   box-shadow: 0 0 0 1px var(--border), var(--shadow-1);
 }
 .lib-detail-card > .deck-stripe { position: absolute; inset: 0 0 auto; z-index: 1; }
-.lib-detail-card > .deck-cover { width: auto; aspect-ratio: 5 / 2; }
+/* The art is 5:2 of the pane's width, but at most 280 px (or 30% of the window) high, so a wide pane (QHD: 1,700 px)
+   doesn't push the deck's details below the fold; up to about 1,800 px wide nothing changes. */
+.lib-detail-card > .deck-cover { width: 100%; aspect-ratio: 5 / 2; max-height: min(280px, 30vh); }
 .lib-detail-card > .deck-cover > .deck-pips { left: var(--s-4); bottom: var(--s-3); }
 .lib-detail-body { display: grid; gap: var(--s-3); padding: var(--s-4) var(--s-5) var(--s-5); }
 .lib-detail-title { margin: 0; font-size: var(--fs-xl); line-height: var(--lh-tight); }
