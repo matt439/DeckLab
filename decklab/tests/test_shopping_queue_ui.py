@@ -44,7 +44,7 @@ class ShoppingQueueInteractionTests(unittest.TestCase):
             deck: {id: "casual/otters", title: "Izzet Otters"}});
           const before = JSON.parse(JSON.stringify(card));
           drawShopping(queueData([card]));
-          const viewer = main.querySelector(".card-row"), control = moveButton(3);
+          const viewer = main.querySelector("#shop-to-buy").closest("section").querySelector(".card-row"), control = moveButton(3);
           assert.equal(control.closest(".card-row"), null);
           assert.equal(control.closest(".shop-queue-row").querySelector(".card-row"), viewer);
           viewer.click();

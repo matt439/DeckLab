@@ -2,6 +2,12 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## P1 Shopping page frame (2026-10-25; E11-S30 slice 12, first part)
+
+Shopping now places its existing deliveries, follow-ups and shop research in a 560px list pane, with buying and missing-card views in the detail pane. It stacks through 1280px. Buying redraws retain delivery, active Undo and history nodes; empty/add/last-remove transitions retain the same frame. Parts of this page links now move keyboard focus to the destination without changing the Shopping route. Queue permissions/identity, aggregate shortfalls and receipt preview contracts retain their existing behavior.
+
+Validation: 180 distinct targeted Python/Node checks passed, including the existing receipt UI checks; the new focus correction passed an 18-check affected-module rerun. Synthetic Chromium covered the nine documented viewport sizes plus requested 1280/1281 in both themes (22 combinations), without page overflow. The requested 1281 width rounded to 1282; exact CSS breakpoint behavior is covered by tests. Mouse/default DPR only; real devices, touch and Safari remain unverified. No live writes, purchases, downloads or Forge games. The pre-existing 1,516-line `tokens.js` audit failure remains. Dense queue grouping/shop-radio matching, compact delivery expanders and Receive delivery remain later slice 12 work.
+
 ## P1 Collection preview and casual rows (2026-10-25; E11-S30 slice 11)
 
 The Card list now selects an exact printing/finish into a lab preview, 400px wide (340px at 1000–1280). Edit copies opens the existing guarded sheet. Casual widths use one panel of rows with 24-row Show more, focus on the first newly shown row, and a sticky search/filter band. The same filtered set drives both layouts and the bulk scope. Notes and alternate-printing warnings remain available, including for read-only viewers. Storage counts retain uncertainty and untracked basic-land wording; no named holder is inferred. Missing prices use a decorative em dash plus spoken words.

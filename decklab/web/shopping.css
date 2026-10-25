@@ -1,10 +1,10 @@
-/* Shopping (shopping.js): lays the shared components out. One column on a phone, under a row of links to its
-   parts; from 1000 px the deliveries on the left and the queue, the decks and the follow-ups on the right; the
-   long-term plan full width under them. */
+/* Shopping's page frame: the existing delivery/follow-up/shop views in a 560 px list pane, buying in the
+   detail pane. Stacked through 1280 px, with links to its parts; the order history stays below both panes.
+   Queue grouping, radio matching and the receipt board have their own later layout slices. */
 .shop-layout { display: grid; gap: var(--s-6); align-items: start; margin-top: var(--s-4); }
 .shop-main, .shop-side { display: grid; gap: var(--s-6); min-width: 0; align-content: start; }
 .shop-section { min-width: 0; }
-.shop-page > .shop-section, .shop-long-slot:not(:empty) { margin-top: var(--s-6); }
+.shop-page > .shop-section { margin-top: var(--s-6); }
 .shop-queue-slot:empty { display: none; }
 .shop-section-head { display: flex; align-items: center; gap: var(--s-3); margin-bottom: var(--s-2); }
 .shop-section-head h2 { margin: 0; font-size: var(--fs-lg); }
@@ -15,8 +15,7 @@
 }
 .shop-section-head h2 { scroll-margin-top: calc(var(--shell-top) + var(--s-3)); }
 
-/* The row of links to the parts: a phone's and a portrait tablet's (one column there); a wide screen shows
-   every part beside the deliveries already. */
+/* The one-column page's jump links stay available on a stacked landscape tablet too. */
 .shop-jumps ul { list-style: none; display: flex; flex-wrap: wrap; gap: var(--s-2); margin: var(--s-3) 0 0; padding: 0; }
 .shop-jumps a {
   display: inline-flex; align-items: center; gap: var(--s-2);
@@ -26,7 +25,7 @@
 }
 .shop-jumps a:hover { border-color: var(--border-strong); }
 .shop-jumps .shop-count { min-width: 0; }
-@media (min-width: 1000px) { .shop-jumps { display: none; } }
+@media (min-width: 1281px) { .shop-jumps { display: none; } }
 .shop-description { margin: 0 0 var(--s-3); color: var(--ink-2); font-size: var(--fs-sm); }
 
 /* A delivery on the way. */
@@ -105,7 +104,7 @@
 .reprint-provenance > summary { min-height: var(--tap); display: flex; align-items: center; }
 .reprint-copy { display: grid; justify-items: start; gap: var(--s-2); margin: var(--s-4) 0; }
 .reprint-copy input { max-width: 36em; width: 100%; }
-.shop-buying-slot { display: grid; gap: var(--s-6); margin-top: var(--s-6); }
+.shop-buying-slot { display: grid; gap: var(--s-6); min-width: 0; }
 .shop-buying-slot:empty { display: none; }
 .shop-missing-rows { display: grid; gap: var(--s-4); grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); }
 .shop-missing-card { min-width: 0; display: grid; align-content: start; gap: var(--s-2); }
@@ -169,11 +168,12 @@
 .shop-contents-head:first-child { margin-top: 0; }
 
 @media (min-width: 1000px) {
-  .shop-layout { grid-template-columns: minmax(0, 3fr) minmax(320px, 2fr); gap: var(--s-6) var(--s-7); }
   .shop-pasts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .shop-long-slot .shop-rows { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
 }
+@media (min-width: 1281px) {
+  .shop-layout { grid-template-columns: 560px minmax(0, 1fr); gap: var(--s-6) var(--s-6); }
+}
 @media (min-width: 1600px) {
-  .shop-layout { grid-template-columns: minmax(0, 2fr) minmax(380px, 1fr); }
   .shop-pasts { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }

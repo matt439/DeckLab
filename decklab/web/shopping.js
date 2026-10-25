@@ -198,7 +198,11 @@ function shopJumps(parts) {
       onclick: (e) => {
         e.preventDefault();
         const target = document.getElementById(p.id);
-        if (target) target.scrollIntoView({ block: "start" });
+        if (target) {
+          target.setAttribute("tabindex", "-1");
+          target.focus({ preventScroll: true });
+          target.scrollIntoView({ block: "start" });
+        }
       } }, el("span", { text: p.label }), p.number > 1 ? el("span", { class: "shop-count", text: String(p.number) }) : null)))));
 }
 
@@ -652,8 +656,6 @@ function drawShopping(data) {
   const view = { data, expanded: new Set(), busy: false, stale: false, root: null, redraw: null,
     token: routeToken, profile: state.profile && state.profile.id };
   const queue = data.to_buy || [], orders = data.orders || [], checks = data.checks || [];
-  const toBuy = queue.filter((card) => card.state !== "long_term");
-  const longTerm = queue.filter((card) => card.state === "long_term");
   const waiting = orders.filter((order) => (order.components || []).some((c) => c.status === "pending"));
   const history = orders.filter((order) => !waiting.includes(order));
   const followUps = checks.filter((check) => check.status === "received");
@@ -664,23 +666,22 @@ function drawShopping(data) {
   const buySlot = el("div", { class: "shop-queue-slot" });
   const deckSlot = el("div", { class: "shop-queue-slot" });
   const longSlot = el("div", { class: "shop-long-slot" });
-  const buyingSlot = el("div", { class: "shop-buying-slot" });
+  const missingSlot = el("div", { class: "shop-buying-slot shop-missing-slot" });
+  const storeSlot = el("div", { class: "shop-buying-slot shop-store-slot" });
   const jumpSlot = el("div");
 
-  // The deliveries on the left; what to buy, the decks still missing cards and the follow-ups on the right
-  // (under them on a phone, with a row of links at the top to reach each part).
+  // The list pane owns deliveries, follow-ups and the current shop research. Buying stays in the detail
+  // pane; below 1281 px they stack, with links to each part. Keep delivery/Undo/history nodes across writes.
   const main = [
     shopSection("shop-on-the-way", "On the way", waiting.length, null,
       waiting.length ? el("div", { class: "shop-deliveries" }, waiting.map((order) => shopDelivery(order, onArrival(order), view)))
         : el("div", { class: "empty" }, el("p", { text: "Nothing is on the way." }))),
-  ];
-  const side = [
-    buySlot, deckSlot,
     followUps.length ? shopSection("shop-follow-ups", "Follow-ups", followUps.length,
       "Checks left open on deliveries that have arrived.",
       el("ul", { class: "shop-followups" }, followUps.map((check) => shopFollowUp(check, orders.find((o) => o.id === check.order_id))))) : null,
+    storeSlot,
   ];
-  const sideNode = el("div", { class: "shop-side", hidden: !toBuy.length && !decks.length && !followUps.length }, side);
+  const sideNode = el("div", { class: "shop-side shop-detail-pane" }, buySlot, missingSlot, deckSlot, longSlot);
   // Redraw only buying controls and their counts. Deliveries and pending follow-up Undo keep their nodes.
   view.redraw = () => {
     const immediate = queue.filter((card) => card.state !== "long_term");
@@ -698,12 +699,12 @@ function drawShopping(data) {
     if (later.length) longSlot.append(shopSection("shop-long-term", "Long-term plan", 0,
       `${plural(later.reduce((sum, r) => sum + (r.quantity || 0), 0), "card")} for decks to build later. Add them to an order when the shop has them, to share its postage.`,
       shopLongTerm(later, view)));
-    clear(buyingSlot);
-    add(buyingSlot, [shopMissingCards(view), shopByShop(view)]);
-    sideNode.hidden = !immediate.length && !decks.length && !followUps.length;
+    clear(missingSlot); add(missingSlot, [shopMissingCards(view)]);
+    clear(storeSlot); add(storeSlot, [shopByShop(view)]);
     clear(jumpSlot);
     const missing = data.missing_cards;
     const missingShown = missing && (!missing.ready || (missing.rows || []).length || (missing.errors || []).length || (missing.warnings || []).length);
+    sideNode.hidden = !immediate.length && !decks.length && !later.length && !missingShown;
     emptyBox.hidden = Boolean(waiting.length || followUps.length || immediate.length || later.length || decks.length || missingShown);
     const jumps = shopJumps([
       { id: "shop-on-the-way", label: "On the way", count: waiting.length, number: waiting.length },
@@ -717,7 +718,7 @@ function drawShopping(data) {
     if (jumps) jumpSlot.append(jumps);
   };
   view.redraw();
-  const layout = el("div", { class: "shop-layout" }, el("div", { class: "shop-main" }, main), sideNode);
+  const layout = el("div", { class: "shop-layout" }, el("div", { class: "shop-main shop-list-pane" }, main), sideNode);
   const layoutSlot = el("div");
   if (emptyBox.hidden) layoutSlot.append(layout);
   const root = el("div", { class: "shop-page" },
@@ -733,8 +734,6 @@ function drawShopping(data) {
     jumpSlot,
     emptyBox,
     layoutSlot,
-    buyingSlot,
-    longSlot,
     history.length ? el("details", { class: "shop-history" },
       el("summary", { text: `Order history · ${plural(history.length, "order")}` }),
       el("ul", { class: "shop-pasts" }, history.map(order => shopPastOrder(order, view)))) : null);

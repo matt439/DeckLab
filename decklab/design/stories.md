@@ -3806,9 +3806,11 @@ Slice 10's selected-list summary built 2026-10-25: exact Planned or built Play-n
 
 Slice 11's Collection metadata built 2026-10-25: explicit unknowns and density-aware details, neutral special-finish pills, missing-details notice/storage filter, visibly named all-filtered-row bulk scope, and dated per-copy estimates. `collection-rows.js` extracts presentation from the existing editing/guard flows; supported language choices match the backend. `test_collection_metadata_ui.py` covers accessibility, filters, bulk scope and dates.
 
+Slice 12's Shopping frame built 2026-10-25: 560px list pane, stacked through 1280px; retained delivery/follow-up Undo/history nodes, honest empty and last-row transitions, and focused jump destinations. Queue identity, write permissions, shortfall semantics and receipt contracts are retained. `test_shopping_layout_ui.py` covers these lifecycle and layout boundaries. Dense queue grouping/radio matching, compact delivery expanders and Receive delivery remain.
+
 Slice 11's Collection layout built 2026-10-25: the exact printing/finish preview beside the lab table, casual rows with 24-row Show more and focus progression, sticky search/filter sheet, recorded notes and alternate-printing warnings. Shared canonical rows and filters keep editing guards and bulk scope; storage wording retains guesses and untracked basic lands. `test_collection_layout_ui.py` covers lifecycle, permissions, selection, filters and increment behavior.
 
-Gap: slices 9 and 10's touch/Safari acceptance; slice 11's extra lab table columns/density, Find cards presentation and named per-printing holder source, then slices 12 to 15 (criteria 1 to 3 and 6). Device checks do not block coding. Section 6's question 4 is settled (Matt, 2026-10-25: only Building and Idea tiles show a status pill). The lab top bar's search is E11-S31.
+Gap: slices 9 and 10's touch/Safari acceptance; slice 11's extra lab table columns/density, Find cards presentation and named per-printing holder source, slice 12's dense queue/delivery presentation and Receive delivery (its page frame is built), then slices 13 to 15 (criteria 1 to 3 and 6). Device checks do not block coding. Section 6's question 4 is settled (Matt, 2026-10-25: only Building and Idea tiles show a status pill). The lab top bar's search is E11-S31.
 
 <a id="e11-s31"></a>
 
