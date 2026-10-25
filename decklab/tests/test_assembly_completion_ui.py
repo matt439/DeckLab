@@ -39,6 +39,7 @@ SETUP = """
       completion:{...d.completion, status:'built', built_version:d.version, already_built:true},
       steps:d.steps.map(s => ({...s, keep:s.need, storage:0, transfers:[]}))}))});
   const builtButton = () => main.querySelector('.pack-built');
+  const builtBlocked = () => builtButton()?.getAttribute('aria-disabled') === 'true';
   const ticks = () => main.querySelectorAll('.pack-tick');
   const checked = () => ticks().map(t => t.getAttribute('aria-pressed'));
   const checkCards = () => ticks().forEach(t => t.click());
@@ -77,13 +78,13 @@ class AssemblyCompletionUiTests(unittest.TestCase):
           });
           drawAssembly(data, routeToken); await settle();
           assert.equal(builtButton().textContent, 'Mark as built');
-          assert.equal(builtButton().disabled, true);
+          assert.equal(builtBlocked(), true);
           builtButton().click(); assert.equal(posts.length, 0);
-          checkCards(); await settle(); assert.equal(builtButton().disabled, false);
+          checkCards(); await settle(); assert.equal(builtBlocked(), false);
           const originalTiles = ticks();
           builtButton().click(); builtButton().click();
           assert.equal(posts.length, 1);
-          assert.equal(builtButton().disabled, true);
+          assert.equal(builtBlocked(), true);
           same(posts[0], ['/api/assembly/built', {decks:[{id:'casual/a',version:'owned'}],
             fingerprint:'first-plan', confirmed:true}]);
           resolveSave({saved:true, built:data.completion.decks, plan:completed(data), warnings:[], tables:{}});
@@ -91,7 +92,7 @@ class AssemblyCompletionUiTests(unittest.TestCase):
           assert.equal(location.hash, '#/assembly');
           assert.equal(ticks().length, originalTiles.length);
           same(checked(), ['true']);
-          assert(!builtButton() || builtButton().disabled);
+          assert(!builtButton() || builtBlocked());
           assert(/built/i.test(main.textContent));
         """)
 
@@ -105,14 +106,14 @@ class AssemblyCompletionUiTests(unittest.TestCase):
           });
           drawAssembly(data,routeToken); await settle();
           assert.equal(builtButton().textContent,'Mark 2 decks built');
-          ticks()[0].click(); await settle(); assert.equal(builtButton().disabled,true);
-          ticks()[1].click(); await settle(); assert.equal(builtButton().disabled,false);
+          ticks()[0].click(); await settle(); assert.equal(builtBlocked(),true);
+          ticks()[1].click(); await settle(); assert.equal(builtBlocked(),false);
           builtButton().click(); await settle();
           same(posts.map(p => p[1].decks), [[{id:'casual/a',version:'target'},{id:'casual/b',version:'owned'}]]);
           same(checked(),['true','true']);
           assert.equal(main.querySelectorAll('.pack-deck').length,2);
           assert.equal(location.hash,'#/assembly');
-          assert(!builtButton() || builtButton().disabled);
+          assert(!builtButton() || builtBlocked());
         """)
 
     def test_saved_decks_stay_built_when_table_refresh_reports_a_problem(self):
@@ -137,7 +138,7 @@ class AssemblyCompletionUiTests(unittest.TestCase):
             plan:completed(data),warnings:[],tables:{}}; });
           drawAssembly(data,routeToken); await settle();
           assert.equal(ticks().length,0);
-          assert.equal(builtButton().disabled,false);
+          assert.equal(builtBlocked(),false);
           builtButton().click(); await settle();
           assert.equal(posts,1);
           assert(main.textContent.includes('Elves is now marked built.'));
@@ -152,14 +153,14 @@ class AssemblyCompletionUiTests(unittest.TestCase):
           };
           drawAssembly(plan(),routeToken); await settle();
           checkCards(); await settle();
-          assert.equal(builtButton().disabled,true,'initial progress is still loading');
+          assert.equal(builtBlocked(),true,'initial progress is still loading');
           pending[0].resolve({ticks:[]}); await settle();
-          assert.equal(pending.length,2); assert.equal(builtButton().disabled,true,'tick save is pending');
+          assert.equal(pending.length,2); assert.equal(builtBlocked(),true,'tick save is pending');
           pending[1].reject(new Error('Connection lost')); await settle();
-          assert.equal(builtButton().disabled,true,'unsaved ticks cannot finish a shared plan');
+          assert.equal(builtBlocked(),true,'unsaved ticks cannot finish a shared plan');
           main.querySelectorAll('button').find(b => b.textContent === 'Retry').click(); await settle();
           pending[2].resolve({ticks:pending[2].body.ids}); await settle();
-          same(checked(),['true']); assert.equal(builtButton().disabled,false);
+          same(checked(),['true']); assert.equal(builtBlocked(),false);
         """)
 
     def test_failed_completion_keeps_ticks_and_offers_a_fresh_plan(self):
@@ -177,7 +178,7 @@ class AssemblyCompletionUiTests(unittest.TestCase):
           assert(refresh); refresh.click(); await settle();
           assert.equal(posts.at(-1)[0],'/api/assembly/preview');
           same(checked(),['true']);
-          assert.equal(builtButton().disabled,false);
+          assert.equal(builtBlocked(),false);
           assert.equal(location.hash,'#/assembly');
         """)
 
@@ -189,16 +190,16 @@ class AssemblyCompletionUiTests(unittest.TestCase):
             return new Promise(resolve => { resolvePreview = resolve; });
           });
           drawAssembly(data,routeToken); await settle(); checkCards(); await settle();
-          assert.equal(builtButton().disabled,false);
+          assert.equal(builtBlocked(),false);
           const owned = main.querySelectorAll('button').find(b => b.textContent === 'Play-now list');
           owned.click();
-          assert.equal(builtButton().disabled,true);
+          assert.equal(builtBlocked(),true);
           builtButton().click(); assert.equal(posts.length,0);
           flushTimers(); await settle();
-          assert.equal(builtButton().disabled,true);
+          assert.equal(builtBlocked(),true);
           same(posts,[['/api/assembly/preview',{decks:[{id:'casual/a',version:'owned'}]}]]);
           resolvePreview(plan([item('casual/a','owned')],'owned-plan')); await settle();
-          same(checked(),['false']); assert.equal(builtButton().disabled,true);
+          same(checked(),['false']); assert.equal(builtBlocked(),true);
         """)
 
     def test_unavailable_or_read_only_plans_cannot_complete_even_with_checked_cards(self):
@@ -212,7 +213,7 @@ class AssemblyCompletionUiTests(unittest.TestCase):
             else { data.decks[0].completion.editable=false; }
             drawAssembly(data,routeToken); await settle(); checkCards(); await settle();
             assert(main.textContent.includes(data.completion.reason));
-            assert(!builtButton() || builtButton().disabled);
+            assert(!builtButton() || builtBlocked());
             if (builtButton()) builtButton().click();
           }
           assert.equal(posts.length,0);
@@ -226,14 +227,14 @@ class AssemblyCompletionUiTests(unittest.TestCase):
           drawAssembly(data,routeToken); await settle();
           const other = main.querySelectorAll('[data-pack-tick]').filter(t => t.tag === 'input');
           assert(other.length); assert(other.every(t => !t.checked));
-          checkCards(); await settle(); assert.equal(builtButton().disabled,false);
+          checkCards(); await settle(); assert.equal(builtBlocked(),false);
           clear(main); drawAssembly(data,routeToken); await settle();
-          same(checked(),['true']); assert.equal(builtButton().disabled,false);
+          same(checked(),['true']); assert.equal(builtBlocked(),false);
           const storage = main.querySelectorAll('button').find(b => b.textContent === 'Storage order');
-          storage.click(); same(checked(),['true']); assert.equal(builtButton().disabled,false);
+          storage.click(); same(checked(),['true']); assert.equal(builtBlocked(),false);
           clear(main); drawAssembly({...data,completion:{...data.completion,fingerprint:'unrelated-revision'}},routeToken);
-          await settle(); same(checked(),['true']); assert.equal(builtButton().disabled,false);
+          await settle(); same(checked(),['true']); assert.equal(builtBlocked(),false);
           clear(main); const changed = plan(); changed.decks[0].steps[0].storage = 3;
           drawAssembly(changed,routeToken); await settle();
-          same(checked(),['false']); assert.equal(builtButton().disabled,true);
+          same(checked(),['false']); assert.equal(builtBlocked(),true);
         """)

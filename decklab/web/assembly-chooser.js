@@ -199,6 +199,7 @@ function packInitChooser(view) {
     if (wide) view.chooser.scrollTop = ctx.scroll;
     view.chooserLaunch.hidden = wide;
     view.chooserRail.hidden = !wide;
+    view.chooserSlot.hidden = !wide;
     if (inside) {
       if (wide) packChooserFocus(view, saved);
       else view.chooserLaunch.focus();
@@ -209,6 +210,7 @@ function packInitChooser(view) {
   packingChoosers.add(view);
   view.chooserLaunch.hidden = ctx.wide;
   view.chooserRail.hidden = !ctx.wide;
+  view.chooserSlot.hidden = !ctx.wide;
   packChooserMove(view.chooser, ctx.wide ? view.chooserRail : null);
   packChooserSync(view);
 }

@@ -60,7 +60,18 @@ focus, with exact return-panel ownership and listener disposal on route/person c
 Queued reveal only scrolls current focus. Unknown colour identity stays neutral;
 strict known identity uses the shared deck pieces, including known colourless.
 
-`assembly-progress.js` follows the switcher script: shared Build decks checkmarks,
+`assembly-finish.js` follows the switcher helper. A retained bar under the stable
+plan column counts global card copies and separate optional steps. The visual meter
+has a spoken equivalent; no card tasks means no meter/max/value or 0/0. The primary
+uses aria-disabled with one retained described reason and stays keyboard reachable.
+Blocked activation only focuses current guidance or reveals the original unchecked
+task through the switcher; it never activates Retry/Refresh or changes ticks.
+Readiness and build saving stay with the original predicate and review/save path.
+Current plan/button/modal guards reject stale actions. Redraw, preview errors and
+empty selection remove the bar. The same narrow Decks launcher starts the plan
+column, keeping short-window sticky containment and resize focus predictable.
+
+`assembly-progress.js` follows the finish helper: shared Build decks checkmarks,
 per-task identities and patches, pending-save status, polling and Clear/Undo.
 Sorting remains a browser preference. Progress is shared through the server;
 it never changes a deck's status without the explicit Mark as built action.

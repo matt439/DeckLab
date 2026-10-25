@@ -24,8 +24,8 @@
 }
 .pack-choose-count { color: var(--ink-2); font-weight: var(--fw-regular); }
 .pack-chooser-slot, .pack-chooser-rail { min-width: 0; }
-.pack-chooser-launcher { max-width: 100%; white-space: normal; }
-.pack-chooser-launcher[hidden], .pack-chooser-rail[hidden], .pack-chooser-empty[hidden] { display: none; }
+.pack-chooser-launcher { justify-self: start; max-width: 100%; white-space: normal; }
+.pack-chooser-launcher[hidden], .pack-chooser-slot[hidden], .pack-chooser-rail[hidden], .pack-chooser-empty[hidden] { display: none; }
 .pack-chooser-empty { margin: var(--s-3) var(--s-4); }
 .pack-decks-sheet .sheet-inner { min-height: 0; }
 .pack-decks-sheet .sheet-head, .pack-decks-sheet .sheet-foot { flex: none; }
@@ -58,11 +58,29 @@
 .pack-sideboard-quantities .field { display: grid; grid-template-columns: minmax(0, 1fr) 5em; align-items: center; gap: var(--s-2); }
 .pack-sideboard-quantities input { width: 100%; min-width: 0; }
 
-/* The sticky bar: one line; a phone gets the short words ("Pulled 5/277 · 0/24 steps"). */
-.pack-bar { flex-wrap: nowrap; }
-.pack-bar > .actions { flex: none; flex-wrap: nowrap; }
-.pack-bar .action-bar-status { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.pack-progress-short { display: none; }
+/* The global copy figure and optional steps remain distinct, with retained guidance beside Finish. */
+.pack-bar { align-items: center; }
+.pack-bar > .actions { flex: 1 1 320px; justify-content: flex-end; align-items: center; flex-wrap: nowrap; }
+.pack-bar .action-bar-status { flex: 1 1 220px; overflow: visible; white-space: normal; }
+.pack-progress { display: grid; gap: var(--s-1); }
+.pack-copy-progress { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--s-1) var(--s-2); align-items: baseline; }
+.pack-copy-figure { font-family: var(--font-mono); font-size: var(--fs-fig-mid); font-variant-numeric: tabular-nums; color: var(--ink); }
+.pack-copy-label, .pack-other-progress, .pack-progress-state { font-size: var(--fs-meta); }
+.pack-copy-meter { grid-column: 1 / -1; width: 100%; max-width: 280px; height: 6px; border: 0;
+  border-radius: var(--r-pill); overflow: hidden; background: var(--track); accent-color: var(--accent); appearance: none; }
+.pack-copy-meter::-webkit-progress-bar { background: var(--track); }
+.pack-copy-meter::-webkit-progress-value { background: var(--accent); }
+.pack-copy-meter::-moz-progress-bar { background: var(--accent); }
+.pack-copy-progress[hidden], .pack-other-progress[hidden] { display: none; }
+.pack-finish-action { display: grid; justify-items: end; gap: var(--s-1); min-width: 0; }
+.pack-finish-action .btn { max-width: 100%; white-space: normal; }
+.pack-bar .pack-completion-message { margin: 0; max-width: 48ch; font-size: var(--fs-meta); }
+.pack-completion-message:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
+@media (max-width: 599px) {
+  .pack-bar .action-bar-status, .pack-bar > .actions { flex-basis: 100%; }
+  .pack-finish-action { flex: 1; justify-items: stretch; }
+  .pack-bar .pack-completion-message { max-width: none; }
+}
 
 /* A deck's plan. */
 .pack-deck-switcher { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-3); margin-top: var(--s-4); }
@@ -116,10 +134,6 @@
    neither covers the card's name. */
 .pack-tiles .card-tile-text { padding-top: 48px; }
 
-@media (max-width: 599px) {
-  .pack-progress-long { display: none; }
-  .pack-progress-short { display: inline; }
-}
 @media (min-width: 1000px) {
   .pack-layout { grid-template-columns: 300px minmax(0, 1fr); gap: var(--s-5); }
   .pack-chooser-slot { position: sticky; top: calc(var(--shell-top) + var(--s-3)); }

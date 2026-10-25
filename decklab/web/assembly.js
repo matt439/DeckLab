@@ -63,15 +63,15 @@ function drawAssembly(data, token) {
   view.chooserLaunch = el("button", { type: "button", class: "btn pack-chooser-launcher", text: "Decks",
     "aria-haspopup": "dialog", "aria-expanded": "false", onclick: () => packRevealChooser(view) });
   view.chooserRail = el("div", { class: "pack-chooser-rail" });
-  view.chooserSlot = el("div", { class: "pack-chooser-slot" }, view.chooserLaunch, view.chooserRail);
+  view.chooserSlot = el("div", { class: "pack-chooser-slot" }, view.chooserRail);
+  view.planMain = el("div", { class: "pack-main" }, view.chooserLaunch, view.messageSlot, view.progressNote, view.sortControl, view.results);
   add(view.root, [
     pageHead({ crumb: fromDeck ? [deckHref(fromDeck.id, parseHash().params.get("version")), fromDeck.title || "The deck"] : null,
       title: routeH1("assembly"), description: "Choose the decks you want to play, then pull their cards. Each physical copy is counted once.",
       // The plan's sleeves and token cards come from these pages.
       more: [mayDo("see_accessories") ? { label: routeFor("accessories").label, href: "#/accessories" } : null,
         { label: routeFor("tokens").label, href: "#/tokens" }] }),
-    el("div", { class: "pack-layout" }, view.chooserSlot,
-      el("div", { class: "pack-main" }, view.messageSlot, view.progressNote, view.sortControl, view.results))]);
+    el("div", { class: "pack-layout" }, view.chooserSlot, view.planMain)]);
   $("#main").append(view.root);
   view.run = () => packRun(view);
   packInitChooser(view);
@@ -163,6 +163,7 @@ async function packRun(view) {
     if (assemblyActive(view) && seq === view.seq) {
       view.previewing = false;
       view.message.textContent = problem.message;
+      packClearBar(view);
       clear(view.results);
       view.sortControl.hidden = true;
       view.data = null;
@@ -371,6 +372,7 @@ function packDeck(view, deck) {
 
 function renderAssemblyPlan(view, data) {
   const presentation = packSwitcherBeforeRender(view);
+  packClearBar(view);
   clear(view.results);
   view.data = data;
   view.bulk = [];
@@ -423,10 +425,8 @@ function renderAssemblyPlan(view, data) {
         : /single-sided verified/i.test(item.notes || "") ? " / single-sided (verified)" : " / reverse not recorded"}`
       + `${item.notes ? `. ${item.notes}` : ""}` }))) : el("p", { text: "No physical tokens have been recorded." })));
   view.results.append(el("p", { class: "sub", text: data.note }));
-  view.bar = actionBar({ actions: [view.finish?.button, el("button", { type: "button", class: "btn btn-quiet pack-clear", text: "Clear",
-    "aria-label": "Clear ticks", title: "Clear ticks", onclick: () => packClearTicks(view) })] });
-  view.bar.node.classList.add("pack-bar");
-  view.results.append(view.bar.node);
+  view.bar = packBuildBar(view);
+  view.planMain.append(view.bar.node);
   wirePackTicks(view);
   packSwitcherAfterRender(view, presentation);
 }
@@ -439,13 +439,13 @@ function packCompletion(view, data) {
   const firstScope = data.decks.find(deck => deck.id === completion.decks[0]?.id)?.build_scope;
   const label = count > 1 ? `Mark ${count} decks built` : firstScope?.mode === "main" ? "Mark main deck built"
     : firstScope?.mode === "partial" ? "Mark selected cards built" : "Mark as built";
-  const message = el("p", { class: "pack-completion-message", role: "status" });
+  const message = el("p", { class: "pack-completion-message", role: "status", tabindex: "-1", id: `pack-finish-${++packFinishSerial}` });
   const error = el("div", { class: "pack-completion-error", role: "alert" });
   const button = count ? el("button", { type: "button", class: "btn btn-primary pack-built", text: label,
-    onclick: () => packMarkBuilt(view) }) : null;
-  view.finish = { message, error, button, label };
+    "aria-describedby": message.id, onclick: event => packFinishClick(view, event.currentTarget) }) : null;
+  view.finish = { message, error, button, label, data };
   packFinishError(view);
-  return el("section", { class: "panel pack-completion" }, el("h2", { text: "Finish building" }), message,
+  return el("section", { class: "panel pack-completion" }, el("h2", { text: "Finish building" }),
     count ? el("p", { class: "sub", text: "Marking built saves these lists and reserves their cards: "
       + completion.decks.map(d => {
         const scope = data.decks.find(deck => deck.id === d.id)?.build_scope;
@@ -478,7 +478,7 @@ function packSaving(view, saving) {
   view.saving = saving;
   if (saving) {
     view.saveDisabled = ["button", "input", "select"].flatMap(tag => [...view.root.querySelectorAll(tag)])
-      .filter(node => !node.disabled && !view.chooser.contains(node));
+      .filter(node => !node.disabled && node !== view.finish?.button && !view.chooser.contains(node));
     view.saveDisabled.forEach(node => { node.disabled = true; });
   } else {
     (view.saveDisabled || []).forEach(node => { node.disabled = false; });
@@ -536,43 +536,15 @@ async function packMarkBuilt(view) {
   }
 }
 
-/** "Pulled 12 of 31 cards · 2 of 4 other steps" in the sticky bar ("Pulled 12/31 · 2/4 steps" on a phone,
- * so the bar stays one line). */
+/** All participants contribute copies; optional kit/token steps keep their own unit. */
 function packProgress(view) {
   packChooserSync(view);
   if (!view.bar) return;
   packBulkProgress(view);
   const ticks = view.ticks || [];
-  const cards = ticks.filter(t => t.tile), other = ticks.filter(t => !t.tile);
-  const sum = (list) => list.reduce((s, t) => s + t.count, 0);
-  const pulled = sum(cards.filter(t => t.done)), done = other.filter(t => t.done).length;
-  const long = [cards.length ? `Pulled ${pulled} of ${plural(sum(cards), "card")}` : null,
-    other.length ? `${done} of ${plural(other.length, "other step")}` : null].filter(Boolean).join(" · ");
-  const short = [cards.length ? `Pulled ${pulled}/${sum(cards)}` : null,
-    other.length ? `${done}/${other.length} steps` : null].filter(Boolean).join(" · ");
-  const all = ticks.length && ticks.every(t => t.done);
-  view.bar.status(all ? el("strong", { text: "All packed." }) : !long ? "Nothing to tick in this plan."
-    : [el("span", { class: "pack-progress-long", text: long }),
-      el("span", { class: "pack-progress-short", "aria-hidden": "true", text: short })]);
+  packUpdateBar(view, ticks, ticks.filter(t => t.tile), ticks.filter(t => !t.tile));
   const clearButton = view.bar.node.querySelector(".pack-clear");
   if (clearButton) clearButton.disabled = Boolean(view.saving) || !ticks.some(t => t.done);
-  if (view.finish) {
-    const completion = view.data.completion, count = completion.decks.length;
-    const cardsDone = cards.every(t => t.done);
-    view.finish.message.textContent = view.saving ? "Marking built…" : view.previewing ? "Updating the plan…"
-      : view.builtMessage || (!count ? completion.reason || "These lists are already marked built."
-        : !completion.can_mark_built ? completion.reason || "This plan can't be marked built yet."
-          : view.finishError ? "Refresh the plan before trying again."
-            : view.progress?.error ? "Save shared progress before marking these decks built."
-              : !view.progress?.loaded ? "Loading shared progress…"
-                : view.progress.pending.size ? "Saving shared progress…"
-            : cardsDone ? "Cards checked. Mark the assembled lists as built when you're ready."
-              : "Check off the remaining cards, then mark the assembled lists as built here.");
-    if (view.finish.button) {
-      view.finish.button.disabled = !packCanFinish(view);
-      view.finish.button.textContent = view.saving ? "Marking built…" : view.finish.label;
-    }
-  }
 }
 
 /** "Zombie / Zombie Knight ×8 (Zombie side only, can be sleeved)": a token card and the face this deck

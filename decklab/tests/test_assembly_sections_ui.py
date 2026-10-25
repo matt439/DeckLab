@@ -127,9 +127,9 @@ class AssemblySectionsUiTests(unittest.TestCase):
             plan:completed(data),warnings:[],tables:{}}; });
           drawAssembly(data,routeToken); await settle();
           assert.equal(builtButton().textContent,'Mark main deck built');
-          ticks()[0].click(); await settle(); assert(builtButton().disabled);
+          ticks()[0].click(); await settle(); assert(builtBlocked());
           assert(main.textContent.includes('Take these out of the deck and put them back in storage'));
-          ticks()[1].click(); await settle(); assert(!builtButton().disabled);
+          ticks()[1].click(); await settle(); assert(!builtBlocked());
           builtButton().click(); await settle(); same(body.decks,[{id:deck.id,version:'target',sideboard:{}}]);
         """)
 

@@ -51,6 +51,18 @@ function packSwitcherFocus(view, target) {
   reveal(); requestAnimationFrame(reveal);
 }
 
+/** Reveal an original current task by its exact participant node; never infer ownership from a name. */
+function packSwitcherRevealTask(view, target) {
+  if (!packSwitcherHere(view) || view.previewing || view.saving || view.reviewing || document.querySelector("dialog[open]")
+      || !target?.isConnected || !view.results.contains(target)) return false;
+  const ctx = view.switcher, panel = ctx.panels.find(p => p.node.contains(target) && view.data.decks.includes(p.deck)
+    && p.node.getAttribute("data-pack-deck") === `${p.deck.id}:${p.deck.version}`);
+  if (!panel) return false;
+  if (!ctx.wide) { ctx.active = packParticipantKey(panel.deck); packSwitcherProject(view); }
+  packSwitcherFocus(view, target);
+  return document.activeElement === target;
+}
+
 /** Keep the shared viewer's close focus when possible; repair only the exact owned current plan. */
 function packViewerWatch(view, item, reply) {
   const dialog = [...document.querySelectorAll("dialog[open]")].find(node => node.matches(".viewer"));

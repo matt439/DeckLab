@@ -208,7 +208,7 @@ class FeatureUiTests(unittest.TestCase):
           // back when it's drawn again.
           const progress = () => main.querySelector('.pack-progress-long').textContent;
           assert.equal(progress(), 'Pulled 0 of 24 cards');
-          assert.equal(main.querySelector('.pack-progress-short').textContent, 'Pulled 0/24');
+          assert.equal(main.querySelector('.pack-copy-figure').textContent, '0 / 24');
           const clearTicks = () => main.querySelector('.pack-clear');
           assert.equal(clearTicks().getAttribute('aria-label'), 'Clear ticks');
           assert.equal(clearTicks().disabled, true);

@@ -104,13 +104,13 @@ class AssemblyBulkUiTests(unittest.TestCase):
           apiWrite=async () => { throw new Error('Offline'); };
           bulk(panels(root)[0]).click(); await settle();
           same(checked(root),['true','true','true']); assert.equal(server.size,0);
-          assert(bulk(panels(root)[0]).disabled); assert(root.querySelector('.pack-built').disabled);
+          assert(bulk(panels(root)[0]).disabled); assert(root.querySelector('.pack-built').getAttribute('aria-disabled') === 'true');
           undo(); await settle(); same(checked(root),['true','true','true']);
           apiWrite=async (path,body) => { posts.push(body); return apply(body); };
           root.querySelectorAll('button').find(b => b.textContent === 'Retry').click(); await settle();
-          assert.equal(server.size,3); assert(!root.querySelector('.pack-built').disabled);
+          assert.equal(server.size,3); assert(root.querySelector('.pack-built').getAttribute('aria-disabled') === 'false');
           undo(); await settle(); same(checked(root),['false','false','false']);
-          assert(root.querySelector('.pack-built').disabled);
+          assert(root.querySelector('.pack-built').getAttribute('aria-disabled') === 'true');
         """)
 
     def test_bulk_and_undo_are_inert_during_preview_review_and_build_save(self):
@@ -216,7 +216,7 @@ class AssemblyBulkUiTests(unittest.TestCase):
             const root=open(data); await settle(); bulk(panels(root)[0]).click(); await settle();
             same(checked(root),['true','true','true']); assert.equal(builds,0);
             const finish=root.querySelector('.pack-built');
-            assert.equal(finish.disabled,mode !== 'review'); finish.click(); await settle();
+            assert.equal(finish.getAttribute('aria-disabled') === 'true',mode !== 'review'); finish.click(); await settle();
             assert.equal(builds,0); assert.equal(reviews,mode === 'review' ? 1 : 0);
           }
         """)

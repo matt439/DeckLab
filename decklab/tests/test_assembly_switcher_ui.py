@@ -54,7 +54,7 @@ class AssemblySwitcherTests(unittest.TestCase):
           assert.equal(button.getAttribute('aria-pressed'),'true');assert.equal(v.switcher.panels[0].button.getAttribute('aria-pressed'),'false');
           assert(v.switcher.panels.every((p,i)=>p.node===panels[i]));assert(v.ticks.every((t,i)=>t===tickNodes[i]));same(v.ticks.map(t=>t.id),ids);
           assert(v.packViewerEntries.every((e,i)=>e===entries[i]));assert.equal(JSON.stringify(v.selected),before);
-          assert.equal(JSON.stringify(saved),stored);same(calls,[]);assert(v.results.contains(v.bar.node));assert(v.results.contains(v.finish.button));
+          assert.equal(JSON.stringify(saved),stored);same(calls,[]);assert(v.planMain.contains(v.bar.node));assert(!v.results.contains(v.bar.node));assert(v.planMain.contains(v.finish.button));
         """)
 
     def test_whole_viewer_keeps_hidden_task_duplicates_order_captions_and_index(self):

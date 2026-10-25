@@ -42,6 +42,26 @@ class AssemblyChooserTests(unittest.TestCase):
     def run_js(self, scenario):
         completion.AssemblyCompletionUiTests.run_js(self, SETUP + scenario)
 
+    def test_same_launcher_is_first_plan_child_and_hidden_slot_preserves_resize_focus(self):
+        self.run_js("""
+          width(true);drawAssembly(chooserData(),routeToken);await settle();const v=current(),launcher=v.chooserLaunch,rail=v.chooserRail;
+          const assertMount=narrow=>{assert(v.planMain.children[0]===launcher);assert(launcher.isConnected);
+            assert.equal(v.root.querySelectorAll('.pack-chooser-launcher').length,1);assert.equal(launcher.hidden,!narrow);
+            assert.equal(v.chooserSlot.hidden,narrow);assert.equal(rail.hidden,narrow);
+            assert.equal(v.chooserSlot.children.length,1);assert(v.chooserSlot.children[0]===rail);};
+          assertMount(true);launcher.focus();width(false);assertMount(false);assert(document.activeElement===v.chooserHeading);
+          const scope=control(v,'casual/a','scope');scope.focus();width(true);assertMount(true);assert(document.activeElement===launcher);
+          launcher.click();const sheet=v.chooserState.sheet;assert(sheet);assert(sheet.body.contains(v.chooser));
+          sheet.close();assertMount(true);assert(document.activeElement===launcher);assert(!v.chooser.isConnected);
+          width(false);assertMount(false);assert(rail.contains(v.chooser));width(true);assertMount(true);
+          const outside=el('button',{text:'Current route'});main.append(outside);outside.focus();v.root.remove();
+          const count=v.seq;media.matches=true;media.fire('change');launcher.click();
+          assert(v.chooserState.disposed);assert(!v.chooserState.sheet);assert(document.activeElement===outside);assert.equal(v.seq,count);
+          width(false);drawAssembly(chooserData(),routeToken);await settle();const fresh=current();
+          assert(!fresh.chooserSlot.hidden);assert(!fresh.chooserRail.hidden);assert(fresh.chooserLaunch.hidden);
+          assert(fresh.planMain.children[0]===fresh.chooserLaunch);assert(fresh.chooserRail.contains(fresh.chooser));
+        """)
+
     def test_partial_rail_reveals_control_with_eight_pixel_gap_and_ignores_adjacent_plan_bar(self):
         self.run_js("""
           drawAssembly(chooserData(),routeToken);await settle();const v=current(),f=railGeometry(v);
