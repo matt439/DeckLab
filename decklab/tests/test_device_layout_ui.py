@@ -469,6 +469,13 @@ class DeckColourTests(unittest.TestCase):
         self.assertIn(".deck-card > .deck-stripe { position: absolute; inset: 0 0 auto; z-index: 1; }", lib)
         self.assertIn("position: relative", re.search(r"^\.deck-card \{(.*?)^\}", lib, re.S | re.M).group(1))
         self.assertIn(".deck-cover:not(.deck-tint) { background: var(--deck-art, var(--surface-3)); }", lib)
+        # Four or five colours stay inside their space (checked in headless Chrome, 2026-10-25): five pips over a
+        # tile's 112 px of art close up 4 px in, and a lab row's pips wrap under a name that leaves them no room
+        # (the iPad's landscape list) rather than running over the owned column.
+        self.assertIn(".deck-cover > .deck-pips:has(> .id-pip:nth-child(5))", lib)
+        self.assertIn("{ left: var(--s-1); gap: 0; }", lib)
+        self.assertIn("flex-wrap: wrap", _block_rule(lib, ".deck-row-title"))
+        self.assertIn(".deck-row-title > .deck-title { flex: 0 1 auto; min-width: 0; }", lib)
 
 
 @unittest.skipUnless(NODE, "Node.js isn't installed")
@@ -555,6 +562,11 @@ class DeckColourUiTests(unittest.TestCase):
           same(deckPageColours({ sections: { Commander: [{ card: { color_identity: ["G", "U"] } }],
             Deck: [{ card: { color_identity: ["R"] } }] } }), ["U", "G"]);
         """)
+
+
+def _block_rule(css, selector):
+    """The declarations of selector's own rule (the first rule written for exactly it)."""
+    return re.search(r"^" + re.escape(selector) + r" \{(.*?)\}", css, re.M).group(1)
 
 
 def _rule(css, selector):
