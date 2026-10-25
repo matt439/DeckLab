@@ -201,6 +201,8 @@ class AssemblyStepsSourceTests(unittest.TestCase):
     def test_native_summary_body_and_casual_done_height_stay_scoped(self):
         css=(WEB/'assembly-steps.css').read_text(encoding='utf-8')
         self.assertIn('min-height: 56px',css)
+        self.assertIn('.pack-step-summary::before { display: none; }',css)
+        self.assertIn('.pack-step-chevron {',css)
         self.assertIn('.pack-step:not([open]) > .pack-step-body',css)
         self.assertIn('@media (min-width: 1000px)',css)
         source=(WEB/'assembly-steps.js').read_text(encoding='utf-8')

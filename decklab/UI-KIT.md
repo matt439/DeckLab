@@ -60,7 +60,7 @@ focus, with exact return-panel ownership and listener disposal on route/person c
 Queued reveal only scrolls current focus. Unknown colour identity stays neutral;
 strict known identity uses the shared deck pieces, including known colourless.
 
-`assembly-steps.js` follows the switcher helper; its CSS follows `assembly.css`.
+`assembly-steps.js` follows the finish helper; its CSS follows `assembly.css`.
 One native details/summary/body retains original tasks across toggle, polling and
 resize. Done derives from a nonempty exact subset of existing ticks. Only casual
 auto-folds confirmed completed steps to 56px; lab starts expanded and permits
@@ -71,7 +71,7 @@ return expand their exact step first. One owned click toggle handles keyboard
 activation, and queued native toggle events read current desired state. Resize
 reveals the same focused current control through the existing guarded helper.
 
-`assembly-finish.js` follows the steps helper. A retained bar under the stable
+`assembly-finish.js` follows the switcher helper. A retained bar under the stable
 plan column counts global card copies and separate optional steps. The visual meter
 has a spoken equivalent; no card tasks means no meter/max/value or 0/0. The primary
 uses aria-disabled with one retained described reason and stays keyboard reachable.
@@ -93,7 +93,18 @@ child hides checked fallback words, so its error removal restores them. Unknown
 and no-art cards keep their original text and viewer semantics. Neutral step
 badges are 28px casual/20px lab. Task wiring, counts and save readiness are unchanged.
 
-`assembly-progress.js` follows the finish helper: shared Build decks checkmarks,
+`assembly-overlap.js` follows the steps helper. Optional competition guidance uses
+confirmed resolved selected-participant facts with conserved safe whole counts
+that match their aggregate row. Effective stand-in names, duplicate/unknown data,
+ordinary all-waiting shortages and donor-only/basic rows do not create guidance.
+The warning table labels copy units and current assignments; it adds no allocation
+or action. Original pull/move pills stay outside viewer/tick hit areas. Casual
+shows Also needed with full accessible/tooltip context; lab shows full names/list
+context, and the table stays fully named. Only lab fact numbers use mono. Scoped
+step-marker reset leaves one visual disclosure arrow. No request, task, fingerprint,
+progress, caption or readiness change is introduced.
+
+`assembly-progress.js` loads after the overlap and section helpers: shared Build decks checkmarks,
 per-task identities and patches, pending-save status, polling and Clear/Undo.
 Sorting remains a browser preference. Progress is shared through the server;
 it never changes a deck's status without the explicit Mark as built action.

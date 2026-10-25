@@ -44,7 +44,7 @@ from decklab import server
 WEB = server.WEB_DIR
 MATCHUP_SCRIPTS = ("sim-ui.js", "matchups.js", "matchups-overview.js", "matchups-summary.js", "matchups-detail.js", "matchups-results.js",
                    "matchups-cards.js")
-PLAY_SCRIPTS = ("deck-tools.js", "collection.js", "collection-rows.js", "collection-cards.js", "collection-bulk.js", "collection-guards.js", "assembly.js", "assembly-chooser.js", "assembly-switcher.js", "assembly-finish.js", "assembly-steps.js", "assembly-sections.js", "assembly-progress.js", "assembly-sheets.js", "hands.js", "play.js", "deck-sideboard.js", "deck-opponents.js", "deck-standins.js", "deck-swaps.js", "product-storage.js", "history.js", "activity.js",
+PLAY_SCRIPTS = ("deck-tools.js", "collection.js", "collection-rows.js", "collection-cards.js", "collection-bulk.js", "collection-guards.js", "assembly.js", "assembly-chooser.js", "assembly-switcher.js", "assembly-finish.js", "assembly-steps.js", "assembly-overlap.js", "assembly-sections.js", "assembly-progress.js", "assembly-sheets.js", "hands.js", "play.js", "deck-sideboard.js", "deck-opponents.js", "deck-standins.js", "deck-swaps.js", "product-storage.js", "history.js", "activity.js",
                 "receipts.js", "receipt-tiles.js", "receipt-layout.js", "receipt-workflow.js", "accessories.js", "accessory-pictures.js", "tokens.js")
 SHELL_SCRIPTS = ("shell.js", "settings.js", "visibility.js")  # account pages, just before app.js
 CARD_SCRIPTS = ("ui.js", "symbols.js", "cards-ui.js", "card-viewer.js")     # the shared card pieces (UI-KIT.md)
@@ -55,7 +55,7 @@ SCRIPTS = ("core.js", *CARD_SCRIPTS, "library.js", "library-glance.js", "library
 # and the page files, which only lay the components out.
 FOUNDATION = ("tokens.css", "base.css", "components.css")
 STYLES = (*FOUNDATION, "cards-ui.css", "shell.css", "library.css", "deck.css", "deck-overview.css", "stats.css", "matchups.css", "field.css", "variant.css",
-          "editor.css", "guide.css", "wishlist.css", "shopping.css", "shopping-orders.css", "collection.css", "play.css", "assembly.css", "assembly-steps.css",
+          "editor.css", "guide.css", "wishlist.css", "shopping.css", "shopping-orders.css", "collection.css", "play.css", "assembly.css", "assembly-steps.css", "assembly-overlap.css",
           "deck-tools.css", "receipts.css", "accessories.css", "tokens-page.css", "activity.css", "history.css")
 SVG_NAMESPACE = "http://www.w3.org/2000/svg"     # a name, not something loaded
 

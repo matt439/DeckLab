@@ -2,6 +2,7 @@
 .pack-step-summary { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3);
   min-height: var(--tap); cursor: pointer; list-style: none; }
 .pack-step-summary::-webkit-details-marker { display: none; }
+.pack-step-summary::before { display: none; }
 .pack-step-summary > h3 { min-width: 0; margin: 0; }
 .pack-step-chevron { flex: none; width: 8px; height: 8px; margin-right: var(--s-2);
   border-right: 2px solid var(--ink-3); border-bottom: 2px solid var(--ink-3); transform: rotate(-45deg); }

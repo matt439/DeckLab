@@ -1,0 +1,21 @@
+/* Existing permitted plan facts only; informative pills stay outside card and tick hit areas. */
+.pack-overlap { margin-top: var(--s-4); }
+.pack-overlap h2 { margin: 0; font-size: var(--fs-md); }
+.pack-overlap > p { margin: var(--s-2) 0; }
+.pack-overlap-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.pack-overlap-table th, .pack-overlap-table td { vertical-align: top; padding: var(--s-2); text-align: left;
+  white-space: normal; overflow-wrap: anywhere; border-bottom: 1px solid var(--border); }
+.pack-overlap-table th:first-child { width: 30%; }
+.pack-overlap-decks { display: grid; gap: var(--s-2); list-style: none; margin: 0; padding: 0; }
+.pack-overlap-decks strong, .pack-overlap-facts { display: block; }
+.pack-overlap-facts { font-variant-numeric: tabular-nums; font-size: var(--fs-meta); }
+.pack-tiles .pack-overlap-pill { justify-self: start; align-self: start; max-width: 100%; width: fit-content;
+  position: relative; box-sizing: border-box; white-space: normal; overflow-wrap: anywhere; }
+.pack-overlap-full { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden;
+  clip-path: inset(50%); white-space: nowrap; }
+@media (min-width: 1000px) {
+  .pack-tiles .pack-overlap-pill { grid-column: 1 / -1; margin: 0 44px var(--s-1) 36px; }
+  .pack-overlap-number { font-family: var(--font-mono); }
+  .pack-overlap-short { display: none; }
+  .pack-overlap-full { position: static; width: auto; height: auto; margin: 0; overflow: visible; clip-path: none; white-space: normal; }
+}

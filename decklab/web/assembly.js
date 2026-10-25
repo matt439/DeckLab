@@ -169,6 +169,7 @@ async function packRun(view) {
       view.sortControl.hidden = true;
       view.data = null;
       packStepsStart(view, null);
+      packOverlapStart(view, null);
       view.finish = null;
       view.bar = null;
       wirePackTicks(view);
@@ -184,7 +185,7 @@ function assemblyTick(text, count = 1, context = null, key = text) {
 }
 
 /** A card to pull as a picture tile with a tick on its corner; id is its key for the saved ticks. */
-function packTile(view, name, { qty, meta, caption, id, finishes = [] }) {
+function packTile(view, name, { qty, meta, caption, id, finishes = [], overlap = null }) {
   const card = (view.cards || {})[name] || null;
   // These are the selected list's finishes; allocation still counts interchangeable copies by name.
   const special = finishes.some(item => ["foil", "etched"].includes(item.finish));
@@ -210,6 +211,8 @@ function packTile(view, name, { qty, meta, caption, id, finishes = [] }) {
     else open.append(el("span", { class: "card-tile-meta pack-row-meta", "aria-hidden": "true" }, intent));
   }
   packRegisterCard(view, tile, card, description);
+  const pill = packOverlapPill(view, name, overlap);
+  if (pill) tile.append(pill);
   return tile;
 }
 
@@ -329,11 +332,12 @@ function packDeck(view, deck) {
   const sleeves = usable(kit && kit.sleeves), box = usable(kit && kit.deck_box);
   const need = !kit ? null : deck.sleeves_need != null ? deck.sleeves_need : kit.need;
   const steps = deck.steps || [];
+  const participant = { id: deck.id, version: deck.version };
   const tiles = (rows) => packCardGroups(view, rows);
   const pulls = steps.filter(s => s.storage).map(s => ({ name: s.name, qty: s.storage, meta: null, finishes: deck.finishes?.[s.name],
-    caption: `Pull ${s.storage} from storage for ${deck.title}`, id: `pull|${s.name}` }));
+    caption: `Pull ${s.storage} from storage for ${deck.title}`, id: `pull|${s.name}`, overlap: participant }));
   const moves = steps.flatMap(s => s.transfers.map(t => ({ name: s.name, qty: t.quantity, meta: `From ${t.from_title}`, finishes: deck.finishes?.[s.name],
-    caption: `Move ${t.quantity} from ${t.from_title} to ${deck.title}; change sleeves`, id: `move|${s.name}|${t.from}` })));
+    caption: `Move ${t.quantity} from ${t.from_title} to ${deck.title}; change sleeves`, id: `move|${s.name}|${t.from}`, overlap: participant })));
   const basics = (deck.basics || []).map(b => ({ name: b.name, qty: b.quantity, meta: null, finishes: deck.finishes?.[b.name],
     caption: `${b.quantity} for ${deck.title}`, id: `basic|${b.name}` }));
   const markers = (deck.standins?.rows || []).filter(row => !row.using).map((row, index) => ({
@@ -392,6 +396,7 @@ function renderAssemblyPlan(view, data) {
   clear(view.results);
   view.data = data;
   packStepsStart(view, data);
+  packOverlapStart(view, data);
   view.bulk = [];
   view.finish = null;
   view.cards = data.cards || {};
@@ -414,7 +419,7 @@ function renderAssemblyPlan(view, data) {
       data.totals.missing ? `${plural(data.totals.missing, "copy", "copies")} not available for this plan` : null]
       .filter(Boolean).join("; ") + ".";
   add(view.results, [el("p", { class: data.ready ? "box box-good" : "box box-warn", text: statusText }),
-    warningsBox(data.warnings, "Inventory needs attention"),
+    warningsBox(data.warnings, "Inventory needs attention"), packOverlapNotice(view),
     // Decks in the same sleeves (one design may sleeve several decks): a note, never a block.
     (data.sleeve_notes || []).length ? el("div", { class: "pack-sleeve-notes" },
       note(...data.sleeve_notes.map((n) => n.note))) : null]);
