@@ -2,6 +2,14 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Compact Receive List rows and native checks (2026-10-25; E11-S30 slice 12)
+
+List mode now places one native checkbox in a sibling label before the inspection button. Its opt-in shared compact row gives ordinary lab rows a 44px floor including the divider; attention and split text can grow and wrap. The lab has no inherited grid gap. Printing/finish and condition/language details, all attention reasons and pending split cues remain visible, with precise descriptions for both controls. A refused change resets the checkbox to the accepted model state. Inspection close and filtered-row focus use fresh visible controls. Pictures, read-only/products, the remembered layout choice and all receipt requests remain unchanged.
+
+Validation: 283 targeted receipt/Shopping/shared/editor/deck UI/source checks passed, followed by 68 affected receipt checks after the lab-spacing correction. Synthetic Chromium checked 24 viewport/theme combinations with a resumed unequal-quantity split draft: the clean lab row measured 44px, checkbox labels fit, long attention/split text wrapped, description targets resolved and no page/row overflow appeared. Native Space and label activation changed the expected copy counts once; split/tick/inspection close and Not-checked focus passed. Mouse/default DPR and keyboard only; coarse/touch/Safari/device acceptance remains open. All API writes were disabled; only disposable local drafts changed. The source audit still flags only pre-existing `tokens.js` (1,516 lines).
+
+The fixture also exposed unresolved logical names receiving an empty deck-use list from the API, which can turn guidance into a storage claim. That producer-confidence correction is a separate follow-on; no real receipt was recorded.
+
 ## Name Receive row-count units (2026-10-25; E11-S30 slice 12)
 
 Fill and Attention controls now explicitly say row/rows, beside the header/bar's card-copy progress. Their predicates, filtering, hidden-row bulk scope and receipt requests are unchanged.

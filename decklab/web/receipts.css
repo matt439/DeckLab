@@ -108,14 +108,36 @@
 .rcpt-grid .card-tile.is-ticked .card-tile-img,
 .rcpt-grid .card-tile.is-ticked .card-tile-back { filter: brightness(.7); }
 
-/* List: each card as a card row (cards-ui.js cardRow) with the tick at its end. */
+/* List: the native tick is beside the inspection button, never inside it. Compact sizing is lab-only. */
 .rcpt-list { display: grid; grid-template-columns: minmax(0, 1fr); }
-.rcpt-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--s-2);
+.rcpt-row { display: grid; grid-template-columns: 44px minmax(0, 1fr); align-items: center;
   border-bottom: 1px solid var(--border); }
 .rcpt-row[hidden] { display: none; }
 .rcpt-row > .card-row { border-bottom: 0; }
+.rcpt-tick-cell { display: flex; align-items: center; justify-content: center; align-self: stretch; min-height: 44px; cursor: pointer; }
+.rcpt-tick-cell > input { appearance: auto; width: 18px; height: 18px; margin: 0; accent-color: var(--accent); cursor: pointer; }
+.rcpt-tick-cell:focus-within { outline: 3px solid var(--focus); outline-offset: -3px; }
+.rcpt-row-attention, .rcpt-row-part, .rcpt-row-details { display: none; }
 @media (min-width: 1000px) {
-  .rcpt-list { grid-template-columns: repeat(auto-fill, minmax(420px, 1fr)); column-gap: var(--s-5); }
+  .rcpt-list { row-gap: 0; }
+  .rcpt-row { grid-template-columns: 40px minmax(0, 1fr); }
+  .rcpt-row > .card-row-compact { min-height: 43px; }
+  .rcpt-tick-cell { margin-bottom: -1px; }
+  .rcpt-row .name > small, .rcpt-row .card-row-chips { display: none; }
+  .rcpt-row-name { display: block; overflow-wrap: anywhere; font-weight: var(--fw-semibold); }
+  .rcpt-row-attention { display: flex; flex-wrap: wrap; gap: var(--s-1); margin-top: var(--s-1); }
+  .rcpt-row-attention .status { white-space: normal; font-size: var(--fs-meta); }
+  .rcpt-row-details { display: flex; flex-direction: column; min-width: 0; max-width: 160px;
+    color: var(--ink-2); font-size: var(--fs-meta); line-height: var(--lh-tight); overflow-wrap: anywhere; }
+  .rcpt-row-part { display: flex; align-items: center; gap: var(--s-1); color: var(--ink-2); font-size: var(--fs-meta); font-weight: var(--fw-medium); }
+  .rcpt-row.is-ticked .rcpt-row-name { color: var(--ink-3); font-weight: var(--fw-medium); }
+  .rcpt-row.is-pending-split { outline: 1px dashed var(--accent-line); outline-offset: -1px; }
+  .rcpt-pending-swatch { flex: none; width: 12px; height: 8px;
+    background: repeating-linear-gradient(45deg, var(--accent) 0 2px, transparent 2px 4px); }
+}
+@media (min-width: 1000px) and (pointer: coarse) {
+  .rcpt-row { grid-template-columns: 44px minmax(0, 1fr); }
+  .rcpt-row > .card-row-compact { min-height: 44px; }
 }
 
 /* A product: the two choice cards, then its cards by deck and section. */

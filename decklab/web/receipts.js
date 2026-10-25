@@ -557,6 +557,30 @@ function rcptShown(view, comp, row) {
   return true;
 }
 
+/** Compact List keeps every attention reason under the name; details never decide whether a row is checked. */
+function rcptListName(view, comp, row, name) {
+  const labels = { "condition or language not set": "Condition or language ?", "back not confirmed": "Back not said yet",
+    "a note": "Check note", "default picture": "Check printing", edited: "Edited" };
+  const attention = rcptAttention(view, comp, row).map((why) => el("span", { class: "status status-warn",
+    title: why === "a note" ? rcptFlag(comp, row) : why === "default picture" ? rcptUnrecorded(comp, row) : null,
+    text: labels[why] || why }));
+  const parts = comp.rows.filter((r) => r.orig === row.orig);
+  return el("span", { class: "rcpt-row-name" }, name,
+    attention.length ? el("span", { class: "rcpt-row-attention" }, attention) : null,
+    parts.length > 1 ? el("span", { class: "rcpt-row-part", id: `rcpt-row-part-${row.key}` },
+      !row.ticked ? el("span", { class: "rcpt-pending-swatch", "aria-hidden": "true" }) : null,
+      `Part ${parts.indexOf(row) + 1} of ${parts.length}${row.ticked ? "" : " · still pending"}`) : null);
+}
+
+function rcptListDetails(comp, row) {
+  const v = row.values;
+  const detail = (value, unknown) => value || el("span", {},
+    el("span", { "aria-hidden": "true", text: "—" }), el("span", { class: "sr-only", text: unknown }));
+  return el("span", { class: "rcpt-row-details", id: `rcpt-row-details-${row.key}` }, el("span", { text: rcptMeta(comp, row) }),
+    comp.kind === "cards" ? el("span", {}, detail(v.condition, "Condition not recorded"), " · ",
+      detail(v.language && v.language.toUpperCase(), "Language not recorded")) : null);
+}
+
 /** One row's tile (or, in List, its row): its picture with the copies, the tick, the name, the printing and the
  * chips. On a part being checked a tap opens its sheet, whose picture opens the viewer over this grid; read only,
  * or on a part that hasn't arrived, a tap opens the viewer and there's no tick. */
@@ -566,7 +590,7 @@ function rcptTile(view, comp, row, readOnly) {
   const list = view.layout === "list" && !readOnly;
   const name = comp.kind === "tokens" ? row.values.front : row.values.name;
   const caption = `${plural(q, "copy", "copies")} in this delivery · ${rcptMeta(comp, row)}`;
-  const tick = active ? el("button", { type: "button", class: `tile-tick${list ? " tile-tick-plain" : ""} rcpt-tick`,
+  const tick = active && !list ? el("button", { type: "button", class: "tile-tick rcpt-tick",
     "aria-pressed": String(row.ticked),
     "aria-label": `Check off ${name}`, onclick: () => rcptTick(view, comp, row, !row.ticked) }) : null;
   const card = rcptCard(comp, row);
@@ -577,11 +601,23 @@ function rcptTile(view, comp, row, readOnly) {
   if (list) {
     const ribbon = rcptUnrecorded(comp, row);
     const rowCard = card || { name, mana_cost: "", type_line: "", img: null, img_small: null };
-    open = cardRow(rowCard, { qty: q, name: comp.kind === "tokens" ? rowCard.name : name, meta: rcptMeta(comp, row, true), aside: null,
+    open = cardRow(rowCard, { qty: q, compact: true,
+      name: rcptListName(view, comp, row, comp.kind === "tokens" ? rowCard.name : name),
+      meta: rcptMeta(comp, row, true), aside: rcptListDetails(comp, row),
       chips: [finishChip(row.values.finish), ribbon ? status("warn", ribbon) : null, ...chips].filter(Boolean),
       onclick: onclick || (() => {}) });
-    if (label) open.setAttribute("aria-label", label);
-    tile = el("div", { class: "rcpt-row" + (row.ticked && active ? " is-ticked" : "") }, open, tick);
+    if (label) open.setAttribute("aria-label", `${label}${rcptAttention(view, comp, row).length
+      ? ". Needs attention: " + rcptAttention(view, comp, row).join(", ") : ""}`);
+    const parts = comp.rows.filter((r) => r.orig === row.orig);
+    const described = `rcpt-row-details-${row.key}${parts.length > 1 ? ` rcpt-row-part-${row.key}` : ""}`;
+    open.setAttribute("aria-describedby", described);
+    const tickCell = active ? el("label", { class: "rcpt-tick-cell" }, el("input", { type: "checkbox", class: "rcpt-tick",
+      checked: row.ticked, "aria-label": `Check off ${plural(q, "copy", "copies")} of ${name}`, "aria-describedby": described,
+      onchange: (e) => { rcptTick(view, comp, row, e.currentTarget.checked); e.currentTarget.checked = row.ticked; }
+    })) : el("span", { class: "rcpt-tick-cell" });
+    const pending = !row.ticked && parts.length > 1;
+    tile = el("div", { class: "rcpt-row" + (row.ticked && active ? " is-ticked" : "")
+      + (pending ? " is-pending-split" : "") }, tickCell, open);
   } else {
     const common = { qty: q, meta: rcptMeta(comp, row, true), state: tick, ticked: row.ticked && active,
       unrecorded: rcptUnrecorded(comp, row), chips, label, onclick };
@@ -684,7 +720,10 @@ function rcptOpenSheet(view, comp, row) {
   }
   const sheet = openReceiptSheet(view, { title: "", side: true, onClose: () => {
     const was = view.sheet; view.sheet = null;
-    if (was && was.row.tile) { const open = was.row.tile.querySelector(".card-tile-open"); if (open) open.focus(); }
+    if (was && was.row.tile) {
+      if (was.row.tile.hidden) rcptFocusAfterTick(view, was.comp, was.row);
+      else if (was.row.open) was.row.open.focus();
+    }
   } });
   view.sheet = { sheet, comp, row };
   rcptFillSheet(view);

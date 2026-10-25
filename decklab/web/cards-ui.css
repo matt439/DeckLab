@@ -57,6 +57,15 @@ button.card-row { cursor: pointer; }
 .card-row .unknown { color: var(--crit-ink); }
 .card-row-chips { display: flex; flex-wrap: wrap; gap: var(--s-1); margin-top: var(--s-1); }
 
+/* An opt-in receipt-sized row. Ordinary cardRow callers retain their thumbnail and spacing. */
+@media (min-width: 1000px) {
+  .card-row-compact { min-height: 44px; grid-template-columns: 24px 22px minmax(0, 1fr) auto; gap: var(--s-2); }
+  .card-row-compact.card-row-noqty { grid-template-columns: 24px minmax(0, 1fr) auto; }
+  .card-row-compact .thumb, .card-row-compact .thumb-missing { width: 24px; height: 34px; }
+  .card-row-compact .qty { font-family: var(--font-num); }
+  .card-row-compact .name { font-size: var(--fs-row); }
+}
+
 /* --------------------------------------------------------------- card tile */
 
 /* A grid of tiles: 3 across on a phone, about 156 px each on a tablet or desktop, 196 px on a QHD window. */

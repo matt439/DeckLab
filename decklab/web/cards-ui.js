@@ -144,6 +144,7 @@ function cardTile(card, opts = {}) {
  *   name, meta  as cardTile's (meta defaults to the type line; unknownMeta replaces it when there's no card)
  *   chips       nodes after the meta line
  *   aside       the node at the end (default manaCost of the card's cost; null for nothing)
+ *   compact     opt in to the 44 px lab row; content can grow beyond that floor
  *   onclick, viewerGroup, caption, viewerStatus   as cardTile's
  *   thumbWide   "<media condition> <width>" where the row's thumbnail is drawn bigger (the deck's picture grid,
  *               "(min-width: 1600px) 220px"): the normal image is offered there (deck.js cardThumb)
@@ -160,7 +161,7 @@ function cardRow(card, opts = {}) {
     meta ? el("small", { class: card ? null : "unknown", text: meta }) : null,
     opts.chips && opts.chips.length ? el("span", { class: "card-row-chips" }, opts.chips) : null);
   const aside = opts.aside !== undefined ? opts.aside : card ? manaCost(card.mana_cost) : null;
-  const cls = "card-row" + (hasQty ? "" : " card-row-noqty");
+  const cls = "card-row" + (hasQty ? "" : " card-row-noqty") + (opts.compact ? " card-row-compact" : "");
   const parts = [thumb, qty, name, aside || el("span")];
   if (!card) return el("div", { class: cls }, parts);
   const node = el("button", { type: "button", class: cls, "aria-haspopup": opts.onclick ? null : "dialog",
