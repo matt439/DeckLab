@@ -117,6 +117,18 @@ have required card-task ticks; optional kit and token ticks stay optional.
 `deck-standins.js` supplies the inventory-visible mappings. Overview links to
 the represented card's rules; the printed play sheet records the text mapping.
 
+Saved Editor headers use the casual Editing/name/stripe frame and the original
+lab context from 1000px. `editorDraftIdentity()` reads loaded cards with canonical
+Commander/Companion/Deck policy, excluding Sideboard; unknown stays neutral and
+known colourless remains explicit. Signature-only `drawEditorHeaderIdentity()`
+refreshes through `changed()` and accepted `fillCards()` hydration, with exact
+editor/route/profile/id/version ownership. New/copy/read-only/version modes remain.
+Saved details keep one native field/toggle tree with a 60px closed casual row.
+`revealEditorDetailsFocus()` uses once-only window/visualViewport hooks to scroll
+the same current saved-fold control above overlapping chrome after resize. It
+never focuses or edits; stale/new-focus/modal/busy work is ignored, tight margins
+shrink and oversized targets align stably. Exact draft/check/save paths are unchanged.
+
 `editor-swaps.js` (after `editor-cards.js`) and `deck-swaps.js` (after
 `deck-standins.js`) are E2-S07's strategic stand-ins, kept apart from those
 physical markers: owned cards that could take a missing card's slot in the

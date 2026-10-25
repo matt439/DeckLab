@@ -62,6 +62,22 @@ details.edit-details[open] > summary { margin-bottom: var(--s-3); }
 .edit-more-details[open] > summary { margin-bottom: var(--s-3); }
 .edit-details-quick { margin: var(--s-2) 0; }
 
+/* Saved editor only: one retained header decoration and the existing native details fold. */
+.edit-head.edit-head-saved { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s-2); }
+.edit-head-saved .edit-kicker { margin: 0; font-size: var(--fs-eyebrow); font-weight: var(--fw-semibold); color: var(--ink-2); }
+.edit-head-saved .edit-title-row h1 { min-width: 0; font-size: var(--fs-lg); font-weight: var(--fw-heavy); overflow-wrap: anywhere; }
+.edit-head-colour { min-width: 0; }
+.edit-head-colour > .deck-stripe { height: var(--stripe-h); }
+details.edit-details-fold:not([open]) { min-height: 60px; box-sizing: border-box; padding: 0 var(--s-4); }
+details.edit-details-fold:not([open]) > summary { min-height: calc(60px - 2px); box-sizing: border-box; }
+@media (min-width: 1000px) {
+  .edit-head.edit-head-saved { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s-2) var(--s-4); }
+  .edit-head-saved .edit-kicker, .edit-head-colour { display: none; }
+  .edit-head-saved .edit-title-row h1 { font-size: var(--fs-2xl); font-weight: var(--fw-bold); }
+  details.edit-details-fold:not([open]) { min-height: 0; padding: var(--s-4); }
+  details.edit-details-fold:not([open]) > summary { min-height: max(32px, var(--btn-h)); }
+}
+
 .field-grid { display: grid; gap: var(--s-4); }
 .field-grid .segmented { display: flex; width: 100%; }
 .field-grid .segmented > * { flex: 1 1 0; padding: var(--s-2) var(--s-2); }

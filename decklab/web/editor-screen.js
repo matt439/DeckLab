@@ -91,11 +91,99 @@ function spaceField() {
   return el("div", { class: "field field-wide field-space" }, el("span", { id: "f-space", text: "Whose deck" }), group);
 }
 
+/** As decks.identity.deck_colors: readable commanders first, else Commander/Companion/Deck.
+ * Sideboard and removed lines never define this current draft's decorative identity. No lookup is made. */
+function editorDraftIdentity(ed) {
+  const read = sections => {
+    const found = [];
+    for (const section of sections) {
+      const lines = ed?.lists?.[section] || [];
+      if (!Array.isArray(lines)) return null;
+      for (const line of lines) {
+        if (!line || !Number.isSafeInteger(line.qty) || line.qty < 1) return null;
+        if (line.card == null) continue;
+        const identity = line.card.color_identity;
+        if (!Array.isArray(identity) || identity.length > 5 || new Set(identity).size !== identity.length
+            || !Array.from(identity).every(c => typeof c === "string" && c.length === 1 && "WUBRG".includes(c))) return null;
+        found.push(identity);
+      }
+    }
+    return found;
+  };
+  const commanders = read(["Commander"]);
+  if (commanders === null) return null;
+  const found = commanders.length ? commanders : read(["Commander", "Companion", "Deck"]);
+  if (!found?.length) return null;
+  const colours = new Set(found.flat());
+  return "WUBRG".split("").filter(c => colours.has(c));
+}
+
+/** Replace only decorative children, and only when identity changes; fields and their focus stay put. */
+function drawEditorHeaderIdentity(ed = editor, initial = false) {
+  const context = ed?.dom?.headerColour;
+  if (!context || ed !== editor || ed.mode !== "edit" || ed.leaving || context.token !== routeToken
+      || context.profile !== state.profile?.id || context.profile !== ed.profile || context.id !== ed.id
+      || context.version !== ed.version || (!initial && !context.node.isConnected)) return;
+  const identity = editorDraftIdentity(ed), key = JSON.stringify(identity);
+  if (context.key === key) return;
+  context.key = key;
+  const pieces = identity === null ? null : deckColourPieces(identity);
+  clear(context.node).append(pieces ? pieces.stripe() : el("span", { class: "deck-stripe is-unknown", "aria-hidden": "true" }),
+    el("span", { class: "sr-only", text: `Current list colour identity. ${pieces ? pieces.label : "Not known"}.` }));
+}
+
+/** Resize reveals only the same focused control in this saved editor's original details fold. */
+function revealEditorDetailsFocus() {
+  const ed = editor, context = ed?.dom?.headerColour, page = ed?.dom?.page;
+  const details = ed?.dom?.detailsSummary, fold = details?.closest(".edit-details-fold"), target = document.activeElement;
+  const current = () => Boolean(ed && ed === editor && ed.mode === "edit" && context && ed.dom.headerColour === context
+    && context.token === routeToken && context.profile === ed.profile && context.profile === state.profile?.id
+    && context.id === ed.id && context.version === ed.version && page === ed.dom.page && page?.isConnected
+    && context.node?.isConnected && page.contains(context.node) && details === ed.dom.detailsSummary
+    && details?.closest(".edit-details-fold") === fold && fold?.isConnected && page.contains(fold)
+    && target?.isConnected && fold.contains(target) && document.activeElement === target && !target.disabled
+    && !target.matches(":disabled") && target.getAttribute("aria-disabled") !== "true" && !target.hidden
+    && !target.closest("[hidden]") && (fold.open || fold.querySelector("summary")?.contains(target))
+    && !ed.asking && !ed.leaving && !ed.saving && !document.querySelector("dialog[open]"));
+  if (!current()) return;
+  const reveal = () => {
+    if (!current()) return;
+    const rect = target.getBoundingClientRect(), vv = window.visualViewport;
+    if (![rect.top, rect.bottom, rect.height].every(Number.isFinite) || rect.height <= 0) return;
+    let top = Number.isFinite(vv?.offsetTop) ? Math.max(0, vv.offsetTop) : 0;
+    let bottom = top + (Number.isFinite(vv?.height) && vv.height > 0 ? vv.height : window.innerHeight);
+    const overlaps = r => r && r.height > 0 && r.right > rect.left && r.left < rect.right;
+    const header = document.querySelector(".topbar")?.getBoundingClientRect();
+    if (overlaps(header) && header.top <= top && header.bottom > top) top = header.bottom;
+    const bar = ed.dom.bar?.isConnected ? ed.dom.bar.getBoundingClientRect() : null;
+    if (overlaps(bar) && bar.bottom > top && bar.top < bottom) bottom = Math.max(top, bar.top);
+    const available = bottom - top;
+    if (available <= 0 || (rect.top >= top && rect.bottom <= bottom)) return;
+    const oversized = rect.height > available;
+    const gap = Math.min(8, oversized ? available / 4 : (available - rect.height) / 2);
+    const first = top + gap, last = bottom - gap;
+    // An oversized control aligns at its start once, rather than oscillating between both ends.
+    const delta = oversized ? rect.top - first
+      : rect.top < top ? rect.top - first : rect.bottom - last;
+    if (Number.isFinite(delta) && Math.abs(delta) > .5) window.scrollBy({ top: delta, behavior: "auto" });
+  };
+  reveal();
+  requestAnimationFrame(reveal); // Recheck this exact editor, fold and focus after layout settles.
+}
+
+window.addEventListener("resize", revealEditorDetailsFocus);
+if (window.visualViewport) window.visualViewport.addEventListener("resize", revealEditorDetailsFocus);
+
 function editorHead() {
   const ed = editor;
   const head = el("header", { class: "deck-head edit-head" });
   if (ed.mode === "edit") {
-    head.append(el("div", { class: "edit-title-row" },
+    head.classList.add("edit-head-saved");
+    ed.dom.headerColour = { node: el("div", { class: "edit-head-colour" }), token: routeToken,
+      profile: state.profile?.id, id: ed.id, version: ed.version, key: undefined };
+    drawEditorHeaderIdentity(ed, true);
+    head.append(ed.dom.headerColour.node, el("p", { class: "edit-kicker", text: "Editing" }),
+      el("div", { class: "edit-title-row" },
       el("h1", { text: ed.title }),
       ed.readOnly ? status("info", "Trying a change") : null),
     el("nav", { class: "version-pick", "aria-label": "Which list to edit" },
@@ -364,6 +452,7 @@ function changed({ list = true, history = true } = {}) {
   }
   drawStats();
   drawDetailsSummary();
+  drawEditorHeaderIdentity(ed);
   drawBar();
   queueDraft();
   scheduleCheck();

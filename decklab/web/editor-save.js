@@ -137,7 +137,7 @@ function fillCards(answer, sent) {
       }
     });
   }
-  if (filled) { drawLines(); drawStats(); }
+  if (filled) { drawLines(); drawStats(); drawEditorHeaderIdentity(ed); }
 }
 
 /** The availability of the list being edited, from the last check (null while there's none). */
