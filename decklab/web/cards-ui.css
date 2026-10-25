@@ -334,7 +334,7 @@ dialog.viewer.show-text[open] {
 /* The panel is dark in both themes: its quieter words and lines in the viewer's own colours. */
 .viewer-text .viewer-type, .viewer-text .viewer-caption { color: var(--on-scrim-2); }
 .viewer-text .viewer-face + .viewer-face { border-top-color: var(--viewer-line); }
-.viewer-text a { color: var(--accent); }
+.viewer-text a { color: var(--viewer-link); }
 /* A button on the dark panel (Collection's "Edit copies"): the panel's colours, not the page theme's. */
 .viewer-text .btn:not(.btn-primary) { background: var(--viewer-panel); color: var(--on-scrim); border-color: var(--viewer-line); }
 @media (hover: hover) and (pointer: fine) { .viewer-text .btn:not(.btn-primary):hover { background: var(--viewer-line); } }

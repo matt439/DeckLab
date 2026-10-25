@@ -331,3 +331,9 @@ button.col-casual-open { cursor: pointer; }
 @media (min-width: 1000px) and (hover: hover) and (pointer: fine) {
   .col-key-hint { display: block; }
 }
+
+/* Saved packing-list hints are separate from the aggregate in-decks counts. */
+.col-packing-marker { display: block; color: var(--ink-2); font-size: var(--fs-meta); line-height: 1.1; }
+.col-packing-hints { display: block; font-size: var(--fs-meta); white-space: normal; overflow-wrap: anywhere; }
+.col-packing-label, .col-packing-hint, .col-packing-hints > .col-viewer-note { display: block; }
+.col-packing-hints a { max-width: 100%; min-width: 0; white-space: normal; overflow-wrap: anywhere; }

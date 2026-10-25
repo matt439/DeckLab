@@ -167,7 +167,7 @@ function colPriceStamp(value) {
 }
 
 /** The lab table: card selection, identity/type, printing/finish, copies and recorded details,
- * anonymous held counts, the estimated price of one copy and notes. The casual list is separate. */
+ * held counts and saved-hint markers, the estimated price of one copy and notes. The casual list is separate. */
 function colRowTable(cv, rows) {
   const sortable = (key, cls = "") => {
     const on = cv.sort.key === key;
@@ -217,9 +217,12 @@ function colRowLine(cv, row) {
   const name = [el("span", { class: "col-cell-name", text: row.name }),
     el("small", { class: "col-cell-meta", text: meta }),
     row.notes ? el("small", { class: "col-cell-note", text: row.notes }) : null];
+  const hints = colPackingHints(cv, row);
+  const choiceCaption = hints ? el("span", { class: "col-viewer-words" },
+    el("span", { class: "col-viewer-counts", text: caption }), hints) : caption;
   const choice = viewerItem(el("button", { type: "button", class: "col-open col-mutate", "data-focus": `edit-${key}`,
     "aria-label": `View ${row.name} (${colPrinting(row)})`,
-    "aria-current": key === cv.selectedKey ? "true" : null, onclick: open }, name), card, "collection-lab-rows", caption);
+    "aria-current": key === cv.selectedKey ? "true" : null, onclick: open }, name), card, "collection-lab-rows", choiceCaption);
   return el("tr", { "data-key": key, "data-selected": key === cv.selectedKey ? true : null,
     class: colUnrecorded(row) ? "is-unrecorded" : null },
     el("td", { class: "col-td-pic" }, thumb),
@@ -251,7 +254,7 @@ function colUnknown(words) {
     el("span", { class: "sr-only", text: words }));
 }
 
-/** These are allocated copy counts only: no deck names or exact physical-printing claims. */
+/** These remain allocated copy counts, separate from saved packing-list hints. */
 function colStorageWords(cv, row) {
   if (!cv.storage || cv.storage.error) return "Copies in decks not known";
   const { held, guess } = colHeld(cv, row);
@@ -259,6 +262,75 @@ function colStorageWords(cv, row) {
   if (!held) return "In storage";
   return `${plural(held, "copy", "copies")} in decks${guess ? " (printing uncertain)" : ""}`
     + ` \u00b7 ${Math.max(0, Number(row.quantity) - held)} free`;
+}
+
+const COL_PACKING_HINT_WORDS = "Saved packing lists may differ from the boxes and current deck lists. "
+  + "Links open current lists.";
+
+/** Validate a route identity without inferring its visibility or consulting the library. */
+function colHolderId(id) {
+  if (typeof id !== "string" || /[\u0000-\u001f\u007f\\]/.test(id)) return false;
+  const parts = id.split("/");
+  if (parts.some((part) => !part.trim() || part === "." || part === "..")) return false;
+  if (parts[0] === "pairing") return parts.length === 2 && parts[1].split("+").length === 2
+    && parts[1].split("+").every((part) => part.trim() && part !== "." && part !== "..");
+  return parts[0] === "product" ? parts.length >= 2
+    : ["casual", "commander"].includes(parts[0]) ? parts.length === 2
+      : parts.length === 3 && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(parts[0])
+        && ["casual", "commander"].includes(parts[1]);
+}
+
+/** New answers name only visible, uncontested hints. Older/malformed answers stay anonymous. */
+function colListedHolders(cv, row) {
+  if (!cv.storage || cv.storage.error || cv.unsupported || cv.data?.space !== cv.space) return null;
+  if (!Number.isSafeInteger(Number(row.quantity)) || Number(row.quantity) < 0) return null;
+  const saved = cv.storage.rows[colKey(row)];
+  if (!saved || typeof saved !== "object" || Array.isArray(saved)
+      || !Number.isSafeInteger(saved.held) || saved.held < 0
+      || !Array.isArray(saved.listed_holders) || !Number.isSafeInteger(saved.unattributed) || saved.unattributed < 0) return null;
+  const holders = [], seen = new Set();
+  let total = saved.unattributed;
+  for (const hint of saved.listed_holders) {
+    if (!hint || typeof hint !== "object" || Array.isArray(hint) || !colHolderId(hint.id)
+        || typeof hint.title !== "string" || !hint.title.trim() || /[\u0000-\u001f\u007f]/.test(hint.title)
+        || !Number.isSafeInteger(hint.quantity) || hint.quantity <= 0 || !["target", "owned"].includes(hint.version)) return null;
+    const key = `${hint.id}|${hint.version}`;
+    if (seen.has(key)) return null;
+    seen.add(key);
+    total += hint.quantity;
+    if (total > saved.held) return null;
+    holders.push({ id: hint.id, title: hint.title, quantity: hint.quantity, version: hint.version });
+  }
+  if (holders.length && saved.held > Number(row.quantity)) return null;
+  return total === saved.held ? { holders, unattributed: saved.unattributed } : null;
+}
+
+/** Recheck a retained link before and after the viewer's asynchronous close. */
+function colPackingLink(cv, row, hint) {
+  const key = colKey(row), href = deckHref(hint.id, hint.version);
+  const current = () => {
+    if (!colActive(cv)) return false;
+    const record = (cv.rows || []).find((item) => colKey(item) === key);
+    return record && colListedHolders(cv, record)?.holders.some((item) => item.id === hint.id
+      && item.version === hint.version && item.quantity === hint.quantity && item.title === hint.title);
+  };
+  return el("a", { href, text: `${hint.quantity} \u00d7 ${hint.title} (${listName(hint.version)})`, onclick: (event) => {
+    event.preventDefault();
+    if (!event.currentTarget.isConnected || !current()) return;
+    colAfterViewer(() => { if (current()) location.hash = href; });
+  } });
+}
+
+/** Names describe saved hints, never verified physical copies or a guaranteed current revision. */
+function colPackingHints(cv, row) {
+  const listed = colListedHolders(cv, row);
+  if (!listed?.holders.length) return null;
+  return el("span", { class: "col-viewer-decks col-packing-hints" },
+    el("span", { class: "col-packing-label", text: "Saved packing-list hints:" }),
+    listed.holders.map((hint) => el("span", { class: "col-packing-hint" }, colPackingLink(cv, row, hint))),
+    listed.unattributed ? el("span", { class: "col-viewer-note",
+      text: `${plural(listed.unattributed, "held copy", "held copies")} without a named hint.` }) : null,
+    el("span", { class: "col-viewer-note", text: COL_PACKING_HINT_WORDS }));
 }
 
 /** Resolve the key from the current filtered rows; detached/stale callbacks never restore old details. */
@@ -297,7 +369,7 @@ function colDrawPreview(cv, row) {
       field("Condition", colDetail(row.condition, "condition")), field("Language", colDetail(row.language, "language")),
       field("Colour identity", colours ? colours.pips(20) : colUnknown("Colour identity not recorded")),
       field("Type", card?.type_line || colUnknown("Type not recorded"))),
-    el("p", { class: "col-preview-storage", text: colStorageWords(cv, row) }),
+    el("p", { class: "col-preview-storage", text: colStorageWords(cv, row) }), colPackingHints(cv, row),
     row.notes ? el("p", { class: "sub", text: row.notes }) : null,
     card?.oracle_text ? el("div", { class: "col-preview-rules" }, oracleParagraphs(card.oracle_text)) : null,
     cv.editable ? el("button", { type: "button", class: "btn btn-primary col-mutate col-preview-edit", text: "Edit copies",
@@ -314,6 +386,7 @@ function colCasualRow(cv, row) {
   const caption = el("span", { class: "col-viewer-words" },
     el("span", { class: "col-viewer-counts", text: `${plural(Number(row.quantity), "copy", "copies")} \u00b7 ${colPrinting(row)}` }),
     el("span", { class: "col-viewer-note", text: colStorageWords(cv, row) }),
+    colPackingHints(cv, row),
     card?.exact === false ? el("span", { class: "col-viewer-note", text: "Picture of another printing" }) : null,
     row.notes ? el("span", { class: "col-viewer-note", text: row.notes }) : null,
     cv.editable ? el("button", { type: "button", class: "btn", text: "Edit copies",
@@ -383,7 +456,7 @@ function colTypeCell(card) {
     ? el("span", { class: "col-type-text", text: card.type_line, title: card.type_line }) : colUnknown("Type not recorded"));
 }
 
-/** Storage holds counts, not the identities of the decks or products holding a printing. */
+/** Counts stay unchanged; the lab's static marker leads to full hints in the selected preview. */
 function colHeldCell(cv, row) {
   const cell = el("td", { class: "col-td-held" });
   if (!cv.storage || cv.storage.error) return add(cell, [colUnknown("Copies in decks not known")]);
@@ -393,7 +466,9 @@ function colHeldCell(cv, row) {
   const words = `${num(held)} in decks${guess ? "?" : ""} \u00b7 ${num(Math.max(0, Number(row.quantity) - held))} free`;
   return add(cell, [el("span", { class: `col-held${guess ? " col-held-guess" : ""}`,
     title: colStorageWords(cv, row) + (guess ? `. ${COL_GUESS_WORDS}` : "") }, simNumbers(words)),
-    guess ? el("span", { class: "sr-only", text: "Printing allocation uncertain." }) : null]);
+    guess ? el("span", { class: "sr-only", text: "Printing allocation uncertain." }) : null,
+    colListedHolders(cv, row)?.holders.length ? el("span", { class: "col-packing-marker",
+      text: "Saved list hints", title: COL_PACKING_HINT_WORDS }) : null]);
 }
 
 

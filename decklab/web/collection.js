@@ -214,6 +214,16 @@ function colStorage(storage) {
   return { error: storage.error || null, rows: storage.rows && typeof storage.rows === "object" ? storage.rows : {} };
 }
 
+/** Older refresh answers may retain legacy counts, but cannot renew named packing-list hints. */
+function colWithoutHints(storage) {
+  if (!storage) return storage;
+  return { ...storage, rows: Object.fromEntries(Object.entries(storage.rows).map(([key, value]) => {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return [key, value];
+    const { listed_holders, unattributed, ...counts } = value;
+    return [key, counts];
+  })) };
+}
+
 /** A row's copies in decks: {held (null for a basic land: not tracked), guess}, held 0 when none. */
 function colHeld(cv, row) {
   const s = cv.storage && cv.storage.rows[colKey(row)];
@@ -236,7 +246,7 @@ function colPrice(cv, row) {
 function colTakeRows(cv, data) {
   cv.rows = data.rows;
   if (data.prices) cv.prices = colPrices(data.prices);
-  if (data.storage) cv.storage = colStorage(data.storage);
+  cv.storage = data.storage ? colStorage(data.storage) : colWithoutHints(cv.storage);
 }
 
 function colActive(cv) {
@@ -324,7 +334,7 @@ function colChanged(cv, answer, words) {
   if (answer && Array.isArray(answer.rows)) cv.rows = answer.rows;
   if (answer && answer.pictures) Object.assign(cv.pictures, answer.pictures);
   if (answer && answer.prices) cv.prices = colPrices(answer.prices);
-  if (answer && answer.storage) cv.storage = colStorage(answer.storage);
+  cv.storage = answer && answer.storage ? colStorage(answer.storage) : colWithoutHints(cv.storage);
   state.library = null;               // the library's missing-card counts come from the collection
   if (!colActive(cv)) { if (words && state.profile?.id === cv.profile) toast(words); return; }
   if (cv.kind === "rows") {

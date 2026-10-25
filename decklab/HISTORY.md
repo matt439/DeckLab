@@ -2,6 +2,14 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Collection saved-list hints UI (2026-10-25; E11-S30 slice 11)
+
+The Card list now shows a static Saved list hints marker without expanding dense rows, and complete hints in its preview and casual/lab viewer captions. The full attribution list, checksum, route identity, quantity and source kind must validate; older, malformed, basic or overcommitted data stays anonymous. Links explicitly choose Planned or Play-now and recheck their current route/person/root/row/hint before and after viewer close. The UI explains that saved lists can differ from boxes/current lists. Save/conflict replies without fresh storage strip names from cloned retained metadata, preserving legacy counts and hashes.
+
+Browser QA also found light-theme links at 2.67:1 on the always-dark viewer panel. A dedicated shared viewer-link token now gives 7.17:1 in either theme, with a two-theme contrast regression.
+
+Validation: 218 distinct targeted Python/Node checks passed (217 broad UI checks plus the new contrast test); the affected 83-check contrast/source rerun passed. Synthetic Chromium checked nine documented sizes plus 1000/1280 in both themes (22 combinations), with 36px mouse rows, wrapping long links and no page/panel overflow. Preview and casual-viewer Play-now links opened the actual synthetic owned view; lab Enter exposed the same hints. Mouse/default DPR only; actual touch, Safari and physical devices remain unverified. No new API reads, canonical/hash changes, live writes or Forge games. The source audit still flags only pre-existing `tokens.js` (1,516 lines). Canonical Planned/library hint swatches and the filter semantic choice remain open.
+
 ## Collection saved packing-list hint source (2026-10-25; E11-S30 slice 11 prerequisite)
 
 Storage answers now add visible, uncontested saved packing-list printing hints (`listed_holders`) and an anonymous remainder, beside unchanged aggregate held/guess counts. Each named hint carries the source list kind, Planned or Play-now. Installed stand-ins, competing or overcommitted hints, cheapest-printing remainders and hidden sources remain anonymous. The existing deck/product privacy gate controls identities; an expected visibility-read failure clears every optional name while preserving allocation counts. Metadata is outside canonical rows/hash and uses the already-read pool/recipe.
