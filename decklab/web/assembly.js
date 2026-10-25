@@ -35,39 +35,46 @@ function drawAssembly(data, token) {
   view.root = el("div", { class: "pack-page" });
   view.results = el("div", { class: "pack-results", "aria-live": "polite" });
   view.message = el("p", { class: "pack-message", role: "status" });
+  view.messageSlot = el("div", { class: "pack-message-slot" }, view.message);
   view.progressNote = el("div", { class: "pack-sync", role: "status" });
   view.picks = el("div", { class: "pack-picks" });
   view.sortControl = packOrderControls(view);
   const from = parseHash().params.get("deck");
   const fromDeck = from && (data.choices.find((item) => item.id === from) || { id: from, title: "The deck" });
-  view.chooser = el("details", { class: "panel pack-choose", open: true },
-    el("summary", {}, el("span", { class: "pack-choose-title", text: "Decks" }), el("span", { class: "pack-choose-count" })),
+  view.chooserCount = el("span", { class: "pack-choose-count" });
+  view.chooserHeading = el("h2", { class: "pack-choose-head", tabindex: "-1" },
+    el("span", { class: "pack-choose-title", text: "Decks" }), view.chooserCount);
+  view.chooser = el("section", { class: "panel pack-choose", "aria-label": "Deck choices" }, view.chooserHeading,
     el("div", { class: "actions pack-presets" },
-      el("button", { type: "button", class: "btn", text: "Built and being built", onclick: () => {
+      el("button", { type: "button", class: "btn", text: "Built and being built", "data-pack-id": "", "data-pack-control": "preset", onclick: e => {
+        if (!packChooserCanChange(view, e.currentTarget)) return;
         view.sideboardChoosing?.clear();
         view.selected = view.choices.filter(c => ["built", "building"].includes(packGroupOf(c))).slice(0, PACK_MAX)
           .map(c => ({ id: c.id, version: "target" }));
         packChanged(view);
-        packFoldChooser(view);          // a preset is a whole choice: on a phone, the plan comes up
       } }),
-      el("button", { type: "button", class: "btn btn-quiet", text: "Clear", onclick: () => {
+      el("button", { type: "button", class: "btn btn-quiet", text: "Clear", "data-pack-id": "", "data-pack-control": "clear", onclick: e => {
+        if (!packChooserCanChange(view, e.currentTarget)) return;
         view.selected = []; view.sideboardChoosing?.clear(); packChanged(view);
       } })),
-    view.picks,
-    // Under 1000 px the checklist sits above the plan: this folds it, once decks are chosen.
-    el("div", { class: "pack-show-plan" }, el("button", { type: "button", class: "btn btn-primary", text: "Show the plan",
-      onclick: () => packFoldChooser(view, true) })));
+    view.picks);
+  view.chooserEmpty = el("p", { class: "sub pack-chooser-empty", text: "No decks available for this plan." });
+  view.chooser.append(view.chooserEmpty);
+  view.chooserLaunch = el("button", { type: "button", class: "btn pack-chooser-launcher", text: "Decks",
+    "aria-haspopup": "dialog", "aria-expanded": "false", onclick: () => packRevealChooser(view) });
+  view.chooserRail = el("div", { class: "pack-chooser-rail" });
+  view.chooserSlot = el("div", { class: "pack-chooser-slot" }, view.chooserLaunch, view.chooserRail);
   add(view.root, [
     pageHead({ crumb: fromDeck ? [deckHref(fromDeck.id, parseHash().params.get("version")), fromDeck.title || "The deck"] : null,
       title: routeH1("assembly"), description: "Choose the decks you want to play, then pull their cards. Each physical copy is counted once.",
       // The plan's sleeves and token cards come from these pages.
       more: [mayDo("see_accessories") ? { label: routeFor("accessories").label, href: "#/accessories" } : null,
         { label: routeFor("tokens").label, href: "#/tokens" }] }),
-    el("div", { class: "pack-layout" }, view.chooser,
-      el("div", { class: "pack-main" }, view.message, view.progressNote, view.sortControl, view.results))]);
+    el("div", { class: "pack-layout" }, view.chooserSlot,
+      el("div", { class: "pack-main" }, view.messageSlot, view.progressNote, view.sortControl, view.results))]);
   $("#main").append(view.root);
-  if (view.selected.length && window.matchMedia && window.matchMedia("(max-width: 999px)").matches) view.chooser.open = false;
   view.run = () => packRun(view);
+  packInitChooser(view);
   drawPackPicks(view);
   renderAssemblyPlan(view, data);
 }
@@ -76,16 +83,9 @@ function assemblyActive(view) {
   return view.token === routeToken && view.profile === state.profile?.id && view.root.isConnected;
 }
 
-/** Folds the deck checklist where it sits above the plan (under 1000 px) once a deck is chosen; scroll: also
- * bring the plan into view. */
-function packFoldChooser(view, scroll = false) {
-  if (!view.selected.length || !(window.matchMedia && window.matchMedia("(max-width: 999px)").matches)) return;
-  view.chooser.open = false;
-  if (scroll && view.chooser.scrollIntoView) view.chooser.scrollIntoView({ block: "start" });
-}
-
 /** The checklist of decks, grouped by status, each with its list (planned or play-now) once it's chosen. */
 function drawPackPicks(view) {
+  const presentation = packChooserBeforeDraw(view);
   clear(view.picks);
   const full = view.selected.length >= PACK_MAX;
   const selected = new Set(view.selected.map(item => item.id));
@@ -97,8 +97,13 @@ function drawPackPicks(view) {
     const list = el("ul", { class: "pack-picklist" }, choices.map((choice) => {
       const picked = view.selected.find(s => s.id === choice.id);
       const box = el("input", { type: "checkbox", checked: Boolean(picked), disabled: !picked && full,
+        "data-pack-id": choice.id, "data-pack-control": "choose",
         onchange: () => {
-          if (box.checked) view.selected.push({ id: choice.id, version: "target" });
+          const accepted = view.selected.some(s => s.id === choice.id);
+          if (!packChooserCanChange(view, box) || !view.choices.includes(choice)
+              || (box.checked && !accepted && view.selected.length >= PACK_MAX)) { box.checked = accepted; return; }
+          if (box.checked && !accepted) view.selected.push({ id: choice.id, version: "target" });
+          else if (box.checked) return;
           else {
             view.selected = view.selected.filter(s => s.id !== choice.id);
             view.sideboardChoosing?.delete(choice.id);
@@ -108,25 +113,23 @@ function drawPackPicks(view) {
       const versions = picked && (choice.versions || []).length > 1
         ? el("div", { class: "segmented pack-version", role: "group", "aria-label": `${choice.title}: which list` },
           choice.versions.map(v => el("button", { type: "button", "aria-pressed": String(picked.version === v), text: listName(v),
+            "data-pack-id": choice.id, "data-pack-control": `version:${v}`,
             onclick: event => packChooseVersion(view, picked, v, event.currentTarget) }))) : null;
       return el("li", {}, el("label", { class: "choice" }, box, el("span", { text: choice.title })), versions,
         packSideboardChoice(view, choice, picked));
     }));
     // Ideas and products are folded until one of them is chosen.
     const shut = (key === "idea" || key === "product") && !choices.some(c => view.selected.some(s => s.id === c.id));
-    view.picks.append(shut ? el("details", { class: "pack-group" }, el("summary", { text: `${words} (${choices.length})` }), list)
-      : el("div", { class: "pack-group" }, el("h3", { text: words }), list));
+    view.picks.append(shut ? el("details", { class: "pack-group", "data-pack-group": key }, el("summary", { text: `${words} (${choices.length})` }), list)
+      : el("div", { class: "pack-group", "data-pack-group": key }, el("h3", { text: words }), list));
   }
-  const count = view.chooser.querySelector(".pack-choose-count");
-  if (count) count.textContent = view.selected.length ? ` · ${view.selected.length} chosen` : "";
-  const show = view.chooser.querySelector(".pack-show-plan");
-  if (show) show.hidden = !view.selected.length;
   if (full) view.picks.append(el("p", { class: "sub", text: `A plan holds up to ${PACK_MAX} decks.` }));
+  packChooserAfterDraw(view, presentation);
 }
 
 /** A choice changed: redraw the checklist and work the plan out again shortly after. */
 function packChanged(view) {
-  closeAssemblySheets();
+  closeAssemblySheets(false);
   ++view.seq;
   view.builtMessage = null;
   view.finishError = null;
@@ -373,9 +376,7 @@ function renderAssemblyPlan(view, data) {
     wirePackTicks(view);
     view.results.append(el("div", { class: "empty" }, el("p", { text: "Choose the decks you want to play." }),
       el("button", { type: "button", class: "btn", text: "Choose decks", onclick: () => {
-        view.chooser.open = true;
-        const first = view.chooser.querySelector("input");
-        if (first) first.focus();
+        packRevealChooser(view);
       } })));
     return;
   }
@@ -467,8 +468,8 @@ function packCanFinish(view) {
 function packSaving(view, saving) {
   view.saving = saving;
   if (saving) {
-    view.saveDisabled = [...view.root.querySelectorAll("button"), ...view.root.querySelectorAll("input")]
-      .filter(node => !node.disabled);
+    view.saveDisabled = ["button", "input", "select"].flatMap(tag => [...view.root.querySelectorAll(tag)])
+      .filter(node => !node.disabled && !view.chooser.contains(node));
     view.saveDisabled.forEach(node => { node.disabled = true; });
   } else {
     (view.saveDisabled || []).forEach(node => { node.disabled = false; });
@@ -529,6 +530,7 @@ async function packMarkBuilt(view) {
 /** "Pulled 12 of 31 cards · 2 of 4 other steps" in the sticky bar ("Pulled 12/31 · 2/4 steps" on a phone,
  * so the bar stays one line). */
 function packProgress(view) {
+  packChooserSync(view);
   if (!view.bar) return;
   packBulkProgress(view);
   const ticks = view.ticks || [];

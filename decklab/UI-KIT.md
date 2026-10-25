@@ -29,7 +29,19 @@ the server does. Loads, writes and retries check the original profile, route,
 connected form and request sequence; late work cannot replace another viewer's
 page. No note is quiet; unavailable storage has explicit wording.
 
-`assembly-progress.js` follows `assembly.js`: shared Build decks checkmarks,
+`assembly-chooser.js` follows `assembly.js`. One chooser tree moves between the
+shared Decks sheet below 1000px and the 300px lab rail. The same minimum-width
+query drives controller and CSS; current deck/control identity restores fresh
+focus after redraw, with guarded viewport reveal. Close/Show the plan only dismiss,
+and choices keep the existing 250ms read-only preview. All eligible options,
+usual-opponent/status groups, the twelve-participant limit, versions and sideboard
+recipes remain. One status node moves to the visible home. Busy/stale/permission
+guards include sheet controls; route/person cleanup disposes the chooser and its
+media listener while ordinary choice changes close only build/stand-in reviews.
+The [drawing](design/packing-chooser.svg) preceded implementation. This adds no
+allocation, progress, inventory or save contract.
+
+`assembly-progress.js` follows the chooser script: shared Build decks checkmarks,
 per-task identities and patches, pending-save status, polling and Clear/Undo.
 Sorting remains a browser preference. Progress is shared through the server;
 it never changes a deck's status without the explicit Mark as built action.

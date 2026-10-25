@@ -8,6 +8,7 @@ from decklab.tests.test_workspace_ui import NODE, RUNNER, WEB
 
 SETUP = """
   clear(main);
+  window.matchMedia('(min-width: 1000px)').matches = true;
   state.profile = {id:'matt', name:'Matt', plays_as:'user', role:'admin', space:'home'};
   state.profiles = [state.profile];
   location.hash = '#/assembly';

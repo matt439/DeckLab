@@ -87,6 +87,7 @@ class FeatureUiTests(unittest.TestCase):
 
     def test_assembly_verified_single_sided_token_label(self):
         self.run_js("""
+          window.matchMedia('(min-width: 1000px)').matches = true;
           clear(main);
           const deck = {id:'casual/a',title:'A',version:'target',sleeves:null,kit:null,sleeves_need:null,steps:[],
             basics:[],returns:[],tokens:null};
@@ -100,6 +101,7 @@ class FeatureUiTests(unittest.TestCase):
     def test_assembly_notes_decks_in_the_same_sleeves(self):
         # E8-S20: decks chosen together in one design of sleeves get a note, never a warning box.
         self.run_js("""
+          window.matchMedia('(min-width: 1000px)').matches = true;
           clear(main);
           const deck = (id, title) => ({id, title, version:'target', sleeves:null, kit:null, sleeves_need:null,
             need:{}, current:[], basics:[], steps:[], returns:[], tokens:null});
@@ -123,6 +125,7 @@ class FeatureUiTests(unittest.TestCase):
 
     def test_assembly_kit_row_ticks_and_short_warning(self):
         self.run_js("""
+          window.matchMedia('(min-width: 1000px)').matches = true;
           clear(main);
           const sleeves = {value:'ds-black',id:'ds-black',kind:'sleeves',state:'linked',quantity:60,image_url:null,
             label:'Dragon Shield Matte (black)'};
@@ -155,6 +158,7 @@ class FeatureUiTests(unittest.TestCase):
 
     def test_assembly_not_recorded_sleeves_on_a_built_deck_open_the_picker(self):
         self.run_js("""
+          window.matchMedia('(min-width: 1000px)').matches = true;
           clear(main);
           const picked = [];
           kitPicker = (opts) => { picked.push(opts); };
@@ -171,6 +175,7 @@ class FeatureUiTests(unittest.TestCase):
 
     def test_packing_plan_steps_tiles_progress_and_shared_ticks(self):
         self.run_js("""
+          window.matchMedia('(min-width: 1000px)').matches = true;
           clear(main);
           const saved = {};
           window.localStorage = {getItem: k => (k in saved ? saved[k] : null), setItem: (k, v) => { saved[k] = String(v); },
@@ -240,6 +245,7 @@ class FeatureUiTests(unittest.TestCase):
 
     def test_packing_plan_decks_come_from_a_checklist(self):
         self.run_js("""
+          window.matchMedia('(min-width: 1000px)').matches = true;
           clear(main);
           const posts = [];
           apiWrite = async (path, body) => { posts.push([path, body]); return {decks:[],rows:[],ready:false,
@@ -255,17 +261,19 @@ class FeatureUiTests(unittest.TestCase):
           // Built and being built are open; ideas and products are folded.
           same(main.querySelectorAll('.pack-group').map(g => g.tag), ['div', 'div', 'details', 'details']);
           const chooser = main.querySelector('.pack-choose');
-          assert.equal(chooser.querySelector('.pack-show-plan').hidden, true);
-          // On a phone the preset folds the checklist, so the plan comes up.
-          window.matchMedia('(max-width: 999px)').matches = true;
-          main.querySelectorAll('button').find(b => b.textContent === 'Built and being built').click();
-          assert.equal(chooser.open, false);
-          window.matchMedia('(max-width: 999px)').matches = false;
-          chooser.open = true;
+          assert.equal(chooser.tag,'section');assert(!main.querySelector('.pack-show-plan'));
+          // On a phone the same chooser moves into a sheet; choosing a preset keeps it open.
+          const media=window.matchMedia('(min-width: 1000px)');media.matches=false;media.fire('change');
+          main.querySelector('.pack-chooser-launcher').click();
+          const sheet=document.body.querySelector('dialog');assert(sheet.contains(chooser));
+          chooser.querySelectorAll('button').find(b => b.textContent === 'Built and being built').click();
+          assert(sheet.isConnected);assert(sheet.contains(chooser));
           flushTimers(); await null; await null;
           same(posts.at(-1), ['/api/assembly/preview', {decks:[{id:'casual/a',version:'target'},{id:'casual/b',version:'target'}]}]);
-          assert(main.querySelector('.pack-choose-count').textContent.includes('2 chosen'));
-          assert.equal(chooser.querySelector('.pack-show-plan').hidden, false);
+          assert(chooser.querySelector('.pack-choose-count').textContent.includes('2 chosen'));
+          sheet.querySelector('.pack-show-plan').click();assert(!sheet.isConnected);
+          assert(!chooser.isConnected);assert(document.activeElement===main.querySelector('.pack-chooser-launcher'));
+          media.matches=true;media.fire('change');assert(main.contains(chooser));
           // A deck with two lists offers them once it's chosen.
           const play = main.querySelectorAll('button').find(b => b.textContent === 'Play-now list');
           play.click(); flushTimers(); await null; await null;

@@ -16,8 +16,7 @@ function packChooseVersion(view, picked, version, node = null) {
 }
 
 function packScopeCurrent(view, picked, node) {
-  return assemblyActive(view) && node.isConnected && view.selected.includes(picked)
-    && !view.saving && !view.reviewing;
+  return packChooserCanChange(view, node) && view.selected.includes(picked);
 }
 
 /** A recipe always includes the full main deck; sideboard quantities are an explicit final state. */
@@ -29,7 +28,8 @@ function packSideboardChoice(view, choice, picked) {
   const chosen = picked.sideboard;
   const custom = view.sideboardChoosing?.has(picked.id) || (chosen && Object.keys(chosen).length);
   const mode = custom ? "custom" : chosen ? "main" : "all";
-  const select = el("select", { "aria-label": `${choice.title}: cards to assemble` },
+  const select = el("select", { "aria-label": `${choice.title}: cards to assemble`,
+    "data-pack-id": choice.id, "data-pack-control": "scope" },
     [["all", "Main deck + whole sideboard"], ["main", "Main deck only"], ["custom", "Choose sideboard cards"]]
       .map(([value, text]) => el("option", { value, text, selected: value === mode })));
   select.value = mode;
@@ -53,6 +53,7 @@ function packSideboardChoice(view, choice, picked) {
     for (const row of rows) {
       const qty = chosen?.[row.name] || 0;
       const input = el("input", { type: "number", min: 0, max: row.quantity, step: 1, value: qty,
+        "data-pack-id": choice.id, "data-pack-control": `quantity:${row.name}`,
         "aria-label": `${choice.title}: ${row.name} sideboard copies` });
       input.addEventListener("change", () => {
         if (!packScopeCurrent(view, picked, node)) return;

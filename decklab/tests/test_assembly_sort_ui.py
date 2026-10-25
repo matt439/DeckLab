@@ -8,6 +8,7 @@ from decklab.tests.test_workspace_ui import NODE, WEB, RUNNER
 
 SETUP = """
   clear(main);
+  window.matchMedia('(min-width: 1000px)').matches = true;
   state.profile = {id:'matt',name:'Matt',space:'home',role:'admin',plays_as:'user'};
   const saved = {};
   window.localStorage = {getItem: k => saved[k] ?? null,

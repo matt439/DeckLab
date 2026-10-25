@@ -3,8 +3,9 @@
 
 const assemblySheets = new Set();
 
-function closeAssemblySheets() {
+function closeAssemblySheets(closeChooser = true) {
   for (const sheet of [...assemblySheets]) sheet.close();
+  if (closeChooser) closePackingChoosers();
 }
 
 function openAssemblySheet(view, title, options = {}) {
@@ -109,8 +110,9 @@ function packReviewBuilt(view) {
               delete picked.sideboard;
               view.sideboardChoosing?.delete(picked.id);
             }
-            view.chooser.open = true;
             packChanged(view);
+            // The review's awaiting caller clears reviewing before the chooser can become editable.
+            Promise.resolve().then(() => packRevealChooser(view));
           });
           part.append(el("label", { class: "field" }, el("span", { text: "Built list" }), list,
             el("small", { class: "field-hint", text: "Changing the list returns to the plan so you can check its cards." })));
