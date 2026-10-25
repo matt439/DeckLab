@@ -2,6 +2,14 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## P1 deck navigation and Last changed (2026-10-25; E11-S30 slice 9)
+
+The deck header now has previous/next links through a fresh server-visible library, retaining its filters/sort where the current deck belongs and otherwise using all visible ordinary decks. It keeps the selected tab, Cards filter and Play-now list when the next deck has one, disables either end, and remembers the selected deck for returning to the library. Late reads check the route, screen, person, connection and retry sequence. Narrow lab widths place 44 px white circles over the art, with enough reserved space for maximum-length titles.
+
+`GET /api/deck` now includes the same actual last-recorded edit date as the library, looked up after the visibility check without rereading decklists or history. The tint band shows Last changed as the device's local date, with a full date/time in the time element's title. Unknown dates stay unlabelled and a metadata read failure leaves the deck usable without exposing diagnostics.
+
+Validation: 251 targeted Python/Node and fixture HTTP tests; Chromium synthetic-data checks at all nine documented viewport sizes plus the 1000/1280 boundaries in both themes, including maximum-length titles and an actual navigation preserving Stats. No overflow or control/title overlap remained. This browser uses mouse input and its default DPR; some phone widths round up one pixel. Real-device, true touch and Safari acceptance remain open. No live records or simulations were changed. The source audit still fails only on untouched `web/tokens.js` (1,516 lines at baseline); every changed source is below 1,200.
+
 ## P1 deck page, first part (2026-10-25; E11-S30 slice 9)
 
 The deck page now has a lab art hero with its identity stripe and tint metadata, a folded toolbar at narrow lab widths, and saved Forge results on Overview. The existing five tabs, editing rights and More actions stay intact. Image failure falls back to a readable title; casual widths keep the compact head.

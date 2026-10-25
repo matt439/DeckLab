@@ -57,11 +57,11 @@
 }
 @media (min-width: 1000px) {
   /* The full deck page promotes the library's art to a hero. The editor keeps its own head. */
-  .deck-page-head { position: relative; gap: 0; grid-template-columns: minmax(0, 1fr); }
-  .deck-page-head > .deck-head-actions { grid-column: 1; grid-row: 1; padding-bottom: var(--s-2); }
+  .deck-page-head { position: relative; gap: 0; grid-template-columns: minmax(0, 1fr) auto; }
+  .deck-page-head > .deck-head-actions { grid-column: 2; grid-row: 1; padding-bottom: var(--s-2); }
   .deck-page-head > .deck-stripe { display: block; grid-row: 2; }
   .deck-page-head > .deck-title-row {
-    grid-column: 1; grid-row: 3; position: relative; isolation: isolate;
+    grid-column: 1 / -1; grid-row: 3; position: relative; isolation: isolate;
     align-items: flex-end; min-height: 184px; padding: var(--s-5);
     background: var(--deck-art, var(--surface-2));
   }
@@ -83,10 +83,11 @@
 }
 @media (min-width: 1000px) and (max-width: 1280px) {
   /* A touch lab has room for art, title and actions in one row, rather than a second toolbar. */
-  .deck-page-head > .deck-title-row { min-height: 148px; padding: var(--s-3); }
+  .deck-page-head > .deck-title-row { min-height: 148px;
+    padding: calc(var(--tap) + 2 * var(--s-3)) var(--s-3) var(--s-3); }
   .deck-page-head .deck-title-row h1 { max-width: calc(100% - 240px); }
   .deck-page-head > .deck-head-actions {
-    grid-row: 3; position: relative; z-index: 2; align-self: end; justify-self: end;
+    grid-column: 1 / -1; grid-row: 3; position: relative; z-index: 2; align-self: end; justify-self: end;
     margin: var(--s-3); padding: 0;
   }
   .deck-head-actions > .deck-actions { outline: 2px solid var(--on-scrim); outline-offset: 2px; border-radius: var(--r-pill); }
@@ -431,4 +432,20 @@ table.data tfoot .total-cost { font-weight: var(--fw-semibold); text-align: left
   /* A phone: "Use n" on its own line under the card and its note. */
   .swap-row { grid-template-columns: minmax(0, 1fr); }
   .swap-row > .swap-use { grid-column: 1; grid-row: auto; justify-self: start; margin-top: var(--s-2); }
+}
+
+/* The fresh visible library supplies previous/next; narrow lab navigation sits over the art. */
+.deck-neighbours { display: none; }
+.deck-changed { color: var(--ink-2); font-size: var(--fs-xs); white-space: nowrap; }
+.deck-neighbour-count { font-family: var(--font-num); font-size: var(--fs-sm); white-space: nowrap; }
+@media (min-width: 1000px) {
+  .deck-page-head > .deck-neighbours { display: flex; grid-column: 1; grid-row: 1; align-items: center;
+    align-self: start; gap: var(--s-2); padding-bottom: var(--s-2); min-width: 0; }
+}
+@media (min-width: 1000px) and (max-width: 1280px) {
+  .deck-page-head > .deck-neighbours { grid-column: 1 / -1; grid-row: 3; position: relative;
+    z-index: 2; justify-self: start; margin: var(--s-3); padding: 0; max-width: calc(100% - 2 * var(--s-3)); }
+  .deck-neighbour-count { padding: var(--s-1) var(--s-2); border-radius: var(--r-pill);
+    background: var(--scrim-strong); color: var(--on-scrim); }
+  .deck-neighbours > .sub { background: var(--surface); color: var(--ink); padding: var(--s-1); }
 }

@@ -181,6 +181,9 @@
   --ring-track: #bcd8d4;        /* a run's progress ring, behind its arc */
   --link: #0a504d;
   --kbd-on-accent: rgb(255 255 255 / .45);   /* a kbd hint's box on a primary button */
+  --art-control-bg: #ffffff;
+  --art-control-ink: #0b5552;
+  --art-control-hover: #e1efec;
   --btn-bg: var(--surface);     /* a secondary button's fill: white in light, none in dark (4.5) */
   --bar-bg: rgb(255 255 255 / .97);   /* a sticky bottom bar: --surface at 97% */
   /* A tick drawn on --accent (a tile's tick, the printing picker's current printing): white in light, the

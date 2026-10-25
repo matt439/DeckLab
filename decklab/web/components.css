@@ -1106,3 +1106,15 @@ table.data tr.group-row .group-count { font-family: var(--font-mono); font-weigh
 .fact-line-in { display: flex; flex-wrap: wrap; align-items: baseline; margin-left: -1em; }
 .fact { white-space: nowrap; min-width: 0; }
 .fact-sep { display: inline-block; width: 1em; text-align: center; }
+
+/* Circular navigation over deck art: the same opaque surface and teal ink in both themes. */
+.btn.btn-art {
+  width: var(--tap); height: var(--tap); min-width: var(--tap); min-height: var(--tap); padding: 0;
+  border: 0; background: var(--art-control-bg); color: var(--art-control-ink); font-size: var(--fs-xl);
+  flex: none; box-shadow: var(--shadow-1);
+}
+.btn.btn-art:active:not(:disabled, [aria-disabled="true"]) { background: var(--art-control-hover); }
+@media (hover: hover) and (pointer: fine) {
+  .btn.btn-art:hover:not(:disabled, [aria-disabled="true"]) { background: var(--art-control-hover); }
+}
+@media (forced-colors: active) { .btn.btn-art { border: 1px solid ButtonText; } }

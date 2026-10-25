@@ -227,6 +227,7 @@ function deckAddress(screen) {
   if (hash !== location.hash) history.replaceState(history.state, "", hash);
   // The Planned list / Play-now list links open the other list on the same tab (opened in a new tab too).
   for (const [v, link] of screen.versionLinks || []) link.setAttribute("href", versionHref(screen.data, v, tab));
+  syncDeckNeighbours(screen);
 }
 
 /** A list's address on tab (the Overview is the address without one). */
@@ -260,13 +261,14 @@ function deckHeader(data) {
   const cover = deckHeadCover(s);
   return el("header", { class: "deck-head deck-page-head", style: colours ? colours.vars(90) : null },
     colours ? colours.stripe() : null,
+    deckNeighbours(data),
     el("div", { class: "deck-title-row" },
       cover,
       el("h1", {}, s.title)),
     el("div", { class: "actions deck-head-actions" }, edit, more),
     el("div", { class: "deck-meta" },
       colours ? colours.pips(22, { cls: "deck-head-pips" }) : null,
-      deckPill(s), deckHeadMeta(data),
+      deckPill(s), deckHeadMeta(data), deckChangedDate(s.edited),
       el("code", { class: "deck-header-id", text: s.id })),
     said.length ? el("p", { class: "sub deck-head-note", text: said.join(" ") }) : null,
     s.id.startsWith(BOX_PREFIX) ? pairingLinks(s.id) : null);

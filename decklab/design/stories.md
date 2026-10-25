@@ -3798,7 +3798,9 @@ Evidence:
 
 Slice 9's first part built 2026-10-25: the lab hero, stripe and tint metadata, narrow folded actions, Overview's saved Forge field summary and newest swap test, and the identity-coloured mana curve (`deck-overview.js`, `deck-overview.css`, `test_deck_overview_ui.py`). The saved field summary meets criterion 4's Overview half. Five existing tabs are retained; run controls remain in Field view. Chromium fixture checks cover both themes at the nine documented viewport sizes with mouse input, not touch or Safari.
 
-Gap: the rest of slice 9 (deck-to-deck navigation, Last changed metadata and touch/Safari acceptance), then slices 10 to 15 (criteria 1 to 3 and 6). Section 6's question 4 is settled (Matt, 2026-10-25: only Building and Idea tiles show a status pill). The lab top bar's search is E11-S31.
+Slice 9's navigation and Last changed metadata built 2026-10-25: fresh server-visible previous/next links, filters and tab/list selection preserved, disabled ends, and actual recorded edit dates in the tint band. The narrow hero reserves navigation space for maximum-length titles. `test_deck_header_ui.py` and `test_deck_changed.py` cover the UI lifecycle, races, dates and server privacy.
+
+Gap: slice 9's touch/Safari acceptance, plus slices 10 to 15 (criteria 1 to 3 and 6). These device checks do not block slice 10's coding. Section 6's question 4 is settled (Matt, 2026-10-25: only Building and Idea tiles show a status pill). The lab top bar's search is E11-S31.
 
 <a id="e11-s31"></a>
 

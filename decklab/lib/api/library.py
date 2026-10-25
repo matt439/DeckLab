@@ -3,12 +3,12 @@ pairing's halves in either order), reading the card pool with a warning
 instead of an error, and _deck_sections, the summary and decklist that the
 deck page, practice hands and matchups all start from.
 
-The shelf's extras (shelf_extras, for GET /api/decks, and _deck_sections for
-GET /api/deck): each summary's "cover" (deck_cover: the card whose art stands
+The shelf's extras (shelf_extras for GET /api/decks; _deck_sections and
+edited_at for GET /api/deck): each summary's "cover" (deck_cover: the card whose art stands
 for the deck, its "Cover card" header line or the automatic one), "colors"
 (deck_colors: its colour identity, WUBRG order; None when no card in it could
 be read), "revision" (the deck text's revision, 0 when unknown: what
-POST /api/deck/cover's "expect" takes) and, in the library, "edited" (when
+POST /api/deck/cover's "expect" takes) and "edited" (when
 its text was last edited, inventory.deck_edited: ISO 8601 in UTC to the
 second, or None).
 """
@@ -367,16 +367,26 @@ def _utc(at):
     return at.astimezone(timezone.utc).replace(microsecond=0).isoformat()
 
 
+def _edited_decks():
+    """The latest deck-edit dates, or no dates when that optional read fails."""
+    try:
+        return inventory.deck_edited()
+    except Exception:           # the page shows no date; "Recently changed" falls back to name order
+        common._log("When the decks were last edited couldn't be read:\n" + traceback.format_exc())
+        return {}
+
+
+def edited_at(deck_id):
+    """One deck's latest edit as ISO UTC seconds from the inventory metadata, or None."""
+    return _utc(_edited_decks().get(deck_id))
+
+
 def shelf_extras(summaries):
     """Add cover, colors, revision and edited to each library summary (in place): GET
     /api/decks. Each deck's Planned list is read once (a product's from one read of the
     products); one that can't be read gets no cover and no colours."""
     products = None
-    try:
-        edited = inventory.deck_edited()
-    except Exception:           # the "Recently changed" sort falls back to the name order
-        common._log("When the decks were last edited couldn't be read:\n" + traceback.format_exc())
-        edited = {}
+    edited = _edited_decks()
     for summary in summaries:
         sections = None
         if not summary.get("error") and "target" in (summary.get("versions") or []):

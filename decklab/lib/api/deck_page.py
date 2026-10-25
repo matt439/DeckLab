@@ -23,7 +23,7 @@ from .deck_aliases import metadata
 from .common import _jsonable, _public, _scrub, _unique
 from .forge_runs import _deck_matchups
 from .guide import playing_guide
-from .library import (_deck_sections, _half_title, _load_pool, _named_by_id, _scrub_summary, shelf_extras,
+from .library import (_deck_sections, _half_title, _load_pool, _named_by_id, _scrub_summary, edited_at, shelf_extras,
                       viewer_decks_revision)
 from .practice import _deck_practice
 from .swaps import view_swaps
@@ -526,6 +526,7 @@ def deck_view(deck_id, version="target", omit=()):
     requested_id = deck_id
     summary, sections = _deck_sections(deck_id, version)
     deck_id = summary["id"]             # a pairing's halves in the library's order
+    summary["edited"] = edited_at(deck_id)
 
     warnings = []
     table = None
