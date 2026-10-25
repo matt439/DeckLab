@@ -30,6 +30,17 @@
 .rcpt-guidance .sub { font-size: var(--fs-meta); }
 .rcpt-guidance-building { color: var(--building-ink); }
 .rcpt-guidance-note { margin: var(--s-4) 0 0; }
+.rcpt-selected-summary { padding-bottom: var(--s-4); margin-bottom: var(--s-5); border-bottom: 1px solid var(--border); }
+.rcpt-selected-facts { display: grid; gap: var(--s-2); min-width: 0; }
+.rcpt-selected-facts p, .rcpt-selected-details { margin: 0; }
+.rcpt-selected-name { overflow-wrap: anywhere; }
+.rcpt-selected-details { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--s-1) var(--s-3); }
+.rcpt-selected-details dt { color: var(--ink-2); }
+.rcpt-selected-details dd { margin: 0; overflow-wrap: anywhere; }
+.rcpt-selected-code { font-family: var(--font-mono); }
+.rcpt-selected-words { display: none; }
+.rcpt-selected-summary .btn { max-width: 100%; margin-top: var(--s-3); white-space: normal; }
+.rcpt-row .card-row[aria-current="true"], .rcpt-picture-inspect[aria-current="true"] { box-shadow: inset 2px 0 var(--accent); }
 @media (min-width: 1000px) {
   .rcpt-head-grid, .rcpt-layout-frame { grid-template-columns: minmax(0, 1fr) 452px; }
   .rcpt-guidance { position: sticky; top: calc(var(--shell-top) + var(--s-4));
@@ -282,3 +293,8 @@
 .tok-reading p { overflow-wrap: anywhere; }     /* a long quoted part wraps rather than widening the sheet */
 .tok-reading .note p + p { margin-top: var(--s-1); }
 .tok-reading-fix { margin-top: var(--s-1); }
+
+@media (max-width: 999px) {
+  .rcpt-selected-code { display: none; }
+  .rcpt-selected-words { display: inline; }
+}

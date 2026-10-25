@@ -2,6 +2,14 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Receive selected-row context and inspector reuse (2026-10-25; E11-S30 slice 12)
+
+Delivery guidance now retains a Selected row summary and one Edit details action using the existing guarded inspector. Exact component id/runtime key membership separates split parts, excludes off/read-only/product contexts and refuses removed keys. Initial context uses a current visible row with explicit Not checked/inspect-to-confirm wording. Current facts follow edits, split/merge and draft restoration; hidden selection stays explicit and its action reveals the exact row first. The action/facts slots remain stable, with one original form/viewer tree and fresh close focus. No new reads, canonical request fields, checking, draft or preview invalidation is added by selecting context. Casual values use words and the lab uses codes.
+
+Validation: 196 guarded receipt/UI/source checks passed. Synthetic Chromium checked 48 verified viewport/theme/layout combinations with long unknown names/notes: five rows still total seven copies, one current row, four original viewer triggers, no extra editors or overflow. Initial/resumed uncertainty, actual split/merge, live condition/language edits, exact hidden-part reopening and fresh Close focus passed. Casual words and lab codes were checked. In the 1000x330 lab, native Tab/Enter reached the retained action in its scrolled pane above the measured Record bar. All API writes were disabled; only disposable local drafts changed. No actual receipt/database write, downloads or Forge games; no touch/coarse/Safari/device/speech acceptance. The source audit still fails only on pre-existing tokens.js (1,516 lines).
+
+Independent slice 12 presentation is built. Inline arrival-check strips still need authoritative check-to-row association; existing component checks remain separate. The ready queue advances to slice 13, starting with the Decks-sheet drawing. Collection question 6 and human/device gates remain open. Rollout 14's stale decision-1 gate is corrected to the already-settled tab-bar decision.
+
 ## Receive Planned destination swatches (2026-10-25; E11-S30 slice 12)
 
 Receipt deck hints now carry optional canonical Planned/library identity from the exact target sections already read. Canonical home/kind and viewer checks precede target/colour reads; cloned summaries and per-output arrays preserve names, counts and provenance. Unknown identity stays null, known colourless stays an empty array, and narrow typed/index-data faults remove only decoration. Unresolved-name row confidence, canonical receipt fields, fingerprint, inventory/pool/target read counts and preview/apply payloads stay unchanged.

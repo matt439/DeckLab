@@ -8,7 +8,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 
 **Aim (updated 2026-10-25):** finish the visual redesign (`E11-S30`), then work through the rows Matt added on 2026-10-25: making Deck Lab easy to self-host for people outside the household (`E11-S32`, `E11-S33`, `E10-S17`) and finishing the token and kit work (`E7-S31`, `E7-S06`, `E8-S14`, `E7-S21`). The private member model is built and live (see Activation below); household device acceptance remains.
 
-**Ready queue:** `E11-S30`, the visual redesign Matt chose on 2026-10-24 ("P1"). Continue with slice 12 of [visual-design.md](decklab/design/visual-design.md#7-rollout), Shopping and Receive delivery. Slices 9 to 11 have their independent coding built; Collection question 6 remains open before any filter semantic switch, and touch/Safari acceptance stays open. After the redesign, in no fixed order unless Matt picks one: the `OPEN` rows Matt added on 2026-10-25 (each has a first slice in its story). The other rows keep their people, date, release, priority or authorization gates.
+**Ready queue:** `E11-S30`, the visual redesign Matt chose on 2026-10-24 ("P1"). Continue with slice 13 of [visual-design.md](decklab/design/visual-design.md#7-rollout), Packing plan (Build decks): draw the Decks sheet first. Independent coding through slice 12 is built. Collection question 6 remains open; Card colour matching stays the compatibility default. Inline Receive checks await authoritative row association, and touch/Safari acceptance stays open. After the redesign, in no fixed order unless Matt picks one: the `OPEN` rows Matt added on 2026-10-25 (each has a first slice in its story). The other rows keep their people, date, release, priority or authorization gates.
 
 **Needs Matt or another person — these don't block coding:**
 - **`E2-S22`: physical-device follow-up.** Confirm hardware and touch usability on the household's actual iPhones and M2 11-inch iPad after the fixes. Keep prior results in the story; the [Safari Simulator suite](decklab/safari/EVIDENCE.md) covers repeat functional regressions.
@@ -68,7 +68,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 
 | id | status | pri | size | item |
 |---|---|---|---|---|
-| `E11-S30` | OPEN | should | L | Visual redesign P1 ([visual-design.md](decklab/design/visual-design.md)): finish slices 12-15 and Collection's open filter decision. Deck page/Matchups/independent Collection coding is built; touch/Safari acceptance stays open. |
+| `E11-S30` | OPEN | should | L | Visual redesign P1 ([visual-design.md](decklab/design/visual-design.md)): finish slices 13-15, Collection's filter decision and Receive check-to-row association. Touch/Safari acceptance stays open. |
 | `E11-S31` | OPEN | could | M | Global search in the top bar for decks and cards ([stories.md](decklab/design/stories.md#e11-s31)), left out of E11-S30's slice 7 by Matt on 2026-10-25; what it searches is still to settle with Matt. |
 | `E11-S32` | OPEN | could | M | A prebuilt release of the Forge fork, with a checksum, as SELF-HOSTING.md's first Forge route. |
 | `E11-S33` | OPEN | could | L | Full Linux support: the 31 failing tests fixed (then a Linux CI run), a systemd timer for the nightly jobs, and a systemd service for the server. |

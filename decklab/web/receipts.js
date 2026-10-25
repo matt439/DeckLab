@@ -364,6 +364,7 @@ function rcptDrawGrid(view, comp) {
   }
   rcptEmptyState(view, comp);
   rcptToolbarCounts(view, comp);
+  rcptSyncSelected(view);
 }
 
 /** A filter-specific empty message with Show all, when the filter leaves nothing to show. */
@@ -581,6 +582,7 @@ function rcptRefreshTile(view, comp, row) {
   row.tile = fresh;
   rcptEmptyState(view, comp);
   rcptToolbarCounts(view, comp);
+  rcptSyncSelected(view);
 }
 
 
@@ -668,6 +670,7 @@ function rcptOpenSheet(view, comp, row) {
 
 function rcptFillSheet(view) {
   const { sheet, comp, row } = view.sheet;
+  rcptSelectRow(view, comp, row);
   const v = row.values;
   sheet.heading.textContent = comp.kind === "tokens" ? (v.back ? `${v.front} // ${v.back}` : v.front) : v.name;
   const body = clear(sheet.body);

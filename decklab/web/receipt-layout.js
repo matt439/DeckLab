@@ -48,9 +48,88 @@ function rcptBuildLayout(view) {
   view.guidance = el("aside", { class: "panel rcpt-guidance", tabindex: "0", "aria-labelledby": "rcpt-guidance-title" },
     el("h2", { id: "rcpt-guidance-title", text: "Delivery guidance" }));
   view.guidanceBody = el("div", { class: "rcpt-guidance-body" });
-  view.guidance.append(view.guidanceBody);
+  view.selectedFacts = el("div", { class: "rcpt-selected-facts", id: "rcpt-selected-facts" });
+  view.selectedInspect = el("button", { type: "button", class: "btn", text: "Edit details…",
+    "aria-haspopup": "dialog", "aria-describedby": "rcpt-selected-facts", onclick: () => {
+      if (!receiptEditable(view)) return;
+      const current = rcptCurrentRow(view, view.selectedRow);
+      if (current) rcptGoTo(view, current);
+    } });
+  view.selectedSummary = el("section", { class: "rcpt-selected-summary", "aria-labelledby": "rcpt-selected-title" },
+    el("h3", { id: "rcpt-selected-title", text: "Selected row" }), view.selectedFacts, view.selectedInspect);
+  view.guidance.append(view.selectedSummary, view.guidanceBody);
   view.frame = el("div", { class: "rcpt-layout-frame" }, view.board, view.guidance);
   view.root.append(view.frame);
+}
+
+/** Runtime keys distinguish split parts. An original payload index cannot identify the working row. */
+function rcptCurrentRow(view, selected) {
+  if (!selected || !receiptActive(view) || view.done || view.readOnly || view.reloadRequired || !mayDo("receipts")) return null;
+  const comp = view.comps.find(c => c.c.id === selected.comp && c.selected && ["cards", "tokens"].includes(c.kind));
+  const row = comp?.rows.find(r => r.key === selected.key);
+  return row ? { comp, row } : null;
+}
+
+/** Inspection follows the current working part; it never checks a row or creates a receipt draft. */
+function rcptSelectRow(view, comp, row) {
+  const selected = { comp: comp.c.id, key: row.key };
+  const current = rcptCurrentRow(view, selected);
+  if (!current || current.comp !== comp || current.row !== row) return;
+  view.selectedRow = selected;
+  rcptSyncSelected(view);
+}
+
+function rcptSelectedValue(code, words, unknown) {
+  return code ? el("span", {}, el("span", { class: "rcpt-selected-code", text: code }),
+    el("span", { class: "rcpt-selected-words", text: words || code }))
+    : el("span", {}, el("span", { "aria-hidden": "true", text: "—" }), el("span", { class: "sr-only", text: unknown }));
+}
+
+/** Reuse loaded facts and one retained action; the inspector remains the only row editor/viewer entry. */
+function rcptSyncSelected(view) {
+  if (!view.selectedSummary) return;
+  const allowed = receiptActive(view) && !view.done && !view.readOnly && !view.reloadRequired && mayDo("receipts");
+  let current = allowed ? rcptCurrentRow(view, view.selectedRow) : null;
+  if (allowed && !current) {
+    // A first visible row is context only, not a claim that it arrived or was inspected.
+    for (const comp of view.comps) {
+      if (!comp.selected || !["cards", "tokens"].includes(comp.kind)) continue;
+      const row = comp.rows.find(r => r.tile && !r.tile.hidden);
+      if (row) { current = { comp, row }; break; }
+    }
+    view.selectedRow = current ? { comp: current.comp.c.id, key: current.row.key } : null;
+  }
+  if (!allowed) view.selectedRow = null;
+  for (const comp of view.comps) for (const row of comp.rows) {
+    if (current?.comp === comp && current.row === row) row.open?.setAttribute("aria-current", "true");
+    else row.open?.removeAttribute("aria-current");
+  }
+  view.selectedSummary.hidden = !allowed;
+  view.selectedInspect.hidden = !current;
+  view.selectedInspect.disabled = !receiptEditable(view);
+  const facts = clear(view.selectedFacts);
+  if (!allowed) return;
+  if (!current) {
+    facts.append(el("p", { class: "sub", text: "Choose an arrived card or token part, then inspect a visible row. Whole products keep their own choices." }));
+    return;
+  }
+  const { comp, row } = current, v = row.values;
+  const name = comp.kind === "tokens" ? [v.front, v.back].filter(Boolean).join(" // ") : v.name;
+  const parts = comp.rows.filter(r => r.orig === row.orig), hidden = Boolean(row.tile?.hidden);
+  facts.append(el("strong", { class: "rcpt-selected-name", text: name }),
+    el("p", { class: "sub", text: `${plural(rcptQty(row), comp.kind === "tokens" ? "token card copy" : "card copy", comp.kind === "tokens" ? "token card copies" : "card copies")} · ${row.ticked ? "Checked" : "Not checked"}` }),
+    el("p", { class: "rcpt-mono", text: rcptMeta(comp, row) }));
+  if (comp.kind === "cards") {
+    const conditions = { NM: "Near mint", LP: "Lightly played", MP: "Moderately played", HP: "Heavily played", DMG: "Damaged" };
+    facts.append(el("dl", { class: "rcpt-selected-details" }, el("dt", { text: "Condition" }),
+      el("dd", {}, rcptSelectedValue(v.condition, conditions[v.condition], "Condition not recorded")),
+      el("dt", { text: "Language" }), el("dd", {}, rcptSelectedValue(v.language, RCPT_LANGUAGE_WORDS[v.language], "Language not recorded"))));
+  } else facts.append(el("p", { class: "sub", text: rcptBackOpen(row) ? "Reverse not confirmed" : v.back ? "Reverse recorded" : "Single-sided verified" }));
+  if (parts.length > 1) facts.append(el("p", { class: "sub", text: `Part ${parts.indexOf(row) + 1} of ${parts.length}${row.ticked ? "" : "; still pending"}.` }));
+  if (v.notes) facts.append(el("p", { class: "sub", text: `Notes: ${v.notes}` }));
+  facts.append(el("p", { class: "sub", text: hidden ? "Hidden by the current view. Editing shows this row first." : "Details from this delivery; inspect to confirm what arrived." }));
+  view.selectedInspect.textContent = hidden ? "Show row and edit details…" : "Edit details…";
+  view.selectedInspect.setAttribute("aria-label", `${hidden ? "Show row and edit" : "Edit"} details for ${name}`);
 }
 
 /** Classify only the supplied copies, from loaded metadata; shared before and after recording. */
@@ -139,6 +218,7 @@ function rcptGuidanceDestinations(view) {
 /** Repaint only presentation; the original blocker predicates and preview/apply requests remain authoritative. */
 function rcptSyncLayout(view, progress) {
   if (!receiptActive(view) || view.done) return;
+  rcptSyncSelected(view);
   rcptHeadProgress(view, progress);
   view.measureBar?.();
   if (!view.guidanceBody) return;
