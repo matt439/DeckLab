@@ -1,0 +1,28 @@
+/* Overview summaries share the same panels and Forge components at both densities. */
+.deck-overview-forge, .deck-overview-swap, .deck-overview-curve {
+  margin-top: var(--s-4); padding: var(--s-4); min-width: 0;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-panel);
+}
+.deck-overview-forge .fv-tile { margin: 0; }
+.deck-overview-forge .fv-chips { margin-block: var(--s-3); }
+.deck-overview-forge-body > .sub { margin-top: var(--s-2); }
+.deck-overview-swap .vt-test-list { margin: 0; }
+.deck-overview-swap .vt-test-item { min-width: 0; }
+.deck-overview-bars { display: flex; align-items: stretch; gap: var(--s-2); height: 160px; max-width: 900px; }
+.deck-overview-column { flex: 1; min-width: 0; display: grid; grid-template-rows: auto minmax(0, 1fr) auto;
+  justify-items: center; gap: var(--s-1); }
+.deck-overview-count, .deck-overview-mv { font-family: var(--font-num); font-size: var(--fs-sm); color: var(--ink-2); }
+.deck-overview-count { min-height: 1.5em; }
+.deck-overview-bar { align-self: end; width: 100%; height: var(--curve-height); min-height: 0;
+  background: var(--deck-stripe, var(--ink-3)); border-radius: var(--r-sm) var(--r-sm) 0 0; }
+@media (forced-colors: active) {
+  .deck-overview-bar { background: CanvasText; }
+}
+
+@media (min-width: 1000px) {
+  .deck-overview-panels { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: var(--s-4); align-items: start; margin-top: var(--s-4); }
+  .deck-overview-panels > * { margin-top: 0; }
+  .deck-overview-panels > .deck-overview-forge { grid-column: 1; grid-row: 1 / span 2; }
+  .deck-overview-panels > .deck-overview-curve, .deck-overview-panels > .deck-overview-swap { grid-column: 2; }
+}

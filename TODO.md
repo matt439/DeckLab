@@ -68,7 +68,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 
 | id | status | pri | size | item |
 |---|---|---|---|---|
-| `E11-S30` | OPEN | should | L | Visual redesign P1 ([visual-design.md](decklab/design/visual-design.md)): slices 1 to 4 (fonts, colour tokens, density tokens, components) built 2026-10-24, slices 5 and 6 (deck colour pieces, simulation components with the run activity icon), slice 7 (the shell) and slice 8 (the library, with a cached field average as its Forge line) 2026-10-25; next is slice 9, the deck page. Matt settled the shell questions and section 6 question 2 on 2026-10-24. |
+| `E11-S30` | OPEN | should | L | Visual redesign P1 ([visual-design.md](decklab/design/visual-design.md)): finish slice 9's deck navigation, Last changed metadata and touch/Safari acceptance; then slices 10-15. Hero, tint and Overview Forge/swap/curve panels are built. |
 | `E11-S31` | OPEN | could | M | Global search in the top bar for decks and cards ([stories.md](decklab/design/stories.md#e11-s31)), left out of E11-S30's slice 7 by Matt on 2026-10-25; what it searches is still to settle with Matt. |
 | `E11-S32` | OPEN | could | M | A prebuilt release of the Forge fork, with a checksum, as SELF-HOSTING.md's first Forge route. |
 | `E11-S33` | OPEN | could | L | Full Linux support: the 31 failing tests fixed (then a Linux CI run), a systemd timer for the nightly jobs, and a systemd service for the server. |

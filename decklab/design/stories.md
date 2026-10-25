@@ -3796,7 +3796,9 @@ Evidence:
 - `decklab/web/library.js`: deckCard, deckRow, libDetail, statusRows, libKeys, deckOwned, deckForgeLine, deckRowForge, libDetailForge; `decklab/web/ui.js`: ownedBar; `decklab/lib/api/library_forge.py`: library_forge_view; `decklab/lib/forge/field.py`: averages; `decklab/tests/test_library_ui.py`: test_the_lab_has_rows_beside_the_selected_decks_detail, test_tested_decks_have_a_forge_line_tiles_rows_and_detail; `decklab/tests/test_library_forge.py`
 - `decklab/web/sim-ui.js`: winRateFigure, rangeBar, freshnessBadge, forgeFlag, swapResult; `decklab/web/runs-pill.js`: drawRunsPill, openRunDetails, runDetailsParts; `decklab/web/matchups-overview.js`: resultRow; `decklab/web/matchups-results.js`: resultPart; `decklab/web/field.js`: fvHeadline, fvChips, fvRows; `decklab/web/variant.js`: vtTestItem; `decklab/tests/test_device_layout_ui.py`: SimComponentTests, SimComponentUiTests; `decklab/tests/test_forge_stop_ui.py`; `decklab/tests/test_web_matchups.py`: RunsPillTests
 
-Gap: slices 9 to 15 (criteria 1 to 4 and 6; the library's part of each is built, and criterion 4's Overview half is slice 9). Section 6's question 4 is settled (Matt, 2026-10-25: only Building and Idea tiles show a status pill). The lab top bar's search is E11-S31.
+Slice 9's first part built 2026-10-25: the lab hero, stripe and tint metadata, narrow folded actions, Overview's saved Forge field summary and newest swap test, and the identity-coloured mana curve (`deck-overview.js`, `deck-overview.css`, `test_deck_overview_ui.py`). The saved field summary meets criterion 4's Overview half. Five existing tabs are retained; run controls remain in Field view. Chromium fixture checks cover both themes at the nine documented viewport sizes with mouse input, not touch or Safari.
+
+Gap: the rest of slice 9 (deck-to-deck navigation, Last changed metadata and touch/Safari acceptance), then slices 10 to 15 (criteria 1 to 3 and 6). Section 6's question 4 is settled (Matt, 2026-10-25: only Building and Idea tiles show a status pill). The lab top bar's search is E11-S31.
 
 <a id="e11-s31"></a>
 

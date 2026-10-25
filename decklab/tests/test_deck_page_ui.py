@@ -261,6 +261,38 @@ class DeckPageUiTests(unittest.TestCase):
           assert.equal(routed, 1);
         """)
 
+    def test_header_uses_computed_colours_and_a_safe_hero_fallback(self):
+        self.run_js("""
+          const page = makePage();
+          page.summary.cover = {name: 'Elf', art: '/img/fdn/1/art_crop'};
+          let head = deckHeader(page);
+          const title = head.querySelector('.deck-title-row');
+          assert(title.querySelector('.deck-head-cover'));
+          assert(head.querySelector('.deck-stripe').getAttribute('aria-hidden') === 'true');
+          assert(head.getAttribute('style').includes('var(--stripe-r)'));
+          assert(head.getAttribute('style').includes('var(--stripe-g)'));
+          assert(head.getAttribute('style').includes('linear-gradient(90deg'));
+          assert.equal(head.querySelector('.deck-header-id').textContent, 'casual/test');
+          assert.equal(head.querySelector('.deck-head-pips').parentNode.getAttribute('class'), 'deck-meta');
+          // A failed picture restores the ordinary text colour and placeholder; the title never vanishes.
+          head.querySelector('img').fire('error');
+          assert.equal(head.querySelector('.deck-head-cover'), null);
+          assert.equal(title.querySelector('h1').textContent, 'Test Deck');
+          // Unknown art URLs never become a hero request; unknown cards never claim colourless identity.
+          page.summary.cover.art = 'https://example.com/picture';
+          page.sections = {Deck: [{qty: 1, name: 'Unknown', card: null}]};
+          head = deckHeader(page);
+          assert.equal(head.querySelector('.deck-head-cover'), null);
+          assert.equal(head.querySelector('.deck-stripe'), null);
+          assert.equal(head.querySelector('.deck-head-pips'), null);
+          assert.equal(head.querySelector('h1').textContent, 'Test Deck');
+          // A readable colourless list retains its explicit C and neutral stripe.
+          page.sections.Deck[0].card = card('Relic', 'Artifact', 2, []);
+          head = deckHeader(page);
+          assert.equal(head.querySelector('.deck-head-pips').getAttribute('aria-label'), 'Colourless');
+          assert(head.getAttribute('style').includes('var(--stripe-c)'));
+        """)
+
     def test_a_token_without_a_picture_shows_labelled_example_art(self):
         self.run_js("""
           const list = tokenNeedList([

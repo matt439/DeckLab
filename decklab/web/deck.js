@@ -257,13 +257,17 @@ function deckHeader(data) {
   const more = menuButton([el("span", { class: "deck-more-words", text: "More" }),
     el("span", { class: "deck-more-dots", "aria-hidden": "true", text: "⋯" })], deckMoreItems(data),
   { aria: "More for this deck" });
-  return el("header", { class: "deck-head deck-page-head" },
+  const cover = deckHeadCover(s);
+  return el("header", { class: "deck-head deck-page-head", style: colours ? colours.vars(90) : null },
+    colours ? colours.stripe() : null,
     el("div", { class: "deck-title-row" },
-      deckHeadCover(s),
-      el("h1", {}, s.title),
-      colours ? colours.pips(22, { cls: "deck-head-pips" }) : null),
+      cover,
+      el("h1", {}, s.title)),
     el("div", { class: "actions deck-head-actions" }, edit, more),
-    el("p", { class: "deck-meta" }, deckPill(s), deckHeadMeta(data)),
+    el("div", { class: "deck-meta" },
+      colours ? colours.pips(22, { cls: "deck-head-pips" }) : null,
+      deckPill(s), deckHeadMeta(data),
+      el("code", { class: "deck-header-id", text: s.id })),
     said.length ? el("p", { class: "sub deck-head-note", text: said.join(" ") }) : null,
     s.id.startsWith(BOX_PREFIX) ? pairingLinks(s.id) : null);
 }
@@ -381,6 +385,7 @@ function overviewParts(data) {
   return [
     commanderReadiness(data),
     deckAssemblySection(data),
+    el("div", { class: "deck-overview-panels" }, deckOverviewForge(data), deckOverviewCurve(data), deckOverviewSwap(data)),
     verdict ? el("section", { class: "deck-section deck-overview-stats", "aria-label": "At a glance" }, verdict,
       el("button", { type: "button", class: "btn btn-quiet deck-more-link", text: "All the stats",
         onclick: () => openDeckTab("stats", { to: "deck-panel-stats" }) })) : null,

@@ -48,13 +48,13 @@ PLAY_SCRIPTS = ("deck-tools.js", "collection.js", "collection-cards.js", "collec
                 "receipts.js", "receipt-workflow.js", "accessories.js", "accessory-pictures.js", "tokens.js")
 SHELL_SCRIPTS = ("shell.js", "settings.js", "visibility.js")  # account pages, just before app.js
 CARD_SCRIPTS = ("ui.js", "symbols.js", "cards-ui.js", "card-viewer.js")     # the shared card pieces (UI-KIT.md)
-SCRIPTS = ("core.js", *CARD_SCRIPTS, "library.js", "library-glance.js", "library-tables.js", "cover.js", "deck-availability.js", "deck.js", "deck-retirement.js", "deck-rename.js", "deck-prices.js", "guide.js", "stats.js", "commander-readiness.js", "commander-night.js", "practice.js", "version.js", "wishlist.js", "shopping.js", "shopping-buying.js", "shopping-reprints.js", "shopping-orders.js", "shopping-order-edit.js", "shopping-order-rows.js", "shopping-order-split.js", "app.js",
+SCRIPTS = ("core.js", *CARD_SCRIPTS, "library.js", "library-glance.js", "library-tables.js", "cover.js", "deck-availability.js", "deck.js", "deck-overview.js", "deck-retirement.js", "deck-rename.js", "deck-prices.js", "guide.js", "stats.js", "commander-readiness.js", "commander-night.js", "practice.js", "version.js", "wishlist.js", "shopping.js", "shopping-buying.js", "shopping-reprints.js", "shopping-orders.js", "shopping-order-edit.js", "shopping-order-rows.js", "shopping-order-split.js", "app.js",
            "editor.js", "editor-screen.js", "editor-details.js", "editor-lines.js", "editor-cards.js", "editor-swaps.js", "editor-save.js", "editor-deckpage.js",
            *MATCHUP_SCRIPTS, "field.js", "variant.js", "runs-pill.js", *PLAY_SCRIPTS, *SHELL_SCRIPTS)    # every script the page loads
 # The design tokens, the base and the shared components first (decklab/UI-REVIEW.md 2.1-2.3), then the shell
 # and the page files, which only lay the components out.
 FOUNDATION = ("tokens.css", "base.css", "components.css")
-STYLES = (*FOUNDATION, "cards-ui.css", "shell.css", "library.css", "deck.css", "stats.css", "matchups.css", "field.css", "variant.css",
+STYLES = (*FOUNDATION, "cards-ui.css", "shell.css", "library.css", "deck.css", "deck-overview.css", "stats.css", "matchups.css", "field.css", "variant.css",
           "editor.css", "guide.css", "wishlist.css", "shopping.css", "shopping-orders.css", "collection.css", "play.css", "assembly.css",
           "deck-tools.css", "receipts.css", "accessories.css", "tokens-page.css", "activity.css", "history.css")
 SVG_NAMESPACE = "http://www.w3.org/2000/svg"     # a name, not something loaded
@@ -387,7 +387,7 @@ class WebFileTests(unittest.TestCase):
         self.assertEqual(scripts, ["/editor.js", "/editor-screen.js", "/editor-details.js", "/editor-lines.js",
                                    "/editor-cards.js", "/editor-swaps.js", "/editor-save.js", "/editor-deckpage.js", *["/" + name for name in MATCHUP_SCRIPTS], "/field.js",
                                    "/variant.js", "/runs-pill.js", "/core.js", *["/" + name for name in CARD_SCRIPTS],
-                               "/library.js", "/library-glance.js", "/library-tables.js", "/cover.js", "/deck-availability.js", "/deck.js", "/deck-retirement.js", "/deck-rename.js", "/deck-prices.js", "/guide.js", "/stats.js", "/commander-readiness.js", "/commander-night.js", "/practice.js", "/version.js", "/wishlist.js", "/shopping.js", "/shopping-buying.js", "/shopping-reprints.js", "/shopping-orders.js", "/shopping-order-edit.js", "/shopping-order-rows.js", "/shopping-order-split.js",
+                               "/library.js", "/library-glance.js", "/library-tables.js", "/cover.js", "/deck-availability.js", "/deck.js", "/deck-overview.js", "/deck-retirement.js", "/deck-rename.js", "/deck-prices.js", "/guide.js", "/stats.js", "/commander-readiness.js", "/commander-night.js", "/practice.js", "/version.js", "/wishlist.js", "/shopping.js", "/shopping-buying.js", "/shopping-reprints.js", "/shopping-orders.js", "/shopping-order-edit.js", "/shopping-order-rows.js", "/shopping-order-split.js",
                                *["/" + name for name in PLAY_SCRIPTS], *["/" + name for name in SHELL_SCRIPTS], "/app.js"])
         self.assertEqual(sorted(s.lstrip("/") for s in scripts), sorted(SCRIPTS))
         # Every script in web/ is one the page loads (and so one these tests read).

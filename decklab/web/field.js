@@ -127,8 +127,8 @@ function fvGames(a) { return (a.opponents || []).filter((o) => !o.not_meaningful
 
 /** The headline: the win rate against an average house deck as a hero figure, with how long ago the field was
  * last played (the last field run's note) and its range bar, then where the list ranks, in a sentence. */
-function fvHeadline(a) {
-  const tile = el("div", { class: "fv-tile" });
+function fvHeadline(a, { panel = true } = {}) {
+  const tile = el("div", { class: panel ? "fv-tile" : "fv-summary" });
   const average = a.average;
   if (average && average.value != null) {
     const what = "Win rate against an average house deck";

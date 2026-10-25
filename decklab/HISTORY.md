@@ -2,6 +2,15 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## P1 deck page, first part (2026-10-25; E11-S30 slice 9)
+
+The deck page now has a lab art hero with its identity stripe and tint metadata, a folded toolbar at narrow lab widths, and saved Forge results on Overview. The existing five tabs, editing rights and More actions stay intact. Image failure falls back to a readable title; casual widths keep the compact head.
+
+- `deck-overview.js` reads the displayed list's field once, with its figure, range, freshness, rank, flags and first-player edge, and its newest swap test. Field view and All tests lead to the existing Matchups controls. No simulations start, and there is no new polling. The mana curve has an identity gradient and a spoken count at each mana value.
+- Late reads check the original route, person, screen and attachment. The summaries use no inventory. Member deck ids now reach their All tests list too.
+- Validation: 214 targeted Python/Node/HTTP-fixture tests and the existing web scale/name contracts; screenshots and overflow checks at the nine documented viewport sizes in light and dark using invented data. The browser retains mouse input and default DPR (some phone widths round up one pixel); true touch/Safari and real-device acceptance remain. No live records or Forge games were used.
+- The source-length audit still reports the pre-existing 1,516-line `web/tokens.js`; changed source files stay below the 1,200-line threshold. Deck-to-deck navigation and Last changed metadata remain in slice 9, so the story stays partial.
+
 ## Plan packed token cards (2026-10-25)
 
 Matt asked for a tool that optimises the token cards across every built deck. The Tokens page's More now has **Plan packed token cards…**. It shows each built deck's Token cards line as it is and as planned, with the card each token gets, the faces used ("can be sleeved"), the spares it got and the tokens left short. **Apply** then saves them all as one change (`deck.token_cards`, all or none).

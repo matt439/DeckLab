@@ -20,7 +20,7 @@ headline. */
   background: var(--surface);
   box-shadow: var(--shadow-1);
 }
-.fv-tile > p { margin: 0 0 var(--s-2); }
+.fv-tile > p, .fv-summary > p { margin: 0 0 var(--s-2); }
 .fv-big { font-size: var(--fs-md); }
 /* The average as a hero figure, with how long ago the field was played beside it (its range bar follows). */
 .fv-figure { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2) var(--s-4); margin: 0 0 var(--s-2); }

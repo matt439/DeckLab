@@ -377,7 +377,7 @@ function vtApplyChange(sections, changes) {
  * be edited here (a product deck or pairing). It fills itself in from /api/variants. */
 function variantTestsSection(data) {
   const s = data && data.summary;
-  if (!s || !/^(casual|commander)\//.test(s.id)) return null;
+  if (!s || s.read_only || !/^(?:[^/]+\/)?(?:casual|commander)\//.test(s.id)) return null;
   const version = data.version === "owned" ? "owned" : "target";
   const body = el("div", { class: "vt-tests-body" }, loadingBox("Loading tests of changes..."));
   const section = el("section", { id: "sec-tests", class: "vt-tests", "aria-labelledby": "h-tests" },
