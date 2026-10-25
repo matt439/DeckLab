@@ -129,6 +129,8 @@ Evidence:
 
 Gap: The library has no text search and no colour or archetype filter.
 
+First slice: a title search box on the library (kept in the address like the other filters), then the colour and archetype filters. It may become the deck half of E11-S31.
+
 **E1-S07** · User1 · should · M · built
 
 As a themed-deck player, I want to choose which card's art pictures my deck in the library, including a particular printing, so that my themed decks look the way I like on the shelf.
@@ -910,6 +912,8 @@ Evidence:
 - `decklab/web/play.js`, `decklab/web/deck-sideboard.js`: the only pages that read /api/play; no matchup, field or rankings page uses play records
 
 Gap: Real games are never compared with Forge's predictions and don't feed the field rating.
+
+First slice: the real record beside Forge's rate on the matchup page for lists that match, with "too few games" below 10 real games until Matt picks the number.
 
 Review note: criterion 2 needs a number of games as its threshold (Matt's call).
 
@@ -1735,7 +1739,7 @@ Evidence:
 
 How the inventory stays true to the physical cards. Each space's own people add, fix and remove cards on the Collection page (single cards, an app export, Add a precon) and token cards on the Tokens page; Matt and User1 both edit home's, each member only their own, and Claude does bulk and member upkeep from the PC (`collection merge`, `collection edit` and `collection apply`, `collection add-precon --space`). Repeat imports, sales and trades, and cards held by built decks are all flagged, other decks' out-of-date tables are listed with Update all rather than refreshed automatically, and the nightly `db check` looks for drift.
 
-Open: E7-S03, E7-S06, E7-S08, E7-S15, E7-S18, E7-S21, E7-S22, E7-S23, E7-S24.
+Open: E7-S03, E7-S06, E7-S08, E7-S15, E7-S18, E7-S21, E7-S22, E7-S23, E7-S24, E7-S31.
 
 **E7-S01** · Matt · must · M · built
 
@@ -1826,6 +1830,8 @@ Evidence:
 - `decklab/web/collection.js`: drawPreconPreview (its token cards 'aren't added: record them on the Tokens page')
 
 Gap: there's no option to add the precon's token cards; the preview only names them and points to the Tokens page. The second criterion holds through the deck's Tokens part.
+
+First slice: an "Add its token cards too" choice in the precon preview, adding each as a token row with printing and back unconfirmed, in the precon's one change.
 
 **E7-S07** · Matt · must · L · built
 
@@ -1995,6 +2001,8 @@ Evidence:
 
 Gap: there's no way to reconcile a physical deck with its record, and no record of when a box was last checked.
 
+First slice: a box check on Build decks (picture tiles with ticks over the built list) that lists what's missing or extra and saves the date checked; the fix-the-list offers come after.
+
 **E7-S22** · Matt · could · M · missing
 
 As a player who sometimes trades cards, I want to record a trade as one event, with the cards that left and the cards that came in, so that the history shows what a card was traded for, not an unrelated removal and a separate addition.
@@ -2146,6 +2154,23 @@ Evidence:
 - `decklab/tests/test_inventory_privacy.py`: test_another_spaces_collection_and_tokens_answer_as_a_missing_space
 - `decklab/tests/test_accounts_ui.py`: test_download_saves_the_spaces_collection_for_whoever_sees_it
 - Not checked in a browser or on a phone: saving a Blob through a link's `download` is how the deck page's Download decklist already works
+
+**E7-S31** · Matt · could · M · missing
+
+As Matt, who keeps some products intact in their own box, I want an intact product to say which token cards it packs, as a built deck's Token cards line does, so that other decks don't count those cards as free and the product isn't told it has none.
+
+- Given an owned product kept intact, when I choose its packed token cards (on its deck page, or `product set-tokens` on the PC), then they're saved with its sleeves and deck box as one change, and the space's other decks count them as in use.
+- Given a product with packed token cards, when it's broken up, then they're freed in the same change, as its sleeves and deck box are.
+- Given the Tokens page's Plan packed token cards, then intact products are planned with the built decks, each deck of a product getting its tokens from the product's cards.
+- Given a product with no packed token cards, then the too-few warning still counts it as wanting one card of each row it uses, as now.
+
+Evidence:
+- `decklab/lib/tokens/__init__.py`: intact products count as holders for the warning only
+- `decklab/lib/tokens/optimise.py`: plans built decks only ("not intact products, which have no line")
+
+Gap: everything. Raised 2026-10-25, the follow-up left by the Token cards line (E4 token work, PRs #7 to #10).
+
+First slice: a `token_cards` field in the product's status, read and written like its `sleeves` and `deck_box`, counted as in use, and cleared by a break-up.
 
 ---
 
@@ -2320,6 +2345,8 @@ Evidence:
 - `decklab/web/assembly.js` (the Put back step covers only cards a chosen list stopped using)
 
 Gap: there is no whole-deck take-apart checklist. Clearing the kit lines when a deck is unbuilt is in E8-S05, and `deck delete`'s refusal in E8-S18.
+
+First slice: a Take apart checklist on Build decks for a built deck: every card in every section, then its sleeves and deck box.
 
 **E8-S15** · Matt · could · S · partial
 
@@ -2917,6 +2944,8 @@ Evidence:
 
 Gap: Settings has no profile or email management, and `lib/profiles.py` silently drops invalid entries (reserved ids, a bad space, a missing plays_as) instead of reporting them.
 
+First slice: report invalid profile entries (reserved id, bad space, missing plays_as) in `homenet status` and setup instead of dropping them; the Settings editor follows.
+
 Review note: L for a could bundles a profile editor, validation, an Access reminder and a status check; the second criterion could be its own small story.
 
 **E10-S18** · Space members · could · M · partial
@@ -3349,7 +3378,7 @@ Evidence:
 
 Keeping Deck Lab running, safe and believable, by Matt as the household's admin and by Claude Code working for him at the PC. It covers the server and its Cloudflare tunnel and "Deck Lab is off" page, the PostgreSQL database with its nightly backup, export, check and restore check, the audit trail on #/activity, the `python -m decklab.db` commands Claude works through (previews, `--expect` guards, `-m` messages, exit codes), the card data's background refresh, Forge upkeep and the Safari Simulator suite. Every write is one audited change set, Matt's own command-line writes are recorded as his, and backups are checked by restoring them.
 
-Open: E11-S02, E11-S08, E11-S12, E11-S16, E11-S21, E11-S28, E11-S30, E11-S31.
+Open: E11-S02, E11-S08, E11-S12, E11-S16, E11-S21, E11-S28, E11-S30, E11-S31, E11-S32, E11-S33.
 
 **E11-S01** · Matt · must · M · built
 
@@ -3483,6 +3512,8 @@ Evidence:
 - `decklab/web/activity.js`, `decklab/lib/api/activity.py` (read-only)
 
 Gap: only deck revisions can be restored. Activity has no Undo, no inverse-change preview and no conflict check for inventory, token, wishlist or accessory change sets.
+
+First slice: Undo on Activity for a single collection or token edit: an inverse change previewed, a conflict refused naming the rows, saved as a new change set.
 
 **E11-S09** · Claude Code · must · L · built
 
@@ -3780,3 +3811,37 @@ As Matt, I want one search in the top bar that finds a deck or a card from any p
 Decided (Matt, 2026-10-25): left out of E11-S30's slice 7 (the shell) as its own story, since Deck Lab had no global search to restyle. Still to settle before building: what it searches (decks, the viewer's collection, every Scryfall card) and how results are grouped.
 
 Gap: everything; nothing built.
+
+**E11-S32** · Matt · could · M · missing
+
+As Matt, publishing Deck Lab for others to run on their own PC, I want a ready-built copy of Deck Lab's Forge fork to download, so that a newcomer gets simulations without cloning and building Forge with Maven.
+
+- Given a release of the fork (matt439/forge), then it holds the built install for the Forge release it's based on, with a checksum, and names that Forge version.
+- Given SELF-HOSTING.md, when a newcomer reaches the Forge step, then the download is the first route and building from source is the second.
+- Given a downloaded install, when `python -m decklab.lib.forge` checks it, then it says whether the install matches what this Deck Lab expects, and how to fix it if not.
+- Given FG#2's rebase onto a new Forge, then making the next release is one documented step of the upgrade.
+
+Evidence:
+- `SELF-HOSTING.md`: the Forge steps (download Forge's release, clone the fork with its tags, build, `decklab/install.py`)
+
+Gap: everything; there's no prebuilt release. Raised 2026-10-25 by the self-host check.
+
+First slice: a script in the fork that packs the installed build as a release archive with a checksum, one release for 2.0.15, and SELF-HOSTING.md pointing to it.
+
+**E11-S33** · Matt · could · L · missing
+
+As Matt, publishing Deck Lab for others to run on their own PC, I want Deck Lab to run on Linux as fully as it does on Windows, so that a self-hoster on Linux doesn't hit Windows-only steps or failing tests.
+
+- Given a Linux checkout, when the whole test suite runs, then it passes, with no test assuming Windows paths or a case-insensitive file system.
+- Given Linux, when `python -m decklab.db schedule` runs, then the nightly backup, prune, export and check are set up through a systemd user timer (or cron) instead of Task Scheduler.
+- Given Linux, when `python -m decklab.lib.homenet` installs or restarts the server, then it uses a systemd user service, and `status` reports it as on Windows.
+- Given SELF-HOSTING.md, then the Linux route has no "a few tests fail" caveat and no hand-written service step.
+
+Evidence:
+- `decklab/db/schedule.py`: Task Scheduler XML through schtasks only
+- `SELF-HOSTING.md`: Linux runs the server under the user's own service manager; a few tests fail on Linux
+- The 2026-10-25 self-host check: 31 of 6188 tests failed on Linux
+
+Gap: everything. Raised 2026-10-25 by the self-host check.
+
+First slice: fix the 31 Linux test failures, then add a Linux CI run so they stay fixed.
