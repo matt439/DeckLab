@@ -110,7 +110,62 @@ class WebReceiptTests(FilesReceiptCase):
         self.assertEqual(len(kit["pictures"]), 2)
         self.assertIsNone(kit["pictures"][1])           # Forest isn't in the fixture's card data: a text tile
         self.assertEqual(kit["decks"][0], [])
-        self.assertEqual(kit["decks"][1], [])            # basic lands aren't counted in the decks' tables
+        self.assertIsNone(kit["decks"][1])              # Forest's logical name isn't in this fixture index
+
+    def test_unresolved_names_have_no_destination_confidence_without_changing_known_rows(self):
+        from decklab.lib import decks
+        self.cards_csv("orders/test.csv", ("Unknown fixture card", "tst", "1", "nonfoil", 2),
+                       ("Pick Your Poison", "mkm", "170", "nonfoil", 1),
+                       ("Llanowar Elves", "fdn", "227", "nonfoil", 2))
+        before = files.tree_files(self.root)
+        canonical = receive.delivery(inventory.current(), "test")["components"][0]["rows"]
+        revision = self.inventory.revision()
+        with mock.patch.object(decks, "list_decks", wraps=decks.list_decks) as listed, \
+                mock.patch.object(pool, "load_pool", wraps=pool.load_pool) as loaded:
+            view = receipts.receipt_view("test")
+        part = view["components"][0]
+        self.assertEqual(part["rows"], canonical)
+        self.assertEqual([set(row) for row in part["rows"]], [set(part["fields"])] * 3)
+        self.assertEqual([row["quantity"] for row in part["rows"]], ["2", "1", "2"])
+        self.assertIsNone(part["decks"][0])
+        self.assertEqual(part["decks"][1], [])
+        self.assertEqual(part["decks"][2], [{"id": "casual/test", "title": "Test", "status": "idea",
+                                              "uses": 2, "waiting": 2}])
+        self.assertIsNone(part["pictures"][0])
+        self.assertEqual(view["fingerprint"], receipts.fingerprint(revision))
+        self.assertEqual(files.tree_files(self.root), before)
+        self.assertEqual(listed.call_count, 2)           # the summaries and the one shared pool's deck scan
+        loaded.assert_called_once_with()
+
+    def test_known_cards_keep_destination_confidence_when_their_pictures_are_unavailable(self):
+        self.cards_csv("orders/test.csv", ("Pick Your Poison", "mkm", "9999", "nonfoil", 1),
+                       ("Llanowar Elves", "fdn", "9999", "nonfoil", 2))
+        with mock.patch.object(receipts, "_pictures", side_effect=lambda kind, rows: [None] * len(rows)):
+            part = receipts.receipt_view("test")["components"][0]
+        self.assertEqual(part["pictures"], [None, None])
+        self.assertEqual(part["decks"][0], [])
+        self.assertEqual(part["decks"][1], [{"id": "casual/test", "title": "Test", "status": "idea",
+                                              "uses": 2, "waiting": 2}])
+
+    def test_all_unresolved_card_and_product_names_need_no_deck_or_pool_lookup(self):
+        from decklab.lib import decks
+        from decklab.lib.api import common
+        self.cards_csv("orders/test.csv", ("Unknown fixture card", "tst", "1", "nonfoil", 2))
+        self.cards_csv("products/kit.csv", ("Unknown fixture product card", "tst", "2", "nonfoil", 3))
+        with mock.patch.object(decks, "list_decks") as listed, \
+                mock.patch.object(pool, "load_pool") as loaded, \
+                mock.patch.object(common, "_log") as logged:
+            view = receipts.receipt_view("test")
+        cards_part, tokens_part, product = view["components"]
+        self.assertEqual(cards_part["decks"], [None])
+        self.assertEqual(product["decks"], [None])
+        self.assertEqual(cards_part["rows"][0]["quantity"], "2")
+        self.assertEqual(product["items"][0]["quantity"], "3")
+        self.assertIsNone(tokens_part["decks"])
+        self.assertEqual(view["kits"], {})
+        listed.assert_not_called()
+        loaded.assert_not_called()
+        logged.assert_not_called()
 
     def test_a_printing_the_card_data_lacks_gets_the_usual_picture_and_says_why(self):
         self.cards_csv("orders/test.csv", ("Llanowar Elves", "fdn", "9999", "nonfoil", 2))
@@ -119,6 +174,8 @@ class WebReceiptTests(FilesReceiptCase):
         self.assertEqual(picture["why"], "not in card data")
         self.assertEqual(picture["finishes"], [])
         self.assertEqual(picture["card"]["name"], "Llanowar Elves")
+        hints = receipts.receipt_view("test")["components"][0]["decks"][0]
+        self.assertEqual([(deck["id"], deck["waiting"]) for deck in hints], [("casual/test", 2)])
 
     def test_without_the_card_data_the_view_still_shows_with_no_pictures(self):
         with mock.patch.object(receipts, "_index_info", return_value=(None, "no card data")):
@@ -156,10 +213,12 @@ class WebReceiptTests(FilesReceiptCase):
 
     def test_the_view_is_home_records_only(self):
         from decklab.lib.api import guard
-        with mock.patch.object(guard, "sees_home_records", return_value=False):     # E10-S29
+        with mock.patch.object(guard, "sees_home_records", return_value=False), \
+                mock.patch.object(inventory, "current") as loaded:     # E10-S29, before any source read
             with self.assertRaises(ApiError) as caught:
                 receipts.receipt_view("test")
         self.assertEqual(caught.exception.status, 403)
+        loaded.assert_not_called()
 
     def test_a_preview_writes_nothing_then_the_receipt_and_the_tables_follow(self):
         before = files.tree_files(self.root)

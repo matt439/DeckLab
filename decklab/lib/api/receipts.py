@@ -106,7 +106,9 @@ def receipt_view(order=None):
     - each cards or product component's "decks", aligned with its rows (or items): the home decks
       whose planned list names that card ([{id, title, status, uses, waiting}]: uses the copies
       the list names, waiting the copies it counts on from this component, pool.row_labels');
-      None for tokens, while the card data isn't ready, or when the decks can't be read;
+      a row is None when its logical card name cannot be resolved, and [] means the known
+      card has no matching deck; the whole list is None for tokens, while the card data isn't
+      ready, or when the decks can't be read;
     - "kits": {deck id: {"sleeves": name}} for the built decks those name, only where this viewer
       sees that deck's sleeves (guard.sees_kit, the accessories' owner rule), for "Where these go";
     - "face_names": Scryfall's token face names when the order has a tokens component ([] while
@@ -271,11 +273,17 @@ def _deck_uses(inv, view, by_id):
                 continue
             label = _incoming_label(inv, by_id.get(item["id"]))
             rows = item["items"] if item["kind"] == "product" else item["rows"]
-            item["decks"] = [[{"id": summary["id"], "title": summary["title"], "status": summary["status"],
-                               "uses": r["need"],
-                               "waiting": sum(qty for source, qty in pool.row_labels(r)["on_the_way"]
-                                              if source == label)}
-                              for summary, r in uses.get(_exact(row.get("name")), [])] for row in rows]
+            item["decks"] = []
+            for row in rows:
+                exact = _exact(row.get("name"))
+                # Unknown logical names cannot establish that no deck is waiting. Printing and
+                # picture availability are independent of this logical-card confidence.
+                item["decks"].append(None if exact is None else [
+                    {"id": summary["id"], "title": summary["title"], "status": summary["status"],
+                     "uses": r["need"],
+                     "waiting": sum(qty for source, qty in pool.row_labels(r)["on_the_way"]
+                                    if source == label)}
+                    for summary, r in uses.get(exact, [])])
         view["kits"] = _kits(uses)
     except Exception:           # the board still shows; the log has the details
         common._log("A delivery's decks couldn't be worked out:\n" + traceback.format_exc())

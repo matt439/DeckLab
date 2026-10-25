@@ -2,6 +2,12 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Preserve unresolved receipt destination confidence (2026-10-25; E11-S30 slice 12)
+
+Receipt deck metadata now distinguishes an unresolved logical card name (`null` for that row) from a known card with no matching deck (`[]`). Known cards retain guidance even when their printing or picture is unavailable. Row alignment, canonical receipt fields, quantities, fingerprint, permissions and preview/apply requests stay unchanged; this adds no inventory or pool reads.
+
+Validation: all 25 file-backed receipt API tests passed with live database probes disabled, including mixed known/unknown rows, absent pictures, products, denied reads and unchanged canonical fields/fingerprint. In synthetic Chromium, one known Opt copy still receives storage advice while two unresolved copies explicitly retain an unknown destination; copy progress stays 3 of 7 without overflow. API writes were disabled and no real receipt was recorded. This does not add touch/Safari/device acceptance. The source audit still flags only pre-existing `tokens.js` (1,516 lines).
+
 ## Compact Receive List rows and native checks (2026-10-25; E11-S30 slice 12)
 
 List mode now places one native checkbox in a sibling label before the inspection button. Its opt-in shared compact row gives ordinary lab rows a 44px floor including the divider; attention and split text can grow and wrap. The lab has no inherited grid gap. Printing/finish and condition/language details, all attention reasons and pending split cues remain visible, with precise descriptions for both controls. A refused change resets the checkbox to the accepted model state. Inspection close and filtered-row focus use fresh visible controls. Pictures, read-only/products, the remembered layout choice and all receipt requests remain unchanged.
