@@ -127,7 +127,7 @@ from pathlib import Path, PurePosixPath
 
 from decklab.lib import cards, decks, inventory, spaces
 from decklab.lib.config import REPO  # noqa: F401  (nothing here reads it; tests not yet ported patch it)
-from decklab.lib.decks.identity import deck_colors
+from decklab.lib.decks.identity import CardIdentityError, deck_colors
 from decklab.lib.inventory import entry, rules, unreadable
 from decklab.lib.inventory.model import Product
 
@@ -454,8 +454,8 @@ def _planned_colors(parsed, sections, why):
         return None                    # Never reload a target or substitute an owned/assembled list.
     try:
         return deck_colors(target)
-    except (OSError, RuntimeError, EOFError, UnicodeDecodeError, json.JSONDecodeError, zlib.error):
-        return None                    # An unavailable local index only removes the optional swatch.
+    except (CardIdentityError, OSError, RuntimeError, EOFError, UnicodeDecodeError, json.JSONDecodeError, zlib.error):
+        return None                    # Unavailable or damaged index data only removes the optional swatch.
 
 
 def _built_in_use(space, intact, found, unresolved, warnings, decks_of=None):

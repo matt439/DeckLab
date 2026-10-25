@@ -224,6 +224,7 @@
 .shop-detail-pane { grid-template-columns: minmax(0, 1fr); }
 .shop-queue-slot, .shop-long-slot { min-width: 0; }
 .shop-queue-presentation { min-width: 0; }
+.shop-queue-deck > .deck-swatch, .shop-group h3 .deck-swatch { margin-right: var(--s-1); }
 .shop-queue-presentation:focus-visible, .shop-queue-row > .card-row:focus-visible { outline: 3px solid var(--focus); outline-offset: -3px; }
 .shop-queue-table-wrap { width: 100%; min-width: 0; max-width: 100%; max-height: calc(100dvh - var(--shell-top) - var(--s-8)); overflow: auto;
   scroll-padding-top: var(--th-h); border: 1px solid var(--border); border-radius: var(--r-panel); background: var(--surface); }

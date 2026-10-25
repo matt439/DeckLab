@@ -148,7 +148,7 @@ class FileShoppingMissingTests(_Fixture, unittest.TestCase):
         linked = rows["Llanowar Elves"]["queue"][0]
         self.assertEqual((linked["queue_row"], linked["deck"], linked["listed_aud"], linked["listed_at"],
                           linked["checked"], linked["in_stock"], linked["notes"]),
-                         (1, {"id": "casual/alpha", "title": "Alpha"}, "0.50", "Fixture shop",
+                         (1, {"id": "casual/alpha", "title": "Alpha", "colors": ["B", "G"]}, "0.50", "Fixture shop",
                           "2026-10-15", "yes", "Reference listing"))
         self.assertEqual(rows["Elvish Mystic"]["missing"], 1)  # queued ten copies do not reduce it again
 

@@ -8,9 +8,12 @@ a received delivery's follow-up check done; shopping_queue.py edits purchase-que
 """
 import contextlib
 import csv
+import json
 import re
+import zlib
 
 from decklab.lib import cards, decks, inventory, purchases, spaces
+from decklab.lib.decks.identity import CardIdentityError, deck_colors
 from decklab.lib.inventory import orders as order_ops       # registers order.checks
 from decklab.lib.inventory import rules
 
@@ -29,12 +32,13 @@ def shopping_overview():
     purchases.overview()'s answer, plus:
       - "queue_revision", the exact inventory revision, and each queued card's
         "queue_row", its one-based position, for shopping_queue.py's guarded write;
-      - "queue_decks", the home deck ids and titles offered when adding a card;
+      - "queue_decks", the visible home deck ids and titles offered when adding a card,
+        with optional "colors" from their Planned lists (WUBRG; [] means colourless);
       - the items of each order still on the way, and each queued card, get "card": the
         card's JSON (card_lookup._card_json, for its picture and the card viewer) or None,
         and each cards or product item its "set", "collector_number" and "finish";
-      - each queued card gets "deck": {"id", "title"} of the home deck it's for (its
-        source naming a deck, or its "for" naming one by title), or None;
+      - each queued card gets "deck": {"id", "title", optional "colors"} of the home deck
+        it's for (its source naming a deck, or its "for" naming one by title), or None;
       - each product component's "product_status" (status.csv's: owned, ordered, preordered);
       - "decks_missing": the home decks whose planned list still misses cards;
       - "missing_cards": {ready, rows, warnings, errors, totals}, one canonical card
@@ -62,12 +66,13 @@ def _overview():
     _product_statuses(answer.get("orders", []))
     deck_errors = []
     summaries = _home_decks(deck_errors)
-    answer["queue_decks"] = [{"id": row["id"], "title": row["title"]} for row in summaries]
-    _link_decks(answer.get("to_buy", []), summaries)
+    cards_ready = _cards_ready()
+    answer["queue_decks"] = _compact_decks(summaries, colors=cards_ready)
+    _link_decks(answer.get("to_buy", []), answer["queue_decks"])
     from . import reprints
     reprint_cache = {}
     reprints.enrich(answer.get("to_buy", []), queued=True, cache=reprint_cache)
-    if _cards_ready():
+    if cards_ready:
         _add_pictures(answer)
         answer["missing_cards"], answer["decks_missing"] = shopping_missing.gather(
             summaries, answer.get("to_buy", []), _card_for, errors=deck_errors)
@@ -173,6 +178,41 @@ def _home_decks(errors=None):
     return [s for s in home if not s.get("error")]
 
 
+def _compact_decks(summaries, *, colors=True):
+    """Permitted home choices, with optional Planned identity from this request's snapshot.
+
+    A colour lookup is attempted only once per id, including failures. It never uses
+    a Play-now/assembled list or a library cache, and no card data means no extra reads.
+    """
+    out, identities = [], {}
+    for summary in summaries:
+        try:
+            space, kind, _ = spaces.split_deck_id(summary["id"])
+        except ValueError:
+            continue
+        if (summary.get("error") or space != spaces.HOME or kind not in decks.KINDS
+                or summary.get("space", spaces.HOME) != spaces.HOME or not guard.sees_deck(summary)):
+            continue
+        item = {"id": summary["id"], "title": summary["title"]}
+        if colors and "target" in summary.get("versions", []):
+            if item["id"] not in identities:
+                identity = None
+                try:
+                    target = decks.load_deck(item["id"], "target")
+                except (decks.DeckNotFound, decks.DeckFileError, OSError, UnicodeError):
+                    pass
+                else:
+                    try:
+                        identity = deck_colors(target)
+                    except (CardIdentityError, OSError, EOFError, UnicodeError, json.JSONDecodeError, zlib.error):
+                        pass                       # Missing/corrupt local card index is optional here.
+                identities[item["id"]] = identity
+            if identities[item["id"]] is not None:
+                item["colors"] = list(identities[item["id"]])
+        out.append(item)
+    return out
+
+
 def _link_decks(queue, summaries):
     """Each queued card's "deck": the home deck its source names (magic/decks/<kind>/<slug>.md, a
     deck's old path), else the one whose title its "for" names, else None."""
@@ -189,6 +229,8 @@ def _link_decks(queue, summaries):
         if found is None:
             found = by_title.get((row.get("for") or "").strip().casefold())
         row["deck"] = {"id": found["id"], "title": found["title"]} if found else None
+        if found is not None and found.get("colors") is not None:
+            row["deck"]["colors"] = list(found["colors"])
 
 
 def _card_for(name, set_code="", number="", cache=None):

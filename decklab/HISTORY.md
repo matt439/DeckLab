@@ -2,6 +2,14 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Shopping Planned deck swatches and optional identity data (2026-10-25; E11-S30 slice 12)
+
+Shopping's linked queue rows and Long-term deck headings now show optional canonical Planned/library identity swatches. Visible home choices are checked before reading target lists, with one request-local lookup per id and no library/Play-now fallback. Unknown identities omit the decoration; known colourless keeps its neutral swatch. Add uses current permitted choices, and colour metadata stays outside canonical queue fields, requests and revisions.
+
+Review found a loaded card record with missing identity can pass coarse card-data readiness. The shared reader now raises a specific data fault for malformed returned identity, which Shopping and the pool's existing optional-decoration boundary omit safely. This also closes the pre-existing built-pool failure from that data fault, preserving physical counts, holder names/printing hints and Shopping missing totals. Generic lookup/programming errors retain their prior propagation policy.
+
+Validation: 83 guarded backend fixture tests passed (including actual prepared damaged-index/built/intact-pool and receipt regressions), plus 194 targeted Shopping/shared UI/source checks. Database connections, network connections and server binding were forbidden in the backend run. Synthetic Chromium checked 24 viewport/theme combinations with four decorative swatches, 12px phone/8px lab height and no overflow. Actual 999/1000 resizing retained the same focused deck link and swatch. Browser data was invented; backend contracts were checked separately. No actual queue/receipt/database writes, downloads or Forge games. Mouse/default DPR only; touch/Safari/device acceptance stays open. The source audit still fails only on pre-existing `tokens.js` (1,516 lines).
+
 ## Receive Ticked view filter (2026-10-25; E11-S30 slice 12)
 
 Receive now offers Ticked alongside All, Not checked and Attention, with its own empty message and Show all recovery. The view preference joins an existing version-1 local draft; older/malformed values restore All. Changing a filter does not manufacture a part-way draft, change bulk/request scope or invalidate a valid preview. Stale/done callbacks cannot change the view, and navigating to a hidden blocker persists All. Unticking a hidden row focuses the next visible check or Show all in both layouts.

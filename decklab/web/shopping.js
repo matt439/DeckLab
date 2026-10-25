@@ -355,7 +355,7 @@ function shopQueueRow(card, group, showFor = true, view = null, showLongTerm = f
     "data-shop-match": view && shopMatches(view, card) ? "true" : null }, row,
     view ? shopQueueResearch(card) : price ? shopReference(card) : null,
     view ? el("span", { class: "sr-only shop-match-words", text: shopMatches(view, card) ? "Matches selected shop." : "" }) : null,
-    deck ? el("a", { class: "shop-queue-deck", href: deckHref(deck.id), text: deck.title }) : null, reprints, move) : row;
+    deck ? el("a", { class: "shop-queue-deck", href: deckHref(deck.id) }, shopDeckSwatch(deck), deck.title) : null, reprints, move) : row;
 }
 
 /** Move controls stay outside the card viewer. Only the existing purchase state changes. */
@@ -663,7 +663,7 @@ function shopLongTerm(rows, view = null) {
           if (view) view.expanded.add(key); draw(true); e.currentTarget.remove();
         } }) : null;
     return el("div", { class: "shop-group", "data-long-key": key },
-      el("h3", {}, group.deck ? el("a", { href: deckHref(group.deck.id), text: group.name }) : group.name,
+      el("h3", {}, group.deck ? el("a", { href: deckHref(group.deck.id) }, shopDeckSwatch(group.deck), group.name) : group.name,
         el("span", { class: "shop-group-count", text: ` · ${plural(copies, "card")}` })),
       list, more);
   });

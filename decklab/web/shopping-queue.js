@@ -16,6 +16,13 @@ function shopQueueUnknown(words) {
 /** Clip only the visual line: the full saved words remain text and are available on hover too. */
 function shopQueueClip(words) { return el("span", {class: "shop-q-clip", title: words, text: words}); }
 
+/** Optional server colours are the deck's Planned/library identity; missing data is not colourless. */
+function shopDeckSwatch(deck) {
+  const colors = deck?.colors;
+  if (!Array.isArray(colors) || !colors.every(color => typeof color === "string" && /^[WUBRG]$/.test(color))) return null;
+  return deckColourPieces(colors)?.swatch() || null;
+}
+
 /** A saved calendar day, not a timestamp guessed from a price or a card-data update. */
 function shopCheckDay(value) {
   if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
