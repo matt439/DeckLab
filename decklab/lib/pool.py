@@ -117,14 +117,17 @@ gives the same as data, for the page.
 import argparse
 import contextlib
 import csv
+import json
 import re
 import sys
+import zlib
 from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import Path, PurePosixPath
 
 from decklab.lib import cards, decks, inventory, spaces
 from decklab.lib.config import REPO  # noqa: F401  (nothing here reads it; tests not yet ported patch it)
+from decklab.lib.decks.identity import deck_colors
 from decklab.lib.inventory import entry, rules, unreadable
 from decklab.lib.inventory.model import Product
 
@@ -163,6 +166,7 @@ class InUse:
     # Retain these canonical names while reading the existing recipe; allocation counts stay unchanged.
     standin_names: set = field(default_factory=set)
     printing_version: str = "target"   # list supplying printings, including the installed assembly snapshot
+    planned_colors: list | None = None # canonical Planned identity, independent of the hint's source version
 
 
 @dataclass
@@ -443,6 +447,17 @@ def _load_pool():
                 warning_decks=about)
 
 
+def _planned_colors(parsed, sections, why):
+    """Optional canonical deck identity from target sections already read for this holder."""
+    target = sections if why == "intact product" else parsed.target if parsed is not None else None
+    if target is None:
+        return None                    # Never reload a target or substitute an owned/assembled list.
+    try:
+        return deck_colors(target)
+    except (OSError, RuntimeError, EOFError, UnicodeDecodeError, json.JSONDecodeError, zlib.error):
+        return None                    # An unavailable local index only removes the optional swatch.
+
+
 def _built_in_use(space, intact, found, unresolved, warnings, decks_of=None):
     """[InUse] of a space's built deck files, and (home's) the decks of the
     intact products whose stems are in intact; found gets every product stem seen;
@@ -506,7 +521,7 @@ def _built_in_use(space, intact, found, unresolved, warnings, decks_of=None):
             warnings.extend(standin_warnings)
             in_use.append(InUse(deck_id, summary["title"], why, held, standin_warnings,
                                 _count_printings(sections, source, unresolved), standin_names,
-                                printing_version=version))
+                                printing_version=version, planned_colors=_planned_colors(parsed, sections, why)))
         finally:
             if decks_of is not None:      # which deck each warning is about (Pool.warning_decks)
                 decks_of.update((text, summary["id"]) for text in warnings[before:])

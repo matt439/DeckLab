@@ -96,8 +96,11 @@ def annotate(storage, holders, by_name, *, sees, records):
                 if allowed is None:
                     return anonymous(storage)   # Discard any earlier names; retain every held/guess count.
                 if allowed:
-                    listed.append({"id": holder.id, "title": holder.title, "quantity": quantity,
-                                   "version": holder.printing_version})
+                    source = {"id": holder.id, "title": holder.title, "quantity": quantity,
+                              "version": holder.printing_version}
+                    if holder.planned_colors is not None:
+                        source["colors"] = list(holder.planned_colors)
+                    listed.append(source)
             listed.sort(key=lambda holder: holder["id"])
             entry["listed_holders"] = listed
             entry["unattributed"] = entry["held"] - sum(holder["quantity"] for holder in listed)

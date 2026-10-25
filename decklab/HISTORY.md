@@ -2,6 +2,12 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Collection saved-hint Planned colours (2026-10-25; E11-S30 slice 11)
+
+Visible saved-list hints now carry optional canonical Planned identity swatches, matching Library. The hint's source kind still chooses its Planned or Play-now route; an owned-view hero can have different colours. The shared identity algorithm is unchanged and uses already-read target sections. Unavailable local card indexes remove only the swatch; visibility gates and anonymous rollback cover colours with names. Unknown identity has no swatch; known colourless alone uses the neutral swatch. Rendering adds no API reads or canonical/hash changes.
+
+Validation: 113 backend sandbox tests passed with live database probes disabled; 223 UI/source checks passed. Synthetic Chromium checked visible preview/expanded-viewer swatches at nine documented viewport sizes plus 1000/1280 in both themes (22 combinations), with no page, caption or link overflow. The always-dark viewer reuses the existing dark stripe palette in either page theme; normal previews keep their page palette. Browser-computed Black cue contrast is 4.20:1 in either theme (all six stops are at least 4.20:1); viewer link text remains 7.17:1. The two new regression cases guard palette scope and resolved cue visibility. Mouse/default DPR only; actual touch/Safari/device acceptance and question 6's filter semantic choice remain open. The Card colour predicate stays unchanged. No live records, writes, downloads or Forge games. The source audit still flags only pre-existing `tokens.js` (1,516 lines).
+
 ## Collection saved-list hints UI (2026-10-25; E11-S30 slice 11)
 
 The Card list now shows a static Saved list hints marker without expanding dense rows, and complete hints in its preview and casual/lab viewer captions. The full attribution list, checksum, route identity, quantity and source kind must validate; older, malformed, basic or overcommitted data stays anonymous. Links explicitly choose Planned or Play-now and recheck their current route/person/root/row/hint before and after viewer close. The UI explains that saved lists can differ from boxes/current lists. Save/conflict replies without fresh storage strip names from cloned retained metadata, preserving legacy counts and hashes.

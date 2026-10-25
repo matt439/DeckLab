@@ -259,7 +259,14 @@
      dark, the dark stripe over --surface) and its art placeholder while a picture loads. A one-colour tint
      runs to its -deep stop; four or five colours share the neutral --tint-multi, and three or more the
      neutral --art-multi. */
-  --stripe-w: #e2c472;
+  /* The existing dark stripe palette is shared by dark pages and swatches on the always-dark viewer. */
+  --stripe-w-dark: #e2c472;
+  --stripe-u-dark: #4a97d6;
+  --stripe-b-dark: #8c7f7a;
+  --stripe-r-dark: #e5594f;
+  --stripe-g-dark: #2fa86a;
+  --stripe-c-dark: #a39e99;
+  --stripe-w: var(--stripe-w-dark);
   --stripe-u: #2f7fbf;
   --stripe-b: #5a4f4b;
   --stripe-r: #d9473e;
@@ -392,11 +399,11 @@
   --chip-on-tint: var(--surface-chip);
   --chip-on-tint-line: rgb(255 255 255 / .10);
   --mana-ring: rgb(0 0 0 / .28);
-  --stripe-u: #4a97d6;
-  --stripe-b: #8c7f7a;
-  --stripe-r: #e5594f;
-  --stripe-g: #2fa86a;
-  --stripe-c: #a39e99;
+  --stripe-u: var(--stripe-u-dark);
+  --stripe-b: var(--stripe-b-dark);
+  --stripe-r: var(--stripe-r-dark);
+  --stripe-g: var(--stripe-g-dark);
+  --stripe-c: var(--stripe-c-dark);
   --tint-w: rgb(226 196 114 / .16);
   --tint-u: rgb(74 151 214 / .16);
   --tint-b: rgb(140 127 122 / .16);

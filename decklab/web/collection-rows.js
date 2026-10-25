@@ -299,7 +299,10 @@ function colListedHolders(cv, row) {
     seen.add(key);
     total += hint.quantity;
     if (total > saved.held) return null;
-    holders.push({ id: hint.id, title: hint.title, quantity: hint.quantity, version: hint.version });
+    // Optional colours describe the deck's current Planned identity, independently of the hint's list kind.
+    const colors = Array.isArray(hint.colors) && hint.colors.every((color) => typeof color === "string" && /^[WUBRG]$/.test(color))
+      ? [...hint.colors] : null;
+    holders.push({ id: hint.id, title: hint.title, quantity: hint.quantity, version: hint.version, colors });
   }
   if (holders.length && saved.held > Number(row.quantity)) return null;
   return total === saved.held ? { holders, unattributed: saved.unattributed } : null;
@@ -314,11 +317,12 @@ function colPackingLink(cv, row, hint) {
     return record && colListedHolders(cv, record)?.holders.some((item) => item.id === hint.id
       && item.version === hint.version && item.quantity === hint.quantity && item.title === hint.title);
   };
-  return el("a", { href, text: `${hint.quantity} \u00d7 ${hint.title} (${listName(hint.version)})`, onclick: (event) => {
+  return el("a", { href, onclick: (event) => {
     event.preventDefault();
     if (!event.currentTarget.isConnected || !current()) return;
     colAfterViewer(() => { if (current()) location.hash = href; });
-  } });
+  } }, deckColourPieces(hint.colors)?.swatch(),
+    el("span", { text: `${hint.quantity} \u00d7 ${hint.title} (${listName(hint.version)})` }));
 }
 
 /** Names describe saved hints, never verified physical copies or a guaranteed current revision. */

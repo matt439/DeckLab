@@ -33,13 +33,13 @@ def hint(name=NAME, *, finish="nonfoil", set_code="fdn", number="227"):
 
 
 def holder(deck_id="casual/a", title="A", *, cards=None, printings=None, warnings=None, standin_names=None,
-           printing_version="target"):
+           printing_version="target", planned_colors=None):
     return pool.InUse(deck_id, title, "intact product" if deck_id.startswith("product/") else "built",
                       Counter({NAME: 1} if cards is None else cards),
                       standin_warnings=[] if warnings is None else warnings,
                       printings=Counter({hint(): 1} if printings is None else printings),
                       standin_names=set() if standin_names is None else set(standin_names),
-                      printing_version=printing_version)
+                      printing_version=printing_version, planned_colors=planned_colors)
 
 
 def grouped(rows):
@@ -407,7 +407,8 @@ class CollectionSourcePrivacyTests(ApiTestCase):
         self.assertEqual(result["rows"][KEY],
                          {"held": 2, "guess": False, "listed_holders": [], "unattributed": 2})
         self.assertEqual(result["rows"]["cmm|648|nonfoil"]["listed_holders"],
-                         [{"id": "casual/sparse", "title": "Sparse printing", "quantity": 1, "version": "target"}])
+                         [{"id": "casual/sparse", "title": "Sparse printing", "quantity": 1,
+                           "version": "target", "colors": ["G"]}])
 
     def test_real_pool_source_links_use_the_assembled_list_version_and_products_use_target(self):
         _write(self.box.magic / "products/status.csv",
@@ -461,8 +462,8 @@ class CollectionSourcePrivacyTests(ApiTestCase):
             with self.subTest(key=key):
                 self.assertEqual(result["rows"][key], {"held": 1, "guess": False, "unattributed": 0,
                     "listed_holders": [{"id": deck_id, "title": uses[deck_id].title,
-                                        "quantity": 1, "version": version}]})
+                                        "quantity": 1, "version": version, "colors": ["G"]}]})
                 self.assertEqual(hidden["rows"][key],
                                  {"held": 1, "guess": False, "listed_holders": [], "unattributed": 1})
-        for secret in ("Assembled Play-now", "casual/assembled-owned", "product/source-box", '"version"'):
+        for secret in ("Assembled Play-now", "casual/assembled-owned", "product/source-box", '"version"', '"colors"'):
             self.assertNotIn(secret, json.dumps(hidden))

@@ -17,6 +17,7 @@ import traceback
 from datetime import timezone
 
 from decklab.lib import cards, decks, inventory, pool, spaces
+from decklab.lib.decks.identity import COLOR_ORDER, deck_colors
 
 from . import common, guard
 from .carddata import _require_cards
@@ -226,9 +227,6 @@ def is_half(summary):
 
 # ---- the shelf: cover cards, colours, revisions, when last edited
 
-COLOR_ORDER = "WUBRG"
-
-
 def _card_of(name):
     exact = name if decks.is_basic_land(name) else cards.resolve(name)
     return cards.card(exact) if exact else None
@@ -311,29 +309,6 @@ def deck_cover(summary, sections):
         else:
             return _cover_json(exact, cover["set"], cover["number"], False)
     return auto_cover(sections, written if problem else None, problem)
-
-
-def deck_colors(sections):
-    """The colour identity of a list ({section: [DeckLine]}), in WUBRG order: its commander's
-    when it has a Commander section Scryfall knows, else every Commander, Companion and Deck
-    card's ([] for a colourless list). None when no card in it could be read (an unknown name, no
-    card data yet), so the library shows no colours rather than a colourless C."""
-    def identities(names):
-        found = []
-        for name in names:
-            exact = cards.resolve(name)
-            card = cards.card(exact) if exact else None
-            if card is not None:
-                found.append(card["color_identity"])
-        return found
-
-    found = identities(line.name for line in (sections.get("Commander") or []))
-    if not found:
-        found = identities(line.name for s in decks.COVER_SECTIONS for line in (sections.get(s) or []))
-    if not found:
-        return None
-    colours = set().union(*found)
-    return [c for c in COLOR_ORDER if c in colours]
 
 
 def _revision_of(deck_id):
