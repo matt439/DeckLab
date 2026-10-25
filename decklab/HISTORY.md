@@ -2,6 +2,12 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## P1 Collection preview and casual rows (2026-10-25; E11-S30 slice 11)
+
+The Card list now selects an exact printing/finish into a lab preview, 400px wide (340px at 1000–1280). Edit copies opens the existing guarded sheet. Casual widths use one panel of rows with 24-row Show more, focus on the first newly shown row, and a sticky search/filter band. The same filtered set drives both layouts and the bulk scope. Notes and alternate-printing warnings remain available, including for read-only viewers. Storage counts retain uncertainty and untracked basic-land wording; no named holder is inferred. Missing prices use a decorative em dash plus spoken words.
+
+Validation: 170 targeted Python/Node tests passed. Synthetic Chromium checks covered the nine documented viewport sizes plus 1000/1280 in both themes (22 combinations), keyed selection, long names, sticky search, filter scope and Show more focus. No page/panel overflow remained; the narrow lab table scrolls locally. Mouse/default DPR only; touch, Safari and physical devices remain unverified. No live data, downloads or Forge games. The source audit retains the pre-existing 1,516-line `tokens.js` failure. Extra lab columns/density, Find cards presentation and exact named holders remain later Collection work.
+
 ## P1 Collection metadata (2026-10-25; E11-S30 slice 11, first part)
 
 Collection now shows recorded condition/language codes in the lab and words at casual widths, explicit spoken unknowns, and neutral foil/etched pills. The missing-details info notice offers Show only these; In storage only retains its existing filter as a toggle chip. The bulk action visibly names all filtered rows, including those beyond the current page. Each printing/finish keeps its own per-copy price estimate, with one exchange-rate statement and an honest source-date freshness badge. Language choices match the backend supported set. Presentation helpers move to `collection-rows.js`; canonical rows, hashes, storage guesses, edit/conflict/import guards and permissions retain their existing flows.

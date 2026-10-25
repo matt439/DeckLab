@@ -17,7 +17,8 @@
  * collection_edit._prices; the sort puts unpriced rows last both ways) and an "In storage only" filter
  * (collection_edit._storage: each row's copies in built decks and intact products, a guess where the
  * decks' lists name another printing); a row's thumbnail opens the viewer (its own group) and its
- * name the row's sheet, where Remove sits at the bottom (UI-REVIEW.md WP9: click to edit). "Set condition &
+ * name selects its printing/finish preview in the lab, with Edit copies opening the existing row sheet.
+ * Casual rows open the viewer with recorded notes and an Edit copies action when permitted. "Set condition &
  * language…" sets one condition and/or language on every row shown, in one change (collection-bulk.js).
  *
  * Writes (lib/api/collection_edit.py) carry the rows' sha256 as the page loaded them: a list changed by

@@ -4,6 +4,8 @@
 
 // ---------------------------------------------------------------- Card list
 
+const COL_CASUAL_ROWS = 24;
+
 /** A recorded detail: words in casual layouts and codes in the lab; unknown stays explicit. */
 function colDetail(value, kind) {
   const label = kind === "condition" ? "Condition" : "Language";
@@ -25,31 +27,41 @@ function colFinishLabel(row) {
 function drawCollectionRows(data, space, token = null) {
   const cv = colView(data, space, token, "rows");
   cv.search = "";
+  cv.selectedKey = null;
+  cv.casualLimit = COL_CASUAL_ROWS;
   cv.page = 1;
   cv.unrecordedOnly = false;
   cv.storageOnly = false;
   const saved = String(local.get("collection.rowsSort") || "name:1").split(":");
   cv.sort = { key: COL_SORTS[saved[0]] ? saved[0] : "name", dir: saved[1] === "-1" ? -1 : 1 };
   const search = el("input", { id: "col-row-search", type: "search", autocomplete: "off", spellcheck: "false",
-    placeholder: "Card name or set", oninput: () => { cv.search = search.value; cv.page = 1; drawColRowList(cv); } });
+    placeholder: "Card name or set", oninput: () => { cv.search = search.value; cv.page = 1; cv.casualLimit = COL_CASUAL_ROWS; drawColRowList(cv); } });
   cv.unrecorded = el("input", { type: "checkbox", id: "col-unrecorded",
-    onchange: () => { cv.unrecordedOnly = cv.unrecorded.checked; cv.page = 1; drawColRowList(cv); } });
+    onchange: () => { cv.unrecordedOnly = cv.unrecorded.checked; cv.page = 1; cv.casualLimit = COL_CASUAL_ROWS; drawColRowList(cv); } });
   cv.unrecordedLabel = el("span");
   cv.unrecordedChoice = el("div", { class: "box box-info col-unrecorded" },
     el("p", {}, cv.unrecordedLabel),
     el("label", { class: "filter-chip", for: cv.unrecorded.id }, cv.unrecorded,
       el("span", { text: "Show only these" })));
   cv.storageBox = el("input", { type: "checkbox", id: "col-storage",
-    onchange: () => { cv.storageOnly = cv.storageBox.checked; cv.page = 1; drawColRowList(cv); } });
+    onchange: () => { cv.storageOnly = cv.storageBox.checked; cv.page = 1; cv.casualLimit = COL_CASUAL_ROWS; drawColRowList(cv); } });
   cv.storageLabel = el("span");
   cv.storageChoice = el("label", { class: "filter-chip col-storage", for: cv.storageBox.id }, cv.storageBox, cv.storageLabel);
   cv.count = el("p", { class: "result-count col-count", role: "status" });
   cv.priceNote = el("p", { class: "price-note col-price-note" });
   cv.list = el("div", { class: "col-row-list" });
+  cv.preview = el("aside", { class: "col-preview", role: "region", "aria-label": "Selected collection row" });
+  const tools = el("div", { class: "toolbar col-row-tools" },
+    el("label", { class: "field col-row-search", for: search.id }, el("span", { class: "sr-only", text: "Search the list" }), search),
+    el("button", { type: "button", class: "btn col-row-filter-toggle", "aria-label": "Filter card list",
+      onclick: () => colRowFilters(cv) }, svgEl("svg", { viewBox: "0 0 20 20", width: 20, height: 20,
+        "aria-hidden": "true", focusable: "false" }, svgEl("path", { d: "M3 4h14l-5.5 6.5V16l-3-1.5v-4L3 4Z",
+        fill: "none", stroke: "currentColor", "stroke-width": 1.6, "stroke-linejoin": "round" }))),
+    el("div", { class: "filter-chips filter-chips-scroll col-row-filter-options" }, cv.storageChoice));
   const root = el("div", { class: "collection-page col-rows-page" }, colHead(cv),
-    cv.unsupported ? null : [cv.unrecordedChoice, el("div", { class: "toolbar col-row-tools" },
-      el("label", { class: "field col-row-search", for: search.id }, el("span", { class: "sr-only", text: "Search the list" }), search),
-      cv.storageChoice, colBulkButton(cv), cv.count), cv.list, cv.priceNote]);
+    cv.unsupported ? null : [cv.unrecordedChoice, tools,
+      el("div", { class: "actions col-row-actions" }, colBulkButton(cv), cv.count),
+      el("div", { class: "col-row-layout" }, cv.list, cv.preview), cv.priceNote]);
   cv.root = root;
   $("#main").append(root);
   if (!cv.unsupported) drawColRowList(cv);
@@ -97,6 +109,8 @@ function drawColRowList(cv) {
     if (!stored) { cv.storageOnly = false; cv.storageBox.checked = false; }
   }
   const shown = colShownRows(cv);
+  const selected = shown.find((row) => colKey(row) === cv.selectedKey);
+  if (!selected) cv.selectedKey = null;
   colBulkSync(cv, shown);
   const cards = rows.reduce((n, row) => n + Number(row.quantity || 0), 0);
   cv.count.textContent = shown.length === rows.length ? `${plural(rows.length, "row")}, ${plural(cards, "card")}`
@@ -113,8 +127,10 @@ function drawColRowList(cv) {
     cv.list.append(el("div", { class: "empty" }, el("p", { text: "No rows match." })));
   } else {
     const page = shown.slice((cv.page - 1) * COL_ROWS_PAGE, cv.page * COL_ROWS_PAGE);
-    add(cv.list, [colPager(cv.page, pages, go, "Pages, top"), colRowTable(cv, page), colPager(cv.page, pages, go, "Pages, bottom")]);
+    add(cv.list, [el("div", { class: "col-row-lab" }, colPager(cv.page, pages, go, "Pages, top"),
+      colRowTable(cv, page), colPager(cv.page, pages, go, "Pages, bottom")), colCasualRows(cv, shown)]);
   }
+  colDrawPreview(cv, selected);
   drawColPriceNote(cv);
   setCollectionBusy(cv, cv.busy);
 }
@@ -159,7 +175,7 @@ function colRowTable(cv, rows) {
       el("button", { type: "button", class: "th-sort", text: COL_SORTS[key], onclick: () => {
         cv.sort = { key, dir: on ? -cv.sort.dir : COL_SORT_FIRST[key] || 1 };
         local.set("collection.rowsSort", `${key}:${cv.sort.dir}`);
-        cv.page = 1;
+        cv.page = 1; cv.casualLimit = COL_CASUAL_ROWS;
         drawColRowList(cv);
       } }));
   };
@@ -183,8 +199,7 @@ function colRowLine(cv, row) {
       "aria-label": `Show ${row.name} (${colPrinting(row)})`, onclick: (e) => openCard(card, e.currentTarget) },
       el("img", { src: card.img_small, alt: "", loading: "lazy", decoding: "async", width: 40, height: 56 })), card, "collection-rows", caption)
     : el("span", { class: "col-thumb col-thumb-none", "aria-hidden": "true" });
-  const open = cv.editable ? () => openCollectionSheet(cv, row)
-    : card ? () => openCard(card, thumb) : null;
+  const open = () => colSelectRow(cv, key);
   const language = COL_LANGUAGES.find(([v]) => v === row.language);
   const condition = COL_CONDITIONS.find(([v]) => v === row.condition);
   // On a phone the columns fold into one line under the name: the printing, then the condition and language
@@ -194,10 +209,12 @@ function colRowLine(cv, row) {
   const name = [el("span", { class: "col-cell-name", text: row.name }),
     el("small", { class: "col-cell-meta", text: meta }),
     row.notes ? el("small", { class: "col-cell-note", text: row.notes }) : null];
-  return el("tr", { "data-key": key, class: colUnrecorded(row) ? "is-unrecorded" : null },
+  return el("tr", { "data-key": key, "data-selected": key === cv.selectedKey ? true : null,
+    class: colUnrecorded(row) ? "is-unrecorded" : null },
     el("td", { class: "col-td-pic" }, thumb),
     el("td", { class: "col-td-name" }, open ? el("button", { type: "button", class: "col-open col-mutate", "data-focus": `edit-${key}`,
-      "aria-label": cv.editable ? `Edit ${row.name} (${colPrinting(row)})` : null, onclick: open }, name) : name),
+      "aria-label": `View ${row.name} (${colPrinting(row)})`,
+      "aria-current": key === cv.selectedKey ? "true" : null, onclick: open }, name) : name),
     el("td", { class: "col-wide col-td-printing" }, colPrinting({ ...row, finish: "nonfoil" }), " · ", colFinishLabel(row)),
     el("td", { class: "num col-td-qty" }, el("span", { text: String(row.quantity) }), colHeldNote(cv, row)),
     colPriceCell(cv, row),
@@ -223,6 +240,132 @@ function colHeldNote(cv, row) {
 function colPriceCell(cv, row) {
   const price = colPrice(cv, row);
   return price == null
-    ? el("td", { class: "num col-td-price col-unpriced" }, el("span", { text: "–", "aria-label": "No price" }))
+    ? el("td", { class: "num col-td-price col-unpriced" }, colUnknown("No price"))
     : el("td", { class: "num col-td-price", text: price.toFixed(2) });
+}
+
+
+/** Unknown values have one decorative mark and words a screen reader can read. */
+function colUnknown(words) {
+  return el("span", {}, el("span", { class: "cell-unknown", "aria-hidden": "true", text: "\u2014" }),
+    el("span", { class: "sr-only", text: words }));
+}
+
+/** These are allocated copy counts only: no deck names or exact physical-printing claims. */
+function colStorageWords(cv, row) {
+  if (!cv.storage || cv.storage.error) return "Copies in decks not known";
+  const { held, guess } = colHeld(cv, row);
+  if (held == null) return "Basic land: deck allocation not tracked";
+  if (!held) return "In storage";
+  return `${plural(held, "copy", "copies")} in decks${guess ? " (printing uncertain)" : ""}`
+    + ` \u00b7 ${Math.max(0, Number(row.quantity) - held)} free`;
+}
+
+/** Resolve the key from the current filtered rows; detached/stale callbacks never restore old details. */
+function colSelectRow(cv, key) {
+  if (!colActive(cv) || cv.busy || !colShownRows(cv).some((row) => colKey(row) === key)) return;
+  cv.selectedKey = key;
+  drawColRowList(cv);
+  const button = [...cv.list.querySelectorAll(".col-open")].find((node) => node.getAttribute("aria-current") === "true");
+  if (button) button.focus();
+}
+
+function colEditSelected(cv, key) {
+  if (!colActive(cv) || cv.busy || !cv.editable) return;
+  const row = (cv.rows || []).find((item) => colKey(item) === key);
+  if (row) openCollectionSheet(cv, row);
+}
+
+/** The lab's selection is a projection of the current canonical row, never an editable copy. */
+function colDrawPreview(cv, row) {
+  if (!cv.preview) return;
+  clear(cv.preview);
+  if (!row) { cv.preview.append(el("p", { class: "sub", text: "Pick a card to see its copies" })); return; }
+  const key = colKey(row), card = cv.pictures[key], price = colPrice(cv, row);
+  const colours = deckColourPieces(card?.color_identity);
+  const field = (name, value) => [el("dt", { text: name }), el("dd", {}, value)];
+  add(cv.preview, [el("h2", { class: "col-preview-title", text: row.name }),
+    card?.img ? el("button", { type: "button", class: "col-preview-picture", "aria-label": `Show ${row.name}`,
+      onclick: (event) => { if (colActive(cv)) openCard(card, event.currentTarget); } },
+    el("img", { src: card.img, alt: "", loading: "lazy", decoding: "async" }))
+      : el("p", { class: "sub col-preview-no-picture", text: "Picture not available" }),
+    card?.exact === false ? el("p", { class: "sub", text: "Picture of another printing" }) : null,
+    el("dl", { class: "col-preview-facts" },
+      field("Printing", el("span", { text: colPrinting(row) })),
+      field("Owned", el("span", { text: plural(Number(row.quantity), "copy", "copies") })),
+      field("Estimated price per copy", price == null ? colUnknown("No price") : `~A$${price.toFixed(2)} each`),
+      field("Condition", colDetail(row.condition, "condition")), field("Language", colDetail(row.language, "language")),
+      field("Colour identity", colours ? colours.pips(20) : colUnknown("Colour identity not recorded")),
+      field("Type", card?.type_line || colUnknown("Type not recorded"))),
+    el("p", { class: "col-preview-storage", text: colStorageWords(cv, row) }),
+    row.notes ? el("p", { class: "sub", text: row.notes }) : null,
+    card?.oracle_text ? el("div", { class: "col-preview-rules" }, oracleParagraphs(card.oracle_text)) : null,
+    cv.editable ? el("button", { type: "button", class: "btn btn-primary col-mutate col-preview-edit", text: "Edit copies",
+      onclick: () => colEditSelected(cv, key) }) : null]);
+}
+
+/** One casual row opens the existing viewer/edit flow; it has no table roles or nested controls. */
+function colCasualRow(cv, row) {
+  const key = colKey(row), card = cv.pictures[key], price = colPrice(cv, row);
+  const condition = row.condition ? COL_CONDITIONS.find(([value]) => value === row.condition)?.[2] || row.condition : null;
+  const language = row.language ? COL_LANGUAGES.find(([value]) => value === row.language)?.[1] || row.language : null;
+  const details = [row.condition === "NM" ? null : condition || "Condition not recorded",
+    row.language === "en" ? null : language || "Language not recorded"].filter(Boolean);
+  const caption = el("span", { class: "col-viewer-words" },
+    el("span", { class: "col-viewer-counts", text: `${plural(Number(row.quantity), "copy", "copies")} \u00b7 ${colPrinting(row)}` }),
+    el("span", { class: "col-viewer-note", text: colStorageWords(cv, row) }),
+    card?.exact === false ? el("span", { class: "col-viewer-note", text: "Picture of another printing" }) : null,
+    row.notes ? el("span", { class: "col-viewer-note", text: row.notes }) : null,
+    cv.editable ? el("button", { type: "button", class: "btn", text: "Edit copies",
+      onclick: () => colAfterViewer(() => colEditSelected(cv, key)) }) : null);
+  const open = card ? (event) => { if (colActive(cv)) openCard(card, event.currentTarget); }
+    : cv.editable ? () => colEditSelected(cv, key) : null;
+  const node = el(open ? "button" : "div", { type: open ? "button" : null, class: "col-casual-open",
+    "aria-label": open ? `${card ? "Show" : "Edit"} ${row.name} (${colPrinting(row)})` : null, onclick: open },
+    el("span", { class: "col-casual-picture", "aria-hidden": "true" }, card?.img_small
+      ? el("img", { src: card.img_small, alt: "", loading: "lazy", decoding: "async", width: 56, height: 78 }) : null),
+    el("span", { class: "col-casual-name", text: row.name }),
+    el("span", { class: "col-casual-price" }, price == null ? colUnknown("No price") : `~A$${price.toFixed(2)} each`),
+    el("span", { class: "col-casual-meta", text: [plural(Number(row.quantity), "copy", "copies"), colPrinting(row), ...details].join(" \u00b7 ") }),
+    el("span", { class: "col-casual-storage", text: colStorageWords(cv, row) }));
+  if (card) viewerItem(node, card, "collection-casual-rows", caption);
+  return el("li", { class: "col-casual-row", "data-key": key }, node,
+    row.notes ? el("p", { class: "col-casual-note", text: row.notes }) : null);
+}
+
+function colCasualRows(cv, shown) {
+  const limit = cv.casualLimit || COL_CASUAL_ROWS, rows = shown.slice(0, limit);
+  return el("div", { class: "col-row-casual" },
+    el("ul", { class: "col-casual-list" }, rows.map((row) => colCasualRow(cv, row))),
+    el("p", { class: "result-count", role: "status", text: `${rows.length} of ${plural(shown.length, "row")}` }),
+    shown.length > limit ? el("button", { type: "button", class: "btn col-show-more", text: "Show more",
+      onclick: () => {
+        if (!colActive(cv)) return;
+        cv.casualLimit = limit + COL_CASUAL_ROWS; drawColRowList(cv);
+        cv.list.querySelectorAll(".col-casual-open")[limit]?.focus();
+      } }) : null);
+}
+
+/** The casual filter button uses the tracked sheet and the same predicates as the lab toolbar. */
+function colRowFilters(cv) {
+  if (!colActive(cv) || cv.busy) return;
+  const sheet = colOpenSheet("Filter card list");
+  const redraw = () => { cv.page = 1; cv.casualLimit = COL_CASUAL_ROWS; drawColRowList(cv); };
+  const checkbox = (words, checked, change, disabled = false) => {
+    const box = el("input", { type: "checkbox", disabled }); box.checked = checked;
+    box.addEventListener("change", () => { if (colActive(cv)) { change(box.checked); redraw(); } });
+    return el("label", { class: "choice" }, box, el("span", { text: words }));
+  };
+  const sort = el("select", { "aria-label": "Sort card list", onchange: () => {
+    if (!colActive(cv)) return;
+    const [key, dir] = sort.value.split(":"); cv.sort = { key, dir: Number(dir) };
+    local.set("collection.rowsSort", sort.value); redraw();
+  } }, Object.entries(COL_SORTS).flatMap(([key, words]) => [1, -1].map((dir) =>
+    el("option", { value: `${key}:${dir}`, text: `${words}: ${dir === 1 ? "ascending" : "descending"}` }))));
+  sort.value = `${cv.sort.key}:${cv.sort.dir}`;
+  add(sheet.body, [
+    checkbox("Condition or language not recorded", cv.unrecordedOnly, (on) => { cv.unrecordedOnly = on; cv.unrecorded.checked = on; }),
+    checkbox("In storage only", cv.storageOnly, (on) => { cv.storageOnly = on; cv.storageBox.checked = on; }, !cv.storage || !!cv.storage.error),
+    el("label", { class: "field" }, el("span", { text: "Sort" }), sort)]);
+  sheetActions(sheet, [{ text: "Done", onclick: () => sheet.close() }]);
 }
