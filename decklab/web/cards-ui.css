@@ -1,0 +1,467 @@
+/* Deck Lab's shared card pieces (decklab/UI-REVIEW.md 2.3, WP5; decklab/UI-KIT.md): card symbols, the
+   card row, the card tile and token tile, the card viewer, the printing picker, and the extras for ui.js's
+   menu and toast. Loaded right after components.css; page files lay these out but never restyle them. */
+
+/* ----------------------------------------------------------------- symbols */
+
+/* Scryfall's symbols (symbols.js): in text they sit on the line at the text's size; in a cost, fixed sizes. */
+.sym { display: inline-block; width: 1.05em; height: 1.05em; margin: 0 1px; vertical-align: -.16em; }
+.cost .sym { width: 18px; height: 18px; margin: 0; vertical-align: middle; flex: none; }
+.cost .sym-small, .sym.sym-small { width: 16px; height: 16px; }
+.reminder { color: var(--ink-2); }
+
+/* ---------------------------------------------------------------- card row */
+
+/* cardRow: thumbnail, copies, name with one meta line (and chips), then the cost, with a --divider line under
+   it. The thumbnail is a small card picture (--shadow-img-sm); without one, a --surface-chip card frame. */
+.card-row {
+  display: grid;
+  grid-template-columns: 40px 22px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--s-3);
+  width: 100%;
+  min-height: 60px;
+  padding: var(--s-1) var(--s-2);
+  border: 0; border-bottom: 1px solid var(--divider);
+  background: transparent;
+  color: var(--ink);
+  font: inherit; text-align: left;
+}
+button.card-row { cursor: pointer; }
+@media (hover: hover) and (pointer: fine) { button.card-row:hover { background: var(--hover); } }
+.card-row-noqty { grid-template-columns: 40px minmax(0, 1fr) auto; }
+.card-row .thumb {
+  width: 40px; height: 56px;
+  border-radius: var(--r-card);
+  object-fit: cover;
+  background: var(--surface-3);
+  box-shadow: var(--shadow-img-sm);
+}
+.card-row .thumb-missing {
+  display: block; width: 40px; height: 56px; border-radius: var(--r-card);
+  background: var(--surface-chip); box-shadow: inset 0 0 0 1px var(--border-strong);
+}
+/* No picture (4.7): a card glyph in --ink-4 in the middle of the frame (cardRow never shows a token, so there's
+   no target glyph here). The editor's art-crop thumbnail uses the same class. */
+.thumb-missing { position: relative; }
+.thumb-missing::after {
+  content: ""; position: absolute; inset: 0; margin: auto;
+  height: min(22px, 70%); aspect-ratio: 8 / 11;
+  background: var(--ink-4);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 22'%3E%3Crect x='1' y='1' width='14' height='20' rx='2' fill='none' stroke='%23000' stroke-width='1.5'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 22'%3E%3Crect x='1' y='1' width='14' height='20' rx='2' fill='none' stroke='%23000' stroke-width='1.5'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+.card-row .qty { font-weight: var(--fw-bold); text-align: right; font-variant-numeric: tabular-nums; }
+.card-row .name { min-width: 0; line-height: var(--lh-tight); }
+.card-row .name small { display: block; color: var(--ink-2); font-size: var(--fs-sm); }
+.card-row .unknown { color: var(--crit-ink); }
+.card-row-chips { display: flex; flex-wrap: wrap; gap: var(--s-1); margin-top: var(--s-1); }
+
+/* --------------------------------------------------------------- card tile */
+
+/* A grid of tiles: 3 across on a phone, about 156 px each on a tablet or desktop, 196 px on a QHD window. */
+.card-tiles { display: grid; gap: var(--s-4) var(--s-3); grid-template-columns: repeat(auto-fill, minmax(156px, 1fr)); }
+@media (max-width: 599px) {
+  .card-tiles { gap: var(--s-3) var(--s-2); grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (min-width: 2200px) {
+  .card-tiles { grid-template-columns: repeat(auto-fill, minmax(196px, 1fr)); }
+}
+
+.card-tile { position: relative; min-width: 0; display: flex; flex-direction: column; gap: var(--s-1); }
+.card-tile-open {
+  display: flex; flex-direction: column; gap: 2px;
+  width: 100%; min-width: 0;
+  padding: 0; border: 0; border-radius: var(--r-md);
+  background: none; color: inherit;
+  font: inherit; text-align: left;
+}
+button.card-tile-open { cursor: pointer; }
+.card-tile-pic {
+  position: relative; display: block;
+  aspect-ratio: 488 / 680;
+  overflow: hidden;
+  border-radius: var(--r-card);
+  background: var(--surface-3);
+  box-shadow: var(--card-tile-shadow, var(--shadow-img));
+}
+/* Hover changes the elevation without replacing the checked card's ring (only with a mouse: 3.3). */
+@media (hover: hover) and (pointer: fine) { button.card-tile-open:hover .card-tile-pic { --card-tile-shadow: var(--shadow-2); } }
+button.card-tile-open:focus-visible { outline: none; }
+button.card-tile-open:focus-visible .card-tile-pic { outline: 3px solid var(--focus); outline-offset: 2px; }
+.card-tile-img { position: absolute; inset: 0; display: block; width: 100%; height: 100%; object-fit: cover; }
+/* The words in card proportions: under the picture while it loads, and the tile itself without one. */
+.card-tile-text {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; align-items: flex-start; gap: var(--s-1);
+  padding: 9% 8%;
+  overflow: hidden;
+  border: 1px solid var(--border-strong); border-radius: var(--r-card);
+  background: var(--surface-chip); color: var(--ink-2);
+  font-size: var(--fs-xs); line-height: var(--lh-tight);
+}
+.card-tile-text b { color: var(--ink); font-size: var(--fs-sm); overflow-wrap: break-word; hyphens: auto; }
+.card-tile-text .cost { justify-content: flex-start; }
+/* While a tile with a ×N badge has no picture (loading, or none), its words start under the badge. */
+.card-tile-pic:has(> .card-tile-qty) > .card-tile-text { padding-top: calc(16% + 2.2em); }
+/* The copies, on the art's top-left corner, only when more than one. */
+.card-tile-qty {
+  position: absolute; top: 11%; left: 6%;
+  min-width: 2.4em; padding: 1px var(--s-2);
+  border-radius: var(--r-pill);
+  background: var(--badge-bg); color: var(--badge-ink);
+  box-shadow: 0 0 0 2px var(--badge-ring);
+  font-size: var(--fs-sm); font-weight: var(--fw-bold); text-align: center; font-variant-numeric: tabular-nums;
+}
+/* The name in up to two lines (three tiles across a phone cut most names short on one). */
+.card-tile-name {
+  padding: var(--s-1) 2px 0;
+  font-size: var(--fs-sm); font-weight: var(--fw-semibold); line-height: var(--lh-tight);
+  overflow: hidden; overflow-wrap: break-word;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2;
+}
+.card-tile-meta {
+  padding: 0 2px;
+  color: var(--ink-2); font-size: var(--fs-sm); line-height: var(--lh-tight); font-variant-numeric: tabular-nums;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+/* .card-tiles-printing: tiles whose meta line is a printing ("TEOC 3/12 · 2/2"), allowed to wrap so a narrow phone
+   tile shows all of it (the Receipts board). Printings are in the body font with tabular numbers on every page. */
+.card-tiles-printing .card-tile-meta { white-space: normal; }
+.card-tile-meta .meta-part { white-space: nowrap; }
+/* The state slot: a tick or a badge on the top-right corner, outside the open button (so it can be one). */
+.card-tile-state { position: absolute; top: var(--s-1); right: var(--s-1); z-index: 2; }
+/* Build decks: keep the tick at the picture's bottom-left, clear of mana costs and the top-left copies.
+   Match the picture's proportions so the words beneath it never move the tick. Only the button takes taps. */
+.card-tile-state:has(> .pack-tick) {
+  top: 0; right: 0; left: 0; aspect-ratio: 488 / 680;
+  display: flex; align-items: flex-end; padding: var(--s-1); pointer-events: none;
+}
+.card-tile-state > .pack-tick { pointer-events: auto; }
+.card-tile-chips { display: flex; flex-wrap: wrap; gap: var(--s-1); padding: 0 2px; }
+.card-tile-chips .chip, .card-tile-chips .status { white-space: normal; }
+/* Checked off: an accent ring, and the picture a little dimmer, so what's left stands out. */
+.card-tile.is-ticked .card-tile-pic { box-shadow: 0 0 0 3px var(--accent), var(--card-tile-shadow, var(--shadow-img)); }
+.card-tile.is-ticked .card-tile-img { filter: brightness(.85); }
+/* Missing (not owned, nor on the way): the picture greyed, so what's still to get stands out. */
+.card-tile.is-missing .card-tile-pic { opacity: .6; }
+.card-tile.is-missing .card-tile-img { filter: grayscale(1); }
+.card-row.is-missing .thumb { filter: grayscale(1); opacity: .55; }
+.card-row.is-missing .name { color: var(--ink-2); }
+/* Some copies missing (deck.js marks the line "1 of 2 missing"): half greyed. */
+.card-tile.is-partly-missing .card-tile-img, .card-row.is-partly-missing .thumb { filter: grayscale(.6); }
+/* Foil: a rainbow sheen over the picture. */
+.card-tile.is-foil .card-tile-pic::after {
+  content: ""; position: absolute; inset: 0;
+  background: var(--foil-sheen); mix-blend-mode: soft-light; pointer-events: none;
+}
+/* A default picture (the printing isn't recorded, or isn't in the card data): a dashed frame and a ribbon. */
+.card-tile.is-unrecorded .card-tile-pic { outline: 2px dashed var(--warn-icon); outline-offset: 2px; }
+.card-tile-ribbon {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  padding: 2px var(--s-1);
+  background: var(--badge-bg); color: var(--badge-ink);
+  font-size: var(--fs-xs); line-height: var(--lh-tight); text-align: center;
+}
+.card-tile-tick {
+  display: block; width: 28px; height: 28px; border-radius: 50%;
+  background: var(--accent) var(--icon-tick-on-accent) center / 18px no-repeat;
+  box-shadow: 0 0 0 2px var(--badge-ring);
+}
+/* A tile's tick (cardTile's state: the Receipts board's and the packing plan's "done"): a 44 px round button
+   on the picture's corner, a white-ringed circle when off and filled with the accent and a tick when on (the
+   ring stays, so it isn't colour alone; the tick is --accent-ink's colour, near-black in dark). .tile-tick-plain is the same tick beside a row, off the picture. */
+.tile-tick {
+  display: block; flex: none; width: var(--tap); height: var(--tap); padding: 0; margin: calc(-1 * var(--s-1));
+  border: 0; border-radius: 50%; background: transparent; cursor: pointer;
+}
+.tile-tick::before {
+  content: ""; display: block; width: 30px; height: 30px; margin: 7px;
+  border-radius: 50%; background: var(--surface) center / 20px no-repeat; box-shadow: 0 0 0 2px var(--badge-ring), var(--shadow-1);
+}
+@media (hover: hover) and (pointer: fine) { .tile-tick:hover::before { box-shadow: 0 0 0 2px var(--accent), var(--shadow-1); } }
+.tile-tick[aria-pressed="true"]::before { background-color: var(--accent); background-image: var(--icon-tick-on-accent); }
+.tile-tick:focus-visible { outline: 3px solid var(--focus); outline-offset: -2px; }
+.tile-tick-plain { margin: 0; }
+.tile-tick-plain::before { box-shadow: 0 0 0 2px var(--border-strong); }
+.tile-tick-plain[aria-pressed="true"]::before { box-shadow: 0 0 0 2px var(--accent); }
+@media (max-width: 599px) {
+  .tile-tick::before { width: 26px; height: 26px; margin: 9px; background-size: 16px; }
+}
+
+/* A token's back, overlapping its front's corner (tokenTile). */
+.token-tile .card-tile-back {
+  position: absolute; right: 5%; bottom: 5%; width: 40%; height: auto;
+  border-radius: var(--r-card);
+  box-shadow: 0 0 0 2px var(--badge-ring), var(--shadow-img);
+}
+
+/* ------------------------------------------------------------- card viewer */
+
+/* card-viewer.js: the whole screen, dark in both themes. A phone (and a tablet held upright): the title and its
+   buttons on top, the card as big as fits, and Previous, "3 / 15" and Next under it; Text puts the card's words
+   in a panel under the card, which gets smaller to make room. A landscape screen from 1,000 px, or any from
+   1,200: the buttons either side of the card, and the text in a column on the right. */
+body.has-card-dialog { overflow: hidden; }
+dialog.viewer {
+  position: fixed; inset: 0;
+  width: 100vw; height: 100dvh; max-width: none; max-height: none;
+  margin: 0; padding: 0; border: 0;
+  background: var(--viewer-bg); color: var(--on-scrim);
+  overflow: hidden; overscroll-behavior: contain;
+  touch-action: pan-y pinch-zoom;       /* a sideways swipe anywhere turns the card (card-viewer.js) */
+}
+dialog.viewer[open] {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-areas: "head head head" "stage stage stage" "prev count next";
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+dialog.viewer::backdrop { background: var(--scrim-strong); }
+.viewer-head {
+  grid-area: head;
+  display: flex; align-items: center; gap: var(--s-2);
+  padding: var(--s-2) var(--s-2) var(--s-1) var(--s-4);
+}
+.viewer-title {
+  flex: 1; min-width: 0; margin: 0;
+  color: var(--on-scrim); font-size: var(--fs-lg);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.viewer-btn, .viewer-nav {
+  flex: none;
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: var(--tap); min-height: var(--tap);
+  padding: 0 var(--s-4);
+  border: 1px solid var(--viewer-line); border-radius: var(--r-pill);
+  background: var(--viewer-btn); color: var(--on-scrim);
+  font: inherit; font-weight: var(--fw-semibold);
+  cursor: pointer;
+}
+@media (hover: hover) and (pointer: fine) { .viewer-btn:hover, .viewer-nav:hover:not(:disabled) { border-color: var(--on-scrim-2); } }
+.viewer-btn[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
+.viewer-btn[hidden] { display: none; }
+.viewer-close { padding: 0; }
+.viewer :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.viewer-nav { width: 52px; height: 52px; padding: 0; border-radius: 50%; }
+.viewer-nav:disabled { opacity: .3; cursor: default; }
+.viewer-prev { grid-area: prev; justify-self: start; margin: var(--s-2) var(--s-4); }
+.viewer-next { grid-area: next; justify-self: end; margin: var(--s-2) var(--s-4); }
+.viewer-foot {
+  grid-area: count; align-self: center;
+  display: flex; flex-direction: column; align-items: center; gap: var(--s-1);
+  min-width: 0;
+}
+.viewer-count {
+  margin: 0;
+  color: var(--on-scrim); font-weight: var(--fw-semibold); font-variant-numeric: tabular-nums;
+}
+/* The tile's own words about the card ("Missing · need 1, have 0", "1 on the way"), under the counter. */
+.viewer-marks { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--s-1); }
+.viewer-marks[hidden] { display: none; }
+.viewer-marks .status { white-space: normal; text-align: center; }
+.viewer-swipe-hint { margin: 0; color: var(--on-scrim-2); font-size: var(--fs-sm); }
+@media (hover: hover) and (pointer: fine) { .viewer-swipe-hint { display: none; } }
+.viewer.is-single .viewer-nav, .viewer.is-single .viewer-count, .viewer.is-single .viewer-swipe-hint { display: none; }
+
+/* The stage: three slides side by side (the card, and the ones before and after it, already drawn), moved
+   together as one track by a swipe. Up-and-down and pinch stay the browser's. */
+.viewer-stage {
+  grid-area: stage;
+  position: relative; min-width: 0; min-height: 0;
+  overflow: hidden;
+  container-type: size;
+  touch-action: pan-y pinch-zoom;
+  user-select: none; -webkit-user-select: none;
+}
+.viewer-track { position: absolute; inset: 0; touch-action: pan-y pinch-zoom; }
+.viewer-track.is-settling { transition: transform .24s cubic-bezier(.2, .8, .3, 1); }
+.viewer-slide {
+  position: absolute; inset: 0; margin: 0;
+  touch-action: pan-y pinch-zoom;
+  display: flex; align-items: center; justify-content: center;
+  padding: var(--s-2) var(--s-3);
+}
+.viewer-slide[data-at="-1"] { transform: translateX(-100%); }
+.viewer-slide[data-at="1"] { transform: translateX(100%); }
+/* The card as big as the stage allows, never past twice the normal image's size. */
+.viewer-frame {
+  flex: none;
+  width: min(calc(100cqw - 24px), calc((100cqh - 16px) * 488 / 680), 976px);
+  aspect-ratio: 488 / 680;
+  overflow: hidden;
+  border-radius: var(--r-card);
+  background: var(--surface-3) center / cover no-repeat;
+  box-shadow: var(--shadow-2);
+}
+.viewer-img { display: block; width: 100%; height: 100%; -webkit-touch-callout: none; }
+.viewer-frame.is-failed .viewer-img { visibility: hidden; }
+.viewer-status:empty { display: none; }
+.viewer-status {
+  position: absolute; left: 50%; bottom: calc(var(--s-4) + 52px); transform: translateX(-50%);
+  width: max-content; max-width: calc(100% - 2 * var(--s-4)); margin: 0;
+  padding: var(--s-2) var(--s-3); border-radius: var(--r-md);
+  background: var(--badge-bg); color: var(--badge-ink); font-size: var(--fs-sm); text-align: center;
+}
+.viewer-retry { position: absolute; left: 50%; bottom: var(--s-4); transform: translateX(-50%); }
+.viewer-retry[hidden] { display: none; }
+/* No picture: the card's words in its place. */
+.viewer-wordcard {
+  overflow-y: auto; overscroll-behavior: contain;
+  padding: var(--s-4);
+  background: var(--surface); color: var(--ink);
+  border-radius: var(--r-lg);
+}
+
+/* The card's words: under the card, which shrinks to fit above them (a swipe on them turns the card too). */
+dialog.viewer.show-text[open] {
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  grid-template-areas: "head head head" "stage stage stage" "text text text" "prev count next";
+}
+.viewer-text {
+  grid-area: text; z-index: 2;
+  display: none;
+  max-height: 45vh; max-height: 45dvh;
+  margin: var(--s-1) var(--s-2) 0;
+  touch-action: pan-y;
+  padding: var(--s-4);
+  overflow-y: auto; overscroll-behavior: contain;
+  border: 1px solid var(--viewer-line); border-radius: var(--r-lg);
+  background: var(--viewer-panel); color: var(--on-scrim);
+}
+.viewer.show-text .viewer-text { display: block; }
+/* The panel is dark in both themes: its quieter words and lines in the viewer's own colours. */
+.viewer-text .viewer-type, .viewer-text .viewer-caption { color: var(--on-scrim-2); }
+.viewer-text .viewer-face + .viewer-face { border-top-color: var(--viewer-line); }
+.viewer-text a { color: var(--accent); }
+/* A button on the dark panel (Collection's "Edit copies"): the panel's colours, not the page theme's. */
+.viewer-text .btn:not(.btn-primary) { background: var(--viewer-panel); color: var(--on-scrim); border-color: var(--viewer-line); }
+@media (hover: hover) and (pointer: fine) { .viewer-text .btn:not(.btn-primary):hover { background: var(--viewer-line); } }
+.viewer-text .btn:not(.btn-primary):active { background: var(--viewer-line); }
+.viewer-text:focus { outline: none; }
+.viewer-face + .viewer-face { margin-top: var(--s-4); padding-top: var(--s-4); border-top: 1px solid var(--border); }
+/* A double-faced card: the face the picture shows is marked, an accent bar and a "Shown" tag. */
+.viewer-face.is-shown { margin-left: calc(-1 * var(--s-3)); padding-left: calc(var(--s-3) - 4px); border-left: 4px solid var(--accent); }
+.viewer-shown-tag {
+  display: inline-block; margin-left: var(--s-2); padding: 0 var(--s-2); vertical-align: middle;
+  border-radius: var(--r-pill); background: var(--accent); color: var(--accent-ink);
+  font-size: var(--fs-xs); font-weight: var(--fw-semibold); line-height: 1.6;
+}
+.viewer-face-name {
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--s-1) var(--s-3);
+  margin: 0 0 var(--s-1); font-size: var(--fs-lg);
+}
+.viewer-face .cost, .viewer-wordcard .cost { justify-content: flex-start; }
+/* The type line, with a one-face card's cost at its end. */
+.viewer-type {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s-1) var(--s-3);
+  margin: 0 0 var(--s-2); color: var(--ink-2); font-weight: var(--fw-semibold);
+}
+.viewer-face .oracle { margin: 0 0 var(--s-2); line-height: var(--lh-body); overflow-wrap: break-word; }
+.viewer-numbers { margin: 0; font-weight: var(--fw-semibold); }
+.viewer-caption { margin: 0 0 var(--s-3); color: var(--ink-2); font-size: var(--fs-sm); }
+
+/* A wide screen: the card, Previous and Next right either side of it, and the text beside them, the group
+   centred. The card's column is as wide as the card can be drawn (the stage's height decides, as .viewer-frame
+   works it out), so the arrows sit a fixed distance from the card whatever the screen. The text panel is as
+   tall as its words, from the card's top. */
+@media (min-width: 1000px) and (orientation: landscape), (min-width: 1200px) {
+  dialog.viewer[open], dialog.viewer.show-text[open] {
+    --viewer-panel-w: min(400px, 30vw);
+    --viewer-card-w: min(1000px, calc((100dvh - 150px) * 488 / 680 + 24px),
+      calc(100vw - 2 * 84px - var(--viewer-panel-w) - 2 * var(--s-5)));
+    grid-template-columns: minmax(0, 1fr) 84px var(--viewer-card-w) 84px var(--viewer-panel-w) minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    grid-template-areas: "head head head head head head" ". prev stage next text ." ". . count . text .";
+  }
+  .viewer-head { padding: var(--s-3) var(--s-3) var(--s-2) var(--s-5); }
+  .viewer-text-btn { display: none; }
+  .viewer-text, .viewer.show-text .viewer-text {
+    grid-area: text; align-self: start;
+    display: block; max-height: calc(100dvh - 150px);
+    margin: var(--s-2) 0 0;
+    font-size: var(--fs-md);
+  }
+  .viewer-prev, .viewer-next { align-self: center; justify-self: center; margin: 0; width: 60px; height: 60px; }
+  .viewer-foot { padding: var(--s-2) 0 var(--s-4); }
+}
+/* A phone on its side (about 850 x 330 with Safari's bars): the card fills the height, Previous and Next at
+   the screen's edges, and the head and the words in a column beside the card, always shown (no Text button). */
+@media (orientation: landscape) and (max-height: 500px) and (max-width: 999.98px) {
+  dialog.viewer[open], dialog.viewer.show-text[open] {
+    --viewer-card-w: min(calc((100dvh - 44px) * 488 / 680 + 24px), calc(100vw - 2 * 64px - 280px));
+    grid-template-columns: 64px var(--viewer-card-w) minmax(0, 1fr) 64px;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    grid-template-areas: "prev stage head next" "prev stage text next" "prev count text next";
+  }
+  .viewer-head { padding: var(--s-1) 0 var(--s-1) var(--s-2); }
+  .viewer-text-btn { display: none; }
+  .viewer-text, .viewer.show-text .viewer-text {
+    grid-area: text; align-self: start;
+    display: block; max-height: calc(100dvh - 70px);
+    margin: 0 0 var(--s-2) var(--s-2);
+    padding: var(--s-3);
+  }
+  .viewer-slide { padding: var(--s-2) var(--s-3) var(--s-1); }
+  .viewer-prev, .viewer-next { grid-row: 1 / -1; align-self: center; justify-self: center; margin: 0; }
+}
+/* QHD: the words a size up beside a card drawn this big. */
+@media (min-width: 1600px) {
+  dialog.viewer[open], dialog.viewer.show-text[open] { --viewer-panel-w: 460px; }
+  .viewer-text, .viewer.show-text .viewer-text { font-size: var(--fs-lg); padding: var(--s-5); }
+  .viewer-text .viewer-caption { font-size: var(--fs-md); }
+}
+/* Portrait: keep the picture full-sized when Text is opened. */
+@media (orientation: portrait) and (max-width: 999.98px) {
+  dialog.viewer.show-text[open] {
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    grid-template-areas: "head head head" "stage stage stage" "prev count next";
+  }
+  .viewer.show-text .viewer-text {
+    grid-area: stage; align-self: end;
+    width: calc(100% - 2 * var(--s-2));
+    max-height: 45dvh; margin: var(--s-2);
+  }
+}
+/* A phone held upright: a double-faced card's title takes two lines, so the back's name isn't cut off. */
+@media (max-width: 599px) {
+  .viewer-title {
+    white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical;
+    overflow: hidden; font-size: var(--fs-md); line-height: 1.2;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .viewer-track.is-settling { transition: none; }
+}
+
+/* --------------------------------------------------------- printing picker */
+
+/* pickPrinting's sheet: the printings as tiles, two across on a phone. */
+.pp-grid { display: grid; gap: var(--s-4) var(--s-3); grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+@media (max-width: 599px) {
+  .pp-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+.pp > .actions { margin-bottom: var(--s-3); }
+.pp-finishes { display: flex; flex-wrap: wrap; gap: var(--s-1); width: 100%; }
+.pp-finishes .btn { padding: 0 var(--s-2); font-size: var(--fs-sm); }
+/* The chosen finish: the toggle chip's on look (components.css .filter-chip). */
+.pp-finishes .btn[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent-strong); box-shadow: inset 0 0 0 1px var(--accent-line); }
+
+/* --------------------------------------------------- ui.js: menu and toast */
+
+.menu .menu-danger { color: var(--weak-ink); }
+.toast-undo { display: flex; align-items: center; gap: var(--s-3); padding-right: var(--s-2); pointer-events: auto; }
+/* Undo: a tertiary in the toast's own (inverted) colours, --btn-h tall (44 on touch). */
+.toast-undo .btn { color: var(--page); text-decoration: underline; }
+.toast-undo .btn:hover, .toast-undo .btn:active { background: transparent; }
+/* Its focus ring in the toast's words' colour: --focus (teal) is under 3:1 on the inverted --ink. */
+.toast-undo .btn:focus-visible { outline-color: var(--page); }
+body:is(.has-edit-bar, :has(#main .action-bar)) .toast-undo { bottom: calc(max(var(--s-2), env(safe-area-inset-bottom)) + var(--bar-h) + var(--s-2)); }
+
+@media (forced-colors: active) {
+  .viewer-btn, .viewer-nav { border-color: ButtonText; }
+  .card-tile.is-ticked .card-tile-pic { outline: 3px solid Highlight; }
+  .tile-tick::before { forced-color-adjust: none; background-color: Canvas; box-shadow: 0 0 0 2px CanvasText; }
+  .tile-tick[aria-pressed="true"]::before { background-color: Highlight; }
+}

@@ -1,0 +1,468 @@
+{
+ "accessories": {
+  "holders": {
+   "holders": {},
+   "warnings": []
+  },
+  "scan": {
+   "found": [],
+   "strays": [],
+   "warnings": []
+  }
+ },
+ "assembly": {
+  "": {
+   "choices": [],
+   "counts_confirmed": true,
+   "decks": [],
+   "note": "This is a plan. Other built decks stay reserved. Nothing is moved, marked built or written to inventory.",
+   "ready": false,
+   "rows": [],
+   "token_note": "Worked out from Scryfall's links between cards and tokens, so it's approximate. Tokens a card makes only through its rules text, and most token copies of other cards, aren't listed. Some listed tokens appear only in certain modes or for your opponent. Deck Lab can't tell how many a game needs. Packing ticks don't reserve or change inventory.",
+   "token_plan": [],
+   "token_plan_note": "Both decks can use these cards. One card shows one face at a time; at home keep shared tokens in one pile on the table.",
+   "token_problems": [],
+   "tokens": [
+    {
+     "back": "",
+     "back_collector_number": "",
+     "back_details": "",
+     "finish": "nonfoil",
+     "front": "Treasure",
+     "front_collector_number": "14",
+     "front_details": "",
+     "key": "2",
+     "notes": "",
+     "quantity": 1,
+     "set": "tltc"
+    },
+    {
+     "back": "Beast",
+     "back_collector_number": "",
+     "back_details": "3/3",
+     "finish": "",
+     "front": "Dog",
+     "front_collector_number": "",
+     "front_details": "",
+     "key": "3",
+     "notes": "printing unconfirmed",
+     "quantity": 1,
+     "set": ""
+    }
+   ],
+   "totals": {
+    "from_storage": 0,
+    "kept": 0,
+    "missing": 0,
+    "need": 0,
+    "transfers": 0,
+    "waiting": 0
+   },
+   "unresolved": [],
+   "warnings": []
+  }
+ },
+ "beginner_box_pairings": [],
+ "collection": {
+  "home": {
+   "pages": [
+    {
+     "cards": [
+      {
+       "basic": true,
+       "card": null,
+       "free_now": null,
+       "held": null,
+       "holders": [],
+       "incoming": 0,
+       "name": "Plains",
+       "owned": 1,
+       "resolved": false
+      }
+     ],
+     "limit": 24,
+     "note": "Ordinary basics are assumed plentiful. Tracked special basics are shown, but their deck allocation isn't tracked.",
+     "page": 1,
+     "pages": 1,
+     "roles": [],
+     "total": 1,
+     "types": [],
+     "warnings": []
+    }
+   ],
+   "special_basics": [
+    {
+     "Plains": 1
+    },
+    {}
+   ]
+  },
+  "user3": {
+   "pages": [
+    {
+     "cards": [],
+     "limit": 24,
+     "note": "Ordinary basics are assumed plentiful. Tracked special basics are shown, but their deck allocation isn't tracked.",
+     "page": 1,
+     "pages": 1,
+     "roles": [],
+     "total": 0,
+     "types": [],
+     "warnings": []
+    }
+   ],
+   "special_basics": [
+    {},
+    {}
+   ]
+  },
+  "user2": {
+   "pages": [
+    {
+     "cards": [
+      {
+       "basic": false,
+       "card": null,
+       "free_now": 3,
+       "held": 0,
+       "holders": [],
+       "incoming": 0,
+       "name": "Shock",
+       "owned": 3,
+       "resolved": false
+      }
+     ],
+     "limit": 24,
+     "note": "Ordinary basics are assumed plentiful. Tracked special basics are shown, but their deck allocation isn't tracked.",
+     "page": 1,
+     "pages": 1,
+     "roles": [],
+     "total": 1,
+     "types": [],
+     "warnings": [
+      "Some inventory names are unresolved: Shock"
+     ]
+    }
+   ],
+   "special_basics": [
+    {},
+    {}
+   ]
+  },
+  "user4": {
+   "pages": [
+    {
+     "cards": [],
+     "limit": 24,
+     "note": "Ordinary basics are assumed plentiful. Tracked special basics are shown, but their deck allocation isn't tracked.",
+     "page": 1,
+     "pages": 1,
+     "roles": [],
+     "total": 0,
+     "types": [],
+     "warnings": []
+    }
+   ],
+   "special_basics": [
+    {},
+    {}
+   ]
+  }
+ },
+ "deck_table": {},
+ "deck_table_priced": {},
+ "deck_view": {},
+ "decks_index": {
+  "decks": [],
+  "halves": [],
+  "warnings": []
+ },
+ "field": {
+  "Commander": {
+   "lists": [],
+   "notes": []
+  },
+  "Constructed": {
+   "lists": [],
+   "notes": []
+  }
+ },
+ "list_decks": [],
+ "load_deck": {},
+ "owned_vs_needed": {},
+ "owned_vs_needed_priced": {},
+ "plan_refresh": {},
+ "pools": {
+  "home": {
+   "in_use": [],
+   "on_the_way": {},
+   "owned": {},
+   "space": "home",
+   "unresolved": {},
+   "warnings": []
+  },
+  "user3": {
+   "in_use": [],
+   "on_the_way": {},
+   "owned": {},
+   "space": "user3",
+   "unresolved": {},
+   "warnings": []
+  },
+  "user2": {
+   "in_use": [],
+   "on_the_way": {},
+   "owned": {
+    "Shock": 3
+   },
+   "space": "user2",
+   "unresolved": {
+    "Shock": [
+     "magic/people/user2/collection.csv"
+    ]
+   },
+   "warnings": []
+  },
+  "user4": {
+   "in_use": [],
+   "on_the_way": {},
+   "owned": {},
+   "space": "user4",
+   "unresolved": {},
+   "warnings": []
+  }
+ },
+ "printing_counts": {
+  "home": {
+   "fdn|272|nonfoil": {
+    "on_the_way": 0,
+    "owned": 1
+   }
+  },
+  "user3": {},
+  "user2": {
+   "m19|156|nonfoil": {
+    "on_the_way": 0,
+    "owned": 3
+   }
+  },
+  "user4": {}
+ },
+ "printings": {},
+ "purchases": {
+  "coverage": [],
+  "overview": {
+   "checks": [],
+   "orders": [],
+   "to_buy": [],
+   "warnings": []
+  },
+  "read_queue": [],
+  "read_records": []
+ },
+ "read_status": {
+  "status": {},
+  "warnings": []
+ },
+ "spaces": [
+  "home",
+  "user2",
+  "user3",
+  "user4"
+ ],
+ "stale_tables": [],
+ "tokens": {
+  "incoming": [
+   [],
+   []
+  ],
+  "incoming_view": {
+   "incoming": [],
+   "problems": []
+  },
+  "spaces": {
+   "home": {
+    "check": [
+     "magic/tokens.csv: not in the standard order; the next Tokens page save sorts it",
+     "magic/tokens.csv line 2: 'Treasure' isn't a Scryfall token, emblem or reminder name",
+     "magic/tokens.csv line 2: a blank back needs 'single-sided verified' in notes",
+     "magic/tokens.csv line 3: 'Dog' isn't a Scryfall token, emblem or reminder name",
+     "magic/tokens.csv line 3: 'Beast' isn't a Scryfall token, emblem or reminder name"
+    ],
+    "gaps": {
+     "gaps": [],
+     "warnings": []
+    },
+    "holders": {
+     "holders": [],
+     "warnings": []
+    },
+    "read": {
+     "lines": [
+      2,
+      3
+     ],
+     "problems": [],
+     "rows": [
+      {
+       "back": "",
+       "back_collector_number": "",
+       "back_details": "",
+       "finish": "nonfoil",
+       "front": "Treasure",
+       "front_collector_number": "14",
+       "front_details": "",
+       "notes": "",
+       "quantity": "1",
+       "set": "tltc"
+      },
+      {
+       "back": "Beast",
+       "back_collector_number": "",
+       "back_details": "3/3",
+       "finish": "",
+       "front": "Dog",
+       "front_collector_number": "",
+       "front_details": "",
+       "notes": "printing unconfirmed",
+       "quantity": "1",
+       "set": ""
+      }
+     ],
+     "sha256": "714c6e7e077140d865012392ffa8e079bf4d09a92f7de3c3eabc5ceac893d1dc",
+     "sorted": false
+    },
+    "row_uses": {
+     "row_uses": {},
+     "warnings": []
+    }
+   },
+   "user3": {
+    "check": [],
+    "gaps": {
+     "gaps": [],
+     "warnings": []
+    },
+    "holders": {
+     "holders": [],
+     "warnings": []
+    },
+    "read": {
+     "lines": [],
+     "problems": [],
+     "rows": [],
+     "sha256": null,
+     "sorted": true
+    },
+    "row_uses": {
+     "row_uses": {},
+     "warnings": []
+    }
+   },
+   "user2": {
+    "check": [
+     "magic/people/user2/tokens.csv line 2: 'Goblin' isn't a Scryfall token, emblem or reminder name",
+     "magic/people/user2/tokens.csv line 2: a blank back needs 'single-sided verified' in notes"
+    ],
+    "gaps": {
+     "gaps": [],
+     "warnings": []
+    },
+    "holders": {
+     "holders": [],
+     "warnings": []
+    },
+    "read": {
+     "lines": [
+      2
+     ],
+     "problems": [],
+     "rows": [
+      {
+       "back": "",
+       "back_collector_number": "",
+       "back_details": "",
+       "finish": "",
+       "front": "Goblin",
+       "front_collector_number": "",
+       "front_details": "1/1; red",
+       "notes": "",
+       "quantity": "2",
+       "set": ""
+      }
+     ],
+     "sha256": "2484bc64f9c4e29b9382cdfc7cfc13bdf55b8c2a00289dc5d9a28ee688751620",
+     "sorted": true
+    },
+    "row_uses": {
+     "row_uses": {},
+     "warnings": []
+    }
+   },
+   "user4": {
+    "check": [],
+    "gaps": {
+     "gaps": [],
+     "warnings": []
+    },
+    "holders": {
+     "holders": [],
+     "warnings": []
+    },
+    "read": {
+     "lines": [],
+     "problems": [],
+     "rows": [],
+     "sha256": null,
+     "sorted": true
+    },
+    "row_uses": {
+     "row_uses": {},
+     "warnings": []
+    }
+   }
+  }
+ },
+ "wishlist_view": {
+  "user1": {
+   "entries": [],
+   "profile": "user1",
+   "warnings": []
+  },
+  "matt": {
+   "entries": [],
+   "profile": "matt",
+   "warnings": []
+  },
+  "user3": {
+   "entries": [],
+   "profile": "user3",
+   "warnings": []
+  },
+  "user2": {
+   "entries": [
+    {
+     "card": null,
+     "have": {
+      "on_the_way": null,
+      "owned": null
+     },
+     "name": "Shock",
+     "notes": "",
+     "number": "",
+     "set": "",
+     "source": ""
+    }
+   ],
+   "profile": "user2",
+   "warnings": [
+    "No card details for 'Shock'; it stays on your wishlist."
+   ]
+  },
+  "user4": {
+   "entries": [],
+   "profile": "user4",
+   "warnings": []
+  }
+ }
+}

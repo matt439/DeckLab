@@ -1,0 +1,7165 @@
+{
+ "accessories": {
+  "holders": {
+   "holders": {},
+   "warnings": []
+  },
+  "scan": {
+   "found": [
+    {
+     "deck_box": "",
+     "holder": "product/fdn-beginner-box",
+     "kind": "product",
+     "owner": "shared",
+     "sections": {
+      "Deck": [
+       {
+        "finish": "nonfoil",
+        "name": "Llanowar Elves",
+        "number": "1",
+        "quantity": 1,
+        "set": "tst"
+       },
+       {
+        "finish": "nonfoil",
+        "name": "Elvish Mystic",
+        "number": "1",
+        "quantity": 1,
+        "set": "tst"
+       },
+       {
+        "finish": "nonfoil",
+        "name": "Forest",
+        "number": "1",
+        "quantity": 7,
+        "set": "tst"
+       },
+       {
+        "finish": "nonfoil",
+        "name": "Llanowar Elves",
+        "number": "1",
+        "quantity": 1,
+        "set": "tst"
+       },
+       {
+        "finish": "nonfoil",
+        "name": "Pick Your Poison",
+        "number": "1",
+        "quantity": 1,
+        "set": "tst"
+       },
+       {
+        "finish": "nonfoil",
+        "name": "Plains",
+        "number": "1",
+        "quantity": 7,
+        "set": "tst"
+       },
+       {
+        "finish": "nonfoil",
+        "name": "Aerie Mystics",
+        "number": "1",
+        "quantity": 1,
+        "set": "tst"
+       },
+       {
+        "finish": "nonfoil",
+        "name": "Mountain",
+        "number": "1",
+        "quantity": 7,
+        "set": "tst"
+       }
+      ]
+     },
+     "sleeves": "",
+     "title": "Foundations Beginner Box"
+    }
+   ],
+   "strays": [],
+   "warnings": []
+  }
+ },
+ "assembly": {
+  "": {
+   "choices": [
+    {
+     "error": null,
+     "id": "product/fdn-beginner-box/elves",
+     "status": null,
+     "title": "Elves (Foundations Beginner Box)",
+     "versions": [
+      "target"
+     ]
+    },
+    {
+     "error": null,
+     "id": "product/fdn-beginner-box/cats",
+     "status": null,
+     "title": "Cats (Foundations Beginner Box)",
+     "versions": [
+      "target"
+     ]
+    },
+    {
+     "error": null,
+     "id": "product/fdn-beginner-box/goblins",
+     "status": null,
+     "title": "Goblins (Foundations Beginner Box)",
+     "versions": [
+      "target"
+     ]
+    }
+   ],
+   "counts_confirmed": true,
+   "decks": [],
+   "note": "This is a plan. Other built decks stay reserved. Nothing is moved, marked built or written to inventory.",
+   "ready": false,
+   "rows": [],
+   "token_note": "Worked out from Scryfall's links between cards and tokens, so it's approximate. Tokens a card makes only through its rules text, and most token copies of other cards, aren't listed. Some listed tokens appear only in certain modes or for your opponent. Deck Lab can't tell how many a game needs. Packing ticks don't reserve or change inventory.",
+   "token_plan": [],
+   "token_plan_note": "Both decks can use these cards. One card shows one face at a time; at home keep shared tokens in one pile on the table.",
+   "token_problems": [],
+   "tokens": [],
+   "totals": {
+    "from_storage": 0,
+    "kept": 0,
+    "missing": 0,
+    "need": 0,
+    "transfers": 0,
+    "waiting": 0
+   },
+   "unresolved": [],
+   "warnings": []
+  },
+  "product/fdn-beginner-box/cats": {
+   "choices": [
+    {
+     "error": null,
+     "id": "product/fdn-beginner-box/elves",
+     "status": null,
+     "title": "Elves (Foundations Beginner Box)",
+     "versions": [
+      "target"
+     ]
+    },
+    {
+     "error": null,
+     "id": "product/fdn-beginner-box/cats",
+     "status": null,
+     "title": "Cats (Foundations Beginner Box)",
+     "versions": [
+      "target"
+     ]
+    },
+    {
+     "error": null,
+     "id": "product/fdn-beginner-box/goblins",
+     "status": null,
+     "title": "Goblins (Foundations Beginner Box)",
+     "versions": [
+      "target"
+     ]
+    }
+   ],
+   "counts_confirmed": true,
+   "decks": [
+    {
+     "basics": [
+      {
+       "name": "Plains",
+       "quantity": 7
+      }
+     ],
+     "id": "product/fdn-beginner-box/cats",
+     "kit": {
+      "deck_box": null,
+      "holder": "product/fdn-beginner-box",
+      "info": [],
+      "need": 26,
+      "owner": "shared",
+      "short": 0,
+      "sleeves": null,
+      "spare": 0,
+      "title": "Foundations Beginner Box",
+      "warnings": [
+       "Foundations Beginner Box is kept intact: choose its sleeves (it needs 26)."
+      ]
+     },
+     "returns": [],
+     "sleeves": "Not recorded for this product",
+     "sleeves_need": 26,
+     "steps": [
+      {
+       "keep": 1,
+       "missing": 0,
+       "name": "Llanowar Elves",
+       "need": 1,
+       "resolved": true,
+       "storage": 0,
+       "transfers": [],
+       "waiting": 0
+      },
+      {
+       "keep": 1,
+       "missing": 0,
+       "name": "Pick Your Poison",
+       "need": 1,
+       "resolved": true,
+       "storage": 0,
+       "transfers": [],
+       "waiting": 0
+      }
+     ],
+     "title": "Cats (Foundations Beginner Box)",
+     "tokens": {
+      "copies": [],
+      "counts": {
+       "check": 0,
+       "differs": 0,
+       "incoming": 0,
+       "kinds": 0,
+       "none": 0,
+       "ready": 0
+      },
+      "needs": [],
+      "note": "Worked out from Scryfall's links between cards and tokens, so it's approximate. Tokens a card makes only through its rules text, and most token copies of other cards, aren't listed. Some listed tokens appear only in certain modes or for your opponent. Deck Lab can't tell how many a game needs.",
+      "unlisted": []
+     },
+     "version": "target"
+    }
+   ],
+   "note": "This is a plan. Other built decks stay reserved. Nothing is moved, marked built or written to inventory.",
+   "ready": true,
+   "rows": [
+    {
+     "from_storage": 0,
+     "held_elsewhere": [
+      {
+       "id": "product/fdn-beginner-box/elves",
+       "quantity": 1,
+       "title": "Elves (Foundations Beginner Box)"
+      }
+     ],
+     "incoming_from": [],
+     "kept": 1,
+     "missing": 0,
+     "name": "Llanowar Elves",
+     "need": 1,
+     "owned_now": 2,
+     "transfers": [],
+     "waiting": 0
+    },
+    {
+     "from_storage": 0,
+     "held_elsewhere": [],
+     "incoming_from": [],
+     "kept": 1,
+     "missing": 0,
+     "name": "Pick Your Poison",
+     "need": 1,
+     "owned_now": 1,
+     "transfers": [],
+     "waiting": 0
+    }
+   ],
+   "token_note": "Worked out from Scryfall's links between cards and tokens, so it's approximate. Tokens a card makes only through its rules text, and most token copies of other cards, aren't listed. Some listed tokens appear only in certain modes or for your opponent. Deck Lab can't tell how many a game needs. Packing ticks don't reserve or change inventory.",
+   "token_plan": [],
+   "token_plan_note": "Both decks can use these cards. One card shows one face at a time; at home keep shared tokens in one pile on the table.",
+   "token_problems": [],
+   "tokens": [],
+   "totals": {
+    "from_storage": 0,
+    "kept": 2,
+    "missing": 0,
+    "need": 2,
+    "transfers": 0,
+    "waiting": 0
+   },
+   "unresolved": [],
+   "warnings": []
+  },
+  "product/fdn-beginner-box/elves": {
+   "choices": [
+    {
+     "error": null,
+     "id": "product/fdn-beginner-box/elves",
+     "status": null,
+     "title": "Elves (Foundations Beginner Box)",
+     "versions": [
+      "target"
+     ]
+    },
+    {
+     "error": null,
+     "id": "product/fdn-beginner-box/cats",
+     "status": null,
+     "title": "Cats (Foundations Beginner Box)",
+     "versions": [
+      "target"
+     ]
+    },
+    {
+     "error": null,
+     "id": "product/fdn-beginner-box/goblins",
+     "status": null,
+     "title": "Goblins (Foundations Beginner Box)",
+     "versions": [
+      "target"
+     ]
+    }
+   ],
+   "counts_confirmed": true,
+   "decks": [
+    {
+     "basics": [
+      {
+       "name": "Forest",
+       "quantity": 7
+      }
+     ],
+     "id": "product/fdn-beginner-box/elves",
+     "kit": {
+      "deck_box": null,
+      "holder": "product/fdn-beginner-box",
+      "info": [],
+      "need": 26,
+      "owner": "shared",
+      "short": 0,
+      "sleeves": null,
+      "spare": 0,
+      "title": "Foundations Beginner Box",
+      "warnings": [
+       "Foundations Beginner Box is kept intact: choose its sleeves (it needs 26)."
+      ]
+     },
+     "returns": [],
+     "sleeves": "Not recorded for this product",
+     "sleeves_need": 26,
+     "steps": [
+      {
+       "keep": 1,
+       "missing": 0,
+       "name": "Elvish Mystic",
+       "need": 1,
+       "resolved": true,
+       "storage": 0,
+       "transfers": [],
+       "waiting": 0
+      },
+      {
+       "keep": 1,
+       "missing": 0,
+       "name": "Llanowar Elves",
+       "need": 1,
+       "resolved": true,
+       "storage": 0,
+       "transfers": [],
+       "waiting": 0
+      }
+     ],
+     "title": "Elves (Foundations Beginner Box)",
+     "tokens": {
+      "copies": [],
+      "counts": {
+       "check": 0,
+       "differs": 0,
+       "incoming": 0,
+       "kinds": 0,
+       "none": 0,
+       "ready": 0
+      },
+      "needs": [],
+      "note": "Worked out from Scryfall's links between cards and tokens, so it's approximate. Tokens a card makes only through its rules text, and most token copies of other cards, aren't listed. Some listed tokens appear only in certain modes or for your opponent. Deck Lab can't tell how many a game needs.",
+      "unlisted": []
+     },
+     "version": "target"
+    }
+   ],
+   "note": "This is a plan. Other built decks stay reserved. Nothing is moved, marked built or written to inventory.",
+   "ready": true,
+   "rows": [
+    {
+     "from_storage": 0,
+     "held_elsewhere": [],
+     "incoming_from": [],
+     "kept": 1,
+     "missing": 0,
+     "name": "Elvish Mystic",
+     "need": 1,
+     "owned_now": 1,
+     "transfers": [],
+     "waiting": 0
+    },
+    {
+     "from_storage": 0,
+     "held_elsewhere": [
+      {
+       "id": "product/fdn-beginner-box/cats",
+       "quantity": 1,
+       "title": "Cats (Foundations Beginner Box)"
+      }
+     ],
+     "incoming_from": [],
+     "kept": 1,
+     "missing": 0,
+     "name": "Llanowar Elves",
+     "need": 1,
+     "owned_now": 2,
+     "transfers": [],
+     "waiting": 0
+    }
+   ],
+   "token_note": "Worked out from Scryfall's links between cards and tokens, so it's approximate. Tokens a card makes only through its rules text, and most token copies of other cards, aren't listed. Some listed tokens appear only in certain modes or for your opponent. Deck Lab can't tell how many a game needs. Packing ticks don't reserve or change inventory.",
+   "token_plan": [],
+   "token_plan_note": "Both decks can use these cards. One card shows one face at a time; at home keep shared tokens in one pile on the table.",
+   "token_problems": [],
+   "tokens": [],
+   "totals": {
+    "from_storage": 0,
+    "kept": 2,
+    "missing": 0,
+    "need": 2,
+    "transfers": 0,
+    "waiting": 0
+   },
+   "unresolved": [],
+   "warnings": []
+  },
+  "product/fdn-beginner-box/goblins": {
+   "choices": [
+    {
+     "error": null,
+     "id": "product/fdn-beginner-box/elves",
+     "status": null,
+     "title": "Elves (Foundations Beginner Box)",
+     "versions": [
+      "target"
+     ]
+    },
+    {
+     "error": null,
+     "id": "product/fdn-beginner-box/cats",
+     "status": null,
+     "title": "Cats (Foundations Beginner Box)",
+     "versions": [
+      "target"
+     ]
+    },
+    {
+     "error": null,
+     "id": "product/fdn-beginner-box/goblins",
+     "status": null,
+     "title": "Goblins (Foundations Beginner Box)",
+     "versions": [
+      "target"
+     ]
+    }
+   ],
+   "counts_confirmed": true,
+   "decks": [
+    {
+     "basics": [
+      {
+       "name": "Mountain",
+       "quantity": 7
+      }
+     ],
+     "id": "product/fdn-beginner-box/goblins",
+     "kit": {
+      "deck_box": null,
+      "holder": "product/fdn-beginner-box",
+      "info": [],
+      "need": 26,
+      "owner": "shared",
+      "short": 0,
+      "sleeves": null,
+      "spare": 0,
+      "title": "Foundations Beginner Box",
+      "warnings": [
+       "Foundations Beginner Box is kept intact: choose its sleeves (it needs 26)."
+      ]
+     },
+     "returns": [],
+     "sleeves": "Not recorded for this product",
+     "sleeves_need": 26,
+     "steps": [
+      {
+       "keep": 1,
+       "missing": 0,
+       "name": "Aerie Mystics",
+       "need": 1,
+       "resolved": true,
+       "storage": 0,
+       "transfers": [],
+       "waiting": 0
+      }
+     ],
+     "title": "Goblins (Foundations Beginner Box)",
+     "tokens": {
+      "copies": [],
+      "counts": {
+       "check": 0,
+       "differs": 0,
+       "incoming": 0,
+       "kinds": 0,
+       "none": 0,
+       "ready": 0
+      },
+      "needs": [],
+      "note": "Worked out from Scryfall's links between cards and tokens, so it's approximate. Tokens a card makes only through its rules text, and most token copies of other cards, aren't listed. Some listed tokens appear only in certain modes or for your opponent. Deck Lab can't tell how many a game needs.",
+      "unlisted": []
+     },
+     "version": "target"
+    }
+   ],
+   "note": "This is a plan. Other built decks stay reserved. Nothing is moved, marked built or written to inventory.",
+   "ready": true,
+   "rows": [
+    {
+     "from_storage": 0,
+     "held_elsewhere": [],
+     "incoming_from": [],
+     "kept": 1,
+     "missing": 0,
+     "name": "Aerie Mystics",
+     "need": 1,
+     "owned_now": 1,
+     "transfers": [],
+     "waiting": 0
+    }
+   ],
+   "token_note": "Worked out from Scryfall's links between cards and tokens, so it's approximate. Tokens a card makes only through its rules text, and most token copies of other cards, aren't listed. Some listed tokens appear only in certain modes or for your opponent. Deck Lab can't tell how many a game needs. Packing ticks don't reserve or change inventory.",
+   "token_plan": [],
+   "token_plan_note": "Both decks can use these cards. One card shows one face at a time; at home keep shared tokens in one pile on the table.",
+   "token_problems": [],
+   "tokens": [],
+   "totals": {
+    "from_storage": 0,
+    "kept": 1,
+    "missing": 0,
+    "need": 1,
+    "transfers": 0,
+    "waiting": 0
+   },
+   "unresolved": [],
+   "warnings": []
+  }
+ },
+ "beginner_box_pairings": [
+  {
+   "built_version": null,
+   "card_count": 18,
+   "format": "Beginner Box pairing (40 cards)",
+   "halves": [
+    "product/fdn-beginner-box/elves",
+    "product/fdn-beginner-box/cats"
+   ],
+   "id": "pairing/elves+cats",
+   "kind": "casual",
+   "player": null,
+   "read_only": true,
+   "sideboard_count": 0,
+   "source": "magic/products/fdn-beginner-box.csv",
+   "space": "home",
+   "status": null,
+   "title": "Elves + Cats (Beginner Box)",
+   "versions": [
+    "target"
+   ]
+  },
+  {
+   "built_version": null,
+   "card_count": 17,
+   "format": "Beginner Box pairing (40 cards)",
+   "halves": [
+    "product/fdn-beginner-box/elves",
+    "product/fdn-beginner-box/goblins"
+   ],
+   "id": "pairing/elves+goblins",
+   "kind": "casual",
+   "player": null,
+   "read_only": true,
+   "sideboard_count": 0,
+   "source": "magic/products/fdn-beginner-box.csv",
+   "space": "home",
+   "status": null,
+   "title": "Elves + Goblins (Beginner Box)",
+   "versions": [
+    "target"
+   ]
+  },
+  {
+   "built_version": null,
+   "card_count": 17,
+   "format": "Beginner Box pairing (40 cards)",
+   "halves": [
+    "product/fdn-beginner-box/cats",
+    "product/fdn-beginner-box/goblins"
+   ],
+   "id": "pairing/cats+goblins",
+   "kind": "casual",
+   "player": null,
+   "read_only": true,
+   "sideboard_count": 0,
+   "source": "magic/products/fdn-beginner-box.csv",
+   "space": "home",
+   "status": null,
+   "title": "Cats + Goblins (Beginner Box)",
+   "versions": [
+    "target"
+   ]
+  }
+ ],
+ "collection": {
+  "home": {
+   "pages": [
+    {
+     "cards": [
+      {
+       "basic": false,
+       "card": {
+        "cmc": 5.0,
+        "color_identity": [
+         "G",
+         "U",
+         "W"
+        ],
+        "colors": [
+         "W"
+        ],
+        "defense": null,
+        "img": "/img/con/1/normal",
+        "img_small": "/img/con/1/small",
+        "loyalty": null,
+        "mana_cost": "{4}{W}",
+        "name": "Aerie Mystics",
+        "oracle_text": "Flying\n{1}{G}{U}: Creatures you control gain shroud until end of turn. (They can't be the targets of spells or abilities.)",
+        "power": "3",
+        "roles": [],
+        "toughness": "3",
+        "type_line": "Creature — Bird Wizard"
+       },
+       "free_now": 0,
+       "held": 1,
+       "holders": [
+        {
+         "id": "product/fdn-beginner-box/goblins",
+         "quantity": 1,
+         "title": "Goblins (Foundations Beginner Box)"
+        }
+       ],
+       "incoming": 0,
+       "name": "Aerie Mystics",
+       "owned": 1,
+       "resolved": true
+      },
+      {
+       "basic": false,
+       "card": {
+        "cmc": 1.0,
+        "color_identity": [
+         "G"
+        ],
+        "colors": [
+         "G"
+        ],
+        "defense": null,
+        "img": "/img/cmm/648/normal",
+        "img_small": "/img/cmm/648/small",
+        "loyalty": null,
+        "mana_cost": "{G}",
+        "name": "Elvish Mystic",
+        "oracle_text": "{T}: Add {G}.",
+        "power": "1",
+        "roles": [
+         "ramp"
+        ],
+        "toughness": "1",
+        "type_line": "Creature — Elf Druid"
+       },
+       "free_now": 0,
+       "held": 1,
+       "holders": [
+        {
+         "id": "product/fdn-beginner-box/elves",
+         "quantity": 1,
+         "title": "Elves (Foundations Beginner Box)"
+        }
+       ],
+       "incoming": 0,
+       "name": "Elvish Mystic",
+       "owned": 1,
+       "resolved": true
+      },
+      {
+       "basic": false,
+       "card": {
+        "cmc": 1.0,
+        "color_identity": [
+         "G"
+        ],
+        "colors": [
+         "G"
+        ],
+        "defense": null,
+        "img": "/img/fdn/227/normal",
+        "img_small": "/img/fdn/227/small",
+        "loyalty": null,
+        "mana_cost": "{G}",
+        "name": "Llanowar Elves",
+        "oracle_text": "{T}: Add {G}.",
+        "power": "1",
+        "roles": [
+         "ramp"
+        ],
+        "toughness": "1",
+        "type_line": "Creature — Elf Druid"
+       },
+       "free_now": 0,
+       "held": 2,
+       "holders": [
+        {
+         "id": "product/fdn-beginner-box/elves",
+         "quantity": 1,
+         "title": "Elves (Foundations Beginner Box)"
+        },
+        {
+         "id": "product/fdn-beginner-box/cats",
+         "quantity": 1,
+         "title": "Cats (Foundations Beginner Box)"
+        }
+       ],
+       "incoming": 0,
+       "name": "Llanowar Elves",
+       "owned": 2,
+       "resolved": true
+      },
+      {
+       "basic": false,
+       "card": {
+        "cmc": 1.0,
+        "color_identity": [
+         "G"
+        ],
+        "colors": [
+         "G"
+        ],
+        "defense": null,
+        "img": "/img/mkm/170/normal",
+        "img_small": "/img/mkm/170/small",
+        "loyalty": null,
+        "mana_cost": "{G}",
+        "name": "Pick Your Poison",
+        "oracle_text": "Choose one —\n• Each opponent sacrifices an artifact of their choice.\n• Each opponent sacrifices an enchantment of their choice.\n• Each opponent sacrifices a creature with flying of their choice.",
+        "power": null,
+        "roles": [
+         "removal"
+        ],
+        "toughness": null,
+        "type_line": "Sorcery"
+       },
+       "free_now": 0,
+       "held": 1,
+       "holders": [
+        {
+         "id": "product/fdn-beginner-box/cats",
+         "quantity": 1,
+         "title": "Cats (Foundations Beginner Box)"
+        }
+       ],
+       "incoming": 0,
+       "name": "Pick Your Poison",
+       "owned": 1,
+       "resolved": true
+      }
+     ],
+     "limit": 24,
+     "note": "Ordinary basics are assumed plentiful. Tracked special basics are shown, but their deck allocation isn't tracked.",
+     "page": 1,
+     "pages": 1,
+     "roles": [
+      "ramp",
+      "removal"
+     ],
+     "total": 4,
+     "types": [
+      "Creature",
+      "Sorcery"
+     ],
+     "warnings": []
+    }
+   ],
+   "special_basics": [
+    {},
+    {}
+   ]
+  },
+  "user3": {
+   "pages": [
+    {
+     "cards": [],
+     "limit": 24,
+     "note": "Ordinary basics are assumed plentiful. Tracked special basics are shown, but their deck allocation isn't tracked.",
+     "page": 1,
+     "pages": 1,
+     "roles": [],
+     "total": 0,
+     "types": [],
+     "warnings": []
+    }
+   ],
+   "special_basics": [
+    {},
+    {}
+   ]
+  },
+  "user2": {
+   "pages": [
+    {
+     "cards": [],
+     "limit": 24,
+     "note": "Ordinary basics are assumed plentiful. Tracked special basics are shown, but their deck allocation isn't tracked.",
+     "page": 1,
+     "pages": 1,
+     "roles": [],
+     "total": 0,
+     "types": [],
+     "warnings": []
+    }
+   ],
+   "special_basics": [
+    {},
+    {}
+   ]
+  },
+  "user4": {
+   "pages": [
+    {
+     "cards": [],
+     "limit": 24,
+     "note": "Ordinary basics are assumed plentiful. Tracked special basics are shown, but their deck allocation isn't tracked.",
+     "page": 1,
+     "pages": 1,
+     "roles": [],
+     "total": 0,
+     "types": [],
+     "warnings": []
+    }
+   ],
+   "special_basics": [
+    {},
+    {}
+   ]
+  }
+ },
+ "deck_table": {},
+ "deck_table_priced": {},
+ "deck_view": {
+  "pairing/cats+goblins@target": {
+   "guide": null,
+   "info": [],
+   "owned": {
+    "conflicts": [
+     {
+      "available": 1,
+      "decks": [
+       [
+        "Elves (Foundations Beginner Box)",
+        1
+       ]
+      ],
+      "missing": 0,
+      "name": "Llanowar Elves",
+      "need": 1,
+      "owned": 2,
+      "short": 0
+     }
+    ],
+    "deck_id": "pairing/cats+goblins",
+    "price_date": "2026-09-28",
+    "price_error": null,
+    "rate": 1.5,
+    "rate_date": "2000-01-01",
+    "rows": [
+     {
+      "aud_each": 0.17,
+      "aud_missing": 0.0,
+      "available": 1,
+      "in_use_elsewhere": [],
+      "labels": {
+       "in_use": [],
+       "on_the_way": []
+      },
+      "missing": 0,
+      "name": "Aerie Mystics",
+      "need": 1,
+      "on_the_way": 0,
+      "on_the_way_from": [],
+      "owned": 1,
+      "priced_finish": "nonfoil",
+      "priced_printing": "CON 1"
+     },
+     {
+      "aud_each": 0.3,
+      "aud_missing": 0.0,
+      "available": 1,
+      "in_use_elsewhere": [
+       [
+        "Elves (Foundations Beginner Box)",
+        1
+       ]
+      ],
+      "labels": {
+       "in_use": [],
+       "on_the_way": []
+      },
+      "missing": 0,
+      "name": "Llanowar Elves",
+      "need": 1,
+      "on_the_way": 0,
+      "on_the_way_from": [],
+      "owned": 2,
+      "priced_finish": "nonfoil",
+      "priced_printing": "M19 314"
+     },
+     {
+      "aud_each": 0.41,
+      "aud_missing": 0.0,
+      "available": 1,
+      "in_use_elsewhere": [],
+      "labels": {
+       "in_use": [],
+       "on_the_way": []
+      },
+      "missing": 0,
+      "name": "Pick Your Poison",
+      "need": 1,
+      "on_the_way": 0,
+      "on_the_way_from": [],
+      "owned": 1,
+      "priced_finish": "nonfoil",
+      "priced_printing": "MKM 170"
+     }
+    ],
+    "totals": {
+     "aud_missing": 0,
+     "cards": 3,
+     "missing": 0,
+     "need": 3,
+     "unpriced": []
+    },
+    "unresolved": [],
+    "version": "target",
+    "warnings": []
+   },
+   "sections": {
+    "Deck": [
+     {
+      "card": {
+       "cmc": 1.0,
+       "color_identity": [
+        "G"
+       ],
+       "colors": [
+        "G"
+       ],
+       "defense": null,
+       "img": "/img/fdn/227/normal",
+       "img_small": "/img/fdn/227/small",
+       "loyalty": null,
+       "mana_cost": "{G}",
+       "name": "Llanowar Elves",
+       "oracle_text": "{T}: Add {G}.",
+       "power": "1",
+       "roles": [
+        "ramp"
+       ],
+       "toughness": "1",
+       "type_line": "Creature — Elf Druid"
+      },
+      "finish": "nonfoil",
+      "name": "Llanowar Elves",
+      "number": "1",
+      "qty": 1,
+      "set": "tst"
+     },
+     {
+      "card": {
+       "cmc": 1.0,
+       "color_identity": [
+        "G"
+       ],
+       "colors": [
+        "G"
+       ],
+       "defense": null,
+       "img": "/img/mkm/170/normal",
+       "img_small": "/img/mkm/170/small",
+       "loyalty": null,
+       "mana_cost": "{G}",
+       "name": "Pick Your Poison",
+       "oracle_text": "Choose one —\n• Each opponent sacrifices an artifact of their choice.\n• Each opponent sacrifices an enchantment of their choice.\n• Each opponent sacrifices a creature with flying of their choice.",
+       "power": null,
+       "roles": [
+        "removal"
+       ],
+       "toughness": null,
+       "type_line": "Sorcery"
+      },
+      "finish": "nonfoil",
+      "name": "Pick Your Poison",
+      "number": "1",
+      "qty": 1,
+      "set": "tst"
+     },
+     {
+      "card": null,
+      "finish": "nonfoil",
+      "name": "Plains",
+      "number": "1",
+      "qty": 7,
+      "set": "tst"
+     },
+     {
+      "card": {
+       "cmc": 5.0,
+       "color_identity": [
+        "G",
+        "U",
+        "W"
+       ],
+       "colors": [
+        "W"
+       ],
+       "defense": null,
+       "img": "/img/con/1/normal",
+       "img_small": "/img/con/1/small",
+       "loyalty": null,
+       "mana_cost": "{4}{W}",
+       "name": "Aerie Mystics",
+       "oracle_text": "Flying\n{1}{G}{U}: Creatures you control gain shroud until end of turn. (They can't be the targets of spells or abilities.)",
+       "power": "3",
+       "roles": [],
+       "toughness": "3",
+       "type_line": "Creature — Bird Wizard"
+      },
+      "finish": "nonfoil",
+      "name": "Aerie Mystics",
+      "number": "1",
+      "qty": 1,
+      "set": "tst"
+     },
+     {
+      "card": null,
+      "finish": "nonfoil",
+      "name": "Mountain",
+      "number": "1",
+      "qty": 7,
+      "set": "tst"
+     }
+    ]
+   },
+   "stats": {
+    "colours": {
+     "assumed_lands": null,
+     "colours": [
+      {
+       "checks": [
+        {
+         "cards": [
+          {
+           "name": "Aerie Mystics",
+           "qty": 1
+          }
+         ],
+         "colours": "W",
+         "cost": "4C",
+         "cost_in_colours": "4W",
+         "gold": false,
+         "have": 0.0,
+         "have_lands": 0.0,
+         "margin": null,
+         "needed": null,
+         "notes": [],
+         "ok": null,
+         "pips": 1,
+         "published": null,
+         "turn": 5
+        }
+       ],
+       "colours": "W",
+       "hardest": {
+        "cards": [
+         {
+          "name": "Aerie Mystics",
+          "qty": 1
+         }
+        ],
+        "colours": "W",
+        "cost": "4C",
+        "cost_in_colours": "4W",
+        "gold": false,
+        "have": 0.0,
+        "have_lands": 0.0,
+        "margin": null,
+        "needed": null,
+        "notes": [],
+        "ok": null,
+        "pips": 1,
+        "published": null,
+        "turn": 5
+       },
+       "land_sources": 0.0,
+       "name": "white",
+       "ok": null,
+       "short": []
+      },
+      {
+       "checks": [
+        {
+         "cards": [
+          {
+           "name": "Llanowar Elves",
+           "qty": 1
+          },
+          {
+           "name": "Pick Your Poison",
+           "qty": 1
+          }
+         ],
+         "colours": "G",
+         "cost": "C",
+         "cost_in_colours": "G",
+         "gold": false,
+         "have": 0.0,
+         "have_lands": 0.0,
+         "margin": null,
+         "needed": null,
+         "notes": [],
+         "ok": null,
+         "pips": 1,
+         "published": null,
+         "turn": 1
+        }
+       ],
+       "colours": "G",
+       "hardest": {
+        "cards": [
+         {
+          "name": "Llanowar Elves",
+          "qty": 1
+         },
+         {
+          "name": "Pick Your Poison",
+          "qty": 1
+         }
+        ],
+        "colours": "G",
+        "cost": "C",
+        "cost_in_colours": "G",
+        "gold": false,
+        "have": 0.0,
+        "have_lands": 0.0,
+        "margin": null,
+        "needed": null,
+        "notes": [],
+        "ok": null,
+        "pips": 1,
+        "published": null,
+        "turn": 1
+       },
+       "land_sources": 0.0,
+       "name": "green",
+       "ok": null,
+       "short": []
+      }
+     ],
+     "deck_lands": 0.0,
+     "definition": "Karsten's 'consistently cast': at least an (89 + mana value)% chance to have the coloured sources by the turn equal to the spell's mana value, on the play, in games with enough lands.",
+     "land_note": null,
+     "ok": null,
+     "rules": [
+      "A land that makes the colour is 1 source. On turn 1 only lands that can enter untapped count (a shock land or fast land can, and in Commander a bond land; a check land, gain land or basic-land fetch can't).",
+      "A land that searches for a basic land is a source of each colour of the basics in the deck (2/3 of one in decks needing 3 or more colours); one that searches for a land type, of each colour the deck's lands of that type make. Pathways: 2/3 each in decks needing 3+ colours.",
+      "A land whose search costs mana (Myriad Landscape's {2}) is a source only of the colours it makes itself until it can be used: paying {2} takes two other lands, so the lands it finds count from turn 4 (Karsten's full source is for searches that cost no mana, like Evolving Wilds).",
+      "A spell // land modal card is 0.8 of a source (1 if its land can enter untapped).",
+      "Mana creatures: 0.5 of a source from the turn after they're cast (turn 2 at the earliest). Mana rocks: 0.75 from the turn after they're cast (turn 3 at the earliest). 2-mana land ramp: 0.75 from turn 3; 3-mana land ramp: 0.5 from turn 5. Each only when the deck can cast the card itself consistently.",
+      "Cheap card draw (mana value 2 or less): each digs for lands, worth (sources of the colour / deck size) rounded down to a quarter, for spells cast after it; the first 10 only.",
+      "Exotic Orchard 0.75 and Fellwar Stone 0.5 of any colour (opponents unknown).",
+      "Not counted: Treasure, scry, and a Verge land's condition (it counts fully for both colours)."
+     ],
+     "source": "karsten-sources",
+     "sources": [
+      {
+       "colours": "G",
+       "counted": true,
+       "found_from_turn": null,
+       "from_turn": 2,
+       "kind": "creature",
+       "name": "Llanowar Elves",
+       "note": "mana creature",
+       "qty": 1,
+       "turn_one": false,
+       "weight": 0.5
+      }
+     ],
+     "table": null,
+     "table_note": "Karsten publishes no source counts below 40 cards, so a 20-card deck gets its sources and requirements without a verdict. Check its 40-card pairings."
+    },
+    "commander": null,
+    "counts": {
+     "commander": 0,
+     "companion": 0,
+     "deck": 17,
+     "main": 17,
+     "sideboard": 0
+    },
+    "curve": {
+     "average_mv": 2.33,
+     "average_mv_definition": "Karsten's: the mana values of the library's nonland cards added up (each copy) and divided by their number. Lands are left out; a spell // land modal card counts as its front face; X counts as 0. The commander and companion are cast from outside the library, so they're left out (listed under outside).",
+     "buckets": [
+      {
+       "cards": [],
+       "creatures": 0,
+       "mv": "0",
+       "noncreatures": 0,
+       "total": 0
+      },
+      {
+       "cards": [
+        {
+         "name": "Llanowar Elves",
+         "qty": 1
+        },
+        {
+         "name": "Pick Your Poison",
+         "qty": 1
+        }
+       ],
+       "creatures": 1,
+       "mv": "1",
+       "noncreatures": 1,
+       "total": 2
+      },
+      {
+       "cards": [],
+       "creatures": 0,
+       "mv": "2",
+       "noncreatures": 0,
+       "total": 0
+      },
+      {
+       "cards": [],
+       "creatures": 0,
+       "mv": "3",
+       "noncreatures": 0,
+       "total": 0
+      },
+      {
+       "cards": [],
+       "creatures": 0,
+       "mv": "4",
+       "noncreatures": 0,
+       "total": 0
+      },
+      {
+       "cards": [
+        {
+         "name": "Aerie Mystics",
+         "qty": 1
+        }
+       ],
+       "creatures": 1,
+       "mv": "5",
+       "noncreatures": 0,
+       "total": 1
+      },
+      {
+       "cards": [],
+       "creatures": 0,
+       "mv": "6",
+       "noncreatures": 0,
+       "total": 0
+      },
+      {
+       "cards": [],
+       "creatures": 0,
+       "mv": "7+",
+       "noncreatures": 0,
+       "total": 0
+      }
+     ],
+     "creatures": 2,
+     "noncreatures": 1,
+     "nonland": 3,
+     "outside": [],
+     "x_spells": {
+      "cards": [],
+      "count": 0
+     }
+    },
+    "guidance": {
+     "deck_size": 17,
+     "library": 20,
+     "note": "17 cards: using the 20-card guidance, the nearest deck size it covers (20, 40, 60).",
+     "size": 20
+    },
+    "keywords": [
+     {
+      "cards": [
+       {
+        "name": "Aerie Mystics",
+        "qty": 1
+       }
+      ],
+      "count": 1,
+      "keyword": "Flying"
+     }
+    ],
+    "kind": "constructed",
+    "lands": {
+     "average_mv": 2.33,
+     "band": 1.0,
+     "cheap": {
+      "count": 1,
+      "draw": [],
+      "ramp": [
+       {
+        "name": "Llanowar Elves",
+        "qty": 1
+       }
+      ]
+     },
+     "companions": 0,
+     "delta": -7.73,
+     "effective": 0.0,
+     "floor": null,
+     "formula": {
+      "published": false,
+      "source": "karsten-lands",
+      "status": "Not published by Karsten: his 60-card formula scaled by 20/60, the way he scales his 80-card one (our extrapolation). It fits all 10 Foundations Beginner Box halves within 0.97 lands and 118 of 119 Foundations Jumpstart lists within 1.",
+      "text": "lands = (20/60) x (19.59 + 1.9 x average mana value + 0.27 x companions) - 0.28 x cheap spells",
+      "worked": "(20/60) x (19.59 + 1.9 x 2.33 + 0.27 x 0) - 0.28 x 1 = 7.73"
+     },
+     "lands": 0,
+     "mana_creatures": [
+      {
+       "cheap": true,
+       "mv": 1.0,
+       "name": "Llanowar Elves",
+       "produces": "G",
+       "qty": 1
+      }
+     ],
+     "mana_rocks": [],
+     "mdfc": {
+      "cards": [],
+      "tapped": 0,
+      "untapped": 0
+     },
+     "recommended": 7.73,
+     "rule_of_thumb": {
+      "sources": [
+       "wizards-jumpstart"
+      ],
+      "text": "8 lands (7 basics + 1 nonbasic); 9 in top-heavy or land-matters halves"
+     },
+     "verdict": "low",
+     "verdict_text": "7.73 fewer lands than the formula (more than 2 off)."
+    },
+    "roles": [
+     {
+      "cards": [
+       {
+        "name": "Pick Your Poison",
+        "qty": 1
+       }
+      ],
+      "count": 1,
+      "role": "removal"
+     },
+     {
+      "cards": [
+       {
+        "name": "Llanowar Elves",
+        "qty": 1
+       }
+      ],
+      "count": 1,
+      "role": "ramp"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "role": "draw"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "role": "counterspell"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "role": "board wipe"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "role": "burn"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "role": "lifegain"
+     }
+    ],
+    "sideboard": {
+     "cards": [],
+     "checks": [],
+     "count": 0
+    },
+    "sources": {
+     "banned-list": {
+      "date": "Commander entry edited 2026-04-03; fetched 2026-09-29",
+      "title": "Banned and Restricted List, Commander entry (Wizards of the Coast)",
+      "url": "https://magic.wizards.com/en/banned-restricted-list"
+     },
+     "brackets-2025-02": {
+      "date": "2025-02-11",
+      "title": "Introducing Commander Brackets Beta (Wizards of the Coast)",
+      "url": "https://magic.wizards.com/en/news/announcements/introducing-commander-brackets-beta"
+     },
+     "brackets-2025-10": {
+      "date": "2025-10-21",
+      "title": "Commander Brackets Beta Update, October 21, 2025 (Wizards of the Coast)",
+      "url": "https://magic.wizards.com/en/news/announcements/commander-brackets-beta-update-october-21-2025"
+     },
+     "brackets-2026-02": {
+      "date": "2026-02-09",
+      "title": "Commander Brackets Beta Update, February 9, 2026 (Wizards of the Coast)",
+      "url": "https://magic.wizards.com/en/news/announcements/commander-brackets-beta-update-february-9-2026"
+     },
+     "commander-spellbook": {
+      "date": "the list downloaded with the card data; its date is shown with the checks",
+      "title": "Commander Spellbook's combo list: two-card combos (commanderspellbook.com, with thanks; fan content under Wizards' Fan Content Policy)",
+      "url": "https://commanderspellbook.com/"
+     },
+     "comp-rules": {
+      "date": "effective 2026-09-25",
+      "title": "Magic: The Gathering Comprehensive Rules, 903 (Commander)",
+      "url": "https://media.wizards.com/2026/downloads/MagicCompRules%2020260925.txt"
+     },
+     "edhrec-lands": {
+      "date": "2024-11-25",
+      "title": "How to Build a Commander Deck (Brian Cain, EDHREC)",
+      "url": "https://edhrec.com/articles/how-to-build-a-commander-deck"
+     },
+     "karsten-commander": {
+      "date": "2022-07-15, updated 2025-08-28",
+      "title": "What's an Optimal Mana Curve and Land/Ramp Count for Commander? (Frank Karsten)",
+      "url": "https://www.tcgplayer.com/content/article/What-s-an-Optimal-Mana-Curve-and-Land-Ramp-Count-for-Commander/e22caad1-b04b-4f8a-951b-a41e9f08da14/"
+     },
+     "karsten-lands": {
+      "date": "2022-07-29, page updated 2025-02-13; still his newest land-count study on 2026-09-29",
+      "title": "How Many Lands Do You Need in Your Deck? An Updated Analysis (Frank Karsten)",
+      "url": "https://www.tcgplayer.com/content/article/How-Many-Lands-Do-You-Need-in-Your-Deck-An-Updated-Analysis/cd1c1a24-d439-4a8e-b369-b936edb0b38a/"
+     },
+     "karsten-sources": {
+      "date": "2022-08-02, page updated 2025-02-13; still his newest on 2026-09-29",
+      "title": "How Many Sources Do You Need to Consistently Cast Your Spells? A 2022 Update (Frank Karsten)",
+      "url": "https://www.tcgplayer.com/content/article/How-Many-Sources-Do-You-Need-to-Consistently-Cast-Your-Spells-A-2022-Update/dc23a7d2-0a16-4c0b-ad36-586fcca03ad8/"
+     },
+     "karsten-verge": {
+      "date": "2024-10-18",
+      "title": "Building Mana Bases with Duskmourn's New Verge Lands (Frank Karsten)",
+      "url": "https://www.tcgplayer.com/content/article/Building-Mana-Bases-with-Duskmourn-s-New-Verge-Lands/02256252-047e-458a-92b3-bed999bd3364/"
+     },
+     "tagger": {
+      "date": "oracle_tags bulk file of 2026-09-28",
+      "title": "Scryfall Tagger oracle tags mass-land-denial and extra-turn",
+      "url": "https://tagger.scryfall.com/tags/card/mass-land-denial"
+     },
+     "wizards-commander": {
+      "date": "fetched 2026-09-29 (Game Changers last changed 2026-02-09)",
+      "title": "Commander format page: Brackets and Game Changers (Wizards of the Coast)",
+      "url": "https://magic.wizards.com/en/formats/commander"
+     },
+     "wizards-jumpstart": {
+      "date": "2024-10-28",
+      "title": "Foundations Jumpstart Booster Themes (Wizards of the Coast)",
+      "url": "https://magic.wizards.com/en/news/announcements/foundations-jumpstart-booster-themes"
+     },
+     "wizards-mana": {
+      "date": "2014-08-18",
+      "title": "The Basics of Mana (Reid Duke, Wizards of the Coast)",
+      "url": "https://magic.wizards.com/en/news/feature/basics-mana-2014-08-18"
+     }
+    },
+    "tribes": {
+     "changelings": {
+      "cards": [],
+      "count": 0,
+      "note": "Changelings are every creature type, so each also counts towards every tribe; they're counted above only under their printed types."
+     },
+     "types": [
+      {
+       "cards": [
+        {
+         "name": "Aerie Mystics",
+         "qty": 1
+        }
+       ],
+       "count": 1,
+       "type": "Bird"
+      },
+      {
+       "cards": [
+        {
+         "name": "Llanowar Elves",
+         "qty": 1
+        }
+       ],
+       "count": 1,
+       "type": "Druid"
+      },
+      {
+       "cards": [
+        {
+         "name": "Llanowar Elves",
+         "qty": 1
+        }
+       ],
+       "count": 1,
+       "type": "Elf"
+      },
+      {
+       "cards": [
+        {
+         "name": "Aerie Mystics",
+         "qty": 1
+        }
+       ],
+       "count": 1,
+       "type": "Wizard"
+      }
+     ]
+    },
+    "types": [
+     {
+      "cards": [
+       {
+        "name": "Aerie Mystics",
+        "qty": 1
+       },
+       {
+        "name": "Llanowar Elves",
+        "qty": 1
+       }
+      ],
+      "count": 2,
+      "type": "creature"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "type": "instant"
+     },
+     {
+      "cards": [
+       {
+        "name": "Pick Your Poison",
+        "qty": 1
+       }
+      ],
+      "count": 1,
+      "type": "sorcery"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "type": "artifact"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "type": "enchantment"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "type": "planeswalker"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "type": "battle"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "type": "land"
+     }
+    ],
+    "unresolved": [
+     {
+      "name": "Mountain",
+      "qty": 7,
+      "section": "Deck"
+     },
+     {
+      "name": "Plains",
+      "qty": 7,
+      "section": "Deck"
+     }
+    ],
+    "warnings": [
+     "17 cards: using the 20-card guidance, the nearest deck size it covers (20, 40, 60).",
+     "14 cards with names that aren't Scryfall cards count towards the deck size but nothing else: Mountain, Plains"
+    ]
+   },
+   "summary": {
+    "built_version": null,
+    "card_count": 17,
+    "format": "Beginner Box pairing (40 cards)",
+    "halves": [
+     "product/fdn-beginner-box/cats",
+     "product/fdn-beginner-box/goblins"
+    ],
+    "holder_sha256": null,
+    "id": "pairing/cats+goblins",
+    "kind": "casual",
+    "kit": {
+     "deck_box": null,
+     "holder": "pairing/cats+goblins",
+     "info": [],
+     "need": 17,
+     "owner": "shared",
+     "short": 0,
+     "sleeves": null,
+     "spare": 0,
+     "title": "Cats + Goblins (Beginner Box)",
+     "warnings": []
+    },
+    "player": null,
+    "read_only": true,
+    "sideboard_count": 0,
+    "source": "magic/products/fdn-beginner-box.csv",
+    "space": "home",
+    "status": null,
+    "title": "Cats + Goblins (Beginner Box)",
+    "versions": [
+     "target"
+    ]
+   },
+   "table": null,
+   "tokens": null,
+   "uncommitted": null,
+   "version": "target",
+   "versions": [
+    "target"
+   ],
+   "warnings": [
+    "Llanowar Elves (TST) 1: Scryfall has no printing TST 1",
+    "Pick Your Poison (TST) 1: Scryfall has no printing TST 1",
+    "'Plains' (Deck) isn't a Scryfall card name, so there's no card data for it",
+    "Aerie Mystics (TST) 1: Scryfall has no printing TST 1",
+    "'Mountain' (Deck) isn't a Scryfall card name, so there's no card data for it"
+   ]
+  },
+  "pairing/elves+cats@target": {
+   "guide": null,
+   "info": [],
+   "owned": {
+    "conflicts": [],
+    "deck_id": "pairing/elves+cats",
+    "price_date": "2026-09-28",
+    "price_error": null,
+    "rate": 1.5,
+    "rate_date": "2000-01-01",
+    "rows": [
+     {
+      "aud_each": 2.03,
+      "aud_missing": 0.0,
+      "available": 1,
+      "in_use_elsewhere": [],
+      "labels": {
+       "in_use": [],
+       "on_the_way": []
+      },
+      "missing": 0,
+      "name": "Elvish Mystic",
+      "need": 1,
+      "on_the_way": 0,
+      "on_the_way_from": [],
+      "owned": 1,
+      "priced_finish": "nonfoil",
+      "priced_printing": "CMM 648"
+     },
+     {
+      "aud_each": 0.3,
+      "aud_missing": 0.0,
+      "available": 2,
+      "in_use_elsewhere": [],
+      "labels": {
+       "in_use": [],
+       "on_the_way": []
+      },
+      "missing": 0,
+      "name": "Llanowar Elves",
+      "need": 2,
+      "on_the_way": 0,
+      "on_the_way_from": [],
+      "owned": 2,
+      "priced_finish": "nonfoil",
+      "priced_printing": "M19 314"
+     },
+     {
+      "aud_each": 0.41,
+      "aud_missing": 0.0,
+      "available": 1,
+      "in_use_elsewhere": [],
+      "labels": {
+       "in_use": [],
+       "on_the_way": []
+      },
+      "missing": 0,
+      "name": "Pick Your Poison",
+      "need": 1,
+      "on_the_way": 0,
+      "on_the_way_from": [],
+      "owned": 1,
+      "priced_finish": "nonfoil",
+      "priced_printing": "MKM 170"
+     }
+    ],
+    "totals": {
+     "aud_missing": 0,
+     "cards": 3,
+     "missing": 0,
+     "need": 4,
+     "unpriced": []
+    },
+    "unresolved": [],
+    "version": "target",
+    "warnings": []
+   },
+   "sections": {
+    "Deck": [
+     {
+      "card": {
+       "cmc": 1.0,
+       "color_identity": [
+        "G"
+       ],
+       "colors": [
+        "G"
+       ],
+       "defense": null,
+       "img": "/img/fdn/227/normal",
+       "img_small": "/img/fdn/227/small",
+       "loyalty": null,
+       "mana_cost": "{G}",
+       "name": "Llanowar Elves",
+       "oracle_text": "{T}: Add {G}.",
+       "power": "1",
+       "roles": [
+        "ramp"
+       ],
+       "toughness": "1",
+       "type_line": "Creature — Elf Druid"
+      },
+      "finish": "nonfoil",
+      "name": "Llanowar Elves",
+      "number": "1",
+      "qty": 2,
+      "set": "tst"
+     },
+     {
+      "card": {
+       "cmc": 1.0,
+       "color_identity": [
+        "G"
+       ],
+       "colors": [
+        "G"
+       ],
+       "defense": null,
+       "img": "/img/cmm/648/normal",
+       "img_small": "/img/cmm/648/small",
+       "loyalty": null,
+       "mana_cost": "{G}",
+       "name": "Elvish Mystic",
+       "oracle_text": "{T}: Add {G}.",
+       "power": "1",
+       "roles": [
+        "ramp"
+       ],
+       "toughness": "1",
+       "type_line": "Creature — Elf Druid"
+      },
+      "finish": "nonfoil",
+      "name": "Elvish Mystic",
+      "number": "1",
+      "qty": 1,
+      "set": "tst"
+     },
+     {
+      "card": null,
+      "finish": "nonfoil",
+      "name": "Forest",
+      "number": "1",
+      "qty": 7,
+      "set": "tst"
+     },
+     {
+      "card": {
+       "cmc": 1.0,
+       "color_identity": [
+        "G"
+       ],
+       "colors": [
+        "G"
+       ],
+       "defense": null,
+       "img": "/img/mkm/170/normal",
+       "img_small": "/img/mkm/170/small",
+       "loyalty": null,
+       "mana_cost": "{G}",
+       "name": "Pick Your Poison",
+       "oracle_text": "Choose one —\n• Each opponent sacrifices an artifact of their choice.\n• Each opponent sacrifices an enchantment of their choice.\n• Each opponent sacrifices a creature with flying of their choice.",
+       "power": null,
+       "roles": [
+        "removal"
+       ],
+       "toughness": null,
+       "type_line": "Sorcery"
+      },
+      "finish": "nonfoil",
+      "name": "Pick Your Poison",
+      "number": "1",
+      "qty": 1,
+      "set": "tst"
+     },
+     {
+      "card": null,
+      "finish": "nonfoil",
+      "name": "Plains",
+      "number": "1",
+      "qty": 7,
+      "set": "tst"
+     }
+    ]
+   },
+   "stats": {
+    "colours": {
+     "assumed_lands": null,
+     "colours": [
+      {
+       "checks": [
+        {
+         "cards": [
+          {
+           "name": "Elvish Mystic",
+           "qty": 1
+          },
+          {
+           "name": "Llanowar Elves",
+           "qty": 2
+          },
+          {
+           "name": "Pick Your Poison",
+           "qty": 1
+          }
+         ],
+         "colours": "G",
+         "cost": "C",
+         "cost_in_colours": "G",
+         "gold": false,
+         "have": 0.0,
+         "have_lands": 0.0,
+         "margin": null,
+         "needed": null,
+         "notes": [],
+         "ok": null,
+         "pips": 1,
+         "published": null,
+         "turn": 1
+        }
+       ],
+       "colours": "G",
+       "hardest": {
+        "cards": [
+         {
+          "name": "Elvish Mystic",
+          "qty": 1
+         },
+         {
+          "name": "Llanowar Elves",
+          "qty": 2
+         },
+         {
+          "name": "Pick Your Poison",
+          "qty": 1
+         }
+        ],
+        "colours": "G",
+        "cost": "C",
+        "cost_in_colours": "G",
+        "gold": false,
+        "have": 0.0,
+        "have_lands": 0.0,
+        "margin": null,
+        "needed": null,
+        "notes": [],
+        "ok": null,
+        "pips": 1,
+        "published": null,
+        "turn": 1
+       },
+       "land_sources": 0.0,
+       "name": "green",
+       "ok": null,
+       "short": []
+      }
+     ],
+     "deck_lands": 0.0,
+     "definition": "Karsten's 'consistently cast': at least an (89 + mana value)% chance to have the coloured sources by the turn equal to the spell's mana value, on the play, in games with enough lands.",
+     "land_note": null,
+     "ok": null,
+     "rules": [
+      "A land that makes the colour is 1 source. On turn 1 only lands that can enter untapped count (a shock land or fast land can, and in Commander a bond land; a check land, gain land or basic-land fetch can't).",
+      "A land that searches for a basic land is a source of each colour of the basics in the deck (2/3 of one in decks needing 3 or more colours); one that searches for a land type, of each colour the deck's lands of that type make. Pathways: 2/3 each in decks needing 3+ colours.",
+      "A land whose search costs mana (Myriad Landscape's {2}) is a source only of the colours it makes itself until it can be used: paying {2} takes two other lands, so the lands it finds count from turn 4 (Karsten's full source is for searches that cost no mana, like Evolving Wilds).",
+      "A spell // land modal card is 0.8 of a source (1 if its land can enter untapped).",
+      "Mana creatures: 0.5 of a source from the turn after they're cast (turn 2 at the earliest). Mana rocks: 0.75 from the turn after they're cast (turn 3 at the earliest). 2-mana land ramp: 0.75 from turn 3; 3-mana land ramp: 0.5 from turn 5. Each only when the deck can cast the card itself consistently.",
+      "Cheap card draw (mana value 2 or less): each digs for lands, worth (sources of the colour / deck size) rounded down to a quarter, for spells cast after it; the first 10 only.",
+      "Exotic Orchard 0.75 and Fellwar Stone 0.5 of any colour (opponents unknown).",
+      "Not counted: Treasure, scry, and a Verge land's condition (it counts fully for both colours)."
+     ],
+     "source": "karsten-sources",
+     "sources": [
+      {
+       "colours": "G",
+       "counted": true,
+       "found_from_turn": null,
+       "from_turn": 2,
+       "kind": "creature",
+       "name": "Elvish Mystic",
+       "note": "mana creature",
+       "qty": 1,
+       "turn_one": false,
+       "weight": 0.5
+      },
+      {
+       "colours": "G",
+       "counted": true,
+       "found_from_turn": null,
+       "from_turn": 2,
+       "kind": "creature",
+       "name": "Llanowar Elves",
+       "note": "mana creature",
+       "qty": 2,
+       "turn_one": false,
+       "weight": 0.5
+      }
+     ],
+     "table": null,
+     "table_note": "Karsten publishes no source counts below 40 cards, so a 20-card deck gets its sources and requirements without a verdict. Check its 40-card pairings."
+    },
+    "commander": null,
+    "counts": {
+     "commander": 0,
+     "companion": 0,
+     "deck": 18,
+     "main": 18,
+     "sideboard": 0
+    },
+    "curve": {
+     "average_mv": 1.0,
+     "average_mv_definition": "Karsten's: the mana values of the library's nonland cards added up (each copy) and divided by their number. Lands are left out; a spell // land modal card counts as its front face; X counts as 0. The commander and companion are cast from outside the library, so they're left out (listed under outside).",
+     "buckets": [
+      {
+       "cards": [],
+       "creatures": 0,
+       "mv": "0",
+       "noncreatures": 0,
+       "total": 0
+      },
+      {
+       "cards": [
+        {
+         "name": "Elvish Mystic",
+         "qty": 1
+        },
+        {
+         "name": "Llanowar Elves",
+         "qty": 2
+        },
+        {
+         "name": "Pick Your Poison",
+         "qty": 1
+        }
+       ],
+       "creatures": 3,
+       "mv": "1",
+       "noncreatures": 1,
+       "total": 4
+      },
+      {
+       "cards": [],
+       "creatures": 0,
+       "mv": "2",
+       "noncreatures": 0,
+       "total": 0
+      },
+      {
+       "cards": [],
+       "creatures": 0,
+       "mv": "3",
+       "noncreatures": 0,
+       "total": 0
+      },
+      {
+       "cards": [],
+       "creatures": 0,
+       "mv": "4",
+       "noncreatures": 0,
+       "total": 0
+      },
+      {
+       "cards": [],
+       "creatures": 0,
+       "mv": "5",
+       "noncreatures": 0,
+       "total": 0
+      },
+      {
+       "cards": [],
+       "creatures": 0,
+       "mv": "6",
+       "noncreatures": 0,
+       "total": 0
+      },
+      {
+       "cards": [],
+       "creatures": 0,
+       "mv": "7+",
+       "noncreatures": 0,
+       "total": 0
+      }
+     ],
+     "creatures": 3,
+     "noncreatures": 1,
+     "nonland": 4,
+     "outside": [],
+     "x_spells": {
+      "cards": [],
+      "count": 0
+     }
+    },
+    "guidance": {
+     "deck_size": 18,
+     "library": 20,
+     "note": "18 cards: using the 20-card guidance, the nearest deck size it covers (20, 40, 60).",
+     "size": 20
+    },
+    "keywords": [],
+    "kind": "constructed",
+    "lands": {
+     "average_mv": 1.0,
+     "band": 1.0,
+     "cheap": {
+      "count": 3,
+      "draw": [],
+      "ramp": [
+       {
+        "name": "Elvish Mystic",
+        "qty": 1
+       },
+       {
+        "name": "Llanowar Elves",
+        "qty": 2
+       }
+      ]
+     },
+     "companions": 0,
+     "delta": -6.32,
+     "effective": 0.0,
+     "floor": null,
+     "formula": {
+      "published": false,
+      "source": "karsten-lands",
+      "status": "Not published by Karsten: his 60-card formula scaled by 20/60, the way he scales his 80-card one (our extrapolation). It fits all 10 Foundations Beginner Box halves within 0.97 lands and 118 of 119 Foundations Jumpstart lists within 1.",
+      "text": "lands = (20/60) x (19.59 + 1.9 x average mana value + 0.27 x companions) - 0.28 x cheap spells",
+      "worked": "(20/60) x (19.59 + 1.9 x 1.00 + 0.27 x 0) - 0.28 x 3 = 6.32"
+     },
+     "lands": 0,
+     "mana_creatures": [
+      {
+       "cheap": true,
+       "mv": 1.0,
+       "name": "Elvish Mystic",
+       "produces": "G",
+       "qty": 1
+      },
+      {
+       "cheap": true,
+       "mv": 1.0,
+       "name": "Llanowar Elves",
+       "produces": "G",
+       "qty": 2
+      }
+     ],
+     "mana_rocks": [],
+     "mdfc": {
+      "cards": [],
+      "tapped": 0,
+      "untapped": 0
+     },
+     "recommended": 6.32,
+     "rule_of_thumb": {
+      "sources": [
+       "wizards-jumpstart"
+      ],
+      "text": "8 lands (7 basics + 1 nonbasic); 9 in top-heavy or land-matters halves"
+     },
+     "verdict": "low",
+     "verdict_text": "6.32 fewer lands than the formula (more than 2 off)."
+    },
+    "roles": [
+     {
+      "cards": [
+       {
+        "name": "Pick Your Poison",
+        "qty": 1
+       }
+      ],
+      "count": 1,
+      "role": "removal"
+     },
+     {
+      "cards": [
+       {
+        "name": "Elvish Mystic",
+        "qty": 1
+       },
+       {
+        "name": "Llanowar Elves",
+        "qty": 2
+       }
+      ],
+      "count": 3,
+      "role": "ramp"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "role": "draw"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "role": "counterspell"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "role": "board wipe"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "role": "burn"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "role": "lifegain"
+     }
+    ],
+    "sideboard": {
+     "cards": [],
+     "checks": [],
+     "count": 0
+    },
+    "sources": {
+     "banned-list": {
+      "date": "Commander entry edited 2026-04-03; fetched 2026-09-29",
+      "title": "Banned and Restricted List, Commander entry (Wizards of the Coast)",
+      "url": "https://magic.wizards.com/en/banned-restricted-list"
+     },
+     "brackets-2025-02": {
+      "date": "2025-02-11",
+      "title": "Introducing Commander Brackets Beta (Wizards of the Coast)",
+      "url": "https://magic.wizards.com/en/news/announcements/introducing-commander-brackets-beta"
+     },
+     "brackets-2025-10": {
+      "date": "2025-10-21",
+      "title": "Commander Brackets Beta Update, October 21, 2025 (Wizards of the Coast)",
+      "url": "https://magic.wizards.com/en/news/announcements/commander-brackets-beta-update-october-21-2025"
+     },
+     "brackets-2026-02": {
+      "date": "2026-02-09",
+      "title": "Commander Brackets Beta Update, February 9, 2026 (Wizards of the Coast)",
+      "url": "https://magic.wizards.com/en/news/announcements/commander-brackets-beta-update-february-9-2026"
+     },
+     "commander-spellbook": {
+      "date": "the list downloaded with the card data; its date is shown with the checks",
+      "title": "Commander Spellbook's combo list: two-card combos (commanderspellbook.com, with thanks; fan content under Wizards' Fan Content Policy)",
+      "url": "https://commanderspellbook.com/"
+     },
+     "comp-rules": {
+      "date": "effective 2026-09-25",
+      "title": "Magic: The Gathering Comprehensive Rules, 903 (Commander)",
+      "url": "https://media.wizards.com/2026/downloads/MagicCompRules%2020260925.txt"
+     },
+     "edhrec-lands": {
+      "date": "2024-11-25",
+      "title": "How to Build a Commander Deck (Brian Cain, EDHREC)",
+      "url": "https://edhrec.com/articles/how-to-build-a-commander-deck"
+     },
+     "karsten-commander": {
+      "date": "2022-07-15, updated 2025-08-28",
+      "title": "What's an Optimal Mana Curve and Land/Ramp Count for Commander? (Frank Karsten)",
+      "url": "https://www.tcgplayer.com/content/article/What-s-an-Optimal-Mana-Curve-and-Land-Ramp-Count-for-Commander/e22caad1-b04b-4f8a-951b-a41e9f08da14/"
+     },
+     "karsten-lands": {
+      "date": "2022-07-29, page updated 2025-02-13; still his newest land-count study on 2026-09-29",
+      "title": "How Many Lands Do You Need in Your Deck? An Updated Analysis (Frank Karsten)",
+      "url": "https://www.tcgplayer.com/content/article/How-Many-Lands-Do-You-Need-in-Your-Deck-An-Updated-Analysis/cd1c1a24-d439-4a8e-b369-b936edb0b38a/"
+     },
+     "karsten-sources": {
+      "date": "2022-08-02, page updated 2025-02-13; still his newest on 2026-09-29",
+      "title": "How Many Sources Do You Need to Consistently Cast Your Spells? A 2022 Update (Frank Karsten)",
+      "url": "https://www.tcgplayer.com/content/article/How-Many-Sources-Do-You-Need-to-Consistently-Cast-Your-Spells-A-2022-Update/dc23a7d2-0a16-4c0b-ad36-586fcca03ad8/"
+     },
+     "karsten-verge": {
+      "date": "2024-10-18",
+      "title": "Building Mana Bases with Duskmourn's New Verge Lands (Frank Karsten)",
+      "url": "https://www.tcgplayer.com/content/article/Building-Mana-Bases-with-Duskmourn-s-New-Verge-Lands/02256252-047e-458a-92b3-bed999bd3364/"
+     },
+     "tagger": {
+      "date": "oracle_tags bulk file of 2026-09-28",
+      "title": "Scryfall Tagger oracle tags mass-land-denial and extra-turn",
+      "url": "https://tagger.scryfall.com/tags/card/mass-land-denial"
+     },
+     "wizards-commander": {
+      "date": "fetched 2026-09-29 (Game Changers last changed 2026-02-09)",
+      "title": "Commander format page: Brackets and Game Changers (Wizards of the Coast)",
+      "url": "https://magic.wizards.com/en/formats/commander"
+     },
+     "wizards-jumpstart": {
+      "date": "2024-10-28",
+      "title": "Foundations Jumpstart Booster Themes (Wizards of the Coast)",
+      "url": "https://magic.wizards.com/en/news/announcements/foundations-jumpstart-booster-themes"
+     },
+     "wizards-mana": {
+      "date": "2014-08-18",
+      "title": "The Basics of Mana (Reid Duke, Wizards of the Coast)",
+      "url": "https://magic.wizards.com/en/news/feature/basics-mana-2014-08-18"
+     }
+    },
+    "tribes": {
+     "changelings": {
+      "cards": [],
+      "count": 0,
+      "note": "Changelings are every creature type, so each also counts towards every tribe; they're counted above only under their printed types."
+     },
+     "types": [
+      {
+       "cards": [
+        {
+         "name": "Elvish Mystic",
+         "qty": 1
+        },
+        {
+         "name": "Llanowar Elves",
+         "qty": 2
+        }
+       ],
+       "count": 3,
+       "type": "Druid"
+      },
+      {
+       "cards": [
+        {
+         "name": "Elvish Mystic",
+         "qty": 1
+        },
+        {
+         "name": "Llanowar Elves",
+         "qty": 2
+        }
+       ],
+       "count": 3,
+       "type": "Elf"
+      }
+     ]
+    },
+    "types": [
+     {
+      "cards": [
+       {
+        "name": "Elvish Mystic",
+        "qty": 1
+       },
+       {
+        "name": "Llanowar Elves",
+        "qty": 2
+       }
+      ],
+      "count": 3,
+      "type": "creature"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "type": "instant"
+     },
+     {
+      "cards": [
+       {
+        "name": "Pick Your Poison",
+        "qty": 1
+       }
+      ],
+      "count": 1,
+      "type": "sorcery"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "type": "artifact"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "type": "enchantment"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "type": "planeswalker"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "type": "battle"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "type": "land"
+     }
+    ],
+    "unresolved": [
+     {
+      "name": "Forest",
+      "qty": 7,
+      "section": "Deck"
+     },
+     {
+      "name": "Plains",
+      "qty": 7,
+      "section": "Deck"
+     }
+    ],
+    "warnings": [
+     "18 cards: using the 20-card guidance, the nearest deck size it covers (20, 40, 60).",
+     "14 cards with names that aren't Scryfall cards count towards the deck size but nothing else: Forest, Plains"
+    ]
+   },
+   "summary": {
+    "built_version": null,
+    "card_count": 18,
+    "format": "Beginner Box pairing (40 cards)",
+    "halves": [
+     "product/fdn-beginner-box/elves",
+     "product/fdn-beginner-box/cats"
+    ],
+    "holder_sha256": null,
+    "id": "pairing/elves+cats",
+    "kind": "casual",
+    "kit": {
+     "deck_box": null,
+     "holder": "pairing/elves+cats",
+     "info": [],
+     "need": 18,
+     "owner": "shared",
+     "short": 0,
+     "sleeves": null,
+     "spare": 0,
+     "title": "Elves + Cats (Beginner Box)",
+     "warnings": []
+    },
+    "player": null,
+    "read_only": true,
+    "sideboard_count": 0,
+    "source": "magic/products/fdn-beginner-box.csv",
+    "space": "home",
+    "status": null,
+    "title": "Elves + Cats (Beginner Box)",
+    "versions": [
+     "target"
+    ]
+   },
+   "table": null,
+   "tokens": null,
+   "uncommitted": null,
+   "version": "target",
+   "versions": [
+    "target"
+   ],
+   "warnings": [
+    "Llanowar Elves (TST) 1: Scryfall has no printing TST 1",
+    "Elvish Mystic (TST) 1: Scryfall has no printing TST 1",
+    "'Forest' (Deck) isn't a Scryfall card name, so there's no card data for it",
+    "Pick Your Poison (TST) 1: Scryfall has no printing TST 1",
+    "'Plains' (Deck) isn't a Scryfall card name, so there's no card data for it"
+   ]
+  },
+  "pairing/elves+goblins@target": {
+   "guide": null,
+   "info": [],
+   "owned": {
+    "conflicts": [
+     {
+      "available": 1,
+      "decks": [
+       [
+        "Cats (Foundations Beginner Box)",
+        1
+       ]
+      ],
+      "missing": 0,
+      "name": "Llanowar Elves",
+      "need": 1,
+      "owned": 2,
+      "short": 0
+     }
+    ],
+    "deck_id": "pairing/elves+goblins",
+    "price_date": "2026-09-28",
+    "price_error": null,
+    "rate": 1.5,
+    "rate_date": "2000-01-01",
+    "rows": [
+     {
+      "aud_each": 0.17,
+      "aud_missing": 0.0,
+      "available": 1,
+      "in_use_elsewhere": [],
+      "labels": {
+       "in_use": [],
+       "on_the_way": []
+      },
+      "missing": 0,
+      "name": "Aerie Mystics",
+      "need": 1,
+      "on_the_way": 0,
+      "on_the_way_from": [],
+      "owned": 1,
+      "priced_finish": "nonfoil",
+      "priced_printing": "CON 1"
+     },
+     {
+      "aud_each": 2.03,
+      "aud_missing": 0.0,
+      "available": 1,
+      "in_use_elsewhere": [],
+      "labels": {
+       "in_use": [],
+       "on_the_way": []
+      },
+      "missing": 0,
+      "name": "Elvish Mystic",
+      "need": 1,
+      "on_the_way": 0,
+      "on_the_way_from": [],
+      "owned": 1,
+      "priced_finish": "nonfoil",
+      "priced_printing": "CMM 648"
+     },
+     {
+      "aud_each": 0.3,
+      "aud_missing": 0.0,
+      "available": 1,
+      "in_use_elsewhere": [
+       [
+        "Cats (Foundations Beginner Box)",
+        1
+       ]
+      ],
+      "labels": {
+       "in_use": [],
+       "on_the_way": []
+      },
+      "missing": 0,
+      "name": "Llanowar Elves",
+      "need": 1,
+      "on_the_way": 0,
+      "on_the_way_from": [],
+      "owned": 2,
+      "priced_finish": "nonfoil",
+      "priced_printing": "M19 314"
+     }
+    ],
+    "totals": {
+     "aud_missing": 0,
+     "cards": 3,
+     "missing": 0,
+     "need": 3,
+     "unpriced": []
+    },
+    "unresolved": [],
+    "version": "target",
+    "warnings": []
+   },
+   "sections": {
+    "Deck": [
+     {
+      "card": {
+       "cmc": 1.0,
+       "color_identity": [
+        "G"
+       ],
+       "colors": [
+        "G"
+       ],
+       "defense": null,
+       "img": "/img/fdn/227/normal",
+       "img_small": "/img/fdn/227/small",
+       "loyalty": null,
+       "mana_cost": "{G}",
+       "name": "Llanowar Elves",
+       "oracle_text": "{T}: Add {G}.",
+       "power": "1",
+       "roles": [
+        "ramp"
+       ],
+       "toughness": "1",
+       "type_line": "Creature — Elf Druid"
+      },
+      "finish": "nonfoil",
+      "name": "Llanowar Elves",
+      "number": "1",
+      "qty": 1,
+      "set": "tst"
+     },
+     {
+      "card": {
+       "cmc": 1.0,
+       "color_identity": [
+        "G"
+       ],
+       "colors": [
+        "G"
+       ],
+       "defense": null,
+       "img": "/img/cmm/648/normal",
+       "img_small": "/img/cmm/648/small",
+       "loyalty": null,
+       "mana_cost": "{G}",
+       "name": "Elvish Mystic",
+       "oracle_text": "{T}: Add {G}.",
+       "power": "1",
+       "roles": [
+        "ramp"
+       ],
+       "toughness": "1",
+       "type_line": "Creature — Elf Druid"
+      },
+      "finish": "nonfoil",
+      "name": "Elvish Mystic",
+      "number": "1",
+      "qty": 1,
+      "set": "tst"
+     },
+     {
+      "card": null,
+      "finish": "nonfoil",
+      "name": "Forest",
+      "number": "1",
+      "qty": 7,
+      "set": "tst"
+     },
+     {
+      "card": {
+       "cmc": 5.0,
+       "color_identity": [
+        "G",
+        "U",
+        "W"
+       ],
+       "colors": [
+        "W"
+       ],
+       "defense": null,
+       "img": "/img/con/1/normal",
+       "img_small": "/img/con/1/small",
+       "loyalty": null,
+       "mana_cost": "{4}{W}",
+       "name": "Aerie Mystics",
+       "oracle_text": "Flying\n{1}{G}{U}: Creatures you control gain shroud until end of turn. (They can't be the targets of spells or abilities.)",
+       "power": "3",
+       "roles": [],
+       "toughness": "3",
+       "type_line": "Creature — Bird Wizard"
+      },
+      "finish": "nonfoil",
+      "name": "Aerie Mystics",
+      "number": "1",
+      "qty": 1,
+      "set": "tst"
+     },
+     {
+      "card": null,
+      "finish": "nonfoil",
+      "name": "Mountain",
+      "number": "1",
+      "qty": 7,
+      "set": "tst"
+     }
+    ]
+   },
+   "stats": {
+    "colours": {
+     "assumed_lands": null,
+     "colours": [
+      {
+       "checks": [
+        {
+         "cards": [
+          {
+           "name": "Aerie Mystics",
+           "qty": 1
+          }
+         ],
+         "colours": "W",
+         "cost": "4C",
+         "cost_in_colours": "4W",
+         "gold": false,
+         "have": 0.0,
+         "have_lands": 0.0,
+         "margin": null,
+         "needed": null,
+         "notes": [],
+         "ok": null,
+         "pips": 1,
+         "published": null,
+         "turn": 5
+        }
+       ],
+       "colours": "W",
+       "hardest": {
+        "cards": [
+         {
+          "name": "Aerie Mystics",
+          "qty": 1
+         }
+        ],
+        "colours": "W",
+        "cost": "4C",
+        "cost_in_colours": "4W",
+        "gold": false,
+        "have": 0.0,
+        "have_lands": 0.0,
+        "margin": null,
+        "needed": null,
+        "notes": [],
+        "ok": null,
+        "pips": 1,
+        "published": null,
+        "turn": 5
+       },
+       "land_sources": 0.0,
+       "name": "white",
+       "ok": null,
+       "short": []
+      },
+      {
+       "checks": [
+        {
+         "cards": [
+          {
+           "name": "Elvish Mystic",
+           "qty": 1
+          },
+          {
+           "name": "Llanowar Elves",
+           "qty": 1
+          }
+         ],
+         "colours": "G",
+         "cost": "C",
+         "cost_in_colours": "G",
+         "gold": false,
+         "have": 0.0,
+         "have_lands": 0.0,
+         "margin": null,
+         "needed": null,
+         "notes": [],
+         "ok": null,
+         "pips": 1,
+         "published": null,
+         "turn": 1
+        }
+       ],
+       "colours": "G",
+       "hardest": {
+        "cards": [
+         {
+          "name": "Elvish Mystic",
+          "qty": 1
+         },
+         {
+          "name": "Llanowar Elves",
+          "qty": 1
+         }
+        ],
+        "colours": "G",
+        "cost": "C",
+        "cost_in_colours": "G",
+        "gold": false,
+        "have": 0.0,
+        "have_lands": 0.0,
+        "margin": null,
+        "needed": null,
+        "notes": [],
+        "ok": null,
+        "pips": 1,
+        "published": null,
+        "turn": 1
+       },
+       "land_sources": 0.0,
+       "name": "green",
+       "ok": null,
+       "short": []
+      }
+     ],
+     "deck_lands": 0.0,
+     "definition": "Karsten's 'consistently cast': at least an (89 + mana value)% chance to have the coloured sources by the turn equal to the spell's mana value, on the play, in games with enough lands.",
+     "land_note": null,
+     "ok": null,
+     "rules": [
+      "A land that makes the colour is 1 source. On turn 1 only lands that can enter untapped count (a shock land or fast land can, and in Commander a bond land; a check land, gain land or basic-land fetch can't).",
+      "A land that searches for a basic land is a source of each colour of the basics in the deck (2/3 of one in decks needing 3 or more colours); one that searches for a land type, of each colour the deck's lands of that type make. Pathways: 2/3 each in decks needing 3+ colours.",
+      "A land whose search costs mana (Myriad Landscape's {2}) is a source only of the colours it makes itself until it can be used: paying {2} takes two other lands, so the lands it finds count from turn 4 (Karsten's full source is for searches that cost no mana, like Evolving Wilds).",
+      "A spell // land modal card is 0.8 of a source (1 if its land can enter untapped).",
+      "Mana creatures: 0.5 of a source from the turn after they're cast (turn 2 at the earliest). Mana rocks: 0.75 from the turn after they're cast (turn 3 at the earliest). 2-mana land ramp: 0.75 from turn 3; 3-mana land ramp: 0.5 from turn 5. Each only when the deck can cast the card itself consistently.",
+      "Cheap card draw (mana value 2 or less): each digs for lands, worth (sources of the colour / deck size) rounded down to a quarter, for spells cast after it; the first 10 only.",
+      "Exotic Orchard 0.75 and Fellwar Stone 0.5 of any colour (opponents unknown).",
+      "Not counted: Treasure, scry, and a Verge land's condition (it counts fully for both colours)."
+     ],
+     "source": "karsten-sources",
+     "sources": [
+      {
+       "colours": "G",
+       "counted": true,
+       "found_from_turn": null,
+       "from_turn": 2,
+       "kind": "creature",
+       "name": "Elvish Mystic",
+       "note": "mana creature",
+       "qty": 1,
+       "turn_one": false,
+       "weight": 0.5
+      },
+      {
+       "colours": "G",
+       "counted": true,
+       "found_from_turn": null,
+       "from_turn": 2,
+       "kind": "creature",
+       "name": "Llanowar Elves",
+       "note": "mana creature",
+       "qty": 1,
+       "turn_one": false,
+       "weight": 0.5
+      }
+     ],
+     "table": null,
+     "table_note": "Karsten publishes no source counts below 40 cards, so a 20-card deck gets its sources and requirements without a verdict. Check its 40-card pairings."
+    },
+    "commander": null,
+    "counts": {
+     "commander": 0,
+     "companion": 0,
+     "deck": 17,
+     "main": 17,
+     "sideboard": 0
+    },
+    "curve": {
+     "average_mv": 2.33,
+     "average_mv_definition": "Karsten's: the mana values of the library's nonland cards added up (each copy) and divided by their number. Lands are left out; a spell // land modal card counts as its front face; X counts as 0. The commander and companion are cast from outside the library, so they're left out (listed under outside).",
+     "buckets": [
+      {
+       "cards": [],
+       "creatures": 0,
+       "mv": "0",
+       "noncreatures": 0,
+       "total": 0
+      },
+      {
+       "cards": [
+        {
+         "name": "Elvish Mystic",
+         "qty": 1
+        },
+        {
+         "name": "Llanowar Elves",
+         "qty": 1
+        }
+       ],
+       "creatures": 2,
+       "mv": "1",
+       "noncreatures": 0,
+       "total": 2
+      },
+      {
+       "cards": [],
+       "creatures": 0,
+       "mv": "2",
+       "noncreatures": 0,
+       "total": 0
+      },
+      {
+       "cards": [],
+       "creatures": 0,
+       "mv": "3",
+       "noncreatures": 0,
+       "total": 0
+      },
+      {
+       "cards": [],
+       "creatures": 0,
+       "mv": "4",
+       "noncreatures": 0,
+       "total": 0
+      },
+      {
+       "cards": [
+        {
+         "name": "Aerie Mystics",
+         "qty": 1
+        }
+       ],
+       "creatures": 1,
+       "mv": "5",
+       "noncreatures": 0,
+       "total": 1
+      },
+      {
+       "cards": [],
+       "creatures": 0,
+       "mv": "6",
+       "noncreatures": 0,
+       "total": 0
+      },
+      {
+       "cards": [],
+       "creatures": 0,
+       "mv": "7+",
+       "noncreatures": 0,
+       "total": 0
+      }
+     ],
+     "creatures": 3,
+     "noncreatures": 0,
+     "nonland": 3,
+     "outside": [],
+     "x_spells": {
+      "cards": [],
+      "count": 0
+     }
+    },
+    "guidance": {
+     "deck_size": 17,
+     "library": 20,
+     "note": "17 cards: using the 20-card guidance, the nearest deck size it covers (20, 40, 60).",
+     "size": 20
+    },
+    "keywords": [
+     {
+      "cards": [
+       {
+        "name": "Aerie Mystics",
+        "qty": 1
+       }
+      ],
+      "count": 1,
+      "keyword": "Flying"
+     }
+    ],
+    "kind": "constructed",
+    "lands": {
+     "average_mv": 2.33,
+     "band": 1.0,
+     "cheap": {
+      "count": 2,
+      "draw": [],
+      "ramp": [
+       {
+        "name": "Elvish Mystic",
+        "qty": 1
+       },
+       {
+        "name": "Llanowar Elves",
+        "qty": 1
+       }
+      ]
+     },
+     "companions": 0,
+     "delta": -7.45,
+     "effective": 0.0,
+     "floor": null,
+     "formula": {
+      "published": false,
+      "source": "karsten-lands",
+      "status": "Not published by Karsten: his 60-card formula scaled by 20/60, the way he scales his 80-card one (our extrapolation). It fits all 10 Foundations Beginner Box halves within 0.97 lands and 118 of 119 Foundations Jumpstart lists within 1.",
+      "text": "lands = (20/60) x (19.59 + 1.9 x average mana value + 0.27 x companions) - 0.28 x cheap spells",
+      "worked": "(20/60) x (19.59 + 1.9 x 2.33 + 0.27 x 0) - 0.28 x 2 = 7.45"
+     },
+     "lands": 0,
+     "mana_creatures": [
+      {
+       "cheap": true,
+       "mv": 1.0,
+       "name": "Elvish Mystic",
+       "produces": "G",
+       "qty": 1
+      },
+      {
+       "cheap": true,
+       "mv": 1.0,
+       "name": "Llanowar Elves",
+       "produces": "G",
+       "qty": 1
+      }
+     ],
+     "mana_rocks": [],
+     "mdfc": {
+      "cards": [],
+      "tapped": 0,
+      "untapped": 0
+     },
+     "recommended": 7.45,
+     "rule_of_thumb": {
+      "sources": [
+       "wizards-jumpstart"
+      ],
+      "text": "8 lands (7 basics + 1 nonbasic); 9 in top-heavy or land-matters halves"
+     },
+     "verdict": "low",
+     "verdict_text": "7.45 fewer lands than the formula (more than 2 off)."
+    },
+    "roles": [
+     {
+      "cards": [],
+      "count": 0,
+      "role": "removal"
+     },
+     {
+      "cards": [
+       {
+        "name": "Elvish Mystic",
+        "qty": 1
+       },
+       {
+        "name": "Llanowar Elves",
+        "qty": 1
+       }
+      ],
+      "count": 2,
+      "role": "ramp"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "role": "draw"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "role": "counterspell"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "role": "board wipe"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "role": "burn"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "role": "lifegain"
+     }
+    ],
+    "sideboard": {
+     "cards": [],
+     "checks": [],
+     "count": 0
+    },
+    "sources": {
+     "banned-list": {
+      "date": "Commander entry edited 2026-04-03; fetched 2026-09-29",
+      "title": "Banned and Restricted List, Commander entry (Wizards of the Coast)",
+      "url": "https://magic.wizards.com/en/banned-restricted-list"
+     },
+     "brackets-2025-02": {
+      "date": "2025-02-11",
+      "title": "Introducing Commander Brackets Beta (Wizards of the Coast)",
+      "url": "https://magic.wizards.com/en/news/announcements/introducing-commander-brackets-beta"
+     },
+     "brackets-2025-10": {
+      "date": "2025-10-21",
+      "title": "Commander Brackets Beta Update, October 21, 2025 (Wizards of the Coast)",
+      "url": "https://magic.wizards.com/en/news/announcements/commander-brackets-beta-update-october-21-2025"
+     },
+     "brackets-2026-02": {
+      "date": "2026-02-09",
+      "title": "Commander Brackets Beta Update, February 9, 2026 (Wizards of the Coast)",
+      "url": "https://magic.wizards.com/en/news/announcements/commander-brackets-beta-update-february-9-2026"
+     },
+     "commander-spellbook": {
+      "date": "the list downloaded with the card data; its date is shown with the checks",
+      "title": "Commander Spellbook's combo list: two-card combos (commanderspellbook.com, with thanks; fan content under Wizards' Fan Content Policy)",
+      "url": "https://commanderspellbook.com/"
+     },
+     "comp-rules": {
+      "date": "effective 2026-09-25",
+      "title": "Magic: The Gathering Comprehensive Rules, 903 (Commander)",
+      "url": "https://media.wizards.com/2026/downloads/MagicCompRules%2020260925.txt"
+     },
+     "edhrec-lands": {
+      "date": "2024-11-25",
+      "title": "How to Build a Commander Deck (Brian Cain, EDHREC)",
+      "url": "https://edhrec.com/articles/how-to-build-a-commander-deck"
+     },
+     "karsten-commander": {
+      "date": "2022-07-15, updated 2025-08-28",
+      "title": "What's an Optimal Mana Curve and Land/Ramp Count for Commander? (Frank Karsten)",
+      "url": "https://www.tcgplayer.com/content/article/What-s-an-Optimal-Mana-Curve-and-Land-Ramp-Count-for-Commander/e22caad1-b04b-4f8a-951b-a41e9f08da14/"
+     },
+     "karsten-lands": {
+      "date": "2022-07-29, page updated 2025-02-13; still his newest land-count study on 2026-09-29",
+      "title": "How Many Lands Do You Need in Your Deck? An Updated Analysis (Frank Karsten)",
+      "url": "https://www.tcgplayer.com/content/article/How-Many-Lands-Do-You-Need-in-Your-Deck-An-Updated-Analysis/cd1c1a24-d439-4a8e-b369-b936edb0b38a/"
+     },
+     "karsten-sources": {
+      "date": "2022-08-02, page updated 2025-02-13; still his newest on 2026-09-29",
+      "title": "How Many Sources Do You Need to Consistently Cast Your Spells? A 2022 Update (Frank Karsten)",
+      "url": "https://www.tcgplayer.com/content/article/How-Many-Sources-Do-You-Need-to-Consistently-Cast-Your-Spells-A-2022-Update/dc23a7d2-0a16-4c0b-ad36-586fcca03ad8/"
+     },
+     "karsten-verge": {
+      "date": "2024-10-18",
+      "title": "Building Mana Bases with Duskmourn's New Verge Lands (Frank Karsten)",
+      "url": "https://www.tcgplayer.com/content/article/Building-Mana-Bases-with-Duskmourn-s-New-Verge-Lands/02256252-047e-458a-92b3-bed999bd3364/"
+     },
+     "tagger": {
+      "date": "oracle_tags bulk file of 2026-09-28",
+      "title": "Scryfall Tagger oracle tags mass-land-denial and extra-turn",
+      "url": "https://tagger.scryfall.com/tags/card/mass-land-denial"
+     },
+     "wizards-commander": {
+      "date": "fetched 2026-09-29 (Game Changers last changed 2026-02-09)",
+      "title": "Commander format page: Brackets and Game Changers (Wizards of the Coast)",
+      "url": "https://magic.wizards.com/en/formats/commander"
+     },
+     "wizards-jumpstart": {
+      "date": "2024-10-28",
+      "title": "Foundations Jumpstart Booster Themes (Wizards of the Coast)",
+      "url": "https://magic.wizards.com/en/news/announcements/foundations-jumpstart-booster-themes"
+     },
+     "wizards-mana": {
+      "date": "2014-08-18",
+      "title": "The Basics of Mana (Reid Duke, Wizards of the Coast)",
+      "url": "https://magic.wizards.com/en/news/feature/basics-mana-2014-08-18"
+     }
+    },
+    "tribes": {
+     "changelings": {
+      "cards": [],
+      "count": 0,
+      "note": "Changelings are every creature type, so each also counts towards every tribe; they're counted above only under their printed types."
+     },
+     "types": [
+      {
+       "cards": [
+        {
+         "name": "Elvish Mystic",
+         "qty": 1
+        },
+        {
+         "name": "Llanowar Elves",
+         "qty": 1
+        }
+       ],
+       "count": 2,
+       "type": "Druid"
+      },
+      {
+       "cards": [
+        {
+         "name": "Elvish Mystic",
+         "qty": 1
+        },
+        {
+         "name": "Llanowar Elves",
+         "qty": 1
+        }
+       ],
+       "count": 2,
+       "type": "Elf"
+      },
+      {
+       "cards": [
+        {
+         "name": "Aerie Mystics",
+         "qty": 1
+        }
+       ],
+       "count": 1,
+       "type": "Bird"
+      },
+      {
+       "cards": [
+        {
+         "name": "Aerie Mystics",
+         "qty": 1
+        }
+       ],
+       "count": 1,
+       "type": "Wizard"
+      }
+     ]
+    },
+    "types": [
+     {
+      "cards": [
+       {
+        "name": "Aerie Mystics",
+        "qty": 1
+       },
+       {
+        "name": "Elvish Mystic",
+        "qty": 1
+       },
+       {
+        "name": "Llanowar Elves",
+        "qty": 1
+       }
+      ],
+      "count": 3,
+      "type": "creature"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "type": "instant"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "type": "sorcery"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "type": "artifact"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "type": "enchantment"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "type": "planeswalker"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "type": "battle"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "type": "land"
+     }
+    ],
+    "unresolved": [
+     {
+      "name": "Forest",
+      "qty": 7,
+      "section": "Deck"
+     },
+     {
+      "name": "Mountain",
+      "qty": 7,
+      "section": "Deck"
+     }
+    ],
+    "warnings": [
+     "17 cards: using the 20-card guidance, the nearest deck size it covers (20, 40, 60).",
+     "14 cards with names that aren't Scryfall cards count towards the deck size but nothing else: Forest, Mountain"
+    ]
+   },
+   "summary": {
+    "built_version": null,
+    "card_count": 17,
+    "format": "Beginner Box pairing (40 cards)",
+    "halves": [
+     "product/fdn-beginner-box/elves",
+     "product/fdn-beginner-box/goblins"
+    ],
+    "holder_sha256": null,
+    "id": "pairing/elves+goblins",
+    "kind": "casual",
+    "kit": {
+     "deck_box": null,
+     "holder": "pairing/elves+goblins",
+     "info": [],
+     "need": 17,
+     "owner": "shared",
+     "short": 0,
+     "sleeves": null,
+     "spare": 0,
+     "title": "Elves + Goblins (Beginner Box)",
+     "warnings": []
+    },
+    "player": null,
+    "read_only": true,
+    "sideboard_count": 0,
+    "source": "magic/products/fdn-beginner-box.csv",
+    "space": "home",
+    "status": null,
+    "title": "Elves + Goblins (Beginner Box)",
+    "versions": [
+     "target"
+    ]
+   },
+   "table": null,
+   "tokens": null,
+   "uncommitted": null,
+   "version": "target",
+   "versions": [
+    "target"
+   ],
+   "warnings": [
+    "Llanowar Elves (TST) 1: Scryfall has no printing TST 1",
+    "Elvish Mystic (TST) 1: Scryfall has no printing TST 1",
+    "'Forest' (Deck) isn't a Scryfall card name, so there's no card data for it",
+    "Aerie Mystics (TST) 1: Scryfall has no printing TST 1",
+    "'Mountain' (Deck) isn't a Scryfall card name, so there's no card data for it"
+   ]
+  },
+  "product/fdn-beginner-box/cats@target": {
+   "guide": null,
+   "info": [],
+   "owned": {
+    "conflicts": [
+     {
+      "available": 1,
+      "decks": [
+       [
+        "Elves (Foundations Beginner Box)",
+        1
+       ]
+      ],
+      "missing": 0,
+      "name": "Llanowar Elves",
+      "need": 1,
+      "owned": 2,
+      "short": 0
+     }
+    ],
+    "deck_id": "product/fdn-beginner-box/cats",
+    "price_date": "2026-09-28",
+    "price_error": null,
+    "rate": 1.5,
+    "rate_date": "2000-01-01",
+    "rows": [
+     {
+      "aud_each": 0.3,
+      "aud_missing": 0.0,
+      "available": 1,
+      "in_use_elsewhere": [
+       [
+        "Elves (Foundations Beginner Box)",
+        1
+       ]
+      ],
+      "labels": {
+       "in_use": [],
+       "on_the_way": []
+      },
+      "missing": 0,
+      "name": "Llanowar Elves",
+      "need": 1,
+      "on_the_way": 0,
+      "on_the_way_from": [],
+      "owned": 2,
+      "priced_finish": "nonfoil",
+      "priced_printing": "M19 314"
+     },
+     {
+      "aud_each": 0.41,
+      "aud_missing": 0.0,
+      "available": 1,
+      "in_use_elsewhere": [],
+      "labels": {
+       "in_use": [],
+       "on_the_way": []
+      },
+      "missing": 0,
+      "name": "Pick Your Poison",
+      "need": 1,
+      "on_the_way": 0,
+      "on_the_way_from": [],
+      "owned": 1,
+      "priced_finish": "nonfoil",
+      "priced_printing": "MKM 170"
+     }
+    ],
+    "totals": {
+     "aud_missing": 0,
+     "cards": 2,
+     "missing": 0,
+     "need": 2,
+     "unpriced": []
+    },
+    "unresolved": [],
+    "version": "target",
+    "warnings": []
+   },
+   "sections": {
+    "Deck": [
+     {
+      "card": {
+       "cmc": 1.0,
+       "color_identity": [
+        "G"
+       ],
+       "colors": [
+        "G"
+       ],
+       "defense": null,
+       "img": "/img/fdn/227/normal",
+       "img_small": "/img/fdn/227/small",
+       "loyalty": null,
+       "mana_cost": "{G}",
+       "name": "Llanowar Elves",
+       "oracle_text": "{T}: Add {G}.",
+       "power": "1",
+       "roles": [
+        "ramp"
+       ],
+       "toughness": "1",
+       "type_line": "Creature — Elf Druid"
+      },
+      "finish": "nonfoil",
+      "name": "Llanowar Elves",
+      "number": "1",
+      "qty": 1,
+      "set": "tst"
+     },
+     {
+      "card": {
+       "cmc": 1.0,
+       "color_identity": [
+        "G"
+       ],
+       "colors": [
+        "G"
+       ],
+       "defense": null,
+       "img": "/img/mkm/170/normal",
+       "img_small": "/img/mkm/170/small",
+       "loyalty": null,
+       "mana_cost": "{G}",
+       "name": "Pick Your Poison",
+       "oracle_text": "Choose one —\n• Each opponent sacrifices an artifact of their choice.\n• Each opponent sacrifices an enchantment of their choice.\n• Each opponent sacrifices a creature with flying of their choice.",
+       "power": null,
+       "roles": [
+        "removal"
+       ],
+       "toughness": null,
+       "type_line": "Sorcery"
+      },
+      "finish": "nonfoil",
+      "name": "Pick Your Poison",
+      "number": "1",
+      "qty": 1,
+      "set": "tst"
+     },
+     {
+      "card": null,
+      "finish": "nonfoil",
+      "name": "Plains",
+      "number": "1",
+      "qty": 7,
+      "set": "tst"
+     }
+    ]
+   },
+   "stats": {
+    "colours": {
+     "assumed_lands": null,
+     "colours": [
+      {
+       "checks": [
+        {
+         "cards": [
+          {
+           "name": "Llanowar Elves",
+           "qty": 1
+          },
+          {
+           "name": "Pick Your Poison",
+           "qty": 1
+          }
+         ],
+         "colours": "G",
+         "cost": "C",
+         "cost_in_colours": "G",
+         "gold": false,
+         "have": 0.0,
+         "have_lands": 0.0,
+         "margin": null,
+         "needed": null,
+         "notes": [],
+         "ok": null,
+         "pips": 1,
+         "published": null,
+         "turn": 1
+        }
+       ],
+       "colours": "G",
+       "hardest": {
+        "cards": [
+         {
+          "name": "Llanowar Elves",
+          "qty": 1
+         },
+         {
+          "name": "Pick Your Poison",
+          "qty": 1
+         }
+        ],
+        "colours": "G",
+        "cost": "C",
+        "cost_in_colours": "G",
+        "gold": false,
+        "have": 0.0,
+        "have_lands": 0.0,
+        "margin": null,
+        "needed": null,
+        "notes": [],
+        "ok": null,
+        "pips": 1,
+        "published": null,
+        "turn": 1
+       },
+       "land_sources": 0.0,
+       "name": "green",
+       "ok": null,
+       "short": []
+      }
+     ],
+     "deck_lands": 0.0,
+     "definition": "Karsten's 'consistently cast': at least an (89 + mana value)% chance to have the coloured sources by the turn equal to the spell's mana value, on the play, in games with enough lands.",
+     "land_note": null,
+     "ok": null,
+     "rules": [
+      "A land that makes the colour is 1 source. On turn 1 only lands that can enter untapped count (a shock land or fast land can, and in Commander a bond land; a check land, gain land or basic-land fetch can't).",
+      "A land that searches for a basic land is a source of each colour of the basics in the deck (2/3 of one in decks needing 3 or more colours); one that searches for a land type, of each colour the deck's lands of that type make. Pathways: 2/3 each in decks needing 3+ colours.",
+      "A land whose search costs mana (Myriad Landscape's {2}) is a source only of the colours it makes itself until it can be used: paying {2} takes two other lands, so the lands it finds count from turn 4 (Karsten's full source is for searches that cost no mana, like Evolving Wilds).",
+      "A spell // land modal card is 0.8 of a source (1 if its land can enter untapped).",
+      "Mana creatures: 0.5 of a source from the turn after they're cast (turn 2 at the earliest). Mana rocks: 0.75 from the turn after they're cast (turn 3 at the earliest). 2-mana land ramp: 0.75 from turn 3; 3-mana land ramp: 0.5 from turn 5. Each only when the deck can cast the card itself consistently.",
+      "Cheap card draw (mana value 2 or less): each digs for lands, worth (sources of the colour / deck size) rounded down to a quarter, for spells cast after it; the first 10 only.",
+      "Exotic Orchard 0.75 and Fellwar Stone 0.5 of any colour (opponents unknown).",
+      "Not counted: Treasure, scry, and a Verge land's condition (it counts fully for both colours)."
+     ],
+     "source": "karsten-sources",
+     "sources": [
+      {
+       "colours": "G",
+       "counted": true,
+       "found_from_turn": null,
+       "from_turn": 2,
+       "kind": "creature",
+       "name": "Llanowar Elves",
+       "note": "mana creature",
+       "qty": 1,
+       "turn_one": false,
+       "weight": 0.5
+      }
+     ],
+     "table": null,
+     "table_note": "Karsten publishes no source counts below 40 cards, so a 20-card deck gets its sources and requirements without a verdict. Check its 40-card pairings."
+    },
+    "commander": null,
+    "counts": {
+     "commander": 0,
+     "companion": 0,
+     "deck": 9,
+     "main": 9,
+     "sideboard": 0
+    },
+    "curve": {
+     "average_mv": 1.0,
+     "average_mv_definition": "Karsten's: the mana values of the library's nonland cards added up (each copy) and divided by their number. Lands are left out; a spell // land modal card counts as its front face; X counts as 0. The commander and companion are cast from outside the library, so they're left out (listed under outside).",
+     "buckets": [
+      {
+       "cards": [],
+       "creatures": 0,
+       "mv": "0",
+       "noncreatures": 0,
+       "total": 0
+      },
+      {
+       "cards": [
+        {
+         "name": "Llanowar Elves",
+         "qty": 1
+        },
+        {
+         "name": "Pick Your Poison",
+         "qty": 1
+        }
+       ],
+       "creatures": 1,
+       "mv": "1",
+       "noncreatures": 1,
+       "total": 2
+      },
+      {
+       "cards": [],
+       "creatures": 0,
+       "mv": "2",
+       "noncreatures": 0,
+       "total": 0
+      },
+      {
+       "cards": [],
+       "creatures": 0,
+       "mv": "3",
+       "noncreatures": 0,
+       "total": 0
+      },
+      {
+       "cards": [],
+       "creatures": 0,
+       "mv": "4",
+       "noncreatures": 0,
+       "total": 0
+      },
+      {
+       "cards": [],
+       "creatures": 0,
+       "mv": "5",
+       "noncreatures": 0,
+       "total": 0
+      },
+      {
+       "cards": [],
+       "creatures": 0,
+       "mv": "6",
+       "noncreatures": 0,
+       "total": 0
+      },
+      {
+       "cards": [],
+       "creatures": 0,
+       "mv": "7+",
+       "noncreatures": 0,
+       "total": 0
+      }
+     ],
+     "creatures": 1,
+     "noncreatures": 1,
+     "nonland": 2,
+     "outside": [],
+     "x_spells": {
+      "cards": [],
+      "count": 0
+     }
+    },
+    "guidance": {
+     "deck_size": 9,
+     "library": 20,
+     "note": "9 cards: using the 20-card guidance, the nearest deck size it covers (20, 40, 60).",
+     "size": 20
+    },
+    "keywords": [],
+    "kind": "constructed",
+    "lands": {
+     "average_mv": 1.0,
+     "band": 1.0,
+     "cheap": {
+      "count": 1,
+      "draw": [],
+      "ramp": [
+       {
+        "name": "Llanowar Elves",
+        "qty": 1
+       }
+      ]
+     },
+     "companions": 0,
+     "delta": -6.88,
+     "effective": 0.0,
+     "floor": null,
+     "formula": {
+      "published": false,
+      "source": "karsten-lands",
+      "status": "Not published by Karsten: his 60-card formula scaled by 20/60, the way he scales his 80-card one (our extrapolation). It fits all 10 Foundations Beginner Box halves within 0.97 lands and 118 of 119 Foundations Jumpstart lists within 1.",
+      "text": "lands = (20/60) x (19.59 + 1.9 x average mana value + 0.27 x companions) - 0.28 x cheap spells",
+      "worked": "(20/60) x (19.59 + 1.9 x 1.00 + 0.27 x 0) - 0.28 x 1 = 6.88"
+     },
+     "lands": 0,
+     "mana_creatures": [
+      {
+       "cheap": true,
+       "mv": 1.0,
+       "name": "Llanowar Elves",
+       "produces": "G",
+       "qty": 1
+      }
+     ],
+     "mana_rocks": [],
+     "mdfc": {
+      "cards": [],
+      "tapped": 0,
+      "untapped": 0
+     },
+     "recommended": 6.88,
+     "rule_of_thumb": {
+      "sources": [
+       "wizards-jumpstart"
+      ],
+      "text": "8 lands (7 basics + 1 nonbasic); 9 in top-heavy or land-matters halves"
+     },
+     "verdict": "low",
+     "verdict_text": "6.88 fewer lands than the formula (more than 2 off)."
+    },
+    "roles": [
+     {
+      "cards": [
+       {
+        "name": "Pick Your Poison",
+        "qty": 1
+       }
+      ],
+      "count": 1,
+      "role": "removal"
+     },
+     {
+      "cards": [
+       {
+        "name": "Llanowar Elves",
+        "qty": 1
+       }
+      ],
+      "count": 1,
+      "role": "ramp"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "role": "draw"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "role": "counterspell"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "role": "board wipe"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "role": "burn"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "role": "lifegain"
+     }
+    ],
+    "sideboard": {
+     "cards": [],
+     "checks": [],
+     "count": 0
+    },
+    "sources": {
+     "banned-list": {
+      "date": "Commander entry edited 2026-04-03; fetched 2026-09-29",
+      "title": "Banned and Restricted List, Commander entry (Wizards of the Coast)",
+      "url": "https://magic.wizards.com/en/banned-restricted-list"
+     },
+     "brackets-2025-02": {
+      "date": "2025-02-11",
+      "title": "Introducing Commander Brackets Beta (Wizards of the Coast)",
+      "url": "https://magic.wizards.com/en/news/announcements/introducing-commander-brackets-beta"
+     },
+     "brackets-2025-10": {
+      "date": "2025-10-21",
+      "title": "Commander Brackets Beta Update, October 21, 2025 (Wizards of the Coast)",
+      "url": "https://magic.wizards.com/en/news/announcements/commander-brackets-beta-update-october-21-2025"
+     },
+     "brackets-2026-02": {
+      "date": "2026-02-09",
+      "title": "Commander Brackets Beta Update, February 9, 2026 (Wizards of the Coast)",
+      "url": "https://magic.wizards.com/en/news/announcements/commander-brackets-beta-update-february-9-2026"
+     },
+     "commander-spellbook": {
+      "date": "the list downloaded with the card data; its date is shown with the checks",
+      "title": "Commander Spellbook's combo list: two-card combos (commanderspellbook.com, with thanks; fan content under Wizards' Fan Content Policy)",
+      "url": "https://commanderspellbook.com/"
+     },
+     "comp-rules": {
+      "date": "effective 2026-09-25",
+      "title": "Magic: The Gathering Comprehensive Rules, 903 (Commander)",
+      "url": "https://media.wizards.com/2026/downloads/MagicCompRules%2020260925.txt"
+     },
+     "edhrec-lands": {
+      "date": "2024-11-25",
+      "title": "How to Build a Commander Deck (Brian Cain, EDHREC)",
+      "url": "https://edhrec.com/articles/how-to-build-a-commander-deck"
+     },
+     "karsten-commander": {
+      "date": "2022-07-15, updated 2025-08-28",
+      "title": "What's an Optimal Mana Curve and Land/Ramp Count for Commander? (Frank Karsten)",
+      "url": "https://www.tcgplayer.com/content/article/What-s-an-Optimal-Mana-Curve-and-Land-Ramp-Count-for-Commander/e22caad1-b04b-4f8a-951b-a41e9f08da14/"
+     },
+     "karsten-lands": {
+      "date": "2022-07-29, page updated 2025-02-13; still his newest land-count study on 2026-09-29",
+      "title": "How Many Lands Do You Need in Your Deck? An Updated Analysis (Frank Karsten)",
+      "url": "https://www.tcgplayer.com/content/article/How-Many-Lands-Do-You-Need-in-Your-Deck-An-Updated-Analysis/cd1c1a24-d439-4a8e-b369-b936edb0b38a/"
+     },
+     "karsten-sources": {
+      "date": "2022-08-02, page updated 2025-02-13; still his newest on 2026-09-29",
+      "title": "How Many Sources Do You Need to Consistently Cast Your Spells? A 2022 Update (Frank Karsten)",
+      "url": "https://www.tcgplayer.com/content/article/How-Many-Sources-Do-You-Need-to-Consistently-Cast-Your-Spells-A-2022-Update/dc23a7d2-0a16-4c0b-ad36-586fcca03ad8/"
+     },
+     "karsten-verge": {
+      "date": "2024-10-18",
+      "title": "Building Mana Bases with Duskmourn's New Verge Lands (Frank Karsten)",
+      "url": "https://www.tcgplayer.com/content/article/Building-Mana-Bases-with-Duskmourn-s-New-Verge-Lands/02256252-047e-458a-92b3-bed999bd3364/"
+     },
+     "tagger": {
+      "date": "oracle_tags bulk file of 2026-09-28",
+      "title": "Scryfall Tagger oracle tags mass-land-denial and extra-turn",
+      "url": "https://tagger.scryfall.com/tags/card/mass-land-denial"
+     },
+     "wizards-commander": {
+      "date": "fetched 2026-09-29 (Game Changers last changed 2026-02-09)",
+      "title": "Commander format page: Brackets and Game Changers (Wizards of the Coast)",
+      "url": "https://magic.wizards.com/en/formats/commander"
+     },
+     "wizards-jumpstart": {
+      "date": "2024-10-28",
+      "title": "Foundations Jumpstart Booster Themes (Wizards of the Coast)",
+      "url": "https://magic.wizards.com/en/news/announcements/foundations-jumpstart-booster-themes"
+     },
+     "wizards-mana": {
+      "date": "2014-08-18",
+      "title": "The Basics of Mana (Reid Duke, Wizards of the Coast)",
+      "url": "https://magic.wizards.com/en/news/feature/basics-mana-2014-08-18"
+     }
+    },
+    "tribes": {
+     "changelings": {
+      "cards": [],
+      "count": 0,
+      "note": "Changelings are every creature type, so each also counts towards every tribe; they're counted above only under their printed types."
+     },
+     "types": [
+      {
+       "cards": [
+        {
+         "name": "Llanowar Elves",
+         "qty": 1
+        }
+       ],
+       "count": 1,
+       "type": "Druid"
+      },
+      {
+       "cards": [
+        {
+         "name": "Llanowar Elves",
+         "qty": 1
+        }
+       ],
+       "count": 1,
+       "type": "Elf"
+      }
+     ]
+    },
+    "types": [
+     {
+      "cards": [
+       {
+        "name": "Llanowar Elves",
+        "qty": 1
+       }
+      ],
+      "count": 1,
+      "type": "creature"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "type": "instant"
+     },
+     {
+      "cards": [
+       {
+        "name": "Pick Your Poison",
+        "qty": 1
+       }
+      ],
+      "count": 1,
+      "type": "sorcery"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "type": "artifact"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "type": "enchantment"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "type": "planeswalker"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "type": "battle"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "type": "land"
+     }
+    ],
+    "unresolved": [
+     {
+      "name": "Plains",
+      "qty": 7,
+      "section": "Deck"
+     }
+    ],
+    "warnings": [
+     "9 cards: using the 20-card guidance, the nearest deck size it covers (20, 40, 60).",
+     "7 cards with names that aren't Scryfall cards count towards the deck size but nothing else: Plains"
+    ]
+   },
+   "summary": {
+    "built_version": null,
+    "card_count": 9,
+    "format": "Beginner Box half (20 cards)",
+    "holder_sha256": "4cf76a5f8195e524ffa114dc12244e69c6746313d37a882c21c6653ad2aa5474",
+    "id": "product/fdn-beginner-box/cats",
+    "kind": "casual",
+    "kit": {
+     "deck_box": null,
+     "holder": "product/fdn-beginner-box",
+     "info": [],
+     "need": 26,
+     "owner": "shared",
+     "short": 0,
+     "sleeves": null,
+     "spare": 0,
+     "title": "Foundations Beginner Box",
+     "warnings": [
+      "Foundations Beginner Box is kept intact: choose its sleeves (it needs 26)."
+     ]
+    },
+    "player": null,
+    "read_only": true,
+    "sideboard_count": 0,
+    "source": "magic/products/fdn-beginner-box.csv",
+    "space": "home",
+    "status": null,
+    "title": "Cats (Foundations Beginner Box)",
+    "versions": [
+     "target"
+    ]
+   },
+   "table": null,
+   "tokens": {
+    "copies": [],
+    "counts": {
+     "check": 0,
+     "differs": 0,
+     "incoming": 0,
+     "kinds": 0,
+     "none": 0,
+     "ready": 0
+    },
+    "needs": [],
+    "note": "Worked out from Scryfall's links between cards and tokens, so it's approximate. Tokens a card makes only through its rules text, and most token copies of other cards, aren't listed. Some listed tokens appear only in certain modes or for your opponent. Deck Lab can't tell how many a game needs.",
+    "unlisted": []
+   },
+   "uncommitted": null,
+   "version": "target",
+   "versions": [
+    "target"
+   ],
+   "warnings": [
+    "Llanowar Elves (TST) 1: Scryfall has no printing TST 1",
+    "Pick Your Poison (TST) 1: Scryfall has no printing TST 1",
+    "'Plains' (Deck) isn't a Scryfall card name, so there's no card data for it",
+    "Foundations Beginner Box is kept intact: choose its sleeves (it needs 26)."
+   ]
+  },
+  "product/fdn-beginner-box/elves@target": {
+   "guide": null,
+   "info": [],
+   "owned": {
+    "conflicts": [
+     {
+      "available": 1,
+      "decks": [
+       [
+        "Cats (Foundations Beginner Box)",
+        1
+       ]
+      ],
+      "missing": 0,
+      "name": "Llanowar Elves",
+      "need": 1,
+      "owned": 2,
+      "short": 0
+     }
+    ],
+    "deck_id": "product/fdn-beginner-box/elves",
+    "price_date": "2026-09-28",
+    "price_error": null,
+    "rate": 1.5,
+    "rate_date": "2000-01-01",
+    "rows": [
+     {
+      "aud_each": 2.03,
+      "aud_missing": 0.0,
+      "available": 1,
+      "in_use_elsewhere": [],
+      "labels": {
+       "in_use": [],
+       "on_the_way": []
+      },
+      "missing": 0,
+      "name": "Elvish Mystic",
+      "need": 1,
+      "on_the_way": 0,
+      "on_the_way_from": [],
+      "owned": 1,
+      "priced_finish": "nonfoil",
+      "priced_printing": "CMM 648"
+     },
+     {
+      "aud_each": 0.3,
+      "aud_missing": 0.0,
+      "available": 1,
+      "in_use_elsewhere": [
+       [
+        "Cats (Foundations Beginner Box)",
+        1
+       ]
+      ],
+      "labels": {
+       "in_use": [],
+       "on_the_way": []
+      },
+      "missing": 0,
+      "name": "Llanowar Elves",
+      "need": 1,
+      "on_the_way": 0,
+      "on_the_way_from": [],
+      "owned": 2,
+      "priced_finish": "nonfoil",
+      "priced_printing": "M19 314"
+     }
+    ],
+    "totals": {
+     "aud_missing": 0,
+     "cards": 2,
+     "missing": 0,
+     "need": 2,
+     "unpriced": []
+    },
+    "unresolved": [],
+    "version": "target",
+    "warnings": []
+   },
+   "sections": {
+    "Deck": [
+     {
+      "card": {
+       "cmc": 1.0,
+       "color_identity": [
+        "G"
+       ],
+       "colors": [
+        "G"
+       ],
+       "defense": null,
+       "img": "/img/fdn/227/normal",
+       "img_small": "/img/fdn/227/small",
+       "loyalty": null,
+       "mana_cost": "{G}",
+       "name": "Llanowar Elves",
+       "oracle_text": "{T}: Add {G}.",
+       "power": "1",
+       "roles": [
+        "ramp"
+       ],
+       "toughness": "1",
+       "type_line": "Creature — Elf Druid"
+      },
+      "finish": "nonfoil",
+      "name": "Llanowar Elves",
+      "number": "1",
+      "qty": 1,
+      "set": "tst"
+     },
+     {
+      "card": {
+       "cmc": 1.0,
+       "color_identity": [
+        "G"
+       ],
+       "colors": [
+        "G"
+       ],
+       "defense": null,
+       "img": "/img/cmm/648/normal",
+       "img_small": "/img/cmm/648/small",
+       "loyalty": null,
+       "mana_cost": "{G}",
+       "name": "Elvish Mystic",
+       "oracle_text": "{T}: Add {G}.",
+       "power": "1",
+       "roles": [
+        "ramp"
+       ],
+       "toughness": "1",
+       "type_line": "Creature — Elf Druid"
+      },
+      "finish": "nonfoil",
+      "name": "Elvish Mystic",
+      "number": "1",
+      "qty": 1,
+      "set": "tst"
+     },
+     {
+      "card": null,
+      "finish": "nonfoil",
+      "name": "Forest",
+      "number": "1",
+      "qty": 7,
+      "set": "tst"
+     }
+    ]
+   },
+   "stats": {
+    "colours": {
+     "assumed_lands": null,
+     "colours": [
+      {
+       "checks": [
+        {
+         "cards": [
+          {
+           "name": "Elvish Mystic",
+           "qty": 1
+          },
+          {
+           "name": "Llanowar Elves",
+           "qty": 1
+          }
+         ],
+         "colours": "G",
+         "cost": "C",
+         "cost_in_colours": "G",
+         "gold": false,
+         "have": 0.0,
+         "have_lands": 0.0,
+         "margin": null,
+         "needed": null,
+         "notes": [],
+         "ok": null,
+         "pips": 1,
+         "published": null,
+         "turn": 1
+        }
+       ],
+       "colours": "G",
+       "hardest": {
+        "cards": [
+         {
+          "name": "Elvish Mystic",
+          "qty": 1
+         },
+         {
+          "name": "Llanowar Elves",
+          "qty": 1
+         }
+        ],
+        "colours": "G",
+        "cost": "C",
+        "cost_in_colours": "G",
+        "gold": false,
+        "have": 0.0,
+        "have_lands": 0.0,
+        "margin": null,
+        "needed": null,
+        "notes": [],
+        "ok": null,
+        "pips": 1,
+        "published": null,
+        "turn": 1
+       },
+       "land_sources": 0.0,
+       "name": "green",
+       "ok": null,
+       "short": []
+      }
+     ],
+     "deck_lands": 0.0,
+     "definition": "Karsten's 'consistently cast': at least an (89 + mana value)% chance to have the coloured sources by the turn equal to the spell's mana value, on the play, in games with enough lands.",
+     "land_note": null,
+     "ok": null,
+     "rules": [
+      "A land that makes the colour is 1 source. On turn 1 only lands that can enter untapped count (a shock land or fast land can, and in Commander a bond land; a check land, gain land or basic-land fetch can't).",
+      "A land that searches for a basic land is a source of each colour of the basics in the deck (2/3 of one in decks needing 3 or more colours); one that searches for a land type, of each colour the deck's lands of that type make. Pathways: 2/3 each in decks needing 3+ colours.",
+      "A land whose search costs mana (Myriad Landscape's {2}) is a source only of the colours it makes itself until it can be used: paying {2} takes two other lands, so the lands it finds count from turn 4 (Karsten's full source is for searches that cost no mana, like Evolving Wilds).",
+      "A spell // land modal card is 0.8 of a source (1 if its land can enter untapped).",
+      "Mana creatures: 0.5 of a source from the turn after they're cast (turn 2 at the earliest). Mana rocks: 0.75 from the turn after they're cast (turn 3 at the earliest). 2-mana land ramp: 0.75 from turn 3; 3-mana land ramp: 0.5 from turn 5. Each only when the deck can cast the card itself consistently.",
+      "Cheap card draw (mana value 2 or less): each digs for lands, worth (sources of the colour / deck size) rounded down to a quarter, for spells cast after it; the first 10 only.",
+      "Exotic Orchard 0.75 and Fellwar Stone 0.5 of any colour (opponents unknown).",
+      "Not counted: Treasure, scry, and a Verge land's condition (it counts fully for both colours)."
+     ],
+     "source": "karsten-sources",
+     "sources": [
+      {
+       "colours": "G",
+       "counted": true,
+       "found_from_turn": null,
+       "from_turn": 2,
+       "kind": "creature",
+       "name": "Elvish Mystic",
+       "note": "mana creature",
+       "qty": 1,
+       "turn_one": false,
+       "weight": 0.5
+      },
+      {
+       "colours": "G",
+       "counted": true,
+       "found_from_turn": null,
+       "from_turn": 2,
+       "kind": "creature",
+       "name": "Llanowar Elves",
+       "note": "mana creature",
+       "qty": 1,
+       "turn_one": false,
+       "weight": 0.5
+      }
+     ],
+     "table": null,
+     "table_note": "Karsten publishes no source counts below 40 cards, so a 20-card deck gets its sources and requirements without a verdict. Check its 40-card pairings."
+    },
+    "commander": null,
+    "counts": {
+     "commander": 0,
+     "companion": 0,
+     "deck": 9,
+     "main": 9,
+     "sideboard": 0
+    },
+    "curve": {
+     "average_mv": 1.0,
+     "average_mv_definition": "Karsten's: the mana values of the library's nonland cards added up (each copy) and divided by their number. Lands are left out; a spell // land modal card counts as its front face; X counts as 0. The commander and companion are cast from outside the library, so they're left out (listed under outside).",
+     "buckets": [
+      {
+       "cards": [],
+       "creatures": 0,
+       "mv": "0",
+       "noncreatures": 0,
+       "total": 0
+      },
+      {
+       "cards": [
+        {
+         "name": "Elvish Mystic",
+         "qty": 1
+        },
+        {
+         "name": "Llanowar Elves",
+         "qty": 1
+        }
+       ],
+       "creatures": 2,
+       "mv": "1",
+       "noncreatures": 0,
+       "total": 2
+      },
+      {
+       "cards": [],
+       "creatures": 0,
+       "mv": "2",
+       "noncreatures": 0,
+       "total": 0
+      },
+      {
+       "cards": [],
+       "creatures": 0,
+       "mv": "3",
+       "noncreatures": 0,
+       "total": 0
+      },
+      {
+       "cards": [],
+       "creatures": 0,
+       "mv": "4",
+       "noncreatures": 0,
+       "total": 0
+      },
+      {
+       "cards": [],
+       "creatures": 0,
+       "mv": "5",
+       "noncreatures": 0,
+       "total": 0
+      },
+      {
+       "cards": [],
+       "creatures": 0,
+       "mv": "6",
+       "noncreatures": 0,
+       "total": 0
+      },
+      {
+       "cards": [],
+       "creatures": 0,
+       "mv": "7+",
+       "noncreatures": 0,
+       "total": 0
+      }
+     ],
+     "creatures": 2,
+     "noncreatures": 0,
+     "nonland": 2,
+     "outside": [],
+     "x_spells": {
+      "cards": [],
+      "count": 0
+     }
+    },
+    "guidance": {
+     "deck_size": 9,
+     "library": 20,
+     "note": "9 cards: using the 20-card guidance, the nearest deck size it covers (20, 40, 60).",
+     "size": 20
+    },
+    "keywords": [],
+    "kind": "constructed",
+    "lands": {
+     "average_mv": 1.0,
+     "band": 1.0,
+     "cheap": {
+      "count": 2,
+      "draw": [],
+      "ramp": [
+       {
+        "name": "Elvish Mystic",
+        "qty": 1
+       },
+       {
+        "name": "Llanowar Elves",
+        "qty": 1
+       }
+      ]
+     },
+     "companions": 0,
+     "delta": -6.6,
+     "effective": 0.0,
+     "floor": null,
+     "formula": {
+      "published": false,
+      "source": "karsten-lands",
+      "status": "Not published by Karsten: his 60-card formula scaled by 20/60, the way he scales his 80-card one (our extrapolation). It fits all 10 Foundations Beginner Box halves within 0.97 lands and 118 of 119 Foundations Jumpstart lists within 1.",
+      "text": "lands = (20/60) x (19.59 + 1.9 x average mana value + 0.27 x companions) - 0.28 x cheap spells",
+      "worked": "(20/60) x (19.59 + 1.9 x 1.00 + 0.27 x 0) - 0.28 x 2 = 6.60"
+     },
+     "lands": 0,
+     "mana_creatures": [
+      {
+       "cheap": true,
+       "mv": 1.0,
+       "name": "Elvish Mystic",
+       "produces": "G",
+       "qty": 1
+      },
+      {
+       "cheap": true,
+       "mv": 1.0,
+       "name": "Llanowar Elves",
+       "produces": "G",
+       "qty": 1
+      }
+     ],
+     "mana_rocks": [],
+     "mdfc": {
+      "cards": [],
+      "tapped": 0,
+      "untapped": 0
+     },
+     "recommended": 6.6,
+     "rule_of_thumb": {
+      "sources": [
+       "wizards-jumpstart"
+      ],
+      "text": "8 lands (7 basics + 1 nonbasic); 9 in top-heavy or land-matters halves"
+     },
+     "verdict": "low",
+     "verdict_text": "6.60 fewer lands than the formula (more than 2 off)."
+    },
+    "roles": [
+     {
+      "cards": [],
+      "count": 0,
+      "role": "removal"
+     },
+     {
+      "cards": [
+       {
+        "name": "Elvish Mystic",
+        "qty": 1
+       },
+       {
+        "name": "Llanowar Elves",
+        "qty": 1
+       }
+      ],
+      "count": 2,
+      "role": "ramp"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "role": "draw"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "role": "counterspell"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "role": "board wipe"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "role": "burn"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "role": "lifegain"
+     }
+    ],
+    "sideboard": {
+     "cards": [],
+     "checks": [],
+     "count": 0
+    },
+    "sources": {
+     "banned-list": {
+      "date": "Commander entry edited 2026-04-03; fetched 2026-09-29",
+      "title": "Banned and Restricted List, Commander entry (Wizards of the Coast)",
+      "url": "https://magic.wizards.com/en/banned-restricted-list"
+     },
+     "brackets-2025-02": {
+      "date": "2025-02-11",
+      "title": "Introducing Commander Brackets Beta (Wizards of the Coast)",
+      "url": "https://magic.wizards.com/en/news/announcements/introducing-commander-brackets-beta"
+     },
+     "brackets-2025-10": {
+      "date": "2025-10-21",
+      "title": "Commander Brackets Beta Update, October 21, 2025 (Wizards of the Coast)",
+      "url": "https://magic.wizards.com/en/news/announcements/commander-brackets-beta-update-october-21-2025"
+     },
+     "brackets-2026-02": {
+      "date": "2026-02-09",
+      "title": "Commander Brackets Beta Update, February 9, 2026 (Wizards of the Coast)",
+      "url": "https://magic.wizards.com/en/news/announcements/commander-brackets-beta-update-february-9-2026"
+     },
+     "commander-spellbook": {
+      "date": "the list downloaded with the card data; its date is shown with the checks",
+      "title": "Commander Spellbook's combo list: two-card combos (commanderspellbook.com, with thanks; fan content under Wizards' Fan Content Policy)",
+      "url": "https://commanderspellbook.com/"
+     },
+     "comp-rules": {
+      "date": "effective 2026-09-25",
+      "title": "Magic: The Gathering Comprehensive Rules, 903 (Commander)",
+      "url": "https://media.wizards.com/2026/downloads/MagicCompRules%2020260925.txt"
+     },
+     "edhrec-lands": {
+      "date": "2024-11-25",
+      "title": "How to Build a Commander Deck (Brian Cain, EDHREC)",
+      "url": "https://edhrec.com/articles/how-to-build-a-commander-deck"
+     },
+     "karsten-commander": {
+      "date": "2022-07-15, updated 2025-08-28",
+      "title": "What's an Optimal Mana Curve and Land/Ramp Count for Commander? (Frank Karsten)",
+      "url": "https://www.tcgplayer.com/content/article/What-s-an-Optimal-Mana-Curve-and-Land-Ramp-Count-for-Commander/e22caad1-b04b-4f8a-951b-a41e9f08da14/"
+     },
+     "karsten-lands": {
+      "date": "2022-07-29, page updated 2025-02-13; still his newest land-count study on 2026-09-29",
+      "title": "How Many Lands Do You Need in Your Deck? An Updated Analysis (Frank Karsten)",
+      "url": "https://www.tcgplayer.com/content/article/How-Many-Lands-Do-You-Need-in-Your-Deck-An-Updated-Analysis/cd1c1a24-d439-4a8e-b369-b936edb0b38a/"
+     },
+     "karsten-sources": {
+      "date": "2022-08-02, page updated 2025-02-13; still his newest on 2026-09-29",
+      "title": "How Many Sources Do You Need to Consistently Cast Your Spells? A 2022 Update (Frank Karsten)",
+      "url": "https://www.tcgplayer.com/content/article/How-Many-Sources-Do-You-Need-to-Consistently-Cast-Your-Spells-A-2022-Update/dc23a7d2-0a16-4c0b-ad36-586fcca03ad8/"
+     },
+     "karsten-verge": {
+      "date": "2024-10-18",
+      "title": "Building Mana Bases with Duskmourn's New Verge Lands (Frank Karsten)",
+      "url": "https://www.tcgplayer.com/content/article/Building-Mana-Bases-with-Duskmourn-s-New-Verge-Lands/02256252-047e-458a-92b3-bed999bd3364/"
+     },
+     "tagger": {
+      "date": "oracle_tags bulk file of 2026-09-28",
+      "title": "Scryfall Tagger oracle tags mass-land-denial and extra-turn",
+      "url": "https://tagger.scryfall.com/tags/card/mass-land-denial"
+     },
+     "wizards-commander": {
+      "date": "fetched 2026-09-29 (Game Changers last changed 2026-02-09)",
+      "title": "Commander format page: Brackets and Game Changers (Wizards of the Coast)",
+      "url": "https://magic.wizards.com/en/formats/commander"
+     },
+     "wizards-jumpstart": {
+      "date": "2024-10-28",
+      "title": "Foundations Jumpstart Booster Themes (Wizards of the Coast)",
+      "url": "https://magic.wizards.com/en/news/announcements/foundations-jumpstart-booster-themes"
+     },
+     "wizards-mana": {
+      "date": "2014-08-18",
+      "title": "The Basics of Mana (Reid Duke, Wizards of the Coast)",
+      "url": "https://magic.wizards.com/en/news/feature/basics-mana-2014-08-18"
+     }
+    },
+    "tribes": {
+     "changelings": {
+      "cards": [],
+      "count": 0,
+      "note": "Changelings are every creature type, so each also counts towards every tribe; they're counted above only under their printed types."
+     },
+     "types": [
+      {
+       "cards": [
+        {
+         "name": "Elvish Mystic",
+         "qty": 1
+        },
+        {
+         "name": "Llanowar Elves",
+         "qty": 1
+        }
+       ],
+       "count": 2,
+       "type": "Druid"
+      },
+      {
+       "cards": [
+        {
+         "name": "Elvish Mystic",
+         "qty": 1
+        },
+        {
+         "name": "Llanowar Elves",
+         "qty": 1
+        }
+       ],
+       "count": 2,
+       "type": "Elf"
+      }
+     ]
+    },
+    "types": [
+     {
+      "cards": [
+       {
+        "name": "Elvish Mystic",
+        "qty": 1
+       },
+       {
+        "name": "Llanowar Elves",
+        "qty": 1
+       }
+      ],
+      "count": 2,
+      "type": "creature"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "type": "instant"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "type": "sorcery"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "type": "artifact"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "type": "enchantment"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "type": "planeswalker"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "type": "battle"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "type": "land"
+     }
+    ],
+    "unresolved": [
+     {
+      "name": "Forest",
+      "qty": 7,
+      "section": "Deck"
+     }
+    ],
+    "warnings": [
+     "9 cards: using the 20-card guidance, the nearest deck size it covers (20, 40, 60).",
+     "7 cards with names that aren't Scryfall cards count towards the deck size but nothing else: Forest"
+    ]
+   },
+   "summary": {
+    "built_version": null,
+    "card_count": 9,
+    "format": "Beginner Box half (20 cards)",
+    "holder_sha256": "4cf76a5f8195e524ffa114dc12244e69c6746313d37a882c21c6653ad2aa5474",
+    "id": "product/fdn-beginner-box/elves",
+    "kind": "casual",
+    "kit": {
+     "deck_box": null,
+     "holder": "product/fdn-beginner-box",
+     "info": [],
+     "need": 26,
+     "owner": "shared",
+     "short": 0,
+     "sleeves": null,
+     "spare": 0,
+     "title": "Foundations Beginner Box",
+     "warnings": [
+      "Foundations Beginner Box is kept intact: choose its sleeves (it needs 26)."
+     ]
+    },
+    "player": null,
+    "read_only": true,
+    "sideboard_count": 0,
+    "source": "magic/products/fdn-beginner-box.csv",
+    "space": "home",
+    "status": null,
+    "title": "Elves (Foundations Beginner Box)",
+    "versions": [
+     "target"
+    ]
+   },
+   "table": null,
+   "tokens": {
+    "copies": [],
+    "counts": {
+     "check": 0,
+     "differs": 0,
+     "incoming": 0,
+     "kinds": 0,
+     "none": 0,
+     "ready": 0
+    },
+    "needs": [],
+    "note": "Worked out from Scryfall's links between cards and tokens, so it's approximate. Tokens a card makes only through its rules text, and most token copies of other cards, aren't listed. Some listed tokens appear only in certain modes or for your opponent. Deck Lab can't tell how many a game needs.",
+    "unlisted": []
+   },
+   "uncommitted": null,
+   "version": "target",
+   "versions": [
+    "target"
+   ],
+   "warnings": [
+    "Llanowar Elves (TST) 1: Scryfall has no printing TST 1",
+    "Elvish Mystic (TST) 1: Scryfall has no printing TST 1",
+    "'Forest' (Deck) isn't a Scryfall card name, so there's no card data for it",
+    "Foundations Beginner Box is kept intact: choose its sleeves (it needs 26)."
+   ]
+  },
+  "product/fdn-beginner-box/goblins@target": {
+   "guide": null,
+   "info": [],
+   "owned": {
+    "conflicts": [],
+    "deck_id": "product/fdn-beginner-box/goblins",
+    "price_date": "2026-09-28",
+    "price_error": null,
+    "rate": 1.5,
+    "rate_date": "2000-01-01",
+    "rows": [
+     {
+      "aud_each": 0.17,
+      "aud_missing": 0.0,
+      "available": 1,
+      "in_use_elsewhere": [],
+      "labels": {
+       "in_use": [],
+       "on_the_way": []
+      },
+      "missing": 0,
+      "name": "Aerie Mystics",
+      "need": 1,
+      "on_the_way": 0,
+      "on_the_way_from": [],
+      "owned": 1,
+      "priced_finish": "nonfoil",
+      "priced_printing": "CON 1"
+     }
+    ],
+    "totals": {
+     "aud_missing": 0,
+     "cards": 1,
+     "missing": 0,
+     "need": 1,
+     "unpriced": []
+    },
+    "unresolved": [],
+    "version": "target",
+    "warnings": []
+   },
+   "sections": {
+    "Deck": [
+     {
+      "card": {
+       "cmc": 5.0,
+       "color_identity": [
+        "G",
+        "U",
+        "W"
+       ],
+       "colors": [
+        "W"
+       ],
+       "defense": null,
+       "img": "/img/con/1/normal",
+       "img_small": "/img/con/1/small",
+       "loyalty": null,
+       "mana_cost": "{4}{W}",
+       "name": "Aerie Mystics",
+       "oracle_text": "Flying\n{1}{G}{U}: Creatures you control gain shroud until end of turn. (They can't be the targets of spells or abilities.)",
+       "power": "3",
+       "roles": [],
+       "toughness": "3",
+       "type_line": "Creature — Bird Wizard"
+      },
+      "finish": "nonfoil",
+      "name": "Aerie Mystics",
+      "number": "1",
+      "qty": 1,
+      "set": "tst"
+     },
+     {
+      "card": null,
+      "finish": "nonfoil",
+      "name": "Mountain",
+      "number": "1",
+      "qty": 7,
+      "set": "tst"
+     }
+    ]
+   },
+   "stats": {
+    "colours": {
+     "assumed_lands": null,
+     "colours": [
+      {
+       "checks": [
+        {
+         "cards": [
+          {
+           "name": "Aerie Mystics",
+           "qty": 1
+          }
+         ],
+         "colours": "W",
+         "cost": "4C",
+         "cost_in_colours": "4W",
+         "gold": false,
+         "have": 0.0,
+         "have_lands": 0.0,
+         "margin": null,
+         "needed": null,
+         "notes": [],
+         "ok": null,
+         "pips": 1,
+         "published": null,
+         "turn": 5
+        }
+       ],
+       "colours": "W",
+       "hardest": {
+        "cards": [
+         {
+          "name": "Aerie Mystics",
+          "qty": 1
+         }
+        ],
+        "colours": "W",
+        "cost": "4C",
+        "cost_in_colours": "4W",
+        "gold": false,
+        "have": 0.0,
+        "have_lands": 0.0,
+        "margin": null,
+        "needed": null,
+        "notes": [],
+        "ok": null,
+        "pips": 1,
+        "published": null,
+        "turn": 5
+       },
+       "land_sources": 0.0,
+       "name": "white",
+       "ok": null,
+       "short": []
+      }
+     ],
+     "deck_lands": 0.0,
+     "definition": "Karsten's 'consistently cast': at least an (89 + mana value)% chance to have the coloured sources by the turn equal to the spell's mana value, on the play, in games with enough lands.",
+     "land_note": null,
+     "ok": null,
+     "rules": [
+      "A land that makes the colour is 1 source. On turn 1 only lands that can enter untapped count (a shock land or fast land can, and in Commander a bond land; a check land, gain land or basic-land fetch can't).",
+      "A land that searches for a basic land is a source of each colour of the basics in the deck (2/3 of one in decks needing 3 or more colours); one that searches for a land type, of each colour the deck's lands of that type make. Pathways: 2/3 each in decks needing 3+ colours.",
+      "A land whose search costs mana (Myriad Landscape's {2}) is a source only of the colours it makes itself until it can be used: paying {2} takes two other lands, so the lands it finds count from turn 4 (Karsten's full source is for searches that cost no mana, like Evolving Wilds).",
+      "A spell // land modal card is 0.8 of a source (1 if its land can enter untapped).",
+      "Mana creatures: 0.5 of a source from the turn after they're cast (turn 2 at the earliest). Mana rocks: 0.75 from the turn after they're cast (turn 3 at the earliest). 2-mana land ramp: 0.75 from turn 3; 3-mana land ramp: 0.5 from turn 5. Each only when the deck can cast the card itself consistently.",
+      "Cheap card draw (mana value 2 or less): each digs for lands, worth (sources of the colour / deck size) rounded down to a quarter, for spells cast after it; the first 10 only.",
+      "Exotic Orchard 0.75 and Fellwar Stone 0.5 of any colour (opponents unknown).",
+      "Not counted: Treasure, scry, and a Verge land's condition (it counts fully for both colours)."
+     ],
+     "source": "karsten-sources",
+     "sources": [],
+     "table": null,
+     "table_note": "Karsten publishes no source counts below 40 cards, so a 20-card deck gets its sources and requirements without a verdict. Check its 40-card pairings."
+    },
+    "commander": null,
+    "counts": {
+     "commander": 0,
+     "companion": 0,
+     "deck": 8,
+     "main": 8,
+     "sideboard": 0
+    },
+    "curve": {
+     "average_mv": 5.0,
+     "average_mv_definition": "Karsten's: the mana values of the library's nonland cards added up (each copy) and divided by their number. Lands are left out; a spell // land modal card counts as its front face; X counts as 0. The commander and companion are cast from outside the library, so they're left out (listed under outside).",
+     "buckets": [
+      {
+       "cards": [],
+       "creatures": 0,
+       "mv": "0",
+       "noncreatures": 0,
+       "total": 0
+      },
+      {
+       "cards": [],
+       "creatures": 0,
+       "mv": "1",
+       "noncreatures": 0,
+       "total": 0
+      },
+      {
+       "cards": [],
+       "creatures": 0,
+       "mv": "2",
+       "noncreatures": 0,
+       "total": 0
+      },
+      {
+       "cards": [],
+       "creatures": 0,
+       "mv": "3",
+       "noncreatures": 0,
+       "total": 0
+      },
+      {
+       "cards": [],
+       "creatures": 0,
+       "mv": "4",
+       "noncreatures": 0,
+       "total": 0
+      },
+      {
+       "cards": [
+        {
+         "name": "Aerie Mystics",
+         "qty": 1
+        }
+       ],
+       "creatures": 1,
+       "mv": "5",
+       "noncreatures": 0,
+       "total": 1
+      },
+      {
+       "cards": [],
+       "creatures": 0,
+       "mv": "6",
+       "noncreatures": 0,
+       "total": 0
+      },
+      {
+       "cards": [],
+       "creatures": 0,
+       "mv": "7+",
+       "noncreatures": 0,
+       "total": 0
+      }
+     ],
+     "creatures": 1,
+     "noncreatures": 0,
+     "nonland": 1,
+     "outside": [],
+     "x_spells": {
+      "cards": [],
+      "count": 0
+     }
+    },
+    "guidance": {
+     "deck_size": 8,
+     "library": 20,
+     "note": "8 cards: using the 20-card guidance, the nearest deck size it covers (20, 40, 60).",
+     "size": 20
+    },
+    "keywords": [
+     {
+      "cards": [
+       {
+        "name": "Aerie Mystics",
+        "qty": 1
+       }
+      ],
+      "count": 1,
+      "keyword": "Flying"
+     }
+    ],
+    "kind": "constructed",
+    "lands": {
+     "average_mv": 5.0,
+     "band": 1.0,
+     "cheap": {
+      "count": 0,
+      "draw": [],
+      "ramp": []
+     },
+     "companions": 0,
+     "delta": -9.7,
+     "effective": 0.0,
+     "floor": null,
+     "formula": {
+      "published": false,
+      "source": "karsten-lands",
+      "status": "Not published by Karsten: his 60-card formula scaled by 20/60, the way he scales his 80-card one (our extrapolation). It fits all 10 Foundations Beginner Box halves within 0.97 lands and 118 of 119 Foundations Jumpstart lists within 1.",
+      "text": "lands = (20/60) x (19.59 + 1.9 x average mana value + 0.27 x companions) - 0.28 x cheap spells",
+      "worked": "(20/60) x (19.59 + 1.9 x 5.00 + 0.27 x 0) - 0.28 x 0 = 9.70"
+     },
+     "lands": 0,
+     "mana_creatures": [],
+     "mana_rocks": [],
+     "mdfc": {
+      "cards": [],
+      "tapped": 0,
+      "untapped": 0
+     },
+     "recommended": 9.7,
+     "rule_of_thumb": {
+      "sources": [
+       "wizards-jumpstart"
+      ],
+      "text": "8 lands (7 basics + 1 nonbasic); 9 in top-heavy or land-matters halves"
+     },
+     "verdict": "low",
+     "verdict_text": "9.70 fewer lands than the formula (more than 2 off)."
+    },
+    "roles": [
+     {
+      "cards": [],
+      "count": 0,
+      "role": "removal"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "role": "ramp"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "role": "draw"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "role": "counterspell"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "role": "board wipe"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "role": "burn"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "role": "lifegain"
+     }
+    ],
+    "sideboard": {
+     "cards": [],
+     "checks": [],
+     "count": 0
+    },
+    "sources": {
+     "banned-list": {
+      "date": "Commander entry edited 2026-04-03; fetched 2026-09-29",
+      "title": "Banned and Restricted List, Commander entry (Wizards of the Coast)",
+      "url": "https://magic.wizards.com/en/banned-restricted-list"
+     },
+     "brackets-2025-02": {
+      "date": "2025-02-11",
+      "title": "Introducing Commander Brackets Beta (Wizards of the Coast)",
+      "url": "https://magic.wizards.com/en/news/announcements/introducing-commander-brackets-beta"
+     },
+     "brackets-2025-10": {
+      "date": "2025-10-21",
+      "title": "Commander Brackets Beta Update, October 21, 2025 (Wizards of the Coast)",
+      "url": "https://magic.wizards.com/en/news/announcements/commander-brackets-beta-update-october-21-2025"
+     },
+     "brackets-2026-02": {
+      "date": "2026-02-09",
+      "title": "Commander Brackets Beta Update, February 9, 2026 (Wizards of the Coast)",
+      "url": "https://magic.wizards.com/en/news/announcements/commander-brackets-beta-update-february-9-2026"
+     },
+     "commander-spellbook": {
+      "date": "the list downloaded with the card data; its date is shown with the checks",
+      "title": "Commander Spellbook's combo list: two-card combos (commanderspellbook.com, with thanks; fan content under Wizards' Fan Content Policy)",
+      "url": "https://commanderspellbook.com/"
+     },
+     "comp-rules": {
+      "date": "effective 2026-09-25",
+      "title": "Magic: The Gathering Comprehensive Rules, 903 (Commander)",
+      "url": "https://media.wizards.com/2026/downloads/MagicCompRules%2020260925.txt"
+     },
+     "edhrec-lands": {
+      "date": "2024-11-25",
+      "title": "How to Build a Commander Deck (Brian Cain, EDHREC)",
+      "url": "https://edhrec.com/articles/how-to-build-a-commander-deck"
+     },
+     "karsten-commander": {
+      "date": "2022-07-15, updated 2025-08-28",
+      "title": "What's an Optimal Mana Curve and Land/Ramp Count for Commander? (Frank Karsten)",
+      "url": "https://www.tcgplayer.com/content/article/What-s-an-Optimal-Mana-Curve-and-Land-Ramp-Count-for-Commander/e22caad1-b04b-4f8a-951b-a41e9f08da14/"
+     },
+     "karsten-lands": {
+      "date": "2022-07-29, page updated 2025-02-13; still his newest land-count study on 2026-09-29",
+      "title": "How Many Lands Do You Need in Your Deck? An Updated Analysis (Frank Karsten)",
+      "url": "https://www.tcgplayer.com/content/article/How-Many-Lands-Do-You-Need-in-Your-Deck-An-Updated-Analysis/cd1c1a24-d439-4a8e-b369-b936edb0b38a/"
+     },
+     "karsten-sources": {
+      "date": "2022-08-02, page updated 2025-02-13; still his newest on 2026-09-29",
+      "title": "How Many Sources Do You Need to Consistently Cast Your Spells? A 2022 Update (Frank Karsten)",
+      "url": "https://www.tcgplayer.com/content/article/How-Many-Sources-Do-You-Need-to-Consistently-Cast-Your-Spells-A-2022-Update/dc23a7d2-0a16-4c0b-ad36-586fcca03ad8/"
+     },
+     "karsten-verge": {
+      "date": "2024-10-18",
+      "title": "Building Mana Bases with Duskmourn's New Verge Lands (Frank Karsten)",
+      "url": "https://www.tcgplayer.com/content/article/Building-Mana-Bases-with-Duskmourn-s-New-Verge-Lands/02256252-047e-458a-92b3-bed999bd3364/"
+     },
+     "tagger": {
+      "date": "oracle_tags bulk file of 2026-09-28",
+      "title": "Scryfall Tagger oracle tags mass-land-denial and extra-turn",
+      "url": "https://tagger.scryfall.com/tags/card/mass-land-denial"
+     },
+     "wizards-commander": {
+      "date": "fetched 2026-09-29 (Game Changers last changed 2026-02-09)",
+      "title": "Commander format page: Brackets and Game Changers (Wizards of the Coast)",
+      "url": "https://magic.wizards.com/en/formats/commander"
+     },
+     "wizards-jumpstart": {
+      "date": "2024-10-28",
+      "title": "Foundations Jumpstart Booster Themes (Wizards of the Coast)",
+      "url": "https://magic.wizards.com/en/news/announcements/foundations-jumpstart-booster-themes"
+     },
+     "wizards-mana": {
+      "date": "2014-08-18",
+      "title": "The Basics of Mana (Reid Duke, Wizards of the Coast)",
+      "url": "https://magic.wizards.com/en/news/feature/basics-mana-2014-08-18"
+     }
+    },
+    "tribes": {
+     "changelings": {
+      "cards": [],
+      "count": 0,
+      "note": "Changelings are every creature type, so each also counts towards every tribe; they're counted above only under their printed types."
+     },
+     "types": [
+      {
+       "cards": [
+        {
+         "name": "Aerie Mystics",
+         "qty": 1
+        }
+       ],
+       "count": 1,
+       "type": "Bird"
+      },
+      {
+       "cards": [
+        {
+         "name": "Aerie Mystics",
+         "qty": 1
+        }
+       ],
+       "count": 1,
+       "type": "Wizard"
+      }
+     ]
+    },
+    "types": [
+     {
+      "cards": [
+       {
+        "name": "Aerie Mystics",
+        "qty": 1
+       }
+      ],
+      "count": 1,
+      "type": "creature"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "type": "instant"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "type": "sorcery"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "type": "artifact"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "type": "enchantment"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "type": "planeswalker"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "type": "battle"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "type": "land"
+     }
+    ],
+    "unresolved": [
+     {
+      "name": "Mountain",
+      "qty": 7,
+      "section": "Deck"
+     }
+    ],
+    "warnings": [
+     "8 cards: using the 20-card guidance, the nearest deck size it covers (20, 40, 60).",
+     "7 cards with names that aren't Scryfall cards count towards the deck size but nothing else: Mountain"
+    ]
+   },
+   "summary": {
+    "built_version": null,
+    "card_count": 8,
+    "format": "Beginner Box half (20 cards)",
+    "holder_sha256": "4cf76a5f8195e524ffa114dc12244e69c6746313d37a882c21c6653ad2aa5474",
+    "id": "product/fdn-beginner-box/goblins",
+    "kind": "casual",
+    "kit": {
+     "deck_box": null,
+     "holder": "product/fdn-beginner-box",
+     "info": [],
+     "need": 26,
+     "owner": "shared",
+     "short": 0,
+     "sleeves": null,
+     "spare": 0,
+     "title": "Foundations Beginner Box",
+     "warnings": [
+      "Foundations Beginner Box is kept intact: choose its sleeves (it needs 26)."
+     ]
+    },
+    "player": null,
+    "read_only": true,
+    "sideboard_count": 0,
+    "source": "magic/products/fdn-beginner-box.csv",
+    "space": "home",
+    "status": null,
+    "title": "Goblins (Foundations Beginner Box)",
+    "versions": [
+     "target"
+    ]
+   },
+   "table": null,
+   "tokens": {
+    "copies": [],
+    "counts": {
+     "check": 0,
+     "differs": 0,
+     "incoming": 0,
+     "kinds": 0,
+     "none": 0,
+     "ready": 0
+    },
+    "needs": [],
+    "note": "Worked out from Scryfall's links between cards and tokens, so it's approximate. Tokens a card makes only through its rules text, and most token copies of other cards, aren't listed. Some listed tokens appear only in certain modes or for your opponent. Deck Lab can't tell how many a game needs.",
+    "unlisted": []
+   },
+   "uncommitted": null,
+   "version": "target",
+   "versions": [
+    "target"
+   ],
+   "warnings": [
+    "Aerie Mystics (TST) 1: Scryfall has no printing TST 1",
+    "'Mountain' (Deck) isn't a Scryfall card name, so there's no card data for it",
+    "Foundations Beginner Box is kept intact: choose its sleeves (it needs 26)."
+   ]
+  }
+ },
+ "decks_index": {
+  "decks": [
+   {
+    "availability_confirmed": {
+     "target": true
+    },
+    "built_version": null,
+    "card_count": 9,
+    "format": "Beginner Box half (20 cards)",
+    "id": "product/fdn-beginner-box/elves",
+    "kind": "casual",
+    "kit": {
+     "deck_box": null,
+     "short": 0,
+     "sleeves": null
+    },
+    "missing": {
+     "target": 0
+    },
+    "on_the_way": {
+     "target": 0
+    },
+    "player": null,
+    "read_only": true,
+    "sideboard_count": 0,
+    "source": "magic/products/fdn-beginner-box.csv",
+    "space": "home",
+    "status": null,
+    "title": "Elves (Foundations Beginner Box)",
+    "tokens": {
+     "differs": [],
+     "incoming": [],
+     "kinds": 0,
+     "none": [],
+     "reminders": []
+    },
+    "versions": [
+     "target"
+    ]
+   },
+   {
+    "availability_confirmed": {
+     "target": true
+    },
+    "built_version": null,
+    "card_count": 9,
+    "format": "Beginner Box half (20 cards)",
+    "id": "product/fdn-beginner-box/cats",
+    "kind": "casual",
+    "kit": {
+     "deck_box": null,
+     "short": 0,
+     "sleeves": null
+    },
+    "missing": {
+     "target": 0
+    },
+    "on_the_way": {
+     "target": 0
+    },
+    "player": null,
+    "read_only": true,
+    "sideboard_count": 0,
+    "source": "magic/products/fdn-beginner-box.csv",
+    "space": "home",
+    "status": null,
+    "title": "Cats (Foundations Beginner Box)",
+    "tokens": {
+     "differs": [],
+     "incoming": [],
+     "kinds": 0,
+     "none": [],
+     "reminders": []
+    },
+    "versions": [
+     "target"
+    ]
+   },
+   {
+    "availability_confirmed": {
+     "target": true
+    },
+    "built_version": null,
+    "card_count": 8,
+    "format": "Beginner Box half (20 cards)",
+    "id": "product/fdn-beginner-box/goblins",
+    "kind": "casual",
+    "kit": {
+     "deck_box": null,
+     "short": 0,
+     "sleeves": null
+    },
+    "missing": {
+     "target": 0
+    },
+    "on_the_way": {
+     "target": 0
+    },
+    "player": null,
+    "read_only": true,
+    "sideboard_count": 0,
+    "source": "magic/products/fdn-beginner-box.csv",
+    "space": "home",
+    "status": null,
+    "title": "Goblins (Foundations Beginner Box)",
+    "tokens": {
+     "differs": [],
+     "incoming": [],
+     "kinds": 0,
+     "none": [],
+     "reminders": []
+    },
+    "versions": [
+     "target"
+    ]
+   }
+  ],
+  "halves": [
+   {
+    "id": "product/fdn-beginner-box/elves",
+    "title": "Elves"
+   },
+   {
+    "id": "product/fdn-beginner-box/cats",
+    "title": "Cats"
+   },
+   {
+    "id": "product/fdn-beginner-box/goblins",
+    "title": "Goblins"
+   }
+  ],
+  "warnings": []
+ },
+ "field": {
+  "Commander": {
+   "lists": [],
+   "notes": []
+  },
+  "Constructed": {
+   "lists": [],
+   "notes": []
+  }
+ },
+ "list_decks": [
+  {
+   "built_version": null,
+   "card_count": 9,
+   "format": "Beginner Box half (20 cards)",
+   "id": "product/fdn-beginner-box/elves",
+   "kind": "casual",
+   "player": null,
+   "read_only": true,
+   "sideboard_count": 0,
+   "source": "magic/products/fdn-beginner-box.csv",
+   "space": "home",
+   "status": null,
+   "title": "Elves (Foundations Beginner Box)",
+   "versions": [
+    "target"
+   ]
+  },
+  {
+   "built_version": null,
+   "card_count": 9,
+   "format": "Beginner Box half (20 cards)",
+   "id": "product/fdn-beginner-box/cats",
+   "kind": "casual",
+   "player": null,
+   "read_only": true,
+   "sideboard_count": 0,
+   "source": "magic/products/fdn-beginner-box.csv",
+   "space": "home",
+   "status": null,
+   "title": "Cats (Foundations Beginner Box)",
+   "versions": [
+    "target"
+   ]
+  },
+  {
+   "built_version": null,
+   "card_count": 8,
+   "format": "Beginner Box half (20 cards)",
+   "id": "product/fdn-beginner-box/goblins",
+   "kind": "casual",
+   "player": null,
+   "read_only": true,
+   "sideboard_count": 0,
+   "source": "magic/products/fdn-beginner-box.csv",
+   "space": "home",
+   "status": null,
+   "title": "Goblins (Foundations Beginner Box)",
+   "versions": [
+    "target"
+   ]
+  }
+ ],
+ "load_deck": {
+  "pairing/cats+goblins": {
+   "Deck": [
+    {
+     "finish": "nonfoil",
+     "name": "Llanowar Elves",
+     "number": "1",
+     "quantity": 1,
+     "set": "tst"
+    },
+    {
+     "finish": "nonfoil",
+     "name": "Pick Your Poison",
+     "number": "1",
+     "quantity": 1,
+     "set": "tst"
+    },
+    {
+     "finish": "nonfoil",
+     "name": "Plains",
+     "number": "1",
+     "quantity": 7,
+     "set": "tst"
+    },
+    {
+     "finish": "nonfoil",
+     "name": "Aerie Mystics",
+     "number": "1",
+     "quantity": 1,
+     "set": "tst"
+    },
+    {
+     "finish": "nonfoil",
+     "name": "Mountain",
+     "number": "1",
+     "quantity": 7,
+     "set": "tst"
+    }
+   ]
+  },
+  "pairing/elves+cats": {
+   "Deck": [
+    {
+     "finish": "nonfoil",
+     "name": "Llanowar Elves",
+     "number": "1",
+     "quantity": 2,
+     "set": "tst"
+    },
+    {
+     "finish": "nonfoil",
+     "name": "Elvish Mystic",
+     "number": "1",
+     "quantity": 1,
+     "set": "tst"
+    },
+    {
+     "finish": "nonfoil",
+     "name": "Forest",
+     "number": "1",
+     "quantity": 7,
+     "set": "tst"
+    },
+    {
+     "finish": "nonfoil",
+     "name": "Pick Your Poison",
+     "number": "1",
+     "quantity": 1,
+     "set": "tst"
+    },
+    {
+     "finish": "nonfoil",
+     "name": "Plains",
+     "number": "1",
+     "quantity": 7,
+     "set": "tst"
+    }
+   ]
+  },
+  "pairing/elves+goblins": {
+   "Deck": [
+    {
+     "finish": "nonfoil",
+     "name": "Llanowar Elves",
+     "number": "1",
+     "quantity": 1,
+     "set": "tst"
+    },
+    {
+     "finish": "nonfoil",
+     "name": "Elvish Mystic",
+     "number": "1",
+     "quantity": 1,
+     "set": "tst"
+    },
+    {
+     "finish": "nonfoil",
+     "name": "Forest",
+     "number": "1",
+     "quantity": 7,
+     "set": "tst"
+    },
+    {
+     "finish": "nonfoil",
+     "name": "Aerie Mystics",
+     "number": "1",
+     "quantity": 1,
+     "set": "tst"
+    },
+    {
+     "finish": "nonfoil",
+     "name": "Mountain",
+     "number": "1",
+     "quantity": 7,
+     "set": "tst"
+    }
+   ]
+  },
+  "product/fdn-beginner-box/cats": {
+   "Deck": [
+    {
+     "finish": "nonfoil",
+     "name": "Llanowar Elves",
+     "number": "1",
+     "quantity": 1,
+     "set": "tst"
+    },
+    {
+     "finish": "nonfoil",
+     "name": "Pick Your Poison",
+     "number": "1",
+     "quantity": 1,
+     "set": "tst"
+    },
+    {
+     "finish": "nonfoil",
+     "name": "Plains",
+     "number": "1",
+     "quantity": 7,
+     "set": "tst"
+    }
+   ]
+  },
+  "product/fdn-beginner-box/elves": {
+   "Deck": [
+    {
+     "finish": "nonfoil",
+     "name": "Llanowar Elves",
+     "number": "1",
+     "quantity": 1,
+     "set": "tst"
+    },
+    {
+     "finish": "nonfoil",
+     "name": "Elvish Mystic",
+     "number": "1",
+     "quantity": 1,
+     "set": "tst"
+    },
+    {
+     "finish": "nonfoil",
+     "name": "Forest",
+     "number": "1",
+     "quantity": 7,
+     "set": "tst"
+    }
+   ]
+  },
+  "product/fdn-beginner-box/goblins": {
+   "Deck": [
+    {
+     "finish": "nonfoil",
+     "name": "Aerie Mystics",
+     "number": "1",
+     "quantity": 1,
+     "set": "tst"
+    },
+    {
+     "finish": "nonfoil",
+     "name": "Mountain",
+     "number": "1",
+     "quantity": 7,
+     "set": "tst"
+    }
+   ]
+  }
+ },
+ "owned_vs_needed": {
+  "pairing/cats+goblins@target": {
+   "conflicts": [
+    {
+     "available": 1,
+     "decks": [
+      [
+       "Elves (Foundations Beginner Box)",
+       1
+      ]
+     ],
+     "missing": 0,
+     "name": "Llanowar Elves",
+     "need": 1,
+     "owned": 2,
+     "short": 0
+    }
+   ],
+   "deck_id": "pairing/cats+goblins",
+   "price_date": null,
+   "price_error": null,
+   "rate": null,
+   "rate_date": null,
+   "rows": [
+    {
+     "aud_each": null,
+     "aud_missing": null,
+     "available": 1,
+     "in_use_elsewhere": [],
+     "missing": 0,
+     "name": "Aerie Mystics",
+     "need": 1,
+     "on_the_way": 0,
+     "on_the_way_from": [],
+     "owned": 1,
+     "priced_finish": null,
+     "priced_printing": null
+    },
+    {
+     "aud_each": null,
+     "aud_missing": null,
+     "available": 1,
+     "in_use_elsewhere": [
+      [
+       "Elves (Foundations Beginner Box)",
+       1
+      ]
+     ],
+     "missing": 0,
+     "name": "Llanowar Elves",
+     "need": 1,
+     "on_the_way": 0,
+     "on_the_way_from": [],
+     "owned": 2,
+     "priced_finish": null,
+     "priced_printing": null
+    },
+    {
+     "aud_each": null,
+     "aud_missing": null,
+     "available": 1,
+     "in_use_elsewhere": [],
+     "missing": 0,
+     "name": "Pick Your Poison",
+     "need": 1,
+     "on_the_way": 0,
+     "on_the_way_from": [],
+     "owned": 1,
+     "priced_finish": null,
+     "priced_printing": null
+    }
+   ],
+   "totals": {
+    "aud_missing": null,
+    "cards": 3,
+    "missing": 0,
+    "need": 3,
+    "unpriced": []
+   },
+   "unresolved": [],
+   "version": "target",
+   "warnings": []
+  },
+  "pairing/elves+cats@target": {
+   "conflicts": [],
+   "deck_id": "pairing/elves+cats",
+   "price_date": null,
+   "price_error": null,
+   "rate": null,
+   "rate_date": null,
+   "rows": [
+    {
+     "aud_each": null,
+     "aud_missing": null,
+     "available": 1,
+     "in_use_elsewhere": [],
+     "missing": 0,
+     "name": "Elvish Mystic",
+     "need": 1,
+     "on_the_way": 0,
+     "on_the_way_from": [],
+     "owned": 1,
+     "priced_finish": null,
+     "priced_printing": null
+    },
+    {
+     "aud_each": null,
+     "aud_missing": null,
+     "available": 2,
+     "in_use_elsewhere": [],
+     "missing": 0,
+     "name": "Llanowar Elves",
+     "need": 2,
+     "on_the_way": 0,
+     "on_the_way_from": [],
+     "owned": 2,
+     "priced_finish": null,
+     "priced_printing": null
+    },
+    {
+     "aud_each": null,
+     "aud_missing": null,
+     "available": 1,
+     "in_use_elsewhere": [],
+     "missing": 0,
+     "name": "Pick Your Poison",
+     "need": 1,
+     "on_the_way": 0,
+     "on_the_way_from": [],
+     "owned": 1,
+     "priced_finish": null,
+     "priced_printing": null
+    }
+   ],
+   "totals": {
+    "aud_missing": null,
+    "cards": 3,
+    "missing": 0,
+    "need": 4,
+    "unpriced": []
+   },
+   "unresolved": [],
+   "version": "target",
+   "warnings": []
+  },
+  "pairing/elves+goblins@target": {
+   "conflicts": [
+    {
+     "available": 1,
+     "decks": [
+      [
+       "Cats (Foundations Beginner Box)",
+       1
+      ]
+     ],
+     "missing": 0,
+     "name": "Llanowar Elves",
+     "need": 1,
+     "owned": 2,
+     "short": 0
+    }
+   ],
+   "deck_id": "pairing/elves+goblins",
+   "price_date": null,
+   "price_error": null,
+   "rate": null,
+   "rate_date": null,
+   "rows": [
+    {
+     "aud_each": null,
+     "aud_missing": null,
+     "available": 1,
+     "in_use_elsewhere": [],
+     "missing": 0,
+     "name": "Aerie Mystics",
+     "need": 1,
+     "on_the_way": 0,
+     "on_the_way_from": [],
+     "owned": 1,
+     "priced_finish": null,
+     "priced_printing": null
+    },
+    {
+     "aud_each": null,
+     "aud_missing": null,
+     "available": 1,
+     "in_use_elsewhere": [],
+     "missing": 0,
+     "name": "Elvish Mystic",
+     "need": 1,
+     "on_the_way": 0,
+     "on_the_way_from": [],
+     "owned": 1,
+     "priced_finish": null,
+     "priced_printing": null
+    },
+    {
+     "aud_each": null,
+     "aud_missing": null,
+     "available": 1,
+     "in_use_elsewhere": [
+      [
+       "Cats (Foundations Beginner Box)",
+       1
+      ]
+     ],
+     "missing": 0,
+     "name": "Llanowar Elves",
+     "need": 1,
+     "on_the_way": 0,
+     "on_the_way_from": [],
+     "owned": 2,
+     "priced_finish": null,
+     "priced_printing": null
+    }
+   ],
+   "totals": {
+    "aud_missing": null,
+    "cards": 3,
+    "missing": 0,
+    "need": 3,
+    "unpriced": []
+   },
+   "unresolved": [],
+   "version": "target",
+   "warnings": []
+  },
+  "product/fdn-beginner-box/cats@target": {
+   "conflicts": [
+    {
+     "available": 1,
+     "decks": [
+      [
+       "Elves (Foundations Beginner Box)",
+       1
+      ]
+     ],
+     "missing": 0,
+     "name": "Llanowar Elves",
+     "need": 1,
+     "owned": 2,
+     "short": 0
+    }
+   ],
+   "deck_id": "product/fdn-beginner-box/cats",
+   "price_date": null,
+   "price_error": null,
+   "rate": null,
+   "rate_date": null,
+   "rows": [
+    {
+     "aud_each": null,
+     "aud_missing": null,
+     "available": 1,
+     "in_use_elsewhere": [
+      [
+       "Elves (Foundations Beginner Box)",
+       1
+      ]
+     ],
+     "missing": 0,
+     "name": "Llanowar Elves",
+     "need": 1,
+     "on_the_way": 0,
+     "on_the_way_from": [],
+     "owned": 2,
+     "priced_finish": null,
+     "priced_printing": null
+    },
+    {
+     "aud_each": null,
+     "aud_missing": null,
+     "available": 1,
+     "in_use_elsewhere": [],
+     "missing": 0,
+     "name": "Pick Your Poison",
+     "need": 1,
+     "on_the_way": 0,
+     "on_the_way_from": [],
+     "owned": 1,
+     "priced_finish": null,
+     "priced_printing": null
+    }
+   ],
+   "totals": {
+    "aud_missing": null,
+    "cards": 2,
+    "missing": 0,
+    "need": 2,
+    "unpriced": []
+   },
+   "unresolved": [],
+   "version": "target",
+   "warnings": []
+  },
+  "product/fdn-beginner-box/elves@target": {
+   "conflicts": [
+    {
+     "available": 1,
+     "decks": [
+      [
+       "Cats (Foundations Beginner Box)",
+       1
+      ]
+     ],
+     "missing": 0,
+     "name": "Llanowar Elves",
+     "need": 1,
+     "owned": 2,
+     "short": 0
+    }
+   ],
+   "deck_id": "product/fdn-beginner-box/elves",
+   "price_date": null,
+   "price_error": null,
+   "rate": null,
+   "rate_date": null,
+   "rows": [
+    {
+     "aud_each": null,
+     "aud_missing": null,
+     "available": 1,
+     "in_use_elsewhere": [],
+     "missing": 0,
+     "name": "Elvish Mystic",
+     "need": 1,
+     "on_the_way": 0,
+     "on_the_way_from": [],
+     "owned": 1,
+     "priced_finish": null,
+     "priced_printing": null
+    },
+    {
+     "aud_each": null,
+     "aud_missing": null,
+     "available": 1,
+     "in_use_elsewhere": [
+      [
+       "Cats (Foundations Beginner Box)",
+       1
+      ]
+     ],
+     "missing": 0,
+     "name": "Llanowar Elves",
+     "need": 1,
+     "on_the_way": 0,
+     "on_the_way_from": [],
+     "owned": 2,
+     "priced_finish": null,
+     "priced_printing": null
+    }
+   ],
+   "totals": {
+    "aud_missing": null,
+    "cards": 2,
+    "missing": 0,
+    "need": 2,
+    "unpriced": []
+   },
+   "unresolved": [],
+   "version": "target",
+   "warnings": []
+  },
+  "product/fdn-beginner-box/goblins@target": {
+   "conflicts": [],
+   "deck_id": "product/fdn-beginner-box/goblins",
+   "price_date": null,
+   "price_error": null,
+   "rate": null,
+   "rate_date": null,
+   "rows": [
+    {
+     "aud_each": null,
+     "aud_missing": null,
+     "available": 1,
+     "in_use_elsewhere": [],
+     "missing": 0,
+     "name": "Aerie Mystics",
+     "need": 1,
+     "on_the_way": 0,
+     "on_the_way_from": [],
+     "owned": 1,
+     "priced_finish": null,
+     "priced_printing": null
+    }
+   ],
+   "totals": {
+    "aud_missing": null,
+    "cards": 1,
+    "missing": 0,
+    "need": 1,
+    "unpriced": []
+   },
+   "unresolved": [],
+   "version": "target",
+   "warnings": []
+  }
+ },
+ "owned_vs_needed_priced": {
+  "pairing/cats+goblins@target": {
+   "conflicts": [
+    {
+     "available": 1,
+     "decks": [
+      [
+       "Elves (Foundations Beginner Box)",
+       1
+      ]
+     ],
+     "missing": 0,
+     "name": "Llanowar Elves",
+     "need": 1,
+     "owned": 2,
+     "short": 0
+    }
+   ],
+   "deck_id": "pairing/cats+goblins",
+   "price_date": "2026-09-28",
+   "price_error": null,
+   "rate": 1.5,
+   "rate_date": "2000-01-01",
+   "rows": [
+    {
+     "aud_each": 0.17,
+     "aud_missing": 0.0,
+     "available": 1,
+     "in_use_elsewhere": [],
+     "missing": 0,
+     "name": "Aerie Mystics",
+     "need": 1,
+     "on_the_way": 0,
+     "on_the_way_from": [],
+     "owned": 1,
+     "priced_finish": "nonfoil",
+     "priced_printing": "CON 1"
+    },
+    {
+     "aud_each": 0.3,
+     "aud_missing": 0.0,
+     "available": 1,
+     "in_use_elsewhere": [
+      [
+       "Elves (Foundations Beginner Box)",
+       1
+      ]
+     ],
+     "missing": 0,
+     "name": "Llanowar Elves",
+     "need": 1,
+     "on_the_way": 0,
+     "on_the_way_from": [],
+     "owned": 2,
+     "priced_finish": "nonfoil",
+     "priced_printing": "M19 314"
+    },
+    {
+     "aud_each": 0.41,
+     "aud_missing": 0.0,
+     "available": 1,
+     "in_use_elsewhere": [],
+     "missing": 0,
+     "name": "Pick Your Poison",
+     "need": 1,
+     "on_the_way": 0,
+     "on_the_way_from": [],
+     "owned": 1,
+     "priced_finish": "nonfoil",
+     "priced_printing": "MKM 170"
+    }
+   ],
+   "totals": {
+    "aud_missing": 0,
+    "cards": 3,
+    "missing": 0,
+    "need": 3,
+    "unpriced": []
+   },
+   "unresolved": [],
+   "version": "target",
+   "warnings": []
+  },
+  "pairing/elves+cats@target": {
+   "conflicts": [],
+   "deck_id": "pairing/elves+cats",
+   "price_date": "2026-09-28",
+   "price_error": null,
+   "rate": 1.5,
+   "rate_date": "2000-01-01",
+   "rows": [
+    {
+     "aud_each": 2.03,
+     "aud_missing": 0.0,
+     "available": 1,
+     "in_use_elsewhere": [],
+     "missing": 0,
+     "name": "Elvish Mystic",
+     "need": 1,
+     "on_the_way": 0,
+     "on_the_way_from": [],
+     "owned": 1,
+     "priced_finish": "nonfoil",
+     "priced_printing": "CMM 648"
+    },
+    {
+     "aud_each": 0.3,
+     "aud_missing": 0.0,
+     "available": 2,
+     "in_use_elsewhere": [],
+     "missing": 0,
+     "name": "Llanowar Elves",
+     "need": 2,
+     "on_the_way": 0,
+     "on_the_way_from": [],
+     "owned": 2,
+     "priced_finish": "nonfoil",
+     "priced_printing": "M19 314"
+    },
+    {
+     "aud_each": 0.41,
+     "aud_missing": 0.0,
+     "available": 1,
+     "in_use_elsewhere": [],
+     "missing": 0,
+     "name": "Pick Your Poison",
+     "need": 1,
+     "on_the_way": 0,
+     "on_the_way_from": [],
+     "owned": 1,
+     "priced_finish": "nonfoil",
+     "priced_printing": "MKM 170"
+    }
+   ],
+   "totals": {
+    "aud_missing": 0,
+    "cards": 3,
+    "missing": 0,
+    "need": 4,
+    "unpriced": []
+   },
+   "unresolved": [],
+   "version": "target",
+   "warnings": []
+  },
+  "pairing/elves+goblins@target": {
+   "conflicts": [
+    {
+     "available": 1,
+     "decks": [
+      [
+       "Cats (Foundations Beginner Box)",
+       1
+      ]
+     ],
+     "missing": 0,
+     "name": "Llanowar Elves",
+     "need": 1,
+     "owned": 2,
+     "short": 0
+    }
+   ],
+   "deck_id": "pairing/elves+goblins",
+   "price_date": "2026-09-28",
+   "price_error": null,
+   "rate": 1.5,
+   "rate_date": "2000-01-01",
+   "rows": [
+    {
+     "aud_each": 0.17,
+     "aud_missing": 0.0,
+     "available": 1,
+     "in_use_elsewhere": [],
+     "missing": 0,
+     "name": "Aerie Mystics",
+     "need": 1,
+     "on_the_way": 0,
+     "on_the_way_from": [],
+     "owned": 1,
+     "priced_finish": "nonfoil",
+     "priced_printing": "CON 1"
+    },
+    {
+     "aud_each": 2.03,
+     "aud_missing": 0.0,
+     "available": 1,
+     "in_use_elsewhere": [],
+     "missing": 0,
+     "name": "Elvish Mystic",
+     "need": 1,
+     "on_the_way": 0,
+     "on_the_way_from": [],
+     "owned": 1,
+     "priced_finish": "nonfoil",
+     "priced_printing": "CMM 648"
+    },
+    {
+     "aud_each": 0.3,
+     "aud_missing": 0.0,
+     "available": 1,
+     "in_use_elsewhere": [
+      [
+       "Cats (Foundations Beginner Box)",
+       1
+      ]
+     ],
+     "missing": 0,
+     "name": "Llanowar Elves",
+     "need": 1,
+     "on_the_way": 0,
+     "on_the_way_from": [],
+     "owned": 2,
+     "priced_finish": "nonfoil",
+     "priced_printing": "M19 314"
+    }
+   ],
+   "totals": {
+    "aud_missing": 0,
+    "cards": 3,
+    "missing": 0,
+    "need": 3,
+    "unpriced": []
+   },
+   "unresolved": [],
+   "version": "target",
+   "warnings": []
+  },
+  "product/fdn-beginner-box/cats@target": {
+   "conflicts": [
+    {
+     "available": 1,
+     "decks": [
+      [
+       "Elves (Foundations Beginner Box)",
+       1
+      ]
+     ],
+     "missing": 0,
+     "name": "Llanowar Elves",
+     "need": 1,
+     "owned": 2,
+     "short": 0
+    }
+   ],
+   "deck_id": "product/fdn-beginner-box/cats",
+   "price_date": "2026-09-28",
+   "price_error": null,
+   "rate": 1.5,
+   "rate_date": "2000-01-01",
+   "rows": [
+    {
+     "aud_each": 0.3,
+     "aud_missing": 0.0,
+     "available": 1,
+     "in_use_elsewhere": [
+      [
+       "Elves (Foundations Beginner Box)",
+       1
+      ]
+     ],
+     "missing": 0,
+     "name": "Llanowar Elves",
+     "need": 1,
+     "on_the_way": 0,
+     "on_the_way_from": [],
+     "owned": 2,
+     "priced_finish": "nonfoil",
+     "priced_printing": "M19 314"
+    },
+    {
+     "aud_each": 0.41,
+     "aud_missing": 0.0,
+     "available": 1,
+     "in_use_elsewhere": [],
+     "missing": 0,
+     "name": "Pick Your Poison",
+     "need": 1,
+     "on_the_way": 0,
+     "on_the_way_from": [],
+     "owned": 1,
+     "priced_finish": "nonfoil",
+     "priced_printing": "MKM 170"
+    }
+   ],
+   "totals": {
+    "aud_missing": 0,
+    "cards": 2,
+    "missing": 0,
+    "need": 2,
+    "unpriced": []
+   },
+   "unresolved": [],
+   "version": "target",
+   "warnings": []
+  },
+  "product/fdn-beginner-box/elves@target": {
+   "conflicts": [
+    {
+     "available": 1,
+     "decks": [
+      [
+       "Cats (Foundations Beginner Box)",
+       1
+      ]
+     ],
+     "missing": 0,
+     "name": "Llanowar Elves",
+     "need": 1,
+     "owned": 2,
+     "short": 0
+    }
+   ],
+   "deck_id": "product/fdn-beginner-box/elves",
+   "price_date": "2026-09-28",
+   "price_error": null,
+   "rate": 1.5,
+   "rate_date": "2000-01-01",
+   "rows": [
+    {
+     "aud_each": 2.03,
+     "aud_missing": 0.0,
+     "available": 1,
+     "in_use_elsewhere": [],
+     "missing": 0,
+     "name": "Elvish Mystic",
+     "need": 1,
+     "on_the_way": 0,
+     "on_the_way_from": [],
+     "owned": 1,
+     "priced_finish": "nonfoil",
+     "priced_printing": "CMM 648"
+    },
+    {
+     "aud_each": 0.3,
+     "aud_missing": 0.0,
+     "available": 1,
+     "in_use_elsewhere": [
+      [
+       "Cats (Foundations Beginner Box)",
+       1
+      ]
+     ],
+     "missing": 0,
+     "name": "Llanowar Elves",
+     "need": 1,
+     "on_the_way": 0,
+     "on_the_way_from": [],
+     "owned": 2,
+     "priced_finish": "nonfoil",
+     "priced_printing": "M19 314"
+    }
+   ],
+   "totals": {
+    "aud_missing": 0,
+    "cards": 2,
+    "missing": 0,
+    "need": 2,
+    "unpriced": []
+   },
+   "unresolved": [],
+   "version": "target",
+   "warnings": []
+  },
+  "product/fdn-beginner-box/goblins@target": {
+   "conflicts": [],
+   "deck_id": "product/fdn-beginner-box/goblins",
+   "price_date": "2026-09-28",
+   "price_error": null,
+   "rate": 1.5,
+   "rate_date": "2000-01-01",
+   "rows": [
+    {
+     "aud_each": 0.17,
+     "aud_missing": 0.0,
+     "available": 1,
+     "in_use_elsewhere": [],
+     "missing": 0,
+     "name": "Aerie Mystics",
+     "need": 1,
+     "on_the_way": 0,
+     "on_the_way_from": [],
+     "owned": 1,
+     "priced_finish": "nonfoil",
+     "priced_printing": "CON 1"
+    }
+   ],
+   "totals": {
+    "aud_missing": 0,
+    "cards": 1,
+    "missing": 0,
+    "need": 1,
+    "unpriced": []
+   },
+   "unresolved": [],
+   "version": "target",
+   "warnings": []
+  }
+ },
+ "plan_refresh": {},
+ "pools": {
+  "home": {
+   "in_use": [
+    {
+     "cards": {
+      "Elvish Mystic": 1,
+      "Llanowar Elves": 1
+     },
+     "id": "product/fdn-beginner-box/elves",
+     "title": "Elves (Foundations Beginner Box)",
+     "why": "intact product"
+    },
+    {
+     "cards": {
+      "Llanowar Elves": 1,
+      "Pick Your Poison": 1
+     },
+     "id": "product/fdn-beginner-box/cats",
+     "title": "Cats (Foundations Beginner Box)",
+     "why": "intact product"
+    },
+    {
+     "cards": {
+      "Aerie Mystics": 1
+     },
+     "id": "product/fdn-beginner-box/goblins",
+     "title": "Goblins (Foundations Beginner Box)",
+     "why": "intact product"
+    }
+   ],
+   "on_the_way": {},
+   "owned": {
+    "Aerie Mystics": 1,
+    "Elvish Mystic": 1,
+    "Llanowar Elves": 2,
+    "Pick Your Poison": 1
+   },
+   "space": "home",
+   "unresolved": {},
+   "warnings": []
+  },
+  "user3": {
+   "in_use": [],
+   "on_the_way": {},
+   "owned": {},
+   "space": "user3",
+   "unresolved": {},
+   "warnings": []
+  },
+  "user2": {
+   "in_use": [],
+   "on_the_way": {},
+   "owned": {},
+   "space": "user2",
+   "unresolved": {},
+   "warnings": []
+  },
+  "user4": {
+   "in_use": [],
+   "on_the_way": {},
+   "owned": {},
+   "space": "user4",
+   "unresolved": {},
+   "warnings": []
+  }
+ },
+ "printing_counts": {
+  "home": {
+   "cmm|648|nonfoil": {
+    "on_the_way": 0,
+    "owned": 1
+   },
+   "con|1|nonfoil": {
+    "on_the_way": 0,
+    "owned": 1
+   },
+   "fdn|227|nonfoil": {
+    "on_the_way": 0,
+    "owned": 2
+   },
+   "mkm|170|nonfoil": {
+    "on_the_way": 0,
+    "owned": 1
+   }
+  },
+  "user3": {},
+  "user2": {},
+  "user4": {}
+ },
+ "printings": {
+  "Aerie Mystics": {
+   "basic": false,
+   "default": {
+    "finish": "nonfoil",
+    "number": "1",
+    "set": "con",
+    "why": "owned"
+   },
+   "name": "Aerie Mystics",
+   "price_date": "2026-09-28",
+   "price_error": null,
+   "printings": [
+    {
+     "aud": 0.17,
+     "finish": "nonfoil",
+     "img": "/img/con/1/normal",
+     "img_small": "/img/con/1/small",
+     "number": "1",
+     "on_the_way": 0,
+     "owned": 1,
+     "released": "2009-02-06",
+     "set": "con",
+     "set_name": "CON",
+     "set_type": "expansion",
+     "usd": 0.11
+    },
+    {
+     "aud": 1.03,
+     "finish": "foil",
+     "img": "/img/con/1/normal",
+     "img_small": "/img/con/1/small",
+     "number": "1",
+     "on_the_way": 0,
+     "owned": 0,
+     "released": "2009-02-06",
+     "set": "con",
+     "set_name": "CON",
+     "set_type": "expansion",
+     "usd": 0.69
+    }
+   ],
+   "rate": 1.5,
+   "rate_date": "2000-01-01",
+   "total": 2
+  },
+  "Elvish Mystic": {
+   "basic": false,
+   "default": {
+    "finish": "nonfoil",
+    "number": "648",
+    "set": "cmm",
+    "why": "owned"
+   },
+   "name": "Elvish Mystic",
+   "price_date": "2026-09-28",
+   "price_error": null,
+   "printings": [
+    {
+     "aud": 2.03,
+     "finish": "nonfoil",
+     "img": "/img/cmm/648/normal",
+     "img_small": "/img/cmm/648/small",
+     "number": "648",
+     "on_the_way": 0,
+     "owned": 1,
+     "released": "2023-08-04",
+     "set": "cmm",
+     "set_name": "CMM",
+     "set_type": "masters",
+     "usd": 1.35
+    },
+    {
+     "aud": 5.83,
+     "finish": "foil",
+     "img": "/img/cmm/648/normal",
+     "img_small": "/img/cmm/648/small",
+     "number": "648",
+     "on_the_way": 0,
+     "owned": 0,
+     "released": "2023-08-04",
+     "set": "cmm",
+     "set_name": "CMM",
+     "set_type": "masters",
+     "usd": 3.89
+    }
+   ],
+   "rate": 1.5,
+   "rate_date": "2000-01-01",
+   "total": 2
+  },
+  "Llanowar Elves": {
+   "basic": false,
+   "default": {
+    "finish": "nonfoil",
+    "number": "227",
+    "set": "fdn",
+    "why": "owned"
+   },
+   "name": "Llanowar Elves",
+   "price_date": "2026-09-28",
+   "price_error": null,
+   "printings": [
+    {
+     "aud": 0.38,
+     "finish": "nonfoil",
+     "img": "/img/fdn/227/normal",
+     "img_small": "/img/fdn/227/small",
+     "number": "227",
+     "on_the_way": 0,
+     "owned": 2,
+     "released": "2024-11-15",
+     "set": "fdn",
+     "set_name": "FDN",
+     "set_type": "core",
+     "usd": 0.25
+    },
+    {
+     "aud": 0.04,
+     "finish": "foil",
+     "img": "/img/pdmu/1%E2%98%85/normal",
+     "img_small": "/img/pdmu/1%E2%98%85/small",
+     "number": "1★",
+     "on_the_way": 0,
+     "owned": 0,
+     "released": "2023-09-01",
+     "set": "pdmu",
+     "set_name": "PDMU",
+     "set_type": "promo",
+     "usd": 0.03
+    },
+    {
+     "aud": 0.3,
+     "finish": "nonfoil",
+     "img": "/img/m19/314/normal",
+     "img_small": "/img/m19/314/small",
+     "number": "314",
+     "on_the_way": 0,
+     "owned": 0,
+     "released": "2018-07-13",
+     "set": "m19",
+     "set_name": "M19",
+     "set_type": "core",
+     "usd": 0.2
+    },
+    {
+     "aud": 2.66,
+     "finish": "foil",
+     "img": "/img/fdn/227/normal",
+     "img_small": "/img/fdn/227/small",
+     "number": "227",
+     "on_the_way": 0,
+     "owned": 0,
+     "released": "2024-11-15",
+     "set": "fdn",
+     "set_name": "FDN",
+     "set_type": "core",
+     "usd": 1.77
+    }
+   ],
+   "rate": 1.5,
+   "rate_date": "2000-01-01",
+   "total": 4
+  },
+  "Pick Your Poison": {
+   "basic": false,
+   "default": {
+    "finish": "nonfoil",
+    "number": "170",
+    "set": "mkm",
+    "why": "owned"
+   },
+   "name": "Pick Your Poison",
+   "price_date": "2026-09-28",
+   "price_error": null,
+   "printings": [
+    {
+     "aud": 0.41,
+     "finish": "nonfoil",
+     "img": "/img/mkm/170/normal",
+     "img_small": "/img/mkm/170/small",
+     "number": "170",
+     "on_the_way": 0,
+     "owned": 1,
+     "released": "2024-02-09",
+     "set": "mkm",
+     "set_name": "MKM",
+     "set_type": "expansion",
+     "usd": 0.27
+    },
+    {
+     "aud": 0.46,
+     "finish": "foil",
+     "img": "/img/mkm/170/normal",
+     "img_small": "/img/mkm/170/small",
+     "number": "170",
+     "on_the_way": 0,
+     "owned": 0,
+     "released": "2024-02-09",
+     "set": "mkm",
+     "set_name": "MKM",
+     "set_type": "expansion",
+     "usd": 0.31
+    }
+   ],
+   "rate": 1.5,
+   "rate_date": "2000-01-01",
+   "total": 2
+  }
+ },
+ "purchases": {
+  "coverage": [
+   "magic/products/fdn-beginner-box.csv: missing order record"
+  ],
+  "overview": {
+   "__error__": "ValueError: Shopping records need attention: magic/products/fdn-beginner-box.csv: missing order record"
+  },
+  "read_queue": [],
+  "read_records": []
+ },
+ "read_status": {
+  "status": {
+   "fdn-beginner-box.csv": {
+    "deck_box": "",
+    "file": "fdn-beginner-box.csv",
+    "intact": true,
+    "notes": "",
+    "sleeves": "",
+    "status": "owned"
+   }
+  },
+  "warnings": []
+ },
+ "spaces": [
+  "home",
+  "user2",
+  "user3",
+  "user4"
+ ],
+ "stale_tables": [],
+ "tokens": {
+  "incoming": [
+   [],
+   []
+  ],
+  "incoming_view": {
+   "incoming": [],
+   "problems": []
+  },
+  "spaces": {
+   "home": {
+    "check": [],
+    "gaps": {
+     "gaps": [],
+     "warnings": []
+    },
+    "holders": {
+     "holders": [
+      [
+       "product/fdn-beginner-box",
+       "Foundations Beginner Box",
+       "target",
+       {
+        "Deck": [
+         {
+          "finish": "nonfoil",
+          "name": "Llanowar Elves",
+          "number": "1",
+          "quantity": 1,
+          "set": "tst"
+         },
+         {
+          "finish": "nonfoil",
+          "name": "Elvish Mystic",
+          "number": "1",
+          "quantity": 1,
+          "set": "tst"
+         },
+         {
+          "finish": "nonfoil",
+          "name": "Forest",
+          "number": "1",
+          "quantity": 7,
+          "set": "tst"
+         },
+         {
+          "finish": "nonfoil",
+          "name": "Llanowar Elves",
+          "number": "1",
+          "quantity": 1,
+          "set": "tst"
+         },
+         {
+          "finish": "nonfoil",
+          "name": "Pick Your Poison",
+          "number": "1",
+          "quantity": 1,
+          "set": "tst"
+         },
+         {
+          "finish": "nonfoil",
+          "name": "Plains",
+          "number": "1",
+          "quantity": 7,
+          "set": "tst"
+         },
+         {
+          "finish": "nonfoil",
+          "name": "Aerie Mystics",
+          "number": "1",
+          "quantity": 1,
+          "set": "tst"
+         },
+         {
+          "finish": "nonfoil",
+          "name": "Mountain",
+          "number": "1",
+          "quantity": 7,
+          "set": "tst"
+         }
+        ]
+       },
+       null
+      ]
+     ],
+     "warnings": []
+    },
+    "read": {
+     "lines": [],
+     "problems": [],
+     "rows": [],
+     "sha256": null,
+     "sorted": true
+    },
+    "row_uses": {
+     "row_uses": {},
+     "warnings": []
+    }
+   },
+   "user3": {
+    "check": [],
+    "gaps": {
+     "gaps": [],
+     "warnings": []
+    },
+    "holders": {
+     "holders": [],
+     "warnings": []
+    },
+    "read": {
+     "lines": [],
+     "problems": [],
+     "rows": [],
+     "sha256": null,
+     "sorted": true
+    },
+    "row_uses": {
+     "row_uses": {},
+     "warnings": []
+    }
+   },
+   "user2": {
+    "check": [],
+    "gaps": {
+     "gaps": [],
+     "warnings": []
+    },
+    "holders": {
+     "holders": [],
+     "warnings": []
+    },
+    "read": {
+     "lines": [],
+     "problems": [],
+     "rows": [],
+     "sha256": null,
+     "sorted": true
+    },
+    "row_uses": {
+     "row_uses": {},
+     "warnings": []
+    }
+   },
+   "user4": {
+    "check": [],
+    "gaps": {
+     "gaps": [],
+     "warnings": []
+    },
+    "holders": {
+     "holders": [],
+     "warnings": []
+    },
+    "read": {
+     "lines": [],
+     "problems": [],
+     "rows": [],
+     "sha256": null,
+     "sorted": true
+    },
+    "row_uses": {
+     "row_uses": {},
+     "warnings": []
+    }
+   }
+  }
+ },
+ "wishlist_view": {
+  "user1": {
+   "entries": [
+    {
+     "card": {
+      "cmc": 5.0,
+      "color_identity": [
+       "G",
+       "U",
+       "W"
+      ],
+      "colors": [
+       "W"
+      ],
+      "defense": null,
+      "img": "/img/con/1/normal",
+      "img_small": "/img/con/1/small",
+      "loyalty": null,
+      "mana_cost": "{4}{W}",
+      "name": "Aerie Mystics",
+      "oracle_text": "Flying\n{1}{G}{U}: Creatures you control gain shroud until end of turn. (They can't be the targets of spells or abilities.)",
+      "power": "3",
+      "roles": [],
+      "toughness": "3",
+      "type_line": "Creature — Bird Wizard"
+     },
+     "have": {
+      "on_the_way": 0,
+      "owned": 1
+     },
+     "name": "Aerie Mystics",
+     "notes": "",
+     "number": "",
+     "set": "",
+     "source": ""
+    },
+    {
+     "card": {
+      "cmc": 1.0,
+      "color_identity": [
+       "G"
+      ],
+      "colors": [
+       "G"
+      ],
+      "defense": null,
+      "img": "/img/cmm/648/normal",
+      "img_small": "/img/cmm/648/small",
+      "loyalty": null,
+      "mana_cost": "{G}",
+      "name": "Elvish Mystic",
+      "oracle_text": "{T}: Add {G}.",
+      "power": "1",
+      "roles": [
+       "ramp"
+      ],
+      "toughness": "1",
+      "type_line": "Creature — Elf Druid"
+     },
+     "have": {
+      "on_the_way": 0,
+      "owned": 1
+     },
+     "name": "Elvish Mystic",
+     "notes": "",
+     "number": "",
+     "set": "",
+     "source": ""
+    },
+    {
+     "card": {
+      "cmc": 1.0,
+      "color_identity": [
+       "G"
+      ],
+      "colors": [
+       "G"
+      ],
+      "defense": null,
+      "img": "/img/fdn/227/normal",
+      "img_small": "/img/fdn/227/small",
+      "loyalty": null,
+      "mana_cost": "{G}",
+      "name": "Llanowar Elves",
+      "oracle_text": "{T}: Add {G}.",
+      "power": "1",
+      "roles": [
+       "ramp"
+      ],
+      "toughness": "1",
+      "type_line": "Creature — Elf Druid"
+     },
+     "have": {
+      "on_the_way": 0,
+      "owned": 2
+     },
+     "name": "Llanowar Elves",
+     "notes": "",
+     "number": "",
+     "set": "",
+     "source": ""
+    },
+    {
+     "card": {
+      "cmc": 1.0,
+      "color_identity": [
+       "G"
+      ],
+      "colors": [
+       "G"
+      ],
+      "defense": null,
+      "img": "/img/mkm/170/normal",
+      "img_small": "/img/mkm/170/small",
+      "loyalty": null,
+      "mana_cost": "{G}",
+      "name": "Pick Your Poison",
+      "oracle_text": "Choose one —\n• Each opponent sacrifices an artifact of their choice.\n• Each opponent sacrifices an enchantment of their choice.\n• Each opponent sacrifices a creature with flying of their choice.",
+      "power": null,
+      "roles": [
+       "removal"
+      ],
+      "toughness": null,
+      "type_line": "Sorcery"
+     },
+     "have": {
+      "on_the_way": 0,
+      "owned": 1
+     },
+     "name": "Pick Your Poison",
+     "notes": "",
+     "number": "",
+     "set": "",
+     "source": ""
+    }
+   ],
+   "profile": "user1",
+   "warnings": []
+  },
+  "matt": {
+   "entries": [
+    {
+     "card": {
+      "cmc": 5.0,
+      "color_identity": [
+       "G",
+       "U",
+       "W"
+      ],
+      "colors": [
+       "W"
+      ],
+      "defense": null,
+      "img": "/img/con/1/normal",
+      "img_small": "/img/con/1/small",
+      "loyalty": null,
+      "mana_cost": "{4}{W}",
+      "name": "Aerie Mystics",
+      "oracle_text": "Flying\n{1}{G}{U}: Creatures you control gain shroud until end of turn. (They can't be the targets of spells or abilities.)",
+      "power": "3",
+      "roles": [],
+      "toughness": "3",
+      "type_line": "Creature — Bird Wizard"
+     },
+     "have": {
+      "on_the_way": 0,
+      "owned": 1
+     },
+     "name": "Aerie Mystics",
+     "notes": "",
+     "number": "",
+     "set": "",
+     "source": ""
+    },
+    {
+     "card": {
+      "cmc": 1.0,
+      "color_identity": [
+       "G"
+      ],
+      "colors": [
+       "G"
+      ],
+      "defense": null,
+      "img": "/img/cmm/648/normal",
+      "img_small": "/img/cmm/648/small",
+      "loyalty": null,
+      "mana_cost": "{G}",
+      "name": "Elvish Mystic",
+      "oracle_text": "{T}: Add {G}.",
+      "power": "1",
+      "roles": [
+       "ramp"
+      ],
+      "toughness": "1",
+      "type_line": "Creature — Elf Druid"
+     },
+     "have": {
+      "on_the_way": 0,
+      "owned": 1
+     },
+     "name": "Elvish Mystic",
+     "notes": "",
+     "number": "",
+     "set": "",
+     "source": ""
+    },
+    {
+     "card": {
+      "cmc": 1.0,
+      "color_identity": [
+       "G"
+      ],
+      "colors": [
+       "G"
+      ],
+      "defense": null,
+      "img": "/img/fdn/227/normal",
+      "img_small": "/img/fdn/227/small",
+      "loyalty": null,
+      "mana_cost": "{G}",
+      "name": "Llanowar Elves",
+      "oracle_text": "{T}: Add {G}.",
+      "power": "1",
+      "roles": [
+       "ramp"
+      ],
+      "toughness": "1",
+      "type_line": "Creature — Elf Druid"
+     },
+     "have": {
+      "on_the_way": 0,
+      "owned": 2
+     },
+     "name": "Llanowar Elves",
+     "notes": "",
+     "number": "",
+     "set": "",
+     "source": ""
+    },
+    {
+     "card": {
+      "cmc": 1.0,
+      "color_identity": [
+       "G"
+      ],
+      "colors": [
+       "G"
+      ],
+      "defense": null,
+      "img": "/img/mkm/170/normal",
+      "img_small": "/img/mkm/170/small",
+      "loyalty": null,
+      "mana_cost": "{G}",
+      "name": "Pick Your Poison",
+      "oracle_text": "Choose one —\n• Each opponent sacrifices an artifact of their choice.\n• Each opponent sacrifices an enchantment of their choice.\n• Each opponent sacrifices a creature with flying of their choice.",
+      "power": null,
+      "roles": [
+       "removal"
+      ],
+      "toughness": null,
+      "type_line": "Sorcery"
+     },
+     "have": {
+      "on_the_way": 0,
+      "owned": 1
+     },
+     "name": "Pick Your Poison",
+     "notes": "",
+     "number": "",
+     "set": "",
+     "source": ""
+    }
+   ],
+   "profile": "matt",
+   "warnings": []
+  },
+  "user3": {
+   "entries": [],
+   "profile": "user3",
+   "warnings": []
+  },
+  "user2": {
+   "entries": [],
+   "profile": "user2",
+   "warnings": []
+  },
+  "user4": {
+   "entries": [],
+   "profile": "user4",
+   "warnings": []
+  }
+ }
+}

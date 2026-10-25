@@ -1,0 +1,31 @@
+/* The Wishlist page (wishlist.js): the search to add a card, the grid of card tiles and a card's sheet.
+   Phone first; it lays shared components out and never restyles them. */
+.wishlist-search { margin-bottom: var(--s-4); padding: var(--s-4); max-width: 760px; }   /* the search, not page-wide on QHD */
+.wishlist-search .search-input { width: 100%; min-width: 0; }
+.wishlist-search-results { list-style: none; padding: 0; margin: var(--s-2) 0 0; display: grid; gap: var(--s-2); }
+.wishlist-search-results:empty { display: none; }
+.wishlist-search-card { display: flex; align-items: center; gap: var(--s-2); min-width: 0; }
+.wishlist-search-card > .card-row { flex: 1; min-width: 0; }
+.wishlist-search-card > .btn { flex: none; }
+.wishlist-message:empty { display: none; }
+.wishlist-message { margin: var(--s-3) 0; color: var(--ink-2); font-size: var(--fs-sm); }
+.wishlist-count { font-size: var(--fs-lg); margin: var(--s-4) 0 var(--s-3); }
+.wishlist-deck-chip { text-decoration: none; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wishlist-deck-chip:hover { text-decoration: underline; }
+@media (pointer: coarse) { .wishlist-deck-chip { min-height: var(--tap); } }
+@media (max-width: 599px) { .wishlist-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* A card's sheet. */
+.wishlist-sheet-message:empty { display: none; }
+.wishlist-sheet-top { display: flex; flex-wrap: wrap; gap: var(--s-4); align-items: flex-start; }
+.wishlist-sheet-pic { flex: none; padding: 0; border: 0; background: none; cursor: zoom-in; border-radius: var(--r-card); overflow: hidden; box-shadow: var(--shadow-img); }
+.wishlist-sheet-pic img { display: block; width: 112px; height: auto; }
+.wishlist-sheet-facts { flex: 1 1 200px; min-width: 0; display: grid; gap: var(--s-2); }
+.wishlist-sheet-facts p { margin: 0; }
+.wishlist-source { color: var(--ink-2); font-size: var(--fs-sm); overflow-wrap: break-word; }
+.wishlist-source a { display: inline-flex; align-items: center; min-height: var(--tap); }
+.wishlist-sheet { display: grid; gap: var(--s-4); }
+.wishlist-sheet textarea { width: 100%; }
+.wishlist-printing-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s-2); }
+.wishlist-printing-words { font-variant-numeric: tabular-nums; font-size: var(--fs-sm); }
+@media (min-width: 600px) { .wishlist-sheet-pic img { width: 146px; } }

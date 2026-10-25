@@ -1,0 +1,12 @@
+/* The deck page's tools (deck-tools.js): the copy sheet's list, and the play sheet printed from More. */
+textarea.export-copy { width: 100%; font-family: var(--font-mono); }
+.print-sheet { display: none; }
+@media print {
+  body:has(.print-sheet) > :not(.print-sheet) { display: none !important; }
+  .print-sheet { display: block; color: #000; background: #fff; font: 10pt/1.35 sans-serif; }
+  .print-sheet h1 { font-size: 18pt; }
+  .print-sheet h2 { font-size: 13pt; break-after: avoid; }
+  .print-sheet pre { white-space: pre-wrap; columns: 2; font: 9pt/1.35 monospace; }
+  .print-sheet .card-link { color: #000; border: 0; padding: 0; font: inherit; text-decoration: none; }
+  .print-warning { border: 1px solid #000; padding: .5rem; font-weight: bold; }
+}

@@ -1,0 +1,159 @@
+{
+ "format": 2,
+ "source": "https://json.commanderspellbook.com/variants.json.gz",
+ "timestamp": "2026-10-14T03:14:00.560664+00:00",
+ "version": "7.3.0",
+ "count": 7,
+ "combos": [
+  {
+   "id": "1-2",
+   "url": "https://commanderspellbook.com/combo/1-2/",
+   "cards": [
+    {
+     "oracle_id": "4b7ac066-e5c7-43e6-9e7e-2739b24a905d",
+     "name": "Serra Angel",
+     "must_be_commander": false
+    },
+    {
+     "oracle_id": "d36075c2-de66-4202-9217-b1102a2bc14b",
+     "name": "Pelakka Wurm",
+     "must_be_commander": false
+    }
+   ],
+   "results": [
+    "Infinite damage",
+    "Infinite lifegain"
+   ],
+   "class": "infinite",
+   "standalone": true
+  },
+  {
+   "id": "3-4",
+   "url": "https://commanderspellbook.com/combo/3-4/",
+   "cards": [
+    {
+     "oracle_id": "d2766fd7-5cf9-4037-9f34-9ae3982c613a",
+     "name": "Wilson, Refined Grizzly",
+     "must_be_commander": true
+    },
+    {
+     "oracle_id": "14c8f55d-d177-4c25-a931-ebeb9e6062a0",
+     "name": "Grizzly Bears",
+     "must_be_commander": false
+    }
+   ],
+   "results": [
+    "Win the game"
+   ],
+   "class": "win",
+   "standalone": true
+  },
+  {
+   "id": "5-6",
+   "url": "https://commanderspellbook.com/combo/5-6/",
+   "cards": [
+    {
+     "oracle_id": "32fc8fa7-7e0a-4d4e-85cf-2f98b3fc6ecf",
+     "name": "Garruk's Companion",
+     "must_be_commander": false
+    },
+    {
+     "oracle_id": "a61ef0cc-1da9-49f9-b0dc-01cf9f6205be",
+     "name": "Changeling Outcast",
+     "must_be_commander": false
+    }
+   ],
+   "results": [
+    "Infinite death triggers"
+   ],
+   "class": "infinite",
+   "standalone": false
+  },
+  {
+   "id": "7-8",
+   "url": "https://commanderspellbook.com/combo/7-8/",
+   "cards": [
+    {
+     "oracle_id": "8539f295-5d58-4436-a73a-b9277c4c7795",
+     "name": "Rampant Growth",
+     "must_be_commander": false
+    },
+    {
+     "oracle_id": "2549bc57-9ffb-4053-9f10-f2a5f792b845",
+     "name": "Myriad Landscape",
+     "must_be_commander": false
+    }
+   ],
+   "results": [
+    "Lock"
+   ],
+   "class": "lock",
+   "standalone": false
+  },
+  {
+   "id": "9-10",
+   "url": "https://commanderspellbook.com/combo/9-10/",
+   "cards": [
+    {
+     "oracle_id": "aa7714b0-2bfb-458a-8ebf-37ec2c53383e",
+     "name": "Fireball",
+     "must_be_commander": false
+    },
+    {
+     "oracle_id": "78301998-fd9b-4cd5-afad-dbcb43cac2a7",
+     "name": "Shatterskull Smashing // Shatterskull, the Hammer Pass",
+     "must_be_commander": false
+    }
+   ],
+   "results": [
+    "Near-infinite damage",
+    "Mass Land Denial"
+   ],
+   "class": "mass_land_denial",
+   "standalone": true
+  },
+  {
+   "id": "11-12",
+   "url": "https://commanderspellbook.com/combo/11-12/",
+   "cards": [
+    {
+     "oracle_id": "713332c1-5bd8-400f-bfff-c1ca0697a043",
+     "name": "Opt",
+     "must_be_commander": false
+    },
+    {
+     "oracle_id": "1720d38a-c3c1-4294-85c1-a91fc7179d6f",
+     "name": "Boon of the Wish-Giver",
+     "must_be_commander": false
+    }
+   ],
+   "results": [
+    "Draw the game"
+   ],
+   "class": "draw",
+   "standalone": true
+  },
+  {
+   "id": "13-14",
+   "url": "https://commanderspellbook.com/combo/13-14/",
+   "cards": [
+    {
+     "oracle_id": "5470dcfa-4eff-43da-abf7-19922841f719",
+     "name": "Kitchen Finks",
+     "must_be_commander": false
+    },
+    {
+     "oracle_id": "254f87cc-e0c2-484d-b5e8-1ea8c366990c",
+     "name": "Worldspine Wurm",
+     "must_be_commander": false
+    }
+   ],
+   "results": [
+    "Lock",
+    "Mass Land Denial"
+   ],
+   "class": "mass_land_denial",
+   "standalone": false
+  }
+ ]
+}

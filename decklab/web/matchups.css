@@ -1,0 +1,412 @@
+/* Deck Lab's matchup screens (matchups.js and its parts; runs-pill.js): the Matchups home's matrix and phone
+   list, the play sheet, the pair page (verdict first), the deck page's Matchups part, per-card numbers and the
+   top bar's run activity's slot. The win-rate figures, range bars, freshness badges and flags are
+   components.css's (sim-ui.js).
+
+   Built on components.css (.btn, .box, .chart, .legend, .segmented, the tables, .progress) and
+   deck.css (.deck-section). Phone first; then 600 (tablet), 1000 (desktop, iPad landscape) and 1600 (QHD). */
+
+/* ---------------------------------------------------------------- bars */
+
+/* Progress marked at a run's planned checks (checkBar, MU-11): a tick at each check. */
+.progress.mu-checkbar { position: relative; overflow: visible; }
+.mu-checks { position: absolute; inset: 0; pointer-events: none; }
+.mu-check { position: absolute; top: -3px; bottom: -3px; width: 2px; margin-left: -1px; border-radius: 1px; background: var(--ink-2); }
+.mu-check.is-passed { background: var(--surface); }
+
+/* ---------------------------------------------------------------- rows */
+
+.mu-group { margin-top: var(--s-5); }
+.mu-group > h2 { display: flex; align-items: baseline; gap: var(--s-2); }
+.mu-view { flex: none; }
+.mu-rankings { max-width: 64rem; margin-top: var(--s-3); }
+.mu-ranking-group { margin-top: var(--s-4); }
+.mu-ranking-group h3 { margin-bottom: var(--s-2); }
+.mu-ranking-list { list-style: none; padding: 0; margin: 0; }
+.mu-ranking-row {
+  display: grid; grid-template-columns: minmax(0, 1fr) max-content;
+  gap: var(--s-1) var(--s-3); padding: var(--s-3) 0; border-bottom: 1px solid var(--border);
+}
+.mu-ranking-name, .mu-ranking-score { display: grid; align-content: start; gap: var(--s-1); min-width: 0; }
+.mu-ranking-name > a { display: inline-flex; align-items: center; min-height: var(--tap); font-weight: var(--fw-semibold); overflow-wrap: anywhere; }
+.mu-ranking-score { text-align: right; max-width: 12rem; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.mu-ranking-row .sub { font-size: var(--fs-sm); color: var(--ink-2); }
+.mu-ranking-row > .status { grid-column: 1; justify-self: start; }
+.mu-ranking-reasons { grid-column: 1 / -1; margin: var(--s-1) 0 0; font-size: var(--fs-sm); }
+@media (max-width: 399px) {
+  .mu-ranking-row { gap: var(--s-1) var(--s-2); }
+  .mu-ranking-score { max-width: 10.5rem; font-size: var(--fs-sm); }
+}
+.mu-list {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));
+  gap: var(--s-2);
+  margin: var(--s-2) 0 var(--s-3);
+  padding: 0;
+}
+.mu-row {
+  display: grid; gap: var(--s-1);
+  height: 100%;
+  padding: var(--s-3) var(--s-4);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  color: var(--ink);
+  text-decoration: none;
+  box-shadow: var(--shadow-1);
+}
+a.mu-row:hover { border-color: var(--border-strong); }
+.mu-names { font-weight: var(--fw-semibold); line-height: var(--lh-tight); }
+.mu-names .mu-first { color: var(--ink); }
+.mu-vs-word { color: var(--ink-2); font-weight: var(--fw-regular); }
+.mu-barline { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--s-3); }
+.mu-pct { min-width: 5.5em; text-align: right; }   /* room for "76% 71–80", so the bars of a list line up */
+.mu-meta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-1) var(--s-2); font-size: var(--fs-sm); color: var(--ink-2); }
+.mu-row .progress { margin: var(--s-1) 0; }
+.mu-deck-actions { margin-top: var(--s-3); }
+.deck-section .ai-cards, .mu-ai .ai-cards { margin: var(--s-2) 0 var(--s-3); }
+.ai-cards p { margin: 0 0 var(--s-2); font-size: var(--fs-sm); }
+.ai-cards .status { white-space: normal; }
+/* The links stay inline (a wrapped line starts where the text does); a taller line and padding that doesn't
+   move the lines give each one a finger-sized target. */
+.mu-not-played { margin: var(--s-2) 0; font-size: var(--fs-sm); color: var(--ink-2); line-height: 2; }
+.mu-not-played-label { font-weight: var(--fw-semibold); color: var(--ink); }
+.mu-not-played a { padding: 8px 0; }
+.mu-all-earlier { align-items: center; max-width: 70ch; }
+.mu-all-earlier > p { flex: 1; min-width: 0; }
+.mu-all-earlier > .btn { flex: none; }
+/* A deck's result whose list has changed since: faded, with a dashed edge (as the matrix's cells), one key line. */
+.mu-row.is-older { border-style: dashed; border-color: var(--border-strong); box-shadow: none; }
+.mu-row.is-older .range-bar, .mu-row.is-older .mu-pct { opacity: .7; }
+.mu-older-key { display: block; margin: 0 0 var(--s-2); }
+.mu-older-key .mu-key-swatch { vertical-align: -2px; margin-right: var(--s-2); }
+.mu-earlier-engine { margin: 0 0 var(--s-2); color: var(--ink-2); font-size: var(--fs-sm); }
+.mu-earlier-results > .mu-list { margin-top: var(--s-2); }
+.mu-refresh-error { margin: var(--s-3) 0; color: var(--warn-text); font-size: var(--fs-sm); font-weight: var(--fw-semibold); }
+.mu-refresh-error:empty { display: none; }
+.mu-gate { margin-top: 0; }
+/* A pair page with no result yet: Play (or the run going) in the result's place (matchups-detail.js). */
+.mu-pair-run { min-width: 0; }
+
+/* ------------------------------------------------------------ the Matchups home */
+
+/* The heading and the format switch together, at the matrix's start (not across the page from it). */
+.mu-home-head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2) var(--s-4); }
+.mu-home-head h2 { margin: 0; }
+.mu-home > .empty { margin: var(--s-3) 0; }
+
+/* The matrix (MU-01): decks on both axes, sticky row names, columns named up the page; a cell is the row deck's
+   win rate on the diverging scale with the number printed. It scrolls sideways inside its frame when it's
+   wider than the screen. Below 600 px the phone's sorted list takes its place. */
+.mu-matrix-part { display: none; }
+.mu-phone-part { margin-top: var(--s-3); }
+.mu-deck-field { max-width: 30rem; margin-bottom: var(--s-3); }
+@media (min-width: 600px) {
+  .mu-matrix-part { display: block; margin-top: var(--s-3); }
+  .mu-phone-part { display: none; }
+}
+.mu-matrix-wrap {
+  overflow: auto; max-width: 100%; width: fit-content;
+  border: 1px solid var(--border); border-radius: var(--r-lg);
+  background: var(--surface); box-shadow: var(--shadow-1);
+}
+.mu-matrix-wrap:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.mu-matrix { border-collapse: separate; border-spacing: 2px; margin: 0; font-variant-numeric: tabular-nums; }
+.mu-matrix th, .mu-matrix td { padding: 0; }
+.mu-corner { position: sticky; left: 0; z-index: 2; background: var(--surface); vertical-align: bottom; padding: var(--s-2); }
+.mu-corner-words { display: block; max-width: 11rem; font-size: var(--fs-sm); color: var(--ink-2); font-weight: var(--fw-regular); text-align: left; }
+.mu-col { vertical-align: bottom; height: 9.5rem; padding-bottom: var(--s-1); }
+.mu-col-name {
+  display: inline-block; writing-mode: vertical-rl; transform: rotate(180deg);
+  max-height: 9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: var(--fs-sm); font-weight: var(--fw-semibold); color: var(--ink);
+}
+.mu-rowhead {
+  position: sticky; left: 0; z-index: 1;
+  min-width: 9rem; max-width: 12rem; padding: 0 var(--s-3) 0 var(--s-2);
+  background: var(--surface);
+  font-size: var(--fs-sm); font-weight: var(--fw-semibold); text-align: left;
+}
+.mu-rowhead > span, .mu-rowhead-pick { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* The row name as a button (from 1,600 px, where the side list shows): picks that deck for the side list. */
+.mu-rowhead .mu-rowhead-pick { display: none; }
+.mu-rowhead-pick {
+  width: 100%; min-height: 2.75rem; padding: 0; border: 0; background: none; cursor: pointer;
+  color: inherit; font: inherit; text-align: left;
+}
+.mu-rowhead-pick:hover { color: var(--link); text-decoration: underline; }
+.mu-rowhead-pick[aria-pressed="true"] { color: var(--accent); }
+.mu-rowhead-pick:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+.mu-cell { width: 3.25rem; height: 2.75rem; border-radius: var(--r-sm); text-align: center; background: var(--even); }
+.mu-cell-link {
+  display: flex; align-items: center; justify-content: center;
+  width: 100%; height: 100%; min-height: 2.75rem;
+  border-radius: var(--r-sm);
+  color: var(--ink); text-decoration: none;
+  font-size: var(--fs-sm); font-weight: var(--fw-bold);
+}
+.mu-cell-link:hover { box-shadow: inset 0 0 0 2px var(--ink); }
+.mu-cell.is-self { background: repeating-linear-gradient(45deg, var(--surface-2) 0 4px, var(--surface) 4px 8px); }
+.mu-cell.is-empty { background: transparent; box-shadow: inset 0 0 0 1px var(--grid); }
+.mu-cell-plus { color: var(--ink-3); font-size: var(--fs-md); font-weight: var(--fw-regular); }
+.mu-cell-plus:hover, .mu-cell-plus:focus-visible { color: var(--accent); font-weight: var(--fw-bold); }
+.mu-cell.is-muted { background: var(--surface-3); }
+.mu-cell.is-muted .mu-cell-link { color: var(--ink-2); }
+.mu-cell.mu-h-none { background: var(--surface-2); }
+/* The diverging scale: 5 points either side of 50% is even (a grey with an edge, so it never reads as an empty
+   cell in either theme), then steps at 15 and 25 points. */
+.mu-h-even { background: color-mix(in srgb, var(--ink-3) 22%, var(--surface)); box-shadow: inset 0 0 0 1px var(--ink-4); }
+.mu-h-win1 { background: color-mix(in srgb, var(--win) 18%, var(--surface)); }
+.mu-h-win2 { background: color-mix(in srgb, var(--win) 34%, var(--surface)); }
+.mu-h-win3 { background: color-mix(in srgb, var(--win) 50%, var(--surface)); }
+.mu-h-loss1 { background: color-mix(in srgb, var(--loss) 18%, var(--surface)); }
+.mu-h-loss2 { background: color-mix(in srgb, var(--loss) 34%, var(--surface)); }
+.mu-h-loss3 { background: color-mix(in srgb, var(--loss) 50%, var(--surface)); }
+/* Older: a list has changed since (or a play-now list played). Only the shade fades (a veil of the surface over
+   it), with a dashed edge, so it doesn't rest on the shade alone; the number stays readable in --ink-2. */
+.mu-cell.is-older, .mu-key-swatch.is-older {
+  background-image: linear-gradient(color-mix(in srgb, var(--surface) 55%, transparent), color-mix(in srgb, var(--surface) 55%, transparent));
+  outline: 1.5px dashed var(--ink-2); outline-offset: -3px;
+}
+.mu-key-swatch.is-older { outline-offset: -1.5px; }
+.mu-cell.is-older .mu-cell-link { color: var(--ink-2); font-weight: var(--fw-semibold); }
+.mu-key-dash { display: inline-grid; place-items: center; color: var(--ink-2); font-weight: var(--fw-bold); line-height: 1; }
+.mu-matrix-key { margin-top: var(--s-3); }
+.mu-key-swatch { width: 18px; height: 14px; border-radius: var(--r-sm); display: inline-block; box-shadow: inset 0 0 0 1px var(--border); }
+.mu-key-plus { width: 18px; text-align: center; color: var(--accent); font-weight: var(--fw-bold); }
+
+/* ------------------------------------------------------------ the play sheet and the run choice */
+
+.mu-play .sub { color: var(--ink-2); font-size: var(--fs-sm); }
+.mu-picker { display: grid; gap: var(--s-4); }
+.mu-pick { display: grid; gap: var(--s-2); min-width: 0; margin: 0; padding: 0; border: 0; }
+.mu-pick legend { padding: 0; margin-bottom: var(--s-2); font-weight: var(--fw-bold); }
+.mu-pick select { width: 100%; }
+.mu-pick .segmented { display: flex; width: 100%; }
+.mu-pick .segmented > * { flex: 1 1 0; }
+.mu-pair { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-3); }
+.mu-pair select { width: 100%; }
+.mu-kind-note { margin: var(--s-3) 0 0; }
+@media (min-width: 600px) {
+  .mu-picker { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+.mu-modes { margin: var(--s-4) 0 var(--s-1); min-width: 0; }
+.games-label { display: block; margin-bottom: var(--s-2); font-size: var(--fs-sm); color: var(--ink-2); font-weight: var(--fw-semibold); }
+.mu-run-buttons { display: flex; width: 100%; max-width: 30rem; }
+.mu-run-buttons > * { flex: 1 1 0; }
+.games-pick .segmented { display: flex; width: 100%; max-width: 30rem; }
+.games-pick .segmented > * { flex: 1 1 0; padding-left: var(--s-1); padding-right: var(--s-1); font-variant-numeric: tabular-nums; }
+.rough-time { margin: var(--s-2) 0 0; font-size: var(--fs-sm); color: var(--ink-2); max-width: 40rem; }
+.mu-more-options { margin-top: var(--s-2); }
+.mu-more-options .games-pick { margin: var(--s-1) 0 var(--s-2); }
+.mu-already:not(:empty) { margin-top: var(--s-3); padding: var(--s-2) var(--s-3); border-radius: var(--r-md); background: var(--surface-2); font-size: var(--fs-sm); }
+.mu-already p { margin: 0; }
+.mu-play .actions, .mu-more .actions { margin-top: var(--s-3); }
+
+/* ------------------------------------------------------------ the pair page */
+
+.mu-head { padding: var(--s-1) 0; }
+.mu-head h1 { margin-bottom: var(--s-1); }
+.mu-meta-line { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-1) var(--s-2); margin: 0 0 var(--s-3); color: var(--ink-2); }
+.mu-sides { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-2); margin: var(--s-3) 0 var(--s-2); }
+.mu-side {
+  display: flex; flex-direction: column; align-items: flex-start; gap: var(--s-1);
+  min-width: 0;
+  padding: var(--s-3);
+  border: 1px solid var(--border); border-radius: var(--r-md);
+  background: var(--surface);
+}
+.mu-side-label { font-size: var(--fs-sm); color: var(--ink-2); font-weight: var(--fw-semibold); }
+.mu-side-title {            /* the whole width of its box, and 44 px tall, to tap */
+  display: flex; align-items: center; align-self: stretch;
+  min-height: 44px; margin: calc(-1 * var(--s-2)) 0;
+  font-weight: var(--fw-bold); line-height: var(--lh-tight);
+}
+.mu-side .sub { font-size: var(--fs-sm); color: var(--ink-2); }
+.mu-side .chips { gap: var(--s-1); }
+.mu-side .status { white-space: normal; }
+
+/* The verdict first (MU-04): the sentence, the win rate (a hero figure, its age and its range bar), one caveat, Play more. */
+.mu-result { display: grid; gap: var(--s-3); margin-top: var(--s-3); }
+.mu-result > * { margin: 0; }
+.mu-verdict > h2 { font-size: var(--fs-xl); line-height: var(--lh-tight); margin: 0 0 var(--s-2); }
+.mu-verdict-win > h2, .mu-verdict-loss > h2, .mu-verdict-even > h2 { color: var(--ink); }
+/* The first deck's win rate (a hero figure) with how long ago it was played, then its range bar. */
+.mu-figure { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2) var(--s-4); margin: var(--s-2) 0; }
+.mu-verdict > .range-bar { margin: 0 0 var(--s-3); max-width: 40rem; }
+.mu-caveat { margin: var(--s-2) 0; font-size: var(--fs-sm); color: var(--ink); }
+.mu-caveat .status { white-space: nowrap; margin-right: var(--s-1); }
+/* A phone: the two decks stacked (side by side a long title wraps to three lines), and a caveat's chip on its
+   own line above its sentence. */
+@media (max-width: 479px) {
+  .mu-sides { grid-template-columns: minmax(0, 1fr); }
+  .mu-caveat .status { display: flex; width: fit-content; margin: 0 0 var(--s-1); }
+}
+.mu-why > p, .mu-why > .legend { max-width: 70ch; }
+.mu-why > p { margin: var(--s-2) 0; }
+.mu-why .sub, .mu-details .sub { color: var(--ink-2); font-size: var(--fs-sm); }
+.mu-details > .panels { margin-top: var(--s-2); gap: var(--s-3); }
+.mu-trust > h3 { margin: var(--s-4) 0 var(--s-2); font-size: var(--fs-md); }
+.mu-trust .sub { margin: var(--s-3) 0 0; }
+.trust-list { list-style: none; display: grid; gap: var(--s-2); margin: 0; padding: 0; font-size: var(--fs-sm); }
+.trust-list .status { white-space: normal; }
+.pilot-flag { margin: var(--s-3) 0 0; }
+.deck-section > .pilot-flag { margin: var(--s-2) 0 var(--s-3); }
+.pilot-flag .box p { margin: 0; }
+.pilot-cards { display: grid; gap: var(--s-1); }
+.pilot-cards li { display: flex; flex-wrap: wrap; align-items: center; gap: 2px var(--s-2); }
+.pilot-why { font-size: var(--fs-sm); color: var(--ink); }
+.score-table col.c-n { width: 4.2em; }
+.score-table col.c-share { width: 4.6em; }
+.casts-table col.c-n { width: 3.9em; }
+.casts-table col.c-share { width: 3.9em; }
+.casts-table th, .casts-table td { padding: 6px 4px; }
+.mu-casts > .panels { margin-top: var(--s-2); }
+.mu-links { display: flex; flex-wrap: wrap; gap: var(--s-1) var(--s-4); margin: var(--s-3) 0 0; }
+.mu-links a { display: inline-flex; align-items: center; min-height: 44px; font-weight: var(--fw-semibold); }
+.mu-more { margin-top: var(--s-3); padding-top: var(--s-3); border-top: 1px solid var(--border); }
+.mu-more > .sub { margin: var(--s-2) 0 0; }
+.runs-table { margin-top: var(--s-2); }
+.runs-table td:first-child { min-width: 8.5em; }   /* "1 Oct, 9:01 am" on one line on phones */
+.runs-table .run-error { display: block; color: var(--crit-ink); }
+.mu-how h4 { margin-top: var(--s-3); }
+.mu-casts > .sub, .mu-how > .sub, .mu-cards > .sub { color: var(--ink-2); font-size: var(--fs-sm); }
+.runs-table .run-cardlog { color: var(--ink-2); font-size: var(--fs-sm); }
+.mu-how .mu-z { color: var(--ink-2); }
+
+/* A run waiting or playing. */
+.mu-running .mu-running-head { display: flex; align-items: center; gap: var(--s-3); margin-bottom: var(--s-3); }
+.mu-running h2 { margin: 0; font-size: var(--fs-lg); }
+.mu-running p { margin: 0 0 var(--s-2); }
+.mu-running .sub { color: var(--ink-2); font-size: var(--fs-sm); }
+.mu-running .actions + .sub { margin-top: var(--s-3); }
+.mu-running .mu-plan { font-weight: var(--fw-semibold); }
+.mu-running .mu-via { margin-top: var(--s-2); }
+.mu-lost:empty { display: none; }
+.mu-lost { color: var(--warn-text); font-weight: var(--fw-semibold); }
+.mu-score { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: var(--s-2); margin: var(--s-2) 0; }
+.mu-score:empty { display: none; }
+.mu-score div { padding: var(--s-2) var(--s-3); border-radius: var(--r-sm); background: var(--surface); min-width: 0; }
+.mu-score dt { font-size: var(--fs-sm); color: var(--ink-2); font-weight: var(--fw-semibold); }
+.mu-score dd { margin: 0; font-size: var(--fs-lg); font-weight: var(--fw-bold); font-variant-numeric: tabular-nums; }
+.mu-live-range { margin: var(--s-1) 0 var(--s-2); }
+
+/* Per-card numbers from the card log (matchups-cards.js cardStatsPart, deckCardStats). The spells' and lands'
+   tables have three number columns of 3.2em and one of 2.8em (12.4em: about 179 px at the tables' 0.9rem
+   of 16 px), the commander's two and one (9.2em: about 132 px). A 390 px phone's panel is about 324 px
+   inside (16 px gutters, 16 px padding and a 1 px border each side), so a card's name keeps about 145 px
+   (a commander's about 190 px); the win rates go across the row under each card. Numbers are ink; a card
+   drawn and never cast says so in words as well as its tint. */
+.mu-cards > .sub, .mu-cards > .card-early { margin: var(--s-1) 0 var(--s-2); }
+.mu-cards > .panels { margin-top: var(--s-3); }
+.card-early { font-size: var(--fs-sm); }
+.card-early .status { white-space: normal; }
+.card-key { display: grid; gap: var(--s-1); max-width: 80ch; margin: var(--s-2) 0 var(--s-3); font-size: var(--fs-sm); color: var(--ink-2); }
+.card-key div { margin: 0; }
+.card-key dt { display: inline; font-weight: var(--fw-semibold); color: var(--ink); }
+.card-key dt::after { content: ": "; }
+.card-key dd { display: inline; margin: 0; }
+.card-groups { max-width: 46rem; }       /* a wide screen's rows stay easy to follow across */
+.card-groups h4 { margin: var(--s-4) 0 2px; font-size: var(--fs-sm); }
+.card-groups h4:first-child { margin-top: var(--s-1); }
+.card-table col.c-n { width: 3.2em; }
+.card-table col.c-turn { width: 2.8em; }
+.card-table th, .card-table td { padding: 6px 4px; }
+.card-table .num { padding: 6px 3px; white-space: nowrap; }     /* ">99%" on one line */
+.card-table .num:last-child { padding-right: 4px; }
+.card-table .name-cell { font-weight: var(--fw-semibold); }
+.card-table .name-cell .x { color: var(--ink-2); margin-left: var(--s-1); font-weight: var(--fw-regular); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.card-table .card-notes { margin: 0 0 var(--s-1); font-size: var(--fs-sm); color: var(--ink); line-height: 1.4; }
+.card-table .card-notes .status { white-space: normal; }
+.card-range { white-space: nowrap; }
+/* Tap-sized names (components.css and deck.css, pointer: coarse) are as wide as the name here, so its ×N stays beside
+   it, in cells with 6 px by 4 px padding; the row's numbers sit level with the name's middle. */
+@media (pointer: coarse) {
+  table.data.card-table .name-cell .card-link { margin: -6px -4px -2px; padding: 0 4px; width: auto; max-width: calc(100% + 8px); }
+  table.data.card-table tbody > tr:first-child > td { vertical-align: middle; }
+}
+.stand-out { list-style: none; display: grid; gap: var(--s-3); margin: var(--s-2) 0 var(--s-1); padding: 0; font-size: var(--fs-sm); }
+.stand-out p { margin: 0; }
+.stand-out .card-link { font-size: var(--fs-sm); }
+/* A card and its number on one line: the name wraps inside its button, the number keeps to the right. */
+.stand-out-cards { list-style: none; display: grid; gap: var(--s-1); max-width: 30rem; margin: var(--s-2) 0 0; padding: 0; }
+.stand-out-cards li { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 2px var(--s-3); }
+.stand-out-cards .card-link { justify-self: start; max-width: 100%; }
+.stand-out-n { text-align: right; }
+.drawn-names li { display: flex; flex-wrap: wrap; align-items: center; gap: 2px var(--s-2); }
+.stand-out-n, .drawn-n { font-size: var(--fs-sm); color: var(--ink); font-variant-numeric: tabular-nums; }
+.stand-out .sub { margin-top: var(--s-1); font-size: var(--fs-sm); }
+.drawn-names { display: grid; gap: var(--s-1); }
+.mu-cardlog-off { margin: var(--s-2) 0 var(--s-3); font-size: var(--fs-sm); }
+.mu-cardlog-off .status { white-space: normal; }
+/* Per-card verdicts (R11): a card's best estimate stays on one line beside its range, as the range does. */
+.card-best { white-space: nowrap; }
+/* What the verdicts are on ("in hand by turn 3", card log version 3: cardStatsBasis): a sentence as long as
+   the key's, kept to the key's measure on a wide screen. */
+.card-basis { max-width: 80ch; }
+
+/* ------------------------------------------------------------ the run activity (runs-pill.js) */
+
+.shell-status[hidden] { display: none; }
+/* The slot takes the top bar's free space (never the nav's: it grows from 0), and the 44 px activity icon sits at
+   its right end (components.css .run-activity). Without room even for the icon (a 600-720 px top bar, the five
+   places beside the logo) there's no icon, never one over the nav; the phone's top bar and wider bars have room. */
+@media (min-width: 600px) {
+  .shell-status:not([hidden]) { flex: 1 1 0; justify-content: flex-end; container-type: inline-size; }
+}
+@container (max-width: 43px) {
+  .shell-status > .run-activity { display: none; }
+}
+
+/* ------------------------------------------------------------ wide screens */
+
+/* From 1,000 px: the pair page's result beside its decks. */
+@media (min-width: 1000px) {
+  .mu-verdict { padding: var(--s-5); }
+}
+/* The folded reading under the verdict: closed sections close together. */
+.mu-reading { display: grid; gap: var(--s-1); align-content: start; min-width: 0; }
+.mu-reading > *, .mu-reading > details.more { margin: 0; }
+.mu-reading > details[open] { margin-bottom: var(--s-3); }
+/* From 1,000 px the matrix's frame is at most a screen tall and its column names stay at its top, so a short
+   window (a laptop's 830 px) never scrolls them away from the lower rows. */
+@media (min-width: 1000px) {
+  .mu-matrix-wrap { max-height: calc(100dvh - var(--shell-top) - var(--s-6)); }
+  .mu-matrix thead th, .mu-matrix thead td { position: sticky; top: 0; z-index: 1; background: var(--surface); }
+  .mu-matrix thead .mu-corner { z-index: 3; }
+}
+/* From 1,400 px (a laptop, QHD): one deck's sorted list right beside the matrix (the matrix's own width, then
+   a fixed gap), not pushed to the far edge; the key wraps to the matrix's width instead of widening its column. */
+@media (min-width: 1400px) {
+  .mu-home-body {
+    display: grid; grid-template-columns: minmax(0, max-content) minmax(300px, 360px);
+    justify-content: start; align-items: start; gap: var(--s-6);
+  }
+  .mu-home-body > .mu-phone-part { display: block; margin-top: var(--s-3); min-width: 0; }
+  .mu-home-body > .mu-phone-part .mu-list { grid-template-columns: 1fr; }
+  .mu-home-body .mu-matrix-key { contain: inline-size; }
+  /* A row's name picks the deck the side list shows. */
+  .mu-rowhead .mu-rowhead-text { display: none; }
+  .mu-rowhead .mu-rowhead-pick { display: block; }
+}
+/* QHD (MU-14): the verdict on the left and the folded reading in one column on the right, from its top; wider
+   row grids; the matrix's cells grow, and one deck's sorted list sits beside the matrix. */
+@media (min-width: 1600px) {
+  .mu-list { grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: var(--s-3); }
+  /* The pair page: the verdict, its folded reading and the earlier results in one column (or, with no result
+     yet, Play or the run going), the two decks stacked beside them; the whole capped at a readable width. */
+  .mu-pair-body {
+    display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 380px);
+    grid-template-areas: "result decks" "earlier decks"; align-items: start; column-gap: var(--s-5);
+    max-width: 1400px;
+  }
+  .mu-pair-body > .mu-result, .mu-pair-body > .mu-pair-run { grid-area: result; }
+  .mu-pair-body > .mu-decks { grid-area: decks; }
+  .mu-pair-body > .mu-earlier-results { grid-area: earlier; }
+  .mu-pair-body .mu-sides { grid-template-columns: 1fr; margin-top: var(--s-3); }
+  .mu-pair-run + .mu-decks .mu-sides { margin-top: 0; }
+  .mu-cell { width: 4.25rem; height: 3.25rem; }
+  .mu-cell-link { min-height: 3.25rem; font-size: var(--fs-md); }
+  .mu-home-body { grid-template-columns: minmax(0, max-content) minmax(420px, 560px); }
+}

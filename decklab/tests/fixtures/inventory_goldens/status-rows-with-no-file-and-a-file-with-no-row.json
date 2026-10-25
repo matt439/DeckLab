@@ -1,0 +1,2074 @@
+{
+ "accessories": {
+  "holders": {
+   "holders": {},
+   "warnings": []
+  },
+  "scan": {
+   "found": [
+    {
+     "deck_box": "",
+     "holder": "product/fdn-beginner-box",
+     "kind": "product",
+     "owner": "shared",
+     "sections": {
+      "Deck": [
+       {
+        "finish": "nonfoil",
+        "name": "Llanowar Elves",
+        "number": "1",
+        "quantity": 1,
+        "set": "tst"
+       }
+      ]
+     },
+     "sleeves": "",
+     "title": "Foundations Beginner Box"
+    }
+   ],
+   "strays": [],
+   "warnings": []
+  }
+ },
+ "assembly": {
+  "": {
+   "choices": [
+    {
+     "error": null,
+     "id": "product/fdn-beginner-box/elves",
+     "status": null,
+     "title": "Elves (Foundations Beginner Box)",
+     "versions": [
+      "target"
+     ]
+    },
+    {
+     "error": null,
+     "id": "product/unlisted/elves",
+     "status": null,
+     "title": "Elves (Unlisted)",
+     "versions": [
+      "target"
+     ]
+    }
+   ],
+   "counts_confirmed": false,
+   "decks": [],
+   "note": "This is a plan. Other built decks stay reserved. Nothing is moved, marked built or written to inventory.",
+   "ready": false,
+   "rows": [],
+   "token_note": "Worked out from Scryfall's links between cards and tokens, so it's approximate. Tokens a card makes only through its rules text, and most token copies of other cards, aren't listed. Some listed tokens appear only in certain modes or for your opponent. Deck Lab can't tell how many a game needs. Packing ticks don't reserve or change inventory.",
+   "token_plan": [],
+   "token_plan_note": "Both decks can use these cards. One card shows one face at a time; at home keep shared tokens in one pile on the table.",
+   "token_problems": [],
+   "tokens": [],
+   "totals": {
+    "from_storage": 0,
+    "kept": 0,
+    "missing": 0,
+    "need": 0,
+    "transfers": 0,
+    "waiting": 0
+   },
+   "unresolved": [],
+   "warnings": [
+    "unlisted.csv isn't in products/status.csv, so it counts as owned and not intact",
+    "products/status.csv lists gone.csv, which isn't in magic/products/"
+   ]
+  },
+  "product/fdn-beginner-box/elves": {
+   "choices": [
+    {
+     "error": null,
+     "id": "product/fdn-beginner-box/elves",
+     "status": null,
+     "title": "Elves (Foundations Beginner Box)",
+     "versions": [
+      "target"
+     ]
+    },
+    {
+     "error": null,
+     "id": "product/unlisted/elves",
+     "status": null,
+     "title": "Elves (Unlisted)",
+     "versions": [
+      "target"
+     ]
+    }
+   ],
+   "counts_confirmed": false,
+   "decks": [
+    {
+     "basics": [],
+     "id": "product/fdn-beginner-box/elves",
+     "kit": {
+      "deck_box": null,
+      "holder": "product/fdn-beginner-box",
+      "info": [],
+      "need": 1,
+      "owner": "shared",
+      "short": 0,
+      "sleeves": null,
+      "spare": 0,
+      "title": "Foundations Beginner Box",
+      "warnings": [
+       "Foundations Beginner Box is kept intact: choose its sleeves (it needs 1)."
+      ]
+     },
+     "returns": [],
+     "sleeves": "Not recorded for this product",
+     "sleeves_need": 1,
+     "steps": [
+      {
+       "keep": 1,
+       "missing": 0,
+       "name": "Llanowar Elves",
+       "need": 1,
+       "resolved": true,
+       "storage": 0,
+       "transfers": [],
+       "waiting": 0
+      }
+     ],
+     "title": "Elves (Foundations Beginner Box)",
+     "tokens": {
+      "copies": [],
+      "counts": {
+       "check": 0,
+       "differs": 0,
+       "incoming": 0,
+       "kinds": 0,
+       "none": 0,
+       "ready": 0
+      },
+      "needs": [],
+      "note": "Worked out from Scryfall's links between cards and tokens, so it's approximate. Tokens a card makes only through its rules text, and most token copies of other cards, aren't listed. Some listed tokens appear only in certain modes or for your opponent. Deck Lab can't tell how many a game needs.",
+      "unlisted": []
+     },
+     "version": "target"
+    }
+   ],
+   "note": "This is a plan. Other built decks stay reserved. Nothing is moved, marked built or written to inventory.",
+   "ready": false,
+   "rows": [
+    {
+     "from_storage": 0,
+     "held_elsewhere": [],
+     "incoming_from": [],
+     "kept": 1,
+     "missing": 0,
+     "name": "Llanowar Elves",
+     "need": 1,
+     "owned_now": 0,
+     "transfers": [],
+     "waiting": 0
+    }
+   ],
+   "token_note": "Worked out from Scryfall's links between cards and tokens, so it's approximate. Tokens a card makes only through its rules text, and most token copies of other cards, aren't listed. Some listed tokens appear only in certain modes or for your opponent. Deck Lab can't tell how many a game needs. Packing ticks don't reserve or change inventory.",
+   "token_plan": [],
+   "token_plan_note": "Both decks can use these cards. One card shows one face at a time; at home keep shared tokens in one pile on the table.",
+   "token_problems": [],
+   "tokens": [],
+   "totals": {
+    "from_storage": 0,
+    "kept": 1,
+    "missing": 0,
+    "need": 1,
+    "transfers": 0,
+    "waiting": 0
+   },
+   "unresolved": [],
+   "warnings": [
+    "unlisted.csv isn't in products/status.csv, so it counts as owned and not intact",
+    "products/status.csv lists gone.csv, which isn't in magic/products/",
+    "Llanowar Elves: built allocations need 1 copies but only 0 are physically owned"
+   ]
+  },
+  "product/unlisted/elves": {
+   "choices": [
+    {
+     "error": null,
+     "id": "product/fdn-beginner-box/elves",
+     "status": null,
+     "title": "Elves (Foundations Beginner Box)",
+     "versions": [
+      "target"
+     ]
+    },
+    {
+     "error": null,
+     "id": "product/unlisted/elves",
+     "status": null,
+     "title": "Elves (Unlisted)",
+     "versions": [
+      "target"
+     ]
+    }
+   ],
+   "counts_confirmed": false,
+   "decks": [
+    {
+     "basics": [],
+     "id": "product/unlisted/elves",
+     "kit": {
+      "deck_box": null,
+      "holder": "product/unlisted",
+      "info": [],
+      "need": 1,
+      "owner": "shared",
+      "short": 0,
+      "sleeves": null,
+      "spare": 0,
+      "title": "unlisted",
+      "warnings": []
+     },
+     "returns": [],
+     "sleeves": "Not recorded for this product",
+     "sleeves_need": 1,
+     "steps": [
+      {
+       "keep": 0,
+       "missing": 1,
+       "name": "Elvish Mystic",
+       "need": 1,
+       "resolved": true,
+       "storage": 0,
+       "transfers": [],
+       "waiting": 0
+      }
+     ],
+     "title": "Elves (Unlisted)",
+     "tokens": {
+      "copies": [],
+      "counts": {
+       "check": 0,
+       "differs": 0,
+       "incoming": 0,
+       "kinds": 0,
+       "none": 0,
+       "ready": 0
+      },
+      "needs": [],
+      "note": "Worked out from Scryfall's links between cards and tokens, so it's approximate. Tokens a card makes only through its rules text, and most token copies of other cards, aren't listed. Some listed tokens appear only in certain modes or for your opponent. Deck Lab can't tell how many a game needs.",
+      "unlisted": []
+     },
+     "version": "target"
+    }
+   ],
+   "note": "This is a plan. Other built decks stay reserved. Nothing is moved, marked built or written to inventory.",
+   "ready": false,
+   "rows": [
+    {
+     "from_storage": 0,
+     "held_elsewhere": [],
+     "incoming_from": [],
+     "kept": 0,
+     "missing": 1,
+     "name": "Elvish Mystic",
+     "need": 1,
+     "owned_now": 0,
+     "transfers": [],
+     "waiting": 0
+    }
+   ],
+   "token_note": "Worked out from Scryfall's links between cards and tokens, so it's approximate. Tokens a card makes only through its rules text, and most token copies of other cards, aren't listed. Some listed tokens appear only in certain modes or for your opponent. Deck Lab can't tell how many a game needs. Packing ticks don't reserve or change inventory.",
+   "token_plan": [],
+   "token_plan_note": "Both decks can use these cards. One card shows one face at a time; at home keep shared tokens in one pile on the table.",
+   "token_problems": [],
+   "tokens": [],
+   "totals": {
+    "from_storage": 0,
+    "kept": 0,
+    "missing": 1,
+    "need": 1,
+    "transfers": 0,
+    "waiting": 0
+   },
+   "unresolved": [],
+   "warnings": [
+    "unlisted.csv isn't in products/status.csv, so it counts as owned and not intact",
+    "products/status.csv lists gone.csv, which isn't in magic/products/"
+   ]
+  }
+ },
+ "beginner_box_pairings": [],
+ "collection": {
+  "home": {
+   "pages": [
+    {
+     "cards": [],
+     "limit": 24,
+     "note": "Ordinary basics are assumed plentiful. Tracked special basics are shown, but their deck allocation isn't tracked.",
+     "page": 1,
+     "pages": 1,
+     "roles": [],
+     "total": 0,
+     "types": [],
+     "warnings": [
+      "unlisted.csv isn't in products/status.csv, so it counts as owned and not intact",
+      "products/status.csv lists gone.csv, which isn't in magic/products/"
+     ]
+    }
+   ],
+   "special_basics": [
+    {},
+    {}
+   ]
+  },
+  "user3": {
+   "pages": [
+    {
+     "cards": [],
+     "limit": 24,
+     "note": "Ordinary basics are assumed plentiful. Tracked special basics are shown, but their deck allocation isn't tracked.",
+     "page": 1,
+     "pages": 1,
+     "roles": [],
+     "total": 0,
+     "types": [],
+     "warnings": []
+    }
+   ],
+   "special_basics": [
+    {},
+    {}
+   ]
+  },
+  "user2": {
+   "pages": [
+    {
+     "cards": [],
+     "limit": 24,
+     "note": "Ordinary basics are assumed plentiful. Tracked special basics are shown, but their deck allocation isn't tracked.",
+     "page": 1,
+     "pages": 1,
+     "roles": [],
+     "total": 0,
+     "types": [],
+     "warnings": []
+    }
+   ],
+   "special_basics": [
+    {},
+    {}
+   ]
+  },
+  "user4": {
+   "pages": [
+    {
+     "cards": [],
+     "limit": 24,
+     "note": "Ordinary basics are assumed plentiful. Tracked special basics are shown, but their deck allocation isn't tracked.",
+     "page": 1,
+     "pages": 1,
+     "roles": [],
+     "total": 0,
+     "types": [],
+     "warnings": []
+    }
+   ],
+   "special_basics": [
+    {},
+    {}
+   ]
+  }
+ },
+ "deck_table": {},
+ "deck_table_priced": {},
+ "deck_view": {
+  "product/fdn-beginner-box/elves@target": {
+   "guide": null,
+   "info": [],
+   "owned": {
+    "conflicts": [],
+    "deck_id": "product/fdn-beginner-box/elves",
+    "price_date": "2026-09-28",
+    "price_error": null,
+    "rate": 1.5,
+    "rate_date": "2000-01-01",
+    "rows": [
+     {
+      "aud_each": 0.3,
+      "aud_missing": 0.3,
+      "available": 0,
+      "in_use_elsewhere": [],
+      "labels": {
+       "in_use": [],
+       "on_the_way": []
+      },
+      "missing": 1,
+      "name": "Llanowar Elves",
+      "need": 1,
+      "on_the_way": 0,
+      "on_the_way_from": [],
+      "owned": 0,
+      "priced_finish": "nonfoil",
+      "priced_printing": "M19 314"
+     }
+    ],
+    "totals": {
+     "aud_missing": 0.3,
+     "cards": 1,
+     "missing": 1,
+     "need": 1,
+     "unpriced": []
+    },
+    "unresolved": [],
+    "version": "target",
+    "warnings": [
+     "unlisted.csv isn't in products/status.csv, so it counts as owned and not intact",
+     "products/status.csv lists gone.csv, which isn't in magic/products/"
+    ]
+   },
+   "sections": {
+    "Deck": [
+     {
+      "card": {
+       "cmc": 1.0,
+       "color_identity": [
+        "G"
+       ],
+       "colors": [
+        "G"
+       ],
+       "defense": null,
+       "img": "/img/fdn/227/normal",
+       "img_small": "/img/fdn/227/small",
+       "loyalty": null,
+       "mana_cost": "{G}",
+       "name": "Llanowar Elves",
+       "oracle_text": "{T}: Add {G}.",
+       "power": "1",
+       "roles": [
+        "ramp"
+       ],
+       "toughness": "1",
+       "type_line": "Creature — Elf Druid"
+      },
+      "finish": "nonfoil",
+      "name": "Llanowar Elves",
+      "number": "1",
+      "qty": 1,
+      "set": "tst"
+     }
+    ]
+   },
+   "stats": {
+    "colours": {
+     "assumed_lands": null,
+     "colours": [
+      {
+       "checks": [
+        {
+         "cards": [
+          {
+           "name": "Llanowar Elves",
+           "qty": 1
+          }
+         ],
+         "colours": "G",
+         "cost": "C",
+         "cost_in_colours": "G",
+         "gold": false,
+         "have": 0.0,
+         "have_lands": 0.0,
+         "margin": null,
+         "needed": null,
+         "notes": [],
+         "ok": null,
+         "pips": 1,
+         "published": null,
+         "turn": 1
+        }
+       ],
+       "colours": "G",
+       "hardest": {
+        "cards": [
+         {
+          "name": "Llanowar Elves",
+          "qty": 1
+         }
+        ],
+        "colours": "G",
+        "cost": "C",
+        "cost_in_colours": "G",
+        "gold": false,
+        "have": 0.0,
+        "have_lands": 0.0,
+        "margin": null,
+        "needed": null,
+        "notes": [],
+        "ok": null,
+        "pips": 1,
+        "published": null,
+        "turn": 1
+       },
+       "land_sources": 0.0,
+       "name": "green",
+       "ok": null,
+       "short": []
+      }
+     ],
+     "deck_lands": 0.0,
+     "definition": "Karsten's 'consistently cast': at least an (89 + mana value)% chance to have the coloured sources by the turn equal to the spell's mana value, on the play, in games with enough lands.",
+     "land_note": null,
+     "ok": null,
+     "rules": [
+      "A land that makes the colour is 1 source. On turn 1 only lands that can enter untapped count (a shock land or fast land can, and in Commander a bond land; a check land, gain land or basic-land fetch can't).",
+      "A land that searches for a basic land is a source of each colour of the basics in the deck (2/3 of one in decks needing 3 or more colours); one that searches for a land type, of each colour the deck's lands of that type make. Pathways: 2/3 each in decks needing 3+ colours.",
+      "A land whose search costs mana (Myriad Landscape's {2}) is a source only of the colours it makes itself until it can be used: paying {2} takes two other lands, so the lands it finds count from turn 4 (Karsten's full source is for searches that cost no mana, like Evolving Wilds).",
+      "A spell // land modal card is 0.8 of a source (1 if its land can enter untapped).",
+      "Mana creatures: 0.5 of a source from the turn after they're cast (turn 2 at the earliest). Mana rocks: 0.75 from the turn after they're cast (turn 3 at the earliest). 2-mana land ramp: 0.75 from turn 3; 3-mana land ramp: 0.5 from turn 5. Each only when the deck can cast the card itself consistently.",
+      "Cheap card draw (mana value 2 or less): each digs for lands, worth (sources of the colour / deck size) rounded down to a quarter, for spells cast after it; the first 10 only.",
+      "Exotic Orchard 0.75 and Fellwar Stone 0.5 of any colour (opponents unknown).",
+      "Not counted: Treasure, scry, and a Verge land's condition (it counts fully for both colours)."
+     ],
+     "source": "karsten-sources",
+     "sources": [
+      {
+       "colours": "G",
+       "counted": true,
+       "found_from_turn": null,
+       "from_turn": 2,
+       "kind": "creature",
+       "name": "Llanowar Elves",
+       "note": "mana creature",
+       "qty": 1,
+       "turn_one": false,
+       "weight": 0.5
+      }
+     ],
+     "table": null,
+     "table_note": "Karsten publishes no source counts below 40 cards, so a 20-card deck gets its sources and requirements without a verdict. Check its 40-card pairings."
+    },
+    "commander": null,
+    "counts": {
+     "commander": 0,
+     "companion": 0,
+     "deck": 1,
+     "main": 1,
+     "sideboard": 0
+    },
+    "curve": {
+     "average_mv": 1.0,
+     "average_mv_definition": "Karsten's: the mana values of the library's nonland cards added up (each copy) and divided by their number. Lands are left out; a spell // land modal card counts as its front face; X counts as 0. The commander and companion are cast from outside the library, so they're left out (listed under outside).",
+     "buckets": [
+      {
+       "cards": [],
+       "creatures": 0,
+       "mv": "0",
+       "noncreatures": 0,
+       "total": 0
+      },
+      {
+       "cards": [
+        {
+         "name": "Llanowar Elves",
+         "qty": 1
+        }
+       ],
+       "creatures": 1,
+       "mv": "1",
+       "noncreatures": 0,
+       "total": 1
+      },
+      {
+       "cards": [],
+       "creatures": 0,
+       "mv": "2",
+       "noncreatures": 0,
+       "total": 0
+      },
+      {
+       "cards": [],
+       "creatures": 0,
+       "mv": "3",
+       "noncreatures": 0,
+       "total": 0
+      },
+      {
+       "cards": [],
+       "creatures": 0,
+       "mv": "4",
+       "noncreatures": 0,
+       "total": 0
+      },
+      {
+       "cards": [],
+       "creatures": 0,
+       "mv": "5",
+       "noncreatures": 0,
+       "total": 0
+      },
+      {
+       "cards": [],
+       "creatures": 0,
+       "mv": "6",
+       "noncreatures": 0,
+       "total": 0
+      },
+      {
+       "cards": [],
+       "creatures": 0,
+       "mv": "7+",
+       "noncreatures": 0,
+       "total": 0
+      }
+     ],
+     "creatures": 1,
+     "noncreatures": 0,
+     "nonland": 1,
+     "outside": [],
+     "x_spells": {
+      "cards": [],
+      "count": 0
+     }
+    },
+    "guidance": {
+     "deck_size": 1,
+     "library": 20,
+     "note": "1 cards: using the 20-card guidance, the nearest deck size it covers (20, 40, 60).",
+     "size": 20
+    },
+    "keywords": [],
+    "kind": "constructed",
+    "lands": {
+     "average_mv": 1.0,
+     "band": 1.0,
+     "cheap": {
+      "count": 1,
+      "draw": [],
+      "ramp": [
+       {
+        "name": "Llanowar Elves",
+        "qty": 1
+       }
+      ]
+     },
+     "companions": 0,
+     "delta": -6.88,
+     "effective": 0.0,
+     "floor": null,
+     "formula": {
+      "published": false,
+      "source": "karsten-lands",
+      "status": "Not published by Karsten: his 60-card formula scaled by 20/60, the way he scales his 80-card one (our extrapolation). It fits all 10 Foundations Beginner Box halves within 0.97 lands and 118 of 119 Foundations Jumpstart lists within 1.",
+      "text": "lands = (20/60) x (19.59 + 1.9 x average mana value + 0.27 x companions) - 0.28 x cheap spells",
+      "worked": "(20/60) x (19.59 + 1.9 x 1.00 + 0.27 x 0) - 0.28 x 1 = 6.88"
+     },
+     "lands": 0,
+     "mana_creatures": [
+      {
+       "cheap": true,
+       "mv": 1.0,
+       "name": "Llanowar Elves",
+       "produces": "G",
+       "qty": 1
+      }
+     ],
+     "mana_rocks": [],
+     "mdfc": {
+      "cards": [],
+      "tapped": 0,
+      "untapped": 0
+     },
+     "recommended": 6.88,
+     "rule_of_thumb": {
+      "sources": [
+       "wizards-jumpstart"
+      ],
+      "text": "8 lands (7 basics + 1 nonbasic); 9 in top-heavy or land-matters halves"
+     },
+     "verdict": "low",
+     "verdict_text": "6.88 fewer lands than the formula (more than 2 off)."
+    },
+    "roles": [
+     {
+      "cards": [],
+      "count": 0,
+      "role": "removal"
+     },
+     {
+      "cards": [
+       {
+        "name": "Llanowar Elves",
+        "qty": 1
+       }
+      ],
+      "count": 1,
+      "role": "ramp"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "role": "draw"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "role": "counterspell"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "role": "board wipe"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "role": "burn"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "role": "lifegain"
+     }
+    ],
+    "sideboard": {
+     "cards": [],
+     "checks": [],
+     "count": 0
+    },
+    "sources": {
+     "banned-list": {
+      "date": "Commander entry edited 2026-04-03; fetched 2026-09-29",
+      "title": "Banned and Restricted List, Commander entry (Wizards of the Coast)",
+      "url": "https://magic.wizards.com/en/banned-restricted-list"
+     },
+     "brackets-2025-02": {
+      "date": "2025-02-11",
+      "title": "Introducing Commander Brackets Beta (Wizards of the Coast)",
+      "url": "https://magic.wizards.com/en/news/announcements/introducing-commander-brackets-beta"
+     },
+     "brackets-2025-10": {
+      "date": "2025-10-21",
+      "title": "Commander Brackets Beta Update, October 21, 2025 (Wizards of the Coast)",
+      "url": "https://magic.wizards.com/en/news/announcements/commander-brackets-beta-update-october-21-2025"
+     },
+     "brackets-2026-02": {
+      "date": "2026-02-09",
+      "title": "Commander Brackets Beta Update, February 9, 2026 (Wizards of the Coast)",
+      "url": "https://magic.wizards.com/en/news/announcements/commander-brackets-beta-update-february-9-2026"
+     },
+     "commander-spellbook": {
+      "date": "the list downloaded with the card data; its date is shown with the checks",
+      "title": "Commander Spellbook's combo list: two-card combos (commanderspellbook.com, with thanks; fan content under Wizards' Fan Content Policy)",
+      "url": "https://commanderspellbook.com/"
+     },
+     "comp-rules": {
+      "date": "effective 2026-09-25",
+      "title": "Magic: The Gathering Comprehensive Rules, 903 (Commander)",
+      "url": "https://media.wizards.com/2026/downloads/MagicCompRules%2020260925.txt"
+     },
+     "edhrec-lands": {
+      "date": "2024-11-25",
+      "title": "How to Build a Commander Deck (Brian Cain, EDHREC)",
+      "url": "https://edhrec.com/articles/how-to-build-a-commander-deck"
+     },
+     "karsten-commander": {
+      "date": "2022-07-15, updated 2025-08-28",
+      "title": "What's an Optimal Mana Curve and Land/Ramp Count for Commander? (Frank Karsten)",
+      "url": "https://www.tcgplayer.com/content/article/What-s-an-Optimal-Mana-Curve-and-Land-Ramp-Count-for-Commander/e22caad1-b04b-4f8a-951b-a41e9f08da14/"
+     },
+     "karsten-lands": {
+      "date": "2022-07-29, page updated 2025-02-13; still his newest land-count study on 2026-09-29",
+      "title": "How Many Lands Do You Need in Your Deck? An Updated Analysis (Frank Karsten)",
+      "url": "https://www.tcgplayer.com/content/article/How-Many-Lands-Do-You-Need-in-Your-Deck-An-Updated-Analysis/cd1c1a24-d439-4a8e-b369-b936edb0b38a/"
+     },
+     "karsten-sources": {
+      "date": "2022-08-02, page updated 2025-02-13; still his newest on 2026-09-29",
+      "title": "How Many Sources Do You Need to Consistently Cast Your Spells? A 2022 Update (Frank Karsten)",
+      "url": "https://www.tcgplayer.com/content/article/How-Many-Sources-Do-You-Need-to-Consistently-Cast-Your-Spells-A-2022-Update/dc23a7d2-0a16-4c0b-ad36-586fcca03ad8/"
+     },
+     "karsten-verge": {
+      "date": "2024-10-18",
+      "title": "Building Mana Bases with Duskmourn's New Verge Lands (Frank Karsten)",
+      "url": "https://www.tcgplayer.com/content/article/Building-Mana-Bases-with-Duskmourn-s-New-Verge-Lands/02256252-047e-458a-92b3-bed999bd3364/"
+     },
+     "tagger": {
+      "date": "oracle_tags bulk file of 2026-09-28",
+      "title": "Scryfall Tagger oracle tags mass-land-denial and extra-turn",
+      "url": "https://tagger.scryfall.com/tags/card/mass-land-denial"
+     },
+     "wizards-commander": {
+      "date": "fetched 2026-09-29 (Game Changers last changed 2026-02-09)",
+      "title": "Commander format page: Brackets and Game Changers (Wizards of the Coast)",
+      "url": "https://magic.wizards.com/en/formats/commander"
+     },
+     "wizards-jumpstart": {
+      "date": "2024-10-28",
+      "title": "Foundations Jumpstart Booster Themes (Wizards of the Coast)",
+      "url": "https://magic.wizards.com/en/news/announcements/foundations-jumpstart-booster-themes"
+     },
+     "wizards-mana": {
+      "date": "2014-08-18",
+      "title": "The Basics of Mana (Reid Duke, Wizards of the Coast)",
+      "url": "https://magic.wizards.com/en/news/feature/basics-mana-2014-08-18"
+     }
+    },
+    "tribes": {
+     "changelings": {
+      "cards": [],
+      "count": 0,
+      "note": "Changelings are every creature type, so each also counts towards every tribe; they're counted above only under their printed types."
+     },
+     "types": [
+      {
+       "cards": [
+        {
+         "name": "Llanowar Elves",
+         "qty": 1
+        }
+       ],
+       "count": 1,
+       "type": "Druid"
+      },
+      {
+       "cards": [
+        {
+         "name": "Llanowar Elves",
+         "qty": 1
+        }
+       ],
+       "count": 1,
+       "type": "Elf"
+      }
+     ]
+    },
+    "types": [
+     {
+      "cards": [
+       {
+        "name": "Llanowar Elves",
+        "qty": 1
+       }
+      ],
+      "count": 1,
+      "type": "creature"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "type": "instant"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "type": "sorcery"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "type": "artifact"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "type": "enchantment"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "type": "planeswalker"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "type": "battle"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "type": "land"
+     }
+    ],
+    "unresolved": [],
+    "warnings": [
+     "1 cards: using the 20-card guidance, the nearest deck size it covers (20, 40, 60)."
+    ]
+   },
+   "summary": {
+    "built_version": null,
+    "card_count": 1,
+    "format": "Beginner Box half (20 cards)",
+    "holder_sha256": "5be4c048fdcc2f87c61196e459873d5e20ed8aaa9d1b0eccedce475d9c5bb0d5",
+    "id": "product/fdn-beginner-box/elves",
+    "kind": "casual",
+    "kit": {
+     "deck_box": null,
+     "holder": "product/fdn-beginner-box",
+     "info": [],
+     "need": 1,
+     "owner": "shared",
+     "short": 0,
+     "sleeves": null,
+     "spare": 0,
+     "title": "Foundations Beginner Box",
+     "warnings": [
+      "Foundations Beginner Box is kept intact: choose its sleeves (it needs 1)."
+     ]
+    },
+    "player": null,
+    "read_only": true,
+    "sideboard_count": 0,
+    "source": "magic/products/fdn-beginner-box.csv",
+    "space": "home",
+    "status": null,
+    "title": "Elves (Foundations Beginner Box)",
+    "versions": [
+     "target"
+    ]
+   },
+   "table": null,
+   "tokens": {
+    "copies": [],
+    "counts": {
+     "check": 0,
+     "differs": 0,
+     "incoming": 0,
+     "kinds": 0,
+     "none": 0,
+     "ready": 0
+    },
+    "needs": [],
+    "note": "Worked out from Scryfall's links between cards and tokens, so it's approximate. Tokens a card makes only through its rules text, and most token copies of other cards, aren't listed. Some listed tokens appear only in certain modes or for your opponent. Deck Lab can't tell how many a game needs.",
+    "unlisted": []
+   },
+   "uncommitted": null,
+   "version": "target",
+   "versions": [
+    "target"
+   ],
+   "warnings": [
+    "Llanowar Elves (TST) 1: Scryfall has no printing TST 1",
+    "Foundations Beginner Box is kept intact: choose its sleeves (it needs 1)."
+   ]
+  },
+  "product/unlisted/elves@target": {
+   "guide": null,
+   "info": [],
+   "owned": {
+    "conflicts": [],
+    "deck_id": "product/unlisted/elves",
+    "price_date": "2026-09-28",
+    "price_error": null,
+    "rate": 1.5,
+    "rate_date": "2000-01-01",
+    "rows": [
+     {
+      "aud_each": 2.03,
+      "aud_missing": 2.03,
+      "available": 0,
+      "in_use_elsewhere": [],
+      "labels": {
+       "in_use": [],
+       "on_the_way": []
+      },
+      "missing": 1,
+      "name": "Elvish Mystic",
+      "need": 1,
+      "on_the_way": 0,
+      "on_the_way_from": [],
+      "owned": 0,
+      "priced_finish": "nonfoil",
+      "priced_printing": "CMM 648"
+     }
+    ],
+    "totals": {
+     "aud_missing": 2.03,
+     "cards": 1,
+     "missing": 1,
+     "need": 1,
+     "unpriced": []
+    },
+    "unresolved": [],
+    "version": "target",
+    "warnings": [
+     "unlisted.csv isn't in products/status.csv, so it counts as owned and not intact",
+     "products/status.csv lists gone.csv, which isn't in magic/products/"
+    ]
+   },
+   "sections": {
+    "Deck": [
+     {
+      "card": {
+       "cmc": 1.0,
+       "color_identity": [
+        "G"
+       ],
+       "colors": [
+        "G"
+       ],
+       "defense": null,
+       "img": "/img/cmm/648/normal",
+       "img_small": "/img/cmm/648/small",
+       "loyalty": null,
+       "mana_cost": "{G}",
+       "name": "Elvish Mystic",
+       "oracle_text": "{T}: Add {G}.",
+       "power": "1",
+       "roles": [
+        "ramp"
+       ],
+       "toughness": "1",
+       "type_line": "Creature — Elf Druid"
+      },
+      "finish": "nonfoil",
+      "name": "Elvish Mystic",
+      "number": "1",
+      "qty": 1,
+      "set": "tst"
+     }
+    ]
+   },
+   "stats": {
+    "colours": {
+     "assumed_lands": null,
+     "colours": [
+      {
+       "checks": [
+        {
+         "cards": [
+          {
+           "name": "Elvish Mystic",
+           "qty": 1
+          }
+         ],
+         "colours": "G",
+         "cost": "C",
+         "cost_in_colours": "G",
+         "gold": false,
+         "have": 0.0,
+         "have_lands": 0.0,
+         "margin": null,
+         "needed": null,
+         "notes": [],
+         "ok": null,
+         "pips": 1,
+         "published": null,
+         "turn": 1
+        }
+       ],
+       "colours": "G",
+       "hardest": {
+        "cards": [
+         {
+          "name": "Elvish Mystic",
+          "qty": 1
+         }
+        ],
+        "colours": "G",
+        "cost": "C",
+        "cost_in_colours": "G",
+        "gold": false,
+        "have": 0.0,
+        "have_lands": 0.0,
+        "margin": null,
+        "needed": null,
+        "notes": [],
+        "ok": null,
+        "pips": 1,
+        "published": null,
+        "turn": 1
+       },
+       "land_sources": 0.0,
+       "name": "green",
+       "ok": null,
+       "short": []
+      }
+     ],
+     "deck_lands": 0.0,
+     "definition": "Karsten's 'consistently cast': at least an (89 + mana value)% chance to have the coloured sources by the turn equal to the spell's mana value, on the play, in games with enough lands.",
+     "land_note": null,
+     "ok": null,
+     "rules": [
+      "A land that makes the colour is 1 source. On turn 1 only lands that can enter untapped count (a shock land or fast land can, and in Commander a bond land; a check land, gain land or basic-land fetch can't).",
+      "A land that searches for a basic land is a source of each colour of the basics in the deck (2/3 of one in decks needing 3 or more colours); one that searches for a land type, of each colour the deck's lands of that type make. Pathways: 2/3 each in decks needing 3+ colours.",
+      "A land whose search costs mana (Myriad Landscape's {2}) is a source only of the colours it makes itself until it can be used: paying {2} takes two other lands, so the lands it finds count from turn 4 (Karsten's full source is for searches that cost no mana, like Evolving Wilds).",
+      "A spell // land modal card is 0.8 of a source (1 if its land can enter untapped).",
+      "Mana creatures: 0.5 of a source from the turn after they're cast (turn 2 at the earliest). Mana rocks: 0.75 from the turn after they're cast (turn 3 at the earliest). 2-mana land ramp: 0.75 from turn 3; 3-mana land ramp: 0.5 from turn 5. Each only when the deck can cast the card itself consistently.",
+      "Cheap card draw (mana value 2 or less): each digs for lands, worth (sources of the colour / deck size) rounded down to a quarter, for spells cast after it; the first 10 only.",
+      "Exotic Orchard 0.75 and Fellwar Stone 0.5 of any colour (opponents unknown).",
+      "Not counted: Treasure, scry, and a Verge land's condition (it counts fully for both colours)."
+     ],
+     "source": "karsten-sources",
+     "sources": [
+      {
+       "colours": "G",
+       "counted": true,
+       "found_from_turn": null,
+       "from_turn": 2,
+       "kind": "creature",
+       "name": "Elvish Mystic",
+       "note": "mana creature",
+       "qty": 1,
+       "turn_one": false,
+       "weight": 0.5
+      }
+     ],
+     "table": null,
+     "table_note": "Karsten publishes no source counts below 40 cards, so a 20-card deck gets its sources and requirements without a verdict. Check its 40-card pairings."
+    },
+    "commander": null,
+    "counts": {
+     "commander": 0,
+     "companion": 0,
+     "deck": 1,
+     "main": 1,
+     "sideboard": 0
+    },
+    "curve": {
+     "average_mv": 1.0,
+     "average_mv_definition": "Karsten's: the mana values of the library's nonland cards added up (each copy) and divided by their number. Lands are left out; a spell // land modal card counts as its front face; X counts as 0. The commander and companion are cast from outside the library, so they're left out (listed under outside).",
+     "buckets": [
+      {
+       "cards": [],
+       "creatures": 0,
+       "mv": "0",
+       "noncreatures": 0,
+       "total": 0
+      },
+      {
+       "cards": [
+        {
+         "name": "Elvish Mystic",
+         "qty": 1
+        }
+       ],
+       "creatures": 1,
+       "mv": "1",
+       "noncreatures": 0,
+       "total": 1
+      },
+      {
+       "cards": [],
+       "creatures": 0,
+       "mv": "2",
+       "noncreatures": 0,
+       "total": 0
+      },
+      {
+       "cards": [],
+       "creatures": 0,
+       "mv": "3",
+       "noncreatures": 0,
+       "total": 0
+      },
+      {
+       "cards": [],
+       "creatures": 0,
+       "mv": "4",
+       "noncreatures": 0,
+       "total": 0
+      },
+      {
+       "cards": [],
+       "creatures": 0,
+       "mv": "5",
+       "noncreatures": 0,
+       "total": 0
+      },
+      {
+       "cards": [],
+       "creatures": 0,
+       "mv": "6",
+       "noncreatures": 0,
+       "total": 0
+      },
+      {
+       "cards": [],
+       "creatures": 0,
+       "mv": "7+",
+       "noncreatures": 0,
+       "total": 0
+      }
+     ],
+     "creatures": 1,
+     "noncreatures": 0,
+     "nonland": 1,
+     "outside": [],
+     "x_spells": {
+      "cards": [],
+      "count": 0
+     }
+    },
+    "guidance": {
+     "deck_size": 1,
+     "library": 20,
+     "note": "1 cards: using the 20-card guidance, the nearest deck size it covers (20, 40, 60).",
+     "size": 20
+    },
+    "keywords": [],
+    "kind": "constructed",
+    "lands": {
+     "average_mv": 1.0,
+     "band": 1.0,
+     "cheap": {
+      "count": 1,
+      "draw": [],
+      "ramp": [
+       {
+        "name": "Elvish Mystic",
+        "qty": 1
+       }
+      ]
+     },
+     "companions": 0,
+     "delta": -6.88,
+     "effective": 0.0,
+     "floor": null,
+     "formula": {
+      "published": false,
+      "source": "karsten-lands",
+      "status": "Not published by Karsten: his 60-card formula scaled by 20/60, the way he scales his 80-card one (our extrapolation). It fits all 10 Foundations Beginner Box halves within 0.97 lands and 118 of 119 Foundations Jumpstart lists within 1.",
+      "text": "lands = (20/60) x (19.59 + 1.9 x average mana value + 0.27 x companions) - 0.28 x cheap spells",
+      "worked": "(20/60) x (19.59 + 1.9 x 1.00 + 0.27 x 0) - 0.28 x 1 = 6.88"
+     },
+     "lands": 0,
+     "mana_creatures": [
+      {
+       "cheap": true,
+       "mv": 1.0,
+       "name": "Elvish Mystic",
+       "produces": "G",
+       "qty": 1
+      }
+     ],
+     "mana_rocks": [],
+     "mdfc": {
+      "cards": [],
+      "tapped": 0,
+      "untapped": 0
+     },
+     "recommended": 6.88,
+     "rule_of_thumb": {
+      "sources": [
+       "wizards-jumpstart"
+      ],
+      "text": "8 lands (7 basics + 1 nonbasic); 9 in top-heavy or land-matters halves"
+     },
+     "verdict": "low",
+     "verdict_text": "6.88 fewer lands than the formula (more than 2 off)."
+    },
+    "roles": [
+     {
+      "cards": [],
+      "count": 0,
+      "role": "removal"
+     },
+     {
+      "cards": [
+       {
+        "name": "Elvish Mystic",
+        "qty": 1
+       }
+      ],
+      "count": 1,
+      "role": "ramp"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "role": "draw"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "role": "counterspell"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "role": "board wipe"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "role": "burn"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "role": "lifegain"
+     }
+    ],
+    "sideboard": {
+     "cards": [],
+     "checks": [],
+     "count": 0
+    },
+    "sources": {
+     "banned-list": {
+      "date": "Commander entry edited 2026-04-03; fetched 2026-09-29",
+      "title": "Banned and Restricted List, Commander entry (Wizards of the Coast)",
+      "url": "https://magic.wizards.com/en/banned-restricted-list"
+     },
+     "brackets-2025-02": {
+      "date": "2025-02-11",
+      "title": "Introducing Commander Brackets Beta (Wizards of the Coast)",
+      "url": "https://magic.wizards.com/en/news/announcements/introducing-commander-brackets-beta"
+     },
+     "brackets-2025-10": {
+      "date": "2025-10-21",
+      "title": "Commander Brackets Beta Update, October 21, 2025 (Wizards of the Coast)",
+      "url": "https://magic.wizards.com/en/news/announcements/commander-brackets-beta-update-october-21-2025"
+     },
+     "brackets-2026-02": {
+      "date": "2026-02-09",
+      "title": "Commander Brackets Beta Update, February 9, 2026 (Wizards of the Coast)",
+      "url": "https://magic.wizards.com/en/news/announcements/commander-brackets-beta-update-february-9-2026"
+     },
+     "commander-spellbook": {
+      "date": "the list downloaded with the card data; its date is shown with the checks",
+      "title": "Commander Spellbook's combo list: two-card combos (commanderspellbook.com, with thanks; fan content under Wizards' Fan Content Policy)",
+      "url": "https://commanderspellbook.com/"
+     },
+     "comp-rules": {
+      "date": "effective 2026-09-25",
+      "title": "Magic: The Gathering Comprehensive Rules, 903 (Commander)",
+      "url": "https://media.wizards.com/2026/downloads/MagicCompRules%2020260925.txt"
+     },
+     "edhrec-lands": {
+      "date": "2024-11-25",
+      "title": "How to Build a Commander Deck (Brian Cain, EDHREC)",
+      "url": "https://edhrec.com/articles/how-to-build-a-commander-deck"
+     },
+     "karsten-commander": {
+      "date": "2022-07-15, updated 2025-08-28",
+      "title": "What's an Optimal Mana Curve and Land/Ramp Count for Commander? (Frank Karsten)",
+      "url": "https://www.tcgplayer.com/content/article/What-s-an-Optimal-Mana-Curve-and-Land-Ramp-Count-for-Commander/e22caad1-b04b-4f8a-951b-a41e9f08da14/"
+     },
+     "karsten-lands": {
+      "date": "2022-07-29, page updated 2025-02-13; still his newest land-count study on 2026-09-29",
+      "title": "How Many Lands Do You Need in Your Deck? An Updated Analysis (Frank Karsten)",
+      "url": "https://www.tcgplayer.com/content/article/How-Many-Lands-Do-You-Need-in-Your-Deck-An-Updated-Analysis/cd1c1a24-d439-4a8e-b369-b936edb0b38a/"
+     },
+     "karsten-sources": {
+      "date": "2022-08-02, page updated 2025-02-13; still his newest on 2026-09-29",
+      "title": "How Many Sources Do You Need to Consistently Cast Your Spells? A 2022 Update (Frank Karsten)",
+      "url": "https://www.tcgplayer.com/content/article/How-Many-Sources-Do-You-Need-to-Consistently-Cast-Your-Spells-A-2022-Update/dc23a7d2-0a16-4c0b-ad36-586fcca03ad8/"
+     },
+     "karsten-verge": {
+      "date": "2024-10-18",
+      "title": "Building Mana Bases with Duskmourn's New Verge Lands (Frank Karsten)",
+      "url": "https://www.tcgplayer.com/content/article/Building-Mana-Bases-with-Duskmourn-s-New-Verge-Lands/02256252-047e-458a-92b3-bed999bd3364/"
+     },
+     "tagger": {
+      "date": "oracle_tags bulk file of 2026-09-28",
+      "title": "Scryfall Tagger oracle tags mass-land-denial and extra-turn",
+      "url": "https://tagger.scryfall.com/tags/card/mass-land-denial"
+     },
+     "wizards-commander": {
+      "date": "fetched 2026-09-29 (Game Changers last changed 2026-02-09)",
+      "title": "Commander format page: Brackets and Game Changers (Wizards of the Coast)",
+      "url": "https://magic.wizards.com/en/formats/commander"
+     },
+     "wizards-jumpstart": {
+      "date": "2024-10-28",
+      "title": "Foundations Jumpstart Booster Themes (Wizards of the Coast)",
+      "url": "https://magic.wizards.com/en/news/announcements/foundations-jumpstart-booster-themes"
+     },
+     "wizards-mana": {
+      "date": "2014-08-18",
+      "title": "The Basics of Mana (Reid Duke, Wizards of the Coast)",
+      "url": "https://magic.wizards.com/en/news/feature/basics-mana-2014-08-18"
+     }
+    },
+    "tribes": {
+     "changelings": {
+      "cards": [],
+      "count": 0,
+      "note": "Changelings are every creature type, so each also counts towards every tribe; they're counted above only under their printed types."
+     },
+     "types": [
+      {
+       "cards": [
+        {
+         "name": "Elvish Mystic",
+         "qty": 1
+        }
+       ],
+       "count": 1,
+       "type": "Druid"
+      },
+      {
+       "cards": [
+        {
+         "name": "Elvish Mystic",
+         "qty": 1
+        }
+       ],
+       "count": 1,
+       "type": "Elf"
+      }
+     ]
+    },
+    "types": [
+     {
+      "cards": [
+       {
+        "name": "Elvish Mystic",
+        "qty": 1
+       }
+      ],
+      "count": 1,
+      "type": "creature"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "type": "instant"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "type": "sorcery"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "type": "artifact"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "type": "enchantment"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "type": "planeswalker"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "type": "battle"
+     },
+     {
+      "cards": [],
+      "count": 0,
+      "type": "land"
+     }
+    ],
+    "unresolved": [],
+    "warnings": [
+     "1 cards: using the 20-card guidance, the nearest deck size it covers (20, 40, 60)."
+    ]
+   },
+   "summary": {
+    "built_version": null,
+    "card_count": 1,
+    "format": "Product deck",
+    "holder_sha256": "5be4c048fdcc2f87c61196e459873d5e20ed8aaa9d1b0eccedce475d9c5bb0d5",
+    "id": "product/unlisted/elves",
+    "kind": "casual",
+    "kit": {
+     "deck_box": null,
+     "holder": "product/unlisted",
+     "info": [],
+     "need": 1,
+     "owner": "shared",
+     "short": 0,
+     "sleeves": null,
+     "spare": 0,
+     "title": "unlisted",
+     "warnings": []
+    },
+    "player": null,
+    "read_only": true,
+    "sideboard_count": 0,
+    "source": "magic/products/unlisted.csv",
+    "space": "home",
+    "status": null,
+    "title": "Elves (Unlisted)",
+    "versions": [
+     "target"
+    ]
+   },
+   "table": null,
+   "tokens": {
+    "copies": [],
+    "counts": {
+     "check": 0,
+     "differs": 0,
+     "incoming": 0,
+     "kinds": 0,
+     "none": 0,
+     "ready": 0
+    },
+    "needs": [],
+    "note": "Worked out from Scryfall's links between cards and tokens, so it's approximate. Tokens a card makes only through its rules text, and most token copies of other cards, aren't listed. Some listed tokens appear only in certain modes or for your opponent. Deck Lab can't tell how many a game needs.",
+    "unlisted": []
+   },
+   "uncommitted": null,
+   "version": "target",
+   "versions": [
+    "target"
+   ],
+   "warnings": [
+    "Elvish Mystic (TST) 1: Scryfall has no printing TST 1"
+   ]
+  }
+ },
+ "decks_index": {
+  "decks": [
+   {
+    "availability_confirmed": {
+     "target": false
+    },
+    "built_version": null,
+    "card_count": 1,
+    "format": "Beginner Box half (20 cards)",
+    "id": "product/fdn-beginner-box/elves",
+    "kind": "casual",
+    "kit": {
+     "deck_box": null,
+     "short": 0,
+     "sleeves": null
+    },
+    "missing": {
+     "target": 1
+    },
+    "on_the_way": {
+     "target": 0
+    },
+    "player": null,
+    "read_only": true,
+    "sideboard_count": 0,
+    "source": "magic/products/fdn-beginner-box.csv",
+    "space": "home",
+    "status": null,
+    "title": "Elves (Foundations Beginner Box)",
+    "tokens": {
+     "differs": [],
+     "incoming": [],
+     "kinds": 0,
+     "none": [],
+     "reminders": []
+    },
+    "versions": [
+     "target"
+    ]
+   },
+   {
+    "availability_confirmed": {
+     "target": false
+    },
+    "built_version": null,
+    "card_count": 1,
+    "format": "Product deck",
+    "id": "product/unlisted/elves",
+    "kind": "casual",
+    "kit": {
+     "deck_box": null,
+     "short": 0,
+     "sleeves": null
+    },
+    "missing": {
+     "target": 1
+    },
+    "on_the_way": {
+     "target": 0
+    },
+    "player": null,
+    "read_only": true,
+    "sideboard_count": 0,
+    "source": "magic/products/unlisted.csv",
+    "space": "home",
+    "status": null,
+    "title": "Elves (Unlisted)",
+    "tokens": {
+     "differs": [],
+     "incoming": [],
+     "kinds": 0,
+     "none": [],
+     "reminders": []
+    },
+    "versions": [
+     "target"
+    ]
+   }
+  ],
+  "halves": [
+   {
+    "id": "product/fdn-beginner-box/elves",
+    "title": "Elves"
+   }
+  ],
+  "warnings": [
+   "unlisted.csv isn't in products/status.csv, so it counts as owned and not intact",
+   "products/status.csv lists gone.csv, which isn't in magic/products/"
+  ]
+ },
+ "field": {
+  "Commander": {
+   "lists": [],
+   "notes": []
+  },
+  "Constructed": {
+   "lists": [],
+   "notes": []
+  }
+ },
+ "list_decks": [
+  {
+   "built_version": null,
+   "card_count": 1,
+   "format": "Beginner Box half (20 cards)",
+   "id": "product/fdn-beginner-box/elves",
+   "kind": "casual",
+   "player": null,
+   "read_only": true,
+   "sideboard_count": 0,
+   "source": "magic/products/fdn-beginner-box.csv",
+   "space": "home",
+   "status": null,
+   "title": "Elves (Foundations Beginner Box)",
+   "versions": [
+    "target"
+   ]
+  },
+  {
+   "built_version": null,
+   "card_count": 1,
+   "format": "Product deck",
+   "id": "product/unlisted/elves",
+   "kind": "casual",
+   "player": null,
+   "read_only": true,
+   "sideboard_count": 0,
+   "source": "magic/products/unlisted.csv",
+   "space": "home",
+   "status": null,
+   "title": "Elves (Unlisted)",
+   "versions": [
+    "target"
+   ]
+  }
+ ],
+ "load_deck": {
+  "product/fdn-beginner-box/elves": {
+   "Deck": [
+    {
+     "finish": "nonfoil",
+     "name": "Llanowar Elves",
+     "number": "1",
+     "quantity": 1,
+     "set": "tst"
+    }
+   ]
+  },
+  "product/unlisted/elves": {
+   "Deck": [
+    {
+     "finish": "nonfoil",
+     "name": "Elvish Mystic",
+     "number": "1",
+     "quantity": 1,
+     "set": "tst"
+    }
+   ]
+  }
+ },
+ "owned_vs_needed": {
+  "product/fdn-beginner-box/elves@target": {
+   "conflicts": [],
+   "deck_id": "product/fdn-beginner-box/elves",
+   "price_date": null,
+   "price_error": null,
+   "rate": null,
+   "rate_date": null,
+   "rows": [
+    {
+     "aud_each": null,
+     "aud_missing": null,
+     "available": 0,
+     "in_use_elsewhere": [],
+     "missing": 1,
+     "name": "Llanowar Elves",
+     "need": 1,
+     "on_the_way": 0,
+     "on_the_way_from": [],
+     "owned": 0,
+     "priced_finish": null,
+     "priced_printing": null
+    }
+   ],
+   "totals": {
+    "aud_missing": null,
+    "cards": 1,
+    "missing": 1,
+    "need": 1,
+    "unpriced": []
+   },
+   "unresolved": [],
+   "version": "target",
+   "warnings": [
+    "unlisted.csv isn't in products/status.csv, so it counts as owned and not intact",
+    "products/status.csv lists gone.csv, which isn't in magic/products/"
+   ]
+  },
+  "product/unlisted/elves@target": {
+   "conflicts": [],
+   "deck_id": "product/unlisted/elves",
+   "price_date": null,
+   "price_error": null,
+   "rate": null,
+   "rate_date": null,
+   "rows": [
+    {
+     "aud_each": null,
+     "aud_missing": null,
+     "available": 0,
+     "in_use_elsewhere": [],
+     "missing": 1,
+     "name": "Elvish Mystic",
+     "need": 1,
+     "on_the_way": 0,
+     "on_the_way_from": [],
+     "owned": 0,
+     "priced_finish": null,
+     "priced_printing": null
+    }
+   ],
+   "totals": {
+    "aud_missing": null,
+    "cards": 1,
+    "missing": 1,
+    "need": 1,
+    "unpriced": []
+   },
+   "unresolved": [],
+   "version": "target",
+   "warnings": [
+    "unlisted.csv isn't in products/status.csv, so it counts as owned and not intact",
+    "products/status.csv lists gone.csv, which isn't in magic/products/"
+   ]
+  }
+ },
+ "owned_vs_needed_priced": {
+  "product/fdn-beginner-box/elves@target": {
+   "conflicts": [],
+   "deck_id": "product/fdn-beginner-box/elves",
+   "price_date": "2026-09-28",
+   "price_error": null,
+   "rate": 1.5,
+   "rate_date": "2000-01-01",
+   "rows": [
+    {
+     "aud_each": 0.3,
+     "aud_missing": 0.3,
+     "available": 0,
+     "in_use_elsewhere": [],
+     "missing": 1,
+     "name": "Llanowar Elves",
+     "need": 1,
+     "on_the_way": 0,
+     "on_the_way_from": [],
+     "owned": 0,
+     "priced_finish": "nonfoil",
+     "priced_printing": "M19 314"
+    }
+   ],
+   "totals": {
+    "aud_missing": 0.3,
+    "cards": 1,
+    "missing": 1,
+    "need": 1,
+    "unpriced": []
+   },
+   "unresolved": [],
+   "version": "target",
+   "warnings": [
+    "unlisted.csv isn't in products/status.csv, so it counts as owned and not intact",
+    "products/status.csv lists gone.csv, which isn't in magic/products/"
+   ]
+  },
+  "product/unlisted/elves@target": {
+   "conflicts": [],
+   "deck_id": "product/unlisted/elves",
+   "price_date": "2026-09-28",
+   "price_error": null,
+   "rate": 1.5,
+   "rate_date": "2000-01-01",
+   "rows": [
+    {
+     "aud_each": 2.03,
+     "aud_missing": 2.03,
+     "available": 0,
+     "in_use_elsewhere": [],
+     "missing": 1,
+     "name": "Elvish Mystic",
+     "need": 1,
+     "on_the_way": 0,
+     "on_the_way_from": [],
+     "owned": 0,
+     "priced_finish": "nonfoil",
+     "priced_printing": "CMM 648"
+    }
+   ],
+   "totals": {
+    "aud_missing": 2.03,
+    "cards": 1,
+    "missing": 1,
+    "need": 1,
+    "unpriced": []
+   },
+   "unresolved": [],
+   "version": "target",
+   "warnings": [
+    "unlisted.csv isn't in products/status.csv, so it counts as owned and not intact",
+    "products/status.csv lists gone.csv, which isn't in magic/products/"
+   ]
+  }
+ },
+ "plan_refresh": {
+  "__error__": "ValueError: Cannot refresh from an incomplete card pool: unlisted.csv isn't in products/status.csv, so it counts as owned and not intact; products/status.csv lists gone.csv, which isn't in magic/products/"
+ },
+ "pools": {
+  "home": {
+   "in_use": [
+    {
+     "cards": {
+      "Llanowar Elves": 1
+     },
+     "id": "product/fdn-beginner-box/elves",
+     "title": "Elves (Foundations Beginner Box)",
+     "why": "intact product"
+    }
+   ],
+   "on_the_way": {},
+   "owned": {},
+   "space": "home",
+   "unresolved": {},
+   "warnings": [
+    "unlisted.csv isn't in products/status.csv, so it counts as owned and not intact",
+    "products/status.csv lists gone.csv, which isn't in magic/products/"
+   ]
+  },
+  "user3": {
+   "in_use": [],
+   "on_the_way": {},
+   "owned": {},
+   "space": "user3",
+   "unresolved": {},
+   "warnings": []
+  },
+  "user2": {
+   "in_use": [],
+   "on_the_way": {},
+   "owned": {},
+   "space": "user2",
+   "unresolved": {},
+   "warnings": []
+  },
+  "user4": {
+   "in_use": [],
+   "on_the_way": {},
+   "owned": {},
+   "space": "user4",
+   "unresolved": {},
+   "warnings": []
+  }
+ },
+ "printing_counts": {
+  "home": {},
+  "user3": {},
+  "user2": {},
+  "user4": {}
+ },
+ "printings": {},
+ "purchases": {
+  "coverage": [
+   "magic/products/gone.csv: missing order record",
+   "magic/products/fdn-beginner-box.csv: missing order record"
+  ],
+  "overview": {
+   "__error__": "ValueError: Shopping records need attention: magic/products/gone.csv: missing order record; magic/products/fdn-beginner-box.csv: missing order record"
+  },
+  "read_queue": {
+   "__error__": "FileNotFoundError: [Errno 2] No such file or directory: '<ROOT>\\\\magic\\\\watchlist.csv'"
+  },
+  "read_records": []
+ },
+ "read_status": {
+  "status": {
+   "fdn-beginner-box.csv": {
+    "deck_box": "",
+    "file": "fdn-beginner-box.csv",
+    "intact": true,
+    "notes": "",
+    "sleeves": "",
+    "status": "owned"
+   },
+   "gone.csv": {
+    "deck_box": "",
+    "file": "gone.csv",
+    "intact": false,
+    "notes": "",
+    "sleeves": "",
+    "status": "owned"
+   }
+  },
+  "warnings": []
+ },
+ "spaces": [
+  "home",
+  "user2",
+  "user3",
+  "user4"
+ ],
+ "stale_tables": [],
+ "tokens": {
+  "incoming": [
+   [],
+   []
+  ],
+  "incoming_view": {
+   "incoming": [],
+   "problems": []
+  },
+  "spaces": {
+   "home": {
+    "check": [],
+    "gaps": {
+     "gaps": [],
+     "warnings": []
+    },
+    "holders": {
+     "holders": [
+      [
+       "product/fdn-beginner-box",
+       "Foundations Beginner Box",
+       "target",
+       {
+        "Deck": [
+         {
+          "finish": "nonfoil",
+          "name": "Llanowar Elves",
+          "number": "1",
+          "quantity": 1,
+          "set": "tst"
+         }
+        ]
+       },
+       null
+      ]
+     ],
+     "warnings": []
+    },
+    "read": {
+     "lines": [],
+     "problems": [],
+     "rows": [],
+     "sha256": null,
+     "sorted": true
+    },
+    "row_uses": {
+     "row_uses": {},
+     "warnings": []
+    }
+   },
+   "user3": {
+    "check": [],
+    "gaps": {
+     "gaps": [],
+     "warnings": []
+    },
+    "holders": {
+     "holders": [],
+     "warnings": []
+    },
+    "read": {
+     "lines": [],
+     "problems": [],
+     "rows": [],
+     "sha256": null,
+     "sorted": true
+    },
+    "row_uses": {
+     "row_uses": {},
+     "warnings": []
+    }
+   },
+   "user2": {
+    "check": [],
+    "gaps": {
+     "gaps": [],
+     "warnings": []
+    },
+    "holders": {
+     "holders": [],
+     "warnings": []
+    },
+    "read": {
+     "lines": [],
+     "problems": [],
+     "rows": [],
+     "sha256": null,
+     "sorted": true
+    },
+    "row_uses": {
+     "row_uses": {},
+     "warnings": []
+    }
+   },
+   "user4": {
+    "check": [],
+    "gaps": {
+     "gaps": [],
+     "warnings": []
+    },
+    "holders": {
+     "holders": [],
+     "warnings": []
+    },
+    "read": {
+     "lines": [],
+     "problems": [],
+     "rows": [],
+     "sha256": null,
+     "sorted": true
+    },
+    "row_uses": {
+     "row_uses": {},
+     "warnings": []
+    }
+   }
+  }
+ },
+ "wishlist_view": {
+  "user1": {
+   "entries": [],
+   "profile": "user1",
+   "warnings": [
+    "unlisted.csv isn't in products/status.csv, so it counts as owned and not intact",
+    "products/status.csv lists gone.csv, which isn't in magic/products/"
+   ]
+  },
+  "matt": {
+   "entries": [],
+   "profile": "matt",
+   "warnings": [
+    "unlisted.csv isn't in products/status.csv, so it counts as owned and not intact",
+    "products/status.csv lists gone.csv, which isn't in magic/products/"
+   ]
+  },
+  "user3": {
+   "entries": [],
+   "profile": "user3",
+   "warnings": []
+  },
+  "user2": {
+   "entries": [],
+   "profile": "user2",
+   "warnings": []
+  },
+  "user4": {
+   "entries": [],
+   "profile": "user4",
+   "warnings": []
+  }
+ }
+}

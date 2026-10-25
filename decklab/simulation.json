@@ -1,0 +1,26 @@
+{
+ "version": 1,
+ "pilots": {
+  "default": {
+   "profile": "Default"
+  },
+  "lists": {
+   "casual/the-free-peoples": {
+    "profile": "Default",
+    "switches": [
+     "etb-harmless-1"
+    ]
+   }
+  }
+ },
+ "field": {
+  "Constructed": {
+   "add": [],
+   "remove": []
+  },
+  "Commander": {
+   "add": [],
+   "remove": []
+  }
+ }
+}

@@ -1,0 +1,1003 @@
+/* Deck Lab's editor: getting cards into the list (Milestone 4; UI-REVIEW.md WP11).
+
+Loaded after editor.js, editor-screen.js, editor-details.js and editor-lines.js and before editor-save.js
+and editor-deckpage.js (then matchups.js and the page's other scripts, core.js to app.js). It holds the Add panel (the side panel's
+Add tab, or the Quick edit's search sheet): its search and "My collection", adding a card, a line's
+printing sheet, "Paste a list" (Add or Replace, with what changes) and a new deck's "Start from" (a
+paste, a precon, another deck). It uses editor.js's constants, `editor`, lines, drafts and sheets,
+editor-screen.js's changed(), editor-details.js's setField() and drawDetails(), and editor-lines.js's
+section titles, steppers, moving and removing a line.
+
+The search (GET /api/deck/find) shows a dozen cards with a line of rules text, the A$ estimate and how
+many are owned: the name typed first, then the deck's space's cards, then whole-word matches. A click or
+Enter on a result adds one copy and the result says "Added ✓ (now 3)"; Shift adds four, and a count typed
+first ("4 bolt") adds that many. The results stay, with the text selected, so the next name can be typed
+at once. "Free copies only" and the colour, type and mana value filters (folded under "Filters") narrow
+it, and the filters alone browse every card; "My collection" lists the cards free for this deck in its
+colours. When few or no names have the typed text in them (and none is it), close spellings follow as
+"Did you mean" cards. The thumbnails (or Alt+Enter) open the card viewer over the results. How to add is
+a tip the first time, until "Got it", then the search box's tooltip.
+
+Autocomplete on phones: the search box scrolls to the top of the screen when the on-screen keyboard
+comes up, and the results are sized to what the keyboard leaves (window.visualViewport); the bar at the
+bottom makes room only while the keyboard is up (noteKeyboard, which compares with the tallest screen
+seen, so a keyboard already up for another box counts too). A tap on a result doesn't take the focus
+away, so the keyboard stays up for the next card. The screen's size is first read while this file loads
+(fullHeight, fullWidth and the visualViewport listeners), so viewHeight() and viewWidth() come before
+that code, in this file.
+*/
+"use strict";
+
+const SEARCH_DELAY = 150;       // ms after the last keystroke before names are looked up
+const SEARCH_MIN = 2;           // characters before names are looked up
+const SEARCH_LIMIT = 12;        // results shown at once
+const GUESS_LIMIT = 3;          // "Did you mean" cards shown after few or no matches
+const SHIFT_COPIES = 4;         // Shift+click or Shift+Enter adds this many
+const ADDED_MS = 1800;          // how long a result says "Added ✓"
+const FIND_TYPES = [["", "Any type"], ["creature", "Creature"], ["instant", "Instant"], ["sorcery", "Sorcery"],
+  ["artifact", "Artifact"], ["enchantment", "Enchantment"], ["planeswalker", "Planeswalker"], ["land", "Land"],
+  ["battle", "Battle"]];
+
+
+// Adding cards -----------------------------------------------------------------
+
+/** The Add tab: Add to (the section), the search with its filters and results, and Paste a list. */
+function addPart(onPaste = openPaste) {
+  const ed = editor;
+  ed.dom.addTo = el("div", { class: "segmented", role: "group", "aria-label": "Add cards to" });
+  const part = el("section", { class: "edit-add", id: "edit-add", "aria-label": "Add cards" },
+    el("div", { class: "add-to" }, el("span", { class: "add-to-label", text: "Add to" }), ed.dom.addTo),
+    cardSearch(),
+    el("div", { class: "add-paste" },
+      el("button", { type: "button", class: "btn btn-quiet", text: "Paste a list…", onclick: onPaste })));
+  drawAddTo();
+  return part;
+}
+
+function drawAddTo() {
+  const ed = editor;
+  if (!ed.dom.addTo) return;
+  const focused = document.activeElement && ed.dom.addTo.contains(document.activeElement)
+    ? document.activeElement.dataset.focus : null;
+  clear(ed.dom.addTo).append(...ed.sections.map((s) => el("button", { type: "button",
+    "aria-pressed": String(ed.addSection === s), "data-focus": `addto:${s}`,
+    onclick: () => { ed.addSection = s; drawAddTo(); queueDraft(); } }, sectionTitle(s))));
+  const again = focused && ed.dom.addTo.querySelector(`[data-focus="${CSS.escape(focused)}"]`);
+  if (again) again.focus({ preventScroll: true });
+}
+
+/** "4 bolt" -> {n: 4, q: "bolt"}; "bolt" -> {n: null, q: "bolt"}. */
+function parseQuery(text) {
+  const t = String(text || "").trim();
+  const m = /^(\d{1,2})\s*x?\s+(\S.*)$/i.exec(t);
+  return m && Number(m[1]) >= 1 ? { n: Number(m[1]), q: m[2].trim() } : { n: null, q: t };
+}
+
+/** The deck's colours, for My collection: its commander's colour identity, else its spells' (not the
+ * colours its lands could make: a land that adds any colour isn't five colours of cards). */
+function deckColours() {
+  try { return listStats().identity; } catch (e) { return []; }
+}
+
+function cardSearch() {
+  const ed = editor;
+  const sees = seesInventory(ed.space || HOME_SPACE);
+  const ac = { items: [], active: -1, seq: 0, timer: 0, query: "", count: null, pickFirst: false, pickCount: null,
+    guessFrom: -1, mode: "search", owned: false, colors: new Set(), type: "", mv: "", page: 1, pages: 1, sees,
+    filtersOpen: local.get("editFilters") === "open" };
+  ac.input = el("input", { type: "search", id: "ac-input", class: "search-input", role: "combobox",
+    "aria-autocomplete": "list", "aria-expanded": "false", "aria-controls": "ac-list", autocomplete: "off",
+    autocorrect: "off", autocapitalize: "none", spellcheck: "false", enterkeyhint: "search",
+    placeholder: "Card name, e.g. 4 bolt", "aria-keyshortcuts": "/ Alt+Enter",
+    title: "Enter or a click adds 1 copy; Shift adds 4; “4 bolt” adds 4. Alt+Enter shows the card big." });
+  ac.list = el("ul", { id: "ac-list", class: "ac-list", role: "listbox", "aria-label": "Cards found", hidden: true });
+  ac.live = el("p", { class: "sr-only", role: "status", "aria-live": "polite" });
+  ac.more = el("button", { type: "button", class: "btn btn-quiet ac-more", hidden: true, text: "More",
+    onclick: () => { ac.page += 1; lookUp(ac, parseQuery(ac.input.value).q, true); } });
+  ed.ac = ac;
+  ac.input.addEventListener("input", () => {
+    clearTimeout(ac.timer);
+    ac.seq += 1;
+    ac.items = [];
+    ac.active = -1;
+    ac.query = "";
+    ac.pickFirst = false;
+    ac.page = 1;
+    clearAdded(ac);
+    markActive(ac);
+    schedule(ac);
+  });
+  ac.input.addEventListener("keydown", (e) => searchKey(ac, e));
+  ac.input.addEventListener("focus", () => {
+    document.body.classList.add("is-searching");
+    noteKeyboard();
+    keepSearchInView(ac);
+  });
+  ac.input.addEventListener("blur", () => {
+    setTimeout(() => {
+      if (ac.wrap.contains(document.activeElement)) return;
+      document.body.classList.remove("is-searching");
+      const part = ac.wrap.closest && ac.wrap.closest(".edit-add");
+      if (part && part.style) part.style.minHeight = "";
+      noteKeyboard();
+    }, 120);
+  });
+  // A tap on a result mustn't take the focus from the box: the phone's keyboard stays up.
+  ac.list.addEventListener("mousedown", (e) => e.preventDefault());
+  ac.list.addEventListener("click", (e) => {
+    const option = e.target.closest("[role=option]");
+    if (!option) return;
+    const i = Number(option.dataset.i);
+    ac.active = i;
+    markActive(ac);
+    pick(ac, i, e.shiftKey ? SHIFT_COPIES : null);
+  });
+  ac.filters = el("div", { class: "ac-filters" });
+  ac.wrap = el("div", { class: "ac-wrap" },
+    el("div", { class: "ac" }, el("label", { for: "ac-input", class: "sr-only", text: "Card name" }), ac.input),
+    ac.filters, addTip(), ac.live, ac.list, ac.more);
+  drawSearchControls(ac);
+  showResults(ac);
+  return ac.wrap;
+}
+
+/** The first time the Add panel shows (on this device): how adding works, until "Got it". */
+function addTip() {
+  if (local.get("editAddTip") === "seen") return null;
+  const touch = window.matchMedia("(pointer: coarse)").matches;
+  const tip = el("div", { class: "note ac-tip", role: "note" },
+    el("p", { text: touch ? "Tap a card to add 1 copy; type “4 bolt” to add 4."
+      : "Click or Enter adds 1 copy; Shift adds 4, and “4 bolt” adds 4." }),
+    el("button", { type: "button", class: "btn btn-quiet", text: "Got it", onclick: () => {
+      local.set("editAddTip", "seen");
+      tip.remove();
+      if (editor && editor.ac) editor.ac.input.focus();
+    } }));
+  return tip;
+}
+
+/** How many of the colour, type and mana value filters are set. */
+function filterCount(ac) { return (ac.colors.size ? 1 : 0) + (ac.type ? 1 : 0) + (ac.mv !== "" ? 1 : 0); }
+
+/** True when the results come from the filters (or My collection, or Free only), with or without a name. */
+function browsing(ac) { return ac.mode === "collection" || ac.owned || filterCount(ac) > 0; }
+
+/** The search's filters on one row: My collection (a tick, not a second switch beside Add to's: every card
+ * when it's off), Free only, then "Filters" (colours, type and mana value, folded away until opened). */
+function drawSearchControls(ac) {
+  const mine = ac.sees ? el("label", { class: "choice ac-mine", title: "Only the cards in your collection that are free for this deck" },
+    el("input", { type: "checkbox", checked: ac.mode === "collection" || null, onchange: (e) => {
+      ac.mode = e.target.checked ? "collection" : "search";
+      // My collection starts in the deck's colours.
+      if (ac.mode === "collection" && !ac.colors.size) deckColours().forEach((c) => ac.colors.add(c));
+      refilter(ac);
+      const again = ac.filters.querySelector(".ac-mine input");
+      if (again) again.focus();
+    } }), "My collection") : null;
+  const colourButtons = "WUBRG".split("").map((c) => el("button", { type: "button", class: "ac-colour",
+    "aria-pressed": String(ac.colors.has(c)), "aria-label": `Fits ${COLOUR_WORDS[c]}`, title: `Fits ${COLOUR_WORDS[c]}`,
+    onclick: () => { if (ac.colors.has(c)) ac.colors.delete(c); else ac.colors.add(c); refilter(ac); } },
+  symbolImg(c, { small: true, alt: "" })));
+  const type = el("select", { class: "ac-select", "aria-label": "Card type",
+    onchange: (e) => { ac.type = e.target.value; refilter(ac); } },
+  FIND_TYPES.map(([value, label]) => el("option", { value, selected: ac.type === value || null, text: label })));
+  const mv = el("select", { class: "ac-select", "aria-label": "Mana value",
+    onchange: (e) => { ac.mv = e.target.value; refilter(ac); } },
+  el("option", { value: "", text: "Any MV" }),
+  [0, 1, 2, 3, 4, 5, 6, 7].map((n) => el("option", { value: n, selected: ac.mv === String(n) || null,
+    text: n === 7 ? "MV 7+" : `MV ${n}` })));
+  const n = filterCount(ac);
+  const toggle = el("button", { type: "button", class: "btn btn-quiet ac-filter-toggle", "aria-expanded": String(ac.filtersOpen),
+    "aria-controls": "ac-filter-more", onclick: () => {
+      ac.filtersOpen = !ac.filtersOpen;
+      local.set("editFilters", ac.filtersOpen ? "open" : "closed");
+      drawSearchControls(ac);
+      const again = ac.filters.querySelector(".ac-filter-toggle");
+      if (again) again.focus();
+    } }, n ? `Filters · ${n}` : "Filters", el("span", { class: "caret", "aria-hidden": "true" }));
+  add(clear(ac.filters), [
+    mine,
+    ac.sees && ac.mode === "search" ? el("label", { class: "choice ac-owned",
+      title: "Only cards with a copy free for this deck: owned or on the way, and not held by another built deck" },
+    el("input", { type: "checkbox", checked: ac.owned || null,
+      onchange: (e) => { ac.owned = e.target.checked; refilter(ac); } }), "Free copies only") : null,
+    toggle,
+    el("div", { class: "ac-filter-more", id: "ac-filter-more", hidden: !ac.filtersOpen || null },
+      el("div", { class: "ac-colours", role: "group", "aria-label": "Colours the cards fit" }, colourButtons),
+      type, mv)]);
+}
+
+function refilter(ac) {
+  ac.page = 1;
+  ac.seq += 1;
+  ac.items = [];
+  ac.active = -1;
+  clearAdded(ac);
+  drawSearchControls(ac);
+  schedule(ac, 0);
+}
+
+/** Look the text up soon, or say what to type. */
+function schedule(ac, delay = SEARCH_DELAY) {
+  clearTimeout(ac.timer);
+  const { q } = parseQuery(ac.input.value);
+  if (!browsing(ac) && q.length < SEARCH_MIN) {
+    ac.seq += 1;
+    ac.items = [];
+    ac.query = "";
+    showResults(ac);
+    return;
+  }
+  ac.timer = setTimeout(() => lookUp(ac, q), delay);
+}
+
+/** /api/deck/find's address for the search as it is now. */
+function findUrl(ac, q) {
+  const ed = editor;
+  const params = new URLSearchParams();
+  if (q) params.set("q", q);
+  if (ac.mode === "collection" || ac.owned) params.set("scope", "owned");
+  if (ac.colors.size) params.set("colors", "WUBRG".split("").filter((c) => ac.colors.has(c)).join(""));
+  if (ac.type) params.set("type", ac.type);
+  if (ac.mv !== "") params.set("mv", ac.mv);
+  params.set("limit", String(SEARCH_LIMIT));
+  if (ac.page > 1) params.set("page", String(ac.page));
+  if (ed && ed.mode === "edit" && ed.id) params.set("id", ed.id);
+  else if (ed && ed.space) params.set("space", ed.space);
+  return `/api/deck/find?${params}`;
+}
+
+async function lookUp(ac, q, more = false) {
+  const seq = ++ac.seq;
+  const typed = () => parseQuery(ac.input.value).q;
+  if (!ac.items.length) listMessage(ac, "Looking up cards…");
+  try {
+    const answer = await api(findUrl(ac, q));
+    if (seq !== ac.seq || typed() !== q) return;
+    const found = answer.cards || [];
+    // Few or no names have the text in them: the server's close spellings ("did_you_mean") come after
+    // them, as cards to pick. Without any, what "Paste a list" makes of the text, which also covers a
+    // server that doesn't send them.
+    let guesses = [];
+    if (q && !more && ac.mode === "search" && !ac.owned) {
+      const shown = new Set(found.map((c) => c.name));
+      const close = (answer.did_you_mean || []).filter((name) => !shown.has(name)).slice(0, GUESS_LIMIT);
+      guesses = close.length ? await cardsNamed(close) : [];
+      if (!found.length && !guesses.length) guesses = await closeCards(q);
+      if (seq !== ac.seq || typed() !== q) return;
+    }
+    const items = more ? [...ac.items, ...found] : [...found, ...guesses];
+    if (!more) ac.guessFrom = guesses.length ? found.length : -1;      // where the "Did you mean" cards start
+    ac.items = items;
+    ac.query = q;
+    ac.count = parseQuery(ac.input.value).n;
+    ac.pages = answer.pages || 1;
+    ac.active = more ? ac.active : ac.items.length ? 0 : -1;
+    if (ac.pickFirst && ac.items.length && ac.items[0].name.toLowerCase() === q.toLowerCase()) {
+      // Enter came before the answer: as many copies as Enter asked for then (Shift's 4, or a count typed).
+      const n = ac.pickCount;
+      ac.pickFirst = false;
+      ac.pickCount = null;
+      drawOptions(ac);
+      pick(ac, 0, n);
+      return;
+    }
+    ac.pickFirst = false;
+    drawOptions(ac);
+  } catch (e) {
+    if (seq !== ac.seq) return;
+    ac.items = [];
+    listMessage(ac, e.status === 503 && e.data?.reason === "off" ? e.message
+      : e.status === 503 && e.data?.reason !== "database" ? "The card data isn't ready yet: try again in a minute."
+      : `The search didn't work: ${e.message}`);
+  }
+}
+
+/** Cards the name search can't find but a close spelling can (a typo such as "lightnig bolt", "fire/ice",
+ * "Æther Vial"): what "Paste a list" makes of the text as one decklist line (its name, or the names it
+ * suggests), each with the search's details. [] if none. */
+async function closeCards(q) {
+  let parsed;
+  try {
+    parsed = await apiWrite("/api/decklist/parse", { text: /^\d+\s*x?\s+\S/i.test(q) ? q : `1 ${q}` });
+  } catch (e) {
+    if (!(e instanceof ApiError)) throw e;
+    return [];
+  }
+  const names = [];
+  for (const lines of Object.values(parsed.sections || {})) for (const line of lines) names.push(line.name);
+  for (const u of parsed.unknown || []) names.push(...(u.suggestions || []));
+  return cardsNamed([...new Set(names)].slice(0, SEARCH_LIMIT));
+}
+
+/** The search's details (picture, cost, default printing, copies in the pool) of exact card names, in
+ * their order; a name the search doesn't find is left out. */
+async function cardsNamed(names) {
+  const found = await Promise.all(names.map((name) =>
+    api(`/api/cards/search?q=${encodeURIComponent(name)}&limit=8&detail=1`)
+      .then((a) => (a.cards || []).find((c) => c.name === name) || null)
+      .catch(() => null)));
+  return found.filter(Boolean);
+}
+
+function listMessage(ac, text) {
+  ac.list.hidden = false;
+  clear(ac.list).append(el("li", { class: "ac-message", role: "presentation", text }));
+  ac.input.removeAttribute("aria-activedescendant");
+  ac.more.hidden = true;
+}
+
+/** The results; nothing (no empty box) until a name is typed or a filter is set. */
+function showResults(ac) {
+  if (ac.items.length) { drawOptions(ac); return; }
+  if (browsing(ac)) {
+    listMessage(ac, ac.mode === "collection" ? "Looking through your collection…" : "Looking up cards…");
+    schedule(ac, 0);
+    return;
+  }
+  clear(ac.list);
+  ac.list.hidden = true;
+  ac.input.removeAttribute("aria-activedescendant");
+  ac.more.hidden = true;
+}
+
+/** The "Added ✓" a result showed belongs to that search: a new one (typing, a filter, Escape) drops it. */
+function clearAdded(ac) {
+  ac.addedAt = null;
+  clearTimeout(ac.addedTimer);
+}
+
+/** "Llanowar Elves" with the typed part marked: the text as typed, else each typed word where a word of
+ * the name starts with it, in order ("llan elv"), else nothing. */
+function highlight(name, q) {
+  if (!q) return name;
+  const i = name.toLowerCase().indexOf(q.toLowerCase());
+  if (i >= 0) return [name.slice(0, i), el("mark", { text: name.slice(i, i + q.length) }), name.slice(i + q.length)];
+  const lower = name.toLowerCase();
+  const parts = [];
+  let from = 0;
+  for (const word of q.toLowerCase().split(/\s+/).filter(Boolean)) {
+    let at = lower.indexOf(word, from);
+    while (at > 0 && /[\p{L}\p{N}]/u.test(lower[at - 1])) at = lower.indexOf(word, at + 1);
+    if (at < 0) return name;
+    parts.push(name.slice(from, at), el("mark", { text: name.slice(at, at + word.length) }));
+    from = at + word.length;
+  }
+  parts.push(name.slice(from));
+  return parts;
+}
+
+/** A result's first line of rules text, symbols drawn, reminder text left out. */
+function oracleLine(card) {
+  const text = (card.oracle_text || (card.faces && card.faces[0] && card.faces[0].oracle_text) || "")
+    .split("\n")[0].replace(/\s*\([^)]*\)/g, "");
+  return text ? renderSymbols(text, { small: true }) : null;
+}
+
+/** The owned badge of a result: "2 free" (My collection), "3 owned" or "1 on the way". */
+function ownedBadge(c) {
+  if (c.free != null) return el("span", { class: "chip chip-good", text: `${c.free} free` });
+  const have = c.have || {};
+  if (have.owned) return el("span", { class: "chip chip-good", text: `${have.owned} owned` });
+  if (have.on_the_way) return el("span", { class: "chip chip-info", text: `${have.on_the_way} on the way` });
+  return null;
+}
+
+function drawOptions(ac) {
+  if (!ac.items.length) {
+    listMessage(ac, ac.mode === "collection" || ac.owned
+      ? (ac.query ? `None of your free cards have “${ac.query}” in their name with these filters.` : "No free cards with these filters.")
+      : !ac.query ? "No cards fit these filters."
+        : filterCount(ac) ? `No card names with “${ac.query}” in them fit these filters.`
+          : `No card names have “${ac.query}” in them, and none are spelt close to it.`);
+    return;
+  }
+  ac.list.hidden = false;
+  clear(ac.list);
+  // "Added ✓" only on the card that was added, in the search it was added from.
+  const added = ac.addedAt && ac.addedAt.query === ac.query ? ac.addedAt : null;
+  ac.items.forEach((c, i) => {
+    if (i === ac.guessFrom) {
+      add(ac.list, [el("li", { class: "ac-message ac-guess", role: "presentation",
+        text: i ? "Or did you mean:" : `No card names have “${ac.query}” in them. Did you mean:` })]);
+    }
+    const card = cardData(c);
+    const thumb = c.img_small
+      ? viewerItem(el("span", { class: "ac-thumb-btn", title: "See it big", "aria-hidden": "true",
+        onclick: (e) => { e.stopPropagation(); openCard(card, e.currentTarget); } },
+      el("img", { class: "ac-thumb", src: c.img_small, alt: "", width: 40, height: 56, loading: "lazy", decoding: "async" })),
+      card, "editor-results", c.type_line)
+      : el("span", { class: "ac-thumb", "aria-hidden": "true" });
+    const aud_ = c.aud != null ? `A$${c.aud.toFixed(2)}` : null;
+    const isAdded = !!(added && added.i === i && added.name === c.name);
+    const option = peekable(el("li", { id: `ac-opt-${i}`, role: "option", class: "ac-option" + (isAdded ? " is-added" : ""),
+      "data-i": i, "aria-selected": String(i === ac.active) },
+    thumb,
+    el("span", { class: "ac-words" },
+      el("span", { class: "ac-name" }, el("span", { class: "ac-name-text" }, highlight(c.name, ac.query)), manaCost(c.mana_cost, true)),
+      // One line under the name: the type, then the start of the rules text (two-line results: more fit).
+      el("small", { class: "ac-oracle" }, el("span", { class: "ac-type", text: c.type_line }),
+        oracleLine(c) ? [" · ", oracleLine(c)] : null)),
+    el("span", { class: "ac-side" },
+      isAdded ? el("span", { class: "ac-added", text: added.words })
+        : [aud_ ? el("span", { class: "ac-price", text: aud_ }) : null, ownedBadge(c)])), card);
+    ac.list.append(option);
+  });
+  ac.more.hidden = !(ac.page < ac.pages);
+  markActive(ac);
+}
+
+/** Alt+Enter: the active result's card, big, in the viewer over the results. */
+function viewResult(ac) {
+  const option = ac.list.querySelector(`#ac-opt-${ac.active}`);
+  const thumb = option && option.querySelector(".ac-thumb-btn");
+  const c = ac.items[ac.active];
+  if (!c) return;
+  openCard(cardData(c), thumb || option);
+}
+
+/** Bring the active result into view inside the box that scrolls the results (the list, the side panel or the
+ * sheet), never the page: a result coming up mustn't move the list being edited. */
+function showInResults(option) {
+  let box = option.parentElement;
+  while (box && box !== document.body) {
+    const style = getComputedStyle(box);
+    if (/(auto|scroll)/.test(style.overflowY) && box.scrollHeight > box.clientHeight) break;
+    box = box.parentElement;
+  }
+  if (!box || box === document.body) return;
+  const b = box.getBoundingClientRect();
+  const o = option.getBoundingClientRect();
+  if (o.top < b.top) box.scrollTop -= b.top - o.top;
+  else if (o.bottom > b.bottom) box.scrollTop += Math.min(o.bottom - b.bottom, o.top - b.top);
+}
+
+function markActive(ac) {
+  ac.list.querySelectorAll("[role=option]").forEach((option, i) => {
+    option.setAttribute("aria-selected", String(i === ac.active));
+    if (i === ac.active) {
+      if (typeof getComputedStyle === "function" && option.getBoundingClientRect) showInResults(option);
+      peekAt(option);
+    }
+  });
+  ac.input.setAttribute("aria-expanded", String(ac.items.length > 0));
+  if (ac.active >= 0 && ac.items.length) ac.input.setAttribute("aria-activedescendant", `ac-opt-${ac.active}`);
+  else ac.input.removeAttribute("aria-activedescendant");
+}
+
+function searchKey(ac, e) {
+  const open = ac.items.length > 0;
+  if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+    if (!open) return;
+    e.preventDefault();
+    const n = ac.items.length;
+    ac.active = (ac.active + (e.key === "ArrowDown" ? 1 : -1) + n) % n;
+    markActive(ac);
+  } else if (e.key === "Enter" && e.altKey) {
+    e.preventDefault();
+    if (open && ac.active >= 0) viewResult(ac);
+  } else if (e.key === "Enter") {
+    e.preventDefault();
+    const { n, q } = parseQuery(ac.input.value);
+    const copiesWanted = e.shiftKey ? SHIFT_COPIES : n;
+    if (open && ac.active >= 0 && ac.query === q) {
+      pick(ac, ac.active, copiesWanted);
+    } else if (q.length >= SEARCH_MIN) {
+      // Typed faster than the lookup: add the card when it comes, if the name is exactly right.
+      clearTimeout(ac.timer);
+      ac.pickFirst = true;
+      ac.pickCount = copiesWanted;
+      lookUp(ac, q);
+    }
+  } else if (e.key === "Escape") {
+    if (ac.input.value) {
+      e.preventDefault();
+      ac.input.value = "";
+      clearTimeout(ac.timer);
+      ac.seq += 1;
+      clearAdded(ac);
+      Object.assign(ac, { items: [], active: -1, query: "", page: 1 });
+      markActive(ac);
+      showResults(ac);
+    }
+  }
+}
+
+/** Add result i: n copies (a count typed first, or Shift's 4), else 1. The result says "Added ✓ (now 3)"
+ * and the text is selected, so the next name replaces it. */
+function pick(ac, i, n = null) {
+  const c = ac.items[i];
+  const { q } = parseQuery(ac.input.value);
+  if (!c || ac.query !== q) return;
+  const line = addCard(c, editor.addSection, n || 1);
+  const words = `Added ✓ (now ${line.qty})`;
+  const added = { i, words, name: c.name, query: ac.query };
+  ac.addedAt = added;
+  ac.live.textContent = `${c.name}: added, ${plural(line.qty, "copy", "copies")} in the ${sectionWords(findLine(line.uid).section)}.`;
+  drawOptions(ac);
+  clearTimeout(ac.addedTimer);
+  ac.addedTimer = setTimeout(() => {
+    if (ac.addedAt !== added) return;
+    ac.addedAt = null;
+    if (ac.items.length && ac.query === added.query) drawOptions(ac);
+  }, ADDED_MS);
+  ac.input.focus({ preventScroll: true });
+  if (ac.input.select) ac.input.select();
+}
+
+/** On a phone the on-screen keyboard covers the bottom of the screen: put the search box near the top
+ * and keep the results within what's left (visualViewport says how much that is). Beside the list (the
+ * sticky side panel, from 1,000 px), whatever the pointer, the panel goes up under the top bar; on a touch
+ * screen or a short one its own body also scrolls the box to its top: scrolling the page to the box does
+ * nothing for a sticky panel, and an iPad's keyboard would otherwise cover the results. */
+function keepSearchInView(ac) {
+  const side = stickySide(ac);
+  const small = window.matchMedia("(pointer: coarse)").matches || (window.visualViewport && window.visualViewport.height < 560);
+  if (side) {
+    raiseSidePanel(ac);
+    const body = small && ac.input.closest(".edit-side-body");
+    if (body) {
+      // The Add part fills the panel's body exactly (editor.css), so it grows by what's above the box (Add to)
+      // for the body to have that much to scroll; the results get the room. It shrinks back on blur.
+      const by = ac.input.getBoundingClientRect().top - body.getBoundingClientRect().top - 8;
+      const part = ac.wrap.closest(".edit-add");
+      if (by > 1 && part && part.style) part.style.minHeight = `calc(100% + ${Math.ceil(by + body.scrollTop)}px)`;
+      if (Math.abs(by) > 1) body.scrollTop += by;
+    }
+  } else if (small) {
+    ac.input.scrollIntoView({ block: "start" });
+  }
+  fitList(ac);
+}
+
+/** The side panel the search is in, when it's sticky beside the list (from 1,000 px), else null. */
+function stickySide(ac) {
+  const side = ac && ac.wrap && ac.wrap.closest && ac.wrap.closest(".edit-side");
+  if (!side || typeof getComputedStyle !== "function" || getComputedStyle(side).position !== "sticky") return null;
+  return side;
+}
+
+/** Beside the list (from 1,000 px), the side panel is sticky under the top bar: when the search gets the focus
+ * with the panel still lower down the page, the page goes up to there, so the panel has the screen's height
+ * for the results (the list scrolls with it, so nothing is lost). */
+function raiseSidePanel(ac) {
+  const side = stickySide(ac);
+  if (!side) return;
+  const stick = parseFloat(getComputedStyle(side).top) || 0;
+  const by = side.getBoundingClientRect().top - stick;
+  if (by > 1) window.scrollBy(0, by);
+}
+
+/** The results' height on a touch screen with its keyboard up: what's left under the box. */
+function fitList(ac) {
+  if (!ac || !ac.list || !document.body.classList.contains("keyboard-up")) {
+    if (ac && ac.list && ac.list.style) ac.list.style.maxHeight = "";
+    return;
+  }
+  const vv = window.visualViewport;
+  const bottom = vv ? vv.offsetTop + vv.height : window.innerHeight;
+  const top = ac.list.getBoundingClientRect().top;
+  ac.list.style.maxHeight = `${Math.max(168, Math.floor(bottom - top - 16))}px`;
+}
+
+/** The height of what's on screen now: less than the page's while an on-screen keyboard is up. */
+function viewHeight() {
+  const vv = window.visualViewport;
+  return vv ? vv.height * vv.scale : window.innerHeight;
+}
+
+function viewWidth() {
+  const vv = window.visualViewport;
+  return vv ? vv.width * vv.scale : window.innerWidth;
+}
+
+// The height with no keyboard up: the tallest seen at this width since the page loaded (a phone turned
+// round starts again). Not just the height when the search box got the focus: the keyboard may be up
+// already then, for the title or a quantity box.
+let fullHeight = viewHeight();
+let fullWidth = viewWidth();
+
+/** body.keyboard-up while the search box has the focus and an on-screen keyboard takes part of a touch
+ * screen: the bar at the bottom makes room for the results then (editor.css), and only then. A
+ * keyboard put away with Back, or a hardware keyboard, leaves the focus in the box and the whole
+ * screen, and the bar shows. */
+function noteKeyboard() {
+  const h = viewHeight();
+  const w = viewWidth();
+  if (Math.abs(w - fullWidth) > 1) {
+    fullWidth = w;
+    fullHeight = h;
+  } else if (h > fullHeight) {
+    fullHeight = h;
+  }
+  const typing = !!(editor && editor.ac && document.activeElement === editor.ac.input);
+  const touch = window.matchMedia("(pointer: coarse)").matches;
+  document.body.classList.toggle("keyboard-up", typing && touch && h < fullHeight - 120);
+}
+
+/** --vvh sizes the side panel to the screen above the keyboard (iOS keeps 100dvh the whole screen's).
+ * The editor's sticky bar also needs the part of the layout viewport below the visual viewport: Safari
+ * can pan back after typing, leaving Save behind its input accessory row. Track that pan as well as
+ * height changes. The scaled height distinguishes a keyboard from pinch zoom alone. */
+function noteViewHeight() {
+  const root = document.documentElement;
+  if (!root || !root.style || !root.style.setProperty) return;
+  const h = viewHeight();
+  root.style.setProperty("--vvh", `${Math.round(h)}px`);
+  const vv = window.visualViewport;
+  const keyboard = window.matchMedia("(pointer: coarse)").matches && h < fullHeight - 120;
+  const bottom = vv && keyboard ? Math.max(0, window.innerHeight - vv.height - vv.offsetTop) : 0;
+  root.style.setProperty("--editor-keyboard-bottom", `${bottom}px`);
+}
+
+if (window.visualViewport) {
+  let last = viewHeight();
+  noteViewHeight();
+  window.visualViewport.addEventListener("resize", () => {
+    const h = viewHeight();
+    const grew = h > last + 1;
+    last = h;
+    noteViewHeight();
+    noteKeyboard();
+    const ac = editor && editor.ac;
+    if (!ac || document.activeElement !== ac.input) return;
+    // The keyboard coming up puts the box at the top; it going away leaves the page where it is.
+    if (grew) fitList(ac);
+    else keepSearchInView(ac);
+  });
+  window.visualViewport.addEventListener("scroll", () => {
+    noteViewHeight();
+    if (editor && editor.ac) fitList(editor.ac);
+  });
+}
+
+/** The card data of a search answer, as a decklist line has it. */
+function cardData(c) {
+  const { default: _, have: __, aud: ___, free: ____, ...card } = c;
+  return card;
+}
+
+/** Add n copies of a found card to section (on the line of its default printing when there is one).
+ * Returns the line. */
+function addCard(c, section, n = 1) {
+  const ed = editor;
+  const lines = ed.lists[section] || (ed.lists[section] = []);
+  const d = c.default;
+  // More copies of a card already there go on its line (the default printing's, if it has one).
+  let line = lines.find((l) => l.name === c.name && (d ? l.set === d.set && l.number === d.number
+    && l.finish === d.finish : !l.set)) || lines.find((l) => l.name === c.name);
+  if (line) {
+    line.qty = Math.min(MAX_COPIES, line.qty + n);
+  } else {
+    line = newLine({ qty: Math.min(MAX_COPIES, n), name: c.name, set: d && d.set, number: d && d.number,
+      finish: d ? d.finish : "nonfoil", card: cardData(c) });
+    placeLine(lines, line);
+  }
+  ed.lastAdded = line.uid;
+  ed.flash = line.uid;
+  if (section === "Commander" && ed.addSection === "Commander") {
+    // That was the commander (partners: pick "Commander" again for the second): the cards picked
+    // after it go into the 99, not the Commander section.
+    ed.addSection = "Deck";
+    if (ed.dom.addTo) drawAddTo();
+    toast(`${c.name} is the commander. New cards go to ${sectionTitle("Deck")} now.`);
+  }
+  syncSections();
+  changed();
+  const row = ed.dom.lines && ed.dom.lines.querySelector(`.edit-row[data-uid="${line.uid}"]`);
+  // Only where Add is a column beside the list (from 1,000 px, editor.css): above the list (a tablet in portrait),
+  // scrolling to the row would take the search box, and the keyboard's field, off the screen.
+  if (row && !ed.quick && addBesideList()) row.scrollIntoView({ block: "nearest" });
+  return line;
+}
+
+/** True when the editor's Add panel is a column beside the list (editor.css: from 1,000 px wide). */
+function addBesideList() {
+  return typeof window === "undefined" || typeof window.matchMedia !== "function"
+    || window.matchMedia("(min-width: 1000px)").matches;
+}
+
+/** The Quick edit's Add: search stays open for the next card; Paste replaces the search sheet. */
+function openAddSheet() {
+  const ed = editor;
+  if (!ed || noOwnedList()) return;
+  const sheet = openSheet({ title: "Add cards", onClose: (action) => {
+    if (editor === ed) { ed.ac = null; ed.dom.addTo = null; }
+    document.body.classList.remove("is-searching", "keyboard-up");
+    if (action === "paste" && editor === ed) openPaste();
+  } });
+  sheet.dialog.classList.add("sheet-search");
+  sheet.body.append(addPart(() => sheet.close("paste")));
+  sheetActions(sheet, [{ text: "Done", kind: "primary", onclick: () => sheet.close() }]);
+  ed.ac.input.focus();
+}
+
+
+// ------------------------------------------------------------ printing picker
+
+/** A line's printing sheet (cards-ui.js pickPrinting: the printings as pictures), with Move and Remove at
+ * the bottom. */
+async function openPrintings(uid) {
+  const found = findLine(uid);
+  if (!found) return;
+  const { line, section } = found;
+  const actions = [...moveTargets(section).map((s) => ({ text: `Move to ${moveWords(s)}`, value: `move:${s}` })),
+    { text: "Remove", kind: "danger", value: "remove" }];
+  const chosen = await pickPrinting(line.name, { title: line.name, actions,
+    current: { set: line.set, number: line.number, finish: line.finish || "nonfoil" } });
+  if (!chosen || !findLine(uid) || editor === null) return;
+  if (chosen.action === "remove") removeLine(uid);
+  else if (chosen.action && chosen.action.startsWith("move:")) moveLine(uid, chosen.action.slice(5));
+  else if (!chosen.action) choosePrinting(uid, chosen);
+}
+
+function choosePrinting(uid, p) {
+  const found = findLine(uid);
+  if (!found) return;
+  const { line, section } = found;
+  if ((line.set || null) === (p.set || null) && (line.number || null) === (p.number || null)
+      && (line.finish || "nonfoil") === (p.finish || "nonfoil")) return;
+  line.set = p.set || null;
+  line.number = p.number || null;
+  line.finish = p.finish || "nonfoil";
+  if (line.card && p.img_small) line.card = { ...line.card, img_small: p.img_small, img: p.img || p.img_small.replace(/\/small$/, "/normal") };
+  // Two lines for one printing become one.
+  const lines = editor.lists[section];
+  const twin = lines.find((l) => l !== line && lineKey(l) === lineKey(line));
+  if (twin) {
+    twin.qty = Math.min(MAX_COPIES, twin.qty + line.qty);
+    lines.splice(lines.indexOf(line), 1);
+  }
+  changed();
+  toast(`${line.name}: ${printingText(line)} now.`);
+}
+
+
+// ------------------------------------------------------------------ pasting
+
+/** Lists with sections' lines merged in (the same printing in the same section goes on one line), as a copy. */
+function mergedLists(lists, sections) {
+  const out = copyList(lists);
+  for (const [name, lines] of Object.entries(sections)) {
+    const section = name === "Commander" && currentKind() !== "commander" ? "Deck" : name;
+    const into = out[section] || (out[section] = []);
+    for (const line of lines) {
+      const same = into.find((l) => lineKey(l) === lineKey(line));
+      if (same) same.qty = Math.min(MAX_COPIES, same.qty + line.qty);
+      else placeLine(into, newLine(line));
+    }
+  }
+  return out;
+}
+
+/** The pasted sections as the whole list (Replace). */
+function replacedLists(sections) {
+  return mergedLists({}, sections);
+}
+
+function openPaste() {
+  const ed = editor;
+  const sheet = openSheet("Paste a list", { wide: true });
+  const area = el("textarea", { id: "paste-text", class: "paste-area", rows: 9, spellcheck: "false",
+    autocapitalize: "off", autocomplete: "off",
+    placeholder: "Deck\n4 Llanowar Elves (FDN) 227\n2 Lightning Bolt\n9 Forest\n\nSideboard\n2 Negate (FDN) 47" });
+  const result = el("div", { class: "paste-result", "aria-live": "polite" });
+  let parsed = null;
+  let mode = "add";
+  const has = Object.values(ed.lists).some((lines) => lines.length);
+  sheet.body.append(el("label", { class: "field", for: "paste-text" },
+    el("span", { text: "Text from Arena, MTGO, Moxfield or ManaBox" }), area), result);
+  const checkButton = el("button", { type: "button", class: "btn btn-primary", text: "Check the list" });
+  const applyButton = el("button", { type: "button", class: "btn btn-primary", hidden: true });
+  sheet.foot.append(el("button", { type: "button", class: "btn", text: "Cancel", onclick: () => sheet.close() }),
+    checkButton, applyButton);
+  area.addEventListener("input", () => {
+    if (!parsed) return;
+    parsed = null;
+    applyButton.hidden = true;
+    checkButton.hidden = false;
+    clear(result);
+  });
+
+  async function check() {
+    if (!area.value.trim()) {
+      clear(result).append(el("p", { class: "form-error", text: "Paste or type a list first." }));
+      return;
+    }
+    busy(checkButton, "Checking…");
+    try {
+      parsed = await apiWrite("/api/decklist/parse", { text: area.value });
+      drawParsed();
+    } catch (e) {
+      if (!(e instanceof ApiError)) throw e;
+      clear(result).append(el("div", { class: "box box-crit" }, el("p", { text: `The list couldn't be read: ${e.message}` })));
+    } finally {
+      unbusy(checkButton);
+    }
+  }
+
+  function fixLine(u, name) {
+    const rows = area.value.replace(/\r\n?/g, "\n").split("\n");
+    const row = rows[u.line - 1] || "";
+    rows[u.line - 1] = row.includes(u.name) ? row.replace(u.name, name) : `${u.qty} ${name}`;
+    area.value = rows.join("\n");
+    parsed = null;
+    check();
+  }
+
+  function drawParsed() {
+    const p = parsed;
+    const after = mode === "replace" ? replacedLists(p.sections || {}) : mergedLists(ed.lists, p.sections || {});
+    const diff = listChanges(ed.lists, after);
+    const modeSwitch = has && p.count.lines ? el("div", { class: "segmented", role: "group", "aria-label": "What to do with the list" },
+      [["add", "Add to the list"], ["replace", "Replace the list"]].map(([key, label]) => el("button", { type: "button",
+        "aria-pressed": String(mode === key), onclick: () => { mode = key; drawParsed(); } }, label))) : null;
+    const shown = diff.slice(0, 40);
+    const kinds = diff.reduce((m, c) => { m[changeKind(c)] = (m[changeKind(c)] || 0) + 1; return m; }, {});
+    const summary = [kinds.added ? `${kinds.added} added` : "", kinds.removed ? `${kinds.removed} taken out` : "",
+      kinds.changed ? `${kinds.changed} changed` : ""].filter(Boolean).join(" · ");
+    add(clear(result), [
+      p.count.lines ? null : el("p", {}, status("warn", "Nothing to add"), " No line of the list names a card Deck Lab knows."),
+      p.unknown.length ? el("div", { class: "box box-crit" },
+        el("h3", { text: `Not card names Deck Lab knows (${p.unknown.length}): left out` }),
+        el("ul", {}, p.unknown.map((u) => el("li", {},
+          el("span", { text: `Line ${u.line}: ${u.text}. ` }),
+          u.suggestions.length
+            ? ["Did you mean ", u.suggestions.map((s, i) => [i ? " or " : "",
+              el("button", { type: "button", class: "chip-btn", text: s, onclick: () => fixLine(u, s) })]), "?"]
+            : "No close match: check the spelling.")))) : null,
+      p.errors.length ? el("div", { class: "box box-warn" },
+        el("h3", { text: `Lines that aren't cards (${p.errors.length}): skipped` }),
+        el("ul", {}, p.errors.map((e) => el("li", { text: `Line ${e.line}: ${e.text}. ${capitalise(e.error)}.` })))) : null,
+      p.warnings.length ? warningsBox(p.warnings, "Notes") : null,
+      modeSwitch,
+      summary ? el("p", { class: "paste-summary" }, el("b", { text: summary })) : null,
+      diff.length ? el("ul", { class: "review-list paste-diff" }, shown.map((c) => el("li", { class: `review-${changeKind(c)}` },
+        el("span", { class: "review-mark", "aria-hidden": "true", text: { added: "+", removed: "−", changed: "~" }[changeKind(c)] }),
+        changeWords(c)))) : p.count.lines ? el("p", { class: "sub", text: "The list already has these cards." }) : null,
+      diff.length > shown.length ? el("p", { class: "sub", text: `and ${diff.length - shown.length} more changes` }) : null]);
+    applyButton.hidden = !p.count.lines || (!diff.length && mode === "add");
+    checkButton.hidden = !!p.count.lines;
+    applyButton.textContent = mode === "replace" ? "Replace the list" : `Add ${plural(p.count.cards, "card")}`;
+    applyButton.className = "btn btn-primary" + (mode === "replace" ? " btn-danger" : "");
+  }
+
+  checkButton.addEventListener("click", check);
+  applyButton.addEventListener("click", () => {
+    if (!parsed) return;
+    const left = parsed.unknown.length;
+    const n = parsed.count.cards;
+    if (mode === "replace") replaceLines(parsed.sections || {});
+    else mergeLines(parsed.sections || {});
+    sheet.close();
+    // The toast's Undo takes back this paste only: after any later change it would undo that instead.
+    const before = ed.history[ed.history.length - 1];
+    const after = ed.snap;
+    showToast((mode === "replace" ? `Replaced the list with ${plural(n, "card")}` : `Added ${plural(n, "card")}`) +
+      (left ? `; ${plural(left, "line")} with unknown names left out.` : "."), { undo: () => {
+      if (editor === ed && ed.snap === after && ed.history[ed.history.length - 1] === before) undoLast();
+      else toast("Other changes came after the paste, so it can't be undone on its own: Ctrl+Z takes changes back one at a time.");
+    } });
+  });
+  area.focus();
+}
+
+/** Add lines to the list: the same printing in the same section goes on one line. */
+function mergeLines(sections) {
+  const ed = editor;
+  ed.lists = mergedLists(ed.lists, sections);
+  return afterBulkChange(sections);
+}
+
+/** The list becomes these sections. */
+function replaceLines(sections) {
+  const ed = editor;
+  ed.lists = replacedLists(sections);
+  ed.removed = [];
+  return afterBulkChange(sections);
+}
+
+function afterBulkChange(sections) {
+  const ed = editor;
+  ed.lastAdded = null;
+  syncSections();
+  if (ed.dom.addTo) drawAddTo();
+  changed();
+  return Object.values(sections).reduce((n, lines) => n + lines.reduce((m, l) => m + l.qty, 0), 0);
+}
+
+
+// --------------------------------------------------------------- starting from
+
+/** A new deck with no cards yet: start from a paste, a precon or another deck. */
+function startFromPart() {
+  const ed = editor;
+  return el("div", { class: "empty edit-start" },
+    el("p", { text: "Start from" }),
+    el("div", { class: "actions" },
+      el("button", { type: "button", class: "btn", text: "A pasted list", onclick: openPaste }),
+      seesInventory(ed.space || HOME_SPACE) ? el("button", { type: "button", class: "btn", text: "A precon", onclick: openPreconStart }) : null,
+      el("button", { type: "button", class: "btn", text: "Another deck", onclick: openDeckStart })));
+}
+
+/** A sheet with a search box and a list of choices drawn by find(text) → Promise<[{label, sub, value}]>. */
+function choiceSheet(title, placeholder, find, onPick) {
+  const sheet = openSheet({ title, wide: true });
+  const input = el("input", { type: "search", class: "search-input", placeholder, "aria-label": placeholder, autocomplete: "off" });
+  const list = el("ul", { class: "choice-list", "aria-live": "polite" });
+  let seq = 0, timer = 0;
+  const run = async () => {
+    const mine = ++seq;
+    clear(list).append(el("li", { class: "sub", text: "Looking…" }));
+    let items;
+    try {
+      items = await find(input.value.trim());
+    } catch (e) {
+      if (!(e instanceof ApiError)) throw e;
+      if (mine === seq) clear(list).append(el("li", { class: "form-error", text: e.message }));
+      return;
+    }
+    if (mine !== seq || sheet.closed) return;
+    clear(list).append(...(items.length ? items.map((item) => el("li", {}, el("button", { type: "button", class: "choice-item",
+      onclick: async (e) => { busy(e.currentTarget, "Loading…"); if (await onPick(item.value)) sheet.close(); else unbusy(e.currentTarget); } },
+    el("b", { text: item.label }), item.sub ? el("small", { text: item.sub }) : null)))
+      : [el("li", { class: "sub", text: "Nothing matches." })]));
+  };
+  input.addEventListener("input", () => { clearTimeout(timer); timer = setTimeout(run, 250); });
+  sheet.body.append(input, list);
+  sheetActions(sheet, [{ text: "Cancel", onclick: () => sheet.close() }]);
+  input.focus();
+  run();
+  return sheet;
+}
+
+/** "A precon": MTGJSON's paper decks (GET /api/precons), and the picked one's lists (its preview, which
+ * changes nothing) go into the new deck. */
+function openPreconStart() {
+  const ed = editor;
+  choiceSheet("Start from a precon", "Search precons, e.g. Goblins", async (q) => {
+    const a = await api(`/api/precons${q ? `?q=${encodeURIComponent(q)}` : ""}`);
+    return (a.decks || []).map((d) => ({ label: d.name, sub: [d.set_name || d.code.toUpperCase(), d.type, d.released].filter(Boolean).join(" · "),
+      value: d }));
+  }, async (deck) => {
+    let p;
+    try {
+      p = await api(`/api/precons/preview?file=${encodeURIComponent(deck.file)}&space=${encodeURIComponent(ed.space || HOME_SPACE)}`);
+    } catch (e) {
+      if (!(e instanceof ApiError)) throw e;
+      toast(`That precon couldn't be read: ${e.message}`);
+      return false;
+    }
+    if (editor !== ed) return true;
+    if (!norm("title", ed.fields.title)) ed.fields.title = p.title;
+    if (!ed.from && p.kind && p.kind !== ed.fields.kind) setField("kind", p.kind);
+    const n = mergeLines(p.lists || {});
+    drawDetails();
+    toast(`Started from ${deck.name}: ${plural(n, "card")}.`);
+    return true;
+  });
+}
+
+/** "Another deck": any deck in the library; its planned list goes into the new deck (it stays as it is). */
+function openDeckStart() {
+  const ed = editor;
+  choiceSheet("Start from another deck", "Search decks", async (q) => {
+    if (!state.library) state.library = await api("/api/decks");
+    const words = q.toLowerCase().split(/\s+/).filter(Boolean);
+    return state.library.decks.filter((d) => words.every((w) => d.title.toLowerCase().includes(w)))
+      .slice(0, 40).map((d) => ({ label: d.title, sub: d.format || FORMAT_WORDS[d.kind] || "", value: d }));
+  }, async (deck) => {
+    let view;
+    try {
+      view = await api(`/api/deck/edit?id=${encodeURIComponent(deck.id)}`);
+    } catch (e) {
+      if (!(e instanceof ApiError)) throw e;
+      toast(`That deck couldn't be read: ${e.message}`);
+      return false;
+    }
+    if (editor !== ed) return true;
+    const n = mergeLines(view.lists.target || {});
+    toast(`Started from ${deck.title}: ${plural(n, "card")}.`);
+    return true;
+  });
+}

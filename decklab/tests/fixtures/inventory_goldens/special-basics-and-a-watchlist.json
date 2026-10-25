@@ -1,0 +1,364 @@
+{
+ "accessories": {
+  "holders": {
+   "holders": {},
+   "warnings": []
+  },
+  "scan": {
+   "found": [],
+   "strays": [],
+   "warnings": []
+  }
+ },
+ "assembly": {
+  "": {
+   "choices": [],
+   "counts_confirmed": true,
+   "decks": [],
+   "note": "This is a plan. Other built decks stay reserved. Nothing is moved, marked built or written to inventory.",
+   "ready": false,
+   "rows": [],
+   "token_note": "Worked out from Scryfall's links between cards and tokens, so it's approximate. Tokens a card makes only through its rules text, and most token copies of other cards, aren't listed. Some listed tokens appear only in certain modes or for your opponent. Deck Lab can't tell how many a game needs. Packing ticks don't reserve or change inventory.",
+   "token_plan": [],
+   "token_plan_note": "Both decks can use these cards. One card shows one face at a time; at home keep shared tokens in one pile on the table.",
+   "token_problems": [],
+   "tokens": [],
+   "totals": {
+    "from_storage": 0,
+    "kept": 0,
+    "missing": 0,
+    "need": 0,
+    "transfers": 0,
+    "waiting": 0
+   },
+   "unresolved": [],
+   "warnings": []
+  }
+ },
+ "beginner_box_pairings": [],
+ "collection": {
+  "home": {
+   "pages": [
+    {
+     "cards": [
+      {
+       "basic": true,
+       "card": null,
+       "free_now": null,
+       "held": null,
+       "holders": [],
+       "incoming": 0,
+       "name": "Forest",
+       "owned": 2,
+       "resolved": false
+      },
+      {
+       "basic": true,
+       "card": null,
+       "free_now": null,
+       "held": null,
+       "holders": [],
+       "incoming": 0,
+       "name": "Plains",
+       "owned": 1,
+       "resolved": false
+      }
+     ],
+     "limit": 24,
+     "note": "Ordinary basics are assumed plentiful. Tracked special basics are shown, but their deck allocation isn't tracked.",
+     "page": 1,
+     "pages": 1,
+     "roles": [],
+     "total": 2,
+     "types": [],
+     "warnings": []
+    }
+   ],
+   "special_basics": [
+    {
+     "Forest": 2,
+     "Plains": 1
+    },
+    {}
+   ]
+  },
+  "user3": {
+   "pages": [
+    {
+     "cards": [],
+     "limit": 24,
+     "note": "Ordinary basics are assumed plentiful. Tracked special basics are shown, but their deck allocation isn't tracked.",
+     "page": 1,
+     "pages": 1,
+     "roles": [],
+     "total": 0,
+     "types": [],
+     "warnings": []
+    }
+   ],
+   "special_basics": [
+    {},
+    {}
+   ]
+  },
+  "user2": {
+   "pages": [
+    {
+     "cards": [],
+     "limit": 24,
+     "note": "Ordinary basics are assumed plentiful. Tracked special basics are shown, but their deck allocation isn't tracked.",
+     "page": 1,
+     "pages": 1,
+     "roles": [],
+     "total": 0,
+     "types": [],
+     "warnings": []
+    }
+   ],
+   "special_basics": [
+    {},
+    {}
+   ]
+  },
+  "user4": {
+   "pages": [
+    {
+     "cards": [],
+     "limit": 24,
+     "note": "Ordinary basics are assumed plentiful. Tracked special basics are shown, but their deck allocation isn't tracked.",
+     "page": 1,
+     "pages": 1,
+     "roles": [],
+     "total": 0,
+     "types": [],
+     "warnings": []
+    }
+   ],
+   "special_basics": [
+    {},
+    {}
+   ]
+  }
+ },
+ "deck_table": {},
+ "deck_table_priced": {},
+ "deck_view": {},
+ "decks_index": {
+  "decks": [],
+  "halves": [],
+  "warnings": []
+ },
+ "field": {
+  "Commander": {
+   "lists": [],
+   "notes": []
+  },
+  "Constructed": {
+   "lists": [],
+   "notes": []
+  }
+ },
+ "list_decks": [],
+ "load_deck": {},
+ "owned_vs_needed": {},
+ "owned_vs_needed_priced": {},
+ "plan_refresh": {},
+ "pools": {
+  "home": {
+   "in_use": [],
+   "on_the_way": {},
+   "owned": {},
+   "space": "home",
+   "unresolved": {},
+   "warnings": []
+  },
+  "user3": {
+   "in_use": [],
+   "on_the_way": {},
+   "owned": {},
+   "space": "user3",
+   "unresolved": {},
+   "warnings": []
+  },
+  "user2": {
+   "in_use": [],
+   "on_the_way": {},
+   "owned": {},
+   "space": "user2",
+   "unresolved": {},
+   "warnings": []
+  },
+  "user4": {
+   "in_use": [],
+   "on_the_way": {},
+   "owned": {},
+   "space": "user4",
+   "unresolved": {},
+   "warnings": []
+  }
+ },
+ "printing_counts": {
+  "home": {
+   "fdn|279|nonfoil": {
+    "on_the_way": 0,
+    "owned": 2
+   },
+   "sld|1513|foil": {
+    "on_the_way": 0,
+    "owned": 1
+   }
+  },
+  "user3": {},
+  "user2": {},
+  "user4": {}
+ },
+ "printings": {},
+ "purchases": {
+  "coverage": [],
+  "overview": {
+   "__error__": "ValueError: watchlist: Opt: source file does not exist"
+  },
+  "read_queue": {
+   "__error__": "ValueError: watchlist: Opt: source file does not exist"
+  },
+  "read_records": []
+ },
+ "read_status": {
+  "status": {},
+  "warnings": []
+ },
+ "spaces": [
+  "home",
+  "user2",
+  "user3",
+  "user4"
+ ],
+ "stale_tables": [],
+ "tokens": {
+  "incoming": [
+   [],
+   []
+  ],
+  "incoming_view": {
+   "incoming": [],
+   "problems": []
+  },
+  "spaces": {
+   "home": {
+    "check": [],
+    "gaps": {
+     "gaps": [],
+     "warnings": []
+    },
+    "holders": {
+     "holders": [],
+     "warnings": []
+    },
+    "read": {
+     "lines": [],
+     "problems": [],
+     "rows": [],
+     "sha256": null,
+     "sorted": true
+    },
+    "row_uses": {
+     "row_uses": {},
+     "warnings": []
+    }
+   },
+   "user3": {
+    "check": [],
+    "gaps": {
+     "gaps": [],
+     "warnings": []
+    },
+    "holders": {
+     "holders": [],
+     "warnings": []
+    },
+    "read": {
+     "lines": [],
+     "problems": [],
+     "rows": [],
+     "sha256": null,
+     "sorted": true
+    },
+    "row_uses": {
+     "row_uses": {},
+     "warnings": []
+    }
+   },
+   "user2": {
+    "check": [],
+    "gaps": {
+     "gaps": [],
+     "warnings": []
+    },
+    "holders": {
+     "holders": [],
+     "warnings": []
+    },
+    "read": {
+     "lines": [],
+     "problems": [],
+     "rows": [],
+     "sha256": null,
+     "sorted": true
+    },
+    "row_uses": {
+     "row_uses": {},
+     "warnings": []
+    }
+   },
+   "user4": {
+    "check": [],
+    "gaps": {
+     "gaps": [],
+     "warnings": []
+    },
+    "holders": {
+     "holders": [],
+     "warnings": []
+    },
+    "read": {
+     "lines": [],
+     "problems": [],
+     "rows": [],
+     "sha256": null,
+     "sorted": true
+    },
+    "row_uses": {
+     "row_uses": {},
+     "warnings": []
+    }
+   }
+  }
+ },
+ "wishlist_view": {
+  "user1": {
+   "entries": [],
+   "profile": "user1",
+   "warnings": []
+  },
+  "matt": {
+   "entries": [],
+   "profile": "matt",
+   "warnings": []
+  },
+  "user3": {
+   "entries": [],
+   "profile": "user3",
+   "warnings": []
+  },
+  "user2": {
+   "entries": [],
+   "profile": "user2",
+   "warnings": []
+  },
+  "user4": {
+   "entries": [],
+   "profile": "user4",
+   "warnings": []
+  }
+ }
+}

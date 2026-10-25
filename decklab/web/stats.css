@@ -1,0 +1,164 @@
+/* A deck's Stats and Practice parts (stats.js, practice.js): colour sources, the land chart, the bar lists,
+   the Commander checks and brackets, the practice run, its setup and its tables. The panels, tiles, charts and
+   legends they sit in are components.css's. */
+
+/* The verdict strip (stats.js statsVerdict): the stats' answers before any chart, on the Overview and Stats. */
+.verdict-strip {
+  list-style: none; margin: 0 0 var(--s-3); padding: 0;
+  display: grid; gap: var(--s-2); grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%;
+}
+.verdict {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-width: 0;
+  padding: var(--s-2) var(--s-3); border-radius: var(--r-md); background: var(--surface); border: 1px solid var(--border);
+}
+.verdict-label { color: var(--ink-2); font-size: var(--fs-sm); font-weight: var(--fw-semibold); }
+.verdict-value { font-size: var(--fs-lg); font-weight: var(--fw-bold); line-height: var(--lh-tight); font-variant-numeric: tabular-nums; }
+.verdict-hint { color: var(--ink-2); font-size: var(--fs-sm); line-height: var(--lh-tight); }
+.verdict .status { margin-top: var(--s-1); }
+.verdict-text { font-weight: var(--fw-semibold); }
+details.explain { margin-top: var(--s-2); }
+details.explain > p, details.explain > .formula { max-width: 72ch; }
+@media (min-width: 600px) {
+  /* Every tile in one row (five fit at 768 px), sharing the row evenly but each at most 280 px: a wide screen
+     doesn't stretch a value and a few words across a third of the page, and three tiles at 820 px fill the row
+     rather than wrapping two and one. The strip is as wide as its tiles at 280 px each. */
+  .verdict-strip { grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); max-width: calc(6 * 280px + 5 * var(--s-2)); }
+  .verdict-strip:has(> :last-child:nth-child(1)) { max-width: 280px; }
+  .verdict-strip:has(> :last-child:nth-child(2)) { max-width: calc(2 * 280px + var(--s-2)); }
+  .verdict-strip:has(> :last-child:nth-child(3)) { max-width: calc(3 * 280px + 2 * var(--s-2)); }
+  .verdict-strip:has(> :last-child:nth-child(4)) { max-width: calc(4 * 280px + 3 * var(--s-2)); }
+  .verdict-strip:has(> :last-child:nth-child(5)) { max-width: calc(5 * 280px + 4 * var(--s-2)); }
+}
+/* A laptop or wider: the mana curve's tiles, chart and bar details keep a chart's width rather than the whole
+   page's, so the panel's stretched bars don't fill a short window. */
+@media (min-width: 1000px) {
+  .panel[aria-labelledby="h-curve"] > :is(.tiles, .chart, .chart-detail) { max-width: 900px; }
+}
+@media (forced-colors: active) { .verdict { border: 1px solid CanvasText; } }
+
+/* Colour sources */
+.colour-list { list-style: none; display: grid; gap: var(--s-3); }
+.colour-head { display: flex; align-items: center; flex-wrap: wrap; gap: var(--s-2); }
+.colour-head b { font-size: var(--fs-md); }
+.colour-head .numbers { color: var(--ink-2); font-size: var(--fs-sm); font-variant-numeric: tabular-nums; }
+.colour-bar { margin: var(--s-1) 0 2px; }
+.colour-bar .track { fill: var(--surface-3); }
+.colour-bar .fill-ok { fill: var(--series-1); }
+.colour-bar .fill-short { fill: var(--crit); }
+.colour-bar .fill-none { fill: var(--series-1); }
+.colour-bar .need { stroke: var(--ink); stroke-width: 2; }
+.colour-text { font-size: var(--fs-sm); color: var(--ink-2); margin: 2px 0 0; }
+.colour-text b { color: var(--ink); }
+
+/* Land bullet chart */
+.land-chart .band-slight { fill: var(--surface-3); stroke: var(--ink-3); stroke-width: 1; }
+.land-chart .band-ok { fill: var(--band-ok); stroke: var(--ink-3); stroke-width: 1; }
+.land-chart .rec { stroke: var(--ink); stroke-width: 2; }
+.land-chart .you { fill: var(--series-1); stroke: var(--surface); stroke-width: 2; }
+.legend .swatch-band { background: var(--band-ok); box-shadow: inset 0 0 0 1px var(--ink-3); }
+.legend .swatch-band2 { background: var(--surface-3); box-shadow: inset 0 0 0 1px var(--ink-3); }
+
+.formula {
+  margin: var(--s-2) 0;
+  padding: var(--s-3);
+  border-radius: var(--r-md);
+  background: var(--surface-2);
+  font-size: var(--fs-sm);
+}
+.formula p { margin: 0 0 var(--s-1); }
+.formula p:last-child { margin: 0; }
+
+/* Bar lists (types, roles, tribes, keywords): their summaries draw a + or - instead of the chevron. */
+.bar-list { list-style: none; }
+.bar-list > li { border-bottom: 1px solid var(--border); }
+.bar-list > li:last-child { border-bottom: 0; }
+.bar-list details > summary, .bar-list .row {
+  display: grid;
+  grid-template-columns: minmax(90px, 38%) minmax(0, 1fr) 36px;
+  align-items: center;
+  gap: var(--s-3);
+  min-height: var(--tap);
+}
+.bar-list details > summary::before { content: none; display: none; }
+.bar-list .row { cursor: default; }
+.bar-list .bar-label { font-weight: var(--fw-semibold); font-size: var(--fs-sm); min-width: 0; }
+/* The +/- marks are decoration: the "/ ''" alternative keeps screen readers from reading them out. */
+.bar-list details > summary .bar-label::after { content: " +"; content: " +" / ""; color: var(--link); font-weight: var(--fw-bold); }
+.bar-list details[open] > summary .bar-label::after { content: " \2212"; content: " \2212" / ""; }
+.bar-list .bar { display: block; height: 12px; border-radius: 0 var(--r-sm) var(--r-sm) 0; background: var(--series-1); min-width: 2px; }
+.bar-list .bar.zero { background: transparent; }
+.bar-list .bar-count { text-align: right; font-weight: var(--fw-bold); font-variant-numeric: tabular-nums; }
+.bar-list details > .card-names { padding: 2px 0 var(--s-3); }
+
+/* Checks (Commander rules) */
+.checks { list-style: none; display: grid; gap: var(--s-3); }
+.checks > li { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--s-1) var(--s-3); align-items: start; }
+.checks .what { font-weight: var(--fw-semibold); }
+/* A rule that's kept: a tick in a ring, in the accent colour (UI-KIT: a tick has a ring as well as its colour). */
+.check-ok {
+  display: inline-grid; place-items: center; width: 1.5em; height: 1.5em; border-radius: var(--r-pill);
+  border: 1px solid var(--accent); color: var(--accent); font-weight: var(--fw-bold); line-height: 1;
+}
+.checks .detail { grid-column: 2; color: var(--ink-2); font-size: var(--fs-sm); }
+
+.checks-table col.c-need, .checks-table col.c-have { width: 3.6em; }
+.checks-table tbody > tr:first-child > * { border-bottom: 0; padding-bottom: 2px; }
+.checks-table .label-row td { padding-top: 2px; }
+.checks-table .label-row .row-labels { margin-bottom: var(--s-2); }
+.check-notes { list-style: none; margin: var(--s-2) 0 0; font-size: var(--fs-sm); color: var(--ink-2); display: grid; gap: 2px; }
+.colour-list .check-notes { margin-top: var(--s-1); }
+.sources-table col.c-makes { width: 5.6em; }
+.sources-table col.c-each { width: 3.4em; }
+.sources-table .source-note { display: block; margin-top: 2px; font-weight: var(--fw-regular); }
+.curve-table col { width: auto; }
+
+.sources-list { list-style: none; font-size: var(--fs-sm); color: var(--ink-2); display: grid; gap: var(--s-2); }
+
+.bracket-list { list-style: none; display: grid; gap: var(--s-3); margin: var(--s-1) 0 var(--s-2); }
+.bracket-list > li { padding: var(--s-3); border-radius: var(--r-md); background: var(--surface-2); }
+.bracket-list p { margin: 0 0 var(--s-1); }
+.bracket-list dl { margin: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: var(--s-1) var(--s-3); font-size: var(--fs-sm); }
+.bracket-list dt { color: var(--ink-2); font-weight: var(--fw-semibold); font-size: var(--fs-xs); }
+.bracket-list dd { margin: 0; }
+.bracket-list .sub { color: var(--ink-2); }
+
+/* --------------------------------------------------------- practice hands */
+
+.practice-running .practice-running-head { display: flex; align-items: center; gap: var(--s-3); margin-bottom: var(--s-3); }
+.practice-running h3 { margin: 0; }
+.practice-running p { margin: 0 0 var(--s-1); }
+.practice-running .sub { color: var(--ink-2); font-size: var(--fs-sm); }
+
+.setup-pick { margin: var(--s-3) 0 var(--s-1); }
+/* One even row of buttons, each a name with a few words under it. */
+.setup-pick .segmented { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); width: 100%; max-width: 560px; }
+.setup-pick .segmented > button { flex-direction: column; gap: 1px; min-height: 52px; padding: var(--s-1); line-height: 1.2; text-align: center; }
+.setup-pick .setup-main { font-weight: var(--fw-semibold); }
+.setup-pick .setup-sub { font-size: var(--fs-xs); font-weight: var(--fw-regular); color: var(--ink-2); }
+.setup-text { color: var(--ink-2); font-size: var(--fs-sm); margin: var(--s-1) 0 var(--s-4); }
+
+/* A figure with its unit on the left, what it means on the right. */
+.stat-rows { list-style: none; display: grid; gap: var(--s-3); margin: var(--s-2) 0 var(--s-3); }
+.stat-rows > li { display: grid; grid-template-columns: 6em minmax(0, 1fr); gap: var(--s-3); align-items: start; }
+.stat-figure .stat-value { display: block; font-size: var(--fs-xl); font-weight: var(--fw-bold); line-height: 1.1; }
+.stat-figure .stat-unit { display: block; font-size: var(--fs-xs); color: var(--ink-2); line-height: var(--lh-tight); margin-top: 2px; }
+.stat-words b { display: block; }
+.stat-words p { margin: 2px 0 0; font-size: var(--fs-sm); color: var(--ink-2); }
+
+.share-list .row, .bar-list.share-list .row { grid-template-columns: minmax(70px, 30%) minmax(0, 1fr) 4.4em; cursor: default; }
+
+.chance-table col.c-turn { width: 3.4em; }
+.chance-table th, .chance-table td { padding: var(--s-2) 3px; }
+.chance-table th:first-child { padding-left: 0; }
+.chance-table td { font-size: var(--fs-sm); }
+.chance-table .colour-name { display: inline-flex; align-items: center; gap: var(--s-2); font-weight: var(--fw-semibold); }
+.practice-table th, .practice-table td { padding: var(--s-2) var(--s-1); }
+
+.fine-print { margin-top: var(--s-5); font-size: var(--fs-sm); color: var(--ink-2); }
+.fine-print p { margin: 0 0 var(--s-2); }
+.fine-print details.more { margin-top: 2px; }
+.fine-print .sources-list .card-link { font-size: var(--fs-sm); min-height: 28px; }
+
+@media (forced-colors: active) {
+  .bar-list .bar { background: CanvasText; }
+}

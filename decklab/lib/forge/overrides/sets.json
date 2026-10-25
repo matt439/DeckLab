@@ -1,0 +1,333 @@
+{
+ "version": 1,
+ "forge": "2.0.15",
+ "sets": {
+  "fiery": {
+   "status": "adopted",
+   "why": "r4 2.3, e4 2.4: cast for 0 % of drawn copies without the edit, 92 % with it. Adopted before the combined run (the owner's decision of 2026-10-03).",
+   "files": {
+    "fiery_annihilation.txt": {
+     "card": "Fiery Annihilation",
+     "upstream_sha256": "91f1f7bcf3e26dcd2cf9390092bca85fda5c19694d2e67c12e76cec829a1e4e9",
+     "edits": [
+      [
+       "SVar:DBChangeZone:DB$ ChangeZone | Origin$ Battlefield | Destination$ Exile | ValidTgts$ Equipment.AttachedTo ParentTarget | TargetMin$ 0 | TargetMax$ 1",
+       "SVar:DBChangeZone:DB$ ChangeZoneAll | ChangeType$ Equipment.AttachedTo Targeted | Origin$ Battlefield | Destination$ Exile"
+      ]
+     ],
+     "cast_target": 0.8
+    }
+   }
+  },
+  "etb": {
+   "status": "experiment",
+   "why": "r4 2.4 (X2): an enters ability the AI must use, and won't when it does nothing useful, stops it casting the card (AiController.checkETBEffects). Not measured yet. Fires of Mount Doom gets only the ChompEquip sub's AILogic$ Always here; etb-flagged has r4's own edit.",
+   "files": {
+    "massacre_wurm.txt": {
+     "card": "Massacre Wurm",
+     "upstream_sha256": "29c8fea71f5b7c8ac84a8b530e0e4c2b53564d4d76d873806dffdbb1b0cee856",
+     "edits": [
+      [
+       "IsCurse$ True",
+       "IsCurse$ True | AILogic$ Always"
+      ]
+     ],
+     "cast_target": 0.6
+    },
+    "theoden_king_of_rohan.txt": {
+     "card": "Théoden, King of Rohan",
+     "upstream_sha256": "2b6340f8ebf08325e582f4255bff0c6ebedb32562d894129eacf36cd76072678",
+     "edits": [
+      [
+       "KW$ Double Strike",
+       "KW$ Double Strike | AILogic$ Always"
+      ]
+     ],
+     "cast_target": null
+    },
+    "samwise_the_stouthearted.txt": {
+     "card": "Samwise the Stouthearted",
+     "upstream_sha256": "73a75c7afdf70cb2f8078c53fefa5a5ad293303b7bee2d07e57e1056677c8d7c",
+     "edits": [
+      [
+       "Execute$ TrigChangeZone |",
+       "Execute$ TrigChangeZone | OptionalDecider$ You |"
+      ]
+     ],
+     "cast_target": null
+    },
+    "eowyn_fearless_knight.txt": {
+     "card": "Éowyn, Fearless Knight",
+     "upstream_sha256": "f4e6457875ee650322534c1703f996c1144e75f209580f8b1b4ab0549b7c0e8a",
+     "edits": [
+      [
+       "Execute$ TrigExile |",
+       "Execute$ TrigExile | AILogic$ BadETB |"
+      ]
+     ],
+     "cast_target": null
+    },
+    "palace_jailer.txt": {
+     "card": "Palace Jailer",
+     "upstream_sha256": "5d3f6fc3830d8b6eca14346185e80a9deb4fc57e2e5c0b92f08bd8b36aa24af4",
+     "edits": [
+      [
+       "Execute$ TrigExile |",
+       "Execute$ TrigExile | AILogic$ BadETB |"
+      ]
+     ],
+     "cast_target": null
+    },
+    "fires_of_mount_doom.txt": {
+     "card": "Fires of Mount Doom",
+     "upstream_sha256": "1aaba79e171cd01c2c0c3212ec790fc89f8c491fcd8e6e2117542ebfb1342164",
+     "edits": [
+      [
+       "ValidCards$ Targeted.Equipment+Attached",
+       "ValidCards$ Targeted.Equipment+Attached | AILogic$ Always"
+      ]
+     ],
+     "cast_target": null
+    }
+   }
+  },
+  "etb-flagged": {
+   "status": "experiment",
+   "why": "r4's two edits that v-r10 flagged, as r4 made them: Sunblast Angel's AILogic$ Always skips the AI's check that the wipe hurts the opponent more (it may wipe its own tapped creatures); Fires of Mount Doom's AILogic$ Always on the damage too.",
+   "files": {
+    "sunblast_angel.txt": {
+     "card": "Sunblast Angel",
+     "upstream_sha256": "eb12e5fb142a929ff1fc4e07e1f7d2365c3a079cd9c4c092eb7ce37316d594c3",
+     "edits": [
+      [
+       "SVar:TrigDestroyAll:DB$ DestroyAll | ValidCards$ Creature.tapped",
+       "SVar:TrigDestroyAll:DB$ DestroyAll | ValidCards$ Creature.tapped | AILogic$ Always\nSVar:PlayMain1:ALWAYS"
+      ]
+     ],
+     "cast_target": null
+    },
+    "fires_of_mount_doom.txt": {
+     "card": "Fires of Mount Doom",
+     "upstream_sha256": "1aaba79e171cd01c2c0c3212ec790fc89f8c491fcd8e6e2117542ebfb1342164",
+     "edits": [
+      [
+       "SubAbility$ ChompEquip",
+       "AILogic$ Always | SubAbility$ ChompEquip"
+      ],
+      [
+       "ValidCards$ Targeted.Equipment+Attached",
+       "ValidCards$ Targeted.Equipment+Attached | AILogic$ Always"
+      ]
+     ],
+     "cast_target": null
+    }
+   }
+  },
+  "tgt": {
+   "status": "experiment",
+   "why": "r4 2.6 (X3): DestroyAi follows AITgts strictly (DestroyAi.java:153), so Stroke of Midnight is held against decks with no permanent of mana value 4 or more.",
+   "files": {
+    "stroke_of_midnight.txt": {
+     "card": "Stroke of Midnight",
+     "upstream_sha256": "911641d4fa0fa0e1ea2c0bed518c92df3a158373b8be3a89485070176e8322a3",
+     "edits": [
+      [
+       " | AITgts$ Card.cmcGE4",
+       ""
+      ]
+     ],
+     "cast_target": 0.75
+    }
+   }
+  },
+  "tgt-gift": {
+   "status": "experiment",
+   "why": "r4's AITgts removal for Generous Gift, flagged by v-r10 (the opponent gets a 3/3, as with Beast Within, which keeps its AITgts): judged on its own.",
+   "files": {
+    "generous_gift.txt": {
+     "card": "Generous Gift",
+     "upstream_sha256": "054989252877c08b4434bbe1d9060aafd6a3f9cad07c038de6640af52fc919bc",
+     "edits": [
+      [
+       " | AITgts$ Card.cmcGE4",
+       ""
+      ]
+     ],
+     "cast_target": null
+    }
+   }
+  },
+  "remove": {
+   "status": "adopted",
+   "why": "Adopted 2026-10-04 (the owner's decision) after the combined run's overrides-remove experiment: pooled matchup +2.4 pts [+1.1, +3.7], adopt by the section 12.4 rules. r4 2.7 (X4): AI:RemoveDeck:All keeps the card out of every AI choice (AiController.java:1568). Beast Within keeps its AITgts, as in r4.",
+   "files": {
+    "devout_decree.txt": {
+     "card": "Devout Decree",
+     "upstream_sha256": "80c84a4740efad24ca09ca5a890478bf134d11256466fa2c77c38d79a4b44ad0",
+     "edits": [
+      [
+       "AI:RemoveDeck:All\n",
+       ""
+      ]
+     ],
+     "cast_target": 0.5
+    },
+    "beast_within.txt": {
+     "card": "Beast Within",
+     "upstream_sha256": "f1f14e5fe66c457b3d98165a813baf57b3394d9ff759161cc154a73ec7f8fc5e",
+     "edits": [
+      [
+       "AI:RemoveDeck:All\n",
+       ""
+      ]
+     ],
+     "cast_target": null
+    }
+   }
+  },
+  "flash": {
+   "status": "experiment",
+   "why": "r4 2.5: a flash creature with no enters ability is cast only at the opponent's end step (PermanentCreatureAi.java:174-180); SVar:PlayMain1:ALWAYS makes it a main-phase play (ComputerUtil.castPermanentInMain1).",
+   "files": {
+    "gandalf_the_white.txt": {
+     "card": "Gandalf the White",
+     "upstream_sha256": "09e3b5459d14c8bde9e7b91cefd8d9d6cb23320f492a3629e7c68ea85519cac9",
+     "edits": [
+      [
+       "K:Flash\n",
+       "K:Flash\nSVar:PlayMain1:ALWAYS\n"
+      ]
+     ],
+     "cast_target": null
+    }
+   }
+  },
+  "hints": {
+   "status": "experiment",
+   "why": "r6's AI hints, checked in Forge 2.0.15's source: SVar:PlayMain1:ALWAYS makes ComputerUtil.castPermanentInMain1 true (ComputerUtil.java:1151-1152), so the lords are cast before combat; SVar:BuffedBy:Card.nonCreature (Sprite Dragon's and Bria's own line) makes castSpellInMain1 cast noncreature spells before combat while the prowess creature is in play (ComputerUtil.java:1245-1274).",
+   "files": {
+    "valley_questcaller.txt": {
+     "card": "Valley Questcaller",
+     "upstream_sha256": "e4fe37705128381f4a9934fdf11cbf84a3de8e075cf660874e3984a233a19629",
+     "edits": [
+      [
+       "DeckHints:Type$Rabbit|Bat|Bird|Mouse\n",
+       "SVar:PlayMain1:ALWAYS\nDeckHints:Type$Rabbit|Bat|Bird|Mouse\n"
+      ]
+     ],
+     "cast_target": null
+    },
+    "righteous_valkyrie.txt": {
+     "card": "Righteous Valkyrie",
+     "upstream_sha256": "0976285578c91de172e1af1ccb142b848c3fc3dad8783ed42cc4b06453ae0f46",
+     "edits": [
+      [
+       "DeckHas:Ability$LifeGain\n",
+       "SVar:PlayMain1:ALWAYS\nDeckHas:Ability$LifeGain\n"
+      ]
+     ],
+     "cast_target": null
+    },
+    "stormcatch_mentor.txt": {
+     "card": "Stormcatch Mentor",
+     "upstream_sha256": "68404094564486da28600b49ea9f42d776694bebc731d7a0a05bd9c5d77a16c4",
+     "edits": [
+      [
+       "DeckHints:Type$Instant|Sorcery\n",
+       "SVar:BuffedBy:Card.nonCreature\nDeckHints:Type$Instant|Sorcery\n"
+      ]
+     ],
+     "cast_target": null
+    },
+    "heartfire_immolator.txt": {
+     "card": "Heartfire Immolator",
+     "upstream_sha256": "14322a380f80cedfb971b64ac61c3bacb2875ee97fca3f51e9062f328be4fa7d",
+     "edits": [
+      [
+       "DeckHas:Ability$Sacrifice\n",
+       "SVar:BuffedBy:Card.nonCreature\nDeckHas:Ability$Sacrifice\n"
+      ]
+     ],
+     "cast_target": null
+    }
+   }
+  },
+  "etb-tfp": {
+   "status": "experiment",
+   "why": "ai-r1 (scout C2, contract D13): the etb set's edits for The Free Peoples' cards only. Only The Free Peoples plays these cards today (2026-10-13), so other decks don't change, but a TFP mirror changes both seats; its Play-now list has none of them. Fires of Mount Doom gets the narrow edit (AILogic$ Always on the ChompEquip sub only; etb-flagged's wider edit had a low end of -10.1). Éowyn gets BadETB. Samwise gets OptionalDecider$ You, which also makes the Ring's tempt optional, so the AI may decline it. Massacre Wurm and Théoden stay only in etb (the Wurm's early-in-hand low end was -5.5).",
+   "files": {
+    "fires_of_mount_doom.txt": {
+     "card": "Fires of Mount Doom",
+     "upstream_sha256": "1aaba79e171cd01c2c0c3212ec790fc89f8c491fcd8e6e2117542ebfb1342164",
+     "edits": [
+      [
+       "ValidCards$ Targeted.Equipment+Attached",
+       "ValidCards$ Targeted.Equipment+Attached | AILogic$ Always"
+      ]
+     ],
+     "cast_target": null
+    },
+    "eowyn_fearless_knight.txt": {
+     "card": "Éowyn, Fearless Knight",
+     "upstream_sha256": "f4e6457875ee650322534c1703f996c1144e75f209580f8b1b4ab0549b7c0e8a",
+     "edits": [
+      [
+       "Execute$ TrigExile |",
+       "Execute$ TrigExile | AILogic$ BadETB |"
+      ]
+     ],
+     "cast_target": null
+    },
+    "samwise_the_stouthearted.txt": {
+     "card": "Samwise the Stouthearted",
+     "upstream_sha256": "73a75c7afdf70cb2f8078c53fefa5a5ad293303b7bee2d07e57e1056677c8d7c",
+     "edits": [
+      [
+       "Execute$ TrigChangeZone |",
+       "Execute$ TrigChangeZone | OptionalDecider$ You |"
+      ]
+     ],
+     "cast_target": null
+    }
+   }
+  },
+  "etb-tfp-jailer": {
+   "status": "experiment",
+   "why": "ai-r1 (scout C2, contract D13): Palace Jailer's BadETB from the etb set, on its own, because its early-in-hand low end was -4.9. Played with etb-tfp as a second arm.",
+   "files": {
+    "palace_jailer.txt": {
+     "card": "Palace Jailer",
+     "upstream_sha256": "5d3f6fc3830d8b6eca14346185e80a9deb4fc57e2e5c0b92f08bd8b36aa24af4",
+     "edits": [
+      [
+       "Execute$ TrigExile |",
+       "Execute$ TrigExile | AILogic$ BadETB |"
+      ]
+     ],
+     "cast_target": null
+    }
+   }
+  },
+  "cmdr-hints": {
+   "status": "experiment",
+   "why": "ai-r1 (scout C8, contract D14): Primal Might has no AILogic, so PumpAi plays it as a plain pump (cast 37.6 % of drawn copies). AILogic$ Fight sends it to FightAi.canFight, which finds the DBFight sub, and PumpAi works X out first and refuses X = 0 (PumpAi.java:284-298, :460-461). The DBFight sub also gets AILogic$ Always, as Joust's does: without it SpellAbilityAi.canPlayWithSubs (:55-66) runs FightAi.chkDrawback (:107-112), which resets the target canFight chose, re-checks the fight without the +X/+X and vetoes the cast unless the unpumped creature already wins. Puca's Mischief was checked and dropped: its trigger's root is an effect-less Pump that PumpAi can't target for an exchange, and ControlExchangeAi vets only the second target.",
+   "files": {
+    "primal_might.txt": {
+     "card": "Primal Might",
+     "upstream_sha256": "f6d8f91c5b82978b1acccd4fde503eb10e4f12ad11272d66b2e5b4ad5bdf5159",
+     "edits": [
+      [
+       "NumDef$ +X | SubAbility$ DBFight",
+       "NumDef$ +X | AILogic$ Fight | SubAbility$ DBFight"
+      ],
+      [
+       "SVar:DBFight:DB$ Fight | Defined$ ParentTarget |",
+       "SVar:DBFight:DB$ Fight | Defined$ ParentTarget | AILogic$ Always |"
+      ]
+     ],
+     "cast_target": 0.6
+    }
+   }
+  }
+ }
+}

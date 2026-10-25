@@ -1,0 +1,1108 @@
+/* Deck Lab's shared components (decklab/UI-REVIEW.md 2.3): buttons, action rows and toolbars, fields' labels,
+   choices, segmented switches, chips, notes and boxes, disclosures, tabs, sheets, menus, the sticky action bar,
+   the toast, empty states, data tables, panels and tiles, charts and inline card names. Loaded after tokens.css
+   and base.css, before the page files, which lay these out but never restyle them.
+
+   Older class names that pages still write are listed beside the new ones (.status for .chip, .head-buttons for
+   .actions, and so on), so a page moves over to the new name without looking different meanwhile. */
+
+/* ------------------------------------------------------------------ buttons */
+
+/* Buttons (design/visual-design.md 4.5): round, 700, sized by --btn-h and --fs-btn (44 px on touch, 36 with a
+   mouse under 1000 px, 32 in the lab). One .btn-primary per view.
+   - .btn alone is the secondary (.btn-secondary says so explicitly): a 1.5 px teal outline and teal words, on
+     white in light and no fill in dark (--btn-bg).
+   - .btn-primary: the teal fill. With aria-disabled="true" it's a primary that can't act yet (Mark as built
+     before every card is ticked): --track and --ink-3, still focusable, its reason beside it, and its click
+     moves focus to the first thing in the way (the page's job). Native disabled stays for busy and frozen.
+   - .btn-quiet is the tertiary: teal words, no box. .btn-quiet.btn-inline lines up with the text above it.
+   - .btn-danger is a destructive tertiary (Remove…, Stop): red words, no box. The red fill
+     (.btn-danger.btn-primary) is only for the last step of a confirm sheet.
+   - .btn-discard is "Discard changes": a tertiary in --ink-2, neither teal nor red. */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--s-2);
+  min-height: var(--btn-h); min-width: var(--btn-h);
+  padding: var(--s-1) var(--s-4);
+  border: 1.5px solid var(--accent);
+  border-radius: var(--r-pill);
+  background: var(--btn-bg);
+  color: var(--accent-strong);
+  font: inherit; font-size: var(--fs-btn); font-weight: var(--fw-bold); line-height: var(--lh-tight);
+  text-decoration: none;
+  cursor: pointer;
+}
+.btn:active:not(:disabled, [aria-disabled="true"]) { background: var(--accent-soft); }
+.btn-primary { background: var(--accent); color: var(--accent-ink); border-color: transparent; box-shadow: var(--shadow-primary); }
+.btn-primary:active:not(:disabled, [aria-disabled="true"]) { background: var(--accent); filter: brightness(.94); }
+.btn-quiet { border-color: transparent; background: transparent; }
+/* A text button right after prose or a list ("More", "Show all 19"): no side padding, so its words line up
+   with the text above. */
+.btn-quiet.btn-inline { padding-inline: 0; min-width: 0; }
+.btn-quiet.btn-inline:active:not(:disabled, [aria-disabled="true"]) { background: transparent; }
+.btn-danger { border-color: transparent; background: transparent; color: var(--weak-ink); }
+.btn-danger:not(.btn-primary):active:not(:disabled, [aria-disabled="true"]) { background: var(--weak-soft); }
+.btn-danger.btn-primary { background: var(--crit); color: var(--on-crit); box-shadow: none; }
+.btn-danger.btn-primary:active:not(:disabled, [aria-disabled="true"]) { background: var(--crit); }
+.btn-discard { border-color: transparent; background: transparent; color: var(--ink-2); }
+.btn-discard:active:not(:disabled, [aria-disabled="true"]) { background: var(--hover); }
+.btn:disabled, .btn[disabled], .btn:not(.btn-primary)[aria-disabled="true"] { opacity: .55; cursor: not-allowed; filter: none; }
+.btn-primary:disabled { box-shadow: none; }
+.btn-primary[aria-disabled="true"] {
+  background: var(--track); color: var(--ink-3); border-color: transparent; box-shadow: none; filter: none; cursor: not-allowed;
+}
+/* The button that opened a menu (openMenu, menuButton) shows it's open (4.5: a 1 px teal ring). A tertiary (a
+   row's ⋯, More) draws exactly 1 px inside its transparent border; a secondary's 1.5 px teal border already is
+   the ring, so it takes --accent-soft rather than a thicker edge; on a primary the ring stands off the fill. */
+.btn[aria-haspopup="menu"][aria-expanded="true"] { box-shadow: inset 0 0 0 1px var(--accent); }
+.btn:not(.btn-primary, .btn-quiet, .btn-danger, .btn-discard)[aria-haspopup="menu"][aria-expanded="true"] { box-shadow: none; background: var(--accent-soft); }
+.btn-primary[aria-haspopup="menu"][aria-expanded="true"] { box-shadow: 0 0 0 2px var(--surface), 0 0 0 3px var(--accent); }
+@media (hover: hover) and (pointer: fine) {
+  .btn:hover:not(:disabled, [aria-disabled="true"]) { background: var(--hover); }
+  .btn-primary:hover:not(:disabled, [aria-disabled="true"]) { background: var(--accent); filter: brightness(1.08); }
+  .btn-danger.btn-primary:hover:not(:disabled, [aria-disabled="true"]) { background: var(--crit); }
+  .btn-danger:not(.btn-primary):hover:not(:disabled, [aria-disabled="true"]) { background: var(--weak-soft); }
+  .btn-quiet.btn-inline:hover:not(:disabled, [aria-disabled="true"]) { background: transparent; text-decoration: underline; }
+}
+/* A keyboard hint in a lab button ("New deck N"): only with a mouse at lab width, never on touch (3.3). Not
+   read out (aria-hidden on the <kbd>); the shortcut belongs in the control's aria-keyshortcuts. */
+.kbd {
+  display: none; align-items: center; justify-content: center;
+  min-width: 1.6em; padding: 0 var(--s-1);
+  border: 1px solid var(--border-strong); border-radius: var(--r-sm);
+  background: var(--surface-chip); color: var(--ink-2);
+  font: var(--fw-medium) var(--fs-kbd) / 1.5 var(--font-mono);
+}
+.btn-primary .kbd { border-color: var(--kbd-on-accent); background: transparent; color: inherit; }
+@media (hover: hover) and (pointer: fine) and (min-width: 1000px) { .kbd { display: inline-flex; } }
+
+/* A row of buttons: they wrap and never touch. */
+.actions, .toolbar, .head-buttons {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2);
+}
+.box .actions { margin-top: var(--s-3); }
+/* A toolbar: live search on the left, filter chips or a segmented switch on the right, the count below. */
+.toolbar { justify-content: space-between; gap: var(--s-3); margin: var(--s-3) 0 var(--s-2); }
+.toolbar > :first-child { flex: 1 1 260px; min-width: 0; }
+.toolbar .result-count { flex-basis: 100%; }
+
+/* --------------------------------------------------------------- page head */
+
+.page-head { padding: var(--s-5) 0 var(--s-2); }
+.page-head p { color: var(--ink-2); margin: 0; }
+.page-head-actions { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--s-3); flex-wrap: wrap; }
+.crumbs { padding-top: var(--s-3); }
+/* Under a crumb the head starts close to it, as the deck page's and the editor's heads do (.deck-head); on a
+   phone the crumb is in the top bar (shell.css), so the head keeps its full padding there. */
+@media (min-width: 600px) { .crumbs + .page-head { padding-top: var(--s-1); } }
+.crumbs a {
+  display: inline-flex; align-items: center; min-height: var(--tap);
+  font-weight: var(--fw-semibold); text-decoration: none;
+}
+.result-count { color: var(--ink-2); font-size: var(--fs-sm); margin: var(--s-2) 0 0; }
+
+/* Filters above a list: two columns on a phone, one row that wraps from 600 px. */
+.filters {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--s-3);
+  align-items: end;
+  margin: var(--s-3) 0 var(--s-2);
+}
+.filters .segmented { grid-column: 1 / -1; justify-self: start; }
+.filters select { width: 100%; }
+@media (min-width: 600px) {
+  .filters { display: flex; flex-wrap: wrap; }
+  .filters > * { flex: 0 1 220px; min-width: 160px; }
+  .filters > .segmented { flex: none; min-width: 0; }
+}
+
+/* ------------------------------------------------------------------- fields */
+
+.field { display: flex; flex-direction: column; gap: var(--s-1); min-width: 0; }
+.field > span, .field > label { font-size: var(--fs-sm); color: var(--ink-2); font-weight: var(--fw-semibold); }
+.field :where(input:not([type="checkbox"], [type="radio"]), select, textarea) { width: 100%; }
+.field-hint { color: var(--ink-2); font-size: var(--fs-sm); font-weight: var(--fw-regular); }
+.field-problem { color: var(--crit-ink); font-weight: var(--fw-semibold); }
+/* Why a Forge Play or Start can't be used now (version.js syncRunControls): beside it, never page-wide. */
+.run-blocked { margin: var(--s-2) 0 0; color: var(--ink-2); font-size: var(--fs-sm); }
+
+/* A tick box or a radio with its words: the whole row is the target, at least 44 px. */
+.choice, .col-choice, .acc-choice, .tok-choice, .tok-check, .vt-choice {
+  display: flex; align-items: center; gap: var(--s-3);
+  min-height: var(--tap);
+  cursor: pointer;
+  overflow-wrap: break-word;
+}
+.tok-check { display: inline-flex; }
+
+.form-error {
+  display: flex; align-items: center; gap: var(--s-2);
+  color: var(--crit-ink); font-weight: var(--fw-semibold); font-size: var(--fs-sm); margin: var(--s-2) 0 0;
+}
+.form-error::before {
+  content: ""; flex: none;
+  width: 16px; height: 16px; border-radius: 50%;
+  background: var(--crit) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M3 3l4 4M7 3l-4 4' stroke='%23fff' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E") center / 10px no-repeat;
+}
+.form-error:empty { display: none; }
+
+/* A row of toggle buttons (aria-pressed) or links (aria-current): the one way to pick 2-6 options (4.5). A round
+   track (--seg-track) and the chosen segment filled teal. With a mouse the segments sit 3 px inside the track;
+   on touch (--seg-pad 0, in the floor at the end of this file) each segment is the track's full 44 px, so the
+   track stays 44 beside the buttons and fields. The track's corners are --r-seg, half its one-row height, not
+   --r-pill: a control that wraps to two rows becomes a rounded rectangle, not a tall stadium that clips its end
+   segments (each segment is one row, so it stays a pill, its curve the track's, 3 px in). */
+.segmented {
+  --seg-pad: 3px;
+  display: inline-flex; flex-wrap: wrap;
+  min-height: var(--seg-h);
+  padding: var(--seg-pad); gap: 2px;
+  border-radius: var(--r-seg);
+  background: var(--seg-track);
+  max-width: 100%;
+}
+.segmented > * {
+  min-height: calc(var(--seg-h) - 2 * var(--seg-pad));
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 0 var(--s-3);
+  border: 0; border-radius: var(--r-pill);
+  background: transparent;
+  color: var(--ink-2);
+  font: inherit; font-size: var(--fs-btn); font-weight: var(--fw-bold);
+  text-decoration: none;
+  cursor: pointer;
+}
+.segmented > [aria-pressed="true"], .segmented > [aria-current="page"] {
+  background: var(--accent);
+  color: var(--accent-ink);
+  box-shadow: var(--shadow-primary);
+}
+/* Words inside the chosen segment (a deck page filter's count, a practice setup's sub-line, the editor's "(none
+   yet)") take its ink, not a page's grey, which is unreadable on teal. Weighted (0,3,0) to beat those page
+   rules, which load later. */
+.segmented.segmented > :is([aria-pressed="true"], [aria-current="page"]) * { color: inherit; }
+.segmented > :is(:disabled, [aria-disabled="true"]) { color: var(--ink-3); cursor: not-allowed; }
+.segmented > [aria-pressed="true"]:is(:disabled, [aria-disabled="true"]) { background: var(--track); color: var(--ink-3); box-shadow: none; }
+@media (hover: hover) and (pointer: fine) {
+  .segmented > :hover:not([aria-pressed="true"], [aria-current="page"], :disabled, [aria-disabled="true"]) { color: var(--ink); background: var(--hover); }
+}
+
+/* A stepper: − [n] +, a round group (4.5). − and + in teal; the number Figtree 16 / 700 casual, mono 12.5 / 600
+   in the lab; a typeable one (.qty-input, or any input in it) sits in a sunken well, a read-only <output> has no
+   fill. A typed number is --fs-qty-input: --fs-qty, but 16 px wherever iOS might zoom on focus. A line the
+   person has changed and not saved (.is-changed or data-changed="true") gets a teal edge and a bold teal
+   number: teal is "yours, unsaved" there (decided 2026-10-24: visual-design.md section 6 question 2). */
+.stepper {
+  display: inline-flex; align-items: center;
+  min-height: var(--stepper-h);
+  border: 1px solid var(--border-strong); border-radius: var(--r-pill);
+  background: var(--surface);
+}
+.stepper .step {
+  width: calc(var(--stepper-h) - 2px); height: calc(var(--stepper-h) - 2px); flex: none;
+  display: grid; place-items: center;
+  border: 0; border-radius: var(--r-pill); background: transparent; color: var(--accent-strong);
+  font: var(--fw-bold) var(--fs-xl) / 1 var(--font);
+  cursor: pointer;
+}
+.stepper .step:active:not(:disabled) { background: var(--accent-soft); }
+.stepper .step[disabled] { color: var(--ink-3); opacity: .45; cursor: default; background: transparent; }
+.stepper :is(.qty-input, input, output) {
+  display: inline-grid; place-items: center;
+  width: 2.6em; min-width: calc(var(--stepper-h) - 2px); height: calc(var(--stepper-h) - 2px); min-height: 0; padding: 0;
+  border: 0; border-radius: var(--r-pill);
+  background: var(--surface-2); color: var(--ink);
+  font: var(--fw-qty) var(--fs-qty) / 1 var(--font-num); text-align: center; font-variant-numeric: tabular-nums;
+}
+.stepper output:not(.qty-input) { background: transparent; }
+.stepper :is(.qty-input, input) { font-size: var(--fs-qty-input); }
+.stepper :is(.qty-input, input):focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; box-shadow: none; }
+.stepper:is(.is-changed, [data-changed="true"]) { border-color: var(--accent); }
+.stepper:is(.is-changed, [data-changed="true"]) :is(.qty-input, input, output) { color: var(--accent-strong); font-weight: var(--fw-heavy); }
+@media (hover: hover) and (pointer: fine) {
+  .stepper .step:hover:not(:disabled) { background: var(--hover); }
+}
+
+/* -------------------------------------------------------------------- chips */
+
+/* One pill: an icon and a word, never colour alone. Show chips only for exceptions, never for "all fine" or 0.
+   .status and .shopping-badge are its older names. */
+.chip, .status, .shopping-badge {
+  display: inline-flex; align-items: center; gap: var(--s-1);
+  padding: 2px var(--s-2) 2px 6px;
+  border-radius: var(--r-pill);
+  font-size: var(--fs-xs); font-weight: var(--fw-semibold); line-height: var(--lh-tight);
+  white-space: nowrap;
+  background: var(--surface-2); color: var(--ink-2);
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+.chip::before, .status::before {
+  content: ""; flex: none;
+  width: 14px; height: 14px; border-radius: 50%;
+  background: var(--ink-3) center / 10px no-repeat;
+}
+.chip-good, .status-good { background: var(--good-soft); color: var(--good-ink); box-shadow: none; }
+.chip-good::before, .status-good::before {
+  background-color: var(--good);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M2 5.2l2 2 4-4.4' fill='none' stroke='%23fff' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+.chip-warn, .status-warn { background: var(--warn-soft); color: var(--warn-ink); box-shadow: none; }
+.chip-warn::before, .status-warn::before, .box-warn > .box-head::before {
+  background-color: var(--warn);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M5 2v3.6' stroke='%230b0b0b' stroke-width='1.8' stroke-linecap='round'/%3E%3Ccircle cx='5' cy='7.9' r='1' fill='%230b0b0b'/%3E%3C/svg%3E");
+}
+.chip-crit, .status-crit { background: var(--crit-soft); color: var(--crit-ink); box-shadow: none; }
+.chip-crit::before, .status-crit::before, .box-crit > .box-head::before {
+  background-color: var(--crit);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M3 3l4 4M7 3l-4 4' stroke='%23fff' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E");
+}
+.chip-info, .status-info { background: var(--info-soft); color: var(--info-ink); box-shadow: none; }
+.chip-info::before, .status-info::before {
+  background-color: var(--series-1);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M1.8 5h5.4M5.2 2.8L7.4 5 5.2 7.2' fill='none' stroke='%23fff' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+/* A delivery state ("Part received"): a neutral outline and a half-filled circle, never teal (teal is for what
+   you can do, or what's selected, owned or done; visual-design.md section 6 question 2). */
+.chip-outline, .status-outline { background: transparent; color: var(--ink-2); box-shadow: inset 0 0 0 1px var(--ink-4); }
+.chip-outline::before, .status-outline::before {
+  background: linear-gradient(90deg, var(--ink-3) 50%, transparent 50%);
+  box-shadow: inset 0 0 0 1.5px var(--ink-3);
+}
+/* No icon: a plain tag (a count, a seller, "via the page"). */
+.chip-plain::before, .status-plain::before { display: none; }
+.chip-plain, .status-plain, .shopping-badge { padding-left: var(--s-2); }
+.chips { display: flex; flex-wrap: wrap; gap: var(--s-2); }
+.chip-wrap { white-space: normal; overflow-wrap: anywhere; min-width: 0; max-width: 100%; }
+
+/* Filter chips: pills that narrow a list ("All · Decks · Collection"), links (aria-current="page") or toggle
+   buttons (aria-pressed). The same pill is the toggle chip (4.5: "Owned only", "In storage only"), a filter
+   that's on or off: off white with a grey edge, on --accent-soft with a teal edge, teal words and a check (a
+   row of chips is never a row of teal fills). A toggle chip can also be a <label class="filter-chip"> round a
+   checkbox, which is hidden and still focusable: the label takes the on look while it's ticked. They wrap;
+   under 600px a .filter-chips-scroll row scrolls sideways instead, its right edge fading so a cut-off chip reads
+   as "more this way" (the padding lets the last chip scroll clear). */
+.filter-chips { display: flex; flex-wrap: wrap; gap: var(--s-2); margin: 0; padding: 0; list-style: none; }
+.filter-chip {
+  position: relative;
+  display: inline-flex; align-items: center; gap: var(--s-1);
+  min-height: var(--btn-h);
+  padding: 0 var(--s-3);
+  border: 1px solid var(--border-strong); border-radius: var(--r-pill);
+  background: var(--surface); color: var(--ink-2);
+  font: inherit; font-size: var(--fs-btn); font-weight: var(--fw-semibold);
+  text-decoration: none; white-space: nowrap;
+  cursor: pointer;
+}
+.filter-chip > input[type="checkbox"] { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.filter-chip:has(> input:focus-visible) { outline: 3px solid var(--focus); outline-offset: 2px; }
+.filter-chip[aria-current="page"], .filter-chip[aria-pressed="true"], .filter-chip:has(> input:checked) {
+  background: var(--accent-soft); color: var(--accent-strong); border-color: var(--accent-line);
+}
+.filter-chip[aria-current="page"]::before, .filter-chip[aria-pressed="true"]::before, .filter-chip:has(> input:checked)::before {
+  content: "\2713"; content: "\2713" / ""; color: var(--accent-strong); font-weight: var(--fw-bold);
+}
+@media (hover: hover) and (pointer: fine) {
+  .filter-chip:hover:not([aria-current="page"], [aria-pressed="true"], :has(> input:checked)) { color: var(--ink); background: var(--hover); }
+}
+@media (max-width: 599px) {
+  .filter-chips-scroll { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding: 0 var(--s-6) 2px 0;
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - var(--s-6)), transparent);
+    mask-image: linear-gradient(to right, #000 calc(100% - var(--s-6)), transparent); }
+  .filter-chips-scroll::-webkit-scrollbar { display: none; }
+  .filter-chips-scroll > * { flex: none; }
+}
+
+/* ------------------------------------------------------------- deck colours */
+
+/* A deck's colour pieces (ui.js deckColourPieces; design/visual-design.md 4.3), from its colour identity and
+   only ever for decks. Pips are its identity, never a card's cost (that's manaCost()'s symbols): a --mana-*
+   circle with its letter, WUBRG, C for colourless, a 1 px ring (white with a shadow over a picture). The
+   stripe and the swatch are equal hard segments of --stripe-* (the helper sets --deck-stripe on them), the
+   tint the helper's gradient over --surface, which shows through the translucent dark tints. */
+.id-pips {
+  display: inline-flex; flex: none; align-items: center; gap: 2px;
+  --pip: var(--pip-md); --fs-pip: var(--fs-pip-md);
+}
+.id-pips-sm { --pip: var(--pip-sm); --fs-pip: var(--fs-pip-sm); gap: 1px; }
+.id-pips-lg { --pip: var(--pip-lg); --fs-pip: var(--fs-pip-lg); }
+.id-pips-xl { --pip: var(--pip-xl); --fs-pip: var(--fs-pip-xl); }
+.id-pip {
+  display: inline-flex; align-items: center; justify-content: center; flex: none;
+  width: var(--pip); height: var(--pip);
+  border-radius: 50%;
+  background: var(--pip-fill, var(--mana-c)); color: var(--mana-ink);
+  font-family: var(--font); font-size: var(--fs-pip); font-weight: var(--fw-heavy); line-height: 1;
+  box-shadow: inset 0 0 0 1px var(--mana-ring);
+}
+.id-pips.is-over-art .id-pip { box-shadow: var(--shadow-pip-art); }
+.id-pip-w { --pip-fill: var(--mana-w); }
+.id-pip-u { --pip-fill: var(--mana-u); }
+.id-pip-b { --pip-fill: var(--mana-b); }
+.id-pip-r { --pip-fill: var(--mana-r); }
+.id-pip-g { --pip-fill: var(--mana-g); }
+.id-pip-c { --pip-fill: var(--mana-c); }
+.deck-stripe { display: block; height: var(--stripe-h); background: var(--deck-stripe, var(--surface-3)); }
+.deck-stripe.is-thin { height: var(--stripe-h-thin); }
+.deck-swatch {
+  display: inline-block; flex: none; vertical-align: middle;
+  width: var(--swatch-w); height: var(--swatch-h);
+  border-radius: var(--r-swatch);
+  background: var(--deck-stripe, var(--surface-3));
+}
+.deck-tint { background: var(--deck-tint), var(--surface); }
+
+/* The owned bar (ui.js ownedBar; design/visual-design.md 4.10): 4 px, teal for what's here, hatched for what's on
+   the way, on --surface-3 (--accent-track in a selected row). */
+.owned-bar { display: flex; height: 4px; overflow: hidden; border-radius: var(--r-swatch); background: var(--surface-3); }
+.owned-bar-fill { flex: none; background: var(--accent); }
+.owned-bar-way { flex: none; background: repeating-linear-gradient(45deg, var(--accent) 0 2px, transparent 2px 4px); }
+
+/* ------------------------------------------------------------ Forge results */
+
+/* Forge's result pieces (sim-ui.js; design/visual-design.md 4.9): the same at both densities, only their sizes
+   change. Every Forge number is mono and in ink, never coloured good or bad: only the flags and the verdict pills
+   wear Forge's strong and weak colours, and always with words. None is teal but a run's own controls. */
+.sim-num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+/* The win-rate figure: inline in a row ("61% 59–63"), on a tile (with "Forge field"), or a hero beside its range
+   and games. */
+.wr { display: inline-flex; align-items: baseline; gap: var(--s-1); color: var(--ink); white-space: nowrap; }
+.wr-value { font-family: var(--font-mono); font-weight: var(--fw-semibold); font-variant-numeric: tabular-nums; }
+.wr-inline .wr-value, .wr-tile .wr-value { font-size: var(--fs-fig-sm); }
+.wr-range { font-family: var(--font-mono); font-size: var(--fs-fig-range); font-weight: var(--fw-medium); color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.wr-caption { font-size: var(--fs-wr-caption); color: var(--ink-2); }
+.wr-hero { display: flex; align-items: center; gap: var(--s-3); white-space: normal; }
+.wr-hero .wr-value { font-size: var(--fs-fig); line-height: 1; letter-spacing: var(--ls-fig); }
+.wr-unit { font-size: var(--fs-fig-unit); }
+.wr-lines { display: grid; gap: 2px; font-size: var(--fs-meta); color: var(--ink-3); }
+
+/* The range bar, on the fixed 20-80% scale: a round track, a dashed 50% tick and the win rate's point 3 px past
+   it each way, the 95% band between them. A live run's band is a dashed outline (it narrows as games play). */
+.range-bar { --range-thick: var(--range-h); display: block; min-width: 0; padding: 3px 0; }
+.range-bar-compact { --range-thick: var(--range-h-compact); }
+.range-track { position: relative; display: block; height: var(--range-thick); border-radius: var(--r-pill); background: var(--range-track); }
+.range-even { position: absolute; left: 50%; top: -3px; bottom: -3px; border-left: 1px dashed var(--ink-4); }
+.range-band { position: absolute; top: 0; bottom: 0; min-width: 2px; border-radius: var(--r-pill); background: var(--range-band); }
+.range-point { position: absolute; top: -3px; bottom: -3px; width: 3px; margin-left: -1.5px; border-radius: 1px; background: var(--ink); }
+.range-bar.is-live .range-band { box-sizing: border-box; top: -2px; bottom: -2px; background: none; border: 1.5px dashed var(--ink-3); }
+.range-bar.is-muted .range-point { background: var(--ink-4); }
+.range-axis { display: flex; justify-content: space-between; margin-top: var(--s-1); font-family: var(--font-mono); font-size: var(--fs-axis); color: var(--ink-3); }
+.range-key-band, .range-key-point, .range-key-even { display: inline-block; flex: none; }
+.range-key-band { width: 16px; height: 8px; border-radius: var(--r-pill); background: var(--range-band); }
+.range-key-point { width: 3px; height: 14px; border-radius: 1px; background: var(--ink); }
+.range-key-even { height: 14px; border-left: 1px dashed var(--ink-4); }
+
+/* The freshness badge: a clock and words, round. Fresh is neutral (plain words in a lab row), aging amber, stale
+   amber with a refresh icon, and "for the saved list" (the editor) amber too. */
+.fresh {
+  display: inline-flex; align-items: center; gap: var(--s-1); flex: none;
+  min-height: var(--fresh-h); padding: 0 var(--s-2);
+  border-radius: var(--r-pill);
+  background: var(--surface-chip); color: var(--ink-2);
+  font-size: var(--fs-fresh); font-weight: var(--fw-semibold); line-height: 1; white-space: nowrap;
+}
+.fresh-row { min-height: var(--fresh-h-row); font-size: var(--fs-fresh-row); }
+.fresh.on-tint { background: var(--chip-on-tint); box-shadow: inset 0 0 0 1px var(--chip-on-tint-line); }
+.fresh.is-aging, .fresh.is-stale, .fresh.is-unsaved { background: var(--warn-soft); color: var(--warn-ink-sm); box-shadow: inset 0 0 0 1px var(--warn-line); }
+/* In a lab row (from 1,000 px, where --fresh-h-row is 17 px) a fresh badge is plain words; casual rows keep the pill. */
+@media (min-width: 1000px) {
+  .fresh-row.is-fresh { min-height: 0; padding: 0; background: none; box-shadow: none; color: inherit; font-size: inherit; font-weight: inherit; }
+}
+.fresh-icon {
+  width: var(--icon-xs); height: var(--icon-xs); flex: none; background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='%23000' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='6' cy='6' r='4.8'/%3E%3Cpath d='M6 3.4V6l1.8 1.2'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='%23000' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='6' cy='6' r='4.8'/%3E%3Cpath d='M6 3.4V6l1.8 1.2'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+.fresh.is-aging .fresh-icon, .fresh.is-stale .fresh-icon, .fresh.is-unsaved .fresh-icon { background: var(--warn-icon); }
+.fresh.is-stale .fresh-icon {
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%23000' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M16.2 10.4a6.2 6.2 0 1 1-1.9-4.9'/%3E%3Cpath d='M15 2.4v3.4h-3.4'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%23000' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M16.2 10.4a6.2 6.2 0 1 1-1.9-4.9'/%3E%3Cpath d='M15 2.4v3.4h-3.4'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
+/* Strong and weak flags: a round pill, a chevron (up or down), the opponent's name (it truncates, the flag stays)
+   and the mono win rate. */
+.flag {
+  display: inline-flex; align-items: center; gap: var(--s-1); min-width: 0; max-width: 100%;
+  min-height: var(--flag-h); padding: 0 var(--s-3) 0 var(--s-2);
+  border-radius: var(--r-pill);
+  font-size: var(--fs-flag); font-weight: var(--fw-semibold); line-height: 1; white-space: nowrap;
+}
+.flag-strong { background: var(--strong-soft); color: var(--strong-ink); }
+.flag-weak { background: var(--weak-soft); color: var(--weak-ink); }
+.flag-chevron {
+  width: 10px; height: 10px; flex: none; background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M2 6.6 5 3.4l3 3.2' fill='none' stroke='%23000' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M2 6.6 5 3.4l3 3.2' fill='none' stroke='%23000' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+.flag-weak .flag-chevron { transform: rotate(180deg); }
+.flag-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.flag-rate { flex: none; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+/* A test of a change: the swap (its quantities in mono), the difference in points, its verdict pill and its range.
+   The +1 and −1 of a curve or count change are neutral (.is-neutral): green and red mean better and worse. */
+.swap-result { display: grid; gap: var(--s-1); min-width: 0; }
+.swap-lines { display: flex; flex-wrap: wrap; gap: 2px var(--s-3); margin: 0; padding: 0; list-style: none; font-weight: var(--fw-semibold); }
+.swap-qty { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.swap-remove { color: var(--weak-ink); }
+.swap-add { color: var(--strong-ink); }
+.swap-lines.is-neutral > li { color: var(--ink-3); }
+.swap-figure { margin: 0; color: var(--ink); }
+.swap-points { font-family: var(--font-mono); font-size: var(--fs-swap); font-weight: var(--fw-semibold); font-variant-numeric: tabular-nums; }
+.swap-unit { font-size: var(--fs-meta); color: var(--ink-2); }
+.swap-facts { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-1) var(--s-2); margin: 0; font-size: var(--fs-meta); color: var(--ink-2); }
+.swap-verdict {
+  display: inline-flex; align-items: center; padding: 2px var(--s-2);
+  border-radius: var(--r-pill);
+  font-size: var(--fs-meta); font-weight: var(--fw-semibold); line-height: var(--lh-tight); white-space: nowrap;
+  background: var(--surface-chip); color: var(--ink-2);
+}
+.swap-verdict-better { background: var(--strong-soft); color: var(--strong-ink); }
+.swap-verdict-worse { background: var(--weak-soft); color: var(--weak-ink); }
+.swap-verdict-likely-better, .swap-verdict-likely-worse { background: none; color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink-4); }
+
+/* The run activity (runs-pill.js): while Forge plays, one slowly turning ring in a 44 px button in the top bar (a
+   still ring with a dot under reduced motion). Its details, a popover under it from 1,000 px or a sheet below,
+   hold each run on --accent-soft with its progress ring and Stop. */
+.run-activity {
+  display: inline-grid; place-items: center; flex: none;
+  width: var(--tap); height: var(--tap); padding: 0;
+  border: 0; border-radius: 50%;
+  background: none; cursor: pointer;
+}
+.run-activity[aria-expanded="true"] { box-shadow: 0 0 0 1px var(--accent); }
+@media (hover: hover) and (pointer: fine) {
+  .run-activity:hover { background: var(--hover); }
+}
+.run-activity:active { background: var(--accent-soft); }
+.activity-ring {
+  display: grid; place-items: center; box-sizing: border-box;
+  width: var(--activity-size); height: var(--activity-size);
+  border: 2.5px solid var(--ring-track); border-top-color: var(--accent); border-radius: 50%;
+  animation: spin 2.4s linear infinite;
+}
+.run-activity.is-waiting .activity-ring { animation-duration: 6s; }
+@media (prefers-reduced-motion: reduce) {
+  .activity-ring { animation: none; border-color: var(--accent); }
+  .activity-ring::after { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+}
+.run-popover {
+  position: absolute; z-index: 30; top: calc(100% + var(--s-1)); right: 0;
+  width: min(380px, calc(100vw - 2 * var(--s-4)));
+  padding: var(--s-3);
+  background: var(--surface); color: var(--ink);
+  border: 1px solid var(--border); border-radius: var(--r-row);
+  box-shadow: var(--shadow-2);
+}
+.run-details-body { display: grid; gap: var(--s-3); }
+.run-entry {
+  display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: var(--s-2) var(--s-3);
+  padding: var(--s-3);
+  border-radius: var(--r-row);
+  background: var(--accent-soft); box-shadow: inset 0 0 0 1px var(--run-line);
+  color: var(--accent-strong);
+}
+.run-entry-words { min-width: 0; }
+.run-entry-words > p { margin: 0; }
+.run-summary { overflow-wrap: anywhere; }
+.run-count { font-size: var(--fs-meta); }
+.run-entry-actions { grid-column: 1 / -1; display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: var(--s-2); }
+.run-ring { display: inline-block; flex: none; width: var(--ring-size); height: var(--ring-size); }
+.run-ring svg { display: block; width: 100%; height: 100%; transform: rotate(-90deg); }
+.run-ring-track, .run-ring-arc { fill: none; stroke-width: 3; }
+.run-ring-track { stroke: var(--ring-track); }
+.run-ring-arc { stroke: var(--accent); stroke-linecap: round; }
+.run-stop-glyph { width: 10px; height: 10px; flex: none; border-radius: 1px; background: currentColor; }
+.run-waiting-head { margin: 0 0 var(--s-1); font-size: var(--fs-group); font-weight: var(--fw-heavy); letter-spacing: var(--ls-caps); text-transform: uppercase; color: var(--ink-2); }
+.run-waiting-list { display: grid; gap: var(--s-1); margin: 0; padding: 0; list-style: none; }
+.run-waiting-list > li { display: flex; align-items: center; gap: var(--s-2); min-height: var(--btn-h); }
+.run-waiting-name { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: var(--fw-semibold); }
+.run-waiting-ahead { flex: none; font-size: var(--fs-meta); color: var(--ink-3); }
+.run-details-foot { margin: 0; }
+
+/* ------------------------------------------------------------ boxes, notes */
+
+/* .box is a panel of its own (a plain .box is a neutral container); its kinds are state boxes. A notice
+   (design/visual-design.md 4.5) is --warn-soft with an inset --warn-line, --warn-ink words and a stroke icon in
+   --warn-icon that says what kind: an info circle for something worth a look (.box-info, a plain .note), a
+   refresh for something out of date (.box-stale, .note-stale: "Update all"), a triangle for a check or a
+   conflict (.box-warn, .note-warn). The icon sits on the box's .box-head when it has one, else in its left
+   padding; a box with a spinner (a run in progress) shows the spinner instead. --info-* is left to the info
+   pills. Crit and good aren't notices and keep their fills. */
+.box {
+  margin: var(--s-3) 0;
+  padding: var(--s-3) var(--s-4);
+  border-radius: var(--r-panel);
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+.box > :last-child { margin-bottom: 0; }
+.box h2, .box h3 { font-size: var(--fs-md); margin-bottom: var(--s-1); }
+.box-crit { background: var(--crit-soft); border-color: transparent; }
+.box-crit h2, .box-crit h3 { color: var(--crit-ink); }
+.box-warn, .box-stale, .box-info {
+  background: var(--warn-soft); border-color: transparent; box-shadow: inset 0 0 0 1px var(--warn-line);
+  color: var(--warn-ink);
+}
+.box-warn :is(h2, h3), .box-stale :is(h2, h3), .box-info :is(h2, h3) { color: var(--warn-ink); font-weight: var(--fw-bold); }
+.box-good { background: var(--good-soft); border-color: transparent; }
+.box-good h2, .box-good h3 { color: var(--good-ink); }
+.box ul { padding-left: var(--s-5); }
+.box li + li { margin-top: var(--s-1); }
+/* A box whose heading carries its status icon (matchups.js markedBox): the chips' icons, a little bigger, so
+   the box's kind never rests on its colour alone. */
+.box-head { display: flex; align-items: flex-start; gap: var(--s-2); }
+.box-head::before {
+  content: ""; flex: none;
+  width: 18px; height: 18px; margin-top: 1px;
+  border-radius: 50%;
+  background: var(--ink-3) center / 12px no-repeat;
+}
+.box-info > .box-head::before, .box-info:not(:has(> .box-head, .spinner))::before, .note::before {
+  content: ""; border-radius: 0; background: var(--warn-icon);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Ccircle cx='10' cy='10' r='7.2' fill='none' stroke='%23000' stroke-width='1.8'/%3E%3Cpath d='M10 9v4.6' stroke='%23000' stroke-width='1.8' stroke-linecap='round'/%3E%3Ccircle cx='10' cy='6.4' r='1.1'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Ccircle cx='10' cy='10' r='7.2' fill='none' stroke='%23000' stroke-width='1.8'/%3E%3Cpath d='M10 9v4.6' stroke='%23000' stroke-width='1.8' stroke-linecap='round'/%3E%3Ccircle cx='10' cy='6.4' r='1.1'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+/* A notice's icon: on its .box-head when it has one, else on the box itself, in the box's left padding. */
+.box-warn:not(:has(> .box-head)), .box-stale:not(:has(> .box-head)), .box-info:not(:has(> .box-head, .spinner)) {
+  position: relative; padding-left: calc(var(--s-4) + 18px + var(--s-2));
+}
+.box-warn:not(:has(> .box-head))::before, .box-stale:not(:has(> .box-head))::before,
+.box-info:not(:has(> .box-head, .spinner))::before {
+  content: ""; position: absolute; left: var(--s-4); top: calc(var(--s-3) + 2px);
+  width: 18px; height: 18px;
+}
+.box-warn > .box-head::before, .box-warn:not(:has(> .box-head))::before, .note-warn::before {
+  border-radius: 0; background: var(--warn-icon);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M10 3.2 2.6 16.4h14.8z' fill='none' stroke='%23000' stroke-width='1.8' stroke-linejoin='round'/%3E%3Cpath d='M10 8.2v3.6' stroke='%23000' stroke-width='1.8' stroke-linecap='round'/%3E%3Ccircle cx='10' cy='14' r='1.1'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M10 3.2 2.6 16.4h14.8z' fill='none' stroke='%23000' stroke-width='1.8' stroke-linejoin='round'/%3E%3Cpath d='M10 8.2v3.6' stroke='%23000' stroke-width='1.8' stroke-linecap='round'/%3E%3Ccircle cx='10' cy='14' r='1.1'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+.box-stale > .box-head::before, .box-stale:not(:has(> .box-head))::before, .note-stale::before {
+  border-radius: 0; background: var(--warn-icon);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%23000' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M16.2 10.4a6.2 6.2 0 1 1-1.9-4.9'/%3E%3Cpath d='M15 2.4v3.4h-3.4'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%23000' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M16.2 10.4a6.2 6.2 0 1 1-1.9-4.9'/%3E%3Cpath d='M15 2.4v3.4h-3.4'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
+/* A note about the state of this item (info, warn, crit, good), never about a setting that's normal. Its one
+   button (a note's "Show only these") sits at its right. */
+.note {
+  display: flex; align-items: flex-start; gap: var(--s-2);
+  margin: var(--s-2) 0 var(--s-3);
+  padding: var(--s-3);
+  border-radius: var(--r-panel);
+  background: var(--warn-soft); box-shadow: inset 0 0 0 1px var(--warn-line);
+  color: var(--warn-ink);
+  font-size: var(--fs-sm);
+}
+.note > .btn:last-child, .note > .actions:last-child { flex: none; align-self: center; margin-left: auto; }
+.note::before { flex: none; width: 18px; height: 18px; margin-top: 1px; }
+.note-crit { background: var(--crit-soft); box-shadow: none; color: var(--ink); }
+.note-good { background: var(--good-soft); box-shadow: none; color: var(--ink); }
+/* The kinds' icons. They come after .note::before, so at the same weight they win: warn and stale swap the info
+   circle's mask for theirs (with the boxes' above); crit and good drop the mask for their filled circles. */
+.note-crit::before, .note-good::before {
+  -webkit-mask: none; mask: none;
+  width: 20px; height: 20px; border-radius: 50%;
+  background: var(--ink-3) center / 12px no-repeat;
+}
+.note-crit::before {
+  background-color: var(--crit);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M3 3l4 4M7 3l-4 4' stroke='%23fff' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E");
+}
+.note-good::before {
+  background-color: var(--good);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M2 5.2l2 2 4-4.4' fill='none' stroke='%23fff' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+.note p { margin: 0; }
+.note p + p { margin-top: var(--s-2); }
+
+/* An empty list: one line, and the one action that fills it. (.shopping-empty and .activity-empty are its
+   older names.) */
+.empty, .shopping-empty, .activity-empty {
+  padding: var(--s-5) var(--s-4);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--r-lg);
+  background: var(--surface-2);
+  color: var(--ink-2);
+  font-size: var(--fs-sm);
+}
+.empty > p { margin: 0 0 var(--s-3); }
+.empty > :last-child { margin-bottom: 0; }
+
+/* ---------------------------------------------------------- loading, progress */
+
+.loading {
+  display: flex; align-items: center; gap: var(--s-3);
+  padding: var(--s-6) 0;
+  color: var(--ink-2);
+}
+.spinner {
+  width: 20px; height: 20px; flex: none;
+  border: 3px solid var(--surface-3);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin .9s linear infinite;
+}
+.spinner-small { width: 14px; height: 14px; border-width: 2px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 3s; } }
+
+.progress {
+  height: 10px;
+  margin: 0 0 var(--s-2);
+  border-radius: var(--r-pill);
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--border-strong);
+  overflow: hidden;
+}
+.progress-fill { display: block; width: 0; height: 100%; border-radius: var(--r-pill); background: var(--series-1); transition: width .3s; }
+@media (prefers-reduced-motion: reduce) { .progress-fill { transition: none; } }
+
+/* ------------------------------------------------------------- disclosures */
+
+/* One chevron on every summary (it turns when open). A summary that draws its own marks opts out. */
+summary { cursor: pointer; list-style: none; }
+summary::-webkit-details-marker { display: none; }
+summary::before {
+  content: ""; display: inline-block; flex: none; vertical-align: middle;
+  position: relative; top: -2px;
+  width: 8px; height: 8px; margin: 0 var(--s-2) 0 2px;
+  border-right: 2px solid currentColor; border-bottom: 2px solid currentColor;
+  transform: rotate(-45deg); transition: transform .15s;
+}
+details[open] > summary::before { transform: rotate(45deg); }
+@media (prefers-reduced-motion: reduce) { summary::before { transition: none; } }
+
+details.more { margin-top: var(--s-3); }
+details.more > summary {
+  display: flex; align-items: center; gap: var(--s-1);
+  min-height: var(--tap);
+  color: var(--link);
+  font-weight: var(--fw-semibold);
+}
+
+/* ----------------------------------------------------------------- tabs */
+
+/* Real tabs (role=tab, aria-selected) or links (aria-current). When they don't fit they scroll sideways, and
+   the edge that has more shows a shade (a CSS scroll shadow: the shade is fixed to the strip, and a cover
+   that scrolls with the tabs hides it at either end). --strip-bg is what the strip sits on. */
+.tabs {
+  --strip-bg: var(--page);
+  display: flex; gap: var(--s-1);
+  overflow-x: auto; scrollbar-width: none;
+  border-bottom: 1px solid var(--border);
+}
+.tabs::-webkit-scrollbar { display: none; }
+.tabs, .section-nav {
+  background:
+    linear-gradient(to right, var(--strip-bg) 40%, transparent) left center / 32px 100% no-repeat local,
+    linear-gradient(to left, var(--strip-bg) 40%, transparent) right center / 32px 100% no-repeat local,
+    radial-gradient(farthest-side at 0 50%, var(--border-strong), transparent) left center / 16px 100% no-repeat scroll,
+    radial-gradient(farthest-side at 100% 50%, var(--border-strong), transparent) right center / 16px 100% no-repeat scroll,
+    var(--strip-bg);
+}
+.tabs > a, .tabs > button {
+  flex: none;
+  display: inline-flex; align-items: center;
+  min-height: var(--tap);
+  padding: 0 var(--s-3);
+  border: 0; border-bottom: 3px solid transparent;
+  background: none;
+  color: var(--ink-2);
+  font: inherit; font-weight: var(--fw-semibold);
+  text-decoration: none; white-space: nowrap;
+  cursor: pointer;
+}
+.tabs > :hover { color: var(--ink); }
+.tabs > [aria-selected="true"], .tabs > [aria-current="page"], .tabs > [aria-current="location"] {
+  color: var(--ink); border-bottom-color: var(--accent);
+}
+
+/* ------------------------------------------------------------------ sheets */
+
+/* A dialog: a bottom sheet on a phone (with a grabber, only a picture: there's no drag), 560 px in the middle on
+   a wider screen, and .sheet-side a panel on the right from 1,280 px (for editing a row beside its list).
+   Destructive actions sit at the bottom. Corners are --r-panel (14 casual, 8 in the lab). */
+dialog.sheet {
+  width: min(560px, calc(100vw - 2 * var(--s-4))); max-width: none;
+  max-height: min(86vh, 760px);
+  max-height: min(86dvh, 760px);
+  padding: 0; border: 0; border-radius: var(--r-panel);
+  background: var(--surface); color: var(--ink);
+  box-shadow: var(--shadow-2);
+  overflow: hidden;
+}
+dialog.sheet-wide { width: min(640px, calc(100vw - 2 * var(--s-4))); }
+dialog.sheet::backdrop { background: var(--scrim); }
+.sheet-inner {
+  display: flex; flex-direction: column;
+  max-height: min(86vh, 760px);
+  max-height: min(86dvh, 760px);
+}
+.sheet-head {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--s-2);
+  padding: var(--s-2) var(--s-2) var(--s-2) var(--s-4); border-bottom: 1px solid var(--border);
+}
+.sheet-head h2 { margin: 0; font-size: var(--fs-lg); }
+.sheet-close { font-size: var(--fs-xl); line-height: 1; padding: 0; width: var(--tap); flex: none; color: var(--ink-2); }
+.sheet-body { padding: var(--s-3) var(--s-4); overflow-y: auto; overscroll-behavior: contain; flex: 1 1 auto; }
+.sheet-body > :last-child { margin-bottom: 0; }
+.sheet-body h3 { font-size: var(--fs-md); margin-top: var(--s-3); }
+.sheet-body h3:first-child { margin-top: 0; }
+.sheet-foot {
+  display: flex; flex-wrap: wrap; gap: var(--s-2);
+  padding: var(--s-3) var(--s-4) max(var(--s-3), env(safe-area-inset-bottom)); border-top: 1px solid var(--border);
+}
+.sheet-foot:empty { display: none; }
+.sheet-foot .btn { flex: 1 1 auto; }
+/* From 600px a quiet Remove… sits at the foot's left, apart from Save, and only as wide as its words. */
+@media (min-width: 600px) { .sheet-foot .btn-danger.btn-quiet { flex: 0 0 auto; order: -1; margin-right: auto; } }
+@media (max-width: 599px) {
+  dialog.sheet, dialog.sheet-wide {
+    width: 100%; max-width: 100%;
+    margin: auto 0 0;
+    border-radius: var(--r-panel) var(--r-panel) 0 0;
+    max-height: 90vh; max-height: 90dvh;
+  }
+  .sheet-inner { max-height: 90vh; max-height: 90dvh; }
+  .sheet-foot { flex-direction: column; }
+  dialog.sheet:not(.vt-sheet) > .sheet-inner::before {
+    content: ""; flex: none; align-self: center;
+    width: 40px; height: 5px; margin-top: var(--s-2);
+    border-radius: var(--r-pill); background: var(--border-strong);
+  }
+}
+@media (min-width: 1280px) {
+  dialog.sheet.sheet-side {
+    width: 380px; height: 100%; max-height: 100%;
+    margin: 0 0 0 auto;
+    border-radius: var(--r-panel) 0 0 var(--r-panel);
+  }
+  dialog.sheet.sheet-side .sheet-inner { height: 100%; max-height: 100%; }
+}
+
+/* ------------------------------------------------------------------- menus */
+
+/* An overflow menu ("More", a row's ...): a popover under its button (4.5). Items are --btn-h tall (44 on
+   touch) in the button's type at 600; the one under the pointer or the arrow keys is --hover (with the focus
+   ring too, as --hover alone is faint). Destructive items come last, after a .menu-sep, in --weak-ink
+   (.menu-danger, cards-ui.css). The button that opened it keeps a teal ring (the buttons above). */
+.menu {
+  position: absolute; z-index: 30;
+  width: max-content; min-width: 200px; max-width: min(320px, calc(100vw - 2 * var(--s-4)));
+  margin: 0; padding: var(--s-1);
+  background: var(--surface); color: var(--ink);
+  border: 1px solid var(--border); border-radius: var(--r-row);
+  box-shadow: var(--shadow-2);
+  list-style: none;
+}
+.menu > a, .menu > button, .menu > li > a, .menu > li > button {
+  display: flex; align-items: center; gap: var(--s-2);
+  width: 100%; min-height: var(--btn-h);
+  padding: 0 var(--s-3);
+  border: 0; border-radius: var(--r-sm);
+  background: none; color: var(--ink);
+  font: inherit; font-size: var(--fs-btn); font-weight: var(--fw-semibold); text-align: left; text-decoration: none;
+  cursor: pointer;
+}
+.menu [role="menuitem"]:focus-visible { background: var(--hover); outline-offset: -3px; }
+.menu [aria-current="page"], .menu [aria-checked="true"] { color: var(--accent-strong); font-weight: var(--fw-bold); }
+.menu :is([role="menuitem"], a, button):is(:disabled, [aria-disabled="true"]) { color: var(--ink-3); background: none; cursor: not-allowed; }
+.menu-sep { height: 1px; margin: var(--s-1) 0; background: var(--border); }
+/* A page head's More (pageHead): its button is the last thing in the head's row, so the menu opens under it,
+   right-aligned. wireMenu also keeps any menuButton's menu inside the window. */
+.page-head-buttons .menu { top: calc(100% + var(--s-1)); right: 0; }
+@media (hover: hover) and (pointer: fine) {
+  .menu > a:hover, .menu > button:hover:not(:disabled), .menu > li > a:hover, .menu > li > button:hover:not(:disabled) { background: var(--hover); }
+}
+
+/* ------------------------------------------------------- action bar, toast */
+
+/* A bar stuck to the bottom of the screen: progress or status on the left, the primary action on the right
+   (4.8: --surface at 97%, a 1 px --border on top). Its sides keep clear of a phone's notch on its side
+   (viewport-fit=cover). It's at least --bar-h tall (72 px casual, 60 in the lab) and sits just above the tab bar
+   (--shell-bottom), which stays under it (section 6 decision 1). */
+.action-bar {
+  position: sticky; bottom: var(--shell-bottom, 0px); z-index: 6;
+  box-sizing: border-box; min-height: calc(var(--bar-h) + env(safe-area-inset-bottom));
+  display: flex; align-items: center; flex-wrap: wrap; gap: var(--s-2) var(--s-3);
+  margin: var(--s-5) calc(-1 * var(--gutter)) 0;
+  padding: var(--s-2) max(var(--gutter), env(safe-area-inset-right)) max(var(--s-2), env(safe-area-inset-bottom)) max(var(--gutter), env(safe-area-inset-left));
+  background: var(--bar-bg);
+  border-top: 1px solid var(--border);
+  box-shadow: var(--shadow-up);
+}
+.action-bar-status { margin-right: auto; min-width: 0; color: var(--ink-2); font-size: var(--fs-sm); }
+
+.page-errors:empty, .toast:empty { display: none; }
+.page-errors { padding-top: var(--s-3); }
+.toast {
+  position: fixed; z-index: 40;
+  left: 50%; bottom: max(var(--s-4), env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  width: max-content; max-width: calc(100vw - 2 * var(--gutter));
+  margin: 0;
+  padding: var(--s-3) var(--s-4);
+  border-radius: var(--r-pill);
+  background: var(--ink); color: var(--page);
+  box-shadow: var(--shadow-2);
+  font-size: var(--fs-sm); font-weight: var(--fw-semibold); text-align: center;
+  pointer-events: none;       /* never in the way of a tap */
+}
+/* Above the editor's bar at the bottom (its count and Save stay in sight). */
+body:is(.has-edit-bar, :has(#main .action-bar)) .toast { bottom: calc(max(var(--s-2), env(safe-area-inset-bottom)) + var(--bar-h) + var(--s-2)); }
+body.has-edit-bar.keyboard-up .toast { bottom: max(var(--s-4), env(safe-area-inset-bottom)); }
+
+/* ------------------------------------------------------- panels and tiles */
+
+.panels {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr));
+  gap: var(--s-4);
+  align-items: start;
+}
+.panel {
+  min-width: 0;
+  padding: var(--s-4);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-1);
+}
+.panel.wide { grid-column: 1 / -1; }
+.panel > h3 { font-size: var(--fs-lg); }
+.panel .sub { color: var(--ink-2); }
+@media (min-width: 1600px) {
+  .panels { grid-template-columns: repeat(auto-fit, minmax(min(100%, 440px), 1fr)); gap: var(--s-5); }
+  .panel.wide { grid-column: span 2; }
+}
+/* From two columns up (1,000 px: iPad landscape, a MacBook beside the card peek, QHD), a short panel's column
+   takes the next panel that fits, rather than leaving a hole as tall as its taller neighbour. A deck's Stats
+   and Practice panels differ most in height (Land count beside Colour sources), so there each panel spans small
+   rows to its own height (deck.js stackPanels). */
+@media (min-width: 1000px) {
+  .deck-panel .panels.is-stacked { grid-auto-flow: row dense; grid-auto-rows: 8px; row-gap: 0; }   /* deck.js stackPanels */
+}
+/* Four columns on a QHD screen. */
+@media (min-width: 2200px) {
+  .panels { grid-template-columns: repeat(auto-fit, minmax(min(100%, 460px), 1fr)); grid-auto-flow: row dense; }
+}
+
+/* Figures in a row: a label, a big value, a hint. */
+.tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s-2); margin: var(--s-2) 0 var(--s-3); }
+.tiles:has(> .tile:nth-child(2):last-child) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+/* A phone fits two tiles a row: three squeeze their labels to a word a line. */
+@media (max-width: 479px) { .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.tile { padding: var(--s-2) var(--s-3); border-radius: var(--r-md); background: var(--surface-2); min-width: 0; }
+.tile .label { font-size: var(--fs-sm); color: var(--ink-2); font-weight: var(--fw-semibold); display: block; }
+.tile .value { font-size: var(--fs-xl); font-weight: var(--fw-bold); line-height: var(--lh-tight); display: block; font-variant-numeric: tabular-nums; }
+.tile .value .status { font-size: var(--fs-xs); margin-top: var(--s-1); }
+.tile .hint { font-size: var(--fs-sm); color: var(--ink-2); display: block; }
+
+/* ------------------------------------------------------------- data tables */
+
+/* A real table (4.7): rows --row-h tall (36 with a mouse, 44 on touch) with --divider lines, a 30 px sticky
+   header in mono uppercase on --surface-2, and numbers right-aligned (mono in the lab, from 1000 px; words
+   under a number, such as "2 in decks", stay Figtree). The row states are for the page slices to set:
+   tr[data-selected] (with aria-current="true" on its name button), tr[data-match] (rows a choice elsewhere
+   points to, .cell-match on the cell that matches) and tr.group-row (one th spanning the columns, role
+   "rowheader", in a row with role "row"). A .label-row (a card's labels, on a second row under it) isn't a row of
+   its own: it takes no row height, and it and the row it belongs to stay top-aligned and hover together.
+   Component hovers and number sizes are :where()-weighted, so a page's own row state or column size wins. */
+.table-wrap { width: 100%; }
+table.data {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: var(--fs-sm);
+}
+table.data th, table.data td {
+  padding: var(--s-2) 6px;
+  border-bottom: 1px solid var(--divider);
+  text-align: left;
+  vertical-align: top;
+  overflow-wrap: break-word;
+}
+table.data tbody tr:not(.label-row) { height: var(--row-h); }
+table.data tbody tr:not(.label-row):not(:has(+ .label-row)) > :is(td, th) { vertical-align: middle; }
+table.data thead th {
+  position: sticky; top: var(--shell-top); z-index: 1;
+  height: var(--th-h);
+  padding-top: var(--s-1); padding-bottom: var(--s-1);
+  background: var(--surface-2);
+  color: var(--ink-3);
+  font: var(--fw-semibold) var(--fs-th) / var(--lh-tight) var(--font-mono);
+  letter-spacing: var(--ls-th); text-transform: uppercase;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--border-strong);
+  overflow-wrap: normal;
+}
+table.data .num { text-align: right; font-variant-numeric: tabular-nums; }
+/* A words column after a right-aligned number column gets a gutter, so "~A$ EACH" doesn't run into "CONDITION". */
+table.data tr > :where(.num) + :where(th:not(.num), td:not(.num)) { padding-left: var(--s-4); }
+@media (min-width: 1000px) {
+  :where(table.data) td.num { font-family: var(--font-num); font-size: var(--fs-cell-num); }
+  :where(table.data) td.num small { font-family: var(--font); }
+}
+table.data tfoot td, table.data tfoot th { font-weight: var(--fw-bold); border-top: 1px solid var(--border-strong); border-bottom: 0; }
+/* A sortable column's header is a button (aria-sort on the th); its name starts with its visible words. */
+table.data .th-sort {
+  display: inline-flex; align-items: center; gap: var(--s-1);
+  padding: 0; border: 0; background: none; color: inherit; font: inherit; letter-spacing: inherit; text-transform: inherit;
+  vertical-align: middle; cursor: pointer;
+}
+table.data th[aria-sort="ascending"] .th-sort::after { content: "\25B2"; content: "\25B2" / ""; font-size: .8em; }
+table.data th[aria-sort="descending"] .th-sort::after { content: "\25BC"; content: "\25BC" / ""; font-size: .8em; }
+@media (hover: hover) and (pointer: fine) {
+  :where(table.data tbody tr:hover, table.data tbody tr:has(+ .label-row:hover), table.data tbody tr:hover + .label-row) > * { background: var(--hover); }
+}
+table.data tbody tr[data-selected] > * {
+  background: var(--accent-soft);
+  box-shadow: inset 0 1px 0 var(--accent-line), inset 0 -1px 0 var(--accent-line);
+}
+table.data tbody tr[data-selected] > :first-child {
+  box-shadow: inset 2px 0 0 var(--accent), inset 0 1px 0 var(--accent-line), inset 0 -1px 0 var(--accent-line);
+}
+table.data tr[data-selected] [aria-current="true"] { color: var(--accent-strong); }
+table.data tbody tr[data-match] > * { background: var(--accent-soft); }
+table.data .cell-match { color: var(--accent-strong); font-weight: var(--fw-bold); }
+table.data .cell-match::before {
+  content: ""; display: inline-block; width: 7px; height: 7px; margin-right: var(--s-1); vertical-align: middle;
+  border-radius: 50%; background: var(--accent);
+}
+table.data tr.group-row > * {
+  height: var(--th-h);
+  padding-top: var(--s-1); padding-bottom: var(--s-1);
+  background: var(--surface-2);
+  color: var(--ink-2);
+  font-size: var(--fs-group); font-weight: var(--fw-heavy); letter-spacing: var(--ls-caps); text-transform: uppercase;
+  text-align: left;
+}
+table.data tr.group-row .group-count { font-family: var(--font-mono); font-weight: var(--fw-semibold); letter-spacing: 0; }
+/* Unknown data (a condition not recorded): a mono em dash, aria-hidden, beside visually hidden words in an
+   .sr-only span ("Condition not recorded"); never an aria-label on a plain span. */
+.cell-unknown { font-family: var(--font-mono); color: var(--ink-3); }
+
+/* ------------------------------------------------------------------ charts */
+
+.legend { display: flex; flex-wrap: wrap; gap: var(--s-1) var(--s-4); font-size: var(--fs-sm); color: var(--ink-2); margin: var(--s-1) 0 var(--s-2); list-style: none; }
+.legend li { display: inline-flex; align-items: center; gap: var(--s-2); }
+.legend .swatch { width: 12px; height: 12px; border-radius: var(--r-sm); display: inline-block; }
+.legend .swatch-line { width: 2px; height: 14px; border-radius: 1px; background: var(--ink); }
+.legend .swatch-dot { width: 12px; height: 12px; border-radius: 50%; background: var(--series-1); box-shadow: 0 0 0 2px var(--surface); }
+
+.chart { width: 100%; min-height: 40px; }
+.chart svg { display: block; overflow: visible; }
+.chart text { font-family: var(--font); }
+.chart .axis-text { fill: var(--ink-3); font-size: var(--fs-xs); font-variant-numeric: tabular-nums; }
+.chart .cap-text { fill: var(--ink-2); font-size: var(--fs-xs); font-weight: var(--fw-semibold); font-variant-numeric: tabular-nums; }
+.chart .label-text { fill: var(--ink-2); font-size: var(--fs-xs); }
+.chart .grid { stroke: var(--grid); stroke-width: 1; shape-rendering: crispEdges; }
+.chart .base { stroke: var(--baseline); stroke-width: 1; shape-rendering: crispEdges; }
+.chart .seg-1 { fill: var(--series-1); }
+.chart .seg-2 { fill: var(--series-2); }
+.chart .seg-muted { fill: var(--series-muted); }
+.chart .avg { stroke: var(--ink); stroke-width: 1.5; pointer-events: none; }
+.chart .col { cursor: pointer; outline: none; }
+.chart .hover-band { fill: var(--hover); opacity: 0; }
+.chart .col.active .hover-band { opacity: 1; }
+.chart .col:focus-visible .hover-band { opacity: 1; stroke: var(--focus); stroke-width: 2; }
+.chart-detail {
+  min-height: var(--tap);
+  margin-top: var(--s-2);
+  padding: var(--s-2) var(--s-3);
+  border-radius: var(--r-md);
+  background: var(--surface-2);
+  font-size: var(--fs-sm);
+}
+.chart-detail p { margin: 0 0 var(--s-2); }
+.chart-detail p:last-child { margin: 0; }
+.meter { display: block; height: 4px; margin-top: var(--s-1); border-radius: var(--r-pill); background: var(--surface-3); overflow: hidden; }
+.meter > span { display: block; height: 100%; border-radius: var(--r-pill); background: var(--series-1); }
+
+/* --------------------------------------------------------- inline card names */
+
+/* A card's name that opens it big (deck.js openCard). */
+.card-names { display: flex; flex-wrap: wrap; gap: var(--s-1) var(--s-2); list-style: none; }
+.card-link {
+  display: inline-flex; align-items: center;
+  min-height: 32px;
+  padding: 2px var(--s-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit; font-size: var(--fs-sm);
+  text-align: left;
+  cursor: pointer;
+}
+@media (hover: hover) and (pointer: fine) {
+  .card-link:hover { border-color: var(--border-strong); background: var(--hover); }
+}
+.card-link .x { color: var(--ink-3); margin-left: var(--s-1); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.box .card-names { padding-left: 0; margin-top: var(--s-2); }
+/* The two-card combos a Commander deck holds (commander-readiness.js comboFindings): one combo a line. */
+.commander-combos { display: grid; gap: var(--s-1); padding-left: 0; list-style: none; }
+/* A card name in running text (the play guide): a dotted-underline link, not a pill, so the line keeps its height. */
+.card-link.card-link-text {
+  display: inline; min-height: 0; padding: 0; border: 0; border-radius: 0; background: none;
+  font: inherit; color: inherit; text-align: inherit;
+  text-decoration: underline dotted var(--ink-2); text-underline-offset: .2em; text-decoration-thickness: 1px;
+}
+.card-link.card-link-text:hover { background: none; text-decoration-style: solid; color: var(--link); }
+
+/* ----------------------------------------------------------- wide, touch, colours */
+
+/* A QHD window: long boxes of words keep to a width that's easy to read. */
+@media (min-width: 1600px) {
+  .note, .box { max-width: 1400px; }
+}
+
+/* The touch floor (design/visual-design.md 3.3): on a coarse pointer every control and row is at least 44 px,
+   at any width. The size tokens already keep 44 px without a fine pointer; this holds it where a component
+   works its size out (a segment inside its track, a stepper's buttons) or is smaller by design (a card name).
+   It's --tap, so a page that fits a smaller control in on purpose says so by setting --tap (the editor's
+   picture tiles). */
+@media (pointer: coarse) {
+  .btn, .segmented > *, .filter-chip, .stepper .step, .menu > a, .menu > button, .menu > li > a, .menu > li > button,
+  table.data .th-sort, .card-link { min-height: var(--tap); }
+  .btn, .stepper .step { min-width: var(--tap); }
+  .segmented { --seg-pad: 0px; }
+  .card-link.card-link-text { min-height: 0; }
+}
+@media (forced-colors: active) {
+  .chip::before, .status::before, .box-head::before, .note::before,
+  .box-warn::before, .box-stale::before, .box-info::before { forced-color-adjust: none; }
+  .box-warn > .box-head::before, .box-warn::before, .box-stale > .box-head::before, .box-stale::before,
+  .box-info > .box-head::before, .box-info::before,
+  .note:not(.note-crit, .note-good)::before { background: CanvasText; }
+  .box-warn, .box-stale, .box-info { border-color: CanvasText; }
+  .note { border: 1px solid CanvasText; }
+  .meter > span, .progress-fill { background: CanvasText; }
+  .chip, .status, .shopping-badge, .filter-chip { border: 1px solid CanvasText; }
+  .filter-chip[aria-current="page"], .filter-chip[aria-pressed="true"], .filter-chip:has(> input:checked) { border-width: 3px; }
+  .segmented > [aria-pressed="true"], .segmented > [aria-current="page"] {
+    forced-color-adjust: none; background: Highlight; color: HighlightText;
+  }
+  .btn-primary[aria-disabled="true"] { border-color: GrayText; color: GrayText; }
+  table.data tbody tr[data-selected] > :first-child { border-left: 3px solid Highlight; }
+  .id-pip, .deck-stripe, .deck-swatch { forced-color-adjust: none; }
+  .range-track, .flag, .fresh, .swap-verdict { border: 1px solid CanvasText; }
+  .range-point, .range-band, .fresh-icon, .flag-chevron, .activity-ring::after, .run-stop-glyph { forced-color-adjust: none; background: CanvasText; }
+  /* As specific as the theme's own colours for these, which would otherwise be drawn as they are. */
+  .fresh:is(.is-aging, .is-stale, .is-unsaved) .fresh-icon, .range-bar.is-muted .range-point { background: CanvasText; }
+  /* The ring's arc is its top border: kept apart from its track, so it still shows it turning. */
+  .activity-ring { forced-color-adjust: none; border-color: GrayText; border-top-color: Highlight; }
+  .run-ring-arc { stroke: CanvasText; }
+}
+/* Still under reduced motion: one even ring round its dot. */
+@media (forced-colors: active) and (prefers-reduced-motion: reduce) {
+  .activity-ring { border-color: Highlight; }
+}
+
+/* A line of facts joined by "·" (core.js factLine): each fact whole, wrapping only between facts, and never a
+   "·" at the start of a line. Every fact has its dot in front, 1em wide; the inner line is pulled 1em left and
+   the outer one clips it, so the dot of whichever fact starts a line is cut off. */
+.fact-line { display: block; overflow: hidden; }
+.fact-line-in { display: flex; flex-wrap: wrap; align-items: baseline; margin-left: -1em; }
+.fact { white-space: nowrap; min-width: 0; }
+.fact-sep { display: inline-block; width: 1em; text-align: center; }

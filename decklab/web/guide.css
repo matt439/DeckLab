@@ -1,0 +1,21 @@
+/* Playing notes are a readable reference on the phone and QHD desktop. */
+.guide-topics { display: grid; gap: var(--s-3); align-items: start; }
+.guide-topic { min-width: 0; border: 1px solid var(--border-strong); border-radius: var(--r-lg); background: var(--surface); }
+.guide-topic > summary { cursor: pointer; padding: var(--s-4) var(--s-4); min-height: 48px; }
+.guide-topic > summary h3 { display: inline; margin: 0; font-size: var(--fs-md); line-height: 1.5; }
+.guide-topic[open] > summary { border-bottom: 1px solid var(--border); }
+.guide-prose { padding: var(--s-1) var(--s-4) var(--s-4); line-height: 1.65; overflow-wrap: break-word; hyphens: auto; }
+.guide-prose > :last-child { margin-bottom: 0; }
+.guide-prose p { max-width: 72ch; }
+.guide-prose ul, .guide-prose ol { padding-left: 1.35em; max-width: 72ch; }
+.guide-prose li + li { margin-top: .65em; }
+.guide-prose li > ul, .guide-prose li > ol { margin-top: .5em; }
+.guide-prose li p { margin-top: .5em; }
+/* A paragraph and a list next to each other get the same gap as two paragraphs (base.css sets none above). */
+.guide-prose :is(ul, ol) + p, .guide-prose p + :is(ul, ol) { margin-top: var(--s-3); }
+.guide-prose a { overflow-wrap: anywhere; }
+.guide-prose .sym { width: 1em; height: 1em; }
+.guide-stale { margin-bottom: var(--s-3); }
+/* One readable column at every width: the open Game plan, then the folded topics under it (two columns left an
+   open topic's text in a narrow box beside a column of one-line folds). */
+.guide-topics { max-width: 800px; }

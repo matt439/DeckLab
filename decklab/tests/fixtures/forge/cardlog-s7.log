@@ -1,0 +1,258 @@
+Error handling registered!
+15:49:02 [INFO ] GuiBase: ##########################################
+15:49:02 [INFO ] GuiBase: APP: Forge v.2.0.15-SNAPSHOT-09.28
+15:49:02 [INFO ] GuiBase: Java: 26.0.1 (Oracle Corporation)
+15:49:02 [INFO ] GuiBase: OS: Windows 11 10.0 amd64
+15:49:02 [INFO ] GuiBase: RAM: 1024 MB max, 32 CPUs
+15:49:02 [INFO ] GuiBase: ##########################################
+Language 'en-US' loaded successfully.
+(ThreadUtil first call): Running with priority 5
+Lazy card database: indexed 35240 card names from 33980 files in 508 ms
+Lazy card database: indexed 0 card names from 0 files in 0 ms
+Upcoming set Star Trek (TRK) dated in the future. All `upcoming` cards will be added to this set with unknown rarity.
+Upcoming set Star Trek (TRK) dated in the future. All `upcoming` cards will be added to this set with unknown rarity.
+Read cards: 854 files in 0 ms (8 parts) using thread pool
+Simulation mode
+Ai(1)-Gruul Ramp (owned) [Default] vs Ai(2)-Izzet Prowess (owned) [Default] - one game of Constructed seed 7
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::objectFieldOffset has been called by com.google.common.util.concurrent.AbstractFuture$UnsafeAtomicHelper (file:/C:/Tools/forge/forge-gui-desktop-2.0.15-jar-with-dependencies.jar)
+WARNING: Please consider reporting this to the maintainers of class com.google.common.util.concurrent.AbstractFuture$UnsafeAtomicHelper
+WARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release
+Firespitter Whelp Did not have activator set in SpellAbilityRestriction.canPlay()
+Information: DL|log|1
+Information: DL|deck|1|1=Lathliss, Dragon Queen;2=Gnarlback Rhino;3=Karplusan Forest;4=Karplusan Forest;5=Eternal Witness;6=Gruul Guildgate;7=Rampaging Baloths;8=Fierce Empath;9=Terror of Mount Velus;10=Rugged Highlands;11=Rugged Highlands;12=Scavenging Ooze;13=Scavenging Ooze;14=Ravenous Giant;15=Tajuru Pathwarden;16=Temple of Abandon;17=Sakura-Tribe Elder;18=Sakura-Tribe Elder;19=Ruby, Daring Tracker;20=Snakeskin Veil;21=Snakeskin Veil;22=Flame Lash;23=Flame Lash;24=Halana and Alena, Partners;25=Wildheart Invoker;26=Llanowar Elves;27=Llanowar Elves;28=Llanowar Elves;29=Llanowar Elves;30=Quakestrider Ceratops;31=Surrak, the Hunt Caller;32=Forest;33=Forest;34=Forest;35=Forest;36=Forest;37=Forest;38=Forest;39=Forest;40=Forest;41=Druid of the Cowl;42=Clifftop Lookout;43=Savage Ventmaw;44=Garruk's Uprising;45=Rabid Gnaw;46=Rabid Gnaw;47=Pelakka Wurm;48=Mountain;49=Mountain;50=Mountain;51=Mountain;52=Mountain;53=Mountain;54=Mountain;55=Bite Down;56=Bite Down;57=Aggressive Mammoth;58=Quaketusk Boar;59=Quaketusk Boar;60=Fiery Annihilation
+Information: DL|deck|2|67=Bria, Riptide Rogue;68=Tolarian Terror;69=Tolarian Terror;70=Lightning Bolt;71=Lightning Bolt;72=Into the Roil;73=Abrade;74=Abrade;75=Abrade;76=Essence Scatter;77=Think Twice;78=Think Twice;79=Burst Lightning;80=Burst Lightning;81=Burst Lightning;82=Burst Lightning;83=Guttersnipe;84=Counterspell;85=Counterspell;86=Heartfire Immolator;87=Heartfire Immolator;88=Heartfire Immolator;89=Mischievous Mystic;90=Mischievous Mystic;91=Mischievous Mystic;92=Swiftwater Cliffs;93=Swiftwater Cliffs;94=Swiftwater Cliffs;95=Swiftwater Cliffs;96=Shivan Reef;97=Shivan Reef;98=Witness Protection;99=Enigma Drake;100=Scorching Dragonfire;101=Island;102=Island;103=Island;104=Island;105=Island;106=Island;107=Island;108=Charmed Sleep;109=Preordain;110=Preordain;111=Preordain;112=Preordain;113=Mountain;114=Mountain;115=Mountain;116=Mountain;117=Mountain;118=Mountain;119=Mountain;120=Firespitter Whelp;121=Firespitter Whelp;122=Stormcatch Mentor;123=Stormcatch Mentor;124=Coruscation Mage;125=Coruscation Mage;126=Temple of Epiphany
+Information: DL|zone|0|-|-|Library|Hand|1|8|Fierce Empath
+Information: DL|zone|0|-|-|Library|Hand|1|33|Forest
+Information: DL|zone|0|-|-|Library|Hand|1|50|Mountain
+Information: DL|zone|0|-|-|Library|Hand|1|57|Aggressive Mammoth
+Information: DL|zone|0|-|-|Library|Hand|1|31|Surrak, the Hunt Caller
+Information: DL|zone|0|-|-|Library|Hand|1|12|Scavenging Ooze
+Information: DL|zone|0|-|-|Library|Hand|1|46|Rabid Gnaw
+Information: DL|zone|0|-|-|Library|Hand|2|115|Mountain
+Information: DL|zone|0|-|-|Library|Hand|2|87|Heartfire Immolator
+Information: DL|zone|0|-|-|Library|Hand|2|89|Mischievous Mystic
+Information: DL|zone|0|-|-|Library|Hand|2|109|Preordain
+Information: DL|zone|0|-|-|Library|Hand|2|92|Swiftwater Cliffs
+Information: DL|zone|0|-|-|Library|Hand|2|94|Swiftwater Cliffs
+Information: DL|zone|0|-|-|Library|Hand|2|85|Counterspell
+Mulligan: Ai(1)-Gruul Ramp (owned) has kept a hand of 7 cards
+Mulligan: Ai(2)-Izzet Prowess (owned) has kept a hand of 7 cards
+Information: DL|hand|1|start|1|8=Fierce Empath;33=Forest;50=Mountain;57=Aggressive Mammoth;31=Surrak, the Hunt Caller;12=Scavenging Ooze;46=Rabid Gnaw
+Information: DL|hand|1|start|2|115=Mountain;87=Heartfire Immolator;89=Mischievous Mystic;109=Preordain;92=Swiftwater Cliffs;94=Swiftwater Cliffs;85=Counterspell
+Turn: Turn 1 (Ai(1)-Gruul Ramp (owned))
+Information: DL|zone|1|1|MAIN1|Hand|Battlefield|1|33|Forest
+Land: Ai(1)-Gruul Ramp (owned) played Forest (33)
+Turn: Turn 2 (Ai(2)-Izzet Prowess (owned))
+Information: DL|zone|2|2|DRAW|Library|Hand|2|121|Firespitter Whelp
+Information: DL|zone|2|2|MAIN1|Hand|Battlefield|2|115|Mountain
+Land: Ai(2)-Izzet Prowess (owned) played Mountain (115)
+Turn: Turn 3 (Ai(1)-Gruul Ramp (owned))
+Information: DL|zone|3|1|DRAW|Library|Hand|1|54|Mountain
+Information: DL|zone|3|1|MAIN1|Hand|Battlefield|1|50|Mountain
+Land: Ai(1)-Gruul Ramp (owned) played Mountain (50)
+Information: DL|zone|3|1|MAIN2|Hand|Stack|1|12|Scavenging Ooze
+Mana: Forest (33) - {T}: Add {G}.
+Mana: Mountain (50) - {T}: Add {R}.
+Add To Stack: Ai(1)-Gruul Ramp (owned) cast Scavenging Ooze
+Information: DL|zone|3|1|MAIN2|Stack|Battlefield|1|12|Scavenging Ooze
+Resolve Stack: Scavenging Ooze - Creature 2 / 2
+Turn: Turn 4 (Ai(2)-Izzet Prowess (owned))
+Information: DL|zone|4|2|DRAW|Library|Hand|2|100|Scorching Dragonfire
+Replacement Effect: Swiftwater Cliffs enters tapped.
+Information: DL|zone|4|2|MAIN1|Hand|Battlefield|2|92|Swiftwater Cliffs
+Land: Ai(2)-Izzet Prowess (owned) played Swiftwater Cliffs (92)
+Add To Stack: Ai(2)-Izzet Prowess (owned) triggered Swiftwater Cliffs
+Life: Life: Ai(2)-Izzet Prowess (owned) 20 > 21
+Resolve Stack: When Swiftwater Cliffs enters, you gain 1 life. [Zone Changer: Swiftwater Cliffs (92)]
+Turn: Turn 5 (Ai(1)-Gruul Ramp (owned))
+Information: DL|zone|5|1|DRAW|Library|Hand|1|35|Forest
+Information: DL|zone|5|1|MAIN1|Hand|Battlefield|1|54|Mountain
+Land: Ai(1)-Gruul Ramp (owned) played Mountain (54)
+Combat: Ai(1)-Gruul Ramp (owned) assigned Scavenging Ooze (12) to attack Ai(2)-Izzet Prowess (owned).
+Combat: Ai(2)-Izzet Prowess (owned) didn't block Scavenging Ooze (12).
+Damage: Scavenging Ooze (12) deals 2 combat damage to Ai(2)-Izzet Prowess (owned).
+Life: Life: Ai(2)-Izzet Prowess (owned) 21 > 19
+Information: DL|zone|5|1|MAIN2|Hand|Stack|1|8|Fierce Empath
+Mana: Forest (33) - {T}: Add {G}.
+Mana: Mountain (50) - {T}: Add {R}.
+Mana: Mountain (54) - {T}: Add {R}.
+Add To Stack: Ai(1)-Gruul Ramp (owned) cast Fierce Empath
+Information: DL|zone|5|1|MAIN2|Stack|Battlefield|1|8|Fierce Empath
+Resolve Stack: Fierce Empath - Creature 1 / 1
+Add To Stack: Ai(1)-Gruul Ramp (owned) triggered Fierce Empath
+Information: DL|zone|5|1|MAIN2|Library|Hand|1|9|Terror of Mount Velus
+Resolve Stack: When Fierce Empath enters, you may search your library for a creature card with mana value 6 or greater, reveal it, put it into your hand, then shuffle. [Zone Changer: Fierce Empath (8)]
+Turn: Turn 6 (Ai(2)-Izzet Prowess (owned))
+Information: DL|zone|6|2|DRAW|Library|Hand|2|120|Firespitter Whelp
+Replacement Effect: Swiftwater Cliffs enters tapped.
+Information: DL|zone|6|2|MAIN1|Hand|Battlefield|2|94|Swiftwater Cliffs
+Land: Ai(2)-Izzet Prowess (owned) played Swiftwater Cliffs (94)
+Add To Stack: Ai(2)-Izzet Prowess (owned) triggered Swiftwater Cliffs
+Life: Life: Ai(2)-Izzet Prowess (owned) 19 > 20
+Resolve Stack: When Swiftwater Cliffs enters, you gain 1 life. [Zone Changer: Swiftwater Cliffs (94)]
+Information: DL|zone|6|2|COMBAT_DECLARE_ATTACKERS|Hand|Stack|2|100|Scorching Dragonfire
+Mana: Mountain (115) - {T}: Add {R}.
+Mana: Swiftwater Cliffs (92) - {T}: Add {U} or {R}.
+Add To Stack: Ai(2)-Izzet Prowess (owned) cast Scorching Dragonfire targeting [Scavenging Ooze (12)]
+Damage: Scorching Dragonfire (100) deals 3 damage to Scavenging Ooze (12).
+Information: DL|zone|6|2|COMBAT_DECLARE_ATTACKERS|-|Command|2|133|Scorching Dragonfire's Effect
+Resolve Stack: Scorching Dragonfire (100) - Scorching Dragonfire (100) deals 3 damage to Scavenging Ooze (12).  If that creature or planeswalker would die this turn, exile it instead
+Information: DL|zone|6|2|COMBAT_DECLARE_ATTACKERS|Stack|Graveyard|2|100|Scorching Dragonfire
+Information: DL|zone|6|2|COMBAT_DECLARE_ATTACKERS|Battlefield|Exile|1|12|Scavenging Ooze
+Zone Change: Scavenging Ooze (12) was put into Exile from Battlefield.
+Replacement Effect: If that permanent would die this turn, exile it instead.
+Turn: Turn 7 (Ai(1)-Gruul Ramp (owned))
+Information: DL|zone|7|1|DRAW|Library|Hand|1|13|Scavenging Ooze
+Information: DL|zone|7|1|MAIN1|Hand|Battlefield|1|35|Forest
+Land: Ai(1)-Gruul Ramp (owned) played Forest (35)
+Combat: Ai(1)-Gruul Ramp (owned) assigned Fierce Empath (8) to attack Ai(2)-Izzet Prowess (owned).
+Combat: Ai(2)-Izzet Prowess (owned) didn't block Fierce Empath (8).
+Damage: Fierce Empath (8) deals 1 combat damage to Ai(2)-Izzet Prowess (owned).
+Life: Life: Ai(2)-Izzet Prowess (owned) 20 > 19
+Information: DL|zone|7|1|MAIN2|Hand|Stack|1|31|Surrak, the Hunt Caller
+Mana: Forest (33) - {T}: Add {G}.
+Mana: Forest (35) - {T}: Add {G}.
+Mana: Mountain (50) - {T}: Add {R}.
+Mana: Mountain (54) - {T}: Add {R}.
+Add To Stack: Ai(1)-Gruul Ramp (owned) cast Surrak, the Hunt Caller
+Information: DL|zone|7|1|MAIN2|Stack|Battlefield|1|31|Surrak, the Hunt Caller
+Resolve Stack: Surrak, the Hunt Caller - Creature 5 / 4
+Turn: Turn 8 (Ai(2)-Izzet Prowess (owned))
+Information: DL|zone|8|2|DRAW|Library|Hand|2|123|Stormcatch Mentor
+Information: DL|zone|8|2|MAIN1|Hand|Stack|2|123|Stormcatch Mentor
+Mana: Swiftwater Cliffs (92) - {T}: Add {U} or {R}.
+Mana: Mountain (115) - {T}: Add {R}.
+Add To Stack: Ai(2)-Izzet Prowess (owned) cast Stormcatch Mentor
+Information: DL|zone|8|2|MAIN1|Stack|Battlefield|2|123|Stormcatch Mentor
+Resolve Stack: Stormcatch Mentor - Creature 1 / 1
+Information: DL|zone|8|2|MAIN1|Hand|Stack|2|109|Preordain
+Mana: Swiftwater Cliffs (94) - {T}: Add {U} or {R}.
+Add To Stack: Ai(2)-Izzet Prowess (owned) cast Preordain
+Add To Stack: Ai(2)-Izzet Prowess (owned) triggered Stormcatch Mentor
+Resolve Stack: Prowess (Whenever you cast a noncreature spell, this creature gets +1/+1 until end of turn.) [Card: Preordain (109), Activator: Ai(2)-Izzet Prowess (owned), SpellAbility: Scry 2, then draw a card. (To scry 2, look at the top two cards of your library, then put any number of them on the bottom and the rest on top in any order.) ]
+Resolve Stack: Ai(2)-Izzet Prowess (owned) scried 2 card(s) to the bottom of the library
+Information: DL|zone|8|2|MAIN1|Library|Library|2|98|Witness Protection
+Information: DL|zone|8|2|MAIN1|Library|Library|2|78|Think Twice
+Information: DL|zone|8|2|MAIN1|Library|Hand|2|126|Temple of Epiphany
+Resolve Stack: Preordain (109) - Ai(2)-Izzet Prowess (owned) scries 2. Ai(2)-Izzet Prowess (owned) draws a card.
+Information: DL|zone|8|2|MAIN1|Stack|Graveyard|2|109|Preordain
+Replacement Effect: Temple of Epiphany enters tapped.
+Information: DL|zone|8|2|MAIN2|Hand|Battlefield|2|126|Temple of Epiphany
+Land: Ai(2)-Izzet Prowess (owned) played Temple of Epiphany (126)
+Add To Stack: Ai(2)-Izzet Prowess (owned) triggered Temple of Epiphany
+Resolve Stack: Ai(2)-Izzet Prowess (owned) scried 1 card(s) to the top of the library
+Information: DL|zone|8|2|MAIN2|Library|Library|2|102|Island
+Resolve Stack: When Temple of Epiphany enters, scry 1. [Zone Changer: Temple of Epiphany (126)]
+Turn: Turn 9 (Ai(1)-Gruul Ramp (owned))
+Information: DL|zone|9|1|UPKEEP|Hand|Stack|1|46|Rabid Gnaw
+Mana: Mountain (50) - {T}: Add {R}.
+Mana: Mountain (54) - {T}: Add {R}.
+Add To Stack: Ai(1)-Gruul Ramp (owned) cast Rabid Gnaw targeting [Surrak, the Hunt Caller (31)] [Stormcatch Mentor (123)]
+Damage: Surrak, the Hunt Caller (31) deals 6 damage to Stormcatch Mentor (123).
+Resolve Stack: Rabid Gnaw (46) - Surrak, the Hunt Caller (31) gets +1/+1 until end of turn. Then Surrak, the Hunt Caller (31) deals damage equal to its power to Stormcatch Mentor (123).
+Information: DL|zone|9|1|UPKEEP|Stack|Graveyard|1|46|Rabid Gnaw
+Information: DL|zone|9|1|UPKEEP|Battlefield|Graveyard|2|123|Stormcatch Mentor
+Zone Change: Stormcatch Mentor (123) was put into Graveyard from Battlefield.
+Information: DL|zone|9|1|DRAW|Library|Hand|1|45|Rabid Gnaw
+Combat: Ai(1)-Gruul Ramp (owned) assigned Surrak, the Hunt Caller (31) and Fierce Empath (8) to attack Ai(2)-Izzet Prowess (owned).
+Combat: Ai(2)-Izzet Prowess (owned) didn't block Surrak, the Hunt Caller (31).
+Ai(2)-Izzet Prowess (owned) didn't block Fierce Empath (8).
+Damage: Surrak, the Hunt Caller (31) deals 6 combat damage to Ai(2)-Izzet Prowess (owned).
+Damage: Fierce Empath (8) deals 1 combat damage to Ai(2)-Izzet Prowess (owned).
+Life: Life: Ai(2)-Izzet Prowess (owned) 19 > 12
+Information: DL|zone|9|1|MAIN2|Hand|Stack|1|13|Scavenging Ooze
+Mana: Forest (33) - {T}: Add {G}.
+Mana: Forest (35) - {T}: Add {G}.
+Add To Stack: Ai(1)-Gruul Ramp (owned) cast Scavenging Ooze
+Information: DL|zone|9|1|MAIN2|Stack|Battlefield|1|13|Scavenging Ooze
+Resolve Stack: Scavenging Ooze - Creature 2 / 2
+Turn: Turn 10 (Ai(2)-Izzet Prowess (owned))
+Information: DL|zone|10|2|DRAW|Library|Hand|2|102|Island
+Information: DL|zone|10|2|MAIN1|Hand|Battlefield|2|102|Island
+Land: Ai(2)-Izzet Prowess (owned) played Island (102)
+Information: DL|zone|10|2|MAIN2|Hand|Stack|2|121|Firespitter Whelp
+Mana: Mountain (115) - {T}: Add {R}.
+Mana: Island (102) - {T}: Add {U}.
+Mana: Swiftwater Cliffs (92) - {T}: Add {U} or {R}.
+Add To Stack: Ai(2)-Izzet Prowess (owned) cast Firespitter Whelp
+Information: DL|zone|10|2|MAIN2|Stack|Battlefield|2|121|Firespitter Whelp
+Resolve Stack: Firespitter Whelp - Creature 2 / 2
+Information: DL|zone|10|2|MAIN2|Hand|Stack|2|89|Mischievous Mystic
+Mana: Swiftwater Cliffs (94) - {T}: Add {U} or {R}.
+Mana: Temple of Epiphany (126) - {T}: Add {U} or {R}.
+Add To Stack: Ai(2)-Izzet Prowess (owned) cast Mischievous Mystic
+Information: DL|zone|10|2|MAIN2|Stack|Battlefield|2|89|Mischievous Mystic
+Resolve Stack: Mischievous Mystic - Creature 2 / 1
+Turn: Turn 11 (Ai(1)-Gruul Ramp (owned))
+Information: DL|zone|11|1|UPKEEP|Hand|Stack|1|45|Rabid Gnaw
+Mana: Mountain (50) - {T}: Add {R}.
+Mana: Mountain (54) - {T}: Add {R}.
+Add To Stack: Ai(1)-Gruul Ramp (owned) cast Rabid Gnaw targeting [Surrak, the Hunt Caller (31)] [Firespitter Whelp (121)]
+Damage: Surrak, the Hunt Caller (31) deals 6 damage to Firespitter Whelp (121).
+Resolve Stack: Rabid Gnaw (45) - Surrak, the Hunt Caller (31) gets +1/+1 until end of turn. Then Surrak, the Hunt Caller (31) deals damage equal to its power to Firespitter Whelp (121).
+Information: DL|zone|11|1|UPKEEP|Stack|Graveyard|1|45|Rabid Gnaw
+Information: DL|zone|11|1|UPKEEP|Battlefield|Graveyard|2|121|Firespitter Whelp
+Zone Change: Firespitter Whelp (121) was put into Graveyard from Battlefield.
+Information: DL|zone|11|1|DRAW|Library|Hand|1|28|Llanowar Elves
+Add To Stack: Ai(1)-Gruul Ramp (owned) triggered Surrak, the Hunt Caller targeting [Surrak, the Hunt Caller (31)]
+Resolve Stack: Formidable — At the beginning of combat on your turn, if creatures you control have total power 8 or greater, target creature you control gains haste until end of turn. (Targeting: [[Surrak, the Hunt Caller (31)]]) [Phase: Ai(1)-Gruul Ramp (owned)]
+Combat: Ai(1)-Gruul Ramp (owned) assigned Surrak, the Hunt Caller (31), Scavenging Ooze (13) and Fierce Empath (8) to attack Ai(2)-Izzet Prowess (owned).
+Combat: Ai(2)-Izzet Prowess (owned) didn't block Surrak, the Hunt Caller (31).
+Ai(2)-Izzet Prowess (owned) assigned Mischievous Mystic (89) to block Scavenging Ooze (13).
+Ai(2)-Izzet Prowess (owned) didn't block Fierce Empath (8).
+Mana: Forest (33) - {T}: Add {G}.
+Add To Stack: Ai(1)-Gruul Ramp (owned) activated Scavenging Ooze targeting [Firespitter Whelp (121)]
+Information: DL|zone|11|1|COMBAT_DECLARE_BLOCKERS|Graveyard|Exile|2|121|Firespitter Whelp
+Life: Life: Ai(1)-Gruul Ramp (owned) 20 > 21
+Resolve Stack: Scavenging Ooze (13) - Exile Firespitter Whelp (121) from the graveyard. Ai(1)-Gruul Ramp (owned) puts a +1/+1 counter on Scavenging Ooze (13). Ai(1)-Gruul Ramp (owned) gains 1 life.
+Damage: Surrak, the Hunt Caller (31) deals 6 combat damage to Ai(2)-Izzet Prowess (owned).
+Damage: Scavenging Ooze (13) deals 3 damage to Mischievous Mystic (89).
+Damage: Fierce Empath (8) deals 1 combat damage to Ai(2)-Izzet Prowess (owned).
+Damage: Mischievous Mystic (89) deals 2 damage to Scavenging Ooze (13).
+Life: Life: Ai(2)-Izzet Prowess (owned) 12 > 5
+Information: DL|zone|11|1|COMBAT_DAMAGE|Battlefield|Graveyard|2|89|Mischievous Mystic
+Zone Change: Mischievous Mystic (89) was put into Graveyard from Battlefield.
+Information: DL|zone|11|1|MAIN2|Hand|Stack|1|28|Llanowar Elves
+Mana: Forest (35) - {T}: Add {G}.
+Add To Stack: Ai(1)-Gruul Ramp (owned) cast Llanowar Elves
+Information: DL|zone|11|1|MAIN2|Stack|Battlefield|1|28|Llanowar Elves
+Resolve Stack: Llanowar Elves - Creature 1 / 1
+Turn: Turn 12 (Ai(2)-Izzet Prowess (owned))
+Information: DL|zone|12|2|DRAW|Library|Hand|2|80|Burst Lightning
+Information: DL|zone|12|2|DRAW|Hand|Stack|2|80|Burst Lightning
+Mana: Mountain (115) - {T}: Add {R}.
+Mana: Island (102) - {T}: Add {U}.
+Mana: Swiftwater Cliffs (92) - {T}: Add {U} or {R}.
+Mana: Swiftwater Cliffs (94) - {T}: Add {U} or {R}.
+Mana: Temple of Epiphany (126) - {T}: Add {U} or {R}.
+Add To Stack: Ai(2)-Izzet Prowess (owned) cast Burst Lightning targeting [Surrak, the Hunt Caller (31)]
+Damage: Burst Lightning (80) deals 4 damage to Surrak, the Hunt Caller (31).
+Resolve Stack: Burst Lightning (80) - Burst Lightning (80) deals 4 damage to Surrak, the Hunt Caller (31).
+Information: DL|zone|12|2|DRAW|Stack|Graveyard|2|80|Burst Lightning
+Information: DL|zone|12|2|DRAW|Battlefield|Graveyard|1|31|Surrak, the Hunt Caller
+Zone Change: Surrak, the Hunt Caller (31) was put into Graveyard from Battlefield.
+Turn: Turn 13 (Ai(1)-Gruul Ramp (owned))
+Information: DL|zone|13|1|DRAW|Library|Hand|1|2|Gnarlback Rhino
+Combat: Ai(1)-Gruul Ramp (owned) assigned Scavenging Ooze (13), Fierce Empath (8) and Llanowar Elves (28) to attack Ai(2)-Izzet Prowess (owned).
+Combat: Ai(2)-Izzet Prowess (owned) didn't block Scavenging Ooze (13).
+Ai(2)-Izzet Prowess (owned) didn't block Fierce Empath (8).
+Ai(2)-Izzet Prowess (owned) didn't block Llanowar Elves (28).
+Damage: Scavenging Ooze (13) deals 3 combat damage to Ai(2)-Izzet Prowess (owned).
+Damage: Fierce Empath (8) deals 1 combat damage to Ai(2)-Izzet Prowess (owned).
+Damage: Llanowar Elves (28) deals 1 combat damage to Ai(2)-Izzet Prowess (owned).
+Life: Life: Ai(2)-Izzet Prowess (owned) 5 > 0
+Player Control: Ai(1)-Gruul Ramp (owned) has restored control over themself
+Player Control: Ai(2)-Izzet Prowess (owned) has restored control over themself
+Game Outcome: Match Duration 0m : 00s
+Game Outcome: Turn 7
+Game Outcome: Ai(1)-Gruul Ramp (owned) has won because all opponents have lost
+Game Outcome: Ai(2)-Izzet Prowess (owned) has lost because life total reached 0
+Match Result: Ai(1)-Gruul Ramp (owned): 1 Ai(2)-Izzet Prowess (owned): 0 
+Information: DL|hand|13|end|1|57=Aggressive Mammoth;9=Terror of Mount Velus;2=Gnarlback Rhino
+Information: DL|hand|13|end|2|87=Heartfire Immolator;85=Counterspell;120=Firespitter Whelp
+Information: DL|library|13|end|1|46
+Information: DL|library|13|end|2|46
+
+Game Result: Game 1 ended in 1122 ms. Ai(1)-Gruul Ramp (owned) has won!
+

@@ -1,0 +1,193 @@
+/* The Collection page (collection.js): Find cards' filters and tile grid, the Card list's dense table, the
+   add and edit sheet's printing strip, imports and precons. Phone first; it lays shared components out and
+   never restyles them. */
+
+/* Spaces and views, and the Tokens page's space picker. */
+.col-switches { display: flex; flex-wrap: wrap; gap: var(--s-3) var(--s-4); align-items: center; margin: var(--s-2) 0 var(--s-3); }
+.col-spaces, .col-views, .tok-spaces { max-width: 100%; overflow-x: auto; }
+.col-spaces > a, .col-views > a, .tok-spaces > a { white-space: nowrap; }   /* 44 px on touch: components.css's floor */
+.tok-spaces { margin: var(--s-1) 0 var(--s-3); }
+.col-read-only, .tok-read-only, .acc-read-only { margin: 0 0 var(--s-3); }
+.col-message:empty, .col-sheet-message:empty { display: none; }
+.col-message { margin: var(--s-3) 0; }
+.col-message .box { margin: var(--s-2) 0 0; }
+
+/* Find cards: the search across the top, then where the cards are and the card filters; they apply as they
+   change. On a phone the card filters fold behind "Filters (n)". */
+.col-filters { display: flex; flex-direction: column; align-items: stretch; gap: var(--s-3); margin-top: 0; }
+.col-filters input, .col-filters select { width: 100%; min-width: 0; }
+.col-filter-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s-2); }
+.col-availability { max-width: 100%; overflow-x: auto; }
+.col-availability > button { white-space: nowrap; }
+.col-filter-extra { display: none; grid-template-columns: 1fr 1fr; gap: var(--s-3); }
+.col-filters.is-open .col-filter-extra { display: grid; }
+@media (min-width: 600px) {
+  .col-filters { display: grid; grid-template-columns: minmax(0, 1fr); align-items: end; }
+  .col-filter-toggle { display: none; }
+  .col-filter-extra { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) 120px; }
+}
+@media (min-width: 1000px) {
+  .col-filters { grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); grid-template-areas: "q extra" "row row"; }
+  .col-filter-q { grid-area: q; }
+  .col-filter-extra { grid-area: extra; }
+  .col-filter-row { grid-area: row; }
+}
+@media (min-width: 1600px) {
+  .col-filters { grid-template-columns: minmax(0, 760px) minmax(0, 960px); }   /* the search box at most 760 px */
+}
+.col-results[aria-busy="true"] { opacity: .6; transition: opacity .15s; }
+.col-result-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s-2); margin: var(--s-2) 0 var(--s-3); }
+.col-result-head .result-count { margin: 0; }
+.col-pager { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-1); }
+.col-pager-at { padding: 0 var(--s-2); color: var(--ink-2); font-size: var(--fs-sm); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.col-results > .col-pager, .col-row-list > .col-pager { justify-content: center; margin: var(--s-4) 0; }
+.col-row-list > .col-pager:first-child { justify-content: flex-end; margin: 0 0 var(--s-2); }
+/* Two tiles a row on a phone (the card's picture is the tile), about 156 px on wider screens. */
+@media (max-width: 599px) {
+  .col-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* The viewer's words about a card (in the card viewer's text panel). */
+.col-viewer-words { display: flex; flex-direction: column; align-items: flex-start; gap: var(--s-2); }
+.col-viewer-counts { color: var(--ink); font-weight: var(--fw-semibold); }
+.col-viewer-decks a { display: inline-flex; align-items: center; min-height: var(--tap); }
+/* The viewer's text panel is dark in both themes. */
+.viewer-text .col-viewer-counts { color: var(--on-scrim); }
+.viewer-text .col-viewer-note, .viewer-text .col-viewer-decks { color: var(--on-scrim-2); }
+
+/* "Edit copies". */
+.col-copy-rows { display: grid; gap: var(--s-2); }
+.col-copy-edit { color: var(--link); font-size: var(--fs-sm); font-weight: var(--fw-semibold); }
+
+/* The Card list: a toolbar, then the dense table. */
+.col-row-tools .col-row-search { flex: 1 1 260px; }
+.col-row-search input { width: 100%; }
+.col-unrecorded { font-size: var(--fs-sm); }
+.col-table .col-th-pic { width: 52px; }
+.col-table .col-td-pic { padding-top: var(--s-1); padding-bottom: var(--s-1); }
+.col-table .col-th-quantity { width: 64px; }
+.col-table .col-th-price { width: 84px; }
+.col-table td.col-unpriced { color: var(--ink-2); font-weight: normal; }
+.col-price-note { margin-top: var(--s-2); }
+.col-storage { font-size: var(--fs-sm); }
+/* Set condition & language (collection-bulk.js): the button sits on the filter line, before the count; the
+ * sheet's choices are a plain fieldset (disabled while saving), and its summary stands out. */
+.col-bulk-fields { display: grid; gap: var(--s-4); margin: 0; padding: 0; border: 0; min-width: 0; }
+.col-bulk-summary { font-weight: var(--fw-semibold); }
+.col-held { display: block; color: var(--ink-2); font-size: var(--fs-sm); font-weight: normal; line-height: 1.2;
+  white-space: normal; overflow-wrap: anywhere; }
+.col-held-guess { color: var(--warn-text); cursor: help; }
+.col-thumb { display: block; width: 40px; height: 56px; padding: 0; border: 0; background: var(--surface-2); border-radius: var(--r-sm); overflow: hidden; cursor: zoom-in; }
+.col-thumb img { display: block; width: 100%; height: 100%; object-fit: cover; }
+/* Denser rows with a mouse. */
+@media (pointer: fine) {
+  .col-thumb { width: 30px; height: 42px; }
+  .col-table .col-th-pic { width: 42px; }
+  .col-open { min-height: 36px; }
+}
+.col-row-list .table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); overflow: clip; }
+.col-thumb-none { cursor: default; }
+.col-open { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; width: 100%; min-height: var(--tap);
+  padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; justify-content: center; }
+.col-open:hover .col-cell-name { text-decoration: underline; }
+.col-cell-name { font-weight: var(--fw-semibold); color: var(--ink); font-size: var(--fs-md); overflow-wrap: break-word; }
+.col-cell-meta { color: var(--ink-2); font-size: var(--fs-sm); }
+.col-td-name { vertical-align: middle; }
+.col-unknown { color: var(--warn-text); font-weight: var(--fw-bold); }
+.col-td-notes { color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.col-table td.num { vertical-align: middle; font-size: var(--fs-md); font-weight: var(--fw-semibold); }
+.col-cell-note { color: var(--ink-2); font-size: var(--fs-sm); overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow-wrap: anywhere; }
+.col-table .col-wide, .col-table .col-notes { display: none; }
+@media (min-width: 768px) {
+  .col-table .col-wide { display: table-cell; vertical-align: middle; }
+  .col-cell-meta { display: none; }
+  .col-table .col-th-set { width: 18%; }
+  .col-table .col-th-condition { width: 10%; }
+  .col-table .col-th-language { width: 13%; }
+}
+/* The notes get their own column only from 1000px; below it they're a line under the name, so the names
+   don't wrap beside a mostly empty column. */
+@media (min-width: 1000px) {
+  .col-table .col-notes { display: table-cell; vertical-align: middle; }
+  .col-table .col-th-notes { width: 22%; }
+  .col-cell-note { display: none; }
+}
+/* QHD: the list no wider than it needs (not 2,500 px with Copies far from Condition), and a gap between the
+   right-aligned price and Condition (the row's sixth cell). */
+@media (min-width: 1600px) {
+  .col-row-list .table-wrap { max-width: 1400px; }
+  .col-table .col-th-condition, .col-table tbody td:nth-child(6) { padding-left: var(--s-6); }
+}
+
+/* The add and edit sheet. */
+.col-form, .col-fields { display: grid; gap: var(--s-4); }
+.col-sheet-message .box { margin: 0; }
+.col-sheet-picture:empty { display: none; }
+.col-sheet-picture { justify-self: center; }
+.col-sheet-pic { display: block; padding: 0; border: 0; background: none; cursor: zoom-in; border-radius: var(--r-card); overflow: hidden; box-shadow: var(--shadow-img); }
+.col-sheet-pic img { display: block; width: 112px; height: auto; }
+@media (min-width: 600px) { .col-sheet-pic img { width: 146px; } }
+.col-name-row { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--s-2); }
+.col-name-row .field { flex: 1 1 240px; }
+.col-form input[type="text"], .col-form select, .col-reason input, .col-file-field input { width: 100%; }
+.col-strip-area { min-width: 0; }
+.col-strip-tools { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2); margin-bottom: var(--s-2); }
+.col-strip-find { flex: 1 1 180px; }
+.col-strip { display: flex; gap: var(--s-2); overflow-x: auto; padding: var(--s-1) var(--s-1) var(--s-2); scroll-snap-type: x proximity; }
+.col-strip-tile {
+  flex: none; width: 88px; display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: var(--s-1); border: 2px solid transparent; border-radius: var(--r-md); background: none; color: var(--ink);
+  font: inherit; font-size: var(--fs-xs); cursor: pointer; scroll-snap-align: center;
+}
+.col-strip-tile[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
+.col-strip-tile small { color: var(--ink-2); font-size: var(--fs-xs); }
+.col-strip-words { font-variant-numeric: tabular-nums; font-weight: var(--fw-semibold); white-space: nowrap; }
+.col-strip-pic { display: grid; place-items: center; width: 73px; aspect-ratio: 488 / 680; border-radius: var(--r-sm); overflow: hidden; background: var(--surface-2); }
+.col-strip-pic img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.col-strip-none { padding: var(--s-1); text-align: center; color: var(--ink-2); }
+.col-stepper { align-self: flex-start; }
+.col-stepper .col-qty-input { width: 4em; }     /* up to 9,999 copies; the stepper draws the rest (components.css) */
+.col-field-condition .segmented, .col-finish .segmented { max-width: 100%; overflow-x: auto; }
+.col-clash { border: 1px solid var(--border); border-radius: var(--r-md); padding: var(--s-2) var(--s-3); margin: var(--s-3) 0; }
+.col-clash legend { font-weight: var(--fw-semibold); padding: 0 var(--s-1); }
+@media (min-width: 600px) {
+  .col-fields { grid-template-columns: 1fr 1fr; }
+  .col-sheet-picture, .col-field-name, .col-field-printing, .col-field-notes, .col-field-condition, .col-field-finish { grid-column: 1 / -1; }
+}
+
+/* Import. */
+.col-file-field input { padding: var(--s-2); }
+.col-import-summary { margin: var(--s-3) 0; }
+.col-import-problems ul { margin: var(--s-2) 0 0; padding-left: var(--s-4); }
+.col-import-table { max-width: 100%; overflow: auto; max-height: 50vh; margin-top: var(--s-3);
+  border: 1px solid var(--border); border-radius: var(--r-md); }
+.col-import-table table.data { table-layout: auto; }
+.col-import-table table.data thead th { top: 0; }
+.col-import-table td { white-space: nowrap; }
+.col-import-table td:nth-child(3) { white-space: normal; min-width: 140px; }
+.col-import-table tr.col-problem td { background: var(--warn-soft); color: var(--warn-ink); font-weight: var(--fw-semibold); }
+
+/* Precons. */
+.precon-search input, .precon-title input { width: 100%; }
+.precon-list { list-style: none; margin: var(--s-3) 0; padding: 0; display: grid; gap: var(--s-2); }
+@media (min-width: 768px) { .precon-list { grid-template-columns: 1fr 1fr; } }
+.precon-pick { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); width: 100%; min-height: 56px;
+  padding: var(--s-2) var(--s-3); text-align: left; font: inherit; color: inherit; background: var(--surface);
+  border: 1px solid var(--border); border-radius: var(--r-md); cursor: pointer; overflow-wrap: break-word; }
+.precon-pick:hover, .precon-pick:focus-visible { border-color: var(--accent); background: var(--accent-soft); }
+.precon-pick-words { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.precon-pick-words small, .precon-pick-date { color: var(--ink-2); font-size: var(--fs-sm); }
+.precon-pick-date { flex: none; font-variant-numeric: tabular-nums; }
+.precon-meta { margin: 0 0 var(--s-2); }
+.precon-summary { margin: 0 0 var(--s-3); }
+.precon-title { margin-bottom: var(--s-1); }
+.precon-title-note:empty { display: none; }
+.precon-section { margin-top: var(--s-4); }
+.precon-section h3 { font-size: var(--fs-md); margin-bottom: var(--s-2); }
+@media (max-width: 599px) { .precon-tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+
+@media (forced-colors: active) {
+  .col-import-table tr.col-problem td { outline: 1px solid CanvasText; }
+  .precon-pick, .col-strip-tile { border: 1px solid CanvasText; }
+  .col-strip-tile[aria-pressed="true"] { outline: 3px solid Highlight; }
+}

@@ -1,0 +1,191 @@
+Simulation mode
+Ai(1)-Selesnya Rabbits (owned) [Default] vs Ai(2)-Orzhov Vampires (owned) [Default] - 200 games of Constructed seed 310002
+Felling Blow (13) - [Couldn't add to stack, failed to target] - Put a +1/+1 counter on target creature you control. Then that creature deals damage equal to its power to target creature an opponent controls.[[Savannah Lions (35), Savannah Lions (36), Wilt-Leaf Liege (6), Treeguard Duo (9)], [Vampire Nighthawk (91)]]
+java.util.concurrent.TimeoutException
+AI eval thread at timeout:
+java.util.concurrent.TimeoutException
+AI eval thread at timeout:
+java.util.concurrent.TimeoutException
+AI eval thread at timeout:
+Stopping slow match as draw
+java.lang.InterruptedException
+Mulligan: Ai(2)-Orzhov Vampires (owned) has mulliganed down to 6 cards.
+Mulligan: Ai(2)-Orzhov Vampires (owned) has kept a hand of 6 cards
+Mulligan: Ai(1)-Selesnya Rabbits (owned) has kept a hand of 7 cards
+Turn: Turn 1 (Ai(2)-Orzhov Vampires (owned))
+Land: Ai(2)-Orzhov Vampires (owned) played Plains (117)
+Turn: Turn 2 (Ai(1)-Selesnya Rabbits (owned))
+Land: Ai(1)-Selesnya Rabbits (owned) played Plains (47)
+Add To Stack: Ai(1)-Selesnya Rabbits (owned) cast Savannah Lions
+Turn: Turn 3 (Ai(2)-Orzhov Vampires (owned))
+Land: Ai(2)-Orzhov Vampires (owned) played Swamp (82)
+Add To Stack: Ai(2)-Orzhov Vampires (owned) cast Ayli, Eternal Pilgrim
+Turn: Turn 4 (Ai(1)-Selesnya Rabbits (owned))
+Land: Ai(1)-Selesnya Rabbits (owned) played Blossoming Sands (19)
+Add To Stack: Ai(1)-Selesnya Rabbits (owned) triggered Blossoming Sands
+Add To Stack: Ai(1)-Selesnya Rabbits (owned) cast Savannah Lions
+Turn: Turn 5 (Ai(2)-Orzhov Vampires (owned))
+Add To Stack: Ai(2)-Orzhov Vampires (owned) cast Go for the Throat targeting [Savannah Lions (35)]
+Land: Ai(2)-Orzhov Vampires (owned) played Temple of Silence (120)
+Add To Stack: Ai(2)-Orzhov Vampires (owned) triggered Temple of Silence
+Turn: Turn 6 (Ai(1)-Selesnya Rabbits (owned))
+Land: Ai(1)-Selesnya Rabbits (owned) played Blossoming Sands (20)
+Add To Stack: Ai(1)-Selesnya Rabbits (owned) triggered Blossoming Sands
+Turn: Turn 7 (Ai(2)-Orzhov Vampires (owned))
+Add To Stack: Ai(2)-Orzhov Vampires (owned) cast Hero's Downfall targeting [Savannah Lions (36)]
+Turn: Turn 8 (Ai(1)-Selesnya Rabbits (owned))
+Land: Ai(1)-Selesnya Rabbits (owned) played Plains (49)
+Add To Stack: Ai(1)-Selesnya Rabbits (owned) cast Wilt-Leaf Liege
+Turn: Turn 9 (Ai(2)-Orzhov Vampires (owned))
+Add To Stack: Ai(2)-Orzhov Vampires (owned) cast Vampire Nighthawk
+Turn: Turn 10 (Ai(1)-Selesnya Rabbits (owned))
+Land: Ai(1)-Selesnya Rabbits (owned) played Plains (43)
+Add To Stack: Ai(1)-Selesnya Rabbits (owned) cast Treeguard Duo
+Add To Stack: Ai(1)-Selesnya Rabbits (owned) triggered Treeguard Duo targeting [Wilt-Leaf Liege (6)]
+Turn: Turn 11 (Ai(2)-Orzhov Vampires (owned))
+Land: Ai(2)-Orzhov Vampires (owned) played Swamp (79)
+Add To Stack: Ai(2)-Orzhov Vampires (owned) cast Inspiring Overseer
+Add To Stack: Ai(2)-Orzhov Vampires (owned) triggered Inspiring Overseer
+Turn: Turn 12 (Ai(1)-Selesnya Rabbits (owned))
+Add To Stack: Felling Blow (13) - [Couldn't add to stack, failed to target] - Put a +1/+1 counter on target creature you control. Then that creature deals damage equal to its power to target creature an opponent controls.
+Add To Stack: Ai(1)-Selesnya Rabbits (owned) cast Dawnwing Marshal
+Turn: Turn 13 (Ai(2)-Orzhov Vampires (owned))
+Land: Ai(2)-Orzhov Vampires (owned) played Swamp (74)
+Add To Stack: Ai(2)-Orzhov Vampires (owned) cast Ajani's Pridemate
+Add To Stack: Ai(2)-Orzhov Vampires (owned) cast Exsanguinate
+Add To Stack: Ai(2)-Orzhov Vampires (owned) triggered Ajani's Pridemate
+Turn: Turn 14 (Ai(1)-Selesnya Rabbits (owned))
+Land: Ai(1)-Selesnya Rabbits (owned) played Plains (46)
+Add To Stack: Ai(1)-Selesnya Rabbits (owned) cast Prideful Parent
+Add To Stack: Ai(1)-Selesnya Rabbits (owned) triggered Prideful Parent
+Add To Stack: Ai(1)-Selesnya Rabbits (owned) cast Druid of the Spade
+Turn: Turn 15 (Ai(2)-Orzhov Vampires (owned))
+Land: Ai(2)-Orzhov Vampires (owned) played Orzhov Guildgate (69)
+Turn: Turn 16 (Ai(1)-Selesnya Rabbits (owned))
+Add To Stack: Ai(1)-Selesnya Rabbits (owned) cast Mentor of the Meek
+Turn: Turn 17 (Ai(2)-Orzhov Vampires (owned))
+Land: Ai(2)-Orzhov Vampires (owned) played Swamp (76)
+Add To Stack: Ai(2)-Orzhov Vampires (owned) cast Ajani's Pridemate
+Turn: Turn 18 (Ai(1)-Selesnya Rabbits (owned))
+Land: Ai(1)-Selesnya Rabbits (owned) played Plains (41)
+Turn: Turn 19 (Ai(2)-Orzhov Vampires (owned))
+Add To Stack: Ai(2)-Orzhov Vampires (owned) cast Ajani's Pridemate
+Turn: Turn 20 (Ai(1)-Selesnya Rabbits (owned))
+Land: Ai(1)-Selesnya Rabbits (owned) played Forest (31)
+Turn: Turn 21 (Ai(2)-Orzhov Vampires (owned))
+Add To Stack: Ai(2)-Orzhov Vampires (owned) cast Hinterland Sanctifier
+Turn: Turn 22 (Ai(1)-Selesnya Rabbits (owned))
+Land: Ai(1)-Selesnya Rabbits (owned) played Forest (27)
+Turn: Turn 23 (Ai(2)-Orzhov Vampires (owned))
+Add To Stack: Ai(2)-Orzhov Vampires (owned) cast Bloodtithe Collector
+Add To Stack: Ai(2)-Orzhov Vampires (owned) triggered Hinterland Sanctifier
+Add To Stack: Ai(2)-Orzhov Vampires (owned) triggered Ajani's Pridemate
+Add To Stack: Ai(2)-Orzhov Vampires (owned) triggered Ajani's Pridemate
+Add To Stack: Ai(2)-Orzhov Vampires (owned) triggered Ajani's Pridemate
+Turn: Turn 24 (Ai(1)-Selesnya Rabbits (owned))
+Add To Stack: Ai(1)-Selesnya Rabbits (owned) cast Dryad Militant
+Turn: Turn 25 (Ai(2)-Orzhov Vampires (owned))
+Land: Ai(2)-Orzhov Vampires (owned) played Plains (118)
+Turn: Turn 26 (Ai(1)-Selesnya Rabbits (owned))
+Land: Ai(1)-Selesnya Rabbits (owned) played Blossoming Sands (22)
+Add To Stack: Ai(1)-Selesnya Rabbits (owned) triggered Blossoming Sands
+Turn: Turn 27 (Ai(2)-Orzhov Vampires (owned))
+Add To Stack: Ai(2)-Orzhov Vampires (owned) cast Crossway Troublemakers
+Add To Stack: Ai(2)-Orzhov Vampires (owned) triggered Hinterland Sanctifier
+Add To Stack: Ai(2)-Orzhov Vampires (owned) triggered Ajani's Pridemate
+Add To Stack: Ai(2)-Orzhov Vampires (owned) triggered Ajani's Pridemate
+Add To Stack: Ai(2)-Orzhov Vampires (owned) triggered Ajani's Pridemate
+Add To Stack: Ai(2)-Orzhov Vampires (owned) triggered Ajani's Pridemate
+Add To Stack: Ai(2)-Orzhov Vampires (owned) triggered Ajani's Pridemate
+Add To Stack: Ai(2)-Orzhov Vampires (owned) triggered Ajani's Pridemate
+Turn: Turn 28 (Ai(1)-Selesnya Rabbits (owned))
+Add To Stack: Ai(1)-Selesnya Rabbits (owned) cast Burrowguard Mentor
+Turn: Turn 29 (Ai(2)-Orzhov Vampires (owned))
+Add To Stack: Ai(2)-Orzhov Vampires (owned) cast Moment of Craving targeting [Cat Token (133)]
+Add To Stack: Ai(1)-Selesnya Rabbits (owned) activated Dawnwing Marshal
+Add To Stack: Ai(2)-Orzhov Vampires (owned) triggered Ajani's Pridemate
+Add To Stack: Ai(2)-Orzhov Vampires (owned) triggered Ajani's Pridemate
+Add To Stack: Ai(2)-Orzhov Vampires (owned) triggered Ajani's Pridemate
+Turn: Turn 30 (Ai(1)-Selesnya Rabbits (owned))
+Land: Ai(1)-Selesnya Rabbits (owned) played Selesnya Guildgate (3)
+Turn: Turn 31 (Ai(2)-Orzhov Vampires (owned))
+Add To Stack: Ai(2)-Orzhov Vampires (owned) cast Night's Whisper
+Add To Stack: Ai(2)-Orzhov Vampires (owned) cast Vampire Neonate
+Add To Stack: Ai(2)-Orzhov Vampires (owned) triggered Hinterland Sanctifier
+Add To Stack: Ai(2)-Orzhov Vampires (owned) triggered Ajani's Pridemate
+Add To Stack: Ai(2)-Orzhov Vampires (owned) triggered Ajani's Pridemate
+Add To Stack: Ai(2)-Orzhov Vampires (owned) triggered Ajani's Pridemate
+Add To Stack: Ai(2)-Orzhov Vampires (owned) cast Vengeful Bloodwitch
+Add To Stack: Ai(2)-Orzhov Vampires (owned) triggered Hinterland Sanctifier
+Add To Stack: Ai(2)-Orzhov Vampires (owned) triggered Ajani's Pridemate
+Add To Stack: Ai(2)-Orzhov Vampires (owned) triggered Ajani's Pridemate
+Add To Stack: Ai(2)-Orzhov Vampires (owned) triggered Ajani's Pridemate
+Turn: Turn 32 (Ai(1)-Selesnya Rabbits (owned))
+Add To Stack: Ai(1)-Selesnya Rabbits (owned) cast Helpful Hunter
+Add To Stack: Ai(1)-Selesnya Rabbits (owned) triggered Mentor of the Meek
+Add To Stack: Ai(1)-Selesnya Rabbits (owned) triggered Helpful Hunter
+Add To Stack: Ai(1)-Selesnya Rabbits (owned) cast Druid of the Spade
+Add To Stack: Ai(1)-Selesnya Rabbits (owned) cast Carrot Cake
+Add To Stack: Ai(1)-Selesnya Rabbits (owned) triggered Carrot Cake
+Add To Stack: Ai(1)-Selesnya Rabbits (owned) triggered Mentor of the Meek
+Land: Ai(1)-Selesnya Rabbits (owned) played Blossoming Sands (21)
+Add To Stack: Ai(1)-Selesnya Rabbits (owned) triggered Blossoming Sands
+Turn: Turn 33 (Ai(2)-Orzhov Vampires (owned))
+Land: Ai(2)-Orzhov Vampires (owned) played Swamp (78)
+Turn: Turn 34 (Ai(1)-Selesnya Rabbits (owned))
+Add To Stack: Ai(1)-Selesnya Rabbits (owned) cast Burrowguard Mentor
+Add To Stack: Ai(2)-Orzhov Vampires (owned) activated Vampire Neonate
+Add To Stack: Ai(2)-Orzhov Vampires (owned) triggered Ajani's Pridemate
+Add To Stack: Ai(2)-Orzhov Vampires (owned) triggered Ajani's Pridemate
+Add To Stack: Ai(2)-Orzhov Vampires (owned) triggered Ajani's Pridemate
+Turn: Turn 35 (Ai(2)-Orzhov Vampires (owned))
+Land: Ai(2)-Orzhov Vampires (owned) played Plains (119)
+Turn: Turn 36 (Ai(1)-Selesnya Rabbits (owned))
+Add To Stack: Ai(1)-Selesnya Rabbits (owned) cast Treeguard Duo
+Add To Stack: Ai(1)-Selesnya Rabbits (owned) triggered Treeguard Duo targeting [Burrowguard Mentor (25)]
+Add To Stack: Ai(2)-Orzhov Vampires (owned) activated Vampire Neonate
+Add To Stack: Ai(2)-Orzhov Vampires (owned) triggered Ajani's Pridemate
+Add To Stack: Ai(2)-Orzhov Vampires (owned) triggered Ajani's Pridemate
+Add To Stack: Ai(2)-Orzhov Vampires (owned) triggered Ajani's Pridemate
+Turn: Turn 37 (Ai(2)-Orzhov Vampires (owned))
+Land: Ai(2)-Orzhov Vampires (owned) played Plains (113)
+Turn: Turn 38 (Ai(1)-Selesnya Rabbits (owned))
+Land: Ai(1)-Selesnya Rabbits (owned) played Plains (45)
+Add To Stack: Ai(2)-Orzhov Vampires (owned) activated Vampire Neonate
+Add To Stack: Ai(2)-Orzhov Vampires (owned) triggered Ajani's Pridemate
+Add To Stack: Ai(2)-Orzhov Vampires (owned) triggered Ajani's Pridemate
+Add To Stack: Ai(2)-Orzhov Vampires (owned) triggered Ajani's Pridemate
+Turn: Turn 39 (Ai(2)-Orzhov Vampires (owned))
+Add To Stack: Ai(2)-Orzhov Vampires (owned) cast Sun-Blessed Healer
+Add To Stack: Ai(2)-Orzhov Vampires (owned) triggered Hinterland Sanctifier
+Add To Stack: Ai(2)-Orzhov Vampires (owned) triggered Ajani's Pridemate
+Add To Stack: Ai(2)-Orzhov Vampires (owned) triggered Ajani's Pridemate
+Add To Stack: Ai(2)-Orzhov Vampires (owned) triggered Ajani's Pridemate
+Turn: Turn 40 (Ai(1)-Selesnya Rabbits (owned))
+Add To Stack: Ai(2)-Orzhov Vampires (owned) activated Vampire Neonate
+Add To Stack: Ai(2)-Orzhov Vampires (owned) triggered Ajani's Pridemate
+Add To Stack: Ai(2)-Orzhov Vampires (owned) triggered Ajani's Pridemate
+Add To Stack: Ai(2)-Orzhov Vampires (owned) triggered Ajani's Pridemate
+Turn: Turn 41 (Ai(2)-Orzhov Vampires (owned))
+Add To Stack: Ai(2)-Orzhov Vampires (owned) cast Fiendish Panda
+Add To Stack: Ai(2)-Orzhov Vampires (owned) triggered Hinterland Sanctifier
+Add To Stack: Ai(2)-Orzhov Vampires (owned) triggered Ajani's Pridemate
+Add To Stack: Ai(2)-Orzhov Vampires (owned) triggered Ajani's Pridemate
+Add To Stack: Ai(2)-Orzhov Vampires (owned) triggered Ajani's Pridemate
+Add To Stack: Ai(2)-Orzhov Vampires (owned) triggered Fiendish Panda
+Turn: Turn 42 (Ai(1)-Selesnya Rabbits (owned))
+Add To Stack: Ai(1)-Selesnya Rabbits (owned) cast Warren Elder
+Add To Stack: Ai(2)-Orzhov Vampires (owned) activated Vampire Neonate
+Add To Stack: Ai(2)-Orzhov Vampires (owned) triggered Ajani's Pridemate
+Add To Stack: Ai(2)-Orzhov Vampires (owned) triggered Ajani's Pridemate
+Add To Stack: Ai(2)-Orzhov Vampires (owned) triggered Ajani's Pridemate
+Add To Stack: Ai(2)-Orzhov Vampires (owned) triggered Fiendish Panda
+Turn: Turn 43 (Ai(2)-Orzhov Vampires (owned))
+Land: Ai(2)-Orzhov Vampires (owned) played Plains (112)
+Turn: Turn 44 (Ai(1)-Selesnya Rabbits (owned))
+Game Outcome: Match Duration 1m : 59s
+Game Outcome: Turn 22
+Game Outcome: Ai(1)-Selesnya Rabbits (owned) has won because all opponents have lost
+Game Outcome: Ai(2)-Orzhov Vampires (owned) has won because all opponents have lost
+Match Result: Ai(1)-Selesnya Rabbits (owned): 69 Ai(2)-Orzhov Vampires (owned): 85 
+Game Result: Game 154 ended in 120002 ms. Ai(2)-Orzhov Vampires (owned) has won!

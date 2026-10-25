@@ -1,0 +1,88 @@
+/* A deck's History page (history.js): the revisions as cards, newest first, each with its changes inline and
+   the changed cards' pictures; runs of saves without card changes folded into one line. Phone first; only the
+   theme's tokens. From 1600px the pictures sit beside the words, and the column widens. */
+.history-revs { list-style: none; margin: var(--s-4) 0 var(--s-5); padding: 0; display: grid; gap: var(--s-3); }
+.history-rev { min-width: 0; padding: var(--s-3) var(--s-4); border: 1px solid var(--border); border-radius: var(--r-lg);
+  background: var(--surface); box-shadow: var(--shadow-1); }
+.history-text { min-width: 0; }
+.history-headline { display: block; margin: 0; font-size: var(--fs-md); font-weight: var(--fw-semibold);
+  line-height: var(--lh-tight); color: var(--ink); }
+.history-open { min-height: var(--tap); width: 100%; padding: 0; border: 0; background: none; font: inherit;
+  font-weight: var(--fw-semibold); text-align: left; cursor: pointer; text-decoration: underline;
+  text-decoration-color: var(--border-strong); text-underline-offset: 3px; }
+.history-open:hover { text-decoration-color: currentColor; }
+.history-deleted .history-headline { color: var(--crit-ink); }
+.history-meta { display: flex; flex-wrap: wrap; gap: 0 var(--s-2); margin: 0; color: var(--ink-2); font-size: var(--fs-sm); }
+.history-meta > * + *::before { content: "·"; margin-right: var(--s-2); }
+.history-cards, .history-fields { margin: var(--s-2) 0 0; overflow-wrap: break-word; }
+.history-which { font-weight: var(--fw-semibold); }
+.history-fields { color: var(--ink-2); font-size: var(--fs-sm); }
+.history-subject { margin: var(--s-2) 0 0; color: var(--ink-2); font-size: var(--fs-sm); overflow-wrap: break-word;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+.history-pictures { list-style: none; margin: var(--s-3) 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--s-2); }
+.history-pic, .history-pic-more { position: relative; display: block; width: 60px; padding: 0; border: 0; background: none;
+  cursor: pointer; border-radius: var(--r-card); }
+.history-pic img { display: block; width: 60px; height: 84px; border-radius: var(--r-card); box-shadow: var(--shadow-img);
+  background: var(--surface-3); object-fit: cover; }
+.history-delta { position: absolute; left: var(--s-1); bottom: var(--s-1); padding: 0 var(--s-1); border-radius: var(--r-sm);
+  background: var(--badge-bg); color: var(--badge-ink); font-size: var(--fs-xs); font-weight: var(--fw-bold);
+  font-variant-numeric: tabular-nums; white-space: nowrap; }
+/* "+N": the changes the strip doesn't show, opening the revision's sheet. A phone shows 7 pictures and the tile
+   (when there are more than 8 changes); a larger screen its 12 and the tile past them. */
+.history-pic-more { height: 84px; border: 1px dashed var(--border-strong); background: var(--surface-2); color: var(--ink);
+  font: inherit; font-weight: var(--fw-semibold); font-variant-numeric: tabular-nums; }
+.history-pic-more:hover { background: var(--surface-3); }
+.history-fold > details { padding: 0 var(--s-4); border: 1px dashed var(--border-strong); border-radius: var(--r-lg);
+  background: var(--surface-2); }
+.history-fold summary { min-height: var(--tap); display: flex; align-items: center; gap: var(--s-2); color: var(--ink-2);
+  font-size: var(--fs-sm); font-weight: var(--fw-semibold); }
+.history-folded { list-style: none; margin: 0 0 var(--s-2); padding: 0; }
+.history-folded-row { display: grid; gap: 2px; width: 100%; min-height: var(--tap); padding: var(--s-2) 0; border: 0;
+  border-top: 1px solid var(--border); background: none; font: inherit; color: var(--ink); text-align: left; cursor: pointer; }
+.history-folded-row:hover { background: var(--surface-3); }
+.history-folded-row .history-subject { margin: 0; color: var(--ink); }
+.history-more { color: var(--ink-2); font-size: var(--fs-sm); }
+.history-rows { border-top: 1px solid var(--border); }
+.history-rows .card-row { grid-template-columns: 40px 4.5em minmax(0, 1fr) auto; }
+.history-rows .card-row .qty { white-space: nowrap; }
+.history-row-text { margin: 0; padding: var(--s-2); border-bottom: 1px solid var(--border); }
+.history-field-list { margin: 0; padding-left: var(--s-5); overflow-wrap: break-word; }
+.history-field-list li + li { margin-top: var(--s-1); }
+.history-compare { margin-top: var(--s-4); }
+.history-compare > summary { min-height: var(--tap); display: flex; align-items: center; gap: var(--s-2);
+  font-weight: var(--fw-semibold); }
+@media (max-width: 599px) {
+  /* Two rows on a phone: 7 pictures and the "+N" tile when there are more; the sheet has them all. */
+  .history-pictures-cut > li:nth-child(n+8):not(.history-pic-more-item) { display: none; }
+  .history-pictures > li:nth-child(n+9):not(.history-pic-more-item) { display: none; }
+  .history-pic-more-item:not(.on-phone) { display: none; }
+  .history-pic-more-item .history-more-wide { display: none; }
+}
+@media (min-width: 600px) {
+  .history-rev { padding: var(--s-4) var(--s-5); }
+  .history-pic, .history-pic img, .history-pic-more { width: 72px; }
+  .history-pic img, .history-pic-more { height: 100px; }
+  .history-pic-more-item:not(.on-wide) { display: none; }
+  .history-pic-more-item .history-more-phone { display: none; }
+}
+@media (min-width: 1000px) {
+  .history-revs, .history-more, .history-revs + .empty { max-width: 960px; }
+}
+@media (min-width: 1600px) {
+  /* QHD: the words on the left and the pictures beside them, so a revision is one band rather than a tall card. */
+  .history-revs, .history-more { max-width: 1480px; }
+  .history-rev.has-pictures { display: grid; grid-template-columns: minmax(320px, 1fr) minmax(0, 1.25fr);
+    gap: var(--s-5); align-items: start; }
+  .history-rev.has-pictures .history-pictures { margin-top: 0; }
+  .history-pic, .history-pic img, .history-pic-more { width: 88px; }
+  .history-pic img, .history-pic-more { height: 123px; }
+}
+/* Laid out by history.js historyFitStrip: one row of tiles at their size, as many pictures as fit and the "+N"
+   tile last. It overrides the phone's two rows above (its rules are as specific, and come first). */
+.history-pictures.history-fit { flex-wrap: nowrap; overflow: hidden; contain: inline-size; }
+.history-pictures.history-fit > li { flex: none; }
+.history-pictures.history-fit > li:not([hidden]) { display: block; }
+@media (forced-colors: active) {
+  .history-rev, .history-fold > details, .history-pic-more { border: 1px solid CanvasText; }
+  .history-delta { forced-color-adjust: none; }
+}

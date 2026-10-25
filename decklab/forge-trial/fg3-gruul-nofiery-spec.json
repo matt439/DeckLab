@@ -1,0 +1,22 @@
+{
+ "name": "fg3-gruul-nofiery",
+ "games": 2800,
+ "pairs": [
+  ["casual/gruul-ramp", "casual/the-free-peoples"],
+  ["casual/gruul-ramp", "casual/izzet-prowess"]
+ ],
+ "arms": {
+  "c4-nofiery": {
+   "pilots": {"casual/gruul-ramp": {"profile": "Default", "switches": ["etb-harmless-1"]}},
+   "overrides": ["remove"],
+   "replace_adopted": true
+  },
+  "nofiery": {
+   "overrides": ["remove"],
+   "replace_adopted": true
+  }
+ },
+ "cards": {
+  "Fiery Annihilation": {"cast_target": null, "turn_target": null}
+ }
+}

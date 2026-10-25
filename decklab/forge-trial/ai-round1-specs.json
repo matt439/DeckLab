@@ -1,0 +1,321 @@
+{
+  "decision-log-e5.json": {
+    "forge_decision_log": [
+      "Pearl of Wisdom",
+      "Preordain",
+      "Burst Lightning",
+      "Flame Lash"
+    ]
+  },
+  "e1-ai-r1-etb-tfp.json": {
+    "name": "ai-r1-etb-tfp",
+    "games": 2800,
+    "pairs": [
+      [
+        "casual/the-free-peoples",
+        "casual/izzet-prowess"
+      ],
+      [
+        "casual/the-free-peoples",
+        "casual/gruul-ramp"
+      ]
+    ],
+    "control": {},
+    "arms": {
+      "etb-tfp": {
+        "overrides": [
+          "etb-tfp"
+        ]
+      },
+      "etb-tfp-jailer": {
+        "overrides": [
+          "etb-tfp",
+          "etb-tfp-jailer"
+        ]
+      }
+    },
+    "cards": {
+      "Fires of Mount Doom": {
+        "cast_target": null,
+        "turn_target": null
+      },
+      "Éowyn, Fearless Knight": {
+        "cast_target": null,
+        "turn_target": null
+      },
+      "Samwise the Stouthearted": {
+        "cast_target": null,
+        "turn_target": null
+      },
+      "Palace Jailer": {
+        "cast_target": null,
+        "turn_target": null
+      }
+    }
+  },
+  "e2-ai-r1-cmdr-hints.json": {
+    "name": "ai-r1-cmdr-hints",
+    "games": 1600,
+    "pairs": [
+      [
+        "commander/finneas-rabbits",
+        "commander/gandalf-and-the-valley"
+      ]
+    ],
+    "control": {},
+    "arms": {
+      "cmdr-hints": {
+        "overrides": [
+          "cmdr-hints"
+        ]
+      }
+    },
+    "cards": {
+      "Primal Might": {
+        "cast_target": 0.6,
+        "turn_target": null
+      }
+    }
+  },
+  "e3-ai-r1-removal-in-combat.json": {
+    "name": "ai-r1-removal-in-combat",
+    "games": 1600,
+    "pairs": [
+      [
+        "casual/the-free-peoples",
+        "casual/izzet-prowess"
+      ],
+      [
+        "casual/the-free-peoples",
+        "casual/gruul-ramp"
+      ]
+    ],
+    "control": {
+      "results_dir": "C:/VSProjects/TradingCardCollection/decklab/data/forge/experiments/ai-r1-etb-tfp/control",
+      "logs_dir": "C:/VSProjects/TradingCardCollection/decklab/data/forge/experiments/ai-r1-etb-tfp/logs/control"
+    },
+    "arms": {
+      "removal-in-combat-1": {
+        "pilots": {
+          "casual/the-free-peoples": {
+            "profile": "Default",
+            "switches": [
+              "removal-in-combat-1"
+            ]
+          }
+        }
+      }
+    },
+    "cards": {
+      "You Cannot Pass!": {
+        "cast_target": null,
+        "turn_target": null
+      },
+      "Swords to Plowshares": {
+        "cast_target": null,
+        "turn_target": null
+      },
+      "Path to Exile": {
+        "cast_target": null,
+        "turn_target": null
+      }
+    }
+  },
+  "e3m-ai-r1-removal-in-combat-mirror.json": {
+    "name": "ai-r1-removal-in-combat-mirror",
+    "games": 3200,
+    "pairs": [
+      [
+        "casual/the-free-peoples",
+        "casual/the-free-peoples"
+      ]
+    ],
+    "control": {},
+    "arms": {
+      "removal-in-combat-1": {
+        "pilots": {
+          "casual/the-free-peoples": {
+            "profile": "Default",
+            "switches": [
+              "removal-in-combat-1"
+            ]
+          }
+        },
+        "sides": "a"
+      }
+    },
+    "cards": {
+      "You Cannot Pass!": {
+        "cast_target": null,
+        "turn_target": null
+      },
+      "Swords to Plowshares": {
+        "cast_target": null,
+        "turn_target": null
+      },
+      "Path to Exile": {
+        "cast_target": null,
+        "turn_target": null
+      }
+    }
+  },
+  "e4-ai-r1-etb-harmless.json": {
+    "name": "ai-r1-etb-harmless",
+    "games": 2800,
+    "pairs": [
+      [
+        "casual/the-free-peoples",
+        "casual/izzet-prowess"
+      ],
+      [
+        "casual/the-free-peoples",
+        "casual/gruul-ramp"
+      ],
+      [
+        "casual/izzet-prowess",
+        "casual/gruul-ramp"
+      ]
+    ],
+    "control": {
+      "results_dir": "C:/VSProjects/TradingCardCollection/decklab/data/forge/experiments/ai-r1-etb-tfp/control",
+      "logs_dir": "C:/VSProjects/TradingCardCollection/decklab/data/forge/experiments/ai-r1-etb-tfp/logs/control"
+    },
+    "arms": {
+      "etb-harmless-tfp": {
+        "pilots": {
+          "casual/the-free-peoples": {
+            "profile": "Default",
+            "switches": [
+              "etb-harmless-1"
+            ]
+          }
+        }
+      },
+      "etb-harmless-ref": {
+        "pilots": {
+          "casual/gruul-ramp": {
+            "profile": "Default",
+            "switches": [
+              "etb-harmless-1"
+            ]
+          }
+        }
+      },
+      "etb-harmless-izzet-nofiery": {
+        "pilots": {
+          "casual/izzet-prowess": {
+            "profile": "Default",
+            "switches": [
+              "etb-harmless-1"
+            ]
+          }
+        },
+        "overrides": [
+          "remove"
+        ],
+        "replace_adopted": true
+      }
+    },
+    "cards": {
+      "Fires of Mount Doom": {
+        "cast_target": null,
+        "turn_target": null
+      },
+      "Samwise the Stouthearted": {
+        "cast_target": null,
+        "turn_target": null
+      },
+      "Fiery Annihilation": {
+        "cast_target": null,
+        "turn_target": null
+      }
+    }
+  },
+  "e5-ai-r1-prowess.json": {
+    "name": "ai-r1-prowess",
+    "games": 1600,
+    "pairs": [
+      [
+        "casual/izzet-prowess",
+        "casual/the-free-peoples"
+      ],
+      [
+        "casual/izzet-prowess",
+        "casual/gruul-ramp"
+      ]
+    ],
+    "control": {},
+    "arms": {
+      "prowess-precombat-1": {
+        "pilots": {
+          "casual/izzet-prowess": {
+            "profile": "Default",
+            "switches": [
+              "prowess-precombat-1"
+            ]
+          }
+        }
+      }
+    },
+    "cards": {
+      "Pearl of Wisdom": {
+        "cast_target": null,
+        "turn_target": null
+      },
+      "Preordain": {
+        "cast_target": null,
+        "turn_target": null
+      },
+      "Burst Lightning": {
+        "cast_target": null,
+        "turn_target": null
+      },
+      "Flame Lash": {
+        "cast_target": null,
+        "turn_target": null
+      }
+    }
+  },
+  "e5m-ai-r1-prowess-mirror.json": {
+    "name": "ai-r1-prowess-mirror",
+    "games": 3200,
+    "pairs": [
+      [
+        "casual/izzet-prowess",
+        "casual/izzet-prowess"
+      ]
+    ],
+    "control": {},
+    "arms": {
+      "prowess-precombat-1": {
+        "pilots": {
+          "casual/izzet-prowess": {
+            "profile": "Default",
+            "switches": [
+              "prowess-precombat-1"
+            ]
+          }
+        },
+        "sides": "a"
+      }
+    },
+    "cards": {
+      "Pearl of Wisdom": {
+        "cast_target": null,
+        "turn_target": null
+      },
+      "Preordain": {
+        "cast_target": null,
+        "turn_target": null
+      },
+      "Burst Lightning": {
+        "cast_target": null,
+        "turn_target": null
+      },
+      "Flame Lash": {
+        "cast_target": null,
+        "turn_target": null
+      }
+    }
+  }
+}

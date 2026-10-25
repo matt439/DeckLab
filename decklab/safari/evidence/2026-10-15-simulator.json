@@ -1,0 +1,652 @@
+{
+  "schema_version": 1,
+  "run_id": "20261015T051426Z-59b4e5",
+  "coverage": "Simulator",
+  "physical_device_acceptance": false,
+  "started_at": "2026-10-15T05:14:26.388820+00:00",
+  "finished_at": "2026-10-15T05:46:29.584149+00:00",
+  "source": {
+    "revision": "62c0dbd8fd21670db2e91645670088da669a0c27",
+    "dirty": false
+  },
+  "exit_code": 0,
+  "checks_passed": 60,
+  "checks_failed": 0,
+  "unavailable_configurations": 0,
+  "environment": {
+    "host": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+    "xcode": "Xcode 27.0\nBuild version 27A266a",
+    "python": "3.14.8",
+    "node": "v24.14.0",
+    "npm": "11.9.0",
+    "appium": "3.4.2",
+    "xcuitest": "10.43.0",
+    "macos_build": "25G83",
+    "runtime": {
+      "identifier": "com.apple.CoreSimulator.SimRuntime.iOS-27-0",
+      "name": "iOS 27.0",
+      "version": "27.0",
+      "buildversion": "24A434"
+    }
+  },
+  "unit_verification": {
+    "windows_focused_tests_passed": 246,
+    "mac_harness_tests_passed": 100
+  },
+  "matrix": [
+    {
+      "requested_model": "iPhone 15 Pro",
+      "model": "iPhone 15 Pro",
+      "device_type": "com.apple.CoreSimulator.SimDeviceType.iPhone-15-Pro",
+      "runtime": "com.apple.CoreSimulator.SimRuntime.iOS-27-0",
+      "os_version": "27.0",
+      "orientation": "PORTRAIT",
+      "status": "passed",
+      "checks": [
+        {
+          "name": "device.native_and_viewport_orientation",
+          "status": "passed",
+          "seconds": 11.43
+        },
+        {
+          "name": "receipt.initial_viewport",
+          "status": "passed",
+          "seconds": 8.93
+        },
+        {
+          "name": "receipt.image_swipe_exactly_one",
+          "status": "passed",
+          "seconds": 8.04
+        },
+        {
+          "name": "receipt.margin_swipe_exactly_one",
+          "status": "passed",
+          "seconds": 7.32
+        },
+        {
+          "name": "receipt.vertical_scroll_keeps_card_and_route",
+          "status": "passed",
+          "seconds": 5.99
+        },
+        {
+          "name": "card_viewer.native_swipes",
+          "status": "passed",
+          "seconds": 6.15
+        },
+        {
+          "name": "editor.keyboard_save_persistence_history",
+          "status": "passed",
+          "seconds": 23.96
+        },
+        {
+          "name": "safari.native_share_add_home_screen",
+          "status": "passed",
+          "seconds": 36.62
+        },
+        {
+          "name": "standalone.visible_safe_areas",
+          "status": "passed",
+          "seconds": 0.03
+        },
+        {
+          "name": "version.stale_detection_reload",
+          "status": "passed",
+          "seconds": 37.04
+        }
+      ],
+      "viewport": {
+        "width": 393,
+        "height": 695
+      },
+      "editor_save": {
+        "editor_mode": "quick",
+        "count_before": 52,
+        "count_saved": 53,
+        "software_keyboard": {
+          "y": 567,
+          "x": 0,
+          "width": 393,
+          "height": 227
+        },
+        "native_save": {
+          "y": 398,
+          "x": 289,
+          "width": 88,
+          "height": 44
+        }
+      },
+      "standalone_safe_areas": {
+        "viewport": {
+          "left": 0,
+          "top": 0,
+          "width": 393,
+          "height": 793,
+          "right": 393,
+          "bottom": 793
+        },
+        "safe_area_insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 34,
+          "left": 0
+        }
+      },
+      "home_icon_activation": "native element click",
+      "version_case_fresh_safari_process": true
+    },
+    {
+      "requested_model": "iPhone 15 Pro",
+      "model": "iPhone 15 Pro",
+      "device_type": "com.apple.CoreSimulator.SimDeviceType.iPhone-15-Pro",
+      "runtime": "com.apple.CoreSimulator.SimRuntime.iOS-27-0",
+      "os_version": "27.0",
+      "orientation": "LANDSCAPE",
+      "status": "passed",
+      "checks": [
+        {
+          "name": "device.native_and_viewport_orientation",
+          "status": "passed",
+          "seconds": 25.34
+        },
+        {
+          "name": "receipt.initial_viewport",
+          "status": "passed",
+          "seconds": 29.92
+        },
+        {
+          "name": "receipt.image_swipe_exactly_one",
+          "status": "passed",
+          "seconds": 31.78
+        },
+        {
+          "name": "receipt.margin_swipe_exactly_one",
+          "status": "passed",
+          "seconds": 29.95
+        },
+        {
+          "name": "receipt.vertical_scroll_keeps_card_and_route",
+          "status": "passed",
+          "seconds": 25.86
+        },
+        {
+          "name": "card_viewer.native_swipes",
+          "status": "passed",
+          "seconds": 26.78
+        },
+        {
+          "name": "editor.keyboard_save_persistence_history",
+          "status": "passed",
+          "seconds": 99.93
+        },
+        {
+          "name": "safari.native_share_add_home_screen",
+          "status": "passed",
+          "seconds": 83.2
+        },
+        {
+          "name": "standalone.visible_safe_areas",
+          "status": "passed",
+          "seconds": 0.03
+        },
+        {
+          "name": "version.stale_detection_reload",
+          "status": "passed",
+          "seconds": 43.0
+        }
+      ],
+      "viewport": {
+        "width": 852,
+        "height": 283
+      },
+      "editor_save": {
+        "editor_mode": "quick",
+        "count_before": 52,
+        "count_saved": 53,
+        "software_keyboard": {
+          "y": 222,
+          "x": 75,
+          "width": 702,
+          "height": 168
+        },
+        "native_save": {
+          "y": 94,
+          "x": 670,
+          "width": 88,
+          "height": 44
+        }
+      },
+      "standalone_safe_areas": {
+        "viewport": {
+          "left": 0,
+          "top": 0,
+          "width": 852,
+          "height": 334,
+          "right": 852,
+          "bottom": 334
+        },
+        "safe_area_insets": {
+          "top": 0,
+          "right": 59,
+          "bottom": 20,
+          "left": 59
+        }
+      },
+      "home_icon_activation": "native element click",
+      "version_case_fresh_safari_process": true
+    },
+    {
+      "requested_model": "iPhone 17 Pro",
+      "model": "iPhone 17 Pro",
+      "device_type": "com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro",
+      "runtime": "com.apple.CoreSimulator.SimRuntime.iOS-27-0",
+      "os_version": "27.0",
+      "orientation": "PORTRAIT",
+      "status": "passed",
+      "checks": [
+        {
+          "name": "device.native_and_viewport_orientation",
+          "status": "passed",
+          "seconds": 11.58
+        },
+        {
+          "name": "receipt.initial_viewport",
+          "status": "passed",
+          "seconds": 8.64
+        },
+        {
+          "name": "receipt.image_swipe_exactly_one",
+          "status": "passed",
+          "seconds": 7.02
+        },
+        {
+          "name": "receipt.margin_swipe_exactly_one",
+          "status": "passed",
+          "seconds": 6.9
+        },
+        {
+          "name": "receipt.vertical_scroll_keeps_card_and_route",
+          "status": "passed",
+          "seconds": 6.14
+        },
+        {
+          "name": "card_viewer.native_swipes",
+          "status": "passed",
+          "seconds": 6.72
+        },
+        {
+          "name": "editor.keyboard_save_persistence_history",
+          "status": "passed",
+          "seconds": 22.62
+        },
+        {
+          "name": "safari.native_share_add_home_screen",
+          "status": "passed",
+          "seconds": 52.69
+        },
+        {
+          "name": "standalone.visible_safe_areas",
+          "status": "passed",
+          "seconds": 0.1
+        },
+        {
+          "name": "version.stale_detection_reload",
+          "status": "passed",
+          "seconds": 42.17
+        }
+      ],
+      "viewport": {
+        "width": 402,
+        "height": 714
+      },
+      "editor_save": {
+        "editor_mode": "quick",
+        "count_before": 52,
+        "count_saved": 53,
+        "software_keyboard": {
+          "y": 589,
+          "x": 0,
+          "width": 402,
+          "height": 227
+        },
+        "native_save": {
+          "y": 420,
+          "x": 298,
+          "width": 88,
+          "height": 44
+        }
+      },
+      "standalone_safe_areas": {
+        "viewport": {
+          "left": 0,
+          "top": 0,
+          "width": 402,
+          "height": 812,
+          "right": 402,
+          "bottom": 812
+        },
+        "safe_area_insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 34,
+          "left": 0
+        }
+      },
+      "home_icon_activation": "native element click",
+      "version_case_fresh_safari_process": true
+    },
+    {
+      "requested_model": "iPhone 17 Pro",
+      "model": "iPhone 17 Pro",
+      "device_type": "com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro",
+      "runtime": "com.apple.CoreSimulator.SimRuntime.iOS-27-0",
+      "os_version": "27.0",
+      "orientation": "LANDSCAPE",
+      "status": "passed",
+      "checks": [
+        {
+          "name": "device.native_and_viewport_orientation",
+          "status": "passed",
+          "seconds": 12.63
+        },
+        {
+          "name": "receipt.initial_viewport",
+          "status": "passed",
+          "seconds": 25.26
+        },
+        {
+          "name": "receipt.image_swipe_exactly_one",
+          "status": "passed",
+          "seconds": 25.48
+        },
+        {
+          "name": "receipt.margin_swipe_exactly_one",
+          "status": "passed",
+          "seconds": 25.09
+        },
+        {
+          "name": "receipt.vertical_scroll_keeps_card_and_route",
+          "status": "passed",
+          "seconds": 19.84
+        },
+        {
+          "name": "card_viewer.native_swipes",
+          "status": "passed",
+          "seconds": 26.87
+        },
+        {
+          "name": "editor.keyboard_save_persistence_history",
+          "status": "passed",
+          "seconds": 100.1
+        },
+        {
+          "name": "safari.native_share_add_home_screen",
+          "status": "passed",
+          "seconds": 83.1
+        },
+        {
+          "name": "standalone.visible_safe_areas",
+          "status": "passed",
+          "seconds": 0.03
+        },
+        {
+          "name": "version.stale_detection_reload",
+          "status": "passed",
+          "seconds": 43.3
+        }
+      ],
+      "viewport": {
+        "width": 874,
+        "height": 292
+      },
+      "editor_save": {
+        "editor_mode": "quick",
+        "count_before": 52,
+        "count_saved": 53,
+        "software_keyboard": {
+          "y": 231,
+          "x": 75,
+          "width": 724,
+          "height": 168
+        },
+        "native_save": {
+          "y": 102,
+          "x": 686,
+          "width": 88,
+          "height": 46
+        }
+      },
+      "standalone_safe_areas": {
+        "viewport": {
+          "left": 0,
+          "top": 0,
+          "width": 874,
+          "height": 340,
+          "right": 874,
+          "bottom": 340
+        },
+        "safe_area_insets": {
+          "top": 0,
+          "right": 62,
+          "bottom": 20,
+          "left": 62
+        }
+      },
+      "home_icon_activation": "native element click",
+      "version_case_fresh_safari_process": true
+    },
+    {
+      "requested_model": "11-inch iPad",
+      "model": "iPad Air 11-inch (M2)",
+      "device_type": "com.apple.CoreSimulator.SimDeviceType.iPad-Air-11-inch-M2",
+      "runtime": "com.apple.CoreSimulator.SimRuntime.iOS-27-0",
+      "os_version": "27.0",
+      "orientation": "PORTRAIT",
+      "status": "passed",
+      "checks": [
+        {
+          "name": "device.native_and_viewport_orientation",
+          "status": "passed",
+          "seconds": 21.14
+        },
+        {
+          "name": "receipt.initial_viewport",
+          "status": "passed",
+          "seconds": 15.61
+        },
+        {
+          "name": "receipt.image_swipe_exactly_one",
+          "status": "passed",
+          "seconds": 14.09
+        },
+        {
+          "name": "receipt.margin_swipe_exactly_one",
+          "status": "passed",
+          "seconds": 12.73
+        },
+        {
+          "name": "receipt.vertical_scroll_keeps_card_and_route",
+          "status": "passed",
+          "seconds": 11.98
+        },
+        {
+          "name": "card_viewer.native_swipes",
+          "status": "passed",
+          "seconds": 9.26
+        },
+        {
+          "name": "editor.keyboard_save_persistence_history",
+          "status": "passed",
+          "seconds": 24.26
+        },
+        {
+          "name": "safari.native_share_add_home_screen",
+          "status": "passed",
+          "seconds": 34.78
+        },
+        {
+          "name": "standalone.visible_safe_areas",
+          "status": "passed",
+          "seconds": 0.11
+        },
+        {
+          "name": "version.stale_detection_reload",
+          "status": "passed",
+          "seconds": 43.49
+        }
+      ],
+      "viewport": {
+        "width": 820,
+        "height": 1048
+      },
+      "editor_save": {
+        "editor_mode": "full",
+        "count_before": 52,
+        "count_saved": 53,
+        "software_keyboard": {
+          "y": 898,
+          "x": 0,
+          "width": 820,
+          "height": 279
+        },
+        "native_save": {
+          "y": 779,
+          "x": 674,
+          "width": 89,
+          "height": 44
+        }
+      },
+      "standalone_safe_areas": {
+        "viewport": {
+          "left": 0,
+          "top": 0,
+          "width": 820,
+          "height": 1148,
+          "right": 820,
+          "bottom": 1148
+        },
+        "safe_area_insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 20,
+          "left": 0
+        }
+      },
+      "home_icon_activation": "native element click",
+      "version_case_fresh_safari_process": true
+    },
+    {
+      "requested_model": "11-inch iPad",
+      "model": "iPad Air 11-inch (M2)",
+      "device_type": "com.apple.CoreSimulator.SimDeviceType.iPad-Air-11-inch-M2",
+      "runtime": "com.apple.CoreSimulator.SimRuntime.iOS-27-0",
+      "os_version": "27.0",
+      "orientation": "LANDSCAPE",
+      "status": "passed",
+      "checks": [
+        {
+          "name": "device.native_and_viewport_orientation",
+          "status": "passed",
+          "seconds": 14.27
+        },
+        {
+          "name": "receipt.initial_viewport",
+          "status": "passed",
+          "seconds": 10.33
+        },
+        {
+          "name": "receipt.image_swipe_exactly_one",
+          "status": "passed",
+          "seconds": 9.01
+        },
+        {
+          "name": "receipt.margin_swipe_exactly_one",
+          "status": "passed",
+          "seconds": 7.97
+        },
+        {
+          "name": "receipt.vertical_scroll_keeps_card_and_route",
+          "status": "passed",
+          "seconds": 11.25
+        },
+        {
+          "name": "card_viewer.native_swipes",
+          "status": "passed",
+          "seconds": 6.19
+        },
+        {
+          "name": "editor.keyboard_save_persistence_history",
+          "status": "passed",
+          "seconds": 24.11
+        },
+        {
+          "name": "safari.native_share_add_home_screen",
+          "status": "passed",
+          "seconds": 34.95
+        },
+        {
+          "name": "standalone.visible_safe_areas",
+          "status": "passed",
+          "seconds": 0.03
+        },
+        {
+          "name": "version.stale_detection_reload",
+          "status": "passed",
+          "seconds": 43.44
+        }
+      ],
+      "viewport": {
+        "width": 1180,
+        "height": 688
+      },
+      "editor_save": {
+        "editor_mode": "full",
+        "count_before": 52,
+        "count_saved": 53,
+        "software_keyboard": {
+          "y": 453,
+          "x": 0,
+          "width": 1180,
+          "height": 364
+        },
+        "native_save": {
+          "y": 334,
+          "x": 1034,
+          "width": 89,
+          "height": 44
+        }
+      },
+      "standalone_safe_areas": {
+        "viewport": {
+          "left": 0,
+          "top": 0,
+          "width": 1180,
+          "height": 788,
+          "right": 1180,
+          "bottom": 788
+        },
+        "safe_area_insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 20,
+          "left": 0
+        }
+      },
+      "home_icon_activation": "native element click",
+      "version_case_fresh_safari_process": true
+    }
+  ],
+  "cleanup": {
+    "verified_at": "2026-10-15T05:47:15.463013+00:00",
+    "report_sha256": "f76eae2dd62c9cf4d9c4c6dd112582540cc729ce0173f1cd78fedc3a69783d91",
+    "created_simulators": 6,
+    "remaining_test_simulators": [],
+    "fixture_listeners_closed": 6,
+    "appium_listener_closed": true,
+    "owned_processes": [],
+    "source_clean": true
+  },
+  "raw_report": {
+    "path": "decklab/data/safari/macbook/20261015T051426Z-59b4e5/report.json",
+    "sha256": "f76eae2dd62c9cf4d9c4c6dd112582540cc729ce0173f1cd78fedc3a69783d91"
+  }
+}

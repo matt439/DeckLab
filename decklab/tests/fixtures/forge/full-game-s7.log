@@ -1,0 +1,96 @@
+Error handling registered!
+12:54:58 [INFO ] GuiBase: ##########################################
+12:54:58 [INFO ] GuiBase: APP: Forge v.2.0.15-SNAPSHOT-09.28
+12:54:58 [INFO ] GuiBase: Java: 26.0.1 (Oracle Corporation)
+12:54:58 [INFO ] GuiBase: OS: Windows 11 10.0 amd64
+12:54:58 [INFO ] GuiBase: RAM: 1024 MB max, 32 CPUs
+12:54:58 [INFO ] GuiBase: ##########################################
+Language 'en-US' loaded successfully.
+(ThreadUtil first call): Running with priority 5
+Read cards: 34010 archived files in 0 ms (25 parts) using thread pool
+Upcoming set Star Trek (TRK) dated in the future. All `upcoming` cards will be added to this set with unknown rarity.
+The card A-Alrund's Epiphany was not assigned to any set. Adding it to UNKNOWN set... to fix see res/editions/ folder. 
+The card A-Baba Lysaga, Night Witch was not assigned to any set. Adding it to UNKNOWN set... to fix see res/editions/ folder. 
+The card A-Divide by Zero was not assigned to any set. Adding it to UNKNOWN set... to fix see res/editions/ folder. 
+The card A-Esika's Chariot was not assigned to any set. Adding it to UNKNOWN set... to fix see res/editions/ folder. 
+The card A-Faceless Haven was not assigned to any set. Adding it to UNKNOWN set... to fix see res/editions/ folder. 
+The card A-Fires of Invention was not assigned to any set. Adding it to UNKNOWN set... to fix see res/editions/ folder. 
+The card A-Goldspan Dragon was not assigned to any set. Adding it to UNKNOWN set... to fix see res/editions/ folder. 
+The card A-Hullbreaker Horror was not assigned to any set. Adding it to UNKNOWN set... to fix see res/editions/ folder. 
+The card A-Kumano Faces Kakkazan was not assigned to any set. Adding it to UNKNOWN set... to fix see res/editions/ folder. 
+The card A-Luminarch Aspirant was not assigned to any set. Adding it to UNKNOWN set... to fix see res/editions/ folder. 
+The card A-Monster Manual was not assigned to any set. Adding it to UNKNOWN set... to fix see res/editions/ folder. 
+The card A-Omnath, Locus of Creation was not assigned to any set. Adding it to UNKNOWN set... to fix see res/editions/ folder. 
+The card A-The Meathook Massacre was not assigned to any set. Adding it to UNKNOWN set... to fix see res/editions/ folder. 
+The card A-Unholy Heat was not assigned to any set. Adding it to UNKNOWN set... to fix see res/editions/ folder. 
+The card Blinding Radiance was not assigned to any set. Adding it to UNKNOWN set... to fix see res/editions/ folder. 
+The card Goblin Bruiser was not assigned to any set. Adding it to UNKNOWN set... to fix see res/editions/ folder. 
+The card Ogre Painbringer was not assigned to any set. Adding it to UNKNOWN set... to fix see res/editions/ folder. 
+The card Titanic Pelagosaur was not assigned to any set. Adding it to UNKNOWN set... to fix see res/editions/ folder. 
+The card Treetop Recluse was not assigned to any set. Adding it to UNKNOWN set... to fix see res/editions/ folder. 
+Upcoming set Star Trek (TRK) dated in the future. All `upcoming` cards will be added to this set with unknown rarity.
+Read cards: 854 files in 0 ms (8 parts) using thread pool
+Simulation mode
+Ai(1)-Gruul Ramp (owned) [Default] vs Ai(2)-Izzet Prowess (owned) [Default] - one game of Constructed seed 7
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::objectFieldOffset has been called by com.google.common.util.concurrent.AbstractFuture$UnsafeAtomicHelper (file:/C:/Tools/forge/forge-gui-desktop-2.0.15-jar-with-dependencies.jar)
+WARNING: Please consider reporting this to the maintainers of class com.google.common.util.concurrent.AbstractFuture$UnsafeAtomicHelper
+WARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release
+Firespitter Whelp Did not have activator set in SpellAbilityRestriction.canPlay()
+Mulligan: Ai(1)-Gruul Ramp (owned) has kept a hand of 7 cards
+Mulligan: Ai(2)-Izzet Prowess (owned) has kept a hand of 7 cards
+Turn: Turn 1 (Ai(1)-Gruul Ramp (owned))
+Land: Ai(1)-Gruul Ramp (owned) played Forest (33)
+Turn: Turn 2 (Ai(2)-Izzet Prowess (owned))
+Land: Ai(2)-Izzet Prowess (owned) played Mountain (115)
+Turn: Turn 3 (Ai(1)-Gruul Ramp (owned))
+Land: Ai(1)-Gruul Ramp (owned) played Mountain (50)
+Add To Stack: Ai(1)-Gruul Ramp (owned) cast Scavenging Ooze
+Turn: Turn 4 (Ai(2)-Izzet Prowess (owned))
+Land: Ai(2)-Izzet Prowess (owned) played Swiftwater Cliffs (92)
+Add To Stack: Ai(2)-Izzet Prowess (owned) triggered Swiftwater Cliffs
+Turn: Turn 5 (Ai(1)-Gruul Ramp (owned))
+Land: Ai(1)-Gruul Ramp (owned) played Mountain (54)
+Add To Stack: Ai(1)-Gruul Ramp (owned) cast Fierce Empath
+Add To Stack: Ai(1)-Gruul Ramp (owned) triggered Fierce Empath
+Turn: Turn 6 (Ai(2)-Izzet Prowess (owned))
+Land: Ai(2)-Izzet Prowess (owned) played Swiftwater Cliffs (94)
+Add To Stack: Ai(2)-Izzet Prowess (owned) triggered Swiftwater Cliffs
+Add To Stack: Ai(2)-Izzet Prowess (owned) cast Scorching Dragonfire targeting [Scavenging Ooze (12)]
+Turn: Turn 7 (Ai(1)-Gruul Ramp (owned))
+Land: Ai(1)-Gruul Ramp (owned) played Forest (35)
+Add To Stack: Ai(1)-Gruul Ramp (owned) cast Surrak, the Hunt Caller
+Turn: Turn 8 (Ai(2)-Izzet Prowess (owned))
+Add To Stack: Ai(2)-Izzet Prowess (owned) cast Stormcatch Mentor
+Add To Stack: Ai(2)-Izzet Prowess (owned) cast Preordain
+Add To Stack: Ai(2)-Izzet Prowess (owned) triggered Stormcatch Mentor
+Land: Ai(2)-Izzet Prowess (owned) played Temple of Epiphany (126)
+Add To Stack: Ai(2)-Izzet Prowess (owned) triggered Temple of Epiphany
+Turn: Turn 9 (Ai(1)-Gruul Ramp (owned))
+Add To Stack: Ai(1)-Gruul Ramp (owned) cast Rabid Gnaw targeting [Surrak, the Hunt Caller (31)] [Stormcatch Mentor (123)]
+Ai(2)-Izzet Prowess (owned) didn't block Fierce Empath (8).
+Add To Stack: Ai(1)-Gruul Ramp (owned) cast Scavenging Ooze
+Turn: Turn 10 (Ai(2)-Izzet Prowess (owned))
+Land: Ai(2)-Izzet Prowess (owned) played Island (102)
+Add To Stack: Ai(2)-Izzet Prowess (owned) cast Firespitter Whelp
+Add To Stack: Ai(2)-Izzet Prowess (owned) cast Mischievous Mystic
+Turn: Turn 11 (Ai(1)-Gruul Ramp (owned))
+Add To Stack: Ai(1)-Gruul Ramp (owned) cast Rabid Gnaw targeting [Surrak, the Hunt Caller (31)] [Firespitter Whelp (121)]
+Add To Stack: Ai(1)-Gruul Ramp (owned) triggered Surrak, the Hunt Caller targeting [Surrak, the Hunt Caller (31)]
+Ai(2)-Izzet Prowess (owned) assigned Mischievous Mystic (89) to block Scavenging Ooze (13).
+Ai(2)-Izzet Prowess (owned) didn't block Fierce Empath (8).
+Add To Stack: Ai(1)-Gruul Ramp (owned) activated Scavenging Ooze targeting [Firespitter Whelp (121)]
+Add To Stack: Ai(1)-Gruul Ramp (owned) cast Llanowar Elves
+Turn: Turn 12 (Ai(2)-Izzet Prowess (owned))
+Add To Stack: Ai(2)-Izzet Prowess (owned) cast Burst Lightning targeting [Surrak, the Hunt Caller (31)]
+Turn: Turn 13 (Ai(1)-Gruul Ramp (owned))
+Ai(2)-Izzet Prowess (owned) didn't block Fierce Empath (8).
+Ai(2)-Izzet Prowess (owned) didn't block Llanowar Elves (28).
+Game Outcome: Match Duration 0m : 01s
+Game Outcome: Turn 7
+Game Outcome: Ai(1)-Gruul Ramp (owned) has won because all opponents have lost
+Game Outcome: Ai(2)-Izzet Prowess (owned) has lost because life total reached 0
+Match Result: Ai(1)-Gruul Ramp (owned): 1 Ai(2)-Izzet Prowess (owned): 0 
+
+Game Result: Game 1 ended in 1312 ms. Ai(1)-Gruul Ramp (owned) has won!
+

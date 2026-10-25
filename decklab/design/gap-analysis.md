@@ -1,0 +1,246 @@
+# Deck Lab: gap analysis
+
+Dated 2026-10-13; coverage recounted on 2026-10-19, after every story in [stories.md](stories.md) was rechecked against the code. Counts below come from the story headers. The dated owner decisions retain their original context; [TODO.md](../../TODO.md) owns the current work order. Part of the design set: [README](README.md) (method and index), [personas](personas.md), [journeys](journeys.md), [stories](stories.md) and this file.
+
+Story ids (such as E7-S09) are those in [stories.md](stories.md). Each story there is marked built, partial, missing or not wanted against the code and its dated verification evidence; this file adds up those marks, groups the gaps and ranks what to do next.
+
+## Headline
+
+Deck Lab already does most of what Matt and User1 need. Of the must and should stories, Matt has 93 built and 2 partial; User1 has 32 built, 1 partial and 1 missing; Claude Code has 15 built, User5 3, the space members 4 and the Commander table 1, with no gaps. Across all 219 stories there are 160 built, 16 partial, 29 missing and 14 not wanted (counted from the story headers on 2026-10-21). E9-S18 is now counted as not wanted.
+
+Matt's answers moved the work towards three things:
+
+- **User1's phone.** She uses Deck Lab on a phone, so the real-device check and the phone's gaps (Quick edit, packing on two devices, adding a picture) come first for her. Her Forge stories matter less: Matt doesn't think she opens Matchups or Stats.
+- **Decided rules.** Home-network writes following the picked profile, the Game log kept to home, and sleeves shared by several decks were built on 2026-10-13 (E10-S03, E10-S24, E8-S20). The member template's private defaults and the rest of private by default shipped on 2026-10-18 and are live since 2026-10-19.
+- **Matt doing more on the pages.** He wants to change the purchase queue and record orders himself, and his own command-line writes to show as his.
+
+Later on 2026-10-13 Matt also decided that every space's data is **private by default** ([privacy-by-default.md](privacy-by-default.md)): nothing is seen outside its space unless its owner makes it public, read-only, and the admin role no longer overrides that on the page. Its original date and phase gates were replaced by the member template's accepted order on 2026-10-18.
+
+On 2026-10-18 Matt accepted the member template ([member-template.md](member-template.md), decisions A to K, all as recommended). User5 (`user5`) is the first real member, and his setup is the template for every member; the other members use it with no config change. "Visible to the family" becomes **public**: read-only to every signed-in profile, future members included, never the open internet (still no open pages, share links or sign-up). The seven added stories E10-S37 to E10-S43 are included in the counts above. Phases 1 to 4 shipped on 2026-10-18 and Matt sent the invite that day. The switches, public readers and guarded departure were built the same day and are live since 2026-10-19, when migrations 0012 and 0013 were applied and the server restarted on committed code. Nothing has been switched Public yet, and no member has left.
+
+No ready coding slice remains in TODO; its rows keep their people, release, priority or source gates. The must and should gaps left are Matt's E11-S02 (the signed-in off-page check) and E11-S28 (User2's session), and User1's E2-S22 (the physical devices) and E5-S15 (purchase requests, deferred). Stand-in suggestions (E2-S07, 2026-10-20), combo detection and official list changes (E9-S23, E9-S24, 2026-10-21), the Forge upgrade check (E11-S15, 2026-10-21), Commander readiness summaries, buying views, packing completion and order changes are already built; they should not return as new work. Forge-heavy items retain their separate approval and idle-PC requirements.
+
+## Owner decisions, 2026-10-13
+
+Matt's answers, numbered as he gave them, to the open questions about the design model, given 2026-10-13. The last column records what each changed at the time; since the 2026-10-19 recheck, only a story a decision still shapes keeps a **Decided (Matt, date)** line in [stories.md](stories.md), so some of the decision lines named below are no longer there.
+
+| # | Question | Decision | Effect on the stories |
+|---:|---|---|---|
+| 1 | User1's device, and whether she uses Matchups or Stats | User1 uses Deck Lab on a phone. Matt doesn't think she uses Matchups or Stats. | Her phone surfaces matter more: E1-S23 raised to must; E2-S05 and E4-S02 raised to should; decision lines on E1-S01, E2-S22, E4-S11 and E5-S14. Her Forge stories go down or move: E3-S07 moved to Matt, E3-S13 lowered to could, E10-S23 stays could. |
+| 2 | Home-network writes follow the picked profile? | Yes; scripts naming nobody still pass. | E10-S03 raised to must (missing); built 2026-10-13. |
+| 3 | User1 asks from the page for a purchase or a Forge run, Matt approving? | Yes, though she'd probably also just say it in person. | Wanted, not urgent: E5-S15 stays should, E3-S13 lowered to could. |
+| 4 | Matt changes the queue and records orders on the pages? | Yes: state, quantity, remove and add, and recording orders. | E5-S06 and E6-S02 raised to should. Queue editing E5-S06 and recording orders E6-S02 are built on 2026-10-15; changing, cancelling and removing orders are built in E6-S24 (2026-10-15), including recorded queue restoration (E6-S07/E6-S08). |
+| 5 | The bracket for Commander nights, and house rules | Probably Bracket 2. The usual store publishes a bracket range for its social Commander night; other venues may not. | Bracket 2 is the household's target (E9-S03). Other venues are covered by E9-S20 (could, built 2026-10-16); whether they'll go to one is unknown. The saved usual-night notes start empty and require explicit current facts. |
+| 6 | An expected arrival date on orders? | No. | E6-S23 not wanted. E6-S03 keeps only naming the order. |
+| 7 | Nightly backup without a logon; start Deck Lab at logon? | Start at logon: yes, turned on 2026-10-13 (`homenet install --at-logon`). Backup without a logon: not needed. The PC stays logged on while it's on, so it is either logged on or off; at-logon tasks are enough, and the nightly's catch-up run after the PC was off covers the rest. | E11-S23 built. E11-S24 not wanted. Restarting after a crash split off as E11-S26 (could). |
+| 8 | When the PC is off: an "off" page, or cached deck lists? | A friendly "Deck Lab is off" message is enough. | E11-S02 cut to the message (should, S). The cached lists split off as E11-S27, not wanted. |
+| 9 | One sleeve design per intact product, or separate sleeves per deck? | One sleeve design should be usable by several decks; it's up to the players not to play both at once. | Reverses the one-holder rule. New must E8-S20. E8-S07 not wanted, E8-S10 not wanted, E2-S20 built to partial, E8-S08 lowered to could, decision line on E8-S09. E8-S20 built 2026-10-13 (E2-S20 back to built), with CLAUDE.md's rule changed in the same work. |
+| 10 | Matt's command-line writes shown as his on Activity? | Yes. | E11-S07 raised to should; built 2026-10-15 with `--actor`. |
+| 11 | User2, User3 and User4: how much will they use Deck Lab? | Occasionally at most, Matt expects; mostly on phones if at all. | Occasional, phone-only. E7-S02 lowered to should, E10-S15 to could; decision lines on E2-S19 and E10-S18. |
+| 12 | Members outside home see the household's Game log? | No. | New must E10-S24 (missing; built 2026-10-13). Decision lines on E4-S11, E4-S19 and E10-S18. |
+| 13 | How much should Deck Lab teach rules and play? | Minimal; products like the Beginner Box do that. | E4-S07 not wanted, E4-S09 lowered to could. The in-context help that exists (How to play, the card viewer's rules text) stays. |
+| 14 | Back up the Forge results? | No: they can be regenerated. | E11-S17 not wanted. |
+| 15 | Who sees another space's data? (given later the same day: "default is no visibility") | Private by default. One switch per space for its collection (tokens included), decks and games, and one per kit owner for accessories; visible means visible to everyone with a profile, read-only. No admin override; admin writes in other spaces are removed from the page (Matt asks Claude). The home chooser offers home profiles only. Claude relays upkeep, not contents. Tests of a change only of one's own space's decks. Either home profile flips home's switches. Per space now, per deck later. Details in [privacy-by-default.md](privacy-by-default.md), section 4. | New stories E10-S28 to E10-S36 (seven musts, two shoulds, all missing). E10-S09 reversed (not_wanted when E10-S30 ships), E10-S19 superseded by E10-S29, notes on E10-S12, E10-S15, E10-S24, E10-S25 and E8-S16. Phase 0 (a rollback fix) done 2026-10-13; phase 1 after 2026-10-19; the rest after Matt's 5b decision (roadmap 25-31). Changed 2026-10-18 by the member template: "visible to the family" is now public (read-only to everyone signed in), per-deck public is a later could (E10-S41), stories E10-S37 to E10-S43 added, and a new build order replaces the phases (roadmap 25-31). |
+
+The phase 5b question (the report before anything is retired) was answered on 2026-10-14: Matt asked for 5b then, after two clean nights. The week of side-by-side checks ended clean on 2026-10-19, and its report is [magic/reports/2026-10-19-database-check-week.md](../../magic/reports/2026-10-19-database-check-week.md).
+
+Later the same day Matt also asked for usage visibility: whether members use Deck Lab and which pages they open, as evidence for which features are worth building. That became E10-S25 (should), built 2026-10-13: the Settings page's Visits panel and `python -m decklab.db visits`.
+
+## Coverage per persona
+
+Counts are of must and should stories only, from the story headers on 2026-10-21. Could and won't stories aren't counted. In brackets: the count before the original decisions of 2026-10-13 (User5 had no stories then).
+
+| Persona | Built | Partial | Missing | Assessment |
+|---|---:|---:|---:|---|
+| [Matt](personas.md) | 93 (47) | 2 (16) | 0 (10) | Served well: editing, packing, kit, buying, receipts, rankings, retirement and rename are built, and so is private by default (live since 2026-10-19). Stand-in suggestions per missing card (E2-S07, 2026-10-20), two-card combo detection (E9-S23), noticing official Brackets or Game Changers list changes (E9-S24) and the Forge upgrade check (E11-S15) are built (the last three on 2026-10-21). Partial: the signed-in off-page check (E11-S02) and User2's session (E11-S28, checklist prepared). |
+| [User1](personas.md) | 32 (21) | 1 (9) | 1 (6) | Her phone surfaces are built: the library (E1-S01 now built), Quick edit, packing checks and completion, wishlist, Game log, kit and pictures. Home members can edit the shared collection and tokens (E10-S43). Partial: physical-device acceptance on the real iPhones and iPad (E2-S22; the Simulator suite covers repeat regressions). Missing: purchase requests (E5-S15, wanted but deliberately deferred). Her Forge stories remain could or Matt's. |
+| [User5](personas.md) (the member template) | 3 | 0 | 0 | Roster, private defaults, history masking for outsiders and starting at logon are built and live; the invite was sent on 2026-10-18. Restarting after a crash (E11-S26) is built and on (2026-10-20); per-deck public (E10-S41) is could and deferred. |
+| [Space members](personas.md) (User2, User3, User4) | 4 (3) | 0 (3) | 0 (0) | Members on User5's terms, with no config change. Their collections, tokens, decks and games are private from everyone outside their own space, admins included. Extra features only for them (E10-S18, E4-S19, could) stay deferred unless one asks; the prepared User2 session may show what's needed. E10-S09 (reading home's decks) is not wanted. |
+| [Claude Code](personas.md) | 15 (8) | 0 (4) | 0 (0) | Typed, audited writes, actor attribution, stale-table guidance, product kit commands, `collection add-precon` for owner-requested upkeep, Forge replay and override checks (E3-S20), card-data dates (E9-S04), one collection row's edit (`collection edit`, E7-S25), many rows' in one change (`collection apply`, E7-S26) and guarded member departure (E10-S40, live since 2026-10-19) are built. Legacy error wording (E11-S12) and command-line privacy labels (E11-S21) are could, outside the active queue. |
+| [The Commander table](personas.md) | 1 (0) | 0 (1) | 0 (0) | Overview names the declared aim, detected Game Changers and effects opponents will face, with source dates and incomplete-data warnings (E9-S06, built). Two-card combos (E9-S23) and Wizards' latest announcement (E9-S24) are checked since 2026-10-21; no automatic check establishes speed, intent or a social table's acceptance. |
+| Anti-persona: the collector | 0 | 0 | 0 | The constraints hold. Orders store no prices, there are no spending totals or collection value, and prices show only as labelled estimates of what's still to buy. E5-S20 and E5-S21 are recorded decisions, not work. |
+| Anti-persona: the tournament grinder | 0 | 0 | 0 | The constraints hold. Casual decks get only the 60-card and 4-copy checks; only Commander decks get the ban list and bracket checks (E2-S21). |
+| Anti-persona: the stranger | 0 | 0 | 0 | The constraints hold. Cloudflare Access fails closed, an unmapped email gets a 403, the home listener refuses tunnel headers, and there are no share links or sign-up (E10-S06, E10-S22). |
+
+## Gap themes
+
+### Packing checks, independent sideboards and retained deck intent
+
+Matt requested three follow-ups on 2026-10-16; all three are built. **E4-S23** bulk-confirms one displayed deck's card actions, with counts, explicit physical scope and Undo that preserves prior checks and later edits on this device. **E4-S24** assembles the full main deck with zero, some or all intended sideboard copies; missing omitted cards do not block it. An explicit saved physical recipe controls reservations and kit counts, independently of intended-list edits. Reducing an already packed sideboard requires visible checked returns and a removal review. **E5-S23** retains intended names and quantities in the unchanged decklists and shows the unassembled real cards separately from acquisition shortages. Inventory permissions apply to physical and remaining-intent details. Existing personal wishlists and the purchase queue need no new structure or automatic changes. Main-only, later sideboard completion, take-apart/rebuild and bulk progress follow the same recipe; NOW and its device/date/Forge gates remain unchanged.
+
+### User1's phone
+
+Stories: E2-S22, E1-S23, E2-S05, E4-S02, E8-S02, E8-S05.
+
+Matt reports portrait and landscape checks passing on the real iPhone 15 Pro and M2 11-inch iPad (2026-10-15, following the Home Screen/layout check; E2-S22 records the results). The iPhone 15 Pro quantity-field appearance, keyboard-open save and History attribution, count restoration, and card-viewer swipes also pass. The [Safari Simulator suite](../safari/EVIDENCE.md) now passes all six configurations, including receipt controls/swipes, keyboard-open Save/History, native Home Screen use and standalone safe areas. E2-S22 remains partial for physical hardware/touch usability after the fixes, especially receipt controls and swipe margins and the remaining iPad/iPhone 17 Pro observations. The physical M2 11-inch iPad's exact model is unconfirmed; the iPad Air 11-inch (M2) Simulator does not establish a hardware match. Repeat the functional regression suite automatically. Since User1 uses a phone, this is her main surface. The missing Notes, header details and Paste a list controls are built (E2-S05, 2026-10-15); physical-device follow-up remains separate. Packing ticks are shared through the server, so she and Matt can split the pulling across devices (E4-S02, built 2026-10-15). The unbuilt deck's Overview points to kit choice in Packing; the picker includes needed, owned and spare/short counts (E8-S05, 2026-10-15). Device photo selection and cropping are built (E8-S02, 2026-10-15): JPEG/PNG/WebP up to 4 MiB, saved with the row. Verification used synthetic photos and automated fixtures, without personal photo files; actual device/touch acceptance remains E2-S22.
+
+### Home-network writes and the Game log
+
+Stories: E10-S03, E10-S24, E8-S16, E10-S15.
+
+Two decided musts, both built 2026-10-13. Reads and writes now follow the profile picked on "Who are you?" on the home network, as through the tunnel, and a refused write answers only its reason (E10-S03). `GET /api/play` sends each viewer only the games and sideboard plans with a deck of their own space (`permissions.sees_play_record`, also used for Activity's play-record rows); the Game log stays in everyone's navigation and opens with a plain note when there's nothing (E10-S24). Accessory pictures name their viewer in the address (E8-S16). The picked profile is trusted, not a login, but since 2026-10-18 the chooser offers only home profiles and the home listener refuses any other name (E10-S35), so that trust is left only inside home. Activity's play-record rows now stay within their space (E10-S15, built 2026-10-18 by E10-S32 and E10-S34).
+
+### Private by default
+
+Stories: E10-S35, E10-S42, E10-S30, E10-S36, E10-S29, E10-S43, E10-S32, E10-S38, E10-S34, E10-S39, E10-S28, E10-S31, E10-S33, E10-S37, E10-S40, E10-S41.
+
+Decided 2026-10-13 and reordered by the accepted member template on 2026-10-18. Phases 1 to 4 are built: private decks, collections and tokens; member Game-log rules; the home-only chooser and script boundary; the precon command; and viewer-specific roster, settings and simulations wording. Matt sent User5's invite on 2026-10-18. Public switches, Forge privacy, read-only accessories, Activity and history subjects were built on 2026-10-18, and so were guarded member departure and recovery; all of it is live since 2026-10-19, when migrations 0012 and 0013 were applied and the server restarted on committed code. Nothing has been switched Public yet, and no member has left. The command line remains exempt from page read/write rules and must not relay private contents.
+
+**Changed 2026-10-18** ([member-template.md](member-template.md)). The pre-invite audit found unfiltered deck readers and member stop rights; the shipped phases closed those paths with own-space visibility, a coarse Forge filter and interim admin-only stopping. E10-S31's full Forge rules are built, and E10-S32's public `games` switch completed with E10-S28. E10-S34 is complete, including own-space Activity and all-row message masking (2026-10-18). See the completed evidence in roadmap ranks 25-31. Per-deck public visibility (E10-S41) remains deferred until requested.
+
+### Sleeves shared by several decks
+
+Stories: E8-S20, E2-S20, E8-S08, E8-S09.
+
+Matt reversed the one-holder rule: a sleeves row may be used by several built decks and intact products, and it's up to the players not to play two at once. Built 2026-10-13 (E8-S20): the picker, the editor and `deck push` accept sleeves another holder has ("Also used by X", with Use them here too or Move them here), `kit()` and `accessories check` no longer report shared designs or colours, each holder's sleeve count is checked against the row on its own, and the Packing plan notes two chosen holders in one design. AGENTS.md ("Sleeves and storage", "Accessories") states the new rule. Left: the deck page's own kit tile doesn't name the other decks in its sleeves yet (the picker and #/accessories do). E8-S08 is built.
+
+### Follow-through after inventory changes
+
+Stories: E7-S09, E11-S10, E7-S12, E7-S04, E7-S11, E6-S07.
+
+The commonest gap. Its biggest part was built 2026-10-13 (E7-S09, E11-S10): the Decks page lists every out-of-date table with Update all (one change) and names the decks it can't update and why; the Collection page's saves and imports, `collection merge`, `deck push` and `deck new` say which decks they left out of date; and Receive delivery's note links to that list. Token cards never change a table, so the Tokens page and `tokens` commands needed nothing. Collection guards are built (E7-S04, E7-S12, E7-S11, 2026-10-15): repeat uploads show recorded provenance before an intentional additive repeat; reductions warn about held physical copies and offer optional Sold/Traded reasons. Cancellation now offers to return recorded fulfilled queue quantities, and removing a mistaken order always restores known outstanding intent (E6-S07/E6-S08/E6-S24, 2026-10-15). Product/token corrections preserve original recorded intent for restoration, with review warnings. Historical orders without complete fulfilment provenance warn for manual queue review, with no guessed rows.
+
+### The queue and orders on the pages
+
+Stories: E5-S06, E6-S02, E6-S24, E6-S07, E6-S08, E6-S06.
+
+Queue editing E5-S06 and recording orders E6-S02 are built on Shopping (2026-10-15). E6-S24 is now built too: record/check corrections, pending card/token and product corrections, additional-copy marks, shipment splits, cancellation and removal all use previewed, audited operations shared with the command line. Cancel requires a reason and offers recorded queue quantities back, checked by default; removing a mistaken order requires a reason, always restores known outstanding intent and refuses any received component. The price-free intent/allocation ledger conserves split attribution and prevents duplicate restoration, preserving current queue metadata and leaving recreated price/shop/date references blank. Product-list corrections retain the original fulfilled intent and quantity even if the list shrinks, with a warning. Token-name corrections remap original intent to remaining physical capacity with a warning; later splits conserve it, and card corrections keep name totals. Whole-component cancellation restores the original recorded request, not newly guessed correction names. Correction warnings require review while original intent remains restorable. Historical orders without complete fulfilment provenance need manual queue review, with no guessed rows. Receiving only ticked rows within one cards/tokens component is built too (E6-S06, 2026-10-15): full edited rows conserve quantities, the preview names received and pending parts, and one audited save records arrived copies while retaining remainder checks and recorded fulfilment attribution. Products remain whole. Accepting User1's purchase requests (E5-S15) would use the existing queue write.
+
+### Commander-night readiness in plain words
+
+Stories: E9-S05, E9-S06, E9-S04, E9-S20, E9-S23, E9-S24.
+
+Built 2026-10-15: Overview starts with a plain sentence about the declared bracket aim and detected cards, a **What opponents will face** list, the real card/tag source dates and an age warning. Missing tags or unresolved names are explicit, and the summary never certifies a bracket. Combos of three or more cards, chained turns, speed and intent remain unchecked. E9-S04 and E9-S06 are built; the parts they lacked, E9-S23 (two-card combos, from Commander Spellbook) and E9-S24 (Wizards' latest Commander announcement, from its sitemap), were built on 2026-10-21 ([commander-sources.md](commander-sources.md)). Checking a recommended card against live Scryfall stays Claude's workflow, not Deck Lab's (Matt, 2026-10-19). The optional usual-night record is built (E9-S20, 2026-10-16): home admins save dated expectations in Settings, and home Commander pages compare the declared targets while keeping unknown facts and unavailable storage explicit. Notes are private to home and do not enforce venue rules.
+
+### Cards on the way: which order
+
+Stories: E6-S03, E5-S16.
+
+Built 2026-10-14. The deck page's banner and Cards tab name the orders or products supplying its awaited copies and whether they're ordered or preordered. The price table stays available when nothing else is missing, and To buy rows on #/shopping link to their home deck's title. Source quantities include only the copies that deck awaits, with the existing inventory privacy rule. Orders still have no expected arrival date (Matt, 2026-10-13).
+
+### Buying decisions across decks and shops
+
+Stories: E5-S04, E5-S09, E5-S22, E5-S07, E5-S11.
+
+Built 2026-10-15: Shopping combines canonical playable-card shortfalls across home decks, names the wanting decks and matching queue rows, shows dated reference prices, and folds the queue by recorded shop and stock state. The combined quantity sums each deck's individual shortfall; it is not a concurrent-build packing requirement. Unavailable or incomplete calculations show explicit errors. The deck price table sorts locally by Card, Missing and extended missing cost, keeping unknown prices last. References are dated research, not live stock or today's lowest price. Reprint follow-ups are built too (E5-S11, 2026-10-16): paper reprints already in the Scryfall snapshot name their upcoming set/date and cache date with coverage limits. Waiting rows offer a manual price check after a listed release since the saved check; unknown dates or unavailable data stay explicit. No price, check date, category or scheduler changes automatically.
+
+### From packing to built
+
+Stories: E4-S01, E4-S03, E4-S21, E8-S05, E8-S11.
+
+Packing now saves the checked built list, kit, physical stand-in recipe and availability tables in one guarded change (2026-10-15). A list change requires checking its new plan; unselected holders stay reserved, and a selected revised donor releases only its surplus. Saved stand-ins show represented-card pictures/rules on Overview and Packing, and the printed play sheet records the text mapping; real arrivals are retired at the next explicit repack. Unbuilt decks explain when kit is chosen, and the picker shows spare/short counts. Automated fixture and disposable-database checks cover the flow; hardware/touch verification remains E2-S22. Product keep-intact/break-up controls, device picture selection/cropping and the product kit command are built too (E8-S11/E8-S02/E8-S18, 2026-10-15). Product storage and kit removal use one confirmed inventory change; its preview follows both revision counters and the kit-owner boundary.
+
+### Availability, data safety and an honest audit trail
+
+Stories: E11-S02, E11-S07, E11-S04, E11-S26, E11-S24.
+
+Deck Lab now starts at logon (built 2026-10-13). The nightly backup runs only while Matt is logged on, and that's enough: the PC stays logged on while it's on, and the nightly catches up after the PC was off, so running it without a logon isn't wanted (E11-S24, Matt, 2026-10-13). The "Deck Lab is off" Worker was deployed on 2026-10-17 (E11-S02); Matt still has to check it signed in on a phone, with Deck Lab stopped and started, plus a save and a photo upload through it. Matt's own command-line writes show as his with `--actor` (E11-S07, 2026-10-15). Phase 5b was built on 2026-10-14 and the side-by-side week ended clean on 2026-10-19, with its report (E11-S04). A watchdog task restarts the server after a crash (E11-S26, on since 2026-10-20).
+
+### Members asking Matt from the page
+
+Stories: E5-S15, E3-S13.
+
+There's no path from a wishlist card to a purchase request, and no way to ask for a Forge run while the simulations setting is "admins". Wanted, but User1 will often just say it in person, and she doesn't use Matchups, so it's low.
+
+### Help at the table, kept minimal
+
+Stories: E4-S15, E4-S09, E4-S07.
+
+Matt wants rules teaching kept minimal (the Beginner Box does that). How to play, Deal a hand and the card viewer's rules text stay. Opponent-specific sideboard plans now show as card pictures on the deck Overview, with both list versions matched, stale warnings and the Sideboard notes fallback (E4-S15, built 2026-10-15). Keep or mulligan feedback on a dealt hand is now could, and general rules explanations aren't wanted.
+
+### Trust in Forge's numbers
+
+Stories: E3-S09, E3-S06, E3-S10, E3-S01, E3-S20, E11-S15.
+
+Matt's alone now. The field budget is saved per profile, every kind of running matchup has a live range once games finish, and the lands verdict says 'Ok' (2026-10-15). Per-format Matchups rankings are built too (E3-S10, 2026-10-15): each connected group has its own ratings and likely rank ranges, while unrated and excluded lists remain visible with reasons. Source dates in Stats disclosures are built (E3-S01, 2026-10-18), with WUBRG order and each colour's hardest requirement first retained. Replaying stale results, checking overrides and keeping experiments apart are built (E3-S20). The post-build checks of an upgrade are one command since 2026-10-21 (`upgrade-check`, E11-S15, built): cardlog-check, serve-check and the overrides check with one summary, and `replay --dry-run`'s plan; the rebase and build of 2.0.16 itself stay manual, as the runbook says. Forge results aren't backed up, by decision: they can be replayed.
+
+## Ranked roadmap
+
+Effort is a rough size: S (a session or less), M (a few sessions), L (a week or more), XL (several weeks). Ranks keep their original numbers; a done row is struck through, with its date, and its details are in [HISTORY.md](../HISTORY.md) and the story's Now line. [TODO.md](../../TODO.md) NOW is the current order. Open on 2026-10-19: ranks 1, 12, 18, 21, 22, 24, 31 (per-deck public only), 32 and 33. None is a ready coding slice: each waits for people, Forge's next release, a decision of Matt's or a source.
+
+| Rank | Item | Stories | Personas | Effort | Why |
+|---:|---|---|---|---|---|
+| 1 | Physical hardware and touch-usability follow-up on the iPhones and iPad | E2-S22 | User1, Matt | S (a session on the devices, plus fixes found) | User1 uses a phone. The [Simulator suite](../safari/EVIDENCE.md) covers repeat functional regressions, and the iPhone 15 Pro and M2 iPad checks of 2026-10-15 pass. Still to check on the real devices: the receipt panel's controls and swipe margins, the Quick edit's Add cards sheet and ⋯ menu, keyboard-open Save and Home Screen use on the iPad, the bracket sentence on the phone, and everything on the iPhone 17 Pro. Needs Matt and the devices. |
+| 2 | ~~Home-network writes follow the picked profile~~ | E10-S03, E8-S16 | User1, Matt, space members | M | Done 2026-10-13. |
+| 3 | ~~The Game log kept to home~~ | E10-S24 | Matt, space members | S-M | Done 2026-10-13. |
+| 4 | ~~Sleeves shared by several decks and products~~ | E8-S20, E2-S20, E8-S08 | Matt, User1 | M | Done 2026-10-13 (E8-S08 counted built on 2026-10-19). |
+| 5 | ~~One list of out-of-date tables with Update all, and commands that name stale decks~~ | E7-S09, E11-S10 | Matt, Claude Code, User1 | M | Done 2026-10-13. |
+| 6 | ~~Cards on the way: name the order~~ | E6-S03, E5-S16 | User1, Matt | S | Done 2026-10-14. No arrival dates (Matt, 2026-10-13). |
+| 7 | ~~Commander-night summary and source dates~~ | E9-S05, E9-S06, E9-S04, E9-S20 | Matt, User1, the Commander table | S-M | Done 2026-10-15 (E9-S20 on 2026-10-16). What they left is now rank 32 (E9-S23, E9-S24). |
+| 8 | ~~The purchase queue and orders on the pages~~ | E5-S06, E6-S02, E6-S24, E6-S07, E6-S08 | Matt | L | Done 2026-10-15. Accepting User1's requests is rank 18. |
+| 9 | ~~User1's phone: the Quick edit's missing fields and packing on two devices~~ | E2-S05, E4-S02 | User1 | M-L | Done 2026-10-15. Physical-device checks are rank 1. |
+| 10 | ~~Matt's command-line writes shown as his~~ | E11-S07 | Matt | S | Done 2026-10-15 (`--actor`). |
+| 11 | ~~Collection hygiene: repeat imports, held copies and reduction reasons~~ | E7-S04, E7-S12, E7-S11 | Matt | S | Done 2026-10-15. |
+| 12 | A "Deck Lab is off" message: the signed-in check | E11-S02 | Matt, User1, members | S | The Worker was deployed on both hostnames behind Access on 2026-10-17 and checked without a sign-in. Matt still has to check, signed in on a phone, the off page with Deck Lab stopped and started again, and a deck save and an accessory photo upload through the Worker. |
+| 13 | ~~Reprint announcements and price-check follow-up~~ | E5-S11 | Matt | M | Done 2026-10-16. |
+| 14 | ~~From packing to built: Mark built, stand-ins, wording~~ | E4-S03, E4-S21, E4-S01, E8-S05 | Matt, User1 | M | Done 2026-10-15. |
+| 15 | ~~Kit on the pages: keep intact or break up a product, upload a picture, a product kit command~~ | E8-S11, E8-S02, E8-S18 | Matt, User1, Claude Code | M | Done 2026-10-15. Device acceptance is rank 1. |
+| 16 | ~~Receive only ticked rows within a component~~ | E6-S06 | Matt, Claude Code | M | Done 2026-10-15. |
+| 17 | ~~Stats disclosures and rankings~~ | E3-S01, E3-S10 | Matt | S-M | Done: rankings 2026-10-15, Stats source dates 2026-10-18. |
+| 18 | Ask Matt from the page: purchase requests, then run requests | E5-S15, E3-S13 | User1, Matt | M | Wanted, not urgent: User1 will often say it in person (Matt, 2026-10-13). A wishlist card becomes a request on #/shopping for Matt to accept (with the built queue write) or decline, without copying private notes. A run request (could) uses the same "waiting for approval" pattern. Deferred in TODO. |
+| 19 | ~~The sideboard plan on the deck page~~ | E4-S15 | User1 | S-M | Done 2026-10-15. Keep or mulligan feedback (E4-S09) is could; leave it unless asked. |
+| 20 | ~~Rename and retire a deck~~ | E1-S19 | Matt, User1 | M | Done 2026-10-16. |
+| 21 | ~~Stand-in suggestions per missing card~~ | E2-S07 | Matt | L | Done 2026-10-20 ([HISTORY.md, Stand-ins for missing cards](../HISTORY.md#stand-ins-for-missing-cards-2026-10-20)), by the "similar role" rule (card type, a shared colour, mana value within 1) Matt agreed on 2026-10-19. Builds on E4-S21's stand-in record (rank 14, done). |
+| 22 | ~~Forge upgrade check in one command~~ | E11-S15 | Matt, Claude Code | L | Done 2026-10-21 (`python -m decklab.lib.forge upgrade-check`), ahead of the 2.0.16 release (about mid-November 2026, an estimate), where it's first used. Wraps `cardlog-check`, `serve-check`, the overrides check and `replay --dry-run` in one summary. E3-S20 (replay, overrides, experiments kept apart) is built. PLAN.md: Still to do 3 (Forge 2.0.16). |
+| 23 | ~~Phase 5b after the side-by-side week~~ | E11-S04 | Matt | S-M | Done: 5b on 2026-10-14; the week ended clean on 2026-10-19, with its report. |
+| 24 | Small items for person spaces, only if someone asks | E10-S18, E4-S19, E11-S26 | Space members, User5 | S-M each | All could: a first-visit landing and naming both players in a space member's game (the restart after a crash, E11-S26, is built). The space members will rarely visit, mostly on phones; check Settings, Visits first. (E10-S15 and E9-S04, once here, are built.) |
+| 25 | ~~The home-only chooser and sleeve-assignment check~~ | E10-S35, E10-S42 | Matt, User1, User5, space members | S | Done 2026-10-18. |
+| 26 | ~~Private decks, without the switches~~ | E10-S30 | Matt, User5, space members | M | Done 2026-10-18. E10-S09 is not wanted. |
+| 27 | ~~Precon command, admin narrowing and home members' rights~~ | E10-S36, E10-S29, E10-S43 | Claude Code, User5, space members, User1, Matt | M | Done 2026-10-18. |
+| 28 | ~~Mixed games, roster, settings wording and JavaScript scrub~~ | E10-S32, E10-S38, E10-S34, E10-S39 | User5, space members, Matt | M | Done 2026-10-18. |
+| 29 | ~~Switches and Forge privacy~~ | E10-S28, E10-S31, E10-S32 (games switch) | User5, Matt, User1, space members | L | Done 2026-10-18; live since 2026-10-19 (migration 0012). Every switch is still Private. |
+| 30 | ~~Public kit and Activity privacy~~ | E10-S33, E10-S34 | User1, Matt | M | Done 2026-10-18; live since 2026-10-19. |
+| 31 | Member history, departure and per-deck public | E10-S37, E10-S40, E10-S41 | User5, Matt, Claude Code | L | History masking (E10-S37) and guarded departure (E10-S40) are done (2026-10-18) and live since 2026-10-19 (migration 0013); no member has left. Per-deck public (E10-S41, could) stays deferred until someone wants it (Matt, 2026-10-18). |
+| 32 | ~~Combo detection and official list changes~~ | E9-S23, E9-S24 | Matt | M each | Split off on 2026-10-19 from E9-S06 and E9-S04. Flag a list holding both pieces of a known two-card combo, and notice when the official Brackets or Game Changers list changes. Done 2026-10-21 ([commander-sources.md](commander-sources.md)): Commander Spellbook's bulk export for combos, Wizards' sitemap for announcement dates. |
+| 33 | User2's user-testing session | E11-S28 | Matt | M | The checklist is prepared ([user-testing-user2.md](user-testing-user2.md), 2026-10-17). Confirm his device and browser with him, run the session, then the follow-up review and stories. Needs Matt and User2. |
+
+Dropped from the roadmap by the decisions: the expected arrival date (E6-S23), keep or mulligan feedback as a near-term item (E4-S09), general rules teaching (E4-S07), cached deck lists while the PC is off (E11-S27), separate sleeves per deck within a product (E8-S10), the Forge results backup (E11-S17), the nightly without a logon (E11-S24), start at logon (E11-S23, done 2026-10-13), seeing who uses Deck Lab (E10-S25, done 2026-10-13), and a measure of whether a deck is fun to play against (E9-S18, a `wont` now counted as not wanted).
+
+### No reserve
+
+The bounded reserve of 2026-10-18 (Stats disclosure dates E3-S01, linked CLI receipt previews E11-S20 and non-writing previews E11-S25) is built, and so is member departure. No reserve item remains. E11-S12 (legacy error wording) and E11-S21 (command-line privacy labels) are could, outside the active queue unless a concrete need picks them.
+
+## PLAN.md alignment
+
+How each item in [PLAN.md](../PLAN.md)'s "Still to do" (first compared on 2026-10-13; rechecked against PLAN.md and the stories on 2026-10-19) compares with the stories. Verdicts: keep (as it is), raise (do sooner), lower (do later), reshape (change its scope), drop (remove).
+
+| PLAN item | Verdict | Note |
+|---|---|---|
+| 1. Moving storage to a database (phase 5b after the side-by-side week) | Done | Phase 5b shipped on 2026-10-14 at Matt's say-so, and the side-by-side week ended clean on 2026-10-19 with its report (E11-S04, roadmap 23). |
+| 1. Open question: writes by a person picked on the home network | Drop | Decided 2026-10-13 and built the same day (E10-S03, roadmap 2), with the Game log's filter (roadmap 3). PLAN.md records it as settled. |
+| 1. Open question: a person-space admin would see home | Drop | Superseded 2026-10-13 by the privacy decision: admins no longer override, so E10-S29 (roadmap 27) covers it; both were built on 2026-10-18, E10-S19 with E10-S29, and PLAN.md records it as settled. (Was: lower, since no such admin exists.) |
+| 1. Open question: editing or removing a pending product | Done | Built 2026-10-15: E6-S08 provides corrections, pending-product cancellation and removal of a mistaken order; original recorded queue intent remains restorable according to the operation after corrections, with review warnings; historical provenance gaps alone require manual queue review. Ticked-row receipts are also built (E6-S06, roadmap 16); physical-device acceptance remains separate. |
+| 1. Renaming a deck | Built | Rename, retirement and restoration retain history, source references and matchup links (E1-S19, roadmap 20, completed 2026-10-16). |
+| 2. More experiment games on an idle PC | Lower | No persona's must or should story depends on it, and it's best run alongside the 2.0.16 replay so adoptions are decided together. |
+| 3. Forge 2.0.16 | Reshape | Keep it dated, and the post-build checks are one command with one summary (E11-S15, roadmap 22, built 2026-10-21). |
+| 4. Round-robin rankings | Done | Built 2026-10-15 (E3-S10, roadmap 17): the Rankings view on #/matchups shows current lists by format, independent rating groups, likely rank ranges, unsettled lists and exclusion reasons. Saved-result and UI fixtures were used; no Forge games were started. The Overview strength line (E1-S12) stays could. |
+| 5. 4-player Commander pods on the page | Lower | Could, and L (E9-S11; its smaller parts were split off as E9-S21 and E9-S22 on 2026-10-19, both could). For the coming nights, the plain Bracket 2 line and "What opponents will face" (E9-S05, E9-S06, roadmap 7) serve the table far better at a fraction of the cost. When pods are built, frame them as "keeps up with the pod", not "wins". |
+| 6. Testing sideboard plans | Lower | Could (E4-S16). Showing the plan on the deck page (E4-S15, should, roadmap 19) helps more at the table first. |
+| 7. Tokens extras | Lower | Could. Split on 2026-10-19 into three stories: counts (E7-S08), opponent tokens and dice and counters (E7-S23, E7-S24), all missing. Adding a precon's token cards as rows to check (E7-S06) is a cheaper related win. |
+| 8. Accessories extras: picture upload from the device | Done | Built 2026-10-15 (E8-S02, roadmap 15): local selection/crop and atomic row/picture Save; synthetic-photo verification, with physical-device acceptance retained in E2-S22. Thumbnails remain E8-S03. |
+| 8. Accessories extras: thumbnails in lists | Keep | Low (E8-S03, could), with a measurable target if picked up. |
+| 8. Accessories extras: separate sleeves per deck within a product | Drop | Superseded by sharing sleeves (E8-S20); E8-S10 is not wanted. PLAN.md's working copy already drops it. |
+| 9. Card pictures on the Receipts page | Drop | Done 2026-10-13. Remove it from the list. |
+| 10. No page lists every out-of-date table | Drop | Done 2026-10-13 (roadmap 5: E7-S09, with the command messages, E11-S10, and the Receive delivery note fix). PLAN.md marks it done. |
+| 10. Phones and the iPad themselves | Keep | First (roadmap 1, E2-S22, must; needs Matt and the devices): remaining physical hardware/touch usability after the fixes. The E11-S29 Simulator suite covers repeated functional regressions; User1's actual phone remains her main surface. |
+| 10. The Quick edit's missing fields | Done | Built 2026-10-15 (E2-S05): Notes, Substitutes, Mark write-up as current, Deck details and Paste a list. Physical-device acceptance stays in E2-S22. |
+| 10. Sortable tables | Drop | Built 2026-10-15 (E5-S22): native Card, Missing and ~AUD missing header buttons sort the deck price table locally. Reprint follow-ups are built too (roadmap 13, E5-S11, 2026-10-16). |
+| 10. Stale comments in editor.js and app.js | Keep | Housekeeping. Do it with any change to those files. |
+| 11. Owner decisions: sleeves may be shared | Drop | Built 2026-10-13 (E8-S20, roadmap 4), with CLAUDE.md changed in the same work. |
+| 11. Owner decisions: the Game log private to home | Drop | Built 2026-10-13 (E10-S24, roadmap 3), with roadmap 2. |
+| 11. Owner decisions: Matt's command-line writes | Built | E11-S07, 2026-10-15: `--actor` across the audited data commands (roadmap 10). |
+| 11. Owner decisions: the queue and orders on the pages | Done | Queue editing E5-S06, recording orders E6-S02 and complete order changes E6-S24 are built (2026-10-15), including cancellation and known queue-intent restoration (E6-S07/E6-S08, roadmap 8). |
+| 11. Owner decisions: User1 asks from the page | Keep | Low, as PLAN.md says (E5-S15 should, E3-S13 could; roadmap 18). |
+| 11. Owner decisions: not wanted | Keep | Matches the stories (E6-S23, E11-S27, E11-S17, E4-S07). |
+| 11. Owner decisions: done, start at logon | Keep | Matches the stories. Start at logon is E11-S23 (built; the task is "At logon time", "Interactive only"), and running with nobody logged on isn't needed because the PC stays logged on while it's on (E11-S24 not wanted, Matt, 2026-10-13). |
+| 11. Owner decisions: private by default | Done | Privacy readers and owner controls, Activity, history, Forge privacy, public kit and guarded member departure were built on 2026-10-18 and are live since 2026-10-19 (migrations 0012 and 0013 applied, server restarted on committed code). Nothing is switched Public yet; only the owners choose that. Per-deck public (E10-S41) stays deferred (roadmap 31). |
+| 11. Owner decisions: Bracket 2 | Keep | Matches E9-S03 and the historical 2026-10-13 venue discussion. E9-S20 is built (2026-10-16): record the checked venue/range and household aim explicitly rather than seeding facts from that discussion. |
+| Missing from PLAN.md | Keep | Nothing to add. The items once listed here (naming the order, Commander-night readiness, shared packing ticks, the "Deck Lab is off" message, collection hygiene, Mark built and stand-ins, product storage on the page, the buying views, the sideboard plan) are built and recorded in HISTORY.md. The open story work (roadmap 1, 12, 18, 21, 22, 24, 31-33) is indexed in TODO.md, which owns the order; PLAN.md keeps only non-story details. |
+
+## Open questions for Matt
+
+1. **Warnings for shared sleeves** (E8-S20). Should Deck Lab warn about anything once sleeves can be shared: nothing at all, only when the sleeve count is too low for two decks often packed together, or when two decks in one Packing plan use the same sleeves? *Answered (Matt, 2026-10-19): warn when kit already in use is chosen. Built the same day: the picker, the editor, Finish building, `deck push`, `deck new` and `product set-kit` warn when a design another holder has is chosen, and the deck page names the others plainly; deck boxes keep their rule (refused once every box is in use, no warning while one is free).*
+2. **Who may change the queue and record orders on the pages** (E5-S06, E6-S02). *Built 2026-10-15 for home admins only, as the stories' criteria say: the queue is read-only for User1 and she gets no order form. Say if User1 should have them too, for her own decks.*
+3. **Other venues** (E9-S20). Do you expect to go to Commander nights at another venue as well as the usual one? The optional usual-night record is now built; leave venue expectations unknown until they are checked for a planned visit.
+4. ~~**Phase 5b** (E11-S04).~~ *Answered: Matt asked for 5b on 2026-10-14, after two clean nights; the week ended clean on 2026-10-19 and its report is written.*
+5. ~~**Stand-in suggestions** (E2-S07).~~ *Answered: Matt agreed the "similar role" rule (card type, a shared colour, mana value within 1) on 2026-10-19.*

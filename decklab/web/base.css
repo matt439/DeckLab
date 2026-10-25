@@ -1,0 +1,150 @@
+/* Deck Lab's base (decklab/UI-REVIEW.md 2.1 and 2.3): the reset, type, links, focus, the page's width and
+   every form field's look. Loaded after tokens.css and before components.css.
+
+   Field rules are wrapped in :where(), so they weigh nothing: a page's class (a stepper's quantity box, the
+   search box with its icon) always wins without fighting them.
+
+   The two typefaces (design/visual-design.md 2.3) are files in web/fonts/, never loaded from the internet:
+   variable woff2 files subset to Latin and Deck Lab's punctuation, licences in decklab/fonts-licences/.
+   index.html preloads Figtree's upright face at this exact URL (a preload at any other URL fetches the file
+   twice); JetBrains Mono and the italic load when something first uses them. If a file fails, or a character
+   isn't in the subset, --font and --font-mono fall back to the system fonts. */
+
+@font-face {
+  font-family: "Figtree";
+  src: url("/fonts/figtree.woff2") format("woff2");
+  font-weight: 300 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Figtree";
+  src: url("/fonts/figtree-italic.woff2") format("woff2");
+  font-weight: 300 900;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: "JetBrains Mono";
+  src: url("/fonts/jetbrains-mono.woff2") format("woff2");
+  font-weight: 100 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--page);
+  color: var(--ink);
+  font: var(--fw-regular) var(--fs-md) / var(--lh-body) var(--font);
+  overflow-wrap: break-word;
+}
+
+h1, h2, h3, h4 { line-height: var(--lh-tight); margin: 0 0 var(--s-2); }
+h1 { font-size: var(--fs-xl); font-weight: var(--fw-bold); }
+h2 { font-size: var(--fs-lg); font-weight: var(--fw-bold); }
+h3 { font-size: var(--fs-md); font-weight: var(--fw-semibold); }
+h4 { font-size: var(--fs-sm); font-weight: var(--fw-semibold); }
+@media (min-width: 600px) {
+  h1 { font-size: var(--fs-2xl); }
+  h2 { font-size: var(--fs-xl); }
+}
+p { margin: 0 0 var(--s-3); }
+ul, ol { margin: 0; padding: 0; }
+a { color: var(--link); text-underline-offset: 2px; }
+img { max-width: 100%; }
+small { font-size: var(--fs-sm); }
+code { font-family: var(--font-mono); font-size: .9em; }
+.num { font-variant-numeric: tabular-nums; }
+
+/* The outline follows the element's own corners (a round button gets a round ring); it never changes them. */
+:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.sr-only {
+  position: absolute !important;
+  width: 1px; height: 1px;
+  margin: -1px; padding: 0; border: 0;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;
+}
+
+.skip {
+  position: absolute; left: var(--s-2); top: -60px; z-index: 50;
+  background: var(--accent); color: var(--accent-ink);
+  padding: var(--s-3) var(--s-4); border-radius: var(--r-md);
+}
+.skip:focus { top: var(--s-2); }
+
+.wrap {
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding-left: max(var(--gutter), env(safe-area-inset-left));
+  padding-right: max(var(--gutter), env(safe-area-inset-right));
+}
+@media (min-width: 1600px) {
+  .wrap { max-width: 2560px; }
+}
+
+main { padding-bottom: var(--s-6); outline: none; }
+[hidden] { display: none !important; }
+
+/* ------------------------------------------------------------------- fields */
+
+/* Selects and text inputs (design/visual-design.md 4.5): --input-h tall (44 on touch, 32 in the lab), --r-field
+   corners (12 casual, 8 in the lab), a search field round, and --fs-input text, which is 16 px wherever there's
+   no fine pointer, so iOS never zooms in on the box. Focused: a teal edge and a 3 px --focus-halo (the outline
+   is transparent, so a forced-colours screen still draws it). */
+
+:where(input:not([type="checkbox"], [type="radio"], [type="file"], [type="range"], [type="color"],
+  [type="hidden"], [type="button"], [type="submit"], [type="reset"], [type="image"]), textarea, select) {
+  max-width: 100%;
+  min-height: var(--input-h);
+  padding: var(--s-1) var(--s-3);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-field);
+  background-color: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--fs-input);
+  line-height: var(--lh-tight);
+}
+:where(input:not([type="checkbox"], [type="radio"], [type="file"], [type="range"], [type="color"],
+  [type="hidden"], [type="button"], [type="submit"], [type="reset"], [type="image"]), textarea, select):focus-visible {
+  outline: 2px solid transparent; outline-offset: 0;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--focus-halo);
+}
+:where(input[type="search"]) { -webkit-appearance: none; appearance: none; border-radius: var(--r-pill); }
+:where(textarea) { display: block; width: 100%; min-height: 90px; padding: var(--s-2) var(--s-3); line-height: var(--lh-body); resize: vertical; }
+:where(input, textarea, select)::placeholder { color: var(--ink-3); opacity: 1; }
+:where(input, textarea, select):disabled { background-color: var(--surface-2); color: var(--ink-3); cursor: not-allowed; }
+:where(input, textarea)[readonly] { background-color: var(--surface-2); color: var(--ink-2); }
+:where(input[type="date"], input[type="time"]) { min-width: 10em; }
+
+:where(select) {
+  padding-right: var(--s-6);
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, currentColor 50%),
+                    linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position: calc(100% - 17px) 50%, calc(100% - 12px) 50%;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+}
+
+/* Ticks and choices: native, in the accent (a tick is "done, or now yours"), --check-size (24 px casual, 22 with a
+   mouse, 18 in the lab). Put them in a label row of at least 44 px (.choice). */
+:where(input[type="checkbox"], input[type="radio"]) {
+  width: var(--check-size); height: var(--check-size);
+  margin: 0;
+  flex: none;
+  accent-color: var(--accent);
+  cursor: pointer;
+}

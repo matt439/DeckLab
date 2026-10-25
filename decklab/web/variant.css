@@ -1,0 +1,103 @@
+/* Tests of changes (variant.js): the test page, the editor's Test row and sheet, and the deck page's
+   list. Every class starts with "vt-". Phones (below 600 px): one column, the sheet full screen; iPad
+   (600-1,599 px): the verdict panel on top and the rows below, a side sheet; QHD (1,600 px and up): the
+   rows beside the verdict panel. */
+
+/* The change, as chips. */
+.vt-chips { display: flex; flex-wrap: wrap; gap: var(--s-2); list-style: none; margin: var(--s-1) 0 var(--s-2); padding: 0; }
+.vt-chip { padding: var(--s-1) var(--s-3); border-radius: var(--r-pill); font-size: var(--fs-sm); font-weight: var(--fw-semibold); border: 1px solid var(--border); }
+/* In Forge's strong and weak colours, as a swap-test result's swap (visual-design.md 4.9). */
+.vt-chip-add { background: var(--strong-soft); color: var(--strong-ink); border-color: transparent; }
+.vt-chip-remove { background: var(--weak-soft); color: var(--weak-ink); border-color: transparent; }
+
+/* The test page. */
+.vt-title { margin-bottom: var(--s-1); }
+.vt-by { margin-top: 0; }
+.vt-grid { display: grid; gap: var(--s-4); grid-template-columns: minmax(0, 1fr); }
+.vt-panel { padding: var(--s-4) var(--s-4); border: 1px solid var(--border); border-radius: var(--r-lg); background: var(--surface); }
+.vt-panel h2 { margin-top: 0; font-size: var(--fs-lg); }
+.vt-verdict.vt-good { border-left: 6px solid var(--good); }
+.vt-verdict.vt-warn { border-left: 6px solid var(--warn); }
+.vt-verdict.vt-crit { border-left: 6px solid var(--crit); }
+.vt-verdict.vt-info { border-left: 6px solid var(--border-strong); }
+.vt-words { line-height: 1.3; }
+.vt-error, .vt-warn { color: var(--crit-ink); }
+.vt-count { font-weight: var(--fw-semibold); font-variant-numeric: tabular-nums; }
+.vt-how { margin: var(--s-3) 0; }
+.vt-how summary { min-height: 44px; display: flex; align-items: center; cursor: pointer; font-weight: var(--fw-semibold); }
+.vt-how ul { margin: var(--s-1) 0 0; padding-left: var(--s-5); }
+
+/* A difference bar: 0 in the middle, the range as a band, the estimate as a tick. Every bar on a page shares one
+   span (vtSpan) and the axis under them; its colour is its verdict, in Forge's strong and weak colours
+   (visual-design.md 2.1): green when the whole range is above 0 (the change helps), red below, grey across 0. */
+.vt-diff { --vt-c: var(--ink-2); position: relative; height: 18px; margin: var(--s-2) 0; border-radius: var(--r-sm); background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--border); }
+.vt-diff-good { --vt-c: var(--strong-ink); }
+.vt-diff-crit { --vt-c: var(--weak-ink); }
+.vt-diff-zero { position: absolute; left: 50%; top: -3px; bottom: -3px; width: 2px; margin-left: -1px; background: var(--ink-2); }
+.vt-diff-band { position: absolute; top: 3px; bottom: 3px; border-radius: var(--r-sm); background: var(--vt-c); opacity: 0.45; }
+.vt-diff-tick { position: absolute; top: 0; bottom: 0; width: 3px; margin-left: -1.5px; background: var(--vt-c); }
+.vt-diff-live .vt-diff-band { background: transparent; border: 2px dashed var(--vt-c); opacity: 1; }
+.vt-axis { display: grid; grid-template-columns: 1fr auto 1fr; gap: var(--s-2); margin: calc(-1 * var(--s-1)) 0 var(--s-2); font-size: var(--fs-sm); font-variant-numeric: tabular-nums; }
+.vt-axis-worse { color: var(--weak-ink); }
+.vt-axis-zero { color: var(--ink-2); }
+.vt-axis-better { color: var(--strong-ink); text-align: right; }
+.vt-rows > .sub { margin: 0 0 var(--s-3); font-size: var(--fs-sm); color: var(--ink-2); }
+
+/* While it plays: a mini bar per opponent. */
+.vt-minis { list-style: none; margin: var(--s-2) 0; padding: 0; display: grid; gap: var(--s-2); }
+.vt-mini { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px var(--s-2); align-items: center; }
+.vt-mini .progress { grid-column: 1 / -1; margin: 0; }
+.vt-mini-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vt-mini-n { font-size: var(--fs-sm); color: var(--ink-2); font-variant-numeric: tabular-nums; }
+
+/* Each opponent. */
+.vt-rows h2 { font-size: var(--fs-lg); }
+.vt-list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s-3); }
+.vt-row { padding: var(--s-3) var(--s-3); border: 1px solid var(--border); border-radius: var(--r-lg); background: var(--surface); }
+.vt-row .sub { margin: 0; font-size: var(--fs-sm); color: var(--ink-2); }
+.vt-row-name { display: flex; justify-content: space-between; gap: var(--s-2); flex-wrap: wrap; font-weight: var(--fw-semibold); }
+.vt-row-name a { min-height: 44px; display: inline-flex; align-items: center; }
+.vt-row-n { font-weight: var(--fw-regular); color: var(--ink-2); font-size: var(--fs-sm); align-self: center; }
+.vt-row-dropped { opacity: 0.65; }
+
+/* The deck page's list. */
+.vt-test-list { list-style: none; margin: 0; padding: 0; }
+.vt-test-item { display: flex; align-items: center; gap: var(--s-2); border-bottom: 1px solid var(--border); }
+.vt-test-item a { min-height: 44px; display: inline-flex; align-items: center; flex: 1 1 auto; }
+.vt-test-item a.vt-test-link { padding: var(--s-2) 0; color: var(--ink); text-decoration: none; }
+.vt-test-item > .fresh { margin-left: auto; }
+.vt-saved { font-size: var(--fs-sm); font-weight: var(--fw-semibold); padding: 2px var(--s-2); border-radius: var(--r-pill); background: var(--good-soft); color: var(--good-ink); }
+
+/* The editor's Test row: before Save from 600 px; a second, full-width row of the bar below it. */
+.vt-test-row { display: flex; align-items: center; gap: var(--s-2); min-width: 0; }
+.vt-test-row[hidden], .vt-test-why[hidden] { display: none; }
+.vt-test-btn { min-height: 44px; white-space: nowrap; }
+.vt-test-why { font-size: var(--fs-sm); color: var(--ink-2); max-width: 220px; line-height: 1.2; }
+@media (max-width: 599px) {
+  .edit-bar:has(> .vt-test-row:not([hidden])) { flex-wrap: wrap; }
+  .vt-test-row { order: -1; flex: 1 0 100%; flex-wrap: wrap; }
+  .vt-test-btn { flex: 1 1 100%; width: 100%; }
+  .vt-test-why { max-width: none; }
+}
+
+/* The sheet: full screen on a phone, a side sheet from 600 px. */
+.vt-sheet-part select { width: 100%; margin: 0 0 var(--s-2); }
+@media (max-width: 599px) {
+  dialog.vt-sheet { width: 100%; max-width: 100%; height: 100%; max-height: 100%; margin: 0; border-radius: 0; }
+  dialog.vt-sheet .sheet-inner { max-height: 100%; height: 100%; }
+}
+@media (min-width: 600px) {
+  dialog.vt-sheet { margin: 0 0 0 auto; height: 100%; max-height: 100%; border-radius: var(--r-lg) 0 0 var(--r-lg); width: min(480px, 90vw); }
+  dialog.vt-sheet .sheet-inner { max-height: 100%; height: 100%; }
+}
+
+/* QHD: the rows beside the verdict panel. */
+@media (min-width: 1600px) {
+  .vt-grid { grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); align-items: start; }
+}
+
+@media (forced-colors: active) {
+  .vt-diff-band, .vt-diff-tick, .vt-diff-zero { forced-color-adjust: none; background: CanvasText; }
+  .vt-axis span { forced-color-adjust: auto; }
+  .vt-diff-live .vt-diff-band { background: transparent; border-color: CanvasText; }
+}

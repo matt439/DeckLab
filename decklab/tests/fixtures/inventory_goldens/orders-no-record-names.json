@@ -1,0 +1,647 @@
+{
+ "accessories": {
+  "holders": {
+   "holders": {},
+   "warnings": []
+  },
+  "scan": {
+   "found": [],
+   "strays": [],
+   "warnings": []
+  }
+ },
+ "assembly": {
+  "": {
+   "choices": [],
+   "counts_confirmed": false,
+   "decks": [],
+   "note": "This is a plan. Other built decks stay reserved. Nothing is moved, marked built or written to inventory.",
+   "ready": false,
+   "rows": [],
+   "token_note": "Worked out from Scryfall's links between cards and tokens, so it's approximate. Tokens a card makes only through its rules text, and most token copies of other cards, aren't listed. Some listed tokens appear only in certain modes or for your opponent. Deck Lab can't tell how many a game needs. Packing ticks don't reserve or change inventory.",
+   "token_plan": [],
+   "token_plan_note": "Both decks can use these cards. One card shows one face at a time; at home keep shared tokens in one pile on the table.",
+   "token_problems": [],
+   "tokens": [],
+   "totals": {
+    "from_storage": 0,
+    "kept": 0,
+    "missing": 0,
+    "need": 0,
+    "transfers": 0,
+    "waiting": 0
+   },
+   "unresolved": [
+    "Opt",
+    "Shock"
+   ],
+   "warnings": []
+  }
+ },
+ "beginner_box_pairings": [],
+ "collection": {
+  "home": {
+   "pages": [
+    {
+     "cards": [
+      {
+       "basic": false,
+       "card": {
+        "cmc": 1.0,
+        "color_identity": [
+         "G"
+        ],
+        "colors": [
+         "G"
+        ],
+        "defense": null,
+        "img": "/img/fdn/227/normal",
+        "img_small": "/img/fdn/227/small",
+        "loyalty": null,
+        "mana_cost": "{G}",
+        "name": "Llanowar Elves",
+        "oracle_text": "{T}: Add {G}.",
+        "power": "1",
+        "roles": [
+         "ramp"
+        ],
+        "toughness": "1",
+        "type_line": "Creature — Elf Druid"
+       },
+       "free_now": 1,
+       "held": 0,
+       "holders": [],
+       "incoming": 0,
+       "name": "Llanowar Elves",
+       "owned": 1,
+       "resolved": true
+      },
+      {
+       "basic": false,
+       "card": null,
+       "free_now": 0,
+       "held": 0,
+       "holders": [],
+       "incoming": 3,
+       "name": "Opt",
+       "owned": 0,
+       "resolved": false
+      },
+      {
+       "basic": false,
+       "card": null,
+       "free_now": 0,
+       "held": 0,
+       "holders": [],
+       "incoming": 1,
+       "name": "Shock",
+       "owned": 0,
+       "resolved": false
+      }
+     ],
+     "limit": 24,
+     "note": "Ordinary basics are assumed plentiful. Tracked special basics are shown, but their deck allocation isn't tracked.",
+     "page": 1,
+     "pages": 1,
+     "roles": [
+      "ramp"
+     ],
+     "total": 3,
+     "types": [
+      "Creature"
+     ],
+     "warnings": [
+      "Some inventory names are unresolved: Opt, Shock"
+     ]
+    }
+   ],
+   "special_basics": [
+    {},
+    {}
+   ]
+  },
+  "user3": {
+   "pages": [
+    {
+     "cards": [],
+     "limit": 24,
+     "note": "Ordinary basics are assumed plentiful. Tracked special basics are shown, but their deck allocation isn't tracked.",
+     "page": 1,
+     "pages": 1,
+     "roles": [],
+     "total": 0,
+     "types": [],
+     "warnings": []
+    }
+   ],
+   "special_basics": [
+    {},
+    {}
+   ]
+  },
+  "user2": {
+   "pages": [
+    {
+     "cards": [],
+     "limit": 24,
+     "note": "Ordinary basics are assumed plentiful. Tracked special basics are shown, but their deck allocation isn't tracked.",
+     "page": 1,
+     "pages": 1,
+     "roles": [],
+     "total": 0,
+     "types": [],
+     "warnings": []
+    }
+   ],
+   "special_basics": [
+    {},
+    {}
+   ]
+  },
+  "user4": {
+   "pages": [
+    {
+     "cards": [],
+     "limit": 24,
+     "note": "Ordinary basics are assumed plentiful. Tracked special basics are shown, but their deck allocation isn't tracked.",
+     "page": 1,
+     "pages": 1,
+     "roles": [],
+     "total": 0,
+     "types": [],
+     "warnings": []
+    }
+   ],
+   "special_basics": [
+    {},
+    {}
+   ]
+  }
+ },
+ "deck_table": {},
+ "deck_table_priced": {},
+ "deck_view": {},
+ "decks_index": {
+  "decks": [],
+  "halves": [],
+  "warnings": []
+ },
+ "field": {
+  "Commander": {
+   "lists": [],
+   "notes": []
+  },
+  "Constructed": {
+   "lists": [],
+   "notes": []
+  }
+ },
+ "list_decks": [],
+ "load_deck": {},
+ "owned_vs_needed": {},
+ "owned_vs_needed_priced": {},
+ "plan_refresh": {
+  "__error__": "ValueError: Cannot refresh from an incomplete card pool: Unknown card: Opt; Unknown card: Shock"
+ },
+ "pools": {
+  "home": {
+   "in_use": [],
+   "on_the_way": {
+    "Opt": [
+     [
+      "order 2026-09-29-singles",
+      2
+     ],
+     [
+      "order 2026-10-01-more",
+      1
+     ]
+    ],
+    "Shock": [
+     [
+      "order 2026-10-01-more",
+      1
+     ]
+    ]
+   },
+   "owned": {
+    "Llanowar Elves": 1,
+    "Opt": 3,
+    "Shock": 1
+   },
+   "space": "home",
+   "unresolved": {
+    "Opt": [
+     "magic/orders/2026-09-29-singles.csv",
+     "magic/orders/2026-10-01-more.csv"
+    ],
+    "Shock": [
+     "magic/orders/2026-10-01-more.csv"
+    ]
+   },
+   "warnings": []
+  },
+  "user3": {
+   "in_use": [],
+   "on_the_way": {},
+   "owned": {},
+   "space": "user3",
+   "unresolved": {},
+   "warnings": []
+  },
+  "user2": {
+   "in_use": [],
+   "on_the_way": {},
+   "owned": {},
+   "space": "user2",
+   "unresolved": {},
+   "warnings": []
+  },
+  "user4": {
+   "in_use": [],
+   "on_the_way": {},
+   "owned": {},
+   "space": "user4",
+   "unresolved": {},
+   "warnings": []
+  }
+ },
+ "printing_counts": {
+  "home": {
+   "dom|60|foil": {
+    "on_the_way": 1,
+    "owned": 0
+   },
+   "dom|60|nonfoil": {
+    "on_the_way": 2,
+    "owned": 0
+   },
+   "fdn|227|nonfoil": {
+    "on_the_way": 0,
+    "owned": 1
+   },
+   "m19|156|nonfoil": {
+    "on_the_way": 1,
+    "owned": 0
+   }
+  },
+  "user3": {},
+  "user2": {},
+  "user4": {}
+ },
+ "printings": {
+  "Llanowar Elves": {
+   "basic": false,
+   "default": {
+    "finish": "nonfoil",
+    "number": "227",
+    "set": "fdn",
+    "why": "owned"
+   },
+   "name": "Llanowar Elves",
+   "price_date": "2026-09-28",
+   "price_error": null,
+   "printings": [
+    {
+     "aud": 0.38,
+     "finish": "nonfoil",
+     "img": "/img/fdn/227/normal",
+     "img_small": "/img/fdn/227/small",
+     "number": "227",
+     "on_the_way": 0,
+     "owned": 1,
+     "released": "2024-11-15",
+     "set": "fdn",
+     "set_name": "FDN",
+     "set_type": "core",
+     "usd": 0.25
+    },
+    {
+     "aud": 0.04,
+     "finish": "foil",
+     "img": "/img/pdmu/1%E2%98%85/normal",
+     "img_small": "/img/pdmu/1%E2%98%85/small",
+     "number": "1★",
+     "on_the_way": 0,
+     "owned": 0,
+     "released": "2023-09-01",
+     "set": "pdmu",
+     "set_name": "PDMU",
+     "set_type": "promo",
+     "usd": 0.03
+    },
+    {
+     "aud": 0.3,
+     "finish": "nonfoil",
+     "img": "/img/m19/314/normal",
+     "img_small": "/img/m19/314/small",
+     "number": "314",
+     "on_the_way": 0,
+     "owned": 0,
+     "released": "2018-07-13",
+     "set": "m19",
+     "set_name": "M19",
+     "set_type": "core",
+     "usd": 0.2
+    },
+    {
+     "aud": 2.66,
+     "finish": "foil",
+     "img": "/img/fdn/227/normal",
+     "img_small": "/img/fdn/227/small",
+     "number": "227",
+     "on_the_way": 0,
+     "owned": 0,
+     "released": "2024-11-15",
+     "set": "fdn",
+     "set_name": "FDN",
+     "set_type": "core",
+     "usd": 1.77
+    }
+   ],
+   "rate": 1.5,
+   "rate_date": "2000-01-01",
+   "total": 4
+  },
+  "Opt": {
+   "__error__": "ApiError: No card named 'Opt'"
+  },
+  "Shock": {
+   "__error__": "ApiError: No card named 'Shock'"
+  }
+ },
+ "purchases": {
+  "coverage": [
+   "magic/orders/2026-09-29-singles.csv: missing order record",
+   "magic/orders/2026-10-01-more.csv: missing order record",
+   "magic/orders/received/2026-09-26-old.csv: missing order record"
+  ],
+  "overview": {
+   "__error__": "ValueError: Shopping records need attention: magic/orders/2026-09-29-singles.csv: missing order record; magic/orders/2026-10-01-more.csv: missing order record; magic/orders/received/2026-09-26-old.csv: missing order record"
+  },
+  "read_queue": {
+   "__error__": "FileNotFoundError: [Errno 2] No such file or directory: '<ROOT>\\\\magic\\\\watchlist.csv'"
+  },
+  "read_records": []
+ },
+ "read_status": {
+  "status": {},
+  "warnings": []
+ },
+ "spaces": [
+  "home",
+  "user2",
+  "user3",
+  "user4"
+ ],
+ "stale_tables": [],
+ "tokens": {
+  "incoming": [
+   [],
+   []
+  ],
+  "incoming_view": {
+   "incoming": [],
+   "problems": []
+  },
+  "spaces": {
+   "home": {
+    "check": [],
+    "gaps": {
+     "gaps": [],
+     "warnings": []
+    },
+    "holders": {
+     "holders": [],
+     "warnings": []
+    },
+    "read": {
+     "lines": [],
+     "problems": [],
+     "rows": [],
+     "sha256": null,
+     "sorted": true
+    },
+    "row_uses": {
+     "row_uses": {},
+     "warnings": []
+    }
+   },
+   "user3": {
+    "check": [],
+    "gaps": {
+     "gaps": [],
+     "warnings": []
+    },
+    "holders": {
+     "holders": [],
+     "warnings": []
+    },
+    "read": {
+     "lines": [],
+     "problems": [],
+     "rows": [],
+     "sha256": null,
+     "sorted": true
+    },
+    "row_uses": {
+     "row_uses": {},
+     "warnings": []
+    }
+   },
+   "user2": {
+    "check": [],
+    "gaps": {
+     "gaps": [],
+     "warnings": []
+    },
+    "holders": {
+     "holders": [],
+     "warnings": []
+    },
+    "read": {
+     "lines": [],
+     "problems": [],
+     "rows": [],
+     "sha256": null,
+     "sorted": true
+    },
+    "row_uses": {
+     "row_uses": {},
+     "warnings": []
+    }
+   },
+   "user4": {
+    "check": [],
+    "gaps": {
+     "gaps": [],
+     "warnings": []
+    },
+    "holders": {
+     "holders": [],
+     "warnings": []
+    },
+    "read": {
+     "lines": [],
+     "problems": [],
+     "rows": [],
+     "sha256": null,
+     "sorted": true
+    },
+    "row_uses": {
+     "row_uses": {},
+     "warnings": []
+    }
+   }
+  }
+ },
+ "wishlist_view": {
+  "user1": {
+   "entries": [
+    {
+     "card": {
+      "cmc": 1.0,
+      "color_identity": [
+       "G"
+      ],
+      "colors": [
+       "G"
+      ],
+      "defense": null,
+      "img": "/img/fdn/227/normal",
+      "img_small": "/img/fdn/227/small",
+      "loyalty": null,
+      "mana_cost": "{G}",
+      "name": "Llanowar Elves",
+      "oracle_text": "{T}: Add {G}.",
+      "power": "1",
+      "roles": [
+       "ramp"
+      ],
+      "toughness": "1",
+      "type_line": "Creature — Elf Druid"
+     },
+     "have": {
+      "on_the_way": 0,
+      "owned": 1
+     },
+     "name": "Llanowar Elves",
+     "notes": "",
+     "number": "",
+     "set": "",
+     "source": ""
+    },
+    {
+     "card": null,
+     "have": {
+      "on_the_way": null,
+      "owned": null
+     },
+     "name": "Opt",
+     "notes": "",
+     "number": "",
+     "set": "",
+     "source": ""
+    },
+    {
+     "card": null,
+     "have": {
+      "on_the_way": null,
+      "owned": null
+     },
+     "name": "Shock",
+     "notes": "",
+     "number": "",
+     "set": "",
+     "source": ""
+    }
+   ],
+   "profile": "user1",
+   "warnings": [
+    "No card details for 'Opt'; it stays on your wishlist.",
+    "No card details for 'Shock'; it stays on your wishlist."
+   ]
+  },
+  "matt": {
+   "entries": [
+    {
+     "card": {
+      "cmc": 1.0,
+      "color_identity": [
+       "G"
+      ],
+      "colors": [
+       "G"
+      ],
+      "defense": null,
+      "img": "/img/fdn/227/normal",
+      "img_small": "/img/fdn/227/small",
+      "loyalty": null,
+      "mana_cost": "{G}",
+      "name": "Llanowar Elves",
+      "oracle_text": "{T}: Add {G}.",
+      "power": "1",
+      "roles": [
+       "ramp"
+      ],
+      "toughness": "1",
+      "type_line": "Creature — Elf Druid"
+     },
+     "have": {
+      "on_the_way": 0,
+      "owned": 1
+     },
+     "name": "Llanowar Elves",
+     "notes": "",
+     "number": "",
+     "set": "",
+     "source": ""
+    },
+    {
+     "card": null,
+     "have": {
+      "on_the_way": null,
+      "owned": null
+     },
+     "name": "Opt",
+     "notes": "",
+     "number": "",
+     "set": "",
+     "source": ""
+    },
+    {
+     "card": null,
+     "have": {
+      "on_the_way": null,
+      "owned": null
+     },
+     "name": "Shock",
+     "notes": "",
+     "number": "",
+     "set": "",
+     "source": ""
+    }
+   ],
+   "profile": "matt",
+   "warnings": [
+    "No card details for 'Opt'; it stays on your wishlist.",
+    "No card details for 'Shock'; it stays on your wishlist."
+   ]
+  },
+  "user3": {
+   "entries": [],
+   "profile": "user3",
+   "warnings": []
+  },
+  "user2": {
+   "entries": [],
+   "profile": "user2",
+   "warnings": []
+  },
+  "user4": {
+   "entries": [],
+   "profile": "user4",
+   "warnings": []
+  }
+ }
+}

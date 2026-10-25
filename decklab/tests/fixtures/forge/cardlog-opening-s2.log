@@ -1,0 +1,231 @@
+Error handling registered!
+16:31:36 [INFO ] GuiBase: ##########################################
+16:31:36 [INFO ] GuiBase: APP: Forge v.2.0.15-SNAPSHOT-09.28
+16:31:36 [INFO ] GuiBase: Java: 26.0.1 (Oracle Corporation)
+16:31:36 [INFO ] GuiBase: OS: Windows 11 10.0 amd64
+16:31:36 [INFO ] GuiBase: RAM: 1024 MB max, 32 CPUs
+16:31:36 [INFO ] GuiBase: ##########################################
+Language 'en-US' loaded successfully.
+(ThreadUtil first call): Running with priority 5
+Lazy card database: indexed 35240 card names from 33980 files in 696 ms
+Lazy card database: indexed 0 card names from 0 files in 0 ms
+Read cards: 854 files in 0 ms (8 parts) using thread pool
+Simulation mode
+Ai(1)-leylines [Default] vs Ai(2)-green [Default] - twelve games of Constructed seed 2
+Information: DL|log|1
+Information: DL|deck|1|1=Gifted Aetherborn;2=Gifted Aetherborn;3=Gifted Aetherborn;4=Gifted Aetherborn;5=Leyline of the Void;6=Leyline of the Void;7=Leyline of the Void;8=Leyline of the Void;9=Doom Blade;10=Doom Blade;11=Doom Blade;12=Doom Blade;13=Sengir Vampire;14=Sengir Vampire;15=Sengir Vampire;16=Sengir Vampire;17=Vampire Nighthawk;18=Vampire Nighthawk;19=Vampire Nighthawk;20=Vampire Nighthawk;21=Duress;22=Duress;23=Duress;24=Duress;25=Swamp;26=Swamp;27=Swamp;28=Swamp;29=Swamp;30=Swamp;31=Swamp;32=Swamp;33=Swamp;34=Swamp;35=Swamp;36=Swamp;37=Swamp;38=Swamp;39=Swamp;40=Swamp;41=Swamp;42=Swamp;43=Swamp;44=Swamp;45=Dread Shade;46=Dread Shade;47=Dread Shade;48=Dread Shade;49=Gemstone Caverns;50=Gemstone Caverns;51=Gemstone Caverns;52=Gemstone Caverns;53=Bloodghast;54=Bloodghast;55=Bloodghast;56=Bloodghast;57=Gravecrawler;58=Gravecrawler;59=Gravecrawler;60=Gravecrawler
+Information: DL|deck|2|61=Grizzly Bears;62=Grizzly Bears;63=Grizzly Bears;64=Grizzly Bears;65=Elvish Mystic;66=Elvish Mystic;67=Elvish Mystic;68=Elvish Mystic;69=Kalonian Tusker;70=Kalonian Tusker;71=Kalonian Tusker;72=Kalonian Tusker;73=Leatherback Baloth;74=Leatherback Baloth;75=Leatherback Baloth;76=Leatherback Baloth;77=Giant Growth;78=Giant Growth;79=Giant Growth;80=Giant Growth;81=Llanowar Elves;82=Llanowar Elves;83=Llanowar Elves;84=Llanowar Elves;85=Centaur Courser;86=Centaur Courser;87=Centaur Courser;88=Centaur Courser;89=Forest;90=Forest;91=Forest;92=Forest;93=Forest;94=Forest;95=Forest;96=Forest;97=Forest;98=Forest;99=Forest;100=Forest;101=Forest;102=Forest;103=Forest;104=Forest;105=Forest;106=Forest;107=Forest;108=Forest;109=Forest;110=Forest;111=Forest;112=Forest;113=Garruk's Companion;114=Garruk's Companion;115=Garruk's Companion;116=Garruk's Companion;117=Rancor;118=Rancor;119=Rancor;120=Rancor
+Information: DL|zone|0|-|-|Library|Hand|1|5|Leyline of the Void
+Information: DL|zone|0|-|-|Library|Hand|1|20|Vampire Nighthawk
+Information: DL|zone|0|-|-|Library|Hand|1|21|Duress
+Information: DL|zone|0|-|-|Library|Hand|1|28|Swamp
+Information: DL|zone|0|-|-|Library|Hand|1|52|Gemstone Caverns
+Information: DL|zone|0|-|-|Library|Hand|1|33|Swamp
+Information: DL|zone|0|-|-|Library|Hand|1|48|Dread Shade
+Information: DL|zone|0|-|-|Library|Hand|2|99|Forest
+Information: DL|zone|0|-|-|Library|Hand|2|112|Forest
+Information: DL|zone|0|-|-|Library|Hand|2|81|Llanowar Elves
+Information: DL|zone|0|-|-|Library|Hand|2|119|Rancor
+Information: DL|zone|0|-|-|Library|Hand|2|83|Llanowar Elves
+Information: DL|zone|0|-|-|Library|Hand|2|75|Leatherback Baloth
+Information: DL|zone|0|-|-|Library|Hand|2|95|Forest
+Mulligan: Ai(2)-green has kept a hand of 7 cards
+Mulligan: Ai(1)-leylines has kept a hand of 7 cards
+Information: DL|zone|0|-|-|Hand|Battlefield|1|5|Leyline of the Void
+Information: DL|zone|0|-|-|Hand|Battlefield|1|52|Gemstone Caverns
+Information: DL|zone|0|-|-|Hand|Exile|1|48|Dread Shade
+Information: DL|hand|1|start|1|20=Vampire Nighthawk;21=Duress;28=Swamp;33=Swamp
+Information: DL|hand|1|start|2|99=Forest;112=Forest;81=Llanowar Elves;119=Rancor;83=Llanowar Elves;75=Leatherback Baloth;95=Forest
+Turn: Turn 1 (Ai(2)-green)
+Information: DL|zone|1|2|MAIN1|Hand|Battlefield|2|99|Forest
+Land: Ai(2)-green played Forest (99)
+Information: DL|zone|1|2|MAIN2|Hand|Stack|2|81|Llanowar Elves
+Mana: Forest (99) - {T}: Add {G}.
+Add To Stack: Ai(2)-green cast Llanowar Elves
+Information: DL|zone|1|2|MAIN2|Stack|Battlefield|2|81|Llanowar Elves
+Resolve Stack: Llanowar Elves - Creature 1 / 1
+Turn: Turn 2 (Ai(1)-leylines)
+Information: DL|zone|2|1|DRAW|Library|Hand|1|27|Swamp
+Information: DL|zone|2|1|MAIN1|Hand|Battlefield|1|28|Swamp
+Land: Ai(1)-leylines played Swamp (28)
+Information: DL|zone|2|1|MAIN2|Hand|Stack|1|21|Duress
+Mana: Swamp (28) - {T}: Add {B}.
+Add To Stack: Ai(1)-leylines cast Duress targeting [Ai(2)-green]
+Information: DL|zone|2|1|MAIN2|Hand|Exile|2|119|Rancor
+Replacement Effect: If a card would be put into an opponent's graveyard from anywhere, exile it instead.
+Discard: Ai(2)-green discards Rancor (119).
+Resolve Stack: Duress (21) - Ai(2)-green reveals their hand. Ai(1)-leylines chooses a Card.nonCreature+nonLand card from it. Ai(2)-green discards that card.
+Information: DL|zone|2|1|MAIN2|Stack|Graveyard|1|21|Duress
+Turn: Turn 3 (Ai(2)-green)
+Information: DL|zone|3|2|DRAW|Library|Hand|2|82|Llanowar Elves
+Information: DL|zone|3|2|MAIN1|Hand|Battlefield|2|112|Forest
+Land: Ai(2)-green played Forest (112)
+Combat: Ai(2)-green assigned Llanowar Elves (81) to attack Ai(1)-leylines.
+Combat: Ai(1)-leylines didn't block Llanowar Elves (81).
+Damage: Llanowar Elves (81) deals 1 combat damage to Ai(1)-leylines.
+Life: Life: Ai(1)-leylines 20 > 19
+Information: DL|zone|3|2|MAIN2|Hand|Stack|2|83|Llanowar Elves
+Mana: Forest (99) - {T}: Add {G}.
+Add To Stack: Ai(2)-green cast Llanowar Elves
+Information: DL|zone|3|2|MAIN2|Stack|Battlefield|2|83|Llanowar Elves
+Resolve Stack: Llanowar Elves - Creature 1 / 1
+Information: DL|zone|3|2|MAIN2|Hand|Stack|2|82|Llanowar Elves
+Mana: Forest (112) - {T}: Add {G}.
+Add To Stack: Ai(2)-green cast Llanowar Elves
+Information: DL|zone|3|2|MAIN2|Stack|Battlefield|2|82|Llanowar Elves
+Resolve Stack: Llanowar Elves - Creature 1 / 1
+Turn: Turn 4 (Ai(1)-leylines)
+Information: DL|zone|4|1|DRAW|Library|Hand|1|18|Vampire Nighthawk
+Information: DL|zone|4|1|MAIN1|Hand|Battlefield|1|33|Swamp
+Land: Ai(1)-leylines played Swamp (33)
+Information: DL|zone|4|1|MAIN2|Hand|Stack|1|20|Vampire Nighthawk
+Mana: Swamp (28) - {T}: Add {B}.
+Mana: Swamp (33) - {T}: Add {B}.
+Mana: Gemstone Caverns (52) - {T}: Add {C}. If Gemstone Caverns has a luck counter on it, instead add one mana of any color. 
+Add To Stack: Ai(1)-leylines cast Vampire Nighthawk
+Information: DL|zone|4|1|MAIN2|Stack|Battlefield|1|20|Vampire Nighthawk
+Resolve Stack: Vampire Nighthawk - Creature 2 / 3
+Turn: Turn 5 (Ai(2)-green)
+Information: DL|zone|5|2|DRAW|Library|Hand|2|104|Forest
+Information: DL|zone|5|2|MAIN2|Hand|Battlefield|2|95|Forest
+Land: Ai(2)-green played Forest (95)
+Information: DL|zone|5|2|MAIN2|Hand|Stack|2|75|Leatherback Baloth
+Mana: Forest (99) - {T}: Add {G}.
+Mana: Forest (112) - {T}: Add {G}.
+Mana: Forest (95) - {T}: Add {G}.
+Add To Stack: Ai(2)-green cast Leatherback Baloth
+Information: DL|zone|5|2|MAIN2|Stack|Battlefield|2|75|Leatherback Baloth
+Resolve Stack: Leatherback Baloth - Creature 4 / 5
+Turn: Turn 6 (Ai(1)-leylines)
+Information: DL|zone|6|1|DRAW|Library|Hand|1|57|Gravecrawler
+Information: DL|zone|6|1|MAIN1|Hand|Battlefield|1|27|Swamp
+Land: Ai(1)-leylines played Swamp (27)
+Combat: Ai(1)-leylines assigned Vampire Nighthawk (20) to attack Ai(2)-green.
+Combat: Ai(2)-green didn't block Vampire Nighthawk (20).
+Damage: Vampire Nighthawk (20) deals 2 combat damage to Ai(2)-green.
+Life: Life: Ai(1)-leylines 19 > 21
+Life: Life: Ai(2)-green 20 > 18
+Information: DL|zone|6|1|MAIN2|Hand|Stack|1|18|Vampire Nighthawk
+Mana: Swamp (28) - {T}: Add {B}.
+Mana: Swamp (33) - {T}: Add {B}.
+Mana: Swamp (27) - {T}: Add {B}.
+Add To Stack: Ai(1)-leylines cast Vampire Nighthawk
+Information: DL|zone|6|1|MAIN2|Stack|Battlefield|1|18|Vampire Nighthawk
+Resolve Stack: Vampire Nighthawk - Creature 2 / 3
+Turn: Turn 7 (Ai(2)-green)
+Information: DL|zone|7|2|DRAW|Library|Hand|2|110|Forest
+Combat: Ai(2)-green assigned Leatherback Baloth (75) to attack Ai(1)-leylines.
+Combat: Ai(1)-leylines didn't block Leatherback Baloth (75).
+Damage: Leatherback Baloth (75) deals 4 combat damage to Ai(1)-leylines.
+Life: Life: Ai(1)-leylines 21 > 17
+Information: DL|zone|7|2|MAIN2|Hand|Battlefield|2|104|Forest
+Land: Ai(2)-green played Forest (104)
+Turn: Turn 8 (Ai(1)-leylines)
+Information: DL|zone|8|1|DRAW|Library|Hand|1|6|Leyline of the Void
+Combat: Ai(1)-leylines assigned Vampire Nighthawk (20) and Vampire Nighthawk (18) to attack Ai(2)-green.
+Combat: Ai(2)-green didn't block Vampire Nighthawk (20).
+Ai(2)-green didn't block Vampire Nighthawk (18).
+Damage: Vampire Nighthawk (20) deals 2 combat damage to Ai(2)-green.
+Life: Life: Ai(1)-leylines 17 > 19
+Damage: Vampire Nighthawk (18) deals 2 combat damage to Ai(2)-green.
+Life: Life: Ai(1)-leylines 19 > 21
+Life: Life: Ai(2)-green 18 > 14
+Information: DL|zone|8|1|MAIN2|Hand|Stack|1|57|Gravecrawler
+Mana: Swamp (28) - {T}: Add {B}.
+Add To Stack: Ai(1)-leylines cast Gravecrawler
+Information: DL|zone|8|1|MAIN2|Stack|Battlefield|1|57|Gravecrawler
+Resolve Stack: Gravecrawler - Creature 2 / 1
+Turn: Turn 9 (Ai(2)-green)
+Information: DL|zone|9|2|DRAW|Library|Hand|2|113|Garruk's Companion
+Combat: Ai(2)-green assigned Leatherback Baloth (75), Llanowar Elves (81), Llanowar Elves (83) and Llanowar Elves (82) to attack Ai(1)-leylines.
+Combat: Ai(1)-leylines didn't block Leatherback Baloth (75).
+Ai(1)-leylines didn't block Llanowar Elves (81).
+Ai(1)-leylines didn't block Llanowar Elves (83).
+Ai(1)-leylines didn't block Llanowar Elves (82).
+Damage: Leatherback Baloth (75) deals 4 combat damage to Ai(1)-leylines.
+Damage: Llanowar Elves (81) deals 1 combat damage to Ai(1)-leylines.
+Damage: Llanowar Elves (83) deals 1 combat damage to Ai(1)-leylines.
+Damage: Llanowar Elves (82) deals 1 combat damage to Ai(1)-leylines.
+Life: Life: Ai(1)-leylines 21 > 14
+Information: DL|zone|9|2|MAIN2|Hand|Battlefield|2|110|Forest
+Land: Ai(2)-green played Forest (110)
+Information: DL|zone|9|2|MAIN2|Hand|Stack|2|113|Garruk's Companion
+Mana: Forest (99) - {T}: Add {G}.
+Mana: Forest (112) - {T}: Add {G}.
+Add To Stack: Ai(2)-green cast Garruk's Companion
+Information: DL|zone|9|2|MAIN2|Stack|Battlefield|2|113|Garruk's Companion
+Resolve Stack: Garruk's Companion - Creature 3 / 2
+Turn: Turn 10 (Ai(1)-leylines)
+Information: DL|zone|10|1|DRAW|Library|Hand|1|14|Sengir Vampire
+Combat: Ai(1)-leylines assigned Gravecrawler (57), Vampire Nighthawk (20) and Vampire Nighthawk (18) to attack Ai(2)-green.
+Combat: Ai(2)-green didn't block Gravecrawler (57).
+Ai(2)-green didn't block Vampire Nighthawk (20).
+Ai(2)-green didn't block Vampire Nighthawk (18).
+Damage: Gravecrawler (57) deals 2 combat damage to Ai(2)-green.
+Damage: Vampire Nighthawk (20) deals 2 combat damage to Ai(2)-green.
+Life: Life: Ai(1)-leylines 14 > 16
+Damage: Vampire Nighthawk (18) deals 2 combat damage to Ai(2)-green.
+Life: Life: Ai(1)-leylines 16 > 18
+Life: Life: Ai(2)-green 14 > 8
+Turn: Turn 11 (Ai(2)-green)
+Information: DL|zone|11|2|DRAW|Library|Hand|2|93|Forest
+Combat: Ai(2)-green assigned Leatherback Baloth (75), Garruk's Companion (113), Llanowar Elves (81), Llanowar Elves (83) and Llanowar Elves (82) to attack Ai(1)-leylines.
+Combat: Ai(1)-leylines didn't block Leatherback Baloth (75).
+Ai(1)-leylines didn't block Garruk's Companion (113).
+Ai(1)-leylines didn't block Llanowar Elves (81).
+Ai(1)-leylines didn't block Llanowar Elves (83).
+Ai(1)-leylines didn't block Llanowar Elves (82).
+Damage: Leatherback Baloth (75) deals 4 combat damage to Ai(1)-leylines.
+Damage: Garruk's Companion (113) deals 3 combat damage to Ai(1)-leylines.
+Damage: Llanowar Elves (81) deals 1 combat damage to Ai(1)-leylines.
+Damage: Llanowar Elves (83) deals 1 combat damage to Ai(1)-leylines.
+Damage: Llanowar Elves (82) deals 1 combat damage to Ai(1)-leylines.
+Life: Life: Ai(1)-leylines 18 > 8
+Information: DL|zone|11|2|MAIN2|Hand|Battlefield|2|93|Forest
+Land: Ai(2)-green played Forest (93)
+Turn: Turn 12 (Ai(1)-leylines)
+Information: DL|zone|12|1|DRAW|Library|Hand|1|23|Duress
+Combat: Ai(1)-leylines assigned Gravecrawler (57) and Vampire Nighthawk (20) to attack Ai(2)-green.
+Combat: Ai(2)-green didn't block Gravecrawler (57).
+Ai(2)-green didn't block Vampire Nighthawk (20).
+Damage: Gravecrawler (57) deals 2 combat damage to Ai(2)-green.
+Damage: Vampire Nighthawk (20) deals 2 combat damage to Ai(2)-green.
+Life: Life: Ai(1)-leylines 8 > 10
+Life: Life: Ai(2)-green 8 > 4
+Turn: Turn 13 (Ai(2)-green)
+Information: DL|zone|13|2|DRAW|Library|Hand|2|114|Garruk's Companion
+Information: DL|zone|13|2|MAIN2|Hand|Stack|2|114|Garruk's Companion
+Mana: Forest (99) - {T}: Add {G}.
+Mana: Forest (112) - {T}: Add {G}.
+Add To Stack: Ai(2)-green cast Garruk's Companion
+Information: DL|zone|13|2|MAIN2|Stack|Battlefield|2|114|Garruk's Companion
+Resolve Stack: Garruk's Companion - Creature 3 / 2
+Turn: Turn 14 (Ai(1)-leylines)
+Information: DL|zone|14|1|DRAW|Library|Hand|1|34|Swamp
+Information: DL|zone|14|1|MAIN1|Hand|Battlefield|1|34|Swamp
+Land: Ai(1)-leylines played Swamp (34)
+Combat: Ai(1)-leylines assigned Vampire Nighthawk (20), Vampire Nighthawk (18) and Gravecrawler (57) to attack Ai(2)-green.
+Combat: Ai(2)-green didn't block Vampire Nighthawk (20).
+Ai(2)-green didn't block Vampire Nighthawk (18).
+Ai(2)-green assigned Llanowar Elves (81) to block Gravecrawler (57).
+Damage: Vampire Nighthawk (20) deals 2 combat damage to Ai(2)-green.
+Life: Life: Ai(1)-leylines 10 > 12
+Damage: Vampire Nighthawk (18) deals 2 combat damage to Ai(2)-green.
+Life: Life: Ai(1)-leylines 12 > 14
+Damage: Gravecrawler (57) deals 2 damage to Llanowar Elves (81).
+Damage: Llanowar Elves (81) deals 1 damage to Gravecrawler (57).
+Life: Life: Ai(2)-green 4 > 0
+Player Control: Ai(1)-leylines has restored control over themself
+Player Control: Ai(2)-green has restored control over themself
+Game Outcome: Match Duration 0m : 00s
+Game Outcome: Turn 7
+Game Outcome: Ai(1)-leylines has won because all opponents have lost
+Game Outcome: Ai(2)-green has lost because life total reached 0
+Match Result: Ai(1)-leylines: 4 Ai(2)-green: 3 
+Information: DL|hand|14|end|1|6=Leyline of the Void;14=Sengir Vampire;23=Duress
+Information: DL|hand|14|end|2|
+Information: DL|library|14|end|1|46
+Information: DL|library|14|end|2|47
+
+Game Result: Game 7 ended in 562 ms. Ai(1)-leylines has won!
+

@@ -1,0 +1,394 @@
+/* A deck's page (deck.js, WP7 of decklab/UI-REVIEW.md): its head, the availability banner, the tab strip and
+   tabs, the Overview's key cards, the Cards tab's toolbar and list, the sleeves and deck box, the Tokens part,
+   the price table, the Matchups tab, "Deal a hand", mana costs drawn in CSS, and the card peek. It lays out
+   components.css's and cards-ui.css's pieces; it never restyles them. */
+
+/* ------------------------------------------------------------------- head */
+
+.deck-top { display: grid; gap: var(--s-3); padding: var(--s-2) 0 var(--s-3); }
+.deck-top > .box { margin: 0; }
+/* The editor's head (editor-screen.js editorHead) uses .deck-head too: these few rules are shared. */
+.deck-head { padding: var(--s-1) 0 var(--s-2); }
+.deck-head h1 { margin-bottom: var(--s-1); }
+.deck-head .deck-format { color: var(--ink-2); margin-bottom: var(--s-3); }
+.version-pick { margin: var(--s-1) 0; }
+
+/* The title row holds Edit and More at every width: the title and its pips on the left, the buttons on the
+   right; the facts, the editor's sentence and a half's pairings go under it across the whole width. */
+.deck-page-head {
+  display: grid; gap: var(--s-2) var(--s-3); grid-template-columns: minmax(0, 1fr) auto; align-items: start; padding: 0;
+}
+.deck-page-head > * { grid-column: 1 / -1; }
+.deck-page-head > .deck-title-row { grid-column: 1; grid-row: 1; align-self: center; }
+.deck-page-head > .deck-head-actions { grid-column: 2; grid-row: 1; }
+/* Scoped to the head: the library's tiles have a .deck-title-row of their own (library.css). */
+.deck-page-head .deck-title-row {
+  display: flex; align-items: center; justify-content: flex-start; flex-wrap: wrap; gap: var(--s-2) var(--s-3); min-width: 0;
+}
+.deck-head-cover {
+  flex: none; display: block; width: 64px; aspect-ratio: 626 / 457; overflow: hidden;
+  border-radius: var(--r-sm); background: var(--surface-2); box-shadow: var(--shadow-1);
+}
+.deck-head-cover-img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.deck-page-head .deck-title-row h1 { margin: 0; font-size: var(--fs-2xl); overflow-wrap: break-word; hyphens: auto; min-width: 0; }
+.deck-meta { margin: 0; color: var(--ink-2); }
+.deck-pill { margin-right: var(--s-2); vertical-align: 1px; }
+.deck-facts a { color: var(--link); }
+.deck-head-actions { margin: 0; flex-wrap: nowrap; justify-content: flex-end; align-items: center; }
+.deck-head-actions .deck-actions { display: flex; align-items: center; gap: var(--s-2); margin: 0; }
+/* More's menu opens under it, lined up with its right edge (it sits at the page's right). */
+.deck-head-actions .menu { top: calc(100% + var(--s-1)); right: 0; }
+.deck-more-dots { display: none; }
+.deck-head-note { margin: 0; color: var(--ink-2); font-size: var(--fs-sm); max-width: 72ch; }
+.deck-page-head .pairings-of { margin: 0; }
+@media (max-width: 599px) {
+  .deck-page-head .deck-title-row h1 { font-size: var(--fs-xl); }
+  .deck-head-cover { display: none; }   /* the title keeps the row beside Edit and ⋯ */
+  /* On a phone More is a square "⋯" beside Edit, so the title keeps most of the row. */
+  .deck-head-actions .menu-button { width: var(--tap); padding: 0; justify-content: center; }
+  .deck-head-actions .menu-button .menu-caret, .deck-more-words { display: none; }
+  .deck-more-dots { display: inline; font-weight: var(--fw-bold); }
+  /* Edit says just "Edit"; a longer button (Try a change, Save as a new deck) goes under the title instead. */
+  .deck-edit-which { display: none; }
+  .deck-page-head:has(.deck-actions-wide) > .deck-title-row { grid-column: 1 / -1; }
+  .deck-page-head:has(.deck-actions-wide) > .deck-head-actions { grid-column: 1 / -1; grid-row: auto; justify-content: flex-start; }
+}
+@media (min-width: 1000px) {
+  .deck-page-head { column-gap: var(--s-5); }
+}
+
+/* The availability banner (deck.js availabilityBanner): the answer, its button, the list picker. */
+.deck-avail { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2) var(--s-4); max-width: none; }
+.deck-avail-text { flex: 1 1 260px; min-width: 0; }
+.deck-avail-head { margin: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--s-1) var(--s-3); }
+.deck-avail-head b { font-size: var(--fs-md); }
+.deck-avail-more { color: var(--ink-2); font-size: var(--fs-sm); }
+.deck-avail-sources { margin: var(--s-2) 0 0; overflow-wrap: anywhere; }
+.deck-avail .btn { flex: none; }
+.deck-avail-plain { padding: 0; }
+.deck-lists { display: grid; gap: var(--s-2); flex: 1 1 100%; min-width: 0; }
+.deck-lists-row { display: flex; align-items: center; gap: var(--s-2); flex-wrap: wrap; }
+.deck-lists-info { width: var(--tap); padding: 0; font-weight: var(--fw-bold); font-style: italic; }
+.deck-lists-about { margin: 0; color: var(--ink-2); font-size: var(--fs-sm); max-width: 70ch; }
+@media (min-width: 1000px) {
+  .deck-avail .deck-lists { flex: 0 1 auto; }
+}
+
+/* --------------------------------------------------------------- the tabs */
+
+/* The tab strip sticks under the top bar, edge to edge, scrolling sideways on a phone (components.css .tabs). A
+   phone on its side keeps its tabs clear of the notch (the page is drawn under it: viewport-fit=cover). */
+.deck-tabs {
+  position: sticky; top: var(--shell-top); z-index: 5;
+  margin: 0 calc(-1 * var(--gutter));
+  padding: 0 max(var(--gutter), env(safe-area-inset-right)) 0 max(var(--gutter), env(safe-area-inset-left));
+}
+.deck-panel { scroll-margin-top: calc(var(--shell-top) + var(--tap) + var(--s-2)); padding-bottom: var(--s-7); }
+.deck-panel:focus { outline: none; }
+@media (max-width: 599px) {
+  .deck-tabs > button { padding: 0 var(--s-2); }
+}
+/* An iPhone: the five tabs fit without scrolling (the strip's own side padding and gaps were what pushed
+   Matchups past the edge at 390px). */
+@media (max-width: 429px) {
+  .deck-tabs { gap: 0; padding: 0 var(--s-1); justify-content: space-between; }
+}
+
+.deck-section { padding-top: var(--s-5); scroll-margin-top: calc(var(--shell-top) + var(--tap) + var(--s-2)); }
+.deck-section > h2 { margin-bottom: var(--s-3); }
+.deck-section .sub { color: var(--ink-2); font-size: var(--fs-sm); }
+.deck-section > h3 { margin-top: var(--s-4); }
+.deck-section-head { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: var(--s-2); margin-bottom: var(--s-3); }
+.deck-section-head h2 { margin: 0; }
+/* "All the stats", "All 60 cards": links in look (the link colour and a chevron), still a full-height target. */
+.deck-more-link { padding-left: 0; padding-right: 0; color: var(--link); }
+.deck-more-link::after { content: "\203A"; content: "\203A" / ""; margin-left: var(--s-1); font-size: var(--fs-lg); line-height: 1; }
+.deck-more-link:hover { text-decoration: underline; }
+.deck-overview-stats > .verdict-strip { margin-bottom: var(--s-1); }
+
+/* ---------------------------------------------------------------- overview */
+
+/* The key cards, big: a strip to swipe on a phone (two and a bit in view), a row of six from 600 px. */
+.deck-key-cards {
+  display: grid; grid-auto-flow: column; grid-auto-columns: 44vw; gap: var(--s-3);
+  margin: 0 calc(-1 * var(--gutter)); padding: var(--s-1) var(--gutter) var(--s-2);
+  overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x mandatory; scroll-padding: 0 var(--gutter);
+  scrollbar-width: none;
+}
+.deck-key-cards::-webkit-scrollbar { display: none; }
+.deck-key-cards > * { scroll-snap-align: start; }
+@media (min-width: 600px) {
+  .deck-key-cards {
+    grid-auto-flow: row; grid-auto-columns: auto; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    margin: 0; padding: 0; overflow: visible; max-width: 1560px;
+  }
+}
+@media (min-width: 1000px) {
+  .deck-key-cards { grid-template-columns: repeat(6, minmax(0, 220px)); }
+}
+
+/* The sleeves and deck box (deck.js deckKit): a tile each, side by side once there's room. */
+.deck-kit-tiles { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s-2); max-width: 1000px; }
+.deck-kit-tile {
+  display: flex; align-items: flex-start; gap: var(--s-3); min-width: 0;
+  padding: var(--s-3); border-radius: var(--r-md); background: var(--surface); border: 1px solid var(--border);
+}
+.deck-kit-tile.is-empty { border-style: dashed; border-color: var(--border-strong); background: transparent; }
+.deck-kit-pic { flex: none; width: 96px; border-radius: var(--r-sm); overflow: hidden; }
+.deck-kit-text { display: flex; flex-direction: column; align-items: flex-start; gap: var(--s-1); min-width: 0; }
+.deck-kit-what { font-size: var(--fs-xs); color: var(--ink-2); font-weight: var(--fw-semibold); }
+.deck-kit-text strong { overflow-wrap: break-word; hyphens: auto; }
+.deck-kit-none { color: var(--ink-2); font-weight: var(--fw-semibold); }
+.deck-kit-chip:empty { display: none; }
+.deck-kit-shared { color: var(--ink-2); overflow-wrap: break-word; }
+.deck-kit-choose { margin-top: var(--s-1); }
+.deck-kit .note { margin-top: var(--s-2); }
+@media (min-width: 600px) {
+  .deck-kit-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .deck-kit-pic { width: 128px; }
+}
+@media (forced-colors: active) { .deck-kit-tile { border: 1px solid CanvasText; } }
+
+.pairings-of .sub { margin-bottom: var(--s-2); color: var(--ink-2); font-size: var(--fs-sm); }
+.pair-links { list-style: none; }
+.pair-links .card-link { text-decoration: none; min-height: 40px; }
+.pair-links .pair-mark { margin-left: var(--s-2); color: var(--ink-2); font-size: var(--fs-sm); font-weight: var(--fw-regular); }
+
+/* ------------------------------------------------------------------ cards */
+
+.deck-cards-bar { margin-top: var(--s-4); }
+.deck-cards-bar > .deck-mode { flex: none; margin-left: auto; }
+.deck-cards-bar > .deck-filter { flex: 0 1 auto; }
+.deck-filter-n { margin-left: var(--s-1); font-variant-numeric: tabular-nums; color: var(--ink-2); font-weight: var(--fw-regular); }
+.deck-cards .result-count { display: flex; align-items: center; flex-wrap: wrap; gap: var(--s-2); margin: 0 0 var(--s-2); }
+.type-group { margin: var(--s-4) 0; }
+.type-group > h3 { display: flex; align-items: baseline; gap: var(--s-2); padding-bottom: var(--s-2); border-bottom: 1px solid var(--border); }
+.type-group > h3 .count { color: var(--ink-2); font-weight: var(--fw-semibold); font-size: var(--fs-sm); }
+.card-list {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
+  column-gap: var(--s-4);
+}
+.deck-tiles { padding-top: var(--s-2); }
+@media (min-width: 1000px) {
+  .deck-tiles { grid-template-columns: repeat(auto-fill, minmax(176px, 1fr)); }
+}
+@media (min-width: 2200px) {
+  .deck-tiles { grid-template-columns: repeat(auto-fill, minmax(196px, 1fr)); }
+}
+
+/* Mana symbols drawn in CSS: what symbols.js shows when Scryfall's picture of one can't load. The glyph
+   sizes are the symbol's own, not text sizes. */
+.cost { display: inline-flex; flex-wrap: wrap; justify-content: flex-end; gap: 2px; align-items: center; }
+.pip {
+  display: inline-grid; place-items: center;
+  width: 18px; height: 18px; border-radius: 50%;
+  background: var(--mana-c);
+  color: var(--mana-ink);
+  font: var(--fw-bold) 11px/1 var(--font);
+  box-shadow: inset 0 0 0 1px var(--mana-edge);
+  flex: none;
+}
+.pip-w { background: var(--mana-w); }
+.pip-u { background: var(--mana-u); }
+.pip-b { background: var(--mana-b); }
+.pip-r { background: var(--mana-r); }
+.pip-g { background: var(--mana-g); }
+.pip-hybrid { background: linear-gradient(135deg, var(--pip-a) 50%, var(--pip-b) 50%); font-size: 8px; letter-spacing: -.5px; }
+.pip-small { width: 16px; height: 16px; font-size: 10px; }
+.pip-small.pip-hybrid { font-size: 7.5px; }      /* two letters inside the small circle */
+.cost-sep { color: var(--ink-3); font-size: var(--fs-xs); padding: 0 2px; }
+
+/* The card peek beside the deck page and the editor (deck.js peekLayout): only a wide screen with a
+   mouse shows it (below). Hidden, its lazy image is never fetched. */
+.card-peek { display: none; }
+
+/* ------------------------------------------------------------------ tokens */
+
+.deck-tokens-chip { margin: var(--s-4) 0 0; }
+.deck-tokens-chip .btn { padding-left: 0; }
+.deck-tokens-chip .status { white-space: normal; }
+.deck-tokens-summary { color: var(--ink-2); margin: 0 0 var(--s-2); }
+.deck-tokens-group { margin: var(--s-4) 0 var(--s-1); font-size: var(--fs-md); }
+.deck-tokens-more p { margin: var(--s-1) 0 0; overflow-wrap: break-word; }
+.deck-tokens-edit a { display: inline-flex; align-items: center; min-height: var(--tap); }
+.token-note { font-size: var(--fs-sm); margin: var(--s-3) 0 0; }
+.token-needs { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: minmax(0, 1fr); }
+.token-need { display: flex; align-items: flex-start; gap: var(--s-3); padding: var(--s-3) 0; border-bottom: 1px solid var(--border); min-width: 0; }
+.token-need-pic { display: flex; flex: none; flex-direction: column; align-items: center; gap: var(--s-1); }
+.token-need-example { color: var(--ink-2); font-size: var(--fs-sm); line-height: var(--lh-tight); text-align: center; }
+.token-need-body { display: flex; flex-direction: column; gap: var(--s-1); min-width: 0; flex: 1; }
+.token-need-body p { margin: 0; overflow-wrap: break-word; }
+.token-need-name b { font-weight: var(--fw-bold); }
+.token-need-made { color: var(--ink-2); font-size: var(--fs-sm); }
+.token-need-made details { display: inline; }
+.token-need-made summary { display: inline; color: var(--link); }
+.token-need-state .status { white-space: normal; }
+.token-grab { list-style: none; padding: 0; margin: 0; font-size: var(--fs-sm); display: grid; gap: 2px; }
+.token-grab li { overflow-wrap: break-word; }
+.token-grab small { display: block; color: var(--ink-2); font-size: var(--fs-sm); }
+.token-stand-ins .sub { margin: var(--s-1) 0 0; font-size: var(--fs-sm); font-weight: var(--fw-semibold); }
+@media (min-width: 1600px) {
+  .token-needs { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: var(--s-5); }
+}
+
+/* ----------------------------------------------------------- price table */
+
+.deck-prices-none { display: flex; align-items: center; flex-wrap: wrap; gap: var(--s-2); margin: 0; color: var(--ink-2); }
+.deck-price-table > .sub { margin: var(--s-2) 0; max-width: 72ch; }
+.deck-prices > .box { margin-top: var(--s-3); }
+.owned-table col.c-need { width: 3.1em; }
+.owned-table col.c-have { width: 3.5em; }
+.owned-table col.c-miss { width: 4.4em; }
+.owned-table col.c-price { width: 4.4em; }
+.owned-table .th-sort { max-width: 100%; flex-wrap: wrap; }
+.owned-table .price-each { display: block; color: var(--ink-2); font-weight: var(--fw-regular); }
+table.data tr.is-missing td, table.data tr.is-missing th,
+table.data tbody.is-missing td, table.data tbody.is-missing th { background: var(--crit-soft); }
+table.data .is-missing .missing-n { color: var(--crit-ink); font-weight: var(--fw-bold); }
+table.data tr:has(+ .label-row) > * { border-bottom: 0; padding-bottom: 2px; }
+table.data .label-row td { padding-top: 0; }
+table.data .row-labels { display: flex; flex-wrap: wrap; gap: var(--s-1); }
+table.data .row-labels .status { white-space: normal; }
+table.data .name-cell .card-link { border: 0; padding: 0; min-height: 0; background: transparent; font-weight: var(--fw-semibold); text-align: left; color: var(--ink); }
+table.data .name-cell .card-link:hover { text-decoration: underline; }
+.price-note { font-size: var(--fs-sm); color: var(--ink-2); max-width: 72ch; }
+table.data tfoot .total-cost { font-weight: var(--fw-semibold); text-align: left; border-top: 0; padding-top: 2px; }
+@media (min-width: 600px) {
+  .owned-table col.c-need, .owned-table col.c-have, .owned-table col.c-miss { width: 4.5em; }
+  .owned-table col.c-price { width: 6em; }
+}
+@media (min-width: 1000px) {
+  .deck-prices .table-wrap { max-width: 1000px; }
+}
+
+/* ---------------------------------------------------------------- matchups */
+
+.deck-mu-part { margin-top: var(--s-4); }
+.deck-mu-part > h2 { margin-bottom: var(--s-3); }
+.deck-mu-ai { margin-top: var(--s-5); }
+/* The Matchups tab's line about earlier-engine games, between Head to head and the AI's limits. */
+.mu-deck-content > .mu-earlier-engine { margin: var(--s-4) 0 0; }
+/* The tests of changes after the field part, as far below it as the deck page's other sections. */
+.fv-section + .vt-tests { padding-top: var(--s-6); }
+
+/* ------------------------------------------------------------ deal a hand */
+
+.hands-section .hands-settings { display: flex; flex-wrap: wrap; gap: var(--s-2) var(--s-5); align-items: end; margin-bottom: var(--s-3); }
+.hands-section .hands-free { display: flex; gap: var(--s-2); align-items: center; min-height: var(--tap); }
+.hands-section .hands-body { margin-top: var(--s-4); }
+.hands-section .hands-actions { display: flex; flex-wrap: wrap; gap: var(--s-3) var(--s-5); align-items: end; }
+.hands-section .hands-cards {
+  list-style: none; padding: 0; margin: var(--s-2) 0 var(--s-3); max-width: none;
+  display: grid; gap: var(--s-3) var(--s-2); grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.hands-section .hands-cards > li { min-width: 0; display: flex; flex-direction: column; gap: var(--s-1); }
+.hands-section .hands-bottom { width: 100%; min-height: var(--tap); white-space: normal; margin: 0; }
+.hands-section .hands-bottom[aria-pressed="true"] { outline: 3px solid var(--focus); outline-offset: -3px; }
+.hands-status { margin: 0; font-weight: var(--fw-semibold); }
+.hands-counts { margin: 0; }
+@media (max-width: 599px) {
+  .hands-section .hands-settings { flex-direction: column; align-items: stretch; }
+}
+@media (min-width: 600px) {
+  .hands-section .hands-cards { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: var(--s-4) var(--s-3); }
+}
+@media (min-width: 1000px) {
+  .hands-section .hands-cards { grid-template-columns: repeat(auto-fill, minmax(150px, 190px)); }
+}
+
+@media (pointer: coarse) {
+  .pair-links .card-link { min-height: var(--tap); }
+  /* The owned table's names fill their cell's height without making the rows much taller. */
+  table.data .name-cell .card-link { min-height: var(--tap); margin: -8px -6px -2px; padding: 0 var(--s-2); width: calc(100% + 12px); }
+}
+
+/* The card peek (deck.js peekLayout): a column on the right of the deck page and the editor with the
+   card last pointed at or focused, at the normal image's own size (488 px) on a QHD screen, 280 px on a
+   laptop from 1,400 px (tokens.css --peek-w). Only with a mouse: on a touch screen nothing is pointed at,
+   and a tap opens the viewer. */
+@media (min-width: 1400px) and (hover: hover) and (pointer: fine) {
+  .peek-layout { display: grid; grid-template-columns: minmax(0, 1fr) var(--peek-w); gap: var(--s-6); align-items: start; }
+  .card-peek { display: block; position: sticky; top: calc(var(--shell-top) + var(--s-4)); padding-top: var(--s-4); }
+  .peek-frame {
+    width: 100%; aspect-ratio: 488 / 680;
+    max-width: calc((100vh - 150px) * 488 / 680);       /* the words under it stay on a short screen */
+    overflow: hidden;
+    border-radius: var(--r-card);
+    background: var(--surface-3) center / cover no-repeat;
+    box-shadow: var(--shadow-2);
+  }
+  .peek-img { display: block; width: 100%; height: 100%; }
+  .peek-img.is-loading, .peek-img:not([src]) { visibility: hidden; }
+  .peek-words { margin-top: var(--s-3); }
+  .peek-words p { margin: 0; }
+  .peek-name { display: flex; align-items: center; flex-wrap: wrap; gap: var(--s-1) var(--s-3); font-size: var(--fs-lg); }
+  .peek-name .cost { justify-content: flex-start; }
+  .peek-type { margin-top: 2px; color: var(--ink-2); }
+  .peek-hint { color: var(--ink-2); }
+  /* The tab strip and the editor's bar end at the page's column, not at the screen's edges. */
+  .peek-main .deck-tabs { margin-left: 0; margin-right: 0; padding-left: 0; padding-right: 0; }
+  .peek-main .deck-key-cards { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .peek-main .edit-bar {
+    margin-left: 0; margin-right: 0; padding-left: var(--s-4); padding-right: var(--s-4);
+    border: 1px solid var(--border-strong); border-bottom: 0; border-radius: var(--r-lg) var(--r-lg) 0 0;
+  }
+}
+@media (min-width: 1400px) and (max-width: 1599px) and (hover: hover) and (pointer: fine) {
+  .peek-layout { gap: var(--s-5); }
+  .peek-name { font-size: var(--fs-md); }
+}
+
+/* A QHD screen: the Overview in two columns, the verdict strip across both, then the key cards (with the token
+   chip and the sleeves and deck box) on the left and How to play beside them at reading width, so neither
+   leaves a screen-tall gap beside it. */
+@media (min-width: 2200px) {
+  #deck-panel-overview:not([hidden]) {
+    display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 800px); column-gap: var(--s-6); align-items: start;
+    /* The guide spans the rows down to the last, flexible one, which takes its extra height, so the left
+       column's parts stay together at the top. */
+    grid-template-rows: repeat(5, auto) 1fr;
+  }
+  #deck-panel-overview > * { grid-column: 1; min-width: 0; }
+  #deck-panel-overview > .deck-overview-stats { grid-column: 1 / -1; grid-row: 1; }
+  #deck-panel-overview > .deck-guide { grid-column: 2; grid-row: 2 / -1; }
+  #deck-panel-overview:not(:has(> .deck-overview-stats)) > .deck-guide { grid-row: 1 / -1; }
+  #deck-panel-overview > .commander-readiness { grid-column: 1 / -1; grid-row: 1; }
+  #deck-panel-overview:has(> .commander-readiness) > .deck-overview-stats { grid-row: 2; }
+  #deck-panel-overview:has(> .commander-readiness) > .deck-guide { grid-row: 3 / -1; }
+  #deck-panel-overview:has(> .commander-readiness):not(:has(> .deck-overview-stats)) > .deck-guide { grid-row: 2 / -1; }
+}
+
+/* No guide yet: the note keeps a reading width. */
+.deck-guide > .empty { max-width: 72ch; }
+
+@media (forced-colors: active) {
+  .pip { forced-color-adjust: none; }
+}
+
+/* The banner's Show missing / Show them, on the Cards tab: its filter chips say the same right under it. */
+.deck-avail.is-on-cards .deck-avail-action { display: none; }
+.commander-night { margin-block: var(--s-3); padding: var(--s-3); border-left: 3px solid var(--border-strong); background: var(--surface-2); overflow-wrap: anywhere; }
+.commander-night h3 { margin-top: 0; }
+.commander-night-rules { white-space: pre-wrap; overflow-wrap: anywhere; }
+.commander-night-comparison { font-weight: var(--fw-semibold); }
+
+/* Stand-ins for missing cards (deck-swaps.js and editor-swaps.js): the Missing filter's box, and the
+   stand-ins sheet's rows, each a card row with its note and, in the editor, "Use n". */
+.deck-swap-finder { max-width: 72ch; margin-bottom: var(--s-4); }
+.swap-finder-list, .swap-list { list-style: none; margin: 0; padding: 0; }
+.swap-finder-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2) var(--s-3);
+  min-height: 44px; padding-block: var(--s-2); border-top: 1px solid var(--border); }
+.swap-finder-name { flex: 1 1 14rem; min-width: 0; overflow-wrap: anywhere; }
+.swap-finder-name small { display: block; color: var(--ink-2); font-size: var(--fs-sm); }
+.swap-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 0 var(--s-3);
+  padding-block: var(--s-2); border-top: 1px solid var(--border); }
+.swap-row > .card-row { grid-column: 1; min-width: 0; }
+.swap-row > .swap-note { grid-column: 1; margin: 0; overflow-wrap: anywhere; }
+.swap-row > .swap-use { grid-column: 2; grid-row: 1 / span 2; min-height: 44px; }
+@media (max-width: 599px) {
+  /* A phone: "Use n" on its own line under the card and its note. */
+  .swap-row { grid-template-columns: minmax(0, 1fr); }
+  .swap-row > .swap-use { grid-column: 1; grid-row: auto; justify-self: start; margin-top: var(--s-2); }
+}

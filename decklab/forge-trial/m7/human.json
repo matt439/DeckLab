@@ -1,0 +1,219 @@
+{
+ "about": "D4b (M7) inputs: 7 Pauper decks and their published human matchup win rates. Each deck is the featured list on its magicmeta.net archetype page, played main deck only in Forge (game 1, no sideboarding); the [Sideboard] lines are kept for the record. Fetched 2026-10-03.",
+ "format": "Pauper",
+ "source": {
+  "name": "MagicMeta Pauper matchup matrix",
+  "url": "https://magicmeta.net/formats/pauper/matchups",
+  "fetched": "2026-10-03",
+  "window": "the page's default window on 2026-10-03 ('Data since Aug 2026', 588 matches across its 16 archetypes; 14/30/60/90-day options)",
+  "data": "MTGO Challenge playoff brackets, TopDeck.gg paper event swiss rounds and Gatherling community league rounds: match results (best of three, with sideboards) between human pilots",
+  "caveat": "The page says even its strongest band carries a 95% interval of about +-20 points, and it shows no win rate under 5 matches. Win rates are whole percents."
+ },
+ "dropped": [
+  {
+   "archetype": "Ephemerate Tron",
+   "why": "its featured decklist couldn't be read whole on 2026-10-03 (18 of 60 main-deck cards, the Urza lands among them, were missing from the fetched page), so it isn't played"
+  }
+ ],
+ "decks": [
+  {
+   "id": "mono-red-madness",
+   "archetype": "Mono Red Madness",
+   "file": "mono-red-madness.dck",
+   "pilot": "Nathaniel S Vowell",
+   "event": "The 4th Common Ground Cup",
+   "date": "2026-07-25",
+   "finish": "1st of 100",
+   "list_url": "https://magicmeta.net/formats/pauper/archetypes/mono-red-madness"
+  },
+  {
+   "id": "mono-blue-delver",
+   "archetype": "Mono-Blue Delver",
+   "file": "mono-blue-delver.dck",
+   "pilot": "Luminati",
+   "event": "Pauper Challenge 32 (MTGO)",
+   "date": "2026-10-02",
+   "finish": "1st of 32",
+   "list_url": "https://magicmeta.net/formats/pauper/archetypes/mono-blue-delver"
+  },
+  {
+   "id": "jund-wildfire",
+   "archetype": "Jund Wildfire",
+   "file": "jund-wildfire.dck",
+   "pilot": "manohito",
+   "event": "Pauper Challenge 32 (MTGO)",
+   "date": "2026-08-26",
+   "finish": "1st of 32",
+   "list_url": "https://magicmeta.net/formats/pauper/archetypes/jund-wildfire"
+  },
+  {
+   "id": "mono-red-rally",
+   "archetype": "Mono Red Rally",
+   "file": "mono-red-rally.dck",
+   "pilot": "Carson Bispels",
+   "event": "Paupergenesis - CubeCon DMV",
+   "date": "2026-07-12",
+   "finish": "5th of 248",
+   "list_url": "https://magicmeta.net/formats/pauper/archetypes/mono-red-rally"
+  },
+  {
+   "id": "grixis-affinity",
+   "archetype": "Grixis Affinity",
+   "file": "grixis-affinity.dck",
+   "pilot": "Markus Leben",
+   "event": "Paupergenesis - CubeCon DMV",
+   "date": "2026-07-12",
+   "finish": "4th of 248",
+   "list_url": "https://magicmeta.net/formats/pauper/archetypes/grixis-affinity"
+  },
+  {
+   "id": "elves",
+   "archetype": "Elves",
+   "file": "elves.dck",
+   "pilot": "Paige Smith",
+   "event": "Paupergenesis - CubeCon DMV",
+   "date": "2026-07-12",
+   "finish": "7th of 248",
+   "list_url": "https://magicmeta.net/formats/pauper/archetypes/elves"
+  },
+  {
+   "id": "mono-blue-faeries",
+   "archetype": "Mono-Blue Faeries",
+   "file": "mono-blue-faeries.dck",
+   "pilot": "Brandon Wacuz",
+   "event": "Pauper-dum 25K",
+   "date": "2026-08-31",
+   "finish": "1st of 58",
+   "list_url": "https://magicmeta.net/formats/pauper/archetypes/mono-blue-faeries"
+  }
+ ],
+ "cells": [
+  {
+   "a": "mono-red-madness",
+   "b": "mono-blue-delver",
+   "pct": 37,
+   "n": 19
+  },
+  {
+   "a": "mono-red-madness",
+   "b": "jund-wildfire",
+   "pct": 73,
+   "n": 15
+  },
+  {
+   "a": "mono-red-madness",
+   "b": "mono-red-rally",
+   "pct": 21,
+   "n": 14
+  },
+  {
+   "a": "mono-red-madness",
+   "b": "grixis-affinity",
+   "pct": 48,
+   "n": 23
+  },
+  {
+   "a": "mono-red-madness",
+   "b": "elves",
+   "pct": 83,
+   "n": 18
+  },
+  {
+   "a": "mono-red-madness",
+   "b": "mono-blue-faeries",
+   "pct": 45,
+   "n": 20
+  },
+  {
+   "a": "mono-blue-delver",
+   "b": "jund-wildfire",
+   "pct": 57,
+   "n": 7
+  },
+  {
+   "a": "mono-blue-delver",
+   "b": "mono-red-rally",
+   "pct": null,
+   "n": 4
+  },
+  {
+   "a": "mono-blue-delver",
+   "b": "grixis-affinity",
+   "pct": 38,
+   "n": 13
+  },
+  {
+   "a": "mono-blue-delver",
+   "b": "elves",
+   "pct": null,
+   "n": 2
+  },
+  {
+   "a": "mono-blue-delver",
+   "b": "mono-blue-faeries",
+   "pct": 20,
+   "n": 5
+  },
+  {
+   "a": "jund-wildfire",
+   "b": "mono-red-rally",
+   "pct": 43,
+   "n": 7
+  },
+  {
+   "a": "jund-wildfire",
+   "b": "grixis-affinity",
+   "pct": 67,
+   "n": 6
+  },
+  {
+   "a": "jund-wildfire",
+   "b": "elves",
+   "pct": null,
+   "n": 3
+  },
+  {
+   "a": "jund-wildfire",
+   "b": "mono-blue-faeries",
+   "pct": null,
+   "n": 3
+  },
+  {
+   "a": "mono-red-rally",
+   "b": "grixis-affinity",
+   "pct": 62,
+   "n": 13
+  },
+  {
+   "a": "mono-red-rally",
+   "b": "elves",
+   "pct": 83,
+   "n": 6
+  },
+  {
+   "a": "mono-red-rally",
+   "b": "mono-blue-faeries",
+   "pct": 43,
+   "n": 7
+  },
+  {
+   "a": "grixis-affinity",
+   "b": "elves",
+   "pct": 40,
+   "n": 10
+  },
+  {
+   "a": "grixis-affinity",
+   "b": "mono-blue-faeries",
+   "pct": 50,
+   "n": 10
+  },
+  {
+   "a": "elves",
+   "b": "mono-blue-faeries",
+   "pct": 75,
+   "n": 8
+  }
+ ],
+ "forge_names_checked": "every main-deck and sideboard name is in Forge 2.0.15's card scripts (decklab/data/forge/cardscripts-2.0.15.json), written as Forge names it"
+}

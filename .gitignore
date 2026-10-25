@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Editor / OS
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Deck Lab local cache (Scryfall bulk, images, simulation results)
+decklab/data/
+
+# Deck Lab Forge trial: keep its scripts and notes; ignore its logs, results,
+# generated decks, Forge user folders and old card-log builds (java/; the card
+# log's source is decklab/lib/forge/java/ now)
+decklab/forge-trial/*/
+# ...except M7's inputs (the combined run's D4b: external decks and published win rates)
+!decklab/forge-trial/m7/
+
+# Deck Lab's off-page Worker (decklab/cloudflare/): wrangler's local state and bundles
+decklab/cloudflare/.wrangler/
+decklab/cloudflare/dist/
+decklab/cloudflare/node_modules/
+
+# Personal data stays out of this repo: the real settings (profiles and their emails, the domain,
+# Cloudflare Access) are decklab/config.json, copied from decklab/config.example.json; a household's
+# own buylists and reports (magic/, pokemon/) live in a private repo of their own.
+decklab/config.json
+magic/
+pokemon/

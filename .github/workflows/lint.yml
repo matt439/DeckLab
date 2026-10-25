@@ -1,0 +1,15 @@
+# On every push: ruff for real errors only (syntax errors, undefined names). Cheap, on Linux.
+# The full rule set isn't enforced: the code has thousands of style findings it was never held to.
+name: lint
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  ruff:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - run: pipx run ruff==0.16.0 check --isolated --select E9,F63,F7,F82 .

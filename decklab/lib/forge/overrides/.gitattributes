@@ -1,0 +1,3 @@
+# Forge card scripts are LF in its cardsfolder.zip: keep the overrides byte for byte as made (overrides make)
+*.txt text eol=lf
+*.json text eol=lf

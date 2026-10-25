@@ -1,0 +1,201 @@
+/* Receiving a delivery (receipts.js): the check-off board. Sections per arrived part, a grid of card tiles
+   (cards-ui.css) with a 44 px tick on each, the toolbar above it, the sheet's picture and fields, a product's
+   choice cards, and the sticky action bar. Layout only: the components are cards-ui.css's and components.css's. */
+
+.receipt-page { max-width: 1800px; }
+
+/* The head: the order's notes in two lines until More. */
+.rcpt-notes {
+  margin: 0; max-width: 72ch; color: var(--ink-2);
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden;
+}
+.rcpt-notes.is-open { display: block; -webkit-line-clamp: none; line-clamp: none; }
+.rcpt-more { margin-top: var(--s-1); }
+.receipt-read-only { margin: var(--s-4) 0; }
+.rcpt-resume:empty { display: none; }
+.rcpt-resume-box { margin: var(--s-4) 0; }
+.rcpt-done { margin-top: var(--s-5); }
+
+/* A section per part of the order. */
+.rcpt-section { margin: var(--s-6) 0 0; }
+.rcpt-section-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s-2) var(--s-4); }
+.rcpt-section-head h2 { margin: 0; font-size: var(--fs-xl); }
+.rcpt-h-state { color: var(--ink-2); font-size: var(--fs-md); font-weight: var(--fw-regular); }
+.rcpt-arrived { flex: none; }
+.rcpt-body { margin-top: var(--s-3); }
+/* A part that hasn't arrived (with several parts): its cards dimmed, without ticks, tools or checks. */
+.rcpt-off-note { margin: var(--s-1) 0 0; }
+.rcpt-section.is-off .rcpt-body { opacity: .6; }
+.rcpt-section.is-off .rcpt-toolbar, .rcpt-section.is-off .rcpt-checks, .rcpt-section.is-off .rcpt-choices { display: none; }
+.rcpt-checks { margin: 0 0 var(--s-4); max-width: 900px; }
+.rcpt-checks h3 { margin: 0 0 var(--s-1); }
+.rcpt-check { align-items: flex-start; padding: var(--s-2) 0; }
+.rcpt-check input { margin-top: 3px; flex: none; }
+
+/* The toolbar: show and layout switches, then the bulk tools. On a phone, one row: the filters (short words)
+   and a Tools button, whose sheet has the layout switch and the bulk tools. */
+.rcpt-toolbar { display: flex; flex-direction: column; gap: var(--s-2); margin-bottom: var(--s-4); }
+.rcpt-toolbar-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2) var(--s-3); }
+.rcpt-fill { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2); }
+.rcpt-fill-label { color: var(--ink-2); font-size: var(--fs-sm); font-weight: var(--fw-semibold); }
+.rcpt-fill select { width: auto; }
+.rcpt-clean { font-size: var(--fs-sm); }
+.rcpt-narrow, .rcpt-tools-button { display: none; }
+.rcpt-tools-sheet { display: flex; flex-direction: column; align-items: flex-start; gap: var(--s-4); }
+@media (max-width: 599px) {
+  .rcpt-toolbar { margin-bottom: var(--s-3); }
+  .rcpt-toolbar-row { flex-wrap: nowrap; justify-content: space-between; gap: var(--s-2); }
+  .rcpt-wide, .rcpt-layout, .rcpt-tools { display: none; }
+  .rcpt-narrow, .rcpt-tools-button { display: inline; }
+  .rcpt-tools-button { display: inline-flex; flex: none; }
+}
+
+/* The grid: 2 tiles on an iPhone (the cards are being checked by hand, so their names matter more than
+   how many fit), 3 on a bigger phone, about 6 at 1,440 px and 9-10 on a QHD screen. */
+.rcpt-grid { display: grid; gap: var(--s-3); grid-template-columns: repeat(auto-fill, minmax(156px, 1fr)); }
+@media (max-width: 599px) {
+  .rcpt-grid { gap: var(--s-2); grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 429px) {
+  .rcpt-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+.rcpt-none, .rcpt-all-blank { grid-column: 1 / -1; }
+.rcpt-all-blank { margin: 0; font-size: var(--fs-sm); color: var(--ink-2); }
+/* The tick under the picture, at the end of the chips' row, so it never covers the card's mana cost. */
+.rcpt-grid .card-tile { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; column-gap: var(--s-1); }
+.rcpt-grid .card-tile > .card-tile-open { grid-column: 1 / -1; }
+.rcpt-grid .card-tile > .card-tile-chips { grid-column: 1; grid-row: 2; }
+.rcpt-grid .card-tile > .card-tile-state { position: static; grid-column: 2; grid-row: 2; justify-self: end; }
+
+.rcpt-flag { cursor: help; }
+
+/* A card checked as received: darker than other pages' ticked tiles (cards-ui.css), so what's
+   still to find in a mixed parcel stands out. */
+.rcpt-grid .card-tile.is-ticked .card-tile-img,
+.rcpt-grid .card-tile.is-ticked .card-tile-back { filter: brightness(.7); }
+
+/* List: each card as a card row (cards-ui.js cardRow) with the tick at its end. */
+.rcpt-list { display: grid; grid-template-columns: minmax(0, 1fr); }
+.rcpt-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--s-2);
+  border-bottom: 1px solid var(--border); }
+.rcpt-row[hidden] { display: none; }
+.rcpt-row > .card-row { border-bottom: 0; }
+@media (min-width: 1000px) {
+  .rcpt-list { grid-template-columns: repeat(auto-fill, minmax(420px, 1fr)); column-gap: var(--s-5); }
+}
+
+/* A product: the two choice cards, then its cards by deck and section. */
+.rcpt-choices { display: grid; gap: var(--s-3); grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  max-width: 900px; margin-bottom: var(--s-4); }
+.rcpt-choice-card {
+  display: flex; flex-direction: column; align-items: flex-start; gap: var(--s-1);
+  min-height: var(--tap); padding: var(--s-4);
+  border: 2px solid var(--border-strong); border-radius: var(--r-lg);
+  background: var(--surface); color: var(--ink);
+  font: inherit; text-align: left; cursor: pointer;
+}
+.rcpt-choice-card strong { font-size: var(--fs-md); }
+.rcpt-choice-card span { color: var(--ink-2); font-size: var(--fs-sm); }
+.rcpt-choice-card:hover:not(:disabled) { border-color: var(--accent); }
+.rcpt-choice-card[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
+.rcpt-choice-card:disabled { cursor: default; opacity: .6; }
+.rcpt-choice-card:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.rcpt-product-group + .rcpt-product-group { margin-top: var(--s-5); }
+.rcpt-product-group h3 { font-size: var(--fs-md); margin: 0 0 var(--s-2); }
+.rcpt-basics { margin-top: var(--s-3); }
+.rcpt-basics summary { min-height: var(--tap); display: flex; align-items: center; cursor: pointer; }
+
+/* The sheet: the big picture (it opens the viewer), then the fields. */
+.rcpt-sheet-top { display: flex; flex-direction: column; align-items: center; gap: var(--s-2); width: 100%; margin-bottom: var(--s-3); touch-action: pan-y pinch-zoom; }
+.rcpt-sheet-nav { display: flex; align-items: center; justify-content: space-between; gap: var(--s-2); width: 100%; }
+.rcpt-sheet-count { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.rcpt-sheet-hint { margin: 0; color: var(--ink-2); font-size: var(--fs-sm); text-align: center; }
+.rcpt-sheet-pic {
+  display: block; width: min(244px, 62vw); aspect-ratio: 488 / 680; padding: 0;
+  border: 0; border-radius: var(--r-card); overflow: hidden;
+  background: var(--surface-3); box-shadow: var(--shadow-img);
+  cursor: zoom-in; touch-action: pan-y;
+}
+/* Phone inspection: a readable card with a full-width swipe area around it. */
+@media (max-width: 599px) { .rcpt-sheet-pic { width: min(320px, 100%); } }
+.rcpt-sheet-pic:disabled { cursor: default; }
+.rcpt-sheet-pic img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.rcpt-sheet-pic:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+.rcpt-sheet-text { display: grid; place-items: center; height: 100%; padding: var(--s-3); color: var(--ink-2); text-align: center; }
+.rcpt-field { margin: 0 0 var(--s-3); }
+.rcpt-field .segmented { align-self: flex-start; }
+.rcpt-field textarea { min-height: 80px; }
+.rcpt-printing p { margin: 0 0 var(--s-2); }
+.rcpt-mono { font-variant-numeric: tabular-nums; }   /* a printing: the body font, as on every page */
+.rcpt-fixed { margin: 0; }
+.rcpt-face-tools { margin: 0 0 var(--s-2); }
+.rcpt-more-fields { margin: var(--s-2) 0 var(--s-3); }
+.rcpt-more-fields summary { min-height: var(--tap); display: flex; align-items: center; cursor: pointer; }
+.rcpt-fields { display: grid; gap: 0 var(--s-3); grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr)); margin-top: var(--s-2); }
+.rcpt-split { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2) var(--s-3); margin: var(--s-2) 0; }
+.rcpt-k { min-width: 2ch; text-align: center; font-weight: var(--fw-bold); font-variant-numeric: tabular-nums; }
+.rcpt-decks { padding-left: var(--s-5); }
+.rcpt-decks li + li { margin-top: var(--s-1); }
+
+/* The bar, one row at every width: the progress over the arrival date on the left, the main button on the right. */
+.rcpt-bar { flex-wrap: nowrap; }
+.rcpt-bar .action-bar-status { display: flex; flex-direction: column; align-items: flex-start; gap: var(--s-1); }
+.rcpt-bar .actions { flex: none; align-items: center; }
+.rcpt-status-line { line-height: var(--lh-tight); }
+.rcpt-progress { color: var(--ink); font-weight: var(--fw-semibold); font-variant-numeric: tabular-nums; }
+.rcpt-stale { color: var(--warn-text); font-weight: var(--fw-semibold); }
+.rcpt-blanks {
+  display: inline-flex; align-items: center; min-height: 24px; padding: 0;
+  border: 0; background: none; color: var(--link); font: inherit; text-align: left;
+  text-decoration: underline; text-underline-offset: 2px; cursor: pointer;
+}
+.rcpt-blanks[hidden] { display: none; }
+.rcpt-blanks:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.rcpt-date { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--s-1) var(--s-2); color: var(--ink-2); font-size: var(--fs-sm); }
+.rcpt-date select, .rcpt-date input { width: auto; }
+.rcpt-message:empty { display: none; }
+.rcpt-message { margin-top: var(--s-4); }
+@media (max-width: 599px) {
+  .rcpt-date select, .rcpt-date input { min-height: 36px; padding-top: 2px; padding-bottom: 2px; }
+  .rcpt-bar .btn-primary { max-width: 46vw; white-space: normal; line-height: var(--lh-tight); }
+}
+
+/* The preview and blocker sheets. */
+.rcpt-outcome { font-size: var(--fs-lg); margin: 0 0 var(--s-2); }
+.rcpt-blank-warn .box-head { margin: 0; font-size: var(--fs-sm); }
+.rcpt-tables .chips { display: inline-flex; flex-wrap: wrap; gap: var(--s-1); vertical-align: middle; }
+.rcpt-changes { margin: var(--s-3) 0; }
+.rcpt-changes summary { min-height: var(--tap); display: flex; align-items: center; cursor: pointer; }
+.rcpt-blockers { list-style: none; padding: 0; margin: 0; }
+/* Each blocker is a link-like button to what it names (its own element, not a .btn). */
+.rcpt-blocker {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--s-2);
+  width: 100%; min-height: var(--tap); padding: var(--s-2) 0;
+  border: 0; background: none; color: var(--link); font: inherit; text-align: left; cursor: pointer;
+}
+.rcpt-blocker:hover { text-decoration: underline; }
+.rcpt-blocker:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.rcpt-blocker::after { content: "›"; flex: none; font-size: var(--fs-lg); }
+.rcpt-blockers li + li { border-top: 1px solid var(--border); }
+
+/* After it's recorded: where each card goes. */
+.rcpt-recorded { margin: var(--s-4) 0; }
+.rcpt-section:focus { outline: none; }
+.rcpt-where-head { margin-top: var(--s-6); }
+.rcpt-where-grid { display: grid; gap: var(--s-3); grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); }
+.rcpt-where { margin-top: var(--s-3); }
+.rcpt-where-grid .rcpt-where { margin-top: 0; }
+.rcpt-where h3 { margin: 0 0 var(--s-1); }
+.rcpt-where-cards { margin: var(--s-2) 0 0; padding-left: var(--s-5); }
+.rcpt-after { margin-top: var(--s-5); }
+
+@media (forced-colors: active) {
+  .rcpt-choice-card[aria-pressed="true"] { border-color: Highlight; }
+}
+
+/* The "Read as" line under a token's details field (tokReadingLine; the Tokens page's sheet uses it too). */
+.tok-reading > * { margin: var(--s-1) 0 0; }
+.tok-reading .note p { margin: 0; }
+.tok-reading p { overflow-wrap: anywhere; }     /* a long quoted part wraps rather than widening the sheet */
+.tok-reading .note p + p { margin-top: var(--s-1); }
+.tok-reading-fix { margin-top: var(--s-1); }

@@ -1,0 +1,17 @@
+# Deck Lab's "off" page (story E11-S02): see worker.mjs and decklab/README.md, "From outside the home".
+# Deploy from this folder with npx wrangler@4.151.1 deploy, after npx wrangler@4.151.1 login.
+name = "decklab-off-page"
+main = "worker.mjs"
+compatibility_date = "2026-09-15"
+# No address outside Access: only the two routes below, which Access covers.
+workers_dev = false
+preview_urls = false
+send_metrics = false
+routes = [
+  { pattern = "decklab.example.com/*", zone_name = "decklab.example.com" },
+  { pattern = "www.decklab.example.com/*", zone_name = "decklab.example.com" },
+]
+
+# No logs at Cloudflare: request paths aren't kept.
+[observability]
+enabled = false

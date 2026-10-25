@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Deck Lab</title>
+<meta name="description" content="Magic decks, their stats and what's owned: Deck Lab on the home PC.">
+<meta name="decklab-web-revision" content="__DECKLAB_WEB_REVISION__">
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#1a1f1d" media="(prefers-color-scheme: dark)">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Deck Lab">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="/icons/icon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png">
+<link rel="preload" href="/fonts/figtree.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/fonts/jetbrains-mono.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/tokens.css">
+<link rel="stylesheet" href="/base.css">
+<link rel="stylesheet" href="/components.css">
+<link rel="stylesheet" href="/cards-ui.css">
+<link rel="stylesheet" href="/shell.css">
+<link rel="stylesheet" href="/library.css">
+<link rel="stylesheet" href="/deck.css">
+<link rel="stylesheet" href="/stats.css">
+<link rel="stylesheet" href="/matchups.css">
+<link rel="stylesheet" href="/field.css">
+<link rel="stylesheet" href="/variant.css">
+<link rel="stylesheet" href="/editor.css">
+<link rel="stylesheet" href="/guide.css">
+<link rel="stylesheet" href="/wishlist.css">
+<link rel="stylesheet" href="/shopping.css">
+<link rel="stylesheet" href="/shopping-orders.css">
+<link rel="stylesheet" href="/collection.css">
+<link rel="stylesheet" href="/play.css">
+<link rel="stylesheet" href="/assembly.css">
+<link rel="stylesheet" href="/deck-tools.css">
+<link rel="stylesheet" href="/receipts.css">
+<link rel="stylesheet" href="/accessories.css">
+<link rel="stylesheet" href="/tokens-page.css">
+<link rel="stylesheet" href="/activity.css">
+<link rel="stylesheet" href="/history.css">
+<script>
+  // Before the first paint: the theme last chosen on this device (or ?theme= for screenshots), with "Auto"
+  // resolved from the system's, so data-theme is always light or dark and a dark page never flashes light.
+  // app.js takes over (applyTheme).
+  (function () {
+    var theme = null;
+    try {
+      var last = localStorage.getItem("decklab.lastProfile");
+      theme = new URLSearchParams(location.search).get("theme") || (last && localStorage.getItem("decklab.theme." + last));
+    } catch (e) { /* storage blocked: the system theme it is */ }
+    if (theme !== "light" && theme !== "dark") theme = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    document.documentElement.setAttribute("data-theme", theme);
+  })();
+</script>
+<script src="/editor.js" defer></script>
+<script src="/editor-screen.js" defer></script>
+<script src="/editor-details.js" defer></script>
+<script src="/editor-lines.js" defer></script>
+<script src="/editor-cards.js" defer></script>
+<script src="/editor-swaps.js" defer></script>
+<script src="/editor-save.js" defer></script>
+<script src="/editor-deckpage.js" defer></script>
+<script src="/sim-ui.js" defer></script>
+<script src="/matchups.js" defer></script>
+<script src="/matchups-overview.js" defer></script>
+<script src="/matchups-detail.js" defer></script>
+<script src="/matchups-results.js" defer></script>
+<script src="/matchups-cards.js" defer></script>
+<script src="/field.js" defer></script>
+<script src="/variant.js" defer></script>
+<script src="/runs-pill.js" defer></script>
+<script src="/core.js" defer></script>
+<script src="/ui.js" defer></script>
+<script src="/symbols.js" defer></script>
+<script src="/cards-ui.js" defer></script>
+<script src="/card-viewer.js" defer></script>
+<script src="/library.js" defer></script>
+<script src="/library-tables.js" defer></script>
+<script src="/cover.js" defer></script>
+<script src="/deck-availability.js" defer></script>
+<script src="/deck.js" defer></script>
+<script src="/deck-retirement.js" defer></script>
+<script src="/deck-rename.js" defer></script>
+<script src="/deck-prices.js" defer></script>
+<script src="/guide.js" defer></script>
+<script src="/stats.js" defer></script>
+<script src="/commander-readiness.js" defer></script>
+  <script src="/commander-night.js" defer></script>
+<script src="/practice.js" defer></script>
+<script src="/version.js" defer></script>
+<script src="/wishlist.js" defer></script>
+<script src="/shopping.js" defer></script>
+<script src="/shopping-buying.js" defer></script>
+<script src="/shopping-reprints.js" defer></script>
+<script src="/shopping-orders.js" defer></script>
+<script src="/shopping-order-edit.js" defer></script>
+<script src="/shopping-order-rows.js" defer></script>
+<script src="/shopping-order-split.js" defer></script>
+<script src="/deck-tools.js" defer></script>
+<script src="/collection.js" defer></script>
+<script src="/collection-cards.js" defer></script>
+<script src="/collection-bulk.js" defer></script>
+<script src="/collection-guards.js" defer></script>
+<script src="/assembly.js" defer></script>
+<script src="/assembly-sections.js" defer></script>
+<script src="/assembly-progress.js" defer></script>
+<script src="/assembly-sheets.js" defer></script>
+<script src="/hands.js" defer></script>
+<script src="/play.js" defer></script>
+<script src="/deck-sideboard.js" defer></script>
+<script src="/deck-opponents.js" defer></script>
+<script src="/deck-standins.js" defer></script>
+<script src="/deck-swaps.js" defer></script>
+<script src="/product-storage.js" defer></script>
+<script src="/history.js" defer></script>
+<script src="/activity.js" defer></script>
+<script src="/receipts.js" defer></script>
+<script src="/receipt-workflow.js" defer></script>
+<script src="/accessories.js" defer></script>
+<script src="/accessory-pictures.js" defer></script>
+<script src="/tokens.js" defer></script>
+<!-- WP4 app shell (decklab/UI-REVIEW.md 2.2): the navigation, avatar menu and tab bar, and the Settings page -->
+<script src="/shell.js" defer></script>
+<script src="/settings.js" defer></script>
+<script src="/visibility.js" defer></script>
+<!-- /WP4 app shell -->
+<script src="/app.js" defer></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar" id="topbar">
+  <div class="wrap topbar-inner">
+    <a class="topbar-back" id="topbar-back" href="#/library" hidden><span aria-hidden="true">‹</span> <span id="topbar-back-label"></span></a>
+    <a class="brand" href="#/library">
+      <img src="/icons/icon-32.png" alt="" width="24" height="24">
+      <span class="brand-name">Deck Lab</span>
+    </a>
+    <span class="topbar-title" id="topbar-title" aria-hidden="true"></span>
+    <nav class="main-nav" id="main-nav" aria-label="Main" hidden></nav>
+    <div class="shell-status" id="shell-status"></div>
+    <div class="topbar-actions" id="topbar-actions" hidden>
+      <button type="button" class="avatar-button" id="avatar-button" aria-expanded="false" aria-controls="avatar-menu">
+        <span class="avatar avatar-0" id="avatar-initial" aria-hidden="true"></span>
+        <span class="sr-only" id="profile-name"></span>
+      </button>
+      <div class="menu avatar-menu" id="avatar-menu" hidden>
+        <div class="menu-head">
+          <span class="menu-name" id="menu-name"></span>
+          <span class="signed-in" id="signed-in" hidden></span>
+        </div>
+        <div class="menu-theme" role="group" aria-labelledby="theme-label">
+          <span id="theme-label">Theme</span>
+          <div class="segmented">
+            <button type="button" data-theme-choice="system" aria-pressed="true">Auto</button>
+            <button type="button" data-theme-choice="light" aria-pressed="false">Light</button>
+            <button type="button" data-theme-choice="dark" aria-pressed="false">Dark</button>
+          </div>
+        </div>
+        <div class="menu-sep"></div>
+        <button type="button" id="switch-profile">Switch person</button>
+        <button type="button" id="menu-reload">Reload page</button>
+        <button type="button" class="menu-check" id="my-device" aria-pressed="false">This is my device</button>
+        <a href="#/visibility" id="menu-visibility" hidden>Who sees what</a>
+        <div class="menu-sep" id="admin-sep" hidden></div>
+        <a href="#/settings" id="menu-settings" hidden>Settings</a>
+        <a href="#/settings?part=about" id="menu-about" hidden>About Deck Lab</a>
+      </div>
+    </div>
+  </div>
+</header>
+<div class="wrap">
+  <div id="build-warning" class="box box-warn build-warning" role="status" aria-live="polite" hidden></div>
+  <div id="page-errors" class="page-errors" role="alert"></div>
+  <p id="toast" class="toast" role="status" aria-live="polite"></p>
+</div>
+<main id="main" class="wrap" tabindex="-1">
+  <p class="loading" role="status"><span class="spinner" aria-hidden="true"></span> Loading Deck Lab...</p>
+  <noscript><p class="box box-crit">Deck Lab needs JavaScript turned on.</p></noscript>
+</main>
+<footer class="wrap footer" id="footer">
+  <p id="footer-data"></p>
+</footer>
+<nav class="tabbar" id="tabbar" aria-label="Main" hidden></nav>
+<dialog class="sheet more-sheet" id="more-sheet" aria-labelledby="more-sheet-title">
+  <div class="sheet-inner">
+    <div class="sheet-head">
+      <h2 id="more-sheet-title">More</h2>
+      <button type="button" class="btn btn-quiet sheet-close" aria-label="Close">×</button>
+    </div>
+    <div class="sheet-body"><ul class="more-list" id="more-list"></ul></div>
+  </div>
+</dialog>
+</body>
+</html>

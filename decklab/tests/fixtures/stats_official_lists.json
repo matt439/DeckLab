@@ -1,0 +1,13 @@
+{
+  "format": 1,
+  "source": "https://magic.wizards.com/en/sitemap.xml",
+  "checked_at": "2026-10-15T03:00:00+00:00",
+  "last_success_at": "2026-10-15T03:00:00+00:00",
+  "etag": "\"fixture\"",
+  "last_modified": null,
+  "announcement": {
+    "date": "2026-02-09",
+    "url": "https://magic.wizards.com/en/news/announcements/commander-brackets-beta-update-february-9-2026"
+  },
+  "error": null
+}

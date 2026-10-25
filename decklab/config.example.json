@@ -1,0 +1,18 @@
+{
+  "database": {"backup_dir": "\\\\NAS\\Backups\\DeckLab"},
+  "allowed_hosts": ["decklab.example.com", "www.decklab.example.com"],
+  "tunnel": {"config": "~/.cloudflared/config.yml", "hostname": "decklab.example.com"},
+  "access": {
+    "team": "your-team",
+    "aud": "<your Cloudflare Access application's audience tag>",
+    "port": 8644
+  },
+  "profiles": [
+    {"id": "matt", "name": "Matt", "plays_as": "user", "role": "admin", "space": "home",
+     "emails": ["matt@example.com"]},
+    {"id": "user1", "name": "User1", "plays_as": "wife", "role": "member", "space": "home",
+     "emails": ["user1@example.com"]},
+    {"id": "user2", "name": "User2", "role": "member", "space": "user2",
+     "emails": ["user2@example.com"]}
+  ]
+}

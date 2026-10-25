@@ -1,0 +1,56 @@
+/* The Activity page (activity.js): the filter chips, then the changes grouped by day, a card each with its
+   headline, when and from where, and its first rows. Phone first; only the theme's tokens, so both themes and
+   forced colours follow. The page keeps to a readable width on wide screens; from 1600px the filters become a
+   rail beside the changes, so the screen's width holds both rather than a column with empty space beside it. */
+.activity-layout { min-width: 0; }
+.activity-main { min-width: 0; }
+.activity-filters { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s-2); margin: var(--s-2) 0 var(--s-4);
+  min-width: 0; }
+.activity-filter { min-width: 0; }
+.activity-filter:empty { display: none; }
+.activity-days { display: grid; gap: var(--s-5); margin: var(--s-4) 0; }
+.activity-day { min-width: 0; }
+.activity-day-head { margin: 0 0 var(--s-2); font-size: var(--fs-md); color: var(--ink-2); }
+.activity-list { list-style: none; padding: 0; margin: 0; display: grid; gap: var(--s-3); }
+.activity-change { padding: var(--s-3) var(--s-4); border: 1px solid var(--border); border-radius: var(--r-lg);
+  background: var(--surface); box-shadow: var(--shadow-1); min-width: 0; }
+.activity-headline { margin: 0; font-size: var(--fs-md); font-weight: var(--fw-semibold); line-height: var(--lh-tight);
+  overflow-wrap: anywhere; }
+.activity-headline a { color: inherit; text-decoration: underline; text-decoration-color: var(--border-strong);
+  text-underline-offset: 3px; }
+.activity-headline a:hover { text-decoration-color: currentColor; }
+.activity-meta { display: flex; flex-wrap: wrap; gap: 0 var(--s-2); margin: var(--s-1) 0 0; color: var(--ink-2);
+  font-size: var(--fs-sm); }
+.activity-where::before { content: "·"; margin-right: var(--s-2); }
+.activity-message, .activity-reason { margin: var(--s-2) 0 0; overflow-wrap: anywhere; }
+.activity-reason { color: var(--ink-2); font-size: var(--fs-sm); }
+.activity-detail { min-width: 0; }
+.activity-rows { list-style: none; margin: var(--s-2) 0 0; padding: 0; border-top: 1px solid var(--border);
+  font-size: var(--fs-sm); color: var(--ink-2); }
+.activity-rows > li { min-width: 0; overflow-wrap: anywhere; }
+.activity-rows > li > span, .activity-rows > li > .activity-link {
+  display: flex; align-items: center; min-height: 44px; padding: var(--s-1) var(--s-2);
+  border-bottom: 1px solid var(--border);
+}
+.activity-rows .activity-link { color: var(--link); }
+.activity-rows .card-row { min-height: 60px; font-size: var(--fs-sm); }
+.activity-all { margin-top: var(--s-1); }
+.activity-more { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2) var(--s-4); margin: var(--s-4) 0 var(--s-5); }
+.activity-note { margin: 0; color: var(--ink-2); font-size: var(--fs-sm); }
+.activity-note:empty { display: none; }
+@media (min-width: 600px) {
+  .activity-change { padding: var(--s-4) var(--s-5); }
+}
+@media (min-width: 1000px) {
+  .activity-filters, .activity-days, .activity-more, .activity-empty { max-width: 960px; }
+}
+@media (min-width: 1600px) {
+  .activity-layout { display: grid; grid-template-columns: 280px minmax(0, 1040px); gap: var(--s-6); align-items: start; }
+  .activity-filters { position: sticky; top: calc(56px + var(--s-4)); margin: var(--s-4) 0 0; gap: var(--s-4);
+    padding: var(--s-4); border: 1px solid var(--border); border-radius: var(--r-lg); background: var(--surface); }
+  .activity-filters, .activity-days, .activity-more, .activity-empty { max-width: none; }
+}
+@media (forced-colors: active) {
+  .activity-change, .activity-empty { border: 1px solid CanvasText; }
+  .activity-when, .activity-where, .activity-reason, .activity-rows, .activity-note { color: CanvasText; }
+}

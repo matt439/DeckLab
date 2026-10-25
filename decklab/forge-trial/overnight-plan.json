@@ -1,0 +1,1395 @@
+{
+ "version": 1,
+ "about": "The combined run's items (sim-combined-run.md section 6), in plan order. overnight.py prepare resolves this into $OUT/plan.resolved.json. Placeholders: {F} the run tree's CLI, {FM} main's CLI (run from the main checkout), {L} overnight_legs.py, {OUT}, {MAIN}, {choice:N} a game count main's play accepts (200 in --smoke), {games:N} a game count scaled by the item's scale (and by the smoke factor in --smoke). 'requires' names wave 3 packages whose code the item runs: an item whose package isn't built in the tree under test is skipped as 'not built tonight', found from the code (overnight.py features), never from a typed list. 'leg' items also need their leg in overnight_legs.LEGS. {smoke:A|B} is A in --smoke, else B (split at spaces).",
+ "soak_min_h": 3.0,
+ "smoke_soak_min_min": 10,
+ "end_reserve_min": 15,
+ "rates": {
+  "fast": 1400,
+  "medium": 900,
+  "board": 280,
+  "commander": 200
+ },
+ "workloads": {
+  "IG": [
+   "casual/izzet-prowess",
+   "casual/gruul-ramp"
+  ],
+  "RV": [
+   "casual/selesnya-rabbits",
+   "casual/orzhov-vampires"
+  ],
+  "GF": [
+   "commander/giada-angels",
+   "commander/finneas-rabbits"
+  ],
+  "AL": [
+   "casual/mono-white-angels",
+   "product/challenger-2019-lightning-aggro"
+  ],
+  "ZL": [
+   "casual/mono-black-zombies",
+   "product/challenger-2019-lightning-aggro"
+  ],
+  "IA": [
+   "casual/izzet-prowess",
+   "casual/mono-white-angels"
+  ]
+ },
+ "items": [
+  {
+   "id": "A1",
+   "block": "A",
+   "priority": 0,
+   "est_min": 3,
+   "internal": "preflight"
+  },
+  {
+   "id": "A2",
+   "block": "A",
+   "priority": 0,
+   "est_min": 0,
+   "internal": "idle-gate"
+  },
+  {
+   "id": "A3",
+   "block": "A",
+   "priority": 0,
+   "est_min": 2,
+   "internal": "staging"
+  },
+  {
+   "id": "A4",
+   "block": "A",
+   "priority": 0,
+   "est_min": 0,
+   "internal": "monitor"
+  },
+  {
+   "id": "B0",
+   "block": "B",
+   "priority": 0,
+   "est_min": 1.5,
+   "exclusive": true,
+   "timing": true,
+   "untimed": true,
+   "cmds": [
+    [
+     "{FM}",
+     "play",
+     "casual/izzet-prowess",
+     "casual/gruul-ramp",
+     "--games",
+     "{choice:800}",
+     "--seed-base",
+     "900001",
+     "--results-dir",
+     "{OUT}/B/b0",
+     "--json",
+     "{workers}"
+    ]
+   ],
+   "smoke": false
+  },
+  {
+   "id": "B1a",
+   "block": "B",
+   "priority": 0,
+   "est_min": 5,
+   "exclusive": true,
+   "timing": true,
+   "cmds": [
+    [
+     "{FM}",
+     "play",
+     "casual/izzet-prowess",
+     "casual/gruul-ramp",
+     "--games",
+     "{choice:800}",
+     "--seed-base",
+     "900001",
+     "--results-dir",
+     "{OUT}/B/b1a/ig",
+     "--json",
+     "{workers}"
+    ],
+    [
+     "{FM}",
+     "play",
+     "casual/selesnya-rabbits",
+     "casual/orzhov-vampires",
+     "--games",
+     "{choice:400}",
+     "--seed-base",
+     "900001",
+     "--results-dir",
+     "{OUT}/B/b1a/rv",
+     "--json",
+     "{workers}"
+    ],
+    [
+     "{FM}",
+     "play",
+     "commander/giada-angels",
+     "commander/finneas-rabbits",
+     "--games",
+     "{choice:200}",
+     "--seed-base",
+     "900001",
+     "--results-dir",
+     "{OUT}/B/b1a/gf1",
+     "--json",
+     "{workers}"
+    ],
+    [
+     "{FM}",
+     "play",
+     "commander/giada-angels",
+     "commander/finneas-rabbits",
+     "--games",
+     "{choice:200}",
+     "--seed-base",
+     "900001",
+     "--results-dir",
+     "{OUT}/B/b1a/gf2",
+     "--json",
+     "{workers}"
+    ]
+   ],
+   "smoke_cmds": [
+    0
+   ]
+  },
+  {
+   "id": "B2",
+   "block": "B",
+   "priority": 0,
+   "est_min": 11,
+   "exclusive": true,
+   "timing": true,
+   "leg": "rounds",
+   "cmds": [
+    [
+     "{L}",
+     "rounds",
+     "--out",
+     "{OUT}/B/b2",
+     "--rounds",
+     "IG{games:800}x3,RV{games:400}x3,GF{games:200}x3",
+     "--seed-base",
+     "900001",
+     "{workers}"
+    ]
+   ]
+  },
+  {
+   "id": "B3",
+   "block": "B",
+   "priority": 1,
+   "est_min": 4,
+   "exclusive": true,
+   "timing": true,
+   "leg": "server-path",
+   "cmds": [
+    [
+     "{L}",
+     "server-path",
+     "--out",
+     "{OUT}/B/b3",
+     "--port",
+     "8643",
+     "--pythonw",
+     "--rounds",
+     "IG{games:800}x2",
+     "{workers}"
+    ]
+   ]
+  },
+  {
+   "id": "B4-none",
+   "block": "B",
+   "priority": 1,
+   "est_min": 4,
+   "exclusive": true,
+   "timing": true,
+   "leg": "rounds",
+   "requires": [
+    "R"
+   ],
+   "cmds": [
+    [
+     "{L}",
+     "rounds",
+     "--out",
+     "{OUT}/B/b4-none",
+     "--pin",
+     "none",
+     "--rounds",
+     "IG{games:800}x3,RV{games:400}x1",
+     "--seed-base",
+     "900001",
+     "{workers}"
+    ]
+   ]
+  },
+  {
+   "id": "B5-k24",
+   "block": "B",
+   "priority": 1,
+   "est_min": 4,
+   "exclusive": true,
+   "timing": true,
+   "leg": "rounds",
+   "requires": [
+    "R"
+   ],
+   "smoke": false,
+   "cmds": [
+    [
+     "{L}",
+     "rounds",
+     "--out",
+     "{OUT}/B/b5-k24",
+     "--workers",
+     "24",
+     "--pin",
+     "core-wrap",
+     "--rounds",
+     "IG{games:800}x3,RV{games:400}x1",
+     "--seed-base",
+     "900001"
+    ]
+   ]
+  },
+  {
+   "id": "B6",
+   "block": "B",
+   "priority": 1,
+   "est_min": 5,
+   "exclusive": true,
+   "timing": true,
+   "leg": "rounds",
+   "requires": [
+    "E3"
+   ],
+   "cmds": [
+    [
+     "{L}",
+     "rounds",
+     "--out",
+     "{OUT}/B/b6",
+     "--perf",
+     "off",
+     "--rounds",
+     "IG{games:800}x3,RV{games:400}x1,GF{games:200}x2",
+     "--seed-base",
+     "900001",
+     "{workers}"
+    ]
+   ],
+   "smoke": false
+  },
+  {
+   "id": "B7-r14a",
+   "block": "B",
+   "priority": 1,
+   "est_min": 4,
+   "exclusive": true,
+   "timing": true,
+   "leg": "rounds",
+   "requires": [
+    "J3"
+   ],
+   "cmds": [
+    [
+     "{L}",
+     "rounds",
+     "--out",
+     "{OUT}/B/b7-r14a",
+     "--exclude-patch",
+     "forge/ai/AiController.class",
+     "--rounds",
+     "IG{games:800}x3,RV{games:400}x1",
+     "--seed-base",
+     "900001",
+     "{workers}"
+    ]
+   ]
+  },
+  {
+   "id": "B9",
+   "block": "B",
+   "priority": 1,
+   "est_min": 6,
+   "exclusive": true,
+   "timing": true,
+   "leg": "rounds",
+   "requires": [
+    "R"
+   ],
+   "cmds": [
+    [
+     "{L}",
+     "rounds",
+     "--out",
+     "{OUT}/B/b9-core",
+     "--load",
+     "4",
+     "--rounds",
+     "IG{games:800}x2",
+     "--seed-base",
+     "900001",
+     "{workers}"
+    ],
+    [
+     "{L}",
+     "rounds",
+     "--out",
+     "{OUT}/B/b9-none",
+     "--load",
+     "4",
+     "--pin",
+     "none",
+     "--rounds",
+     "IG{games:800}x2",
+     "--seed-base",
+     "900001",
+     "{workers}"
+    ]
+   ],
+   "smoke": false
+  },
+  {
+   "id": "B4-ccd",
+   "block": "B",
+   "priority": 2,
+   "est_min": 4,
+   "exclusive": true,
+   "timing": true,
+   "leg": "rounds",
+   "requires": [
+    "R"
+   ],
+   "cmds": [
+    [
+     "{L}",
+     "rounds",
+     "--out",
+     "{OUT}/B/b4-ccd",
+     "--pin",
+     "ccd",
+     "--rounds",
+     "IG{games:800}x3,RV{games:400}x1",
+     "--seed-base",
+     "900001",
+     "{workers}"
+    ]
+   ],
+   "smoke": false
+  },
+  {
+   "id": "B5-k20",
+   "block": "B",
+   "priority": 2,
+   "est_min": 4,
+   "exclusive": true,
+   "timing": true,
+   "leg": "rounds",
+   "requires": [
+    "R"
+   ],
+   "smoke": false,
+   "cmds": [
+    [
+     "{L}",
+     "rounds",
+     "--out",
+     "{OUT}/B/b5-k20",
+     "--workers",
+     "20",
+     "--pin",
+     "core-wrap",
+     "--rounds",
+     "IG{games:800}x3,RV{games:400}x1",
+     "--seed-base",
+     "900001"
+    ]
+   ]
+  },
+  {
+   "id": "B5-k32",
+   "block": "B",
+   "priority": 2,
+   "est_min": 4,
+   "exclusive": true,
+   "timing": true,
+   "leg": "rounds",
+   "requires": [
+    "R"
+   ],
+   "smoke": false,
+   "cmds": [
+    [
+     "{L}",
+     "rounds",
+     "--out",
+     "{OUT}/B/b5-k32",
+     "--workers",
+     "32",
+     "--pin",
+     "core-wrap",
+     "--rounds",
+     "IG{games:800}x3,RV{games:400}x1",
+     "--seed-base",
+     "900001"
+    ]
+   ]
+  },
+  {
+   "id": "B7-r04",
+   "block": "B",
+   "priority": 2,
+   "est_min": 4,
+   "exclusive": true,
+   "timing": true,
+   "leg": "rounds",
+   "requires": [
+    "J3"
+   ],
+   "cmds": [
+    [
+     "{L}",
+     "rounds",
+     "--out",
+     "{OUT}/B/b7-r04",
+     "--exclude-patch",
+     "forge/game/mulligan/AbstractMulligan.class",
+     "--rounds",
+     "IG{games:800}x3,RV{games:400}x1",
+     "--seed-base",
+     "900001",
+     "{workers}"
+    ]
+   ],
+   "smoke": false
+  },
+  {
+   "id": "B7-off",
+   "block": "B",
+   "priority": 2,
+   "est_min": 4,
+   "exclusive": true,
+   "timing": true,
+   "leg": "rounds",
+   "requires": [
+    "E3"
+   ],
+   "cmds": [
+    [
+     "{L}",
+     "rounds",
+     "--out",
+     "{OUT}/B/b7-off",
+     "--game-patches",
+     "off",
+     "--rounds",
+     "IG{games:800}x3,RV{games:400}x1",
+     "--seed-base",
+     "900001",
+     "{workers}"
+    ]
+   ],
+   "smoke": false
+  },
+  {
+   "id": "B1b",
+   "block": "B",
+   "priority": 0,
+   "est_min": 5,
+   "exclusive": true,
+   "timing": true,
+   "cmds": [
+    [
+     "{FM}",
+     "play",
+     "casual/izzet-prowess",
+     "casual/gruul-ramp",
+     "--games",
+     "{choice:800}",
+     "--seed-base",
+     "900001",
+     "--results-dir",
+     "{OUT}/B/b1b/ig",
+     "--json",
+     "{workers}"
+    ],
+    [
+     "{FM}",
+     "play",
+     "casual/selesnya-rabbits",
+     "casual/orzhov-vampires",
+     "--games",
+     "{choice:400}",
+     "--seed-base",
+     "900001",
+     "--results-dir",
+     "{OUT}/B/b1b/rv",
+     "--json",
+     "{workers}"
+    ],
+    [
+     "{FM}",
+     "play",
+     "commander/giada-angels",
+     "commander/finneas-rabbits",
+     "--games",
+     "{choice:200}",
+     "--seed-base",
+     "900001",
+     "--results-dir",
+     "{OUT}/B/b1b/gf1",
+     "--json",
+     "{workers}"
+    ],
+    [
+     "{FM}",
+     "play",
+     "commander/giada-angels",
+     "commander/finneas-rabbits",
+     "--games",
+     "{choice:200}",
+     "--seed-base",
+     "900001",
+     "--results-dir",
+     "{OUT}/B/b1b/gf2",
+     "--json",
+     "{workers}"
+    ]
+   ],
+   "smoke_cmds": [
+    0
+   ]
+  },
+  {
+   "id": "C1",
+   "block": "C",
+   "priority": 0,
+   "est_min": 3,
+   "exclusive": true,
+   "leg": "parity",
+   "cmds": [
+    [
+     "{L}",
+     "parity",
+     "--out",
+     "{OUT}/C/c1",
+     "--constructed",
+     "{games:20}",
+     "--commander",
+     "{games:5}",
+     "--replay-differences"
+    ]
+   ]
+  },
+  {
+   "id": "C2",
+   "block": "C",
+   "priority": 0,
+   "est_min": 2,
+   "exclusive": true,
+   "leg": "cardlog-onoff",
+   "cmds": [
+    [
+     "{L}",
+     "cardlog-onoff",
+     "--out",
+     "{OUT}/C/c2",
+     "--games",
+     "{games:200}",
+     "--replay-differences"
+    ]
+   ]
+  },
+  {
+   "id": "C3",
+   "block": "C",
+   "priority": 0,
+   "est_min": 3,
+   "exclusive": true,
+   "cmds": [
+    [
+     "{F}",
+     "serve-check",
+     "--games",
+     "{games:40}"
+    ]
+   ]
+  },
+  {
+   "id": "C4",
+   "block": "C",
+   "priority": 0,
+   "est_min": 1,
+   "exclusive": true,
+   "leg": "deck-order",
+   "requires": [
+    "V",
+    "J3"
+   ],
+   "inputs": [
+    "variants.json"
+   ],
+   "cmds": [
+    [
+     "{L}",
+     "deck-order",
+     "--out",
+     "{OUT}/C/c4",
+     "--games",
+     "{games:20}",
+     "--variants",
+     "{OUT}/inputs/variants.json"
+    ]
+   ]
+  },
+  {
+   "id": "D0",
+   "block": "D",
+   "priority": 0,
+   "est_min": 1,
+   "internal": "server-start"
+  },
+  {
+   "id": "D1",
+   "block": "D",
+   "priority": 0,
+   "est_min": 45,
+   "preemptible": true,
+   "pool": "server",
+   "soak": true,
+   "requires": [
+    "R"
+   ],
+   "est_from": "replay",
+   "cmds": [
+    [
+     "{F}",
+     "replay",
+     "--results-dir",
+     "{OUT}/staging/results",
+     "--matchups",
+     "{matchups}",
+     "--logs-dir",
+     "{OUT}/logs/replay",
+     "--log-every",
+     "1",
+     "--json"
+    ]
+   ]
+  },
+  {
+   "id": "D2a-crn",
+   "block": "D",
+   "priority": 1,
+   "est_min": 4,
+   "shrink_min": 0.5,
+   "pool": "server",
+   "soak": true,
+   "requires": [
+    "V",
+    "R"
+   ],
+   "inputs": [
+    "variant-1.txt",
+    "variant-2.txt"
+   ],
+   "cmds": [
+    [
+     "{F}",
+     "variant",
+     "casual/gruul-ramp",
+     "--list",
+     "{OUT}/inputs/variant-1.txt",
+     "--against",
+     "casual/izzet-prowess",
+     "--games",
+     "{games:800}",
+     "--results-dir",
+     "{OUT}/staging/results",
+     "--logs-dir",
+     "{OUT}/logs/crn",
+     "--json"
+    ],
+    [
+     "{F}",
+     "variant",
+     "casual/gruul-ramp",
+     "--list",
+     "{OUT}/inputs/variant-2.txt",
+     "--against",
+     "casual/izzet-prowess",
+     "--games",
+     "{games:800}",
+     "--results-dir",
+     "{OUT}/staging/results",
+     "--logs-dir",
+     "{OUT}/logs/crn",
+     "--json"
+    ]
+   ]
+  },
+  {
+   "id": "D2a-m4",
+   "block": "D",
+   "priority": 1,
+   "est_min": 5,
+   "shrink_min": 0.5,
+   "pool": "local",
+   "soak": true,
+   "requires": [
+    "X",
+    "R"
+   ],
+   "specs": [
+    "exp-m4-fiery.json",
+    "exp-m4-shared.json"
+   ],
+   "spec_cmd": [
+    "{F}",
+    "experiment",
+    "{SPEC}",
+    "--results-dir",
+    "{OUT}/experiments/{NAME}",
+    "--control-dir",
+    "{OUT}/staging/results",
+    "--control-logs-dir",
+    "{OUT}/logs/replay",
+    "--logs-dir",
+    "{OUT}/logs/{NAME}",
+    "--games",
+    "{games:800}"
+   ]
+  },
+  {
+   "id": "D2a-field",
+   "block": "D",
+   "priority": 1,
+   "est_min": 3,
+   "shrink_min": 0.5,
+   "pool": "server",
+   "soak": true,
+   "requires": [
+    "V",
+    "R",
+    "S"
+   ],
+   "inputs": [
+    "variant-1.txt"
+   ],
+   "cmds": [
+    [
+     "{F}",
+     "variant",
+     "casual/gruul-ramp",
+     "--list",
+     "{OUT}/inputs/variant-1.txt",
+     "--field",
+     "--opponents",
+     "casual/izzet-prowess,product/challenger-2019-lightning-aggro,casual/mono-white-angels",
+     "--until",
+     "ahead",
+     "--results-dir",
+     "{OUT}/staging/results",
+     "--logs-dir",
+     "{OUT}/logs/crn",
+     "--json"
+    ]
+   ],
+   "smoke": false
+  },
+  {
+   "id": "D2b-p1",
+   "block": "D",
+   "priority": 1,
+   "est_min": 6,
+   "pool": "server",
+   "soak": true,
+   "requires": [
+    "V",
+    "R"
+   ],
+   "inputs": [
+    "ladders.json"
+   ],
+   "ladders": [
+    "casual/izzet-prowess",
+    "casual/selesnya-rabbits",
+    "casual/mono-white-angels"
+   ]
+  },
+  {
+   "id": "D2c-p1",
+   "block": "D",
+   "priority": 1,
+   "est_min": 18,
+   "shrink_min": 0.5,
+   "pool": "local",
+   "soak": true,
+   "requires": [
+    "X",
+    "R"
+   ],
+   "specs": [
+    "exp-overrides-etb.json",
+    "exp-overrides-tgt.json",
+    "exp-overrides-remove.json",
+    "exp-overrides-flash.json"
+   ],
+   "spec_cmd": [
+    "{F}",
+    "experiment",
+    "{SPEC}",
+    "--results-dir",
+    "{OUT}/experiments/{NAME}",
+    "--control-dir",
+    "{OUT}/staging/results",
+    "--control-logs-dir",
+    "{OUT}/logs/replay",
+    "--logs-dir",
+    "{OUT}/logs/{NAME}",
+    "--games",
+    "{games:800}"
+   ]
+  },
+  {
+   "id": "D2d-p1",
+   "block": "D",
+   "priority": 1,
+   "est_min": 11,
+   "shrink_min": 0.5,
+   "pool": "local",
+   "soak": true,
+   "requires": [
+    "X",
+    "R"
+   ],
+   "specs": [
+    "exp-pump.json"
+   ],
+   "spec_cmd": [
+    "{F}",
+    "experiment",
+    "{SPEC}",
+    "--results-dir",
+    "{OUT}/experiments/{NAME}",
+    "--control-dir",
+    "{OUT}/staging/results",
+    "--control-logs-dir",
+    "{OUT}/logs/replay",
+    "--logs-dir",
+    "{OUT}/logs/{NAME}",
+    "--games",
+    "{games:800}"
+   ]
+  },
+  {
+   "id": "D3a-ref",
+   "block": "D",
+   "priority": 1,
+   "est_min": 18,
+   "shrink_min": 0.5,
+   "preemptible": true,
+   "pool": "server",
+   "soak": true,
+   "requires": [
+    "F",
+    "R"
+   ],
+   "cmds": [
+    [
+     "{F}",
+     "field",
+     "casual/mono-white-angels",
+     "--fixed",
+     "{games:1600}",
+     "--results-dir",
+     "{OUT}/staging/results",
+     "--logs-dir",
+     "{OUT}/logs/field",
+     "--log-every",
+     "10"
+    ]
+   ]
+  },
+  {
+   "id": "D3a-api",
+   "block": "D",
+   "priority": 1,
+   "est_min": 8,
+   "exclusive": true,
+   "pool": "server",
+   "soak": true,
+   "requires": [
+    "F",
+    "S"
+   ],
+   "leg": "api-field",
+   "cmds": [
+    [
+     "{L}",
+     "api-field",
+     "--port",
+     "8643",
+     "--deck",
+     "casual/mono-white-angels",
+     "--budget",
+     "{budget:standard}",
+     "--out",
+     "{OUT}/D/d3a-api"
+    ]
+   ],
+   "smoke": false
+  },
+  {
+   "id": "D3c",
+   "block": "D",
+   "priority": 1,
+   "est_min": 9,
+   "shrink_min": 0.6,
+   "pool": "server",
+   "soak": true,
+   "requires": [
+    "A",
+    "R"
+   ],
+   "leg": "adaptive",
+   "cmds": [
+    [
+     "{L}",
+     "adaptive",
+     "--out",
+     "{OUT}/D/d3c",
+     "--pairs",
+     "{smoke:IG|AL,IG,ZL}",
+     "--modes",
+     "{smoke:assess|assess,ahead}",
+     "--seed-base",
+     "3",
+     "--logs-dir",
+     "{OUT}/logs/adaptive",
+     "--max",
+     "{smoke:400|3200}"
+    ]
+   ]
+  },
+  {
+   "id": "D2b-p2",
+   "block": "D",
+   "priority": 2,
+   "est_min": 2,
+   "pool": "server",
+   "soak": true,
+   "requires": [
+    "V",
+    "R"
+   ],
+   "inputs": [
+    "ladders.json"
+   ],
+   "ladders": [
+    "casual/gruul-ramp",
+    "casual/mono-black-midrange"
+   ]
+  },
+  {
+   "id": "D2c-p2",
+   "block": "D",
+   "priority": 2,
+   "est_min": 7,
+   "pool": "local",
+   "soak": true,
+   "requires": [
+    "X",
+    "R"
+   ],
+   "specs": [
+    "exp-overrides-etb-flagged.json",
+    "exp-overrides-tgt-gift.json",
+    "exp-overrides-hints.json"
+   ],
+   "spec_cmd": [
+    "{F}",
+    "experiment",
+    "{SPEC}",
+    "--results-dir",
+    "{OUT}/experiments/{NAME}",
+    "--control-dir",
+    "{OUT}/staging/results",
+    "--control-logs-dir",
+    "{OUT}/logs/replay",
+    "--logs-dir",
+    "{OUT}/logs/{NAME}",
+    "--games",
+    "{games:800}"
+   ]
+  },
+  {
+   "id": "D2d-p2",
+   "block": "D",
+   "priority": 2,
+   "est_min": 26,
+   "pool": "local",
+   "soak": true,
+   "requires": [
+    "X",
+    "R"
+   ],
+   "specs": [
+    "exp-profiles.json"
+   ],
+   "spec_cmd": [
+    "{F}",
+    "experiment",
+    "{SPEC}",
+    "--results-dir",
+    "{OUT}/experiments/{NAME}",
+    "--control-dir",
+    "{OUT}/staging/results",
+    "--control-logs-dir",
+    "{OUT}/logs/replay",
+    "--logs-dir",
+    "{OUT}/logs/{NAME}",
+    "--games",
+    "{games:800}"
+   ],
+   "smoke": false
+  },
+  {
+   "id": "D2d-p2h",
+   "block": "D",
+   "priority": 2,
+   "est_min": 6,
+   "exclusive": true,
+   "pool": "local",
+   "soak": true,
+   "requires": [
+    "X",
+    "R"
+   ],
+   "leg": "hybrid",
+   "inputs": [
+    "exp-hybrid.json"
+   ],
+   "cmds": [
+    [
+     "{L}",
+     "hybrid",
+     "--inputs",
+     "{OUT}/inputs",
+     "--experiments",
+     "{OUT}/experiments",
+     "--logs-dir",
+     "{OUT}/logs",
+     "--control-dir",
+     "{OUT}/staging/results",
+     "--control-logs-dir",
+     "{OUT}/logs/replay",
+     "--games",
+     "{games:100}",
+     "--mirror-games",
+     "{games:400}",
+     "--out",
+     "{OUT}/D/d2d-hybrid"
+    ]
+   ],
+   "smoke": false
+  },
+  {
+   "id": "D2e-b",
+   "block": "D",
+   "priority": 2,
+   "est_min": 25,
+   "pool": "local",
+   "soak": true,
+   "requires": [
+    "X",
+    "R"
+   ],
+   "specs": [
+    "exp-sensitivity-b.json"
+   ],
+   "spec_cmd": [
+    "{F}",
+    "experiment",
+    "{SPEC}",
+    "--results-dir",
+    "{OUT}/experiments/{NAME}",
+    "--control-dir",
+    "{OUT}/staging/results",
+    "--control-logs-dir",
+    "{OUT}/logs/replay",
+    "--logs-dir",
+    "{OUT}/logs/{NAME}",
+    "--games",
+    "{games:200}"
+   ],
+   "smoke": false
+  },
+  {
+   "id": "D3b",
+   "block": "D",
+   "priority": 2,
+   "est_min": 8,
+   "pool": "server",
+   "soak": true,
+   "requires": [
+    "F",
+    "R"
+   ],
+   "cmds": [
+    [
+     "{F}",
+     "field",
+     "commander/giada-angels",
+     "--fixed",
+     "{games:800}",
+     "--results-dir",
+     "{OUT}/staging/results",
+     "--logs-dir",
+     "{OUT}/logs/field",
+     "--log-every",
+     "10"
+    ]
+   ]
+  },
+  {
+   "id": "D2e-c",
+   "block": "D",
+   "priority": 3,
+   "est_min": 7,
+   "pool": "local",
+   "soak": true,
+   "requires": [
+    "X",
+    "R"
+   ],
+   "specs": [
+    "exp-sensitivity-c.json"
+   ],
+   "spec_cmd": [
+    "{F}",
+    "experiment",
+    "{SPEC}",
+    "--results-dir",
+    "{OUT}/experiments/{NAME}",
+    "--control-dir",
+    "{OUT}/staging/results",
+    "--control-logs-dir",
+    "{OUT}/logs/replay",
+    "--logs-dir",
+    "{OUT}/logs/{NAME}",
+    "--games",
+    "{games:200}"
+   ],
+   "smoke": false
+  },
+  {
+   "id": "D4a",
+   "block": "D",
+   "priority": 2,
+   "est_min": 45,
+   "pool": "local",
+   "leg": "m6",
+   "smoke": false,
+   "cmds": [
+    [
+     "{L}",
+     "m6",
+     "--out",
+     "{OUT}/D/m6",
+     "--pods",
+     "200",
+     "--decks",
+     "commander/giada-angels,commander/finneas-rabbits,commander/gisa-zombies,product/fdc-wretched-ranks",
+     "--compare",
+     "commander/giada-angels,product/fdc-calling-all-angels,commander/finneas-rabbits,commander/gisa-zombies",
+     "--compare-pods",
+     "100",
+     "--per-batch",
+     "5",
+     "--procs",
+     "12"
+    ]
+   ]
+  },
+  {
+   "id": "D4b",
+   "block": "D",
+   "priority": 3,
+   "est_min": 30,
+   "pool": "local",
+   "leg": "m7",
+   "inputs": [
+    "m7"
+   ],
+   "smoke": false,
+   "cmds": [
+    [
+     "{L}",
+     "m7",
+     "--out",
+     "{OUT}/D/m7",
+     "--inputs",
+     "{OUT}/inputs/m7",
+     "--games",
+     "400",
+     "--max-min",
+     "45"
+    ]
+   ]
+  },
+  {
+   "id": "D-fill",
+   "block": "D",
+   "priority": 0,
+   "est_min": 0,
+   "preemptible": true,
+   "pool": "server",
+   "soak": true,
+   "internal": "filler",
+   "requires": [
+    "R"
+   ],
+   "cmds": [
+    [
+     "{F}",
+     "replay",
+     "--results-dir",
+     "{OUT}/D/filler/results",
+     "--matchups",
+     "{matchups}",
+     "--logs-dir",
+     "{OUT}/logs/filler",
+     "--log-every",
+     "10",
+     "--json"
+    ]
+   ],
+   "env": {
+    "DECKLAB_SEED_BASE": "5"
+   }
+  },
+  {
+   "id": "D8",
+   "block": "D",
+   "priority": 0,
+   "est_min": 6,
+   "pool": "server",
+   "internal": "final-probe",
+   "requires": [
+    "R"
+   ]
+  },
+  {
+   "id": "D9",
+   "block": "D",
+   "priority": 0,
+   "est_min": 1,
+   "internal": "server-stop"
+  },
+  {
+   "id": "D10",
+   "block": "D",
+   "priority": 1,
+   "est_min": 6,
+   "exclusive": true,
+   "leg": "idle-close",
+   "requires": [
+    "R"
+   ],
+   "cmds": [
+    [
+     "{L}",
+     "idle-close",
+     "--port",
+     "8644",
+     "--idle-s",
+     "{idle_s}",
+     "--out",
+     "{OUT}/D/d10",
+     "--games",
+     "{games:200}"
+    ]
+   ]
+  },
+  {
+   "id": "E1",
+   "block": "E",
+   "priority": 0,
+   "est_min": 1,
+   "cmds": [
+    [
+     "{F}",
+     "replay",
+     "--results-dir",
+     "{OUT}/staging/results",
+     "--dry-run",
+     "--json"
+    ]
+   ]
+  },
+  {
+   "id": "E2",
+   "block": "E",
+   "priority": 0,
+   "est_min": 1,
+   "cmds": [
+    [
+     "{F}",
+     "staged-move",
+     "--from",
+     "{OUT}/staging/results",
+     "--to",
+     "{OUT}/E/e2-target",
+     "--dry-run",
+     "--json"
+    ]
+   ]
+  },
+  {
+   "id": "E3",
+   "block": "E",
+   "priority": 0,
+   "est_min": 5,
+   "leg": "offline",
+   "cmds": [
+    [
+     "{L}",
+     "offline",
+     "--out",
+     "{OUT}/E/e3",
+     "--staging",
+     "{OUT}/staging/results",
+     "--logs",
+     "{OUT}/logs/replay",
+     "--card-data-mtime",
+     "{card_data_mtime}"
+    ]
+   ]
+  },
+  {
+   "id": "E4",
+   "block": "E",
+   "priority": 0,
+   "est_min": 2,
+   "internal": "cleanup"
+  },
+  {
+   "id": "E5",
+   "block": "E",
+   "priority": 0,
+   "est_min": 1,
+   "internal": "report"
+  }
+ ]
+}

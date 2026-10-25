@@ -1,0 +1,278 @@
+Error handling registered!
+16:40:15 [INFO ] GuiBase: ##########################################
+16:40:15 [INFO ] GuiBase: APP: Forge v.2.0.15-SNAPSHOT-09.28
+16:40:15 [INFO ] GuiBase: Java: 26.0.1 (Oracle Corporation)
+16:40:15 [INFO ] GuiBase: OS: Windows 11 10.0 amd64
+16:40:15 [INFO ] GuiBase: RAM: 1024 MB max, 32 CPUs
+16:40:15 [INFO ] GuiBase: ##########################################
+Language 'en-US' loaded successfully.
+(ThreadUtil first call): Running with priority 5
+Read cards: 34010 archived files in 1 ms (25 parts) using thread pool
+Simulation mode
+Ai(1)-2eb0867ad84f [Default] vs Ai(2)-d09616864f11 [Default] - twenty  games of Constructed seed 5
+
+Felling Blow (11) - [Couldn't add to stack, failed to target] - Put a +1/+1 counter on target creature you control. Then that creature deals damage equal to its power to target creature an opponent controls.[[Valley Questcaller (58), Burrowguard Mentor (26)], [Marauding Blight-Priest (95)]]
+Information: DL|log|1
+Information: DL|deck|1|1=Overrun;2=Helpful Hunter;3=Wilt-Leaf Liege;4=Carrot Cake;5=Carrot Cake;6=Sunpetal Grove;7=Sunpetal Grove;8=Treeguard Duo;9=Treeguard Duo;10=Regal Caracal;11=Felling Blow;12=Finneas, Ace Archer;13=Broken Wings;14=Release the Dogs;15=Blossoming Sands;16=Blossoming Sands;17=Blossoming Sands;18=Blossoming Sands;19=Hop to It;20=Hop to It;21=Hop to It;22=Mentor of the Meek;23=Prideful Parent;24=Prideful Parent;25=Burrowguard Mentor;26=Burrowguard Mentor;27=Burrowguard Mentor;28=Forest;29=Forest;30=Forest;31=Forest;32=Forest;33=Forest;34=Forest;35=Harvestrite Host;36=Harvestrite Host;37=Plains;38=Plains;39=Plains;40=Plains;41=Plains;42=Plains;43=Plains;44=Plains;45=Plains;46=Warren Elder;47=Warren Elder;48=Warren Elder;49=Druid of the Spade;50=Druid of the Spade;51=Druid of the Spade;52=Byrke, Long Ear of the Law;53=Bite Down;54=Rabbit Response;55=Rabbit Response;56=Valley Questcaller;57=Valley Questcaller;58=Valley Questcaller;59=Rabid Bite;60=Rabid Bite
+Information: DL|deck|2|61=Go for the Throat;62=Go for the Throat;63=Fiendish Panda;64=Night's Whisper;65=Night's Whisper;66=Crossway Troublemakers;67=Vengeful Bloodwitch;68=Vengeful Bloodwitch;69=Vengeful Bloodwitch;70=Dazzling Angel;71=Swamp;72=Swamp;73=Swamp;74=Swamp;75=Swamp;76=Swamp;77=Swamp;78=Swamp;79=Swamp;80=Mortify;81=Inspiring Overseer;82=Inspiring Overseer;83=Twinblade Paladin;84=Ajani's Pridemate;85=Ajani's Pridemate;86=Ajani's Pridemate;87=Ajani's Pridemate;88=Vampire Nighthawk;89=Vampire Nighthawk;90=Gifted Aetherborn;91=Gifted Aetherborn;92=Exsanguinate;93=Moment of Craving;94=Moment of Craving;95=Marauding Blight-Priest;96=Marauding Blight-Priest;97=Ayli, Eternal Pilgrim;98=Evolving Wilds;99=Evolving Wilds;100=Scoured Barrens;101=Scoured Barrens;102=Hinterland Sanctifier;103=Hinterland Sanctifier;104=Hinterland Sanctifier;105=Hinterland Sanctifier;106=Isolated Chapel;107=Isolated Chapel;108=Hero's Downfall;109=Hero's Downfall;110=Vampire of the Dire Moon;111=Vampire of the Dire Moon;112=Bloodtithe Collector;113=Plains;114=Plains;115=Plains;116=Plains;117=Plains;118=Plains;119=Plains;120=Plains
+Information: DL|zone|0|-|-|Library|Hand|1|34|Forest
+Information: DL|zone|0|-|-|Library|Hand|1|9|Treeguard Duo
+Information: DL|zone|0|-|-|Library|Hand|1|15|Blossoming Sands
+Information: DL|zone|0|-|-|Library|Hand|1|53|Bite Down
+Information: DL|zone|0|-|-|Library|Hand|1|27|Burrowguard Mentor
+Information: DL|zone|0|-|-|Library|Hand|1|39|Plains
+Information: DL|zone|0|-|-|Library|Hand|1|28|Forest
+Information: DL|zone|0|-|-|Library|Hand|2|85|Ajani's Pridemate
+Information: DL|zone|0|-|-|Library|Hand|2|115|Plains
+Information: DL|zone|0|-|-|Library|Hand|2|67|Vengeful Bloodwitch
+Information: DL|zone|0|-|-|Library|Hand|2|94|Moment of Craving
+Information: DL|zone|0|-|-|Library|Hand|2|76|Swamp
+Information: DL|zone|0|-|-|Library|Hand|2|64|Night's Whisper
+Information: DL|zone|0|-|-|Library|Hand|2|69|Vengeful Bloodwitch
+Mulligan: Ai(2)-d09616864f11 has kept a hand of 7 cards
+Mulligan: Ai(1)-2eb0867ad84f has kept a hand of 7 cards
+Information: DL|hand|1|start|1|34=Forest;9=Treeguard Duo;15=Blossoming Sands;53=Bite Down;27=Burrowguard Mentor;39=Plains;28=Forest
+Information: DL|hand|1|start|2|85=Ajani's Pridemate;115=Plains;67=Vengeful Bloodwitch;94=Moment of Craving;76=Swamp;64=Night's Whisper;69=Vengeful Bloodwitch
+Turn: Turn 1 (Ai(2)-d09616864f11)
+Information: DL|zone|1|2|MAIN1|Hand|Battlefield|2|115|Plains
+Land: Ai(2)-d09616864f11 played Plains (115)
+Turn: Turn 2 (Ai(1)-2eb0867ad84f)
+Information: DL|zone|2|1|DRAW|Library|Hand|1|14|Release the Dogs
+Replacement Effect: Blossoming Sands enters tapped.
+Information: DL|zone|2|1|MAIN1|Hand|Battlefield|1|15|Blossoming Sands
+Land: Ai(1)-2eb0867ad84f played Blossoming Sands (15)
+Add To Stack: Ai(1)-2eb0867ad84f triggered Blossoming Sands
+Life: Life: Ai(1)-2eb0867ad84f 20 > 21
+Resolve Stack: When Blossoming Sands enters, you gain 1 life. [Zone Changer: Blossoming Sands (15)]
+Turn: Turn 3 (Ai(2)-d09616864f11)
+Information: DL|zone|3|2|DRAW|Library|Hand|2|107|Isolated Chapel
+Replacement Effect: Isolated Chapel enters tapped unless you control a Plains or a Swamp.
+Information: DL|zone|3|2|MAIN1|Hand|Battlefield|2|107|Isolated Chapel
+Land: Ai(2)-d09616864f11 played Isolated Chapel (107)
+Information: DL|zone|3|2|MAIN2|Hand|Stack|2|85|Ajani's Pridemate
+Mana: Plains (115) - {T}: Add {W}.
+Mana: Isolated Chapel (107) - {T}: Add {W} or {B}.
+Add To Stack: Ai(2)-d09616864f11 cast Ajani's Pridemate
+Information: DL|zone|3|2|MAIN2|Stack|Battlefield|2|85|Ajani's Pridemate
+Resolve Stack: Ajani's Pridemate - Creature 2 / 2
+Turn: Turn 4 (Ai(1)-2eb0867ad84f)
+Information: DL|zone|4|1|DRAW|Library|Hand|1|26|Burrowguard Mentor
+Information: DL|zone|4|1|MAIN1|Hand|Battlefield|1|34|Forest
+Land: Ai(1)-2eb0867ad84f played Forest (34)
+Information: DL|zone|4|1|MAIN2|Hand|Stack|1|27|Burrowguard Mentor
+Mana: Blossoming Sands (15) - {T}: Add {G} or {W}.
+Mana: Forest (34) - {T}: Add {G}.
+Add To Stack: Ai(1)-2eb0867ad84f cast Burrowguard Mentor
+Information: DL|zone|4|1|MAIN2|Stack|Battlefield|1|27|Burrowguard Mentor
+Resolve Stack: Burrowguard Mentor - Creature * / *
+Turn: Turn 5 (Ai(2)-d09616864f11)
+Information: DL|zone|5|2|DRAW|Library|Hand|2|114|Plains
+Information: DL|zone|5|2|MAIN1|Hand|Battlefield|2|76|Swamp
+Land: Ai(2)-d09616864f11 played Swamp (76)
+Combat: Ai(2)-d09616864f11 assigned Ajani's Pridemate (85) to attack Ai(1)-2eb0867ad84f.
+Combat: Ai(1)-2eb0867ad84f didn't block Ajani's Pridemate (85).
+Information: DL|zone|5|2|COMBAT_DECLARE_BLOCKERS|Hand|Stack|2|94|Moment of Craving
+Mana: Swamp (76) - {T}: Add {B}.
+Mana: Plains (115) - {T}: Add {W}.
+Add To Stack: Ai(2)-d09616864f11 cast Moment of Craving targeting [Burrowguard Mentor (27)]
+Life: Life: Ai(2)-d09616864f11 20 > 22
+Resolve Stack: Moment of Craving (94) - Burrowguard Mentor (27) gets -2/-2  until end of turn. Ai(2)-d09616864f11 gains 2 life.
+Information: DL|zone|5|2|COMBAT_DECLARE_BLOCKERS|Stack|Graveyard|2|94|Moment of Craving
+Information: DL|zone|5|2|COMBAT_DECLARE_BLOCKERS|Battlefield|Graveyard|1|27|Burrowguard Mentor
+Zone Change: Burrowguard Mentor (27) was put into Graveyard from Battlefield.
+Add To Stack: Ai(2)-d09616864f11 triggered Ajani's Pridemate
+Resolve Stack: Whenever you gain life, put a +1/+1 counter on Ajani's Pridemate. [Player: Ai(2)-d09616864f11, Gained Amount: 2]
+Damage: Ajani's Pridemate (85) deals 3 combat damage to Ai(1)-2eb0867ad84f.
+Life: Life: Ai(1)-2eb0867ad84f 21 > 18
+Turn: Turn 6 (Ai(1)-2eb0867ad84f)
+Information: DL|zone|6|1|DRAW|Library|Hand|1|58|Valley Questcaller
+Information: DL|zone|6|1|MAIN1|Hand|Battlefield|1|39|Plains
+Land: Ai(1)-2eb0867ad84f played Plains (39)
+Information: DL|zone|6|1|MAIN2|Hand|Stack|1|58|Valley Questcaller
+Mana: Plains (39) - {T}: Add {W}.
+Mana: Forest (34) - {T}: Add {G}.
+Add To Stack: Ai(1)-2eb0867ad84f cast Valley Questcaller
+Information: DL|zone|6|1|MAIN2|Stack|Battlefield|1|58|Valley Questcaller
+Resolve Stack: Valley Questcaller - Creature 2 / 3
+Turn: Turn 7 (Ai(2)-d09616864f11)
+Information: DL|zone|7|2|DRAW|Library|Hand|2|98|Evolving Wilds
+Information: DL|zone|7|2|MAIN1|Hand|Battlefield|2|114|Plains
+Land: Ai(2)-d09616864f11 played Plains (114)
+Combat: Ai(2)-d09616864f11 assigned Ajani's Pridemate (85) to attack Ai(1)-2eb0867ad84f.
+Combat: Ai(1)-2eb0867ad84f didn't block Ajani's Pridemate (85).
+Damage: Ajani's Pridemate (85) deals 3 combat damage to Ai(1)-2eb0867ad84f.
+Life: Life: Ai(1)-2eb0867ad84f 18 > 15
+Information: DL|zone|7|2|MAIN2|Hand|Stack|2|67|Vengeful Bloodwitch
+Mana: Swamp (76) - {T}: Add {B}.
+Mana: Plains (115) - {T}: Add {W}.
+Add To Stack: Ai(2)-d09616864f11 cast Vengeful Bloodwitch
+Information: DL|zone|7|2|MAIN2|Stack|Battlefield|2|67|Vengeful Bloodwitch
+Resolve Stack: Vengeful Bloodwitch - Creature 1 / 1
+Information: DL|zone|7|2|MAIN2|Hand|Stack|2|69|Vengeful Bloodwitch
+Mana: Isolated Chapel (107) - {T}: Add {W} or {B}.
+Mana: Plains (114) - {T}: Add {W}.
+Add To Stack: Ai(2)-d09616864f11 cast Vengeful Bloodwitch
+Information: DL|zone|7|2|MAIN2|Stack|Battlefield|2|69|Vengeful Bloodwitch
+Resolve Stack: Vengeful Bloodwitch - Creature 1 / 1
+Turn: Turn 8 (Ai(1)-2eb0867ad84f)
+Information: DL|zone|8|1|UPKEEP|Hand|Stack|1|53|Bite Down
+Mana: Forest (34) - {T}: Add {G}.
+Mana: Plains (39) - {T}: Add {W}.
+Add To Stack: Ai(1)-2eb0867ad84f cast Bite Down targeting [Valley Questcaller (58)] [Vengeful Bloodwitch (67)]
+Damage: Valley Questcaller (58) deals 2 damage to Vengeful Bloodwitch (67).
+Resolve Stack: Bite Down (53) -  Valley Questcaller (58) deals 2 damage to Vengeful Bloodwitch (67).
+Information: DL|zone|8|1|UPKEEP|Stack|Graveyard|1|53|Bite Down
+Information: DL|zone|8|1|UPKEEP|Battlefield|Graveyard|2|67|Vengeful Bloodwitch
+Zone Change: Vengeful Bloodwitch (67) was put into Graveyard from Battlefield.
+Add To Stack: Ai(2)-d09616864f11 triggered Vengeful Bloodwitch targeting [Ai(1)-2eb0867ad84f]
+Add To Stack: Ai(2)-d09616864f11 triggered Vengeful Bloodwitch targeting [Ai(1)-2eb0867ad84f]
+Life: Life: Ai(1)-2eb0867ad84f 15 > 14
+Life: Life: Ai(2)-d09616864f11 22 > 23
+Resolve Stack: Whenever this creature or another creature you control dies, target opponent loses 1 life and you gain 1 life. (Targeting: [[Ai(1)-2eb0867ad84f]]) [Zone Changer: Vengeful Bloodwitch (67)]
+Add To Stack: Ai(2)-d09616864f11 triggered Ajani's Pridemate
+Resolve Stack: Whenever you gain life, put a +1/+1 counter on Ajani's Pridemate. [Player: Ai(2)-d09616864f11, Gained Amount: 1]
+Life: Life: Ai(1)-2eb0867ad84f 14 > 13
+Life: Life: Ai(2)-d09616864f11 23 > 24
+Resolve Stack: Whenever this creature or another creature you control dies, target opponent loses 1 life and you gain 1 life. (Targeting: [[Ai(1)-2eb0867ad84f]]) [Zone Changer: Vengeful Bloodwitch (67)]
+Add To Stack: Ai(2)-d09616864f11 triggered Ajani's Pridemate
+Resolve Stack: Whenever you gain life, put a +1/+1 counter on Ajani's Pridemate. [Player: Ai(2)-d09616864f11, Gained Amount: 1]
+Information: DL|zone|8|1|DRAW|Library|Hand|1|11|Felling Blow
+Information: DL|zone|8|1|MAIN1|Hand|Battlefield|1|28|Forest
+Land: Ai(1)-2eb0867ad84f played Forest (28)
+Combat: Ai(1)-2eb0867ad84f assigned Valley Questcaller (58) to attack Ai(2)-d09616864f11.
+Combat: Ai(2)-d09616864f11 didn't block Valley Questcaller (58).
+Damage: Valley Questcaller (58) deals 2 combat damage to Ai(2)-d09616864f11.
+Life: Life: Ai(2)-d09616864f11 24 > 22
+Information: DL|zone|8|1|MAIN2|Hand|Stack|1|26|Burrowguard Mentor
+Mana: Blossoming Sands (15) - {T}: Add {G} or {W}.
+Mana: Forest (28) - {T}: Add {G}.
+Add To Stack: Ai(1)-2eb0867ad84f cast Burrowguard Mentor
+Information: DL|zone|8|1|MAIN2|Stack|Battlefield|1|26|Burrowguard Mentor
+Resolve Stack: Burrowguard Mentor - Creature * / *
+Add To Stack: Ai(1)-2eb0867ad84f triggered Valley Questcaller
+Resolve Stack: Ai(1)-2eb0867ad84f scried 1 card(s) to the top of the library
+Information: DL|zone|8|1|MAIN2|Library|Library|1|29|Forest
+Resolve Stack: Whenever one or more other Rabbits, Bats, Birds, and/or Mice you control enter, scry 1. [Amount: 1]
+Turn: Turn 9 (Ai(2)-d09616864f11)
+Information: DL|zone|9|2|DRAW|Library|Hand|2|86|Ajani's Pridemate
+Combat: Ai(2)-d09616864f11 assigned Ajani's Pridemate (85) to attack Ai(1)-2eb0867ad84f.
+Combat: Ai(1)-2eb0867ad84f didn't block Ajani's Pridemate (85).
+Damage: Ajani's Pridemate (85) deals 5 combat damage to Ai(1)-2eb0867ad84f.
+Life: Life: Ai(1)-2eb0867ad84f 13 > 8
+Information: DL|zone|9|2|MAIN2|Hand|Battlefield|2|98|Evolving Wilds
+Land: Ai(2)-d09616864f11 played Evolving Wilds (98)
+Information: DL|zone|9|2|MAIN2|Battlefield|Graveyard|2|98|Evolving Wilds
+Zone Change: Evolving Wilds (98) was put into Graveyard from Battlefield.
+Add To Stack: Ai(2)-d09616864f11 activated Evolving Wilds
+Information: DL|zone|9|2|MAIN2|Library|Battlefield|2|73|Swamp
+Resolve Stack: Evolving Wilds (98) - Ai(2)-d09616864f11 searches their library for a basic land card, puts it onto the battlefield tapped, then shuffles.
+Information: DL|zone|9|2|MAIN2|Hand|Stack|2|86|Ajani's Pridemate
+Mana: Plains (115) - {T}: Add {W}.
+Mana: Plains (114) - {T}: Add {W}.
+Add To Stack: Ai(2)-d09616864f11 cast Ajani's Pridemate
+Information: DL|zone|9|2|MAIN2|Stack|Battlefield|2|86|Ajani's Pridemate
+Resolve Stack: Ajani's Pridemate - Creature 2 / 2
+Information: DL|zone|9|2|MAIN2|Hand|Stack|2|64|Night's Whisper
+Mana: Swamp (76) - {T}: Add {B}.
+Mana: Isolated Chapel (107) - {T}: Add {W} or {B}.
+Add To Stack: Ai(2)-d09616864f11 cast Night's Whisper
+Information: DL|zone|9|2|MAIN2|Library|Hand|2|87|Ajani's Pridemate
+Information: DL|zone|9|2|MAIN2|Library|Hand|2|95|Marauding Blight-Priest
+Life: Life: Ai(2)-d09616864f11 22 > 20
+Resolve Stack: Night's Whisper (64) - Ai(2)-d09616864f11 draws two cards. Ai(2)-d09616864f11 loses 2 life.
+Information: DL|zone|9|2|MAIN2|Stack|Graveyard|2|64|Night's Whisper
+Turn: Turn 10 (Ai(1)-2eb0867ad84f)
+Information: DL|zone|10|1|DRAW|Library|Hand|1|29|Forest
+Information: DL|zone|10|1|MAIN1|Hand|Battlefield|1|29|Forest
+Land: Ai(1)-2eb0867ad84f played Forest (29)
+Information: DL|zone|10|1|MAIN1|Hand|Stack|1|9|Treeguard Duo
+Mana: Forest (34) - {T}: Add {G}.
+Mana: Forest (28) - {T}: Add {G}.
+Mana: Forest (29) - {T}: Add {G}.
+Mana: Plains (39) - {T}: Add {W}.
+Add To Stack: Ai(1)-2eb0867ad84f cast Treeguard Duo
+Information: DL|zone|10|1|MAIN1|Stack|Battlefield|1|9|Treeguard Duo
+Resolve Stack: Treeguard Duo - Creature 3 / 4
+Add To Stack: Ai(1)-2eb0867ad84f triggered Valley Questcaller
+Add To Stack: Ai(1)-2eb0867ad84f triggered Treeguard Duo targeting [Burrowguard Mentor (26)]
+Resolve Stack: When Treeguard Duo enters, until end of turn, target creature you control gains vigilance and gets +X/+X, where X is the number of creatures you control. (Targeting: [[Burrowguard Mentor (26)]]) [Zone Changer: Treeguard Duo (9)]
+Resolve Stack: Ai(1)-2eb0867ad84f scried 1 card(s) to the top of the library
+Information: DL|zone|10|1|MAIN1|Library|Library|1|17|Blossoming Sands
+Resolve Stack: Whenever one or more other Rabbits, Bats, Birds, and/or Mice you control enter, scry 1. [Amount: 1]
+Combat: Ai(1)-2eb0867ad84f assigned Valley Questcaller (58) and Burrowguard Mentor (26) to attack Ai(2)-d09616864f11.
+Combat: Ai(2)-d09616864f11 didn't block Valley Questcaller (58).
+Ai(2)-d09616864f11 didn't block Burrowguard Mentor (26).
+Damage: Valley Questcaller (58) deals 2 combat damage to Ai(2)-d09616864f11.
+Damage: Burrowguard Mentor (26) deals 7 combat damage to Ai(2)-d09616864f11.
+Life: Life: Ai(2)-d09616864f11 20 > 11
+Turn: Turn 11 (Ai(2)-d09616864f11)
+Information: DL|zone|11|2|DRAW|Library|Hand|2|61|Go for the Throat
+Information: DL|zone|11|2|DRAW|Hand|Stack|2|61|Go for the Throat
+Mana: Swamp (76) - {T}: Add {B}.
+Mana: Swamp (73) - {T}: Add {B}.
+Add To Stack: Ai(2)-d09616864f11 cast Go for the Throat targeting [Treeguard Duo (9)]
+Information: DL|zone|11|2|DRAW|Battlefield|Graveyard|1|9|Treeguard Duo
+Zone Change: Treeguard Duo (9) was put into Graveyard from Battlefield.
+Resolve Stack: Go for the Throat (61) - Destroy Treeguard Duo (9).
+Information: DL|zone|11|2|DRAW|Stack|Graveyard|2|61|Go for the Throat
+Combat: Ai(2)-d09616864f11 assigned Ajani's Pridemate (85) to attack Ai(1)-2eb0867ad84f.
+Combat: Ai(1)-2eb0867ad84f assigned Burrowguard Mentor (26) to block Ajani's Pridemate (85).
+Damage: Ajani's Pridemate (85) deals 5 damage to Burrowguard Mentor (26).
+Damage: Burrowguard Mentor (26) deals 3 damage to Ajani's Pridemate (85).
+Information: DL|zone|11|2|COMBAT_DAMAGE|Battlefield|Graveyard|1|26|Burrowguard Mentor
+Zone Change: Burrowguard Mentor (26) was put into Graveyard from Battlefield.
+Information: DL|zone|11|2|MAIN2|Hand|Stack|2|95|Marauding Blight-Priest
+Mana: Isolated Chapel (107) - {T}: Add {W} or {B}.
+Mana: Plains (115) - {T}: Add {W}.
+Mana: Plains (114) - {T}: Add {W}.
+Add To Stack: Ai(2)-d09616864f11 cast Marauding Blight-Priest
+Information: DL|zone|11|2|MAIN2|Stack|Battlefield|2|95|Marauding Blight-Priest
+Resolve Stack: Marauding Blight-Priest - Creature 3 / 2
+Turn: Turn 12 (Ai(1)-2eb0867ad84f)
+Information: DL|zone|12|1|DRAW|Library|Hand|1|17|Blossoming Sands
+Information: DL|zone|12|1|MAIN1|Hand|Stack|1|11|Felling Blow
+Mana: Forest (34) - {T}: Add {G}.
+Mana: Forest (28) - {T}: Add {G}.
+Mana: Forest (29) - {T}: Add {G}.
+Add To Stack: Felling Blow (11) - [Couldn't add to stack, failed to target] - Put a +1/+1 counter on target creature you control. Then that creature deals damage equal to its power to target creature an opponent controls.
+Replacement Effect: Blossoming Sands enters tapped.
+Information: DL|zone|12|1|MAIN2|Hand|Battlefield|1|17|Blossoming Sands
+Land: Ai(1)-2eb0867ad84f played Blossoming Sands (17)
+Add To Stack: Ai(1)-2eb0867ad84f triggered Blossoming Sands
+Life: Life: Ai(1)-2eb0867ad84f 8 > 9
+Resolve Stack: When Blossoming Sands enters, you gain 1 life. [Zone Changer: Blossoming Sands (17)]
+Turn: Turn 13 (Ai(2)-d09616864f11)
+Information: DL|zone|13|2|DRAW|Library|Hand|2|104|Hinterland Sanctifier
+Combat: Ai(2)-d09616864f11 assigned Ajani's Pridemate (85), Marauding Blight-Priest (95), Ajani's Pridemate (86) and Vengeful Bloodwitch (69) to attack Ai(1)-2eb0867ad84f.
+Combat: Ai(1)-2eb0867ad84f didn't block Ajani's Pridemate (85).
+Ai(1)-2eb0867ad84f assigned Valley Questcaller (58) to block Marauding Blight-Priest (95).
+Ai(1)-2eb0867ad84f didn't block Ajani's Pridemate (86).
+Ai(1)-2eb0867ad84f didn't block Vengeful Bloodwitch (69).
+Damage: Ajani's Pridemate (85) deals 5 combat damage to Ai(1)-2eb0867ad84f.
+Damage: Marauding Blight-Priest (95) deals 3 damage to Valley Questcaller (58).
+Damage: Ajani's Pridemate (86) deals 2 combat damage to Ai(1)-2eb0867ad84f.
+Damage: Vengeful Bloodwitch (69) deals 1 combat damage to Ai(1)-2eb0867ad84f.
+Damage: Valley Questcaller (58) deals 2 damage to Marauding Blight-Priest (95).
+Life: Life: Ai(1)-2eb0867ad84f 9 > 1
+Information: DL|zone|13|2|COMBAT_DAMAGE|Battlefield|Graveyard|2|95|Marauding Blight-Priest
+Zone Change: Marauding Blight-Priest (95) was put into Graveyard from Battlefield.
+Information: DL|zone|13|2|COMBAT_DAMAGE|Battlefield|Graveyard|1|58|Valley Questcaller
+Zone Change: Valley Questcaller (58) was put into Graveyard from Battlefield.
+Add To Stack: Ai(2)-d09616864f11 triggered Vengeful Bloodwitch targeting [Ai(1)-2eb0867ad84f]
+Life: Life: Ai(1)-2eb0867ad84f 1 > 0
+Life: Life: Ai(2)-d09616864f11 11 > 12
+Resolve Stack: Whenever this creature or another creature you control dies, target opponent loses 1 life and you gain 1 life. (Targeting: [[Ai(1)-2eb0867ad84f]]) [Zone Changer: Marauding Blight-Priest (95)]
+Player Control: Ai(1)-2eb0867ad84f has restored control over themself
+Player Control: Ai(2)-d09616864f11 has restored control over themself
+Game Outcome: Match Duration 0m : 00s
+Game Outcome: Turn 7
+Game Outcome: Ai(1)-2eb0867ad84f has lost because life total reached 0
+Game Outcome: Ai(2)-d09616864f11 has won because all opponents have lost
+Match Result: Ai(1)-2eb0867ad84f: 6 Ai(2)-d09616864f11: 7 
+Information: DL|hand|13|end|1|14=Release the Dogs
+Information: DL|hand|13|end|2|87=Ajani's Pridemate;104=Hinterland Sanctifier
+Information: DL|library|13|end|1|47
+Information: DL|library|13|end|2|44
+
+Game Result: Game 13 ended in 692 ms. Ai(2)-d09616864f11 has won!
+

@@ -1,0 +1,25 @@
+# The whole unittest suite, weekly and by hand (Actions, tests, Run workflow). It takes about 25 minutes,
+# and Windows minutes count double on a private repo, so it doesn't run on every push.
+# There's no PostgreSQL service, .venv or card data here: the database tests skip
+# (decklab/tests/db_support.py), as do the real-Forge games. Windows, because Deck Lab only runs there.
+name: tests
+
+on:
+  schedule:
+    - cron: "0 17 * * 6"      # Sunday 03:00 at home (UTC+10)
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Tests (no database)
+        run: python -m unittest discover -s decklab/tests -t .

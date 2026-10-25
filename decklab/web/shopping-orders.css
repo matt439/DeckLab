@@ -1,0 +1,28 @@
+/* The placed-order sheet keeps fields readable and each row's controls beside it. */
+.shop-order-form { display: grid; gap: var(--s-4); min-width: 0; }
+.shop-order-form[hidden], .shop-order-preview[hidden] { display: none; }
+.shop-order-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: var(--s-3); }
+.shop-order-section { display: grid; gap: var(--s-3); min-width: 0; padding-top: var(--s-4); border-top: 1px solid var(--border); }
+.shop-order-section > h3 { margin: 0; font-size: var(--fs-md); }
+.shop-order-section > summary, .shop-order-paste > summary { min-height: var(--tap); cursor: pointer; font-weight: var(--fw-semibold); }
+details.shop-order-section:not([open]) > :not(summary) { display: none; }
+.shop-order-section > .field, .shop-order-form > .field { margin: 0; }
+.shop-order-section textarea { width: 100%; }
+.shop-order-search { display: grid; grid-template-columns: minmax(0, 1fr) 90px; gap: var(--s-2) var(--s-3); align-items: end; }
+.shop-order-search > button { grid-column: 1 / -1; justify-self: start; }
+.shop-order-cards { display: grid; gap: var(--s-2); }
+.shop-order-card { display: grid; grid-template-columns: minmax(0, 1fr) 76px auto auto; gap: var(--s-2); align-items: center; border-bottom: 1px solid var(--border); padding: var(--s-2) 0; }
+.shop-order-card > div, .shop-order-queue label > span { min-width: 0; overflow-wrap: anywhere; }
+.shop-order-card small, .shop-order-queue small { display: block; color: var(--ink-2); font-size: var(--fs-sm); }
+.shop-order-queue { display: grid; grid-template-columns: minmax(0, 1fr) 76px; align-items: center; gap: var(--s-3); }
+.shop-order-queue label { display: flex; gap: var(--s-2); align-items: center; min-height: var(--tap); }
+.shop-order-queue input[type="checkbox"], .shop-order-form input[type="checkbox"] { width: 22px; height: 22px; flex-shrink: 0; }
+.shop-order-preview { min-width: 0; overflow-wrap: anywhere; }
+.shop-order-row-details { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: var(--s-1) var(--s-3); margin: 0; }
+.shop-order-row-details > dd { min-width: 0; margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.shop-order-preview h3 { margin-top: 0; }
+.shop-order-csv { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 260px; overflow-y: auto; font-size: var(--fs-sm); padding: var(--s-2); background: var(--surface-2); }
+@media (max-width: 599px) {
+  .shop-order-card { grid-template-columns: minmax(0, 1fr) 76px; }
+  .shop-order-card > button { justify-self: start; }
+}

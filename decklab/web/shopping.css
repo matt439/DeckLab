@@ -1,0 +1,179 @@
+/* Shopping (shopping.js): lays the shared components out. One column on a phone, under a row of links to its
+   parts; from 1000 px the deliveries on the left and the queue, the decks and the follow-ups on the right; the
+   long-term plan full width under them. */
+.shop-layout { display: grid; gap: var(--s-6); align-items: start; margin-top: var(--s-4); }
+.shop-main, .shop-side { display: grid; gap: var(--s-6); min-width: 0; align-content: start; }
+.shop-section { min-width: 0; }
+.shop-page > .shop-section, .shop-long-slot:not(:empty) { margin-top: var(--s-6); }
+.shop-queue-slot:empty { display: none; }
+.shop-section-head { display: flex; align-items: center; gap: var(--s-3); margin-bottom: var(--s-2); }
+.shop-section-head h2 { margin: 0; font-size: var(--fs-lg); }
+.shop-count {
+  min-width: 1.75em; padding: 0 var(--s-2);
+  border-radius: var(--r-pill); background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--border);
+  font-size: var(--fs-sm); font-weight: var(--fw-semibold); text-align: center; font-variant-numeric: tabular-nums;
+}
+.shop-section-head h2 { scroll-margin-top: calc(var(--shell-top) + var(--s-3)); }
+
+/* The row of links to the parts: a phone's and a portrait tablet's (one column there); a wide screen shows
+   every part beside the deliveries already. */
+.shop-jumps ul { list-style: none; display: flex; flex-wrap: wrap; gap: var(--s-2); margin: var(--s-3) 0 0; padding: 0; }
+.shop-jumps a {
+  display: inline-flex; align-items: center; gap: var(--s-2);
+  min-height: var(--tap); padding: 0 var(--s-3);
+  border: 1px solid var(--border); border-radius: var(--r-pill); background: var(--surface);
+  color: var(--ink); font-size: var(--fs-sm); font-weight: var(--fw-semibold); text-decoration: none; white-space: nowrap;
+}
+.shop-jumps a:hover { border-color: var(--border-strong); }
+.shop-jumps .shop-count { min-width: 0; }
+@media (min-width: 1000px) { .shop-jumps { display: none; } }
+.shop-description { margin: 0 0 var(--s-3); color: var(--ink-2); font-size: var(--fs-sm); }
+
+/* A delivery on the way. */
+.shop-deliveries { display: grid; gap: var(--s-4); align-items: start; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); }
+.shop-delivery { display: grid; grid-template-columns: minmax(0, 1fr); min-width: 0; gap: var(--s-2); align-content: start; }
+.shop-delivery > * { margin: 0; }
+.shop-delivery-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--s-1) var(--s-3); }
+.shop-delivery-head h3 { margin: 0; font-size: var(--fs-md); overflow-wrap: break-word; hyphens: auto; }
+.shop-delivery .sub { font-size: var(--fs-sm); }
+.shop-delivery > .actions { margin-top: var(--s-2); }
+.shop-notes {
+  color: var(--ink-2); font-size: var(--fs-sm); overflow-wrap: break-word;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden;
+}
+.shop-parts { list-style: none; padding: 0; margin: 0; font-size: var(--fs-sm); color: var(--ink-2); }
+.shop-parts li { padding: var(--s-1) 0; }
+.shop-checks { padding: 0 var(--s-3); border-radius: var(--r-md); background: var(--surface-2); }
+.shop-checks > summary {
+  display: flex; align-items: center; min-height: var(--tap); cursor: pointer;
+  font-size: var(--fs-sm); font-weight: var(--fw-semibold);
+}
+.shop-checks-count { color: var(--ink-2); font-weight: var(--fw-regular); white-space: pre; }
+.shop-checks ul { margin: 0; padding: 0 0 var(--s-3) var(--s-5); font-size: var(--fs-sm); }
+.shop-checks li + li { margin-top: var(--s-1); }
+
+/* The pictures strip: small card pictures in one row, the last one "+N". */
+.shop-strip { list-style: none; display: flex; gap: var(--s-1); min-width: 0; margin: var(--s-1) 0; padding: 0; }
+.shop-strip li { flex: 0 1 61px; min-width: 0; }
+.shop-thumb {
+  position: relative; display: flex; align-items: center; justify-content: center;
+  width: 100%; aspect-ratio: 488 / 680; padding: 0; overflow: hidden;
+  border: 1px solid var(--border); border-radius: var(--r-sm);
+  background: var(--surface-2); color: var(--ink-2); cursor: pointer; font: inherit;
+}
+.shop-thumb img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.shop-thumb:hover { border-color: var(--border-strong); }
+.shop-thumb:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.shop-thumb-text { position: relative; padding: var(--s-1); font-size: var(--fs-xs); line-height: var(--lh-tight); text-align: center; overflow-wrap: break-word; hyphens: auto; }
+.shop-thumb-qty {
+  position: absolute; left: 2px; bottom: 2px; padding: 0 var(--s-1);
+  border-radius: var(--r-pill); background: var(--badge-bg); color: var(--badge-ink);
+  font-size: var(--fs-xs); font-weight: var(--fw-bold);
+}
+.shop-thumb-more { font-weight: var(--fw-bold); color: var(--ink); }
+/* Six pictures on a phone, eight from 600 px: each width has its own "+N" (shopStrip). */
+@media (max-width: 599px) { .shop-strip .shop-wide-only { display: none; } }
+@media (min-width: 600px) { .shop-strip .shop-narrow-only { display: none; } }
+
+/* Follow-ups, each with Done. */
+.shop-followups { list-style: none; padding: 0; margin: 0; display: grid; gap: var(--s-2); }
+.shop-followup {
+  display: flex; align-items: center; gap: var(--s-3);
+  padding: var(--s-3) var(--s-4); border: 1px solid var(--border); border-radius: var(--r-lg);
+  background: var(--surface); box-shadow: var(--shadow-1);
+}
+.shop-followup[hidden] { display: none; }
+.shop-followup-text { flex: 1; min-width: 0; }
+.shop-followup-text p { margin: 0; overflow-wrap: break-word; }
+.shop-followup-text .sub { margin-top: var(--s-1); font-size: var(--fs-sm); }
+
+/* The queue's rows (card-row), in columns where there's room. */
+.shop-rows { display: grid; gap: var(--s-2); grid-template-columns: minmax(0, 1fr); }
+.shop-price { color: var(--ink-2); font-size: var(--fs-sm); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.shop-queue-row { min-width: 0; }
+.shop-queue-row > .card-row { width: 100%; }
+.shop-reference { display: grid; gap: var(--s-1); color: var(--ink-2); font-size: var(--fs-sm); overflow-wrap: anywhere; }
+.shop-reference small { font-size: var(--fs-xs); }
+.shop-queue-row > .shop-reference { padding: var(--s-1) var(--s-3); }
+.reprint-info { display: grid; gap: var(--s-1); min-width: 0; overflow-wrap: anywhere; }
+.shop-queue-row > .reprint-info { padding: var(--s-2) var(--s-3); }
+.reprint-info p, .reprint-provenance p { margin: 0; }
+.reprint-printings { margin: 0; padding-left: var(--s-5); }
+.reprint-printings a { display: inline-flex; align-items: center; min-height: var(--tap); }
+.reprint-info > button { justify-self: start; }
+.reprint-provenance { display: grid; gap: var(--s-2); }
+.reprint-provenance > summary { min-height: var(--tap); display: flex; align-items: center; }
+.reprint-copy { display: grid; justify-items: start; gap: var(--s-2); margin: var(--s-4) 0; }
+.reprint-copy input { max-width: 36em; width: 100%; }
+.shop-buying-slot { display: grid; gap: var(--s-6); margin-top: var(--s-6); }
+.shop-buying-slot:empty { display: none; }
+.shop-missing-rows { display: grid; gap: var(--s-4); grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); }
+.shop-missing-card { min-width: 0; display: grid; align-content: start; gap: var(--s-2); }
+.shop-missing-card > .card-row { width: 100%; }
+.shop-missing-decks, .shop-missing-queue { margin: 0; padding-left: var(--s-5); }
+.shop-missing-decks a { display: inline-flex; align-items: center; min-height: var(--tap); }
+.shop-missing-queue p { margin: 0; }
+.shop-missing-queue li + li { margin-top: var(--s-2); }
+.shop-missing-queue .shop-reference { text-align: left; }
+.shop-store-choice { max-width: 32em; margin-bottom: var(--s-4); }
+.shop-store-fold > summary { min-height: var(--tap); display: flex; align-items: center; margin-bottom: var(--s-3); }
+.shop-store-group + .shop-store-group { margin-top: var(--s-5); }
+.shop-store-group h3 { margin: 0 0 var(--s-2); }
+.shop-store-group h4 { margin: var(--s-3) 0 var(--s-2); }
+.shop-store-row { min-width: 0; }
+.shop-store-row > .sub { margin: var(--s-1) var(--s-3); }
+.shop-queue-actions { display: grid; justify-items: start; gap: var(--s-2); }
+.shop-queue-actions .menu { top: calc(100% + var(--s-1)); left: 0; }
+.shop-queue-actions .form-error { width: 100%; }
+.shop-queue-form { display: grid; gap: var(--s-4); }
+.shop-layout[hidden], .shop-empty[hidden] { display: none; }
+.shop-queue-deck {
+  display: flex; align-items: center; min-height: var(--tap); padding: var(--s-1) var(--s-3);
+  font-size: var(--fs-sm); overflow-wrap: anywhere;
+}
+
+/* Decks still missing cards: each a link to its missing cards, in two groups (built and being built, ideas);
+   its title, then one line of words, then any chips, always in that order. */
+.shop-deck-group + .shop-deck-group { margin-top: var(--s-4); }
+.shop-deck-group > h3 { margin: 0 0 var(--s-2); color: var(--ink-2); font-size: var(--fs-sm); font-weight: var(--fw-semibold); }
+.shop-decks { list-style: none; padding: 0; margin: 0; display: grid; gap: var(--s-2); }
+.shop-deck {
+  display: grid; gap: var(--s-1); justify-items: start;
+  min-height: var(--tap); padding: var(--s-3) var(--s-4);
+  border: 1px solid var(--border); border-radius: var(--r-lg); background: var(--surface);
+  color: inherit; text-decoration: none;
+}
+.shop-deck:hover { border-color: var(--border-strong); }
+.shop-deck-title { overflow-wrap: break-word; max-width: 100%; }
+.shop-deck small { color: var(--ink-2); font-size: var(--fs-sm); }
+.shop-deck .chips { margin-top: var(--s-1); }
+
+/* The long-term plan, grouped by deck. */
+.shop-group + .shop-group { margin-top: var(--s-5); }
+.shop-group h3 { margin: 0 0 var(--s-2); font-size: var(--fs-md); }
+.shop-group-count { color: var(--ink-2); font-weight: var(--fw-regular); }
+.shop-group > .btn { margin-top: var(--s-2); }
+
+/* The order history, folded. */
+.shop-history { margin-top: var(--s-6); padding-top: var(--s-4); border-top: 1px solid var(--border); }
+.shop-history > summary { display: flex; align-items: center; min-height: var(--tap); cursor: pointer; font-weight: var(--fw-semibold); }
+.shop-pasts { list-style: none; padding: 0; margin: var(--s-2) 0 0; display: grid; gap: 0 var(--s-5); grid-template-columns: minmax(0, 1fr); }
+.shop-past { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); border-bottom: 1px solid var(--border); }
+.shop-past a { display: grid; flex: 1; min-width: 0; min-height: var(--tap); padding: var(--s-2) 0; color: inherit; text-decoration: none; }
+.shop-past a:hover strong { text-decoration: underline; }
+.shop-past small { color: var(--ink-2); font-size: var(--fs-sm); }
+
+/* A delivery's whole contents, in a sheet. */
+.shop-contents { display: grid; gap: var(--s-1); }
+.shop-contents-head { margin: var(--s-4) 0 var(--s-2); font-size: var(--fs-md); }
+.shop-contents-head:first-child { margin-top: 0; }
+
+@media (min-width: 1000px) {
+  .shop-layout { grid-template-columns: minmax(0, 3fr) minmax(320px, 2fr); gap: var(--s-6) var(--s-7); }
+  .shop-pasts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .shop-long-slot .shop-rows { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
+}
+@media (min-width: 1600px) {
+  .shop-layout { grid-template-columns: minmax(0, 2fr) minmax(380px, 1fr); }
+  .shop-pasts { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}

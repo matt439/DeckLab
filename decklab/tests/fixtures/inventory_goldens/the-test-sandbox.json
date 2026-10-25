@@ -1,0 +1,8009 @@
+{
+ "accessories": {
+  "holders": {
+   "holders": {},
+   "warnings": []
+  },
+  "scan": {
+   "found": [
+    {
+     "deck_box": "",
+     "holder": "product/fdn-beginner-box",
+     "kind": "product",
+     "owner": "shared",
+     "sections": {
+      "Deck": [
+       {
+        "finish": "nonfoil",
+        "name": "Llanowar Elves",
+        "number": "227",
+        "quantity": 1,
+        "set": "fdn"
+       },
+       {
+        "finish": "nonfoil",
+        "name": "Elvish Mystic",
+        "number": "648",
+        "quantity": 1,
+        "set": "cmm"
+       },
+       {
+        "finish": "nonfoil",
+        "name": "Forest",
+        "number": null,
+        "quantity": 7,
+        "set": "fdn"
+       },
+       {
+        "finish": "nonfoil",
+        "name": "Llanowar Elves",
+        "number": "227",
+        "quantity": 1,
+        "set": "fdn"
+       },
+       {
+        "finish": "nonfoil",
+        "name": "Pick Your Poison",
+        "number": "170",
+        "quantity": 1,
+        "set": "mkm"
+       },
+       {
+        "finish": "nonfoil",
+        "name": "Aerie Mystics",
+        "number": "1",
+        "quantity": 1,
+        "set": "con"
+       }
+      ]
+     },
+     "sleeves": "",
+     "title": "Foundations Beginner Box"
+    }
+   ],
+   "strays": [],
+   "warnings": []
+  }
+ },
+ "assembly": {
+  "": {
+   "choices": [
+    {
+     "error": "no fenced decklist block under a '## Decklist' heading, so its Planned list can't be read",
+     "id": "casual/broken",
+     "status": "idea",
+     "title": "Broken",
+     "versions": []
+    },
+    {
+     "error": null,
+     "id": "casual/gruul-test",
+     "status": "building",
+     "title": "Gruul Test",
+     "versions": [
+      "target",
+      "owned"
+     ]
+    },
+    {
+     "error": null,
+     "id": "commander/elf-commander",
+     "status": "idea",
+     "title": "Elf Commander",
+     "versions": [
+      "target"
+     ]
+    },
+    {
+     "error": null,
+     "id": "product/fdc-test-precon",
+     "status": null,
+     "title": "Fdc Test Precon",
+     "versions": [
+      "target"
+     ]
+    },
+    {
+     "error": null,
+     "id": "product/fdn-beginner-box/elves",
+     "status": null,
+     "title": "Elves (Foundations Beginner Box)",
+     "versions": [
+      "target"
+     ]
+    },
+    {
+     "error": null,
+     "id": "product/fdn-beginner-box/cats",
+     "status": null,
+     "title": "Cats (Foundations Beginner Box)",
+     "versions": [
+      "target"
+     ]
+    },
+    {
+     "error": null,
+     "id": "product/fdn-beginner-box/goblins",
+     "status": null,
+     "title": "Goblins (Foundations Beginner Box)",
+     "versions": [
+      "target"
+     ]
+    }
+   ],
+   "counts_confirmed": false,
+   "decks": [],
+   "note": "This is a plan. Other built decks stay reserved. Nothing is moved, marked built or written to inventory.",
+   "ready": false,
+   "rows": [],
+   "token_note": "Worked out from Scryfall's links between cards and tokens, so it's approximate. Tokens a card makes only through its rules text, and most token copies of other cards, aren't listed. Some listed tokens appear only in certain modes or for your opponent. Deck Lab can't tell how many a game needs. Packing ticks don't reserve or change inventory.",
+   "token_plan": [],
+   "token_plan_note": "Both decks can use these cards. One card shows one face at a time; at home keep shared tokens in one pile on the table.",
+   "token_problems": [],
+   "tokens": [],
+   "totals": {
+    "from_storage": 0,
+    "kept": 0,
+    "missing": 0,
+    "need": 0,
+    "transfers": 0,
+    "waiting": 0
+   },
+   "unresolved": [],
+   "warnings": [
+    "magic/decks/casual/broken.md can't be read: no fenced decklist block under a '## Decklist' heading, so its Planned list can't be read"
+   ]
+  },
+  "casual/broken": {
+   "__error__": "ApiError: magic/decks/casual/broken.md can't be read: no fenced decklist block under a '## Decklist' heading, so its Planned list can't be read"
+  },
+  "casual/gruul-test": {
+   "choices": [
+    {
+     "error": "no fenced decklist block under a '## Decklist' heading, so its Planned list can't be read",
+     "id": "casual/broken",
+     "status": "idea",
+     "title": "Broken",
+     "versions": []
+    },
+    {
+     "error": null,
+     "id": "casual/gruul-test",
+     "status": "building",
+     "title": "Gruul Test",
+     "versions": [
+      "target",
+      "owned"
+     ]
+    },
+    {
+     "error": null,
+     "id": "commander/elf-commander",
+     "status": "idea",
+     "title": "Elf Commander",
+     "versions": [
+      "target"
+     ]
+    },
+    {
+     "error": null,
+     "id": "product/fdc-test-precon",
+     "status": null,
+     "title": "Fdc Test Precon",
+     "versions": [
+      "target"
+     ]
+    },
+    {
+     "error": null,
+     "id": "product/fdn-beginner-box/elves",
+     "status": null,
+     "title": "Elves (Foundations Beginner Box)",
+     "versions": [
+      "target"
+     ]
+    },
+    {
+     "error": null,
+     "id": "product/fdn-beginner-box/cats",
+     "status": null,
+     "title": "Cats (Foundations Beginner Box)",
+     "versions": [
+      "target"
+     ]
+    },
+    {
+     "error": null,
+     "id": "product/fdn-beginner-box/goblins",
+     "status": null,
+     "title": "Goblins (Foundations Beginner Box)",
+     "versions": [
+      "target"
+     ]
+    }
+   ],
+   "counts_confirmed": false,
+   "decks": [
+    {
+     "basics": [
+      {
+       "name": "Forest",
+       "quantity": 9
+      }
+     ],
+     "id": "casual/gruul-test",
+     "kit": {
+      "deck_box": null,
+      "holder": "casual/gruul-test",
+      "info": [],
+      "need": 25,
+      "owner": "shared",
+      "short": 0,
+      "sleeves": null,
+      "spare": 0,
+      "title": "Gruul Test",
+      "warnings": []
+     },
+     "returns": [],
+     "sleeves": "Not recorded",
+     "sleeves_need": 25,
+     "steps": [
+      {
+       "keep": 0,
+       "missing": 0,
+       "name": "Black Lotus",
+       "need": 1,
+       "resolved": true,
+       "storage": 1,
+       "transfers": [],
+       "waiting": 0
+      },
+      {
+       "keep": 0,
+       "missing": 2,
+       "name": "Elvish Mystic",
+       "need": 2,
+       "resolved": true,
+       "storage": 0,
+       "transfers": [],
+       "waiting": 0
+      },
+      {
+       "keep": 0,
+       "missing": 1,
+       "name": "Fire // Ice",
+       "need": 1,
+       "resolved": true,
+       "storage": 0,
+       "transfers": [],
+       "waiting": 0
+      },
+      {
+       "keep": 0,
+       "missing": 3,
+       "name": "Llanowar Elves",
+       "need": 6,
+       "resolved": true,
+       "storage": 3,
+       "transfers": [],
+       "waiting": 0
+      },
+      {
+       "keep": 0,
+       "missing": 1,
+       "name": "Murderous Rider // Swift End",
+       "need": 1,
+       "resolved": true,
+       "storage": 0,
+       "transfers": [],
+       "waiting": 0
+      },
+      {
+       "keep": 0,
+       "missing": 1,
+       "name": "Opt",
+       "need": 1,
+       "resolved": false,
+       "storage": 0,
+       "transfers": [],
+       "waiting": 0
+      },
+      {
+       "keep": 0,
+       "missing": 2,
+       "name": "Pick Your Poison",
+       "need": 2,
+       "resolved": true,
+       "storage": 0,
+       "transfers": [],
+       "waiting": 0
+      },
+      {
+       "keep": 0,
+       "missing": 0,
+       "name": "Sol Ring",
+       "need": 1,
+       "resolved": true,
+       "storage": 0,
+       "transfers": [],
+       "waiting": 1
+      },
+      {
+       "keep": 0,
+       "missing": 1,
+       "name": "Very Cryptic Command",
+       "need": 1,
+       "resolved": true,
+       "storage": 0,
+       "transfers": [],
+       "waiting": 0
+      }
+     ],
+     "title": "Gruul Test",
+     "tokens": {
+      "copies": [],
+      "counts": {
+       "check": 0,
+       "differs": 0,
+       "incoming": 0,
+       "kinds": 0,
+       "none": 0,
+       "ready": 0
+      },
+      "needs": [],
+      "note": "Worked out from Scryfall's links between cards and tokens, so it's approximate. Tokens a card makes only through its rules text, and most token copies of other cards, aren't listed. Some listed tokens appear only in certain modes or for your opponent. Deck Lab can't tell how many a game needs.",
+      "unlisted": []
+     },
+     "version": "target"
+    }
+   ],
+   "note": "This is a plan. Other built decks stay reserved. Nothing is moved, marked built or written to inventory.",
+   "ready": false,
+   "rows": [
+    {
+     "from_storage": 1,
+     "held_elsewhere": [],
+     "incoming_from": [],
+     "kept": 0,
+     "missing": 0,
+     "name": "Black Lotus",
+     "need": 1,
+     "owned_now": 1,
+     "transfers": [],
+     "waiting": 0
+    },
+    {
+     "from_storage": 0,
+     "held_elsewhere": [
+      {
+       "id": "product/fdn-beginner-box/elves",
+       "quantity": 1,
+       "title": "Elves (Foundations Beginner Box)"
+      }
+     ],
+     "incoming_from": [],
+     "kept": 0,
+     "missing": 2,
+     "name": "Elvish Mystic",
+     "need": 2,
+     "owned_now": 1,
+     "transfers": [],
+     "waiting": 0
+    },
+    {
+     "from_storage": 0,
+     "held_elsewhere": [],
+     "incoming_from": [],
+     "kept": 0,
+     "missing": 1,
+     "name": "Fire // Ice",
+     "need": 1,
+     "owned_now": 0,
+     "transfers": [],
+     "waiting": 0
+    },
+    {
+     "from_storage": 3,
+     "held_elsewhere": [
+      {
+       "id": "product/fdn-beginner-box/elves",
+       "quantity": 1,
+       "title": "Elves (Foundations Beginner Box)"
+      },
+      {
+       "id": "product/fdn-beginner-box/cats",
+       "quantity": 1,
+       "title": "Cats (Foundations Beginner Box)"
+      }
+     ],
+     "incoming_from": [],
+     "kept": 0,
+     "missing": 3,
+     "name": "Llanowar Elves",
+     "need": 6,
+     "owned_now": 5,
+     "transfers": [],
+     "waiting": 0
+    },
+    {
+     "from_storage": 0,
+     "held_elsewhere": [],
+     "incoming_from": [],
+     "kept": 0,
+     "missing": 1,
+     "name": "Murderous Rider // Swift End",
+     "need": 1,
+     "owned_now": 0,
+     "transfers": [],
+     "waiting": 0
+    },
+    {
+     "from_storage": 0,
+     "held_elsewhere": [],
+     "incoming_from": [],
+     "kept": 0,
+     "missing": 1,
+     "name": "Opt",
+     "need": 1,
+     "owned_now": 0,
+     "transfers": [],
+     "waiting": 0
+    },
+    {
+     "from_storage": 0,
+     "held_elsewhere": [
+      {
+       "id": "product/fdn-beginner-box/cats",
+       "quantity": 1,
+       "title": "Cats (Foundations Beginner Box)"
+      }
+     ],
+     "incoming_from": [],
+     "kept": 0,
+     "missing": 2,
+     "name": "Pick Your Poison",
+     "need": 2,
+     "owned_now": 0,
+     "transfers": [],
+     "waiting": 0
+    },
+    {
+     "from_storage": 0,
+     "held_elsewhere": [],
+     "incoming_from": [
+      {
+       "quantity": 1,
+       "source": "fdc-test-precon, preordered"
+      }
+     ],
+     "kept": 0,
+     "missing": 0,
+     "name": "Sol Ring",
+     "need": 1,
+     "owned_now": 0,
+     "transfers": [],
+     "waiting": 1
+    },
+    {
+     "from_storage": 0,
+     "held_elsewhere": [],
+     "incoming_from": [],
+     "kept": 0,
+     "missing": 1,
+     "name": "Very Cryptic Command",
+     "need": 1,
+     "owned_now": 0,
+     "transfers": [],
+     "waiting": 0
+    }
+   ],
+   "token_note": "Worked out from Scryfall's links between cards and tokens, so it's approximate. Tokens a card makes only through its rules text, and most token copies of other cards, aren't listed. Some listed tokens appear only in certain modes or for your opponent. Deck Lab can't tell how many a game needs. Packing ticks don't reserve or change inventory.",
+   "token_plan": [],
+   "token_plan_note": "Both decks can use these cards. One card shows one face at a time; at home keep shared tokens in one pile on the table.",
+   "token_problems": [],
+   "tokens": [],
+   "totals": {
+    "from_storage": 4,
+    "kept": 0,
+    "missing": 11,
+    "need": 16,
+    "transfers": 0,
+    "waiting": 1
+   },
+   "unresolved": [
+    "Opt"
+   ],
+   "warnings": [
+    "magic/decks/casual/broken.md can't be read: no fenced decklist block under a '## Decklist' heading, so its Planned list can't be read",
+    "Pick Your Poison: built allocations need 1 copies but only 0 are physically owned"
+   ]
+  },
+  "commander/elf-commander": {
+   "choices": [
+    {
+     "error": "no fenced decklist block under a '## Decklist' heading, so its Planned list can't be read",
+     "id": "casual/broken",
+     "status": "idea",
+     "title": "Broken",
+     "versions": []
+    },
+    {
+     "error": null,
+     "id": "casual/gruul-test",
+     "status": "building",
+     "title": "Gruul Test",
+     "versions": [
+      "target",
+      "owned"
+     ]
+    },
+    {
+     "error": null,
+     "id": "commander/elf-commander",
+     "status": "idea",
+     "title": "Elf Commander",
+     "versions": [
+      "target"
+     ]
+    },
+    {
+     "error": null,
+     "id": "product/fdc-test-precon",
+     "status": null,
+     "title": "Fdc Test Precon",
+     "versions": [
+      "target"
+     ]
+    },
+    {
+     "error": null,
+     "id": "product/fdn-beginner-box/elves",
+     "status": null,
+     "title": "Elves (Foundations Beginner Box)",
+     "versions": [
+      "target"
+     ]
+    },
+    {
+     "error": null,
+     "id": "product/fdn-beginner-box/cats",
+     "status": null,
+     "title": "Cats (Foundations Beginner Box)",
+     "versions": [
+      "target"
+     ]
+    },
+    {
+     "error": null,
+     "id": "product/fdn-beginner-box/goblins",
+     "status": null,
+     "title": "Goblins (Foundations Beginner Box)",
+     "versions": [
+      "target"
+     ]
+    }
+   ],
+   "counts_confirmed": false,
+   "decks": [
+    {
+     "basics": [],
+     "id": "commander/elf-commander",
+     "kit": {
+      "deck_box": null,
+      "holder": "commander/elf-commander",
+      "info": [],
+      "need": 3,
+      "owner": "user1",
+      "short": 0,
+      "sleeves": null,
+      "spare": 0,
+      "title": "Elf Commander",
+      "warnings": []
+     },
+     "returns": [],
+     "sleeves": "Not recorded",
+     "sleeves_need": 3,
+     "steps": [
+      {
+       "keep": 0,
+       "missing": 1,
+       "name": "Ghalta, Primal Hunger",
+       "need": 1,
+       "resolved": true,
+       "storage": 0,
+       "transfers": [],
+       "waiting": 0
+      },
+      {
+       "keep": 0,
+       "missing": 0,
+       "name": "Llanowar Elves",
+       "need": 1,
+       "resolved": true,
+       "storage": 1,
+       "transfers": [],
+       "waiting": 0
+      },
+      {
+       "keep": 0,
+       "missing": 0,
+       "name": "Sol Ring",
+       "need": 1,
+       "resolved": true,
+       "storage": 0,
+       "transfers": [],
+       "waiting": 1
+      }
+     ],
+     "title": "Elf Commander",
+     "tokens": {
+      "copies": [],
+      "counts": {
+       "check": 0,
+       "differs": 0,
+       "incoming": 0,
+       "kinds": 0,
+       "none": 0,
+       "ready": 0
+      },
+      "needs": [],
+      "note": "Worked out from Scryfall's links between cards and tokens, so it's approximate. Tokens a card makes only through its rules text, and most token copies of other cards, aren't listed. Some listed tokens appear only in certain modes or for your opponent. Deck Lab can't tell how many a game needs.",
+      "unlisted": []
+     },
+     "version": "target"
+    }
+   ],
+   "note": "This is a plan. Other built decks stay reserved. Nothing is moved, marked built or written to inventory.",
+   "ready": false,
+   "rows": [
+    {
+     "from_storage": 0,
+     "held_elsewhere": [],
+     "incoming_from": [],
+     "kept": 0,
+     "missing": 1,
+     "name": "Ghalta, Primal Hunger",
+     "need": 1,
+     "owned_now": 0,
+     "transfers": [],
+     "waiting": 0
+    },
+    {
+     "from_storage": 1,
+     "held_elsewhere": [
+      {
+       "id": "product/fdn-beginner-box/elves",
+       "quantity": 1,
+       "title": "Elves (Foundations Beginner Box)"
+      },
+      {
+       "id": "product/fdn-beginner-box/cats",
+       "quantity": 1,
+       "title": "Cats (Foundations Beginner Box)"
+      }
+     ],
+     "incoming_from": [],
+     "kept": 0,
+     "missing": 0,
+     "name": "Llanowar Elves",
+     "need": 1,
+     "owned_now": 5,
+     "transfers": [],
+     "waiting": 0
+    },
+    {
+     "from_storage": 0,
+     "held_elsewhere": [],
+     "incoming_from": [
+      {
+       "quantity": 1,
+       "source": "fdc-test-precon, preordered"
+      }
+     ],
+     "kept": 0,
+     "missing": 0,
+     "name": "Sol Ring",
+     "need": 1,
+     "owned_now": 0,
+     "transfers": [],
+     "waiting": 1
+    }
+   ],
+   "token_note": "Worked out from Scryfall's links between cards and tokens, so it's approximate. Tokens a card makes only through its rules text, and most token copies of other cards, aren't listed. Some listed tokens appear only in certain modes or for your opponent. Deck Lab can't tell how many a game needs. Packing ticks don't reserve or change inventory.",
+   "token_plan": [],
+   "token_plan_note": "Both decks can use these cards. One card shows one face at a time; at home keep shared tokens in one pile on the table.",
+   "token_problems": [],
+   "tokens": [],
+   "totals": {
+    "from_storage": 1,
+    "kept": 0,
+    "missing": 1,
+    "need": 3,
+    "transfers": 0,
+    "waiting": 1
+   },
+   "unresolved": [],
+   "warnings": [
+    "magic/decks/casual/broken.md can't be read: no fenced decklist block under a '## Decklist' heading, so its Planned list can't be read"
+   ]
+  },
+  "product/fdc-test-precon": {
+   "choices": [
+    {
+     "error": "no fenced decklist block under a '## Decklist' heading, so its Planned list can't be read",
+     "id": "casual/broken",
+     "status": "idea",
+     "title": "Broken",
+     "versions": []
+    },
+    {
+     "error": null,
+     "id": "casual/gruul-test",
+     "status": "building",
+     "title": "Gruul Test",
+     "versions": [
+      "target",
+      "owned"
+     ]
+    },
+    {
+     "error": null,
+     "id": "commander/elf-commander",
+     "status": "idea",
+     "title": "Elf Commander",
+     "versions": [
+      "target"
+     ]
+    },
+    {
+     "error": null,
+     "id": "product/fdc-test-precon",
+     "status": null,
+     "title": "Fdc Test Precon",
+     "versions": [
+      "target"
+     ]
+    },
+    {
+     "error": null,
+     "id": "product/fdn-beginner-box/elves",
+     "status": null,
+     "title": "Elves (Foundations Beginner Box)",
+     "versions": [
+      "target"
+     ]
+    },
+    {
+     "error": null,
+     "id": "product/fdn-beginner-box/cats",
+     "status": null,
+     "title": "Cats (Foundations Beginner Box)",
+     "versions": [
+      "target"
+     ]
+    },
+    {
+     "error": null,
+     "id": "product/fdn-beginner-box/goblins",
+     "status": null,
+     "title": "Goblins (Foundations Beginner Box)",
+     "versions": [
+      "target"
+     ]
+    }
+   ],
+   "counts_confirmed": false,
+   "decks": [
+    {
+     "basics": [
+      {
+       "name": "Swamp",
+       "quantity": 10
+      }
+     ],
+     "id": "product/fdc-test-precon",
+     "kit": {
+      "deck_box": null,
+      "holder": "product/fdc-test-precon",
+      "info": [],
+      "need": 12,
+      "owner": "shared",
+      "short": 0,
+      "sleeves": null,
+      "spare": 0,
+      "title": "fdc-test-precon",
+      "warnings": []
+     },
+     "returns": [],
+     "sleeves": "Not recorded for this product",
+     "sleeves_need": 12,
+     "steps": [
+      {
+       "keep": 0,
+       "missing": 0,
+       "name": "Abaddon the Despoiler",
+       "need": 1,
+       "resolved": true,
+       "storage": 0,
+       "transfers": [],
+       "waiting": 1
+      },
+      {
+       "keep": 0,
+       "missing": 0,
+       "name": "Sol Ring",
+       "need": 1,
+       "resolved": true,
+       "storage": 0,
+       "transfers": [],
+       "waiting": 1
+      }
+     ],
+     "title": "Fdc Test Precon",
+     "tokens": {
+      "copies": [],
+      "counts": {
+       "check": 0,
+       "differs": 0,
+       "incoming": 0,
+       "kinds": 0,
+       "none": 0,
+       "ready": 0
+      },
+      "needs": [],
+      "note": "Worked out from Scryfall's links between cards and tokens, so it's approximate. Tokens a card makes only through its rules text, and most token copies of other cards, aren't listed. Some listed tokens appear only in certain modes or for your opponent. Deck Lab can't tell how many a game needs.",
+      "unlisted": []
+     },
+     "version": "target"
+    }
+   ],
+   "note": "This is a plan. Other built decks stay reserved. Nothing is moved, marked built or written to inventory.",
+   "ready": false,
+   "rows": [
+    {
+     "from_storage": 0,
+     "held_elsewhere": [],
+     "incoming_from": [
+      {
+       "quantity": 1,
+       "source": "fdc-test-precon, preordered"
+      }
+     ],
+     "kept": 0,
+     "missing": 0,
+     "name": "Abaddon the Despoiler",
+     "need": 1,
+     "owned_now": 0,
+     "transfers": [],
+     "waiting": 1
+    },
+    {
+     "from_storage": 0,
+     "held_elsewhere": [],
+     "incoming_from": [
+      {
+       "quantity": 1,
+       "source": "fdc-test-precon, preordered"
+      }
+     ],
+     "kept": 0,
+     "missing": 0,
+     "name": "Sol Ring",
+     "need": 1,
+     "owned_now": 0,
+     "transfers": [],
+     "waiting": 1
+    }
+   ],
+   "token_note": "Worked out from Scryfall's links between cards and tokens, so it's approximate. Tokens a card makes only through its rules text, and most token copies of other cards, aren't listed. Some listed tokens appear only in certain modes or for your opponent. Deck Lab can't tell how many a game needs. Packing ticks don't reserve or change inventory.",
+   "token_plan": [],
+   "token_plan_note": "Both decks can use these cards. One card shows one face at a time; at home keep shared tokens in one pile on the table.",
+   "token_problems": [],
+   "tokens": [],
+   "totals": {
+    "from_storage": 0,
+    "kept": 0,
+    "missing": 0,
+    "need": 2,
+    "transfers": 0,
+    "waiting": 2
+   },
+   "unresolved": [],
+   "warnings": [
+    "magic/decks/casual/broken.md can't be read: no fenced decklist block under a '## Decklist' heading, so its Planned list can't be read"
+   ]
+  },
+  "product/fdn-beginner-box/cats": {
+   "choices": [
+    {
+     "error": "no fenced decklist block under a '## Decklist' heading, so its Planned list can't be read",
+     "id": "casual/broken",
+     "status": "idea",
+     "title": "Broken",
+     "versions": []
+    },
+    {
+     "error": null,
+     "id": "casual/gruul-test",
+     "status": "building",
+     "title": "Gruul Test",
+     "versions": [
+      "target",
+      "owned"
+     ]
+    },
+    {
+     "error": null,
+     "id": "commander/elf-commander",
+     "status": "idea",
+     "title": "Elf Commander",
+     "versions": [
+      "target"
+     ]
+    },
+    {
+     "error": null,
+     "id": "product/fdc-test-precon",
+     "status": null,
+     "title": "Fdc Test Precon",
+     "versions": [
+      "target"
+     ]
+    },
+    {
+     "error": null,
+     "id": "product/fdn-beginner-box/elves",
+     "status": null,
+     "title": "Elves (Foundations Beginner Box)",
+     "versions": [
+      "target"
+     ]
+    },
+    {
+     "error": null,
+     "id": "product/fdn-beginner-box/cats",
+     "status": null,
+     "title": "Cats (Foundations Beginner Box)",
+     "versions": [
+      "target"
+     ]
+    },
+    {
+     "error": null,
+     "id": "product/fdn-beginner-box/goblins",
+     "status": null,
+     "title": "Goblins (Foundations Beginner Box)",
+     "versions": [
+      "target"
+     ]
+    }
+   ],
+   "counts_confirmed": false,
+   "decks": [
+    {
+     "basics": [],
+     "id": "product/fdn-beginner-box/cats",
+     "kit": {
+      "deck_box": null,
+      "holder": "product/fdn-beginner-box",
+      "info": [],
+      "need": 12,
+      "owner": "shared",
+      "short": 0,
+      "sleeves": null,
+      "spare": 0,
+      "title": "Foundations Beginner Box",
+      "warnings": [
+       "Foundations Beginner Box is kept intact: choose its sleeves (it needs 12)."
+      ]
+     },
+     "returns": [],
+     "sleeves": "Not recorded for this product",
+     "sleeves_need": 12,
+     "steps": [
+      {
+       "keep": 1,
+       "missing": 0,
+       "name": "Llanowar Elves",
+       "need": 1,
+       "resolved": true,
+       "storage": 0,
+       "transfers": [],
+       "waiting": 0
+      },
+      {
+       "keep": 1,
+       "missing": 0,
+       "name": "Pick Your Poison",
+       "need": 1,
+       "resolved": true,
+       "storage": 0,
+       "transfers": [],
+       "waiting": 0
+      }
+     ],
+     "title": "Cats (Foundations Beginner Box)",
+     "tokens": {
+      "copies": [],
+      "counts": {
+       "check": 0,
+       "differs": 0,
+       "incoming": 0,
+       "kinds": 0,
+       "none": 0,
+       "ready": 0
+      },
+      "needs": [],
+      "note": "Worked out from Scryfall's links between cards and tokens, so it's approximate. Tokens a card makes only through its rules text, and most token copies of other cards, aren't listed. Some listed tokens appear only in certain modes or for your opponent. Deck Lab can't tell how many a game needs.",
+      "unlisted": []
+     },
+     "version": "target"
+    }
+   ],
+   "note": "This is a plan. Other built decks stay reserved. Nothing is moved, marked built or written to inventory.",
+   "ready": false,
+   "rows": [
+    {
+     "from_storage": 0,
+     "held_elsewhere": [
+      {
+       "id": "product/fdn-beginner-box/elves",
+       "quantity": 1,
+       "title": "Elves (Foundations Beginner Box)"
+      }
+     ],
+     "incoming_from": [],
+     "kept": 1,
+     "missing": 0,
+     "name": "Llanowar Elves",
+     "need": 1,
+     "owned_now": 5,
+     "transfers": [],
+     "waiting": 0
+    },
+    {
+     "from_storage": 0,
+     "held_elsewhere": [],
+     "incoming_from": [],
+     "kept": 1,
+     "missing": 0,
+     "name": "Pick Your Poison",
+     "need": 1,
+     "owned_now": 0,
+     "transfers": [],
+     "waiting": 0
+    }
+   ],
+   "token_note": "Worked out from Scryfall's links between cards and tokens, so it's approximate. Tokens a card makes only through its rules text, and most token copies of other cards, aren't listed. Some listed tokens appear only in certain modes or for your opponent. Deck Lab can't tell how many a game needs. Packing ticks don't reserve or change inventory.",
+   "token_plan": [],
+   "token_plan_note": "Both decks can use these cards. One card shows one face at a time; at home keep shared tokens in one pile on the table.",
+   "token_problems": [],
+   "tokens": [],
+   "totals": {
+    "from_storage": 0,
+    "kept": 2,
+    "missing": 0,
+    "need": 2,
+    "transfers": 0,
+    "waiting": 0
+   },
+   "unresolved": [],
+   "warnings": [
+    "magic/decks/casual/broken.md can't be read: no fenced decklist block under a '## Decklist' heading, so its Planned list can't be read",
+    "Pick Your Poison: built allocations need 1 copies but only 0 are physically owned"
+   ]
+  },
+  "product/fdn-beginner-box/elves": {
+   "choices": [
+    {
+     "error": "no fenced decklist block under a '## Decklist' heading, so its Planned list can't be read",
+     "id": "casual/broken",
+     "status": "idea",
+     "title": "Broken",
+     "versions": []
+    },
+    {
+     "error": null,
+     "id": "casual/gruul-test",
+     "status": "building",
+     "title": "Gruul Test",
+     "versions": [
+      "target",
+      "owned"
+     ]
+    },
+    {
+     "error": null,
+     "id": "commander/elf-commander",
+     "status": "idea",
+     "title": "Elf Commander",
+     "versions": [
+      "target"
+     ]
+    },
+    {
+     "error": null,
+     "id": "product/fdc-test-precon",
+     "status": null,
+     "title": "Fdc Test Precon",
+     "versions": [
+      "target"
+     ]
+    },
+    {
+     "error": null,
+     "id": "product/fdn-beginner-box/elves",
+     "status": null,
+     "title": "Elves (Foundations Beginner Box)",
+     "versions": [
+      "target"
+     ]
+    },
+    {
+     "error": null,
+     "id": "product/fdn-beginner-box/cats",
+     "status": null,
+     "title": "Cats (Foundations Beginner Box)",
+     "versions": [
+      "target"
+     ]
+    },
+    {
+     "error": null,
+     "id": "product/fdn-beginner-box/goblins",
+     "status": null,
+     "title": "Goblins (Foundations Beginner Box)",
+     "versions": [
+      "target"
+     ]
+    }
+   ],
+   "counts_confirmed": false,
+   "decks": [
+    {
+     "basics": [
+      {
+       "name": "Forest",
+       "quantity": 7
+      }
+     ],
+     "id": "product/fdn-beginner-box/elves",
+     "kit": {
+      "deck_box": null,
+      "holder": "product/fdn-beginner-box",
+      "info": [],
+      "need": 12,
+      "owner": "shared",
+      "short": 0,
+      "sleeves": null,
+      "spare": 0,
+      "title": "Foundations Beginner Box",
+      "warnings": [
+       "Foundations Beginner Box is kept intact: choose its sleeves (it needs 12)."
+      ]
+     },
+     "returns": [],
+     "sleeves": "Not recorded for this product",
+     "sleeves_need": 12,
+     "steps": [
+      {
+       "keep": 1,
+       "missing": 0,
+       "name": "Elvish Mystic",
+       "need": 1,
+       "resolved": true,
+       "storage": 0,
+       "transfers": [],
+       "waiting": 0
+      },
+      {
+       "keep": 1,
+       "missing": 0,
+       "name": "Llanowar Elves",
+       "need": 1,
+       "resolved": true,
+       "storage": 0,
+       "transfers": [],
+       "waiting": 0
+      }
+     ],
+     "title": "Elves (Foundations Beginner Box)",
+     "tokens": {
+      "copies": [],
+      "counts": {
+       "check": 0,
+       "differs": 0,
+       "incoming": 0,
+       "kinds": 0,
+       "none": 0,
+       "ready": 0
+      },
+      "needs": [],
+      "note": "Worked out from Scryfall's links between cards and tokens, so it's approximate. Tokens a card makes only through its rules text, and most token copies of other cards, aren't listed. Some listed tokens appear only in certain modes or for your opponent. Deck Lab can't tell how many a game needs.",
+      "unlisted": []
+     },
+     "version": "target"
+    }
+   ],
+   "note": "This is a plan. Other built decks stay reserved. Nothing is moved, marked built or written to inventory.",
+   "ready": false,
+   "rows": [
+    {
+     "from_storage": 0,
+     "held_elsewhere": [],
+     "incoming_from": [],
+     "kept": 1,
+     "missing": 0,
+     "name": "Elvish Mystic",
+     "need": 1,
+     "owned_now": 1,
+     "transfers": [],
+     "waiting": 0
+    },
+    {
+     "from_storage": 0,
+     "held_elsewhere": [
+      {
+       "id": "product/fdn-beginner-box/cats",
+       "quantity": 1,
+       "title": "Cats (Foundations Beginner Box)"
+      }
+     ],
+     "incoming_from": [],
+     "kept": 1,
+     "missing": 0,
+     "name": "Llanowar Elves",
+     "need": 1,
+     "owned_now": 5,
+     "transfers": [],
+     "waiting": 0
+    }
+   ],
+   "token_note": "Worked out from Scryfall's links between cards and tokens, so it's approximate. Tokens a card makes only through its rules text, and most token copies of other cards, aren't listed. Some listed tokens appear only in certain modes or for your opponent. Deck Lab can't tell how many a game needs. Packing ticks don't reserve or change inventory.",
+   "token_plan": [],
+   "token_plan_note": "Both decks can use these cards. One card shows one face at a time; at home keep shared tokens in one pile on the table.",
+   "token_problems": [],
+   "tokens": [],
+   "totals": {
+    "from_storage": 0,
+    "kept": 2,
+    "missing": 0,
+    "need": 2,
+    "transfers": 0,
+    "waiting": 0
+   },
+   "unresolved": [],
+   "warnings": [
+    "magic/decks/casual/broken.md can't be read: no fenced decklist block under a '## Decklist' heading, so its Planned list can't be read"
+   ]
+  },
+  "product/fdn-beginner-box/goblins": {
+   "choices": [
+    {
+     "error": "no fenced decklist block under a '## Decklist' heading, so its Planned list can't be read",
+     "id": "casual/broken",
+     "status": "idea",
+     "title": "Broken",
+     "versions": []
+    },
+    {
+     "error": null,
+     "id": "casual/gruul-test",
+     "status": "building",
+     "title": "Gruul Test",
+     "versions": [
+      "target",
+      "owned"
+     ]
+    },
+    {
+     "error": null,
+     "id": "commander/elf-commander",
+     "status": "idea",
+     "title": "Elf Commander",
+     "versions": [
+      "target"
+     ]
+    },
+    {
+     "error": null,
+     "id": "product/fdc-test-precon",
+     "status": null,
+     "title": "Fdc Test Precon",
+     "versions": [
+      "target"
+     ]
+    },
+    {
+     "error": null,
+     "id": "product/fdn-beginner-box/elves",
+     "status": null,
+     "title": "Elves (Foundations Beginner Box)",
+     "versions": [
+      "target"
+     ]
+    },
+    {
+     "error": null,
+     "id": "product/fdn-beginner-box/cats",
+     "status": null,
+     "title": "Cats (Foundations Beginner Box)",
+     "versions": [
+      "target"
+     ]
+    },
+    {
+     "error": null,
+     "id": "product/fdn-beginner-box/goblins",
+     "status": null,
+     "title": "Goblins (Foundations Beginner Box)",
+     "versions": [
+      "target"
+     ]
+    }
+   ],
+   "counts_confirmed": false,
+   "decks": [
+    {
+     "basics": [],
+     "id": "product/fdn-beginner-box/goblins",
+     "kit": {
+      "deck_box": null,
+      "holder": "product/fdn-beginner-box",
+      "info": [],
+      "need": 12,
+      "owner": "shared",
+      "short": 0,
+      "sleeves": null,
+      "spare": 0,
+      "title": "Foundations Beginner Box",
+      "warnings": [
+       "Foundations Beginner Box is kept intact: choose its sleeves (it needs 12)."
+      ]
+     },
+     "returns": [],
+     "sleeves": "Not recorded for this product",
+     "sleeves_need": 12,
+     "steps": [
+      {
+       "keep": 1,
+       "missing": 0,
+       "name": "Aerie Mystics",
+       "need": 1,
+       "resolved": true,
+       "storage": 0,
+       "transfers": [],
+       "waiting": 0
+      }
+     ],
+     "title": "Goblins (Foundations Beginner Box)",
+     "tokens": {
+      "copies": [],
+      "counts": {
+       "check": 0,
+       "differs": 0,
+       "incoming": 0,
+       "kinds": 0,
+       "none": 0,
+       "ready": 0
+      },
+      "needs": [],
+      "note": "Worked out from Scryfall's links between cards and tokens, so it's approximate. Tokens a card makes only through its rules text, and most token copies of other cards, aren't listed. Some listed tokens appear only in certain modes or for your opponent. Deck Lab can't tell how many a game needs.",
+      "unlisted": []
+     },
+     "version": "target"
+    }
+   ],
+   "note": "This is a plan. Other built decks stay reserved. Nothing is moved, marked built or written to inventory.",
+   "ready": false,
+   "rows": [
+    {
+     "from_storage": 0,
+     "held_elsewhere": [],
+     "incoming_from": [],
+     "kept": 1,
+     "missing": 0,
+     "name": "Aerie Mystics",
+     "need": 1,
+     "owned_now": 0,
+     "transfers": [],
+     "waiting": 0
+    }
+   ],
+   "token_note": "Worked out from Scryfall's links between cards and tokens, so it's approximate. Tokens a card makes only through its rules text, and most token copies of other cards, aren't listed. Some listed tokens appear only in certain modes or for your opponent. Deck Lab can't tell how many a game needs. Packing ticks don't reserve or change inventory.",
+   "token_plan": [],
+   "token_plan_note": "Both decks can use these cards. One card shows one face at a time; at home keep shared tokens in one pile on the table.",
+   "token_problems": [],
+   "tokens": [],
+   "totals": {
+    "from_storage": 0,
+    "kept": 1,
+    "missing": 0,
+    "need": 1,
+    "transfers": 0,
+    "waiting": 0
+   },
+   "unresolved": [],
+   "warnings": [
+    "magic/decks/casual/broken.md can't be read: no fenced decklist block under a '## Decklist' heading, so its Planned list can't be read",
+    "Aerie Mystics: built allocations need 1 copies but only 0 are physically owned"
+   ]
+  }
+ },
+ "beginner_box_pairings": [
+  {
+   "built_version": null,
+   "card_count": 11,
+   "format": "Beginner Box pairing (40 cards)",
+   "halves": [
+    "product/fdn-beginner-box/elves",
+    "product/fdn-beginner-box/cats"
+   ],
+   "id": "pairing/elves+cats",
+   "kind": "casual",
+   "player": null,
+   "read_only": true,
+   "sideboard_count": 0,
+   "source": "magic/products/fdn-beginner-box.csv",
+   "space": "home",
+   "status": null,
+   "title": "Elves + Cats (Beginner Box)",
+   "versions": [
+    "target"
+   ]
+  },
+  {
+   "built_version": null,
+   "card_count": 10,
+   "format": "Beginner Box pairing (40 cards)",
+   "halves": [
+    "product/fdn-beginner-box/elves",
+    "product/fdn-beginner-box/goblins"
+   ],
+   "id": "pairing/elves+goblins",
+   "kind": "casual",
+   "player": null,
+   "read_only": true,
+   "sideboard_count": 0,
+   "source": "magic/products/fdn-beginner-box.csv",
+   "space": "home",
+   "status": null,
+   "title": "Elves + Goblins (Beginner Box)",
+   "versions": [
+    "target"
+   ]
+  },
+  {
+   "built_version": null,
+   "card_count": 3,
+   "format": "Beginner Box pairing (40 cards)",
+   "halves": [
+    "product/fdn-beginner-box/cats",
+    "product/fdn-beginner-box/goblins"
+   ],
+   "id": "pairing/cats+goblins",
+   "kind": "casual",
+   "player": null,
+   "read_only": true,
+   "sideboard_count": 0,
+   "source": "magic/products/fdn-beginner-box.csv",
+   "space": "home",
+   "status": null,
+   "title": "Cats + Goblins (Beginner Box)",
+   "versions": [
+    "target"
+   ]
+  }
+ ],
+ "collection": {
+  "home": {
+   "pages": [
+    {
+     "cards": [
+      {
+       "basic": false,
+       "card": {
+        "cmc": 5.0,
+        "color_identity": [
+         "B",
+         "R",
+         "U"
+        ],
+        "colors": [
+         "B",
+         "R",
+         "U"
+        ],
+        "defense": null,
+        "img": "/img/40k/319/normal",
+        "img_small": "/img/40k/319/small",
+        "loyalty": null,
+        "mana_cost": "{2}{U}{B}{R}",
+        "name": "Abaddon the Despoiler",
+        "oracle_text": "Trample\nMark of Chaos Ascendant — During your turn, spells you cast from your hand with mana value X or less have cascade, where X is the total amount of life your opponents have lost this turn.",
+        "power": "5",
+        "roles": [],
+        "toughness": "5",
+        "type_line": "Legendary Creature — Astartes Warrior"
+       },
+       "free_now": 0,
+       "held": 0,
+       "holders": [],
+       "incoming": 1,
+       "name": "Abaddon the Despoiler",
+       "owned": 0,
+       "resolved": true
+      },
+      {
+       "basic": false,
+       "card": {
+        "cmc": 0.0,
+        "color_identity": [],
+        "colors": [],
+        "defense": null,
+        "img": "/img/lea/232/normal",
+        "img_small": "/img/lea/232/small",
+        "loyalty": null,
+        "mana_cost": "{0}",
+        "name": "Black Lotus",
+        "oracle_text": "{T}, Sacrifice this artifact: Add three mana of any one color.",
+        "power": null,
+        "roles": [],
+        "toughness": null,
+        "type_line": "Artifact"
+       },
+       "free_now": 1,
+       "held": 0,
+       "holders": [],
+       "incoming": 0,
+       "name": "Black Lotus",
+       "owned": 1,
+       "resolved": true
+      },
+      {
+       "basic": false,
+       "card": {
+        "cmc": 1.0,
+        "color_identity": [
+         "G"
+        ],
+        "colors": [
+         "G"
+        ],
+        "defense": null,
+        "img": "/img/cmm/648/normal",
+        "img_small": "/img/cmm/648/small",
+        "loyalty": null,
+        "mana_cost": "{G}",
+        "name": "Elvish Mystic",
+        "oracle_text": "{T}: Add {G}.",
+        "power": "1",
+        "roles": [
+         "ramp"
+        ],
+        "toughness": "1",
+        "type_line": "Creature — Elf Druid"
+       },
+       "free_now": 0,
+       "held": 1,
+       "holders": [
+        {
+         "id": "product/fdn-beginner-box/elves",
+         "quantity": 1,
+         "title": "Elves (Foundations Beginner Box)"
+        }
+       ],
+       "incoming": 0,
+       "name": "Elvish Mystic",
+       "owned": 1,
+       "resolved": true
+      },
+      {
+       "basic": false,
+       "card": {
+        "cmc": 1.0,
+        "color_identity": [
+         "G"
+        ],
+        "colors": [
+         "G"
+        ],
+        "defense": null,
+        "img": "/img/fdn/227/normal",
+        "img_small": "/img/fdn/227/small",
+        "loyalty": null,
+        "mana_cost": "{G}",
+        "name": "Llanowar Elves",
+        "oracle_text": "{T}: Add {G}.",
+        "power": "1",
+        "roles": [
+         "ramp"
+        ],
+        "toughness": "1",
+        "type_line": "Creature — Elf Druid"
+       },
+       "free_now": 3,
+       "held": 2,
+       "holders": [
+        {
+         "id": "product/fdn-beginner-box/elves",
+         "quantity": 1,
+         "title": "Elves (Foundations Beginner Box)"
+        },
+        {
+         "id": "product/fdn-beginner-box/cats",
+         "quantity": 1,
+         "title": "Cats (Foundations Beginner Box)"
+        }
+       ],
+       "incoming": 0,
+       "name": "Llanowar Elves",
+       "owned": 5,
+       "resolved": true
+      },
+      {
+       "basic": false,
+       "card": {
+        "cmc": 1.0,
+        "color_identity": [],
+        "colors": [],
+        "defense": null,
+        "img": "/img/ecc/57/normal",
+        "img_small": "/img/ecc/57/small",
+        "loyalty": null,
+        "mana_cost": "{1}",
+        "name": "Sol Ring",
+        "oracle_text": "{T}: Add {C}{C}.",
+        "power": null,
+        "roles": [
+         "ramp"
+        ],
+        "toughness": null,
+        "type_line": "Artifact"
+       },
+       "free_now": 0,
+       "held": 0,
+       "holders": [],
+       "incoming": 1,
+       "name": "Sol Ring",
+       "owned": 0,
+       "resolved": true
+      }
+     ],
+     "limit": 24,
+     "note": "Ordinary basics are assumed plentiful. Tracked special basics are shown, but their deck allocation isn't tracked.",
+     "page": 1,
+     "pages": 1,
+     "roles": [
+      "ramp"
+     ],
+     "total": 5,
+     "types": [
+      "Artifact",
+      "Creature",
+      "Legendary"
+     ],
+     "warnings": [
+      "magic/decks/casual/broken.md can't be read: no fenced decklist block under a '## Decklist' heading, so its Planned list can't be read"
+     ]
+    }
+   ],
+   "special_basics": [
+    {},
+    {}
+   ]
+  }
+ },
+ "deck_table": {
+  "magic/decks/casual/broken.md": {
+   "__error__": "DeckFileError: casual/broken: no fenced decklist block under a '## Decklist' heading, so its Planned list can't be read"
+  },
+  "magic/decks/casual/gruul-test.md": [
+   [
+    {
+     "aud_each": null,
+     "aud_missing": null,
+     "card": "Elvish Mystic",
+     "labels": [
+      "1 in use in Elves (Foundations Beginner Box)"
+     ],
+     "missing": 2,
+     "need": 2,
+     "notes_cell": null,
+     "owned": 0
+    },
+    {
+     "aud_each": null,
+     "aud_missing": null,
+     "card": "Fire // Ice",
+     "labels": [],
+     "missing": 1,
+     "need": 1,
+     "notes_cell": null,
+     "owned": 0
+    },
+    {
+     "aud_each": null,
+     "aud_missing": null,
+     "card": "Llanowar Elves",
+     "labels": [
+      "1 in use in Elves (Foundations Beginner Box)",
+      "1 in use in Cats (Foundations Beginner Box)"
+     ],
+     "missing": 3,
+     "need": 6,
+     "notes_cell": null,
+     "owned": 3
+    },
+    {
+     "aud_each": null,
+     "aud_missing": null,
+     "card": "Murderous Rider // Swift End",
+     "labels": [],
+     "missing": 1,
+     "need": 1,
+     "notes_cell": null,
+     "owned": 0
+    },
+    {
+     "aud_each": null,
+     "aud_missing": null,
+     "card": "Opt",
+     "labels": [],
+     "missing": 1,
+     "need": 1,
+     "notes_cell": null,
+     "owned": 0
+    },
+    {
+     "aud_each": null,
+     "aud_missing": null,
+     "card": "Pick Your Poison",
+     "labels": [],
+     "missing": 2,
+     "need": 2,
+     "notes_cell": null,
+     "owned": 0
+    },
+    {
+     "aud_each": null,
+     "aud_missing": null,
+     "card": "Very Cryptic Command",
+     "labels": [],
+     "missing": 1,
+     "need": 1,
+     "notes_cell": null,
+     "owned": 0
+    },
+    {
+     "aud_each": "",
+     "aud_missing": "",
+     "card": "Black Lotus",
+     "labels": [],
+     "missing": 0,
+     "need": 1,
+     "notes_cell": null,
+     "owned": 1
+    },
+    {
+     "aud_each": "",
+     "aud_missing": "",
+     "card": "Sol Ring",
+     "labels": [
+      "1 on the way (fdc-test-precon, preordered)"
+     ],
+     "missing": 0,
+     "need": 1,
+     "notes_cell": null,
+     "owned": 1
+    }
+   ],
+   {
+    "aud_missing": null,
+    "label": "Total to buy",
+    "labels": null,
+    "missing": 11,
+    "notes_cell": null
+   },
+   null
+  ],
+  "magic/decks/commander/elf-commander.md": [
+   [
+    {
+     "aud_each": null,
+     "aud_missing": null,
+     "card": "Ghalta, Primal Hunger",
+     "labels": [],
+     "missing": 1,
+     "need": 1,
+     "notes_cell": null,
+     "owned": 0
+    },
+    {
+     "aud_each": "",
+     "aud_missing": "",
+     "card": "Llanowar Elves",
+     "labels": [],
+     "missing": 0,
+     "need": 1,
+     "notes_cell": null,
+     "owned": 1
+    },
+    {
+     "aud_each": "",
+     "aud_missing": "",
+     "card": "Sol Ring",
+     "labels": [
+      "1 on the way (fdc-test-precon, preordered)"
+     ],
+     "missing": 0,
+     "need": 1,
+     "notes_cell": null,
+     "owned": 1
+    }
+   ],
+   {
+    "aud_missing": null,
+    "label": "Total to buy",
+    "labels": null,
+    "missing": 1,
+    "notes_cell": null
+   },
+   null
+  ]
+ },
+ "deck_table_priced": {
+  "magic/decks/casual/broken.md": {
+   "__error__": "DeckFileError: casual/broken: no fenced decklist block under a '## Decklist' heading, so its Planned list can't be read"
+  },
+  "magic/decks/casual/gruul-test.md": [
+   [
+    {
+     "aud_each": "~$2.03",
+     "aud_missing": "~$4.06",
+     "card": "Elvish Mystic",
+     "labels": [
+      "1 in use in Elves (Foundations Beginner Box)"
+     ],
+     "missing": 2,
+     "need": 2,
+     "notes_cell": null,
+     "owned": 0
+    },
+    {
+     "aud_each": "~$4.94",
+     "aud_missing": "~$4.94",
+     "card": "Fire // Ice",
+     "labels": [],
+     "missing": 1,
+     "need": 1,
+     "notes_cell": null,
+     "owned": 0
+    },
+    {
+     "aud_each": "~$0.30",
+     "aud_missing": "~$0.90",
+     "card": "Llanowar Elves",
+     "labels": [
+      "1 in use in Elves (Foundations Beginner Box)",
+      "1 in use in Cats (Foundations Beginner Box)"
+     ],
+     "missing": 3,
+     "need": 6,
+     "notes_cell": null,
+     "owned": 3
+    },
+    {
+     "aud_each": "~$0.46",
+     "aud_missing": "~$0.46",
+     "card": "Murderous Rider // Swift End",
+     "labels": [],
+     "missing": 1,
+     "need": 1,
+     "notes_cell": null,
+     "owned": 0
+    },
+    {
+     "aud_each": "no price",
+     "aud_missing": "",
+     "card": "Opt",
+     "labels": [],
+     "missing": 1,
+     "need": 1,
+     "notes_cell": null,
+     "owned": 0
+    },
+    {
+     "aud_each": "~$0.41",
+     "aud_missing": "~$0.82",
+     "card": "Pick Your Poison",
+     "labels": [],
+     "missing": 2,
+     "need": 2,
+     "notes_cell": null,
+     "owned": 0
+    },
+    {
+     "aud_each": "~$2.04",
+     "aud_missing": "~$2.04",
+     "card": "Very Cryptic Command",
+     "labels": [],
+     "missing": 1,
+     "need": 1,
+     "notes_cell": null,
+     "owned": 0
+    },
+    {
+     "aud_each": "",
+     "aud_missing": "",
+     "card": "Black Lotus",
+     "labels": [],
+     "missing": 0,
+     "need": 1,
+     "notes_cell": null,
+     "owned": 1
+    },
+    {
+     "aud_each": "",
+     "aud_missing": "",
+     "card": "Sol Ring",
+     "labels": [
+      "1 on the way (fdc-test-precon, preordered)"
+     ],
+     "missing": 0,
+     "need": 1,
+     "notes_cell": null,
+     "owned": 1
+    }
+   ],
+   {
+    "aud_missing": "~$13.22",
+    "label": "Total to buy",
+    "labels": [
+     "not counted, no price: Opt"
+    ],
+    "missing": 11,
+    "notes_cell": null
+   },
+   {
+    "price_date": "2026-09-28",
+    "rate": 1.5,
+    "rate_date": "2000-01-01"
+   }
+  ],
+  "magic/decks/commander/elf-commander.md": [
+   [
+    {
+     "aud_each": "~$2.27",
+     "aud_missing": "~$2.27",
+     "card": "Ghalta, Primal Hunger",
+     "labels": [],
+     "missing": 1,
+     "need": 1,
+     "notes_cell": null,
+     "owned": 0
+    },
+    {
+     "aud_each": "",
+     "aud_missing": "",
+     "card": "Llanowar Elves",
+     "labels": [],
+     "missing": 0,
+     "need": 1,
+     "notes_cell": null,
+     "owned": 1
+    },
+    {
+     "aud_each": "",
+     "aud_missing": "",
+     "card": "Sol Ring",
+     "labels": [
+      "1 on the way (fdc-test-precon, preordered)"
+     ],
+     "missing": 0,
+     "need": 1,
+     "notes_cell": null,
+     "owned": 1
+    }
+   ],
+   {
+    "aud_missing": "~$2.27",
+    "label": "Total to buy",
+    "labels": [],
+    "missing": 1,
+    "notes_cell": null
+   },
+   {
+    "price_date": "2026-09-28",
+    "rate": 1.5,
+    "rate_date": "2000-01-01"
+   }
+  ]
+ },
+ "deck_view": {
+  "casual/broken@target": {
+   "__error__": "ApiError: magic/decks/casual/broken.md can't be read: no fenced decklist block under a '## Decklist' heading, so its Planned list can't be read"
+  },
+  "casual/gruul-test@owned": {
+   "guide": {
+    "changed_on": null,
+    "sections": []
+   },
+   "info": [],
+   "owned": {
+    "conflicts": [
+     {
+      "available": 3,
+      "decks": [
+       [
+        "Elves (Foundations Beginner Box)",
+        1
+       ],
+       [
+        "Cats (Foundations Beginner Box)",
+        1
+       ]
+      ],
+      "missing": 1,
+      "name": "Llanowar Elves",
+      "need": 4,
+      "owned": 5,
+      "short": 1
+     }
+    ],
+    "deck_id": "casual/gruul-test",
+    "price_date": "2026-09-28",
+    "price_error": null,
+    "rate": 1.5,
+    "rate_date": "2000-01-01",
+    "rows": [
+     {
+      "aud_each": 0.3,
+      "aud_missing": 0.3,
+      "available": 3,
+      "in_use_elsewhere": [
+       [
+        "Elves (Foundations Beginner Box)",
+        1
+       ],
+       [
+        "Cats (Foundations Beginner Box)",
+        1
+       ]
+      ],
+      "labels": {
+       "in_use": [
+        [
+         "Elves (Foundations Beginner Box)",
+         1
+        ],
+        [
+         "Cats (Foundations Beginner Box)",
+         1
+        ]
+       ],
+       "on_the_way": []
+      },
+      "missing": 1,
+      "name": "Llanowar Elves",
+      "need": 4,
+      "on_the_way": 0,
+      "on_the_way_from": [],
+      "owned": 5,
+      "priced_finish": "nonfoil",
+      "priced_printing": "M19 314"
+     }
+    ],
+    "totals": {
+     "aud_missing": 0.3,
+     "cards": 1,
+     "missing": 1,
+     "need": 4,
+     "unpriced": []
+    },
+    "unresolved": [],
+    "version": "owned",
+    "warnings": [
+     "magic/decks/casual/broken.md can't be read: no fenced decklist block under a '## Decklist' heading, so its Planned list can't be read"
+    ]
+   },
+   "sections": {
+    "Deck": [
+     {
+      "card": {
+       "cmc": 1.0,
+       "color_identity": [
+        "G"
+       ],
+       "colors": [
+        "G"
+       ],
+       "defense": null,
+       "img": "/img/fdn/227/normal",
+       "img_small": "/img/fdn/227/small",
+       "loyalty": null,
+       "mana_cost": "{G}",
+       "name": "Llanowar Elves",
+       "oracle_text": "{T}: Add {G}.",
+       "power": "1",
+       "roles": [
+        "ramp"
+       ],
+       "toughness": "1",
+       "type_line": "Creature — Elf Druid"
+      },
+      "finish": "nonfoil",
+      "name": "Llanowar Elves",
+      "number": "227",
+      "qty": 4,
+      "set": "fdn"
+     }
+    ]
+   },
+   "stats": {
+    "cards": 4,
+    "colors": [
+     "B",
+     "G"
+    ],
+    "kind": "constructed",
+    "sections": [
+     "Deck"
+    ]
+   },
+   "summary": {
+    "built_version": null,
+    "built_version_text": null,
+    "card_count": 23,
+    "deck_box": null,
+    "format": "Casual 60-card, 1v1",
+    "holder_sha256": "b03ded079aff18519eb05efb122f602c60ab4104683cf0aa51e88c429b64b450",
+    "id": "casual/gruul-test",
+    "kind": "casual",
+    "kit": {
+     "deck_box": null,
+     "holder": "casual/gruul-test",
+     "info": [],
+     "need": 4,
+     "owner": "shared",
+     "short": 0,
+     "sleeves": null,
+     "spare": 0,
+     "title": "Gruul Test",
+     "warnings": []
+    },
+    "player": "either",
+    "read_only": false,
+    "sideboard_count": 2,
+    "sleeves": null,
+    "source": "magic/decks/casual/gruul-test.md",
+    "space": "home",
+    "status": "building",
+    "title": "Gruul Test",
+    "versions": [
+     "target",
+     "owned"
+    ]
+   },
+   "table": {
+    "changes": [],
+    "has_table": false,
+    "sha256": "b03ded079aff18519eb05efb122f602c60ab4104683cf0aa51e88c429b64b450",
+    "stale": false
+   },
+   "tokens": {
+    "copies": [],
+    "counts": {
+     "check": 0,
+     "differs": 0,
+     "incoming": 0,
+     "kinds": 0,
+     "none": 0,
+     "ready": 0
+    },
+    "needs": [],
+    "note": "Worked out from Scryfall's links between cards and tokens, so it's approximate. Tokens a card makes only through its rules text, and most token copies of other cards, aren't listed. Some listed tokens appear only in certain modes or for your opponent. Deck Lab can't tell how many a game needs.",
+    "unlisted": []
+   },
+   "uncommitted": null,
+   "version": "owned",
+   "versions": [
+    "target",
+    "owned"
+   ],
+   "warnings": []
+  },
+  "casual/gruul-test@target": {
+   "guide": {
+    "changed_on": null,
+    "sections": []
+   },
+   "info": [],
+   "owned": {
+    "conflicts": [
+     {
+      "available": 0,
+      "decks": [
+       [
+        "Elves (Foundations Beginner Box)",
+        1
+       ]
+      ],
+      "missing": 2,
+      "name": "Elvish Mystic",
+      "need": 2,
+      "owned": 1,
+      "short": 1
+     },
+     {
+      "available": 3,
+      "decks": [
+       [
+        "Elves (Foundations Beginner Box)",
+        1
+       ],
+       [
+        "Cats (Foundations Beginner Box)",
+        1
+       ]
+      ],
+      "missing": 3,
+      "name": "Llanowar Elves",
+      "need": 6,
+      "owned": 5,
+      "short": 2
+     },
+     {
+      "available": 0,
+      "decks": [
+       [
+        "Cats (Foundations Beginner Box)",
+        1
+       ]
+      ],
+      "missing": 2,
+      "name": "Pick Your Poison",
+      "need": 2,
+      "owned": 0,
+      "short": 0
+     }
+    ],
+    "deck_id": "casual/gruul-test",
+    "price_date": "2026-09-28",
+    "price_error": null,
+    "rate": 1.5,
+    "rate_date": "2000-01-01",
+    "rows": [
+     {
+      "aud_each": 2.03,
+      "aud_missing": 4.06,
+      "available": 0,
+      "in_use_elsewhere": [
+       [
+        "Elves (Foundations Beginner Box)",
+        1
+       ]
+      ],
+      "labels": {
+       "in_use": [
+        [
+         "Elves (Foundations Beginner Box)",
+         1
+        ]
+       ],
+       "on_the_way": []
+      },
+      "missing": 2,
+      "name": "Elvish Mystic",
+      "need": 2,
+      "on_the_way": 0,
+      "on_the_way_from": [],
+      "owned": 1,
+      "priced_finish": "nonfoil",
+      "priced_printing": "CMM 648"
+     },
+     {
+      "aud_each": 4.94,
+      "aud_missing": 4.94,
+      "available": 0,
+      "in_use_elsewhere": [],
+      "labels": {
+       "in_use": [],
+       "on_the_way": []
+      },
+      "missing": 1,
+      "name": "Fire // Ice",
+      "need": 1,
+      "on_the_way": 0,
+      "on_the_way_from": [],
+      "owned": 0,
+      "priced_finish": "nonfoil",
+      "priced_printing": "APC 128"
+     },
+     {
+      "aud_each": 0.3,
+      "aud_missing": 0.9,
+      "available": 3,
+      "in_use_elsewhere": [
+       [
+        "Elves (Foundations Beginner Box)",
+        1
+       ],
+       [
+        "Cats (Foundations Beginner Box)",
+        1
+       ]
+      ],
+      "labels": {
+       "in_use": [
+        [
+         "Elves (Foundations Beginner Box)",
+         1
+        ],
+        [
+         "Cats (Foundations Beginner Box)",
+         1
+        ]
+       ],
+       "on_the_way": []
+      },
+      "missing": 3,
+      "name": "Llanowar Elves",
+      "need": 6,
+      "on_the_way": 0,
+      "on_the_way_from": [],
+      "owned": 5,
+      "priced_finish": "nonfoil",
+      "priced_printing": "M19 314"
+     },
+     {
+      "aud_each": 0.46,
+      "aud_missing": 0.46,
+      "available": 0,
+      "in_use_elsewhere": [],
+      "labels": {
+       "in_use": [],
+       "on_the_way": []
+      },
+      "missing": 1,
+      "name": "Murderous Rider // Swift End",
+      "need": 1,
+      "on_the_way": 0,
+      "on_the_way_from": [],
+      "owned": 0,
+      "priced_finish": "nonfoil",
+      "priced_printing": "ELD 97"
+     },
+     {
+      "aud_each": null,
+      "aud_missing": null,
+      "available": 0,
+      "in_use_elsewhere": [],
+      "labels": {
+       "in_use": [],
+       "on_the_way": []
+      },
+      "missing": 1,
+      "name": "Opt",
+      "need": 1,
+      "on_the_way": 0,
+      "on_the_way_from": [],
+      "owned": 0,
+      "priced_finish": null,
+      "priced_printing": null
+     },
+     {
+      "aud_each": 0.41,
+      "aud_missing": 0.82,
+      "available": 0,
+      "in_use_elsewhere": [
+       [
+        "Cats (Foundations Beginner Box)",
+        1
+       ]
+      ],
+      "labels": {
+       "in_use": [],
+       "on_the_way": []
+      },
+      "missing": 2,
+      "name": "Pick Your Poison",
+      "need": 2,
+      "on_the_way": 0,
+      "on_the_way_from": [],
+      "owned": 0,
+      "priced_finish": "nonfoil",
+      "priced_printing": "MKM 170"
+     },
+     {
+      "aud_each": 2.04,
+      "aud_missing": 2.04,
+      "available": 0,
+      "in_use_elsewhere": [],
+      "labels": {
+       "in_use": [],
+       "on_the_way": []
+      },
+      "missing": 1,
+      "name": "Very Cryptic Command",
+      "need": 1,
+      "on_the_way": 0,
+      "on_the_way_from": [],
+      "owned": 0,
+      "priced_finish": "nonfoil",
+      "priced_printing": "UST 49a"
+     },
+     {
+      "aud_each": null,
+      "aud_missing": null,
+      "available": 1,
+      "in_use_elsewhere": [],
+      "labels": {
+       "in_use": [],
+       "on_the_way": []
+      },
+      "missing": 0,
+      "name": "Black Lotus",
+      "need": 1,
+      "on_the_way": 0,
+      "on_the_way_from": [],
+      "owned": 1,
+      "priced_finish": null,
+      "priced_printing": null
+     },
+     {
+      "aud_each": 2.42,
+      "aud_missing": 0.0,
+      "available": 1,
+      "in_use_elsewhere": [],
+      "labels": {
+       "in_use": [],
+       "on_the_way": [
+        [
+         "fdc-test-precon, preordered",
+         1
+        ]
+       ]
+      },
+      "missing": 0,
+      "name": "Sol Ring",
+      "need": 1,
+      "on_the_way": 1,
+      "on_the_way_from": [
+       [
+        "fdc-test-precon, preordered",
+        1
+       ]
+      ],
+      "owned": 1,
+      "priced_finish": "nonfoil",
+      "priced_printing": "ECC 57"
+     }
+    ],
+    "totals": {
+     "aud_missing": 13.22,
+     "cards": 9,
+     "missing": 11,
+     "need": 16,
+     "unpriced": [
+      "Opt"
+     ]
+    },
+    "unresolved": [
+     [
+      "Opt",
+      "decklist"
+     ]
+    ],
+    "version": "target",
+    "warnings": [
+     "magic/decks/casual/broken.md can't be read: no fenced decklist block under a '## Decklist' heading, so its Planned list can't be read"
+    ]
+   },
+   "sections": {
+    "Deck": [
+     {
+      "card": {
+       "cmc": 1.0,
+       "color_identity": [
+        "G"
+       ],
+       "colors": [
+        "G"
+       ],
+       "defense": null,
+       "img": "/img/fdn/227/normal",
+       "img_small": "/img/fdn/227/small",
+       "loyalty": null,
+       "mana_cost": "{G}",
+       "name": "Llanowar Elves",
+       "oracle_text": "{T}: Add {G}.",
+       "power": "1",
+       "roles": [
+        "ramp"
+       ],
+       "toughness": "1",
+       "type_line": "Creature — Elf Druid"
+      },
+      "finish": "nonfoil",
+      "name": "Llanowar Elves",
+      "number": "227",
+      "qty": 4,
+      "set": "fdn"
+     },
+     {
+      "card": {
+       "cmc": 1.0,
+       "color_identity": [
+        "G"
+       ],
+       "colors": [
+        "G"
+       ],
+       "defense": null,
+       "img": "/img/cmm/648/normal",
+       "img_small": "/img/cmm/648/small",
+       "loyalty": null,
+       "mana_cost": "{G}",
+       "name": "Elvish Mystic",
+       "oracle_text": "{T}: Add {G}.",
+       "power": "1",
+       "roles": [
+        "ramp"
+       ],
+       "toughness": "1",
+       "type_line": "Creature — Elf Druid"
+      },
+      "finish": "nonfoil",
+      "name": "Elvish Mystic",
+      "number": null,
+      "qty": 2,
+      "set": null
+     },
+     {
+      "card": {
+       "cmc": 1.0,
+       "color_identity": [
+        "G"
+       ],
+       "colors": [
+        "G"
+       ],
+       "defense": null,
+       "img": "/img/m19/314/normal",
+       "img_small": "/img/m19/314/small",
+       "loyalty": null,
+       "mana_cost": "{G}",
+       "name": "Llanowar Elves",
+       "oracle_text": "{T}: Add {G}.",
+       "power": "1",
+       "roles": [
+        "ramp"
+       ],
+       "toughness": "1",
+       "type_line": "Creature — Elf Druid"
+      },
+      "finish": "nonfoil",
+      "name": "Llanowar Elves",
+      "number": null,
+      "qty": 1,
+      "set": "m19"
+     },
+     {
+      "card": {
+       "cmc": 1.0,
+       "color_identity": [
+        "G"
+       ],
+       "colors": [
+        "G"
+       ],
+       "defense": null,
+       "img": "/img/pdmu/1%E2%98%85/normal",
+       "img_small": "/img/pdmu/1%E2%98%85/small",
+       "loyalty": null,
+       "mana_cost": "{G}",
+       "name": "Llanowar Elves",
+       "oracle_text": "{T}: Add {G}.",
+       "power": "1",
+       "roles": [
+        "ramp"
+       ],
+       "toughness": "1",
+       "type_line": "Creature — Elf Druid"
+      },
+      "finish": "nonfoil",
+      "name": "Llanowar Elves",
+      "number": "1★",
+      "qty": 1,
+      "set": "pdmu"
+     },
+     {
+      "card": {
+       "cmc": 0.0,
+       "color_identity": [],
+       "colors": [],
+       "defense": null,
+       "img": "/img/lea/232/normal",
+       "img_small": "/img/lea/232/small",
+       "loyalty": null,
+       "mana_cost": "{0}",
+       "name": "Black Lotus",
+       "oracle_text": "{T}, Sacrifice this artifact: Add three mana of any one color.",
+       "power": null,
+       "roles": [],
+       "toughness": null,
+       "type_line": "Artifact"
+      },
+      "finish": "nonfoil",
+      "name": "Black Lotus",
+      "number": null,
+      "qty": 1,
+      "set": null
+     },
+     {
+      "card": {
+       "cmc": 4.0,
+       "color_identity": [
+        "U"
+       ],
+       "colors": [
+        "U"
+       ],
+       "defense": null,
+       "img": "/img/ust/49d/normal",
+       "img_small": "/img/ust/49d/small",
+       "loyalty": null,
+       "mana_cost": "{1}{U}{U}{U}",
+       "name": "Very Cryptic Command",
+       "oracle_text": "Choose two —\n• Return target permanent to its controller's hand.\n• Draw two cards, then discard a card.\n• Change the target of target spell with a single target.\n• Turn over target nontoken creature.",
+       "power": null,
+       "roles": [],
+       "toughness": null,
+       "type_line": "Instant"
+      },
+      "finish": "nonfoil",
+      "name": "Very Cryptic Command",
+      "number": "49d",
+      "qty": 1,
+      "set": "ust"
+     },
+     {
+      "card": {
+       "cmc": 3.0,
+       "color_identity": [
+        "B"
+       ],
+       "colors": [
+        "B"
+       ],
+       "defense": null,
+       "faces": [
+        {
+         "colors": null,
+         "defense": null,
+         "img": "/img/eld/97/normal",
+         "img_small": "/img/eld/97/small",
+         "loyalty": null,
+         "mana_cost": "{1}{B}{B}",
+         "name": "Murderous Rider",
+         "oracle_text": "Lifelink\nWhen this creature dies, put it on the bottom of its owner's library.",
+         "power": "2",
+         "toughness": "3",
+         "type_line": "Creature — Zombie Knight"
+        },
+        {
+         "colors": null,
+         "defense": null,
+         "img": "/img/eld/97/normal",
+         "img_small": "/img/eld/97/small",
+         "loyalty": null,
+         "mana_cost": "{1}{B}{B}",
+         "name": "Swift End",
+         "oracle_text": "Destroy target creature or planeswalker. You lose 2 life. (Then exile this card. You may cast the creature later from exile.)",
+         "power": null,
+         "toughness": null,
+         "type_line": "Instant — Adventure"
+        }
+       ],
+       "img": "/img/eld/97/normal",
+       "img_small": "/img/eld/97/small",
+       "loyalty": null,
+       "mana_cost": "{1}{B}{B}",
+       "name": "Murderous Rider // Swift End",
+       "oracle_text": "Lifelink\nWhen this creature dies, put it on the bottom of its owner's library.\n//\nDestroy target creature or planeswalker. You lose 2 life. (Then exile this card. You may cast the creature later from exile.)",
+       "power": "2",
+       "roles": [],
+       "toughness": "3",
+       "type_line": "Creature — Zombie Knight"
+      },
+      "finish": "nonfoil",
+      "name": "Murderous Rider",
+      "number": "97",
+      "qty": 1,
+      "set": "eld"
+     },
+     {
+      "card": null,
+      "finish": "nonfoil",
+      "name": "Opt",
+      "number": "512",
+      "qty": 1,
+      "set": "fdn"
+     },
+     {
+      "card": {
+       "cmc": 4.0,
+       "color_identity": [
+        "R",
+        "U"
+       ],
+       "colors": [
+        "R",
+        "U"
+       ],
+       "defense": null,
+       "faces": [
+        {
+         "colors": null,
+         "defense": null,
+         "img": "/img/apc/128/normal",
+         "img_small": "/img/apc/128/small",
+         "loyalty": null,
+         "mana_cost": "{1}{R}",
+         "name": "Fire",
+         "oracle_text": "Fire deals 2 damage divided as you choose among one or two targets.",
+         "power": null,
+         "toughness": null,
+         "type_line": "Instant"
+        },
+        {
+         "colors": null,
+         "defense": null,
+         "img": "/img/apc/128/normal",
+         "img_small": "/img/apc/128/small",
+         "loyalty": null,
+         "mana_cost": "{1}{U}",
+         "name": "Ice",
+         "oracle_text": "Tap target permanent.\nDraw a card.",
+         "power": null,
+         "toughness": null,
+         "type_line": "Instant"
+        }
+       ],
+       "img": "/img/apc/128/normal",
+       "img_small": "/img/apc/128/small",
+       "loyalty": null,
+       "mana_cost": "{1}{R} // {1}{U}",
+       "name": "Fire // Ice",
+       "oracle_text": "Fire deals 2 damage divided as you choose among one or two targets.\n//\nTap target permanent.\nDraw a card.",
+       "power": null,
+       "roles": [
+        "removal",
+        "draw",
+        "burn"
+       ],
+       "toughness": null,
+       "type_line": "Instant // Instant"
+      },
+      "finish": "nonfoil",
+      "name": "Fire // Ice",
+      "number": "999",
+      "qty": 1,
+      "set": "apc"
+     },
+     {
+      "card": {
+       "cmc": 1.0,
+       "color_identity": [],
+       "colors": [],
+       "defense": null,
+       "img": "/img/ecc/57/normal",
+       "img_small": "/img/ecc/57/small",
+       "loyalty": null,
+       "mana_cost": "{1}",
+       "name": "Sol Ring",
+       "oracle_text": "{T}: Add {C}{C}.",
+       "power": null,
+       "roles": [
+        "ramp"
+       ],
+       "toughness": null,
+       "type_line": "Artifact"
+      },
+      "finish": "nonfoil",
+      "name": "Sol Ring",
+      "number": "170",
+      "qty": 1,
+      "set": "mkm"
+     },
+     {
+      "card": null,
+      "finish": "nonfoil",
+      "name": "Forest",
+      "number": null,
+      "qty": 9,
+      "set": null
+     }
+    ],
+    "Sideboard": [
+     {
+      "card": {
+       "cmc": 1.0,
+       "color_identity": [
+        "G"
+       ],
+       "colors": [
+        "G"
+       ],
+       "defense": null,
+       "img": "/img/mkm/170/normal",
+       "img_small": "/img/mkm/170/small",
+       "loyalty": null,
+       "mana_cost": "{G}",
+       "name": "Pick Your Poison",
+       "oracle_text": "Choose one —\n• Each opponent sacrifices an artifact of their choice.\n• Each opponent sacrifices an enchantment of their choice.\n• Each opponent sacrifices a creature with flying of their choice.",
+       "power": null,
+       "roles": [
+        "removal"
+       ],
+       "toughness": null,
+       "type_line": "Sorcery"
+      },
+      "finish": "nonfoil",
+      "name": "Pick Your Poison",
+      "number": "170",
+      "qty": 2,
+      "set": "mkm"
+     }
+    ]
+   },
+   "stats": {
+    "cards": 25,
+    "colors": [
+     "B",
+     "G"
+    ],
+    "kind": "constructed",
+    "sections": [
+     "Deck",
+     "Sideboard"
+    ]
+   },
+   "summary": {
+    "built_version": null,
+    "built_version_text": null,
+    "card_count": 23,
+    "deck_box": null,
+    "format": "Casual 60-card, 1v1",
+    "holder_sha256": "b03ded079aff18519eb05efb122f602c60ab4104683cf0aa51e88c429b64b450",
+    "id": "casual/gruul-test",
+    "kind": "casual",
+    "kit": {
+     "deck_box": null,
+     "holder": "casual/gruul-test",
+     "info": [],
+     "need": 25,
+     "owner": "shared",
+     "short": 0,
+     "sleeves": null,
+     "spare": 0,
+     "title": "Gruul Test",
+     "warnings": []
+    },
+    "player": "either",
+    "read_only": false,
+    "sideboard_count": 2,
+    "sleeves": null,
+    "source": "magic/decks/casual/gruul-test.md",
+    "space": "home",
+    "status": "building",
+    "title": "Gruul Test",
+    "versions": [
+     "target",
+     "owned"
+    ]
+   },
+   "table": {
+    "changes": [],
+    "has_table": false,
+    "sha256": "b03ded079aff18519eb05efb122f602c60ab4104683cf0aa51e88c429b64b450",
+    "stale": false
+   },
+   "tokens": {
+    "copies": [],
+    "counts": {
+     "check": 0,
+     "differs": 0,
+     "incoming": 0,
+     "kinds": 0,
+     "none": 0,
+     "ready": 0
+    },
+    "needs": [],
+    "note": "Worked out from Scryfall's links between cards and tokens, so it's approximate. Tokens a card makes only through its rules text, and most token copies of other cards, aren't listed. Some listed tokens appear only in certain modes or for your opponent. Deck Lab can't tell how many a game needs.",
+    "unlisted": []
+   },
+   "uncommitted": null,
+   "version": "target",
+   "versions": [
+    "target",
+    "owned"
+   ],
+   "warnings": [
+    "'Opt' (Deck) isn't a Scryfall card name, so there's no card data for it",
+    "Fire // Ice (APC) 999: Scryfall has no printing APC 999",
+    "Sol Ring (MKM) 170: MKM 170 is Pick Your Poison, not Sol Ring",
+    "'Forest' (Deck) isn't a Scryfall card name, so there's no card data for it"
+   ]
+  },
+  "commander/elf-commander@target": {
+   "guide": {
+    "changed_on": null,
+    "sections": []
+   },
+   "info": [],
+   "owned": {
+    "conflicts": [
+     {
+      "available": 3,
+      "decks": [
+       [
+        "Elves (Foundations Beginner Box)",
+        1
+       ],
+       [
+        "Cats (Foundations Beginner Box)",
+        1
+       ]
+      ],
+      "missing": 0,
+      "name": "Llanowar Elves",
+      "need": 1,
+      "owned": 5,
+      "short": 0
+     }
+    ],
+    "deck_id": "commander/elf-commander",
+    "price_date": "2026-09-28",
+    "price_error": null,
+    "rate": 1.5,
+    "rate_date": "2000-01-01",
+    "rows": [
+     {
+      "aud_each": 2.27,
+      "aud_missing": 2.27,
+      "available": 0,
+      "in_use_elsewhere": [],
+      "labels": {
+       "in_use": [],
+       "on_the_way": []
+      },
+      "missing": 1,
+      "name": "Ghalta, Primal Hunger",
+      "need": 1,
+      "on_the_way": 0,
+      "on_the_way_from": [],
+      "owned": 0,
+      "priced_finish": "nonfoil",
+      "priced_printing": "RIX 130"
+     },
+     {
+      "aud_each": 0.3,
+      "aud_missing": 0.0,
+      "available": 3,
+      "in_use_elsewhere": [
+       [
+        "Elves (Foundations Beginner Box)",
+        1
+       ],
+       [
+        "Cats (Foundations Beginner Box)",
+        1
+       ]
+      ],
+      "labels": {
+       "in_use": [],
+       "on_the_way": []
+      },
+      "missing": 0,
+      "name": "Llanowar Elves",
+      "need": 1,
+      "on_the_way": 0,
+      "on_the_way_from": [],
+      "owned": 5,
+      "priced_finish": "nonfoil",
+      "priced_printing": "M19 314"
+     },
+     {
+      "aud_each": 2.42,
+      "aud_missing": 0.0,
+      "available": 1,
+      "in_use_elsewhere": [],
+      "labels": {
+       "in_use": [],
+       "on_the_way": [
+        [
+         "fdc-test-precon, preordered",
+         1
+        ]
+       ]
+      },
+      "missing": 0,
+      "name": "Sol Ring",
+      "need": 1,
+      "on_the_way": 1,
+      "on_the_way_from": [
+       [
+        "fdc-test-precon, preordered",
+        1
+       ]
+      ],
+      "owned": 1,
+      "priced_finish": "nonfoil",
+      "priced_printing": "ECC 57"
+     }
+    ],
+    "totals": {
+     "aud_missing": 2.27,
+     "cards": 3,
+     "missing": 1,
+     "need": 3,
+     "unpriced": []
+    },
+    "unresolved": [],
+    "version": "target",
+    "warnings": [
+     "magic/decks/casual/broken.md can't be read: no fenced decklist block under a '## Decklist' heading, so its Planned list can't be read"
+    ]
+   },
+   "sections": {
+    "Commander": [
+     {
+      "card": {
+       "cmc": 12.0,
+       "color_identity": [
+        "G"
+       ],
+       "colors": [
+        "G"
+       ],
+       "defense": null,
+       "img": "/img/rix/130/normal",
+       "img_small": "/img/rix/130/small",
+       "loyalty": null,
+       "mana_cost": "{10}{G}{G}",
+       "name": "Ghalta, Primal Hunger",
+       "oracle_text": "This spell costs {X} less to cast, where X is the total power of creatures you control.\nTrample (This creature can deal excess combat damage to the player or planeswalker it's attacking.)",
+       "power": "12",
+       "roles": [],
+       "toughness": "12",
+       "type_line": "Legendary Creature — Elder Dinosaur"
+      },
+      "finish": "nonfoil",
+      "name": "Ghalta, Primal Hunger",
+      "number": "130",
+      "qty": 1,
+      "set": "rix"
+     }
+    ],
+    "Deck": [
+     {
+      "card": {
+       "cmc": 1.0,
+       "color_identity": [
+        "G"
+       ],
+       "colors": [
+        "G"
+       ],
+       "defense": null,
+       "img": "/img/fdn/227/normal",
+       "img_small": "/img/fdn/227/small",
+       "loyalty": null,
+       "mana_cost": "{G}",
+       "name": "Llanowar Elves",
+       "oracle_text": "{T}: Add {G}.",
+       "power": "1",
+       "roles": [
+        "ramp"
+       ],
+       "toughness": "1",
+       "type_line": "Creature — Elf Druid"
+      },
+      "finish": "nonfoil",
+      "name": "Llanowar Elves",
+      "number": "227",
+      "qty": 1,
+      "set": "fdn"
+     },
+     {
+      "card": {
+       "cmc": 1.0,
+       "color_identity": [],
+       "colors": [],
+       "defense": null,
+       "img": "/img/ecc/57/normal",
+       "img_small": "/img/ecc/57/small",
+       "loyalty": null,
+       "mana_cost": "{1}",
+       "name": "Sol Ring",
+       "oracle_text": "{T}: Add {C}{C}.",
+       "power": null,
+       "roles": [
+        "ramp"
+       ],
+       "toughness": null,
+       "type_line": "Artifact"
+      },
+      "finish": "nonfoil",
+      "name": "Sol Ring",
+      "number": "57",
+      "qty": 1,
+      "set": "ecc"
+     }
+    ]
+   },
+   "stats": {
+    "cards": 3,
+    "colors": [
+     "B",
+     "G"
+    ],
+    "kind": "commander",
+    "sections": [
+     "Commander",
+     "Deck"
+    ]
+   },
+   "summary": {
+    "built_version": null,
+    "built_version_text": null,
+    "card_count": 3,
+    "deck_box": null,
+    "format": "Commander",
+    "holder_sha256": "f53b81cbc1a6e099416af972b385e52bcbdaf3124c4d4b2eb7b755756ec50e0c",
+    "id": "commander/elf-commander",
+    "kind": "commander",
+    "kit": {
+     "deck_box": null,
+     "holder": "commander/elf-commander",
+     "info": [],
+     "need": 3,
+     "owner": "user1",
+     "short": 0,
+     "sleeves": null,
+     "spare": 0,
+     "title": "Elf Commander",
+     "warnings": []
+    },
+    "player": "wife",
+    "read_only": false,
+    "sideboard_count": 0,
+    "sleeves": null,
+    "source": "magic/decks/commander/elf-commander.md",
+    "space": "home",
+    "status": "idea",
+    "target_bracket": 2,
+    "title": "Elf Commander",
+    "versions": [
+     "target"
+    ]
+   },
+   "table": {
+    "changes": [],
+    "has_table": false,
+    "sha256": "f53b81cbc1a6e099416af972b385e52bcbdaf3124c4d4b2eb7b755756ec50e0c",
+    "stale": false
+   },
+   "tokens": {
+    "copies": [],
+    "counts": {
+     "check": 0,
+     "differs": 0,
+     "incoming": 0,
+     "kinds": 0,
+     "none": 0,
+     "ready": 0
+    },
+    "needs": [],
+    "note": "Worked out from Scryfall's links between cards and tokens, so it's approximate. Tokens a card makes only through its rules text, and most token copies of other cards, aren't listed. Some listed tokens appear only in certain modes or for your opponent. Deck Lab can't tell how many a game needs.",
+    "unlisted": []
+   },
+   "uncommitted": null,
+   "version": "target",
+   "versions": [
+    "target"
+   ],
+   "warnings": []
+  },
+  "pairing/cats+goblins@target": {
+   "guide": null,
+   "info": [],
+   "owned": {
+    "conflicts": [
+     {
+      "available": 4,
+      "decks": [
+       [
+        "Elves (Foundations Beginner Box)",
+        1
+       ]
+      ],
+      "missing": 0,
+      "name": "Llanowar Elves",
+      "need": 1,
+      "owned": 5,
+      "short": 0
+     }
+    ],
+    "deck_id": "pairing/cats+goblins",
+    "price_date": "2026-09-28",
+    "price_error": null,
+    "rate": 1.5,
+    "rate_date": "2000-01-01",
+    "rows": [
+     {
+      "aud_each": 0.17,
+      "aud_missing": 0.17,
+      "available": 0,
+      "in_use_elsewhere": [],
+      "labels": {
+       "in_use": [],
+       "on_the_way": []
+      },
+      "missing": 1,
+      "name": "Aerie Mystics",
+      "need": 1,
+      "on_the_way": 0,
+      "on_the_way_from": [],
+      "owned": 0,
+      "priced_finish": "nonfoil",
+      "priced_printing": "CON 1"
+     },
+     {
+      "aud_each": 0.41,
+      "aud_missing": 0.41,
+      "available": 0,
+      "in_use_elsewhere": [],
+      "labels": {
+       "in_use": [],
+       "on_the_way": []
+      },
+      "missing": 1,
+      "name": "Pick Your Poison",
+      "need": 1,
+      "on_the_way": 0,
+      "on_the_way_from": [],
+      "owned": 0,
+      "priced_finish": "nonfoil",
+      "priced_printing": "MKM 170"
+     },
+     {
+      "aud_each": 0.3,
+      "aud_missing": 0.0,
+      "available": 4,
+      "in_use_elsewhere": [
+       [
+        "Elves (Foundations Beginner Box)",
+        1
+       ]
+      ],
+      "labels": {
+       "in_use": [],
+       "on_the_way": []
+      },
+      "missing": 0,
+      "name": "Llanowar Elves",
+      "need": 1,
+      "on_the_way": 0,
+      "on_the_way_from": [],
+      "owned": 5,
+      "priced_finish": "nonfoil",
+      "priced_printing": "M19 314"
+     }
+    ],
+    "totals": {
+     "aud_missing": 0.58,
+     "cards": 3,
+     "missing": 2,
+     "need": 3,
+     "unpriced": []
+    },
+    "unresolved": [],
+    "version": "target",
+    "warnings": [
+     "magic/decks/casual/broken.md can't be read: no fenced decklist block under a '## Decklist' heading, so its Planned list can't be read"
+    ]
+   },
+   "sections": {
+    "Deck": [
+     {
+      "card": {
+       "cmc": 1.0,
+       "color_identity": [
+        "G"
+       ],
+       "colors": [
+        "G"
+       ],
+       "defense": null,
+       "img": "/img/fdn/227/normal",
+       "img_small": "/img/fdn/227/small",
+       "loyalty": null,
+       "mana_cost": "{G}",
+       "name": "Llanowar Elves",
+       "oracle_text": "{T}: Add {G}.",
+       "power": "1",
+       "roles": [
+        "ramp"
+       ],
+       "toughness": "1",
+       "type_line": "Creature — Elf Druid"
+      },
+      "finish": "nonfoil",
+      "name": "Llanowar Elves",
+      "number": "227",
+      "qty": 1,
+      "set": "fdn"
+     },
+     {
+      "card": {
+       "cmc": 1.0,
+       "color_identity": [
+        "G"
+       ],
+       "colors": [
+        "G"
+       ],
+       "defense": null,
+       "img": "/img/mkm/170/normal",
+       "img_small": "/img/mkm/170/small",
+       "loyalty": null,
+       "mana_cost": "{G}",
+       "name": "Pick Your Poison",
+       "oracle_text": "Choose one —\n• Each opponent sacrifices an artifact of their choice.\n• Each opponent sacrifices an enchantment of their choice.\n• Each opponent sacrifices a creature with flying of their choice.",
+       "power": null,
+       "roles": [
+        "removal"
+       ],
+       "toughness": null,
+       "type_line": "Sorcery"
+      },
+      "finish": "nonfoil",
+      "name": "Pick Your Poison",
+      "number": "170",
+      "qty": 1,
+      "set": "mkm"
+     },
+     {
+      "card": {
+       "cmc": 5.0,
+       "color_identity": [
+        "G",
+        "U",
+        "W"
+       ],
+       "colors": [
+        "W"
+       ],
+       "defense": null,
+       "img": "/img/con/1/normal",
+       "img_small": "/img/con/1/small",
+       "loyalty": null,
+       "mana_cost": "{4}{W}",
+       "name": "Aerie Mystics",
+       "oracle_text": "Flying\n{1}{G}{U}: Creatures you control gain shroud until end of turn. (They can't be the targets of spells or abilities.)",
+       "power": "3",
+       "roles": [],
+       "toughness": "3",
+       "type_line": "Creature — Bird Wizard"
+      },
+      "finish": "nonfoil",
+      "name": "Aerie Mystics",
+      "number": "1",
+      "qty": 1,
+      "set": "con"
+     }
+    ]
+   },
+   "stats": {
+    "cards": 3,
+    "colors": [
+     "B",
+     "G"
+    ],
+    "kind": "constructed",
+    "sections": [
+     "Deck"
+    ]
+   },
+   "summary": {
+    "built_version": null,
+    "card_count": 3,
+    "format": "Beginner Box pairing (40 cards)",
+    "halves": [
+     "product/fdn-beginner-box/cats",
+     "product/fdn-beginner-box/goblins"
+    ],
+    "holder_sha256": null,
+    "id": "pairing/cats+goblins",
+    "kind": "casual",
+    "kit": {
+     "deck_box": null,
+     "holder": "pairing/cats+goblins",
+     "info": [],
+     "need": 3,
+     "owner": "shared",
+     "short": 0,
+     "sleeves": null,
+     "spare": 0,
+     "title": "Cats + Goblins (Beginner Box)",
+     "warnings": []
+    },
+    "player": null,
+    "read_only": true,
+    "sideboard_count": 0,
+    "source": "magic/products/fdn-beginner-box.csv",
+    "space": "home",
+    "status": null,
+    "title": "Cats + Goblins (Beginner Box)",
+    "versions": [
+     "target"
+    ]
+   },
+   "table": null,
+   "tokens": null,
+   "uncommitted": null,
+   "version": "target",
+   "versions": [
+    "target"
+   ],
+   "warnings": []
+  },
+  "pairing/elves+cats@target": {
+   "guide": null,
+   "info": [],
+   "owned": {
+    "conflicts": [],
+    "deck_id": "pairing/elves+cats",
+    "price_date": "2026-09-28",
+    "price_error": null,
+    "rate": 1.5,
+    "rate_date": "2000-01-01",
+    "rows": [
+     {
+      "aud_each": 0.41,
+      "aud_missing": 0.41,
+      "available": 0,
+      "in_use_elsewhere": [],
+      "labels": {
+       "in_use": [],
+       "on_the_way": []
+      },
+      "missing": 1,
+      "name": "Pick Your Poison",
+      "need": 1,
+      "on_the_way": 0,
+      "on_the_way_from": [],
+      "owned": 0,
+      "priced_finish": "nonfoil",
+      "priced_printing": "MKM 170"
+     },
+     {
+      "aud_each": 2.03,
+      "aud_missing": 0.0,
+      "available": 1,
+      "in_use_elsewhere": [],
+      "labels": {
+       "in_use": [],
+       "on_the_way": []
+      },
+      "missing": 0,
+      "name": "Elvish Mystic",
+      "need": 1,
+      "on_the_way": 0,
+      "on_the_way_from": [],
+      "owned": 1,
+      "priced_finish": "nonfoil",
+      "priced_printing": "CMM 648"
+     },
+     {
+      "aud_each": 0.3,
+      "aud_missing": 0.0,
+      "available": 5,
+      "in_use_elsewhere": [],
+      "labels": {
+       "in_use": [],
+       "on_the_way": []
+      },
+      "missing": 0,
+      "name": "Llanowar Elves",
+      "need": 2,
+      "on_the_way": 0,
+      "on_the_way_from": [],
+      "owned": 5,
+      "priced_finish": "nonfoil",
+      "priced_printing": "M19 314"
+     }
+    ],
+    "totals": {
+     "aud_missing": 0.41,
+     "cards": 3,
+     "missing": 1,
+     "need": 4,
+     "unpriced": []
+    },
+    "unresolved": [],
+    "version": "target",
+    "warnings": [
+     "magic/decks/casual/broken.md can't be read: no fenced decklist block under a '## Decklist' heading, so its Planned list can't be read"
+    ]
+   },
+   "sections": {
+    "Deck": [
+     {
+      "card": {
+       "cmc": 1.0,
+       "color_identity": [
+        "G"
+       ],
+       "colors": [
+        "G"
+       ],
+       "defense": null,
+       "img": "/img/fdn/227/normal",
+       "img_small": "/img/fdn/227/small",
+       "loyalty": null,
+       "mana_cost": "{G}",
+       "name": "Llanowar Elves",
+       "oracle_text": "{T}: Add {G}.",
+       "power": "1",
+       "roles": [
+        "ramp"
+       ],
+       "toughness": "1",
+       "type_line": "Creature — Elf Druid"
+      },
+      "finish": "nonfoil",
+      "name": "Llanowar Elves",
+      "number": "227",
+      "qty": 2,
+      "set": "fdn"
+     },
+     {
+      "card": {
+       "cmc": 1.0,
+       "color_identity": [
+        "G"
+       ],
+       "colors": [
+        "G"
+       ],
+       "defense": null,
+       "img": "/img/cmm/648/normal",
+       "img_small": "/img/cmm/648/small",
+       "loyalty": null,
+       "mana_cost": "{G}",
+       "name": "Elvish Mystic",
+       "oracle_text": "{T}: Add {G}.",
+       "power": "1",
+       "roles": [
+        "ramp"
+       ],
+       "toughness": "1",
+       "type_line": "Creature — Elf Druid"
+      },
+      "finish": "nonfoil",
+      "name": "Elvish Mystic",
+      "number": "648",
+      "qty": 1,
+      "set": "cmm"
+     },
+     {
+      "card": null,
+      "finish": "nonfoil",
+      "name": "Forest",
+      "number": null,
+      "qty": 7,
+      "set": "fdn"
+     },
+     {
+      "card": {
+       "cmc": 1.0,
+       "color_identity": [
+        "G"
+       ],
+       "colors": [
+        "G"
+       ],
+       "defense": null,
+       "img": "/img/mkm/170/normal",
+       "img_small": "/img/mkm/170/small",
+       "loyalty": null,
+       "mana_cost": "{G}",
+       "name": "Pick Your Poison",
+       "oracle_text": "Choose one —\n• Each opponent sacrifices an artifact of their choice.\n• Each opponent sacrifices an enchantment of their choice.\n• Each opponent sacrifices a creature with flying of their choice.",
+       "power": null,
+       "roles": [
+        "removal"
+       ],
+       "toughness": null,
+       "type_line": "Sorcery"
+      },
+      "finish": "nonfoil",
+      "name": "Pick Your Poison",
+      "number": "170",
+      "qty": 1,
+      "set": "mkm"
+     }
+    ]
+   },
+   "stats": {
+    "cards": 11,
+    "colors": [
+     "B",
+     "G"
+    ],
+    "kind": "constructed",
+    "sections": [
+     "Deck"
+    ]
+   },
+   "summary": {
+    "built_version": null,
+    "card_count": 11,
+    "format": "Beginner Box pairing (40 cards)",
+    "halves": [
+     "product/fdn-beginner-box/elves",
+     "product/fdn-beginner-box/cats"
+    ],
+    "holder_sha256": null,
+    "id": "pairing/elves+cats",
+    "kind": "casual",
+    "kit": {
+     "deck_box": null,
+     "holder": "pairing/elves+cats",
+     "info": [],
+     "need": 11,
+     "owner": "shared",
+     "short": 0,
+     "sleeves": null,
+     "spare": 0,
+     "title": "Elves + Cats (Beginner Box)",
+     "warnings": []
+    },
+    "player": null,
+    "read_only": true,
+    "sideboard_count": 0,
+    "source": "magic/products/fdn-beginner-box.csv",
+    "space": "home",
+    "status": null,
+    "title": "Elves + Cats (Beginner Box)",
+    "versions": [
+     "target"
+    ]
+   },
+   "table": null,
+   "tokens": null,
+   "uncommitted": null,
+   "version": "target",
+   "versions": [
+    "target"
+   ],
+   "warnings": [
+    "'Forest' (Deck) isn't a Scryfall card name, so there's no card data for it"
+   ]
+  },
+  "pairing/elves+goblins@target": {
+   "guide": null,
+   "info": [],
+   "owned": {
+    "conflicts": [
+     {
+      "available": 4,
+      "decks": [
+       [
+        "Cats (Foundations Beginner Box)",
+        1
+       ]
+      ],
+      "missing": 0,
+      "name": "Llanowar Elves",
+      "need": 1,
+      "owned": 5,
+      "short": 0
+     }
+    ],
+    "deck_id": "pairing/elves+goblins",
+    "price_date": "2026-09-28",
+    "price_error": null,
+    "rate": 1.5,
+    "rate_date": "2000-01-01",
+    "rows": [
+     {
+      "aud_each": 0.17,
+      "aud_missing": 0.17,
+      "available": 0,
+      "in_use_elsewhere": [],
+      "labels": {
+       "in_use": [],
+       "on_the_way": []
+      },
+      "missing": 1,
+      "name": "Aerie Mystics",
+      "need": 1,
+      "on_the_way": 0,
+      "on_the_way_from": [],
+      "owned": 0,
+      "priced_finish": "nonfoil",
+      "priced_printing": "CON 1"
+     },
+     {
+      "aud_each": 2.03,
+      "aud_missing": 0.0,
+      "available": 1,
+      "in_use_elsewhere": [],
+      "labels": {
+       "in_use": [],
+       "on_the_way": []
+      },
+      "missing": 0,
+      "name": "Elvish Mystic",
+      "need": 1,
+      "on_the_way": 0,
+      "on_the_way_from": [],
+      "owned": 1,
+      "priced_finish": "nonfoil",
+      "priced_printing": "CMM 648"
+     },
+     {
+      "aud_each": 0.3,
+      "aud_missing": 0.0,
+      "available": 4,
+      "in_use_elsewhere": [
+       [
+        "Cats (Foundations Beginner Box)",
+        1
+       ]
+      ],
+      "labels": {
+       "in_use": [],
+       "on_the_way": []
+      },
+      "missing": 0,
+      "name": "Llanowar Elves",
+      "need": 1,
+      "on_the_way": 0,
+      "on_the_way_from": [],
+      "owned": 5,
+      "priced_finish": "nonfoil",
+      "priced_printing": "M19 314"
+     }
+    ],
+    "totals": {
+     "aud_missing": 0.17,
+     "cards": 3,
+     "missing": 1,
+     "need": 3,
+     "unpriced": []
+    },
+    "unresolved": [],
+    "version": "target",
+    "warnings": [
+     "magic/decks/casual/broken.md can't be read: no fenced decklist block under a '## Decklist' heading, so its Planned list can't be read"
+    ]
+   },
+   "sections": {
+    "Deck": [
+     {
+      "card": {
+       "cmc": 1.0,
+       "color_identity": [
+        "G"
+       ],
+       "colors": [
+        "G"
+       ],
+       "defense": null,
+       "img": "/img/fdn/227/normal",
+       "img_small": "/img/fdn/227/small",
+       "loyalty": null,
+       "mana_cost": "{G}",
+       "name": "Llanowar Elves",
+       "oracle_text": "{T}: Add {G}.",
+       "power": "1",
+       "roles": [
+        "ramp"
+       ],
+       "toughness": "1",
+       "type_line": "Creature — Elf Druid"
+      },
+      "finish": "nonfoil",
+      "name": "Llanowar Elves",
+      "number": "227",
+      "qty": 1,
+      "set": "fdn"
+     },
+     {
+      "card": {
+       "cmc": 1.0,
+       "color_identity": [
+        "G"
+       ],
+       "colors": [
+        "G"
+       ],
+       "defense": null,
+       "img": "/img/cmm/648/normal",
+       "img_small": "/img/cmm/648/small",
+       "loyalty": null,
+       "mana_cost": "{G}",
+       "name": "Elvish Mystic",
+       "oracle_text": "{T}: Add {G}.",
+       "power": "1",
+       "roles": [
+        "ramp"
+       ],
+       "toughness": "1",
+       "type_line": "Creature — Elf Druid"
+      },
+      "finish": "nonfoil",
+      "name": "Elvish Mystic",
+      "number": "648",
+      "qty": 1,
+      "set": "cmm"
+     },
+     {
+      "card": null,
+      "finish": "nonfoil",
+      "name": "Forest",
+      "number": null,
+      "qty": 7,
+      "set": "fdn"
+     },
+     {
+      "card": {
+       "cmc": 5.0,
+       "color_identity": [
+        "G",
+        "U",
+        "W"
+       ],
+       "colors": [
+        "W"
+       ],
+       "defense": null,
+       "img": "/img/con/1/normal",
+       "img_small": "/img/con/1/small",
+       "loyalty": null,
+       "mana_cost": "{4}{W}",
+       "name": "Aerie Mystics",
+       "oracle_text": "Flying\n{1}{G}{U}: Creatures you control gain shroud until end of turn. (They can't be the targets of spells or abilities.)",
+       "power": "3",
+       "roles": [],
+       "toughness": "3",
+       "type_line": "Creature — Bird Wizard"
+      },
+      "finish": "nonfoil",
+      "name": "Aerie Mystics",
+      "number": "1",
+      "qty": 1,
+      "set": "con"
+     }
+    ]
+   },
+   "stats": {
+    "cards": 10,
+    "colors": [
+     "B",
+     "G"
+    ],
+    "kind": "constructed",
+    "sections": [
+     "Deck"
+    ]
+   },
+   "summary": {
+    "built_version": null,
+    "card_count": 10,
+    "format": "Beginner Box pairing (40 cards)",
+    "halves": [
+     "product/fdn-beginner-box/elves",
+     "product/fdn-beginner-box/goblins"
+    ],
+    "holder_sha256": null,
+    "id": "pairing/elves+goblins",
+    "kind": "casual",
+    "kit": {
+     "deck_box": null,
+     "holder": "pairing/elves+goblins",
+     "info": [],
+     "need": 10,
+     "owner": "shared",
+     "short": 0,
+     "sleeves": null,
+     "spare": 0,
+     "title": "Elves + Goblins (Beginner Box)",
+     "warnings": []
+    },
+    "player": null,
+    "read_only": true,
+    "sideboard_count": 0,
+    "source": "magic/products/fdn-beginner-box.csv",
+    "space": "home",
+    "status": null,
+    "title": "Elves + Goblins (Beginner Box)",
+    "versions": [
+     "target"
+    ]
+   },
+   "table": null,
+   "tokens": null,
+   "uncommitted": null,
+   "version": "target",
+   "versions": [
+    "target"
+   ],
+   "warnings": [
+    "'Forest' (Deck) isn't a Scryfall card name, so there's no card data for it"
+   ]
+  },
+  "product/fdc-test-precon@target": {
+   "guide": null,
+   "info": [],
+   "owned": {
+    "conflicts": [],
+    "deck_id": "product/fdc-test-precon",
+    "price_date": "2026-09-28",
+    "price_error": null,
+    "rate": 1.5,
+    "rate_date": "2000-01-01",
+    "rows": [
+     {
+      "aud_each": 0.63,
+      "aud_missing": 0.0,
+      "available": 1,
+      "in_use_elsewhere": [],
+      "labels": {
+       "in_use": [],
+       "on_the_way": [
+        [
+         "fdc-test-precon, preordered",
+         1
+        ]
+       ]
+      },
+      "missing": 0,
+      "name": "Abaddon the Despoiler",
+      "need": 1,
+      "on_the_way": 1,
+      "on_the_way_from": [
+       [
+        "fdc-test-precon, preordered",
+        1
+       ]
+      ],
+      "owned": 1,
+      "priced_finish": "etched",
+      "priced_printing": "40K 319 etched"
+     },
+     {
+      "aud_each": 2.42,
+      "aud_missing": 0.0,
+      "available": 1,
+      "in_use_elsewhere": [],
+      "labels": {
+       "in_use": [],
+       "on_the_way": [
+        [
+         "fdc-test-precon, preordered",
+         1
+        ]
+       ]
+      },
+      "missing": 0,
+      "name": "Sol Ring",
+      "need": 1,
+      "on_the_way": 1,
+      "on_the_way_from": [
+       [
+        "fdc-test-precon, preordered",
+        1
+       ]
+      ],
+      "owned": 1,
+      "priced_finish": "nonfoil",
+      "priced_printing": "ECC 57"
+     }
+    ],
+    "totals": {
+     "aud_missing": 0,
+     "cards": 2,
+     "missing": 0,
+     "need": 2,
+     "unpriced": []
+    },
+    "unresolved": [],
+    "version": "target",
+    "warnings": [
+     "magic/decks/casual/broken.md can't be read: no fenced decklist block under a '## Decklist' heading, so its Planned list can't be read"
+    ]
+   },
+   "sections": {
+    "Commander": [
+     {
+      "card": {
+       "cmc": 5.0,
+       "color_identity": [
+        "B",
+        "R",
+        "U"
+       ],
+       "colors": [
+        "B",
+        "R",
+        "U"
+       ],
+       "defense": null,
+       "img": "/img/40k/319/normal",
+       "img_small": "/img/40k/319/small",
+       "loyalty": null,
+       "mana_cost": "{2}{U}{B}{R}",
+       "name": "Abaddon the Despoiler",
+       "oracle_text": "Trample\nMark of Chaos Ascendant — During your turn, spells you cast from your hand with mana value X or less have cascade, where X is the total amount of life your opponents have lost this turn.",
+       "power": "5",
+       "roles": [],
+       "toughness": "5",
+       "type_line": "Legendary Creature — Astartes Warrior"
+      },
+      "finish": "etched",
+      "name": "Abaddon the Despoiler",
+      "number": "319",
+      "qty": 1,
+      "set": "40k"
+     }
+    ],
+    "Deck": [
+     {
+      "card": {
+       "cmc": 1.0,
+       "color_identity": [],
+       "colors": [],
+       "defense": null,
+       "img": "/img/ecc/57/normal",
+       "img_small": "/img/ecc/57/small",
+       "loyalty": null,
+       "mana_cost": "{1}",
+       "name": "Sol Ring",
+       "oracle_text": "{T}: Add {C}{C}.",
+       "power": null,
+       "roles": [
+        "ramp"
+       ],
+       "toughness": null,
+       "type_line": "Artifact"
+      },
+      "finish": "nonfoil",
+      "name": "Sol Ring",
+      "number": "57",
+      "qty": 1,
+      "set": "ecc"
+     },
+     {
+      "card": null,
+      "finish": "nonfoil",
+      "name": "Swamp",
+      "number": null,
+      "qty": 10,
+      "set": "fdc"
+     }
+    ]
+   },
+   "stats": {
+    "cards": 12,
+    "colors": [
+     "B",
+     "G"
+    ],
+    "kind": "commander",
+    "sections": [
+     "Commander",
+     "Deck"
+    ]
+   },
+   "summary": {
+    "built_version": null,
+    "card_count": 12,
+    "format": "Product deck",
+    "holder_sha256": "f53b038e6b5ec3cfac16ee699f897cce85b74626ca34f89fd6303adbf96729b7",
+    "id": "product/fdc-test-precon",
+    "kind": "commander",
+    "kit": {
+     "deck_box": null,
+     "holder": "product/fdc-test-precon",
+     "info": [],
+     "need": 12,
+     "owner": "shared",
+     "short": 0,
+     "sleeves": null,
+     "spare": 0,
+     "title": "fdc-test-precon",
+     "warnings": []
+    },
+    "player": null,
+    "read_only": true,
+    "sideboard_count": 0,
+    "source": "magic/products/fdc-test-precon.csv",
+    "space": "home",
+    "status": null,
+    "title": "Fdc Test Precon",
+    "versions": [
+     "target"
+    ]
+   },
+   "table": null,
+   "tokens": {
+    "copies": [],
+    "counts": {
+     "check": 0,
+     "differs": 0,
+     "incoming": 0,
+     "kinds": 0,
+     "none": 0,
+     "ready": 0
+    },
+    "needs": [],
+    "note": "Worked out from Scryfall's links between cards and tokens, so it's approximate. Tokens a card makes only through its rules text, and most token copies of other cards, aren't listed. Some listed tokens appear only in certain modes or for your opponent. Deck Lab can't tell how many a game needs.",
+    "unlisted": []
+   },
+   "uncommitted": null,
+   "version": "target",
+   "versions": [
+    "target"
+   ],
+   "warnings": [
+    "'Swamp' (Deck) isn't a Scryfall card name, so there's no card data for it"
+   ]
+  },
+  "product/fdn-beginner-box/cats@target": {
+   "guide": null,
+   "info": [],
+   "owned": {
+    "conflicts": [
+     {
+      "available": 4,
+      "decks": [
+       [
+        "Elves (Foundations Beginner Box)",
+        1
+       ]
+      ],
+      "missing": 0,
+      "name": "Llanowar Elves",
+      "need": 1,
+      "owned": 5,
+      "short": 0
+     }
+    ],
+    "deck_id": "product/fdn-beginner-box/cats",
+    "price_date": "2026-09-28",
+    "price_error": null,
+    "rate": 1.5,
+    "rate_date": "2000-01-01",
+    "rows": [
+     {
+      "aud_each": 0.41,
+      "aud_missing": 0.41,
+      "available": 0,
+      "in_use_elsewhere": [],
+      "labels": {
+       "in_use": [],
+       "on_the_way": []
+      },
+      "missing": 1,
+      "name": "Pick Your Poison",
+      "need": 1,
+      "on_the_way": 0,
+      "on_the_way_from": [],
+      "owned": 0,
+      "priced_finish": "nonfoil",
+      "priced_printing": "MKM 170"
+     },
+     {
+      "aud_each": 0.3,
+      "aud_missing": 0.0,
+      "available": 4,
+      "in_use_elsewhere": [
+       [
+        "Elves (Foundations Beginner Box)",
+        1
+       ]
+      ],
+      "labels": {
+       "in_use": [],
+       "on_the_way": []
+      },
+      "missing": 0,
+      "name": "Llanowar Elves",
+      "need": 1,
+      "on_the_way": 0,
+      "on_the_way_from": [],
+      "owned": 5,
+      "priced_finish": "nonfoil",
+      "priced_printing": "M19 314"
+     }
+    ],
+    "totals": {
+     "aud_missing": 0.41,
+     "cards": 2,
+     "missing": 1,
+     "need": 2,
+     "unpriced": []
+    },
+    "unresolved": [],
+    "version": "target",
+    "warnings": [
+     "magic/decks/casual/broken.md can't be read: no fenced decklist block under a '## Decklist' heading, so its Planned list can't be read"
+    ]
+   },
+   "sections": {
+    "Deck": [
+     {
+      "card": {
+       "cmc": 1.0,
+       "color_identity": [
+        "G"
+       ],
+       "colors": [
+        "G"
+       ],
+       "defense": null,
+       "img": "/img/fdn/227/normal",
+       "img_small": "/img/fdn/227/small",
+       "loyalty": null,
+       "mana_cost": "{G}",
+       "name": "Llanowar Elves",
+       "oracle_text": "{T}: Add {G}.",
+       "power": "1",
+       "roles": [
+        "ramp"
+       ],
+       "toughness": "1",
+       "type_line": "Creature — Elf Druid"
+      },
+      "finish": "nonfoil",
+      "name": "Llanowar Elves",
+      "number": "227",
+      "qty": 1,
+      "set": "fdn"
+     },
+     {
+      "card": {
+       "cmc": 1.0,
+       "color_identity": [
+        "G"
+       ],
+       "colors": [
+        "G"
+       ],
+       "defense": null,
+       "img": "/img/mkm/170/normal",
+       "img_small": "/img/mkm/170/small",
+       "loyalty": null,
+       "mana_cost": "{G}",
+       "name": "Pick Your Poison",
+       "oracle_text": "Choose one —\n• Each opponent sacrifices an artifact of their choice.\n• Each opponent sacrifices an enchantment of their choice.\n• Each opponent sacrifices a creature with flying of their choice.",
+       "power": null,
+       "roles": [
+        "removal"
+       ],
+       "toughness": null,
+       "type_line": "Sorcery"
+      },
+      "finish": "nonfoil",
+      "name": "Pick Your Poison",
+      "number": "170",
+      "qty": 1,
+      "set": "mkm"
+     }
+    ]
+   },
+   "stats": {
+    "cards": 2,
+    "colors": [
+     "B",
+     "G"
+    ],
+    "kind": "constructed",
+    "sections": [
+     "Deck"
+    ]
+   },
+   "summary": {
+    "built_version": null,
+    "card_count": 2,
+    "format": "Beginner Box half (20 cards)",
+    "holder_sha256": "f53b038e6b5ec3cfac16ee699f897cce85b74626ca34f89fd6303adbf96729b7",
+    "id": "product/fdn-beginner-box/cats",
+    "kind": "casual",
+    "kit": {
+     "deck_box": null,
+     "holder": "product/fdn-beginner-box",
+     "info": [],
+     "need": 12,
+     "owner": "shared",
+     "short": 0,
+     "sleeves": null,
+     "spare": 0,
+     "title": "Foundations Beginner Box",
+     "warnings": [
+      "Foundations Beginner Box is kept intact: choose its sleeves (it needs 12)."
+     ]
+    },
+    "player": null,
+    "read_only": true,
+    "sideboard_count": 0,
+    "source": "magic/products/fdn-beginner-box.csv",
+    "space": "home",
+    "status": null,
+    "title": "Cats (Foundations Beginner Box)",
+    "versions": [
+     "target"
+    ]
+   },
+   "table": null,
+   "tokens": {
+    "copies": [],
+    "counts": {
+     "check": 0,
+     "differs": 0,
+     "incoming": 0,
+     "kinds": 0,
+     "none": 0,
+     "ready": 0
+    },
+    "needs": [],
+    "note": "Worked out from Scryfall's links between cards and tokens, so it's approximate. Tokens a card makes only through its rules text, and most token copies of other cards, aren't listed. Some listed tokens appear only in certain modes or for your opponent. Deck Lab can't tell how many a game needs.",
+    "unlisted": []
+   },
+   "uncommitted": null,
+   "version": "target",
+   "versions": [
+    "target"
+   ],
+   "warnings": [
+    "Foundations Beginner Box is kept intact: choose its sleeves (it needs 12)."
+   ]
+  },
+  "product/fdn-beginner-box/elves@target": {
+   "guide": null,
+   "info": [],
+   "owned": {
+    "conflicts": [
+     {
+      "available": 4,
+      "decks": [
+       [
+        "Cats (Foundations Beginner Box)",
+        1
+       ]
+      ],
+      "missing": 0,
+      "name": "Llanowar Elves",
+      "need": 1,
+      "owned": 5,
+      "short": 0
+     }
+    ],
+    "deck_id": "product/fdn-beginner-box/elves",
+    "price_date": "2026-09-28",
+    "price_error": null,
+    "rate": 1.5,
+    "rate_date": "2000-01-01",
+    "rows": [
+     {
+      "aud_each": 2.03,
+      "aud_missing": 0.0,
+      "available": 1,
+      "in_use_elsewhere": [],
+      "labels": {
+       "in_use": [],
+       "on_the_way": []
+      },
+      "missing": 0,
+      "name": "Elvish Mystic",
+      "need": 1,
+      "on_the_way": 0,
+      "on_the_way_from": [],
+      "owned": 1,
+      "priced_finish": "nonfoil",
+      "priced_printing": "CMM 648"
+     },
+     {
+      "aud_each": 0.3,
+      "aud_missing": 0.0,
+      "available": 4,
+      "in_use_elsewhere": [
+       [
+        "Cats (Foundations Beginner Box)",
+        1
+       ]
+      ],
+      "labels": {
+       "in_use": [],
+       "on_the_way": []
+      },
+      "missing": 0,
+      "name": "Llanowar Elves",
+      "need": 1,
+      "on_the_way": 0,
+      "on_the_way_from": [],
+      "owned": 5,
+      "priced_finish": "nonfoil",
+      "priced_printing": "M19 314"
+     }
+    ],
+    "totals": {
+     "aud_missing": 0,
+     "cards": 2,
+     "missing": 0,
+     "need": 2,
+     "unpriced": []
+    },
+    "unresolved": [],
+    "version": "target",
+    "warnings": [
+     "magic/decks/casual/broken.md can't be read: no fenced decklist block under a '## Decklist' heading, so its Planned list can't be read"
+    ]
+   },
+   "sections": {
+    "Deck": [
+     {
+      "card": {
+       "cmc": 1.0,
+       "color_identity": [
+        "G"
+       ],
+       "colors": [
+        "G"
+       ],
+       "defense": null,
+       "img": "/img/fdn/227/normal",
+       "img_small": "/img/fdn/227/small",
+       "loyalty": null,
+       "mana_cost": "{G}",
+       "name": "Llanowar Elves",
+       "oracle_text": "{T}: Add {G}.",
+       "power": "1",
+       "roles": [
+        "ramp"
+       ],
+       "toughness": "1",
+       "type_line": "Creature — Elf Druid"
+      },
+      "finish": "nonfoil",
+      "name": "Llanowar Elves",
+      "number": "227",
+      "qty": 1,
+      "set": "fdn"
+     },
+     {
+      "card": {
+       "cmc": 1.0,
+       "color_identity": [
+        "G"
+       ],
+       "colors": [
+        "G"
+       ],
+       "defense": null,
+       "img": "/img/cmm/648/normal",
+       "img_small": "/img/cmm/648/small",
+       "loyalty": null,
+       "mana_cost": "{G}",
+       "name": "Elvish Mystic",
+       "oracle_text": "{T}: Add {G}.",
+       "power": "1",
+       "roles": [
+        "ramp"
+       ],
+       "toughness": "1",
+       "type_line": "Creature — Elf Druid"
+      },
+      "finish": "nonfoil",
+      "name": "Elvish Mystic",
+      "number": "648",
+      "qty": 1,
+      "set": "cmm"
+     },
+     {
+      "card": null,
+      "finish": "nonfoil",
+      "name": "Forest",
+      "number": null,
+      "qty": 7,
+      "set": "fdn"
+     }
+    ]
+   },
+   "stats": {
+    "cards": 9,
+    "colors": [
+     "B",
+     "G"
+    ],
+    "kind": "constructed",
+    "sections": [
+     "Deck"
+    ]
+   },
+   "summary": {
+    "built_version": null,
+    "card_count": 9,
+    "format": "Beginner Box half (20 cards)",
+    "holder_sha256": "f53b038e6b5ec3cfac16ee699f897cce85b74626ca34f89fd6303adbf96729b7",
+    "id": "product/fdn-beginner-box/elves",
+    "kind": "casual",
+    "kit": {
+     "deck_box": null,
+     "holder": "product/fdn-beginner-box",
+     "info": [],
+     "need": 12,
+     "owner": "shared",
+     "short": 0,
+     "sleeves": null,
+     "spare": 0,
+     "title": "Foundations Beginner Box",
+     "warnings": [
+      "Foundations Beginner Box is kept intact: choose its sleeves (it needs 12)."
+     ]
+    },
+    "player": null,
+    "read_only": true,
+    "sideboard_count": 0,
+    "source": "magic/products/fdn-beginner-box.csv",
+    "space": "home",
+    "status": null,
+    "title": "Elves (Foundations Beginner Box)",
+    "versions": [
+     "target"
+    ]
+   },
+   "table": null,
+   "tokens": {
+    "copies": [],
+    "counts": {
+     "check": 0,
+     "differs": 0,
+     "incoming": 0,
+     "kinds": 0,
+     "none": 0,
+     "ready": 0
+    },
+    "needs": [],
+    "note": "Worked out from Scryfall's links between cards and tokens, so it's approximate. Tokens a card makes only through its rules text, and most token copies of other cards, aren't listed. Some listed tokens appear only in certain modes or for your opponent. Deck Lab can't tell how many a game needs.",
+    "unlisted": []
+   },
+   "uncommitted": null,
+   "version": "target",
+   "versions": [
+    "target"
+   ],
+   "warnings": [
+    "'Forest' (Deck) isn't a Scryfall card name, so there's no card data for it",
+    "Foundations Beginner Box is kept intact: choose its sleeves (it needs 12)."
+   ]
+  },
+  "product/fdn-beginner-box/goblins@target": {
+   "guide": null,
+   "info": [],
+   "owned": {
+    "conflicts": [],
+    "deck_id": "product/fdn-beginner-box/goblins",
+    "price_date": "2026-09-28",
+    "price_error": null,
+    "rate": 1.5,
+    "rate_date": "2000-01-01",
+    "rows": [
+     {
+      "aud_each": 0.17,
+      "aud_missing": 0.17,
+      "available": 0,
+      "in_use_elsewhere": [],
+      "labels": {
+       "in_use": [],
+       "on_the_way": []
+      },
+      "missing": 1,
+      "name": "Aerie Mystics",
+      "need": 1,
+      "on_the_way": 0,
+      "on_the_way_from": [],
+      "owned": 0,
+      "priced_finish": "nonfoil",
+      "priced_printing": "CON 1"
+     }
+    ],
+    "totals": {
+     "aud_missing": 0.17,
+     "cards": 1,
+     "missing": 1,
+     "need": 1,
+     "unpriced": []
+    },
+    "unresolved": [],
+    "version": "target",
+    "warnings": [
+     "magic/decks/casual/broken.md can't be read: no fenced decklist block under a '## Decklist' heading, so its Planned list can't be read"
+    ]
+   },
+   "sections": {
+    "Deck": [
+     {
+      "card": {
+       "cmc": 5.0,
+       "color_identity": [
+        "G",
+        "U",
+        "W"
+       ],
+       "colors": [
+        "W"
+       ],
+       "defense": null,
+       "img": "/img/con/1/normal",
+       "img_small": "/img/con/1/small",
+       "loyalty": null,
+       "mana_cost": "{4}{W}",
+       "name": "Aerie Mystics",
+       "oracle_text": "Flying\n{1}{G}{U}: Creatures you control gain shroud until end of turn. (They can't be the targets of spells or abilities.)",
+       "power": "3",
+       "roles": [],
+       "toughness": "3",
+       "type_line": "Creature — Bird Wizard"
+      },
+      "finish": "nonfoil",
+      "name": "Aerie Mystics",
+      "number": "1",
+      "qty": 1,
+      "set": "con"
+     }
+    ]
+   },
+   "stats": {
+    "cards": 1,
+    "colors": [
+     "B",
+     "G"
+    ],
+    "kind": "constructed",
+    "sections": [
+     "Deck"
+    ]
+   },
+   "summary": {
+    "built_version": null,
+    "card_count": 1,
+    "format": "Beginner Box half (20 cards)",
+    "holder_sha256": "f53b038e6b5ec3cfac16ee699f897cce85b74626ca34f89fd6303adbf96729b7",
+    "id": "product/fdn-beginner-box/goblins",
+    "kind": "casual",
+    "kit": {
+     "deck_box": null,
+     "holder": "product/fdn-beginner-box",
+     "info": [],
+     "need": 12,
+     "owner": "shared",
+     "short": 0,
+     "sleeves": null,
+     "spare": 0,
+     "title": "Foundations Beginner Box",
+     "warnings": [
+      "Foundations Beginner Box is kept intact: choose its sleeves (it needs 12)."
+     ]
+    },
+    "player": null,
+    "read_only": true,
+    "sideboard_count": 0,
+    "source": "magic/products/fdn-beginner-box.csv",
+    "space": "home",
+    "status": null,
+    "title": "Goblins (Foundations Beginner Box)",
+    "versions": [
+     "target"
+    ]
+   },
+   "table": null,
+   "tokens": {
+    "copies": [],
+    "counts": {
+     "check": 0,
+     "differs": 0,
+     "incoming": 0,
+     "kinds": 0,
+     "none": 0,
+     "ready": 0
+    },
+    "needs": [],
+    "note": "Worked out from Scryfall's links between cards and tokens, so it's approximate. Tokens a card makes only through its rules text, and most token copies of other cards, aren't listed. Some listed tokens appear only in certain modes or for your opponent. Deck Lab can't tell how many a game needs.",
+    "unlisted": []
+   },
+   "uncommitted": null,
+   "version": "target",
+   "versions": [
+    "target"
+   ],
+   "warnings": [
+    "Foundations Beginner Box is kept intact: choose its sleeves (it needs 12)."
+   ]
+  }
+ },
+ "decks_index": {
+  "decks": [
+   {
+    "availability_confirmed": {},
+    "built_version": null,
+    "built_version_text": null,
+    "card_count": 0,
+    "deck_box": null,
+    "error": "no fenced decklist block under a '## Decklist' heading, so its Planned list can't be read",
+    "format": null,
+    "id": "casual/broken",
+    "kind": "casual",
+    "kit": {
+     "deck_box": null,
+     "short": 0,
+     "sleeves": null
+    },
+    "missing": {},
+    "on_the_way": {},
+    "player": null,
+    "read_only": false,
+    "sideboard_count": 0,
+    "sleeves": null,
+    "source": "magic/decks/casual/broken.md",
+    "space": "home",
+    "status": "idea",
+    "title": "Broken",
+    "tokens": null,
+    "versions": []
+   },
+   {
+    "availability_confirmed": {
+     "owned": false,
+     "target": false
+    },
+    "built_version": null,
+    "built_version_text": null,
+    "card_count": 23,
+    "deck_box": null,
+    "format": "Casual 60-card, 1v1",
+    "id": "casual/gruul-test",
+    "kind": "casual",
+    "kit": {
+     "deck_box": null,
+     "short": 0,
+     "sleeves": null
+    },
+    "missing": {
+     "owned": 1,
+     "target": 11
+    },
+    "on_the_way": {
+     "owned": 0,
+     "target": 1
+    },
+    "player": "either",
+    "read_only": false,
+    "sideboard_count": 2,
+    "sleeves": null,
+    "source": "magic/decks/casual/gruul-test.md",
+    "space": "home",
+    "status": "building",
+    "title": "Gruul Test",
+    "tokens": {
+     "differs": [],
+     "incoming": [],
+     "kinds": 0,
+     "none": [],
+     "reminders": []
+    },
+    "versions": [
+     "target",
+     "owned"
+    ]
+   },
+   {
+    "availability_confirmed": {
+     "target": false
+    },
+    "built_version": null,
+    "built_version_text": null,
+    "card_count": 3,
+    "deck_box": null,
+    "format": "Commander",
+    "id": "commander/elf-commander",
+    "kind": "commander",
+    "kit": {
+     "deck_box": null,
+     "short": 0,
+     "sleeves": null
+    },
+    "missing": {
+     "target": 1
+    },
+    "on_the_way": {
+     "target": 1
+    },
+    "player": "wife",
+    "read_only": false,
+    "sideboard_count": 0,
+    "sleeves": null,
+    "source": "magic/decks/commander/elf-commander.md",
+    "space": "home",
+    "status": "idea",
+    "target_bracket": 2,
+    "title": "Elf Commander",
+    "tokens": null,
+    "versions": [
+     "target"
+    ]
+   },
+   {
+    "availability_confirmed": {
+     "target": false
+    },
+    "built_version": null,
+    "card_count": 12,
+    "format": "Product deck",
+    "id": "product/fdc-test-precon",
+    "kind": "commander",
+    "kit": {
+     "deck_box": null,
+     "short": 0,
+     "sleeves": null
+    },
+    "missing": {
+     "target": 0
+    },
+    "on_the_way": {
+     "target": 2
+    },
+    "player": null,
+    "read_only": true,
+    "sideboard_count": 0,
+    "source": "magic/products/fdc-test-precon.csv",
+    "space": "home",
+    "status": null,
+    "title": "Fdc Test Precon",
+    "tokens": {
+     "differs": [],
+     "incoming": [],
+     "kinds": 0,
+     "none": [],
+     "reminders": []
+    },
+    "versions": [
+     "target"
+    ]
+   },
+   {
+    "availability_confirmed": {
+     "target": false
+    },
+    "built_version": null,
+    "card_count": 9,
+    "format": "Beginner Box half (20 cards)",
+    "id": "product/fdn-beginner-box/elves",
+    "kind": "casual",
+    "kit": {
+     "deck_box": null,
+     "short": 0,
+     "sleeves": null
+    },
+    "missing": {
+     "target": 0
+    },
+    "on_the_way": {
+     "target": 0
+    },
+    "player": null,
+    "read_only": true,
+    "sideboard_count": 0,
+    "source": "magic/products/fdn-beginner-box.csv",
+    "space": "home",
+    "status": null,
+    "title": "Elves (Foundations Beginner Box)",
+    "tokens": {
+     "differs": [],
+     "incoming": [],
+     "kinds": 0,
+     "none": [],
+     "reminders": []
+    },
+    "versions": [
+     "target"
+    ]
+   },
+   {
+    "availability_confirmed": {
+     "target": false
+    },
+    "built_version": null,
+    "card_count": 2,
+    "format": "Beginner Box half (20 cards)",
+    "id": "product/fdn-beginner-box/cats",
+    "kind": "casual",
+    "kit": {
+     "deck_box": null,
+     "short": 0,
+     "sleeves": null
+    },
+    "missing": {
+     "target": 1
+    },
+    "on_the_way": {
+     "target": 0
+    },
+    "player": null,
+    "read_only": true,
+    "sideboard_count": 0,
+    "source": "magic/products/fdn-beginner-box.csv",
+    "space": "home",
+    "status": null,
+    "title": "Cats (Foundations Beginner Box)",
+    "tokens": {
+     "differs": [],
+     "incoming": [],
+     "kinds": 0,
+     "none": [],
+     "reminders": []
+    },
+    "versions": [
+     "target"
+    ]
+   },
+   {
+    "availability_confirmed": {
+     "target": false
+    },
+    "built_version": null,
+    "card_count": 1,
+    "format": "Beginner Box half (20 cards)",
+    "id": "product/fdn-beginner-box/goblins",
+    "kind": "casual",
+    "kit": {
+     "deck_box": null,
+     "short": 0,
+     "sleeves": null
+    },
+    "missing": {
+     "target": 1
+    },
+    "on_the_way": {
+     "target": 0
+    },
+    "player": null,
+    "read_only": true,
+    "sideboard_count": 0,
+    "source": "magic/products/fdn-beginner-box.csv",
+    "space": "home",
+    "status": null,
+    "title": "Goblins (Foundations Beginner Box)",
+    "tokens": {
+     "differs": [],
+     "incoming": [],
+     "kinds": 0,
+     "none": [],
+     "reminders": []
+    },
+    "versions": [
+     "target"
+    ]
+   }
+  ],
+  "halves": [
+   {
+    "id": "product/fdn-beginner-box/elves",
+    "title": "Elves"
+   },
+   {
+    "id": "product/fdn-beginner-box/cats",
+    "title": "Cats"
+   },
+   {
+    "id": "product/fdn-beginner-box/goblins",
+    "title": "Goblins"
+   }
+  ],
+  "warnings": [
+   "magic/decks/casual/broken.md can't be read: no fenced decklist block under a '## Decklist' heading, so its Planned list can't be read"
+  ]
+ },
+ "field": {
+  "Commander": {
+   "lists": [
+    {
+     "card_count": 3,
+     "card_sha": "be60e12d8938d6673bf1217626f3027825763c0ec9a166ed242db9e5dd0e962c",
+     "cards": {
+      "Commander": [
+       [
+        1,
+        "Ghalta, Primal Hunger"
+       ]
+      ],
+      "Main": [
+       [
+        1,
+        "Llanowar Elves"
+       ],
+       [
+        1,
+        "Sol Ring"
+       ]
+      ]
+     },
+     "dck": "[metadata]\nName=be60e12d8938\n[Commander]\n1 Ghalta, Primal Hunger\n[Main]\n1 Llanowar Elves\n1 Sol Ring\n",
+     "id": "commander/elf-commander",
+     "kind": "commander",
+     "pilot": {
+      "profile": "Default",
+      "switches": []
+     },
+     "source": null,
+     "title": "Elf Commander",
+     "version": "target"
+    }
+   ],
+   "notes": []
+  },
+  "Constructed": {
+   "lists": [
+    {
+     "card_count": 23,
+     "card_sha": "09076440b4eaa716a2cf50667cba4c887a55bba7be45b1a3719fa044393a3049",
+     "cards": {
+      "Commander": [],
+      "Main": [
+       [
+        4,
+        "Llanowar Elves"
+       ],
+       [
+        2,
+        "Elvish Mystic"
+       ],
+       [
+        1,
+        "Llanowar Elves"
+       ],
+       [
+        1,
+        "Llanowar Elves"
+       ],
+       [
+        1,
+        "Black Lotus"
+       ],
+       [
+        1,
+        "Very Cryptic Command"
+       ],
+       [
+        1,
+        "Murderous Rider"
+       ],
+       [
+        1,
+        "Opt"
+       ],
+       [
+        1,
+        "Fire // Ice"
+       ],
+       [
+        1,
+        "Sol Ring"
+       ],
+       [
+        9,
+        "Forest"
+       ]
+      ]
+     },
+     "dck": "[metadata]\nName=09076440b4ea\n[Main]\n1 Black Lotus\n2 Elvish Mystic\n1 Fire\n9 Forest\n6 Llanowar Elves\n1 Murderous Rider\n1 Opt\n1 Sol Ring\n1 Very Cryptic Command\n",
+     "id": "casual/gruul-test",
+     "kind": "constructed",
+     "pilot": {
+      "profile": "Default",
+      "switches": []
+     },
+     "source": null,
+     "title": "Gruul Test",
+     "version": "target"
+    }
+   ],
+   "notes": [
+    "Broken isn't in the field: its file can't be read (no fenced decklist block under a '## Decklist' heading, so its Planned list can't be read)."
+   ]
+  }
+ },
+ "list_decks": [
+  {
+   "built_version": null,
+   "built_version_text": null,
+   "card_count": 0,
+   "deck_box": null,
+   "error": "no fenced decklist block under a '## Decklist' heading, so its Planned list can't be read",
+   "format": null,
+   "id": "casual/broken",
+   "kind": "casual",
+   "player": null,
+   "read_only": false,
+   "sideboard_count": 0,
+   "sleeves": null,
+   "source": "magic/decks/casual/broken.md",
+   "space": "home",
+   "status": "idea",
+   "title": "Broken",
+   "versions": []
+  },
+  {
+   "built_version": null,
+   "built_version_text": null,
+   "card_count": 23,
+   "deck_box": null,
+   "format": "Casual 60-card, 1v1",
+   "id": "casual/gruul-test",
+   "kind": "casual",
+   "player": "either",
+   "read_only": false,
+   "sideboard_count": 2,
+   "sleeves": null,
+   "source": "magic/decks/casual/gruul-test.md",
+   "space": "home",
+   "status": "building",
+   "title": "Gruul Test",
+   "versions": [
+    "target",
+    "owned"
+   ]
+  },
+  {
+   "built_version": null,
+   "built_version_text": null,
+   "card_count": 3,
+   "deck_box": null,
+   "format": "Commander",
+   "id": "commander/elf-commander",
+   "kind": "commander",
+   "player": "wife",
+   "read_only": false,
+   "sideboard_count": 0,
+   "sleeves": null,
+   "source": "magic/decks/commander/elf-commander.md",
+   "space": "home",
+   "status": "idea",
+   "target_bracket": 2,
+   "title": "Elf Commander",
+   "versions": [
+    "target"
+   ]
+  },
+  {
+   "built_version": null,
+   "card_count": 12,
+   "format": "Product deck",
+   "id": "product/fdc-test-precon",
+   "kind": "commander",
+   "player": null,
+   "read_only": true,
+   "sideboard_count": 0,
+   "source": "magic/products/fdc-test-precon.csv",
+   "space": "home",
+   "status": null,
+   "title": "Fdc Test Precon",
+   "versions": [
+    "target"
+   ]
+  },
+  {
+   "built_version": null,
+   "card_count": 9,
+   "format": "Beginner Box half (20 cards)",
+   "id": "product/fdn-beginner-box/elves",
+   "kind": "casual",
+   "player": null,
+   "read_only": true,
+   "sideboard_count": 0,
+   "source": "magic/products/fdn-beginner-box.csv",
+   "space": "home",
+   "status": null,
+   "title": "Elves (Foundations Beginner Box)",
+   "versions": [
+    "target"
+   ]
+  },
+  {
+   "built_version": null,
+   "card_count": 2,
+   "format": "Beginner Box half (20 cards)",
+   "id": "product/fdn-beginner-box/cats",
+   "kind": "casual",
+   "player": null,
+   "read_only": true,
+   "sideboard_count": 0,
+   "source": "magic/products/fdn-beginner-box.csv",
+   "space": "home",
+   "status": null,
+   "title": "Cats (Foundations Beginner Box)",
+   "versions": [
+    "target"
+   ]
+  },
+  {
+   "built_version": null,
+   "card_count": 1,
+   "format": "Beginner Box half (20 cards)",
+   "id": "product/fdn-beginner-box/goblins",
+   "kind": "casual",
+   "player": null,
+   "read_only": true,
+   "sideboard_count": 0,
+   "source": "magic/products/fdn-beginner-box.csv",
+   "space": "home",
+   "status": null,
+   "title": "Goblins (Foundations Beginner Box)",
+   "versions": [
+    "target"
+   ]
+  }
+ ],
+ "load_deck": {
+  "pairing/cats+goblins": {
+   "Deck": [
+    {
+     "finish": "nonfoil",
+     "name": "Llanowar Elves",
+     "number": "227",
+     "quantity": 1,
+     "set": "fdn"
+    },
+    {
+     "finish": "nonfoil",
+     "name": "Pick Your Poison",
+     "number": "170",
+     "quantity": 1,
+     "set": "mkm"
+    },
+    {
+     "finish": "nonfoil",
+     "name": "Aerie Mystics",
+     "number": "1",
+     "quantity": 1,
+     "set": "con"
+    }
+   ]
+  },
+  "pairing/elves+cats": {
+   "Deck": [
+    {
+     "finish": "nonfoil",
+     "name": "Llanowar Elves",
+     "number": "227",
+     "quantity": 2,
+     "set": "fdn"
+    },
+    {
+     "finish": "nonfoil",
+     "name": "Elvish Mystic",
+     "number": "648",
+     "quantity": 1,
+     "set": "cmm"
+    },
+    {
+     "finish": "nonfoil",
+     "name": "Forest",
+     "number": null,
+     "quantity": 7,
+     "set": "fdn"
+    },
+    {
+     "finish": "nonfoil",
+     "name": "Pick Your Poison",
+     "number": "170",
+     "quantity": 1,
+     "set": "mkm"
+    }
+   ]
+  },
+  "pairing/elves+goblins": {
+   "Deck": [
+    {
+     "finish": "nonfoil",
+     "name": "Llanowar Elves",
+     "number": "227",
+     "quantity": 1,
+     "set": "fdn"
+    },
+    {
+     "finish": "nonfoil",
+     "name": "Elvish Mystic",
+     "number": "648",
+     "quantity": 1,
+     "set": "cmm"
+    },
+    {
+     "finish": "nonfoil",
+     "name": "Forest",
+     "number": null,
+     "quantity": 7,
+     "set": "fdn"
+    },
+    {
+     "finish": "nonfoil",
+     "name": "Aerie Mystics",
+     "number": "1",
+     "quantity": 1,
+     "set": "con"
+    }
+   ]
+  },
+  "product/fdc-test-precon": {
+   "Commander": [
+    {
+     "finish": "etched",
+     "name": "Abaddon the Despoiler",
+     "number": "319",
+     "quantity": 1,
+     "set": "40k"
+    }
+   ],
+   "Deck": [
+    {
+     "finish": "nonfoil",
+     "name": "Sol Ring",
+     "number": "57",
+     "quantity": 1,
+     "set": "ecc"
+    },
+    {
+     "finish": "nonfoil",
+     "name": "Swamp",
+     "number": null,
+     "quantity": 10,
+     "set": "fdc"
+    }
+   ]
+  },
+  "product/fdn-beginner-box/cats": {
+   "Deck": [
+    {
+     "finish": "nonfoil",
+     "name": "Llanowar Elves",
+     "number": "227",
+     "quantity": 1,
+     "set": "fdn"
+    },
+    {
+     "finish": "nonfoil",
+     "name": "Pick Your Poison",
+     "number": "170",
+     "quantity": 1,
+     "set": "mkm"
+    }
+   ]
+  },
+  "product/fdn-beginner-box/elves": {
+   "Deck": [
+    {
+     "finish": "nonfoil",
+     "name": "Llanowar Elves",
+     "number": "227",
+     "quantity": 1,
+     "set": "fdn"
+    },
+    {
+     "finish": "nonfoil",
+     "name": "Elvish Mystic",
+     "number": "648",
+     "quantity": 1,
+     "set": "cmm"
+    },
+    {
+     "finish": "nonfoil",
+     "name": "Forest",
+     "number": null,
+     "quantity": 7,
+     "set": "fdn"
+    }
+   ]
+  },
+  "product/fdn-beginner-box/goblins": {
+   "Deck": [
+    {
+     "finish": "nonfoil",
+     "name": "Aerie Mystics",
+     "number": "1",
+     "quantity": 1,
+     "set": "con"
+    }
+   ]
+  }
+ },
+ "owned_vs_needed": {
+  "casual/broken@target": {
+   "__error__": "DeckFileError: casual/broken: no fenced decklist block under a '## Decklist' heading, so its Planned list can't be read"
+  },
+  "casual/gruul-test@owned": {
+   "conflicts": [
+    {
+     "available": 3,
+     "decks": [
+      [
+       "Elves (Foundations Beginner Box)",
+       1
+      ],
+      [
+       "Cats (Foundations Beginner Box)",
+       1
+      ]
+     ],
+     "missing": 1,
+     "name": "Llanowar Elves",
+     "need": 4,
+     "owned": 5,
+     "short": 1
+    }
+   ],
+   "deck_id": "casual/gruul-test",
+   "price_date": null,
+   "price_error": null,
+   "rate": null,
+   "rate_date": null,
+   "rows": [
+    {
+     "aud_each": null,
+     "aud_missing": null,
+     "available": 3,
+     "in_use_elsewhere": [
+      [
+       "Elves (Foundations Beginner Box)",
+       1
+      ],
+      [
+       "Cats (Foundations Beginner Box)",
+       1
+      ]
+     ],
+     "missing": 1,
+     "name": "Llanowar Elves",
+     "need": 4,
+     "on_the_way": 0,
+     "on_the_way_from": [],
+     "owned": 5,
+     "priced_finish": null,
+     "priced_printing": null
+    }
+   ],
+   "totals": {
+    "aud_missing": null,
+    "cards": 1,
+    "missing": 1,
+    "need": 4,
+    "unpriced": []
+   },
+   "unresolved": [],
+   "version": "owned",
+   "warnings": [
+    "magic/decks/casual/broken.md can't be read: no fenced decklist block under a '## Decklist' heading, so its Planned list can't be read"
+   ]
+  },
+  "casual/gruul-test@target": {
+   "conflicts": [
+    {
+     "available": 0,
+     "decks": [
+      [
+       "Elves (Foundations Beginner Box)",
+       1
+      ]
+     ],
+     "missing": 2,
+     "name": "Elvish Mystic",
+     "need": 2,
+     "owned": 1,
+     "short": 1
+    },
+    {
+     "available": 3,
+     "decks": [
+      [
+       "Elves (Foundations Beginner Box)",
+       1
+      ],
+      [
+       "Cats (Foundations Beginner Box)",
+       1
+      ]
+     ],
+     "missing": 3,
+     "name": "Llanowar Elves",
+     "need": 6,
+     "owned": 5,
+     "short": 2
+    },
+    {
+     "available": 0,
+     "decks": [
+      [
+       "Cats (Foundations Beginner Box)",
+       1
+      ]
+     ],
+     "missing": 2,
+     "name": "Pick Your Poison",
+     "need": 2,
+     "owned": 0,
+     "short": 0
+    }
+   ],
+   "deck_id": "casual/gruul-test",
+   "price_date": null,
+   "price_error": null,
+   "rate": null,
+   "rate_date": null,
+   "rows": [
+    {
+     "aud_each": null,
+     "aud_missing": null,
+     "available": 0,
+     "in_use_elsewhere": [
+      [
+       "Elves (Foundations Beginner Box)",
+       1
+      ]
+     ],
+     "missing": 2,
+     "name": "Elvish Mystic",
+     "need": 2,
+     "on_the_way": 0,
+     "on_the_way_from": [],
+     "owned": 1,
+     "priced_finish": null,
+     "priced_printing": null
+    },
+    {
+     "aud_each": null,
+     "aud_missing": null,
+     "available": 0,
+     "in_use_elsewhere": [],
+     "missing": 1,
+     "name": "Fire // Ice",
+     "need": 1,
+     "on_the_way": 0,
+     "on_the_way_from": [],
+     "owned": 0,
+     "priced_finish": null,
+     "priced_printing": null
+    },
+    {
+     "aud_each": null,
+     "aud_missing": null,
+     "available": 3,
+     "in_use_elsewhere": [
+      [
+       "Elves (Foundations Beginner Box)",
+       1
+      ],
+      [
+       "Cats (Foundations Beginner Box)",
+       1
+      ]
+     ],
+     "missing": 3,
+     "name": "Llanowar Elves",
+     "need": 6,
+     "on_the_way": 0,
+     "on_the_way_from": [],
+     "owned": 5,
+     "priced_finish": null,
+     "priced_printing": null
+    },
+    {
+     "aud_each": null,
+     "aud_missing": null,
+     "available": 0,
+     "in_use_elsewhere": [],
+     "missing": 1,
+     "name": "Murderous Rider // Swift End",
+     "need": 1,
+     "on_the_way": 0,
+     "on_the_way_from": [],
+     "owned": 0,
+     "priced_finish": null,
+     "priced_printing": null
+    },
+    {
+     "aud_each": null,
+     "aud_missing": null,
+     "available": 0,
+     "in_use_elsewhere": [],
+     "missing": 1,
+     "name": "Opt",
+     "need": 1,
+     "on_the_way": 0,
+     "on_the_way_from": [],
+     "owned": 0,
+     "priced_finish": null,
+     "priced_printing": null
+    },
+    {
+     "aud_each": null,
+     "aud_missing": null,
+     "available": 0,
+     "in_use_elsewhere": [
+      [
+       "Cats (Foundations Beginner Box)",
+       1
+      ]
+     ],
+     "missing": 2,
+     "name": "Pick Your Poison",
+     "need": 2,
+     "on_the_way": 0,
+     "on_the_way_from": [],
+     "owned": 0,
+     "priced_finish": null,
+     "priced_printing": null
+    },
+    {
+     "aud_each": null,
+     "aud_missing": null,
+     "available": 0,
+     "in_use_elsewhere": [],
+     "missing": 1,
+     "name": "Very Cryptic Command",
+     "need": 1,
+     "on_the_way": 0,
+     "on_the_way_from": [],
+     "owned": 0,
+     "priced_finish": null,
+     "priced_printing": null
+    },
+    {
+     "aud_each": null,
+     "aud_missing": null,
+     "available": 1,
+     "in_use_elsewhere": [],
+     "missing": 0,
+     "name": "Black Lotus",
+     "need": 1,
+     "on_the_way": 0,
+     "on_the_way_from": [],
+     "owned": 1,
+     "priced_finish": null,
+     "priced_printing": null
+    },
+    {
+     "aud_each": null,
+     "aud_missing": null,
+     "available": 1,
+     "in_use_elsewhere": [],
+     "missing": 0,
+     "name": "Sol Ring",
+     "need": 1,
+     "on_the_way": 1,
+     "on_the_way_from": [
+      [
+       "fdc-test-precon, preordered",
+       1
+      ]
+     ],
+     "owned": 1,
+     "priced_finish": null,
+     "priced_printing": null
+    }
+   ],
+   "totals": {
+    "aud_missing": null,
+    "cards": 9,
+    "missing": 11,
+    "need": 16,
+    "unpriced": []
+   },
+   "unresolved": [
+    [
+     "Opt",
+     "decklist"
+    ]
+   ],
+   "version": "target",
+   "warnings": [
+    "magic/decks/casual/broken.md can't be read: no fenced decklist block under a '## Decklist' heading, so its Planned list can't be read"
+   ]
+  },
+  "commander/elf-commander@target": {
+   "conflicts": [
+    {
+     "available": 3,
+     "decks": [
+      [
+       "Elves (Foundations Beginner Box)",
+       1
+      ],
+      [
+       "Cats (Foundations Beginner Box)",
+       1
+      ]
+     ],
+     "missing": 0,
+     "name": "Llanowar Elves",
+     "need": 1,
+     "owned": 5,
+     "short": 0
+    }
+   ],
+   "deck_id": "commander/elf-commander",
+   "price_date": null,
+   "price_error": null,
+   "rate": null,
+   "rate_date": null,
+   "rows": [
+    {
+     "aud_each": null,
+     "aud_missing": null,
+     "available": 0,
+     "in_use_elsewhere": [],
+     "missing": 1,
+     "name": "Ghalta, Primal Hunger",
+     "need": 1,
+     "on_the_way": 0,
+     "on_the_way_from": [],
+     "owned": 0,
+     "priced_finish": null,
+     "priced_printing": null
+    },
+    {
+     "aud_each": null,
+     "aud_missing": null,
+     "available": 3,
+     "in_use_elsewhere": [
+      [
+       "Elves (Foundations Beginner Box)",
+       1
+      ],
+      [
+       "Cats (Foundations Beginner Box)",
+       1
+      ]
+     ],
+     "missing": 0,
+     "name": "Llanowar Elves",
+     "need": 1,
+     "on_the_way": 0,
+     "on_the_way_from": [],
+     "owned": 5,
+     "priced_finish": null,
+     "priced_printing": null
+    },
+    {
+     "aud_each": null,
+     "aud_missing": null,
+     "available": 1,
+     "in_use_elsewhere": [],
+     "missing": 0,
+     "name": "Sol Ring",
+     "need": 1,
+     "on_the_way": 1,
+     "on_the_way_from": [
+      [
+       "fdc-test-precon, preordered",
+       1
+      ]
+     ],
+     "owned": 1,
+     "priced_finish": null,
+     "priced_printing": null
+    }
+   ],
+   "totals": {
+    "aud_missing": null,
+    "cards": 3,
+    "missing": 1,
+    "need": 3,
+    "unpriced": []
+   },
+   "unresolved": [],
+   "version": "target",
+   "warnings": [
+    "magic/decks/casual/broken.md can't be read: no fenced decklist block under a '## Decklist' heading, so its Planned list can't be read"
+   ]
+  },
+  "pairing/cats+goblins@target": {
+   "conflicts": [
+    {
+     "available": 4,
+     "decks": [
+      [
+       "Elves (Foundations Beginner Box)",
+       1
+      ]
+     ],
+     "missing": 0,
+     "name": "Llanowar Elves",
+     "need": 1,
+     "owned": 5,
+     "short": 0
+    }
+   ],
+   "deck_id": "pairing/cats+goblins",
+   "price_date": null,
+   "price_error": null,
+   "rate": null,
+   "rate_date": null,
+   "rows": [
+    {
+     "aud_each": null,
+     "aud_missing": null,
+     "available": 0,
+     "in_use_elsewhere": [],
+     "missing": 1,
+     "name": "Aerie Mystics",
+     "need": 1,
+     "on_the_way": 0,
+     "on_the_way_from": [],
+     "owned": 0,
+     "priced_finish": null,
+     "priced_printing": null
+    },
+    {
+     "aud_each": null,
+     "aud_missing": null,
+     "available": 0,
+     "in_use_elsewhere": [],
+     "missing": 1,
+     "name": "Pick Your Poison",
+     "need": 1,
+     "on_the_way": 0,
+     "on_the_way_from": [],
+     "owned": 0,
+     "priced_finish": null,
+     "priced_printing": null
+    },
+    {
+     "aud_each": null,
+     "aud_missing": null,
+     "available": 4,
+     "in_use_elsewhere": [
+      [
+       "Elves (Foundations Beginner Box)",
+       1
+      ]
+     ],
+     "missing": 0,
+     "name": "Llanowar Elves",
+     "need": 1,
+     "on_the_way": 0,
+     "on_the_way_from": [],
+     "owned": 5,
+     "priced_finish": null,
+     "priced_printing": null
+    }
+   ],
+   "totals": {
+    "aud_missing": null,
+    "cards": 3,
+    "missing": 2,
+    "need": 3,
+    "unpriced": []
+   },
+   "unresolved": [],
+   "version": "target",
+   "warnings": [
+    "magic/decks/casual/broken.md can't be read: no fenced decklist block under a '## Decklist' heading, so its Planned list can't be read"
+   ]
+  },
+  "pairing/elves+cats@target": {
+   "conflicts": [],
+   "deck_id": "pairing/elves+cats",
+   "price_date": null,
+   "price_error": null,
+   "rate": null,
+   "rate_date": null,
+   "rows": [
+    {
+     "aud_each": null,
+     "aud_missing": null,
+     "available": 0,
+     "in_use_elsewhere": [],
+     "missing": 1,
+     "name": "Pick Your Poison",
+     "need": 1,
+     "on_the_way": 0,
+     "on_the_way_from": [],
+     "owned": 0,
+     "priced_finish": null,
+     "priced_printing": null
+    },
+    {
+     "aud_each": null,
+     "aud_missing": null,
+     "available": 1,
+     "in_use_elsewhere": [],
+     "missing": 0,
+     "name": "Elvish Mystic",
+     "need": 1,
+     "on_the_way": 0,
+     "on_the_way_from": [],
+     "owned": 1,
+     "priced_finish": null,
+     "priced_printing": null
+    },
+    {
+     "aud_each": null,
+     "aud_missing": null,
+     "available": 5,
+     "in_use_elsewhere": [],
+     "missing": 0,
+     "name": "Llanowar Elves",
+     "need": 2,
+     "on_the_way": 0,
+     "on_the_way_from": [],
+     "owned": 5,
+     "priced_finish": null,
+     "priced_printing": null
+    }
+   ],
+   "totals": {
+    "aud_missing": null,
+    "cards": 3,
+    "missing": 1,
+    "need": 4,
+    "unpriced": []
+   },
+   "unresolved": [],
+   "version": "target",
+   "warnings": [
+    "magic/decks/casual/broken.md can't be read: no fenced decklist block under a '## Decklist' heading, so its Planned list can't be read"
+   ]
+  },
+  "pairing/elves+goblins@target": {
+   "conflicts": [
+    {
+     "available": 4,
+     "decks": [
+      [
+       "Cats (Foundations Beginner Box)",
+       1
+      ]
+     ],
+     "missing": 0,
+     "name": "Llanowar Elves",
+     "need": 1,
+     "owned": 5,
+     "short": 0
+    }
+   ],
+   "deck_id": "pairing/elves+goblins",
+   "price_date": null,
+   "price_error": null,
+   "rate": null,
+   "rate_date": null,
+   "rows": [
+    {
+     "aud_each": null,
+     "aud_missing": null,
+     "available": 0,
+     "in_use_elsewhere": [],
+     "missing": 1,
+     "name": "Aerie Mystics",
+     "need": 1,
+     "on_the_way": 0,
+     "on_the_way_from": [],
+     "owned": 0,
+     "priced_finish": null,
+     "priced_printing": null
+    },
+    {
+     "aud_each": null,
+     "aud_missing": null,
+     "available": 1,
+     "in_use_elsewhere": [],
+     "missing": 0,
+     "name": "Elvish Mystic",
+     "need": 1,
+     "on_the_way": 0,
+     "on_the_way_from": [],
+     "owned": 1,
+     "priced_finish": null,
+     "priced_printing": null
+    },
+    {
+     "aud_each": null,
+     "aud_missing": null,
+     "available": 4,
+     "in_use_elsewhere": [
+      [
+       "Cats (Foundations Beginner Box)",
+       1
+      ]
+     ],
+     "missing": 0,
+     "name": "Llanowar Elves",
+     "need": 1,
+     "on_the_way": 0,
+     "on_the_way_from": [],
+     "owned": 5,
+     "priced_finish": null,
+     "priced_printing": null
+    }
+   ],
+   "totals": {
+    "aud_missing": null,
+    "cards": 3,
+    "missing": 1,
+    "need": 3,
+    "unpriced": []
+   },
+   "unresolved": [],
+   "version": "target",
+   "warnings": [
+    "magic/decks/casual/broken.md can't be read: no fenced decklist block under a '## Decklist' heading, so its Planned list can't be read"
+   ]
+  },
+  "product/fdc-test-precon@target": {
+   "conflicts": [],
+   "deck_id": "product/fdc-test-precon",
+   "price_date": null,
+   "price_error": null,
+   "rate": null,
+   "rate_date": null,
+   "rows": [
+    {
+     "aud_each": null,
+     "aud_missing": null,
+     "available": 1,
+     "in_use_elsewhere": [],
+     "missing": 0,
+     "name": "Abaddon the Despoiler",
+     "need": 1,
+     "on_the_way": 1,
+     "on_the_way_from": [
+      [
+       "fdc-test-precon, preordered",
+       1
+      ]
+     ],
+     "owned": 1,
+     "priced_finish": null,
+     "priced_printing": null
+    },
+    {
+     "aud_each": null,
+     "aud_missing": null,
+     "available": 1,
+     "in_use_elsewhere": [],
+     "missing": 0,
+     "name": "Sol Ring",
+     "need": 1,
+     "on_the_way": 1,
+     "on_the_way_from": [
+      [
+       "fdc-test-precon, preordered",
+       1
+      ]
+     ],
+     "owned": 1,
+     "priced_finish": null,
+     "priced_printing": null
+    }
+   ],
+   "totals": {
+    "aud_missing": null,
+    "cards": 2,
+    "missing": 0,
+    "need": 2,
+    "unpriced": []
+   },
+   "unresolved": [],
+   "version": "target",
+   "warnings": [
+    "magic/decks/casual/broken.md can't be read: no fenced decklist block under a '## Decklist' heading, so its Planned list can't be read"
+   ]
+  },
+  "product/fdn-beginner-box/cats@target": {
+   "conflicts": [
+    {
+     "available": 4,
+     "decks": [
+      [
+       "Elves (Foundations Beginner Box)",
+       1
+      ]
+     ],
+     "missing": 0,
+     "name": "Llanowar Elves",
+     "need": 1,
+     "owned": 5,
+     "short": 0
+    }
+   ],
+   "deck_id": "product/fdn-beginner-box/cats",
+   "price_date": null,
+   "price_error": null,
+   "rate": null,
+   "rate_date": null,
+   "rows": [
+    {
+     "aud_each": null,
+     "aud_missing": null,
+     "available": 0,
+     "in_use_elsewhere": [],
+     "missing": 1,
+     "name": "Pick Your Poison",
+     "need": 1,
+     "on_the_way": 0,
+     "on_the_way_from": [],
+     "owned": 0,
+     "priced_finish": null,
+     "priced_printing": null
+    },
+    {
+     "aud_each": null,
+     "aud_missing": null,
+     "available": 4,
+     "in_use_elsewhere": [
+      [
+       "Elves (Foundations Beginner Box)",
+       1
+      ]
+     ],
+     "missing": 0,
+     "name": "Llanowar Elves",
+     "need": 1,
+     "on_the_way": 0,
+     "on_the_way_from": [],
+     "owned": 5,
+     "priced_finish": null,
+     "priced_printing": null
+    }
+   ],
+   "totals": {
+    "aud_missing": null,
+    "cards": 2,
+    "missing": 1,
+    "need": 2,
+    "unpriced": []
+   },
+   "unresolved": [],
+   "version": "target",
+   "warnings": [
+    "magic/decks/casual/broken.md can't be read: no fenced decklist block under a '## Decklist' heading, so its Planned list can't be read"
+   ]
+  },
+  "product/fdn-beginner-box/elves@target": {
+   "conflicts": [
+    {
+     "available": 4,
+     "decks": [
+      [
+       "Cats (Foundations Beginner Box)",
+       1
+      ]
+     ],
+     "missing": 0,
+     "name": "Llanowar Elves",
+     "need": 1,
+     "owned": 5,
+     "short": 0
+    }
+   ],
+   "deck_id": "product/fdn-beginner-box/elves",
+   "price_date": null,
+   "price_error": null,
+   "rate": null,
+   "rate_date": null,
+   "rows": [
+    {
+     "aud_each": null,
+     "aud_missing": null,
+     "available": 1,
+     "in_use_elsewhere": [],
+     "missing": 0,
+     "name": "Elvish Mystic",
+     "need": 1,
+     "on_the_way": 0,
+     "on_the_way_from": [],
+     "owned": 1,
+     "priced_finish": null,
+     "priced_printing": null
+    },
+    {
+     "aud_each": null,
+     "aud_missing": null,
+     "available": 4,
+     "in_use_elsewhere": [
+      [
+       "Cats (Foundations Beginner Box)",
+       1
+      ]
+     ],
+     "missing": 0,
+     "name": "Llanowar Elves",
+     "need": 1,
+     "on_the_way": 0,
+     "on_the_way_from": [],
+     "owned": 5,
+     "priced_finish": null,
+     "priced_printing": null
+    }
+   ],
+   "totals": {
+    "aud_missing": null,
+    "cards": 2,
+    "missing": 0,
+    "need": 2,
+    "unpriced": []
+   },
+   "unresolved": [],
+   "version": "target",
+   "warnings": [
+    "magic/decks/casual/broken.md can't be read: no fenced decklist block under a '## Decklist' heading, so its Planned list can't be read"
+   ]
+  },
+  "product/fdn-beginner-box/goblins@target": {
+   "conflicts": [],
+   "deck_id": "product/fdn-beginner-box/goblins",
+   "price_date": null,
+   "price_error": null,
+   "rate": null,
+   "rate_date": null,
+   "rows": [
+    {
+     "aud_each": null,
+     "aud_missing": null,
+     "available": 0,
+     "in_use_elsewhere": [],
+     "missing": 1,
+     "name": "Aerie Mystics",
+     "need": 1,
+     "on_the_way": 0,
+     "on_the_way_from": [],
+     "owned": 0,
+     "priced_finish": null,
+     "priced_printing": null
+    }
+   ],
+   "totals": {
+    "aud_missing": null,
+    "cards": 1,
+    "missing": 1,
+    "need": 1,
+    "unpriced": []
+   },
+   "unresolved": [],
+   "version": "target",
+   "warnings": [
+    "magic/decks/casual/broken.md can't be read: no fenced decklist block under a '## Decklist' heading, so its Planned list can't be read"
+   ]
+  }
+ },
+ "owned_vs_needed_priced": {
+  "casual/broken@target": {
+   "__error__": "DeckFileError: casual/broken: no fenced decklist block under a '## Decklist' heading, so its Planned list can't be read"
+  },
+  "casual/gruul-test@owned": {
+   "conflicts": [
+    {
+     "available": 3,
+     "decks": [
+      [
+       "Elves (Foundations Beginner Box)",
+       1
+      ],
+      [
+       "Cats (Foundations Beginner Box)",
+       1
+      ]
+     ],
+     "missing": 1,
+     "name": "Llanowar Elves",
+     "need": 4,
+     "owned": 5,
+     "short": 1
+    }
+   ],
+   "deck_id": "casual/gruul-test",
+   "price_date": "2026-09-28",
+   "price_error": null,
+   "rate": 1.5,
+   "rate_date": "2000-01-01",
+   "rows": [
+    {
+     "aud_each": 0.3,
+     "aud_missing": 0.3,
+     "available": 3,
+     "in_use_elsewhere": [
+      [
+       "Elves (Foundations Beginner Box)",
+       1
+      ],
+      [
+       "Cats (Foundations Beginner Box)",
+       1
+      ]
+     ],
+     "missing": 1,
+     "name": "Llanowar Elves",
+     "need": 4,
+     "on_the_way": 0,
+     "on_the_way_from": [],
+     "owned": 5,
+     "priced_finish": "nonfoil",
+     "priced_printing": "M19 314"
+    }
+   ],
+   "totals": {
+    "aud_missing": 0.3,
+    "cards": 1,
+    "missing": 1,
+    "need": 4,
+    "unpriced": []
+   },
+   "unresolved": [],
+   "version": "owned",
+   "warnings": [
+    "magic/decks/casual/broken.md can't be read: no fenced decklist block under a '## Decklist' heading, so its Planned list can't be read"
+   ]
+  },
+  "casual/gruul-test@target": {
+   "conflicts": [
+    {
+     "available": 0,
+     "decks": [
+      [
+       "Elves (Foundations Beginner Box)",
+       1
+      ]
+     ],
+     "missing": 2,
+     "name": "Elvish Mystic",
+     "need": 2,
+     "owned": 1,
+     "short": 1
+    },
+    {
+     "available": 3,
+     "decks": [
+      [
+       "Elves (Foundations Beginner Box)",
+       1
+      ],
+      [
+       "Cats (Foundations Beginner Box)",
+       1
+      ]
+     ],
+     "missing": 3,
+     "name": "Llanowar Elves",
+     "need": 6,
+     "owned": 5,
+     "short": 2
+    },
+    {
+     "available": 0,
+     "decks": [
+      [
+       "Cats (Foundations Beginner Box)",
+       1
+      ]
+     ],
+     "missing": 2,
+     "name": "Pick Your Poison",
+     "need": 2,
+     "owned": 0,
+     "short": 0
+    }
+   ],
+   "deck_id": "casual/gruul-test",
+   "price_date": "2026-09-28",
+   "price_error": null,
+   "rate": 1.5,
+   "rate_date": "2000-01-01",
+   "rows": [
+    {
+     "aud_each": 2.03,
+     "aud_missing": 4.06,
+     "available": 0,
+     "in_use_elsewhere": [
+      [
+       "Elves (Foundations Beginner Box)",
+       1
+      ]
+     ],
+     "missing": 2,
+     "name": "Elvish Mystic",
+     "need": 2,
+     "on_the_way": 0,
+     "on_the_way_from": [],
+     "owned": 1,
+     "priced_finish": "nonfoil",
+     "priced_printing": "CMM 648"
+    },
+    {
+     "aud_each": 4.94,
+     "aud_missing": 4.94,
+     "available": 0,
+     "in_use_elsewhere": [],
+     "missing": 1,
+     "name": "Fire // Ice",
+     "need": 1,
+     "on_the_way": 0,
+     "on_the_way_from": [],
+     "owned": 0,
+     "priced_finish": "nonfoil",
+     "priced_printing": "APC 128"
+    },
+    {
+     "aud_each": 0.3,
+     "aud_missing": 0.9,
+     "available": 3,
+     "in_use_elsewhere": [
+      [
+       "Elves (Foundations Beginner Box)",
+       1
+      ],
+      [
+       "Cats (Foundations Beginner Box)",
+       1
+      ]
+     ],
+     "missing": 3,
+     "name": "Llanowar Elves",
+     "need": 6,
+     "on_the_way": 0,
+     "on_the_way_from": [],
+     "owned": 5,
+     "priced_finish": "nonfoil",
+     "priced_printing": "M19 314"
+    },
+    {
+     "aud_each": 0.46,
+     "aud_missing": 0.46,
+     "available": 0,
+     "in_use_elsewhere": [],
+     "missing": 1,
+     "name": "Murderous Rider // Swift End",
+     "need": 1,
+     "on_the_way": 0,
+     "on_the_way_from": [],
+     "owned": 0,
+     "priced_finish": "nonfoil",
+     "priced_printing": "ELD 97"
+    },
+    {
+     "aud_each": null,
+     "aud_missing": null,
+     "available": 0,
+     "in_use_elsewhere": [],
+     "missing": 1,
+     "name": "Opt",
+     "need": 1,
+     "on_the_way": 0,
+     "on_the_way_from": [],
+     "owned": 0,
+     "priced_finish": null,
+     "priced_printing": null
+    },
+    {
+     "aud_each": 0.41,
+     "aud_missing": 0.82,
+     "available": 0,
+     "in_use_elsewhere": [
+      [
+       "Cats (Foundations Beginner Box)",
+       1
+      ]
+     ],
+     "missing": 2,
+     "name": "Pick Your Poison",
+     "need": 2,
+     "on_the_way": 0,
+     "on_the_way_from": [],
+     "owned": 0,
+     "priced_finish": "nonfoil",
+     "priced_printing": "MKM 170"
+    },
+    {
+     "aud_each": 2.04,
+     "aud_missing": 2.04,
+     "available": 0,
+     "in_use_elsewhere": [],
+     "missing": 1,
+     "name": "Very Cryptic Command",
+     "need": 1,
+     "on_the_way": 0,
+     "on_the_way_from": [],
+     "owned": 0,
+     "priced_finish": "nonfoil",
+     "priced_printing": "UST 49a"
+    },
+    {
+     "aud_each": null,
+     "aud_missing": null,
+     "available": 1,
+     "in_use_elsewhere": [],
+     "missing": 0,
+     "name": "Black Lotus",
+     "need": 1,
+     "on_the_way": 0,
+     "on_the_way_from": [],
+     "owned": 1,
+     "priced_finish": null,
+     "priced_printing": null
+    },
+    {
+     "aud_each": 2.42,
+     "aud_missing": 0.0,
+     "available": 1,
+     "in_use_elsewhere": [],
+     "missing": 0,
+     "name": "Sol Ring",
+     "need": 1,
+     "on_the_way": 1,
+     "on_the_way_from": [
+      [
+       "fdc-test-precon, preordered",
+       1
+      ]
+     ],
+     "owned": 1,
+     "priced_finish": "nonfoil",
+     "priced_printing": "ECC 57"
+    }
+   ],
+   "totals": {
+    "aud_missing": 13.22,
+    "cards": 9,
+    "missing": 11,
+    "need": 16,
+    "unpriced": [
+     "Opt"
+    ]
+   },
+   "unresolved": [
+    [
+     "Opt",
+     "decklist"
+    ]
+   ],
+   "version": "target",
+   "warnings": [
+    "magic/decks/casual/broken.md can't be read: no fenced decklist block under a '## Decklist' heading, so its Planned list can't be read"
+   ]
+  },
+  "commander/elf-commander@target": {
+   "conflicts": [
+    {
+     "available": 3,
+     "decks": [
+      [
+       "Elves (Foundations Beginner Box)",
+       1
+      ],
+      [
+       "Cats (Foundations Beginner Box)",
+       1
+      ]
+     ],
+     "missing": 0,
+     "name": "Llanowar Elves",
+     "need": 1,
+     "owned": 5,
+     "short": 0
+    }
+   ],
+   "deck_id": "commander/elf-commander",
+   "price_date": "2026-09-28",
+   "price_error": null,
+   "rate": 1.5,
+   "rate_date": "2000-01-01",
+   "rows": [
+    {
+     "aud_each": 2.27,
+     "aud_missing": 2.27,
+     "available": 0,
+     "in_use_elsewhere": [],
+     "missing": 1,
+     "name": "Ghalta, Primal Hunger",
+     "need": 1,
+     "on_the_way": 0,
+     "on_the_way_from": [],
+     "owned": 0,
+     "priced_finish": "nonfoil",
+     "priced_printing": "RIX 130"
+    },
+    {
+     "aud_each": 0.3,
+     "aud_missing": 0.0,
+     "available": 3,
+     "in_use_elsewhere": [
+      [
+       "Elves (Foundations Beginner Box)",
+       1
+      ],
+      [
+       "Cats (Foundations Beginner Box)",
+       1
+      ]
+     ],
+     "missing": 0,
+     "name": "Llanowar Elves",
+     "need": 1,
+     "on_the_way": 0,
+     "on_the_way_from": [],
+     "owned": 5,
+     "priced_finish": "nonfoil",
+     "priced_printing": "M19 314"
+    },
+    {
+     "aud_each": 2.42,
+     "aud_missing": 0.0,
+     "available": 1,
+     "in_use_elsewhere": [],
+     "missing": 0,
+     "name": "Sol Ring",
+     "need": 1,
+     "on_the_way": 1,
+     "on_the_way_from": [
+      [
+       "fdc-test-precon, preordered",
+       1
+      ]
+     ],
+     "owned": 1,
+     "priced_finish": "nonfoil",
+     "priced_printing": "ECC 57"
+    }
+   ],
+   "totals": {
+    "aud_missing": 2.27,
+    "cards": 3,
+    "missing": 1,
+    "need": 3,
+    "unpriced": []
+   },
+   "unresolved": [],
+   "version": "target",
+   "warnings": [
+    "magic/decks/casual/broken.md can't be read: no fenced decklist block under a '## Decklist' heading, so its Planned list can't be read"
+   ]
+  },
+  "pairing/cats+goblins@target": {
+   "conflicts": [
+    {
+     "available": 4,
+     "decks": [
+      [
+       "Elves (Foundations Beginner Box)",
+       1
+      ]
+     ],
+     "missing": 0,
+     "name": "Llanowar Elves",
+     "need": 1,
+     "owned": 5,
+     "short": 0
+    }
+   ],
+   "deck_id": "pairing/cats+goblins",
+   "price_date": "2026-09-28",
+   "price_error": null,
+   "rate": 1.5,
+   "rate_date": "2000-01-01",
+   "rows": [
+    {
+     "aud_each": 0.17,
+     "aud_missing": 0.17,
+     "available": 0,
+     "in_use_elsewhere": [],
+     "missing": 1,
+     "name": "Aerie Mystics",
+     "need": 1,
+     "on_the_way": 0,
+     "on_the_way_from": [],
+     "owned": 0,
+     "priced_finish": "nonfoil",
+     "priced_printing": "CON 1"
+    },
+    {
+     "aud_each": 0.41,
+     "aud_missing": 0.41,
+     "available": 0,
+     "in_use_elsewhere": [],
+     "missing": 1,
+     "name": "Pick Your Poison",
+     "need": 1,
+     "on_the_way": 0,
+     "on_the_way_from": [],
+     "owned": 0,
+     "priced_finish": "nonfoil",
+     "priced_printing": "MKM 170"
+    },
+    {
+     "aud_each": 0.3,
+     "aud_missing": 0.0,
+     "available": 4,
+     "in_use_elsewhere": [
+      [
+       "Elves (Foundations Beginner Box)",
+       1
+      ]
+     ],
+     "missing": 0,
+     "name": "Llanowar Elves",
+     "need": 1,
+     "on_the_way": 0,
+     "on_the_way_from": [],
+     "owned": 5,
+     "priced_finish": "nonfoil",
+     "priced_printing": "M19 314"
+    }
+   ],
+   "totals": {
+    "aud_missing": 0.58,
+    "cards": 3,
+    "missing": 2,
+    "need": 3,
+    "unpriced": []
+   },
+   "unresolved": [],
+   "version": "target",
+   "warnings": [
+    "magic/decks/casual/broken.md can't be read: no fenced decklist block under a '## Decklist' heading, so its Planned list can't be read"
+   ]
+  },
+  "pairing/elves+cats@target": {
+   "conflicts": [],
+   "deck_id": "pairing/elves+cats",
+   "price_date": "2026-09-28",
+   "price_error": null,
+   "rate": 1.5,
+   "rate_date": "2000-01-01",
+   "rows": [
+    {
+     "aud_each": 0.41,
+     "aud_missing": 0.41,
+     "available": 0,
+     "in_use_elsewhere": [],
+     "missing": 1,
+     "name": "Pick Your Poison",
+     "need": 1,
+     "on_the_way": 0,
+     "on_the_way_from": [],
+     "owned": 0,
+     "priced_finish": "nonfoil",
+     "priced_printing": "MKM 170"
+    },
+    {
+     "aud_each": 2.03,
+     "aud_missing": 0.0,
+     "available": 1,
+     "in_use_elsewhere": [],
+     "missing": 0,
+     "name": "Elvish Mystic",
+     "need": 1,
+     "on_the_way": 0,
+     "on_the_way_from": [],
+     "owned": 1,
+     "priced_finish": "nonfoil",
+     "priced_printing": "CMM 648"
+    },
+    {
+     "aud_each": 0.3,
+     "aud_missing": 0.0,
+     "available": 5,
+     "in_use_elsewhere": [],
+     "missing": 0,
+     "name": "Llanowar Elves",
+     "need": 2,
+     "on_the_way": 0,
+     "on_the_way_from": [],
+     "owned": 5,
+     "priced_finish": "nonfoil",
+     "priced_printing": "M19 314"
+    }
+   ],
+   "totals": {
+    "aud_missing": 0.41,
+    "cards": 3,
+    "missing": 1,
+    "need": 4,
+    "unpriced": []
+   },
+   "unresolved": [],
+   "version": "target",
+   "warnings": [
+    "magic/decks/casual/broken.md can't be read: no fenced decklist block under a '## Decklist' heading, so its Planned list can't be read"
+   ]
+  },
+  "pairing/elves+goblins@target": {
+   "conflicts": [
+    {
+     "available": 4,
+     "decks": [
+      [
+       "Cats (Foundations Beginner Box)",
+       1
+      ]
+     ],
+     "missing": 0,
+     "name": "Llanowar Elves",
+     "need": 1,
+     "owned": 5,
+     "short": 0
+    }
+   ],
+   "deck_id": "pairing/elves+goblins",
+   "price_date": "2026-09-28",
+   "price_error": null,
+   "rate": 1.5,
+   "rate_date": "2000-01-01",
+   "rows": [
+    {
+     "aud_each": 0.17,
+     "aud_missing": 0.17,
+     "available": 0,
+     "in_use_elsewhere": [],
+     "missing": 1,
+     "name": "Aerie Mystics",
+     "need": 1,
+     "on_the_way": 0,
+     "on_the_way_from": [],
+     "owned": 0,
+     "priced_finish": "nonfoil",
+     "priced_printing": "CON 1"
+    },
+    {
+     "aud_each": 2.03,
+     "aud_missing": 0.0,
+     "available": 1,
+     "in_use_elsewhere": [],
+     "missing": 0,
+     "name": "Elvish Mystic",
+     "need": 1,
+     "on_the_way": 0,
+     "on_the_way_from": [],
+     "owned": 1,
+     "priced_finish": "nonfoil",
+     "priced_printing": "CMM 648"
+    },
+    {
+     "aud_each": 0.3,
+     "aud_missing": 0.0,
+     "available": 4,
+     "in_use_elsewhere": [
+      [
+       "Cats (Foundations Beginner Box)",
+       1
+      ]
+     ],
+     "missing": 0,
+     "name": "Llanowar Elves",
+     "need": 1,
+     "on_the_way": 0,
+     "on_the_way_from": [],
+     "owned": 5,
+     "priced_finish": "nonfoil",
+     "priced_printing": "M19 314"
+    }
+   ],
+   "totals": {
+    "aud_missing": 0.17,
+    "cards": 3,
+    "missing": 1,
+    "need": 3,
+    "unpriced": []
+   },
+   "unresolved": [],
+   "version": "target",
+   "warnings": [
+    "magic/decks/casual/broken.md can't be read: no fenced decklist block under a '## Decklist' heading, so its Planned list can't be read"
+   ]
+  },
+  "product/fdc-test-precon@target": {
+   "conflicts": [],
+   "deck_id": "product/fdc-test-precon",
+   "price_date": "2026-09-28",
+   "price_error": null,
+   "rate": 1.5,
+   "rate_date": "2000-01-01",
+   "rows": [
+    {
+     "aud_each": 0.63,
+     "aud_missing": 0.0,
+     "available": 1,
+     "in_use_elsewhere": [],
+     "missing": 0,
+     "name": "Abaddon the Despoiler",
+     "need": 1,
+     "on_the_way": 1,
+     "on_the_way_from": [
+      [
+       "fdc-test-precon, preordered",
+       1
+      ]
+     ],
+     "owned": 1,
+     "priced_finish": "etched",
+     "priced_printing": "40K 319 etched"
+    },
+    {
+     "aud_each": 2.42,
+     "aud_missing": 0.0,
+     "available": 1,
+     "in_use_elsewhere": [],
+     "missing": 0,
+     "name": "Sol Ring",
+     "need": 1,
+     "on_the_way": 1,
+     "on_the_way_from": [
+      [
+       "fdc-test-precon, preordered",
+       1
+      ]
+     ],
+     "owned": 1,
+     "priced_finish": "nonfoil",
+     "priced_printing": "ECC 57"
+    }
+   ],
+   "totals": {
+    "aud_missing": 0,
+    "cards": 2,
+    "missing": 0,
+    "need": 2,
+    "unpriced": []
+   },
+   "unresolved": [],
+   "version": "target",
+   "warnings": [
+    "magic/decks/casual/broken.md can't be read: no fenced decklist block under a '## Decklist' heading, so its Planned list can't be read"
+   ]
+  },
+  "product/fdn-beginner-box/cats@target": {
+   "conflicts": [
+    {
+     "available": 4,
+     "decks": [
+      [
+       "Elves (Foundations Beginner Box)",
+       1
+      ]
+     ],
+     "missing": 0,
+     "name": "Llanowar Elves",
+     "need": 1,
+     "owned": 5,
+     "short": 0
+    }
+   ],
+   "deck_id": "product/fdn-beginner-box/cats",
+   "price_date": "2026-09-28",
+   "price_error": null,
+   "rate": 1.5,
+   "rate_date": "2000-01-01",
+   "rows": [
+    {
+     "aud_each": 0.41,
+     "aud_missing": 0.41,
+     "available": 0,
+     "in_use_elsewhere": [],
+     "missing": 1,
+     "name": "Pick Your Poison",
+     "need": 1,
+     "on_the_way": 0,
+     "on_the_way_from": [],
+     "owned": 0,
+     "priced_finish": "nonfoil",
+     "priced_printing": "MKM 170"
+    },
+    {
+     "aud_each": 0.3,
+     "aud_missing": 0.0,
+     "available": 4,
+     "in_use_elsewhere": [
+      [
+       "Elves (Foundations Beginner Box)",
+       1
+      ]
+     ],
+     "missing": 0,
+     "name": "Llanowar Elves",
+     "need": 1,
+     "on_the_way": 0,
+     "on_the_way_from": [],
+     "owned": 5,
+     "priced_finish": "nonfoil",
+     "priced_printing": "M19 314"
+    }
+   ],
+   "totals": {
+    "aud_missing": 0.41,
+    "cards": 2,
+    "missing": 1,
+    "need": 2,
+    "unpriced": []
+   },
+   "unresolved": [],
+   "version": "target",
+   "warnings": [
+    "magic/decks/casual/broken.md can't be read: no fenced decklist block under a '## Decklist' heading, so its Planned list can't be read"
+   ]
+  },
+  "product/fdn-beginner-box/elves@target": {
+   "conflicts": [
+    {
+     "available": 4,
+     "decks": [
+      [
+       "Cats (Foundations Beginner Box)",
+       1
+      ]
+     ],
+     "missing": 0,
+     "name": "Llanowar Elves",
+     "need": 1,
+     "owned": 5,
+     "short": 0
+    }
+   ],
+   "deck_id": "product/fdn-beginner-box/elves",
+   "price_date": "2026-09-28",
+   "price_error": null,
+   "rate": 1.5,
+   "rate_date": "2000-01-01",
+   "rows": [
+    {
+     "aud_each": 2.03,
+     "aud_missing": 0.0,
+     "available": 1,
+     "in_use_elsewhere": [],
+     "missing": 0,
+     "name": "Elvish Mystic",
+     "need": 1,
+     "on_the_way": 0,
+     "on_the_way_from": [],
+     "owned": 1,
+     "priced_finish": "nonfoil",
+     "priced_printing": "CMM 648"
+    },
+    {
+     "aud_each": 0.3,
+     "aud_missing": 0.0,
+     "available": 4,
+     "in_use_elsewhere": [
+      [
+       "Cats (Foundations Beginner Box)",
+       1
+      ]
+     ],
+     "missing": 0,
+     "name": "Llanowar Elves",
+     "need": 1,
+     "on_the_way": 0,
+     "on_the_way_from": [],
+     "owned": 5,
+     "priced_finish": "nonfoil",
+     "priced_printing": "M19 314"
+    }
+   ],
+   "totals": {
+    "aud_missing": 0,
+    "cards": 2,
+    "missing": 0,
+    "need": 2,
+    "unpriced": []
+   },
+   "unresolved": [],
+   "version": "target",
+   "warnings": [
+    "magic/decks/casual/broken.md can't be read: no fenced decklist block under a '## Decklist' heading, so its Planned list can't be read"
+   ]
+  },
+  "product/fdn-beginner-box/goblins@target": {
+   "conflicts": [],
+   "deck_id": "product/fdn-beginner-box/goblins",
+   "price_date": "2026-09-28",
+   "price_error": null,
+   "rate": 1.5,
+   "rate_date": "2000-01-01",
+   "rows": [
+    {
+     "aud_each": 0.17,
+     "aud_missing": 0.17,
+     "available": 0,
+     "in_use_elsewhere": [],
+     "missing": 1,
+     "name": "Aerie Mystics",
+     "need": 1,
+     "on_the_way": 0,
+     "on_the_way_from": [],
+     "owned": 0,
+     "priced_finish": "nonfoil",
+     "priced_printing": "CON 1"
+    }
+   ],
+   "totals": {
+    "aud_missing": 0.17,
+    "cards": 1,
+    "missing": 1,
+    "need": 1,
+    "unpriced": []
+   },
+   "unresolved": [],
+   "version": "target",
+   "warnings": [
+    "magic/decks/casual/broken.md can't be read: no fenced decklist block under a '## Decklist' heading, so its Planned list can't be read"
+   ]
+  }
+ },
+ "plan_refresh": {
+  "__error__": "ValueError: Cannot refresh from an incomplete card pool: magic/decks/casual/broken.md can't be read: no fenced decklist block under a '## Decklist' heading, so its Planned list can't be read"
+ },
+ "pools": {
+  "home": {
+   "in_use": [
+    {
+     "cards": {
+      "Elvish Mystic": 1,
+      "Llanowar Elves": 1
+     },
+     "id": "product/fdn-beginner-box/elves",
+     "title": "Elves (Foundations Beginner Box)",
+     "why": "intact product"
+    },
+    {
+     "cards": {
+      "Llanowar Elves": 1,
+      "Pick Your Poison": 1
+     },
+     "id": "product/fdn-beginner-box/cats",
+     "title": "Cats (Foundations Beginner Box)",
+     "why": "intact product"
+    },
+    {
+     "cards": {
+      "Aerie Mystics": 1
+     },
+     "id": "product/fdn-beginner-box/goblins",
+     "title": "Goblins (Foundations Beginner Box)",
+     "why": "intact product"
+    }
+   ],
+   "on_the_way": {
+    "Abaddon the Despoiler": [
+     [
+      "fdc-test-precon, preordered",
+      1
+     ]
+    ],
+    "Sol Ring": [
+     [
+      "fdc-test-precon, preordered",
+      1
+     ]
+    ]
+   },
+   "owned": {
+    "Abaddon the Despoiler": 1,
+    "Black Lotus": 1,
+    "Elvish Mystic": 1,
+    "Llanowar Elves": 5,
+    "Sol Ring": 1
+   },
+   "space": "home",
+   "unresolved": {},
+   "warnings": [
+    "magic/decks/casual/broken.md can't be read: no fenced decklist block under a '## Decklist' heading, so its Planned list can't be read"
+   ]
+  }
+ },
+ "printing_counts": {
+  "home": {
+   "40k|319|etched": {
+    "on_the_way": 1,
+    "owned": 0
+   },
+   "cmm|648|nonfoil": {
+    "on_the_way": 0,
+    "owned": 1
+   },
+   "ecc|57|nonfoil": {
+    "on_the_way": 1,
+    "owned": 0
+   },
+   "fdc||nonfoil": {
+    "on_the_way": 10,
+    "owned": 0
+   },
+   "fdn|227|nonfoil": {
+    "on_the_way": 0,
+    "owned": 5
+   },
+   "lea|232|nonfoil": {
+    "on_the_way": 0,
+    "owned": 1
+   }
+  }
+ },
+ "printings": {
+  "Abaddon the Despoiler": {
+   "basic": false,
+   "default": {
+    "finish": "etched",
+    "number": "319",
+    "set": "40k",
+    "why": "owned"
+   },
+   "name": "Abaddon the Despoiler",
+   "price_date": "2026-09-28",
+   "price_error": null,
+   "printings": [
+    {
+     "aud": 0.63,
+     "finish": "etched",
+     "img": "/img/40k/319/normal",
+     "img_small": "/img/40k/319/small",
+     "number": "319",
+     "on_the_way": 1,
+     "owned": 0,
+     "released": "2022-10-07",
+     "set": "40k",
+     "set_name": "40K",
+     "set_type": "commander",
+     "usd": 0.42
+    }
+   ],
+   "rate": 1.5,
+   "rate_date": "2000-01-01",
+   "total": 1
+  },
+  "Black Lotus": {
+   "basic": false,
+   "default": {
+    "finish": "nonfoil",
+    "number": "232",
+    "set": "lea",
+    "why": "owned"
+   },
+   "name": "Black Lotus",
+   "price_date": "2026-09-28",
+   "price_error": null,
+   "printings": [
+    {
+     "aud": null,
+     "finish": "nonfoil",
+     "img": "/img/lea/232/normal",
+     "img_small": "/img/lea/232/small",
+     "number": "232",
+     "on_the_way": 0,
+     "owned": 1,
+     "released": "1993-08-05",
+     "set": "lea",
+     "set_name": "LEA",
+     "set_type": "core",
+     "usd": null
+    }
+   ],
+   "rate": 1.5,
+   "rate_date": "2000-01-01",
+   "total": 1
+  },
+  "Elvish Mystic": {
+   "basic": false,
+   "default": {
+    "finish": "nonfoil",
+    "number": "648",
+    "set": "cmm",
+    "why": "owned"
+   },
+   "name": "Elvish Mystic",
+   "price_date": "2026-09-28",
+   "price_error": null,
+   "printings": [
+    {
+     "aud": 2.03,
+     "finish": "nonfoil",
+     "img": "/img/cmm/648/normal",
+     "img_small": "/img/cmm/648/small",
+     "number": "648",
+     "on_the_way": 0,
+     "owned": 1,
+     "released": "2023-08-04",
+     "set": "cmm",
+     "set_name": "CMM",
+     "set_type": "masters",
+     "usd": 1.35
+    },
+    {
+     "aud": 5.83,
+     "finish": "foil",
+     "img": "/img/cmm/648/normal",
+     "img_small": "/img/cmm/648/small",
+     "number": "648",
+     "on_the_way": 0,
+     "owned": 0,
+     "released": "2023-08-04",
+     "set": "cmm",
+     "set_name": "CMM",
+     "set_type": "masters",
+     "usd": 3.89
+    }
+   ],
+   "rate": 1.5,
+   "rate_date": "2000-01-01",
+   "total": 2
+  },
+  "Llanowar Elves": {
+   "basic": false,
+   "default": {
+    "finish": "nonfoil",
+    "number": "227",
+    "set": "fdn",
+    "why": "owned"
+   },
+   "name": "Llanowar Elves",
+   "price_date": "2026-09-28",
+   "price_error": null,
+   "printings": [
+    {
+     "aud": 0.38,
+     "finish": "nonfoil",
+     "img": "/img/fdn/227/normal",
+     "img_small": "/img/fdn/227/small",
+     "number": "227",
+     "on_the_way": 0,
+     "owned": 5,
+     "released": "2024-11-15",
+     "set": "fdn",
+     "set_name": "FDN",
+     "set_type": "core",
+     "usd": 0.25
+    },
+    {
+     "aud": 0.04,
+     "finish": "foil",
+     "img": "/img/pdmu/1%E2%98%85/normal",
+     "img_small": "/img/pdmu/1%E2%98%85/small",
+     "number": "1★",
+     "on_the_way": 0,
+     "owned": 0,
+     "released": "2023-09-01",
+     "set": "pdmu",
+     "set_name": "PDMU",
+     "set_type": "promo",
+     "usd": 0.03
+    },
+    {
+     "aud": 0.3,
+     "finish": "nonfoil",
+     "img": "/img/m19/314/normal",
+     "img_small": "/img/m19/314/small",
+     "number": "314",
+     "on_the_way": 0,
+     "owned": 0,
+     "released": "2018-07-13",
+     "set": "m19",
+     "set_name": "M19",
+     "set_type": "core",
+     "usd": 0.2
+    },
+    {
+     "aud": 2.66,
+     "finish": "foil",
+     "img": "/img/fdn/227/normal",
+     "img_small": "/img/fdn/227/small",
+     "number": "227",
+     "on_the_way": 0,
+     "owned": 0,
+     "released": "2024-11-15",
+     "set": "fdn",
+     "set_name": "FDN",
+     "set_type": "core",
+     "usd": 1.77
+    }
+   ],
+   "rate": 1.5,
+   "rate_date": "2000-01-01",
+   "total": 4
+  },
+  "Sol Ring": {
+   "basic": false,
+   "default": {
+    "finish": "nonfoil",
+    "number": "57",
+    "set": "ecc",
+    "why": "owned"
+   },
+   "name": "Sol Ring",
+   "price_date": "2026-09-28",
+   "price_error": null,
+   "printings": [
+    {
+     "aud": 2.42,
+     "finish": "nonfoil",
+     "img": "/img/ecc/57/normal",
+     "img_small": "/img/ecc/57/small",
+     "number": "57",
+     "on_the_way": 1,
+     "owned": 0,
+     "released": "2026-01-23",
+     "set": "ecc",
+     "set_name": "ECC",
+     "set_type": "commander",
+     "usd": 1.61
+    }
+   ],
+   "rate": 1.5,
+   "rate_date": "2000-01-01",
+   "total": 1
+  }
+ },
+ "purchases": {
+  "coverage": [
+   "magic/products/fdn-beginner-box.csv: missing order record",
+   "magic/products/fdc-test-precon.csv: missing order record"
+  ],
+  "overview": {
+   "__error__": "ValueError: Shopping records need attention: magic/products/fdn-beginner-box.csv: missing order record; magic/products/fdc-test-precon.csv: missing order record"
+  },
+  "read_queue": {
+   "__error__": "FileNotFoundError: [Errno 2] No such file or directory: '<ROOT>\\\\magic\\\\watchlist.csv'"
+  },
+  "read_records": []
+ },
+ "read_status": {
+  "status": {
+   "fdc-test-precon.csv": {
+    "deck_box": "",
+    "file": "fdc-test-precon.csv",
+    "intact": false,
+    "notes": "due soon",
+    "sleeves": "",
+    "status": "preordered"
+   },
+   "fdn-beginner-box.csv": {
+    "deck_box": "",
+    "file": "fdn-beginner-box.csv",
+    "intact": true,
+    "notes": "kept as its decks",
+    "sleeves": "",
+    "status": "owned"
+   }
+  },
+  "warnings": []
+ },
+ "spaces": [
+  "home"
+ ],
+ "stale_tables": [],
+ "tokens": {
+  "incoming": [
+   [],
+   []
+  ],
+  "incoming_view": {
+   "incoming": [],
+   "problems": []
+  },
+  "spaces": {
+   "home": {
+    "check": [],
+    "gaps": {
+     "gaps": [],
+     "warnings": []
+    },
+    "holders": {
+     "holders": [
+      [
+       "casual/gruul-test",
+       "Gruul Test",
+       "target",
+       {
+        "Deck": [
+         {
+          "finish": "nonfoil",
+          "name": "Llanowar Elves",
+          "number": "227",
+          "quantity": 4,
+          "set": "fdn"
+         },
+         {
+          "finish": "nonfoil",
+          "name": "Elvish Mystic",
+          "number": null,
+          "quantity": 2,
+          "set": null
+         },
+         {
+          "finish": "nonfoil",
+          "name": "Llanowar Elves",
+          "number": null,
+          "quantity": 1,
+          "set": "m19"
+         },
+         {
+          "finish": "nonfoil",
+          "name": "Llanowar Elves",
+          "number": "1★",
+          "quantity": 1,
+          "set": "pdmu"
+         },
+         {
+          "finish": "nonfoil",
+          "name": "Black Lotus",
+          "number": null,
+          "quantity": 1,
+          "set": null
+         },
+         {
+          "finish": "nonfoil",
+          "name": "Very Cryptic Command",
+          "number": "49d",
+          "quantity": 1,
+          "set": "ust"
+         },
+         {
+          "finish": "nonfoil",
+          "name": "Murderous Rider",
+          "number": "97",
+          "quantity": 1,
+          "set": "eld"
+         },
+         {
+          "finish": "nonfoil",
+          "name": "Opt",
+          "number": "512",
+          "quantity": 1,
+          "set": "fdn"
+         },
+         {
+          "finish": "nonfoil",
+          "name": "Fire // Ice",
+          "number": "999",
+          "quantity": 1,
+          "set": "apc"
+         },
+         {
+          "finish": "nonfoil",
+          "name": "Sol Ring",
+          "number": "170",
+          "quantity": 1,
+          "set": "mkm"
+         },
+         {
+          "finish": "nonfoil",
+          "name": "Forest",
+          "number": null,
+          "quantity": 9,
+          "set": null
+         }
+        ],
+        "Sideboard": [
+         {
+          "finish": "nonfoil",
+          "name": "Pick Your Poison",
+          "number": "170",
+          "quantity": 2,
+          "set": "mkm"
+         }
+        ]
+       },
+       "casual/gruul-test"
+      ],
+      [
+       "product/fdn-beginner-box",
+       "Foundations Beginner Box",
+       "target",
+       {
+        "Deck": [
+         {
+          "finish": "nonfoil",
+          "name": "Llanowar Elves",
+          "number": "227",
+          "quantity": 1,
+          "set": "fdn"
+         },
+         {
+          "finish": "nonfoil",
+          "name": "Elvish Mystic",
+          "number": "648",
+          "quantity": 1,
+          "set": "cmm"
+         },
+         {
+          "finish": "nonfoil",
+          "name": "Forest",
+          "number": null,
+          "quantity": 7,
+          "set": "fdn"
+         },
+         {
+          "finish": "nonfoil",
+          "name": "Llanowar Elves",
+          "number": "227",
+          "quantity": 1,
+          "set": "fdn"
+         },
+         {
+          "finish": "nonfoil",
+          "name": "Pick Your Poison",
+          "number": "170",
+          "quantity": 1,
+          "set": "mkm"
+         },
+         {
+          "finish": "nonfoil",
+          "name": "Aerie Mystics",
+          "number": "1",
+          "quantity": 1,
+          "set": "con"
+         }
+        ]
+       },
+       null
+      ]
+     ],
+     "warnings": []
+    },
+    "read": {
+     "lines": [],
+     "problems": [],
+     "rows": [],
+     "sha256": null,
+     "sorted": true
+    },
+    "row_uses": {
+     "row_uses": {},
+     "warnings": []
+    }
+   }
+  }
+ },
+ "wishlist_view": {
+  "user1": {
+   "entries": [
+    {
+     "card": {
+      "cmc": 5.0,
+      "color_identity": [
+       "B",
+       "R",
+       "U"
+      ],
+      "colors": [
+       "B",
+       "R",
+       "U"
+      ],
+      "defense": null,
+      "img": "/img/40k/319/normal",
+      "img_small": "/img/40k/319/small",
+      "loyalty": null,
+      "mana_cost": "{2}{U}{B}{R}",
+      "name": "Abaddon the Despoiler",
+      "oracle_text": "Trample\nMark of Chaos Ascendant — During your turn, spells you cast from your hand with mana value X or less have cascade, where X is the total amount of life your opponents have lost this turn.",
+      "power": "5",
+      "roles": [],
+      "toughness": "5",
+      "type_line": "Legendary Creature — Astartes Warrior"
+     },
+     "have": {
+      "on_the_way": 1,
+      "owned": 0
+     },
+     "name": "Abaddon the Despoiler",
+     "notes": "",
+     "number": "",
+     "set": "",
+     "source": ""
+    },
+    {
+     "card": {
+      "cmc": 0.0,
+      "color_identity": [],
+      "colors": [],
+      "defense": null,
+      "img": "/img/lea/232/normal",
+      "img_small": "/img/lea/232/small",
+      "loyalty": null,
+      "mana_cost": "{0}",
+      "name": "Black Lotus",
+      "oracle_text": "{T}, Sacrifice this artifact: Add three mana of any one color.",
+      "power": null,
+      "roles": [],
+      "toughness": null,
+      "type_line": "Artifact"
+     },
+     "have": {
+      "on_the_way": 0,
+      "owned": 1
+     },
+     "name": "Black Lotus",
+     "notes": "",
+     "number": "",
+     "set": "",
+     "source": ""
+    },
+    {
+     "card": {
+      "cmc": 1.0,
+      "color_identity": [
+       "G"
+      ],
+      "colors": [
+       "G"
+      ],
+      "defense": null,
+      "img": "/img/cmm/648/normal",
+      "img_small": "/img/cmm/648/small",
+      "loyalty": null,
+      "mana_cost": "{G}",
+      "name": "Elvish Mystic",
+      "oracle_text": "{T}: Add {G}.",
+      "power": "1",
+      "roles": [
+       "ramp"
+      ],
+      "toughness": "1",
+      "type_line": "Creature — Elf Druid"
+     },
+     "have": {
+      "on_the_way": 0,
+      "owned": 1
+     },
+     "name": "Elvish Mystic",
+     "notes": "",
+     "number": "",
+     "set": "",
+     "source": ""
+    },
+    {
+     "card": {
+      "cmc": 1.0,
+      "color_identity": [
+       "G"
+      ],
+      "colors": [
+       "G"
+      ],
+      "defense": null,
+      "img": "/img/fdn/227/normal",
+      "img_small": "/img/fdn/227/small",
+      "loyalty": null,
+      "mana_cost": "{G}",
+      "name": "Llanowar Elves",
+      "oracle_text": "{T}: Add {G}.",
+      "power": "1",
+      "roles": [
+       "ramp"
+      ],
+      "toughness": "1",
+      "type_line": "Creature — Elf Druid"
+     },
+     "have": {
+      "on_the_way": 0,
+      "owned": 5
+     },
+     "name": "Llanowar Elves",
+     "notes": "",
+     "number": "",
+     "set": "",
+     "source": ""
+    },
+    {
+     "card": {
+      "cmc": 1.0,
+      "color_identity": [],
+      "colors": [],
+      "defense": null,
+      "img": "/img/ecc/57/normal",
+      "img_small": "/img/ecc/57/small",
+      "loyalty": null,
+      "mana_cost": "{1}",
+      "name": "Sol Ring",
+      "oracle_text": "{T}: Add {C}{C}.",
+      "power": null,
+      "roles": [
+       "ramp"
+      ],
+      "toughness": null,
+      "type_line": "Artifact"
+     },
+     "have": {
+      "on_the_way": 1,
+      "owned": 0
+     },
+     "name": "Sol Ring",
+     "notes": "",
+     "number": "",
+     "set": "",
+     "source": ""
+    }
+   ],
+   "profile": "user1",
+   "warnings": [
+    "magic/decks/casual/broken.md can't be read: no fenced decklist block under a '## Decklist' heading, so its Planned list can't be read"
+   ]
+  },
+  "matt": {
+   "entries": [
+    {
+     "card": {
+      "cmc": 5.0,
+      "color_identity": [
+       "B",
+       "R",
+       "U"
+      ],
+      "colors": [
+       "B",
+       "R",
+       "U"
+      ],
+      "defense": null,
+      "img": "/img/40k/319/normal",
+      "img_small": "/img/40k/319/small",
+      "loyalty": null,
+      "mana_cost": "{2}{U}{B}{R}",
+      "name": "Abaddon the Despoiler",
+      "oracle_text": "Trample\nMark of Chaos Ascendant — During your turn, spells you cast from your hand with mana value X or less have cascade, where X is the total amount of life your opponents have lost this turn.",
+      "power": "5",
+      "roles": [],
+      "toughness": "5",
+      "type_line": "Legendary Creature — Astartes Warrior"
+     },
+     "have": {
+      "on_the_way": 1,
+      "owned": 0
+     },
+     "name": "Abaddon the Despoiler",
+     "notes": "",
+     "number": "",
+     "set": "",
+     "source": ""
+    },
+    {
+     "card": {
+      "cmc": 0.0,
+      "color_identity": [],
+      "colors": [],
+      "defense": null,
+      "img": "/img/lea/232/normal",
+      "img_small": "/img/lea/232/small",
+      "loyalty": null,
+      "mana_cost": "{0}",
+      "name": "Black Lotus",
+      "oracle_text": "{T}, Sacrifice this artifact: Add three mana of any one color.",
+      "power": null,
+      "roles": [],
+      "toughness": null,
+      "type_line": "Artifact"
+     },
+     "have": {
+      "on_the_way": 0,
+      "owned": 1
+     },
+     "name": "Black Lotus",
+     "notes": "",
+     "number": "",
+     "set": "",
+     "source": ""
+    },
+    {
+     "card": {
+      "cmc": 1.0,
+      "color_identity": [
+       "G"
+      ],
+      "colors": [
+       "G"
+      ],
+      "defense": null,
+      "img": "/img/cmm/648/normal",
+      "img_small": "/img/cmm/648/small",
+      "loyalty": null,
+      "mana_cost": "{G}",
+      "name": "Elvish Mystic",
+      "oracle_text": "{T}: Add {G}.",
+      "power": "1",
+      "roles": [
+       "ramp"
+      ],
+      "toughness": "1",
+      "type_line": "Creature — Elf Druid"
+     },
+     "have": {
+      "on_the_way": 0,
+      "owned": 1
+     },
+     "name": "Elvish Mystic",
+     "notes": "",
+     "number": "",
+     "set": "",
+     "source": ""
+    },
+    {
+     "card": {
+      "cmc": 1.0,
+      "color_identity": [
+       "G"
+      ],
+      "colors": [
+       "G"
+      ],
+      "defense": null,
+      "img": "/img/fdn/227/normal",
+      "img_small": "/img/fdn/227/small",
+      "loyalty": null,
+      "mana_cost": "{G}",
+      "name": "Llanowar Elves",
+      "oracle_text": "{T}: Add {G}.",
+      "power": "1",
+      "roles": [
+       "ramp"
+      ],
+      "toughness": "1",
+      "type_line": "Creature — Elf Druid"
+     },
+     "have": {
+      "on_the_way": 0,
+      "owned": 5
+     },
+     "name": "Llanowar Elves",
+     "notes": "",
+     "number": "",
+     "set": "",
+     "source": ""
+    },
+    {
+     "card": {
+      "cmc": 1.0,
+      "color_identity": [],
+      "colors": [],
+      "defense": null,
+      "img": "/img/ecc/57/normal",
+      "img_small": "/img/ecc/57/small",
+      "loyalty": null,
+      "mana_cost": "{1}",
+      "name": "Sol Ring",
+      "oracle_text": "{T}: Add {C}{C}.",
+      "power": null,
+      "roles": [
+       "ramp"
+      ],
+      "toughness": null,
+      "type_line": "Artifact"
+     },
+     "have": {
+      "on_the_way": 1,
+      "owned": 0
+     },
+     "name": "Sol Ring",
+     "notes": "",
+     "number": "",
+     "set": "",
+     "source": ""
+    }
+   ],
+   "profile": "matt",
+   "warnings": [
+    "magic/decks/casual/broken.md can't be read: no fenced decklist block under a '## Decklist' heading, so its Planned list can't be read"
+   ]
+  }
+ }
+}

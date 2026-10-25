@@ -1,0 +1,108 @@
+/* The packing plan (assembly.js): lays the shared components out. A phone: the deck checklist folded above the
+   plan. From 1000 px the checklist is a column on the left and the plan beside it; each deck's plan is its own
+   panel, and from 1600 px two decks sit side by side. */
+.pack-layout { display: grid; gap: var(--s-4); align-items: start; margin-top: var(--s-4); }
+.pack-main { min-width: 0; display: grid; gap: var(--s-4); align-content: start; }
+.pack-message:empty { display: none; }
+.pack-message { margin: 0; color: var(--ink-2); }
+.pack-sort { gap: var(--s-3); }
+.pack-sort[hidden] { display: none; }
+.pack-completion { margin-top: var(--s-4); }
+.pack-completion h2 { margin: 0; font-size: var(--fs-lg); }
+.pack-completion-message { margin: var(--s-2) 0; }
+.pack-completion-error:empty { display: none; }
+.pack-completion-error p { color: var(--warn-text); }
+.pack-storage-group + .pack-storage-group { margin-top: var(--s-4); }
+.pack-storage-group h4 { margin: 0; font-size: var(--fs-sm); color: var(--ink-2); }
+
+/* The deck checklist. */
+.pack-choose { min-width: 0; padding: 0; }
+.pack-choose > summary {
+  display: flex; align-items: center; min-height: var(--tap); padding: var(--s-2) var(--s-4);
+  cursor: pointer; font-weight: var(--fw-semibold);
+}
+.pack-choose-count { color: var(--ink-2); font-weight: var(--fw-regular); }
+.pack-choose[open] > summary { border-bottom: 1px solid var(--border); }
+.pack-presets, .pack-picks { padding: 0 var(--s-4); }
+.pack-presets { padding-top: var(--s-3); }
+.pack-picks { padding-bottom: var(--s-3); }
+.pack-group { margin-top: var(--s-3); }
+.pack-group > h3, .pack-group > summary { margin: 0; color: var(--ink-2); font-size: var(--fs-sm); font-weight: var(--fw-semibold); }
+.pack-group > summary { display: flex; align-items: center; min-height: var(--tap); cursor: pointer; }
+.pack-picklist { list-style: none; margin: 0; padding: 0; }
+.pack-picklist li { border-bottom: 1px solid var(--border); }
+.pack-picklist li:last-child { border-bottom: 0; }
+.pack-picklist .choice span { min-width: 0; overflow-wrap: break-word; }
+.pack-version { margin: 0 0 var(--s-2) var(--s-6); }
+.pack-sideboard-choice { display: grid; gap: var(--s-2); margin: 0 0 var(--s-3) var(--s-6); min-width: 0; }
+.pack-sideboard-choice .field { margin: 0; min-width: 0; }
+.pack-sideboard-choice select { width: 100%; min-width: 0; }
+.pack-sideboard-choice p { margin: 0; }
+.pack-sideboard-quantities { display: grid; gap: var(--s-2); }
+.pack-sideboard-quantities .field { display: grid; grid-template-columns: minmax(0, 1fr) 5em; align-items: center; gap: var(--s-2); }
+.pack-sideboard-quantities input { width: 100%; min-width: 0; }
+.pack-show-plan { padding: 0 var(--s-4) var(--s-3); }
+.pack-show-plan[hidden] { display: none; }
+
+/* The sticky bar: one line; a phone gets the short words ("Pulled 5/277 · 0/24 steps"). */
+.pack-bar { flex-wrap: nowrap; }
+.pack-bar > .actions { flex: none; flex-wrap: nowrap; }
+.pack-bar .action-bar-status { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pack-progress-short { display: none; }
+
+/* A deck's plan. */
+.pack-decks { display: grid; gap: var(--s-4); align-items: start; }
+.pack-deck { display: grid; gap: var(--s-4); }
+.pack-deck-head h2 { margin: 0; font-size: var(--fs-xl); overflow-wrap: break-word; }
+.pack-deck-head .sub { margin: var(--s-1) 0 0; }
+.pack-bulk { display: grid; justify-items: start; gap: var(--s-2); }
+.pack-bulk[hidden] { display: none; }
+.pack-bulk-scope { margin: 0; }
+.pack-step h3 { display: flex; align-items: center; gap: var(--s-2); margin: 0 0 var(--s-3); font-size: var(--fs-md); }
+.pack-step-n {
+  display: inline-flex; align-items: center; justify-content: center; flex: none;
+  width: 1.75em; height: 1.75em; border-radius: 50%;
+  background: var(--accent-soft); color: var(--ink); font-size: var(--fs-sm); font-weight: var(--fw-bold);
+}
+.pack-step > .sub { margin: 0 0 var(--s-2); }
+.pack-tiles { margin-top: var(--s-2); }
+.pack-list, .pack-plain { list-style: none; margin: 0; padding: 0; }
+.pack-list li { border-bottom: 1px solid var(--border); overflow-wrap: break-word; }
+.pack-list li:last-child { border-bottom: 0; }
+.pack-plain li { padding: var(--s-1) 0; overflow-wrap: break-word; }
+.pack-row { display: flex; align-items: center; gap: var(--s-3); min-height: var(--tap); padding: var(--s-2) 0; cursor: pointer; }
+.pack-row:has(input:checked) span { text-decoration: line-through; color: var(--ink-2); }
+.assembly-pending { padding: var(--s-2) 0; color: var(--ink-2); }
+.pack-fold > summary { display: flex; align-items: center; min-height: var(--tap); cursor: pointer; font-weight: var(--fw-semibold); }
+.pack-fold[open] > summary { margin-bottom: var(--s-2); }
+.assembly-kit { display: grid; gap: var(--s-2); }
+.pack-kit-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-3); min-width: 0; }
+.pack-kit-row p { flex: 1 1 12em; margin: 0; overflow-wrap: break-word; }
+.assembly-kit .box { margin: 0; }
+.assembly-kit .box ul { margin: 0; }
+.pack-extra > summary { display: flex; align-items: center; min-height: var(--tap); cursor: pointer; font-weight: var(--fw-semibold); }
+.pack-extra[open] > summary { margin-bottom: var(--s-2); }
+.pack-extra h2 { margin-top: 0; font-size: var(--fs-lg); }
+
+/* A tile's words (before its picture loads, or without one) start under the copies badge and the tick, so
+   neither covers the card's name. */
+.pack-tiles .card-tile-text { padding-top: 48px; }
+
+@media (max-width: 599px) {
+  .pack-progress-long { display: none; }
+  .pack-progress-short { display: inline; }
+}
+@media (min-width: 1000px) {
+  .pack-show-plan { display: none; }
+  .pack-layout { grid-template-columns: minmax(260px, 320px) minmax(0, 1fr); gap: var(--s-5); }
+  .pack-choose { position: sticky; top: calc(var(--shell-top) + var(--s-3)); max-height: calc(100vh - var(--shell-top) - var(--s-6)); overflow: auto; }
+}
+/* A QHD window: up to four decks side by side, and the plan's status line across all of them. */
+@media (min-width: 1600px) {
+  .pack-decks { grid-template-columns: repeat(auto-fit, minmax(min(100%, 520px), 1fr)); }
+  .pack-results > .box { max-width: none; }
+}
+/* There the deck columns are narrow, so their card tiles are smaller than the page's usual 196 px. */
+@media (min-width: 2200px) {
+  .pack-decks .card-tiles { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+}

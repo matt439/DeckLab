@@ -1,0 +1,499 @@
+/* Deck Lab's design tokens (decklab/UI-REVIEW.md 2.1): type, spacing, radii, elevation, colours and control
+   sizes. Every other stylesheet reads these; none defines a colour, font size, radius or shadow of its own.
+
+   Load order (index.html): tokens.css, base.css, components.css, then the page files. Page files only lay
+   out components; they never restyle a button or an input.
+
+   Themes: app.js always puts data-theme="light" or "dark" on <html> ("Auto" is resolved with matchMedia
+   and follows the system as it changes; a small script in index.html's <head> does it before the first
+   paint). So the dark colours are written once, in :root[data-theme="dark"].
+
+   The colours are P1's (decklab/design/visual-design.md 2.1, 2.2 and 2.6; E11-S30 slice 2). Teal (--accent
+   and its family) means "you can do something" or "this is selected, yours, owned or done"; links are teal
+   too (dark in light, light in dark), and only info boxes (--info-*) stay blue. Deck colour (--stripe-*, --tint-*, --art-*) belongs
+   only to decks, Forge's strong and weak colours only to Forge results, and amber (--warn-*) is "look at
+   this". The chart colours (--series-*) are the dataviz reference palette (series 1 blue, series 2 orange),
+   checked for colour-blind separation and contrast against these surfaces in both themes.
+
+   Breakpoints, one ladder for every page (media queries can't read custom properties, so they're written
+   out where they're used):
+     below 600 px     phone: lists in one column, image tiles in 2-3 columns
+     600-999 px       tablet portrait
+     1000-1599 px     desktop and iPad landscape (.wrap up to 1,400 px)
+     1600 px and up   QHD: the whole width, the hover peek (hover and a fine pointer only)
+     (2200 px and up: a QHD window's extra columns, and 359 px and below: the narrowest phones.) */
+
+:root {
+  color-scheme: light;
+
+  /* Type */
+  --font: "Figtree", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;       /* base.css @font-face */
+  --font-mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  --fs-xs: .75rem;     /* chips and badges only */
+  --fs-sm: .875rem;    /* meta, captions: the smallest size anyone reads */
+  --fs-md: 1rem;       /* body, inputs (16 px stops iOS zooming on focus) */
+  --fs-lg: 1.25rem;    /* panel and section titles */
+  --fs-xl: 1.5rem;     /* page sections, deck title on a phone */
+  --fs-2xl: 2rem;      /* page title */
+  --fw-regular: 400;
+  --fw-semibold: 600;
+  --fw-bold: 700;
+  --lh-body: 1.5;
+  --lh-tight: 1.25;
+
+  /* Spacing: a 4 px grid */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 24px;
+  --s-6: 32px;
+  --s-7: 48px;
+  --s-8: 64px;
+  --gutter: var(--s-4);         /* the page's side margin: --s-5 from 600 px, --s-6 from 1,600 px */
+
+  /* Radii */
+  --r-sm: 4px;                  /* art thumbnails, small swatches, a kbd hint */
+  --r-md: 10px;                 /* anything not yet moved over to P1's radii (buttons are --r-pill since slice 4) */
+  --r-lg: 14px;                 /* cards, panels, sheets */
+  --r-pill: 999px;
+  --r-seg: calc(var(--seg-h) / 2);   /* a segmented track: round on one row, a rounded rectangle when it wraps */
+  --r-card: 4.75% / 3.4%;       /* a Magic card's corners, on its picture */
+
+  /* Control sizes: 44 px to touch; a mouse gets the denser step below. --tap is a touch target that
+     isn't a control (a link in a list, a row), and stays 44 px. */
+  --ctl-h: 44px;                /* buttons, segmented switches */
+  --field-h: 44px;              /* inputs and selects */
+  --tap: 44px;
+  --shell-top: calc(56px + env(safe-area-inset-top));      /* the sticky top bar or casual header (shell.css), 56 px at both densities */
+
+  /* P1's density tokens (decklab/design/visual-design.md 2.3-2.5 and 3; E11-S30 slice 3). One set of names,
+     three levels, switched at the breakpoint ladder's 1000 px step and by the pointer:
+       casual         under 1000 px: the phone and the iPad in portrait (the values here)
+       touch lab      1000 px and up without a fine pointer: the iPad in landscape, lab layout at touch sizes
+       lab            1000 px and up with a fine pointer: the desktop's dense tool
+     Sizes only shrink under (pointer: fine), so a touch screen keeps 44 px at every width. A narrow window with
+     a mouse gets today's step (36-38 px). The older --fs-*, --r-md/lg, --ctl-h and --field-h keep their
+     values until each component moves over (the page slices); slice 4's components read the new ones. */
+  --fw-medium: 500;
+  --fw-heavy: 800;              /* page titles, eyebrows, group headings, pip letters */
+  --fs-h1: 2rem;                /* page title, with --ls-h1 */
+  --fs-hero: 2rem;              /* a deck's name over its art */
+  --fs-eyebrow: .8125rem;       /* a panel's uppercase label, --ls-caps */
+  --fs-group: .8125rem;         /* a group heading (Built, Building), uppercase */
+  --fs-body: 1rem;
+  --fs-row: 1.0625rem;          /* a row's or tile's title, 700 */
+  --fs-meta: .875rem;           /* a meta line, --ink-2 at casual density, --ink-3 in the lab */
+  --fs-btn: .9375rem;           /* a button's label, 700 */
+  --fs-input: 1rem;             /* a field's text: 16 px wherever iOS might zoom on focus */
+  --fs-th: .65625rem;           /* a table header, mono uppercase (casual density has no tables) */
+  --fs-kbd: .65625rem;          /* a keyboard hint (only with a fine pointer) */
+  --fs-cell-num: .875rem;       /* a table's mono numbers: quantities, money */
+  --fs-qty: 1rem;               /* a stepper's number: Figtree 16 / 700 casual, mono 12.5 / 600 in the lab */
+  --fw-qty: 700;
+  --fs-qty-input: 1rem;         /* ... when it's typed into: never under --fs-input's 16 px without a fine pointer */
+  --font-num: var(--font);      /* counts and quantities: Figtree (tabular) casual, mono in the lab (2.3) */
+  --fs-fig-mid: 1.5rem;         /* a progress figure (the Packing plan's 19 / 39) */
+  --fs-fig: 2.5rem;             /* a big win rate, mono 600 */
+  --fs-fig-unit: 1.5rem;        /* its "%" */
+  --fs-fig-sm: 1rem;            /* an inline win rate, mono 600 */
+  --fs-fig-range: .875rem;      /* the range after an inline win rate, mono 500 */
+  --ls-h1: -.03em;
+  --ls-hero: -.03em;
+  --ls-fig: 0em;
+  --ls-caps: .08em;             /* eyebrows and group headings */
+  --ls-th: .07em;
+  --lh-copy: 1.5;               /* body text's line height */
+  --r-panel: 14px;              /* panels, cards, notices, a phone sheet's top corners */
+  --r-row: 8px;                 /* a selected row, a menu */
+  --r-field: 12px;              /* selects and plain text inputs */
+  --btn-h: 44px;                /* buttons (a casual primary may go to 48) */
+  --seg-h: 44px;                /* a segmented control */
+  --input-h: 44px;              /* inputs and selects */
+  --stepper-h: 46px;            /* a stepper, its − and + 44 px */
+  --check-size: 24px;           /* a checkbox, inside a 52 px label (the lab's 18 px in a 40 x 44 cell) */
+  --row-h: 44px;                /* a table row */
+  --th-h: 30px;                 /* a table's header row, and a table's group row */
+  --bar-h: 72px;                /* a page's bar at the bottom (an action bar, the editor's), at least: 60 in the lab */
+  --seg-track: var(--track);    /* a segmented control's track: --track for now, --surface-chip in the lab once
+                                   slice 8 puts lab content on --surface (on --page, #efeee9 on #f1f0ec, it has
+                                   no visible edge) */
+  --list-row-h: 54px;           /* a lab list row (the library's deck rows), 2 px apart */
+  --tile-min: 104px;            /* a casual deck tile's least height */
+  --tile-min-forge: 112px;      /* ... with a Forge line */
+  --flag-h: 30px;               /* a strong or weak flag */
+  --gutter-list: var(--gutter); /* a lab list pane's side padding */
+  /* Forge's result pieces (sim-ui.js; visual-design.md 4.9, slice 6): a flag's words; a range bar's thickness
+     (compact in a Matchups row) and its axis; a freshness badge's height and words (a row's in the lab is 17 px);
+     a swap test's difference; the run activity's turning ring and a run's progress ring; a 12 px icon. */
+  --fs-flag: .875rem;
+  --range-h: 12px;
+  --range-h-compact: 6px;
+  --fs-axis: .875rem;
+  --fresh-h: 24px;
+  --fresh-h-row: 24px;
+  --fs-fresh: .8125rem;
+  --fs-fresh-row: .8125rem;
+  --fs-swap: 1rem;
+  --fs-wr-caption: .8125rem;    /* "Forge field" under a tile's win rate (a tile is casual only) */
+  --activity-size: 24px;
+  --ring-size: 24px;
+  --icon-xs: 12px;
+
+  /* Elevation. In dark mode surfaces and borders do the lifting: pictures get a faint light ring with their
+     shadow, and only overlays get a real one. Lab panels use a 1 px --border, not a shadow.
+     --shadow-1 leaves out P1's 1 px ring (light rgb(20 40 38 / .09), dark rgb(255 255 255 / .06)) while the
+     panels and tiles that use it still have a border of their own, or they'd draw a double edge; the ring
+     comes with the borderless tiles (slices 4 and 8). */
+  --shadow-1: 0 1px 2px rgb(20 40 38 / .08);                                 /* tiles, cards */
+  --shadow-2: 0 6px 18px rgb(20 40 38 / .18);                                /* sheets, menus, popovers */
+  --shadow-up: 0 -4px 14px rgb(20 40 38 / .07);                              /* a bar stuck to the bottom */
+  --shadow-img: 0 2px 8px rgb(20 40 38 / .22);                               /* a card's picture */
+  --shadow-img-sm: 0 1px 3px rgb(20 40 38 / .25);                            /* a thumbnail in a row */
+  --shadow-primary: 0 1px 2px rgb(15 110 106 / .35);                         /* a primary button */
+  --focus-halo: rgb(15 110 106 / .18);   /* the 3 px halo round a focused field (a focused control gets --focus's outline) */
+
+  /* Colours */
+  --page: #f1f0ec;              /* the body, a lab detail pane, the phone page */
+  --surface: #ffffff;           /* the top bar, list panes, panels, the tab bar, sheets */
+  --surface-2: #f6f5f1;         /* sunken: table headers, search fields, empty-state wells, chart tracks */
+  --surface-3: #e4e2dc;         /* the owned bar's track, the land chart's "within 2" band */
+  --surface-chip: #efeee9;      /* a lab segmented track, neutral badges, kbd, the finish pill, no-image frames */
+  --track: #e6e4de;             /* a phone segmented track, a primary that can't act yet, the colourless pip */
+  --hover: #f6f5f1;             /* a row under the pointer (raised in dark, so it doesn't read as pressed) */
+  --band-ok: #cfccc4;           /* the land chart's "within 1" band; both bands have --ink-3 edges */
+  --ink: #1c211f;               /* text, win-rate figures, a range bar's point */
+  --ink-2: #3d4542;             /* secondary text, nav links, meta on tints */
+  --ink-3: #565e5a;             /* tertiary text, counts, axis labels: 5.9:1 on --page, the lightest text */
+  --ink-4: #8a918d;             /* never text: the 50% tick, neutral outlines, empty-picture glyphs */
+  --grid: #e1e0d9;
+  --baseline: #c3c2b7;
+  --border: #e2e0d9;            /* panels and bars */
+  --border-strong: #d8d6ce;     /* buttons, inputs, kbd, steppers, chart baselines */
+  --divider: #ebe9e3;           /* lines between table rows and groups */
+  --rule: #dcdad2;              /* a phone section heading's hairline */
+  --accent: #0f6e6a;            /* deep teal, 5.9:1 on white */
+  --accent-strong: #0b5552;     /* teal text: on --accent-soft, a secondary button, the avatar fallback */
+  --accent-ink: #ffffff;        /* text on --accent */
+  --accent-soft: #e1efec;       /* the current nav pill, a selected row or tile, a run's details */
+  --accent-line: rgb(15 110 106 / .5);   /* the 1 px border of a selected row or chip */
+  --accent-track: #d3e2df;      /* the owned bar's track inside a selected row */
+  --ring-track: #bcd8d4;        /* a run's progress ring, behind its arc */
+  --link: #0a504d;
+  --kbd-on-accent: rgb(255 255 255 / .45);   /* a kbd hint's box on a primary button */
+  --btn-bg: var(--surface);     /* a secondary button's fill: white in light, none in dark (4.5) */
+  --bar-bg: rgb(255 255 255 / .97);   /* a sticky bottom bar: --surface at 97% */
+  /* A tick drawn on --accent (a tile's tick, the printing picker's current printing): white in light, the
+     near-black --accent-ink in dark, where white on light teal is about 2:1. */
+  --icon-tick-on-accent: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M2 5.2l2 2 4-4.4' fill='none' stroke='%23fff' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  --info-ink: #1c5cab;          /* info boxes only: links aren't blue */
+  --info-soft: #e8f1fc;
+  --selected: var(--accent-soft);
+  --focus: var(--accent);
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --series-muted: #9b9991;      /* de-emphasised columns ("later"); 2.8:1 on --surface, always labelled */
+  --good: #0ca30c;
+  --good-ink: #006300;
+  --good-soft: #e7f4e7;
+  --warn: #fab219;
+  --warn-ink: #4d3500;          /* text on --warn-soft */
+  --warn-ink-sm: #6b4500;       /* small text on --warn-soft */
+  --warn-soft: #fbf3e2;         /* notices, aging badges, "needs attention" pills */
+  --warn-line: #efdcb4;         /* their inset 1 px ring */
+  --warn-icon: #8a5600;         /* icons on --warn-soft, a dashed "check this" outline */
+  --warn-text: #7a4c00;         /* amber warning words straight on a surface, with no --warn-soft behind them */
+  --building-ink: #7a4c00;      /* the Building group heading, Waiting rows, "keep with its cards" */
+  --missing: #a33a2e;           /* "9 to buy" text only */
+  --crit: #d03b3b;
+  --crit-ink: #b3261e;
+  --crit-soft: #fbeaea;
+  --on-crit: #ffffff;           /* text on a --crit fill (the confirm sheet's red last step) */
+  --win: #3b8f52;               /* the matchup matrix's cells only, diverging around 50%: a calmer green
+                                   than --good's tick, beside the teal accent; 3.9:1 on white */
+  --loss: var(--crit);
+  --even: var(--surface-2);
+  /* Forge results only: "strong against", +1 in a swap and a "better" verdict; "weak against", -1 and "worse"
+     (and a destructive text button). A win-rate figure itself is never coloured. */
+  --strong-soft: #e3f1e6;
+  --strong-ink: #1d6b3a;
+  --weak-soft: #fbe9e6;
+  --weak-ink: #9b2f22;
+  --range-band: rgb(28 33 31 / .22);   /* a range bar's 95% band */
+  --range-track: #ebe9e3;
+  --run-line: rgb(15 110 106 / .28);   /* the 1 px edge of a run's details */
+  --chip-on-tint: rgb(255 255 255 / .8);         /* a badge on a deck's tint ... */
+  --chip-on-tint-line: rgb(20 40 38 / .14);      /* ... and its inset 1 px ring */
+  /* Mana symbol fills (the printed symbols' colours); text on them is always dark. */
+  --mana-w: #fffbd5;
+  --mana-u: #aae0fa;
+  --mana-b: #cbc2bf;
+  --mana-r: #f9aa8f;
+  --mana-g: #9bd3ae;
+  --mana-c: #ccc2c0;
+  --mana-ink: #0b0b0b;
+  --mana-edge: rgb(0 0 0 / .35);
+  --mana-ring: rgb(28 33 31 / .22);   /* inset 1 px around a colour-identity pip */
+  --shadow-pip-art: 0 0 0 2px #ffffff, 0 2px 4px rgb(0 0 0 / .3);   /* a pip over a picture, in both themes */
+  /* A colour-identity pip (ui.js deckColourPieces): 16 px in a lab row, 20 on a casual tile or a lab band,
+     22 in a casual deck head, 24 in a filter toggle; its letter 9, 10, 11 and 12 px. */
+  --pip-sm: 16px;
+  --pip-md: 20px;
+  --pip-lg: 22px;
+  --pip-xl: 24px;
+  --fs-pip-sm: .5625rem;
+  --fs-pip-md: .625rem;
+  --fs-pip-lg: .6875rem;
+  --fs-pip-xl: .75rem;
+  /* A deck's identity stripe, 5 px over a tile or a head and 3 px under a thumbnail, and its swatch before
+     its name on a page that isn't about decks (12 px tall on a phone). */
+  --stripe-h: 5px;
+  --stripe-h-thin: 3px;
+  --swatch-w: 14px;
+  --swatch-h: 8px;
+  --r-swatch: 2px;
+  /* A deck's colours (visual-design.md 4.3), only ever on decks: its stripe (lighter in dark), its tint (in
+     dark, the dark stripe over --surface) and its art placeholder while a picture loads. A one-colour tint
+     runs to its -deep stop; four or five colours share the neutral --tint-multi, and three or more the
+     neutral --art-multi. */
+  --stripe-w: #e2c472;
+  --stripe-u: #2f7fbf;
+  --stripe-b: #5a4f4b;
+  --stripe-r: #d9473e;
+  --stripe-g: #1f8a55;
+  --stripe-c: #8f8a85;
+  --tint-w: #fcf6e6;
+  --tint-u: #e8f1f8;
+  --tint-b: #efecea;
+  --tint-r: #fbeceb;
+  --tint-g: #e7f3ec;
+  --tint-c: #eeedea;
+  --tint-multi: #f3f1ea;
+  --tint-w-deep: #f8efd8;
+  --tint-u-deep: #ddebf5;
+  --tint-b-deep: #e9e5e3;
+  --tint-r-deep: #f9e4e3;
+  --tint-g-deep: #dcede4;
+  --tint-c-deep: #e8e6e3;
+  --art-w: #f3ead2;
+  --art-u: #d9e6f0;
+  --art-b: #e3dfdc;
+  --art-r: #efe3d0;
+  --art-g: #dbe9df;
+  --art-c: #e6e4de;
+  --art-multi: #e6e4de;
+  /* Each person's colour (their initial on the avatar), white text on all three. */
+  --avatar-1: #b8481d;
+  --avatar-2: #2f7a3b;
+  --avatar-3: #6a4bb5;
+  --avatar-ink: #ffffff;
+  /* Over pictures and behind overlays: the same in both themes. */
+  --scrim: rgb(0 0 0 / .55);    /* behind a sheet */
+  --scrim-strong: rgb(0 0 0 / .78);   /* behind a card shown big */
+  --on-scrim: #ffffff;
+  --on-scrim-2: #dddddd;
+  --scrim-edge: rgb(0 0 0 / .6);     /* the edge of something white over a picture */
+  --badge-bg: rgb(11 11 11 / .85);    /* a count on a card's picture */
+  --badge-ink: #ffffff;
+  --badge-ring: rgb(255 255 255 / .9);
+  /* The card viewer (cards-ui.css), dark in both themes, and a foil card's sheen on its picture. */
+  --viewer-bg: rgb(10 10 12);
+  --viewer-btn: rgb(255 255 255 / .12);
+  --viewer-line: rgb(255 255 255 / .24);
+  --viewer-panel: rgb(32 32 36);  /* the viewer's text panel: a dark surface, as the viewer is dark in both themes */
+  --foil-sheen: linear-gradient(125deg, rgb(255 0 128 / .55), rgb(255 210 0 / .45) 28%, rgb(0 255 170 / .45) 52%,
+    rgb(0 140 255 / .5) 76%, rgb(200 0 255 / .45));
+
+  /* Older names, kept so the page files that still use them work while they move over. */
+  --btn: var(--accent);
+  --btn-ink: var(--accent-ink);
+  --radius: var(--r-lg);
+  --shadow: var(--shadow-1);
+}
+
+@media (max-width: 599px) {
+  :root { --swatch-h: 12px; }
+}
+/* A phone on its side: the top bar isn't sticky (shell.css), so sticky parts stick at the screen's top. */
+@media (orientation: landscape) and (max-height: 500px) {
+  :root { --shell-top: env(safe-area-inset-top, 0px); }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --shadow-1: 0 0 transparent;  /* the ring waits for the borderless tiles, as in light */
+  --shadow-2: 0 8px 24px rgb(0 0 0 / .6);
+  --shadow-up: 0 0 transparent;  /* not "none": it's also used inside a list of shadows; the border does it */
+  --shadow-img: 0 0 0 1px rgb(255 255 255 / .08), 0 4px 14px rgb(0 0 0 / .55);
+  --shadow-img-sm: 0 0 0 1px rgb(255 255 255 / .08), 0 2px 6px rgb(0 0 0 / .5);
+  --shadow-primary: 0 0 transparent;
+  --focus-halo: rgb(79 189 181 / .25);
+  --page: #121614;
+  --surface: #1a1f1d;
+  --surface-2: #161a19;
+  --surface-3: #2c3331;
+  --surface-chip: #252b29;
+  --track: #2c3331;
+  --hover: #222826;
+  --band-ok: #4e4d47;
+  --ink: #e9ecea;
+  --ink-2: #c3c9c6;
+  --ink-3: #9aa29e;
+  --ink-4: #6b7470;
+  --grid: #2c2c2f;
+  --baseline: #4a4a46;
+  --border: #2c3331;
+  --border-strong: #3a4240;
+  --divider: #252b29;
+  --rule: #2c3331;
+  --accent: #4fbdb5;
+  --accent-strong: #7fd4cd;
+  --accent-ink: #06201f;        /* near-black on teal (7.5:1): white fails in dark */
+  --accent-soft: rgb(79 189 181 / .14);
+  --accent-line: rgb(79 189 181 / .55);
+  --accent-track: rgb(79 189 181 / .24);
+  --ring-track: #2f5a56;
+  --link: #7fd4cd;
+  --kbd-on-accent: rgb(6 32 31 / .4);
+  --btn-bg: transparent;
+  --bar-bg: rgb(26 31 29 / .97);
+  --icon-tick-on-accent: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M2 5.2l2 2 4-4.4' fill='none' stroke='%2306201f' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  --info-ink: #86b6ef;
+  --info-soft: #16263b;
+  --series-1: #3987e5;
+  --series-2: #d95926;
+  --series-muted: #6f6d68;
+  --good-ink: #3fbf3f;
+  --good-soft: #142a14;
+  --warn-ink: #f3d9a6;
+  --warn-ink-sm: #f3d9a6;
+  --warn-soft: rgb(240 180 76 / .10);
+  --warn-line: rgb(240 180 76 / .30);
+  --warn-icon: #e9b45a;
+  --warn-text: #e9b45a;
+  --building-ink: #e9b45a;
+  --missing: #ff9a8a;
+  --crit: #e66767;
+  --win: #58b06c;
+  --crit-ink: #f08a8a;
+  --crit-soft: #3a1c1c;
+  --on-crit: #2a0b0b;           /* white on the dark --crit is 3.2:1; this is 5.6:1 */
+  --strong-soft: rgb(127 211 154 / .14);
+  --strong-ink: #7fd39a;
+  --weak-soft: rgb(255 154 138 / .14);
+  --weak-ink: #ff9a8a;
+  --range-band: rgb(233 236 234 / .30);
+  --range-track: #2c3331;
+  --run-line: rgb(79 189 181 / .3);
+  --chip-on-tint: var(--surface-chip);
+  --chip-on-tint-line: rgb(255 255 255 / .10);
+  --mana-ring: rgb(0 0 0 / .28);
+  --stripe-u: #4a97d6;
+  --stripe-b: #8c7f7a;
+  --stripe-r: #e5594f;
+  --stripe-g: #2fa86a;
+  --stripe-c: #a39e99;
+  --tint-w: rgb(226 196 114 / .16);
+  --tint-u: rgb(74 151 214 / .16);
+  --tint-b: rgb(140 127 122 / .16);
+  --tint-r: rgb(229 89 79 / .16);
+  --tint-g: rgb(47 168 106 / .16);
+  --tint-c: rgb(163 158 153 / .16);
+  --tint-multi: var(--surface);
+  --tint-w-deep: rgb(226 196 114 / .24);
+  --tint-u-deep: rgb(74 151 214 / .24);
+  --tint-b-deep: rgb(140 127 122 / .24);
+  --tint-r-deep: rgb(229 89 79 / .24);
+  --tint-g-deep: rgb(47 168 106 / .24);
+  --tint-c-deep: rgb(163 158 153 / .24);
+  --art-w: #332d1f;
+  --art-u: #1f2a33;
+  --art-b: #232833;
+  --art-r: #33291f;
+  --art-g: #1f2e25;
+  --art-c: #252b29;
+  --art-multi: #26272c;
+}
+
+/* The gutter widens with the screen. */
+@media (min-width: 600px) {
+  :root { --gutter: var(--s-5); }
+}
+@media (min-width: 1400px) {
+  :root { --peek-w: 280px; }       /* the card peek beside a deck and the editor, with a mouse (deck.css) */
+}
+@media (min-width: 1600px) {
+  :root { --gutter: var(--s-6); --peek-w: 400px; --tile-w: 172px; }
+}
+@media (min-width: 2200px) {
+  :root { --peek-w: 488px; --tile-w: 196px; }
+}
+
+/* A mouse: denser controls. A touch screen keeps 44 px. */
+@media (pointer: fine) {
+  :root {
+    --ctl-h: 36px; --field-h: 38px;
+    --btn-h: 36px; --seg-h: 36px; --input-h: 38px; --stepper-h: 36px; --check-size: 22px; --row-h: 36px;
+  }
+}
+
+/* P1's lab density, 1000 px and up. These are the touch lab's values (the iPad in landscape): lab type and
+   radii, but body, table numbers and inline win rates 14, buttons 15 and fields 16, and controls and rows
+   still 44 px (flags 26, checkboxes 24). */
+@media (min-width: 1000px) {
+  :root {
+    --bar-h: 60px;
+    --fs-h1: 1.375rem;
+    --fs-hero: 1.875rem;
+    --fs-eyebrow: .6875rem;
+    --fs-group: .6875rem;
+    --fs-body: .875rem;
+    --fs-row: .875rem;
+    --fs-meta: .75rem;
+    --fs-btn: .9375rem;
+    --fs-input: 1rem;
+    --fs-cell-num: .875rem;
+    --fs-qty: .875rem;
+    --fw-qty: 600;
+    --font-num: var(--font-mono);
+    --fs-fig-mid: 1.75rem;
+    --fs-fig: 2.25rem;
+    --fs-fig-unit: 1.375rem;
+    --fs-fig-sm: .875rem;
+    --fs-fig-range: .6875rem;
+    --ls-h1: -.025em;
+    --ls-fig: -.04em;
+    --lh-copy: 1.4;
+    --r-panel: 8px;
+    --r-field: 8px;
+    --flag-h: 26px;
+    --gutter-list: 20px;
+    --fs-flag: .8125rem;
+    --range-h: 10px;
+    --fs-axis: .6875rem;
+    --fresh-h: 20px;
+    --fresh-h-row: 17px;
+    --fs-fresh: .75rem;
+    --fs-fresh-row: .6875rem;
+    --fs-swap: .9375rem;
+    --activity-size: 20px;
+    --ring-size: 16px;
+  }
+}
+/* ... and with a mouse, the dense lab: 13 px body, buttons, fields and inline win rates (12-12.5 px meta and
+   table numbers) and 28-32 px controls. */
+@media (min-width: 1000px) and (pointer: fine) {
+  :root {
+    --fs-body: .8125rem;
+    --fs-btn: .8125rem;
+    --fs-input: .8125rem;
+    --fs-cell-num: .78125rem;
+    --fs-qty: .78125rem;
+    --fs-qty-input: .78125rem;
+    --fs-fig-sm: .8125rem;
+    --fs-fig-range: .65625rem;
+    --btn-h: 32px; --seg-h: 28px; --input-h: 32px; --stepper-h: 28px; --check-size: 18px;
+    --flag-h: 22px;
+    --fs-flag: .75rem;
+  }
+}

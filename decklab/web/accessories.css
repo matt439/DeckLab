@@ -1,0 +1,167 @@
+/* The Accessories page (accessories.js), its add/edit sheet and the kit picker other pages open:
+   phone first, with tokens only and 44 px touch targets. */
+.acc-filter { margin: var(--s-4) 0 var(--s-2); max-width: 100%; overflow-x: auto; }
+.acc-message:empty { display: none; }
+.acc-message { margin: var(--s-3) 0; }
+.acc-section { margin-top: var(--s-5); }
+.acc-section > h2 { font-size: var(--fs-lg); }
+/* The tiles: two a row on a phone, the picture first, one line under the name, then chips. */
+.acc-grid {
+  list-style: none; padding: 0; display: grid; gap: var(--s-4) var(--s-3); margin-top: var(--s-3);
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 150px), 1fr));
+}
+@media (max-width: 599px) { .acc-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.acc-card { display: flex; flex-direction: column; gap: var(--s-2); min-width: 0; }
+.acc-tile {
+  display: flex; flex-direction: column; gap: var(--s-2); width: 100%; min-width: 0; padding: 0;
+  border: 0; background: none; color: var(--ink); font: inherit; text-align: left;
+}
+button.acc-tile { cursor: pointer; }
+.acc-tile .acc-thumb-fill { border-radius: var(--r-lg); border: 1px solid var(--border); background: var(--surface); }
+button.acc-tile:hover .acc-thumb-fill { border-color: var(--accent); }
+.acc-tile-words { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.acc-tile-name {
+  font-weight: var(--fw-semibold); overflow-wrap: break-word; hyphens: auto;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden;
+}
+.acc-tile-meta { color: var(--ink-2); font-size: var(--fs-sm); }
+.acc-chips { gap: var(--s-1); }
+.acc-user-chip { text-decoration: none; max-width: 100%; }
+.acc-user-chip:hover { text-decoration: underline; }
+@media (pointer: coarse) { .acc-user-chip { min-height: var(--tap); } }
+.acc-why { font-size: var(--fs-sm); margin: 0; }
+.acc-pick-tile:disabled { cursor: default; opacity: 0.65; }
+
+/* Built decks without sleeves, and products kept intact. */
+.acc-panels { display: grid; gap: var(--s-4); margin: var(--s-4) 0; }
+.acc-panels:empty { display: none; }
+.acc-panels .panel { margin: 0; min-width: 0; }
+.acc-panels h2 { font-size: var(--fs-lg); }
+@media (min-width: 1000px) { .acc-panels { grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); } }
+.acc-holder-list, .acc-product-list { list-style: none; padding: 0; margin: var(--s-2) 0 0; display: grid; gap: var(--s-2); }
+.acc-holder { min-height: 44px; }
+.acc-holder, .acc-product-pick { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: var(--s-3); align-items: center; }
+.acc-holder-words { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-width: 0; }
+.acc-holder-words small { color: var(--ink-2); font-size: var(--fs-sm); }
+.acc-holder-words a { font-weight: var(--fw-semibold); }
+.acc-none-words { color: var(--ink-2); font-style: italic; }
+.acc-product { border-top: 1px solid var(--border); padding-top: var(--s-3); min-width: 0; }
+.acc-product:first-child { border-top: 0; padding-top: 0; }
+.acc-product-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--s-1) var(--s-3); margin: 0; }
+.acc-product-head small { color: var(--ink-2); font-size: var(--fs-sm); }
+.acc-product-picks { display: grid; gap: var(--s-3); margin-top: var(--s-2); }
+@media (min-width: 768px) { .acc-product-picks { grid-template-columns: 1fr 1fr; } }
+
+/* Pictures: square, the whole picture shown, on a sunken background. */
+.acc-thumb {
+  --acc-thumb: 64px;
+  display: inline-flex; align-items: center; justify-content: center; flex: none;
+  width: var(--acc-thumb); height: var(--acc-thumb);
+  border-radius: var(--r-sm); overflow: hidden; background: var(--surface-2); color: var(--ink-2);
+}
+.acc-thumb-fill { display: flex; width: 100%; height: auto; aspect-ratio: 1 / 1; border-radius: 0; }
+.acc-thumb img { display: block; width: 100%; height: 100%; object-fit: contain; }
+/* A cropped picture: a frame of the crop's shape, the picture scaled and moved inside it (accessoryThumb). */
+.acc-crop { position: relative; display: block; width: 100%; max-height: 100%; overflow: hidden; }
+.acc-crop.acc-crop-tall { width: auto; height: 100%; max-width: 100%; }
+.acc-thumb .acc-crop img { position: absolute; max-width: none; max-height: none; object-fit: fill; }
+/* Nothing chosen: a dashed empty slot. */
+.acc-slot-none { background: transparent; border: 2px dashed var(--border-strong); }
+.acc-thumb-fallback { padding: var(--s-2); font-size: var(--fs-sm); font-weight: var(--fw-semibold); text-align: center; }
+
+/* The add/edit sheet. */
+.acc-form { display: grid; gap: var(--s-4); }
+.acc-link-field { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s-2); align-items: end; }
+.acc-form input[type="url"], .acc-form input[type="number"], .acc-form input[type="text"] { width: 100%; }
+.acc-sheet-message:empty { display: none; }
+.acc-sheet-message .box { margin: 0; }
+.acc-picture { display: grid; gap: var(--s-2); }
+.acc-preview { margin: 0; max-width: 240px; }
+.acc-preview figcaption { margin-top: var(--s-1); font-size: var(--fs-sm); }
+.acc-picture-actions { display: flex; flex-wrap: wrap; gap: var(--s-1) var(--s-2); }
+.acc-no-picture { margin: 0; }
+/* The cropper: the whole picture, shaded outside the box, with corner handles big enough for a finger. */
+.acc-cropper { display: grid; gap: var(--s-2); }
+.acc-cropper > p { margin: 0; }
+.acc-crop-stage { position: relative; justify-self: start; margin: 14px; background: var(--surface-2); user-select: none; -webkit-user-select: none; }
+.acc-crop-clip { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.acc-crop-shade { position: absolute; box-shadow: 0 0 0 9999px var(--scrim); }
+.acc-crop-stage img { display: block; max-width: 100%; max-height: min(60vh, 480px); pointer-events: none; }
+.acc-crop-box {
+  position: absolute; box-sizing: border-box; cursor: move; touch-action: none;
+  border: 2px solid var(--on-scrim); outline: 1px solid var(--scrim-edge);
+}
+.acc-crop-box:focus-visible { outline: 3px solid var(--link); outline-offset: 0; }
+.acc-crop-handle {
+  position: absolute; width: 28px; height: 28px; touch-action: none;
+  background: var(--on-scrim); border: 2px solid var(--scrim-edge); border-radius: 50%;
+}
+.acc-crop-nw { left: -14px; top: -14px; cursor: nwse-resize; }
+.acc-crop-ne { right: -14px; top: -14px; cursor: nesw-resize; }
+.acc-crop-sw { left: -14px; bottom: -14px; cursor: nesw-resize; }
+.acc-crop-se { right: -14px; bottom: -14px; cursor: nwse-resize; }
+@media (pointer: fine) {
+  .acc-crop-handle { width: 16px; height: 16px; }
+  .acc-crop-nw, .acc-crop-sw { left: -8px; } .acc-crop-ne, .acc-crop-se { right: -8px; }
+  .acc-crop-nw, .acc-crop-ne { top: -8px; } .acc-crop-sw, .acc-crop-se { bottom: -8px; }
+}
+@media (forced-colors: active) {
+  .acc-crop-box { border-color: Highlight; }
+  .acc-crop-handle { background: Highlight; }
+}
+.acc-fields { display: grid; gap: var(--s-4); }
+.acc-field-quantity > label { font-size: var(--fs-sm); color: var(--ink-2); font-weight: var(--fw-semibold); }
+.acc-packs { margin-top: var(--s-1); }
+.acc-pack { min-width: 64px; }
+.acc-clash { border: 1px solid var(--border); border-radius: var(--r-md); padding: var(--s-2) var(--s-3); margin: var(--s-3) 0; }
+.acc-clash legend { font-weight: var(--fw-semibold); padding: 0 var(--s-1); }
+
+/* The kit picker: a grid of tiles, the chosen one marked. */
+.acc-pick {
+  list-style: none; padding: 0; display: grid; gap: var(--s-2);
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
+}
+.acc-pick-tile {
+  display: flex; align-items: center; gap: var(--s-3); width: 100%; min-height: 64px; padding: var(--s-2);
+  border: 1px solid var(--border-strong); border-radius: var(--r-md);
+  background: var(--surface); color: var(--ink); font: inherit; text-align: left; cursor: pointer;
+}
+.acc-pick-tile:hover { background: var(--hover); }
+.acc-pick-tile[aria-pressed="true"] { background: var(--selected); border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.acc-pick-tile[data-taken="true"] .acc-thumb { opacity: 0.6; }
+.acc-pick-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.acc-pick-text strong { overflow-wrap: break-word; hyphens: auto; }
+.acc-pick-text small { color: var(--ink-2); }
+.acc-pick-taken { color: var(--warn-text) !important; font-weight: var(--fw-semibold); }
+.acc-pick-add { justify-content: center; border-style: dashed; color: var(--link); }
+
+@media (min-width: 600px) {
+  .acc-link-field { grid-template-columns: minmax(0, 1fr) auto; }
+  .acc-fields { grid-template-columns: 1fr 1fr; }
+  .acc-field-notes { grid-column: 1 / -1; }
+}
+@media (min-width: 600px) {
+  .acc-grid { grid-template-columns: repeat(auto-fill, minmax(176px, 1fr)); }
+}
+@media (min-width: 1600px) {
+  .acc-grid { grid-template-columns: repeat(auto-fill, minmax(208px, 1fr)); }
+  /* Products kept intact: each Choose… stays beside the sleeves or deck box it changes. */
+  .acc-product-picks { grid-template-columns: repeat(2, minmax(0, 520px)); justify-content: start; }
+}
+@media (forced-colors: active) {
+  .acc-pick-tile, .acc-thumb { border: 1px solid CanvasText; }
+  .acc-slot-none { border: 2px dashed CanvasText; }
+  .acc-pick-tile[aria-pressed="true"] { outline: 3px solid Highlight; outline-offset: 2px; }
+}
+
+/* A read-only visitor's details sheet: the picture beside its words (stacked on a phone). */
+.acc-details { display: grid; gap: var(--s-4); grid-template-columns: minmax(0, 1fr); }
+.acc-details > .acc-thumb-fill, .acc-details > :first-child { max-width: 240px; }
+.acc-details-words p { margin: 0 0 var(--s-2); }
+.acc-details-notes { white-space: pre-wrap; }
+.acc-details-words h3 { font-size: var(--fs-md); margin: var(--s-3) 0 var(--s-1); }
+.acc-details-words ul { margin: 0; padding-left: var(--s-4); }
+@media (min-width: 600px) { .acc-details { grid-template-columns: 200px minmax(0, 1fr); } }
+
+/* The edit sheet's heading takes focus on a touch screen (accSheetFocus): no ring for that. */
+.acc-sheet-title:focus { outline: none; }

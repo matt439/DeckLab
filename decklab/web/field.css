@@ -1,0 +1,105 @@
+/* The deck view's "Against the field" part (field.js). Every class starts with "fv-".
+Phone first (one column); from 600 px the play box shows a mini bar per opponent; from 1,000 px the
+rows go in two columns; from 1,600 px (the whole-width layout) the rows become a table beside the
+headline. */
+
+.fv-content { display: grid; gap: var(--s-2); }
+.fv-section { min-width: 0; }
+.fv-layout { display: grid; gap: var(--s-3); }
+.fv-side { display: grid; gap: var(--s-3); align-content: start; min-width: 0; }
+.fv-main { min-width: 0; }
+.fv-main > h3 { margin: 0; }
+
+/* No games yet: one empty state, with the play box in it. */
+.fv-empty > .fv-play { margin-top: var(--s-3); }
+
+.fv-tile {
+  padding: var(--s-3) var(--s-4);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-1);
+}
+.fv-tile > p { margin: 0 0 var(--s-2); }
+.fv-big { font-size: var(--fs-md); }
+/* The average as a hero figure, with how long ago the field was played beside it (its range bar follows). */
+.fv-figure { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2) var(--s-4); margin: 0 0 var(--s-2); }
+.fv-rating { margin-top: var(--s-2); }
+.fv-small, .fv-partial { font-size: var(--fs-sm); color: var(--ink-2); }
+.fv-partial { margin-top: var(--s-2); }
+
+.fv-chips { list-style: none; display: grid; gap: var(--s-2); margin: 0; padding: 0; }
+.fv-chip {
+  display: block;
+  min-height: 44px;
+  padding: var(--s-3);
+  border-radius: var(--r-lg);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--ink);
+  text-decoration: none;
+  font-size: var(--fs-sm);
+}
+.fv-chip-strong, .fv-chip-weak { line-height: var(--lh-body); }
+a.fv-chip:hover { border-color: var(--border-strong); }
+
+.fv-rows {
+  list-style: none;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--s-2);
+  margin: var(--s-2) 0 var(--s-3);
+  padding: 0;
+}
+.fv-row {
+  display: grid; gap: var(--s-1);
+  min-height: 44px;
+  padding: var(--s-3) var(--s-4);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  color: var(--ink);
+  text-decoration: none;
+  box-shadow: var(--shadow-1);
+}
+a.fv-row:hover { border-color: var(--border-strong); }
+.fv-name { font-weight: var(--fw-semibold); line-height: var(--lh-tight); }
+.fv-barline { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--s-3); }
+.fv-pct { min-width: 5.5em; text-align: right; }   /* room for "76% 71–80", so the bars line up */
+.fv-meta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-1) var(--s-2); font-size: var(--fs-sm); color: var(--ink-2); }
+.fv-muted { opacity: 0.6; }
+
+.fv-play {
+  padding: var(--s-3) var(--s-4);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+}
+.fv-play > h3 { margin: 0 0 var(--s-2); }
+.fv-minis { display: none; list-style: none; margin: var(--s-2) 0; padding: 0; }
+.fv-minis > li { display: grid; grid-template-columns: minmax(0, 9em) minmax(0, 1fr) 5em; align-items: center; gap: var(--s-2);
+  font-size: var(--fs-sm); }
+.fv-mini-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fv-mini-count { text-align: right; font-variant-numeric: tabular-nums; color: var(--ink-2); }
+
+.fv-how { margin-top: var(--s-2); }
+.fv-notes { margin: var(--s-2) 0 0; padding-left: var(--s-5); font-size: var(--fs-sm); color: var(--ink-2); max-width: 75ch; }
+.fv-notes li + li { margin-top: var(--s-1); }
+
+@media (min-width: 600px) {
+  .fv-minis { display: grid; gap: var(--s-2); }
+}
+
+@media (min-width: 1000px) {
+  .fv-rows { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* The whole-width layout: the headline beside a table of the opponents. */
+@media (min-width: 1600px) {
+  .fv-layout { grid-template-columns: minmax(300px, 380px) minmax(0, 1fr); align-items: start; }
+  .fv-rows { grid-template-columns: minmax(0, 1fr); gap: 0; border: 1px solid var(--border);
+    border-radius: var(--r-lg); background: var(--surface); }
+  .fv-rows > li + li .fv-row { border-top: 1px solid var(--border); }
+  .fv-row { grid-template-columns: minmax(10em, 1.2fr) minmax(12em, 2fr) minmax(12em, 1.6fr); align-items: center;
+    border: 0; border-radius: 0; box-shadow: none; padding: var(--s-2) var(--s-4); }
+}
