@@ -107,8 +107,8 @@
 .pack-step h3 { display: flex; align-items: center; gap: var(--s-2); margin: 0 0 var(--s-3); font-size: var(--fs-md); }
 .pack-step-n {
   display: inline-flex; align-items: center; justify-content: center; flex: none;
-  width: 1.75em; height: 1.75em; border-radius: 50%;
-  background: var(--accent-soft); color: var(--ink); font-size: var(--fs-sm); font-weight: var(--fw-bold);
+  width: 28px; height: 28px; border-radius: 50%;
+  background: var(--surface-chip); color: var(--ink-2); font-size: var(--fs-sm); font-weight: var(--fw-medium);
 }
 .pack-step > .sub { margin: 0 0 var(--s-2); }
 .pack-tiles { margin-top: var(--s-2); }
@@ -117,7 +117,7 @@
 .pack-list li:last-child { border-bottom: 0; }
 .pack-plain li { padding: var(--s-1) 0; overflow-wrap: break-word; }
 .pack-row { display: flex; align-items: center; gap: var(--s-3); min-height: var(--tap); padding: var(--s-2) 0; cursor: pointer; }
-.pack-row:has(input:checked) span { text-decoration: line-through; color: var(--ink-2); }
+.pack-row:has(input:checked) span { color: var(--ink-3); font-weight: var(--fw-medium); }
 .assembly-pending { padding: var(--s-2) 0; color: var(--ink-2); }
 .pack-fold > summary { display: flex; align-items: center; min-height: var(--tap); cursor: pointer; font-weight: var(--fw-semibold); }
 .pack-fold[open] > summary { margin-bottom: var(--s-2); }
@@ -147,4 +147,74 @@
 /* There the deck columns are narrow, so their card tiles are smaller than the page's usual 196 px. */
 @media (min-width: 2200px) {
   .pack-decks .card-tiles { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+}
+
+/* The original viewer/tick nodes project as compact rows only in the lab. */
+.pack-row-qty, .pack-row-finish, .pack-row-meta { display: none; }
+.pack-tiles .card-tile.is-ticked :is(.card-tile-name, .card-tile-meta, .pack-row-qty, .card-tile-text b) {
+  color: var(--ink-3); font-weight: var(--fw-medium);
+}
+.pack-tiles .card-tile.is-ticked .card-tile-img { opacity: .42; filter: none; }
+.pack-tiles .card-tile.is-ticked .card-tile-pic:has(> .card-tile-img) > .card-tile-text { visibility: hidden; }
+.pack-tiles .card-tile.is-ticked .card-tile-pic:has(> .card-tile-img)::before {
+  content: ""; position: absolute; z-index: 1; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  width: 40px; height: 40px; border-radius: 50%; pointer-events: none;
+  background: var(--accent) var(--icon-tick-on-accent) center / 24px no-repeat;
+}
+@media (min-width: 1000px) {
+  .pack-step-n { width: 20px; height: 20px; }
+  .pack-decks .pack-tiles { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .pack-tiles > .card-tile {
+    display: grid; grid-template-columns: minmax(0, 1fr) 44px; align-items: center; gap: 0;
+    min-height: 46px; box-sizing: border-box; border-bottom: 1px solid var(--border); border-radius: var(--r-sm);
+  }
+  .pack-tiles .card-tile-open {
+    display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; grid-template-rows: auto auto;
+    align-items: center; gap: 0 var(--s-2); min-height: 44px; padding: 2px var(--s-2) 2px 0;
+    box-sizing: border-box; border-radius: var(--r-sm);
+  }
+  .pack-tiles > .card-tile:has(> .card-tile-open:focus-visible) { outline: 2px solid var(--focus); outline-offset: -2px; }
+  .pack-tiles .card-tile-open:focus-visible .card-tile-pic { outline: none; }
+  .pack-tiles .card-tile-pic {
+    grid-column: 1; grid-row: 1 / 3; width: 28px; height: calc(28px * 680 / 488);
+    border: 1px solid var(--border); box-sizing: border-box; background: var(--track); border-radius: var(--r-sm); box-shadow: none;
+  }
+  .pack-tiles .card-tile.is-ticked .card-tile-pic { box-shadow: none; }
+  .pack-tiles .card-tile-text {
+    inset: 0 auto auto 0; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%);
+  }
+  .pack-tiles .card-tile-name {
+    grid-column: 2; grid-row: 1; display: block; -webkit-line-clamp: unset; -webkit-box-orient: initial;
+    max-height: none; padding: 0; font-size: var(--fs-row); overflow: visible; white-space: normal; overflow-wrap: anywhere;
+  }
+  .pack-tiles .card-tile-open:not(:has(> .card-tile-meta)) .card-tile-name { grid-row: 1 / 3; }
+  .pack-tiles .card-tile-meta {
+    grid-column: 2; grid-row: 2; padding: 0; font-size: var(--fs-meta); white-space: normal; overflow: visible;
+    overflow-wrap: anywhere;
+  }
+  .pack-tiles .card-tile-meta .meta-part { white-space: normal; overflow-wrap: anywhere; }
+  .pack-tiles .pack-row-finish, .pack-tiles .pack-row-meta { display: inline; }
+  .pack-tiles .card-tile-meta:not(.pack-row-meta) > .pack-row-finish::before { content: " · "; }
+  .pack-tiles .pack-row-qty {
+    display: block; grid-column: 3; grid-row: 1 / 3; min-width: 2ch; text-align: right;
+    font-family: var(--font-mono); font-size: var(--fs-row); font-variant-numeric: tabular-nums;
+  }
+  /* Keep the old quantity words accessible while the separate mono column is decorative. */
+  .pack-tiles .card-tile-qty {
+    top: auto; left: auto; width: 1px; min-width: 0; height: 1px; padding: 0; overflow: hidden;
+    clip-path: inset(50%); white-space: nowrap;
+  }
+  .pack-tiles .card-tile-chips { display: none; }
+  .pack-tiles .card-tile-state:has(> .pack-tick) {
+    position: static; grid-column: 2; grid-row: 1; width: 44px; height: 44px; aspect-ratio: auto;
+    align-items: center; justify-content: center; padding: 0; pointer-events: auto;
+  }
+  .pack-tiles .pack-tick { width: 44px; height: 44px; margin: 0; border-radius: var(--r-sm); }
+  .pack-tiles .pack-tick::before {
+    width: 18px; height: 18px; margin: 13px; border-radius: var(--r-sm); background-size: 12px;
+    box-shadow: 0 0 0 1.5px var(--border-strong);
+  }
+  .pack-tiles .pack-tick[aria-pressed="true"]::before { box-shadow: 0 0 0 1.5px var(--accent); }
+  .pack-tiles .card-tile.is-ticked .card-tile-img { opacity: 1; filter: none; }
+  .pack-tiles .card-tile.is-ticked .card-tile-pic:has(> .card-tile-img)::before { display: none; }
 }

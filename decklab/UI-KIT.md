@@ -71,6 +71,17 @@ Current plan/button/modal guards reject stale actions. Redraw, preview errors an
 empty selection remove the bar. The same narrow Decks launcher starts the plan
 column, keeping short-window sticky containment and resize focus predictable.
 
+Packing-only lab CSS projects original tile/open/tick nodes into rows with a
+46px minimum, 28px thumbnail, decorative mono quantity (including one) and 44px
+tick target. Names and donor/List-intent metadata wrap; viewer focus outlines the
+row. Casual keeps tiles. Finish labels describe existing selected-list intent,
+never allocated printings; returns keep no finish decoration. Done checklist text
+uses ink-3/medium without strikethrough. Casual checked actual art uses .42 opacity
+and a decorative 40px check; controls retain full opacity. Only an actual image
+child hides checked fallback words, so its error removal restores them. Unknown
+and no-art cards keep their original text and viewer semantics. Neutral step
+badges are 28px casual/20px lab. Task wiring, counts and save readiness are unchanged.
+
 `assembly-progress.js` follows the finish helper: shared Build decks checkmarks,
 per-task identities and patches, pending-save status, polling and Clear/Undo.
 Sorting remains a browser preference. Progress is shared through the server;

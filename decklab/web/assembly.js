@@ -198,6 +198,15 @@ function packTile(view, name, { qty, meta, caption, id, finishes = [] }) {
   const tile = cardTile(card, { qty, name: frontName(name), meta, finish, chips, state: tick,
     onclick: card ? event => packOpenCard(view, event.currentTarget) : null,
     viewerGroup: "packing", caption: description, label: finishWords ? `${name}. ${description}` : card ? null : name });
+  const open = tile.querySelector(".card-tile-open");
+  open.append(el("span", { class: "pack-row-qty", "aria-hidden": "true", text: String(qty) }));
+  if (finishWords) {
+    const intent = el("span", { class: "pack-row-finish", "aria-hidden": "true", title: `Deck list: ${finishWords}`,
+      text: `List: ${finishWords}` });
+    const metaNode = open.querySelector(".card-tile-meta");
+    if (metaNode) metaNode.append(intent);
+    else open.append(el("span", { class: "card-tile-meta pack-row-meta", "aria-hidden": "true" }, intent));
+  }
   packRegisterCard(view, tile, card, description);
   return tile;
 }
