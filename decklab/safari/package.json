@@ -9,7 +9,7 @@
   },
   "packageManager": "npm@11.9.0",
   "devDependencies": {
-    "appium": "3.4.2",
+    "appium": "3.8.0",
     "appium-xcuitest-driver": "10.43.0"
   }
 }
