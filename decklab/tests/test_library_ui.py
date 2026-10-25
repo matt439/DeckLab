@@ -845,5 +845,29 @@ class LibraryTablesTests(_Shelf):
         """)
 
 
+@unittest.skipUnless(NODE, "Node.js isn't installed")
+class LibraryGlanceTests(_Shelf):
+    """The lab's detail pane past its summary (library-glance.js): the guide's opening and the key cards."""
+
+    def test_the_guide_opening_is_plain_text_with_stops(self):
+        self.run_js(r"""
+          assert.equal(libGlanceText("## Plan\nGo **wide** with [Otters](https://x.example) and `Opt`.\n\n- Mulligan seven lands\n- Hold Bolt"),
+            "Plan. Go wide with Otters and Opt. Mulligan seven lands. Hold Bolt.");
+          assert.equal(libGlanceText(""), "");
+        """)
+
+    def test_key_cards_follow_this_decks_guide_not_the_last_deck_page(self):
+        self.run_js(r"""
+          state.cards = new Map([["Elsewhere", {}]]);       // the last deck page's cards, not this deck's
+          const card = (name) => ({ name, type_line: "Creature — Elf", cmc: 2 });
+          const data = { summary: { kind: "commander" }, guide: { sections: [{ title: "Plan", markdown: "Beta wins. Beta again." }] },
+            sections: { Commander: [{ qty: 1, name: "Boss", card: card("Boss") }],
+              Deck: [{ qty: 1, name: "Alpha", card: card("Alpha") }, { qty: 1, name: "Beta", card: card("Beta") }] } };
+          const { commanders, lines } = keyCardLines(data, cardNamesPattern(["Boss", "Alpha", "Beta"]));
+          assert.deepEqual(lines.map((l) => l.name), ["Boss", "Beta", "Alpha"]);
+          assert.equal(commanders.length, 1);
+        """)
+
+
 if __name__ == "__main__":
     unittest.main()

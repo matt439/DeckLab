@@ -18,7 +18,8 @@ availability) and the sort (Ready first, Recently changed, Name) are kept in the
 behind a "Filter" sheet. "Mine" is the decks Played by the visitor at home, or a person's own decks.
 
 Loaded after core.js, whose helpers (el, load, state, deckHref, pairingId, warningsBox, ...) it uses, and
-library-tables.js (the Tables out of date list, libTablesPanel) and cover.js (openCoverPicker) after it. app.js's route() calls showLibrary(), and its deckPlayerWords() names who
+library-glance.js (the detail pane's key cards, stats and play guide, libGlance), library-tables.js (the Tables out
+of date list, libTablesPanel) and cover.js (openCoverPicker) after it. app.js's route() calls showLibrary(), and its deckPlayerWords() names who
 plays each deck. Nothing here runs at load.
 */
 "use strict";
@@ -655,11 +656,13 @@ function libDetail(d, ctx) {
   const chip = owned ? deckOwnedExtra(d) : ready.chip;
   const open = deckHref(d.id) + (ready.missing > 0 ? "&tab=cards&filter=missing" : "");
   const edit = canEditDeck(d) && !d.error ? el("a", { class: "btn btn-primary", href: editHref(d.id), text: "Edit deck" }) : null;
+  const glance = libGlance(d);                                  // library-glance.js
   return el("section", { class: "lib-detail", "aria-label": `Selected deck: ${d.title}`, "data-id": d.id },
     el("div", { class: "lib-detail-card" },
       colours ? colours.stripe() : null,
       deckCover(d, colours),
       el("div", { class: "lib-detail-body" + (colours ? " deck-tint" : ""), style: colours ? colours.vars(90) : null },
+       el("div", { class: "lib-detail-main" },
         el("h2", { class: "lib-detail-title", text: d.title }),
         el("div", { class: "lib-detail-chips" }, deckStatusPill(d, true), deckMeta(d, ctx.person)),
         owned,
@@ -671,7 +674,8 @@ function libDetail(d, ctx) {
         deckTokens(d.tokens),
         deckSleeve(d.kit),
         el("div", { class: "actions lib-detail-actions" }, edit,
-          el("a", { class: edit ? "btn btn-secondary" : "btn btn-primary", href: open, text: "Open deck" })))));
+          el("a", { class: edit ? "btn btn-secondary" : "btn btn-primary", href: open, text: "Open deck" }))),
+       glance.facts, glance.cards)));
 }
 
 /** The library's Forge numbers (GET /api/library/forge: each casual list's field average and when it was tested,
