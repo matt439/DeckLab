@@ -53,21 +53,18 @@ function rcptBuildLayout(view) {
   view.root.append(view.frame);
 }
 
-/** Advice from already-loaded deck needs, never a physical allocation or a receipt confirmation. */
-function rcptGuidanceDestinations(view) {
+/** Classify only the supplied copies, from loaded metadata; shared before and after recording. */
+function rcptDestinationAdvice(view, received) {
   const out = [];
-  for (const comp of view.comps) {
-    if (!comp.selected) continue;
+  for (const comp of received) {
     if (comp.kind === "product") {
-      out.push(el("li", { text: `${rcptTitle(comp.c, view.data)}: ${comp.intact === "yes"
-        ? "keep together as its own deck(s)." : comp.intact === "no" ? "break up into storage."
-          : "choose whether to keep it together or break it up."}` }));
+      out.push({ kind: "product", comp, title: rcptTitle(comp.c, view.data) });
       continue;
     }
-    const checked = comp.rows.filter((row) => row.ticked);
+    const checked = comp.rows;
     if (!checked.length) continue;
     if (comp.kind === "tokens") {
-      out.push(el("li", { text: `${plural(checked.reduce((n, row) => n + rcptQty(row), 0), "token card copy", "token card copies")}: with your tokens.` }));
+      out.push({ kind: "tokens", quantity: checked.reduce((n, row) => n + rcptQty(row), 0) });
       continue;
     }
     const names = new Map();
@@ -78,7 +75,7 @@ function rcptGuidanceDestinations(view) {
     for (const [name, rows] of names) {
       let left = rows.reduce((n, row) => n + rcptQty(row), 0);
       if (rcptIsBasic(name)) {
-        out.push(el("li", { class: "rcpt-destination-unknown", text: `${left} \u00d7 ${name}: basic-land deck destinations are not tracked.` }));
+        out.push({ kind: "unknown", name, quantity: left, why: "basic" });
         continue;
       }
       const candidates = new Map();
@@ -86,7 +83,7 @@ function rcptGuidanceDestinations(view) {
         && comp.decks[row.orig].every((deck) => deck && typeof deck.id === "string" && typeof deck.title === "string"
           && Number.isSafeInteger(deck.waiting) && deck.waiting >= 0));
       if (!known) {
-        out.push(el("li", { class: "rcpt-destination-unknown", text: `${left} \u00d7 ${name}: destination not known from this delivery's data.` }));
+        out.push({ kind: "unknown", name, quantity: left, why: "unavailable" });
         continue;
       }
       // Split rows repeat the source row's waiting count: cap by checked copies, never add those hints twice.
@@ -100,15 +97,30 @@ function rcptGuidanceDestinations(view) {
         const give = Math.min(left, deck.waiting);
         if (!give) continue;
         left -= give;
-        const sleeves = view.data.kits?.[deck.id]?.sleeves;
-        out.push(el("li", {}, `${give} \u00d7 ${name}: `, el("a", { href: deckHref(deck.id), text: deck.title }),
-          sleeves ? el("span", { class: "sub", text: ` \u00b7 sleeves: ${sleeves}` })
-            : deck.status === "building" ? el("span", { class: "rcpt-guidance-building", text: " \u00b7 Building: keep them with its cards" }) : null));
+        out.push({ kind: "deck", name, quantity: give, deck });
       }
-      if (left) out.push(el("li", { text: `${left} \u00d7 ${name}: storage; no deck is waiting in the loaded delivery data.` }));
+      if (left) out.push({ kind: "storage", name, quantity: left });
     }
   }
   return out;
+}
+
+/** Advice from already-loaded deck needs, never a physical allocation or a receipt confirmation. */
+function rcptGuidanceDestinations(view) {
+  return rcptDestinationAdvice(view, rcptReceived(view)).map((item) => {
+    const comp = item.comp;
+    if (item.kind === "product") return el("li", { text: `${item.title}: ${comp.intact === "yes"
+      ? "keep together as its own deck(s)." : comp.intact === "no" ? "break up into storage."
+        : "choose whether to keep it together or break it up."}` });
+    if (item.kind === "tokens") return el("li", { text: `${plural(item.quantity, "token card copy", "token card copies")}: with your tokens.` });
+    if (item.kind === "unknown") return el("li", { class: "rcpt-destination-unknown", text: `${item.quantity} \u00d7 ${item.name}: ${item.why === "basic"
+      ? "basic-land deck destinations are not tracked." : "destination not known from this delivery's data."}` });
+    if (item.kind === "storage") return el("li", { text: `${item.quantity} \u00d7 ${item.name}: storage; no deck is waiting in the loaded delivery data.` });
+    const deck = item.deck, sleeves = view.data.kits?.[deck.id]?.sleeves;
+    return el("li", {}, `${item.quantity} \u00d7 ${item.name}: `, el("a", { href: deckHref(deck.id), text: deck.title }),
+      sleeves ? el("span", { class: "sub", text: ` \u00b7 sleeves: ${sleeves}` })
+        : deck.status === "building" ? el("span", { class: "rcpt-guidance-building", text: " \u00b7 Building: keep them with its cards" }) : null);
+  });
 }
 
 /** Repaint only presentation; the original blocker predicates and preview/apply requests remain authoritative. */

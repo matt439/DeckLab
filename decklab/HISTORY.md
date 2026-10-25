@@ -2,6 +2,12 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Preserve receipt destination uncertainty (2026-10-25; E11-S30 slice 12)
+
+Recorded results now use the same loaded-data destination classifier as pre-record guidance. Unavailable/missing/malformed metadata and untracked basic-land destinations get explicit panels instead of being called storage. Storage advice requires complete known deck metadata for a nonbasic card, after its loaded waiting quantities are accounted for. Split hints are deduplicated and capped to supplied copies; recorded results use the frozen reviewed selection, preserving partial scope and whole-product/token treatment. No request, preview/apply payload, permission or data-read changes.
+
+Validation: 242 targeted UI/source checks passed, including eight new destination regressions and the committed frame/observer cases. Post-record success and partial/frozen selection are fixture-test evidence; no actual receipt or database write was performed. Chromium confirmed unchanged pre-record progress/guidance without overflow. Mouse/default DPR only; this does not add actual touch/Safari/device acceptance. No downloads or Forge games. The source audit still flags only pre-existing `tokens.js` (1,516 lines).
+
 ## Receive header and loaded-data guidance (2026-10-25; E11-S30 slice 12)
 
 Receive delivery now has order/date metadata, explicit card-copy progress and a 452px sticky lab guidance aside; narrow views stack it after the existing board. Whole products stay separate from loose-copy counts. The aside uses selected/ticked rows and already-loaded needs/kit data, caps repeated split hints, and keeps missing/basic-land destinations uncertain. It adds no data reads or allocation guarantees. The separate server preview, exact confirmation, frozen reviewed rows and apply/recovery workflow are unchanged.

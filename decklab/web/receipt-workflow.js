@@ -416,42 +416,36 @@ function rcptAddedWords(totals) {
 /** "Where these go": the decks that count on these cards (by deck, with its sleeves when you see them), then the
  * rest to storage; token cards to the token box; a product as its own deck(s) or into storage. */
 function rcptWhereTheyGo(view, received) {
-  const decks = new Map(), storage = [], parts = [];
+  const decks = new Map(), storage = [], unknown = [], basics = [], parts = [];
   const kits = view.data.kits || {};
-  for (const comp of received) {
-    if (comp.kind === "tokens") {
+  for (const item of rcptDestinationAdvice(view, received)) {
+    if (item.kind === "tokens") {
       parts.push(el("div", { class: "panel rcpt-where" }, el("h3", { text: "Token cards" }),
-        el("p", {}, `${plural(comp.rows.reduce((n, r) => n + rcptQty(r), 0), "token card")} go with your tokens. `,
+        el("p", {}, `${plural(item.quantity, "token card")} go with your tokens. `,
           el("a", { href: "#/tokens", text: "See them on Tokens" }))));
       continue;
     }
-    if (comp.kind === "product") {
-      parts.push(el("div", { class: "panel rcpt-where" }, el("h3", { text: rcptTitle(comp.c, view.data) }),
+    if (item.kind === "product") {
+      const comp = item.comp;
+      parts.push(el("div", { class: "panel rcpt-where" }, el("h3", { text: item.title }),
         el("p", { text: comp.intact === "yes" ? "Kept as its own deck(s): choose its sleeves and deck box on its deck page."
-          : "Broken up: its cards go into the storage box." })));
+          : comp.intact === "no" ? "Broken up: its cards go into the storage box."
+            : "Its storage choice is not known from the recorded selection." })));
       continue;
     }
-    const left = new Map();     // name -> copies not yet given to a deck
-    for (const row of comp.rows) left.set(row.values.name, (left.get(row.values.name) || 0) + rcptQty(row));
-    const seen = new Set();
-    for (const row of comp.rows) {
-      if (seen.has(row.values.name)) continue;
-      seen.add(row.values.name);
-      for (const d of rcptDecks(comp, row)) {
-        const give = Math.min(d.waiting || 0, left.get(row.values.name));
-        if (give <= 0) continue;
-        left.set(row.values.name, left.get(row.values.name) - give);
-        if (!decks.has(d.id)) decks.set(d.id, { deck: d, cards: [] });
-        decks.get(d.id).cards.push([give, row.values.name]);
-      }
+    if (item.kind === "unknown") {
+      (item.why === "basic" ? basics : unknown).push([item.quantity, item.name]);
+      continue;
     }
-    for (const [name, n] of left) if (n > 0) storage.push([n, name]);
+    if (item.kind === "storage") { storage.push([item.quantity, item.name]); continue; }
+    if (!decks.has(item.deck.id)) decks.set(item.deck.id, { deck: item.deck, cards: [] });
+    decks.get(item.deck.id).cards.push([item.quantity, item.name]);
   }
   const rank = (d) => (d.status === "built" ? 0 : d.status === "building" ? 1 : 2);
   const groups = [...decks.values()].sort((a, b) => rank(a.deck) - rank(b.deck) || a.deck.title.localeCompare(b.deck.title));
   const lines = (cards) => el("ul", { class: "rcpt-where-cards" }, cards.map(([n, name]) => el("li", { text: `${n} × ${name}` })));
   const out = [];
-  if (groups.length || storage.length) out.push(el("h2", { class: "rcpt-where-head", text: "Where these go" }));
+  if (groups.length || storage.length || unknown.length || basics.length) out.push(el("h2", { class: "rcpt-where-head", text: "Where these go" }));
   if (groups.length) {
     out.push(el("div", { class: "rcpt-where-grid" }, groups.map(({ deck, cards }) => el("div", { class: "panel rcpt-where" },
       el("h3", {}, el("a", { href: deckHref(deck.id), text: deck.title })),
@@ -463,6 +457,12 @@ function rcptWhereTheyGo(view, received) {
     out.push(el("div", { class: "panel rcpt-where" }, el("h3", { text: "To storage" }),
       el("p", { class: "sub", text: "No deck is waiting for these: they go unsleeved into the storage box." }), lines(storage)));
   }
+  if (unknown.length) out.push(el("div", { class: "panel rcpt-where rcpt-where-unknown" },
+    el("h3", { text: "Destination not known" }),
+    el("p", { class: "sub", text: "Deck destinations could not be worked out from the delivery data. Check where these copies belong." }), lines(unknown)));
+  if (basics.length) out.push(el("div", { class: "panel rcpt-where rcpt-where-basics" },
+    el("h3", { text: "Basic lands" }),
+    el("p", { class: "sub", text: "Basic-land deck destinations are not tracked." }), lines(basics)));
   return [...out, ...parts];
 }
 
