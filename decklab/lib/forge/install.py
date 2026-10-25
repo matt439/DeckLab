@@ -5,6 +5,7 @@ index of Forge's card scripts (the names it knows, and the cards its AI leaves o
 import json
 import os
 import re
+import shutil
 import threading
 import zipfile
 from pathlib import Path
@@ -29,8 +30,10 @@ def _version_tuple(text):
 
 def find_java(setting=None):
     """The java.exe to run Forge with: setting (config forge_java) when given, else the
-    newest JDK's in C:\\Program Files\\Java (never the launcher on the PATH). None if
-    there's none."""
+    newest JDK's in C:\\Program Files\\Java, else JAVA_HOME's, else (off Windows) the java on
+    the PATH with its links followed, so javac and jar are beside it. On Windows the PATH's
+    java.exe is never used: it's a launcher that starts the real one as a second process.
+    None if there's none."""
     if setting:
         path = Path(setting)
         return path if path.is_file() else None
@@ -42,8 +45,17 @@ def find_java(setting=None):
             if (folder / "bin" / exe).is_file():
                 found.append((_version_tuple(folder.name[4:]), folder / "bin" / exe))
     except OSError:
-        return None
-    return max(found)[1] if found else None
+        pass
+    if found:
+        return max(found)[1]
+    home = os.environ.get("JAVA_HOME")
+    if home and (Path(home) / "bin" / exe).is_file():
+        return Path(home) / "bin" / exe
+    if os.name != "nt":
+        on_path = shutil.which("java")
+        if on_path:
+            return Path(on_path).resolve()
+    return None
 
 
 def _find_jar(forge_dir):

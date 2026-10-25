@@ -1,21 +1,31 @@
 """The one-time set-up, safe to run again: `python -m decklab.db setup`.
 
-As the postgres superuser (its password already in pgpass), it
+As the postgres superuser, it
 1. makes the three login roles if they're missing (conn.ROLES), each with a fresh random
    password that goes straight into the user's pgpass file and nowhere else;
 2. makes the database, owned by decklab_owner, if it's missing, and lets only the three roles
    connect to it;
-3. applies the migrations as the owner (migrate.py), and
-4. syncs the profiles from config.json (profiles_sync.py).
+3. applies the migrations as the owner (migrate.py),
+4. syncs the profiles from config.json (profiles_sync.py), and
+5. on a new install, whose database holds no inventory and no decks at all, starts an empty
+   inventory and deck library (one change set by system), so the collection, decks and shopping
+   work from the first run. A database holding either is left alone: one with no decks but an
+   inventory, or the other way round, is a bad restore, not a new install.
 
 A role that already has a pgpass line keeps its password (and gets it back on the server if
 it no longer logs in with it). One without (made by hand, or the line was lost) gets a new
 one, set on the server before it's written to pgpass. The password is sent to the server only
 as a SCRAM verifier worked out here (libpq's PQencryptPasswordConn), so the plain text never
 appears in SQL, in the server's log or on a command line, and it is never printed.
+
+The superuser's password comes from pgpass. On a new install, where pgpass has no line for
+postgres, setup asks for it once at a prompt (only when it runs in a terminal) and keeps it in
+memory for that run: it's never written anywhere, as nothing else in Deck Lab logs in as postgres.
 """
+import getpass
 import os
 import secrets
+import sys
 import tempfile
 from pathlib import Path
 
@@ -213,16 +223,66 @@ def ensure_database(c, name, say=print):
     return True
 
 
+_PASSWORD_REFUSED = ("no password supplied", "password authentication failed")
+
+
+def _superuser(say=print, ask=getpass.getpass, interactive=None):
+    """An autocommit superuser connection to the postgres database: with pgpass's password, or,
+    when the server wants one pgpass doesn't give and this runs in a terminal, with one typed at
+    a prompt (see the module docstring). Raises DbUnavailable otherwise, saying how to fix it."""
+    try:
+        return db.connect("super", dbname="postgres", autocommit=True)
+    except db.DbUnavailable as e:
+        if not any(words in str(e) for words in _PASSWORD_REFUSED):
+            raise
+        if interactive is None:
+            interactive = sys.stdin.isatty()
+        hint = (f"Run setup in a terminal to be asked for the {db.SUPERUSER} superuser's password, or add a line "
+                f"localhost:5432:*:{db.SUPERUSER}:<password> to {pgpass_path()}")
+        if not interactive:
+            raise db.DbUnavailable(f"{e}. {hint}.") from None
+    say(f"PostgreSQL wants the {db.SUPERUSER} superuser's password (set when PostgreSQL was installed). "
+        "It's used for this setup only and not saved.")
+    password = ask(f"Password for {db.SUPERUSER}: ")
+    try:
+        return db.connect("super", dbname="postgres", autocommit=True, password=password)
+    finally:
+        password = None
+
+
+def ensure_empty_inventory(name, say=print):
+    """Step 5 of the module docstring. Returns True when it started an empty inventory."""
+    from decklab.db import inv_inventory
+    from decklab.lib.inventory import paths, pg, rules
+    from decklab.lib.inventory.files import FileInventory
+    from decklab.lib.inventory.model import QUEUE_FIELDS
+    from decklab.lib.state import Actor
+    if inv_inventory.inventory_held(name) is not None or inv_inventory.decks_held(name) is not None:
+        return False
+    with tempfile.TemporaryDirectory(prefix="decklab-empty-") as tmp:
+        root = Path(tmp)
+        (root / paths.STATUS).parent.mkdir(parents=True)
+        (root / paths.STATUS).write_text(",".join(rules.STATUS_FIELDS) + "\n", encoding="utf-8")
+        (root / paths.WATCHLIST).write_text(",".join(QUEUE_FIELDS) + "\n", encoding="utf-8")
+        inv = FileInventory(root).load()
+    pg.write_model(inv, Actor("system", "System", source="cli"),
+                   "Start an empty inventory and deck library for a new install",
+                   contents={}, decks=True, images={}, dbname=name)
+    say("Started an empty collection, deck library and shopping list (a new install).")
+    return True
+
+
 def run(dbname=None, say=print):
     """The whole set-up (see the module docstring). Returns 0."""
     from decklab.db import migrate, profiles_sync
     name = dbname or db.settings()["name"]
-    with db.connect("super", dbname="postgres", autocommit=True) as c:
+    with _superuser(say) as c:
         ensure_roles(c, say=say)
         ensure_database(c, name, say=say)
     secure_database(name)
     applied = migrate.apply(dbname=name, say=say)
     summary = profiles_sync.sync(dbname=name)
+    ensure_empty_inventory(name, say=say)
     say(f"Database {name}: {len(applied)} migration(s) applied now; profiles "
         f"{profiles_sync.describe(summary)}.")
     return 0

@@ -92,9 +92,10 @@ from .table_rows import (CARD_COLUMNS, COMPONENT_COLUMNS, ITEM_COLUMNS, ITEM_TAB
                          Unrepresentable, deck_tables, reasons, representable, tables)
 
 LOCK_KEY = "inventory"                       # the advisory lock every inventory write takes
-NOT_IMPORTED = ("the database holds no inventory: restore the newest backup "
-                "(a decklab-*.dump from the NAS or decklab/data/backups/, with pg_restore), "
-                "after python -m decklab.db migrate if migrations are pending")
+NOT_IMPORTED = ("the database holds no inventory: on a new install, run python -m decklab.db setup, which "
+                "starts an empty one; otherwise restore the newest backup (a decklab-*.dump from the "
+                "backup folder or decklab/data/backups/, with pg_restore), after python -m decklab.db "
+                "migrate if migrations are pending")
 STALE = "inventory as of {when}: the database isn't reachable"
 STALE_NO_DECKS = ("the database isn't reachable, and the decks weren't loaded from it before it went "
                   "away: try again once it's back")

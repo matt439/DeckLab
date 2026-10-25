@@ -363,8 +363,11 @@ def _load_pool():
     inv = inventory.current()
     unresolved, warnings = {}, []
     collection = inv.collection(spaces.HOME)
-    owned = read_card_csv(collection, unresolved)
-    collection_printings = read_printings(collection)
+    if collection.exists:
+        owned = read_card_csv(collection, unresolved)
+        collection_printings = read_printings(collection)
+    else:                                   # a new install's empty collection, as a person's
+        owned, collection_printings = Counter(), Counter()
     on_the_way, incoming_sources = {}, {}
     pending = {c.path: (order, c) for order, c in inv.components()
                if c.status == "pending" and c.kind in ("cards", "product")

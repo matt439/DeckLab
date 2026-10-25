@@ -354,6 +354,18 @@ class BackupTests(_OpsDb):
         self.assertTrue(lines[1].startswith("  last dump: 20"))
         self.assertFalse(any("WARNING" in l for l in lines), lines)
 
+    def test_without_a_backup_dir_the_dump_stays_in_staging(self):
+        self.settings["backup_dir"] = None
+        self.assertEqual(backup.run_backup(say=self.say), 0, self.said)
+        staging = backup.dumps_in(self.tmp / "staging")
+        self.assertEqual(len(staging), 1)
+        self.assertIn("stays on this computer only", self.said[-1])
+        (ok, path, _, _), = self.runs("dump")
+        self.assertTrue(ok)
+        self.assertEqual(Path(path), self.tmp / "staging" / staging[0])
+        self.assertEqual(backup.run_prune(say=self.say), 0, self.said)
+        self.assertEqual(backup.run_restore_check(say=self.say), 0, self.said)
+
     def test_a_restore_that_differs_fails(self):
         self.assertEqual(backup.run_backup(say=self.say), 0, self.said)
         with self.connect("owner") as c:

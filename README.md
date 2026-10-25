@@ -13,6 +13,7 @@ It runs on one Windows PC and is used from phones, tablets and the PC's browser 
 
 ## Where to read more
 
+- [SELF-HOSTING.md](SELF-HOSTING.md): setting up your own Deck Lab.
 - [decklab/README.md](decklab/README.md): how to run it, set it up and use every part.
 - [decklab/PLAN.md](decklab/PLAN.md) and [TODO.md](TODO.md): what's still to do.
 - [decklab/HISTORY.md](decklab/HISTORY.md): what was built, and why.
@@ -21,7 +22,9 @@ It runs on one Windows PC and is used from phones, tablets and the PC's browser 
 
 ## Setup in short
 
-Deck Lab needs Python 3.14, PostgreSQL, a JDK and a Forge build (decklab/README.md, "Deck Lab's own Forge"). Copy `decklab/config.example.json` to `decklab/config.json` and fill in your own profiles; that file is gitignored, so real names and email addresses never enter the repo. A household's own buylists and reports (`magic/buylists/`, `magic/reports/`, which orders' and the watchlist's `source` fields name) live in a private repo of its own: set `records_repo` to that checkout's folder. The people and decks named in the docs and tests are made up.
+**[SELF-HOSTING.md](SELF-HOSTING.md) sets up your own Deck Lab, step by step.** In short: Deck Lab needs Python 3.14 and PostgreSQL, and, for simulations, a JDK 21 or later and a build of its Forge fork. Make a `.venv` with psycopg, copy `decklab/config.example.json` to `decklab/config.json` and put your own profile in it (that file is gitignored, so real names and email addresses never enter the repo), run `python -m decklab.db setup`, then `python decklab/server.py`, and open http://localhost:8642. Windows gets the most help (a background task, the firewall script, the nightly backup task); on Linux and macOS the server runs in a terminal or under your own service manager.
+
+A household's own buylists and reports (`magic/buylists/`, `magic/reports/`, which orders' and the watchlist's `source` fields name) can live in a private repo of its own: set `records_repo` to that checkout's folder (see `decklab/config.full.example.json`). The people and decks named in the docs and tests are made up.
 
 ## Licence and credits
 
