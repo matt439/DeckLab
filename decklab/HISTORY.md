@@ -2,6 +2,12 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Shopping saved metadata presentation (2026-10-25; E11-S30 slice 12)
+
+Casual queue rows now use the shared dated-check freshness badge for valid, non-future recorded calendar days. Missing, malformed and future dates remain factual without an invented age; the lab retains a compact exact ISO date in a semantic time element. Exact/any printing intent and neutral foil/etched pills stay visible, while concise card-viewer names lead to captions with the full saved printing, state, reference-price, check-date, stock and note evidence. Unknown prices stay unknown and zero remains valid. No live price or stock lookup is added.
+
+Validation: 188 targeted Shopping/shared UI/source checks passed, including seven metadata scenarios. Synthetic Chromium checked 24 viewport/theme combinations with all eight intent rows retained, neutral finish pills, bounded metadata and no page overflow; ordinary lab rows remain 36px. Viewer/control identity and date/price uncertainty have fixture-test coverage. All API writes were disabled; no real inventory, downloads or Forge games. Mouse/default DPR only; touch/Safari/device acceptance stays open. The source audit still fails only for pre-existing `tokens.js` (1,516 lines).
+
 ## Preserve unresolved receipt destination confidence (2026-10-25; E11-S30 slice 12)
 
 Receipt deck metadata now distinguishes an unresolved logical card name (`null` for that row) from a known card with no matching deck (`[]`). Known cards retain guidance even when their printing or picture is unavailable. Row alignment, canonical receipt fields, quantities, fingerprint, permissions and preview/apply requests stay unchanged; this adds no inventory or pool reads.

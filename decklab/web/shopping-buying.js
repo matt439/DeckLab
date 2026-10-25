@@ -8,7 +8,7 @@ function shopReference(row) {
   if (!price) return null;
   return el("span", {class: "shop-reference"},
     el("span", {text: `Reference price ${price}`}),
-    el("small", {text: row.checked ? `Checked ${row.checked}` : "Check date not recorded"}));
+    shopChecked(row.checked));
 }
 
 /** Resolve against current queue rows after Add, Edit, Move or Remove, never stale row numbers. */
@@ -73,8 +73,7 @@ function shopQueueResearch(row) {
   const price = shopReference(row), shop = shopQueueShop(row);
   return el("span", {class: "shop-reference shop-queue-research"}, price,
     !price && shop ? el("span", {text: `Recorded at ${shop}`}) : null,
-    !price ? el("small", {text: row.checked ? `Checked ${row.checked}; reference price not recorded.`
-      : "Check date and reference price not recorded."}) : null,
+    !price ? [shopChecked(row.checked), el("small", {text: "Reference price not recorded."})] : null,
     row.in_stock === "no" ? status("warn", "Out of stock when checked")
       : el("span", {text: row.in_stock === "yes" ? "In stock when checked" : "Stock not recorded"}));
 }

@@ -16,6 +16,51 @@ function shopQueueUnknown(words) {
 /** Clip only the visual line: the full saved words remain text and are available on hover too. */
 function shopQueueClip(words) { return el("span", {class: "shop-q-clip", title: words, text: words}); }
 
+/** A saved calendar day, not a timestamp guessed from a price or a card-data update. */
+function shopCheckDay(value) {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+  const day = new Date(`${value}T12:00:00`);
+  return !Number.isNaN(day.getTime()) && day.getFullYear() === Number(value.slice(0, 4))
+    && day.getMonth() + 1 === Number(value.slice(5, 7)) && day.getDate() === Number(value.slice(8, 10)) ? day : null;
+}
+
+/** Keep lab's exact ISO date compact. Casual research can use the shared dated-check badge. */
+function shopChecked(value, {compact = false, now = Date.now()} = {}) {
+  if (!value) return compact ? shopQueueUnknown("Check date not recorded")
+    : el("span", {class: "shop-checked-unknown", text: "Check date not recorded"});
+  const day = shopCheckDay(value), today = new Date(now);
+  today.setHours(23, 59, 59, 999);
+  const words = `Recorded check date: ${value}`;
+  const badge = !compact && day && day.getTime() <= today.getTime() && typeof freshnessBadge === "function"
+    ? freshnessBadge(day, {verb: "checked", byDate: true, size: "casual", now,
+      staleWords: `checked ${simDay(day, false, now)}`}) : null;
+  return el(day ? "time" : "span", {class: "shop-checked", datetime: day ? value : null, title: words},
+    badge || (compact ? value : day && day.getTime() <= today.getTime() ? `Checked ${value}` : words));
+}
+
+/** Printing intent is spoken once in full; the casual row's neutral finish pill is decorative beside it. */
+function shopPrintingIntent(card) { return shopPrinting(card) + (card.finish === "nonfoil" ? ", nonfoil" : ""); }
+
+function shopPrintingMeta(card) {
+  const exact = card.printing === "exact";
+  return el("span", {class: "shop-printing-meta"}, el("span", {class: "sr-only", text: shopPrintingIntent(card)}),
+    el("span", {class: "shop-printing-visual", "aria-hidden": "true"},
+      exact ? el("span", {class: "shop-exact-tag", text: `EXACT ${String(card.set || "").toUpperCase()}`}) : "Any printing",
+      exact && card.collector_number ? el("span", {text: card.collector_number}) : null,
+      finishChip(card.finish), card.finish && !["foil", "etched"].includes(card.finish) ? el("span", {text: card.finish === "nonfoil" ? "Nonfoil" : card.finish}) : null));
+}
+
+/** The full saved intent/evidence belongs in the viewer, rather than in a long button name. */
+function shopQueueCaption(card) {
+  return [card.deck?.title || card.for ? `For ${card.deck?.title || card.for}` : null,
+    SHOPPING_STATES[card.state] || (card.state ? `State: ${card.state}` : "State not recorded"),
+    `Requested printing: ${shopPrintingIntent(card)}`,
+    shopPrice(card) ? `Reference price ${shopPrice(card)}` : "Reference price not recorded",
+    card.checked ? `Recorded check date: ${card.checked}` : "Check date not recorded",
+    card.in_stock === "yes" ? "In stock when checked" : card.in_stock === "no" ? "Out of stock when checked" : "Stock not recorded",
+    card.notes || null].filter(Boolean).join(". ");
+}
+
 /** Move a node explicitly: the viewer/controls are never cloned or left hidden in a second group. */
 function shopQueuePut(parent, ...nodes) {
   for (const node of nodes.filter(Boolean)) { node.remove(); parent.append(node); }
@@ -48,7 +93,7 @@ function shopQueueTableRecord(card, casual, showFor, view) {
     el("td", {class: "shop-q-shop"}, shop ? shopQueueClip(shop) : shopQueueUnknown("Shop not recorded")),
     el("td", {class: "shop-q-stock"}, card.in_stock === "no" ? status("warn", "Out of stock")
       : card.in_stock === "yes" ? "In stock" : shopQueueUnknown("Stock not recorded")),
-    el("td", {class: "shop-q-checked"}, card.checked || shopQueueUnknown("Check date not recorded")),
+    el("td", {class: "shop-q-checked"}, shopChecked(card.checked, {compact: true})),
     el("td", {class: "shop-q-actions"}));
   let extra = null, extraBody = null, more = null;
   if (card.notes || reprints) {

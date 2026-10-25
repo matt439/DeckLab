@@ -341,10 +341,12 @@ function shopQueueRow(card, group, showFor = true, view = null, showLongTerm = f
   const reason = grouped && ["waiting_for_stock", "waiting_for_reprint"].includes(card.state) ? SHOPPING_STATES[card.state]
     : grouped && !SHOP_QUEUE_STATES.includes(card.state) ? `State: ${card.state || "not recorded"}` : null;
   const meta = [showFor && !deck && card.for ? card.for : null, shopPrinting(card), reason].filter(Boolean).join(" · ");
-  const caption = [price ? `Reference price ${price}${card.checked ? `, checked ${card.checked}` : ""}` : null, card.notes || null]
-    .filter(Boolean).join(". ");
   const row = cardRow(card.card || null, { qty: card.quantity, name: card.name, meta, unknownMeta: meta, chips,
-    aside: null, viewerGroup: group, caption: caption || null });
+    aside: null, viewerGroup: group, caption: shopQueueCaption(card) });
+  const metaNode = row.querySelector("small");
+  if (metaNode) add(clear(metaNode), [showFor && !deck && card.for ? `${card.for} \u00b7 ` : null,
+    shopPrintingMeta(card), reason ? ` \u00b7 ${reason}` : null]);
+  if (row.matches("button")) row.setAttribute("aria-label", `${card.name}, ${plural(card.quantity, "copy", "copies")}`);
   const move = view && mayDo("orders") && view.data.queue_revision && card.queue_row
     ? shopQueueMove(card, view) : null;
   const reprints = reprintInfo(card);

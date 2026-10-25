@@ -82,7 +82,7 @@ class ShoppingQueueTableInteractionTests(unittest.TestCase):
           assert.equal(main.querySelector('.shop-queue-table'),null);
           assert(viewTrigger(1)===trigger && edit(1)===editor && move(1)===mover);
           assert(document.activeElement===editor);
-          assert.equal(trigger.getAttribute('aria-label'),null);
+          assert.equal(trigger.getAttribute('aria-label'),'Alpha, 1 copy');
           density(true); assert.equal(main.querySelector('.shop-q-extra').hidden,false);
           main.querySelector('.shop-q-more').focus(); density(false);
           assert(document.activeElement===trigger, 'a table-only disclosure returns to the same visible card trigger');

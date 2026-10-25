@@ -153,6 +153,9 @@
 .shop-queue-group[data-queue-group="waiting"] > h3 { color: var(--building-ink); }
 .shop-queue-group[data-queue-group="deferred"] > h3, .shop-queue-group[data-queue-group="other"] > h3 { color: var(--ink-2); }
 .shop-queue-row > .shop-queue-research { position: relative; padding: var(--s-2) var(--s-3); }
+.shop-checked { display: inline-block; max-width: 100%; }
+.shop-printing-visual { display: inline-flex; align-items: center; flex-wrap: wrap; gap: var(--s-1); }
+.shop-printing-visual .chip-foil { vertical-align: middle; }
 .shop-queue-research > .status { justify-self: start; }
 .shop-queue-row[data-shop-match="true"] { border-radius: var(--r-panel); background: var(--accent-soft); }
 .shop-queue-row[data-shop-match="true"] > .card-row { background: transparent; }

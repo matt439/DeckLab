@@ -210,8 +210,10 @@ class ShoppingBuyingInteractionTests(unittest.TestCase):
           assert(canonicalRow('Zero').textContent.includes('Reference price A$0.00 at Store'));
           assert(canonicalRow('Zero').textContent.includes('Checked 2026-10-14'));
           assert(canonicalRow('Undated').textContent.includes('Check date not recorded'));
-          assert(canonicalRow('Unpriced').textContent.includes('Checked 2026-10-12; reference price not recorded'));
-          assert(canonicalRow('Unrecorded').textContent.includes('Check date and reference price not recorded'));
+          assert.equal(canonicalRow('Unpriced').querySelector('time').getAttribute('datetime'),'2026-10-12');
+          assert(canonicalRow('Unpriced').textContent.includes('Reference price not recorded'));
+          assert(canonicalRow('Unrecorded').textContent.includes('Check date not recorded'));
+          assert(canonicalRow('Unrecorded').textContent.includes('Reference price not recorded'));
           assert.equal(shopSectionNode().querySelector('.card-row'),null);
         """)
 
