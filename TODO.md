@@ -104,4 +104,4 @@ Rules for writing it: read them before editing a row, not before picking one.
 
 **`size`:** as in the design model: `S` a session or less · `M` a few sessions · `L` a week or more · `XL` several weeks. `+pc` means the real cost is idle PC time for Forge games, run serially.
 
-**Privacy:** like the design files, this is committed to the repo and any member may read it. Nothing about tuning one player's decks against another's, no prices paid, no wishlist notes.
+**Privacy:** like the design files, this is committed to a public repo, so anyone may read it. Nothing about tuning one player's decks against another's, no prices paid, no wishlist notes.
