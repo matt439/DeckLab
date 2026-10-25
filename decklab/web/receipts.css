@@ -216,6 +216,8 @@
 .rcpt-k { min-width: 2ch; text-align: center; font-weight: var(--fw-bold); font-variant-numeric: tabular-nums; }
 .rcpt-decks { padding-left: var(--s-5); }
 .rcpt-decks li + li { margin-top: var(--s-1); }
+.rcpt-deck-link { display: inline-flex; align-items: center; gap: var(--s-1); max-width: 100%; min-width: 0; vertical-align: middle; }
+.rcpt-deck-title { min-width: 0; overflow-wrap: anywhere; }
 
 /* One Record action, with its blocker reason and native arrival date beside it. The measured bar may grow. */
 .rcpt-bar { flex-wrap: nowrap; }

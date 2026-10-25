@@ -483,7 +483,7 @@ function rcptWhereTheyGo(view, received) {
   if (groups.length || storage.length || unknown.length || basics.length) out.push(el("h2", { class: "rcpt-where-head", text: "Where these go" }));
   if (groups.length) {
     out.push(el("div", { class: "rcpt-where-grid" }, groups.map(({ deck, cards }) => el("div", { class: "panel rcpt-where" },
-      el("h3", {}, el("a", { href: deckHref(deck.id), text: deck.title })),
+      el("h3", {}, rcptDeckLink(deck)),
       kits[deck.id] && kits[deck.id].sleeves ? el("p", { class: "sub", text: `Sleeve them in ${kits[deck.id].sleeves}.` })
         : deck.status === "built" ? null : el("p", { class: "sub", text: `${STATUS_WORDS[deck.status] || "Idea"}: keep them with its cards.` }),
       lines(cards)))));

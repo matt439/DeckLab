@@ -99,7 +99,7 @@ class WebReceiptTests(FilesReceiptCase):
         self.assertIn("nonfoil", picture["finishes"])
         # The deck that counts on these two copies from this order.
         self.assertEqual(cards_part["decks"], [[{"id": "casual/test", "title": "Test", "status": "idea", "uses": 2,
-                                                "waiting": 2}]])
+                                                "waiting": 2, "colors": ["G"]}]])
         self.assertEqual(view["kits"], {})
         self.assertEqual(len(tokens_part["pictures"]), 1)
         self.assertIsNone(tokens_part["decks"])
@@ -130,7 +130,7 @@ class WebReceiptTests(FilesReceiptCase):
         self.assertIsNone(part["decks"][0])
         self.assertEqual(part["decks"][1], [])
         self.assertEqual(part["decks"][2], [{"id": "casual/test", "title": "Test", "status": "idea",
-                                              "uses": 2, "waiting": 2}])
+                                              "uses": 2, "waiting": 2, "colors": ["G"]}])
         self.assertIsNone(part["pictures"][0])
         self.assertEqual(view["fingerprint"], receipts.fingerprint(revision))
         self.assertEqual(files.tree_files(self.root), before)
@@ -145,7 +145,7 @@ class WebReceiptTests(FilesReceiptCase):
         self.assertEqual(part["pictures"], [None, None])
         self.assertEqual(part["decks"][0], [])
         self.assertEqual(part["decks"][1], [{"id": "casual/test", "title": "Test", "status": "idea",
-                                              "uses": 2, "waiting": 2}])
+                                              "uses": 2, "waiting": 2, "colors": ["G"]}])
 
     def test_all_unresolved_card_and_product_names_need_no_deck_or_pool_lookup(self):
         from decklab.lib import decks

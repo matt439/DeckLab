@@ -2,6 +2,14 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Receive Planned destination swatches (2026-10-25; E11-S30 slice 12)
+
+Receipt deck hints now carry optional canonical Planned/library identity from the exact target sections already read. Canonical home/kind and viewer checks precede target/colour reads; cloned summaries and per-output arrays preserve names, counts and provenance. Unknown identity stays null, known colourless stays an empty array, and narrow typed/index-data faults remove only decoration. Unresolved-name row confidence, canonical receipt fields, fingerprint, inventory/pool/target read counts and preview/apply payloads stay unchanged.
+
+Guidance links, frozen post-record headings, existing inspection links and plain row-name chips share validated decorative swatches. There is no card-colour/library-cache/owned fallback, new interactive content in check labels, or extra viewer group. Existing compact lab row-chip hiding is retained; visible swatches follow the shared 8px/12px height tokens.
+
+Validation: 218 API/UI/source fixture checks passed with database connections, socket connections and server binding forbidden. Synthetic Chromium checked 48 verified viewport/theme/Pictures-or-List combinations with 4-of-7 progress, unchanged row/viewer counts, decorative cues, preserved target links and no overflow. An actual inspection link opened the Planned deck; Back plus explicit resume restored selection and guidance. Recorded-success, multicolour, colourless, malformed/unknown, privacy and read-count boundaries are fixture-test evidence. All browser API writes were disabled; no actual receipt/database write, downloads or Forge games. Mouse/default DPR and keyboard only; actual touch/coarse/Safari/device/speech acceptance stays open. The source audit still fails only on pre-existing tokens.js (1,516 lines).
+
 ## Dense Shopping finish pills (2026-10-25; E11-S30 slice 12)
 
 Dense Printing cells now use the shared neutral Foil/Etched pills, with one full spoken requested-printing intent and a decorative visual line. Collector numbers and finish pills retain their width; long exact-set tags can ellipsize with full title/text retained. Nonfoil stays plain, missing finishes stay unclaimed and older unknown values remain factual text. The 156px preferred printing column preserves 36px ordinary rows and waiting reasons. Existing viewer/write nodes, requests, quantity and revision semantics are unchanged.

@@ -490,10 +490,12 @@ function rcptChips(view, comp, row) {
   if (flag) chips.push(el("span", { class: "chip chip-plain rcpt-flag", title: flag, text: "⚑ Note" }));
   const decks = rcptDecks(comp, row);
   const waiting = decks.filter((d) => d.waiting > 0);
-  for (const d of waiting) chips.push(el("span", { class: "chip chip-info", title: `${d.title} counts on ${d.waiting} from this delivery`, text: `For ${rcptShortTitle(d.title)} ×${d.waiting}` }));
+  for (const d of waiting) chips.push(el("span", { class: "chip chip-info", title: `${d.title} counts on ${d.waiting} from this delivery` },
+    rcptDeckSwatch(d), `For ${rcptShortTitle(d.title)} ×${d.waiting}`));
   if (!waiting.length) {
     const using = decks.filter((d) => d.status === "built" || d.status === "building");
-    for (const d of using.slice(0, 2)) chips.push(el("span", { class: "chip chip-plain", title: `${d.title} lists ${d.uses}`, text: `${rcptShortTitle(d.title)} ×${d.uses}` }));
+    for (const d of using.slice(0, 2)) chips.push(el("span", { class: "chip chip-plain", title: `${d.title} lists ${d.uses}` },
+      rcptDeckSwatch(d), `${rcptShortTitle(d.title)} ×${d.uses}`));
     if (using.length > 2) chips.push(el("span", { class: "chip chip-plain", text: `+${using.length - 2}` }));
   }
   return chips;
@@ -675,7 +677,7 @@ function rcptFillSheet(view) {
   const decks = rcptDecks(comp, row);
   if (decks.length) {
     body.append(el("h3", { text: "Decks with this card" }), el("ul", { class: "rcpt-decks" }, decks.map((d) =>
-      el("li", {}, el("a", { href: deckHref(d.id), text: d.title }),
+      el("li", {}, rcptDeckLink(d),
         ` · ${STATUS_WORDS[d.status] || "Idea"}, lists ${d.uses}`,
         d.waiting ? el("strong", { text: ` · counts on ${d.waiting} from this delivery` }) : null))));
   }

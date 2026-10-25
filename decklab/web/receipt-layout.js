@@ -105,6 +105,19 @@ function rcptDestinationAdvice(view, received) {
   return out;
 }
 
+/** Optional canonical Planned/library decoration; malformed/absent data never becomes colourless. */
+function rcptDeckSwatch(deck) {
+  const colors = deck?.colors;
+  if (!Array.isArray(colors) || colors.length > 5 || new Set(colors).size !== colors.length
+      || !Array.from(colors).every((color) => typeof color === "string" && /^[WUBRG]$/.test(color))) return null;
+  return deckColourPieces(colors).swatch();
+}
+
+function rcptDeckLink(deck) {
+  return el("a", { class: "rcpt-deck-link", href: deckHref(deck.id, "target") }, rcptDeckSwatch(deck),
+    el("span", { class: "rcpt-deck-title", text: deck.title }));
+}
+
 /** Advice from already-loaded deck needs, never a physical allocation or a receipt confirmation. */
 function rcptGuidanceDestinations(view) {
   return rcptDestinationAdvice(view, rcptReceived(view)).map((item) => {
@@ -117,7 +130,7 @@ function rcptGuidanceDestinations(view) {
       ? "basic-land deck destinations are not tracked." : "destination not known from this delivery's data."}` });
     if (item.kind === "storage") return el("li", { text: `${item.quantity} \u00d7 ${item.name}: storage; no deck is waiting in the loaded delivery data.` });
     const deck = item.deck, sleeves = view.data.kits?.[deck.id]?.sleeves;
-    return el("li", {}, `${item.quantity} \u00d7 ${item.name}: `, el("a", { href: deckHref(deck.id), text: deck.title }),
+    return el("li", {}, `${item.quantity} \u00d7 ${item.name}: `, rcptDeckLink(deck),
       sleeves ? el("span", { class: "sub", text: ` \u00b7 sleeves: ${sleeves}` })
         : deck.status === "building" ? el("span", { class: "rcpt-guidance-building", text: " \u00b7 Building: keep them with its cards" }) : null);
   });
