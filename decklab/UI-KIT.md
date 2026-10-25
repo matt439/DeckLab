@@ -46,9 +46,21 @@ the already-loaded canonical Planned/library summary, including for Play-now or
 partial sideboard recipes. Null means unknown; an empty array means known
 colourless. This is decoration only: unselected choices have no added colours,
 and selections, task keys, fingerprints, reads and accepted requests stay the same.
-The current chooser does not yet render it.
+The Decks chooser options stay undecorated; the casual switcher uses this field.
 
-`assembly-progress.js` follows the chooser script: shared Build decks checkmarks,
+`assembly-switcher.js` follows the chooser helper. Below 1000px, all selected
+participants (up to twelve) have id/version keyed pressed buttons; inactive
+original panels are hidden, never detached or rewired. The lab shows all panels.
+Global required-card counts, optional steps, warnings, shared-token guidance and
+completion keep the whole-plan scope. Switching makes no request or stored choice.
+The packing-only viewer adapter uses original triggers/cards/captions in task order,
+including hidden panels and duplicates; generic viewer filtering stays unchanged.
+Distinct opening watches and current-plan/trigger/busy guards protect close/resize
+focus, with exact return-panel ownership and listener disposal on route/person changes.
+Queued reveal only scrolls current focus. Unknown colour identity stays neutral;
+strict known identity uses the shared deck pieces, including known colourless.
+
+`assembly-progress.js` follows the switcher script: shared Build decks checkmarks,
 per-task identities and patches, pending-save status, polling and Clear/Undo.
 Sorting remains a browser preference. Progress is shared through the server;
 it never changes a deck's status without the explicit Mark as built action.

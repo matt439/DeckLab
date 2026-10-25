@@ -5,7 +5,7 @@ const assemblySheets = new Set();
 
 function closeAssemblySheets(closeChooser = true) {
   for (const sheet of [...assemblySheets]) sheet.close();
-  if (closeChooser) closePackingChoosers();
+  if (closeChooser) { closePackingChoosers(); closePackingSwitchers(); }
 }
 
 function openAssemblySheet(view, title, options = {}) {

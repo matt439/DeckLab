@@ -75,6 +75,7 @@ function drawAssembly(data, token) {
   $("#main").append(view.root);
   view.run = () => packRun(view);
   packInitChooser(view);
+  packInitSwitcher(view);
   drawPackPicks(view);
   renderAssemblyPlan(view, data);
 }
@@ -193,8 +194,11 @@ function packTile(view, name, { qty, meta, caption, id, finishes = [] }) {
   const tick = el("button", { type: "button", class: "tile-tick pack-tick", "aria-pressed": "false",
     "aria-label": `${qty > 1 ? `${qty} × ` : ""}${name}: done`, "data-pack-tick": id, "data-pack-count": qty,
     "data-pack-context": JSON.stringify(finishes.map(f => [f.finish, f.quantity]).sort()) });
-  return cardTile(card, { qty, name: frontName(name), meta, finish, chips, state: tick,
+  const tile = cardTile(card, { qty, name: frontName(name), meta, finish, chips, state: tick,
+    onclick: card ? event => packOpenCard(view, event.currentTarget) : null,
     viewerGroup: "packing", caption: description, label: finishWords ? `${name}. ${description}` : card ? null : name });
+  packRegisterCard(view, tile, card, description);
+  return tile;
 }
 
 /** A browser preference for this person. Reordering the displayed plan needs no new preview. */
@@ -366,6 +370,7 @@ function packDeck(view, deck) {
 }
 
 function renderAssemblyPlan(view, data) {
+  const presentation = packSwitcherBeforeRender(view);
   clear(view.results);
   view.data = data;
   view.bulk = [];
@@ -373,11 +378,13 @@ function renderAssemblyPlan(view, data) {
   view.cards = data.cards || {};
   view.sortControl.hidden = !data.decks.length;
   if (!data.decks.length) {
+    packAttachSwitcher(view, data, []);
     wirePackTicks(view);
     view.results.append(el("div", { class: "empty" }, el("p", { text: "Choose the decks you want to play." }),
       el("button", { type: "button", class: "btn", text: "Choose decks", onclick: () => {
         packRevealChooser(view);
       } })));
+    packSwitcherAfterRender(view, presentation);
     return;
   }
   const standins = data.decks.reduce((sum, deck) => sum + (deck.standins?.rows || []).reduce((n, row) => n + row.qty, 0), 0);
@@ -394,7 +401,8 @@ function renderAssemblyPlan(view, data) {
       note(...data.sleeve_notes.map((n) => n.note))) : null]);
   if (data.unresolved.length) view.results.append(el("p", { class: "box box-warn",
     text: `Unresolved card names: ${data.unresolved.join(", ")}` }));
-  view.results.append(el("div", { class: "pack-decks" }, data.decks.map(deck => packDeck(view, deck))));
+  const panels = data.decks.map(deck => ({ deck, node: packDeck(view, deck) }));
+  view.results.append(packAttachSwitcher(view, data, panels), el("div", { class: "pack-decks" }, panels.map(panel => panel.node)));
   const completion = packCompletion(view, data);
   if (completion) view.results.append(completion);
   const held = data.rows.filter(row => row.missing && row.held_elsewhere.length);
@@ -420,6 +428,7 @@ function renderAssemblyPlan(view, data) {
   view.bar.node.classList.add("pack-bar");
   view.results.append(view.bar.node);
   wirePackTicks(view);
+  packSwitcherAfterRender(view, presentation);
 }
 
 /** Finish here: ticks record progress; this explicit action saves the assembled lists. */

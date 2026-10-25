@@ -3826,6 +3826,8 @@ Slice 13's first chooser batch built 2026-10-25: reviewed Decks-sheet drawing, o
 
 Slice 13's selected participant data now carries optional canonical Planned identity from an already-read summary, with no extra reads or allocation/request/fingerprint change. Sixty-three guarded fixture checks passed, including full-plan equality and Planned-versus-physical divergence. The chooser UI is unchanged; the remaining presentation will consume this decoration.
 
+Slice 13's casual deck switcher and packing-only whole-plan viewer built 2026-10-25: all id/version participants and original task nodes remain, hidden cards retain viewer order/captions, and global progress/completion still includes every participant. Native 0/1/2/12, return-trigger resize and focus checks passed; 252 integrated checks and 24 Chromium viewport/theme cases passed with actual data writes disabled. Exact printing labels remain unavailable from current representative-art/name-count data; rows/steps, done states, finish-bar work and human/device gates remain.
+
 Gap: slices 9 to 12's touch/Safari acceptance, Collection's open colour-filter choice and Receive's check-to-row association; then slices 13 to 15 (criteria 1 to 3 and 6). Independent coding through slice 12 is built; component checks stay separate until their row association is authoritative. Device checks do not block coding. Section 6's question 4 is settled (Matt, 2026-10-25: only Building and Idea tiles show a status pill). The lab top bar's search is E11-S31.
 
 <a id="e11-s31"></a>
