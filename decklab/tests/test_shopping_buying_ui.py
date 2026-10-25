@@ -22,13 +22,21 @@ class ShoppingBuyingInteractionTests(unittest.TestCase):
             missing_cards: {ready: true, rows: missing, errors: [], warnings: [], totals: {}}, ...extra});
           const missingSection = () => main.querySelector("#shop-missing-cards")?.closest("section");
           const shopSectionNode = () => main.querySelector("#shop-by-shop")?.closest("section");
+          const shopRadio = choice => main.querySelectorAll('.shop-store-radio')
+            .find(input => input.getAttribute('data-shop-choice') === choice);
+          const selectedShop = () => main.querySelectorAll('.shop-store-radio').find(input => input.checked)?.value;
           const chooseShop = choice => {
-            const select = main.querySelector("#shop-buying-store");
-            const fold = select.closest("details");
-            if (fold) {fold.setAttribute("open", ""); fold.open = true; fold.fire("toggle");}
-            select.value = choice; select.fire("change");
-            return select;
+            const radio = shopRadio(choice); assert(radio, 'shop radio must exist: ' + choice);
+            // The DOM double does not implement a native radio group's checked/default action.
+            main.querySelectorAll('.shop-store-radio').forEach(input => { input.checked = input === radio; });
+            radio.focus(); radio.fire('change'); return radio;
           };
+          const sameNodes = (actual, expected) => { assert.equal(actual.length,expected.length);
+            actual.forEach((node,index)=>assert.equal(node,expected[index])); };
+          const canonicalQueue = () => main.querySelectorAll('[data-shop-queue]');
+          const canonicalRow = name => canonicalQueue().find(node =>
+            node.querySelector('.card-row')?.querySelector('.name')?.textContent.startsWith(name));
+          const matchedQueue = () => canonicalQueue().filter(node => node.getAttribute('data-shop-match') === 'true');
           const missingArticle = name => main.querySelectorAll(".shop-missing-card")
             .find(article => article.getAttribute("data-missing-card") === name);
           const editControl = n => main.querySelectorAll(".shop-queue-edit")
@@ -92,7 +100,7 @@ class ShoppingBuyingInteractionTests(unittest.TestCase):
           assert.equal(intent.querySelectorAll("li").length, 1);
           assert(intent.textContent.includes("3 queued"));
           assert(!intent.textContent.includes("8 queued"));
-          assert.equal(shopSectionNode().querySelectorAll(".shop-store-row").length, 2);
+          assert.equal(canonicalQueue().length, 2);
         """)
 
     def test_unavailable_counts_show_a_retry_and_never_claim_nothing_to_buy(self):
@@ -138,59 +146,73 @@ class ShoppingBuyingInteractionTests(unittest.TestCase):
           assert.equal(shopSectionNode(), undefined);
         """)
 
-    def test_shop_groups_include_long_term_and_keep_stock_yes_no_unknown_separate(self):
-        self.run_buying_js("""
-          drawShopping(shoppingData([
-            row("In stock", {listed_at: "Beta", in_stock: "yes"}),
-            row("Out of stock", {listed_at: "Beta", in_stock: "no"}),
-            row("Unknown", {listed_at: "Beta", in_stock: ""}),
-            row("Later", {listed_at: "Alpha", in_stock: "yes", state: "long_term"}),
-            row("Unresearched", {listed_at: "   ", in_stock: ""})]));
-          const section = shopSectionNode(), groups = section.querySelectorAll(".shop-store-group");
-          same(groups.map(group => group.querySelector("h3").textContent), ["Alpha", "Beta", "Not checked at any shop"]);
-          assert(groups[0].textContent.includes("Later"));
-          assert(groups[0].textContent.includes("Long-term plan"));
-          same(groups[1].querySelectorAll("h4").map(heading => heading.textContent),
-            ["In stock when checked", "Out of stock when checked", "Stock not recorded"]);
-          assert.equal(groups[1].querySelectorAll(".shop-store-row").length, 3);
-          assert(groups[2].textContent.includes("Unresearched"));
-          assert(section.textContent.includes("check the shop before ordering"));
+    def test_shop_choices_count_canonical_rows_across_states_without_duplicate_research(self):
+        self.run_buying_js(r"""
+          const queue=SHOP_QUEUE_STATES.map((state,i)=>row('Intent '+i,{queue_row:i+1,state,quantity:i+1,
+            listed_at:'  Store A  ',in_stock:i===0?'yes':i===1?'no':''}));
+          queue.push(row('Token intent',{queue_row:6,is_token:true,quantity:8,listed_at:'   '}));
+          const original=queue.map(item=>({...item}));let reads=0,writes=0;
+          api=async()=>{reads++;throw new Error('Shop choices must not read');};
+          apiWrite=async()=>{writes++;throw new Error('Shop choices must not write');};
+          drawShopping(shoppingData(queue));
+          const section=shopSectionNode(),fieldset=section.querySelector('.shop-store-choices');
+          assert.equal(fieldset.tag,'fieldset');assert.equal(section.querySelector('select'),null);
+          assert.equal(section.querySelector('details'),null);assert.equal(section.querySelector('.card-row'),null);
+          same(section.querySelectorAll('.shop-store-radio').map(input=>[input.getAttribute('type'),input.value]),
+            [['radio','all'],['radio','shop:Store A'],['radio','unchecked']]);
+          const label=choice=>shopRadio(choice).closest('label').textContent;
+          assert(label('all').includes('6 rows'));assert(label('all').includes('23 cards'));
+          assert(label('shop:Store A').includes('5 rows'));assert(label('shop:Store A').includes('15 cards'));
+          assert(/1 row/.test(label('unchecked')));assert(label('unchecked').includes('8 cards'));
+          assert.equal(canonicalQueue().length,6);assert.equal(selectedShop(),'all');
+          assert(canonicalRow('Intent 0').textContent.includes('In stock when checked'));
+          assert(canonicalRow('Intent 1').textContent.includes('Out of stock when checked'));
+          assert(canonicalRow('Intent 2').textContent.includes('Stock not recorded'));
+          chooseShop('shop:Store A');assert.equal(matchedQueue().length,5);
+          assert.equal(canonicalQueue().length,6);assert.equal(reads,0);assert.equal(writes,0);
+          same(queue,original);assert(section.textContent.includes('check the shop before ordering'));
         """)
 
-    def test_shop_selection_filters_recorded_research_without_writing(self):
-        self.run_buying_js("""
-          apiWrite = async () => {throw new Error("Selecting a shop must not write");};
-          const alpha = row("Alpha", {listed_at: "Store A", checked: "2026-10-13", listed_aud: "1.25"});
-          drawShopping(shoppingData([alpha, row("Beta", {listed_at: "Store B"}), row("Gamma")]));
-          chooseShop("shop:Store B");
-          assert.equal(shopSectionNode().querySelectorAll(".shop-store-group").length, 1);
-          assert(shopSectionNode().querySelector(".shop-store-results").textContent.includes("Beta"));
-          assert(!shopSectionNode().querySelector(".shop-store-results").textContent.includes("Alpha"));
-          chooseShop("unchecked");
-          assert(shopSectionNode().querySelector(".shop-store-results").textContent.includes("Gamma"));
-          chooseShop("all");
-          assert.equal(shopSectionNode().querySelectorAll(".shop-store-row").length, 3);
-          assert.equal(alpha.listed_aud, "1.25");
-          assert.equal(alpha.checked, "2026-10-13");
+    def test_shop_radio_marks_without_replacing_or_filtering_canonical_rows_and_clear_keeps_focus(self):
+        self.run_buying_js(r"""
+          let reads=0,writes=0;
+          api=async()=>{reads++;throw new Error('Marking must not read');};
+          apiWrite=async()=>{writes++;throw new Error('Marking must not write');};
+          const alpha=row('Alpha',{queue_row:1,listed_at:'Store A',checked:'2026-10-13',listed_aud:'1.25',card:cardData('Alpha')});
+          const beta=row('Beta',{queue_row:2,listed_at:'Store B'});
+          drawShopping(shoppingData([alpha,beta,row('Gamma',{queue_row:3})]));
+          const before=canonicalQueue(),viewer=canonicalRow('Alpha').querySelector('.card-row');
+          const controls=main.querySelectorAll('.shop-queue-write'),group=viewer.getAttribute('data-viewer');
+          const radio=chooseShop('shop:Store B');
+          sameNodes(canonicalQueue(),before);sameNodes(main.querySelectorAll('.shop-queue-write'),controls);
+          assert.equal(document.activeElement,radio);assert.equal(matchedQueue().length,1);
+          assert.equal(matchedQueue()[0],canonicalRow('Beta'));
+          assert.equal(canonicalRow('Alpha').querySelector('.card-row'),viewer);
+          assert.equal(viewer.getAttribute('data-viewer'),group);
+          assert(main.querySelector('.shop-match-slot').textContent.includes('Marking Store B rows'));
+          chooseShop('unchecked');assert.equal(matchedQueue()[0],canonicalRow('Gamma'));
+          assert(main.querySelector('.shop-match-slot').textContent.includes('Marking rows not checked at any shop'));
+          const clearMatch=main.querySelector('.shop-clear-match');clearMatch.focus();clearMatch.click();
+          assert.equal(selectedShop(),'all');assert.equal(matchedQueue().length,0);
+          assert.equal(document.activeElement,shopRadio('all'));sameNodes(canonicalQueue(),before);
+          viewer.click();assert.equal(inspections.at(-1).card.name,'Alpha');
+          assert.equal(reads,0);assert.equal(writes,0);assert.equal(alpha.listed_aud,'1.25');assert.equal(alpha.checked,'2026-10-13');
         """)
 
-    def test_reference_price_and_check_date_are_visible_without_card_data_or_image(self):
+    def test_canonical_reference_price_and_check_date_are_visible_without_card_data_or_image(self):
         self.run_buying_js("""
           drawShopping(shoppingData([
             row("Zero", {listed_at: "Store", listed_aud: "0", checked: "2026-10-14"}),
             row("Undated", {listed_at: "Store", listed_aud: "1.10"}),
             row("Unpriced", {listed_at: "Store", checked: "2026-10-12"}),
             row("Unrecorded", {listed_at: "Store"})]));
-          const research = shopSectionNode();
-          assert.equal(research.querySelector("img"), null);
-          assert(research.textContent.includes("Reference price A$0.00 at Store"));
-          assert(research.textContent.includes("Checked 2026-10-14"));
-          assert(research.textContent.includes("Check date not recorded"));
-          assert(research.textContent.includes("Checked 2026-10-12; reference price not recorded"));
-          assert(research.textContent.includes("Check date and reference price not recorded"));
-          const queue = main.querySelector("#shop-to-buy").closest("section");
-          assert(queue.textContent.includes("Checked 2026-10-14"));
-          assert(queue.textContent.includes("Reference price A$0.00 at Store"));
+          assert(canonicalQueue().every(node=>node.querySelector('img')===null));
+          assert(canonicalRow('Zero').textContent.includes('Reference price A$0.00 at Store'));
+          assert(canonicalRow('Zero').textContent.includes('Checked 2026-10-14'));
+          assert(canonicalRow('Undated').textContent.includes('Check date not recorded'));
+          assert(canonicalRow('Unpriced').textContent.includes('Checked 2026-10-12; reference price not recorded'));
+          assert(canonicalRow('Unrecorded').textContent.includes('Check date and reference price not recorded'));
+          assert.equal(shopSectionNode().querySelector('.card-row'),null);
         """)
 
     def test_untrusted_names_decks_shops_errors_and_notes_remain_text(self):
@@ -231,7 +253,7 @@ class ShoppingBuyingInteractionTests(unittest.TestCase):
           assert.equal(view.data.queue_revision, "q2");
           assert.equal(writes[0][0], "/api/shopping/queue");
           assert.equal(writes[0][1].expect, "q1");
-          assert(shopSectionNode().textContent.includes("Alpha"));
+          assert(canonicalRow("Alpha"));
         """)
 
     def test_edit_redraws_quantities_and_references_but_preserves_chosen_shop(self):
@@ -248,9 +270,9 @@ class ShoppingBuyingInteractionTests(unittest.TestCase):
           sheetButton(sheet, "Save").click(); await null; await null;
           assert(missingArticle("Alpha").textContent.includes("4 queued"));
           assert(!missingArticle("Alpha").textContent.includes("1 queued"));
-          assert.equal(main.querySelector("#shop-buying-store").value, "shop:Store A");
-          assert.equal(shopSectionNode().querySelectorAll(".shop-store-row").length, 1);
-          assert(shopSectionNode().textContent.includes("Reference price A$0.50 at Store A"));
+          assert.equal(selectedShop(), "shop:Store A");
+          assert.equal(matchedQueue().length, 1);
+          assert(canonicalRow("Alpha").textContent.includes("Reference price A$0.50 at Store A"));
           assert.equal(old.quantity, 1);
         """)
 
@@ -274,7 +296,7 @@ class ShoppingBuyingInteractionTests(unittest.TestCase):
           assert.equal(view.data.queue_revision, "q2");
           assert(missingArticle("Goblin").textContent.includes("Not in the purchase queue"));
           assert.equal(missingArticle("Goblin").querySelector(".shop-missing-queue"), null);
-          assert.equal(shopSectionNode().querySelectorAll(".shop-store-row").length, 1);
+          assert.equal(canonicalQueue().length, 1);
         """)
 
     def test_corrected_playable_identity_clears_old_token_evidence_before_redrawing_shortfalls(self):
@@ -301,7 +323,7 @@ class ShoppingBuyingInteractionTests(unittest.TestCase):
           assert(!missingArticle("Goblin").textContent.includes("Not in the purchase queue"));
           assert.equal(view.data.queue_revision, "q2");
           assert.equal(writes[0].expect, "q1");
-          shopSectionNode().querySelector(".card-row").click();
+          canonicalRow("Goblin").querySelector(".card-row").click();
           assert.equal(inspections.at(-1).card.name, "Goblin");
         """)
 
@@ -315,31 +337,27 @@ class ShoppingBuyingInteractionTests(unittest.TestCase):
           assert.equal(main.querySelector("#shop-to-buy"), null);
           assert(missingArticle("Alpha").textContent.includes("Long-term plan"));
           assert(!missingArticle("Alpha").textContent.includes("Ready to buy"));
-          assert(shopSectionNode().querySelector(".shop-store-results").textContent.includes("Alpha"));
-          assert(shopSectionNode().querySelector(".shop-store-results").textContent.includes("Long-term plan"));
-          assert.equal(main.querySelector("#shop-buying-store").value, "shop:Store");
+          assert(canonicalRow("Alpha").closest("section").textContent.includes("Long-term plan"));
+          assert.equal(matchedQueue().length, 1);
+          assert.equal(selectedShop(), "shop:Store");
         """)
 
-    def test_shop_fold_and_selection_survive_saved_edits_and_moves_but_respect_explicit_close(self):
+    def test_shop_selection_and_marks_survive_saved_edits_and_moves_and_clear(self):
         self.run_buying_js("""
           const queued = row("Alpha", {queue_row: 1, listed_at: "Store", quantity: 1});
-          apiWrite = async (path, body) => ({revision: body.state ? "q3" : "q2",
-            item: {...queued, ...body.values}});
+          apiWrite = async (path, body) => ({revision: body.state ? "q3" : "q2", item: {...queued, ...body.values}});
           const view = drawShopping(shoppingData([queued]));
           chooseShop("shop:Store");
           const sheet = shopQueueSheet(view, queued);
           field(sheet, "quantity").value = "2";
           sheetButton(sheet, "Save").click(); await null; await null;
-          assert.equal(main.querySelector("#shop-buying-store").value, "shop:Store");
-          assert.equal(shopSectionNode().querySelector("details").getAttribute("open"), "");
+          assert.equal(selectedShop(), "shop:Store");assert.equal(matchedQueue().length,1);
+          assert(shopRadio('shop:Store').closest('label').textContent.includes('2 cards'));
           await shopMoveQueue(queued, "long_term", view, el("div"));
-          assert.equal(main.querySelector("#shop-buying-store").value, "shop:Store");
-          const fold = shopSectionNode().querySelector("details");
-          assert.equal(fold.getAttribute("open"), "");
-          fold.removeAttribute("open"); fold.open = false; fold.fire("toggle");
-          view.redraw();
-          assert.equal(shopSectionNode().querySelector("details").getAttribute("open"), null);
-          assert.equal(main.querySelector("#shop-buying-store").value, "shop:Store");
+          assert.equal(selectedShop(), "shop:Store");assert.equal(matchedQueue().length,1);
+          assert.equal(main.querySelector('#shop-to-buy'),null);assert(canonicalRow('Alpha').closest('section').textContent.includes('Long-term plan'));
+          main.querySelector('.shop-clear-match').click();assert.equal(selectedShop(),'all');assert.equal(matchedQueue().length,0);
+          assert.equal(shopSectionNode().querySelector('select'),null);assert.equal(shopSectionNode().querySelector('details'),null);
         """)
 
     def test_remove_drops_old_annotations_resets_missing_shop_and_renumbers_current_edit_ids(self):
@@ -355,7 +373,7 @@ class ShoppingBuyingInteractionTests(unittest.TestCase):
           sheetButton(sheet, "Remove card").click(); await null; await null; await null;
           assert(missingArticle("Alpha").textContent.includes("Not in the purchase queue"));
           assert(!missingArticle("Alpha").textContent.includes("3 queued"));
-          assert.equal(main.querySelector("#shop-buying-store").value, "all");
+          assert.equal(selectedShop(), "all");
           assert(!shopSectionNode().textContent.includes("Only alpha"));
           same(view.data.to_buy.map(item => [item.name, item.queue_row]), [["Beta", 1]]);
           assert.equal(editControl(2), undefined);
@@ -365,7 +383,7 @@ class ShoppingBuyingInteractionTests(unittest.TestCase):
           same(writes, [{action: "remove", row: 1, reason: "Changed plan", expect: "q1"}]);
         """)
 
-    def test_read_only_views_keep_research_deck_links_and_viewers_without_write_controls(self):
+    def test_read_only_views_keep_canonical_research_links_and_viewers_without_write_controls(self):
         self.run_buying_js("""
           state.may = {admin: false, orders: false, see_inventory: ["home"]};
           apiWrite = async () => {throw new Error("A read-only buying view must not write");};
@@ -373,37 +391,32 @@ class ShoppingBuyingInteractionTests(unittest.TestCase):
             deck: {id: "casual/otters", title: "Otters"}})], [missingRow("Alpha", {card: cardData("Alpha")})]));
           assert.equal(main.querySelector(".shop-queue-write"), null);
           chooseShop("shop:Store");
-          const research = shopSectionNode(), link = research.querySelector(".shop-queue-deck");
-          assert.equal(link.getAttribute("href"), "#/deck?id=casual%2Fotters&v=target");
-          assert.equal(link.closest("button"), null);
-          research.querySelector(".card-row").click();
-          assert.equal(inspections.at(-1).card.name, "Alpha");
-          assert.equal(research.querySelectorAll("button").length, 1);
-          assert.equal(research.querySelector(".shop-category-move"), null);
+          const canonical=canonicalRow('Alpha'),link=canonical.querySelector('.shop-queue-deck');
+          assert.equal(link.getAttribute('href'),'#/deck?id=casual%2Fotters&v=target');assert.equal(link.closest('button'),null);
+          canonical.querySelector('.card-row').click();assert.equal(inspections.at(-1).card.name,'Alpha');
+          assert.equal(canonical.querySelector('.shop-category-move'),null);assert.equal(shopSectionNode().querySelector('.card-row'),null);
+          assert.equal(matchedQueue().length,1);assert(main.querySelector('.shop-clear-match'));
         """)
 
-    def test_stale_shop_selector_and_missing_refresh_ignore_changed_profile_and_route(self):
-        self.run_buying_js("""
-          let refreshes = 0;
-          route = () => {refreshes += 1;};
-          const replacedView = drawShopping(shoppingData([row("Alpha", {listed_at: "Store"})]));
-          const replacedSelect = main.querySelector("#shop-buying-store");
-          replacedView.redraw();
-          replacedSelect.value = "shop:Store"; replacedSelect.fire("change");
-          assert.equal(replacedView.shopChoice, "all");
-          assert.equal(main.querySelector("#shop-buying-store").value, "all");
-          for (const departure of ["profile", "route"]) {
-            clear(main); state.profile = state.profiles[0];
-            const view = drawShopping(shoppingData([row("Alpha", {listed_at: "Store"})], [],
-              {missing_cards: {ready: false, rows: [], errors: [], warnings: []}}));
-            const select = main.querySelector("#shop-buying-store");
-            const refresh = missingSection().querySelector("button");
-            if (departure === "profile") state.profile = state.profiles[1];
-            else routeToken += 1;
-            select.value = "shop:Store"; select.fire("change"); refresh.click();
-            assert.equal(view.shopChoice, "all");
+    def test_stale_shop_radios_clear_chip_and_missing_refresh_ignore_replaced_nodes_profile_and_route(self):
+        self.run_buying_js(r"""
+          let refreshes=0,writes=0;route=()=>{refreshes++;};apiWrite=async()=>{writes++;throw new Error('Must not write');};
+          const replacedView=drawShopping(shoppingData([row('Alpha',{listed_at:'Store'})]));
+          const replacedRadio=shopRadio('shop:Store');chooseShop('shop:Store');
+          const replacedClear=main.querySelector('.shop-clear-match');replacedView.redraw();
+          replacedRadio.checked=true;replacedRadio.fire('change');replacedClear.click();
+          assert.equal(replacedView.shopChoice,'shop:Store');assert.equal(selectedShop(),'shop:Store');assert.equal(matchedQueue().length,1);
+          for(const departure of ['profile','route']){
+            clear(main);state.profile=state.profiles[0];
+            const view=drawShopping(shoppingData([row('Alpha',{listed_at:'Store'})],[],
+              {missing_cards:{ready:false,rows:[],errors:[],warnings:[]}}));
+            chooseShop('shop:Store');const radio=shopRadio('all'),clearButton=main.querySelector('.shop-clear-match');
+            const refresh=missingSection().querySelector('button');
+            if(departure==='profile')state.profile=state.profiles[1];else routeToken++;
+            radio.checked=true;radio.fire('change');clearButton.click();refresh.click();
+            assert.equal(view.shopChoice,'shop:Store');assert.equal(matchedQueue().length,1);
           }
-          assert.equal(refreshes, 0);
+          assert.equal(refreshes,0);assert.equal(writes,0);
         """)
 
     def test_failed_queue_write_leaves_combined_and_shop_rows_at_the_saved_revision(self):
@@ -418,10 +431,70 @@ class ShoppingBuyingInteractionTests(unittest.TestCase):
           assert(missingArticle("Alpha").textContent.includes("2 queued"));
           assert(!missingArticle("Alpha").textContent.includes("9 queued"));
           assert.equal(view.data.queue_revision, "q1");
-          assert.equal(main.querySelector("#shop-buying-store").value, "shop:Store");
+          assert.equal(selectedShop(), "shop:Store");
           assert(sheet.queueError.textContent.includes("Shopping changed meanwhile"));
           assert.equal(view.stale, true);
           assert.equal(editControl(1).disabled, true);
+        """)
+
+
+
+    def test_shop_marks_reveal_all_matching_long_term_groups_and_clear_keeps_them_expanded(self):
+        self.run_buying_js(r"""
+          const queue=[];
+          for(const [slug,title] of [['a','Deck A'],['b','Deck B']]){
+            for(let n=0;n<14;n++)queue.push(row(title+' '+n,{queue_row:queue.length+1,state:'long_term',
+              listed_at:n===13?'Match shop':'Other',deck:{id:'casual/'+slug,title},card:cardData(title+' '+n)}));
+          }
+          let writes=0;apiWrite=async()=>{writes++;throw new Error('Reveal must not write');};
+          const view=drawShopping(shoppingData(queue)),before=canonicalQueue();
+          assert.equal(before.length,24);const first=before[0],viewer=first.querySelector('.card-row');
+          const controls=first.querySelectorAll('.shop-queue-write'),group=viewer.getAttribute('data-viewer');
+          const radio=chooseShop('shop:Match shop');
+          assert.equal(canonicalQueue().length,28);assert.equal(matchedQueue().length,2);
+          assert(canonicalRow('Deck A 13'));assert(canonicalRow('Deck B 13'));
+          assert(canonicalQueue()[0]===first,'revealing keeps the existing first row');assert(first.querySelector('.card-row')===viewer);
+          sameNodes(first.querySelectorAll('.shop-queue-write'),controls);assert.equal(viewer.getAttribute('data-viewer'),group);
+          assert.equal(document.activeElement,radio);assert(view.expanded.has('casual/a'));assert(view.expanded.has('casual/b'));
+          main.querySelector('.shop-clear-match').click();assert.equal(matchedQueue().length,0);
+          assert.equal(canonicalQueue().length,28);assert(view.expanded.has('casual/a'));assert(view.expanded.has('casual/b'));
+          assert.equal(writes,0);
+        """)
+
+    def test_newly_revealed_rows_inherit_busy_and_conflict_write_control_gates(self):
+        self.run_buying_js(r"""
+          for(const phase of ['busy','stale']){
+            clear(main);let writes=0,finish;
+            const moving=row('Moving',{queue_row:1,state:'ready'});
+            const later=Array.from({length:14},(_,i)=>row('Later '+i,{queue_row:i+2,state:'long_term',
+              listed_at:i===13?'Reveal shop':'Other',deck:{id:'casual/later',title:'Later deck'}}));
+            const view=drawShopping(shoppingData([moving,...later]));
+            apiWrite=()=>{writes++;return phase==='busy'?new Promise(resolve=>{finish=resolve;})
+              :Promise.reject(new ApiError(409,'Shopping changed meanwhile'));};
+            const pending=shopMoveQueue(moving,'waiting_for_stock',view,el('div'));
+            if(phase==='stale')await pending;
+            assert.equal(canonicalQueue().length,13);
+            chooseShop('shop:Reveal shop');assert.equal(canonicalQueue().length,15);
+            const revealed=canonicalRow('Later 13');assert(revealed);
+            assert(revealed.querySelectorAll('.shop-queue-write').every(node=>node.disabled));
+            assert(main.querySelectorAll('.shop-queue-write').every(node=>node.disabled));
+            assert.equal(writes,1,'shop matching never issues a write');
+            if(phase==='busy'){finish({revision:'q2'});await pending;}
+          }
+        """)
+
+    def test_immediate_groups_preserve_waiting_reasons_and_deferred_intent_without_state_chips(self):
+        self.run_buying_js(r"""
+          const queue=[row('Ready item',{queue_row:1,state:'ready'}),row('Stock item',{queue_row:2,state:'waiting_for_stock'}),
+            row('Reprint item',{queue_row:3,state:'waiting_for_reprint'}),row('Deferred item',{queue_row:4,state:'deferred'})];
+          const original=queue.map(item=>[item.name,item.state,item.queue_row]);
+          drawShopping(shoppingData(queue));const section=main.querySelector('#shop-to-buy').closest('section');
+          assert(section.textContent.includes('Ready'));assert(section.textContent.includes('Waiting'));assert(section.textContent.includes('Deferred'));
+          assert(canonicalRow('Stock item').textContent.includes('Waiting for stock'));
+          assert(canonicalRow('Reprint item').textContent.includes('Waiting for reprint'));
+          for(const node of canonicalQueue())for(const chip of node.querySelectorAll('.status'))
+            assert(!['Waiting for stock','Waiting for reprint','Deferred','Ready to buy'].includes(chip.textContent));
+          same(queue.map(item=>[item.name,item.state,item.queue_row]),original);assert.equal(canonicalQueue().length,4);
         """)
 
 

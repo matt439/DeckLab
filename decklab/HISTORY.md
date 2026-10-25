@@ -2,6 +2,14 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Shopping queue groups and shop matching (2026-10-25; E11-S30 slice 12)
+
+By shop now offers one native radio choice with row/copy counts and marks canonical queue rows instead of duplicating their cards, viewers and controls. A removable chip clears matching and returns focus to All. Choices span every saved category; matching Long-term groups reveal their existing remaining rows without replacing their first controls. Ready, Waiting and Deferred are separate headings; Waiting retains its stock/reprint reason, while Long-term keeps deck grouping. No persisted state or purchase intent is recategorized.
+
+Research facts now live on each canonical queue row, including stock and recorded check dates without an image or price; zero reference prices stay valid. Row identity, exact revision writes, busy/stale/profile/route guards, permissions, reprints and missing-deck shortfall semantics are retained. Queue Move returns focus after its new controls unlock. The dense lab table remains separate work.
+
+Validation: 253 targeted Python/Node checks passed (145 Shopping/order/receipt/reprint checks plus 108 shared/source checks). Synthetic Chromium checked 22 viewport/theme combinations: all eight fixture intent rows remain, exactly three chosen-shop rows are marked, all groups remain, 54px radio targets fit and no page/radio/chip overflow appears. Actual native arrow selection and Clear focus were checked. Long-term reveal/retained-node and save/move lifecycle coverage is unit-fixture evidence. Mouse/default DPR only; no real touch/Safari/device, live database, API writes, downloads or Forge games. The source audit still flags only pre-existing `tokens.js` (1,516 lines).
+
 ## Compact Shopping deliveries (2026-10-25; E11-S30 slice 12)
 
 On-the-way deliveries are now one-column native disclosure rows, with a 54px minimum collapsed height and wrapping full seller/title, recorded date, pending-copy count and existing status. Opening a row retains its card strip, notes, arrival checks and permission-gated Receive/details/edit actions. The strip uses 44px cards, existing responsive hidden-copy counts and the full-contents sheet. Buying redraws preserve open disclosures, nested check state and viewer triggers. New order remains the page's one primary; no unsupported keyboard hint is shown.

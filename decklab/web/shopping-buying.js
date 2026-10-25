@@ -59,57 +59,100 @@ function shopMissingCards(view) {
     "These totals add each Planned home deck's separate shortfall. Shared collection copies may count for more than one deck. Queue rows record purchase decisions separately.", content);
 }
 
-/** All states, including long-term plans, stay available when sharing a shop's postage. */
-function shopByShop(view) {
+/** Group copies of the current queue without changing saved state, order or row identifiers. */
+function shopQueueGroups(rows, view) {
+  const groups = [["ready", "Ready", rows.filter(row => row.state === "ready")],
+    ["waiting", "Waiting", rows.filter(row => ["waiting_for_stock", "waiting_for_reprint"].includes(row.state))],
+    ["deferred", "Deferred", rows.filter(row => row.state === "deferred")],
+    ["other", "State not recorded", rows.filter(row => !SHOP_QUEUE_STATES.includes(row.state))]];
+  return el("div", {class: "shop-queue-groups"}, groups.filter(([, , list]) => list.length).map(([key, title, list]) =>
+    el("section", {class: "shop-queue-group", "data-queue-group": key},
+      el("h3", {}, title, el("span", {class: "shop-group-count", text: ` \u00b7 ${plural(list.length, "row")}`})),
+      el("div", {class: "shop-rows"}, list.map(card => shopQueueRow(card, "to-buy", true, view, false, true))))));
+}
+
+/** Every recorded stock/date fact stays on its canonical queue row, even without an image or price. */
+function shopQueueResearch(row) {
+  const price = shopReference(row), shop = shopQueueShop(row);
+  return el("span", {class: "shop-reference shop-queue-research"}, price,
+    !price && shop ? el("span", {text: `Recorded at ${shop}`}) : null,
+    !price ? el("small", {text: row.checked ? `Checked ${row.checked}; reference price not recorded.`
+      : "Check date and reference price not recorded."}) : null,
+    row.in_stock === "no" ? status("warn", "Out of stock when checked")
+      : el("span", {text: row.in_stock === "yes" ? "In stock when checked" : "Stock not recorded"}));
+}
+
+function shopQueueShop(row) { return String(row.listed_at || "").trim(); }
+
+/** Only the pinned answer's queue contributes shop names and counts; no library or research reads. */
+function shopChoices(view) {
   const rows = view.data.to_buy || [];
-  if (!rows.length) return null;
-  const shops = [...new Set(rows.map(row => (row.listed_at || "").trim()).filter(Boolean))]
-    .sort((a, b) => a.localeCompare(b));
-  const choices = [{value: "all", text: "All recorded shops"},
-    ...shops.map(shop => ({value: `shop:${shop}`, text: shop})),
-    {value: "unchecked", text: "Not checked at any shop"}];
-  if (!choices.some(choice => choice.value === view.shopChoice)) view.shopChoice = "all";
-  const select = el("select", {id: "shop-buying-store", "aria-label": "Shop"},
-    choices.map(choice => el("option", {value: choice.value, text: choice.text})));
-  select.value = view.shopChoice;
-  const results = el("div", {class: "shop-store-results", "aria-live": "polite"});
-  const draw = () => {
-    clear(results);
-    const wanted = view.shopChoice === "all" ? [...shops, ""]
-      : [view.shopChoice === "unchecked" ? "" : view.shopChoice.slice(5)];
-    let found = 0;
-    wanted.forEach((shop, index) => {
-      const group = rows.filter(row => (row.listed_at || "").trim() === shop);
-      if (!group.length) return;
-      found += group.length;
-      const section = el("section", {class: "shop-store-group"},
-        el("h3", {text: shop || "Not checked at any shop"}));
-      for (const [stock, label] of [["yes", "In stock when checked"], ["no", "Out of stock when checked"], ["", "Stock not recorded"]]) {
-        const bucket = group.filter(row => (row.in_stock === "yes" || row.in_stock === "no" ? row.in_stock : "") === stock);
-        if (!bucket.length) continue;
-        section.append(el("h4", {text: label}), el("div", {class: "shop-rows"}, bucket.map(row => {
-          const card = shopQueueRow(row, `shopping-store-${index}-${stock || "unknown"}`, true, null, true);
-          return el("div", {class: "shop-store-row"}, card,
-            !shopPrice(row) ? el("p", {class: "sub", text: row.checked
-              ? `Checked ${row.checked}; reference price not recorded.` : "Check date and reference price not recorded."}) : null);
-        })));
-      }
-      results.append(section);
-    });
-    if (!found) results.append(el("p", {class: "empty", text: "No purchase-queue rows recorded for this shop."}));
-  };
-  select.addEventListener("change", () => {
-    if (!select.isConnected || !shopQueueActive(view)) return;
-    view.shopChoice = select.value;
-    view.shopOpen = true;
-    draw();
-  });
-  draw();
-  const fold = el("details", {class: "shop-store-fold", open: Boolean(view.shopOpen)},
-    el("summary", {text: "View the queue by shop"}),
-    el("label", {class: "field shop-store-choice", for: select.id}, el("span", {text: "Shop"}), select), results);
-  fold.addEventListener("toggle", () => {if (fold.isConnected && shopQueueActive(view)) view.shopOpen = fold.open;});
+  const shops = [...new Set(rows.map(shopQueueShop).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+  const choice = (value, text, list) => ({value, text, rows: list.length,
+    cards: list.reduce((sum, row) => sum + (Number(row.quantity) || 0), 0)});
+  return [choice("all", "All queue rows", rows),
+    ...shops.map(shop => choice(`shop:${shop}`, shop, rows.filter(row => shopQueueShop(row) === shop))),
+    choice("unchecked", "Not checked at any shop", rows.filter(row => !shopQueueShop(row)))];
+}
+
+function shopNormalizeChoice(view) {
+  if (!(view.data.to_buy || []).length || !shopChoices(view).some(choice => choice.value === view.shopChoice)) view.shopChoice = "all";
+}
+
+function shopMatches(view, row) {
+  const chosen = view.shopChoice || "all";
+  return chosen !== "all" && shopQueueShop(row) === (chosen === "unchecked" ? "" : chosen.slice(5));
+}
+
+/** Matching marks existing rows. Reveal a matching long-term group through its existing Show all path. */
+function shopApplyMatches(view) {
+  if (!view.root || !shopQueueActive(view)) return;
+  shopNormalizeChoice(view);
+  const chosen = view.shopChoice;
+  if (chosen !== "all") {
+    const keys = new Set((view.data.to_buy || []).filter(row => row.state === "long_term" && shopMatches(view, row))
+      .map(row => row.deck ? row.deck.id : row.for || ""));
+    for (const group of view.root.querySelectorAll("[data-long-key]"))
+      if (keys.has(group.getAttribute("data-long-key"))) group.querySelector(".shop-long-more")?.click();
+  }
+  for (const row of view.root.querySelectorAll("[data-shop-queue]")) {
+    const match = chosen !== "all" && row.getAttribute("data-shop-name") === (chosen === "unchecked" ? "" : chosen.slice(5));
+    if (match) row.setAttribute("data-shop-match", "true"); else row.removeAttribute("data-shop-match");
+    const words = row.querySelector(".shop-match-words");
+    if (words) words.textContent = match ? "Matches selected shop." : "";
+  }
+  for (const radio of view.root.querySelectorAll(".shop-store-radio")) radio.checked = radio.value === chosen;
+  clear(view.matchSlot);
+  if (chosen === "all") return;
+  const words = chosen === "unchecked" ? "Marking rows not checked at any shop" : `Marking ${chosen.slice(5)} rows`;
+  view.matchSlot.append(el("button", {type: "button", class: "filter-chip shop-clear-match", text: `${words} \u00d7`,
+    "aria-label": `${words}. Clear shop matching`, onclick: event => {
+      if (!event.currentTarget.isConnected || !shopQueueActive(view)) return;
+      view.shopChoice = "all";
+      shopApplyMatches(view);
+      Array.from(view.root.querySelectorAll(".shop-store-radio")).find(radio => radio.value === "all")?.focus({preventScroll: true});
+    }}));
+}
+
+/** One read-only shop choice marks canonical rows across every saved category, including long-term. */
+function shopByShop(view) {
+  if (!(view.data.to_buy || []).length) return null;
+  shopNormalizeChoice(view);
+  const choices = shopChoices(view);
   return shopSection("shop-by-shop", "By shop", 0,
-    "Every queue row last seen at each shop, including long-term plans. Prices and stock are dated references; check the shop before ordering.",
-    fold);
+    "Mark queue rows last seen at a shop, including long-term plans. Prices and stock are dated references; check the shop before ordering.",
+    el("fieldset", {class: "shop-store-choices"}, el("legend", {class: "sr-only", text: "Mark queue rows by shop"}),
+      choices.map((choice, index) => {
+        const radio = el("input", {type: "radio", class: "shop-store-radio", name: "shopping-shop", value: choice.value,
+          id: `shop-choice-${index}`, "data-shop-choice": choice.value, onchange: event => {
+            if (!event.currentTarget.checked || !event.currentTarget.isConnected || !shopQueueActive(view)) return;
+            if (!shopChoices(view).some(item => item.value === choice.value)) return;
+            view.shopChoice = choice.value;
+            shopApplyMatches(view);
+          }});
+        radio.checked = choice.value === view.shopChoice;
+        return el("label", {class: "shop-store-choice", for: radio.id}, radio,
+          el("span", {class: "shop-store-name", text: choice.text}),
+          el("span", {class: "shop-store-counts", text: `${plural(choice.rows, "row")} \u00b7 ${plural(choice.cards, "card")}`}));
+      })));
 }

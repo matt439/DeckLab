@@ -313,12 +313,14 @@ function shopPrice(card) {
 
 /** A queued card as a row: its picture, copies, what it's for and which printing, a chip for a state that
  * isn't "ready", the reference price at the end. A deck link sits outside the card-viewer button. */
-function shopQueueRow(card, group, showFor = true, view = null, showLongTerm = false) {
+function shopQueueRow(card, group, showFor = true, view = null, showLongTerm = false, grouped = false) {
   const price = shopPrice(card);
-  const chips = [card.state && card.state !== "ready" && (showLongTerm || card.state !== "long_term") ? status("warn", SHOPPING_STATES[card.state]) : null,
-    card.in_stock === "no" && price ? status("plain", "Out of stock when checked") : null].filter(Boolean);
+  const chips = [!grouped && card.state && card.state !== "ready" && (showLongTerm || card.state !== "long_term") ? status("warn", SHOPPING_STATES[card.state]) : null,
+    !view && card.in_stock === "no" && price ? status("plain", "Out of stock when checked") : null].filter(Boolean);
   const deck = showFor ? card.deck : null;
-  const meta = [showFor && !deck && card.for ? card.for : null, shopPrinting(card)].filter(Boolean).join(" · ");
+  const reason = grouped && ["waiting_for_stock", "waiting_for_reprint"].includes(card.state) ? SHOPPING_STATES[card.state]
+    : grouped && !SHOP_QUEUE_STATES.includes(card.state) ? `State: ${card.state || "not recorded"}` : null;
+  const meta = [showFor && !deck && card.for ? card.for : null, shopPrinting(card), reason].filter(Boolean).join(" · ");
   const caption = [price ? `Reference price ${price}${card.checked ? `, checked ${card.checked}` : ""}` : null, card.notes || null]
     .filter(Boolean).join(". ");
   const row = cardRow(card.card || null, { qty: card.quantity, name: card.name, meta, unknownMeta: meta, chips,
@@ -326,8 +328,11 @@ function shopQueueRow(card, group, showFor = true, view = null, showLongTerm = f
   const move = view && mayDo("orders") && view.data.queue_revision && card.queue_row
     ? shopQueueMove(card, view) : null;
   const reprints = reprintInfo(card);
-  return deck || move || price || reprints ? el("div", { class: "shop-queue-row" }, row,
-    price ? shopReference(card) : null,
+  return view || deck || move || price || reprints ? el("div", { class: "shop-queue-row",
+    "data-shop-queue": view ? String(card.queue_row || "") : null, "data-shop-name": view ? shopQueueShop(card) : null,
+    "data-shop-match": view && shopMatches(view, card) ? "true" : null }, row,
+    view ? shopQueueResearch(card) : price ? shopReference(card) : null,
+    view ? el("span", { class: "sr-only shop-match-words", text: shopMatches(view, card) ? "Matches selected shop." : "" }) : null,
     deck ? el("a", { class: "shop-queue-deck", href: deckHref(deck.id), text: deck.title }) : null, reprints, move) : row;
 }
 
@@ -342,6 +347,7 @@ function shopQueueMove(card, view) {
   const details = el("button", { type: "button", class: "btn btn-quiet shop-queue-edit shop-queue-write",
     "data-queue-row": card.queue_row, text: "Details…", "aria-label": `Change ${card.name}`,
     onclick: () => shopQueueSheet(view, card) });
+  button.disabled = details.disabled = Boolean(view.busy || view.stale);
   button.setAttribute("class", `${button.getAttribute("class")} shop-queue-write`);
   return el("div", { class: "shop-queue-actions" }, el("div", { class: "actions" }, menu, details), error);
 }
@@ -548,7 +554,7 @@ async function shopMoveQueue(card, next, view, error) {
   error.hidden = true;
   const buttons = view.root.querySelectorAll(".shop-category-move");
   buttons.forEach((button) => { button.disabled = true; });
-  let retry = null;
+  let retry = null, focusAfter = null;
   try {
     const answer = await apiWrite("/api/shopping/queue", { row: card.queue_row, state: next, expect: view.data.queue_revision });
     if (!shopQueueActive(view)) return;
@@ -557,9 +563,8 @@ async function shopMoveQueue(card, next, view, error) {
     view.data.queue_revision = answer.revision;
     if (next === "long_term") view.expanded.add(card.deck ? card.deck.id : card.for || "");
     view.redraw();
-    const moved = Array.from(view.root.querySelectorAll(".shop-category-move"))
+    focusAfter = Array.from(view.root.querySelectorAll(".shop-category-move"))
       .find((button) => Number(button.dataset.queueRow) === card.queue_row);
-    if (moved) moved.focus({ preventScroll: true });
     toast(`${card.name} moved to ${SHOPPING_STATES[next]}.`);
   } catch (failure) {
     if (!shopQueueActive(view)) return;
@@ -573,6 +578,7 @@ async function shopMoveQueue(card, next, view, error) {
     if (view.root.isConnected) {
       view.root.querySelectorAll(".shop-category-move").forEach((button) => { button.disabled = Boolean(view.stale); });
       if (retry) retry.focus({ preventScroll: true });
+      else if (focusAfter && shopQueueActive(view)) focusAfter.focus({ preventScroll: true });
     }
   }
 }
@@ -618,15 +624,20 @@ function shopLongTerm(rows, view = null) {
     const copies = group.rows.reduce((sum, r) => sum + (r.quantity || 0), 0);
     const list = el("div", { class: "shop-rows" });
     const draw = (all) => {
-      clear(list);
-      add(list, (all ? group.rows : group.rows.slice(0, SHOP_LONG_TERM_SHOWN)).map((r) => shopQueueRow(r, "long-term", false, view)));
+      const shown = all ? group.rows : group.rows.slice(0, SHOP_LONG_TERM_SHOWN);
+      const first = all ? list.children.length : 0;
+      if (!all) clear(list);
+      add(list, shown.slice(first).map((r) => shopQueueRow(r, "long-term", false, view)));
     };
     const expanded = view && view.expanded.has(key);
     draw(expanded);
     const more = !expanded && group.rows.length > SHOP_LONG_TERM_SHOWN
-      ? el("button", { type: "button", class: "btn btn-quiet btn-inline", text: `Show all ${group.rows.length}`,
-        onclick: (e) => { if (view) view.expanded.add(key); draw(true); e.currentTarget.remove(); } }) : null;
-    return el("div", { class: "shop-group" },
+      ? el("button", { type: "button", class: "btn btn-quiet btn-inline shop-long-more", text: `Show all ${group.rows.length}`,
+        onclick: (e) => {
+          if (view && (!e.currentTarget.isConnected || !shopQueueActive(view))) return;
+          if (view) view.expanded.add(key); draw(true); e.currentTarget.remove();
+        } }) : null;
+    return el("div", { class: "shop-group", "data-long-key": key },
       el("h3", {}, group.deck ? el("a", { href: deckHref(group.deck.id), text: group.name }) : group.name,
         el("span", { class: "shop-group-count", text: ` · ${plural(copies, "card")}` })),
       list, more);
@@ -669,6 +680,8 @@ function drawShopping(data) {
   const longSlot = el("div", { class: "shop-long-slot" });
   const missingSlot = el("div", { class: "shop-buying-slot shop-missing-slot" });
   const storeSlot = el("div", { class: "shop-buying-slot shop-store-slot" });
+  const matchSlot = el("div", { class: "shop-match-slot", role: "status", "aria-live": "polite" });
+  view.matchSlot = matchSlot;
   const jumpSlot = el("div");
 
   // The list pane owns deliveries, follow-ups and the current shop research. Buying stays in the detail
@@ -682,9 +695,10 @@ function drawShopping(data) {
       el("ul", { class: "shop-followups" }, followUps.map((check) => shopFollowUp(check, orders.find((o) => o.id === check.order_id))))) : null,
     storeSlot,
   ];
-  const sideNode = el("div", { class: "shop-side shop-detail-pane" }, buySlot, missingSlot, deckSlot, longSlot);
+  const sideNode = el("div", { class: "shop-side shop-detail-pane" }, matchSlot, buySlot, missingSlot, deckSlot, longSlot);
   // Redraw only buying controls and their counts. Deliveries and pending follow-up Undo keep their nodes.
   view.redraw = () => {
+    shopNormalizeChoice(view);
     const immediate = queue.filter((card) => card.state !== "long_term");
     const later = queue.filter((card) => card.state === "long_term");
     const planned = new Map();
@@ -692,7 +706,7 @@ function drawShopping(data) {
     clear(buySlot);
     if (immediate.length) buySlot.append(shopSection("shop-to-buy", "To buy", immediate.length,
       "Cards we've decided to buy. Prices are the lowest seen when checked, not live stock.",
-      el("div", { class: "shop-rows" }, immediate.map((card) => shopQueueRow(card, "to-buy", true, view)))));
+      shopQueueGroups(immediate, view)));
     clear(deckSlot);
     if (decks.length) deckSlot.append(shopSection("shop-decks", "Decks still missing cards", decks.length,
       "Not a shopping list: open a deck to see its missing cards and decide what to buy.", shopDecksMissing(decks, planned)));
@@ -717,6 +731,7 @@ function drawShopping(data) {
       { id: "shop-long-term", label: "Long-term plan", count: later.length, number: 0 },
     ]);
     if (jumps) jumpSlot.append(jumps);
+    shopApplyMatches(view);
   };
   view.redraw();
   const layout = el("div", { class: "shop-layout" }, el("div", { class: "shop-main shop-list-pane" }, main), sideNode);
