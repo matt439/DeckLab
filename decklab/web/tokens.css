@@ -497,3 +497,8 @@
     --fs-flag: .75rem;
   }
 }
+/* ... and on a maximized QHD screen (2,200 px and up, a mouse) every rem size one step bigger: 13 px lab body
+   becomes 14.6 px, so the type keeps its size against a 2,560 px page. Controls and rows (px) stay as they are. */
+@media (min-width: 2200px) and (pointer: fine) {
+  :root { font-size: 112.5%; }
+}

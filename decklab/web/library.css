@@ -189,6 +189,8 @@ button.deck-card { cursor: pointer; }
   margin-top: var(--s-2);
 }
 @media (min-width: 1281px) { .lib-split { grid-template-columns: minmax(0, 720px) minmax(0, 1fr); } }
+/* From 2,200 px the list is 880 px, for the larger type (tokens.css) and a less lopsided split. */
+@media (min-width: 2200px) { .lib-split { grid-template-columns: minmax(0, 880px) minmax(0, 1fr); } }
 .lib-split > .lib-list {
   padding: var(--s-1) var(--gutter-list) var(--s-4);
   border-radius: var(--r-panel);
@@ -262,6 +264,10 @@ button.deck-row { cursor: pointer; }
   .deck-row { grid-template-columns: 56px minmax(0, 1fr) minmax(0, 150px) minmax(0, 132px); }
   .deck-row-forge > .range-bar { display: block; }
 }
+@media (min-width: 2200px) {
+  .deck-row { grid-template-columns: 64px minmax(0, 1fr) minmax(0, 180px) minmax(0, 160px); }
+  .deck-row-art { width: 64px; height: 44px; }
+}
 
 /* The detail pane: the selected deck's overview, sticky under the top bar. */
 .lib-detail {
@@ -275,9 +281,12 @@ button.deck-row { cursor: pointer; }
   box-shadow: 0 0 0 1px var(--border), var(--shadow-1);
 }
 .lib-detail-card > .deck-stripe { position: absolute; inset: 0 0 auto; z-index: 1; }
-.lib-detail-card > .deck-cover { width: auto; aspect-ratio: 5 / 2; }
+/* The art is 5:2 of the pane's width, but at most 240 px (or 30% of the window) high, so a wide pane (QHD: 1,600 px)
+   doesn't push the deck's details below the fold. */
+.lib-detail-card > .deck-cover { width: 100%; aspect-ratio: 5 / 2; max-height: min(240px, 30vh); }
 .lib-detail-card > .deck-cover > .deck-pips { left: var(--s-4); bottom: var(--s-3); }
-.lib-detail-body { display: grid; gap: var(--s-3); padding: var(--s-4) var(--s-5) var(--s-5); }
+.lib-detail-body { display: grid; gap: var(--s-4); padding: var(--s-4) var(--s-5) var(--s-5); }
+.lib-detail-main { display: grid; gap: var(--s-3); align-content: start; min-width: 0; }
 .lib-detail-title { margin: 0; font-size: var(--fs-xl); line-height: var(--lh-tight); }
 .lib-detail-chips { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2) var(--s-3); }
 .lib-detail-actions { margin-top: var(--s-2); }
@@ -289,6 +298,46 @@ button.deck-row { cursor: pointer; }
 .lib-detail-forge-figure { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s-2) var(--s-3); }
 .lib-detail-forge-note { margin: 0; color: var(--ink-2); font-size: var(--fs-meta); }
 .lib-detail-forge > .btn { justify-self: start; }
+
+/* The parts library-glance.js fills in once the deck has loaded: the stats in brief with a small mana curve, the
+   play guide's opening and the key cards. Under the summary in a narrow pane (the iPad, 1000-1280 px); in a pane
+   1,000 px wide or more (1,920 px and up), the stats and guide beside the summary and the key cards across both. */
+.lib-detail { container-type: inline-size; }
+.lib-glance-facts { display: grid; gap: var(--s-4); align-content: start; min-width: 0; }
+.lib-glance-facts:empty, .lib-glance-cards:empty { display: none; }
+.lib-glance-part { display: grid; gap: var(--s-2); padding-top: var(--s-3); border-top: 1px solid var(--border); min-width: 0; }
+.lib-glance-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--s-3); }
+.lib-glance-plan {
+  margin: 0; color: var(--ink-2); line-height: var(--lh-copy, 1.4);
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 4; line-clamp: 4; overflow: hidden;
+}
+.lib-curve-wrap { display: grid; gap: var(--s-2); }
+.lib-curve {
+  display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: var(--s-1);
+  height: 112px; max-width: 520px;
+}
+.lib-curve-col { display: flex; flex-direction: column; justify-content: flex-end; min-width: 0; height: 100%; }
+.lib-curve-n { min-height: 1.2em; color: var(--ink-2); font-family: var(--font-mono); font-size: var(--fs-meta); text-align: center; }
+.lib-curve-bar {
+  display: flex; flex-direction: column; height: calc(var(--h) * .7); min-height: 0;
+  border-radius: var(--r-sm) var(--r-sm) 0 0; overflow: hidden;
+}
+.lib-curve-other { background: var(--series-2); }
+.lib-curve-creatures { background: var(--series-1); }
+.lib-curve-mv {
+  padding-top: 2px; border-top: 1px solid var(--border-strong);
+  color: var(--ink-3); font-family: var(--font-mono); font-size: var(--fs-meta); text-align: center;
+}
+.lib-curve-key { display: flex; align-items: center; gap: var(--s-1) var(--s-2); margin: 0; color: var(--ink-3); font-size: var(--fs-meta); }
+.lib-curve-key > .swatch { width: 10px; height: 10px; border-radius: var(--r-swatch); }
+.lib-curve-key > .swatch ~ .swatch { margin-left: var(--s-2); }
+.lib-key-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: var(--s-3); }
+@container (min-width: 1000px) {
+  .lib-detail-body { grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: var(--s-3) var(--s-6); padding-bottom: var(--s-4); }
+  .lib-glance-facts > :first-child { padding-top: 0; border-top: 0; }
+  .lib-glance-cards { grid-column: 1 / -1; }
+  .lib-key-cards { grid-template-columns: repeat(6, minmax(0, 1fr)); max-width: calc(6 * 136px + 5 * var(--s-3)); }
+}
 
 /* ---------------------------------------------------------------- pairings */
 

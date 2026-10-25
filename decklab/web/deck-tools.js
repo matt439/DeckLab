@@ -75,7 +75,13 @@ function printDeck(data) {
  * when there are no cards. The guide's links and deck.js's key cards use it. */
 function cardNamePattern() {
   if (typeof state === "undefined" || !state.cards || !state.cards.size) return null;
-  const names = [...state.cards.keys()].sort((a, b) => b.length - a.length);
+  return cardNamesPattern(state.cards.keys());
+}
+
+/** cardNamePattern's pattern for any card names (the library's detail pane, which has no state.cards). */
+function cardNamesPattern(cardNames) {
+  const names = [...new Set(cardNames)].sort((a, b) => b.length - a.length);
+  if (!names.length) return null;
   const escape = (t) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   return new RegExp(`(?<![\\p{L}\\p{N}])(?:${names.map(escape).join("|")})(?![\\p{L}\\p{N}])`, "gu");
 }

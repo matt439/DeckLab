@@ -400,18 +400,7 @@ function overviewParts(data) {
  * its play guide names most (first named first), then the dearest. A swipe goes from one to the next (the
  * "key" viewer group). */
 function keyCardsPart(data, total) {
-  const commanders = (data.sections.Commander || []).filter((l) => l.card);
-  const named = guideMentions(data);
-  const byGuide = (a, b) => {
-    const ra = named.get(a.name), rb = named.get(b.name);
-    if (ra && rb) return rb.count - ra.count || ra.first - rb.first;
-    return ra ? -1 : rb ? 1 : 0;
-  };
-  const singleton = data.summary.kind === "commander" || commanders.length > 0;
-  const spells = mergedLines(data.sections.Deck || []).filter((l) => l.card && typeGroup(l.card) !== "Lands")
-    .filter((l) => !commanders.some((c) => c.name === l.name))
-    .sort((a, b) => (singleton ? byGuide(a, b) : 0) || b.qty - a.qty || b.card.cmc - a.card.cmc || a.name.localeCompare(b.name));
-  const lines = [...commanders, ...spells].slice(0, Math.max(KEY_CARDS, commanders.length));
+  const { commanders, lines } = keyCardLines(data);
   if (!lines.length) return null;
   return el("section", { class: "deck-section deck-key", "aria-labelledby": "h-key" },
     el("div", { class: "deck-section-head" },
@@ -423,12 +412,29 @@ function keyCardsPart(data, total) {
       caption: commanders.includes(line) ? "Commander" : `${plural(line.qty, "copy", "copies")} in the deck` }))));
 }
 
+/** keyCardsPart's choice (also the library's detail pane, library-glance.js, which passes its own card-name
+ * pattern): {commanders, lines}, the commanders then the key spells, at most KEY_CARDS unless there are more
+ * commanders. */
+function keyCardLines(data, pattern = cardNamePattern()) {
+  const commanders = (data.sections.Commander || []).filter((l) => l.card);
+  const named = guideMentions(data, pattern);
+  const byGuide = (a, b) => {
+    const ra = named.get(a.name), rb = named.get(b.name);
+    if (ra && rb) return rb.count - ra.count || ra.first - rb.first;
+    return ra ? -1 : rb ? 1 : 0;
+  };
+  const singleton = data.summary.kind === "commander" || commanders.length > 0;
+  const spells = mergedLines(data.sections.Deck || []).filter((l) => l.card && typeGroup(l.card) !== "Lands")
+    .filter((l) => !commanders.some((c) => c.name === l.name))
+    .sort((a, b) => (singleton ? byGuide(a, b) : 0) || b.qty - a.qty || b.card.cmc - a.card.cmc || a.name.localeCompare(b.name));
+  return { commanders, lines: [...commanders, ...spells].slice(0, Math.max(KEY_CARDS, commanders.length)) };
+}
+
 /** How often the play guide names each of the deck's cards: name -> {count, first} (first: the order of
  * its first mention). Empty without a guide. */
-function guideMentions(data) {
+function guideMentions(data, pattern = cardNamePattern()) {      // deck-tools.js
   const found = new Map();
   const sections = (data.guide && data.guide.sections) || [];
-  const pattern = cardNamePattern();       // deck-tools.js
   if (!pattern || !sections.length) return found;
   for (const part of sections) {
     for (const match of String(part.markdown || "").matchAll(pattern)) {

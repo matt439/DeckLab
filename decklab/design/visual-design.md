@@ -269,7 +269,7 @@ Same name and same look at both densities; only size changes. Each lives in `com
 
 | Page | List | Detail | Stacks at |
 |---|---|---|---|
-| Library | `minmax(0, 720px)` | `1fr` (46% / 54% from 1000 to 1280) | < 1000 |
+| Library | `minmax(0, 720px)` (880 px from 2200) | `1fr` (46% / 54% from 1000 to 1280); its art 5:2 but at most `min(240px, 30vh)` high | < 1000 |
 | Collection | `1fr` (the table) | 400 px (340 from 1000 to 1280) | < 1000 |
 | Shopping | 560 px (orders, follow-ups, by shop) | `1fr` (queue and missing tables) | ≤ 1280 |
 | Receive delivery | `minmax(0, 1fr)` (the parts) | 452 px, sticky | < 1000 |
@@ -342,7 +342,7 @@ All Forge numbers are mono. None of these is teal except the controls that start
 
 ### Library (drawn in the earlier round)
 
-Casual: tiles in groups, a filter segmented control and a filter icon button; on the iPad 2 across. Lab: deck rows in the list pane, the selected deck's overview in the detail pane (Forge field summary with figure, range bar, flags and first-player edge; Availability; latest swap). New deck is the list's primary, Edit deck the detail's.
+Casual: tiles in groups, a filter segmented control and a filter icon button; on the iPad 2 across. Lab: deck rows in the list pane, the selected deck's overview in the detail pane (Forge field summary with figure, range bar, flags and first-player edge; Availability; latest swap). Built (2026-10-25): the summary and Forge field, then At a glance (the verdict strip and a small mana curve), the play guide's first topic (four lines) and up to six key cards, each linking to its deck-page tab; side by side in a pane 1,000 px or wider. New deck is the list's primary, Edit deck the detail's.
 
 ### Deck page (drawn in the earlier round, and on the iPad)
 
@@ -433,7 +433,7 @@ What the round didn't settle, and where P1 didn't hold up as written.
 8. **"Phone has no tables"** holds, but **the lab had no dense table** at all: Collection, Shopping and Receive delivery each invented one. Section 4.7 is the merged version; build it once.
 9. **Mono for every desktop number** collided with the existing "printings in the body font" rule and set words in mono in several places. Section 2.3 narrows it.
 10. **The 760 px step** is mostly moot once the casual layout takes over below 1000 px.
-11. **Lab text is small.** 10.5–12 px on a QHD screen at 100% is fine for Matt; on a laptop at default scaling it may not be. Check on the real devices before signing off slice 2.
+11. **Lab text is small.** 10.5–12 px on a QHD screen at 100% is fine for Matt; on a laptop at default scaling it may not be. Check on the real devices before signing off slice 2. **Revisited (Matt, 2026-10-25):** on a maximized QHD window it was too small after all, and the library's 5:2 art filled a 1,750 px detail pane (700 px high) and pushed the deck's details below the fold. From 2200 px with a mouse every rem size is 112.5% (13 px lab body becomes 14.6), the library's list is 880 px with 64 px thumbnails, and its detail art is capped at `min(240px, 30vh)`. The detail pane also showed too little for its width, so it now loads the deck (GET /api/deck without matchups) and adds the stats in brief, a small mana curve, the play guide's opening and the key cards (Matt's choice); in a pane 1,000 px or wider those sit beside the summary, with the key cards across the bottom, and the whole pane fits a 1080 or 1440 px high window.
 
 **Accessibility patterns to fix system-wide**
 
