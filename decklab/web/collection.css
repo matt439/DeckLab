@@ -12,28 +12,62 @@
 .col-message { margin: var(--s-3) 0; }
 .col-message .box { margin: var(--s-2) 0 0; }
 
-/* Find cards: the search across the top, then where the cards are and the card filters; they apply as they
-   change. On a phone the card filters fold behind "Filters (n)". */
-.col-filters { display: flex; flex-direction: column; align-items: stretch; gap: var(--s-3); margin-top: 0; }
-.col-filters input, .col-filters select { width: 100%; min-width: 0; }
-.col-filter-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s-2); }
-.col-availability { max-width: 100%; overflow-x: auto; }
-.col-availability > button { white-space: nowrap; }
-.col-filter-extra { display: none; grid-template-columns: 1fr 1fr; gap: var(--s-3); }
-.col-filters.is-open .col-filter-extra { display: grid; }
-@media (min-width: 600px) {
-  .col-filters { display: grid; grid-template-columns: minmax(0, 1fr); align-items: end; }
-  .col-filter-toggle { display: none; }
-  .col-filter-extra { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) 120px; }
+/* Find cards keeps its card-colour queries and name-level counts. Casual results are rows; lab browsing
+   remains the existing card grid. Identity pips describe the card, never the colour-filter predicate. */
+.col-filters {
+  position: sticky; top: var(--shell-top); z-index: 5; background: var(--page);
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center;
+  gap: var(--s-2); margin-top: 0; padding-block: var(--s-2);
 }
+.col-filters input, .col-filters select { width: 100%; min-width: 0; }
+.col-filter-q { min-width: 0; }
+.col-filter-q input { min-height: 48px; }
+.col-filter-toggle { position: relative; width: 50px; min-width: 50px; height: 50px; padding: 0; }
+.col-filter-count { position: absolute; right: 0; bottom: 0; min-width: 1.25em; padding: 0 var(--s-1);
+  border-radius: var(--r-pill); background: var(--accent-soft); color: var(--accent-strong); font-size: var(--fs-xs); }
+.col-filter-row { grid-column: 1 / -1; display: flex; min-width: 0; align-items: center; gap: var(--s-2); }
+.col-availability { max-width: 100%; overflow-x: auto; flex-wrap: nowrap; }
+.col-availability > button { white-space: nowrap; flex: none; }
+.col-filter-extra { grid-column: 1 / -1; display: none; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--s-3); }
+/* Expanded filters enter page flow so a short landscape window can reach the results. */
+.col-filters.is-open { position: static; }
+.col-filters.is-open .col-filter-extra { display: grid; }
+.col-find-colour-note { display: none; grid-column: 1 / -1; margin: 0; }
+.col-filters.is-open .col-find-colour-note { display: block; }
+.col-find-lab { display: none; }
+.col-find-rows { list-style: none; margin: 0; padding: 0; background: var(--surface);
+  border: 1px solid var(--border); border-radius: var(--r-panel); overflow: hidden; }
+.col-find-row + .col-find-row { border-top: 1px solid var(--divider); }
+.col-find-open { display: grid; grid-template-columns: 56px minmax(0, 1fr) auto; align-items: start;
+  gap: var(--s-1) var(--s-3); width: 100%; min-height: var(--tap); padding: var(--s-3);
+  border: 0; background: transparent; color: var(--ink); font: inherit; text-align: left; }
+button.col-find-open { cursor: pointer; }
+.col-find-open:focus-visible { outline-offset: -3px; }
+.col-find-picture { grid-column: 1; grid-row: 1 / 4; width: 56px; height: 78px; overflow: hidden;
+  border-radius: var(--r-card); background: var(--surface-chip); }
+.col-find-picture img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.col-find-heading { grid-column: 2; display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-1) var(--s-2); min-width: 0; }
+.col-find-name { min-width: 0; font-size: var(--fs-row); font-weight: var(--fw-bold); overflow-wrap: anywhere; }
+.col-find-count { grid-column: 3; white-space: nowrap; font-size: var(--fs-meta); font-weight: var(--fw-semibold); font-variant-numeric: tabular-nums; }
+.col-find-meta, .col-find-type { grid-column: 2 / -1; min-width: 0; color: var(--ink-2); font-size: var(--fs-meta); overflow-wrap: anywhere; }
+.col-find-identity { display: inline-flex; min-width: 0; }
+.col-tiles .col-find-identity { padding: 0 var(--s-2) var(--s-2); }
 @media (min-width: 1000px) {
-  .col-filters { grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); grid-template-areas: "q extra" "row row"; }
+  .col-filters { position: static; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); align-items: end; grid-template-areas: "q extra" "row row" "note note"; }
   .col-filter-q { grid-area: q; }
-  .col-filter-extra { grid-area: extra; }
+  .col-filter-q input { min-height: var(--input-h); }
+  .col-filter-toggle { display: none; }
+  .col-filter-extra { display: grid; grid-area: extra; grid-template-columns: repeat(3, minmax(0, 1fr)) 120px; }
   .col-filter-row { grid-area: row; }
+  .col-find-colour-note { display: block; grid-area: note; }
+  .col-find-lab { display: block; }
+  .col-find-casual { display: none; }
 }
 @media (min-width: 1600px) {
   .col-filters { grid-template-columns: minmax(0, 760px) minmax(0, 960px); }   /* the search box at most 760 px */
+}
+@media (hover: hover) and (pointer: fine) {
+  button.col-find-open:hover { background: var(--hover); }
 }
 .col-results[aria-busy="true"] { opacity: .6; transition: opacity .15s; }
 .col-result-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s-2); margin: var(--s-2) 0 var(--s-3); }
@@ -42,10 +76,6 @@
 .col-pager-at { padding: 0 var(--s-2); color: var(--ink-2); font-size: var(--fs-sm); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .col-results > .col-pager, .col-row-list > .col-pager { justify-content: center; margin: var(--s-4) 0; }
 .col-row-list > .col-pager:first-child { justify-content: flex-end; margin: 0 0 var(--s-2); }
-/* Two tiles a row on a phone (the card's picture is the tile), about 156 px on wider screens. */
-@media (max-width: 599px) {
-  .col-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
 
 /* The viewer's words about a card (in the card viewer's text panel). */
 .col-viewer-words { display: flex; flex-direction: column; align-items: flex-start; gap: var(--s-2); }

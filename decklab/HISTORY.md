@@ -2,6 +2,14 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## P1 Find cards presentation (2026-10-25; E11-S30 slice 11)
+
+Find cards now uses casual name-level rows with identity markers and its existing lab card grid. Separate viewer groups prevent hidden layouts from duplicating swipe entries. Server-owned/free/incoming/held/basic-land facts, existing query/paging/space sequencing and guarded Edit copies are retained; name-level rows infer no per-printing prices. Full-held wording is concise while partial, unknown-free and overallocated counts remain explicit. The casual closed search/filter band is sticky, with a live count and 50px filter control; expanded filters enter page flow so short landscape windows can reach the results.
+
+Card colour matching remains the conservative compatibility default, clearly labelled and separate from colour-identity pips. This is not a new user preference; the optional semantic switch remains open in visual-design question 6.
+
+Validation: 201 distinct targeted Python/Node checks passed (200 broad checks and the added held-wording regression), with successful 82-check CSS/source and 17-case Find cards reruns. Synthetic Chromium checked closed/expanded filters at nine documented sizes plus 1000/1280 in both themes (44 combinations), without page/row overflow. It also verified filter sizing/counts, sticky search, short-landscape result access, distinct colour/identity behavior and a 23-item viewer group. Mouse/default DPR only; actual touch, Safari and devices remain unverified. No added API reads, live writes, downloads or Forge games. The pre-existing `tokens.js` source-audit failure remains. Named holder provenance/presentation and the filter semantic choice remain later Collection work.
+
 ## P1 Collection keyboard navigation (2026-10-25; E11-S30 slice 11)
 
 The lab table now supports J/K through the current filtered order across page boundaries, without wrapping. Enter restores the selected page and opens its card using a fresh visible viewer trigger; Close returns focus to that row. Unknown cards retain the existing permitted edit flow or the read-only preview. Header Enter, text fields, modifiers, busy states and stale route/profile/detached controls keep their own behavior. A compact hint appears only in the fine-pointer hover lab.

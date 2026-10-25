@@ -9,8 +9,8 @@
  * Each space (lib/spaces.py) has its own collection: home's, and each person's. The page opens on
  * the visitor's own space. Home's addresses and requests leave ?space= out.
  *
- * Find cards is a grid of card tiles (cards-ui.js cardTile, one viewer group, so a swipe goes through
- * the page's cards); its filters apply as they're typed, and the address follows them (replaceState).
+ * Find cards uses a lab card grid and casual rows, each with its own viewer group so hidden
+ * layouts do not duplicate swipe items; its filters apply as they're typed, and the address follows them (replaceState).
  * The viewer's words for a card say how many are owned, free and in which decks, with "Edit copies".
  * The Card list is a dense table of the rows, sortable and paged, with a filter for rows whose
  * condition or language isn't recorded and each row's estimated price (its own printing and finish,
@@ -357,7 +357,7 @@ function drawCollection(data, query, space = HOME_SPACE, token = null) {
   const cv = colView(data, space, token, "find");
   cv.query = new URLSearchParams(query);
   cv.findSeq = 0;
-  const root = el("div", { class: "collection-page" }, colHead(cv, query));
+  const root = el("div", { class: "collection-page col-find-page" }, colHead(cv, query));
   cv.root = root;
   if (!cv.unsupported) {
     cv.results = el("div", { class: "col-results" });
@@ -395,23 +395,41 @@ function colFilters(cv) {
     (v) => colFilter(cv, "availability", v === "all" ? "" : v), "Show");
   availability.classList.add("col-availability");
   cv.filterControls = { q: search, mv };
-  // On a phone the four card filters fold behind "Filters (n)"; from 600 px they're always shown.
-  const set = ["color", "type", "role", "mv"].filter((key) => q.get(key)).length;
+  // Casual widths keep the card filters folded; the button's count follows the current query. Identity
+  // pips on results do not change this existing card-colour predicate (colourless lands can have identity).
   const form = el("form", { class: "filters col-filters", role: "search", "aria-label": "Filter the collection",
     onsubmit: (event) => event.preventDefault() });
+  cv.filterCount = el("span", { class: "col-filter-count", "aria-hidden": "true" });
   const toggle = el("button", { type: "button", class: "btn col-filter-toggle", "aria-expanded": "false",
-    "aria-controls": "col-filter-extra", text: set ? `Filters (${set})` : "Filters",
-    onclick: () => toggle.setAttribute("aria-expanded", String(form.classList.toggle("is-open"))) });
+    "aria-controls": "col-filter-extra", onclick: () => {
+      if (colActive(cv)) toggle.setAttribute("aria-expanded", String(form.classList.toggle("is-open")));
+    } }, el("span", { class: "sr-only", text: "Filter cards" }),
+    svgEl("svg", { viewBox: "0 0 20 20", width: 20, height: 20, "aria-hidden": "true", focusable: "false" },
+      svgEl("path", { d: "M3 4h14l-5.5 6.5V16l-3-1.5v-4L3 4Z", fill: "none", stroke: "currentColor",
+        "stroke-width": 1.6, "stroke-linejoin": "round" })), cv.filterCount);
+  cv.filterToggle = toggle;
+  colFindFilterCount(cv);
   add(form, [
     el("label", { class: "field col-filter-q", for: search.id }, el("span", { class: "sr-only", text: "Search" }), search),
-    el("div", { class: "col-filter-row" }, availability, toggle),
+    toggle,
+    el("div", { class: "col-filter-row" }, availability),
     el("div", { id: "col-filter-extra", class: "col-filter-extra" },
-      field("color", "Colour", select("color", [["", "Any"], ["W", "White"], ["U", "Blue"], ["B", "Black"],
+      field("color", "Card colour", select("color", [["", "Any"], ["W", "White"], ["U", "Blue"], ["B", "Black"],
         ["R", "Red"], ["G", "Green"], ["C", "Colourless"]])),
       field("type", "Type", select("type", [["", "Any"], ...(data.types || []).map((v) => [v, v])])),
       field("role", "Role", select("role", [["", "Any"], ...(data.roles || []).map((v) => [v, capitalise(v)])])),
-      field("mv", "Mana value", mv))]);
+      field("mv", "Mana value", mv)),
+    el("p", { class: "sub col-find-colour-note", text: "Colour filters use card colour; pips show colour identity." })]);
   return form;
+}
+
+/** Search and availability remain separate from the four extra filters counted on this button. */
+function colFindFilterCount(cv) {
+  if (!cv.filterToggle || !cv.filterCount) return;
+  const count = ["color", "type", "role", "mv"].filter((key) => cv.query.get(key)).length;
+  cv.filterCount.textContent = count ? String(count) : "";
+  cv.filterCount.hidden = !count;
+  cv.filterToggle.setAttribute("aria-label", `Filter cards${count ? `, ${count} active` : ""}`);
 }
 
 /** How many cards a page of Find cards shows: more on a wide screen. */
@@ -431,6 +449,7 @@ function colFilter(cv, key, value) {
 
 async function colLoadFind(cv, query, paging) {
   cv.query = query;
+  colFindFilterCount(cv);
   history.replaceState(history.state, "", colHash(cv.space, "find", query));
   const seq = ++cv.findSeq;
   cv.results.setAttribute("aria-busy", "true");
@@ -468,8 +487,9 @@ function drawCollectionResults(cv, data) {
     el("div", { class: "col-result-head" },
       el("p", { class: "result-count", role: "status", text: counted }),
       colPager(data.page, data.pages, go, "Pages, top")),
-    cards.length ? el("div", { class: "card-tiles col-tiles" }, cards.map((row) => colTile(cv, row)))
-      : colFindEmpty(cv, filtered, data.total || 0),
+    cards.length ? [el("div", { class: "col-find-lab" },
+      el("div", { class: "card-tiles col-tiles" }, cards.map((row) => colTile(cv, row)))),
+      el("div", { class: "col-find-casual" }, colFindRows(cv, cards))] : colFindEmpty(cv, filtered, data.total || 0),
     colPager(data.page, data.pages, go, "Pages, bottom")]);
 }
 
@@ -499,11 +519,9 @@ function colCountWords(row) {
 /** One card of Find cards: its picture with ×N for the copies owned, one line of counts, and chips only for
  * what's worth noticing (on the way, a name the card data doesn't know). Its viewer words have the decks
  * that hold it and, where the visitor may change the collection, Edit copies. */
-function colTile(cv, row) {
-  const chips = [];
-  if (row.incoming && row.owned) chips.push(status("info", `${row.incoming} on the way`));
-  if (!row.card) chips.push(status("warn", "Name not matched"));
-  const caption = el("span", { class: "col-viewer-words" },
+/** The same server-supplied count, basic-land and holder facts at both densities. */
+function colFindCaption(cv, row) {
+  return el("span", { class: "col-viewer-words" },
     el("span", { class: "col-viewer-counts", text: [row.owned ? `${row.owned} owned` : "None owned yet",
       !row.basic && row.owned && row.free_now != null ? `${row.free_now} free now` : null,
       row.incoming ? `${row.incoming} on the way` : null].filter(Boolean).join(" · ") }),
@@ -512,10 +530,47 @@ function colTile(cv, row) {
       row.holders.map((h, i) => [i ? ", " : "", `${h.quantity} in `, colViewerLink(deckHref(h.id), h.title)])) : null,
     cv.editable && row.owned ? el("button", { type: "button", class: "btn col-viewer-edit", text: "Edit copies",
       onclick: () => colAfterViewer(() => openCopiesSheet(cv, row.name)) }) : null);
-  return cardTile(row.card || null, { qty: row.owned, name: row.name, meta: colCountWords(row) || null, chips,
-    viewerGroup: "collection", caption,
+}
+
+/** Identity markers are presentation only; Find cards' colour query still matches card.colors. */
+function colFindIdentity(card, size = 16) {
+  const colours = deckColourPieces(card?.color_identity);
+  return colours ? el("span", { class: "col-find-identity", role: "group", "aria-label": "Colour identity" }, colours.pips(size)) : null;
+}
+
+function colTile(cv, row) {
+  const chips = [];
+  if (row.incoming && row.owned) chips.push(status("info", `${row.incoming} on the way`));
+  if (!row.card) chips.push(status("warn", "Name not matched"));
+  const tile = cardTile(row.card || null, { qty: row.owned, name: row.name, meta: colCountWords(row) || null, chips,
+    viewerGroup: "collection", caption: colFindCaption(cv, row),
     label: `${row.name}, ${colCountWords(row) || "none owned"}`,
     onclick: row.card ? null : (cv.editable ? () => openCopiesSheet(cv, row.name) : null) });
+  add(tile, [colFindIdentity(row.card)]);
+  return tile;
+}
+
+/** Casual Find cards is a name-level list, not a printing-level price or an allocation calculation. */
+function colFindRows(cv, cards) {
+  return el("ul", { class: "col-find-rows" }, cards.map((row) => {
+    const caption = colFindCaption(cv, row), words = colCountWords(row) || "None owned";
+    const extra = [row.incoming && row.owned ? `${row.incoming} on the way` : null,
+      row.basic ? "Deck allocation not tracked" : null,
+      !row.basic && !(row.owned && row.free_now === 0 && row.held === row.owned) && Number.isFinite(row.held) && row.held > 0 ? `${row.held} in decks` : null].filter(Boolean);
+    const open = row.card ? (event) => { if (colActive(cv)) openCard(row.card, event.currentTarget); }
+      : cv.editable ? () => openCopiesSheet(cv, row.name) : null;
+    const node = el(open ? "button" : "div", { class: "col-find-open", type: open ? "button" : null,
+      "aria-label": open ? `${row.name}, ${words}` : null, "aria-haspopup": open ? "dialog" : null, onclick: open },
+      el("span", { class: "col-find-picture", "aria-hidden": "true" }, row.card?.img_small
+        ? el("img", { src: row.card.img_small, alt: "", loading: "lazy", decoding: "async", width: 56, height: 78 }) : null),
+      el("span", { class: "col-find-heading" }, el("span", { class: "col-find-name", text: row.name }), colFindIdentity(row.card, 20)),
+      el("span", { class: "col-find-count", text: `${row.owned || 0} owned` }),
+      el("span", { class: "col-find-meta", text: [words, ...extra].join(" · ") }),
+      row.card?.type_line ? el("span", { class: "col-find-type", text: row.card.type_line })
+        : el("span", { class: "col-find-type" }, row.card ? "Type not recorded" : status("warn", "Name not matched")));
+    if (row.card) viewerItem(node, row.card, "collection-find", caption);
+    return el("li", { class: "col-find-row" }, node);
+  }));
 }
 
 /** "Edit copies": the rows that hold a card (one per printing), each opening its sheet, and Add another

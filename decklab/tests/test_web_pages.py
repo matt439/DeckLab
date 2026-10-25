@@ -239,14 +239,16 @@ class PageSourceTests(unittest.TestCase):
         self.assertIn("FileReader", _function(script, "readImportFile"))
         self.assertIn('accept: ".csv,.txt,text/csv,text/plain"', script)
         self.assertIn('type: "number", inputmode: "numeric"', script)
-        # WP9: Find cards as card tiles in one viewer group, filters that apply as they change, pagers at the
-        # top and bottom; the Card list a sortable, paged table with thumbnails and a "not recorded" filter,
+        # Find cards keeps lab tiles and a separate casual row viewer group, automatic filters and pagers
+        # at the top and bottom; the Card list a sortable, paged table with thumbnails and a "not recorded" filter,
         # whose rows open their sheet (Remove at its bottom); Add card's printing strip.
         tile = _function(script, "colTile")
         self.assertIn("cardTile(", tile)
         self.assertIn('viewerGroup: "collection"', tile)
-        self.assertIn("Edit copies", tile)
-        self.assertNotIn("Filter cards", script)
+        self.assertIn("colFindCaption(cv, row)", tile)
+        self.assertIn("Edit copies", _function(script, "colFindCaption"))
+        self.assertIn('viewerItem(node, row.card, "collection-find", caption)', _function(script, "colFindRows"))
+        self.assertIn('colFilter(cv, key, node.value)', _function(script, "colFilters"))
         self.assertIn("history.replaceState(", _function(script, "colLoadFind"))
         self.assertEqual(_function(script, "drawCollectionResults").count("colPager("), 2)
         self.assertEqual(_function(script, "drawColRowList").count("colPager("), 2)
@@ -261,7 +263,8 @@ class PageSourceTests(unittest.TestCase):
         css = _text("collection.css")
         # Its switches (segmented links) are 44 px on touch from components.css's floor, not a height of their own.
         self.assertNotRegex(css, r"\.col-views > a[^{]*\{[^}]*min-height")
-        self.assertIn(".col-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }", css)
+        self.assertIn(".col-find-casual { display: none; }", css)
+        self.assertIn(".col-find-lab { display: block; }", css)
         # 16 px inputs wherever there's no fine pointer, so iOS doesn't zoom (DensityTokenTests checks the token).
         self.assertIn("font-size: var(--fs-input)", _text("base.css"))
         self.assertIn("@media (forced-colors: active)", css)
