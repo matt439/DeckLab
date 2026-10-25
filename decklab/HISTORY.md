@@ -2,6 +2,12 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## P1 Collection keyboard navigation (2026-10-25; E11-S30 slice 11)
+
+The lab table now supports J/K through the current filtered order across page boundaries, without wrapping. Enter restores the selected page and opens its card using a fresh visible viewer trigger; Close returns focus to that row. Unknown cards retain the existing permitted edit flow or the read-only preview. Header Enter, text fields, modifiers, busy states and stale route/profile/detached controls keep their own behavior. A compact hint appears only in the fine-pointer hover lab.
+
+Validation: 184 targeted Python/Node checks passed, including six new keyboard/lifecycle/paging/viewer regressions. Synthetic Chromium verified J/K, Enter, Close/focus return and all nine documented sizes plus 1000/1280 in both themes (22 layout combinations), with no page overflow or header overlap. Mouse/default DPR only; actual touch, Safari and physical devices remain unverified. No live writes, new API reads or Forge games. The pre-existing `tokens.js` source-audit failure remains. Find cards presentation and named per-printing holder provenance remain later Collection work.
+
 ## P1 Collection lab columns (2026-10-25; E11-S30 slice 11)
 
 The lab table now separates card identity, type, printing, finish, copies, condition, language, usage, per-copy price and notes. Identity uses the card's actual `color_identity`, preserving the distinct card-colour search predicate. Unknowns and untracked basic lands remain explicit; held/free counts retain printing uncertainty without inventing holder names. Container queries hide identity, type and language first. The named keyboard scroll region has its own sticky header, 36px mouse rows including dividers, and preferred widths that fit wide panes.

@@ -296,3 +296,8 @@ button.col-casual-open { cursor: pointer; }
 @media (min-width: 1000px) and (pointer: fine) {
   .col-row-lab .col-open { min-height: calc(var(--row-h) - 1px); }
 }
+
+.col-key-hint { display: none; margin: 0; padding: var(--s-2) var(--s-3); color: var(--ink-2); font-size: var(--fs-meta); }
+@media (min-width: 1000px) and (hover: hover) and (pointer: fine) {
+  .col-key-hint { display: block; }
+}

@@ -179,7 +179,10 @@ function colRowTable(cv, rows) {
         drawColRowList(cv);
       } }));
   };
-  return el("div", { class: "table-wrap", role: "region", "aria-label": "Collection rows", tabindex: 0 },
+  return el("div", { class: "table-wrap", role: "region", "aria-label": "Collection rows", tabindex: 0,
+    onkeydown: (event) => colTableKeys(cv, event) },
+    el("p", { class: "col-key-hint" }, el("kbd", { text: "J" }), " / ", el("kbd", { text: "K" }),
+      " move \u00b7 ", el("kbd", { text: "Enter" }), " opens"),
     el("table", { class: "data col-table" },
     el("thead", {}, el("tr", {},
       el("th", { scope: "col", class: "col-th-pic" }, el("span", { class: "sr-only", text: "Picture" })),
@@ -214,12 +217,13 @@ function colRowLine(cv, row) {
   const name = [el("span", { class: "col-cell-name", text: row.name }),
     el("small", { class: "col-cell-meta", text: meta }),
     row.notes ? el("small", { class: "col-cell-note", text: row.notes }) : null];
+  const choice = viewerItem(el("button", { type: "button", class: "col-open col-mutate", "data-focus": `edit-${key}`,
+    "aria-label": `View ${row.name} (${colPrinting(row)})`,
+    "aria-current": key === cv.selectedKey ? "true" : null, onclick: open }, name), card, "collection-lab-rows", caption);
   return el("tr", { "data-key": key, "data-selected": key === cv.selectedKey ? true : null,
     class: colUnrecorded(row) ? "is-unrecorded" : null },
     el("td", { class: "col-td-pic" }, thumb),
-    el("td", { class: "col-td-name" }, open ? el("button", { type: "button", class: "col-open col-mutate", "data-focus": `edit-${key}`,
-      "aria-label": `View ${row.name} (${colPrinting(row)})`,
-      "aria-current": key === cv.selectedKey ? "true" : null, onclick: open }, name) : name),
+    el("td", { class: "col-td-name" }, choice),
     colIdentityCell(card), colTypeCell(card),
     el("td", { class: "col-wide col-td-printing", text: colPrinting({ ...row, finish: "nonfoil" }) }),
     el("td", { class: "col-td-finish" }, colFinishLabel(row)),
@@ -390,4 +394,37 @@ function colHeldCell(cv, row) {
   return add(cell, [el("span", { class: `col-held${guess ? " col-held-guess" : ""}`,
     title: colStorageWords(cv, row) + (guess ? `. ${COL_GUESS_WORDS}` : "") }, simNumbers(words)),
     guess ? el("span", { class: "sr-only", text: "Printing allocation uncertain." }) : null]);
+}
+
+
+/** Lab navigation follows the current filtered ordering, including page boundaries. */
+function colTableKeys(cv, event) {
+  if (!colActive(cv) || cv.busy || !event.currentTarget?.isConnected || event.ctrlKey || event.metaKey || event.altKey) return;
+  if (["input", "textarea", "select", "[contenteditable]"].some((selector) => event.target?.closest(selector))) return;
+  const key = String(event.key || "").toLowerCase(), shown = colShownRows(cv);
+  if (key === "j" || key === "k") {
+    if (!shown.length) return;
+    const at = shown.findIndex((row) => colKey(row) === cv.selectedKey);
+    const next = at < 0 ? (key === "j" ? 0 : shown.length - 1)
+      : Math.max(0, Math.min(shown.length - 1, at + (key === "j" ? 1 : -1)));
+    event.preventDefault();
+    cv.page = Math.floor(next / COL_ROWS_PAGE) + 1;
+    colSelectRow(cv, colKey(shown[next]));
+    return;
+  }
+  if (key !== "enter") return;
+  const choice = event.target?.closest(".col-open");
+  if (!choice && event.target !== event.currentTarget) return; // headers retain their own Enter action
+  const rowKey = choice?.closest("tr")?.getAttribute("data-key") || cv.selectedKey;
+  const row = shown.find((item) => colKey(item) === rowKey);
+  if (!row) return;
+  event.preventDefault();
+  cv.page = Math.floor(shown.indexOf(row) / COL_ROWS_PAGE) + 1;
+  colSelectRow(cv, rowKey);
+  const card = cv.pictures[rowKey];
+  const trigger = [...cv.list.querySelectorAll(".col-open")]
+    .find((node) => node.closest("tr").getAttribute("data-key") === rowKey);
+  if (card && trigger) openCard(card, trigger);
+  else if (cv.editable) colEditSelected(cv, rowKey);
+  else { cv.preview.setAttribute("tabindex", "-1"); cv.preview.focus({ preventScroll: true }); }
 }
