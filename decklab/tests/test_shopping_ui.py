@@ -62,7 +62,7 @@ class ShoppingInteractionTests(unittest.TestCase):
             order({id: "old", status: "received", components: [component({status: "received"})]})],
             checks: [{order_id: "2026-10-08-examplegames", component_id: "cards", status: "pending", text: "Look at the conditions."}]});
           const cards = main.querySelectorAll(".shop-delivery");
-          same(cards.map(c => c.querySelector("h3").textContent), ["eBay · Goblins", "Example Games", "eBay · A Walk in the Woods"]);
+          same(cards.map(c => c.querySelector(".shop-delivery-title").textContent), ["eBay · Goblins", "Example Games", "eBay · A Walk in the Woods"]);
           // "On the way" once: the section says it, the cards don't.
           assert.equal(main.textContent.split("On the way").length - 1, 1);
           // A strip of 8 pictures at most (7 and "+N" past 8), 6 on a phone (5 and "+N" past 6), chosen by CSS; each

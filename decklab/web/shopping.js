@@ -1,4 +1,4 @@
-/* Shopping (UI-REVIEW.md WP10): a row of links to the parts (a phone's and a portrait tablet's), the deliveries on the way, each a card titled "seller · topic" with a strip
+/* Shopping (UI-REVIEW.md WP10): a row of links to the parts (a phone's and a portrait tablet's), the deliveries on the way, each a disclosure titled "seller · topic" with a strip
 of its cards' pictures, its arrival checks inside it and Receive delivery as its main action; follow-ups left
 open on deliveries that have arrived, each with Done (POST /api/shopping/check, an admin's); the cards we've
 decided to buy; the decks still missing cards (a link to each deck's missing cards, kept apart from the queue:
@@ -152,8 +152,7 @@ function shopComponentWords(component) {
   return what;
 }
 
-/** A delivery on the way: title, when it was ordered and what it holds, its pictures, its notes (two lines),
- * the checks to make when it arrives, and Receive delivery. */
+/** A compact delivery row opens its existing contents, checks and actions in place. */
 function shopDelivery(order, checks, view = null) {
   const components = order.components || [];
   const pending = components.filter((c) => c.status === "pending");
@@ -163,18 +162,20 @@ function shopDelivery(order, checks, view = null) {
   const words = kinds.size === 1 && kinds.has("tokens") ? plural(total, "token card") : plural(total, "card");
   const receive = pending.length && mayDo("receipts");
   const href = `#/receipt?order=${encodeURIComponent(order.id)}`;
-  return el("article", { class: "panel shop-delivery" },
-    el("div", { class: "shop-delivery-head" },
-      el("h3", { text: shopOrderTitle(order) }), shopOrderChip(order)),
-    el("p", { class: "sub", text: [order.ordered_on ? `Ordered ${shopDay(order.ordered_on)}` : "Order date not recorded", words]
-      .join(" · ") }),
+  return el("details", { class: "panel shop-delivery" },
+    el("summary", { class: "shop-delivery-summary" }, el("h3", {},
+      el("span", { class: "shop-delivery-head" },
+        el("span", { class: "shop-delivery-title", text: shopOrderTitle(order) }), shopOrderChip(order)),
+      el("span", { class: "sub shop-delivery-meta", text: [order.ordered_on ? `Ordered ${shopDay(order.ordered_on)}` : "Order date not recorded", words]
+        .join(" · ") }))),
+    el("div", { class: "shop-delivery-body" },
     items.length ? shopStrip(order, items) : null,
     components.length > 1 ? el("ul", { class: "shop-parts" }, components.map((c) => el("li", { text: shopComponentWords(c) }))) : null,
     order.notes ? el("p", { class: "shop-notes", text: order.notes, title: order.notes }) : null,
     checks.length ? shopChecks(checks) : null,
     el("div", { class: "actions" },
       receive ? el("a", { class: "btn btn-secondary", href, text: "Receive delivery" })
-        : el("a", { class: "btn btn-quiet", href, text: "Delivery details" }), shopOrderEditButton(order, view)));
+        : el("a", { class: "btn btn-quiet", href, text: "Delivery details" }), shopOrderEditButton(order, view))));
 }
 
 /** The checks to make when a delivery arrives. Open on a wide screen; folded on a phone ("Check when it

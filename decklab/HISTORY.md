@@ -2,6 +2,12 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Compact Shopping deliveries (2026-10-25; E11-S30 slice 12)
+
+On-the-way deliveries are now one-column native disclosure rows, with a 54px minimum collapsed height and wrapping full seller/title, recorded date, pending-copy count and existing status. Opening a row retains its card strip, notes, arrival checks and permission-gated Receive/details/edit actions. The strip uses 44px cards, existing responsive hidden-copy counts and the full-contents sheet. Buying redraws preserve open disclosures, nested check state and viewer triggers. New order remains the page's one primary; no unsupported keyboard hint is shown.
+
+Validation: 231 targeted Python/Node checks passed (103 Shopping/order/receipt checks and 128 buying/shared/source checks). Synthetic Chromium checked closed and expanded rows at nine documented viewport sizes plus requested 1280/1281 in both themes (22 combinations; 1281 rounded to 1282). All had no page/summary/body overflow; long names grow beyond the 54px floor on phones. Enter/Space activation, complete 12-copy contents, responsive +4/+6 counts, 44px pictures and sheet-close focus return were checked. Mouse/default DPR only; actual touch/Safari/device acceptance remains open. No live records, API writes, downloads or Forge games. The source audit still flags only pre-existing `tokens.js` (1,516 lines).
+
 ## Collection saved-hint Planned colours (2026-10-25; E11-S30 slice 11)
 
 Visible saved-list hints now carry optional canonical Planned identity swatches, matching Library. The hint's source kind still chooses its Planned or Play-now route; an owned-view hero can have different colours. The shared identity algorithm is unchanged and uses already-read target sections. Unavailable local card indexes remove only the swatch; visibility gates and anonymous rollback cover colours with names. Unknown identity has no swatch; known colourless alone uses the neutral swatch. Rendering adds no API reads or canonical/hash changes.
