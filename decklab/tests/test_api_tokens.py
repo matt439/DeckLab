@@ -462,6 +462,28 @@ class WithIndexTests(TokensApiTestCase):
         self.assertTrue(missing[0]["image"].startswith("/img/"))
         self.assertNotIn(tokens.NAMES_UNCHECKED, view["info"])
 
+    def test_a_row_too_few_built_decks_can_share_is_named(self):
+        self.assertEqual(self.row("Insect")["shared"], [])                 # Queen Deck is only being built
+        self.write("decks/casual/queen.md", deck_md("Queen Deck", status="built"))
+        self.assertEqual(self.row("Insect")["shared"], [])                 # one card, one built deck
+        self.write("decks/casual/hive.md", deck_md("Hive Deck", status="built"))
+        self.assertEqual(self.row("Insect")["shared"],
+                         [{"deck": "casual/hive", "title": "Hive Deck", "link": "casual/hive"},
+                          {"deck": "casual/queen", "title": "Queen Deck", "link": "casual/queen"}])
+        notes, warnings = [], []
+        tokens.check(notes=notes, warnings=warnings)
+        self.assertIn("Only 1 card, used by 2 built decks: Hive Deck and Queen Deck",
+                      "\n".join(warnings))
+        # The deck page names the other built decks beside a card to grab from that row.
+        from decklab.lib.api import deck_page
+        inv = tokens.read()
+        insect = next(i for i, r in enumerate(inv.rows) if r["front"] == "Insect")
+        result = {"needs": [{"name": "Insect", "cards": [{"row": insect}]}]}
+        shown = deck_page._with_shared(result, {"id": "casual/queen", "space": "home"}, inv, [])
+        self.assertEqual(shown["needs"][0]["cards"][0]["shared"],
+                         [{"deck": "casual/hive", "title": "Hive Deck", "link": "casual/hive"}])
+        self.assertNotIn("shared", result["needs"][0]["cards"][0])         # the cached result is left alone
+
     def test_names_are_checked_and_fixed(self):
         answer = self.save(action="add", row={**RABBIT, "front": "rabbit"})
         self.assertEqual(answer["warnings"], [])

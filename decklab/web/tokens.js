@@ -106,6 +106,8 @@ function tokenNeed(need) {
       cards.length ? el("ul", { class: "token-grab", "aria-label": "Grab" }, cards.map((card) => el("li", {},
         `Grab ${tokCardWords(card)}`,
         card.also_for && card.also_for.length ? ` (same card as for ${card.also_for.join(" and ")})` : null,
+        card.shared && card.shared.length ? el("small", { class: "tok-shared",
+          text: `Also used by ${card.shared.map((h) => h.title).join(" and ")}, with too few cards for all of them` }) : null,
         card.verdict === "check" && card.why && card.why.length ? el("small", { text: card.why.join("; ") }) : null))) : null,
       incoming.length ? el("ul", { class: "token-grab", "aria-label": "On the way" }, incoming.map((item) => el("li", {
         text: `On the way: ${tokLabel(item)} ×${item.quantity} (order ${item.order})` }))) : null,
@@ -662,9 +664,11 @@ function tokShown(view) {
 }
 
 /** Whether a row has something to check (the "To check" filter): its details or printing are unconfirmed, or
- * a deck's use of it says to check it, or it only stands in for a different token. */
+ * a deck's use of it says to check it, or it only stands in for a different token, or more built decks use it
+ * than it has cards. */
 function tokToCheck(row) {
-  return Boolean(row.unconfirmed || (row.uses || []).some((u) => u.state === "check" || u.state === "differs"));
+  return Boolean(row.unconfirmed || (row.shared || []).length
+    || (row.uses || []).some((u) => u.state === "check" || u.state === "differs"));
 }
 
 /** Whether a tile carries the "Details to check" chip: only when a deck relies on the card and its details
@@ -760,6 +764,7 @@ function tokCard(view, row) {
   const chips = [
     tokNeedsCheckChip(row) ? status("warn", "Details to check") : null,
     unknown ? status("warn", "Not a Scryfall name") : null,
+    (row.shared || []).length ? status("warn", `Too few for ${plural(row.shared.length, "built deck")}`) : null,
     ...tokDeckChips(row)];
   const caption = [`×${row.quantity}`, tokPrinting(row), row.notes || null].filter(Boolean).join(" · ")
     + (example ? " (example art: printing not recorded)" : "");
@@ -1069,6 +1074,7 @@ function tokSheetSummary(ctx, row, onZoom) {
       pics.map((src) => el("img", { src, alt: "", width: 100, height: 140, loading: "lazy" }))),
       example ? el("p", { class: "result-count", text: "Example art: the printing isn't recorded." }) : null) : null,
     el("div", { class: "tok-sheet-uses" },
+      (row.shared || []).length ? el("p", { class: "box box-warn tok-shared", text: tokSharedWords(row) }) : null,
       el("h3", { text: uses.length ? "Used for" : "Not used by a deck" }),
       uses.length ? el("ul", {}, uses.map((use) => {
         const face = use.side === "back" ? row.back : row.front;
@@ -1076,6 +1082,14 @@ function tokSheetSummary(ctx, row, onZoom) {
           face && row.back ? ` (${face} side)` : null,
           use.state && use.state !== "ready" ? [" ", tokenStateChip(use.state)] : null);
       })) : null));
+}
+
+/** "Only 2 cards, used by 3 built decks: A, B and C. They can't all have one packed." (the API's "shared"). */
+function tokSharedWords(row) {
+  const titles = row.shared.map((h) => h.title);
+  const list = titles.length > 1 ? `${titles.slice(0, -1).join(", ")} and ${titles[titles.length - 1]}` : titles[0];
+  return `Only ${plural(row.quantity, "card")}, used by ${plural(titles.length, "built deck")}: ${list}. `
+    + "They can't all have one packed.";
 }
 
 function tokFields(ctx, row) {

@@ -429,6 +429,46 @@ def row_uses(inv, incoming_rows, warnings, space=spaces.HOME):
     return dict(out)
 
 
+def built_ids(space=spaces.HOME):
+    """The ids of a space's built decks: the holders of row_uses that pack
+    their token cards. Owned products kept intact (product/<stem>) count as
+    built too, but aren't listed here: shared_rows counts every product/
+    holder as built."""
+    return {s["id"] for s in decks.list_decks()
+            if s.get("space", spaces.HOME) == space and s.get("status") == "built"
+            and not s["id"].startswith(("product/", "pairing/"))}
+
+
+def _is_built(deck_id, built):
+    return deck_id in built or deck_id.startswith("product/")
+
+
+def shared_rows(inv, uses, built):
+    """{row index: [{deck, title, link}]}: the rows of inv whose uses
+    (row_uses) name more built holders (built_ids, and intact products) than
+    the row has cards, each with those holders in the order uses names them.
+    Each built holder is taken to pack at least one card of a row it uses, so
+    such a row can't be in all of their boxes at once. A stand-in counts: it
+    is packed too. Decks still being built never count."""
+    out = {}
+    for i, items in uses.items():
+        holders = []
+        for use in items:
+            if _is_built(use["deck"], built) and all(h["deck"] != use["deck"] for h in holders):
+                holders.append({"deck": use["deck"], "title": use["title"], "link": use["link"]})
+        if i < len(inv.rows) and len(holders) > int(inv.rows[i]["quantity"]):
+            out[i] = holders
+    return out
+
+
+def shared_words(row, holders):
+    """"Only 2 cards, used by 3 built decks: A, B and C": the warning for a
+    row of shared_rows."""
+    cards_ = int(row["quantity"])
+    return (f"Only {_plural(cards_, 'card')}, used by {len(holders)} built decks: "
+            f"{_and([h['title'] for h in holders])}")
+
+
 CACHE_SIZE = 64
 _cache = collections.OrderedDict()
 _cache_lock = threading.Lock()
@@ -481,6 +521,7 @@ def check(notes=None, space=spaces.HOME, warnings=None):
     like mistakes (details_mistakes: "4/4 white flying", "whte"), are
     appended to warnings: they never fail the check."""
     notes = [] if notes is None else notes
+    wants_warnings = warnings is not None
     warnings = [] if warnings is None else warnings
     file_label = label_for(space)
     problems = []
@@ -522,7 +563,22 @@ def check(notes=None, space=spaces.HOME, warnings=None):
     if space == spaces.HOME:
         _, payload_problems = incoming()
         problems.extend(payload_problems)
+    if wants_warnings and ready and inv.rows:
+        warnings.extend(_shared_warnings(inv, space, file_label))
     return problems
+
+
+def _shared_warnings(inv, space, file_label):
+    """check's warnings for rows more built decks use than the row has
+    cards (shared_rows), or one line saying why they couldn't be worked out."""
+    try:
+        found = incoming()[0] if space == spaces.HOME else []
+        uses = row_uses(inv, found, [], space)
+        shared = shared_rows(inv, uses, built_ids(space))
+    except Exception as e:      # a deck that can't be read: the check itself still stands
+        return [f"{file_label}: which built decks share token cards couldn't be worked out ({e})"]
+    return [f"{file_label} line {inv.lines[i]}: {shared_words(inv.rows[i], holders)}"
+            for i, holders in sorted(shared.items())]
 
 
 

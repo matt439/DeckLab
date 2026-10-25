@@ -1040,7 +1040,7 @@ function mergedTokenCards(need) {
   const byWords = new Map();
   for (const card of cards) {
     const key = JSON.stringify([card.front, card.back || "", card.side || "", card.verdict || "", card.why || [],
-      card.also_for || []]);
+      card.also_for || [], (card.shared || []).map((h) => h.deck || h.title)]);
     const same = byWords.get(key);
     if (same) same.quantity = (Number(same.quantity) || 0) + (Number(card.quantity) || 0);
     else byWords.set(key, { ...card });
