@@ -3800,7 +3800,9 @@ Slice 9's first part built 2026-10-25: the lab hero, stripe and tint metadata, n
 
 Slice 9's navigation and Last changed metadata built 2026-10-25: fresh server-visible previous/next links, filters and tab/list selection preserved, disabled ends, and actual recorded edit dates in the tint band. The narrow hero reserves navigation space for maximum-length titles. `test_deck_header_ui.py` and `test_deck_changed.py` cover the UI lifecycle, races, dates and server privacy.
 
-Gap: slice 9's touch/Safari acceptance, plus slices 10 to 15 (criteria 1 to 3 and 6). These device checks do not block slice 10's coding. Section 6's question 4 is settled (Matt, 2026-10-25: only Building and Idea tiles show a status pill). The lab top bar's search is E11-S31.
+Slice 10's first part built 2026-10-25: one selected deck's opponents as a mouse lab table, casual cards and coarse-input lab links, the simulations-mode chip, and shared Rankings figures. The shared entry model preserves pair choice, perspective, saved links and exception/permission handling. No field summary or residual is inferred from pair data.
+
+Gap: slice 9's touch/Safari acceptance; slice 10's selected-list field summary/latest swap and its device acceptance; then slices 11 to 15 (criteria 1 to 3 and 6). Device checks do not block coding. Section 6's question 4 is settled (Matt, 2026-10-25: only Building and Idea tiles show a status pill). The lab top bar's search is E11-S31.
 
 <a id="e11-s31"></a>
 

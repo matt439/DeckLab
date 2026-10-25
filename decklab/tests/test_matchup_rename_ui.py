@@ -26,7 +26,7 @@ SETUP = r"""
   apiWrite=async()=>{writes++;throw new Error('Read-only fixture');};
   runGate=()=>({may:false,why:'Fixture only'});runsAllowed=()=>false;noteRuns=()=>{};
   const selected=()=>main.querySelector('#mu-deck-pick').querySelectorAll('option').find(option=>option.getAttribute('selected')!==null)?.getAttribute('value');
-  const played=()=>main.querySelectorAll('td').filter(cell=>(cell.getAttribute('class')||'').includes('mu-h-')).length;
+  const played=()=>main.querySelectorAll('.mu-opponent-row').length;
   const open=(lib=library(),data=answer())=>{location.hash='#/matchups';drawMatchups(lib,data,new URLSearchParams(),routeToken);};
 """
 
@@ -42,12 +42,12 @@ class MatchupRenameUiTests(unittest.TestCase):
     def test_other_device_rename_refreshes_axes_before_applying_canonical_results(self):
         self.run_js(r"""
           stored.set(HOME_DECK_KEY,'casual/old');const lib=library(),data=answer(),original=JSON.stringify(data);open(lib,data);
-          assert.equal(selected(),'casual/old');assert.equal(played(),2);
+          assert.equal(selected(),'casual/old');assert.equal(played(),1);
           const wait=held();read=async url=>url==='/api/decks'?wait.promise:answer('after',true);
           const refresh=matchupRefresh.refresh();await settle();same(requests.map(item=>item.url),['/api/matchups','/api/decks']);
-          assert.equal(selected(),'casual/old');assert.equal(played(),2,'old coherent display stays while new names load');
+          assert.equal(selected(),'casual/old');assert.equal(played(),1,'old coherent display stays while new names load');
           wait.resolve(library('after',true));await refresh;await settle();
-          assert.equal(selected(),'casual/new');assert.equal(stored.get(HOME_DECK_KEY),'casual/new');assert.equal(played(),2);
+          assert.equal(selected(),'casual/new');assert.equal(stored.get(HOME_DECK_KEY),'casual/new');assert.equal(played(),1);
           assert(main.textContent.includes('Gamma'));assert(!main.querySelectorAll('th').some(cell=>cell.getAttribute('title')==='Alpha'));
           assert.equal(state.library.decks_revision,'after');assert.equal(JSON.stringify(data),original);assert.equal(lib.decks[0].id,'casual/old');assert.equal(writes,0);
         """)
@@ -62,20 +62,20 @@ class MatchupRenameUiTests(unittest.TestCase):
     def test_failed_library_refresh_keeps_coherent_results_and_retries_automatically(self):
         self.run_js(r"""
           stored.set(HOME_DECK_KEY,'casual/old');open();read=async url=>{if(url==='/api/decks')throw new Error('Database unavailable');return answer('after',true);};
-          await matchupRefresh.refresh();assert.equal(selected(),'casual/old');assert.equal(played(),2);
+          await matchupRefresh.refresh();assert.equal(selected(),'casual/old');assert.equal(played(),1);
           assert(main.textContent.includes('Matchup updates aren'));assert(main.textContent.includes('Database unavailable'));
           read=async url=>url==='/api/decks'?library('after',true):answer('after',true);await matchupRefresh.refresh();
-          assert.equal(selected(),'casual/new');assert.equal(played(),2);assert(main.textContent.includes('Connected again'));
+          assert.equal(selected(),'casual/new');assert.equal(played(),1);assert(main.textContent.includes('Connected again'));
           same(requests.map(item=>item.url),['/api/matchups','/api/decks','/api/matchups','/api/decks']);
         """)
 
     def test_library_and_results_must_describe_the_same_snapshot(self):
         self.run_js(r"""
           open();read=async url=>url==='/api/decks'?library('even-later',true):answer('after',true);
-          await matchupRefresh.refresh();assert.equal(selected(),'casual/old');assert.equal(played(),2);
+          await matchupRefresh.refresh();assert.equal(selected(),'casual/old');assert.equal(played(),1);
           assert(main.textContent.includes('changed while their names were loading'));assert.equal(state.library?.decks_revision,undefined);
           read=async url=>url==='/api/decks'?library('even-later',true):answer('even-later',true);
-          await matchupRefresh.refresh();assert.equal(played(),2);assert.equal(selected(),'casual/new');
+          await matchupRefresh.refresh();assert.equal(played(),1);assert.equal(selected(),'casual/new');
         """)
 
     def test_refresh_is_single_flight_and_late_library_responses_cannot_cross_a_profile_or_route(self):
@@ -94,24 +94,24 @@ class MatchupRenameUiTests(unittest.TestCase):
           open();const wait=held();read=async url=>url==='/api/decks'?wait.promise:answer('after',true);
           const refresh=matchupRefresh.refresh();await settle();assert.equal(requests.length,2);
           document.visibilityState='hidden';document.fire('visibilitychange');assert(requests[0].signal.aborted);assert(requests[1].signal.aborted);
-          wait.resolve(library('after',true));await refresh;assert.equal(selected(),'casual/old');assert.equal(played(),2);
+          wait.resolve(library('after',true));await refresh;assert.equal(selected(),'casual/old');assert.equal(played(),1);
           document.visibilityState='visible';read=async url=>url==='/api/decks'?library('after',true):answer('after',true);
-          document.fire('visibilitychange');await settle();assert.equal(selected(),'casual/new');assert.equal(played(),2);
+          document.fire('visibilitychange');await settle();assert.equal(selected(),'casual/new');assert.equal(played(),1);
         """)
 
     def test_initial_race_waits_for_a_matching_library_even_with_unchanged_results(self):
         self.run_js(r"""
           const wait=held();read=async url=>url==='/api/decks'?wait.promise:answer('after',true);
           open(library(),answer('after',true));assert(main.textContent.includes('Updating the decks'));await settle();
-          wait.resolve(library('after',true));await settle();assert(main.querySelector('.mu-matrix-part'));assert.equal(played(),2);
+          wait.resolve(library('after',true));await settle();assert(main.querySelector('.mu-opponents'));assert.equal(played(),1);
           assert.equal(selected(),'casual/opponent');assert(main.textContent.includes('Gamma'));
         """)
 
     def test_unchanged_revision_does_not_add_library_fetches_or_redraw_focused_links(self):
         self.run_js(r"""
-          open();const link=main.querySelector('.mu-cell-link');link.focus();read=async()=>answer();
+          open();const link=main.querySelector('.mu-opponent-row');link.focus();read=async()=>answer();
           await matchupRefresh.refresh();same(requests.map(item=>item.url),['/api/matchups']);
-          assert.equal(main.querySelector('.mu-cell-link'),link);assert.equal(document.activeElement,link);assert.equal(writes,0);
+          assert.equal(main.querySelector('.mu-opponent-row'),link);assert.equal(document.activeElement,link);assert.equal(writes,0);
         """)
 
     def test_old_play_link_picks_both_renamed_decks_and_preserves_play_now_versions(self):

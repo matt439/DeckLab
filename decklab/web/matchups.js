@@ -5,7 +5,7 @@ follow them and show what came out, in words a non-statistician can read.
 The matchup scripts load after the editor (editor.js first), in this order:
     sim-ui.js             Forge's result pieces: win-rate figures, range bars, freshness badges, flags, tests
     matchups.js           shared constants, words, the run choice and AI limits
-    matchups-overview.js  cross-device refresh, result rows, the Matchups home (matrix, phone list, play
+    matchups-overview.js  cross-device refresh, result rows, the Matchups home (opponent table/cards, play
                           sheet) and the deck page's results (deckResultParts)
     matchups-detail.js    one matchup (the pair page): starting, following and stopping a run
     matchups-results.js   the verdict, "Why we're confident", "Details" and how the games were played
@@ -19,8 +19,7 @@ ask(), busy() and unbusy(); app.js supplies afterRender(). app.js routes to show
 the deck page's Matchups tab (deck-tools.js) uses deckResultParts, aiLimitsParts and the refresh loop.
 
 Routes:
-    #/matchups[?a=<deck id>&av=target|owned]   the Matchups home: a matrix of every deck against every other
-                                               (on a phone, one deck's matchups as a sorted list), the runs
+    #/matchups[?a=<deck id>&av=target|owned]   the Matchups home: one deck's opponents, as a lab table or casual cards, the runs
                                                playing now, and "Play a matchup" (a sheet). a/av open the
                                                sheet with that deck picked (the deck page's link).
     #/matchup?a=<id>&av=<v>&b=<id>&bv=<v>      one pair, from deck a's side: not played yet (the run choice
@@ -48,7 +47,7 @@ game that finished is kept.
 
 A win rate is a mono figure in ink with its range bar on the fixed 20-80% scale (sim-ui.js, design/visual-
 design.md 4.9; E11-S30 slice 6, in place of MU-06's diverging green and red bars): the figure is never coloured,
-and only the matrix's cells still shade around 50%. A result that means nothing (a commander Forge's AI never
+and no result figure is coloured by its rate. A result that means nothing (a commander Forge's AI never
 casts) gets a faded mark and no band, and says so in words.
 
 Engines (simulation wave 2): every saved result says which engine played it ("engine": {kind, run_version,

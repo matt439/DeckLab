@@ -68,7 +68,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 
 | id | status | pri | size | item |
 |---|---|---|---|---|
-| `E11-S30` | OPEN | should | L | Visual redesign P1 ([visual-design.md](decklab/design/visual-design.md)): slice 10, Matchups, then 11-15. Slice 9 coding is built; touch/Safari acceptance remains open. |
+| `E11-S30` | OPEN | should | L | Visual redesign P1 ([visual-design.md](decklab/design/visual-design.md)): finish slice 10's field summary/latest swap, then 11-15. Slice 9 coding and slice 10's table/cards, chip and Rankings figures are built; device acceptance stays open. |
 | `E11-S31` | OPEN | could | M | Global search in the top bar for decks and cards ([stories.md](decklab/design/stories.md#e11-s31)), left out of E11-S30's slice 7 by Matt on 2026-10-25; what it searches is still to settle with Matt. |
 | `E11-S32` | OPEN | could | M | A prebuilt release of the Forge fork, with a checksum, as SELF-HOSTING.md's first Forge route. |
 | `E11-S33` | OPEN | could | L | Full Linux support: the 31 failing tests fixed (then a Linux CI run), a systemd timer for the nightly jobs, and a systemd service for the server. |

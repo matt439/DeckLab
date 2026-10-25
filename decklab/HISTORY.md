@@ -2,6 +2,16 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## P1 Matchups views and Rankings figures (2026-10-25; E11-S30 slice 10, first part)
+
+Matchups now shows one selected deck's saved opponents: a real six-column table with mouse input from 1000 px, cards at casual widths, and whole-row links for coarse input in the lab. One shared entry model preserves the best saved pair, exact perspective and destinations, old-list/engine wording, meaningless-result flags and the permission gate for unplayed matches. Uninformative figures fade and retain their words. The old matrix is removed.
+
+A neutral lock chip beside the title shows only the current known simulations mode and updates when settings load. It adds no setting control or identity disclosure. Rankings retain connected-group boundaries, exclusions, uncertainty and refresh behavior, now with the shared win-rate figure and mono numerals. Casual ranking rows stack so the percent sign stays beside its number.
+
+Validation: 164 targeted UI/source tests; synthetic Chromium checks for Matchups and Rankings at all nine documented viewport sizes in light and dark (36 combinations), with no page overflow or figures outside their rows. The browser uses mouse input/default DPR; coarse input, Safari and physical devices remain unverified. No live records or simulations were used. Source-length audit still flags only the pre-existing 1,516-line `tokens.js`; changed sources are below 1,200.
+
+Slice 10 remains partial: the selected list's field average, first-player edge/residual flags and latest swap need their own server answers with exact list context. Pair win rates are not averaged into a field rating or used to invent flags.
+
 ## P1 deck navigation and Last changed (2026-10-25; E11-S30 slice 9)
 
 The deck header now has previous/next links through a fresh server-visible library, retaining its filters/sort where the current deck belongs and otherwise using all visible ordinary decks. It keeps the selected tab, Cards filter and Play-now list when the next deck has one, disables either end, and remembers the selected deck for returning to the library. Late reads check the route, screen, person, connection and retry sequence. Narrow lab widths place 44 px white circles over the art, with enough reserved space for maximum-length titles.

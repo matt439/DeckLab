@@ -516,12 +516,13 @@ function crumb(href, label) {
 
 /** A page's head: an optional crumb ([href, label]), the h1 and a one-line description, then one primary
  * action and the rest in a "More" menu (menuButton's items). Returns the nodes to add. */
-function pageHead({ crumb: back = null, title, description = null, primary = null, more = null, id = null } = {}) {
+function pageHead({ crumb: back = null, title, description = null, primary = null, more = null, id = null, badge = null } = {}) {
   const extra = (more || []).filter(Boolean);
   return [
     back ? crumb(back[0], back[1]) : null,
     el("div", { class: "page-head page-head-actions" },
-      el("div", {}, el("h1", { id, text: title }), description ? el("p", { text: description }) : null),
+      el("div", {}, badge ? el("div", { class: "page-head-title" }, el("h1", { id, text: title }), badge)
+        : el("h1", { id, text: title }), description ? el("p", { text: description }) : null),
       primary || extra.length ? el("div", { class: "actions page-head-buttons" }, primary,
         extra.length ? menuButton("More", extra) : null) : null),
   ];

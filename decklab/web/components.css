@@ -372,7 +372,7 @@
 .wr-range { font-family: var(--font-mono); font-size: var(--fs-fig-range); font-weight: var(--fw-medium); color: var(--ink-2); font-variant-numeric: tabular-nums; }
 .wr-caption { font-size: var(--fs-wr-caption); color: var(--ink-2); }
 .wr-hero { display: flex; align-items: center; gap: var(--s-3); white-space: normal; }
-.wr-hero .wr-value { font-size: var(--fs-fig); line-height: 1; letter-spacing: var(--ls-fig); }
+.wr-hero .wr-value { flex: none; white-space: nowrap; font-size: var(--fs-fig); line-height: 1; letter-spacing: var(--ls-fig); }
 .wr-unit { font-size: var(--fs-fig-unit); }
 .wr-lines { display: grid; gap: 2px; font-size: var(--fs-meta); color: var(--ink-3); }
 
@@ -1118,3 +1118,12 @@ table.data tr.group-row .group-count { font-family: var(--font-mono); font-weigh
   .btn.btn-art:hover:not(:disabled, [aria-disabled="true"]) { background: var(--art-control-hover); }
 }
 @media (forced-colors: active) { .btn.btn-art { border: 1px solid ButtonText; } }
+
+
+.page-head-title { display: flex; align-items: center; flex-wrap: wrap; gap: var(--s-2) var(--s-3); }
+.chip.simulations-chip { background: var(--surface-chip); color: var(--ink-2); }
+.chip.simulations-chip::before {
+  display: block; border-radius: 0; background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23000' stroke-width='1.5'%3E%3Crect x='3' y='7' width='10' height='7' rx='1.5'/%3E%3Cpath d='M5 7V5a3 3 0 0 1 6 0v2'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23000' stroke-width='1.5'%3E%3Crect x='3' y='7' width='10' height='7' rx='1.5'/%3E%3Cpath d='M5 7V5a3 3 0 0 1 6 0v2'/%3E%3C/svg%3E") center / contain no-repeat;
+}

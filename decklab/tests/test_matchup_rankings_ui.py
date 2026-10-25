@@ -43,12 +43,12 @@ class MatchupRankingsUiTests(unittest.TestCase):
           const calls=[];api=async url=>{calls.push(url);return answer('Constructed',{
             rows:[row('casual/a','Alpha')]});};
           view.mode='matchups';drawHome(host,data,library,view);
-          assert(host.querySelector('.mu-matrix-part'));assert.equal(calls.length,0);
+          assert(host.querySelector('.mu-opponents'));assert.equal(calls.length,0);
           button(host,'Rankings').click();await settle();
           same(calls,['/api/rankings?format=Constructed']);assert.equal(writes,0);
           assert.equal(button(host,'Rankings').getAttribute('aria-pressed'),'true');
           assert.equal(button(host,'Matchups').getAttribute('aria-pressed'),'false');
-          assert(host.querySelector('.mu-rankings'));assert(!host.querySelector('.mu-matrix-part'));
+          assert(host.querySelector('.mu-rankings'));assert(!host.querySelector('.mu-opponents'));
           assert.equal(storage.get('decklab.matchups.view'),'rankings');
           assert(!host.querySelector('[data-run]'));
         """)
@@ -64,7 +64,12 @@ class MatchupRankingsUiTests(unittest.TestCase):
             notes:['Only current lists and the current engine count.','Same cards and pilot share one rating.']})},'Constructed');
           assert.equal(host.querySelectorAll('.mu-ranking-row').length,4);
           assert(host.textContent.includes('Rank 1 of 2'));assert(/Likely rank 1[^0-9]+2/.test(host.textContent));
-          assert(host.textContent.includes('Rating 80%'));assert(/95% range 60%[^0-9]+100%/.test(host.textContent));
+          assert(host.textContent.includes('Rating 80%'));
+          const figure=host.querySelector('.wr');
+          assert.equal(figure.getAttribute('role'),'img');
+          assert(figure.getAttribute('aria-label').includes('80 percent, range 60 to 100'));
+          assert(host.textContent.includes('95% range'));
+          assert(host.querySelectorAll('.sim-num').some(n=>n.textContent==='1,200'));
           assert(host.textContent.includes('1,200 games'));assert(host.textContent.includes('Unsettled'));
           assert(host.textContent.includes('Not enough precision.'));assert(host.textContent.includes('No rating yet'));
           const excluded=host.querySelectorAll('.mu-ranking-row').find(n=>n.dataset.deck==='casual/excluded');
@@ -139,7 +144,7 @@ class MatchupRankingsUiTests(unittest.TestCase):
           assert.equal(view.mode,'rankings');assert.equal(view.format,'Commander');assert.equal(view.deck,'commander/d');
           assert.equal(calls,1);assert.equal(button(host,'Commander').getAttribute('aria-pressed'),'true');
           button(host,'Matchups').click();assert.equal(view.deck,'commander/d');
-          assert.equal(view.format,'Commander');assert(host.querySelector('.mu-phone-part'));
+          assert.equal(view.format,'Commander');assert(host.querySelector('.mu-opponents'));
           button(host,'Rankings').click();await settle();assert.equal(view.deck,'commander/d');assert.equal(writes,0);
         """)
 
@@ -272,7 +277,7 @@ class MatchupRankingsUiTests(unittest.TestCase):
           const pending=[];api=(url,opts)=>new Promise(resolve=>pending.push({url,resolve,signal:opts.signal}));
           drawHome(host,data,library,view);button(host,'Matchups').click();await settle();
           assert(pending[0].signal.aborted);assert.equal(view.rankingsRequest,null);
-          assert(host.querySelector('.mu-phone-part'));assert(!host.querySelector('.mu-rankings'));
+          assert(host.querySelector('.mu-opponents'));assert(!host.querySelector('.mu-rankings'));
           button(host,'Rankings').click();assert.equal(pending.length,2);
           pending[1].resolve(answer('Constructed',{rows:[row('casual/a','New visit')]}));await settle();
           pending[0].resolve(answer('Constructed',{rows:[row('casual/a','Cancelled visit')]}));await settle();

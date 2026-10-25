@@ -1,5 +1,4 @@
-/* The Matchups home (a matrix of every deck against every other; on a phone, one deck's matchups as a sorted
-list), the play sheet, the rows every matchup list shares, the deck page's Matchups results (deckResultParts) and the updates across
+/* The Matchups home (one deck's opponents in a lab table or casual cards), the play sheet, the rows every matchup list shares, the deck page's Matchups results (deckResultParts) and the updates across
 devices. Loaded after matchups.js and before the detail, result and card-stat scripts. Shares matchups.js's
 constants and helpers; the refresh loop serves both matchup routes and the deck page. Functions run only after
 all deferred scripts have loaded. */
@@ -282,7 +281,7 @@ function olderKey(items) {
     const side = fromSide(item, deckId || item.sides[0].id);
     return side.me.current === false || side.them.current === false;
   });
-  return any ? el("p", { class: "legend mu-older-key" }, el("span", { class: "mu-key-swatch mu-h-win1 is-older", "aria-hidden": "true" }),
+  return any ? el("p", { class: "legend mu-older-key" }, el("span", { class: "mu-key-swatch is-older", "aria-hidden": "true" }),
     "Faded: one of the lists has changed since those games") : null;
 }
 
@@ -417,13 +416,6 @@ function matrixDecks(library, results, format) {
   ].map((d) => ({ id: d.id, version: "target", title: d.title, kind: d.kind }));
 }
 
-/** A cell's shade on the diverging scale (5 points either side of 50% is even; then steps at 15 and 25). */
-function heatClass(value) {
-  const d = value - 0.5;
-  const size = Math.abs(d) < 0.05 ? 0 : Math.abs(d) < 0.15 ? 1 : Math.abs(d) < 0.25 ? 2 : 3;
-  return size === 0 ? "mu-h-even" : `mu-h-${d > 0 ? "win" : "loss"}${size}`;
-}
-
 /** Each deck's short name (shortTitle) by id, its full title where two decks' short names would be the same. */
 function shortNames(decks) {
   const counts = new Map();
@@ -431,91 +423,84 @@ function shortNames(decks) {
   return new Map(decks.map((d) => [d.id, counts.get(shortTitle(d.title)) > 1 ? d.title : shortTitle(d.title)]));
 }
 
-/** The matrix (MU-01): each row deck's latest win rate against each column deck, shaded on the diverging scale
- * with the number printed; faded when a list has changed since (or the result is of a play-now list); "–" when
- * the result means nothing; "+" in an empty cell opens that pair to play it (only while the viewer may start
- * runs); a tap opens the pair. */
-function matchupMatrix(decks, pairs, format, pick = null) {
-  const may = runsAllowed();
-  const names = shortNames(decks);
-  const head = el("tr", {}, el("td", { class: "mu-corner" },
-    el("span", { class: "mu-corner-words", text: "Row deck's win rate against each column deck" })),
-  decks.map((d) => el("th", { scope: "col", class: "mu-col", title: d.title },
-    el("span", { class: "mu-col-name", text: names.get(d.id) }))));
-  const rows = decks.map((row) => el("tr", {},
-    el("th", { scope: "row", class: "mu-rowhead", title: row.title },
-      el("span", { class: pick ? "mu-rowhead-text" : null, text: names.get(row.id) }),
-      // From 1,400 px, where the side list shows one deck's matchups, the row's name picks that deck.
-      pick ? el("button", { type: "button", class: "mu-rowhead-pick", text: names.get(row.id),
-        "aria-pressed": String(row.id === pick.current), "aria-label": `Show matchups for ${row.title}`,
-        onclick: () => pick.choose(row.id) }) : null),
-    decks.map((col) => {
-      if (sameDeckId(col.id) === sameDeckId(row.id)) {
-        return el("td", { class: "mu-cell is-self" }, el("span", { class: "sr-only", text: "Same deck" }));
-      }
-      const pair = pairs.get(`${format}|${pairKey(row.id, col.id)}`);
-      if (!pair) {
-        return el("td", { class: "mu-cell is-empty" }, may
-          ? el("a", { class: "mu-cell-link mu-cell-plus", href: matchupHref(row, col),
-            "aria-label": `Play ${row.title} against ${col.title}`, text: "+" })
-          : el("span", { class: "sr-only", text: "Not played" }));
-      }
-      const side = fromSide(pair.latest, row.id);
-      const value = side.rate.value;
-      const playNow = side.me.version === "owned" || side.them.version === "owned";
-      const older = playNow || side.me.current === false || side.them.current === false;
-      const muted = !!pair.latest.not_meaningful;
-      const words = muted ? "results mean nothing (a commander never cast)"
-        : value == null ? "no winner counted yet"
-          : `${edgeWords(value).toLowerCase()}, wins ${pct(value, 0)}`;
-      const which = playNow ? ` (${sideShort(side.me)} vs ${sideShort(side.them)})` : "";
-      const cls = muted ? "is-muted" : value == null ? "mu-h-none" : heatClass(value);
-      return el("td", { class: `mu-cell ${cls}${older ? " is-older" : ""}` },
-        el("a", { class: "mu-cell-link", href: side.href, title: `${row.title} vs ${col.title}${which}: ${words}`,
-          "aria-label": `${row.title} against ${col.title}${which}: ${words}` +
-            `${playNow ? ", played with a play-now list" : older ? ", played with an older list" : ""}` },
-        muted ? "–" : value == null ? "?" : pct(value, 0)));
-    })));
-  return el("div", { class: "mu-matrix-wrap", tabindex: "0", role: "region", "aria-label": "Every deck against every other" },
-    el("table", { class: "mu-matrix" },
-      el("caption", { class: "sr-only", text: "Each row deck's latest win rate against each column deck" }),
-      el("thead", {}, head), el("tbody", {}, rows)));
-}
-
-/** The matrix's key: the diverging scale, what faded means, "–" (when a cell shows it) and the "+". */
-function matrixKey(matrix) {
-  const step = (cls, words) => el("li", {}, el("span", { class: `mu-key-swatch ${cls}`, "aria-hidden": "true" }), words);
-  return el("ul", { class: "legend mu-matrix-key", "aria-label": "Key" },
-    step("mu-h-loss3", "Loses most games"), step("mu-h-even", "About even"), step("mu-h-win3", "Wins most games"),
-    step("mu-h-win1 is-older", "Faded: a list has changed since, or a play-now list played"),
-    matrix && matrix.querySelector(".mu-cell.is-muted") ? el("li", {}, el("span", { class: "mu-key-swatch is-muted mu-key-dash",
-      "aria-hidden": "true", text: "–" }), "Means nothing: a commander Forge never casts") : null,
-    runsAllowed() ? el("li", {}, el("span", { class: "mu-key-plus", "aria-hidden": "true", text: "+" }), "Not played yet: tap to play") : null);
-}
-
-/** One deck's matchups as a sorted list (a phone's matrix): a row per opponent, best matchup first (results
- * that mean nothing last), the pair's earlier results on its page; then "Not played yet against". engines:
- * whether any result was played with today's engine (then an older one is tagged). */
-function deckMatchupList(deck, decks, pairs, format, engines = false) {
-  const entries = [];
-  const played = new Set();
-  // Only the decks on the matrix's axes: a deck deleted since keeps its results on its opponents' deck pages.
-  const onAxis = new Set(decks.map((d) => sameDeckId(d.id)));
+/** One best saved result per opponent, from the selected deck's side. The shared model keeps the table,
+ * casual cards and touch lab links in the same order. Deleted decks stay on the deck pages, off these axes. */
+function matchupEntries(deck, decks, pairs, format, engines = false) {
+  const entries = [], played = new Set(), onAxis = new Set(decks.map((d) => sameDeckId(d.id)));
   for (const [key, pair] of pairs) {
     if (!key.startsWith(`${format}|`)) continue;
-    const ids = pair.latest.sides.map((s) => sameDeckId(s.id));
-    if (!ids.includes(sameDeckId(deck.id))) continue;
-    const side = fromSide(pair.latest, deck.id);
+    if (!pair.latest.sides.some((s) => sameDeckId(s.id) === sameDeckId(deck.id))) continue;
+    const item = pair.latest, side = fromSide(item, deck.id);
     if (!onAxis.has(sameDeckId(side.them.id))) continue;
     played.add(sameDeckId(side.them.id));
-    entries.push({ pair, value: side.rate.value, muted: !!pair.latest.not_meaningful });
+    const olderWords = [side.me.current === false ? "this list has changed since" : null,
+      side.them.current === false ? "the opponent's list has changed since" : null,
+      side.me.version === "owned" || side.them.version === "owned" ? "played with a play-now list" : null]
+      .filter(Boolean).join("; ");
+    entries.push({ item, side, value: side.rate.value, muted: !!item.not_meaningful, olderWords,
+      engineTag: engines && !pair.newer && earlierEngine(item) });
   }
   entries.sort(byBestFirst);
-  const others = decks.filter((d) => sameDeckId(d.id) !== sameDeckId(deck.id) && !played.has(sameDeckId(d.id)));
+  return { entries, others: decks.filter((d) => sameDeckId(d.id) !== sameDeckId(deck.id) && !played.has(sameDeckId(d.id))) };
+}
+
+/** Keep a whole-row link's spoken name to its opponent, the rate and facts that change how it reads. */
+function matchupOpponentLabel(entry) {
+  const { side, muted, olderWords, engineTag } = entry;
+  return [sideTitle(side.them), winRateWords(side.rate, "win rate"), muted ? "results are not meaningful" : null,
+    olderWords, engineTag ? "earlier engine" : null].filter(Boolean).join(", ");
+}
+
+/** Only facts the saved pair actually supplies: field strong/weak flags are never inferred from its rate. */
+function matchupOpponentFlags(entry) {
+  return [entry.muted ? status("crit", "Not meaningful") : null,
+    entry.engineTag ? status("plain", "Earlier engine") : null];
+}
+
+/** Mouse lab: real table semantics. The range is its own column, so the rate figure says only the point. */
+function matchupOpponentTable(entries) {
+  return el("div", { class: "mu-opponent-table" }, el("table", { class: "data" },
+    el("caption", { class: "sr-only", text: "Matchups by win rate, best first; results that mean nothing last" }),
+    el("thead", {}, el("tr", {}, ["Opponent", "Win rate", "95% range", "Range", "Games", "Flag"]
+      .map((text) => el("th", { scope: "col", text })))),
+    el("tbody", {}, entries.map((entry) => {
+      const { item, side, muted, olderWords } = entry;
+      const range = side.rate.value == null ? null : simRange(side.rate);
+      return el("tr", { class: [olderWords && "is-older", muted && "is-muted"].filter(Boolean).join(" ") },
+        el("th", { scope: "row" }, el("a", { class: "mu-opponent-name", href: side.href, text: sideTitle(side.them),
+          title: olderWords ? capitalise(olderWords) : null }),
+          olderWords ? el("span", { class: "sr-only", text: `${capitalise(olderWords)}. ` }) : null),
+        el("td", { class: "num" }, winRateFigure({ value: side.rate.value }, { what: "Win rate", barred: true })),
+        el("td", { class: "num" }, range ? el("span", { class: "sim-num", text: `${range}%` })
+          : el("small", { text: "Not known" })),
+        el("td", {}, rangeBar(side.rate, { compact: true, muted, decorative: true })),
+        el("td", { class: "num sim-num", text: thousands(item.games) }),
+        el("td", {}, el("span", { class: "mu-opponent-flags" }, matchupOpponentFlags(entry)),
+          freshnessBadge(item.updated, { size: "row", compact: true, changed: side.me.current === false || side.them.current === false })));
+    }))));
+}
+
+/** Casual cards and touch lab rows: each is one link, never an anchor pretending to be a table row. */
+function matchupOpponentLinks(entries) {
+  return el("ul", { class: "mu-opponent-links" }, entries.map((entry) => {
+    const { item, side, muted, olderWords } = entry;
+    return el("li", {}, el("a", { class: `mu-opponent-row${olderWords ? " is-older" : ""}${muted ? " is-muted" : ""}`, href: side.href,
+      "aria-label": matchupOpponentLabel(entry) },
+      el("span", { class: "mu-opponent-name", text: sideTitle(side.them) }),
+      el("span", { class: "mu-barline" }, rangeBar(side.rate, { compact: true, muted, decorative: true }),
+        el("span", { class: "mu-pct" }, winRateFigure(side.rate, { what: "Win rate", barred: true }))),
+      el("span", { class: "mu-meta" }, simNumbers(gamesWords(item.games)),
+        freshnessBadge(item.updated, { size: "row", compact: true, changed: side.me.current === false || side.them.current === false }), matchupOpponentFlags(entry))));
+  }));
+}
+
+/** The deck page keeps its result cards and changed-list key; it shares the home's best-first entries. */
+function deckMatchupList(deck, decks, pairs, format, engines = false) {
+  const { entries, others } = matchupEntries(deck, decks, pairs, format, engines);
   return [
-    entries.length ? olderKey(entries.map(({ pair }) => ({ item: pair.latest, deckId: deck.id }))) : null,
-    entries.length ? el("ul", { class: "mu-list" }, entries.map(({ pair }) =>
-      resultRow(pair.latest, { against: true, deckId: deck.id, engineTag: engines && !pair.newer })))
+    entries.length ? olderKey(entries.map(({ item }) => ({ item, deckId: deck.id }))) : null,
+    entries.length ? el("ul", { class: "mu-list" }, entries.map(({ item, engineTag }) =>
+      resultRow(item, { against: true, deckId: deck.id, engineTag })))
       : el("p", { class: "empty", text: `${deck.title} hasn't played a matchup yet.` }),
     notPlayedLine(deck, others)];
 }
@@ -533,7 +518,7 @@ function drawMatchups(library, matchups, params, token) {
     onclick: opener }) : null;
   add(main, [
     pageHead({ title: routeH1("matchups"), description: "Forge, a free Magic rules engine, plays two decks " +
-      "against each other on the PC, hundreds of times, and counts who wins.", primary: play }),
+      "against each other on the PC, hundreds of times, and counts who wins.", primary: play, badge: simulationsChip() }),
     gate.may ? null : el("p", { class: "run-blocked mu-gate", text: gate.why }),
     forgeBox(data.forge),
     updates.node, lists]);
@@ -556,9 +541,8 @@ function drawMatchups(library, matchups, params, token) {
     b: params.get("b"), bv: params.get("bv") }, null);
 }
 
-/** The home's lists: the runs playing now, then the format switch (when both have decks) and that format's
- * matrix, with the phone's "Show matchups for [deck]" list in its place under 600 px (and beside the matrix
- * from 1400 px). view keeps the format and deck picked across redraws. */
+/** The runs playing now, then one deck's opponents, as cards below 1000 px, a table with a mouse and whole
+ * link rows in the touch lab. view keeps the selected mode, format and deck across redraws. */
 function drawHome(host, data, library, view) {
   clear(host);
   const running = data.running || [], results = data.results || [];
@@ -607,22 +591,24 @@ function drawHome(host, data, library, view) {
     local.set(HOME_DECK_KEY, id);
     replaceMatchupContent(host, () => drawHome(host, data, library, view));
   };
-  // The phone's list (beside the matrix from 1,400 px): one deck's matchups, sorted.
+  // The same selected deck and best-first opponents at every density.
   const played = (d) => shown.filter((r) => r.sides.some((s) => sameDeckId(s.id) === sameDeckId(d.id))).length;
   if (!decks.some((d) => d.id === view.deck)) {
     const kept = keptPick;
     view.deck = decks.some((d) => d.id === kept) ? kept
       : [...decks].sort((x, y) => played(y) - played(x))[0].id;
   }
-  const matrix = matchupMatrix(decks, pairs, view.format, { current: view.deck, choose });
-  const body = el("div", { class: "mu-home-body" }, el("div", { class: "mu-matrix-part" }, matrix, matrixKey(matrix)));
+  const body = el("div", { class: "mu-home-body" });
   const names = shortNames(decks);
   const select = el("select", { id: "mu-deck-pick", onchange: () => choose(select.value) },
     decks.map((d) => el("option", { value: d.id, text: names.get(d.id), title: d.title, selected: d.id === view.deck })));
   const deck = decks.find((d) => d.id === view.deck);
-  body.append(el("div", { class: "mu-phone-part" },
-    el("label", { class: "field mu-deck-field", for: select.id }, el("span", { text: "Show matchups for" }), select),
-    deckMatchupList(deck, decks, pairs, view.format, anyTodaysEngine(shown))));
+  const { entries, others } = matchupEntries(deck, decks, pairs, view.format, anyTodaysEngine(shown));
+  add(body, [el("label", { class: "field mu-deck-field", for: select.id }, el("span", { text: "Show matchups for" }), select),
+    el("div", { class: "mu-opponents" }, entries.length
+      ? [matchupOpponentTable(entries), matchupOpponentLinks(entries)]
+      : el("p", { class: "empty", text: `${deck.title} hasn't played a matchup yet.` })),
+    notPlayedLine(deck, others)]);
   section.append(body);
 }
 
@@ -715,17 +701,20 @@ function muRankingRow(row) {
   const versions = row.versions?.length ? row.versions : [row.version || "target"];
   const list = versions.length > 1 ? "Planned and play-now lists (same cards and pilot)" : capitalise(listName(versions[0], true));
   const r = row.rating, rated = r && Number.isFinite(r.value);
-  const rating = rated ? `Rating ${pct(r.value, 0)}` + (Number.isFinite(r.low) && Number.isFinite(r.high)
-    ? ` (95% range ${pct(r.low, 0)}–${pct(r.high, 0)})` : "") : null;
-  const rank = rated && Number.isFinite(r.rank) ? `Rank ${r.rank} of ${r.of}` : "No rating yet";
+  const rate = rated ? { value: r.value, low: Number.isFinite(r.low) ? r.low : null,
+    high: Number.isFinite(r.high) ? r.high : null } : null;
+  const rank = rated && Number.isFinite(r.rank) && Number.isFinite(r.of) ? `Rank ${r.rank} of ${r.of}` : "No rating yet";
   const range = rated && Number.isFinite(r.rank_low) && Number.isFinite(r.rank_high)
-    ? `Likely rank ${r.rank_low === r.rank_high ? r.rank_low : `${r.rank_low}–${r.rank_high}`}` : "Rank range unavailable";
+    ? `Likely rank ${r.rank_low === r.rank_high ? r.rank_low : `${r.rank_low}-${r.rank_high}`}` : "Rank range unavailable";
   return el("li", { class: "mu-ranking-row", "data-deck": row.id, "data-version": row.version },
     el("div", { class: "mu-ranking-name" }, el("a", { href: deckHref(row.id, row.version), text: row.title }),
       el("span", { class: "sub", text: list })),
-    el("div", { class: "mu-ranking-score" }, el("strong", { text: rated ? rank : row.in_field === false ? "Outside the field" : rank }),
-      rated ? el("span", { text: range }) : null,
-      el("span", { class: "sub", text: metaWords(rating, row.in_field === false ? null : gamesWords(row.games)) })),
+    el("div", { class: "mu-ranking-score" },
+      rated ? el("span", { class: "sub", text: "Rating " }) : null,
+      rated ? winRateFigure(rate, { size: "hero", what: "Rating against an average current field list" }) : null,
+      el("strong", {}, simNumbers(rated ? rank : row.in_field === false ? "Outside the field" : rank)),
+      rated ? el("span", {}, simNumbers(range)) : null,
+      row.in_field !== false && Number.isFinite(row.games) ? el("span", { class: "sub" }, simNumbers(gamesWords(row.games))) : null),
     row.unsettled ? status("warn", "Unsettled") : null,
     row.exclusion || row.reasons?.length ? el("p", { class: "mu-ranking-reasons", text:
       [...new Set([row.exclusion, ...(row.reasons || [])].filter(Boolean))].join(" ") }) : null);
