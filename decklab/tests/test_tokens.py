@@ -854,6 +854,28 @@ class HolderTests(IndexTestCase):
                                          "token": "Insect", "side": "front", "state": "differs"}])
         self.assertTrue(all(u["token"] != "Zombie Rogue" for us in uses.values() for u in us))   # hints aren't uses
 
+    def test_built_ids_are_the_built_decks(self):
+        self.assertEqual(tokens.built_ids(), {"casual/built"})
+
+    def test_shared_rows_need_more_built_holders_than_cards(self):
+        inv = tokens.read()
+        row = next(i for i, r in enumerate(inv.rows) if r["back"] == "Zombie Knight")
+        cards_ = int(inv.rows[row]["quantity"])
+
+        def use(deck, state="ready"):
+            return {"deck": deck, "title": deck.split("/")[-1], "link": deck, "token": "Zombie",
+                    "side": "front", "state": state}
+        built = {f"casual/b{n}" for n in range(cards_ + 1)}
+        enough = {row: [use(f"casual/b{n}") for n in range(cards_)] + [use("casual/building")]}
+        self.assertEqual(tokens.shared_rows(inv, enough, built), {})      # a deck being built never counts
+        twice = {row: [use("casual/b0"), use("casual/b0", "differs")] * (cards_ + 1)}
+        self.assertEqual(tokens.shared_rows(inv, twice, built), {})       # one deck counts once
+        over = {row: [use(f"casual/b{n}") for n in range(cards_)] + [use("product/kit", "differs")]}
+        shared = tokens.shared_rows(inv, over, built)                     # an intact product and a stand-in count
+        self.assertEqual([h["deck"] for h in shared[row]], [f"casual/b{n}" for n in range(cards_)] + ["product/kit"])
+        self.assertTrue(tokens.shared_words(inv.rows[row], shared[row]).startswith(
+            f"Only {cards_} card{'' if cards_ == 1 else 's'}, used by {cards_ + 1} built decks: b0"))
+
     def test_a_product_with_named_decks_has_no_deck_link(self):
         self.write("products/test-product.csv", "deck,section,name,quantity,finish,set,collector_number\n"
                                                 "Gisa,deck,\"Gisa, the Hellraiser\",1,nonfoil,potj,89s\n"

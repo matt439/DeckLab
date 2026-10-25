@@ -275,7 +275,37 @@ def _view_tokens(summary, version, sections, info):
         found = _TOKEN_LINE.match(problem)
         info.append(f"Token cards line {found[1]} couldn't be read; see the Tokens page" if found
                     else _scrub([problem])[0])
-    return _with_examples(_deck_tokens(summary["id"], version, sections, inv, inc))
+    return _with_shared(_with_examples(_deck_tokens(summary["id"], version, sections, inv, inc)),
+                        summary, inv, inc)
+
+
+def _with_shared(result, summary, inv, inc):
+    """result with "shared" on each card to grab: the other built decks that use that token
+    card (tokens.shared_rows), when more built decks use it than it has cards; [] otherwise
+    (and result as it is when no card has any).
+    The page says so beside the card. Decks the viewer may not see leave the card's "shared"
+    empty, as the Tokens page does. A copy; the cached result is never changed."""
+    needs = result.get("needs") if isinstance(result, dict) else None
+    if not needs or not any(need.get("cards") for need in needs):
+        return result
+    space = summary.get("space", spaces.HOME)
+    try:
+        shared = tokens.shared_rows(inv, tokens.row_uses(inv, inc, [], space), tokens.built_ids(space))
+    except Exception:           # the deck's tokens still show; the log has the details
+        common._log("The shared token cards couldn't be worked out:\n" + traceback.format_exc())
+        return result
+    from .tokens import _seen_holders
+    sees = guard.deck_reader()
+
+    def others(row):
+        holders = _seen_holders(shared.get(row, []), sees)
+        return [h for h in holders if h["deck"] != summary["id"]] if holders else []
+    if not any(others(card["row"]) for need in needs for card in need.get("cards") or []):
+        return result
+    out = dict(result)
+    out["needs"] = [dict(need, cards=[dict(card, shared=others(card["row"])) for card in need.get("cards") or []])
+                    for need in needs]
+    return out
 
 
 def _token_pool(space):

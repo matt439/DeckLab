@@ -143,12 +143,12 @@ def _face(row, side, index_ready):
             "example": example}
 
 
-def _row_json(i, row, uses, index_ready):
+def _row_json(i, row, uses, shared, index_ready):
     return {"key": f"r{i}", "index": i, **row, "quantity": int(row["quantity"]),
             "single_sided": not row["back"] and bool(_SINGLE.search(row["notes"])),
             "unconfirmed": rules.token_uncertain(row),
             "faces": [_face(row, side, index_ready) for side in ("front", "back") if side == "front" or row[side]],
-            "uses": uses.get(i, [])}
+            "uses": uses.get(i, []), "shared": shared.get(i, [])}
 
 
 def _incoming_json(found):
@@ -180,7 +180,9 @@ def tokens_view(space=None):
     own decks, with no orders): {space, sha256 (None before the space has
     any), exists, sorted, index_ready, rows: [{key "r<i>", index, the ten
     fields (quantity an int), single_sided, unconfirmed, faces [{side, name,
-    details, known, image, example}], uses [{deck, title, token, side, state}]}],
+    details, known, image, example}], uses [{deck, title, token, side, state}],
+    shared [{deck, title, link}]: the built decks that use the row, when there are more than its
+    cards (tokens.shared_rows; [] otherwise)}],
     cards (physical cards in all), missing (tokens.gaps: the tokens built and
     building decks and intact products need with nothing owned), incoming
     (pending token orders: {order, component, path, cards, rows}),
@@ -210,6 +212,8 @@ def _tokens_view(space):
                                         else ([], []))
             index_ready = tokens._ready()
             uses = _deck_side("token uses", lambda: tokens.row_uses(inv, found, warnings, space), {}, info)
+            shared = _deck_side("shared token cards",
+                                lambda: tokens.shared_rows(inv, uses, tokens.built_ids(space)), {}, info)
             missing = _deck_side("missing tokens", lambda: tokens.gaps(inv, found, warnings, space), [], info)
     except OSError as e:
         raise ApiError(500, f"The tokens list can't be read: {_public(e)}") from None
@@ -224,11 +228,12 @@ def _tokens_view(space):
     if not records:
         found, incoming_problems = [], []
     uses = {i: _seen_uses(items, sees) for i, items in uses.items()}
+    shared = {i: _seen_holders(holders, sees) for i, holders in shared.items()}
     missing = [_seen_gap(gap, sees) for gap in missing]
     warnings = [text for text in warnings if _seen_text(text, sees, records)]
     return {"space": space, "sha256": inv.sha256, "exists": inv.sha256 is not None, "sorted": inv.sorted,
             "index_ready": index_ready,
-            "rows": [_row_json(i, row, uses, index_ready) for i, row in enumerate(inv.rows)],
+            "rows": [_row_json(i, row, uses, shared, index_ready) for i, row in enumerate(inv.rows)],
             "cards": sum(int(row["quantity"]) for row in inv.rows),
             "missing": missing, "incoming": _incoming_json(found), "face_names": face_names,
             "keywords": sorted(tokens._keywords()), "problems": _unique(_scrub(inv.problems)),
@@ -243,6 +248,14 @@ def _seen_use(use, sees):
     if named_holder(use["deck"], sees):
         return use
     return {**use, "deck": None, "title": guard.hidden_deck(use["deck"]), "link": None}
+
+
+def _seen_holders(holders, sees):
+    """A shared row's built holders ({deck, title, link}, tokens.shared_rows), or [] when the
+    viewer may not see one of them: the warning would tell how many hidden decks use the row,
+    which _seen_uses keeps from being told."""
+    from .inventory_views import named_holder
+    return holders if all(named_holder(h["deck"], sees) for h in holders) else []
 
 
 def _seen_uses(items, sees):
