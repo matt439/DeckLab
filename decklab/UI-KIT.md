@@ -41,6 +41,13 @@ media listener while ordinary choice changes close only build/stand-in reviews.
 The [drawing](design/packing-chooser.svg) preceded implementation. This adds no
 allocation, progress, inventory or save contract.
 
+Selected packing participants expose optional `data.decks[].colors` copied from
+the already-loaded canonical Planned/library summary, including for Play-now or
+partial sideboard recipes. Null means unknown; an empty array means known
+colourless. This is decoration only: unselected choices have no added colours,
+and selections, task keys, fingerprints, reads and accepted requests stay the same.
+The current chooser does not yet render it.
+
 `assembly-progress.js` follows the chooser script: shared Build decks checkmarks,
 per-task identities and patches, pending-save status, polling and Clear/Undo.
 Sorting remains a browser preference. Progress is shared through the server;

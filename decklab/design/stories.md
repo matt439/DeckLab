@@ -3824,6 +3824,8 @@ Slice 11's canonical Planned/library hint swatches built 2026-10-25: optional co
 
 Slice 13's first chooser batch built 2026-10-25: reviewed Decks-sheet drawing, one chooser tree in a sheet below 1000px or a 300px rail, preserved groups/presets/twelve-participant/version/sideboard scope, guarded current-focus recovery and unchanged previews/saves. 236 integrated checks passed with zero skips and live DB/Python sockets blocked; 24 synthetic Chromium viewport/theme cases and native dismissal/capacity/recipe/error/breakpoint focus checks passed with actual data writes disabled. See [HISTORY.md](../HISTORY.md#packing-decks-chooser-and-responsive-rail-2026-10-25-e11-s30-slice-13). Remaining slice 13 presentation and human/device gates stay open.
 
+Slice 13's selected participant data now carries optional canonical Planned identity from an already-read summary, with no extra reads or allocation/request/fingerprint change. Sixty-three guarded fixture checks passed, including full-plan equality and Planned-versus-physical divergence. The chooser UI is unchanged; the remaining presentation will consume this decoration.
+
 Gap: slices 9 to 12's touch/Safari acceptance, Collection's open colour-filter choice and Receive's check-to-row association; then slices 13 to 15 (criteria 1 to 3 and 6). Independent coding through slice 12 is built; component checks stay separate until their row association is authoritative. Device checks do not block coding. Section 6's question 4 is settled (Matt, 2026-10-25: only Building and Idea tiles show a status pill). The lab top bar's search is E11-S31.
 
 <a id="e11-s31"></a>

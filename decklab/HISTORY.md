@@ -2,6 +2,12 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Planned identity on selected packing participants (2026-10-25; E11-S30 slice 13)
+
+Selected packing participants now copy optional canonical Planned/library colours from the summary already loaded by the existing deck reader. Play-now selection and explicit sideboard recipes do not replace that identity. Arrays are independent copies; known colourless remains an empty array and unknown/failed identity remains null. Unselected chooser options remain undecorated. This supplies the later presentation without changing the current UI, shelf helper, reads, allocations, normalized selections, assembly keys, completion fingerprints or accepted request fields.
+
+Validation: 63 guarded fixture checks passed with zero skips, including six new cases for Planned/owned/recipe divergence, Commander/colourless/unknown identity, array isolation, existing identity-fault fallback, exact read traces and full-plan equality after removing only decoration, immutable source/request/files, twelve participants and thirteenth rejection. The 33 web/page contracts also passed. Database probes/connections and Python socket connections/binding were blocked. No real inventory/database write, browser/device acceptance or new visual claim. Source audit: 773 owned files; only the pre-existing tokens.js (1,516 lines) exceeds 1,200.
+
 ## Packing Decks chooser and responsive rail (2026-10-25; E11-S30 slice 13)
 
 The Decks-sheet drawing was reviewed before implementation ([drawing](design/packing-chooser.svg), [scope](design/packing-chooser.md)). Below 1000px, one original chooser subtree moves into the shared sheet; from 1000px it occupies a 300px sticky rail. Close, Show the plan, Escape and Back only dismiss. All eligible choices, status/usual-opponent groups, presets, Planned/Play-now lists, explicit sideboard recipes and the existing 12-selected-deck limit remain. There is one current status/error node and no inferred colour or shortfall data.
