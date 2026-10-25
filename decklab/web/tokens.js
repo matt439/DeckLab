@@ -5,7 +5,9 @@
  * Also the pieces other pages use (deck.js, library.js and assembly.js):
  *     tokenThumb(url, px, label)      a token's small picture from Deck Lab's /img/ route, with a fallback
  *     tokenStateChip(state, words)    a need's state as a chip: "Have it: 8 cards", "None owned", ...
- *     tokenNeedList(needs)            a deck's needs as a list (lib/tokens deck_tokens's "needs")
+ *     tokenNeedList(needs, faces)     a deck's needs as a list (lib/tokens deck_tokens's "needs")
+ *     tokFacesUsed(needs)             the faces of each token card a deck uses, for tokSides
+ *     tokSides(card, faces)           "Zombie side only, can be sleeved" or "both sides used"
  *
  * Every write goes to /api/tokens/... (lib/api/tokens.py), which checks the list's sha256. The rows have
  * no ids, so a row is named by its ten values as the page loaded them ("base"): a list changed by
@@ -62,10 +64,49 @@ function tokenStateChip(state, words) {
 /** "Zombie / Zombie Knight" or, for a single-sided card, "The Monarch". */
 function tokLabel(row) { return row.back ? `${row.front} / ${row.back}` : row.front; }
 
-/** "Zombie / Zombie Knight ×8, Zombie side" (no side for a single-sided card). */
-function tokCardWords(card) {
+/** The key tokFacesUsed files a token card under: its row and faces (a row index alone could name another
+ * card once the list has changed). */
+function tokFacesKey(card) { return JSON.stringify([card.row, tokFold(card.front), tokFold(card.back || "")]); }
+
+/** Map of tokFacesKey -> Map(folded face -> face): the faces of each token card a deck uses, from its
+ * deck_tokens needs: the cards it grabs for a need it has, and the stand-in it uses for one that differs.
+ * A card whose two faces both show up there is needed both ways up; one used for a single face (Rabbit /
+ * Rabbit counts as one) can go in a sleeve. */
+function tokFacesUsed(needs) {
+  const faces = new Map();
+  for (const need of needs || []) {
+    const used = (need.cards || []).length ? need.cards
+      : need.state === "differs" && (need.stand_ins || []).length ? [need.stand_ins[0]] : [];
+    for (const card of used) {
+      const face = card.side === "back" ? card.back : card.front;
+      if (!face) continue;
+      const key = tokFacesKey(card);
+      if (!faces.has(key)) faces.set(key, new Map());
+      faces.get(key).set(tokFold(face), face);
+    }
+  }
+  return faces;
+}
+
+/** How much of a double-sided token card a deck uses: "both sides used", or "Zombie side only, can be
+ * sleeved" when the deck needs just one face (so the card can go in a sleeve that hides the other).
+ * null for a single-sided card or one the deck doesn't use. faces: tokFacesUsed. */
+function tokSides(card, faces) {
+  if (!card.back || !faces) return null;
+  const used = faces.get(tokFacesKey(card));
+  if (!used || !used.size) return null;
+  return used.size > 1 ? "both sides used" : `${[...used.values()][0]} side only, can be sleeved`;
+}
+
+/** "Zombie / Zombie Knight ×8, Zombie side" (no side for a single-sided card), with tokSides's words when
+ * faces is given: "…, Zombie side only, can be sleeved" or "…, Zombie side (both sides used)". */
+function tokCardWords(card, faces = null) {
   const face = card.side === "back" ? card.back : card.front;
-  return `${tokLabel(card)} ×${card.quantity}` + (card.back && face ? `, ${face} side` : "");
+  const sides = tokSides(card, faces);
+  const side = !card.back || !face ? ""
+    : sides && sides !== "both sides used" ? `, ${face} side only, can be sleeved`
+    : `, ${face} side` + (sides ? ` (${sides})` : "");
+  return `${tokLabel(card)} ×${card.quantity}${side}`;
 }
 
 /** A need's characteristics in words: "2/2 black creature with flying". */
@@ -90,8 +131,9 @@ function tokMadeBy(madeBy) {
 }
 
 /** One need of a deck: picture, name and characteristics, who makes it, its state, the cards to grab and
- * the stand-ins, with why each stand-in differs. */
-function tokenNeed(need) {
+ * the stand-ins, with why each stand-in differs. faces (tokFacesUsed of all the deck's needs) adds whether
+ * a double-sided card to grab is needed both ways up. */
+function tokenNeed(need, faces = null) {
   const cards = need.cards || [], standIns = need.stand_ins || [], incoming = need.incoming || [];
   const desc = need.key && String(need.key).startsWith("name:") ? "" : tokNeedWords(need);
   // A token without a picture of its own shows example art of a token with its name, labelled as such.
@@ -104,7 +146,7 @@ function tokenNeed(need) {
       tokMadeBy(need.made_by),
       el("p", { class: "token-need-state" }, tokenStateChip(need.state, need.words)),
       cards.length ? el("ul", { class: "token-grab", "aria-label": "Grab" }, cards.map((card) => el("li", {},
-        `Grab ${tokCardWords(card)}`,
+        `Grab ${tokCardWords(card, faces)}`,
         card.also_for && card.also_for.length ? ` (same card as for ${card.also_for.join(" and ")})` : null,
         card.shared && card.shared.length ? el("small", { class: "tok-shared",
           text: `Also used by ${card.shared.map((h) => h.title).join(" and ")}, with too few cards for all of them` }) : null,
@@ -118,9 +160,10 @@ function tokenNeed(need) {
           card.why && card.why.length ? el("small", { text: card.why.join("; ") }) : null)))) : null));
 }
 
-/** A deck's token needs (deck_tokens's "needs") as a list, in the server's order. */
-function tokenNeedList(needs) {
-  return el("ul", { class: "token-needs" }, (needs || []).map(tokenNeed));
+/** A deck's token needs (deck_tokens's "needs") as a list, in the server's order. faces: tokFacesUsed of
+ * all the deck's needs (tokenNeed). */
+function tokenNeedList(needs, faces = null) {
+  return el("ul", { class: "token-needs" }, (needs || []).map((need) => tokenNeed(need, faces)));
 }
 
 /** "4 ready · 1 to check · 1 you don't have" from a deck_tokens result's counts. */

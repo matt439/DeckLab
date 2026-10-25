@@ -2,6 +2,14 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## One side or both of a token card (2026-10-25)
+
+Matt sleeves a double-sided token card when a deck needs only one of its faces, and leaves it bare when both are needed. The pages now say which (`tokens.js` `tokFacesUsed` and `tokSides`, worked out on the page from the deck's `deck_tokens` needs, so the server's answers are unchanged):
+
+- **Deck page:** each packed card ("Packed: 2 Zombie // Zombie Knight (Zombie side only, can be sleeved)") and each card to grab ("Zombie side (both sides used)").
+- **Packing plan:** the grab and stand-in ticks ("(Zombie side only, can be sleeved)", "(Zombie side; both sides used)").
+- A face counts as used when the deck grabs the card for a token it makes, or uses it as the stand-in for one that differs. Rabbit / Rabbit is one face. Single-sided cards say nothing. Not checked in a browser.
+
 ## Token cards reserved by built decks (2026-10-25)
 
 Built decks hold token cards now, as they hold playable cards. Until now one token row counted as owned for every deck that made that token.

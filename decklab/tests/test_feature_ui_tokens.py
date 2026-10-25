@@ -497,7 +497,7 @@ class TokensUiTests(unittest.TestCase):
                                'Insect 1/1 green creature with flying, deathtouch',
                                'Different token: your card says no deathtouch',
                                'Grab Elf Warrior / Cat ×1, Cat side', 'colour not recorded',
-                               'Grab Zombie / Zombie Knight ×8, Zombie side (same card as for The Monarch)',
+                               'Grab Zombie / Zombie Knight ×8, Zombie side only, can be sleeved (same card as for The Monarch)',
                                'Have it: 8 cards', 'Only for sideboard cards', 'Grab Ooze ×1', 'Makes copies: 1 card',
                                'Gandalf, Westward Voyager', "May also make things Scryfall doesn't link: 1 card", 'Elrond',
                                'Edit your tokens']) {
@@ -548,7 +548,7 @@ class TokensUiTests(unittest.TestCase):
           const section = tokensSection(data);
           main.append(section);
           const text = section.textContent;
-          for (const words of ['Packed: 2 Zombie // Zombie Knight; 1 Treasure (no token card matches)',
+          for (const words of ['Packed: 2 Zombie // Zombie Knight (Zombie side only, can be sleeved); 1 Treasure (no token card matches)',
                                'In use: Spirit ×1, packed in Other Deck', 'All yours are packed in Other Deck']) {
             assert(text.includes(words), words);
           }
@@ -582,6 +582,36 @@ class TokensUiTests(unittest.TestCase):
           assert.equal(tokSharedWords({...row0, quantity: 1, shared: row0.shared.map(h => ({...h, quantity: 1}))}),
             "Only 1 card, used by 2 built decks: A Deck and B Deck. They can't all have one packed.");
           assert.equal(tokenStateChip('in_use').textContent, 'Packed in other decks');
+        """)
+
+    def test_double_sided_token_cards_say_whether_both_sides_are_used(self):
+        self.run_js(self.TOKENS + """
+          // One row, Zombie / Zombie Knight, used for both its faces: both sides are needed, so no sleeve.
+          const zk = need('Zombie Knight', 'ready', 'Have it: 8 cards', {cards: [card('Zombie', 'Zombie Knight', 8, 'back', 'agrees')]});
+          const both = [needs[4], zk];
+          const faces = tokFacesUsed(both);
+          assert.equal(tokSides({row: 0, front: 'Zombie', back: 'Zombie Knight'}, faces), 'both sides used');
+          assert.equal(tokSides({row: 0, front: 'Ooze', back: ''}, faces), null);           // single-sided
+          assert.equal(tokSides({row: 7, front: 'Zombie', back: 'Zombie Knight'}, faces), null);   // not this deck's
+          assert.equal(tokSides({row: 0, front: 'Zombie', back: 'Zombie Knight'}, tokFacesUsed([needs[4]])),
+            'Zombie side only, can be sleeved');
+          // Rabbit / Rabbit is one face, whichever side is up.
+          const rabbits = [need('Rabbit', 'ready', '', {cards: [card('Rabbit', 'Rabbit', 2, 'front', 'exact')]}),
+                           need('Rabbit', 'ready', '', {key: 'k-r2', cards: [card('Rabbit', 'Rabbit', 2, 'back', 'exact')]})];
+          assert.equal(tokSides({row: 0, front: 'Rabbit', back: 'Rabbit'}, tokFacesUsed(rabbits)), 'Rabbit side only, can be sleeved');
+          clear(main);
+          const packed = {written: true, expect: 'b'.repeat(64), tokens_sha256: 'a'.repeat(64), choices: [],
+            lines: [{text: '2 Zombie // Zombie Knight', quantity: 2, rows: [{row: 0, front: 'Zombie', back: 'Zombie Knight', quantity: 2}]}]};
+          const section = tokensSection({summary: {id: 'casual/zed', player: 'user'}, tokens: {...deckTokensResult, needs: both, packed}});
+          const text = section.textContent;
+          for (const words of ['Packed: 2 Zombie // Zombie Knight (both sides used)',
+                               'Grab Zombie / Zombie Knight ×8, Zombie side (both sides used)',
+                               'Grab Zombie / Zombie Knight ×8, Zombie Knight side (both sides used)']) {
+            assert(text.includes(words), words);
+          }
+          const ticks = assemblyTokenTasks({needs: both}).map(li => li.textContent);
+          assert(ticks.some(t => t.includes('Grab Zombie / Zombie Knight ×8 (Zombie side; both sides used) for Zombie')), ticks);
+          assert(ticks.some(t => t.includes('(Zombie Knight side; both sides used) for Zombie Knight')), ticks);
         """)
 
     def test_library_token_chips_only_when_something_is_wrong(self):
@@ -621,9 +651,9 @@ class TokensUiTests(unittest.TestCase):
             decks:[deck('casual/a','Otters',deckTokensResult), deck('casual/b','Gandalf',null),
                    deck('casual/c','Other',{unavailable:'Token data is being rebuilt; refresh in a minute.'})]},routeToken);
           const text = main.textContent;
-          for (const words of ['Grab Zombie / Zombie Knight ×8 (Zombie side) for Zombie',
-                               'Grab Elf Warrior / Cat ×1 (Cat side) for Cat (details not recorded)',
-                               "Stand-in for Insect: Insect / Goblin ×1 (your card says no deathtouch; Hornet Queen's Insect has deathtouch; tell your opponent)",
+          for (const words of ['Grab Zombie / Zombie Knight ×8 (Zombie side only, can be sleeved) for Zombie',
+                               'Grab Elf Warrior / Cat ×1 (Cat side only, can be sleeved) for Cat (details not recorded)',
+                               "Stand-in for Insect: Insect / Goblin ×1 (your card says no deathtouch; Hornet Queen's Insect has deathtouch; Insect side only, can be sleeved; tell your opponent)",
                                'No Raccoon token: use a stand-in (a spare token card or a die)',
                                'No Fish token yet: 2 on the way', 'Check by hand: Gandalf, Westward Voyager, Elrond',
                                'Token data is being rebuilt', 'Shared tokens', 'Both decks can use these cards.',
