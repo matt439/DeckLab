@@ -1008,14 +1008,15 @@ function tokensSection(data) {
   if (!needs.length) {
     section.append(el("p", { class: "sub", text: "No tokens or reminders are linked to this list's cards on Scryfall." }));
   } else {
+    const faces = tokFacesUsed(needs);
     const merged = needs.map(mergedTokenCards);
     const main = merged.filter((n) => !n.sideboard_only), side = merged.filter((n) => n.sideboard_only);
     const words = tokCountWords(t.counts);
     if (words) section.append(el("p", { class: "deck-tokens-summary", text: words }));
-    if (t.packed) section.append(deckPackedTokens(data));
-    if (main.length) section.append(tokenNeedList(main));
+    if (t.packed) section.append(deckPackedTokens(data, faces));
+    if (main.length) section.append(tokenNeedList(main, faces));
     if (side.length) {
-      section.append(el("h3", { class: "deck-tokens-group", text: "Only for sideboard cards" }), tokenNeedList(side));
+      section.append(el("h3", { class: "deck-tokens-group", text: "Only for sideboard cards" }), tokenNeedList(side, faces));
     }
   }
   if (copies.length) {
@@ -1034,11 +1035,15 @@ function tokensSection(data) {
 }
 
 /** A built deck's packed token cards (its text's Token cards line, lib/api/deck_page.py _packed): what its
- * deck box holds, which the other decks count as in use, with "Change…" for whoever may change the deck. */
-function deckPackedTokens(data) {
+ * deck box holds, which the other decks count as in use, with "Change…" for whoever may change the deck.
+ * faces (tokFacesUsed of the deck's needs) says of each double-sided card whether the deck needs both
+ * sides or only one, which can be sleeved. */
+function deckPackedTokens(data, faces = null) {
   const p = data.tokens.packed;
   const lines = p.lines || [];
-  const label = (line) => line.rows.length ? line.text : `${line.text} (no token card matches)`;
+  const sides = (line) => [...new Set(line.rows.map((row) => tokSides(row, faces)).filter(Boolean))];
+  const label = (line) => !line.rows.length ? `${line.text} (no token card matches)`
+    : sides(line).length ? `${line.text} (${sides(line).join("; ")})` : line.text;
   const words = p.error ? `The Token cards line can't be read: ${p.error}`
     : lines.length ? `Packed: ${lines.map(label).join("; ")}`
     : p.written ? "Packed: no token cards." : "Packed token cards aren't recorded yet.";
