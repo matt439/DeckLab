@@ -2,6 +2,12 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Dense Shopping finish pills (2026-10-25; E11-S30 slice 12)
+
+Dense Printing cells now use the shared neutral Foil/Etched pills, with one full spoken requested-printing intent and a decorative visual line. Collector numbers and finish pills retain their width; long exact-set tags can ellipsize with full title/text retained. Nonfoil stays plain, missing finishes stay unclaimed and older unknown values remain factual text. The 156px preferred printing column preserves 36px ordinary rows and waiting reasons. Existing viewer/write nodes, requests, quantity and revision semantics are unchanged.
+
+Validation: 209 targeted Shopping/shared/source checks passed, including two added printing/resize scenarios. Four initial assertions used selectors/class-list behavior unsupported by the minimal DOM double; corrected assertions use its established helpers. Synthetic Chromium checked 24 verified viewport/theme combinations with all eight intent rows and no page overflow: neutral 16px finish pills and a four-digit collector number fit beside a long exact-set tag, with full spoken/title intent and 36px rows. The approximately 891px/801px tables keep horizontal scrolling inside their panes. No actual queue/database writes, downloads or Forge games. Mouse/default DPR only; coarse/touch/Safari/device/speech acceptance stays open. The source audit still fails only on pre-existing tokens.js (1,516 lines).
+
 ## Guarded Receive Record arrival action (2026-10-25; E11-S30 slice 12)
 
 Receive now has one constant Record arrival primary with an adjacent described reason. Client blockers mute it with aria-disabled while keeping it focusable; its guarded handler takes the person to the first live row/check/product choice/date. Ready still calls the existing server preview and opens its exact confirmation before apply. Blank condition/language and unticked partial remainder remain non-blocking. Busy/reload/done/profile/route/permission and frozen-review guards remain intact. Empty selected parts have a focusable fallback, product choices must be known, and real-calendar date validation rejects malformed restored values without normalising them. Native date controls use shared size tokens; measured bar wrapping still reserves guidance clearance. The singular blank-copy guidance now says lacks.

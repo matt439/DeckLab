@@ -73,6 +73,18 @@ function shopQueuePut(parent, ...nodes) {
   for (const node of nodes.filter(Boolean)) { node.remove(); parent.append(node); }
 }
 
+/** Dense printing facts keep one full spoken intent and neutral finish pills in the existing row. */
+function shopQueuePrinting(card) {
+  const exact = card.printing === "exact", intent = shopPrintingIntent(card);
+  const visual = exact ? [el("span", {class: "shop-exact-tag", text: `EXACT ${String(card.set || "").toUpperCase()}`}),
+    card.collector_number ? el("span", {class: "shop-q-printing-number", text: card.collector_number}) : null]
+    : [el("span", {class: "shop-q-printing-kind", text: "Any printing"})];
+  visual.push(finishChip(card.finish) || (card.finish && card.finish !== "nonfoil"
+    ? el("span", {class: "shop-q-printing-kind", text: card.finish}) : null));
+  return el("span", {class: "shop-q-printing-line", title: intent}, el("span", {class: "sr-only", text: intent}),
+    el("span", {class: "shop-q-printing-visual", "aria-hidden": "true"}, visual));
+}
+
 function shopQueueTableRecord(card, casual, showFor, view) {
   const children = Array.from(casual.children), trigger = casual.querySelector(".card-row");
   trigger?.setAttribute("title", card.name);
@@ -83,10 +95,7 @@ function shopQueueTableRecord(card, casual, showFor, view) {
   const nameCell = el("td", {class: "shop-q-name"});
   const price = shopPrice(card), value = price ? Number(card.listed_aud).toLocaleString("en-AU",
     {minimumFractionDigits: 2, maximumFractionDigits: 2}) : null;
-  const printingLine = el("span", {class: "shop-q-printing-line", title: shopPrinting(card)}, card.printing === "exact"
-    ? [el("span", {class: "shop-exact-tag", text: `EXACT ${String(card.set || "").toUpperCase()}`}),
-      el("span", {text: [card.collector_number, card.finish && card.finish !== "nonfoil" ? card.finish : null].filter(Boolean).join(" ")})]
-    : shopPrinting(card));
+  const printingLine = shopQueuePrinting(card);
   const printing = el("td", {class: "shop-q-printing"}, printingLine);
   if (["waiting_for_stock", "waiting_for_reprint"].includes(card.state))
     printing.append(el("small", {class: "shop-q-reason", text: card.state === "waiting_for_stock" ? "for stock" : "for a reprint"}));

@@ -120,3 +120,36 @@ class ShoppingMetadataInteractionTests(unittest.TestCase):
           assert.equal(main.querySelector('.deck-swatch'),null);
           assert.equal(main.querySelector('.shop-queue-deck').getAttribute('href'),'#/deck?id=casual%2Fvisible&v=target');
         """)
+
+    def test_dense_printing_keeps_full_intent_and_neutral_pills_without_mutating_saved_values(self):
+        self.run_js("""
+          for(const printing of ['exact','any'])for(const finish of ['foil','etched','nonfoil','','older finish']){
+            const item=row('Alpha',{printing,set:'fdn',collector_number:'1234',finish}),before=JSON.stringify(item);
+            const line=shopQueuePrinting(item),visual=line.querySelector('.shop-q-printing-visual');
+            assert.equal(line.getAttribute('title'),shopPrintingIntent(item));
+            assert.equal(line.querySelector('.sr-only').textContent,shopPrintingIntent(item));
+            assert.equal(visual.getAttribute('aria-hidden'),'true');
+            const pill=visual.querySelector('.chip-foil');assert.equal(Boolean(pill),['foil','etched'].includes(finish));
+            if(pill)assert(pill.getAttribute('class').includes('chip-plain'));
+            if(printing==='exact'){
+              assert.equal(visual.querySelector('.shop-exact-tag').textContent,'EXACT FDN');
+              assert.equal(visual.querySelector('.shop-q-printing-number').textContent,'1234');
+            }else assert(visual.textContent.includes('Any printing'));
+            if(finish==='older finish')assert(visual.textContent.includes('older finish'));
+            assert.equal(JSON.stringify(item),before);
+          }
+        """)
+
+    def test_dense_finish_keeps_waiting_reason_and_original_viewer_controls_through_resize(self):
+        self.run_js("""
+          const item=row('Alpha',{printing:'exact',set:'fdn',collector_number:'1234',finish:'etched',state:'waiting_for_reprint'});
+          const before=JSON.stringify(item),view=drawShopping({...empty,to_buy:[item]});
+          const trigger=entry().querySelector('.card-row'),pill=trigger.querySelector('.chip-foil'),edit=main.querySelector('.shop-queue-edit');
+          density(true);assert.equal(entry().querySelector('.shop-q-printing-number').textContent,'1234');
+          assert.equal(entry().querySelector('.shop-q-printing').querySelector('.chip-foil').textContent,'Etched');
+          assert.equal(entry().querySelector('.shop-q-reason').textContent,'for a reprint');
+          assert(entry().querySelector('.card-row')===trigger);assert(main.querySelector('.shop-queue-edit')===edit);
+          assert.equal(viewerGroup(trigger).items.length,1);density(false);
+          assert(trigger.querySelector('.chip-foil')===pill);assert.equal(JSON.stringify(item),before);
+          assert.equal(view.data.queue_revision,'q1');assert.equal(main.querySelectorAll('.shop-queue-edit').length,1);
+        """)

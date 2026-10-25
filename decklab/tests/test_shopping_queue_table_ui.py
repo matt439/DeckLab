@@ -53,7 +53,9 @@ class ShoppingQueueTableInteractionTests(unittest.TestCase):
           assert.equal(entry(3).querySelector('.shop-q-checked').textContent,'2026-10-24');
           assert.equal(entry(3).querySelector('.shop-q-stock').textContent,'In stock');
           assert.equal(entry(3).querySelector('.shop-queue-deck').getAttribute('href'),'#/deck?id=casual%2Fotters&v=target');
-          assert(entry(2).querySelector('.shop-q-printing').textContent.includes('EXACT FDN7foilfor a reprint'.replace('7foil','7 foil')));
+          assert.equal(entry(2).querySelector('.shop-q-printing-line').querySelector('.sr-only').textContent,'Exact: FDN 7 foil');
+          assert.equal(entry(2).querySelector('.shop-q-printing').querySelector('.chip-foil').textContent,'Foil');
+          assert.equal(entry(2).querySelector('.shop-q-reason').textContent,'for a reprint');
           assert(entry(4).querySelector('.shop-q-stock').textContent.includes('Out of stock'));
           assert(entry(5).querySelector('.shop-q-price').textContent.includes('Reference price not recorded'));
           assert(entry(5).querySelector('.shop-q-shop').textContent.includes('Shop not recorded'));
@@ -273,7 +275,8 @@ class ShoppingQueueTableInteractionTests(unittest.TestCase):
           assert.equal(deck.textContent,title); assert.equal(deck.getAttribute('title'),title);
           assert.equal(deck.getAttribute('href'),'#/deck?id=casual%2Flong-title&v=target');
           assert.equal(entry(1).querySelector('.shop-q-printing-line').getAttribute('title'),'Exact: FDN 123 foil');
-          assert(entry(1).querySelector('.shop-q-printing-line').textContent.includes('123 foil'));
+          assert.equal(entry(1).querySelector('.shop-q-printing-number').textContent,'123');
+          assert.equal(entry(1).querySelector('.shop-q-printing').querySelector('.chip-foil').textContent,'Foil');
           assert.equal(entry(1).querySelector('.shop-q-reason').textContent,'for a reprint');
           assert.equal(entry(1).querySelector('.shop-q-stock').textContent,'Out of stock');
           assert.equal(entry(1).querySelector('.shop-q-checked').textContent,'2026-10-24');
