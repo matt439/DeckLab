@@ -3804,7 +3804,9 @@ Slice 10's first part built 2026-10-25: one selected deck's opponents as a mouse
 
 Slice 10's selected-list summary built 2026-10-25: exact Planned or built Play-now context, the server's field rating/flags/first-player edge and newest recorded swap. Bounded cached reads follow the selection and reject stale answers; historical tests retain their tested cards. All tests focuses its existing destination and late content keeps it visible until manual scrolling. `test_matchup_selected_summary_ui.py` covers lifecycle, failures and independent refresh; `test_deck_overview_ui.py` covers the incoming link and scroll-anchor behavior.
 
-Gap: slices 9 and 10's touch/Safari acceptance; then slices 11 to 15 (criteria 1 to 3 and 6). Device checks do not block coding. Section 6's question 4 is settled (Matt, 2026-10-25: only Building and Idea tiles show a status pill). The lab top bar's search is E11-S31.
+Slice 11's Collection metadata built 2026-10-25: explicit unknowns and density-aware details, neutral special-finish pills, missing-details notice/storage filter, visibly named all-filtered-row bulk scope, and dated per-copy estimates. `collection-rows.js` extracts presentation from the existing editing/guard flows; supported language choices match the backend. `test_collection_metadata_ui.py` covers accessibility, filters, bulk scope and dates.
+
+Gap: slices 9 and 10's touch/Safari acceptance; slice 11's lab preview and casual list/sticky search/Show more, then slices 12 to 15 (criteria 1 to 3 and 6). Device checks do not block coding. Section 6's question 4 is settled (Matt, 2026-10-25: only Building and Idea tiles show a status pill). The lab top bar's search is E11-S31.
 
 <a id="e11-s31"></a>
 

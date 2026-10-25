@@ -62,13 +62,15 @@
 /* The Card list: a toolbar, then the dense table. */
 .col-row-tools .col-row-search { flex: 1 1 260px; }
 .col-row-search input { width: 100%; }
-.col-unrecorded { font-size: var(--fs-sm); }
+.col-unrecorded { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2) var(--s-4); font-size: var(--fs-sm); }
+.col-unrecorded > p { margin: 0; flex: 1 1 18rem; }
 .col-table .col-th-pic { width: 52px; }
 .col-table .col-td-pic { padding-top: var(--s-1); padding-bottom: var(--s-1); }
 .col-table .col-th-quantity { width: 64px; }
 .col-table .col-th-price { width: 84px; }
 .col-table td.col-unpriced { color: var(--ink-2); font-weight: normal; }
-.col-price-note { margin-top: var(--s-2); }
+.col-price-note { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--s-2); margin-top: var(--s-2); }
+.col-detail-code { display: none; }
 .col-storage { font-size: var(--fs-sm); }
 /* Set condition & language (collection-bulk.js): the button sits on the filter line, before the count; the
  * sheet's choices are a plain fieldset (disabled while saving), and its summary stands out. */
@@ -108,6 +110,8 @@
 /* The notes get their own column only from 1000px; below it they're a line under the name, so the names
    don't wrap beside a mostly empty column. */
 @media (min-width: 1000px) {
+  .col-detail-code { display: inline; font-family: var(--font-mono); }
+  .col-detail-word { display: none; }
   .col-table .col-notes { display: table-cell; vertical-align: middle; }
   .col-table .col-th-notes { width: 22%; }
   .col-cell-note { display: none; }

@@ -44,7 +44,7 @@ from decklab import server
 WEB = server.WEB_DIR
 MATCHUP_SCRIPTS = ("sim-ui.js", "matchups.js", "matchups-overview.js", "matchups-summary.js", "matchups-detail.js", "matchups-results.js",
                    "matchups-cards.js")
-PLAY_SCRIPTS = ("deck-tools.js", "collection.js", "collection-cards.js", "collection-bulk.js", "collection-guards.js", "assembly.js", "assembly-sections.js", "assembly-progress.js", "assembly-sheets.js", "hands.js", "play.js", "deck-sideboard.js", "deck-opponents.js", "deck-standins.js", "deck-swaps.js", "product-storage.js", "history.js", "activity.js",
+PLAY_SCRIPTS = ("deck-tools.js", "collection.js", "collection-rows.js", "collection-cards.js", "collection-bulk.js", "collection-guards.js", "assembly.js", "assembly-sections.js", "assembly-progress.js", "assembly-sheets.js", "hands.js", "play.js", "deck-sideboard.js", "deck-opponents.js", "deck-standins.js", "deck-swaps.js", "product-storage.js", "history.js", "activity.js",
                 "receipts.js", "receipt-workflow.js", "accessories.js", "accessory-pictures.js", "tokens.js")
 SHELL_SCRIPTS = ("shell.js", "settings.js", "visibility.js")  # account pages, just before app.js
 CARD_SCRIPTS = ("ui.js", "symbols.js", "cards-ui.js", "card-viewer.js")     # the shared card pieces (UI-KIT.md)

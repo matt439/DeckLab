@@ -50,9 +50,9 @@ class FeatureUiTests(unittest.TestCase):
             quantity: 1, notes: '', ...row}).querySelector('.col-cell-meta').textContent;
           assert(!meta({condition: 'NM', language: 'en'}).includes('NM'));
           assert(!meta({condition: 'NM', language: 'en'}).includes('en'));
-          assert(meta({condition: 'LP', language: 'en'}).includes('LP'));
-          assert(meta({condition: '', language: ''}).includes('Condition ?'));
-          assert(meta({condition: '', language: ''}).includes('Language ?'));
+          assert(meta({condition: 'LP', language: 'en'}).includes('Lightly Played'));
+          assert(meta({condition: '', language: ''}).includes('Condition not recorded'));
+          assert(meta({condition: '', language: ''}).includes('Language not recorded'));
           // The "not recorded" choice is unticked when its filter is reset (no such rows any more).
           const box = el('input', {type: 'checkbox'}); box.checked = true;
           const rows = {list: el('div'), rows: [{name: 'Alpha', set: 'fdn', collector_number: '1', finish: 'nonfoil',

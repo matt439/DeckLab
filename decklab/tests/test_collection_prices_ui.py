@@ -41,8 +41,9 @@ class CollectionPricesUiTests(unittest.TestCase):
           heading().querySelector('button').click();
           assert.equal(heading().getAttribute('aria-sort'), 'ascending');
           same(shown(), ['Llanowar Elves 0.36', 'Llanowar Elves 2.52', 'Arcane Signet 19.06', 'Sol Ring 20.20', 'Black Lotus –']);
-          for (const text of ['estimate', "own printing and finish", '2026-10-19', '1.4217 AUD', '2026-10-21'])
+          for (const text of ['estimate', "own printing and finish", '1.4217 AUD', '2026-10-21'])
             assert(main.querySelector('.col-price-note').textContent.includes(text), text);
+          assert.equal(main.querySelector('.col-price-note').querySelector('.fresh').getAttribute('title'), '2026-10-19');
         """)
 
     def test_a_save_s_prices_replace_the_old_ones(self):

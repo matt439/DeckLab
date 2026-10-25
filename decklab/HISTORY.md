@@ -2,6 +2,12 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## P1 Collection metadata (2026-10-25; E11-S30 slice 11, first part)
+
+Collection now shows recorded condition/language codes in the lab and words at casual widths, explicit spoken unknowns, and neutral foil/etched pills. The missing-details info notice offers Show only these; In storage only retains its existing filter as a toggle chip. The bulk action visibly names all filtered rows, including those beyond the current page. Each printing/finish keeps its own per-copy price estimate, with one exchange-rate statement and an honest source-date freshness badge. Language choices match the backend supported set. Presentation helpers move to `collection-rows.js`; canonical rows, hashes, storage guesses, edit/conflict/import guards and permissions retain their existing flows.
+
+Validation: 161 targeted Python/Node tests passed, including 105-row bulk scope, unknown metadata accessibility, per-copy estimates, invalid dates and timezone handling. Synthetic Chromium checks cover the nine documented viewport sizes in both themes with mouse input/default DPR only; touch, Safari and physical-device acceptance remain open. No live records or Forge games were used. The source audit retains the pre-existing `tokens.js` failure (1,516 lines); changed source files remain below 1,200. The lab preview, casual rows and sticky search/Show more remain the next Collection work.
+
 ## P1 selected-list Matchups summaries (2026-10-25; E11-S30 slice 10)
 
 Matchups now names the selected deck's exact Planned or built Play-now list above its own saved Forge field summary and newest swap test. The field rating, flags and first-player edge come from the server; pair rates remain separate. Historical swaps keep the original tested cards. Bounded caching, foreground refresh, cancellation, timeouts and explicit retry preserve selection and focus during progress updates. All tests reaches its existing section and late content keeps that destination visible until manual scrolling.

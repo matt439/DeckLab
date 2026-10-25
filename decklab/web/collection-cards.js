@@ -98,7 +98,7 @@ function colFields(ctx, row) {
   const quantity = el("input", { id: id("quantity"), class: "col-qty-input", type: "number", inputmode: "numeric", min: 1,
     max: 9999, step: 1, value: ctx.row ? String(ctx.row.quantity) : "1", "aria-label": "Copies" });
   const step = (by) => { quantity.value = String(Math.min(9999, Math.max(1, (parseInt(quantity.value, 10) || 0) + by))); };
-  const language = el("select", { id: id("language") }, COL_LANGUAGES.map(([v, t]) => el("option", { value: v, text: t })));
+  const language = el("select", { id: id("language") }, COL_LANGUAGES.map(([v, t]) => el("option", { value: v, text: v ? `${t} (${v})` : t })));
   language.value = value("language");
   const languageNow = value("language");
   if (languageNow && !COL_LANGUAGES.some(([o]) => o === languageNow)) {

@@ -457,6 +457,8 @@ profile changes and the away lock; delayed reads and saves check their original
 viewer and route. Packing and new Forge matchup pickers put eligible usual
 opponents in a leading group while preserving explicit selections.
 
+Collection Card list presentation lives in `collection-rows.js`, loaded after `collection.js`: unknown condition/language cells pair a decorative em dash with spoken words, lab metadata shows codes, and casual metadata shows unusual or unknown words. Foil/etched use the shared neutral finish pill; non-foil is plain. The missing-details info notice and storage toggle retain their native checkbox filters. The bulk action visibly names every filtered row, including rows beyond the displayed page. Prices remain per-copy estimates for each printing/finish, with one rate and a local-calendar source-date freshness badge; unknown dates stay explicit. Collection language options match the backend supported codes.
+
 Collection row editing and conflict recovery live in `collection-cards.js`; `collection-guards.js` owns optional reduction reasons, advisory held-copy confirmations and repeat-import warnings; `collection-bulk.js` owns the Card list's Set condition & language sheet (E7-S29). They use the shared sheet, field, button and warning components. Collection sheets open through `colOpenSheet`; the shared printing picker joins the same tracking set through its `onOpen` hook. They close on route/profile/away-lock changes via `colCloseSheets`; delayed work checks the original viewer before opening another sheet. Import apply captures the reviewed preview and disables file selection while it waits.
 
 ## Tests
