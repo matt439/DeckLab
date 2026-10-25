@@ -272,8 +272,9 @@ def _storage(space, rows, prices):
     basic land (their copies in decks aren't tracked); the rest are in storage. The decks count copies
     by name, so each name's are given first to the rows of the printings the decks' lists name, then
     the rest to its cheapest rows (prices: _prices; unpriced ones last), with guess true on a row that
-    got some of those when another row could have (more rows with room than copies left to place). A row with none held has no entry. Copies only, never which decks:
-    the rows are already only for viewers who may see this space's inventory. error: why there are
+    got some of those when another row could have (more rows with room than copies left to place). A row with none held has no entry. collection_sources adds visible, uncontested
+    saved-list hints as listed_holders and leaves the rest unattributed; these aren't verified physical-printing assignments.
+    The rows are already only for viewers who may see this space's inventory. error: why there are
     no counts (the pool can't be read), else None."""
     answer = {"rows": {}, "error": None}
     if not rows:
@@ -327,7 +328,12 @@ def _storage(space, rows, prices):
     except (ValueError, OSError, csv.Error, RuntimeError) as error:
         return {"rows": {}, "error": "The copies in decks couldn't be worked out"
                 + ("." if space == spaces.HOME and not guard.sees_home_records() else f": {_public(error)}")}
-    return answer
+    from .collection_sources import VISIBILITY_READ_ERRORS, annotate, anonymous
+    try:
+        sees, records = guard.deck_reader(), guard.sees_home_records()
+    except VISIBILITY_READ_ERRORS:
+        return anonymous(answer)
+    return annotate(answer, p.in_use, by_name, sees=sees, records=records)
 
 
 def _extras(space, shown):

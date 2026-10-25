@@ -159,6 +159,10 @@ class InUse:
     # (name, set, collector number, finish) -> copies, of the lines that name a printing: which printings the
     # held copies probably are (the Card list's storage counts); cards is what counts, stand-ins included
     printings: Counter = field(default_factory=Counter)
+    # Logical printing hints cannot locate copies replaced by, or used as, installed stand-ins.
+    # Retain these canonical names while reading the existing recipe; allocation counts stay unchanged.
+    standin_names: set = field(default_factory=set)
+    printing_version: str = "target"   # list supplying printings, including the installed assembly snapshot
 
 
 @dataclass
@@ -476,7 +480,7 @@ def _built_in_use(space, intact, found, unresolved, warnings, decks_of=None):
                 warnings.append(f"{source} can't be read: {e}")
                 continue
             held = _count_sections(sections, source, unresolved)
-            standin_warnings = []
+            standin_warnings, standin_names = [], set()
             if why == "built":
                 from decklab.lib.decks import standins
                 stored = inventory.current().deck(deck_id)
@@ -494,13 +498,15 @@ def _built_in_use(space, intact, found, unresolved, warnings, decks_of=None):
                             mappings = [{**row, "for": _canonical(row["for"], source, unresolved),
                                          "using": _canonical(row["using"], source, unresolved) if row["using"] else None}
                                         for row in installed["cards"]]
+                            standin_names = {name for row in mappings for name in (row["for"], row["using"]) if name}
                             held = standins.physical_counts(held, mappings, standin_warnings, source)
                     except (decks.DeckFileError, standins.StandInsError) as error:
                         warnings.append(f"{source}: installed stand-ins can't be read: {error}")
                         continue
             warnings.extend(standin_warnings)
             in_use.append(InUse(deck_id, summary["title"], why, held, standin_warnings,
-                                _count_printings(sections, source, unresolved)))
+                                _count_printings(sections, source, unresolved), standin_names,
+                                printing_version=version))
         finally:
             if decks_of is not None:      # which deck each warning is about (Pool.warning_decks)
                 decks_of.update((text, summary["id"]) for text in warnings[before:])

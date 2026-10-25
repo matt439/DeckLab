@@ -2,6 +2,14 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Collection saved packing-list hint source (2026-10-25; E11-S30 slice 11 prerequisite)
+
+Storage answers now add visible, uncontested saved packing-list printing hints (`listed_holders`) and an anonymous remainder, beside unchanged aggregate held/guess counts. Each named hint carries the source list kind, Planned or Play-now. Installed stand-ins, competing or overcommitted hints, cheapest-printing remainders and hidden sources remain anonymous. The existing deck/product privacy gate controls identities; an expected visibility-read failure clears every optional name while preserving allocation counts. Metadata is outside canonical rows/hash and uses the already-read pool/recipe.
+
+These are saved-list hints, not verified physical-printing assignments. The source kind does not identify a historical revision: an assembly snapshot can retain older lines while its current intended list changes. UI consumption follows separately.
+
+Validation: 100 targeted sandbox Python tests passed with live database probes disabled, covering printing/finish and version context, public/private/product visibility, no admin override, stand-ins, sparse/competing/overcommitted hints, anonymous remainders, visibility-failure rollback, basic/error states, unchanged allocation/hash, rows/save/409 consistency and pinned read counts. No actual database, live records, browser/device acceptance, added pool/deck/history reads or Forge games. Legacy golden comparisons retain their business projections while excluding the new derived indices, which have dedicated assertions. The source audit still flags only pre-existing `tokens.js` (1,516 lines); changed sources stay below 1,200.
+
 ## P1 Find cards presentation (2026-10-25; E11-S30 slice 11)
 
 Find cards now uses casual name-level rows with identity markers and its existing lab card grid. Separate viewer groups prevent hidden layouts from duplicating swipe entries. Server-owned/free/incoming/held/basic-land facts, existing query/paging/space sequencing and guarded Edit copies are retained; name-level rows infer no per-printing prices. Full-held wording is concise while partial, unknown-free and overallocated counts remain explicit. The casual closed search/filter band is sticky, with a live count and 50px filter control; expanded filters enter page flow so short landscape windows can reach the results.
