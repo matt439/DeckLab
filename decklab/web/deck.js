@@ -1012,6 +1012,7 @@ function tokensSection(data) {
     const main = merged.filter((n) => !n.sideboard_only), side = merged.filter((n) => n.sideboard_only);
     const words = tokCountWords(t.counts);
     if (words) section.append(el("p", { class: "deck-tokens-summary", text: words }));
+    if (t.packed) section.append(deckPackedTokens(data));
     if (main.length) section.append(tokenNeedList(main));
     if (side.length) {
       section.append(el("h3", { class: "deck-tokens-group", text: "Only for sideboard cards" }), tokenNeedList(side));
@@ -1030,6 +1031,70 @@ function tokensSection(data) {
     el("p", { class: "sub", text: t.note })));
   section.append(edit);
   return section;
+}
+
+/** A built deck's packed token cards (its text's Token cards line, lib/api/deck_page.py _packed): what its
+ * deck box holds, which the other decks count as in use, with "Change…" for whoever may change the deck. */
+function deckPackedTokens(data) {
+  const p = data.tokens.packed;
+  const lines = p.lines || [];
+  const label = (line) => line.rows.length ? line.text : `${line.text} (no token card matches)`;
+  const words = p.error ? `The Token cards line can't be read: ${p.error}`
+    : lines.length ? `Packed: ${lines.map(label).join("; ")}`
+    : p.written ? "Packed: no token cards." : "Packed token cards aren't recorded yet.";
+  const may = canEditDeck(data.summary) && (p.choices || []).length && !p.error;
+  return el("div", { class: "deck-tokens-packed" },
+    el("p", { class: p.error ? "box box-warn" : "sub", text: words }),
+    may ? el("button", { type: "button", class: "btn btn-quiet", text: "Change packed token cards…",
+      onclick: () => openPackedTokens(data) }) : null);
+}
+
+/** The sheet choosing a built deck's packed token cards: a count per token card it could use (at most what
+ * other decks leave of it), saved as one change (POST /api/deck/token-cards). */
+function openPackedTokens(data) {
+  const p = data.tokens.packed, s = data.summary;
+  const sheet = openSheet({ title: "Packed token cards" });
+  const inputs = [];
+  sheet.body.append(el("p", { class: "sub", text: "The token cards in this deck's box. Other decks count them as in use." }),
+    el("ul", { class: "pack-plain deck-packed-choices" }, (p.choices || []).map((c) => {
+      const id = `packed-${sheet.heading.id}-${c.row}`;
+      const input = el("input", { id, type: "number", inputmode: "numeric", min: 0, max: c.free, step: 1,
+        value: String(Math.min(c.packed, c.free)) });
+      inputs.push([c, input]);
+      const name = `${c.back ? `${c.front} / ${c.back}` : c.front}${c.set ? ` (${c.set.toUpperCase()} ${c.number})` : ""}`;
+      const rest = c.free < c.quantity ? `, ${num(c.quantity - c.free)} in other decks` : "";
+      return el("li", {}, el("label", { for: id, text: `${name}: ${plural(c.quantity, "card")}${rest}` }), " ", input);
+    })));
+  const message = el("p", { class: "box box-crit", hidden: true });
+  sheet.body.append(message);
+  const save = () => {
+    const cards = [];
+    for (const [c, input] of inputs) {
+      const n = Number(input.value);
+      if (!Number.isInteger(n) || n < 0 || n > c.free) {
+        message.textContent = `Choose 0 to ${c.free} for ${c.front}.`;
+        message.hidden = false;
+        input.focus();
+        return;
+      }
+      if (n) cards.push({ row: c.row, quantity: n });
+    }
+    apiWrite("/api/deck/token-cards", { id: s.id, expect: p.expect, tokens_sha256: p.tokens_sha256, cards })
+      .then(() => {
+        sheet.close();
+        toast("Packed token cards saved");
+        const here = parseHash();
+        if (here.path === "deck" && addressDeckId(here.params.get("id") || "") === s.id) route();
+      })
+      .catch((e) => {
+        if (!(e instanceof ApiError)) throw e;
+        message.textContent = e.message;
+        message.hidden = false;
+      });
+  };
+  sheetActions(sheet, [{ text: "Cancel", onclick: () => sheet.close() },
+    { text: "Save", kind: "primary", value: "save", onclick: save }]);
+  return sheet;
 }
 
 /** A token need with its token cards to grab that read the same ("Dog / Beast ×1, Dog side", for two rows

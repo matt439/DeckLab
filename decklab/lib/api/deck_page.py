@@ -15,7 +15,7 @@ from decklab.lib.state import StateError
 from . import common, guard
 from .opponents import add_usual_opponents, usual_opponent_ids, usual_opponents
 from .common import ApiError
-from .assembly import TOKEN_FAILED, _deck_tokens
+from .assembly import TOKEN_FAILED, _deck_tokens, held_tokens
 from .card_lookup import _line_json, _owned_json
 from .carddata import _require_cards
 from .commits import _table_json
@@ -206,7 +206,7 @@ def _index_tokens():
         if space not in inventories:
             try:
                 inv, inc = _token_pool(space)
-                inventories[space] = (inv, inc)
+                inventories[space] = (inv, inc, held_tokens(inv, space))
             except Exception:   # the library still shows; the log has the details
                 whose = "" if space == spaces.HOME else f" of {space}'s space"
                 common._log(f"The tokens{whose} couldn't be read for the library:\n" + traceback.format_exc())
@@ -222,7 +222,7 @@ def _index_tokens():
         found = inventory(summary.get("space", spaces.HOME))
         if found is None:
             return None
-        inv, inc = found
+        inv, inc, holds = found
         if deck_id.startswith("product/") or summary.get("status") == "building":
             version = "target"
         elif summary.get("status") == "built":
@@ -242,7 +242,9 @@ def _index_tokens():
             if sections is None:
                 version = version or pool._built_version(summary, [])
                 sections = decks.load_deck(deck_id, version)
-            result = tokens.cached_deck_tokens(deck_id, version, sections, inv, inc)
+            held = tokens.reserve.held_elsewhere(holds, deck_id)
+            result = (tokens.cached_deck_tokens(deck_id, version, sections, inv, inc, held) if held
+                      else tokens.cached_deck_tokens(deck_id, version, sections, inv, inc))
         except RuntimeError:    # the card index is missing or being rebuilt
             unavailable.append(deck_id)
             return None
@@ -275,22 +277,74 @@ def _view_tokens(summary, version, sections, info):
         found = _TOKEN_LINE.match(problem)
         info.append(f"Token cards line {found[1]} couldn't be read; see the Tokens page" if found
                     else _scrub([problem])[0])
-    return _with_shared(_with_examples(_deck_tokens(summary["id"], version, sections, inv, inc)),
-                        summary, inv, inc)
+    holds = held_tokens(inv, summary.get("space", spaces.HOME))
+    result = _deck_tokens(summary["id"], version, sections, inv, inc,
+                          tokens.reserve.held_elsewhere(holds, summary["id"]))
+    result = _with_shared(_with_examples(result), summary, inv, inc, holds)
+    if isinstance(result, dict) and "needs" in result and summary.get("status") == "built" \
+            and not summary["id"].startswith("product/"):
+        packed = _packed(summary, inv, holds, result)
+        if packed["written"] or packed["choices"]:     # nothing to say or choose: no part (as before)
+            result = dict(result, packed=packed)
+    return result
 
 
-def _with_shared(result, summary, inv, inc):
-    """result with "shared" on each card to grab: the other built decks that use that token
-    card (tokens.shared_rows), when more built decks use it than it has cards; [] otherwise
-    (and result as it is when no card has any).
-    The page says so beside the card. Decks the viewer may not see leave the card's "shared"
-    empty, as the Tokens page does. A copy; the cached result is never changed."""
+def _packed(summary, inv, holds, result):
+    """A built deck's packed token cards, for its Tokens part: {"written": whether its text has a
+    Token cards line, "lines": [{"text", "quantity", "rows": [{row, front, back, quantity}]}]
+    (the line's cards, by the rows that hold them; rows [] for a line no token card matches),
+    "choices": [{row, front, back, set, number, quantity, free, packed}] (the token cards the
+    sheet offers: those its needs could grab, stand in with or find in use, and those it packs;
+    free is what other built decks leave of the row), "expect" (the deck text's sha256) and
+    "tokens_sha256" (the token cards' list the rows index), for POST /api/deck/token-cards;
+    "error" when the line can't be read}."""
+    from decklab.lib.inventory.ops_decks import parsed_deck
+    stored = inventory.current().deck(summary["id"])
+    base = {"expect": stored.sha256 if stored is not None else None, "tokens_sha256": inv.sha256}
+    try:
+        parsed = parsed_deck(stored)
+        lines = decks.token_cards(parsed) if parsed is not None else []
+        written = parsed is not None and decks.has_token_cards(parsed)
+    except decks.DeckFileError as e:
+        return {**base, "written": True, "lines": [], "choices": [], "error": _scrub([str(e)])[0]}
+    hold = holds.get(summary["id"], {"rows": {}, "unmatched": []})
+    out = []
+    for line in lines:
+        rows = [i for i in sorted(hold["rows"]) if tokens.reserve.matches(line, inv.rows[i])]
+        out.append({"text": line.text(), "quantity": line.quantity,
+                    "rows": [{"row": i, "front": inv.rows[i]["front"], "back": inv.rows[i]["back"],
+                              "quantity": hold["rows"][i]} for i in rows]})
+    elsewhere = tokens.reserve.held_elsewhere(holds, summary["id"])
+    offered = set(hold["rows"])
+    for need in result.get("needs", []):
+        offered.update(c["row"] for c in need.get("cards", []))
+        offered.update(c["row"] for c in need.get("stand_ins", []) if not c.get("close"))
+        offered.update(c["row"] for c in need.get("in_use", []))
+    choices = []
+    for i in sorted(offered):
+        if not 0 <= i < len(inv.rows):
+            continue
+        row, qty = inv.rows[i], int(inv.rows[i]["quantity"])
+        choices.append({"row": i, "front": row["front"], "back": row["back"], "set": row["set"],
+                        "number": row["front_collector_number"], "quantity": qty,
+                        "free": max(qty - sum(h["quantity"] for h in elsewhere.get(i, [])), 0),
+                        "packed": hold["rows"].get(i, 0)})
+    return {**base, "written": written, "lines": out, "choices": choices}
+
+
+def _with_shared(result, summary, inv, inc, holds=None):
+    """result with "shared" on each card to grab: the other built decks that want that token
+    card (tokens.shared_rows), when they want more than it has; [] otherwise
+    (and result as it is when no card has any). The page says so beside the card. Decks the
+    viewer may not see leave the card's "shared" empty, as the Tokens page does. A copy; the
+    cached result is never changed."""
     needs = result.get("needs") if isinstance(result, dict) else None
     if not needs or not any(need.get("cards") for need in needs):
         return result
     space = summary.get("space", spaces.HOME)
     try:
-        shared = tokens.shared_rows(inv, tokens.row_uses(inv, inc, [], space), tokens.built_ids(space))
+        holds = tokens.reserve.holds(inv, space) if holds is None else holds
+        shared = tokens.shared_rows(inv, tokens.row_uses(inv, inc, [], space), tokens.built_ids(space), holds)
     except Exception:           # the deck's tokens still show; the log has the details
         common._log("The shared token cards couldn't be worked out:\n" + traceback.format_exc())
         return result

@@ -468,8 +468,8 @@ class WithIndexTests(TokensApiTestCase):
         self.assertEqual(self.row("Insect")["shared"], [])                 # one card, one built deck
         self.write("decks/casual/hive.md", deck_md("Hive Deck", status="built"))
         self.assertEqual(self.row("Insect")["shared"],
-                         [{"deck": "casual/hive", "title": "Hive Deck", "link": "casual/hive"},
-                          {"deck": "casual/queen", "title": "Queen Deck", "link": "casual/queen"}])
+                         [{"deck": "casual/hive", "title": "Hive Deck", "link": "casual/hive", "quantity": 1},
+                          {"deck": "casual/queen", "title": "Queen Deck", "link": "casual/queen", "quantity": 1}])
         notes, warnings = [], []
         tokens.check(notes=notes, warnings=warnings)
         self.assertIn("Only 1 card, used by 2 built decks: Hive Deck and Queen Deck",
@@ -481,7 +481,7 @@ class WithIndexTests(TokensApiTestCase):
         result = {"needs": [{"name": "Insect", "cards": [{"row": insect}]}]}
         shown = deck_page._with_shared(result, {"id": "casual/queen", "space": "home"}, inv, [])
         self.assertEqual(shown["needs"][0]["cards"][0]["shared"],
-                         [{"deck": "casual/hive", "title": "Hive Deck", "link": "casual/hive"}])
+                         [{"deck": "casual/hive", "title": "Hive Deck", "link": "casual/hive", "quantity": 1}])
         self.assertNotIn("shared", result["needs"][0]["cards"][0])         # the cached result is left alone
 
     def test_names_are_checked_and_fixed(self):

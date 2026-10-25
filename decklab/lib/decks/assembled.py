@@ -108,9 +108,11 @@ def install(deck, version, sections, *, force=False):
 
 
 def clear(deck, *, serial=None):
-    """Take apart without deleting intended lists or saved stand-in choices."""
-    from . import standins
+    """Take apart without deleting intended lists or saved stand-in choices. The packed token
+    cards (tokencards.py) go back to the pile with the rest."""
+    from . import standins, tokencards
     deck.header[:] = [f for f in deck.header if f.key.casefold() != FIELD.casefold()]
+    tokencards.set_token_cards(deck, None)
     if serial is not None:
         _set_header(deck, GENERATION, str(serial))
     data = standins.get_stand_ins(deck)

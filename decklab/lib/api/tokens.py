@@ -143,12 +143,25 @@ def _face(row, side, index_ready):
             "example": example}
 
 
-def _row_json(i, row, uses, shared, index_ready):
+def _packed_rows(holds, sees):
+    """{row index: [{deck, title, link, quantity}]}: the built decks whose Token cards lines hold
+    each row's cards (tokens.reserve.holds), as the viewer may see them (_seen_use's words)."""
+    out = {}
+    for deck_id in sorted(holds):
+        for i, qty in holds[deck_id]["rows"].items():
+            shown = _seen_use({"deck": deck_id, "title": holds[deck_id]["title"], "link": deck_id,
+                               "token": "", "side": "", "state": ""}, sees)
+            out.setdefault(i, []).append({"deck": shown["deck"], "title": shown["title"], "link": shown["link"],
+                                          "quantity": qty})
+    return out
+
+
+def _row_json(i, row, uses, shared, packed, index_ready):
     return {"key": f"r{i}", "index": i, **row, "quantity": int(row["quantity"]),
             "single_sided": not row["back"] and bool(_SINGLE.search(row["notes"])),
             "unconfirmed": rules.token_uncertain(row),
             "faces": [_face(row, side, index_ready) for side in ("front", "back") if side == "front" or row[side]],
-            "uses": uses.get(i, []), "shared": shared.get(i, [])}
+            "uses": uses.get(i, []), "shared": shared.get(i, []), "packed": packed.get(i, [])}
 
 
 def _incoming_json(found):
@@ -181,8 +194,9 @@ def tokens_view(space=None):
     any), exists, sorted, index_ready, rows: [{key "r<i>", index, the ten
     fields (quantity an int), single_sided, unconfirmed, faces [{side, name,
     details, known, image, example}], uses [{deck, title, token, side, state}],
-    shared [{deck, title, link}]: the built decks that use the row, when there are more than its
-    cards (tokens.shared_rows; [] otherwise)}],
+    shared [{deck, title, link, quantity}]: the built decks that want the row's cards, when they
+    want more than it has (tokens.shared_rows; [] otherwise), packed [{deck, title, link,
+    quantity}]: the built decks whose Token cards lines hold its cards (tokens.reserve.holds)}],
     cards (physical cards in all), missing (tokens.gaps: the tokens built and
     building decks and intact products need with nothing owned), incoming
     (pending token orders: {order, component, path, cards, rows}),
@@ -212,8 +226,9 @@ def _tokens_view(space):
                                         else ([], []))
             index_ready = tokens._ready()
             uses = _deck_side("token uses", lambda: tokens.row_uses(inv, found, warnings, space), {}, info)
+            holds = _deck_side("packed token cards", lambda: tokens.reserve.holds(inv, space, warnings), {}, info)
             shared = _deck_side("shared token cards",
-                                lambda: tokens.shared_rows(inv, uses, tokens.built_ids(space)), {}, info)
+                                lambda: tokens.shared_rows(inv, uses, tokens.built_ids(space), holds), {}, info)
             missing = _deck_side("missing tokens", lambda: tokens.gaps(inv, found, warnings, space), [], info)
     except OSError as e:
         raise ApiError(500, f"The tokens list can't be read: {_public(e)}") from None
@@ -229,11 +244,12 @@ def _tokens_view(space):
         found, incoming_problems = [], []
     uses = {i: _seen_uses(items, sees) for i, items in uses.items()}
     shared = {i: _seen_holders(holders, sees) for i, holders in shared.items()}
+    packed = _packed_rows(holds, sees)
     missing = [_seen_gap(gap, sees) for gap in missing]
     warnings = [text for text in warnings if _seen_text(text, sees, records)]
     return {"space": space, "sha256": inv.sha256, "exists": inv.sha256 is not None, "sorted": inv.sorted,
             "index_ready": index_ready,
-            "rows": [_row_json(i, row, uses, shared, index_ready) for i, row in enumerate(inv.rows)],
+            "rows": [_row_json(i, row, uses, shared, packed, index_ready) for i, row in enumerate(inv.rows)],
             "cards": sum(int(row["quantity"]) for row in inv.rows),
             "missing": missing, "incoming": _incoming_json(found), "face_names": face_names,
             "keywords": sorted(tokens._keywords()), "problems": _unique(_scrub(inv.problems)),

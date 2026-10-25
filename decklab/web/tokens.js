@@ -32,7 +32,7 @@ const TOK_SINGLE = "single-sided verified";
 // A need's state: the chip's kind and its short words (when the server's words aren't to hand).
 const TOK_STATES = {
   ready: ["good", "Have it"], check: ["info", "Details to check"], differs: ["warn", "Different token"],
-  incoming: ["info", "On the way"], none: ["warn", "None owned"],
+  incoming: ["info", "On the way"], none: ["warn", "None owned"], in_use: ["warn", "Packed in other decks"],
 };
 
 
@@ -109,6 +109,8 @@ function tokenNeed(need) {
         card.shared && card.shared.length ? el("small", { class: "tok-shared",
           text: `Also used by ${card.shared.map((h) => h.title).join(" and ")}, with too few cards for all of them` }) : null,
         card.verdict === "check" && card.why && card.why.length ? el("small", { text: card.why.join("; ") }) : null))) : null,
+      (need.in_use || []).length ? el("ul", { class: "token-grab", "aria-label": "In use" }, need.in_use.map((item) =>
+        el("li", { text: `In use: ${tokLabel(item)} ×${item.quantity}, packed in ${item.decks.join(" and ")}` }))) : null,
       incoming.length ? el("ul", { class: "token-grab", "aria-label": "On the way" }, incoming.map((item) => el("li", {
         text: `On the way: ${tokLabel(item)} ×${item.quantity} (order ${item.order})` }))) : null,
       standIns.length ? el("div", { class: "token-stand-ins" }, el("p", { class: "sub", text: "Stand-ins" }),
@@ -738,6 +740,7 @@ function tokDeckChips(row) {
   for (const use of row.uses || []) {
     const same = decks.find((d) => d.deck === use.deck);
     if (same) { if (use.state !== "differs") same.standIn = false; continue; }
+    if (use.state === "in_use") continue;     // the deck would use it, but other decks pack every card
     decks.push({ deck: use.deck, link: use.link, title: use.title, standIn: use.state === "differs" });
   }
   return decks.map((d) => tokDeckChip(d.deck, d.link, d.title, d.standIn));
@@ -1075,6 +1078,8 @@ function tokSheetSummary(ctx, row, onZoom) {
       example ? el("p", { class: "result-count", text: "Example art: the printing isn't recorded." }) : null) : null,
     el("div", { class: "tok-sheet-uses" },
       (row.shared || []).length ? el("p", { class: "box box-warn tok-shared", text: tokSharedWords(row) }) : null,
+      (row.packed || []).length ? el("p", { class: "tok-packed", text: `Packed in ${row.packed.map((h) =>
+        `${h.title}${h.quantity > 1 ? ` ×${h.quantity}` : ""}`).join(", ")}` }) : null,
       el("h3", { text: uses.length ? "Used for" : "Not used by a deck" }),
       uses.length ? el("ul", {}, uses.map((use) => {
         const face = use.side === "back" ? row.back : row.front;
@@ -1084,12 +1089,17 @@ function tokSheetSummary(ctx, row, onZoom) {
       })) : null));
 }
 
-/** "Only 2 cards, used by 3 built decks: A, B and C. They can't all have one packed." (the API's "shared"). */
+/** "Only 2 cards, used by 3 built decks: A, B and C. They can't all have one packed." or, when a deck packs
+ * more than one, "Only 2 cards, but built decks pack 3: A ×2 and B." (the API's "shared"). */
 function tokSharedWords(row) {
-  const titles = row.shared.map((h) => h.title);
-  const list = titles.length > 1 ? `${titles.slice(0, -1).join(", ")} and ${titles[titles.length - 1]}` : titles[0];
-  return `Only ${plural(row.quantity, "card")}, used by ${plural(titles.length, "built deck")}: ${list}. `
-    + "They can't all have one packed.";
+  const and = (words) => words.length > 1 ? `${words.slice(0, -1).join(", ")} and ${words[words.length - 1]}` : words[0];
+  const counts = row.shared.map((h) => h.quantity || 1);
+  if (counts.every((n) => n === 1)) {
+    return `Only ${plural(row.quantity, "card")}, used by ${plural(row.shared.length, "built deck")}: `
+      + `${and(row.shared.map((h) => h.title))}. They can't all have one packed.`;
+  }
+  return `Only ${plural(row.quantity, "card")}, but built decks pack ${num(counts.reduce((a, b) => a + b, 0))}: `
+    + `${and(row.shared.map((h) => `${h.title}${(h.quantity || 1) > 1 ? ` ×${h.quantity}` : ""}`))}.`;
 }
 
 function tokFields(ctx, row) {

@@ -1,12 +1,13 @@
 """Finish an assembly plan with one atomic, revision-checked save of its decks."""
 import hashlib
 import json
+import traceback
 
-from decklab.lib import accessories, decks, inventory, spaces
+from decklab.lib import accessories, decks, inventory, spaces, tokens
 from decklab.lib.decks import assembled, standins
 from decklab.lib.inventory import ops_decks, refresh
 
-from . import assembly_sections, drafts, guard, saving
+from . import assembly_sections, common, drafts, guard, saving
 from .carddata import _require_cards
 from .common import ApiError, _flag, _keys, _parse_body, _scrub
 from .settings import _writer
@@ -160,12 +161,59 @@ def _kit_fields(plan, choices, profile):
     return result
 
 
+class _TokenPacking:
+    """Finish building's Token cards lines (lib/decks/tokencards.py): a deck being marked built
+    whose text has no such line gets one card of the first free token card for each token its
+    built list has (a ready or check need: tokens.deck_tokens, with what other built decks and
+    the decks before it in this save pack taken out), one line per card. A deck that already has
+    a line keeps it. Nothing is filled while the card index or the token cards can't be read."""
+
+    def __init__(self):
+        self.extra = {}
+        try:
+            self.inv = tokens.read(space=spaces.HOME)
+            self.inc, _ = tokens.incoming()
+        except Exception:       # the decks are still marked built, without packed token cards
+            common._log("Token cards couldn't be read for Finish building:\n" + traceback.format_exc())
+            self.inv = None
+
+    def fill(self, deck, sections):
+        if self.inv is None or decks.has_token_cards(deck):
+            return
+        try:
+            holds = tokens.reserve.holds(self.inv, spaces.HOME, extra=self.extra)
+            result = tokens.deck_tokens(sections, self.inv, self.inc,
+                                        tokens.reserve.held_elsewhere(holds, deck.deck_id))
+        except RuntimeError:    # the card index is missing or being rebuilt
+            return
+        except Exception:
+            common._log(f"The token cards of {deck.deck_id} couldn't be worked out:\n" + traceback.format_exc())
+            return
+        rows = []
+        for need in result["needs"]:
+            if need["state"] not in ("ready", "check"):
+                continue
+            card = next((c for c in need["cards"] if c["quantity"] > 0), None)
+            if card is not None and card["row"] not in rows:
+                rows.append(card["row"])
+        lines = {}
+        for i in rows:
+            line = tokens.reserve.line_for(self.inv.rows[i], 1)
+            key = (line.front, line.back, line.set, line.number)
+            lines[key] = decks.TokenCardLine(lines[key].quantity + 1, line.front, line.back, line.set,
+                                             line.number) if key in lines else line
+        if lines:
+            decks.set_token_cards(deck, list(lines.values()))
+            self.extra[deck.deck_id] = (deck.title, list(lines.values()))
+
+
 def _texts(plan, profile, kit=None):
     """Prepare editor validation and installed stand-ins before one atomic write."""
     snapshot = inventory.current()
     kit = _kit_fields(plan, kit, profile)
     participants = {item["id"]: item for item in plan["decks"]}
     items, warnings = [], []
+    packing = _TokenPacking()
     for item in plan["completion"]["decks"]:
         stored = snapshot.deck(item["id"])
         parsed = ops_decks.parsed_deck(stored)
@@ -187,6 +235,7 @@ def _texts(plan, profile, kit=None):
                               force=standins.needs_install(parsed, participant))
         except decks.DeckFileError as error:
             raise ApiError(400, f"The physical build cannot be recorded: {error}") from None
+        packing.fill(parsed, assembly_sections.selected_sections(plan, item["id"]))
         drafts._rule_warnings(draft, parsed)
         proposed = participants[item["id"]].get("standins")
         if proposed is not None:
