@@ -54,6 +54,8 @@
 @media (min-width: 1000px) { .shop-delivery-summary h3 { font-size: var(--fs-row); } }
 @media (hover: hover) and (pointer: fine) { .shop-delivery-summary:hover { background: var(--hover); } }
 .shop-delivery-summary:active { background: var(--accent-soft); }
+.shop-receive-hint { display: none; color: var(--ink-3); font-size: var(--fs-meta); }
+@media (hover: hover) and (pointer: fine) { .shop-receive-hint { display: inline; } }
 .shop-notes {
   color: var(--ink-2); font-size: var(--fs-sm); overflow-wrap: break-word;
   display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden;

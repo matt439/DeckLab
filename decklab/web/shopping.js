@@ -162,20 +162,40 @@ function shopDelivery(order, checks, view = null) {
   const words = kinds.size === 1 && kinds.has("tokens") ? plural(total, "token card") : plural(total, "card");
   const receive = pending.length && mayDo("receipts");
   const href = `#/receipt?order=${encodeURIComponent(order.id)}`;
+  const keyHint = receive && view ? `shop-receive-key-${encodeURIComponent(order.id)}` : null;
   return el("details", { class: "panel shop-delivery" },
-    el("summary", { class: "shop-delivery-summary" }, el("h3", {},
+    el("summary", { class: "shop-delivery-summary", "aria-keyshortcuts": keyHint ? "R" : null,
+      "aria-describedby": keyHint, onkeydown: (event) => shopReceiveKey(view, order, event) }, el("h3", {},
       el("span", { class: "shop-delivery-head" },
         el("span", { class: "shop-delivery-title", text: shopOrderTitle(order) }), shopOrderChip(order)),
       el("span", { class: "sub shop-delivery-meta", text: [order.ordered_on ? `Ordered ${shopDay(order.ordered_on)}` : "Order date not recorded", words]
         .join(" · ") }))),
     el("div", { class: "shop-delivery-body" },
+    keyHint ? el("span", { class: "sr-only", id: keyHint,
+      text: "Press R from this delivery row to open Receive delivery. Enter or Space expands or collapses the row." }) : null,
     items.length ? shopStrip(order, items) : null,
     components.length > 1 ? el("ul", { class: "shop-parts" }, components.map((c) => el("li", { text: shopComponentWords(c) }))) : null,
     order.notes ? el("p", { class: "shop-notes", text: order.notes, title: order.notes }) : null,
     checks.length ? shopChecks(checks) : null,
     el("div", { class: "actions" },
       receive ? el("a", { class: "btn btn-secondary", href, text: "Receive delivery" })
-        : el("a", { class: "btn btn-quiet", href, text: "Delivery details" }), shopOrderEditButton(order, view))));
+        : el("a", { class: "btn btn-quiet", href, text: "Delivery details" }),
+      receive && view ? el("span", { class: "shop-receive-hint", "aria-hidden": "true",
+        title: "With this delivery row focused, press R to receive it." }, el("kbd", { text: "R" })) : null,
+      shopOrderEditButton(order, view))));
+}
+
+/** R opens only the focused live delivery row; native Enter/Space keep their disclosure behavior. */
+function shopReceiveKey(view, order, event) {
+  if (event.defaultPrevented || event.isComposing || event.repeat || event.ctrlKey || event.metaKey || event.altKey
+      || String(event.key || "").toLowerCase() !== "r") return;
+  const summary = event.currentTarget;
+  if (!view || !shopQueueActive(view) || view.busy || view.stale || !summary?.isConnected
+      || event.target !== summary || document.activeElement !== summary || !view.root.contains(summary)) return;
+  const current = (view.data.orders || []).find((item) => item.id === order.id);
+  if (current !== order || !mayDo("receipts") || !(current.components || []).some((part) => part.status === "pending")) return;
+  event.preventDefault();
+  location.hash = `#/receipt?order=${encodeURIComponent(current.id)}`;
 }
 
 /** The checks to make when a delivery arrives. Open on a wide screen; folded on a phone ("Check when it

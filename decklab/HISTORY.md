@@ -2,6 +2,12 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Focused delivery Receive shortcut (2026-10-25; E11-S30 slice 12)
+
+With a delivery summary focused, R opens that delivery's Receive page. Enter and Space retain native expansion. The shortcut rechecks attachment, route/profile/root, current order identity, pending parts and current receipts permission; busy/stale, composing/repeated/modifier input and child-control events cannot navigate. It does not read or record an arrival. A linked screen-reader description explains the action separately from expansion; the R hint is visible only with fine hover input.
+
+Validation: 257 targeted Python/Node checks passed (149 Shopping/order/receipt/reprint checks plus 108 shared/source checks), including four new focused shortcut regressions. Synthetic Chromium verified the closed-row shortcut and four phone/desktop/theme expanded-row cases against consistent disposable Shopping/receipt data: native Enter still opens the row, R loads its actual receipt, and no page overflow appears. The description link resolves. All API writes were disabled. Mouse/default DPR and keyboard only; no actual touch/Safari/device or assistive-speech acceptance, live records, downloads or Forge games. The source audit still flags only pre-existing `tokens.js` (1,516 lines).
+
 ## Shopping queue groups and shop matching (2026-10-25; E11-S30 slice 12)
 
 By shop now offers one native radio choice with row/copy counts and marks canonical queue rows instead of duplicating their cards, viewers and controls. A removable chip clears matching and returns focus to All. Choices span every saved category; matching Long-term groups reveal their existing remaining rows without replacing their first controls. Ready, Waiting and Deferred are separate headings; Waiting retains its stock/reprint reason, while Long-term keeps deck grouping. No persisted state or purchase intent is recategorized.
