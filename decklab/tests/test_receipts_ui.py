@@ -64,6 +64,30 @@ class ReceiptBoardTests(unittest.TestCase):
           const at=body().indexOf('null');assert(at<0, body().slice(Math.max(0,at-80),at+40));
         """)
 
+    def test_row_badges_stay_distinct_from_unequal_copy_progress_and_do_not_narrow_bulk_scope(self):
+        self.run_js("""
+          const d=delivery();d.components[0].rows[0].quantity='8';
+          const v=drawReceipt(d,routeToken),comp=v.comps[0];
+          assert(v.headProgress.textContent.includes('0 of 9 card copies checked'));
+          assert.equal(comp.fillButton.textContent,'Apply to 1 row');
+          const attention=comp.filterButtons.find(b=>b.getAttribute('data-filter')==='attention');
+          assert.equal(attention.children[0].textContent,'Needs attention (2 rows)');
+          assert.equal(attention.children[1].textContent,'Attention (2 rows)');
+          const before=rcptRequestKey(v),rows=JSON.stringify(comp.rows.map(r=>r.values));
+          rcptToolbarCounts(v,comp);rcptTools(v,comp,true);
+          assert.equal(rcptRequestKey(v),before);assert.equal(JSON.stringify(comp.rows.map(r=>r.values)),rows);
+          rcptTick(v,comp,comp.rows[0],true);v.filter='todo';rcptRefreshAll(v);
+          assert(v.headProgress.textContent.includes('8 of 9 card copies checked'));
+          assert(comp.rows[0].tile.hidden);assert.equal(comp.fillButton.textContent,'Apply to 1 row');
+          rcptFillBlanks(v,comp,'LP','ja');
+          assert.equal(comp.rows[0].values.condition,'LP');assert.equal(comp.rows[0].values.language,'ja');
+          assert.equal(comp.rows[0].values.quantity,'8');assert.equal(comp.rows[1].values.quantity,'1');
+          assert.equal(comp.rows[1].values.condition,'NM');assert.equal(comp.rows[1].values.language,'en');
+          const selected=rcptRequest(v).components[0];same(selected.take,[{row:1}]);
+          same(selected.rows.map(r=>[r.quantity,r.condition,r.language]),[['8','LP','ja'],['1','NM','en']]);
+          assert(v.headProgress.textContent.includes('8 of 9 card copies checked'));
+        """,draw=False)
+
     def test_the_board_shows_pictures_chips_and_the_tiles_open_the_viewer_as_a_group(self):
         self.run_js("""
           const tiles=main.querySelectorAll('.card-tile');assert.equal(tiles.length,2);

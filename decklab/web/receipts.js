@@ -309,7 +309,7 @@ function rcptTools(view, comp, inSheet, done = () => {}) {
     el("span", { text: "Clear “check on arrival” notes when ticked" })));
   if (fill) {
     const blanks = comp.rows.filter((row) => rcptBlank(comp, row)).length;
-    fill.hidden = !blanks; fillButton.textContent = `Apply to ${blanks}`;
+    fill.hidden = !blanks; fillButton.textContent = `Apply to ${plural(blanks, "row")}`;
   }
   if (inSheet) nodes.unshift(rcptField("Layout", el("div", { class: "segmented", role: "group", "aria-label": "Layout" }, rcptLayoutButtons(view))));
   return { nodes, fill, fillButton };
@@ -372,13 +372,13 @@ function rcptToolbarCounts(view, comp) {
   if (comp.fill) {
     const blanks = comp.rows.filter((row) => rcptBlank(comp, row)).length;
     comp.fill.hidden = !blanks;
-    comp.fillButton.textContent = `Apply to ${blanks}`;
+    comp.fillButton.textContent = `Apply to ${plural(blanks, "row")}`;
   }
   if (comp.filterButtons) {
     const attention = comp.rows.filter((row) => rcptAttention(view, comp, row).length).length;
     const [wide, narrow] = comp.filterButtons[2].children;
-    wide.textContent = attention ? `Needs attention (${attention})` : "Needs attention";
-    narrow.textContent = attention ? `Attention (${attention})` : "Attention";
+    wide.textContent = attention ? `Needs attention (${plural(attention, "row")})` : "Needs attention";
+    narrow.textContent = attention ? `Attention (${plural(attention, "row")})` : "Attention";
   }
 }
 

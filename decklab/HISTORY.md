@@ -2,6 +2,12 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Name Receive row-count units (2026-10-25; E11-S30 slice 12)
+
+Fill and Attention controls now explicitly say row/rows, beside the header/bar's card-copy progress. Their predicates, filtering, hidden-row bulk scope and receipt requests are unchanged.
+
+Validation: 59 focused receipt/frame/destination checks passed, including an unequal-quantity regression: two attention rows and one fill row stay distinct from eight of nine checked copies, and hidden rows retain their bulk-fill/request scope. Chromium checked desktop and phone labels without page overflow. No actual receipt/database write, downloads or Forge games; no new touch/Safari/device acceptance. The source audit still flags only pre-existing `tokens.js` (1,516 lines).
+
 ## Dense Shopping queue tables (2026-10-25; E11-S30 slice 12)
 
 The lab now uses real grouped purchase-queue tables with Card, Printing, For, Qty, Ref AUD, Shop, Stock and Checked facts plus the existing guarded actions. Long-term keeps its deck groups and append-only Show all. Below 1000px the existing cards return. A density change moves the original viewer triggers, deck links, research and write controls; there is one attached representation, with current row identity/revision and focus preserved. Notes/reprint research expand in a full-width detail row, while saved words remain accessible when visually clipped.
