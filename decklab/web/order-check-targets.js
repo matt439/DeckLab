@@ -36,14 +36,46 @@ function rcptRowChecks(comp, row) {
   return targets.flatMap((target, i) => target?.row === row.orig + 1 ? [{number: i + 1, text: comp.c.checks[i]}] : []);
 }
 
-/** Repeated split pieces show the same original-row context, never another verification control. */
-function rcptRowCheckStrip(comp, row) {
+/** Split siblings and inspector summaries retain context without duplicating verification controls. */
+function rcptRowCheckStrip(comp, row, controls = false) {
   const checks = rcptRowChecks(comp, row);
   if (!checks.length) return null;
+  const host = controls ? el("div", {class: "rcpt-row-check-controls"}) : null;
+  if (controls) row.checkHost = host;
   return el("div", {class: "rcpt-row-checks"},
-    el("p", {class: "field-hint", text: "Arrival checks for the original recorded order row. Verify them in To check for this whole part; split pieces share these checks."}),
+    el("p", {class: "field-hint", text: "Arrival checks for the original recorded order row. These apply to this whole part; split pieces share these checks."}),
     el("p", {class: "sub", text: orderCheckRowLabel(comp.kind, comp.c.rows[row.orig], row.orig + 1)}),
-    el("ul", {}, checks.map(check => el("li", {text: `Check ${check.number}: ${check.text}`}))));
+    host, el("ul", {class: "rcpt-row-check-context"}, checks.map(check => el("li", {text: `Check ${check.number}: ${check.text}`}))));
+}
+
+/** Keep canonical controls alive while their row tiles are replaced. */
+function rcptParkCheckControls(comp) {
+  const focused = comp.checkBoxes?.includes(document.activeElement) ? document.activeElement : null;
+  if (comp.checkFallback) for (const label of comp.checkLabels || []) comp.checkFallback.append(label);
+  return focused;
+}
+
+/** Exactly one visible source-row piece owns a check; hidden or unproved targets stay in To check. */
+function rcptPlaceCheckControls(view, comp, focused = null) {
+  if (!comp.checkFallback || !comp.checkLabels) return;
+  const targets = rcptCheckTargets(comp);
+  for (let index = 0; index < comp.checkLabels.length; index++) {
+    const target = targets?.[index];
+    const row = target && comp.selected ? comp.rows.find(part => part.orig === target.row - 1 && part.tile && !part.tile.hidden
+      && part.checkHost && comp.grid.contains(part.tile) && part.tile.contains(part.checkHost)) : null;
+    (row?.checkHost || comp.checkFallback).append(comp.checkLabels[index]);
+    comp.checkBoxes[index].checked = Boolean(comp.checks[index]);
+    comp.checkScopes[index].textContent = target
+      ? orderCheckRowLabel(comp.kind, comp.c.rows[target.row - 1], target.row) + ". Required for this whole delivery part."
+      : "Required for this whole delivery part.";
+    comp.checkScopes[index].setAttribute("class", target && !row ? "rcpt-check-scope" : "sr-only");
+  }
+  for (const row of comp.rows) if (row.checkHost) {
+    const strip = row.checkHost.parentNode;
+    strip?.classList.toggle("has-check-control", row.checkHost.children.length > 0);
+  }
+  comp.checkPanel.hidden = comp.checkFallback.children.length === 0;
+  if (focused && comp.checkBoxes.includes(focused) && focused.isConnected && !focused.disabled && receiptEditable(view) && comp.selected) focused.focus();
 }
 
 function shopCheckTargetReceipt(answer, body, context) {

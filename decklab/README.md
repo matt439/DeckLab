@@ -424,9 +424,14 @@ When adding a check to an existing pending cards or tokens part, **About an
 original order row (optional)** can associate it with one explicitly chosen
 recorded row. **General check for this whole part** is the default. Preview
 shows the selected original row and check before saving. Receive delivery then
-shows that context beside the row, including locally edited or split copies;
-verify the check once in the part's **To check** list. Splitting a tile does not
-create another verification tick. Older unassociated checks, new-order checks and product
+shows that context beside the row, including locally edited or split copies.
+The check's single label and checkbox move beside the first visible piece of
+its proven original row. General or unproved checks, or checks whose target is
+hidden or in an unselected part, stay in **To check**. A targeted fallback also
+names its original row and printing. Splitting a tile does not create another
+verification tick: the check still applies to the whole part. The same control
+and checked state survive filtering, Pictures/List, row rebuilds, split/merge,
+Undo and the existing explicit **Resume your check** flow. Older unassociated checks, new-order checks and product
 checks stay general. Saving a payload correction, shipment split or order merge,
 or receiving the part, drops its old row associations. If the saved association
 cannot be confirmed, refresh Shopping and inspect the saved checks before making

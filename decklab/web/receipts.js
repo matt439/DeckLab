@@ -197,8 +197,10 @@ function rcptMakeComp(view, c, index) {
 // ------------------------------------------------------------------ sections
 
 function rcptDrawBoard(view) {
+  const checkFocus = new Map(view.comps.map(comp => [comp, rcptParkCheckControls(comp)]));
   clear(view.board);
   for (const comp of view.comps) view.board.append(rcptSection(view, comp));
+  for (const comp of view.comps) rcptPlaceCheckControls(view, comp, checkFocus.get(comp));
 }
 
 function rcptSection(view, comp) {
@@ -254,10 +256,25 @@ function rcptGridClass(view) {
 
 /** The order's checks for this component, each with its own tick. */
 function rcptChecksCard(view, comp) {
-  comp.checkBoxes = comp.c.checks.map((text, i) => el("input", { type: "checkbox", checked: comp.checks[i] || null,
-    onchange: (e) => { if (!receiptEditable(view)) return; comp.checks[i] = e.currentTarget.checked; rcptDrawGrid(view, comp); rcptChanged(view); } }));
-  return el("div", { class: "box rcpt-checks", id: `rcpt-${comp.index}-checks` }, el("h3", { text: "To check" }),
-    comp.c.checks.map((text, i) => el("label", { class: "choice rcpt-check" }, comp.checkBoxes[i], el("span", { text }))));
+  if (!comp.checkTexts || JSON.stringify(comp.checkTexts) !== JSON.stringify(comp.c.checks)) {
+    comp.checkBoxes = comp.c.checks.map((text, i) => el("input", { type: "checkbox", checked: comp.checks[i] || null,
+      "aria-labelledby": `rcpt-${comp.index}-check-text-${i}`, "aria-describedby": `rcpt-${comp.index}-check-scope-${i}`, onchange: (e) => {
+        if (!receiptEditable(view) || !comp.selected || !view.comps.includes(comp) || comp.checkBoxes[i] !== e.currentTarget
+            || !e.currentTarget.isConnected || !comp.section.contains(e.currentTarget)) {
+          if (comp.checkBoxes[i] === e.currentTarget) e.currentTarget.checked = Boolean(comp.checks[i]);
+          return;
+        }
+        comp.checks[i] = e.currentTarget.checked; rcptDrawGrid(view, comp); rcptChanged(view);
+      } }));
+    comp.checkScopes = comp.c.checks.map((text, i) => el("span", {class: "sr-only", id: `rcpt-${comp.index}-check-scope-${i}`}));
+    comp.checkLabels = comp.c.checks.map((text, i) => el("label", { class: "choice rcpt-check" },
+      comp.checkBoxes[i], el("span", {}, el("span", {text, id: `rcpt-${comp.index}-check-text-${i}`}), comp.checkScopes[i])));
+    comp.checkTexts = [...comp.c.checks];
+  }
+  comp.checkFallback = el("div", {class: "rcpt-check-fallback"}, comp.checkLabels);
+  comp.checkPanel = el("div", { class: "box rcpt-checks", id: `rcpt-${comp.index}-checks` },
+    el("h3", { text: "To check" }), comp.checkFallback);
+  return comp.checkPanel;
 }
 
 /** The filters and the layout switch above a grid, then the bulk tools (filling in blanks, Tick all, clearing
@@ -352,6 +369,7 @@ function rcptRefreshAll(view) {
 }
 
 function rcptDrawGrid(view, comp) {
+  const checkFocus = rcptParkCheckControls(comp);
   clear(comp.grid);
   comp.allBlank = rcptAllBlank(comp);
   if (comp.allBlank) {
@@ -362,6 +380,7 @@ function rcptDrawGrid(view, comp) {
     row.tile = rcptTile(view, comp, row, false);
     comp.grid.append(row.tile);
   }
+  rcptPlaceCheckControls(view, comp, checkFocus);
   rcptEmptyState(view, comp);
   rcptToolbarCounts(view, comp);
   rcptSyncSelected(view);
@@ -563,9 +582,11 @@ function rcptRefreshTile(view, comp, row) {
   const parent = row.tile && row.tile.parentNode;
   // The first card given a condition or language brings the others' "not set" chips back: draw them all.
   if (!parent || typeof parent.replaceChild !== "function" || rcptAllBlank(comp) !== comp.allBlank) { rcptDrawGrid(view, comp); return; }
+  const checkFocus = rcptParkCheckControls(comp);
   const fresh = rcptTile(view, comp, row, false);
   parent.replaceChild(fresh, row.tile);
   row.tile = fresh;
+  rcptPlaceCheckControls(view, comp, checkFocus);
   rcptEmptyState(view, comp);
   rcptToolbarCounts(view, comp);
   rcptSyncSelected(view);

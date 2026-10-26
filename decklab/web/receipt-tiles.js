@@ -61,6 +61,7 @@ function rcptPictureTile(view, comp, row, card, chips) {
  * chips. Active Pictures use a native check label plus Inspect; List's inspection opens the same sheet. Read only,
  * or on a part that hasn't arrived, a tap opens the viewer and there's no tick. */
 function rcptTile(view, comp, row, readOnly) {
+  row.checkHost = null;
   const q = rcptQty(row);
   const active = !readOnly && comp.selected;
   const list = view.layout === "list" && !readOnly;
@@ -104,7 +105,7 @@ function rcptTile(view, comp, row, readOnly) {
   }
   if (card && card.img_small && open) viewerItem(open, card, comp.group, caption);
   row.open = open;
-  const checks = rcptRowCheckStrip(comp, row);
+  const checks = rcptRowCheckStrip(comp, row, !readOnly && comp.selected);
   if (checks) tile.append(checks);
   tile.setAttribute("data-row", String(row.key));
   if (!readOnly) tile.hidden = !rcptShown(view, comp, row);

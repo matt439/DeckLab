@@ -25,7 +25,7 @@ class ReceiptCheckTargetUiTests(unittest.TestCase):
     def run_js(self, scenario):
         test_receipts_ui.ReceiptBoardTests.run_js(self, SETUP + scenario, draw=False)
 
-    def test_only_proved_original_row_gets_read_only_context_and_one_component_checkbox(self):
+    def test_only_proved_original_row_gets_the_same_canonical_component_checkbox(self):
         self.run_js(r'''
           let reads=0,writes=0;api=async()=>{reads++;};apiWrite=async()=>{writes++;};
           const v=draw(),c=v.comps[0];
@@ -34,7 +34,7 @@ class ReceiptCheckTargetUiTests(unittest.TestCase):
           assert(strip.textContent.includes('Row 2: 1 x Alpha'));
           assert(strip.textContent.includes('original recorded order row'));
           assert(strip.textContent.includes('whole part'));assert(strip.textContent.includes('Check exact art'));
-          assert(!strip.textContent.includes('General Alpha reminder'));assert.equal(strip.querySelector('input'),null);
+          assert(!strip.textContent.includes('General Alpha reminder'));assert.equal(strip.querySelector('input'),c.checkBoxes[0]);
           assert.equal(canonicalChecks(c).length,2);assert(canonicalChecks(c).every(Boolean));
           assert.equal(rcptFlag(c,c.rows[0]),'');assert.equal(rcptFlag(c,c.rows[1]),'Check exact art');
           assert.equal(reads,0);assert.equal(writes,0);
@@ -77,8 +77,9 @@ class ReceiptCheckTargetUiTests(unittest.TestCase):
           for(const row of [r,part]) {
             const strip=row.tile.querySelector('.rcpt-row-checks');assert(strip);
             assert(strip.textContent.includes('Row 2: 1 x Alpha'));assert(!strip.textContent.includes('Changed display'));
-            assert(strip.textContent.includes('split pieces share'));assert.equal(strip.querySelector('input'),null);
+            assert(strip.textContent.includes('split pieces share'));
           }
+          assert.equal([r,part].filter(row=>row.tile.querySelector('.rcpt-row-checks').querySelector('input')).length,1);
           assert.equal(canonicalChecks(c).length,2);
           c.rows[0].ticked=true;assert.equal(rcptRequest(v).components[0].verified,false);
           assert(rcptClientBlockers(v).some(x=>x.text==='Check not ticked: Check exact art'));
@@ -122,7 +123,7 @@ class ReceiptCheckTargetUiTests(unittest.TestCase):
           const strip=row.tile.querySelector('.rcpt-row-checks');assert(strip.textContent.includes('3 x Bird // Golem'));
           assert(!strip.textContent.includes('Food'));assert(!strip.textContent.includes('Treasure'));
           assert.equal(rcptFlag(comp,row),'Confirm the physical reverse');assert.equal(canonicalChecks(comp).length,1);
-          assert.equal(strip.querySelector('input'),null);
+          assert.equal(strip.querySelector('input'),comp.checkBoxes[0]);
         ''')
 
     def test_inspection_selected_panel_and_list_share_read_only_original_context(self):

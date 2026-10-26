@@ -2,6 +2,18 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Inline original-row arrival checks (2026-10-26; E11-S30 slice 12)
+
+Receive delivery now moves each existing canonical arrival-check label/input beside the first visible piece of its proven original row. General/unproved checks and hidden or unselected targets fall back to **To check**. A targeted fallback visibly names the original row and printing; inline/general scope captions remain available to screen readers without duplicate visible wording. Split siblings and inspector summaries retain read-only context. There is exactly one verification control per check, outside the card-selection label, with no nested checkbox labels.
+
+Parking and reparenting the original nodes preserves control identity, checked state and owned focus through filters, Pictures/List, row rebuilds, local split/merge/Undo and explicit draft Resume. Verification remains whole-part, with unchanged receipt requests, draft format and backend/schema behavior. This adds no migration beyond the already-unapplied 0015 association foundation and makes no live activation claim.
+
+Validation: the full affected UI/source group passed 208 checks without skips in 14.113 seconds, including 14 new cases. The final caption delta passed 70 affected checks without skips in 4.480 seconds, including one new case. Independent base and caption reviews are clear; repository Ruff and diff checks passed. The source audit covered 937 files with only the existing `tokens.js` 1,447-line exception.
+
+The final native matrix passed 12 light/dark cases at 320, 600, 820, 1000, 1280 and 1920 px without overflow or page errors. The same canonical node/focus survived Attention-filter fallback and return; the targeted fallback caption stayed visible, with no nested or duplicate controls. Pictures and List both passed, including the phone's actual Tools switch. At 320 light and 1920 dark, component-wide gating with only another row checked and real local split, merge, Undo, reload and explicit Resume preserved every control/draft state. There were zero API writes, 14 baseline visit POSTs blocked, and all fixture inventory/order-record/payload/deck bytes unchanged. Three screenshots, including the narrow fallback caption, were inspected as pixels. The first native failure expected automatic Resume; clicking the existing button corrected the harness, with no product fix. This is isolated fixture evidence, not actual touch/Safari/device or household acceptance.
+
+E11-S30 remains partial and OPEN for its separate confirmed-printing model, Collection filter choice, full-data dark states and touch/Safari/household-device acceptance. Story counts are unchanged.
+
 ## Undo collection notes in a bounded metadata batch (2026-10-26; E11-S08)
 
 The existing complete 2-50-row collection UPDATE inverse now accepts notes alongside condition and language, including combinations. Quantity, name, printing identity, mixed sources and partial selection remain refused. Complete-source ownership, unique keys, latest audit touches, full current rows, both revisions, atomic ordinary `apply_rows` restoration and complete keyed receipts retain the existing batch contract.
