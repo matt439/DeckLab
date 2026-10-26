@@ -2,7 +2,7 @@
 visible casual list's field average and when it was tested, worked out from the saved games (nothing plays).
 
     library_forge_view()
-                        {"decks": {deck id: {"version", "rate" {value, low, high} or None, "partial",
+                        {"decks": {deck id: {"version", "card_sha", "rate" {value, low, high} or None, "partial",
                         "counted", "of", "games", "tested"}}, "error"}
 
 The field and its numbers are the field view's (forge.field.averages), over the decks this viewer sees, as
@@ -52,7 +52,7 @@ def library_forge_view():
                "product_notes": seen.everything or seen.space == "home"}
     try:
         lists = forge.field.field_lists(FORMAT, **{k: v for k, v in options.items() if k != "keep"})
-        fingerprint = (tuple((e["id"], e["card_sha"]) for e in lists),
+        fingerprint = (tuple((e["id"], e["version"], e["card_sha"]) for e in lists),
                        _stamp(forge.common._results_dir(None)))
         key = (seen.space, seen.everything, public)
         with _lock:
@@ -74,7 +74,8 @@ def library_forge_view():
         rate = None
         if average.get("value") is not None:
             rate = {k: average.get(k) for k in ("value", "low", "high")}
-        out[deck_id] = {"version": numbers["version"], "rate": rate, "partial": bool(average.get("partial")),
+        out[deck_id] = {"version": numbers["version"], "card_sha": numbers["card_sha"],
+                        "rate": rate, "partial": bool(average.get("partial")),
                         "counted": average.get("counted"), "of": average.get("of"), "games": numbers["games"],
                         "tested": numbers["tested"]}
     return {"decks": out, "error": None}

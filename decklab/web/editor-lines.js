@@ -366,7 +366,7 @@ function editorUndoFocus(ed) {
   const host = ed.dom.lines, active = document.activeElement;
   if (!editorKeyboardCurrent(ed) || !active?.isConnected) return null;
   const address = { active, token: routeToken, profile: ed.profile, scope: JSON.stringify([ed.id, ed.version, ed.space]) };
-  const bar = ["addCards", "save", "saveMore", "checks"].find((key) => ed.dom.barParts?.[key] === active);
+  const bar = ["addCards", "save", "saveMore", "checks", "undo"].find((key) => ed.dom.barParts?.[key] === active);
   if (bar) return { ...address, bar };
   if (ed.dom.searchDock && editorSearchDockCurrent(ed.dom.searchDock) && ed.dom.searchDock.root.contains(active))
     return { ...address, bar: "addCards" }; // Undo redraws the Dock; recover at its current launcher or Cards.

@@ -126,7 +126,7 @@ class EditViewTests(EditorTestCase):
         self.assertEqual(set(view), {"id", "space", "kind", "title", "source", "editable", "why_not", "sha256", "fields",
                                      "field_text", "editable_fields", "sections", "lists", "changed_on", "table", "prose",
                                      "new_deck", "brackets", "other_sleeves", "accessories",
-                                     "warnings", "may_save", "why_not_save"})
+                                     "warnings", "may_save", "why_not_save", "forge_lists"})
         self.assertEqual((view["id"], view["kind"], view["title"], view["editable"], view["why_not"]),
                          ("casual/gruul-test", "casual", "Gruul Test", True, None))
         self.assertEqual(view["source"], "casual/gruul-test")      # the deck's id, never a file

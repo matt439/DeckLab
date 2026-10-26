@@ -173,6 +173,21 @@ two-line full List rows at most 600px wide. Keep actual printing, cost and
 availability visible. Checks headings switch real classes rather than overriding
 the shared sr-only rule. Full Editor peek stays suppressed.
 
+Full List rows retain their mana costs beside numeric MV; the native MV button
+reverses sorting within each existing group. Unknown values remain unknown and
+sort last. Sort moves only presentation nodes, leaving the focused row attached
+and saved/request order intact. Changed rows use the teal row treatment only
+while no warning/block style applies.
+
+The bar retains change counts, copy deltas, Undo and guarded Discard alongside
+its original controls. Its split Save is one retained group. Phone history
+actions use two rows in the same native focus order; bar height remains measured
+by the Dock. `editor-forge.js` shows optional saved evidence only after exact
+ID/version/playable-fingerprint matching and current page/person/frame checks.
+The API computes hashes from the parsed edit snapshot; field cache identity
+includes version. Missing evidence supplies no numbers; partial coverage stays
+explicit.
+
 `editorCurveBaseline()` compares only the current actual saved edit/version,
 including a readable trial, never a new/copy/unstarted list. Saved quantities
 stay immutable; same-name current card metadata may fill a local projection,

@@ -474,7 +474,7 @@ button.edit-card:hover { background: var(--hover); }
 .edit-bar {
   position: sticky; bottom: max(var(--shell-bottom, 0px), var(--editor-keyboard-bottom, 0px)); z-index: 6;
   box-sizing: border-box; min-height: calc(var(--bar-h) + env(safe-area-inset-bottom));
-  display: flex; align-items: center; gap: var(--s-2);
+  display: flex; align-items: center; flex-wrap: wrap; gap: var(--s-2);
   margin: var(--s-5) calc(-1 * var(--gutter)) calc(-1 * var(--s-6));
   /* The count and Save keep clear of a phone's notch on its side (viewport-fit=cover). */
   padding: var(--s-2) max(var(--gutter), env(safe-area-inset-right)) max(var(--s-2), env(safe-area-inset-bottom)) max(var(--gutter), env(safe-area-inset-left));
@@ -492,11 +492,39 @@ button.edit-card:hover { background: var(--hover); }
 .bar-none { font-size: var(--fs-sm); font-weight: var(--fw-semibold); color: var(--ink-2); }
 .bar-warn { padding: var(--s-1) var(--s-2); }
 .bar-checking { display: inline-flex; align-items: center; gap: var(--s-2); font-size: var(--fs-sm); color: var(--ink-2); }
+.bar-changes { display: grid; flex: 1 1 10em; min-width: 0; gap: var(--s-1); line-height: var(--lh-tight); }
+.bar-change-count { color: var(--ink-2); font-size: var(--fs-sm); overflow-wrap: anywhere; }
+.bar-change-copies { font-family: var(--font-mono); font-size: var(--fs-sm); }
+.bar-change-added { color: var(--strong-ink); }
+.bar-change-removed { color: var(--weak-ink); }
+.bar-history-actions { display: contents; }
+.bar-undo, .bar-discard { flex: none; }
+.bar-save-group { display: inline-flex; flex: none; align-items: center; gap: var(--s-2); }
+.bar-changes[hidden], .bar-history-actions[hidden], .bar-change-copies[hidden], .bar-discard[hidden] { display: none; }
+@media (max-width: 599px) {
+  .edit-bar { gap: var(--s-1) var(--s-2); }
+  .edit-bar .bar-count { flex: 1 1 5em; }
+  .edit-bar .bar-changes { flex: 1 1 8em; }
+  .bar-add-detail { display: none; }
+  .edit-bar.has-history-actions { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto var(--tap); }
+  .edit-bar.has-history-actions .bar-count { grid-column: 1; grid-row: 1; margin: 0; }
+  .edit-bar.has-history-actions .bar-changes { grid-column: 2; grid-row: 1; }
+  .edit-bar.has-history-actions :is(.bar-checking, .bar-warn) { grid-column: 3; grid-row: 1; max-width: 5.5em; min-width: 0; }
+  .edit-bar.has-history-actions .bar-warn .status { white-space: normal; }
+  .edit-bar.has-history-actions .bar-add { grid-column: 4; grid-row: 1; padding-left: 0; padding-right: 0; }
+  .edit-bar.has-history-actions .bar-undo { grid-column: 1; grid-row: 2; }
+  .edit-bar.has-history-actions .bar-discard { grid-column: 2; grid-row: 2; }
+  .edit-bar.has-history-actions .bar-save-group { grid-column: 3 / 5; grid-row: 2; justify-self: end; }
+}
 /* Forge actions retain their own controls outside the replaceable curve and counts. No result is inferred. */
 .edit-forge { margin-top: var(--s-4); padding-top: var(--s-3); border-top: 1px solid var(--divider); min-width: 0; }
 .edit-forge[hidden] { display: none; }
 .edit-forge h3 { margin: 0 0 var(--s-2); font-size: var(--fs-sm); }
 .edit-forge > .sub { margin: 0 0 var(--s-3); }
+.edit-forge-summary { display: grid; gap: var(--s-2); margin-bottom: var(--s-3); }
+.edit-forge-summary[hidden] { display: none; }
+.edit-forge-summary > .sub { margin: 0; }
+.edit-forge-summary > .fresh { justify-self: start; }
 .edit-forge .vt-test-row { flex-wrap: wrap; align-items: flex-start; }
 .edit-forge .vt-test-why { flex-basis: 100%; max-width: none; overflow-wrap: anywhere; }
 

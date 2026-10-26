@@ -33,6 +33,18 @@ def _offered_sections(kind, *decklists):
     return [name for name in decks.SECTIONS if name in EDITOR_SECTIONS[kind] or name in present]
 
 
+def _forge_lists(deck):
+    """Optional playable identities from this exact parsed snapshot; no engine is started."""
+    try:
+        from decklab.lib.forge.lists import card_sha
+        kind = "commander" if deck.kind == "commander" else "constructed"
+        return {version: card_sha(sections, kind) if sections is not None and (version == "target" or sections) else None
+                for version, sections in (("target", deck.target), ("owned", deck.owned))}
+    except Exception:
+        common._log(f"The editor's optional Forge identities can't be worked out:\n{traceback.format_exc()}")
+        return {}
+
+
 def _file_edit_json(deck, p, warnings):
     """edit_view()'s answer for a deck file."""
     why_not = None
@@ -67,6 +79,9 @@ def _file_edit_json(deck, p, warnings):
         "editable_fields": editable_fields if why_not is None else [],
         "sections": _offered_sections(deck.kind, deck.target, deck.owned),
         "lists": {"target": _lines_json(deck.target, warnings), "owned": _lines_json(deck.owned or None, warnings)},
+        # These identify only the playable lists, using Forge's exact main/commander semantics.
+        # Work from this parsed snapshot rather than loading the deck again after a concurrent save.
+        "forge_lists": _forge_lists(deck),
         "changed_on": deck.changed_on,
         "prose": drafts.prose_of(deck.text),
         "new_deck": None,
@@ -110,7 +125,8 @@ def edit_view(deck_id):
     or "owned", target_bracket 1-5, sleeves; None when absent or unreadable),
     field_text (Deck Lab's header fields as written), editable_fields,
     sections (the ones the editor offers), lists {"target", "owned" (None
-    when the file has none)} in deck_view's line format, changed_on (the
+    when the file has none)} in deck_view's line format, forge_lists (each saved
+    version's playable card_sha, ignoring printings/order/sideboard as Forge does), changed_on (the
     "Decklist changed" date), prose ({"substitutes", "notes"}: the
     write-up's text, each None when the deck has no such section;
     drafts.prose_of), table (the out-of-date note, _table_json; left
