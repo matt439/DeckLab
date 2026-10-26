@@ -85,5 +85,6 @@ def apply_plan(body):
     def refused(e):
         return ApiError(409, CHANGED, conflict=True) if getattr(e, "reason", None) == "changed" else None
     apply_op(inventory.Op("deck.token_cards", {"items": items,
-             "expected_inventory_revision": result["inventory_revision"]}), profile, what, refused)
+             "expected_inventory_revision": result["inventory_revision"],
+             "expected_decks_revision": result["decks_revision"]}), profile, what, refused)
     return {"saved": len(items), "decks": [item["id"] for item in items]}

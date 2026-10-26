@@ -190,7 +190,8 @@ def plan(inv, built, space=spaces.HOME, warnings=None):
                     "packs": sorted(packs[d["id"]], key=lambda p: cards.fold(p["token"])),
                     "short": sorted(short[d["id"]], key=cards.fold), "spares": spares[d["id"]],
                     "sha256": d["stored"].sha256, "parsed": d["parsed"], "stored": d["stored"]})
-    digest = hashlib.sha256(json.dumps([inv.sha256, snapshot.revision,
+    digest = hashlib.sha256(json.dumps([inv.sha256, snapshot.revision, snapshot.decks_revision,
                                        [(d["id"], d["sha256"], d["after"]) for d in out]])
                             .encode()).hexdigest()
-    return {"decks": out, "tokens_sha256": inv.sha256, "inventory_revision": snapshot.revision, "sha256": digest}
+    return {"decks": out, "tokens_sha256": inv.sha256, "inventory_revision": snapshot.revision,
+            "decks_revision": snapshot.decks_revision, "sha256": digest}

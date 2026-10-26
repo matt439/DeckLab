@@ -2,6 +2,12 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Token-plan participant revision guard (2026-10-27)
+
+Token plans now bind the full deck-parts revision as well as the inventory revision and changed deck texts. An unchanged participant edited or deleted, or a newly built deck added between recompute and save, therefore refuses the whole operation before any write. The receipt also changes when a deck edit leaves the planned token lines identical.
+
+Validation: 40 affected reservation, planner and legacy checks plus seven new file/API race and no-op cases passed. Tests change only disposable deck files immediately before real apply, prove the inventory revision stays unchanged, and verify 409 with every post-race file preserved. Independent review confirmed both file and PostgreSQL revision/rollback paths; no new PostgreSQL execution is claimed for this guard. Ruff and whitespace checks passed.
+
 ## Intact-product token records and fixed reservations (2026-10-27; E7-S31 first slice)
 
 An owned intact product can record its physical packed token cards from any of its generated deck pages, or with `product tokens` / `product set-tokens` on the PC. One record covers the whole box. It reserves existing token quantities once, preserves inventory and kit, and clears with kit on break-up. Blank means unknown packing: no explicit reservation, with the existing shared-card warning still assuming one card per used row. Four- and six-column status formats remain readable; migration 0014 adds the new database column with blank defaults.
