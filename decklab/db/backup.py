@@ -463,12 +463,12 @@ def run_restore_check(source=None, say=say):
     recorded when it was dumped, and every public and audit table's content with the digests
     recorded with them (a dump recorded before phase 5 has none: counts only), then drop the
     scratch database. Returns 0, or 1 on any failure or difference (recorded either way)."""
-    import psycopg
-    from psycopg import sql
     s = db.settings()
     source = Path(source or s["backup_dir"] or s["staging_dir"])
     started = datetime.now()
-    scratch = _scratch_name(s["name"])
+    scratch = _scratch_name(s["name"])      # refused before psycopg is needed
+    import psycopg
+    from psycopg import sql
 
     def failed(text, path=None, size=None):
         record("restore_check", started, False, path, size, text)

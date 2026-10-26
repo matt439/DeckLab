@@ -491,7 +491,7 @@ class Sandbox:
         return self
 
     def _start(self):
-        self.root = Path(tempfile.mkdtemp())
+        self.root = Path(tempfile.mkdtemp()).resolve()  # long form, as golden_dump.pointed() resolves it
         self.stack.callback(shutil.rmtree, self.root, True)
         self.magic, self.data, self.web = self.root / "magic", self.root / "data", self.root / "web"
         _write(self.magic / "collection.csv", COLLECTION)
