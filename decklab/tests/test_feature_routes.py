@@ -8,7 +8,7 @@ import json
 from unittest import mock
 
 from decklab.lib import config, pool
-from decklab.lib.api import (accessories, activity, assembly, assembly_completion, assembly_ticks, collection, cover, editor, history, play_records,
+from decklab.lib.api import (accessories, activity, activity_undo, assembly, assembly_completion, assembly_ticks, collection, cover, editor, history, play_records,
                              receipts, shopping, shopping_order_changes, shopping_orders, shopping_queue, tokens)
 from decklab.tests.test_server import ServerTestCase, WRITE
 
@@ -29,8 +29,10 @@ GETS = (
     ("/api/tokens", tokens, "tokens_view", "", {}),
     ("/api/activity", activity, "activity_view", "before=10&limit=50&kind=decks&actor=matt",
      {"before": "10", "limit": "50", "kind": "decks", "actor": "matt"}),
+    ("/api/activity/undo", activity_undo, "undo_view", "id=17", {"id": "17"}),
 )
 POSTS = (
+    ("/api/activity/undo", activity_undo, "apply_undo"),
     ("/api/assembly/preview", assembly, "assembly_preview"),
     ("/api/assembly/built", assembly_completion, "mark_built"),
     ("/api/assembly/ticks", assembly_ticks, "packing_ticks"),
@@ -96,6 +98,8 @@ class FeatureRouteTests(ServerTestCase):
                     parameter = "id" if parameter == "deck_id" else parameter
                     self.assertError(path + f"?{parameter}=one&{parameter}=two", 400)
                 for method in ("POST", "PUT", "DELETE", "OPTIONS"):
+                    if method == "POST" and any(write[0] == path for write in POSTS):
+                        continue  # A combined read/write route has its POST guards checked below.
                     self.assertError(path + "?" + query, 405, method=method, body=b"{}" if method == "POST" else None)
                 handler.assert_not_called()
 
@@ -103,6 +107,8 @@ class FeatureRouteTests(ServerTestCase):
         for path, module, name in POSTS:
             with self.subTest(path=path), mock.patch.object(module, name) as handler:
                 for method in ("GET", "HEAD", "PUT", "DELETE", "OPTIONS"):
+                    if method in ("GET", "HEAD") and any(read[0] == path for read in GETS):
+                        continue  # Its GET/HEAD query contract is checked by the read-route cases.
                     code, headers, body = self.request(method, path)
                     self.assertEqual(code, 405)
                     self.assertFalse([key for key in headers if key.lower().startswith("access-control-")])

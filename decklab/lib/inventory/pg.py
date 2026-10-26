@@ -75,6 +75,7 @@ import csv
 import dataclasses
 import hashlib
 import io
+import json
 import threading
 from collections import defaultdict
 from datetime import datetime
@@ -167,7 +168,31 @@ SELECTS = {
 
 
 def _select(c):
-    return {table: c.execute(query).fetchall() for table, query in SELECTS.items()}
+    columns = _status_columns(c)
+    status = "select file, " + ", ".join(column if column in columns else "''::text as token_cards"
+                                         for column in STATUS_COLUMNS) + " from product_status"
+    return {table: c.execute(status if table == "product_status" else query).fetchall()
+            for table, query in SELECTS.items()}
+
+
+def _status_columns(c):
+    """Probe the actual column, without caching absence across a later migration."""
+    ready = c.execute("select exists(select 1 from pg_catalog.pg_attribute "
+                      "where attrelid=to_regclass('public.product_status') and attname='token_cards' "
+                      "and not attisdropped)").fetchone()[0]
+    return STATUS_COLUMNS if ready else tuple(column for column in STATUS_COLUMNS if column != "token_cards")
+
+
+def _status_tables(t, columns):
+    """Old schemas can represent blank unknown packing, never discard a recorded value."""
+    if columns == STATUS_COLUMNS:
+        return t
+    token_at = STATUS_COLUMNS.index("token_cards")
+    if any(row[token_at] for row in t["product_status"].values()):
+        raise Invalid("Product packed token cards require migration 0014. Run the database migrations first.")
+    indices = [STATUS_COLUMNS.index(column) for column in columns]
+    return {**t, "product_status": {key: tuple(row[index] for index in indices)
+                                    for key, row in t["product_status"].items()}}
 
 
 def snapshot(data, revision):
@@ -288,13 +313,13 @@ def _db(value):
     return list(value) if isinstance(value, tuple) else value
 
 
-def _keyed_rows(table, t):
+def _keyed_rows(table, t, status_columns=STATUS_COLUMNS):
     """(key columns, value columns, {key: values}) of one of t's keyed tables (tables()' shape)."""
     return {
         "collection_card": (("space_id", "set_code", "collector_number", "finish"),
                             ("name", "quantity", "condition", "language", "notes")),
         "product": (("stem",), ("name", "format", "columns")),
-        "product_status": (("file",), STATUS_COLUMNS),
+        "product_status": (("file",), status_columns),
         "purchase_order": (("id",), ORDER_COLUMNS),
         "order_component": (("order_id", "id"), COMPONENT_COLUMNS),
     }[table] + (t[table],)
@@ -310,8 +335,10 @@ def _plain_key(key):
 
 def _write_all(cur, t):
     """Insert every row of t (tables()' shape) into empty tables, parents first."""
+    status_columns = _status_columns(cur)
+    t = _status_tables(t, status_columns)  # Refuse unsupported data before any inventory DML.
     for table in PARENTS_FIRST:
-        keys, values, rows = _keyed_rows(table, t)
+        keys, values, rows = _keyed_rows(table, t, status_columns)
         _insert(cur, table, keys + values, [(*_plain_key(k), *map(_db, v)) for k, v in rows.items()])
     _insert(cur, "product_item", ("product_stem", "position", "cells"),
             [(stem, n, list(cells)) for stem, found in t["product_item"].items() for n, cells in enumerate(found)])
@@ -332,6 +359,9 @@ def _diff(cur, old, new):
     """Write the difference between two tables() results, each kind of statement in one
     executemany batch (deletes children first, then inserts and updates parents first); returns
     how many rows it wrote."""
+    status_columns = _status_columns(cur)
+    new = _status_tables(new, status_columns)  # Preflight before deletes, inserts or updates.
+    old = _status_tables(old, status_columns)
     count = 0
     pending = []
 
@@ -359,14 +389,14 @@ def _diff(cur, old, new):
     add("delete from product_item where product_stem = %s",
         [(stem,) for stem, found in old["product_item"].items() if found != new["product_item"].get(stem)])
     for table in reversed(PARENTS_FIRST):
-        keys, _, rows = _keyed_rows(table, old)
+        keys, _, rows = _keyed_rows(table, old, status_columns)
         add(f"delete from {table} where {where(keys)}", [_plain_key(key) for key in rows.keys() - new[table].keys()])
     for table in ("token_card", "watchlist_item"):
         kept = {r[0] for r in new[table] if r[0]}
         add(f"delete from {table} where id = %s", [(row[0],) for row in old[table] if row[0] not in kept])
     # Inserts and updates, parents first.
     for table in PARENTS_FIRST:
-        keys, values, rows = _keyed_rows(table, new)
+        keys, values, rows = _keyed_rows(table, new, status_columns)
         before = old[table]
         add(insert(table, keys + values),
             [(*_plain_key(key), *map(_db, value)) for key, value in rows.items() if key not in before])
@@ -674,6 +704,33 @@ class PgInventory:
             return {"at": at, "actor": actor, "name": name or actor, "source": source, "message": message}
         return self._call(work)
 
+    def undo_audit(self, change_id):
+        """Internal original rows, never Activity's filtered/capped projection.
+
+        Two rows suffice to prove a change is outside the single-row Undo slice.
+        During apply use this transaction's already-locked connection, not a second
+        snapshot that could race the inventory being changed.
+        """
+        def work(c):
+            return [{"id": rid, "table": table, "op": op, "key": key, "before": old, "after": new}
+                    for rid, table, op, key, old, new in c.execute(
+                        "select id,table_name,op,row_key,before,after from audit.row_change "
+                        "where change_set_id=%s order by id limit 2", (change_id,)).fetchall()]
+        applying = getattr(self._applying, "connection", None)
+        return work(applying) if applying is not None else self._call(work)
+
+    def undo_latest(self, table, key):
+        """Latest *audit row* touching this key. Change-set IDs are allocated before
+        the inventory lock and therefore cannot establish write order."""
+        if table not in ("collection_card", "token_card"):
+            raise Invalid("That row does not support Undo.")
+        def work(c):
+            found = c.execute("select id from audit.row_change where table_name=%s and row_key=%s::jsonb "
+                              "order by id desc limit 1", (table, json.dumps(key))).fetchone()
+            return found[0] if found is not None else None
+        applying = getattr(self._applying, "connection", None)
+        return work(applying) if applying is not None else self._call(work)
+
     # -------------------------------------------------------- writing
 
     def apply(self, op, actor, message, reason=None, expected_revision=None):
@@ -695,10 +752,13 @@ class PgInventory:
                     if expected_revision is not None and str(expected_revision) != before.revision:
                         raise Conflict(files.MOVED_MESSAGE)
                     self._applying.saves = deck_key is not None
+                    previous_connection = getattr(self._applying, "connection", None)
+                    self._applying.connection = c
                     try:
                         after, summary = op.run(changes.detach(before))
                     finally:
                         self._applying.saves = None
+                        self._applying.connection = previous_connection
                     after = changes.prepare(before, after)
                     decks_changed = any(paths.is_deck_part(rel) for rel in changes.changed(before, after))
                     if decks_changed and deck_key is None:

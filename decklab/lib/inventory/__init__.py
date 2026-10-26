@@ -427,3 +427,12 @@ def apply(op, actor, message, reason=None, expected_revision=None, refresh=True)
     if pin is not None:
         pin.snapshot = after
     return after, summary
+
+
+def undo_review(change_id, space, snapshot=None):
+    """One supported audited row update, in this authorized space, or a guarded refusal."""
+    from .undo import review
+    return review(change_id, space, snapshot)
+
+
+from . import undo  # noqa: E402,F401  (registers inventory.undo after this interface is defined)

@@ -24,7 +24,7 @@ from decklab.lib import cards, config, decks, inventory, pool, tokens
 from decklab.lib.api import common
 from decklab.lib.api import tokens as api_tok
 from decklab.lib.api.common import ApiError
-from decklab.lib.inventory import Op, files, model
+from decklab.lib.inventory import Op, files, model, rules
 from decklab.lib.inventory.files import FileInventory
 from decklab.lib.state import Actor
 from decklab.lib.tokens import ops
@@ -149,8 +149,7 @@ class Tree:
                     "people/user2"):
             (self.magic / sub).mkdir(parents=True)
         (self.magic / "tokens.csv").write_text(ROWS, encoding="utf-8", newline="\n")
-        (self.magic / "products/status.csv").write_text("file,status,intact,sleeves,deck_box,notes\n",
-                                                         encoding="utf-8", newline="\n")
+        (self.magic / "products/status.csv").write_bytes(rules.csv_bytes((), rules.STATUS_FIELDS))
         (self.magic / "watchlist.csv").write_text(",".join(model.QUEUE_FIELDS) + "\n", encoding="utf-8",
                                                   newline="\n")
         (self.magic / "decks/casual/queen.md").write_text(deck_md("Queen Deck", deck="1 Hornet Queen\n"),

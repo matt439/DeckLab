@@ -204,6 +204,8 @@ E7-S21 now has its first slice: ordinary home built decks can review their saved
 
 E4-S13 is built: the pair matchup page places the visible human record beside Forge's verdict for the same deck identities and historical cards actually played. The below-10 warning, separate denominators and failure states keep a small or unavailable record from appearing to validate the simulation. This does not change field ratings.
 
+E11-S08 remains partial: Activity now reviews and saves one guarded same-identity audited collection/token UPDATE as a new inverse change. The original audit remains immutable. Broader import/receipt/removal/identity/multi-row and accessory/wishlist recovery remain, with no operation provenance inferred from a single-row audit. Current status counts are unchanged.
+
 ## PLAN.md alignment
 
 How each item in [PLAN.md](../PLAN.md)'s "Still to do" (first compared on 2026-10-13; rechecked against PLAN.md and the stories on 2026-10-19) compares with the stories. Verdicts: keep (as it is), raise (do sooner), lower (do later), reshape (change its scope), drop (remove).

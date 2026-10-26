@@ -3520,13 +3520,15 @@ As Matt, the household admin, I want to undo a wrong change from the audit trail
 - Given rows have changed since, when I try to undo, then I'm told which rows conflict and nothing is written.
 - Given a deck change, when I want it back, then the deck's History opens the old revision as a draft to save.
 
+Now (2026-10-26): [the first guarded Activity Undo slice is implemented](../HISTORY.md#guarded-activity-undo-for-one-audited-row-2026-10-26-e11-s08). An authoritative current-to-restored review can save one inverse audited UPDATE for a same-identity collection row (quantity, condition, language, notes) or stable token row (quantity, notes), subject to current permissions and lock-time conflict checks. Deck History still opens an old revision as a draft.
+
 Evidence:
-- `decklab/web/history.js`: historySheet, showRevisionEditor (Open as a draft)
-- `decklab/web/activity.js`, `decklab/lib/api/activity.py` (read-only)
+- `decklab/lib/inventory/undo.py`, `pg.py`, `decklab/lib/state/pg.py`: complete original audit source, latest original audit-row id, full after-state and inventory/deck revision checks under the normal write lock; one new inverse audit without changing the original
+- `decklab/lib/api/activity_undo.py`, `activity.py`: advisory candidate hint, separate authorized own-space preview/apply, protected row-label conflicts and actual restored-row/save receipts
+- `decklab/web/activity-undo.js`, `activity.js`, `history.js`: explicit Save Undo, no display-row write authority, unknown/stale outcomes require reload, bounded filter/page-depth refresh, and Open as a draft for deck revisions
+- `decklab/tests/test_inventory_undo.py`, `test_activity_undo_api.py`, `test_activity_undo_ui.py`: source scope, collisions, changed/touched rows, held reductions, exact preview/receipt values and current UI ownership
 
-Gap: only deck revisions can be restored. Activity has no Undo, no inverse-change preview and no conflict check for inventory, token, wishlist or accessory change sets.
-
-First slice: Undo on Activity for a single collection or token edit: an inverse change previewed, a conflict refused naming the rows, saved as a new change set.
+Gap: broader imports, receipts, merges, removals, identity changes and multi-row recovery, plus accessory and wishlist inverses, remain beyond this slice. Eligibility follows the complete audited row set, not an inferred operation label: a one-row bulk update is indistinguishable from another qualifying single UPDATE. Unknown, conflicting or held-card reductions refuse; an in-use acknowledgement remains the normal editor's separate action. Undo supplies no automatic retry or already-done/idempotent result claim. Disposable PostgreSQL core validation and the native fixture matrix passed; the broader affected check group is still pending its final receipt. Live household activation remains separate.
 
 **E11-S09** · Claude Code · must · L · built
 

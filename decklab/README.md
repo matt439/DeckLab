@@ -347,7 +347,11 @@ command line, an import or a sync, its message and reason, and its first few row
 ("Added Plains (SLD 1513) to User1's wishlist", "Your theme: system → dark", "Simulations: admins →
 everyone") with **Show all**. Filter chips pick a kind of change and a person (the server filters, so
 **Load older** keeps to them), and rows link to their decks, receipts and cards (the card viewer, over
-the change's cards). It only reads; there's no undo.
+the change's cards). The list read is separate from the explicitly confirmed Undo described below.
+
+**Review undo** is an advisory candidate button; its separate server preview decides whether the change can be reversed now. This first slice requires exactly one audited UPDATE globally, in the viewer's own space: collection quantity/condition/language/notes on the same printing identity, or token quantity/notes on the same stable row. The review shows the authoritative current row and restored values, including notes only to its authorized editor. **Save Undo** creates one new audited inverse and keeps the original change immutable. It checks the original audit row is still latest, its full after-state, and both inventory and deck revisions under the normal write lock. Collisions, unknown holdings, later touches and unsafe held-card reductions refuse; any in-use acknowledgement belongs to the normal editor, not Undo.
+
+A conflict or uncertain response requires **Reload Activity**, with no blind retry or claim that a previous attempt was already done. Done refreshes the same filter and number of loaded pages, keeping the old rows until all reads succeed and restoring the original anchor where present. The complete audit shape governs eligibility; a bulk action that produced exactly one qualifying UPDATE can meet the same rule. Larger or mixed imports, receipts, merges, removals, identity/multi-row changes and accessory/wishlist recovery remain future work. `GET /api/activity/undo?id=` supplies the authoritative review; `POST /api/activity/undo` accepts only the source id and opaque review receipt, plus the current profile. No migration is needed.
 
 `GET /api/activity?before=&limit=&kind=&actor=` (`lib/api/activity.py`; `limit`
 1-100, 50 by default) applies `permissions.activity_scope`: named viewers see
@@ -614,7 +618,7 @@ used by the other person's deck says "one of User1's decks", without a link or a
   records it (`--tokens ""` clears; token SHA `none` only when no token sheet exists). `--dry-run` previews,
   and `--actor matt` follows other writes. Both receipts are checked again under the write lock. Product
   records and status receipts stay private even when home's collection and decks are public.
-  This feature needs migration `0014_product_token_cards.sql`; this coding session has not applied it live.
+  Recording product token cards needs migration `0014_product_token_cards.sql`; this coding session has not applied it live. Before that migration, blank packing remains readable as unknown and ordinary blank-record updates still work; saving a recorded value refuses without partial changes.
 - **Saving and history:** each add, edit, removal or choice is one change set in the audit trail,
   by whoever made it, such as "add sleeves Dragon Shield Matte (black)" or "set sleeves for Izzet
   Otters" by User1, shown on the Activity page (only to the viewers who see that row's owner: an

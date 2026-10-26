@@ -10,7 +10,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 
 **Ready queue:** `E11-S30`, the visual redesign Matt chose on 2026-10-24 ("P1"). Slice 14 of [visual-design.md](decklab/design/visual-design.md#7-rollout) is implemented, as are slice 13's scoped recorded packing activity, verified intact-product storage review and per-card movable-copy priorities. Exact physical printing still needs a confirmed-printing model; independent ready reserve work can continue while it is designed. Slice 15's synthetic dark smoke passed; full-data and device acceptance remain open. The approved desktop keyboard plan is built; global search has its separate decision below. Collection question 6, authoritative Receive check-to-row association and touch/Safari acceptance remain separate gates, with Card colour matching the compatibility default.
 
-**Ready reserve:** after the redesign, the `OPEN` rows Matt added on 2026-10-25 have concrete first slices in their stories, in no fixed order unless Matt picks one. A first guarded Undo (`E11-S08`) also remains ready. The 2026-10-26 audit checked the reserve against the code: no extra stories need promoting. Release publication, Linux service/timer installation, device checks and Forge games retain their separate gates.
+**Ready reserve:** after the redesign, the `OPEN` rows Matt added on 2026-10-25 have concrete first slices in their stories, in no fixed order unless Matt picks one. `E11-S08` retains broader recovery work beyond its implemented single-row Undo review. The 2026-10-26 audit checked the reserve against the code: no extra stories need promoting. Release publication, Linux service/timer installation, device checks and Forge games retain their separate gates.
 
 **Needs Matt or another person — these don't block coding:**
 - **`E11-S31`: global-search scope.** Choose the sources (visible decks, the viewer's collection and/or all Scryfall cards) and result grouping before building. Library title, colour and archetype filters (`E1-S05`) are built independently of that decision.
@@ -70,7 +70,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 | `E11-S31` | DECISION | could | M | Global search in the top bar ([stories.md](decklab/design/stories.md#e11-s31)): Matt chooses sources and result grouping before building. |
 | `E11-S32` | OPEN | could | M | A prebuilt release of the Forge fork, with a checksum, as SELF-HOSTING.md's first Forge route. |
 | `E11-S33` | OPEN | could | L | Full Linux support: reproduce and fix the failures from the dated self-host check, add Linux CI, then a nightly timer and server service. |
-| `E11-S08` | OPEN | could | L | Undo a wrong change from Activity; first, a single collection or token edit, with a preview and a conflict check. |
+| `E11-S08` | OPEN | could | L | First audited-update Undo slice built for one same-identity collection/token row. Broader imports, receipts, removals, identity and multi-row recovery remain. |
 | `E11-S02` | DECISION | should | S | The "Deck Lab is off" Worker is deployed (`decklab/cloudflare/`): Matt checks a signed-in save, a photo upload, and the page with Deck Lab stopped. |
 
 ## Areas with no open rows
