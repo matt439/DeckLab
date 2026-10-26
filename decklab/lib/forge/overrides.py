@@ -428,28 +428,31 @@ class _FileLock:
     byte, as the slots' (slots.py), taken by this process's threads one at a time."""
 
     def __enter__(self):
+        # Any exception out of here gives both locks back: a thread left holding _deploy_lock
+        # (an interrupt in the wait, say) would make every later deploy in this process wait forever.
         _deploy_lock.acquire()
+        self.fd = None
         try:
             common.DATA_DIR.mkdir(parents=True, exist_ok=True)
             self.fd = os.open(common.DATA_DIR / LOCK_FILE, os.O_RDWR | os.O_CREAT | getattr(os, "O_BINARY", 0), 0o666)
-        except OSError:
+            deadline = time.monotonic() + LOCK_WAIT_S
+            while True:
+                try:
+                    if sys.platform == "win32":
+                        os.lseek(self.fd, 0, os.SEEK_SET)
+                        msvcrt.locking(self.fd, msvcrt.LK_NBLCK, 1)
+                    else:
+                        fcntl.flock(self.fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                    return self
+                except OSError:
+                    if time.monotonic() > deadline:
+                        raise TimeoutError("another Deck Lab process held the overrides' lock") from None
+                    time.sleep(0.05)
+        except BaseException:
+            if self.fd is not None:
+                os.close(self.fd)
             _deploy_lock.release()
             raise
-        deadline = time.monotonic() + LOCK_WAIT_S
-        while True:
-            try:
-                if sys.platform == "win32":
-                    os.lseek(self.fd, 0, os.SEEK_SET)
-                    msvcrt.locking(self.fd, msvcrt.LK_NBLCK, 1)
-                else:
-                    fcntl.flock(self.fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-                return self
-            except OSError:
-                if time.monotonic() > deadline:
-                    os.close(self.fd)
-                    _deploy_lock.release()
-                    raise TimeoutError("another Deck Lab process held the overrides' lock") from None
-                time.sleep(0.05)
 
     def __exit__(self, *exc):
         try:

@@ -1,18 +1,35 @@
-# The whole unittest suite, weekly and by hand (Actions, tests, Run workflow). It takes about 25 minutes,
-# and Windows minutes count double on a private repo, so it doesn't run on every push.
-# There's no PostgreSQL service, .venv or card data here: the database tests skip
+# The whole unittest suite on every pull request, on main, weekly and by hand (Actions, tests, Run workflow),
+# split across 4 parallel Windows jobs (scripts/test_shard.py) so it takes about 5 minutes instead of 15.
+# Standard GitHub-hosted runners are free on a public repo; the shards count against the account's
+# 20 concurrent jobs. There's no PostgreSQL service, .venv or card data here: the database tests skip
 # (decklab/tests/db_support.py), as do the real-Forge games. Windows, because Deck Lab only runs there.
 name: tests
 
 on:
+  pull_request:
+  push:
+    branches: [main]
   schedule:
     - cron: "0 17 * * 6"      # Sunday 03:00 at home (UTC+10)
   workflow_dispatch:
 
+concurrency:                  # a new push to a pull request stops its older run
+  group: tests-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
-  test:
+  shard:
+    name: shard ${{ matrix.name }}
     runs-on: windows-latest
-    timeout-minutes: 45
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:              # index is test_shard.py's (from 0); expressions can't subtract
+          - { index: 0, name: 1 of 4 }
+          - { index: 1, name: 2 of 4 }
+          - { index: 2, name: 3 of 4 }
+          - { index: 3, name: 4 of 4 }
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -22,4 +39,13 @@ jobs:
         with:
           node-version: "24"
       - name: Tests (no database)
-        run: python -m unittest discover -s decklab/tests -t .
+        run: python scripts/test_shard.py ${{ matrix.index }} 4 --hang-after 600
+
+  # The one check to require before merging: it passes only when every shard did.
+  tests:
+    needs: shard
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - run: test "${{ needs.shard.result }}" = success

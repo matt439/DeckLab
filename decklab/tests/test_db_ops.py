@@ -7,6 +7,7 @@ repo, the real decklab database or Task Scheduler. db.log is redirected to a tem
 
 Run from the repo root: .venv\\Scripts\\python -m unittest decklab.tests.test_db_ops
 """
+import importlib.util
 import io
 import json
 import os
@@ -145,6 +146,7 @@ class CompareCountsTests(unittest.TestCase):
 
 
 class ScratchTargetTests(unittest.TestCase):
+    @unittest.skipUnless(importlib.util.find_spec("psycopg"), "psycopg renders the DROP")
     def test_drop_is_confined_to_the_configured_scratch_and_never_requests_force(self):
         connection = mock.Mock()
         with mock.patch.object(db, "settings", return_value={"name": "fixture"}):

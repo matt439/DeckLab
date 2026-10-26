@@ -395,14 +395,22 @@ class RunTests(ForgeCase):
     def test_the_first_use_of_the_user_folder_starts_one_process_alone(self):
         self.settings["forge_workers"] = 4      # the PC's budget (slots.py): room for all 4 at once
         self.fake("slowstart=0.6")
-        self.run_matchup(200, batch=50, workers=4)
-        times = sorted(t for _, _, t in self.starts())
-        self.assertEqual(len(times), 4)
-        self.assertGreaterEqual(times[1] - times[0], 0.5)       # the rest waited for the first header
-        self.log.unlink()
-        self.run_matchup(200, batch=50, workers=4, results_dir=self.tmp / "second")
-        times = sorted(t for _, _, t in self.starts())
-        self.assertLess(times[-1] - times[0], 0.5)               # then all together
+        # When Deck Lab starts each process, not when its Python is up (4 at once on a small CI runner
+        # can take over a second between them).
+        times = []
+        real_start = forge.processes.start_process
+
+        def start(argv, cwd=None, env=None, stdin=False):
+            times.append(time.monotonic())
+            return real_start(argv, cwd=cwd, env=env, stdin=stdin)
+
+        with mock.patch.object(forge.processes, "start_process", start):
+            self.run_matchup(200, batch=50, workers=4)
+            self.assertEqual(len(times), 4)
+            self.assertGreaterEqual(times[1] - times[0], 0.5)       # the rest waited for the first header
+            del times[:]
+            self.run_matchup(200, batch=50, workers=4, results_dir=self.tmp / "second")
+        self.assertLess(times[-1] - times[0], 0.5)                   # then all together
 
     def test_the_user_folder(self):
         user = self.tmp / "user"

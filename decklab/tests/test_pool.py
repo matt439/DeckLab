@@ -74,7 +74,7 @@ class PoolTestCase(unittest.TestCase):
     inventory backend (self.inventory, a FileInventory over it)."""
 
     def setUp(self):
-        root = Path(tempfile.mkdtemp())
+        root = Path(tempfile.mkdtemp()).resolve()       # long form, as golden_dump.pointed() resolves it
         self.addCleanup(shutil.rmtree, root, True)
         self.magic = root / "magic"
         for sub in ("orders/received", "products", "decks/casual", "decks/commander"):

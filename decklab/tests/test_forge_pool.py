@@ -567,8 +567,8 @@ class StartTests(PoolCase):
         self.assertTrue(all(len(set(slots_)) == 1 for slots_ in by_pid.values()), by_pid)
 
     def test_pinning_is_off_with_forge_pin_false(self):
-        if not forge.cores.core_masks():
-            self.skipTest("this PC's topology is one Deck Lab doesn't pin by")
+        if len(forge.cores.core_masks()) < 4:
+            self.skipTest("this PC has no core of its own for each of the 4 workers")
         own = self.pool_()
         self.drain(own.submit(self.job(40)))
         self.assertTrue(all(w["pinned"] for w in own.status()["workers"]))

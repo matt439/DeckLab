@@ -662,6 +662,7 @@ class PriorityTests(SlotFolder, unittest.TestCase):
         code = ("import subprocess, sys, time;"
                 "c = subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(60)']);"
                 "print(c.pid, flush=True); time.sleep(60)")
+        own = priority_class(os.getpid())
         with mock.patch.object(subprocess, "Popen", wraps=subprocess.Popen) as popen:
             proc = forge.processes.start_process([sys.executable, "-c", code])
         self.addCleanup(proc.stdout.close)
@@ -673,7 +674,7 @@ class PriorityTests(SlotFolder, unittest.TestCase):
         # And what it starts (a java.exe that's only a launcher starts the real one) is too.
         self.assertEqual((priority_class(proc.pid), priority_class(child)),
                          (subprocess.BELOW_NORMAL_PRIORITY_CLASS, subprocess.BELOW_NORMAL_PRIORITY_CLASS))
-        self.assertEqual(priority_class(os.getpid()), subprocess.NORMAL_PRIORITY_CLASS)
+        self.assertEqual(priority_class(os.getpid()), own)
         forge.kill_process(proc)
         proc.wait()
 
