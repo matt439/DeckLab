@@ -2,6 +2,14 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Documentation-only changes skip the full CI suite (2026-10-26)
+
+Pushes to main and pull requests that change only known documentation paths now skip all four Windows test shards; lint still runs. A cheap selector compares the whole pushed range or the pull request's merge-base diff, including deleted paths and both sides of renames. Markdown deck fixtures, Forge text, dependencies, workflows, runtime assets and unknown paths still need the suite. Missing history or an uncertain comparison also runs it. Weekly and manual runs always run the suite.
+
+The required tests check remains present: it accepts an explicitly detected documentation-only skip or successful shards, and fails for failed/cancelled detection or unexpected skips. AGENTS.md describes the new rule.
+
+Validation: 11 focused tests passed using disposable Git repositories and CLI event/output files, including diverged pull-request history, multi-commit pushes, fixture renames/deletions, malformed events, missing revisions and over 300 changed paths. The required-check Bash step passed all 64 combinations of detection result, selection output and shard result. Both workflows parsed, their job/trigger contracts checked, and the configured repository-wide ruff and whitespace checks passed. No GitHub Actions run was started.
+
 ## Accessory form explains all three kinds (2026-10-26)
 
 Matt found the initial Add sleeves heading misleading before choosing Kind. Every creation sheet now opens as Add accessory, with "Add sleeves, a deck box or a playmat." visible above the form. The heading stays general when Kind changes or Find picture infers a kind, including sheets opened from a kit picker. Edit still names the accessory; kind selection, field visibility and form values behave as before. This supersedes the kind-specific Add headings below.
