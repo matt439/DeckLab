@@ -1,12 +1,12 @@
 # Deck Lab: gap analysis
 
-Dated 2026-10-13; coverage recounted on 2026-10-19, after every story in [stories.md](stories.md) was rechecked against the code. Counts below come from the story headers. The dated owner decisions retain their original context; [TODO.md](../../TODO.md) owns the current work order. Part of the design set: [README](README.md) (method and index), [personas](personas.md), [journeys](journeys.md), [stories](stories.md) and this file.
+Dated 2026-10-13; every story in [stories.md](stories.md) was rechecked against the code on 2026-10-19. Counts below were recounted from the story headers on 2026-10-26. The dated owner decisions retain their original context; [TODO.md](../../TODO.md) owns the current work order. Part of the design set: [README](README.md) (method and index), [personas](personas.md), [journeys](journeys.md), [stories](stories.md) and this file.
 
 Story ids (such as E7-S09) are those in [stories.md](stories.md). Each story there is marked built, partial, missing or not wanted against the code and its dated verification evidence; this file adds up those marks, groups the gaps and ranks what to do next.
 
 ## Headline
 
-Deck Lab already does most of what Matt and User1 need. Of the must and should stories, Matt has 96 built and 3 partial; User1 has 32 built, 1 partial and 1 missing; Claude Code has 15 built, User5 4, the space members 4 and the Commander table 1, with no gaps. Across all 229 stories there are 164 built, 17 partial, 34 missing and 14 not wanted (counted from the story headers on 2026-10-25). E9-S18 is now counted as not wanted.
+Deck Lab already does most of what Matt and User1 need. Of the must and should stories, Matt has 96 built and 3 partial; User1 has 32 built, 1 partial and 1 missing; Claude Code has 15 built, User5 4, the space members 4 and the Commander table 1, with no gaps. Across all 229 stories there are 164 built, 17 partial, 34 missing and 14 not wanted (recounted from the story headers on 2026-10-26). E9-S18 is now counted as not wanted.
 
 Matt's answers moved the work towards three things:
 
@@ -18,7 +18,7 @@ Later on 2026-10-13 Matt also decided that every space's data is **private by de
 
 On 2026-10-18 Matt accepted the member template ([member-template.md](member-template.md), decisions A to K, all as recommended). User5 (`user5`) is the first real member, and his setup is the template for every member; the other members use it with no config change. "Visible to the family" becomes **public**: read-only to every signed-in profile, future members included, never the open internet (still no open pages, share links or sign-up). The seven added stories E10-S37 to E10-S43 are included in the counts above. Phases 1 to 4 shipped on 2026-10-18 and Matt sent the invite that day. The switches, public readers and guarded departure were built the same day and are live since 2026-10-19, when migrations 0012 and 0013 were applied and the server restarted on committed code. Nothing has been switched Public yet, and no member has left.
 
-No ready coding slice remains in TODO; its rows keep their people, release, priority or source gates. The must and should gaps left are Matt's E11-S02 (the signed-in off-page check) and E11-S28 (User2's session), and User1's E2-S22 (the physical devices) and E5-S15 (purchase requests, deferred). Stand-in suggestions (E2-S07, 2026-10-20), combo detection and official list changes (E9-S23, E9-S24, 2026-10-21), the Forge upgrade check (E11-S15, 2026-10-21), Commander readiness summaries, buying views, packing completion and order changes are already built; they should not return as new work. Forge-heavy items retain their separate approval and idle-PC requirements.
+The visual redesign (E11-S30) has ready coding slices, with a reserve of self-hosting, token and kit work added on 2026-10-25. [TODO.md](../../TODO.md) NOW owns the order; each story owns its concrete first slice and later dependencies. Coding can continue while the separate people, device, release and authorization gates remain open. The other must and should gaps are Matt's E11-S02 (the signed-in off-page check) and E11-S28 (User2's session), and User1's E2-S22 (the physical devices) and E5-S15 (purchase requests, deferred). Stand-in suggestions (E2-S07, 2026-10-20), combo detection and official list changes (E9-S23, E9-S24, 2026-10-21), the Forge upgrade check (E11-S15, 2026-10-21), Commander readiness summaries, buying views, packing completion and order changes are already built; they should not return as new work. Forge-heavy items retain their separate approval and idle-PC requirements.
 
 ## Owner decisions, 2026-10-13
 
@@ -48,13 +48,13 @@ Later the same day Matt also asked for usage visibility: whether members use Dec
 
 ## Coverage per persona
 
-Counts are of must and should stories only, from the story headers on 2026-10-21. Could and won't stories aren't counted. In brackets: the count before the original decisions of 2026-10-13 (User5 had no stories then).
+Counts are of must and should stories only, recounted from the story headers on 2026-10-26. Could and won't stories aren't counted. In brackets: the count before the original decisions of 2026-10-13 (User5 had no stories then).
 
 | Persona | Built | Partial | Missing | Assessment |
 |---|---:|---:|---:|---|
-| [Matt](personas.md) | 93 (47) | 2 (16) | 0 (10) | Served well: editing, packing, kit, buying, receipts, rankings, retirement and rename are built, and so is private by default (live since 2026-10-19). Stand-in suggestions per missing card (E2-S07, 2026-10-20), two-card combo detection (E9-S23), noticing official Brackets or Game Changers list changes (E9-S24) and the Forge upgrade check (E11-S15) are built (the last three on 2026-10-21). Partial: the signed-in off-page check (E11-S02) and User2's session (E11-S28, checklist prepared). |
+| [Matt](personas.md) | 96 (47) | 3 (16) | 0 (10) | Served well: editing, packing, kit, buying, receipts, rankings, retirement and rename are built, and so is private by default (live since 2026-10-19). Stand-in suggestions per missing card (E2-S07, 2026-10-20), two-card combo detection (E9-S23), noticing official Brackets or Game Changers list changes (E9-S24) and the Forge upgrade check (E11-S15) are built (the last three on 2026-10-21). Partial: the visual redesign (E11-S30, ready coding), the signed-in off-page check (E11-S02) and User2's session (E11-S28, checklist prepared). |
 | [User1](personas.md) | 32 (21) | 1 (9) | 1 (6) | Her phone surfaces are built: the library (E1-S01 now built), Quick edit, packing checks and completion, wishlist, Game log, kit and pictures. Home members can edit the shared collection and tokens (E10-S43). Partial: physical-device acceptance on the real iPhones and iPad (E2-S22; the Simulator suite covers repeat regressions). Missing: purchase requests (E5-S15, wanted but deliberately deferred). Her Forge stories remain could or Matt's. |
-| [User5](personas.md) (the member template) | 3 | 0 | 0 | Roster, private defaults, history masking for outsiders and starting at logon are built and live; the invite was sent on 2026-10-18. Restarting after a crash (E11-S26) is built and on (2026-10-20); per-deck public (E10-S41) is could and deferred. |
+| [User5](personas.md) (the member template) | 4 | 0 | 0 | Roster, private defaults, history masking for outsiders and starting at logon are built and live; the invite was sent on 2026-10-18. Restarting after a crash (E11-S26) is built and on (2026-10-20); per-deck public (E10-S41) is could and deferred. |
 | [Space members](personas.md) (User2, User3, User4) | 4 (3) | 0 (3) | 0 (0) | Members on User5's terms, with no config change. Their collections, tokens, decks and games are private from everyone outside their own space, admins included. Extra features only for them (E10-S18, E4-S19, could) stay deferred unless one asks; the prepared User2 session may show what's needed. E10-S09 (reading home's decks) is not wanted. |
 | [Claude Code](personas.md) | 15 (8) | 0 (4) | 0 (0) | Typed, audited writes, actor attribution, stale-table guidance, product kit commands, `collection add-precon` for owner-requested upkeep, Forge replay and override checks (E3-S20), card-data dates (E9-S04), one collection row's edit (`collection edit`, E7-S25), many rows' in one change (`collection apply`, E7-S26) and guarded member departure (E10-S40, live since 2026-10-19) are built. Legacy error wording (E11-S12) and command-line privacy labels (E11-S21) are could, outside the active queue. |
 | [The Commander table](personas.md) | 1 (0) | 0 (1) | 0 (0) | Overview names the declared aim, detected Game Changers and effects opponents will face, with source dates and incomplete-data warnings (E9-S06, built). Two-card combos (E9-S23) and Wizards' latest announcement (E9-S24) are checked since 2026-10-21; no automatic check establishes speed, intent or a social table's acceptance. |
@@ -156,7 +156,7 @@ Matt's alone now. The field budget is saved per profile, every kind of running m
 
 ## Ranked roadmap
 
-Effort is a rough size: S (a session or less), M (a few sessions), L (a week or more), XL (several weeks). Ranks keep their original numbers; a done row is struck through, with its date, and its details are in [HISTORY.md](../HISTORY.md) and the story's Now line. [TODO.md](../../TODO.md) NOW is the current order. Open on 2026-10-19: ranks 1, 12, 18, 21, 22, 24, 31 (per-deck public only), 32 and 33. None is a ready coding slice: each waits for people, Forge's next release, a decision of Matt's or a source.
+Effort is a rough size: S (a session or less), M (a few sessions), L (a week or more), XL (several weeks). Ranks keep their original numbers; a done row is struck through, with its date, and its details are in [HISTORY.md](../HISTORY.md) and the story's Now line. This is the historical roadmap, not a second queue: [TODO.md](../../TODO.md) NOW owns the current order, including the visual redesign and the later self-hosting, token and kit reserve. The open historical ranks are 1, 12, 18, 24, 31 (per-deck public only) and 33; their people and priority gates remain in force.
 
 | Rank | Item | Stories | Personas | Effort | Why |
 |---:|---|---|---|---|---|
@@ -196,9 +196,9 @@ Effort is a rough size: S (a session or less), M (a few sessions), L (a week or 
 
 Dropped from the roadmap by the decisions: the expected arrival date (E6-S23), keep or mulligan feedback as a near-term item (E4-S09), general rules teaching (E4-S07), cached deck lists while the PC is off (E11-S27), separate sleeves per deck within a product (E8-S10), the Forge results backup (E11-S17), the nightly without a logon (E11-S24), start at logon (E11-S23, done 2026-10-13), seeing who uses Deck Lab (E10-S25, done 2026-10-13), and a measure of whether a deck is fun to play against (E9-S18, a `wont` now counted as not wanted).
 
-### No reserve
+### Ready reserve
 
-The bounded reserve of 2026-10-18 (Stats disclosure dates E3-S01, linked CLI receipt previews E11-S20 and non-writing previews E11-S25) is built, and so is member departure. No reserve item remains. E11-S12 (legacy error wording) and E11-S21 (command-line privacy labels) are could, outside the active queue unless a concrete need picks them.
+The bounded reserve of 2026-10-18 (Stats disclosure dates E3-S01, linked CLI receipt previews E11-S20 and non-writing previews E11-S25) is built, and so is member departure. The 2026-10-26 audit confirms that the current queue has substantial coding work: continue E11-S30, then the self-hosting, token and kit stories already admitted by NOW. Their [story owners](stories.md) specify the first slices; [TODO.md](../../TODO.md) separates ready work from decisions, dates, deferred items and costly runs. No additional stories are needed to keep the queue supplied. E11-S12 (legacy error wording) and E11-S21 (command-line privacy labels) remain could, outside the active queue unless a concrete need picks them.
 
 ## PLAN.md alignment
 

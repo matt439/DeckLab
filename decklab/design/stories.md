@@ -41,14 +41,14 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 20 | 14 | 1 | 4 | 1 |
 | [E5: Decide what to buy](#e5-decide-what-to-buy) | 22 | 15 | 0 | 5 | 2 |
 | [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 20 | 17 | 0 | 1 | 2 |
-| [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 23 | 13 | 4 | 6 | 0 |
+| [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 27 | 17 | 4 | 6 | 0 |
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 16 | 10 | 1 | 3 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 19 | 13 | 0 | 5 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 35 | 30 | 1 | 2 | 2 |
-| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 25 | 15 | 6 | 1 | 3 |
-| **Total** | **220** | **160** | **17** | **29** | **14** |
+| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 28 | 15 | 6 | 4 | 3 |
+| **Total** | **229** | **164** | **17** | **34** | **14** |
 
-Counted from the story headers on 2026-10-24.
+Counted from the story headers on 2026-10-26.
 
 ---
 
@@ -129,7 +129,7 @@ Evidence:
 
 Gap: The library has no text search and no colour or archetype filter.
 
-First slice: a title search box on the library (kept in the address like the other filters), then the colour and archetype filters. It may become the deck half of E11-S31.
+First slice: a title search box on the library (kept in the address like the other filters), then the colour and archetype filters. This is ready independently of E11-S31's global-search scope choice; shared matching can be reused later.
 
 **E1-S07** · User1 · should · M · built
 
@@ -2348,6 +2348,8 @@ Gap: there is no whole-deck take-apart checklist. Clearing the kit lines when a 
 
 First slice: a Take apart checklist on Build decks for a built deck: every card in every section, then its sleeves and deck box.
 
+Related scope: E11-S30's [slice 13](visual-design.md#7-rollout) owns intact-product take-apart and transfer. Reuse presentation where useful, while keeping this whole-deck checklist's acceptance separate.
+
 **E8-S15** · Matt · could · S · partial
 
 As Matt, I want a built deck's sleeves to follow when the deck changes hands between me and User1 (or becomes 'either'), so that the deck isn't left using sleeves its new player can't see or change.
@@ -3878,6 +3880,8 @@ As Matt, I want one search in the top bar that finds a deck or a card from any p
 
 Decided (Matt, 2026-10-25): left out of E11-S30's slice 7 (the shell) as its own story, since Deck Lab had no global search to restyle. Still to settle before building: what it searches (decks, the viewer's collection, every Scryfall card) and how results are grouped.
 
+Next step: Matt chooses the sources and result grouping; this is a DECISION in TODO until then. E1-S05's local library title search is independently ready.
+
 Gap: everything; nothing built.
 
 **E11-S32** · Matt · could · M · missing
@@ -3894,7 +3898,7 @@ Evidence:
 
 Gap: everything; there's no prebuilt release. Raised 2026-10-25 by the self-host check.
 
-First slice: a script in the fork that packs the installed build as a release archive with a checksum, one release for 2.0.15, and SELF-HOSTING.md pointing to it.
+First slice: add and locally verify a script in the Forge fork that packs the distributable installed build as an archive, records the base Forge version and build metadata, writes a SHA-256 checksum and documents the repeatable release procedure. Publishing a real 2.0.15 release and updating SELF-HOSTING.md to its verified download link follow as separately authorized steps.
 
 **E11-S33** · Matt · could · L · missing
 
@@ -3912,4 +3916,4 @@ Evidence:
 
 Gap: everything. Raised 2026-10-25 by the self-host check.
 
-First slice: fix the 31 Linux test failures, then add a Linux CI run so they stay fixed.
+First slice: reproduce and record the current Linux failures under Python 3.14, fix Windows path and case assumptions, then add a Linux CI run so they stay fixed. The 31 failures out of 6188 tests are the dated 2026-10-25 baseline, not a current count. Generate and test the later service/timer files separately from installing or enabling them on a host.

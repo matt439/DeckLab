@@ -523,7 +523,7 @@ function openAccessorySheet({ kind = "sleeves", onSaved, onLatest, row = null, s
   const editing = Boolean(row);
   const words = ACC_KINDS[row ? row.kind : kind] || ACC_KINDS.sleeves;
   let ctx;
-  const sheet = openAccessoryDialog(editing ? `Edit ${row.label || row.name}` : `Add ${words.title.toLowerCase()}`,
+  const sheet = openAccessoryDialog(editing ? `Edit ${row.label || row.name}` : `Add ${words.one.toLowerCase()}`,
     { wide: true, onClose: () => accDisposeSheet(ctx) });
   ctx = { sheet, row, editing, lockKind, sha256, onSaved, onLatest, busy: false, touched: new Set(), inputs: {},
     profile: state.profile?.id, token: routeToken,
@@ -624,6 +624,7 @@ function accFields(ctx, row, kind) {
 }
 
 function accKindChanged(ctx) {
+  if (!ctx.editing) ctx.sheet.heading.textContent = `Add ${(ACC_KINDS[ctx.inputs.kind.value] || ACC_KINDS.sleeves).one.toLowerCase()}`;
   const sleeves = ctx.inputs.kind.value === "sleeves";
   ctx.packs.hidden = !sleeves;
   if (ctx.capacityField) ctx.capacityField.hidden = ctx.inputs.kind.value !== "deck_box";

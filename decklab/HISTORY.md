@@ -2,6 +2,14 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Accessory add title and ready-work audit (2026-10-26)
+
+The accessory Add sheet now follows Kind: Add sleeves, Add deck box or Add playmat. Manual changes and a kind inferred by Find picture update the existing dialog heading; an Edit sheet keeps the accessory's name. Form values stay in place.
+
+The TODO audit checked the current reserve against its story owners and code. Eleven items have ready first slices (two small, four medium and five large), with the visual redesign still first. Global search E11-S31 is now DECISION because sources and result grouping need Matt's choice; local Library search remains independently ready. Forge release preparation is separated from publication, and Linux work starts by reproducing the dated test failures. Stale no-work/no-reserve claims and story summary counts are corrected; no additional stories were promoted.
+
+Validation: reproduced the stale title before the fix; direct DOM/event checks passed for all three initial kinds, repeated kind changes, inferred kinds, retained form values and the named Edit heading. All 21 existing accessory sheet, feature and upload UI checks passed; JavaScript syntax and whitespace checks passed. These checks use synthetic data and the complete page's scripts in the DOM double, without a browser or inventory writes.
+
 ## Retained nonmodal Editor search Dock (2026-10-26; E11-S30 slice 14)
 
 Casual Add cards now opens one retained nonmodal search region above the existing count/Save bar. Full Editor preserves its original Add pane across the 1000px boundary; Quick mounts its search lazily and reuses the same controls/query/results on reopen. The original heading remains visible. Native Tab can leave the region, with measured clearance for the current covered page control. Search scrolls locally; current-root/profile/route/query/frame guards, cancellation and generation checks prevent stale focus or pending Add intent. Existing keyboard-up covered-tab policy remains.
