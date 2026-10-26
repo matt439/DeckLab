@@ -38,17 +38,17 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E1: Find, plan and choose decks](#e1-find-plan-and-choose-decks) | 12 | 10 | 0 | 2 | 0 |
 | [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 16 | 13 | 1 | 1 | 1 |
 | [E3: Test a deck](#e3-test-a-deck) | 14 | 11 | 3 | 0 | 0 |
-| [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 20 | 14 | 1 | 4 | 1 |
+| [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 20 | 15 | 1 | 3 | 1 |
 | [E5: Decide what to buy](#e5-decide-what-to-buy) | 22 | 15 | 0 | 5 | 2 |
 | [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 20 | 17 | 0 | 1 | 2 |
-| [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 27 | 19 | 3 | 5 | 0 |
+| [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 27 | 19 | 4 | 4 | 0 |
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 16 | 11 | 1 | 2 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 19 | 13 | 0 | 5 | 1 |
-| [E10: Members, access and privacy](#e10-members-access-and-privacy) | 35 | 30 | 2 | 1 | 2 |
+| [E10: Members, access and privacy](#e10-members-access-and-privacy) | 35 | 31 | 1 | 1 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 28 | 15 | 6 | 4 | 3 |
-| **Total** | **229** | **168** | **17** | **30** | **14** |
+| **Total** | **229** | **170** | **17** | **28** | **14** |
 
-Counted from the story headers on 2026-10-27.
+Counted from the story headers on 2026-10-26.
 
 ---
 
@@ -2751,7 +2751,7 @@ Evidence:
 
 Who Deck Lab's profiles are, where each one's cards and decks live, and who may see or change what. Matt (admin) and User1 share the home space; User2, User3, User4 and User5 (`user5`, the template for every member, [member-template.md](member-template.md)) each have their own, and sign in only through decklab.example.com. Each space's collection, decks and games, and each kit owner's accessories, are private unless the owner makes them public: read-only, to everyone signed in through Cloudflare Access, with no admin override ([privacy-by-default.md](privacy-by-default.md)). The command line still reads every space, so Claude relays upkeep, not contents, and adding a person still means editing config.json and the Access policy by hand.
 
-Open: E10-S17, E10-S18, E10-S41.
+Open: E10-S18, E10-S41.
 
 **E10-S01** · Matt · must · L · built
 
@@ -2942,7 +2942,7 @@ Evidence:
 - `decklab/lib/api/activity.py`: visible_change, _row
 - `decklab/tests/test_activity.py`: VisibilityTests
 
-**E10-S17** · Matt · could · L · partial
+**E10-S17** · Matt · could · L · built
 
 As Matt, the admin, I want to add a member or change someone's email without editing files on the PC, so that bringing someone in is quick and I can't break config.json with a typo.
 
@@ -2951,28 +2951,20 @@ As Matt, the admin, I want to add a member or change someone's email without edi
 - Given a new email, then the page reminds him to add it to the Cloudflare Access policy, and `homenet status` warns about profiles whose email can't sign in.
 - Given emails, then they are never sent to the page except to the admin on this panel.
 
+Now: built 2026-10-26 ([HISTORY.md](../HISTORY.md#local-sign-in-readiness-and-member-management-completion-2026-10-26-e10-s17)). Settings can add a private own-space member or replace an existing member email through reviewed, audited publication and recovery. Local status reports known configuration blockers; no real member change, Access policy or sign-in is claimed.
+
 Evidence:
-- `decklab/lib/profiles.py`: tolerant parsing plus position/code diagnostics and strict local `read_checked`
-- `decklab/lib/homenet/profile_config.py`, `commands.py`: local status and install preflight
+- `decklab/lib/profiles.py`: tolerant parsing, position/code diagnostics, strict local `read_checked` and shared `supported_email` validator
+- `decklab/lib/homenet/profile_config.py`: local-only static sign-in positions/codes for legacy roles, absent/unsupported aliases and cross-profile duplicates; `commands.py`: install preflight
 - `decklab/db/profiles_sync.py`, `setup.py`: refusal before connection/setup and one validated snapshot
 - `test_profile_config_validation.py`, `test_homenet_profile_diagnostics.py`, `test_profile_config_privacy.py`: compatibility, side-effect gates and request privacy
 - `decklab/lib/profile_config.py`, `decklab/db/profile_edits.py`, `decklab/db/profiles_sync.py`: raw-config and membership receipts, exact web-actor audit, private pending publication journal and coordinated local recovery/sync
-- `decklab/lib/api/members.py`, `decklab/web/settings-members.js`: named-home-admin-only existing-member email review, guarded save/no-op receipts, private panel lifetime and explicit Access-policy reminder
+- `decklab/lib/api/members.py`, `decklab/web/settings-members.js`: named-home-admin-only member creation/email review, guarded receipts, private panel lifetime and explicit Access-policy reminder
 - `test_members_api.py`, `test_settings_members_ui.py`: authorization-before-read, strict payload scope, stale and uncertain outcomes, exact receipt validation and retired form controls
 - `decklab/db/profile_admission.py`, `profile_edits.create`, `POST /api/settings/member`: strict unused-id admission, fixed Member/own-space creation, exact three-row INSERT audit and guarded append-publication recovery
 - `test_profile_admission.py`, `test_profile_create_pg.py`: creation validation, retained membership/private/audit/Forge provenance and disposable persistence/recovery coverage
 
-Now: local diagnostics/setup safety built 2026-10-27 ([HISTORY.md](../HISTORY.md#local-profile-diagnostics-and-safe-setup-2026-10-27-e10-s17-first-slice)). Invalid entries cannot silently become a partial database sync; detailed reasons stay on local status, with no authentication or API roster change.
-
-The [existing-member email slice](../HISTORY.md#guarded-member-email-replacement-in-settings-2026-10-26-e10-s17) is implemented. A named home admin can replace exactly one existing non-home member alias after review, preserving other aliases, identity, space, records and unrelated raw configuration values. Full config and membership receipts bind the save. The audited web actor and exact committed outcome govern configuration publication; pending recovery gates profile/auth reads, and local sync recovers before reading the source under the shared claim. The panel keeps emails private and explicitly calls for a separate Access-policy update and sign-in check.
-
-The [Add member slice](../HISTORY.md#guarded-member-creation-in-settings-2026-10-26-e10-s17) is implemented. A named home admin reviews the exact new display name, permanent id and email. The server fixes Member role and an empty own space, Private by default. Full config/membership receipts, one audited three-row insertion and the verified raw append recipe govern publication and recovery. Reused, departed or retained-data identities and uncertain provenance are refused, with inventory and cooperative Forge claims protecting publication. No old private records or visibility choices are adopted.
-
-Gap: Access-policy/sign-in readiness checks, including the local status warning for an address that cannot sign in, remain. No real member, configuration/email, Access policy or sign-in was changed or verified by this coding task. Local request parsing remains tolerant outside pending-publication refusal; setup and config-backed sync still refuse invalid entries before changes.
-
-Next slice: make Access-policy/sign-in readiness explicit without claiming a policy update or a successful member sign-in from local configuration alone.
-
-Review note: L for a could bundles a profile editor, validation, an Access reminder and a status check; the second criterion could be its own small story.
+Verification limits: status diagnoses known local blockers only, without querying the Access policy or verifying a real sign-in. Each intended address still needs its separate policy and sign-in check. [E11-S02](#e11-s02) retains the signed-in household workflow checks; those do not establish coverage for every new member/address. Local parsing remains tolerant outside pending-publication refusal, and household activation remains separate.
 
 **E10-S18** · Space members · could · M · partial
 

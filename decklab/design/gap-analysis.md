@@ -6,7 +6,7 @@ Story ids (such as E7-S09) are those in [stories.md](stories.md). Each story the
 
 ## Headline
 
-Deck Lab already does most of what Matt and User1 need. Of the must and should stories, Matt has 96 built and 3 partial; User1 has 32 built, 1 partial and 1 missing; Claude Code has 15 built, User5 4, the space members 4 and the Commander table 1, with no gaps. Across all 229 stories there are 169 built, 18 partial, 28 missing and 14 not wanted (recounted from the story headers on 2026-10-26). E9-S18 is now counted as not wanted.
+Deck Lab already does most of what Matt and User1 need. Of the must and should stories, Matt has 96 built and 3 partial; User1 has 32 built, 1 partial and 1 missing; Claude Code has 15 built, User5 4, the space members 4 and the Commander table 1, with no gaps. Across all 229 stories there are 170 built, 17 partial, 28 missing and 14 not wanted (recounted from the story headers on 2026-10-26). E9-S18 is now counted as not wanted.
 
 Matt's answers moved the work towards three things:
 
@@ -206,7 +206,7 @@ E4-S13 is built: the pair matchup page places the visible human record beside Fo
 
 E11-S08 remains partial: Activity now reviews and saves one guarded same-identity audited collection/token UPDATE as a new inverse change. The original audit remains immutable. Broader import/receipt/removal/identity/multi-row and accessory/wishlist recovery remain, with no operation provenance inferred from a single-row audit. Current status counts are unchanged.
 
-E10-S17 remains partial: a named home admin can add a new member with an empty Private own space or replace one existing non-home member email in Settings. Full raw-configuration and membership receipts bind one audited change, and a private journal gates profile/auth reads until exact-outcome publication is recovered. Creation fixes the Member role server-side and refuses reused, departed or retained-data identities instead of inheriting their private records or visibility. Config-backed sync shares the claim and rereads its source after claiming it. Access-policy guidance is explicit; Access-policy/sign-in readiness checks remain. No real member creation/edit or sign-in acceptance is claimed, and story counts are unchanged.
+E10-S17 is built: a named home admin can add a new member with an empty Private own space or replace one existing non-home member email in Settings. Full raw-configuration and membership receipts bind one audited change, and a private journal gates profile/auth reads until exact-outcome publication is recovered. Creation fixes Member role server-side and refuses reused, departed or retained-data identities instead of inheriting their private records or visibility. Config-backed sync shares the claim and rereads its source after claiming it. Access-policy guidance is explicit, and local status reports known configuration sign-in blockers by position/code without changing tolerant request parsing. No real member change, external policy or per-address sign-in acceptance is claimed. E11-S02's separate signed-in household workflow checks remain open and do not verify every member/address.
 
 ## PLAN.md alignment
 

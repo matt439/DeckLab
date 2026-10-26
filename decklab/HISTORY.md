@@ -2,6 +2,16 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Local sign-in readiness and member management completion (2026-10-26; E10-S17)
+
+Local `homenet status` diagnostics now identify known profile sign-in blockers when an Access configuration is present: legacy profiles without explicit roles, no usable ASCII email alias, unsupported declared address syntax and an alias shared across usable profiles. Reports contain only an entry position, static code, reason and local remedy, with no submitted names or addresses. Valid Access configurations and local-only configurations add no sign-in warnings. The strict Settings address validator is shared as `profiles.supported_email`; tolerant profile/authentication parsing is unchanged.
+
+Validation: all 63 focused profile, diagnostics, privacy and member-edit checks passed without skips in 3.107 seconds. They cover valid/local-only silence, missing and unsupported aliases, normalized cross-profile duplicates, legacy-role agreement, malformed containers, position-only privacy and pure local diagnostics. Independent review is clear; Ruff and whitespace checks passed. Validation used fixtures, without invoking actual PC status/process checks, contacting Cloudflare or changing real configuration, membership or data.
+
+Together with the reviewed Settings creation/email forms, audited publication/recovery and explicit Access reminder documented below, all four E10-S17 functional criteria are implemented. The story is marked built and its TODO row removed. Recounting the 229 story headers gives 170 built, 17 partial, 28 missing and 14 not wanted; the E10 subtotal is 31 built, one partial, one missing and two not wanted. Summary tables also correct the already-shipped E4/E7 subtotals to match their unchanged story headers.
+
+These diagnostics prove only known local configuration facts. They neither inspect the Cloudflare Access policy nor certify sign-in with an intended address. Each address still needs that separate operational check, and [E11-S02's signed-in household workflow acceptance](design/stories.md#e11-s02) remains open without establishing coverage for every member/address. No real member creation/edit, household server activation, external policy change or human sign-in acceptance is claimed.
+
 ## Guarded member creation in Settings (2026-10-26; E10-S17)
 
 The Members panel now offers Add member to a named home admin. Review new member shows the exact display name, permanent id and normalized sign-in address before Save new member. The server fixes the role to Member and creates an empty own space named by the id, with collection, decks and games Private by default. A browser cannot choose admin or home access. Strict id/name/email validation rejects reserved ids, invalid or duplicate addresses and control characters; existing profiles, aliases and unrelated raw configuration values are preserved.

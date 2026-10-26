@@ -40,6 +40,8 @@ Local status reports those rejected entries by position, code and static reason.
 config-backed profile sync use read_checked() to refuse a partial list before any change;
 read() and parse() remain tolerant request readers and expose no diagnostics.
 """
+import re
+
 from decklab.lib import config
 
 ROLES = ("admin", "member")
@@ -88,6 +90,25 @@ def email_key(value):
     if not value or not value.isascii():
         return None
     return value.lower()
+
+
+def supported_email(value):
+    """The supported ASCII address form for explicit writes and local checks.
+
+    Tolerant request readers and authentication deliberately keep email_key()
+    and their existing behavior; this helper does not change which aliases they read.
+    """
+    email = email_key(value)
+    if email is None or len(email) > 254 or email.count("@") != 1:
+        return None
+    local, domain = email.split("@")
+    if not 1 <= len(local) <= 64 or not re.fullmatch(r"[a-z0-9.!#$%&'*+/=?^_`{|}~-]+", local) \
+            or local.startswith(".") or local.endswith(".") or ".." in local \
+            or len(domain) > 253 or "." not in domain \
+            or any(not re.fullmatch(r"[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?", label)
+                   for label in domain.split(".")):
+        return None
+    return email
 
 
 def _emails(value):

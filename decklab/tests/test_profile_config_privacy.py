@@ -4,6 +4,7 @@ from unittest import mock
 
 from decklab.lib import api, config, profiles
 from decklab.lib.api import settings
+from decklab.lib.homenet import profile_config
 from decklab.tests import test_roster_privacy as roster
 
 
@@ -17,7 +18,8 @@ class ProfileDiagnosticsPrivacyTests(roster.RosterTestCase):
             with context():
                 expected = settings.profiles()
                 with mock.patch.object(config, "load", return_value={"profiles": [*roster.PROFILES, invalid]}), \
-                        mock.patch.object(profiles, "read_checked", side_effect=AssertionError("strict reader on request path")):
+                        mock.patch.object(profiles, "read_checked", side_effect=AssertionError("strict reader on request path")), \
+                        mock.patch.object(profile_config, "check", side_effect=AssertionError("local diagnostics on request path")):
                     actual = settings.profiles()
                 self.assertEqual(actual, expected)
                 serialized = json.dumps(actual)
@@ -29,7 +31,8 @@ class ProfileDiagnosticsPrivacyTests(roster.RosterTestCase):
     def test_card_status_does_not_expose_diagnostics_or_call_strict_reader(self):
         expected = api.status()
         with mock.patch.object(config, "load", return_value={"profiles": [None]}), \
-                mock.patch.object(profiles, "read_checked", side_effect=AssertionError("strict reader on status path")):
+                mock.patch.object(profiles, "read_checked", side_effect=AssertionError("strict reader on status path")), \
+                mock.patch.object(profile_config, "check", side_effect=AssertionError("local diagnostics on API status path")):
             actual = api.status()
         self.assertEqual(actual, expected)
         self.assertTrue(set(actual).isdisjoint({"profiles", "profile_issues", "diagnostics", "issues"}))

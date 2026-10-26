@@ -34,15 +34,8 @@ def _receipt(value):
 
 
 def _email(value):
-    email = profiles.email_key(value)
-    if email is None or len(email) > 254 or email.count("@") != 1:
-        raise InvalidProfileEdit("Enter a valid email address using ASCII characters.")
-    local, domain = email.split("@")
-    if not 1 <= len(local) <= 64 or not re.fullmatch(r"[a-z0-9.!#$%&'*+/=?^_`{|}~-]+", local) \
-            or local.startswith(".") or local.endswith(".") or ".." in local \
-            or len(domain) > 253 or "." not in domain \
-            or any(not re.fullmatch(r"[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?", label)
-                   for label in domain.split(".")):
+    email = profiles.supported_email(value)
+    if email is None:
         raise InvalidProfileEdit("Enter a valid email address using ASCII characters.")
     return email
 
