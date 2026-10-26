@@ -125,8 +125,12 @@ class AssemblyOverlapUiTests(unittest.TestCase):
 class AssemblyOverlapSourceTests(unittest.TestCase):
     def test_static_warning_facts_wrap_outside_controls_without_action_or_api(self):
         source=(WEB/'assembly-overlap.js').read_text(encoding='utf-8');css=(WEB/'assembly-overlap.css').read_text(encoding='utf-8')
-        self.assertNotIn('apiWrite',source);self.assertNotIn('onclick',source);self.assertNotIn('addEventListener',source)
-        self.assertNotIn('Give to',source);self.assertIn('white-space: normal; overflow-wrap: anywhere',css)
+        self.assertNotIn('apiWrite',source)
+        facts=source.split('function packPlayableOverlap(',1)[1].split('function packOverlapStart(',1)[0]
+        pill=source.split('function packOverlapPill(',1)[1].split('function packOverlapPreference(',1)[0]
+        for static in (facts,pill):
+            self.assertNotIn('onclick',static);self.assertNotIn('addEventListener',static)
+        self.assertIn('white-space: normal; overflow-wrap: anywhere',css)
         self.assertIn('grid-column: 1 / -1',css);self.assertIn('scope: "row"',source);self.assertIn('All quantities are card copies',source)
         self.assertIn('.pack-overlap-number { font-family: var(--font-mono); }',css)
         self.assertNotIn('.pack-overlap-facts { font-family: var(--font-mono)',css)

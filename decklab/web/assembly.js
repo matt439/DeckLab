@@ -182,11 +182,13 @@ async function packRun(view) {
       view.previewing = false;
       view.message.textContent = problem.message;
       packClearBar(view);
+      packPreferenceBeforeRender(view);
       clear(view.results);
       view.sortControl.hidden = true;
       view.data = null;
       packStepsStart(view, null);
       packOverlapStart(view, null);
+      add(view.results, [packOverlapNotice(view)]);
       view.finish = null;
       view.bar = null;
       wirePackTicks(view);
@@ -485,6 +487,7 @@ function packDeck(view, deck) {
 function renderAssemblyPlan(view, data) {
   const presentation = packSwitcherBeforeRender(view);
   packClearBar(view);
+  packPreferenceBeforeRender(view);
   clear(view.results);
   view.data = data;
   packStepsStart(view, data);

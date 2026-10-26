@@ -3,7 +3,8 @@
 
 function packSelectedChoice(item) {
   return { id: item.id, version: item.version,
-    ...(item.sideboard != null ? { sideboard: { ...item.sideboard } } : {}) };
+    ...(item.sideboard != null ? { sideboard: { ...item.sideboard } } : {}),
+    ...(Array.isArray(item.prefer) ? { prefer: [...item.prefer] } : {}) };
 }
 
 function packChooseVersion(view, picked, version, node = null) {
@@ -11,6 +12,7 @@ function packChooseVersion(view, picked, version, node = null) {
   if (picked.version === version) return;
   picked.version = version;
   delete picked.sideboard;
+  delete picked.prefer;
   view.sideboardChoosing?.delete(picked.id);
   packChanged(view);
 }
@@ -45,6 +47,7 @@ function packSideboardChoice(view, choice, picked) {
       view.sideboardChoosing.add(picked.id);
       picked.sideboard = chosen ? { ...chosen } : Object.fromEntries(rows.map(row => [row.name, row.quantity]));
     }
+    delete picked.prefer;
     packChanged(view);
   });
   if (mode === "custom") {
@@ -66,6 +69,7 @@ function packSideboardChoice(view, choice, picked) {
         const next = { ...(picked.sideboard || {}) };
         if (number) next[row.name] = number; else delete next[row.name];
         picked.sideboard = next;
+        delete picked.prefer;
         view.sideboardChoosing ||= new Set(); view.sideboardChoosing.add(picked.id);
         packChanged(view);
       });

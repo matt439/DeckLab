@@ -27,6 +27,7 @@ def _load(item, profile):
         empty["parsed"] = parsed
         empty["editable"] = guard.allowed(profile, "deck.edit", parsed)
         data = standins.get_stand_ins(parsed)
+        empty["configured"] = [*data["target"], *data["owned"]]
         empty["installed"] = (data["built"] or {}).get("cards", []) if parsed.status == "built" else []
         raw = data[item["version"]]
         # A list edit can remove a represented card. Retire that choice on the next
@@ -94,7 +95,7 @@ def _retired(meta, rows, shortages, logical):
             for (target, marker), qty in before.items() if qty > after[(target, marker)]]
 
 
-def plan_standins(p, participants, aliases, unresolved, profile, allocate):
+def plan_standins(p, participants, aliases, unresolved, profile, allocate, *, priorities=None):
     # A known installed marker remains reserved, but selecting its holder can
     # repair a later logical-list edit by returning it. Unselected holders and
     # unreadable metadata still block the plan as before.
@@ -102,10 +103,12 @@ def plan_standins(p, participants, aliases, unresolved, profile, allocate):
                   for warning in getattr(holder, "standin_warnings", ())}
     if repairable:
         p = replace(p, warnings=[warning for warning in p.warnings if warning not in repairable])
+    from . import assembly_preferences
+    metadata = [_load(item, profile) for item in participants]
+    assembly_preferences.reject_markers(priorities or {}, metadata)
     baseline = allocate(p, _copies(participants), aliases, unresolved)
     available = _spares(p, baseline, aliases)
     original_spare = Counter(available)
-    metadata = [_load(item, profile) for item in participants]
     effective, shortages = [], []
     for item in baseline["decks"]:
         shortages.append(Counter({step["name"]: step["waiting"] + step["missing"] for step in item["steps"]}))
@@ -187,4 +190,4 @@ def plan_standins(p, participants, aliases, unresolved, profile, allocate):
         answer["warnings"].extend(f"{item['title']}: {warning}" for item, meta in zip(participants, metadata)
                                   if meta.get("invalid") for warning in meta["warnings"])
         answer["counts_confirmed"] = answer["ready"] = False
-    return answer
+    return assembly_preferences.add_controls(answer, priorities or {}, metadata)

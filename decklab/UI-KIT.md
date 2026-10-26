@@ -127,6 +127,21 @@ card-copy count. Identical polls retain the status nodes and Retry focus; change
 scope, failures and pending tasks outside the current scope hide old metadata.
 Older servers without metadata keep the same usable checks.
 
+The packing recipe may carry per-choice `prefer: [canonical card names]` for
+movable copies. Both allocation passes keep existing copies and unselected
+reservations fixed; only storage/released surplus uses the preferred recipient,
+while arrivals keep their original waiting order. The server returns optional
+per-row `preference_options` and `preferred` only for confirmed, marker-free
+competition, excluding both saved versions' configured and installed mappings.
+The overlap's native select and Reset alter only the existing read-only preview
+recipe. Priorities remain in completion/context fingerprints, copy through
+product-review returns, and clear on the affected version/sideboard change.
+Stale/busy controls restore accepted values. Success/error redraws repair only
+owned focus to a fresh select, Reset, notice heading or attached chooser control;
+later focus and modal work win. After a rejected preview, Reset remains available
+without replaying old instructions. Tests are `test_assembly_preferences.py` and
+`test_assembly_preference_ui.py`.
+
 `assembly-sheets.js` follows the progress script. Its final review collects the
 built list and kit for one save, and its stand-in chooser saves only planned
 physical markers. Sheets close on plan, route, person and away-lock changes;

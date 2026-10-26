@@ -108,6 +108,7 @@ function packReviewBuilt(view) {
             if (picked) {
               picked.version = list.value;
               delete picked.sideboard;
+              delete picked.prefer;
               view.sideboardChoosing?.delete(picked.id);
             }
             packChanged(view);
