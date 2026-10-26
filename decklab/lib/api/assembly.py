@@ -301,6 +301,10 @@ def _preview(selected, profile=False):
                              "steps": [], "returns": []})
         if checklist is not None:
             participants[-1]["take_apart"] = checklist
+            from .box_check import project as box_check
+            checked = box_check(parsed, stored, checklist, profile)
+            if checked is not None:
+                participants[-1]["box_check"] = checked
     from . import assembly_preferences
     selections, priorities = assembly_preferences.normalize(selections, participants)
     from .assembly_markers import plan_standins
@@ -322,6 +326,12 @@ def _preview(selected, profile=False):
     answer["rename_versions"] = {item["id"]: item["rename_version"] for item in participants}
     answer["assembly_keys"] = {item["id"]: item["assembly_key"] for item in participants if item.get("assembly_key")}
     answer["cards"] = _plan_cards(answer, answer["decks"], pictured)
+    if any(item.get("box_check") is not None for item in answer["decks"]):
+        # Separate representative art: intended printing choices cannot certify the cards in a box.
+        names = {row["name"] for item in answer["decks"]
+                 for section in item.get("take_apart", {}).get("sections", {}).values()
+                 for row in section if row["name"] is not None}
+        answer["box_check_cards"] = _plan_cards({"rows": [{"name": name} for name in sorted(names)]}, [], {})
     answer["sleeve_notes"] = _sleeve_notes(participants)
     answer["token_plan"] = _token_plan(participants, token_inv)
     answer["token_plan_note"] = TOKEN_PLAN_NOTE

@@ -212,6 +212,8 @@ A deck's id is `<kind>/<slug>` at home (`casual/gruul-ramp`, `commander/giada-an
 - **"Decklist changed in Deck Lab on <date>; prose sections may be out of date."** in a deck: pull it, update the prose sections to match the decklist, remove that line, and push it. `deck list` shows which decks have the line.
 - **A new deck:** write its text in the format below, with an `## Owned vs needed` heading and the table's header and `|---|` lines but no rows yet, then `deck new`, then `deck tables ID --reprice --apply` to fill and price the table (and, if the new deck is built, `deck tables --apply` with no ID for the other decks). Every deck needs that table and only Scryfall card names: one deck without them makes every receipt's and order's table refresh in its space fail.
 
+**Physical box checks:** Build decks' **Check box** reviews an ordinary home built deck's saved physical assembly, every section and basic land included, with installed named or unspecified stand-ins. Counts and section-aware missing/extra differences are local to the review. **Save check date** changes only the optional `- **Box checked:** YYYY-MM-DD` header through a conflict-checked deck save; no observations enter the deck text, inventory or audit message. Its private deck-page date is historical, not a certificate of current contents or printing. The lists, kit, reservations and shared packing ticks are unchanged. List/collection repairs and member/product checks remain separate future work.
+
 #### The deck text format
 
 Each deck's text has these parts, in this order:

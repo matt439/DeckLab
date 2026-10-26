@@ -614,6 +614,9 @@ def deck_view(deck_id, version="target", omit=()):
             answer["commander_night"] = night
     if sees:
         answer.update(owned=owned, tokens=_view_tokens(summary, version, sections, info), table=table)
+        if deck_file is not None and space == spaces.HOME and guard.sees_home_records():
+            from decklab.lib.decks import boxcheck
+            answer["box_checked_on"] = boxcheck.checked_on(deck_file)
         from .assembly_standins import project
         answer["standins"] = project(deck_file, version) if deck_file is not None else None
         assembled = _assembled_view(summary, p, warnings, deck=deck_file, result=owned if version == "target" else None)

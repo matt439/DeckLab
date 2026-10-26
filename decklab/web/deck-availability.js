@@ -35,6 +35,19 @@ function incomingBannerSources(owned) {
 
 // ------------------------------------------------------------- availability
 
+/** A historical date is displayed only as an actual calendar day; it certifies no current contents. */
+function boxCheckDate(value) {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value) || Number(value.slice(0, 4)) < 1) return null;
+  const date = new Date(value + "T00:00:00Z");
+  return Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== value ? null : value;
+}
+
+function boxCheckDateNote(data) {
+  const date = boxCheckDate(data.box_checked_on);
+  return date ? el("p", { class: "sub deck-box-checked" }, "Last box check recorded: ",
+    el("time", { datetime: date, text: date }), ". Contents may have changed since.") : null;
+}
+
 /** What the deck's owned rows add up to: {missing, aud, priced, coming, held} (copies missing, their
  * estimated A$, whether every missing card has a price, copies on the way, copies other decks hold that this
  * deck is short of). null when there's no answer to give. */
@@ -91,6 +104,7 @@ function availabilityBanner(data, screen) {
       el("p", { class: "deck-avail-head" }, el("b", { text: head + which }),
         more.length ? el("span", { class: "deck-avail-more", text: more.join(" · ") }) : null),
       a && a.coming ? incomingBannerSources(data.owned) : null,
+      boxCheckDateNote(data),
       assembled ? el("p", { class: "sub deck-avail-assembled", text: assembledStateWords(assembled) + "." }) : null),
     action, picker);
 }

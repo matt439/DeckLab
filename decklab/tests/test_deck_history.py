@@ -19,7 +19,7 @@ from unittest import mock
 
 from decklab.lib import api, config, inventory
 from decklab.lib.api import history
-from decklab.lib.inventory import files
+from decklab.lib.inventory import files, rules
 from decklab.lib.inventory.model import DeckRevision
 from decklab.lib.state import Actor
 from decklab.tests import db_support
@@ -322,7 +322,7 @@ def _snapshot(lists=False):
     empty status list and watchlist too (an inventory the database can hold)."""
     parts = {ALPHA: _deck("Alpha", "3 Opt (DOM) 60\n").encode(), EXAMPLE_DRAGONS: _deck("Example Dragons").encode()}
     if lists:
-        parts["magic/products/status.csv"] = b"file,status,intact,sleeves,deck_box,notes\n"
+        parts["magic/products/status.csv"] = rules.csv_bytes([], rules.STATUS_FIELDS)
         parts["magic/watchlist.csv"] = (b"name,set,collector_number,finish,quantity,for,printing,listed_aud,"
                                         b"listed_at,in_stock,checked,notes,state,source\n")
     return files.build(parts), {}

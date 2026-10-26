@@ -9,7 +9,7 @@ and accessory saves with a local picture (accessories.MAX_SAVE_BODY).
 
 
 def dispatch(handler, route, query):
-    from decklab.lib.api import (accessories, activity, assembly, assembly_completion, assembly_standins, assembly_ticks, collection, collection_edit, cover, editor, history,
+    from decklab.lib.api import (accessories, activity, assembly, assembly_completion, assembly_standins, assembly_ticks, box_check, collection, collection_edit, cover, editor, history,
                                  library_forge, opponents, play_records, precons, products, product_tokens, rankings, receipts, rename, retirement, shopping, shopping_order_changes, shopping_orders, shopping_queue, swaps, token_cards, token_plan, tokens, visits)
     from decklab.lib.api.common import MAX_BODY
 
@@ -71,6 +71,7 @@ def dispatch(handler, route, query):
         ("precons", "add"): precons.add_precon,
         ("deck", "cover"): cover.save_cover,
         ("deck", "token-cards"): token_cards.save_token_cards,
+        ("deck", "box-check"): box_check.save_box_check,
         ("deck", "opponents"): opponents.save_opponents,
         ("deck", "swaps"): swaps.suggest_draft_swaps,      # a dry run: nothing is written
         ("deck", "retire"): retirement.retire_deck,

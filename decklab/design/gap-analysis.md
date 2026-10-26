@@ -6,7 +6,7 @@ Story ids (such as E7-S09) are those in [stories.md](stories.md). Each story the
 
 ## Headline
 
-Deck Lab already does most of what Matt and User1 need. Of the must and should stories, Matt has 96 built and 3 partial; User1 has 32 built, 1 partial and 1 missing; Claude Code has 15 built, User5 4, the space members 4 and the Commander table 1, with no gaps. Across all 229 stories there are 168 built, 17 partial, 30 missing and 14 not wanted (recounted from the story headers on 2026-10-27). E9-S18 is now counted as not wanted.
+Deck Lab already does most of what Matt and User1 need. Of the must and should stories, Matt has 96 built and 3 partial; User1 has 32 built, 1 partial and 1 missing; Claude Code has 15 built, User5 4, the space members 4 and the Commander table 1, with no gaps. Across all 229 stories there are 168 built, 18 partial, 29 missing and 14 not wanted (recounted from the story headers on 2026-10-27). E9-S18 is now counted as not wanted.
 
 Matt's answers moved the work towards three things:
 
@@ -199,6 +199,8 @@ Dropped from the roadmap by the decisions: the expected arrival date (E6-S23), k
 ### Ready reserve
 
 The bounded reserve of 2026-10-18 (Stats disclosure dates E3-S01, linked CLI receipt previews E11-S20 and non-writing previews E11-S25) is built, and so is member departure. The 2026-10-26 audit confirms that the current queue has substantial coding work: continue E11-S30, then the self-hosting, token and kit stories already admitted by NOW. Their [story owners](stories.md) specify the first slices; [TODO.md](../../TODO.md) separates ready work from decisions, dates, deferred items and costly runs. No additional stories are needed to keep the queue supplied. E11-S12 (legacy error wording) and E11-S21 (command-line privacy labels) remain could, outside the active queue unless a concrete need picks them.
+
+E7-S21 now has its first slice: ordinary home built decks can review their saved physical cards, record section-aware differences locally and save a historical check date. The date records no observations or printing certification. Repair offers and the Library due-for-check filter remain, as do member/product expansion and physical-device/household acceptance. It stays open as partial work.
 
 ## PLAN.md alignment
 

@@ -1989,7 +1989,7 @@ Evidence:
 
 Gap: the Card list's rows are edited one at a time; only Receive delivery has a bulk condition and language fill.
 
-**E7-S21** · Matt · could · L · missing
+**E7-S21** · Matt · could · L · partial
 
 As an owner of built decks in the shared pool, I want to check a built deck's box against its recorded list and note any card that's missing or extra, so that the records stay true to the physical decks after many swaps between games.
 
@@ -1998,12 +1998,14 @@ As an owner of built decks in the shared pool, I want to check a built deck's bo
 - Given a box check is saved, when the deck page is opened, then it shows the date the box was last checked.
 - Given a deck not checked for a long time, when the library is shown, then it can be filtered to decks due for a check.
 
+Now (2026-10-26): [the first slice is implemented](../HISTORY.md#physical-box-checks-and-historical-dates-2026-10-26-e7-s21) for ordinary home built decks. Build decks reviews the saved physical assembly in every section, including basics and installed named or unspecified stand-ins, with explicit found counts and separate extras. Only a historical date is saved; counts and differences remain local, and pictures certify no physical printing or current contents.
+
 Evidence:
-- `decklab/web/assembly.js`, `decklab/web/assembly-progress.js`: Build decks' ticks are shared across devices but never change the inventory or record a check date
+- `decklab/lib/decks/boxcheck.py`, `decklab/lib/api/box_check.py`: section- and role-aware differences, exact source receipts, private date-only save through the normal deck write lock
+- `decklab/web/assembly-boxcheck.js`, `decklab/web/assembly.js`, `decklab/web/deck-availability.js`: blank local counts, picture ticks, reviewed differences, guarded Save check date and a private historical date note
+- `decklab/tests/test_box_check_model.py`, `test_box_check_api.py`, `test_box_check_ui.py`, `test_box_check_pg.py`: model, permissions, stale/uncertain outcomes, unchanged-list/date-only persistence and disposable database checks
 
-Gap: there's no way to reconcile a physical deck with its record, and no record of when a box was last checked.
-
-First slice: a box check on Build decks (picture tiles with ticks over the built list) that lists what's missing or extra and saves the date checked; the fix-the-list offers come after.
+Gap: separate offers to fix the list or collection and the Library filter for decks due for a check remain. Member-space and product box checks are future scope. The native fixture matrix passed; real-device and household acceptance remain separate.
 
 **E7-S22** · Matt · could · M · missing
 

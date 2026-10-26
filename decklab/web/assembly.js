@@ -470,7 +470,7 @@ function packDeck(view, deck) {
       el("p", { class: "sub", text: listName(deck.version) }),
       deck.build_scope ? el("p", { class: "sub pack-build-scope", text: packScopeWords(deck) }) : null,
       deck.completion?.already_built ? status("good", "Built") : null,
-      packTakeApartButton(view, deck)),
+      packTakeApartButton(view, deck), packBoxCheckButton(view, deck)),
     packBulkControl(view, deck),
     packStandinsPart(view, deck),
     step("sleeves", "Sleeves", kitNode, sleeves && need ? el("ul", { class: "pack-list" },
