@@ -2,6 +2,10 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Synthetic dark-layout smoke pass (2026-10-26; E11-S30 slice 15)
+
+Sixty disposable Chromium cases covered 15 routes at 320, 820, 1280 and 1920px in dark mode, with no page overflow or script errors. The routes included Collection, Tokens, Shopping, Receive, Build decks, Game log, Wishlist, Accessories, Activity, Settings, deck/edit/new/history and Matchups. Writes were blocked. Empty fixture pages remained empty; Matchups exercised the fixture's guarded error state. This is mouse/default-DPR layout evidence, not full data, Forge, touch, Safari or household-device acceptance. Slice 15 and the outstanding slice 13 contracts remain open.
+
 ## Explicit field re-test after saving (2026-10-26; E11-S30 slice 14)
 
 Saved full Editors offer an unchecked, transient Re-test against the field after saving choice. It follows the current simulations permission and remains outside drafts/history. New, copied, Quick, unstarted and read-only trial editors do not offer it. A confirmed successful save can submit one request using the returned saved list's fingerprint; an unavailable identity, a stale page/person or a refused start never turns into an unguarded request. Commander uses the same explicit choice without inventing a Constructed-field summary.
