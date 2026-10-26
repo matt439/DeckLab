@@ -1,4 +1,4 @@
-"""Intact products reserve token cards once; automatic deck plans cannot move those copies."""
+"""Intact products reserve token cards once; fixed-holder plans protect those copies."""
 import csv
 import io
 import json
@@ -9,7 +9,7 @@ from decklab.lib.api import deck_page, guard, token_plan
 from decklab.lib.api.common import ApiError
 from decklab.lib.inventory import Op, ops_decks
 from decklab.lib.state import Actor
-from decklab.lib.tokens import products
+from decklab.lib.tokens import plan_products, products
 from decklab.tests import household_config
 from decklab.tests import test_api_tokens as token_fixture
 from decklab.tests import test_token_reservation as reservation_fixture
@@ -50,6 +50,14 @@ class ProductTokenReservationsTests(token_fixture.TokensApiTestCase):
 
     def built(self, slug, *, packed=None, source="1 Army of the Damned\n"):
         self.write(f"decks/casual/{slug}.md", reservation_fixture.built(slug.upper(), deck=source, packed=packed))
+
+    def fixed_plan(self):
+        """Explicit ordinary-only optimise mode keeps product reservations fixed."""
+        inv = tokens.read()
+        built = tokens.built_ids()
+        found = [(deck_id, title, tokens.cached_deck_tokens(deck_id, version, sections, inv, [])["needs"])
+                 for deck_id, title, version, sections, _ in tokens._holders([], include_products=False) if deck_id in built]
+        return tokens.optimise.plan(inv, found)
 
     def test_multi_deck_product_holds_once_under_actual_canonical_producer(self):
         inv = tokens.read()
@@ -115,7 +123,7 @@ class ProductTokenReservationsTests(token_fixture.TokensApiTestCase):
         self.built("a")
         self.built("b", packed="8 Zombie // Zombie Knight")
         status_before = (self.magic / "products/status.csv").read_bytes()
-        result = tokens.plan_token_cards()
+        result = self.fixed_plan()
         self.assertEqual([item["id"] for item in result["decks"]], ["casual/a", "casual/b"])
         self.assertEqual([item["after"] for item in result["decks"]], ["3 Zombie // Zombie Knight", "2 Zombie // Zombie Knight"])
         self.assertEqual(sum(item["spares"] for item in result["decks"]), 3)
@@ -126,17 +134,18 @@ class ProductTokenReservationsTests(token_fixture.TokensApiTestCase):
         self.status("10 Zombie // Zombie Knight")
         self.built("a")
         self.built("b")
-        result = tokens.plan_token_cards()
+        result = self.fixed_plan()
         self.assertTrue(all(item["after"] == "" and item["spares"] == 0 for item in result["decks"]))
         self.assertTrue(all(item["short"] == ["Zombie"] for item in result["decks"]))
         self.assertEqual(tokens.reserve.holds(tokens.read())[HOLDER]["rows"], {self.zombie(): 10})
 
-    def test_plan_save_changes_only_decks_and_keeps_product_reservation(self):
+    def test_fixed_mode_save_changes_only_decks_and_keeps_product_reservation(self):
         self.built("a")
         self.built("b")
         status_before = (self.magic / "products/status.csv").read_bytes()
-        preview = token_plan.plan_view()
-        answer = self.call(token_plan.apply_plan, sha256=preview["sha256"])
+        with mock.patch.object(plan_products, "gather", return_value=[]):
+            preview = token_plan.plan_view()
+            answer = self.call(token_plan.apply_plan, sha256=preview["sha256"])
         self.assertEqual(answer, {"saved": 2, "decks": ["casual/a", "casual/b"]})
         self.assertEqual((self.magic / "products/status.csv").read_bytes(), status_before)
         holds = tokens.reserve.holds(tokens.read())

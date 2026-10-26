@@ -349,7 +349,7 @@ def deck_tokens(sections, inv=None, incoming_rows=None, held=None):
 
 # ------------------------------------------------------------------ holders and the cache
 
-def _holders(warnings, space=spaces.HOME):
+def _holders(warnings, space=spaces.HOME, *, include_products=True):
     """[(id, title, version, sections, link)] of a space: built decks (their
     built version), decks being built (their target list) and, at home, owned
     products kept intact. link is the deck id a deck page opens for the
@@ -383,7 +383,7 @@ def _holders(warnings, space=spaces.HOME):
             warnings.append(f"{summary['source']} can't be read: {e}")
             continue
         found.append((summary["id"], summary["title"], version, sections, summary["id"]))
-    if space != spaces.HOME:
+    if space != spaces.HOME or not include_products:
         return found
     product_decks = None
     listed = {product.file for product in inventory.current().products}
@@ -429,15 +429,25 @@ def gaps(inv, incoming_rows, warnings, space=spaces.HOME):
 
 
 def plan_token_cards(space=spaces.HOME, warnings=None):
-    """optimise.plan for space: every built deck's Token cards line planned at once, from its
-    built version's needs with every row free. Raises RuntimeError when the card index isn't
-    ready."""
+    """Plan built decks and home's eligible intact products from one snapshot.
+
+    Ordinary decks use their built list; each actual product subdeck contributes
+    its own needs to the shared physical pool. Raises RuntimeError while the card
+    index is unavailable or an existing reservation cannot be read.
+    """
+    if not inventory.is_pinned():
+        with inventory.pinned():
+            return plan_token_cards(space, warnings)
     warnings = [] if warnings is None else warnings
     inv = read(space=space)
     built = built_ids(space)
     found = [(deck_id, title, cached_deck_tokens(deck_id, version, sections, inv, [])["needs"])
-             for deck_id, title, version, sections, _ in _holders(warnings, space) if deck_id in built]
-    return optimise.plan(inv, found, space, warnings)
+             for deck_id, title, version, sections, _ in _holders(warnings, space, include_products=False) if deck_id in built]
+    product_plans = []
+    if space == spaces.HOME:
+        from . import plan_products
+        product_plans = plan_products.gather(inv, warnings, evaluate=cached_deck_tokens, section_key=_sections_key)
+    return optimise.plan(inv, found, space, warnings, products=product_plans)
 
 
 def _held_tokens(deck_id, version, sections, inv, incoming_rows, held):

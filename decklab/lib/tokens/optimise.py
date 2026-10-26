@@ -16,8 +16,9 @@ Then the spares (Matt, 2026-10-25: "one each, then share spares"): what's left o
 out one card at a time, round the decks given that row in id order (or, for a row nobody was given,
 the decks it would serve as an exact, agreeing or check card), so a Treasure deck may get 3.
 
-Intact products are fixed holders in this slice. Their recorded copies are left out of both
-flow capacities and spare distribution; automatic product planning is still separate work.
+An eligible intact product contributes one demand participant per actual subdeck. Their
+assignments share the same physical capacity and are saved once for the whole box. Products
+outside the supplied plan keep their recorded copies out of flow and spare distribution.
 
 plan() only works it out (tokens.plan_token_cards reads what it needs); lib/api/token_plan.py previews it and saves every line as one change.
 """
@@ -88,7 +89,25 @@ def _candidates(need, inv):
     return [c for c in out if int(inv.rows[c[0]]["quantity"]) > 0]
 
 
-def plan(inv, built, space=spaces.HOME, warnings=None):
+def _lines(inv, given, packs=()):
+    """Canonical physical quantities; face/sleeve claims only for one ordinary deck."""
+    lines, sides = {}, {}
+    for i in sorted(given):
+        line = reserve.line_for(inv.rows[i], given[i])
+        key = (line.front, line.back, line.set, line.number)
+        if key in lines:
+            line = decks.TokenCardLine(lines[key].quantity + line.quantity, *key)
+        lines[key] = line
+        row = inv.rows[i]
+        faces = {cards.fold(row[p["side"]]): row[p["side"]] for p in packs if p["row"] == i}
+        if _two_sided(row) and faces:
+            sides.setdefault(key, set()).add(
+                "both sides used" if len(faces) > 1 else f"{next(iter(faces.values()))} side only, can be sleeved")
+    return (decks.format_token_cards(list(lines.values())),
+            [{"text": line.text(), "sides": sorted(sides.get(key, ()))} for key, line in lines.items()])
+
+
+def plan(inv, built, space=spaces.HOME, warnings=None, *, products=None):
     """{"decks": [{id, title, before, after, lines: [{text, sides}], changed, packs: [{token, row,
     verdict, side, card}], short: [token], spares, sha256, parsed, stored}], "tokens_sha256",
     "sha256"}: a Token cards line for each built deck of space (see the module docstring), in id
@@ -99,26 +118,34 @@ def plan(inv, built, space=spaces.HOME, warnings=None):
     each part of after with sides ("both sides used" or "Zombie side only, can be sleeved" for a
     double-sided card), short the tokens no card was left for, spares how many extra cards it got.
     sha256 covers what an apply must find unchanged: each deck's text and its planned line, and
-    the rows. Problems go in warnings."""
+    the rows. Optional products are plan_products.gather's whole-box descriptors;
+    omitted products remain fixed holders. The result's products list contains
+    one packing record per box and each actual subdeck's packs/short/spares.
+    status_sha256 and both snapshot revisions bind the mixed apply. Problems go
+    in warnings."""
     from decklab.lib.inventory.ops_decks import parsed_deck
     warnings = [] if warnings is None else warnings
     current = reserve.holds(inv, space, warnings)
     snapshot = inventory.current()
+    products = products or []
     found = []
     for deck_id, title, needs in built:
         stored = snapshot.deck(deck_id)
         parsed = parsed_deck(stored)
         before = parsed.get_field(decks.TOKEN_CARDS_FIELD) if decks.has_token_cards(parsed) else None
-        found.append({"id": deck_id, "title": title, "stored": stored, "parsed": parsed, "before": before,
+        found.append({"id": deck_id, "holder": deck_id, "title": title, "stored": stored, "parsed": parsed, "before": before,
                       "needs": needs})
+    for product in products:
+        if not product["fixed"]:
+            found.extend({**item, "holder": product["holder"]} for item in product["decks"])
     found.sort(key=lambda d: d["id"])
 
-    # Fixed holders outside this plan (intact products) keep their physical cards.
+    # Only participating holders release their old physical cards for reallocation.
     # An unreadable reservation cannot silently become free stock.
     if any(hold.get("error") for hold in current.values()):
         from .products import FAILED
         raise RuntimeError(FAILED)
-    planned = {d["id"] for d in found}
+    planned = {d["holder"] for d in found}
     locked = collections.Counter()
     for holder, hold in current.items():
         if holder not in planned:
@@ -131,7 +158,7 @@ def plan(inv, built, space=spaces.HOME, warnings=None):
     edges, uses = [], []
     for n, (deck, need, options) in enumerate(needs):
         edges.append((source, 1 + n, 1, 0))
-        packed = current.get(deck["id"], {}).get("rows", {})
+        packed = current.get(deck["holder"], {}).get("rows", {})
         for row, verdict, rank, side in options:
             cost = (rank * _RANK_WEIGHT + (0 if packed.get(row) else _MOVE_WEIGHT)
                     + (_TWO_SIDED_WEIGHT if _two_sided(inv.rows[row]) else 0))
@@ -171,27 +198,42 @@ def plan(inv, built, space=spaces.HOME, warnings=None):
 
     out = []
     for d in found:
-        lines, sides = {}, {}
-        for i in sorted(given[d["id"]]):
-            line = reserve.line_for(inv.rows[i], given[d["id"]][i])
-            key = (line.front, line.back, line.set, line.number)
-            if key in lines:
-                line = decks.TokenCardLine(lines[key].quantity + line.quantity, *key)
-            lines[key] = line
-            row = inv.rows[i]
-            faces = {cards.fold(row[p["side"]]): row[p["side"]] for p in packs[d["id"]] if p["row"] == i}
-            if _two_sided(row) and faces:
-                sides.setdefault(key, set()).add(
-                    "both sides used" if len(faces) > 1 else f"{next(iter(faces.values()))} side only, can be sleeved")
-        after = decks.format_token_cards(list(lines.values()))
+        if "stored" not in d:
+            continue
+        after, lines = _lines(inv, given[d["id"]], packs[d["id"]])
         out.append({"id": d["id"], "title": d["title"], "before": d["before"], "after": after,
-                    "lines": [{"text": line.text(), "sides": sorted(sides.get(key, ()))} for key, line in lines.items()],
+                    "lines": lines,
                     "changed": d["before"] != after,
                     "packs": sorted(packs[d["id"]], key=lambda p: cards.fold(p["token"])),
                     "short": sorted(short[d["id"]], key=cards.fold), "spares": spares[d["id"]],
                     "sha256": d["stored"].sha256, "parsed": d["parsed"], "stored": d["stored"]})
-    digest = hashlib.sha256(json.dumps([inv.sha256, snapshot.revision, snapshot.decks_revision,
-                                       [(d["id"], d["sha256"], d["after"]) for d in out]])
+    product_out, product_receipt = [], []
+    for product in products:
+        allocated = collections.Counter()
+        subdecks = []
+        for d in product["decks"]:
+            deck_id = d["id"]
+            allocated.update(given.get(deck_id, {}))
+            subdecks.append({"id": deck_id, "title": d["title"],
+                             "packs": sorted(packs.get(deck_id, []), key=lambda p: cards.fold(p["token"])),
+                             "short": sorted(short.get(deck_id, []), key=cards.fold), "spares": spares.get(deck_id, 0)})
+        after, lines = _lines(inv, allocated)
+        if product["fixed"]:
+            after = product["before"]
+            lines = [{"text": line.text(), "sides": []} for line in decks.parse_token_cards(after)]
+        item = {key: product[key] for key in ("stem", "holder", "title", "link", "before")}
+        item.update(after=after, lines=lines, changed=product["before"] != after, decks=subdecks)
+        product_out.append(item)
+        product_receipt.append([item, product["source"], product["fixed"],
+                                [(d["id"], d["sections_key"], d["needs"]) for d in product["decks"]]])
+    status_sha256 = None
+    if space == spaces.HOME:
+        from decklab.lib.inventory.kit import status_sha256 as status_sha
+        status_sha256 = status_sha(snapshot)
+    digest = hashlib.sha256(json.dumps([inv.sha256, snapshot.revision, snapshot.decks_revision, status_sha256,
+                                       [(d["id"], d["sha256"], d["after"]) for d in out], product_receipt],
+                                      sort_keys=True)
                             .encode()).hexdigest()
-    return {"decks": out, "tokens_sha256": inv.sha256, "inventory_revision": snapshot.revision,
-            "decks_revision": snapshot.decks_revision, "sha256": digest}
+    return {"decks": out, "products": product_out, "tokens_sha256": inv.sha256,
+            "inventory_revision": snapshot.revision, "decks_revision": snapshot.decks_revision,
+            "status_sha256": status_sha256, "sha256": digest}

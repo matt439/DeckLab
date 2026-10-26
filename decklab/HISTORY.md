@@ -2,6 +2,16 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Automatic product token plans (2026-10-27; E7-S31)
+
+Plan packed token cards now includes eligible intact products alongside built decks. Each actual product subdeck has a separate demand in one shared physical-card flow; copies and spares are then combined once into the whole box's record. A paired card cannot satisfy demands in two different decks at once. Existing holder choices remain a tie-breaker, and incomplete, ambiguous or unsupported product sources retain their fixed reservations. A product with no detected needs keeps its manual record; blank remains unknown packing.
+
+One `tokens.plan` operation checks the original inventory, deck-parts, token-list and product-status receipts before staging any deck or product changes. Every changed participant needs its permission. The evolving status hash is used only after that original check, so several product records and deck histories save in one transaction and audit set. Member-space plans never gather home products. The preview binds actual source membership, sections and subdeck allocations, and reports saved deck ids and product stems separately.
+
+The extracted `token-plan.js` shows whole-product totals, actual subdeck shortfalls and valid links without inventing a root route or whole-box sleeve guidance. It validates mixed receipts, retires stale controls and closes on route/profile changes. A lost response or conflict requires an explicit fresh review; late completion can refresh only the original owned view after its sheet history entry closes.
+
+Validation: 296 affected checks passed with no skips. New coverage includes 20 core planning cases, 11 mixed file/API cases, three actual disposable PostgreSQL cases and 21 UI cases. Database checks verify one audit set for two products and one deck, no token-quantity changes, no-op behavior, source races and failed staged operations with no partial persistence. The existing package-binding check caught a callback import violation; dependency injection fixed it without weakening the check. Twelve final synthetic Chromium width/theme cases (320, 600, 820, 1000, 1280 and 1920px, light/dark) passed cancellation, reopening, group counts, shortfalls, save and subsequent no-op review with no overflow or script errors. The final fixture run made one mixed save, allocating two paired cards across three demands while preserving collection, token quantities, product state and intended lists. Independent core/backend and UI review, Ruff, syntax and whitespace checks passed. Migration 0014 and the older live server were not activated; no household, Forge, touch or Safari acceptance is claimed.
+
 ## Token-plan participant revision guard (2026-10-27)
 
 Token plans now bind the full deck-parts revision as well as the inventory revision and changed deck texts. An unchanged participant edited or deleted, or a newly built deck added between recompute and save, therefore refuses the whole operation before any write. The receipt also changes when a deck edit leaves the planned token lines identical.

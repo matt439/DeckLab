@@ -601,8 +601,12 @@ used by the other person's deck says "one of User1's decks", without a link or a
   to a home viewer who may edit products. One record covers the whole box, including every generated deck page;
   it reserves existing physical token cards without adding or removing inventory. Paired faces count as one card.
   Blank means packing is unknown: it reserves nothing explicitly and retains the shared-card warning's
-  one-per-used-row assumption. **Clear packed record** restores that state. The deck planner leaves recorded
-  product copies alone; planning products automatically with decks remains E7-S31's next slice.
+  one-per-used-row assumption. **Clear packed record** restores that state. **Plan packed token cards** on
+  Tokens plans built decks and eligible intact products together. Each actual product subdeck has its own
+  demand, sharing one physical capacity across all participants, and the result saves once for the box.
+  The preview shows both whole-product totals and subdeck shortfalls. Products whose needs cannot be safely
+  calculated, or which have no detected needs, retain their existing records. One mixed save requires every
+  changed deck/product permission and rechecks inventory, deck, token-list and product-status receipts.
   On the PC, `python -m decklab.db product tokens STEM [--json]` prints the record and both hashes;
   `product set-tokens STEM --expect SHA --tokens-sha256 TOKEN_SHA --tokens "2 Treasure; 1 Beast // Dog" -m "..."`
   records it (`--tokens ""` clears; token SHA `none` only when no token sheet exists). `--dry-run` previews,

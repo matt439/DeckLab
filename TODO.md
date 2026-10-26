@@ -6,7 +6,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 
 **The only ordering in this file.** Keep every `DECISION` row here. Keep this block to the current aim and the next few actions; results go in their owners (HISTORY.md for what shipped).
 
-**Aim (updated 2026-10-26):** finish the visual redesign (`E11-S30`), then work through the rows Matt added on 2026-10-25: making Deck Lab easy to self-host for people outside the household (`E11-S32`, `E11-S33`, `E10-S17`) and finishing the token and kit work (`E7-S31`, `E7-S06`, `E7-S21`). The private member model is built and live (see Activation below); household device acceptance remains.
+**Aim (updated 2026-10-26):** finish the visual redesign (`E11-S30`), then work through the rows Matt added on 2026-10-25: making Deck Lab easy to self-host for people outside the household (`E11-S32`, `E11-S33`, `E10-S17`) and finishing the token and kit work (`E7-S06`, `E7-S21`). The private member model is built and live (see Activation below); household device acceptance remains.
 
 **Ready queue:** `E11-S30`, the visual redesign Matt chose on 2026-10-24 ("P1"). Slice 14 of [visual-design.md](decklab/design/visual-design.md#7-rollout) is implemented, as are slice 13's scoped recorded packing activity, verified intact-product storage review and per-card movable-copy priorities. Exact physical printing still needs a confirmed-printing model; independent ready reserve work can continue while it is designed. Slice 15's synthetic dark smoke passed; full-data and device acceptance remain open. The approved desktop keyboard plan is built; global search has its separate decision below. Collection question 6, authoritative Receive check-to-row association and touch/Safari acceptance remain separate gates, with Card colour matching the compatibility default.
 
@@ -47,7 +47,6 @@ An index of open work, one row per item; each row points to the doc that owns th
 
 | id | status | pri | size | item |
 |---|---|---|---|---|
-| `E7-S31` | OPEN | could | M | Plan intact products with built decks; guarded product token records and fixed reservations are implemented, pending migration 0014 activation. |
 | `E7-S06` | OPEN | could | M | Confirm physical quantities when precon token sources omit them; guarded opt-in for explicit counts is built. |
 | `E7-S21` | OPEN | could | L | Check a built deck's box against its list, list what's missing or extra, and record the date checked. |
 | `E5-S15` | DEFERRED | should | M | User1 asks from the page for a card or a Forge run, Matt approves (`E3-S13`); not urgent. |

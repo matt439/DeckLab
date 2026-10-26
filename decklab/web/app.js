@@ -118,6 +118,7 @@ async function chooseProfile(profile) {
   closeDeckRetirementSheets();
   closeAssemblySheets();
   closeProductStorageSheets();
+  closeTokenPlanSheets();
   closeAccessorySheets();
   closeReceiptSheets();
   state.profile = profile;
@@ -209,6 +210,7 @@ function drawWho() {
   closeDeckRetirementSheets();
   closeAssemblySheets();
   closeProductStorageSheets();
+  closeTokenPlanSheets();
   closeAccessorySheets();
   closeReceiptSheets();
   stopMatchupRefresh();
@@ -252,6 +254,7 @@ function route() {
   closeDeckRetirementSheets();
   closeAssemblySheets();
   closeProductStorageSheets();
+  closeTokenPlanSheets();
   closeAccessorySheets();
   closeReceiptSheets();
   stopMatchupRefresh();

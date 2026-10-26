@@ -41,12 +41,12 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 20 | 14 | 1 | 4 | 1 |
 | [E5: Decide what to buy](#e5-decide-what-to-buy) | 22 | 15 | 0 | 5 | 2 |
 | [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 20 | 17 | 0 | 1 | 2 |
-| [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 27 | 17 | 5 | 5 | 0 |
+| [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 27 | 18 | 4 | 5 | 0 |
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 16 | 11 | 1 | 2 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 19 | 13 | 0 | 5 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 35 | 30 | 2 | 1 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 28 | 15 | 6 | 4 | 3 |
-| **Total** | **229** | **166** | **19** | **30** | **14** |
+| **Total** | **229** | **167** | **18** | **30** | **14** |
 
 Counted from the story headers on 2026-10-27.
 
@@ -1738,7 +1738,7 @@ Evidence:
 
 How the inventory stays true to the physical cards. Each space's own people add, fix and remove cards on the Collection page (single cards, an app export, Add a precon) and token cards on the Tokens page; Matt and User1 both edit home's, each member only their own, and Claude does bulk and member upkeep from the PC (`collection merge`, `collection edit` and `collection apply`, `collection add-precon --space`). Repeat imports, sales and trades, and cards held by built decks are all flagged, other decks' out-of-date tables are listed with Update all rather than refreshed automatically, and the nightly `db check` looks for drift.
 
-Open: E7-S03, E7-S06, E7-S08, E7-S15, E7-S18, E7-S21, E7-S22, E7-S23, E7-S24, E7-S31.
+Open: E7-S03, E7-S06, E7-S08, E7-S15, E7-S18, E7-S21, E7-S22, E7-S23, E7-S24.
 
 **E7-S01** · Matt · must · M · built
 
@@ -2156,7 +2156,7 @@ Evidence:
 - `decklab/tests/test_accounts_ui.py`: test_download_saves_the_spaces_collection_for_whoever_sees_it
 - Not checked in a browser or on a phone: saving a Blob through a link's `download` is how the deck page's Download decklist already works
 
-**E7-S31** · Matt · could · M · partial
+**E7-S31** · Matt · could · M · built
 
 As Matt, who keeps some products intact in their own box, I want an intact product to say which token cards it packs, as a built deck's Token cards line does, so that other decks don't count those cards as free and the product isn't told it has none.
 
@@ -2167,13 +2167,15 @@ As Matt, who keeps some products intact in their own box, I want an intact produ
 
 Evidence:
 - `decklab/db/migrations/0014_product_token_cards.sql`, `decklab/lib/inventory/ops_products.py`, `decklab/db/product_tokens.py`: a guarded product record, legacy status readers and atomic clearing on break-up
-- `decklab/lib/tokens/products.py`, `reserve.py`, `optimise.py`: actual producer relation, one reservation per product, fixed copies excluded from deck plans and a lock-time inventory revision guard
+- `decklab/lib/tokens/products.py`, `plan_products.py`, `reserve.py`, `optimise.py`: actual producer relation, separate subdeck demands sharing physical capacity, one product record and conservative fixed fallback
+- `decklab/lib/inventory/ops_token_plan.py`, `decklab/lib/api/token_plan.py`, `decklab/web/token-plan.js`: one reviewed mixed plan, all changed permissions and original receipts checked before any writes
 - `decklab/lib/api/product_tokens.py`, `deck_page.py`, `decklab/web/product-tokens.js`: home-only picker shared across generated product deck routes; no product record or status receipt through public collection/deck access
 - `decklab/tests/test_product_tokens.py`, `test_product_tokens_api.py`, `test_product_tokens_cli.py`, `test_product_tokens_pg.py`, `test_product_token_reservations.py`, `test_product_tokens_ui.py`
+- `decklab/tests/test_product_token_planning.py`, `test_token_plan_mixed.py`, `test_token_plan_mixed_pg.py`, `test_product_token_plan_ui.py`: physical quantities, product membership, atomic mixed writes, permissions, races, scoped UI and uncertain outcomes
 
-Now (2026-10-27): the first slice is implemented. An owned intact product records quantities of existing token cards once for its whole box. Blank means packing is unknown, retaining the one-per-used-row warning; clearing does not claim it packs none. Break-up clears this record with its kit. Deck planning protects recorded product copies and refuses unreadable reservations. Migration 0014 and activation have not been performed on the live database or server.
+Now (2026-10-27): manual records and automatic mixed planning are implemented. Each actual product subdeck has its own demand, with one physical capacity and one saved record for the box. Products whose complete token needs cannot be calculated, or with no detected needs, retain their records; blank still means unknown packing. Break-up clears the record with kit. Migration 0014 and activation have not been performed on the live database or server.
 
-Gap: Plan packed token cards still plans built decks only. The remaining slice must plan products with them and allocate each product's cards across its own decks, preserving one physical quantity for a paired card.
+Validation includes 296 affected checks and twelve synthetic Chromium width/theme cases with one guarded fixture mixed save. Household data, actual devices and Forge were not used.
 
 ---
 
