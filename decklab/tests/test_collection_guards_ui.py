@@ -142,7 +142,7 @@ class CollectionGuardsUiTests(unittest.TestCase):
           const {cv, ctx: edit} = await make(); edit.sheet.close(); location.hash = '#/collection';
           const sheet = colOpenSheet('Add a precon'); const titleInput = el('input', {value: 'Private title'});
           const ctx = {cv, sheet, titleInput, titleNote: el('p'), message: el('div'), whose: 'the home collection', busy: false,
-            preview: {sha256: 's1', deck: {file: 'test.json', name: 'Fixture precon'}}};
+            preview: {ready: true, editable: true, sha256: 's1', deck: {file: 'test.json', name: 'Fixture precon'}}};
           let finish; apiWrite = () => new Promise(resolve => { finish = resolve; }); state.saved = null;
           const pending = addPrecon(ctx); await flush(); colCloseSheets(); state.profile = PROFILES[2];
           finish({collection: {added: {cards: 60}}, deck: {id: 'casual/private-title', title: 'Private title'}}); await pending;

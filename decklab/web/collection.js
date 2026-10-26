@@ -877,7 +877,7 @@ async function searchPrecons(ctx) {
   }
 }
 
-async function previewPrecon(ctx, deck) {
+async function previewPrecon(ctx, deck, keptTitle = null) {
   const cv = ctx.cv;
   clearTimeout(ctx.timer);            // a search typed just before the pick would cover the preview
   const seq = ++ctx.seq;
@@ -891,12 +891,13 @@ async function previewPrecon(ctx, deck) {
     const params = new URLSearchParams({ file: deck.file });
     if (cv.space !== HOME_SPACE) params.set("space", cv.space);
     const preview = await api(`/api/precons/preview?${params}`);
-    if (seq !== ctx.seq || ctx.sheet.closed) return;
+    if (seq !== ctx.seq || ctx.sheet.closed || !colActive(cv)) return;
     ctx.preview = preview;
+    ctx.keptTitle = keptTitle;
     clear(ctx.message);
     drawPreconPreview(ctx);
   } catch (error) {
-    if (seq !== ctx.seq || ctx.sheet.closed) return;
+    if (seq !== ctx.seq || ctx.sheet.closed || !colActive(cv)) return;
     clear(ctx.message).append(el("div", { class: "box box-crit", role: "alert" }, el("p", { text: error.message })));
   }
 }
@@ -907,6 +908,43 @@ function preconLine(c) {
   return `${c.qty} ${c.name}${c.set ? ` (${c.set.toUpperCase()}) ${c.number}${finish}` : ""}`;
 }
 
+/** Only a complete, authorized token offer can opt into the reviewed token-list revision. */
+function preconTokenOffer(preview) {
+  const offer = preview?.token_import;
+  if (!offer || offer.ready !== true || offer.editable !== true || !Array.isArray(offer.rows) || !offer.rows.length
+      || !(offer.sha256 === null || typeof offer.sha256 === "string" && /^[a-f0-9]{64}$/.test(offer.sha256))
+      || typeof offer.source_sha256 !== "string" || !/^[a-f0-9]{64}$/.test(offer.source_sha256)
+      || !Array.isArray(offer.problems) || offer.problems.length || new Set(offer.rows.map(row => row?.source_row)).size !== offer.rows.length
+      || !Number.isSafeInteger(offer.cards) || offer.cards < 1
+      || !offer.rows.every(row => row && typeof row.front === "string" && row.front.trim() === row.front && row.front.length > 0
+        && !/[\u0000-\u001f\u007f]/.test(row.front)
+        && Number.isSafeInteger(row.quantity) && row.quantity > 0 && Number.isSafeInteger(row.source_row) && row.source_row > 0)
+      || offer.rows.reduce((sum, row) => sum + row.quantity, 0) !== offer.cards) return null;
+  return offer;
+}
+
+function preconTokenChoice(ctx) {
+  ctx.tokenChoice = null; ctx.tokenPreviewStale = false;
+  const preview = ctx.preview, offer = preconTokenOffer(preview), raw = preview.token_import;
+  if (!raw) return null; // Older servers keep their original opt-out flow.
+  if (!offer || !preview.editable) return raw.rows?.length || raw.problems?.length
+    ? el("div", { class: "box box-warn" }, el("p", { text: "Token cards cannot be added from this preview. Check them on the Tokens page instead." }),
+      Array.isArray(raw.problems) ? el("ul", {}, raw.problems.filter(problem => problem && typeof problem.message === "string")
+        .map(problem => el("li", { text: problem.message }))) : null) : null;
+  const node = el("input", { type: "checkbox" });
+  let accepted = false;
+  node.addEventListener("change", () => {
+    if (ctx.busy || ctx.sheet.closed || !colActive(ctx.cv) || ctx.preview !== preview || !node.isConnected
+        || !ctx.area.contains(node) || ctx.tokenChoice?.offer !== offer) { node.checked = accepted; return; }
+    accepted = Boolean(node.checked);
+  });
+  ctx.tokenChoice = { node, offer, preview };
+  return el("section", { class: "precon-tokens" },
+    el("label", { class: "choice" }, node, el("span", { text: `Add its token cards too (${plural(offer.cards, "card")})` })),
+    el("p", { class: "sub", text: "Added as separate rows for checking. Printing, finish and reverse face stay unconfirmed; check the physical cards afterward." }),
+    el("ul", {}, offer.rows.map(row => el("li", { text: `${row.quantity} x ${row.front}` }))));
+}
+
 function drawPreconPreview(ctx) {
   const p = ctx.preview;
   const d = p.deck;
@@ -914,7 +952,8 @@ function drawPreconPreview(ctx) {
   const total = Object.values(counts).reduce((a, b) => a + b, 0);
   const leftOut = Object.entries(p.left_out || {}).map(([what, n]) => plural(n, what));
   const adds = p.adds || { rows: 0, cards: 0 };
-  const titleInput = el("input", { id: `precon-title-${ctx.sheet.heading.id}`, type: "text", maxlength: "100", value: p.title });
+  const titleInput = el("input", { id: `precon-title-${ctx.sheet.heading.id}`, type: "text", maxlength: "100", value: ctx.keptTitle ?? p.title });
+  ctx.keptTitle = null;
   ctx.titleInput = titleInput;
   ctx.titleNote = el("p", { class: "field-problem precon-title-note", role: "status" });
   const sayTaken = () => {
@@ -946,8 +985,9 @@ function drawPreconPreview(ctx) {
     ctx.titleNote,
     leftOut.length || (p.tokens && p.tokens.length) ? el("p", { class: "sub" },
       leftOut.length ? `Not added: ${leftOut.join(", ")}. ` : "",
-      p.tokens && p.tokens.length ? ["Its token cards (", p.tokens.map((t) => `${t.count} ${t.name}`).join(", "),
+      !p.token_import && p.tokens && p.tokens.length ? ["Its token cards (", p.tokens.map((t) => `${t.count} ${t.name}`).join(", "),
         ") aren't added: record them on the ", el("a", { href: "#/tokens", text: "Tokens page" }), " once checked."] : null) : null,
+    preconTokenChoice(ctx),
     Object.entries(lists).map(([section, lines]) => el("section", { class: "precon-section" },
       el("h3", { text: `${section === "Deck" ? "Deck" : section} (${num(counts[section] || 0)})` }),
       el("div", { class: "card-tiles precon-tiles" }, lines.map((c) => tile(c, section)))))]);
@@ -959,14 +999,18 @@ function drawPreconPreview(ctx) {
 async function addPrecon(ctx) {
   const cv = ctx.cv;
   const p = ctx.preview;
-  if (ctx.busy || ctx.sheet.closed || !p || !colActive(cv)) return;
+  if (ctx.busy || ctx.sheet.closed || !p || !p.ready || !p.editable || !colActive(cv) || ctx.tokenPreviewStale) return;
+  const tokensChosen = ctx.tokenChoice?.node.checked === true, offer = preconTokenOffer(p);
+  if (tokensChosen && (!offer || ctx.tokenChoice.preview !== p || ctx.tokenChoice.offer !== offer)) return;
   const title = ctx.titleInput.value.trim();
   if (!title) { ctx.titleNote.textContent = "The deck needs a title."; ctx.titleInput.focus(); return; }
   ctx.busy = true;
+  if (ctx.tokenChoice) ctx.tokenChoice.node.disabled = true;
   for (const button of ctx.sheet.foot.querySelectorAll("button")) button.disabled = true;
   clear(ctx.message).append(loadingBox(`Adding ${p.deck.name}…`));
   try {
-    const answer = await apiWrite("/api/precons/add", { space: cv.space, file: p.deck.file, title, sha256: p.sha256 });
+    const answer = await apiWrite("/api/precons/add", { space: cv.space, file: p.deck.file, title, sha256: p.sha256,
+      ...(tokensChosen ? { add_tokens: true, tokens_sha256: offer.sha256, tokens_source_sha256: offer.source_sha256 } : {}) });
     if (ctx.sheet.closed || !colActive(cv)) return;
     const added = answer.collection && answer.collection.added;
     ctx.sheet.close();
@@ -975,14 +1019,17 @@ async function addPrecon(ctx) {
     // The deck page's box about a new deck (editor-deckpage.js, savedBox), as the editor's Create leaves it:
     // warnings (no sleeves yet, the deck rules) and other decks' tables now out of date.
     const hash = deckHref(answer.deck.id, "target");
-    state.saved = { hash, version: "target", mode: "new", answer: { ...answer.deck,
-      precon: { name: p.deck.name, whose: ctx.whose, cards: added ? added.cards : 0 } } };
+    const tokenCount = tokensChosen && answer.tokens?.cards === offer.cards && answer.tokens?.rows === offer.rows.length ? offer.cards : null;
+    state.saved = { hash, profile: state.profile?.id, version: "target", mode: "new", answer: { ...answer.deck,
+      precon: { name: p.deck.name, whose: ctx.whose, cards: added ? added.cards : 0,
+        ...(tokensChosen ? { tokens: tokenCount, tokens_uncertain: tokenCount === null } : {}) } } };
     state.scroll.delete(hash);        // open the deck at the top, where the box is
     toast("");                        // an older note would cover the box
     location.hash = hash;
   } catch (error) {
     if (ctx.sheet.closed || !colActive(cv)) return;
     ctx.busy = false;
+    if (ctx.tokenChoice) ctx.tokenChoice.node.disabled = false;
     for (const button of ctx.sheet.foot.querySelectorAll("button")) button.disabled = false;
     const data = error.data || {};
     if (error.status === 500 || !error.data) {
@@ -990,10 +1037,22 @@ async function addPrecon(ctx) {
       // save may have gone in, and adding again would add the cards twice.
       cv.rows = null;
       state.library = null;
+      ctx.tokenPreviewStale = true;
+      if (ctx.tokenChoice) ctx.tokenChoice.node.disabled = true;
       clear(ctx.message).append(el("div", { class: "box box-crit", role: "alert" }, el("p", { text: error.message }),
-        el("p", { text: `It isn't known whether its cards went into ${ctx.whose}. Look there (and on the Decks page) before adding it again.` })));
+        el("p", { text: `It isn't known whether its cards went into ${ctx.whose}. Look there (and on the Decks page${tokensChosen ? " and Tokens page" : ""}) before adding it again.` })));
       sheetActions(ctx.sheet, [{ text: "Close", kind: "primary", value: "close",
         onclick: () => { ctx.sheet.close(); if (colActive(cv)) colReload(cv, error.message); } }]);
+      return;
+    }
+    if (error.status === 409 && (data.token_conflict || tokensChosen && data.sha256)) {
+      ctx.tokenPreviewStale = true;
+      if (ctx.tokenChoice) ctx.tokenChoice.node.disabled = true;
+      clear(ctx.message).append(el("div", { class: "box box-warn", role: "alert" }, el("p", { text: error.message }),
+        el("p", { text: "Nothing was added. Preview again to review the current collection and token list, then choose whether to add the token cards." })));
+      sheetActions(ctx.sheet, [ctx.back, { text: "Preview again", kind: "primary", onclick: () => {
+        if (!ctx.sheet.closed && colActive(cv) && !ctx.busy && ctx.preview === p) previewPrecon(ctx, p.deck, ctx.titleInput.value.trim());
+      } }]);
       return;
     }
     if (error.status === 409 && data.sha256) {

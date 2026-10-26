@@ -1826,11 +1826,13 @@ As a deck builder, I want a precon's token cards offered for adding when I add t
 - Given I skip them, then the deck page's Tokens part still shows them as not owned.
 
 Evidence:
-- `decklab/web/collection.js`: drawPreconPreview (its token cards 'aren't added: record them on the Tokens page')
+- `decklab/web/collection.js`: preconTokenChoice, addPrecon (default unchecked, guarded source and inventory receipts, fresh-preview conflicts)
+- `decklab/lib/precon_tokens.py`, `decklab/lib/api/precons.py`, `decklab/lib/inventory/ops_decks.py`: explicit source counts, unconfirmed separate rows, one atomic precon change
+- `decklab/db/inv_collection.py`: add-precon --add-tokens; `decklab/tests/test_precon_tokens.py`, `test_precon_tokens_cli.py`, `test_precon_tokens_ui.py`
 
-Gap: there's no option to add the precon's token cards; the preview only names them and points to the Tokens page. The second criterion holds through the deck's Tokens part.
+Now (2026-10-27): sources with explicit physical counts and unambiguous checked face names offer token rows in the precon's one change. Printing, finish and reverse face remain unknown; skipping is still the default. Synthetic browser saves and file/API/CLI tests cover this bounded path.
 
-First slice: an "Add its token cards too" choice in the precon preview, adding each as a token row with printing and back unconfirmed, in the precon's one change.
+Gap: MTGJSON's documented CardToken model does not guarantee a count. Missing counts and combined or ambiguous names currently refuse the optional batch, leaving the ordinary precon available. The remaining slice needs explicit physical-quantity confirmation and safe handling of face ambiguity; no missing count means one and no combined name is split into additional cards. The second criterion already holds through the deck's Tokens part.
 
 **E7-S07** · Matt · must · L · built
 

@@ -2,6 +2,16 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Guarded precon token opt-in (2026-10-27; E7-S06 first slice)
+
+Add a precon offers an unchecked token-card choice when MTGJSON supplies explicit bounded physical counts and checked unambiguous face names. Each source entry stays a separate row with printing, finish and reverse face unknown, with source provenance and a reminder to check physical pairing. The collection, token rows and new deck save as one operation; the command line uses the same path with `collection add-precon --add-tokens`. Ordinary imports skip tokens by default and retain their existing behavior and playable-card counts.
+
+The preview binds the exact offered source rows and the private token revision. Changed sources or token lists, and collection conflicts on an opted-in save, require a fresh unchecked preview while preserving the chosen title. Unknown save outcomes cannot repeat the addition. Receipts report token counts only when both card and row counts agree; private token hashes are never read for an unauthorized viewer. Invalid or ambiguous optional token information does not block the playable precon.
+
+MTGJSON's documented CardToken model does not guarantee physical counts. This slice refuses missing counts and combined names rather than assuming a count or splitting physical cards; E7-S06 remains partial for explicit quantity confirmation and safe face-ambiguity handling. See the source's [Deck](https://mtgjson.com/data-models/deck/) and [CardToken](https://mtgjson.com/data-models/card/card-token/) models.
+
+Validation: 97 affected parser, API, CLI, UI and disposable-server checks passed, including atomic file writes, stale source/token conflicts, cancellation, profile changes and uncertain outcomes. Two additional disposable PostgreSQL checks passed without skips, verifying the combined persisted rows and one audit change, and no partial write on a stale token list. Independent cross-layer review, Ruff, JavaScript syntax and whitespace checks passed. Twelve synthetic Chromium width/theme cases (320, 600, 820, 1000, 1280 and 1920px, light/dark) had no overflow or script errors. Separate opt-out and opt-in fixture saves added 16 playable cards and four token cards in two unconfirmed rows, preserving the original fixture deck. The opt-in test server uses seeded temporary MTGJSON lists with downloads still forbidden. No household data, live precon cache, Forge, touch or Safari acceptance was used.
+
 ## Whole-deck take-apart checklist (2026-10-27; E8-S14)
 
 A built ordinary deck on Build decks offers a Take-apart checklist for its saved physical build, independently of the selected intended list and the plan's smaller Put back step. It includes every section and basic land, installed named or anonymous stand-ins, recorded paired token cards, and only the kit details the viewer may see. Missing token/kit records stay explicit. Malformed evidence is unavailable, with no mutable-list fallback or printing claim.

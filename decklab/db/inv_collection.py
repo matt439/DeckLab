@@ -134,6 +134,8 @@ def register(sub):
                     help="who plays it (home only; default the --actor's plays_as, else no Played by line)")
     sp.add_argument("-m", "--message", required=True, help="what the change does, for the history")
     sp.add_argument("--dry-run", action="store_true", help="show what it would add and make; save nothing")
+    sp.add_argument("--add-tokens", action="store_true",
+                    help="also add token entries with explicit source counts; printing and reverse face stay unconfirmed")
     cli_actor.add_argument(sp)
     sp.set_defaults(func=_add_precon)
 
@@ -639,7 +641,9 @@ def _api_refusal(e):
     """The exit code (and stderr) for a refusal of the page's precon code (an ApiError): 2 when the
     database can't be reached, else 1, with each problem it lists."""
     print(f"Not added: {e.message}", file=sys.stderr)
-    for problem in (e.extra or {}).get("problems") or ():
+    problems = list((e.extra or {}).get("problems") or ())
+    problems.extend((e.extra or {}).get("token_problems") or ())
+    for problem in problems:
         line = problem.get("line")
         print(f"  {f'line {line}: ' if line else ''}{problem.get('message')}", file=sys.stderr)
     conflict = (e.extra or {}).get("conflict")
@@ -670,7 +674,7 @@ def _add_precon(args):
     try:
         # Checked with no profile: a script naming nobody may write every space, as the command line does.
         made = page.plan_add(args.space, args.code, args.title, {"player": player} if player else None, None,
-                             actor.name)
+                             actor.name, add_tokens=args.add_tokens)
     except common.ApiError as e:
         return _api_refusal(e)
     built, plan, whose = made["built"], made["plan"], made["whose"]
@@ -691,7 +695,14 @@ def _add_precon(args):
         if made["table"].get("note"):
             print(made["table"]["note"])
         if tokens:
-            print(f"Its token cards (in its Notes, not added to the token cards): {tokens}.")
+            if args.add_tokens:
+                candidate = built["token_candidates"]
+                print(f"Would add {_plural(candidate['cards'], 'token card')} in {_plural(len(candidate['rows']), 'separate row')}; "
+                      "quantities as declared by MTGJSON, printing and reverse face unconfirmed.")
+                for item in candidate["rows"]:
+                    print(f"  {item['row']['quantity']} {item['row']['front']} (source token entry {item['source_row']}; check physical pairing)")
+            else:
+                print(f"Its token cards (in its Notes, not added to the token cards): {tokens}.")
         print("Nothing saved (--dry-run).")
         return 0
     try:
@@ -709,6 +720,9 @@ def _add_precon(args):
     from decklab.db import inv_decks
     inv_decks.stale_notes(args.space, exclude=(made["deck_id"],), other=True)
     added = counts.get("cards", 0) if good else 0
+    if args.add_tokens:
+        print(f"Added {_plural(counts['token_cards'], 'token card')} in {_plural(counts['token_rows'], 'separate row')}; "
+              "printing and reverse face unconfirmed.")
     print(f"Added {_plural(added, 'card')} ({counts.get('added_rows', 0) if good else 0} new rows) to {whose} "
           f"and made {made['deck_id']}.")
     return 0
