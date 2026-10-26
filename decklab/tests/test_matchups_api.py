@@ -89,7 +89,7 @@ class NotPlayedTests(MatchupTestCase):
         answer = api.matchup(GRUUL_ID, "target", GRUUL_ID, "owned")
         self.assertEqual(set(answer), {"key", "format", "sides", "status", "job", "result", "notice", "error",
                                        "choices", "default_games", "default_mode", "workers", "batch_games", "forge",
-                                       "earlier", "estimates"})
+                                       "earlier", "estimates", "real_games"})
         self.assertRegex(answer["key"], r"^[0-9a-f]{64}$")
         # No results of an earlier engine, and no auto-profile known before any game.
         self.assertEqual(answer["earlier"], [])

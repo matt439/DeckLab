@@ -752,7 +752,7 @@ Gap: membership changes only by hand-editing `decklab/simulation.json`; there's 
 
 This epic covers getting physical decks onto the table and learning from the games played: choosing the decks, pulling and sleeving the cards from home's shared pool on Build decks (#/assembly, the packing plan), reading a deck's How to play and practising opening hands, playing with sideboard plans, and recording the result on the Game log (#/play). Each game is seen only by the spaces whose decks it names, a side whose deck the viewer may not see shows only as words such as "one of the home decks", and each space changes only its own side (E10-S32). Teaching the rules is left to products like the Beginner Box, so Deck Lab keeps teaching minimal. User1 uses Deck Lab on her phone, so Build decks and the Game log on a phone matter most.
 
-Open: E4-S09, E4-S13, E4-S16, E4-S18, E4-S19.
+Open: E4-S09, E4-S16, E4-S18, E4-S19.
 
 **E4-S01** · Matt · must · L · built
 
@@ -899,7 +899,7 @@ Evidence:
 - `decklab/lib/api/play_records.py`: play_overview
 - `decklab/tests/test_play_ui.py`: test_session_summary_balances_seats_and_keeps_list_revisions_separate
 
-**E4-S13** · Matt · could · M · missing
+**E4-S13** · Matt · could · M · built
 
 As a player who uses Forge to judge decks, I want to see our real head-to-head record next to Forge's predicted win rate for the same two lists, so that I know how far Forge's verdicts hold up for our decks and our play.
 
@@ -907,14 +907,14 @@ As a player who uses Forge to judge decks, I want to see our real head-to-head r
 - Given only a few real games, then the page says the real record can't confirm or contradict Forge yet.
 - Given the lists differ from Forge's (an older list), then they aren't paired.
 
+Now (2026-10-26): [Real games is shown beside the Forge result](../HISTORY.md#real-games-beside-forge-results-2026-10-26-e4-s13) on a pair's matchup page. Only the same deck identities and historical main-deck/commander cards actually played count, with rename aliases and either recorded seat order handled. The separate human wins/draws/sample and plain wins-per-all-games share use a below-10 warning; ten or more games remain observational, not certification.
+
 Evidence:
-- `decklab/web/play.js`, `decklab/web/deck-sideboard.js`: the only pages that read /api/play; no matchup, field or rankings page uses play records
+- `decklab/lib/api/play_comparison.py`, `forge_runs.py`: read-only aggregate over visible historical played sections, exact pair identities/cards, rename and seat mapping; printing choices and unused Sideboard/Companion sections are outside this comparison
+- `decklab/web/matchups-play.js`, `matchups-results.js`: static Real games panel beside the verdict, explicit plain human denominator versus Forge's balanced headline, matching-scope note and honest unavailable/unsupported states without false zero counts
+- `decklab/tests/test_play_comparison.py`, `test_matchups_play_ui.py`: historical changed/sideboarded cards, permissions, generic failures, strict counts/dates, reverse sides, zero/draws, 9/10 threshold, text escaping and no actions or extra reads
 
-Gap: Real games are never compared with Forge's predictions and don't feed the field rating.
-
-First slice: the real record beside Forge's rate on the matchup page for lists that match, with "too few games" below 10 real games until Matt picks the number.
-
-Review note: criterion 2 needs a number of games as its threshold (Matt's call).
+The panel exposes only aggregate counts and dates, with no player names, notes or game-record ids. It neither starts simulations nor changes Forge field ratings.
 
 **E4-S14** · Matt · should · M · built
 

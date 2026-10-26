@@ -787,8 +787,10 @@ def _matchup_json(forge, key, sides, ai_lists, default_games, stored, default_mo
     fmt = full["format"] if full is not None else forge.fmt_for(ai_lists[0][1])
     if result is not None and isinstance(result.get("adaptive_last"), dict):
         result["adaptive_last"] = _adaptive_last(result["adaptive_last"], a_side)
+    from . import play_comparison
     return {"key": key, "format": fmt, "sides": sides, "status": status, "job": seen.mask(progress),
             "result": seen.mask(result), "notice": notice, "error": error, "choices": list(forge.GAME_CHOICES),
+            "real_games": play_comparison.summarize(sides, fmt, profile=seen.profile, script=seen.everything),
             "default_games": forge.DEFAULT_GAMES if default_games is None else default_games,
             "default_mode": default_mode,
             **_batching(), "forge": forge.status(), "earlier": _earlier(forge, key, fmt, sha_a, sha_b, seen),

@@ -59,7 +59,7 @@ Each epic has a journey in [journeys.md](journeys.md) and its stories in [storie
 | E1 | Find, plan and choose decks | The library (`#/library`), deck ideas, cover pictures, the deck page's banner and Overview, choosing what to play | 10 | 0 | 2 | 0 |
 | E2 | Build and edit a deck | New deck, the editor and the phone Quick edit, Planned and Play-now lists, owned vs needed, history; `deck pull/push/new/tables` | 13 | 1 | 1 | 1 |
 | E3 | Test a deck | Stats, Practice, Forge matchups (`#/matchups`, `#/matchup`), field rank, Test this change (`#/variant`), the simulations setting | 11 | 3 | 0 | 0 |
-| E4 | Get ready, play and learn | The Packing plan (`#/assembly`), tokens to grab, How to play, practice hands, the Game log (`#/play`) and sideboard plans | 14 | 1 | 4 | 1 |
+| E4 | Get ready, play and learn | The Packing plan (`#/assembly`), tokens to grab, How to play, practice hands, the Game log (`#/play`) and sideboard plans | 15 | 1 | 3 | 1 |
 | E5 | Decide what to buy | Missing cards and estimated costs, the purchase queue on `#/shopping`, AU shop checks, buylists, `watchlist` and `order add --fulfils` | 15 | 0 | 5 | 2 |
 | E6 | Record orders and receive cards | `order add\|edit\|checks\|split\|cancel`, products, on the way, Receive delivery (`#/receipt`), follow-ups, keeping a product intact | 17 | 0 | 1 | 2 |
 | E7 | Keep the collection accurate | The Collection page (`#/collection`), imports and Add a precon, `collection merge`, Tokens (`#/tokens`), removals, stale tables, `db check` | 19 | 4 | 4 | 0 |
@@ -71,7 +71,7 @@ Each epic has a journey in [journeys.md](journeys.md) and its stories in [storie
 ## Headline counts
 
 - **9 personas:** two primary, two secondary (User5 and the space members), one supplementary, one non-human actor and three anti-personas.
-- **11 epics, 229 stories:** 168 built, 18 partial, 29 missing and 14 not wanted.
+- **11 epics, 229 stories:** 169 built, 18 partial, 28 missing and 14 not wanted.
 - **Must and should stories:** Matt has 96 built and 3 partial; User1 has 32 built, 1 partial and 1 missing; Claude Code has 15 built; User5 has 4 built; the space members have 4 built; the Commander table has 1 built. None of the last four has a must or should gap. (Recounted from the story headers on 2026-10-26.)
 
 Deck Lab already does most of what Matt and User1 need. Private by default is built and live since 2026-10-19, when migrations 0012 and 0013 were applied and the server restarted on committed code; nothing has been switched Public yet. Guarded member departure is built and live too; no member has left. The visual redesign (E11-S30) has ready coding slices, followed by the self-hosting, token and kit work Matt added on 2026-10-25. [TODO.md](../../TODO.md) owns their order and readiness; each story owns its first slice and later gates. The other must and should gaps are the physical-device follow-up (E2-S22), the signed-in off-page check (E11-S02) and User2's testing session (E11-S28), which need the people involved; and User1's purchase requests (E5-S15), which are deferred. Stand-in suggestions (E2-S07, 2026-10-20), combo detection (E9-S23) and noticing official list changes (E9-S24, both 2026-10-21) are built, and so is the Forge upgrade check (E11-S15, 2026-10-21).
