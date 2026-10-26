@@ -37,7 +37,7 @@ class Node {
   getAttribute(key) { return key in this.attrs ? this.attrs[key] : null; }
   removeAttribute(key) { delete this.attrs[key]; if (key === "hidden" || key === "disabled") this[key] = false; }
   append(...items) {
-    for (let item of items) { if (!(item instanceof Node)) item = new Text(String(item)); item.parentNode = this; this.children.push(item); }
+    for (let item of items) { if (!(item instanceof Node)) item = new Text(String(item)); item.remove(); item.parentNode = this; this.children.push(item); }
   }
   appendChild(child) { this.append(child); return child; }
   insertBefore(child, before) {

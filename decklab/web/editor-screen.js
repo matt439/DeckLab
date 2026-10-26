@@ -346,6 +346,7 @@ function mainTabs() {
     notes ? el("div", { class: "tabs edit-tabs", role: "tablist", "aria-label": "Edit", onkeydown: tabArrows },
       tab("cards", "Cards"), tab("notes", "Notes"))
       : el("h2", { class: ed.quick ? "sr-only" : "edit-cards-title", text: ed.mode === "edit" ? listName(ed.version) : "Cards" }),
+    lookOffered ? editorManaSortButton() : null,
     lookOffered ? ed.dom.look : null);
 }
 
@@ -379,6 +380,7 @@ function drawLookSwitch() {
         showRowAvailability(currentAvailability());
       } }, label)));
   ed.dom.look.hidden = ed.tab !== "cards";
+  updateEditorManaSort();
 }
 
 /** The main column's body: the list, or the write-up. */
@@ -401,6 +403,7 @@ function drawMain() {
     projectEditorSearchDock();
     host.append(notesPart());
     if (ed.dom.look) ed.dom.look.hidden = true;
+    updateEditorManaSort();
     return;
   }
   host.append(ed.dom.lines);

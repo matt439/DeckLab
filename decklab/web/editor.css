@@ -130,6 +130,8 @@ details.edit-details-fold:not([open]) > summary { min-height: calc(60px - 2px); 
 .edit-main-head { display: flex; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; gap: var(--s-2) var(--s-3); }
 .edit-tabs { flex: 1 1 auto; min-width: 0; }
 .edit-look { flex: none; margin-bottom: var(--s-1); }
+.edit-mv-sort { flex: none; margin-left: auto; margin-bottom: var(--s-1); font-family: var(--font-mono); }
+.edit-mv-sort[hidden] { display: none; }
 
 @media (min-width: 1000px) {
   .bar-add-jump { display: none; }
@@ -220,7 +222,7 @@ details.edit-details-fold:not([open]) > summary { min-height: calc(60px - 2px); 
 @media (min-width: 1000px) and (pointer: fine) { .edit-row { --tap: 28px; } }
 .edit-list > .edit-row {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto auto var(--tap);
+  grid-template-columns: auto minmax(0, 1fr) auto auto auto var(--tap);
   align-items: center;
   gap: 0 var(--s-2);
   min-height: var(--tap);
@@ -247,6 +249,12 @@ button.edit-card:hover { background: var(--hover); }
 .edit-card .nm { display: flex; align-items: center; gap: var(--s-2); min-width: 0; font-weight: var(--fw-semibold); line-height: var(--lh-tight); }
 .edit-card .nm-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .edit-card .cost { flex: none; }
+.edit-mv { min-width: 3ch; color: var(--ink-2); font-family: var(--font-mono); font-size: var(--fs-sm); text-align: right; }
+.edit-list > .edit-row.is-unsaved:not(.is-blocked):not(.is-warned) {
+  background: var(--accent-soft);
+  box-shadow: inset 2px 0 0 var(--accent), inset 0 1px 0 var(--accent-line), inset 0 -1px 0 var(--accent-line);
+}
+.edit-list > .edit-row.is-unsaved:not(.is-blocked):not(.is-warned) .nm-text { color: var(--accent-strong); }
 .edit-badge-slot { min-width: 0; }      /* kept when empty, so ⋯ stays in its column */
 .chip-btn {
   display: inline-flex; align-items: center; gap: var(--s-1);
@@ -282,16 +290,15 @@ button.edit-card:hover { background: var(--hover); }
 
 /* A real three-pane list can be narrow even in the lab. Preserve the original controls, costs and
    facts, giving the card name the first line and its printing/availability the second. */
-@media (min-width: 1000px) {
-  .edit-page.has-editor-panes .edit-main { container-type: inline-size; container-name: editor-cards; }
-}
+.edit-page.has-editor-panes .edit-main { container-type: inline-size; container-name: editor-cards; }
 @container editor-cards (max-width: 600px) {
   .edit-page.has-editor-panes .edit-list > .edit-row:not(.edit-removed) {
-    grid-template-columns: auto minmax(0, 1fr) auto var(--tap);
-    grid-template-areas: "step card card more" "step print badge more";
+    grid-template-columns: auto auto minmax(0, 1fr) auto var(--tap);
+    grid-template-areas: "step card card card more" "step mv print badge more";
   }
   .edit-page.has-editor-panes .edit-list > .edit-row > .edit-stepper { grid-area: step; }
   .edit-page.has-editor-panes .edit-list > .edit-row > .edit-card { grid-area: card; }
+  .edit-page.has-editor-panes .edit-list > .edit-row > .edit-mv { grid-area: mv; }
   .edit-page.has-editor-panes .edit-list > .edit-row > .edit-more { grid-area: more; }
   .edit-page.has-editor-panes .edit-list > .edit-row > .edit-print {
     grid-area: print; justify-self: start; max-width: 100%; min-width: 0; white-space: normal; overflow-wrap: anywhere;

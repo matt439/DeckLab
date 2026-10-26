@@ -2,6 +2,14 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Editor mana value and changed rows (2026-10-26; E11-S30 slice 14)
+
+Full Editor List rows now keep their mana costs beside a mana-value column. The native MV control reverses numeric sorting within existing type and section groups. Zero and fractional values stay valid; missing or invalid values remain unknown and sort last in either direction. Pictures and Quick Editor keep their existing presentation. Changed rows reuse the approved teal row treatment; blocked and warning rows retain their status colours.
+
+Sorting moves the original rows and controls while preserving saved list order, request indexes, drafts, history and viewer metadata. A focused row stays attached, so sorting cannot blur its quantity input and commit partially typed text. Removed rows retain their exact Undo context. The DOM double now moves existing nodes when appending, matching browser semantics.
+
+Validation: 48 focused checks and all 1,367 UI/source checks passed; repository ruff and JavaScript syntax checks passed. Twelve synthetic Chromium width/theme cases (600, 820, 999, 1000, 1280 and 1920px, light/dark) retained facts without horizontal overflow or page errors. Native keyboard sorting preserved controls/payload/history; a pending zero kept focus and selection with no blur or model change. The disposable fixture blocked all non-GET requests. No live data, Forge games, Safari, touch or physical-device acceptance. Slice 14 remains partial for the action bar and evidence-aware Forge work.
+
 ## Documentation-only changes skip the full CI suite (2026-10-26)
 
 Pushes to main and pull requests that change only known documentation paths now skip all four Windows test shards; lint still runs. A cheap selector compares the whole pushed range or the pull request's merge-base diff, including deleted paths and both sides of renames. Markdown deck fixtures, Forge text, dependencies, workflows, runtime assets and unknown paths still need the suite. Missing history or an uncertain comparison also runs it. Weekly and manual runs always run the suite.
