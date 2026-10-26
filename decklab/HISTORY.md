@@ -2,6 +2,14 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Review intact product storage from Build decks (2026-10-26; E11-S30 slice 13)
+
+Short or waiting cards held in a verified intact product now offer its existing Product storage review. The source must match the actual same-snapshot producer relation, owned/intact status, held counts and a readable generated deck route; a multi-deck product uses a real subdeck route and appears once. An id prefix or representative card picture is never evidence. Optional source failures leave the original allocation usable.
+
+The link keeps one in-memory copy of the settled selected deck/version/sideboard recipe for that profile and exact Build decks address. Browser Back consumes it once, loads fresh choices and requests a fresh plan before showing instructions. Failed refreshes keep the recipe for explicit Retry. Changing person, address or ordinary choices invalidates the return intent, and pending/uncertain checks keep navigation in place with guidance. Product preview, permission, kit privacy, revision and opaque-token checks remain the existing storage workflow's; nothing is broken up or transferred automatically.
+
+Validation: 65 backend checks, 133 affected frontend checks and a separate 108-check integration run passed. Eleven new source tests and ten new review/UI cases cover malformed/hidden/multi-deck provenance, stale controls, return scope and cancellation. Twelve synthetic Chromium width/theme cases (320, 600, 820, 1000, 1280 and 1920px, light/dark) passed native review/Cancel/Back with the same two-deck recipe and no overflow or script errors. Thirteen disposable product previews and one explicit guarded fixture break-up confirmed fresh storage counts and disappearance of the warning; the real collection, decks, kit and Forge were untouched. CI-rule ruff, JavaScript syntax and whitespace checks passed. Touch, Safari and physical-device acceptance remain open.
+
 ## Recorded packing activity (2026-10-26; E11-S30 slice 13)
 
 Build decks shows the latest committed update to its current check scope, with an absolute date, the known home profile's avatar and a count of check updates, including unticks. Unknown or outside actors appear as Someone. It does not claim anyone is online or count moved card copies. The existing tick response carries optional metadata; no migration, extra request or new endpoint is needed. Metadata/logging failures cannot turn a saved tick into a failed write, and older servers keep usable checks without the line.

@@ -145,6 +145,9 @@ def assembly_view(deck=None, version="target"):
     basics. These describe the list, not physical copies allocated from
     storage, other decks or returns; allocation remains by card name.
 
+    A held_elsewhere row may include optional intact_product {id, title, deck_id}:
+    an owned/intact product with a verified readable deck route, never permission to move it.
+
     Selected participants also carry optional canonical Planned/library "colors" from the
     summary already read, independent of the selected list/physical recipe. None is unknown;
     [] is known colourless. No extra deck or inventory read is made for that decoration.
@@ -200,6 +203,9 @@ def assembly_preview(body):
 
 
 def _preview(selected, profile=False):
+    if not inventory.is_pinned():
+        with inventory.pinned():
+            return _preview(selected, profile=profile)
     if not isinstance(selected, list) or len(selected) > MAX_DECKS:
         raise ApiError(400, f"Choose up to {MAX_DECKS} decks")
     p, participants, aliases, unresolved = pool.load_pool(), [], set(), {}
@@ -278,6 +284,8 @@ def _preview(selected, profile=False):
                              "steps": [], "returns": []})
     from .assembly_markers import plan_standins
     answer = plan_standins(p, participants, aliases, unresolved, profile, plan_counts)
+    from .assembly_products import annotate
+    answer = annotate(answer, p, inventory.current())
     answer["selections"] = selections
     from .assembly_intent import project
     for item in answer["decks"]:

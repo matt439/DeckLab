@@ -124,6 +124,16 @@ have required card-task ticks; optional kit and token ticks stay optional.
 `deck-standins.js` supplies the inventory-visible mappings. Overview links to
 the represented card's rules; the printed play sheet records the text mapping.
 
+Build decks groups optional verified `held_elsewhere[].intact_product` evidence
+by its opaque product id, using one actual supplied readable deck route for the
+existing Product storage review. Only short/waiting cards contribute. The link
+keeps one in-memory, profile/address-scoped recipe after shared checks settle;
+Browser Back consumes it once and re-previews before showing card instructions.
+A refresh failure keeps choices for explicit Retry, never old counts. Pending or
+uncertain checks show guidance. No product mutation or transfer is automatic.
+`test_assembly_products.py` and `test_assembly_product_review_ui.py` guard source,
+privacy, multi-deck grouping and navigation/refresh ownership.
+
 Saved Editor headers use the casual Editing/name/stripe frame and the original
 lab context from 1000px. `editorDraftIdentity()` reads loaded cards with canonical
 Commander/Companion/Deck policy, excluding Sideboard; unknown stays neutral and
