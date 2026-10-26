@@ -745,6 +745,14 @@ class PgInventory:
         applying = getattr(self._applying, "connection", None)
         return work(applying) if applying is not None else self._call(work)
 
+    def undo_token_positions(self, space):
+        """Persisted own-space token layout, on Undo's applying connection when set."""
+        def work(c):
+            return [{"id": rid, "position": position} for rid, position in c.execute(
+                "select id,position from token_card where space_id=%s order by position,id", (space,)).fetchall()]
+        applying = getattr(self._applying, "connection", None)
+        return work(applying) if applying is not None else self._call(work)
+
     # -------------------------------------------------------- writing
 
     def apply(self, op, actor, message, reason=None, expected_revision=None):

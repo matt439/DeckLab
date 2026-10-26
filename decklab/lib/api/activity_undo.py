@@ -14,7 +14,7 @@ from .common import ApiError, DATABASE_DOWN, _keys, _parse_body
 from .settings import _writer
 
 NO_CHANGE = "No undoable change at that ID."
-UNSUPPORTED = "This change cannot be undone here. Supported Undo covers single-row edits, unheld nonbasic collection additions, verified collection deletions and batches of 2–50 condition/language updates."
+UNSUPPORTED = "This change cannot be undone here. Supported Undo covers single-row edits, unheld nonbasic collection additions, unheld verified token additions, verified collection deletions and batches of 2-50 condition/language updates."
 CHANGED = "The change can no longer be undone safely. Reload Activity and review it again."
 UNCONFIRMED = "The undo result could not be confirmed. Reload Activity before trying again."
 SHA = re.compile(r"[a-f0-9]{64}")
@@ -59,7 +59,10 @@ def review_hint(change, shown, profile):
     row = rows[0]
     kind = TABLE_KIND.get(row.get("table"))
     before, after = row.get("before"), row.get("after")
-    insertion = row.get("table") == "collection_card" and row.get("op") == "INSERT" and before is None
+    token_insert = row.get("table") == "token_card" and isinstance(after, dict) \
+        and type(after.get("id")) is int and 1 <= after["id"] < 10 ** 18 \
+        and type(after.get("position")) is int and after["position"] >= 0 and row.get("key") == {"id": after["id"]}
+    insertion = (row.get("table") == "collection_card" or token_insert) and row.get("op") == "INSERT" and before is None
     deletion = row.get("table") == "collection_card" and row.get("op") == "DELETE" and after is None and isinstance(before, dict)
     if not kind or not deletion and (not isinstance(after, dict) or not insertion and (row.get("op") != "UPDATE" or not isinstance(before, dict))):
         return None
@@ -115,7 +118,7 @@ def _project(plan):
     adding = plan.get("action") == "add"
     if not (current is None if adding else isinstance(current, dict)) \
             or not (restored is None if removing else isinstance(restored, dict)) \
-            or removing and (kind != "collection" or plan.get("reason_required") is not True) \
+            or removing and (kind not in MUTABLE or plan.get("reason_required") is not True) \
             or adding and (kind != "collection" or plan.get("physical_confirmation_required") is not True) \
             or not isinstance(plan.get("expect"), str) \
             or not SHA.fullmatch(plan["expect"]) or not isinstance(plan.get("label"), str) or not plan["label"].strip():
@@ -133,8 +136,14 @@ def _project(plan):
             row[key] = value
         rows.append(row)
     if removing:
+        extra = {}
+        if kind == "tokens":
+            rid = plan.get("token_row_id")
+            if type(rid) is not int or not 1 <= rid < 10 ** 18 or plan.get("key") != {"id": rid}:
+                raise ApiError(503, UNCONFIRMED)
+            extra["token_row_id"] = rid
         return {"available": True, "id": plan["change_id"], "expect": plan["expect"], "kind": kind, "space": plan["space"],
-                "label": plan["label"], "action": "remove", "reason_required": True, "current": rows[0], "restored": None}
+                "label": plan["label"], "action": "remove", "reason_required": True, "current": rows[0], "restored": None, **extra}
     if adding:
         return {"available": True, "id": plan["change_id"], "expect": plan["expect"], "kind": kind, "space": plan["space"],
                 "label": plan["label"], "action": "add", "physical_confirmation_required": True, "current": None, "restored": rows[0]}
@@ -180,7 +189,7 @@ def _restored(after, plan):
     sheet = after.collection(space) if kind == "collection" else after.token_set(space)
     try:
         actual = undo.restored_row(after, plan)
-    except (inventory.Invalid, inventory.Conflict, ValueError, TypeError):
+    except (inventory.Invalid, inventory.Conflict, ValueError, TypeError, KeyError):
         raise ApiError(503, UNCONFIRMED) from None
     if actual != plan["restore"]:
         raise ApiError(503, UNCONFIRMED)
@@ -220,7 +229,7 @@ def apply_undo(body):
         except inventory.Invalid as error:
             raise ApiError(400, str(error)) from None
     elif "reason" in data:
-        raise ApiError(400, "A reason is accepted only when Undo removes an added collection row.")
+        raise ApiError(400, "A reason is accepted only when Undo removes an added collection or token row.")
     if not isinstance(data["expect"], str) or not SHA.fullmatch(data["expect"]):
         raise ApiError(400, "expect must be the full review receipt from Undo")
     if data["expect"] != plan["expect"]:
@@ -254,16 +263,25 @@ def apply_undo(body):
         raise ApiError(503, UNCONFIRMED)
     if removing and (extra.get("action") != "remove" or extra.get("undo_reason") != reason):
         raise ApiError(503, UNCONFIRMED)
+    if removing and plan["kind"] == "tokens":
+        if type(extra.get("removed_token_row_id")) is not int or extra["removed_token_row_id"] != plan["token_row_id"] \
+                or not isinstance(plan.get("token_rows_after"), list) or type(counts.get("cards")) is not int:
+            raise ApiError(503, UNCONFIRMED)
     if adding:
         expected = {"added_rows": 1, "bumped_rows": 0, "skipped_basics": 0, "cards": plan["restore"]["quantity"]}
         if extra.get("action") != "add" or extra.get("confirmed_owned") is not True or counts.get("merged") is not False \
                 or any(type(counts.get(key)) is not int or counts[key] != value for key, value in expected.items()):
             raise ApiError(503, UNCONFIRMED)
     sheet, restored = _restored(after, plan)
+    if removing and plan["kind"] == "tokens" and counts["cards"] != sum(row.qty for row in sheet.rows):
+        raise ApiError(503, UNCONFIRMED)
     result = {"saved": True, "source_id": change_id, "expect": data["expect"], "kind": plan["kind"], "space": plan["space"],
               "sha256": files.rendered_sha256(sheet), "revision": after.revision, "restored": restored, "summary": summary.text}
     if removing:
-        result.update(action="remove", removed_key={key: plan["current"][key] for key in ("set", "collector_number", "finish")})
+        if plan["kind"] == "tokens":
+            result.update(action="remove", removed_token_row_id=plan["token_row_id"])
+        else:
+            result.update(action="remove", removed_key={key: plan["current"][key] for key in ("set", "collector_number", "finish")})
     elif adding:
         result.update(action="add", added_key={key: plan["restore"][key] for key in ("set", "collector_number", "finish")})
     return result

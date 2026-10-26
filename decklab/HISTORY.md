@@ -2,6 +2,20 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Undo one unused added token-card row (2026-10-26; E11-S08)
+
+Activity Undo now removes an unused token-card row from a change containing exactly one global token INSERT. The complete original row, its stable database id and position must still match, its original audit-row id must remain the latest touch, and both inventory/deck revisions must match the review. The physical pairing must already be verified; an unknown reverse or pairing refuses, and a blank reverse requires the existing `single-sided verified` note. Undo never guesses a reverse face, combines duplicate physical identities or claims command provenance from the audit shape.
+
+The inverse reads packing as recorded for built decks and intact products. Unknown/unreadable packing, an in-use target, ambiguous duplicate identities, invalid or changed row ordering, over-reservation or any resulting allocation change refuses the operation. It proves that every surviving row keeps its stable id and values, its existing physical allocation and free capacity; other spaces and non-token data remain unchanged. A paired front/back entry contributes its quantity once to physical-card totals. The ordinary token removal runs under the existing inventory lock, with same-connection source/layout reads and no planning or replacement allocation.
+
+The preview shows all token facts and warns that the entire physical row will be removed. Save Undo needs a nonblank reason of at most 200 characters, showing its normalized form and adding it to the new inverse audit. The confirmed API result proves row absence and returns the exact `removed_token_row_id` with `restored: null`; the UI checks that stable-id receipt rather than a mutable list index or collection printing key. Existing collection, single-row UPDATE and metadata-batch protocols, original history and conflict/uncertain-outcome reload behavior remain unchanged. Household server activation is separate.
+
+Validation: the final combined Undo, Activity privacy, UI, web and personal-data group passed 349 tests without skips in 54.517 seconds. The affected frontend group passed 122 checks. The focused backend group passed 180 checks, including 37 new cases (21 pure, ten API and six actual disposable PostgreSQL) alongside the previous 143. The database cases prove exactly one DELETE, no surviving position/value UPDATE and stable physical allocations. Independent source review and global Ruff checks are clear. The source audit found 922 files, with only the existing 1,447-line tokens.js above the size guideline.
+
+The isolated native fixture matrix passed all 12 light/dark cases at 320, 600, 820, 1000, 1280 and 1920px with no horizontal overflow or page errors. It made 24 preview reads and one intercepted synthetic paired-row removal POST, with zero actual writes and twelve blocked baseline visit POSTs. Fixture inventory/deck bytes stayed unchanged, and light/dark screenshots were inspected as actual pixels. This browser receipt is separate from actual disposable PostgreSQL checks; no real token removal, physical-device, household activation or human pairing acceptance is claimed.
+
+E11-S08 remains partial and open for broader receipt/import/removal recovery, identity and other multi-row changes, and accessory/wishlist inverses. Story counts remain 170 built, 17 partial, 28 missing and 14 not wanted.
+
 ## Undo a bounded collection metadata change (2026-10-26; E11-S08)
 
 Activity Undo now supports an original global change containing 2-50 collection UPDATE rows that changed only condition and/or language. Quantity, name, printing key and notes changes, mixed tables and partial selection remain unsupported. Eligibility follows the complete audited shape, without claiming which command produced it. The preview shows every printing and every current-to-restored metadata change, and Save Undo restores the complete eligible source as one new audited change.

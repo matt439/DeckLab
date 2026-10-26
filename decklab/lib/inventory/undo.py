@@ -2,7 +2,7 @@
 
 Audit row shape is authoritative; messages cannot prove which command made a change.
 Same-identity edits, unheld nonbasic collection insertions and confirmed, verified
-collection deletions are supported. Every check runs again in the ordinary
+collection deletions, metadata batches and unheld verified token insertions are supported. Every check runs again in the ordinary
 PostgreSQL inventory transaction before its pure edit helper is called.
 """
 import hashlib
@@ -70,6 +70,22 @@ def _source(rows, space):
         raise UndoMissing()
     row = rows[0]
     old, new = row.get("before"), row.get("after")
+    if row.get("table") == TOKENS and row.get("op") == "INSERT" and old is None:
+        if not isinstance(new, dict) or new.get("space_id") != space:
+            raise UndoMissing()
+        if set(new) != TOKEN_FIELDS:
+            raise UndoUnsupported("The inserted token row has an unsupported schema.")
+        _identifier(row.get("id"))
+        if not isinstance(row.get("key"), dict) or set(row["key"]) != {"id"} \
+                or type(new["id"]) is not int or not 1 <= new["id"] < 10 ** 18 or row["key"]["id"] != new["id"] \
+                or type(row["key"]["id"]) is not int or type(new["position"]) is not int or new["position"] < 0:
+            raise UndoUnsupported("The original token identity cannot be checked.")
+        wanted = _ordinary(new, TOKENS)
+        try:
+            rules.validate_token_row(_cells(wanted), "Token Undo", incoming=True)
+        except ValueError:
+            raise UndoUnsupported("Verify the token card's physical pairing in Tokens before undoing its addition.") from None
+        return row, wanted, None
     if row.get("table") == COLLECTION and row.get("op") == "INSERT" and old is None:
         if not isinstance(new, dict) or new.get("space_id") != space:
             raise UndoMissing()
@@ -126,7 +142,12 @@ def restored_row(snapshot, plan):
     table = COLLECTION if plan["kind"] == "collection" else TOKENS
     sheet = snapshot.collection(plan["space"]) if table == COLLECTION else snapshot.token_set(plan["space"])
     if plan.get("action") == "remove":
-        if table != COLLECTION or sheet.error is not None or sheet.strict_error is not None or sheet.csv_error is not None \
+        if table == TOKENS:
+            from .undo_tokens import ordered_rows
+            if ordered_rows(sheet) != plan["token_rows_after"] or any(row.id == plan["token_row_id"] for row in sheet.rows):
+                raise UndoConflict("The removed token row's absence cannot be confirmed. Reload Tokens.", plan["label"])
+            return None
+        if sheet.error is not None or sheet.strict_error is not None or sheet.csv_error is not None \
                 or not sheet.exists and sheet.rows \
                 or any(rules.ident(row.as_dict()) == rules.ident(plan["current"]) for row in sheet.rows):
             raise UndoConflict("The removed row's absence cannot be confirmed. Reload the list.", plan["label"])
@@ -178,6 +199,9 @@ def _inverse(snapshot, source, wanted, restore, space):
         return ops_collection.edit(snapshot, space, list(rules.ident(wanted)), restore,
                                    sha256=files.rendered_sha256(snapshot.collection(space)))
     from decklab.lib.tokens import ops as token_ops
+    if restore is None:
+        from . import undo_tokens
+        return undo_tokens.remove(snapshot, source, wanted, space, _label(TOKENS, wanted))
     return token_ops.edit(snapshot, space=space, base=_cells(wanted), row=_cells(restore),
                           sha256=files.rendered_sha256(snapshot.token_set(space)), separate=True)
 
@@ -499,9 +523,9 @@ def review(change_id, space, snapshot=None):
     after, inverse_summary = _inverse(snapshot, source, wanted, restore, space)
     if wanted is None:
         _added_row(after, inverse_summary, restore, space, label)
-    elif restore is None:
+    elif restore is None and source["table"] == COLLECTION:
         _insert_removal(snapshot, after, wanted, space, label, source)
-    elif restore["quantity"] < wanted["quantity"]:
+    elif restore is not None and restore["quantity"] < wanted["quantity"]:
         _reduction(snapshot, after, source["table"], space, label, source)
     receipt = json.dumps([change_id, source, snapshot.revision, snapshot.decks_revision], ensure_ascii=False,
                          sort_keys=True, separators=(",", ":"))
@@ -512,6 +536,10 @@ def review(change_id, space, snapshot=None):
         result.update(action="add", physical_confirmation_required=True)
     elif restore is None:
         result.update(action="remove", reason_required=True)
+        if source["table"] == TOKENS:
+            from .undo_tokens import ordered_rows
+            result.update(token_row_id=source["after"]["id"], token_position=source["after"]["position"],
+                          token_rows_after=ordered_rows(after.token_set(space)))
     else:
         result["fields"] = [{"field": key, "before": wanted[key], "after": restore[key]}
                             for key in wanted if wanted[key] != restore[key]]
@@ -540,7 +568,10 @@ def apply_undo(snapshot, *, change_id, space, expect, reason=None, confirm_owned
     if adding and confirm_owned is not True:
         raise Invalid("Confirm that you still physically own every recorded copy before restoring this row.")
     table = COLLECTION if plan["kind"] == "collection" else TOKENS
-    after, summary = _inverse(snapshot, {"table": table}, plan["current"], plan["restore"], space)
+    source = {"table": table}
+    if removing and table == TOKENS:
+        source["after"] = {"id": plan["token_row_id"], "position": plan["token_position"]}
+    after, summary = _inverse(snapshot, source, plan["current"], plan["restore"], space)
     if adding:
         _added_row(after, summary, plan["restore"], space, plan["label"])
     sheet = after.collection(space) if table == COLLECTION else after.token_set(space)
@@ -550,4 +581,5 @@ def apply_undo(snapshot, *, change_id, space, expect, reason=None, confirm_owned
                           {**(summary.extra or {}), "undo_of": change_id, "space": space,
                            "kind": plan["kind"], "row_change_id": plan["row_change_id"],
                            **({"action": "remove", "undo_reason": reason} if removing else {}),
+                           **({"removed_token_row_id": plan["token_row_id"]} if removing and table == TOKENS else {}),
                            **({"action": "add", "confirmed_owned": True} if adding else {})})

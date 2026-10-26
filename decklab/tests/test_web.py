@@ -589,7 +589,9 @@ class WebFileTests(unittest.TestCase):
         # renamed, so neither side spells it any more.)
         script = _scripts()
         server = _lib_text("api")
-        self.assertNotIn("moved_to", script)
+        # Ban the exact legacy identifier; removed_token_row_id is a distinct
+        # stable-row Undo receipt that legitimately contains this substring.
+        self.assertNotRegex(script, r"\bmoved_to\b")
         self.assertNotIn('"moved_to"', server)
         for key in ("did_you_mean", "warning_cards"):
             with self.subTest(key=key):
