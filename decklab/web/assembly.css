@@ -63,6 +63,12 @@
 .pack-bar > .actions { flex: 1 1 320px; justify-content: flex-end; align-items: center; flex-wrap: nowrap; }
 .pack-bar .action-bar-status { flex: 1 1 220px; overflow: visible; white-space: normal; }
 .pack-progress { display: grid; gap: var(--s-1); }
+.pack-last-activity { display: flex; align-items: center; gap: var(--s-2); margin-top: var(--s-2); font-size: var(--fs-sm); color: var(--ink-2); }
+.pack-last-activity[hidden] { display: none; }
+.pack-last-activity > span:last-child { min-width: 0; overflow-wrap: anywhere; }
+.pack-activity-avatar { flex: none; width: 20px; height: 20px; font-size: var(--fs-xs); }
+.pack-activity-avatar.is-unknown { background: var(--surface-chip); color: var(--ink-2); }
+@media (min-width: 1000px) { .pack-activity-avatar { width: 24px; height: 24px; } }
 .pack-copy-progress { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--s-1) var(--s-2); align-items: baseline; }
 .pack-copy-figure { font-family: var(--font-mono); font-size: var(--fs-fig-mid); font-variant-numeric: tabular-nums; color: var(--ink); }
 .pack-copy-label, .pack-other-progress, .pack-progress-state { font-size: var(--fs-meta); }

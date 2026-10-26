@@ -678,6 +678,34 @@ class PgStore:
         ids = rules.packing_ids(ids)
         return self._call(lambda c: self._packing_ticks(c.cursor(), ids))
 
+    def packing_activity(self, ids):
+        """Latest recorded tick/untick change affecting the requested task hashes, or None.
+
+        Return only its raw actor id, UTC timestamp and matching audit-row count. The table-name
+        filter uses the existing audit index; unrelated rows and task identities never leave SQL.
+        This read neither writes audit rows nor claims the actor is currently packing or online.
+        The current thread's unfinished batch is excluded until it commits, as in MemoryStore.
+        """
+        ids = rules.packing_ids(ids)
+        if not ids:
+            return None
+
+        def work(c):
+            batch = self._batch()
+            pending = batch.change_set if batch is not None else None
+            # Change sets are allocated before the packing lock. Audit-row IDs follow the actual
+            # serialized packing writes, even when an earlier transaction takes that lock later.
+            row = c.execute("with latest as (select r.change_set_id as id from audit.row_change r "
+                            "where r.table_name = 'packing_tick' and r.row_key->>'id' = any(%s::text[]) "
+                            "and (%s::bigint is null or r.change_set_id <> %s) order by r.id desc limit 1) "
+                            "select c.actor, c.at, count(r.id) from latest l "
+                            "join audit.change_set c on c.id = l.id "
+                            "join audit.row_change r on r.change_set_id = c.id "
+                            "where r.table_name = 'packing_tick' and r.row_key->>'id' = any(%s::text[]) "
+                            "group by c.id, c.actor, c.at", (ids, pending, pending, ids)).fetchone()
+            return {"actor": row[0], "at": row[1].astimezone(timezone.utc).isoformat(), "checks": row[2]} if row else None
+        return self._call(work)
+
     def packing_ticks_put(self, changes, actor, message, *, ids=None):
         """Atomically patch individual tasks, returning checked hashes within ids.
 

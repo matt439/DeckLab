@@ -1,5 +1,6 @@
 """Shared progress contract on memory and disposable PostgreSQL, never household data."""
 import concurrent.futures
+from datetime import datetime, timedelta
 import hashlib
 import unittest
 
@@ -13,6 +14,81 @@ TASKS = [hashlib.sha256(f"task-{i}".encode()).hexdigest() for i in range(16)]
 
 
 class PackingContract:
+    def test_activity_waits_for_batch_commit_even_when_own_tick_is_visible(self):
+        a = TASKS[0]
+        with self.store.batch(MATT, "Packing transaction"):
+            self.store.packing_ticks_put({a: True}, MATT, "Tick")
+            self.assertEqual(self.store.packing_ticks([a]), [a])
+            self.assertIsNone(self.store.packing_activity([a]))
+        saved = self.store.packing_activity([a])
+        self.assertEqual(saved["actor"], "matt")
+        with self.store.batch(USER1, "Clear packing transaction"):
+            self.store.packing_ticks_put({a: False}, USER1, "Untick")
+            self.assertEqual(self.store.packing_activity([a]), saved)
+        self.assertEqual(self.store.packing_activity([a])["actor"], "user1")
+
+    def test_recorded_activity_is_scoped_and_returns_no_private_rows_or_prose(self):
+        a, b, private = TASKS[:3]
+        self.assertIsNone(self.store.packing_activity([]))
+        self.assertIsNone(self.store.packing_activity([a, b]))
+        self.store.packing_ticks_put({a: True, private: True}, MATT, "Private fixture detail")
+        change = self.store.activity()["changes"][0]
+        expected = {"actor": "matt", "at": change["at"], "checks": 1}
+        self.assertEqual(self.store.packing_activity([a, b]), expected)
+        self.assertEqual(self.store.packing_activity([a, a]), expected)
+        self.assertEqual(self.store.packing_activity([a, private]), dict(expected, checks=2))
+        self.assertEqual(datetime.fromisoformat(expected["at"]).utcoffset(), timedelta(0))
+        self.store.packing_ticks_put({private: False}, USER1, "Private fixture cleared")
+        self.assertEqual(self.store.packing_activity([a]), expected)
+        self.assertEqual(self.store.packing_activity([private])["actor"], "user1")
+
+    def test_activity_reads_noops_and_unrelated_writes_do_not_create_a_heartbeat(self):
+        a, b = TASKS[:2]
+        self.store.packing_ticks_put({a: True}, MATT, "Pull a card")
+        expected = self.store.packing_activity([a, b])
+        before = self.store.activity()
+        self.assertEqual(self.store.packing_activity([a, b]), expected)
+        self.assertEqual(self.store.activity(), before)
+        self.store.packing_ticks_put({a: True, b: False}, USER1, "Already as recorded")
+        self.assertEqual(self.store.activity(), before)
+        self.store.settings_put("user1", {"theme": "dark"}, USER1, "Unrelated setting")
+        self.assertEqual(self.store.packing_activity([a, b]), expected)
+        self.assertIsNone(self.store.packing_activity([TASKS[4]]))
+
+    def test_activity_includes_unticks_even_after_all_checks_are_cleared(self):
+        a, b = TASKS[:2]
+        self.store.packing_ticks_put({a: True, b: True}, MATT, "Pull cards")
+        self.store.packing_ticks_put({a: False, b: False}, USER1, "Clear cards")
+        change = self.store.activity()["changes"][0]
+        self.assertEqual(self.store.packing_ticks([a, b]), [])
+        self.assertEqual(self.store.packing_activity([a, b]),
+                         {"actor": "user1", "at": change["at"], "checks": 2})
+        self.assertEqual(self.store.packing_activity([a])["checks"], 1)
+
+    def test_activity_counts_only_matching_rows_of_a_mixed_batch_and_rolls_back(self):
+        a, b, private = TASKS[:3]
+        with self.store.batch(USER1, "Mixed packing batch"):
+            self.store.packing_ticks_put({a: True, private: True}, MATT, "Pull")
+            self.store.settings_put("matt", {"theme": "dark"}, MATT, "Unrelated setting")
+        expected = self.store.packing_activity([a, b])
+        self.assertEqual(expected["actor"], "user1")
+        self.assertEqual(expected["checks"], 1)
+        before = self.store.activity()
+        with self.assertRaisesRegex(RuntimeError, "rollback"):
+            with self.store.batch(MATT, "Interrupted packing"):
+                self.store.packing_ticks_put({a: False, b: True}, MATT, "Change checks")
+                raise RuntimeError("rollback")
+        self.assertEqual(self.store.activity(), before)
+        self.assertEqual(self.store.packing_activity([a, b]), expected)
+        self.assertEqual(self.store.packing_ticks([a, b]), [a])
+
+    def test_activity_scope_validation_precedes_reading(self):
+        for ids in (None, "bad", {}, ["not-a-hash"], [TASKS[0]] * 2001):
+            with self.subTest(ids=ids), self.assertRaises(state.Invalid):
+                self.store.packing_activity(ids)
+        self.assertIsNone(self.store.packing_activity((TASKS[0],)))
+        self.assertEqual(self.store.activity()["changes"], [])
+
     def test_patches_are_shared_scoped_and_idempotent(self):
         a, b, private = TASKS[:3]
         self.assertEqual(self.store.packing_ticks([a, b]), [])
@@ -45,6 +121,7 @@ class PackingContract:
         self.assertEqual(self.store.packing_ticks(TASKS), [])
         self.assertEqual(self.store.settings("matt"), {})
         self.assertEqual(self.store.activity()["changes"], [])
+        self.assertIsNone(self.store.packing_activity(TASKS))
 
     def test_bad_patches_never_change_progress(self):
         for patch in ({"not-a-hash": True}, {TASKS[0]: 1}, {TASKS[0]: None}, []):
@@ -74,6 +151,9 @@ class MemoryPackingTests(PackingContract, unittest.TestCase):
         with self.assertRaises(state.Unavailable):
             self.store.packing_ticks(TASKS)
         with self.assertRaises(state.Unavailable):
+            self.store.packing_activity(TASKS)
+        self.assertIsNone(self.store.packing_activity([]))
+        with self.assertRaises(state.Unavailable):
             self.store.packing_ticks_put({TASKS[0]: True}, MATT, "Tick")
         self.store.down = False
         self.assertEqual(self.store.packing_ticks(TASKS), [])
@@ -85,6 +165,18 @@ class PgPackingTests(PackingContract, db_support.DbTestCase):
         db_support.reset(self.dbname)
         db_support.seed_membership(self.dbname)
         self.store = PgStore(dbname=self.dbname)
+
+    def test_activity_follows_packing_write_order_not_change_set_creation_order(self):
+        from decklab.lib.state.pg import PgStore
+        other = PgStore(dbname=self.dbname)
+        task = TASKS[0]
+        # This transaction allocates its audit change set first, but takes the packing lock last.
+        with self.store.batch(MATT, "Started first, packed last"):
+            other.packing_ticks_put({task: True}, USER1, "Packed first")
+            self.store.packing_ticks_put({task: False}, MATT, "Cleared last")
+        self.assertEqual(self.store.packing_ticks([task]), [])
+        self.assertEqual(self.store.packing_activity([task])["actor"], "matt")
+        self.assertEqual(self.store.packing_activity([task])["checks"], 1)
 
     def test_schema_guards_and_privileges_cover_the_new_table(self):
         import psycopg

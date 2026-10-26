@@ -7,11 +7,11 @@ import copy
 import hashlib
 import json
 
-from decklab.lib import state
+from decklab.lib import spaces, state
 from decklab.lib.state import rules
-from . import guard
+from . import common, guard
 from .common import ApiError, _CONTROL_RE, _keys, _parse_body, state_errors
-from .settings import _web_actor, _writer
+from .settings import _config_profiles, _web_actor, _writer
 
 MAX_ID = 1000
 MAX_BODY = 2 * 1024 * 1024
@@ -61,11 +61,30 @@ def _ids(values):
     return hashed
 
 
+def _packing_activity(store, ids):
+    """Optional scoped audit evidence; an unknown/outside actor never exposes a private profile."""
+    try:
+        last = store.packing_activity(ids)
+        if last is None:
+            return None
+        person = next((p for p in _config_profiles() if p["id"] == last["actor"]
+                       and p.get("space", spaces.HOME) == spaces.HOME), None)
+        return {"profile": person["id"] if person else None, "by": person["name"] if person else "Someone",
+                "at": last["at"], "checks": last["checks"]}
+    except Exception as error:
+        # The tick operation already succeeded. Optional decoration cannot turn it into a failed write.
+        try:
+            common._log(f"Optional packing activity could not be read: {error}")
+        except Exception:
+            pass  # A failed diagnostic cannot invalidate the already-completed tick operation either.
+        return None
+
+
 def packing_ticks(body):
     """POST /api/assembly/ticks {ids:[text], changes?:[{id,done}], profile?}.
 
     Without changes this reads only: no profile or audit entry is needed. A patch requires
-    a real home writer and may change only supplied ids. Returns {ticks:[text]} restricted
+    a real home writer and may change only supplied ids. Returns {ticks:[text], activity:object|null} restricted
     to that same scope. Both home players may tick any packing task they can describe;
     this never changes inventory, deck lists or accessories. Same-task edits use the last
     write; independent ticks are kept even when devices started from an older read.
@@ -98,4 +117,5 @@ def packing_ticks(body):
                     raise ApiError(400, "Change each packing task only once")
                 changes[hashed[key]] = change["done"]
             checked = set(store.packing_ticks_put(changes, _web_actor(profile), "Update packing ticks", ids=ids))
-    return {"ticks": [key for key, hashed_id in hashed.items() if hashed_id in checked]}
+    return {"ticks": [key for key, hashed_id in hashed.items() if hashed_id in checked],
+            "activity": _packing_activity(store, ids)}

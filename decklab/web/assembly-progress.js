@@ -54,6 +54,7 @@ function wirePackTicks(view) {
     return tick;
   });
   view.progress.scope = JSON.stringify(view.ticks.map(t => t.id).sort());
+  if (previous !== view.progress.scope) view.progress.activity = null;
   packApplyTicks(view);
   if (previous !== view.progress.scope) packSync(view);
 }
@@ -71,15 +72,41 @@ function packApplyTicks(view) {
 function packProgressNotice(view) {
   if (!view.progressNote) return;
   const p = view.progress;
-  clear(view.progressNote);
+  if (p.note !== view.progressNote) {
+    p.note = view.progressNote;
+    p.message = el("div");
+    p.activityNode = el("div", { class: "pack-last-activity", hidden: true });
+    clear(p.note).append(p.message, p.activityNode);
+    p.messageKey = null; p.activityKey = null;
+  }
   view.progressNote.hidden = !view.ticks?.length;
   if (view.progressNote.hidden) return;
   const words = p.error
     ? `${p.pending.size ? "These ticks haven't been saved. " : "Shared ticks couldn't be checked. "}${p.error}`
     : p.pending.size ? "Saving ticks…" : !p.loaded ? "Loading shared ticks…" : "Ticks saved for both of you.";
-  view.progressNote.append(el("span", { class: p.error ? "box box-warn" : "sub", text: words }));
-  if (p.error) view.progressNote.append(el("button", { type: "button", class: "btn btn-quiet", text: "Retry",
-    onclick: () => packSync(view) }));
+  if (p.messageKey !== words) {
+    p.messageKey = words;
+    clear(p.message).append(el("span", { class: p.error ? "box box-warn" : "sub", text: words }));
+    if (p.error) p.message.append(el("button", { type: "button", class: "btn btn-quiet", text: "Retry",
+      onclick: () => packSync(view) }));
+  }
+  const a = p.activity, date = a && new Date(a.at);
+  const valid = a && typeof a.by === "string" && a.by.trim() && Number.isSafeInteger(a.checks) && a.checks > 0
+    && typeof a.at === "string" && Number.isFinite(date.getTime());
+  const key = valid ? JSON.stringify([a.profile, a.by, a.at, a.checks]) : "";
+  if (p.activityKey !== key) {
+    p.activityKey = key;
+    clear(p.activityNode);
+    p.activityNode.hidden = !valid;
+    if (valid) {
+      const index = typeof a.profile === "string" ? state.profiles.findIndex(person => person.id === a.profile) : -1;
+      p.activityNode.append(el("span", { class: `avatar pack-activity-avatar ${index >= 0 ? `avatar-${index % 4}` : "is-unknown"}`,
+        "aria-hidden": "true", text: index >= 0 ? a.by.trim().slice(0, 1).toUpperCase() : "?" }),
+        el("span", {}, el("span", { text: `Last recorded update: ${a.by} · ${plural(a.checks, "check update")}. ` }),
+          el("time", { datetime: a.at, text: date.toLocaleString("en-AU", {
+            day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit" }) })));
+    }
+  }
 }
 
 function packQueueTicks(view, changes) {
@@ -104,7 +131,10 @@ async function packSync(view) {
   if (!assemblyActive(view) && !p.pending.size) return;
   clearTimeout(p.timer);
   const changes = [...p.pending].map(([id, change]) => ({ id, ...change }));
+  const activityScope = p.scope;
   const ids = [...new Set([...(view.ticks || []).map(t => t.id), ...changes.map(t => t.id)])];
+  const currentIds = new Set((view.ticks || []).map(t => t.id));
+  const exactActivityScope = ids.every(id => currentIds.has(id));
   if (!ids.length) {
     p.loaded = true;
     packApplyTicks(view);
@@ -119,6 +149,7 @@ async function packSync(view) {
     const answer = await apiWrite("/api/assembly/ticks", body);
     if (!packProgressOwner(view)) return;
     if (!Array.isArray(answer.ticks)) throw new Error("The shared ticks couldn't be read. Try again.");
+    if (p.scope === activityScope) p.activity = exactActivityScope ? answer.activity || null : null;
     ids.forEach(id => p.remote.delete(id));
     answer.ticks.filter(id => ids.includes(id)).forEach(id => p.remote.add(id));
     for (const change of changes) {
@@ -127,7 +158,7 @@ async function packSync(view) {
     p.loaded = true;
     p.error = null;
   } catch (problem) {
-    if (packProgressOwner(view)) p.error = problem.message;
+    if (packProgressOwner(view)) { p.error = problem.message; p.activity = null; }
   } finally {
     p.busy = false;
     if (packProgressOwner(view)) {

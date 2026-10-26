@@ -2,6 +2,14 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Recorded packing activity (2026-10-26; E11-S30 slice 13)
+
+Build decks shows the latest committed update to its current check scope, with an absolute date, the known home profile's avatar and a count of check updates, including unticks. Unknown or outside actors appear as Someone. It does not claim anyone is online or count moved card copies. The existing tick response carries optional metadata; no migration, extra request or new endpoint is needed. Metadata/logging failures cannot turn a saved tick into a failed write, and older servers keep usable checks without the line.
+
+The audit read follows actual serialized packing writes rather than change-set allocation order, excludes the current unfinished batch, and returns no task ids, messages or unrelated rows. Profile mapping is home-only. The browser retains identical status nodes and Retry focus, clears old metadata after a scope/read failure and suppresses activity from older pending tasks outside the current selection.
+
+Validation: 312 packing checks passed, including disposable PostgreSQL audit ordering/batch checks with no database skips and scoped privacy/failure/UI regressions. Independent review resolved ordering and best-effort diagnostic issues. Twelve synthetic Chromium width/theme cases (320, 600, 820, 1000, 1280 and 1920px, light/dark) passed native fixture tick/untick and recorded-date/20px-or-24px-avatar checks, with no page overflow or script errors. A real poll retained the displayed nodes. Only disposable progress ticks were written; no real inventory, deck completion, kit or Forge changes occurred. Physical-device, touch and Safari acceptance remain open.
+
 ## Library title search (2026-10-26; E1-S05)
 
 Find a deck by title filters the already authorized library response across visible deck and product groups. It matches literal text without case or outside-space differences, keeps native raw typing/IME and focus intact, and stores the trimmed query as `q` in the address without creating a Back entry per keystroke. Clear search preserves the other filters; Show every deck clears the search and select filters. Matching folded groups open temporarily without changing remembered folds. Lab selection falls back to a matching deck and restores the original choice when the query clears; no stale detail stays visible after no results.

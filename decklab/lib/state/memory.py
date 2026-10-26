@@ -254,6 +254,21 @@ class MemoryStore:
             self._check()
             return [key for key in ids if key in self._packing]
 
+    def packing_activity(self, ids):
+        """Latest recorded packing change in this scope, including cleared checks; no presence heartbeat."""
+        ids = rules.packing_ids(ids)
+        if not ids:
+            return None
+        wanted = set(ids)
+        with self._lock:
+            self._check()
+            for change in reversed(self._changes):
+                checks = sum(row["table"] == "packing_tick" and row["key"].get("id") in wanted
+                             for row in change["rows"])
+                if checks:
+                    return {"actor": change["actor"], "at": change["at"], "checks": checks}
+            return None
+
     def packing_ticks_put(self, changes, actor, message, *, ids=None):
         changes = rules.packing_changes(changes)
         ids = rules.packing_ids(list(changes) if ids is None else ids)

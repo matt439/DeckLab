@@ -53,12 +53,14 @@ class BulkPackingSafeguardsTests(PreparationCase):
         assembly_ticks.packing_ticks(json.dumps({"profile": "user1", "ids": [other],
                                                 "changes": [{"id": other, "done": True}]}))
         with mock.patch.object(self.inventory, "apply", wraps=self.inventory.apply) as apply:
-            self.assertEqual(self.tick_all(), {"ticks": self.ids})
+            progress = self.tick_all()
+            self.assertEqual(progress["ticks"], self.ids)
+            self.assertEqual(progress["activity"]["checks"], len(self.ids))
             self.assertEqual(self.preview()["completion"], plan["completion"])
             self.assert_refused(400, plan, confirmed=False)
             apply.assert_not_called()
         self.assertEqual(before, {path: path.read_bytes() for path in self.magic.rglob("*") if path.is_file()})
-        self.assertEqual(assembly_ticks.packing_ticks(json.dumps({"ids": [other]})), {"ticks": [other]})
+        self.assertEqual(assembly_ticks.packing_ticks(json.dumps({"ids": [other]}))["ticks"], [other])
 
     def test_checked_available_cards_do_not_hide_missing_or_incoming_sideboard(self):
         self.deck("a", "A", "building", "Deck\n4 Llanowar Elves\n20 Forest\n\nSideboard\n1 Elvish Mystic\n",

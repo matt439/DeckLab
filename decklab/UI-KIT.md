@@ -108,6 +108,13 @@ progress, caption or readiness change is introduced.
 per-task identities and patches, pending-save status, polling and Clear/Undo.
 Sorting remains a browser preference. Progress is shared through the server;
 it never changes a deck's status without the explicit Mark as built action.
+The optional last-recorded-update line uses only the latest committed audit change
+for the current task scope: a known home profile's existing avatar colour, an
+absolute semantic date and the count of check updates, including unticks. Unknown
+actors are Someone. This is recorded activity, never an online/presence claim or a
+card-copy count. Identical polls retain the status nodes and Retry focus; changed
+scope, failures and pending tasks outside the current scope hide old metadata.
+Older servers without metadata keep the same usable checks.
 
 `assembly-sheets.js` follows the progress script. Its final review collects the
 built list and kit for one save, and its stand-in chooser saves only planned

@@ -36,6 +36,7 @@ tests/test_state_contract.py checks):
 - play_get(kind, id) -> record or None; play_list(kind) -> [record] in id order;
   play_put(kind, record, expected_sha, actor, message) -> record
 - packing_ticks(ids) -> [checked task hash] among ids, shared across home profiles;
+  packing_activity(ids) -> latest scoped recorded {actor, at, checks} or None (never online presence);
   packing_ticks_put(changes, actor, message, *, ids=None) -> [checked task hash] among ids
   (defaults to changes' keys); changes maps opaque SHA-256 hashes to bool, patches only
   those tasks, and stores no task text or private kit labels
