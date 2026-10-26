@@ -2,6 +2,20 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Current-page keyboard fast routes (2026-10-26; approved desktop shortcut plan, step 3)
+
+Question mark opens contextual help outside editing, menus and dialogs, returning to the original eligible control. F reaches the existing current Editor Add cards search or the current Collection Find/Card list field. Editor slash remains its compatibility alias. M opens only the original More menu for the exact focused current Editor row's plus, minus, card or printing button. More itself uses native Enter/Space. The avatar help entry carries its current character hint, and all new character routes follow the existing per-profile off switch.
+
+Dispatch requires exact current controller/root/profile/route/frame ownership, one eligible descriptor, an enabled visible target and no busy operation. It yields to native text/select/contenteditable input, handled events, IME/AltGraph, extra modifiers, repeated activation, menus and dialogs. Help de-duplicates wording only after dispatch counts owners. Legitimate new-deck space changes explicitly rebind current row/scope metadata; arbitrary stale frame changes still refuse. A modal Quick search never advertises F while that route is blocked.
+
+Global search remains E11-S31's separate sources/grouping decision. No Library search, primary-editor chord, Ctrl+Enter Save/Record/Forge route, data matching change or wholesale menu regrouping was added. Semantic question mark accepts its produced character without guessing a layout-specific punctuation aria-keyshortcuts value; letter metadata remains explicit.
+
+Validation: 506 guarded UI/keyboard/Editor/source checks passed with zero skips, including 18 new route cases. The first 504-case run found a test-local inherited saved-name collision; source review additionally corrected Quick-modal F metadata, legitimate space-change rebinding and help wording/hints. A follow-up assertion now verifies current-result provenance and the existing normalized card projection rather than seed-object reference identity. All 34 affected help/route cases passed before the final integrated run, without weakening ownership guards. Database probes/connections and Python socket connect/bind/listen were blocked.
+
+18 synthetic Chromium interaction cases passed across current-page search, exact row More, help/focus return, editing/select/menu boundaries, character Off and the final follow-ups. New-deck space rebinding is isolated-regression coverage: the browser fixture offers only one space. The invented-data fixture logged 94 API requests, including 5 read-only checks and 8 rejected automatic visits, with no other mutation attempts. No Save, Record or Forge action was clicked. The fixture stopped cleanly and its temporary tab/viewport were released.
+
+The source audit still flags only pre-existing tokens.js at 1,516 lines among 801 owned files. Save payload/control flow remains unchanged; the two prior shortcut-metadata lifecycle hooks are retained. The documented post-request main-input race remains. No actual Save/conflict, live database, download, Forge, full-suite or Linux acceptance. Real IME, speech, touch, Safari and physical-device acceptance remain open. All three approved keyboard stages are built; E11-S30's other presentation and data-contract work remains partial.
+
 ## Contextual keyboard help (2026-10-26; approved desktop shortcut plan, step 2)
 
 Every profile can open Keyboard shortcuts from the avatar menu. Help lists current page commands, their contexts and unavailable states, with a guarded return to the original control. Existing controls gain current hints and shortcut metadata without replacement. Current-root/profile ownership, route cleanup, hidden or busy controls and Save entry/finally transitions keep the descriptions current.

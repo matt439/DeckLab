@@ -156,14 +156,15 @@ function lineRow(line, section) {
     : el("button", { type: "button", class: "chip-btn edit-print", "data-focus": `print:${line.uid}`, "aria-haspopup": "dialog",
       "aria-label": `${line.name}: ${printingText(line)}. Change the printing`, onclick: () => openPrintings(line.uid) },
     printingText(line), el("span", { class: "caret", "aria-hidden": "true" }));
+  const more = rowMenuButton(line);
   const row = peekable(el("li", { class: "edit-row" + (editor.flash === line.uid ? " flash" : ""), "data-uid": line.uid },
     stepper(line, "row"),
     open,
     el("span", { class: "edit-badge-slot" }),
     print,
-    rowMenuButton(line)), card);
+    more), card);
   if (!card) row.append(el("p", { class: "edit-problem", text: "Not a card name in the card data; kept as written." }));
-  row.editorChange = { ...change, trigger: open };
+  row.editorChange = { ...change, trigger: open, more };
   row.append(change.description);
   return row;
 }
@@ -173,9 +174,10 @@ function lineTile(line, section) {
   const change = editorRowChangeNodes(line, section);
   // The badge sits on the picture's corner and the finish is in the meta line ("FDN 227 · foil", with the
   // sheen), so every tile's footer is − n + and ⋯ on one line.
+  const more = rowMenuButton(line);
   const tile = cardTile(line.card, { qty: line.qty, name: line.name, meta: printingText(line),
     viewerGroup: "editor", caption: lineCaption(line, section), state: el("span", { class: "edit-badge-slot" }),
-    chips: [stepper(line, "tile"), rowMenuButton(line)] });
+    chips: [stepper(line, "tile"), more] });
   tile.classList.add("edit-row", "edit-tile");
   if (line.finish === "foil" || line.finish === "etched") tile.classList.add(`is-${line.finish}`);
   if (editor.flash === line.uid) tile.classList.add("flash");
@@ -186,14 +188,14 @@ function lineTile(line, section) {
     el("span", { text: line.name }));
   const trigger = tile.querySelector(".card-tile-open");
   trigger.append(change.was); // A separate line, outside the original two-line name clamp.
-  tile.editorChange = { ...change, trigger };
+  tile.editorChange = { ...change, trigger, more };
   tile.append(change.description);
   return tile;
 }
 
 /** Retained decoration only: the original card trigger, quantity and menu keep their identity. */
 function editorRowChangeNodes(line, section) {
-  return { line, section,
+  return { line, section, keyboardFrame: keyboardEditorFrame(editor),
     dot: el("span", { class: "dot edit-unsaved-dot", hidden: true, "aria-hidden": "true" }),
     was: el("span", { class: "edit-was", hidden: true, "aria-hidden": "true" }),
     description: el("span", { class: "sr-only edit-change-description", id: `edit-change-${line.uid}`, hidden: true }) };

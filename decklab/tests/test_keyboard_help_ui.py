@@ -271,7 +271,7 @@ class KeyboardHelpUiTests(unittest.TestCase):
           location.hash='#/edit?id=casual%2Fsample&v=target';const ed=full();
           const searchInput=ed.ac.input,save=ed.dom.barParts.save,page=ed.dom.page,body=JSON.stringify(draftBody()),history=ed.history.length;
           accepted(ed.ac);
-          assert.equal(searchInput.getAttribute('aria-keyshortcuts'),'/ Alt+Enter');
+          assert.equal(searchInput.getAttribute('aria-keyshortcuts'),'F / Alt+Enter');
           assert.equal(save.getAttribute('aria-keyshortcuts'),'Control+S Meta+S');
           const commands=keyboardHelpCommands();
           for(const key of ['ArrowUp','ArrowDown','Enter','Shift+Enter','Alt+Enter','Escape'])
@@ -285,7 +285,7 @@ class KeyboardHelpUiTests(unittest.TestCase):
           assert.equal(keyboardHelpCommands().find(c=>c.keys.includes('/')).available,false);
           assert(keyboardHelpCommands().find(c=>c.label==='Finish editing a quantity').available);
           assert.equal(keyboardHelpCommands().find(c=>c.label==='Finish editing an Add cards quantity').available,false);
-          ed.saving=false;drawBar();assert.equal(searchInput.getAttribute('aria-keyshortcuts'),'/ Alt+Enter');
+          ed.saving=false;drawBar();assert.equal(searchInput.getAttribute('aria-keyshortcuts'),'F / Alt+Enter');
           assert.equal(save.getAttribute('aria-keyshortcuts'),'Control+S Meta+S');
           assert(keyboardHelpCommands().find(c=>c.label==='Finish editing an Add cards quantity').available);
           save.setAttribute('aria-keyshortcuts','Control+S Meta+S Alt+S');save.disabled=true;refreshKeyboardHints();
@@ -299,7 +299,7 @@ class KeyboardHelpUiTests(unittest.TestCase):
           assert.equal(save.getAttribute('aria-keyshortcuts'),'Control+S Meta+S');
           assert.equal(keyboardHelpCommands().find(c=>c.keys.includes('/')).available,false);
           assert(keyboardHelpCommands().find(c=>c.keys.includes('Alt+Enter')).available);
-          setKeyboardCharactersEnabled(true);assert.equal(searchInput.getAttribute('aria-keyshortcuts'),'/ Alt+Enter');
+          setKeyboardCharactersEnabled(true);assert.equal(searchInput.getAttribute('aria-keyshortcuts'),'F / Alt+Enter');
           assert(ed.ac.input===searchInput&&ed.dom.barParts.save===save&&ed.dom.page===page);
           assert.equal(JSON.stringify(draftBody()),body);assert.equal(ed.history.length,history);
           closeEditor();const trial=full({may_save:false});assert(trial.readOnly);
@@ -324,7 +324,7 @@ class KeyboardHelpUiTests(unittest.TestCase):
               assert.equal(path,'/api/deck/check','Only the frozen precheck is allowed; no deck save');
               return new Promise((resolve,reject)=>{releaseCheck=resolve;rejectCheck=reject;});
             };
-            assert.equal(searchInput.getAttribute('aria-keyshortcuts'),'/ Alt+Enter');
+            assert.equal(searchInput.getAttribute('aria-keyshortcuts'),'F / Alt+Enter');
             assert.equal(saveButton.getAttribute('aria-keyshortcuts'),'Control+S Meta+S');
             const pending=saveNow();
             // An existing check makes drawCheckingState skip drawBar. The state
@@ -342,7 +342,7 @@ class KeyboardHelpUiTests(unittest.TestCase):
             await pending;
             assert.equal(ed.saving,false);assert.equal(ed.checking,false);assert(!saveButton.disabled);
             assert.equal(saveButton.getAttribute('aria-keyshortcuts'),'Control+S Meta+S');
-            assert.equal(searchInput.getAttribute('aria-keyshortcuts'),'/ Alt+Enter');
+            assert.equal(searchInput.getAttribute('aria-keyshortcuts'),'F / Alt+Enter');
             assert(keyboardHelpCommands().find(c=>c.label==='Finish editing a quantity').available);
             assert(keyboardHelpCommands().find(c=>c.label==='Finish editing an Add cards quantity').available);
             const review=keyboardDialog();assert(review);

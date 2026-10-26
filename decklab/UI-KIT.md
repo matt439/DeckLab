@@ -698,3 +698,11 @@ The browser-local per-profile character preference defaults on; storage failure
 keeps a session fallback with a notice. Turning it off leaves native controls,
 navigation and Ctrl/Cmd editing intact. Save entry/finally refresh metadata only;
 pre-save typing and the remaining post-request input limitation are unchanged.
+
+Current-page character routes use explicit descriptors: F focuses existing
+Editor/Collection search, M opens the exact eligible Editor row's retained More,
+and semantic ? opens help. Editor / stays compatible; global search is separate.
+Dispatch counts eligible owners before help de-duplication, preserves native
+editing/modifiers/IME/repeat and yields to overlays and busy operations. Frame
+rebinding is explicit at the legitimate new-deck space action, not arbitrary
+model changes. Modal Quick fields do not advertise the inactive F route.

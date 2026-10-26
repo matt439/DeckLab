@@ -211,6 +211,7 @@ function syncThemeChoice(theme) {
 /** Mark the page on screen in the navigation (its section: a deck page is under Decks), its way back and its
  * title on the phone. Called by route() before the page draws. */
 function syncShell(path = parseHash().path) {
+  registerShellKeyboardHelp();
   refreshKeyboardHints();
   const section = routeSection(path);
   for (const link of document.querySelectorAll("[data-route]")) {

@@ -384,6 +384,7 @@ function drawCollection(data, query, space = HOME_SPACE, token = null) {
     drawCollectionResults(cv, data);
   }
   $("#main").append(root);
+  registerCollectionKeyboardHelp(cv);
   colTakeNotice(cv);
   return cv;
 }

@@ -36,6 +36,7 @@ function drawCollectionRows(data, space, token = null) {
   cv.sort = { key: COL_SORTS[saved[0]] ? saved[0] : "name", dir: saved[1] === "-1" ? -1 : 1 };
   const search = el("input", { id: "col-row-search", type: "search", autocomplete: "off", spellcheck: "false",
     placeholder: "Card name or set", oninput: () => { cv.search = search.value; cv.page = 1; cv.casualLimit = COL_CASUAL_ROWS; drawColRowList(cv); } });
+  cv.rowSearch = search;
   cv.unrecorded = el("input", { type: "checkbox", id: "col-unrecorded",
     onchange: () => { cv.unrecordedOnly = cv.unrecorded.checked; cv.page = 1; cv.casualLimit = COL_CASUAL_ROWS; drawColRowList(cv); } });
   cv.unrecordedLabel = el("span");

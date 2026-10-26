@@ -84,10 +84,12 @@ function spaceField() {
       text: space === HOME_SPACE ? "Home" : spaceName(space),
       onclick: () => {
         if (ed.space === space) return;
+        const previousSpace = ed.space;
         ed.space = space;
         ed.fields.player = newDeckPlayer(space);
         drawDetails();
         drawTitleHint();
+        rebindEditorKeyboardSpace(ed, previousSpace);
         changed({ list: false });
       } }));
   }
