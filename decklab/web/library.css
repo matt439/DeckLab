@@ -5,6 +5,11 @@
 
 /* ------------------------------------------------------------------ filters */
 
+.lib-title-search { display: flex; align-items: flex-end; gap: var(--s-2); margin: var(--s-3) 0 var(--s-2); }
+.lib-title-field { flex: 1; min-width: 0; }
+.lib-title-clear { flex: none; }
+.lib-title-clear[hidden] { display: none; }
+
 .lib-filters {
   display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
   gap: var(--s-2) var(--s-3);

@@ -35,7 +35,7 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 
 | Epic | Stories | Built | Partial | Missing | Not wanted |
 |---|---:|---:|---:|---:|---:|
-| [E1: Find, plan and choose decks](#e1-find-plan-and-choose-decks) | 12 | 9 | 0 | 3 | 0 |
+| [E1: Find, plan and choose decks](#e1-find-plan-and-choose-decks) | 12 | 9 | 1 | 2 | 0 |
 | [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 16 | 13 | 1 | 1 | 1 |
 | [E3: Test a deck](#e3-test-a-deck) | 14 | 11 | 3 | 0 | 0 |
 | [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 20 | 14 | 1 | 4 | 1 |
@@ -46,7 +46,7 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E9: Commander nights](#e9-commander-nights) | 19 | 13 | 0 | 5 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 35 | 30 | 1 | 2 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 28 | 15 | 6 | 4 | 3 |
-| **Total** | **229** | **164** | **17** | **34** | **14** |
+| **Total** | **229** | **164** | **18** | **33** | **14** |
 
 Counted from the story headers on 2026-10-26.
 
@@ -115,7 +115,7 @@ Evidence:
 - `decklab/web/library.js`: LIB_SORTS, LIB_READINESS, libraryFilters, filtersHash, libFilterSheet
 - `decklab/tests/test_library_ui.py`: test_sorts_ready_first_recently_changed_and_name, test_the_phone_filter_sheet_counts_and_applies_filters
 
-**E1-S05** · Matt · could · S · missing
+**E1-S05** · Matt · could · S · partial
 
 As a deck builder, I want to find a deck by typing part of its name, or by colour or archetype, so that I can reach it quickly once the shelf holds many decks and spaces.
 
@@ -125,11 +125,12 @@ As a deck builder, I want to find a deck by typing part of its name, or by colou
 - Given a search, when the address is bookmarked, then the search is kept like the other filters.
 
 Evidence:
-- `decklab/web/library.js`: libraryFilters, libVisibleDecks (no title, colour or archetype test)
+- `decklab/web/library.js`: libraryFilters, filtersHash, libTitleQuery, libMatchesTitle and the retained search input
+- `decklab/tests/test_library_title_search_ui.py`: literal matching, URL/native input state, combined filters, groups, selection and stale ownership
 
-Gap: The library has no text search and no colour or archetype filter.
+Now: title search built 2026-10-26 ([HISTORY.md](../HISTORY.md#library-title-search-2026-10-26-e1-s05)); it searches only the existing authorized deck/product summaries and retains the query in the address.
 
-First slice: a title search box on the library (kept in the address like the other filters), then the colour and archetype filters. This is ready independently of E11-S31's global-search scope choice; shared matching can be reused later.
+Gap: Colour and archetype filters remain. This is ready independently of E11-S31's global-search scope choice; shared matching can be reused later.
 
 **E1-S07** · User1 · should · M · built
 

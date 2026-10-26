@@ -15,7 +15,8 @@ Decks are grouped by whose they are: the home decks first, then each person's (t
 by name, in a part that folds away; within each, casual then Commander. Products (sealed decks, read only)
 come last, folded until opened (remembered on this device). The filters (whose decks, format, status,
 availability) and the sort (Ready first, Recently changed, Name) are kept in the address; on a phone they're
-behind a "Filter" sheet. "Mine" is the decks Played by the visitor at home, or a person's own decks.
+behind a "Filter" sheet. Title search stays in sight, with its query in the address too. "Mine" is the
+decks Played by the visitor at home, or a person's own decks.
 
 Loaded after core.js, whose helpers (el, load, state, deckHref, pairingId, warningsBox, ...) it uses, and
 library-glance.js (the detail pane's key cards, stats and play guide, libGlance), library-tables.js (the Tables out
@@ -32,6 +33,7 @@ const LIB_READINESS = { ready: "All cards here", waiting: "Cards on the way", mi
 const LIB_PRODUCTS_KEY = "library.products.open";      // "1" when the products part is open (folded by default)
 const LIB_LAB_QUERY = "(min-width: 1000px)";           // the lab: rows and the detail pane beside them
 const LIB_STATUS_GROUPS = [["built", "Built"], ["building", "Building"], ["idea", "Ideas"]];
+let libTitleSearchOwner = null;                    // the exact retained input of the current library draw
 
 /** True at lab width (LIB_LAB_QUERY). */
 function libIsLab() {
@@ -50,6 +52,7 @@ function libraryFilters(params) {
     readiness: LIB_READINESS[params.get("readiness")] ? params.get("readiness") : "",
     sort: LIB_SORTS[sort] ? sort : "ready",
     deck: params.get("deck") || "",            // the lab's selected deck
+    q: (params.get("q") || "").trim(),        // title text only, never a card/deck-id query
     tables: params.get("tables") === "1",      // scroll to the Tables out of date list (not kept in the address)
   };
 }
@@ -62,6 +65,7 @@ function filtersHash(filters) {
   if (filters.readiness) params.set("readiness", filters.readiness);
   if (filters.sort && filters.sort !== "ready") params.set("sort", filters.sort);
   if (filters.deck) params.set("deck", filters.deck);
+  if (filters.q?.trim()) params.set("q", filters.q.trim());
   const query = params.toString();
   return "#/library" + (query ? "?" + query : "");
 }
@@ -69,6 +73,14 @@ function filtersHash(filters) {
 /** How many of the filters (format, status, availability) are set: the phone's "Filter (n)". */
 function libFilterCount(filters) {
   return ["format", "status", "readiness"].filter((key) => filters[key]).length;
+}
+
+/** Keep raw typing in the input; only matching ignores outside spaces, case and compatibility forms. */
+function libTitleQuery(value) { return (value || "").trim().normalize("NFKC").toLowerCase(); }
+
+function libMatchesTitle(deck, filters) {
+  const query = libTitleQuery(filters.q);
+  return !query || (deck.title || "").normalize("NFKC").toLowerCase().includes(query);
 }
 
 function showLibrary(params, token) {
@@ -101,7 +113,7 @@ function libChoices(shown = false) {
 
 function drawLibrary(data, filters) {
   const main = $("#main");
-  const results = el("div", { class: "results" });
+  const results = el("div", { class: "results", id: "library-results" });
   state.libraryHash = location.hash || "#/library";     // where a deck's "← Decks" comes back to
   const view = { picking: false };
   const keyboardToken = routeToken, keyboardProfile = state.profile?.id;
@@ -146,6 +158,31 @@ function drawLibrary(data, filters) {
     libSelect(`filter-${key}`, label, entries, filters[key], (value) => set(key, value)));
   const filterButton = el("button", { type: "button", class: "btn lib-filter-button", "aria-haspopup": "dialog",
     onclick: () => libFilterSheet(data, filters, set, setMany) });
+  let composing = false;
+  const titleInput = el("input", { type: "search", id: "library-title-search", value: filters.q || "",
+    autocomplete: "off", spellcheck: "false", "aria-controls": "library-results",
+    "aria-describedby": "library-title-hint", oninput: event => {
+      if (!composing && !event.isComposing) searchTitles();
+    }, onsearch: () => { if (!composing) searchTitles(); },
+    oncompositionstart: () => { composing = true; }, oncompositionend: () => { composing = false; searchTitles(); } });
+  const clearTitle = el("button", { type: "button", class: "btn btn-quiet lib-title-clear", text: "Clear",
+    "aria-label": "Clear title search", onclick: () => {
+      if (!searchCurrent()) return;
+      titleInput.value = ""; composing = false; searchTitles(); titleInput.focus({ preventScroll: true });
+    } });
+  const titleSearch = el("div", { class: "lib-title-search", role: "search", "aria-label": "Search deck titles" },
+    el("label", { class: "field lib-title-field", for: "library-title-search" },
+      el("span", { text: "Find a deck by title" }), titleInput), clearTitle,
+    el("span", { class: "sr-only", id: "library-title-hint", text: "Search titles in this library. Other filters still apply." }));
+  const searchOwner = libTitleSearchOwner = { input: titleInput, root: titleSearch, results };
+  const searchCurrent = () => libTitleSearchOwner === searchOwner && results.isConnected && titleInput.isConnected && main.contains(titleSearch)
+    && titleSearch.contains(titleInput) && keyboardToken === routeToken && keyboardProfile === state.profile?.id;
+  view.current = searchCurrent;
+  function searchTitles() {
+    if (!searchCurrent() || filters.q === titleInput.value) return;
+    filters.q = titleInput.value; // Never trim or rewrite the live input: a space may start the next word.
+    redraw();
+  }
   function syncControls() {
     mine.setAttribute("aria-pressed", String(!filters.all));
     all.setAttribute("aria-pressed", String(filters.all));
@@ -155,6 +192,7 @@ function drawLibrary(data, filters) {
     }
     const n = libFilterCount(filters);
     filterButton.textContent = n ? `Filter (${n})` : "Filter";
+    clearTitle.hidden = !titleInput.value;
   }
 
   // Choosing deck pictures: a mode where a tap on a deck you may change opens its picture picker.
@@ -190,6 +228,7 @@ function drawLibrary(data, filters) {
       primary, more: rowMore ? [] : more }),
     warningsBox(data.warnings, "Warnings"),
     tables,
+    titleSearch,
     el("div", { class: "lib-filters", role: "group", "aria-label": "Filter the decks" },
       el("div", { class: "segmented", role: "group", "aria-label": "Whose decks" }, mine, all),
       el("div", { class: "lib-selects" }, selects),
@@ -205,7 +244,7 @@ function drawLibrary(data, filters) {
  * (the focus stays on the one just changed); only the buttons follow the count. */
 function libFilterSheet(data, filters, set, setMany) {
   const sheet = openSheet({ title: "Filter decks" });
-  const count = () => libVisibleDecks(data, filters).length;
+  const count = () => libVisibleDecks(data, filters).length + libVisibleProducts(data, filters).length;
   const fields = libChoices(true).map(([key, label, entries]) =>
     libSelect(`sheet-filter-${key}`, label, entries, filters[key], (value) => { set(key, value); draw(); }, true));
   const body = el("div", { class: "lib-sheet-fields" }, fields);
@@ -253,7 +292,15 @@ function libCoverEditable(d) {
 function libVisibleDecks(data, filters) {
   return data.decks.filter((d) => !d.id.startsWith("product/") && (filters.all || isMyDeck(d))
     && (!filters.status || d.status === filters.status)
-    && (!filters.format || d.kind === filters.format) && matchesReadiness(d, filters.readiness));
+    && (!filters.format || d.kind === filters.format) && matchesReadiness(d, filters.readiness) && libMatchesTitle(d, filters));
+}
+
+/** Products have no player or status; search never broadens those existing visibility choices. */
+function libVisibleProducts(data, filters) {
+  if (filters.status || filters.format && filters.format !== "product"
+      || ownSpace() !== HOME_SPACE && !filters.all && filters.format !== "product") return [];
+  return data.decks.filter(d => d.id.startsWith("product/") && matchesReadiness(d, filters.readiness)
+    && libMatchesTitle(d, filters));
 }
 
 
@@ -364,8 +411,8 @@ function statusRows(decks, ctx) {
 function personGroup(space, decks, ctx) {
   const key = `library.folded.${space}`;
   const part = el("details", { class: "space-group space-person", "data-space": space,
-    open: local.get(key) !== "1",
-    ontoggle: () => { local.set(key, part.open ? "0" : "1"); } },
+    open: ctx.searching || local.get(key) !== "1",
+    ontoggle: () => { if (!ctx.searching) local.set(key, part.open ? "0" : "1"); } },
     el("summary", {}, el("h2", {}, `${spaceName(space)}'s decks`, el("span", { class: "count", text: `(${decks.length})` }))),
     kindGroups(decks, "h3", { ...ctx, person: true }));
   return part;
@@ -411,19 +458,18 @@ function drawLibraryResults(target, data, filters, view = {}, redraw = null) {
   const sorted = lab ? libRowOrder(libVisibleDecks(data, filters), filters.sort || "ready") : [];
   const selected = sorted.find((d) => d.id === filters.deck) || sorted[0] || null;
   const ctx = { sort: filters.sort || "ready", picking: Boolean(view.picking), redraw, lab,
-    selected: selected ? selected.id : null, select: view.select || (() => {}) };
+    selected: selected ? selected.id : null, select: view.select || (() => {}), searching: !!libTitleQuery(filters.q) };
   const results = el("div", { class: "lib-list" });
   target.append(lab && selected ? el("div", { class: "lib-split" }, results, libDetail(selected, ctx)) : results);
   const files = data.decks.filter((d) => !d.id.startsWith("product/"));
-  const products = data.decks.filter((d) => d.id.startsWith("product/") && matchesReadiness(d, filters.readiness));
+  const products = libVisibleProducts(data, filters);
   const shown = libVisibleDecks(data, filters);
   const hiddenOthers = filters.all ? 0 : files.filter((d) => !isMyDeck(d)
     && (!filters.status || d.status === filters.status)
-    && (!filters.format || d.kind === filters.format) && matchesReadiness(d, filters.readiness)).length;
+    && (!filters.format || d.kind === filters.format) && matchesReadiness(d, filters.readiness) && libMatchesTitle(d, filters)).length;
   // Products belong to nobody (they're read-only card lists) and have no status. A person sees the home's
   // only among all decks or when asking for products: they aren't theirs.
-  const showProducts = (!filters.format || filters.format === "product") && !filters.status
-    && (ownSpace() === HOME_SPACE || filters.all || filters.format === "product") && products.length > 0;
+  const showProducts = products.length > 0;
 
   const counts = shown.length ? [plural(shown.length, "deck")] : [];
   if (showProducts) counts.push(plural(products.length, "product deck"));
@@ -457,14 +503,16 @@ function drawLibraryResults(target, data, filters, view = {}, redraw = null) {
     for (const space of people) results.append(personGroup(space, bySpace.get(space), ctx));
   }
 
-  if (showProducts) results.append(productsGroup(data, products, ctx, filters.format === "product"));
+  if (showProducts) results.append(productsGroup(data, products, ctx, filters.format === "product" || ctx.searching));
 
   if (!shown.length && !showProducts) {
-    const any = libFilterCount(filters) || !filters.all;
+    const any = libFilterCount(filters) || libTitleQuery(filters.q) || !filters.all;
     results.append(el("div", { class: "empty" },
       el("p", { text: any ? "No decks match these filters." : "There are no decks yet." }),
       any ? el("a", { class: "btn", href: "#/library?all=1", text: "Show every deck",
-        onclick: (e) => { e.preventDefault(); Object.assign(filters, { all: true, format: "", status: "", readiness: "" });
+        onclick: (e) => { e.preventDefault();
+          if (!target.isConnected || view.current && !view.current()) return;
+          Object.assign(filters, { all: true, format: "", status: "", readiness: "", q: "" });
           history.replaceState(history.state, "", filtersHash(filters)); clear($("#main"));
           drawLibrary(state.library || data, filters); } })
         : createTargets().length ? el("a", { class: "btn btn-primary", href: newDeckHref(), text: "New deck" }) : null));

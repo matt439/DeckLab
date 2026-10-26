@@ -38,7 +38,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 
 | id | status | pri | size | item |
 |---|---|---|---|---|
-| `E1-S05` | OPEN | could | S | Library title search kept in the address, then colour and archetype filters; independent of `E11-S31`'s scope choice. |
+| `E1-S05` | OPEN | could | S | Colour and archetype filters beside the retained Library title search; independent of `E11-S31`'s global-search scope choice. |
 | `E4-S13` | OPEN | could | M | Real head-to-head record beside Forge's predicted win rate for the same lists; "too few games" below 10 until Matt picks the number. |
 | `E8-S14` | OPEN | could | S | A take-apart checklist on Build decks: every card to unsleeve and put back, then the sleeves and deck box. |
 | `E2-S22` | DECISION | must | M | Physical hardware/touch-usability follow-up on the household's iPhones and M2 11-inch iPad; the six-configuration Safari Simulator suite passes ([evidence](decklab/safari/EVIDENCE.md)). |

@@ -2,6 +2,14 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Library title search (2026-10-26; E1-S05)
+
+Find a deck by title filters the already authorized library response across visible deck and product groups. It matches literal text without case or outside-space differences, keeps native raw typing/IME and focus intact, and stores the trimmed query as `q` in the address without creating a Back entry per keystroke. Clear search preserves the other filters; Show every deck clears the search and select filters. Matching folded groups open temporarily without changing remembered folds. Lab selection falls back to a matching deck and restores the original choice when the query clears; no stale detail stays visible after no results.
+
+Search adds no endpoint, list reload or search request. A newly selected visible deck still uses the existing cached detail read. The Filter sheet counts matching product decks as well as saved decks. Old search/reset controls cannot change another page, route or profile. Colour and archetype filters remain the story's gap.
+
+Validation: 116 focused Library/accounts/keyboard/web/source checks passed, including nine new search regressions. Ten synthetic Chromium width/theme cases (320, 600, 820, 1000 and 1920px, light/dark) passed native multiword typing, Clear/focus, URL history, lab selection restoration and product-only count/fold checks, with no overflow or page errors and exactly one library-list read per page. Writes were blocked and extra deck/product rows were invented fixture data. IME composition has fixture coverage; actual IME, touch, Safari and device acceptance are not claimed. JavaScript syntax, CI-rule ruff and whitespace checks passed.
+
 ## Synthetic dark-layout smoke pass (2026-10-26; E11-S30 slice 15)
 
 Sixty disposable Chromium cases covered 15 routes at 320, 820, 1280 and 1920px in dark mode, with no page overflow or script errors. The routes included Collection, Tokens, Shopping, Receive, Build decks, Game log, Wishlist, Accessories, Activity, Settings, deck/edit/new/history and Matchups. Writes were blocked. Empty fixture pages remained empty; Matchups exercised the fixture's guarded error state. This is mouse/default-DPR layout evidence, not full data, Forge, touch, Safari or household-device acceptance. Slice 15 and the outstanding slice 13 contracts remain open.
