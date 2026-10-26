@@ -521,9 +521,8 @@ function accKeptPicture(row) {
 function openAccessorySheet({ kind = "sleeves", onSaved, onLatest, row = null, sha256, lockKind = false,
   owners = null, owner = null, onRemove = null, removeBlocked = null } = {}) {
   const editing = Boolean(row);
-  const words = ACC_KINDS[row ? row.kind : kind] || ACC_KINDS.sleeves;
   let ctx;
-  const sheet = openAccessoryDialog(editing ? `Edit ${row.label || row.name}` : `Add ${words.one.toLowerCase()}`,
+  const sheet = openAccessoryDialog(editing ? `Edit ${row.label || row.name}` : "Add accessory",
     { wide: true, onClose: () => accDisposeSheet(ctx) });
   ctx = { sheet, row, editing, lockKind, sha256, onSaved, onLatest, busy: false, touched: new Set(), inputs: {},
     profile: state.profile?.id, token: routeToken,
@@ -547,7 +546,9 @@ function openAccessorySheet({ kind = "sleeves", onSaved, onLatest, row = null, s
   ctx.linkField = el("div", { class: "acc-link-field" },
     el("label", { class: "field", for: link.id }, el("span", { text: "Link to the product or its picture" }), link),
     ctx.find);
-  add(ctx.form, [ctx.linkField, accPhotoControls(ctx), ctx.message, ctx.picture, accFields(ctx, row, row ? row.kind : kind),
+  add(ctx.form, [
+    !editing ? el("p", { class: "sub", text: "Add sleeves, a deck box or a playmat." }) : null,
+    ctx.linkField, accPhotoControls(ctx), ctx.message, ctx.picture, accFields(ctx, row, row ? row.kind : kind),
     editing && removeBlocked ? el("p", { id: `acc-why-${sheet.heading.id}`, class: "field-hint acc-why", text: removeBlocked }) : null]);
   sheet.body.append(ctx.form);
   ctx.onRemove = editing ? onRemove : null;
@@ -624,7 +625,6 @@ function accFields(ctx, row, kind) {
 }
 
 function accKindChanged(ctx) {
-  if (!ctx.editing) ctx.sheet.heading.textContent = `Add ${(ACC_KINDS[ctx.inputs.kind.value] || ACC_KINDS.sleeves).one.toLowerCase()}`;
   const sleeves = ctx.inputs.kind.value === "sleeves";
   ctx.packs.hidden = !sleeves;
   if (ctx.capacityField) ctx.capacityField.hidden = ctx.inputs.kind.value !== "deck_box";

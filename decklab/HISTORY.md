@@ -2,6 +2,12 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Accessory form explains all three kinds (2026-10-26)
+
+Matt found the initial Add sleeves heading misleading before choosing Kind. Every creation sheet now opens as Add accessory, with "Add sleeves, a deck box or a playmat." visible above the form. The heading stays general when Kind changes or Find picture infers a kind, including sheets opened from a kit picker. Edit still names the accessory; kind selection, field visibility and form values behave as before. This supersedes the kind-specific Add headings below.
+
+Validation: all 21 existing accessory sheet, feature and upload UI checks passed. Direct DOM/event checks covered all three initial kinds, picker/general entry modes, kind changes, inferred kinds, retained values, kind-dependent controls and the named Edit heading. JavaScript syntax and whitespace checks passed. Synthetic data only; no inventory writes or browser/device acceptance.
+
 ## Accessory add title and ready-work audit (2026-10-26)
 
 The accessory Add sheet now follows Kind: Add sleeves, Add deck box or Add playmat. Manual changes and a kind inferred by Find picture update the existing dialog heading; an Edit sheet keeps the accessory's name. Form values stay in place.
