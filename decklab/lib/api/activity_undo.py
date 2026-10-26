@@ -14,13 +14,13 @@ from .common import ApiError, DATABASE_DOWN, _keys, _parse_body
 from .settings import _writer
 
 NO_CHANGE = "No undoable change at that ID."
-UNSUPPORTED = "This change cannot be undone here. Supported Undo covers single-row edits, unheld nonbasic collection additions, unheld verified token additions, verified collection deletions and batches of 2-50 positive quantity/condition/language/notes updates."
+UNSUPPORTED = "This change cannot be undone here. Supported Undo covers single-row edits, unheld nonbasic collection additions, unheld verified token additions, verified collection deletions and batches of 2-50 collection deletions or positive quantity/condition/language/notes updates."
 CHANGED = "The change can no longer be undone safely. Reload Activity and review it again."
 UNCONFIRMED = "The undo result could not be confirmed. Reload Activity before trying again."
 SHA = re.compile(r"[a-f0-9]{64}")
 MUTABLE = {"collection": ("quantity", "condition", "language", "notes"), "tokens": ("quantity", "notes")}
 TABLE_KIND = {"collection_card": "collection", "token_card": "tokens"}
-BATCH_ACTIONS = ("batch_metadata", "batch_update")
+BATCH_ACTIONS = ("batch_metadata", "batch_update", "batch_add")
 
 
 def _space(profile):
@@ -49,10 +49,11 @@ def review_hint(change, shown, profile):
     if type(total) is int and 2 <= total <= 50 and len(rows) == total and not change.get("more") and not change.get("groups"):
         space = _space(profile)
         if shown.get("id") == change.get("id") and guard.allowed(profile, "collection.edit", space) \
-                and all(isinstance(row, dict) and row.get("table") == "collection_card" and row.get("op") == "UPDATE"
-                        and isinstance(row.get("before"), dict) and isinstance(row.get("after"), dict)
-                        and row["before"].get("space_id") == space and row["after"].get("space_id") == space
-                        for row in rows):
+                and all(isinstance(row, dict) and row.get("table") == "collection_card"
+                        and isinstance(row.get("before"), dict) and row["before"].get("space_id") == space
+                        and (row.get("op") == "UPDATE" and isinstance(row.get("after"), dict) and row["after"].get("space_id") == space
+                             or row.get("op") == "DELETE" and row.get("after") is None) for row in rows) \
+                and len({row["op"] for row in rows}) == 1:
             return {"review": True}
         return None
     if change.get("total", len(rows)) != 1 or len(rows) != 1 or change.get("more") or change.get("groups"):
@@ -164,28 +165,35 @@ def _batch_project(plan):
         raise ApiError(503, UNCONFIRMED)
     rows, keys, ids = [], set(), set()
     quantity_changed = False
+    adding = plan["action"] == "batch_add"
+    if adding and plan.get("physical_confirmation_required") is not True:
+        raise ApiError(503, UNCONFIRMED)
     for item in plan["rows"]:
         if not isinstance(item, dict) or type(item.get("row_change_id")) is not int or item["row_change_id"] < 1:
             raise ApiError(503, UNCONFIRMED)
         projected = _project({"kind": "collection", "space": plan["space"], "change_id": plan["change_id"],
                               "expect": plan["expect"], "label": item.get("label"),
-                              "current": item.get("current"), "restore": item.get("restore")})
-        key = rules.ident(projected["current"])
+                              "current": item.get("current"), "restore": item.get("restore"),
+                              **({"action": "add", "physical_confirmation_required": True} if adding else {})})
+        key = rules.ident(projected["restored"] if adding else projected["current"])
         raw_key = item.get("key")
         if not isinstance(raw_key, dict) or set(raw_key) != {"space_id", "set_code", "collector_number", "finish"} \
                 or raw_key != {"space_id": plan["space"], "set_code": key[0], "collector_number": key[1], "finish": key[2]} \
                 or key in keys or item["row_change_id"] in ids \
-                or any(field["field"] not in MUTABLE["collection"] for field in projected["fields"]):
+                or not adding and any(field["field"] not in MUTABLE["collection"] for field in projected["fields"]):
             raise ApiError(503, UNCONFIRMED)
-        quantity_changed = quantity_changed or projected["current"]["quantity"] != projected["restored"]["quantity"]
+        if not adding:
+            quantity_changed = quantity_changed or projected["current"]["quantity"] != projected["restored"]["quantity"]
         keys.add(key)
         ids.add(item["row_change_id"])
         rows.append({"key": dict(zip(("set", "collector_number", "finish"), key)), "label": projected["label"],
-                     "current": projected["current"], "restored": projected["restored"], "fields": projected["fields"]})
-    if (plan["action"] == "batch_update") != quantity_changed:
+                     "current": projected["current"], "restored": projected["restored"],
+                     **({} if adding else {"fields": projected["fields"]})})
+    if not adding and (plan["action"] == "batch_update") != quantity_changed:
         raise ApiError(503, UNCONFIRMED)
     return {"available": True, "id": plan["change_id"], "expect": plan["expect"], "kind": "collection", "space": plan["space"],
-            "label": plan["label"], "action": plan["action"], "row_count": len(rows), "rows": rows}
+            "label": plan["label"], "action": plan["action"], "row_count": len(rows), "rows": rows,
+            **({"physical_confirmation_required": True} if adding else {})}
 
 
 def _restored(after, plan):
@@ -220,10 +228,10 @@ def apply_undo(body):
     plan = _review(change_id, profile)  # hidden/missing is resolved before malformed or stale receipt errors
     _project(plan)
     removing = plan.get("action") == "remove"
-    adding = plan.get("action") == "add"
+    adding = plan.get("action") in ("add", "batch_add")
     if adding:
         if data.get("confirm_owned") is not True:
-            raise ApiError(400, "Confirm that you still physically own every recorded copy before restoring this row.")
+            raise ApiError(400, "Confirm that you still physically own every recorded copy before restoring these copies.")
     elif "confirm_owned" in data:
         raise ApiError(400, "Physical ownership confirmation is accepted only when restoring a deleted collection row.")
     reason = None
@@ -247,12 +255,19 @@ def apply_undo(body):
     extra, counts = summary.extra or {}, summary.counts or {}
     if plan.get("action") in BATCH_ACTIONS:
         if not summary.changed or type(counts.get("undo")) is not int or counts["undo"] != 1 \
-                or type(counts.get("edited")) is not int or counts["edited"] != plan["row_count"] \
-                or type(counts.get("removed")) is not int or counts["removed"] != 0 \
                 or extra.get("undo_of") != change_id or extra.get("kind") != "collection" or extra.get("space") != plan["space"] \
                 or extra.get("action") != plan["action"] or type(extra.get("row_count")) is not int \
                 or extra["row_count"] != plan["row_count"] \
                 or extra.get("row_change_ids") != [item["row_change_id"] for item in plan["rows"]]:
+            raise ApiError(503, UNCONFIRMED)
+        if adding:
+            expected = {"added_rows": plan["row_count"], "bumped_rows": 0, "skipped_basics": 0,
+                        "cards": sum(item["restore"]["quantity"] for item in plan["rows"])}
+            if extra.get("confirmed_owned") is not True or counts.get("merged") is not False \
+                    or any(type(counts.get(key)) is not int or counts[key] != value for key, value in expected.items()):
+                raise ApiError(503, UNCONFIRMED)
+        elif type(counts.get("edited")) is not int or counts["edited"] != plan["row_count"] \
+                or type(counts.get("removed")) is not int or counts["removed"] != 0:
             raise ApiError(503, UNCONFIRMED)
         from decklab.lib.inventory import undo
         try:

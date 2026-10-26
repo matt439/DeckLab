@@ -2,6 +2,18 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Restore a complete deleted collection-row batch (2026-10-26; E11-S08)
+
+The new `batch_add` slice restores a complete global own-space source of 2-50 collection DELETE rows. Each original row id and printing key must be unique, every key still absent and each original deletion still its latest touch, with both inventory/deck revisions checked under the normal write lock. Cached card data must prove the exact canonical paper printing and finish; ordinary Add round-trips must reproduce every historical cell without merging, bumping another row or skipping basics. All rows form one exact candidate, atomic save and new audit; the original audit remains immutable.
+
+Preview uses `physical_confirmation_required: true` and rows shaped as key, label, `current: null` and full restored row, with no UPDATE fields or invented current-zero row. One initially unchecked confirmation covers every recorded copy across the complete batch; check/uncheck and cancel/reopen reset behavior preserve explicit ownership consent. Fewer copies require cancelling and recording actual ownership in Collection, with no partial selection or quantity input. The save sends only source/receipt/profile and ownership confirmation; every actual full restored row must match its keyed receipt, irrespective of response order. Mixed UPDATE/DELETE, identity/zero and general import inverses remain unsupported; token DELETE restoration needs a separate identity policy.
+
+The final combined group passed 292 checks without skips in 64.541 seconds across 23 modules: 127 pure, 72 API, 47 guarded disposable PostgreSQL and 46 UI checks. The new backend coverage comprises 37 cases: 20 pure, nine API and eight actual PostgreSQL. The affected UI group separately passed 46 checks without skips in 3.661 seconds: ten new batch-restoration cases, 14 single-row Add and 22 existing batch/notes/quantity checks. A separate web/source/privacy/Activity group passed 38 checks without skips in 2.978 seconds. Independent final source/test/UI reviews and scoped Ruff are clear; source auditing covered 942 files with only the existing `tokens.js` 1,447-line exception.
+
+The native fixture matrix passed 12 light/dark cases at 320, 600, 820, 1000, 1280 and 1920 px without overflow or page errors. It made 24 preview GETs and one intercepted synthetic POST with reversed keyed rows, with zero actual writes and 12 baseline visit POSTs blocked. Each case checked one initially unchecked confirmation, check/uncheck and cancel/reopen reset, nine copies across two printings, full historical literal markup and long notes. Fixture inventory/deck bytes stayed unchanged; two screenshots were inspected as pixels.
+
+E11-S08 remains partial and OPEN for broader inverses, with story counts unchanged. No migration, live activation, real collection change or physical-device/household acceptance is included.
+
 ## Undo positive collection quantities in a bounded batch (2026-10-26; E11-S08)
 
 Complete 2-50-row collection UPDATE sources can now restore positive quantity corrections, optionally combined with condition, language and notes. Any quantity change uses `batch_update`; metadata-only sources retain `batch_metadata`. Complete global own-space scope, unique identities, full current rows, latest audit touches, both revisions, ordinary atomic `apply_rows` restoration and complete keyed receipts remain required. Zero/removal, name/printing identity, mixed sources and partial selection remain refused; this adds no general import inverse.

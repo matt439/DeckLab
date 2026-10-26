@@ -25,7 +25,7 @@ SHA = re.compile(r"[a-f0-9]{64}")
 BATCH_MAX = 50
 BATCH_FIELDS = ("condition", "language", "notes")
 BATCH_UPDATE_FIELDS = ("quantity", *BATCH_FIELDS)
-BATCH_ACTIONS = ("batch_metadata", "batch_update")
+BATCH_ACTIONS = ("batch_metadata", "batch_update", "batch_add")
 
 
 class UndoMissing(Invalid):
@@ -434,7 +434,7 @@ def restored_rows(snapshot, plan):
     for item in plan["rows"]:
         key = rules.ident(item["restore"])
         if key not in found or found[key] != item["restore"]:
-            raise UndoConflict("The restored metadata rows cannot be confirmed. Reload the collection.", plan["label"])
+            raise UndoConflict("The restored collection rows cannot be confirmed. Reload the collection.", plan["label"])
         restored.append({"key": dict(zip(("set", "collector_number", "finish"), key)), "row": found[key]})
     return restored
 
@@ -492,11 +492,69 @@ def _batch_reductions(snapshot, after, rows, space, label):
     _reduction(snapshot, after, COLLECTION, space, label, {"table": COLLECTION})
 
 
+def _batch_add_inverse(snapshot, rows, space, label):
+    """One pure candidate; ordinary adds must preserve every former cell exactly."""
+    from . import changes, ops_collection
+    for item in rows:
+        _absent_row(snapshot, item["restore"], space, item["label"])
+    sheet = snapshot.collection(space)
+    before_rows = _row_map(sheet, label) if sheet.exists else {}
+    after = snapshot
+    for item in rows:
+        after, summary = ops_collection.add(after, space, item["restore"],
+                                             sha256=files.rendered_sha256(after.collection(space)))
+        _added_row(after, summary, item["restore"], space, item["label"])
+    try:
+        settled = changes.prepare(snapshot, after)
+        expected = {**before_rows, **{rules.ident(item["restore"]): item["restore"] for item in rows}}
+        if _row_map(settled.collection(space), label) != expected \
+                or set(settled.collections) != set(snapshot.collections) | {space} \
+                or any(settled.collection(owner) != snapshot.collection(owner) for owner in snapshot.collections if owner != space) \
+                or settled != snapshot.replace(collections=settled.collections):
+            raise ValueError("Unexpected restoration effect")
+    except Exception:
+        raise UndoConflict("The complete deleted collection rows cannot be restored exactly. Nothing was saved.", label) from None
+    return settled, Summary(f"restore {len(rows)} deleted collection rows", counts={"added_rows": len(rows), "bumped_rows": 0,
+        "skipped_basics": 0, "merged": False, "cards": sum(item["restore"]["quantity"] for item in rows)})
+
+
+def _batch_delete_review(change_id, space, snapshot, store, raw):
+    if any(row.get("table") != COLLECTION or row.get("op") != "DELETE" or not isinstance(row.get("before"), dict)
+           or row["before"].get("space_id") != space or row.get("after") is not None for row in raw):
+        raise UndoMissing()
+    rows, keys, ids = [], set(), set()
+    for record in raw:
+        source, _, restore = _source([record], space)
+        key, rid = rules.ident(restore), source["id"]
+        if key in keys or rid in ids:
+            raise UndoUnsupported("A collection batch must name each original row exactly once.")
+        keys.add(key)
+        ids.add(rid)
+        rows.append({"key": source["key"], "row_change_id": rid, "current": None, "restore": restore})
+    for item in rows:
+        item["label"] = _label(COLLECTION, item["restore"])
+        if store.undo_latest(COLLECTION, item["key"]) != item["row_change_id"]:
+            raise UndoConflict("A row was touched after the selected change. Nothing was restored.", item["label"])
+        _absent_row(snapshot, item["restore"], space, item["label"])
+        _deleted_row(item["restore"])
+        if "\0" in item["restore"]["notes"]:
+            raise UndoUnsupported("The recorded notes cannot be restored as database text.")
+    label = f"{len(rows)} deleted collection rows"
+    _batch_add_inverse(snapshot, rows, space, label)
+    receipt = json.dumps([change_id, raw, snapshot.revision, snapshot.decks_revision], ensure_ascii=False,
+                         sort_keys=True, separators=(",", ":"))
+    return {"change_id": change_id, "kind": "collection", "space": space, "action": "batch_add",
+            "physical_confirmation_required": True, "row_count": len(rows), "rows": rows, "label": label,
+            "expect": hashlib.sha256(receipt.encode("utf-8")).hexdigest()}
+
+
 def _batch_review(change_id, space, snapshot, store):
     reader = getattr(store, "undo_audit_batch", None)
     raw = reader(change_id) if callable(reader) else None
     if not isinstance(raw, list) or not 2 <= len(raw) <= BATCH_MAX:
         raise UndoMissing()
+    if all(isinstance(row, dict) and row.get("op") == "DELETE" for row in raw):
+        return _batch_delete_review(change_id, space, snapshot, store, raw)
     # Ownership is a separate first pass. Never diagnose an own row before a
     # later hidden/unknown row has made the entire source unavailable.
     if any(not isinstance(row, dict) or row.get("table") != COLLECTION or row.get("op") != "UPDATE"
@@ -602,12 +660,17 @@ def apply_undo(snapshot, *, change_id, space, expect, reason=None, confirm_owned
     if plan["expect"] != expect:
         raise UndoConflict("The inventory or decks changed after the Undo preview. Review it again.", plan["label"])
     if plan.get("action") in BATCH_ACTIONS:
-        after, summary = _batch_inverse(snapshot, plan["rows"], space, plan["label"])
+        adding = plan["action"] == "batch_add"
+        if adding and confirm_owned is not True:
+            raise Invalid("Confirm that you still physically own every recorded copy before restoring these rows.")
+        after, summary = (_batch_add_inverse if adding else _batch_inverse)(snapshot, plan["rows"], space, plan["label"])
         return after, Summary(f"Undo change #{change_id}: restore {plan['label']}", {**summary.counts, "undo": 1},
-                              {after.collection(space).path: list(BATCH_UPDATE_FIELDS if plan["action"] == "batch_update" else BATCH_FIELDS)},
+                              {after.collection(space).path: ["add"] if adding else
+                               list(BATCH_UPDATE_FIELDS if plan["action"] == "batch_update" else BATCH_FIELDS)},
                               {**(summary.extra or {}), "undo_of": change_id, "space": space, "kind": "collection",
                                "action": plan["action"], "row_count": plan["row_count"],
-                               "row_change_ids": [item["row_change_id"] for item in plan["rows"]]})
+                               "row_change_ids": [item["row_change_id"] for item in plan["rows"]],
+                               **({"confirmed_owned": True} if adding else {})})
     removing = plan.get("action") == "remove"
     adding = plan.get("action") == "add"
     if removing:

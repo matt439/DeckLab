@@ -46,11 +46,28 @@ function activityUndoBatchEvidence(data) {
   return stock === quantityChanged;
 }
 
+function activityUndoBatchAddEvidence(data) {
+  if (data.kind !== "collection" || data.physical_confirmation_required !== true
+      || !Number.isSafeInteger(data.row_count) || data.row_count < 2 || data.row_count > 50
+      || !Array.isArray(data.rows) || data.rows.length !== data.row_count
+      || Object.keys(data).sort().join(",") !== "action,available,expect,id,kind,label,physical_confirmation_required,row_count,rows,space") return false;
+  const keys = new Set();
+  for (const item of data.rows) {
+    if (!item || typeof item !== "object" || Object.keys(item).sort().join(",") !== "current,key,label,restored"
+        || item.current !== null || typeof item.label !== "string" || !item.label.trim() || !activityUndoRow(item.restored, "collection")) return false;
+    const key = activityUndoBatchKey(item.key, item.restored);
+    if (!key || keys.has(key)) return false;
+    keys.add(key);
+  }
+  return true;
+}
+
 function activityUndoEvidence(data, id, space) {
   if (!data || data.available !== true || data.id !== id || data.space !== space || !["collection", "tokens"].includes(data.kind)
       || typeof data.expect !== "string" || !/^[a-f0-9]{64}$/.test(data.expect)
       || typeof data.label !== "string" || !data.label.trim()) return null;
   if (["batch_metadata", "batch_update"].includes(data.action)) return activityUndoBatchEvidence(data) ? data : null;
+  if (data.action === "batch_add") return activityUndoBatchAddEvidence(data) ? data : null;
   if (data.action === "add") return data.kind === "collection" && data.physical_confirmation_required === true && data.current === null
     && activityUndoRow(data.restored, "collection") && Object.keys(data).sort().join(",") === "action,available,current,expect,id,kind,label,physical_confirmation_required,restored,space" ? data : null;
   if (!activityUndoRow(data.current, data.kind)) return null;
@@ -79,7 +96,7 @@ function activityUndoReceipt(answer, preview) {
     && typeof answer.summary === "string" && answer.summary.trim();
   if (!confirmed) return false;
   if (!(preview.action === "remove" && preview.kind === "tokens") && Object.hasOwn(answer, "removed_token_row_id")) return false;
-  if (["batch_metadata", "batch_update"].includes(preview.action)) {
+  if (["batch_metadata", "batch_update", "batch_add"].includes(preview.action)) {
     if (answer.action !== preview.action || answer.row_count !== preview.row_count || !Array.isArray(answer.restored_rows)
         || answer.restored_rows.length !== preview.row_count || ["restored", "added_key", "removed_key"].some(field => Object.hasOwn(answer, field))) return false;
     const expected = new Map(preview.rows.map(item => [activityUndoBatchKey(item.key), item.restored])), seen = new Set();
@@ -172,7 +189,7 @@ function openActivityUndo(view, id) {
 function activityUndoShow(ctx) {
   const { sheet, preview, view } = ctx, signature = JSON.stringify(preview);
   const removing = preview.action === "remove";
-  const adding = preview.action === "add";
+  const batchAdding = preview.action === "batch_add", adding = batchAdding || preview.action === "add";
   const stock = preview.action === "batch_update", batch = stock || preview.action === "batch_metadata";
   const words = { quantity: "Quantity", condition: "Condition", language: "Language", notes: "Notes" };
   const identity = ACTIVITY_UNDO_FIELDS[preview.kind].filter(field => !ACTIVITY_UNDO_EDITABLE[preview.kind].includes(field));
@@ -222,17 +239,22 @@ function activityUndoShow(ctx) {
     };
     reasonInput.addEventListener("input", changed); reasonInput.addEventListener("change", changed);
   } else if (adding) {
-    sheet.body.append(el("p", { class: "box box-warn", text: "Undo restores all " + plural(preview.restored.quantity, "recorded copy", "recorded copies")
-      + " of this printing, with the historical condition, language and notes shown below." }),
+    const copies = batchAdding ? preview.rows.reduce((sum, item) => sum + item.restored.quantity, 0) : preview.restored.quantity;
+    const scope = batchAdding ? " across all " + plural(preview.row_count, "printing") : " of this printing";
+    const historical = row => el("dl", {}, ACTIVITY_UNDO_FIELDS.collection.flatMap(field => [el("dt", { text: field.replaceAll("_", " ") }),
+      el("dd", { class: field === "notes" ? "activity-undo-note" : null, text: text(row[field]) })]));
+    sheet.body.append(el("p", { class: "box box-warn", text: "Undo restores all " + plural(copies, "recorded copy", "recorded copies")
+      + scope + ", with the historical condition, language and notes shown below." }),
       el("p", { class: "sub", text: "Confirm only if you still physically own the entire recorded quantity. If you own fewer copies, cancel and use Collection to record the copies you still own." }),
-      el("p", { class: "sub", text: "Saving creates one new audited change; the original change stays in Activity." }),
-      el("section", { class: "panel" }, el("h3", { text: "Historical row to restore" }),
-        el("dl", {}, ACTIVITY_UNDO_FIELDS.collection.flatMap(field => [el("dt", { text: field.replaceAll("_", " ") }),
-          el("dd", { text: text(preview.restored[field]) })]))));
+      el("p", { class: "sub", text: "Saving creates one new audited change; the original change stays in Activity." }));
+    if (batchAdding) sheet.body.append(el("p", { class: "sub", text: "Review every historical row below. All printings restore together; there is no partial selection." }),
+      el("div", { class: "panels" }, preview.rows.map(item => el("section", { class: "panel activity-undo-batch-row" },
+        el("h4", { text: item.label }), historical(item.restored)))));
+    else sheet.body.append(el("section", { class: "panel" }, el("h3", { text: "Historical row to restore" }), historical(preview.restored)));
     const id = "activity-undo-owned-" + sheet.heading.id;
     ownershipInput = el("input", { id, type: "checkbox" }); ownershipInput.checked = false;
     sheet.body.append(el("label", { class: "choice", for: id }, ownershipInput, el("span", {
-      text: "I confirm all " + plural(preview.restored.quantity, "recorded copy", "recorded copies") + " of this printing are still physically owned." })));
+      text: "I confirm all " + plural(copies, "recorded copy", "recorded copies") + scope + " are still physically owned." })));
     ownershipInput.addEventListener("change", () => {
       if (!ctx.here() || ctx.pending || ctx.saved || ctx.needsRefresh || !ownershipInput.isConnected || !sheet.body.contains(ownershipInput)
           || ctx.preview !== preview || JSON.stringify(preview) !== signature) { ownershipInput.checked = confirmedOwned; return; }
