@@ -798,27 +798,87 @@ function listStats(ed = editor) {
     identity: "WUBRG".split("").filter((c) => identity.has(c)) };
 }
 
+/** Only an actual saved list of this edit can be a comparison. Read-only trials still have that
+ * readable baseline; new/copy/start-Play-now drafts do not. Unknown card data is not a zero count. */
+function editorCurveBaseline(ed) {
+  if (ed.mode !== "edit" || !ed.hasFileList || ed.starting || !["target", "owned"].includes(ed.version)) return null;
+  const sections = currentKind() === "commander" ? ["Commander", "Deck"] : ["Deck"];
+  const usable = line => line && Number.isSafeInteger(line.qty) && line.qty > 0 && line.card
+    && typeof line.card.type_line === "string" && Number.isFinite(line.card.cmc) && line.card.cmc >= 0;
+  const sameSpell = (a, b) => a.cmc === b.cmc
+    && /\bLand\b/.test(a.type_line.split(" // ")[0]) === /\bLand\b/.test(b.type_line.split(" // ")[0]);
+  if (!ed.base?.lists || !ed.lists) return null;
+  const known = new Map(), projected = {};
+  for (const section of sections) {
+    const lines = ed.lists[section] || [];
+    if (!Array.isArray(lines) || !lines.every(usable)) return null;
+    for (const line of lines) {
+      const other = known.get(line.name);
+      if (other && !sameSpell(other, line.card)) return null;
+      known.set(line.name, line.card);
+    }
+  }
+  for (const section of sections) {
+    const lines = ed.base.lists[section] || [];
+    if (!Array.isArray(lines)) return null;
+    projected[section] = [];
+    for (const line of lines) {
+      // A check can hydrate the draft after its saved copies were made. Reuse only same-name card
+      // metadata in this local projection, never current quantities or a zero for missing metadata.
+      const other = known.get(line?.name), card = line?.card || other;
+      if (!usable({...line, card}) || (other && !sameSpell(card, other))) return null;
+      projected[section].push({...line, card});
+    }
+  }
+  return listStats({...ed, lists: projected}).curve;
+}
+
+/** Current spell counts keep their usual name; old-height marks and neutral deltas describe the saved
+ * list on the same scale. The existing deck-colour helper owns the gradient, including colourless. */
+function editorCurvePart(ed, stats, before) {
+  const curve = stats.curve, top = Math.max(1, ...curve, ...(before || []));
+  const labels = curve.map((_, i) => i === CURVE_TOP ? `${CURVE_TOP}+` : String(i));
+  const changes = before ? curve.map((n, i) => n - before[i]) : curve.map(() => 0);
+  const compared = changes.some(n => n !== 0);
+  const saved = `saved ${listName(ed.version, true)}`;
+  const changeWords = i => `${before[i]} saved, ${curve[i]} now (${Math.abs(changes[i])} ${changes[i] > 0 ? "more" : "fewer"})`;
+  const words = `Spells by mana value: ${curve.map((n, i) => `${labels[i]}: ${n}`).join(", ")}`
+    + (compared ? `. Compared with the ${saved}: ${changes.flatMap((n, i) => n ? [`${labels[i]}: ${changeWords(i)}`] : []).join(", ")}` : "");
+  const identity = editorDraftIdentity(ed), colours = identity === null ? null : deckColourPieces(identity);
+  const style = colours ? colours.vars().replace("linear-gradient(90deg", "linear-gradient(180deg") : "";
+  const height = n => `${(100 * n / top).toFixed(1)}%`;
+  return el("section", {class: "stat-block edit-curve-part", "aria-labelledby": "h-curve", style},
+    el("h3", {id: "h-curve"}, "Mana curve", stats.spells
+      ? el("span", {class: "sub", text: ` \u00b7 average ${num(stats.average, 2)}`}) : null),
+    el("div", {class: "edit-curve", role: "img", "aria-label": words},
+      curve.map((n, i) => el("div", {class: "curve-col", "aria-hidden": "true",
+        title: `${plural(n, "spell")} at mana value ${labels[i]}` + (changes[i] ? `; ${changeWords(i)}` : "")},
+        el("span", {class: "curve-n", text: n ? String(n) : ""}),
+        el("span", {class: "curve-track"}, el("span", {class: "curve-bar", style: `height: ${height(n)}`}),
+          changes[i] ? el("span", {class: `curve-before ${changes[i] > 0 ? "is-grown" : "is-shrunk"}`,
+            style: `bottom: ${height(before[i])}`}) : null),
+        el("span", {class: "curve-delta", text: changes[i] ? `${changes[i] > 0 ? "+" : "\u2212"}${Math.abs(changes[i])}` : ""}),
+        el("span", {class: "curve-mv", text: labels[i]})))),
+    compared ? el("p", {class: "curve-comparison", text: `Dashed marks and +/\u2212 counts compare this draft with the ${saved}.`}) : null);
+}
+
 function drawStats() {
   const ed = editor;
   const host = ed.dom.stats;
   if (!host || !host.isConnected) return;
   const s = listStats(ed);
+  const before = editorCurveBaseline(ed);
   clear(host);
   if (!s.total) {
-    host.append(el("p", { class: "empty", text: "Add cards to see the curve, lands and colours." }));
+    const removedSpells = before?.some(n => n > 0);
+    if (removedSpells) host.append(editorCurvePart(ed, s, before));
+    host.append(el("p", { class: "empty", text: removedSpells
+      ? "No cards in this draft. The curve compares it with the saved list."
+      : "Add cards to see the curve, lands and colours." }));
     return;
   }
-  const top = Math.max(1, ...s.curve);
-  const labels = s.curve.map((_, i) => (i === CURVE_TOP ? `${CURVE_TOP}+` : String(i)));
   add(host, [
-    el("section", { class: "stat-block", "aria-labelledby": "h-curve" },
-      el("h3", { id: "h-curve" }, "Mana curve", el("span", { class: "sub", text: ` · average ${num(s.average, 2)}` })),
-      el("div", { class: "edit-curve", role: "img",
-        "aria-label": `Spells by mana value: ${s.curve.map((n, i) => `${labels[i]}: ${n}`).join(", ")}` },
-      s.curve.map((n, i) => el("div", { class: "curve-col", title: `${plural(n, "spell")} at mana value ${labels[i]}` },
-        el("span", { class: "curve-n", text: n ? String(n) : "" }),
-        el("span", { class: "curve-track" }, el("span", { class: "curve-bar", style: `height: ${Math.round((n / top) * 100)}%` })),
-        el("span", { class: "curve-mv", text: labels[i] }))))),
+    editorCurvePart(ed, s, before),
     el("section", { class: "stat-block", "aria-labelledby": "h-lands" },
       el("h3", { id: "h-lands", text: "Lands" }),
       el("p", { class: "stat-line" }, el("b", { text: String(s.lands) }),

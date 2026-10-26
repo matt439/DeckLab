@@ -403,8 +403,18 @@ button.edit-card:hover { background: var(--hover); }
 .edit-curve { display: flex; align-items: stretch; gap: var(--s-1); height: 128px; }
 .curve-col { flex: 1 1 0; display: flex; flex-direction: column; align-items: center; min-width: 0; }
 .curve-n { font-size: var(--fs-xs); color: var(--ink-2); font-variant-numeric: tabular-nums; min-height: 1.2em; }
-.curve-track { flex: 1 1 auto; width: 100%; display: flex; align-items: flex-end; justify-content: center; border-bottom: 1px solid var(--baseline); }
-.curve-bar { display: block; width: 70%; max-width: 28px; background: var(--series-1); border-radius: var(--r-sm) var(--r-sm) 0 0; }
+.curve-track { position: relative; flex: 1 1 auto; width: 100%; display: flex; align-items: flex-end; justify-content: center; border-bottom: 1px solid var(--baseline); }
+.curve-bar { display: block; width: 70%; max-width: 28px; background: var(--deck-stripe, var(--ink-3)); border-radius: var(--r-sm) var(--r-sm) 0 0; }
+.curve-before { position: absolute; left: 50%; transform: translateX(-50%); width: 70%; max-width: 28px; height: 0;
+  border-top: 2px dashed var(--ink-4); pointer-events: none; }
+.curve-before.is-grown { border-color: var(--on-scrim); filter: drop-shadow(0 1px 0 var(--scrim-edge)); }
+.curve-delta { min-height: 1.2em; color: var(--ink-3); font: var(--fs-xs) var(--font-num); }
+.curve-comparison { margin: var(--s-2) 0 0; color: var(--ink-2); font-size: var(--fs-sm); }
+@media (forced-colors: active) {
+  .edit-curve .curve-bar { background: CanvasText; }
+  .curve-before { border-color: CanvasText; filter: none; }
+  .curve-before.is-grown { border-color: Canvas; }
+}
 .curve-mv { font-size: var(--fs-xs); color: var(--ink-2); margin-top: 2px; }
 .stat-line { margin: 0; }
 .stat-sources { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--s-2) var(--s-4); }

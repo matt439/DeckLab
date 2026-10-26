@@ -173,6 +173,16 @@ two-line full List rows at most 600px wide. Keep actual printing, cost and
 availability visible. Checks headings switch real classes rather than overriding
 the shared sr-only rule. Full Editor peek stays suppressed.
 
+`editorCurveBaseline()` compares only the current actual saved edit/version,
+including a readable trial, never a new/copy/unstarted list. Saved quantities
+stay immutable; same-name current card metadata may fill a local projection,
+while missing/contradictory mana-value/land knowledge suppresses comparison.
+`editorCurvePart()` uses a common saved/current scale, canonical deck gradient,
+neutral deltas and exact spoken counts. Grown old-height marks use on-scrim
+with scrim-edge; shrunk caps use ink-4. Zero spells retain saved caps without
+an invalid average. Undo/restore/rebase/hydration recalculate from source;
+row order/global dirty state and unrelated Stats remain independent.
+
 `editor-swaps.js` (after `editor-cards.js`) and `deck-swaps.js` (after
 `deck-standins.js`) are E2-S07's strategic stand-ins, kept apart from those
 physical markers: owned cards that could take a missing card's slot in the
