@@ -14,7 +14,7 @@ selection. Products stay tiles in both.
 Decks are grouped by whose they are: the home decks first, then each person's (their own space, lib/spaces.py),
 by name, in a part that folds away; within each, casual then Commander. Products (sealed decks, read only)
 come last, folded until opened (remembered on this device). The filters (whose decks, format, status,
-availability) and the sort (Ready first, Recently changed, Name) are kept in the address; on a phone they're
+colour identity, archetype, availability) and the sort (Ready first, Recently changed, Name) are kept in the address; on a phone they're
 behind a "Filter" sheet. Title search stays in sight, with its query in the address too. "Mine" is the
 decks Played by the visitor at home, or a person's own decks.
 
@@ -49,6 +49,8 @@ function libraryFilters(params) {
     all: params.get("all") === "1",
     format: FORMAT_WORDS[format] ? format : "",
     status: STATUS_WORDS[status] ? status : "",
+    color: libColourChoice(params.get("color")),
+    archetype: libArchetypeQuery(params.get("archetype")),
     readiness: LIB_READINESS[params.get("readiness")] ? params.get("readiness") : "",
     sort: LIB_SORTS[sort] ? sort : "ready",
     deck: params.get("deck") || "",            // the lab's selected deck
@@ -62,6 +64,9 @@ function filtersHash(filters) {
   if (filters.all) params.set("all", "1");
   if (filters.format) params.set("format", filters.format);
   if (filters.status) params.set("status", filters.status);
+  const color = libColourChoice(filters.color), archetype = libArchetypeQuery(filters.archetype);
+  if (color) params.set("color", color);
+  if (archetype) params.set("archetype", archetype);
   if (filters.readiness) params.set("readiness", filters.readiness);
   if (filters.sort && filters.sort !== "ready") params.set("sort", filters.sort);
   if (filters.deck) params.set("deck", filters.deck);
@@ -70,9 +75,61 @@ function filtersHash(filters) {
   return "#/library" + (query ? "?" + query : "");
 }
 
-/** How many of the filters (format, status, availability) are set: the phone's "Filter (n)". */
+/** How many select filters are set: the phone's "Filter (n)" (title and sort stay independent). */
 function libFilterCount(filters) {
-  return ["format", "status", "readiness"].filter((key) => filters[key]).length;
+  return ["format", "status", "color", "archetype", "readiness"].filter((key) => filters[key]).length;
+}
+
+/** A bookmarked identity choice: includes every chosen colour, or explicitly colourless/unknown. */
+function libColourChoice(value) {
+  if (value === "C" || value === "unknown") return value;
+  return typeof value === "string" && /^[WUBRG]{1,5}$/.test(value) && new Set(value).size === value.length
+    ? [..."WUBRG"].filter(color => value.includes(color)).join("") : "";
+}
+
+function libMatchesColour(deck, value) {
+  const choice = libColourChoice(value);
+  if (!choice) return true;
+  const colors = deck.colors;
+  const known = !deck.error && Array.isArray(colors) && colors.length <= 5 && new Set(colors).size === colors.length
+    && Array.from(colors).every(color => typeof color === "string" && /^[WUBRG]$/.test(color));
+  if (choice === "unknown") return !known;
+  if (!known) return false;
+  return choice === "C" ? colors.length === 0 : [...choice].every(color => colors.includes(color));
+}
+
+/** Archetypes are literal header strings, not a taxonomy or card-name/regular-expression query. */
+function libArchetypeQuery(value) {
+  return typeof value === "string" ? value.normalize("NFKC").trim().replace(/\s+/g, " ").toLowerCase() : "";
+}
+
+function libMatchesMetadata(deck, filters) {
+  const archetype = libArchetypeQuery(filters.archetype);
+  return libMatchesTitle(deck, filters) && libMatchesColour(deck, filters.color)
+    && (!archetype || libArchetypeQuery(deck.archetype) === archetype);
+}
+
+function libColourChoices() {
+  const choices = [["", "Any colour identity"]];
+  // Single colours first, then pairs, triples, four and five; WUBRG within each choice.
+  for (let size = 1; size <= 5; size++) {
+    for (let mask = 1; mask < 32; mask++) {
+      const colors = [..."WUBRG"].filter((_, index) => mask & (1 << index));
+      if (colors.length === size) choices.push([colors.join(""), `Includes ${colors.map(color => COLOUR_WORDS[color]).join(" + ")}`]);
+    }
+  }
+  return [...choices, ["C", "Colourless"], ["unknown", "Colour identity unknown"]];
+}
+
+function libArchetypeChoices(data, value) {
+  const choices = new Map();
+  for (const deck of data?.decks || []) {
+    const key = libArchetypeQuery(deck.archetype);
+    if (key && !choices.has(key)) choices.set(key, deck.archetype.normalize("NFKC").trim().replace(/\s+/g, " "));
+  }
+  // Keep an unmatched bookmark visible in the native select, so it can be cleared normally.
+  if (value && !choices.has(value)) choices.set(value, value);
+  return [["", "Any archetype"], ...[...choices].sort((a, b) => a[1].localeCompare(b[1]))];
 }
 
 /** Keep raw typing in the input; only matching ignores outside spaces, case and compatibility forms. */
@@ -102,10 +159,12 @@ function libSelect(id, label, entries, value, onchange, shown = false) {
 
 /** The filter and sort choices: [key, label, entries]. shown: for the sheet, whose fields show their labels
  * (the row's selects hide theirs, so its sort options say "Sort: ..."). */
-function libChoices(shown = false) {
+function libChoices(shown = false, data = null, filters = {}) {
   return [
     ["format", "Format", [["", "All formats"], ...Object.entries(FORMAT_WORDS)]],
     ["status", "Status", [["", "Any status"], ...Object.entries(STATUS_WORDS)]],
+    ["color", "Colour identity", libColourChoices()],
+    ["archetype", "Archetype", libArchetypeChoices(data, filters.archetype)],
     ["readiness", `${listName("target")} availability`, [["", "Any availability"], ...Object.entries(LIB_READINESS)]],
     ["sort", "Sort", Object.entries(LIB_SORTS).map(([v, text]) => [v, shown ? text : `Sort: ${text}`])],
   ];
@@ -126,10 +185,15 @@ function drawLibrary(data, filters) {
     registerLibraryKeyboardHelp(results, keyboardToken, keyboardProfile);
     return true;
   };
-  const redraw = () => {
-    if (!results.isConnected) return;
+  const syncAddress = () => {
+    // A phone sheet has a temporary history entry. Keep its underlying page address unchanged until Back lands.
+    if (view.filterSheet) return;
     history.replaceState(history.state, "", filtersHash(filters));
     state.libraryHash = location.hash;
+  };
+  const redraw = () => {
+    if (!results.isConnected) return;
+    syncAddress();
     refresh();
     syncControls();
   };
@@ -137,8 +201,7 @@ function drawLibrary(data, filters) {
   view.select = (id, focus = false) => {
     if (!results.isConnected || filters.deck === id) return;
     filters.deck = id;
-    history.replaceState(history.state, "", filtersHash(filters));
-    state.libraryHash = location.hash;
+    syncAddress();
     refresh();
     if (focus) {
       const row = Array.from(results.querySelectorAll(".deck-row")).find((r) => r.getAttribute("data-id") === id);
@@ -148,16 +211,17 @@ function drawLibrary(data, filters) {
   libWatchDensity(results, refresh);
   libKeys(results, view);
   libLoadForge(data, refresh);
-  const set = (key, value) => { filters[key] = value; redraw(); };
-  const setMany = (values) => { Object.assign(filters, values); redraw(); };
+  const set = (key, value) => { if (!view.current?.()) return; filters[key] = value; redraw(); };
+  const setMany = (values) => { if (!view.current?.()) return; Object.assign(filters, values); redraw(); };
   const who = state.profile;
   const mine = el("button", { type: "button", text: `${who.name}'s decks`,
-    onclick: () => { filters.all = false; redraw(); } });
-  const all = el("button", { type: "button", text: "All decks", onclick: () => { filters.all = true; redraw(); } });
-  const selects = libChoices().map(([key, label, entries]) =>
+    onclick: () => set("all", false) });
+  const all = el("button", { type: "button", text: "All decks", onclick: () => set("all", true) });
+  const choices = libChoices(false, data, filters);
+  const selects = choices.map(([key, label, entries]) =>
     libSelect(`filter-${key}`, label, entries, filters[key], (value) => set(key, value)));
   const filterButton = el("button", { type: "button", class: "btn lib-filter-button", "aria-haspopup": "dialog",
-    onclick: () => libFilterSheet(data, filters, set, setMany) });
+    onclick: () => { if (view.current?.()) libOpenFilterSheet(view, data, filters, set, setMany, syncAddress); } });
   let composing = false;
   const titleInput = el("input", { type: "search", id: "library-title-search", value: filters.q || "",
     autocomplete: "off", spellcheck: "false", "aria-controls": "library-results",
@@ -186,7 +250,7 @@ function drawLibrary(data, filters) {
   function syncControls() {
     mine.setAttribute("aria-pressed", String(!filters.all));
     all.setAttribute("aria-pressed", String(filters.all));
-    for (const [key] of libChoices()) {
+    for (const [key] of choices) {
       const select = main.querySelector(`#filter-${key}`);
       if (select) select.value = filters[key] || "";
     }
@@ -218,8 +282,7 @@ function drawLibrary(data, filters) {
   const tables = libTablesPanel(filters.tables ? () => {
     filters.tables = false;
     if (!results.isConnected) return;
-    history.replaceState(history.state, "", filtersHash(filters));
-    state.libraryHash = location.hash;
+    syncAddress();
   } : null, () => libReloadShelf(data, refresh));
 
   // The warnings go first: they say when the missing-card counts can't be trusted.
@@ -242,20 +305,21 @@ function drawLibrary(data, filters) {
 
 /** The phone's filter sheet: the same choices with their words, applied as they change. The fields stay put
  * (the focus stays on the one just changed); only the buttons follow the count. */
-function libFilterSheet(data, filters, set, setMany) {
-  const sheet = openSheet({ title: "Filter decks" });
+function libFilterSheet(data, filters, set, setMany, onClose = null) {
+  const sheet = openSheet({ title: "Filter decks", onClose });
   const count = () => libVisibleDecks(data, filters).length + libVisibleProducts(data, filters).length;
-  const fields = libChoices(true).map(([key, label, entries]) =>
+  const choices = libChoices(true, data, filters);
+  const fields = choices.map(([key, label, entries]) =>
     libSelect(`sheet-filter-${key}`, label, entries, filters[key], (value) => { set(key, value); draw(); }, true));
   const body = el("div", { class: "lib-sheet-fields" }, fields);
   function draw() {
-    for (const [key] of libChoices()) {
+    for (const [key] of choices) {
       const select = body.querySelector(`#sheet-filter-${key}`);
       if (select && select.value !== (filters[key] || "")) select.value = filters[key] || "";
     }
     sheetActions(sheet, [
       libFilterCount(filters) ? { text: "Clear filters", onclick: () => {
-        setMany({ format: "", status: "", readiness: "" });
+        setMany({ format: "", status: "", color: "", archetype: "", readiness: "" });
         draw();
         const first = body.querySelector("select");
         if (first) first.focus();
@@ -265,6 +329,37 @@ function libFilterSheet(data, filters, set, setMany) {
   sheet.body.append(body);
   draw();
   return sheet;
+}
+
+/** Commit a filter sheet's live changes only after its temporary history entry has closed. */
+function libOpenFilterSheet(view, data, filters, set, setMany, syncAddress) {
+  if (view.filterSheet || !view.current?.()) return null;
+  const owner = view.filterSheet = { hash: location.hash, sheet: null };
+  const current = () => view.filterSheet === owner && view.current?.() && location.hash === owner.hash;
+  const release = () => {
+    window.removeEventListener("popstate", landed);
+    window.removeEventListener("hashchange", abandoned);
+    if (view.filterSheet === owner) view.filterSheet = null;
+  };
+  const abandoned = () => release();
+  const landed = () => {
+    const entry = owner.sheet?.entry;
+    const valid = current() && (!entry || history.state?.sheet !== entry.token
+      && history.state?.pos === entry.pos - 1);
+    release();
+    if (valid) syncAddress();
+  };
+  const closed = () => {
+    if (!current()) { release(); return; }
+    const entry = owner.sheet?.entry;
+    // No-history environments and already-landed native Back need no deferred listener.
+    if (!entry || entry.fromHistory || history.state?.sheet !== entry.token) { landed(); return; }
+    // Explicit Close/Show waits for releaseSheetEntry's Back, rather than rewriting the departing entry.
+    window.addEventListener("popstate", landed);
+    window.addEventListener("hashchange", abandoned);
+  };
+  owner.sheet = libFilterSheet(data, filters, set, setMany, closed);
+  return owner.sheet;
 }
 
 /** Whether a deck is the visitor's: in their own space for a person; at home, Played by them or by either. */
@@ -292,7 +387,7 @@ function libCoverEditable(d) {
 function libVisibleDecks(data, filters) {
   return data.decks.filter((d) => !d.id.startsWith("product/") && (filters.all || isMyDeck(d))
     && (!filters.status || d.status === filters.status)
-    && (!filters.format || d.kind === filters.format) && matchesReadiness(d, filters.readiness) && libMatchesTitle(d, filters));
+    && (!filters.format || d.kind === filters.format) && matchesReadiness(d, filters.readiness) && libMatchesMetadata(d, filters));
 }
 
 /** Products have no player or status; search never broadens those existing visibility choices. */
@@ -300,7 +395,7 @@ function libVisibleProducts(data, filters) {
   if (filters.status || filters.format && filters.format !== "product"
       || ownSpace() !== HOME_SPACE && !filters.all && filters.format !== "product") return [];
   return data.decks.filter(d => d.id.startsWith("product/") && matchesReadiness(d, filters.readiness)
-    && libMatchesTitle(d, filters));
+    && libMatchesMetadata(d, filters));
 }
 
 
@@ -458,7 +553,8 @@ function drawLibraryResults(target, data, filters, view = {}, redraw = null) {
   const sorted = lab ? libRowOrder(libVisibleDecks(data, filters), filters.sort || "ready") : [];
   const selected = sorted.find((d) => d.id === filters.deck) || sorted[0] || null;
   const ctx = { sort: filters.sort || "ready", picking: Boolean(view.picking), redraw, lab,
-    selected: selected ? selected.id : null, select: view.select || (() => {}), searching: !!libTitleQuery(filters.q) };
+    selected: selected ? selected.id : null, select: view.select || (() => {}),
+    searching: !!(libTitleQuery(filters.q) || filters.color || filters.archetype) };
   const results = el("div", { class: "lib-list" });
   target.append(lab && selected ? el("div", { class: "lib-split" }, results, libDetail(selected, ctx)) : results);
   const files = data.decks.filter((d) => !d.id.startsWith("product/"));
@@ -466,7 +562,7 @@ function drawLibraryResults(target, data, filters, view = {}, redraw = null) {
   const shown = libVisibleDecks(data, filters);
   const hiddenOthers = filters.all ? 0 : files.filter((d) => !isMyDeck(d)
     && (!filters.status || d.status === filters.status)
-    && (!filters.format || d.kind === filters.format) && matchesReadiness(d, filters.readiness) && libMatchesTitle(d, filters)).length;
+    && (!filters.format || d.kind === filters.format) && matchesReadiness(d, filters.readiness) && libMatchesMetadata(d, filters)).length;
   // Products belong to nobody (they're read-only card lists) and have no status. A person sees the home's
   // only among all decks or when asking for products: they aren't theirs.
   const showProducts = products.length > 0;
@@ -512,7 +608,7 @@ function drawLibraryResults(target, data, filters, view = {}, redraw = null) {
       any ? el("a", { class: "btn", href: "#/library?all=1", text: "Show every deck",
         onclick: (e) => { e.preventDefault();
           if (!target.isConnected || view.current && !view.current()) return;
-          Object.assign(filters, { all: true, format: "", status: "", readiness: "", q: "" });
+          Object.assign(filters, { all: true, format: "", status: "", color: "", archetype: "", readiness: "", q: "" });
           history.replaceState(history.state, "", filtersHash(filters)); clear($("#main"));
           drawLibrary(state.library || data, filters); } })
         : createTargets().length ? el("a", { class: "btn btn-primary", href: newDeckHref(), text: "New deck" }) : null));

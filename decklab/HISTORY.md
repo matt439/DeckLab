@@ -2,6 +2,14 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Library colour and archetype filters (2026-10-27; E1-S05)
+
+Library filters now combine title search with canonical Planned colour identity and the literal Archetype header from already authorized summaries. Includes blue + black means both colours, with additional colours allowed; all 31 combinations are available. Colourless requires a known empty identity, while unknown, malformed and unreadable identities stay distinct. Archetypes match whole headers after compatibility, case and whitespace normalization. Bookmarks, Mine, readiness, product groups, temporary matching folds and lab selection retain their existing behavior.
+
+Native phone validation found that closing the Filter sheet reverted the address and lost its choices. Results now update immediately while the temporary sheet entry keeps its original address; a guarded landing commits the chosen query to the underlying page. Show, header Close and browser Back all retain filters without refetching the library. Wrong profile, route, hash, roots or history position cannot commit a stale close.
+
+Validation: 127 focused checks passed, including ten new metadata cases and ten browser-like history regressions, followed by the combined 651-check packing/Library/web run. Twelve synthetic Chromium width/theme cases (320, 600, 820, 1000, 1280 and 1920px, light/dark) passed native colour/archetype/title composition, unknown/colourless separation and retained selection, with one list read per page, no overflow and no script errors. An additional 320px native Back/header-close case passed. All writes were blocked; extra summaries were invented fixture data. Ruff, JavaScript syntax and whitespace checks passed. Touch, Safari and physical-device acceptance are not claimed.
+
 ## Review intact product storage from Build decks (2026-10-26; E11-S30 slice 13)
 
 Short or waiting cards held in a verified intact product now offer its existing Product storage review. The source must match the actual same-snapshot producer relation, owned/intact status, held counts and a readable generated deck route; a multi-deck product uses a real subdeck route and appears once. An id prefix or representative card picture is never evidence. Optional source failures leave the original allocation usable.

@@ -1,12 +1,12 @@
 # Deck Lab: gap analysis
 
-Dated 2026-10-13; every story in [stories.md](stories.md) was rechecked against the code on 2026-10-19. Counts below were recounted from the story headers on 2026-10-26. The dated owner decisions retain their original context; [TODO.md](../../TODO.md) owns the current work order. Part of the design set: [README](README.md) (method and index), [personas](personas.md), [journeys](journeys.md), [stories](stories.md) and this file.
+Dated 2026-10-13; every story in [stories.md](stories.md) was rechecked against the code on 2026-10-19. Counts below were recounted from the story headers on 2026-10-27. The dated owner decisions retain their original context; [TODO.md](../../TODO.md) owns the current work order. Part of the design set: [README](README.md) (method and index), [personas](personas.md), [journeys](journeys.md), [stories](stories.md) and this file.
 
 Story ids (such as E7-S09) are those in [stories.md](stories.md). Each story there is marked built, partial, missing or not wanted against the code and its dated verification evidence; this file adds up those marks, groups the gaps and ranks what to do next.
 
 ## Headline
 
-Deck Lab already does most of what Matt and User1 need. Of the must and should stories, Matt has 96 built and 3 partial; User1 has 32 built, 1 partial and 1 missing; Claude Code has 15 built, User5 4, the space members 4 and the Commander table 1, with no gaps. Across all 229 stories there are 164 built, 17 partial, 34 missing and 14 not wanted (recounted from the story headers on 2026-10-26). E9-S18 is now counted as not wanted.
+Deck Lab already does most of what Matt and User1 need. Of the must and should stories, Matt has 96 built and 3 partial; User1 has 32 built, 1 partial and 1 missing; Claude Code has 15 built, User5 4, the space members 4 and the Commander table 1, with no gaps. Across all 229 stories there are 165 built, 17 partial, 33 missing and 14 not wanted (recounted from the story headers on 2026-10-27). E9-S18 is now counted as not wanted.
 
 Matt's answers moved the work towards three things:
 

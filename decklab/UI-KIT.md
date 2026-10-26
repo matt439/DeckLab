@@ -11,6 +11,17 @@ How Deck Lab's pages are built from shared pieces: the design tokens, the CSS co
 
 The scripts share one global scope, so a name may be defined only once across all of them (`test_web.test_no_name_is_defined_twice`). Nothing in the shared files runs at load. The sheet helpers (`openSheet`, `sheetActions`, `ask`, `busy`, `unbusy`) are in `editor.js`.
 
+Library title, colour-identity and archetype filters use only its already authorized
+summaries. Native Includes choices require every chosen WUBRG colour; known `[]`
+is colourless and null/malformed/unreadable stays unknown. Archetypes match whole
+normalized literal headers. `q`, `color` and `archetype` retain bookmarks alongside
+existing filters. Matching folds open temporarily and lab selection intent stays.
+The phone Filter sheet updates results immediately but defers URL replacement
+until its temporary history entry lands. Exact owner/profile/route/hash/position
+guards preserve Show, Close and Back without a new list read or stale takeover.
+`test_library_metadata_filters_ui.py` and `test_library_filter_history_ui.py`
+cover these contracts alongside the retained native title-search tests.
+
 `commander-readiness.js` follows `stats.js`. `commanderReadiness(data)` is the
 first Commander Overview section, and `commanderDataNote(bracket)` renders the
 same actual source dates and freshness note there and in the Stats panel. Both

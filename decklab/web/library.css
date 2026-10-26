@@ -15,8 +15,9 @@
   gap: var(--s-2) var(--s-3);
   margin: var(--s-3) 0 var(--s-2);
 }
-.lib-selects { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2); }
-.lib-select select { width: auto; max-width: 100%; }
+.lib-selects { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2); min-width: 0; max-width: 100%; }
+.lib-select { min-width: 0; max-width: 100%; }
+.lib-select select { width: auto; max-width: min(100%, 18rem); }
 .lib-filter-button { display: none; }
 /* More, when there's no New deck beside the title: the filter row's last item, at its right end. */
 .lib-row-end { display: flex; align-items: center; gap: var(--s-2); margin-left: auto; }
@@ -26,6 +27,7 @@
 /* Its menu opens under the button, right-aligned, as a page head's More does. */
 .lib-more .menu { top: calc(100% + var(--s-1)); right: 0; }
 .lib-sheet-fields { display: grid; gap: var(--s-3); }
+.lib-sheet-fields .field, .lib-sheet-fields select { min-width: 0; max-width: 100%; }
 @media (max-width: 599px) {
   .lib-selects { display: none; }
   .lib-filter-button { display: inline-flex; }

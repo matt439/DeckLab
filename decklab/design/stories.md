@@ -35,7 +35,7 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 
 | Epic | Stories | Built | Partial | Missing | Not wanted |
 |---|---:|---:|---:|---:|---:|
-| [E1: Find, plan and choose decks](#e1-find-plan-and-choose-decks) | 12 | 9 | 1 | 2 | 0 |
+| [E1: Find, plan and choose decks](#e1-find-plan-and-choose-decks) | 12 | 10 | 0 | 2 | 0 |
 | [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 16 | 13 | 1 | 1 | 1 |
 | [E3: Test a deck](#e3-test-a-deck) | 14 | 11 | 3 | 0 | 0 |
 | [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 20 | 14 | 1 | 4 | 1 |
@@ -46,9 +46,9 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E9: Commander nights](#e9-commander-nights) | 19 | 13 | 0 | 5 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 35 | 30 | 1 | 2 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 28 | 15 | 6 | 4 | 3 |
-| **Total** | **229** | **164** | **18** | **33** | **14** |
+| **Total** | **229** | **165** | **17** | **33** | **14** |
 
-Counted from the story headers on 2026-10-26.
+Counted from the story headers on 2026-10-27.
 
 ---
 
@@ -56,7 +56,7 @@ Counted from the story headers on 2026-10-26.
 
 How Matt and User1 (and, more lightly, User2, User3, User4 and User5) find a deck in the library (#/library), choose its picture, open its deck page (#/deck) to see whether it can be built and how to play it, rename or retire it, and pick what to play tonight. Each viewer's library holds their own space's decks, plus any another space has made public. A plain "Deck Lab is off" message is enough while the PC is off (E11-S02); collector-value sorting and legality badges on casual decks aren't wanted.
 
-Open: E1-S05, E1-S12, E1-S13.
+Open: E1-S12, E1-S13.
 
 **E1-S01** · User1 · must · M · built
 
@@ -115,7 +115,7 @@ Evidence:
 - `decklab/web/library.js`: LIB_SORTS, LIB_READINESS, libraryFilters, filtersHash, libFilterSheet
 - `decklab/tests/test_library_ui.py`: test_sorts_ready_first_recently_changed_and_name, test_the_phone_filter_sheet_counts_and_applies_filters
 
-**E1-S05** · Matt · could · S · partial
+**E1-S05** · Matt · could · S · built
 
 As a deck builder, I want to find a deck by typing part of its name, or by colour or archetype, so that I can reach it quickly once the shelf holds many decks and spaces.
 
@@ -125,12 +125,10 @@ As a deck builder, I want to find a deck by typing part of its name, or by colou
 - Given a search, when the address is bookmarked, then the search is kept like the other filters.
 
 Evidence:
-- `decklab/web/library.js`: libraryFilters, filtersHash, libTitleQuery, libMatchesTitle and the retained search input
-- `decklab/tests/test_library_title_search_ui.py`: literal matching, URL/native input state, combined filters, groups, selection and stale ownership
+- `decklab/web/library.js`: retained native title input, `libMatchesColour`, exact normalized archetypes, `filtersHash` and guarded phone history landing
+- `decklab/tests/test_library_title_search_ui.py`, `test_library_metadata_filters_ui.py` and `test_library_filter_history_ui.py`: matching, bookmarks, filter composition, scope, selection and native-history lifecycle
 
-Now: title search built 2026-10-26 ([HISTORY.md](../HISTORY.md#library-title-search-2026-10-26-e1-s05)); it searches only the existing authorized deck/product summaries and retains the query in the address.
-
-Gap: Colour and archetype filters remain. This is ready independently of E11-S31's global-search scope choice; shared matching can be reused later.
+Now: built 2026-10-27 ([HISTORY.md](../HISTORY.md#library-colour-and-archetype-filters-2026-10-27-e1-s05)); all filters use existing authorized summaries. Includes colour choices allow additional colours; unknown and known colourless remain separate. Phone sheet closing retains the query without another list read.
 
 **E1-S07** · User1 · should · M · built
 
@@ -3883,7 +3881,7 @@ As Matt, I want one search in the top bar that finds a deck or a card from any p
 
 Decided (Matt, 2026-10-25): left out of E11-S30's slice 7 (the shell) as its own story, since Deck Lab had no global search to restyle. Still to settle before building: what it searches (decks, the viewer's collection, every Scryfall card) and how results are grouped.
 
-Next step: Matt chooses the sources and result grouping; this is a DECISION in TODO until then. E1-S05's local library title search is independently ready.
+Next step: Matt chooses the sources and result grouping; this is a DECISION in TODO until then. E1-S05's local Library title, colour and archetype filters are built independently of this decision.
 
 Gap: everything; nothing built.
 
