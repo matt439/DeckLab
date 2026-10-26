@@ -731,6 +731,20 @@ class PgInventory:
         applying = getattr(self._applying, "connection", None)
         return work(applying) if applying is not None else self._call(work)
 
+    def undo_audit_batch(self, change_id):
+        """Unfiltered bounded original rows; the 51st row refuses a 50-row batch.
+
+        Keep undo_audit's two-row single-source contract unchanged. No Activity
+        projection or SQL ownership filter can make a mixed source look complete.
+        """
+        def work(c):
+            return [{"id": rid, "table": table, "op": op, "key": key, "before": old, "after": new}
+                    for rid, table, op, key, old, new in c.execute(
+                        "select id,table_name,op,row_key,before,after from audit.row_change "
+                        "where change_set_id=%s order by id limit 51", (change_id,)).fetchall()]
+        applying = getattr(self._applying, "connection", None)
+        return work(applying) if applying is not None else self._call(work)
+
     # -------------------------------------------------------- writing
 
     def apply(self, op, actor, message, reason=None, expected_revision=None):

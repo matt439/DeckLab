@@ -16,16 +16,45 @@ function activityUndoRow(row, kind) {
     && Boolean((row.name || row.front || "").trim());
 }
 
+function activityUndoBatchKey(key, row = null) {
+  const fields = ["set", "collector_number", "finish"];
+  if (!key || typeof key !== "object" || Array.isArray(key) || Object.keys(key).sort().join(",") !== "collector_number,finish,set"
+      || fields.some(field => typeof key[field] !== "string" || !key[field] || row && key[field] !== row[field])) return null;
+  return JSON.stringify(fields.map(field => key[field]));
+}
+
+function activityUndoBatchEvidence(data) {
+  if (data.kind !== "collection" || !Number.isSafeInteger(data.row_count) || data.row_count < 2 || data.row_count > 50
+      || !Array.isArray(data.rows) || data.rows.length !== data.row_count
+      || Object.keys(data).sort().join(",") !== "action,available,expect,id,kind,label,row_count,rows,space") return false;
+  const keys = new Set();
+  for (const item of data.rows) {
+    if (!item || typeof item !== "object" || Object.keys(item).sort().join(",") !== "current,fields,key,label,restored"
+        || typeof item.label !== "string" || !item.label.trim() || !activityUndoRow(item.current, "collection") || !activityUndoRow(item.restored, "collection")) return false;
+    const key = activityUndoBatchKey(item.key, item.current);
+    if (!key || keys.has(key)) return false;
+    keys.add(key);
+    const changed = ACTIVITY_UNDO_FIELDS.collection.filter(field => item.current[field] !== item.restored[field]);
+    if (!changed.length || changed.some(field => !["condition", "language"].includes(field)) || !Array.isArray(item.fields)
+        || item.fields.length !== changed.length || new Set(item.fields.map(field => field?.field)).size !== changed.length
+        || [...item.fields].some(field => !field || Object.keys(field).sort().join(",") !== "after,before,field" || !changed.includes(field.field)
+          || field.before !== item.current[field.field] || field.after !== item.restored[field.field])) return false;
+  }
+  return true;
+}
+
 function activityUndoEvidence(data, id, space) {
   if (!data || data.available !== true || data.id !== id || data.space !== space || !["collection", "tokens"].includes(data.kind)
       || typeof data.expect !== "string" || !/^[a-f0-9]{64}$/.test(data.expect)
       || typeof data.label !== "string" || !data.label.trim()) return null;
+  if (data.action === "batch_metadata") return activityUndoBatchEvidence(data) ? data : null;
   if (data.action === "add") return data.kind === "collection" && data.physical_confirmation_required === true && data.current === null
     && activityUndoRow(data.restored, "collection") && Object.keys(data).sort().join(",") === "action,available,current,expect,id,kind,label,physical_confirmation_required,restored,space" ? data : null;
   if (!activityUndoRow(data.current, data.kind)) return null;
   if (data.action === "remove") return data.kind === "collection" && data.reason_required === true && data.restored === null
     && !Object.hasOwn(data, "fields") && Object.keys(data).sort().join(",") === "action,available,current,expect,id,kind,label,reason_required,restored,space" ? data : null;
   if (Object.hasOwn(data, "action") || Object.hasOwn(data, "reason_required") || Object.hasOwn(data, "physical_confirmation_required")
+      || Object.hasOwn(data, "rows") || Object.hasOwn(data, "row_count")
       || !activityUndoRow(data.restored, data.kind) || !Array.isArray(data.fields) || !data.fields.length) return null;
   const allowed = ACTIVITY_UNDO_EDITABLE[data.kind], changed = ACTIVITY_UNDO_FIELDS[data.kind].filter(field => data.current[field] !== data.restored[field]);
   if (changed.some(field => !allowed.includes(field)) || changed.length !== data.fields.length
@@ -41,6 +70,19 @@ function activityUndoReceipt(answer, preview) {
     && /^[a-f0-9]{64}$/.test(answer.sha256) && typeof answer.revision === "string" && answer.revision.trim()
     && typeof answer.summary === "string" && answer.summary.trim();
   if (!confirmed) return false;
+  if (preview.action === "batch_metadata") {
+    if (answer.action !== "batch_metadata" || answer.row_count !== preview.row_count || !Array.isArray(answer.restored_rows)
+        || answer.restored_rows.length !== preview.row_count || ["restored", "added_key", "removed_key"].some(field => Object.hasOwn(answer, field))) return false;
+    const expected = new Map(preview.rows.map(item => [activityUndoBatchKey(item.key), item.restored])), seen = new Set();
+    for (const item of answer.restored_rows) {
+      if (!item || typeof item !== "object" || Object.keys(item).sort().join(",") !== "key,row" || !activityUndoRow(item.row, "collection")) return false;
+      const key = activityUndoBatchKey(item.key, item.row), row = expected.get(key);
+      if (!key || !row || seen.has(key) || ACTIVITY_UNDO_FIELDS.collection.some(field => item.row[field] !== row[field])) return false;
+      seen.add(key);
+    }
+    return seen.size === expected.size;
+  }
+  if (Object.hasOwn(answer, "row_count") || Object.hasOwn(answer, "restored_rows")) return false;
   if (preview.action === "add") {
     const key = answer.added_key;
     return preview.kind === "collection" && answer.action === "add" && !Object.hasOwn(answer, "removed_key")
@@ -119,13 +161,24 @@ function activityUndoShow(ctx) {
   const { sheet, preview, view } = ctx, signature = JSON.stringify(preview);
   const removing = preview.action === "remove";
   const adding = preview.action === "add";
+  const batch = preview.action === "batch_metadata";
   const words = { quantity: "Quantity", condition: "Condition", language: "Language", notes: "Notes" };
   const identity = ACTIVITY_UNDO_FIELDS[preview.kind].filter(field => !ACTIVITY_UNDO_EDITABLE[preview.kind].includes(field));
   const text = value => value === "" ? "Not recorded" : String(value);
   let reasonInput = null, acceptedReason = "", reviewedReason = null;
   let ownershipInput = null, confirmedOwned = false;
   clear(sheet.body).append(el("h3", { text: preview.label }));
-  if (removing) {
+  if (batch) {
+    const rows = preview.rows.map(item => {
+      const changes = item.fields.map(field => el("p", {}, el("b", { text: words[field.field] + ": " }),
+        el("span", { text: text(field.before) }), " → ", el("span", { text: text(field.after) })));
+      return el("section", { class: "panel activity-undo-batch-row" }, el("h4", { text: item.label }),
+        el("p", { class: "sub", text: item.key.set.toUpperCase() + " " + item.key.collector_number + " · " + item.key.finish }), changes);
+    });
+    sheet.body.append(el("p", { class: "sub", text: "Review all " + plural(preview.row_count, "printing")
+      + " below. Their condition and language changes will be restored together in one new audited change; the original change stays in Activity." }),
+      el("div", { class: "panels" }, rows));
+  } else if (removing) {
     sheet.body.append(el("p", { class: "box box-warn", text: "Undo removes all " + plural(preview.current.quantity, "recorded copy", "recorded copies")
       + " of this printing from the collection. The entire added row will be removed." }),
     el("p", { class: "sub", text: "Saving creates one new audited change; the original change stays in Activity. The row and its physical uses are checked again when you save." }),

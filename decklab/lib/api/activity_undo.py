@@ -14,7 +14,7 @@ from .common import ApiError, DATABASE_DOWN, _keys, _parse_body
 from .settings import _writer
 
 NO_CHANGE = "No undoable change at that ID."
-UNSUPPORTED = "This change cannot be undone here. Only supported single-row edits, unheld nonbasic collection additions and verified collection deletions can be undone."
+UNSUPPORTED = "This change cannot be undone here. Supported Undo covers single-row edits, unheld nonbasic collection additions, verified collection deletions and batches of 2–50 condition/language updates."
 CHANGED = "The change can no longer be undone safely. Reload Activity and review it again."
 UNCONFIRMED = "The undo result could not be confirmed. Reload Activity before trying again."
 SHA = re.compile(r"[a-f0-9]{64}")
@@ -44,6 +44,16 @@ def review_hint(change, shown, profile):
     this viewer. An unsupported one-row update can still explain itself on review.
     """
     rows = change.get("rows") or ()
+    total = change.get("total", len(rows))
+    if type(total) is int and 2 <= total <= 50 and len(rows) == total and not change.get("more") and not change.get("groups"):
+        space = _space(profile)
+        if shown.get("id") == change.get("id") and guard.allowed(profile, "collection.edit", space) \
+                and all(isinstance(row, dict) and row.get("table") == "collection_card" and row.get("op") == "UPDATE"
+                        and isinstance(row.get("before"), dict) and isinstance(row.get("after"), dict)
+                        and row["before"].get("space_id") == space and row["after"].get("space_id") == space
+                        for row in rows):
+            return {"review": True}
+        return None
     if change.get("total", len(rows)) != 1 or len(rows) != 1 or change.get("more") or change.get("groups"):
         return None
     row = rows[0]
@@ -96,6 +106,8 @@ def _review(change_id, profile):
 
 
 def _project(plan):
+    if plan.get("action") == "batch_metadata":
+        return _batch_project(plan)
     kind = plan["kind"]
     columns = rules.FIELDS if kind == "collection" else rules.TOKEN_FIELDS
     current, restored = plan.get("current"), plan.get("restore")
@@ -133,6 +145,33 @@ def _project(plan):
     fields = [{"field": key, "before": current[key], "after": restored[key]} for key in MUTABLE[kind] if key in changed]
     return {"available": True, "id": plan["change_id"], "expect": plan["expect"], "kind": kind, "space": plan["space"],
             "label": plan["label"], "fields": fields, "current": current, "restored": restored}
+
+
+def _batch_project(plan):
+    if plan.get("kind") != "collection" or type(plan.get("row_count")) is not int or not 2 <= plan["row_count"] <= 50 \
+            or not isinstance(plan.get("rows"), list) or len(plan["rows"]) != plan["row_count"] \
+            or not isinstance(plan.get("label"), str) or not plan["label"].strip():
+        raise ApiError(503, UNCONFIRMED)
+    rows, keys, ids = [], set(), set()
+    for item in plan["rows"]:
+        if not isinstance(item, dict) or type(item.get("row_change_id")) is not int or item["row_change_id"] < 1:
+            raise ApiError(503, UNCONFIRMED)
+        projected = _project({"kind": "collection", "space": plan["space"], "change_id": plan["change_id"],
+                              "expect": plan["expect"], "label": item.get("label"),
+                              "current": item.get("current"), "restore": item.get("restore")})
+        key = rules.ident(projected["current"])
+        raw_key = item.get("key")
+        if not isinstance(raw_key, dict) or set(raw_key) != {"space_id", "set_code", "collector_number", "finish"} \
+                or raw_key != {"space_id": plan["space"], "set_code": key[0], "collector_number": key[1], "finish": key[2]} \
+                or key in keys or item["row_change_id"] in ids \
+                or any(field["field"] not in ("condition", "language") for field in projected["fields"]):
+            raise ApiError(503, UNCONFIRMED)
+        keys.add(key)
+        ids.add(item["row_change_id"])
+        rows.append({"key": dict(zip(("set", "collector_number", "finish"), key)), "label": projected["label"],
+                     "current": projected["current"], "restored": projected["restored"], "fields": projected["fields"]})
+    return {"available": True, "id": plan["change_id"], "expect": plan["expect"], "kind": "collection", "space": plan["space"],
+            "label": plan["label"], "action": "batch_metadata", "row_count": len(rows), "rows": rows}
 
 
 def _restored(after, plan):
@@ -192,6 +231,23 @@ def apply_undo(body):
     after, summary = saving.apply_op(op, profile, f"Undo activity change {change_id}", _refused,
                                      **({"reason": reason} if removing else {}))
     extra, counts = summary.extra or {}, summary.counts or {}
+    if plan.get("action") == "batch_metadata":
+        if not summary.changed or type(counts.get("undo")) is not int or counts["undo"] != 1 \
+                or type(counts.get("edited")) is not int or counts["edited"] != plan["row_count"] \
+                or type(counts.get("removed")) is not int or counts["removed"] != 0 \
+                or extra.get("undo_of") != change_id or extra.get("kind") != "collection" or extra.get("space") != plan["space"] \
+                or extra.get("action") != "batch_metadata" or type(extra.get("row_count")) is not int \
+                or extra["row_count"] != plan["row_count"] \
+                or extra.get("row_change_ids") != [item["row_change_id"] for item in plan["rows"]]:
+            raise ApiError(503, UNCONFIRMED)
+        from decklab.lib.inventory import undo
+        try:
+            restored = undo.restored_rows(after, plan)
+        except Exception:
+            raise ApiError(503, UNCONFIRMED) from None
+        return {"saved": True, "source_id": change_id, "expect": data["expect"], "kind": "collection", "space": plan["space"],
+                "action": "batch_metadata", "row_count": plan["row_count"], "restored_rows": restored,
+                "sha256": files.rendered_sha256(after.collection(plan["space"])), "revision": after.revision, "summary": summary.text}
     if not summary.changed or type(counts.get("undo")) is not int or counts["undo"] != 1 \
             or extra.get("undo_of") != change_id or extra.get("kind") != plan["kind"] or extra.get("space") != plan["space"] \
             or extra.get("row_change_id") != plan["row_change_id"]:

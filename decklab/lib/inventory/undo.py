@@ -22,6 +22,8 @@ TOKEN_FIELDS = set(rules.TOKEN_FIELDS) - {"set"} | {"set_code", "space_id", "id"
 SUPPORTED = {COLLECTION: ("collection", {"quantity", "condition", "language", "notes"}),
              TOKENS: ("tokens", {"quantity", "notes"})}
 SHA = re.compile(r"[a-f0-9]{64}")
+BATCH_MAX = 50
+BATCH_FIELDS = ("condition", "language")
 
 
 class UndoMissing(Invalid):
@@ -385,6 +387,94 @@ def _added_row(after, summary, restore, space, label):
         raise UndoConflict("The deleted row would change during restoration. Use the Collection editor.", label)
 
 
+def _row_map(sheet, label):
+    if not sheet.exists or sheet.error is not None or sheet.strict_error is not None or sheet.csv_error is not None:
+        raise UndoConflict("The collection cannot be checked. Use the Collection editor.", label)
+    result = {}
+    for row in sheet.rows:
+        values = row.as_dict()
+        key = rules.ident(values)
+        if key in result:
+            raise UndoConflict("The collection has an ambiguous printing. Nothing was undone.", label)
+        values["quantity"] = int(values["quantity"])
+        result[key] = values
+    return result
+
+
+def restored_rows(snapshot, plan):
+    """Actual full rows looked up by identity, returned in the preview's order."""
+    found = _row_map(snapshot.collection(plan["space"]), plan["label"])
+    restored = []
+    for item in plan["rows"]:
+        key = rules.ident(item["restore"])
+        if key not in found or found[key] != item["restore"]:
+            raise UndoConflict("The restored metadata rows cannot be confirmed. Reload the collection.", plan["label"])
+        restored.append({"key": dict(zip(("set", "collector_number", "finish"), key)), "row": found[key]})
+    return restored
+
+
+def _batch_inverse(snapshot, rows, space, label):
+    from . import changes, ops_collection
+    after, summary = ops_collection.apply_rows(snapshot, space,
+        edits=[(list(rules.ident(item["current"])), item["restore"]) for item in rows], removals=(),
+        sha256=files.rendered_sha256(snapshot.collection(space)), expect_decks_revision=snapshot.decks_revision)
+    try:
+        settled = changes.prepare(snapshot, after)
+        counts = summary.counts or {}
+        if type(counts.get("edited")) is not int or counts["edited"] != len(rows) \
+                or type(counts.get("removed")) is not int or counts["removed"] != 0:
+            raise ValueError("Unexpected inverse scope")
+        before_rows = _row_map(snapshot.collection(space), label)
+        actual = _row_map(settled.collection(space), label)
+        expected = {**before_rows, **{rules.ident(item["restore"]): item["restore"] for item in rows}}
+        if actual != expected or set(settled.collections) != set(snapshot.collections) \
+                or any(settled.collection(owner) != snapshot.collection(owner) for owner in snapshot.collections if owner != space) \
+                or settled != snapshot.replace(collections=settled.collections):
+            raise ValueError("Unexpected inverse effect")
+    except Exception:
+        raise UndoConflict("The complete metadata change cannot be restored exactly. Nothing was saved.", label) from None
+    return settled, summary
+
+
+def _batch_review(change_id, space, snapshot, store):
+    reader = getattr(store, "undo_audit_batch", None)
+    raw = reader(change_id) if callable(reader) else None
+    if not isinstance(raw, list) or not 2 <= len(raw) <= BATCH_MAX:
+        raise UndoMissing()
+    # Ownership is a separate first pass. Never diagnose an own row before a
+    # later hidden/unknown row has made the entire source unavailable.
+    if any(not isinstance(row, dict) or row.get("table") != COLLECTION or row.get("op") != "UPDATE"
+           or not isinstance(row.get("before"), dict) or not isinstance(row.get("after"), dict)
+           or row["before"].get("space_id") != space or row["after"].get("space_id") != space for row in raw):
+        raise UndoMissing()
+    rows, keys, ids = [], set(), set()
+    for record in raw:
+        source, wanted, restore = _source([record], space)
+        changed = {key for key in wanted if wanted[key] != restore[key]}
+        if not changed or changed - set(BATCH_FIELDS):
+            raise UndoUnsupported("Only condition and language metadata can be undone in a batch.")
+        key, rid = rules.ident(wanted), source["id"]
+        if key in keys or rid in ids:
+            raise UndoUnsupported("A metadata batch must name each original row exactly once.")
+        keys.add(key)
+        ids.add(rid)
+        rows.append({"key": source["key"], "row_change_id": rid, "current": wanted, "restore": restore,
+                     "label": _label(COLLECTION, wanted),
+                     "fields": [{"field": field, "before": wanted[field], "after": restore[field]}
+                                for field in BATCH_FIELDS if field in changed]})
+    label = f"Metadata on {len(rows)} collection rows"
+    for item in rows:
+        if store.undo_latest(COLLECTION, item["key"]) != item["row_change_id"]:
+            raise UndoConflict("A row was touched after the selected change. Nothing was undone.", item["label"])
+        _current_row(snapshot, {"table": COLLECTION}, item["current"], space, item["label"])
+    _batch_inverse(snapshot, rows, space, label)
+    receipt = json.dumps([change_id, raw, snapshot.revision, snapshot.decks_revision], ensure_ascii=False,
+                         sort_keys=True, separators=(",", ":"))
+    return {"change_id": change_id, "kind": "collection", "space": space, "action": "batch_metadata",
+            "row_count": len(rows), "rows": rows, "label": label,
+            "expect": hashlib.sha256(receipt.encode("utf-8")).hexdigest()}
+
+
 def review(change_id, space, snapshot=None):
     """Internal current→restore plan, only after proving the entire source is in space."""
     _identifier(change_id)
@@ -394,7 +484,10 @@ def review(change_id, space, snapshot=None):
     if not callable(getattr(store, "undo_audit", None)) or not callable(getattr(store, "undo_latest", None)):
         raise UndoUnsupported("Undo is available only with the database audit trail.")
     snapshot = current() if snapshot is None else snapshot
-    source, wanted, restore = _source(store.undo_audit(change_id), space)
+    raw = store.undo_audit(change_id)
+    if isinstance(raw, list) and len(raw) > 1:
+        return _batch_review(change_id, space, snapshot, store)
+    source, wanted, restore = _source(raw, space)
     label = _label(source["table"], restore if wanted is None else wanted)
     if store.undo_latest(source["table"], source["key"]) != source["id"]:
         raise UndoConflict("This row was touched after the selected change. Nothing was undone.", label)
@@ -433,6 +526,13 @@ def apply_undo(snapshot, *, change_id, space, expect, reason=None, confirm_owned
     plan = review(change_id, space, snapshot)
     if plan["expect"] != expect:
         raise UndoConflict("The inventory or decks changed after the Undo preview. Review it again.", plan["label"])
+    if plan.get("action") == "batch_metadata":
+        after, summary = _batch_inverse(snapshot, plan["rows"], space, plan["label"])
+        return after, Summary(f"Undo change #{change_id}: restore {plan['label']}", {**summary.counts, "undo": 1},
+                              {after.collection(space).path: list(BATCH_FIELDS)},
+                              {**(summary.extra or {}), "undo_of": change_id, "space": space, "kind": "collection",
+                               "action": "batch_metadata", "row_count": plan["row_count"],
+                               "row_change_ids": [item["row_change_id"] for item in plan["rows"]]})
     removing = plan.get("action") == "remove"
     adding = plan.get("action") == "add"
     if removing:
