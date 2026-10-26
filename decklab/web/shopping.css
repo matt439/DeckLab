@@ -1,11 +1,22 @@
-/* Shopping (shopping.js): lays the shared components out. One column on a phone, under a row of links to its
-   parts; from 1000 px the deliveries on the left and the queue, the decks and the follow-ups on the right; the
-   long-term plan full width under them. */
+/* Shopping's page frame: the existing delivery/follow-up/shop views in a 560 px list pane, buying in the
+   detail pane. Stacked through 1280 px, with links to its parts; the order history stays below both panes.
+   Queue grouping, radio matching and the receipt board have their own later layout slices. */
 .shop-layout { display: grid; gap: var(--s-6); align-items: start; margin-top: var(--s-4); }
 .shop-main, .shop-side { display: grid; gap: var(--s-6); min-width: 0; align-content: start; }
 .shop-section { min-width: 0; }
-.shop-page > .shop-section, .shop-long-slot:not(:empty) { margin-top: var(--s-6); }
+.shop-page > .shop-section { margin-top: var(--s-6); }
 .shop-queue-slot:empty { display: none; }
+.shop-add-home { display: contents; }
+.shop-add-home:empty, .shop-add-casual:empty { display: none; }
+.shop-queue-controls { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--s-3); margin-bottom: var(--s-3); }
+.shop-queue-controls[hidden] { display: none; }
+.shop-queue-controls .segmented { width: 100%; max-width: 400px; min-width: 0; }
+.shop-queue-controls .segmented > button { flex: 1 1 0; min-width: 0; min-height: 44px; }
+.shop-queue-add-round { width: 44px; min-width: 44px; min-height: 44px; padding: 0; }
+.shop-queue-add-round::before { content: "+"; font: var(--fw-bold) var(--fs-row) / 1 var(--font); }
+.shop-queue-category { color: var(--ink-2); font-weight: var(--fw-bold); }
+.shop-queue-category[hidden] { display: none; }
+.shop-queue-shop-group > h3 { overflow-wrap: anywhere; }
 .shop-section-head { display: flex; align-items: center; gap: var(--s-3); margin-bottom: var(--s-2); }
 .shop-section-head h2 { margin: 0; font-size: var(--fs-lg); }
 .shop-count {
@@ -15,8 +26,7 @@
 }
 .shop-section-head h2 { scroll-margin-top: calc(var(--shell-top) + var(--s-3)); }
 
-/* The row of links to the parts: a phone's and a portrait tablet's (one column there); a wide screen shows
-   every part beside the deliveries already. */
+/* The one-column page's jump links stay available on a stacked landscape tablet too. */
 .shop-jumps ul { list-style: none; display: flex; flex-wrap: wrap; gap: var(--s-2); margin: var(--s-3) 0 0; padding: 0; }
 .shop-jumps a {
   display: inline-flex; align-items: center; gap: var(--s-2);
@@ -26,17 +36,37 @@
 }
 .shop-jumps a:hover { border-color: var(--border-strong); }
 .shop-jumps .shop-count { min-width: 0; }
-@media (min-width: 1000px) { .shop-jumps { display: none; } }
+@media (min-width: 1281px) { .shop-jumps { display: none; } }
 .shop-description { margin: 0 0 var(--s-3); color: var(--ink-2); font-size: var(--fs-sm); }
 
-/* A delivery on the way. */
-.shop-deliveries { display: grid; gap: var(--s-4); align-items: start; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); }
-.shop-delivery { display: grid; grid-template-columns: minmax(0, 1fr); min-width: 0; gap: var(--s-2); align-content: start; }
-.shop-delivery > * { margin: 0; }
+/* Deliveries are compact native disclosure rows; opening one retains its existing body and actions. */
+.shop-deliveries { min-width: 0; background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r-panel); box-shadow: var(--shadow-1); overflow: hidden; }
+.shop-delivery.panel { display: block; min-width: 0; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+.shop-delivery-summary { display: flex; align-items: center; gap: var(--s-3); min-height: 54px; padding: var(--s-1) var(--s-3);
+  list-style: none; cursor: pointer; box-shadow: inset 0 -1px 0 var(--divider); }
+.shop-delivery-summary::-webkit-details-marker { display: none; }
+.shop-delivery-summary::before { content: none; display: none; }
+.shop-delivery-summary:focus-visible { outline: 3px solid var(--focus); outline-offset: -3px; }
+.shop-delivery-summary::after { content: ""; flex: none; width: 8px; height: 8px; margin-right: var(--s-1);
+  border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; color: var(--ink-2); transform: rotate(45deg); }
+.shop-delivery[open] > .shop-delivery-summary::after { transform: rotate(225deg); }
+.shop-delivery:last-child:not([open]) > .shop-delivery-summary { box-shadow: none; }
+.shop-delivery-summary h3 { flex: 1; min-width: 0; margin: 0; font-size: var(--fs-md); line-height: var(--lh-tight); }
+.shop-delivery-title { min-width: 0; overflow-wrap: anywhere; }
 .shop-delivery-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--s-1) var(--s-3); }
-.shop-delivery-head h3 { margin: 0; font-size: var(--fs-md); overflow-wrap: break-word; hyphens: auto; }
+.shop-delivery-meta { display: block; margin-top: 2px; font-weight: var(--fw-regular); }
+.shop-delivery-body { display: grid; min-width: 0; gap: var(--s-2); padding: var(--s-3); box-shadow: inset 0 -1px 0 var(--divider); }
+.shop-delivery:not([open]) > .shop-delivery-body { display: none; }
+.shop-delivery-body > * { margin: 0; }
+.shop-delivery:last-child > .shop-delivery-body { box-shadow: none; }
 .shop-delivery .sub { font-size: var(--fs-sm); }
-.shop-delivery > .actions { margin-top: var(--s-2); }
+.shop-delivery-body > .actions { margin-top: var(--s-2); }
+@media (min-width: 1000px) { .shop-delivery-summary h3 { font-size: var(--fs-row); } }
+@media (hover: hover) and (pointer: fine) { .shop-delivery-summary:hover { background: var(--hover); } }
+.shop-delivery-summary:active { background: var(--accent-soft); }
+.shop-receive-hint { display: none; color: var(--ink-3); font-size: var(--fs-meta); }
+@media (hover: hover) and (pointer: fine) { .shop-receive-hint { display: inline; } }
 .shop-notes {
   color: var(--ink-2); font-size: var(--fs-sm); overflow-wrap: break-word;
   display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden;
@@ -53,8 +83,8 @@
 .shop-checks li + li { margin-top: var(--s-1); }
 
 /* The pictures strip: small card pictures in one row, the last one "+N". */
-.shop-strip { list-style: none; display: flex; gap: var(--s-1); min-width: 0; margin: var(--s-1) 0; padding: 0; }
-.shop-strip li { flex: 0 1 61px; min-width: 0; }
+.shop-strip { list-style: none; display: flex; gap: var(--s-1); min-width: 0; margin: var(--s-1) 0; padding: 0; overflow-x: auto; }
+.shop-strip li { flex: 0 0 44px; min-width: 0; }
 .shop-thumb {
   position: relative; display: flex; align-items: center; justify-content: center;
   width: 100%; aspect-ratio: 488 / 680; padding: 0; overflow: hidden;
@@ -63,7 +93,7 @@
 }
 .shop-thumb img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .shop-thumb:hover { border-color: var(--border-strong); }
-.shop-thumb:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.shop-thumb:focus-visible { outline: 3px solid var(--focus); outline-offset: -3px; }
 .shop-thumb-text { position: relative; padding: var(--s-1); font-size: var(--fs-xs); line-height: var(--lh-tight); text-align: center; overflow-wrap: break-word; hyphens: auto; }
 .shop-thumb-qty {
   position: absolute; left: 2px; bottom: 2px; padding: 0 var(--s-1);
@@ -105,7 +135,7 @@
 .reprint-provenance > summary { min-height: var(--tap); display: flex; align-items: center; }
 .reprint-copy { display: grid; justify-items: start; gap: var(--s-2); margin: var(--s-4) 0; }
 .reprint-copy input { max-width: 36em; width: 100%; }
-.shop-buying-slot { display: grid; gap: var(--s-6); margin-top: var(--s-6); }
+.shop-buying-slot { display: grid; gap: var(--s-6); min-width: 0; }
 .shop-buying-slot:empty { display: none; }
 .shop-missing-rows { display: grid; gap: var(--s-4); grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); }
 .shop-missing-card { min-width: 0; display: grid; align-content: start; gap: var(--s-2); }
@@ -115,13 +145,35 @@
 .shop-missing-queue p { margin: 0; }
 .shop-missing-queue li + li { margin-top: var(--s-2); }
 .shop-missing-queue .shop-reference { text-align: left; }
-.shop-store-choice { max-width: 32em; margin-bottom: var(--s-4); }
-.shop-store-fold > summary { min-height: var(--tap); display: flex; align-items: center; margin-bottom: var(--s-3); }
-.shop-store-group + .shop-store-group { margin-top: var(--s-5); }
-.shop-store-group h3 { margin: 0 0 var(--s-2); }
-.shop-store-group h4 { margin: var(--s-3) 0 var(--s-2); }
-.shop-store-row { min-width: 0; }
-.shop-store-row > .sub { margin: var(--s-1) var(--s-3); }
+.shop-match-slot:empty { display: none; }
+.shop-match-slot > .shop-clear-match { max-width: 100%; text-align: left; overflow-wrap: anywhere; }
+.shop-store-choices { display: grid; min-width: 0; margin: 0; padding: 0; border: 1px solid var(--border); border-radius: var(--r-panel);
+  background: var(--surface); overflow: hidden; }
+.shop-store-choices .shop-store-choice { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center;
+  gap: var(--s-3); min-height: 54px; max-width: none; margin: 0; padding: var(--s-2) var(--s-3); cursor: pointer;
+  box-shadow: inset 0 -1px 0 var(--divider); }
+.shop-store-choice:last-child { box-shadow: none; }
+.shop-store-choice:has(:checked) { background: var(--accent-soft); }
+.shop-store-name { min-width: 0; overflow-wrap: anywhere; font-weight: var(--fw-semibold); }
+.shop-store-counts { color: var(--ink-2); font-size: var(--fs-meta); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.shop-store-radio { accent-color: var(--accent); margin: 0; }
+.shop-store-choice:has(:focus-visible) { outline: 3px solid var(--focus); outline-offset: -3px; }
+.shop-queue-group + .shop-queue-group { margin-top: var(--s-4); }
+.shop-queue-group > h3 { margin: 0 0 var(--s-2); font-size: var(--fs-meta); font-weight: var(--fw-bold); }
+.shop-queue-group[data-queue-group="ready"] > h3 { color: var(--accent-strong); }
+.shop-queue-group[data-queue-group="waiting"] > h3 { color: var(--building-ink); }
+.shop-queue-group[data-queue-group="deferred"] > h3, .shop-queue-group[data-queue-group="other"] > h3 { color: var(--ink-2); }
+.shop-queue-row > .shop-queue-research { position: relative; padding: var(--s-2) var(--s-3); }
+.shop-checked { display: inline-block; max-width: 100%; }
+.shop-printing-visual { display: inline-flex; align-items: center; flex-wrap: wrap; gap: var(--s-1); }
+.shop-printing-visual .chip-foil { vertical-align: middle; }
+.shop-queue-research > .status { justify-self: start; }
+.shop-queue-row[data-shop-match="true"] { border-radius: var(--r-panel); background: var(--accent-soft); }
+.shop-queue-row[data-shop-match="true"] > .card-row { background: transparent; }
+.shop-queue-row[data-shop-match="true"] > .shop-queue-research { padding-left: calc(var(--s-3) + 7px + var(--s-2)); color: var(--accent-strong); }
+.shop-queue-row[data-shop-match="true"] > .shop-queue-research::before { content: ""; position: absolute; left: var(--s-3); top: var(--s-3);
+  width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
+@media (min-width: 1000px) { .shop-store-counts { font-family: var(--font-num); } }
 .shop-queue-actions { display: grid; justify-items: start; gap: var(--s-2); }
 .shop-queue-actions .menu { top: calc(100% + var(--s-1)); left: 0; }
 .shop-queue-actions .form-error { width: 100%; }
@@ -169,11 +221,89 @@
 .shop-contents-head:first-child { margin-top: 0; }
 
 @media (min-width: 1000px) {
-  .shop-layout { grid-template-columns: minmax(0, 3fr) minmax(320px, 2fr); gap: var(--s-6) var(--s-7); }
   .shop-pasts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .shop-long-slot .shop-rows { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
 }
+@media (min-width: 1281px) {
+  .shop-layout { grid-template-columns: 560px minmax(0, 1fr); gap: var(--s-6) var(--s-6); }
+}
 @media (min-width: 1600px) {
-  .shop-layout { grid-template-columns: minmax(0, 2fr) minmax(380px, 1fr); }
   .shop-pasts { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+/* One active lab table replaces the card projection. Its horizontal scroll stays inside the pane. */
+.shop-detail-pane { grid-template-columns: minmax(0, 1fr); }
+.shop-queue-slot, .shop-long-slot { min-width: 0; }
+.shop-queue-presentation { min-width: 0; }
+.shop-queue-deck > .deck-swatch, .shop-group h3 .deck-swatch { margin-right: var(--s-1); }
+.shop-queue-presentation:focus-visible, .shop-queue-row > .card-row:focus-visible { outline: 3px solid var(--focus); outline-offset: -3px; }
+.shop-queue-table-wrap { width: 100%; min-width: 0; max-width: 100%; max-height: calc(100dvh - var(--shell-top) - var(--s-8)); overflow: auto;
+  scroll-padding-top: var(--th-h); border: 1px solid var(--border); border-radius: var(--r-panel); background: var(--surface); }
+.shop-queue-table-wrap:focus-visible { outline: 3px solid var(--focus); outline-offset: -3px; }
+table.shop-queue-table { min-width: 840px; border-collapse: separate; border-spacing: 0; }
+.shop-queue-table.shop-queue-no-for { min-width: 750px; }
+table.shop-queue-table thead th { top: 0; padding-top: 0; padding-bottom: 0; }
+table.shop-queue-table tbody tr.group-row { height: var(--th-h); }
+table.shop-queue-table tbody tr.group-row > th { padding-top: 0; padding-bottom: 0; }
+table.shop-queue-table :is(th, td) { padding: 0 var(--s-1); }
+.shop-queue-table td { height: var(--row-h); vertical-align: middle; }
+table.shop-queue-table .shop-queue-lab-row > td { border-bottom: 0; box-shadow: inset 0 -1px 0 var(--divider); }
+.shop-queue-table .shop-q-head-name { width: 140px; }
+.shop-queue-table .shop-q-head-printing { width: 156px; }
+.shop-queue-table .shop-q-head-for { width: 90px; }
+.shop-queue-table .shop-q-head-qty { width: 40px; }
+.shop-queue-table .shop-q-head-price { width: 65px; }
+.shop-queue-table .shop-q-head-shop { width: 80px; }
+.shop-queue-table .shop-q-head-stock { width: 90px; }
+.shop-queue-table .shop-q-head-checked { width: 86px; }
+.shop-queue-table .shop-q-head-actions { width: 144px; }
+.shop-queue-table .shop-q-name { position: relative; }
+.shop-q-name > .card-row { display: flex; gap: var(--s-2); width: 100%; min-width: 0; min-height: var(--row-h); padding: 0;
+  border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+.shop-q-name:has(.shop-q-more) > .card-row { padding-right: var(--btn-h); }
+.shop-q-name .card-row > :is(.thumb, .thumb-missing) { flex: none; width: 22px; height: 30px; min-width: 0; object-fit: cover; }
+.shop-q-name .card-row > .name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-row); }
+.shop-q-name .card-row :is(.qty, small, .card-row-chips) { display: none; }
+.shop-q-name > .card-row > :last-child:not(.name) { display: none; }
+.shop-q-more { position: absolute; right: 0; top: 50%; transform: translateY(-50%); min-width: var(--btn-h); min-height: var(--btn-h); padding: 0; }
+.shop-queue-table .shop-queue-deck { display: block; height: var(--row-h); min-height: var(--row-h); line-height: var(--row-h);
+  padding: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.shop-q-clip, .shop-q-printing-line { display: block; min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.shop-q-printing { font-variant-numeric: tabular-nums; }
+.shop-q-printing-line { line-height: 16px; }
+.shop-q-printing-visual { display: flex; align-items: center; gap: var(--s-1); min-width: 0; max-width: 100%; height: 16px; overflow: hidden; }
+.shop-q-printing-visual .shop-exact-tag, .shop-q-printing-kind { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.shop-q-printing-visual .shop-exact-tag { margin-right: 0; }
+.shop-q-printing-number { flex: none; }
+.shop-q-printing-visual .chip-foil { flex: none; height: 16px; min-height: 0; padding: 0 var(--s-1); gap: var(--s-1); font-size: var(--fs-meta); line-height: 16px; }
+.shop-exact-tag { display: inline-block; padding: 0 2px; margin-right: 3px; box-shadow: inset 0 0 0 1px var(--ink-4);
+  font: var(--fw-semibold) var(--fs-kbd) / 16px var(--font-mono); white-space: nowrap; }
+.shop-q-reason { display: block; color: var(--building-ink); font-size: var(--fs-meta); line-height: 14px; }
+.shop-q-shop { position: relative; }
+.shop-q-checked { font: var(--fs-meta) var(--font-num); white-space: nowrap; }
+.shop-queue-table :is(.shop-q-qty, .shop-q-price) { font: var(--fw-semibold) var(--fs-cell-num) var(--font-num); text-align: right; }
+.shop-q-stock .status { max-width: 100%; padding: 2px var(--s-1); font-size: var(--fs-meta); }
+.shop-q-stock .status::before { display: none; }
+.shop-queue-table .shop-queue-actions { gap: 0; }
+.shop-queue-table .shop-queue-actions > .actions { flex-wrap: nowrap; gap: var(--s-1); }
+.shop-queue-table .shop-queue-actions .btn { padding-right: 6px; padding-left: 6px; gap: var(--s-1); white-space: nowrap; }
+.shop-queue-table .shop-queue-actions .menu { position: fixed; max-height: calc(100vh - 16px); overflow: auto; z-index: 30; }
+.shop-queue-table .shop-queue-actions .form-error { white-space: normal; }
+.shop-queue-table button:focus-visible, .shop-queue-table a:focus-visible { outline: 3px solid var(--focus); outline-offset: -3px; }
+.shop-queue-table :is(button, a) { scroll-margin-top: calc(var(--shell-top) + var(--th-h) + var(--s-2)); scroll-margin-bottom: var(--s-2); }
+.shop-queue-table tr[data-shop-match="true"] > td { background: var(--accent-soft); }
+.shop-queue-table tr[data-shop-match="true"] > .shop-q-shop { padding-left: calc(var(--s-1) + 7px + var(--s-1)); color: var(--accent-strong); font-weight: var(--fw-bold); }
+.shop-queue-table tr[data-shop-match="true"] > .shop-q-shop::before { content: ""; position: absolute; left: var(--s-1); top: 50%; transform: translateY(-50%);
+  width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
+.shop-queue-table .group-row[data-queue-group="ready"] > th { color: var(--accent-strong); }
+.shop-queue-table .group-row[data-queue-group="waiting"] > th { color: var(--building-ink); }
+.shop-q-extra[hidden] { display: none; }
+.shop-queue-table .shop-q-extra > td { height: auto; padding: var(--s-3); background: var(--surface-2); }
+.shop-q-extra-body { display: grid; gap: var(--s-3); min-width: 0; overflow-wrap: anywhere; }
+.shop-q-extra-body > p { margin: 0; white-space: pre-wrap; }
+@media (pointer: coarse) {
+  .shop-queue-table .shop-q-head-actions { width: 150px; }
+  table.shop-queue-table { min-width: 890px; }
+  .shop-queue-table.shop-queue-no-for { min-width: 800px; }
+  .shop-q-name .card-row > :is(.thumb, .thumb-missing) { width: 30px; height: 42px; }
 }

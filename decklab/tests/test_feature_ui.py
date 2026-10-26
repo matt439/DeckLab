@@ -50,9 +50,9 @@ class FeatureUiTests(unittest.TestCase):
             quantity: 1, notes: '', ...row}).querySelector('.col-cell-meta').textContent;
           assert(!meta({condition: 'NM', language: 'en'}).includes('NM'));
           assert(!meta({condition: 'NM', language: 'en'}).includes('en'));
-          assert(meta({condition: 'LP', language: 'en'}).includes('LP'));
-          assert(meta({condition: '', language: ''}).includes('Condition ?'));
-          assert(meta({condition: '', language: ''}).includes('Language ?'));
+          assert(meta({condition: 'LP', language: 'en'}).includes('Lightly Played'));
+          assert(meta({condition: '', language: ''}).includes('Condition not recorded'));
+          assert(meta({condition: '', language: ''}).includes('Language not recorded'));
           // The "not recorded" choice is unticked when its filter is reset (no such rows any more).
           const box = el('input', {type: 'checkbox'}); box.checked = true;
           const rows = {list: el('div'), rows: [{name: 'Alpha', set: 'fdn', collector_number: '1', finish: 'nonfoil',
@@ -87,6 +87,7 @@ class FeatureUiTests(unittest.TestCase):
 
     def test_assembly_verified_single_sided_token_label(self):
         self.run_js("""
+          window.matchMedia('(min-width: 1000px)').matches = true;
           clear(main);
           const deck = {id:'casual/a',title:'A',version:'target',sleeves:null,kit:null,sleeves_need:null,steps:[],
             basics:[],returns:[],tokens:null};
@@ -100,6 +101,7 @@ class FeatureUiTests(unittest.TestCase):
     def test_assembly_notes_decks_in_the_same_sleeves(self):
         # E8-S20: decks chosen together in one design of sleeves get a note, never a warning box.
         self.run_js("""
+          window.matchMedia('(min-width: 1000px)').matches = true;
           clear(main);
           const deck = (id, title) => ({id, title, version:'target', sleeves:null, kit:null, sleeves_need:null,
             need:{}, current:[], basics:[], steps:[], returns:[], tokens:null});
@@ -123,6 +125,7 @@ class FeatureUiTests(unittest.TestCase):
 
     def test_assembly_kit_row_ticks_and_short_warning(self):
         self.run_js("""
+          window.matchMedia('(min-width: 1000px)').matches = true;
           clear(main);
           const sleeves = {value:'ds-black',id:'ds-black',kind:'sleeves',state:'linked',quantity:60,image_url:null,
             label:'Dragon Shield Matte (black)'};
@@ -155,6 +158,7 @@ class FeatureUiTests(unittest.TestCase):
 
     def test_assembly_not_recorded_sleeves_on_a_built_deck_open_the_picker(self):
         self.run_js("""
+          window.matchMedia('(min-width: 1000px)').matches = true;
           clear(main);
           const picked = [];
           kitPicker = (opts) => { picked.push(opts); };
@@ -171,6 +175,7 @@ class FeatureUiTests(unittest.TestCase):
 
     def test_packing_plan_steps_tiles_progress_and_shared_ticks(self):
         self.run_js("""
+          window.matchMedia('(min-width: 1000px)').matches = true;
           clear(main);
           const saved = {};
           window.localStorage = {getItem: k => (k in saved ? saved[k] : null), setItem: (k, v) => { saved[k] = String(v); },
@@ -185,9 +190,14 @@ class FeatureUiTests(unittest.TestCase):
             decks:[deck],rows:[],ready:false,counts_confirmed:true,unresolved:[],warnings:[],note:'A plan.',token_note:'',
             totals:{waiting:1,missing:1},tokens:[],token_plan:[],cards:{Elves:card('Elves'),Bolt:card('Bolt'),Forest:card('Forest')}};
           drawAssembly(data, routeToken); await packingSettle();
-          const steps = main.querySelectorAll('.pack-step').map(s => s.querySelector('h3').textContent);
-          same(steps, ['1Sleeves', '2Pull from storage (2 cards)', '3Move from other decks (1 card)',
-            '4Basic lands (20 cards)', '5Put back (1 card)']);
+          const steps = main.querySelectorAll('.pack-step');
+          same(steps.map(s => s.querySelector('.pack-step-n').textContent), ['1','2','3','4','5']);
+          assert(steps.every(s => s.querySelector('.pack-step-n').getAttribute('aria-hidden') === 'true'));
+          same(steps.map(s => s.querySelector('.pack-step-spoken').textContent),
+            ['Step 1. ', 'Step 2. ', 'Step 3. ', 'Step 4. ', 'Step 5. ']);
+          const titles = ['Sleeves', 'Pull from storage (2 cards)', 'Move from other decks (1 card)',
+            'Basic lands (20 cards)', 'Put back (1 card)'];
+          assert(steps.every((s, i) => s.querySelector('h3').textContent.endsWith(titles[i])));
           // Kept and still-waiting cards are folded, never ticks.
           const folds = main.querySelectorAll('.pack-fold');
           assert(folds[0].textContent.includes('Already in this deck (1 card)'));
@@ -203,7 +213,7 @@ class FeatureUiTests(unittest.TestCase):
           // back when it's drawn again.
           const progress = () => main.querySelector('.pack-progress-long').textContent;
           assert.equal(progress(), 'Pulled 0 of 24 cards');
-          assert.equal(main.querySelector('.pack-progress-short').textContent, 'Pulled 0/24');
+          assert.equal(main.querySelector('.pack-copy-figure').textContent, '0 / 24');
           const clearTicks = () => main.querySelector('.pack-clear');
           assert.equal(clearTicks().getAttribute('aria-label'), 'Clear ticks');
           assert.equal(clearTicks().disabled, true);
@@ -240,6 +250,7 @@ class FeatureUiTests(unittest.TestCase):
 
     def test_packing_plan_decks_come_from_a_checklist(self):
         self.run_js("""
+          window.matchMedia('(min-width: 1000px)').matches = true;
           clear(main);
           const posts = [];
           apiWrite = async (path, body) => { posts.push([path, body]); return {decks:[],rows:[],ready:false,
@@ -255,17 +266,19 @@ class FeatureUiTests(unittest.TestCase):
           // Built and being built are open; ideas and products are folded.
           same(main.querySelectorAll('.pack-group').map(g => g.tag), ['div', 'div', 'details', 'details']);
           const chooser = main.querySelector('.pack-choose');
-          assert.equal(chooser.querySelector('.pack-show-plan').hidden, true);
-          // On a phone the preset folds the checklist, so the plan comes up.
-          window.matchMedia('(max-width: 999px)').matches = true;
-          main.querySelectorAll('button').find(b => b.textContent === 'Built and being built').click();
-          assert.equal(chooser.open, false);
-          window.matchMedia('(max-width: 999px)').matches = false;
-          chooser.open = true;
+          assert.equal(chooser.tag,'section');assert(!main.querySelector('.pack-show-plan'));
+          // On a phone the same chooser moves into a sheet; choosing a preset keeps it open.
+          const media=window.matchMedia('(min-width: 1000px)');media.matches=false;media.fire('change');
+          main.querySelector('.pack-chooser-launcher').click();
+          const sheet=document.body.querySelector('dialog');assert(sheet.contains(chooser));
+          chooser.querySelectorAll('button').find(b => b.textContent === 'Built and being built').click();
+          assert(sheet.isConnected);assert(sheet.contains(chooser));
           flushTimers(); await null; await null;
           same(posts.at(-1), ['/api/assembly/preview', {decks:[{id:'casual/a',version:'target'},{id:'casual/b',version:'target'}]}]);
-          assert(main.querySelector('.pack-choose-count').textContent.includes('2 chosen'));
-          assert.equal(chooser.querySelector('.pack-show-plan').hidden, false);
+          assert(chooser.querySelector('.pack-choose-count').textContent.includes('2 chosen'));
+          sheet.querySelector('.pack-show-plan').click();assert(!sheet.isConnected);
+          assert(!chooser.isConnected);assert(document.activeElement===main.querySelector('.pack-chooser-launcher'));
+          media.matches=true;media.fire('change');assert(main.contains(chooser));
           // A deck with two lists offers them once it's chosen.
           const play = main.querySelectorAll('button').find(b => b.textContent === 'Play-now list');
           play.click(); flushTimers(); await null; await null;

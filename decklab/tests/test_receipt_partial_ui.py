@@ -17,7 +17,7 @@ class PartialReceiptTests(unittest.TestCase):
           await previewDelivery(view);assert.equal(calls.length,0);
           assert(body().includes('tick at least one card that arrived'));closeReceiptSheets();
           rcptTick(view,comp,comp.rows[1],true);
-          assert.equal(view.primary.textContent,'Confirm: 1 selected checked');
+          assert.equal(view.primary.textContent,'Record arrival');assert.equal(view.primary.getAttribute('aria-disabled'),'false');
           assert.equal(rcptProgress(view).blanks,0);assert(view.blanks.hidden);
           await previewDelivery(view);assert.equal(calls.length,1);
           const sent=calls[0][1].components[0];same(sent.take,[{row:2}]);
@@ -121,7 +121,7 @@ class PartialReceiptTests(unittest.TestCase):
           let finish;apiWrite=()=>new Promise(resolve=>finish=resolve);const preparing=previewDelivery(view);
           rcptTick(view,comp,comp.rows[0],true);assert(!comp.rows[0].ticked,'busy UI cannot edit selection');
           comp.rows[0].ticked=true;finish(ready);await preparing;
-          assert.equal(view.preview,null);assert(!body().includes('Record arrival'));
+          assert.equal(view.preview,null);assert(!view.previewSheet);
           assert(!view.primary.disabled);
         """)
 

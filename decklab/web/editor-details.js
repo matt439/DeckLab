@@ -28,13 +28,13 @@ function detailsPart() {
     ed.dom.more = el("div", { class: "field-grid" });
     ed.dom.detailsSummary = el("span", { class: "details-summary" });
     part = el("section", { class: "edit-details edit-details-quick", "aria-label": "Deck details" }, ed.dom.details,
-      el("details", { class: "panel edit-details edit-more-details", open: ed.detailsOpen || null,
+      el("details", { class: "panel edit-details edit-more-details edit-details-fold", open: ed.detailsOpen || null,
         ontoggle: (e) => { ed.detailsOpen = e.currentTarget.open; } },
       el("summary", {}, el("span", { class: "details-line" },
         el("span", { class: "details-title", text: "Deck details" }), ed.dom.detailsSummary)), ed.dom.more));
   } else {
     ed.dom.detailsSummary = el("span", { class: "details-summary" });
-    part = el("details", { class: "panel edit-details", open: ed.detailsOpen || null,
+    part = el("details", { class: "panel edit-details edit-details-fold", open: ed.detailsOpen || null,
       ontoggle: (e) => { ed.detailsOpen = e.currentTarget.open; } },
     el("summary", {}, el("span", { class: "details-line" },
       el("span", { class: "details-title", text: "Deck details" }), ed.dom.detailsSummary)),
@@ -251,6 +251,9 @@ function drawKitNeeds() {
  * other decks have only gets the focus (Enter or Space picks it, after the warning), so arrowing past it
  * never opens the warning. */
 function kitArrow(e, key) {
+  if (!editorKeyboardCurrent() || editor.saving || editor.asking || editor.leaving
+    || editorKeyIgnored(e) || keyboardMenuOpen() || document.querySelector("dialog[open]")
+    || e.ctrlKey || e.metaKey || e.altKey || e.shiftKey || !editor?.dom?.page?.contains(e.currentTarget)) return;
   const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key];
   if (!step) return;
   const tiles = [...e.currentTarget.querySelectorAll(".kit-tile")].filter((t) => !t.disabled);

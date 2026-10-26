@@ -236,7 +236,9 @@ function openSwapsFromRoute(params, id) {
   const ed = editor;
   const swap = params.get("swap"), tab = params.get("tab");
   if (!ed || ed.mode !== "edit" || ed.id !== id || (!swap && tab !== "notes")) return;
-  history.replaceState(history.state, "", editHref(ed.id, ed.version));
+  const previousHash = location.hash, canonicalHash = editHref(ed.id, ed.version);
+  history.replaceState(history.state, "", canonicalHash);
+  canonicalEditorPaneHash(ed, previousHash, canonicalHash);
   if (tab === "notes") {
     ed.tab = "notes";
     drawMain();

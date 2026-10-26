@@ -79,10 +79,9 @@ class AdaptivePlayTests(unittest.TestCase):
         self.assertEqual([f["kind"] for f in found], ["win", "loss", "win", "win", "even", "open", "none", "win", "even"])
 
     @unittest.skipUnless(NODE, "needs Node.js")
-    def test_pairs_and_the_matrix(self):
+    def test_pairs_choose_the_current_lists_before_the_engine(self):
         # One entry per pair (MU-01): a pair's best result is today's lists with today's engine, then today's lists;
-        # the matrix shows each row deck's win rate (the other side's is 1 - the first's), faded for an older list,
-        # with "+" in an empty cell only while the viewer may start runs.
+        # choosing the opponent table must not change that rule or lose the pair's earlier results.
         side = lambda i, t, cur=True: {"id": i, "version": "target", "title": t, "current": cur}
         today = {"kind": "decklab", "current": True}
         old = {"kind": "decklab", "current": False}
@@ -93,25 +92,110 @@ class AdaptivePlayTests(unittest.TestCase):
              "winrate": {"value": 0.8}, "games": 400, "engine": old, "updated": "2026-10-04T10:00:00"},
             {"key": "3" * 64, "format": "Constructed", "sides": [side("casual/a", "A"), side("casual/b", "B")],
              "winrate": {"value": 0.6}, "games": 400, "engine": old, "updated": "2026-10-03T10:00:00"}]
-        decks = [{"id": "casual/a", "title": "A", "version": "target"}, {"id": "casual/b", "title": "B", "version": "target"},
-                 {"id": "casual/c", "title": "C", "version": "target"}]
-        stub = ("globalThis.mayStartRuns = () => globalThis.may; globalThis.fitWidth = () => {}; "
-                "const walk = (n) => [n, ...(n.children || []).flatMap(walk)]; ")
-        pairs, cells, blocked = _run_page([
+        pairs = _run_page([
             f"(() => {{ const p = pairsOf({json.dumps(results)}); const [only] = [...p.values()]; "
-            f"return JSON.stringify([p.size, only.latest.key[0], only.earlier.map((i) => i.key[0]), only.newer]); }})()",
-            f"(() => {{ {stub} may = true; const t = matchupMatrix({json.dumps(decks)}, pairsOf({json.dumps(results)}), "
-            f"'Constructed'); return walk(t).filter((n) => n.tag === 'td').map((c) => c.getAttribute('class') + ':' + c.textContent).join('|'); }})()",
-            f"(() => {{ {stub} may = false; const t = matchupMatrix({json.dumps(decks)}, pairsOf({json.dumps(results)}), "
-            f"'Constructed'); return walk(t).filter((n) => n.tag === 'td').map((c) => c.textContent).join('|'); }})()"])
+            f"return JSON.stringify([p.size, only.latest.key[0], only.earlier.map((i) => i.key[0]), only.newer]); }})()"])[0]
         self.assertEqual(json.loads(pairs), [1, "2", ["1", "3"], True])     # B's 80% with today's lists wins
-        self.assertEqual(cells.split("|"), [
-            "mu-corner:Row deck's win rate against each column deck",
-            "mu-cell is-self:Same deck", "mu-cell mu-h-loss3:20%", "mu-cell is-empty:+",
-            "mu-cell mu-h-win3:80%", "mu-cell is-self:Same deck", "mu-cell is-empty:+",
-            "mu-cell is-empty:+", "mu-cell is-empty:+", "mu-cell is-self:Same deck"])
-        self.assertNotIn("+", blocked)
-        self.assertIn("Not played", blocked)
+
+    @unittest.skipUnless(NODE, "needs Node.js")
+    def test_opponent_views_share_sorted_results_and_exact_perspective(self):
+        side = lambda name, current=True: {"id": f"casual/{name.lower()}", "title": name,
+                                           "version": "target", "current": current}
+        def result(key, a, b, value, low, high, **extra):
+            return {"key": key * 64, "format": "Constructed", "sides": [a, b], "games": 400,
+                    "winrate": {"value": value, "low": low, "high": high}, "engine": {"current": True},
+                    "updated": "2026-10-05T10:00:00", **extra}
+        decks = [side(name) for name in ("A", "B", "C", "D", "E", "Z")]
+        results = [result("1", side("B"), side("A"), .8, .7, .9),
+                   result("2", side("A"), side("C"), .65, .6, .7),
+                   result("3", side("A"), side("D"), .99, .98, 1, not_meaningful=True),
+                   result("4", side("A"), side("E", False), .5, .45, .55),
+                   result("5", side("A"), side("Hidden"), .9, .8, 1),
+                   result("6", side("A"), side("Z"), .9, .8, 1, format="Commander")]
+        script = f"""
+          const decks={json.dumps(decks)}, pairs=pairsOf({json.dumps(results)});
+          const {{entries,others}}=matchupEntries(decks[0],decks,pairs,'Constructed');
+          const walk=n=>[n,...(n.children||[]).flatMap(walk)];
+          const table=matchupOpponentTable(entries), links=matchupOpponentLinks(entries);
+          const tableNode=walk(table).find(n=>n.tag==='table');
+          const thead=walk(tableNode).find(n=>n.tag==='thead');
+          const tbody=walk(tableNode).find(n=>n.tag==='tbody');
+          const anchors=n=>walk(n).filter(n=>n.tag==='a');
+          return JSON.stringify({{
+            entries:entries.map(e=>[e.side.them.id,e.side.rate,e.side.href,!!e.muted,e.olderWords]),
+            others:others.map(d=>d.id),tableTag:tableNode.tag,
+            headers:walk(thead).filter(n=>n.tag==='th').map(n=>n.textContent),
+            tableLinks:anchors(tbody).map(n=>[n.textContent,n.getAttribute('href')]),
+            linkTag:links.tag,linkRows:links.children.map(n=>n.tag),
+            links:anchors(links).map(n=>[n.getAttribute('href'),n.getAttribute('aria-label')]),
+            tableWords:table.textContent,linkWords:links.textContent,
+            figureCounts:[table,links].map(n=>walk(n).filter(n=>(n.getAttribute('class')||'').split(' ').includes('wr')).length),
+            decorativeBars:[table,links].map(n=>walk(n).filter(n=>(n.getAttribute('class')||'').split(' ').includes('range-bar'))
+              .every(n=>n.getAttribute('aria-hidden')==='true'))
+          }});
+        """
+        answer = json.loads(_run_page([f"(() => {{{script}}})()"])[0])
+        self.assertEqual([row[0] for row in answer["entries"]], ["casual/c", "casual/e", "casual/b", "casual/d"])
+        reversed_rate = answer["entries"][2][1]
+        for key, expected in (("value", .2), ("low", .1), ("high", .3)):
+            self.assertAlmostEqual(reversed_rate[key], expected)
+        self.assertEqual(answer["others"], ["casual/z"])
+        self.assertEqual(answer["tableTag"], "table")
+        self.assertEqual(answer["headers"], ["Opponent", "Win rate", "95% range", "Range", "Games", "Flag"])
+        self.assertEqual([row[0] for row in answer["tableLinks"]], ["C", "E", "B", "D"])
+        self.assertEqual([row[1] for row in answer["tableLinks"]], [row[0] for row in answer["links"]])
+        self.assertEqual(answer["linkTag"], "ul")
+        self.assertEqual(answer["linkRows"], ["li"] * 4)
+        self.assertEqual(answer["figureCounts"], [4, 4])
+        self.assertEqual(answer["decorativeBars"], [True, True])
+        for href, label in answer["links"]:
+            self.assertTrue(href.startswith("#/matchup?"), href)
+            self.assertEqual(label.lower().count("win rate"), 1, label)
+            self.assertNotIn("400", label)       # metadata is visible, not repeated in the row's spoken name
+            self.assertNotIn("2026", label)
+        self.assertIn("65 percent", answer["links"][0][1])
+        self.assertIn("range 60 to 70", answer["links"][0][1])
+        self.assertIn("changed since", answer["links"][1][1].lower())
+        self.assertIn("not meaningful", answer["links"][-1][1].lower())
+        for words in (answer["tableWords"], answer["linkWords"]):
+            self.assertIn("Not meaningful", words)
+            self.assertNotIn("strong against", words)
+            self.assertNotIn("weak against", words)     # raw win rates do not supply field residual flags
+
+    @unittest.skipUnless(NODE, "needs Node.js")
+    def test_opponent_old_engine_links_and_unplayed_targets_respect_run_gate(self):
+        data = {"key": "e" * 64, "format": "Constructed", "games": 100,
+                "sides": [{"id": "casual/a", "title": "A", "version": "target", "current": True},
+                          {"id": "casual/b", "title": "B", "version": "target", "current": True}],
+                "winrate": {"value": .6, "low": .5, "high": .7}, "engine": {"current": False}}
+        script = f"""
+          const item={json.dumps(data)},decks=[...item.sides,{{id:'casual/c',title:'C',version:'target'}}];
+          const {{entries,others}}=matchupEntries(decks[0],decks,pairsOf([item]),'Constructed');
+          const walk=n=>[n,...(n.children||[]).flatMap(walk)];
+          const table=matchupOpponentTable(entries),links=matchupOpponentLinks(entries);
+          const tagged=matchupEntries(decks[0],decks,pairsOf([item]),'Constructed',true).entries;
+          globalThis.mayStartRuns=()=>true;
+          const allowed=notPlayedLine(decks[0],others);
+          globalThis.mayStartRuns=()=>false;
+          const blocked=notPlayedLine(decks[0],others);
+          return JSON.stringify([walk(table).filter(n=>n.tag==='a').map(n=>n.getAttribute('href')),
+            walk(links).filter(n=>n.tag==='a').map(n=>n.getAttribute('href')),
+            walk(allowed).filter(n=>n.tag==='a').map(n=>n.getAttribute('href')),
+            walk(blocked).filter(n=>n.tag==='a').length,blocked.textContent,notPlayedLine(decks[0],[]),
+            table.textContent,matchupOpponentTable(tagged).textContent,matchupOpponentLabel(tagged[0])]);
+        """
+        table, links, allowed, blocked_links, blocked_words, empty, plain, tagged, label = json.loads(
+            _run_page([f"(() => {{{script}}})()"])[0])
+        self.assertEqual(table, [f"#/matchup?key={'e' * 64}"])
+        self.assertEqual(links, table)
+        self.assertEqual(len(allowed), 1)
+        self.assertIn("b=casual%2Fc", allowed[0])
+        self.assertEqual(blocked_links, 0)
+        self.assertIn("Not played yet against: C", blocked_words)
+        self.assertIsNone(empty)
+        self.assertNotIn("Earlier engine", plain)      # an all-earlier list explains it once above the rows
+        self.assertIn("Earlier engine", tagged)        # mixed-engine lists mark the older exception
+        self.assertIn("earlier engine", label)
 
     @unittest.skipUnless(NODE, "needs Node.js")
     def test_the_matchups_page_works_while_the_settings_cant_be_read(self):
@@ -271,7 +355,7 @@ class DeckMatchupTests(unittest.TestCase):
 
 @unittest.skipUnless(NODE, "Node.js isn't installed")
 class ReviewFixTests(unittest.TestCase):
-    """The stage-2 review's fixes on the Matchups pages, run (_run_page): the matrix's odd cells, which result
+    """The stage-2 review's fixes on the Matchups pages, run (_run_page): unusual results, which result
     stands for a pair, sorting, short names, the deck page's links and lines, and the play sheet's gate."""
 
     STUB = ("globalThis.mayStartRuns = () => true; globalThis.fitWidth = () => {}; "
@@ -285,46 +369,54 @@ class ReviewFixTests(unittest.TestCase):
         return dict({"key": key * 64, "format": "Constructed", "sides": [a, b], "winrate": {"value": value},
                      "games": 400, "engine": {"kind": "decklab", "current": engine}, "updated": updated}, **more)
 
-    def test_the_matrix_takes_a_result_with_no_win_rate_and_prefers_planned_lists(self):
+    def test_opponent_views_take_a_result_with_no_win_rate_and_prefer_planned_lists(self):
         a, b, c = (self.side("casual/a", "A"), self.side("casual/b", "B"), self.side("casual/c", "C"))
         decks = [{"id": d["id"], "title": d["title"], "version": "target"} for d in (a, b, c)]
         results = [
             # A newer result of A's play-now list, and an older one of both planned lists: the planned one stands.
             self.result("1", self.side("casual/a", "A", "owned"), b, 0.9),
             self.result("2", a, b, 0.4, engine=False, updated="2026-10-01T10:00:00"),
-            # Only a play-now list against C: shown, faded and said so.
+            # Only a play-now list against C: shown, marked and said so.
             self.result("3", self.side("casual/a", "A", "owned"), c, 0.7),
-            # Every game a draw: no win rate, and the matrix still draws.
+            # Every game a draw: no win rate, and the opponent views still draw.
             self.result("4", b, c, None)]
-        matrix = f"matchupMatrix({json.dumps(decks)}, pairsOf({json.dumps(results)}), 'Constructed')"
-        cells, labels = _run_page([
-            f"(() => {{ {self.STUB} return walk({matrix}).filter((n) => n.tag === 'td').slice(1).map((c) => "
-            "c.getAttribute('class') + ':' + c.textContent).join('|'); })()",
-            f"(() => {{ {self.STUB} return walk({matrix}).filter((n) => n.tag === 'a').map((c) => "
-            "c.getAttribute('aria-label')).join('|'); })()"])
-        cells = cells.split("|")
-        self.assertEqual(cells[1], "mu-cell mu-h-loss1:40%")                 # A vs B: the planned lists' 40%
-        self.assertEqual(cells[2], "mu-cell mu-h-win2 is-older:70%")         # A vs C: only a play-now list
-        self.assertEqual(cells[5], "mu-cell mu-h-none:?")                    # B vs C: no winner counted
-        self.assertIn("A against C (A (play-now) vs C): favourite, wins 70%, played with a play-now list", labels)
-        self.assertIn("B against C: no winner counted yet", labels)
+        model = f"matchupEntries({json.dumps(a)}, {json.dumps(decks)}, pairsOf({json.dumps(results)}), 'Constructed')"
+        entries, labels, unknown = _run_page([
+            f"(() => {{ const {{entries}}={model}; return JSON.stringify(entries.map(e=> "
+            "[e.side.them.id,e.side.rate.value,e.side.href,e.olderWords])); })()",
+            f"(() => {{ {self.STUB} const {{entries}}={model}; return walk(matchupOpponentLinks(entries))"
+            ".filter(n=>n.tag==='a').map(n=>n.getAttribute('aria-label')).join('|'); })()",
+            f"(() => {{ {self.STUB} const {{entries}}=matchupEntries({json.dumps(b)}, {json.dumps(decks)}, "
+            f"pairsOf({json.dumps(results)}), 'Constructed'); const list=matchupOpponentLinks(entries); "
+            "return JSON.stringify([matchupOpponentTable(entries).textContent,walk(list).filter(n=>n.tag==='a')"
+            ".map(n=>n.getAttribute('aria-label'))]); })()"])
+        entries = json.loads(entries)
+        self.assertEqual([(row[0], row[1]) for row in entries], [("casual/c", .7), ("casual/b", .4)])
+        self.assertIn("play-now", entries[0][3])
+        self.assertEqual(entries[1][2], f"#/matchup?key={'2' * 64}")
+        self.assertIn("play-now", labels)
+        unknown_words, unknown_labels = json.loads(unknown)
+        self.assertIn("?", unknown_words)
+        self.assertRegex(unknown_labels[-1].lower(), r"not known|no winner")
 
-    def test_meaningless_results_sort_last_and_the_key_explains_the_dash(self):
+    def test_meaningless_results_sort_last_and_say_why(self):
         a, b, c = (self.side("commander/a", "A"), self.side("commander/b", "B"), self.side("commander/c", "C"))
         decks = [{"id": d["id"], "title": d["title"], "version": "target"} for d in (a, b, c)]
         results = [dict(self.result("1", a, b, 0.89, not_meaningful=True), format="Commander"),
                    dict(self.result("2", a, c, 0.6), format="Commander")]
         pairs = f"pairsOf({json.dumps(results)})"
-        listed, key, plain = _run_page([
+        listed, table, links = _run_page([
             f"(() => {{ {self.STUB} return deckMatchupList({json.dumps(decks[0])}, {json.dumps(decks)}, {pairs}, "
             "'Commander'); })()",
-            f"(() => {{ {self.STUB} const t = matchupMatrix({json.dumps(decks)}, {pairs}, 'Commander'); "
-            "t.querySelector = () => walk(t).find((n) => (n.getAttribute('class') || '').includes('is-muted')); "
-            "return matrixKey(t); })()",
-            f"(() => {{ {self.STUB} const t = el('div'); t.querySelector = () => null; return matrixKey(t); }})()"])
+            f"(() => {{ const {{entries}}=matchupEntries({json.dumps(decks[0])}, {json.dumps(decks)}, {pairs}, "
+            "'Commander'); return matchupOpponentTable(entries); })()",
+            f"(() => {{ {self.STUB} const {{entries}}=matchupEntries({json.dumps(decks[0])}, {json.dumps(decks)}, {pairs}, "
+            "'Commander'); return JSON.stringify(walk(matchupOpponentLinks(entries)).filter(n=>n.tag==='a')"
+            ".map(n=>n.getAttribute('aria-label'))); })()"])
         self.assertLess(listed.index("vs C"), listed.index("vs B"))          # the real 60% before the 89% that means nothing
-        self.assertIn("Means nothing: a commander Forge never casts", key)
-        self.assertNotIn("Means nothing", plain)
+        self.assertLess(table.index("C"), table.index("B"))
+        self.assertIn("Not meaningful", table)
+        self.assertIn("not meaningful", json.loads(links)[-1].lower())
         self.assertNotIn("Earlier engine", listed)
 
     def test_short_names_stay_apart(self):
@@ -367,7 +459,7 @@ class ReviewFixTests(unittest.TestCase):
         refresh = sheet[sheet.index("function refresh()"):sheet.index("async function submit")]
         # A deck or run choice changed after syncRunControls disabled Start must not enable it again.
         self.assertIn("start.disabled = (data.forge || {}).ready === false || (!running && !runsAllowed());", refresh)
-        # Opened from the Commander matrix, it starts with a Commander deck; and the times are the lists' own.
+        # Opened from the Commander opponent view, it starts with a Commander deck; and the times are the lists' own.
         self.assertIn("playableDecks(library).find((d) => deckFormat(d) === format)", sheet)
         self.assertIn('games.setEstimates(answer.estimates || null, answer.format === "Commander")', sheet)
         self.assertIn("openPlaySheet(library, () => data, token, {}, view.format)", _function(script, "drawMatchups"))

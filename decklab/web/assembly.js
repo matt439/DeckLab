@@ -35,39 +35,48 @@ function drawAssembly(data, token) {
   view.root = el("div", { class: "pack-page" });
   view.results = el("div", { class: "pack-results", "aria-live": "polite" });
   view.message = el("p", { class: "pack-message", role: "status" });
+  view.messageSlot = el("div", { class: "pack-message-slot" }, view.message);
   view.progressNote = el("div", { class: "pack-sync", role: "status" });
   view.picks = el("div", { class: "pack-picks" });
   view.sortControl = packOrderControls(view);
   const from = parseHash().params.get("deck");
   const fromDeck = from && (data.choices.find((item) => item.id === from) || { id: from, title: "The deck" });
-  view.chooser = el("details", { class: "panel pack-choose", open: true },
-    el("summary", {}, el("span", { class: "pack-choose-title", text: "Decks" }), el("span", { class: "pack-choose-count" })),
+  view.chooserCount = el("span", { class: "pack-choose-count" });
+  view.chooserHeading = el("h2", { class: "pack-choose-head", tabindex: "-1" },
+    el("span", { class: "pack-choose-title", text: "Decks" }), view.chooserCount);
+  view.chooser = el("section", { class: "panel pack-choose", "aria-label": "Deck choices" }, view.chooserHeading,
     el("div", { class: "actions pack-presets" },
-      el("button", { type: "button", class: "btn", text: "Built and being built", onclick: () => {
+      el("button", { type: "button", class: "btn", text: "Built and being built", "data-pack-id": "", "data-pack-control": "preset", onclick: e => {
+        if (!packChooserCanChange(view, e.currentTarget)) return;
         view.sideboardChoosing?.clear();
         view.selected = view.choices.filter(c => ["built", "building"].includes(packGroupOf(c))).slice(0, PACK_MAX)
           .map(c => ({ id: c.id, version: "target" }));
         packChanged(view);
-        packFoldChooser(view);          // a preset is a whole choice: on a phone, the plan comes up
       } }),
-      el("button", { type: "button", class: "btn btn-quiet", text: "Clear", onclick: () => {
+      el("button", { type: "button", class: "btn btn-quiet", text: "Clear", "data-pack-id": "", "data-pack-control": "clear", onclick: e => {
+        if (!packChooserCanChange(view, e.currentTarget)) return;
         view.selected = []; view.sideboardChoosing?.clear(); packChanged(view);
       } })),
-    view.picks,
-    // Under 1000 px the checklist sits above the plan: this folds it, once decks are chosen.
-    el("div", { class: "pack-show-plan" }, el("button", { type: "button", class: "btn btn-primary", text: "Show the plan",
-      onclick: () => packFoldChooser(view, true) })));
+    view.picks);
+  view.chooserEmpty = el("p", { class: "sub pack-chooser-empty", text: "No decks available for this plan." });
+  view.chooser.append(view.chooserEmpty);
+  view.chooserLaunch = el("button", { type: "button", class: "btn pack-chooser-launcher", text: "Decks",
+    "aria-haspopup": "dialog", "aria-expanded": "false", onclick: () => packRevealChooser(view) });
+  view.chooserRail = el("div", { class: "pack-chooser-rail" });
+  view.chooserSlot = el("div", { class: "pack-chooser-slot" }, view.chooserRail);
+  view.planMain = el("div", { class: "pack-main" }, view.chooserLaunch, view.messageSlot, view.progressNote, view.sortControl, view.results);
   add(view.root, [
     pageHead({ crumb: fromDeck ? [deckHref(fromDeck.id, parseHash().params.get("version")), fromDeck.title || "The deck"] : null,
       title: routeH1("assembly"), description: "Choose the decks you want to play, then pull their cards. Each physical copy is counted once.",
       // The plan's sleeves and token cards come from these pages.
       more: [mayDo("see_accessories") ? { label: routeFor("accessories").label, href: "#/accessories" } : null,
         { label: routeFor("tokens").label, href: "#/tokens" }] }),
-    el("div", { class: "pack-layout" }, view.chooser,
-      el("div", { class: "pack-main" }, view.message, view.progressNote, view.sortControl, view.results))]);
+    el("div", { class: "pack-layout" }, view.chooserSlot, view.planMain)]);
   $("#main").append(view.root);
-  if (view.selected.length && window.matchMedia && window.matchMedia("(max-width: 999px)").matches) view.chooser.open = false;
   view.run = () => packRun(view);
+  packInitChooser(view);
+  packInitSwitcher(view);
+  packInitSteps(view);
   drawPackPicks(view);
   renderAssemblyPlan(view, data);
 }
@@ -76,16 +85,9 @@ function assemblyActive(view) {
   return view.token === routeToken && view.profile === state.profile?.id && view.root.isConnected;
 }
 
-/** Folds the deck checklist where it sits above the plan (under 1000 px) once a deck is chosen; scroll: also
- * bring the plan into view. */
-function packFoldChooser(view, scroll = false) {
-  if (!view.selected.length || !(window.matchMedia && window.matchMedia("(max-width: 999px)").matches)) return;
-  view.chooser.open = false;
-  if (scroll && view.chooser.scrollIntoView) view.chooser.scrollIntoView({ block: "start" });
-}
-
 /** The checklist of decks, grouped by status, each with its list (planned or play-now) once it's chosen. */
 function drawPackPicks(view) {
+  const presentation = packChooserBeforeDraw(view);
   clear(view.picks);
   const full = view.selected.length >= PACK_MAX;
   const selected = new Set(view.selected.map(item => item.id));
@@ -97,8 +99,13 @@ function drawPackPicks(view) {
     const list = el("ul", { class: "pack-picklist" }, choices.map((choice) => {
       const picked = view.selected.find(s => s.id === choice.id);
       const box = el("input", { type: "checkbox", checked: Boolean(picked), disabled: !picked && full,
+        "data-pack-id": choice.id, "data-pack-control": "choose",
         onchange: () => {
-          if (box.checked) view.selected.push({ id: choice.id, version: "target" });
+          const accepted = view.selected.some(s => s.id === choice.id);
+          if (!packChooserCanChange(view, box) || !view.choices.includes(choice)
+              || (box.checked && !accepted && view.selected.length >= PACK_MAX)) { box.checked = accepted; return; }
+          if (box.checked && !accepted) view.selected.push({ id: choice.id, version: "target" });
+          else if (box.checked) return;
           else {
             view.selected = view.selected.filter(s => s.id !== choice.id);
             view.sideboardChoosing?.delete(choice.id);
@@ -108,25 +115,23 @@ function drawPackPicks(view) {
       const versions = picked && (choice.versions || []).length > 1
         ? el("div", { class: "segmented pack-version", role: "group", "aria-label": `${choice.title}: which list` },
           choice.versions.map(v => el("button", { type: "button", "aria-pressed": String(picked.version === v), text: listName(v),
+            "data-pack-id": choice.id, "data-pack-control": `version:${v}`,
             onclick: event => packChooseVersion(view, picked, v, event.currentTarget) }))) : null;
       return el("li", {}, el("label", { class: "choice" }, box, el("span", { text: choice.title })), versions,
         packSideboardChoice(view, choice, picked));
     }));
     // Ideas and products are folded until one of them is chosen.
     const shut = (key === "idea" || key === "product") && !choices.some(c => view.selected.some(s => s.id === c.id));
-    view.picks.append(shut ? el("details", { class: "pack-group" }, el("summary", { text: `${words} (${choices.length})` }), list)
-      : el("div", { class: "pack-group" }, el("h3", { text: words }), list));
+    view.picks.append(shut ? el("details", { class: "pack-group", "data-pack-group": key }, el("summary", { text: `${words} (${choices.length})` }), list)
+      : el("div", { class: "pack-group", "data-pack-group": key }, el("h3", { text: words }), list));
   }
-  const count = view.chooser.querySelector(".pack-choose-count");
-  if (count) count.textContent = view.selected.length ? ` · ${view.selected.length} chosen` : "";
-  const show = view.chooser.querySelector(".pack-show-plan");
-  if (show) show.hidden = !view.selected.length;
   if (full) view.picks.append(el("p", { class: "sub", text: `A plan holds up to ${PACK_MAX} decks.` }));
+  packChooserAfterDraw(view, presentation);
 }
 
 /** A choice changed: redraw the checklist and work the plan out again shortly after. */
 function packChanged(view) {
-  closeAssemblySheets();
+  closeAssemblySheets(false);
   ++view.seq;
   view.builtMessage = null;
   view.finishError = null;
@@ -159,9 +164,12 @@ async function packRun(view) {
     if (assemblyActive(view) && seq === view.seq) {
       view.previewing = false;
       view.message.textContent = problem.message;
+      packClearBar(view);
       clear(view.results);
       view.sortControl.hidden = true;
       view.data = null;
+      packStepsStart(view, null);
+      packOverlapStart(view, null);
       view.finish = null;
       view.bar = null;
       wirePackTicks(view);
@@ -177,7 +185,7 @@ function assemblyTick(text, count = 1, context = null, key = text) {
 }
 
 /** A card to pull as a picture tile with a tick on its corner; id is its key for the saved ticks. */
-function packTile(view, name, { qty, meta, caption, id, finishes = [] }) {
+function packTile(view, name, { qty, meta, caption, id, finishes = [], overlap = null }) {
   const card = (view.cards || {})[name] || null;
   // These are the selected list's finishes; allocation still counts interchangeable copies by name.
   const special = finishes.some(item => ["foil", "etched"].includes(item.finish));
@@ -190,8 +198,22 @@ function packTile(view, name, { qty, meta, caption, id, finishes = [] }) {
   const tick = el("button", { type: "button", class: "tile-tick pack-tick", "aria-pressed": "false",
     "aria-label": `${qty > 1 ? `${qty} × ` : ""}${name}: done`, "data-pack-tick": id, "data-pack-count": qty,
     "data-pack-context": JSON.stringify(finishes.map(f => [f.finish, f.quantity]).sort()) });
-  return cardTile(card, { qty, name: frontName(name), meta, finish, chips, state: tick,
+  const tile = cardTile(card, { qty, name: frontName(name), meta, finish, chips, state: tick,
+    onclick: card ? event => packOpenCard(view, event.currentTarget) : null,
     viewerGroup: "packing", caption: description, label: finishWords ? `${name}. ${description}` : card ? null : name });
+  const open = tile.querySelector(".card-tile-open");
+  open.append(el("span", { class: "pack-row-qty", "aria-hidden": "true", text: String(qty) }));
+  if (finishWords) {
+    const intent = el("span", { class: "pack-row-finish", "aria-hidden": "true", title: `Deck list: ${finishWords}`,
+      text: `List: ${finishWords}` });
+    const metaNode = open.querySelector(".card-tile-meta");
+    if (metaNode) metaNode.append(intent);
+    else open.append(el("span", { class: "card-tile-meta pack-row-meta", "aria-hidden": "true" }, intent));
+  }
+  packRegisterCard(view, tile, card, description);
+  const pill = packOverlapPill(view, name, overlap);
+  if (pill) tile.append(pill);
+  return tile;
 }
 
 /** A browser preference for this person. Reordering the displayed plan needs no new preview. */
@@ -295,7 +317,12 @@ function assemblyKit(deck, need, view = null) {
 function packStep(number, title, ...content) {
   const parts = content.flat(Infinity).filter(Boolean);
   if (!parts.length) return null;
-  return el("div", { class: "pack-step" }, el("h3", {}, el("span", { class: "pack-step-n", text: String(number) }), title), parts);
+  return el("details", { class: "pack-step" },
+    el("summary", { class: "pack-step-summary" },
+      el("h3", {}, el("span", { class: "pack-step-n", "aria-hidden": "true", text: String(number) }),
+        el("span", { class: "pack-step-spoken sr-only", text: `Step ${number}. ` }), title),
+      el("span", { class: "pack-step-chevron", "aria-hidden": "true" })),
+    el("div", { class: "pack-step-body" }, parts));
 }
 
 /** A deck's plan, step by step. */
@@ -305,11 +332,12 @@ function packDeck(view, deck) {
   const sleeves = usable(kit && kit.sleeves), box = usable(kit && kit.deck_box);
   const need = !kit ? null : deck.sleeves_need != null ? deck.sleeves_need : kit.need;
   const steps = deck.steps || [];
+  const participant = { id: deck.id, version: deck.version };
   const tiles = (rows) => packCardGroups(view, rows);
   const pulls = steps.filter(s => s.storage).map(s => ({ name: s.name, qty: s.storage, meta: null, finishes: deck.finishes?.[s.name],
-    caption: `Pull ${s.storage} from storage for ${deck.title}`, id: `pull|${s.name}` }));
+    caption: `Pull ${s.storage} from storage for ${deck.title}`, id: `pull|${s.name}`, overlap: participant }));
   const moves = steps.flatMap(s => s.transfers.map(t => ({ name: s.name, qty: t.quantity, meta: `From ${t.from_title}`, finishes: deck.finishes?.[s.name],
-    caption: `Move ${t.quantity} from ${t.from_title} to ${deck.title}; change sleeves`, id: `move|${s.name}|${t.from}` })));
+    caption: `Move ${t.quantity} from ${t.from_title} to ${deck.title}; change sleeves`, id: `move|${s.name}|${t.from}`, overlap: participant })));
   const basics = (deck.basics || []).map(b => ({ name: b.name, qty: b.quantity, meta: null, finishes: deck.finishes?.[b.name],
     caption: `${b.quantity} for ${deck.title}`, id: `basic|${b.name}` }));
   const markers = (deck.standins?.rows || []).filter(row => !row.using).map((row, index) => ({
@@ -321,14 +349,14 @@ function packDeck(view, deck) {
   const waiting = steps.filter(s => s.waiting || s.missing);
   const tokenLines = assemblyTokenTasks(deck.tokens, view.data.tokens);
   let n = 0;
-  const step = (title, ...content) => {
+  const step = (kind, title, ...content) => {
     const node = packStep(n + 1, title, ...content);
-    if (node) n += 1;
+    if (node) { packRegisterStep(view, deck, kind, n + 1, node); n += 1; }
     return node;
   };
-  const cardStep = (title, rows, ...intro) => {
+  const cardStep = (kind, title, rows, ...intro) => {
     const count = rows.reduce((total, row) => total + row.qty, 0);
-    return rows.length ? step(`${title} (${plural(count, "card")})`, ...intro, tiles(rows)) : null;
+    return rows.length ? step(kind, `${title} (${plural(count, "card")})`, ...intro, tiles(rows)) : null;
   };
   const kitNode = assemblyKit(deck, need, view);
   const keptNode = kept.length ? el("details", { class: "pack-fold" },
@@ -342,16 +370,16 @@ function packDeck(view, deck) {
       deck.completion?.already_built ? status("good", "Built") : null),
     packBulkControl(view, deck),
     packStandinsPart(view, deck),
-    step("Sleeves", kitNode, sleeves && need ? el("ul", { class: "pack-list" },
+    step("sleeves", "Sleeves", kitNode, sleeves && need ? el("ul", { class: "pack-list" },
       assemblyTick(`Get out ${need} ${assemblyKitName(sleeves)} sleeves`, 1, [sleeves.id || sleeves.value, need], "sleeves")) : null),
-    cardStep("Pull from storage", view.order === "storage" ? [...pulls, ...basics] : pulls),
-    cardStep("Move from other decks", moves, el("p", { class: "sub", text: "Change their sleeves as you move them." })),
-    view.order !== "storage" ? cardStep("Basic lands", basics) : null,
-    cardStep("Spare-card stand-ins", markers),
-    view.order !== "storage" ? step("Tokens", tokenLines && tokenLines.length ? el("ul", { class: "pack-list" }, tokenLines) : null) : null,
-    cardStep("Put back", returns, el("p", { class: "sub", text: "Take these out of the deck and put them back in storage, unsleeved." })),
-    view.order === "storage" ? step("Tokens", tokenLines && tokenLines.length ? el("ul", { class: "pack-list" }, tokenLines) : null) : null,
-    step("Pack", box ? el("ul", { class: "pack-list" },
+    cardStep("pull", "Pull from storage", view.order === "storage" ? [...pulls, ...basics] : pulls),
+    cardStep("move", "Move from other decks", moves, el("p", { class: "sub", text: "Change their sleeves as you move them." })),
+    view.order !== "storage" ? cardStep("basic", "Basic lands", basics) : null,
+    cardStep("standin", "Spare-card stand-ins", markers),
+    view.order !== "storage" ? step("tokens", "Tokens", tokenLines && tokenLines.length ? el("ul", { class: "pack-list" }, tokenLines) : null) : null,
+    cardStep("return", "Put back", returns, el("p", { class: "sub", text: "Take these out of the deck and put them back in storage, unsleeved." })),
+    view.order === "storage" ? step("tokens", "Tokens", tokenLines && tokenLines.length ? el("ul", { class: "pack-list" }, tokenLines) : null) : null,
+    step("box", "Pack", box ? el("ul", { class: "pack-list" },
       assemblyTick(`Pack into ${assemblyKitName(box)}`, 1, [box.id || box.value], "box")) : null),
     keptNode,
     remainingIntentPart(deck.remaining_intent),
@@ -363,20 +391,24 @@ function packDeck(view, deck) {
 }
 
 function renderAssemblyPlan(view, data) {
+  const presentation = packSwitcherBeforeRender(view);
+  packClearBar(view);
   clear(view.results);
   view.data = data;
+  packStepsStart(view, data);
+  packOverlapStart(view, data);
   view.bulk = [];
   view.finish = null;
   view.cards = data.cards || {};
   view.sortControl.hidden = !data.decks.length;
   if (!data.decks.length) {
+    packAttachSwitcher(view, data, []);
     wirePackTicks(view);
     view.results.append(el("div", { class: "empty" }, el("p", { text: "Choose the decks you want to play." }),
       el("button", { type: "button", class: "btn", text: "Choose decks", onclick: () => {
-        view.chooser.open = true;
-        const first = view.chooser.querySelector("input");
-        if (first) first.focus();
+        packRevealChooser(view);
       } })));
+    packSwitcherAfterRender(view, presentation);
     return;
   }
   const standins = data.decks.reduce((sum, deck) => sum + (deck.standins?.rows || []).reduce((n, row) => n + row.qty, 0), 0);
@@ -387,13 +419,14 @@ function renderAssemblyPlan(view, data) {
       data.totals.missing ? `${plural(data.totals.missing, "copy", "copies")} not available for this plan` : null]
       .filter(Boolean).join("; ") + ".";
   add(view.results, [el("p", { class: data.ready ? "box box-good" : "box box-warn", text: statusText }),
-    warningsBox(data.warnings, "Inventory needs attention"),
+    warningsBox(data.warnings, "Inventory needs attention"), packOverlapNotice(view),
     // Decks in the same sleeves (one design may sleeve several decks): a note, never a block.
     (data.sleeve_notes || []).length ? el("div", { class: "pack-sleeve-notes" },
       note(...data.sleeve_notes.map((n) => n.note))) : null]);
   if (data.unresolved.length) view.results.append(el("p", { class: "box box-warn",
     text: `Unresolved card names: ${data.unresolved.join(", ")}` }));
-  view.results.append(el("div", { class: "pack-decks" }, data.decks.map(deck => packDeck(view, deck))));
+  const panels = data.decks.map(deck => ({ deck, node: packDeck(view, deck) }));
+  view.results.append(packAttachSwitcher(view, data, panels), el("div", { class: "pack-decks" }, panels.map(panel => panel.node)));
   const completion = packCompletion(view, data);
   if (completion) view.results.append(completion);
   const held = data.rows.filter(row => row.missing && row.held_elsewhere.length);
@@ -414,11 +447,10 @@ function renderAssemblyPlan(view, data) {
         : /single-sided verified/i.test(item.notes || "") ? " / single-sided (verified)" : " / reverse not recorded"}`
       + `${item.notes ? `. ${item.notes}` : ""}` }))) : el("p", { text: "No physical tokens have been recorded." })));
   view.results.append(el("p", { class: "sub", text: data.note }));
-  view.bar = actionBar({ actions: [view.finish?.button, el("button", { type: "button", class: "btn btn-quiet pack-clear", text: "Clear",
-    "aria-label": "Clear ticks", title: "Clear ticks", onclick: () => packClearTicks(view) })] });
-  view.bar.node.classList.add("pack-bar");
-  view.results.append(view.bar.node);
+  view.bar = packBuildBar(view);
+  view.planMain.append(view.bar.node);
   wirePackTicks(view);
+  packSwitcherAfterRender(view, presentation);
 }
 
 /** Finish here: ticks record progress; this explicit action saves the assembled lists. */
@@ -429,13 +461,13 @@ function packCompletion(view, data) {
   const firstScope = data.decks.find(deck => deck.id === completion.decks[0]?.id)?.build_scope;
   const label = count > 1 ? `Mark ${count} decks built` : firstScope?.mode === "main" ? "Mark main deck built"
     : firstScope?.mode === "partial" ? "Mark selected cards built" : "Mark as built";
-  const message = el("p", { class: "pack-completion-message", role: "status" });
+  const message = el("p", { class: "pack-completion-message", role: "status", tabindex: "-1", id: `pack-finish-${++packFinishSerial}` });
   const error = el("div", { class: "pack-completion-error", role: "alert" });
   const button = count ? el("button", { type: "button", class: "btn btn-primary pack-built", text: label,
-    onclick: () => packMarkBuilt(view) }) : null;
-  view.finish = { message, error, button, label };
+    "aria-describedby": message.id, onclick: event => packFinishClick(view, event.currentTarget) }) : null;
+  view.finish = { message, error, button, label, data };
   packFinishError(view);
-  return el("section", { class: "panel pack-completion" }, el("h2", { text: "Finish building" }), message,
+  return el("section", { class: "panel pack-completion" }, el("h2", { text: "Finish building" }),
     count ? el("p", { class: "sub", text: "Marking built saves these lists and reserves their cards: "
       + completion.decks.map(d => {
         const scope = data.decks.find(deck => deck.id === d.id)?.build_scope;
@@ -467,8 +499,8 @@ function packCanFinish(view) {
 function packSaving(view, saving) {
   view.saving = saving;
   if (saving) {
-    view.saveDisabled = [...view.root.querySelectorAll("button"), ...view.root.querySelectorAll("input")]
-      .filter(node => !node.disabled);
+    view.saveDisabled = ["button", "input", "select"].flatMap(tag => [...view.root.querySelectorAll(tag)])
+      .filter(node => !node.disabled && node !== view.finish?.button && !view.chooser.contains(node));
     view.saveDisabled.forEach(node => { node.disabled = true; });
   } else {
     (view.saveDisabled || []).forEach(node => { node.disabled = false; });
@@ -526,42 +558,15 @@ async function packMarkBuilt(view) {
   }
 }
 
-/** "Pulled 12 of 31 cards · 2 of 4 other steps" in the sticky bar ("Pulled 12/31 · 2/4 steps" on a phone,
- * so the bar stays one line). */
+/** All participants contribute copies; optional kit/token steps keep their own unit. */
 function packProgress(view) {
+  packChooserSync(view);
   if (!view.bar) return;
   packBulkProgress(view);
   const ticks = view.ticks || [];
-  const cards = ticks.filter(t => t.tile), other = ticks.filter(t => !t.tile);
-  const sum = (list) => list.reduce((s, t) => s + t.count, 0);
-  const pulled = sum(cards.filter(t => t.done)), done = other.filter(t => t.done).length;
-  const long = [cards.length ? `Pulled ${pulled} of ${plural(sum(cards), "card")}` : null,
-    other.length ? `${done} of ${plural(other.length, "other step")}` : null].filter(Boolean).join(" · ");
-  const short = [cards.length ? `Pulled ${pulled}/${sum(cards)}` : null,
-    other.length ? `${done}/${other.length} steps` : null].filter(Boolean).join(" · ");
-  const all = ticks.length && ticks.every(t => t.done);
-  view.bar.status(all ? el("strong", { text: "All packed." }) : !long ? "Nothing to tick in this plan."
-    : [el("span", { class: "pack-progress-long", text: long }),
-      el("span", { class: "pack-progress-short", "aria-hidden": "true", text: short })]);
+  packUpdateBar(view, ticks, ticks.filter(t => t.tile), ticks.filter(t => !t.tile));
   const clearButton = view.bar.node.querySelector(".pack-clear");
   if (clearButton) clearButton.disabled = Boolean(view.saving) || !ticks.some(t => t.done);
-  if (view.finish) {
-    const completion = view.data.completion, count = completion.decks.length;
-    const cardsDone = cards.every(t => t.done);
-    view.finish.message.textContent = view.saving ? "Marking built…" : view.previewing ? "Updating the plan…"
-      : view.builtMessage || (!count ? completion.reason || "These lists are already marked built."
-        : !completion.can_mark_built ? completion.reason || "This plan can't be marked built yet."
-          : view.finishError ? "Refresh the plan before trying again."
-            : view.progress?.error ? "Save shared progress before marking these decks built."
-              : !view.progress?.loaded ? "Loading shared progress…"
-                : view.progress.pending.size ? "Saving shared progress…"
-            : cardsDone ? "Cards checked. Mark the assembled lists as built when you're ready."
-              : "Check off the remaining cards, then mark the assembled lists as built here.");
-    if (view.finish.button) {
-      view.finish.button.disabled = !packCanFinish(view);
-      view.finish.button.textContent = view.saving ? "Marking built…" : view.finish.label;
-    }
-  }
 }
 
 /** "Zombie / Zombie Knight ×8 (Zombie side only, can be sleeved)": a token card and the face this deck

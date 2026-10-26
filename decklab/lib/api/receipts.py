@@ -41,10 +41,12 @@ import json
 import time
 import traceback
 import uuid
+import zlib
 from datetime import datetime, timedelta, timezone
 from pathlib import PurePosixPath
 
 from decklab.lib import cards, config, inventory, spaces
+from decklab.lib.decks.identity import CardIdentityError, deck_colors
 from decklab.lib.inventory import files, receive, rules
 from decklab.lib.tokens import details as token_details
 from . import common
@@ -104,9 +106,12 @@ def receipt_view(order=None):
     - each product component's "product" ({name, format}) and "items" (its card list: name, set,
       collector_number, finish, quantity, section, deck), with "pictures" aligned with the items;
     - each cards or product component's "decks", aligned with its rows (or items): the home decks
-      whose planned list names that card ([{id, title, status, uses, waiting}]: uses the copies
+      whose planned list names that card ([{id, title, status, uses, waiting, colors}]: uses the copies
       the list names, waiting the copies it counts on from this component, pool.row_labels');
-      None for tokens, while the card data isn't ready, or when the decks can't be read;
+      a row is None when its logical card name cannot be resolved, and [] means the known
+      card has no matching deck; the whole list is None for tokens, while the card data isn't
+      ready, or when the decks can't be read; colors is the same Planned identity as the library,
+      from the target sections already read (None unknown, [] known colourless);
     - "kits": {deck id: {"sleeves": name}} for the built decks those name, only where this viewer
       sees that deck's sleeves (guard.sees_kit, the accessories' owner rule), for "Where these go";
     - "face_names": Scryfall's token face names when the order has a tokens component ([] while
@@ -239,6 +244,14 @@ def _token_picture(row):
     return out
 
 
+def _planned_colors(sections):
+    """Optional Planned/library identity from the target sections already read for a visible deck."""
+    try:
+        return deck_colors(sections)
+    except (CardIdentityError, OSError, EOFError, UnicodeError, json.JSONDecodeError, zlib.error):
+        return None
+
+
 def _deck_uses(inv, view, by_id):
     """Fill each cards and product component's "decks" and the view's "kits" (see receipt_view).
     Any failure leaves them None and {} (logged): the board still works without them."""
@@ -250,9 +263,18 @@ def _deck_uses(inv, view, by_id):
                 rows = item["items"] if item["kind"] == "product" else item["rows"]
                 wanted.update(_exact(row.get("name")) for row in rows)
         wanted.discard(None)
-        summaries = [s for s in decks.list_decks() if s.get("space", spaces.HOME) == spaces.HOME
-                     and s["kind"] in ("casual", "commander") and not s.get("error")
-                     and not s["id"].startswith(("product/", "pairing/"))] if wanted else []
+        summaries = []
+        if wanted:
+            sees = guard.deck_reader()
+            for summary in decks.list_decks():
+                try:
+                    space, kind, _ = decks.split_id(summary.get("id"))
+                except ValueError:
+                    continue
+                if (space == spaces.HOME and summary.get("space", space) == spaces.HOME
+                        and kind in ("casual", "commander") and summary.get("kind") == kind
+                        and not summary.get("error") and sees(summary)):
+                    summaries.append(summary)
         found = pool.load_pool() if summaries else None
         uses = {}           # name -> [(summary, owned-vs-needed row)]
         for summary in summaries:
@@ -263,6 +285,7 @@ def _deck_uses(inv, view, by_id):
             if not {_exact(line.name) for lines in sections.values() for line in lines} & wanted:
                 continue
             result = pool.owned_vs_needed(summary["id"], "target", pool=found, prices=False)
+            summary = dict(summary, colors=_planned_colors(sections))
             for r in result["rows"]:
                 if r["name"] in wanted:
                     uses.setdefault(r["name"], []).append((summary, r))
@@ -271,11 +294,18 @@ def _deck_uses(inv, view, by_id):
                 continue
             label = _incoming_label(inv, by_id.get(item["id"]))
             rows = item["items"] if item["kind"] == "product" else item["rows"]
-            item["decks"] = [[{"id": summary["id"], "title": summary["title"], "status": summary["status"],
-                               "uses": r["need"],
-                               "waiting": sum(qty for source, qty in pool.row_labels(r)["on_the_way"]
-                                              if source == label)}
-                              for summary, r in uses.get(_exact(row.get("name")), [])] for row in rows]
+            item["decks"] = []
+            for row in rows:
+                exact = _exact(row.get("name"))
+                # Unknown logical names cannot establish that no deck is waiting. Printing and
+                # picture availability are independent of this logical-card confidence.
+                item["decks"].append(None if exact is None else [
+                    {"id": summary["id"], "title": summary["title"], "status": summary["status"],
+                     "colors": None if summary["colors"] is None else list(summary["colors"]),
+                     "uses": r["need"],
+                     "waiting": sum(qty for source, qty in pool.row_labels(r)["on_the_way"]
+                                    if source == label)}
+                    for summary, r in uses.get(exact, [])])
         view["kits"] = _kits(uses)
     except Exception:           # the board still shows; the log has the details
         common._log("A delivery's decks couldn't be worked out:\n" + traceback.format_exc())

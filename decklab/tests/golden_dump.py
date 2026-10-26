@@ -285,8 +285,9 @@ def pointed(root):
 
 # Dataclass fields the recorded goldens predate and that only index what they already hold:
 # pool.Pool.warning_decks (E10-S29), which deck each of its warnings is about, and pool.InUse.printings
-# (E7-S28), the printings a holder's list names for the copies its cards already count.
-_NOT_RECORDED = frozenset({"warning_decks", "printings"})
+# (E7-S28), the printings a holder's list names for the copies its cards already count;
+# standin_names, printing_version and planned_colors index recipe/list facts captured by deck projections.
+_NOT_RECORDED = frozenset({"warning_decks", "printings", "standin_names", "printing_version", "planned_colors"})
 
 def _plain(value, root):
     """value as JSON-able data (see the module docstring)."""

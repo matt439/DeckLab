@@ -162,6 +162,11 @@ class RowsTests(CollectionEditTestCase):
 
     def test_storage_counts_give_held_copies_to_named_printings_then_the_cheapest(self):
         # In storage only (E7-S28): decks count copies by name; their lists' printings say which rows hold them.
+        # Source hints are additive metadata; keep these assertions on the original allocation.
+        def counts(storage):
+            return {**storage, "rows": {key: {field: row[field] for field in ("held", "guess")}
+                                        for key, row in storage["rows"].items()}}
+
         from collections import Counter
         from decklab.lib import pool
         row = lambda name, s, n, finish="nonfoil", q="2": {"name": name, "set": s, "collector_number": n,
@@ -175,7 +180,7 @@ class RowsTests(CollectionEditTestCase):
         fake = pool.Pool(Counter(), {}, decks)
         prices = ce._prices(rows)
         with mock.patch.object(pool, "load_pool", return_value=fake):
-            storage = ce._storage("home", rows, prices)
+            storage = counts(ce._storage("home", rows, prices))
         self.assertIsNone(storage["error"])
         self.assertEqual(storage["rows"], {
             "fdn|227|foil": {"held": 1, "guess": False},         # the printing the deck's list names
@@ -185,29 +190,29 @@ class RowsTests(CollectionEditTestCase):
         # Two rows with room for a copy no list names: the cheaper one gets it, as a guess.
         decks[0].printings.clear()
         with mock.patch.object(pool, "load_pool", return_value=fake):
-            storage = ce._storage("home", rows, prices)
+            storage = counts(ce._storage("home", rows, prices))
         self.assertEqual(storage["rows"]["fdn|227|nonfoil"], {"held": 2, "guess": True})
         self.assertNotIn("fdn|227|foil", storage["rows"])
         # An unpriced row isn't known to be cheap: the priced one gets the copies first.
         unpriced = {**prices, "rows": {k: v for k, v in prices["rows"].items() if k != "fdn|227|nonfoil"}}
         with mock.patch.object(pool, "load_pool", return_value=fake):
-            storage = ce._storage("home", rows, unpriced)
+            storage = counts(ce._storage("home", rows, unpriced))
         self.assertEqual(storage["rows"]["fdn|227|foil"], {"held": 1, "guess": True})
         self.assertEqual(storage["rows"]["fdn|227|nonfoil"], {"held": 1, "guess": True})
         # Copies enough to fill every row: no choice, so no guess.
         decks[0].cards["Llanowar Elves"] = 3
         with mock.patch.object(pool, "load_pool", return_value=fake):
-            storage = ce._storage("home", rows, prices)
+            storage = counts(ce._storage("home", rows, prices))
         self.assertEqual((storage["rows"]["fdn|227|nonfoil"], storage["rows"]["fdn|227|foil"]),
                          ({"held": 2, "guess": False}, {"held": 1, "guess": False}))
         with mock.patch.object(ce, "_ready", return_value=False):
             self.assertEqual(ce._storage("home", rows, prices), {"rows": {}, "error": "The card data isn't ready yet."})
         with mock.patch.object(pool, "load_pool", side_effect=ValueError("bad pool")):
-            storage = ce._storage("home", rows, prices)
+            storage = counts(ce._storage("home", rows, prices))
         self.assertEqual(storage["rows"], {})
         self.assertIn("bad pool", storage["error"])
         # Through the rows view, against the sandbox's real built decks.
-        self.assertEqual(self.rows()["storage"], {"rows": {"cmm|648|nonfoil": {"held": 1, "guess": False},
+        self.assertEqual(counts(self.rows()["storage"]), {"rows": {"cmm|648|nonfoil": {"held": 1, "guess": False},
                                                            "fdn|227|nonfoil": {"held": 2, "guess": False}},
                                                   "error": None})
 

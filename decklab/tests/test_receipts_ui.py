@@ -1,5 +1,5 @@
 """The Receipts page's check-off board (receipts.js, decklab/UI-REVIEW.md WP6) in a small DOM double: nothing is
-received on open, ticks earn "Confirm: all N checked" (verified), the preview and the apply are separate and an
+received on open, Record arrival follows client blockers (verified), preview and apply are separate and an
 edit after the preview stops the apply, late answers are dropped, splits keep the order's totals, a token's back
 must be confirmed, a product needs its choice, the check survives a reload, members see it read only, the tiles
 open the card viewer as a group, and the success view says where the cards go."""
@@ -57,12 +57,36 @@ class ReceiptBoardTests(unittest.TestCase):
           let calls=0;apiWrite=async()=>{calls++;throw new Error('no write');};
           assert.equal(view.comps.length,1);assert(view.comps[0].selected);   // one part: chosen, no "This arrived" box
           assert(!main.textContent.includes('This arrived'));
-          assert.equal(view.primary.textContent,'Preview');
+          assert.equal(view.primary.textContent,'Record arrival');
           assert(main.textContent.includes('0/3 ✓'));assert(main.textContent.includes('1 check left'));
           await previewDelivery(view);assert.equal(calls,0);
           assert(body().includes('tick at least one card that arrived'));assert(body().includes('Check not ticked: Verify actual condition'));
           const at=body().indexOf('null');assert(at<0, body().slice(Math.max(0,at-80),at+40));
         """)
+
+    def test_row_badges_stay_distinct_from_unequal_copy_progress_and_do_not_narrow_bulk_scope(self):
+        self.run_js("""
+          const d=delivery();d.components[0].rows[0].quantity='8';
+          const v=drawReceipt(d,routeToken),comp=v.comps[0];
+          assert(v.headProgress.textContent.includes('0 of 9 card copies checked'));
+          assert.equal(comp.fillButton.textContent,'Apply to 1 row');
+          const attention=comp.filterButtons.find(b=>b.getAttribute('data-filter')==='attention');
+          assert.equal(attention.children[0].textContent,'Needs attention (2 rows)');
+          assert.equal(attention.children[1].textContent,'Attention (2 rows)');
+          const before=rcptRequestKey(v),rows=JSON.stringify(comp.rows.map(r=>r.values));
+          rcptToolbarCounts(v,comp);rcptTools(v,comp,true);
+          assert.equal(rcptRequestKey(v),before);assert.equal(JSON.stringify(comp.rows.map(r=>r.values)),rows);
+          rcptTick(v,comp,comp.rows[0],true);v.filter='todo';rcptRefreshAll(v);
+          assert(v.headProgress.textContent.includes('8 of 9 card copies checked'));
+          assert(comp.rows[0].tile.hidden);assert.equal(comp.fillButton.textContent,'Apply to 1 row');
+          rcptFillBlanks(v,comp,'LP','ja');
+          assert.equal(comp.rows[0].values.condition,'LP');assert.equal(comp.rows[0].values.language,'ja');
+          assert.equal(comp.rows[0].values.quantity,'8');assert.equal(comp.rows[1].values.quantity,'1');
+          assert.equal(comp.rows[1].values.condition,'NM');assert.equal(comp.rows[1].values.language,'en');
+          const selected=rcptRequest(v).components[0];same(selected.take,[{row:1}]);
+          same(selected.rows.map(r=>[r.quantity,r.condition,r.language]),[['8','LP','ja'],['1','NM','en']]);
+          assert(v.headProgress.textContent.includes('8 of 9 card copies checked'));
+        """,draw=False)
 
     def test_the_board_shows_pictures_chips_and_the_tiles_open_the_viewer_as_a_group(self):
         self.run_js("""
@@ -129,7 +153,7 @@ class ReceiptBoardTests(unittest.TestCase):
           tickAll(view);
           // Every tile ticked, but Alpha's condition and language are still blank: not "all checked" yet, and the
           // note that says so stays (only the "check on arrival" part goes with the tick).
-          assert.equal(view.primary.textContent,'Preview');
+          assert.equal(view.primary.textContent,'Record arrival');
           assert(!view.blanks.hidden);assert(main.textContent.includes('2 with no condition or language'));
           assert.equal(view.comps[0].rows[0].values.notes,'condition and language not recorded');
           await previewDelivery(view);
@@ -142,7 +166,7 @@ class ReceiptBoardTests(unittest.TestCase):
           rcptFillBlanks(view,view.comps[0],'NM','en');
           assert.equal(view.comps[0].rows[0].values.notes,'');                  // true no more, so it goes too
           assert(view.blanks.hidden);
-          assert.equal(view.primary.textContent,'Confirm: all 3 checked');
+          assert.equal(view.primary.textContent,'Record arrival');assert.equal(view.primary.getAttribute('aria-disabled'),'false');
           await previewDelivery(view);
           assert.equal(calls.length,2);assert.equal(calls[1][0],'/api/receipt/preview');
           sent=calls[1][1];assert.equal(sent.received_on,'2026-10-08');assert.equal(sent.fingerprint,'a'.repeat(64));
@@ -187,14 +211,14 @@ class ReceiptBoardTests(unittest.TestCase):
           tickAll(view);let finish;apiWrite=()=>new Promise(resolve=>{finish=resolve;});
           const pending=previewDelivery(view);routeToken++;clear(main).append(el('p',{text:'Another page'}));
           finish(ready);await pending;assert.equal(main.textContent,'Another page');
-          assert.equal(view.preview,null);assert(!body().includes('Record arrival'));
+          assert.equal(view.preview,null);assert(!view.previewSheet);
         """)
 
     def test_a_change_of_profile_discards_a_late_result(self):
         self.run_js("""
           tickAll(view);let finish;apiWrite=()=>new Promise(resolve=>{finish=resolve;});
           const pending=previewDelivery(view);state.profile={id:'user1',name:'User1'};
-          finish(ready);await pending;assert.equal(view.preview,null);assert(!body().includes('Record arrival'));
+          finish(ready);await pending;assert.equal(view.preview,null);assert(!view.previewSheet);
         """)
 
     def test_success_says_where_the_cards_go_and_offers_no_second_receipt(self):
@@ -493,11 +517,11 @@ class ReceiptBoardTests(unittest.TestCase):
           const comp=view.comps[0];
           view.filter='todo';rcptRefreshAll(view);
           const first=comp.rows[0].tile.querySelector('.rcpt-tick');
-          assert.equal(first.getAttribute('aria-label'),'Check off Alpha');
-          first.focus();first.click();
+          assert.equal(first.getAttribute('aria-label'),'Check off 2 copies of Alpha');
+          first.focus();first.checked=true;first.fire('change');
           assert(comp.rows[0].tile.hidden);
           assert.equal(document.activeElement,comp.rows[1].tile.querySelector('.rcpt-tick'));
-          document.activeElement.click();
+          document.activeElement.checked=true;document.activeElement.fire('change');
           assert(main.textContent.includes('Everything here is checked.'));
           const show=comp.grid.querySelector('.rcpt-none').querySelector('button');
           assert.equal(document.activeElement,show);

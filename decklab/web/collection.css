@@ -12,28 +12,62 @@
 .col-message { margin: var(--s-3) 0; }
 .col-message .box { margin: var(--s-2) 0 0; }
 
-/* Find cards: the search across the top, then where the cards are and the card filters; they apply as they
-   change. On a phone the card filters fold behind "Filters (n)". */
-.col-filters { display: flex; flex-direction: column; align-items: stretch; gap: var(--s-3); margin-top: 0; }
-.col-filters input, .col-filters select { width: 100%; min-width: 0; }
-.col-filter-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s-2); }
-.col-availability { max-width: 100%; overflow-x: auto; }
-.col-availability > button { white-space: nowrap; }
-.col-filter-extra { display: none; grid-template-columns: 1fr 1fr; gap: var(--s-3); }
-.col-filters.is-open .col-filter-extra { display: grid; }
-@media (min-width: 600px) {
-  .col-filters { display: grid; grid-template-columns: minmax(0, 1fr); align-items: end; }
-  .col-filter-toggle { display: none; }
-  .col-filter-extra { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) 120px; }
+/* Find cards keeps its card-colour queries and name-level counts. Casual results are rows; lab browsing
+   remains the existing card grid. Identity pips describe the card, never the colour-filter predicate. */
+.col-filters {
+  position: sticky; top: var(--shell-top); z-index: 5; background: var(--page);
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center;
+  gap: var(--s-2); margin-top: 0; padding-block: var(--s-2);
 }
+.col-filters input, .col-filters select { width: 100%; min-width: 0; }
+.col-filter-q { min-width: 0; }
+.col-filter-q input { min-height: 48px; }
+.col-filter-toggle { position: relative; width: 50px; min-width: 50px; height: 50px; padding: 0; }
+.col-filter-count { position: absolute; right: 0; bottom: 0; min-width: 1.25em; padding: 0 var(--s-1);
+  border-radius: var(--r-pill); background: var(--accent-soft); color: var(--accent-strong); font-size: var(--fs-xs); }
+.col-filter-row { grid-column: 1 / -1; display: flex; min-width: 0; align-items: center; gap: var(--s-2); }
+.col-availability { max-width: 100%; overflow-x: auto; flex-wrap: nowrap; }
+.col-availability > button { white-space: nowrap; flex: none; }
+.col-filter-extra { grid-column: 1 / -1; display: none; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--s-3); }
+/* Expanded filters enter page flow so a short landscape window can reach the results. */
+.col-filters.is-open { position: static; }
+.col-filters.is-open .col-filter-extra { display: grid; }
+.col-find-colour-note { display: none; grid-column: 1 / -1; margin: 0; }
+.col-filters.is-open .col-find-colour-note { display: block; }
+.col-find-lab { display: none; }
+.col-find-rows { list-style: none; margin: 0; padding: 0; background: var(--surface);
+  border: 1px solid var(--border); border-radius: var(--r-panel); overflow: hidden; }
+.col-find-row + .col-find-row { border-top: 1px solid var(--divider); }
+.col-find-open { display: grid; grid-template-columns: 56px minmax(0, 1fr) auto; align-items: start;
+  gap: var(--s-1) var(--s-3); width: 100%; min-height: var(--tap); padding: var(--s-3);
+  border: 0; background: transparent; color: var(--ink); font: inherit; text-align: left; }
+button.col-find-open { cursor: pointer; }
+.col-find-open:focus-visible { outline-offset: -3px; }
+.col-find-picture { grid-column: 1; grid-row: 1 / 4; width: 56px; height: 78px; overflow: hidden;
+  border-radius: var(--r-card); background: var(--surface-chip); }
+.col-find-picture img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.col-find-heading { grid-column: 2; display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-1) var(--s-2); min-width: 0; }
+.col-find-name { min-width: 0; font-size: var(--fs-row); font-weight: var(--fw-bold); overflow-wrap: anywhere; }
+.col-find-count { grid-column: 3; white-space: nowrap; font-size: var(--fs-meta); font-weight: var(--fw-semibold); font-variant-numeric: tabular-nums; }
+.col-find-meta, .col-find-type { grid-column: 2 / -1; min-width: 0; color: var(--ink-2); font-size: var(--fs-meta); overflow-wrap: anywhere; }
+.col-find-identity { display: inline-flex; min-width: 0; }
+.col-tiles .col-find-identity { padding: 0 var(--s-2) var(--s-2); }
 @media (min-width: 1000px) {
-  .col-filters { grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); grid-template-areas: "q extra" "row row"; }
+  .col-filters { position: static; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); align-items: end; grid-template-areas: "q extra" "row row" "note note"; }
   .col-filter-q { grid-area: q; }
-  .col-filter-extra { grid-area: extra; }
+  .col-filter-q input { min-height: var(--input-h); }
+  .col-filter-toggle { display: none; }
+  .col-filter-extra { display: grid; grid-area: extra; grid-template-columns: repeat(3, minmax(0, 1fr)) 120px; }
   .col-filter-row { grid-area: row; }
+  .col-find-colour-note { display: block; grid-area: note; }
+  .col-find-lab { display: block; }
+  .col-find-casual { display: none; }
 }
 @media (min-width: 1600px) {
   .col-filters { grid-template-columns: minmax(0, 760px) minmax(0, 960px); }   /* the search box at most 760 px */
+}
+@media (hover: hover) and (pointer: fine) {
+  button.col-find-open:hover { background: var(--hover); }
 }
 .col-results[aria-busy="true"] { opacity: .6; transition: opacity .15s; }
 .col-result-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s-2); margin: var(--s-2) 0 var(--s-3); }
@@ -42,10 +76,6 @@
 .col-pager-at { padding: 0 var(--s-2); color: var(--ink-2); font-size: var(--fs-sm); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .col-results > .col-pager, .col-row-list > .col-pager { justify-content: center; margin: var(--s-4) 0; }
 .col-row-list > .col-pager:first-child { justify-content: flex-end; margin: 0 0 var(--s-2); }
-/* Two tiles a row on a phone (the card's picture is the tile), about 156 px on wider screens. */
-@media (max-width: 599px) {
-  .col-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
 
 /* The viewer's words about a card (in the card viewer's text panel). */
 .col-viewer-words { display: flex; flex-direction: column; align-items: flex-start; gap: var(--s-2); }
@@ -62,13 +92,15 @@
 /* The Card list: a toolbar, then the dense table. */
 .col-row-tools .col-row-search { flex: 1 1 260px; }
 .col-row-search input { width: 100%; }
-.col-unrecorded { font-size: var(--fs-sm); }
+.col-unrecorded { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2) var(--s-4); font-size: var(--fs-sm); }
+.col-unrecorded > p { margin: 0; flex: 1 1 18rem; }
 .col-table .col-th-pic { width: 52px; }
 .col-table .col-td-pic { padding-top: var(--s-1); padding-bottom: var(--s-1); }
 .col-table .col-th-quantity { width: 64px; }
 .col-table .col-th-price { width: 84px; }
 .col-table td.col-unpriced { color: var(--ink-2); font-weight: normal; }
-.col-price-note { margin-top: var(--s-2); }
+.col-price-note { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--s-2); margin-top: var(--s-2); }
+.col-detail-code { display: none; }
 .col-storage { font-size: var(--fs-sm); }
 /* Set condition & language (collection-bulk.js): the button sits on the filter line, before the count; the
  * sheet's choices are a plain fieldset (disabled while saving), and its summary stands out. */
@@ -108,15 +140,15 @@
 /* The notes get their own column only from 1000px; below it they're a line under the name, so the names
    don't wrap beside a mostly empty column. */
 @media (min-width: 1000px) {
+  .col-detail-code { display: inline; font-family: var(--font-mono); }
+  .col-detail-word { display: none; }
   .col-table .col-notes { display: table-cell; vertical-align: middle; }
   .col-table .col-th-notes { width: 22%; }
   .col-cell-note { display: none; }
 }
-/* QHD: the list no wider than it needs (not 2,500 px with Copies far from Condition), and a gap between the
-   right-aligned price and Condition (the row's sixth cell). */
+/* QHD: the list no wider than it needs (not 2,500 px with Copies far from Condition). */
 @media (min-width: 1600px) {
   .col-row-list .table-wrap { max-width: 1400px; }
-  .col-table .col-th-condition, .col-table tbody td:nth-child(6) { padding-left: var(--s-6); }
 }
 
 /* The add and edit sheet. */
@@ -191,3 +223,118 @@
   .precon-pick, .col-strip-tile { border: 1px solid CanvasText; }
   .col-strip-tile[aria-pressed="true"] { outline: 3px solid Highlight; }
 }
+
+/* Card list: a selected row beside its preview in lab, one panel of rows in casual layouts. */
+.col-row-layout, .col-row-list { min-width: 0; }
+.col-row-lab, .col-preview { display: none; }
+.col-row-tools { position: sticky; top: var(--shell-top); z-index: 5; background: var(--page);
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--s-2); padding-block: var(--s-2); }
+.col-row-tools .col-row-search { min-width: 0; }
+.col-row-tools .col-row-search input { min-height: 48px; }
+.col-row-filter-toggle { width: 50px; height: 50px; padding: 0; }
+.col-row-filter-options { grid-column: 1 / -1; min-width: 0; }
+.col-row-actions { margin: var(--s-2) 0 var(--s-3); }
+.col-row-actions .col-count { margin: 0; }
+.col-casual-list { list-style: none; margin: 0; padding: 0; background: var(--surface);
+  border: 1px solid var(--border); border-radius: var(--r-panel); overflow: hidden; }
+.col-casual-row + .col-casual-row { border-top: 1px solid var(--divider); }
+.col-casual-open { display: grid; grid-template-columns: 56px minmax(0, 1fr) auto; align-items: start;
+  gap: var(--s-1) var(--s-3); width: 100%; min-height: var(--tap); padding: var(--s-3);
+  border: 0; background: transparent; color: var(--ink); font: inherit; text-align: left; }
+button.col-casual-open { cursor: pointer; }
+.col-casual-open:focus-visible { outline-offset: -3px; }
+.col-casual-picture { grid-column: 1; grid-row: 1 / 4; width: 56px; height: 78px;
+  overflow: hidden; border-radius: var(--r-card); background: var(--surface-chip); }
+.col-casual-picture img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.col-casual-name { grid-column: 2; min-width: 0; font-size: var(--fs-row); font-weight: var(--fw-bold); overflow-wrap: anywhere; }
+.col-casual-price { grid-column: 3; white-space: nowrap; font-weight: var(--fw-semibold); font-variant-numeric: tabular-nums; }
+.col-casual-meta, .col-casual-storage { grid-column: 2 / -1; min-width: 0; color: var(--ink-2); font-size: var(--fs-meta); overflow-wrap: anywhere; }
+.col-casual-note { margin: 0; padding: 0 var(--s-3) var(--s-3); color: var(--ink-2); font-size: var(--fs-meta);
+  white-space: pre-wrap; overflow-wrap: anywhere; }
+.col-row-casual > .col-show-more { margin-bottom: var(--s-3); }
+.col-preview-title, .col-preview-rules, .col-preview-storage { overflow-wrap: anywhere; }
+.col-preview-title { font-size: var(--fs-lg); }
+.col-preview-facts { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--s-2); margin-block: var(--s-3); }
+.col-preview-facts dt { color: var(--ink-2); }
+.col-preview-facts dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.col-preview-picture { display: block; border: 0; padding: 0; background: transparent; margin: var(--s-3) auto; cursor: zoom-in; }
+.col-preview-picture img { display: block; width: 180px; max-width: 100%; height: auto; border-radius: var(--r-card); }
+@media (min-width: 1000px) {
+  .col-row-layout { display: grid; grid-template-columns: minmax(0, 1fr) 400px; gap: var(--s-5); align-items: start; }
+  .col-row-lab { display: block; }
+  .col-row-casual, .col-row-filter-toggle { display: none; }
+  .col-row-tools { position: static; display: flex; }
+  .col-row-tools .col-row-search input { min-height: var(--input-h); }
+  .col-row-tools .col-row-filter-options { overflow: visible; }
+  .col-preview { display: block; position: sticky; top: calc(var(--shell-top) + var(--s-3));
+    max-height: calc(100dvh - var(--shell-top) - 2 * var(--s-3)); overflow: auto;
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-panel); padding: var(--s-4); }
+  .col-row-lab .table-wrap { overflow: auto; max-height: calc(100dvh - var(--shell-top) - var(--s-6)); }
+  .col-row-lab .col-table thead th { top: 0; }
+  .col-row-lab .col-table { min-width: 640px; }
+  .col-row-lab :is(.col-th-pic, .col-td-pic) { display: none; }
+}
+@media (min-width: 1000px) and (max-width: 1280px) {
+  .col-row-layout { grid-template-columns: minmax(0, 1fr) 340px; }
+  .col-row-lab :is(.col-th-language, .col-td-language) { display: none; }
+}
+@media (hover: hover) and (pointer: fine) {
+  button.col-casual-open:hover { background: var(--hover); }
+}
+
+/* Table metadata stays on one line at the row token's density. The preview holds full text. */
+@media (min-width: 1000px) {
+  .col-row-lab { container: collection-table / inline-size; }
+  .col-row-lab .col-table :is(th, td) { white-space: nowrap; overflow-wrap: normal; }
+  .col-row-lab .col-table td { padding-top: 0; padding-bottom: 0; }
+  .col-row-lab .col-open { min-width: 0; min-height: var(--row-h); }
+  .col-row-lab .col-cell-name { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis;
+    font-size: var(--fs-row); white-space: nowrap; }
+  .col-row-lab .col-table td.num { font-family: var(--font-num); font-size: var(--fs-cell-num); font-weight: var(--fw-semibold); }
+  .col-row-lab .col-th-name { width: 10rem; }
+  .col-row-lab .col-th-colour { width: 6rem; }
+  .col-row-lab .col-th-type { width: 9rem; }
+  .col-row-lab .col-th-set { width: 5.5rem; }
+  .col-row-lab .col-th-finish { width: 4rem; }
+  .col-row-lab .col-th-quantity { width: 3.5rem; }
+  .col-row-lab .col-th-condition { width: 5rem; }
+  .col-row-lab .col-th-language { width: 4rem; }
+  .col-row-lab .col-th-held { width: 8rem; }
+  .col-row-lab .col-th-price { width: 5rem; }
+  .col-row-lab .col-th-notes { width: 9rem; }
+  .col-row-lab .col-type-text { display: block; overflow: hidden; text-overflow: ellipsis; }
+  .col-row-lab .col-held { display: inline; font-size: inherit; line-height: inherit; white-space: nowrap; }
+  .col-row-lab .col-td-held { font-family: var(--font); font-size: var(--fs-meta); }
+  .col-row-lab .col-table tbody tr[data-selected] > .col-td-name {
+    box-shadow: inset 2px 0 var(--accent), inset 0 1px 0 var(--accent-line), inset 0 -1px 0 var(--accent-line);
+  }
+}
+@container collection-table (max-width: 1100px) {
+  .col-column-colour { display: none; }
+}
+@container collection-table (max-width: 1000px) {
+  .col-column-type { display: none; }
+}
+@container collection-table (max-width: 900px) {
+  .col-row-lab :is(.col-th-language, .col-td-language) { display: none; }
+}
+@container collection-table (max-width: 800px) {
+  .col-row-lab .col-notes { display: none; }
+}
+
+/* The row's divider is included in the 36px mouse density; touch controls retain their 44px floor. */
+@media (min-width: 1000px) and (pointer: fine) {
+  .col-row-lab .col-open { min-height: calc(var(--row-h) - 1px); }
+}
+
+.col-key-hint { display: none; margin: 0; padding: var(--s-2) var(--s-3); color: var(--ink-2); font-size: var(--fs-meta); }
+@media (min-width: 1000px) and (hover: hover) and (pointer: fine) {
+  .col-key-hint { display: block; }
+}
+
+/* Saved packing-list hints are separate from the aggregate in-decks counts. */
+.col-packing-marker { display: block; color: var(--ink-2); font-size: var(--fs-meta); line-height: 1.1; }
+.col-packing-hints { display: block; font-size: var(--fs-meta); white-space: normal; overflow-wrap: anywhere; }
+.col-packing-label, .col-packing-hint, .col-packing-hints > .col-viewer-note { display: block; }
+.col-packing-hints a { max-width: 100%; min-width: 0; gap: var(--s-1); white-space: normal; overflow-wrap: anywhere; }
+.col-packing-hints a > span:not(.deck-swatch) { min-width: 0; }

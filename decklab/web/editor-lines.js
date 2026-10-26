@@ -73,9 +73,13 @@ function drawLines() {
     if (!entries.length && section === "Commander" && kind !== "commander") continue;
     if (!entries.length && section === "Sideboard") continue;
     if (!entries.length && !total && ed.mode === "new" && !ed.from && section === "Deck") continue;
-    const part = el("section", { class: "edit-section", "aria-label": sectionTitle(section) },
+    const part = el("section", { class: "edit-section" + (section === "Sideboard" ? " edit-sideboard" : ""),
+      "data-section": section, "aria-label": sectionTitle(section) },
       el("h3", { class: "section-title" }, sectionTitle(section),
         el("span", { class: "count", "data-count": section, text: countWords(copies(lines)) })));
+    if (section === "Sideboard" && (kind === "casual" || kind === "commander")) {
+      part.append(el("p", { class: "edit-sideboard-note", text: `Not counted in the ${kind === "commander" ? 100 : 60}.` }));
+    }
     if (!entries.length) {
       add(part, [emptyPart(section)]);
     } else if (section === "Deck") {
@@ -98,6 +102,7 @@ function drawLines() {
     if (again) again.focus({ preventScroll: true });
   }
   markRows();
+  syncEditorRowChanges(ed);
   ed.flash = null;
 }
 
@@ -132,16 +137,18 @@ function lineCaption(line, section) {
  * the whole list), at most one badge (filled by editor-save.js showRowAvailability when the card isn't
  * simply owned and free), its printing (the printing sheet), and ⋯ (change printing, move, remove). */
 function lineRow(line, section) {
+  const change = editorRowChangeNodes(line, section);
   const card = line.card;
   const open = card
     ? viewerItem(el("button", { type: "button", class: "edit-card", "aria-haspopup": "dialog",
       "aria-label": `See ${line.name}`, "data-focus": `card:${line.uid}`, onclick: (e) => openCard(card, e.currentTarget) },
     card.img_small ? el("img", { class: "edit-thumb", src: card.img_small, alt: "", loading: "lazy", decoding: "async",
       width: 40, height: 56 }) : el("span", { class: "edit-thumb thumb-missing", "aria-hidden": "true" }),
-    el("span", { class: "nm" }, el("span", { class: "nm-text", text: line.name }), editor.quick ? null : manaCost(card.mana_cost, true))),
+    el("span", { class: "nm" }, change.dot, el("span", { class: "nm-text", text: line.name }), change.was,
+      editor.quick ? null : manaCost(card.mana_cost, true))),
     card, "editor", lineCaption(line, section))
     : el("span", { class: "edit-card" }, el("span", { class: "edit-thumb thumb-missing", "aria-hidden": "true" }),
-      el("span", { class: "nm" }, el("span", { class: "nm-text", text: line.name })));
+      el("span", { class: "nm" }, change.dot, el("span", { class: "nm-text", text: line.name }), change.was));
   // The Quick edit shows the printing as words under the name; its ⋯ changes it (a 44 px row stays one row).
   // On a phone the name has the first line to itself; the cost goes before the printing on the second.
   const print = editor.quick ? el("span", { class: "edit-print-words" }, card ? manaCost(card.mana_cost, true) : null,
@@ -149,34 +156,101 @@ function lineRow(line, section) {
     : el("button", { type: "button", class: "chip-btn edit-print", "data-focus": `print:${line.uid}`, "aria-haspopup": "dialog",
       "aria-label": `${line.name}: ${printingText(line)}. Change the printing`, onclick: () => openPrintings(line.uid) },
     printingText(line), el("span", { class: "caret", "aria-hidden": "true" }));
+  const more = rowMenuButton(line);
   const row = peekable(el("li", { class: "edit-row" + (editor.flash === line.uid ? " flash" : ""), "data-uid": line.uid },
     stepper(line, "row"),
     open,
     el("span", { class: "edit-badge-slot" }),
     print,
-    rowMenuButton(line)), card);
+    more), card);
   if (!card) row.append(el("p", { class: "edit-problem", text: "Not a card name in the card data; kept as written." }));
+  row.editorChange = { ...change, trigger: open, more };
+  row.append(change.description);
   return row;
 }
 
 /** A line in the Pictures look: the card's picture, stacked for its copies, with − n + under it. */
 function lineTile(line, section) {
+  const change = editorRowChangeNodes(line, section);
   // The badge sits on the picture's corner and the finish is in the meta line ("FDN 227 · foil", with the
   // sheen), so every tile's footer is − n + and ⋯ on one line.
+  const more = rowMenuButton(line);
   const tile = cardTile(line.card, { qty: line.qty, name: line.name, meta: printingText(line),
     viewerGroup: "editor", caption: lineCaption(line, section), state: el("span", { class: "edit-badge-slot" }),
-    chips: [stepper(line, "tile"), rowMenuButton(line)] });
+    chips: [stepper(line, "tile"), more] });
   tile.classList.add("edit-row", "edit-tile");
   if (line.finish === "foil" || line.finish === "etched") tile.classList.add(`is-${line.finish}`);
   if (editor.flash === line.uid) tile.classList.add("flash");
   tile.dataset.uid = String(line.uid);
   tile.setAttribute("data-uid", String(line.uid));
   tile.setAttribute("data-copies", String(Math.min(line.qty, 4)));
+  clear(tile.querySelector(".card-tile-name")).append(change.dot,
+    el("span", { text: line.name }));
+  const trigger = tile.querySelector(".card-tile-open");
+  trigger.append(change.was); // A separate line, outside the original two-line name clamp.
+  tile.editorChange = { ...change, trigger, more };
+  tile.append(change.description);
   return tile;
 }
 
-/** A line's ⋯ menu: its printing, moving it to another section, a short Play-now line's stand-ins
- * (editor-swaps.js), and Remove (last). */
+/** Retained decoration only: the original card trigger, quantity and menu keep their identity. */
+function editorRowChangeNodes(line, section) {
+  return { line, section, keyboardFrame: keyboardEditorFrame(editor),
+    dot: el("span", { class: "dot edit-unsaved-dot", hidden: true, "aria-hidden": "true" }),
+    was: el("span", { class: "edit-was", hidden: true, "aria-hidden": "true" }),
+    description: el("span", { class: "sr-only edit-change-description", id: `edit-change-${line.uid}`, hidden: true }) };
+}
+
+/** Compare saved intent by section and exact printing, never by transient page uid or card name alone.
+ * New/copy editors and a Play-now list not saved yet have no saved baseline. Duplicate exact keys can
+ * share an aggregate change, but cannot truthfully claim that one particular row "was N". */
+function syncEditorRowChanges(ed = editor) {
+  if (!ed || ed !== editor || !ed.dom.lines) return;
+  const saved = ed.mode === "edit" && ed.hasFileList && !ed.starting && ed.base?.lists
+    && ed.view?.lists?.[ed.version] != null;
+  const before = saved ? tally(ed.base.lists) : new Map();
+  const after = saved ? tally(ed.lists) : new Map();
+  const counts = (lists) => {
+    const out = new Map();
+    for (const [section, lines] of Object.entries(lists || {})) for (const line of lines) {
+      const key = `${section}\n${lineKey(line)}`;
+      out.set(key, (out.get(key) || 0) + 1);
+    }
+    return out;
+  };
+  const oldCounts = saved ? counts(ed.base.lists) : new Map();
+  const newCounts = saved ? counts(ed.lists) : new Map();
+  const current = new Map();
+  for (const [section, lines] of Object.entries(ed.lists)) for (const line of lines) current.set(line.uid, { line, section });
+  for (const row of ed.dom.lines.querySelectorAll("[data-uid]")) {
+    const p = row.editorChange;
+    if (!p) continue;
+    const found = current.get(p.line.uid);
+    const key = `${p.section}\n${lineKey(p.line)}`;
+    const was = before.get(key)?.qty || 0;
+    const changed = !!saved && found?.line === p.line && found.section === p.section && was !== (after.get(key)?.qty || 0);
+    const unique = (oldCounts.get(key) || 0) <= 1 && newCounts.get(key) === 1;
+    row.classList.toggle("is-unsaved", changed);
+    p.dot.hidden = !changed;
+    p.was.hidden = !changed || !unique;
+    p.was.textContent = changed && unique ? `was ${was}` : "";
+    p.description.hidden = !changed;
+    p.description.textContent = changed
+      ? `Unsaved change. Saved ${sectionTitle(p.section)}: ${plural(was, "copy", "copies")} of this printing.` : "";
+    const stepper = row.querySelector(".edit-stepper");
+    if (stepper) stepper.classList.toggle("is-changed", changed);
+    // Merge our description with any other one, and remove only our id when the change is undone.
+    for (const target of [p.trigger, stepper?.querySelector(".qty-input")]) if (target) {
+      const ids = (target.getAttribute("aria-describedby") || "").split(/\s+/).filter((id) => id && id !== p.description.id);
+      if (changed) ids.push(p.description.id);
+      if (ids.length) target.setAttribute("aria-describedby", ids.join(" "));
+      else target.removeAttribute("aria-describedby");
+    }
+  }
+}
+
+/** A line's ⋯ menu: a short Play-now line's stand-ins (editor-swaps.js), its printing,
+ * moving it to another section, and Remove (last). */
 function rowMenuButton(line) {
   const uid = line.uid;
   const button = el("button", { type: "button", class: "btn btn-quiet edit-more", "data-focus": `more:${uid}`,
@@ -185,9 +259,9 @@ function rowMenuButton(line) {
       const found = findLine(uid);
       if (!found) return;
       openMenu(button, [
+        swapsAvailableFor(found.line) ? { text: "Stand-ins…", onclick: () => openSwapSheet(uid) } : null,
         { text: "Change printing…", onclick: () => openPrintings(uid) },
         ...moveTargets(found.section).map((s) => ({ text: `Move to ${moveWords(s)}`, onclick: () => moveLine(uid, s) })),
-        swapsAvailableFor(found.line) ? { text: "Stand-ins…", onclick: () => openSwapSheet(uid) } : null,
         "-",
         { text: "Remove", danger: true, onclick: () => removeLine(uid) }]);
     } });
@@ -208,7 +282,8 @@ function removedRow(g) {
   const line = g.line;
   const what = `${line.qty} ${line.name}` + (line.set ? ` (${printingText(line)})` : "");
   return el(visualLook() ? "div" : "li", { class: "edit-row edit-removed", "data-removed": g.uid },
-    el("p", { class: "removed-text" }, el("span", { class: "removed-word", text: "Removed" }), ` ${what}`),
+    el("p", { class: "removed-text" }, el("span", { class: "removed-word", text: "Removed" }), " ",
+      el("span", { class: "removed-line", text: what })),
     el("button", { type: "button", class: "btn btn-quiet undo-btn", "data-focus": `undo:${g.uid}`,
       "aria-label": `Undo: put ${what} back`, onclick: () => undoRemove(g.uid) }, "Undo"));
 }
@@ -218,21 +293,78 @@ function typedQty(text) {
   return /^\s*\d{1,2}\s*$/.test(text) ? parseInt(text, 10) : NaN;
 }
 
+/** A row/control's semantic address survives copyList's fresh page uids during Undo. */
+function editorUndoFocus(ed) {
+  const host = ed.dom.lines, active = document.activeElement;
+  if (!editorKeyboardCurrent(ed) || !active?.isConnected) return null;
+  const address = { active, token: routeToken, profile: ed.profile, scope: JSON.stringify([ed.id, ed.version, ed.space]) };
+  const bar = ["addCards", "save", "saveMore", "checks"].find((key) => ed.dom.barParts?.[key] === active);
+  if (bar) return { ...address, bar };
+  if (ed.dom.searchDock && editorSearchDockCurrent(ed.dom.searchDock) && ed.dom.searchDock.root.contains(active))
+    return { ...address, bar: "addCards" }; // Undo redraws the Dock; recover at its current launcher or Cards.
+  if (!host?.contains(active)) return null;
+  const row = [...host.querySelectorAll("[data-uid]")].find((node) => node.editorChange && node.contains(active));
+  let found = row?.editorChange && findLine(row.editorChange.line.uid), kind = active.dataset.focus?.split(":")[0];
+  if (found?.line !== row?.editorChange?.line || found?.section !== row?.editorChange?.section) found = null;
+  if (row?.editorChange?.trigger?.contains(active)) kind = "card";
+  if (!found) {
+    const gone = ed.removed.find((item) => String(item.uid) === active.closest?.("[data-removed]")?.dataset.removed);
+    if (!gone) return null;
+    found = { line: gone.line, section: gone.section, index: gone.before.length }; kind = "plus";
+  }
+  const lines = ed.lists[found.section] || [], key = lineKey(found.line);
+  return { ...address, key, section: found.section, index: found.index, kind,
+    occurrence: lines.slice(0, found.index).filter((line) => lineKey(line) === key).length };
+}
+
+/** Restore only the owned row focus lost by this synchronous redraw, never a new field or modal focus. */
+function restoreEditorUndoFocus(ed, saved) {
+  if (!saved) return;
+  const here = () => editorKeyboardCurrent(ed) && saved.token === routeToken && saved.profile === state.profile?.id
+    && saved.scope === JSON.stringify([ed.id, ed.version, ed.space]) && (saved.bar || ed.dom.lines?.isConnected)
+    && !ed.saving && !ed.asking && !ed.leaving && !document.querySelector("dialog[open]") && !keyboardMenuOpen();
+  const visible = (node) => node?.isConnected && !node.disabled && !node.hidden && !node.closest("[hidden]")
+    && !node.matches(":disabled") && (!node.getClientRects || node.getClientRects().length > 0)
+    && (/^(BUTTON|INPUT|SELECT|TEXTAREA|SUMMARY)$/.test((node.tagName || node.tag || "").toUpperCase()) || node.getAttribute("tabindex") !== null);
+  const active = document.activeElement, freshBar = saved.bar && ed.dom.barParts?.[saved.bar];
+  if (!here() || active && active !== saved.active && active !== document.body && active.isConnected
+    && (active !== freshBar || visible(active))) return;
+  const lines = ed.lists[saved.section] || [], matches = lines.filter((line) => lineKey(line) === saved.key);
+  const line = matches[Math.min(saved.occurrence, matches.length - 1)] || lines[Math.min(saved.index, lines.length - 1)];
+  const row = [...ed.dom.lines.querySelectorAll("[data-uid]")].find((node) => node.editorChange && node.editorChange.line === line);
+  const selectors = { minus: ".step-minus", plus: ".step-plus", qty: ".qty-input", more: ".edit-more", print: ".edit-print" };
+  const preferred = saved.bar ? freshBar : saved.kind === "card" ? row?.editorChange?.trigger
+    : selectors[saved.kind] && row?.querySelector(selectors[saved.kind]);
+  const target = [preferred, row?.querySelector(".qty-input"), ed.dom.page.querySelector('[data-focus="tab:cards"]'), ed.dom.lines.querySelector("button"),
+    ed.dom.barParts?.addCards, ed.dom.barParts?.save].find(visible);
+  if (!target || !here()) return;
+  target.focus({ preventScroll: true });
+  if (here() && document.activeElement === target) target.scrollIntoView({ block: "center" });
+}
+
 /** − n +. "−" on a line of 1 removes it (with Undo, where it was). */
 function stepper(line, where) {
-  const uid = line.uid;
+  const ed = editor, uid = line.uid;
   const qty = el("input", { class: "qty-input", type: "text", inputmode: "numeric", pattern: "[0-9]*", maxlength: 2,
     value: String(line.qty), "aria-label": `Copies of ${line.name}`, "data-focus": `qty:${where}:${uid}`,
     enterkeyhint: "done" });
+  // ed.saving also covers the editable pre-save check; it is not a main-input lock.
+  const current = () => editor === ed && ed.profile === state.profile?.id && qty.isConnected
+    && editorKeyboardCurrent(ed) && !ed.asking && !ed.leaving && !qty.disabled && !qty.matches(":disabled")
+    && findLine(uid)?.line === line;
   qty.addEventListener("focus", () => qty.select());
   // A number counts as it's typed (the count, the draft, the checks) and nothing is drawn again: the
   // tap that comes next, on Save or on another row's +, lands on what the finger went for.
-  qty.addEventListener("input", () => {
+  const input = (event) => {
+    if (!current() || editorKeyIgnored(event) || keyboardMenuOpen() || document.querySelector("dialog[open]")) return;
     const n = typedQty(qty.value);
     if (n >= 1) setQty(uid, n);
-  });
+  };
+  qty.addEventListener("input", input);
+  editorComposition(qty, input);
   // Leaving the box: 0 removes the line, anything that isn't a number goes back to the count.
-  qty.addEventListener("change", () => {
+  qty.addEventListener("change", (event) => {
+    if (!current() || editorKeyIgnored(event) || keyboardMenuOpen() || document.querySelector("dialog[open]")) return;
     const found = findLine(uid);
     if (!found) return;
     const n = typedQty(qty.value);
@@ -243,7 +375,11 @@ function stepper(line, where) {
     if (n >= 1 && n !== found.line.qty) setQty(uid, n);
     qty.value = String(found.line.qty);
   });
-  qty.addEventListener("keydown", (e) => { if (e.key === "Enter") qty.blur(); });
+  qty.addEventListener("keydown", (e) => {
+    if (!current() || document.activeElement !== qty || editorKeyIgnored(e) || keyboardMenuOpen() || document.querySelector("dialog[open]")
+      || e.ctrlKey || e.metaKey || e.altKey || e.shiftKey || e.key !== "Enter") return;
+    e.preventDefault(); if (!e.repeat) qty.blur();
+  });
   return el("div", { class: "stepper edit-stepper", "data-uid": uid },
     el("button", { type: "button", class: "step step-minus", "aria-label": line.qty <= 1 ? `Remove ${line.name}` : `One fewer ${line.name}`,
       "data-focus": `minus:${where}:${uid}`, onclick: () => stepQty(uid, -1) }, "−"),
@@ -292,7 +428,21 @@ function showQty(line) {
     else if (line.qty > 1) tile.querySelector(".card-tile-pic").append(el("span", { class: "card-tile-qty", text: `×${line.qty}` }));
     if (badge && line.qty <= 1) badge.remove();
   }
+  syncEditorLineCaption(line);
   refreshCounts();
+}
+
+/** Keep the current line's registered caption current without replacing its viewer entry or trigger. */
+function syncEditorLineCaption(line) {
+  const ed = editor;
+  if (!ed || !line || ed.profile !== state.profile?.id || !ed.dom.lines?.isConnected) return;
+  const found = findLine(line.uid);
+  if (found?.line !== line) return;
+  const row = ed.dom.lines.querySelector(`[data-uid="${line.uid}"]`), p = row?.editorChange, trigger = p?.trigger;
+  if (p?.line !== line || p.section !== found.section || !trigger || !row.contains(trigger)
+    || trigger.getAttribute("data-viewer") !== "editor") return;
+  const entry = viewerCards.get(trigger);
+  if (entry && entry.card === line.card) entry.caption = lineCaption(line, found.section);
 }
 
 function removeLine(uid) {

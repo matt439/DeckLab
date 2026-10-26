@@ -1,5 +1,5 @@
 /* Deck Lab's page: receiving a delivery as a check-off board (decklab/UI-REVIEW.md WP6). Each pending part of
-the order is a grid of card pictures with a 44 px tick on each; a tap opens the card's sheet (its printing,
+the order has native checks in Pictures or List. Inspect opens the card's sheet (its printing,
 finish, condition, language and notes, split copies), whose picture opens the swipe viewer over the whole
 grid. A sticky bar at the bottom shows the progress, the arrival date and the one main action: Preview, which
 names the checked selection once its required checks are ticked; unticked cards remain pending. The preview opens a dialog in plain
@@ -13,6 +13,7 @@ can) sees the same tiles, read only. */
 "use strict";
 
 const RCPT_CONDITIONS = ["", "NM", "LP", "MP", "HP", "DMG"];
+const RCPT_FILTERS = ["all", "todo", "attention", "ticked"];
 const RCPT_LANGUAGES = ["", "en", "ja", "de", "fr", "it", "es", "pt", "ko", "ru", "zhs", "zht"];
 const RCPT_LANGUAGE_WORDS = { en: "English", ja: "Japanese", de: "German", fr: "French", it: "Italian", es: "Spanish",
   pt: "Portuguese", ko: "Korean", ru: "Russian", zhs: "Chinese (simplified)", zht: "Chinese (traditional)" };
@@ -108,8 +109,9 @@ function rcptNotesWithout(notes, test) {
 /** The delivery for a visitor who can't record arrivals (only an admin can): the same tiles, read only. A tap
  * opens the card viewer over the component's tiles. */
 function drawReceiptReadOnly(view, data) {
+  view.readOnly = true;
   setTitle(`${routeFor("receipt").title}: ${data.seller || data.order}`);
-  add(view.root, [rcptHead(data, "Delivery"),
+  add(view.root, [rcptHead(data, "Delivery", view),
     el("p", { class: "note receipt-read-only", text: "Only an admin can record a delivery's arrival, so this is read only." })]);
   data.components.forEach((c, index) => {
     const comp = rcptMakeComp(view, c, index);
@@ -128,23 +130,6 @@ function drawReceiptReadOnly(view, data) {
   });
   $("#main").append(view.root);
   return view;
-}
-
-/** The page's head: the crumb back to Shopping, the title, who sent it and when, and the order's notes (two lines
- * with More). */
-function rcptHead(data, title) {
-  const notes = data.notes ? el("p", { class: "rcpt-notes", text: data.notes }) : null;
-  const more = notes && data.notes.length > 140 ? el("button", { type: "button", class: "btn btn-quiet btn-inline rcpt-more",
-    "aria-expanded": "false", text: "More", onclick: (e) => {
-      const open = notes.classList.contains("is-open");
-      notes.classList.toggle("is-open", !open);
-      e.currentTarget.setAttribute("aria-expanded", String(!open));
-      e.currentTarget.textContent = open ? "More" : "Less";
-    } }) : null;
-  const sent = [data.seller || "Seller not recorded", data.ordered_on ? `ordered ${rcptDate(data.ordered_on)}` : null]
-    .filter(Boolean).join(" · ");
-  return [...pageHead({ crumb: ["#/shopping", routeFor("shopping").label], title: title || routeH1("receipt"),
-    description: sent }), notes, more];
 }
 
 /** A component's heading in plain words: "15 cards from Example Games", "13 token cards", "Goblin Horde (product)";
@@ -166,7 +151,7 @@ function drawReceipt(data, token) {
   if (!mayDo("receipts")) return drawReceiptReadOnly(view, data);
   setTitle(`${routeFor("receipt").title}: ${data.seller || data.order}`);
   const pending = data.components.filter((c) => c.status === "pending");
-  add(view.root, [rcptHead(data)]);
+  add(view.root, [rcptHead(data, null, view)]);
   if (!pending.length) {
     view.root.append(el("div", { class: "empty" }, el("p", { text: "Everything in this order has arrived." }),
       el("a", { class: "btn btn-primary", href: "#/shopping", text: "Back to Shopping" })));
@@ -182,7 +167,7 @@ function drawReceipt(data, token) {
     view.comps.push(comp);
   }
   view.board = el("div", { class: "rcpt-board" });
-  view.root.append(view.board);
+  rcptBuildLayout(view);
   const done = data.components.filter((c) => c.status !== "pending");
   if (done.length) {
     view.root.append(el("p", { class: "sub rcpt-done", text: `Already dealt with: ${done.map((c) =>
@@ -196,6 +181,7 @@ function drawReceipt(data, token) {
   rcptOfferDraft(view);
   $("#main").append(view.root);
   rcptSync(view);
+  rcptWatchBar(view);
   return view;
 }
 
@@ -279,9 +265,10 @@ function rcptChecksCard(view, comp) {
  * the grid starts near the top. */
 function rcptToolbar(view, comp) {
   const words = (wide, narrow) => [el("span", { class: "rcpt-wide", text: wide }), el("span", { class: "rcpt-narrow", text: narrow })];
-  comp.filterButtons = [["all", "All", "All"], ["todo", "Not checked", "To do"], ["attention", "Needs attention", "Attention"]]
+  comp.filterButtons = [["all", "All", "All"], ["todo", "Not checked", "To do"],
+    ["attention", "Needs attention", "Attention"], ["ticked", "Ticked", "Ticked"]]
     .map(([key, wide, narrow]) => el("button", { type: "button", "aria-pressed": String(view.filter === key), "data-filter": key,
-      onclick: () => { view.filter = key; rcptRefreshAll(view); } }, words(wide, narrow)));
+      onclick: () => rcptSetFilter(view, key) }, words(wide, narrow)));
   comp.layoutButtons = rcptLayoutButtons(view);
   const tools = rcptTools(view, comp, false);
   comp.fill = tools.fill; comp.fillButton = tools.fillButton;
@@ -324,7 +311,7 @@ function rcptTools(view, comp, inSheet, done = () => {}) {
     el("span", { text: "Clear “check on arrival” notes when ticked" })));
   if (fill) {
     const blanks = comp.rows.filter((row) => rcptBlank(comp, row)).length;
-    fill.hidden = !blanks; fillButton.textContent = `Apply to ${blanks}`;
+    fill.hidden = !blanks; fillButton.textContent = `Apply to ${plural(blanks, "row")}`;
   }
   if (inSheet) nodes.unshift(rcptField("Layout", el("div", { class: "segmented", role: "group", "aria-label": "Layout" }, rcptLayoutButtons(view))));
   return { nodes, fill, fillButton };
@@ -343,6 +330,14 @@ function rcptToolsSheet(view, comp) {
   add(sheet.body, [el("div", { class: "rcpt-tools-sheet" }, tools.nodes)]);
   sheetActions(sheet, [{ text: "Done", kind: "primary", onclick: () => sheet.close() }]);
   return sheet;
+}
+
+/** A view preference joins an existing draft without changing the checked selection or its preview. */
+function rcptSetFilter(view, key) {
+  if (!receiptActive(view) || view.done) return;
+  view.filter = RCPT_FILTERS.includes(key) ? key : "all";
+  rcptRefreshAll(view);
+  if (receiptEditable(view)) rcptSaveDraft(view);
 }
 
 /** Redraws every grid and toolbar state (a filter or layout change, a resumed draft). */
@@ -369,16 +364,18 @@ function rcptDrawGrid(view, comp) {
   }
   rcptEmptyState(view, comp);
   rcptToolbarCounts(view, comp);
+  rcptSyncSelected(view);
 }
 
-/** "Everything here is checked." with Show all, when the filter leaves nothing to show. */
+/** A filter-specific empty message with Show all, when the filter leaves nothing to show. */
 function rcptEmptyState(view, comp) {
   const old = comp.grid.querySelector(".rcpt-none");
   if (old) old.remove();
   if (comp.rows.some((row) => !row.tile.hidden)) return null;
   const none = el("div", { class: "empty rcpt-none" },
-    el("p", { text: view.filter === "todo" ? "Everything here is checked." : "Nothing here needs attention." }),
-    el("button", { type: "button", class: "btn", text: "Show all", onclick: () => { view.filter = "all"; rcptRefreshAll(view); } }));
+    el("p", { text: view.filter === "todo" ? "Everything here is checked."
+      : view.filter === "ticked" ? "Nothing here is checked yet." : "Nothing here needs attention." }),
+    el("button", { type: "button", class: "btn", text: "Show all", onclick: () => rcptSetFilter(view, "all") }));
   comp.grid.append(none);
   return none;
 }
@@ -387,13 +384,13 @@ function rcptToolbarCounts(view, comp) {
   if (comp.fill) {
     const blanks = comp.rows.filter((row) => rcptBlank(comp, row)).length;
     comp.fill.hidden = !blanks;
-    comp.fillButton.textContent = `Apply to ${blanks}`;
+    comp.fillButton.textContent = `Apply to ${plural(blanks, "row")}`;
   }
   if (comp.filterButtons) {
     const attention = comp.rows.filter((row) => rcptAttention(view, comp, row).length).length;
     const [wide, narrow] = comp.filterButtons[2].children;
-    wide.textContent = attention ? `Needs attention (${attention})` : "Needs attention";
-    narrow.textContent = attention ? `Attention (${attention})` : "Attention";
+    wide.textContent = attention ? `Needs attention (${plural(attention, "row")})` : "Needs attention";
+    narrow.textContent = attention ? `Attention (${plural(attention, "row")})` : "Attention";
   }
 }
 
@@ -494,10 +491,12 @@ function rcptChips(view, comp, row) {
   if (flag) chips.push(el("span", { class: "chip chip-plain rcpt-flag", title: flag, text: "⚑ Note" }));
   const decks = rcptDecks(comp, row);
   const waiting = decks.filter((d) => d.waiting > 0);
-  for (const d of waiting) chips.push(el("span", { class: "chip chip-info", title: `${d.title} counts on ${d.waiting} from this delivery`, text: `For ${rcptShortTitle(d.title)} ×${d.waiting}` }));
+  for (const d of waiting) chips.push(el("span", { class: "chip chip-info", title: `${d.title} counts on ${d.waiting} from this delivery` },
+    rcptDeckSwatch(d), `For ${rcptShortTitle(d.title)} ×${d.waiting}`));
   if (!waiting.length) {
     const using = decks.filter((d) => d.status === "built" || d.status === "building");
-    for (const d of using.slice(0, 2)) chips.push(el("span", { class: "chip chip-plain", title: `${d.title} lists ${d.uses}`, text: `${rcptShortTitle(d.title)} ×${d.uses}` }));
+    for (const d of using.slice(0, 2)) chips.push(el("span", { class: "chip chip-plain", title: `${d.title} lists ${d.uses}` },
+      rcptDeckSwatch(d), `${rcptShortTitle(d.title)} ×${d.uses}`));
     if (using.length > 2) chips.push(el("span", { class: "chip chip-plain", text: `+${using.length - 2}` }));
   }
   return chips;
@@ -568,49 +567,9 @@ function rcptAttention(view, comp, row) {
 
 function rcptShown(view, comp, row) {
   if (view.filter === "todo") return !row.ticked;
+  if (view.filter === "ticked") return row.ticked;
   if (view.filter === "attention") return rcptAttention(view, comp, row).length > 0;
   return true;
-}
-
-/** One row's tile (or, in List, its row): its picture with the copies, the tick, the name, the printing and the
- * chips. On a part being checked a tap opens its sheet, whose picture opens the viewer over this grid; read only,
- * or on a part that hasn't arrived, a tap opens the viewer and there's no tick. */
-function rcptTile(view, comp, row, readOnly) {
-  const q = rcptQty(row);
-  const active = !readOnly && comp.selected;
-  const list = view.layout === "list" && !readOnly;
-  const name = comp.kind === "tokens" ? row.values.front : row.values.name;
-  const caption = `${plural(q, "copy", "copies")} in this delivery · ${rcptMeta(comp, row)}`;
-  const tick = active ? el("button", { type: "button", class: `tile-tick${list ? " tile-tick-plain" : ""} rcpt-tick`,
-    "aria-pressed": String(row.ticked),
-    "aria-label": `Check off ${name}`, onclick: () => rcptTick(view, comp, row, !row.ticked) }) : null;
-  const card = rcptCard(comp, row);
-  const chips = rcptChips(view, comp, row);
-  const label = active ? `${name}: check and edit` : null;
-  const onclick = active ? () => rcptOpenSheet(view, comp, row) : card ? (e) => openCard(card, e.currentTarget) : null;
-  let tile, open;
-  if (list) {
-    const ribbon = rcptUnrecorded(comp, row);
-    const rowCard = card || { name, mana_cost: "", type_line: "", img: null, img_small: null };
-    open = cardRow(rowCard, { qty: q, name: comp.kind === "tokens" ? rowCard.name : name, meta: rcptMeta(comp, row, true), aside: null,
-      chips: [finishChip(row.values.finish), ribbon ? status("warn", ribbon) : null, ...chips].filter(Boolean),
-      onclick: onclick || (() => {}) });
-    if (label) open.setAttribute("aria-label", label);
-    tile = el("div", { class: "rcpt-row" + (row.ticked && active ? " is-ticked" : "") }, open, tick);
-  } else {
-    const common = { qty: q, meta: rcptMeta(comp, row, true), state: tick, ticked: row.ticked && active,
-      unrecorded: rcptUnrecorded(comp, row), chips, label, onclick };
-    tile = comp.kind === "tokens"
-      ? tokenTile({ front: row.values.front, back: row.values.back, img: card.img_small,
-        back_img: card.faces ? card.faces[1].img_small : null }, { ...common, name: card.name })
-      : cardTile(card, { ...common, finish: row.values.finish, name: frontName(row.values.name) });
-    open = tile.querySelector(".card-tile-open");
-  }
-  if (card && card.img_small && open) viewerItem(open, card, comp.group, caption);
-  row.open = open;
-  tile.setAttribute("data-row", String(row.key));
-  if (!readOnly) tile.hidden = !rcptShown(view, comp, row);
-  return tile;
 }
 
 /** Replaces one row's tile in place (after a tick or an edit). */
@@ -623,13 +582,14 @@ function rcptRefreshTile(view, comp, row) {
   row.tile = fresh;
   rcptEmptyState(view, comp);
   rcptToolbarCounts(view, comp);
+  rcptSyncSelected(view);
 }
 
 
 // ------------------------------------------------------------------ ticks and bulk tools
 
 /** Ticks or unticks a row. Ticking clears its "check on arrival" notes (when that's on); the sheet can put them
- * back. A tick that hides the tile (under Not checked) moves the focus to the next tile's tick, or to the empty
+ * back. A change that hides the tile under a filter moves the focus to the next tile's tick, or to the empty
  * state's Show all. */
 function rcptTick(view, comp, row, value) {
   if (!receiptEditable(view)) return;
@@ -699,7 +659,10 @@ function rcptOpenSheet(view, comp, row) {
   }
   const sheet = openReceiptSheet(view, { title: "", side: true, onClose: () => {
     const was = view.sheet; view.sheet = null;
-    if (was && was.row.tile) { const open = was.row.tile.querySelector(".card-tile-open"); if (open) open.focus(); }
+    if (was && was.row.tile) {
+      if (was.row.tile.hidden) rcptFocusAfterTick(view, was.comp, was.row);
+      else if (was.row.open) was.row.open.focus();
+    }
   } });
   view.sheet = { sheet, comp, row };
   rcptFillSheet(view);
@@ -707,6 +670,7 @@ function rcptOpenSheet(view, comp, row) {
 
 function rcptFillSheet(view) {
   const { sheet, comp, row } = view.sheet;
+  rcptSelectRow(view, comp, row);
   const v = row.values;
   sheet.heading.textContent = comp.kind === "tokens" ? (v.back ? `${v.front} // ${v.back}` : v.front) : v.name;
   const body = clear(sheet.body);
@@ -716,7 +680,7 @@ function rcptFillSheet(view) {
   const decks = rcptDecks(comp, row);
   if (decks.length) {
     body.append(el("h3", { text: "Decks with this card" }), el("ul", { class: "rcpt-decks" }, decks.map((d) =>
-      el("li", {}, el("a", { href: deckHref(d.id), text: d.title }),
+      el("li", {}, rcptDeckLink(d),
         ` · ${STATUS_WORDS[d.status] || "Idea"}, lists ${d.uses}`,
         d.waiting ? el("strong", { text: ` · counts on ${d.waiting} from this delivery` }) : null))));
   }

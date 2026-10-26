@@ -1,0 +1,244 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2140" height="1810" viewBox="0 0 2140 1810" role="img" aria-labelledby="title desc">
+  <title id="title">P1 Build decks: Decks chooser sheet, drawing before implementation</title>
+  <desc id="desc">Illustrative fixture data only. Five states show a 393 by 700 bottom sheet, an 852 by 330 centered body-scrolled sheet, empty and twelve-selected states, and the 999 to 1000 pixel handoff to one 300 pixel chooser rail. No real records, card availability, colours or prices.</desc>
+  <defs>
+    <clipPath id="clip-1">
+      <rect x="40" y="278" width="393" height="489" />
+    </clipPath>
+    <clipPath id="clip-2">
+      <rect x="636" y="218" width="560" height="156" />
+    </clipPath>
+  </defs>
+  <rect width="100%" height="100%" fill="#f1f0ec" />
+  <text x="40" y="48" font-family="Figtree,Segoe UI,sans-serif" font-size="30" font-weight="700" fill="#1c211f" text-anchor="start">Build decks / Decks chooser</text>
+  <text x="40" y="80" font-family="Figtree,Segoe UI,sans-serif" font-size="16" font-weight="400" fill="#565e5a" text-anchor="start">E11-S30 · slice 13 · drawing for source review · illustrative fixture data only · source f9aa281</text>
+  <text x="40" y="113" font-family="Figtree,Segoe UI,sans-serif" font-size="17" font-weight="700" fill="#1c211f" text-anchor="start">01 / 393 × 700 · narrow / coarse controls</text>
+  <rect x="40" y="135" width="393" height="700" rx="0" fill="#ffffff" stroke="#d8d6ce" stroke-width="1" />
+  <rect x="40" y="135" width="393" height="56" rx="0" fill="#ffffff" />
+  <text x="60" y="170" font-family="Figtree,Segoe UI,sans-serif" font-size="14" font-weight="700" fill="#0b5552" text-anchor="start">DECK LAB</text>
+  <text x="413" y="170" font-family="Figtree,Segoe UI,sans-serif" font-size="16" font-weight="400" fill="#1c211f" text-anchor="end">Build decks</text>
+  <line x1="40" y1="191" x2="433" y2="191" stroke="#e2e0d9" stroke-width="1" />
+  <text x="64" y="231" font-family="Figtree,Segoe UI,sans-serif" font-size="23" font-weight="700" fill="#1c211f" text-anchor="start">Build decks</text>
+  <rect x="40" y="135" width="393" height="700" rx="0" fill="#9b9e99" />
+  <rect x="40" y="205" width="393" height="630" rx="14" fill="#ffffff" />
+  <rect x="40" y="821" width="393" height="14" rx="0" fill="#ffffff" />
+  <rect x="216.5" y="213" width="40" height="5" rx="2.5" fill="#d8d6ce" />
+  <text x="56" y="254" font-family="Figtree,Segoe UI,sans-serif" font-size="20" font-weight="700" fill="#1c211f" text-anchor="start">Decks</text>
+  <text x="125" y="254" font-family="Figtree,Segoe UI,sans-serif" font-size="14" font-weight="400" fill="#565e5a" text-anchor="start">· 2 chosen</text>
+  <line x1="396" y1="242" x2="408" y2="254" stroke="#3d4542" stroke-width="2" />
+  <line x1="408" y1="242" x2="396" y2="254" stroke="#3d4542" stroke-width="2" />
+  <line x1="40" y1="278" x2="433" y2="278" stroke="#e2e0d9" stroke-width="1" />
+  <g clip-path="url(#clip-1)">
+    <rect x="56" y="290" width="247" height="44" rx="22.0" fill="#ffffff" stroke="#0f6e6a" stroke-width="1.5" />
+    <text x="179.5" y="317.0" font-family="Figtree,Segoe UI,sans-serif" font-size="15" font-weight="700" fill="#0b5552" text-anchor="middle">Built and being built</text>
+    <rect x="311" y="290" width="106" height="44" rx="22.0" fill="#ffffff" />
+    <text x="364.0" y="317.0" font-family="Figtree,Segoe UI,sans-serif" font-size="15" font-weight="700" fill="#0b5552" text-anchor="middle">Clear</text>
+    <text x="56" y="358" font-family="Figtree,Segoe UI,sans-serif" font-size="14" font-weight="400" fill="#565e5a" text-anchor="start">Changes update the plan automatically.</text>
+    <text x="56" y="384" font-family="Figtree,Segoe UI,sans-serif" font-size="14" font-weight="700" fill="#3d4542" text-anchor="start">Usual opponents</text>
+    <rect x="56" y="410.0" width="24" height="24" rx="4" fill="#ffffff" stroke="#d8d6ce" stroke-width="1.5" />
+    <text x="92" y="427.0" font-family="Figtree,Segoe UI,sans-serif" font-size="16" font-weight="400" fill="#1c211f" text-anchor="start">Linen Banner</text>
+    <line x1="56" y1="448" x2="405" y2="448" stroke="#ebe9e3" stroke-width="1" />
+    <text x="56" y="473" font-family="Figtree,Segoe UI,sans-serif" font-size="14" font-weight="700" fill="#3d4542" text-anchor="start">Built</text>
+    <rect x="56" y="499.0" width="24" height="24" rx="4" fill="#0f6e6a" stroke="#0f6e6a" stroke-width="1.5" />
+    <line x1="61" y1="511.0" x2="67.0" y2="517.0" stroke="#ffffff" stroke-width="2" />
+    <line x1="67.0" y1="517.0" x2="76" y2="504.0" stroke="#ffffff" stroke-width="2" />
+    <text x="92" y="516.0" font-family="Figtree,Segoe UI,sans-serif" font-size="16" font-weight="700" fill="#1c211f" text-anchor="start">Amber Orchard</text>
+    <line x1="56" y1="537" x2="405" y2="537" stroke="#ebe9e3" stroke-width="1" />
+    <rect x="92" y="541" width="309" height="44" rx="22.0" fill="#e6e4de" />
+    <rect x="92.0" y="541" width="154.5" height="44" rx="22.0" fill="#0f6e6a" />
+    <text x="169.25" y="568.0" font-family="Figtree,Segoe UI,sans-serif" font-size="14" font-weight="700" fill="#ffffff" text-anchor="middle">Planned list</text>
+    <text x="323.75" y="568.0" font-family="Figtree,Segoe UI,sans-serif" font-size="14" font-weight="400" fill="#3d4542" text-anchor="middle">Play-now list</text>
+    <text x="92" y="611" font-family="Figtree,Segoe UI,sans-serif" font-size="14" font-weight="400" fill="#3d4542" text-anchor="start">Cards to assemble</text>
+    <rect x="92" y="623" width="309" height="44" rx="12" fill="#ffffff" stroke="#d8d6ce" stroke-width="1" />
+    <text x="104" y="650.0" font-family="Figtree,Segoe UI,sans-serif" font-size="14" font-weight="400" fill="#1c211f" text-anchor="start">Main deck + whole sideboard</text>
+    <line x1="378" y1="643.0" x2="384" y2="649.0" stroke="#3d4542" stroke-width="2" />
+    <line x1="384" y1="649.0" x2="390" y2="643.0" stroke="#3d4542" stroke-width="2" />
+    <text x="92" y="690" font-family="Figtree,Segoe UI,sans-serif" font-size="14" font-weight="400" fill="#565e5a" text-anchor="start">Full main deck + 5 of 5 intended</text>
+    <text x="92" y="710" font-family="Figtree,Segoe UI,sans-serif" font-size="14" font-weight="400" fill="#565e5a" text-anchor="start">sideboard cards. The intended list stays saved.</text>
+    <rect x="56" y="750.0" width="24" height="24" rx="4" fill="#ffffff" stroke="#d8d6ce" stroke-width="1.5" />
+    <text x="92" y="767.0" font-family="Figtree,Segoe UI,sans-serif" font-size="16" font-weight="400" fill="#1c211f" text-anchor="start">River Workshop</text>
+    <line x1="56" y1="788" x2="405" y2="788" stroke="#ebe9e3" stroke-width="1" />
+    <text x="56" y="818" font-family="Figtree,Segoe UI,sans-serif" font-size="14" font-weight="700" fill="#3d4542" text-anchor="start">Being built</text>
+    <rect x="56" y="842.0" width="24" height="24" rx="4" fill="#0f6e6a" stroke="#0f6e6a" stroke-width="1.5" />
+    <line x1="61" y1="854.0" x2="67.0" y2="860.0" stroke="#ffffff" stroke-width="2" />
+    <line x1="67.0" y1="860.0" x2="76" y2="847.0" stroke="#ffffff" stroke-width="2" />
+    <text x="92" y="859.0" font-family="Figtree,Segoe UI,sans-serif" font-size="16" font-weight="700" fill="#1c211f" text-anchor="start">Evening Pages</text>
+    <line x1="56" y1="880" x2="405" y2="880" stroke="#ebe9e3" stroke-width="1" />
+    <rect x="92" y="884" width="309" height="44" rx="22.0" fill="#e6e4de" />
+    <rect x="246.5" y="884" width="154.5" height="44" rx="22.0" fill="#0f6e6a" />
+    <text x="169.25" y="911.0" font-family="Figtree,Segoe UI,sans-serif" font-size="14" font-weight="400" fill="#3d4542" text-anchor="middle">Planned list</text>
+    <text x="323.75" y="911.0" font-family="Figtree,Segoe UI,sans-serif" font-size="14" font-weight="700" fill="#ffffff" text-anchor="middle">Play-now list</text>
+    <text x="56" y="972" font-family="Figtree,Segoe UI,sans-serif" font-size="14" font-weight="700" fill="#3d4542" text-anchor="start">› Ideas (9)</text>
+    <text x="56" y="1020" font-family="Figtree,Segoe UI,sans-serif" font-size="14" font-weight="700" fill="#3d4542" text-anchor="start">› Products (4)</text>
+  </g>
+  <rect x="423" y="288" width="4" height="469" rx="2" fill="#f6f5f1" />
+  <rect x="423" y="313.86" width="4" height="38" rx="2" fill="#d8d6ce" />
+  <line x1="40" y1="767" x2="433" y2="767" stroke="#e2e0d9" stroke-width="1" />
+  <rect x="56" y="779" width="361" height="44" rx="22.0" fill="#0f6e6a" />
+  <text x="236.5" y="806.0" font-family="Figtree,Segoe UI,sans-serif" font-size="15" font-weight="700" fill="#ffffff" text-anchor="middle">Show the plan</text>
+  <text x="40" y="875" font-family="Figtree,Segoe UI,sans-serif" font-size="14" font-weight="400" fill="#3d4542" text-anchor="start">Shared bottom-sheet geometry: max 90dvh.</text>
+  <text x="40" y="897" font-family="Figtree,Segoe UI,sans-serif" font-size="14" font-weight="400" fill="#3d4542" text-anchor="start">52px checkbox labels; 44px fields and actions.</text>
+  <text x="40" y="919" font-family="Figtree,Segoe UI,sans-serif" font-size="14" font-weight="400" fill="#3d4542" text-anchor="start">Only the body scrolls; every eligible choice remains</text>
+  <text x="40" y="941" font-family="Figtree,Segoe UI,sans-serif" font-size="14" font-weight="400" fill="#3d4542" text-anchor="start">reachable. No list is capped at 2 or 12 options.</text>
+  <text x="490" y="113" font-family="Figtree,Segoe UI,sans-serif" font-size="17" font-weight="700" fill="#1c211f" text-anchor="start">02 / 852 × 330 · short landscape / body scrolled</text>
+  <rect x="490" y="135" width="852" height="330" rx="0" fill="#ffffff" stroke="#d8d6ce" stroke-width="1" />
+  <rect x="490" y="135" width="852" height="56" rx="0" fill="#ffffff" />
+  <text x="510" y="170" font-family="Figtree,Segoe UI,sans-serif" font-size="14" font-weight="700" fill="#0b5552" text-anchor="start">DECK LAB</text>
+  <text x="630" y="170" font-family="Figtree,Segoe UI,sans-serif" font-size="13" font-weight="400" fill="#3d4542" text-anchor="start">Decks     Collection     Shopping     Matchups</text>
+  <line x1="490" y1="191" x2="1342" y2="191" stroke="#e2e0d9" stroke-width="1" />
+  <text x="514" y="231" font-family="Figtree,Segoe UI,sans-serif" font-size="23" font-weight="700" fill="#1c211f" text-anchor="start">Build decks</text>
+  <rect x="490" y="135" width="852" height="330" rx="0" fill="#9b9e99" />
+  <rect x="639" y="162" width="560" height="284" rx="14" fill="#858b85" />
+  <rect x="636" y="158" width="560" height="284" rx="14" fill="#ffffff" />
+  <text x="652" y="194" font-family="Figtree,Segoe UI,sans-serif" font-size="20" font-weight="700" fill="#1c211f" text-anchor="start">Decks</text>
+  <text x="721" y="194" font-family="Figtree,Segoe UI,sans-serif" font-size="14" font-weight="400" fill="#565e5a" text-anchor="start">· 2 chosen</text>
+  <line x1="1159" y1="182" x2="1171" y2="194" stroke="#3d4542" stroke-width="2" />
+  <line x1="1171" y1="182" x2="1159" y2="194" stroke="#3d4542" stroke-width="2" />
+  <line x1="636" y1="218" x2="1196" y2="218" stroke="#e2e0d9" stroke-width="1" />
+  <g clip-path="url(#clip-2)">
+    <text x="652" y="240" font-family="Figtree,Segoe UI,sans-serif" font-size="14" font-weight="700" fill="#3d4542" text-anchor="start">Amber Orchard · Cards to assemble</text>
+    <rect x="652" y="250" width="512" height="44" rx="12" fill="#ffffff" stroke="#d8d6ce" stroke-width="1" />
+    <text x="664" y="277.0" font-family="Figtree,Segoe UI,sans-serif" font-size="14" font-weight="400" fill="#1c211f" text-anchor="start">Choose sideboard cards</text>
+    <line x1="1141" y1="270.0" x2="1147" y2="276.0" stroke="#3d4542" stroke-width="2" />
+    <line x1="1147" y1="276.0" x2="1153" y2="270.0" stroke="#3d4542" stroke-width="2" />
+    <text x="652" y="328" font-family="Figtree,Segoe UI,sans-serif" font-size="14" font-weight="400" fill="#1c211f" text-anchor="start">Example answer (of 3)</text>
+    <rect x="1076" y="304" width="72" height="44" rx="12" fill="#ffffff" stroke="#d8d6ce" stroke-width="1" />
+    <text x="1098" y="331" font-family="JetBrains Mono,Consolas,monospace" font-size="16" font-weight="400" fill="#1c211f" text-anchor="start">1</text>
+    <text x="652" y="364" font-family="Figtree,Segoe UI,sans-serif" font-size="14" font-weight="400" fill="#6b4500" text-anchor="start">Choose a whole number from 0 to 3 for Example answer.</text>
+  </g>
+  <rect x="1186" y="227" width="4" height="138" rx="2" fill="#f6f5f1" />
+  <rect x="1186" y="289.0" width="4" height="38" rx="2" fill="#d8d6ce" />
+  <line x1="636" y1="374" x2="1196" y2="374" stroke="#e2e0d9" stroke-width="1" />
+  <rect x="652" y="386" width="528" height="44" rx="22.0" fill="#0f6e6a" />
+  <text x="916.0" y="413.0" font-family="Figtree,Segoe UI,sans-serif" font-size="15" font-weight="700" fill="#ffffff" text-anchor="middle">Show the plan</text>
+  <text x="490" y="502" font-family="Figtree,Segoe UI,sans-serif" font-size="14" font-weight="400" fill="#3d4542" text-anchor="start">Shared centered sheet: 560px wide, max 86dvh (284px here). Header + footer stay visible;</text>
+  <text x="490" y="524" font-family="Figtree,Segoe UI,sans-serif" font-size="14" font-weight="400" fill="#3d4542" text-anchor="start">156px scrolling body in this illustration. Native numeric fields retain their current limits and error words.</text>
+  <text x="490" y="546" font-family="Figtree,Segoe UI,sans-serif" font-size="14" font-weight="400" fill="#3d4542" text-anchor="start">No fixed page/footer overlay covers the focused field. Escape, Back and Close dismiss without reverting choices.</text>
+  <text x="1390" y="113" font-family="Figtree,Segoe UI,sans-serif" font-size="17" font-weight="700" fill="#1c211f" text-anchor="start">03 / empty choice list · 393px excerpt</text>
+  <rect x="1390" y="135" width="393" height="300" rx="14" fill="#ffffff" stroke="#d8d6ce" stroke-width="1" />
+  <text x="1406" y="171" font-family="Figtree,Segoe UI,sans-serif" font-size="20" font-weight="700" fill="#1c211f" text-anchor="start">Decks</text>
+  <text x="1475" y="171" font-family="Figtree,Segoe UI,sans-serif" font-size="14" font-weight="400" fill="#565e5a" text-anchor="start">· 0 chosen</text>
+  <line x1="1746" y1="159" x2="1758" y2="171" stroke="#3d4542" stroke-width="2" />
+  <line x1="1758" y1="159" x2="1746" y2="171" stroke="#3d4542" stroke-width="2" />
+  <line x1="1390" y1="195" x2="1783" y2="195" stroke="#e2e0d9" stroke-width="1" />
+  <rect x="1406" y="207" width="247" height="44" rx="22.0" fill="#ffffff" stroke="#0f6e6a" stroke-width="1.5" />
+  <text x="1529.5" y="234.0" font-family="Figtree,Segoe UI,sans-serif" font-size="15" font-weight="700" fill="#0b5552" text-anchor="middle">Built and being built</text>
+  <rect x="1661" y="207" width="106" height="44" rx="22.0" fill="#ffffff" />
+  <text x="1714.0" y="234.0" font-family="Figtree,Segoe UI,sans-serif" font-size="15" font-weight="700" fill="#0b5552" text-anchor="middle">Clear</text>
+  <text x="1406" y="295" font-family="Figtree,Segoe UI,sans-serif" font-size="16" font-weight="400" fill="#565e5a" text-anchor="start">No decks available for this plan.</text>
+  <line x1="1390" y1="367" x2="1783" y2="367" stroke="#e2e0d9" stroke-width="1" />
+  <rect x="1406" y="379" width="361" height="44" rx="22.0" fill="#ffffff" stroke="#0f6e6a" stroke-width="1.5" />
+  <text x="1586.5" y="406.0" font-family="Figtree,Segoe UI,sans-serif" font-size="15" font-weight="700" fill="#0b5552" text-anchor="middle">Close</text>
+  <text x="1390" y="469" font-family="Figtree,Segoe UI,sans-serif" font-size="14" font-weight="400" fill="#3d4542" text-anchor="start">No eligible choices: one plain empty line.</text>
+  <text x="1390" y="491" font-family="Figtree,Segoe UI,sans-serif" font-size="14" font-weight="400" fill="#3d4542" text-anchor="start">If choices exist but none is selected, retain the</text>
+  <text x="1390" y="513" font-family="Figtree,Segoe UI,sans-serif" font-size="14" font-weight="400" fill="#3d4542" text-anchor="start">unchecked list; Show the plan is absent, not disabled.</text>
+  <text x="1390" y="533" font-family="Figtree,Segoe UI,sans-serif" font-size="17" font-weight="700" fill="#1c211f" text-anchor="start">04 / 12 selected of 17 eligible · 393px excerpt</text>
+  <rect x="1390" y="555" width="393" height="330" rx="14" fill="#ffffff" stroke="#d8d6ce" stroke-width="1" />
+  <text x="1406" y="591" font-family="Figtree,Segoe UI,sans-serif" font-size="20" font-weight="700" fill="#1c211f" text-anchor="start">Decks</text>
+  <text x="1475" y="591" font-family="Figtree,Segoe UI,sans-serif" font-size="14" font-weight="400" fill="#565e5a" text-anchor="start">· 12 chosen</text>
+  <line x1="1746" y1="579" x2="1758" y2="591" stroke="#3d4542" stroke-width="2" />
+  <line x1="1758" y1="579" x2="1746" y2="591" stroke="#3d4542" stroke-width="2" />
+  <line x1="1390" y1="615" x2="1783" y2="615" stroke="#e2e0d9" stroke-width="1" />
+  <rect x="1406" y="627" width="247" height="44" rx="22.0" fill="#ffffff" stroke="#0f6e6a" stroke-width="1.5" />
+  <text x="1529.5" y="654.0" font-family="Figtree,Segoe UI,sans-serif" font-size="15" font-weight="700" fill="#0b5552" text-anchor="middle">Built and being built</text>
+  <rect x="1661" y="627" width="106" height="44" rx="22.0" fill="#ffffff" />
+  <text x="1714.0" y="654.0" font-family="Figtree,Segoe UI,sans-serif" font-size="15" font-weight="700" fill="#0b5552" text-anchor="middle">Clear</text>
+  <text x="1406" y="701" font-family="Figtree,Segoe UI,sans-serif" font-size="14" font-weight="400" fill="#565e5a" text-anchor="start">A plan holds up to 12 decks.</text>
+  <rect x="1406" y="727.0" width="24" height="24" rx="4" fill="#0f6e6a" stroke="#0f6e6a" stroke-width="1.5" />
+  <line x1="1411" y1="739.0" x2="1417.0" y2="745.0" stroke="#ffffff" stroke-width="2" />
+  <line x1="1417.0" y1="745.0" x2="1426" y2="732.0" stroke="#ffffff" stroke-width="2" />
+  <text x="1442" y="744.0" font-family="Figtree,Segoe UI,sans-serif" font-size="16" font-weight="700" fill="#1c211f" text-anchor="start">Fixture deck 12</text>
+  <line x1="1406" y1="765" x2="1755" y2="765" stroke="#ebe9e3" stroke-width="1" />
+  <rect x="1406" y="779.0" width="24" height="24" rx="4" fill="#ffffff" stroke="#d8d6ce" stroke-width="1.5" />
+  <text x="1442" y="796.0" font-family="Figtree,Segoe UI,sans-serif" font-size="16" font-weight="400" fill="#565e5a" text-anchor="start">Fixture deck 13</text>
+  <line x1="1406" y1="817" x2="1755" y2="817" stroke="#ebe9e3" stroke-width="1" />
+  <rect x="1773" y="683" width="4" height="134" rx="2" fill="#f6f5f1" />
+  <rect x="1773" y="754.04" width="4" height="38" rx="2" fill="#d8d6ce" />
+  <line x1="1390" y1="817" x2="1783" y2="817" stroke="#e2e0d9" stroke-width="1" />
+  <rect x="1406" y="829" width="361" height="44" rx="22.0" fill="#0f6e6a" />
+  <text x="1586.5" y="856.0" font-family="Figtree,Segoe UI,sans-serif" font-size="15" font-weight="700" fill="#ffffff" text-anchor="middle">Show the plan</text>
+  <text x="1390" y="919" font-family="Figtree,Segoe UI,sans-serif" font-size="14" font-weight="400" fill="#3d4542" text-anchor="start">Only unchosen boxes are disabled at the limit.</text>
+  <text x="1390" y="941" font-family="Figtree,Segoe UI,sans-serif" font-size="14" font-weight="400" fill="#3d4542" text-anchor="start">Chosen rows, versions and recipes remain editable.</text>
+  <text x="1390" y="963" font-family="Figtree,Segoe UI,sans-serif" font-size="14" font-weight="400" fill="#3d4542" text-anchor="start">Rows 14–17 remain in the same scrolling list.</text>
+  <rect x="490" y="610" width="852" height="300" rx="14" fill="#ffffff" stroke="#d8d6ce" stroke-width="1" />
+  <text x="514" y="644" font-family="Figtree,Segoe UI,sans-serif" font-size="21" font-weight="700" fill="#1c211f" text-anchor="start">One chooser tree, two visible homes</text>
+  <rect x="514" y="668" width="215" height="44" rx="8" fill="#f6f5f1" stroke="#e2e0d9" stroke-width="1" />
+  <text x="621.5" y="695" font-family="Figtree,Segoe UI,sans-serif" font-size="14" font-weight="700" fill="#1c211f" text-anchor="middle">Decks button + sheet</text>
+  <rect x="780" y="668" width="230" height="44" rx="8" fill="#f6f5f1" stroke="#e2e0d9" stroke-width="1" />
+  <text x="895.0" y="695" font-family="Figtree,Segoe UI,sans-serif" font-size="14" font-weight="700" fill="#1c211f" text-anchor="middle">same chooser subtree</text>
+  <rect x="1062" y="668" width="256" height="44" rx="8" fill="#f6f5f1" stroke="#e2e0d9" stroke-width="1" />
+  <text x="1190.0" y="695" font-family="Figtree,Segoe UI,sans-serif" font-size="14" font-weight="700" fill="#1c211f" text-anchor="middle">300px lab rail</text>
+  <line x1="736" y1="690" x2="771" y2="690" stroke="#0f6e6a" stroke-width="2" />
+  <line x1="763" y1="685" x2="771" y2="690" stroke="#0f6e6a" stroke-width="2" />
+  <line x1="763" y1="695" x2="771" y2="690" stroke="#0f6e6a" stroke-width="2" />
+  <line x1="1018" y1="690" x2="1053" y2="690" stroke="#0f6e6a" stroke-width="2" />
+  <line x1="1045" y1="685" x2="1053" y2="690" stroke="#0f6e6a" stroke-width="2" />
+  <line x1="1045" y1="695" x2="1053" y2="690" stroke="#0f6e6a" stroke-width="2" />
+  <text x="514" y="747" font-family="Figtree,Segoe UI,sans-serif" font-size="15" font-weight="400" fill="#3d4542" text-anchor="start">• Checkbox / list / recipe change → existing 250ms read-only preview.</text>
+  <text x="514" y="771" font-family="Figtree,Segoe UI,sans-serif" font-size="15" font-weight="400" fill="#3d4542" text-anchor="start">• Close / Show the plan only dismiss; selections and pending work stay.</text>
+  <text x="514" y="795" font-family="Figtree,Segoe UI,sans-serif" font-size="15" font-weight="400" fill="#3d4542" text-anchor="start">• Redraw → restore the fresh matching control; fallback to a visible heading.</text>
+  <text x="514" y="819" font-family="Figtree,Segoe UI,sans-serif" font-size="15" font-weight="400" fill="#3d4542" text-anchor="start">• 999 → 1000: dismiss modal, move chooser to rail, restore visible control focus.</text>
+  <text x="514" y="843" font-family="Figtree,Segoe UI,sans-serif" font-size="15" font-weight="400" fill="#3d4542" text-anchor="start">• 1000 → 999: show closed Decks launcher; never auto-open a new modal.</text>
+  <text x="514" y="867" font-family="Figtree,Segoe UI,sans-serif" font-size="15" font-weight="400" fill="#3d4542" text-anchor="start">• Decks chooser stays open through choices; existing review sheets still close.</text>
+  <text x="40" y="1052" font-family="Figtree,Segoe UI,sans-serif" font-size="17" font-weight="700" fill="#1c211f" text-anchor="start">05a / 999 × 420 · closed launcher, chooser lives in sheet</text>
+  <rect x="40" y="1075" width="999" height="420" rx="0" fill="#ffffff" stroke="#d8d6ce" stroke-width="1" />
+  <rect x="40" y="1075" width="999" height="56" rx="0" fill="#ffffff" />
+  <text x="60" y="1110" font-family="Figtree,Segoe UI,sans-serif" font-size="14" font-weight="700" fill="#0b5552" text-anchor="start">DECK LAB</text>
+  <text x="180" y="1110" font-family="Figtree,Segoe UI,sans-serif" font-size="13" font-weight="400" fill="#3d4542" text-anchor="start">Decks     Collection     Shopping     Matchups</text>
+  <line x1="40" y1="1131" x2="1039" y2="1131" stroke="#e2e0d9" stroke-width="1" />
+  <text x="64" y="1171" font-family="Figtree,Segoe UI,sans-serif" font-size="23" font-weight="700" fill="#1c211f" text-anchor="start">Build decks</text>
+  <rect x="40" y="1132" width="999" height="363" rx="0" fill="#f1f0ec" />
+  <text x="64" y="1171" font-family="Figtree,Segoe UI,sans-serif" font-size="23" font-weight="700" fill="#1c211f" text-anchor="start">Build decks</text>
+  <rect x="784" y="1147" width="231" height="44" rx="22.0" fill="#ffffff" stroke="#0f6e6a" stroke-width="1.5" />
+  <text x="899.5" y="1174.0" font-family="Figtree,Segoe UI,sans-serif" font-size="15" font-weight="700" fill="#0b5552" text-anchor="middle">Decks · 2 chosen</text>
+  <rect x="64" y="1199" width="951" height="218" rx="14" fill="#ffffff" stroke="#e2e0d9" stroke-width="1" />
+  <text x="88" y="1236" font-family="Figtree,Segoe UI,sans-serif" font-size="18" font-weight="700" fill="#1c211f" text-anchor="start">Current packing plan (unchanged)</text>
+  <text x="88" y="1269" font-family="Figtree,Segoe UI,sans-serif" font-size="15" font-weight="400" fill="#565e5a" text-anchor="start">Decks opens the chooser; the page has no duplicate checklist.</text>
+  <text x="88" y="1301" font-family="Figtree,Segoe UI,sans-serif" font-size="15" font-weight="400" fill="#565e5a" text-anchor="start">Existing plan / shared ticks / completion guards stay authoritative.</text>
+  <rect x="64" y="1440" width="951" height="44" rx="8" fill="#f6f5f1" stroke="#e2e0d9" stroke-width="1" />
+  <text x="88" y="1468" font-family="Figtree,Segoe UI,sans-serif" font-size="14" font-weight="400" fill="#565e5a" text-anchor="start">Existing packing progress / completion bar</text>
+  <text x="1090" y="1052" font-family="Figtree,Segoe UI,sans-serif" font-size="17" font-weight="700" fill="#1c211f" text-anchor="start">05b / 1000 × 420 · one 300px rail, fine-pointer example</text>
+  <rect x="1090" y="1075" width="1000" height="420" rx="0" fill="#ffffff" stroke="#d8d6ce" stroke-width="1" />
+  <rect x="1090" y="1075" width="1000" height="56" rx="0" fill="#ffffff" />
+  <text x="1110" y="1110" font-family="Figtree,Segoe UI,sans-serif" font-size="14" font-weight="700" fill="#0b5552" text-anchor="start">DECK LAB</text>
+  <text x="1230" y="1110" font-family="Figtree,Segoe UI,sans-serif" font-size="13" font-weight="400" fill="#3d4542" text-anchor="start">Decks     Collection     Shopping     Matchups</text>
+  <line x1="1090" y1="1131" x2="2090" y2="1131" stroke="#e2e0d9" stroke-width="1" />
+  <text x="1114" y="1171" font-family="Figtree,Segoe UI,sans-serif" font-size="23" font-weight="700" fill="#1c211f" text-anchor="start">Build decks</text>
+  <rect x="1090" y="1132" width="1000" height="363" rx="0" fill="#f1f0ec" />
+  <text x="1114" y="1171" font-family="Figtree,Segoe UI,sans-serif" font-size="23" font-weight="700" fill="#1c211f" text-anchor="start">Build decks</text>
+  <rect x="1114" y="1199" width="300" height="272" rx="8" fill="#ffffff" stroke="#e2e0d9" stroke-width="1" />
+  <text x="1130" y="1228" font-family="Figtree,Segoe UI,sans-serif" font-size="15" font-weight="700" fill="#1c211f" text-anchor="start">Decks · 2 chosen</text>
+  <line x1="1114" y1="1243" x2="1414" y2="1243" stroke="#e2e0d9" stroke-width="1" />
+  <rect x="1130" y="1253" width="194" height="32" rx="16.0" fill="#ffffff" stroke="#0f6e6a" stroke-width="1.5" />
+  <text x="1227.0" y="1274.0" font-family="Figtree,Segoe UI,sans-serif" font-size="12" font-weight="700" fill="#0b5552" text-anchor="middle">Built and being built</text>
+  <rect x="1328" y="1253" width="70" height="32" rx="16.0" fill="#ffffff" />
+  <text x="1363.0" y="1274.0" font-family="Figtree,Segoe UI,sans-serif" font-size="12" font-weight="700" fill="#0b5552" text-anchor="middle">Clear</text>
+  <text x="1130" y="1311" font-family="Figtree,Segoe UI,sans-serif" font-size="12" font-weight="700" fill="#3d4542" text-anchor="start">Built</text>
+  <rect x="1130" y="1332.0" width="18" height="18" rx="4" fill="#0f6e6a" stroke="#0f6e6a" stroke-width="1.5" />
+  <line x1="1135" y1="1341.0" x2="1138.0" y2="1344.0" stroke="#ffffff" stroke-width="2" />
+  <line x1="1138.0" y1="1344.0" x2="1144" y2="1337.0" stroke="#ffffff" stroke-width="2" />
+  <text x="1160" y="1346.0" font-family="Figtree,Segoe UI,sans-serif" font-size="13" font-weight="700" fill="#1c211f" text-anchor="start">Amber Orchard</text>
+  <line x1="1130" y1="1363" x2="1398" y2="1363" stroke="#ebe9e3" stroke-width="1" />
+  <rect x="1158" y="1370" width="240" height="28" rx="14.0" fill="#e6e4de" />
+  <rect x="1158.0" y="1370" width="120.0" height="28" rx="14.0" fill="#0f6e6a" />
+  <text x="1218.0" y="1389.0" font-family="Figtree,Segoe UI,sans-serif" font-size="12" font-weight="700" fill="#ffffff" text-anchor="middle">Planned list</text>
+  <text x="1338.0" y="1389.0" font-family="Figtree,Segoe UI,sans-serif" font-size="12" font-weight="400" fill="#3d4542" text-anchor="middle">Play-now list</text>
+  <text x="1158" y="1427" font-family="Figtree,Segoe UI,sans-serif" font-size="12" font-weight="400" fill="#3d4542" text-anchor="start">Cards to assemble</text>
+  <rect x="1158" y="1435" width="240" height="32" rx="12" fill="#ffffff" stroke="#d8d6ce" stroke-width="1" />
+  <text x="1170" y="1456.0" font-family="Figtree,Segoe UI,sans-serif" font-size="12" font-weight="400" fill="#1c211f" text-anchor="start">Main deck + whole sideboard</text>
+  <line x1="1375" y1="1449.0" x2="1381" y2="1455.0" stroke="#3d4542" stroke-width="2" />
+  <line x1="1381" y1="1455.0" x2="1387" y2="1449.0" stroke="#3d4542" stroke-width="2" />
+  <rect x="1434" y="1199" width="632" height="272" rx="8" fill="#ffffff" stroke="#e2e0d9" stroke-width="1" />
+  <text x="1454" y="1236" font-family="Figtree,Segoe UI,sans-serif" font-size="18" font-weight="700" fill="#1c211f" text-anchor="start">Current packing plan</text>
+  <text x="1454" y="1269" font-family="Figtree,Segoe UI,sans-serif" font-size="13" font-weight="400" fill="#565e5a" text-anchor="start">300px rail + 20px gap + remaining plan width.</text>
+  <text x="1454" y="1301" font-family="Figtree,Segoe UI,sans-serif" font-size="13" font-weight="400" fill="#565e5a" text-anchor="start">No modal or hidden duplicate chooser controls.</text>
+  <text x="1454" y="1333" font-family="Figtree,Segoe UI,sans-serif" font-size="13" font-weight="400" fill="#565e5a" text-anchor="start">Shown: fine pointer. Coarse retains 44px controls.</text>
+  <rect x="40" y="1540" width="2050" height="221" rx="14" fill="#ffffff" stroke="#d8d6ce" stroke-width="1" />
+  <text x="64" y="1578" font-family="Figtree,Segoe UI,sans-serif" font-size="22" font-weight="700" fill="#1c211f" text-anchor="start">Source contract and drawing scope</text>
+  <text x="64" y="1614" font-family="Figtree,Segoe UI,sans-serif" font-size="16" font-weight="400" fill="#3d4542" text-anchor="start">17 eligible choices are illustrative, not an API count: 1 Usual opponent + 2 Built + 1 Being built + 9 Ideas + 4 Products.</text>
+  <text x="64" y="1643" font-family="Figtree,Segoe UI,sans-serif" font-size="16" font-weight="400" fill="#3d4542" text-anchor="start">MAX_DECKS / PACK_MAX = 12 bounds selected plan participants only. Error/no-version choices remain filtered as today.</text>
+  <text x="64" y="1672" font-family="Figtree,Segoe UI,sans-serif" font-size="16" font-weight="400" fill="#3d4542" text-anchor="start">Preserve existing server error/status text and sideboard validation. No added choice filters, request fields, reads or writes.</text>
+  <text x="64" y="1701" font-family="Figtree,Segoe UI,sans-serif" font-size="16" font-weight="400" fill="#3d4542" text-anchor="start">No authoritative choice colours or shortfall counts exist here: no invented swatches, tint, prices or “9 to buy”.</text>
+  <text x="64" y="1730" font-family="Figtree,Segoe UI,sans-serif" font-size="16" font-weight="400" fill="#3d4542" text-anchor="start">See packing-chooser.md for exact control labels, focus/history rules and unchanged permission/model boundaries.</text>
+  <text x="40" y="1793" font-family="Figtree,Segoe UI,sans-serif" font-size="13" font-weight="400" fill="#565e5a" text-anchor="start">Wireframe only · P1 light tokens · Figtree / JetBrains Mono with local Segoe UI / Consolas preview fallback · no real records</text>
+</svg>

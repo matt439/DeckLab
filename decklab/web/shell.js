@@ -75,6 +75,7 @@ function toggleMyDevice() {
 
 /** Wire the shell's fixed parts in index.html once, at start. */
 function setUpShell() {
+  setUpKeyboardHelp();
   const avatar = byId("avatar-button"), menu = byId("avatar-menu");
   if (avatar && menu) wireMenu(avatar, menu);
   for (const button of document.querySelectorAll("[data-theme-choice]")) {
@@ -82,6 +83,8 @@ function setUpShell() {
   }
   const device = byId("my-device");
   if (device) device.addEventListener("click", toggleMyDevice);
+  const shortcuts = byId("menu-shortcuts");
+  if (shortcuts) shortcuts.addEventListener("click", () => showKeyboardHelp(byId("avatar-button")));
   const reload = byId("menu-reload");
   if (reload) reload.addEventListener("click", reloadDeckLab);
   const sheet = byId("more-sheet");
@@ -208,6 +211,8 @@ function syncThemeChoice(theme) {
 /** Mark the page on screen in the navigation (its section: a deck page is under Decks), its way back and its
  * title on the phone. Called by route() before the page draws. */
 function syncShell(path = parseHash().path) {
+  registerShellKeyboardHelp();
+  refreshKeyboardHints();
   const section = routeSection(path);
   for (const link of document.querySelectorAll("[data-route]")) {
     if (link.dataset.route === section.path) link.setAttribute("aria-current", "page");

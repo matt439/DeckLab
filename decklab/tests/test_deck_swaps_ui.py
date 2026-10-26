@@ -21,7 +21,7 @@ SETUP = PAGE + """
       {name: 'Ghost', section: 'Deck', missing: 1, aud_each: 9, card: null, type: 'creature', colours: ['G'], mv: 2,
        in_list: 0, list_missing: 1, more: 0, candidates: []}]};
   const calls = [];
-  api = async (path) => { calls.push(path); return swapsAnswer; };
+  api = async (path) => { if (path === '/api/decks') return {decks: []}; calls.push(path); return swapsAnswer; };
   const settle = async () => { for (let i = 0; i < 6; i += 1) await Promise.resolve(); };
   const finder = () => main.querySelector('.deck-swap-finder');
   const showMissing = (page) => { clear(main); location.hash = '#/deck?id=casual%2Ftest&tab=cards&filter=missing';

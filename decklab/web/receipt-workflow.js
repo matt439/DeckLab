@@ -71,13 +71,15 @@ function rcptBuildBar(view) {
   view.progress = el("span", { class: "rcpt-progress" });
   view.stale = el("span", { class: "rcpt-stale" });
   view.blanks = el("button", { type: "button", class: "rcpt-blanks", hidden: true, onclick: () => {
-    view.filter = "attention"; rcptRefreshAll(view);
+    rcptSetFilter(view, "attention");
     const first = view.comps.find((c) => c.selected && c.kind === "cards");
     if (first && first.section) first.section.scrollIntoView({ block: "start", behavior: "smooth" });
   } });
-  view.primary = el("button", { type: "button", class: "btn btn-primary", text: "Preview", onclick: () => previewDelivery(view) });
+  view.recordReason = el("span", { id: "rcpt-record-reason", class: "rcpt-record-reason", "aria-live": "polite" });
+  view.primary = el("button", { type: "button", class: "btn btn-primary", text: "Record arrival",
+    "aria-describedby": "rcpt-record-reason", onclick: () => rcptRecord(view) });
   // One row on a phone too: the progress over the date on the left, the main button on the right.
-  view.bar = actionBar({ status: [el("span", { class: "rcpt-status-line" }, view.progress, view.stale), view.blanks,
+  view.bar = actionBar({ status: [el("span", { class: "rcpt-status-line" }, view.progress, view.stale), view.recordReason, view.blanks,
     el("label", { class: "rcpt-date" }, el("span", { text: "Arrived" }), view.dateSelect, view.dateInput)],
   actions: [view.primary] });
   view.bar.node.classList.add("rcpt-bar");
@@ -99,25 +101,37 @@ function rcptProgress(view) {
   return { copies, ticked, checks, checksLeft, blanks, ready: ticked > 0 && !empty && !checksLeft && !blanks };
 }
 
-/** The bar's progress, the main button's words, and "Changed since preview". */
+/** The bar uses the same blockers as preview; blank details and unticked remainder never block recording. */
 function rcptSync(view) {
   if (!view.bar) return;
   const p = rcptProgress(view);
   const any = view.comps.some((c) => c.selected);
-  const undecided = view.comps.filter((c) => c.selected && c.kind === "product" && !c.intact);
+  const undecided = view.comps.filter((c) => c.selected && c.kind === "product" && !["yes", "no"].includes(c.intact));
   add(clear(view.progress), [!any ? "Tick “This arrived” on what came." : p.copies
     ? `${p.ticked}/${p.copies} ✓${p.checksLeft ? ` · ${plural(p.checksLeft, "check")} left` : ""}`
     : undecided.length ? `Choose what to do with ${undecided.map((c) => (c.c.product && c.c.product.name) || c.c.id).join(" and ")}.`
-      : "Ready to preview."]);
-  view.primary.textContent = p.ready && !view.comps.some((c) => c.selected && c.kind === "product" && !c.intact)
-    ? p.ticked === p.copies ? `Confirm: all ${p.ticked} checked` : `Confirm: ${p.ticked} selected checked` : "Preview";
+      : "Ready to review."]);
+  const blockers = rcptClientBlockers(view);
+  view.primary.setAttribute("aria-disabled", String(blockers.length > 0));
+  view.recordReason.textContent = view.reloadRequired ? "The delivery changed. Reload it before recording."
+    : blockers.length ? `${blockers[0].text}${blockers.length > 1 ? ` (${blockers.length} things to check.)` : ""}`
+      : "Review the exact changes before recording.";
   // Warn only about the copies being received; unticked copies remain pending.
   const showBlanks = any && p.blanks > 0 && p.ticked > 0 && !p.checksLeft;
   view.blanks.hidden = !showBlanks;
   view.blanks.textContent = showBlanks ? `${p.blanks} with no condition or language` : "";
-  view.primary.disabled = view.busy || view.reloadRequired || !any;
+  view.primary.disabled = !receiptEditable(view);
   const changed = view.preview && view.preview.key !== rcptRequestKey(view);
   view.stale.textContent = changed ? " · Changed since preview, preview again" : "";
+  rcptSyncLayout(view, p);
+}
+
+/** A blocked primary stays reachable and takes focus to the first actionable blocker. */
+function rcptRecord(view) {
+  if (!receiptEditable(view)) return;
+  const blockers = rcptClientBlockers(view);
+  if (blockers.length) { rcptGoTo(view, blockers[0]); return; }
+  return previewDelivery(view);
 }
 
 /** After any change: the bar, the draft, and the preview marked out of date. */
@@ -154,15 +168,19 @@ function rcptRequestKey(view) { return JSON.stringify(rcptRequest(view)); }
  * a product with no storage choice, or a bad date. Unticked rows remain pending. */
 function rcptClientBlockers(view) {
   const out = [];
+  if (!view.comps.some(comp => comp.selected)) {
+    const first = view.comps[0]?.section;
+    out.push({ text: 'Tick "This arrived" on what came.', target: first?.querySelector("input") || first });
+  }
   for (const comp of view.comps) {
     if (!comp.selected) continue;
     if (comp.kind === "product") {
-      if (!comp.intact) out.push({ text: `${rcptTitle(comp.c, view.data)}: choose whether to keep it as its own deck(s) or break it up.`,
+      if (!["yes", "no"].includes(comp.intact)) out.push({ text: `${rcptTitle(comp.c, view.data)}: choose whether to keep it as its own deck(s) or break it up.`,
         target: comp.choice });
       continue;
     }
     const selected = comp.rows.filter(row => row.ticked);
-    if (!selected.length) out.push({ text: `${rcptTitle(comp.c, view.data)}: tick at least one card that arrived.`, target: comp.section });
+    if (!selected.length) out.push({ text: `${rcptTitle(comp.c, view.data)}: tick at least one card that arrived.`, comp, selection: true });
     if (comp.kind === "tokens") {
       for (const row of selected) {
         if (rcptBackOpen(row)) out.push({ text: `${rcptRowName(comp, row)}: say what its back is, or that it's blank.`, comp, row });
@@ -173,12 +191,19 @@ function rcptClientBlockers(view) {
     });
   }
   const today = view.data.today || rcptToday();
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(view.date.value || "")) out.push({ text: "Choose the date it arrived.", date: true });
+  if (!rcptValidDay(view.date.value)) out.push({ text: "Choose a valid arrival date.", date: true });
   else if (view.date.value > today) out.push({ text: "The arrival date can't be in the future.", date: true });
   else if (view.data.ordered_on && view.date.value < view.data.ordered_on) {
     out.push({ text: `It can't have arrived before it was ordered (${rcptDate(view.data.ordered_on)}).`, date: true });
   }
   return out;
+}
+
+/** Match the native date input's real calendar days without normalising an invalid saved value. */
+function rcptValidDay(value) {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value) || value.startsWith("0000-")) return false;
+  const day = new Date(`${value}T00:00:00Z`);
+  return Number.isFinite(day.getTime()) && day.toISOString().slice(0, 10) === value;
 }
 
 /** A row's name for a list of blockers: a token with its printing ("Ooze (TM11 5)"), so twins can be told apart. */
@@ -192,8 +217,17 @@ function rcptRowName(comp, row) {
 /** Takes the person to what a blocker names: the tile (its sheet), a check, the product's choice or the date. */
 function rcptGoTo(view, item) {
   if (!receiptEditable(view)) return;
+  if (item.selection) {
+    if (view.filter !== "all") rcptSetFilter(view, "all");
+    const target = item.comp.rows[0]?.tile?.querySelector(".rcpt-tick") || item.comp.section;
+    if (target) {
+      if (target === item.comp.section) target.setAttribute("tabindex", "-1");
+      target.scrollIntoView({ block: "center", behavior: "smooth" }); target.focus();
+    }
+    return;
+  }
   if (item.comp && item.row) {
-    if (view.filter !== "all") { view.filter = "all"; rcptRefreshAll(view); }
+    if (view.filter !== "all") rcptSetFilter(view, "all");
     const tile = item.row.tile;
     if (tile) tile.scrollIntoView({ block: "center", behavior: "smooth" });
     rcptOpenSheet(view, item.comp, item.row);
@@ -211,12 +245,14 @@ function rcptGoTo(view, item) {
     return;
   }
   if (item.target) {
+    const target = item.target.getAttribute("role") === "group"
+      ? [...item.target.querySelectorAll("button")].find(button => !button.disabled) || item.target : item.target;
     // A section isn't focusable by itself: tabindex -1 lets the focus land on it.
-    if (/^(section|div)$/i.test(item.target.tagName || item.target.tag || "") && !item.target.getAttribute("tabindex")) {
-      item.target.setAttribute("tabindex", "-1");
+    if (/^(section|div)$/i.test(target.tagName || target.tag || "") && !target.getAttribute("tabindex")) {
+      target.setAttribute("tabindex", "-1");
     }
-    item.target.scrollIntoView({ block: "center", behavior: "smooth" });
-    item.target.focus();
+    target.scrollIntoView({ block: "center", behavior: "smooth" });
+    target.focus();
   }
 }
 
@@ -415,45 +451,39 @@ function rcptAddedWords(totals) {
 /** "Where these go": the decks that count on these cards (by deck, with its sleeves when you see them), then the
  * rest to storage; token cards to the token box; a product as its own deck(s) or into storage. */
 function rcptWhereTheyGo(view, received) {
-  const decks = new Map(), storage = [], parts = [];
+  const decks = new Map(), storage = [], unknown = [], basics = [], parts = [];
   const kits = view.data.kits || {};
-  for (const comp of received) {
-    if (comp.kind === "tokens") {
+  for (const item of rcptDestinationAdvice(view, received)) {
+    if (item.kind === "tokens") {
       parts.push(el("div", { class: "panel rcpt-where" }, el("h3", { text: "Token cards" }),
-        el("p", {}, `${plural(comp.rows.reduce((n, r) => n + rcptQty(r), 0), "token card")} go with your tokens. `,
+        el("p", {}, `${plural(item.quantity, "token card")} go with your tokens. `,
           el("a", { href: "#/tokens", text: "See them on Tokens" }))));
       continue;
     }
-    if (comp.kind === "product") {
-      parts.push(el("div", { class: "panel rcpt-where" }, el("h3", { text: rcptTitle(comp.c, view.data) }),
+    if (item.kind === "product") {
+      const comp = item.comp;
+      parts.push(el("div", { class: "panel rcpt-where" }, el("h3", { text: item.title }),
         el("p", { text: comp.intact === "yes" ? "Kept as its own deck(s): choose its sleeves and deck box on its deck page."
-          : "Broken up: its cards go into the storage box." })));
+          : comp.intact === "no" ? "Broken up: its cards go into the storage box."
+            : "Its storage choice is not known from the recorded selection." })));
       continue;
     }
-    const left = new Map();     // name -> copies not yet given to a deck
-    for (const row of comp.rows) left.set(row.values.name, (left.get(row.values.name) || 0) + rcptQty(row));
-    const seen = new Set();
-    for (const row of comp.rows) {
-      if (seen.has(row.values.name)) continue;
-      seen.add(row.values.name);
-      for (const d of rcptDecks(comp, row)) {
-        const give = Math.min(d.waiting || 0, left.get(row.values.name));
-        if (give <= 0) continue;
-        left.set(row.values.name, left.get(row.values.name) - give);
-        if (!decks.has(d.id)) decks.set(d.id, { deck: d, cards: [] });
-        decks.get(d.id).cards.push([give, row.values.name]);
-      }
+    if (item.kind === "unknown") {
+      (item.why === "basic" ? basics : unknown).push([item.quantity, item.name]);
+      continue;
     }
-    for (const [name, n] of left) if (n > 0) storage.push([n, name]);
+    if (item.kind === "storage") { storage.push([item.quantity, item.name]); continue; }
+    if (!decks.has(item.deck.id)) decks.set(item.deck.id, { deck: item.deck, cards: [] });
+    decks.get(item.deck.id).cards.push([item.quantity, item.name]);
   }
   const rank = (d) => (d.status === "built" ? 0 : d.status === "building" ? 1 : 2);
   const groups = [...decks.values()].sort((a, b) => rank(a.deck) - rank(b.deck) || a.deck.title.localeCompare(b.deck.title));
   const lines = (cards) => el("ul", { class: "rcpt-where-cards" }, cards.map(([n, name]) => el("li", { text: `${n} × ${name}` })));
   const out = [];
-  if (groups.length || storage.length) out.push(el("h2", { class: "rcpt-where-head", text: "Where these go" }));
+  if (groups.length || storage.length || unknown.length || basics.length) out.push(el("h2", { class: "rcpt-where-head", text: "Where these go" }));
   if (groups.length) {
     out.push(el("div", { class: "rcpt-where-grid" }, groups.map(({ deck, cards }) => el("div", { class: "panel rcpt-where" },
-      el("h3", {}, el("a", { href: deckHref(deck.id), text: deck.title })),
+      el("h3", {}, rcptDeckLink(deck)),
       kits[deck.id] && kits[deck.id].sleeves ? el("p", { class: "sub", text: `Sleeve them in ${kits[deck.id].sleeves}.` })
         : deck.status === "built" ? null : el("p", { class: "sub", text: `${STATUS_WORDS[deck.status] || "Idea"}: keep them with its cards.` }),
       lines(cards)))));
@@ -462,6 +492,12 @@ function rcptWhereTheyGo(view, received) {
     out.push(el("div", { class: "panel rcpt-where" }, el("h3", { text: "To storage" }),
       el("p", { class: "sub", text: "No deck is waiting for these: they go unsleeved into the storage box." }), lines(storage)));
   }
+  if (unknown.length) out.push(el("div", { class: "panel rcpt-where rcpt-where-unknown" },
+    el("h3", { text: "Destination not known" }),
+    el("p", { class: "sub", text: "Deck destinations could not be worked out from the delivery data. Check where these copies belong." }), lines(unknown)));
+  if (basics.length) out.push(el("div", { class: "panel rcpt-where rcpt-where-basics" },
+    el("h3", { text: "Basic lands" }),
+    el("p", { class: "sub", text: "Basic-land deck destinations are not tracked." }), lines(basics)));
   return [...out, ...parts];
 }
 
@@ -498,7 +534,7 @@ function rcptDraftKey(view) { return `receipt:${view.profile}:${view.data.order}
 
 function rcptSaveDraft(view) {
   if (!view.drafting || view.done) return;
-  const draft = { v: 1, date: view.date, comps: {} };
+  const draft = { v: 1, date: view.date, filter: view.filter, comps: {} };
   for (const comp of view.comps) {
     draft.comps[comp.c.id] = { selected: comp.selected, intact: comp.intact, checks: comp.checks,
       rows: comp.kind === "product" ? [] : comp.rows.map((r) => ({ orig: r.orig, values: r.values, ticked: r.ticked, before: r.before,
@@ -591,6 +627,7 @@ function rcptOfferDraft(view) {
 
 function rcptApplyDraft(view, draft) {
   if (!receiptEditable(view)) return;
+  view.filter = RCPT_FILTERS.includes(draft.filter) ? draft.filter : "all";
   for (const comp of view.comps) {
     const saved = draft.comps[comp.c.id];
     comp.selected = view.comps.length === 1 ? true : Boolean(saved.selected);

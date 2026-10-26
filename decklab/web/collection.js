@@ -9,15 +9,16 @@
  * Each space (lib/spaces.py) has its own collection: home's, and each person's. The page opens on
  * the visitor's own space. Home's addresses and requests leave ?space= out.
  *
- * Find cards is a grid of card tiles (cards-ui.js cardTile, one viewer group, so a swipe goes through
- * the page's cards); its filters apply as they're typed, and the address follows them (replaceState).
+ * Find cards uses a lab card grid and casual rows, each with its own viewer group so hidden
+ * layouts do not duplicate swipe items; its filters apply as they're typed, and the address follows them (replaceState).
  * The viewer's words for a card say how many are owned, free and in which decks, with "Edit copies".
  * The Card list is a dense table of the rows, sortable and paged, with a filter for rows whose
  * condition or language isn't recorded and each row's estimated price (its own printing and finish,
  * collection_edit._prices; the sort puts unpriced rows last both ways) and an "In storage only" filter
  * (collection_edit._storage: each row's copies in built decks and intact products, a guess where the
  * decks' lists name another printing); a row's thumbnail opens the viewer (its own group) and its
- * name the row's sheet, where Remove sits at the bottom (UI-REVIEW.md WP9: click to edit). "Set condition &
+ * name selects its printing/finish preview in the lab, with Edit copies opening the existing row sheet.
+ * Casual rows open the viewer with recorded notes and an Edit copies action when permitted. "Set condition &
  * language…" sets one condition and/or language on every row shown, in one change (collection-bulk.js).
  *
  * Writes (lib/api/collection_edit.py) carry the rows' sha256 as the page loaded them: a list changed by
@@ -36,9 +37,12 @@ const COL_FINISH_WORDS = { nonfoil: "Non-foil", foil: "Foil", etched: "Etched" }
 // Condition: a segmented choice (short words), with the long ones as each button's title.
 const COL_CONDITIONS = [["", "?", "Not recorded"], ["NM", "NM", "Near Mint"], ["LP", "LP", "Lightly Played"],
   ["MP", "MP", "Moderately Played"], ["HP", "HP", "Heavily Played"], ["DMG", "DMG", "Damaged"]];
-const COL_LANGUAGES = [["", "Not recorded"], ["en", "English"], ["ja", "Japanese"], ["de", "German"], ["fr", "French"],
-  ["it", "Italian"], ["es", "Spanish"], ["pt", "Portuguese"], ["ru", "Russian"], ["ko", "Korean"],
-  ["zhs", "Chinese (simplified)"], ["zht", "Chinese (traditional)"]];
+// Supported codes match collection_edit.LANGUAGES; retain the existing display names.
+const COL_LANGUAGES = [["", "Not recorded"], ["en", "English"], ["ja", "Japanese"], ["de", "German"],
+  ["fr", "French"], ["it", "Italian"], ["es", "Spanish"], ["pt", "Portuguese"],
+  ["ru", "Russian"], ["ko", "Korean"], ["zhs", "Chinese (simplified)"], ["zht", "Chinese (traditional)"],
+  ["he", "Hebrew"], ["la", "Latin"], ["grc", "Ancient Greek"], ["ar", "Arabic"],
+  ["sa", "Sanskrit"], ["ph", "Phyrexian"], ["qya", "Quenya"]];
 const COL_FILTER_KEYS = ["q", "color", "type", "role", "mv", "availability", "page"];
 const COL_AVAILABILITY = [["all", "All"], ["free", "Free now"], ["incoming", "On the way"], ["held", "In decks"]];
 const COL_IMPORT_MAX = 4 * 1024 * 1024;     // bytes: the server's limit (collection_edit.MAX_IMPORT; 20,000 rows)
@@ -145,7 +149,7 @@ function colViewerLink(href, text) {
 function colPager(page, pages, go, label) {
   if (!(pages > 1)) return null;
   const button = (text, to, aria) => el("button", { type: "button", class: "btn btn-quiet", text, "aria-label": aria,
-    disabled: to < 1 || to > pages || to === page || null, onclick: () => go(to) });
+    disabled: to < 1 || to > pages || to === page || null, onclick: (event) => go(to, event.currentTarget) });
   return el("nav", { class: "col-pager", "aria-label": label },
     button("«", 1, "First page"), button("‹", page - 1, "Previous page"),
     el("span", { class: "col-pager-at", text: `Page ${page} of ${pages}` }),
@@ -210,6 +214,16 @@ function colStorage(storage) {
   return { error: storage.error || null, rows: storage.rows && typeof storage.rows === "object" ? storage.rows : {} };
 }
 
+/** Older refresh answers may retain legacy counts, but cannot renew named packing-list hints. */
+function colWithoutHints(storage) {
+  if (!storage) return storage;
+  return { ...storage, rows: Object.fromEntries(Object.entries(storage.rows).map(([key, value]) => {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return [key, value];
+    const { listed_holders, unattributed, ...counts } = value;
+    return [key, counts];
+  })) };
+}
+
 /** A row's copies in decks: {held (null for a basic land: not tracked), guess}, held 0 when none. */
 function colHeld(cv, row) {
   const s = cv.storage && cv.storage.rows[colKey(row)];
@@ -232,12 +246,20 @@ function colPrice(cv, row) {
 function colTakeRows(cv, data) {
   cv.rows = data.rows;
   if (data.prices) cv.prices = colPrices(data.prices);
-  if (data.storage) cv.storage = colStorage(data.storage);
+  cv.storage = data.storage ? colStorage(data.storage) : colWithoutHints(cv.storage);
 }
 
 function colActive(cv) {
   return cv.token === routeToken && state.profile && state.profile.id === cv.profile
     && (!cv.root || cv.root.isConnected);
+}
+
+/** Page keys belong to one current view and yield to text composition, menus and dialogs. */
+function colKeyboardReady(cv, event) {
+  return colActive(cv) && !cv.busy && !event.defaultPrevented && !event.isComposing && event.keyCode !== 229
+    && !event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey
+    && event.currentTarget?.isConnected && cv.root?.contains(event.currentTarget)
+    && !document.querySelector("dialog[open]") && !keyboardMenuOpen();
 }
 
 /** Save the space's collection as a CSV in the collection's columns, named after the space and the date
@@ -292,6 +314,7 @@ function setCollectionBusy(cv, busy) {
   if (!cv.root) return;
   cv.root.setAttribute("aria-busy", String(busy));
   for (const control of cv.root.querySelectorAll(".col-mutate")) control.disabled = busy;
+  refreshKeyboardHints();
 }
 
 /** Say what happened (and toast it); stale: a save's stale_tables, the decks' tables it left out of date
@@ -320,7 +343,7 @@ function colChanged(cv, answer, words) {
   if (answer && Array.isArray(answer.rows)) cv.rows = answer.rows;
   if (answer && answer.pictures) Object.assign(cv.pictures, answer.pictures);
   if (answer && answer.prices) cv.prices = colPrices(answer.prices);
-  if (answer && answer.storage) cv.storage = colStorage(answer.storage);
+  cv.storage = answer && answer.storage ? colStorage(answer.storage) : colWithoutHints(cv.storage);
   state.library = null;               // the library's missing-card counts come from the collection
   if (!colActive(cv)) { if (words && state.profile?.id === cv.profile) toast(words); return; }
   if (cv.kind === "rows") {
@@ -353,7 +376,7 @@ function drawCollection(data, query, space = HOME_SPACE, token = null) {
   const cv = colView(data, space, token, "find");
   cv.query = new URLSearchParams(query);
   cv.findSeq = 0;
-  const root = el("div", { class: "collection-page" }, colHead(cv, query));
+  const root = el("div", { class: "collection-page col-find-page" }, colHead(cv, query));
   cv.root = root;
   if (!cv.unsupported) {
     cv.results = el("div", { class: "col-results" });
@@ -361,6 +384,7 @@ function drawCollection(data, query, space = HOME_SPACE, token = null) {
     drawCollectionResults(cv, data);
   }
   $("#main").append(root);
+  registerCollectionKeyboardHelp(cv);
   colTakeNotice(cv);
   return cv;
 }
@@ -382,7 +406,13 @@ function colFilters(cv) {
   // Each typed filter has its own timer, so changing one doesn't drop the other's pending change.
   let searchTimer = 0, mvTimer = 0;
   search.addEventListener("input", () => { clearTimeout(searchTimer); searchTimer = setTimeout(() => colFilter(cv, "q", search.value.trim()), COL_TYPE_MS); });
-  search.addEventListener("keydown", (e) => { if (e.key === "Enter") { clearTimeout(searchTimer); colFilter(cv, "q", search.value.trim()); } });
+  search.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter" || !colKeyboardReady(cv, event) || event.target !== search
+        || document.activeElement !== search) return;
+    event.preventDefault();
+    if (event.repeat) return;
+    clearTimeout(searchTimer); colFilter(cv, "q", search.value.trim());
+  });
   const mv = el("input", { id: id("mv"), type: "number", inputmode: "decimal", min: "0", step: "0.5", placeholder: "Any",
     value: q.get("mv") || "" });
   mv.addEventListener("input", () => { clearTimeout(mvTimer); mvTimer = setTimeout(() => colFilter(cv, "mv", mv.value.trim()), COL_TYPE_MS); });
@@ -391,23 +421,41 @@ function colFilters(cv) {
     (v) => colFilter(cv, "availability", v === "all" ? "" : v), "Show");
   availability.classList.add("col-availability");
   cv.filterControls = { q: search, mv };
-  // On a phone the four card filters fold behind "Filters (n)"; from 600 px they're always shown.
-  const set = ["color", "type", "role", "mv"].filter((key) => q.get(key)).length;
+  // Casual widths keep the card filters folded; the button's count follows the current query. Identity
+  // pips on results do not change this existing card-colour predicate (colourless lands can have identity).
   const form = el("form", { class: "filters col-filters", role: "search", "aria-label": "Filter the collection",
     onsubmit: (event) => event.preventDefault() });
+  cv.filterCount = el("span", { class: "col-filter-count", "aria-hidden": "true" });
   const toggle = el("button", { type: "button", class: "btn col-filter-toggle", "aria-expanded": "false",
-    "aria-controls": "col-filter-extra", text: set ? `Filters (${set})` : "Filters",
-    onclick: () => toggle.setAttribute("aria-expanded", String(form.classList.toggle("is-open"))) });
+    "aria-controls": "col-filter-extra", onclick: () => {
+      if (colActive(cv)) toggle.setAttribute("aria-expanded", String(form.classList.toggle("is-open")));
+    } }, el("span", { class: "sr-only", text: "Filter cards" }),
+    svgEl("svg", { viewBox: "0 0 20 20", width: 20, height: 20, "aria-hidden": "true", focusable: "false" },
+      svgEl("path", { d: "M3 4h14l-5.5 6.5V16l-3-1.5v-4L3 4Z", fill: "none", stroke: "currentColor",
+        "stroke-width": 1.6, "stroke-linejoin": "round" })), cv.filterCount);
+  cv.filterToggle = toggle;
+  colFindFilterCount(cv);
   add(form, [
     el("label", { class: "field col-filter-q", for: search.id }, el("span", { class: "sr-only", text: "Search" }), search),
-    el("div", { class: "col-filter-row" }, availability, toggle),
+    toggle,
+    el("div", { class: "col-filter-row" }, availability),
     el("div", { id: "col-filter-extra", class: "col-filter-extra" },
-      field("color", "Colour", select("color", [["", "Any"], ["W", "White"], ["U", "Blue"], ["B", "Black"],
+      field("color", "Card colour", select("color", [["", "Any"], ["W", "White"], ["U", "Blue"], ["B", "Black"],
         ["R", "Red"], ["G", "Green"], ["C", "Colourless"]])),
       field("type", "Type", select("type", [["", "Any"], ...(data.types || []).map((v) => [v, v])])),
       field("role", "Role", select("role", [["", "Any"], ...(data.roles || []).map((v) => [v, capitalise(v)])])),
-      field("mv", "Mana value", mv))]);
+      field("mv", "Mana value", mv)),
+    el("p", { class: "sub col-find-colour-note", text: "Colour filters use card colour; pips show colour identity." })]);
   return form;
+}
+
+/** Search and availability remain separate from the four extra filters counted on this button. */
+function colFindFilterCount(cv) {
+  if (!cv.filterToggle || !cv.filterCount) return;
+  const count = ["color", "type", "role", "mv"].filter((key) => cv.query.get(key)).length;
+  cv.filterCount.textContent = count ? String(count) : "";
+  cv.filterCount.hidden = !count;
+  cv.filterToggle.setAttribute("aria-label", `Filter cards${count ? `, ${count} active` : ""}`);
 }
 
 /** How many cards a page of Find cards shows: more on a wide screen. */
@@ -427,6 +475,7 @@ function colFilter(cv, key, value) {
 
 async function colLoadFind(cv, query, paging) {
   cv.query = query;
+  colFindFilterCount(cv);
   history.replaceState(history.state, "", colHash(cv.space, "find", query));
   const seq = ++cv.findSeq;
   cv.results.setAttribute("aria-busy", "true");
@@ -464,8 +513,9 @@ function drawCollectionResults(cv, data) {
     el("div", { class: "col-result-head" },
       el("p", { class: "result-count", role: "status", text: counted }),
       colPager(data.page, data.pages, go, "Pages, top")),
-    cards.length ? el("div", { class: "card-tiles col-tiles" }, cards.map((row) => colTile(cv, row)))
-      : colFindEmpty(cv, filtered, data.total || 0),
+    cards.length ? [el("div", { class: "col-find-lab" },
+      el("div", { class: "card-tiles col-tiles" }, cards.map((row) => colTile(cv, row)))),
+      el("div", { class: "col-find-casual" }, colFindRows(cv, cards))] : colFindEmpty(cv, filtered, data.total || 0),
     colPager(data.page, data.pages, go, "Pages, bottom")]);
 }
 
@@ -495,11 +545,9 @@ function colCountWords(row) {
 /** One card of Find cards: its picture with ×N for the copies owned, one line of counts, and chips only for
  * what's worth noticing (on the way, a name the card data doesn't know). Its viewer words have the decks
  * that hold it and, where the visitor may change the collection, Edit copies. */
-function colTile(cv, row) {
-  const chips = [];
-  if (row.incoming && row.owned) chips.push(status("info", `${row.incoming} on the way`));
-  if (!row.card) chips.push(status("warn", "Name not matched"));
-  const caption = el("span", { class: "col-viewer-words" },
+/** The same server-supplied count, basic-land and holder facts at both densities. */
+function colFindCaption(cv, row) {
+  return el("span", { class: "col-viewer-words" },
     el("span", { class: "col-viewer-counts", text: [row.owned ? `${row.owned} owned` : "None owned yet",
       !row.basic && row.owned && row.free_now != null ? `${row.free_now} free now` : null,
       row.incoming ? `${row.incoming} on the way` : null].filter(Boolean).join(" · ") }),
@@ -508,10 +556,47 @@ function colTile(cv, row) {
       row.holders.map((h, i) => [i ? ", " : "", `${h.quantity} in `, colViewerLink(deckHref(h.id), h.title)])) : null,
     cv.editable && row.owned ? el("button", { type: "button", class: "btn col-viewer-edit", text: "Edit copies",
       onclick: () => colAfterViewer(() => openCopiesSheet(cv, row.name)) }) : null);
-  return cardTile(row.card || null, { qty: row.owned, name: row.name, meta: colCountWords(row) || null, chips,
-    viewerGroup: "collection", caption,
+}
+
+/** Identity markers are presentation only; Find cards' colour query still matches card.colors. */
+function colFindIdentity(card, size = 16) {
+  const colours = deckColourPieces(card?.color_identity);
+  return colours ? el("span", { class: "col-find-identity", role: "group", "aria-label": "Colour identity" }, colours.pips(size)) : null;
+}
+
+function colTile(cv, row) {
+  const chips = [];
+  if (row.incoming && row.owned) chips.push(status("info", `${row.incoming} on the way`));
+  if (!row.card) chips.push(status("warn", "Name not matched"));
+  const tile = cardTile(row.card || null, { qty: row.owned, name: row.name, meta: colCountWords(row) || null, chips,
+    viewerGroup: "collection", caption: colFindCaption(cv, row),
     label: `${row.name}, ${colCountWords(row) || "none owned"}`,
     onclick: row.card ? null : (cv.editable ? () => openCopiesSheet(cv, row.name) : null) });
+  add(tile, [colFindIdentity(row.card)]);
+  return tile;
+}
+
+/** Casual Find cards is a name-level list, not a printing-level price or an allocation calculation. */
+function colFindRows(cv, cards) {
+  return el("ul", { class: "col-find-rows" }, cards.map((row) => {
+    const caption = colFindCaption(cv, row), words = colCountWords(row) || "None owned";
+    const extra = [row.incoming && row.owned ? `${row.incoming} on the way` : null,
+      row.basic ? "Deck allocation not tracked" : null,
+      !row.basic && !(row.owned && row.free_now === 0 && row.held === row.owned) && Number.isFinite(row.held) && row.held > 0 ? `${row.held} in decks` : null].filter(Boolean);
+    const open = row.card ? (event) => { if (colActive(cv)) openCard(row.card, event.currentTarget); }
+      : cv.editable ? () => openCopiesSheet(cv, row.name) : null;
+    const node = el(open ? "button" : "div", { class: "col-find-open", type: open ? "button" : null,
+      "aria-label": open ? `${row.name}, ${words}` : null, "aria-haspopup": open ? "dialog" : null, onclick: open },
+      el("span", { class: "col-find-picture", "aria-hidden": "true" }, row.card?.img_small
+        ? el("img", { src: row.card.img_small, alt: "", loading: "lazy", decoding: "async", width: 56, height: 78 }) : null),
+      el("span", { class: "col-find-heading" }, el("span", { class: "col-find-name", text: row.name }), colFindIdentity(row.card, 20)),
+      el("span", { class: "col-find-count", text: `${row.owned || 0} owned` }),
+      el("span", { class: "col-find-meta", text: [words, ...extra].join(" · ") }),
+      row.card?.type_line ? el("span", { class: "col-find-type", text: row.card.type_line })
+        : el("span", { class: "col-find-type" }, row.card ? "Type not recorded" : status("warn", "Name not matched")));
+    if (row.card) viewerItem(node, row.card, "collection-find", caption);
+    return el("li", { class: "col-find-row" }, node);
+  }));
 }
 
 /** "Edit copies": the rows that hold a card (one per printing), each opening its sheet, and Add another
@@ -552,196 +637,6 @@ function colRowFacts(row) {
     row.notes || null].filter(Boolean).join(" · ");
 }
 
-
-// ---------------------------------------------------------------- Card list
-
-function drawCollectionRows(data, space, token = null) {
-  const cv = colView(data, space, token, "rows");
-  cv.search = "";
-  cv.page = 1;
-  cv.unrecordedOnly = false;
-  cv.storageOnly = false;
-  const saved = String(local.get("collection.rowsSort") || "name:1").split(":");
-  cv.sort = { key: COL_SORTS[saved[0]] ? saved[0] : "name", dir: saved[1] === "-1" ? -1 : 1 };
-  const search = el("input", { id: "col-row-search", type: "search", autocomplete: "off", spellcheck: "false",
-    placeholder: "Card name or set", oninput: () => { cv.search = search.value; cv.page = 1; drawColRowList(cv); } });
-  cv.unrecorded = el("input", { type: "checkbox", id: "col-unrecorded",
-    onchange: () => { cv.unrecordedOnly = cv.unrecorded.checked; cv.page = 1; drawColRowList(cv); } });
-  cv.unrecordedLabel = el("span");
-  cv.unrecordedChoice = el("label", { class: "choice col-unrecorded", for: cv.unrecorded.id }, cv.unrecorded, cv.unrecordedLabel);
-  cv.storageBox = el("input", { type: "checkbox", id: "col-storage",
-    onchange: () => { cv.storageOnly = cv.storageBox.checked; cv.page = 1; drawColRowList(cv); } });
-  cv.storageLabel = el("span");
-  cv.storageChoice = el("label", { class: "choice col-storage", for: cv.storageBox.id }, cv.storageBox, cv.storageLabel);
-  cv.count = el("p", { class: "result-count col-count", role: "status" });
-  cv.priceNote = el("p", { class: "price-note col-price-note" });
-  cv.list = el("div", { class: "col-row-list" });
-  const root = el("div", { class: "collection-page col-rows-page" }, colHead(cv),
-    cv.unsupported ? null : [el("div", { class: "toolbar col-row-tools" },
-      el("label", { class: "field col-row-search", for: search.id }, el("span", { class: "sr-only", text: "Search the list" }), search),
-      cv.storageChoice, cv.unrecordedChoice, colBulkButton(cv), cv.count), cv.list, cv.priceNote]);
-  cv.root = root;
-  $("#main").append(root);
-  if (!cv.unsupported) drawColRowList(cv);
-  colTakeNotice(cv);
-  return cv;
-}
-
-/** The rows the search and the "in storage" and "not recorded" filters show, sorted. */
-function colShownRows(cv) {
-  const words = tokFold(cv.search || "");
-  const rows = (cv.rows || []).filter((row) => (!words || tokFold(row.name).includes(words) || tokFold(row.set).includes(words))
-    && (!cv.unrecordedOnly || colUnrecorded(row)) && (!cv.storageOnly || colInStorage(cv, row)));
-  const { key, dir } = cv.sort;
-  if (key === "price") {
-    // Unpriced rows stay last whichever way it's sorted; equal prices go by name.
-    return rows.sort((a, b) => {
-      const x = colPrice(cv, a), y = colPrice(cv, b);
-      if (x == null || y == null) return (x == null) - (y == null) || String(a.name).localeCompare(String(b.name));
-      return (x - y) * dir || String(a.name).localeCompare(String(b.name));
-    });
-  }
-  const value = (row) => key === "quantity" ? Number(row.quantity || 0)
-    : key === "set" ? `${row.set || "~"} ${String(row.collector_number || "").padStart(6, "0")}`
-      : key === "condition" ? ["NM", "LP", "MP", "HP", "DMG"].indexOf(row.condition) + 1 || 9
-        : String(row[key] || "~").toLowerCase();
-  return rows.sort((a, b) => {
-    const x = value(a), y = value(b);
-    const c = typeof x === "number" ? x - y : x.localeCompare(y);
-    return c * dir || String(a.name).localeCompare(String(b.name));
-  });
-}
-
-function drawColRowList(cv) {
-  if (!cv.list) return;
-  const rows = cv.rows || [];
-  const unrecorded = rows.filter(colUnrecorded).length;
-  cv.unrecordedLabel.textContent = `Condition or language not recorded (${num(unrecorded)})`;
-  cv.unrecordedChoice.hidden = !unrecorded;
-  if (!unrecorded) { cv.unrecordedOnly = false; cv.unrecorded.checked = false; }
-  // In storage only: offered only when the copies in decks could be worked out.
-  const stored = cv.storage && !cv.storage.error ? rows.filter((row) => colInStorage(cv, row)) : null;
-  if (cv.storageChoice) {
-    cv.storageLabel.textContent = stored ? `In storage only (${plural(stored.length, "row")})` : "";
-    cv.storageChoice.hidden = !stored || !rows.length;
-    if (!stored) { cv.storageOnly = false; cv.storageBox.checked = false; }
-  }
-  const shown = colShownRows(cv);
-  colBulkSync(cv, shown);
-  const cards = rows.reduce((n, row) => n + Number(row.quantity || 0), 0);
-  cv.count.textContent = shown.length === rows.length ? `${plural(rows.length, "row")}, ${plural(cards, "card")}`
-    : `${num(shown.length)} of ${plural(rows.length, "row")}`;
-  const pages = Math.max(1, Math.ceil(shown.length / COL_ROWS_PAGE));
-  cv.page = Math.min(Math.max(1, cv.page), pages);
-  const go = (page) => { cv.page = page; drawColRowList(cv); cv.list.scrollIntoView({ block: "start", behavior: "smooth" }); };
-  clear(cv.list);
-  if (!rows.length) {
-    cv.list.append(el("div", { class: "empty" }, el("p", { text: "No cards recorded yet." }),
-      cv.editable ? el("button", { type: "button", class: "btn col-mutate", text: "Add card",
-        onclick: () => openCollectionSheet(cv) }) : null));
-  } else if (!shown.length) {
-    cv.list.append(el("div", { class: "empty" }, el("p", { text: "No rows match." })));
-  } else {
-    const page = shown.slice((cv.page - 1) * COL_ROWS_PAGE, cv.page * COL_ROWS_PAGE);
-    add(cv.list, [colPager(cv.page, pages, go, "Pages, top"), colRowTable(cv, page), colPager(cv.page, pages, go, "Pages, bottom")]);
-  }
-  drawColPriceNote(cv);
-  setCollectionBusy(cv, cv.busy);
-}
-
-/** What the Card list's prices are: estimates, from when and at what rate, or why there are none. */
-function drawColPriceNote(cv) {
-  if (!cv.priceNote) return;
-  const p = cv.prices || {};
-  cv.priceNote.hidden = !(cv.rows || []).length;
-  cv.priceNote.textContent = p.rate
-    ? `~A$ each is an estimate for that row's own printing and finish: Scryfall's US price of ${p.price_date || "an unknown date"} `
-      + `× 1 USD = ${p.rate} AUD (ECB rate of ${p.rate_date}). A dash means Scryfall has no price for it.`
-    : p.price_error ? `No prices: ${p.price_error}` : "No prices: the card data isn't ready yet.";
-  const storage = cv.storage;
-  if (storage && storage.error) cv.priceNote.textContent += ` In storage only isn't offered: ${storage.error}`;
-  if (cv.storageOnly) cv.priceNote.textContent += " In storage only counts the copies in built decks and products kept"
-    + " intact; basic lands are always listed, since their copies in decks aren't tracked.";
-  if (storage && Object.values(storage.rows).some((s) => s && s.guess)) cv.priceNote.textContent += ` ${COL_GUESS_WORDS}`;
-}
-
-/** The dense table: thumbnail (opens the viewer), the card (opens its sheet, or the viewer when read only),
- * printing, copies, the estimated price of one copy, condition, language and notes. On a phone the last four fold into a line under the name. */
-function colRowTable(cv, rows) {
-  const sortable = (key, cls = "") => {
-    const on = cv.sort.key === key;
-    return el("th", { scope: "col", class: `col-th-${key} ${cls}`.trim(), "aria-sort": on ? (cv.sort.dir > 0 ? "ascending" : "descending") : null },
-      el("button", { type: "button", class: "th-sort", text: COL_SORTS[key], onclick: () => {
-        cv.sort = { key, dir: on ? -cv.sort.dir : COL_SORT_FIRST[key] || 1 };
-        local.set("collection.rowsSort", `${key}:${cv.sort.dir}`);
-        cv.page = 1;
-        drawColRowList(cv);
-      } }));
-  };
-  return el("div", { class: "table-wrap" }, el("table", { class: "data col-table" },
-    el("thead", {}, el("tr", {},
-      el("th", { scope: "col", class: "col-th-pic" }, el("span", { class: "sr-only", text: "Picture" })),
-      sortable("name"), sortable("set", "col-wide"), sortable("quantity", "num"), sortable("price", "num"),
-      sortable("condition", "col-wide"),
-      sortable("language", "col-wide"), el("th", { scope: "col", class: "col-notes col-th-notes", text: "Notes" }))),
-    el("tbody", {}, rows.map((row) => colRowLine(cv, row)))));
-}
-
-function colRowLine(cv, row) {
-  const card = cv.pictures[colKey(row)] || null;
-  const key = colKey(row);
-  const facts = colRowFacts(row);
-  const caption = [`×${row.quantity}`, colPrinting(row), facts].filter(Boolean).join(" · ")
-    + (card && card.exact === false && row.set ? " (picture of another printing)" : "");
-  const thumb = card && card.img_small
-    ? viewerItem(el("button", { type: "button", class: "col-thumb", "aria-haspopup": "dialog",
-      "aria-label": `Show ${row.name} (${colPrinting(row)})`, onclick: (e) => openCard(card, e.currentTarget) },
-      el("img", { src: card.img_small, alt: "", loading: "lazy", decoding: "async", width: 40, height: 56 })), card, "collection-rows", caption)
-    : el("span", { class: "col-thumb col-thumb-none", "aria-hidden": "true" });
-  const open = cv.editable ? () => openCollectionSheet(cv, row)
-    : card ? () => openCard(card, thumb) : null;
-  const unknown = (value, words) => value ? el("span", { text: value }) : el("span", { class: "col-unknown", text: "?", title: words, "aria-label": words });
-  const language = COL_LANGUAGES.find(([v]) => v === row.language);
-  // On a phone the columns fold into one line under the name: the printing, then the condition and language
-  // only when they're unusual (not Near Mint, not English) or not recorded. Below 1000px the notes go under it.
-  const meta = [colPrinting(row), row.condition === "NM" ? null : row.condition || "Condition ?",
-    !row.language ? "Language ?" : row.language === "en" ? null : language ? language[1] : row.language].filter(Boolean).join(" · ");
-  const name = [el("span", { class: "col-cell-name", text: row.name }),
-    el("small", { class: "col-cell-meta", text: meta }),
-    row.notes ? el("small", { class: "col-cell-note", text: row.notes }) : null];
-  return el("tr", { "data-key": key, class: colUnrecorded(row) ? "is-unrecorded" : null },
-    el("td", { class: "col-td-pic" }, thumb),
-    el("td", { class: "col-td-name" }, open ? el("button", { type: "button", class: "col-open col-mutate", "data-focus": `edit-${key}`,
-      "aria-label": cv.editable ? `Edit ${row.name} (${colPrinting(row)})` : null, onclick: open }, name) : name),
-    el("td", { class: "col-wide col-td-printing", text: colPrinting(row) }),
-    el("td", { class: "num col-td-qty" }, el("span", { text: String(row.quantity) }), colHeldNote(cv, row)),
-    colPriceCell(cv, row),
-    el("td", { class: "col-wide" }, unknown(row.condition, "Condition not recorded")),
-    el("td", { class: "col-wide" }, row.language ? el("span", { text: language ? language[1] : row.language })
-      : unknown("", "Language not recorded")),
-    el("td", { class: "col-notes col-td-notes", text: row.notes || "", title: row.notes || null }));
-}
-
-const COL_GUESS_WORDS = "A ? after \"in decks\" means the decks' lists don't say which of this card's printings"
-  + " they hold, so the copies are counted against the cheapest: check the decks.";
-
-/** Under a row's copies: how many are in decks ("1 in a deck", "all in decks"), "in decks?" with a
- * title when the decks' lists name another printing (a guess), nothing when all are in storage. */
-function colHeldNote(cv, row) {
-  const { held, guess } = colHeld(cv, row);
-  if (!held) return null;
-  const all = held >= Number(row.quantity || 0);
-  const words = all ? "all in decks" : held === 1 ? "1 in a deck" : `${num(held)} in decks`;
-  return el("small", { class: `col-held${guess ? " col-held-guess" : ""}`, text: guess ? `${words}?` : words,
-    title: guess ? COL_GUESS_WORDS : null });
-}
-
-function colPriceCell(cv, row) {
-  const price = colPrice(cv, row);
-  return price == null
-    ? el("td", { class: "num col-td-price col-unpriced" }, el("span", { text: "–", "aria-label": "No price" }))
-    : el("td", { class: "num col-td-price", text: price.toFixed(2) });
-}
 
 // ------------------------------------------------------------------ import
 

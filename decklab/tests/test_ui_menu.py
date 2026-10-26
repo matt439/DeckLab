@@ -31,7 +31,8 @@ class Element extends Node {
 const focusCalls = [];
 const document = { activeElement: null, body: new Element('body'), documentElement: { clientWidth: 820 },
   createElement: (t) => new Element(t), createElementNS: (ns, t) => new Element(t), createTextNode: (t) => t,
-  addEventListener() {}, removeEventListener() {}, getElementById: () => null, querySelector: () => null };
+  addEventListener() {}, removeEventListener() {}, getElementById: () => null, querySelector: () => null,
+  querySelectorAll: () => [] }; // This placement fixture has no core popover menus or dialogs.
 const window = { innerHeight: 1106, scrollX: 0, scrollY: 400, addEventListener() {}, removeEventListener() {} };
 const ctx = { document, window, Node, console, setTimeout, clearTimeout };
 ctx.globalThis = ctx;

@@ -52,7 +52,7 @@ class DeckSideboardUiTests(unittest.TestCase):
           assert.equal(inspections[0].card.img, '/img/old/7/normal');
           same(viewerGroup(inspections[0].trigger).items.map(item => item.card.name), ['Elf', 'Bolt']);
           // It is an Overview feature: opening another tab does not request plans.
-          let loads = 0; api = async () => { loads++; return answer(); };
+          let loads = 0; api = async (path) => { if (path.startsWith('/api/play?')) loads++; return answer(); };
           open('#/deck?id=casual%2Ftest&v=target&tab=cards'); await settle();
           assert.equal(loads, 0); tab('overview').click(); await settle(); assert.equal(loads, 1);
         """)

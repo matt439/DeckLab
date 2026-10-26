@@ -20,6 +20,7 @@ SETUP = EDITOR + """
     rate: 1.5, rate_date: "2026-10-19", price_date: "2026-10-19", warnings: [],
     cards: [{name: "Lightning Bolt", section: "Deck", missing: 2, aud_each: 1.5, card: bolt, type: "instant",
       colours: ["R"], mv: 1, in_list: 2, candidates: [shockOption], more: 0}]};
+  const drawSwapFrame = drawEditor; // Mount real ownership before the existing redraw stubs.
   function playNow(substitutes = "") {
     edit();
     editor.version = "owned";
@@ -27,6 +28,7 @@ SETUP = EDITOR + """
       Sideboard: [{qty: 1, name: "Ravenous Giant", card: giant}]});
     editor.prose = {notes: "", substitutes};
     editor.snap = snapshot(editor);
+    drawSwapFrame();
     editor.check = {availability: {owned: {rows: [{name: "Lightning Bolt", missing: 2}, {name: "Ravenous Giant", missing: 1},
       {name: "Llanowar Elves", missing: 0}]}}};
     editor.checkError = null;

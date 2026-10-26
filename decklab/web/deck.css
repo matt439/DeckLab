@@ -32,6 +32,8 @@
 .deck-head-cover-img { display: block; width: 100%; height: 100%; object-fit: cover; }
 .deck-page-head .deck-title-row h1 { margin: 0; font-size: var(--fs-2xl); overflow-wrap: break-word; hyphens: auto; min-width: 0; }
 .deck-meta { margin: 0; color: var(--ink-2); }
+.deck-page-head > .deck-meta { display: flex; align-items: center; flex-wrap: wrap; gap: var(--s-2); }
+.deck-page-head > .deck-stripe, .deck-header-id { display: none; }
 .deck-pill { margin-right: var(--s-2); vertical-align: 1px; }
 .deck-facts a { color: var(--link); }
 .deck-head-actions { margin: 0; flex-wrap: nowrap; justify-content: flex-end; align-items: center; }
@@ -54,7 +56,46 @@
   .deck-page-head:has(.deck-actions-wide) > .deck-head-actions { grid-column: 1 / -1; grid-row: auto; justify-content: flex-start; }
 }
 @media (min-width: 1000px) {
-  .deck-page-head { column-gap: var(--s-5); }
+  /* The full deck page promotes the library's art to a hero. The editor keeps its own head. */
+  .deck-page-head { position: relative; gap: 0; grid-template-columns: minmax(0, 1fr) auto; }
+  .deck-page-head > .deck-head-actions { grid-column: 2; grid-row: 1; padding-bottom: var(--s-2); }
+  .deck-page-head > .deck-stripe { display: block; grid-row: 2; }
+  .deck-page-head > .deck-title-row {
+    grid-column: 1 / -1; grid-row: 3; position: relative; isolation: isolate;
+    align-items: flex-end; min-height: 184px; padding: var(--s-5);
+    background: var(--deck-art, var(--surface-2));
+  }
+  .deck-page-head .deck-head-cover {
+    display: block; position: absolute; inset: 0; width: auto; height: auto; aspect-ratio: auto;
+    border-radius: 0; box-shadow: none;
+  }
+  .deck-page-head .deck-title-row:has(.deck-head-cover)::after {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background: linear-gradient(180deg, transparent, var(--scrim-strong) 60%);
+  }
+  .deck-page-head .deck-title-row h1 { position: relative; z-index: 1; font-size: var(--fs-hero); }
+  .deck-page-head .deck-title-row:has(.deck-head-cover) h1 { color: var(--on-scrim); }
+  .deck-page-head > .deck-meta {
+    grid-row: 4; padding: var(--s-3) var(--s-5); background: var(--deck-tint, none), var(--surface-2);
+  }
+  .deck-header-id { display: inline; margin-left: auto; font-size: var(--fs-xs); overflow-wrap: anywhere; }
+  .deck-page-head > .deck-head-note, .deck-page-head > .pairings-of { margin-top: var(--s-2); }
+}
+@media (min-width: 1000px) and (max-width: 1280px) {
+  /* A touch lab has room for art, title and actions in one row, rather than a second toolbar. */
+  .deck-page-head > .deck-title-row { min-height: 148px;
+    padding: calc(var(--tap) + 2 * var(--s-3)) var(--s-3) var(--s-3); }
+  .deck-page-head .deck-title-row h1 { max-width: calc(100% - 240px); }
+  .deck-page-head > .deck-head-actions {
+    grid-column: 1 / -1; grid-row: 3; position: relative; z-index: 2; align-self: end; justify-self: end;
+    margin: var(--s-3); padding: 0;
+  }
+  .deck-head-actions > .deck-actions { outline: 2px solid var(--on-scrim); outline-offset: 2px; border-radius: var(--r-pill); }
+  .deck-page-head > .deck-meta { padding-inline: var(--s-3); }
+}
+@media (forced-colors: active) {
+  .deck-page-head .deck-title-row:has(.deck-head-cover) h1 { color: CanvasText; background: Canvas; }
+  .deck-page-head .deck-title-row:has(.deck-head-cover)::after { display: none; }
 }
 
 /* The availability banner (deck.js availabilityBanner): the answer, its button, the list picker. */
@@ -391,4 +432,20 @@ table.data tfoot .total-cost { font-weight: var(--fw-semibold); text-align: left
   /* A phone: "Use n" on its own line under the card and its note. */
   .swap-row { grid-template-columns: minmax(0, 1fr); }
   .swap-row > .swap-use { grid-column: 1; grid-row: auto; justify-self: start; margin-top: var(--s-2); }
+}
+
+/* The fresh visible library supplies previous/next; narrow lab navigation sits over the art. */
+.deck-neighbours { display: none; }
+.deck-changed { color: var(--ink-2); font-size: var(--fs-xs); white-space: nowrap; }
+.deck-neighbour-count { font-family: var(--font-num); font-size: var(--fs-sm); white-space: nowrap; }
+@media (min-width: 1000px) {
+  .deck-page-head > .deck-neighbours { display: flex; grid-column: 1; grid-row: 1; align-items: center;
+    align-self: start; gap: var(--s-2); padding-bottom: var(--s-2); min-width: 0; }
+}
+@media (min-width: 1000px) and (max-width: 1280px) {
+  .deck-page-head > .deck-neighbours { grid-column: 1 / -1; grid-row: 3; position: relative;
+    z-index: 2; justify-self: start; margin: var(--s-3); padding: 0; max-width: calc(100% - 2 * var(--s-3)); }
+  .deck-neighbour-count { padding: var(--s-1) var(--s-2); border-radius: var(--r-pill);
+    background: var(--scrim-strong); color: var(--on-scrim); }
+  .deck-neighbours > .sub { background: var(--surface); color: var(--ink); padding: var(--s-1); }
 }

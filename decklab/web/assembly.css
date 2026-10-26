@@ -1,9 +1,10 @@
-/* The packing plan (assembly.js): lays the shared components out. A phone: the deck checklist folded above the
-   plan. From 1000 px the checklist is a column on the left and the plan beside it; each deck's plan is its own
+/* The packing plan (assembly.js): lays the shared components out. Below 1000px the same chooser opens in a
+   sheet. From 1000 px the checklist is a column on the left and the plan beside it; each deck's plan is its own
    panel, and from 1600 px two decks sit side by side. */
 .pack-layout { display: grid; gap: var(--s-4); align-items: start; margin-top: var(--s-4); }
 .pack-main { min-width: 0; display: grid; gap: var(--s-4); align-content: start; }
 .pack-message:empty { display: none; }
+.pack-message-slot:empty, .pack-message-slot:has(> .pack-message:empty) { display: none; }
 .pack-message { margin: 0; color: var(--ink-2); }
 .pack-sort { gap: var(--s-3); }
 .pack-sort[hidden] { display: none; }
@@ -17,12 +18,27 @@
 
 /* The deck checklist. */
 .pack-choose { min-width: 0; padding: 0; }
-.pack-choose > summary {
+.pack-choose-head {
   display: flex; align-items: center; min-height: var(--tap); padding: var(--s-2) var(--s-4);
-  cursor: pointer; font-weight: var(--fw-semibold);
+  margin: 0; font-size: var(--fs-md); font-weight: var(--fw-semibold); border-bottom: 1px solid var(--border);
 }
 .pack-choose-count { color: var(--ink-2); font-weight: var(--fw-regular); }
-.pack-choose[open] > summary { border-bottom: 1px solid var(--border); }
+.pack-chooser-slot, .pack-chooser-rail { min-width: 0; }
+.pack-chooser-launcher { justify-self: start; max-width: 100%; white-space: normal; }
+.pack-chooser-launcher[hidden], .pack-chooser-slot[hidden], .pack-chooser-rail[hidden], .pack-chooser-empty[hidden] { display: none; }
+.pack-chooser-empty { margin: var(--s-3) var(--s-4); }
+.pack-decks-sheet .sheet-inner { min-height: 0; }
+.pack-decks-sheet .sheet-head, .pack-decks-sheet .sheet-foot { flex: none; }
+.pack-decks-sheet .sheet-body { min-height: 0; }
+.pack-decks-sheet .pack-choose { padding: 0; border: 0; border-radius: 0; box-shadow: none; }
+.pack-decks-sheet .pack-choose-head { display: none; }
+.pack-decks-sheet .pack-presets, .pack-decks-sheet .pack-picks { padding-left: 0; padding-right: 0; }
+.pack-decks-sheet .pack-presets { padding-top: 0; }
+.pack-decks-sheet .pack-chooser-empty { margin-left: 0; margin-right: 0; }
+.pack-decks-sheet .pack-presets .btn { white-space: normal; }
+.pack-decks-sheet .choice { min-height: 52px; }
+.pack-decks-sheet .pack-message { margin-bottom: var(--s-3); }
+.pack-decks-sheet .pack-message:empty { display: none; }
 .pack-presets, .pack-picks { padding: 0 var(--s-4); }
 .pack-presets { padding-top: var(--s-3); }
 .pack-picks { padding-bottom: var(--s-3); }
@@ -41,19 +57,49 @@
 .pack-sideboard-quantities { display: grid; gap: var(--s-2); }
 .pack-sideboard-quantities .field { display: grid; grid-template-columns: minmax(0, 1fr) 5em; align-items: center; gap: var(--s-2); }
 .pack-sideboard-quantities input { width: 100%; min-width: 0; }
-.pack-show-plan { padding: 0 var(--s-4) var(--s-3); }
-.pack-show-plan[hidden] { display: none; }
 
-/* The sticky bar: one line; a phone gets the short words ("Pulled 5/277 · 0/24 steps"). */
-.pack-bar { flex-wrap: nowrap; }
-.pack-bar > .actions { flex: none; flex-wrap: nowrap; }
-.pack-bar .action-bar-status { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.pack-progress-short { display: none; }
+/* The global copy figure and optional steps remain distinct, with retained guidance beside Finish. */
+.pack-bar { align-items: center; }
+.pack-bar > .actions { flex: 1 1 320px; justify-content: flex-end; align-items: center; flex-wrap: nowrap; }
+.pack-bar .action-bar-status { flex: 1 1 220px; overflow: visible; white-space: normal; }
+.pack-progress { display: grid; gap: var(--s-1); }
+.pack-copy-progress { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--s-1) var(--s-2); align-items: baseline; }
+.pack-copy-figure { font-family: var(--font-mono); font-size: var(--fs-fig-mid); font-variant-numeric: tabular-nums; color: var(--ink); }
+.pack-copy-label, .pack-other-progress, .pack-progress-state { font-size: var(--fs-meta); }
+.pack-copy-meter { grid-column: 1 / -1; width: 100%; max-width: 280px; height: 6px; border: 0;
+  border-radius: var(--r-pill); overflow: hidden; background: var(--track); accent-color: var(--accent); appearance: none; }
+.pack-copy-meter::-webkit-progress-bar { background: var(--track); }
+.pack-copy-meter::-webkit-progress-value { background: var(--accent); }
+.pack-copy-meter::-moz-progress-bar { background: var(--accent); }
+.pack-copy-progress[hidden], .pack-other-progress[hidden] { display: none; }
+.pack-finish-action { display: grid; justify-items: end; gap: var(--s-1); min-width: 0; }
+.pack-finish-action .btn { max-width: 100%; white-space: normal; }
+.pack-bar .pack-completion-message { margin: 0; max-width: 48ch; font-size: var(--fs-meta); }
+.pack-completion-message:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
+@media (max-width: 599px) {
+  .pack-bar .action-bar-status, .pack-bar > .actions { flex-basis: 100%; }
+  .pack-finish-action { flex: 1; justify-items: stretch; }
+  .pack-bar .pack-completion-message { max-width: none; }
+}
 
 /* A deck's plan. */
+.pack-deck-switcher { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-3); margin-top: var(--s-4); }
+.pack-deck-switcher[hidden], .pack-deck[hidden] { display: none; }
+.pack-deck-choice { position: relative; min-width: 0; min-height: 104px; display: flex; flex-direction: column;
+  align-items: flex-start; gap: var(--s-2); overflow: hidden; padding: var(--s-4); border: 1px solid var(--border-strong);
+  border-radius: var(--r-panel); background: var(--deck-tint, var(--surface)); color: var(--ink); font: inherit;
+  text-align: left; cursor: pointer; }
+.pack-deck-choice > .deck-stripe { position: absolute; top: 0; left: 0; right: 0; }
+.pack-deck-choice strong { font-size: var(--fs-row); overflow-wrap: anywhere; }
+.pack-deck-choice-list { font-size: var(--fs-meta); color: var(--ink-2); }
+.pack-deck-choice[aria-pressed="true"] { box-shadow: inset 0 0 0 2px var(--accent); }
+.pack-deck-choice:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+@media (forced-colors: active) { .pack-deck-choice[aria-pressed="true"] { outline: 2px solid Highlight; } }
 .pack-decks { display: grid; gap: var(--s-4); align-items: start; }
 .pack-deck { display: grid; gap: var(--s-4); }
 .pack-deck-head h2 { margin: 0; font-size: var(--fs-xl); overflow-wrap: break-word; }
+.pack-deck-head h2, .pack-deck-choice { scroll-margin-top: calc(var(--shell-top) + var(--s-3));
+  scroll-margin-bottom: calc(var(--bar-h) + var(--shell-bottom, 0px) + var(--s-3)); }
 .pack-deck-head .sub { margin: var(--s-1) 0 0; }
 .pack-bulk { display: grid; justify-items: start; gap: var(--s-2); }
 .pack-bulk[hidden] { display: none; }
@@ -61,8 +107,8 @@
 .pack-step h3 { display: flex; align-items: center; gap: var(--s-2); margin: 0 0 var(--s-3); font-size: var(--fs-md); }
 .pack-step-n {
   display: inline-flex; align-items: center; justify-content: center; flex: none;
-  width: 1.75em; height: 1.75em; border-radius: 50%;
-  background: var(--accent-soft); color: var(--ink); font-size: var(--fs-sm); font-weight: var(--fw-bold);
+  width: 28px; height: 28px; border-radius: 50%;
+  background: var(--surface-chip); color: var(--ink-2); font-size: var(--fs-sm); font-weight: var(--fw-medium);
 }
 .pack-step > .sub { margin: 0 0 var(--s-2); }
 .pack-tiles { margin-top: var(--s-2); }
@@ -71,7 +117,7 @@
 .pack-list li:last-child { border-bottom: 0; }
 .pack-plain li { padding: var(--s-1) 0; overflow-wrap: break-word; }
 .pack-row { display: flex; align-items: center; gap: var(--s-3); min-height: var(--tap); padding: var(--s-2) 0; cursor: pointer; }
-.pack-row:has(input:checked) span { text-decoration: line-through; color: var(--ink-2); }
+.pack-row:has(input:checked) span { color: var(--ink-3); font-weight: var(--fw-medium); }
 .assembly-pending { padding: var(--s-2) 0; color: var(--ink-2); }
 .pack-fold > summary { display: flex; align-items: center; min-height: var(--tap); cursor: pointer; font-weight: var(--fw-semibold); }
 .pack-fold[open] > summary { margin-bottom: var(--s-2); }
@@ -88,14 +134,10 @@
    neither covers the card's name. */
 .pack-tiles .card-tile-text { padding-top: 48px; }
 
-@media (max-width: 599px) {
-  .pack-progress-long { display: none; }
-  .pack-progress-short { display: inline; }
-}
 @media (min-width: 1000px) {
-  .pack-show-plan { display: none; }
-  .pack-layout { grid-template-columns: minmax(260px, 320px) minmax(0, 1fr); gap: var(--s-5); }
-  .pack-choose { position: sticky; top: calc(var(--shell-top) + var(--s-3)); max-height: calc(100vh - var(--shell-top) - var(--s-6)); overflow: auto; }
+  .pack-layout { grid-template-columns: 300px minmax(0, 1fr); gap: var(--s-5); }
+  .pack-chooser-slot { position: sticky; top: calc(var(--shell-top) + var(--s-3)); }
+  .pack-choose { max-height: calc(100dvh - var(--shell-top) - var(--s-6)); overflow: auto; }
 }
 /* A QHD window: up to four decks side by side, and the plan's status line across all of them. */
 @media (min-width: 1600px) {
@@ -105,4 +147,74 @@
 /* There the deck columns are narrow, so their card tiles are smaller than the page's usual 196 px. */
 @media (min-width: 2200px) {
   .pack-decks .card-tiles { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+}
+
+/* The original viewer/tick nodes project as compact rows only in the lab. */
+.pack-row-qty, .pack-row-finish, .pack-row-meta { display: none; }
+.pack-tiles .card-tile.is-ticked :is(.card-tile-name, .card-tile-meta, .pack-row-qty, .card-tile-text b) {
+  color: var(--ink-3); font-weight: var(--fw-medium);
+}
+.pack-tiles .card-tile.is-ticked .card-tile-img { opacity: .42; filter: none; }
+.pack-tiles .card-tile.is-ticked .card-tile-pic:has(> .card-tile-img) > .card-tile-text { visibility: hidden; }
+.pack-tiles .card-tile.is-ticked .card-tile-pic:has(> .card-tile-img)::before {
+  content: ""; position: absolute; z-index: 1; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  width: 40px; height: 40px; border-radius: 50%; pointer-events: none;
+  background: var(--accent) var(--icon-tick-on-accent) center / 24px no-repeat;
+}
+@media (min-width: 1000px) {
+  .pack-step-n { width: 20px; height: 20px; }
+  .pack-decks .pack-tiles { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .pack-tiles > .card-tile {
+    display: grid; grid-template-columns: minmax(0, 1fr) 44px; align-items: center; gap: 0;
+    min-height: 46px; box-sizing: border-box; border-bottom: 1px solid var(--border); border-radius: var(--r-sm);
+  }
+  .pack-tiles .card-tile-open {
+    display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; grid-template-rows: auto auto;
+    align-items: center; gap: 0 var(--s-2); min-height: 44px; padding: 2px var(--s-2) 2px 0;
+    box-sizing: border-box; border-radius: var(--r-sm);
+  }
+  .pack-tiles > .card-tile:has(> .card-tile-open:focus-visible) { outline: 2px solid var(--focus); outline-offset: -2px; }
+  .pack-tiles .card-tile-open:focus-visible .card-tile-pic { outline: none; }
+  .pack-tiles .card-tile-pic {
+    grid-column: 1; grid-row: 1 / 3; width: 28px; height: calc(28px * 680 / 488);
+    border: 1px solid var(--border); box-sizing: border-box; background: var(--track); border-radius: var(--r-sm); box-shadow: none;
+  }
+  .pack-tiles .card-tile.is-ticked .card-tile-pic { box-shadow: none; }
+  .pack-tiles .card-tile-text {
+    inset: 0 auto auto 0; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%);
+  }
+  .pack-tiles .card-tile-name {
+    grid-column: 2; grid-row: 1; display: block; -webkit-line-clamp: unset; -webkit-box-orient: initial;
+    max-height: none; padding: 0; font-size: var(--fs-row); overflow: visible; white-space: normal; overflow-wrap: anywhere;
+  }
+  .pack-tiles .card-tile-open:not(:has(> .card-tile-meta)) .card-tile-name { grid-row: 1 / 3; }
+  .pack-tiles .card-tile-meta {
+    grid-column: 2; grid-row: 2; padding: 0; font-size: var(--fs-meta); white-space: normal; overflow: visible;
+    overflow-wrap: anywhere;
+  }
+  .pack-tiles .card-tile-meta .meta-part { white-space: normal; overflow-wrap: anywhere; }
+  .pack-tiles .pack-row-finish, .pack-tiles .pack-row-meta { display: inline; }
+  .pack-tiles .card-tile-meta:not(.pack-row-meta) > .pack-row-finish::before { content: " · "; }
+  .pack-tiles .pack-row-qty {
+    display: block; grid-column: 3; grid-row: 1 / 3; min-width: 2ch; text-align: right;
+    font-family: var(--font-mono); font-size: var(--fs-row); font-variant-numeric: tabular-nums;
+  }
+  /* Keep the old quantity words accessible while the separate mono column is decorative. */
+  .pack-tiles .card-tile-qty {
+    top: auto; left: auto; width: 1px; min-width: 0; height: 1px; padding: 0; overflow: hidden;
+    clip-path: inset(50%); white-space: nowrap;
+  }
+  .pack-tiles .card-tile-chips { display: none; }
+  .pack-tiles .card-tile-state:has(> .pack-tick) {
+    position: static; grid-column: 2; grid-row: 1; width: 44px; height: 44px; aspect-ratio: auto;
+    align-items: center; justify-content: center; padding: 0; pointer-events: auto;
+  }
+  .pack-tiles .pack-tick { width: 44px; height: 44px; margin: 0; border-radius: var(--r-sm); }
+  .pack-tiles .pack-tick::before {
+    width: 18px; height: 18px; margin: 13px; border-radius: var(--r-sm); background-size: 12px;
+    box-shadow: 0 0 0 1.5px var(--border-strong);
+  }
+  .pack-tiles .pack-tick[aria-pressed="true"]::before { box-shadow: 0 0 0 1.5px var(--accent); }
+  .pack-tiles .card-tile.is-ticked .card-tile-img { opacity: 1; filter: none; }
+  .pack-tiles .card-tile.is-ticked .card-tile-pic:has(> .card-tile-img)::before { display: none; }
 }

@@ -145,6 +145,10 @@ def assembly_view(deck=None, version="target"):
     basics. These describe the list, not physical copies allocated from
     storage, other decks or returns; allocation remains by card name.
 
+    Selected participants also carry optional canonical Planned/library "colors" from the
+    summary already read, independent of the selected list/physical recipe. None is unknown;
+    [] is known colourless. No extra deck or inventory read is made for that decoration.
+
     The plan is the home pool's: 403 for anyone outside the home
     (guard.require_sees_home_records), here and in assembly_preview."""
     from . import guard
@@ -256,6 +260,7 @@ def _preview(selected, profile=False):
         shown = sees and guard.sees_kit(summary, owners)
         sleeves, kit = _kit(summary, sections, inv, usage, owners) if shown else (None, None)
         participants.append({"id": summary["id"], "title": summary["title"], "version": choice["version"],
+                             "colors": list(summary["colors"]) if isinstance(summary.get("colors"), list) else None,
                              "rename_version": stored.rename_version if stored is not None else 0,
                              "assembly_key": assembly_sections.task_key(parsed, normalized, sections),
                              "build_scope": assembly_sections.scope(sections, intended),

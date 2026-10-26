@@ -1,4 +1,4 @@
-/* Shopping (UI-REVIEW.md WP10): a row of links to the parts (a phone's and a portrait tablet's), the deliveries on the way, each a card titled "seller · topic" with a strip
+/* Shopping (UI-REVIEW.md WP10): a row of links to the parts (a phone's and a portrait tablet's), the deliveries on the way, each a disclosure titled "seller · topic" with a strip
 of its cards' pictures, its arrival checks inside it and Receive delivery as its main action; follow-ups left
 open on deliveries that have arrived, each with Done (POST /api/shopping/check, an admin's); the cards we've
 decided to buy; the decks still missing cards (a link to each deck's missing cards, kept apart from the queue:
@@ -152,8 +152,7 @@ function shopComponentWords(component) {
   return what;
 }
 
-/** A delivery on the way: title, when it was ordered and what it holds, its pictures, its notes (two lines),
- * the checks to make when it arrives, and Receive delivery. */
+/** A compact delivery row opens its existing contents, checks and actions in place. */
 function shopDelivery(order, checks, view = null) {
   const components = order.components || [];
   const pending = components.filter((c) => c.status === "pending");
@@ -163,18 +162,44 @@ function shopDelivery(order, checks, view = null) {
   const words = kinds.size === 1 && kinds.has("tokens") ? plural(total, "token card") : plural(total, "card");
   const receive = pending.length && mayDo("receipts");
   const href = `#/receipt?order=${encodeURIComponent(order.id)}`;
-  return el("article", { class: "panel shop-delivery" },
-    el("div", { class: "shop-delivery-head" },
-      el("h3", { text: shopOrderTitle(order) }), shopOrderChip(order)),
-    el("p", { class: "sub", text: [order.ordered_on ? `Ordered ${shopDay(order.ordered_on)}` : "Order date not recorded", words]
-      .join(" · ") }),
+  const keyHint = receive && view ? `shop-receive-key-${encodeURIComponent(order.id)}` : null;
+  const delivery = el("details", { class: "panel shop-delivery" },
+    el("summary", { class: "shop-delivery-summary", "aria-keyshortcuts": null,
+      "aria-describedby": keyHint, onkeydown: (event) => shopReceiveKey(view, order, event) }, el("h3", {},
+      el("span", { class: "shop-delivery-head" },
+        el("span", { class: "shop-delivery-title", text: shopOrderTitle(order) }), shopOrderChip(order)),
+      el("span", { class: "sub shop-delivery-meta", text: [order.ordered_on ? `Ordered ${shopDay(order.ordered_on)}` : "Order date not recorded", words]
+        .join(" · ") }))),
+    el("div", { class: "shop-delivery-body" },
+    keyHint ? el("span", { class: "sr-only shop-receive-description", id: keyHint,
+      text: "Enter or Space expands or collapses the row." }) : null,
     items.length ? shopStrip(order, items) : null,
     components.length > 1 ? el("ul", { class: "shop-parts" }, components.map((c) => el("li", { text: shopComponentWords(c) }))) : null,
     order.notes ? el("p", { class: "shop-notes", text: order.notes, title: order.notes }) : null,
     checks.length ? shopChecks(checks) : null,
     el("div", { class: "actions" },
       receive ? el("a", { class: "btn btn-secondary", href, text: "Receive delivery" })
-        : el("a", { class: "btn btn-quiet", href, text: "Delivery details" }), shopOrderEditButton(order, view)));
+        : el("a", { class: "btn btn-quiet", href, text: "Delivery details" }),
+      receive && view ? el("span", { class: "shop-receive-hint", "aria-hidden": "true", hidden: true,
+        title: "With this delivery row focused, press R to receive it." }, el("kbd", { text: "R" })) : null,
+      shopOrderEditButton(order, view))));
+  const summary = delivery.querySelector(".shop-delivery-summary");
+  summary.keyboardDelivery = {view, order, hint: delivery.querySelector(".shop-receive-hint"),
+    description: delivery.querySelector(".shop-receive-description")};
+  return delivery;
+}
+
+/** R opens only the focused live delivery row; native Enter/Space keep their disclosure behavior. */
+function shopReceiveKey(view, order, event) {
+  if (!keyboardCharactersEnabled() || event.defaultPrevented || event.isComposing || event.repeat || event.ctrlKey || event.metaKey || event.altKey
+      || String(event.key || "").toLowerCase() !== "r") return;
+  const summary = event.currentTarget;
+  if (!view || !shopQueueActive(view) || view.busy || view.stale || !summary?.isConnected
+      || event.target !== summary || document.activeElement !== summary || !view.root.contains(summary)) return;
+  const current = (view.data.orders || []).find((item) => item.id === order.id);
+  if (current !== order || !mayDo("receipts") || !(current.components || []).some((part) => part.status === "pending")) return;
+  event.preventDefault();
+  location.hash = `#/receipt?order=${encodeURIComponent(current.id)}`;
 }
 
 /** The checks to make when a delivery arrives. Open on a wide screen; folded on a phone ("Check when it
@@ -198,7 +223,11 @@ function shopJumps(parts) {
       onclick: (e) => {
         e.preventDefault();
         const target = document.getElementById(p.id);
-        if (target) target.scrollIntoView({ block: "start" });
+        if (target) {
+          target.setAttribute("tabindex", "-1");
+          target.focus({ preventScroll: true });
+          target.scrollIntoView({ block: "start" });
+        }
       } }, el("span", { text: p.label }), p.number > 1 ? el("span", { class: "shop-count", text: String(p.number) }) : null)))));
 }
 
@@ -308,22 +337,29 @@ function shopPrice(card) {
 
 /** A queued card as a row: its picture, copies, what it's for and which printing, a chip for a state that
  * isn't "ready", the reference price at the end. A deck link sits outside the card-viewer button. */
-function shopQueueRow(card, group, showFor = true, view = null, showLongTerm = false) {
+function shopQueueRow(card, group, showFor = true, view = null, showLongTerm = false, grouped = false) {
   const price = shopPrice(card);
-  const chips = [card.state && card.state !== "ready" && (showLongTerm || card.state !== "long_term") ? status("warn", SHOPPING_STATES[card.state]) : null,
-    card.in_stock === "no" && price ? status("plain", "Out of stock when checked") : null].filter(Boolean);
+  const chips = [!grouped && card.state && card.state !== "ready" && (showLongTerm || card.state !== "long_term") ? status("warn", SHOPPING_STATES[card.state]) : null,
+    !view && card.in_stock === "no" && price ? status("plain", "Out of stock when checked") : null].filter(Boolean);
   const deck = showFor ? card.deck : null;
-  const meta = [showFor && !deck && card.for ? card.for : null, shopPrinting(card)].filter(Boolean).join(" · ");
-  const caption = [price ? `Reference price ${price}${card.checked ? `, checked ${card.checked}` : ""}` : null, card.notes || null]
-    .filter(Boolean).join(". ");
+  const reason = grouped && ["waiting_for_stock", "waiting_for_reprint"].includes(card.state) ? SHOPPING_STATES[card.state]
+    : grouped && !SHOP_QUEUE_STATES.includes(card.state) ? `State: ${card.state || "not recorded"}` : null;
+  const meta = [showFor && !deck && card.for ? card.for : null, shopPrinting(card), reason].filter(Boolean).join(" · ");
   const row = cardRow(card.card || null, { qty: card.quantity, name: card.name, meta, unknownMeta: meta, chips,
-    aside: null, viewerGroup: group, caption: caption || null });
+    aside: null, viewerGroup: group, caption: shopQueueCaption(card) });
+  const metaNode = row.querySelector("small");
+  if (metaNode) add(clear(metaNode), [showFor && !deck && card.for ? `${card.for} \u00b7 ` : null,
+    shopPrintingMeta(card), reason ? ` \u00b7 ${reason}` : null]);
+  if (row.matches("button")) row.setAttribute("aria-label", `${card.name}, ${plural(card.quantity, "copy", "copies")}`);
   const move = view && mayDo("orders") && view.data.queue_revision && card.queue_row
     ? shopQueueMove(card, view) : null;
   const reprints = reprintInfo(card);
-  return deck || move || price || reprints ? el("div", { class: "shop-queue-row" }, row,
-    price ? shopReference(card) : null,
-    deck ? el("a", { class: "shop-queue-deck", href: deckHref(deck.id), text: deck.title }) : null, reprints, move) : row;
+  return view || deck || move || price || reprints ? el("div", { class: "shop-queue-row",
+    "data-shop-queue": view ? String(card.queue_row || "") : null, "data-shop-name": view ? shopQueueShop(card) : null,
+    "data-shop-match": view && shopMatches(view, card) ? "true" : null }, row,
+    view ? shopQueueResearch(card) : price ? shopReference(card) : null,
+    view ? el("span", { class: "sr-only shop-match-words", text: shopMatches(view, card) ? "Matches selected shop." : "" }) : null,
+    deck ? el("a", { class: "shop-queue-deck", href: deckHref(deck.id) }, shopDeckSwatch(deck), deck.title) : null, reprints, move) : row;
 }
 
 /** Move controls stay outside the card viewer. Only the existing purchase state changes. */
@@ -334,9 +370,11 @@ function shopQueueMove(card, view) {
   })), { aria: `Move ${card.name} to another category`, buttonClass: "btn btn-quiet shop-category-move" });
   const button = menu.querySelector(".menu-button");
   button.setAttribute("data-queue-row", card.queue_row);
+  button.addEventListener("click", () => shopQueueMenuPosition(button, menu.querySelector(".menu")));
   const details = el("button", { type: "button", class: "btn btn-quiet shop-queue-edit shop-queue-write",
     "data-queue-row": card.queue_row, text: "Details…", "aria-label": `Change ${card.name}`,
     onclick: () => shopQueueSheet(view, card) });
+  button.disabled = details.disabled = Boolean(view.busy || view.stale);
   button.setAttribute("class", `${button.getAttribute("class")} shop-queue-write`);
   return el("div", { class: "shop-queue-actions" }, el("div", { class: "actions" }, menu, details), error);
 }
@@ -352,6 +390,7 @@ function shopQueueBusy(view, busy) {
       if (["Save", "Add card", "Remove…", "Remove card"].includes(button.textContent)) button.disabled = busy || view.stale;
     });
   }
+  refreshKeyboardHints();
 }
 
 function shopQueueActive(view) {
@@ -532,7 +571,7 @@ async function shopSaveQueue(view, sheet, error, body, card) {
     if (!sheet.closed) sheet.dialog.querySelectorAll("button").forEach((button) => {
       button.disabled = view.stale && (button.textContent === "Save" || button.textContent === "Add card" || button.textContent === "Remove card");
     });
-    if (focusAfter && shopQueueActive(view)) focusAfter.focus({ preventScroll: true });
+    if (focusAfter && shopQueueActive(view)) shopQueueFocus(focusAfter);
   }
 }
 
@@ -543,7 +582,7 @@ async function shopMoveQueue(card, next, view, error) {
   error.hidden = true;
   const buttons = view.root.querySelectorAll(".shop-category-move");
   buttons.forEach((button) => { button.disabled = true; });
-  let retry = null;
+  let retry = null, focusAfter = null;
   try {
     const answer = await apiWrite("/api/shopping/queue", { row: card.queue_row, state: next, expect: view.data.queue_revision });
     if (!shopQueueActive(view)) return;
@@ -552,9 +591,8 @@ async function shopMoveQueue(card, next, view, error) {
     view.data.queue_revision = answer.revision;
     if (next === "long_term") view.expanded.add(card.deck ? card.deck.id : card.for || "");
     view.redraw();
-    const moved = Array.from(view.root.querySelectorAll(".shop-category-move"))
+    focusAfter = Array.from(view.root.querySelectorAll(".shop-category-move"))
       .find((button) => Number(button.dataset.queueRow) === card.queue_row);
-    if (moved) moved.focus({ preventScroll: true });
     toast(`${card.name} moved to ${SHOPPING_STATES[next]}.`);
   } catch (failure) {
     if (!shopQueueActive(view)) return;
@@ -567,7 +605,8 @@ async function shopMoveQueue(card, next, view, error) {
     shopQueueBusy(view, false);
     if (view.root.isConnected) {
       view.root.querySelectorAll(".shop-category-move").forEach((button) => { button.disabled = Boolean(view.stale); });
-      if (retry) retry.focus({ preventScroll: true });
+      if (retry) shopQueueFocus(retry);
+      else if (focusAfter && shopQueueActive(view)) shopQueueFocus(focusAfter);
     }
   }
 }
@@ -611,18 +650,25 @@ function shopLongTerm(rows, view = null) {
   }
   return [...groups.entries()].map(([key, group]) => {
     const copies = group.rows.reduce((sum, r) => sum + (r.quantity || 0), 0);
-    const list = el("div", { class: "shop-rows" });
+    const list = view ? shopQueuePresentation([["long_term", "Long-term", []]], view, {showFor: false, group: "long-term", headings: false})
+      : el("div", { class: "shop-rows" });
+    let shownCount = 0;
     const draw = (all) => {
-      clear(list);
-      add(list, (all ? group.rows : group.rows.slice(0, SHOP_LONG_TERM_SHOWN)).map((r) => shopQueueRow(r, "long-term", false, view)));
+      const shown = all ? group.rows : group.rows.slice(0, SHOP_LONG_TERM_SHOWN);
+      if (view) list.appendQueueRows(shown.slice(shownCount));
+      else add(list, shown.slice(shownCount).map((r) => shopQueueRow(r, "long-term", false)));
+      shownCount = shown.length;
     };
     const expanded = view && view.expanded.has(key);
     draw(expanded);
     const more = !expanded && group.rows.length > SHOP_LONG_TERM_SHOWN
-      ? el("button", { type: "button", class: "btn btn-quiet btn-inline", text: `Show all ${group.rows.length}`,
-        onclick: (e) => { if (view) view.expanded.add(key); draw(true); e.currentTarget.remove(); } }) : null;
-    return el("div", { class: "shop-group" },
-      el("h3", {}, group.deck ? el("a", { href: deckHref(group.deck.id), text: group.name }) : group.name,
+      ? el("button", { type: "button", class: "btn btn-quiet btn-inline shop-long-more", text: `Show all ${group.rows.length}`,
+        onclick: (e) => {
+          if (view && (!e.currentTarget.isConnected || !shopQueueActive(view))) return;
+          if (view) view.expanded.add(key); draw(true); e.currentTarget.remove();
+        } }) : null;
+    return el("div", { class: "shop-group", "data-long-key": key },
+      el("h3", {}, group.deck ? el("a", { href: deckHref(group.deck.id) }, shopDeckSwatch(group.deck), group.name) : group.name,
         el("span", { class: "shop-group-count", text: ` · ${plural(copies, "card")}` })),
       list, more);
   });
@@ -649,11 +695,14 @@ function shopSection(id, title, count, description, ...content) {
 function drawShopping(data) {
   if (typeof noteDeliveries === "function") noteDeliveries(data);     // the top bar's badge (shell.js)
   if (!data.to_buy) data.to_buy = [];
-  const view = { data, expanded: new Set(), busy: false, stale: false, root: null, redraw: null,
+  const view = { data, expanded: new Set(), queuePresentations: [], queueOrder: "state", busy: false, stale: false, root: null, redraw: null,
     token: routeToken, profile: state.profile && state.profile.id };
+  view.addButton = mayDo("orders") && data.queue_revision ? el("button", { type: "button",
+    class: `btn ${isAdminProfile() ? "" : "btn-primary "}shop-queue-add shop-queue-write`,
+    "aria-label": "Add card to the purchase queue", onclick: () => shopQueueSheet(view) },
+    el("span", {class: "shop-queue-add-label", text: "Add card"})) : null;
+  view.addHome = view.addButton ? el("span", {class: "shop-add-home"}, view.addButton) : null;
   const queue = data.to_buy || [], orders = data.orders || [], checks = data.checks || [];
-  const toBuy = queue.filter((card) => card.state !== "long_term");
-  const longTerm = queue.filter((card) => card.state === "long_term");
   const waiting = orders.filter((order) => (order.components || []).some((c) => c.status === "pending"));
   const history = orders.filter((order) => !waiting.includes(order));
   const followUps = checks.filter((check) => check.status === "received");
@@ -664,25 +713,30 @@ function drawShopping(data) {
   const buySlot = el("div", { class: "shop-queue-slot" });
   const deckSlot = el("div", { class: "shop-queue-slot" });
   const longSlot = el("div", { class: "shop-long-slot" });
-  const buyingSlot = el("div", { class: "shop-buying-slot" });
+  const missingSlot = el("div", { class: "shop-buying-slot shop-missing-slot" });
+  const storeSlot = el("div", { class: "shop-buying-slot shop-store-slot" });
+  const matchSlot = el("div", { class: "shop-match-slot", role: "status", "aria-live": "polite" });
+  view.matchSlot = matchSlot;
   const jumpSlot = el("div");
 
-  // The deliveries on the left; what to buy, the decks still missing cards and the follow-ups on the right
-  // (under them on a phone, with a row of links at the top to reach each part).
+  // The list pane owns deliveries, follow-ups and the current shop research. Buying stays in the detail
+  // pane; below 1281 px they stack, with links to each part. Keep delivery/Undo/history nodes across writes.
   const main = [
     shopSection("shop-on-the-way", "On the way", waiting.length, null,
       waiting.length ? el("div", { class: "shop-deliveries" }, waiting.map((order) => shopDelivery(order, onArrival(order), view)))
         : el("div", { class: "empty" }, el("p", { text: "Nothing is on the way." }))),
-  ];
-  const side = [
-    buySlot, deckSlot,
     followUps.length ? shopSection("shop-follow-ups", "Follow-ups", followUps.length,
       "Checks left open on deliveries that have arrived.",
       el("ul", { class: "shop-followups" }, followUps.map((check) => shopFollowUp(check, orders.find((o) => o.id === check.order_id))))) : null,
+    storeSlot,
   ];
-  const sideNode = el("div", { class: "shop-side", hidden: !toBuy.length && !decks.length && !followUps.length }, side);
+  const sideNode = el("div", { class: "shop-side shop-detail-pane" }, matchSlot, buySlot, missingSlot, deckSlot, longSlot);
   // Redraw only buying controls and their counts. Deliveries and pending follow-up Undo keep their nodes.
   view.redraw = () => {
+    shopReturnQueueAdd(view);
+    view.queueControls = view.queueAddSlot = null;
+    view.queuePresentations = [];
+    shopNormalizeChoice(view);
     const immediate = queue.filter((card) => card.state !== "long_term");
     const later = queue.filter((card) => card.state === "long_term");
     const planned = new Map();
@@ -690,7 +744,7 @@ function drawShopping(data) {
     clear(buySlot);
     if (immediate.length) buySlot.append(shopSection("shop-to-buy", "To buy", immediate.length,
       "Cards we've decided to buy. Prices are the lowest seen when checked, not live stock.",
-      el("div", { class: "shop-rows" }, immediate.map((card) => shopQueueRow(card, "to-buy", true, view)))));
+      shopQueueControls(view), shopQueueGroups(immediate, view)));
     clear(deckSlot);
     if (decks.length) deckSlot.append(shopSection("shop-decks", "Decks still missing cards", decks.length,
       "Not a shopping list: open a deck to see its missing cards and decide what to buy.", shopDecksMissing(decks, planned)));
@@ -698,12 +752,12 @@ function drawShopping(data) {
     if (later.length) longSlot.append(shopSection("shop-long-term", "Long-term plan", 0,
       `${plural(later.reduce((sum, r) => sum + (r.quantity || 0), 0), "card")} for decks to build later. Add them to an order when the shop has them, to share its postage.`,
       shopLongTerm(later, view)));
-    clear(buyingSlot);
-    add(buyingSlot, [shopMissingCards(view), shopByShop(view)]);
-    sideNode.hidden = !immediate.length && !decks.length && !followUps.length;
+    clear(missingSlot); add(missingSlot, [shopMissingCards(view)]);
+    clear(storeSlot); add(storeSlot, [shopByShop(view)]);
     clear(jumpSlot);
     const missing = data.missing_cards;
     const missingShown = missing && (!missing.ready || (missing.rows || []).length || (missing.errors || []).length || (missing.warnings || []).length);
+    sideNode.hidden = !immediate.length && !decks.length && !later.length && !missingShown;
     emptyBox.hidden = Boolean(waiting.length || followUps.length || immediate.length || later.length || decks.length || missingShown);
     const jumps = shopJumps([
       { id: "shop-on-the-way", label: "On the way", count: waiting.length, number: waiting.length },
@@ -715,9 +769,10 @@ function drawShopping(data) {
       { id: "shop-long-term", label: "Long-term plan", count: later.length, number: 0 },
     ]);
     if (jumps) jumpSlot.append(jumps);
+    shopApplyMatches(view);
   };
   view.redraw();
-  const layout = el("div", { class: "shop-layout" }, el("div", { class: "shop-main" }, main), sideNode);
+  const layout = el("div", { class: "shop-layout" }, el("div", { class: "shop-main shop-list-pane" }, main), sideNode);
   const layoutSlot = el("div");
   if (emptyBox.hidden) layoutSlot.append(layout);
   const root = el("div", { class: "shop-page" },
@@ -725,16 +780,13 @@ function drawShopping(data) {
       primary: mayDo("orders") && data.queue_revision ? [
         isAdminProfile() ? el("button", { type: "button", class: "btn btn-primary shop-order-add shop-queue-write",
           text: "New order", onclick: () => shopOrderSheet(view) }) : null,
-        el("button", { type: "button", class: `btn ${isAdminProfile() ? "" : "btn-primary "}shop-queue-add shop-queue-write`,
-          text: "Add card", onclick: () => shopQueueSheet(view) }),
+        view.addHome,
       ] : null,
       more: [{ label: routeFor("wishlist").label, href: "#/wishlist" }, { label: "Refresh", onclick: () => route() }] }),
     warningsBox(data.warnings, "Some shopping records need attention"),
     jumpSlot,
     emptyBox,
     layoutSlot,
-    buyingSlot,
-    longSlot,
     history.length ? el("details", { class: "shop-history" },
       el("summary", { text: `Order history · ${plural(history.length, "order")}` }),
       el("ul", { class: "shop-pasts" }, history.map(order => shopPastOrder(order, view)))) : null);
@@ -745,6 +797,11 @@ function drawShopping(data) {
     redraw();
     if (!emptyBox.hidden) layout.remove();
     else if (!layout.parentNode) layoutSlot.append(layout);
+    shopSyncQueueControls(view);
+    registerShoppingKeyboardHelp(view);
   };
+  registerShoppingKeyboardHelp(view);
+  shopSyncQueueControls(view);
+  shopWatchQueueDensity(view);
   return view;
 }

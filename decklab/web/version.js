@@ -219,10 +219,11 @@ async function loadSimulations() {
 }
 
 /** Keep a /api/simulations answer, bring the run controls up to date with it, and show an admin's setting on
- * the Settings page when it's on screen. Nothing is shown across the page: a member is told beside each Play
+ * the Settings page when it's on screen. Matchups also has a neutral mode chip; a member is told beside each Play
  * or Start (syncRunControls), and so is an admin while runs are paused. */
 function renderSimulations(s) {
   state.simulations = s;
+  syncSimulationsChips();
   syncRunControls();
   const loading = $("#sim-loading");
   if (loading) loading.hidden = true;
@@ -322,4 +323,27 @@ async function changeSimulations(change) {
     toast(`The simulations setting couldn't be saved: ${e.message}`);
     loadSimulations();
   }
+}
+
+
+/** Matchups' neutral, read-only setting chip. An unknown answer supplies no guessed mode. */
+function simulationsChip() {
+  const chip = el("span", { class: "chip chip-plain simulations-chip", role: "img", "data-simulations-chip": "" });
+  drawSimulationsChip(chip);
+  return chip;
+}
+
+function drawSimulationsChip(chip) {
+  const setting = state.simulations;
+  const mode = new Map([["admins", "Admins only"], ["everyone", "Anyone"], ["paused", "Paused"]]).get(setting?.mode);
+  const words = mode ? `Simulations: ${mode}` : "";
+  chip.hidden = !words;
+  chip.textContent = words;
+  chip.setAttribute("aria-label", words);
+  if (setting?.unavailable) chip.setAttribute("title", "The database isn't reachable; this is the server's current fallback setting.");
+  else chip.removeAttribute("title");
+}
+
+function syncSimulationsChips() {
+  for (const chip of document.querySelectorAll("[data-simulations-chip]")) drawSimulationsChip(chip);
 }

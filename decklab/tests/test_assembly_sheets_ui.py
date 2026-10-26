@@ -52,7 +52,7 @@ class AssemblySheetsUiTests(unittest.TestCase):
           assert(!sheet().body.textContent.includes('Private'));
           assert(sheet().body.textContent.includes('25 spare'));
           action('Cancel').click(); await settle(); assert.equal(posts.length,0);
-          assert.equal(builtButton().disabled,false); same(checked(),['true']);
+          assert.equal(builtBlocked(),false); same(checked(),['true']);
           builtButton().click(); await settle();
           select('Elves: sleeves').value='Shared'; select('Elves: deck box').value='Box';
           action('Mark as built').click(); await settle(); builtButton().click();
@@ -108,7 +108,7 @@ class AssemblySheetsUiTests(unittest.TestCase):
           builtButton().click(); await settle();
           const input=select('Elves: built list'); input.value='owned'; input.fire('change'); await settle();
           assert.equal(assemblySheets.size,0); assert.equal(posts.length,0);
-          assert(builtButton().disabled); flushTimers(); await settle();
+          assert(builtBlocked()); flushTimers(); await settle();
           same(posts,[['/api/assembly/preview',{decks:[{id:'casual/a',version:'owned'}]}]]);
           same(checked(),['false']);
         """)
@@ -177,7 +177,7 @@ class AssemblySheetsUiTests(unittest.TestCase):
           drawAssembly(data,routeToken); await settle();
           assert(main.textContent.includes('Ready to pack with 2 stand-ins'));
           assert.equal(ticks().length,2); ticks()[0].click(); await settle();
-          assert(builtButton().disabled); ticks()[1].click(); await settle(); assert(!builtButton().disabled);
+          assert(builtBlocked()); ticks()[1].click(); await settle(); assert(!builtBlocked());
           assert(main.querySelectorAll('.card-tile').some(tile=>tile.textContent.includes('Use any spare card')));
         """)
 
@@ -214,7 +214,7 @@ class AssemblySheetsUiTests(unittest.TestCase):
           builtButton().click(); await settle(); assert.equal(assemblySheets.size,1);
           view.selected=[]; packChanged(view); await settle();
           assert.equal(assemblySheets.size,0); assert.equal(view.reviewing,false);
-          assert(builtButton().disabled);
+          assert(builtBlocked());
         """)
 
 

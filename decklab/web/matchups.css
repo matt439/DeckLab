@@ -1,5 +1,5 @@
-/* Deck Lab's matchup screens (matchups.js and its parts; runs-pill.js): the Matchups home's matrix and phone
-   list, the play sheet, the pair page (verdict first), the deck page's Matchups part, per-card numbers and the
+/* Deck Lab's matchup screens (matchups.js and its parts; runs-pill.js): the Matchups home's opponent table
+   and cards, the play sheet, the pair page (verdict first), the deck page's Matchups part, per-card numbers and the
    top bar's run activity's slot. The win-rate figures, range bars, freshness badges and flags are
    components.css's (sim-ui.js).
 
@@ -29,7 +29,7 @@
 }
 .mu-ranking-name, .mu-ranking-score { display: grid; align-content: start; gap: var(--s-1); min-width: 0; }
 .mu-ranking-name > a { display: inline-flex; align-items: center; min-height: var(--tap); font-weight: var(--fw-semibold); overflow-wrap: anywhere; }
-.mu-ranking-score { text-align: right; max-width: 12rem; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.mu-ranking-score { text-align: right; max-width: 16rem; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
 .mu-ranking-row .sub { font-size: var(--fs-sm); color: var(--ink-2); }
 .mu-ranking-row > .status { grid-column: 1; justify-self: start; }
 .mu-ranking-reasons { grid-column: 1 / -1; margin: var(--s-1) 0 0; font-size: var(--fs-sm); }
@@ -56,7 +56,9 @@
   text-decoration: none;
   box-shadow: var(--shadow-1);
 }
-a.mu-row:hover { border-color: var(--border-strong); }
+@media (hover: hover) and (pointer: fine) {
+  a.mu-row:hover { border-color: var(--border-strong); }
+}
 .mu-names { font-weight: var(--fw-semibold); line-height: var(--lh-tight); }
 .mu-names .mu-first { color: var(--ink); }
 .mu-vs-word { color: var(--ink-2); font-weight: var(--fw-regular); }
@@ -96,85 +98,70 @@ a.mu-row:hover { border-color: var(--border-strong); }
 .mu-home-head h2 { margin: 0; }
 .mu-home > .empty { margin: var(--s-3) 0; }
 
-/* The matrix (MU-01): decks on both axes, sticky row names, columns named up the page; a cell is the row deck's
-   win rate on the diverging scale with the number printed. It scrolls sideways inside its frame when it's
-   wider than the screen. Below 600 px the phone's sorted list takes its place. */
-.mu-matrix-part { display: none; }
-.mu-phone-part { margin-top: var(--s-3); }
+/* The selected list's field and latest test are separate from saved pairs, which may use other lists. */
+.mu-selected-summary { display: grid; gap: var(--s-3); margin-bottom: var(--s-4); }
+.mu-selected-panel { min-width: 0; padding: var(--s-4); border: 1px solid var(--border); border-radius: var(--r-panel); background: var(--surface); }
+.mu-selected-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s-2); }
+.mu-selected-head h3 { margin: 0; }
+.mu-selected-list { margin: var(--s-2) 0 var(--s-3); }
+.mu-selected-content > :last-child { margin-bottom: 0; }
+.mu-selected-summary .vt-test-item { flex-wrap: wrap; }
+.mu-selected-summary .vt-test-link { min-width: 0; }
+@media (min-width: 1000px) {
+  .mu-selected-summary { grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); }
+}
+
+/* One selected deck's opponents: casual cards below 1000 px, a real table in the mouse lab and
+   a list of whole-row links in the touch lab. Both representations share one sorted data model. */
+.mu-home-body { max-width: 100rem; }
 .mu-deck-field { max-width: 30rem; margin-bottom: var(--s-3); }
-@media (min-width: 600px) {
-  .mu-matrix-part { display: block; margin-top: var(--s-3); }
-  .mu-phone-part { display: none; }
+.mu-opponent-table { display: none; }
+.mu-opponent-links {
+  list-style: none; padding: 0; margin: 0;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); gap: var(--s-3);
 }
-.mu-matrix-wrap {
-  overflow: auto; max-width: 100%; width: fit-content;
-  border: 1px solid var(--border); border-radius: var(--r-lg);
-  background: var(--surface); box-shadow: var(--shadow-1);
+.mu-opponent-row {
+  display: grid; align-content: start; gap: var(--s-2); height: 100%; min-height: var(--tap);
+  padding: var(--s-4); border: 1px solid var(--border); border-radius: var(--r-panel);
+  background: var(--surface); color: var(--ink); text-decoration: none;
 }
-.mu-matrix-wrap:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
-.mu-matrix { border-collapse: separate; border-spacing: 2px; margin: 0; font-variant-numeric: tabular-nums; }
-.mu-matrix th, .mu-matrix td { padding: 0; }
-.mu-corner { position: sticky; left: 0; z-index: 2; background: var(--surface); vertical-align: bottom; padding: var(--s-2); }
-.mu-corner-words { display: block; max-width: 11rem; font-size: var(--fs-sm); color: var(--ink-2); font-weight: var(--fw-regular); text-align: left; }
-.mu-col { vertical-align: bottom; height: 9.5rem; padding-bottom: var(--s-1); }
-.mu-col-name {
-  display: inline-block; writing-mode: vertical-rl; transform: rotate(180deg);
-  max-height: 9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  font-size: var(--fs-sm); font-weight: var(--fw-semibold); color: var(--ink);
+.mu-opponent-name { min-width: 0; overflow-wrap: anywhere; font-weight: var(--fw-semibold); }
+.mu-opponent-row .mu-opponent-name { font-size: var(--fs-row); font-weight: var(--fw-bold); }
+.mu-opponent-flags { display: inline-flex; flex-wrap: wrap; gap: var(--s-1); }
+.mu-opponent-flags:empty { display: none; }
+.mu-opponent-row.is-older { border-style: dashed; border-color: var(--border-strong); }
+.mu-opponent-row.is-older .range-bar { opacity: .7; }
+.mu-key-swatch {
+  width: 18px; height: 14px; border-radius: var(--r-sm); display: inline-block;
+  background: var(--surface-2); outline: 1.5px dashed var(--ink-2); outline-offset: -1.5px;
 }
-.mu-rowhead {
-  position: sticky; left: 0; z-index: 1;
-  min-width: 9rem; max-width: 12rem; padding: 0 var(--s-3) 0 var(--s-2);
-  background: var(--surface);
-  font-size: var(--fs-sm); font-weight: var(--fw-semibold); text-align: left;
+@media (min-width: 1000px) and (pointer: fine) {
+  .mu-opponent-table { display: block; }
+  .mu-opponent-links { display: none; }
+  .mu-opponent-table table { background: var(--surface); }
+  .mu-opponent-table th:nth-child(2), .mu-opponent-table th:nth-child(3) { width: 7rem; text-align: right; }
+  .mu-opponent-table th:nth-child(4) { width: 12rem; }
+  .mu-opponent-table th:nth-child(5) { width: 6rem; text-align: right; }
+  .mu-opponent-table th:nth-child(6) { width: 15rem; }
+  .mu-opponent-table .mu-opponent-name { display: inline-flex; align-items: center; }
+  .mu-opponent-table .range-bar { min-width: 0; }
+  .mu-opponent-table tr.is-older > * { border-bottom-style: dashed; border-bottom-color: var(--border-strong); }
+  .mu-opponent-table tr.is-older .range-bar { opacity: .7; }
+  .mu-opponent-flags:not(:empty) { margin-right: var(--s-1); }
 }
-.mu-rowhead > span, .mu-rowhead-pick { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-/* The row name as a button (from 1,600 px, where the side list shows): picks that deck for the side list. */
-.mu-rowhead .mu-rowhead-pick { display: none; }
-.mu-rowhead-pick {
-  width: 100%; min-height: 2.75rem; padding: 0; border: 0; background: none; cursor: pointer;
-  color: inherit; font: inherit; text-align: left;
+@media (min-width: 1000px) and (pointer: coarse) {
+  .mu-opponent-links { grid-template-columns: 1fr; gap: 0; border: 1px solid var(--border); border-radius: var(--r-panel); overflow: hidden; }
+  .mu-opponent-row {
+    grid-template-columns: minmax(0, 1fr) minmax(12rem, 20rem) minmax(12rem, 16rem);
+    align-items: center; min-height: var(--row-h); padding: var(--s-2) var(--s-3);
+    border: 0; border-bottom: 1px solid var(--divider); border-radius: 0;
+  }
+  .mu-opponent-links > li:last-child .mu-opponent-row { border-bottom: 0; }
+  .mu-opponent-row .mu-opponent-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-row); }
+  .mu-opponent-row:focus-visible { outline-offset: -3px; }
+  .mu-opponent-row:active { background: var(--accent-soft); }
+  .mu-opponent-row.is-older { border-bottom: 1px dashed var(--border-strong); }
 }
-.mu-rowhead-pick:hover { color: var(--link); text-decoration: underline; }
-.mu-rowhead-pick[aria-pressed="true"] { color: var(--accent); }
-.mu-rowhead-pick:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
-.mu-cell { width: 3.25rem; height: 2.75rem; border-radius: var(--r-sm); text-align: center; background: var(--even); }
-.mu-cell-link {
-  display: flex; align-items: center; justify-content: center;
-  width: 100%; height: 100%; min-height: 2.75rem;
-  border-radius: var(--r-sm);
-  color: var(--ink); text-decoration: none;
-  font-size: var(--fs-sm); font-weight: var(--fw-bold);
-}
-.mu-cell-link:hover { box-shadow: inset 0 0 0 2px var(--ink); }
-.mu-cell.is-self { background: repeating-linear-gradient(45deg, var(--surface-2) 0 4px, var(--surface) 4px 8px); }
-.mu-cell.is-empty { background: transparent; box-shadow: inset 0 0 0 1px var(--grid); }
-.mu-cell-plus { color: var(--ink-3); font-size: var(--fs-md); font-weight: var(--fw-regular); }
-.mu-cell-plus:hover, .mu-cell-plus:focus-visible { color: var(--accent); font-weight: var(--fw-bold); }
-.mu-cell.is-muted { background: var(--surface-3); }
-.mu-cell.is-muted .mu-cell-link { color: var(--ink-2); }
-.mu-cell.mu-h-none { background: var(--surface-2); }
-/* The diverging scale: 5 points either side of 50% is even (a grey with an edge, so it never reads as an empty
-   cell in either theme), then steps at 15 and 25 points. */
-.mu-h-even { background: color-mix(in srgb, var(--ink-3) 22%, var(--surface)); box-shadow: inset 0 0 0 1px var(--ink-4); }
-.mu-h-win1 { background: color-mix(in srgb, var(--win) 18%, var(--surface)); }
-.mu-h-win2 { background: color-mix(in srgb, var(--win) 34%, var(--surface)); }
-.mu-h-win3 { background: color-mix(in srgb, var(--win) 50%, var(--surface)); }
-.mu-h-loss1 { background: color-mix(in srgb, var(--loss) 18%, var(--surface)); }
-.mu-h-loss2 { background: color-mix(in srgb, var(--loss) 34%, var(--surface)); }
-.mu-h-loss3 { background: color-mix(in srgb, var(--loss) 50%, var(--surface)); }
-/* Older: a list has changed since (or a play-now list played). Only the shade fades (a veil of the surface over
-   it), with a dashed edge, so it doesn't rest on the shade alone; the number stays readable in --ink-2. */
-.mu-cell.is-older, .mu-key-swatch.is-older {
-  background-image: linear-gradient(color-mix(in srgb, var(--surface) 55%, transparent), color-mix(in srgb, var(--surface) 55%, transparent));
-  outline: 1.5px dashed var(--ink-2); outline-offset: -3px;
-}
-.mu-key-swatch.is-older { outline-offset: -1.5px; }
-.mu-cell.is-older .mu-cell-link { color: var(--ink-2); font-weight: var(--fw-semibold); }
-.mu-key-dash { display: inline-grid; place-items: center; color: var(--ink-2); font-weight: var(--fw-bold); line-height: 1; }
-.mu-matrix-key { margin-top: var(--s-3); }
-.mu-key-swatch { width: 18px; height: 14px; border-radius: var(--r-sm); display: inline-block; box-shadow: inset 0 0 0 1px var(--border); }
-.mu-key-plus { width: 18px; text-align: center; color: var(--accent); font-weight: var(--fw-bold); }
 
 /* ------------------------------------------------------------ the play sheet and the run choice */
 
@@ -369,29 +356,7 @@ a.mu-row:hover { border-color: var(--border-strong); }
 .mu-reading { display: grid; gap: var(--s-1); align-content: start; min-width: 0; }
 .mu-reading > *, .mu-reading > details.more { margin: 0; }
 .mu-reading > details[open] { margin-bottom: var(--s-3); }
-/* From 1,000 px the matrix's frame is at most a screen tall and its column names stay at its top, so a short
-   window (a laptop's 830 px) never scrolls them away from the lower rows. */
-@media (min-width: 1000px) {
-  .mu-matrix-wrap { max-height: calc(100dvh - var(--shell-top) - var(--s-6)); }
-  .mu-matrix thead th, .mu-matrix thead td { position: sticky; top: 0; z-index: 1; background: var(--surface); }
-  .mu-matrix thead .mu-corner { z-index: 3; }
-}
-/* From 1,400 px (a laptop, QHD): one deck's sorted list right beside the matrix (the matrix's own width, then
-   a fixed gap), not pushed to the far edge; the key wraps to the matrix's width instead of widening its column. */
-@media (min-width: 1400px) {
-  .mu-home-body {
-    display: grid; grid-template-columns: minmax(0, max-content) minmax(300px, 360px);
-    justify-content: start; align-items: start; gap: var(--s-6);
-  }
-  .mu-home-body > .mu-phone-part { display: block; margin-top: var(--s-3); min-width: 0; }
-  .mu-home-body > .mu-phone-part .mu-list { grid-template-columns: 1fr; }
-  .mu-home-body .mu-matrix-key { contain: inline-size; }
-  /* A row's name picks the deck the side list shows. */
-  .mu-rowhead .mu-rowhead-text { display: none; }
-  .mu-rowhead .mu-rowhead-pick { display: block; }
-}
-/* QHD (MU-14): the verdict on the left and the folded reading in one column on the right, from its top; wider
-   row grids; the matrix's cells grow, and one deck's sorted list sits beside the matrix. */
+/* QHD (MU-14): the verdict on the left and folded reading on the right, with wider result cards. */
 @media (min-width: 1600px) {
   .mu-list { grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: var(--s-3); }
   /* The pair page: the verdict, its folded reading and the earlier results in one column (or, with no result
@@ -406,7 +371,13 @@ a.mu-row:hover { border-color: var(--border-strong); }
   .mu-pair-body > .mu-earlier-results { grid-area: earlier; }
   .mu-pair-body .mu-sides { grid-template-columns: 1fr; margin-top: var(--s-3); }
   .mu-pair-run + .mu-decks .mu-sides { margin-top: 0; }
-  .mu-cell { width: 4.25rem; height: 3.25rem; }
-  .mu-cell-link { min-height: 3.25rem; font-size: var(--fs-md); }
-  .mu-home-body { grid-template-columns: minmax(0, max-content) minmax(420px, 560px); }
+}
+
+/* A commander the AI never casts makes the result uninformative; words remain, its figures fade. */
+.mu-opponent-row.is-muted .mu-barline, .mu-opponent-table tr.is-muted .wr { opacity: .7; }
+
+/* Casual rankings give the shared hero figure its own full-width row, so % never drops below its number. */
+@media (max-width: 999px) {
+  .mu-ranking-row { grid-template-columns: minmax(0, 1fr); }
+  .mu-ranking-score { text-align: left; max-width: none; }
 }

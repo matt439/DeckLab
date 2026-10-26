@@ -258,15 +258,15 @@ class AccountsUiTests(unittest.TestCase):
             status: "pending", checks: ["Check finish"], fields: ["name", "quantity"], rows: [{ name: "Alpha", quantity: "2" }] }] };
           as("user2", MAY.user2);
           drawReceipt(delivery, routeToken);
-          // The Receipts board read only: the tile, no ticks and no Preview.
+          // The Receipts board read only: the tile, no ticks and no Record arrival.
           assert(main.textContent.includes("Alpha"));
           assert(main.textContent.includes("read only"));
           assert.equal(main.querySelector(".rcpt-tick"), null);
-          assert.equal(button(main, "Preview"), null);
+          assert.equal(button(main, "Record arrival"), null);
           as("matt", MAY.admin);
           drawReceipt(delivery, routeToken);
           assert(main.querySelector(".rcpt-tick"));
-          assert(button(main, "Preview"));
+          assert(button(main, "Record arrival"));
         """)
 
     def test_accessories_are_hidden_from_person_spaces(self):

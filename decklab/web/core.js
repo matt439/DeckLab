@@ -516,15 +516,88 @@ function crumb(href, label) {
 
 /** A page's head: an optional crumb ([href, label]), the h1 and a one-line description, then one primary
  * action and the rest in a "More" menu (menuButton's items). Returns the nodes to add. */
-function pageHead({ crumb: back = null, title, description = null, primary = null, more = null, id = null } = {}) {
+function pageHead({ crumb: back = null, title, description = null, primary = null, more = null, id = null, badge = null } = {}) {
   const extra = (more || []).filter(Boolean);
   return [
     back ? crumb(back[0], back[1]) : null,
     el("div", { class: "page-head page-head-actions" },
-      el("div", {}, el("h1", { id, text: title }), description ? el("p", { text: description }) : null),
+      el("div", {}, badge ? el("div", { class: "page-head-title" }, el("h1", { id, text: title }), badge)
+        : el("h1", { id, text: title }), description ? el("p", { text: description }) : null),
       primary || extra.length ? el("div", { class: "actions page-head-buttons" }, primary,
         extra.length ? menuButton("More", extra) : null) : null),
   ];
+}
+
+/** Text entry owns its keys, including descendants of an editable region. A nearer contenteditable=false
+ * boundary restores ordinary controls; native text inputs still own their editing keys there. */
+function keyboardEditing(target) {
+  if (target && target.isContentEditable) return true;
+  for (let node = target; node; node = node.parentNode) {
+    if (/^(INPUT|SELECT|TEXTAREA)$/.test((node.tagName || node.tag || "").toUpperCase())) return true;
+    const editable = node.getAttribute && node.getAttribute("contenteditable");
+    if (editable != null) return editable.toLowerCase() !== "false";
+  }
+  return false;
+}
+
+let keyboardLastDialog = null;
+document.addEventListener("focusin", (event) => {
+  for (let node = event.target; node; node = node.parentNode) {
+    if ((node.tagName || node.tag || "").toUpperCase() === "DIALOG" && (node.open || node.getAttribute("open") !== null)) {
+      keyboardLastDialog = node; return;
+    }
+  }
+});
+
+/** The native dialog which owns focus (the top layer). Remember focus order for BODY restoration: a
+ * reusable viewer may have opened above a sheet which is later in DOM order. */
+function keyboardDialog() {
+  const dialogs = Array.from(document.querySelectorAll("dialog")).filter((node) => node.isConnected
+    && (node.open || node.getAttribute("open") !== null));
+  for (let node = document.activeElement; node; node = node.parentNode) {
+    if (dialogs.includes(node)) { keyboardLastDialog = node; return node; }
+  }
+  if (dialogs.includes(keyboardLastDialog)) return keyboardLastDialog;
+  return dialogs[dialogs.length - 1] || null;
+}
+
+/** A menu in a hidden ancestor or closed dialog does not own keys. */
+function keyboardShown(node) {
+  if (!node || !node.isConnected) return false;
+  for (let at = node; at; at = at.parentNode) {
+    if (at.hidden) return false;
+    if ((at.tagName || at.tag || "").toUpperCase() === "DIALOG" && !at.open && at.getAttribute("open") === null) return false;
+  }
+  return true;
+}
+
+/** The two shared menu implementations use the same keyboard boundary. A body-mounted overflow menu
+ * remembers its anchor so a menu opened by a dialog belongs to that dialog too. */
+function keyboardMenuOwns(menu) {
+  if (!keyboardShown(menu) || (menu.keyboardAnchor && (!menu.keyboardAnchor.isConnected || menu.keyboardAnchor.disabled
+      || menu.keyboardAnchor.getAttribute("aria-disabled") === "true"))) return false;
+  const dialog = keyboardDialog();
+  return !dialog || dialog.contains(menu) || Boolean(menu.keyboardAnchor && dialog.contains(menu.keyboardAnchor));
+}
+
+function keyboardMenuOpen() {
+  const menus = new Set([...document.querySelectorAll("[role=menu]"), ...document.querySelectorAll("[data-popover]")]);
+  return Array.from(menus).some(keyboardMenuOwns);
+}
+
+const keyboardMenuButtons = new WeakSet();
+
+/** After a menu choice returns focus here, held Enter/Space must not reopen it. */
+function keyboardMenuButton(button) {
+  if (keyboardMenuButtons.has(button)) return;
+  keyboardMenuButtons.add(button);
+  button.addEventListener("keydown", (event) => {
+    if (!event.repeat || (event.key !== "Enter" && event.key !== " ") || event.defaultPrevented
+        || event.isComposing || event.keyCode === 229 || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey
+        || !button.isConnected || button.disabled || !button.contains(event.target) || keyboardEditing(event.target)) return;
+    const dialog = keyboardDialog();
+    if (!dialog || dialog.contains(button)) event.preventDefault();
+  });
 }
 
 let menuSeq = 0;
@@ -541,7 +614,9 @@ function menuButton(label, items, { aria = null, buttonClass = "btn btn-secondar
       const props = { role: "menuitem", class: item.danger ? "menu-danger" : null, text: item.label,
         "aria-current": item.current ? "page" : null };
       return item.href ? el("a", { ...props, href: item.href, onclick: () => closeMenus() })
-        : el("button", { ...props, type: "button", onclick: (event) => { closeMenus(); item.onclick(event); } });
+        : el("button", { ...props, type: "button", onclick: (event) => {
+          closeMenus(); if (button.isConnected) button.focus(); item.onclick(event);
+        } });
     }));
   const button = el("button", { type: "button", class: `${buttonClass} menu-button`, "aria-haspopup": "menu",
     "aria-expanded": "false", "aria-controls": id, "aria-label": aria },
@@ -553,17 +628,29 @@ function menuButton(label, items, { aria = null, buttonClass = "btn btn-secondar
  * it, focus moves into it on opening and the arrow keys move through its items. Returns the button. */
 function wireMenu(button, menu) {
   menu.setAttribute("data-popover", "");
+  keyboardMenuButton(button);
   button.addEventListener("click", () => {
+    const dialog = keyboardDialog();
+    if (!button.isConnected || button.disabled || button.getAttribute("aria-disabled") === "true"
+        || !menu.isConnected || (dialog && !dialog.contains(button))) return;
     const opening = menu.hidden;
     closeMenus();
     if (!opening) return;
     menu.hidden = false;
     keepInWindow(menu);
     button.setAttribute("aria-expanded", "true");
-    const first = menu.querySelector("[role=menuitem]") || menu.querySelector("button") || menu.querySelector("a");
+    const eligible = (item) => keyboardShown(item) && !item.disabled && item.getAttribute("aria-disabled") !== "true";
+    const first = Array.from(menu.querySelectorAll("[role=menuitem]")).find(eligible)
+      || Array.from(menu.querySelectorAll("button")).find(eligible) || Array.from(menu.querySelectorAll("a")).find(eligible);
     if (first && first.focus) first.focus();
   });
   menu.addEventListener("keydown", (event) => {
+    if (!keyboardMenuOwns(menu) || !button.isConnected || !menu.contains(event.target) || keyboardEditing(event.target)
+        || event.defaultPrevented || event.isComposing || event.keyCode === 229
+        || event.altKey || event.ctrlKey || event.metaKey || (event.shiftKey && event.key !== "Tab")) return;
+    // A held activation must not choose again when the menu returns focus to its button. Navigation may repeat.
+    if (event.repeat && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); return; }
+    if (event.key === "Tab") { closeMenus(); return; }
     if (event.key === "Escape") {
       closeMenus();
       button.focus();
@@ -571,7 +658,8 @@ function wireMenu(button, menu) {
       return;
     }
     if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
-    const items = [...menu.querySelectorAll("[role=menuitem]")];
+    const items = [...menu.querySelectorAll("[role=menuitem]")].filter((item) => !item.disabled
+      && item.getAttribute("aria-disabled") !== "true");
     if (!items.length) return;
     const at = items.indexOf(document.activeElement), down = event.key === "ArrowDown";
     items[at < 0 ? (down ? 0 : items.length - 1) : (at + (down ? 1 : -1) + items.length) % items.length].focus();
@@ -594,6 +682,7 @@ function keepInWindow(menu) {
 /** Close every open popover menu. */
 function closeMenus() {
   for (const menu of document.querySelectorAll("[data-popover]")) {
+    if (typeof menu.closePopover === "function") { menu.closePopover(); continue; }
     if (menu.hidden) continue;
     menu.hidden = true;
     for (const button of document.querySelectorAll(`[aria-controls="${menu.id}"]`)) {
@@ -627,7 +716,16 @@ function opensPopover(button) {
   const menu = document.getElementById(button.getAttribute("aria-controls"));
   return Boolean(menu && menu.getAttribute("data-popover") !== null);
 }
-document.addEventListener("keydown", (event) => { if (event.key === "Escape") closeMenus(); });
+document.addEventListener("keydown", (event) => {
+  if (event.key !== "Escape" || event.defaultPrevented || event.isComposing || event.keyCode === 229
+      || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey || keyboardEditing(event.target)) return;
+  const menu = Array.from(document.querySelectorAll("[data-popover]")).find(keyboardMenuOwns);
+  if (!menu) return;
+  const anchor = document.querySelector(`[aria-controls="${menu.id}"]`);
+  closeMenus();
+  if (anchor && anchor.isConnected) anchor.focus();
+  event.preventDefault();
+});
 
 
 // ------------------------------------------------- history entries: Back closes
@@ -664,6 +762,13 @@ function pushSheetEntry(close) {
       for (const entry of [...sheetEntries].reverse()) {
         if (entry.pos > pos && !entry.done) { entry.fromHistory = true; entry.close(); }
       }
+      const current = history.state;
+      const liveSheet = current?.sheet && sheetEntries.some(entry => entry.token === current.sheet && !entry.done);
+      if (current?.sheet && !liveSheet) {
+        const { sheet, ...rest } = current;
+        history.replaceState(rest, ""); // A closed historical mark is a page again, not a reusable live sheet.
+      }
+      if (!liveSheet && !current?.cardViewer && typeof editorSheetHistoryLanded === "function") editorSheetHistoryLanded(current?.pos);
     });
   }
   const entry = { token: ++sheetEntrySeq, pos: null, close, done: false, fromHistory: false };

@@ -377,11 +377,17 @@ function vtApplyChange(sections, changes) {
  * be edited here (a product deck or pairing). It fills itself in from /api/variants. */
 function variantTestsSection(data) {
   const s = data && data.summary;
-  if (!s || !/^(casual|commander)\//.test(s.id)) return null;
+  if (!s || s.read_only || !/^(?:[^/]+\/)?(?:casual|commander)\//.test(s.id)) return null;
   const version = data.version === "owned" ? "owned" : "target";
   const body = el("div", { class: "vt-tests-body" }, loadingBox("Loading tests of changes..."));
   const section = el("section", { id: "sec-tests", class: "vt-tests", "aria-labelledby": "h-tests" },
     el("h2", { id: "h-tests", text: "Tests of changes" }), body);
+  const token = routeToken, viewer = state.profile?.id;
+  if (new URLSearchParams(location.hash.split("?")[1] || "").get("part") === "tests") {
+    setTimeout(() => {
+      if (token === routeToken && viewer === state.profile?.id && section.isConnected) jumpTo("sec-tests");
+    }, 0);
+  }
   api(`/api/variants?id=${encodeURIComponent(s.id)}&version=${version}`).then((answer) => {
     clear(body);
     const tests = answer.tests || [];
@@ -446,7 +452,7 @@ function vtTestState(ed) {
   return { show: true, ok: true, why: null };
 }
 
-/** The editor bar's Test row (made once; vtSyncTestRow updates it). */
+/** The editor Forge panel's Test row (made once; vtSyncTestRow updates it). */
 function vtTestRow() {
   const button = el("button", { type: "button", class: "btn vt-test-btn", text: "Test this change", onclick: () => vtOpenTestSheet() });
   const why = el("span", { class: "vt-test-why" });

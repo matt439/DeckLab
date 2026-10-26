@@ -4,6 +4,51 @@
 
 .receipt-page { max-width: 1800px; }
 
+/* Receive's order metadata and copy progress. Whole products keep their separate choice/count. */
+.rcpt-head-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s-4); margin-bottom: var(--s-4); }
+.rcpt-head-details, .rcpt-head-progress { min-width: 0; }
+.rcpt-head-details .page-head { margin-bottom: var(--s-2); }
+.rcpt-order-meta { display: flex; flex-wrap: wrap; gap: var(--s-1) var(--s-4); margin: 0;
+  color: var(--ink-2); font: var(--fs-meta)/var(--lh-copy) var(--font-mono); overflow-wrap: anywhere; }
+.rcpt-head-progress { display: flex; flex-direction: column; justify-content: center; gap: var(--s-2); }
+.rcpt-head-count { font-family: var(--font-mono); font-size: var(--fs-meta); color: var(--ink); }
+.rcpt-head-progress .owned-bar { width: 100%; }
+.rcpt-head-progress .sub { margin: 0; }
+
+/* This first frame preserves the existing board and Record bar; the aside is advice, not confirmation. */
+.rcpt-layout-frame { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s-5); margin-top: var(--s-5); }
+.rcpt-layout-frame .rcpt-board { min-width: 0; }
+.rcpt-layout-frame .rcpt-board > .rcpt-section:first-child { margin-top: 0; }
+.rcpt-guidance { min-width: 0; align-self: start; overflow-wrap: anywhere; }
+.rcpt-guidance > h2 { margin: 0 0 var(--s-4); font-size: var(--fs-lg); }
+.rcpt-guidance h3 { margin: 0 0 var(--s-2); font-size: var(--fs-body); }
+.rcpt-guidance section + section { margin-top: var(--s-5); }
+.rcpt-guidance ul { padding-left: var(--s-5); margin: 0; }
+.rcpt-guidance-checks ul { list-style: none; padding: 0; }
+.rcpt-guidance-destinations li + li { margin-top: var(--s-2); }
+.rcpt-guidance-destinations a { display: inline-flex; align-items: center; min-height: var(--tap); }
+.rcpt-guidance .sub { font-size: var(--fs-meta); }
+.rcpt-guidance-building { color: var(--building-ink); }
+.rcpt-guidance-note { margin: var(--s-4) 0 0; }
+.rcpt-selected-summary { padding-bottom: var(--s-4); margin-bottom: var(--s-5); border-bottom: 1px solid var(--border); }
+.rcpt-selected-facts { display: grid; gap: var(--s-2); min-width: 0; }
+.rcpt-selected-facts p, .rcpt-selected-details { margin: 0; }
+.rcpt-selected-name { overflow-wrap: anywhere; }
+.rcpt-selected-details { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--s-1) var(--s-3); }
+.rcpt-selected-details dt { color: var(--ink-2); }
+.rcpt-selected-details dd { margin: 0; overflow-wrap: anywhere; }
+.rcpt-selected-code { font-family: var(--font-mono); }
+.rcpt-selected-words { display: none; }
+.rcpt-selected-summary .btn { max-width: 100%; margin-top: var(--s-3); white-space: normal; }
+.rcpt-row .card-row[aria-current="true"], .rcpt-picture-inspect[aria-current="true"] { box-shadow: inset 2px 0 var(--accent); }
+@media (min-width: 1000px) {
+  .rcpt-head-grid, .rcpt-layout-frame { grid-template-columns: minmax(0, 1fr) 452px; }
+  .rcpt-guidance { position: sticky; top: calc(var(--shell-top) + var(--s-4));
+    scroll-margin-top: calc(var(--shell-top) + var(--s-4));
+    scroll-margin-bottom: calc(max(var(--bar-h), var(--rcpt-bar-height, 0px)) + var(--s-4));
+    max-height: calc(100dvh - var(--shell-top) - max(var(--bar-h), var(--rcpt-bar-height, 0px)) - var(--s-6)); overflow-y: auto; overscroll-behavior: contain; }
+}
+
 /* The head: the order's notes in two lines until More. */
 .rcpt-notes {
   margin: 0; max-width: 72ch; color: var(--ink-2);
@@ -67,21 +112,67 @@
 .rcpt-grid .card-tile > .card-tile-chips { grid-column: 1; grid-row: 2; }
 .rcpt-grid .card-tile > .card-tile-state { position: static; grid-column: 2; grid-row: 2; justify-self: end; }
 
+/* Checking a Pictures tile is native label activation; Inspect is its separate sheet/viewer action. */
+.rcpt-check-tile { display: grid; grid-template-rows: 1fr auto; gap: var(--s-1); min-width: 0; }
+.rcpt-picture-label { cursor: pointer; }
+.rcpt-grid .rcpt-picture-label > .card-tile-state { display: grid; place-items: center; min-width: 52px; min-height: 52px; }
+.rcpt-picture-tick { appearance: auto; width: 28px; height: 28px; margin: 0; accent-color: var(--accent); cursor: pointer; }
+.rcpt-picture-inspect { min-height: 44px; justify-self: stretch; }
+.rcpt-picture-pending { display: inline-flex; align-items: center; gap: var(--s-1); }
+.rcpt-picture-pending::before { display: none; }
+.rcpt-picture-pending .rcpt-pending-swatch { display: inline-block; flex: none; width: 12px; height: 8px;
+  background: repeating-linear-gradient(45deg, var(--accent) 0 2px, transparent 2px 4px); }
+.rcpt-check-tile.is-pending-split > .rcpt-picture-label { outline: 1px dashed var(--accent-line); outline-offset: 2px; }
+.rcpt-check-tile > .rcpt-picture-label:focus-within { outline: 3px solid var(--focus); outline-offset: 3px; }
+.rcpt-picture-label .rcpt-picture-done { display: none; }
+@media (min-width: 1000px) {
+  .rcpt-grid .rcpt-picture-label > .card-tile-state { min-width: 44px; min-height: 44px; }
+  .rcpt-picture-tick { width: 18px; height: 18px; }
+}
+
 .rcpt-flag { cursor: help; }
 
 /* A card checked as received: darker than other pages' ticked tiles (cards-ui.css), so what's
    still to find in a mixed parcel stands out. */
 .rcpt-grid .card-tile.is-ticked .card-tile-img,
 .rcpt-grid .card-tile.is-ticked .card-tile-back { filter: brightness(.7); }
+@media (max-width: 999px) {
+  .rcpt-grid .rcpt-picture-label.is-ticked .card-tile-img,
+  .rcpt-grid .rcpt-picture-label.is-ticked .card-tile-back { opacity: .42; filter: none; }
+  .rcpt-picture-label .card-tile-pic:has(> :is(.card-tile-img, .card-tile-back)) > .rcpt-picture-done { display: block; position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -50%); width: 40px; height: 40px; background-size: 24px; pointer-events: none; }
+}
 
-/* List: each card as a card row (cards-ui.js cardRow) with the tick at its end. */
+/* List: the native tick is beside the inspection button, never inside it. Compact sizing is lab-only. */
 .rcpt-list { display: grid; grid-template-columns: minmax(0, 1fr); }
-.rcpt-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--s-2);
+.rcpt-row { display: grid; grid-template-columns: 44px minmax(0, 1fr); align-items: center;
   border-bottom: 1px solid var(--border); }
 .rcpt-row[hidden] { display: none; }
 .rcpt-row > .card-row { border-bottom: 0; }
+.rcpt-tick-cell { display: flex; align-items: center; justify-content: center; align-self: stretch; min-height: 44px; cursor: pointer; }
+.rcpt-tick-cell > input { appearance: auto; width: 18px; height: 18px; margin: 0; accent-color: var(--accent); cursor: pointer; }
+.rcpt-tick-cell:focus-within { outline: 3px solid var(--focus); outline-offset: -3px; }
+.rcpt-row-attention, .rcpt-row-part, .rcpt-row-details { display: none; }
 @media (min-width: 1000px) {
-  .rcpt-list { grid-template-columns: repeat(auto-fill, minmax(420px, 1fr)); column-gap: var(--s-5); }
+  .rcpt-list { row-gap: 0; }
+  .rcpt-row { grid-template-columns: 40px minmax(0, 1fr); }
+  .rcpt-row > .card-row-compact { min-height: 43px; }
+  .rcpt-tick-cell { margin-bottom: -1px; }
+  .rcpt-row .name > small, .rcpt-row .card-row-chips { display: none; }
+  .rcpt-row-name { display: block; overflow-wrap: anywhere; font-weight: var(--fw-semibold); }
+  .rcpt-row-attention { display: flex; flex-wrap: wrap; gap: var(--s-1); margin-top: var(--s-1); }
+  .rcpt-row-attention .status { white-space: normal; font-size: var(--fs-meta); }
+  .rcpt-row-details { display: flex; flex-direction: column; min-width: 0; max-width: 160px;
+    color: var(--ink-2); font-size: var(--fs-meta); line-height: var(--lh-tight); overflow-wrap: anywhere; }
+  .rcpt-row-part { display: flex; align-items: center; gap: var(--s-1); color: var(--ink-2); font-size: var(--fs-meta); font-weight: var(--fw-medium); }
+  .rcpt-row.is-ticked .rcpt-row-name { color: var(--ink-3); font-weight: var(--fw-medium); }
+  .rcpt-row.is-pending-split { outline: 1px dashed var(--accent-line); outline-offset: -1px; }
+  .rcpt-pending-swatch { flex: none; width: 12px; height: 8px;
+    background: repeating-linear-gradient(45deg, var(--accent) 0 2px, transparent 2px 4px); }
+}
+@media (min-width: 1000px) and (pointer: coarse) {
+  .rcpt-row { grid-template-columns: 44px minmax(0, 1fr); }
+  .rcpt-row > .card-row-compact { min-height: 44px; }
 }
 
 /* A product: the two choice cards, then its cards by deck and section. */
@@ -136,13 +227,16 @@
 .rcpt-k { min-width: 2ch; text-align: center; font-weight: var(--fw-bold); font-variant-numeric: tabular-nums; }
 .rcpt-decks { padding-left: var(--s-5); }
 .rcpt-decks li + li { margin-top: var(--s-1); }
+.rcpt-deck-link { display: inline-flex; align-items: center; gap: var(--s-1); max-width: 100%; min-width: 0; vertical-align: middle; }
+.rcpt-deck-title { min-width: 0; overflow-wrap: anywhere; }
 
-/* The bar, one row at every width: the progress over the arrival date on the left, the main button on the right. */
+/* One Record action, with its blocker reason and native arrival date beside it. The measured bar may grow. */
 .rcpt-bar { flex-wrap: nowrap; }
-.rcpt-bar .action-bar-status { display: flex; flex-direction: column; align-items: flex-start; gap: var(--s-1); }
+.rcpt-bar .action-bar-status { display: flex; flex: 1; flex-direction: column; align-items: flex-start; gap: var(--s-1); }
 .rcpt-bar .actions { flex: none; align-items: center; }
 .rcpt-status-line { line-height: var(--lh-tight); }
 .rcpt-progress { color: var(--ink); font-weight: var(--fw-semibold); font-variant-numeric: tabular-nums; }
+.rcpt-record-reason { max-width: 72ch; color: var(--ink-2); line-height: var(--lh-tight); overflow-wrap: anywhere; }
 .rcpt-stale { color: var(--warn-text); font-weight: var(--fw-semibold); }
 .rcpt-blanks {
   display: inline-flex; align-items: center; min-height: 24px; padding: 0;
@@ -151,12 +245,12 @@
 }
 .rcpt-blanks[hidden] { display: none; }
 .rcpt-blanks:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
-.rcpt-date { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--s-1) var(--s-2); color: var(--ink-2); font-size: var(--fs-sm); }
+.rcpt-date { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--s-1) var(--s-2); max-width: 100%; color: var(--ink-2); font-size: var(--fs-sm); }
 .rcpt-date select, .rcpt-date input { width: auto; }
 .rcpt-message:empty { display: none; }
 .rcpt-message { margin-top: var(--s-4); }
 @media (max-width: 599px) {
-  .rcpt-date select, .rcpt-date input { min-height: 36px; padding-top: 2px; padding-bottom: 2px; }
+  .rcpt-date select, .rcpt-date input { min-height: var(--field-h); max-width: 100%; padding-top: 2px; padding-bottom: 2px; }
   .rcpt-bar .btn-primary { max-width: 46vw; white-space: normal; line-height: var(--lh-tight); }
 }
 
@@ -199,3 +293,8 @@
 .tok-reading p { overflow-wrap: anywhere; }     /* a long quoted part wraps rather than widening the sheet */
 .tok-reading .note p + p { margin-top: var(--s-1); }
 .tok-reading-fix { margin-top: var(--s-1); }
+
+@media (max-width: 999px) {
+  .rcpt-selected-code { display: none; }
+  .rcpt-selected-words { display: inline; }
+}

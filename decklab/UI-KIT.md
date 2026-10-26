@@ -29,7 +29,82 @@ the server does. Loads, writes and retries check the original profile, route,
 connected form and request sequence; late work cannot replace another viewer's
 page. No note is quiet; unavailable storage has explicit wording.
 
-`assembly-progress.js` follows `assembly.js`: shared Build decks checkmarks,
+`assembly-chooser.js` follows `assembly.js`. One chooser tree moves between the
+shared Decks sheet below 1000px and the 300px lab rail. The same minimum-width
+query drives controller and CSS; current deck/control identity restores fresh
+focus after redraw, with guarded viewport reveal. Close/Show the plan only dismiss,
+and choices keep the existing 250ms read-only preview. All eligible options,
+usual-opponent/status groups, the twelve-participant limit, versions and sideboard
+recipes remain. One status node moves to the visible home. Busy/stale/permission
+guards include sheet controls; route/person cleanup disposes the chooser and its
+media listener while ordinary choice changes close only build/stand-in reviews.
+The [drawing](design/packing-chooser.svg) preceded implementation. This adds no
+allocation, progress, inventory or save contract.
+
+Selected packing participants expose optional `data.decks[].colors` copied from
+the already-loaded canonical Planned/library summary, including for Play-now or
+partial sideboard recipes. Null means unknown; an empty array means known
+colourless. This is decoration only: unselected choices have no added colours,
+and selections, task keys, fingerprints, reads and accepted requests stay the same.
+The Decks chooser options stay undecorated; the casual switcher uses this field.
+
+`assembly-switcher.js` follows the chooser helper. Below 1000px, all selected
+participants (up to twelve) have id/version keyed pressed buttons; inactive
+original panels are hidden, never detached or rewired. The lab shows all panels.
+Global required-card counts, optional steps, warnings, shared-token guidance and
+completion keep the whole-plan scope. Switching makes no request or stored choice.
+The packing-only viewer adapter uses original triggers/cards/captions in task order,
+including hidden panels and duplicates; generic viewer filtering stays unchanged.
+Distinct opening watches and current-plan/trigger/busy guards protect close/resize
+focus, with exact return-panel ownership and listener disposal on route/person changes.
+Queued reveal only scrolls current focus. Unknown colour identity stays neutral;
+strict known identity uses the shared deck pieces, including known colourless.
+
+`assembly-steps.js` follows the finish helper; its CSS follows `assembly.css`.
+One native details/summary/body retains original tasks across toggle, polling and
+resize. Done derives from a nonempty exact subset of existing ticks. Only casual
+auto-folds confirmed completed steps to 56px; lab starts expanded and permits
+manual disclosure. Focus, owned viewer return, pending/errors and modal/busy work
+defer automatic collapse. Manual reopening persists for the same task scope;
+Undo/uncheck reopens without moving focus or participant selection. Guides/viewer
+return expand their exact step first. One owned click toggle handles keyboard
+activation, and queued native toggle events read current desired state. Resize
+reveals the same focused current control through the existing guarded helper.
+
+`assembly-finish.js` follows the switcher helper. A retained bar under the stable
+plan column counts global card copies and separate optional steps. The visual meter
+has a spoken equivalent; no card tasks means no meter/max/value or 0/0. The primary
+uses aria-disabled with one retained described reason and stays keyboard reachable.
+Blocked activation only focuses current guidance or reveals the original unchecked
+task through the switcher; it never activates Retry/Refresh or changes ticks.
+Readiness and build saving stay with the original predicate and review/save path.
+Current plan/button/modal guards reject stale actions. Redraw, preview errors and
+empty selection remove the bar. The same narrow Decks launcher starts the plan
+column, keeping short-window sticky containment and resize focus predictable.
+
+Packing-only lab CSS projects original tile/open/tick nodes into rows with a
+46px minimum, 28px thumbnail, decorative mono quantity (including one) and 44px
+tick target. Names and donor/List-intent metadata wrap; viewer focus outlines the
+row. Casual keeps tiles. Finish labels describe existing selected-list intent,
+never allocated printings; returns keep no finish decoration. Done checklist text
+uses ink-3/medium without strikethrough. Casual checked actual art uses .42 opacity
+and a decorative 40px check; controls retain full opacity. Only an actual image
+child hides checked fallback words, so its error removal restores them. Unknown
+and no-art cards keep their original text and viewer semantics. Neutral step
+badges are 28px casual/20px lab. Task wiring, counts and save readiness are unchanged.
+
+`assembly-overlap.js` follows the steps helper. Optional competition guidance uses
+confirmed resolved selected-participant facts with conserved safe whole counts
+that match their aggregate row. Effective stand-in names, duplicate/unknown data,
+ordinary all-waiting shortages and donor-only/basic rows do not create guidance.
+The warning table labels copy units and current assignments; it adds no allocation
+or action. Original pull/move pills stay outside viewer/tick hit areas. Casual
+shows Also needed with full accessible/tooltip context; lab shows full names/list
+context, and the table stays fully named. Only lab fact numbers use mono. Scoped
+step-marker reset leaves one visual disclosure arrow. No request, task, fingerprint,
+progress, caption or readiness change is introduced.
+
+`assembly-progress.js` loads after the overlap and section helpers: shared Build decks checkmarks,
 per-task identities and patches, pending-save status, polling and Clear/Undo.
 Sorting remains a browser preference. Progress is shared through the server;
 it never changes a deck's status without the explicit Mark as built action.
@@ -41,6 +116,84 @@ late work checks the original viewer, route and plan. Anonymous spare markers
 have required card-task ticks; optional kit and token ticks stay optional.
 `deck-standins.js` supplies the inventory-visible mappings. Overview links to
 the represented card's rules; the printed play sheet records the text mapping.
+
+Saved Editor headers use the casual Editing/name/stripe frame and the original
+lab context from 1000px. `editorDraftIdentity()` reads loaded cards with canonical
+Commander/Companion/Deck policy, excluding Sideboard; unknown stays neutral and
+known colourless remains explicit. Signature-only `drawEditorHeaderIdentity()`
+refreshes through `changed()` and accepted `fillCards()` hydration, with exact
+editor/route/profile/id/version ownership. New/copy/read-only/version modes remain.
+Saved details keep one native field/toggle tree with a 60px closed casual row.
+`revealEditorDetailsFocus()` uses once-only window/visualViewport hooks to scroll
+the same current saved-fold control above overlapping chrome after resize. It
+never focuses or edits; stale/new-focus/modal/busy work is ignored, tight margins
+shrink and oversized targets align stably. Exact draft/check/save paths are unchanged.
+
+Editor search results are a labelled native list with sibling Inspect, static
+facts and retained Add/quantity actions. The highlighted list item has
+`aria-current`; the search field keeps focus for arrow selection and uses
+live announcements, while Tab reaches the native actions.
+`editor-search-quantity.js` shares Add's exact preferred-line resolver: current
+section, strict default set/number/finish then the original same-name fallback;
+never sum names or infer printing. Actual line section/printing describes the
+stepper. Original quantity/remove/Undo/history paths perform mutations, with
+exact current line/controller/query/owner guards. Explicit commit handles Enter
+and blur without relying on implicit change events; a consumed edit cannot
+remove a fallback printing. Focus recovery respects outside destinations through
+reentrant refresh. Quick outside-main results resync through original changes.
+Actions reject saving/asking/leaving and unrelated dialogs; passive results may
+paint, but rejected pending Add intent is consumed and cannot replay. Added expiry and
+More append retain existing result/action nodes, including the viewer trigger.
+More failure retains accepted rows and retries that exact page. Search ownership
+is the exact editor/controller/route/profile and connected wrapper; accepted
+async work also matches query and deck id/version/space. Close, replacement and
+Quick dismissal invalidate timers/answers without changing request payloads or
+aborting the server read. Keep constructor painting separate from mounted actions.
+
+Editor List and Pictures steppers default to a 46px group, yielding 44px
+native buttons after the shared border. Pictures footers wrap and retain a
+44px More target. Only `min-width:1000px` plus a fine pointer restores the
+original dense List token and 34px Pictures group/32px More. Sideboard's exact
+`data-section`/`.edit-sideboard` hook supplies the surface-2 band and kind-correct
+size-exclusion note; removed-only groups keep original Undo and no zero count.
+The existing optional Stand-ins action comes before printing, moves and Remove.
+
+The full Editor retains one Add/search, Stats and Checks tree. `sidePanel()`
+owns their original roots and tab buttons; `projectEditorPanes()` changes only
+visibility/roles. Lab shows the three areas; casual tabs/fold project the same
+nodes. Exact current-draw ownership and per-scroll id/version/space snapshots
+reject stale work while allowing legitimate new-deck space changes. Explicit
+Add/check jumps leave Notes; passive resize does not. Pane focus uses scroll-only
+reveal, with guarded hidden-header rescue and same-route history restoration.
+Consumed swap/Notes URLs refresh only the qualified original pane context at
+the existing canonicalization point; queued work keeps its invocation hash.
+Earlier-address draft recovery does not consume a link before an editor exists.
+The side track reserves list width, and the named `editor-cards` container uses
+two-line full List rows at most 600px wide. Keep actual printing, cost and
+availability visible. Checks headings switch real classes rather than overriding
+the shared sr-only rule. Full Editor peek stays suppressed.
+
+`editorCurveBaseline()` compares only the current actual saved edit/version,
+including a readable trial, never a new/copy/unstarted list. Saved quantities
+stay immutable; same-name current card metadata may fill a local projection,
+while missing/contradictory mana-value/land knowledge suppresses comparison.
+`editorCurvePart()` uses a common saved/current scale, canonical deck gradient,
+neutral deltas and exact spoken counts. Grown old-height marks use on-scrim
+with scrim-edge; shrunk caps use ink-4. Zero spells retain saved caps without
+an invalid average. Undo/restore/rebase/hydration recalculate from source;
+row order/global dirty state and unrelated Stats remain independent.
+
+`syncEditorRowChanges()` uses exact section/printing tallies against an actual
+saved edit, including readable trials. New/copy/unstarted lists are undecorated.
+Retained dot/prior-count/description nodes update without replacing actions;
+duplicate exact keys suppress per-row prior counts. `changed({list:false})`
+refreshes them in place, merging only their own description ID. Pictures keeps
+its original two-line name and places the retained prior count after metadata
+inside the same trigger. Removed text is struck, filled in casual and dashed
+in lab; original Undo and global dirty/ordering semantics remain unchanged.
+`showQty()` also refreshes only the current original viewer entry's caption through
+`syncEditorLineCaption()`, checking line/section/row/trigger/card/profile ownership.
+The next open gets current quantities; an already-open viewer is not live-updated.
 
 `editor-swaps.js` (after `editor-cards.js`) and `deck-swaps.js` (after
 `deck-standins.js`) are E2-S07's strategic stand-ins, kept apart from those
@@ -118,7 +271,7 @@ Continue pending delivery reloads them; the response's new fingerprint identifie
 the saved inventory. Quantities count physical card copies (a product uses its
 card-list quantity); tracked-addition totals may exclude plain basics. A 503 keeps
 the same preview for Retry recording arrival; a 409 requires Reload the delivery,
-with the draft retained on failure; loading a new fingerprint drops older drafts.
+with the draft retained on failure; loading a new fingerprint drops older drafts. Record arrival is the one constant primary: client blockers set `aria-disabled` with a live described reason, and its guarded handler focuses the first actionable blocker. Ready calls the same exact server preview/confirmation/apply; blank condition/language and partial remainder do not block it. Busy/reload/done or inactive/unauthorised views keep native disabling. Date checks require a string real calendar day, preserving invalid saved values for correction.
 `openReceiptSheet`/`closeReceiptSheets` track row, preview, blocker, draft and
 confirmation dialogs for route/person/away cleanup. Preserve busy, changed-preview
 and original-viewer guards. The partial split, receipt, checks/provenance and table
@@ -134,7 +287,7 @@ refresh are one save.
 - **Chips only for exceptions.** Show a chip for a state worth noticing ("2 missing", "On the way", "Condition ?"). Don't show one for "all fine", for zero, or for the normal case.
 - **Notes describe the item, not settings.** `.note` and `.box` are for the state of this thing, never for explaining a normal setting.
 - **Click to edit.** A record opens its sheet when tapped, and Remove sits at the bottom of that sheet. Don't put an Edit and Remove pair on every row.
-- **Every card picture opens the viewer.** Use `cardTile`/`cardRow` with `viewerGroup`, or call `viewerItem` on your own element. Don't build a separate zoom.
+- **Card pictures use the shared viewer.** Use `cardTile`/`cardRow` with `viewerGroup`, or call `viewerItem` on your own element. Don't build a separate zoom. Receive native check labels use their separate Inspect action to reach the existing sheet/viewer.
 - **Mana and rules text use symbols.** Use `manaCost()` for costs and `renderSymbols()`/`oracleParagraphs()` for text containing `{…}`. Never print raw `{T}`.
 - **Touch targets are 44 px.** The components read P1's size tokens (`--btn-h`, `--seg-h`, `--stepper-h`, `--input-h`, `--check-size`, `--row-h`), which are 44 px without a fine pointer at every width and denser with a mouse. On top of that, one `@media (pointer: coarse)` block at the end of `components.css` holds every control at `min-height: var(--tap)` (buttons and steppers' − and + at `min-width` too), so a page never sets a control's touch height itself. Use `--tap` for anything tappable that isn't a control; a page that fits a smaller control in on purpose (the editor's picture tiles) sets `--tap` (and `--stepper-h`) on it.
 - **Hover only with a mouse.** A component's `:hover` look is inside `@media (hover: hover) and (pointer: fine)`, so it doesn't stick after a tap; touch gets `:active` in `--accent-soft`. `kbd` hints show only with a mouse from 1000px.
@@ -208,6 +361,7 @@ A card shown as its picture. Put tiles in a `.card-tiles` grid: 3 columns on a p
 | `meta` | One line, such as `"MSC 143 · Nonfoil"` |
 | `finish` | `"foil"` adds a rainbow sheen and a chip; `"etched"` adds a chip |
 | `state` | A node for the top-right corner (a tick button, a status badge). It sits outside the open button, so it can be a button itself. |
+| `check` | Opt in to a native checkbox label containing static phrasing content. Supply one checkbox; keep chips non-interactive. `state`, `onclick` and `viewerGroup` are unused; place inspection in a separate sibling control. |
 | `ticked` | Adds an accent ring and dims the picture (the item is checked off); hover elevation preserves the ring, and keyboard focus has its own outline |
 | `unrecorded` | Ribbon words, shown with a dashed frame (`"Default picture: printing not recorded"`) |
 | `chips` | Nodes under the meta line: deck chips, `status("warn", "Condition ?")`. Use them only for exceptions. |
@@ -216,7 +370,7 @@ A card shown as its picture. Put tiles in a `.card-tiles` grid: 3 columns on a p
 | `label`, `sizes` | The open button's accessible name, and `<img sizes>` (the default is `TILE_SIZES`) |
 | `large` | A bigger picture's address (the `/img/` route's `large`, 672px) to offer too, for big tiles (the deck page's key cards). If it fails, the tile drops back to the normal picture. |
 
-**A tick on a tile** (the Receipts board, Build decks): pass `state: el("button", {type: "button", class: "tile-tick", "aria-pressed": "false", "aria-label": "<name>: done"})` and toggle `aria-pressed` and the tile's `.is-ticked` together. Build decks puts its `pack-tick` at the picture's bottom-left, clear of the mana cost and copies badge. The Receipts board moves it under the picture, at the end of the chips' row, so it never covers the card's cost (`receipts.css`). `.tile-tick` (cards-ui.css) is a 44px button drawing a 30px circle (26px on a phone): white-ringed when off, the accent with a tick when on. Beside a row instead of on a picture, add `.tile-tick-plain` (a grey ring). Pages add their own class for their scripts (`rcpt-tick`, `pack-tick`) but never restyle it.
+**A tick on a tile** (Build decks): pass `state: el("button", {type: "button", class: "tile-tick", "aria-pressed": "false", "aria-label": "<name>: done"})` and toggle `aria-pressed` and `.is-ticked` together. Build decks puts `pack-tick` at the picture's bottom-left, clear of costs/copy badges. `.tile-tick` is a 44px button with a ring/circle, and `.tile-tick-plain` is its row variant. Active Receive Pictures instead opt into `check`: the whole tile is a native label, with a separate sibling Inspect button and the page's checkbox sizing/descriptions. Read-only/off parts keep viewer-only tiles.
 
 Without a card, or without a picture, the tile shows the name and type line in card proportions. The same words sit under the picture while it loads, and show if it fails. Class names: `.card-tile-open`, `-pic`, `-img`, `-text`, `-qty`, `-name`, `-meta`, `-state`, `-chips`, `-ribbon`, `-tick`, and the states `.is-foil`, `.is-etched`, `.is-ticked`, `.is-unrecorded`, `.is-text`. Add `.is-missing` (every copy missing: the picture greyed) or `.is-partly-missing` (some missing: half grey) to a tile or a `cardRow`; the deck page does, and then a fully missing card carries no "Missing" chip (the grey says it; a screen reader gets the word), only a partly missing one ("1 of 2 missing"). A tile's name takes up to two lines. A `.card-tiles` grid with `.card-tiles-printing` lets each tile's meta (a printing, such as `TEOC 3/12 · 2/2`) wrap. A printing ("FDN 227") is in the body font with tabular numbers on every page, never monospace; a finish shown as a chip (`finishChip`) isn't repeated in the meta. While a tile with a ×N badge has no picture, its words start under the badge.
 
@@ -275,7 +429,7 @@ Groups wired so far:
 | Library | the picture picker's cards (`cover`; its Automatic tile opens the viewer at its card's own tile) |
 | Editor | the rows and picture stacks (`editor`), the search results' thumbnails (`editor-results`), a missing card's stand-ins (`editor-swaps`) |
 | Receipts | each part's grid (`receipt-<n>`, the part's index) |
-| Collection | Find cards (`collection`), the Card list's thumbnails (`collection-rows`), a precon's preview (`precon`) |
+| Collection | Find cards lab tiles (`collection`) and casual rows (`collection-find`), Card list thumbnails (`collection-rows`), lab names (`collection-lab-rows`), casual rows (`collection-casual-rows`), precon preview (`precon`) |
 | Tokens | the token cards (`tokens`), the Missing and On the way tiles (`tokens-missing`) |
 | Wishlist | the cards (`wishlist`), the search results (`wishlist-search`) |
 | Shopping | a delivery's strip and its "+N" sheet (one group per delivery), the purchase queue |
@@ -307,7 +461,13 @@ resulting rows, additional-copy state and affected deck tables.
 
 `#/deck?id=<deck id>&v=target|owned[&tab=overview|cards|stats|practice|matchups][&filter=all|missing|coming|held]` (deck.js `deckViewOf`, `deckAddress`). The tab and the Cards tab's filter change in place (`history.replaceState`), so Back leaves the deck rather than stepping through its tabs; an old `?part=field` opens Matchups. Link to a part with `openDeckTab(name, {filter, to})` on the page, or with the address from elsewhere. `GET /api/deck` takes `omit=matchups` (the answer's slowest part, its `matchups` left out): the page asks with it unless it opens on Matchups, and the Matchups tab fetches them when it first opens. `GET /api/deck/cards` is the light read of a deck's cards (the picture picker's), `GET /api/deck/find` the editor's finder.
 
-The head shows the deck's library picture small beside the title (`deckHeadCover`, the summary's `cover.art`), and More's "Change library picture…" opens `openCoverPicker` for a deck text the viewer may change; a save draws the page again.
+The head keeps its small library picture on casual widths and promotes it to a 184 px art hero in the lab, with an identity stripe and tinted metadata band (`deckHeadCover`, `deckColourPieces`). From 1000 to 1280 px the actions fold over a 148 px hero; without art the title uses normal ink, and image failure removes the white-on-art treatment. More's "Change library picture." opens `openCoverPicker` for a deck text the viewer may change; a save draws the page again.
+
+`deck-header.js` follows `deck.js`: its previous/next links read a fresh `/api/decks` answer and follow the library's grouped filters/sort while the current deck is included, otherwise all visible ordinary decks. They keep the current tab and card filter, and select Play-now only when the neighbour has it. The first/last arrows are disabled, and the selected deck is remembered for returning to the library. No cached profile's names are reused; late reads check route, screen, profile, connection and request sequence. At narrow lab widths the 44 px opaque `.btn-art` circles sit over the hero, whose top padding reserves their space even for a 100-character title. Both themes use the same white art-control surface and dark teal ink tokens.
+
+The tint metadata's `<time>` reads `summary.edited` from `/api/deck`: the actual last recorded deck edit, ISO UTC seconds at the API, a local-device date on the page and a full date/time in its title. Null/invalid dates add no label, and metadata read failure does not block the deck. The timestamp is looked up only after the deck's visibility check, and matches the library's edit metadata.
+
+`deck-overview.js` follows `deck-header.js`; `deck-overview.css` follows `deck.css`. Overview reads `/api/field` and `/api/variants` once for the displayed list, drawing the existing Forge figure, freshness, range, flags and newest swap result, plus a mana curve with the deck's identity gradient. From 1000 px these panels sit in two columns. Field view and All tests open the existing Matchups controls; reading Overview never starts a run. Loading, empty and unavailable states are explicit. Late answers require the original route, profile, screen and attached panel. The panels do not read inventory, so public-deck viewers get no collection counts from them. The five existing tabs and their lazy loading are retained.
 
 More's **Retire deck…** opens a sheet for an editable unbuilt saved deck
 (`deck-retirement.js`). Read its current eligibility, SHA and revision first;
@@ -392,9 +552,19 @@ The matchup scripts' shared run pieces (matchups.js): `runChoiceControl(options,
 
 A blocked run control stays the page's own button, disabled, with the reason on the line under its row. This replaces WP2's idea of swapping the button for "Ask Matt to play this": a button that can't do anything shouldn't look like one you can press, and the same line covers every reason (admins only, or simulations paused), naming who can start runs.
 
+### Matchups opponent views
+
+The Matchups home uses `matchupEntries` for one best saved result per opponent, ordered best first and uninformative results last. Mouse input from 1000 px gets a real six-column table; casual widths get cards; coarse input from 1000 px gets whole-row links with 44 px targets and an inset focus ring. Both views retain exact perspective and saved-result destinations, current-list/engine selection, exceptions and start permissions. Table/list semantics are not mixed. Adjacent range bars are decorative, and a linked row's spoken name says the opponent and rate once. No pair percentage is treated as a field rating or residual flag.
+
+`simulationsChip()` adds a neutral, noninteractive lock chip beside the title through `pageHead`'s optional `badge`. It shows the server's known mode only (Admins only, Anyone or Paused), updates through `renderSimulations`, and discloses no setter identity, date or worker count. Unknown modes stay hidden. Reasons remain beside run controls; saved results stay readable.
+
+`matchups-summary.js` follows the overview and uses the shared field/swap renderers. Two named panels show the selected deck's explicit Planned or built Play-now list; the field API must echo that exact identity and format. Recorded swaps keep the cards they tested. The per-view cache is bounded, keyed by person/list/revisions/saved results, and uses the existing foreground watcher to refresh independently changing swap history. Route, person, selection, attachment and request-sequence guards reject stale answers; reads time out with an explicit retry. Reading never starts a simulation. Casual panels stack and freshness wraps inside the swap panel.
+
+All tests links use `part=tests`, focus `sec-tests` while its deck remains current, and clear the shell/sticky tabs. Late field and matchup content redraws use the app's existing `keepPlace` anchor, which yields when the reader scrolls.
+
 ### Matchups rankings
 
-`matchups-overview.js` owns the Matchups / Rankings segmented control on `#/matchups`; both views share the existing format selection. Rankings reads `GET /api/rankings?format=Constructed|Commander` and starts no simulations. Render each server-connected group separately, sorted by percentage rating, with the 95% rating range, likely rank range, decided games and Unsettled reasons. The rating estimates the win rate against an average current field list in that group, balanced for who starts. Keep unrated and excluded current lists visible; excluded rows show the reason without a game count. Never imply a rank between disconnected groups or compare formats.
+`matchups-overview.js` owns the Matchups / Rankings segmented control on `#/matchups`; both views share the existing format selection. Rankings reads `GET /api/rankings?format=Constructed|Commander` and starts no simulations. Render each server-connected group separately, sorted by percentage rating, with the 95% rating range, likely rank range, decided games and Unsettled reasons. The rating estimates the win rate against an average current field list in that group, balanced for who starts. Keep unrated and excluded current lists visible; excluded rows show the reason without a game count. Never imply a rank between disconnected groups or compare formats. Ratings use `winRateFigure`; rank, range and game numerals use `simNumbers`, so words keep the body font. Casual widths stack the rating below its deck name; the shared hero value never wraps its percent sign onto another line.
 
 While Rankings is selected and visible, its read is single-flight: refresh after 15 seconds without a result change, or promptly after results change. Its AbortController cancels on hidden/pagehide, stop, route or view exit; reject stale route/profile answers. Each read has a 12-second deadline and a clear failure state. Keep this lifecycle within the existing Matchups overview; `matchups.css` supplies its responsive rows.
 
@@ -441,6 +611,22 @@ profile changes and the away lock; delayed reads and saves check their original
 viewer and route. Packing and new Forge matchup pickers put eligible usual
 opponents in a leading group while preserving explicit selections.
 
+Collection Card list presentation lives in `collection-rows.js`, loaded after `collection.js`: unknown condition/language cells pair a decorative em dash with spoken words, lab metadata shows codes, and casual metadata shows unusual or unknown words. Foil/etched use the shared neutral finish pill; non-foil is plain. The missing-details info notice and storage toggle retain their native checkbox filters. The bulk action visibly names every filtered row, including rows beyond the displayed page. Prices remain per-copy estimates for each printing/finish, with one rate and a local-calendar source-date freshness badge; unknown dates stay explicit. Collection language options match the backend supported codes.
+
+The lab table has separate Colour identity, Type, Printing, Finish, Copies, Condition, Language, In decks, price and Notes columns. Identity pips come from `card.color_identity`, including explicit colourless/unknown handling. Usage remains anonymous held/free counts with spoken uncertainty and basic-land unknowns. Container queries hide identity, type and language first, then notes. The named, keyboard-focusable table region scrolls independently with a local sticky header; preferred widths fit wide panes, while the 1000px edge keeps local horizontal scrolling. Fine-pointer rows include their divider in 36px; coarse controls retain their 44px floor. Within the table, J/K follows the current filtered order across page boundaries without wrapping. Enter restores the selected page and opens the card from a fresh visible lab viewer-group trigger, so Close returns focus correctly; unknown cards use the existing permitted edit flow or focus the read-only preview. Headers retain native Enter, and text fields/modifiers/busy/stale contexts retain their guards. Keyboard hints show only in the fine-pointer hover lab.
+
+`collection-rows.js` also owns the lab's keyed selection/preview and casual list. A lab name selects the current printing/finish; Edit copies opens the existing guarded sheet. The preview is 400px, 340px at 1000–1280, with local scrolling in its narrow table. Casual rows share the same filtered set, show 24 at a time and focus the first added row after Show more. Their viewer captions preserve recorded notes and alternate-printing warnings. The search/filter band stays below the shell; its tracked sheet changes the same native predicates and sort. Neither pagination nor Show more changes bulk scope. Storage is expressed as counts/uncertainty/basic-land wording, never inferred holder names.
+
+Shopping's `.shop-layout` uses a 560px list pane from 1281px: existing deliveries, follow-ups and By shop research stay left; buying, Missing cards, legacy deck shortfalls and long-term plans stay right. It stacks through 1280px with Parts of this page links that focus their destinations while retaining `#/shopping`. Buying redraws keep delivery, follow-up Undo and history nodes. Empty/last-row transitions mount or remove the same frame. The queue identity, permissions and receipt workflow are unchanged; canonical queue rows are grouped into Ready, Waiting (with stock/reprint reasons) and Deferred, with Long-term still grouped by deck. Native shop radio rows show row/copy counts and mark canonical rows; no duplicate research viewers or write controls remain. A removable matching chip resets to All and returns focus. Matching Long-term groups reveal through their append-only Show all path, preserving existing controls. Research/check-date/stock facts remain on canonical rows without a price/image; zero stays valid. The lab now uses real tables through `shopping-queue.js`, with 36px mouse rows including inset dividers and 30px headers/group rows. Their bounded, focusable scroll region has local sticky headers; the detail grid has explicit minimum-width constraints. CSS minimums are 840/750px (with/without For) and 890/800px on coarse input; the fine immediate fixture needs about 891px for complete actions and printing facts (about 801px without For). A single attached representation moves original viewer/deck/research/write nodes at 1000px, preserving focus and current row/revision guards. Full notes/reprint details expand in an adjacent row; clipped words retain full text/title. Fixed menus escape the frame and clear coordinates in casual density. Notes controls use `--btn-h` (32px fine, 44px coarse) and remain inside ordinary rows. `test_shopping_queue_table_ui.py` covers projection, viewer/research close, read-only/unknown data, matching and save/move/remove lifecycle. Deliveries use native details/summary rows with a 54px minimum collapsed height, wrapping full names and explicit pending-copy/date/status metadata. Bodies retain all existing checks and guarded actions; 44px strip pictures keep responsive hidden-copy counts and the complete-contents sheet. Summary/thumbnail focus rings stay inset, and the delivery-only chevron suppresses the global summary marker without changing nested checks. A focused delivery summary exposes R to open its Receive page, with `aria-keyshortcuts` and a linked description distinguishing native Enter/Space expansion. A fine-hover hint accompanies the action. Navigation rechecks the live root/route/profile/current order, pending parts and receipts permission; busy/stale/modifier/composition/repeat and child-control events are ignored. It performs no read or arrival write. Casual research uses the shared freshness badge only for valid non-future saved check days; unknown/invalid/future dates stay factual, and lab cells retain exact semantic ISO dates. Casual printing intent pairs full spoken wording with decorative exact/any and neutral finish presentation. Concise viewer names retain the full saved evidence in captions. `test_shopping_metadata_ui.py` covers dates, unknown/zero facts, printing and retained projection identity. Linked queue rows and Long-term headings use validated optional Planned/library swatches from the current answer; unknown has none and known colourless is neutral. The server checks visible home choices before target reads and memoizes per request, without using card colours or a library/owned cache. Colour fields remain outside canonical queue data and writes. A typed malformed returned-card identity fault removes only optional decoration in Shopping and the existing pool colour projection; physical counts and holder provenance stay intact. `test_shopping_colors.py`, `test_pool_optional_identity.py` and `test_shopping_colors_ui.py` cover these boundaries. Casual By state/By shop controls regroup the same immediate rows/viewer/research/write nodes; shop groups preserve saved category wording and explicit unchecked shops, independently of matching and Long-term reveal. The view-local choice survives lab state tables and write redraws. One existing Add node moves after layout mounting between its header home and a 44px casual round slot; its label uses the shared visually hidden treatment only while round. Sheet/focus, busy/stale and permission guards remain intact. `test_shopping_casual_controls_ui.py` covers these lifecycle boundaries. Dense Printing cells use shared neutral finish pills in a 16px line, with collector number/finish held visible and long set tags clipped with full title/spoken intent. Nonfoil remains plain, missing/older values stay factual and waiting reasons remain separate. The 156px preferred column preserves ordinary 36px rows and bounded scrolling. `test_shopping_metadata_ui.py` and `test_shopping_queue_table_ui.py` cover intent, retained controls and state/resize boundaries.
+
+Receive uses `receipt-layout.js` for its order/date header, card-copy progress and loaded-data guidance. Products count separately. The board and a 452px named, focusable, sticky/scrollable aside sit together from 1000px; narrower views stack. Advice uses only selected/ticked rows and loaded needs/kit data, with capped split hints and explicit unknown/basic destinations. The Record bar remains the one existing action surface outside the frame. Its actual height is measured into `--rcpt-bar-height`; lab max-height and focus-scroll margins reserve the greater of that height and `--bar-h`. The scoped observer disconnects on stale/detached/done views; sync updates support the fallback. `test_receipt_layout_ui.py` covers copy units, uncertainty, unchanged preview/apply, lifecycle and clearance. Pre-record and success renderers share `rcptDestinationAdvice`: only the supplied selected/ticked or frozen recorded copies contribute. Unknown metadata and untracked basics remain separate from storage, with repeated split hints capped; known-empty nonbasic metadata permits storage advice. The API preserves per-row `null` for unresolved logical names and `[]` for known cards without a matching deck; missing printing/picture data alone does not remove logical destination confidence. Product/token scope and all preview/apply payloads remain unchanged. `test_receipt_destinations_ui.py` guards post-record uncertainty and frozen partial quantities. Attention and fill labels explicitly count rows; header/bar progress counts card copies, with whole products separate. Filtering and bulk-fill scope are unchanged, including hidden rows. List mode opts into `cardRow(card, {compact:true})` without changing other callers. Native checkboxes live in sibling labels, not inside inspection buttons. Lab ordinary rows are 44px including the divider with zero list gap; labels are 40px wide (44px coarse) with an 18px checkbox. Metadata, attention and pending split cues remain visible and may grow the row. Controls reference unique row details/part descriptions. Rejected changes restore accepted checked state, and sheet/filtered-row close focuses a fresh visible trigger. Read-only/products and the remembered layout choice stay unchanged. `test_receipt_compact_ui.py` guards native-change, scope, descriptions, attention and focus. Ticked is a view-only fourth filter, preserving Attention ordering and all hidden-row bulk/request scope. An optional validated filter field joins existing v1 drafts; older/malformed values restore All, and a filter alone creates no draft. Filter changes retain valid previews, with active/done guards and fresh visible check/Show all focus. Hidden-blocker navigation persists All. `test_receipt_ticked_ui.py` covers scope, draft compatibility, preview retention and both layouts. Active Pictures use the opt-in shared native label path with a sibling Inspect button as the sole per-row viewer trigger. `receipt-tiles.js` owns both layouts' rendering; runtime and fixture registries include it. Native changes roll back if rejected; descriptions and fresh filtered/sheet focus preserve split/attention scope. Casual checks are 28px in 52px cells, lab checks 18px in 44px cells, Inspect at least 44px. Casual checked card images use .42 opacity plus one decorative 40px disc, omitted/hidden for missing or failed art. `test_receipt_pictures_ui.py` guards native structure, scope, guards, defaults, tokens and focus. Component checks remain separate until an authoritative row association exists. The final bar keeps native date semantics and shared field sizing, with measured wrapping/clearance. `test_receipt_bar_ui.py` covers primary/blocker focus, partial blanks, exact review/apply, product/token choices, dates including malformed restored types, and stale/recovery guards. Receipt destination hints carry optional canonical Planned identity from the same already-read target sections, after home/kind/visibility checks. Unknown/null and known colourless/empty remain distinct; typed/local-index decoration faults preserve canonical rows, counts, fingerprints, provenance and read counts. Guidance, frozen success headings, inspection links and plain row-name chips use validated decorative swatches, without extra requests, forms or viewer triggers. Compact lab chips retain their existing hiding. `test_receipt_colors.py` and `test_receipt_colors_ui.py` cover privacy, shared identity, per-output copies, optional faults, unchanged scope/draft/preview and label phrasing. The retained Selected row facts/action resolve exact current component id/runtime key, preserving split identity, unknown details and explicit hidden-row recovery. Initial context is a visible selected-part row, never an arrival claim. The single Edit details action reuses the guarded inspector/form/viewer; edits, split/merge and draft restoration refresh current facts and close focus. Casual values use words and lab values use codes. No extra reads, canonical fields, checks, draft creation or preview invalidation come from context selection. `test_receipt_selected_ui.py` covers lifecycle/membership, uncertainty, hidden parts and current values. Inline component-check association remains a separate data-contract gate.
+
+Find cards keeps its name-level API/counts and lab card grid, with one panel of 56px-picture rows below 1000px. Identity pips use `color_identity`; the clearly labelled Card colour selector still uses the existing card-colour predicate. This is a compatibility default, not a new semantic decision. Owned/free/incoming/held/basic-land facts stay server-provided, and name-level rows do not invent per-printing prices. Separate viewer groups exclude the hidden density. The closed casual filter band is sticky with a 48px search and 50px filter button, live active count and a scrolling availability row. Expanded filters enter page flow so short landscape windows can reach results. Query keys, space/paging limits, async sequencing and guarded Edit copies are retained.
+
+Collection storage answers add optional `listed_holders: [{id, title, quantity, version, colors?}]` and `unattributed` beside unchanged `held`/`guess`. These are visible, uncontested saved packing-list printing hints, not verified physical assignments. Source kind is `target`/`owned`; an assembly snapshot may retain older lines, so this is no historical-revision guarantee. Stand-in-affected names, competing/overcommitted claims and cheapest remainders remain anonymous. The existing deck/product visibility gate runs before identities are returned; expected visibility-read failures clear every optional name while retaining aggregate counts. Basics keep null allocation. Metadata stays outside canonical rows/hash and uses the existing pool/recipe read.
+
+The Card list consumes those hints only when the full identity/title/quantity/version list validates and named quantities plus anonymous remainder equal held copies. Malformed, overcommitted, basic, unsupported and older answers stay anonymous. A static table marker preserves density; full guarded links appear in the selected preview and both casual/lab viewer captions. Links name Planned/Play-now, open the current list, and revalidate the active route/person/root/current row and hint before and after viewer close. The copy explains that saved lists may differ from boxes/current lists. `colWithoutHints` clones retained legacy storage and strips named metadata when saves/conflicts omit fresh storage, even with the same hash; fresh answers restore it. Shared viewer links use `--viewer-link` on their always-dark panel, independent of page theme (7.17:1 measured); `test_viewer_contrast.py` guards the shared two-theme contrast requirement. Optional hint swatches describe canonical Planned/library identity, independently of source kind; viewed owned-hero colours may differ. Unknown/invalid colours draw nothing without discarding valid hints, while an explicit empty array means known colourless. Colours pass the same visibility gate and use already-read target sections; an expected local-index failure removes only the optional swatch. Viewer hint swatches reuse the existing dark stripe palette locally; normal previews retain their page-theme palette. Minimum decorative-cue contrast on the viewer panel is 4.20:1, separate from the link text requirement.
+
 Collection row editing and conflict recovery live in `collection-cards.js`; `collection-guards.js` owns optional reduction reasons, advisory held-copy confirmations and repeat-import warnings; `collection-bulk.js` owns the Card list's Set condition & language sheet (E7-S29). They use the shared sheet, field, button and warning components. Collection sheets open through `colOpenSheet`; the shared printing picker joins the same tracking set through its `onOpen` hook. They close on route/profile/away-lock changes via `colCloseSheets`; delayed work checks the original viewer before opening another sheet. Import apply captures the reviewed preview and disables file selection while it waits.
 
 ## Tests
@@ -476,3 +662,66 @@ Rules added for these devices (the device pass of 2026-10-13), besides those abo
 - **Every width:** History's card strips are one row (as many pictures as fit, then the +N tile). A grid whose column holds a picture strip (Shopping's deliveries) needs `minmax(0, 1fr)` columns and `min-width: 0`, or the strip's min-content widens the card.
 
 Receive delivery inspection panels (`rcptSheetPicture`) are separate from the shared full-screen viewer: on a phone the picture is up to 320px wide, inside a full-width swipe surface. Previous/Next, a count and a swipe/enlarge hint accompany multi-card lists. Vertical gestures scroll; form controls keep their own input behaviour. Tapping the image opens the shared viewer.
+
+## Keyboard ownership
+
+The two menu implementations share `keyboardEditing`, `keyboardDialog`,
+`keyboardShown` and `keyboardMenuOpen` in core.js. Popovers include native-control
+avatar menus; body-mounted overflow menus retain their anchor and join ordinary
+popover/route cleanup. Detached/background anchors do not open, menu types are
+exclusive, held activation does not reopen a returned anchor, and native Tab is
+not prevented. Core menus use Up/Down; overflow menus also use Home/End.
+Page handlers check current view/focus, modifiers, composition and consumed
+events before acting. Navigation may repeat; activation does not. Collection
+sort/pager redraws restore only their fresh owned control. Dialog focus order,
+not reusable-viewer DOM order, owns fallback navigation. No new binding belongs
+to this reliability slice; contextual help and fast routes follow separately.
+
+Editor keyboard actions use the view-only `ed.dom.keyboardOwner` and
+`editorKeyboardCurrent()` before Save/Undo. `editorKeyIgnored()` and per-input
+`editorComposition()` retain event/IME ownership and exact Enter variants.
+`editorUndoFocus()`/`restoreEditorUndoFocus()` retain semantic row occurrence or
+stable bar-part addresses, with visible existing-control fallbacks and no stale
+focus reclamation. Main quantity callbacks require current mounted ownership,
+exact line/input, enabled control and no asking/leaving context. They deliberately
+retain typing during the pre-save check; post-request input retention remains
+a separate Save-state limit in HISTORY. No payload or save-path change is part
+of this reliability slice.
+
+`keyboard-help.js` owns current page command descriptors, `aria-keyshortcuts`
+and non-destructive hints. Registration requires the current mounted root and
+profile; stale routes, unavailable controls and busy actions lose active hints.
+Avatar help is available to every profile, uses the shared sheet and returns
+focus only to its still-visible owned anchor. Help lists commands for after
+closing the sheet. Core menu Up/Down and overflow Home/End remain distinct.
+The browser-local per-profile character preference defaults on; storage failure
+keeps a session fallback with a notice. Turning it off leaves native controls,
+navigation and Ctrl/Cmd editing intact. Save entry/finally refresh metadata only;
+pre-save typing and the remaining post-request input limitation are unchanged.
+
+Current-page character routes use explicit descriptors: F focuses existing
+Editor/Collection search, M opens the exact eligible Editor row's retained More,
+and semantic ? opens help. Editor / stays compatible; global search is separate.
+Dispatch counts eligible owners before help de-duplication, preserves native
+editing/modifiers/IME/repeat and yields to overlays and busy operations. Frame
+rebinding is explicit at the legitimate new-deck space action, not arbitrary
+model changes. Modal Quick fields do not advertise the inactive F route.
+
+The full Editor's labelled `.edit-forge` section retains its one original
+`vtTestRow` beside, not inside, replaceable `.edit-stats`. `drawBar` synchronizes
+eligibility and panel visibility through the same row; the reason is visible.
+The original secondary button, native disabled state and description remain.
+Quick scope and all Forge request/test/Save behavior are unchanged. Result
+figures, unsaved evidence and after-save testing are separate work.
+
+`editor-search-dock.js` projects the retained Add root as a labelled nonmodal
+region/tabpanel in casual density. It measures the existing bar and viewport,
+reserves document clearance, and scrolls only the same current owned control.
+The original heading and query/results survive reopening and density changes;
+generation/query/route/profile guards cancel stale frames and pending actions.
+Escape follows search's first-clear handling, then owned dismissal. Back/Paste
+and saved-editor takeover use exact transient tokens/positions; unrelated live
+overlays retain ownership. The ordinary Save path is unchanged. Current F/help
+registration follows lazy Quick mount; nontext Dock Undo resolves a fresh visible
+launcher/Cards fallback, while input Undo remains native. Target sizing reads
+the shared --tap/--btn-h and panel/font rules; keyboard-up tab policy is unchanged.

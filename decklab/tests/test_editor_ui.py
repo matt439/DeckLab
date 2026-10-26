@@ -104,9 +104,10 @@ class EditorPageTests(unittest.TestCase):
         # UI review round 2: below 1,000 px the Add/Stats/Checks panel came before the list, so the deck began
         # under the fold. With cards it starts folded to its tabs; a tab or Add cards opens it, Hide folds it.
         self.run_js("""
-          addPart = () => el("div"); showSide = () => {};
+          addPart = () => el("div");
           edit(); editor.ac = null; editor.dom.check = el("section");
           const panel = sidePanel();
+          editor.dom.page = el("div", {}, panel); main.append(editor.dom.page); mountEditorPanes();
           assert(panel.classList.contains("is-folded"));
           assert.equal(editor.dom.sideFold.textContent, "Show");
           assert.equal(editor.dom.sideFold.getAttribute("aria-expanded"), "false");
@@ -115,7 +116,9 @@ class EditorPageTests(unittest.TestCase):
           assert.equal(editor.dom.sideFold.textContent, "Hide");
           editor.dom.sideFold.click();
           assert(panel.classList.contains("is-folded"));
-          focusSearch();
+          // This isolated pane fixture has no mounted search/keyboard owner.
+          // Actual Add/F ownership is covered by test_editor_search_dock_ui.
+          setSide("add");
           assert(!panel.classList.contains("is-folded"));
           assert.equal(editor.side, "add");
           // An empty deck starts open: adding cards is the first thing to do.
@@ -125,7 +128,7 @@ class EditorPageTests(unittest.TestCase):
 
     def test_ctrl_z_takes_back_each_change(self):
         self.run_js("""
-          edit();
+          edit(); drawEditor(); // Real mounted ownership remains while this model test stubs redraw.
           drawEditor = () => {}; drawLines = () => {};
           changed = (opts) => { editor.dirty = isDirty(); if (!opts || opts.history !== false) recordHistory(editor); };
           editor.lists.Deck[0].qty = 3; changed({list: false});
@@ -142,7 +145,6 @@ class EditorPageTests(unittest.TestCase):
           editor.lists.Deck[0].qty = 1; changed({list: false});
           const typed = document.fire("keydown", {key: "z", ctrlKey: true, target: {tagName: "TEXTAREA"}});
           assert.equal(typed.defaultPrevented, false);
-          editor.dom = {x: 1};
           const event = document.fire("keydown", {key: "z", ctrlKey: true, target: document.body});
           assert.equal(event.defaultPrevented, true);
           assert.equal(editor.lists.Deck.find(l => l.name === "Llanowar Elves").qty, 4);
@@ -333,8 +335,7 @@ class EditorPageTests(unittest.TestCase):
 
     def test_ctrl_s_never_reaches_the_browser_while_a_sheet_is_open(self):
         self.run_js("""
-          edit();
-          editor.dom = {x: 1};
+          edit(); drawEditor();
           let saves = 0; saveNow = () => { saves += 1; };
           const sheet = el("dialog", {open: ""}); document.body.append(sheet);
           const e = document.fire("keydown", {key: "s", ctrlKey: true, target: document.body});
@@ -350,7 +351,7 @@ class EditorPageTests(unittest.TestCase):
           edit();
           drawAddTo = () => {}; changed = () => {}; syncSections = () => {};
           editor.dom.lines = null;
-          cardSearch(); const ac = editor.ac;
+          main.append(cardSearch()); const ac = editor.ac;
           const found = (name) => ({...card(name, "Instant", 1), default: null, have: {owned: 0, on_the_way: 0}, aud: null});
           ac.items = [found("Lightning Bolt"), found("Bolt Bend")]; ac.query = "bolt"; ac.input.value = "bolt"; ac.active = 0;
           pick(ac, 0);
@@ -371,7 +372,7 @@ class EditorPageTests(unittest.TestCase):
 
     def test_the_paste_toasts_undo_takes_back_only_the_paste(self):
         self.run_js("""
-          edit();
+          edit(); drawEditor(); // Mount before stubbing the redraw side effects below.
           drawEditor = () => {}; drawLines = () => {}; syncSections = () => {};
           changed = (opts) => { editor.dirty = isDirty(); if (!opts || opts.history !== false) recordHistory(editor); };
           let undo = null;

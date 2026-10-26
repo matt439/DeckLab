@@ -53,20 +53,27 @@ function fieldSection(data) {
 /** Still the page this part was drawn for? */
 function fvHere(ctx) { return ctx.token === routeToken; }
 
+/** Late field content must not move a section the reader jumped to below it. */
+function fvKeepPlace(change) {
+  return typeof keepPlace === "function" ? keepPlace(change) : change();
+}
+
 async function fvRefresh(ctx) {
   clearTimeout(ctx.timer);
   if (!fvHere(ctx) || ctx.busy) return;
   try {
     const answer = await api(ctx.url);
     if (!fvHere(ctx) || ctx.busy) return;
-    fvDraw(ctx, answer);
+    fvKeepPlace(() => fvDraw(ctx, answer));
   } catch (e) {
     if (!fvHere(ctx) || ctx.busy) return;
-    clear(ctx.content).append(el("div", { class: "box box-warn" },
-      el("h3", { class: "box-head", text: "The field can't be shown" }),
-      el("p", { text: e.message || String(e) }),
-      el("div", { class: "actions" },
-        el("button", { type: "button", class: "btn", text: "Try again", onclick: () => fvRefresh(ctx) }))));
+    fvKeepPlace(() => {
+      clear(ctx.content).append(el("div", { class: "box box-warn" },
+        el("h3", { class: "box-head", text: "The field can't be shown" }),
+        el("p", { text: e.message || String(e) }),
+        el("div", { class: "actions" },
+          el("button", { type: "button", class: "btn", text: "Try again", onclick: () => fvRefresh(ctx) }))));
+    });
     return;
   }
   fvSchedule(ctx);
@@ -127,8 +134,8 @@ function fvGames(a) { return (a.opponents || []).filter((o) => !o.not_meaningful
 
 /** The headline: the win rate against an average house deck as a hero figure, with how long ago the field was
  * last played (the last field run's note) and its range bar, then where the list ranks, in a sentence. */
-function fvHeadline(a) {
-  const tile = el("div", { class: "fv-tile" });
+function fvHeadline(a, { panel = true } = {}) {
+  const tile = el("div", { class: panel ? "fv-tile" : "fv-summary" });
   const average = a.average;
   if (average && average.value != null) {
     const what = "Win rate against an average house deck";

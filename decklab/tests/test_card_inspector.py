@@ -129,7 +129,8 @@ class TextNode extends Node {
 const document = { activeElement: null, body: new Element('body'), documentElement: new Element('html'),
   createElement: (t) => new Element(t), createElementNS: (ns, t) => new Element(t), createTextNode: (t) => new TextNode(t),
   addEventListener() {}, querySelector: () => null,
-  querySelectorAll: (sel) => document.body.all().filter((n) => n.getAttribute(sel.slice(1, -1)) !== null) };
+  querySelectorAll: (sel) => document.body.all().filter((n) => sel.startsWith('[')
+    ? n.getAttribute(sel.slice(1, -1)) !== null : n.tagName === sel.toUpperCase()) };
 const historyLog = [];
 const history = { state: { pos: 4 }, length: 5,
   pushState(state) { historyLog.push(['push', state]); this.state = state; this.length += 1; },

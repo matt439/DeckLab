@@ -26,6 +26,7 @@
 <link rel="stylesheet" href="/shell.css">
 <link rel="stylesheet" href="/library.css">
 <link rel="stylesheet" href="/deck.css">
+  <link rel="stylesheet" href="/deck-overview.css">
 <link rel="stylesheet" href="/stats.css">
 <link rel="stylesheet" href="/matchups.css">
 <link rel="stylesheet" href="/field.css">
@@ -38,6 +39,8 @@
 <link rel="stylesheet" href="/collection.css">
 <link rel="stylesheet" href="/play.css">
 <link rel="stylesheet" href="/assembly.css">
+<link rel="stylesheet" href="/assembly-steps.css">
+<link rel="stylesheet" href="/assembly-overlap.css">
 <link rel="stylesheet" href="/deck-tools.css">
 <link rel="stylesheet" href="/receipts.css">
 <link rel="stylesheet" href="/accessories.css">
@@ -63,12 +66,15 @@
 <script src="/editor-details.js" defer></script>
 <script src="/editor-lines.js" defer></script>
 <script src="/editor-cards.js" defer></script>
+<script src="/editor-search-quantity.js" defer></script>
+<script src="/editor-search-dock.js" defer></script>
 <script src="/editor-swaps.js" defer></script>
 <script src="/editor-save.js" defer></script>
 <script src="/editor-deckpage.js" defer></script>
 <script src="/sim-ui.js" defer></script>
 <script src="/matchups.js" defer></script>
 <script src="/matchups-overview.js" defer></script>
+<script src="/matchups-summary.js" defer></script>
 <script src="/matchups-detail.js" defer></script>
 <script src="/matchups-results.js" defer></script>
 <script src="/matchups-cards.js" defer></script>
@@ -86,6 +92,8 @@
 <script src="/cover.js" defer></script>
 <script src="/deck-availability.js" defer></script>
 <script src="/deck.js" defer></script>
+<script src="/deck-header.js" defer></script>
+<script src="/deck-overview.js" defer></script>
 <script src="/deck-retirement.js" defer></script>
 <script src="/deck-rename.js" defer></script>
 <script src="/deck-prices.js" defer></script>
@@ -98,6 +106,7 @@
 <script src="/wishlist.js" defer></script>
 <script src="/shopping.js" defer></script>
 <script src="/shopping-buying.js" defer></script>
+<script src="/shopping-queue.js" defer></script>
 <script src="/shopping-reprints.js" defer></script>
 <script src="/shopping-orders.js" defer></script>
 <script src="/shopping-order-edit.js" defer></script>
@@ -105,10 +114,16 @@
 <script src="/shopping-order-split.js" defer></script>
 <script src="/deck-tools.js" defer></script>
 <script src="/collection.js" defer></script>
+<script src="/collection-rows.js" defer></script>
 <script src="/collection-cards.js" defer></script>
 <script src="/collection-bulk.js" defer></script>
 <script src="/collection-guards.js" defer></script>
 <script src="/assembly.js" defer></script>
+<script src="/assembly-chooser.js" defer></script>
+<script src="/assembly-switcher.js" defer></script>
+<script src="/assembly-finish.js" defer></script>
+<script src="/assembly-steps.js" defer></script>
+<script src="/assembly-overlap.js" defer></script>
 <script src="/assembly-sections.js" defer></script>
 <script src="/assembly-progress.js" defer></script>
 <script src="/assembly-sheets.js" defer></script>
@@ -122,11 +137,14 @@
 <script src="/history.js" defer></script>
 <script src="/activity.js" defer></script>
 <script src="/receipts.js" defer></script>
+<script src="/receipt-tiles.js" defer></script>
+<script src="/receipt-layout.js" defer></script>
 <script src="/receipt-workflow.js" defer></script>
 <script src="/accessories.js" defer></script>
 <script src="/accessory-pictures.js" defer></script>
 <script src="/tokens.js" defer></script>
 <!-- WP4 app shell (decklab/UI-REVIEW.md 2.2): the navigation, avatar menu and tab bar, and the Settings page -->
+<script src="/keyboard-help.js" defer></script>
 <script src="/shell.js" defer></script>
 <script src="/settings.js" defer></script>
 <script src="/visibility.js" defer></script>
@@ -166,6 +184,7 @@
         <div class="menu-sep"></div>
         <button type="button" id="switch-profile">Switch person</button>
         <button type="button" id="menu-reload">Reload page</button>
+        <button type="button" id="menu-shortcuts">Keyboard shortcuts</button>
         <button type="button" class="menu-check" id="my-device" aria-pressed="false">This is my device</button>
         <a href="#/visibility" id="menu-visibility" hidden>Who sees what</a>
         <div class="menu-sep" id="admin-sep" hidden></div>

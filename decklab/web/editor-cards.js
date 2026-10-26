@@ -42,7 +42,7 @@ const FIND_TYPES = [["", "Any type"], ["creature", "Creature"], ["instant", "Ins
 // Adding cards -----------------------------------------------------------------
 
 /** The Add tab: Add to (the section), the search with its filters and results, and Paste a list. */
-function addPart(onPaste = openPaste) {
+function addPart(onPaste = editorSearchPaste) {
   const ed = editor;
   ed.dom.addTo = el("div", { class: "segmented", role: "group", "aria-label": "Add cards to" });
   const part = el("section", { class: "edit-add", id: "edit-add", "aria-label": "Add cards" },
@@ -64,6 +64,7 @@ function drawAddTo() {
     onclick: () => { ed.addSection = s; drawAddTo(); queueDraft(); } }, sectionTitle(s))));
   const again = focused && ed.dom.addTo.querySelector(`[data-focus="${CSS.escape(focused)}"]`);
   if (again) again.focus({ preventScroll: true });
+  syncEditorSearchQuantities(ed.ac);
 }
 
 /** "4 bolt" -> {n: 4, q: "bolt"}; "bolt" -> {n: null, q: "bolt"}. */
@@ -79,42 +80,93 @@ function deckColours() {
   try { return listStats().identity; } catch (e) { return []; }
 }
 
+/** A search belongs to one editor/route/profile. Only initial synchronous painting may precede mount. */
+function editorSearchOwned(ac) {
+  const ed = ac?.owner;
+  return Boolean(ed && editor === ed && ed.ac === ac && !ac.cancelled && !ed.leaving
+    && ac.token === routeToken && ac.profile === state.profile?.id && ac.profile === ed.profile);
+}
+
+function editorSearchCurrent(ac, painting = false) {
+  const dock = ac?.owner?.dom?.searchDock;
+  return editorSearchOwned(ac) && !ac.dockSuspended && (!dock || dock.ac !== ac || editorSearchDockCurrent(dock))
+    && Boolean(ac.wrap?.isConnected || (painting && ac.initializing));
+}
+
+function editorSearchScope(ac) { return JSON.stringify([ac.owner.id, ac.owner.version, ac.owner.space]); }
+
+function editorSearchResultsCurrent(ac) {
+  return editorSearchCurrent(ac) && (!ac.resultScope || ac.resultScope === editorSearchScope(ac));
+}
+
+function cancelEditorSearch(ac) {
+  if (!ac) return;
+  ac.cancelled = true;
+  ++ac.seq;
+  ac.pickFirst = false; ac.pickCount = null;
+  resetSearchMore(ac);
+  clearTimeout(ac.timer); clearTimeout(ac.addedTimer);
+}
+
+function editorSearchActionCurrent(ac, card, index, target) {
+  return editorSearchCanAct(ac) && editorSearchResultsCurrent(ac) && ac.items[index] === card && target?.isConnected && ac.list.contains(target)
+    && ac.query === parseQuery(ac.input.value).q;
+}
+
+function resetSearchMore(ac) {
+  ac.morePending = false;
+  ac.more?.removeAttribute("aria-disabled");
+  if (ac.more) ac.more.textContent = "More";
+  if (ac.moreError) ac.moreError.hidden = true;
+}
+
 function cardSearch() {
   const ed = editor;
+  cancelEditorSearch(ed.ac);
   const sees = seesInventory(ed.space || HOME_SPACE);
   const ac = { items: [], active: -1, seq: 0, timer: 0, query: "", count: null, pickFirst: false, pickCount: null,
     guessFrom: -1, mode: "search", owned: false, colors: new Set(), type: "", mv: "", page: 1, pages: 1, sees,
-    filtersOpen: local.get("editFilters") === "open" };
-  ac.input = el("input", { type: "search", id: "ac-input", class: "search-input", role: "combobox",
-    "aria-autocomplete": "list", "aria-expanded": "false", "aria-controls": "ac-list", autocomplete: "off",
+    filtersOpen: local.get("editFilters") === "open", owner: ed, token: routeToken, profile: ed.profile,
+    cancelled: false, initializing: true, resultScope: null };
+  ac.input = el("input", { type: "search", id: "ac-input", class: "search-input",
+    "aria-controls": "ac-list", "aria-describedby": "ac-help", autocomplete: "off",
     autocorrect: "off", autocapitalize: "none", spellcheck: "false", enterkeyhint: "search",
-    placeholder: "Card name, e.g. 4 bolt", "aria-keyshortcuts": "/ Alt+Enter",
+    placeholder: "Card name, e.g. 4 bolt", "aria-keyshortcuts": keyboardCharactersEnabled(ed.profile) ? "/ Alt+Enter" : "Alt+Enter",
     title: "Enter or a click adds 1 copy; Shift adds 4; “4 bolt” adds 4. Alt+Enter shows the card big." });
-  ac.list = el("ul", { id: "ac-list", class: "ac-list", role: "listbox", "aria-label": "Cards found", hidden: true });
+  ac.list = el("ul", { id: "ac-list", class: "ac-list", "aria-label": "Cards found", hidden: true });
   ac.live = el("p", { class: "sr-only", role: "status", "aria-live": "polite" });
   ac.more = el("button", { type: "button", class: "btn btn-quiet ac-more", hidden: true, text: "More",
-    onclick: () => { ac.page += 1; lookUp(ac, parseQuery(ac.input.value).q, true); } });
+    onclick: () => { if (editorSearchResultsCurrent(ac) && !ac.morePending && ac.page < ac.pages) { ac.page += 1; lookUp(ac, parseQuery(ac.input.value).q, true); } } });
+  ac.moreError = el("p", { class: "ac-more-error sub", role: "status", hidden: true });
   ed.ac = ac;
-  ac.input.addEventListener("input", () => {
+  const input = (event) => {
+    if (!editorSearchCurrent(ac) || event.defaultPrevented) return;
     clearTimeout(ac.timer);
     ac.seq += 1;
     ac.items = [];
     ac.active = -1;
     ac.query = "";
     ac.pickFirst = false;
+    ac.resultScope = null;
+    resetSearchMore(ac);
+    ac.rendered = null; clear(ac.list); ac.list.hidden = true; ac.more.hidden = true;
     ac.page = 1;
     clearAdded(ac);
     markActive(ac);
-    schedule(ac);
-  });
+    if (!event.isComposing && !ac.input.editorComposing) schedule(ac);
+  };
+  ac.input.addEventListener("input", input);
+  editorComposition(ac.input, input);
   ac.input.addEventListener("keydown", (e) => searchKey(ac, e));
   ac.input.addEventListener("focus", () => {
+    if (!editorSearchCurrent(ac)) return;
     document.body.classList.add("is-searching");
     noteKeyboard();
     keepSearchInView(ac);
   });
   ac.input.addEventListener("blur", () => {
     setTimeout(() => {
+      if (!editorSearchCurrent(ac)) return;
       if (ac.wrap.contains(document.activeElement)) return;
       document.body.classList.remove("is-searching");
       const part = ac.wrap.closest && ac.wrap.closest(".edit-add");
@@ -122,22 +174,18 @@ function cardSearch() {
       noteKeyboard();
     }, 120);
   });
-  // A tap on a result mustn't take the focus from the box: the phone's keyboard stays up.
-  ac.list.addEventListener("mousedown", (e) => e.preventDefault());
-  ac.list.addEventListener("click", (e) => {
-    const option = e.target.closest("[role=option]");
-    if (!option) return;
-    const i = Number(option.dataset.i);
-    ac.active = i;
-    markActive(ac);
-    pick(ac, i, e.shiftKey ? SHIFT_COPIES : null);
+  // Add/Inspect keep the search keyboard; native quantity fields/buttons need their own focus.
+  ac.list.addEventListener("mousedown", (e) => {
+    if (editorSearchCurrent(ac) && !e.target.closest?.(".ac-stepper")) e.preventDefault();
   });
   ac.filters = el("div", { class: "ac-filters" });
   ac.wrap = el("div", { class: "ac-wrap" },
     el("div", { class: "ac" }, el("label", { for: "ac-input", class: "sr-only", text: "Card name" }), ac.input),
-    ac.filters, addTip(), ac.live, ac.list, ac.more);
+    ac.filters, addTip(), el("p", { id: "ac-help", class: "sr-only", text: "Arrow keys choose a result. Enter adds it; Shift adds four. Alt+Enter opens the card. Tab reaches each result action." }),
+    ac.live, ac.list, ac.moreError, ac.more);
   drawSearchControls(ac);
   showResults(ac);
+  ac.initializing = false;
   return ac.wrap;
 }
 
@@ -208,10 +256,14 @@ function drawSearchControls(ac) {
 }
 
 function refilter(ac) {
+  if (!editorSearchCurrent(ac)) return;
   ac.page = 1;
   ac.seq += 1;
   ac.items = [];
   ac.active = -1;
+  ac.resultScope = null;
+  resetSearchMore(ac);
+  ac.rendered = null; clear(ac.list); ac.list.hidden = true; ac.more.hidden = true;
   clearAdded(ac);
   drawSearchControls(ac);
   schedule(ac, 0);
@@ -219,6 +271,7 @@ function refilter(ac) {
 
 /** Look the text up soon, or say what to type. */
 function schedule(ac, delay = SEARCH_DELAY) {
+  if (!editorSearchCurrent(ac, true)) return;
   clearTimeout(ac.timer);
   const { q } = parseQuery(ac.input.value);
   if (!browsing(ac) && q.length < SEARCH_MIN) {
@@ -248,12 +301,16 @@ function findUrl(ac, q) {
 }
 
 async function lookUp(ac, q, more = false) {
+  if (!editorSearchCurrent(ac) || (more && ac.morePending)) return;
   const seq = ++ac.seq;
+  const scope = editorSearchScope(ac);
+  const page = ac.page;
+  if (more) { ac.morePending = true; ac.more.setAttribute("aria-disabled", "true"); }
   const typed = () => parseQuery(ac.input.value).q;
   if (!ac.items.length) listMessage(ac, "Looking up cards…");
   try {
     const answer = await api(findUrl(ac, q));
-    if (seq !== ac.seq || typed() !== q) return;
+    if (!editorSearchCurrent(ac) || seq !== ac.seq || typed() !== q || scope !== editorSearchScope(ac)) return;
     const found = answer.cards || [];
     // Few or no names have the text in them: the server's close spellings ("did_you_mean") come after
     // them, as cards to pick. Without any, what "Paste a list" makes of the text, which also covers a
@@ -264,14 +321,16 @@ async function lookUp(ac, q, more = false) {
       const close = (answer.did_you_mean || []).filter((name) => !shown.has(name)).slice(0, GUESS_LIMIT);
       guesses = close.length ? await cardsNamed(close) : [];
       if (!found.length && !guesses.length) guesses = await closeCards(q);
-      if (seq !== ac.seq || typed() !== q) return;
+      if (!editorSearchCurrent(ac) || seq !== ac.seq || typed() !== q || scope !== editorSearchScope(ac)) return;
     }
     const items = more ? [...ac.items, ...found] : [...found, ...guesses];
     if (!more) ac.guessFrom = guesses.length ? found.length : -1;      // where the "Did you mean" cards start
     ac.items = items;
+    ac.resultScope = scope;
     ac.query = q;
     ac.count = parseQuery(ac.input.value).n;
     ac.pages = answer.pages || 1;
+    resetSearchMore(ac);
     ac.active = more ? ac.active : ac.items.length ? 0 : -1;
     if (ac.pickFirst && ac.items.length && ac.items[0].name.toLowerCase() === q.toLowerCase()) {
       // Enter came before the answer: as many copies as Enter asked for then (Shift's 4, or a count typed).
@@ -285,11 +344,15 @@ async function lookUp(ac, q, more = false) {
     ac.pickFirst = false;
     drawOptions(ac);
   } catch (e) {
-    if (seq !== ac.seq) return;
-    ac.items = [];
-    listMessage(ac, e.status === 503 && e.data?.reason === "off" ? e.message
+    if (!editorSearchCurrent(ac) || seq !== ac.seq || typed() !== q || scope !== editorSearchScope(ac)) return;
+    const words = e.status === 503 && e.data?.reason === "off" ? e.message
       : e.status === 503 && e.data?.reason !== "database" ? "The card data isn't ready yet: try again in a minute."
-      : `The search didn't work: ${e.message}`);
+      : `The search didn't work: ${e.message}`;
+    if (more && ac.items.length) {
+      resetSearchMore(ac); ac.page = Math.max(1, page - 1);
+      ac.more.textContent = "Retry more"; ac.more.hidden = !(ac.page < ac.pages);
+      ac.moreError.textContent = words; ac.moreError.hidden = false;
+    } else { ac.items = []; listMessage(ac, words); }
   }
 }
 
@@ -321,14 +384,17 @@ async function cardsNamed(names) {
 }
 
 function listMessage(ac, text) {
+  if (!editorSearchCurrent(ac, true)) return;
   ac.list.hidden = false;
+  ac.rendered = null;
+  resetSearchMore(ac);
   clear(ac.list).append(el("li", { class: "ac-message", role: "presentation", text }));
-  ac.input.removeAttribute("aria-activedescendant");
   ac.more.hidden = true;
 }
 
 /** The results; nothing (no empty box) until a name is typed or a filter is set. */
 function showResults(ac) {
+  if (!editorSearchCurrent(ac, true)) return;
   if (ac.items.length) { drawOptions(ac); return; }
   if (browsing(ac)) {
     listMessage(ac, ac.mode === "collection" ? "Looking through your collection…" : "Looking up cards…");
@@ -336,8 +402,9 @@ function showResults(ac) {
     return;
   }
   clear(ac.list);
+  ac.rendered = null;
+  resetSearchMore(ac);
   ac.list.hidden = true;
-  ac.input.removeAttribute("aria-activedescendant");
   ac.more.hidden = true;
 }
 
@@ -383,7 +450,13 @@ function ownedBadge(c) {
   return null;
 }
 
+function searchResultSide(c, words = null) {
+  if (words) return [el("span", { class: "ac-added", text: words })];
+  return [c.aud != null ? el("span", { class: "ac-price", text: `A$${c.aud.toFixed(2)}` }) : null, ownedBadge(c)];
+}
+
 function drawOptions(ac) {
+  if (!editorSearchCurrent(ac, true) || (ac.resultScope && ac.resultScope !== editorSearchScope(ac))) return;
   if (!ac.items.length) {
     listMessage(ac, ac.mode === "collection" || ac.owned
       ? (ac.query ? `None of your free cards have “${ac.query}” in their name with these filters.` : "No free cards with these filters.")
@@ -393,47 +466,68 @@ function drawOptions(ac) {
     return;
   }
   ac.list.hidden = false;
-  clear(ac.list);
+  ac.resultScope = editorSearchScope(ac);
+  const prior = ac.rendered;
+  const retained = prior && prior.query === ac.query && prior.scope === ac.resultScope && prior.cards.length <= ac.items.length
+    && prior.cards.every((card, i) => card === ac.items[i]) && prior.nodes.every(node => ac.list.contains(node));
+  if (!retained) { clear(ac.list); ac.rendered = { query: ac.query, scope: ac.resultScope, cards: [], nodes: [] }; }
   // "Added ✓" only on the card that was added, in the search it was added from.
   const added = ac.addedAt && ac.addedAt.query === ac.query ? ac.addedAt : null;
   ac.items.forEach((c, i) => {
+    const isAdded = !!(added && added.i === i && added.name === c.name);
+    const old = ac.rendered.nodes[i];
+    if (old) {
+      old.classList.toggle("is-added", isAdded);
+      add(clear(old.querySelector(".ac-side")), searchResultSide(c, isAdded ? added.words : null));
+      syncSearchQuantity(old.querySelector(".ac-actions").searchQuantity);
+      return;
+    }
     if (i === ac.guessFrom) {
       add(ac.list, [el("li", { class: "ac-message ac-guess", role: "presentation",
         text: i ? "Or did you mean:" : `No card names have “${ac.query}” in them. Did you mean:` })]);
     }
     const card = cardData(c);
     const thumb = c.img_small
-      ? viewerItem(el("span", { class: "ac-thumb-btn", title: "See it big", "aria-hidden": "true",
-        onclick: (e) => { e.stopPropagation(); openCard(card, e.currentTarget); } },
+      ? viewerItem(el("button", { type: "button", class: "ac-thumb-btn", title: "See it big", "aria-label": `See ${c.name} big`, "aria-haspopup": "dialog",
+        onclick: (e) => { e.stopPropagation(); if (editorSearchActionCurrent(ac, c, i, e.currentTarget)) openCard(card, e.currentTarget); } },
       el("img", { class: "ac-thumb", src: c.img_small, alt: "", width: 40, height: 56, loading: "lazy", decoding: "async" })),
       card, "editor-results", c.type_line)
       : el("span", { class: "ac-thumb", "aria-hidden": "true" });
-    const aud_ = c.aud != null ? `A$${c.aud.toFixed(2)}` : null;
-    const isAdded = !!(added && added.i === i && added.name === c.name);
-    const option = peekable(el("li", { id: `ac-opt-${i}`, role: "option", class: "ac-option" + (isAdded ? " is-added" : ""),
-      "data-i": i, "aria-selected": String(i === ac.active) },
-    thumb,
+    const addButton = el("button", { type: "button", class: "ac-add", "aria-label": `Add ${c.name}`, "aria-describedby": `ac-type-${i} ac-side-${i}`,
+      onclick: e => {
+        if (e.currentTarget.hidden || !editorSearchActionCurrent(ac, c, i, e.currentTarget)) return;
+        ac.active = i; markActive(ac); pick(ac, i, e.shiftKey ? SHIFT_COPIES : null);
+      }, onfocus: () => { if (editorSearchResultsCurrent(ac)) { ac.active = i; markActive(ac); } } }, "Add");
+    const facts = el("div", { class: "ac-result-facts" },
     el("span", { class: "ac-words" },
       el("span", { class: "ac-name" }, el("span", { class: "ac-name-text" }, highlight(c.name, ac.query)), manaCost(c.mana_cost, true)),
       // One line under the name: the type, then the start of the rules text (two-line results: more fit).
-      el("small", { class: "ac-oracle" }, el("span", { class: "ac-type", text: c.type_line }),
+      el("small", { class: "ac-oracle", id: `ac-type-${i}` }, el("span", { class: "ac-type", text: c.type_line }),
         oracleLine(c) ? [" · ", oracleLine(c)] : null)),
-    el("span", { class: "ac-side" },
-      isAdded ? el("span", { class: "ac-added", text: added.words })
-        : [aud_ ? el("span", { class: "ac-price", text: aud_ }) : null, ownedBadge(c)])), card);
+    el("span", { class: "ac-side", id: `ac-side-${i}` }, searchResultSide(c, isAdded ? added.words : null)));
+    const option = peekable(el("li", { id: `ac-opt-${i}`, class: "ac-option" + (isAdded ? " is-added" : ""), "data-i": i }, thumb, facts, searchQuantitySlot(ac, c, i, addButton)), card);
     ac.list.append(option);
+    syncSearchQuantity(option.querySelector(".ac-actions").searchQuantity);
+    ac.rendered.nodes.push(option);
   });
-  ac.more.hidden = !(ac.page < ac.pages);
+  ac.rendered.cards = ac.items.slice();
+  const hideMore = !ac.morePending && !(ac.page < ac.pages);
+  if (hideMore && document.activeElement === ac.more && editorSearchResultsCurrent(ac)
+      && ![...document.querySelectorAll("dialog[open]")].some(dialog => !dialog.contains(ac.input))) ac.input.focus({ preventScroll: true });
+  ac.more.hidden = hideMore;
   markActive(ac);
 }
 
 /** Alt+Enter: the active result's card, big, in the viewer over the results. */
 function viewResult(ac) {
+  if (!editorSearchResultsCurrent(ac) || ac.query !== parseQuery(ac.input.value).q) return;
   const option = ac.list.querySelector(`#ac-opt-${ac.active}`);
   const thumb = option && option.querySelector(".ac-thumb-btn");
   const c = ac.items[ac.active];
   if (!c) return;
-  openCard(cardData(c), thumb || option);
+  const addButton = option?.querySelector(".ac-add");
+  const fallback = addButton?.hidden ? option.querySelector(".ac-actions").searchQuantity.qty : addButton;
+  openCard(cardData(c), thumb || fallback);
 }
 
 /** Bring the active result into view inside the box that scrolls the results (the list, the side panel or the
@@ -452,32 +546,36 @@ function showInResults(option) {
   else if (o.bottom > b.bottom) box.scrollTop += Math.min(o.bottom - b.bottom, o.top - b.top);
 }
 
-function markActive(ac) {
-  ac.list.querySelectorAll("[role=option]").forEach((option, i) => {
-    option.setAttribute("aria-selected", String(i === ac.active));
+function markActive(ac, announce = false) {
+  if (!editorSearchCurrent(ac, true)) return;
+  ac.list.querySelectorAll(".ac-option").forEach((option, i) => {
+    if (i === ac.active) option.setAttribute("aria-current", "true");
+    else option.removeAttribute("aria-current");
     if (i === ac.active) {
       if (typeof getComputedStyle === "function" && option.getBoundingClientRect) showInResults(option);
       peekAt(option);
     }
   });
-  ac.input.setAttribute("aria-expanded", String(ac.items.length > 0));
-  if (ac.active >= 0 && ac.items.length) ac.input.setAttribute("aria-activedescendant", `ac-opt-${ac.active}`);
-  else ac.input.removeAttribute("aria-activedescendant");
+  if (announce && ac.items[ac.active]) ac.live.textContent = `Result ${ac.active + 1} of ${ac.items.length}: ${ac.items[ac.active].name}.`;
 }
 
 function searchKey(ac, e) {
-  const open = ac.items.length > 0;
+  if (!editorSearchCurrent(ac) || editorKeyIgnored(e) || keyboardMenuOpen() || e.ctrlKey || e.metaKey) return;
+  const open = ac.items.length > 0 && editorSearchResultsCurrent(ac);
   if (e.key === "ArrowDown" || e.key === "ArrowUp") {
-    if (!open) return;
+    if (e.altKey || e.shiftKey || !open || !editorSearchCanAct(ac)) return;
     e.preventDefault();
     const n = ac.items.length;
     ac.active = (ac.active + (e.key === "ArrowDown" ? 1 : -1) + n) % n;
-    markActive(ac);
+    markActive(ac, true);
   } else if (e.key === "Enter" && e.altKey) {
+    if (e.shiftKey) return;
     e.preventDefault();
-    if (open && ac.active >= 0) viewResult(ac);
+    if (!e.repeat && editorSearchCanAct(ac) && open && ac.active >= 0) viewResult(ac);
   } else if (e.key === "Enter") {
     e.preventDefault();
+    if (e.repeat) return;
+    if (!editorSearchCanAct(ac)) { ac.pickFirst = false; ac.pickCount = null; return; }
     const { n, q } = parseQuery(ac.input.value);
     const copiesWanted = e.shiftKey ? SHIFT_COPIES : n;
     if (open && ac.active >= 0 && ac.query === q) {
@@ -490,6 +588,8 @@ function searchKey(ac, e) {
       lookUp(ac, q);
     }
   } else if (e.key === "Escape") {
+    if (e.altKey || e.shiftKey || !editorSearchCanAct(ac)) return;
+    if (e.repeat) { e.preventDefault(); return; }
     if (ac.input.value) {
       e.preventDefault();
       ac.input.value = "";
@@ -506,10 +606,12 @@ function searchKey(ac, e) {
 /** Add result i: n copies (a count typed first, or Shift's 4), else 1. The result says "Added ✓ (now 3)"
  * and the text is selected, so the next name replaces it. */
 function pick(ac, i, n = null) {
+  if (!editorSearchCanAct(ac) || !editorSearchResultsCurrent(ac)) return;
   const c = ac.items[i];
   const { q } = parseQuery(ac.input.value);
   if (!c || ac.query !== q) return;
   const line = addCard(c, editor.addSection, n || 1);
+  if (!editorSearchCurrent(ac)) return;
   const words = `Added ✓ (now ${line.qty})`;
   const added = { i, words, name: c.name, query: ac.query };
   ac.addedAt = added;
@@ -517,6 +619,7 @@ function pick(ac, i, n = null) {
   drawOptions(ac);
   clearTimeout(ac.addedTimer);
   ac.addedTimer = setTimeout(() => {
+    if (!editorSearchCurrent(ac)) return;
     if (ac.addedAt !== added) return;
     ac.addedAt = null;
     if (ac.items.length && ac.query === added.query) drawOptions(ac);
@@ -531,6 +634,11 @@ function pick(ac, i, n = null) {
  * screen or a short one its own body also scrolls the box to its top: scrolling the page to the box does
  * nothing for a sticky panel, and an iPad's keyboard would otherwise cover the results. */
 function keepSearchInView(ac) {
+  if (ac?.dockSuspended) return;
+  if (editorSearchDocked(ac)) {
+    queueEditorSearchDockFit(ac.owner.dom.searchDock);
+    revealEditorSearchDockFocus(ac.owner.dom.searchDock, ac.input); return;
+  }
   const side = stickySide(ac);
   const small = window.matchMedia("(pointer: coarse)").matches || (window.visualViewport && window.visualViewport.height < 560);
   if (side) {
@@ -570,6 +678,7 @@ function raiseSidePanel(ac) {
 
 /** The results' height on a touch screen with its keyboard up: what's left under the box. */
 function fitList(ac) {
+  if (editorSearchDocked(ac)) { ac.list.style.maxHeight = ""; return; }
   if (!ac || !ac.list || !document.body.classList.contains("keyboard-up")) {
     if (ac && ac.list && ac.list.style) ac.list.style.maxHeight = "";
     return;
@@ -610,7 +719,7 @@ function noteKeyboard() {
   } else if (h > fullHeight) {
     fullHeight = h;
   }
-  const typing = !!(editor && editor.ac && document.activeElement === editor.ac.input);
+  const typing = !!(editor && editor.ac && !editor.ac.dockSuspended && document.activeElement === editor.ac.input);
   const touch = window.matchMedia("(pointer: coarse)").matches;
   document.body.classList.toggle("keyboard-up", typing && touch && h < fullHeight - 120);
 }
@@ -640,7 +749,7 @@ if (window.visualViewport) {
     noteViewHeight();
     noteKeyboard();
     const ac = editor && editor.ac;
-    if (!ac || document.activeElement !== ac.input) return;
+    if (!ac || ac.dockSuspended || document.activeElement !== ac.input) return;
     // The keyboard coming up puts the box at the top; it going away leaves the page where it is.
     if (grew) fitList(ac);
     else keepSearchInView(ac);
@@ -664,8 +773,7 @@ function addCard(c, section, n = 1) {
   const lines = ed.lists[section] || (ed.lists[section] = []);
   const d = c.default;
   // More copies of a card already there go on its line (the default printing's, if it has one).
-  let line = lines.find((l) => l.name === c.name && (d ? l.set === d.set && l.number === d.number
-    && l.finish === d.finish : !l.set)) || lines.find((l) => l.name === c.name);
+  let line = editorAddLine(ed, c, section);
   if (line) {
     line.qty = Math.min(MAX_COPIES, line.qty + n);
   } else {
@@ -697,20 +805,8 @@ function addBesideList() {
     || window.matchMedia("(min-width: 1000px)").matches;
 }
 
-/** The Quick edit's Add: search stays open for the next card; Paste replaces the search sheet. */
-function openAddSheet() {
-  const ed = editor;
-  if (!ed || noOwnedList()) return;
-  const sheet = openSheet({ title: "Add cards", onClose: (action) => {
-    if (editor === ed) { ed.ac = null; ed.dom.addTo = null; }
-    document.body.classList.remove("is-searching", "keyboard-up");
-    if (action === "paste" && editor === ed) openPaste();
-  } });
-  sheet.dialog.classList.add("sheet-search");
-  sheet.body.append(addPart(() => sheet.close("paste")));
-  sheetActions(sheet, [{ text: "Done", kind: "primary", onclick: () => sheet.close() }]);
-  ed.ac.input.focus();
-}
+/** Quick Add uses the same retained nonmodal search dock. */
+function openAddSheet() { openEditorSearchDock(); }
 
 
 // ------------------------------------------------------------ printing picker

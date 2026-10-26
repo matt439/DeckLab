@@ -44,7 +44,7 @@ class ShoppingQueueInteractionTests(unittest.TestCase):
             deck: {id: "casual/otters", title: "Izzet Otters"}});
           const before = JSON.parse(JSON.stringify(card));
           drawShopping(queueData([card]));
-          const viewer = main.querySelector(".card-row"), control = moveButton(3);
+          const viewer = main.querySelector("#shop-to-buy").closest("section").querySelector(".card-row"), control = moveButton(3);
           assert.equal(control.closest(".card-row"), null);
           assert.equal(control.closest(".shop-queue-row").querySelector(".card-row"), viewer);
           viewer.click();
@@ -73,7 +73,7 @@ class ShoppingQueueInteractionTests(unittest.TestCase):
           same(messages, ["Alpha moved to Long-term plan.", "Alpha moved to Ready to buy."]);
         """)
 
-    def test_existing_states_update_chips_and_use_latest_revision(self):
+    def test_existing_states_update_groups_and_waiting_reasons_with_latest_revision(self):
         self.run_queue_js("""
           const writes = [];
           apiWrite = async (path, body) => {
@@ -82,13 +82,16 @@ class ShoppingQueueInteractionTests(unittest.TestCase):
           };
           drawShopping(queueData([queueRow(1), queueRow(2)]));
           await moveTo(1, "Waiting for stock");
-          assert(moveButton(1).closest(".shop-queue-row").querySelector(".card-row-chips").textContent.includes("Waiting for stock"));
+          assert(moveButton(1).closest(".shop-queue-row").textContent.includes("Waiting for stock"));
+          assert.equal(moveButton(1).closest(".shop-queue-group").getAttribute("data-queue-group"), "waiting");
           await moveTo(2, "Waiting for reprint");
-          assert(moveButton(2).closest(".shop-queue-row").querySelector(".card-row-chips").textContent.includes("Waiting for reprint"));
+          assert(moveButton(2).closest(".shop-queue-row").textContent.includes("Waiting for reprint"));
+          assert.equal(moveButton(2).closest(".shop-queue-group").getAttribute("data-queue-group"), "waiting");
           await moveTo(1, "Deferred");
           const moved = moveButton(1).closest(".shop-queue-row");
-          assert(moved.querySelector(".card-row-chips").textContent.includes("Deferred"));
-          assert(!moved.querySelector(".card-row-chips").textContent.includes("Waiting for stock"));
+          assert.equal(moved.closest(".shop-queue-group").getAttribute("data-queue-group"), "deferred");
+          assert(!moved.querySelector(".card-row").textContent.includes("Waiting for stock"));
+          assert.equal(moved.querySelector(".card-row-chips"), null, 'saved category is the group, not a pill');
           same(writes, [{row: 1, state: "waiting_for_stock", expect: "queue-v1"},
             {row: 2, state: "waiting_for_reprint", expect: "queue-v2"},
             {row: 1, state: "deferred", expect: "queue-v3"}]);

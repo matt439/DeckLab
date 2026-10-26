@@ -77,6 +77,9 @@ older code (the committed tests/fixtures/inventory_goldens):
 - "swap-defaults": E2-S07 adds deck_view's "swaps", the swaps a saved Play-now list makes,
   worked out from the two lists and the Substitutes prose the goldens already compare. Only that
   new key is dropped; test_swaps_core and test_swaps_api check its values and privacy.
+- "assembly-colors": packing participants carry the Planned/library "colors" already in their
+  deck summaries. Only that new key is dropped from assembly answers; test_assembly_colors
+  checks its values and privacy.
 """
 import copy
 import re
@@ -453,6 +456,16 @@ def swap_defaults(dump):
                 view.pop("swaps", None)
 
 
+def assembly_colors(dump):
+    """Drop only the packing participants' new "colors" key (copied from their deck summaries)."""
+    for mine in [dump, *((dump.get("by_viewer") or {}).values())]:
+        plans = mine.get("assembly") if isinstance(mine, dict) else None
+        for plan in plans.values() if isinstance(plans, dict) else []:
+            for deck in (plan.get("decks") or []) if isinstance(plan, dict) else []:
+                if isinstance(deck, dict):
+                    deck.pop("colors", None)
+
+
 def rename_defaults(dump):
     """Only additive default generations; retain malformed or changed rename evidence."""
     for mine in [dump, *((dump.get("by_viewer") or {}).values())]:
@@ -625,7 +638,8 @@ EXPECTED_P5 = (("deck-id-messages", deck_id_messages), ("phase-5-wording", phase
                ("incoming-sources", incoming_sources), ("assembly-completion", assembly_completion),
                ("assembly-progress", assembly_progress), ("usual-opponents", usual_opponents),
                ("stand-in-defaults", standin_defaults), ("rename-defaults", rename_defaults),
-               ("assembly-section-defaults", assembly_section_defaults), ("swap-defaults", swap_defaults))
+               ("assembly-section-defaults", assembly_section_defaults), ("swap-defaults", swap_defaults),
+               ("assembly-colors", assembly_colors))
 
 
 def normalise(dump):

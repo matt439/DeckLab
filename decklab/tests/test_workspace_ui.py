@@ -48,10 +48,10 @@ class WorkspaceInteractionTests(unittest.TestCase):
                             {...beta, img_small: "/img/b/1/small", img: "/img/b/1/normal"}];
           results("a", pictured);
           ac.input.fire("keydown", {key: "ArrowDown"});
-          const options = ac.list.querySelectorAll("[role=option]");
+          const options = ac.list.querySelectorAll(".ac-option");
           assert.equal(ac.active, 1);
-          assert.equal(options[1].getAttribute("aria-selected"), "true");
-          assert.equal(ac.input.getAttribute("aria-activedescendant"), options[1].id);
+          assert.equal(options[1].getAttribute("aria-current"), "true");
+          assert.equal(ac.input.getAttribute("aria-activedescendant"), null);
           assert.equal(editor.lists.Deck.length, 0);
           const thumb = options[1].querySelector(".ac-thumb-btn");
           let stopped = false;
@@ -68,14 +68,14 @@ class WorkspaceInteractionTests(unittest.TestCase):
     def test_click_and_enter_add_with_counts_and_keep_the_results(self):
         self.run_js("""
           results("a");
-          const options = ac.list.querySelectorAll("[role=option]");
-          ac.list.fire("click", {target: options[1].querySelector(".ac-name")});
+          const options = ac.list.querySelectorAll(".ac-option");
+          options[1].querySelector('.ac-add').click();
           same(editor.lists.Deck.map(x => [x.name, x.qty]), [["Beta", 1]]);
           assert.equal(ac.input.value, "a");                       // the results stay for the next card
           assert.equal(ac.items.length, 2);
           assert.ok(ac.list.textContent.includes("Added ✓ (now 1)"));
           assert.equal(document.activeElement, ac.input);
-          ac.list.fire("click", {target: ac.list.querySelectorAll("[role=option]")[1], shiftKey: true});
+          ac.input.fire("keydown", {key: "Enter", shiftKey: true});
           same(editor.lists.Deck.map(x => [x.name, x.qty]), [["Beta", 5]]);  // Shift adds 4
           ac.input.fire("keydown", {key: "ArrowUp"});
           const event = ac.input.fire("keydown", {key: "Enter"});

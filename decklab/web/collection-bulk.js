@@ -20,7 +20,9 @@ function colBulkButton(cv) {
 function colBulkSync(cv, shown) {
   if (!cv.bulkButton) return;
   cv.bulkButton.hidden = !shown.length;
-  cv.bulkButton.setAttribute("aria-label", `Set condition & language on the ${plural(shown.length, "row")} shown`);
+  const words = `Set condition & language. ${plural(shown.length, "row")} shown`;
+  cv.bulkButton.textContent = words;
+  cv.bulkButton.setAttribute("aria-label", words);
 }
 
 /** A language code's name ("English"), or the code itself. */
@@ -69,7 +71,7 @@ function openBulkSheet(cv) {
   const redraw = () => drawBulkSheet(ctx);
   ctx.condition = colSegmented([["", "As is", "Leave as is"], ...COL_CONDITIONS.filter(([v]) => v)], "", redraw, "Condition");
   ctx.language = el("select", { id: id("language"), onchange: redraw },
-    el("option", { value: "", text: "Leave as is" }), COL_LANGUAGES.filter(([v]) => v).map(([v, t]) => el("option", { value: v, text: t })));
+    el("option", { value: "", text: "Leave as is" }), COL_LANGUAGES.filter(([v]) => v).map(([v, t]) => el("option", { value: v, text: `${t} (${v})` })));
   ctx.language.value = "";
   ctx.onlyBlank = el("input", { type: "checkbox", id: id("blank"), onchange: redraw });
   ctx.onlyBlank.checked = true;

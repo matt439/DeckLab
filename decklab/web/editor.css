@@ -62,6 +62,22 @@ details.edit-details[open] > summary { margin-bottom: var(--s-3); }
 .edit-more-details[open] > summary { margin-bottom: var(--s-3); }
 .edit-details-quick { margin: var(--s-2) 0; }
 
+/* Saved editor only: one retained header decoration and the existing native details fold. */
+.edit-head.edit-head-saved { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s-2); }
+.edit-head-saved .edit-kicker { margin: 0; font-size: var(--fs-eyebrow); font-weight: var(--fw-semibold); color: var(--ink-2); }
+.edit-head-saved .edit-title-row h1 { min-width: 0; font-size: var(--fs-lg); font-weight: var(--fw-heavy); overflow-wrap: anywhere; }
+.edit-head-colour { min-width: 0; }
+.edit-head-colour > .deck-stripe { height: var(--stripe-h); }
+details.edit-details-fold:not([open]) { min-height: 60px; box-sizing: border-box; padding: 0 var(--s-4); }
+details.edit-details-fold:not([open]) > summary { min-height: calc(60px - 2px); box-sizing: border-box; }
+@media (min-width: 1000px) {
+  .edit-head.edit-head-saved { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s-2) var(--s-4); }
+  .edit-head-saved .edit-kicker, .edit-head-colour { display: none; }
+  .edit-head-saved .edit-title-row h1 { font-size: var(--fs-2xl); font-weight: var(--fw-bold); }
+  details.edit-details-fold:not([open]) { min-height: 0; padding: var(--s-4); }
+  details.edit-details-fold:not([open]) > summary { min-height: max(32px, var(--btn-h)); }
+}
+
 .field-grid { display: grid; gap: var(--s-4); }
 .field-grid .segmented { display: flex; width: 100%; }
 .field-grid .segmented > * { flex: 1 1 0; padding: var(--s-2) var(--s-2); }
@@ -91,11 +107,10 @@ details.edit-details[open] > summary { margin-bottom: var(--s-3); }
   .kit-tile[aria-checked="true"] { outline: 3px solid Highlight; outline-offset: 2px; }
 }
 
-/* ------------------------------------------------------------ the two columns */
+/* ------------------------------------------------------------ retained editor panes */
 
-/* Below 1,000 px Deck details, then the side panel (Add, Stats, Checks), then the list; from 1,000 px (an
-   iPad in landscape) the side panel is a sticky column beside Deck details and the list, level with Deck
-   details. */
+/* The list and two bounded side columns make the lab's three panes. Below 1,000px the existing tabs
+   project the same attached Add, Stats and Checks roots into one folded panel; the Quick edit is separate. */
 .edit-work {
   display: grid; gap: var(--s-4); align-items: start; margin-top: var(--s-3);
   grid-template-columns: minmax(0, 1fr); grid-template-areas: "details" "side" "main";
@@ -106,15 +121,11 @@ details.edit-details[open] > summary { margin-bottom: var(--s-3); }
 .edit-side-head { display: flex; align-items: center; gap: var(--s-2); flex: none; }
 .edit-side-tabs { --strip-bg: var(--surface); padding: 0 var(--s-2); flex: 1 1 auto; min-width: 0; }
 .edit-side-fold { flex: none; margin-right: var(--s-2); }
-/* A tablet held upright (below 1,000 px): the panel comes before the list, so once the deck has cards it's
-   folded to its tabs; a tab (or Add cards) opens it, Hide folds it again. */
-@media (max-width: 999px) {
-  .edit-side.is-folded .edit-side-body { display: none; }
-  .edit-side.is-folded .edit-side-tabs { border-bottom: 0; }
-  .edit-side.is-folded .edit-side-tabs [aria-selected="true"] { border-bottom-color: transparent; color: var(--ink-2); }
-}
-@media (min-width: 1000px) { .edit-side-fold { display: none; } }
-.edit-side-body { padding: var(--s-3); }
+.edit-side.is-folded .edit-side-tabs { border-bottom: 0; }
+.edit-side.is-folded .edit-side-tabs [aria-selected="true"] { border-bottom-color: transparent; color: var(--ink-2); }
+.edit-pane-grid { padding: var(--s-3); min-width: 0; }
+.edit-search-pane, .edit-facts-pane, .edit-stats-pane { min-width: 0; }
+.edit-pane-heading { display: none; margin: 0 0 var(--s-3); font-size: var(--fs-lg); }
 .tab-count { margin-left: var(--s-1); }
 .edit-main-head { display: flex; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; gap: var(--s-2) var(--s-3); }
 .edit-tabs { flex: 1 1 auto; min-width: 0; }
@@ -123,8 +134,9 @@ details.edit-details[open] > summary { margin-bottom: var(--s-3); }
 @media (min-width: 1000px) {
   .bar-add-jump { display: none; }
   .edit-work {
-    grid-template-columns: minmax(0, 1fr) minmax(300px, 340px); grid-template-rows: auto 1fr;
-    grid-template-areas: "details side" "main side"; gap: var(--s-4) var(--s-5);
+    /* Reserve 360px plus the 16px gap for the list while the two 272px panes grow towards 320px. */
+    grid-template-columns: minmax(0, 1fr) clamp(560px, calc(100% - 376px), 656px); grid-template-rows: auto 1fr;
+    grid-template-areas: "details side" "main side"; gap: var(--s-4) var(--s-4);
   }
   .edit-work.edit-work-single { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto; grid-template-areas: "details" "main"; }
   .edit-side {
@@ -132,12 +144,27 @@ details.edit-details[open] > summary { margin-bottom: var(--s-3); }
     display: flex; flex-direction: column;
     /* --vvh (editor-cards.js) is what an on-screen keyboard leaves; iOS doesn't shrink 100dvh for it. */
     max-height: calc(var(--vvh, 100dvh) - var(--shell-top) - 104px);
+    border: 0; border-radius: 0; background: none; box-shadow: none; overflow: visible;
   }
-  .edit-side-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
-  .edit-side .edit-add { display: flex; flex-direction: column; min-height: 100%; }
+  .edit-pane-grid {
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-4); align-items: start;
+    flex: 1 1 auto; min-height: 0; max-height: inherit; padding: 0;
+  }
+  .edit-search-pane, .edit-facts-pane {
+    padding: var(--s-3); border: 1px solid var(--border); border-radius: var(--r-panel);
+    background: var(--surface); box-shadow: var(--shadow-1);
+    max-height: inherit; min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable;
+  }
+  .edit-search-pane { display: flex; flex-direction: column; }
+  .edit-pane-heading { display: block; flex: none; }
+  .edit-side .edit-add { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; }
   .edit-side .ac-wrap { flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0; }
   .edit-side .ac-list { flex: 0 1 auto; max-height: none; }
   .edit-side .ac-list:has(.ac-option) { flex: 1 1 auto; min-height: 320px; }
+  .edit-facts-pane .edit-check { margin-top: var(--s-4); padding-top: var(--s-4); border-top: 1px solid var(--border); }
+  .edit-facts-pane #h-check {
+    margin: 0 0 var(--s-3); font-size: var(--fs-lg);
+  }
   /* A result's name takes two lines rather than being cut ("Angel of tâ€¦"): a finger has no tooltip. */
   .edit-side .ac-name { align-items: flex-start; }
   .edit-side .ac-name-text {
@@ -161,9 +188,6 @@ details.edit-details[open] > summary { margin-bottom: var(--s-3); }
     max-height: calc(var(--vvh, 100dvh) - var(--shell-top) - var(--s-6));
   }
 }
-@media (min-width: 1280px) {
-  .edit-work { grid-template-columns: minmax(0, 1fr) minmax(340px, 400px); }
-}
 /* The Notes tab: the write-up has the page's width (the side panel and the peek have nothing to do with it). */
 .edit-page.is-notes .edit-side { display: none; }
 .edit-page.is-notes .edit-work { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto; grid-template-areas: "details" "main"; }
@@ -181,6 +205,9 @@ details.edit-details[open] > summary { margin-bottom: var(--s-3); }
 }
 .edit-section .type-title { display: flex; align-items: baseline; gap: var(--s-2); margin: var(--s-3) 0 0; color: var(--ink-2); font-size: var(--fs-sm); }
 .edit-section .count { color: var(--ink-2); font-weight: var(--fw-semibold); font-size: var(--fs-sm); font-variant-numeric: tabular-nums; }
+.edit-sideboard { padding: var(--s-3); border-radius: var(--r-md); background: var(--surface-2); }
+.edit-sideboard > .section-title { color: var(--ink-2); }
+.edit-sideboard-note { margin: var(--s-2) 0; color: var(--ink-2); font-size: var(--fs-sm); }
 .empty-section { color: var(--ink-2); font-size: var(--fs-sm); margin: var(--s-2) 0; }
 /* Two or more columns on a wide screen read down each column (a type group top to bottom), not across. */
 .edit-list {
@@ -188,9 +215,9 @@ details.edit-details[open] > summary { margin-bottom: var(--s-3); }
   columns: 520px; column-gap: var(--s-5);
 }
 .edit-list > * { break-inside: avoid; }
-/* A row: − n +, the card (art and name), one badge, the printing, ⋯. 32 px with a mouse, 44 px to touch. */
+/* A row: − n +, the card (art and name), one badge, the printing, ⋯. 44 px targets; the wide fine-pointer lab stays dense. */
 .edit-row { --tap: 44px; }
-@media (pointer: fine) { .edit-row { --tap: 28px; } }
+@media (min-width: 1000px) and (pointer: fine) { .edit-row { --tap: 28px; } }
 .edit-list > .edit-row {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto auto var(--tap);
@@ -205,7 +232,7 @@ details.edit-details[open] > summary { margin-bottom: var(--s-3); }
 @media (prefers-reduced-motion: reduce) { .edit-row.flash { animation: none; background: var(--selected); } }
 .edit-row.is-blocked { background: var(--crit-soft); box-shadow: inset 3px 0 0 var(--crit); }
 .edit-row.is-warned:not(.is-blocked) { background: var(--warn-soft); box-shadow: inset 3px 0 0 var(--warn); }
-.edit-stepper { flex: none; }
+.edit-stepper { flex: none; --stepper-h: 46px; } /* the shared group's border leaves 44px buttons */
 .edit-stepper .step { font-size: var(--fs-lg); }
 .edit-card {
   display: flex; align-items: center; gap: var(--s-2); min-width: 0; min-height: var(--tap);
@@ -234,14 +261,46 @@ button.edit-card:hover { background: var(--hover); }
 .edit-more { min-width: var(--tap); min-height: var(--tap); padding: 0; font-size: var(--fs-lg); line-height: 1; }
 .edit-problem, .edit-block, .edit-warn { grid-column: 2 / -1; margin: 0 0 var(--s-1); padding-left: var(--s-1); font-size: var(--fs-sm); color: var(--crit-ink); font-weight: var(--fw-semibold); }
 .edit-warn { color: var(--warn-text); }
+/* Unsaved counts are tied to the saved section and printing, and updated without replacing controls. */
+.edit-unsaved-dot { display: inline-block; flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); vertical-align: .05em; }
+.edit-was { flex: none; color: var(--ink-2); font-size: var(--fs-sm); font-weight: var(--fw-medium); white-space: nowrap; }
+.edit-unsaved-dot[hidden], .edit-was[hidden] { display: none; }
+.edit-tile .edit-unsaved-dot { margin-right: var(--s-1); }
+.edit-tile .card-tile-open > .edit-was { margin: 0; padding: 0 2px; }
 /* A removed line, where it was, until the list is drawn afresh: "Removed 2 Llanowar Elves (FDN 227). Undo". */
 .edit-removed { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); background: var(--surface-2); border-radius: var(--r-sm); box-sizing: border-box; padding-left: var(--s-2); }
 .removed-text { margin: 0; min-width: 0; color: var(--ink-2); font-size: var(--fs-sm); }
 .removed-word { font-weight: var(--fw-bold); color: var(--crit-ink); }
+.removed-line { text-decoration: line-through; }
+@media (min-width: 1000px) {
+  :is(.edit-list, .edit-stacks) > .edit-removed { background: transparent; border: 1px dashed var(--border-strong); }
+}
 .undo-btn { min-width: 72px; }
 .edit-empty, .edit-start { margin-top: var(--s-3); }
 .edit-start .actions { justify-content: center; }
 .empty-section { display: flex; align-items: center; flex-wrap: wrap; gap: var(--s-2) var(--s-3); }
+
+/* A real three-pane list can be narrow even in the lab. Preserve the original controls, costs and
+   facts, giving the card name the first line and its printing/availability the second. */
+@media (min-width: 1000px) {
+  .edit-page.has-editor-panes .edit-main { container-type: inline-size; container-name: editor-cards; }
+}
+@container editor-cards (max-width: 600px) {
+  .edit-page.has-editor-panes .edit-list > .edit-row:not(.edit-removed) {
+    grid-template-columns: auto minmax(0, 1fr) auto var(--tap);
+    grid-template-areas: "step card card more" "step print badge more";
+  }
+  .edit-page.has-editor-panes .edit-list > .edit-row > .edit-stepper { grid-area: step; }
+  .edit-page.has-editor-panes .edit-list > .edit-row > .edit-card { grid-area: card; }
+  .edit-page.has-editor-panes .edit-list > .edit-row > .edit-more { grid-area: more; }
+  .edit-page.has-editor-panes .edit-list > .edit-row > .edit-print {
+    grid-area: print; justify-self: start; max-width: 100%; min-width: 0; white-space: normal; overflow-wrap: anywhere;
+  }
+  .edit-page.has-editor-panes .edit-list > .edit-row > .edit-badge-slot { grid-area: badge; max-width: 100%; }
+  .edit-page.has-editor-panes .edit-list > .edit-row > .edit-card .nm { flex-wrap: wrap; }
+  .edit-page.has-editor-panes .edit-list > .edit-row > .edit-card .nm-text { white-space: normal; overflow-wrap: anywhere; }
+  .edit-page.has-editor-panes .edit-list > .edit-row > .edit-badge-slot :is(.chip, .status) { white-space: normal; }
+}
 
 /* ------------------------------------------------------------ the list: picture stacks */
 
@@ -252,9 +311,15 @@ button.edit-card:hover { background: var(--hover); }
 .edit-tile[data-copies="3"] .card-tile-pic { box-shadow: 4px 4px 0 -1px var(--surface-3), 4px 4px 0 0 var(--border-strong), 8px 8px 0 -1px var(--surface-3), 8px 8px 0 0 var(--border-strong); }
 .edit-tile[data-copies="4"] .card-tile-pic { box-shadow: 4px 4px 0 -1px var(--surface-3), 4px 4px 0 0 var(--border-strong), 8px 8px 0 -1px var(--surface-3), 8px 8px 0 0 var(--border-strong), 12px 12px 0 -1px var(--surface-3), 12px 12px 0 0 var(--border-strong); }
 .edit-tile[data-copies] .card-tile-pic { margin-right: var(--s-3); }
-.edit-tile .card-tile-chips { display: flex; align-items: center; justify-content: space-between; flex-wrap: nowrap; gap: var(--s-1); }
-.edit-tile .edit-stepper { --tap: 32px; --stepper-h: 34px; }   /* a compact stepper fits the tile's foot */
-.edit-tile .edit-more { --tap: 32px; flex: none; }
+.edit-tile .card-tile-chips { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--s-1); }
+.edit-tile .edit-stepper { --tap: 44px; }
+.edit-tile .edit-more { --tap: 44px; flex: none; margin-left: auto; }
+@media (min-width: 1000px) and (pointer: fine) {
+  .edit-stepper { --stepper-h: inherit; }
+  .edit-tile .card-tile-chips { flex-wrap: nowrap; }
+  .edit-tile .edit-stepper { --tap: 32px; --stepper-h: 34px; }
+  .edit-tile .edit-more { --tap: 32px; margin-left: 0; }
+}
 /* The one badge ("2 missing", "On the way") sits on the picture's corner, so every footer is the same. */
 .edit-tile .card-tile-state { top: var(--s-2); right: calc(var(--s-3) + var(--s-1)); left: var(--s-1); display: flex; justify-content: flex-end; pointer-events: none; }
 .edit-tile .card-tile-state .chip { box-shadow: var(--shadow-1); pointer-events: auto; }
@@ -297,17 +362,32 @@ button.edit-card:hover { background: var(--hover); }
   border: 1px solid var(--border-strong); border-radius: var(--r-md);
 }
 .ac-option {
-  display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; align-items: center; gap: var(--s-1) var(--s-3);
+  display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; align-items: center; gap: var(--s-1) var(--s-3);
   min-height: 52px; padding: var(--s-1) var(--s-2);
   border-radius: var(--r-sm);
   cursor: pointer;
 }
 .ac-option + .ac-option { border-top: 1px solid var(--border); }
 .ac-option:hover { background: var(--hover); }
-.ac-option[aria-selected="true"] { background: var(--selected); box-shadow: inset 3px 0 0 var(--accent); }
+.ac-option[aria-current="true"] { background: var(--selected); box-shadow: inset 3px 0 0 var(--accent); }
 .ac-option.is-added { background: var(--good-soft); }
-.ac-thumb-btn { display: block; cursor: zoom-in; border-radius: var(--r-card); }
+.ac-add { display: grid; place-items: center;
+  width: 100%; min-width: 44px; min-height: 44px; padding: 0; border: 0; border-radius: var(--r-sm);
+  color: inherit; background: none; font: inherit; text-align: left; cursor: pointer; }
+.ac-add:focus-visible, .ac-thumb-btn:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.ac-thumb-btn { display: grid; place-items: center; width: 44px; min-height: 44px; padding: 0; border: 0;
+  color: inherit; background: none; cursor: zoom-in; border-radius: var(--r-card); }
 .ac-thumb { width: 34px; height: 48px; border-radius: var(--r-card); object-fit: cover; background: var(--surface-3); display: block; }
+.ac-result-facts { display: flex; min-width: 0; flex-direction: column; gap: 1px; }
+.ac-list .ac-option.is-in-list { grid-template-columns: 44px minmax(0, 1fr); background: var(--accent-soft); }
+.ac-actions { display: grid; justify-items: end; gap: var(--s-1); }
+.ac-option.is-in-list .ac-actions { grid-column: 1 / -1; display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: var(--s-2); }
+.ac-actions > [hidden] { display: none; }
+.ac-stepper { background: var(--accent-soft); }
+.ac-quantity-context { flex: 1 1 8em; min-width: 0; font-size: var(--fs-sm); color: var(--ink-2); overflow-wrap: anywhere; text-align: left; }
+.ac-result-facts .ac-name { flex-wrap: wrap; }
+.ac-result-facts .ac-name-text { flex: 1 1 8em; min-width: 0; white-space: normal; overflow-wrap: anywhere; display: block; -webkit-line-clamp: unset; line-clamp: unset; }
+.ac-result-facts .ac-side { flex-direction: row; align-items: center; flex-wrap: wrap; text-align: left; }
 .ac-words { min-width: 0; display: flex; flex-direction: column; gap: 1px; line-height: var(--lh-tight); }
 .ac-name { display: flex; align-items: center; gap: var(--s-2); min-width: 0; font-weight: var(--fw-semibold); }
 .ac-name-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -333,8 +413,18 @@ button.edit-card:hover { background: var(--hover); }
 .edit-curve { display: flex; align-items: stretch; gap: var(--s-1); height: 128px; }
 .curve-col { flex: 1 1 0; display: flex; flex-direction: column; align-items: center; min-width: 0; }
 .curve-n { font-size: var(--fs-xs); color: var(--ink-2); font-variant-numeric: tabular-nums; min-height: 1.2em; }
-.curve-track { flex: 1 1 auto; width: 100%; display: flex; align-items: flex-end; justify-content: center; border-bottom: 1px solid var(--baseline); }
-.curve-bar { display: block; width: 70%; max-width: 28px; background: var(--series-1); border-radius: var(--r-sm) var(--r-sm) 0 0; }
+.curve-track { position: relative; flex: 1 1 auto; width: 100%; display: flex; align-items: flex-end; justify-content: center; border-bottom: 1px solid var(--baseline); }
+.curve-bar { display: block; width: 70%; max-width: 28px; background: var(--deck-stripe, var(--ink-3)); border-radius: var(--r-sm) var(--r-sm) 0 0; }
+.curve-before { position: absolute; left: 50%; transform: translateX(-50%); width: 70%; max-width: 28px; height: 0;
+  border-top: 2px dashed var(--ink-4); pointer-events: none; }
+.curve-before.is-grown { border-color: var(--on-scrim); filter: drop-shadow(0 1px 0 var(--scrim-edge)); }
+.curve-delta { min-height: 1.2em; color: var(--ink-3); font: var(--fs-xs) var(--font-num); }
+.curve-comparison { margin: var(--s-2) 0 0; color: var(--ink-2); font-size: var(--fs-sm); }
+@media (forced-colors: active) {
+  .edit-curve .curve-bar { background: CanvasText; }
+  .curve-before { border-color: CanvasText; filter: none; }
+  .curve-before.is-grown { border-color: Canvas; }
+}
 .curve-mv { font-size: var(--fs-xs); color: var(--ink-2); margin-top: 2px; }
 .stat-line { margin: 0; }
 .stat-sources { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--s-2) var(--s-4); }
@@ -395,12 +485,18 @@ button.edit-card:hover { background: var(--hover); }
 .bar-none { font-size: var(--fs-sm); font-weight: var(--fw-semibold); color: var(--ink-2); }
 .bar-warn { padding: var(--s-1) var(--s-2); }
 .bar-checking { display: inline-flex; align-items: center; gap: var(--s-2); font-size: var(--fs-sm); color: var(--ink-2); }
+/* Forge actions retain their own controls outside the replaceable curve and counts. No result is inferred. */
+.edit-forge { margin-top: var(--s-4); padding-top: var(--s-3); border-top: 1px solid var(--divider); min-width: 0; }
+.edit-forge[hidden] { display: none; }
+.edit-forge h3 { margin: 0 0 var(--s-2); font-size: var(--fs-sm); }
+.edit-forge > .sub { margin: 0 0 var(--s-3); }
+.edit-forge .vt-test-row { flex-wrap: wrap; align-items: flex-start; }
+.edit-forge .vt-test-why { flex-basis: 100%; max-width: none; overflow-wrap: anywhere; }
+
 /* The split Save: Save, then ▾ (Save & view deck) joined to it. */
 .bar-save { min-width: 88px; position: relative; }
 .bar-save:has(+ .bar-save-more) { border-top-right-radius: 0; border-bottom-right-radius: 0; }
 .bar-save + .bar-save-more { min-width: 0; margin-left: calc(-1 * var(--s-2)); padding: 0 var(--s-3); border-top-left-radius: 0; border-bottom-left-radius: 0; border-left: 1px solid var(--accent-ink); }
-/* variant.js's reason beside a disabled "Test this change" is its tooltip here (still its description). */
-.edit-bar .vt-test-why { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .bar-save .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--warn); box-shadow: 0 0 0 2px var(--accent); position: absolute; top: 6px; right: 6px; }
 
 /* ------------------------------------------------------------ sheets */
@@ -473,7 +569,7 @@ dialog.sheet-search .sheet-body { display: flex; flex-direction: column; overflo
 dialog.sheet-search .edit-add { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; }
 dialog.sheet-search .ac-wrap { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; }
 dialog.sheet-search .ac-list { flex: 0 1 auto; min-height: 0; max-height: none; }
-dialog.sheet-search .ac-option { grid-template-columns: 34px minmax(0, 1fr) auto; }
+dialog.sheet-search .ac-option { grid-template-columns: 44px minmax(0, 1fr) auto; }
 /* A phone on its side (330 px tall): the sheet takes the screen's height, the one-time tip and Done (the Ã—
    closes it too) give their room to the results, and the whole body scrolls under the search box, which stays
    at its top: a results box of its own would be a row or two high between Add to, the filters and More. */
@@ -499,12 +595,9 @@ dialog.sheet-search .ac-option { grid-template-columns: 34px minmax(0, 1fr) auto
   .edit-details-new > .field-grid .segmented > * { flex: 1 1 auto; white-space: nowrap; }
 }
 
-/* From 1,400 px with a mouse the card pointed at shows in a column on the right (deck.js peekLayout; deck.css
-   draws it for every page, 280 px wide below 1,600 px). Beside the editor's Add panel a laptop's peek is
-   narrower still, so the list keeps room for long names ("Bilbo Baggins, Burglar // Thief of the Ages"). */
-@media (min-width: 1400px) and (max-width: 1599px) and (hover: hover) and (pointer: fine) {
-  .edit-page .peek-layout { grid-template-columns: minmax(0, 1fr) 240px; }
-}
+/* The full editor already has list/search/stats: the shared deck peek must not create a fourth pane. */
+.edit-page.has-editor-panes .peek-layout { display: block; }
+.edit-page.has-editor-panes .card-peek { display: none; }
 @media (min-width: 2200px) {
   .edit-stacks { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
 }
@@ -513,3 +606,41 @@ dialog.sheet-search .ac-option { grid-template-columns: 34px minmax(0, 1fr) auto
 /* No card pointed at yet (a new deck): no empty frame in the peek. */
 .edit-page .card-peek:has(.peek-img:not([src])) { visibility: hidden; }
 .paste-summary { margin: 0; }
+
+/* Casual search is a labelled, nonmodal region above the measured action bar.
+   Its original tree stays mounted; only this bounded body scrolls. */
+.edit-dock-head { display: contents; }
+.edit-dock-clearance { flex: none; pointer-events: none; overflow-anchor: none; }
+.edit-dock-clearance[hidden] { display: none; }
+.edit-search-dock {
+  --btn-h: var(--tap);
+  position: fixed; z-index: 14; box-sizing: border-box;
+  display: flex; flex-direction: column; min-height: 0; min-width: 0; padding: 0;
+  overflow: hidden; background: var(--surface); border: 1px solid var(--border-strong);
+  border-radius: var(--r-panel) var(--r-panel) 0 0; box-shadow: var(--shadow-2);
+}
+.edit-search-dock[hidden] { display: none; }
+.edit-search-dock .edit-dock-head {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--s-2);
+  flex: none; padding: var(--s-2) var(--s-3); border-bottom: 1px solid var(--border);
+}
+.edit-search-dock .edit-dock-head h2 { display: block; margin: 0; font-size: var(--fs-lg); }
+.edit-search-dock .edit-add {
+  display: block; flex: 1 1 auto; min-height: 0 !important; padding: var(--s-3);
+  overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable;
+}
+.edit-search-dock .ac-wrap { display: block; min-height: 0; }
+.edit-search-dock .ac { position: sticky; top: 0; z-index: 2; padding: var(--s-1) 0; background: var(--surface); }
+.edit-search-dock .search-input { min-height: 48px; font-size: max(16px, 1rem); }
+.edit-search-dock .ac-list, .edit-search-dock .ac-list:has(.ac-option) {
+  min-height: 0 !important; max-height: none !important; overflow: visible;
+}
+.edit-search-dock .ac-option { min-height: 76px; }
+.edit-search-dock .ac-add { min-height: 68px; }
+.edit-search-dock :is(.ac-filters button, .ac-select, .ac-mine, .ac-owned, .add-paste .btn, .add-to button) { min-height: var(--tap); }
+.edit-search-dock .ac-colour { width: var(--tap); height: var(--tap); }
+.edit-search-dock .ac-stepper .step { min-width: var(--tap); min-height: var(--tap); }
+.edit-search-dock .ac-stepper .qty-input { min-height: var(--tap); }
+body.has-editor-search-dock .edit-side { overflow: visible; }
+/* Searching must leave the one real count/Save bar available above the keyboard. */
+body.has-editor-search-dock.is-searching.keyboard-up .edit-bar { display: flex; }

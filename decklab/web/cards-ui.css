@@ -57,6 +57,15 @@ button.card-row { cursor: pointer; }
 .card-row .unknown { color: var(--crit-ink); }
 .card-row-chips { display: flex; flex-wrap: wrap; gap: var(--s-1); margin-top: var(--s-1); }
 
+/* An opt-in receipt-sized row. Ordinary cardRow callers retain their thumbnail and spacing. */
+@media (min-width: 1000px) {
+  .card-row-compact { min-height: 44px; grid-template-columns: 24px 22px minmax(0, 1fr) auto; gap: var(--s-2); }
+  .card-row-compact.card-row-noqty { grid-template-columns: 24px minmax(0, 1fr) auto; }
+  .card-row-compact .thumb, .card-row-compact .thumb-missing { width: 24px; height: 34px; }
+  .card-row-compact .qty { font-family: var(--font-num); }
+  .card-row-compact .name { font-size: var(--fs-row); }
+}
+
 /* --------------------------------------------------------------- card tile */
 
 /* A grid of tiles: 3 across on a phone, about 156 px each on a tablet or desktop, 196 px on a QHD window. */
@@ -334,7 +343,16 @@ dialog.viewer.show-text[open] {
 /* The panel is dark in both themes: its quieter words and lines in the viewer's own colours. */
 .viewer-text .viewer-type, .viewer-text .viewer-caption { color: var(--on-scrim-2); }
 .viewer-text .viewer-face + .viewer-face { border-top-color: var(--viewer-line); }
-.viewer-text a { color: var(--accent); }
+.viewer-text a { color: var(--viewer-link); }
+/* Saved-hint swatches sit on this dark panel even when the surrounding page uses the light theme. */
+.viewer-text .col-packing-hints .deck-swatch {
+  --stripe-w: var(--stripe-w-dark);
+  --stripe-u: var(--stripe-u-dark);
+  --stripe-b: var(--stripe-b-dark);
+  --stripe-r: var(--stripe-r-dark);
+  --stripe-g: var(--stripe-g-dark);
+  --stripe-c: var(--stripe-c-dark);
+}
 /* A button on the dark panel (Collection's "Edit copies"): the panel's colours, not the page theme's. */
 .viewer-text .btn:not(.btn-primary) { background: var(--viewer-panel); color: var(--on-scrim); border-color: var(--viewer-line); }
 @media (hover: hover) and (pointer: fine) { .viewer-text .btn:not(.btn-primary):hover { background: var(--viewer-line); } }

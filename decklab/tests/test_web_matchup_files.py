@@ -76,7 +76,7 @@ class MatchupFileTests(unittest.TestCase):
         # E11-S30 slice 6 (design/visual-design.md 4.9), in place of MU-06's diverging green and red bars: a win rate
         # is sim-ui.js's mono figure in ink with its range bar on the fixed 20-80% scale, on the rows, the pair
         # page's verdict, a live run and the field part, and the old bar is gone. Beside a figure the bar is
-        # decorative, the figure saying it once. Only the matrix's cells still shade around 50% (--win and --loss).
+        # decorative, the figure saying it once. The opponent views do not colour figures by win rate.
         script = _scripts([*MATCHUP_SCRIPTS, "field.js"])
         self.assertNotRegex(script, r"\bwinBar\(|drawWinBar|winBarKey|wb-bar")
         self.assertNotIn(".wb-", _styles())
@@ -98,11 +98,34 @@ class MatchupFileTests(unittest.TestCase):
         self.assertNotRegex(row + rows, r"rangeBar\([^)]*\bwhat\b")
         matchups = re.sub(r"/\*.*?\*/", "", _text("matchups.css"), flags=re.S)
         shaded = [line for line in matchups.splitlines() if re.search(r"var\(--(win|loss)\)", line)]
-        self.assertTrue(shaded)
-        self.assertEqual([line for line in shaded if not line.startswith(".mu-h-")], [])
+        self.assertEqual(shaded, [])
         components = _text("components.css")
         self.assertIn(".range-point {", components)
         self.assertIn(".wr-value { font-family: var(--font-mono);", components)
+
+    def test_opponents_use_semantic_views_for_each_density_and_pointer(self):
+        # P1 slice 10: a mouse gets a real table; casual and touch lab use a list of whole-row links.
+        # Pointer-specific CSS keeps the hidden representation out of keyboard and accessibility navigation.
+        script = _scripts(MATCHUP_SCRIPTS)
+        table = _function(script, "matchupOpponentTable")
+        links = _function(script, "matchupOpponentLinks")
+        self.assertIn('el("table", { class: "data" }', table)
+        self.assertIn('el("th", { scope: "col", text }', table)
+        self.assertIn('el("th", { scope: "row" }', table)
+        self.assertIn('el("ul", { class: "mu-opponent-links" }', links)
+        self.assertIn('"aria-label": matchupOpponentLabel(entry)', links)
+        self.assertNotRegex(table + links, r'role: "(?:row|cell|columnheader)"')
+        css = _text("matchups.css")
+        self.assertIn(".mu-opponent-table { display: none; }", css)
+        fine = re.search(r"@media \(min-width: 1000px\) and \(pointer: fine\) \{(.*?)\n\}", css, re.S).group(1)
+        self.assertIn(".mu-opponent-table { display: block; }", fine)
+        self.assertIn(".mu-opponent-links { display: none; }", fine)
+        coarse = re.search(r"@media \(min-width: 1000px\) and \(pointer: coarse\) \{(.*?)\n\}", css, re.S).group(1)
+        self.assertIn("min-height: var(--row-h)", coarse)
+        self.assertIn(".mu-opponent-row:active { background: var(--accent-soft); }", coarse)
+        self.assertIn(".mu-opponent-row:focus-visible { outline-offset: -3px; }", coarse)
+        self.assertNotIn(":hover", coarse)
+        self.assertNotRegex(css, r"\.mu-matrix|\.mu-phone-part|\.mu-cell")
 
     # Milestone 5 review, round 2 (the matchup screens).
 
@@ -141,7 +164,8 @@ class MatchupFileTests(unittest.TestCase):
         self.assertIn('if (engineTag && earlierEngine(item)) tags.push(status("plain", "Earlier engine"));', body)
         script = _scripts(MATCHUP_SCRIPTS)
         self.assertIn("anyTodaysEngine(results)", _function(script, "allEarlierLine"))
-        self.assertIn("engineTag: engines && !pair.newer", _function(script, "deckMatchupList"))
+        self.assertIn("engineTag: engines && !pair.newer && earlierEngine(item)", _function(script, "matchupEntries"))
+        self.assertIn("matchupEntries(deck, decks, pairs, format, engines)", _function(script, "deckMatchupList"))
         self.assertIn("engineTag: engines && !e.all.some((item) => !earlierEngine(item))", _function(script, "deckResultParts"))
 
     def test_list_answers_leave_the_form_error_alone(self):

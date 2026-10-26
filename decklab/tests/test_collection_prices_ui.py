@@ -16,7 +16,7 @@ FIXTURE = SETUP + """
     'fdn|227|foil': {usd: 1.77, aud: 2.52}, 'sld|2538|nonfoil': {usd: 13.41, aud: 19.06}},
     rate: 1.4217, rate_date: '2026-10-21', price_date: '2026-10-19', price_error: null};
   const shown = () => main.querySelectorAll('tr').filter(tr => tr.getAttribute('data-key')).map(tr =>
-    `${tr.querySelector('.col-cell-name').textContent} ${tr.querySelector('.col-td-price').textContent}`);
+    `${tr.querySelector('.col-cell-name').textContent} ${tr.querySelector('.col-td-price').querySelector('.cell-unknown') ? 'No price' : tr.querySelector('.col-td-price').textContent}`);
   const heading = () => main.querySelector('.col-th-price');
   const draw = (data = {}) => { clear(main); as('matt', MAY.admin);
     return drawCollectionRows({space: 'home', sha256: 's1', rows, prices, editable: true, ...data}, 'home'); };
@@ -37,12 +37,13 @@ class CollectionPricesUiTests(unittest.TestCase):
           assert(heading().textContent.includes('~A$ each'));
           heading().querySelector('button').click();
           assert.equal(heading().getAttribute('aria-sort'), 'descending');
-          same(shown(), ['Sol Ring 20.20', 'Arcane Signet 19.06', 'Llanowar Elves 2.52', 'Llanowar Elves 0.36', 'Black Lotus –']);
+          same(shown(), ['Sol Ring 20.20', 'Arcane Signet 19.06', 'Llanowar Elves 2.52', 'Llanowar Elves 0.36', 'Black Lotus No price']);
           heading().querySelector('button').click();
           assert.equal(heading().getAttribute('aria-sort'), 'ascending');
-          same(shown(), ['Llanowar Elves 0.36', 'Llanowar Elves 2.52', 'Arcane Signet 19.06', 'Sol Ring 20.20', 'Black Lotus –']);
-          for (const text of ['estimate', "own printing and finish", '2026-10-19', '1.4217 AUD', '2026-10-21'])
+          same(shown(), ['Llanowar Elves 0.36', 'Llanowar Elves 2.52', 'Arcane Signet 19.06', 'Sol Ring 20.20', 'Black Lotus No price']);
+          for (const text of ['estimate', "own printing and finish", '1.4217 AUD', '2026-10-21'])
             assert(main.querySelector('.col-price-note').textContent.includes(text), text);
+          assert.equal(main.querySelector('.col-price-note').querySelector('.fresh').getAttribute('title'), '2026-10-19');
         """)
 
     def test_a_save_s_prices_replace_the_old_ones(self):
@@ -73,7 +74,7 @@ class CollectionPricesUiTests(unittest.TestCase):
           const box = main.querySelector('#col-storage'), label = main.querySelector('.col-storage');
           assert(!label.hidden); assert(label.textContent.includes('In storage only (4 rows)'));
           const held = () => main.querySelectorAll('.col-held').map(e => e.textContent);
-          same(held(), ['1 in a deck?', 'all in decks']);
+          same(held(), ['1 in decks? · 1 free', '1 in decks · 0 free']);
           assert(main.querySelector('.col-held-guess').getAttribute('title').includes('cheapest'));
           // The title can't be reached on a phone: the note under the list says it too.
           assert(main.querySelector('.col-price-note').textContent.includes("don't say which of this card's printings"));
@@ -100,7 +101,7 @@ class CollectionPricesUiTests(unittest.TestCase):
         self.run_js("""
           draw({prices: {rows: {}, rate: null, rate_date: null, price_date: null, price_error: 'No USD->AUD rate'}});
           assert(main.querySelector('.col-price-note').textContent.includes('No prices: No USD->AUD rate'));
-          assert(shown().every(text => text.endsWith('–')));
+          assert(shown().every(text => text.endsWith('No price')));
           draw({prices: undefined});        // an older server: no prices at all
-          assert(shown().every(text => text.endsWith('–')));
+          assert(shown().every(text => text.endsWith('No price')));
         """)

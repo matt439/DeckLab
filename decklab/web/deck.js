@@ -113,8 +113,12 @@ function deckTabStrip(screen) {
   }
   // The arrow keys, Home and End move between the tabs (and open them), as a tablist's should.
   strip.addEventListener("keydown", (e) => {
+    if (deckScreen !== screen || !strip.isConnected || e.defaultPrevented || e.isComposing || e.keyCode === 229
+        || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey || keyboardDialog() || keyboardMenuOpen()) return;
+    const target = e.target && e.target.closest && e.target.closest("[role=tab]");
+    if (!target || !strip.contains(target) || target !== document.activeElement || keyboardEditing(e.target)) return;
     const names = DECK_TABS.map(([name]) => name);
-    const at = names.indexOf(screen.view.tab);
+    const at = names.indexOf(target.dataset.tab);
     const to = { ArrowRight: at + 1, ArrowLeft: at - 1, Home: 0, End: names.length - 1 }[e.key];
     if (to === undefined) return;
     e.preventDefault();
@@ -227,6 +231,7 @@ function deckAddress(screen) {
   if (hash !== location.hash) history.replaceState(history.state, "", hash);
   // The Planned list / Play-now list links open the other list on the same tab (opened in a new tab too).
   for (const [v, link] of screen.versionLinks || []) link.setAttribute("href", versionHref(screen.data, v, tab));
+  syncDeckNeighbours(screen);
 }
 
 /** A list's address on tab (the Overview is the address without one). */
@@ -257,13 +262,18 @@ function deckHeader(data) {
   const more = menuButton([el("span", { class: "deck-more-words", text: "More" }),
     el("span", { class: "deck-more-dots", "aria-hidden": "true", text: "⋯" })], deckMoreItems(data),
   { aria: "More for this deck" });
-  return el("header", { class: "deck-head deck-page-head" },
+  const cover = deckHeadCover(s);
+  return el("header", { class: "deck-head deck-page-head", style: colours ? colours.vars(90) : null },
+    colours ? colours.stripe() : null,
+    deckNeighbours(data),
     el("div", { class: "deck-title-row" },
-      deckHeadCover(s),
-      el("h1", {}, s.title),
-      colours ? colours.pips(22, { cls: "deck-head-pips" }) : null),
+      cover,
+      el("h1", {}, s.title)),
     el("div", { class: "actions deck-head-actions" }, edit, more),
-    el("p", { class: "deck-meta" }, deckPill(s), deckHeadMeta(data)),
+    el("div", { class: "deck-meta" },
+      colours ? colours.pips(22, { cls: "deck-head-pips" }) : null,
+      deckPill(s), deckHeadMeta(data), deckChangedDate(s.edited),
+      el("code", { class: "deck-header-id", text: s.id })),
     said.length ? el("p", { class: "sub deck-head-note", text: said.join(" ") }) : null,
     s.id.startsWith(BOX_PREFIX) ? pairingLinks(s.id) : null);
 }
@@ -381,6 +391,7 @@ function overviewParts(data) {
   return [
     commanderReadiness(data),
     deckAssemblySection(data),
+    el("div", { class: "deck-overview-panels" }, deckOverviewForge(data), deckOverviewCurve(data), deckOverviewSwap(data)),
     verdict ? el("section", { class: "deck-section deck-overview-stats", "aria-label": "At a glance" }, verdict,
       el("button", { type: "button", class: "btn btn-quiet deck-more-link", text: "All the stats",
         onclick: () => openDeckTab("stats", { to: "deck-panel-stats" }) })) : null,

@@ -99,6 +99,9 @@ function metaParts(meta) {
  *   finish      "foil" or "etched": a sheen on the picture and a chip
  *   state       a node for the top-right corner (a tick button, a status badge); it sits outside the open
  *               button, so it may be a button itself
+ *   check       opt in to a native checkbox label instead of an open button (a checkbox input node).
+ *               This mode uses only static spans; chips must be non-interactive phrasing content.
+ *               Inspection belongs in a separate sibling button; state, onclick and viewerGroup are unused.
  *   ticked      true: an accent ring and the picture dimmed (a tile checked off)
  *   unrecorded  words for a dashed frame and a ribbon ("Default picture: printing not recorded")
  *   chips       nodes under the meta line (deck chips, "Condition ?"); show chips only for exceptions
@@ -119,20 +122,20 @@ function cardTile(card, opts = {}) {
   const words = [pic,
     el("span", { class: "card-tile-name", title: card && card.name !== name ? card.name : null, text: name }),
     opts.meta ? el("span", { class: "card-tile-meta" }, metaParts(opts.meta)) : null];
-  const click = opts.onclick || (card ? (e) => openCard(card, e.currentTarget) : null);
-  const open = click
+  const click = opts.check ? null : opts.onclick || (card ? (e) => openCard(card, e.currentTarget) : null);
+  const open = opts.check ? el("span", { class: "card-tile-open" }, words) : click
     ? el("button", { type: "button", class: "card-tile-open", "aria-haspopup": opts.onclick ? null : "dialog",
       "aria-label": opts.label || null, onclick: click }, words)
     : el("div", { class: "card-tile-open" }, words);
-  if (card && !opts.onclick && opts.viewerGroup) viewerItem(open, card, opts.viewerGroup, opts.caption || null, opts.viewerStatus || null);
-  if (card && card.img) peekable(open, card);
+  if (!opts.check && card && !opts.onclick && opts.viewerGroup) viewerItem(open, card, opts.viewerGroup, opts.caption || null, opts.viewerStatus || null);
+  if (!opts.check && card && card.img) peekable(open, card);
   const chips = [finishChip(finish), ...(opts.chips || [])].filter(Boolean);
   const cls = ["card-tile", finish ? `is-${finish}` : "", opts.unrecorded ? "is-unrecorded" : "",
     opts.ticked ? "is-ticked" : "", card && card.img_small ? "" : "is-text"].filter(Boolean).join(" ");
-  return el("div", { class: cls },
+  return el(opts.check ? "label" : "div", { class: cls },
     open,
-    opts.state ? el("span", { class: "card-tile-state" }, opts.state) : null,
-    chips.length ? el("div", { class: "card-tile-chips" }, chips) : null);
+    opts.check || opts.state ? el("span", { class: "card-tile-state" }, opts.check || opts.state) : null,
+    chips.length ? el(opts.check ? "span" : "div", { class: "card-tile-chips" }, chips) : null);
 }
 
 
@@ -144,6 +147,7 @@ function cardTile(card, opts = {}) {
  *   name, meta  as cardTile's (meta defaults to the type line; unknownMeta replaces it when there's no card)
  *   chips       nodes after the meta line
  *   aside       the node at the end (default manaCost of the card's cost; null for nothing)
+ *   compact     opt in to the 44 px lab row; content can grow beyond that floor
  *   onclick, viewerGroup, caption, viewerStatus   as cardTile's
  *   thumbWide   "<media condition> <width>" where the row's thumbnail is drawn bigger (the deck's picture grid,
  *               "(min-width: 1600px) 220px"): the normal image is offered there (deck.js cardThumb)
@@ -160,7 +164,7 @@ function cardRow(card, opts = {}) {
     meta ? el("small", { class: card ? null : "unknown", text: meta }) : null,
     opts.chips && opts.chips.length ? el("span", { class: "card-row-chips" }, opts.chips) : null);
   const aside = opts.aside !== undefined ? opts.aside : card ? manaCost(card.mana_cost) : null;
-  const cls = "card-row" + (hasQty ? "" : " card-row-noqty");
+  const cls = "card-row" + (hasQty ? "" : " card-row-noqty") + (opts.compact ? " card-row-compact" : "");
   const parts = [thumb, qty, name, aside || el("span")];
   if (!card) return el("div", { class: cls }, parts);
   const node = el("button", { type: "button", class: cls, "aria-haspopup": opts.onclick ? null : "dialog",

@@ -29,10 +29,11 @@ SETUP = """
     choice('casual/b','Beta'), choice('casual/c','Gamma','idea',['casual/a']),
     choice('product/d','Delta','product')];
   const pack = (items=choices(), selected=[{id:'casual/a',version:'owned'}]) => {
-    const view = {choices:items,selected,seq:0,timer:null,run:()=>{}};
-    view.picks = el('div');
-    view.chooser = el('div', {}, el('span',{class:'pack-choose-count'}),el('div',{class:'pack-show-plan'}));
-    main.append(view.picks,view.chooser); drawPackPicks(view); return view;
+    window.matchMedia('(min-width: 1000px)').matches = true;
+    // Use the real mounted chooser so selection callbacks satisfy its current-view/node guards.
+    drawAssembly({choices:items,selections:selected,decks:[],rows:[],ready:false,counts_confirmed:true,
+      unresolved:[],warnings:[],note:'Fixture plan',token_note:'',totals:{waiting:0,missing:0},tokens:[],token_plan:[]},routeToken);
+    return packingProgressView;
   };
   const group = (view, title) => view.picks.querySelectorAll('.pack-group')
     .find(g => (g.querySelector('h3') || g.querySelector('summary'))?.textContent === title);

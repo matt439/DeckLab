@@ -137,7 +137,7 @@ function fillCards(answer, sent) {
       }
     });
   }
-  if (filled) { drawLines(); drawStats(); }
+  if (filled) { drawLines(); drawStats(); drawEditorHeaderIdentity(ed); }
 }
 
 /** The availability of the list being edited, from the last check (null while there's none). */
@@ -163,7 +163,7 @@ function drawCheck() {
   showRowAvailability(null);
   clear(host);
   const a = ed.check;
-  host.append(el("h2", { id: "h-check", class: ed.dom.sideBody ? "sr-only" : null }, "Checks",
+  host.append(el("h2", { id: "h-check", class: ed.dom.panes?.wide ? "edit-pane-heading" : ed.dom.sideBody ? "sr-only" : null }, "Checks",
     el("span", { class: "checking-now sub", hidden: !ed.checking || null }, el("span", { class: "spinner spinner-small", "aria-hidden": "true" }), "checking")));
   if (ed.gone) {
     host.append(el("p", { class: "sub", text: "Not checked: this deck was deleted since you opened it (see the note at the top)." }),
@@ -403,6 +403,7 @@ async function saveNow({ viewAfter = false } = {}) {
   const button = ed.dom.barParts && ed.dom.barParts.save;
   // Saving until the save itself has answered: a second Ctrl+S meanwhile would send the old sha again.
   ed.saving = true;
+  refreshKeyboardHints();
   if (button) busy(button, ed.mode === "new" ? "Creating…" : "Saving…");
   try {
     let answer = null;
@@ -429,6 +430,7 @@ async function saveNow({ viewAfter = false } = {}) {
   } finally {
     ed.saving = false;
     if (button && editor === ed && button.dataset.busy) unbusy(button);
+    if (editor === ed) refreshKeyboardHints();
   }
 }
 

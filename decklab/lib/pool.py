@@ -117,14 +117,17 @@ gives the same as data, for the page.
 import argparse
 import contextlib
 import csv
+import json
 import re
 import sys
+import zlib
 from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import Path, PurePosixPath
 
 from decklab.lib import cards, decks, inventory, spaces
 from decklab.lib.config import REPO  # noqa: F401  (nothing here reads it; tests not yet ported patch it)
+from decklab.lib.decks.identity import CardIdentityError, deck_colors
 from decklab.lib.inventory import entry, rules, unreadable
 from decklab.lib.inventory.model import Product
 
@@ -159,6 +162,11 @@ class InUse:
     # (name, set, collector number, finish) -> copies, of the lines that name a printing: which printings the
     # held copies probably are (the Card list's storage counts); cards is what counts, stand-ins included
     printings: Counter = field(default_factory=Counter)
+    # Logical printing hints cannot locate copies replaced by, or used as, installed stand-ins.
+    # Retain these canonical names while reading the existing recipe; allocation counts stay unchanged.
+    standin_names: set = field(default_factory=set)
+    printing_version: str = "target"   # list supplying printings, including the installed assembly snapshot
+    planned_colors: list | None = None # canonical Planned identity, independent of the hint's source version
 
 
 @dataclass
@@ -439,6 +447,17 @@ def _load_pool():
                 warning_decks=about)
 
 
+def _planned_colors(parsed, sections, why):
+    """Optional canonical deck identity from target sections already read for this holder."""
+    target = sections if why == "intact product" else parsed.target if parsed is not None else None
+    if target is None:
+        return None                    # Never reload a target or substitute an owned/assembled list.
+    try:
+        return deck_colors(target)
+    except (CardIdentityError, OSError, RuntimeError, EOFError, UnicodeDecodeError, json.JSONDecodeError, zlib.error):
+        return None                    # Unavailable or damaged index data only removes the optional swatch.
+
+
 def _built_in_use(space, intact, found, unresolved, warnings, decks_of=None):
     """[InUse] of a space's built deck files, and (home's) the decks of the
     intact products whose stems are in intact; found gets every product stem seen;
@@ -476,7 +495,7 @@ def _built_in_use(space, intact, found, unresolved, warnings, decks_of=None):
                 warnings.append(f"{source} can't be read: {e}")
                 continue
             held = _count_sections(sections, source, unresolved)
-            standin_warnings = []
+            standin_warnings, standin_names = [], set()
             if why == "built":
                 from decklab.lib.decks import standins
                 stored = inventory.current().deck(deck_id)
@@ -494,13 +513,15 @@ def _built_in_use(space, intact, found, unresolved, warnings, decks_of=None):
                             mappings = [{**row, "for": _canonical(row["for"], source, unresolved),
                                          "using": _canonical(row["using"], source, unresolved) if row["using"] else None}
                                         for row in installed["cards"]]
+                            standin_names = {name for row in mappings for name in (row["for"], row["using"]) if name}
                             held = standins.physical_counts(held, mappings, standin_warnings, source)
                     except (decks.DeckFileError, standins.StandInsError) as error:
                         warnings.append(f"{source}: installed stand-ins can't be read: {error}")
                         continue
             warnings.extend(standin_warnings)
             in_use.append(InUse(deck_id, summary["title"], why, held, standin_warnings,
-                                _count_printings(sections, source, unresolved)))
+                                _count_printings(sections, source, unresolved), standin_names,
+                                printing_version=version, planned_colors=_planned_colors(parsed, sections, why)))
         finally:
             if decks_of is not None:      # which deck each warning is about (Pool.warning_decks)
                 decks_of.update((text, summary["id"]) for text in warnings[before:])
