@@ -129,10 +129,20 @@ the same current saved-fold control above overlapping chrome after resize. It
 never focuses or edits; stale/new-focus/modal/busy work is ignored, tight margins
 shrink and oversized targets align stably. Exact draft/check/save paths are unchanged.
 
-Editor search results are a labelled native list with sibling `.ac-add` and
-`.ac-thumb-btn` buttons, not options containing controls. The highlighted Add
-has `aria-current`; the search field keeps focus for arrow selection and uses
-live announcements, while Tab reaches the native actions. Added expiry and
+Editor search results are a labelled native list with sibling Inspect, static
+facts and retained Add/quantity actions. The highlighted list item has
+`aria-current`; the search field keeps focus for arrow selection and uses
+live announcements, while Tab reaches the native actions.
+`editor-search-quantity.js` shares Add's exact preferred-line resolver: current
+section, strict default set/number/finish then the original same-name fallback;
+never sum names or infer printing. Actual line section/printing describes the
+stepper. Original quantity/remove/Undo/history paths perform mutations, with
+exact current line/controller/query/owner guards. Explicit commit handles Enter
+and blur without relying on implicit change events; a consumed edit cannot
+remove a fallback printing. Focus recovery respects outside destinations through
+reentrant refresh. Quick outside-main results resync through original changes.
+Actions reject saving/asking/leaving and unrelated dialogs; passive results may
+paint, but rejected pending Add intent is consumed and cannot replay. Added expiry and
 More append retain existing result/action nodes, including the viewer trigger.
 More failure retains accepted rows and retries that exact page. Search ownership
 is the exact editor/controller/route/profile and connected wrapper; accepted

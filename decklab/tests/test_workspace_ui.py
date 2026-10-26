@@ -50,7 +50,7 @@ class WorkspaceInteractionTests(unittest.TestCase):
           ac.input.fire("keydown", {key: "ArrowDown"});
           const options = ac.list.querySelectorAll(".ac-option");
           assert.equal(ac.active, 1);
-          assert.equal(options[1].querySelector('.ac-add').getAttribute("aria-current"), "true");
+          assert.equal(options[1].getAttribute("aria-current"), "true");
           assert.equal(ac.input.getAttribute("aria-activedescendant"), null);
           assert.equal(editor.lists.Deck.length, 0);
           const thumb = options[1].querySelector(".ac-thumb-btn");
@@ -75,7 +75,7 @@ class WorkspaceInteractionTests(unittest.TestCase):
           assert.equal(ac.items.length, 2);
           assert.ok(ac.list.textContent.includes("Added ✓ (now 1)"));
           assert.equal(document.activeElement, ac.input);
-          ac.list.querySelectorAll('.ac-add')[1].fire("click", {shiftKey: true});
+          ac.input.fire("keydown", {key: "Enter", shiftKey: true});
           same(editor.lists.Deck.map(x => [x.name, x.qty]), [["Beta", 5]]);  // Shift adds 4
           ac.input.fire("keydown", {key: "ArrowUp"});
           const event = ac.input.fire("keydown", {key: "Enter"});

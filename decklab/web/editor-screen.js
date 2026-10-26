@@ -451,6 +451,7 @@ function changed({ list = true, history = true } = {}) {
   } else {
     drawKitNeeds();
   }
+  syncEditorSearchQuantities(ed.ac);
   drawStats();
   drawDetailsSummary();
   drawEditorHeaderIdentity(ed);

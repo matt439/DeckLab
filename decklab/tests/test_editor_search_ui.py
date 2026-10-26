@@ -28,9 +28,9 @@ class EditorSearchUiTests(unittest.TestCase):
           const row = ac.list.querySelector('.ac-option');
           const add = row.querySelector('.ac-add'), inspect = row.querySelector('.ac-thumb-btn');
           assert.equal(add.tag, 'button'); assert.equal(inspect.tag, 'button');
-          assert.equal(add.parentNode, row); assert.equal(inspect.parentNode, row);
+          assert.equal(add.parentNode.parentNode, row); assert.equal(inspect.parentNode, row);
           assert.equal(add.contains(inspect), false); assert.equal(inspect.contains(add), false);
-          assert.equal(add.getAttribute('aria-current'), 'true');
+          assert.equal(row.getAttribute('aria-current'), 'true');
           assert.equal(add.getAttribute('aria-label'), 'Add Alpha');
           for (const id of add.getAttribute('aria-describedby').split(' '))
             assert(document.getElementById(id), 'action metadata is described by connected nodes');
@@ -40,8 +40,8 @@ class EditorSearchUiTests(unittest.TestCase):
           add.click(); assert.equal(changes, 1); assert.equal(editor.lists.Deck[0].qty, 1);
         """)
         css = (workspace_ui.WEB / 'editor.css').read_text(encoding='utf-8')
-        self.assertIn('dialog.sheet-search .ac-option { grid-template-columns: 44px minmax(0, 1fr); }', css,
-                      'Quick search uses the same two native sibling actions, including its 44px Inspect target')
+        self.assertIn('dialog.sheet-search .ac-option { grid-template-columns: 44px minmax(0, 1fr) auto; }', css,
+                      'Quick search keeps native actions outside facts and its 44px Inspect target')
 
     def test_arrow_live_selection_preserves_added_confirmation_and_old_count_rules(self):
         self.run_js(r"""
@@ -57,7 +57,7 @@ class EditorSearchUiTests(unittest.TestCase):
           assert.equal(editor.lists.Deck[0].qty, 7);
           ac.input.fire('keydown', {key:'Enter',altKey:true});
           assert.equal(inspections.length, 1); assert.equal(changes, 2);
-          assert.equal(inspections[0].trigger, ac.list.querySelectorAll('.ac-add')[1]);
+          assert.equal(inspections[0].trigger, ac.list.querySelectorAll('.ac-actions')[1].searchQuantity.qty);
         """)
 
     def test_native_add_keeps_default_printing_and_selected_section_matching(self):
@@ -66,11 +66,11 @@ class EditorSearchUiTests(unittest.TestCase):
           editor.lists.Deck = [{uid:'old',name:'Alpha',qty:2,set:'old',number:'1',card},
             {uid:'new',name:'Alpha',qty:3,set:'new',number:'7',card}];
           editor.lists.Sideboard = [{uid:'side',name:'Alpha',qty:9,set:'new',number:'7',card}];
-          results('Alpha', [card]); ac.list.querySelector('.ac-add').click();
+          results('Alpha', [card]); ac.input.fire('keydown', {key:'Enter'});
           same(editor.lists.Deck.map(line => line.qty), [2,4]);
           assert.equal(editor.lists.Sideboard[0].qty, 9);
           editor.addSection = 'Sideboard';
-          ac.list.querySelector('.ac-add').fire('click', {shiftKey:true});
+          ac.input.fire('keydown', {key:'Enter',shiftKey:true});
           same(editor.lists.Deck.map(line => line.qty), [2,4]);
           assert.equal(editor.lists.Sideboard[0].qty, 13);
         """)
@@ -94,7 +94,7 @@ class EditorSearchUiTests(unittest.TestCase):
           viewerDom.dialog.open = false; viewerDom.dialog.removeAttribute('open'); viewerClosed();
           assert.equal(document.activeElement, inspect); assert.equal(changes, 1);
           assert(addedTimer); assert.equal(ac.live.textContent.includes('added'), true);
-          add.focus(); drawOptions(ac); assert.equal(document.activeElement, add);
+          const qty=row.querySelector('.qty-input');qty.focus();drawOptions(ac);assert.equal(document.activeElement,qty);
         """)
 
     def test_more_retains_native_focus_and_viewer_return_then_appends(self):
@@ -217,7 +217,8 @@ class EditorSearchUiTests(unittest.TestCase):
           const old=begin(); openAddSheet(); const oldAc=old.ac, before=listSignature(old.lists);
           const pending=[]; api=() => new Promise(resolve => pending.push(resolve));
           oldAc.input.value=elves.name; oldAc.input.fire('input'); oldAc.input.fire('keydown',{key:'Enter'});
-          closeEditor(); const next=begin(); const nextBefore=listSignature(next.lists);
+          closeEditor();for(const dialog of document.querySelectorAll('dialog'))dialog.remove();
+          const next=begin(); const nextBefore=listSignature(next.lists);
           pending[0]({cards:[elves]}); await settle();
           assert.equal(listSignature(old.lists),before); assert.equal(listSignature(next.lists),nextBefore);
           assert.equal(oldAc.cancelled,true);
@@ -241,6 +242,6 @@ class EditorSearchUiTests(unittest.TestCase):
           same([params.get('id'),params.get('scope'),params.get('colors'),params.get('type'),params.get('mv')],
             ['casual/sample','owned','G','creature','1']);
           assert.equal(search.items[0].name,elves.name);
-          const before=editor.lists.Deck[0].qty; search.list.querySelector('.ac-add').click();
+          const before=editor.lists.Deck[0].qty; search.list.querySelector('.step-plus').click();
           assert.equal(editor.lists.Deck[0].qty,before+1);
         """)

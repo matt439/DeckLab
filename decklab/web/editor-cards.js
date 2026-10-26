@@ -64,6 +64,7 @@ function drawAddTo() {
     onclick: () => { ed.addSection = s; drawAddTo(); queueDraft(); } }, sectionTitle(s))));
   const again = focused && ed.dom.addTo.querySelector(`[data-focus="${CSS.escape(focused)}"]`);
   if (again) again.focus({ preventScroll: true });
+  syncEditorSearchQuantities(ed.ac);
 }
 
 /** "4 bolt" -> {n: 4, q: "bolt"}; "bolt" -> {n: null, q: "bolt"}. */
@@ -106,7 +107,7 @@ function cancelEditorSearch(ac) {
 }
 
 function editorSearchActionCurrent(ac, card, index, target) {
-  return editorSearchResultsCurrent(ac) && ac.items[index] === card && target?.isConnected && ac.list.contains(target)
+  return editorSearchCanAct(ac) && editorSearchResultsCurrent(ac) && ac.items[index] === card && target?.isConnected && ac.list.contains(target)
     && ac.query === parseQuery(ac.input.value).q;
 }
 
@@ -169,8 +170,10 @@ function cardSearch() {
       noteKeyboard();
     }, 120);
   });
-  // A tap on a result mustn't take the focus from the box: the phone's keyboard stays up.
-  ac.list.addEventListener("mousedown", (e) => { if (editorSearchCurrent(ac)) e.preventDefault(); });
+  // Add/Inspect keep the search keyboard; native quantity fields/buttons need their own focus.
+  ac.list.addEventListener("mousedown", (e) => {
+    if (editorSearchCurrent(ac) && !e.target.closest?.(".ac-stepper")) e.preventDefault();
+  });
   ac.filters = el("div", { class: "ac-filters" });
   ac.wrap = el("div", { class: "ac-wrap" },
     el("div", { class: "ac" }, el("label", { for: "ac-input", class: "sr-only", text: "Card name" }), ac.input),
@@ -472,6 +475,7 @@ function drawOptions(ac) {
     if (old) {
       old.classList.toggle("is-added", isAdded);
       add(clear(old.querySelector(".ac-side")), searchResultSide(c, isAdded ? added.words : null));
+      syncSearchQuantity(old.querySelector(".ac-actions").searchQuantity);
       return;
     }
     if (i === ac.guessFrom) {
@@ -487,17 +491,19 @@ function drawOptions(ac) {
       : el("span", { class: "ac-thumb", "aria-hidden": "true" });
     const addButton = el("button", { type: "button", class: "ac-add", "aria-label": `Add ${c.name}`, "aria-describedby": `ac-type-${i} ac-side-${i}`,
       onclick: e => {
-        if (!editorSearchActionCurrent(ac, c, i, e.currentTarget)) return;
+        if (e.currentTarget.hidden || !editorSearchActionCurrent(ac, c, i, e.currentTarget)) return;
         ac.active = i; markActive(ac); pick(ac, i, e.shiftKey ? SHIFT_COPIES : null);
-      }, onfocus: () => { if (editorSearchResultsCurrent(ac)) { ac.active = i; markActive(ac); } } },
+      }, onfocus: () => { if (editorSearchResultsCurrent(ac)) { ac.active = i; markActive(ac); } } }, "Add");
+    const facts = el("div", { class: "ac-result-facts" },
     el("span", { class: "ac-words" },
       el("span", { class: "ac-name" }, el("span", { class: "ac-name-text" }, highlight(c.name, ac.query)), manaCost(c.mana_cost, true)),
       // One line under the name: the type, then the start of the rules text (two-line results: more fit).
       el("small", { class: "ac-oracle", id: `ac-type-${i}` }, el("span", { class: "ac-type", text: c.type_line }),
         oracleLine(c) ? [" · ", oracleLine(c)] : null)),
     el("span", { class: "ac-side", id: `ac-side-${i}` }, searchResultSide(c, isAdded ? added.words : null)));
-    const option = peekable(el("li", { id: `ac-opt-${i}`, class: "ac-option" + (isAdded ? " is-added" : ""), "data-i": i }, thumb, addButton), card);
+    const option = peekable(el("li", { id: `ac-opt-${i}`, class: "ac-option" + (isAdded ? " is-added" : ""), "data-i": i }, thumb, facts, searchQuantitySlot(ac, c, i, addButton)), card);
     ac.list.append(option);
+    syncSearchQuantity(option.querySelector(".ac-actions").searchQuantity);
     ac.rendered.nodes.push(option);
   });
   ac.rendered.cards = ac.items.slice();
@@ -515,7 +521,9 @@ function viewResult(ac) {
   const thumb = option && option.querySelector(".ac-thumb-btn");
   const c = ac.items[ac.active];
   if (!c) return;
-  openCard(cardData(c), thumb || option?.querySelector(".ac-add"));
+  const addButton = option?.querySelector(".ac-add");
+  const fallback = addButton?.hidden ? option.querySelector(".ac-actions").searchQuantity.qty : addButton;
+  openCard(cardData(c), thumb || fallback);
 }
 
 /** Bring the active result into view inside the box that scrolls the results (the list, the side panel or the
@@ -537,9 +545,8 @@ function showInResults(option) {
 function markActive(ac, announce = false) {
   if (!editorSearchCurrent(ac, true)) return;
   ac.list.querySelectorAll(".ac-option").forEach((option, i) => {
-    const button = option.querySelector(".ac-add");
-    if (i === ac.active) button.setAttribute("aria-current", "true");
-    else button.removeAttribute("aria-current");
+    if (i === ac.active) option.setAttribute("aria-current", "true");
+    else option.removeAttribute("aria-current");
     if (i === ac.active) {
       if (typeof getComputedStyle === "function" && option.getBoundingClientRect) showInResults(option);
       peekAt(option);
@@ -562,6 +569,7 @@ function searchKey(ac, e) {
     if (open && ac.active >= 0) viewResult(ac);
   } else if (e.key === "Enter") {
     e.preventDefault();
+    if (!editorSearchCanAct(ac)) { ac.pickFirst = false; ac.pickCount = null; return; }
     const { n, q } = parseQuery(ac.input.value);
     const copiesWanted = e.shiftKey ? SHIFT_COPIES : n;
     if (open && ac.active >= 0 && ac.query === q) {
@@ -590,7 +598,7 @@ function searchKey(ac, e) {
 /** Add result i: n copies (a count typed first, or Shift's 4), else 1. The result says "Added ✓ (now 3)"
  * and the text is selected, so the next name replaces it. */
 function pick(ac, i, n = null) {
-  if (!editorSearchResultsCurrent(ac)) return;
+  if (!editorSearchCanAct(ac) || !editorSearchResultsCurrent(ac)) return;
   const c = ac.items[i];
   const { q } = parseQuery(ac.input.value);
   if (!c || ac.query !== q) return;
@@ -751,8 +759,7 @@ function addCard(c, section, n = 1) {
   const lines = ed.lists[section] || (ed.lists[section] = []);
   const d = c.default;
   // More copies of a card already there go on its line (the default printing's, if it has one).
-  let line = lines.find((l) => l.name === c.name && (d ? l.set === d.set && l.number === d.number
-    && l.finish === d.finish : !l.set)) || lines.find((l) => l.name === c.name);
+  let line = editorAddLine(ed, c, section);
   if (line) {
     line.qty = Math.min(MAX_COPIES, line.qty + n);
   } else {
