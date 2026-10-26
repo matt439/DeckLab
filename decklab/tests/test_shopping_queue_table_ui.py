@@ -160,9 +160,12 @@ class ShoppingQueueTableInteractionTests(unittest.TestCase):
     def test_readonly_and_old_media_callbacks_cannot_reveal_or_rewrite_replaced_private_view(self):
         self.run_queue_js("""
           density(true); state.may.admin=false; state.may.orders=false;
+          // Other pages' page-lifetime listeners (the Editor's resize) aren't the view's.
+          const resident=[...(window.matchMedia(SHOP_QUEUE_LAB).events.get('change')||[])];
           const view=drawShopping(data([qrow('Private',1,{listed_at:'Secret shop'})]));
           assert.equal(main.querySelectorAll('.shop-queue-write').length,0);
-          const query=window.matchMedia(SHOP_QUEUE_LAB), callbacks=[...query.events.get('change')];
+          const query=window.matchMedia(SHOP_QUEUE_LAB), callbacks=query.events.get('change').filter(c=>!resident.includes(c));
+          assert(callbacks.length);
           const table=main.querySelector('.shop-queue-table'); state.profile={id:'elsewhere'};
           density(false); assert(main.querySelector('.shop-queue-table')===table);
           assert(callbacks.every(callback=>!query.events.get('change').includes(callback)));
@@ -248,10 +251,12 @@ class ShoppingQueueTableInteractionTests(unittest.TestCase):
 
     def test_focused_table_region_returns_to_visible_group_and_only_latest_view_listens(self):
         self.run_queue_js("""
-          density(true); drawShopping(data([qrow('Alpha',1)]));
+          density(true); const resident=[...(window.matchMedia(SHOP_QUEUE_LAB).events.get('change')||[])];
+          drawShopping(data([qrow('Alpha',1)]));
           const holder=main.querySelector('.shop-queue-presentation'); main.querySelector('.shop-queue-table-wrap').focus();
           density(false); assert(document.activeElement===holder); assert.equal(holder.getAttribute('tabindex'),'-1');
-          const query=window.matchMedia(SHOP_QUEUE_LAB), before=[...query.events.get('change')];
+          const query=window.matchMedia(SHOP_QUEUE_LAB), before=query.events.get('change').filter(c=>!resident.includes(c));
+          assert(before.length);
           clear(main); drawShopping(data([qrow('Beta',1)]));
           assert(before.every(callback=>!query.events.get('change').includes(callback)));
           density(true); assert.equal(main.querySelectorAll('.shop-queue-table').length,1);
