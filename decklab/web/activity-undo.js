@@ -19,10 +19,13 @@ function activityUndoRow(row, kind) {
 function activityUndoEvidence(data, id, space) {
   if (!data || data.available !== true || data.id !== id || data.space !== space || !["collection", "tokens"].includes(data.kind)
       || typeof data.expect !== "string" || !/^[a-f0-9]{64}$/.test(data.expect)
-      || typeof data.label !== "string" || !data.label.trim() || !activityUndoRow(data.current, data.kind)) return null;
+      || typeof data.label !== "string" || !data.label.trim()) return null;
+  if (data.action === "add") return data.kind === "collection" && data.physical_confirmation_required === true && data.current === null
+    && activityUndoRow(data.restored, "collection") && Object.keys(data).sort().join(",") === "action,available,current,expect,id,kind,label,physical_confirmation_required,restored,space" ? data : null;
+  if (!activityUndoRow(data.current, data.kind)) return null;
   if (data.action === "remove") return data.kind === "collection" && data.reason_required === true && data.restored === null
     && !Object.hasOwn(data, "fields") && Object.keys(data).sort().join(",") === "action,available,current,expect,id,kind,label,reason_required,restored,space" ? data : null;
-  if (Object.hasOwn(data, "action") || Object.hasOwn(data, "reason_required")
+  if (Object.hasOwn(data, "action") || Object.hasOwn(data, "reason_required") || Object.hasOwn(data, "physical_confirmation_required")
       || !activityUndoRow(data.restored, data.kind) || !Array.isArray(data.fields) || !data.fields.length) return null;
   const allowed = ACTIVITY_UNDO_EDITABLE[data.kind], changed = ACTIVITY_UNDO_FIELDS[data.kind].filter(field => data.current[field] !== data.restored[field]);
   if (changed.some(field => !allowed.includes(field)) || changed.length !== data.fields.length
@@ -38,13 +41,20 @@ function activityUndoReceipt(answer, preview) {
     && /^[a-f0-9]{64}$/.test(answer.sha256) && typeof answer.revision === "string" && answer.revision.trim()
     && typeof answer.summary === "string" && answer.summary.trim();
   if (!confirmed) return false;
+  if (preview.action === "add") {
+    const key = answer.added_key;
+    return preview.kind === "collection" && answer.action === "add" && !Object.hasOwn(answer, "removed_key")
+      && activityUndoRow(answer.restored, "collection") && ACTIVITY_UNDO_FIELDS.collection.every(field => answer.restored[field] === preview.restored[field])
+      && key && typeof key === "object" && !Array.isArray(key) && Object.keys(key).sort().join(",") === "collector_number,finish,set"
+      && ["set", "collector_number", "finish"].every(field => key[field] === preview.restored[field]);
+  }
   if (preview.action === "remove") {
     const key = answer.removed_key;
-    return preview.kind === "collection" && answer.action === "remove" && answer.restored === null && key && typeof key === "object" && !Array.isArray(key)
+    return preview.kind === "collection" && answer.action === "remove" && !Object.hasOwn(answer, "added_key") && answer.restored === null && key && typeof key === "object" && !Array.isArray(key)
       && Object.keys(key).sort().join(",") === "collector_number,finish,set"
       && ["set", "collector_number", "finish"].every(field => key[field] === preview.current[field]);
   }
-  return !Object.hasOwn(answer, "action") && !Object.hasOwn(answer, "removed_key") && activityUndoRow(answer.restored, preview.kind)
+  return !Object.hasOwn(answer, "action") && !Object.hasOwn(answer, "removed_key") && !Object.hasOwn(answer, "added_key") && activityUndoRow(answer.restored, preview.kind)
     && ACTIVITY_UNDO_FIELDS[preview.kind].every(field => answer.restored[field] === preview.restored[field]);
 }
 
@@ -108,10 +118,12 @@ function openActivityUndo(view, id) {
 function activityUndoShow(ctx) {
   const { sheet, preview, view } = ctx, signature = JSON.stringify(preview);
   const removing = preview.action === "remove";
+  const adding = preview.action === "add";
   const words = { quantity: "Quantity", condition: "Condition", language: "Language", notes: "Notes" };
   const identity = ACTIVITY_UNDO_FIELDS[preview.kind].filter(field => !ACTIVITY_UNDO_EDITABLE[preview.kind].includes(field));
   const text = value => value === "" ? "Not recorded" : String(value);
   let reasonInput = null, acceptedReason = "", reviewedReason = null;
+  let ownershipInput = null, confirmedOwned = false;
   clear(sheet.body).append(el("h3", { text: preview.label }));
   if (removing) {
     sheet.body.append(el("p", { class: "box box-warn", text: "Undo removes all " + plural(preview.current.quantity, "recorded copy", "recorded copies")
@@ -134,6 +146,23 @@ function activityUndoShow(ctx) {
       error.textContent = ""; actions();
     };
     reasonInput.addEventListener("input", changed); reasonInput.addEventListener("change", changed);
+  } else if (adding) {
+    sheet.body.append(el("p", { class: "box box-warn", text: "Undo restores all " + plural(preview.restored.quantity, "recorded copy", "recorded copies")
+      + " of this printing, with the historical condition, language and notes shown below." }),
+      el("p", { class: "sub", text: "Confirm only if you still physically own the entire recorded quantity. If you own fewer copies, cancel and use Collection to record the copies you still own." }),
+      el("p", { class: "sub", text: "Saving creates one new audited change; the original change stays in Activity." }),
+      el("section", { class: "panel" }, el("h3", { text: "Historical row to restore" }),
+        el("dl", {}, ACTIVITY_UNDO_FIELDS.collection.flatMap(field => [el("dt", { text: field.replaceAll("_", " ") }),
+          el("dd", { text: text(preview.restored[field]) })]))));
+    const id = "activity-undo-owned-" + sheet.heading.id;
+    ownershipInput = el("input", { id, type: "checkbox" }); ownershipInput.checked = false;
+    sheet.body.append(el("label", { class: "choice", for: id }, ownershipInput, el("span", {
+      text: "I confirm all " + plural(preview.restored.quantity, "recorded copy", "recorded copies") + " of this printing are still physically owned." })));
+    ownershipInput.addEventListener("change", () => {
+      if (!ctx.here() || ctx.pending || ctx.saved || ctx.needsRefresh || !ownershipInput.isConnected || !sheet.body.contains(ownershipInput)
+          || ctx.preview !== preview || JSON.stringify(preview) !== signature) { ownershipInput.checked = confirmedOwned; return; }
+      confirmedOwned = ownershipInput.checked === true; ownershipInput.checked = confirmedOwned; error.textContent = ""; actions();
+    });
   } else {
     const panels = [["Current", "before"], ["Restored by Undo", "after"]].map(([title, key]) => el("section", { class: "panel" },
       el("h3", { text: title }), preview.fields.map(field => el("p", {}, el("b", { text: words[field.field] + ": " }), text(field[key])))));
@@ -144,11 +173,12 @@ function activityUndoShow(ctx) {
   const error = el("p", { class: "form-error", role: "alert", tabindex: "-1" }); sheet.body.append(error);
   function actions() {
     if (reasonInput) reasonInput.disabled = ctx.pending || ctx.saved || ctx.needsRefresh;
+    if (ownershipInput) ownershipInput.disabled = ctx.pending || ctx.saved || ctx.needsRefresh;
     sheetActions(sheet, ctx.saved ? [{ text: "Done", kind: "primary", onclick: event => { if (ctx.here() && event.currentTarget.isConnected) sheet.close(); } }]
       : ctx.needsRefresh ? [{ text: "Reload Activity", kind: "primary", onclick: event => { if (ctx.here() && event.currentTarget.isConnected) sheet.close(); } },
         { text: "Close", onclick: () => sheet.close() }]
         : [{ text: "Cancel", disabled: ctx.pending, onclick: () => sheet.close() },
-          { text: ctx.pending ? "Saving Undo." : "Save Undo", kind: "primary", disabled: ctx.pending || removing && !reviewedReason, onclick: save }]);
+          { text: ctx.pending ? "Saving Undo." : "Save Undo", kind: "primary", disabled: ctx.pending || removing && !reviewedReason || adding && !confirmedOwned, onclick: save }]);
   }
   async function save(event) {
     if (!ctx.here() || ctx.pending || ctx.saved || ctx.needsRefresh || !event?.currentTarget?.isConnected || !sheet.foot.contains(event.currentTarget)
@@ -157,11 +187,15 @@ function activityUndoShow(ctx) {
         || !reviewedReason || activityUndoRemovalReason(reasonInput.value) !== reviewedReason)) {
       error.textContent = "Enter and review a nonblank reason of at most 200 characters before saving Undo."; return;
     }
+    if (adding && (!ownershipInput?.isConnected || !sheet.body.contains(ownershipInput) || !confirmedOwned || ownershipInput.checked !== true)) {
+      error.textContent = "Confirm that every recorded copy is still physically owned before saving Undo."; return;
+    }
     const trigger = document.activeElement;
     const focusOwned = () => document.activeElement === trigger || document.activeElement === document.body || !document.activeElement?.isConnected;
     ctx.pending = true; error.textContent = ""; actions();
     try {
-      const answer = await apiWrite("/api/activity/undo", { id: ctx.id, expect: preview.expect, ...(removing ? { reason: reviewedReason } : {}) });
+      const answer = await apiWrite("/api/activity/undo", { id: ctx.id, expect: preview.expect,
+        ...(removing ? { reason: reviewedReason } : {}), ...(adding ? { confirm_owned: true } : {}) });
       state.library = null;
       if (!activityUndoReceipt(answer, preview)) throw new Error("The Undo result could not be confirmed.");
       if (!activityUndoOwner(ctx)) return;

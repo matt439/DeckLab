@@ -1,4 +1,4 @@
-"""Review one eligible collection/token update or collection insertion from original audit rows.
+"""Review eligible collection/token updates or collection insertions/deletions from original audit rows.
 
 The request supplies only a source change id and its opaque review receipt. The
 inventory backend reads the complete original change and rechecks it under its
@@ -14,7 +14,7 @@ from .common import ApiError, DATABASE_DOWN, _keys, _parse_body
 from .settings import _writer
 
 NO_CHANGE = "No undoable change at that ID."
-UNSUPPORTED = "This change cannot be undone here. Only a single supported collection or token edit, or an unheld nonbasic collection row addition, can be undone."
+UNSUPPORTED = "This change cannot be undone here. Only supported single-row edits, unheld nonbasic collection additions and verified collection deletions can be undone."
 CHANGED = "The change can no longer be undone safely. Reload Activity and review it again."
 UNCONFIRMED = "The undo result could not be confirmed. Reload Activity before trying again."
 SHA = re.compile(r"[a-f0-9]{64}")
@@ -50,10 +50,11 @@ def review_hint(change, shown, profile):
     kind = TABLE_KIND.get(row.get("table"))
     before, after = row.get("before"), row.get("after")
     insertion = row.get("table") == "collection_card" and row.get("op") == "INSERT" and before is None
-    if not kind or not isinstance(after, dict) or not insertion and (row.get("op") != "UPDATE" or not isinstance(before, dict)):
+    deletion = row.get("table") == "collection_card" and row.get("op") == "DELETE" and after is None and isinstance(before, dict)
+    if not kind or not deletion and (not isinstance(after, dict) or not insertion and (row.get("op") != "UPDATE" or not isinstance(before, dict))):
         return None
     space = _space(profile)
-    if not insertion and before.get("space_id") != space or after.get("space_id") != space \
+    if not insertion and before.get("space_id") != space or not deletion and after.get("space_id") != space \
             or not guard.allowed(profile, kind + ".edit", space) or shown.get("id") != change.get("id"):
         return None
     return {"review": True}
@@ -99,13 +100,16 @@ def _project(plan):
     columns = rules.FIELDS if kind == "collection" else rules.TOKEN_FIELDS
     current, restored = plan.get("current"), plan.get("restore")
     removing = plan.get("action") == "remove"
-    if not isinstance(current, dict) or not (restored is None if removing else isinstance(restored, dict)) \
+    adding = plan.get("action") == "add"
+    if not (current is None if adding else isinstance(current, dict)) \
+            or not (restored is None if removing else isinstance(restored, dict)) \
             or removing and (kind != "collection" or plan.get("reason_required") is not True) \
+            or adding and (kind != "collection" or plan.get("physical_confirmation_required") is not True) \
             or not isinstance(plan.get("expect"), str) \
             or not SHA.fullmatch(plan["expect"]) or not isinstance(plan.get("label"), str) or not plan["label"].strip():
         raise ApiError(503, UNCONFIRMED)
     rows = []
-    for source in (current,) if removing else (current, restored):
+    for source in (restored,) if adding else (current,) if removing else (current, restored):
         row = {}
         for key in columns:
             value = source.get(key)
@@ -119,6 +123,9 @@ def _project(plan):
     if removing:
         return {"available": True, "id": plan["change_id"], "expect": plan["expect"], "kind": kind, "space": plan["space"],
                 "label": plan["label"], "action": "remove", "reason_required": True, "current": rows[0], "restored": None}
+    if adding:
+        return {"available": True, "id": plan["change_id"], "expect": plan["expect"], "kind": kind, "space": plan["space"],
+                "label": plan["label"], "action": "add", "physical_confirmation_required": True, "current": None, "restored": rows[0]}
     current, restored = rows
     changed = [key for key in columns if current[key] != restored[key]]
     if not changed or set(changed) - set(MUTABLE[kind]):
@@ -155,11 +162,17 @@ def undo_view(id=None):
 def apply_undo(body):
     """POST {profile,id,expect}: one new audited undo, never a history rewrite."""
     data = _parse_body(body)
-    _keys(data, ("profile", "id", "expect"), ("reason",))
+    _keys(data, ("profile", "id", "expect"), ("reason", "confirm_owned"))
     profile, change_id = _writer(data), _id(data["id"])
     plan = _review(change_id, profile)  # hidden/missing is resolved before malformed or stale receipt errors
     _project(plan)
     removing = plan.get("action") == "remove"
+    adding = plan.get("action") == "add"
+    if adding:
+        if data.get("confirm_owned") is not True:
+            raise ApiError(400, "Confirm that you still physically own every recorded copy before restoring this row.")
+    elif "confirm_owned" in data:
+        raise ApiError(400, "Physical ownership confirmation is accepted only when restoring a deleted collection row.")
     reason = None
     if removing:
         from decklab.lib.inventory import undo
@@ -174,7 +187,8 @@ def apply_undo(body):
     if data["expect"] != plan["expect"]:
         raise _changed(plan["label"])
     op = inventory.Op("inventory.undo", {"change_id": change_id, "space": plan["space"], "expect": data["expect"],
-                                         **({"reason": reason} if removing else {})})
+                                         **({"reason": reason} if removing else {}),
+                                         **({"confirm_owned": True} if adding else {})})
     after, summary = saving.apply_op(op, profile, f"Undo activity change {change_id}", _refused,
                                      **({"reason": reason} if removing else {}))
     extra, counts = summary.extra or {}, summary.counts or {}
@@ -184,9 +198,16 @@ def apply_undo(body):
         raise ApiError(503, UNCONFIRMED)
     if removing and (extra.get("action") != "remove" or extra.get("undo_reason") != reason):
         raise ApiError(503, UNCONFIRMED)
+    if adding:
+        expected = {"added_rows": 1, "bumped_rows": 0, "skipped_basics": 0, "cards": plan["restore"]["quantity"]}
+        if extra.get("action") != "add" or extra.get("confirmed_owned") is not True or counts.get("merged") is not False \
+                or any(type(counts.get(key)) is not int or counts[key] != value for key, value in expected.items()):
+            raise ApiError(503, UNCONFIRMED)
     sheet, restored = _restored(after, plan)
     result = {"saved": True, "source_id": change_id, "expect": data["expect"], "kind": plan["kind"], "space": plan["space"],
               "sha256": files.rendered_sha256(sheet), "revision": after.revision, "restored": restored, "summary": summary.text}
     if removing:
         result.update(action="remove", removed_key={key: plan["current"][key] for key in ("set", "collector_number", "finish")})
+    elif adding:
+        result.update(action="add", added_key={key: plan["restore"][key] for key in ("set", "collector_number", "finish")})
     return result

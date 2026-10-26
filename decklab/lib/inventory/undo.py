@@ -1,10 +1,12 @@
 """Guarded inverse of one supported audited row, never a historical rewrite.
 
 Audit row shape is authoritative; messages cannot prove which command made a change.
-Same-identity edits and an unheld nonbasic collection insertion are supported. Every check runs again in
-the ordinary PostgreSQL inventory transaction before its pure edit helper is called.
+Same-identity edits, unheld nonbasic collection insertions and confirmed, verified
+collection deletions are supported. Every check runs again in the ordinary
+PostgreSQL inventory transaction before its pure edit helper is called.
 """
 import hashlib
+import io
 import json
 import re
 
@@ -76,6 +78,16 @@ def _source(rows, space):
                 or any(row["key"][key] != new[key] for key in COLLECTION_KEYS):
             raise UndoUnsupported("The original collection identity cannot be checked.")
         return row, _ordinary(new, COLLECTION), None
+    if row.get("table") == COLLECTION and row.get("op") == "DELETE" and new is None:
+        if not isinstance(old, dict) or old.get("space_id") != space:
+            raise UndoMissing()
+        if set(old) != COLLECTION_FIELDS:
+            raise UndoUnsupported("The deleted collection row has an unsupported schema.")
+        _identifier(row.get("id"))
+        if not isinstance(row.get("key"), dict) or set(row["key"]) != COLLECTION_KEYS \
+                or any(row["key"][key] != old[key] for key in COLLECTION_KEYS):
+            raise UndoUnsupported("The original collection identity cannot be checked.")
+        return row, None, _ordinary(old, COLLECTION)
     if row.get("table") not in SUPPORTED or not isinstance(old, dict) or not isinstance(new, dict) \
             or old.get("space_id") != space or new.get("space_id") != space:
         raise UndoMissing()
@@ -117,6 +129,9 @@ def restored_row(snapshot, plan):
                 or any(rules.ident(row.as_dict()) == rules.ident(plan["current"]) for row in sheet.rows):
             raise UndoConflict("The removed row's absence cannot be confirmed. Reload the list.", plan["label"])
         return None
+    if plan.get("action") == "add" and (not sheet.exists or sheet.error is not None \
+            or sheet.strict_error is not None or sheet.csv_error is not None):
+        raise UndoConflict("The restored row cannot be confirmed. Reload the list.", plan["label"])
     matches = [row for row in sheet.rows if (rules.ident(row.as_dict()) == rules.ident(plan["restore"]) if table == COLLECTION
                else row.id == plan["key"]["id"])]
     if len(matches) != 1:
@@ -151,6 +166,9 @@ def _current_row(snapshot, source, wanted, space, label):
 def _inverse(snapshot, source, wanted, restore, space):
     if source["table"] == COLLECTION:
         from . import ops_collection
+        if wanted is None:
+            return ops_collection.add(snapshot, space, restore,
+                                      sha256=files.rendered_sha256(snapshot.collection(space)))
         if restore is None:
             return ops_collection.remove(snapshot, space, list(rules.ident(wanted)),
                                          sha256=files.rendered_sha256(snapshot.collection(space)),
@@ -325,6 +343,48 @@ def removal_reason(value):
     return reason
 
 
+def _absent_row(snapshot, restore, space, label):
+    sheet = snapshot.collection(space)
+    if sheet.error is not None or sheet.strict_error is not None or sheet.csv_error is not None \
+            or not sheet.exists and sheet.rows:
+        raise UndoConflict("The current collection cannot be checked. Use the Collection editor.", label)
+    if any(rules.ident(row.as_dict()) == rules.ident(restore) for row in sheet.rows):
+        raise UndoConflict("That printing is already in the collection. Nothing was restored.", label)
+
+
+def _deleted_row(restore):
+    """Validate exact historical facts without tidying them or guessing a printing."""
+    from decklab.lib import cards
+    try:
+        cells = _cells(restore)
+        checked = rules.parse_cards(io.StringIO(rules.collection_csv_bytes([cells]).decode("utf-8"), newline=""),
+                                    "Undo", existing=True)
+        if checked != [cells] or rules.ordinary_basic(cells):
+            raise ValueError("Unsupported historical row")
+        printing = cards.printing(restore["set"], restore["collector_number"])
+        if cards.resolve(restore["name"]) != restore["name"] or not isinstance(printing, dict) \
+                or not isinstance(cards.printing_card(restore["set"], restore["collector_number"]), dict) \
+                or cards.resolve(printing.get("name")) != restore["name"] \
+                or not isinstance(printing.get("games"), list) or not isinstance(printing.get("finishes"), list) \
+                or any(not isinstance(value, str) for value in [*printing["games"], *printing["finishes"]]) \
+                or printing.get("digital") is not False or "paper" not in printing.get("games", []) \
+                or restore["finish"] not in printing.get("finishes", []):
+            raise ValueError("Historical printing cannot be verified")
+    except Exception:
+        raise UndoUnsupported("The exact deleted row cannot be restored unchanged with the current card data. Use the Collection editor.") from None
+
+
+def _added_row(after, summary, restore, space, label):
+    counts = summary.counts or {}
+    expected = {"added_rows": 1, "bumped_rows": 0, "skipped_basics": 0, "cards": restore["quantity"]}
+    if any(type(counts.get(key)) is not int or counts[key] != value for key, value in expected.items()) \
+            or counts.get("merged") is not False:
+        raise UndoConflict("The deleted row could not be restored exactly. Nothing was saved.", label)
+    actual = restored_row(after, {"kind": "collection", "space": space, "action": "add", "restore": restore, "label": label})
+    if actual != restore:
+        raise UndoConflict("The deleted row would change during restoration. Use the Collection editor.", label)
+
+
 def review(change_id, space, snapshot=None):
     """Internal current→restore plan, only after proving the entire source is in space."""
     _identifier(change_id)
@@ -335,12 +395,18 @@ def review(change_id, space, snapshot=None):
         raise UndoUnsupported("Undo is available only with the database audit trail.")
     snapshot = current() if snapshot is None else snapshot
     source, wanted, restore = _source(store.undo_audit(change_id), space)
-    label = _label(source["table"], wanted)
+    label = _label(source["table"], restore if wanted is None else wanted)
     if store.undo_latest(source["table"], source["key"]) != source["id"]:
         raise UndoConflict("This row was touched after the selected change. Nothing was undone.", label)
-    _current_row(snapshot, source, wanted, space, label)
-    after, _ = _inverse(snapshot, source, wanted, restore, space)
-    if restore is None:
+    if wanted is None:
+        _absent_row(snapshot, restore, space, label)
+        _deleted_row(restore)
+    else:
+        _current_row(snapshot, source, wanted, space, label)
+    after, inverse_summary = _inverse(snapshot, source, wanted, restore, space)
+    if wanted is None:
+        _added_row(after, inverse_summary, restore, space, label)
+    elif restore is None:
         _insert_removal(snapshot, after, wanted, space, label, source)
     elif restore["quantity"] < wanted["quantity"]:
         _reduction(snapshot, after, source["table"], space, label, source)
@@ -349,7 +415,9 @@ def review(change_id, space, snapshot=None):
     result = {"change_id": change_id, "row_change_id": source["id"], "kind": SUPPORTED[source["table"]][0],
             "space": space, "key": source["key"], "current": wanted, "restore": restore, "label": label,
             "expect": hashlib.sha256(receipt.encode("utf-8")).hexdigest()}
-    if restore is None:
+    if wanted is None:
+        result.update(action="add", physical_confirmation_required=True)
+    elif restore is None:
         result.update(action="remove", reason_required=True)
     else:
         result["fields"] = [{"field": key, "before": wanted[key], "after": restore[key]}
@@ -358,7 +426,7 @@ def review(change_id, space, snapshot=None):
 
 
 @register("inventory.undo")
-def apply_undo(snapshot, *, change_id, space, expect, reason=None):
+def apply_undo(snapshot, *, change_id, space, expect, reason=None, confirm_owned=False):
     """Called inside the existing backend lock; source and latest audit share its connection."""
     if not isinstance(expect, str) or not SHA.fullmatch(expect):
         raise Invalid("Review this Undo before applying it.")
@@ -366,14 +434,20 @@ def apply_undo(snapshot, *, change_id, space, expect, reason=None):
     if plan["expect"] != expect:
         raise UndoConflict("The inventory or decks changed after the Undo preview. Review it again.", plan["label"])
     removing = plan.get("action") == "remove"
+    adding = plan.get("action") == "add"
     if removing:
         reason = removal_reason(reason)
+    if adding and confirm_owned is not True:
+        raise Invalid("Confirm that you still physically own every recorded copy before restoring this row.")
     table = COLLECTION if plan["kind"] == "collection" else TOKENS
     after, summary = _inverse(snapshot, {"table": table}, plan["current"], plan["restore"], space)
+    if adding:
+        _added_row(after, summary, plan["restore"], space, plan["label"])
     sheet = after.collection(space) if table == COLLECTION else after.token_set(space)
     return after, Summary(f"Undo change #{change_id}: {'remove added row' if removing else 'restore'} {plan['label']}",
                           {**summary.counts, "undo": 1},
-                          {sheet.path: ["remove"] if removing else [field["field"] for field in plan["fields"]]},
+                          {sheet.path: ["add"] if adding else ["remove"] if removing else [field["field"] for field in plan["fields"]]},
                           {**(summary.extra or {}), "undo_of": change_id, "space": space,
                            "kind": plan["kind"], "row_change_id": plan["row_change_id"],
-                           **({"action": "remove", "undo_reason": reason} if removing else {})})
+                           **({"action": "remove", "undo_reason": reason} if removing else {}),
+                           **({"action": "add", "confirmed_owned": True} if adding else {})})

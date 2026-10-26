@@ -69,7 +69,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 | `E11-S31` | DECISION | could | M | Global search in the top bar ([stories.md](decklab/design/stories.md#e11-s31)): Matt chooses sources and result grouping before building. |
 | `E11-S32` | OPEN | could | M | A prebuilt release of the Forge fork, with a checksum, as SELF-HOSTING.md's first Forge route. |
 | `E11-S33` | OPEN | could | L | Full Linux support: reproduce and fix the failures from the dated self-host check, add Linux CI, then a nightly timer and server service. |
-| `E11-S08` | OPEN | could | L | Same-identity UPDATE Undo and removal of one unused inserted nonbasic collection row are built. Broader import, receipt, removal, identity and multi-row inverses remain. |
+| `E11-S08` | OPEN | could | L | Single-row UPDATE Undo and narrow collection INSERT/DELETE inverses are built. Broader import, receipt, removal, identity and multi-row inverses remain. |
 | `E11-S02` | DECISION | should | S | The "Deck Lab is off" Worker is deployed (`decklab/cloudflare/`): Matt checks a signed-in save, a photo upload, and the page with Deck Lab stopped. |
 
 ## Areas with no open rows
