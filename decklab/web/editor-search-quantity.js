@@ -13,7 +13,7 @@ function editorAddLine(ed, card, section) {
 
 /** Passive answers may paint during another operation; only current search actions may mutate. */
 function editorSearchCanAct(ac) {
-  if (!editorSearchCurrent(ac) || ac.owner.saving || ac.owner.asking || ac.owner.leaving) return false;
+  if (!editorSearchCurrent(ac) || ac.owner.saving || ac.owner.asking || ac.owner.leaving || keyboardMenuOpen()) return false;
   return ![...document.querySelectorAll("dialog[open]")].some(dialog => !dialog.contains(ac.input));
 }
 
@@ -41,12 +41,15 @@ function searchQuantitySlot(ac, card, index, addButton) {
     return record.edit = { line: record.line, section: record.section, done: false };
   };
   qty.addEventListener("focus", () => { if (current(qty)) { editing(); qty.select(); } });
-  qty.addEventListener("input", () => {
+  const input = (event) => {
+    if (editorKeyIgnored(event) || keyboardMenuOpen()) return;
     if (!current(qty)) { syncSearchQuantity(record); return; }
     editing();
     const n = typedQty(qty.value);
     if (n >= 1) act(qty, line => setQty(line.uid, n));
-  });
+  };
+  qty.addEventListener("input", input);
+  editorComposition(qty, input);
   const commit = (event, kind) => {
     // A focused change precedes blur's destination. Keep its controls alive until blur or explicit Enter.
     if (kind === "change" && document.activeElement === qty && current(qty)) return;
@@ -68,9 +71,10 @@ function searchQuantitySlot(ac, card, index, addButton) {
     if (accepted && n === 0 && ownedExit && record.group.hidden && editorSearchCanAct(ac)
         && (background(focused) || record.group.contains(focused) || focused === undo)) addButton.focus({ preventScroll: true });
   };
-  qty.addEventListener("change", event => commit(event, "change"));
-  qty.addEventListener("blur", event => commit(event, "blur"));
+  qty.addEventListener("change", event => { if (!editorKeyIgnored(event) && !keyboardMenuOpen()) commit(event, "change"); });
+  qty.addEventListener("blur", event => { if (!editorKeyIgnored(event) && !keyboardMenuOpen()) commit(event, "blur"); });
   qty.addEventListener("keydown", event => {
+    if (document.activeElement !== qty || editorKeyIgnored(event) || keyboardMenuOpen()) return;
     // Zero can hide or disable the next control. Handle only that owned exit before the browser targets it.
     if (event.key === "Tab" && !event.ctrlKey && !event.altKey && !event.metaKey) {
       const next = event.shiftKey ? minus : plus;
@@ -78,11 +82,12 @@ function searchQuantitySlot(ac, card, index, addButton) {
       const remaining = (ac.owner.lists[record.section] || []).filter(line => line !== record.line);
       const after = editorAddLine({ lists: { [record.section]: remaining } }, card, record.section);
       if (after && (event.shiftKey || after.qty < MAX_COPIES)) return; // The native adjacent button survives.
-      event.preventDefault(); commit(event, "tab");
+      event.preventDefault(); if (!event.repeat) commit(event, "tab");
       return;
     }
-    if (event.key !== "Enter") return;
-    event.preventDefault(); commit(event, "enter");
+    if (event.key !== "Enter" || event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) return;
+    event.preventDefault(); if (event.repeat) return;
+    commit(event, "enter");
     if (document.activeElement === qty) qty.blur();
   });
   const plus = el("button", { type: "button", class: "step step-plus", text: "+",

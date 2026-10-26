@@ -676,3 +676,14 @@ events before acting. Navigation may repeat; activation does not. Collection
 sort/pager redraws restore only their fresh owned control. Dialog focus order,
 not reusable-viewer DOM order, owns fallback navigation. No new binding belongs
 to this reliability slice; contextual help and fast routes follow separately.
+
+Editor keyboard actions use the view-only `ed.dom.keyboardOwner` and
+`editorKeyboardCurrent()` before Save/Undo. `editorKeyIgnored()` and per-input
+`editorComposition()` retain event/IME ownership and exact Enter variants.
+`editorUndoFocus()`/`restoreEditorUndoFocus()` retain semantic row occurrence or
+stable bar-part addresses, with visible existing-control fallbacks and no stale
+focus reclamation. Main quantity callbacks require current mounted ownership,
+exact line/input, enabled control and no asking/leaving context. They deliberately
+retain typing during the pre-save check; post-request input retention remains
+a separate Save-state limit in HISTORY. No payload or save-path change is part
+of this reliability slice.

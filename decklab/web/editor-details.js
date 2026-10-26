@@ -251,6 +251,9 @@ function drawKitNeeds() {
  * other decks have only gets the focus (Enter or Space picks it, after the warning), so arrowing past it
  * never opens the warning. */
 function kitArrow(e, key) {
+  if (!editorKeyboardCurrent() || editor.saving || editor.asking || editor.leaving
+    || editorKeyIgnored(e) || keyboardMenuOpen() || document.querySelector("dialog[open]")
+    || e.ctrlKey || e.metaKey || e.altKey || e.shiftKey || !editor?.dom?.page?.contains(e.currentTarget)) return;
   const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key];
   if (!step) return;
   const tiles = [...e.currentTarget.querySelectorAll(".kit-tile")].filter((t) => !t.disabled);

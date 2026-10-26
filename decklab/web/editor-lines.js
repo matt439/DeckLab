@@ -291,21 +291,76 @@ function typedQty(text) {
   return /^\s*\d{1,2}\s*$/.test(text) ? parseInt(text, 10) : NaN;
 }
 
+/** A row/control's semantic address survives copyList's fresh page uids during Undo. */
+function editorUndoFocus(ed) {
+  const host = ed.dom.lines, active = document.activeElement;
+  if (!editorKeyboardCurrent(ed) || !active?.isConnected) return null;
+  const address = { active, token: routeToken, profile: ed.profile, scope: JSON.stringify([ed.id, ed.version, ed.space]) };
+  const bar = ["addCards", "save", "saveMore", "checks"].find((key) => ed.dom.barParts?.[key] === active);
+  if (bar) return { ...address, bar };
+  if (!host?.contains(active)) return null;
+  const row = [...host.querySelectorAll("[data-uid]")].find((node) => node.editorChange && node.contains(active));
+  let found = row?.editorChange && findLine(row.editorChange.line.uid), kind = active.dataset.focus?.split(":")[0];
+  if (found?.line !== row?.editorChange?.line || found?.section !== row?.editorChange?.section) found = null;
+  if (row?.editorChange?.trigger?.contains(active)) kind = "card";
+  if (!found) {
+    const gone = ed.removed.find((item) => String(item.uid) === active.closest?.("[data-removed]")?.dataset.removed);
+    if (!gone) return null;
+    found = { line: gone.line, section: gone.section, index: gone.before.length }; kind = "plus";
+  }
+  const lines = ed.lists[found.section] || [], key = lineKey(found.line);
+  return { ...address, key, section: found.section, index: found.index, kind,
+    occurrence: lines.slice(0, found.index).filter((line) => lineKey(line) === key).length };
+}
+
+/** Restore only the owned row focus lost by this synchronous redraw, never a new field or modal focus. */
+function restoreEditorUndoFocus(ed, saved) {
+  if (!saved) return;
+  const here = () => editorKeyboardCurrent(ed) && saved.token === routeToken && saved.profile === state.profile?.id
+    && saved.scope === JSON.stringify([ed.id, ed.version, ed.space]) && (saved.bar || ed.dom.lines?.isConnected)
+    && !ed.saving && !ed.asking && !ed.leaving && !document.querySelector("dialog[open]") && !keyboardMenuOpen();
+  const visible = (node) => node?.isConnected && !node.disabled && !node.hidden && !node.closest("[hidden]")
+    && !node.matches(":disabled") && (!node.getClientRects || node.getClientRects().length > 0)
+    && (/^(BUTTON|INPUT|SELECT|TEXTAREA|SUMMARY)$/.test((node.tagName || node.tag || "").toUpperCase()) || node.getAttribute("tabindex") !== null);
+  const active = document.activeElement, freshBar = saved.bar && ed.dom.barParts?.[saved.bar];
+  if (!here() || active && active !== saved.active && active !== document.body && active.isConnected
+    && (active !== freshBar || visible(active))) return;
+  const lines = ed.lists[saved.section] || [], matches = lines.filter((line) => lineKey(line) === saved.key);
+  const line = matches[Math.min(saved.occurrence, matches.length - 1)] || lines[Math.min(saved.index, lines.length - 1)];
+  const row = [...ed.dom.lines.querySelectorAll("[data-uid]")].find((node) => node.editorChange && node.editorChange.line === line);
+  const selectors = { minus: ".step-minus", plus: ".step-plus", qty: ".qty-input", more: ".edit-more", print: ".edit-print" };
+  const preferred = saved.bar ? freshBar : saved.kind === "card" ? row?.editorChange?.trigger
+    : selectors[saved.kind] && row?.querySelector(selectors[saved.kind]);
+  const target = [preferred, row?.querySelector(".qty-input"), ed.dom.page.querySelector('[data-focus="tab:cards"]'), ed.dom.lines.querySelector("button"),
+    ed.dom.barParts?.addCards, ed.dom.barParts?.save].find(visible);
+  if (!target || !here()) return;
+  target.focus({ preventScroll: true });
+  if (here() && document.activeElement === target) target.scrollIntoView({ block: "center" });
+}
+
 /** − n +. "−" on a line of 1 removes it (with Undo, where it was). */
 function stepper(line, where) {
-  const uid = line.uid;
+  const ed = editor, uid = line.uid;
   const qty = el("input", { class: "qty-input", type: "text", inputmode: "numeric", pattern: "[0-9]*", maxlength: 2,
     value: String(line.qty), "aria-label": `Copies of ${line.name}`, "data-focus": `qty:${where}:${uid}`,
     enterkeyhint: "done" });
+  // ed.saving also covers the editable pre-save check; it is not a main-input lock.
+  const current = () => editor === ed && ed.profile === state.profile?.id && qty.isConnected
+    && editorKeyboardCurrent(ed) && !ed.asking && !ed.leaving && !qty.disabled && !qty.matches(":disabled")
+    && findLine(uid)?.line === line;
   qty.addEventListener("focus", () => qty.select());
   // A number counts as it's typed (the count, the draft, the checks) and nothing is drawn again: the
   // tap that comes next, on Save or on another row's +, lands on what the finger went for.
-  qty.addEventListener("input", () => {
+  const input = (event) => {
+    if (!current() || editorKeyIgnored(event) || keyboardMenuOpen() || document.querySelector("dialog[open]")) return;
     const n = typedQty(qty.value);
     if (n >= 1) setQty(uid, n);
-  });
+  };
+  qty.addEventListener("input", input);
+  editorComposition(qty, input);
   // Leaving the box: 0 removes the line, anything that isn't a number goes back to the count.
-  qty.addEventListener("change", () => {
+  qty.addEventListener("change", (event) => {
+    if (!current() || editorKeyIgnored(event) || keyboardMenuOpen() || document.querySelector("dialog[open]")) return;
     const found = findLine(uid);
     if (!found) return;
     const n = typedQty(qty.value);
@@ -316,7 +371,11 @@ function stepper(line, where) {
     if (n >= 1 && n !== found.line.qty) setQty(uid, n);
     qty.value = String(found.line.qty);
   });
-  qty.addEventListener("keydown", (e) => { if (e.key === "Enter") qty.blur(); });
+  qty.addEventListener("keydown", (e) => {
+    if (!current() || document.activeElement !== qty || editorKeyIgnored(e) || keyboardMenuOpen() || document.querySelector("dialog[open]")
+      || e.ctrlKey || e.metaKey || e.altKey || e.shiftKey || e.key !== "Enter") return;
+    e.preventDefault(); if (!e.repeat) qty.blur();
+  });
   return el("div", { class: "stepper edit-stepper", "data-uid": uid },
     el("button", { type: "button", class: "step step-minus", "aria-label": line.qty <= 1 ? `Remove ${line.name}` : `One fewer ${line.name}`,
       "data-focus": `minus:${where}:${uid}`, onclick: () => stepQty(uid, -1) }, "−"),

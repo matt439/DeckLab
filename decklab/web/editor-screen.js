@@ -59,6 +59,7 @@ function drawEditor() {
       work,
       side || !listOpen ? null : ed.dom.check,
       ed.dom.bar]))]);
+  ed.dom.keyboardOwner = { page: ed.dom.page, token: routeToken, profile: ed.profile };
   mountEditorPanes();
   drawMain();
   drawBanners();
@@ -345,6 +346,8 @@ function mainTabs() {
 
 /** A tablist's keys (the tabs pattern): Left and Right (wrapping), Home and End pick the tab and focus it. */
 function tabArrows(e) {
+  if (!editorKeyboardCurrent() || editorKeyIgnored(e) || keyboardMenuOpen() || document.querySelector("dialog[open]")
+    || e.ctrlKey || e.metaKey || e.altKey || e.shiftKey || !editor?.dom?.page?.contains(e.currentTarget)) return;
   const tabs = [...e.currentTarget.querySelectorAll("[role=tab]")];
   const at = tabs.indexOf(document.activeElement);
   if (at < 0) return;
@@ -915,16 +918,16 @@ function drawBar() {
       count: el("div", { class: "bar-count" }),
       checking: el("span", { class: "bar-checking", hidden: true },
         el("span", { class: "spinner spinner-small", "aria-hidden": "true" }), "Checking"),
-      checks: el("button", { type: "button", class: "btn btn-quiet bar-warn", hidden: true, onclick: jumpToChecks }),
+      checks: el("button", { type: "button", class: "btn btn-quiet bar-warn", hidden: true, "data-focus": "bar:checks", onclick: jumpToChecks }),
       dot: el("span", { class: "dot", role: "img", "aria-label": "(unsaved changes)", hidden: true }) };
     // The Quick edit's search sheet; below 1,100 px (editor.css) a jump to the Add panel above the list.
     p.addCards = noOwnedList() ? null : el("button", { type: "button", class: "btn bar-add" + (ed.quick ? "" : " bar-add-jump"),
-      onclick: ed.quick ? openAddSheet : focusSearch }, "Add cards");
+      "data-focus": "bar:add", onclick: ed.quick ? openAddSheet : focusSearch }, "Add cards");
     if (!ed.readOnly) {
       p.save = el("button", { type: "button", class: "btn btn-primary bar-save", onclick: () => saveNow(),
         "data-focus": "save" }, ed.mode === "new" ? "Create" : "Save", p.dot);
       p.saveMore = ed.quick ? null : el("button", { type: "button", class: "btn btn-primary bar-save-more",
-        "aria-label": "More ways to save", "aria-haspopup": "menu", text: "▾",
+        "aria-label": "More ways to save", "aria-haspopup": "menu", "data-focus": "bar:save-more", text: "▾",
         onclick: () => openMenu(p.saveMore, [{ text: ed.mode === "new" ? "Create & view deck" : "Save & view deck",
           onclick: () => saveNow({ viewAfter: true }) }]) });
     }

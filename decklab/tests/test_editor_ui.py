@@ -126,7 +126,7 @@ class EditorPageTests(unittest.TestCase):
 
     def test_ctrl_z_takes_back_each_change(self):
         self.run_js("""
-          edit();
+          edit(); drawEditor(); // Real mounted ownership remains while this model test stubs redraw.
           drawEditor = () => {}; drawLines = () => {};
           changed = (opts) => { editor.dirty = isDirty(); if (!opts || opts.history !== false) recordHistory(editor); };
           editor.lists.Deck[0].qty = 3; changed({list: false});
@@ -143,7 +143,6 @@ class EditorPageTests(unittest.TestCase):
           editor.lists.Deck[0].qty = 1; changed({list: false});
           const typed = document.fire("keydown", {key: "z", ctrlKey: true, target: {tagName: "TEXTAREA"}});
           assert.equal(typed.defaultPrevented, false);
-          editor.dom = {x: 1};
           const event = document.fire("keydown", {key: "z", ctrlKey: true, target: document.body});
           assert.equal(event.defaultPrevented, true);
           assert.equal(editor.lists.Deck.find(l => l.name === "Llanowar Elves").qty, 4);
@@ -334,8 +333,7 @@ class EditorPageTests(unittest.TestCase):
 
     def test_ctrl_s_never_reaches_the_browser_while_a_sheet_is_open(self):
         self.run_js("""
-          edit();
-          editor.dom = {x: 1};
+          edit(); drawEditor();
           let saves = 0; saveNow = () => { saves += 1; };
           const sheet = el("dialog", {open: ""}); document.body.append(sheet);
           const e = document.fire("keydown", {key: "s", ctrlKey: true, target: document.body});
@@ -372,7 +370,7 @@ class EditorPageTests(unittest.TestCase):
 
     def test_the_paste_toasts_undo_takes_back_only_the_paste(self):
         self.run_js("""
-          edit();
+          edit(); drawEditor(); // Mount before stubbing the redraw side effects below.
           drawEditor = () => {}; drawLines = () => {}; syncSections = () => {};
           changed = (opts) => { editor.dirty = isDirty(); if (!opts || opts.history !== false) recordHistory(editor); };
           let undo = null;

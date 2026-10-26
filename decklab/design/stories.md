@@ -3854,6 +3854,8 @@ Current viewer-caption counts built 2026-10-26: in-place quantities and merged R
 
 Matt's approved desktop keyboard plan started 2026-10-26: shared menu/dialog ownership, Library/Deck guards and Collection sort/pager focus are built. 458 guarded UI/source checks and 16 synthetic Chromium interactions passed, with real data writes blocked. Editor reliability, contextual help and fast routes remain separate stages; global search remains E11-S31's scope choice. See [HISTORY.md](../HISTORY.md#page-and-menu-keyboard-reliability-2026-10-26-approved-desktop-shortcut-plan-step-1).
 
+The approved keyboard plan's Editor reliability built 2026-10-26: exact shortcut/IME/event ownership, semantic row/bar Undo focus and stale callback guards; pre-save quantity typing remains live. 472 guarded checks and 16 synthetic Chromium Editor interactions passed, plus the existing Shopping R route in the completed fixture. Contextual help and fast routes follow separately. The source-only post-request main-input race remains a bar/Save-state limitation, not a claimed actual Save test. See [HISTORY.md](../HISTORY.md#editor-keyboard-reliability-and-undo-focus-2026-10-26-approved-desktop-shortcut-plan-step-1).
+
 Gap: slices 9 to 12's touch/Safari acceptance, Collection's open colour-filter choice and Receive's check-to-row association; then slices 13 to 15 (criteria 1 to 3 and 6). Independent coding through slice 12 is built; component checks stay separate until their row association is authoritative. Device checks do not block coding. Section 6's question 4 is settled (Matt, 2026-10-25: only Building and Idea tiles show a status pill). The lab top bar's search is E11-S31.
 
 <a id="e11-s31"></a>

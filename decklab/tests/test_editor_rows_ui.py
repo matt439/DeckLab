@@ -110,7 +110,7 @@ class EditorRowInteractionTests(unittest.TestCase):
           changed=()=>{};let reads=0,writes=0;
           api=async()=>{reads++;throw Error('unexpected read');};apiWrite=async()=>{writes++;throw Error('unexpected write');};
           for (const look of ['list','visual']) {
-            clear(main);const ed=edit();ed.look=look;ed.dom.lines=el('div');main.append(ed.dom.lines);drawLines();
+            clear(main);const ed=edit();ed.look=look;drawEditor(); // The actual mounted page owns row input.
             const line=ed.lists.Deck[0], row=ed.dom.lines.querySelector(`[data-uid="${line.uid}"]`);
             const plus=row.querySelector('.step-plus'), minus=row.querySelector('.step-minus'), qty=row.querySelector('.qty-input');
             const trigger=row.querySelector('[data-viewer="editor"]'), metadata=viewerCards.get(trigger);

@@ -1002,7 +1002,9 @@ function recordHistory(ed = editor) {
 /** Ctrl+Z: back to the state before the last change. False when there's nothing to undo. */
 function undoLast() {
   const ed = editor;
-  if (!ed || !ed.history || !ed.history.length) return false;
+  if (!editorKeyboardCurrent(ed) || ed.saving || ed.asking || ed.leaving || !ed.history?.length
+    || document.querySelector("dialog[open]") || keyboardMenuOpen()) return false;
+  const focus = editorUndoFocus(ed);
   const was = JSON.parse(ed.history.pop());
   ed.lists = copyList(was.lists);
   ed.fields = was.fields;
@@ -1016,37 +1018,51 @@ function undoLast() {
   syncSections();
   drawEditor();
   changed({ list: false, history: false });
+  restoreEditorUndoFocus(ed, focus);
   return true;
 }
 
-/** True when a key went to a box being typed in (it has its own Ctrl+Z, and "/" is a character there). */
-function typingIn(target) {
-  return !!(target && (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName || "")));
+/** The mounted Editor page and person still own these controls. */
+function editorKeyboardCurrent(ed = editor) {
+  const own = ed?.dom?.keyboardOwner;
+  return !!(ed === editor && own && own.page === ed.dom.page && own.page.isConnected
+    && own.token === routeToken && own.profile === ed.profile && own.profile === state.profile?.id);
 }
+
+/** An earlier handler, IME composition or AltGraph owns this event. Binding modifiers stay local. */
+function editorKeyIgnored(event) {
+  return !!(event.defaultPrevented || event.isComposing || event.keyCode === 229
+    || event.getModifierState?.("AltGraph") || event.target?.editorComposing);
+}
+
+/** Intermediate composed text is not a quantity or an Add intent. Process the finished text once. */
+function editorComposition(input, update) {
+  input.addEventListener("compositionstart", (event) => { input.editorComposing = true; update(event); });
+  input.addEventListener("compositionend", (event) => { input.editorComposing = false; update(event); });
+}
+
+/** True when a key went to a box being typed in (it has its own Ctrl+Z, and "/" is a character there). */
+function typingIn(target) { return keyboardEditing(target); }
 
 /** The editor's keys: Ctrl/Cmd+S saves, Ctrl/Cmd+Z takes back the last change, "/" goes to the search. */
 function editorKeys(e) {
   const ed = editor;
-  if (!ed || !ed.dom || ed.leaving) return;
-  const mod = e.ctrlKey || e.metaKey;
-  const key = (e.key || "").toLowerCase();
-  if (document.querySelector("dialog[open]")) {
-    // A sheet is open (a printing, a paste, the review): Ctrl+S does nothing rather than the browser's
-    // "Save page as".
-    if (mod && !e.altKey && key === "s") e.preventDefault();
+  if (!editorKeyboardCurrent(ed) || editorKeyIgnored(e)) return;
+  const mod = Boolean(e.ctrlKey) !== Boolean(e.metaKey), key = (e.key || "").toLowerCase();
+  const exact = mod && !e.altKey && !e.shiftKey, save = exact && key === "s", undo = exact && key === "z";
+  if (document.querySelector("dialog[open]") || keyboardMenuOpen() || ed.saving || ed.asking || ed.leaving) {
+    if (save || (undo && !typingIn(e.target) && !document.querySelector("dialog[open]") && !keyboardMenuOpen())) e.preventDefault();
     return;
   }
-  if (mod && !e.altKey && key === "s") {
+  if (save) {
     e.preventDefault();
-    if (!ed.readOnly) saveNow();
-  } else if (mod && !e.altKey && !e.shiftKey && key === "z" && !typingIn(e.target)) {
-    if (undoLast()) {
-      e.preventDefault();
-      toast("Undone.");
-    }
-  } else if (e.key === "/" && !mod && !typingIn(e.target)) {
-    e.preventDefault();
-    focusSearch();
+    if (!e.repeat && !ed.readOnly) saveNow();
+  } else if (undo && !typingIn(e.target)) {
+    if (e.repeat) { e.preventDefault(); return; }
+    if (undoLast()) { e.preventDefault(); toast("Undone."); }
+  } else if (e.key === "/" && !e.ctrlKey && !e.metaKey && !e.altKey && !typingIn(e.target)) {
+    e.preventDefault(); // Shift can produce the semantic slash on another keyboard layout.
+    if (!e.repeat) focusSearch();
   }
 }
 document.addEventListener("keydown", editorKeys);

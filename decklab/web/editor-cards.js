@@ -137,8 +137,8 @@ function cardSearch() {
     onclick: () => { if (editorSearchResultsCurrent(ac) && !ac.morePending && ac.page < ac.pages) { ac.page += 1; lookUp(ac, parseQuery(ac.input.value).q, true); } } });
   ac.moreError = el("p", { class: "ac-more-error sub", role: "status", hidden: true });
   ed.ac = ac;
-  ac.input.addEventListener("input", () => {
-    if (!editorSearchCurrent(ac)) return;
+  const input = (event) => {
+    if (!editorSearchCurrent(ac) || event.defaultPrevented) return;
     clearTimeout(ac.timer);
     ac.seq += 1;
     ac.items = [];
@@ -151,8 +151,10 @@ function cardSearch() {
     ac.page = 1;
     clearAdded(ac);
     markActive(ac);
-    schedule(ac);
-  });
+    if (!event.isComposing && !ac.input.editorComposing) schedule(ac);
+  };
+  ac.input.addEventListener("input", input);
+  editorComposition(ac.input, input);
   ac.input.addEventListener("keydown", (e) => searchKey(ac, e));
   ac.input.addEventListener("focus", () => {
     if (!editorSearchCurrent(ac)) return;
@@ -556,19 +558,21 @@ function markActive(ac, announce = false) {
 }
 
 function searchKey(ac, e) {
-  if (!editorSearchCurrent(ac)) return;
+  if (!editorSearchCurrent(ac) || editorKeyIgnored(e) || keyboardMenuOpen() || e.ctrlKey || e.metaKey) return;
   const open = ac.items.length > 0 && editorSearchResultsCurrent(ac);
   if (e.key === "ArrowDown" || e.key === "ArrowUp") {
-    if (!open) return;
+    if (e.altKey || e.shiftKey || !open || !editorSearchCanAct(ac)) return;
     e.preventDefault();
     const n = ac.items.length;
     ac.active = (ac.active + (e.key === "ArrowDown" ? 1 : -1) + n) % n;
     markActive(ac, true);
   } else if (e.key === "Enter" && e.altKey) {
+    if (e.shiftKey) return;
     e.preventDefault();
-    if (open && ac.active >= 0) viewResult(ac);
+    if (!e.repeat && editorSearchCanAct(ac) && open && ac.active >= 0) viewResult(ac);
   } else if (e.key === "Enter") {
     e.preventDefault();
+    if (e.repeat) return;
     if (!editorSearchCanAct(ac)) { ac.pickFirst = false; ac.pickCount = null; return; }
     const { n, q } = parseQuery(ac.input.value);
     const copiesWanted = e.shiftKey ? SHIFT_COPIES : n;
@@ -582,6 +586,8 @@ function searchKey(ac, e) {
       lookUp(ac, q);
     }
   } else if (e.key === "Escape") {
+    if (e.altKey || e.shiftKey || !editorSearchCanAct(ac)) return;
+    if (e.repeat) { e.preventDefault(); return; }
     if (ac.input.value) {
       e.preventDefault();
       ac.input.value = "";
