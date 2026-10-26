@@ -65,6 +65,7 @@ function drawEditor() {
   drawBanners();
   drawCheck();
   drawBar();
+  registerEditorKeyboardHelp(ed);
   if (focus) {
     const again = main.querySelector(`[data-focus="${CSS.escape(focus)}"]`);
     if (again) again.focus({ preventScroll: true });
@@ -979,6 +980,7 @@ function drawBar() {
     if (why) p.test.vt.button.title = why.textContent || "";
   }
   drawSideTabs();
+  refreshKeyboardHints();
 }
 
 /** The bar's warnings: the Checks tab (or, in the Quick edit, the checks under the list). */

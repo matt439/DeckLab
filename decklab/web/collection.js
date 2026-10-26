@@ -314,6 +314,7 @@ function setCollectionBusy(cv, busy) {
   if (!cv.root) return;
   cv.root.setAttribute("aria-busy", String(busy));
   for (const control of cv.root.querySelectorAll(".col-mutate")) control.disabled = busy;
+  refreshKeyboardHints();
 }
 
 /** Say what happened (and toast it); stale: a save's stale_tables, the decks' tables it left out of date

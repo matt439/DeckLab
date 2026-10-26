@@ -2,6 +2,18 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Contextual keyboard help (2026-10-26; approved desktop shortcut plan, step 2)
+
+Every profile can open Keyboard shortcuts from the avatar menu. Help lists current page commands, their contexts and unavailable states, with a guarded return to the original control. Existing controls gain current hints and shortcut metadata without replacement. Current-root/profile ownership, route cleanup, hidden or busy controls and Save entry/finally transitions keep the descriptions current.
+
+The per-profile browser-local Single-character shortcuts switch defaults on and can disable Library/Collection J/K, Editor slash and the focused Shopping delivery R route. Native Enter, Space, Tab, arrows, text editing and Ctrl/Cmd actions remain available. Storage failure has an in-memory fallback and notice. This stage adds no new binding or global search.
+
+Validation: 488 guarded UI/keyboard/Editor/source checks passed with zero skips, including 16 new help cases. The first integration exposed missing initial Library registration, a canonical shell CSS breakpoint contract and three fixture issues; the follow-up fixes initial registration, places identical help styles in components.css, and corrects fixture names and actual non-admin permission setup. The affected 16 cases passed before the full final run. Independent source review is clear. Database probes/connections and Python socket connect/bind/listen were blocked.
+
+Nineteen synthetic Chromium cases passed: initial Library hints; dialog ownership; character Off and focus return; reload/profile isolation; writable light and read-only dark narrow help without horizontal overflow; Quick slash Off/On; Ctrl+Z and Collection Enter remaining usable while characters are off; Collection J and Shopping R Off; native delivery disclosure; R restored to Receive; full Editor help and keyboard scrolling. No Record or Save was clicked. The invented-data fixture logged 138 API requests, including four read-only checks and eight rejected automatic visits, with no other mutation attempts. It stopped cleanly; the temporary tab and viewport were released.
+
+The source audit still flags only pre-existing tokens.js at 1,516 lines among 800 owned files. editorGuard, draftBody, runCheck and doSave remain byte-identical after newline normalization; saveNow differs only by two shortcut-metadata refresh calls. No payload or save control-flow change. No actual Save/conflict, live database, download, Forge, full-suite or Linux acceptance. Real IME, speech, touch, Safari and physical-device acceptance remain open; the previously documented post-request main-input race remains. Fast routes are the next separately validated stage.
+
 ## Editor keyboard reliability and Undo focus (2026-10-26; approved desktop shortcut plan, step 1)
 
 Editor shortcuts now require the exact mounted page, route token and profile. Save/Undo match one Ctrl or Meta modifier without extra Alt/Shift; repeated activation, IME/AltGraph and already-handled events yield appropriately. Slash retains its semantic Shift-produced form where a keyboard layout needs it. Search keeps plain Enter's typed/default count, Shift+Enter's four and Alt+Enter's Inspect; unrelated modified Enter no longer adds. Plain navigation arrows may repeat. Tabs/kit arrows preserve modified browser commands; kit mutation and global Undo refuse busy/departing/overlay contexts.

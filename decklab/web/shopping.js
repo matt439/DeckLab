@@ -163,16 +163,16 @@ function shopDelivery(order, checks, view = null) {
   const receive = pending.length && mayDo("receipts");
   const href = `#/receipt?order=${encodeURIComponent(order.id)}`;
   const keyHint = receive && view ? `shop-receive-key-${encodeURIComponent(order.id)}` : null;
-  return el("details", { class: "panel shop-delivery" },
-    el("summary", { class: "shop-delivery-summary", "aria-keyshortcuts": keyHint ? "R" : null,
+  const delivery = el("details", { class: "panel shop-delivery" },
+    el("summary", { class: "shop-delivery-summary", "aria-keyshortcuts": null,
       "aria-describedby": keyHint, onkeydown: (event) => shopReceiveKey(view, order, event) }, el("h3", {},
       el("span", { class: "shop-delivery-head" },
         el("span", { class: "shop-delivery-title", text: shopOrderTitle(order) }), shopOrderChip(order)),
       el("span", { class: "sub shop-delivery-meta", text: [order.ordered_on ? `Ordered ${shopDay(order.ordered_on)}` : "Order date not recorded", words]
         .join(" · ") }))),
     el("div", { class: "shop-delivery-body" },
-    keyHint ? el("span", { class: "sr-only", id: keyHint,
-      text: "Press R from this delivery row to open Receive delivery. Enter or Space expands or collapses the row." }) : null,
+    keyHint ? el("span", { class: "sr-only shop-receive-description", id: keyHint,
+      text: "Enter or Space expands or collapses the row." }) : null,
     items.length ? shopStrip(order, items) : null,
     components.length > 1 ? el("ul", { class: "shop-parts" }, components.map((c) => el("li", { text: shopComponentWords(c) }))) : null,
     order.notes ? el("p", { class: "shop-notes", text: order.notes, title: order.notes }) : null,
@@ -180,14 +180,18 @@ function shopDelivery(order, checks, view = null) {
     el("div", { class: "actions" },
       receive ? el("a", { class: "btn btn-secondary", href, text: "Receive delivery" })
         : el("a", { class: "btn btn-quiet", href, text: "Delivery details" }),
-      receive && view ? el("span", { class: "shop-receive-hint", "aria-hidden": "true",
+      receive && view ? el("span", { class: "shop-receive-hint", "aria-hidden": "true", hidden: true,
         title: "With this delivery row focused, press R to receive it." }, el("kbd", { text: "R" })) : null,
       shopOrderEditButton(order, view))));
+  const summary = delivery.querySelector(".shop-delivery-summary");
+  summary.keyboardDelivery = {view, order, hint: delivery.querySelector(".shop-receive-hint"),
+    description: delivery.querySelector(".shop-receive-description")};
+  return delivery;
 }
 
 /** R opens only the focused live delivery row; native Enter/Space keep their disclosure behavior. */
 function shopReceiveKey(view, order, event) {
-  if (event.defaultPrevented || event.isComposing || event.repeat || event.ctrlKey || event.metaKey || event.altKey
+  if (!keyboardCharactersEnabled() || event.defaultPrevented || event.isComposing || event.repeat || event.ctrlKey || event.metaKey || event.altKey
       || String(event.key || "").toLowerCase() !== "r") return;
   const summary = event.currentTarget;
   if (!view || !shopQueueActive(view) || view.busy || view.stale || !summary?.isConnected
@@ -386,6 +390,7 @@ function shopQueueBusy(view, busy) {
       if (["Save", "Add card", "Remove…", "Remove card"].includes(button.textContent)) button.disabled = busy || view.stale;
     });
   }
+  refreshKeyboardHints();
 }
 
 function shopQueueActive(view) {
@@ -793,7 +798,9 @@ function drawShopping(data) {
     if (!emptyBox.hidden) layout.remove();
     else if (!layout.parentNode) layoutSlot.append(layout);
     shopSyncQueueControls(view);
+    registerShoppingKeyboardHelp(view);
   };
+  registerShoppingKeyboardHelp(view);
   shopSyncQueueControls(view);
   shopWatchQueueDensity(view);
   return view;

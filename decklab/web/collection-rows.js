@@ -141,6 +141,7 @@ function drawColRowList(cv) {
   colDrawPreview(cv, selected);
   drawColPriceNote(cv);
   setCollectionBusy(cv, cv.busy);
+  registerCollectionKeyboardHelp(cv);
   // A native sort/pager activation removes its own control. Restore only that owned focus.
   if ((sort || pageFocus) && colActive(cv) && cv.root?.contains(cv.list) && !cv.busy
       && !document.querySelector("dialog[open]") && !keyboardMenuOpen()
@@ -206,10 +207,10 @@ function colRowTable(cv, rows) {
         drawColRowList(cv);
       } }));
   };
-  return el("div", { class: "table-wrap", role: "region", "aria-label": "Collection rows", tabindex: 0,
+  return el("div", { class: "table-wrap", role: "region", "aria-label": "Collection rows", tabindex: 0, "aria-keyshortcuts": "Enter",
     onkeydown: (event) => colTableKeys(cv, event) },
-    el("p", { class: "col-key-hint" }, el("kbd", { text: "J" }), " / ", el("kbd", { text: "K" }),
-      " move \u00b7 ", el("kbd", { text: "Enter" }), " opens"),
+    el("p", { class: "col-key-hint" }, el("span", {class: "keyboard-character-hint", hidden: true},
+      el("kbd", { text: "J" }), " / ", el("kbd", { text: "K" }), " move \u00b7 "), el("kbd", { text: "Enter" }), " opens"),
     el("table", { class: "data col-table" },
     el("thead", {}, el("tr", {},
       el("th", { scope: "col", class: "col-th-pic" }, el("span", { class: "sr-only", text: "Picture" })),
@@ -509,6 +510,7 @@ function colTableKeys(cv, event) {
   if (keyboardEditing(event.target)) return;
   const key = String(event.key || "").toLowerCase(), shown = colShownRows(cv);
   if (key === "j" || key === "k") {
+    if (!keyboardCharactersEnabled()) return;
     if (!shown.length) return;
     const at = shown.findIndex((row) => colKey(row) === cv.selectedKey);
     const next = at < 0 ? (key === "j" ? 0 : shown.length - 1)

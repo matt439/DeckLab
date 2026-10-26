@@ -403,6 +403,7 @@ async function saveNow({ viewAfter = false } = {}) {
   const button = ed.dom.barParts && ed.dom.barParts.save;
   // Saving until the save itself has answered: a second Ctrl+S meanwhile would send the old sha again.
   ed.saving = true;
+  refreshKeyboardHints();
   if (button) busy(button, ed.mode === "new" ? "Creating…" : "Saving…");
   try {
     let answer = null;
@@ -429,6 +430,7 @@ async function saveNow({ viewAfter = false } = {}) {
   } finally {
     ed.saving = false;
     if (button && editor === ed && button.dataset.busy) unbusy(button);
+    if (editor === ed) refreshKeyboardHints();
   }
 }
 

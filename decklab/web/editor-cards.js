@@ -129,7 +129,7 @@ function cardSearch() {
   ac.input = el("input", { type: "search", id: "ac-input", class: "search-input",
     "aria-controls": "ac-list", "aria-describedby": "ac-help", autocomplete: "off",
     autocorrect: "off", autocapitalize: "none", spellcheck: "false", enterkeyhint: "search",
-    placeholder: "Card name, e.g. 4 bolt", "aria-keyshortcuts": "/ Alt+Enter",
+    placeholder: "Card name, e.g. 4 bolt", "aria-keyshortcuts": keyboardCharactersEnabled(ed.profile) ? "/ Alt+Enter" : "Alt+Enter",
     title: "Enter or a click adds 1 copy; Shift adds 4; “4 bolt” adds 4. Alt+Enter shows the card big." });
   ac.list = el("ul", { id: "ac-list", class: "ac-list", "aria-label": "Cards found", hidden: true });
   ac.live = el("p", { class: "sr-only", role: "status", "aria-live": "polite" });

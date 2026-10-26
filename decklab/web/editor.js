@@ -1060,7 +1060,7 @@ function editorKeys(e) {
   } else if (undo && !typingIn(e.target)) {
     if (e.repeat) { e.preventDefault(); return; }
     if (undoLast()) { e.preventDefault(); toast("Undone."); }
-  } else if (e.key === "/" && !e.ctrlKey && !e.metaKey && !e.altKey && !typingIn(e.target)) {
+  } else if (e.key === "/" && keyboardCharactersEnabled(ed.profile) && !e.ctrlKey && !e.metaKey && !e.altKey && !typingIn(e.target)) {
     e.preventDefault(); // Shift can produce the semantic slash on another keyboard layout.
     if (!e.repeat) focusSearch();
   }

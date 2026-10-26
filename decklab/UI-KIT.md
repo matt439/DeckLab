@@ -687,3 +687,14 @@ exact line/input, enabled control and no asking/leaving context. They deliberate
 retain typing during the pre-save check; post-request input retention remains
 a separate Save-state limit in HISTORY. No payload or save-path change is part
 of this reliability slice.
+
+`keyboard-help.js` owns current page command descriptors, `aria-keyshortcuts`
+and non-destructive hints. Registration requires the current mounted root and
+profile; stale routes, unavailable controls and busy actions lose active hints.
+Avatar help is available to every profile, uses the shared sheet and returns
+focus only to its still-visible owned anchor. Help lists commands for after
+closing the sheet. Core menu Up/Down and overflow Home/End remain distinct.
+The browser-local per-profile character preference defaults on; storage failure
+keeps a session fallback with a notice. Turning it off leaves native controls,
+navigation and Ctrl/Cmd editing intact. Save entry/finally refresh metadata only;
+pre-save typing and the remaining post-request input limitation are unchanged.

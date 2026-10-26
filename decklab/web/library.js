@@ -104,12 +104,14 @@ function drawLibrary(data, filters) {
   const results = el("div", { class: "results" });
   state.libraryHash = location.hash || "#/library";     // where a deck's "← Decks" comes back to
   const view = { picking: false };
+  const keyboardToken = routeToken, keyboardProfile = state.profile?.id;
   // Drawing the decks again: refresh() as they are (a cover chosen; nothing once the library has been left,
   // say by an Undo pressed on another page: false then), redraw() after the filters changed, which also keeps
   // them in the address.
   const refresh = () => {
     if (!results.isConnected) return false;
     drawLibraryResults(results, data, filters, view, refresh);
+    registerLibraryKeyboardHelp(results, keyboardToken, keyboardProfile);
     return true;
   };
   const redraw = () => {
@@ -196,6 +198,7 @@ function drawLibrary(data, filters) {
     results]);
   syncControls();
   drawLibraryResults(results, data, filters, view, refresh);
+  registerLibraryKeyboardHelp(results, keyboardToken, keyboardProfile);
 }
 
 /** The phone's filter sheet: the same choices with their words, applied as they change. The fields stay put
@@ -772,7 +775,7 @@ function libKeys(results, view) {
         || event.metaKey || event.ctrlKey || event.altKey || event.shiftKey || event.defaultPrevented
         || event.isComposing || event.keyCode === 229 || keyboardDialog() || keyboardMenuOpen()) return;
     const key = (event.key || "").toLowerCase();
-    if (key !== "j" && key !== "k") return;
+    if ((key !== "j" && key !== "k") || !keyboardCharactersEnabled(profile)) return;
     const target = event.target;
     if ((target && target.isConnected === false) || keyboardEditing(target)) return;
     const rows = Array.from(results.querySelectorAll(".deck-row"));
