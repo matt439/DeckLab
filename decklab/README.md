@@ -1526,6 +1526,15 @@ python -m decklab.db schedule remove
 
 `install` registers the Task Scheduler task "Deck Lab database backup": every day at 03:30, as Matt's own account and only while he's logged on (it must be, to reach the NAS), running `pythonw.exe -m decklab.db nightly` in the repo folder, with no window. If the PC was off at 03:30 it runs when the PC is next on, and a run still going when the next one is due isn't doubled. A run may take at most two hours. It runs the `pythonw.exe` beside the Python `install` was run from, which must be able to use psycopg (the system Python can, through `lib/venv.py`; otherwise it refuses, saying to install the `.venv`'s packages and run `install` again with the system `python`). Run `install` with the system `python`, not the `.venv`'s: the `.venv`'s `pythonw.exe` is a launcher that starts a second process, which the task's time limit may leave running. `schedule status` warns when the task runs a `pythonw.exe` inside `.venv`. The task registered before phase 5 runs the `.venv`'s, so it's registered again from the system `python` at the phase 5a cutover. After making the `.venv` again, or upgrading Python, run `install` again.
 
+**Linux nightly unit previews:** these print one complete candidate unit to stdout, using paths on the target Linux machine:
+
+```
+python -m decklab.db schedule preview-systemd --unit service --python /usr/bin/python3.14 --workdir /srv/DeckLab
+python -m decklab.db schedule preview-systemd --unit timer --python /usr/bin/python3.14 --workdir /srv/DeckLab --at 03:30
+```
+
+The fixed filenames are `decklab-nightly.service` and `decklab-nightly.timer`. Both target paths are required, absolute POSIX paths; quote shell arguments containing spaces. `--at` is local HH:MM, default 03:30. The renderer validates all inputs before printing UTF-8/LF text. It reads no configuration or database, calls no host manager and writes no files. Other schedule actions reject preview options. The oneshot service has a two-hour timeout; its persistent timer will not start that same service while it is active, but separate direct nightly commands have no shared lock. Installation, enabling and actual Linux/systemd validation remain future work; Windows scheduling above is unchanged.
+
 ### The server and the database
 
 - **At start-up** (after the URL line), the server starts a thread that checks the database once a minute (`lib/dbstatus.py`) with one app-role connection: which migrations are pending, whether phase 2's tables can be read, and when the last good dump finished. The first check logs one "Database: ..." line in the server log, and only the background server then copies `config.json`'s profiles into the database (with the request timeouts, so a lock held elsewhere fails it with one line rather than stalling the checks; it never removes every profile). It never applies migrations itself, never fails the start, and is stopped first when the server stops.

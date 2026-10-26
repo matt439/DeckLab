@@ -2,6 +2,16 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Preview Linux nightly service and timer files (2026-10-26; E11-S33)
+
+`python -m decklab.db schedule preview-systemd` prints one complete candidate `decklab-nightly.service` or `decklab-nightly.timer`, with explicit absolute POSIX interpreter/repository paths and a strict local HH:MM time. The pure renderer is usable from Windows. It makes no host, systemd-manager, configuration, database or filesystem calls. Existing Windows install/remove/status dispatch is unchanged.
+
+The service is oneshot, with a two-hour start timeout and no restart or retained active state. The persistent daily timer defaults to 03:30 local time and names that service explicitly. Activation does not duplicate the same active unit; this provides no lock across separate direct nightly invocations. Executable and WorkingDirectory values follow their distinct systemd parsers, retaining literal dollar signs and escaping percent specifiers. Unsupported paths refuse before output. Preview-only stdout uses strict UTF-8 and LF so a Windows pipe does not silently replace target-path characters.
+
+All 32 focused renderer, CLI and existing Task Scheduler XML checks passed without skips in 0.622 seconds. They include forbidden host/data/process/write boundaries, invalid inputs, unchanged Windows dispatch and an ASCII-pipe byte regression. Independent review against systemd's [command rules](https://www.freedesktop.org/software/systemd/man/latest/systemd.service.html#Command%20lines) and [WorkingDirectory rules](https://www.freedesktop.org/software/systemd/man/latest/systemd.exec.html#WorkingDirectory=), Ruff and diff checks are clear; an actual CLI invocation also printed the expected service. This is lexical and mocked validation, not Linux or service-manager execution.
+
+Real Linux reproduction remains blocked here: the read-only `wsl.exe --list --quiet` operation returned Access is denied, `Wsl/EnumerateDistros/Service/E_ACCESSDENIED`, exit 1. No distributions were enumerated, and that action was stopped without retry or another access route. No service/timer was installed or enabled. Linux Python 3.14/full-suite and CI evidence, scheduling integration, host acceptance and server lifecycle support remain; E11-S33 stays missing and OPEN, with story counts unchanged.
+
 ## Restore a complete deleted collection-row batch (2026-10-26; E11-S08)
 
 The new `batch_add` slice restores a complete global own-space source of 2-50 collection DELETE rows. Each original row id and printing key must be unique, every key still absent and each original deletion still its latest touch, with both inventory/deck revisions checked under the normal write lock. Cached card data must prove the exact canonical paper printing and finish; ordinary Add round-trips must reproduce every historical cell without merging, bumping another row or skipping basics. All rows form one exact candidate, atomic save and new audit; the original audit remains immutable.

@@ -14,7 +14,7 @@ psycopg through lib/venv.py; .venv\\Scripts\\python works as well).
                    (--history: the recent runs)
   nightly          what the scheduled task runs: backup, prune, visits' prune, export, check, restore check
   visits           who has visited Deck Lab and what they opened (read-only; visits.py)
-  schedule         install, remove or show the nightly Task Scheduler task
+  schedule         manage the nightly Task Scheduler task, or preview systemd user units
   wishlist         list or change a profile's wishlist: list, add, set, remove (wishlist_cli.py)
 
 The inventory's commands (phase 3) come from decklab/db/inv_<area>.py modules, found and
@@ -184,6 +184,15 @@ def _nightly(args):
 
 def _schedule(args):
     from decklab.db import schedule
+    if args.action == "preview-systemd":
+        # A piped Windows stdout may otherwise replace target-path characters with '?'.
+        # Unit files are UTF-8; keep their text exact without changing other commands.
+        if hasattr(sys.stdout, "reconfigure"):
+            sys.stdout.reconfigure(encoding="utf-8", errors="strict", newline="\n")
+        return schedule.preview_systemd(getattr(args, "unit", None), getattr(args, "python", None),
+                                        getattr(args, "workdir", None), getattr(args, "at", None))
+    if any(getattr(args, name, None) is not None for name in ("unit", "python", "workdir", "at")):
+        raise ValueError("--unit, --python, --workdir and --at are only for schedule preview-systemd.")
     if args.action == "install":
         return schedule.install()
     if args.action == "remove":
@@ -253,8 +262,13 @@ def parser():
     sp.add_argument("--days", type=int, default=30, metavar="N",
                     help="the window for days visited and the pages opened most (1-366, default 30)")
     sp.add_argument("--profile", metavar="P", help="only this profile's visits")
-    sp = command("schedule", _schedule, "Install, remove or show the nightly Task Scheduler task.")
-    sp.add_argument("action", choices=("install", "remove", "status"))
+    sp = command("schedule", _schedule, "Manage the nightly Task Scheduler task, or print a systemd user "
+                                      "unit preview without installing anything.")
+    sp.add_argument("action", choices=("install", "remove", "status", "preview-systemd"))
+    sp.add_argument("--unit", choices=("service", "timer"), help="which systemd user unit to print")
+    sp.add_argument("--python", metavar="PATH", help="preview: absolute POSIX path to the target Python")
+    sp.add_argument("--workdir", metavar="DIR", help="preview: absolute POSIX path to the target repo")
+    sp.add_argument("--at", metavar="HH:MM", help="preview: daily local time (default 03:30)")
     from decklab.db import wishlist_cli
     wishlist_cli.add_parser(sub)
     from decklab.db import visibility_cli

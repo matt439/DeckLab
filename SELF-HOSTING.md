@@ -168,6 +168,15 @@ Deck Lab runs up to 16 Forge workers at once, each with up to 1 GB of memory. Th
 - **pg_dump:** Deck Lab finds it in `C:\Program Files\PostgreSQL\<version>\bin` or on the PATH. Set `database.pg_bin` to its folder if it's somewhere else.
 - **Updating:** `git pull`, then `python -m decklab.db migrate`, then restart the server.
 
+To review candidate Linux nightly units, use `schedule preview-systemd` with the target machine's absolute paths:
+
+```
+python -m decklab.db schedule preview-systemd --unit service --python /usr/bin/python3.14 --workdir /srv/DeckLab
+python -m decklab.db schedule preview-systemd --unit timer --python /usr/bin/python3.14 --workdir /srv/DeckLab --at 03:30
+```
+
+Each command prints one complete unit (`decklab-nightly.service` or `decklab-nightly.timer`) as UTF-8 text. The time is local HH:MM and defaults to 03:30. This preview is available on Windows too and makes no host, database or filesystem changes. Generated units still need Linux runtime and manager validation; installing/enabling them and Linux server-service support remain unfinished. See the reference's [nightly task](decklab/README.md#the-nightly-task) for the preview contract.
+
 ## 10. From outside your home (optional)
 
 Deck Lab can start a Cloudflare Tunnel itself, behind Cloudflare Access's email login. That needs a domain on Cloudflare, `cloudflared`, and `allowed_hosts`, `tunnel` and `access` blocks in `config.json` (see `config.full.example.json`, and the reference's "From outside the home"). Leave those blocks out of `config.json` until you set this up. Without them, Deck Lab serves your home network only.

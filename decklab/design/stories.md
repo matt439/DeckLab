@@ -3946,12 +3946,14 @@ As Matt, publishing Deck Lab for others to run on their own PC, I want Deck Lab 
 Now (2026-10-26): [interpreter-path semantics have a targeted fix](../HISTORY.md#interpreter-path-semantics-portability-2026-10-26-e11-s33), with isolated lexical/mocked validation on Windows. Explicit POSIX paths preserve their flavour, while Windows strings retain drive/UNC directories. No full Linux acceptance criterion has passed, so the story remains missing.
 
 Evidence:
-- `decklab/db/schedule.py`: Task Scheduler XML through schtasks only
+- `decklab/db/schedule.py`: Windows Task Scheduler management, plus stdout-only candidate systemd nightly unit previews
 - `SELF-HOSTING.md`: Linux still uses the user's own service manager and manual nightly scheduling; the current Linux full suite is unverified
 - The 2026-10-25 self-host check: 31 of 6188 tests failed on Linux
 - `decklab/lib/homenet/commands.py`: `_python_sibling`, `pythonw_path`, `this_pythons`, preserving explicit POSIX path types before the Windows string heuristic
 - `test_homenet_executable_paths.py`, `test_gitops.py`: injected lexical path flavours, typed PathLike/default interpreter cases and a genuinely Windows lexical diagnostic fixture
 
-Gap: a real Linux Python 3.14 reproduction and full-suite pass, Linux CI, and generated/tested nightly timer and server service remain. The targeted checks establish no Linux runtime or service-manager acceptance.
+The independent nightly preview slice is implemented: `schedule preview-systemd --unit service|timer --python PATH --workdir DIR [--at HH:MM]` prints fixed-name candidate units, with explicit POSIX paths, directive-specific literal escaping and strict UTF-8/LF output. All 32 focused renderer/CLI/Windows-XML checks passed without skips, and independent review is clear. It reads no host/config/data and installs nothing. See [HISTORY.md](../HISTORY.md#preview-linux-nightly-service-and-timer-files-2026-10-26-e11-s33).
 
-Next slice: reproduce and record the current Linux failures under Python 3.14, continue fixing platform path/case assumptions, then add a Linux CI run so they stay fixed. The 31 failures out of 6188 tests are the dated 2026-10-25 baseline, not a current count. Generate and test the later service/timer files separately from installing or enabling them on a host.
+Gap: a real Linux Python 3.14 reproduction and full-suite pass, Linux CI, nightly installation/enabling/integration and server-service support remain. The targeted previews establish no Linux runtime or service-manager acceptance. Read-only WSL distribution discovery was denied with `Wsl/EnumerateDistros/Service/E_ACCESSDENIED` and stopped, so real Linux validation needs an available authorized environment.
+
+Next slice: reproduce and record the current Linux failures under Python 3.14, continue fixing platform path/case assumptions, then add a Linux CI run so they stay fixed. The 31 failures out of 6188 tests are the dated 2026-10-25 baseline, not a current count. Exercise the generated nightly units in an authorized Linux environment before integration; server-unit generation and lifecycle integration remain separate work. Host installation/enabling stays separate from rendering.
