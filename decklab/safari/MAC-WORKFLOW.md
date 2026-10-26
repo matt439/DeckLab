@@ -64,7 +64,9 @@ when newer commits are transferred; it does not pin the checkout to that commit.
 The launcher always runs that directory's current revision.
 
 The prepared toolchain is Python 3.14.8, Node 24.14.0 / npm 11.9.0, Appium 3.4.2
-and XCUITest 10.43.0. The accepted run used Xcode 27.0 and iOS 27.0. These are
+and XCUITest 10.43.0; the lockfile moved to Appium 3.8.0 and XCUITest 10.43.1 on
+2026-10-26 (security fixes), so rerun `setup.sh` as below before the next run.
+The accepted run used Xcode 27.0 and iOS 27.0. These are
 recorded versions, not instructions to upgrade whenever a newer release appears.
 
 ## Connect to the Mac for the first time

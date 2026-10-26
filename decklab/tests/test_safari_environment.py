@@ -78,7 +78,7 @@ class EnvironmentInspectionTests(unittest.TestCase):
             ("xcode-select", "-p"): "/Applications/Xcode.app/Contents/Developer",
             ("node", "--version"): "v24.14.0",
             ("npm", "--version"): "11.9.0",
-            (str(environment.APPIUM), "--version"): "3.4.2",
+            (str(environment.APPIUM), "--version"): "3.8.0",
             ("xcrun", "simctl", "list", "runtimes", "--json"): json.dumps({"runtimes": [
                 {"identifier": "ios26", "name": "iOS 26.0", "version": "26.0", "isAvailable": True}]}),
             ("xcrun", "simctl", "list", "devices", "--json"): '{"devices": {}}',
@@ -91,7 +91,7 @@ class EnvironmentInspectionTests(unittest.TestCase):
                 mock.patch.object(environment.platform, "system", return_value="Darwin"),
                 mock.patch.object(environment, "run", side_effect=lambda *args: self.responses[args]),
                 mock.patch.object(environment.shutil, "which", return_value="/usr/bin/xcrun"),
-                mock.patch.object(environment.Path, "read_text", return_value='{"version": "10.43.0"}')):
+                mock.patch.object(environment.Path, "read_text", return_value='{"version": "10.43.1"}')):
             self.enterContext(patch)
         self.pgrep = self.enterContext(mock.patch.object(environment.subprocess, "run", return_value=
             subprocess.CompletedProcess(["pgrep", "-x", "Simulator"], 1, stdout="", stderr="")))

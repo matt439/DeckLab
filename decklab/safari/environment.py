@@ -150,14 +150,14 @@ def inspect(ipad_model=None, runtime=None):
             found["errors"].append(f"{name}: {error}. Follow decklab/safari/README.md setup.")
     if "node" in found and _version(found["node"]) != (24, 14, 0):
         found["errors"].append("Use pinned Node 24.14.0 (nvm install && nvm use in decklab/safari).")
-    for name, wanted in (("npm", "11.9.0"), ("appium", "3.4.2")):
+    for name, wanted in (("npm", "11.9.0"), ("appium", "3.8.0")):
         if name in found and found[name] != wanted:
             found["errors"].append(f"Use pinned {name} {wanted}; run bash decklab/safari/setup.sh.")
     try:
         found["xcuitest"] = json.loads((HERE / "node_modules" / "appium-xcuitest-driver" /
                                        "package.json").read_text(encoding="utf-8"))["version"]
-        if found["xcuitest"] != "10.43.0":
-            raise ValueError("installed XCUITest does not match 10.43.0")
+        if found["xcuitest"] != "10.43.1":
+            raise ValueError("installed XCUITest does not match 10.43.1")
     except (OSError, ValueError, KeyError) as error:
         found["errors"].append(f"XCUITest: {error}. Run bash decklab/safari/setup.sh.")
     if "xcode" in found and _version(found["xcode"].splitlines()[0]) < (26,):
