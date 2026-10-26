@@ -350,7 +350,7 @@ class EditorPageTests(unittest.TestCase):
           edit();
           drawAddTo = () => {}; changed = () => {}; syncSections = () => {};
           editor.dom.lines = null;
-          cardSearch(); const ac = editor.ac;
+          main.append(cardSearch()); const ac = editor.ac;
           const found = (name) => ({...card(name, "Instant", 1), default: null, have: {owned: 0, on_the_way: 0}, aud: null});
           ac.items = [found("Lightning Bolt"), found("Bolt Bend")]; ac.query = "bolt"; ac.input.value = "bolt"; ac.active = 0;
           pick(ac, 0);

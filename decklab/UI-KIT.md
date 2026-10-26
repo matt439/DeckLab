@@ -129,6 +129,17 @@ the same current saved-fold control above overlapping chrome after resize. It
 never focuses or edits; stale/new-focus/modal/busy work is ignored, tight margins
 shrink and oversized targets align stably. Exact draft/check/save paths are unchanged.
 
+Editor search results are a labelled native list with sibling `.ac-add` and
+`.ac-thumb-btn` buttons, not options containing controls. The highlighted Add
+has `aria-current`; the search field keeps focus for arrow selection and uses
+live announcements, while Tab reaches the native actions. Added expiry and
+More append retain existing result/action nodes, including the viewer trigger.
+More failure retains accepted rows and retries that exact page. Search ownership
+is the exact editor/controller/route/profile and connected wrapper; accepted
+async work also matches query and deck id/version/space. Close, replacement and
+Quick dismissal invalidate timers/answers without changing request payloads or
+aborting the server read. Keep constructor painting separate from mounted actions.
+
 `editor-swaps.js` (after `editor-cards.js`) and `deck-swaps.js` (after
 `deck-standins.js`) are E2-S07's strategic stand-ins, kept apart from those
 physical markers: owned cards that could take a missing card's slot in the

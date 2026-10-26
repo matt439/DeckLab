@@ -313,16 +313,21 @@ button.edit-card:hover { background: var(--hover); }
   border: 1px solid var(--border-strong); border-radius: var(--r-md);
 }
 .ac-option {
-  display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; align-items: center; gap: var(--s-1) var(--s-3);
+  display: grid; grid-template-columns: 44px minmax(0, 1fr); align-items: center; gap: var(--s-1) var(--s-3);
   min-height: 52px; padding: var(--s-1) var(--s-2);
   border-radius: var(--r-sm);
   cursor: pointer;
 }
 .ac-option + .ac-option { border-top: 1px solid var(--border); }
 .ac-option:hover { background: var(--hover); }
-.ac-option[aria-selected="true"] { background: var(--selected); box-shadow: inset 3px 0 0 var(--accent); }
+.ac-option:has(.ac-add[aria-current="true"]) { background: var(--selected); box-shadow: inset 3px 0 0 var(--accent); }
 .ac-option.is-added { background: var(--good-soft); }
-.ac-thumb-btn { display: block; cursor: zoom-in; border-radius: var(--r-card); }
+.ac-add { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--s-3);
+  width: 100%; min-width: 0; min-height: 44px; padding: 0; border: 0; border-radius: var(--r-sm);
+  color: inherit; background: none; font: inherit; text-align: left; cursor: pointer; }
+.ac-add:focus-visible, .ac-thumb-btn:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.ac-thumb-btn { display: grid; place-items: center; width: 44px; min-height: 44px; padding: 0; border: 0;
+  color: inherit; background: none; cursor: zoom-in; border-radius: var(--r-card); }
 .ac-thumb { width: 34px; height: 48px; border-radius: var(--r-card); object-fit: cover; background: var(--surface-3); display: block; }
 .ac-words { min-width: 0; display: flex; flex-direction: column; gap: 1px; line-height: var(--lh-tight); }
 .ac-name { display: flex; align-items: center; gap: var(--s-2); min-width: 0; font-weight: var(--fw-semibold); }
@@ -489,7 +494,7 @@ dialog.sheet-search .sheet-body { display: flex; flex-direction: column; overflo
 dialog.sheet-search .edit-add { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; }
 dialog.sheet-search .ac-wrap { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; }
 dialog.sheet-search .ac-list { flex: 0 1 auto; min-height: 0; max-height: none; }
-dialog.sheet-search .ac-option { grid-template-columns: 34px minmax(0, 1fr) auto; }
+dialog.sheet-search .ac-option { grid-template-columns: 44px minmax(0, 1fr); }
 /* A phone on its side (330 px tall): the sheet takes the screen's height, the one-time tip and Done (the Ã—
    closes it too) give their room to the results, and the whole body scrolls under the search box, which stays
    at its top: a results box of its own would be a row or two high between Add to, the filters and More. */

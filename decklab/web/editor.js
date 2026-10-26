@@ -864,7 +864,7 @@ function closeEditor() {
   saveDraft(ed);
   clearTimeout(ed.checkTimer);
   clearTimeout(ed.draftTimer);
-  if (ed.ac) clearTimeout(ed.ac.timer);
+  cancelEditorSearch(ed.ac);
   document.body.classList.remove("is-searching", "keyboard-up", "has-edit-bar", "is-quick-edit");
   editor = null;
 }
