@@ -262,4 +262,3 @@ class PlayComparisonTests(ApiTestCase):
         self.assertEqual((reverse["real_games"]["games"], reverse["real_games"]["wins"]), (1, [0, 1]))
         self.assertEqual(answer["sides"][0]["id"], "casual/a")
         self.assertEqual(reverse["sides"][0]["id"], "casual/b")
-
