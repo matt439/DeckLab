@@ -75,12 +75,12 @@ function packReviewBoxCheck(view, deck) {
   const evidence = packBoxCheckEvidence(deck), recipe = JSON.stringify(view.selected.map(packSelectedChoice));
   const data = view.data, root = view.root, seq = view.seq, original = JSON.stringify([deck.box_check, deck.take_apart]);
   const expected = [], extras = [], controls = [], repairButtons = [], acceptedValues = new WeakMap();
-  let leavingForCollection = false, sourceSha = evidence?.meta.expect;
+  let leavingForRepair = false, editorReading = false, sourceSha = evidence?.meta.expect;
   let stage = "edit", pending = false, saved = false, needsRefresh = false, refreshed = false, review = null;
   view.reviewing = true; packProgress(view);
   const ctx = openAssemblySheet(view, "Check " + deck.title + " box", { onClose: () => {
     if (!owner()) return;
-    if (leavingForCollection) { view.reviewing = false; view.boxCheckRefresh = null; packProgress(view); return; }
+    if (leavingForRepair) { view.reviewing = false; view.boxCheckRefresh = null; packProgress(view); return; }
     if (saved || needsRefresh) afterClose();
     else if (!pending) { view.reviewing = false; packProgress(view); }
   } });
@@ -90,10 +90,10 @@ function packReviewBoxCheck(view, deck) {
     && original === JSON.stringify([deck.box_check, deck.take_apart]);
   const current = () => owner() && assemblySheetHere(ctx);
   const here = () => current() && [...document.querySelectorAll("dialog[open]")].at(-1) === ctx.sheet.dialog;
-  const actionable = (event, part = ctx.sheet.body) => here() && !pending && !saved && !needsRefresh
+  const actionable = (event, part = ctx.sheet.body) => here() && !pending && !saved && !needsRefresh && !editorReading
     && event?.currentTarget?.isConnected && part.contains(event.currentTarget);
   const error = el("p", { class: "form-error", role: "alert", tabindex: "-1" });
-  const editing = el("div"), reviewing = el("div", { hidden: true });
+  const editing = el("div"), reviewing = el("div", { hidden: true }), editorChoices = el("div", { class: "box-editor-choices" });
   ctx.sheet.body.append(el("p", { text: "Review the recorded physical cards and installed stand-in markers in every section. Count the cards actually in the box, then review any differences." }),
     el("p", { class: "sub", text: "Pictures are representative name-only art. They do not confirm a printing, finish or physical quantity. Saving records a historical date; the counts and differences stay only in this review." }),
     el("p", { class: "sub", text: "Every count starts unreviewed. Tick a tile to fill its full recorded quantity, or enter a whole count. Use 0 when none were found." }), editing, reviewing, error);
@@ -138,7 +138,11 @@ function packReviewBoxCheck(view, deck) {
   function lock() {
     for (const control of controls) control.disabled = pending || saved || needsRefresh || stage !== "edit";
     for (const row of expected) row.tick.disabled = pending || saved || needsRefresh || stage !== "edit";
-    for (const button of repairButtons) button.disabled = pending || needsRefresh || leavingForCollection;
+    for (const button of repairButtons) button.disabled = pending || needsRefresh || leavingForRepair || editorReading;
+  }
+  function leaveForRepair(go) {
+    leavingForRepair = true; lock();
+    boxCollectionAfterSheet(ctx.sheet, () => owner() && leavingForRepair, go);
   }
   function differences() {
     clear(reviewing).append(el("h3", { text: "Review differences" }),
@@ -153,17 +157,30 @@ function packReviewBoxCheck(view, deck) {
         else if (boxCollectionDifference(deck, evidence, row, key)) {
           const button = el("button", { type: "button", class: "btn btn-secondary box-collection-open", text: "Review collection copies",
             "aria-label": "Review collection copies: " + row.name + " (" + row.section + ", " + key + ")", onclick: event => {
-              if (!here() || pending || needsRefresh || leavingForCollection || !event.currentTarget.isConnected || !reviewing.contains(event.currentTarget)
+              if (!here() || pending || needsRefresh || leavingForRepair || editorReading || !event.currentTarget.isConnected || !reviewing.contains(event.currentTarget)
                   || !review[key].includes(row) || JSON.stringify(snapshot()) !== JSON.stringify(review)) return;
               const difference = boxCollectionDifference(deck, { meta: { ...evidence.meta, expect: sourceSha } }, row, key);
               if (!difference) return;
-              leavingForCollection = true; lock();
-              boxCollectionAfterSheet(ctx.sheet, () => owner() && leavingForCollection, () => boxCollectionNavigate(difference));
+              leaveForRepair(() => boxCollectionNavigate(difference));
+            } });
+          repairButtons.push(button); item.append(button);
+        }
+        if (boxEditorObservation(deck, evidence, row, key)) {
+          const button = el("button", { type: "button", class: "btn btn-secondary box-editor-open", text: "Review a deck list",
+            "aria-label": "Review a deck list: " + row.name + " (" + row.section + ", " + key + ")", onclick: event => {
+              if (!here() || pending || needsRefresh || leavingForRepair || editorReading || !event.currentTarget.isConnected || !reviewing.contains(event.currentTarget)
+                  || !review[key].includes(row) || JSON.stringify(snapshot()) !== JSON.stringify(review)) return;
+              boxEditorChoices(deck, { meta: { ...evidence.meta, expect: sourceSha } }, row, key, {
+                host: editorChoices, sourceSha: () => sourceSha,
+                here: () => here() && !pending && !needsRefresh && !leavingForRepair && ["review", "saved"].includes(stage)
+                  && editorChoices.isConnected && reviewing.contains(editorChoices) && JSON.stringify(snapshot()) === JSON.stringify(review),
+                busy: value => { editorReading = value; if (current()) actions(); }, leave: leaveForRepair });
             } });
           repairButtons.push(button); item.append(button);
         }
         return item;
       })) : el("p", { text: "None recorded in this review." })));
+    clear(editorChoices); reviewing.append(editorChoices);
     if (!evidence.meta.editable) reviewing.append(el("p", { class: "sub", text: evidence.meta.why_not || "You cannot save a check date for this deck." }));
   }
   function actions() {
@@ -172,13 +189,13 @@ function packReviewBoxCheck(view, deck) {
       : needsRefresh ? { text: "Reload plan", kind: "primary", onclick: event => {
         if (here() && !pending && event.currentTarget.isConnected) ctx.sheet.close();
       } } : evidence && stage === "review" ? { text: pending ? "Saving check date." : "Save check date", kind: "primary",
-        disabled: pending || !evidence.meta.editable, onclick: save }
+        disabled: pending || editorReading || !evidence.meta.editable, onclick: save }
         : evidence ? { text: "Review differences", kind: "primary", disabled: pending || !snapshot(), onclick: event => {
           if (!actionable(event, ctx.sheet.foot) || stage !== "edit") return;
           review = snapshot(); if (!review) return;
           stage = "review"; editing.hidden = true; reviewing.hidden = false; differences(); error.textContent = ""; actions();
         } } : null,
-      !saved && !needsRefresh && stage === "review" ? { text: "Back to counts", disabled: pending, onclick: event => {
+      !saved && !needsRefresh && stage === "review" ? { text: "Back to counts", disabled: pending || editorReading, onclick: event => {
         if (!actionable(event, ctx.sheet.foot)) return;
         stage = "edit"; editing.hidden = false; reviewing.hidden = true; error.textContent = ""; actions();
       } } : null,
@@ -251,7 +268,7 @@ function packReviewBoxCheck(view, deck) {
     else { window.addEventListener("popstate", landed); window.addEventListener("hashchange", stop); }
   }
   async function save(event) {
-    if (!actionable(event, ctx.sheet.foot) || stage !== "review" || !evidence.meta.editable || !review
+    if (!actionable(event, ctx.sheet.foot) || editorReading || stage !== "review" || !evidence.meta.editable || !review
         || JSON.stringify(snapshot()) !== JSON.stringify(review)) return;
     const trigger = document.activeElement;
     const focusOwned = () => document.activeElement === trigger || document.activeElement === document.body || !document.activeElement?.isConnected;

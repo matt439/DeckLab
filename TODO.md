@@ -45,7 +45,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 
 | id | status | pri | size | item |
 |---|---|---|---|---|
-| `E7-S21` | OPEN | could | L | Box reviews, dates, Library filters and guarded Collection repair review are built. Intended/physical-list repair offers remain. |
+| `E7-S21` | OPEN | could | L | Box reviews, dates, Library filters and Collection/intended-list review offers are built. Physical-list repair remains. |
 | `E5-S15` | DEFERRED | should | M | User1 asks from the page for a card or a Forge run, Matt approves (`E3-S13`); not urgent. |
 | `E5-S24` | DEFERRED | could | S | Copy one shop's list from Shopping's By shop, for pasting into the shop's search. |
 

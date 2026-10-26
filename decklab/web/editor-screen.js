@@ -217,6 +217,7 @@ function drawBanners() {
   const host = ed.dom.banners;
   if (!host) return;
   clear(host);
+  if (typeof boxEditorContextBanner === "function") add(host, [boxEditorContextBanner(ed)]);
   if (typeof editorRetestNotice === "function") add(host, [editorRetestNotice(ed)]);
   if (ed.draftRemoveFailed) {
     host.append(el("div", { class: "box box-warn banner", role: "alert" },

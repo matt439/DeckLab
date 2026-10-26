@@ -2,6 +2,16 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Box observations beside an explicitly chosen intended list (2026-10-26; E7-S21)
+
+A named box difference now offers Review a deck list. A fresh saved-source and permission check offers only existing Planned/Play-now versions, with an explicit choice rather than selecting from the physical build. Opening a version closes the local box review and discards its counts/extras; it saves no date or list change. A one-use, profile/route/source-scoped memory handoff accompanies the ordinary Editor load, current-address draft restore/rebase and earlier-address draft choice. Only after that normal initialization does a dismissible observation note appear. The handoff applies no quantity, printing, list or Built version changes, and a saved-source mismatch retires the context.
+
+Users make any intended-list edit themselves through the normal reviewed save. The handoff preserves the saved physical Assembled recipe, generation, installed markers, check date, tokens, kit and stock; it does not reconcile physical contents or infer ownership. Source, route, profile, connected controls and busy cleanup are guarded across delayed reads and draft choices. Independent final review is clear, including the last busy-release change and race/draft tests.
+
+The final focused group passed 142 tests without skips in 11.534 seconds. JavaScript syntax, global Ruff and whitespace checks passed. Source auditing found 926 owned files, with only the existing 1,447-line tokens.js above the size guideline. The native fixture matrix passed 12 cases at 320, 600, 820, 1000, 1280 and 1920px, with Planned in light mode and Play-now in dark mode, zero horizontal overflow and no page errors. Each case made three source-deck reads including draft seeding, and the handoff preserved device draft bytes. In the final case one explicit disposable Play-now save left Planned, Assembled/generation/markers, date, packed tokens, kit and stock unchanged. There were no shared-tick or date writes, 36 baseline visit POSTs were blocked, and light/dark screenshots were inspected as actual pixels.
+
+No real household data, physical-device or human acceptance was used. E7-S21 remains partial and OPEN for physical-list repair; Collection and intended-list review offers are built. Story counts are unchanged.
+
 ## Interpreter-path semantics portability (2026-10-26; E11-S33)
 
 The home-server interpreter helpers now preserve Windows drive, UNC, rooted, relative and mixed-separator strings on either lexical path flavour, while explicit POSIX path objects retain their own flavour, literal backslashes and colon-named components. Typed subclasses and default interpreter inputs follow the same rule. The Git diagnostic fixture now uses `PureWindowsPath` for its Windows-specific strings. Independent review caught and verified fixes for explicit POSIX input being reclassified or reinterpreted through a native Windows wrapper; final source review is clear.

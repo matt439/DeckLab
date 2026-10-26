@@ -261,6 +261,7 @@ function route() {
   const token = ++routeToken;
   const { path, params } = parseHash();
   boxCollectionRoute(path, token);
+  boxEditorRoute(path, token);
   closeEditor(path);                // editor.js: the editor on screen is left (its draft stays)
   if (!state.profile) return drawWho();
   noteVisit(path, params);

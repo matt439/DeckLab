@@ -1998,7 +1998,7 @@ As an owner of built decks in the shared pool, I want to check a built deck's bo
 - Given a box check is saved, when the deck page is opened, then it shows the date the box was last checked.
 - Given a deck not checked for a long time, when the library is shown, then it can be filtered to decks due for a check.
 
-Now (2026-10-26): box reviews, historical dates, Library date filters and the [Collection repair handoff](../HISTORY.md#box-differences-to-guarded-collection-review-2026-10-26-e7-s21) are implemented for ordinary home built decks. A named difference opens a fresh printing/total-owned review as a separate collection change; no stock delta, intended list or physical recipe is inferred from the observation.
+Now (2026-10-26): box reviews, historical dates, Library filters, Collection review and the [normal Editor handoff](../HISTORY.md#box-observations-beside-an-explicitly-chosen-intended-list-2026-10-26-e7-s21) are implemented for ordinary home built decks. A named observation can accompany a fresh Collection review or an explicitly chosen existing Planned/Play-now list, preserving ordinary draft restoration and leaving all edits to the user.
 
 Evidence:
 - `decklab/lib/decks/boxcheck.py`, `decklab/lib/api/box_check.py`: section- and role-aware differences, exact source receipts, private date-only save through the normal deck write lock
@@ -2008,8 +2008,10 @@ Evidence:
 - `decklab/tests/test_library_box_check_api.py`, `test_library_boxchecks_ui.py`, `test_library_boxchecks_history_ui.py`: date scope and privacy, malformed/omitted summaries, combined filters, retained input, URL and phone Back behavior
 - `decklab/web/box-collection.js`, `assembly-boxcheck.js`, `collection.js`, `collection-cards.js`: one-shot guarded handoff, source-deck/current-row/exact-name checks, explicit printing/finish/total and fresh conflict review through ordinary collection writes
 - `decklab/tests/test_box_collection_ui.py`: marker roles, scope/history/ownership guards, blank totals, duplicate-printing refusal, stale source and separate collection-only writes
+- `decklab/web/box-editor.js`, `assembly-boxcheck.js`, `editor.js`, `editor-screen.js`, `app.js`: existing-version choice, fresh source/permission checks and memory-only context after normal current/alias draft restoration/rebase, without applying observation values
+- `decklab/tests/test_box_editor_ui.py`, `test_box_editor_drafts_ui.py`: source and busy/ownership races, draft preservation, version/route guards, stale-context retirement and unchanged physical/date/packing state
 
-Gap: intended/physical-list repair offers remain. Member-space and product box checks are future scope. Native fixture checks passed, with real-device and household acceptance separate. The historical date and name-only art certify no current contents, printing or finish.
+Gap: physical-list repair remains. Member-space and product box checks are future scope. Native fixture checks passed, with real-device and household acceptance separate. The historical date and name-only art certify no current contents, printing or finish, and an intended-list edit does not reconcile the recorded physical build.
 
 **E7-S22** · Matt · could · M · missing
 
