@@ -116,7 +116,7 @@ class UnsavedEditorRowInteractionTests(unittest.TestCase):
             assert(tile.querySelector('.qty-input')===input&&document.activeElement===input);
             assert.equal(trigger.getAttribute('aria-describedby'),p.description.id);
             assert.equal(p.was.getAttribute('aria-hidden'),'true');assert(viewerCards.get(trigger)===registered);
-            if(card)assert.equal(registered.caption,lineCaption({...line,qty:4},'Deck'));
+            if(card)assert.equal(registered.caption,lineCaption(line,'Deck'));
             else assert.equal(registered,undefined);
             setQty(line.uid,4);assert(p.was.hidden&&p.was.parentNode===trigger);assert.equal(label.textContent,name);
           }

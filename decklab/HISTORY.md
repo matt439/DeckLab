@@ -2,6 +2,14 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Current Editor viewer captions (2026-10-26; E11-S30 slice 14)
+
+In-place quantities now update the current row's existing registered viewer caption. Opening a card after a List, Pictures, Quick or preferred-search stepper edit shows the current count; merged original Remove/Undo updates the surviving printing. The exact line, section, row, trigger, group and card must still belong to the current editor and profile. Registration identity, status, focus and controls remain intact. This refreshes the next open, not the text of a viewer already open.
+
+Validation: 271 guarded integrated Editor/UI/source checks passed with zero skips. Five new cases cover actual group opening across list modes and trials, separate printings/Commander sections, search steppers, merged Undo and stale/unknown ownership. The first run's two failures were test-local name collisions, corrected without production changes. Six synthetic Chromium interaction cases passed: List plus, typed List, Pictures plus, preferred-search plus, merged Undo to six and Quick plus. Counts were restored. The stopped disposable fixture logged 43 API requests, including 12 read-only checks and three rejected automatic visits; no other mutation attempts. Actual data writes, database and downloads were blocked. No actual Save/conflict, Forge, full-suite, Linux, touch, Safari, physical-device, speech or real-IME acceptance.
+
+The source audit still flags only pre-existing tokens.js at 1,516 lines among 794 owned files. Save paths and the quantity/removal mutations are unchanged apart from showQty's guarded metadata hook. No shortcut was changed in this slice. Matt has since approved the three-step keyboard plan; its reliability fixes, contextual help and fast routes are separate scoped work. Slice 14 remains partial for selected rows/MV, Forge, docking and bar; prior human/device and data-contract gates remain open.
+
 ## Exact unsaved Editor row presentation (2026-10-26; E11-S30 slice 14)
 
 Saved Editor rows show an accent dot, changed stepper and a prior count using the exact saved section/name/set/number/finish key. A unique printing newly added to that section can say was 0; duplicate exact keys share the saved aggregate description but suppress an ambiguous per-row prior count. New/copy/unstarted lists have no saved baseline; readable trials of an actual saved version do. Fields/Notes and order-only global dirty state stay independent of these row markers.

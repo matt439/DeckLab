@@ -365,7 +365,21 @@ function showQty(line) {
     else if (line.qty > 1) tile.querySelector(".card-tile-pic").append(el("span", { class: "card-tile-qty", text: `×${line.qty}` }));
     if (badge && line.qty <= 1) badge.remove();
   }
+  syncEditorLineCaption(line);
   refreshCounts();
+}
+
+/** Keep the current line's registered caption current without replacing its viewer entry or trigger. */
+function syncEditorLineCaption(line) {
+  const ed = editor;
+  if (!ed || !line || ed.profile !== state.profile?.id || !ed.dom.lines?.isConnected) return;
+  const found = findLine(line.uid);
+  if (found?.line !== line) return;
+  const row = ed.dom.lines.querySelector(`[data-uid="${line.uid}"]`), p = row?.editorChange, trigger = p?.trigger;
+  if (p?.line !== line || p.section !== found.section || !trigger || !row.contains(trigger)
+    || trigger.getAttribute("data-viewer") !== "editor") return;
+  const entry = viewerCards.get(trigger);
+  if (entry && entry.card === line.card) entry.caption = lineCaption(line, found.section);
 }
 
 function removeLine(uid) {

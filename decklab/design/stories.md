@@ -3850,6 +3850,8 @@ Slice 14's saved-list curve presentation built 2026-10-26: canonical gradient, c
 
 Slice 14's exact unsaved-row presentation built 2026-10-26: retained dots, prior counts and changed steppers from saved section/printing tallies, duplicate-safe descriptions and original Remove/Undo. A native Pictures count-clipping finding was corrected without changing its name clamp or trigger. 266 guarded integrated checks, 36 final layout/theme cases and four native Remove/Undo cases passed with actual writes blocked. Current viewer-caption freshness remains a separate existing follow-up; selected rows/MV, Forge, docking, bar and device work keep the story partial. See [HISTORY.md](../HISTORY.md#exact-unsaved-editor-row-presentation-2026-10-26-e11-s30-slice-14).
 
+Current viewer-caption counts built 2026-10-26: in-place quantities and merged Remove/Undo update only the guarded existing row registration. 271 guarded integrated checks and six synthetic Chromium interaction cases passed; already-open text is not live-updated. No new shortcut. Matt subsequently approved keyboard conflict/focus fixes, contextual help and coherent fast routes as separate scoped work. See [HISTORY.md](../HISTORY.md#current-editor-viewer-captions-2026-10-26-e11-s30-slice-14).
+
 Gap: slices 9 to 12's touch/Safari acceptance, Collection's open colour-filter choice and Receive's check-to-row association; then slices 13 to 15 (criteria 1 to 3 and 6). Independent coding through slice 12 is built; component checks stay separate until their row association is authoritative. Device checks do not block coding. Section 6's question 4 is settled (Matt, 2026-10-25: only Building and Idea tiles show a status pill). The lab top bar's search is E11-S31.
 
 <a id="e11-s31"></a>

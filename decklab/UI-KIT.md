@@ -191,6 +191,9 @@ refreshes them in place, merging only their own description ID. Pictures keeps
 its original two-line name and places the retained prior count after metadata
 inside the same trigger. Removed text is struck, filled in casual and dashed
 in lab; original Undo and global dirty/ordering semantics remain unchanged.
+`showQty()` also refreshes only the current original viewer entry's caption through
+`syncEditorLineCaption()`, checking line/section/row/trigger/card/profile ownership.
+The next open gets current quantities; an already-open viewer is not live-updated.
 
 `editor-swaps.js` (after `editor-cards.js`) and `deck-swaps.js` (after
 `deck-standins.js`) are E2-S07's strategic stand-ins, kept apart from those
