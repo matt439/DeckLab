@@ -227,7 +227,7 @@ class CollectionFindLayoutUiTests(unittest.TestCase):
           // Each typed filter has its own debounce, and Enter commits the trimmed search.
           search.value = '  new query  '; search.fire('input'); mv.value = '4'; mv.fire('input'); flushTimers();
           assert.equal(cv.query.get('q'), 'new query'); assert.equal(cv.query.get('mv'), '4');
-          search.value = 'exact'; search.fire('input'); search.fire('keydown', {key: 'Enter'});
+          search.value = 'exact'; search.fire('input'); search.focus(); search.fire('keydown', {key: 'Enter'});
           assert.equal(cv.query.get('q'), 'exact'); const count = paths.length; flushTimers(); assert.equal(paths.length, count);
           const availability = main.querySelector('[aria-label=Show]');
           assert(availability.classList.contains('col-availability'));

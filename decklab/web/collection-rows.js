@@ -96,6 +96,11 @@ function colShownRows(cv) {
 
 function drawColRowList(cv) {
   if (!cv.list) return;
+  const focused = document.activeElement;
+  const sort = cv.list.contains(focused) ? focused?.closest(".th-sort")?.getAttribute("data-col-sort") : null;
+  const pager = cv.list.contains(focused) ? focused?.closest(".col-pager") : null;
+  const pageFocus = pager && focused.matches("button") ? {
+    label: pager.getAttribute("aria-label"), action: focused.getAttribute("aria-label") } : null;
   const rows = cv.rows || [];
   const unrecorded = rows.filter(colUnrecorded).length;
   cv.unrecordedLabel.textContent = `Condition or language not recorded: ${plural(unrecorded, "row")}`;
@@ -117,7 +122,10 @@ function drawColRowList(cv) {
     : `${num(shown.length)} of ${plural(rows.length, "row")}`;
   const pages = Math.max(1, Math.ceil(shown.length / COL_ROWS_PAGE));
   cv.page = Math.min(Math.max(1, cv.page), pages);
-  const go = (page) => { cv.page = page; drawColRowList(cv); cv.list.scrollIntoView({ block: "start", behavior: "smooth" }); };
+  const go = (page, control) => {
+    if (!colRowControlCurrent(cv, control)) return;
+    cv.page = page; drawColRowList(cv); cv.list.scrollIntoView({ block: "start", behavior: "smooth" });
+  };
   clear(cv.list);
   if (!rows.length) {
     cv.list.append(el("div", { class: "empty" }, el("p", { text: "No cards recorded yet." }),
@@ -133,6 +141,24 @@ function drawColRowList(cv) {
   colDrawPreview(cv, selected);
   drawColPriceNote(cv);
   setCollectionBusy(cv, cv.busy);
+  // A native sort/pager activation removes its own control. Restore only that owned focus.
+  if ((sort || pageFocus) && colActive(cv) && cv.root?.contains(cv.list) && !cv.busy
+      && !document.querySelector("dialog[open]") && !keyboardMenuOpen()
+      && (document.activeElement === focused || document.activeElement === document.body)) {
+    let target = sort ? cv.list.querySelector(`[data-col-sort="${sort}"]`) : null;
+    if (pageFocus) {
+      const fresh = [...cv.list.querySelectorAll(".col-pager")].find(node => node.getAttribute("aria-label") === pageFocus.label);
+      target = [...(fresh?.querySelectorAll("button") || [])].find(node => node.getAttribute("aria-label") === pageFocus.action && !node.disabled);
+      if (!target) target = cv.list.querySelector(".table-wrap");
+    }
+    if (target) target.focus({ preventScroll: true });
+  }
+}
+
+/** Detached controls never sort, page or reclaim focus in a newer view. */
+function colRowControlCurrent(cv, control) {
+  return colActive(cv) && !cv.busy && control?.isConnected && !control.disabled && cv.list?.contains(control) && cv.root?.contains(control)
+    && !document.querySelector("dialog[open]") && !keyboardMenuOpen();
 }
 
 /** What the Card list's prices are: estimates, from when and at what rate, or why there are none. */
@@ -172,7 +198,8 @@ function colRowTable(cv, rows) {
   const sortable = (key, cls = "") => {
     const on = cv.sort.key === key;
     return el("th", { scope: "col", class: `col-th-${key} ${cls}`.trim(), "aria-sort": on ? (cv.sort.dir > 0 ? "ascending" : "descending") : null },
-      el("button", { type: "button", class: "th-sort", text: COL_SORTS[key], onclick: () => {
+      el("button", { type: "button", class: "th-sort", "data-col-sort": key, text: COL_SORTS[key], onclick: (event) => {
+        if (!colRowControlCurrent(cv, event.currentTarget)) return;
         cv.sort = { key, dir: on ? -cv.sort.dir : COL_SORT_FIRST[key] || 1 };
         local.set("collection.rowsSort", `${key}:${cv.sort.dir}`);
         cv.page = 1; cv.casualLimit = COL_CASUAL_ROWS;
@@ -478,8 +505,8 @@ function colHeldCell(cv, row) {
 
 /** Lab navigation follows the current filtered ordering, including page boundaries. */
 function colTableKeys(cv, event) {
-  if (!colActive(cv) || cv.busy || !event.currentTarget?.isConnected || event.ctrlKey || event.metaKey || event.altKey) return;
-  if (["input", "textarea", "select", "[contenteditable]"].some((selector) => event.target?.closest(selector))) return;
+  if (!colKeyboardReady(cv, event) || !cv.list.contains(event.currentTarget) || !event.currentTarget.contains(event.target)) return;
+  if (keyboardEditing(event.target)) return;
   const key = String(event.key || "").toLowerCase(), shown = colShownRows(cv);
   if (key === "j" || key === "k") {
     if (!shown.length) return;
@@ -498,6 +525,7 @@ function colTableKeys(cv, event) {
   const row = shown.find((item) => colKey(item) === rowKey);
   if (!row) return;
   event.preventDefault();
+  if (event.repeat) return; // suppress the native button click too; held J/K still navigates
   cv.page = Math.floor(shown.indexOf(row) / COL_ROWS_PAGE) + 1;
   colSelectRow(cv, rowKey);
   const card = cv.pictures[rowKey];

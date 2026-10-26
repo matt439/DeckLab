@@ -377,7 +377,10 @@ function toggleViewerText() {
 }
 
 function viewerKey(e) {
-  if (!viewerState || e.altKey || e.ctrlKey || e.metaKey) return;
+  const dialog = viewerDom && viewerDom.dialog;
+  if (!viewerState || !dialog || !dialog.isConnected || keyboardDialog() !== dialog || keyboardMenuOpen()
+      || e.defaultPrevented || e.isComposing || e.keyCode === 229 || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey
+      || (e.target && e.target.isConnected === false) || keyboardEditing(e.target)) return;
   const moves = { ArrowRight: () => stepViewer(1), ArrowLeft: () => stepViewer(-1),
     Home: () => goViewer(0), End: () => goViewer(viewerState.items.length - 1) };
   if (!moves[e.key]) return;

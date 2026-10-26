@@ -113,8 +113,12 @@ function deckTabStrip(screen) {
   }
   // The arrow keys, Home and End move between the tabs (and open them), as a tablist's should.
   strip.addEventListener("keydown", (e) => {
+    if (deckScreen !== screen || !strip.isConnected || e.defaultPrevented || e.isComposing || e.keyCode === 229
+        || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey || keyboardDialog() || keyboardMenuOpen()) return;
+    const target = e.target && e.target.closest && e.target.closest("[role=tab]");
+    if (!target || !strip.contains(target) || target !== document.activeElement || keyboardEditing(e.target)) return;
     const names = DECK_TABS.map(([name]) => name);
-    const at = names.indexOf(screen.view.tab);
+    const at = names.indexOf(target.dataset.tab);
     const to = { ArrowRight: at + 1, ArrowLeft: at - 1, Home: 0, End: names.length - 1 }[e.key];
     if (to === undefined) return;
     e.preventDefault();

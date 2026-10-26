@@ -662,3 +662,17 @@ Rules added for these devices (the device pass of 2026-10-13), besides those abo
 - **Every width:** History's card strips are one row (as many pictures as fit, then the +N tile). A grid whose column holds a picture strip (Shopping's deliveries) needs `minmax(0, 1fr)` columns and `min-width: 0`, or the strip's min-content widens the card.
 
 Receive delivery inspection panels (`rcptSheetPicture`) are separate from the shared full-screen viewer: on a phone the picture is up to 320px wide, inside a full-width swipe surface. Previous/Next, a count and a swipe/enlarge hint accompany multi-card lists. Vertical gestures scroll; form controls keep their own input behaviour. Tapping the image opens the shared viewer.
+
+## Keyboard ownership
+
+The two menu implementations share `keyboardEditing`, `keyboardDialog`,
+`keyboardShown` and `keyboardMenuOpen` in core.js. Popovers include native-control
+avatar menus; body-mounted overflow menus retain their anchor and join ordinary
+popover/route cleanup. Detached/background anchors do not open, menu types are
+exclusive, held activation does not reopen a returned anchor, and native Tab is
+not prevented. Core menus use Up/Down; overflow menus also use Home/End.
+Page handlers check current view/focus, modifiers, composition and consumed
+events before acting. Navigation may repeat; activation does not. Collection
+sort/pager redraws restore only their fresh owned control. Dialog focus order,
+not reusable-viewer DOM order, owns fallback navigation. No new binding belongs
+to this reliability slice; contextual help and fast routes follow separately.

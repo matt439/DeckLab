@@ -765,13 +765,16 @@ function libWatchDensity(results, refresh) {
 /** J and K in the lab: select the next or previous row and move the focus to it (Enter then opens it). Not
  * while typing, with a modifier, or once the library has been left. */
 function libKeys(results, view) {
+  const token = routeToken, profile = state.profile ? state.profile.id : null;
   const keys = (event) => {
     if (!results.isConnected) { document.removeEventListener("keydown", keys); return; }
-    if (!libIsLab() || event.metaKey || event.ctrlKey || event.altKey || event.defaultPrevented) return;
+    if (token !== routeToken || profile !== (state.profile ? state.profile.id : null) || !libIsLab()
+        || event.metaKey || event.ctrlKey || event.altKey || event.shiftKey || event.defaultPrevented
+        || event.isComposing || event.keyCode === 229 || keyboardDialog() || keyboardMenuOpen()) return;
     const key = (event.key || "").toLowerCase();
     if (key !== "j" && key !== "k") return;
     const target = event.target;
-    if (target && target.closest && target.closest("input, select, textarea, [contenteditable], dialog")) return;
+    if ((target && target.isConnected === false) || keyboardEditing(target)) return;
     const rows = Array.from(results.querySelectorAll(".deck-row"));
     if (!rows.length) return;
     const at = rows.findIndex((r) => r.getAttribute("aria-current") === "true");

@@ -61,7 +61,8 @@ class DeckPageUiTests(unittest.TestCase):
           assert(panel('stats').children.length > 0);
           assert(location.hash.endsWith('&tab=stats'));
           // The arrow keys move between the tabs.
-          main.querySelector('[role=tablist]').fire('keydown', {key: 'ArrowRight'});
+          tab('stats').focus();
+          main.querySelector('[role=tablist]').fire('keydown', {key: 'ArrowRight', target: tab('stats')});
           assert.equal(tab('practice').getAttribute('aria-selected'), 'true');
           assert(location.hash.endsWith('&tab=practice'));
           // An old ?part=field link opens Matchups; an unknown tab the Overview.

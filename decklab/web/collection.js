@@ -149,7 +149,7 @@ function colViewerLink(href, text) {
 function colPager(page, pages, go, label) {
   if (!(pages > 1)) return null;
   const button = (text, to, aria) => el("button", { type: "button", class: "btn btn-quiet", text, "aria-label": aria,
-    disabled: to < 1 || to > pages || to === page || null, onclick: () => go(to) });
+    disabled: to < 1 || to > pages || to === page || null, onclick: (event) => go(to, event.currentTarget) });
   return el("nav", { class: "col-pager", "aria-label": label },
     button("«", 1, "First page"), button("‹", page - 1, "Previous page"),
     el("span", { class: "col-pager-at", text: `Page ${page} of ${pages}` }),
@@ -252,6 +252,14 @@ function colTakeRows(cv, data) {
 function colActive(cv) {
   return cv.token === routeToken && state.profile && state.profile.id === cv.profile
     && (!cv.root || cv.root.isConnected);
+}
+
+/** Page keys belong to one current view and yield to text composition, menus and dialogs. */
+function colKeyboardReady(cv, event) {
+  return colActive(cv) && !cv.busy && !event.defaultPrevented && !event.isComposing && event.keyCode !== 229
+    && !event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey
+    && event.currentTarget?.isConnected && cv.root?.contains(event.currentTarget)
+    && !document.querySelector("dialog[open]") && !keyboardMenuOpen();
 }
 
 /** Save the space's collection as a CSV in the collection's columns, named after the space and the date
@@ -396,7 +404,13 @@ function colFilters(cv) {
   // Each typed filter has its own timer, so changing one doesn't drop the other's pending change.
   let searchTimer = 0, mvTimer = 0;
   search.addEventListener("input", () => { clearTimeout(searchTimer); searchTimer = setTimeout(() => colFilter(cv, "q", search.value.trim()), COL_TYPE_MS); });
-  search.addEventListener("keydown", (e) => { if (e.key === "Enter") { clearTimeout(searchTimer); colFilter(cv, "q", search.value.trim()); } });
+  search.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter" || !colKeyboardReady(cv, event) || event.target !== search
+        || document.activeElement !== search) return;
+    event.preventDefault();
+    if (event.repeat) return;
+    clearTimeout(searchTimer); colFilter(cv, "q", search.value.trim());
+  });
   const mv = el("input", { id: id("mv"), type: "number", inputmode: "decimal", min: "0", step: "0.5", placeholder: "Any",
     value: q.get("mv") || "" });
   mv.addEventListener("input", () => { clearTimeout(mvTimer); mvTimer = setTimeout(() => colFilter(cv, "mv", mv.value.trim()), COL_TYPE_MS); });

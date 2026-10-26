@@ -15,8 +15,15 @@ let openMenuNow = null;         // the menu open now ({close}), so opening anoth
  * it; the arrow keys, Home and End move between items, and the focus goes back to anchor. Sets anchor's
  * aria-expanded while it's open. Returns {node, close()}. */
 function openMenu(anchor, items) {
+  const dialog = keyboardDialog();
+  if (!anchor || !anchor.isConnected || anchor.disabled || anchor.getAttribute("aria-disabled") === "true"
+      || (dialog && !dialog.contains(anchor))) return { node: null, close() {} };
+  keyboardMenuButton(anchor);
   if (openMenuNow) openMenuNow.close();
-  const list = el("ul", { class: "menu", role: "menu" });
+  closeMenus();
+  const list = el("ul", { class: "menu", role: "menu", id: `menu-${++menuSeq}`, "data-popover": "" });
+  list.keyboardAnchor = anchor;
+  list.closePopover = () => close(false);
   const buttons = [];
   for (const item of items || []) {
     if (!item) continue;
@@ -24,7 +31,8 @@ function openMenu(anchor, items) {
     const props = { role: "menuitem", class: item.danger ? "menu-danger" : null, tabindex: "-1",
       "aria-current": item.current ? "page" : null, "aria-disabled": item.disabled ? "true" : null };
     const node = item.href
-      ? el("a", { ...props, href: item.href, text: item.text, onclick: () => close(false) })
+      ? el("a", { ...props, href: item.href, text: item.text,
+        onclick: (event) => { if (item.disabled) { event.preventDefault(); return; } close(false); } })
       : el("button", { ...props, type: "button", text: item.text, disabled: item.disabled || null,
         onclick: () => { close(true); if (item.onclick) item.onclick(); } });
     buttons.push(node);
@@ -43,8 +51,15 @@ function openMenu(anchor, items) {
   };
   const outside = (e) => { if (!list.contains(e.target) && !anchor.contains(e.target)) close(false); };
   const keys = (e) => {
-    const at = buttons.indexOf(document.activeElement);
-    const go = (i) => { e.preventDefault(); buttons[(i + buttons.length) % buttons.length].focus({ preventScroll: true }); };
+    if (!anchor.isConnected) { close(false); return; }
+    if (!keyboardMenuOwns(list) || !list.contains(e.target) || keyboardEditing(e.target)
+        || e.defaultPrevented || e.isComposing || e.keyCode === 229
+        || e.altKey || e.ctrlKey || e.metaKey || (e.shiftKey && e.key !== "Tab")) return;
+    if (e.repeat && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); return; }
+    const enabled = buttons.filter((node) => !node.disabled && node.getAttribute("aria-disabled") !== "true");
+    const at = enabled.indexOf(document.activeElement);
+    const go = (i) => { if (!enabled.length) return; e.preventDefault();
+      enabled[(i + enabled.length) % enabled.length].focus({ preventScroll: true }); };
     if (e.key === "Escape") { e.preventDefault(); close(true); }
     else if (e.key === "Tab") close(false);
     else if (e.key === "ArrowDown") go(at + 1);
@@ -59,16 +74,18 @@ function openMenu(anchor, items) {
     document.removeEventListener("pointerdown", outside, true);
     window.removeEventListener("resize", place);
     if (openMenuNow && openMenuNow.node === list) openMenuNow = null;
-    if (refocus) anchor.focus();
+    if (refocus && anchor.isConnected) anchor.focus();
   }
   list.addEventListener("keydown", keys);
   document.body.append(list);
   place();
   anchor.setAttribute("aria-haspopup", "menu");
+  anchor.setAttribute("aria-controls", list.id);
   anchor.setAttribute("aria-expanded", "true");
   document.addEventListener("pointerdown", outside, true);
   window.addEventListener("resize", place);
-  if (buttons.length) buttons[0].focus({ preventScroll: true });
+  const first = buttons.find((node) => !node.disabled && node.getAttribute("aria-disabled") !== "true");
+  if (first) first.focus({ preventScroll: true });
   openMenuNow = { node: list, close: () => close(false) };
   return openMenuNow;
 }
