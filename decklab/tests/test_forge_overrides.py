@@ -221,6 +221,27 @@ class DeployTests(OverridesCase):
             fcntl.flock(fd, fcntl.LOCK_UN)
         self.assertNotEqual(overrides.ensure_deployed(self.user)["hash"], "none")
 
+    def test_an_interrupted_wait_gives_the_lock_back(self):
+        # Not only OSError: a thread interrupted while it waits (a patched sleep raising, an
+        # interrupt) mustn't leave this process's later deploys waiting forever.
+        forge.common.DATA_DIR.mkdir(parents=True, exist_ok=True)
+        fd = os.open(forge.common.DATA_DIR / overrides.LOCK_FILE, os.O_RDWR | os.O_CREAT | getattr(os, "O_BINARY", 0))
+        self.addCleanup(os.close, fd)
+        if sys.platform == "win32":
+            msvcrt.locking(fd, msvcrt.LK_NBLCK, 1)
+        else:
+            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        with mock.patch.object(overrides.time, "sleep", side_effect=KeyboardInterrupt), \
+                self.assertRaises(KeyboardInterrupt):
+            overrides.ensure_deployed(self.user)
+        self.assertFalse(overrides._deploy_lock.locked())
+        if sys.platform == "win32":
+            os.lseek(fd, 0, os.SEEK_SET)
+            msvcrt.locking(fd, msvcrt.LK_UNLCK, 1)
+        else:
+            fcntl.flock(fd, fcntl.LOCK_UN)
+        self.assertNotEqual(overrides.ensure_deployed(self.user)["hash"], "none")
+
     def test_experiment_and_knob_folders(self):
         folder = overrides.user_dir_for(["fiery", "remove"])
         self.assertEqual(folder.parent, forge.common.DATA_DIR / "users")

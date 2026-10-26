@@ -51,7 +51,7 @@ magic/
 pokemon/
   collection.csv        # owned full-art singles
   wishlist.csv
-scripts/                # helpers (decklab.cmd starts Deck Lab from any folder; audit_source_lengths.py)
+scripts/                # helpers (decklab.cmd starts Deck Lab from any folder; audit_source_lengths.py; test_shard.py, one of CI's 4 parallel test jobs)
 decklab/                # Deck Lab, the home-network deck page: what is still to do and the design in decklab/PLAN.md, what was built in decklab/HISTORY.md, how to run it in decklab/README.md
   design/               # the design model (2026-10-13): personas, journeys, user stories with built/partial/missing status, gap analysis; flip a story's status when its feature ships
   server.py             # runs in the background once started; not at logon unless installed with --at-logon (python -m decklab.lib.homenet status|stop|start|restart); http://localhost:8642
