@@ -31,6 +31,7 @@ const CURVE_TOP = 7;            // the curve's last column: 7 or more
 function drawEditor() {
   const ed = editor;
   const main = $("#main");
+  disposeEditorSearchDock(ed);
   const focus = document.activeElement && main.contains(document.activeElement)
     ? document.activeElement.dataset.focus : null;
   clear(main);
@@ -65,6 +66,7 @@ function drawEditor() {
   drawBanners();
   drawCheck();
   drawBar();
+  mountEditorSearchDock(ed);
   registerEditorKeyboardHelp(ed);
   if (focus) {
     const again = main.querySelector(`[data-focus="${CSS.escape(focus)}"]`);
@@ -395,6 +397,8 @@ function drawMain() {
     host.setAttribute("aria-labelledby", `edit-tab-${ed.tab}`);
   }
   if (ed.tab === "notes") {
+    closeEditorSearchDock(ed.dom.searchDock, { focus: false });
+    projectEditorSearchDock();
     host.append(notesPart());
     if (ed.dom.look) ed.dom.look.hidden = true;
     return;
@@ -403,6 +407,7 @@ function drawMain() {
   drawLookSwitch();
   drawLines();
   showRowAvailability(currentAvailability());
+  projectEditorSearchDock();
 }
 
 // The write-up ----------------------------------------------------------------------
@@ -589,6 +594,7 @@ function projectEditorPanes(context) {
   }
   const heading = ed.dom.check.querySelector("#h-check");
   if (heading) heading.setAttribute("class", wide ? "edit-pane-heading" : "sr-only");
+  projectEditorSearchDock();
 }
 
 /** Folds the side panel to its tabs (below 1,000 px; a wide screen always shows it), or opens it. */
@@ -596,11 +602,13 @@ function foldSide(folded) {
   const ed = editor, context = ed?.dom?.panes;
   if (!editorPanesCurrent(context)) return;
   const active = document.activeElement;
+  if (folded) closeEditorSearchDock(ed.dom.searchDock, { focus: false });
   if (folded && !context.wide && ed.dom.sideBody.contains(active) && !document.querySelector("dialog[open]")) {
     ed.dom.sideFold.focus({ preventScroll: true });
   }
   ed.sideFolded = folded;
   projectEditorPanes(context);
+  if (!folded && ed.side === "add" && editorSearchDockWanted(ed)) openEditorSearchDock();
 }
 
 function drawSideTabs(context = editor?.dom?.panes, building = false) {
@@ -624,6 +632,7 @@ function drawSideTabs(context = editor?.dom?.panes, building = false) {
 function setSide(key, context = editor?.dom?.panes) {
   if (!editorPanesCurrent(context) || !context.panels[key]) return;
   const ed = context.ed, active = document.activeElement;
+  if (key !== "add") closeEditorSearchDock(ed.dom.searchDock, { focus: false });
   if (ed.tab !== "cards") { ed.tab = "cards"; drawMain(); }
   ed.side = key;
   ed.sideFolded = false;
@@ -634,6 +643,7 @@ function setSide(key, context = editor?.dom?.panes) {
       && !ed.saving && !ed.asking && !document.querySelector("dialog[open]")) {
     context.buttons[key].button.focus({ preventScroll: true });
   }
+  if (key === "add" && editorSearchDockWanted(ed)) openEditorSearchDock();
 }
 
 function showSide() {
@@ -685,6 +695,10 @@ function resizeEditorPanes() {
 
 /** Scroll only the same owned focus, using the pane's actual scroller and the visible header/bar. */
 function revealEditorPaneFocus(context, target) {
+  if (context.ed.dom.searchDock?.fixed && context.search.contains(target)) {
+    if (editorSearchDocked(context.ac)) revealEditorSearchDockFocus(context.ed.dom.searchDock, target);
+    return;
+  }
   const ed = context.ed, key = editorPaneOf(context, target);
   // A new deck can change space without rebuilding this tree. A queued scroll still belongs to its old scope.
   const scope = JSON.stringify([ed.id, ed.version, ed.space]), hash = location.hash;
@@ -743,7 +757,7 @@ document.addEventListener("pointerdown", clearEditorPaneHeaderFocus);
 function focusSearch() {
   const ed = editor;
   if (!ed) return;
-  if (ed.quick || !ed.dom.sideBody) { openAddSheet(); return; }
+  if (editorSearchDockWanted(ed) || !ed.dom.sideBody) { openEditorSearchDock(); return; }
   if (!editorPanesCurrent(ed.dom.panes)) return;
   if (ed.tab !== "cards") { ed.tab = "cards"; drawMain(); }
   if (ed.side !== "add") setSide("add");
@@ -919,6 +933,7 @@ function noOwnedList() {
  * once and then changed in place: a check that comes back (or a quantity typed) while a finger is on Save
  * doesn't swap the button from under it. */
 function drawBar() {
+  queueEditorSearchDockFit();
   const ed = editor;
   const bar = ed.dom.bar;
   if (!bar) return;

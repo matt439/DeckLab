@@ -763,10 +763,12 @@ function showNewDeck(params, token) {
 }
 
 function startEditor(opts) {
+  disposeEditorSearchDock(editor, { takeover: true });
   const profile = state.profile;
   const ed = { mode: opts.mode, version: opts.version || "target", profile: profile.id, checkSeq: 0, check: null, checkError: null,
     notice: null, lastAdded: null, flash: null, addSection: "Deck", leaving: false, asking: false,
-    brackets: [], sent: {}, removed: [], pos: entryPos(), pendingDraftKey: opts.pendingDraftKey || null,
+    brackets: [], sent: {}, removed: [], pos: entryPos(), entryHash: location.hash, entryToken: routeToken,
+    pendingDraftKey: opts.pendingDraftKey || null,
     draftRemoveFailed: !!opts.pendingDraftKey, quick: quickEditing(), history: [], snap: null,
     side: local.get("editSide") || "add", look: local.get("editLook") === "visual" ? "visual" : "list",
     tab: "cards", prose: null, markCurrent: false };
@@ -862,6 +864,7 @@ function closeEditor() {
   if (!editor) return;
   const ed = editor;
   saveDraft(ed);
+  disposeEditorSearchDock(ed);
   clearTimeout(ed.checkTimer);
   clearTimeout(ed.draftTimer);
   cancelEditorSearch(ed.ac);
@@ -930,6 +933,7 @@ async function leaveEditor(ask = true) {
       return false;
     }
     editor.leaving = true;
+    disposeEditorSearchDock(editor);
     document.querySelectorAll("dialog.sheet").forEach((d) => d.close());   // a question left open, too
     return true;
   }
@@ -1108,6 +1112,7 @@ function openSheet(title, opts = {}) {
   // A history entry, so a phone's Back closes the sheet (not the page). history: false for a sheet opened while
   // the browser is moving through history (the editor's "Leave without saving?").
   if (opts.history !== false) sheet.entry = pushSheetEntry(() => sheet.close());
+  trackEditorSearchDockSheet(sheet);
   return sheet;
 }
 

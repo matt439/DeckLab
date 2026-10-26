@@ -713,3 +713,15 @@ eligibility and panel visibility through the same row; the reason is visible.
 The original secondary button, native disabled state and description remain.
 Quick scope and all Forge request/test/Save behavior are unchanged. Result
 figures, unsaved evidence and after-save testing are separate work.
+
+`editor-search-dock.js` projects the retained Add root as a labelled nonmodal
+region/tabpanel in casual density. It measures the existing bar and viewport,
+reserves document clearance, and scrolls only the same current owned control.
+The original heading and query/results survive reopening and density changes;
+generation/query/route/profile guards cancel stale frames and pending actions.
+Escape follows search's first-clear handling, then owned dismissal. Back/Paste
+and saved-editor takeover use exact transient tokens/positions; unrelated live
+overlays retain ownership. The ordinary Save path is unchanged. Current F/help
+registration follows lazy Quick mount; nontext Dock Undo resolves a fresh visible
+launcher/Cards fallback, while input Undo remains native. Target sizing reads
+the shared --tap/--btn-h and panel/font rules; keyboard-up tab policy is unchanged.

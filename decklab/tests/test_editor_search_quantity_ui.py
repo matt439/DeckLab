@@ -44,7 +44,7 @@ class EditorSearchQuantityUiTests(unittest.TestCase):
             Sideboard:[{qty:8,name:elves.name,set:'new',number:'7',finish:'nonfoil',card:elves}]});
           drawLines();openAddSheet();
           const card={...elves,default:{set:'new',number:'7',finish:'nonfoil'}},ac=found([card]);
-          assert.equal(main.contains(ac.wrap),false);
+          assert.equal(main.contains(ac.wrap),true);
           const record=quantity(ac),qtyField=record.qty,inspect=ac.list.querySelector('.ac-thumb-btn');
           assert.equal(ac.list.fire('mousedown',{target:qtyField}).defaultPrevented,false);
           assert.equal(ac.list.fire('mousedown',{target:record.plus}).defaultPrevented,false);
@@ -161,7 +161,7 @@ class EditorSearchQuantityUiTests(unittest.TestCase):
         self.run_js(r"""
           window.matchMedia('(min-width: 600px)').matches=true;
           startEditor({mode:'edit',view:view(),version:'target'});assert.equal(editor.quick,false);
-          const ac=editor.ac,before=JSON.stringify(editor.lists);let findAnswer,checkAnswer;
+          focusSearch();const ac=editor.ac,before=JSON.stringify(editor.lists);let findAnswer,checkAnswer;
           let writes=0;apiWrite=async()=>{writes++;throw Error('unexpected write');};
           api=()=>new Promise(done=>{findAnswer=done;});
           ac.input.value=elves.name;ac.input.fire('input');ac.input.fire('keydown',{key:'Enter'});

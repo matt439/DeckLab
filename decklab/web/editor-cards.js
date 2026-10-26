@@ -42,7 +42,7 @@ const FIND_TYPES = [["", "Any type"], ["creature", "Creature"], ["instant", "Ins
 // Adding cards -----------------------------------------------------------------
 
 /** The Add tab: Add to (the section), the search with its filters and results, and Paste a list. */
-function addPart(onPaste = openPaste) {
+function addPart(onPaste = editorSearchPaste) {
   const ed = editor;
   ed.dom.addTo = el("div", { class: "segmented", role: "group", "aria-label": "Add cards to" });
   const part = el("section", { class: "edit-add", id: "edit-add", "aria-label": "Add cards" },
@@ -88,7 +88,9 @@ function editorSearchOwned(ac) {
 }
 
 function editorSearchCurrent(ac, painting = false) {
-  return editorSearchOwned(ac) && Boolean(ac.wrap?.isConnected || (painting && ac.initializing));
+  const dock = ac?.owner?.dom?.searchDock;
+  return editorSearchOwned(ac) && !ac.dockSuspended && (!dock || dock.ac !== ac || editorSearchDockCurrent(dock))
+    && Boolean(ac.wrap?.isConnected || (painting && ac.initializing));
 }
 
 function editorSearchScope(ac) { return JSON.stringify([ac.owner.id, ac.owner.version, ac.owner.space]); }
@@ -632,6 +634,11 @@ function pick(ac, i, n = null) {
  * screen or a short one its own body also scrolls the box to its top: scrolling the page to the box does
  * nothing for a sticky panel, and an iPad's keyboard would otherwise cover the results. */
 function keepSearchInView(ac) {
+  if (ac?.dockSuspended) return;
+  if (editorSearchDocked(ac)) {
+    queueEditorSearchDockFit(ac.owner.dom.searchDock);
+    revealEditorSearchDockFocus(ac.owner.dom.searchDock, ac.input); return;
+  }
   const side = stickySide(ac);
   const small = window.matchMedia("(pointer: coarse)").matches || (window.visualViewport && window.visualViewport.height < 560);
   if (side) {
@@ -671,6 +678,7 @@ function raiseSidePanel(ac) {
 
 /** The results' height on a touch screen with its keyboard up: what's left under the box. */
 function fitList(ac) {
+  if (editorSearchDocked(ac)) { ac.list.style.maxHeight = ""; return; }
   if (!ac || !ac.list || !document.body.classList.contains("keyboard-up")) {
     if (ac && ac.list && ac.list.style) ac.list.style.maxHeight = "";
     return;
@@ -711,7 +719,7 @@ function noteKeyboard() {
   } else if (h > fullHeight) {
     fullHeight = h;
   }
-  const typing = !!(editor && editor.ac && document.activeElement === editor.ac.input);
+  const typing = !!(editor && editor.ac && !editor.ac.dockSuspended && document.activeElement === editor.ac.input);
   const touch = window.matchMedia("(pointer: coarse)").matches;
   document.body.classList.toggle("keyboard-up", typing && touch && h < fullHeight - 120);
 }
@@ -741,7 +749,7 @@ if (window.visualViewport) {
     noteViewHeight();
     noteKeyboard();
     const ac = editor && editor.ac;
-    if (!ac || document.activeElement !== ac.input) return;
+    if (!ac || ac.dockSuspended || document.activeElement !== ac.input) return;
     // The keyboard coming up puts the box at the top; it going away leaves the page where it is.
     if (grew) fitList(ac);
     else keepSearchInView(ac);
@@ -797,26 +805,8 @@ function addBesideList() {
     || window.matchMedia("(min-width: 1000px)").matches;
 }
 
-/** The Quick edit's Add: search stays open for the next card; Paste replaces the search sheet. */
-function openAddSheet() {
-  const ed = editor;
-  if (!ed || noOwnedList()) return;
-  let ac = null;
-  const sheet = openSheet({ title: "Add cards", onClose: (action) => {
-    const current = editorSearchOwned(ac);
-    cancelEditorSearch(ac);
-    if (!current) return;
-    ed.ac = null; ed.dom.addTo = null;
-    document.body.classList.remove("is-searching", "keyboard-up");
-    if (action === "paste") openPaste();
-  } });
-  sheet.dialog.classList.add("sheet-search");
-  const part = addPart(() => sheet.close("paste"));
-  ac = ed.ac;
-  sheet.body.append(part);
-  sheetActions(sheet, [{ text: "Done", kind: "primary", onclick: () => sheet.close() }]);
-  ed.ac.input.focus();
-}
+/** Quick Add uses the same retained nonmodal search dock. */
+function openAddSheet() { openEditorSearchDock(); }
 
 
 // ------------------------------------------------------------ printing picker

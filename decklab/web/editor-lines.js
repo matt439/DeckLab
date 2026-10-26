@@ -300,6 +300,8 @@ function editorUndoFocus(ed) {
   const address = { active, token: routeToken, profile: ed.profile, scope: JSON.stringify([ed.id, ed.version, ed.space]) };
   const bar = ["addCards", "save", "saveMore", "checks"].find((key) => ed.dom.barParts?.[key] === active);
   if (bar) return { ...address, bar };
+  if (ed.dom.searchDock && editorSearchDockCurrent(ed.dom.searchDock) && ed.dom.searchDock.root.contains(active))
+    return { ...address, bar: "addCards" }; // Undo redraws the Dock; recover at its current launcher or Cards.
   if (!host?.contains(active)) return null;
   const row = [...host.querySelectorAll("[data-uid]")].find((node) => node.editorChange && node.contains(active));
   let found = row?.editorChange && findLine(row.editorChange.line.uid), kind = active.dataset.focus?.split(":")[0];

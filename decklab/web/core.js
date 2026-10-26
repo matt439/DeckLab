@@ -762,6 +762,13 @@ function pushSheetEntry(close) {
       for (const entry of [...sheetEntries].reverse()) {
         if (entry.pos > pos && !entry.done) { entry.fromHistory = true; entry.close(); }
       }
+      const current = history.state;
+      const liveSheet = current?.sheet && sheetEntries.some(entry => entry.token === current.sheet && !entry.done);
+      if (current?.sheet && !liveSheet) {
+        const { sheet, ...rest } = current;
+        history.replaceState(rest, ""); // A closed historical mark is a page again, not a reusable live sheet.
+      }
+      if (!liveSheet && !current?.cardViewer && typeof editorSheetHistoryLanded === "function") editorSheetHistoryLanded(current?.pos);
     });
   }
   const entry = { token: ++sheetEntrySeq, pos: null, close, done: false, fromHistory: false };

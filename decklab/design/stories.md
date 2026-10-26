@@ -3862,6 +3862,8 @@ The approved keyboard plan's current-page fast routes built 2026-10-26: question
 
 Slice 14's retained Forge action panel built 2026-10-26: the existing secondary Test this change button and visible reason sit outside replaceable Stats content, with unchanged eligibility and callbacks. 520 guarded integrated checks and ten synthetic Chromium cases passed; no actual run/write. Results/badge/after-save behavior remain separate evidence-aware work. See [HISTORY.md](../HISTORY.md#retained-editor-forge-action-panel-2026-10-26-e11-s30-slice-14).
 
+Slice 14's retained nonmodal search Dock built 2026-10-26: original search/query/controls, measured Save-bar and outside-focus clearance, exact Back/Paste/history takeover, guarded Escape and current keyboard/help/Undo integration. 560 guarded integrated checks plus 15 Chromium interactions and two final layout spot checks passed with actual writes blocked. Device acceptance and remaining row/MV/bar/Forge work stay open. See [HISTORY.md](../HISTORY.md#retained-nonmodal-editor-search-dock-2026-10-26-e11-s30-slice-14).
+
 Gap: slices 9 to 12's touch/Safari acceptance, Collection's open colour-filter choice and Receive's check-to-row association; then slices 13 to 15 (criteria 1 to 3 and 6). Independent coding through slice 12 is built; component checks stay separate until their row association is authoritative. Device checks do not block coding. Section 6's question 4 is settled (Matt, 2026-10-25: only Building and Idea tiles show a status pill). The lab top bar's search is E11-S31.
 
 <a id="e11-s31"></a>

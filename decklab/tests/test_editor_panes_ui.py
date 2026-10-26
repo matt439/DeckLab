@@ -26,6 +26,13 @@ SETUP = quick.SETUP + '\nchanged = ' + REAL_CHANGED + r''';
     ac.input.value=elves.name;ac.query=elves.name;ac.items=[foundCard];ac.active=0;
     ac.resultScope=editorSearchScope(ac);drawOptions(ac);
   }
+  function dockGeometry(ed,target,height=48) {
+    const body=ed.dom.addPart,measure={moves:0};let value=0;
+    body.box={top:100,bottom:250,height:150,left:0,right:1000};
+    Object.defineProperty(body,'scrollTop',{configurable:true,get:()=>value,set:n=>{value=n;measure.moves++;}});
+    target.getBoundingClientRect=()=>({top:602-value,bottom:602+height-value,height,left:420,right:680});
+    return measure;
+  }
 '''
 
 DEEP_LINK_SETUP = r'''
@@ -72,21 +79,21 @@ class EditorPanesUiTests(unittest.TestCase):
           tabs[2].focus();ed.check={blocks:[{}],warnings:[]};drawSideTabs();
           assert.equal(document.activeElement,tabs[2]);
           same(SIDE_TABS.map(([key])=>ctx.buttons[key].button===tabs[SIDE_TABS.findIndex(([k])=>k===key)]),[true,true,true]);
-          assert.equal(tabs[2].querySelector('.tab-count').textContent,'1');assert.equal(ac.seq,seq);
+          assert.equal(tabs[2].querySelector('.tab-count').textContent,'1');assert(ac.seq>seq,'Closing casual Add invalidates pending work without model changes');
           width(true);for(const key of ['add','stats','checks'])assert(shown(key));
           assert.equal(ed.ac,ac);assert.equal(ed.dom.stats,roots[1]);assert(ed.dom.stats.textContent.includes('Mana curve'));
         ''')
 
-    def test_pending_answer_survives_hidden_tab_without_extra_reads_or_early_enter(self):
+    def test_closed_casual_search_rejects_old_reply_and_reopens_with_a_fresh_read(self):
         self.run_js(r'''
           const ed=full(),ac=ed.ac,requests=[],before=JSON.stringify(ed.lists);let resolve;
           api=path=>{requests.push(path);return new Promise(r=>resolve=r);};
           ac.input.value=elves.name;const pending=lookUp(ac,elves.name);setSide('checks');width(false);
-          assert.equal(ed.ac,ac);assert(editorSearchCurrent(ac));
-          resolve({cards:[foundCard],pages:2});await pending;
-          assert.equal(ac.items[0].name,elves.name);assert.equal(ac.pages,2);assert.equal(requests.length,1);
-          const control=ac.list.querySelector('.ac-add');setSide('add');assert.equal(ac.list.querySelector('.ac-add'),control);
-          assert(!ac.pickFirst);assert.equal(JSON.stringify(ed.lists),before);
+          assert.equal(ed.ac,ac);assert(ac.dockSuspended);assert(!editorSearchCurrent(ac));
+          resolve({cards:[foundCard],pages:2});await pending;assert.equal(ac.items.length,0);assert.equal(requests.length,1);
+          setSide('add');flushTimers();assert.equal(requests.length,2);
+          resolve({cards:[foundCard],pages:2});await settle();assert.equal(ac.items[0].name,elves.name);
+          assert.equal(ac.pages,2);assert(!ac.pickFirst);assert.equal(JSON.stringify(ed.lists),before);
         ''')
 
     def test_checks_heading_class_survives_reply_recreation_and_both_responsive_modes(self):
@@ -134,7 +141,7 @@ class EditorPanesUiTests(unittest.TestCase):
           assert.equal(ed.tab,'cards');assert.equal(ed.ac,ac);assert(document.activeElement===ac.input);
           ed.tab='notes';drawMain();jumpToChecks();assert.equal(ed.tab,'cards');assert(document.activeElement===ed.dom.check);
           assert.equal(JSON.stringify(ed.prose),prose);
-          assert.equal(JSON.stringify(draftBody()),before);assert.equal(ed.history.length,history);assert.equal(ac.seq,seq);assert.equal(writes,0);
+          assert.equal(JSON.stringify(draftBody()),before);assert.equal(ed.history.length,history);assert(ac.seq>seq,'Explicitly closed Add invalidates request intent');assert.equal(writes,0);
           for(const [key,panel] of Object.entries(ctx.panels)) {
             assert.equal(panel.getAttribute('role'),'tabpanel');
             assert.equal(ctx.buttons[key].button.getAttribute('aria-controls'),panel.id);
@@ -221,19 +228,19 @@ class EditorPanesUiTests(unittest.TestCase):
           const ed=full(),ctx=ed.dom.panes,ac=ed.ac,pictured={...foundCard,img_small:'/img/f/small',img:'/img/f/normal'};
           ac.input.value=elves.name;ac.query=elves.name;ac.items=[pictured];ac.active=0;drawOptions(ac);
           ac.list.removeAttribute('hidden'); // Native .hidden=false reflects the attribute; this DOM double does not.
-          const trigger=ac.list.querySelector('.ac-thumb-btn'),seq=ac.seq,query=ac.query;let doc=0,moves=0;
+          const trigger=ac.list.querySelector('.ac-thumb-btn'),seq=ac.seq,query=ac.query;let moves=0;
           window.innerHeight=330;window.visualViewport.height=330;
-          trigger.getBoundingClientRect=()=>({top:602-doc,bottom:650-doc,height:48,left:420,right:464});
-          ed.dom.bar.box={top:258,bottom:330,height:72,left:0,right:1000};window.scrollBy=opts=>{doc+=opts.top;moves++;};
+          const local=dockGeometry(ed,trigger);
+          ed.dom.bar.box={top:258,bottom:330,height:72,left:0,right:1000};window.scrollBy=()=>moves++;
           openCardViewer([pictured],0,{trigger});viewerState.history=false;viewerDom.dialog.open=true;
           width(false);assert(shown('add'));assert.equal(moves,0);
           viewerDom.dialog.open=false;viewerDom.dialog.removeAttribute('open');viewerClosed();
           assert(document.activeElement===trigger);const focus=trigger.focus.bind(trigger);let focusedAgain=0;
           trigger.focus=(...args)=>{focusedAgain++;focus(...args);};
           // The DOM double does not bubble focusin; dispatch the native event after shared viewerClosed focuses.
-          ctx.root.fire('focusin',{target:trigger});assert(moves>0);assert(trigger.getBoundingClientRect().bottom<=250);
+          ctx.root.fire('focusin',{target:trigger});flushTimers();assert(local.moves>0);assert.equal(moves,0);assert(trigger.getBoundingClientRect().bottom<=250);
           assert(document.activeElement===trigger);assert.equal(focusedAgain,0);assert.equal(ac.seq,seq);assert.equal(ac.query,query);
-          const outside=el('button');main.append(outside);outside.focus();const before=moves;flushTimers();
+          ctx.root.fire('focusin',{target:trigger});const outside=el('button');main.append(outside);outside.focus();const before=moves,localBefore=local.moves;flushTimers();assert.equal(local.moves,localBefore);
           assert.equal(moves,before);assert(document.activeElement===outside);
           const old=ctx;full();old.root.fire('focusin',{target:trigger});assert.equal(moves,before);
         ''')
@@ -254,18 +261,18 @@ class EditorPanesUiTests(unittest.TestCase):
         self.run_js(r'''
           const ed=full(),ctx=ed.dom.panes,ac=ed.ac,pictured={...foundCard,img_small:'/img/f/small',img:'/img/f/normal'};
           ac.input.value=elves.name;ac.query=elves.name;ac.items=[pictured];ac.active=0;drawOptions(ac);ac.list.removeAttribute('hidden');
-          const trigger=ac.list.querySelector('.ac-thumb-btn'),scope=editorSearchScope(ac);let doc=0,moves=0,focusCalls=0;
+          const trigger=ac.list.querySelector('.ac-thumb-btn'),scope=editorSearchScope(ac);let moves=0,focusCalls=0;
           window.innerHeight=330;window.visualViewport.height=330;
-          trigger.getBoundingClientRect=()=>({top:602-doc,bottom:650-doc,height:48,left:420,right:464});
-          ed.dom.bar.box={top:258,bottom:330,height:72,left:0,right:1000};window.scrollBy=opts=>{doc+=opts.top;moves++;};
+          const local=dockGeometry(ed,trigger);
+          ed.dom.bar.box={top:258,bottom:330,height:72,left:0,right:1000};window.scrollBy=()=>moves++;
           openCardViewer([pictured],0,{trigger});viewerState.history=false;viewerDom.dialog.open=true;width(false);
           // Browser autofocus can return to the page before the dialog's open state is removed.
           trigger.focus();ctx.root.fire('focusin',{target:trigger});assert.equal(moves,0);
           const focus=trigger.focus.bind(trigger);trigger.focus=(...args)=>{focusCalls++;focus(...args);};
           viewerDom.dialog.open=false;viewerDom.dialog.removeAttribute('open');viewerClosed();assert.equal(focusCalls,1);
-          flushTimers();assert(moves>0);assert(trigger.getBoundingClientRect().bottom<=250);
+          flushTimers();assert(local.moves>0);assert.equal(moves,0);assert(trigger.getBoundingClientRect().bottom<=250);
           assert(document.activeElement===trigger);assert.equal(focusCalls,1);assert.equal(editorSearchScope(ac),scope);
-          const done=moves;flushTimers();assert.equal(moves,done);
+          const done=local.moves;flushTimers();assert.equal(local.moves,done);assert.equal(moves,0);
         ''')
 
     def test_modal_blocked_focus_queue_refuses_open_modal_changed_scope_focus_or_busy_effect(self):
@@ -274,7 +281,7 @@ class EditorPanesUiTests(unittest.TestCase):
             for(const dialog of document.querySelectorAll('dialog'))dialog.remove();state.profile=state.profiles[1];
             window.matchMedia('(min-width: 1000px)').matches=true;
             const ed=full(),ctx=ed.dom.panes,target=ed.ac.input;let moves=0;
-            width(false);setSide('add');target.box={top:602,bottom:634,height:32,left:420,right:680};
+            width(false);setSide('add');flushTimers();const local=dockGeometry(ed,target,32);
             ed.dom.bar.box={top:258,bottom:330,height:72,left:0,right:1000};window.innerHeight=330;window.visualViewport.height=330;
             window.scrollBy=()=>moves++;const modal=el('dialog',{open:true});document.body.append(modal);
             target.focus();ctx.root.fire('focusin',{target});assert.equal(moves,0);
@@ -290,7 +297,7 @@ class EditorPanesUiTests(unittest.TestCase):
             else if(action==='new-search')ed.ac={...ed.ac};
             else if(action==='new-view')full();
             else if(action==='saving'||action==='asking')ed[action]=true;
-            const active=document.activeElement;flushTimers();assert.equal(moves,0,action);assert(document.activeElement===active);
+            const active=document.activeElement;flushTimers();assert.equal(local.moves,0,action);assert.equal(moves,0,action);assert(document.activeElement===active);
             flushTimers();assert.equal(moves,0,action+' has no repeated retry');
           }
         ''')
@@ -298,18 +305,18 @@ class EditorPanesUiTests(unittest.TestCase):
     def test_same_route_popstate_repairs_ua_scroll_restoration_after_the_first_focus_frame(self):
         self.run_js(r'''
           location.hash='#/edit?id=casual/sample&v=target';
-          const ed=full(),ctx=ed.dom.panes,target=ed.ac.input,hash=location.hash;let doc=0,moves=0,focusCalls=0;
-          width(false);setSide('add');window.innerHeight=330;window.visualViewport.height=330;
-          target.getBoundingClientRect=()=>({top:602-doc,bottom:634-doc,height:32,left:420,right:680});
-          ed.dom.bar.box={top:258,bottom:330,height:72,left:0,right:1000};window.scrollBy=opts=>{doc+=opts.top;moves++;};
+          const ed=full(),ctx=ed.dom.panes,target=ed.ac.input,hash=location.hash;let moves=0,focusCalls=0;
+          width(false);setSide('add');flushTimers();window.innerHeight=330;window.visualViewport.height=330;
+          const local=dockGeometry(ed,target,32);
+          ed.dom.bar.box={top:258,bottom:330,height:72,left:0,right:1000};window.scrollBy=()=>moves++;
           target.focus();const focus=target.focus.bind(target);target.focus=(...args)=>{focusCalls++;focus(...args);};
           ctx.root.fire('focusin',{target});flushTimers();assert(target.getBoundingClientRect().bottom<=250);
           // Closing the viewer's history entry can restore its saved page scroll after that first frame.
-          doc=0;assert.equal(target.getBoundingClientRect().top,602);window.fire('popstate');assert(moves>0);
+          ed.dom.addPart.scrollTop=0;assert.equal(target.getBoundingClientRect().top,602);window.fire('popstate');assert.equal(moves,0);
           // UA restoration follows popstate dispatch. The one owned frame must use the final geometry.
-          doc=0;flushTimers();assert(target.getBoundingClientRect().bottom<=250);
+          ed.dom.addPart.scrollTop=0;flushTimers();assert(target.getBoundingClientRect().bottom<=250);assert(local.moves>0);assert.equal(moves,0);
           assert(document.activeElement===target);assert.equal(focusCalls,0);assert.equal(location.hash,hash);
-          const done=moves;flushTimers();assert.equal(moves,done);
+          const done=local.moves;flushTimers();assert.equal(local.moves,done);assert.equal(moves,0);
         ''')
 
     def test_history_repair_refuses_real_navigation_before_hashchange_and_all_late_owner_changes(self):
@@ -319,9 +326,9 @@ class EditorPanesUiTests(unittest.TestCase):
             for(const dialog of document.querySelectorAll('dialog'))dialog.remove();state.profile=state.profiles[1];
             location.hash='#/edit?id=casual/sample&v=target';window.matchMedia('(min-width: 1000px)').matches=true;
             const ed=full(),ctx=ed.dom.panes,target=ed.ac.input,hash=location.hash;let moves=0;
-            width(false);setSide('add');window.innerHeight=330;window.visualViewport.height=330;
-            target.box={top:602,bottom:634,height:32,left:420,right:680};ed.dom.bar.box={top:258,bottom:330,height:72,left:0,right:1000};
-            window.scrollBy=()=>moves++;target.focus();
+            width(false);setSide('add');flushTimers();window.innerHeight=330;window.visualViewport.height=330;
+            const local=dockGeometry(ed,target,32);ed.dom.bar.box={top:258,bottom:330,height:72,left:0,right:1000};
+            window.scrollBy=()=>moves++;if(document.activeElement!==target)target.focus();
             // This open modal prevents immediate scrolling; the frame then proves every late guard.
             const blocker=el('dialog',{open:true});document.body.append(blocker);
             if(action==='hash-before')location.hash='#/library';
@@ -340,7 +347,7 @@ class EditorPanesUiTests(unittest.TestCase):
             else if(action==='detached')ed.dom.page.remove();
             else if(action==='new-search')ed.ac={...ed.ac};
             else if(action==='new-view')full();
-            const active=document.activeElement;flushTimers();assert.equal(moves,0,action);assert(document.activeElement===active);
+            const active=document.activeElement;flushTimers();assert.equal(local.moves,0,action);assert.equal(moves,0,action);assert(document.activeElement===active);
           }
         ''')
 
@@ -351,10 +358,10 @@ class EditorPanesUiTests(unittest.TestCase):
           assert.equal(location.hash,hash);assert.equal(ed.dom.panes.hash,hash);
           same(replacements,[hash]);assert.equal(requests.length,1);assert(requests[0].startsWith('/api/deck/edit?'));
           same(opened,[ed.lists.Sideboard[0].uid]);assert.equal(ed.lists.Sideboard[0].name,bolt.name);
-          width(false);setSide('add');const target=ed.ac.input;let moves=0;
-          target.box={top:602,bottom:634,height:32,left:420,right:680};ed.dom.bar.box={top:258,bottom:330,height:72,left:0,right:1000};
+          width(false);setSide('add');const target=ed.ac.input;let moves=0;flushTimers();
+          const local=dockGeometry(ed,target,32);ed.dom.bar.box={top:258,bottom:330,height:72,left:0,right:1000};
           window.innerHeight=330;window.visualViewport.height=330;window.scrollBy=()=>moves++;
-          target.focus();revealEditorPaneFocus(ed.dom.panes,target);assert(moves>0,'canonicalized current pane remains live');
+          if(document.activeElement!==target)target.focus();revealEditorPaneFocus(ed.dom.panes,target);flushTimers();assert(local.moves>0,'canonicalized current dock remains live');assert.equal(moves,0);
         ''')
 
     def test_actual_notes_link_keeps_notes_intent_and_still_refuses_real_navigation(self):
@@ -365,12 +372,12 @@ class EditorPanesUiTests(unittest.TestCase):
           const prose=JSON.stringify(ed.prose),textarea=document.getElementById('prose-notes');
           assert.equal(textarea.value,ed.prose.notes);focusSearch();assert.equal(ed.tab,'cards');assert.equal(ed.ac,ac);
           assert.equal(JSON.stringify(ed.prose),prose);assert.equal(requests.length,1);same(opened,[]);
-          width(false);setSide('add');const target=ac.input;let moves=0;
-          target.box={top:602,bottom:634,height:32,left:420,right:680};ed.dom.bar.box={top:258,bottom:330,height:72,left:0,right:1000};
-          window.innerHeight=330;window.visualViewport.height=330;window.scrollBy=()=>moves++;target.focus();
+          width(false);setSide('add');const target=ac.input;let moves=0;flushTimers();
+          const local=dockGeometry(ed,target,32);ed.dom.bar.box={top:258,bottom:330,height:72,left:0,right:1000};
+          window.innerHeight=330;window.visualViewport.height=330;window.scrollBy=()=>moves++;if(document.activeElement!==target)target.focus();
           location.hash='#/library';window.fire('popstate');assert.equal(moves,0,'hash guard precedes routeToken/hashchange');
-          location.hash=hash;revealEditorPaneFocus(ed.dom.panes,target);assert(moves>0);
-          const done=moves;location.hash='#/library';flushTimers();assert.equal(moves,done,'old queued scope cannot follow navigation');
+          location.hash=hash;revealEditorPaneFocus(ed.dom.panes,target);flushTimers();assert(local.moves>0);assert.equal(moves,0);
+          const done=local.moves;revealEditorPaneFocus(ed.dom.panes,target);location.hash='#/library';flushTimers();assert.equal(local.moves,done,'old queued scope cannot follow navigation');assert.equal(moves,0);
         ''')
 
     def test_alias_draft_gate_preserves_intent_until_callback_and_canonical_refresh_drops_old_frames(self):
@@ -389,15 +396,15 @@ class EditorPanesUiTests(unittest.TestCase):
           same(replacements,[]);button(main,'Open saved deck').click();const ed=editor,ctx=ed.dom.panes,ac=ed.ac;
           assert(ed&&ctx);assert.equal(ctx.hash,intentHash);assert.equal(location.hash,intentHash);
           assert.equal(stored.get(oldKey),raw);assert.equal(ed.tab,'cards','deferred callback keeps the existing intent timing');
-          width(false);setSide('add');const target=ac.input;let moves=0;
-          target.box={top:602,bottom:634,height:32,left:420,right:680};ed.dom.bar.box={top:258,bottom:330,height:72,left:0,right:1000};
-          window.innerHeight=330;window.visualViewport.height=330;window.scrollBy=()=>moves++;target.focus();
+          width(false);setSide('add');const target=ac.input;let moves=0;flushTimers();
+          const scrollMeasure=dockGeometry(ed,target,32);ed.dom.bar.box={top:258,bottom:330,height:72,left:0,right:1000};
+          window.innerHeight=330;window.visualViewport.height=330;window.scrollBy=()=>moves++;if(document.activeElement!==target)target.focus();
           const modal=el('dialog',{open:true});document.body.append(modal);revealEditorPaneFocus(ctx,target);assert.equal(moves,0);
           openSwapsFromRoute(params,ed.id);const canonical=editHref(ed.id,'owned');
           assert.equal(location.hash,canonical);assert.equal(ctx.hash,canonical);same(replacements,[canonical]);
           assert.equal(ed.tab,'notes');focusSearch();assert.equal(ed.ac,ac);assert(document.activeElement===target);
-          modal.remove();flushTimers();assert.equal(moves,0,'old queued deep-link hash cannot adopt the refreshed canonical address');
-          revealEditorPaneFocus(ctx,target);assert(moves>0,'fresh canonical work remains allowed');
+          modal.remove();flushTimers();assert.equal(scrollMeasure.moves,0,'old queued deep-link hash cannot adopt the refreshed canonical address');assert.equal(moves,0);
+          focusSearch();revealEditorPaneFocus(ctx,target);flushTimers();assert(scrollMeasure.moves>0,'fresh canonical dock work remains allowed');assert.equal(moves,0);
           assert.equal(stored.get(oldKey),raw);assert.equal(requests.length,1);
         ''')
 

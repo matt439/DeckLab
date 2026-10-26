@@ -40,6 +40,12 @@ class Node {
     for (let item of items) { if (!(item instanceof Node)) item = new Text(String(item)); item.parentNode = this; this.children.push(item); }
   }
   appendChild(child) { this.append(child); return child; }
+  insertBefore(child, before) {
+    if (child === before) return child;
+    if (before && before.parentNode !== this) throw Error("Insert reference is outside this parent");
+    child.remove(); child.parentNode = this;
+    this.children.splice(before ? this.children.indexOf(before) : this.children.length, 0, child); return child;
+  }
   replaceChildren(...items) { this.children.forEach((n) => { n.parentNode = null; }); this.children = []; this.append(...items); }
   replaceWith(node) {
     const parent = this.parentNode; if (!parent) return;
@@ -50,6 +56,7 @@ class Node {
   get textContent() { return this.children.map((c) => c.textContent).join(""); }
   contains(node) { return node === this || this.children.some((c) => c.contains(node)); }
   get isConnected() { return document.body.contains(this); }
+  get nextSibling() { const nodes = this.parentNode?.children; return nodes ? nodes[nodes.indexOf(this) + 1] || null : null; }
   matches(selector) {
     const attr = /\[([^=\]]+)(?:=["']?([^\]"']+)["']?)?\]/g;
     for (const match of selector.matchAll(attr)) {
@@ -111,7 +118,7 @@ const context = { Node, document, window, console, URL, URLSearchParams, assert,
 };
 vm.createContext(context);
 const scriptNames = allScripts ? [...fs.readFileSync(web + "/index.html", "utf8").matchAll(/<script src="\/([^"?]+)"/g)].map(m => m[1])
-  : ["core.js", "ui.js", "symbols.js", "cards-ui.js", "card-viewer.js", "library-tables.js", "editor.js", "deck-availability.js", "deck.js", "deck-header.js", "deck-overview.js", "deck-retirement.js", "deck-prices.js", "deck-sideboard.js", "deck-opponents.js", "deck-standins.js", "deck-swaps.js", "product-storage.js", "accessory-pictures.js", "assembly-chooser.js", "assembly-switcher.js", "assembly-finish.js", "assembly-steps.js", "assembly-overlap.js", "assembly-sections.js", "assembly-sheets.js", "collection-guards.js", "receipts.js", "receipt-tiles.js", "receipt-layout.js", "receipt-workflow.js", "commander-readiness.js", "commander-night.js", "deck-tools.js", "editor-screen.js", "editor-details.js", "editor-lines.js", "editor-cards.js", "editor-search-quantity.js", "editor-swaps.js", "editor-save.js", "wishlist.js", "shopping.js", "shopping-buying.js", "shopping-queue.js", "shopping-reprints.js", "shopping-orders.js", "shopping-order-edit.js", "shopping-order-rows.js", "keyboard-help.js", "shell.js", "app.js"];
+  : ["core.js", "ui.js", "symbols.js", "cards-ui.js", "card-viewer.js", "library-tables.js", "editor.js", "deck-availability.js", "deck.js", "deck-header.js", "deck-overview.js", "deck-retirement.js", "deck-prices.js", "deck-sideboard.js", "deck-opponents.js", "deck-standins.js", "deck-swaps.js", "product-storage.js", "accessory-pictures.js", "assembly-chooser.js", "assembly-switcher.js", "assembly-finish.js", "assembly-steps.js", "assembly-overlap.js", "assembly-sections.js", "assembly-sheets.js", "collection-guards.js", "receipts.js", "receipt-tiles.js", "receipt-layout.js", "receipt-workflow.js", "commander-readiness.js", "commander-night.js", "deck-tools.js", "editor-screen.js", "editor-details.js", "editor-lines.js", "editor-cards.js", "editor-search-quantity.js", "editor-search-dock.js", "editor-swaps.js", "editor-save.js", "wishlist.js", "shopping.js", "shopping-buying.js", "shopping-queue.js", "shopping-reprints.js", "shopping-orders.js", "shopping-order-edit.js", "shopping-order-rows.js", "keyboard-help.js", "shell.js", "app.js"];
 for (const name of scriptNames) {
   let source = fs.readFileSync(web + "/" + name, "utf8");
   // Network start-up is outside these tests; all actual interaction functions

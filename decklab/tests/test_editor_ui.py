@@ -116,7 +116,9 @@ class EditorPageTests(unittest.TestCase):
           assert.equal(editor.dom.sideFold.textContent, "Hide");
           editor.dom.sideFold.click();
           assert(panel.classList.contains("is-folded"));
-          focusSearch();
+          // This isolated pane fixture has no mounted search/keyboard owner.
+          // Actual Add/F ownership is covered by test_editor_search_dock_ui.
+          setSide("add");
           assert(!panel.classList.contains("is-folded"));
           assert.equal(editor.side, "add");
           // An empty deck starts open: adding cards is the first thing to do.

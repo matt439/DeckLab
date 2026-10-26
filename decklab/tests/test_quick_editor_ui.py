@@ -126,8 +126,8 @@ class QuickEditorUiTests(unittest.TestCase):
               count:{lines:1,cards:2},unknown:[],errors:[],warnings:[]};
           };
           main.querySelector('.bar-add').click();
-          assert.equal(document.querySelectorAll('dialog').length, 1);
-          button(document.querySelector('dialog'), 'Paste a list…').click();
+          assert.equal(document.querySelectorAll('dialog').length, 0);
+          button(editor.dom.searchDock.root, 'Paste a list…').click();
           assert.equal(document.querySelectorAll('dialog').length, 1);
           assert(document.querySelector('dialog').textContent.includes('Check the list'));
           input('paste-text', '2 Lightning Bolt');
@@ -153,13 +153,13 @@ class QuickEditorUiTests(unittest.TestCase):
           apiWrite = async () => ({sections:{Deck:[{qty:60,name:forest.name,card:forest}]},
             count:{lines:1,cards:60},unknown:[],errors:[],warnings:[]});
           main.querySelector('.bar-add').click();
-          button(document.querySelector('dialog'), 'Paste a list…').click();
+          button(editor.dom.searchDock.root, 'Paste a list…').click();
           input('paste-text', '60 Forest');
           button(document.querySelector('dialog'), 'Check the list').click(); await settle();
           button(document.querySelector('dialog'), 'Cancel').click();
           assert.equal(listSignature(editor.lists), before);
           main.querySelector('.bar-add').click();
-          button(document.querySelector('dialog'), 'Paste a list…').click();
+          button(editor.dom.searchDock.root, 'Paste a list…').click();
           input('paste-text', '60 Forest');
           button(document.querySelector('dialog'), 'Check the list').click(); await settle();
           const sheet = document.querySelector('dialog');
@@ -172,7 +172,7 @@ class QuickEditorUiTests(unittest.TestCase):
           assert.equal(draftBody().fields, undefined);
         """)
 
-    def test_paste_waits_for_native_close_and_reuses_the_search_history_entry(self):
+    def test_paste_closes_nonmodal_dock_and_reuses_the_search_history_entry(self):
         self.run_js(r"""
           const closes = [];
           Node.prototype.showModal = function () { this.open = true; };
@@ -183,24 +183,16 @@ class QuickEditorUiTests(unittest.TestCase):
           history.replaceState = value => { history.state = value; };
           history.back = () => { backed++; history.state = {pos:0}; };
           begin(); main.querySelector('.bar-add').click();
-          assert.equal(sheetEntries.length, 1);
-          const search = document.querySelector('dialog'), oldToken = history.state.sheet;
-          button(search, 'Paste a list…').click();
-          assert.equal(document.getElementById('paste-text'), null, 'Native close finishes first');
-          assert.equal(document.querySelectorAll('dialog').length, 1);
-          closes.shift()();
-          assert.equal(search.isConnected, false);
-          assert(document.getElementById('paste-text'));
-          assert.equal(document.querySelectorAll('dialog').length, 1);
-          assert.equal(sheetEntries.length, 1);
-          assert.equal(history.state.pos, 1);
-          assert.notEqual(history.state.sheet, oldToken);
-          flushTimers(); assert.equal(backed, 0, 'Search close cannot step off the Paste entry');
-          button(document.querySelector('dialog'), 'Cancel').click();
-          closes.shift()(); flushTimers();
-          assert.equal(sheetEntries.length, 0);
-          assert.equal(backed, 1);
-          assert.equal(document.querySelectorAll('dialog').length, 0);
+          const dock=editor.dom.searchDock,search=editor.ac,oldToken=history.state.sheet;
+          assert.equal(sheetEntries.length,1);assert.equal(document.querySelectorAll('dialog').length,0);
+          button(dock.root,'Paste a list…').click();
+          assert(!dock.open&&dock.root.hidden&&search.dockSuspended);assert(search.wrap.isConnected);
+          assert(document.getElementById('paste-text'));assert.equal(document.querySelectorAll('dialog').length,1);
+          assert.equal(sheetEntries.length,1);assert.equal(history.state.pos,1);assert.notEqual(history.state.sheet,oldToken);
+          flushTimers();assert.equal(backed,0,'Dock release cannot step off the Paste entry');
+          button(document.querySelector('dialog'),'Cancel').click();closes.shift()();flushTimers();
+          assert.equal(sheetEntries.length,0);assert.equal(backed,1);assert.equal(document.querySelectorAll('dialog').length,0);
+          openAddSheet();assert.equal(editor.ac,search);
         """)
 
     def test_person_space_and_read_only_permissions_still_apply(self):

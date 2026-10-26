@@ -606,3 +606,41 @@ dialog.sheet-search .ac-option { grid-template-columns: 44px minmax(0, 1fr) auto
 /* No card pointed at yet (a new deck): no empty frame in the peek. */
 .edit-page .card-peek:has(.peek-img:not([src])) { visibility: hidden; }
 .paste-summary { margin: 0; }
+
+/* Casual search is a labelled, nonmodal region above the measured action bar.
+   Its original tree stays mounted; only this bounded body scrolls. */
+.edit-dock-head { display: contents; }
+.edit-dock-clearance { flex: none; pointer-events: none; overflow-anchor: none; }
+.edit-dock-clearance[hidden] { display: none; }
+.edit-search-dock {
+  --btn-h: var(--tap);
+  position: fixed; z-index: 14; box-sizing: border-box;
+  display: flex; flex-direction: column; min-height: 0; min-width: 0; padding: 0;
+  overflow: hidden; background: var(--surface); border: 1px solid var(--border-strong);
+  border-radius: var(--r-panel) var(--r-panel) 0 0; box-shadow: var(--shadow-2);
+}
+.edit-search-dock[hidden] { display: none; }
+.edit-search-dock .edit-dock-head {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--s-2);
+  flex: none; padding: var(--s-2) var(--s-3); border-bottom: 1px solid var(--border);
+}
+.edit-search-dock .edit-dock-head h2 { display: block; margin: 0; font-size: var(--fs-lg); }
+.edit-search-dock .edit-add {
+  display: block; flex: 1 1 auto; min-height: 0 !important; padding: var(--s-3);
+  overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable;
+}
+.edit-search-dock .ac-wrap { display: block; min-height: 0; }
+.edit-search-dock .ac { position: sticky; top: 0; z-index: 2; padding: var(--s-1) 0; background: var(--surface); }
+.edit-search-dock .search-input { min-height: 48px; font-size: max(16px, 1rem); }
+.edit-search-dock .ac-list, .edit-search-dock .ac-list:has(.ac-option) {
+  min-height: 0 !important; max-height: none !important; overflow: visible;
+}
+.edit-search-dock .ac-option { min-height: 76px; }
+.edit-search-dock .ac-add { min-height: 68px; }
+.edit-search-dock :is(.ac-filters button, .ac-select, .ac-mine, .ac-owned, .add-paste .btn, .add-to button) { min-height: var(--tap); }
+.edit-search-dock .ac-colour { width: var(--tap); height: var(--tap); }
+.edit-search-dock .ac-stepper .step { min-width: var(--tap); min-height: var(--tap); }
+.edit-search-dock .ac-stepper .qty-input { min-height: var(--tap); }
+body.has-editor-search-dock .edit-side { overflow: visible; }
+/* Searching must leave the one real count/Save bar available above the keyboard. */
+body.has-editor-search-dock.is-searching.keyboard-up .edit-bar { display: flex; }

@@ -193,23 +193,18 @@ class EditorSearchUiTests(unittest.TestCase):
           add.click(); inspect.fire('click', {stopPropagation(){}}); assert.equal(changes,0); assert.equal(inspections.length,0);
         """)
 
-    def test_quick_dismiss_cancels_early_enter_and_replacement_close_keeps_new_search(self):
+    def test_quick_dismiss_suspends_early_enter_and_stale_close_keeps_replacement_search(self):
         self.run_quick(r"""
-          begin(); let sheet;
-          const makeSheet=openSheet; openSheet=options => (sheet=makeSheet(options));
-          openAddSheet(); const old=editor.ac, ed=editor, before=listSignature(ed.lists);
-          const pending=[]; api=() => new Promise(resolve => pending.push(resolve));
-          old.input.value=elves.name; old.input.fire('input'); old.input.fire('keydown',{key:'Enter',shiftKey:true});
-          assert.equal(old.pickFirst,true); sheet.close();
-          assert.equal(old.cancelled,true); assert.equal(old.pickFirst,false); assert.equal(ed.ac,null);
-          pending[0]({cards:[elves]}); await settle();
-          assert.equal(listSignature(ed.lists),before);
-          openAddSheet(); const prior=editor.ac, priorSheet=sheet;
-          const replacement=cardSearch(); sheet.body.append(replacement); const current=editor.ac;
-          document.body.classList.add('is-searching'); priorSheet.close();
-          assert.equal(editor.ac,current); assert.equal(current.cancelled,false);
-          assert.equal(document.body.classList.contains('is-searching'),true);
-          assert.equal(prior.cancelled,true);
+          begin();openAddSheet();const old=editor.ac,ed=editor,dock=ed.dom.searchDock,before=listSignature(ed.lists);
+          const pending=[];api=()=>new Promise(resolve=>pending.push(resolve));
+          old.input.value=elves.name;old.input.fire('input');old.input.fire('keydown',{key:'Enter',shiftKey:true});
+          assert(old.pickFirst);closeEditorSearchDock(dock);
+          assert(old.dockSuspended&&!old.cancelled);assert(!old.pickFirst);assert.equal(ed.ac,old);
+          pending[0]({cards:[elves]});await settle();assert.equal(listSignature(ed.lists),before);
+          openAddSheet();assert.equal(ed.ac,old);
+          main.append(cardSearch());const current=ed.ac;document.body.classList.add('is-searching');
+          closeEditorSearchDock(dock);assert.equal(ed.ac,current);assert(!current.cancelled);
+          assert(document.body.classList.contains('is-searching'));assert(old.cancelled);
         """)
 
     def test_close_editor_or_replacing_search_drops_late_exact_enter(self):

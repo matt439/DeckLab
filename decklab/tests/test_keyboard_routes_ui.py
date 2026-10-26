@@ -163,8 +163,9 @@ class KeyboardRoutesUiTests(unittest.TestCase):
     def test_full_editor_f_reveals_retained_add_search_without_changing_the_draft_or_requesting_data(self):
         self.run_js(panes_ui.SETUP, r'''
           location.hash='#/edit?id=casual%2Fsample&v=target';const ed=full(),ac=ed.ac,searchInput=ac.input;
-          const before=JSON.stringify(draftBody()),history=ed.history.length,seq=ac.seq,calls=noRouteIo();
+          const before=JSON.stringify(draftBody()),history=ed.history.length,calls=noRouteIo();
           ed.tab='notes';drawMain();setSide('stats');foldSide(true);const anchor=routeAnchor(ed.dom.page);
+          const seq=ac.seq; // Notes has already suspended any old lookup; F itself must remain a focus-only route.
           assert(routeFrom(anchor,'f').defaultPrevented);assert.equal(ed.tab,'cards');assert.equal(ed.side,'add');assert(shown('add'));
           assert(ed.ac===ac&&ed.ac.input===searchInput);assert.equal(document.activeElement,searchInput);assert(searchInput.selected);
           assert.equal(searchInput.getAttribute('aria-keyshortcuts'),'F / Alt+Enter');
@@ -175,16 +176,16 @@ class KeyboardRoutesUiTests(unittest.TestCase):
           assert(ed.dom.page===page&&ed.ac===ac&&ed.ac.input===searchInput);same(calls,[]);
         ''', DESKTOP)
 
-    def test_quick_editor_f_opens_one_add_sheet_and_cancels_old_search_on_close(self):
+    def test_quick_editor_f_opens_one_nonmodal_dock_and_retains_search_on_close(self):
         self.run_js(quick_ui.SETUP, r'''
           location.hash='#/edit?id=casual%2Fsample&v=target';const ed=begin({}, {restoreDraft:false}),anchor=routeAnchor(ed.dom.page);
           const before=JSON.stringify(draftBody()),history=ed.history.length,calls=noRouteIo();
-          assert(routeFrom(anchor,'f').defaultPrevented);const first=ed.ac,dialog=keyboardDialog();
-          assert(first&&dialog&&dialog.classList.contains('sheet-search'));assert.equal(document.activeElement,first.input);
-          assert(!routeFrom(anchor,'f').defaultPrevented);assert.equal(ed.ac,first);assert.equal(keyboardDialog(),dialog);
-          button(dialog,'Done').click();assert(first.cancelled);assert.equal(ed.ac,null);assert(!dialog.isConnected);
-          assert(routeFrom(anchor,'f').defaultPrevented);assert(ed.ac&&ed.ac!==first);assert.equal(document.activeElement,ed.ac.input);
-          button(keyboardDialog(),'Done').click();assert.equal(JSON.stringify(draftBody()),before);assert.equal(ed.history.length,history);same(calls,[]);
+          assert(routeFrom(anchor,'f').defaultPrevented);const first=ed.ac,dock=ed.dom.searchDock,entry=dock.entry;
+          assert(first&&dock.fixed&&dock.open);assert.equal(keyboardDialog(),null);assert.equal(document.activeElement,first.input);
+          assert(routeFrom(anchor,'f').defaultPrevented);assert.equal(ed.ac,first);assert.equal(dock.entry,entry);
+          dock.close.click();assert(first.dockSuspended&&!first.cancelled);assert.equal(ed.ac,first);assert(dock.root.hidden);
+          assert(routeFrom(anchor,'f').defaultPrevented);assert.equal(ed.ac,first);assert.equal(document.activeElement,first.input);
+          dock.close.click();assert.equal(JSON.stringify(draftBody()),before);assert.equal(ed.history.length,history);same(calls,[]);
         ''', PHONE)
 
     def test_editor_f_allows_local_readonly_trial_but_refuses_missing_play_now_or_stale_model_frame(self):
@@ -204,14 +205,16 @@ class KeyboardRoutesUiTests(unittest.TestCase):
           same([current.id,current.version,current.space,current.mode],savedRouteFrame);assert(routeFrom(target,'f').defaultPrevented);
         ''', DESKTOP)
 
-    def test_modal_quick_f_refresh_never_advertises_f_and_keeps_native_search_keys(self):
+    def test_modal_search_f_refresh_never_advertises_f_and_keeps_native_search_keys(self):
         self.run_js(quick_ui.SETUP, r'''
           location.hash='#/edit?id=casual%2Fsample&v=target';const modalEditor=begin({}, {restoreDraft:false});
           const modalAnchor=routeAnchor(modalEditor.dom.page),modalBody=JSON.stringify(draftBody());
           const modalHistory=modalEditor.history.length,modalCalls=noRouteIo();
-          assert(routeFrom(modalAnchor,'f').defaultPrevented);
-          const modalSearch=modalEditor.ac,modalInput=modalSearch.input,modalDialog=keyboardDialog();
-          assert(modalDialog&&modalDialog.classList.contains('sheet-search'));
+          // Search is nonmodal in Quick now. Keep the shared metadata contract covered with an actual owned sheet.
+          const sheet=openSheet('Modal search fixture'),part=addPart();sheet.body.append(part);
+          sheetActions(sheet,[{text:'Done',onclick:()=>sheet.close()}]);registerEditorKeyboardHelp(modalEditor);
+          const modalSearch=modalEditor.ac,modalInput=modalSearch.input,modalDialog=sheet.dialog;
+          assert.equal(keyboardDialog(),modalDialog);
           const doneButton=button(modalDialog,'Done');
           for(const refresh of [refreshKeyboardHints,()=>window.fire('resize')]) {
             refresh();assert.equal(modalInput.getAttribute('aria-keyshortcuts'),'/ Alt+Enter');
@@ -228,7 +231,7 @@ class KeyboardRoutesUiTests(unittest.TestCase):
           assert.equal(inspections.length,1);assert.equal(modalSearch.items[modalSearch.active],modalFound);same(inspections[0].card,elves);
           setKeyboardCharactersEnabled(true);assert.equal(modalInput.getAttribute('aria-keyshortcuts'),'/ Alt+Enter');
           assert(!routeFrom(doneButton,'f').defaultPrevented);doneButton.click();
-          assert.equal(keyboardDialog(),null);assert(modalSearch.cancelled);
+          assert.equal(keyboardDialog(),null);assert(!editorSearchCurrent(modalSearch));
           assert.equal(JSON.stringify(draftBody()),modalBody);assert.equal(modalEditor.history.length,modalHistory);same(modalCalls,[]);
         ''', PHONE)
 
