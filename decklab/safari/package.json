@@ -9,7 +9,31 @@
   },
   "packageManager": "npm@11.9.0",
   "devDependencies": {
-    "appium": "3.4.2",
-    "appium-xcuitest-driver": "10.43.0"
+    "appium": "3.8.0",
+    "appium-xcuitest-driver": "10.43.1"
+  },
+  "overrides": {
+    "@appium/base-driver": "10.8.1",
+    "@appium/support": "7.2.8",
+    "@xmldom/xmldom@0.8": "0.8.15",
+    "@xmldom/xmldom@0.9": "0.9.12",
+    "axios": "1.20.0",
+    "body-parser": "2.4.0",
+    "brace-expansion@2": "2.1.7",
+    "brace-expansion@5": "5.0.12",
+    "fast-uri@3": "3.1.9",
+    "follow-redirects": "1.16.2",
+    "form-data": "4.0.6",
+    "lodash": "4.18.1",
+    "moment": "2.31.0",
+    "morgan": "1.12.1",
+    "proxy-addr": "2.0.8",
+    "qs": "6.16.1",
+    "sharp": "0.35.5",
+    "shell-quote": "1.12.0",
+    "uuid@13": "13.0.2",
+    "ws": "8.22.0",
+    "yaml@2": "2.9.1",
+    "yauzl@3": "3.4.0"
   }
 }

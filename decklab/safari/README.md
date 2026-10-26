@@ -68,10 +68,16 @@ touch-usability checks separately.
 `setup.sh` installs the exact dependency graph in `package-lock.json` locally
 under `decklab/safari/node_modules`, runs XCUITest's doctor and prints available
 runtimes and device types. It refuses to install anything on Windows or Linux.
-The pins are **Appium 3.4.2** and **XCUITest 10.43.0**. Both require the Appium 3
+The pins are **Appium 3.8.0** and **XCUITest 10.43.1**. Both require the Appium 3
 Node/npm range satisfied by the Node/npm versions above; driver 10 requires
 Appium 3 ([driver requirements](https://appium.github.io/appium-xcuitest-driver/10.43/getting-started/system-requirements/),
 [Appium requirements](https://appium.io/docs/en/3.4/guides/migrating-2-to-3/)).
+`package.json`'s `overrides` (2026-10-26) lift vulnerable transitive packages to patched
+versions in the same major, clearing GitHub's Dependabot alerts outside the driver. They don't
+reach the copies inside `appium-xcuitest-driver`, which ships its own `npm-shrinkwrap.json`:
+those alerts were dismissed on GitHub as local test tooling (no release, 12.x included, had
+cleared them). When a driver release updates its shrinkwrap, move to it and drop the overrides
+it makes unnecessary; `npm audit --package-lock-only` in `decklab/safari` shows what's left.
 Do not update packages globally to repair a local run. Repeat `setup.sh` after a
 pull changes the lockfile. Changing Xcode or a runtime also needs a new report.
 
