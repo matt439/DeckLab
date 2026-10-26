@@ -348,6 +348,8 @@ class ReceiptBoardTests(unittest.TestCase):
           assert.equal(main.querySelectorAll('.rcpt-flag').length,0);
           assert.equal(rcptFlag(comp,comp.rows[0]),'');
           d.components[0].checks=['Verify the pairing of Golem // Bird and whether the Ooze is single-sided.'];
+          d.components[0].check_targeting={available:true,payload_sha256:'a'.repeat(64),row_sha256s:['b'.repeat(64),'c'.repeat(64)]};
+          d.components[0].check_targets=[{row:2,row_sha256:'c'.repeat(64)}];
           clear(main);const w=drawReceipt(d,routeToken);
           assert.equal(rcptFlag(w.comps[0],w.comps[0].rows[0]),'');assert(rcptFlag(w.comps[0],w.comps[0].rows[1]));
           w.comps[0].checks=[true];assert.equal(rcptFlag(w.comps[0],w.comps[0].rows[1]),'');

@@ -144,16 +144,36 @@ function shopOrderCheckSheet(order, component, view, number = null) {
   if (!shopMayEditOrder(view) || !shopQueueActive(view) || view.busy || view.stale || component.status !== "pending") return null;
   const form = el("form", {class: "shop-order-form"});
   const input = number === null ? el("input", {type: "text", maxlength: 2000, "data-order-change-field": "check"}) : null;
+  const rows = orderCheckTargeting(component, component.edit_rows) ? component.edit_rows.map(row => ({...row})) : null;
+  const source = rows ? component.check_targeting.payload_sha256 : null, originalRows = rows ? JSON.stringify(rows) : null;
+  const rowShas = rows ? [...component.check_targeting.row_sha256s] : null;
+  const target = input && rows ? el("select", {"data-order-change-field": "check_target"},
+    el("option", {value: "", text: "General check for this whole part"}), rows.map((row, index) =>
+      el("option", {value: String(index + 1), text: orderCheckRowLabel(component.kind, row, index + 1)}))) : null;
   const edit = shopOrderChangeSheet(order, view, number === null ? "Add arrival check" : "Withdraw arrival check", form, () => {
     if (number !== null) return {action: "checks", component: component.id, withdraw: [number]};
     const text = input.value.trim();
     if (!text) throw new Error("Enter the check to add.");
-    return {action: "checks", component: component.id, add: [text]};
-  });
+    const body = {action: "checks", component: component.id, add: [text]};
+    if (target?.value) {
+      if (!/^[1-9]\d*$/.test(target.value) || !rows[Number(target.value) - 1]
+          || !orderCheckTargeting(component, component.edit_rows) || component.check_targeting.payload_sha256 !== source
+          || JSON.stringify(component.check_targeting.row_sha256s) !== JSON.stringify(rowShas)
+          || JSON.stringify(component.edit_rows) !== originalRows) throw new Error("The original order rows changed. Refresh Shopping before choosing a row.");
+      body.target = {row: Number(target.value), payload_sha256: source};
+    }
+    return body;
+  }, {validatePreview: number === null ? shopCheckTargetReceipt : null,
+    targetContext: rows ? {component: component.id, kind: component.kind, rows, rowShas, nextCheck: component.checks.length + 1} : null});
   form.append(el("p", {text: `${shopOrderTitle(order)} · ${shopComponentWords(component)}`}));
   if (input) {
     input.id = `arrival-check-${edit.sheet.heading.id}`;
     form.append(el("label", {class: "field", for: input.id}, el("span", {text: "Check on arrival"}), input));
+    if (target) {
+      target.id = `arrival-check-target-${edit.sheet.heading.id}`;
+      form.append(el("label", {class: "field", for: target.id}, el("span", {text: "About an original order row (optional)"}), target),
+        el("p", {class: "field-hint", text: "Leave this general unless you choose one exact recorded row. The check still needs verifying for the whole delivery part."}));
+    }
   } else {
     form.append(el("p", {text: `Check ${number}: ${component.checks[number - 1]}`}),
       el("p", {class: "field-hint", text: "Withdraw a check added by mistake. The receipt verifies checks when the delivery arrives."}));
@@ -174,6 +194,7 @@ function shopOrderChangeSheet(order, view, title, form, values, options = {}) {
   }}), view);
   const previewBox = el("div", {class: "shop-order-preview", hidden: true, "aria-live": "polite"});
   const error = el("div", {class: "form-error", role: "alert", hidden: true});
+  const acceptedControls = new WeakMap();
   let preview = null, previewBody = "", sequence = 0, busyNow = false, picking = false, picker = null, saved = false, refreshed = false;
   const alive = () => !sheet.closed && shopQueueActive(view) && shopMayEditOrder(view);
   const available = () => alive() && !saved && !busyNow && !picking && !view.busy && !view.stale;
@@ -212,8 +233,9 @@ function shopOrderChangeSheet(order, view, title, form, values, options = {}) {
       const answer = await apiWrite("/api/shopping/order/change/preview", body);
       if (!alive() || seq !== sequence || original !== JSON.stringify(payload())) return;
       if (!answer.preview || answer.revision !== expect) throw new Error("The preview was incomplete. Preview the change again.");
+      if (options.validatePreview) options.validatePreview(answer, body, options.targetContext);
       preview = answer.preview; previewBody = original;
-      clear(previewBox).append(shopOrderChangePreview(answer, body));
+      clear(previewBox).append(shopOrderChangePreview(answer, body, false, options.targetContext));
       previewBox.hidden = false; form.hidden = true; previewBox.scrollIntoView({block: "start"});
     } catch (failure) {
       if (alive()) {
@@ -227,9 +249,17 @@ function shopOrderChangeSheet(order, view, title, form, values, options = {}) {
     try {
       if (previewBody !== JSON.stringify(payload())) {invalidate(); problem("The change was edited. Preview it again before saving."); return;}
     } catch (failure) {invalidate(); problem(failure.message); return;}
-    const token = preview; error.hidden = true; setBusy(true);
+    const token = preview, signedBody = JSON.parse(previewBody), targeted = Boolean(options.validatePreview && signedBody.target);
+    let uncertainTarget = false;
+    error.hidden = true; setBusy(true);
     try {
       const answer = await apiWrite("/api/shopping/order/change/apply", {preview: token});
+      if (targeted) {
+        try {
+          if (answer.saved !== true) throw new Error("No saved receipt");
+          options.validatePreview(answer, signedBody, options.targetContext);
+        } catch (failure) { uncertainTarget = true; throw failure; }
+      }
       state.library = null;
       if (!alive()) {
         if (shopQueueActive(view)) {shopCloseQueueSheets(view); route();}
@@ -238,7 +268,7 @@ function shopOrderChangeSheet(order, view, title, form, values, options = {}) {
       preview = null;
       if (options.retainResult) {
         saved = true; error.hidden = true; form.hidden = true; previewBox.hidden = false;
-        clear(previewBox).append(shopOrderChangePreview(answer, JSON.parse(previewBody), true));
+        clear(previewBox).append(shopOrderChangePreview(answer, JSON.parse(previewBody), true, options.targetContext));
         actions(); return;
       }
       shopCloseQueueSheets(view);
@@ -246,8 +276,10 @@ function shopOrderChangeSheet(order, view, title, form, values, options = {}) {
       route();
     } catch (failure) {
       if (alive()) {
-        invalidate(); if (failure.status === 409) view.stale = true;
-        problem(`The change couldn't be saved: ${failure.message}. Preview it again before saving.`); conflictRefresh();
+        uncertainTarget ||= targeted && (!failure.status || failure.status >= 500);
+        invalidate(); if (failure.status === 409 || uncertainTarget) view.stale = true;
+        problem(uncertainTarget ? "The saved row association couldn't be confirmed. Refresh Shopping and inspect the saved checks before making another change."
+          : `The change couldn't be saved: ${failure.message}. Preview it again before saving.`); conflictRefresh();
       }
     } finally {if (alive()) setBusy(false); else shopQueueBusy(view, false);}
   }
@@ -268,17 +300,27 @@ function shopOrderChangeSheet(order, view, title, form, values, options = {}) {
     } finally {picker = null; picking = false; if (alive()) sheet.queueBusy();}
   }, bind() {
     for (const tag of ["input", "textarea", "select"]) for (const input of form.querySelectorAll(tag)) {
-      input.addEventListener("input", invalidate); input.addEventListener("change", invalidate);
+      if (acceptedControls.has(input)) continue;
+      const value = () => ["checkbox", "radio"].includes(input.getAttribute("type")) ? Boolean(input.checked) : input.value;
+      acceptedControls.set(input, value());
+      const changed = () => {
+        const next = value();
+        if (next === acceptedControls.get(input)) return;
+        acceptedControls.set(input, next); invalidate();
+      };
+      input.addEventListener("input", changed); input.addEventListener("change", changed);
     }
     actions(); sheet.heading.focus();
   }};
 }
 
-function shopOrderChangePreview(answer, body = null, saved = false) {
+function shopOrderChangePreview(answer, body = null, saved = false, targetContext = null) {
   const record = answer.record || {}, box = el("div", {}, el("h3", {text: saved
     ? answer.removed ? "Order removed" : "Order change saved" : "Confirm this change"}),
     el("p", {text: answer.summary}), el("p", {text: answer.order}));
   if (body?.reason) box.append(el("p", {text: `Reason: ${body.reason}`}));
+  const checkTarget = shopCheckTargetPreview(answer, targetContext);
+  if (checkTarget) box.append(checkTarget);
   box.append(el("dl", {}, el("dt", {text: "Seller"}), el("dd", {text: record.seller || "Not recorded"}),
     el("dt", {text: "Order date"}), el("dd", {text: record.ordered_on ? shopDay(record.ordered_on) : "Not recorded"}),
     el("dt", {text: "Delivery notes"}), el("dd", {text: record.notes || "None recorded"})));

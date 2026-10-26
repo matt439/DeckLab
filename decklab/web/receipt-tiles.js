@@ -104,6 +104,8 @@ function rcptTile(view, comp, row, readOnly) {
   }
   if (card && card.img_small && open) viewerItem(open, card, comp.group, caption);
   row.open = open;
+  const checks = rcptRowCheckStrip(comp, row);
+  if (checks) tile.append(checks);
   tile.setAttribute("data-row", String(row.key));
   if (!readOnly) tile.hidden = !rcptShown(view, comp, row);
   return tile;

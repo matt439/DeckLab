@@ -421,7 +421,7 @@ def receive(inv, *, order, components, received_on, wording="web"):
         inv = inv.move_component(order, component.id, "received", received_on)
         if component.checks and component.kind != "product":
             # Keep evidence of what was checked without leaving it actionable.
-            inv = inv.update_component(order, component.id, verified_checks=component.checks, checks=[])
+            inv = inv.update_component(order, component.id, verified_checks=component.checks, checks=[], check_links=None)
 
     for other in inv.orders:
         if other.file != the_order.file and any(c.path in moved for c in other.components):

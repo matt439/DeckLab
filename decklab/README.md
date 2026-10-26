@@ -418,6 +418,18 @@ shows the result before **Save change** records one audited change by Matt.
 Another save after the preview requires a refresh and new preview. Received
 checks still use Follow-ups.
 
+When adding a check to an existing pending cards or tokens part, **About an
+original order row (optional)** can associate it with one explicitly chosen
+recorded row. **General check for this whole part** is the default. Preview
+shows the selected original row and check before saving. Receive delivery then
+shows that context beside the row, including locally edited or split copies;
+verify the check once in the part's **To check** list. Splitting a tile does not
+create another verification tick. Older unassociated checks, new-order checks and product
+checks stay general. Saving a payload correction, shipment split or order merge,
+or receiving the part, drops its old row associations. If the saved association
+cannot be confirmed, refresh Shopping and inspect the saved checks before making
+another change; do not repeat an uncertain save.
+
 Pending card and token parts also offer corrections to their row details. Cards
 keep the same names and copies, with printing, finish, condition, language and
 notes editable; copies can be divided between printings. Tokens keep the same

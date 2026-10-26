@@ -84,13 +84,13 @@ from decklab.db import conn as db, space_members
 from decklab.lib.state import Actor, Conflict, Invalid, Unavailable
 from decklab.lib.state import pg as state_pg
 
-from . import DECK_SAVES_PAUSED, changes, files, paths, pg_decks, pg_aliases, rules
+from . import DECK_SAVES_PAUSED, changes, files, paths, pg_decks, pg_aliases, pg_check_links, rules
 from .model import QUEUE_FIELDS, Component, ImageMeta, ImportInfo, Order
 # The snapshot-as-rows code is shared with the files backend (table_rows.py); these names stay
 # here for the callers and tests that use them as pg's.
 from .table_rows import (CARD_COLUMNS, COMPONENT_COLUMNS, ITEM_COLUMNS, ITEM_TABLES,  # noqa: F401
                          ORDER_COLUMNS, PAYLOAD_FIELDS, STATUS_COLUMNS, TOKEN_COLUMNS, WATCH_COLUMNS,
-                         Unrepresentable, deck_tables, reasons, representable, tables)
+                         JsonColumn, Unrepresentable, deck_tables, reasons, representable, tables)
 
 LOCK_KEY = "inventory"                       # the advisory lock every inventory write takes
 NOT_IMPORTED = ("the database holds no inventory: on a new install, run python -m decklab.db setup, which "
@@ -171,7 +171,8 @@ def _select(c):
     columns = _status_columns(c)
     status = "select file, " + ", ".join(column if column in columns else "''::text as token_cards"
                                          for column in STATUS_COLUMNS) + " from product_status"
-    return {table: c.execute(status if table == "product_status" else query).fetchall()
+    component = pg_check_links.select(c)
+    return {table: c.execute(status if table == "product_status" else component if table == "order_component" else query).fetchall()
             for table, query in SELECTS.items()}
 
 
@@ -234,9 +235,10 @@ def snapshot(data, revision):
         components[row[0]].append(row)
     for oid, seller, ordered_on, sources, notes, audit_notes in data["purchase_order"]:
         built = []
-        for _, cid, _, kind, file_name, status_, received_on, checks, verified, _ in \
-                sorted(components[oid], key=lambda r: r[2]):
-            built.append(Component.build(cid, kind, file_name, status_, received_on, checks, verified))
+        for row in sorted(components[oid], key=lambda r: r[2]):
+            _, cid, _, kind, file_name, status_, received_on, checks, verified, _ = row[:10]
+            metadata = row[10] if len(row) > 10 else None
+            built.append(Component.build(cid, kind, file_name, status_, received_on, checks, verified, metadata))
             if kind != "product":
                 rows = [cells for _, cells in sorted(payload_rows[(oid, cid)], key=lambda r: r[0])]
                 out[paths.payload(kind, status_, file_name)] = _render(PAYLOAD_FIELDS[kind], rows)[0]
@@ -310,10 +312,13 @@ def _insert(cur, table, columns, rows):
 
 def _db(value):
     """A Python value as psycopg should send it (tuples as arrays)."""
+    if isinstance(value, JsonColumn):
+        from psycopg.types.json import Jsonb
+        return Jsonb(value.value)
     return list(value) if isinstance(value, tuple) else value
 
 
-def _keyed_rows(table, t, status_columns=STATUS_COLUMNS):
+def _keyed_rows(table, t, status_columns=STATUS_COLUMNS, component_columns=COMPONENT_COLUMNS):
     """(key columns, value columns, {key: values}) of one of t's keyed tables (tables()' shape)."""
     return {
         "collection_card": (("space_id", "set_code", "collector_number", "finish"),
@@ -321,7 +326,7 @@ def _keyed_rows(table, t, status_columns=STATUS_COLUMNS):
         "product": (("stem",), ("name", "format", "columns")),
         "product_status": (("file",), status_columns),
         "purchase_order": (("id",), ORDER_COLUMNS),
-        "order_component": (("order_id", "id"), COMPONENT_COLUMNS),
+        "order_component": (("order_id", "id"), component_columns),
     }[table] + (t[table],)
 
 
@@ -337,8 +342,10 @@ def _write_all(cur, t):
     """Insert every row of t (tables()' shape) into empty tables, parents first."""
     status_columns = _status_columns(cur)
     t = _status_tables(t, status_columns)  # Refuse unsupported data before any inventory DML.
+    component_columns = pg_check_links.columns(cur)
+    t = pg_check_links.compatible(t, component_columns)
     for table in PARENTS_FIRST:
-        keys, values, rows = _keyed_rows(table, t, status_columns)
+        keys, values, rows = _keyed_rows(table, t, status_columns, component_columns)
         _insert(cur, table, keys + values, [(*_plain_key(k), *map(_db, v)) for k, v in rows.items()])
     _insert(cur, "product_item", ("product_stem", "position", "cells"),
             [(stem, n, list(cells)) for stem, found in t["product_item"].items() for n, cells in enumerate(found)])
@@ -362,6 +369,8 @@ def _diff(cur, old, new):
     status_columns = _status_columns(cur)
     new = _status_tables(new, status_columns)  # Preflight before deletes, inserts or updates.
     old = _status_tables(old, status_columns)
+    component_columns = pg_check_links.columns(cur)
+    new, old = (pg_check_links.compatible(t, component_columns) for t in (new, old))
     count = 0
     pending = []
 
@@ -389,14 +398,14 @@ def _diff(cur, old, new):
     add("delete from product_item where product_stem = %s",
         [(stem,) for stem, found in old["product_item"].items() if found != new["product_item"].get(stem)])
     for table in reversed(PARENTS_FIRST):
-        keys, _, rows = _keyed_rows(table, old, status_columns)
+        keys, _, rows = _keyed_rows(table, old, status_columns, component_columns)
         add(f"delete from {table} where {where(keys)}", [_plain_key(key) for key in rows.keys() - new[table].keys()])
     for table in ("token_card", "watchlist_item"):
         kept = {r[0] for r in new[table] if r[0]}
         add(f"delete from {table} where id = %s", [(row[0],) for row in old[table] if row[0] not in kept])
     # Inserts and updates, parents first.
     for table in PARENTS_FIRST:
-        keys, values, rows = _keyed_rows(table, new, status_columns)
+        keys, values, rows = _keyed_rows(table, new, status_columns, component_columns)
         before = old[table]
         add(insert(table, keys + values),
             [(*_plain_key(key), *map(_db, value)) for key, value in rows.items() if key not in before])
@@ -750,6 +759,12 @@ class PgInventory:
         def work(c):
             return [{"id": rid, "position": position} for rid, position in c.execute(
                 "select id,position from token_card where space_id=%s order by position,id", (space,)).fetchall()]
+        applying = getattr(self._applying, "connection", None)
+        return work(applying) if applying is not None else self._call(work)
+
+    def supports_check_links(self):
+        def work(c):
+            return "check_links" in pg_check_links.columns(c)
         applying = getattr(self._applying, "connection", None)
         return work(applying) if applying is not None else self._call(work)
 

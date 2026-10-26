@@ -255,7 +255,7 @@ function rcptGridClass(view) {
 /** The order's checks for this component, each with its own tick. */
 function rcptChecksCard(view, comp) {
   comp.checkBoxes = comp.c.checks.map((text, i) => el("input", { type: "checkbox", checked: comp.checks[i] || null,
-    onchange: (e) => { if (!receiptEditable(view)) return; comp.checks[i] = e.currentTarget.checked; rcptChanged(view); } }));
+    onchange: (e) => { if (!receiptEditable(view)) return; comp.checks[i] = e.currentTarget.checked; rcptDrawGrid(view, comp); rcptChanged(view); } }));
   return el("div", { class: "box rcpt-checks", id: `rcpt-${comp.index}-checks` }, el("h3", { text: "To check" }),
     comp.c.checks.map((text, i) => el("label", { class: "choice rcpt-check" }, comp.checkBoxes[i], el("span", { text }))));
 }
@@ -503,28 +503,14 @@ function rcptChips(view, comp, row) {
 }
 
 /** A row's notes worth a ⚑ (not the arrival notes, not "listed as …" provenance, not what Condition ? or
- * Back ? already says) and an unticked check that names its card, for the ⚑ chip; "" for none. */
+ * Back ? already says) and an unticked check associated with its original order row, for the ⚑ chip; "" for none. */
 function rcptFlag(comp, row) {
   const v = row.values;
   const backOpen = comp.kind === "tokens" && rcptBackOpen(row);
   const notes = rcptCleanNotes(v.notes, comp.kind, v).notes.split(/;\s*/).filter((p) => p && !RCPT_PROVENANCE.test(p)
     && !RCPT_BLANK_NOTE.test(p) && !(backOpen && (RCPT_UNVERIFIED.test(p) || /\bback\b|reverse|pairing/i.test(p))));
-  const check = (comp.c.checks || []).find((text, i) => !comp.checks[i] && rcptCheckNames(comp, row, text));
+  const check = rcptRowChecks(comp, row).find(check => !comp.checks[check.number - 1])?.text;
   return [notes.join("; "), check].filter(Boolean).join(" · ");
-}
-
-/** True when a check names this row's card: a card's whole name as words; a token's two faces as a pair
- * (either way round). A single-faced token's check is about its back, which Back ? already shows. */
-function rcptCheckNames(comp, row, text) {
-  const v = row.values;
-  if (comp.kind === "tokens") {
-    if (!v.back || rcptBackOpen(row)) return false;
-    return text.includes(`${v.front} // ${v.back}`) || text.includes(`${v.back} // ${v.front}`);
-  }
-  const name = frontName(v.name);
-  if (!name) return false;
-  const quoted = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  return new RegExp(`(^|[^\\w'])${quoted}($|[^\\w'])`).test(text);
 }
 
 /** True when a token row's back still has to be confirmed: an unresolved pairing note, or a blank back that isn't
@@ -675,6 +661,7 @@ function rcptFillSheet(view) {
   sheet.heading.textContent = comp.kind === "tokens" ? (v.back ? `${v.front} // ${v.back}` : v.front) : v.name;
   const body = clear(sheet.body);
   add(body, [rcptSheetPicture(view, comp, row),
+    rcptRowCheckStrip(comp, row),
     comp.kind === "tokens" ? rcptTokenFields(view, comp, row) : rcptCardFields(view, comp, row),
     rcptCopies(view, comp, row)]);
   const decks = rcptDecks(comp, row);

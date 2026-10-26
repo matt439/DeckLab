@@ -648,7 +648,7 @@ def edit_order(inv, *, order, component, rows, check_cards=True):
         return inv, Summary(f"Order {order} {component}: nothing to change")
     inv = inv.set_component_rows(order, component, rows)
     from . import order_fulfilment
-    inv = inv.with_order(order_fulfilment.edit(o, component, previous, rows))
+    inv = inv.with_order(order_fulfilment.edit(inv.order(order), component, previous, rows))
     return _done(before, inv, Summary(f"Edited order {order} {component}: {_plural(len(rows), 'row')}",
                                       {"rows": len(rows)}, extra={"warnings": warnings}))
 
@@ -656,7 +656,7 @@ def edit_order(inv, *, order, component, rows, check_cards=True):
 # ------------------------------------------------------------------ order.checks
 
 @register("order.checks")
-def order_checks(inv, *, order, component, add=None, resolve=None, clear=False, withdraw=None):
+def order_checks(inv, *, order, component, add=None, resolve=None, clear=False, withdraw=None, target=None):
     """A component's checks: add one (text), resolve one (1-based, as `order show` numbers them),
     clear them all, or withdraw one (a check added by mistake: gone, nothing verified).
     Resolving and clearing are for a component that has arrived, which keeps what was resolved
@@ -665,6 +665,14 @@ def order_checks(inv, *, order, component, add=None, resolve=None, clear=False, 
     can't skip, so resolving them before it arrives is refused."""
     before = inv
     _, c = _component(inv, order, component)
+    from . import check_links
+    if target is not None:
+        if add is None or c.kind not in PAYLOAD_FIELDS or c.status != "pending":
+            raise Invalid("Only a new arrival check on a pending cards or tokens part may target a row.")
+        from . import backend, pg_check_links
+        store = backend()
+        if getattr(store, "name", None) == "db" and not store.supports_check_links():
+            raise Invalid(pg_check_links.REQUIRED)
     if sum(x is not None and x is not False for x in (add, resolve, clear or None, withdraw)) != 1:
         raise Invalid("Give one of: a check to add, a check number to resolve or withdraw, or clear")
     if c.status == "cancelled":
@@ -693,6 +701,15 @@ def order_checks(inv, *, order, component, add=None, resolve=None, clear=False, 
         done = [checks.pop(resolve - 1)]
         text = f"Order {order} {component}: resolved a check"
     changes = {"checks": checks}
+    if add is not None:
+        rows = []
+        if c.kind in PAYLOAD_FIELDS and c.status == "pending":
+            sheet = inv.payloads.get(c.path)
+            if sheet is not None and sheet.readable and not sheet.strict_error and not sheet.csv_error:
+                rows = [{key: row.text(key) for key in PAYLOAD_FIELDS[c.kind]} for row in sheet.rows]
+        changes["check_links"] = check_links.append(c, rows, PAYLOAD_FIELDS.get(c.kind, ()), checks[-1], target)
+    else:
+        changes["check_links"] = check_links.remap(c, checks, withdraw if withdraw is not None else resolve)
     if done and c.status == "received":
         changes["verified_checks"] = list(c.verified_checks or []) + done
     inv = inv.update_component(order, component, **changes)
@@ -754,6 +771,7 @@ def split_order(inv, *, order, component, new_id, take, move_checks=(), copy_che
         items.append(item)
         if isinstance(item, dict) and item.get("id") == component:
             item["checks"] = old_checks
+            item.pop("check_links", None)  # A split never transfers a row binding by position.
             items.append(made.record())
     record["components"] = items
     inv = inv.with_order(Order(o.file, record))
