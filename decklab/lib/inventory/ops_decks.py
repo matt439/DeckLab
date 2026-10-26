@@ -273,9 +273,11 @@ def update_tables(inv, *, items):
 
 
 @register("deck.token_cards")
-def token_cards(inv, *, items):
+def token_cards(inv, *, items, expected_inventory_revision=None):
     """Several built decks' texts replaced at once with new Token cards lines (the Tokens page's
     plan, lib/api/token_plan.py), or none, as deck.update_tables."""
+    if expected_inventory_revision is not None and inv.revision != expected_inventory_revision:
+        raise DeckRefused("The inventory changed after the token cards were planned.", 409, "changed")
     out, done = _save_many(inv, "deck.token_cards", "the token cards were planned", items, "token cards")
     if not done:
         return inv, Summary("Nothing to change")

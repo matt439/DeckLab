@@ -10,7 +10,7 @@ and accessory saves with a local picture (accessories.MAX_SAVE_BODY).
 
 def dispatch(handler, route, query):
     from decklab.lib.api import (accessories, activity, assembly, assembly_completion, assembly_standins, assembly_ticks, collection, collection_edit, cover, editor, history,
-                                 library_forge, opponents, play_records, precons, products, rankings, receipts, rename, retirement, shopping, shopping_order_changes, shopping_orders, shopping_queue, swaps, token_cards, token_plan, tokens, visits)
+                                 library_forge, opponents, play_records, precons, products, product_tokens, rankings, receipts, rename, retirement, shopping, shopping_order_changes, shopping_orders, shopping_queue, swaps, token_cards, token_plan, tokens, visits)
     from decklab.lib.api.common import MAX_BODY
 
     gets = {
@@ -52,6 +52,7 @@ def dispatch(handler, route, query):
         ("receipt", "apply"): receipts.apply_receipt,
         ("product", "intact", "preview"): products.preview_storage,
         ("product", "intact", "apply"): products.apply_storage,
+        ("product", "token-cards"): product_tokens.save_product_tokens,
         ("shopping", "check"): shopping.resolve_check,
         ("shopping", "queue"): shopping_queue.save_queue_state,
         ("shopping", "order", "preview"): shopping_orders.preview_order,

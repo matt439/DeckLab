@@ -39,7 +39,7 @@ TOKEN_COLUMNS = ("front", "back", "set_code", "front_collector_number", "back_co
                  "quantity", "front_details", "back_details", "notes")
 WATCH_COLUMNS = ("name", "set_code", "collector_number", "finish", "quantity", "for_deck", "printing",
                  "listed_aud", "listed_at", "in_stock", "checked", "notes", "state", "source")
-STATUS_COLUMNS = ("position", "status", "intact", "sleeves", "deck_box", "notes")
+STATUS_COLUMNS = ("position", "status", "intact", "sleeves", "deck_box", "notes", "token_cards")
 ORDER_COLUMNS = ("seller", "ordered_on", "sources", "notes", "audit_notes")
 COMPONENT_COLUMNS = ("position", "kind", "file_name", "status", "received_on", "checks", "verified_checks",
                      "product_stem")

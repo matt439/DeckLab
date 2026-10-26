@@ -234,8 +234,8 @@ class WatchRow(Row):
 
 
 class StatusRow(Row):
-    """A products/status.csv row: file, status, intact, sleeves, deck_box, notes (a legacy
-    4-column file's rows have no sleeves or deck_box column: get() gives None)."""
+    """A products/status.csv row, including the optional packed-token record.
+    Legacy rows lack kit or token columns: get() gives None for missing columns."""
     COLUMNS = tuple(rules.STATUS_FIELDS)
 
     file = property(lambda self: self.get("file"))
@@ -243,6 +243,7 @@ class StatusRow(Row):
     intact = property(lambda self: self.get("intact"))
     sleeves = property(lambda self: self.get("sleeves"))
     deck_box = property(lambda self: self.get("deck_box"))
+    token_cards = property(lambda self: self.get("token_cards"))
     notes = property(lambda self: self.get("notes"))
 
 
@@ -722,8 +723,8 @@ class Inventory:
         return self.replace(tokens=dict(sorted(tokens.items())))
 
     def with_status_rows(self, rows):
-        """products/status.csv holding rows (StatusRow's or mappings), always with the six
-        columns (a legacy four-column file is rewritten with blank sleeves and deck_box, as a
+        """products/status.csv holding rows (StatusRow's or mappings), always with the current
+        columns (a legacy file gains blank kit and packed-token columns, as a
         receipt does)."""
         made = tuple(coerce(StatusRow, row) for row in rows)
         return self.replace(status=Sheet(paths.STATUS, StatusRow.COLUMNS, made, True))

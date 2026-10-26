@@ -4,7 +4,8 @@
     GET  /api/tokens/plan[?space=]   plan_view(): each built deck's line as it is and as planned
     POST /api/tokens/plan            apply_plan(body): save every changed line, all or none
 
-Both need the space's inventory (require_sees_inventory: its own people only). The apply needs
+Both need the space's inventory and tokens.edit; a public collection does not publish private
+whole-space packing recipes. The apply also needs
 deck.edit on every deck whose line changes (403 naming the first it may not change, before anything is
 written) and the plan's sha256 from the preview: the plan is worked out again and must come out the
 same (the decks' texts, the token cards and the planned lines), else 409 "Something changed since the
@@ -43,8 +44,10 @@ def plan_view(space=None):
     "warnings"}."""
     space = _space(space)
     guard.require_sees_inventory(space)
-    result, warnings = _plan(space)
     profile = guard.viewer()
+    # A public token collection does not publish private deck packing recipes.
+    guard.require_space_write(profile, "tokens.edit", space)
+    result, warnings = _plan(space)
     out = [_deck_json(item, profile) for item in result["decks"]]
     return {"space": space, "sha256": result["sha256"], "tokens_sha256": result["tokens_sha256"], "decks": out,
             "changes": sum(1 for d in out if d["changed"]), "warnings": warnings}
@@ -58,6 +61,7 @@ def apply_plan(body):
     _keys(data, ("profile", "sha256"), ("space",))
     space = _space(data.get("space"))
     guard.require_sees_inventory(space)
+    guard.require_space_write(profile, "tokens.edit", space)
     result, _ = _plan(space)
     if data["sha256"] != result["sha256"]:
         raise ApiError(409, CHANGED, conflict=True)
@@ -80,5 +84,6 @@ def apply_plan(body):
 
     def refused(e):
         return ApiError(409, CHANGED, conflict=True) if getattr(e, "reason", None) == "changed" else None
-    apply_op(inventory.Op("deck.token_cards", {"items": items}), profile, what, refused)
+    apply_op(inventory.Op("deck.token_cards", {"items": items,
+             "expected_inventory_revision": result["inventory_revision"]}), profile, what, refused)
     return {"saved": len(items), "decks": [item["id"] for item in items]}

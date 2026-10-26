@@ -267,6 +267,18 @@ def register(sub):
     sp.add_argument("--sleeves", metavar="ID|none", help="a shared sleeves id, or none to clear it")
     sp.add_argument("--deck-box", metavar="ID|none", help="a shared deck-box id, or none to clear it")
 
+    from decklab.db import product_tokens
+    sp = actions.add_parser("tokens", help="Show an intact product's packed-token record and source hashes.")
+    sp.add_argument("stem")
+    sp.add_argument("--json", action="store_true")
+    sp.set_defaults(func=product_tokens.show)
+    sp = _write(actions, "set-tokens", "Record an intact product's packed tokens; empty text clears the record.",
+                product_tokens.save)
+    sp.add_argument("stem")
+    sp.add_argument("--expect", required=True, metavar="SHA", help="the product tokens status-list sha (at least 12 characters)")
+    sp.add_argument("--tokens-sha256", required=True, metavar="SHA|none", help="the token-list sha, or none when absent")
+    sp.add_argument("--tokens", required=True, metavar="TEXT", help="Token cards syntax; empty text clears the packing record")
+
     p = sub.add_parser("watchlist", help="List or change the purchase queue (list, set, remove, apply).",
                        description="The watchlist (the purchase queue).")
     actions = p.add_subparsers(dest="action", required=True, metavar="action")

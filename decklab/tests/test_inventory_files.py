@@ -674,7 +674,7 @@ class ReviewFixTests(TempRoot):
         legacy = files.build({"magic/products/status.csv": b"file,status,intact,notes\nx.csv,preordered,,soon\n"})
         made = legacy.with_status_rows(legacy.status.rows)
         self.assertEqual(files.render(made)["magic/products/status.csv"],
-                         b"file,status,intact,sleeves,deck_box,notes\nx.csv,preordered,,,,soon\n")
+                         b"file,status,intact,sleeves,deck_box,notes,token_cards\nx.csv,preordered,,,,soon,\n")
         older = files.build({"magic/collection.csv": b"name,set,collector_number,finish,quantity\nOpt,dom,60,nonfoil,1\n"})
         grown = older.with_collection("home", [*older.collection().rows,
                                                model.CardRow.make(name="Shock", set="m19", collector_number="156",

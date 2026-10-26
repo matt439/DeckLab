@@ -585,7 +585,7 @@ used by the other person's deck says "one of User1's decks", without a link or a
   there aren't enough.
 - **Product storage:** a product deck's Overview shows whether its product is kept intact or
   broken up. An admin can choose **Break up into storage** or **Keep intact**, then review the
-  affected tables and confirm. Breaking up clears the product's sleeves and box; keeping intact
+  affected tables and confirm. Breaking up clears the product's sleeves, box and packed-token record; keeping intact
   reserves its cards together and requires saved deck lists. This changes the whole product,
   including all its decks. The preview checks both inventory and deck revisions again at Save,
   and preserves the existing kit owner's permissions. Other home viewers see the storage state
@@ -597,6 +597,18 @@ used by the other person's deck says "one of User1's decks", without a link or a
   product must still be owned and intact, and new choices must be shared accessory ids.
   `--dry-run` previews, and `--actor matt` changes attribution as for the other inventory commands.
   The one `kit.set` operation needs no card download or deck-table refresh.
+- **Product packed token cards:** an owned intact product's Cards tab offers **Change product packed token cards**
+  to a home viewer who may edit products. One record covers the whole box, including every generated deck page;
+  it reserves existing physical token cards without adding or removing inventory. Paired faces count as one card.
+  Blank means packing is unknown: it reserves nothing explicitly and retains the shared-card warning's
+  one-per-used-row assumption. **Clear packed record** restores that state. The deck planner leaves recorded
+  product copies alone; planning products automatically with decks remains E7-S31's next slice.
+  On the PC, `python -m decklab.db product tokens STEM [--json]` prints the record and both hashes;
+  `product set-tokens STEM --expect SHA --tokens-sha256 TOKEN_SHA --tokens "2 Treasure; 1 Beast // Dog" -m "..."`
+  records it (`--tokens ""` clears; token SHA `none` only when no token sheet exists). `--dry-run` previews,
+  and `--actor matt` follows other writes. Both receipts are checked again under the write lock. Product
+  records and status receipts stay private even when home's collection and decks are public.
+  This feature needs migration `0014_product_token_cards.sql`; this coding session has not applied it live.
 - **Saving and history:** each add, edit, removal or choice is one change set in the audit trail,
   by whoever made it, such as "add sleeves Dragon Shield Matte (black)" or "set sleeves for Izzet
   Otters" by User1, shown on the Activity page (only to the viewers who see that row's owner: an

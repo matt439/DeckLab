@@ -513,7 +513,8 @@ def shared_rows(inv, uses, built, all_holds=None):
         for deck_id in sorted(all_holds):
             qty = all_holds[deck_id]["rows"].get(i, 0)
             if qty and all(h["deck"] != deck_id for h in holders):
-                holders.append({"deck": deck_id, "title": all_holds[deck_id]["title"], "link": deck_id,
+                holders.append({"deck": deck_id, "title": all_holds[deck_id]["title"],
+                                "link": all_holds[deck_id].get("link", deck_id),
                                 "quantity": qty})
         if sum(h["quantity"] for h in holders) > int(row["quantity"]):
             out[i] = holders

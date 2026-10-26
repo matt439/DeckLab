@@ -41,10 +41,18 @@ def _deck_tokens(deck_id, version, sections, inv, inc, held=None):
 
 
 def held_tokens(inv, space=spaces.HOME):
-    """tokens.reserve.holds of a space's built decks, or {} (logged) when they can't be worked out:
-    the plan and pages then show every token card as free, as before reservations."""
+    """Packed holders with private titles redacted for this request, or {} on read failure.
+
+    Quantities stay available to public inventory readers; product identities remain home's.
+    """
     try:
-        return tokens.reserve.holds(inv, space)
+        found = tokens.reserve.holds(inv, space)
+        from . import guard
+        from .inventory_views import named_holder
+        sees = guard.deck_reader()
+        return {holder: hold if named_holder(holder, sees) else
+                dict(hold, title=guard.hidden_deck(holder), link=None)
+                for holder, hold in found.items()}
     except Exception:
         common._log("The packed token cards couldn't be worked out:\n" + traceback.format_exc())
         return {}

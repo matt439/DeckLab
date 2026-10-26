@@ -1,6 +1,6 @@
 """Plan every built deck's Token cards line at once (the Tokens page's "Plan packed token cards").
 
-Each built deck of a space (built_ids: not intact products, which have no line) wants one card for
+Each built deck of a space (built_ids) wants one card for
 each token its built list makes (deck_tokens' needs, worked out with every row free). The plan gives
 each need one card, choosing over all the decks together so the space's rows go as far as they can:
 
@@ -15,6 +15,9 @@ each need one card, choosing over all the decks together so the space's rows go 
 Then the spares (Matt, 2026-10-25: "one each, then share spares"): what's left of each row is dealt
 out one card at a time, round the decks given that row in id order (or, for a row nobody was given,
 the decks it would serve as an exact, agreeing or check card), so a Treasure deck may get 3.
+
+Intact products are fixed holders in this slice. Their recorded copies are left out of both
+flow capacities and spare distribution; automatic product planning is still separate work.
 
 plan() only works it out (tokens.plan_token_cards reads what it needs); lib/api/token_plan.py previews it and saves every line as one change.
 """
@@ -110,6 +113,18 @@ def plan(inv, built, space=spaces.HOME, warnings=None):
                       "needs": needs})
     found.sort(key=lambda d: d["id"])
 
+    # Fixed holders outside this plan (intact products) keep their physical cards.
+    # An unreadable reservation cannot silently become free stock.
+    if any(hold.get("error") for hold in current.values()):
+        from .products import FAILED
+        raise RuntimeError(FAILED)
+    planned = {d["id"] for d in found}
+    locked = collections.Counter()
+    for holder, hold in current.items():
+        if holder not in planned:
+            locked.update(hold["rows"])
+    capacities = [max(int(row["quantity"]) - locked[i], 0) for i, row in enumerate(inv.rows)]
+
     # The flow: source -> each need (1) -> each row it could use (rank) -> sink (the row's quantity).
     needs = [(d, need, _candidates(need, inv)) for d in found for need in d["needs"]]
     source, sink = 0, 1 + len(needs) + len(inv.rows)
@@ -123,7 +138,7 @@ def plan(inv, built, space=spaces.HOME, warnings=None):
             uses.append((len(edges), n, row, verdict, side))
             edges.append((1 + n, 1 + len(needs) + row, 1, cost))
     for i, row in enumerate(inv.rows):
-        edges.append((1 + len(needs) + i, sink, int(row["quantity"]), 0))
+        edges.append((1 + len(needs) + i, sink, capacities[i], 0))
     flow = _min_cost_flow(sink + 1, edges, source, sink)
 
     given = {d["id"]: {} for d in found}             # deck -> {row: cards}
@@ -144,7 +159,7 @@ def plan(inv, built, space=spaces.HOME, warnings=None):
     # The spares, dealt round the decks given each row (or that could use it), in id order.
     spares = {d["id"]: 0 for d in found}
     for i, row in enumerate(inv.rows):
-        left = int(row["quantity"]) - sum(g.get(i, 0) for g in given.values())
+        left = capacities[i] - sum(g.get(i, 0) for g in given.values())
         takers = [d["id"] for d in found if given[d["id"]].get(i)]
         if not takers:
             takers = sorted({deck["id"] for deck, _, options in needs
@@ -175,6 +190,7 @@ def plan(inv, built, space=spaces.HOME, warnings=None):
                     "packs": sorted(packs[d["id"]], key=lambda p: cards.fold(p["token"])),
                     "short": sorted(short[d["id"]], key=cards.fold), "spares": spares[d["id"]],
                     "sha256": d["stored"].sha256, "parsed": d["parsed"], "stored": d["stored"]})
-    digest = hashlib.sha256(json.dumps([inv.sha256, [(d["id"], d["sha256"], d["after"]) for d in out]])
+    digest = hashlib.sha256(json.dumps([inv.sha256, snapshot.revision,
+                                       [(d["id"], d["sha256"], d["after"]) for d in out]])
                             .encode()).hexdigest()
-    return {"decks": out, "tokens_sha256": inv.sha256, "sha256": digest}
+    return {"decks": out, "tokens_sha256": inv.sha256, "inventory_revision": snapshot.revision, "sha256": digest}

@@ -47,7 +47,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 
 | id | status | pri | size | item |
 |---|---|---|---|---|
-| `E7-S31` | OPEN | could | M | Intact products pack token cards (a `token_cards` field beside their sleeves and deck box), counted as in use and planned with the built decks. |
+| `E7-S31` | OPEN | could | M | Plan intact products with built decks; guarded product token records and fixed reservations are implemented, pending migration 0014 activation. |
 | `E7-S06` | OPEN | could | M | Confirm physical quantities when precon token sources omit them; guarded opt-in for explicit counts is built. |
 | `E7-S21` | OPEN | could | L | Check a built deck's box against its list, list what's missing or extra, and record the date checked. |
 | `E5-S15` | DEFERRED | should | M | User1 asks from the page for a card or a Forge run, Matt approves (`E3-S13`); not urgent. |

@@ -41,12 +41,12 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 20 | 14 | 1 | 4 | 1 |
 | [E5: Decide what to buy](#e5-decide-what-to-buy) | 22 | 15 | 0 | 5 | 2 |
 | [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 20 | 17 | 0 | 1 | 2 |
-| [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 27 | 17 | 4 | 6 | 0 |
+| [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 27 | 17 | 5 | 5 | 0 |
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 16 | 11 | 1 | 2 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 19 | 13 | 0 | 5 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 35 | 30 | 2 | 1 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 28 | 15 | 6 | 4 | 3 |
-| **Total** | **229** | **166** | **18** | **31** | **14** |
+| **Total** | **229** | **166** | **19** | **30** | **14** |
 
 Counted from the story headers on 2026-10-27.
 
@@ -2156,7 +2156,7 @@ Evidence:
 - `decklab/tests/test_accounts_ui.py`: test_download_saves_the_spaces_collection_for_whoever_sees_it
 - Not checked in a browser or on a phone: saving a Blob through a link's `download` is how the deck page's Download decklist already works
 
-**E7-S31** · Matt · could · M · missing
+**E7-S31** · Matt · could · M · partial
 
 As Matt, who keeps some products intact in their own box, I want an intact product to say which token cards it packs, as a built deck's Token cards line does, so that other decks don't count those cards as free and the product isn't told it has none.
 
@@ -2166,12 +2166,14 @@ As Matt, who keeps some products intact in their own box, I want an intact produ
 - Given a product with no packed token cards, then the too-few warning still counts it as wanting one card of each row it uses, as now.
 
 Evidence:
-- `decklab/lib/tokens/__init__.py`: intact products count as holders for the warning only
-- `decklab/lib/tokens/optimise.py`: plans built decks only ("not intact products, which have no line")
+- `decklab/db/migrations/0014_product_token_cards.sql`, `decklab/lib/inventory/ops_products.py`, `decklab/db/product_tokens.py`: a guarded product record, legacy status readers and atomic clearing on break-up
+- `decklab/lib/tokens/products.py`, `reserve.py`, `optimise.py`: actual producer relation, one reservation per product, fixed copies excluded from deck plans and a lock-time inventory revision guard
+- `decklab/lib/api/product_tokens.py`, `deck_page.py`, `decklab/web/product-tokens.js`: home-only picker shared across generated product deck routes; no product record or status receipt through public collection/deck access
+- `decklab/tests/test_product_tokens.py`, `test_product_tokens_api.py`, `test_product_tokens_cli.py`, `test_product_tokens_pg.py`, `test_product_token_reservations.py`, `test_product_tokens_ui.py`
 
-Gap: everything. Raised 2026-10-25, the follow-up left by the Token cards line (E4 token work, PRs #7 to #10).
+Now (2026-10-27): the first slice is implemented. An owned intact product records quantities of existing token cards once for its whole box. Blank means packing is unknown, retaining the one-per-used-row warning; clearing does not claim it packs none. Break-up clears this record with its kit. Deck planning protects recorded product copies and refuses unreadable reservations. Migration 0014 and activation have not been performed on the live database or server.
 
-First slice: a `token_cards` field in the product's status, read and written like its `sleeves` and `deck_box`, counted as in use, and cleared by a break-up.
+Gap: Plan packed token cards still plans built decks only. The remaining slice must plan products with them and allocate each product's cards across its own decks, preserving one physical quantity for a paired card.
 
 ---
 
