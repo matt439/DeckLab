@@ -47,7 +47,43 @@ def ordinary_summary(**changes):
             "source": "casual/a", **changes}
 
 
+def library_summary(**changes):
+    return ordinary_summary(**{"status": "built", "versions": ["target"], "card_count": 60, "sideboard_count": 15,
+                               "title": "Fixture deck", "missing": {"target": 2}, "box_check": {"checked_on": None}, **changes})
+
+
 class GoldenPackingTests(unittest.TestCase):
+    def test_library_default_date_omission_is_exact_and_preserves_metadata_scope_and_input(self):
+        index = {"decks_index": {"decks": [library_summary()], "warnings": ["Keep warning"], "halves": [], "decks_revision": "keep"}}
+        original = {**copy.deepcopy(index), "by_viewer": {viewer: copy.deepcopy(index) for viewer in ("matt", "user1", "(local)", "user2", "unknown")},
+                    "unrelated": copy.deepcopy(index)}
+        before = copy.deepcopy(original)
+        result = golden_packing.normalise(original)
+        self.assertEqual(original, before)
+        expected = copy.deepcopy(index)
+        expected["decks_index"]["decks"][0].pop("box_check")
+        self.assertEqual(result["decks_index"], expected["decks_index"])
+        for viewer in ("matt", "user1", "(local)"):
+            self.assertEqual(result["by_viewer"][viewer], expected)
+        for viewer in ("user2", "unknown"):
+            self.assertEqual(result["by_viewer"][viewer], index)
+        self.assertEqual(result["unrelated"], index)
+
+    def test_library_written_dates_malformed_shapes_and_noneligible_summaries_stay_comparable(self):
+        base = library_summary()
+        changes = [{"box_check": value} for value in (None, [], {}, {"checked_on": "2026-10-26"}, {"checked_on": "bad"},
+                                                       {"checked_on": False}, {"checked_on": None, "unexpected": "keep"})]
+        changes += [{"status": value} for value in (None, "idea", "building", True)]
+        changes += [{"versions": value} for value in (None, [], ["owned"], ["target", "target"], "target")]
+        changes += [{"card_count": value} for value in (None, 0, -1, True, "60")]
+        changes += [{"sideboard_count": value} for value in (None, -1, True, "15")]
+        changes += [{"space": "user2"}, {"read_only": True}, {"id": "product/box"}, {"kind": "product"},
+                    {"id": "user2/casual/a"}, {"source": "casual/other"}, {"error": None}, {"error": "Unreadable"}]
+        for changed in changes:
+            with self.subTest(changed=changed):
+                original = {"decks_index": {"decks": [{**base, **changed}]}}
+                self.assertEqual(golden_packing.normalise(original), original)
+
     def test_default_box_receipts_and_name_only_art_drop_only_at_exact_paths_without_mutation(self):
         base = {"assembly": {"a": {"decks": [box_participant()], "box_check_cards": {"Opt": box_art()},
                                    "cards": {"Opt": {"name": "Keep existing card metadata"}}, "totals": {"missing": 0}}},

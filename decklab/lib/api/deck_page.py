@@ -63,12 +63,15 @@ def decks_index():
 
     A built ordinary deck also has "assembled": its saved physical main/sideboard
     counts and the real Planned cards still outside that build (assembly_intent.project).
+    A readable ordinary home built deck has "box_check": {checked_on: ISO date or None}
+    only for viewers of home's records and inventory. None means no reliable date
+    was recorded; it makes no claim about whether the physical box was checked.
 
     missing, on_the_way, availability_confirmed, assembled and tokens are left out of a
     deck whose space's inventory the visitor may not see (the phase 4
     design's R6d, guard.sees_inventory), and that space's pool isn't read."""
     _require_cards()
-    summaries = guard.visible_decks(decks.list_decks())
+    summaries = [dict(summary) for summary in guard.visible_decks(decks.list_decks())]
     opponents = usual_opponent_ids(summaries)
     add_usual_opponents(summaries, opponents)
     warnings = []
@@ -80,6 +83,7 @@ def decks_index():
     kits = _index_kits(summaries) if sees else None
     token_briefs = _index_tokens()
     for summary in summaries:
+        summary.pop("box_check", None)  # Always project private metadata afresh for this request.
         space = summary.get("space", spaces.HOME)
         if guard.sees_inventory(space):
             if space not in pools:
@@ -120,12 +124,12 @@ def _index_counts(summary, p, warnings):
     summary["missing"] = missing
     summary["on_the_way"] = waiting
     summary["availability_confirmed"] = confirmed
-    assembled = _assembled_view(summary, p, warnings, result=intended)
+    assembled = _assembled_view(summary, p, warnings, result=intended, check_date=True)
     if assembled is not None:
         summary["assembled"] = assembled
 
 
-def _assembled_view(summary, p, warnings, *, deck=None, result=None):
+def _assembled_view(summary, p, warnings, *, deck=None, result=None, check_date=False):
     """Inventory-only physical build and retained Planned intent; optional when unreadable."""
     if summary.get("status") != "built" or summary.get("error") or summary["id"].startswith(("product/", "pairing/")):
         return None
@@ -134,6 +138,12 @@ def _assembled_view(summary, p, warnings, *, deck=None, result=None):
             from decklab.lib.inventory.ops_decks import parsed_deck
             record = inventory.current().deck(summary["id"])
             deck = parsed_deck(record) if record is not None else None
+        # Reuse this already parsed request-snapshot record; public inventory or
+        # public decks alone never publish home's historical physical-check date.
+        if check_date and deck is not None and deck.space == spaces.HOME and deck.kind in decks.KINDS \
+                and deck.status == "built" and guard.sees_home_records() and guard.sees_inventory(spaces.HOME):
+            from decklab.lib.decks import boxcheck
+            summary["box_check"] = {"checked_on": boxcheck.checked_on(deck)}
         from .assembly_intent import project
         return project(deck, p, result)
     except (decks.DeckNotFound, decks.DeckFileError, OSError, ValueError) as error:

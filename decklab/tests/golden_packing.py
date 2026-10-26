@@ -10,6 +10,8 @@ Default box-check receipts must match the physical checklist before omission;
 their representative art is restricted to those physical names. Only a null
 historical date on an ordinary home deck page is omitted. Written dates,
 malformed metadata and existing packing counts/differences remain comparable.
+At the Library index, only a clean null check date on a readable ordinary home
+built summary is omitted, for the fixture's home viewers and top-level script.
 """
 import copy
 import hashlib
@@ -158,11 +160,28 @@ def _ordinary_home_summary(summary):
         and summary.get("source") in (deck_id, f"magic/decks/{deck_id}.md")
 
 
+def _default_library_box_check(summary):
+    return (_ordinary_home_summary(summary) and summary.get("status") == "built" and "error" not in summary
+            and summary.get("versions") in (["target"], ["target", "owned"])
+            and type(summary.get("card_count")) is int and summary["card_count"] > 0
+            and type(summary.get("sideboard_count")) is int and summary["sideboard_count"] >= 0
+            and isinstance(summary.get("box_check"), dict) and summary["box_check"] == {"checked_on": None})
+
+
 def normalise(dump):
     out = copy.deepcopy(dump)
-    for mine in [out, *((out.get("by_viewer") or {}).values())]:
+    for viewer, mine in [(None, out), *((out.get("by_viewer") or {}).items())]:
         if not isinstance(mine, dict):
             continue
+        # These are golden_dump's synthetic home identities, never live config.
+        # A date exposed in any outside/unknown viewer remains comparable.
+        if viewer in (None, "matt", "user1", "(local)"):
+            index = mine.get("decks_index")
+            summaries = index.get("decks") if isinstance(index, dict) else None
+            if isinstance(summaries, list):
+                for summary in summaries:
+                    if _default_library_box_check(summary):
+                        summary.pop("box_check")
         for plan in (mine.get("assembly") or {}).values():
             if not isinstance(plan, dict):
                 continue

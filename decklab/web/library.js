@@ -51,6 +51,7 @@ function libraryFilters(params) {
     status: STATUS_WORDS[status] ? status : "",
     color: libColourChoice(params.get("color")),
     archetype: libArchetypeQuery(params.get("archetype")),
+    ...libBoxFilterParams(params),
     readiness: LIB_READINESS[params.get("readiness")] ? params.get("readiness") : "",
     sort: LIB_SORTS[sort] ? sort : "ready",
     deck: params.get("deck") || "",            // the lab's selected deck
@@ -67,6 +68,7 @@ function filtersHash(filters) {
   const color = libColourChoice(filters.color), archetype = libArchetypeQuery(filters.archetype);
   if (color) params.set("color", color);
   if (archetype) params.set("archetype", archetype);
+  libBoxFilterHash(params, filters);
   if (filters.readiness) params.set("readiness", filters.readiness);
   if (filters.sort && filters.sort !== "ready") params.set("sort", filters.sort);
   if (filters.deck) params.set("deck", filters.deck);
@@ -77,7 +79,7 @@ function filtersHash(filters) {
 
 /** How many select filters are set: the phone's "Filter (n)" (title and sort stay independent). */
 function libFilterCount(filters) {
-  return ["format", "status", "color", "archetype", "readiness"].filter((key) => filters[key]).length;
+  return ["format", "status", "color", "archetype", "readiness"].filter((key) => filters[key]).length + (libBoxMode(filters.box_check) ? 1 : 0);
 }
 
 /** A bookmarked identity choice: includes every chosen colour, or explicitly colourless/unknown. */
@@ -106,7 +108,7 @@ function libArchetypeQuery(value) {
 function libMatchesMetadata(deck, filters) {
   const archetype = libArchetypeQuery(filters.archetype);
   return libMatchesTitle(deck, filters) && libMatchesColour(deck, filters.color)
-    && (!archetype || libArchetypeQuery(deck.archetype) === archetype);
+    && (!archetype || libArchetypeQuery(deck.archetype) === archetype) && libMatchesBoxCheck(deck, filters);
 }
 
 function libColourChoices() {
@@ -166,6 +168,7 @@ function libChoices(shown = false, data = null, filters = {}) {
     ["color", "Colour identity", libColourChoices()],
     ["archetype", "Archetype", libArchetypeChoices(data, filters.archetype)],
     ["readiness", `${listName("target")} availability`, [["", "Any availability"], ...Object.entries(LIB_READINESS)]],
+    ...libBoxCheckChoices(),
     ["sort", "Sort", Object.entries(LIB_SORTS).map(([v, text]) => [v, shown ? text : `Sort: ${text}`])],
   ];
 }
@@ -211,7 +214,11 @@ function drawLibrary(data, filters) {
   libWatchDensity(results, refresh);
   libKeys(results, view);
   libLoadForge(data, refresh);
-  const set = (key, value) => { if (!view.current?.()) return; filters[key] = value; redraw(); };
+  const set = (key, value) => {
+    if (!view.current?.()) return;
+    if (key === "box_check" && value !== "before") filters.checked_before = "";
+    filters[key] = value; redraw();
+  };
   const setMany = (values) => { if (!view.current?.()) return; Object.assign(filters, values); redraw(); };
   const who = state.profile;
   const mine = el("button", { type: "button", text: `${who.name}'s decks`,
@@ -220,6 +227,7 @@ function drawLibrary(data, filters) {
   const choices = libChoices(false, data, filters);
   const selects = choices.map(([key, label, entries]) =>
     libSelect(`filter-${key}`, label, entries, filters[key], (value) => set(key, value)));
+  const boxCutoff = libBoxCutoff("filter-checked-before", filters, set, false, () => view.current?.());
   const filterButton = el("button", { type: "button", class: "btn lib-filter-button", "aria-haspopup": "dialog",
     onclick: () => { if (view.current?.()) libOpenFilterSheet(view, data, filters, set, setMany, syncAddress); } });
   let composing = false;
@@ -240,7 +248,7 @@ function drawLibrary(data, filters) {
     el("span", { class: "sr-only", id: "library-title-hint", text: "Search titles in this library. Other filters still apply." }));
   const searchOwner = libTitleSearchOwner = { input: titleInput, root: titleSearch, results };
   const searchCurrent = () => libTitleSearchOwner === searchOwner && results.isConnected && titleInput.isConnected && main.contains(titleSearch)
-    && titleSearch.contains(titleInput) && keyboardToken === routeToken && keyboardProfile === state.profile?.id;
+    && titleSearch.contains(titleInput) && keyboardToken === routeToken && keyboardProfile === state.profile?.id && parseHash().path === "library";
   view.current = searchCurrent;
   function searchTitles() {
     if (!searchCurrent() || filters.q === titleInput.value) return;
@@ -255,6 +263,7 @@ function drawLibrary(data, filters) {
       if (select) select.value = filters[key] || "";
     }
     const n = libFilterCount(filters);
+    boxCutoff.sync();
     filterButton.textContent = n ? `Filter (${n})` : "Filter";
     clearTitle.hidden = !titleInput.value;
   }
@@ -294,7 +303,7 @@ function drawLibrary(data, filters) {
     titleSearch,
     el("div", { class: "lib-filters", role: "group", "aria-label": "Filter the decks" },
       el("div", { class: "segmented", role: "group", "aria-label": "Whose decks" }, mine, all),
-      el("div", { class: "lib-selects" }, selects),
+      el("div", { class: "lib-selects" }, selects, boxCutoff.node),
       el("div", { class: "lib-row-end" + (rowMore ? " has-more" : "") }, filterButton, rowMore)),
     picking,
     results]);
@@ -305,26 +314,31 @@ function drawLibrary(data, filters) {
 
 /** The phone's filter sheet: the same choices with their words, applied as they change. The fields stay put
  * (the focus stays on the one just changed); only the buttons follow the count. */
-function libFilterSheet(data, filters, set, setMany, onClose = null) {
+function libFilterSheet(data, filters, set, setMany, onClose = null, current = () => true) {
   const sheet = openSheet({ title: "Filter decks", onClose });
   const count = () => libVisibleDecks(data, filters).length + libVisibleProducts(data, filters).length;
   const choices = libChoices(true, data, filters);
   const fields = choices.map(([key, label, entries]) =>
     libSelect(`sheet-filter-${key}`, label, entries, filters[key], (value) => { set(key, value); draw(); }, true));
-  const body = el("div", { class: "lib-sheet-fields" }, fields);
+  const cutoff = libBoxCutoff("sheet-filter-checked-before", filters, (key, value) => { set(key, value); draw(); }, true,
+    () => !sheet.closed && current());
+  const guidance = el("p", { class: "sub lib-box-check-guidance", role: "status" });
+  const body = el("div", { class: "lib-sheet-fields" }, fields, cutoff.node, guidance);
   function draw() {
     for (const [key] of choices) {
       const select = body.querySelector(`#sheet-filter-${key}`);
       if (select && select.value !== (filters[key] || "")) select.value = filters[key] || "";
     }
+    cutoff.sync();
+    const issue = libBoxCheckIssue(data, filters); guidance.textContent = issue.text; guidance.hidden = !issue.text;
     sheetActions(sheet, [
       libFilterCount(filters) ? { text: "Clear filters", onclick: () => {
-        setMany({ format: "", status: "", color: "", archetype: "", readiness: "" });
+        setMany({ format: "", status: "", color: "", archetype: "", readiness: "", box_check: "", checked_before: "" });
         draw();
         const first = body.querySelector("select");
         if (first) first.focus();
       } } : null,
-      { text: `Show ${plural(count(), "deck")}`, kind: "primary", onclick: () => sheet.close() }]);
+      { text: issue.blocking ? "Close filters" : `Show ${plural(count(), "deck")}`, kind: "primary", onclick: () => sheet.close() }]);
   }
   sheet.body.append(body);
   draw();
@@ -358,7 +372,7 @@ function libOpenFilterSheet(view, data, filters, set, setMany, syncAddress) {
     window.addEventListener("popstate", landed);
     window.addEventListener("hashchange", abandoned);
   };
-  owner.sheet = libFilterSheet(data, filters, set, setMany, closed);
+  owner.sheet = libFilterSheet(data, filters, set, setMany, closed, current);
   return owner.sheet;
 }
 
@@ -554,7 +568,7 @@ function drawLibraryResults(target, data, filters, view = {}, redraw = null) {
   const selected = sorted.find((d) => d.id === filters.deck) || sorted[0] || null;
   const ctx = { sort: filters.sort || "ready", picking: Boolean(view.picking), redraw, lab,
     selected: selected ? selected.id : null, select: view.select || (() => {}),
-    searching: !!(libTitleQuery(filters.q) || filters.color || filters.archetype) };
+    searching: !!(libTitleQuery(filters.q) || filters.color || filters.archetype || libBoxMode(filters.box_check)) };
   const results = el("div", { class: "lib-list" });
   target.append(lab && selected ? el("div", { class: "lib-split" }, results, libDetail(selected, ctx)) : results);
   const files = data.decks.filter((d) => !d.id.startsWith("product/"));
@@ -568,6 +582,8 @@ function drawLibraryResults(target, data, filters, view = {}, redraw = null) {
   const showProducts = products.length > 0;
 
   const counts = shown.length ? [plural(shown.length, "deck")] : [];
+  const checkIssue = libBoxCheckIssue(data, filters);
+  if (checkIssue.text) results.append(el("p", { class: "box box-info lib-box-check-guidance", role: "status", text: checkIssue.text }));
   if (showProducts) counts.push(plural(products.length, "product deck"));
   const othersWords = ownSpace() === HOME_SPACE ? "played only by someone else" : "of other people";
   if (counts.length || hiddenOthers) {
@@ -604,11 +620,11 @@ function drawLibraryResults(target, data, filters, view = {}, redraw = null) {
   if (!shown.length && !showProducts) {
     const any = libFilterCount(filters) || libTitleQuery(filters.q) || !filters.all;
     results.append(el("div", { class: "empty" },
-      el("p", { text: any ? "No decks match these filters." : "There are no decks yet." }),
+      el("p", { text: checkIssue.blocking ? "Update the check-date filter to see matches." : any ? "No decks match these filters." : "There are no decks yet." }),
       any ? el("a", { class: "btn", href: "#/library?all=1", text: "Show every deck",
         onclick: (e) => { e.preventDefault();
           if (!target.isConnected || view.current && !view.current()) return;
-          Object.assign(filters, { all: true, format: "", status: "", color: "", archetype: "", readiness: "", q: "" });
+          Object.assign(filters, { all: true, format: "", status: "", color: "", archetype: "", readiness: "", box_check: "", checked_before: "", q: "" });
           history.replaceState(history.state, "", filtersHash(filters)); clear($("#main"));
           drawLibrary(state.library || data, filters); } })
         : createTargets().length ? el("a", { class: "btn btn-primary", href: newDeckHref(), text: "New deck" }) : null));
@@ -820,6 +836,7 @@ function libDetail(d, ctx) {
         d.error ? null : libDetailForge(d),
         deckTokens(d.tokens),
         deckSleeve(d.kit),
+        libBoxSelectedNote(d),
         el("div", { class: "actions lib-detail-actions" }, edit,
           el("a", { class: edit ? "btn btn-secondary" : "btn btn-primary", href: open, text: "Open deck" }))),
        glance.facts, glance.cards)));

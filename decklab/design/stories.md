@@ -2000,12 +2000,16 @@ As an owner of built decks in the shared pool, I want to check a built deck's bo
 
 Now (2026-10-26): [the first slice is implemented](../HISTORY.md#physical-box-checks-and-historical-dates-2026-10-26-e7-s21) for ordinary home built decks. Build decks reviews the saved physical assembly in every section, including basics and installed named or unspecified stand-ins, with explicit found counts and separate extras. Only a historical date is saved; counts and differences remain local, and pictures certify no physical printing or current contents.
 
+The [Library date-filter slice](../HISTORY.md#library-box-check-date-filters-2026-10-26-e7-s21) is implemented too. Authorized home viewers can select no reliable date recorded, or dates strictly before an explicitly chosen cutoff. It composes with the existing Library filters and phone-sheet history. No age policy is inferred, and outside-scope decks or unavailable summaries never become unchecked decks.
+
 Evidence:
 - `decklab/lib/decks/boxcheck.py`, `decklab/lib/api/box_check.py`: section- and role-aware differences, exact source receipts, private date-only save through the normal deck write lock
 - `decklab/web/assembly-boxcheck.js`, `decklab/web/assembly.js`, `decklab/web/deck-availability.js`: blank local counts, picture ticks, reviewed differences, guarded Save check date and a private historical date note
 - `decklab/tests/test_box_check_model.py`, `test_box_check_api.py`, `test_box_check_ui.py`, `test_box_check_pg.py`: model, permissions, stale/uncertain outcomes, unchanged-list/date-only persistence and disposable database checks
+- `decklab/lib/api/deck_page.py`, `decklab/web/library-boxchecks.js`, `decklab/web/library.js`: private request-local index dates, strict cutoff/unrecorded filters and historical selected-deck note
+- `decklab/tests/test_library_box_check_api.py`, `test_library_boxchecks_ui.py`, `test_library_boxchecks_history_ui.py`: date scope and privacy, malformed/omitted summaries, combined filters, retained input, URL and phone Back behavior
 
-Gap: separate offers to fix the list or collection and the Library filter for decks due for a check remain. Member-space and product box checks are future scope. The native fixture matrix passed; real-device and household acceptance remain separate.
+Gap: separate offers to fix the list or collection remain. Member-space and product box checks are future scope. Both native fixture matrices passed; real-device and household acceptance remain separate.
 
 **E7-S22** · Matt · could · M · missing
 
