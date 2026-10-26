@@ -69,7 +69,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 | `E11-S31` | DECISION | could | M | Global search in the top bar ([stories.md](decklab/design/stories.md#e11-s31)): Matt chooses sources and result grouping before building. |
 | `E11-S32` | OPEN | could | M | A prebuilt release of the Forge fork, with a checksum, as SELF-HOSTING.md's first Forge route. |
 | `E11-S33` | OPEN | could | L | Interpreter-path fixes have isolated lexical checks. Real Linux 3.14 reproduction/full suite, Linux CI, nightly timer and server service remain. |
-| `E11-S08` | OPEN | could | L | Row edits, narrow collection INSERT/DELETE, unused token INSERT and 2-50-row collection condition/language Undo are built. Broader inverses remain. |
+| `E11-S08` | OPEN | could | L | Row edits, narrow collection INSERT/DELETE, unused token INSERT and 2-50-row collection condition/language/notes Undo are built. Broader inverses remain. |
 | `E11-S02` | DECISION | should | S | The "Deck Lab is off" Worker is deployed (`decklab/cloudflare/`): Matt checks a signed-in save, a photo upload, and the page with Deck Lab stopped. |
 
 ## Areas with no open rows

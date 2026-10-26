@@ -35,10 +35,11 @@ class BatchUndoPgTests(db_support.DbTestCase):
             raise AssertionError("Metadata Undo requires a disposable database")
         db_support.seed_membership(cls.dbname, collection_fixture.ROLES["profiles"])
 
-    def seed(self, count=2):
+    def seed(self, count=2, *, notes=None, notes_only=False):
         rows = [{"name": "Llanowar Elves", "set": "fdn", "collector_number": str(1000 + index), "finish": "nonfoil",
                  "quantity": "2", "condition": "" if index % 2 == 0 else "legacy condition",
-                 "language": "" if index % 2 == 0 else "de", "notes": "Unchanged metadata note " + str(index)}
+                 "language": "" if index % 2 == 0 else "de",
+                 "notes": notes[index] if notes is not None else "Unchanged metadata note " + str(index)}
                 for index in range(count)]
         class Seed:
             kind = "fixture.metadata-seed"
@@ -46,7 +47,9 @@ class BatchUndoPgTests(db_support.DbTestCase):
                 old = [row.as_dict() for row in snapshot.collection("home").rows]
                 return snapshot.with_collection("home", [*old, *rows]), Summary("Seed disposable metadata rows")
         inventory.apply(Seed(), existing.ACTOR, "Fixture metadata seed")
-        edits = [(list(rules.ident(row)), {**row, "condition": "NM", "language": "en"}) for row in rows]
+        edits = [(list(rules.ident(row)), {**row, **({} if notes_only else {"condition": "NM", "language": "en"}),
+                                         **({"notes": "Replaced metadata note " + str(index)} if notes is not None else {})})
+                 for index, row in enumerate(rows)]
         inventory.apply(Op("collection.apply", {"space": "home", "edits": edits}), existing.ACTOR, "Fixture metadata update")
         return self.source("collection_card"), rows
 
@@ -105,6 +108,36 @@ class BatchUndoPgTests(db_support.DbTestCase):
             inventory.undo_review(source, "home")
         self.assertEqual(self.persisted(), before)
 
+    def test_notes_only_restore_exact_text_and_empty_with_one_audited_batch(self):
+        notes = ["", 'Quoted "gift", café — 日本語 <b>literal text</b>']
+        source, rows = self.seed(notes=notes, notes_only=True)
+        plan = inventory.undo_review(source, "home")
+        self.assertEqual([[field["field"] for field in item["fields"]] for item in plan["rows"]], [["notes"], ["notes"]])
+        before = self.persisted()
+        original = self.sql("select id,op,row_key,before,after from audit.row_change where change_set_id=%s order by id", (source,))
+        after, summary = self.apply(source, plan)
+        self.assertEqual((summary.counts["edited"], summary.counts["removed"]), (2, 0))
+        self.assertEqual([item["row"]["notes"] for item in undo.restored_rows(after, plan)], notes)
+        self.assertEqual({rules.ident(item["row"]): item["row"] for item in undo.restored_rows(after, plan)},
+                         {rules.ident(row): {**row, "quantity": int(row["quantity"])} for row in rows})
+        written = self.persisted()
+        self.assertEqual(len(written["audit.change_set"]), len(before["audit.change_set"]) + 1)
+        self.assertEqual(len(written["audit.row_change"]), len(before["audit.row_change"]) + 2)
+        self.assertEqual(self.sql("select id,op,row_key,before,after from audit.row_change where change_set_id=%s order by id", (source,)), original)
+        for table in before.keys() - {"collection_card", "inventory_revision", "audit.change_set", "audit.row_change"}:
+            self.assertEqual(written[table], before[table], table)
+
+    def test_notes_with_condition_language_restore_full_actual_rows_through_api(self):
+        source, rows = self.seed(notes=["=literal historical note " + "é" * 600, " \tOriginal\r\nsecond line\rlast line  "])
+        with access.using({"profile": "matt", "email": "matt@example.com", "remote": True}):
+            preview = activity_undo.undo_view(id=str(source))
+            self.assertEqual([[field["field"] for field in item["fields"]] for item in preview["rows"]],
+                             [["condition", "language", "notes"], ["condition", "language", "notes"]])
+            result = activity_undo.apply_undo(json.dumps({"profile": "matt", "id": source, "expect": preview["expect"]}).encode())
+        self.assertEqual(result["restored_rows"], [{"key": item["key"], "row": item["restored"]} for item in preview["rows"]])
+        self.assertEqual({rules.ident(item["row"]): item["row"] for item in result["restored_rows"]},
+                         {rules.ident(row): {**row, "quantity": int(row["quantity"])} for row in rows})
+
     def test_one_later_touch_and_both_revisions_block_the_entire_batch(self):
         source, rows = self.seed()
         for table in ("inventory_revision", "decks_revision"):
@@ -126,7 +159,7 @@ class BatchUndoPgTests(db_support.DbTestCase):
         self.assertEqual(self.persisted(), before)
 
     def test_late_sql_failure_rolls_back_every_row_and_same_connection_is_reused(self):
-        source, _ = self.seed()
+        source, _ = self.seed(notes=["First note before change", "Second note before change"])
         plan = inventory.undo_review(source, "home")
         before = self.persisted()
         original_diff, original_call = pg._diff, self.backend._call

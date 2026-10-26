@@ -14,7 +14,7 @@ from .common import ApiError, DATABASE_DOWN, _keys, _parse_body
 from .settings import _writer
 
 NO_CHANGE = "No undoable change at that ID."
-UNSUPPORTED = "This change cannot be undone here. Supported Undo covers single-row edits, unheld nonbasic collection additions, unheld verified token additions, verified collection deletions and batches of 2-50 condition/language updates."
+UNSUPPORTED = "This change cannot be undone here. Supported Undo covers single-row edits, unheld nonbasic collection additions, unheld verified token additions, verified collection deletions and batches of 2-50 condition/language/notes updates."
 CHANGED = "The change can no longer be undone safely. Reload Activity and review it again."
 UNCONFIRMED = "The undo result could not be confirmed. Reload Activity before trying again."
 SHA = re.compile(r"[a-f0-9]{64}")
@@ -173,7 +173,7 @@ def _batch_project(plan):
         if not isinstance(raw_key, dict) or set(raw_key) != {"space_id", "set_code", "collector_number", "finish"} \
                 or raw_key != {"space_id": plan["space"], "set_code": key[0], "collector_number": key[1], "finish": key[2]} \
                 or key in keys or item["row_change_id"] in ids \
-                or any(field["field"] not in ("condition", "language") for field in projected["fields"]):
+                or any(field["field"] not in ("condition", "language", "notes") for field in projected["fields"]):
             raise ApiError(503, UNCONFIRMED)
         keys.add(key)
         ids.add(item["row_change_id"])

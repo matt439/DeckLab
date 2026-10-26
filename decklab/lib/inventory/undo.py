@@ -23,7 +23,7 @@ SUPPORTED = {COLLECTION: ("collection", {"quantity", "condition", "language", "n
              TOKENS: ("tokens", {"quantity", "notes"})}
 SHA = re.compile(r"[a-f0-9]{64}")
 BATCH_MAX = 50
-BATCH_FIELDS = ("condition", "language")
+BATCH_FIELDS = ("condition", "language", "notes")
 
 
 class UndoMissing(Invalid):
@@ -476,7 +476,17 @@ def _batch_review(change_id, space, snapshot, store):
         source, wanted, restore = _source([record], space)
         changed = {key for key in wanted if wanted[key] != restore[key]}
         if not changed or changed - set(BATCH_FIELDS):
-            raise UndoUnsupported("Only condition and language metadata can be undone in a batch.")
+            raise UndoUnsupported("Only condition, language and notes metadata can be undone in a batch.")
+        if "notes" in changed:
+            # Historical text is restored verbatim, not run through fresh-input
+            # trimming/length/formula policy. PostgreSQL must still represent it.
+            try:
+                for value in (wanted["notes"], restore["notes"]):
+                    if "\0" in value:
+                        raise ValueError("NUL is not PostgreSQL text")
+                    value.encode("utf-8")
+            except (ValueError, UnicodeError):
+                raise UndoUnsupported("The recorded notes cannot be restored as database text.") from None
         key, rid = rules.ident(wanted), source["id"]
         if key in keys or rid in ids:
             raise UndoUnsupported("A metadata batch must name each original row exactly once.")

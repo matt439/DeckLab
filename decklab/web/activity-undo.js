@@ -35,7 +35,7 @@ function activityUndoBatchEvidence(data) {
     if (!key || keys.has(key)) return false;
     keys.add(key);
     const changed = ACTIVITY_UNDO_FIELDS.collection.filter(field => item.current[field] !== item.restored[field]);
-    if (!changed.length || changed.some(field => !["condition", "language"].includes(field)) || !Array.isArray(item.fields)
+    if (!changed.length || changed.some(field => !["condition", "language", "notes"].includes(field)) || !Array.isArray(item.fields)
         || item.fields.length !== changed.length || new Set(item.fields.map(field => field?.field)).size !== changed.length
         || [...item.fields].some(field => !field || Object.keys(field).sort().join(",") !== "after,before,field" || !changed.includes(field.field)
           || field.before !== item.current[field.field] || field.after !== item.restored[field.field])) return false;
@@ -180,12 +180,13 @@ function activityUndoShow(ctx) {
   if (batch) {
     const rows = preview.rows.map(item => {
       const changes = item.fields.map(field => el("p", {}, el("b", { text: words[field.field] + ": " }),
-        el("span", { text: text(field.before) }), " → ", el("span", { text: text(field.after) })));
+        el("span", { class: field.field === "notes" ? "activity-undo-note" : null, text: text(field.before) }), " → ",
+        el("span", { class: field.field === "notes" ? "activity-undo-note" : null, text: text(field.after) })));
       return el("section", { class: "panel activity-undo-batch-row" }, el("h4", { text: item.label }),
         el("p", { class: "sub", text: item.key.set.toUpperCase() + " " + item.key.collector_number + " · " + item.key.finish }), changes);
     });
     sheet.body.append(el("p", { class: "sub", text: "Review all " + plural(preview.row_count, "printing")
-      + " below. Their condition and language changes will be restored together in one new audited change; the original change stays in Activity." }),
+      + " below. Their condition, language or notes will be restored together in one new audited change; the original change stays in Activity." }),
       el("div", { class: "panels" }, rows));
   } else if (removing) {
     const tokenCards = preview.kind === "tokens";

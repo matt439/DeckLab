@@ -1,4 +1,4 @@
-"""Bounded condition/language Undo batches use complete global audit-shaped fixtures.
+"""Bounded collection metadata Undo batches use complete global audit-shaped fixtures.
 
 The fixture deliberately preserves the production single-reader LIMIT 2 and adds
 a separate max-51-row reader. No database, card-index update or real data is used.
@@ -54,6 +54,14 @@ class BatchMetadataUndoTests(unittest.TestCase):
 
     def source(self):
         return self.store.audit[fixture.CHANGE_ID]
+
+    def note_batch(self, notes, *, mixed=False):
+        """Record exact former notes, optionally beside condition/language edits."""
+        self.seed(len(notes))
+        for record, note in zip(self.source(), notes):
+            if not mixed:
+                record["before"] = copy.deepcopy(record["after"])
+            record["before"]["notes"] = note
 
     def review(self):
         return inventory.undo_review(fixture.CHANGE_ID, "home", self.store.snapshot)
@@ -141,8 +149,8 @@ class BatchMetadataUndoTests(unittest.TestCase):
             with self.subTest(duplicate=duplicate), self.assertRaises((undo.UndoMissing, undo.UndoUnsupported, undo.UndoConflict)):
                 self.review()
 
-    def test_quantity_notes_identity_names_and_noops_are_outside_this_metadata_slice(self):
-        for field in ("quantity", "notes", "finish", "name", "noop"):
+    def test_quantity_identity_names_and_noops_are_outside_this_metadata_slice(self):
+        for field in ("quantity", "finish", "name", "noop"):
             self.seed()
             first = self.source()[0]
             if field == "noop":
@@ -193,6 +201,84 @@ class BatchMetadataUndoTests(unittest.TestCase):
         untouched = next(row for row in after.collection("home").rows if row.collector_number == "900")
         self.assertEqual(untouched.as_dict(), snapshot.collection("home").rows[0].as_dict())
         self.assertEqual(self.store.snapshot, snapshot)
+        self.assertEqual(self.store.audit, original)
+
+    def test_notes_only_restores_empty_and_quoted_unicode_text_exactly(self):
+        notes = ["", 'Stored separately; "gift", café — 日本語 <b>literal text</b>']
+        self.note_batch(notes)
+        plan = self.review()
+        self.assertEqual([item["fields"] for item in plan["rows"]],
+                         [[{"field": "notes", "before": "Unchanged note " + str(index), "after": note}]
+                          for index, note in enumerate(notes)])
+        with mock.patch.object(ops_collection, "apply_rows", wraps=ops_collection.apply_rows) as ordinary:
+            after, summary = self.apply(plan)
+        self.assertEqual(ordinary.call_count, 2)  # fresh review plus one inverse under apply
+        self.assertEqual(summary.counts["edited"], 2)
+        self.assertEqual(summary.counts["removed"], 0)
+        self.assertEqual([item["row"]["notes"] for item in undo.restored_rows(after, plan)], notes)
+        self.assertEqual(undo.restored_rows(after, plan), self.receipts(plan))
+
+    def test_notes_and_other_metadata_can_change_in_different_combinations(self):
+        self.note_batch(["Old first note", "Old second note", "Old third note"], mixed=True)
+        self.source()[0]["before"]["condition"] = self.source()[0]["after"]["condition"]
+        self.source()[0]["before"]["language"] = self.source()[0]["after"]["language"]
+        self.source()[1]["before"]["language"] = self.source()[1]["after"]["language"]
+        plan = self.review()
+        self.assertEqual([[field["field"] for field in item["fields"]] for item in plan["rows"]],
+                         [["notes"], ["condition", "notes"], ["condition", "language", "notes"]])
+        after, _ = self.apply(plan)
+        self.assertEqual(undo.restored_rows(after, plan), self.receipts(plan))
+
+    def test_historical_text_is_not_trimmed_limited_or_interpreted_as_fresh_input(self):
+        notes = [" \t ", '  Quoted "gift", café 日本語; repeated; prose  ',
+                 "First\r\nSecond\rThird\nFourth\twith a tab", "Long historical note " + "é" * 600,
+                 "=literal historical note", "+literal historical note", "-literal historical note", "@literal historical note"]
+        for note in notes:
+            self.note_batch([note, "Other unchanged historical meaning"])
+            before, original = self.store.snapshot, copy.deepcopy(self.store.audit)
+            with self.subTest(note=note):
+                plan = self.review()
+                after, _ = self.apply(plan)
+                self.assertEqual([item["row"]["notes"] for item in undo.restored_rows(after, plan)],
+                                 [note, "Other unchanged historical meaning"])
+                self.assertEqual(undo.restored_rows(after, plan), self.receipts(plan))
+            self.assertEqual(self.store.snapshot, before)
+            self.assertEqual(self.store.audit, original)
+
+    def test_nontext_historical_notes_refuse_the_whole_batch_without_changes(self):
+        for note in (None, 1, True, [], {}):
+            self.note_batch(["Valid first note", note])
+            before, original = self.store.snapshot, copy.deepcopy(self.store.audit)
+            with self.subTest(note=note), self.assertRaises(undo.UndoUnsupported):
+                self.review()
+            self.assertEqual(self.store.snapshot, before)
+            self.assertEqual(self.store.audit, original)
+
+    def test_unpersistable_note_text_refuses_before_ordinary_edits_or_receipt_hashing(self):
+        for note in ("Embedded\0NUL", "Unpaired\ud800surrogate", "Unpaired\udfffsurrogate"):
+            for side in ("before", "after"):
+                self.note_batch(["Valid first note", "Valid second note"])
+                self.source()[-1][side]["notes"] = note
+                before, original = self.store.snapshot, copy.deepcopy(self.store.audit)
+                with self.subTest(note=repr(note), side=side), \
+                        mock.patch.object(ops_collection, "apply_rows", side_effect=AssertionError("Unpersistable edit")), \
+                        self.assertRaises(undo.UndoUnsupported):
+                    self.review()
+                self.assertEqual(self.store.snapshot, before)
+                self.assertEqual(self.store.audit, original)
+
+    def test_one_candidate_note_rewrite_refuses_the_entire_batch(self):
+        self.note_batch(["Former first note", "Former second note"])
+        before, original = self.store.snapshot, copy.deepcopy(self.store.audit)
+        original_apply = ops_collection.apply_rows
+        def rewritten(*args, **kwargs):
+            after, summary = original_apply(*args, **kwargs)
+            rows = [row.as_dict() for row in after.collection("home").rows]
+            rows[-1]["notes"] += " silently rewritten"
+            return after.with_collection("home", rows), summary
+        with mock.patch.object(ops_collection, "apply_rows", side_effect=rewritten), self.assertRaises(undo.UndoConflict):
+            self.review()
+        self.assertEqual(self.store.snapshot, before)
         self.assertEqual(self.store.audit, original)
 
     def test_receipt_follows_audit_plan_order_even_when_collection_sort_order_differs(self):

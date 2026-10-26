@@ -2,6 +2,16 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Undo collection notes in a bounded metadata batch (2026-10-26; E11-S08)
+
+The existing complete 2-50-row collection UPDATE inverse now accepts notes alongside condition and language, including combinations. Quantity, name, printing identity, mixed sources and partial selection remain refused. Complete-source ownership, unique keys, latest audit touches, full current rows, both revisions, atomic ordinary `apply_rows` restoration and complete keyed receipts retain the existing batch contract.
+
+Historical notes restore verbatim, including whitespace, multiline or long text, formula-like text and literal markup. No fresh-input normalization, trimming or length/formula policy is imposed on the historical value; non-text, NUL and invalid UTF-8 representations refuse before the inverse. The preview uses plain text nodes with preserved whitespace and anywhere wrapping, adding no stock or edit inputs. Other inverse protocols and immutable original audit history are unchanged.
+
+Validation passed 43 backend checks without skips in 8.116 seconds: 23 pure, 12 API and eight actual disposable PostgreSQL checks, including 11 new cases. The new five and existing batch UI cases passed together: 17 checks without skips in 1.323 seconds. Independent final review is clear. The isolated native matrix passed 12 light/dark cases at 320, 600, 820, 1000, 1280 and 1920 px without overflow or page errors. It made 24 preview GETs and one intercepted synthetic POST with reordered keyed receipt rows, with zero actual writes and 12 blocked baseline visit POSTs. Long unbroken current notes and multiline/literal-markup historical notes displayed correctly; fixture inventory/deck bytes stayed unchanged, and screenshots were inspected as actual pixels.
+
+E11-S08 remains partial and OPEN for broader inverses, with counts unchanged. No migration, real-data write, live activation, physical-device or human acceptance is claimed.
+
 ## Explicit original-row context for arrival checks (2026-10-26; E11-S30 slice 12)
 
 Adding a new arrival check to an existing pending cards or tokens part now offers one explicit original-row association. General remains the default; legacy, new-order and product checks remain general. Receive delivery shows proven original-row context beside locally edited rows and every split piece, while verification remains once per check for the whole part in **To check**. No row is inferred from a card name or the check's wording.

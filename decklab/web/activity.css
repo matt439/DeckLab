@@ -38,6 +38,7 @@
 .activity-more { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2) var(--s-4); margin: var(--s-4) 0 var(--s-5); }
 .activity-note { margin: 0; color: var(--ink-2); font-size: var(--fs-sm); }
 .activity-note:empty { display: none; }
+.activity-undo-note { white-space: pre-wrap; overflow-wrap: anywhere; }
 @media (min-width: 600px) {
   .activity-change { padding: var(--s-4) var(--s-5); }
 }

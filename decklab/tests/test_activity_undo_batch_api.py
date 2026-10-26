@@ -39,7 +39,7 @@ class BatchUndoApiTests(unittest.TestCase):
         for row in result["rows"]:
             self.assertEqual(set(row), {"key", "label", "current", "restored", "fields"})
             self.assertEqual(row["key"], {key: row["current"][key] for key in ("set", "collector_number", "finish")})
-            self.assertTrue({field["field"] for field in row["fields"]} <= {"condition", "language"})
+            self.assertTrue({field["field"] for field in row["fields"]} <= {"condition", "language", "notes"})
             self.assertEqual(row["current"]["quantity"], row["restored"]["quantity"])
             self.assertEqual(row["current"]["notes"], row["restored"]["notes"])
         self.assertEqual(self.backend.writes, [])
@@ -58,6 +58,37 @@ class BatchUndoApiTests(unittest.TestCase):
         self.assertEqual(next(row.as_dict() for row in self.backend.snapshot.collection("home").rows if row.collector_number == "900"), untouched)
         self.assertEqual(len(self.backend.writes), 1)
 
+    def test_notes_are_explicit_plain_text_fields_and_actual_keyed_receipts(self):
+        notes = ["", '<script>throw "literal only"</script> & café']
+        self.case.note_batch(notes, mixed=True)
+        preview = self.view()
+        for index, item in enumerate(preview["rows"]):
+            self.assertEqual([field["field"] for field in item["fields"]], ["condition", "language", "notes"])
+            self.assertEqual(item["fields"][-1], {"field": "notes", "before": "Unchanged note " + str(index),
+                                                "after": notes[index]})
+        answer = self.apply(expect=preview["expect"])
+        self.assertEqual(answer["restored_rows"], [{"key": item["key"], "row": item["restored"]} for item in preview["rows"]])
+        self.assertEqual([item["row"]["notes"] for item in answer["restored_rows"]], notes)
+        self.assertEqual(json.loads(json.dumps(answer))["restored_rows"], answer["restored_rows"])
+        self.assertEqual(len(self.backend.writes), 1)
+
+    def test_invalid_historical_notes_are_unavailable_before_any_write(self):
+        for note in (None, 1, True, [], {}, "Embedded\0NUL", "Unpaired\ud800surrogate"):
+            self.case.note_batch(["Valid old note", note])
+            with self.subTest(note=note):
+                self.assertEqual(self.view(), {"available": False, "id": original.CHANGE_ID, "reason": activity_undo.UNSUPPORTED})
+                self.refused(400, self.apply, expect="0" * 64)
+        self.assertEqual(self.backend.writes, [])
+
+    def test_historical_whitespace_and_multiline_notes_survive_json_and_receipt(self):
+        notes = [" \tOriginal\r\nsecond line\nlast line  ", "=literal note " + "é" * 600]
+        self.case.note_batch(notes)
+        preview = json.loads(json.dumps(self.view()))
+        self.assertEqual([item["fields"][0]["after"] for item in preview["rows"]], notes)
+        answer = self.apply(expect=preview["expect"])
+        self.assertEqual([item["row"]["notes"] for item in answer["restored_rows"]], notes)
+        self.assertEqual(answer["restored_rows"], [{"key": item["key"], "row": item["restored"]} for item in preview["rows"]])
+
     def test_beyond_limit_and_mixed_source_hide_all_rows_before_bad_expect(self):
         self.case.seed(51)
         errors = [self.refused(404, self.apply, expect="bad")]
@@ -68,8 +99,8 @@ class BatchUndoApiTests(unittest.TestCase):
         self.assertEqual([error.message for error in errors], [activity_undo.NO_CHANGE] * 2)
         self.assertEqual(self.backend.writes, [])
 
-    def test_quantity_notes_and_other_row_facts_are_not_batch_metadata(self):
-        for field, old in (("quantity", 1), ("notes", "Old note"), ("name", "Other card")):
+    def test_quantity_and_other_row_facts_are_not_batch_metadata(self):
+        for field, old in (("quantity", 1), ("name", "Other card")):
             self.case.seed()
             self.case.source()[0]["before"][field] = old
             with self.subTest(field=field):
