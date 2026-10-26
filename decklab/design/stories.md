@@ -1998,9 +1998,7 @@ As an owner of built decks in the shared pool, I want to check a built deck's bo
 - Given a box check is saved, when the deck page is opened, then it shows the date the box was last checked.
 - Given a deck not checked for a long time, when the library is shown, then it can be filtered to decks due for a check.
 
-Now (2026-10-26): [the first slice is implemented](../HISTORY.md#physical-box-checks-and-historical-dates-2026-10-26-e7-s21) for ordinary home built decks. Build decks reviews the saved physical assembly in every section, including basics and installed named or unspecified stand-ins, with explicit found counts and separate extras. Only a historical date is saved; counts and differences remain local, and pictures certify no physical printing or current contents.
-
-The [Library date-filter slice](../HISTORY.md#library-box-check-date-filters-2026-10-26-e7-s21) is implemented too. Authorized home viewers can select no reliable date recorded, or dates strictly before an explicitly chosen cutoff. It composes with the existing Library filters and phone-sheet history. No age policy is inferred, and outside-scope decks or unavailable summaries never become unchecked decks.
+Now (2026-10-26): box reviews, historical dates, Library date filters and the [Collection repair handoff](../HISTORY.md#box-differences-to-guarded-collection-review-2026-10-26-e7-s21) are implemented for ordinary home built decks. A named difference opens a fresh printing/total-owned review as a separate collection change; no stock delta, intended list or physical recipe is inferred from the observation.
 
 Evidence:
 - `decklab/lib/decks/boxcheck.py`, `decklab/lib/api/box_check.py`: section- and role-aware differences, exact source receipts, private date-only save through the normal deck write lock
@@ -2008,8 +2006,10 @@ Evidence:
 - `decklab/tests/test_box_check_model.py`, `test_box_check_api.py`, `test_box_check_ui.py`, `test_box_check_pg.py`: model, permissions, stale/uncertain outcomes, unchanged-list/date-only persistence and disposable database checks
 - `decklab/lib/api/deck_page.py`, `decklab/web/library-boxchecks.js`, `decklab/web/library.js`: private request-local index dates, strict cutoff/unrecorded filters and historical selected-deck note
 - `decklab/tests/test_library_box_check_api.py`, `test_library_boxchecks_ui.py`, `test_library_boxchecks_history_ui.py`: date scope and privacy, malformed/omitted summaries, combined filters, retained input, URL and phone Back behavior
+- `decklab/web/box-collection.js`, `assembly-boxcheck.js`, `collection.js`, `collection-cards.js`: one-shot guarded handoff, source-deck/current-row/exact-name checks, explicit printing/finish/total and fresh conflict review through ordinary collection writes
+- `decklab/tests/test_box_collection_ui.py`: marker roles, scope/history/ownership guards, blank totals, duplicate-printing refusal, stale source and separate collection-only writes
 
-Gap: separate offers to fix the list or collection remain. Member-space and product box checks are future scope. Both native fixture matrices passed; real-device and household acceptance remain separate.
+Gap: intended/physical-list repair offers remain. Member-space and product box checks are future scope. Native fixture checks passed, with real-device and household acceptance separate. The historical date and name-only art certify no current contents, printing or finish.
 
 **E7-S22** · Matt · could · M · missing
 

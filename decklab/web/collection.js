@@ -386,6 +386,7 @@ function drawCollection(data, query, space = HOME_SPACE, token = null) {
   $("#main").append(root);
   registerCollectionKeyboardHelp(cv);
   colTakeNotice(cv);
+  boxCollectionConsume(cv);
   return cv;
 }
 
@@ -601,32 +602,58 @@ function colFindRows(cv, cards) {
 
 /** "Edit copies": the rows that hold a card (one per printing), each opening its sheet, and Add another
  * printing. */
-async function openCopiesSheet(cv, name) {
-  if (!colActive(cv) || cv.busy || !cv.editable) return;
+async function openCopiesSheet(cv, name, opts = {}) {
+  const repair = opts.repair;
+  const allowed = () => colActive(cv) && !cv.busy && cv.editable && (!repair || repair.here());
+  if (!allowed()) return;
   const sheet = colOpenSheet(`${name}: your copies`, { wide: true });
   const body = el("div", { class: "col-copies" }, loadingBox("Loading its rows…"));
+  if (repair) sheet.body.append(boxCollectionNotice(repair.difference));
   sheet.body.append(body);
   sheetActions(sheet, [{ text: "Close", onclick: () => sheet.close() }]);
   try {
-    await colEnsureRows(cv);
+    if (repair) {
+      const fresh = await api(colPath("/api/collection/rows", cv.space));
+      if (!allowed() || sheet.closed) return;
+      if (fresh?.editable !== true || fresh.space !== HOME_SPACE || !/^[a-f0-9]{64}$/.test(fresh.sha256 || "") || !boxCollectionRows(fresh.rows))
+        throw new Error("The current collection rows couldn't be verified.");
+      cv.sha256 = fresh.sha256; colTakeRows(cv, fresh);
+      if (fresh.pictures) Object.assign(cv.pictures, fresh.pictures);
+      const exact = await api(`/api/printings?name=${encodeURIComponent(name)}`);
+      if (!allowed() || sheet.closed) return;
+      if (!boxCollectionPrintings(exact, name)) throw new Error("The exact card name couldn't be matched.");
+    } else await colEnsureRows(cv);
   } catch (error) {
-    if (!sheet.closed) clear(body).append(el("div", { class: "box box-crit" }, el("p", { text: error.message })));
+    if (!sheet.closed && allowed()) clear(body).append(el("div", { class: "box box-crit" }, el("p", { text: repair
+      ? "This card's copies couldn't be checked. Close this review and search Collection for the exact card name manually; no copies were changed."
+      : error.message })));
     return;
   }
-  if (sheet.closed) return;
+  if (sheet.closed || !allowed()) return;
   const rows = (cv.rows || []).filter((r) => r.name === name);
-  const open = (row) => { sheet.close(); openCollectionSheet(cv, row); };
+  let opening = false;
+  const open = (row) => {
+    if (opening || sheet.closed || !allowed()) return;
+    opening = true;
+    if (repair) boxCollectionAfterSheet(sheet, allowed, () => openCollectionSheet(cv, row, { name, repair }));
+    else { sheet.close(); openCollectionSheet(cv, row); }
+  };
   add(clear(body), [
     rows.length ? el("div", { class: "col-copy-rows" }, rows.map((row) => cardRow(cv.pictures[colKey(row)] || null, {
       qty: Number(row.quantity), name: colPrinting(row), meta: colRowFacts(row) || "Condition and language recorded",
       aside: el("span", { class: "col-copy-edit", "aria-hidden": "true", text: "Edit" }),
-      onclick: () => open(row) }))) : el("p", { class: "sub", text: "None of its rows are recorded here: it's only on the way." })]);
+      onclick: () => open(row) }))) : el("p", { class: "sub", text: repair
+        ? "No printing is recorded for this card. Count copies across every location before adding a printing."
+        : "None of its rows are recorded here: it's only on the way." })]);
   // A row without a known card is a plain div: give it its own button.
   for (const [i, node] of [...body.querySelectorAll(".card-row")].entries()) {
     if (node.tagName !== "BUTTON") node.append(el("button", { type: "button", class: "btn", text: "Edit", onclick: () => open(rows[i]) }));
   }
   sheetActions(sheet, [
-    { text: "Add another printing", kind: "primary", onclick: () => { sheet.close(); openCollectionSheet(cv, null, { name }); } },
+    { text: "Add another printing", kind: "primary", onclick: () => {
+      if (repair) open(null);
+      else { sheet.close(); openCollectionSheet(cv, null, { name }); }
+    } },
     { text: "Close", onclick: () => sheet.close() }]);
 }
 

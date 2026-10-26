@@ -74,11 +74,13 @@ function packBoxReceipt(answer, deck, evidence, review) {
 function packReviewBoxCheck(view, deck) {
   const evidence = packBoxCheckEvidence(deck), recipe = JSON.stringify(view.selected.map(packSelectedChoice));
   const data = view.data, root = view.root, seq = view.seq, original = JSON.stringify([deck.box_check, deck.take_apart]);
-  const expected = [], extras = [], controls = [], acceptedValues = new WeakMap();
+  const expected = [], extras = [], controls = [], repairButtons = [], acceptedValues = new WeakMap();
+  let leavingForCollection = false, sourceSha = evidence?.meta.expect;
   let stage = "edit", pending = false, saved = false, needsRefresh = false, refreshed = false, review = null;
   view.reviewing = true; packProgress(view);
   const ctx = openAssemblySheet(view, "Check " + deck.title + " box", { onClose: () => {
     if (!owner()) return;
+    if (leavingForCollection) { view.reviewing = false; view.boxCheckRefresh = null; packProgress(view); return; }
     if (saved || needsRefresh) afterClose();
     else if (!pending) { view.reviewing = false; packProgress(view); }
   } });
@@ -136,14 +138,32 @@ function packReviewBoxCheck(view, deck) {
   function lock() {
     for (const control of controls) control.disabled = pending || saved || needsRefresh || stage !== "edit";
     for (const row of expected) row.tick.disabled = pending || saved || needsRefresh || stage !== "edit";
+    for (const button of repairButtons) button.disabled = pending || needsRefresh || leavingForCollection;
   }
   function differences() {
     clear(reviewing).append(el("h3", { text: "Review differences" }),
       el("p", { text: plural(review.expected_cards, "recorded physical card") + "; " + plural(review.found_cards, "card") + " found, including extras." }),
       el("p", { class: "sub", text: "Saving the check date keeps the deck's lists, collection, kit and reservations as recorded." }));
+    reviewing.append(el("p", { class: "sub", text: "Review collection copies closes this local box review and discards its counts and extras. It does not save a check date or change the collection. A missing card may still be in storage or another box." }));
+    repairButtons.length = 0;
     for (const [key, label] of [["missing", "Missing"], ["extra", "Extra"]]) reviewing.append(el("section", {},
-      el("h4", { text: label }), review[key].length ? el("ul", {}, review[key].map(row => el("li", {
-        text: row.section + ": " + row.quantity + " x " + packBoxRowWords(row) }))) : el("p", { text: "None recorded in this review." })));
+      el("h4", { text: label }), review[key].length ? el("ul", {}, review[key].map(row => {
+        const item = el("li", {}, el("span", { text: row.section + ": " + row.quantity + " x " + packBoxRowWords(row) }));
+        if (row.name === null) item.append(el("p", { class: "sub", text: "Identify this physical stand-in first. Its represented card is not a collection lookup." }));
+        else if (boxCollectionDifference(deck, evidence, row, key)) {
+          const button = el("button", { type: "button", class: "btn btn-secondary box-collection-open", text: "Review collection copies",
+            "aria-label": "Review collection copies: " + row.name + " (" + row.section + ", " + key + ")", onclick: event => {
+              if (!here() || pending || needsRefresh || leavingForCollection || !event.currentTarget.isConnected || !reviewing.contains(event.currentTarget)
+                  || !review[key].includes(row) || JSON.stringify(snapshot()) !== JSON.stringify(review)) return;
+              const difference = boxCollectionDifference(deck, { meta: { ...evidence.meta, expect: sourceSha } }, row, key);
+              if (!difference) return;
+              leavingForCollection = true; lock();
+              boxCollectionAfterSheet(ctx.sheet, () => owner() && leavingForCollection, () => boxCollectionNavigate(difference));
+            } });
+          repairButtons.push(button); item.append(button);
+        }
+        return item;
+      })) : el("p", { text: "None recorded in this review." })));
     if (!evidence.meta.editable) reviewing.append(el("p", { class: "sub", text: evidence.meta.why_not || "You cannot save a check date for this deck." }));
   }
   function actions() {
@@ -243,6 +263,7 @@ function packReviewBoxCheck(view, deck) {
       if (!packBoxReceipt(answer, deck, evidence, review)) throw new Error("The box check result could not be confirmed.");
       if (!owner()) return;
       saved = true; stage = "saved"; view.boxCheckRefresh = { data };
+      sourceSha = answer.sha256;
       if (current()) {
         const confirmation = el("p", { role: "status", tabindex: "-1", text: "Last box check recorded: " + answer.checked_on
           + ". Contents may have changed since. Only the date was saved; keep this difference review until you are done." });
