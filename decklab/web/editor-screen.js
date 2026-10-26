@@ -217,6 +217,7 @@ function drawBanners() {
   const host = ed.dom.banners;
   if (!host) return;
   clear(host);
+  if (typeof editorRetestNotice === "function") add(host, [editorRetestNotice(ed)]);
   if (ed.draftRemoveFailed) {
     host.append(el("div", { class: "box box-warn banner", role: "alert" },
       el("h2", { text: ed.pendingDraftKey ? "The deck was saved, but its old draft couldn't be removed"

@@ -3868,6 +3868,8 @@ Slice 14's retained nonmodal search Dock built 2026-10-26: original search/query
 
 Gap: slices 9 to 12's touch/Safari acceptance, Collection's open colour-filter choice and Receive's check-to-row association; then slices 13 to 15 (criteria 1 to 3 and 6). Independent coding through slice 12 is built; component checks stay separate until their row association is authoritative. Device checks do not block coding. Section 6's question 4 is settled (Matt, 2026-10-25: only Building and Idea tiles show a status pill). The lab top bar's search is E11-S31.
 
+Slice 14 implementation finished 2026-10-26: numeric MV and retained sorting, changed-row treatment, the owned action bar, exact saved-list Forge evidence and the guarded explicit post-save field choice are built. The field response never delays the successful-save UI or replaces later edits; the remaining physical/Safari checks, slice 13 contracts and slice 15 remain with the visual-design owner. Validation and limits are recorded in HISTORY.md.
+
 <a id="e11-s31"></a>
 
 **E11-S31** · Matt · could · M · missing

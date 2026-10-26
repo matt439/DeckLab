@@ -188,6 +188,13 @@ The API computes hashes from the parsed edit snapshot; field cache identity
 includes version. Missing evidence supplies no numbers; partial coverage stays
 explicit.
 
+An unchecked post-save field choice is transient and available only for a full
+saved writable list. Simulation updates refresh its control/reason. A successful
+save submits at most once with the returned playable fingerprint, then finalizes
+the saved UI immediately. Deferred run outcomes update only the owned message;
+they never reload an editor, remove a draft or retry. Save-and-view receipts are
+profile-scoped. The read-only evidence path never starts games.
+
 `editorCurveBaseline()` compares only the current actual saved edit/version,
 including a readable trial, never a new/copy/unstarted list. Saved quantities
 stay immutable; same-name current card metadata may fill a local projection,

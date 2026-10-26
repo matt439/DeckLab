@@ -2,6 +2,14 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Explicit field re-test after saving (2026-10-26; E11-S30 slice 14)
+
+Saved full Editors offer an unchecked, transient Re-test against the field after saving choice. It follows the current simulations permission and remains outside drafts/history. New, copied, Quick, unstarted and read-only trial editors do not offer it. A confirmed successful save can submit one request using the returned saved list's fingerprint; an unavailable identity, a stale page/person or a refused start never turns into an unguarded request. Commander uses the same explicit choice without inventing a Constructed-field summary.
+
+The saved Editor becomes usable immediately while the field response is pending. Late success/failure changes only its owned confirmation message: later quantities, Notes, focus and history stay intact, and another page/person cannot be taken over. Save-and-view confirmations are profile-scoped too. Lost queue responses say the save succeeded and ask the viewer to check Matchups before starting another run; there is no automatic run or save retry.
+
+Validation: all 1,389 UI/source checks passed, including nine new post-save scenarios; the 19 affected re-test/summary/panel checks, repository ruff, JavaScript syntax and whitespace checks passed. Independent review caught and resolved an initial added-wait race before delivery. Synthetic Chromium performed one real HTTP save against the disposable fixture and one intercepted field request with the exact saved fingerprint. The saved page appeared before that held field response; native later quantity/Notes edits survived it, and permission refresh disabled/re-enabled the checkbox. The fixture stayed paused and its Forge entry points stayed forbidden. No real field job, game, household write, Safari or physical-device acceptance.
+
 ## Guard field runs against a changed saved list (2026-10-26; E11-S30 slice 14)
 
 Field-run callers may now send `expected_card_sha`, the full playable-list fingerprint they intend to test. The API retains its normal viewer, simulation, deck and version checks, then rejects a changed list before checking Forge or submitting a job. A matching request captures that exact entry, so a later save cannot change the queued list. Existing callers without the optional guard behave as before. This is the prerequisite for the Editor's re-test-after-save choice; the choice is not built in this commit.

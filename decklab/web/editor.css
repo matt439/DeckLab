@@ -525,6 +525,11 @@ button.edit-card:hover { background: var(--hover); }
 .edit-forge-summary[hidden] { display: none; }
 .edit-forge-summary > .sub { margin: 0; }
 .edit-forge-summary > .fresh { justify-self: start; }
+.edit-retest { margin-top: var(--s-3); }
+.edit-retest[hidden] { display: none; }
+.edit-retest label { display: flex; align-items: center; gap: var(--s-2); min-height: var(--tap); font-size: var(--fs-sm); }
+.edit-retest input { flex: none; }
+.edit-retest .sub { margin: var(--s-1) 0 0; }
 .edit-forge .vt-test-row { flex-wrap: wrap; align-items: flex-start; }
 .edit-forge .vt-test-why { flex-basis: 100%; max-width: none; overflow-wrap: anywhere; }
 
