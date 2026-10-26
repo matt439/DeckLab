@@ -9,7 +9,7 @@ from pathlib import Path
 from unittest import mock
 
 from decklab.db import conn as db, space_members
-from decklab.lib import access, config, state
+from decklab.lib import access, cards, config, inventory, state
 from decklab.lib.api import wishlist_undo as api
 from decklab.lib.api.common import ApiError
 from decklab.lib.state import pg, pg_wishlist_undo as adapter, wishlist_undo as undo
@@ -99,7 +99,7 @@ class WishlistUndoPgTests(db_support.DbTestCase):
             self.assertEqual(caught.exception.message, api.NO_CHANGE)
         self.assertEqual(self.persisted(), before)
 
-    def test_mixed_or_printing_sources_are_never_partial_wishlist_metadata_inverses(self):
+    def test_mixed_sources_stay_unavailable_and_valid_printing_preferences_can_be_reviewed(self):
         source, _, _ = self.seed()
         with self.store.batch(MATT, "Fixture mixed state source"):
             self.store.wishlist_set("matt", "Opt", MATT, "Fixture", notes="Mixed note")
@@ -112,8 +112,69 @@ class WishlistUndoPgTests(db_support.DbTestCase):
         self.store.wishlist_set("matt", "Opt", MATT, "Fixture printing update", set="fdn", number="227")
         printing = self.sql("select max(id) from audit.change_set")[0][0]
         before = self.persisted()
-        with self.assertRaises(undo.UndoUnsupported):
-            self.store.wishlist_undo_review(printing, "matt")
+        plan = self.store.wishlist_undo_review(printing, "matt")
+        self.assertEqual([field["field"] for field in plan["fields"]], ["set", "number"])
+        self.assertEqual(self.persisted(), before)
+
+    def printing_source(self, original, current, *, mixed=False):
+        self.seed()
+        self.store.wishlist_set("matt", "Opt", MATT, "Fixture historical preference", set=original[0], number=original[1],
+                                **({"notes": "  Historical café\r\nsecond\t  ", "source": "  magic/old.md  "} if mixed else {}))
+        restored = copy.deepcopy(self.store.wishlist("matt")[0])
+        self.store.wishlist_set("matt", "Opt", MATT, "Fixture current preference", set=current[0], number=current[1],
+                                **({"notes": "Current note", "source": "magic/current.md"} if mixed else {}))
+        source = self.sql("select max(change_set_id) from audit.row_change where table_name='wishlist_entry'")[0][0]
+        return source, restored
+
+    def test_historical_nullable_and_paired_printing_preferences_restore_without_index(self):
+        for old, current in ((("", ""), ("zzz", "9x")), (("zzz", "9x"), ("", "")), (("zzz", "9x"), ("yyy", "8y"))):
+            source, restored = self.printing_source(old, current)
+            before = self.persisted()
+            with self.subTest(old=old, current=current), \
+                    mock.patch.object(cards, "resolve", side_effect=AssertionError("No card index")), \
+                    mock.patch.object(cards, "printing", side_effect=AssertionError("No printing index")), \
+                    mock.patch.object(cards, "printing_card", side_effect=AssertionError("No printing index")), \
+                    mock.patch.object(inventory, "current", side_effect=AssertionError("No inventory")):
+                plan = self.store.wishlist_undo_review(source, "matt")
+                self.assertEqual(self.persisted(), before)
+                result = self.apply(source, plan=plan)
+            self.assertEqual(result["restored"], restored)
+            self.assertEqual(self.store.wishlist("matt")[0], restored)
+            self.assertEqual(self.sql("select set_code,collector_number from wishlist_entry where profile_id='matt' and name='Opt'"),
+                             [(old[0] or None, old[1] or None)])
+            self.assertEqual(len(self.persisted()["audit.row_change"]), len(before["audit.row_change"]) + 1)
+
+    def test_combined_printing_and_text_api_inverse_has_exact_raw_list_and_one_audit(self):
+        source, restored = self.printing_source(("zzz", "9x"), ("yyy", "8y"), mixed=True)
+        before = self.persisted()
+        original = self.sql("select id,op,before,after from audit.row_change where change_set_id=%s", (source,))
+        with access.using({"profile": "matt", "email": "matt@example.com", "remote": True}):
+            shown = api.wishlist_undo_view(id=str(source))
+            self.assertEqual([field["field"] for field in shown["fields"]], ["set", "number", "notes", "source"])
+            result = api.apply_wishlist_undo(json.dumps({"profile": "matt", "id": source, "expect": shown["expect"]}).encode())
+        self.assertEqual(result["restored"], restored)
+        self.assertEqual(self.sql("select id,op,before,after from audit.row_change where change_set_id=%s", (source,)), original)
+        after = self.persisted()
+        self.assertEqual(len(after["audit.change_set"]), len(before["audit.change_set"]) + 1)
+        self.assertEqual(len(after["audit.row_change"]), len(before["audit.row_change"]) + 1)
+        for table in before.keys() - {"wishlist_entry", "audit.change_set", "audit.row_change"}:
+            self.assertEqual(after[table], before[table], table)
+
+    def test_printing_receipt_validation_failure_rolls_back_both_printing_fields_and_audit(self):
+        source, _ = self.printing_source(("zzz", "9x"), ("yyy", "8y"))
+        plan, before = self.store.wishlist_undo_review(source, "matt"), self.persisted()
+        with mock.patch.object(undo, "receipt", side_effect=undo.UndoConflict()), self.assertRaises(undo.UndoConflict):
+            self.apply(source, plan=plan)
+        self.assertEqual(self.persisted(), before)
+
+    def test_later_printing_edit_away_and_back_refuses_original_source_without_any_write(self):
+        source, _ = self.printing_source(("zzz", "9x"), ("yyy", "8y"))
+        plan = self.store.wishlist_undo_review(source, "matt")
+        self.store.wishlist_set("matt", "Opt", MATT, "Fixture later printing", set="tmp", number="1")
+        self.store.wishlist_set("matt", "Opt", MATT, "Fixture printing ABA", set="yyy", number="8y")
+        before = self.persisted()
+        with self.assertRaises(undo.UndoConflict):
+            self.apply(source, plan=plan)
         self.assertEqual(self.persisted(), before)
 
     def test_own_list_changes_and_target_aba_refuse_but_other_profile_changes_do_not(self):

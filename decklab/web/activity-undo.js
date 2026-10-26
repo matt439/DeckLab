@@ -6,7 +6,7 @@ const ACTIVITY_UNDO_FIELDS = {
   tokens: ["front", "back", "set", "front_collector_number", "back_collector_number", "finish", "quantity", "front_details", "back_details", "notes"],
   wishlist: ["name", "set", "number", "notes", "source"],
 };
-const ACTIVITY_UNDO_EDITABLE = { collection: ["quantity", "condition", "language", "notes"], tokens: ["quantity", "notes"], wishlist: ["notes", "source"] };
+const ACTIVITY_UNDO_EDITABLE = { collection: ["quantity", "condition", "language", "notes"], tokens: ["quantity", "notes"], wishlist: ["set", "number", "notes", "source"] };
 
 function activityUndoRow(row, kind) {
   if (!["collection", "tokens", "wishlist"].includes(kind)) return false;
@@ -69,9 +69,10 @@ function activityUndoWishlistEvidence(data, profile) {
   if (data.action !== "wishlist_update" || data.profile !== profile || typeof profile !== "string" || !profile
       || Object.keys(data).sort().join(",") !== "action,available,current,expect,fields,id,kind,label,profile,restored"
       || !activityUndoRow(data.current, "wishlist") || !activityUndoRow(data.restored, "wishlist")
-      || data.label !== data.current.name || ["name", "set", "number"].some(field => data.current[field] !== data.restored[field])
-      || Boolean(data.current.set) !== Boolean(data.current.number)) return false;
-  const changed = ["notes", "source"].filter(field => data.current[field] !== data.restored[field]);
+      || data.label !== data.current.name || data.current.name !== data.restored.name
+      || [data.current, data.restored].some(row => Boolean(row.set) !== Boolean(row.number)
+        || row.set && (!/^[a-z0-9]{2,8}$/.test(row.set) || [...row.number].length > 16 || /[\u0000-\u001f\u007f]/.test(row.number)))) return false;
+  const changed = ACTIVITY_UNDO_EDITABLE.wishlist.filter(field => data.current[field] !== data.restored[field]);
   return changed.length > 0 && Array.isArray(data.fields) && data.fields.length === changed.length
     && new Set(data.fields.map(item => item?.field)).size === changed.length
     && [...data.fields].every(item => item && Object.keys(item).sort().join(",") === "after,before,field" && changed.includes(item.field)
@@ -231,8 +232,9 @@ function activityUndoShow(ctx) {
   const batchRemoving = preview.action === "batch_remove", removing = batchRemoving || preview.action === "remove";
   const batchAdding = preview.action === "batch_add", adding = batchAdding || preview.action === "add";
   const stock = preview.action === "batch_update", batch = stock || preview.action === "batch_metadata";
-  const words = { quantity: "Quantity", condition: "Condition", language: "Language", notes: "Notes", source: "Source" };
-  const identity = ACTIVITY_UNDO_FIELDS[preview.kind].filter(field => !ACTIVITY_UNDO_EDITABLE[preview.kind].includes(field));
+  const words = { quantity: "Quantity", condition: "Condition", language: "Language", notes: "Notes", source: "Source", set: "Set", number: "Collector number" };
+  const identity = preview.kind === "wishlist" ? ["name", ...["set", "number"].filter(field => !preview.fields.some(item => item.field === field))]
+    : ACTIVITY_UNDO_FIELDS[preview.kind].filter(field => !ACTIVITY_UNDO_EDITABLE[preview.kind].includes(field));
   const text = value => value === "" ? "Not recorded" : String(value);
   let reasonInput = null, acceptedReason = "", reviewedReason = null;
   let ownershipInput = null, confirmedOwned = false;
@@ -312,7 +314,7 @@ function activityUndoShow(ctx) {
       el("h3", { text: title }), preview.fields.map(field => el("p", {}, el("b", { text: words[field.field] + ": " }),
         el("span", { class: ["notes", "source"].includes(field.field) ? "activity-undo-note" : null, text: text(field[key]) })))));
     sheet.body.append(el("p", { class: "sub", text: "Review the current row and the values this Undo will restore. Saving creates one new audited change; the original change stays in Activity." }),
-      el("dl", {}, identity.flatMap(field => [el("dt", { text: field.replaceAll("_", " ") }), el("dd", { text: text(preview.current[field]) })])),
+      el("dl", {}, identity.flatMap(field => [el("dt", { text: field === "number" ? "collector number" : field.replaceAll("_", " ") }), el("dd", { text: text(preview.current[field]) })])),
       el("div", { class: "panels" }, panels));
   }
   const error = el("p", { class: "form-error", role: "alert", tabindex: "-1" }); sheet.body.append(error);

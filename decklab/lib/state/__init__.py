@@ -22,7 +22,7 @@ tests/test_state_contract.py checks):
   retained lists without a profile. It never permits writes for a departed member or exempts
   the actor from membership checks.
 - PostgreSQL wishlist_undo_review(change_id, profile_id) and wishlist_undo_apply(change_id,
-  profile_id, expect, actor, message) review/apply one owner-only notes/source UPDATE inverse.
+  profile_id, expect, actor, message) review/apply one owner-only printing/notes/source UPDATE inverse.
   They require an independent transaction, exact global audit/current/list evidence and the
   shared wishlist lock. The saved receipt's decimal revision is the owner's latest audit-row
   id, not an inventory/deck revision. Memory-only tests use an explicit audit-shaped adapter.

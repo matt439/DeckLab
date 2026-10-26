@@ -177,7 +177,7 @@ class WishlistUndoApiTests(test_api.ApiTestCase):
         self.assertEqual(self.unchanged(), before)
         self.assertFalse([call for call in self.store.calls if call[0] == "apply"])
 
-    def test_malformed_request_and_unsupported_printing_history_never_write(self):
+    def test_malformed_request_and_unsupported_identity_history_never_write(self):
         before = self.unchanged()
         for value in (None, True, 0, -1, 1.5, "1.0", "../1", 10 ** 18):
             with self.subTest(id=value):
@@ -192,9 +192,73 @@ class WishlistUndoApiTests(test_api.ApiTestCase):
         actor = state.Actor("matt", "Matt", via="tunnel")
         self.store.wishlist_set("matt", "Opt", actor, "Fixture printing edit", set="dom", number="60")
         self.change_id = self.store.changes()[-1]["id"]
+        self.store._changes[-1]["rows"][0]["before"]["name"] = "Another entry"
         before = self.unchanged()
         self.assertEqual(self.view(), {"available": False, "id": self.change_id, "reason": wishlist_undo.UNSUPPORTED})
         self.assertEqual(self.refused(400, self.apply, expect="a" * 64).message, wishlist_undo.UNSUPPORTED)
+        self.assertEqual(self.unchanged(), before)
+
+    def printing_source(self, original, current, *, mixed=False):
+        actor = state.Actor("matt", "Matt", via="tunnel")
+        self.store.wishlist_set("matt", "Opt", actor, "Fixture historical preference", set=original[0], number=original[1],
+                                **({"notes": "  Historical café\r\nsecond\t  ", "source": "  magic/old.md  "} if mixed else {}))
+        restored = copy.deepcopy(self.store.wishlist("matt")[0])
+        self.store.wishlist_set("matt", "Opt", actor, "Fixture changed preference", set=current[0], number=current[1],
+                                **({"notes": "Changed preference note", "source": "magic/current.md"} if mixed else {}))
+        self.change_id = self.store.changes()[-1]["id"]
+        return restored
+
+    def test_historical_printing_preferences_clear_restore_or_change_without_card_index(self):
+        for old, new in ((("", ""), ("zzz", "9x")), (("zzz", "9x"), ("", "")),
+                         (("old", "1"), ("new", "2")), (("old", "1"), ("old", "2")), (("old", "1"), ("new", "1"))):
+            self.install()
+            restored = self.printing_source(old, new)
+            with self.subTest(old=old, new=new), mock.patch.object(cards, "resolve", side_effect=AssertionError("No card index")), \
+                    mock.patch.object(cards, "printing", side_effect=AssertionError("No printing lookup")), \
+                    mock.patch.object(cards, "printing_card", side_effect=AssertionError("No printing lookup")), \
+                    mock.patch.object(inventory, "current", side_effect=AssertionError("No inventory")):
+                preview = self.view()
+                self.assertEqual(preview["restored"], restored)
+                self.assertEqual([item["field"] for item in preview["fields"]],
+                                 [field for field in ("set", "number") if preview["current"][field] != restored[field]])
+                result = self.apply(expect=preview["expect"])
+            self.assertEqual(result["restored"], restored)
+            self.assertEqual((result["kind"], result["action"], result["profile"]), ("wishlist", "wishlist_update", "matt"))
+            self.assertEqual(self.store.wishlist("matt")[0], restored)
+
+    def test_printing_and_text_differences_share_unchanged_protocol_and_exact_actual_receipt(self):
+        restored = self.printing_source(("zzz", "9x"), ("yyy", "8y"), mixed=True)
+        original = copy.deepcopy(self.store.raw_source(self.change_id))
+        preview = self.view()
+        self.assertEqual([item["field"] for item in preview["fields"]], ["set", "number", "notes", "source"])
+        result = self.apply(expect=preview["expect"])
+        self.assertEqual(result["restored"], restored)
+        self.assertEqual(result["sha256"], kernel.list_sha(self.store.raw_entries("matt")))
+        self.assertEqual(result["revision"], str(self.store.latest("matt")))
+        self.assertEqual(self.store.raw_source(self.change_id), original)
+        self.assertEqual(set(result), {"saved", "source_id", "expect", "kind", "action", "profile", "restored", "sha256", "revision", "summary"})
+
+    def test_invalid_projected_printing_pair_and_wrong_actual_printing_refuse_confirmation(self):
+        self.printing_source(("zzz", "9x"), ("yyy", "8y"))
+        plan = self.store.wishlist_undo_review(self.change_id, "matt")
+        for field, value in (("set", ""), ("number", None), ("set", "UPPER")):
+            bad = copy.deepcopy(plan)
+            bad["restored"][field] = value
+            with self.subTest(field=field, value=value), mock.patch.object(wishlist_undo, "_call", return_value=bad):
+                self.refused(503, self.view)
+        result = self.store.wishlist_undo_apply(self.change_id, "matt", plan["expect"], state.Actor("matt", "Matt"), "Fixture inverse")
+        result["restored"]["number"] = "Wrong but valid"
+        with mock.patch.object(wishlist_undo, "_call", return_value=result):
+            self.refused(503, self.apply, expect=plan["expect"])
+
+    def test_printing_target_aba_refuses_old_source_even_when_current_preference_returns(self):
+        self.printing_source(("zzz", "9x"), ("yyy", "8y"))
+        preview = self.view()
+        actor = state.Actor("matt", "Matt")
+        self.store.wishlist_set("matt", "Opt", actor, "Fixture later preference", set="tmp", number="1")
+        self.store.wishlist_set("matt", "Opt", actor, "Fixture preference ABA", set="yyy", number="8y")
+        before = self.unchanged()
+        self.refused(409, self.apply, expect=preview["expect"])
         self.assertEqual(self.unchanged(), before)
 
     def test_failed_actual_receipt_rolls_back_wishlist_and_audit(self):

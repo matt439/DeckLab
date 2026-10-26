@@ -76,6 +76,7 @@ def apply(store, change_id, pid, expect, actor, message):
                     raise undo.UndoConflict()
                 current, positions = store._entries(cur, pid)
                 changed, _ = store._wishlist_set_at(cur, pid, current, positions, plan["current"]["name"],
+                                                   set=plan["restored"]["set"], number=plan["restored"]["number"],
                                                    notes=plan["restored"]["notes"], source=plan["restored"]["source"])
                 if changed is not True:
                     raise undo.UndoConflict()

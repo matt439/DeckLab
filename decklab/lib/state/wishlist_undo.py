@@ -11,9 +11,9 @@ import re
 from . import Conflict, Invalid, rules
 
 RAW_FIELDS = {"profile_id", "position", "name", "set_code", "collector_number", "notes", "source"}
-IMMUTABLE = RAW_FIELDS - {"notes", "source"}
+IMMUTABLE = {"profile_id", "position", "name"}
 KEY_FIELDS = {"profile_id", "position"}
-FIELDS = ("notes", "source")
+FIELDS = ("set", "number", "notes", "source")
 SHA = re.compile(r"[a-f0-9]{64}")
 
 
@@ -92,11 +92,12 @@ def review(change_id, pid, source_rows, raw_entries, latest_target, latest_owner
             or type(row["key"].get("position")) is not int \
             or row["key"] != {"profile_id": pid, "position": new["position"]} \
             or any(old[field] != new[field] for field in IMMUTABLE):
-        raise UndoUnsupported("Only notes and source on the same wishlist entry can be undone here.")
-    changed = [field for field in FIELDS if old[field] != new[field]]
+        raise UndoUnsupported("Only the printing preference, notes and source on the same wishlist entry can be undone here.")
+    changed = [field for field in FIELDS if current[field] != restored[field]]
     if not changed:
         raise UndoUnsupported("There is no wishlist metadata change to undo.")
-    if rules.edited(current, notes=restored["notes"], source=restored["source"]) != restored:
+    if rules.edited(current, set=restored["set"], number=restored["number"],
+                    notes=restored["notes"], source=restored["source"]) != restored:
         raise UndoUnsupported("The original wishlist values cannot be restored exactly.")
     _layout(raw_entries, pid)
     found = [index for index, item in enumerate(raw_entries) if item["position"] == new["position"]]

@@ -20,6 +20,9 @@ class WishlistUndoUiTests(unittest.TestCase):
             rows:[{table:'wishlist_entry',op:'UPDATE',summary:'Displayed wishlist metadata'}]});
           const openWish=async(p=wishPreview())=>{const made=mount([wishChange()],null,{kind:'wishlist',actor:null});
             api=async()=>p;made.trigger.click();await settle();return{...made,sheet:[...colSheets].at(-1),p};};
+          const printingPreview=(current={set:'m19',number:'314'},restored={set:'fdn',number:'227'},extra={})=>{
+            const p=wishPreview();p.current=wishRow(current);p.restored={...p.current,...restored};
+            p.fields=['set','number','notes','source'].filter(field=>p.current[field]!==p.restored[field]).map(field=>({field,before:p.current[field],after:p.restored[field]}));return{...p,...extra};};
         ''' + scenario)
 
     def test_wishlist_hint_uses_only_the_separate_hardcoded_endpoint(self):
@@ -123,6 +126,51 @@ class WishlistUndoUiTests(unittest.TestCase):
           api=async path=>{asked.push(path);return asked.length===1?page([wishChange(43,false),wishChange(42,false)],42):page([wishChange(41,false),wishChange(40,false)],40);};
           button(sheet.dialog,'Done').click();await settle();same(asked,['/api/activity?kind=wishlist&actor='+filter.actor,'/api/activity?before=42&kind=wishlist&actor='+filter.actor]);
           assert.equal(view.loadedPages,2);assert.equal(view.shown,4);assert.equal(location.hash,activityHref(filter));assert(view.days.querySelector('[data-activity-id="42"]'));assert(!view.undoBusy);
+        ''')
+
+    def test_printing_only_restoration_shows_both_pairs_without_card_or_inventory_reads(self):
+        self.run_js(r'''
+          const p=printingPreview(),before=JSON.stringify(p),made=mount([wishChange()]),asked=[];api=async path=>{asked.push(path);return p;};made.trigger.click();await settle();
+          const sheet=[...colSheets].at(-1),text=sheet.body.textContent;for(const word of ['Llanowar Elves','Set: m19','Set: fdn','Collector number: 314','Collector number: 227'])assert(text.includes(word),word);
+          same(asked,['/api/activity/wishlist-undo?id=42']);assert.equal(sheet.body.querySelector('img,a,input,textarea,select'),null);
+          assert(!text.includes('Quantity:'));assert(!text.includes('Notes:'));assert(save(sheet));assert.equal(JSON.stringify(p),before);
+        ''')
+
+    def test_one_member_printing_changes_keep_the_other_identity_fact_visible(self):
+        self.run_js(r'''
+          const cases=[printingPreview({set:'m19',number:'314'},{set:'fdn'}),printingPreview({set:'fdn',number:'314'},{number:'227'})];
+          for(const p of cases){const {sheet}=await openWish(p),text=sheet.body.textContent;assert(save(sheet));
+            if(p.fields[0].field==='set'){assert(text.includes('Set: m19'));assert(text.includes('Set: fdn'));assert(text.includes('collector number'));assert(text.includes('314'));}
+            else {assert(text.includes('Collector number: 314'));assert(text.includes('Collector number: 227'));assert(text.includes('fdn'));}
+          }
+        ''')
+
+    def test_printing_can_be_cleared_or_restored_with_metadata_as_one_exact_entry(self):
+        self.run_js(r'''
+          for(const [current,restored] of [[{set:'fdn',number:'227'},{set:'',number:''}],[{set:'',number:''},{set:'fdn',number:'227',notes:'Historical note',source:'Old fixture'}]]){
+            const p=printingPreview(current,restored),{sheet}=await openWish(p);assert(save(sheet));assert(sheet.body.textContent.includes('Not recorded'));
+            let body;apiWrite=async(path,sent)=>{assert.equal(path,'/api/activity/wishlist-undo');body=sent;return wishSaved(p);};save(sheet).click();await settle();
+            same(body,{id:42,expect:'a'.repeat(64)});assert(button(sheet.dialog,'Done'));
+          }
+        ''')
+
+    def test_both_printing_pairs_match_ordinary_forms_without_digit_only_or_utf16_limits(self):
+        self.run_js(r'''
+          for(const side of ['current','restored'])for(const bad of [{set:'',number:'1'},{set:'fdn',number:''},{set:'FDN',number:'1'},{set:'f',number:'1'},
+            {set:'123456789',number:'1'},{set:'fdn\n',number:'1'},{set:'fdn\r',number:'1'},{set:'fdn\u2028',number:'1'},{set:'fdn\u2029',number:'1'},
+            {set:'fdn',number:'a'.repeat(17)},{set:'fdn',number:'1\n2'},{set:'fdn',number:'1\u007f2'}]){
+            const p=printingPreview();Object.assign(p[side],bad);p.fields=['set','number','notes','source'].filter(field=>p.current[field]!==p.restored[field]).map(field=>({field,before:p.current[field],after:p.restored[field]}));
+            const {sheet}=await openWish(p);assert(!save(sheet),side+JSON.stringify(bad));
+          }
+          for(const number of ['12a','\u2605','\ud83d\ude00'.repeat(16),' 1 ']){const p=printingPreview({set:'fdn',number:'227'},{number}),{sheet}=await openWish(p);assert(save(sheet),number);}
+        ''')
+
+    def test_missing_printing_diff_or_wrong_actual_printing_never_claims_success(self):
+        self.run_js(r'''
+          const p=printingPreview(),missing=printingPreview();missing.fields.pop();assert(!save((await openWish(missing)).sheet));
+          const named=printingPreview();named.restored.name='Another card';assert(!save((await openWish(named)).sheet));
+          for(const field of ['set','number']){const made=await openWish(p);let writes=0;apiWrite=async()=>{writes++;return wishSaved(p,{restored:{...p.restored,[field]:'Different'}});};
+            const old=save(made.sheet);old.click();await settle();assert(button(made.sheet.dialog,'Reload Activity'));assert(!button(made.sheet.dialog,'Done'));old.fire('click');assert.equal(writes,1);}
         ''')
 
 

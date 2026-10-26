@@ -1,4 +1,4 @@
-"""Private owner-only wishlist note/source Undo, independent of inventory Undo."""
+"""Private owner-only wishlist preference Undo, independent of inventory Undo."""
 import re
 
 from decklab.lib import permissions, state
@@ -9,7 +9,7 @@ from .common import ApiError, DATABASE_DOWN, _keys, _parse_body
 from .settings import _web_actor, _writer
 
 NO_CHANGE = "No undoable wishlist change at that ID."
-UNSUPPORTED = "Only notes or source on one unchanged wishlist entry can be undone here."
+UNSUPPORTED = "Only the printing preference, notes or source on one unchanged wishlist entry can be undone here."
 CHANGED = "The wishlist changed. Reload Activity and review this Undo again."
 UNCONFIRMED = "The wishlist Undo result could not be confirmed. Reload Activity before trying again."
 REVISION = re.compile(r"[1-9][0-9]{0,18}")
@@ -62,7 +62,7 @@ def _project(plan, change_id, pid):
             or not isinstance(plan.get("expect"), str) or not undo.SHA.fullmatch(plan["expect"]):
         raise ApiError(503, UNCONFIRMED)
     current, restored = _entry(plan.get("current")), _entry(plan.get("restored"))
-    if any(current[field] != restored[field] for field in ("name", "set", "number")) or plan.get("label") != current["name"]:
+    if current["name"] != restored["name"] or plan.get("label") != current["name"]:
         raise ApiError(503, UNCONFIRMED)
     fields = [{"field": field, "before": current[field], "after": restored[field]} for field in undo.FIELDS
               if current[field] != restored[field]]
@@ -106,4 +106,4 @@ def apply_wishlist_undo(body):
         raise ApiError(503, UNCONFIRMED)
     return {"saved": True, "source_id": change_id, "expect": plan["expect"], "kind": "wishlist", "action": "wishlist_update",
             "profile": pid, "restored": actual, "sha256": result["sha256"], "revision": result["revision"],
-            "summary": f"Undo change #{change_id}: restore wishlist notes and source"}
+            "summary": f"Undo change #{change_id}: restore wishlist preferences"}

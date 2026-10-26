@@ -134,19 +134,81 @@ class WishlistUndoTests(unittest.TestCase):
             with self.subTest(field=field, type=type(value).__name__), self.assertRaises(undo.UndoUnsupported):
                 self.review()
 
-    def test_name_position_and_printing_changes_are_not_metadata_recovery(self):
-        for changed in ({"name": "Another name"}, {"position": 3},
-                        {"set_code": "fdn", "collector_number": "227"}):
+    def test_name_position_owner_and_nonupdate_changes_remain_excluded(self):
+        for changed in ({"name": "Another name"}, {"position": 3}):
             self.seed()
             self.source()["before"].update(changed)
             with self.subTest(changed=changed), self.assertRaises(undo.UndoUnsupported):
                 self.review()
-        for set_code, number in (("", ""), (None, "227"), ("fdn", None), ("FDN", "227")):
+        self.seed()
+        self.source()["before"]["profile_id"] = "user1"
+        with self.assertRaises(undo.UndoMissing):
+            self.review()
+        for op, missing in (("INSERT", "before"), ("DELETE", "after")):
             self.seed()
-            for row in (self.source()["before"], self.source()["after"], self.raw_entries[1]):
-                row.update(set_code=set_code, collector_number=number)
-            with self.subTest(printing=(set_code, number)), self.assertRaises(undo.UndoUnsupported):
+            self.source()["op"], self.source()[missing] = op, None
+            with self.subTest(op=op), self.assertRaises(undo.UndoMissing):
                 self.review()
+
+    def test_added_printing_preference_can_be_undone_to_sql_null_pair(self):
+        self.source()["before"] = copy.deepcopy(self.source()["after"])
+        for row in (self.source()["after"], self.raw_entries[1]):
+            row.update(set_code="fdn", collector_number="227")
+        before = copy.deepcopy((self.source_rows, self.raw_entries))
+        plan = self.review()
+        self.assertEqual(plan["fields"], [{"field": "set", "before": "fdn", "after": ""},
+                                          {"field": "number", "before": "227", "after": ""}])
+        self.assertEqual((plan["raw_restore"]["set_code"], plan["raw_restore"]["collector_number"]), (None, None))
+        self.assertEqual(self.saved(plan)["restored"], dto(self.source()["before"]))
+        self.assertEqual(plan["raw_after"][0], self.raw_entries[0])
+        self.assertEqual(plan["raw_after"][2], self.raw_entries[2])
+        self.assertEqual((self.source_rows, self.raw_entries), before)
+
+    def test_cleared_printing_preference_restores_exact_historical_pair(self):
+        self.source()["before"] = copy.deepcopy(self.source()["after"])
+        self.source()["before"].update(set_code="fdn", collector_number="227")
+        plan = self.review()
+        self.assertEqual(plan["fields"], [{"field": "set", "before": "", "after": "fdn"},
+                                          {"field": "number", "before": "", "after": "227"}])
+        self.assertEqual((plan["raw_current"]["set_code"], plan["raw_current"]["collector_number"]), (None, None))
+        self.assertEqual((plan["restored"]["set"], plan["restored"]["number"]), ("fdn", "227"))
+        result = self.saved(plan)
+        self.assertEqual(result["restored"], dto(self.source()["before"]))
+        self.assertEqual(result["sha256"], undo.list_sha(plan["raw_after"]))
+        self.assertEqual(result["revision"], str(NEW_ROW_ID))
+
+    def test_replaced_unknown_historical_printing_and_metadata_restore_without_card_index(self):
+        self.source()["before"].update(set_code="zzold", collector_number="007a",
+                                        notes="  Old note\r\nsecond\tline  ", source="  Old source  ")
+        for row in (self.source()["after"], self.raw_entries[1]):
+            row.update(set_code="future7", collector_number="A-19")
+        inputs = copy.deepcopy((self.source_rows, self.raw_entries))
+        with mock.patch.object(cards, "resolve", side_effect=AssertionError("No card index lookup")), \
+                mock.patch.object(cards, "printing", side_effect=AssertionError("No printing lookup")), \
+                mock.patch.object(cards, "printing_card", side_effect=AssertionError("No printing card lookup")), \
+                mock.patch.object(inventory, "current", side_effect=AssertionError("No inventory lookup")):
+            plan = self.review()
+            result = self.saved(plan)
+        self.assertEqual(plan["fields"], [{"field": field, "before": dto(self.source()["after"])[field],
+                                           "after": dto(self.source()["before"])[field]}
+                                          for field in ("set", "number", "notes", "source")])
+        self.assertEqual(result["restored"], dto(self.source()["before"]))
+        self.assertEqual(plan["raw_after"][1], self.source()["before"])
+        self.assertEqual((self.source_rows, self.raw_entries), inputs)
+
+    def test_malformed_halfpair_types_controls_and_nonexact_raw_printing_still_refuse(self):
+        invalid = (("", ""), (None, "227"), ("fdn", None), ("fdn", ""), ("", "227"),
+                   ("FDN", "227"), (" fdn", "227"), (False, None), (None, False),
+                   (1, "227"), ("fdn", 227), ([], None), (None, {}),
+                   ("fdn", "227\0"), ("fdn", "two\nlines"), ("fdn", "x" * 17))
+        for side in ("before", "after"):
+            for set_code, number in invalid:
+                self.seed()
+                self.source()[side].update(set_code=set_code, collector_number=number)
+                if side == "after":
+                    self.raw_entries[1].update(set_code=set_code, collector_number=number)
+                with self.subTest(side=side, printing=(set_code, number)), self.assertRaises(undo.UndoUnsupported):
+                    self.review()
 
     def test_a_noop_source_is_not_an_undoable_update(self):
         self.source()["before"] = copy.deepcopy(self.source()["after"])

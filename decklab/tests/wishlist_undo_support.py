@@ -67,6 +67,7 @@ class AuditWishlistMemory(MemoryStore):
             saved = copy.deepcopy((self._wishlists, self._changes, self._audit_ids))
             try:
                 changed, _ = self.wishlist_set(pid, plan["current"]["name"], actor, message,
+                                               set=plan["restored"]["set"], number=plan["restored"]["number"],
                                                notes=plan["restored"]["notes"], source=plan["restored"]["source"])
                 if not changed:
                     raise undo.UndoConflict()

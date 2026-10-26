@@ -2,6 +2,16 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Undo a wishlist printing preference (2026-10-26; E11-S08)
+
+The existing owner-only single wishlist UPDATE inverse now restores a historical set/collector-number preference, optionally together with notes/source. Both current and historical nullable printing pairs must round-trip the ordinary wishlist forms exactly; name, profile and position remain immutable. The same endpoint, action, exact five-field entries, full raw-list/latest-audit receipt, admitted connection/key lock and actual inverse-audit/list proof are retained. No card-index lookup or physical-card inference is added.
+
+The review shows explicit Set and Collector number differences. A one-member printing change retains its unchanged partner as an identity fact; metadata-only reviews keep the whole unchanged printing. Clearing or restoring a blank preference uses both empty fields. Both sides obey ordinary ASCII set-code, Unicode-codepoint collector-number length and control-character rules, including non-digit collector numbers. The browser still sends only the source id/receipt/profile, and a saved printing mismatch cannot confirm success.
+
+All 271 targeted checks passed without skips in 35.801 seconds, including 39 guarded disposable PostgreSQL and 120 Undo UI checks. The delta adds four pure, four API/route, four PostgreSQL and five UI cases, including actual SQL NULL restoration, mixed preferences/text, printing ABA, exact receipt and late rollback. Independent final source/test/API/UI review and repository Ruff are clear.
+
+The isolated native matrix passed 12 light/dark cases at 320, 600, 820, 1000, 1280 and 1920 px with zero overflow/page errors. Both printing pairs and literal notes/source displayed, another home owner's preview was rejected, inventory cache and loaded Activity filters/pages were preserved, and two screenshots were inspected as pixels. There were 25 preview GETs and one intercepted synthetic POST, zero actual writes and 12 blocked baseline visit POSTs; fixture wishlists, inventory and decks remained unchanged. No migration, live activation or device/human acceptance is included. E11-S08 remains partial and OPEN; story counts are unchanged.
+
 ## Undo one owner's wishlist notes or source (2026-10-26; E11-S08)
 
 Activity can review and reverse one global `wishlist_entry` UPDATE changing only notes/source, through `/api/activity/wishlist-undo`. The actual named viewer must own that exact profile's wishlist before any source or body authority is considered. Sharing home, being an admin or sending a script header provides no override. Owner, position, name and nullable printing fields remain immutable. Mixed/hidden/orphan/departed sources refuse generically, with no historical source enrichment, card-index lookup or inventory read.
