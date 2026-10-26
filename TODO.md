@@ -29,7 +29,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 | id | status | pri | size | item |
 |---|---|---|---|---|
 | `E10-S41` | DEFERRED | could | L | Per-deck public (decision A): only once someone wants it. |
-| `E10-S17` | OPEN | could | L | Settings can replace an existing member's email. Adding a member and Access-policy/sign-in checks remain; local profile diagnostics and guarded recovery are built. |
+| `E10-S17` | OPEN | could | L | Settings member creation and email changes are built. Access-policy/sign-in readiness checks remain; local profile diagnostics and guarded recovery are built. |
 | `E10-S18` | DEFERRED | could | M | Small person-space items (`E10-S18` first-visit landing, `E4-S19` game players): only if a member asks. Check Settings, Visits first. |
 
 ## Deck Lab: decks, kit and the table

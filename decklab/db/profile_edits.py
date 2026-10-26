@@ -10,6 +10,7 @@ import hashlib
 import json
 import re
 import uuid
+from contextlib import contextmanager, nullcontext
 from types import SimpleNamespace
 
 from decklab.db import conn as db, profiles_sync, space_members
@@ -139,25 +140,66 @@ def _result(raw, listed, member_id, old, new, config_sha, membership_sha, change
             "access_policy_required": True}
 
 
+def _created(raw, listed, member_id, name, email):
+    from decklab.db import profile_admission
+    name = profile_admission.validate(member_id, name)
+    if member_id in {p["id"] for p in listed}:
+        raise InvalidProfileEdit("That member id cannot be used. Choose a different id.")
+    if any(email in profile["emails"] for profile in listed):
+        raise InvalidProfileEdit("That email is already listed. Choose an address that belongs to only this member.")
+    changed = copy.deepcopy(raw)
+    changed["profiles"].append({"id": member_id, "name": name, "role": "member", "space": member_id,
+                                "emails": [email]})
+    return changed
+
+
+def _kind(journal):
+    kind = journal.get("kind", "email_replace")
+    if kind not in ("email_replace", "create_member"):
+        raise PendingProfileEdit(files.PENDING)
+    return kind
+
+
 def _audit_outcome(cur, journal):
     row = cur.execute("select actor, source, message, via from audit.change_set where id = %s",
                       (journal["change_set_id"],)).fetchone()
     if row is None:
         return False
-    if row != (journal["actor"], "web", "Change member email\nMember email operation: " + journal["operation"],
+    kind = _kind(journal)
+    message = "Add member\nMember create operation: " if kind == "create_member" else "Change member email\nMember email operation: "
+    if row != (journal["actor"], "web", message + journal["operation"],
                journal["via"]):
         raise PendingProfileEdit(files.PENDING)
     changes = cur.execute("select table_name, op, row_key, before, after from audit.row_change "
                           "where change_set_id = %s order by id", (journal["change_set_id"],)).fetchall()
-    pid, old, new = journal["member_id"], journal["old_email"], journal["new_email"]
-    old_row, new_row = {"profile_id": pid, "email": old}, {"profile_id": pid, "email": new}
-    if changes != [("profile_email", "DELETE", old_row, old_row, None),
-                   ("profile_email", "INSERT", new_row, None, new_row)]:
+    pid = journal["member_id"]
+    if kind == "create_member":
+        profile_row = {"id": pid, "name": journal["name"], "role": "member", "space_id": pid,
+                       "plays_as": None, "position": journal["position"]}
+        email_row = {"profile_id": pid, "email": journal["email"]}
+        expected = [("space", "INSERT", {"id": pid}, None, {"id": pid}),
+                    ("profile", "INSERT", {"id": pid}, None, profile_row),
+                    ("profile_email", "INSERT", email_row, None, email_row)]
+    else:
+        old_row = {"profile_id": pid, "email": journal["old_email"]}
+        new_row = {"profile_id": pid, "email": journal["new_email"]}
+        expected = [("profile_email", "DELETE", old_row, old_row, None),
+                    ("profile_email", "INSERT", new_row, None, new_row)]
+    if changes != expected:
         raise PendingProfileEdit(files.PENDING)
     return True
 
 
-def _recover_locked(*, dbname=None, fault=None):
+@contextmanager
+def _connection(dbname, existing=None):
+    if existing is not None:
+        yield existing
+    else:
+        with db.connect("app", dbname=dbname, autocommit=True, options=OPTIONS) as c:
+            yield c
+
+
+def _recover_locked(*, dbname=None, fault=None, results_dir=None, conn=None):
     if not files.pending():
         return None
     journal = files.load_journal()
@@ -169,16 +211,37 @@ def _recover_locked(*, dbname=None, fault=None):
         raw = files.parse(before)
         before_list, after_list = _listed(raw), _listed(files.parse(after))
         _actor(SimpleNamespace(id=journal["actor"], source="web", via=journal["via"]), before_list)
-        old, new = _email(journal["old_email"]), _email(journal["new_email"])
-        if old == new or old != journal["old_email"] or new != journal["new_email"] \
-                or files.json_bytes(_replace(raw, before_list, journal["member_id"], old, new)) != after:
+        kind = _kind(journal)
+        forge = nullcontext()
+        if kind == "create_member":
+            from decklab.db import profile_admission
+            from decklab.lib.forge import lifecycle
+            email = _email(journal["email"])
+            if email != journal["email"] or type(journal["position"]) is not int \
+                    or journal["position"] != len(before_list):
+                raise PendingProfileEdit(files.PENDING)
+            changed = _created(raw, before_list, journal["member_id"], journal["name"], email)
+            if str(lifecycle.root_path(results_dir)) != journal["results_root"]:
+                raise PendingProfileEdit(files.PENDING)
+            forge = profile_admission.forge_claim(journal["member_id"], results_dir)
+        else:
+            old, new = _email(journal["old_email"]), _email(journal["new_email"])
+            if old == new or old != journal["old_email"] or new != journal["new_email"]:
+                raise PendingProfileEdit(files.PENDING)
+            changed = _replace(raw, before_list, journal["member_id"], old, new)
+        if files.json_bytes(changed) != after:
             raise PendingProfileEdit(files.PENDING)
-        with db.connect("app", dbname=dbname, autocommit=True, options=OPTIONS) as c:
+        with forge, _connection(dbname, conn) as c:
             with c.transaction():
+                if kind == "create_member":
+                    c.execute("select pg_advisory_xact_lock(hashtext(%s))", ("inventory",))
                 _locks(c)
                 committed = _audit_outcome(c, journal)
                 expected = after_list if committed else before_list
                 receipt = _check(c, expected)
+                if committed and kind == "create_member":
+                    profile_admission.require_unused(c, journal["member_id"],
+                                                     created_change_set_id=journal["change_set_id"])
                 # Keep membership/departure and all profile writers excluded until
                 # the matching file is published and its pending gate is cleared.
                 current, _ = files.snapshot()
@@ -200,10 +263,10 @@ def _recover_locked(*, dbname=None, fault=None):
         raise PendingProfileEdit(files.PENDING) from None
 
 
-def recover(*, dbname=None):
+def recover(*, dbname=None, results_dir=None):
     """Local upkeep only; config-backed sync invokes this before admitting profiles."""
     with files.claim(allow_pending=True):
-        return _recover_locked(dbname=dbname)
+        return _recover_locked(dbname=dbname, results_dir=results_dir)
 
 
 def preview(*, actor, dbname=None):
@@ -292,3 +355,91 @@ def apply(member_id, old_email, new_email, *, config_sha256, membership_sha256, 
             raise
         return _result(changed, after_list, member_id, old, new, files.digest(after), membership,
                        journal["change_set_id"], saved=True)
+
+
+def _created_result(raw, listed, member_id, after, membership, change_id):
+    member = next(p for p in _members(raw, listed) if p["id"] == member_id)
+    return {"saved": True, "noop": False, "member": member, "config_sha256": files.digest(after),
+            "membership_sha256": membership, "change_set_id": change_id, "access_policy_required": True}
+
+
+def create(member_id, name, email, *, config_sha256, membership_sha256, actor, dbname=None,
+           fault=None, results_dir=None):
+    """Create one unused member identity, with private empty defaults and one audit.
+
+    results_dir is an isolated-fixture seam, never a web-supplied path. The
+    session inventory claim survives COMMIT until matching config publication,
+    so queued orphan-data writers cannot occupy the newly created identity.
+    """
+    from decklab.db import profile_admission
+    expected_config, expected_members = _receipt(config_sha256), _receipt(membership_sha256)
+    email = _email(email)
+    name = profile_admission.validate(member_id, name)
+    with files.claim(allow_pending=True):
+        if files.pending():
+            _recover_locked(dbname=dbname, results_dir=results_dir)
+            raise StaleProfileEdit(STALE)
+        before, raw = files.snapshot()
+        listed = _listed(raw)
+        _actor(actor, listed)
+        if files.digest(before) != expected_config:
+            raise StaleProfileEdit(STALE)
+        changed = _created(raw, listed, member_id, name, email)
+        after_list = _listed(changed)
+        after = files.json_bytes(changed)
+        if len(after) > files.MAX_CONFIG:
+            raise InvalidProfileEdit("Member configuration is too large to save here. Edit it locally instead.")
+        journal = None
+        with profile_admission.forge_claim(member_id, results_dir) as claim:
+            try:
+                with db.connect("app", dbname=dbname, autocommit=True, options=OPTIONS) as c:
+                    # Unlike xact locks this survives the DB/config commit gap.
+                    # Closing this dedicated connection releases it on every exit.
+                    c.execute("select pg_advisory_lock(hashtext(%s))", ("inventory",))
+                    with c.transaction():
+                        _locks(c)
+                        _check(c, listed, expected_members)
+                        profile_admission.require_unused(c, member_id)
+                    operation = uuid.uuid4().hex
+                    message = "Add member\nMember create operation: " + operation
+                    with db.change(actor.id, "web", message, via=actor.via, conn=c) as (cur, change_id):
+                        _locks(cur)
+                        _check(cur, listed, expected_members)
+                        profile_admission.require_unused(cur, member_id)
+                        if files.snapshot()[0] != before:
+                            raise StaleProfileEdit(STALE)
+                        journal = {"version": 1, "kind": "create_member",
+                                   "config_path": str(files.ordinary(config.CONFIG_FILE)), "operation": operation,
+                                   "database": _database(dbname), "actor": actor.id, "via": actor.via,
+                                   "member_id": member_id, "name": name, "email": email, "position": len(listed),
+                                   "results_root": str(claim.root), "change_set_id": change_id,
+                                   "before": base64.b64encode(before).decode("ascii"),
+                                   "after": base64.b64encode(after).decode("ascii"),
+                                   "before_sha256": expected_config, "after_sha256": files.digest(after)}
+                        files.prepare(journal)
+                        if fault:
+                            fault("prepared")
+                        cur.execute("insert into space(id) values(%s)", (member_id,))
+                        cur.execute("insert into profile(id,name,role,space_id,plays_as,position) "
+                                    "values(%s,%s,'member',%s,null,%s)", (member_id, name, member_id, len(listed)))
+                        cur.execute("insert into profile_email(profile_id,email) values(%s,%s)", (member_id, email))
+                        _check(cur, after_list)
+                        if fault:
+                            fault("sql_done")
+                    if fault:
+                        fault("committed")
+                    outcome = _recover_locked(dbname=dbname, fault=fault, results_dir=results_dir, conn=c)
+            except Exception:
+                if journal is not None and files.pending():
+                    try:
+                        # The dedicated session claim was released by closing c;
+                        # prove uncertain COMMIT via a fresh connection, never replay.
+                        outcome = _recover_locked(dbname=dbname, results_dir=results_dir)
+                    except Exception:
+                        raise PendingProfileEdit(files.PENDING) from None
+                    if outcome and outcome["committed"]:
+                        return _created_result(changed, after_list, member_id, after,
+                                               outcome["membership_sha256"], journal["change_set_id"])
+                raise
+        return _created_result(changed, after_list, member_id, after,
+                               outcome["membership_sha256"], journal["change_set_id"])

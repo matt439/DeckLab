@@ -1,4 +1,4 @@
-"""Private Settings email replacement for existing non-home members (E10-S17)."""
+"""Private Settings member creation and existing-email replacement (E10-S17)."""
 from contextlib import contextmanager
 
 from decklab.db import conn as db
@@ -59,3 +59,23 @@ def change(body):
         return profile_edits.apply(data["member_id"], data["old_email"], data["new_email"],
                                    config_sha256=data["config_sha256"], membership_sha256=data["membership_sha256"],
                                    actor=_web_actor(viewer))
+
+
+def create(body):
+    """POST /api/settings/member: one new member, always in their own private space."""
+    from decklab.db import profile_edits
+    with _errors():
+        viewer = _admin()
+        if isinstance(body, str):
+            body = body.encode("utf-8")
+        if len(body) > MAX_BODY:
+            raise ApiError(413, "The new member request is too large.")
+        data = _load_json(body, "The new member request")
+        fields = {"profile", "member_id", "name", "email", "config_sha256", "membership_sha256"}
+        if not isinstance(data, dict) or set(data) != fields:
+            raise ApiError(400, "The new member request needs exactly the reviewed identity, email and receipts.")
+        if data["profile"] != viewer["id"]:
+            raise ApiError(403, "You can only make changes as yourself.")
+        return profile_edits.create(data["member_id"], data["name"], data["email"],
+                                    config_sha256=data["config_sha256"], membership_sha256=data["membership_sha256"],
+                                    actor=_web_actor(viewer))

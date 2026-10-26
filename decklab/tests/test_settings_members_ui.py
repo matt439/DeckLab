@@ -138,6 +138,27 @@ class SettingsMembersUiTests(unittest.TestCase):
           main.querySelector('.settings-members-form').fire('submit');assert.equal(writes.length,1);assert(!main.textContent.includes('change saved.'));
         ''')
 
+    def test_email_validation_refusal_shows_static_reason_without_reopening_save(self):
+        self.run_js(r'''
+          await openMembers();apiWrite=async(path,body)=>{writes.push(body);throw Object.assign(Error('That email is already listed. Choose an address that belongs to only this member.'),{status:400});};
+          reviewEmail();saveEmail();await flush();assert(main.textContent.includes('That email is already listed. Choose an address that belongs to only this member.'));
+          assert(main.textContent.includes('Reload member emails before reviewing another change'));assert.equal(byId('settings-member-new-email').value,'new@example.com');
+          memberButton('Add member').fire('click');saveEmail();main.querySelector('.settings-members-form').fire('submit');
+          assert.equal(writes.length,1);assert.equal(main.querySelector('.settings-member-add-form'),null);assert(memberButton('Save email change').hidden);
+          assert(!memberButton('Reload member emails').hidden);assert(!main.textContent.includes('change saved.'));
+        ''')
+
+    def test_email_unknown_server_details_and_unbounded_refusals_are_not_exposed(self):
+        self.run_js(r'''
+          for(const failure of [Error('private-detail-marker'),Object.assign(Error('private-detail-marker'),{status:500}),
+            Object.assign(Error('private-detail-marker'),{status:503}),{status:400,message:''},{status:400,message:null},
+            {status:400,message:'private-detail-marker'+'x'.repeat(501)}]){
+            await openMembers();apiWrite=async()=>{throw failure;};reviewEmail();saveEmail();await flush();
+            assert(main.textContent.includes("save couldn't be confirmed"));assert(!main.textContent.includes('private-detail-marker'));
+            assert(!main.textContent.includes('change saved.'));assert(!memberButton('Reload member emails').hidden);
+          }
+        ''')
+
     def test_malformed_or_mismatched_receipts_fail_closed(self):
         self.run_js(r'''
           const changes=[reply=>({...reply,saved:false}),reply=>({...reply,noop:true}),reply=>({...reply,change_set_id:null}),

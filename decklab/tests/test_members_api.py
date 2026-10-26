@@ -20,6 +20,10 @@ SAVED = {"saved": True, "noop": False, "member": {"id": "user2", "name": "User2"
          "replaced": {"old_email": "user2@example.com", "new_email": "replacement@example.com"},
          "config_sha256": "c" * 64, "membership_sha256": "d" * 64,
          "change_set_id": 42, "access_policy_required": True}
+CREATE = {"profile": "matt", "member_id": "user3", "name": "User3", "email": "user3@example.com",
+          "config_sha256": "a" * 64, "membership_sha256": "b" * 64}
+CREATED = {key: value for key, value in SAVED.items() if key != "replaced"}
+CREATED["member"] = {"id": "user3", "name": "User3", "emails": ["user3@example.com"]}
 
 
 class MembersApiTests(unittest.TestCase):
@@ -27,6 +31,7 @@ class MembersApiTests(unittest.TestCase):
         self.viewer = mock.patch.object(guard, "viewer", return_value=people.MATT).start()
         self.preview = mock.patch.object(profile_edits, "preview", return_value=copy.deepcopy(SNAPSHOT)).start()
         self.apply = mock.patch.object(profile_edits, "apply", return_value=copy.deepcopy(SAVED)).start()
+        self.create = mock.patch.object(profile_edits, "create", return_value=copy.deepcopy(CREATED)).start()
         self.addCleanup(mock.patch.stopall)
 
     def refused(self, status, call, *args, **kwargs):
@@ -45,8 +50,10 @@ class MembersApiTests(unittest.TestCase):
                     self.viewer.return_value = viewer
                     first = self.refused(403, members.view)
                     self.assertEqual(self.refused(403, members.change, b"private malformed payload"), first)
+                    self.assertEqual(self.refused(403, members.create, b"private malformed payload"), first)
         self.preview.assert_not_called()
         self.apply.assert_not_called()
+        self.create.assert_not_called()
 
     def test_permission_has_no_script_bypass_and_needs_a_named_home_admin(self):
         for script in (False, True):
@@ -114,8 +121,40 @@ class MembersApiTests(unittest.TestCase):
         self.assertEqual(self.send(), receipt)
         self.apply.assert_called_once()
 
+    def test_creation_forwards_only_reviewed_identity_and_the_current_web_actor(self):
+        self.assertEqual(members.create(json.dumps(CREATE).encode()), CREATED)
+        args, kwargs = self.create.call_args
+        self.assertEqual(args, ("user3", "User3", "user3@example.com"))
+        self.assertEqual(kwargs["actor"].id, "matt")
+        self.assertEqual(kwargs["actor"].source, "web")
+        self.assertEqual(kwargs["config_sha256"], CREATE["config_sha256"])
+        self.apply.assert_not_called()
+
+    def test_creation_cannot_change_role_space_or_impersonate_an_actor(self):
+        for extra in ({"role": "admin"}, {"space": "home"}, {"plays_as": "user"}, {"public": True}):
+            self.refused(400, members.create, json.dumps({**CREATE, **extra}).encode())
+        self.refused(403, members.create, json.dumps({**CREATE, "profile": "user1"}).encode())
+        self.create.assert_not_called()
+
+    def test_creation_has_no_implicit_email_edit_or_payload_fallback(self):
+        for value in (REQUEST, None, [], {k: v for k, v in CREATE.items() if k != "member_id"}):
+            self.refused(400, members.create, json.dumps(value).encode())
+        self.refused(413, members.create, b" " * (members.MAX_BODY + 1))
+        self.create.assert_not_called()
+
 
 class MembersHttpTests(ServerTestCase):
+    def test_member_creation_uses_only_the_guarded_post_endpoint(self):
+        with mock.patch.object(members, "create", return_value=CREATED) as save:
+            status, _, body = self.request("POST", "/api/settings/member", json.dumps(CREATE).encode(), WRITE)
+            self.assertEqual(status, 200)
+            self.assertEqual(json.loads(body), CREATED)
+            self.assertEqual(json.loads(save.call_args.args[0]), CREATE)
+            self.assertEqual(self.request("GET", "/api/settings/member")[0], 405)
+            self.assertEqual(self.request("POST", "/api/settings/member?public=1", b"{}", WRITE)[0], 400)
+            self.assertEqual(self.request("POST", "/api/settings/member", json.dumps(CREATE).encode(), {})[0], 403)
+            save.assert_called_once()
+
     def test_pending_profile_publication_does_not_return_local_me_rights(self):
         with mock.patch.object(access, "me", side_effect=profile_edits.PendingProfileEdit("private recovery detail")):
             status, _, body = self.request("GET", "/api/me", script=False)

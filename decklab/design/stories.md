@@ -2959,14 +2959,18 @@ Evidence:
 - `decklab/lib/profile_config.py`, `decklab/db/profile_edits.py`, `decklab/db/profiles_sync.py`: raw-config and membership receipts, exact web-actor audit, private pending publication journal and coordinated local recovery/sync
 - `decklab/lib/api/members.py`, `decklab/web/settings-members.js`: named-home-admin-only existing-member email review, guarded save/no-op receipts, private panel lifetime and explicit Access-policy reminder
 - `test_members_api.py`, `test_settings_members_ui.py`: authorization-before-read, strict payload scope, stale and uncertain outcomes, exact receipt validation and retired form controls
+- `decklab/db/profile_admission.py`, `profile_edits.create`, `POST /api/settings/member`: strict unused-id admission, fixed Member/own-space creation, exact three-row INSERT audit and guarded append-publication recovery
+- `test_profile_admission.py`, `test_profile_create_pg.py`: creation validation, retained membership/private/audit/Forge provenance and disposable persistence/recovery coverage
 
 Now: local diagnostics/setup safety built 2026-10-27 ([HISTORY.md](../HISTORY.md#local-profile-diagnostics-and-safe-setup-2026-10-27-e10-s17-first-slice)). Invalid entries cannot silently become a partial database sync; detailed reasons stay on local status, with no authentication or API roster change.
 
 The [existing-member email slice](../HISTORY.md#guarded-member-email-replacement-in-settings-2026-10-26-e10-s17) is implemented. A named home admin can replace exactly one existing non-home member alias after review, preserving other aliases, identity, space, records and unrelated raw configuration values. Full config and membership receipts bind the save. The audited web actor and exact committed outcome govern configuration publication; pending recovery gates profile/auth reads, and local sync recovers before reading the source under the shared claim. The panel keeps emails private and explicitly calls for a separate Access-policy update and sign-in check.
 
-Gap: adding a member and checking whether an address can sign in through Access remain. No real configuration/email, Access policy or sign-in was changed or verified by this coding task. Local request parsing remains tolerant outside pending-publication refusal; setup and config-backed sync still refuse invalid entries before changes.
+The [Add member slice](../HISTORY.md#guarded-member-creation-in-settings-2026-10-26-e10-s17) is implemented. A named home admin reviews the exact new display name, permanent id and email. The server fixes Member role and an empty own space, Private by default. Full config/membership receipts, one audited three-row insertion and the verified raw append recipe govern publication and recovery. Reused, departed or retained-data identities and uncertain provenance are refused, with inventory and cooperative Forge claims protecting publication. No old private records or visibility choices are adopted.
 
-Next slice: guarded creation of a member with their own space, reusing the coordinated configuration/database publication and privacy rules.
+Gap: Access-policy/sign-in readiness checks, including the local status warning for an address that cannot sign in, remain. No real member, configuration/email, Access policy or sign-in was changed or verified by this coding task. Local request parsing remains tolerant outside pending-publication refusal; setup and config-backed sync still refuse invalid entries before changes.
+
+Next slice: make Access-policy/sign-in readiness explicit without claiming a policy update or a successful member sign-in from local configuration alone.
 
 Review note: L for a could bundles a profile editor, validation, an Access reminder and a status check; the second criterion could be its own small story.
 

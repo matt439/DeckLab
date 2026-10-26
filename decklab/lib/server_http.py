@@ -479,6 +479,11 @@ class Handler(BaseHTTPRequestHandler):
                 self._allow("POST")
                 self._no_query(query)
                 return self._send_json(200, members.change(self._write_body(members.MAX_BODY)))
+            if route == ["settings", "member"]:
+                from decklab.lib.api import members
+                self._allow("POST")
+                self._no_query(query)
+                return self._send_json(200, members.create(self._write_body(members.MAX_BODY)))
             if len(route) == 3 and route[0] == "profiles" and route[2] == "settings":
                 self._allow(*GET, "PUT")
                 self._no_query(query)
