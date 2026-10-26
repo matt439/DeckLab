@@ -2,6 +2,12 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Guard field runs against a changed saved list (2026-10-26; E11-S30 slice 14)
+
+Field-run callers may now send `expected_card_sha`, the full playable-list fingerprint they intend to test. The API retains its normal viewer, simulation, deck and version checks, then rejects a changed list before checking Forge or submitting a job. A matching request captures that exact entry, so a later save cannot change the queued list. Existing callers without the optional guard behave as before. This is the prerequisite for the Editor's re-test-after-save choice; the choice is not built in this commit.
+
+Validation: 25 focused field API/privacy tests passed, including seven new cases for exact matching, malformed hashes, mismatch before any submission work, unchanged old callers, visibility/version precedence and paused simulations. Forge and the coordinator are stubs: no game, job thread, live data or external download ran. Scoped CI-rule ruff and whitespace checks passed.
+
 ## Editor change bar and saved Forge evidence (2026-10-26; E11-S30 slice 14)
 
 The retained action bar now reports changed card groups, fields and write-up sections separately from card-copy additions/removals. Printing-only and list-structure changes stay visible; trial, new and unstarted lists use words that do not imply a saved baseline. Undo uses existing history and restores the fresh owned control or Cards after its last entry. Discard reuses the existing confirmation/reload and rechecks page, person and scope after confirmation. Save, checks and Add retain their controls. The split Save stays together; the phone bar uses two rows when history actions are present and reserves its measured height for the search Dock. It can grow beyond the nominal design height to retain touch targets.
