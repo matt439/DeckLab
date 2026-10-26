@@ -139,14 +139,14 @@ def _refused(e):
     return ApiError(409, _public(e))
 
 
-def apply_op(op, profile, message, refused=None):
+def apply_op(op, profile, message, refused=None, *, reason=None):
     """inventory.apply(op) as profile (settings._web_actor), under inventory_write_lock: (the
     inventory after, Summary). refused(error) turns a refusal into the page's answer first
     (an ApiError, or None to leave it to the default: a DeckRefused with its code and words,
     else _refused)."""
     try:
         with inventory_write_lock():
-            return inventory.apply(op, _web_actor(profile), message)
+            return inventory.apply(op, _web_actor(profile), message, **({"reason": reason} if reason is not None else {}))
     except (inventory.Invalid, inventory.Conflict, inventory.Unavailable) as e:
         mapped = refused(e) if refused is not None else None
         if mapped is not None:

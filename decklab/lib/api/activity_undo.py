@@ -1,4 +1,4 @@
-"""Review and undo one eligible collection/token update from the original audit rows.
+"""Review one eligible collection/token update or collection insertion from original audit rows.
 
 The request supplies only a source change id and its opaque review receipt. The
 inventory backend reads the complete original change and rechecks it under its
@@ -14,7 +14,7 @@ from .common import ApiError, DATABASE_DOWN, _keys, _parse_body
 from .settings import _writer
 
 NO_CHANGE = "No undoable change at that ID."
-UNSUPPORTED = "This change cannot be undone here. Only a single supported collection or token edit can be undone."
+UNSUPPORTED = "This change cannot be undone here. Only a single supported collection or token edit, or an unheld nonbasic collection row addition, can be undone."
 CHANGED = "The change can no longer be undone safely. Reload Activity and review it again."
 UNCONFIRMED = "The undo result could not be confirmed. Reload Activity before trying again."
 SHA = re.compile(r"[a-f0-9]{64}")
@@ -49,10 +49,11 @@ def review_hint(change, shown, profile):
     row = rows[0]
     kind = TABLE_KIND.get(row.get("table"))
     before, after = row.get("before"), row.get("after")
-    if not kind or row.get("op") != "UPDATE" or not isinstance(before, dict) or not isinstance(after, dict):
+    insertion = row.get("table") == "collection_card" and row.get("op") == "INSERT" and before is None
+    if not kind or not isinstance(after, dict) or not insertion and (row.get("op") != "UPDATE" or not isinstance(before, dict)):
         return None
     space = _space(profile)
-    if before.get("space_id") != space or after.get("space_id") != space \
+    if not insertion and before.get("space_id") != space or after.get("space_id") != space \
             or not guard.allowed(profile, kind + ".edit", space) or shown.get("id") != change.get("id"):
         return None
     return {"review": True}
@@ -97,11 +98,14 @@ def _project(plan):
     kind = plan["kind"]
     columns = rules.FIELDS if kind == "collection" else rules.TOKEN_FIELDS
     current, restored = plan.get("current"), plan.get("restore")
-    if not isinstance(current, dict) or not isinstance(restored, dict) or not isinstance(plan.get("expect"), str) \
+    removing = plan.get("action") == "remove"
+    if not isinstance(current, dict) or not (restored is None if removing else isinstance(restored, dict)) \
+            or removing and (kind != "collection" or plan.get("reason_required") is not True) \
+            or not isinstance(plan.get("expect"), str) \
             or not SHA.fullmatch(plan["expect"]) or not isinstance(plan.get("label"), str) or not plan["label"].strip():
         raise ApiError(503, UNCONFIRMED)
     rows = []
-    for source in (current, restored):
+    for source in (current,) if removing else (current, restored):
         row = {}
         for key in columns:
             value = source.get(key)
@@ -112,6 +116,9 @@ def _project(plan):
                 raise ApiError(503, UNCONFIRMED)
             row[key] = value
         rows.append(row)
+    if removing:
+        return {"available": True, "id": plan["change_id"], "expect": plan["expect"], "kind": kind, "space": plan["space"],
+                "label": plan["label"], "action": "remove", "reason_required": True, "current": rows[0], "restored": None}
     current, restored = rows
     changed = [key for key in columns if current[key] != restored[key]]
     if not changed or set(changed) - set(MUTABLE[kind]):
@@ -148,21 +155,38 @@ def undo_view(id=None):
 def apply_undo(body):
     """POST {profile,id,expect}: one new audited undo, never a history rewrite."""
     data = _parse_body(body)
-    _keys(data, ("profile", "id", "expect"))
+    _keys(data, ("profile", "id", "expect"), ("reason",))
     profile, change_id = _writer(data), _id(data["id"])
     plan = _review(change_id, profile)  # hidden/missing is resolved before malformed or stale receipt errors
     _project(plan)
+    removing = plan.get("action") == "remove"
+    reason = None
+    if removing:
+        from decklab.lib.inventory import undo
+        try:
+            reason = undo.removal_reason(data.get("reason"))
+        except inventory.Invalid as error:
+            raise ApiError(400, str(error)) from None
+    elif "reason" in data:
+        raise ApiError(400, "A reason is accepted only when Undo removes an added collection row.")
     if not isinstance(data["expect"], str) or not SHA.fullmatch(data["expect"]):
         raise ApiError(400, "expect must be the full review receipt from Undo")
     if data["expect"] != plan["expect"]:
         raise _changed(plan["label"])
-    op = inventory.Op("inventory.undo", {"change_id": change_id, "space": plan["space"], "expect": data["expect"]})
-    after, summary = saving.apply_op(op, profile, f"Undo activity change {change_id}", _refused)
+    op = inventory.Op("inventory.undo", {"change_id": change_id, "space": plan["space"], "expect": data["expect"],
+                                         **({"reason": reason} if removing else {})})
+    after, summary = saving.apply_op(op, profile, f"Undo activity change {change_id}", _refused,
+                                     **({"reason": reason} if removing else {}))
     extra, counts = summary.extra or {}, summary.counts or {}
     if not summary.changed or type(counts.get("undo")) is not int or counts["undo"] != 1 \
             or extra.get("undo_of") != change_id or extra.get("kind") != plan["kind"] or extra.get("space") != plan["space"] \
             or extra.get("row_change_id") != plan["row_change_id"]:
         raise ApiError(503, UNCONFIRMED)
+    if removing and (extra.get("action") != "remove" or extra.get("undo_reason") != reason):
+        raise ApiError(503, UNCONFIRMED)
     sheet, restored = _restored(after, plan)
-    return {"saved": True, "source_id": change_id, "expect": data["expect"], "kind": plan["kind"], "space": plan["space"],
-            "sha256": files.rendered_sha256(sheet), "revision": after.revision, "restored": restored, "summary": summary.text}
+    result = {"saved": True, "source_id": change_id, "expect": data["expect"], "kind": plan["kind"], "space": plan["space"],
+              "sha256": files.rendered_sha256(sheet), "revision": after.revision, "restored": restored, "summary": summary.text}
+    if removing:
+        result.update(action="remove", removed_key={key: plan["current"][key] for key in ("set", "collector_number", "finish")})
+    return result

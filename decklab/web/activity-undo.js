@@ -19,7 +19,10 @@ function activityUndoRow(row, kind) {
 function activityUndoEvidence(data, id, space) {
   if (!data || data.available !== true || data.id !== id || data.space !== space || !["collection", "tokens"].includes(data.kind)
       || typeof data.expect !== "string" || !/^[a-f0-9]{64}$/.test(data.expect)
-      || typeof data.label !== "string" || !data.label.trim() || !activityUndoRow(data.current, data.kind)
+      || typeof data.label !== "string" || !data.label.trim() || !activityUndoRow(data.current, data.kind)) return null;
+  if (data.action === "remove") return data.kind === "collection" && data.reason_required === true && data.restored === null
+    && !Object.hasOwn(data, "fields") && Object.keys(data).sort().join(",") === "action,available,current,expect,id,kind,label,reason_required,restored,space" ? data : null;
+  if (Object.hasOwn(data, "action") || Object.hasOwn(data, "reason_required")
       || !activityUndoRow(data.restored, data.kind) || !Array.isArray(data.fields) || !data.fields.length) return null;
   const allowed = ACTIVITY_UNDO_EDITABLE[data.kind], changed = ACTIVITY_UNDO_FIELDS[data.kind].filter(field => data.current[field] !== data.restored[field]);
   if (changed.some(field => !allowed.includes(field)) || changed.length !== data.fields.length
@@ -30,11 +33,25 @@ function activityUndoEvidence(data, id, space) {
 }
 
 function activityUndoReceipt(answer, preview) {
-  return answer && answer.saved === true && answer.source_id === preview.id && answer.expect === preview.expect
+  const confirmed = answer && answer.saved === true && answer.source_id === preview.id && answer.expect === preview.expect
     && answer.kind === preview.kind && answer.space === preview.space && typeof answer.sha256 === "string"
     && /^[a-f0-9]{64}$/.test(answer.sha256) && typeof answer.revision === "string" && answer.revision.trim()
-    && typeof answer.summary === "string" && answer.summary.trim() && activityUndoRow(answer.restored, preview.kind)
+    && typeof answer.summary === "string" && answer.summary.trim();
+  if (!confirmed) return false;
+  if (preview.action === "remove") {
+    const key = answer.removed_key;
+    return preview.kind === "collection" && answer.action === "remove" && answer.restored === null && key && typeof key === "object" && !Array.isArray(key)
+      && Object.keys(key).sort().join(",") === "collector_number,finish,set"
+      && ["set", "collector_number", "finish"].every(field => key[field] === preview.current[field]);
+  }
+  return !Object.hasOwn(answer, "action") && !Object.hasOwn(answer, "removed_key") && activityUndoRow(answer.restored, preview.kind)
     && ACTIVITY_UNDO_FIELDS[preview.kind].every(field => answer.restored[field] === preview.restored[field]);
+}
+
+function activityUndoRemovalReason(value) {
+  if (typeof value !== "string" || [...value].length > 200) return null;
+  const reason = value.replace(/\p{Cf}/gu, "").replace(/[\p{White_Space}\u001c-\u001f]+/gu, " ").trim();
+  return reason && !/[\u0000-\u001f\u007f]/.test(reason) ? reason : null;
 }
 
 function activityUndoOwner(ctx) {
@@ -90,31 +107,61 @@ function openActivityUndo(view, id) {
 
 function activityUndoShow(ctx) {
   const { sheet, preview, view } = ctx, signature = JSON.stringify(preview);
+  const removing = preview.action === "remove";
   const words = { quantity: "Quantity", condition: "Condition", language: "Language", notes: "Notes" };
   const identity = ACTIVITY_UNDO_FIELDS[preview.kind].filter(field => !ACTIVITY_UNDO_EDITABLE[preview.kind].includes(field));
   const text = value => value === "" ? "Not recorded" : String(value);
-  const panels = [["Current", "before"], ["Restored by Undo", "after"]].map(([title, key]) => el("section", { class: "panel" },
-    el("h3", { text: title }), preview.fields.map(field => el("p", {}, el("b", { text: words[field.field] + ": " }), text(field[key])))));
-  clear(sheet.body).append(el("h3", { text: preview.label }),
-    el("p", { class: "sub", text: "Review the current row and the values this Undo will restore. Saving creates one new audited change; the original change stays in Activity." }),
-    el("dl", {}, identity.flatMap(field => [el("dt", { text: field.replaceAll("_", " ") }), el("dd", { text: text(preview.current[field]) })])),
-    el("div", { class: "panels" }, panels));
+  let reasonInput = null, acceptedReason = "", reviewedReason = null;
+  clear(sheet.body).append(el("h3", { text: preview.label }));
+  if (removing) {
+    sheet.body.append(el("p", { class: "box box-warn", text: "Undo removes all " + plural(preview.current.quantity, "recorded copy", "recorded copies")
+      + " of this printing from the collection. The entire added row will be removed." }),
+    el("p", { class: "sub", text: "Saving creates one new audited change; the original change stays in Activity. The row and its physical uses are checked again when you save." }),
+    el("section", { class: "panel" }, el("h3", { text: "Current row to remove" }),
+      el("dl", {}, ACTIVITY_UNDO_FIELDS.collection.flatMap(field => [el("dt", { text: field.replaceAll("_", " ") }),
+        el("dd", { text: text(preview.current[field]) })]))));
+    const id = "activity-undo-reason-" + sheet.heading.id;
+    reasonInput = el("input", { id, type: "text", maxlength: 400, autocomplete: "off", "aria-describedby": id + "-hint" });
+    const normalized = el("p", { class: "sub", role: "status", "aria-live": "polite" });
+    sheet.body.append(el("label", { class: "field", for: id }, el("span", { text: "Reason for removing this added row (required)" }), reasonInput),
+      el("p", { class: "field-hint", id: id + "-hint", text: "Up to 200 characters. Enter why these copies should be removed from the collection." }), normalized);
+    const changed = () => {
+      if (!ctx.here() || ctx.pending || ctx.saved || ctx.needsRefresh || !reasonInput.isConnected || !sheet.body.contains(reasonInput)
+          || ctx.preview !== preview || JSON.stringify(preview) !== signature) { reasonInput.value = acceptedReason; return; }
+      if (reasonInput.value === acceptedReason) return;
+      acceptedReason = reasonInput.value; reviewedReason = activityUndoRemovalReason(acceptedReason);
+      normalized.textContent = reviewedReason ? "Reason to be saved: " + reviewedReason : "Enter a nonblank reason of at most 200 characters.";
+      error.textContent = ""; actions();
+    };
+    reasonInput.addEventListener("input", changed); reasonInput.addEventListener("change", changed);
+  } else {
+    const panels = [["Current", "before"], ["Restored by Undo", "after"]].map(([title, key]) => el("section", { class: "panel" },
+      el("h3", { text: title }), preview.fields.map(field => el("p", {}, el("b", { text: words[field.field] + ": " }), text(field[key])))));
+    sheet.body.append(el("p", { class: "sub", text: "Review the current row and the values this Undo will restore. Saving creates one new audited change; the original change stays in Activity." }),
+      el("dl", {}, identity.flatMap(field => [el("dt", { text: field.replaceAll("_", " ") }), el("dd", { text: text(preview.current[field]) })])),
+      el("div", { class: "panels" }, panels));
+  }
   const error = el("p", { class: "form-error", role: "alert", tabindex: "-1" }); sheet.body.append(error);
   function actions() {
+    if (reasonInput) reasonInput.disabled = ctx.pending || ctx.saved || ctx.needsRefresh;
     sheetActions(sheet, ctx.saved ? [{ text: "Done", kind: "primary", onclick: event => { if (ctx.here() && event.currentTarget.isConnected) sheet.close(); } }]
       : ctx.needsRefresh ? [{ text: "Reload Activity", kind: "primary", onclick: event => { if (ctx.here() && event.currentTarget.isConnected) sheet.close(); } },
         { text: "Close", onclick: () => sheet.close() }]
         : [{ text: "Cancel", disabled: ctx.pending, onclick: () => sheet.close() },
-          { text: ctx.pending ? "Saving Undo." : "Save Undo", kind: "primary", disabled: ctx.pending, onclick: save }]);
+          { text: ctx.pending ? "Saving Undo." : "Save Undo", kind: "primary", disabled: ctx.pending || removing && !reviewedReason, onclick: save }]);
   }
   async function save(event) {
     if (!ctx.here() || ctx.pending || ctx.saved || ctx.needsRefresh || !event?.currentTarget?.isConnected || !sheet.foot.contains(event.currentTarget)
         || ctx.preview !== preview || JSON.stringify(preview) !== signature || !activityUndoEvidence(preview, ctx.id, ctx.space)) return;
+    if (removing && (!reasonInput?.isConnected || !sheet.body.contains(reasonInput) || reasonInput.value !== acceptedReason
+        || !reviewedReason || activityUndoRemovalReason(reasonInput.value) !== reviewedReason)) {
+      error.textContent = "Enter and review a nonblank reason of at most 200 characters before saving Undo."; return;
+    }
     const trigger = document.activeElement;
     const focusOwned = () => document.activeElement === trigger || document.activeElement === document.body || !document.activeElement?.isConnected;
     ctx.pending = true; error.textContent = ""; actions();
     try {
-      const answer = await apiWrite("/api/activity/undo", { id: ctx.id, expect: preview.expect });
+      const answer = await apiWrite("/api/activity/undo", { id: ctx.id, expect: preview.expect, ...(removing ? { reason: reviewedReason } : {}) });
       state.library = null;
       if (!activityUndoReceipt(answer, preview)) throw new Error("The Undo result could not be confirmed.");
       if (!activityUndoOwner(ctx)) return;

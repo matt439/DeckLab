@@ -1,7 +1,7 @@
-"""Guarded inverse of one supported audited row UPDATE, never a historical rewrite.
+"""Guarded inverse of one supported audited row, never a historical rewrite.
 
 Audit row shape is authoritative; messages cannot prove which command made a change.
-Only same-identity metadata/quantity edits are supported. Every check runs again in
+Same-identity edits and an unheld nonbasic collection insertion are supported. Every check runs again in
 the ordinary PostgreSQL inventory transaction before its pure edit helper is called.
 """
 import hashlib
@@ -66,6 +66,16 @@ def _source(rows, space):
         raise UndoMissing()
     row = rows[0]
     old, new = row.get("before"), row.get("after")
+    if row.get("table") == COLLECTION and row.get("op") == "INSERT" and old is None:
+        if not isinstance(new, dict) or new.get("space_id") != space:
+            raise UndoMissing()
+        if set(new) != COLLECTION_FIELDS:
+            raise UndoUnsupported("The inserted collection row has an unsupported schema.")
+        _identifier(row.get("id"))
+        if not isinstance(row.get("key"), dict) or set(row["key"]) != COLLECTION_KEYS \
+                or any(row["key"][key] != new[key] for key in COLLECTION_KEYS):
+            raise UndoUnsupported("The original collection identity cannot be checked.")
+        return row, _ordinary(new, COLLECTION), None
     if row.get("table") not in SUPPORTED or not isinstance(old, dict) or not isinstance(new, dict) \
             or old.get("space_id") != space or new.get("space_id") != space:
         raise UndoMissing()
@@ -101,6 +111,12 @@ def restored_row(snapshot, plan):
     """The actual stored inverse row, without SQL identity/position fields, for a receipt."""
     table = COLLECTION if plan["kind"] == "collection" else TOKENS
     sheet = snapshot.collection(plan["space"]) if table == COLLECTION else snapshot.token_set(plan["space"])
+    if plan.get("action") == "remove":
+        if table != COLLECTION or sheet.error is not None or sheet.strict_error is not None or sheet.csv_error is not None \
+                or not sheet.exists and sheet.rows \
+                or any(rules.ident(row.as_dict()) == rules.ident(plan["current"]) for row in sheet.rows):
+            raise UndoConflict("The removed row's absence cannot be confirmed. Reload the list.", plan["label"])
+        return None
     matches = [row for row in sheet.rows if (rules.ident(row.as_dict()) == rules.ident(plan["restore"]) if table == COLLECTION
                else row.id == plan["key"]["id"])]
     if len(matches) != 1:
@@ -135,6 +151,10 @@ def _current_row(snapshot, source, wanted, space, label):
 def _inverse(snapshot, source, wanted, restore, space):
     if source["table"] == COLLECTION:
         from . import ops_collection
+        if restore is None:
+            return ops_collection.remove(snapshot, space, list(rules.ident(wanted)),
+                                         sha256=files.rendered_sha256(snapshot.collection(space)),
+                                         expect_decks_revision=snapshot.decks_revision)
         return ops_collection.edit(snapshot, space, list(rules.ident(wanted)), restore,
                                    sha256=files.rendered_sha256(snapshot.collection(space)))
     from decklab.lib.tokens import ops as token_ops
@@ -255,6 +275,56 @@ def _reduction(snapshot, after, table, space, label, source):
         raise UndoConflict("Packed token quantities cannot safely be reduced here. Use the normal token editor.", label) from None
 
 
+def _insert_removal(snapshot, after, wanted, space, label, source):
+    """No aggregate surplus or probable printing hint proves this row physically free."""
+    from decklab.lib import decks, inventory, pool
+    from decklab.lib.api.collection_guards import _check_holders
+    from decklab.lib.decks import assembled, standins
+    unresolved = {}
+    try:
+        canonical = pool._canonical(wanted["name"], "Undo", unresolved)
+    except Exception:
+        raise UndoConflict("The inserted card's physical identity cannot be checked. Use the Collection editor.", label) from None
+    if decks.is_basic_land(canonical):
+        raise UndoUnsupported("Use the Collection editor to remove tracked basic lands.")
+    if unresolved:
+        raise UndoConflict("The inserted card's physical identity cannot be checked. Use the Collection editor.", label)
+    _reduction(snapshot, after, COLLECTION, space, label, source)
+    try:
+        for deck in _known_decks(snapshot, space):
+            if deck.status != "built":
+                continue
+            if sum(field.key.casefold() == standins.STAND_INS_FIELD.casefold() for field in deck.header) > 1:
+                raise ValueError("Ambiguous installed markers")
+            installed = standins.installed_for(deck)
+            if installed:
+                if installed["version"] != assembled.version(deck) or any(row["using"] is None for row in installed["cards"]):
+                    raise ValueError("Unknown physical markers")
+                standins.validate_rows(installed["cards"], assembled.sections(deck))
+        with inventory.pinned(snapshot):
+            held = pool.load_pool(space)
+            _check_holders(snapshot, space, held)
+        if held.unresolved or held.warning_decks or any(holder.standin_warnings for holder in held.in_use):
+            raise ValueError("Uncertain physical holders")
+        if any(holder.cards[canonical] > 0 for holder in held.in_use):
+            raise UndoConflict("This card is used by a built deck or intact product. Use the Collection editor.", label)
+    except UndoConflict:
+        raise
+    except Exception:
+        raise UndoConflict("Physical holders cannot safely be checked. Use the Collection editor.", label) from None
+
+
+def removal_reason(value):
+    """The user's explicit reason, normalized like Collection's removal note."""
+    from decklab.lib import decks
+    if not isinstance(value, str) or len(value) > 200:
+        raise Invalid("Removing an added row needs a reason of at most 200 characters.")
+    reason = decks.clean_title(value)
+    if not reason or re.search(r"[\x00-\x1f\x7f]", reason):
+        raise Invalid("Give a nonblank reason for removing the added row.")
+    return reason
+
+
 def review(change_id, space, snapshot=None):
     """Internal current→restore plan, only after proving the entire source is in space."""
     _identifier(change_id)
@@ -270,29 +340,40 @@ def review(change_id, space, snapshot=None):
         raise UndoConflict("This row was touched after the selected change. Nothing was undone.", label)
     _current_row(snapshot, source, wanted, space, label)
     after, _ = _inverse(snapshot, source, wanted, restore, space)
-    if restore["quantity"] < wanted["quantity"]:
+    if restore is None:
+        _insert_removal(snapshot, after, wanted, space, label, source)
+    elif restore["quantity"] < wanted["quantity"]:
         _reduction(snapshot, after, source["table"], space, label, source)
     receipt = json.dumps([change_id, source, snapshot.revision, snapshot.decks_revision], ensure_ascii=False,
                          sort_keys=True, separators=(",", ":"))
-    return {"change_id": change_id, "row_change_id": source["id"], "kind": SUPPORTED[source["table"]][0],
+    result = {"change_id": change_id, "row_change_id": source["id"], "kind": SUPPORTED[source["table"]][0],
             "space": space, "key": source["key"], "current": wanted, "restore": restore, "label": label,
-            "fields": [{"field": key, "before": wanted[key], "after": restore[key]}
-                       for key in wanted if wanted[key] != restore[key]],
             "expect": hashlib.sha256(receipt.encode("utf-8")).hexdigest()}
+    if restore is None:
+        result.update(action="remove", reason_required=True)
+    else:
+        result["fields"] = [{"field": key, "before": wanted[key], "after": restore[key]}
+                            for key in wanted if wanted[key] != restore[key]]
+    return result
 
 
 @register("inventory.undo")
-def apply_undo(snapshot, *, change_id, space, expect):
+def apply_undo(snapshot, *, change_id, space, expect, reason=None):
     """Called inside the existing backend lock; source and latest audit share its connection."""
     if not isinstance(expect, str) or not SHA.fullmatch(expect):
         raise Invalid("Review this Undo before applying it.")
     plan = review(change_id, space, snapshot)
     if plan["expect"] != expect:
         raise UndoConflict("The inventory or decks changed after the Undo preview. Review it again.", plan["label"])
+    removing = plan.get("action") == "remove"
+    if removing:
+        reason = removal_reason(reason)
     table = COLLECTION if plan["kind"] == "collection" else TOKENS
     after, summary = _inverse(snapshot, {"table": table}, plan["current"], plan["restore"], space)
     sheet = after.collection(space) if table == COLLECTION else after.token_set(space)
-    return after, Summary(f"Undo change #{change_id}: restore {plan['label']}", {**summary.counts, "undo": 1},
-                          {sheet.path: [field["field"] for field in plan["fields"]]},
+    return after, Summary(f"Undo change #{change_id}: {'remove added row' if removing else 'restore'} {plan['label']}",
+                          {**summary.counts, "undo": 1},
+                          {sheet.path: ["remove"] if removing else [field["field"] for field in plan["fields"]]},
                           {**(summary.extra or {}), "undo_of": change_id, "space": space,
-                           "kind": plan["kind"], "row_change_id": plan["row_change_id"]})
+                           "kind": plan["kind"], "row_change_id": plan["row_change_id"],
+                           **({"action": "remove", "undo_reason": reason} if removing else {})})
