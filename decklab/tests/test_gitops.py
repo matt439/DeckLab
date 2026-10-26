@@ -11,7 +11,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 from unittest import mock
 
 from decklab.lib import gitops
@@ -177,7 +177,7 @@ class ErrorTextTests(GitTestCase):
         self.assertEqual((error.kind, str(error)), ("failed", "git status failed: fatal: something odd in decks"))
 
     def test_repo_paths_in_every_form(self):
-        root = Path(r"C:\Users\someone\TradingCardCollection")
+        root = PureWindowsPath(r"C:\Users\someone\TradingCardCollection")
         text = (r"C:\Users\someone\TradingCardCollection\magic\decks x c:/users/someone/tradingcardcollection/magic "
                 "/c/Users/someone/TradingCardCollection/decks C:/Users/someone/TradingCardCollection "
                 "C:/Users/someone/TradingCardCollection2/x")

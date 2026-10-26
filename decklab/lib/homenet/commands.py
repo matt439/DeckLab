@@ -25,7 +25,7 @@ import tempfile
 import threading
 import time
 from datetime import datetime
-from pathlib import Path
+from pathlib import Path, PurePosixPath, PureWindowsPath
 
 from decklab.lib import access, config, control, profiles, tunnel
 
@@ -44,16 +44,26 @@ from .task import _task_file, parse_task_xml, server_arguments, task_xml, watchd
 
 # ------------------------------------------------------------ the task
 
+def _python_sibling(executable, name):
+    """Typed POSIX paths keep their flavour; ambiguous drive/backslash strings use Windows'."""
+    executable = executable or sys.executable
+    if isinstance(executable, PurePosixPath):
+        return executable.with_name(name)
+    text = os.fspath(executable)
+    windows = bool(ntpath.splitdrive(text)[0]) or "\\" in text and not text.startswith("/")
+    sibling = PureWindowsPath(text).with_name(name) if windows else Path(text).with_name(name)
+    return Path(str(sibling))
+
+
 def pythonw_path(executable=None):
     """The windowless pythonw.exe beside this Python (sys.executable)."""
-    return Path(executable or sys.executable).with_name("pythonw.exe")
+    return _python_sibling(executable, "pythonw.exe")
 
 
 def this_pythons(executable=None):
     """This Python's python.exe and pythonw.exe (Windows' firewall prompt
     makes rules for each)."""
-    executable = Path(executable or sys.executable)
-    return [executable.with_name("python.exe"), executable.with_name("pythonw.exe")]
+    return [_python_sibling(executable, "python.exe"), _python_sibling(executable, "pythonw.exe")]
 
 
 def pc_name():

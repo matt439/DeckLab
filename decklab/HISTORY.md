@@ -2,6 +2,14 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Interpreter-path semantics portability (2026-10-26; E11-S33)
+
+The home-server interpreter helpers now preserve Windows drive, UNC, rooted, relative and mixed-separator strings on either lexical path flavour, while explicit POSIX path objects retain their own flavour, literal backslashes and colon-named components. Typed subclasses and default interpreter inputs follow the same rule. The Git diagnostic fixture now uses `PureWindowsPath` for its Windows-specific strings. Independent review caught and verified fixes for explicit POSIX input being reclassified or reinterpreted through a native Windows wrapper; final source review is clear.
+
+The isolated suite passed 58 checks without skips in 0.270 seconds: `test_homenet_executable_paths`, `test_homenet.TaskXmlTests`, `SchtasksTests`, `CommandTests`, `PatchTargetTests`, and `test_homenet_watchdog.WatchdogCommandTests`. Seven new lexical methods cover both injected path factories, PathLike/default inputs, typed POSIX instances/subclasses, bare names and invalid roots. These are Windows-host lexical/mocked checks, not a Linux reproduction, full-suite result or service/timer installation.
+
+E11-S33 remains missing and OPEN, with story counts unchanged. A real Linux Python 3.14 reproduction/full suite, Linux CI and generated/tested service and nightly timer remain; host installation/enabling is separate. The dated 2026-10-25 Linux result remains historical evidence, with no current failure count asserted. No system task, running server or real data was changed by this slice.
+
 ## Undo one unused added token-card row (2026-10-26; E11-S08)
 
 Activity Undo now removes an unused token-card row from a change containing exactly one global token INSERT. The complete original row, its stable database id and position must still match, its original audit-row id must remain the latest touch, and both inventory/deck revisions must match the review. The physical pairing must already be verified; an unknown reverse or pairing refuses, and a blank reverse requires the existing `single-sided verified` note. Undo never guesses a reverse face, combines duplicate physical identities or claims command provenance from the audit shape.

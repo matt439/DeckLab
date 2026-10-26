@@ -14,7 +14,7 @@ This guide sets up Deck Lab on your own computer, from nothing, for you and your
 | The firewall script (`decklab/network-setup.ps1`) and `homenet status`'s network checks | Yes | No |
 | The nightly backup task (`python -m decklab.db schedule`) | Yes | No: run `python -m decklab.db nightly` from cron or a systemd timer |
 
-Deck Lab is built and used every day on Windows. On Linux a few tests fail because of Windows assumptions in the tests themselves (paths, a case-insensitive file system); they don't affect running it.
+Deck Lab is built and used every day on Windows. The dated Linux self-host check of 2026-10-25 found platform assumptions. Interpreter paths and Windows-path test fixtures now have targeted lexical/mocked checks on Windows; a fresh Linux Python 3.14 full-suite pass remains unverified. Linux service and nightly-job installation still use the manual steps below; full support remains [E11-S33](decklab/design/stories.md#e11-s33).
 
 ## 1. What to install
 

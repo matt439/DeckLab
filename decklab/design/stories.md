@@ -3935,11 +3935,15 @@ As Matt, publishing Deck Lab for others to run on their own PC, I want Deck Lab 
 - Given Linux, when `python -m decklab.lib.homenet` installs or restarts the server, then it uses a systemd user service, and `status` reports it as on Windows.
 - Given SELF-HOSTING.md, then the Linux route has no "a few tests fail" caveat and no hand-written service step.
 
+Now (2026-10-26): [interpreter-path semantics have a targeted fix](../HISTORY.md#interpreter-path-semantics-portability-2026-10-26-e11-s33), with isolated lexical/mocked validation on Windows. Explicit POSIX paths preserve their flavour, while Windows strings retain drive/UNC directories. No full Linux acceptance criterion has passed, so the story remains missing.
+
 Evidence:
 - `decklab/db/schedule.py`: Task Scheduler XML through schtasks only
-- `SELF-HOSTING.md`: Linux runs the server under the user's own service manager; a few tests fail on Linux
+- `SELF-HOSTING.md`: Linux still uses the user's own service manager and manual nightly scheduling; the current Linux full suite is unverified
 - The 2026-10-25 self-host check: 31 of 6188 tests failed on Linux
+- `decklab/lib/homenet/commands.py`: `_python_sibling`, `pythonw_path`, `this_pythons`, preserving explicit POSIX path types before the Windows string heuristic
+- `test_homenet_executable_paths.py`, `test_gitops.py`: injected lexical path flavours, typed PathLike/default interpreter cases and a genuinely Windows lexical diagnostic fixture
 
-Gap: everything. Raised 2026-10-25 by the self-host check.
+Gap: a real Linux Python 3.14 reproduction and full-suite pass, Linux CI, and generated/tested nightly timer and server service remain. The targeted checks establish no Linux runtime or service-manager acceptance.
 
-First slice: reproduce and record the current Linux failures under Python 3.14, fix Windows path and case assumptions, then add a Linux CI run so they stay fixed. The 31 failures out of 6188 tests are the dated 2026-10-25 baseline, not a current count. Generate and test the later service/timer files separately from installing or enabling them on a host.
+Next slice: reproduce and record the current Linux failures under Python 3.14, continue fixing platform path/case assumptions, then add a Linux CI run so they stay fixed. The 31 failures out of 6188 tests are the dated 2026-10-25 baseline, not a current count. Generate and test the later service/timer files separately from installing or enabling them on a host.
