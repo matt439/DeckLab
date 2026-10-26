@@ -10,7 +10,7 @@ and accessory saves with a local picture (accessories.MAX_SAVE_BODY).
 
 def dispatch(handler, route, query):
     from decklab.lib.api import (accessories, activity, activity_undo, assembly, assembly_completion, assembly_standins, assembly_ticks, box_check, collection, collection_edit, cover, editor, history,
-                                 library_forge, opponents, play_records, precons, products, product_tokens, rankings, receipts, rename, retirement, shopping, shopping_order_changes, shopping_orders, shopping_queue, swaps, token_cards, token_plan, tokens, visits)
+                                 library_forge, opponents, play_records, precons, products, product_tokens, rankings, receipts, rename, retirement, shopping, shopping_order_changes, shopping_orders, shopping_queue, swaps, token_cards, token_plan, tokens, visits, wishlist_undo)
     from decklab.lib.api.common import MAX_BODY
 
     gets = {
@@ -40,10 +40,12 @@ def dispatch(handler, route, query):
         ("tokens", "plan"): (token_plan.plan_view, ("space",)),
         ("activity",): (activity.activity_view, ("before", "limit", "kind", "actor")),
         ("activity", "undo"): (activity_undo.undo_view, ("id",)),
+        ("activity", "wishlist-undo"): (wishlist_undo.wishlist_undo_view, ("id",)),
         ("visits",): (visits.visits_view, ("days", "who")),
     }
     posts = {
         ("activity", "undo"): activity_undo.apply_undo,
+        ("activity", "wishlist-undo"): wishlist_undo.apply_wishlist_undo,
         ("assembly", "preview"): assembly.assembly_preview,
         ("assembly", "built"): assembly_completion.mark_built,
         ("assembly", "ticks"): (assembly_ticks.packing_ticks, assembly_ticks.MAX_BODY),
@@ -87,7 +89,7 @@ def dispatch(handler, route, query):
         handler._allow("GET", "HEAD")
         function, names = gets[key]
         params = handler._query(query, names)
-        if "id" in names and key != ("activity", "undo"):
+        if "id" in names and key not in {("activity", "undo"), ("activity", "wishlist-undo")}:
             params["deck_id"] = handler._deck_id(params) if "id" in params else None
             params.pop("id", None)
         handler._send_json(200, function(**params))

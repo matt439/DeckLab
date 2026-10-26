@@ -4,11 +4,12 @@
 const ACTIVITY_UNDO_FIELDS = {
   collection: ["name", "set", "collector_number", "finish", "quantity", "condition", "language", "notes"],
   tokens: ["front", "back", "set", "front_collector_number", "back_collector_number", "finish", "quantity", "front_details", "back_details", "notes"],
+  wishlist: ["name", "set", "number", "notes", "source"],
 };
-const ACTIVITY_UNDO_EDITABLE = { collection: ["quantity", "condition", "language", "notes"], tokens: ["quantity", "notes"] };
+const ACTIVITY_UNDO_EDITABLE = { collection: ["quantity", "condition", "language", "notes"], tokens: ["quantity", "notes"], wishlist: ["notes", "source"] };
 
 function activityUndoRow(row, kind) {
-  if (!["collection", "tokens"].includes(kind)) return false;
+  if (!["collection", "tokens", "wishlist"].includes(kind)) return false;
   const fields = ACTIVITY_UNDO_FIELDS[kind];
   return fields && row && typeof row === "object" && !Array.isArray(row)
     && Object.keys(row).sort().join(",") === [...fields].sort().join(",")
@@ -64,10 +65,25 @@ function activityUndoPhysicalBatchEvidence(data) {
   return true;
 }
 
-function activityUndoEvidence(data, id, space) {
-  if (!data || data.available !== true || data.id !== id || data.space !== space || !["collection", "tokens"].includes(data.kind)
+function activityUndoWishlistEvidence(data, profile) {
+  if (data.action !== "wishlist_update" || data.profile !== profile || typeof profile !== "string" || !profile
+      || Object.keys(data).sort().join(",") !== "action,available,current,expect,fields,id,kind,label,profile,restored"
+      || !activityUndoRow(data.current, "wishlist") || !activityUndoRow(data.restored, "wishlist")
+      || data.label !== data.current.name || ["name", "set", "number"].some(field => data.current[field] !== data.restored[field])
+      || Boolean(data.current.set) !== Boolean(data.current.number)) return false;
+  const changed = ["notes", "source"].filter(field => data.current[field] !== data.restored[field]);
+  return changed.length > 0 && Array.isArray(data.fields) && data.fields.length === changed.length
+    && new Set(data.fields.map(item => item?.field)).size === changed.length
+    && [...data.fields].every(item => item && Object.keys(item).sort().join(",") === "after,before,field" && changed.includes(item.field)
+      && item.before === data.current[item.field] && item.after === data.restored[item.field]);
+}
+
+function activityUndoEvidence(data, id, space, profile = state.profile?.id) {
+  if (!data || data.available !== true || data.id !== id
       || typeof data.expect !== "string" || !/^[a-f0-9]{64}$/.test(data.expect)
       || typeof data.label !== "string" || !data.label.trim()) return null;
+  if (data.kind === "wishlist") return activityUndoWishlistEvidence(data, profile) ? data : null;
+  if (data.space !== space || !["collection", "tokens"].includes(data.kind)) return null;
   if (["batch_metadata", "batch_update"].includes(data.action)) return activityUndoBatchEvidence(data) ? data : null;
   if (["batch_add", "batch_remove"].includes(data.action)) return activityUndoPhysicalBatchEvidence(data) ? data : null;
   if (data.action === "add") return data.kind === "collection" && data.physical_confirmation_required === true && data.current === null
@@ -92,6 +108,14 @@ function activityUndoEvidence(data, id, space) {
 }
 
 function activityUndoReceipt(answer, preview) {
+  if (preview.kind === "wishlist") return Boolean(answer && answer.saved === true && answer.source_id === preview.id
+    && answer.expect === preview.expect && answer.kind === "wishlist" && answer.action === "wishlist_update" && answer.profile === preview.profile
+    && Object.keys(answer).sort().join(",") === "action,expect,kind,profile,restored,revision,saved,sha256,source_id,summary"
+    && typeof answer.sha256 === "string" && /^[a-f0-9]{64}$/.test(answer.sha256)
+    && typeof answer.revision === "string" && /^[1-9][0-9]{0,18}$/.test(answer.revision)
+    && (answer.revision.length < 19 || answer.revision <= "9223372036854775807")
+    && typeof answer.summary === "string" && answer.summary.trim() && activityUndoRow(answer.restored, "wishlist")
+    && ACTIVITY_UNDO_FIELDS.wishlist.every(field => answer.restored[field] === preview.restored[field]));
   const confirmed = answer && answer.saved === true && answer.source_id === preview.id && answer.expect === preview.expect
     && answer.kind === preview.kind && answer.space === preview.space && typeof answer.sha256 === "string"
     && /^[a-f0-9]{64}$/.test(answer.sha256) && typeof answer.revision === "string" && answer.revision.trim()
@@ -160,18 +184,19 @@ function activityUndoOwner(ctx) {
 
 function activityUndoButton(view, change) {
   if (change.undo?.review !== true || !Number.isSafeInteger(change.id) || change.id < 1) return null;
-  const id = change.id, root = view.days;
+  const id = change.id, root = view.days, endpoint = change.undo.kind === "wishlist" ? "/api/activity/wishlist-undo" : "/api/activity/undo";
   const button = el("button", { type: "button", class: "btn btn-quiet activity-review-undo", text: "Review undo", onclick: () => {
     if (view.undoBusy || view.undoRefreshNeeded || view.undoCtx || view.older?.disabled || root !== view.days || !root.isConnected
         || !button.isConnected || !root.contains(button) || view.token !== routeToken || view.profile !== state.profile?.id
         || view.hash !== location.hash || document.querySelector("dialog[open]")) return;
-    openActivityUndo(view, id);
+    openActivityUndo(view, id, endpoint);
   } });
   return button;
 }
 
-function openActivityUndo(view, id) {
-  const ctx = { view, id, root: view.days, seq: view.seq, profile: state.profile?.id, space: ownSpace(), token: routeToken,
+function openActivityUndo(view, id, endpoint = "/api/activity/undo") {
+  if (!["/api/activity/undo", "/api/activity/wishlist-undo"].includes(endpoint)) return null;
+  const ctx = { view, id, endpoint, root: view.days, seq: view.seq, profile: state.profile?.id, space: ownSpace(), token: routeToken,
     hash: location.hash, filter: { ...view.filter }, filterSignature: JSON.stringify(view.filter),
     pending: false, saved: false, needsRefresh: false, refreshing: false, refreshed: false, preview: null };
   view.undoCtx = ctx; view.undoBusy = true;
@@ -180,18 +205,18 @@ function openActivityUndo(view, id) {
     if (ctx.saved || ctx.needsRefresh) activityUndoAfterClose(ctx);
     else { view.undoCtx = null; view.undoBusy = false; }
   } });
-  ctx.current = () => activityUndoOwner(ctx) && !sheet.closed;
+  ctx.current = () => activityUndoOwner(ctx) && ctx.endpoint === endpoint && !sheet.closed;
   ctx.here = () => ctx.current() && [...document.querySelectorAll("dialog[open]")].at(-1) === sheet.dialog;
   clear(sheet.body).append(loadingBox("Checking whether this change can be undone."));
   sheetActions(sheet, [{ text: "Cancel", onclick: () => sheet.close() }]);
-  api("/api/activity/undo?" + new URLSearchParams({ id })).then(data => {
+  api(endpoint + "?" + new URLSearchParams({ id })).then(data => {
     if (!ctx.current()) return;
     if (data?.available === false && data.id === id && typeof data.reason === "string") {
       clear(sheet.body).append(el("p", { text: "Undo is not available for this change." }), el("p", { class: "sub", text: data.reason }));
       sheetActions(sheet, [{ text: "Close", onclick: () => sheet.close() }]); return;
     }
-    const preview = activityUndoEvidence(data, id, ctx.space);
-    if (!preview) throw new Error("The Undo preview could not be checked.");
+    const preview = activityUndoEvidence(data, id, ctx.space, ctx.profile);
+    if (!preview || (preview.kind === "wishlist") !== (endpoint === "/api/activity/wishlist-undo")) throw new Error("The Undo preview could not be checked.");
     ctx.preview = preview; activityUndoShow(ctx);
   }).catch(failure => {
     if (!ctx.current()) return;
@@ -202,11 +227,11 @@ function openActivityUndo(view, id) {
 }
 
 function activityUndoShow(ctx) {
-  const { sheet, preview, view } = ctx, signature = JSON.stringify(preview);
+  const { sheet, preview, view, endpoint } = ctx, signature = JSON.stringify(preview);
   const batchRemoving = preview.action === "batch_remove", removing = batchRemoving || preview.action === "remove";
   const batchAdding = preview.action === "batch_add", adding = batchAdding || preview.action === "add";
   const stock = preview.action === "batch_update", batch = stock || preview.action === "batch_metadata";
-  const words = { quantity: "Quantity", condition: "Condition", language: "Language", notes: "Notes" };
+  const words = { quantity: "Quantity", condition: "Condition", language: "Language", notes: "Notes", source: "Source" };
   const identity = ACTIVITY_UNDO_FIELDS[preview.kind].filter(field => !ACTIVITY_UNDO_EDITABLE[preview.kind].includes(field));
   const text = value => value === "" ? "Not recorded" : String(value);
   let reasonInput = null, acceptedReason = "", reviewedReason = null;
@@ -284,7 +309,8 @@ function activityUndoShow(ctx) {
     });
   } else {
     const panels = [["Current", "before"], ["Restored by Undo", "after"]].map(([title, key]) => el("section", { class: "panel" },
-      el("h3", { text: title }), preview.fields.map(field => el("p", {}, el("b", { text: words[field.field] + ": " }), text(field[key])))));
+      el("h3", { text: title }), preview.fields.map(field => el("p", {}, el("b", { text: words[field.field] + ": " }),
+        el("span", { class: ["notes", "source"].includes(field.field) ? "activity-undo-note" : null, text: text(field[key]) })))));
     sheet.body.append(el("p", { class: "sub", text: "Review the current row and the values this Undo will restore. Saving creates one new audited change; the original change stays in Activity." }),
       el("dl", {}, identity.flatMap(field => [el("dt", { text: field.replaceAll("_", " ") }), el("dd", { text: text(preview.current[field]) })])),
       el("div", { class: "panels" }, panels));
@@ -301,7 +327,7 @@ function activityUndoShow(ctx) {
   }
   async function save(event) {
     if (!ctx.here() || ctx.pending || ctx.saved || ctx.needsRefresh || !event?.currentTarget?.isConnected || !sheet.foot.contains(event.currentTarget)
-        || ctx.preview !== preview || JSON.stringify(preview) !== signature || !activityUndoEvidence(preview, ctx.id, ctx.space)) return;
+        || ctx.endpoint !== endpoint || ctx.preview !== preview || JSON.stringify(preview) !== signature || !activityUndoEvidence(preview, ctx.id, ctx.space, ctx.profile)) return;
     if (removing && (!reasonInput?.isConnected || !sheet.body.contains(reasonInput) || reasonInput.value !== acceptedReason
         || !reviewedReason || activityUndoRemovalReason(reasonInput.value) !== reviewedReason)) {
       error.textContent = "Enter and review a nonblank reason of at most 200 characters before saving Undo."; return;
@@ -313,9 +339,9 @@ function activityUndoShow(ctx) {
     const focusOwned = () => document.activeElement === trigger || document.activeElement === document.body || !document.activeElement?.isConnected;
     ctx.pending = true; error.textContent = ""; actions();
     try {
-      const answer = await apiWrite("/api/activity/undo", { id: ctx.id, expect: preview.expect,
+      const answer = await apiWrite(endpoint, { id: ctx.id, expect: preview.expect,
         ...(removing ? { reason: reviewedReason } : {}), ...(adding ? { confirm_owned: true } : {}) });
-      state.library = null;
+      if (preview.kind !== "wishlist") state.library = null;
       if (!activityUndoReceipt(answer, preview)) throw new Error("The Undo result could not be confirmed.");
       if (!activityUndoOwner(ctx)) return;
       ctx.saved = true;
@@ -324,7 +350,7 @@ function activityUndoShow(ctx) {
         sheet.body.append(confirmation); actions(); if (ctx.here() && focusOwned()) confirmation.focus();
       }
     } catch (failure) {
-      state.library = null;
+      if (preview.kind !== "wishlist") state.library = null;
       if (!activityUndoOwner(ctx)) return;
       ctx.needsRefresh = true;
       error.textContent = (failure.status ? failure.message : "The Undo result could not be confirmed.") + " Reload Activity before reviewing another Undo.";

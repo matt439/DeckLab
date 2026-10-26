@@ -592,20 +592,36 @@ class PgStore:
                 with self._change(c, actor, message, profile_ids=(pid,), orphan_profile_ids=orphans) as (cur, _):
                     self._lock(cur, f"wishlist:{pid}")
                     entries, positions = self._entries(cur, pid)
-                    i = rules.find(entries, name)
-                    if i is None:
-                        raise Invalid(f"{name} isn't on the wishlist")
-                    new = rules.edited(entries[i], notes=notes, source=source, set=set, number=number)
-                    if new == entries[i]:
-                        raise _Unchanged((False, entries))
-                    cur.execute("update wishlist_entry set set_code = %s, collector_number = %s, notes = %s, "
-                                "source = %s where profile_id = %s and position = %s",
-                                (new["set"] or None, new["number"] or None, new["notes"], new["source"],
-                                 pid, positions[i]))
-                    return True, entries[:i] + [new] + entries[i + 1:]
+                    changed, result = self._wishlist_set_at(cur, pid, entries, positions, name,
+                                                          notes=notes, source=source, set=set, number=number)
+                    if not changed:
+                        raise _Unchanged((False, result))
+                    return changed, result
             except _Unchanged as u:
                 return u.result
         return self._call(work)
+
+    @staticmethod
+    def _wishlist_set_at(cur, pid, entries, positions, name, **fields):
+        """The ordinary setter on an already admitted/locked cursor; never opens a connection."""
+        i = rules.find(entries, name)
+        if i is None:
+            raise Invalid(f"{name} isn't on the wishlist")
+        new = rules.edited(entries[i], **fields)
+        if new == entries[i]:
+            return False, entries
+        cur.execute("update wishlist_entry set set_code = %s, collector_number = %s, notes = %s, "
+                    "source = %s where profile_id = %s and position = %s",
+                    (new["set"] or None, new["number"] or None, new["notes"], new["source"], pid, positions[i]))
+        return True, entries[:i] + [new] + entries[i + 1:]
+
+    def wishlist_undo_review(self, change_id, profile_id):
+        from . import pg_wishlist_undo
+        return pg_wishlist_undo.preview(self, change_id, profile_id)
+
+    def wishlist_undo_apply(self, change_id, profile_id, expect, actor, message):
+        from . import pg_wishlist_undo
+        return pg_wishlist_undo.apply(self, change_id, profile_id, expect, actor, message)
 
     # ------------------------------------------------------------------ settings
 
