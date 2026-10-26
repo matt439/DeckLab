@@ -102,6 +102,7 @@ function drawLines() {
     if (again) again.focus({ preventScroll: true });
   }
   markRows();
+  syncEditorRowChanges(ed);
   ed.flash = null;
 }
 
@@ -136,16 +137,18 @@ function lineCaption(line, section) {
  * the whole list), at most one badge (filled by editor-save.js showRowAvailability when the card isn't
  * simply owned and free), its printing (the printing sheet), and ⋯ (change printing, move, remove). */
 function lineRow(line, section) {
+  const change = editorRowChangeNodes(line, section);
   const card = line.card;
   const open = card
     ? viewerItem(el("button", { type: "button", class: "edit-card", "aria-haspopup": "dialog",
       "aria-label": `See ${line.name}`, "data-focus": `card:${line.uid}`, onclick: (e) => openCard(card, e.currentTarget) },
     card.img_small ? el("img", { class: "edit-thumb", src: card.img_small, alt: "", loading: "lazy", decoding: "async",
       width: 40, height: 56 }) : el("span", { class: "edit-thumb thumb-missing", "aria-hidden": "true" }),
-    el("span", { class: "nm" }, el("span", { class: "nm-text", text: line.name }), editor.quick ? null : manaCost(card.mana_cost, true))),
+    el("span", { class: "nm" }, change.dot, el("span", { class: "nm-text", text: line.name }), change.was,
+      editor.quick ? null : manaCost(card.mana_cost, true))),
     card, "editor", lineCaption(line, section))
     : el("span", { class: "edit-card" }, el("span", { class: "edit-thumb thumb-missing", "aria-hidden": "true" }),
-      el("span", { class: "nm" }, el("span", { class: "nm-text", text: line.name })));
+      el("span", { class: "nm" }, change.dot, el("span", { class: "nm-text", text: line.name }), change.was));
   // The Quick edit shows the printing as words under the name; its ⋯ changes it (a 44 px row stays one row).
   // On a phone the name has the first line to itself; the cost goes before the printing on the second.
   const print = editor.quick ? el("span", { class: "edit-print-words" }, card ? manaCost(card.mana_cost, true) : null,
@@ -160,11 +163,14 @@ function lineRow(line, section) {
     print,
     rowMenuButton(line)), card);
   if (!card) row.append(el("p", { class: "edit-problem", text: "Not a card name in the card data; kept as written." }));
+  row.editorChange = { ...change, trigger: open };
+  row.append(change.description);
   return row;
 }
 
 /** A line in the Pictures look: the card's picture, stacked for its copies, with − n + under it. */
 function lineTile(line, section) {
+  const change = editorRowChangeNodes(line, section);
   // The badge sits on the picture's corner and the finish is in the meta line ("FDN 227 · foil", with the
   // sheen), so every tile's footer is − n + and ⋯ on one line.
   const tile = cardTile(line.card, { qty: line.qty, name: line.name, meta: printingText(line),
@@ -176,7 +182,69 @@ function lineTile(line, section) {
   tile.dataset.uid = String(line.uid);
   tile.setAttribute("data-uid", String(line.uid));
   tile.setAttribute("data-copies", String(Math.min(line.qty, 4)));
+  clear(tile.querySelector(".card-tile-name")).append(change.dot,
+    el("span", { text: line.name }));
+  const trigger = tile.querySelector(".card-tile-open");
+  trigger.append(change.was); // A separate line, outside the original two-line name clamp.
+  tile.editorChange = { ...change, trigger };
+  tile.append(change.description);
   return tile;
+}
+
+/** Retained decoration only: the original card trigger, quantity and menu keep their identity. */
+function editorRowChangeNodes(line, section) {
+  return { line, section,
+    dot: el("span", { class: "dot edit-unsaved-dot", hidden: true, "aria-hidden": "true" }),
+    was: el("span", { class: "edit-was", hidden: true, "aria-hidden": "true" }),
+    description: el("span", { class: "sr-only edit-change-description", id: `edit-change-${line.uid}`, hidden: true }) };
+}
+
+/** Compare saved intent by section and exact printing, never by transient page uid or card name alone.
+ * New/copy editors and a Play-now list not saved yet have no saved baseline. Duplicate exact keys can
+ * share an aggregate change, but cannot truthfully claim that one particular row "was N". */
+function syncEditorRowChanges(ed = editor) {
+  if (!ed || ed !== editor || !ed.dom.lines) return;
+  const saved = ed.mode === "edit" && ed.hasFileList && !ed.starting && ed.base?.lists
+    && ed.view?.lists?.[ed.version] != null;
+  const before = saved ? tally(ed.base.lists) : new Map();
+  const after = saved ? tally(ed.lists) : new Map();
+  const counts = (lists) => {
+    const out = new Map();
+    for (const [section, lines] of Object.entries(lists || {})) for (const line of lines) {
+      const key = `${section}\n${lineKey(line)}`;
+      out.set(key, (out.get(key) || 0) + 1);
+    }
+    return out;
+  };
+  const oldCounts = saved ? counts(ed.base.lists) : new Map();
+  const newCounts = saved ? counts(ed.lists) : new Map();
+  const current = new Map();
+  for (const [section, lines] of Object.entries(ed.lists)) for (const line of lines) current.set(line.uid, { line, section });
+  for (const row of ed.dom.lines.querySelectorAll("[data-uid]")) {
+    const p = row.editorChange;
+    if (!p) continue;
+    const found = current.get(p.line.uid);
+    const key = `${p.section}\n${lineKey(p.line)}`;
+    const was = before.get(key)?.qty || 0;
+    const changed = !!saved && found?.line === p.line && found.section === p.section && was !== (after.get(key)?.qty || 0);
+    const unique = (oldCounts.get(key) || 0) <= 1 && newCounts.get(key) === 1;
+    row.classList.toggle("is-unsaved", changed);
+    p.dot.hidden = !changed;
+    p.was.hidden = !changed || !unique;
+    p.was.textContent = changed && unique ? `was ${was}` : "";
+    p.description.hidden = !changed;
+    p.description.textContent = changed
+      ? `Unsaved change. Saved ${sectionTitle(p.section)}: ${plural(was, "copy", "copies")} of this printing.` : "";
+    const stepper = row.querySelector(".edit-stepper");
+    if (stepper) stepper.classList.toggle("is-changed", changed);
+    // Merge our description with any other one, and remove only our id when the change is undone.
+    for (const target of [p.trigger, stepper?.querySelector(".qty-input")]) if (target) {
+      const ids = (target.getAttribute("aria-describedby") || "").split(/\s+/).filter((id) => id && id !== p.description.id);
+      if (changed) ids.push(p.description.id);
+      if (ids.length) target.setAttribute("aria-describedby", ids.join(" "));
+      else target.removeAttribute("aria-describedby");
+    }
+  }
 }
 
 /** A line's ⋯ menu: a short Play-now line's stand-ins (editor-swaps.js), its printing,
@@ -212,7 +280,8 @@ function removedRow(g) {
   const line = g.line;
   const what = `${line.qty} ${line.name}` + (line.set ? ` (${printingText(line)})` : "");
   return el(visualLook() ? "div" : "li", { class: "edit-row edit-removed", "data-removed": g.uid },
-    el("p", { class: "removed-text" }, el("span", { class: "removed-word", text: "Removed" }), ` ${what}`),
+    el("p", { class: "removed-text" }, el("span", { class: "removed-word", text: "Removed" }), " ",
+      el("span", { class: "removed-line", text: what })),
     el("button", { type: "button", class: "btn btn-quiet undo-btn", "data-focus": `undo:${g.uid}`,
       "aria-label": `Undo: put ${what} back`, onclick: () => undoRemove(g.uid) }, "Undo"));
 }

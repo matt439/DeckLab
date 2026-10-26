@@ -261,10 +261,20 @@ button.edit-card:hover { background: var(--hover); }
 .edit-more { min-width: var(--tap); min-height: var(--tap); padding: 0; font-size: var(--fs-lg); line-height: 1; }
 .edit-problem, .edit-block, .edit-warn { grid-column: 2 / -1; margin: 0 0 var(--s-1); padding-left: var(--s-1); font-size: var(--fs-sm); color: var(--crit-ink); font-weight: var(--fw-semibold); }
 .edit-warn { color: var(--warn-text); }
+/* Unsaved counts are tied to the saved section and printing, and updated without replacing controls. */
+.edit-unsaved-dot { display: inline-block; flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); vertical-align: .05em; }
+.edit-was { flex: none; color: var(--ink-2); font-size: var(--fs-sm); font-weight: var(--fw-medium); white-space: nowrap; }
+.edit-unsaved-dot[hidden], .edit-was[hidden] { display: none; }
+.edit-tile .edit-unsaved-dot { margin-right: var(--s-1); }
+.edit-tile .card-tile-open > .edit-was { margin: 0; padding: 0 2px; }
 /* A removed line, where it was, until the list is drawn afresh: "Removed 2 Llanowar Elves (FDN 227). Undo". */
 .edit-removed { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); background: var(--surface-2); border-radius: var(--r-sm); box-sizing: border-box; padding-left: var(--s-2); }
 .removed-text { margin: 0; min-width: 0; color: var(--ink-2); font-size: var(--fs-sm); }
 .removed-word { font-weight: var(--fw-bold); color: var(--crit-ink); }
+.removed-line { text-decoration: line-through; }
+@media (min-width: 1000px) {
+  :is(.edit-list, .edit-stacks) > .edit-removed { background: transparent; border: 1px dashed var(--border-strong); }
+}
 .undo-btn { min-width: 72px; }
 .edit-empty, .edit-start { margin-top: var(--s-3); }
 .edit-start .actions { justify-content: center; }

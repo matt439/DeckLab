@@ -451,6 +451,7 @@ function changed({ list = true, history = true } = {}) {
   } else {
     drawKitNeeds();
   }
+  if (!list) syncEditorRowChanges(ed);
   syncEditorSearchQuantities(ed.ac);
   drawStats();
   drawDetailsSummary();

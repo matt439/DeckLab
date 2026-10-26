@@ -183,6 +183,15 @@ with scrim-edge; shrunk caps use ink-4. Zero spells retain saved caps without
 an invalid average. Undo/restore/rebase/hydration recalculate from source;
 row order/global dirty state and unrelated Stats remain independent.
 
+`syncEditorRowChanges()` uses exact section/printing tallies against an actual
+saved edit, including readable trials. New/copy/unstarted lists are undecorated.
+Retained dot/prior-count/description nodes update without replacing actions;
+duplicate exact keys suppress per-row prior counts. `changed({list:false})`
+refreshes them in place, merging only their own description ID. Pictures keeps
+its original two-line name and places the retained prior count after metadata
+inside the same trigger. Removed text is struck, filled in casual and dashed
+in lab; original Undo and global dirty/ordering semantics remain unchanged.
+
 `editor-swaps.js` (after `editor-cards.js`) and `deck-swaps.js` (after
 `deck-standins.js`) are E2-S07's strategic stand-ins, kept apart from those
 physical markers: owned cards that could take a missing card's slot in the

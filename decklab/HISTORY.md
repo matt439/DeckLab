@@ -2,6 +2,20 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Exact unsaved Editor row presentation (2026-10-26; E11-S30 slice 14)
+
+Saved Editor rows show an accent dot, changed stepper and a prior count using the exact saved section/name/set/number/finish key. A unique printing newly added to that section can say was 0; duplicate exact keys share the saved aggregate description but suppress an ambiguous per-row prior count. New/copy/unstarted lists have no saved baseline; readable trials of an actual saved version do. Fields/Notes and order-only global dirty state stay independent of these row markers.
+
+Original quantity, printing, menu and viewer triggers remain. Quantity-only changes refresh retained decorations and merge only their own accessible description ID, without replacing controls or unrelated descriptions. Remove keeps the original exact Undo and strikes the removed text, with casual fill or a lab dashed outline. Undo, draft restore and rebase recalculate against the current saved baseline. Native review caught the prior-count span being clipped inside Pictures' two-line name at 1180px; it now has its own line inside the original trigger after metadata, preserving the original name clamp and registration.
+
+Validation: 266 integrated Editor/UI/source checks passed with zero skips, with live database probes/connections and Python socket connect/bind/listen blocked. Eleven row cases cover exact printing/section, duplicates, saved eligibility, original controls/descriptions/focus, Remove/Undo, unknown cards, actual restore/rebase and order-only dirty independence. Synthetic Chromium passed 36 final layout/theme cases: 20 unaffected List/Quick cases plus all 16 affected Pictures cases rerun after the caption correction. Known and long unknown names, prior counts, changed targets and resolved description IDs fitted without horizontal overflow. Four native Remove/Undo cases passed at lab1000, casual999 and Quick, including exact five-copy SFT2 restoration, strike/outline/fill and original focus. List and Pictures viewer return reached their expected triggers.
+
+Viewer-caption freshness is a separate existing limit: an in-place quantity change leaves the large viewer's caption at its last-render count until redraw. The new row controls preserve that registration; freshness is not claimed here and is the next small follow-up. No shortcut binding was added by this slice. The separate desktop keyboard audit remains read-only until Matt chooses any changes.
+
+Both disposable native fixtures blocked actual writes and were stopped after counts were restored. Initial matrix: 418 API requests (44 checks, 38 rejected visits); corrected Pictures/interaction fixture: 266 (28 checks, 21 rejected visits), with no other mutation attempts. No actual save/conflict, live database, download, Forge, full-suite or Linux acceptance. Mouse/default DPR and keyboard only; touch/coarse/Safari/device/speech acceptance stays open. Original mutation and save paths are unchanged. Source audit: 793 owned files; only pre-existing tokens.js (1,516 lines) exceeds 1,200.
+
+Slice 14 remains partial for viewer-caption freshness, selected rows/MV, Forge presentation, docked search and the bar. Slice 13 contracts/workflow, Collection question 6, Receive check-to-row association and human/device gates stay open.
+
 ## Saved-list Editor curve comparison (2026-10-26; E11-S30 slice 14)
 
 The Editor curve uses the current deck's canonical gradient and one common scale for current and saved buckets. Growth marks the saved height with a dashed white line and its existing scrim edge; shrink marks use ink-4, with neutral signed differences and exact saved/current spoken counts. Zero current spells retain their saved cap without a misleading average. Existing lands, sources and types remain unchanged.
