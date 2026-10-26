@@ -177,6 +177,141 @@ class WishlistUndoPgTests(db_support.DbTestCase):
             self.apply(source, plan=plan)
         self.assertEqual(self.persisted(), before)
 
+    def presence_source(self, op, *, slot="first", only=False):
+        for row in self.store.wishlist("matt"):
+            self.store.wishlist_remove("matt", row["name"], MATT, "Clear disposable fixture list")
+        entry = {"name": "Opt", "set": "zzz", "number": "9x", "notes": "  Historical café\r\nsecond\t  ",
+                 "source": "  magic/example.md  "}
+        other = lambda name: {"name": name, "set": "", "number": "", "notes": "Unchanged", "source": ""}
+        if op == "INSERT":
+            if not only:
+                self.store.wishlist_add("matt", other("Forest"), MATT, "Fixture survivor")
+            self.store.wishlist_add("matt", entry, MATT, "Fixture source addition")
+        else:
+            order = [entry] if only else {"first": [entry, other("Forest"), other("Island")],
+                "middle": [other("Forest"), entry, other("Island")], "last": [other("Forest"), other("Island"), entry]}[slot]
+            for row in order:
+                self.store.wishlist_add("matt", row, MATT, "Fixture former list")
+            self.store.wishlist_remove("matt", "Opt", MATT, "Fixture source removal")
+        source = self.sql("select change_set_id from audit.row_change where table_name='wishlist_entry' "
+                          "order by id desc limit 1")[0][0]
+        self.assertEqual(self.sql("select op from audit.row_change where change_set_id=%s", (source,)), [(op,)])
+        return source, entry
+
+    def test_latest_added_wishlist_entry_removes_to_empty_with_exact_delete_receipt_and_audit(self):
+        source, entry = self.presence_source("INSERT", only=True)
+        before = self.persisted()
+        original = self.sql("select id,op,row_key,before,after from audit.row_change where change_set_id=%s", (source,))
+        with access.using({"profile": "matt", "email": "matt@example.com", "remote": True}):
+            shown = api.wishlist_undo_view(id=str(source))
+            self.assertEqual((shown["action"], shown["current"], shown["restored"]), ("wishlist_remove", entry, None))
+            self.assertNotIn("fields", shown)
+            result = api.apply_wishlist_undo(json.dumps({"profile": "matt", "id": source, "expect": shown["expect"]}).encode())
+        self.assertEqual((result["action"], result["restored"], result["removed_name"]), ("wishlist_remove", None, "Opt"))
+        self.assertEqual(self.store.wishlist("matt"), [])
+        self.assertEqual(result["sha256"], undo.list_sha([]))
+        after = self.persisted()
+        self.assertEqual(len(after["audit.change_set"]), len(before["audit.change_set"]) + 1)
+        self.assertEqual(len(after["audit.row_change"]), len(before["audit.row_change"]) + 1)
+        self.assertEqual(self.sql("select op,after from audit.row_change order by id desc limit 1"), [("DELETE", None)])
+        self.assertEqual(self.sql("select id,op,row_key,before,after from audit.row_change where change_set_id=%s", (source,)), original)
+        self.assertEqual(self.sql("select actor,source,via,reason from audit.change_set order by id desc limit 1"), [("matt", "web", "tunnel", None)])
+
+    def test_latest_removed_entry_recreates_only_exact_first_middle_last_or_empty_slot(self):
+        for slot, only in (("first", False), ("middle", False), ("last", False), ("first", True)):
+            source, entry = self.presence_source("DELETE", slot=slot, only=only)
+            plan, before = self.store.wishlist_undo_review(source, "matt"), self.persisted()
+            self.assertEqual((plan["action"], plan["current"], plan["restored"]), ("wishlist_add", None, entry))
+            with self.subTest(slot=slot, only=only), mock.patch.object(cards, "resolve", side_effect=AssertionError("No card index")), \
+                    mock.patch.object(inventory, "current", side_effect=AssertionError("No physical inventory")):
+                saved = self.apply(source, plan=plan)
+            self.assertEqual(saved["restored"], entry)
+            with self.connect("ro") as connection:
+                self.assertEqual(adapter.entries(connection.cursor(), "matt"), plan["raw_after"])
+            self.assertEqual(self.sql("select op,before,after from audit.row_change order by id desc limit 1"),
+                             [("INSERT", None, plan["raw_restore"])])
+            after = self.persisted()
+            self.assertEqual(len(after["audit.row_change"]), len(before["audit.row_change"]) + 1)
+            for table in before.keys() - {"wishlist_entry", "audit.change_set", "audit.row_change"}:
+                self.assertEqual(after[table], before[table], table)
+
+    def test_presence_requires_latest_owner_change_and_blocks_logical_name_aba_at_other_position(self):
+        source, entry = self.presence_source("DELETE", slot="first")
+        plan = self.store.wishlist_undo_review(source, "matt")
+        other = state.Actor("user1", "User1")
+        self.store.wishlist_add("user1", {"name": "Forest", "set": "", "number": "", "notes": "Other owner", "source": ""}, other, "Other list")
+        self.assertEqual(self.store.wishlist_undo_review(source, "matt")["expect"], plan["expect"])
+        self.store.wishlist_add("matt", entry, MATT, "Logical name returned at end")
+        self.store.wishlist_remove("matt", "Opt", MATT, "Logical name removed again")
+        with self.connect("ro") as connection:
+            cur = connection.cursor()
+            self.assertEqual(adapter.entries(cur, "matt"), [row for row in plan["raw_after"] if row["name"] != "Opt"])
+            self.assertEqual(adapter.latest(cur, "matt", plan["raw_restore"]["position"]), plan["row_change_id"])
+        before = self.persisted()
+        with self.assertRaises(undo.UndoConflict):
+            self.apply(source, plan=plan)
+        self.assertEqual(self.persisted(), before)
+        source, _ = self.presence_source("INSERT")
+        plan = self.store.wishlist_undo_review(source, "matt")
+        self.store.wishlist_set("matt", "Forest", MATT, "Later own unrelated update", notes="Later")
+        before = self.persisted()
+        with self.assertRaises(undo.UndoConflict):
+            self.apply(source, plan=plan)
+        self.assertEqual(self.persisted(), before)
+
+    def test_removed_entry_with_wide_gap_or_empty_nonzero_position_refuses_without_reordering(self):
+        for keep in ((0, 4, 9), (4,)):
+            for row in self.store.wishlist("matt"):
+                self.store.wishlist_remove("matt", row["name"], MATT, "Clear fixture list")
+            for index in range(10):
+                self.store.wishlist_add("matt", {"name": f"Card{index}", "set": "", "number": "", "notes": "", "source": ""}, MATT, "Fixture slots")
+            for index in range(10):
+                if index not in keep:
+                    self.store.wishlist_remove("matt", f"Card{index}", MATT, "Fixture gap")
+            self.store.wishlist_remove("matt", "Card4", MATT, "Fixture removed slot")
+            source = self.sql("select max(change_set_id) from audit.row_change where table_name='wishlist_entry'")[0][0]
+            before = self.persisted()
+            with self.subTest(keep=keep), self.assertRaises(undo.UndoConflict):
+                self.store.wishlist_undo_review(source, "matt")
+            with self.assertRaises(undo.UndoConflict):
+                self.store.wishlist_undo_apply(source, "matt", "0" * 64, MATT, "Do not guess fixture slot")
+            self.assertEqual(self.persisted(), before)
+
+    def test_presence_opposite_write_and_audit_roll_back_and_use_one_connection_shared_helper(self):
+        for op, method in (("INSERT", "_wishlist_remove_at"), ("DELETE", "_wishlist_add_at")):
+            source, _ = self.presence_source(op)
+            plan, before = self.store.wishlist_undo_review(source, "matt"), self.persisted()
+            with self.subTest(op=op), mock.patch.object(undo, "receipt", side_effect=undo.UndoConflict()), self.assertRaises(undo.UndoConflict):
+                self.apply(source, plan=plan)
+            self.assertEqual(self.persisted(), before)
+            with mock.patch.object(self.store, "_connect", wraps=self.store._connect) as connections, \
+                    mock.patch.object(self.store, method, wraps=getattr(self.store, method)) as helper, \
+                    mock.patch.object(self.store, "wishlist_add", side_effect=AssertionError("Nested public add")), \
+                    mock.patch.object(self.store, "wishlist_remove", side_effect=AssertionError("Nested public remove")), \
+                    mock.patch.object(self.store, "wishlist_set", side_effect=AssertionError("Nested public setter")):
+                result = self.apply(source, plan=plan)
+            self.assertEqual(connections.call_count, 1)
+            self.assertEqual(helper.call_count, 1)
+            self.assertEqual(result["restored"], plan["restored"])
+
+    def test_presence_lost_reply_after_commit_is_uncertain_and_never_retried(self):
+        for op in ("INSERT", "DELETE"):
+            source, entry = self.presence_source(op)
+            plan, before = self.store.wishlist_undo_review(source, "matt"), self.persisted()
+            original = self.store._call
+            def lost(work):
+                original(work)
+                raise state.Unavailable("Synthetic committed presence reply loss")
+            with self.subTest(op=op), access.using({"profile": "matt", "email": "matt@example.com", "remote": True}), \
+                    mock.patch.object(self.store, "_call", side_effect=lost) as calls, self.assertRaises(ApiError) as caught:
+                api.apply_wishlist_undo(json.dumps({"profile": "matt", "id": source, "expect": plan["expect"]}).encode())
+            self.assertEqual(caught.exception.status, 503)
+            self.assertEqual(calls.call_count, 1)
+            self.assertEqual(any(row == entry for row in self.store.wishlist("matt")), op == "DELETE")
+            self.assertEqual(len(self.persisted()["audit.change_set"]), len(before["audit.change_set"]) + 1)
+            with self.assertRaises(undo.UndoConflict):
+                self.store.wishlist_undo_review(source, "matt")
+
     def test_own_list_changes_and_target_aba_refuse_but_other_profile_changes_do_not(self):
         source, _, _ = self.seed()
         plan = self.store.wishlist_undo_review(source, "matt")

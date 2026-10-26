@@ -49,11 +49,14 @@ def review_hint(change, shown, profile):
     if total == 1 and len(rows) == 1 and not change.get("more") and not change.get("groups") and profile \
             and shown.get("id") == change.get("id"):
         row = rows[0]
-        if isinstance(row, dict) and row.get("table") == "wishlist_entry" and row.get("op") == "UPDATE" \
-                and isinstance(row.get("before"), dict) and isinstance(row.get("after"), dict) \
-                and row["before"].get("profile_id") == profile.get("id") == row["after"].get("profile_id") \
-                and permissions.sees_wishlist(profile, profile["id"]) and guard.allowed(profile, "wishlist.edit", profile["id"]):
-            return {"review": True, "kind": "wishlist"}
+        from decklab.lib.state import wishlist_undo
+        try:
+            wishlist_undo.source_record(rows, profile.get("id"))
+        except wishlist_undo.UndoMissing:
+            pass
+        else:
+            if permissions.sees_wishlist(profile, profile["id"]) and guard.allowed(profile, "wishlist.edit", profile["id"]):
+                return {"review": True, "kind": "wishlist"}
     if type(total) is int and 2 <= total <= 50 and len(rows) == total and not change.get("more") and not change.get("groups"):
         space = _space(profile)
         if shown.get("id") == change.get("id") and guard.allowed(profile, "collection.edit", space) \

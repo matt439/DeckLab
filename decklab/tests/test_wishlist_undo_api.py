@@ -198,6 +198,164 @@ class WishlistUndoApiTests(test_api.ApiTestCase):
         self.assertEqual(self.refused(400, self.apply, expect="a" * 64).message, wishlist_undo.UNSUPPORTED)
         self.assertEqual(self.unchanged(), before)
 
+    def presence_source(self, op, *, profile="matt", only=False):
+        self.install()
+        actor = state.Actor(profile, "Matt" if profile == "matt" else profile.title(), via="tunnel")
+        target = {"name": "Wishlist <b>literal</b>", "set": "zzz", "number": "9x",
+                  "notes": "  Historical note\r\nsecond\tline  ", "source": "  Fixture source  "}
+        forest = {"name": "Forest", "set": "", "number": "", "notes": "Keep first", "source": ""}
+        island = {**forest, "name": "Island", "notes": "Keep last"}
+        entries = [] if only else [forest, island]
+        if op == "DELETE":
+            entries.insert(0 if only else 1, target)
+        self.store.seed_wishlist(profile, entries)
+        if op == "INSERT":
+            self.store.wishlist_add(profile, target, actor, "Fixture added a wishlist entry")
+        else:
+            self.store.wishlist_remove(profile, target["name"], actor, "Fixture removed a wishlist entry")
+        self.change_id = self.store.changes()[-1]["id"]
+        return target
+
+    def test_presence_preview_and_saved_receipts_have_exact_action_specific_nulls_and_fields(self):
+        for op in ("INSERT", "DELETE"):
+            for only in (False, True):
+                target = self.presence_source(op, only=only)
+                source = self.store.raw_source(self.change_id)
+                before = self.unchanged()
+                with self.subTest(op=op, only=only):
+                    preview = self.view()
+                    self.assertEqual(set(preview), {"available", "id", "expect", "kind", "action", "profile", "label", "current", "restored"})
+                    action = "wishlist_remove" if op == "INSERT" else "wishlist_add"
+                    self.assertEqual((preview["action"], preview["label"], preview["profile"]), (action, target["name"], "matt"))
+                    self.assertEqual(preview["current"], target if op == "INSERT" else None)
+                    self.assertEqual(preview["restored"], target if op == "DELETE" else None)
+                    self.assertEqual(self.unchanged(), before)
+                    result = self.apply(expect=preview["expect"])
+                    keys = {"saved", "source_id", "expect", "kind", "action", "profile", "restored", "sha256", "revision", "summary"}
+                    self.assertEqual(set(result), keys | ({"removed_name"} if op == "INSERT" else set()))
+                    self.assertEqual(result["restored"], preview["restored"])
+                    if op == "INSERT":
+                        self.assertEqual(result["removed_name"], target["name"])
+                    self.assertEqual((result["action"], result["source_id"]), (action, self.change_id))
+                    self.assertEqual(result["sha256"], kernel.list_sha(self.store.raw_entries("matt")))
+                    self.assertEqual(result["revision"], str(self.store.latest("matt")))
+                    history = self.store.changes()
+                    self.assertEqual(history[:-1], before[1])
+                    self.assertEqual(history[-1]["rows"], [{"table": "wishlist_entry", "op": "DELETE" if op == "INSERT" else "INSERT",
+                                                          "key": source[0]["key"], "before": source[0]["after"], "after": source[0]["before"]}])
+                    self.assertEqual(self.store.raw_source(self.change_id), source)
+                    self.assertEqual(len([call for call in self.store.calls if call[0] == "apply"]), 1)
+
+    def test_presence_request_cannot_supply_reason_confirmation_stock_position_or_metadata(self):
+        for op in ("INSERT", "DELETE"):
+            self.presence_source(op)
+            preview, before = self.view(), self.unchanged()
+            for extra in ({"reason": "Remove it"}, {"confirm_owned": True}, {"stock": []}, {"at": 0}, {"insert_at": 0},
+                          {"notes": "Override"}, {"source": "Override"}, {"set": "fdn"}, {"number": "1"},
+                          {"current": preview["current"]}, {"restored": preview["restored"]}, {"removed_name": "Override"}, {"space": "home"}):
+                with self.subTest(op=op, extra=extra):
+                    self.refused(400, self.apply, expect=preview["expect"], **extra)
+            self.assertEqual(self.unchanged(), before)
+            self.assertFalse([call for call in self.store.calls if call[0] == "apply"])
+
+    def test_presence_is_named_owner_only_before_bad_expect_including_home_and_admin(self):
+        for op in ("INSERT", "DELETE"):
+            for owner, viewers in (("matt", ("user1", "user2")), ("user1", ("matt", "user2"))):
+                self.presence_source(op, profile=owner)
+                before = self.unchanged()
+                for pid in viewers:
+                    with self.subTest(op=op, owner=owner, viewer=pid), self.identity(pid):
+                        self.assertEqual(self.refused(404, self.view).message, wishlist_undo.NO_CHANGE)
+                        self.assertEqual(self.refused(404, self.apply, expect="bad", profile=pid).message, wishlist_undo.NO_CHANGE)
+                with access.using(None), access.viewing(None), \
+                        mock.patch.object(wishlist_undo, "_parse_body", side_effect=AssertionError("No body before viewer")):
+                    self.assertEqual(self.refused(404, wishlist_undo.apply_wishlist_undo, b'{"profile":"matt"}').message,
+                                     wishlist_undo.NO_CHANGE)
+                self.assertEqual(self.unchanged(), before)
+                with self.identity(owner):
+                    preview = self.view()
+                    self.assertTrue(self.apply(profile=owner, expect=preview["expect"])["saved"])
+
+    def test_presence_later_own_write_or_other_position_name_aba_blocks_but_other_owner_does_not(self):
+        for op in ("INSERT", "DELETE"):
+            for mode in ("own-write", "name-aba", "other-owner"):
+                target = self.presence_source(op)
+                preview = self.view()
+                actor = state.Actor("matt", "Matt", via="tunnel")
+                if mode == "own-write":
+                    self.store.wishlist_set("matt", "Forest", actor, "Fixture later own change", notes="Later note")
+                elif mode == "name-aba":
+                    original_rows = self.store.raw_entries("matt")
+                    added = target if op == "DELETE" else {**target, "name": "Temporary wishlist entry"}
+                    self.store.wishlist_add("matt", added, actor, "Fixture later logical-name add")
+                    self.store.wishlist_remove("matt", added["name"], actor, "Fixture later logical-name removal")
+                    self.assertEqual(self.store.raw_entries("matt"), original_rows)
+                    if op == "DELETE":
+                        position = self.store.raw_source(self.change_id)[0]["before"]["position"]
+                        self.assertEqual(self.store.latest("matt", position), self.store.raw_source(self.change_id)[0]["id"])
+                else:
+                    support.seed(self.store, "user2")
+                before = self.unchanged()
+                with self.subTest(op=op, mode=mode):
+                    if mode == "other-owner":
+                        other = self.store.raw_entries("user2")
+                        self.assertEqual(self.view()["expect"], preview["expect"])
+                        self.assertTrue(self.apply(expect=preview["expect"])["saved"])
+                        self.assertEqual(self.store.raw_entries("user2"), other)
+                    else:
+                        self.assertEqual(self.refused(409, self.view).message, wishlist_undo.CHANGED)
+                        self.assertEqual(self.refused(409, self.apply, expect=preview["expect"]).message, wishlist_undo.CHANGED)
+                        self.assertEqual(self.unchanged(), before)
+
+    def test_presence_restore_uses_exact_ordinary_slot_without_printing_lookup_or_empty_guess(self):
+        for only in (False, True):
+            target = self.presence_source("DELETE", only=only)
+            survivors = self.store.raw_entries("matt")
+            with self.subTest(only=only), mock.patch.object(cards, "resolve", side_effect=AssertionError("No card index")), \
+                    mock.patch.object(cards, "printing", side_effect=AssertionError("No printing lookup")), \
+                    mock.patch.object(cards, "printing_card", side_effect=AssertionError("No printing lookup")), \
+                    mock.patch.object(inventory, "current", side_effect=AssertionError("No inventory")):
+                preview = self.view()
+                result = self.apply(expect=preview["expect"])
+            self.assertEqual(result["restored"], target)
+            self.assertEqual([row for row in self.store.raw_entries("matt") if row["name"] != target["name"]], survivors)
+        self.presence_source("DELETE")  # The removed middle row was position 1.
+        self.store.seed_wishlist("matt", [])  # A legacy empty layout must not turn it into position 0.
+        before = self.unchanged()
+        self.assertEqual(self.refused(409, self.view).message, wishlist_undo.CHANGED)
+        self.assertEqual(self.refused(409, self.apply, expect="bad").message, wishlist_undo.CHANGED)
+        self.assertEqual(self.unchanged(), before)
+
+    def test_malformed_presence_projection_or_actual_receipt_never_reports_confirmation(self):
+        for op in ("INSERT", "DELETE"):
+            self.presence_source(op)
+            plan = self.store.wishlist_undo_review(self.change_id, "matt")
+            null_side, full_side = ("restored", "current") if op == "INSERT" else ("current", "restored")
+            bad_missing = copy.deepcopy(plan)
+            del bad_missing[null_side]
+            before = self.unchanged()
+            for bad_plan in ({**plan, "action": "wishlist_unknown"}, {**plan, "fields": []}, {**plan, null_side: {}},
+                             {**plan, full_side: None}, {**plan, "label": "Wrong entry"}, bad_missing,
+                             {**plan, full_side: {**plan[full_side], "notes": None}}):
+                with self.subTest(op=op, plan=bad_plan), mock.patch.object(self.store, "wishlist_undo_review", return_value=bad_plan):
+                    self.assertEqual(self.refused(503, self.view).message, wishlist_undo.UNCONFIRMED)
+            base = {"review": plan, "restored": plan["restored"], "sha256": plan["sha256"], "revision": str(plan["latest_owner"] + 1)}
+            if op == "INSERT":
+                base["removed_name"] = plan["current"]["name"]
+                absent = dict(base)
+                del absent["removed_name"]
+                malformed = [absent, {**base, "removed_name": "Wrong entry"}, {**base, "restored": plan["current"]}]
+            else:
+                malformed = [{**base, "restored": None}, {**base, "restored": {**plan["restored"], "name": "Wrong entry"}},
+                             {**base, "removed_name": plan["restored"]["name"]}]
+            malformed += [{**base, "sha256": "0" * 64 if plan["sha256"] != "0" * 64 else "1" * 64},
+                          {**base, "revision": str(plan["latest_owner"])}, {**base, "revision": "9223372036854775808"},
+                          {**base, "review": {**plan, "fields": []}}]
+            for bad_result in malformed:
+                with self.subTest(op=op, result=bad_result), mock.patch.object(self.store, "wishlist_undo_apply", return_value=bad_result):
+                    self.assertEqual(self.refused(503, self.apply, expect=plan["expect"]).message, wishlist_undo.UNCONFIRMED)
+            self.assertEqual(self.unchanged(), before)
+
     def printing_source(self, original, current, *, mixed=False):
         actor = state.Actor("matt", "Matt", via="tunnel")
         self.store.wishlist_set("matt", "Opt", actor, "Fixture historical preference", set=original[0], number=original[1],

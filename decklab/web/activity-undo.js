@@ -66,12 +66,17 @@ function activityUndoPhysicalBatchEvidence(data) {
 }
 
 function activityUndoWishlistEvidence(data, profile) {
-  if (data.action !== "wishlist_update" || data.profile !== profile || typeof profile !== "string" || !profile
-      || Object.keys(data).sort().join(",") !== "action,available,current,expect,fields,id,kind,label,profile,restored"
-      || !activityUndoRow(data.current, "wishlist") || !activityUndoRow(data.restored, "wishlist")
-      || data.label !== data.current.name || data.current.name !== data.restored.name
-      || [data.current, data.restored].some(row => Boolean(row.set) !== Boolean(row.number)
-        || row.set && (!/^[a-z0-9]{2,8}$/.test(row.set) || [...row.number].length > 16 || /[\u0000-\u001f\u007f]/.test(row.number)))) return false;
+  const adding = data.action === "wishlist_add", removing = data.action === "wishlist_remove", updating = data.action === "wishlist_update";
+  const keys = ["action", "available", "current", "expect", "id", "kind", "label", "profile", "restored", ...(updating ? ["fields"] : [])];
+  if (!adding && !removing && !updating || data.profile !== profile || typeof profile !== "string" || !profile
+      || Object.keys(data).sort().join(",") !== keys.sort().join(",")) return false;
+  const rows = adding ? [data.restored] : removing ? [data.current] : [data.current, data.restored];
+  if (rows.some(row => !activityUndoRow(row, "wishlist") || Boolean(row.set) !== Boolean(row.number)
+      || row.set && (!/^[a-z0-9]{2,8}$/.test(row.set) || [...row.number].length > 16 || /[\u0000-\u001f\u007f]/.test(row.number)))
+      || data.label !== rows[0].name) return false;
+  if (adding) return data.current === null;
+  if (removing) return data.restored === null;
+  if (data.current.name !== data.restored.name) return false;
   const changed = ACTIVITY_UNDO_EDITABLE.wishlist.filter(field => data.current[field] !== data.restored[field]);
   return changed.length > 0 && Array.isArray(data.fields) && data.fields.length === changed.length
     && new Set(data.fields.map(item => item?.field)).size === changed.length
@@ -109,14 +114,20 @@ function activityUndoEvidence(data, id, space, profile = state.profile?.id) {
 }
 
 function activityUndoReceipt(answer, preview) {
-  if (preview.kind === "wishlist") return Boolean(answer && answer.saved === true && answer.source_id === preview.id
-    && answer.expect === preview.expect && answer.kind === "wishlist" && answer.action === "wishlist_update" && answer.profile === preview.profile
-    && Object.keys(answer).sort().join(",") === "action,expect,kind,profile,restored,revision,saved,sha256,source_id,summary"
-    && typeof answer.sha256 === "string" && /^[a-f0-9]{64}$/.test(answer.sha256)
-    && typeof answer.revision === "string" && /^[1-9][0-9]{0,18}$/.test(answer.revision)
-    && (answer.revision.length < 19 || answer.revision <= "9223372036854775807")
-    && typeof answer.summary === "string" && answer.summary.trim() && activityUndoRow(answer.restored, "wishlist")
-    && ACTIVITY_UNDO_FIELDS.wishlist.every(field => answer.restored[field] === preview.restored[field]));
+  if (preview.kind === "wishlist") {
+    const removing = preview.action === "wishlist_remove";
+    const keys = ["action", "expect", "kind", "profile", "restored", "revision", "saved", "sha256", "source_id", "summary", ...(removing ? ["removed_name"] : [])];
+    const confirmed = answer && answer.saved === true && answer.source_id === preview.id
+      && answer.expect === preview.expect && answer.kind === "wishlist" && answer.action === preview.action && answer.profile === preview.profile
+      && ["wishlist_add", "wishlist_remove", "wishlist_update"].includes(preview.action)
+      && Object.keys(answer).sort().join(",") === keys.sort().join(",")
+      && typeof answer.sha256 === "string" && /^[a-f0-9]{64}$/.test(answer.sha256)
+      && typeof answer.revision === "string" && /^[1-9][0-9]{0,18}$/.test(answer.revision)
+      && (answer.revision.length < 19 || answer.revision <= "9223372036854775807")
+      && typeof answer.summary === "string" && answer.summary.trim();
+    return Boolean(confirmed && (removing ? answer.restored === null && typeof answer.removed_name === "string" && answer.removed_name === preview.current?.name
+      : activityUndoRow(answer.restored, "wishlist") && ACTIVITY_UNDO_FIELDS.wishlist.every(field => answer.restored[field] === preview.restored[field])));
+  }
   const confirmed = answer && answer.saved === true && answer.source_id === preview.id && answer.expect === preview.expect
     && answer.kind === preview.kind && answer.space === preview.space && typeof answer.sha256 === "string"
     && /^[a-f0-9]{64}$/.test(answer.sha256) && typeof answer.revision === "string" && answer.revision.trim()
@@ -231,15 +242,23 @@ function activityUndoShow(ctx) {
   const { sheet, preview, view, endpoint } = ctx, signature = JSON.stringify(preview);
   const batchRemoving = preview.action === "batch_remove", removing = batchRemoving || preview.action === "remove";
   const batchAdding = preview.action === "batch_add", adding = batchAdding || preview.action === "add";
+  const wishlistPresence = preview.kind === "wishlist" && ["wishlist_add", "wishlist_remove"].includes(preview.action);
   const stock = preview.action === "batch_update", batch = stock || preview.action === "batch_metadata";
   const words = { quantity: "Quantity", condition: "Condition", language: "Language", notes: "Notes", source: "Source", set: "Set", number: "Collector number" };
-  const identity = preview.kind === "wishlist" ? ["name", ...["set", "number"].filter(field => !preview.fields.some(item => item.field === field))]
+  const identity = preview.kind === "wishlist" ? ["name", ...["set", "number"].filter(field => !preview.fields?.some(item => item.field === field))]
     : ACTIVITY_UNDO_FIELDS[preview.kind].filter(field => !ACTIVITY_UNDO_EDITABLE[preview.kind].includes(field));
   const text = value => value === "" ? "Not recorded" : String(value);
   let reasonInput = null, acceptedReason = "", reviewedReason = null;
   let ownershipInput = null, confirmedOwned = false;
   clear(sheet.body).append(el("h3", { text: preview.label }));
-  if (batch) {
+  if (wishlistPresence) {
+    const restoring = preview.action === "wishlist_add", row = restoring ? preview.restored : preview.current;
+    sheet.body.append(el("p", { class: "box box-warn", text: restoring ? "Save Undo restores this entry to your wishlist." : "Save Undo removes this entry from your wishlist." }),
+      el("p", { class: "sub", text: "Review its saved printing, notes and source below. Saving creates one new audited change; the original change stays in Activity." }),
+      el("section", { class: "panel" }, el("h3", { text: restoring ? "Historical wishlist entry to restore" : "Current wishlist entry to remove" }),
+        el("dl", {}, ACTIVITY_UNDO_FIELDS.wishlist.flatMap(field => [el("dt", { text: field === "number" ? "collector number" : field }),
+          el("dd", { class: ["notes", "source"].includes(field) ? "activity-undo-note" : null, text: text(row[field]) })]))));
+  } else if (batch) {
     const rows = preview.rows.map(item => {
       const changes = item.fields.map(field => el("p", {}, el("b", { text: words[field.field] + ": " }),
         el("span", { class: field.field === "notes" ? "activity-undo-note" : null, text: text(field.before) }), " → ",

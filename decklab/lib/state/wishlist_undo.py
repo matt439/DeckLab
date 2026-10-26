@@ -74,42 +74,75 @@ def list_sha(raw_entries):
         raise UndoUnsupported("The wishlist cannot be represented exactly.") from None
 
 
-def review(change_id, pid, source_rows, raw_entries, latest_target, latest_owner):
-    if not _id(change_id) or not isinstance(pid, str) or not rules.PROFILE_ID.fullmatch(pid):
-        raise UndoMissing()
+def source_record(source_rows, pid):
+    """Whole-source privacy before row values, labels or positions are inspected."""
     if not isinstance(source_rows, list) or len(source_rows) != 1:
         raise UndoMissing()
     row = source_rows[0]
-    if not isinstance(row, dict) or row.get("table") != "wishlist_entry" or row.get("op") != "UPDATE" \
-            or not isinstance(row.get("before"), dict) or not isinstance(row.get("after"), dict) \
-            or row["before"].get("profile_id") != pid or row["after"].get("profile_id") != pid:
+    if not isinstance(row, dict) or not {"before", "after"} <= set(row) \
+            or row.get("table") != "wishlist_entry" or row.get("op") not in ("UPDATE", "INSERT", "DELETE"):
         raise UndoMissing()
+    old, new, op = row.get("before"), row.get("after"), row["op"]
+    if (old is not None if op == "INSERT" else not isinstance(old, dict) or old.get("profile_id") != pid) \
+            or (new is not None if op == "DELETE" else not isinstance(new, dict) or new.get("profile_id") != pid):
+        raise UndoMissing()
+    return row
+
+
+def review(change_id, pid, source_rows, raw_entries, latest_target, latest_owner):
+    if not _id(change_id) or not isinstance(pid, str) or not rules.PROFILE_ID.fullmatch(pid):
+        raise UndoMissing()
+    row = source_record(source_rows, pid)
     old, new = row["before"], row["after"]
     if not _id(row.get("id")):
         raise UndoUnsupported("The original wishlist audit identity cannot be checked.")
-    restored, current = _entry(old, pid), _entry(new, pid)
+    restored, current = _entry(old, pid) if old is not None else None, _entry(new, pid) if new is not None else None
+    target = new if new is not None else old
     if not isinstance(row.get("key"), dict) or set(row["key"]) != KEY_FIELDS \
             or type(row["key"].get("position")) is not int \
-            or row["key"] != {"profile_id": pid, "position": new["position"]} \
-            or any(old[field] != new[field] for field in IMMUTABLE):
+            or row["key"] != {"profile_id": pid, "position": target["position"]} \
+            or row["op"] == "UPDATE" and any(old[field] != new[field] for field in IMMUTABLE):
         raise UndoUnsupported("Only the printing preference, notes and source on the same wishlist entry can be undone here.")
-    changed = [field for field in FIELDS if current[field] != restored[field]]
-    if not changed:
-        raise UndoUnsupported("There is no wishlist metadata change to undo.")
-    if rules.edited(current, set=restored["set"], number=restored["number"],
-                    notes=restored["notes"], source=restored["source"]) != restored:
-        raise UndoUnsupported("The original wishlist values cannot be restored exactly.")
-    _layout(raw_entries, pid)
-    found = [index for index, item in enumerate(raw_entries) if item["position"] == new["position"]]
-    if len(found) != 1 or raw_entries[found[0]] != new or latest_target != row["id"] \
-            or not _id(latest_target) or not _id(latest_owner) or latest_owner < latest_target:
+    presence = row["op"] != "UPDATE"
+    if latest_target != row["id"] or not _id(latest_target) or not _id(latest_owner) or latest_owner < latest_target \
+            or presence and latest_owner != row["id"]:
         raise UndoConflict()
+    _layout(raw_entries, pid)
     expected = copy.deepcopy(raw_entries)
-    expected[found[0]] = copy.deepcopy(old)
+    extra = {}
+    if row["op"] == "DELETE":
+        if any(item["position"] == old["position"] for item in raw_entries):
+            raise UndoConflict()
+        dto = [_entry(item, pid) for item in raw_entries]
+        index = sum(item["position"] < old["position"] for item in raw_entries)
+        try:
+            position, moves = rules.insert_slot([item["position"] for item in raw_entries], index)
+            if rules.add_plan(dto, restored) != "add" or position != old["position"] or moves:
+                raise Invalid("The original slot cannot be reproduced")
+        except Invalid:
+            raise UndoConflict() from None
+        expected.insert(index, copy.deepcopy(old))
+        action, extra = "wishlist_add", {"insert_at": index}
+    else:
+        found = [index for index, item in enumerate(raw_entries) if item["position"] == new["position"]]
+        if len(found) != 1 or raw_entries[found[0]] != new:
+            raise UndoConflict()
+        if row["op"] == "INSERT":
+            expected.pop(found[0])
+            action = "wishlist_remove"
+        else:
+            changed = [field for field in FIELDS if current[field] != restored[field]]
+            if not changed:
+                raise UndoUnsupported("There is no wishlist metadata change to undo.")
+            if rules.edited(current, set=restored["set"], number=restored["number"],
+                            notes=restored["notes"], source=restored["source"]) != restored:
+                raise UndoUnsupported("The original wishlist values cannot be restored exactly.")
+            expected[found[0]] = copy.deepcopy(old)
+            action = "wishlist_update"
+            extra = {"fields": [{"field": field, "before": current[field], "after": restored[field]} for field in changed]}
     expect = list_sha([change_id, source_rows, raw_entries, latest_target, latest_owner])
-    return {"change_id": change_id, "profile": pid, "kind": "wishlist", "action": "wishlist_update", "label": current["name"],
-            "current": current, "restored": restored, "fields": [{"field": field, "before": current[field], "after": restored[field]}
-                                                                  for field in changed],
+    return {"change_id": change_id, "profile": pid, "kind": "wishlist", "action": action, "label": target["name"],
+            "current": current, "restored": restored, **extra,
             "expect": expect, "row_change_id": row["id"], "latest_owner": latest_owner, "raw_current": copy.deepcopy(new),
             "raw_restore": copy.deepcopy(old), "raw_after": expected, "sha256": list_sha(expected)}
 
@@ -122,15 +155,21 @@ def receipt(plan, actual_raw_entries, actual_new_source_rows, latest_owner):
     row = actual_new_source_rows[0]
     if isinstance(row, dict):
         try:
-            _entry(row.get("before"), pid)
-            _entry(row.get("after"), pid)
+            if row.get("before") is not None:
+                _entry(row["before"], pid)
+            if row.get("after") is not None:
+                _entry(row["after"], pid)
         except Invalid:
             raise UndoConflict() from None
-    if not isinstance(row, dict) or row.get("table") != "wishlist_entry" or row.get("op") != "UPDATE" \
+    op = {"wishlist_update": "UPDATE", "wishlist_add": "INSERT", "wishlist_remove": "DELETE"}[plan["action"]]
+    target = plan["raw_restore"] if plan["raw_restore"] is not None else plan["raw_current"]
+    if not isinstance(row, dict) or not {"before", "after"} <= set(row) or row.get("table") != "wishlist_entry" or row.get("op") != op \
             or not isinstance(row.get("key"), dict) or type(row["key"].get("position")) is not int \
-            or row.get("key") != {"profile_id": pid, "position": plan["raw_restore"]["position"]} \
+            or row.get("key") != {"profile_id": pid, "position": target["position"]} \
             or row.get("before") != plan["raw_current"] or row.get("after") != plan["raw_restore"] \
             or not _id(row.get("id")) or row["id"] <= plan["latest_owner"] or not _id(latest_owner) or latest_owner != row["id"]:
         raise UndoConflict()
-    actual = next(item for item in actual_raw_entries if item["position"] == plan["raw_restore"]["position"])
+    if op == "DELETE":
+        return {"restored": None, "removed_name": target["name"], "sha256": list_sha(actual_raw_entries), "revision": str(latest_owner)}
+    actual = next(item for item in actual_raw_entries if item["position"] == target["position"])
     return {"restored": _entry(actual, pid), "sha256": list_sha(actual_raw_entries), "revision": str(latest_owner)}

@@ -1,4 +1,4 @@
-"""Pure wishlist UPDATE Undo proof and saved-receipt tests, with no store or I/O.
+"""Pure wishlist Undo proof and saved-receipt tests, with no store or I/O.
 
 Wishlist privacy follows the profile, including two profiles sharing home. All
 raw rows and globally unfiltered audit replies here are explicit test values.
@@ -59,9 +59,26 @@ class WishlistUndoTests(unittest.TestCase):
 
     @staticmethod
     def actual_source(plan, id=NEW_ROW_ID):
-        return [{"id": id, "table": "wishlist_entry", "op": "UPDATE",
-                 "key": {"profile_id": plan["profile"], "position": plan["raw_current"]["position"]},
+        row = plan["raw_restore"] if plan["raw_restore"] is not None else plan["raw_current"]
+        op = {"wishlist_remove": "DELETE", "wishlist_add": "INSERT"}.get(plan["action"], "UPDATE")
+        return [{"id": id, "table": "wishlist_entry", "op": op,
+                 "key": {"profile_id": plan["profile"], "position": row["position"]},
                  "before": copy.deepcopy(plan["raw_current"]), "after": copy.deepcopy(plan["raw_restore"])}]
+
+    def seed_presence(self, op="INSERT", row=None, rows=None):
+        self.seed()
+        row = raw() if row is None else copy.deepcopy(row)
+        self.source_rows = [{"id": ROW_ID, "table": "wishlist_entry", "op": op,
+                             "key": {"profile_id": PROFILE, "position": row["position"]},
+                             "before": row if op == "DELETE" else None,
+                             "after": row if op == "INSERT" else None}]
+        if rows is None:
+            rows = [raw("Forest", 0, notes="Keep first"), raw("Island", 5, notes="Keep last")]
+            if op == "INSERT":
+                rows.insert(1, copy.deepcopy(row))
+        self.raw_entries = copy.deepcopy(rows)
+        self.latest_owner = self.latest_target = ROW_ID
+        return self.source_rows
 
     def saved(self, plan=None, **overrides):
         plan = self.review() if plan is None else plan
@@ -134,7 +151,7 @@ class WishlistUndoTests(unittest.TestCase):
             with self.subTest(field=field, type=type(value).__name__), self.assertRaises(undo.UndoUnsupported):
                 self.review()
 
-    def test_name_position_owner_and_nonupdate_changes_remain_excluded(self):
+    def test_name_position_owner_and_unknown_operation_changes_remain_excluded(self):
         for changed in ({"name": "Another name"}, {"position": 3}):
             self.seed()
             self.source()["before"].update(changed)
@@ -144,9 +161,9 @@ class WishlistUndoTests(unittest.TestCase):
         self.source()["before"]["profile_id"] = "user1"
         with self.assertRaises(undo.UndoMissing):
             self.review()
-        for op, missing in (("INSERT", "before"), ("DELETE", "after")):
+        for op in ("MERGE", "UPSERT"):
             self.seed()
-            self.source()["op"], self.source()[missing] = op, None
+            self.source()["op"] = op
             with self.subTest(op=op), self.assertRaises(undo.UndoMissing):
                 self.review()
 
@@ -233,8 +250,8 @@ class WishlistUndoTests(unittest.TestCase):
         self.assertNotIn("Hidden household wishlist", messages[0])
         self.assertNotIn("user1", messages[0])
 
-    def test_raw_source_requires_exact_schema_key_types_and_update_operation(self):
-        for mode in ("missing-field", "extra-field", "bad-key", "float-key", "boolean-key", "boolean-position", "negative-position", "bad-id", "insert", "delete"):
+    def test_raw_source_requires_exact_schema_key_types_and_operation_shape(self):
+        for mode in ("missing-field", "extra-field", "bad-key", "float-key", "boolean-key", "boolean-position", "negative-position", "bad-id", "malformed-insert", "malformed-delete"):
             self.seed()
             row = self.source()
             if mode == "missing-field":
@@ -253,10 +270,10 @@ class WishlistUndoTests(unittest.TestCase):
                 row["before"]["position"] = row["after"]["position"] = row["key"]["position"] = value
             elif mode == "bad-id":
                 row["id"] = True
-            elif mode == "insert":
-                row["op"], row["before"] = "INSERT", None
+            elif mode == "malformed-insert":
+                row["op"] = "INSERT"  # A genuine INSERT must have no before row.
             else:
-                row["op"], row["after"] = "DELETE", None
+                row["op"] = "DELETE"  # A genuine DELETE must have no after row.
             with self.subTest(mode=mode), self.assertRaises((undo.UndoMissing, undo.UndoUnsupported)):
                 self.review()
 
@@ -389,6 +406,175 @@ class WishlistUndoTests(unittest.TestCase):
                 self.saved(plan, latest_owner=version)
         with self.assertRaises(undo.UndoConflict):
             self.saved(plan, actual_new_source_rows=self.actual_source(plan, OWNER_VERSION), latest_owner=OWNER_VERSION)
+
+    def test_insert_inverse_removes_exact_present_entry_and_can_leave_an_empty_list(self):
+        target = raw(notes='  Literal <b>note</b>\r\nnext\tline  ', source="  Fixture source  ")
+        for only_entry in (False, True):
+            self.seed_presence(row=target, rows=[target] if only_entry else None)
+            original = copy.deepcopy((self.source_rows, self.raw_entries))
+            with self.subTest(only_entry=only_entry):
+                plan = self.review()
+                self.assertEqual((plan["action"], plan["current"], plan["restored"]), ("wishlist_remove", dto(target), None))
+                self.assertNotIn("fields", plan)
+                self.assertEqual(plan["raw_current"], target)
+                self.assertIsNone(plan["raw_restore"])
+                self.assertEqual(plan["raw_after"], [row for row in self.raw_entries if row["position"] != target["position"]])
+                result = self.saved(plan)
+                self.assertEqual(set(result), {"restored", "removed_name", "sha256", "revision"})
+                self.assertIsNone(result["restored"])
+                self.assertEqual(result["removed_name"], target["name"])
+                self.assertEqual(result["sha256"], undo.list_sha(plan["raw_after"]))
+                self.assertEqual((self.source_rows, self.raw_entries), original)
+
+    def test_delete_inverse_restores_only_exact_ordinary_first_middle_last_and_empty_slots(self):
+        cases = ((0, [raw("Forest", 1), raw("Island", 2)], 0),
+                 (4, [raw("Forest", 0), raw("Island", 5)], 1),
+                 (9, [raw("Forest", 0), raw("Island", 8)], 2), (0, [], 0))
+        for position, rows, insert_at in cases:
+            target = raw(position=position, set_code="zzold", collector_number="007a",
+                         notes="  Literal\r\nsecond\tline  ", source="  Old source  ")
+            self.seed_presence("DELETE", target, rows)
+            original = copy.deepcopy((self.source_rows, self.raw_entries))
+            with self.subTest(position=position, positions=[row["position"] for row in rows]), \
+                    mock.patch.object(cards, "resolve", side_effect=AssertionError("No card index")), \
+                    mock.patch.object(cards, "printing", side_effect=AssertionError("No printing lookup")):
+                plan = self.review()
+                self.assertEqual((plan["action"], plan["current"], plan["restored"]), ("wishlist_add", None, dto(target)))
+                self.assertNotIn("fields", plan)
+                self.assertIsNone(plan["raw_current"])
+                self.assertEqual(plan["raw_restore"], target)
+                self.assertEqual(plan["insert_at"], insert_at)
+                expected = copy.deepcopy(rows)
+                expected.insert(insert_at, target)
+                self.assertEqual(plan["raw_after"], expected)
+                self.assertEqual(self.saved(plan)["restored"], dto(target))
+                self.assertEqual((self.source_rows, self.raw_entries), original)
+
+    def test_presence_requires_source_to_be_latest_owner_change_even_after_other_entry_aba(self):
+        for op in ("INSERT", "DELETE"):
+            self.seed_presence(op)
+            plan = self.review()
+            # Unrelated global changes need not advance this owner's version.
+            self.assertNotEqual(self.review(change_id=CHANGE_ID + 10000)["expect"], plan["expect"])
+            for version in (None, True, float(ROW_ID), str(ROW_ID), ROW_ID - 1, ROW_ID + 1, OWNER_VERSION):
+                with self.subTest(op=op, latest_owner=version), self.assertRaises(undo.UndoConflict):
+                    self.review(latest_owner=version)
+            for target_version in (None, False, float(ROW_ID), ROW_ID + 1):
+                with self.subTest(op=op, latest_target=target_version), self.assertRaises(undo.UndoConflict):
+                    self.review(latest_target=target_version)
+
+    def test_delete_inverse_refuses_guessed_reused_name_colliding_or_full_slots(self):
+        cases = ((raw(position=4), []),
+                 (raw(position=4), [raw("Forest", 0), raw("Island", 9)]),
+                 (raw(position=4), [raw("Forest", 0), raw("Plains", 4), raw("Island", 5)]),
+                 (raw(position=4), [raw("oPT", 0), raw("Island", 5)]),
+                 (raw(position=rules.MAX_ENTRIES), [raw(f"Card {index}", index) for index in range(rules.MAX_ENTRIES)]))
+        for target, rows in cases:
+            self.seed_presence("DELETE", target, rows)
+            original = copy.deepcopy((self.source_rows, self.raw_entries))
+            with self.subTest(position=target["position"], rows=len(rows)), self.assertRaises((undo.UndoConflict, undo.UndoUnsupported)):
+                self.review()
+            self.assertEqual((self.source_rows, self.raw_entries), original)
+
+    def test_presence_rows_require_exact_schema_text_nullable_printing_and_position(self):
+        for op in ("INSERT", "DELETE"):
+            for changed in ({"notes": None}, {"source": "one\ntwo"}, {"set_code": "fdn", "collector_number": None},
+                            {"set_code": "", "collector_number": ""}, {"position": True}, {"future": "Unknown field"}):
+                self.seed_presence(op)
+                side = "after" if op == "INSERT" else "before"
+                self.source()[side].update(changed)
+                with self.subTest(op=op, changed=changed), self.assertRaises(undo.UndoUnsupported):
+                    self.review()
+            self.seed_presence(op)
+            side = "after" if op == "INSERT" else "before"
+            del self.source()[side]["source"]
+            with self.subTest(op=op, missing="source"), self.assertRaises(undo.UndoUnsupported):
+                self.review()
+
+    def test_presence_global_ownership_proof_precedes_any_label_or_raw_entry_validation(self):
+        for op in ("INSERT", "DELETE"):
+            self.seed_presence(op)
+            side = "after" if op == "INSERT" else "before"
+            own_bad = copy.deepcopy(self.source())
+            own_bad[side]["notes"] = None
+            hidden = copy.deepcopy(self.source())
+            hidden[side].update(profile_id="user1", notes="Hidden note")
+            for sources in ([hidden], [own_bad, hidden], [own_bad, copy.deepcopy(own_bad)]):
+                with self.subTest(op=op, rows=len(sources)), \
+                        mock.patch.object(rules, "entry", side_effect=AssertionError("No private validation")), \
+                        self.assertRaises(undo.UndoMissing) as caught:
+                    self.review(source_rows=sources)
+                self.assertNotIn("Hidden", str(caught.exception))
+                self.assertNotIn("user1", str(caught.exception))
+
+    def test_presence_current_state_key_and_latest_target_must_still_match_exactly(self):
+        for op in ("INSERT", "DELETE"):
+            for mode in ("key", "float-key", "target-missing-or-present", "duplicate-name", "reordered", "changed-full-row"):
+                self.seed_presence(op)
+                if mode == "key":
+                    self.source()["key"]["position"] = 7
+                elif mode == "float-key":
+                    self.source()["key"]["position"] = 4.0
+                elif mode == "target-missing-or-present":
+                    self.raw_entries = [row for row in self.raw_entries if row["position"] != 4]
+                    if op == "DELETE":
+                        self.raw_entries.insert(1, raw())
+                elif mode == "duplicate-name":
+                    self.raw_entries[-1]["name"] = "FOREST"
+                elif mode == "reordered":
+                    self.raw_entries.reverse()
+                elif op == "INSERT":
+                    self.raw_entries[1]["notes"] += " changed after source"
+                else:
+                    self.latest_target += 1
+                error = undo.UndoUnsupported if mode in ("key", "float-key") else undo.UndoConflict
+                with self.subTest(op=op, mode=mode), self.assertRaises(error):
+                    self.review()
+
+    def test_presence_receipt_requires_one_exact_opposite_audit_and_complete_unchanged_survivors(self):
+        for op in ("INSERT", "DELETE"):
+            self.seed_presence(op)
+            plan = self.review()
+            original = copy.deepcopy((plan, self.source_rows, self.raw_entries))
+            for mode in ("missing", "mixed", "wrong-op", "key", "wrong-row", "wrong-null", "old-id", "other-owner"):
+                rows = self.actual_source(plan)
+                side = "before" if op == "INSERT" else "after"
+                if mode == "missing":
+                    rows = []
+                elif mode == "mixed":
+                    rows.append({"id": NEW_ROW_ID + 1, "table": "profile_setting", "op": "UPDATE"})
+                elif mode == "wrong-op":
+                    rows[0]["op"] = "UPDATE"
+                elif mode == "key":
+                    rows[0]["key"]["position"] = 4.0
+                elif mode == "wrong-row":
+                    rows[0][side]["notes"] += " changed"
+                elif mode == "wrong-null":
+                    rows[0]["after" if op == "INSERT" else "before"] = {}
+                elif mode == "old-id":
+                    rows[0]["id"] = ROW_ID
+                else:
+                    rows[0][side]["profile_id"] = "user1"
+                with self.subTest(op=op, mode=mode), self.assertRaises(undo.UndoConflict):
+                    self.saved(plan, actual_new_source_rows=rows)
+            for mode in ("survivor-change", "survivor-move", "missing", "extra", "reordered"):
+                rows = self.expected_raw(plan)
+                if mode == "survivor-change":
+                    rows[0]["notes"] += " unexpected"
+                elif mode == "survivor-move":
+                    rows[0]["position"] += 1
+                elif mode == "missing":
+                    rows.pop(0)
+                elif mode == "extra":
+                    rows.append(raw("Plains", 12))
+                else:
+                    rows.reverse()
+                with self.subTest(op=op, actual=mode), self.assertRaises(undo.UndoConflict):
+                    self.saved(plan, actual_raw_entries=rows)
+            for version in (ROW_ID, NEW_ROW_ID + 1, float(NEW_ROW_ID)):
+                with self.subTest(op=op, latest_owner=version), self.assertRaises(undo.UndoConflict):
+                    self.saved(plan, latest_owner=version)
+            self.assertEqual((plan, self.source_rows, self.raw_entries), original)
 
     def test_kernel_needs_no_inventory_store_card_index_or_external_lookup(self):
         with mock.patch.object(inventory, "current", side_effect=AssertionError("inventory read")), \

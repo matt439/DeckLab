@@ -44,7 +44,8 @@ class AuditWishlistMemory(MemoryStore):
         if pid in self.inactive:
             raise undo.UndoMissing()
         raw = self.raw_source(change_id)
-        position = raw[0].get("after", {}).get("position") if len(raw) == 1 and isinstance(raw[0].get("after"), dict) else None
+        target = (raw[0].get("after") or raw[0].get("before")) if len(raw) == 1 else None
+        position = target.get("position") if isinstance(target, dict) else None
         return undo.review(change_id, pid, raw, self.raw_entries(pid), self.latest(pid, position), self.latest(pid))
 
     def wishlist_undo_review(self, change_id, pid):
@@ -66,9 +67,14 @@ class AuditWishlistMemory(MemoryStore):
                 raise undo.UndoConflict()
             saved = copy.deepcopy((self._wishlists, self._changes, self._audit_ids))
             try:
-                changed, _ = self.wishlist_set(pid, plan["current"]["name"], actor, message,
-                                               set=plan["restored"]["set"], number=plan["restored"]["number"],
-                                               notes=plan["restored"]["notes"], source=plan["restored"]["source"])
+                if plan["action"] == "wishlist_add":
+                    changed, _ = self.wishlist_add(pid, plan["restored"], actor, message, at=plan["insert_at"])
+                elif plan["action"] == "wishlist_remove":
+                    changed, _ = self.wishlist_remove(pid, plan["current"]["name"], actor, message)
+                else:
+                    changed, _ = self.wishlist_set(pid, plan["current"]["name"], actor, message,
+                                                   set=plan["restored"]["set"], number=plan["restored"]["number"],
+                                                   notes=plan["restored"]["notes"], source=plan["restored"]["source"])
                 if not changed:
                     raise undo.UndoConflict()
                 result = undo.receipt(plan, self.raw_entries(pid), self.raw_source(self._changes[-1]["id"]), self.latest(pid))

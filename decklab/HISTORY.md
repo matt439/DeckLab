@@ -2,6 +2,18 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Undo the latest wishlist entry addition or removal (2026-10-26; E11-S08)
+
+The owner-only wishlist endpoint now reverses a single global INSERT as `wishlist_remove`, or a single global DELETE as `wishlist_add`. These entry actions require the original row to be the latest audit row for that entire owner's wishlist, preventing logical-name ABA at another SQL position. Preference UPDATE eligibility keeps its existing latest-target policy. Current/history rows, unique names, raw nullable printing pairs and complete ordered list remain exact; hidden, mixed, stale or malformed sources refuse before any write.
+
+Removal uses the ordinary same-cursor casefold helper and proves the exact surviving list, including an empty result. Restoration requires both the original position and casefold name to be absent, and ordinary insertion must reproduce that exact position with no survivor moves. A wider gap or an empty list whose old position was nonzero therefore refuses honestly. Shared cursor add/remove helpers retain normal duplicate/no-op, insertion-shift and unique-violation behavior. Each inverse runs under the existing admitted transaction/wishlist lock and proves one actual opposite audit row, exact full-list digest and a newer owner audit version before success.
+
+The action-specific preview has explicit null/current or null/restored entries and no diff fields. The browser shows the entire saved entry as literal text and sends only profile/id/expect, with no physical-ownership, quantity, reason, position or stock controls. Add receipts prove the actual full restored entry; remove receipts prove exact `removed_name` and `restored: null`. Existing profile/endpoint/context/proof, cache, unknown-outcome Reload and Activity page-depth/filter guards remain.
+
+All 300 targeted checks passed without skips in 43.226 seconds, including 45 guarded disposable PostgreSQL and 129 Undo UI checks. The delta adds eight pure, six API/route, six PostgreSQL and nine UI cases; ordinary wishlist/CLI/server/routing/Activity Undo and selected Memory/Pg add/remove/audit/batch contracts also passed. Independent final source/test/API/UI review and Ruff are clear.
+
+The native fixture matrix passed 24 cases (both actions, both themes, 320/600/820/1000/1280/1920 px) without overflow or page errors. It made 50 preview GETs, including two foreign-home-owner refusals, and two intercepted synthetic POSTs. There were zero actual writes and 24 blocked baseline visit POSTs; fixture wishlists, inventory and decks stayed unchanged. Full plain historical/current entries, cancel/reopen, exact receipts, cache and loaded Activity state passed; two screenshots were inspected as pixels. No migration, live activation or device/human acceptance is claimed. E11-S08 remains partial and OPEN for broader recovery; story counts are unchanged.
+
 ## Undo a wishlist printing preference (2026-10-26; E11-S08)
 
 The existing owner-only single wishlist UPDATE inverse now restores a historical set/collector-number preference, optionally together with notes/source. Both current and historical nullable printing pairs must round-trip the ordinary wishlist forms exactly; name, profile and position remain immutable. The same endpoint, action, exact five-field entries, full raw-list/latest-audit receipt, admitted connection/key lock and actual inverse-audit/list proof are retained. No card-index lookup or physical-card inference is added.

@@ -534,18 +534,10 @@ class PgStore:
                 with self._change(c, actor, message, profile_ids=(pid,), orphan_profile_ids=orphans) as (cur, _):
                     self._lock(cur, f"wishlist:{pid}")
                     entries, positions = self._entries(cur, pid)
-                    if rules.add_plan(entries, new) == "exists":
-                        raise _Unchanged((False, entries))
-                    position, moves = rules.insert_slot(positions, at)
-                    for old, moved in moves:        # highest first: each into a free position
-                        cur.execute("update wishlist_entry set position = %s where profile_id = %s "
-                                    "and position = %s", (moved, pid, old))
-                    cur.execute("insert into wishlist_entry (profile_id, position, name, set_code, "
-                                "collector_number, notes, source) values (%s, %s, %s, %s, %s, %s, %s)",
-                                (pid, position, new["name"], new["set"] or None,
-                                 new["number"] or None, new["notes"], new["source"]))
-                    index = len(entries) if at is None else min(at, len(entries))
-                    return True, entries[:index] + [new] + entries[index:]
+                    changed, result = self._wishlist_add_at(cur, pid, entries, positions, new, at=at)
+                    if not changed:
+                        raise _Unchanged((False, result))
+                    return changed, result
             except _Unchanged as u:
                 return u.result
             except psycopg.errors.UniqueViolation:
@@ -567,12 +559,10 @@ class PgStore:
                 with self._change(c, actor, message, reason, profile_ids=(pid,), orphan_profile_ids=orphans) as (cur, _):
                     self._lock(cur, f"wishlist:{pid}")
                     entries, positions = self._entries(cur, pid)
-                    i = rules.find(entries, name)
-                    if i is None:
-                        raise _Unchanged((False, entries))
-                    cur.execute("delete from wishlist_entry where profile_id = %s and position = %s",
-                                (pid, positions[i]))
-                    return True, entries[:i] + entries[i + 1:]
+                    changed, result = self._wishlist_remove_at(cur, pid, entries, positions, name)
+                    if not changed:
+                        raise _Unchanged((False, result))
+                    return changed, result
             except _Unchanged as u:
                 return u.result
         return self._call(work)
@@ -600,6 +590,30 @@ class PgStore:
             except _Unchanged as u:
                 return u.result
         return self._call(work)
+
+    @staticmethod
+    def _wishlist_add_at(cur, pid, entries, positions, new, *, at=None):
+        """Ordinary insertion, including its existing duplicate/no-op and position rules."""
+        new = rules.entry(new)
+        if rules.add_plan(entries, new) == "exists":
+            return False, entries
+        position, moves = rules.insert_slot(positions, at)
+        for old, moved in moves:
+            cur.execute("update wishlist_entry set position=%s where profile_id=%s and position=%s", (moved, pid, old))
+        cur.execute("insert into wishlist_entry(profile_id,position,name,set_code,collector_number,notes,source) "
+                    "values(%s,%s,%s,%s,%s,%s,%s)", (pid, position, new["name"], new["set"] or None,
+                    new["number"] or None, new["notes"], new["source"]))
+        index = len(entries) if at is None else min(at, len(entries))
+        return True, entries[:index] + [new] + entries[index:]
+
+    @staticmethod
+    def _wishlist_remove_at(cur, pid, entries, positions, name):
+        """Ordinary casefold removal on the same admitted/locked connection."""
+        i = rules.find(entries, name)
+        if i is None:
+            return False, entries
+        cur.execute("delete from wishlist_entry where profile_id=%s and position=%s", (pid, positions[i]))
+        return True, entries[:i] + entries[i + 1:]
 
     @staticmethod
     def _wishlist_set_at(cur, pid, entries, positions, name, **fields):

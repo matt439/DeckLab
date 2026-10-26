@@ -31,11 +31,9 @@ def latest(cur, pid, position=None):
 def _plan(store, cur, change_id, pid):
     raw = source(cur, change_id)
     # Private scope is decided before even deriving a position from another row.
-    if len(raw) != 1 or raw[0]["table"] != "wishlist_entry" or raw[0]["op"] != "UPDATE" \
-            or not isinstance(raw[0]["before"], dict) or not isinstance(raw[0]["after"], dict) \
-            or raw[0]["before"].get("profile_id") != pid or raw[0]["after"].get("profile_id") != pid:
-        raise undo.UndoMissing()
-    position = raw[0]["after"].get("position")
+    row = undo.source_record(raw, pid)
+    target = row["after"] if row["after"] is not None else row["before"]
+    position = target.get("position")
     return undo.review(change_id, pid, raw, entries(cur, pid), latest(cur, pid, position), latest(cur, pid))
 
 
@@ -75,9 +73,14 @@ def apply(store, change_id, pid, expect, actor, message):
                 if expect != plan["expect"]:
                     raise undo.UndoConflict()
                 current, positions = store._entries(cur, pid)
-                changed, _ = store._wishlist_set_at(cur, pid, current, positions, plan["current"]["name"],
-                                                   set=plan["restored"]["set"], number=plan["restored"]["number"],
-                                                   notes=plan["restored"]["notes"], source=plan["restored"]["source"])
+                if plan["action"] == "wishlist_add":
+                    changed, _ = store._wishlist_add_at(cur, pid, current, positions, plan["restored"], at=plan["insert_at"])
+                elif plan["action"] == "wishlist_remove":
+                    changed, _ = store._wishlist_remove_at(cur, pid, current, positions, plan["current"]["name"])
+                else:
+                    changed, _ = store._wishlist_set_at(cur, pid, current, positions, plan["current"]["name"],
+                                                       set=plan["restored"]["set"], number=plan["restored"]["number"],
+                                                       notes=plan["restored"]["notes"], source=plan["restored"]["source"])
                 if changed is not True:
                     raise undo.UndoConflict()
                 saved = undo.receipt(plan, entries(cur, pid), source(cur, change_set), latest(cur, pid))
