@@ -140,6 +140,14 @@ async work also matches query and deck id/version/space. Close, replacement and
 Quick dismissal invalidate timers/answers without changing request payloads or
 aborting the server read. Keep constructor painting separate from mounted actions.
 
+Editor List and Pictures steppers default to a 46px group, yielding 44px
+native buttons after the shared border. Pictures footers wrap and retain a
+44px More target. Only `min-width:1000px` plus a fine pointer restores the
+original dense List token and 34px Pictures group/32px More. Sideboard's exact
+`data-section`/`.edit-sideboard` hook supplies the surface-2 band and kind-correct
+size-exclusion note; removed-only groups keep original Undo and no zero count.
+The existing optional Stand-ins action comes before printing, moves and Remove.
+
 `editor-swaps.js` (after `editor-cards.js`) and `deck-swaps.js` (after
 `deck-standins.js`) are E2-S07's strategic stand-ins, kept apart from those
 physical markers: owned cards that could take a missing card's slot in the

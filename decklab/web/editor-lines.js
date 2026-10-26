@@ -73,9 +73,13 @@ function drawLines() {
     if (!entries.length && section === "Commander" && kind !== "commander") continue;
     if (!entries.length && section === "Sideboard") continue;
     if (!entries.length && !total && ed.mode === "new" && !ed.from && section === "Deck") continue;
-    const part = el("section", { class: "edit-section", "aria-label": sectionTitle(section) },
+    const part = el("section", { class: "edit-section" + (section === "Sideboard" ? " edit-sideboard" : ""),
+      "data-section": section, "aria-label": sectionTitle(section) },
       el("h3", { class: "section-title" }, sectionTitle(section),
         el("span", { class: "count", "data-count": section, text: countWords(copies(lines)) })));
+    if (section === "Sideboard" && (kind === "casual" || kind === "commander")) {
+      part.append(el("p", { class: "edit-sideboard-note", text: `Not counted in the ${kind === "commander" ? 100 : 60}.` }));
+    }
     if (!entries.length) {
       add(part, [emptyPart(section)]);
     } else if (section === "Deck") {
@@ -175,8 +179,8 @@ function lineTile(line, section) {
   return tile;
 }
 
-/** A line's ⋯ menu: its printing, moving it to another section, a short Play-now line's stand-ins
- * (editor-swaps.js), and Remove (last). */
+/** A line's ⋯ menu: a short Play-now line's stand-ins (editor-swaps.js), its printing,
+ * moving it to another section, and Remove (last). */
 function rowMenuButton(line) {
   const uid = line.uid;
   const button = el("button", { type: "button", class: "btn btn-quiet edit-more", "data-focus": `more:${uid}`,
@@ -185,9 +189,9 @@ function rowMenuButton(line) {
       const found = findLine(uid);
       if (!found) return;
       openMenu(button, [
+        swapsAvailableFor(found.line) ? { text: "Stand-ins…", onclick: () => openSwapSheet(uid) } : null,
         { text: "Change printing…", onclick: () => openPrintings(uid) },
         ...moveTargets(found.section).map((s) => ({ text: `Move to ${moveWords(s)}`, onclick: () => moveLine(uid, s) })),
-        swapsAvailableFor(found.line) ? { text: "Stand-ins…", onclick: () => openSwapSheet(uid) } : null,
         "-",
         { text: "Remove", danger: true, onclick: () => removeLine(uid) }]);
     } });

@@ -2,6 +2,18 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Casual Editor row targets and Sideboard context (2026-10-26; E11-S30 slice 14)
+
+Editor steppers use a 46px shared group for actual 44px minus/plus buttons at casual widths and with a coarse pointer. Pictures keeps a 44px More target and allows its footer to wrap within the existing tile columns. From exactly 1000px with a fine pointer, List inherits the original dense shared token and Pictures restores its 34px group/32px buttons and More target. Fractional widths below 1000 retain casual targets.
+
+Sideboard sections use a surface-2 band and ink-2 heading, with Not counted in the 60 for casual and Not counted in the 100 for Commander. Unknown kinds make no numeric claim; Companion is unchanged. Removed-only sections keep the band, suppress zero counts and retain original exact Undo. Optional Stand-ins precedes Change printing, the existing move targets and Remove. Availability predicates, live uid lookup and callbacks are unchanged.
+
+Validation: 199 integrated Editor/UI/source checks passed with zero skips, with live database probes/connections and Python socket connection/bind/listen blocked. Five new cases cover actual shared target math, pointer/fractional/lab boundaries, kind/count/Companion behavior, removed-only List/Pictures Undo, menu order/live-uid callbacks, quantity limits and viewer metadata. Fresh synthetic Chromium passed 54 final cases: 44 List/Pictures viewport/theme cases and ten longer-name unknown-card cases. Targets and wrapped footers fitted without page overflow; sixty main cards and three Sideboard copies remained distinct. Native minus Enter/plus Space, optional Stand-ins-first menu, and exact three-copy Opt Remove/Undo with original printing and focus passed in List/Pictures.
+
+The disposable fixture logged 366 API requests: 35 read-only deck checks, 33 automatic visit POSTs rejected, and no other mutation attempts. Every actual data write remained blocked. Quantity, removal, Undo, move and row/tile viewer helpers remain identical after line-ending normalization. No actual save/conflict, live database, download, Forge, full-suite or Linux acceptance. Native evidence is mouse/default DPR and keyboard; coarse-pointer behavior is deterministic source/fixture evidence, with touch, Safari, physical-device and speech acceptance open. Source audit: 787 owned files; only pre-existing tokens.js (1,516 lines) exceeds 1,200.
+
+Slice 14 remains partial for retained panes, unsaved/selected row states, already-in-deck result steppers, docked search and bar work. Slice 13's remaining contracts/workflow, Collection question 6, Receive check-to-row association and human/device gates stay open.
+
 ## Native Editor search actions and current-owner results (2026-10-26; E11-S30 slice 14)
 
 Card results form a labelled native list, with sibling Add and Inspect buttons and aria-current on the highlighted Add action. The search field has keyboard help and live selection announcements. Up/Down, Enter, Shift-four, typed quantities, Alt+Enter, selected section, preferred-printing matching, filters and request parameters keep their existing behavior. Added expiry and accepted More pages retain existing result/action nodes, preserving native focus and the shared viewer's original return target. Failed More keeps accepted rows and retries the same page, with a static error and no duplicate in-flight request.

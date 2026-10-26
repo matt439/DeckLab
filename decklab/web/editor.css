@@ -197,6 +197,9 @@ details.edit-details-fold:not([open]) > summary { min-height: calc(60px - 2px); 
 }
 .edit-section .type-title { display: flex; align-items: baseline; gap: var(--s-2); margin: var(--s-3) 0 0; color: var(--ink-2); font-size: var(--fs-sm); }
 .edit-section .count { color: var(--ink-2); font-weight: var(--fw-semibold); font-size: var(--fs-sm); font-variant-numeric: tabular-nums; }
+.edit-sideboard { padding: var(--s-3); border-radius: var(--r-md); background: var(--surface-2); }
+.edit-sideboard > .section-title { color: var(--ink-2); }
+.edit-sideboard-note { margin: var(--s-2) 0; color: var(--ink-2); font-size: var(--fs-sm); }
 .empty-section { color: var(--ink-2); font-size: var(--fs-sm); margin: var(--s-2) 0; }
 /* Two or more columns on a wide screen read down each column (a type group top to bottom), not across. */
 .edit-list {
@@ -204,9 +207,9 @@ details.edit-details-fold:not([open]) > summary { min-height: calc(60px - 2px); 
   columns: 520px; column-gap: var(--s-5);
 }
 .edit-list > * { break-inside: avoid; }
-/* A row: − n +, the card (art and name), one badge, the printing, ⋯. 32 px with a mouse, 44 px to touch. */
+/* A row: − n +, the card (art and name), one badge, the printing, ⋯. 44 px targets; the wide fine-pointer lab stays dense. */
 .edit-row { --tap: 44px; }
-@media (pointer: fine) { .edit-row { --tap: 28px; } }
+@media (min-width: 1000px) and (pointer: fine) { .edit-row { --tap: 28px; } }
 .edit-list > .edit-row {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto auto var(--tap);
@@ -221,7 +224,7 @@ details.edit-details-fold:not([open]) > summary { min-height: calc(60px - 2px); 
 @media (prefers-reduced-motion: reduce) { .edit-row.flash { animation: none; background: var(--selected); } }
 .edit-row.is-blocked { background: var(--crit-soft); box-shadow: inset 3px 0 0 var(--crit); }
 .edit-row.is-warned:not(.is-blocked) { background: var(--warn-soft); box-shadow: inset 3px 0 0 var(--warn); }
-.edit-stepper { flex: none; }
+.edit-stepper { flex: none; --stepper-h: 46px; } /* the shared group's border leaves 44px buttons */
 .edit-stepper .step { font-size: var(--fs-lg); }
 .edit-card {
   display: flex; align-items: center; gap: var(--s-2); min-width: 0; min-height: var(--tap);
@@ -268,9 +271,15 @@ button.edit-card:hover { background: var(--hover); }
 .edit-tile[data-copies="3"] .card-tile-pic { box-shadow: 4px 4px 0 -1px var(--surface-3), 4px 4px 0 0 var(--border-strong), 8px 8px 0 -1px var(--surface-3), 8px 8px 0 0 var(--border-strong); }
 .edit-tile[data-copies="4"] .card-tile-pic { box-shadow: 4px 4px 0 -1px var(--surface-3), 4px 4px 0 0 var(--border-strong), 8px 8px 0 -1px var(--surface-3), 8px 8px 0 0 var(--border-strong), 12px 12px 0 -1px var(--surface-3), 12px 12px 0 0 var(--border-strong); }
 .edit-tile[data-copies] .card-tile-pic { margin-right: var(--s-3); }
-.edit-tile .card-tile-chips { display: flex; align-items: center; justify-content: space-between; flex-wrap: nowrap; gap: var(--s-1); }
-.edit-tile .edit-stepper { --tap: 32px; --stepper-h: 34px; }   /* a compact stepper fits the tile's foot */
-.edit-tile .edit-more { --tap: 32px; flex: none; }
+.edit-tile .card-tile-chips { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--s-1); }
+.edit-tile .edit-stepper { --tap: 44px; }
+.edit-tile .edit-more { --tap: 44px; flex: none; margin-left: auto; }
+@media (min-width: 1000px) and (pointer: fine) {
+  .edit-stepper { --stepper-h: inherit; }
+  .edit-tile .card-tile-chips { flex-wrap: nowrap; }
+  .edit-tile .edit-stepper { --tap: 32px; --stepper-h: 34px; }
+  .edit-tile .edit-more { --tap: 32px; margin-left: 0; }
+}
 /* The one badge ("2 missing", "On the way") sits on the picture's corner, so every footer is the same. */
 .edit-tile .card-tile-state { top: var(--s-2); right: calc(var(--s-3) + var(--s-1)); left: var(--s-1); display: flex; justify-content: flex-end; pointer-events: none; }
 .edit-tile .card-tile-state .chip { box-shadow: var(--shadow-1); pointer-events: auto; }
