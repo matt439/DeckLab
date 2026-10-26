@@ -485,12 +485,18 @@ button.edit-card:hover { background: var(--hover); }
 .bar-none { font-size: var(--fs-sm); font-weight: var(--fw-semibold); color: var(--ink-2); }
 .bar-warn { padding: var(--s-1) var(--s-2); }
 .bar-checking { display: inline-flex; align-items: center; gap: var(--s-2); font-size: var(--fs-sm); color: var(--ink-2); }
+/* Forge actions retain their own controls outside the replaceable curve and counts. No result is inferred. */
+.edit-forge { margin-top: var(--s-4); padding-top: var(--s-3); border-top: 1px solid var(--divider); min-width: 0; }
+.edit-forge[hidden] { display: none; }
+.edit-forge h3 { margin: 0 0 var(--s-2); font-size: var(--fs-sm); }
+.edit-forge > .sub { margin: 0 0 var(--s-3); }
+.edit-forge .vt-test-row { flex-wrap: wrap; align-items: flex-start; }
+.edit-forge .vt-test-why { flex-basis: 100%; max-width: none; overflow-wrap: anywhere; }
+
 /* The split Save: Save, then ▾ (Save & view deck) joined to it. */
 .bar-save { min-width: 88px; position: relative; }
 .bar-save:has(+ .bar-save-more) { border-top-right-radius: 0; border-bottom-right-radius: 0; }
 .bar-save + .bar-save-more { min-width: 0; margin-left: calc(-1 * var(--s-2)); padding: 0 var(--s-3); border-top-left-radius: 0; border-bottom-left-radius: 0; border-left: 1px solid var(--accent-ink); }
-/* variant.js's reason beside a disabled "Test this change" is its tooltip here (still its description). */
-.edit-bar .vt-test-why { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .bar-save .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--warn); box-shadow: 0 0 0 2px var(--accent); position: absolute; top: 6px; right: 6px; }
 
 /* ------------------------------------------------------------ sheets */

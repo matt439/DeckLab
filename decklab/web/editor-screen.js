@@ -476,10 +476,17 @@ function sidePanel() {
     onkeydown: tabArrows });
   ed.dom.addPart = addPart();
   ed.dom.stats = el("div", { class: "edit-stats" });
+  // The original Test row lives outside drawStats's replaceable numbers. Checks and quantities
+  // can update the curve without detaching its focused button or its retained reason.
+  ed.dom.forgeTest = typeof vtTestRow === "function" ? vtTestRow() : null;
+  ed.dom.forge = ed.dom.forgeTest ? el("section", { class: "edit-forge", hidden: true,
+    "aria-labelledby": "h-editor-forge" },
+    el("h3", { id: "h-editor-forge", text: "Forge" }),
+    el("p", { class: "sub", text: "Compare this draft with the saved list using Forge." }), ed.dom.forgeTest) : null;
   const search = el("section", { class: "edit-search-pane edit-side-body", id: "edit-pane-add" },
     el("h2", { class: "edit-pane-heading", id: "h-editor-add", tabindex: "-1", text: "Add cards" }), ed.dom.addPart);
   const stats = el("section", { class: "edit-stats-pane", id: "edit-pane-stats" },
-    el("h2", { class: "edit-pane-heading", id: "h-editor-stats", tabindex: "-1", text: "Stats" }), ed.dom.stats);
+    el("h2", { class: "edit-pane-heading", id: "h-editor-stats", tabindex: "-1", text: "Stats" }), ed.dom.stats, ed.dom.forge);
   const facts = el("div", { class: "edit-facts-pane" }, stats, ed.dom.check);
   ed.dom.sideBody = el("div", { class: "edit-pane-grid", id: "edit-side-panel" }, search, facts);
   ed.dom.check.classList.add("edit-check-side");
@@ -934,11 +941,11 @@ function drawBar() {
         onclick: () => openMenu(p.saveMore, [{ text: ed.mode === "new" ? "Create & view deck" : "Save & view deck",
           onclick: () => saveNow({ viewAfter: true }) }]) });
     }
-    // variant.js (wave 3): "Test this change", before Save (a second row of its own below 700 px).
-    p.test = typeof vtTestRow === "function" && !ed.quick ? vtTestRow() : null;
+    // The full editor's stable Forge panel owns the one original secondary Test row.
+    p.test = ed.dom.forgeTest || null;
     clear(bar).append(p.count, p.checking, p.checks);
     add(bar, [p.addCards]);
-    add(bar, [p.test, p.save]);
+    add(bar, [p.save]);
     add(bar, [p.saveMore]);
   }
   const kind = currentKind();
@@ -977,7 +984,8 @@ function drawBar() {
   if (p.save && !p.save.dataset.busy) p.save.disabled = none;
   if (p.test) {
     vtSyncTestRow(p.test);
-    // Its reason ("Keep the same number of cards ...") is the button's tooltip here, not words in the bar.
+    if (ed.dom.forge) ed.dom.forge.hidden = p.test.hidden;
+    // Keep the original visible reason and button description as eligibility changes.
     const why = p.test.vt && p.test.vt.why;
     if (why) p.test.vt.button.title = why.textContent || "";
   }

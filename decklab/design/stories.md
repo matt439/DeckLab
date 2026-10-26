@@ -3860,6 +3860,8 @@ The approved plan's contextual keyboard help built 2026-10-26: all-profile avata
 
 The approved keyboard plan's current-page fast routes built 2026-10-26: question-mark help, F for existing Editor/Collection search and M for an exact focused Editor row's More. Editor slash remains compatible; global sources/grouping stays E11-S31. 506 guarded checks and 18 synthetic Chromium cases passed with actual writes blocked. All three keyboard stages are built, with device and other slice-14 gates still open. See [HISTORY.md](../HISTORY.md#current-page-keyboard-fast-routes-2026-10-26-approved-desktop-shortcut-plan-step-3).
 
+Slice 14's retained Forge action panel built 2026-10-26: the existing secondary Test this change button and visible reason sit outside replaceable Stats content, with unchanged eligibility and callbacks. 520 guarded integrated checks and ten synthetic Chromium cases passed; no actual run/write. Results/badge/after-save behavior remain separate evidence-aware work. See [HISTORY.md](../HISTORY.md#retained-editor-forge-action-panel-2026-10-26-e11-s30-slice-14).
+
 Gap: slices 9 to 12's touch/Safari acceptance, Collection's open colour-filter choice and Receive's check-to-row association; then slices 13 to 15 (criteria 1 to 3 and 6). Independent coding through slice 12 is built; component checks stay separate until their row association is authoritative. Device checks do not block coding. Section 6's question 4 is settled (Matt, 2026-10-25: only Building and Idea tiles show a status pill). The lab top bar's search is E11-S31.
 
 <a id="e11-s31"></a>

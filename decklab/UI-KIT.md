@@ -706,3 +706,10 @@ Dispatch counts eligible owners before help de-duplication, preserves native
 editing/modifiers/IME/repeat and yields to overlays and busy operations. Frame
 rebinding is explicit at the legitimate new-deck space action, not arbitrary
 model changes. Modal Quick fields do not advertise the inactive F route.
+
+The full Editor's labelled `.edit-forge` section retains its one original
+`vtTestRow` beside, not inside, replaceable `.edit-stats`. `drawBar` synchronizes
+eligibility and panel visibility through the same row; the reason is visible.
+The original secondary button, native disabled state and description remain.
+Quick scope and all Forge request/test/Save behavior are unchanged. Result
+figures, unsaved evidence and after-save testing are separate work.

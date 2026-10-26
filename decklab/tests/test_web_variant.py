@@ -2,9 +2,8 @@
 R15, forge-trial/sim-wave3-contract.md section 11.6), in test_web's way: they read the files, and run
 a few of the page's functions under Node.js when it's installed.
 
-- The editor's Test row: below 700 px a second, full-width row of the bottom bar (44 px high); from
-  700 px before Save; shown while the deck or commander differs from the saved list, disabled with
-  the reason for a size change or a sideboard-only change.
+- The editor's Test row: retained in its labelled Forge panel; shown while the deck or commander
+  differs from the saved list, disabled with its visible reason for a size change or sideboard-only change.
 - The test page while it plays: progress, the next check, the dashed live range and Stop, and no
   verdict words; it stops asking once its page is left.
 - "Save this change" asks before replacing another unsaved draft of that list.
@@ -43,19 +42,23 @@ class VariantPageTests(unittest.TestCase):
             with self.subTest(name=name):
                 self.assertTrue(name.startswith(("vt-", "btn")) or name in SHARED, name)
 
-    def test_the_test_row_by_width(self):
-        phone = re.search(r"@media \(max-width: 599px\) \{(.*?)\n\}", CSS, re.S).group(1)
-        self.assertIn(".vt-test-row { order: -1; flex: 1 0 100%;", phone)
-        self.assertIn(".edit-bar:has(> .vt-test-row:not([hidden])) { flex-wrap: wrap; }", phone)
+    def test_the_test_row_lives_in_the_retained_forge_panel(self):
         self.assertRegex(CSS, r"\.vt-test-btn \{[^}]*min-height: 44px")
         self.assertIn(".vt-test-row[hidden], .vt-test-why[hidden] { display: none; }", CSS)
-        # From 600 px it sits before Save in the bar (editor-screen.js drawBar).
+        self.assertNotIn(".edit-bar:has(> .vt-test-row", CSS)
+        side = _function(_text("editor-screen.js"), "sidePanel")
+        self.assertIn('ed.dom.forgeTest = typeof vtTestRow === "function" ? vtTestRow() : null;', side)
+        self.assertIn('"aria-labelledby": "h-editor-forge"', side)
+        self.assertIn('ed.dom.stats, ed.dom.forge', side)
+        # drawStats replaces the numbers only; the original action and its reason stay attached.
+        stats = _function(_text("editor-screen.js"), "drawStats")
+        self.assertNotIn("ed.dom.forge", stats)
         bar = _function(_text("editor-screen.js"), "drawBar")
-        self.assertIn("add(bar, [p.test, p.save]);", bar)
+        self.assertIn("p.test = ed.dom.forgeTest || null;", bar)
         self.assertIn("vtSyncTestRow(p.test)", bar)
-        # The stylesheet loads after editor.css's .edit-bar? No: before it, and it only adds flex-wrap, which
-        # editor.css never sets.
-        self.assertNotRegex(_styles().split("/* The bar with the count and Save")[1].split("}")[0], "flex-wrap")
+        self.assertIn("ed.dom.forge.hidden = p.test.hidden", bar)
+        self.assertNotIn("add(bar, [p.test", bar)
+        self.assertNotIn(".edit-bar .vt-test-why", _styles())
 
     def test_the_live_state_has_no_verdict(self):
         live = _function(SCRIPT, "vtLivePanel")

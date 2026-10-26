@@ -452,7 +452,7 @@ function vtTestState(ed) {
   return { show: true, ok: true, why: null };
 }
 
-/** The editor bar's Test row (made once; vtSyncTestRow updates it). */
+/** The editor Forge panel's Test row (made once; vtSyncTestRow updates it). */
 function vtTestRow() {
   const button = el("button", { type: "button", class: "btn vt-test-btn", text: "Test this change", onclick: () => vtOpenTestSheet() });
   const why = el("span", { class: "vt-test-why" });

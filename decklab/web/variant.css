@@ -68,17 +68,11 @@
 .vt-test-item > .fresh { margin-left: auto; }
 .vt-saved { font-size: var(--fs-sm); font-weight: var(--fw-semibold); padding: 2px var(--s-2); border-radius: var(--r-pill); background: var(--good-soft); color: var(--good-ink); }
 
-/* The editor's Test row: before Save from 600 px; a second, full-width row of the bar below it. */
+/* The editor's retained Test row; editor.css places it in the Forge panel. */
 .vt-test-row { display: flex; align-items: center; gap: var(--s-2); min-width: 0; }
 .vt-test-row[hidden], .vt-test-why[hidden] { display: none; }
 .vt-test-btn { min-height: 44px; white-space: nowrap; }
 .vt-test-why { font-size: var(--fs-sm); color: var(--ink-2); max-width: 220px; line-height: 1.2; }
-@media (max-width: 599px) {
-  .edit-bar:has(> .vt-test-row:not([hidden])) { flex-wrap: wrap; }
-  .vt-test-row { order: -1; flex: 1 0 100%; flex-wrap: wrap; }
-  .vt-test-btn { flex: 1 1 100%; width: 100%; }
-  .vt-test-why { max-width: none; }
-}
 
 /* The sheet: full screen on a phone, a side sheet from 600 px. */
 .vt-sheet-part select { width: 100%; margin: 0 0 var(--s-2); }

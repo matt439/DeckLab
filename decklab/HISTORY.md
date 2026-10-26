@@ -2,6 +2,16 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Retained Editor Forge action panel (2026-10-26; E11-S30 slice 14)
+
+The full Editor's existing secondary Test this change row now lives in a labelled Forge section beside Stats, outside the replaceable curve/count content. The original button and its visible eligibility reason remain attached through ordinary Stats/check updates. Save stays in the bar. Existing printing-only, sideboard, size, new/unstarted-list and permission behavior remains; Quick Editor keeps its existing scope without a new Test action. No field result, unsaved result badge, after-save checkbox or new run/read behavior is invented.
+
+Validation: all 14 affected checks passed, then 520 guarded integrated keyboard/Editor/UI/source checks passed with zero skips, including six new Forge-panel scenarios. Tests cover original control/reason identity and focus, eligibility changes, sideboard/main/printing distinctions, panel ownership and no new requests. Database probes/connections and Python socket connect/bind/listen were blocked. Independent source review found no Dock/Forge semantic conflict; shared edits remain separate incremental batches.
+
+Ten synthetic Chromium cases passed: one retained button outside the bar; visible size and sideboard-only reasons; settled keyboard scrolling; 1000/1280 light/dark geometry; compact full Editor Stats access; row-focused Undo restoring quantities and hiding unchanged Forge; and actual Quick Editor scope after reload at 394 CSS pixels. The disposable fixture logged 56 API requests, including seven read-only checks, three rejected automatic visits and two rejected profile-theme preference writes from the light/dark checks. No real data was written. Test/Save/Record/run actions were not clicked; quantities were restored, the fixture stopped cleanly and its tab/viewport were released.
+
+The source audit still flags only pre-existing tokens.js at 1,516 lines among 802 owned files. drawStats, vtTally, vtSameTally, vtTestState, vtOpenTestSheet, draftBody, runCheck, saveNow and doSave remain byte-identical to commit 50 after newline normalization. No actual Save/conflict, live database, download, Forge game, full-suite or Linux acceptance. Touch, Safari, real-device, speech and real-IME acceptance remain open. Slice 14 remains partial for row/MV, docking/bar and the remaining evidence-aware Forge presentation/after-save behavior.
+
 ## Current-page keyboard fast routes (2026-10-26; approved desktop shortcut plan, step 3)
 
 Question mark opens contextual help outside editing, menus and dialogs, returning to the original eligible control. F reaches the existing current Editor Add cards search or the current Collection Find/Card list field. Editor slash remains its compatibility alias. M opens only the original More menu for the exact focused current Editor row's plus, minus, card or printing button. More itself uses native Enter/Space. The avatar help entry carries its current character hint, and all new character routes follow the existing per-profile off switch.
