@@ -2,6 +2,14 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Whole-deck take-apart checklist (2026-10-27; E8-S14)
+
+A built ordinary deck on Build decks offers a Take-apart checklist for its saved physical build, independently of the selected intended list and the plan's smaller Put back step. It includes every section and basic land, installed named or anonymous stand-ins, recorded paired token cards, and only the kit details the viewer may see. Missing token/kit records stay explicit. Malformed evidence is unavailable, with no mutable-list fallback or printing claim.
+
+Checks are local and make no progress, inventory or status write. After every check, an explicit Mark deck taken apart uses the existing SHA- and permission-checked status save. It clears physical reservations and kit while preserving intended lists and future stand-in choices. Done, Close or a known late success removes only that deck from the selected recipe and refreshes the plan; other sideboard/priorities remain. Stale controls and modal/profile/route/recipe changes cannot take over another view. Lost responses require a fresh read before another explicit save, and known participant statuses refresh the chooser.
+
+Validation: 160 backend regressions, 50 UI checks and a separate 117-check integration run passed. Fifteen new backend and nineteen frontend cases cover physical-source fidelity, privacy, conflicts, one-write behavior, cancellation, uncertain outcomes, later modals and owned focus. Twelve synthetic Chromium width/theme cases (320, 600, 820, 1000, 1280 and 1920px, light/dark), plus one focused 320px case, passed local checking/cancellation, layout and explicit fixture saves with no overflow or script errors. Two disposable status saves freed assembly, installed markers, packed tokens and kit while preserving the newer intended list and collection; no packing ticks were written. Ruff, JavaScript syntax and whitespace checks passed. Household data, Forge, touch, Safari and physical-device acceptance were untouched.
+
 ## Local profile diagnostics and safe setup (2026-10-27; E10-S17 first slice)
 
 Local `homenet status` reports rejected profile entries by one-based position, stable code and static reason, without echoing submitted names, ids, spaces or emails. It continues the PC checks, and valid configurations gain no extra line. Tolerant request parsing and existing authentication behavior stay unchanged, including legacy roles, accepted duplicate ordering, blank names and email normalization.

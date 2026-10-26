@@ -22,6 +22,165 @@ function assemblySheetHere(ctx) {
     && assemblyActive(ctx.view) && ctx.view.data === ctx.data;
 }
 
+/** Validate the recorded physical checklist, never substitute the displayed intended list. */
+function packTakeApartContents(info) {
+  if (!info || info.available !== true || !/^[a-f0-9]{64}$/.test(info.sha256 || "")
+      || typeof info.can_take_apart !== "boolean" || !["assembled", "built-list"].includes(info.source)
+      || !["target", "owned"].includes(info.version)
+      || !Number.isSafeInteger(info.card_count) || info.card_count < 1 || info.card_count > 20000
+      || !info.sections || typeof info.sections !== "object" || Array.isArray(info.sections)
+      || !Array.isArray(info.sections.Deck) || !info.sections.Deck.length
+      || Object.keys(info.sections).some(key => !["Commander", "Companion", "Deck", "Sideboard"].includes(key))
+      || !Array.isArray(info.tokens) || !Number.isSafeInteger(info.token_count) || info.token_count < 0
+      || typeof info.tokens_recorded !== "boolean") return null;
+  const named = name => typeof name === "string" && name.trim() && !/[\u0000-\u001f\u007f]/.test(name);
+  let cards = 0, rows = 0;
+  for (const section of Object.values(info.sections)) {
+    if (!Array.isArray(section)) return null;
+    for (const row of section) {
+      if (!row || !Number.isSafeInteger(row.quantity) || row.quantity < 1
+          || !["card", "marker"].includes(row.kind) || !(named(row.name) || row.kind === "marker" && row.name === null)
+          || row.kind === "marker" && !named(row.for) || row.kind === "card" && row.for !== null
+          || (row.name === null ? row.basic !== null : typeof row.basic !== "boolean")) return null;
+      cards += row.quantity; rows++;
+    }
+  }
+  if (rows > 2000 || cards !== info.card_count) return null;
+  let tokens = 0;
+  for (const row of info.tokens) {
+    if (!row || !Number.isSafeInteger(row.quantity) || row.quantity < 1 || !named(row.front)
+        || !(row.back == null || row.back === "" || named(row.back))
+        || !(row.set == null || typeof row.set === "string") || !(row.number == null || typeof row.number === "string")) return null;
+    tokens += row.quantity;
+  }
+  return tokens === info.token_count && (info.tokens_recorded || !tokens) ? info : null;
+}
+
+function packTakeApartButton(view, deck) {
+  if (!deck.take_apart || deck.completion?.status !== "built") return null;
+  const data = view.data, recipe = JSON.stringify(view.selected.map(packSelectedChoice));
+  const button = el("button", { type: "button", class: "btn btn-quiet pack-take-apart", text: "Take-apart checklist",
+    "aria-label": `${deck.title}: take-apart checklist`, onclick: () => {
+      if (!assemblyActive(view) || view.hash !== location.hash || view.data !== data || !data.decks.includes(deck)
+          || !button.isConnected || !view.results.contains(button) || view.previewing || view.reviewing || view.saving
+          || document.querySelector("dialog[open]") || recipe !== JSON.stringify(view.selected.map(packSelectedChoice))) return;
+      const progress = view.progress;
+      if (!progress?.loaded || progress.busy || progress.pending.size || progress.error) {
+        view.message.textContent = "Save or check the shared packing ticks before opening the take-apart checklist.";
+        return;
+      }
+      packReviewTakeApart(view, deck);
+    } });
+  return button;
+}
+
+/** These local checks never reserve cards or share packing ticks. The final save changes status once. */
+function packReviewTakeApart(view, deck) {
+  const info = packTakeApartContents(deck.take_apart), checks = [];
+  const recipe = JSON.stringify(view.selected.map(packSelectedChoice));
+  view.reviewing = true; packProgress(view);
+  let pending = false, saved = false, finished = false, needsRefresh = false;
+  const ctx = openAssemblySheet(view, `Take apart ${deck.title}`, { onClose: () => {
+    if (owner()) { view.reviewing = false; if (saved) finish(); else packProgress(view); }
+  } });
+  const owner = () => assemblyActive(view) && view.hash === location.hash && view.data === ctx.data
+    && recipe === JSON.stringify(view.selected.map(packSelectedChoice));
+  const currentSheet = () => owner() && assemblySheetHere(ctx);
+  const here = () => currentSheet() && [...document.querySelectorAll("dialog[open]")].at(-1) === ctx.sheet.dialog;
+  const error = el("p", { class: "form-error", role: "alert", tabindex: "-1" });
+  const fields = el("div");
+  const addCheck = (parent, text) => {
+    let accepted = false;
+    const input = el("input", { type: "checkbox", onchange: () => {
+      if (!here() || pending || saved) { input.checked = accepted; return; }
+      accepted = Boolean(input.checked);
+      actions();
+    } });
+    checks.push(input); parent.append(el("label", { class: "choice" }, input, el("span", { text })));
+  };
+  ctx.sheet.body.append(el("p", { text: "Unsleeve the recorded physical cards and return them to storage. Check the box before recording that this deck is taken apart. Its intended lists stay saved." }));
+  if (!info) {
+    ctx.sheet.body.append(el("p", { class: "box box-warn", text: deck.take_apart.reason || "The recorded physical contents cannot be checked. Refresh the plan or repair the deck record first." }));
+  } else {
+    ctx.sheet.body.append(el("p", { class: "sub", text: `${plural(info.card_count, "physical card")}. These are recorded card names, not confirmed printing assignments.` }), fields);
+    for (const section of ["Commander", "Companion", "Deck", "Sideboard"]) {
+      const rows = info.sections[section];
+      if (!rows?.length) continue;
+      const part = el("section", {}, el("h3", { text: section })); fields.append(part);
+      for (const row of rows) addCheck(part, row.kind === "marker"
+        ? `${row.quantity} x ${row.name || "spare card"} (marked for ${row.for})`
+        : `${row.quantity} x ${row.name}`);
+    }
+    const tokens = el("section", {}, el("h3", { text: "Token cards" })); fields.append(tokens);
+    for (const row of info.tokens) addCheck(tokens, `Return ${row.quantity} x ${row.front}${row.back ? ` // ${row.back}` : ""}`
+      + `${row.set ? ` (${String(row.set).toUpperCase()}${row.number ? ` ${row.number}` : ""})` : ""} to the token pile`);
+    addCheck(tokens, info.tokens_recorded ? "Check the box for any other token or reminder cards"
+      : "Check for token or reminder cards and return any to the token pile; none are recorded as packed");
+    const kit = el("section", {}, el("h3", { text: "Sleeves and deck box" })); fields.append(kit);
+    if (info.kit_reason) kit.append(el("p", { class: "sub", text: info.kit_reason }));
+    for (const [key, title] of [["sleeves", "Sleeves"], ["deck_box", "Deck box"]]) {
+      const ref = info.kit?.[key];
+      const label = ref && ["linked", "text"].includes(ref.state) ? assemblyKitName(ref) : null;
+      addCheck(kit, `Put away ${title.toLowerCase()}${label ? `: ${label}` : ref ? " (recorded accessory needs checking)"
+        : info.kit ? " (not recorded)" : " (details not visible)"}`);
+    }
+    if (!info.can_take_apart) ctx.sheet.body.append(el("p", { class: "sub", text: info.why_not || "You cannot change this deck." }));
+  }
+  ctx.sheet.body.append(error);
+  function actions() {
+    sheetActions(ctx.sheet, [saved ? { text: "Done", kind: "primary", onclick: () => finish() }
+      : needsRefresh ? { text: "Refresh plan", kind: "primary", onclick: () => {
+        if (!here() || pending) return;
+        ctx.sheet.close(); view.reviewing = false; packChanged(view); clearTimeout(view.timer); view.run();
+      } } : info ? { text: "Mark deck taken apart", kind: "primary", disabled: pending || !info.can_take_apart || checks.some(input => !input.checked), onclick: save } : null,
+      !saved ? { text: info ? "Cancel" : "Close", disabled: pending, onclick: () => ctx.sheet.close() } : null]);
+  }
+  function finish() {
+    if (!owner() || !saved || finished || !ctx.sheet.closed && !here()) return;
+    finished = true;
+    ctx.sheet.close(); view.reviewing = false;
+    view.selected = view.selected.filter(item => item.id !== deck.id);
+    view.choices = view.choices.map(choice => choice.id === deck.id ? { ...choice, status: "building" } : choice);
+    view.sideboardChoosing?.delete(deck.id);
+    if (view.buildKit) delete view.buildKit[deck.id];
+    packChanged(view); clearTimeout(view.timer); view.run();
+    showToast(`${deck.title} is now marked as taken apart.`);
+  }
+  async function save() {
+    if (!here() || !info || !info.can_take_apart || pending || saved || needsRefresh || checks.some(input => !input.checked)) return;
+    const trigger = document.activeElement;
+    const focusOwned = () => [document.body, trigger].includes(document.activeElement) || !document.activeElement?.isConnected;
+    pending = true; checks.forEach(input => { input.disabled = true; }); error.textContent = "";
+    packSaving(view, true); actions();
+    try {
+      const answer = await apiWrite("/api/deck/save", { id: deck.id, sha256: info.sha256, fields: { status: "building" } });
+      if (answer.saved !== true || answer.id !== deck.id) throw new Error("The save result could not be confirmed.");
+      state.library = null;
+      if (!owner()) return;
+      saved = true; packSaving(view, false);
+      if (!currentSheet()) { finish(); return; }
+      const confirmation = el("p", { role: "status", tabindex: "-1", text: `${deck.title} is marked as taken apart. Its recorded cards, tokens, sleeves and box are free again. Its intended lists are kept.` });
+      clear(ctx.sheet.body).append(confirmation);
+      if (answer.stale_tables?.length) ctx.sheet.body.append(tablesLaterNote("Some availability tables need updating."));
+      actions();
+      if (here() && focusOwned()) confirmation.focus();
+    } catch (failure) {
+      state.library = null; // A lost response may follow a committed save; the next read must be fresh.
+      if (!owner()) return;
+      packSaving(view, false); needsRefresh = true;
+      if (!currentSheet()) { view.reviewing = false; view.run(); return; }
+      error.textContent = failure.status ? `${failure.message} Refresh the plan before trying again.`
+        : "The save result could not be confirmed. Refresh the plan before trying again.";
+      if (here() && focusOwned()) error.focus();
+    } finally {
+      pending = false;
+      if (owner()) { packSaving(view, false); if (currentSheet()) actions(); }
+    }
+  }
+  actions();
+  return ctx;
+}
+
 /** Choose kit now, then save it with the status, built list and physical stand-ins. */
 function packReviewBuilt(view) {
   return new Promise(resolve => {

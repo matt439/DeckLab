@@ -172,10 +172,18 @@ async function packRun(view) {
     view.builtMessage = null;
     view.finishError = null;
     view.message.textContent = "";
+    // A separately reviewed take-apart save (including a lost response) may have changed these statuses.
+    let statusesChanged = false;
+    view.choices = view.choices.map(choice => {
+      const status = result.decks?.find(deck => deck.id === choice.id)?.completion?.status;
+      if (!["idea", "building", "built"].includes(status) || status === choice.status) return choice;
+      statusesChanged = true;
+      return { ...choice, status };
+    });
     if (result.selections) {
       view.selected = result.selections.map(packSelectedChoice);
       drawPackPicks(view);
-    }
+    } else if (statusesChanged) drawPackPicks(view);
     renderAssemblyPlan(view, result);
   } catch (problem) {
     if (assemblyActive(view) && seq === view.seq) {
@@ -461,7 +469,8 @@ function packDeck(view, deck) {
       el("h2", {}, el("a", { href: deckHref(deck.id, deck.version), text: deck.title })),
       el("p", { class: "sub", text: listName(deck.version) }),
       deck.build_scope ? el("p", { class: "sub pack-build-scope", text: packScopeWords(deck) }) : null,
-      deck.completion?.already_built ? status("good", "Built") : null),
+      deck.completion?.already_built ? status("good", "Built") : null,
+      packTakeApartButton(view, deck)),
     packBulkControl(view, deck),
     packStandinsPart(view, deck),
     step("sleeves", "Sleeves", kitNode, sleeves && need ? el("ul", { class: "pack-list" },

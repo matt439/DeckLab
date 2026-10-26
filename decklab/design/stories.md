@@ -42,11 +42,11 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E5: Decide what to buy](#e5-decide-what-to-buy) | 22 | 15 | 0 | 5 | 2 |
 | [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 20 | 17 | 0 | 1 | 2 |
 | [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 27 | 17 | 4 | 6 | 0 |
-| [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 16 | 10 | 1 | 3 | 2 |
+| [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 16 | 11 | 1 | 2 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 19 | 13 | 0 | 5 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 35 | 30 | 2 | 1 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 28 | 15 | 6 | 4 | 3 |
-| **Total** | **229** | **165** | **18** | **32** | **14** |
+| **Total** | **229** | **166** | **18** | **31** | **14** |
 
 Counted from the story headers on 2026-10-27.
 
@@ -2177,7 +2177,7 @@ First slice: a `token_cards` field in the product's status, read and written lik
 
 The physical side of home's shared pool: each built deck and each product kept intact is in one sleeve design and one deck box, every other card sits unsleeved in the storage box, and moving a card between decks means changing its sleeve. Deck Lab records the sleeves, deck boxes and playmats (each Matt's, User1's or shared) on the Sleeves & boxes page, a built deck's Sleeves and Deck box lines and an intact product's kit, warns when a holder has too few sleeves or a box that is full or too small, and lets one sleeve design sleeve several holders. Choosing a deck's kit needs the right to edit that deck; an owner may make their kit public (read-only), and members never see private kit. Accessory prices are not wanted.
 
-Open: E8-S03, E8-S14, E8-S15, E8-S19.
+Open: E8-S03, E8-S15, E8-S19.
 
 **E8-S01** · Matt · must · M · built
 
@@ -2333,7 +2333,7 @@ Evidence:
 - `decklab/tests/test_product_storage.py`: test_break_preview_matches_shared_operation_without_writing_then_saves_once, test_keep_intact_reserves_cards_without_adding_to_collection_or_restoring_old_kit, test_private_old_kit_is_masked_and_admin_cannot_clear_it
 - `decklab/tests/test_product_storage_ui.py`
 
-**E8-S14** · Matt · could · S · missing
+**E8-S14** · Matt · could · S · built
 
 As Matt, taking a built deck apart, I want one list of every card to unsleeve and return to storage, with the sleeves and box to put away, so that nothing is left in the box.
 
@@ -2341,11 +2341,11 @@ As Matt, taking a built deck apart, I want one list of every card to unsleeve an
 - Given that checklist, then it also names the sleeves and deck box to put away.
 
 Evidence:
-- `decklab/web/assembly.js` (the Put back step covers only cards a chosen list stopped using)
+- `decklab/lib/api/assembly_takeapart.py`: authoritative physical sections, installed markers, packed tokens and authorized kit refs
+- `decklab/web/assembly-sheets.js`: local checks and explicit existing SHA-bound status save
+- `decklab/tests/test_assembly_takeapart.py`, `test_assembly_takeapart_ui.py`: source fidelity, malformed records, privacy, lifecycle and safe completion
 
-Gap: there is no whole-deck take-apart checklist. Clearing the kit lines when a deck is unbuilt is in E8-S05, and `deck delete`'s refusal in E8-S18.
-
-First slice: a Take apart checklist on Build decks for a built deck: every card in every section, then its sleeves and deck box.
+Now: built 2026-10-27 ([HISTORY.md](../HISTORY.md#whole-deck-take-apart-checklist-2026-10-27-e8-s14)); every recorded physical card and kit item is checked before the optional status save. Newer intended lists stay saved, and only the taken-apart participant leaves the refreshed plan.
 
 Related scope: E11-S30's [slice 13](visual-design.md#7-rollout) owns intact-product take-apart and transfer. Reuse presentation where useful, while keeping this whole-deck checklist's acceptance separate.
 

@@ -150,6 +150,18 @@ have required card-task ticks; optional kit and token ticks stay optional.
 `deck-standins.js` supplies the inventory-visible mappings. Overview links to
 the represented card's rules; the printed play sheet records the text mapping.
 
+A built ordinary participant may expose `take_apart` from its saved physical
+assembly, or the defined legacy built-list fallback. All sections, basics,
+installed markers and recorded packed tokens are separate from current selected
+instructions; kit refs reuse existing visibility. Unavailable or malformed
+metadata never becomes an intended-list checklist. Its native local checks do
+not use shared progress. Only the explicit status-only deck save uses the reviewed
+SHA; all checks and edit eligibility are required. Success reconciles only the
+original owner, removes that participant and previews the remaining recipe.
+Uncertain/refused writes require Refresh rather than another save. Modal and
+focus guards retain later work, and known success still reconciles after Close.
+`test_assembly_takeapart.py` and `test_assembly_takeapart_ui.py` cover these rules.
+
 Build decks groups optional verified `held_elsewhere[].intact_product` evidence
 by its opaque product id, using one actual supplied readable deck route for the
 existing Product storage review. Only short/waiting cards contribute. The link

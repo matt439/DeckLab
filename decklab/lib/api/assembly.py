@@ -153,6 +153,10 @@ def assembly_view(deck=None, version="target"):
     summary already read, independent of the selected list/physical recipe. None is unknown;
     [] is known colourless. No extra deck or inventory read is made for that decoration.
 
+    A selected built ordinary home deck has "take_apart": the current physical snapshot (or
+    legacy built list), all sections and installed markers, packed token cards and visible kit.
+    It supplies the deck SHA for an ordinary explicit status save; no checklist read changes it.
+
     The plan is the home pool's: 403 for anyone outside the home
     (guard.require_sees_home_records), here and in assembly_preview."""
     from . import guard
@@ -268,6 +272,8 @@ def _preview(selected, profile=False):
                     basics[name] += line.quantity
         shown = sees and guard.sees_kit(summary, owners)
         sleeves, kit = _kit(summary, sections, inv, usage, owners) if shown else (None, None)
+        from .assembly_takeapart import project as take_apart
+        checklist = take_apart(parsed, stored, kit, profile)
         participants.append({"id": summary["id"], "title": summary["title"], "version": choice["version"],
                              "colors": list(summary["colors"]) if isinstance(summary.get("colors"), list) else None,
                              "rename_version": stored.rename_version if stored is not None else 0,
@@ -285,6 +291,8 @@ def _preview(selected, profile=False):
                              "finishes": {name: [{"finish": finish, "quantity": qty} for finish, qty in counts.items()]
                                           for name, counts in finishes.items()},
                              "steps": [], "returns": []})
+        if checklist is not None:
+            participants[-1]["take_apart"] = checklist
     from . import assembly_preferences
     selections, priorities = assembly_preferences.normalize(selections, participants)
     from .assembly_markers import plan_standins
