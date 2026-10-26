@@ -44,7 +44,7 @@ from decklab import server
 WEB = server.WEB_DIR
 MATCHUP_SCRIPTS = ("sim-ui.js", "matchups.js", "matchups-overview.js", "matchups-summary.js", "matchups-detail.js", "matchups-results.js",
                    "matchups-cards.js")
-PLAY_SCRIPTS = ("deck-tools.js", "collection.js", "collection-rows.js", "collection-cards.js", "collection-bulk.js", "collection-guards.js", "assembly.js", "assembly-chooser.js", "assembly-switcher.js", "assembly-finish.js", "assembly-steps.js", "assembly-overlap.js", "assembly-sections.js", "assembly-progress.js", "assembly-sheets.js", "hands.js", "play.js", "deck-sideboard.js", "deck-opponents.js", "deck-standins.js", "deck-swaps.js", "product-storage.js", "history.js", "activity.js",
+PLAY_SCRIPTS = ("deck-tools.js", "collection.js", "precon-token-choices.js", "collection-rows.js", "collection-cards.js", "collection-bulk.js", "collection-guards.js", "assembly.js", "assembly-chooser.js", "assembly-switcher.js", "assembly-finish.js", "assembly-steps.js", "assembly-overlap.js", "assembly-sections.js", "assembly-progress.js", "assembly-sheets.js", "hands.js", "play.js", "deck-sideboard.js", "deck-opponents.js", "deck-standins.js", "deck-swaps.js", "product-storage.js", "history.js", "activity.js",
                 "receipts.js", "receipt-tiles.js", "receipt-layout.js", "receipt-workflow.js", "accessories.js", "accessory-pictures.js", "tokens.js", "token-plan.js", "product-tokens.js")
 SHELL_SCRIPTS = ("keyboard-help.js", "shell.js", "settings.js", "visibility.js")  # account pages, just before app.js
 CARD_SCRIPTS = ("ui.js", "symbols.js", "cards-ui.js", "card-viewer.js")     # the shared card pieces (UI-KIT.md)

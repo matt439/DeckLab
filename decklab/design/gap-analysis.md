@@ -6,7 +6,7 @@ Story ids (such as E7-S09) are those in [stories.md](stories.md). Each story the
 
 ## Headline
 
-Deck Lab already does most of what Matt and User1 need. Of the must and should stories, Matt has 96 built and 3 partial; User1 has 32 built, 1 partial and 1 missing; Claude Code has 15 built, User5 4, the space members 4 and the Commander table 1, with no gaps. Across all 229 stories there are 167 built, 18 partial, 30 missing and 14 not wanted (recounted from the story headers on 2026-10-27). E9-S18 is now counted as not wanted.
+Deck Lab already does most of what Matt and User1 need. Of the must and should stories, Matt has 96 built and 3 partial; User1 has 32 built, 1 partial and 1 missing; Claude Code has 15 built, User5 4, the space members 4 and the Commander table 1, with no gaps. Across all 229 stories there are 168 built, 17 partial, 30 missing and 14 not wanted (recounted from the story headers on 2026-10-27). E9-S18 is now counted as not wanted.
 
 Matt's answers moved the work towards three things:
 

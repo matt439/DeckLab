@@ -41,12 +41,12 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 20 | 14 | 1 | 4 | 1 |
 | [E5: Decide what to buy](#e5-decide-what-to-buy) | 22 | 15 | 0 | 5 | 2 |
 | [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 20 | 17 | 0 | 1 | 2 |
-| [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 27 | 18 | 4 | 5 | 0 |
+| [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 27 | 19 | 3 | 5 | 0 |
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 16 | 11 | 1 | 2 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 19 | 13 | 0 | 5 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 35 | 30 | 2 | 1 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 28 | 15 | 6 | 4 | 3 |
-| **Total** | **229** | **167** | **18** | **30** | **14** |
+| **Total** | **229** | **168** | **17** | **30** | **14** |
 
 Counted from the story headers on 2026-10-27.
 
@@ -1738,7 +1738,7 @@ Evidence:
 
 How the inventory stays true to the physical cards. Each space's own people add, fix and remove cards on the Collection page (single cards, an app export, Add a precon) and token cards on the Tokens page; Matt and User1 both edit home's, each member only their own, and Claude does bulk and member upkeep from the PC (`collection merge`, `collection edit` and `collection apply`, `collection add-precon --space`). Repeat imports, sales and trades, and cards held by built decks are all flagged, other decks' out-of-date tables are listed with Update all rather than refreshed automatically, and the nightly `db check` looks for drift.
 
-Open: E7-S03, E7-S06, E7-S08, E7-S15, E7-S18, E7-S21, E7-S22, E7-S23, E7-S24.
+Open: E7-S03, E7-S08, E7-S15, E7-S18, E7-S21, E7-S22, E7-S23, E7-S24.
 
 **E7-S01** · Matt · must · M · built
 
@@ -1818,7 +1818,7 @@ Evidence:
 - `decklab/tests/test_precons.py`: test_adds_the_cards_and_the_deck_in_one_change, test_refusals_change_nothing
 - `decklab/tests/test_precon_cli.py`: test_the_same_deck_as_the_page, test_a_dry_run_previews_the_cards_and_the_deck_and_saves_nothing
 
-**E7-S06** · Matt · could · M · partial
+**E7-S06** · Matt · could · M · built
 
 As a deck builder, I want a precon's token cards offered for adding when I add the precon, so that its decks' token needs are met without typing each token.
 
@@ -1826,13 +1826,14 @@ As a deck builder, I want a precon's token cards offered for adding when I add t
 - Given I skip them, then the deck page's Tokens part still shows them as not owned.
 
 Evidence:
-- `decklab/web/collection.js`: preconTokenChoice, addPrecon (default unchecked, guarded source and inventory receipts, fresh-preview conflicts)
+- `decklab/web/precon-token-choices.js`, `collection.js`: explicit per-entry physical quantities/front choices, default unchecked, exact receipts, fresh-preview conflicts and owned controls
 - `decklab/lib/precon_tokens.py`, `decklab/lib/api/precons.py`, `decklab/lib/inventory/ops_decks.py`: explicit source counts, unconfirmed separate rows, one atomic precon change
 - `decklab/db/inv_collection.py`: add-precon --add-tokens; `decklab/tests/test_precon_tokens.py`, `test_precon_tokens_cli.py`, `test_precon_tokens_ui.py`
+- `decklab/tests/test_precon_token_choices.py`, `test_precon_token_choices_api.py`, `test_precon_token_choices_cli.py`, `test_precon_token_choices_pg.py`, `test_precon_token_choices_ui.py`: unknown counts, paired-face choices, zero skips, bound CSV, atomic persistence and UI ownership
 
-Now (2026-10-27): sources with explicit physical counts and unambiguous checked face names offer token rows in the precon's one change. Printing, finish and reverse face remain unknown; skipping is still the default. Synthetic browser saves and file/API/CLI tests cover this bounded path.
+Now (2026-10-27): unknown counts remain blank for explicit confirmation; one face is chosen for an ambiguous entry, and zero skips an entry. Users count each physical card once across paired-face source entries. Every positive entry remains a separate row with printing, finish and reverse face unknown, saved with collection/deck as one change. Skipping is still the default; CLI choice files bind the reviewed source hash.
 
-Gap: MTGJSON's documented CardToken model does not guarantee a count. Missing counts and combined or ambiguous names currently refuse the optional batch, leaving the ordinary precon available. The remaining slice needs explicit physical-quantity confirmation and safe handling of face ambiguity; no missing count means one and no combined name is split into additional cards. The second criterion already holds through the deck's Tokens part.
+Validation: 200 affected checks passed, including guarded disposable PostgreSQL cases, and twelve synthetic browser width/theme cases passed. Malformed or unchecked names still refuse only the optional batch. No count, pairing or printing is inferred; household data and real-device acceptance were untouched.
 
 **E7-S07** · Matt · must · L · built
 
