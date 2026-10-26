@@ -10,10 +10,10 @@ list's rows editor-lines.js's. It uses editor.js's constants, `editor`, lines, f
 and sheets, editor-details.js's Deck details, editor-lines.js's list, editor-cards.js's Add panel, search
 sheet and printing sheet, and editor-save.js's checks, saving and discarding.
 
-Layout (editor.css): from 1,000 px (an iPad in landscape) Deck details and the list are one column and the
-side panel a sticky column beside them; below that Deck details, the panel and the list come one after the
-other. The Notes tab has the whole width. From 1,400 px with a mouse the card pointed at shows in the peek
-column (deck.js peekLayout). On a phone (quickEditing) the editor is the Quick edit: compact rows with
+Layout (editor.css): from 1,000 px the list, search and Stats/Checks form three panes; below that the original
+Add/Stats/Checks tabs project their retained roots into one folded panel above the list. Notes has the whole
+width; the full editor's shared card peek stays hidden so it cannot become a fourth pane. On a phone
+(quickEditing) the editor is the Quick edit: compact rows with
 steppers, "Add cards" opening a search sheet with Paste a list, a line's ⋯ (printing, move, remove),
 the status, folded Deck details, Notes and Save. Pictures and the side panel stay on larger screens.
 A new deck on a phone is the Quick edit with its title and format.
@@ -51,7 +51,7 @@ function drawEditor() {
   const work = el("div", { class: "edit-work" + (side ? "" : " edit-work-single") },
     detailsPart(), side, el("div", { class: "edit-main" }, mainTabs(), ed.dom.mainBody = el("div", { class: "edit-main-body" })));
   // deck.js: on a wide screen with a mouse, the card last pointed at shows beside the editor.
-  add(main, [ed.dom.page = el("div", { class: "edit-page" + (ed.quick ? " is-quick" : "") },
+  add(main, [ed.dom.page = el("div", { class: "edit-page" + (ed.quick ? " is-quick" : "") + (side ? " has-editor-panes" : "") },
     peekLayout(`edit:${ed.mode}:${ed.id || ed.from || ""}:${ed.version}`, firstCard(ed.lists), [
       crumb(back[0], back[1]),
       editorHead(),
@@ -59,6 +59,7 @@ function drawEditor() {
       work,
       side || !listOpen ? null : ed.dom.check,
       ed.dom.bar]))]);
+  mountEditorPanes();
   drawMain();
   drawBanners();
   drawCheck();
@@ -465,73 +466,274 @@ function sidePanel() {
   if (!SIDE_TABS.some(([key]) => key === ed.side)) ed.side = "add";
   ed.dom.sideTabs = el("div", { class: "tabs edit-side-tabs", role: "tablist", "aria-label": "Add, stats and checks",
     onkeydown: tabArrows });
-  ed.dom.sideBody = el("div", { class: "edit-side-body", role: "tabpanel", id: "edit-side-panel" });
   ed.dom.addPart = addPart();
   ed.dom.stats = el("div", { class: "edit-stats" });
+  const search = el("section", { class: "edit-search-pane edit-side-body", id: "edit-pane-add" },
+    el("h2", { class: "edit-pane-heading", id: "h-editor-add", tabindex: "-1", text: "Add cards" }), ed.dom.addPart);
+  const stats = el("section", { class: "edit-stats-pane", id: "edit-pane-stats" },
+    el("h2", { class: "edit-pane-heading", id: "h-editor-stats", tabindex: "-1", text: "Stats" }), ed.dom.stats);
+  const facts = el("div", { class: "edit-facts-pane" }, stats, ed.dom.check);
+  ed.dom.sideBody = el("div", { class: "edit-pane-grid", id: "edit-side-panel" }, search, facts);
   ed.dom.check.classList.add("edit-check-side");
   // Below 1,000 px (editor.css) the panel is folded to its tabs once the deck has cards, so the list starts on
   // the first screen; the fold button (and a tab, or Add cards) opens it.
   if (ed.sideFolded === undefined) ed.sideFolded = !emptyList();
+  const context = ed.dom.panes = { ed, token: routeToken, hash: location.hash, profile: ed.profile, id: ed.id, version: ed.version,
+    ac: ed.ac, search, facts, panels: { add: search, stats, checks: ed.dom.check },
+    buttons: {}, page: null, root: null, building: true, wide: editorPanesWide() };
   ed.dom.sideFold = el("button", { type: "button", class: "btn btn-quiet edit-side-fold", "aria-controls": "edit-side-panel",
-    onclick: () => foldSide(!ed.sideFolded) });
-  drawSideTabs();
-  showSide();
+    onfocus: event => rememberEditorPaneHeader(context, event.currentTarget),
+    onclick: () => { if (editorPanesCurrent(context)) foldSide(!ed.sideFolded); } });
+  for (const [key, label] of SIDE_TABS) {
+    const count = el("span", { class: "chip tab-count", role: "img", hidden: true });
+    const button = el("button", { type: "button", role: "tab", id: `edit-side-${key}`,
+      "data-pane": key, "aria-controls": context.panels[key].id,
+      onfocus: event => rememberEditorPaneHeader(context, event.currentTarget),
+      onclick: () => setSide(key, context) }, label, count);
+    context.buttons[key] = { button, count };
+    ed.dom.sideTabs.append(button);
+  }
+  const head = context.head = el("div", { class: "edit-side-head" }, ed.dom.sideTabs, ed.dom.sideFold);
   ed.dom.side = el("aside", { class: "panel edit-side", "aria-label": "Add, stats and checks" },
-    el("div", { class: "edit-side-head" }, ed.dom.sideTabs, ed.dom.sideFold), ed.dom.sideBody);
-  foldSide(ed.sideFolded);
+    head, ed.dom.sideBody);
+  context.root = ed.dom.side;
+  context.root.addEventListener("focusin", event => {
+    if (editorPanesCurrent(context) && event.target !== context.rescuingHeader && editorPaneOf(context, event.target)) {
+      revealEditorPaneFocus(context, event.target);
+    }
+  });
+  drawSideTabs(context, true);
+  projectEditorPanes(context);
   return ed.dom.side;
+}
+
+function editorPanesWide() { return window.matchMedia("(min-width: 1000px)").matches; }
+
+/** The pane tree belongs to this exact editor draw; presentation never creates a new search. */
+function editorPanesCurrent(context, building = false) {
+  const ed = context?.ed;
+  return Boolean(ed && editor === ed && ed.dom.panes === context && !ed.quick && !ed.leaving
+    && context.token === routeToken && context.profile === state.profile?.id && context.profile === ed.profile
+    && context.id === ed.id && context.version === ed.version && context.ac === ed.ac && !context.ac?.cancelled
+    && context.root === ed.dom.side && (building && context.building || !context.building
+      && context.page === ed.dom.page && context.page?.isConnected && context.page.contains(context.root)));
+}
+
+/** Only the editor's consumed swap/Notes URL may refresh this same tree's canonical address. */
+function canonicalEditorPaneHash(ed, previousHash, canonicalHash) {
+  const context = ed?.dom?.panes;
+  if (!editorPanesCurrent(context) || context.ed !== ed || ed.mode !== "edit" || context.hash !== previousHash
+      || canonicalHash !== editHref(ed.id, ed.version) || location.hash !== canonicalHash) return;
+  context.hash = canonicalHash;
+}
+
+function mountEditorPanes() {
+  const context = editor?.dom?.panes;
+  if (!editorPanesCurrent(context, true) || !context.building) return;
+  context.page = editor.dom.page;
+  context.building = false;
+  showSide();
+}
+
+function editorPaneOf(context, target) {
+  if (!target) return null;
+  return SIDE_TABS.find(([key]) => context.panels[key].contains(target))?.[0] || null;
+}
+
+/** Preserve a narrow tab's ownership through the browser's automatic blur when CSS hides the header. */
+function rememberEditorPaneHeader(context, target) {
+  if (!editorPanesCurrent(context) || context.wide || !context.head.contains(target)) return;
+  context.headerFocus = { target, scope: JSON.stringify([context.ed.id, context.ed.version, context.ed.space]) };
+}
+
+function clearEditorPaneHeaderFocus(event) {
+  const context = editor?.dom?.panes, held = context?.headerFocus;
+  if (!editorPanesCurrent(context) || !held) return;
+  const body = event.target === document.body || event.target === document.documentElement;
+  if (body && context.projectingHeader === held) return;
+  if (event.type === "pointerdown" ? !context.head.contains(event.target) : event.target !== held.target) {
+    context.headerFocus = null;
+  }
+}
+
+/** All roots stay attached. Only the casual projection uses the tabs and the saved fold preference. */
+function projectEditorPanes(context) {
+  const ed = context.ed, wide = context.wide;
+  context.head.hidden = wide;
+  ed.dom.sideBody.hidden = !wide && ed.sideFolded;
+  ed.dom.side.classList.toggle("is-folded", ed.sideFolded);
+  ed.dom.sideFold.textContent = ed.sideFolded ? "Show" : "Hide";
+  ed.dom.sideFold.setAttribute("aria-expanded", String(!ed.sideFolded));
+  context.facts.hidden = !wide && ed.side === "add";
+  for (const [key, panel] of Object.entries(context.panels)) {
+    panel.hidden = !wide && ed.side !== key;
+    if (wide) panel.removeAttribute("role");
+    else panel.setAttribute("role", "tabpanel");
+    panel.setAttribute("aria-labelledby", wide ? ({ add: "h-editor-add", stats: "h-editor-stats", checks: "h-check" })[key]
+      : `edit-side-${key}`);
+  }
+  const heading = ed.dom.check.querySelector("#h-check");
+  if (heading) heading.setAttribute("class", wide ? "edit-pane-heading" : "sr-only");
 }
 
 /** Folds the side panel to its tabs (below 1,000 px; a wide screen always shows it), or opens it. */
 function foldSide(folded) {
-  const ed = editor;
+  const ed = editor, context = ed?.dom?.panes;
+  if (!editorPanesCurrent(context)) return;
+  const active = document.activeElement;
+  if (folded && !context.wide && ed.dom.sideBody.contains(active) && !document.querySelector("dialog[open]")) {
+    ed.dom.sideFold.focus({ preventScroll: true });
+  }
   ed.sideFolded = folded;
-  if (!ed.dom.side) return;
-  ed.dom.side.classList.toggle("is-folded", folded);
-  ed.dom.sideFold.textContent = folded ? "Show" : "Hide";
-  ed.dom.sideFold.setAttribute("aria-expanded", String(!folded));
+  projectEditorPanes(context);
 }
 
-function drawSideTabs() {
-  const ed = editor;
-  if (!ed.dom.sideTabs) return;
-  const focused = document.activeElement && ed.dom.sideTabs.contains(document.activeElement) ? document.activeElement.id : null;
+function drawSideTabs(context = editor?.dom?.panes, building = false) {
+  if (!editorPanesCurrent(context, building)) return;
+  const ed = context.ed;
   const a = ed.check;
   const blocks = (a ? a.blocks.length : 0) + (typedTitleProblem() ? 1 : 0);
   const warnings = a && !emptyList() ? a.warnings.length : 0;
-  clear(ed.dom.sideTabs).append(...SIDE_TABS.map(([key, label]) => el("button", { type: "button", role: "tab",
-    id: `edit-side-${key}`, "aria-selected": String(ed.side === key), "aria-controls": "edit-side-panel",
-    tabindex: ed.side === key ? "0" : "-1", onclick: () => setSide(key) }, label,
-  key === "checks" && (blocks || warnings) ? el("span", { class: `chip chip-${blocks ? "crit" : "warn"} tab-count`,
-    text: String(blocks || warnings), "aria-label": blocks ? plural(blocks, "problem") : plural(warnings, "warning") }) : null)));
-  if (focused) { const again = document.getElementById(focused); if (again) again.focus({ preventScroll: true }); }
+  for (const [key, { button, count }] of Object.entries(context.buttons)) {
+    button.setAttribute("aria-selected", String(ed.side === key));
+    button.setAttribute("tabindex", ed.side === key ? "0" : "-1");
+    count.hidden = key !== "checks" || !(blocks || warnings);
+    if (!count.hidden) {
+      count.setAttribute("class", `chip chip-${blocks ? "crit" : "warn"} tab-count`);
+      count.textContent = String(blocks || warnings);
+      count.setAttribute("aria-label", blocks ? plural(blocks, "problem") : plural(warnings, "warning"));
+    }
+  }
 }
 
-function setSide(key) {
-  const ed = editor;
-  foldSide(false);
+function setSide(key, context = editor?.dom?.panes) {
+  if (!editorPanesCurrent(context) || !context.panels[key]) return;
+  const ed = context.ed, active = document.activeElement;
+  if (ed.tab !== "cards") { ed.tab = "cards"; drawMain(); }
   ed.side = key;
+  ed.sideFolded = false;
   local.set("editSide", key);
   drawSideTabs();
   showSide();
+  if (!context.wide && editorPaneOf(context, active) && editorPaneOf(context, active) !== key
+      && !ed.saving && !ed.asking && !document.querySelector("dialog[open]")) {
+    context.buttons[key].button.focus({ preventScroll: true });
+  }
 }
 
 function showSide() {
-  const ed = editor;
-  if (!ed.dom.sideBody) return;
-  ed.dom.sideBody.setAttribute("aria-labelledby", `edit-side-${ed.side}`);
-  clear(ed.dom.sideBody).append(ed.side === "add" ? ed.dom.addPart : ed.side === "stats" ? ed.dom.stats : ed.dom.check);
-  if (ed.side === "stats") drawStats();
+  const context = editor?.dom?.panes;
+  if (!editorPanesCurrent(context)) return;
+  context.wide = editorPanesWide();
+  projectEditorPanes(context);
+  if (context.wide || context.ed.side === "stats") drawStats();
 }
+
+/** A resize may hide the casual tabs, but never the original focused or viewer-return pane. */
+function resizeEditorPanes() {
+  const context = editor?.dom?.panes;
+  if (!editorPanesCurrent(context)) return;
+  const ed = context.ed, active = document.activeElement, wide = editorPanesWide(), wasWide = context.wide;
+  const pane = editorPaneOf(context, active);
+  const held = wide && !wasWide ? context.headerFocus : null;
+  const background = node => !node || node === document.body || node === document.documentElement;
+  const rescue = held && held.target.isConnected && context.head.contains(held.target) && !held.target.disabled
+    && held.scope === JSON.stringify([ed.id, ed.version, ed.space]) && (active === held.target || background(active)) ? held : null;
+  // Read only the current viewer's exact return node; its close event may still be pending.
+  const returnPane = typeof viewerState !== "undefined" && viewerState && viewerDom?.dialog?.contains(active)
+    ? editorPaneOf(context, viewerState.trigger) : null;
+  if (!wide && (pane || returnPane)) {
+    ed.side = pane || returnPane;
+    ed.sideFolded = false;
+  }
+  context.wide = wide;
+  context.projectingHeader = rescue;
+  projectEditorPanes(context);
+  context.projectingHeader = null;
+  const ownedHeader = rescue && context.headerFocus === rescue;
+  if (wide && !wasWide) context.headerFocus = null;
+  drawSideTabs();
+  if (wide && !wasWide) drawStats();
+  if (ed.tab !== "cards" || ed.saving || ed.asking || document.querySelector("dialog[open]")) return;
+  if (ownedHeader && editorPanesCurrent(context)) {
+    const key = rescue.target.dataset.pane || ed.side;
+    const target = context.panels[key]?.querySelector("h2");
+    if (target && (document.activeElement === rescue.target || background(document.activeElement))) {
+      target.setAttribute("tabindex", "-1");
+      context.rescuingHeader = target;
+      target.focus({ preventScroll: true });
+      context.rescuingHeader = null;
+      revealEditorPaneFocus(context, target);
+    }
+  } else if (pane) revealEditorPaneFocus(context, active);
+}
+
+/** Scroll only the same owned focus, using the pane's actual scroller and the visible header/bar. */
+function revealEditorPaneFocus(context, target) {
+  const ed = context.ed, key = editorPaneOf(context, target);
+  // A new deck can change space without rebuilding this tree. A queued scroll still belongs to its old scope.
+  const scope = JSON.stringify([ed.id, ed.version, ed.space]), hash = location.hash;
+  const owned = () => Boolean(editorPanesCurrent(context) && context.hash === hash && hash === location.hash && key && ed.tab === "cards"
+    && scope === JSON.stringify([ed.id, ed.version, ed.space])
+    && !target.disabled && !target.hidden && !target.closest("[hidden]") && !target.matches(":disabled")
+    && target.getAttribute("aria-disabled") !== "true" && document.activeElement === target
+    && target.isConnected && context.panels[key].contains(target) && !context.panels[key].hidden
+    && !ed.dom.sideBody.hidden);
+  const current = () => owned() && !ed.saving && !ed.asking && !document.querySelector("dialog[open]");
+  // Native return focus may precede removal of the closing dialog's open state. Queue once for this same scope.
+  if (!owned()) return;
+  const scroll = () => {
+    if (!current()) return;
+    const scroller = key === "add" ? context.search : context.facts;
+    const delta = () => {
+      const rect = target.getBoundingClientRect(), bounds = scroller.getBoundingClientRect(), vv = window.visualViewport;
+      if (![rect.top, rect.bottom, rect.height].every(Number.isFinite) || rect.height <= 0) return 0;
+      let top = Number.isFinite(vv?.offsetTop) ? Math.max(0, vv.offsetTop) : 0;
+      let bottom = top + (vv?.height > 0 ? vv.height : window.innerHeight);
+      const overlaps = r => r && r.height > 0 && r.right > rect.left && r.left < rect.right;
+      const header = document.querySelector(".topbar")?.getBoundingClientRect(), bar = ed.dom.bar?.getBoundingClientRect();
+      if (overlaps(header) && header.top <= top && header.bottom > top) top = header.bottom;
+      if (overlaps(bar) && bar.bottom > top && bar.top < bottom) bottom = Math.max(top, bar.top);
+      if (context.wide && bounds.height > 0) { top = Math.max(top, bounds.top); bottom = Math.min(bottom, bounds.bottom); }
+      const available = bottom - top;
+      if (available <= 0 || rect.top >= top && rect.bottom <= bottom) return 0;
+      const oversized = rect.height > available, gap = Math.min(8, oversized ? available / 4 : (available - rect.height) / 2);
+      return oversized || rect.top < top ? rect.top - top - gap : rect.bottom - bottom + gap;
+    };
+    let by = delta();
+    if (context.wide && Number.isFinite(by) && Math.abs(by) > .5 && current()) {
+      scroller.scrollTop += by; // Native clamping is remeasured before falling back to the page.
+      by = delta();
+    }
+    if (Number.isFinite(by) && Math.abs(by) > .5 && current()) window.scrollBy({ top: by, behavior: "auto" });
+  };
+  scroll();
+  requestAnimationFrame(scroll);
+}
+
+/** Same-route viewer Back can restore scroll after its first focus frame. Never follow a real navigation. */
+function revealEditorPaneHistoryFocus() {
+  const context = editor?.dom?.panes, target = document.activeElement;
+  if (!editorPanesCurrent(context) || context.hash !== location.hash || !editorPaneOf(context, target)) return;
+  revealEditorPaneFocus(context, target);
+}
+
+window.matchMedia("(min-width: 1000px)").addEventListener("change", resizeEditorPanes);
+window.addEventListener("resize", resizeEditorPanes);
+window.addEventListener("popstate", revealEditorPaneHistoryFocus);
+document.addEventListener("focusin", clearEditorPaneHeaderFocus);
+document.addEventListener("pointerdown", clearEditorPaneHeaderFocus);
 
 /** "/" and the bar's Add: the search box (the Add tab, or the Quick edit's search sheet). */
 function focusSearch() {
   const ed = editor;
   if (!ed) return;
   if (ed.quick || !ed.dom.sideBody) { openAddSheet(); return; }
+  if (!editorPanesCurrent(ed.dom.panes)) return;
+  if (ed.tab !== "cards") { ed.tab = "cards"; drawMain(); }
   if (ed.side !== "add") setSide("add");
   else foldSide(false);
-  if (ed.ac) {
+  if (editorSearchCurrent(ed.ac)) {
     ed.ac.input.focus();
     if (ed.ac.input.select) ed.ac.input.select();
   }

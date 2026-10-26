@@ -148,6 +148,21 @@ original dense List token and 34px Pictures group/32px More. Sideboard's exact
 size-exclusion note; removed-only groups keep original Undo and no zero count.
 The existing optional Stand-ins action comes before printing, moves and Remove.
 
+The full Editor retains one Add/search, Stats and Checks tree. `sidePanel()`
+owns their original roots and tab buttons; `projectEditorPanes()` changes only
+visibility/roles. Lab shows the three areas; casual tabs/fold project the same
+nodes. Exact current-draw ownership and per-scroll id/version/space snapshots
+reject stale work while allowing legitimate new-deck space changes. Explicit
+Add/check jumps leave Notes; passive resize does not. Pane focus uses scroll-only
+reveal, with guarded hidden-header rescue and same-route history restoration.
+Consumed swap/Notes URLs refresh only the qualified original pane context at
+the existing canonicalization point; queued work keeps its invocation hash.
+Earlier-address draft recovery does not consume a link before an editor exists.
+The side track reserves list width, and the named `editor-cards` container uses
+two-line full List rows at most 600px wide. Keep actual printing, cost and
+availability visible. Checks headings switch real classes rather than overriding
+the shared sr-only rule. Full Editor peek stays suppressed.
+
 `editor-swaps.js` (after `editor-cards.js`) and `deck-swaps.js` (after
 `deck-standins.js`) are E2-S07's strategic stand-ins, kept apart from those
 physical markers: owned cards that could take a missing card's slot in the

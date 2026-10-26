@@ -107,11 +107,10 @@ details.edit-details-fold:not([open]) > summary { min-height: calc(60px - 2px); 
   .kit-tile[aria-checked="true"] { outline: 3px solid Highlight; outline-offset: 2px; }
 }
 
-/* ------------------------------------------------------------ the two columns */
+/* ------------------------------------------------------------ retained editor panes */
 
-/* Below 1,000 px Deck details, then the side panel (Add, Stats, Checks), then the list; from 1,000 px (an
-   iPad in landscape) the side panel is a sticky column beside Deck details and the list, level with Deck
-   details. */
+/* The list and two bounded side columns make the lab's three panes. Below 1,000px the existing tabs
+   project the same attached Add, Stats and Checks roots into one folded panel; the Quick edit is separate. */
 .edit-work {
   display: grid; gap: var(--s-4); align-items: start; margin-top: var(--s-3);
   grid-template-columns: minmax(0, 1fr); grid-template-areas: "details" "side" "main";
@@ -122,15 +121,11 @@ details.edit-details-fold:not([open]) > summary { min-height: calc(60px - 2px); 
 .edit-side-head { display: flex; align-items: center; gap: var(--s-2); flex: none; }
 .edit-side-tabs { --strip-bg: var(--surface); padding: 0 var(--s-2); flex: 1 1 auto; min-width: 0; }
 .edit-side-fold { flex: none; margin-right: var(--s-2); }
-/* A tablet held upright (below 1,000 px): the panel comes before the list, so once the deck has cards it's
-   folded to its tabs; a tab (or Add cards) opens it, Hide folds it again. */
-@media (max-width: 999px) {
-  .edit-side.is-folded .edit-side-body { display: none; }
-  .edit-side.is-folded .edit-side-tabs { border-bottom: 0; }
-  .edit-side.is-folded .edit-side-tabs [aria-selected="true"] { border-bottom-color: transparent; color: var(--ink-2); }
-}
-@media (min-width: 1000px) { .edit-side-fold { display: none; } }
-.edit-side-body { padding: var(--s-3); }
+.edit-side.is-folded .edit-side-tabs { border-bottom: 0; }
+.edit-side.is-folded .edit-side-tabs [aria-selected="true"] { border-bottom-color: transparent; color: var(--ink-2); }
+.edit-pane-grid { padding: var(--s-3); min-width: 0; }
+.edit-search-pane, .edit-facts-pane, .edit-stats-pane { min-width: 0; }
+.edit-pane-heading { display: none; margin: 0 0 var(--s-3); font-size: var(--fs-lg); }
 .tab-count { margin-left: var(--s-1); }
 .edit-main-head { display: flex; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; gap: var(--s-2) var(--s-3); }
 .edit-tabs { flex: 1 1 auto; min-width: 0; }
@@ -139,8 +134,9 @@ details.edit-details-fold:not([open]) > summary { min-height: calc(60px - 2px); 
 @media (min-width: 1000px) {
   .bar-add-jump { display: none; }
   .edit-work {
-    grid-template-columns: minmax(0, 1fr) minmax(300px, 340px); grid-template-rows: auto 1fr;
-    grid-template-areas: "details side" "main side"; gap: var(--s-4) var(--s-5);
+    /* Reserve 360px plus the 16px gap for the list while the two 272px panes grow towards 320px. */
+    grid-template-columns: minmax(0, 1fr) clamp(560px, calc(100% - 376px), 656px); grid-template-rows: auto 1fr;
+    grid-template-areas: "details side" "main side"; gap: var(--s-4) var(--s-4);
   }
   .edit-work.edit-work-single { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto; grid-template-areas: "details" "main"; }
   .edit-side {
@@ -148,12 +144,27 @@ details.edit-details-fold:not([open]) > summary { min-height: calc(60px - 2px); 
     display: flex; flex-direction: column;
     /* --vvh (editor-cards.js) is what an on-screen keyboard leaves; iOS doesn't shrink 100dvh for it. */
     max-height: calc(var(--vvh, 100dvh) - var(--shell-top) - 104px);
+    border: 0; border-radius: 0; background: none; box-shadow: none; overflow: visible;
   }
-  .edit-side-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
-  .edit-side .edit-add { display: flex; flex-direction: column; min-height: 100%; }
+  .edit-pane-grid {
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-4); align-items: start;
+    flex: 1 1 auto; min-height: 0; max-height: inherit; padding: 0;
+  }
+  .edit-search-pane, .edit-facts-pane {
+    padding: var(--s-3); border: 1px solid var(--border); border-radius: var(--r-panel);
+    background: var(--surface); box-shadow: var(--shadow-1);
+    max-height: inherit; min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable;
+  }
+  .edit-search-pane { display: flex; flex-direction: column; }
+  .edit-pane-heading { display: block; flex: none; }
+  .edit-side .edit-add { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; }
   .edit-side .ac-wrap { flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0; }
   .edit-side .ac-list { flex: 0 1 auto; max-height: none; }
   .edit-side .ac-list:has(.ac-option) { flex: 1 1 auto; min-height: 320px; }
+  .edit-facts-pane .edit-check { margin-top: var(--s-4); padding-top: var(--s-4); border-top: 1px solid var(--border); }
+  .edit-facts-pane #h-check {
+    margin: 0 0 var(--s-3); font-size: var(--fs-lg);
+  }
   /* A result's name takes two lines rather than being cut ("Angel of tâ€¦"): a finger has no tooltip. */
   .edit-side .ac-name { align-items: flex-start; }
   .edit-side .ac-name-text {
@@ -176,9 +187,6 @@ details.edit-details-fold:not([open]) > summary { min-height: calc(60px - 2px); 
     height: calc(var(--vvh, 100dvh) - var(--shell-top) - var(--s-6));
     max-height: calc(var(--vvh, 100dvh) - var(--shell-top) - var(--s-6));
   }
-}
-@media (min-width: 1280px) {
-  .edit-work { grid-template-columns: minmax(0, 1fr) minmax(340px, 400px); }
 }
 /* The Notes tab: the write-up has the page's width (the side panel and the peek have nothing to do with it). */
 .edit-page.is-notes .edit-side { display: none; }
@@ -261,6 +269,28 @@ button.edit-card:hover { background: var(--hover); }
 .edit-empty, .edit-start { margin-top: var(--s-3); }
 .edit-start .actions { justify-content: center; }
 .empty-section { display: flex; align-items: center; flex-wrap: wrap; gap: var(--s-2) var(--s-3); }
+
+/* A real three-pane list can be narrow even in the lab. Preserve the original controls, costs and
+   facts, giving the card name the first line and its printing/availability the second. */
+@media (min-width: 1000px) {
+  .edit-page.has-editor-panes .edit-main { container-type: inline-size; container-name: editor-cards; }
+}
+@container editor-cards (max-width: 600px) {
+  .edit-page.has-editor-panes .edit-list > .edit-row:not(.edit-removed) {
+    grid-template-columns: auto minmax(0, 1fr) auto var(--tap);
+    grid-template-areas: "step card card more" "step print badge more";
+  }
+  .edit-page.has-editor-panes .edit-list > .edit-row > .edit-stepper { grid-area: step; }
+  .edit-page.has-editor-panes .edit-list > .edit-row > .edit-card { grid-area: card; }
+  .edit-page.has-editor-panes .edit-list > .edit-row > .edit-more { grid-area: more; }
+  .edit-page.has-editor-panes .edit-list > .edit-row > .edit-print {
+    grid-area: print; justify-self: start; max-width: 100%; min-width: 0; white-space: normal; overflow-wrap: anywhere;
+  }
+  .edit-page.has-editor-panes .edit-list > .edit-row > .edit-badge-slot { grid-area: badge; max-width: 100%; }
+  .edit-page.has-editor-panes .edit-list > .edit-row > .edit-card .nm { flex-wrap: wrap; }
+  .edit-page.has-editor-panes .edit-list > .edit-row > .edit-card .nm-text { white-space: normal; overflow-wrap: anywhere; }
+  .edit-page.has-editor-panes .edit-list > .edit-row > .edit-badge-slot :is(.chip, .status) { white-space: normal; }
+}
 
 /* ------------------------------------------------------------ the list: picture stacks */
 
@@ -529,12 +559,9 @@ dialog.sheet-search .ac-option { grid-template-columns: 44px minmax(0, 1fr); }
   .edit-details-new > .field-grid .segmented > * { flex: 1 1 auto; white-space: nowrap; }
 }
 
-/* From 1,400 px with a mouse the card pointed at shows in a column on the right (deck.js peekLayout; deck.css
-   draws it for every page, 280 px wide below 1,600 px). Beside the editor's Add panel a laptop's peek is
-   narrower still, so the list keeps room for long names ("Bilbo Baggins, Burglar // Thief of the Ages"). */
-@media (min-width: 1400px) and (max-width: 1599px) and (hover: hover) and (pointer: fine) {
-  .edit-page .peek-layout { grid-template-columns: minmax(0, 1fr) 240px; }
-}
+/* The full editor already has list/search/stats: the shared deck peek must not create a fourth pane. */
+.edit-page.has-editor-panes .peek-layout { display: block; }
+.edit-page.has-editor-panes .card-peek { display: none; }
 @media (min-width: 2200px) {
   .edit-stacks { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
 }

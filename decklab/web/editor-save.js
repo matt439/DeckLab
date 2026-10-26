@@ -163,7 +163,7 @@ function drawCheck() {
   showRowAvailability(null);
   clear(host);
   const a = ed.check;
-  host.append(el("h2", { id: "h-check", class: ed.dom.sideBody ? "sr-only" : null }, "Checks",
+  host.append(el("h2", { id: "h-check", class: ed.dom.panes?.wide ? "edit-pane-heading" : ed.dom.sideBody ? "sr-only" : null }, "Checks",
     el("span", { class: "checking-now sub", hidden: !ed.checking || null }, el("span", { class: "spinner spinner-small", "aria-hidden": "true" }), "checking")));
   if (ed.gone) {
     host.append(el("p", { class: "sub", text: "Not checked: this deck was deleted since you opened it (see the note at the top)." }),

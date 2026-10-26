@@ -104,9 +104,10 @@ class EditorPageTests(unittest.TestCase):
         # UI review round 2: below 1,000 px the Add/Stats/Checks panel came before the list, so the deck began
         # under the fold. With cards it starts folded to its tabs; a tab or Add cards opens it, Hide folds it.
         self.run_js("""
-          addPart = () => el("div"); showSide = () => {};
+          addPart = () => el("div");
           edit(); editor.ac = null; editor.dom.check = el("section");
           const panel = sidePanel();
+          editor.dom.page = el("div", {}, panel); main.append(editor.dom.page); mountEditorPanes();
           assert(panel.classList.contains("is-folded"));
           assert.equal(editor.dom.sideFold.textContent, "Show");
           assert.equal(editor.dom.sideFold.getAttribute("aria-expanded"), "false");

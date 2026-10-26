@@ -51,14 +51,13 @@ class DeviceLayoutFileTests(unittest.TestCase):
         self.assertIn(".deck-more-link::after", deck)
 
     def test_card_peek_from_1400_px(self):
-        # A MacBook Air (1,470 px) has the peek beside a deck too, 280 px wide; the editor's is 240 px there so
-        # its list keeps room beside the Add panel.
+        # A MacBook Air still has the shared peek beside a deck. The full editor already has three panes.
         css = _styles()
         self.assertIn(".peek-layout { display: grid;",
                       _block(css, "(min-width: 1400px) and (hover: hover) and (pointer: fine)"))
         self.assertIn("--peek-w: 280px;", _block(_text("tokens.css"), "(min-width: 1400px)"))
-        self.assertIn("minmax(0, 1fr) 240px",
-                      _block(_text("editor.css"), "(min-width: 1400px) and (max-width: 1599px) and (hover: hover) and (pointer: fine)"))
+        self.assertIn(".edit-page.has-editor-panes .peek-layout { display: block; }", _text("editor.css"))
+        self.assertIn(".edit-page.has-editor-panes .card-peek { display: none; }", _text("editor.css"))
 
     def test_qhd_overview_in_two_columns(self):
         qhd = _block(_text("deck.css"), "(min-width: 2200px)")
