@@ -44,9 +44,9 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 27 | 17 | 4 | 6 | 0 |
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 16 | 10 | 1 | 3 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 19 | 13 | 0 | 5 | 1 |
-| [E10: Members, access and privacy](#e10-members-access-and-privacy) | 35 | 30 | 1 | 2 | 2 |
+| [E10: Members, access and privacy](#e10-members-access-and-privacy) | 35 | 30 | 2 | 1 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 28 | 15 | 6 | 4 | 3 |
-| **Total** | **229** | **165** | **17** | **33** | **14** |
+| **Total** | **229** | **165** | **18** | **32** | **14** |
 
 Counted from the story headers on 2026-10-27.
 
@@ -2929,7 +2929,7 @@ Evidence:
 - `decklab/lib/api/activity.py`: visible_change, _row
 - `decklab/tests/test_activity.py`: VisibilityTests
 
-**E10-S17** · Matt · could · L · missing
+**E10-S17** · Matt · could · L · partial
 
 As Matt, the admin, I want to add a member or change someone's email without editing files on the PC, so that bringing someone in is quick and I can't break config.json with a typo.
 
@@ -2939,13 +2939,16 @@ As Matt, the admin, I want to add a member or change someone's email without edi
 - Given emails, then they are never sent to the page except to the admin on this panel.
 
 Evidence:
-- `decklab/lib/profiles.py`: RESERVED_IDS
-- `decklab/db/profiles_sync.py`
-- `decklab/web/settings.js`
+- `decklab/lib/profiles.py`: tolerant parsing plus position/code diagnostics and strict local `read_checked`
+- `decklab/lib/homenet/profile_config.py`, `commands.py`: local status and install preflight
+- `decklab/db/profiles_sync.py`, `setup.py`: refusal before connection/setup and one validated snapshot
+- `test_profile_config_validation.py`, `test_homenet_profile_diagnostics.py`, `test_profile_config_privacy.py`: compatibility, side-effect gates and request privacy
 
-Gap: Settings has no profile or email management, and `lib/profiles.py` silently drops invalid entries (reserved ids, a bad space, a missing plays_as) instead of reporting them.
+Now: local diagnostics/setup safety built 2026-10-27 ([HISTORY.md](../HISTORY.md#local-profile-diagnostics-and-safe-setup-2026-10-27-e10-s17-first-slice)). Invalid entries cannot silently become a partial database sync; detailed reasons stay on local status, with no authentication or API roster change.
 
-First slice: report invalid profile entries (reserved id, bad space, missing plays_as) in `homenet status` and setup instead of dropping them; the Settings editor follows.
+Gap: Settings profile/email management, its audited config/database update, Access-policy guidance and sign-in checks remain. Local request parsing is deliberately still tolerant; setup and config-backed sync refuse invalid entries before changes.
+
+Next slice: the guarded Settings profile editor, following the existing privacy and configuration-source rules.
 
 Review note: L for a could bundles a profile editor, validation, an Access reminder and a status check; the second criterion could be its own small story.
 

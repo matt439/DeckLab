@@ -35,6 +35,10 @@ out rather than failing every request: a bad or repeated id, an id the
 database's audit trail keeps for its own actors (RESERVED_IDS: claude,
 system, test and home, "someone at home"), no name, or a home profile
 without a valid plays_as.
+
+Local status reports those rejected entries by position, code and static reason. Setup and
+config-backed profile sync use read_checked() to refuse a partial list before any change;
+read() and parse() remain tolerant request readers and expose no diagnostics.
 """
 from decklab.lib import config
 
@@ -46,6 +50,25 @@ MAX_ID = 40
 # Actors the audit trail names that aren't profiles (decklab.lib.state.Actor): a profile with
 # one of these ids would be mistaken for them.
 RESERVED_IDS = frozenset({"claude", "system", "test", HOME})
+ISSUE_REASONS = {
+    "profiles_type": "profiles must be a list.",
+    "entry_type": "Each profile entry must be an object.",
+    "invalid_id": "id must use lowercase letters, digits and single hyphens, at most 40 characters.",
+    "reserved_id": "id is reserved for the audit trail's own actors.",
+    "duplicate_id": "id repeats an earlier usable profile entry.",
+    "invalid_name": "name must be text.",
+    "invalid_space": "space must be home or the profile's own non-reserved id.",
+    "invalid_plays_as": "A home profile needs plays_as set to user, wife or either.",
+}
+
+
+class InvalidProfiles(ValueError):
+    """A local preflight refusal. Its public message never contains configuration values."""
+
+    def __init__(self, issues):
+        self.issues = issues
+        super().__init__("Profile configuration has invalid entries. Run python -m decklab.lib.homenet status "
+                         "for local diagnostics; fix decklab/config.json before syncing or setup.")
 
 
 def valid_id(profile_id):
@@ -90,29 +113,59 @@ def parse(listed, access=False):
     """The usable profiles in config.json's "profiles" value, in its order (see
     the module docstring). access: the config has an "access" block, so a
     missing role means member even when no profile names one."""
+    return parse_with_diagnostics(listed, access=access)[0]
+
+
+def parse_with_diagnostics(listed, access=False):
+    """(Usable profiles, rejected-entry diagnostics), without changing parse's normalization.
+
+    Each issue has a one-based index (None for the list itself), a stable code and a static
+    reason. No submitted value is copied into a diagnostic. Role and email fallbacks stay
+    compatible; only entries the existing parser leaves out are diagnosed here.
+    """
     from decklab.lib.decks import PLAYERS
+    issues = []
+
+    def reject(index, code):
+        issues.append({"index": index, "code": code, "reason": ISSUE_REASONS[code]})
+
     if not isinstance(listed, list):
-        return []
+        reject(None, "profiles_type")
+        return [], issues
     legacy_mode = not access and legacy(listed)
     out, seen = [], set()
-    for p in listed:
-        if not (isinstance(p, dict) and valid_id(p.get("id")) and p["id"] not in seen
-                and p["id"] not in RESERVED_IDS and isinstance(p.get("name"), str)):
+    for index, p in enumerate(listed, 1):
+        if not isinstance(p, dict):
+            reject(index, "entry_type")
+            continue
+        if not valid_id(p.get("id")):
+            reject(index, "invalid_id")
+            continue
+        if p["id"] in seen:
+            reject(index, "duplicate_id")
+            continue
+        if p["id"] in RESERVED_IDS:
+            reject(index, "reserved_id")
+            continue
+        if not isinstance(p.get("name"), str):
+            reject(index, "invalid_name")
             continue
         space = p.get("space", HOME)
         if space == HOME:
             if p.get("plays_as") not in PLAYERS:
+                reject(index, "invalid_plays_as")
                 continue
             plays_as = p["plays_as"]
         elif space == p["id"] and space not in RESERVED_SPACES:
             plays_as = None
         else:
+            reject(index, "invalid_space")
             continue
         role = "admin" if legacy_mode else (p.get("role") if p.get("role") in ROLES else "member")
         out.append({"id": p["id"], "name": p["name"], "role": role, "space": space,
                     "plays_as": plays_as, "emails": _emails(p.get("emails"))})
         seen.add(p["id"])
-    return out
+    return out, issues
 
 
 def read(settings=None):
@@ -120,6 +173,19 @@ def read(settings=None):
     Raises OSError or ValueError when config.json can't be read."""
     settings = config.load() if settings is None else settings
     return parse(settings.get("profiles") or [], access=settings.get("access") is not None)
+
+
+def read_checked(settings=None):
+    """Local setup/sync preflight: reject a partial usable list before any side effect.
+
+    Missing profiles is still an empty configuration; an explicitly malformed profiles value
+    is diagnosed. Request readers keep using read(), whose tolerant behavior is unchanged.
+    """
+    settings = config.load() if settings is None else settings
+    listed, issues = parse_with_diagnostics(settings.get("profiles", []), access=settings.get("access") is not None)
+    if issues:
+        raise InvalidProfiles(issues)
+    return listed
 
 
 def public(profile):

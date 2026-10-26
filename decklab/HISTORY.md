@@ -2,6 +2,14 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Local profile diagnostics and safe setup (2026-10-27; E10-S17 first slice)
+
+Local `homenet status` reports rejected profile entries by one-based position, stable code and static reason, without echoing submitted names, ids, spaces or emails. It continues the PC checks, and valid configurations gain no extra line. Tolerant request parsing and existing authentication behavior stay unchanged, including legacy roles, accepted duplicate ordering, blank names and email normalization.
+
+Install, database setup and config-backed profile sync now refuse invalid entries before task or database side effects. Sync cannot treat a skipped entry as permission to remove a profile. Setup passes the exact validated snapshot to sync. Refusals direct the operator to local status; detailed diagnostics stay outside request status/roster responses. Settings profile/email management and Access-policy guidance remain separate work.
+
+Validation: 206 affected profile/auth/roster/home-network checks passed under process-wide synthetic configuration, plus 63 disposable database core/phase-2 checks. The 19 new validation/preflight/privacy checks also passed independently. Tests verify no install, connection, migration or sync action on invalid input, compatible valid parsing, and no diagnostic or hidden roster exposure to any viewer. Ruff and whitespace checks passed. No live configuration, database, scheduled task or server setup was changed.
+
 ## Per-card packing priorities (2026-10-27; E11-S30 slice 13)
 
 For a card competing between selected decks, Give free copies first to changes the current packing recipe's preferred recipient. It reallocates only storage copies and released participant surplus. Existing keeps and unselected reservations remain fixed, and incoming copies retain their original waiting order. Default selection order clears that card's choice; Reset card priorities clears all choices, including harmless no-ops and recovery after a refused preview. Version and sideboard changes clear that choice's priorities.

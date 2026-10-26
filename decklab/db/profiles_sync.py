@@ -9,7 +9,9 @@ nobody uses any more.
 Everything happens in one change set (actor system, source sync). When the database already
 matches, nothing is written, so a sync at every start-up doesn't fill the audit trail.
 
-Two refusals guard the trail: a profile with one of profiles.RESERVED_IDS (claude, system,
+Config-backed sync rejects any invalid profile entry before connecting, rather than syncing
+a partial list that could remove a skipped profile. Explicit parsed inputs retain their checks.
+Two further refusals guard the trail: a profile with one of profiles.RESERVED_IDS (claude, system,
 test, home) is refused, since those name the trail's other actors; and an empty list never
 removes every profile (a config.json that lost its "profiles" is far likelier than a house
 with nobody in it): nothing is written, and db.log says so.
@@ -64,11 +66,11 @@ def plan(want, have):
 
 
 def sync(listed=None, dbname=None, timeout=None, options=None):
-    """Bring the tables in line with listed (default: profiles.read(), config.json's
+    """Bring the tables in line with listed (default: profiles.read_checked(), config.json's
     profiles). timeout and options are conn.connect()'s (the server passes the state store's
     short connect timeout and lock/statement timeouts, so a lock held elsewhere fails the sync
     rather than holding up the thread it runs on). Returns {"added": [...], "changed": [...], "removed": [...]} (profile ids)."""
-    listed = profiles_lib.read() if listed is None else listed
+    listed = profiles_lib.read_checked() if listed is None else listed
     reserved = sorted(p["id"] for p in listed if p["id"] in profiles_lib.RESERVED_IDS)
     if reserved:
         raise ValueError(f"profile id {reserved[0]} is kept for the audit trail's own actors "

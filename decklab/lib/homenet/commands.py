@@ -27,9 +27,9 @@ import time
 from datetime import datetime
 from pathlib import Path
 
-from decklab.lib import access, config, control, tunnel
+from decklab.lib import access, config, control, profiles, tunnel
 
-from . import gather, watchdog
+from . import gather, profile_config, watchdog
 from . import mdns as multicast         # not "mdns": cmd_status has a variable of that name
 from .checks import check_addresses, check_firewall, check_network, check_sleep, exit_code, format_report, lan_of
 from .common import (
@@ -337,6 +337,14 @@ def _windows_only():
 
 
 def cmd_install(name, port, no_start=False, log_path=None, port_given=False, host=None, at_logon=False):
+    try:
+        profiles.read_checked()
+    except profiles.InvalidProfiles as problem:
+        say(str(problem))
+        return 1
+    except (OSError, ValueError, TypeError):
+        say("Profile configuration could not be checked. Fix decklab/config.json before installing.")
+        return 1
     if _windows_only():
         return 1
     pythonw = pythonw_path()
@@ -932,7 +940,7 @@ def cmd_status(name, port):
     server_programs.append(task["command"] if task and task.get("command") else str(pythonw_path()))
     python_programs = this_pythons()
 
-    lines = []
+    lines = profile_config.check(settings)
     lines += check_server(mine, answer, port, log_file, newest_code_mtime(), other)
     lines += check_task(task, task_facts if isinstance(task_facts, dict) else {}, str(SERVER_SCRIPT),
                         exists=file_exists, error=task_error, user=task_user(), pythonw=str(pythonw_path()))

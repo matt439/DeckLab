@@ -273,15 +273,17 @@ def ensure_empty_inventory(name, say=print):
 
 
 def run(dbname=None, say=print):
-    """The whole set-up (see the module docstring). Returns 0."""
+    """Validate profiles before the whole set-up (see the module docstring). Returns 0."""
     from decklab.db import migrate, profiles_sync
+    from decklab.lib import profiles
+    listed = profiles.read_checked()
     name = dbname or db.settings()["name"]
     with _superuser(say) as c:
         ensure_roles(c, say=say)
         ensure_database(c, name, say=say)
     secure_database(name)
     applied = migrate.apply(dbname=name, say=say)
-    summary = profiles_sync.sync(dbname=name)
+    summary = profiles_sync.sync(listed=listed, dbname=name)
     ensure_empty_inventory(name, say=say)
     say(f"Database {name}: {len(applied)} migration(s) applied now; profiles "
         f"{profiles_sync.describe(summary)}.")
