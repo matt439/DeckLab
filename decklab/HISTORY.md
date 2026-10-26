@@ -2,6 +2,18 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Undo positive collection quantities in a bounded batch (2026-10-26; E11-S08)
+
+Complete 2-50-row collection UPDATE sources can now restore positive quantity corrections, optionally combined with condition, language and notes. Any quantity change uses `batch_update`; metadata-only sources retain `batch_metadata`. Complete global own-space scope, unique identities, full current rows, latest audit touches, both revisions, ordinary atomic `apply_rows` restoration and complete keyed receipts remain required. Zero/removal, name/printing identity, mixed sources and partial selection remain refused; this adds no general import inverse.
+
+Every decrease additionally proves holder and installed Stand-ins certainty against the complete final candidate, using the existing aggregate capacity policy. Cumulative reductions and cross-printing offsets are evaluated together. This establishes neither which printing is physically free nor permission to move packed cards; uncertain holdings or inadequate capacity refuse, with physical corrections and in-use acknowledgement left to Collection. Original audit history and earlier inverse protocols remain unchanged.
+
+Validation passed 61 focused backend checks without skips: 32 pure, 17 API and 12 actual disposable PostgreSQL checks, including 18 new cases. All 22 affected UI checks passed without skips in 1.757 seconds, including five new cases. The final combined Undo regression passed all 231 checks without skips in 51.854 seconds across 18 modules: 107 pure, 63 API, 39 guarded disposable PostgreSQL and 22 UI checks. Independent final review and repository Ruff are clear; the source audit covered 938 files with only the existing `tokens.js` 1,447-line exception.
+
+The isolated native matrix passed 12 light/dark cases at 320, 600, 820, 1000, 1280 and 1920 px without overflow or page errors. It made 24 preview GETs and one intercepted synthetic POST with reversed keyed receipt rows, with zero actual writes and 12 baseline visit POSTs blocked. Quantity corrections 6 to 4 and 3 to 5, mixed notes and literal markup displayed without edit inputs. Fixture inventory/deck bytes stayed unchanged; two screenshots were inspected as pixels. This browser evidence is separate from actual disposable PostgreSQL validation and establishes no physical-device or household acceptance.
+
+E11-S08 remains partial and OPEN for broader inverses, with story counts unchanged. No migration or live activation is included.
+
 ## Inline original-row arrival checks (2026-10-26; E11-S30 slice 12)
 
 Receive delivery now moves each existing canonical arrival-check label/input beside the first visible piece of its proven original row. General/unproved checks and hidden or unselected targets fall back to **To check**. A targeted fallback visibly names the original row and printing; inline/general scope captions remain available to screen readers without duplicate visible wording. Split siblings and inspector summaries retain read-only context. There is exactly one verification control per check, outside the card-selection label, with no nested checkbox labels.

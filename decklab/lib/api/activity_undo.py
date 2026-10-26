@@ -14,12 +14,13 @@ from .common import ApiError, DATABASE_DOWN, _keys, _parse_body
 from .settings import _writer
 
 NO_CHANGE = "No undoable change at that ID."
-UNSUPPORTED = "This change cannot be undone here. Supported Undo covers single-row edits, unheld nonbasic collection additions, unheld verified token additions, verified collection deletions and batches of 2-50 condition/language/notes updates."
+UNSUPPORTED = "This change cannot be undone here. Supported Undo covers single-row edits, unheld nonbasic collection additions, unheld verified token additions, verified collection deletions and batches of 2-50 positive quantity/condition/language/notes updates."
 CHANGED = "The change can no longer be undone safely. Reload Activity and review it again."
 UNCONFIRMED = "The undo result could not be confirmed. Reload Activity before trying again."
 SHA = re.compile(r"[a-f0-9]{64}")
 MUTABLE = {"collection": ("quantity", "condition", "language", "notes"), "tokens": ("quantity", "notes")}
 TABLE_KIND = {"collection_card": "collection", "token_card": "tokens"}
+BATCH_ACTIONS = ("batch_metadata", "batch_update")
 
 
 def _space(profile):
@@ -109,7 +110,7 @@ def _review(change_id, profile):
 
 
 def _project(plan):
-    if plan.get("action") == "batch_metadata":
+    if plan.get("action") in BATCH_ACTIONS:
         return _batch_project(plan)
     kind = plan["kind"]
     columns = rules.FIELDS if kind == "collection" else rules.TOKEN_FIELDS
@@ -162,6 +163,7 @@ def _batch_project(plan):
             or not isinstance(plan.get("label"), str) or not plan["label"].strip():
         raise ApiError(503, UNCONFIRMED)
     rows, keys, ids = [], set(), set()
+    quantity_changed = False
     for item in plan["rows"]:
         if not isinstance(item, dict) or type(item.get("row_change_id")) is not int or item["row_change_id"] < 1:
             raise ApiError(503, UNCONFIRMED)
@@ -173,14 +175,17 @@ def _batch_project(plan):
         if not isinstance(raw_key, dict) or set(raw_key) != {"space_id", "set_code", "collector_number", "finish"} \
                 or raw_key != {"space_id": plan["space"], "set_code": key[0], "collector_number": key[1], "finish": key[2]} \
                 or key in keys or item["row_change_id"] in ids \
-                or any(field["field"] not in ("condition", "language", "notes") for field in projected["fields"]):
+                or any(field["field"] not in MUTABLE["collection"] for field in projected["fields"]):
             raise ApiError(503, UNCONFIRMED)
+        quantity_changed = quantity_changed or projected["current"]["quantity"] != projected["restored"]["quantity"]
         keys.add(key)
         ids.add(item["row_change_id"])
         rows.append({"key": dict(zip(("set", "collector_number", "finish"), key)), "label": projected["label"],
                      "current": projected["current"], "restored": projected["restored"], "fields": projected["fields"]})
+    if (plan["action"] == "batch_update") != quantity_changed:
+        raise ApiError(503, UNCONFIRMED)
     return {"available": True, "id": plan["change_id"], "expect": plan["expect"], "kind": "collection", "space": plan["space"],
-            "label": plan["label"], "action": "batch_metadata", "row_count": len(rows), "rows": rows}
+            "label": plan["label"], "action": plan["action"], "row_count": len(rows), "rows": rows}
 
 
 def _restored(after, plan):
@@ -240,12 +245,12 @@ def apply_undo(body):
     after, summary = saving.apply_op(op, profile, f"Undo activity change {change_id}", _refused,
                                      **({"reason": reason} if removing else {}))
     extra, counts = summary.extra or {}, summary.counts or {}
-    if plan.get("action") == "batch_metadata":
+    if plan.get("action") in BATCH_ACTIONS:
         if not summary.changed or type(counts.get("undo")) is not int or counts["undo"] != 1 \
                 or type(counts.get("edited")) is not int or counts["edited"] != plan["row_count"] \
                 or type(counts.get("removed")) is not int or counts["removed"] != 0 \
                 or extra.get("undo_of") != change_id or extra.get("kind") != "collection" or extra.get("space") != plan["space"] \
-                or extra.get("action") != "batch_metadata" or type(extra.get("row_count")) is not int \
+                or extra.get("action") != plan["action"] or type(extra.get("row_count")) is not int \
                 or extra["row_count"] != plan["row_count"] \
                 or extra.get("row_change_ids") != [item["row_change_id"] for item in plan["rows"]]:
             raise ApiError(503, UNCONFIRMED)
@@ -255,7 +260,7 @@ def apply_undo(body):
         except Exception:
             raise ApiError(503, UNCONFIRMED) from None
         return {"saved": True, "source_id": change_id, "expect": data["expect"], "kind": "collection", "space": plan["space"],
-                "action": "batch_metadata", "row_count": plan["row_count"], "restored_rows": restored,
+                "action": plan["action"], "row_count": plan["row_count"], "restored_rows": restored,
                 "sha256": files.rendered_sha256(after.collection(plan["space"])), "revision": after.revision, "summary": summary.text}
     if not summary.changed or type(counts.get("undo")) is not int or counts["undo"] != 1 \
             or extra.get("undo_of") != change_id or extra.get("kind") != plan["kind"] or extra.get("space") != plan["space"] \

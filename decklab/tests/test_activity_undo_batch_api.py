@@ -89,6 +89,68 @@ class BatchUndoApiTests(unittest.TestCase):
         self.assertEqual([item["row"]["notes"] for item in answer["restored_rows"]], notes)
         self.assertEqual(answer["restored_rows"], [{"key": item["key"], "row": item["restored"]} for item in preview["rows"]])
 
+    def test_quantity_preview_and_actual_receipt_use_separate_batch_update_action(self):
+        self.case.quantity_batch([2, 3], [4, 5], mixed=True)
+        preview = self.view()
+        self.assertEqual((preview["action"], preview["row_count"]), ("batch_update", 2))
+        for item in preview["rows"]:
+            self.assertEqual([field["field"] for field in item["fields"]], ["quantity", "condition", "language"])
+            self.assertEqual(item["fields"][0], {"field": "quantity", "before": item["current"]["quantity"],
+                                                "after": item["restored"]["quantity"]})
+        result = self.apply(expect=preview["expect"])
+        self.assertEqual(result["action"], "batch_update")
+        self.assertEqual(result["restored_rows"], [{"key": item["key"], "row": item["restored"]} for item in preview["rows"]])
+        self.assertEqual(self.backend.writes[0][0].params, {"change_id": original.CHANGE_ID, "space": "home", "expect": preview["expect"]})
+        self.assertEqual(len(self.backend.writes), 1)
+
+    def test_quantity_batches_accept_no_override_or_subset_and_keep_hidden_source_first(self):
+        self.case.quantity_batch([2, 3], [4, 5])
+        preview = self.view()
+        for extra in ({"allow_in_use": True}, {"rows": []}, {"quantity": 1}, {"reason": "Bypass"}, {"confirm_owned": True}):
+            with self.subTest(extra=extra):
+                self.refused(400, self.apply, expect=preview["expect"], **extra)
+        self.case.source()[-1]["after"]["space_id"] = "user2"
+        self.assertEqual(self.refused(404, self.apply, expect="bad").message, activity_undo.NO_CHANGE)
+        self.assertEqual(self.backend.writes, [])
+
+    def test_unsafe_cumulative_reduction_is_conflict_with_no_partial_write(self):
+        self.case.quantity_batch([3, 3], [1, 1])
+        self.backend.snapshot = self.backend.snapshot.with_collection("home", [row.as_dict() for row in
+            self.backend.snapshot.collection("home").rows if row.collector_number != "900"])
+        self.case.case.built("4 Llanowar Elves\n56 Forest")
+        before = self.backend.snapshot
+        self.refused(409, self.view)
+        self.refused(409, self.apply, expect="0" * 64)
+        self.assertEqual(self.backend.snapshot, before)
+        self.assertEqual(self.backend.writes, [])
+
+    def test_backend_action_must_match_whether_any_quantity_changed(self):
+        self.case.quantity_batch([2, 3], [4, 5])
+        plan = self.case.review()
+        for quantity in (True, False):
+            corrupt = copy.deepcopy(plan)
+            if quantity:
+                corrupt["action"] = "batch_metadata"
+            else:
+                for item in corrupt["rows"]:
+                    item["restore"]["quantity"] = item["current"]["quantity"]
+                    item["restore"]["notes"] = "Metadata only"
+            with self.subTest(quantity=quantity), mock.patch.object(activity_undo.inventory, "undo_review", return_value=corrupt):
+                self.refused(503, self.view)
+
+    def test_actual_quantity_and_summary_action_must_match_the_complete_review(self):
+        self.case.quantity_batch([2, 3], [4, 5])
+        preview = self.view()
+        after, summary = self.case.apply()
+        rows = [row.as_dict() for row in after.collection("home").rows]
+        rows[-1]["quantity"] = 1
+        results = [(after.with_collection("home", rows), summary),
+                   (after, inventory.Summary(summary.text, summary.counts, summary.changed,
+                                             {**summary.extra, "action": "batch_metadata"}))]
+        for result in results:
+            with self.subTest(result=result), mock.patch.object(activity_undo.saving, "apply_op", return_value=result):
+                self.refused(503, self.apply, expect=preview["expect"])
+
     def test_beyond_limit_and_mixed_source_hide_all_rows_before_bad_expect(self):
         self.case.seed(51)
         errors = [self.refused(404, self.apply, expect="bad")]
@@ -99,8 +161,8 @@ class BatchUndoApiTests(unittest.TestCase):
         self.assertEqual([error.message for error in errors], [activity_undo.NO_CHANGE] * 2)
         self.assertEqual(self.backend.writes, [])
 
-    def test_quantity_and_other_row_facts_are_not_batch_metadata(self):
-        for field, old in (("quantity", 1), ("name", "Other card")):
+    def test_identity_and_other_row_facts_are_not_batch_updates(self):
+        for field, old in (("finish", "foil"), ("name", "Other card")):
             self.case.seed()
             self.case.source()[0]["before"][field] = old
             with self.subTest(field=field):

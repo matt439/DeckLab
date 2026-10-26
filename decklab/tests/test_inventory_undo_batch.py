@@ -4,6 +4,7 @@ The fixture deliberately preserves the production single-reader LIMIT 2 and adds
 a separate max-51-row reader. No database, card-index update or real data is used.
 """
 import copy
+import json
 import unittest
 from unittest import mock
 
@@ -62,6 +63,23 @@ class BatchMetadataUndoTests(unittest.TestCase):
             if not mixed:
                 record["before"] = copy.deepcopy(record["after"])
             record["before"]["notes"] = note
+
+    def quantity_batch(self, current, restored, *, mixed=False):
+        self.seed(len(current))
+        for record, now, old in zip(self.source(), current, restored):
+            record["after"]["quantity"] = now
+            if not mixed:
+                record["before"] = copy.deepcopy(record["after"])
+            record["before"]["quantity"] = old
+        after_by_key = {tuple(record["after"][field] for field in KEY_FIELDS): record["after"] for record in self.source()}
+        rows = []
+        for row in self.store.snapshot.collection("home").rows:
+            values = row.as_dict()
+            key = ("home", values["set"], values["collector_number"], values["finish"])
+            if key in after_by_key:
+                values["quantity"] = after_by_key[key]["quantity"]
+            rows.append(values)
+        self.store.snapshot = self.store.snapshot.with_collection("home", rows)
 
     def review(self):
         return inventory.undo_review(fixture.CHANGE_ID, "home", self.store.snapshot)
@@ -149,8 +167,8 @@ class BatchMetadataUndoTests(unittest.TestCase):
             with self.subTest(duplicate=duplicate), self.assertRaises((undo.UndoMissing, undo.UndoUnsupported, undo.UndoConflict)):
                 self.review()
 
-    def test_quantity_identity_names_and_noops_are_outside_this_metadata_slice(self):
-        for field in ("quantity", "finish", "name", "noop"):
+    def test_identity_names_and_noops_are_outside_this_batch_slice(self):
+        for field in ("finish", "name", "noop"):
             self.seed()
             first = self.source()[0]
             if field == "noop":
@@ -280,6 +298,116 @@ class BatchMetadataUndoTests(unittest.TestCase):
             self.review()
         self.assertEqual(self.store.snapshot, before)
         self.assertEqual(self.store.audit, original)
+
+    def test_positive_quantity_updates_choose_separate_action_and_exact_full_rows(self):
+        self.quantity_batch([2, 3], [1, 9999], mixed=True)
+        before, original = self.store.snapshot, copy.deepcopy(self.store.audit)
+        plan = self.review()
+        self.assertEqual(plan["action"], "batch_update")
+        self.assertEqual([[field["field"] for field in item["fields"]] for item in plan["rows"]],
+                         [["quantity", "condition", "language"], ["quantity", "condition", "language"]])
+        after, summary = self.apply(plan)
+        self.assertEqual(summary.extra["action"], "batch_update")
+        self.assertEqual((summary.counts["edited"], summary.counts["removed"]), (2, 0))
+        self.assertEqual(undo.restored_rows(after, plan), self.receipts(plan))
+        self.assertEqual(self.store.snapshot, before)
+        self.assertEqual(self.store.audit, original)
+        self.seed()
+        self.assertEqual(self.review()["action"], "batch_metadata")
+
+    def test_batch_quantity_requires_positive_bounded_integer_on_both_sides(self):
+        for value in (0, -1, 10000, True, "2", None):
+            for side in ("before", "after"):
+                self.quantity_batch([2, 3], [4, 5])
+                self.source()[-1][side]["quantity"] = value
+                with self.subTest(value=value, side=side), self.assertRaises(undo.UndoUnsupported):
+                    self.review()
+
+    def test_cumulative_same_name_reductions_check_complete_final_capacity(self):
+        self.quantity_batch([3, 3], [1, 1])
+        self.store.snapshot = self.store.snapshot.with_collection("home", [row.as_dict() for row in
+            self.store.snapshot.collection("home").rows if row.collector_number != "900"])
+        self.case.built("4 Llanowar Elves\n56 Forest")
+        before, original = self.store.snapshot, copy.deepcopy(self.store.audit)
+        # Either individual reduction leaves four copies. Together only two remain.
+        with self.assertRaises(undo.UndoConflict):
+            self.review()
+        self.assertEqual(self.store.snapshot, before)
+        self.assertEqual(self.store.audit, original)
+
+    def test_held_card_surplus_uses_existing_aggregate_policy_without_moving_anything(self):
+        self.quantity_batch([4, 4], [3, 3])
+        self.case.built("4 Llanowar Elves\n56 Forest")
+        before = self.store.snapshot
+        plan = self.review()
+        after, _ = self.apply(plan)
+        self.assertEqual(plan["action"], "batch_update")
+        self.assertEqual(undo.restored_rows(after, plan), self.receipts(plan))
+        self.assertEqual(after.decks, before.decks)
+        self.assertEqual(after.decks_revision, before.decks_revision)
+
+    def test_net_neutral_cross_printing_offsets_still_refuse_unknown_installed_demand(self):
+        for kind in ("anonymous", "duplicate", "version", "invalid"):
+            self.quantity_batch([3, 3], [1, 5])
+            recipe = self.case.standins(using=None if kind == "anonymous" else "Llanowar Elves",
+                                       version="owned" if kind == "version" else "target")
+            recipe["built"]["cards"][0]["for"] = "Elvish Mystic"
+            if kind == "invalid":
+                recipe["built"]["cards"][0]["qty"] = 2
+            header = "- **Stand-ins:** " + json.dumps(recipe) + "\n"
+            if kind == "duplicate":
+                header += "- **Stand-ins:** " + json.dumps(recipe) + "\n"
+            self.case.built("1 Elvish Mystic\n59 Forest", header)
+            before, original = self.store.snapshot, copy.deepcopy(self.store.audit)
+            with self.subTest(kind=kind), self.assertRaises(undo.UndoConflict):
+                self.review()
+            self.assertEqual(self.store.snapshot, before)
+            self.assertEqual(self.store.audit, original)
+
+    def test_net_neutral_reduction_requires_complete_unambiguous_pool(self):
+        from decklab.lib.api import collection_guards
+        for kind in ("unresolved", "warning_decks", "standin_warnings", "missing_holder"):
+            self.quantity_batch([3, 3], [1, 5])
+            held = type("Held", (), {"unresolved": {}, "warning_decks": {}, "in_use": []})()
+            if kind in ("unresolved", "warning_decks"):
+                setattr(held, kind, {"fixture": "Unknown demand"})
+            elif kind == "standin_warnings":
+                held.in_use = [type("Holder", (), {"standin_warnings": ["Unknown recipe"]})()]
+            with self.subTest(kind=kind), mock.patch.object(pool, "load_pool", return_value=held), \
+                    mock.patch.object(collection_guards, "_check_holders", side_effect=ValueError("Unknown")
+                                      if kind == "missing_holder" else None), self.assertRaises(undo.UndoConflict):
+                self.review()
+
+    def test_named_recipes_other_spaces_and_physical_records_are_unchanged(self):
+        self.quantity_batch([3, 3], [1, 5])
+        recipe = self.case.standins()
+        recipe["built"]["cards"][0]["for"] = "Elvish Mystic"
+        self.case.built("1 Elvish Mystic\n59 Forest", "- **Stand-ins:** " + json.dumps(recipe) + "\n")
+        self.store.snapshot = self.store.snapshot.with_collection("user2", [{**fixture.CARD, "quantity": 8}])
+        before = self.store.snapshot
+        plan = self.review()
+        after, _ = self.apply(plan)
+        self.assertEqual(after, before.replace(collections=after.collections))
+        self.assertEqual(after.collection("user2"), before.collection("user2"))
+        self.assertEqual(after.decks, before.decks)
+        self.assertEqual(undo.restored_rows(after, plan), self.receipts(plan))
+
+    def test_increase_only_updates_do_not_require_physical_demand_lookups(self):
+        self.quantity_batch([2, 3], [4, 5])
+        with mock.patch.object(pool, "load_pool", side_effect=AssertionError("No reduction")):
+            plan = self.review()
+            after, _ = self.apply(plan)
+        self.assertEqual(undo.restored_rows(after, plan), self.receipts(plan))
+
+    def test_one_full_settled_candidate_is_used_for_all_quantity_reduction_checks(self):
+        self.quantity_batch([3, 3], [1, 1])
+        original = undo._reduction
+        with mock.patch.object(undo, "_reduction", wraps=original) as check:
+            plan = self.review()
+        self.assertEqual(check.call_count, 1)
+        args = check.call_args.args
+        self.assertEqual([row.qty for row in args[1].collection("home").rows if row.collector_number != "900"], [1, 1])
+        self.assertEqual(undo.restored_rows(args[1], plan), self.receipts(plan))
 
     def test_receipt_follows_audit_plan_order_even_when_collection_sort_order_differs(self):
         self.store.audit[fixture.CHANGE_ID].reverse()

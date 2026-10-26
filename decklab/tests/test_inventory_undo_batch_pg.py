@@ -7,7 +7,7 @@ from unittest import mock
 
 from decklab.lib import access, config, inventory
 from decklab.lib.api import activity_undo
-from decklab.lib.inventory import Op, Summary, ops_collection, pg, rules, undo
+from decklab.lib.inventory import Op, Summary, model, ops_collection, pg, rules, undo
 from decklab.lib.state import Invalid
 from decklab.tests import db_support, test_inventory_undo_pg as existing
 from decklab.tests import test_collection_edit as collection_fixture
@@ -57,6 +57,28 @@ class BatchUndoPgTests(db_support.DbTestCase):
         plan = inventory.undo_review(source, "home") if plan is None else plan
         return inventory.apply(Op("inventory.undo", {"change_id": source, "space": "home", "expect": plan["expect"]}),
                                existing.ACTOR, "Undo fixture metadata batch")
+
+    def quantity_seed(self, current, restored, *, main=None, recipe=None, mixed=False):
+        rows = [{"name": "Llanowar Elves", "set": "fdn", "collector_number": str(1000 + index), "finish": "nonfoil",
+                 "quantity": str(quantity), "condition": "", "language": "", "notes": "Exact prior note " + str(index)}
+                for index, quantity in enumerate(restored)]
+        class Seed:
+            kind = "fixture.quantity-seed"
+            def run(self, snapshot):
+                unrelated = [row.as_dict() for row in snapshot.collection("home").rows if row.name != "Llanowar Elves"]
+                after = snapshot.with_collection("home", [*unrelated, *rows])
+                if main:
+                    header = "- **Stand-ins:** " + json.dumps(recipe) + "\n" if recipe else ""
+                    text = "# Physical fixture\n\n- **Format:** Casual 60-card, 1v1\n- **Status:** built\n" \
+                        + header + "\n## Decklist\n\n```\nDeck\n" + main + "\n```\n"
+                    after = after.with_deck(model.Deck("home", "casual", "physical", text))
+                return after, Summary("Seed disposable quantity facts and physical recipe")
+        inventory.apply(Seed(), existing.ACTOR, "Fixture quantity seed")
+        edits = [(list(rules.ident(row)), {**row, "quantity": str(quantity),
+                                         **({"condition": "NM", "language": "en", "notes": "Updated note"} if mixed else {})})
+                 for row, quantity in zip(rows, current)]
+        inventory.apply(Op("collection.apply", {"space": "home", "edits": edits}), existing.ACTOR, "Fixture quantity update")
+        return self.source("collection_card"), rows
 
     def test_complete_fifty_row_reader_keeps_single_default(self):
         source, _ = self.seed(50)
@@ -137,6 +159,74 @@ class BatchUndoPgTests(db_support.DbTestCase):
         self.assertEqual(result["restored_rows"], [{"key": item["key"], "row": item["restored"]} for item in preview["rows"]])
         self.assertEqual({rules.ident(item["row"]): item["row"] for item in result["restored_rows"]},
                          {rules.ident(row): {**row, "quantity": int(row["quantity"])} for row in rows})
+
+    def test_positive_quantity_api_restores_one_audited_keyed_batch_and_preserves_recipes(self):
+        recipe = {"target": [], "owned": [], "built": {"version": "target",
+                  "cards": [{"for": "Elvish Mystic", "using": "Llanowar Elves", "qty": 1}]}}
+        source, rows = self.quantity_seed([3, 3], [1, 5], main="1 Elvish Mystic\n59 Forest", recipe=recipe, mixed=True)
+        before, snapshot = self.persisted(), self.fresh()
+        original = self.sql("select id,op,row_key,before,after from audit.row_change where change_set_id=%s order by id", (source,))
+        with access.using({"profile": "matt", "email": "matt@example.com", "remote": True}):
+            preview = activity_undo.undo_view(id=str(source))
+            self.assertEqual(preview["action"], "batch_update")
+            result = activity_undo.apply_undo(json.dumps({"profile": "matt", "id": source, "expect": preview["expect"]}).encode())
+        self.assertEqual(result["action"], "batch_update")
+        self.assertEqual(result["restored_rows"], [{"key": item["key"], "row": item["restored"]} for item in preview["rows"]])
+        self.assertEqual({rules.ident(item["row"]): item["row"] for item in result["restored_rows"]},
+                         {rules.ident(row): {**row, "quantity": int(row["quantity"])} for row in rows})
+        written, after = self.persisted(), self.fresh()
+        self.assertEqual(len(written["audit.change_set"]), len(before["audit.change_set"]) + 1)
+        self.assertEqual(len(written["audit.row_change"]), len(before["audit.row_change"]) + 2)
+        self.assertEqual(self.sql("select id,op,row_key,before,after from audit.row_change where change_set_id=%s order by id", (source,)), original)
+        self.assertEqual(after.decks, snapshot.decks)
+        self.assertEqual(after.collection("user2"), snapshot.collection("user2"))
+        for table in before.keys() - {"collection_card", "inventory_revision", "audit.change_set", "audit.row_change"}:
+            self.assertEqual(written[table], before[table], table)
+
+    def test_cumulative_same_name_reductions_refuse_all_rows_and_audit(self):
+        source, _ = self.quantity_seed([3, 3], [1, 1], main="4 Llanowar Elves\n56 Forest")
+        before = self.persisted()
+        with self.assertRaises(undo.UndoConflict):
+            inventory.undo_review(source, "home")
+        with self.assertRaises(undo.UndoConflict):
+            self.apply(source, {"expect": "0" * 64})
+        self.assertEqual(self.persisted(), before)
+
+    def test_net_neutral_printing_offset_does_not_hide_unknown_physical_demand(self):
+        recipe = {"target": [], "owned": [], "built": {"version": "target",
+                  "cards": [{"for": "Elvish Mystic", "using": None, "qty": 1}]}}
+        source, _ = self.quantity_seed([3, 3], [1, 5], main="1 Elvish Mystic\n59 Forest", recipe=recipe)
+        before = self.persisted()
+        with self.assertRaises(undo.UndoConflict):
+            inventory.undo_review(source, "home")
+        self.assertEqual(self.persisted(), before)
+
+    def test_quantity_batch_stale_revisions_aba_and_late_failure_leave_complete_state_unchanged(self):
+        source, _ = self.quantity_seed([3, 3], [1, 5])
+        for table in ("inventory_revision", "decks_revision"):
+            plan = inventory.undo_review(source, "home")
+            with self.connect("owner") as connection:
+                connection.execute("update " + table + " set revision=revision+1")
+            before = self.persisted()
+            with self.subTest(table=table), self.assertRaises(undo.UndoConflict):
+                self.apply(source, plan)
+            self.assertEqual(self.persisted(), before)
+        plan, before = inventory.undo_review(source, "home"), self.persisted()
+        original_diff = pg._diff
+        def late(*args):
+            original_diff(*args)
+            raise Invalid("Synthetic late quantity SQL failure")
+        with mock.patch.object(pg, "_diff", side_effect=late), self.assertRaises(Invalid):
+            self.apply(source, plan)
+        self.assertEqual(self.persisted(), before)
+        row = next(row.as_dict() for row in self.fresh().collection("home").rows if row.collector_number == "1000")
+        for quantity in (4, 3):
+            inventory.apply(Op("collection.edit", {"space": "home", "original": list(rules.ident(row)),
+                                                     "row": {**row, "quantity": quantity}}), existing.ACTOR, "Fixture later quantity touch")
+        before = self.persisted()
+        with self.assertRaises(undo.UndoConflict):
+            inventory.undo_review(source, "home")
+        self.assertEqual(self.persisted(), before)
 
     def test_one_later_touch_and_both_revisions_block_the_entire_batch(self):
         source, rows = self.seed()

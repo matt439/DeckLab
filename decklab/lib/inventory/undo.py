@@ -24,6 +24,8 @@ SUPPORTED = {COLLECTION: ("collection", {"quantity", "condition", "language", "n
 SHA = re.compile(r"[a-f0-9]{64}")
 BATCH_MAX = 50
 BATCH_FIELDS = ("condition", "language", "notes")
+BATCH_UPDATE_FIELDS = ("quantity", *BATCH_FIELDS)
+BATCH_ACTIONS = ("batch_metadata", "batch_update")
 
 
 class UndoMissing(Invalid):
@@ -456,8 +458,38 @@ def _batch_inverse(snapshot, rows, space, label):
                 or settled != snapshot.replace(collections=settled.collections):
             raise ValueError("Unexpected inverse effect")
     except Exception:
-        raise UndoConflict("The complete metadata change cannot be restored exactly. Nothing was saved.", label) from None
+        raise UndoConflict("The complete collection change cannot be restored exactly. Nothing was saved.", label) from None
     return settled, summary
+
+
+def _batch_reductions(snapshot, after, rows, space, label):
+    """Prove aggregate capacity against the whole candidate, never printing freedom."""
+    if not any(item["restore"]["quantity"] < item["current"]["quantity"] for item in rows):
+        return
+    from decklab.lib import inventory, pool
+    from decklab.lib.api.collection_guards import _check_holders
+    from decklab.lib.decks import assembled, standins
+    try:
+        for deck in _known_decks(snapshot, space):
+            if deck.status != "built":
+                continue
+            if sum(field.key.casefold() == standins.STAND_INS_FIELD.casefold() for field in deck.header) > 1:
+                raise ValueError("Ambiguous installed markers")
+            installed = standins.installed_for(deck)
+            if installed:
+                if installed["version"] != assembled.version(deck) or any(row["using"] is None for row in installed["cards"]):
+                    raise ValueError("Unknown physical markers")
+                standins.validate_rows(installed["cards"], assembled.sections(deck))
+        with inventory.pinned(snapshot):
+            held = pool.load_pool(space)
+            _check_holders(snapshot, space, held)
+        if held.unresolved or held.warning_decks or any(holder.standin_warnings for holder in held.in_use):
+            raise ValueError("Uncertain physical holders")
+    except Exception:
+        raise UndoConflict("Physical holders cannot safely be checked. Use the Collection editor.", label) from None
+    # COLLECTION ignores source and evaluates every reduced canonical name. One
+    # complete candidate catches cumulative reductions and cross-printing offsets.
+    _reduction(snapshot, after, COLLECTION, space, label, {"table": COLLECTION})
 
 
 def _batch_review(change_id, space, snapshot, store):
@@ -472,11 +504,13 @@ def _batch_review(change_id, space, snapshot, store):
            or row["before"].get("space_id") != space or row["after"].get("space_id") != space for row in raw):
         raise UndoMissing()
     rows, keys, ids = [], set(), set()
+    quantity_changed = False
     for record in raw:
         source, wanted, restore = _source([record], space)
         changed = {key for key in wanted if wanted[key] != restore[key]}
-        if not changed or changed - set(BATCH_FIELDS):
-            raise UndoUnsupported("Only condition, language and notes metadata can be undone in a batch.")
+        if not changed or changed - set(BATCH_UPDATE_FIELDS):
+            raise UndoUnsupported("Only positive quantity, condition, language and notes updates can be undone in a batch.")
+        quantity_changed = quantity_changed or "quantity" in changed
         if "notes" in changed:
             # Historical text is restored verbatim, not run through fresh-input
             # trimming/length/formula policy. PostgreSQL must still represent it.
@@ -489,22 +523,25 @@ def _batch_review(change_id, space, snapshot, store):
                 raise UndoUnsupported("The recorded notes cannot be restored as database text.") from None
         key, rid = rules.ident(wanted), source["id"]
         if key in keys or rid in ids:
-            raise UndoUnsupported("A metadata batch must name each original row exactly once.")
+            raise UndoUnsupported("A collection batch must name each original row exactly once.")
         keys.add(key)
         ids.add(rid)
         rows.append({"key": source["key"], "row_change_id": rid, "current": wanted, "restore": restore,
                      "label": _label(COLLECTION, wanted),
                      "fields": [{"field": field, "before": wanted[field], "after": restore[field]}
-                                for field in BATCH_FIELDS if field in changed]})
-    label = f"Metadata on {len(rows)} collection rows"
+                                for field in BATCH_UPDATE_FIELDS if field in changed]})
+    action = "batch_update" if quantity_changed else "batch_metadata"
+    label = f"Updates to {len(rows)} collection rows" if quantity_changed else f"Metadata on {len(rows)} collection rows"
     for item in rows:
         if store.undo_latest(COLLECTION, item["key"]) != item["row_change_id"]:
             raise UndoConflict("A row was touched after the selected change. Nothing was undone.", item["label"])
         _current_row(snapshot, {"table": COLLECTION}, item["current"], space, item["label"])
-    _batch_inverse(snapshot, rows, space, label)
+    after, _ = _batch_inverse(snapshot, rows, space, label)
+    if quantity_changed:
+        _batch_reductions(snapshot, after, rows, space, label)
     receipt = json.dumps([change_id, raw, snapshot.revision, snapshot.decks_revision], ensure_ascii=False,
                          sort_keys=True, separators=(",", ":"))
-    return {"change_id": change_id, "kind": "collection", "space": space, "action": "batch_metadata",
+    return {"change_id": change_id, "kind": "collection", "space": space, "action": action,
             "row_count": len(rows), "rows": rows, "label": label,
             "expect": hashlib.sha256(receipt.encode("utf-8")).hexdigest()}
 
@@ -564,12 +601,12 @@ def apply_undo(snapshot, *, change_id, space, expect, reason=None, confirm_owned
     plan = review(change_id, space, snapshot)
     if plan["expect"] != expect:
         raise UndoConflict("The inventory or decks changed after the Undo preview. Review it again.", plan["label"])
-    if plan.get("action") == "batch_metadata":
+    if plan.get("action") in BATCH_ACTIONS:
         after, summary = _batch_inverse(snapshot, plan["rows"], space, plan["label"])
         return after, Summary(f"Undo change #{change_id}: restore {plan['label']}", {**summary.counts, "undo": 1},
-                              {after.collection(space).path: list(BATCH_FIELDS)},
+                              {after.collection(space).path: list(BATCH_UPDATE_FIELDS if plan["action"] == "batch_update" else BATCH_FIELDS)},
                               {**(summary.extra or {}), "undo_of": change_id, "space": space, "kind": "collection",
-                               "action": "batch_metadata", "row_count": plan["row_count"],
+                               "action": plan["action"], "row_count": plan["row_count"],
                                "row_change_ids": [item["row_change_id"] for item in plan["rows"]]})
     removing = plan.get("action") == "remove"
     adding = plan.get("action") == "add"
