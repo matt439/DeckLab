@@ -444,7 +444,12 @@ class Handler(BaseHTTPRequestHandler):
             if route == ["me"]:
                 self._allow(*GET)
                 self._no_query(query)
-                return self._send_json(200, access.me(self.identity))
+                from decklab.lib.profile_config import PendingProfileEdit
+                try:
+                    identity = access.me(self.identity)
+                except PendingProfileEdit:
+                    raise api.ApiError(503, "Member settings need local recovery before sign-in can continue.") from None
+                return self._send_json(200, identity)
             if route == ["visibility"]:
                 from decklab.lib.api import visibility as visibility_api
                 self._allow(*GET, "PUT")
@@ -464,6 +469,16 @@ class Handler(BaseHTTPRequestHandler):
                 if self.command == "PUT":
                     return self._send_json(200, api.change_commander_night(self._write_body(api.MAX_COMMANDER_NIGHT_BODY)))
                 return self._send_json(200, api.commander_night_view())
+            if route == ["settings", "members"]:
+                from decklab.lib.api import members
+                self._allow(*GET)
+                self._no_query(query)
+                return self._send_json(200, members.view())
+            if route == ["settings", "member-email"]:
+                from decklab.lib.api import members
+                self._allow("POST")
+                self._no_query(query)
+                return self._send_json(200, members.change(self._write_body(members.MAX_BODY)))
             if len(route) == 3 and route[0] == "profiles" and route[2] == "settings":
                 self._allow(*GET, "PUT")
                 self._no_query(query)

@@ -70,7 +70,18 @@ def sync(listed=None, dbname=None, timeout=None, options=None):
     profiles). timeout and options are conn.connect()'s (the server passes the state store's
     short connect timeout and lock/statement timeouts, so a lock held elsewhere fails the sync
     rather than holding up the thread it runs on). Returns {"added": [...], "changed": [...], "removed": [...]} (profile ids)."""
-    listed = profiles_lib.read_checked() if listed is None else listed
+    if listed is None:
+        from decklab.lib import profile_config
+        from decklab.db import profile_edits
+        with profile_config.claim(allow_pending=True):
+            profile_edits._recover_locked(dbname=dbname)
+            return _sync(profiles_lib.read_checked(), dbname=dbname, timeout=timeout, options=options)
+    return _sync(listed, dbname=dbname, timeout=timeout, options=options)
+
+
+def _sync(listed, dbname=None, timeout=None, options=None):
+    """The caller holds the raw-config claim when inputs came from that file."""
+    from decklab.lib import profile_config
     reserved = sorted(p["id"] for p in listed if p["id"] in profiles_lib.RESERVED_IDS)
     if reserved:
         raise ValueError(f"profile id {reserved[0]} is kept for the audit trail's own actors "
@@ -78,10 +89,14 @@ def sync(listed=None, dbname=None, timeout=None, options=None):
     if not listed:
         db.log("Profiles not synced: config.json lists none, and a sync would remove every profile.")
         return {"added": [], "changed": [], "removed": []}
+    # Explicit programmatic inputs keep their no-config-read contract, but may
+    # not write through an unresolved config publication from another process.
+    profile_config.require_ready()
     want = wanted(listed)
     with db.connect("app", dbname=dbname, timeout=timeout, options=options) as c:
         with c.cursor() as cur:
             space_members.shared(cur)
+            profile_config.require_ready()
             if space_members.departed(cur, want[0] | set(want[1])):
                 raise ValueError("A departed member is still configured: remove that profile from config.json before syncing")
             todo = plan(want, current(cur))
@@ -94,6 +109,7 @@ def sync(listed=None, dbname=None, timeout=None, options=None):
                 # first; if it did, the change set is rolled back rather than left empty.
                 space_members.shared(cur)
                 cur.execute("lock table profile, profile_email, space in share row exclusive mode")
+                profile_config.require_ready()
                 if space_members.departed(cur, want[0] | set(want[1])):
                     raise ValueError("A departed member is still configured: remove that profile from config.json before syncing")
                 todo = plan(want, current(cur))

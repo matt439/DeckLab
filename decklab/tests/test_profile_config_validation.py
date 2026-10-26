@@ -1,7 +1,10 @@
 """Local strict profile preflights preserve tolerant readers and never touch real configuration."""
 import copy
 import json
+import os
+import tempfile
 import unittest
+from pathlib import Path
 from unittest import mock
 
 from decklab.db import migrate, profiles_sync, setup
@@ -103,6 +106,14 @@ class ProfileConfigValidationTests(unittest.TestCase):
 
 
 class ProfileSetupSafetyTests(unittest.TestCase):
+    def setUp(self):
+        root = Path(os.environ["USERPROFILE"]) / "AppData" / "Local" / "Temp" if os.name == "nt" else None
+        temporary = tempfile.TemporaryDirectory(prefix="decklab-profile-preflight-", dir=root)
+        self.addCleanup(temporary.cleanup)
+        patcher = mock.patch.object(config, "CONFIG_FILE", Path(temporary.name) / "config.json")
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
     def test_config_backed_sync_refuses_before_connection_or_database_log(self):
         with mock.patch.object(config, "load", return_value=invalid_settings()), \
                 mock.patch.object(profiles_sync.db, "connect") as connect, \

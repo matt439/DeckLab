@@ -2956,12 +2956,17 @@ Evidence:
 - `decklab/lib/homenet/profile_config.py`, `commands.py`: local status and install preflight
 - `decklab/db/profiles_sync.py`, `setup.py`: refusal before connection/setup and one validated snapshot
 - `test_profile_config_validation.py`, `test_homenet_profile_diagnostics.py`, `test_profile_config_privacy.py`: compatibility, side-effect gates and request privacy
+- `decklab/lib/profile_config.py`, `decklab/db/profile_edits.py`, `decklab/db/profiles_sync.py`: raw-config and membership receipts, exact web-actor audit, private pending publication journal and coordinated local recovery/sync
+- `decklab/lib/api/members.py`, `decklab/web/settings-members.js`: named-home-admin-only existing-member email review, guarded save/no-op receipts, private panel lifetime and explicit Access-policy reminder
+- `test_members_api.py`, `test_settings_members_ui.py`: authorization-before-read, strict payload scope, stale and uncertain outcomes, exact receipt validation and retired form controls
 
 Now: local diagnostics/setup safety built 2026-10-27 ([HISTORY.md](../HISTORY.md#local-profile-diagnostics-and-safe-setup-2026-10-27-e10-s17-first-slice)). Invalid entries cannot silently become a partial database sync; detailed reasons stay on local status, with no authentication or API roster change.
 
-Gap: Settings profile/email management, its audited config/database update, Access-policy guidance and sign-in checks remain. Local request parsing is deliberately still tolerant; setup and config-backed sync refuse invalid entries before changes.
+The [existing-member email slice](../HISTORY.md#guarded-member-email-replacement-in-settings-2026-10-26-e10-s17) is implemented. A named home admin can replace exactly one existing non-home member alias after review, preserving other aliases, identity, space, records and unrelated raw configuration values. Full config and membership receipts bind the save. The audited web actor and exact committed outcome govern configuration publication; pending recovery gates profile/auth reads, and local sync recovers before reading the source under the shared claim. The panel keeps emails private and explicitly calls for a separate Access-policy update and sign-in check.
 
-Next slice: the guarded Settings profile editor, following the existing privacy and configuration-source rules.
+Gap: adding a member and checking whether an address can sign in through Access remain. No real configuration/email, Access policy or sign-in was changed or verified by this coding task. Local request parsing remains tolerant outside pending-publication refusal; setup and config-backed sync still refuse invalid entries before changes.
+
+Next slice: guarded creation of a member with their own space, reusing the coordinated configuration/database publication and privacy rules.
 
 Review note: L for a could bundles a profile editor, validation, an Access reminder and a status check; the second criterion could be its own small story.
 

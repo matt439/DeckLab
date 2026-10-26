@@ -48,7 +48,7 @@ import time
 import urllib.error
 import urllib.request
 
-from decklab.lib import config
+from decklab.lib import config, profile_config
 from decklab.lib import profiles as profile_list
 
 LEEWAY = 60                 # seconds of clock difference allowed for exp and nbf
@@ -148,7 +148,7 @@ def profile_for_email(email, listed):
 
 
 def _config_profiles():
-    return config.load().get("profiles") or []
+    return profile_config.read_settings().get("profiles") or []
 
 
 def fetch_keys(team):
@@ -323,6 +323,8 @@ class Verifier:
             raise AccessError(NOT_SET_UP)
         try:
             profiles = self._profiles()
+        except profile_config.PendingProfileEdit:
+            raise AccessError("Member settings need local recovery before anyone can sign in.", 503) from None
         except (OSError, ValueError, TypeError):
             raise AccessError("Deck Lab's config.json can't be read, so no one can be signed in", 500) from None
         if not isinstance(profiles, list) or profile_list.legacy(profiles):
@@ -470,7 +472,7 @@ def me(identity, profiles=None):
     from decklab.lib import permissions, spaces, visibility
     has_access = False
     if profiles is None:
-        settings = config.load()
+        settings = profile_config.read_settings()
         profiles, has_access = settings.get("profiles") or [], settings.get("access") is not None
     listed = profile_list.parse(profiles, access=identity is not None or has_access)
     space_ids = spaces.space_ids(listed)

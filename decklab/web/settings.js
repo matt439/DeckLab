@@ -46,6 +46,7 @@ function showSettings(params, token) {
           el("p", { class: "sub", id: "sim-since" })),
         el("p", { class: "sub", id: "sim-loading", text: "Loading the simulations setting…" })),
       commanderNightSettings(),
+      settingsMembersPanel(),
       el("section", { class: "panel settings-part", id: "settings-visits", "aria-labelledby": "settings-visits-title" },
         el("h2", { id: "settings-visits-title", text: "Visits" }),
         el("p", { class: "sub", text: `Who has opened Deck Lab, and which pages. The last ${VISIT_DAYS} days unless it says otherwise.` }),
@@ -66,6 +67,7 @@ function showSettings(params, token) {
   if (state.status) renderVersionStatus(state.status);
   loadSimulations();
   loadCommanderNightSettings(token);
+  loadSettingsMembers(token);
   loadVisits(token);
   showFooter();
 }

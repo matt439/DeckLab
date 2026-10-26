@@ -5,7 +5,7 @@ profile_setting table), and _writer, the profile every write is made by.
 The store keeps the values as saved; what each setting may be, and its default, are here
 (SETTINGS), so a value that isn't allowed any more is dropped when it's read.
 """
-from decklab.lib import access, config, permissions, profiles as profile_list, state
+from decklab.lib import access, config, permissions, profile_config, profiles as profile_list, state
 
 from . import common
 from .common import MAX_BODY, ApiError, _load_json, _public, state_errors
@@ -34,7 +34,9 @@ def _config_profiles(emails=False):
     "emails" only when emails is true: they're never sent to the page.
     ApiError 500 when config.json can't be read."""
     try:
-        listed = profile_list.read(config.load())
+        listed = profile_list.read()
+    except profile_config.PendingProfileEdit:
+        raise ApiError(503, "Member settings need local recovery. Run python -m decklab.db sync-profiles on the PC.") from None
     except (OSError, ValueError) as e:
         raise ApiError(500, f"decklab/config.json can't be read: {_public(e)}") from None
     keys = ("id", "name", "plays_as", "role", "space") + (("emails",) if emails else ())

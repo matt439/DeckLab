@@ -250,6 +250,10 @@ svg.icon-more { stroke-width: 4; }
 .settings-fields[hidden] { display: none; }
 .settings-fields .field { display: grid; gap: var(--s-1); justify-items: start; }
 .settings-fields .field > span { font-weight: var(--fw-semibold); }
+.settings-members-form { min-width: 0; }
+.settings-members-form .field { min-width: 0; justify-items: stretch; }
+.settings-members-form .field > :where(input, select) { min-width: 0; max-width: 100%; width: 100%; }
+.settings-member-review, .settings-member-result { min-width: 0; overflow-wrap: anywhere; }
 .commander-night-range { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-3); }
 .commander-night-form .field > :where(input, select, textarea) { justify-self: stretch; }
 .visits-list { display: grid; gap: var(--s-4); }

@@ -206,6 +206,8 @@ E4-S13 is built: the pair matchup page places the visible human record beside Fo
 
 E11-S08 remains partial: Activity now reviews and saves one guarded same-identity audited collection/token UPDATE as a new inverse change. The original audit remains immutable. Broader import/receipt/removal/identity/multi-row and accessory/wishlist recovery remain, with no operation provenance inferred from a single-row audit. Current status counts are unchanged.
 
+E10-S17 remains partial: a named home admin can review and replace one existing non-home member email in Settings. The complete raw configuration and database membership are bound by receipts, the actual web actor is audited, and a private journal gates profile/auth reads until exact-outcome publication is recovered. Config-backed sync shares the claim and rereads its source after claiming it. Other aliases, records and configuration values are preserved; Access-policy guidance is explicit. Adding a member and verifying Access-policy/sign-in coverage remain. No real member edit or sign-in acceptance is claimed, and story counts are unchanged.
+
 ## PLAN.md alignment
 
 How each item in [PLAN.md](../PLAN.md)'s "Still to do" (first compared on 2026-10-13; rechecked against PLAN.md and the stories on 2026-10-19) compares with the stories. Verdicts: keep (as it is), raise (do sooner), lower (do later), reshape (change its scope), drop (remove).

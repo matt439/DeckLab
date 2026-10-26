@@ -171,7 +171,9 @@ def parse_with_diagnostics(listed, access=False):
 def read(settings=None):
     """The profiles from config.json (or from settings, an already loaded config.load()).
     Raises OSError or ValueError when config.json can't be read."""
-    settings = config.load() if settings is None else settings
+    if settings is None:
+        from decklab.lib import profile_config
+        settings = profile_config.read_settings()
     return parse(settings.get("profiles") or [], access=settings.get("access") is not None)
 
 
@@ -181,7 +183,9 @@ def read_checked(settings=None):
     Missing profiles is still an empty configuration; an explicitly malformed profiles value
     is diagnosed. Request readers keep using read(), whose tolerant behavior is unchanged.
     """
-    settings = config.load() if settings is None else settings
+    if settings is None:
+        from decklab.lib import profile_config
+        settings = profile_config.read_settings()
     listed, issues = parse_with_diagnostics(settings.get("profiles", []), access=settings.get("access") is not None)
     if issues:
         raise InvalidProfiles(issues)

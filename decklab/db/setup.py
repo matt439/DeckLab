@@ -274,6 +274,12 @@ def ensure_empty_inventory(name, say=print):
 
 def run(dbname=None, say=print):
     """Validate profiles before the whole set-up (see the module docstring). Returns 0."""
+    from decklab.lib import profile_config
+    with profile_config.claim():
+        return _run(dbname=dbname, say=say)
+
+
+def _run(dbname=None, say=print):
     from decklab.db import migrate, profiles_sync
     from decklab.lib import profiles
     listed = profiles.read_checked()
