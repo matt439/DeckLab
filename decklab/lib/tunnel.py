@@ -60,6 +60,14 @@ def settings_of(settings):
             "hostname": str(tunnel.get("hostname") or "").strip().lower()}
 
 
+def public_address(settings):
+    """The address the tunnel opens Deck Lab at ("https://decklab.example.com"),
+    for links that must open from anywhere, such as a deck box label's QR code
+    (E8-S21); None with no tunnel or no usable hostname."""
+    host = (settings_of(settings) or {}).get("hostname")
+    return f"https://{host}" if host and re.fullmatch(r"[a-z0-9]([a-z0-9.-]*[a-z0-9])?", host) else None
+
+
 def usual_server(port, configured_port):
     """True for the server on its configured port, the one the tunnel (and its
     listener) is for; False for a test's server or one on another port."""

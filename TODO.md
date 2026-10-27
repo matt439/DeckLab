@@ -43,7 +43,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 | `E2-S23` | OPEN | could | S | A Considering list kept with each deck, outside its lists and tables. |
 | `E2-S24` | OPEN | could | M | Own card categories in a deck (ramp, draw, removal) with counts. |
 | `E4-S26` | OPEN | could | M | A phone life counter that ends by recording the game (multiplayer later, with `E4-S18`). |
-| `E8-S21` | OPEN | could | S | Printable deck box label with a QR code to the deck page. |
+| `E8-S21` | OPEN | could | S | Deck box labels with a QR code are built for built decks; next an intact product's label, linking to its product deck pages. |
 | `E8-S22` | OPEN | could | M | A location (row, section) for storage copies, shown in the packing plan; with `E8-S19`'s storage count. |
 
 ## Deck Lab: collection, orders and buying
@@ -56,7 +56,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 | `E5-S24` | DEFERRED | could | S | Copy one shop's list from Shopping's By shop, for pasting into the shop's search. |
 | `E5-S08` | OPEN | could | XL | Australian shop prices and stock, starting with a daily MTGMate snapshot for queued rows; then `E5-S19`'s back-in-stock alerts. |
 | `E6-S19` | OPEN | could | M | Tell User1, at the next visit, when a receipt brought cards for a deck User1 plays. |
-| `E7-S22` | OPEN | could | M | `collection trade` is built; next the Collection page's Record a trade, then a whole-trade Undo. |
+| `E7-S22` | OPEN | could | M | `collection trade` and the Collection page's Record a trade are built; next a whole-trade Undo. |
 | `E7-S32` | OPEN | could | L | Camera scanning into the collection; first slice is a recognition spike. ManaBox import stays the route meanwhile. |
 
 ## Deck Lab: Commander nights

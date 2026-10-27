@@ -46,6 +46,11 @@ class SettingsTests(unittest.TestCase):
         self.assertEqual(setup["config"], Path(os.path.expanduser("~/.cloudflared/config.yml")))
         self.assertEqual(setup["hostname"], "decklab.example.com")
 
+    def test_public_address_for_printed_links(self):
+        self.assertEqual(tunnel.public_address(SETTINGS), "https://decklab.example.com")      # E8-S21's QR code
+        for settings in ({}, {"tunnel": {"config": "x"}}, {"tunnel": {"config": "x", "hostname": "a b/c"}}):
+            self.assertIsNone(tunnel.public_address(settings))
+
 
 class StartTests(unittest.TestCase):
     def setUp(self):

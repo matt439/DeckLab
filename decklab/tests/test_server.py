@@ -246,6 +246,14 @@ class ApiEndpointTests(ServerTestCase):
         self.assertEqual(self.get_json("/api/profiles"), api.profiles())
         self.assertEqual([p["id"] for p in self.get_json("/api/profiles")["profiles"]], ["matt", "user1"])
 
+    def test_me_gives_the_tunnels_address_for_printed_links(self):
+        # E8-S21: a box label's QR code opens the deck page at the tunnel's address, when there is one.
+        from decklab.lib import config
+        with mock.patch.object(config, "load", return_value={}):
+            self.assertIsNone(self.get_json("/api/me")["address"])
+        with mock.patch.object(config, "load", return_value={"tunnel": {"config": "x", "hostname": "decklab.example.com"}}):
+            self.assertEqual(self.get_json("/api/me")["address"], "https://decklab.example.com")
+
     def test_status_says_how_the_database_is(self):
         # lib/dbstatus.py's snapshot, answered at once; its own tests cover who sees what.
         from decklab.lib import dbstatus

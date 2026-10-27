@@ -157,7 +157,7 @@ class TwoListenersTests(unittest.TestCase):
     def test_me_through_the_tunnel(self):
         status, _, body = self.remote_request("GET", "/api/me", email="User1@Example.com")
         self.assertEqual(status, 200)
-        self.assertEqual({k: v for k, v in json.loads(body).items() if k != "may"},
+        self.assertEqual({k: v for k, v in json.loads(body).items() if k not in ("may", "address")},
                          {"profile": "user1", "name": "User1", "remote": True})
 
     def test_the_body_profile_is_the_logins(self):
@@ -310,7 +310,7 @@ class TwoListenersTests(unittest.TestCase):
     def test_home_as_before(self):
         status, _, body = self.request(self.home, "GET", "/api/me")
         self.assertEqual(status, 200)
-        self.assertEqual({k: v for k, v in json.loads(body).items() if k != "may"},
+        self.assertEqual({k: v for k, v in json.loads(body).items() if k not in ("may", "address")},
                          {"profile": None, "name": None, "remote": False})
         self.assertEqual(self.request(self.home, "GET", "/")[0], 200)
         self.assertEqual(self.request(self.home, "GET", "/api/status", headers={"Host": "example.com"})[0], 400)
