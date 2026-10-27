@@ -649,7 +649,7 @@ class StatusTests(Guarded):
         self.patch("decklab.lib.homenet.commands.task_user", return_value="HOMEPC\\player")
         self.patch("decklab.lib.homenet.commands.file_exists", return_value=True)
         self.control.read_state.return_value = running_state()
-        with Quiet() as q:
+        with mock.patch.object(sys, "platform", "win32"), Quiet() as q:        # the watchdog is Windows'
             code = homenet.commands.cmd_status("Deck Lab", 8642)
         return code, " ".join(q.out.getvalue().split())
 

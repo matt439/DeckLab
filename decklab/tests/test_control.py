@@ -12,6 +12,7 @@ Run from the repo root: python -m unittest discover -s decklab/tests -t .
 import os
 import re
 import shutil
+import signal
 import socket
 import subprocess
 import sys
@@ -267,7 +268,7 @@ class ProcessTests(unittest.TestCase):
             with self.subTest(pid=pid):
                 self.assertFalse(control.process_alive(pid))
 
-    @unittest.skipUnless(WINDOWS, "Windows only")
+    @unittest.skipUnless(WINDOWS or sys.platform.startswith("linux"), "Windows and Linux only")
     def test_process_started(self):
         started = control.process_started(os.getpid())
         self.assertLessEqual(started, time.time())
@@ -385,17 +386,65 @@ class StopTests(TempCase):
         self.assertEqual(stops, [])
 
 
+@unittest.skipIf(WINDOWS, "off Windows a stop is SIGTERM")
+class SignalStopTests(TempCase):
+
+    def test_sigterm_calls_on_stop_once_in_a_thread_and_close_restores_the_handler(self):
+        before = signal.getsignal(signal.SIGTERM)
+        stops = []
+        listener = control.listen_for_stop(free_port(), lambda: stops.append(threading.current_thread().name))
+        self.addCleanup(listener.close)
+        os.kill(os.getpid(), signal.SIGTERM)
+        os.kill(os.getpid(), signal.SIGTERM)                # a second one is ignored
+        self.assertTrue(wait_until(lambda: stops))
+        time.sleep(0.2)
+        self.assertEqual(len(stops), 1)
+        self.assertTrue(stops[0].startswith("stop-listener-"))
+        listener.close()
+        self.assertEqual(signal.getsignal(signal.SIGTERM), before)
+
+    def test_only_the_main_thread_listens(self):
+        got = []
+        thread = threading.Thread(target=lambda: got.append(control.listen_for_stop(free_port(), lambda: None)))
+        thread.start()
+        thread.join(5)
+        self.assertIsInstance(got[0], control._NoListener)
+
+    def test_request_stop_sends_sigterm_to_the_state_files_process(self):
+        port, child = free_port(), sleeper(self)
+        reaper = threading.Thread(target=child.wait, daemon=True)     # so it doesn't linger as a zombie
+        reaper.start()
+        control.write_state({"version": 1, "pid": child.pid, "port": port, "started": now_iso()}, self.state_file)
+        self.assertEqual(control.request_stop(port, wait=10, path=self.state_file), "stopped")
+        reaper.join(5)
+        self.assertEqual(child.returncode, -signal.SIGTERM)
+
+    def test_request_stop_with_nothing_to_stop(self):
+        port = free_port()
+        self.assertEqual(control.request_stop(port, wait=0, path=self.state_file), "not running")
+        control.write_state({"version": 1, "pid": os.getpid(), "port": port, "started": now_iso()}, self.state_file)
+        self.assertEqual(control.request_stop(port, wait=0, path=self.state_file), "not running")    # itself
+        self.assertEqual(control.request_stop(port + 1, wait=0, path=self.state_file), "not running")
+
+    def test_request_stop_timeout(self):
+        port = free_port()
+        child = subprocess.Popen([sys.executable, "-c", "import signal, time; signal.signal(signal.SIGTERM, "
+                                  "signal.SIG_IGN); print('ready', flush=True); time.sleep(120)"],
+                                 stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+        self.addCleanup(lambda: (child.kill(), child.wait(10)))
+        child.stdout.readline()
+        control.write_state({"version": 1, "pid": child.pid, "port": port, "started": now_iso()}, self.state_file)
+        self.assertEqual(control.request_stop(port, wait=0.3, path=self.state_file), "timeout")
+
+
 class OffWindowsTests(unittest.TestCase):
 
     def test_no_ops_off_windows(self):
-        with mock.patch.object(control.sys, "platform", "linux"):
-            self.assertEqual(control.request_stop(50001, wait=0), "unsupported")
-            listener = control.listen_for_stop(50001, lambda: None)
-            listener.close()
+        with mock.patch.object(control.sys, "platform", "darwin"):
             watcher = control.watch_session_end(lambda: None, on_close=lambda: None)
             self.assertIsNone(watcher.hwnd)
             watcher.close()
-            self.assertIsNone(control.process_started(os.getpid()))
+            self.assertIsNone(control.process_started(os.getpid()))     # only Windows and Linux say
 
 
 @unittest.skipUnless(WINDOWS, "the session-end window is Windows only")

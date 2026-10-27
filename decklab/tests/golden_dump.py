@@ -74,6 +74,7 @@ import dataclasses
 import hashlib
 import importlib
 import json
+import re
 import subprocess
 import sys
 from collections.abc import Mapping
@@ -685,7 +686,17 @@ def first_difference(a, b, path="$"):
             n = min(len(a), len(b))
             return f"{path}[{n}]", a[n] if len(a) > n else "(missing)", b[n] if len(b) > n else "(missing)"
         return None
+    if isinstance(a, str) and _root_slashes(a) == _root_slashes(b):
+        return None         # the same path under <ROOT>, written on Windows and on POSIX
     return None if a == b else (path, a, b)
+
+
+# A path under <ROOT> as an OSError's text writes it: Windows' separators (doubled in a repr) or /.
+_ROOT_PATH = re.compile(r"<ROOT>(?:\\\\|\\|/)[^'\"\s]*")
+
+
+def _root_slashes(text):
+    return _ROOT_PATH.sub(lambda m: re.sub(r"\\\\|\\", "/", m.group(0)), text)
 
 
 def compare(a, b, say=print):

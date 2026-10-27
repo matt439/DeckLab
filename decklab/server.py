@@ -1,7 +1,7 @@
 """Deck Lab's web server: the page, its JSON API and the card images.
 
 Usage (from the repo root):
-    python decklab/server.py [--host 0.0.0.0] [--port 8642] [--no-update] [--log FILE]
+    python decklab/server.py [--host 0.0.0.0] [--port 8642] [--no-update] [--log FILE] [--background]
     python decklab/server.py [--port 8642] --stop
 
 The host and port default to "host" and "port" in decklab/config.json (all
@@ -39,6 +39,11 @@ status run it too). Without a window:
   stopping." in the log). taskkill /F still ends it at once, and a matchup
   that's playing loses the games it hadn't saved.
 Servers in a window listen for --stop, taskkill and the session's end too.
+
+Off Windows: homenet runs the server as a systemd user service (homenet's
+service.py), with --background (a background server, though systemd gives
+it a stderr) and --log. --stop, homenet stop and `systemctl --user stop`
+send it SIGTERM, which stops it the way Ctrl+C does.
 
 While a server runs, decklab/data/server.json (control.STATE_FILE) says so:
 its process id, host, port, start time, Python, log file, and whether it
@@ -496,6 +501,9 @@ def _parse_args(argv):
     parser.add_argument("--log", metavar="FILE",
                         help="write the log to FILE (rotated at 2 MB, 3 old files kept). Without "
                              "--log, a server with no window (pythonw) logs to decklab/data/logs/server.log")
+    parser.add_argument("--background", action="store_true",
+                        help="run as the background server, as a windowless pythonw does (homenet's systemd "
+                             "service gives it): its database check copies config.json's profiles in")
     parser.add_argument("--stop", action="store_true",
                         help="stop the Deck Lab server running on the port (as Ctrl+C would), then exit")
     return parser.parse_args(argv)
@@ -526,7 +534,8 @@ def main(argv=None):
             log_path = os.path.abspath(args.log)
             stream = _log_to(log_path, announce=console)
         host = settings.get("host", "0.0.0.0") if args.host is None else args.host
-        return server_run._serve(host, port, args.no_update, settings, log_path, background=not console)
+        return server_run._serve(host, port, args.no_update, settings, log_path,
+                                 background=not console or args.background)
     except Exception:
         server_http.log(f"{server_run._stamp()} Deck Lab stopped with an error:\n{traceback.format_exc()}")
         return 1

@@ -1,5 +1,8 @@
 """The "Deck Lab database backup" Task Scheduler task: every day at 03:30 it runs
 `pythonw.exe -m decklab.db nightly` (nightly.py) in the repo folder, with no window.
+Off Windows, install, remove and status act on a systemd user timer instead
+(decklab-nightly.timer and .service, systemd_units.py; E11-S33), written to
+the user's systemd folder and enabled with systemctl --user.
 
 It runs as the current user, only while they're logged on (InteractiveToken), without
 administrator (LeastPrivilege): the NAS's password is in that user's Credential Manager, so
@@ -183,11 +186,112 @@ def _same(a, b):
         ntpath.normcase(ntpath.normpath(str(b).strip('"')))
 
 
-def install(name=TASK_NAME, say=print):
-    """Register (or replace) the task. Returns 0, or 1 when it can't be."""
-    if sys.platform != "win32":
-        say("The nightly task uses Windows' Task Scheduler, so it only works on Windows.")
+# ------------------------------------------------------------ off Windows: a systemd user timer (E11-S33)
+
+def _service():
+    # homenet's systemd helpers (systemctl, the unit folder), which the tests replace there.
+    from decklab.lib.homenet import service
+    return service
+
+
+def install_systemd(at=AT, say=print):
+    """Write decklab-nightly.service and .timer (systemd_units) to the user's systemd folder
+    and enable the timer. Returns 0, or 1 when it can't be."""
+    from decklab.db import systemd_units
+    service = _service()
+    problem = psycopg_problem()
+    if problem:
+        say(problem.replace(r".venv\Scripts\python", ".venv/bin/python"))
         return 1
+    try:
+        units = systemd_units.nightly_units(sys.executable, str(config.REPO), at)
+    except ValueError as e:
+        say(f"The nightly units can't be written: {e}")
+        return 1
+    folder = service.unit_dir()
+    try:
+        folder.mkdir(parents=True, exist_ok=True)
+        for name, text in units.items():
+            (folder / name).write_text(text, encoding="utf-8", newline="\n")
+    except OSError as e:
+        say(f"The nightly units couldn't be written to {folder}: {e}")
+        return 1
+    for args in (("daemon-reload",), ("enable", "--now", systemd_units.TIMER)):
+        code, out, err = service.systemctl(*args)
+        if code != 0:
+            say(f"Wrote the nightly units to {folder}, but systemctl --user {' '.join(args)} failed: "
+                f"{service._said(out, err, code)}. Is this a systemd user session?")
+            return 1
+    say(f"Installed {systemd_units.TIMER} ({folder}): every day at {at} (or as soon as the PC is on after "
+        "that), it runs")
+    say(f"  {sys.executable} {ARGUMENTS}")
+    say(f"  in {config.REPO}. Its log: decklab/data/logs/db.log. It runs while your systemd user session "
+        "does: loginctl enable-linger keeps it running when you're logged out.")
+    return 0
+
+
+def remove_systemd(say=print):
+    """Disable the timer and delete both units. Returns 0 (also when there were none), or 1."""
+    from decklab.db import systemd_units
+    service = _service()
+    folder = service.unit_dir()
+    paths = [folder / systemd_units.TIMER, folder / systemd_units.SERVICE]
+    if not any(p.exists() for p in paths):
+        say(f"{systemd_units.TIMER} isn't installed, so there was nothing to remove.")
+        return 0
+    code, out, err = service.systemctl("disable", "--now", systemd_units.TIMER)
+    if code != 0:
+        say(f"systemctl --user disable {systemd_units.TIMER} failed: {service._said(out, err, code)}")
+        return 1
+    try:
+        for path in paths:
+            path.unlink(missing_ok=True)
+    except OSError as e:
+        say(f"{path} couldn't be removed: {e}")
+        return 1
+    service.systemctl("daemon-reload")
+    say(f"Removed {systemd_units.TIMER}: the database is no longer backed up each night.")
+    return 0
+
+
+def status_systemd(exists=None):
+    """status's lines off Windows: the units as installed, and the timer as systemd has it."""
+    from decklab.db import systemd_units
+    service = _service()
+    exists = exists or (lambda p: Path(p).exists())
+    folder = service.unit_dir()
+    timer = folder / systemd_units.TIMER
+    if not timer.exists():
+        return [f"Nightly task: {systemd_units.TIMER} isn't installed (python -m decklab.db schedule install)."]
+    try:
+        unit = service.parse_unit((folder / systemd_units.SERVICE).read_text(encoding="utf-8"))
+        at = re.search(r"^OnCalendar=\*-\*-\* (\d\d:\d\d)", timer.read_text(encoding="utf-8"), re.M)
+    except (OSError, UnicodeDecodeError) as e:
+        return [f"Nightly task: the units in {folder} can't be read ({e}); run schedule install again."]
+    program = unit["python"] or ""
+    lines = [f"Nightly task: {systemd_units.TIMER} runs {program} {ARGUMENTS}",
+             f"  in {unit['workdir']}, daily at {at.group(1) if at else '?'}, catching up after the PC was off."]
+    code, out, _ = service.systemctl("show", systemd_units.TIMER, "--property=UnitFileState,ActiveState")
+    facts = dict(row.split("=", 1) for row in out.splitlines() if "=" in row) if code == 0 else {}
+    if not facts:
+        lines.append("  WARNING: systemctl --user couldn't say whether the timer is on.")
+    elif facts.get("UnitFileState") != "enabled" or facts.get("ActiveState") != "active":
+        lines.append("  WARNING: the timer isn't enabled and active, so nothing is backed up "
+                     f"(systemctl --user enable --now {systemd_units.TIMER}).")
+    if not program or not exists(program):
+        lines.append(f"  WARNING: {program or '(nothing)'} isn't there any more; run schedule install again.")
+    if unit["workdir"] and Path(unit["workdir"]) != Path(config.REPO):
+        lines.append(f"  WARNING: it runs in {unit['workdir']}, not this repo ({config.REPO}).")
+    return lines
+
+
+# ------------------------------------------------------------ Windows: the Task Scheduler task
+
+def install(name=TASK_NAME, say=print):
+    """Register (or replace) the task, or off Windows the systemd timer. Returns 0, or 1 when
+    it can't be."""
+    if sys.platform != "win32":
+        return install_systemd(say=say)
     problem = psycopg_problem()
     if problem:
         say(problem)
@@ -214,10 +318,10 @@ def install(name=TASK_NAME, say=print):
 
 
 def remove(name=TASK_NAME, say=print):
-    """Delete the task. Returns 0 (also when there was none), or 1 when it couldn't be deleted."""
+    """Delete the task (off Windows, the systemd timer). Returns 0 (also when there was none),
+    or 1 when it couldn't be deleted."""
     if sys.platform != "win32":
-        say("The nightly task uses Windows' Task Scheduler, so it only works on Windows.")
-        return 1
+        return remove_systemd(say=say)
     homenet = _homenet()
     if query_task(name) is None:
         say(f'The "{name}" task isn\'t registered, so there was nothing to remove.')
@@ -258,5 +362,5 @@ def describe(task, exists=None):
 def status(name=TASK_NAME):
     """The schedule status command's lines."""
     if sys.platform != "win32":
-        return ["Nightly task: Task Scheduler is Windows-only."]
+        return status_systemd()
     return describe(query_task(name))

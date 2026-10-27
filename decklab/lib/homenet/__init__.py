@@ -86,6 +86,7 @@ Where things are (lib/homenet/):
     mdns.py      the <pc>.local lookup
     checks.py    the Network, Firewall, Addresses and Sleep checks, and the report
     watchdog.py  ensure (restart after a crash), its record and log, and its status lines
+    service.py   off Windows: the systemd user service in place of the task (E11-S33)
     __main__.py  python -m decklab.lib.homenet
 The names tests replace (control, _schtasks, probe, run_powershell,
 MDNS_GROUP and others) aren't offered here: they're used from their own
@@ -100,7 +101,7 @@ from .checks import (
 )
 from .commands import (
     NOT_LISTENING, _delay_text, _file_size, _last_run_line, _log_tail, _probe_host, _said, _task_settings_lines,
-    _usable_task, _windows_only, check_server, check_task, cmd_install, cmd_restart, code_changed_since,
+    _usable_task, _wait_for_start, check_server, check_task, cmd_install, cmd_restart, code_changed_since,
     delete_task, describe_running, how_to_stop, main, query_task, register_task, same_user, server_state, task_host,
     task_log_file, task_port, task_problem, urls,
 )

@@ -14,7 +14,7 @@ psycopg through lib/venv.py; .venv\\Scripts\\python works as well).
                    (--history: the recent runs)
   nightly          what the scheduled task runs: backup, prune, visits' prune, export, check, restore check
   visits           who has visited Deck Lab and what they opened (read-only; visits.py)
-  schedule         manage the nightly Task Scheduler task, or preview systemd user units
+  schedule         manage the nightly task (Task Scheduler; a systemd user timer off Windows)
   wishlist         list or change a profile's wishlist: list, add, set, remove (wishlist_cli.py)
 
 The inventory's commands (phase 3) come from decklab/db/inv_<area>.py modules, found and
@@ -262,8 +262,8 @@ def parser():
     sp.add_argument("--days", type=int, default=30, metavar="N",
                     help="the window for days visited and the pages opened most (1-366, default 30)")
     sp.add_argument("--profile", metavar="P", help="only this profile's visits")
-    sp = command("schedule", _schedule, "Manage the nightly Task Scheduler task, or print a systemd user "
-                                      "unit preview without installing anything.")
+    sp = command("schedule", _schedule, "Manage the nightly task (Task Scheduler on Windows, a systemd "
+                                      "user timer elsewhere), or print the systemd units without installing them.")
     sp.add_argument("action", choices=("install", "remove", "status", "preview-systemd"))
     sp.add_argument("--unit", choices=("service", "timer"), help="which systemd user unit to print")
     sp.add_argument("--python", metavar="PATH", help="preview: absolute POSIX path to the target Python")

@@ -130,16 +130,16 @@ def tree_files(root, import_bytes=False):
     magic = root / "magic"
     candidates = [magic / "collection.csv", magic / "tokens.csv", magic / "watchlist.csv"]
     for pattern in ("imports/*", "people/*/collection.csv", "people/*/tokens.csv", "people/*/imports/*",
-                    "products/*.csv", "orders/records/*.json"):
+                    "products/*.[cC][sS][vV]", "orders/records/*.json"):
         candidates += sorted(magic.glob(pattern))
     for folder in paths.PAYLOAD_FOLDERS:
-        candidates += sorted((root / folder).glob("*.csv"))
+        candidates += sorted((root / folder).glob("*.[cC][sS][vV]"))   # X.CSV too on a case-sensitive file system
     out = {}
     for path in candidates:
         rel = path.relative_to(root).as_posix()
         found = paths.classify(rel)
         if found is None:
-            # X.CSV: Windows' glob finds it and today's readers counted it, but only a lower-case
+            # X.CSV: the globs find it (Windows' ignores case anyway) and today's readers counted it, but only a lower-case
             # .csv is inventory. Unreadable (with what to do) rather than silently left out; a
             # real X.csv beside it (a case-sensitive file system) wins.
             if path.suffix.lower() == ".csv" and paths.classify(rel[:-4] + ".csv") is not None:

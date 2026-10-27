@@ -123,11 +123,26 @@ def _no_constants(name):
     raise ValueError(f"{name} isn't allowed")
 
 
+MAX_JSON_DEPTH = 200          # far deeper than any request Deck Lab takes
+
+
+def _depth_over(data, limit):
+    """True when data's lists and objects nest more than limit deep (walked without recursion)."""
+    stack = [(data, 1)]
+    while stack:
+        value, depth = stack.pop()
+        if isinstance(value, (dict, list)):
+            if depth > limit:
+                return True
+            stack.extend((v, depth + 1) for v in (value.values() if isinstance(value, dict) else value))
+    return False
+
+
 def _load_json(body, what):
     """body (bytes) as JSON, or ApiError 400 saying why not, with what
     ("The settings", "The request") as the subject. Besides bad UTF-8, bad
-    JSON and a key given twice, it refuses JSON nested too deeply for Python
-    to read and text holding a lone surrogate ("\\ud800" is valid JSON but
+    JSON and a key given twice, it refuses JSON nested over MAX_JSON_DEPTH
+    deep and text holding a lone surrogate ("\\ud800" is valid JSON but
     not a character, so it could never be sent back or written to a file)."""
     try:
         data = json.loads(body.decode("utf-8"), object_pairs_hook=_unique_keys, parse_constant=_no_constants)
@@ -135,6 +150,10 @@ def _load_json(body, what):
         raise ApiError(400, f"{what} isn't valid JSON: {e}") from None
     except RecursionError:
         raise ApiError(400, f"{what} isn't valid JSON: it's nested too deeply") from None
+    if _depth_over(data, MAX_JSON_DEPTH):
+        # Where the C stack is big (Linux's 8 MB main thread), json reads far deeper than Python
+        # code walking the result could: the same limit everywhere, whatever the stack.
+        raise ApiError(400, f"{what} isn't valid JSON: it's nested too deeply")
     try:
         json.dumps(data, ensure_ascii=False).encode("utf-8")
     except UnicodeEncodeError:

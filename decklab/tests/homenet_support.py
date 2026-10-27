@@ -231,6 +231,11 @@ class Guarded(unittest.TestCase):
         self.schtasks = self.patch("decklab.lib.homenet.commands._schtasks",
                                    side_effect=AssertionError("schtasks reached without a mock"))
         self.patch("decklab.lib.homenet.gather.run_powershell", side_effect=AssertionError("PowerShell reached"))
+        # Off Windows the commands use systemd: its units go in the test's folder, and systemctl
+        # fails the test unless it's replaced.
+        self.patch("decklab.lib.homenet.service.UNIT_DIR", self.data / "systemd-user")
+        self.systemctl = self.patch("decklab.lib.homenet.service.systemctl",
+                                    side_effect=AssertionError("systemctl reached without a mock"))
         # config.json's tunnel stays out of status: it would reach the internet.
         self.patch("decklab.lib.tunnel.settings_of", return_value=None)
         self.patch("decklab.lib.tunnel.check_public", side_effect=AssertionError("public address reached"))

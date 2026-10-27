@@ -13,6 +13,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 **Ready reserve:** after the redesign, the `OPEN` rows Matt added on 2026-10-25 have concrete first slices in their stories, in no fixed order unless Matt picks one. `E11-S08` retains broader recovery work beyond its implemented single-row Undo review. The 2026-10-26 audit checked the reserve against the code: no extra stories need promoting. Release publication, Linux service/timer installation, device checks and Forge games retain their separate gates.
 
 **Needs Matt or another person — these don't block coding:**
+- **`E11-S33`: one real Linux run.** On a Linux PC with a systemd login session (not this repo's CI container), run `python -m decklab.lib.homenet install --at-logon`, `start`, `stop` and `python -m decklab.db schedule install` once ([SELF-HOSTING.md](SELF-HOSTING.md), step 9).
 - **`E11-S31`: global-search scope.** Choose the sources (visible decks, the viewer's collection and/or all Scryfall cards) and result grouping before building. Library title, colour and archetype filters (`E1-S05`) are built independently of that decision.
 - **`E2-S22`: physical-device follow-up.** Confirm hardware and touch usability on the household's actual iPhones and M2 11-inch iPad after the fixes. Keep prior results in the story; the [Safari Simulator suite](decklab/safari/EVIDENCE.md) covers repeat functional regressions.
 - **`E11-S02`: signed-in off-page check.** On a phone through decklab.example.com, save a deck edit, upload an accessory photo, and check the off page while Deck Lab is stopped.
@@ -68,7 +69,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 | `E11-S30` | OPEN | should | L | Visual redesign P1 ([visual-design.md](decklab/design/visual-design.md)): slice 13's confirmed-printing model, slice 15's full-data dark pass, and Collection's filter decision. Empty/loading/failed states are built. Touch/Safari acceptance stays open. |
 | `E11-S31` | DECISION | could | M | Global search in the top bar ([stories.md](decklab/design/stories.md#e11-s31)): Matt chooses sources and result grouping before building. |
 | `E11-S32` | OPEN | could | M | A prebuilt release of the Forge fork, with a checksum, as SELF-HOSTING.md's first Forge route. |
-| `E11-S33` | OPEN | could | L | Interpreter paths and nightly systemd unit previews have isolated checks. Real Linux 3.14/full suite, CI, service/timer integration and host acceptance remain. |
+| `E11-S33` | DECISION | could | S | Linux suite, CI, systemd service and nightly timer are built; one run on a real Linux PC with a login session remains (`homenet install --at-logon`, `start`, `stop`, `schedule install`). |
 | `E11-S08` | OPEN | could | L | Narrow inventory, wishlist and accessory recovery is built. Mixed receipts/imports and broader recovery remain. |
 | `E11-S02` | DECISION | should | S | The "Deck Lab is off" Worker is deployed (`decklab/cloudflare/`): Matt checks a signed-in save, a photo upload, and the page with Deck Lab stopped. |
 

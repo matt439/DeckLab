@@ -13,7 +13,7 @@ from unittest import mock
 
 from decklab.lib.forge import lifecycle
 from decklab.lib.forge import adaptive, cli_results, experiment, field, runner, variants
-from decklab.tests.test_forge_runhooks import KEY, v2_result
+from decklab.tests.test_forge_runhooks import KEY, assert_lock_given_up, v2_result
 
 
 CHILD = """
@@ -234,7 +234,7 @@ class LifecycleTests(unittest.TestCase):
                     lifecycle.LifecycleError, "removed member"):
                 updater(KEY, self.root, introduce)
             self.assertEqual(path.read_bytes(), before)
-            self.assertFalse((self.root / f"{KEY}.lock").exists())
+            assert_lock_given_up(self, self.root)
 
     def test_cached_departed_inputs_never_reach_runner_or_note_work(self):
         self.departed(["user2"])

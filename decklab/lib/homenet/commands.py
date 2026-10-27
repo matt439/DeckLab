@@ -29,7 +29,7 @@ from pathlib import Path, PurePosixPath, PureWindowsPath
 
 from decklab.lib import access, config, control, profiles, tunnel
 
-from . import gather, profile_config, watchdog
+from . import gather, profile_config, service, watchdog
 from . import mdns as multicast         # not "mdns": cmd_status has a variable of that name
 from .checks import check_addresses, check_firewall, check_network, check_sleep, exit_code, format_report, lan_of
 from .common import (
@@ -339,13 +339,6 @@ def _log_tail(path, lines=LOG_TAIL, start=0):
 
 # ------------------------------------------------------------ commands
 
-def _windows_only():
-    if sys.platform != "win32":
-        say("Starting at logon uses Windows' Task Scheduler, so it only works on Windows.")
-        return True
-    return False
-
-
 def cmd_install(name, port, no_start=False, log_path=None, port_given=False, host=None, at_logon=False):
     try:
         profiles.read_checked()
@@ -355,8 +348,8 @@ def cmd_install(name, port, no_start=False, log_path=None, port_given=False, hos
     except (OSError, ValueError, TypeError):
         say("Profile configuration could not be checked. Fix decklab/config.json before installing.")
         return 1
-    if _windows_only():
-        return 1
+    if sys.platform != "win32":
+        return service.install(name, port, no_start, log_path, port_given, host, at_logon)
     pythonw = pythonw_path()
     if not pythonw.is_file():
         say(f"pythonw.exe (the windowless Python) isn't beside this Python ({sys.executable}), so "
@@ -478,8 +471,8 @@ def _usable_task(name, restarting=False):
 
 
 def cmd_start(name, port):
-    if _windows_only():
-        return 1
+    if sys.platform != "win32":
+        return service.start(name, port)
     task = _usable_task(name)
     if task is None:
         return 1
@@ -500,8 +493,17 @@ def _start_task(name, port, task=None):
     if code != 0:
         say(f'Task Scheduler couldn\'t start the "{name}" task: {_said(out, err, code)}')
         return 1
+    # A task whose last run had only just ended can still count as running
+    # for a moment, and IgnoreNew then drops the start: asked once more.
+    return _wait_for_start(port, log_file, log_start, again=lambda: _schtasks("/Run", "/TN", name))
+
+
+def _wait_for_start(port, log_file, log_start, again=None, how=None):
+    """After a start (the task's, or off Windows the service's): wait for the server to
+    answer, calling again() once after RERUN_AFTER seconds. When it doesn't answer, show
+    what it wrote to its log since log_start, and how to see why (how)."""
     log(f"Starting Deck Lab (waiting up to {START_WAIT} seconds for it to answer)...")
-    started, asked_again = time.monotonic(), False
+    started, asked_again = time.monotonic(), again is None
     while time.monotonic() - started < START_WAIT:
         state = server_state(port)          # written once it's listening, with its address
         answer = probe(port, _probe_host(state))
@@ -519,9 +521,7 @@ def _start_task(name, port, task=None):
                 say(f"  It listens on {host} only, so phones can't reach it.")
             return 0
         if not asked_again and time.monotonic() - started >= RERUN_AFTER:
-            # A task whose last run had only just ended can still count as
-            # running for a moment, and IgnoreNew then drops the start.
-            _schtasks("/Run", "/TN", name)
+            again()
             asked_again = True
         time.sleep(0.5)
     say(f"Deck Lab didn't answer on port {port} within {START_WAIT} seconds.")
@@ -532,7 +532,8 @@ def _start_task(name, port, task=None):
             say(f"  {text}")
     else:
         say(f"It wrote nothing to its log ({log_file}) after the start, so it may not have started "
-            "at all. python -m decklab.lib.homenet status shows how the task last ran.")
+            "at all. " + (f"{how} shows why." if how else
+                          "python -m decklab.lib.homenet status shows how the task last ran."))
     return 1
 
 
@@ -561,10 +562,13 @@ def cmd_stop(port):
     if result == "timeout":
         say(f"Deck Lab was asked to stop but was still running after {STOP_WAIT} seconds"
             + (f" (process {pid})." if pid else ".")
-            + f" If it doesn't stop, end {program} in Task Manager.")
+            + (f" If it doesn't stop, end {program} in Task Manager." if sys.platform == "win32" else
+               f" If it doesn't stop: kill {pid}" if pid else ""))
         return 1
     if sys.platform != "win32":
-        say("Stopping Deck Lab from here only works on Windows: press Ctrl+C in its window.")
+        say(f"Deck Lab (process {pid}) can't be signalled from here: it runs as another user. Stop it as that "
+            "user (python -m decklab.lib.homenet stop), or with: systemctl --user stop decklab.service"
+            if pid else f"The Deck Lab server on port {port} can't be signalled from here: stop it where it runs.")
         return 1
     # The stop event is there but can't be set from here (control.request_stop).
     who = f"Deck Lab ({program}, process {pid})" if pid else f"The Deck Lab server on port {port}"
@@ -576,8 +580,8 @@ def cmd_stop(port):
 
 
 def cmd_restart(name, port):
-    if _windows_only():
-        return 1
+    if sys.platform != "win32":
+        return service.restart(name, port)
     task = _usable_task(name, restarting=True)
     if task is None:
         return 1
@@ -597,8 +601,8 @@ def cmd_restart(name, port):
 
 
 def cmd_remove(name, port):
-    if _windows_only():
-        return 1
+    if sys.platform != "win32":
+        return service.remove(name, port)
     stopped = cmd_stop(port)
     watch = watchdog_name(name)
     if query_task(watch) is not None:
@@ -950,21 +954,31 @@ def cmd_status(name, port):
     server_programs.append(task["command"] if task and task.get("command") else str(pythonw_path()))
     python_programs = this_pythons()
 
+    running = mine is not None and bool(answer.get("deck_lab"))
     lines = profile_config.check(settings)
     lines += check_server(mine, answer, port, log_file, newest_code_mtime(), other)
-    lines += check_task(task, task_facts if isinstance(task_facts, dict) else {}, str(SERVER_SCRIPT),
-                        exists=file_exists, error=task_error, user=task_user(), pythonw=str(pythonw_path()))
-    lines += watchdog.status_lines(name, port, task, facts, mine is not None and bool(answer.get("deck_lab")))
-    lines += check_network(network, step_error(facts, "network"))
-    lines += check_firewall(facts.get("firewall"), port, server_programs, python_programs,
-                            step_error(facts, "firewall"), lan=lan_of(network))
+    if sys.platform == "win32":
+        lines += check_task(task, task_facts if isinstance(task_facts, dict) else {}, str(SERVER_SCRIPT),
+                            exists=file_exists, error=task_error, user=task_user(), pythonw=str(pythonw_path()))
+        lines += watchdog.status_lines(name, port, task, facts, running)
+        lines += check_network(network, step_error(facts, "network"))
+        lines += check_firewall(facts.get("firewall"), port, server_programs, python_programs,
+                                step_error(facts, "firewall"), lan=lan_of(network))
+    else:
+        # The systemd service in place of the tasks; the network, firewall and sleep facts are
+        # Windows' (PowerShell), so they're left to the person running it.
+        lines += service.status_lines(name, port, running, exists=file_exists)
+        lines.append(line(OK, "Network", f"Not checked off Windows: phones need this PC's firewall to let in TCP "
+                                         f"port {port} from the home network, and the PC not to sleep."))
     lines += check_addresses(network, hostname, mdns, port)
-    lines += check_sleep(facts.get("power"), step_error(facts, "power"))
+    if sys.platform == "win32":
+        lines += check_sleep(facts.get("power"), step_error(facts, "power"))
     lines += check_tunnel(settings, found.get("public"), tunnel.ingress_problems(settings, port),
                           found.get("listener"))
     seconds = time.monotonic() - started
     header = (f"Deck Lab status, {datetime.now().strftime('%Y-%m-%d %H:%M')} (port {port}; checked in "
-              f"{seconds:.1f} s, of which PowerShell {facts.get('seconds', 0):.1f} s)")
+              f"{seconds:.1f} s" + (f", of which PowerShell {facts.get('seconds', 0):.1f} s)" if sys.platform == "win32"
+                                    else ")"))
     footer = ("These checks run on the PC itself, so they can't prove a phone gets through: the real test "
               "is opening the address above on a phone on the home Wi-Fi.")
     say(format_report(lines, header=header, footer=footer))

@@ -670,10 +670,15 @@ class CommandTests(Guarded):
         with mock.patch.object(sys, "platform", "win32"), Quiet() as q:
             self.assertEqual(homenet.commands.cmd_stop(18642), 1)
         self.assertIn("The Deck Lab server on port 18642 can't be signalled", q.text)
-        # Off Windows there's no stop event at all.
+        # Off Windows it's SIGTERM, which a server run by another user doesn't take from this one.
         with mock.patch.object(sys, "platform", "linux"), Quiet() as q:
             self.assertEqual(homenet.commands.cmd_stop(18642), 1)
-        self.assertIn("only works on Windows", q.text)
+        self.assertIn("The Deck Lab server on port 18642 can't be signalled from here", q.text)
+        self.find.return_value = (running_state(port=18642), {"answered": True, "deck_lab": True})
+        with mock.patch.object(sys, "platform", "linux"), Quiet() as q:
+            self.assertEqual(homenet.commands.cmd_stop(18642), 1)
+        self.assertIn("Deck Lab (process 4242) can't be signalled from here: it runs as another user", q.text)
+        self.assertNotIn("Task Manager", q.text)
 
     def test_stop_when_an_old_server_answers(self):
         self.find.return_value = (None, {"answered": True, "deck_lab": True})
@@ -690,10 +695,13 @@ class CommandTests(Guarded):
     def test_stop_timeout_names_the_program(self):
         self.find.return_value = (running_state(port=18642, python=PYTHON), {"answered": True, "deck_lab": True})
         self.control.request_stop.return_value = "timeout"
-        with Quiet() as q:
+        with mock.patch.object(sys, "platform", "win32"), Quiet() as q:
             self.assertEqual(homenet.commands.cmd_stop(18642), 1)
         self.assertIn("(process 4242)", q.text)
         self.assertIn("end python.exe in Task Manager", q.text)
+        with mock.patch.object(sys, "platform", "linux"), Quiet() as q:
+            self.assertEqual(homenet.commands.cmd_stop(18642), 1)
+        self.assertIn("If it doesn't stop: kill 4242", q.text)
 
     @unittest.skipUnless(WINDOWS, "install uses Task Scheduler")
     def test_install_registers_and_starts(self):
@@ -844,7 +852,7 @@ class CommandTests(Guarded):
 class StatusCommandTests(Guarded):
     """cmd_status from end to end, with canned facts."""
 
-    def run_status(self, facts, state=None, answer=None, mdns=None):
+    def run_status(self, facts, state=None, answer=None, mdns=None, platform="win32"):
         self.control.read_state.return_value = state
         self.patch("decklab.lib.homenet.gather.gather_facts", return_value=facts)
         self.patch("decklab.lib.homenet.commands.probe",
@@ -856,7 +864,7 @@ class StatusCommandTests(Guarded):
         self.patch("decklab.lib.homenet.commands.pythonw_path", return_value=Path(PYTHONW))
         self.patch("decklab.lib.homenet.commands.this_pythons", return_value=[Path(PYTHON), Path(PYTHONW)])
         self.patch("decklab.lib.homenet.commands.newest_code_mtime", return_value=None)
-        with Quiet() as q:
+        with mock.patch.object(sys, "platform", platform), Quiet() as q:
             code = homenet.commands.cmd_status("Deck Lab", PORT)
         return code, " ".join(q.out.getvalue().split())     # the report's wrapping undone
 
@@ -944,13 +952,14 @@ class PatchTargetTests(unittest.TestCase):
     nothing (and letting the real schtasks, PowerShell, stop requests or
     multicast through)."""
 
-    MODULES = ("common", "task", "commands", "gather", "mdns", "checks", "watchdog")
+    MODULES = ("common", "task", "commands", "gather", "mdns", "checks", "watchdog", "service")
     REPLACED = {
         "commands": ("control", "_schtasks", "_start_task", "find_server", "probe", "local_ipv4", "file_exists",
                      "pythonw_path", "task_user", "pc_name", "this_pythons", "newest_code_mtime", "cmd_status",
                      "cmd_stop", "cmd_start", "cmd_remove", "time"),
         "gather": ("run_powershell", "gather_facts"),
         "mdns": ("MDNS_GROUP", "mdns_lookup"),
+        "service": ("UNIT_DIR", "systemctl"),
     }
 
     def test_each_has_one_home(self):

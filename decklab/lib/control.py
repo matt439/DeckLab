@@ -431,9 +431,13 @@ def process_alive(pid):
 
 
 def process_started(pid):
-    """When process pid started, in seconds since 1970, or None (not Windows,
-    no such process, or not ours to look at)."""
-    if sys.platform != "win32" or not _valid_pid(pid):
+    """When process pid started, in seconds since 1970, or None (not Windows
+    or Linux, no such process, or not ours to look at)."""
+    if not _valid_pid(pid):
+        return None
+    if sys.platform.startswith("linux"):
+        return _linux_started(pid)
+    if sys.platform != "win32":
         return None
     win = _win()
     handle = win.k32.OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, False, pid)
@@ -448,6 +452,19 @@ def process_started(pid):
         return ticks / 10_000_000 - _EPOCH_AS_FILETIME
     finally:
         win.k32.CloseHandle(handle)
+
+
+def _linux_started(pid):
+    """process_started() from /proc: the process's start in clock ticks after boot (field 22 of
+    /proc/<pid>/stat, counted after the command's closing parenthesis) plus the boot time."""
+    try:
+        stat = Path(f"/proc/{int(pid)}/stat").read_text(encoding="ascii", errors="replace")
+        ticks = int(stat[stat.rindex(")") + 2:].split()[19])
+        boot = next(int(row.split()[1]) for row in Path("/proc/stat").read_text(encoding="ascii").splitlines()
+                    if row.startswith("btime "))
+        return boot + ticks / os.sysconf("SC_CLK_TCK")
+    except (OSError, ValueError, IndexError, StopIteration):
+        return None
 
 
 # ------------------------------------------------------------- stopping
@@ -520,17 +537,53 @@ class _StopListener:
         self._k32.CloseHandle(self._closing)
 
 
+class _SignalListener:
+    """listen_for_stop()'s answer off Windows: SIGTERM (request_stop's, or a
+    service manager's such as systemd stopping the service) calls on_stop()
+    once, in a thread of its own, since the handler runs on the main thread,
+    which serve_forever() is busy on. close() puts the old handler back."""
+
+    def __init__(self, port, on_stop):
+        import signal
+        self._signal, self._on_stop, self._lock, self._called = signal, on_stop, threading.Lock(), False
+        self.name = f"SIGTERM to process {os.getpid()}"
+        self._port = port
+        self._previous = signal.signal(signal.SIGTERM, self._handle)
+
+    def _handle(self, signum, frame):
+        with self._lock:
+            if self._called:
+                return
+            self._called = True
+        threading.Thread(target=self._run, name=f"stop-listener-{self._port}", daemon=True).start()
+
+    def _run(self):
+        try:
+            self._on_stop()
+        except Exception:
+            _log(f"Stopping failed:\n{traceback.format_exc()}")
+
+    def close(self):
+        signal = self._signal
+        if self._previous is not None and signal.getsignal(signal.SIGTERM) == self._handle:
+            signal.signal(signal.SIGTERM, self._previous)
+        self._previous = None
+
+
 def listen_for_stop(port, on_stop):
     """Call on_stop() (once, in a thread of its own) when request_stop(port)
     asks this process to stop. The answer's close() stops listening. Raises
-    OSError if the event can't be made. Does nothing off Windows.
+    OSError if the event can't be made. Off Windows it's SIGTERM, which only
+    the main thread can listen for: from any other thread it does nothing.
 
     Call it once the server has the port, never before: a server that then
     found the port taken would already have opened (and reset) the running
     server's event. And call it before writing the state file, so whoever
     finds the server there can stop it."""
     if sys.platform != "win32":
-        return _NoListener()
+        if threading.current_thread() is not threading.main_thread():
+            return _NoListener()
+        return _SignalListener(port, on_stop)
     return _StopListener(port, on_stop)
 
 
@@ -549,10 +602,11 @@ def request_stop(port, wait=STOP_WAIT, path=None):
     "stopped": it has (its process has ended, or with no state file naming
     it, it has closed its stop event); "not running": no server listens for
     a stop on that port; "timeout": asked, but still running; "unsupported":
-    not Windows, or the server can't be signalled from here (it runs as
-    administrator or as another user). path is the state file (STATE_FILE)."""
+    the server can't be signalled from here (it runs as administrator or as
+    another user). Off Windows the state file's process gets SIGTERM
+    (_SignalListener). path is the state file (STATE_FILE)."""
     if sys.platform != "win32":
-        return "unsupported"
+        return _request_stop_posix(port, wait, path)
     win = _win()
     k32, name = win.k32, stop_event_name(port)
     state = read_state(path)
@@ -592,6 +646,27 @@ _WATCHERS = {}                      # hwnd -> _SessionWatcher
 _WATCHERS_LOCK = threading.Lock()
 _WNDPROC = None                     # the window procedure's ctypes callback: kept for the process's life
 _TITLES = itertools.count(1)
+
+
+def _request_stop_posix(port, wait, path):
+    import signal
+    state = read_state(path)
+    if not state or state.get("port") != port or state.get("pid") == os.getpid() \
+            or not process_alive(state.get("pid")):
+        return "not running"
+    pid = state["pid"]
+    try:
+        os.kill(pid, signal.SIGTERM)
+    except ProcessLookupError:
+        return "stopped"
+    except PermissionError:
+        return "unsupported"
+    deadline = time.monotonic() + max(0.0, wait)
+    while process_alive(pid):
+        if time.monotonic() >= deadline:
+            return "timeout"
+        time.sleep(0.1)
+    return "stopped"
 
 
 def _window_proc(hwnd, message, wparam, lparam):

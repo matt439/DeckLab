@@ -7,6 +7,7 @@ Run from the repo root: python -m unittest decklab.tests.test_forge_runhooks
 """
 import json
 import shutil
+import sys
 import tempfile
 import threading
 import time
@@ -68,6 +69,16 @@ class IsResultTests(unittest.TestCase):
         self.assertFalse(saved._is_result(v2_result(kind=None), KEY))
 
 
+
+def assert_lock_given_up(case, folder, key=KEY):
+    """The matchup's lock was given up: on Windows its file is gone (runner._release); elsewhere
+    the 0-byte file stays, and a new claim gets the lock at once."""
+    path = folder / f"{key}.lock"
+    if sys.platform == "win32":
+        case.assertFalse(path.exists())
+    else:
+        runner._release(runner._claim(folder, key), path)
+
 class UpdateResultTests(unittest.TestCase):
 
     def setUp(self):
@@ -97,7 +108,7 @@ class UpdateResultTests(unittest.TestCase):
         # A function may return the new result instead.
         out = runner.update_result(KEY, self.tmp, lambda result: dict(result, adaptive=[]))
         self.assertEqual((out["adaptive"], self.read()["adaptive"]), ([], []))
-        self.assertFalse((self.tmp / f"{KEY}.lock").exists())         # the lock is given up
+        assert_lock_given_up(self, self.tmp)
 
     def test_no_result_no_change(self):
         called = []
@@ -144,7 +155,7 @@ class UpdateResultTests(unittest.TestCase):
             runner.update_result(KEY, self.tmp, lambda r: r.update(note=1))
         self.assertEqual(str(caught.exception), runner.NOT_SAVED)
         self.assertEqual(self.read(), before)
-        self.assertFalse((self.tmp / f"{KEY}.lock").exists())
+        assert_lock_given_up(self, self.tmp)
 
 
 if __name__ == "__main__":

@@ -1004,7 +1004,10 @@ class WriteTests(ServerTestCase):
         # be sent back (the block would echo it); nesting 20,000 deep overflows.
         surrogate = b'{"profile": "matt", "kind": "casual", "lists": {"target": {"Deck": [{"qty": 1, "name": "\\ud800"}]}}}'
         deep = b'{"profile": "matt", "kind": "casual", "lists": ' + b"[" * 20000 + b"]" * 20000 + b"}"
-        for body, words in ((surrogate, "isn't valid Unicode"), (deep, "nested too deeply")):
+        # Past MAX_JSON_DEPTH it's refused too, on any stack (Linux's reads 20,000 deep without overflowing).
+        limit = b'{"profile": "matt", "kind": "casual", "lists": ' + b"[" * 200 + b"]" * 200 + b"}"
+        for body, words in ((surrogate, "isn't valid Unicode"), (deep, "nested too deeply"),
+                            (limit, "nested too deeply")):
             with self.subTest(words=words):
                 self.assertIn(words, self.assertError("/api/deck/check", 400, "POST", body, WRITE))
         self.assertIn("isn't valid Unicode",

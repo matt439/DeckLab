@@ -42,7 +42,7 @@ class HomenetProfileDiagnosticsTests(Guarded):
 
     def test_install_refuses_before_platform_task_watchdog_directory_or_start_actions(self):
         self.settings = invalid_settings()
-        with mock.patch.object(commands, "_windows_only") as platform, \
+        with mock.patch.object(commands.service, "install") as platform, \
                 mock.patch.object(commands, "pythonw_path") as pythonw, \
                 mock.patch.object(commands, "register_task") as register, \
                 mock.patch.object(commands, "_install_watchdog") as watchdog, \
@@ -73,7 +73,7 @@ class HomenetProfileDiagnosticsTests(Guarded):
 
     def test_install_config_read_failure_is_generic_and_has_no_side_effect(self):
         with mock.patch.object(config, "load", side_effect=ValueError("private@example.com")), \
-                mock.patch.object(commands, "_windows_only") as platform, Quiet() as output:
+                mock.patch.object(commands.service, "install") as platform, Quiet() as output:
             self.assertEqual(commands.cmd_install("Fixture task", PORT), 1)
         self.assertIn("could not be checked", output.text)
         self.assertNotIn("private@example.com", output.text)

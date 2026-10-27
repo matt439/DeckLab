@@ -6,15 +6,15 @@ This guide sets up Deck Lab on your own computer, from nothing, for you and your
 
 ## What runs where
 
-| | Windows 10 or 11 | Linux and macOS |
-|---|---|---|
-| The server, the database, the pages, the command line | Yes | Yes |
-| Forge simulations | Yes | Yes (the fork builds with JDK 21 and Maven) |
-| Starting in the background and at logon (`homenet install`) | Yes | No: run the server in a terminal, or with your own service manager |
-| The firewall script (`decklab/network-setup.ps1`) and `homenet status`'s network checks | Yes | No |
-| The nightly backup task (`python -m decklab.db schedule`) | Yes | No: run `python -m decklab.db nightly` from cron or a systemd timer |
+| | Windows 10 or 11 | Linux (with systemd) | macOS |
+|---|---|---|---|
+| The server, the database, the pages, the command line | Yes | Yes | Yes |
+| Forge simulations | Yes | Yes (the fork builds with JDK 21 and Maven) | Yes |
+| Starting in the background and at logon (`homenet install`) | Yes (Task Scheduler) | Yes (a systemd user service) | No: run the server in a terminal, or under launchd |
+| The firewall script (`decklab/network-setup.ps1`) and `homenet status`'s network checks | Yes | No: open the port in your own firewall | No |
+| The nightly backup task (`python -m decklab.db schedule`) | Yes (Task Scheduler) | Yes (a systemd user timer) | No: run `python -m decklab.db nightly` from cron |
 
-Deck Lab is built and used every day on Windows. The dated Linux self-host check of 2026-10-25 found platform assumptions. Interpreter paths and Windows-path test fixtures now have targeted lexical/mocked checks on Windows; a fresh Linux Python 3.14 full-suite pass remains unverified. Linux service and nightly-job installation still use the manual steps below; full support remains [E11-S33](decklab/design/stories.md#e11-s33).
+Deck Lab is built and used every day on Windows. Every test runs on Linux too, on each change (the `linux` jobs of the tests workflow), and the whole suite passed on Linux with Python 3.14 on 2026-10-27 ([E11-S33](decklab/design/stories.md#e11-s33)).
 
 ## 1. What to install
 
@@ -158,24 +158,23 @@ Deck Lab runs up to 16 Forge workers at once, each with up to 1 GB of memory. Th
 ## 9. Keep it running and backed up
 
 - **Windows, in the background:** `python -m decklab.lib.homenet install --no-start`, then `python -m decklab.lib.homenet start` (the reference's "Start it" covers starting at logon and the restart watchdog).
-- **Linux and macOS:** run `python decklab/server.py` under your service manager (a systemd user service, launchd), from the repo root.
+- **Linux, in the background:** the same commands. `python -m decklab.lib.homenet install --no-start` writes a systemd user service, `~/.config/systemd/user/decklab.service`, which runs `decklab/server.py` with the Python you ran it with; `start`, `stop`, `restart`, `status` and `remove` work as on Windows. `install --at-logon` enables it, so it starts with your systemd user session; to start it at boot instead of when you log in, run `loginctl enable-linger` once. systemd restarts it if it crashes, but not after `homenet stop`. If it won't start, `systemctl --user status decklab.service` and `journalctl --user -u decklab.service` say why, besides its log.
+- **macOS:** run `python decklab/server.py` from the repo root, in a terminal or under launchd.
 - **Backups:** `python -m decklab.db backup` writes a dump to `decklab/data/backups/` and copies it to `database.backup_dir` in `config.json`, a folder on another disk or a NAS:
   ```json
   "database": {"backup_dir": "D:\\Backups\\DeckLab"}
   ```
   Set it on Windows, where the default is the original household's NAS share and the copy fails without it. Off Windows there's no default, and the dumps stay in `decklab/data/backups/` only.
-- **The nightly job:** `python -m decklab.db nightly` runs the backup, its pruning, a restore check now and then, and the data's check. It also exports the data as plain files into a git repo of their own, `../DeckLabData` beside this repo, unless `database.export_repo` says where. On Windows, `python -m decklab.db schedule install` runs it every night; elsewhere, schedule it with cron.
+- **The nightly job:** `python -m decklab.db nightly` runs the backup, its pruning, a restore check now and then, and the data's check. It also exports the data as plain files into a git repo of their own, `../DeckLabData` beside this repo, unless `database.export_repo` says where. `python -m decklab.db schedule install` runs it every night at 03:30: on Windows as a Task Scheduler task, on Linux as a systemd user timer (`decklab-nightly.timer` and `.service` beside the server's unit, catching up a night the PC was off). `schedule status` shows it and `schedule remove` takes it away. On macOS, schedule it with cron.
 - **pg_dump:** Deck Lab finds it in `C:\Program Files\PostgreSQL\<version>\bin` or on the PATH. Set `database.pg_bin` to its folder if it's somewhere else.
 - **Updating:** `git pull`, then `python -m decklab.db migrate`, then restart the server.
 
-To review candidate Linux nightly units, use `schedule preview-systemd` with the target machine's absolute paths:
+To see the nightly units before installing them, or to write them for another machine, `schedule preview-systemd` prints one with the paths you give, and changes nothing:
 
 ```
 python -m decklab.db schedule preview-systemd --unit service --python /usr/bin/python3.14 --workdir /srv/DeckLab
 python -m decklab.db schedule preview-systemd --unit timer --python /usr/bin/python3.14 --workdir /srv/DeckLab --at 03:30
 ```
-
-Each command prints one complete unit (`decklab-nightly.service` or `decklab-nightly.timer`) as UTF-8 text. The time is local HH:MM and defaults to 03:30. This preview is available on Windows too and makes no host, database or filesystem changes. Generated units still need Linux runtime and manager validation; installing/enabling them and Linux server-service support remain unfinished. See the reference's [nightly task](decklab/README.md#the-nightly-task) for the preview contract.
 
 ## 10. From outside your home (optional)
 
@@ -187,4 +186,5 @@ Deck Lab can start a Cloudflare Tunnel itself, behind Cloudflare Access's email 
 - **"can't reach PostgreSQL ... connection refused":** PostgreSQL isn't running, or it isn't on port 5432 (set `database.port` in `config.json`).
 - **"the database holds no inventory"** or **"the database holds no decks":** run `python -m decklab.db setup` again. It starts the empty collection and deck library on a new database.
 - **The page says the card data isn't ready:** wait for the download, or run `python -m decklab.lib.cards update` and read what it says.
-- **The server's log** is `decklab/data/logs/server.log` when it runs in the background.
+- **The server's log** is `decklab/data/logs/server.log` when it runs in the background (on Linux, systemd's journal has what it said before it opened the log: `journalctl --user -u decklab.service`).
+- **"systemd couldn't reload its units"** from `homenet install` or `schedule install` on Linux: there's no systemd user session (`systemctl --user` can't reach it), as in some containers and over `su`. Log in as that user directly, or over SSH.

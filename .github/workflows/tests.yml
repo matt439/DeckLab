@@ -1,8 +1,9 @@
 # The whole unittest suite on code changes, weekly and by hand (Actions, tests, Run workflow),
-# split across 4 parallel Windows jobs (scripts/test_shard.py) so it takes about 5 minutes instead of 15.
-# Standard GitHub-hosted runners are free on a public repo; the shards count against the account's
-# 20 concurrent jobs. There's no PostgreSQL service, .venv or card data here: the database tests skip
-# (decklab/tests/db_support.py), as do the real-Forge games. Windows, because Deck Lab only runs there.
+# split across 4 parallel Windows jobs (scripts/test_shard.py) so it takes about 5 minutes instead of 15,
+# and again on Linux in 2 jobs, so a self-hoster's Linux stays as tested as the household's Windows
+# (E11-S33). Standard GitHub-hosted runners are free on a public repo; the shards count against the
+# account's 20 concurrent jobs. There's no PostgreSQL service, .venv or card data here: the database
+# tests skip (decklab/tests/db_support.py), as do the real-Forge games.
 name: tests
 
 on:
@@ -56,9 +57,32 @@ jobs:
       - name: Tests (no database)
         run: python scripts/test_shard.py ${{ matrix.index }} 4 --hang-after 600
 
+  linux:
+    needs: changes
+    if: needs.changes.outputs.run_tests == 'true'
+    name: linux ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { index: 0, name: 1 of 2 }
+          - { index: 1, name: 2 of 2 }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Tests (no database)
+        run: python scripts/test_shard.py ${{ matrix.index }} 2 --hang-after 600
+
   # Keep this required check present for docs-only PRs, without starting the shards.
   tests:
-    needs: [changes, shard]
+    needs: [changes, shard, linux]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 2
@@ -68,11 +92,14 @@ jobs:
           CHANGES_RESULT: ${{ needs.changes.result }}
           RUN_TESTS: ${{ needs.changes.outputs.run_tests }}
           SHARD_RESULT: ${{ needs.shard.result }}
+          LINUX_RESULT: ${{ needs.linux.result }}
         run: |
           test "$CHANGES_RESULT" = success
           if [ "$RUN_TESTS" = false ]; then
             test "$SHARD_RESULT" = skipped
+            test "$LINUX_RESULT" = skipped
           else
             test "$RUN_TESTS" = true
             test "$SHARD_RESULT" = success
+            test "$LINUX_RESULT" = success
           fi
