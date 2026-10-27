@@ -39,8 +39,12 @@
 .activity-note { margin: 0; color: var(--ink-2); font-size: var(--fs-sm); }
 .activity-note:empty { display: none; }
 .activity-undo-note { white-space: pre-wrap; overflow-wrap: anywhere; }
+.panels.activity-undo-photos { grid-template-columns: minmax(0, 1fr); gap: var(--s-4); }
+.activity-undo-photos > .panel { margin: 0; min-width: 0; }
+.activity-undo-photos .acc-thumb-fill { max-width: 280px; margin-inline: auto; }
 @media (min-width: 600px) {
   .activity-change { padding: var(--s-4) var(--s-5); }
+  .panels.activity-undo-photos { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (min-width: 1000px) {
   .activity-filters, .activity-days, .activity-more, .activity-empty { max-width: 960px; }

@@ -9,7 +9,7 @@ from .common import ApiError, DATABASE_DOWN, _keys, _parse_body
 from .settings import _web_actor, _writer
 
 NO_CHANGE = "No undoable accessory change at that ID."
-UNSUPPORTED = "Undo restores recorded accessory details, confirmed counts or unused record corrections, removes an unused image-free addition or restores an exact image-free deleted record. Current photos and kit are kept; recorded counts and capacity may change warnings."
+UNSUPPORTED = "Undo restores recorded accessory details, a reviewed crop on the current photo, confirmed counts or unused record corrections, removes an unused image-free addition or restores an exact image-free deleted record. Current photos and kit are kept; recorded counts and capacity may change warnings."
 CHANGED = "The accessories changed. Reload Activity and review this Undo again."
 UNCONFIRMED = "The accessory Undo result could not be confirmed. Reload Activity before trying again."
 REVISION = re.compile(r"[1-9][0-9]{0,18}")
@@ -59,6 +59,7 @@ def _project(plan, change_id, owners):
             or not isinstance(plan.get("expect"), str) or not undo.SHA.fullmatch(plan["expect"]):
         raise ApiError(503, UNCONFIRMED)
     action = plan["action"]
+    cropping = action == "accessory_crop_update"
     flags = ("reason_required", "confirmation_required", *undo.UPDATE_CONFIRMATIONS.values())
     try:
         source = undo.source_record([plan.get("source")], owners)
@@ -75,8 +76,11 @@ def _project(plan, change_id, owners):
                     or {field for field in undo.RAW if old[field] != new[field]} - set(undo.UPDATE_FIELDS[action])):
             raise inventory.Invalid("Bad source proof")
         wide = action in undo.UPDATE_CONFIRMATIONS
-        project = undo.stock_meta if wide else undo.meta
+        project = dict if cropping else undo.stock_meta if wide else undo.meta
         current, restored = (None, old) if adding else (new, None) if removing else (project(new), project(old))
+        photo = undo.photo_envelope(plan.get("photo")) if cropping else None
+        if cropping and (not new["image"] or photo["name"] != new["image"]) or not cropping and "photo" in plan:
+            raise inventory.Invalid("Bad current photo proof")
     except (inventory.Invalid, KeyError):
         raise ApiError(503, UNCONFIRMED) from None
     if adding:
@@ -96,7 +100,7 @@ def _project(plan, change_id, owners):
         return {"available": True, "id": change_id, "expect": plan["expect"], "kind": "accessory",
                 "action": "accessory_remove", "label": current["name"], "current": current,
                 "restored": None, "reason_required": True}
-    current, restored = _meta(current, wide), _meta(restored, wide)
+    current, restored = (undo.raw_row(current), undo.raw_row(restored)) if cropping else (_meta(current, wide), _meta(restored, wide))
     editable = undo.UPDATE_FIELDS[action]
     flag = undo.UPDATE_CONFIRMATIONS.get(action)
     fields = [{"field": field, "before": current[field], "after": restored[field]} for field in editable
@@ -108,7 +112,7 @@ def _project(plan, change_id, owners):
         raise ApiError(503, UNCONFIRMED)
     return {"available": True, "id": change_id, "expect": plan["expect"], "kind": "accessory",
             "action": action, "label": current["name"], "current": current, "restored": restored,
-            "fields": fields, **({flag: True} if flag is not None else {})}
+            "fields": fields, **({flag: True} if flag is not None else {}), **({"photo": photo} if cropping else {})}
 
 
 def accessory_undo_view(id=None):
@@ -128,9 +132,9 @@ def apply_accessory_undo(body):
     writer = _writer(data)
     guard.require(writer, "accessories.edit")
     owners = guard.accessory_owners(writer)
-    _keys(data, ("profile", "id", "expect"), ("reason", "confirm_restore", "confirm_stock", "confirm_owner", "confirm_kind", "confirm_record"))
+    _keys(data, ("profile", "id", "expect"), ("reason", "confirm_restore", "confirm_stock", "confirm_owner", "confirm_kind", "confirm_record", "confirm_photo"))
     change_id = _id(data["id"])
-    options = [data.get(field, ...) for field in ("reason", "confirm_restore", "confirm_stock", "confirm_owner", "confirm_kind", "confirm_record")]
+    options = [data.get(field, ...) for field in ("reason", "confirm_restore", "confirm_stock", "confirm_owner", "confirm_kind", "confirm_record", "confirm_photo")]
     while options and options[-1] is ...:
         options.pop()
     result = _call("accessory_undo_apply", change_id, owners, data["expect"], _web_actor(writer),
@@ -145,11 +149,14 @@ def apply_accessory_undo(body):
     ownership = plan["action"] == "accessory_owner_update"
     kind_change = plan["action"] == "accessory_kind_update"
     record = plan["action"] == "accessory_record_update"
+    cropping = plan["action"] == "accessory_crop_update"
     try:
-        actual = undo.raw_row(result.get("restored")) if adding else None if removing else _meta(result.get("restored"), plan["action"] in undo.UPDATE_CONFIRMATIONS)
+        actual = undo.raw_row(result.get("restored")) if adding or cropping else None if removing else _meta(result.get("restored"), plan["action"] in undo.UPDATE_CONFIRMATIONS)
+        photo = undo.photo_envelope(result.get("photo")) if cropping else None
     except inventory.Invalid:
         raise ApiError(503, UNCONFIRMED) from None
     if actual != plan["restored"] or data["expect"] != plan["expect"] \
+            or cropping and photo != plan["photo"] or not cropping and "photo" in result \
             or removing and ("restored" not in result or result["restored"] is not None or result.get("removed_id") != plan["current"]["id"]) \
             or not removing and "removed_id" in result \
             or adding and result.get("added_id") != plan["restored"]["id"] \
@@ -164,5 +171,6 @@ def apply_accessory_undo(body):
             "action": plan["action"], "restored": actual, "sha256": result["sha256"],
             **({"removed_id": result["removed_id"]} if removing else {}),
             **({"added_id": result["added_id"]} if adding else {}),
+            **({"photo": photo} if cropping else {}),
             "revision": result["revision"], "summary": f"Undo change #{change_id}: " + (
-                "restore a deleted accessory record" if adding else "remove an unused added accessory" if removing else "restore a combined accessory correction" if record else "restore the recorded accessory kind" if kind_change else "restore recorded accessory sharing" if ownership else "restore a recorded accessory count" if stock else "restore recorded accessory details")}
+                "restore a deleted accessory record" if adding else "remove an unused added accessory" if removing else "restore a crop on the current accessory photo" if cropping else "restore a combined accessory correction" if record else "restore the recorded accessory kind" if kind_change else "restore recorded accessory sharing" if ownership else "restore a recorded accessory count" if stock else "restore recorded accessory details")}

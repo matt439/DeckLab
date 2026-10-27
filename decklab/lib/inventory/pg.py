@@ -756,10 +756,20 @@ class PgInventory:
                     self._applying.connection = previous
         return self._call(work)
 
-    def accessory_undo_apply(self, change_id, owners, expect, actor, message, reason=..., confirm_restore=..., confirm_stock=..., confirm_owner=..., confirm_kind=..., confirm_record=...):
+    def accessory_undo_photo(self, name, sha256, size):
+        """Target-only current bytes, on Undo's already locked review/save connection."""
+        from decklab.lib.accessory_fetch import MAX_IMAGE
+        connection = getattr(self._applying, "connection", None)
+        if connection is None:
+            raise Invalid("Accessory photo proof needs its locked transaction.")
+        row = connection.execute("select content from accessory_image where file_name=%s and sha256=%s and size=%s "
+                                 "and size between 1 and %s for share", (name, sha256, size, MAX_IMAGE)).fetchone()
+        return None if row is None else bytes(row[0])
+
+    def accessory_undo_apply(self, change_id, owners, expect, actor, message, reason=..., confirm_restore=..., confirm_stock=..., confirm_owner=..., confirm_kind=..., confirm_record=..., confirm_photo=...):
         from .accessory_undo import MetadataRestore, source_record, removal_reason, update_action
         canonical = None
-        if any(value is not ... for value in (reason, confirm_restore, confirm_stock, confirm_owner, confirm_kind, confirm_record)):
+        if any(value is not ... for value in (reason, confirm_restore, confirm_stock, confirm_owner, confirm_kind, confirm_record, confirm_photo)):
             # Audit rows are immutable. Establish complete source ownership before
             # validating the public reason; all mutable facts are rechecked in apply.
             source = source_record(self.undo_audit(change_id), owners)
@@ -770,13 +780,14 @@ class PgInventory:
             if confirm_restore is not ... and (source["op"] != "DELETE" or confirm_restore is not True):
                 raise Invalid("Confirm only the entire historical deleted accessory record.")
             for value, action in ((confirm_stock, "accessory_stock_update"), (confirm_owner, "accessory_owner_update"),
-                                  (confirm_kind, "accessory_kind_update"), (confirm_record, "accessory_record_update")):
+                                  (confirm_kind, "accessory_kind_update"), (confirm_record, "accessory_record_update"),
+                                  (confirm_photo, "accessory_crop_update")):
                 if value is not ... and (source["op"] != "UPDATE" or value is not True
                         or update_action(source["before"], source["after"]) != action):
                     raise Invalid("Confirm only the reviewed accessory correction.")
         _, summary = self.apply(MetadataRestore(change_id, owners, expect, store=self,
             reason=canonical if reason is not ... else ..., confirm_restore=confirm_restore, confirm_stock=confirm_stock,
-            confirm_owner=confirm_owner, confirm_kind=confirm_kind, confirm_record=confirm_record), actor, message,
+            confirm_owner=confirm_owner, confirm_kind=confirm_kind, confirm_record=confirm_record, confirm_photo=confirm_photo), actor, message,
                                 reason=canonical)
         return summary.extra["accessory_undo"]
 
@@ -882,8 +893,13 @@ class PgInventory:
                                   for rid, table, action, key, old, new in cur.execute(
                                       "select id,table_name,op,row_key,before,after from audit.row_change "
                                       "where change_set_id=%s order by id limit 2", (change_set,)).fetchall()]
-                        receipt = op.verify(before, saved, actual)
-                        if op.plan["action"] in ("accessory_remove", "accessory_add", "accessory_stock_update", "accessory_owner_update", "accessory_kind_update", "accessory_record_update"):
+                        previous_verify_connection = getattr(self._applying, "connection", None)
+                        self._applying.connection = c
+                        try:
+                            receipt = op.verify(before, saved, actual)
+                        finally:
+                            self._applying.connection = previous_verify_connection
+                        if op.plan["action"] in ("accessory_remove", "accessory_add", "accessory_stock_update", "accessory_owner_update", "accessory_kind_update", "accessory_record_update", "accessory_crop_update"):
                             recorded_reason = cur.execute("select reason from audit.change_set where id=%s", (change_set,)).fetchone()
                             if recorded_reason is None or recorded_reason[0] != (op.reason if op.plan["action"] == "accessory_remove" else None):
                                 raise Conflict("The accessory Undo reason could not be confirmed.")

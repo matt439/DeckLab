@@ -50,7 +50,7 @@ class AuditAccessories:
         self.calls.append(("review", change_id, owners))
         return kernel.review(change_id, owners, self.snapshot, self)[0]
 
-    def accessory_undo_apply(self, change_id, owners, expect, actor, message, reason=..., confirm_restore=..., confirm_stock=..., confirm_owner=..., confirm_kind=..., confirm_record=...):
+    def accessory_undo_apply(self, change_id, owners, expect, actor, message, reason=..., confirm_restore=..., confirm_stock=..., confirm_owner=..., confirm_kind=..., confirm_record=..., confirm_photo=...):
         self.calls.append(("apply", change_id, owners))
         if reason is not ...:
             source = kernel.source_record(self.undo_audit(change_id), owners)
@@ -62,16 +62,17 @@ class AuditAccessories:
             if source["op"] != "DELETE" or confirm_restore is not True:
                 raise inventory.Invalid("Only an entire deleted accessory takes confirmation.")
         for value, action in ((confirm_stock, "accessory_stock_update"), (confirm_owner, "accessory_owner_update"),
-                              (confirm_kind, "accessory_kind_update"), (confirm_record, "accessory_record_update")):
+                              (confirm_kind, "accessory_kind_update"), (confirm_record, "accessory_record_update"),
+                              (confirm_photo, "accessory_crop_update")):
             if value is not ...:
                 source = kernel.source_record(self.undo_audit(change_id), owners)
                 if source["op"] != "UPDATE" or value is not True \
                         or kernel.update_action(source["before"], source["after"]) != action:
                     raise inventory.Invalid("Only the reviewed accessory correction takes this confirmation.")
         before = self.snapshot
-        operation = kernel.MetadataRestore(change_id, owners, expect, reason=reason, confirm_restore=confirm_restore,
+        operation = kernel.MetadataRestore(change_id, owners, expect, store=self, reason=reason, confirm_restore=confirm_restore,
                                            confirm_stock=confirm_stock, confirm_owner=confirm_owner, confirm_kind=confirm_kind,
-                                           confirm_record=confirm_record)
+                                           confirm_record=confirm_record, confirm_photo=confirm_photo)
         after, summary = operation.run(changes.detach(before))
         after = changes.prepare(before, after).replace(decks_revision="fixture-saved-decks")
         actual = support.actual_source(operation.plan, id=self.latest + 1)

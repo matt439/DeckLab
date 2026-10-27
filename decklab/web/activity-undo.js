@@ -108,7 +108,50 @@ function activityUndoAccessoryCount(row) {
     && activityUndoAccessoryQuantity(row.quantity) && activityUndoAccessoryCapacity(row);
 }
 
+function activityUndoAccessoryCrop(value) {
+  if (value === "") return [0, 0, 1, 1];
+  if (typeof value !== "string" || !/^(?:0|1|0\.\d{1,4})(?:,(?:0|1|0\.\d{1,4})){3}(?![\s\S])/.test(value)) return null;
+  const parts = value.split(",").map(Number), [x, y, w, h] = parts;
+  if (w < .02 || h < .02 || x + w > 1.00005 || y + h > 1.00005
+      || parts.map(n => n.toFixed(4).replace(/0+$/, "").replace(/\.$/, "")).join(",") !== value) return null;
+  return parts;
+}
+
+function activityUndoAccessoryPhotoRow(row) {
+  return row && typeof row === "object" && !Array.isArray(row)
+    && Object.keys(row).sort().join(",") === [...ACTIVITY_UNDO_ACCESSORY_STOCK_FIELDS].sort().join(",")
+    && ACTIVITY_UNDO_ACCESSORY_STOCK_FIELDS.every(field => typeof row[field] === "string" && !/[\u0000\ud800-\udfff]/u.test(row[field]))
+    && activityUndoAccessoryCount(Object.fromEntries(ACTIVITY_UNDO_ACCESSORY_QUANTITY_FIELDS.map(field => [field, row[field]])))
+    && row.id.length <= 40 && /^[a-z0-9]+(?:-[a-z0-9]+)*(?![\s\S])/.test(row.id)
+    && ["sleeves", "deck_box", "playmat"].includes(row.kind)
+    && ["jpg", "png", "webp"].some(ext => row.image === row.id + "." + ext)
+    && activityUndoAccessoryCrop(row.crop) !== null
+    && activityUndoAccessoryUrl(row.link, 500) && activityUndoAccessoryUrl(row.image_source, 2000);
+}
+
+function activityUndoAccessoryPhoto(photo, row) {
+  return photo && typeof photo === "object" && !Array.isArray(photo)
+    && Object.keys(photo).sort().join(",") === "name,sha256,size,version" && photo.name === row.image
+    && Number.isSafeInteger(photo.size) && photo.size > 0 && photo.size <= 4 * 1024 * 1024
+    && typeof photo.sha256 === "string" && /^[a-f0-9]{64}(?![\s\S])/.test(photo.sha256)
+    && typeof photo.version === "string" && /^[a-f0-9]{8}(?![\s\S])/.test(photo.version);
+}
+
+function activityUndoAccessoryCropEvidence(data, space, profile) {
+  if (space !== "home" || typeof profile !== "string" || !profile
+      || Object.keys(data).sort().join(",") !== "action,available,current,expect,fields,id,kind,label,photo,photo_confirmation_required,restored"
+      || data.photo_confirmation_required !== true || !activityUndoAccessoryPhotoRow(data.current) || !activityUndoAccessoryPhotoRow(data.restored)
+      || ![profile, "shared"].includes(data.current.owner) || data.label !== data.current.name
+      || !activityUndoAccessoryPhoto(data.photo, data.current) || data.current.crop === data.restored.crop
+      || ACTIVITY_UNDO_ACCESSORY_STOCK_FIELDS.some(field => field !== "crop" && data.current[field] !== data.restored[field])
+      || !Array.isArray(data.fields) || data.fields.length !== 1) return false;
+  const field = data.fields[0];
+  return field && Object.keys(field).sort().join(",") === "after,before,field" && field.field === "crop"
+    && field.before === data.current.crop && field.after === data.restored.crop;
+}
+
 function activityUndoAccessoryEvidence(data, space, profile) {
+  if (data.action === "accessory_crop_update") return activityUndoAccessoryCropEvidence(data, space, profile);
   const removing = data.action === "accessory_remove", adding = data.action === "accessory_add";
   const counting = data.action === "accessory_stock_update";
   const owning = data.action === "accessory_owner_update", retyping = data.action === "accessory_kind_update", correcting = data.action === "accessory_record_update";
@@ -192,13 +235,17 @@ function activityUndoReceipt(answer, preview) {
     const owning = preview.action === "accessory_owner_update";
     const retyping = preview.action === "accessory_kind_update";
     const correcting = preview.action === "accessory_record_update";
-    const keys = ["action", "expect", "kind", "restored", "revision", "saved", "sha256", "source_id", "summary", ...(removing ? ["removed_id"] : adding ? ["added_id"] : [])];
+    const cropping = preview.action === "accessory_crop_update";
+    const keys = ["action", "expect", "kind", "restored", "revision", "saved", "sha256", "source_id", "summary", ...(removing ? ["removed_id"] : adding ? ["added_id"] : cropping ? ["photo"] : [])];
     return Boolean(answer && answer.saved === true && answer.source_id === preview.id && answer.expect === preview.expect
-      && answer.kind === "accessory" && answer.action === preview.action && ["accessory_update", "accessory_stock_update", "accessory_owner_update", "accessory_kind_update", "accessory_record_update", "accessory_remove", "accessory_add"].includes(preview.action)
+      && answer.kind === "accessory" && answer.action === preview.action && ["accessory_update", "accessory_stock_update", "accessory_owner_update", "accessory_kind_update", "accessory_record_update", "accessory_crop_update", "accessory_remove", "accessory_add"].includes(preview.action)
       && Object.keys(answer).sort().join(",") === keys.sort().join(",")
       && typeof answer.sha256 === "string" && /^[a-f0-9]{64}$/.test(answer.sha256) && activityUndoAuditVersion(answer.revision)
       && typeof answer.summary === "string" && answer.summary.trim()
-      && (removing ? answer.restored === null && answer.removed_id === preview.current.id
+      && (cropping ? activityUndoAccessoryPhotoRow(answer.restored) && activityUndoAccessoryPhoto(answer.photo, answer.restored)
+          && ACTIVITY_UNDO_ACCESSORY_STOCK_FIELDS.every(field => answer.restored[field] === preview.restored[field])
+          && ["name", "size", "sha256", "version"].every(field => answer.photo[field] === preview.photo[field])
+        : removing ? answer.restored === null && answer.removed_id === preview.current.id
         : adding ? answer.added_id === preview.restored.id && activityUndoAccessoryStock(answer.restored)
           && ACTIVITY_UNDO_ACCESSORY_STOCK_FIELDS.every(field => answer.restored[field] === preview.restored[field])
           : counting || owning || retyping || correcting ? activityUndoAccessoryCount(answer.restored) && ACTIVITY_UNDO_ACCESSORY_QUANTITY_FIELDS.every(field => answer.restored[field] === preview.restored[field])
@@ -296,6 +343,78 @@ function activityUndoButton(view, change) {
   return button;
 }
 
+/** Verify one current image, then display both recorded crops from its same local bytes. */
+function activityUndoPhotoPreview(ctx, frames, changed) {
+  const preview = ctx.preview, signature = JSON.stringify(preview), controller = new AbortController();
+  const photo = { ready: false, failed: false, url: null, images: [] };
+  let active = true;
+  const current = () => active && ctx.current() && ctx.preview === preview && JSON.stringify(preview) === signature;
+  const release = () => {
+    if (!active) return;
+    active = false; controller.abort(); photo.ready = false;
+    for (const img of photo.images) { img.onload = null; img.onerror = null; img.removeAttribute("src"); }
+    for (const frame of frames) frame.box.style.visibility = "hidden";
+    if (photo.url !== null) { URL.revokeObjectURL(photo.url); photo.url = null; }
+  };
+  ctx.photoRelease = release;
+  photo.valid = () => current() && photo.ready && !photo.failed && photo.url !== null && photo.images.length === 2
+    && photo.images.every(img => img.isConnected && ctx.sheet.body.contains(img) && img.src === photo.url
+      && (!img.currentSrc || img.currentSrc === photo.url) && img.complete && img.naturalWidth > 0 && img.naturalHeight > 0);
+  const load = frame => new Promise((resolve, reject) => {
+    const img = el("img", { alt: frame.label, decoding: "async" }), [x, y, w, h] = activityUndoAccessoryCrop(frame.crop);
+    Object.assign(img.style, { width: `${100 / w}%`, height: `${100 / h}%`, left: `${-100 * x / w}%`, top: `${-100 * y / h}%` });
+    const clipped = el("span", { class: "acc-crop" }, img); frame.box.append(clipped); photo.images.push(img);
+    const loaded = () => {
+      if (!current() || img.src !== photo.url || !img.complete || !img.naturalWidth || !img.naturalHeight) { reject(Error("The photo did not decode.")); return; }
+      const ratio = w * img.naturalWidth / (h * img.naturalHeight);
+      clipped.style.aspectRatio = String(ratio); clipped.classList.toggle("acc-crop-tall", ratio < 1); resolve();
+    };
+    const decoding = typeof img.decode === "function";
+    img.onload = () => { if (!decoding) loaded(); }; img.onerror = () => reject(Error("The photo did not load.")); img.src = photo.url;
+    if (decoding) Promise.resolve(img.decode()).then(loaded, reject);
+    else if (img.complete) loaded();
+  });
+  Promise.resolve().then(async () => {
+    if (!current()) { release(); return; }
+    const meta = preview.photo, ext = meta.name.split(".").at(-1), mime = { jpg: "image/jpeg", png: "image/png", webp: "image/webp" }[ext];
+    const url = accImgSrc("/accessory-img/" + encodeURIComponent(meta.name) + "?v=" + meta.version);
+    const response = await fetch(url, { method: "GET", cache: "no-store", credentials: "same-origin", mode: "same-origin", redirect: "error",
+      signal: controller.signal, headers: { Accept: mime, "X-Deck-Lab-Viewer": ctx.profile } });
+    if (!current()) { release(); return; }
+    if (!response.ok || response.status !== 200 || response.redirected || response.headers.get("ETag") !== '"' + meta.sha256 + '"'
+        || response.headers.get("Content-Type")?.split(";")[0].trim().toLowerCase() !== mime
+        || response.headers.get("Content-Length") !== String(meta.size) || !response.body?.getReader) throw Error("The current photo could not be verified.");
+    const reader = response.body.getReader(), chunks = []; let size = 0;
+    try {
+      while (true) {
+        const part = await reader.read();
+        if (!current()) { release(); return; }
+        if (part.done) break;
+        if (!(part.value instanceof Uint8Array)) throw Error("The photo stream could not be checked.");
+        size += part.value.byteLength;
+        if (size > meta.size || size > 4 * 1024 * 1024) { controller.abort(); throw Error("The photo is too large."); }
+        chunks.push(part.value);
+      }
+    } finally { reader.releaseLock?.(); }
+    if (size !== meta.size) throw Error("The photo is incomplete.");
+    const blob = new Blob(chunks, { type: mime });
+    if (blob.size !== meta.size) throw Error("The photo blob could not be checked.");
+    if (!current()) { release(); return; }
+    const objectUrl = URL.createObjectURL(blob);
+    if (typeof objectUrl !== "string" || !objectUrl.startsWith("blob:")) throw Error("The photo preview could not be created.");
+    photo.url = objectUrl;
+    await Promise.all(frames.map(load));
+    if (!current()) { release(); return; }
+    if (photo.images[0].naturalWidth !== photo.images[1].naturalWidth || photo.images[0].naturalHeight !== photo.images[1].naturalHeight) throw Error("The photo views disagree.");
+    for (const frame of frames) frame.box.style.visibility = "";
+    photo.ready = true; changed();
+  }).catch(() => {
+    if (!current()) { release(); return; }
+    photo.failed = true; release(); changed();
+  });
+  return photo;
+}
+
 function openActivityUndo(view, id, endpoint = "/api/activity/undo") {
   if (!["/api/activity/undo", "/api/activity/wishlist-undo", "/api/activity/accessory-undo"].includes(endpoint)) return null;
   const ctx = { view, id, endpoint, root: view.days, seq: view.seq, profile: state.profile?.id, space: ownSpace(), token: routeToken,
@@ -303,6 +422,7 @@ function openActivityUndo(view, id, endpoint = "/api/activity/undo") {
     pending: false, saved: false, needsRefresh: false, refreshing: false, refreshed: false, preview: null };
   view.undoCtx = ctx; view.undoBusy = true;
   const sheet = ctx.sheet = colOpenSheet("Review undo", { wide: true, onClose: () => {
+    ctx.photoRelease?.();
     if (!activityUndoOwner(ctx) || ctx.pending) return;
     if (ctx.saved || ctx.needsRefresh) activityUndoAfterClose(ctx);
     else { view.undoCtx = null; view.undoBusy = false; }
@@ -337,6 +457,7 @@ function activityUndoShow(ctx) {
   const accessoryOwning = preview.kind === "accessory" && preview.action === "accessory_owner_update";
   const accessoryRetyping = preview.kind === "accessory" && preview.action === "accessory_kind_update";
   const accessoryCorrecting = preview.kind === "accessory" && preview.action === "accessory_record_update";
+  const accessoryCropping = preview.kind === "accessory" && preview.action === "accessory_crop_update";
   const batchRemoving = preview.action === "batch_remove", removing = batchRemoving || accessoryRemoving || preview.action === "remove";
   const batchAdding = preview.action === "batch_add", adding = batchAdding || accessoryAdding || preview.action === "add";
   const wishlistPresence = preview.kind === "wishlist" && ["wishlist_add", "wishlist_remove"].includes(preview.action);
@@ -354,6 +475,7 @@ function activityUndoShow(ctx) {
   const kindCount = row => row.quantity + " " + (row.kind === "sleeves" ? row.quantity === "1" ? "individual sleeve" : "individual sleeves" : row.quantity === "1" ? "item" : "items");
   let reasonInput = null, acceptedReason = "", reviewedReason = null;
   let ownershipInput = null, confirmedOwned = false;
+  let photoPreview = null, startPhoto = null;
   clear(sheet.body).append(el("h3", { text: preview.label }));
   if (wishlistPresence) {
     const restoring = preview.action === "wishlist_add", row = restoring ? preview.restored : preview.current;
@@ -362,6 +484,34 @@ function activityUndoShow(ctx) {
       el("section", { class: "panel" }, el("h3", { text: restoring ? "Historical wishlist entry to restore" : "Current wishlist entry to remove" }),
         el("dl", {}, ACTIVITY_UNDO_FIELDS.wishlist.flatMap(field => [el("dt", { text: field === "number" ? "collector number" : field }),
           el("dd", { class: ["notes", "source"].includes(field) ? "activity-undo-note" : null, text: text(row[field]) })]))));
+  } else if (accessoryCropping) {
+    const frames = [["Current crop", preview.current], ["Restored crop", preview.restored]].map(([title, row]) => {
+      const box = el("span", { class: "acc-thumb acc-thumb-fill", style: "visibility: hidden" });
+      return { box, crop: row.crop, label: title + " on the current photo", panel: el("figure", { class: "panel" },
+        el("h4", { text: title }), el("p", { class: "sub", text: row.crop ? "Recorded crop: " + row.crop : "Whole current photo" }), box) };
+    });
+    const status = el("p", { class: "sub", role: "status", "aria-live": "polite", text: "Checking the current photo before you review its crops." });
+    sheet.body.append(el("p", { class: "box box-warn", text: "This restores only the recorded crop on the photo saved now. It cannot recover an earlier photo. Both views below use the same verified current photo; the photo itself, stock and kit stay as they are." }),
+      el("p", { class: "sub", text: kindText(preview.current.kind) + " · " + kindCount(preview.current) + " · " + ownerText(preview.current.owner) }),
+      status, el("div", { class: "panels activity-undo-photos" }, frames.map(frame => frame.panel)));
+    const id = "activity-undo-photo-" + sheet.heading.id;
+    ownershipInput = el("input", { id, type: "checkbox", disabled: true }); ownershipInput.checked = false;
+    sheet.body.append(el("label", { class: "choice", for: id }, ownershipInput,
+      el("span", { text: "I have checked both views and want this crop on the current photo." })));
+    ownershipInput.addEventListener("change", () => {
+      if (!ctx.here() || ctx.pending || ctx.saved || ctx.needsRefresh || !photoPreview?.valid() || !ownershipInput.isConnected
+          || !sheet.body.contains(ownershipInput) || ctx.preview !== preview || JSON.stringify(preview) !== signature) { ownershipInput.checked = confirmedOwned; return; }
+      confirmedOwned = ownershipInput.checked === true; ownershipInput.checked = confirmedOwned; error.textContent = ""; actions();
+    });
+    startPhoto = () => { photoPreview = activityUndoPhotoPreview(ctx, frames, () => {
+      if (!ctx.current()) return;
+      if (photoPreview.failed) {
+        confirmedOwned = false; ctx.needsRefresh = true;
+        status.textContent = "The current photo could not be verified. No crop review is available.";
+        error.textContent = "Reload Activity before reviewing this crop again.";
+      } else status.textContent = "Both views use the verified current photo. Review the crop you want to restore.";
+      ownershipInput.checked = confirmedOwned; actions();
+    }); };
   } else if (batch) {
     const rows = preview.rows.map(item => {
       const changes = item.fields.map(field => el("p", {}, el("b", { text: words[field.field] + ": " }),
@@ -557,12 +707,12 @@ function activityUndoShow(ctx) {
   const error = el("p", { class: "form-error", role: "alert", tabindex: "-1" }); sheet.body.append(error);
   function actions() {
     if (reasonInput) reasonInput.disabled = ctx.pending || ctx.saved || ctx.needsRefresh;
-    if (ownershipInput) ownershipInput.disabled = ctx.pending || ctx.saved || ctx.needsRefresh;
+    if (ownershipInput) ownershipInput.disabled = ctx.pending || ctx.saved || ctx.needsRefresh || accessoryCropping && !photoPreview?.valid();
     sheetActions(sheet, ctx.saved ? [{ text: "Done", kind: "primary", onclick: event => { if (ctx.here() && event.currentTarget.isConnected) sheet.close(); } }]
       : ctx.needsRefresh ? [{ text: "Reload Activity", kind: "primary", onclick: event => { if (ctx.here() && event.currentTarget.isConnected) sheet.close(); } },
         { text: "Close", onclick: () => sheet.close() }]
         : [{ text: "Cancel", disabled: ctx.pending, onclick: () => sheet.close() },
-          { text: ctx.pending ? "Saving Undo." : "Save Undo", kind: "primary", disabled: ctx.pending || removing && !reviewedReason || (adding || accessoryCounting || accessoryOwning || accessoryRetyping || accessoryCorrecting) && !confirmedOwned, onclick: save }]);
+          { text: ctx.pending ? "Saving Undo." : "Save Undo", kind: "primary", disabled: ctx.pending || removing && !reviewedReason || (adding || accessoryCounting || accessoryOwning || accessoryRetyping || accessoryCorrecting || accessoryCropping) && !confirmedOwned || accessoryCropping && !photoPreview?.valid(), onclick: save }]);
   }
   async function save(event) {
     if (!ctx.here() || ctx.pending || ctx.saved || ctx.needsRefresh || !event?.currentTarget?.isConnected || !sheet.foot.contains(event.currentTarget)
@@ -571,8 +721,9 @@ function activityUndoShow(ctx) {
         || !reviewedReason || activityUndoRemovalReason(reasonInput.value) !== reviewedReason)) {
       error.textContent = "Enter and review a nonblank reason of at most 200 characters before saving Undo."; return;
     }
-    if ((adding || accessoryCounting || accessoryOwning || accessoryRetyping || accessoryCorrecting) && (!ownershipInput?.isConnected || !sheet.body.contains(ownershipInput) || !confirmedOwned || ownershipInput.checked !== true)) {
-      error.textContent = accessoryCorrecting ? "Review and confirm the whole recorded correction before saving Undo."
+    if ((adding || accessoryCounting || accessoryOwning || accessoryRetyping || accessoryCorrecting || accessoryCropping) && (!ownershipInput?.isConnected || !sheet.body.contains(ownershipInput) || !confirmedOwned || ownershipInput.checked !== true || accessoryCropping && !photoPreview?.valid())) {
+      error.textContent = accessoryCropping ? "Wait for the verified current photo, then confirm both crop views before saving Undo."
+        : accessoryCorrecting ? "Review and confirm the whole recorded correction before saving Undo."
         : accessoryRetyping ? "Review and confirm the accessory kind and whole recorded count before saving Undo."
         : accessoryOwning ? "Review and confirm who should own this accessory record before saving Undo."
         : accessoryCounting ? "Review and confirm the entire recorded accessory count before saving Undo."
@@ -584,7 +735,7 @@ function activityUndoShow(ctx) {
     ctx.pending = true; error.textContent = ""; actions();
     try {
       const answer = await apiWrite(endpoint, { id: ctx.id, expect: preview.expect,
-        ...(removing ? { reason: reviewedReason } : {}), ...(accessoryCorrecting ? { confirm_record: true } : accessoryRetyping ? { confirm_kind: true } : accessoryOwning ? { confirm_owner: true } : accessoryCounting ? { confirm_stock: true } : accessoryAdding ? { confirm_restore: true } : adding ? { confirm_owned: true } : {}) });
+        ...(removing ? { reason: reviewedReason } : {}), ...(accessoryCropping ? { confirm_photo: true } : accessoryCorrecting ? { confirm_record: true } : accessoryRetyping ? { confirm_kind: true } : accessoryOwning ? { confirm_owner: true } : accessoryCounting ? { confirm_stock: true } : accessoryAdding ? { confirm_restore: true } : adding ? { confirm_owned: true } : {}) });
       if (preview.kind !== "wishlist") state.library = null;
       if (!activityUndoReceipt(answer, preview)) throw new Error("The Undo result could not be confirmed.");
       if (!activityUndoOwner(ctx)) return;
@@ -607,6 +758,7 @@ function activityUndoShow(ctx) {
     }
   }
   actions();
+  startPhoto?.();
 }
 
 /** A bounded refresh keeps the filter and loaded page depth; old rows stay until every read succeeds. */
