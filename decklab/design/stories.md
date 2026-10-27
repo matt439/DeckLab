@@ -543,7 +543,7 @@ Evidence:
 
 Gap: Still to check on the real devices: the receipt panel's navigation and Close before the image and its swipe margins, the Quick edit's Add cards sheet with the keyboard and its ⋯ menu, keyboard-open Save and Home Screen use on the iPad, the Commander bracket sentence's place on the phone (E9-S05), and everything on the iPhone 17 Pro.
 
-**E2-S23** · Matt · could · S · missing
+**E2-S23** · Matt · could · S · built
 
 As a deck builder, I want a Considering list kept with each deck, so that cards I might add stay with the deck without counting in its lists, tables or packing.
 
@@ -553,10 +553,14 @@ As a deck builder, I want a Considering list kept with each deck, so that cards 
 
 Decided (Matt, 2026-10-27): added from the comparison with Moxfield's maybeboard.
 
-Evidence:
-- `decklab/web/editor-swaps.js` and E2-S19 (try a change without saving); the wishlist (E5-S14)
+Now: Built 2026-10-28 ([Considering list](../HISTORY.md#considering-list-2026-10-28-e2-s23)): a `## Considering` block of card lines is read beside the Planned and Play-now lists, so no table, pool, packing, sleeve, stats, tokens, Forge, print, box-check or `deck_line` reader counts it. The Cards tab lists it with each card's free copies (only to viewers who see the collection) and adds, removes or moves a card into the Planned list or sideboard, each one save (`POST /api/deck/considering`).
+Not yet: the editor has no Considering view of its own (its save and check take `lists.considering`), and `deck_line` SQL leaves Considering cards out.
 
-Gap: Ideas for a deck live in prose or the wishlist; the deck text has no considering section.
+Evidence:
+- `decklab/lib/decks/considering.py`; `deckfile.py` parse_deck, `render.py` render_deck_file, `edit.py` apply_edit
+- `decklab/lib/api/considering.py` (view, save_considering); `deck_page.py` deck_view; `drafts.py` _read_draft; `saving.py` save_deck
+- `decklab/web/deck-considering.js`
+- `decklab/tests/test_deck_considering.py`, `decklab/tests/test_deck_considering_ui.py`
 
 First slice: a `Considering` section in the deck text format that the parser reads and every table, pool and packing reader skips.
 

@@ -37,8 +37,8 @@ class _Draft:
         self.known = set(known)
         self.known_setless = {name for name, set_code, _, _ in self.known if set_code is None}
         self.counts = _lazy(lambda: _visible_counts(space))
-        self.lists = {"target": None, "owned": None}
-        self.sent = {"target": 0, "owned": 0}   # lines the page sent in each list
+        self.lists = {"target": None, "owned": None, "considering": None}   # considering: [DeckLine]
+        self.sent = {"target": 0, "owned": 0, "considering": 0}   # lines the page sent in each list
         self.fields = {}
         self.blocks = []
         self.warnings = []
@@ -304,18 +304,25 @@ def _read_draft(data, kind, deck=None, source=None, space=None):
     whose own space counts) or a new deck (kind, starting from source's
     sections, in space: home by default)."""
     space = deck.space if deck is not None else (space or spaces.HOME)
-    draft = _Draft(kind, _known(deck.target, deck.owned) if deck is not None else _known(source), space)
+    draft = _Draft(kind, _known(deck.target, deck.owned, {"Deck": deck.considering or []}) if deck is not None
+                   else _known(source), space)
     raw = data.get("lists")
-    versions = ("target", "owned") if deck is not None else ("target",)
+    versions = ("target", "owned", "considering") if deck is not None else ("target",)
     if raw is not None:
         if not isinstance(raw, dict):
             raise ApiError(400, 'lists must be a JSON object like {"target": {"Deck": [...]}}')
         for version in raw:
             if version not in versions:
-                raise ApiError(400, f"Unknown list {version!r}; send {' and '.join(versions)}")
+                raise ApiError(400, f"Unknown list {version!r}; send {', '.join(versions)}")
         for version in versions:
             sections = raw.get(version)
             if sections is None:
+                continue
+            if version == "considering":
+                # The Considering list (decks/considering.py): card lines only, no sections.
+                if not isinstance(sections, list):
+                    raise ApiError(400, "lists.considering must be a list of card lines")
+                draft.lists[version] = _read_sections(draft, version, {"Deck": sections}).get("Deck", [])
                 continue
             if not isinstance(sections, dict):
                 raise ApiError(400, f"lists.{version} must be a JSON object of sections")
