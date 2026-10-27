@@ -442,8 +442,12 @@ class WebFileTests(unittest.TestCase):
             rest = _text(name).replace(helper, "")
             with self.subTest(script=name):
                 self.assertNotRegex(rest, r"method:\s*[\"'`](POST|PUT|PATCH|DELETE)")
-        # The only other fetch() is api()'s, the plain GET.
-        rest = _scripts().replace(helper, "")
+        # Crop Undo reads verified photo bytes with one explicit GET. All other
+        # reads use api(); this exception must not allow another write path.
+        photo = _function(_text("activity-undo.js"), "activityUndoPhotoPreview")
+        self.assertEqual(len(re.findall(r"\bfetch\(", photo)), 1)
+        self.assertEqual(re.findall(r"method:\s*[\"'`](\w+)[\"'`]", photo), ["GET"])
+        rest = _scripts().replace(helper, "").replace(photo, "")
         self.assertEqual(len(re.findall(r"\bfetch\(", rest)), 1)
         self.assertIn("fetch(", _function(rest, "api"))
 

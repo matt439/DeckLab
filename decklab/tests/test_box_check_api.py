@@ -36,7 +36,7 @@ class BoxCheckCase(preparation.PreparationCase):
         self.cards_csv("collection.csv", (ELF, "fdn", "227", "nonfoil", 8),
                        (MYSTIC, "cmm", "648", "nonfoil", 8), (POISON, "mkm", "170", "nonfoil", 3))
         self.deck("a", "A", "built", MAIN, owned=f"Deck\n2 {MYSTIC}\n20 Forest\n", built_version="target")
-        patcher = mock.patch.object(box_check, "_today", return_value=WHEN)
+        patcher = mock.patch.object(box_check, "_box_check_today", return_value=WHEN)
         patcher.start()
         self.addCleanup(patcher.stop)
 

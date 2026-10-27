@@ -251,7 +251,7 @@ class ReceiptTests(support.PoolTestCase):
         self.record()
         self.status(("kept.csv", "owned", "yes"), ("test.csv", "ordered", ""))
         after, _ = inventory.preview(self.op({"id": "product-test", "verified": False, "intact": "yes"}))
-        self.assertTrue(files.render_sheet(after.status).startswith(b"file,status,intact,sleeves,deck_box,notes\n"))
+        self.assertTrue(files.render_sheet(after.status).startswith(b"file,status,intact,sleeves,deck_box,notes,token_cards\n"))
         self.write("products/status.csv", "file,status,intact,sleeves,deck_box,notes\n"
                                           "kept.csv,owned,yes,red,,\ntest.csv,ordered,,blue,blue box,\n")
         self.receive({"id": "product-test", "verified": False, "intact": "no"})
@@ -481,7 +481,7 @@ class TokenHelperTests(unittest.TestCase):
                                             "status.csv")[0]["sleeves"], "red")
         self.assertEqual(rules.parse_status("file,status,intact,notes\nx.csv,owned,yes,n\n", "status.csv"),
                          [{"file": "x.csv", "status": "owned", "intact": "yes", "notes": "n", "sleeves": "",
-                           "deck_box": ""}])
+                           "deck_box": "", "token_cards": ""}])
         with self.assertRaisesRegex(ValueError, "expected columns file,status,intact,sleeves,deck_box,notes"):
             rules.parse_status("file,status,intact,sleeves,notes\nx.csv,owned,yes,red,n\n", "status.csv")
 

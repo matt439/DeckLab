@@ -21,7 +21,7 @@ from .settings import _writer
 SHA = re.compile(r"[a-f0-9]{64}")
 
 
-def _today():
+def _box_check_today():
     return date.today().isoformat()
 
 
@@ -99,7 +99,7 @@ def save_box_check(body):
         raise ApiError(409, "The physical checklist changed. Refresh the plan before saving this box check.")
     try:
         result = boxcheck.compare(sections, data["rows"], data["extras"], canonical_name=_exact_name)
-        checked_on = _today()
+        checked_on = _box_check_today()
         boxcheck.record_date(deck, checked_on)
         text = decks.render_deck_file(deck)
     except (ValueError, decks.DeckFileError) as error:

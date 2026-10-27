@@ -571,7 +571,7 @@ function activityUndoShow(ctx) {
   } else if (accessoryAdding) {
     const row = preview.restored, zero = row.quantity === "0", units = row.kind === "sleeves"
       ? row.quantity === "1" ? "individual sleeve" : "individual sleeves" : row.quantity === "1" ? "item" : "items";
-    sheet.body.append(el("p", { class: "box box-warn", text: zero
+    add(sheet.body, [el("p", { class: "box box-warn", text: zero
       ? "Restore this zero-quantity reference record. No owned items are added."
       : "Undo restores all " + row.quantity + " " + units + " in this historical accessory record, in addition to the quantities already recorded in Sleeves & boxes." }),
       el("p", { class: "sub", text: "Saving creates one new audited change; the original audit stays in Activity. No photo or kit assignments are restored. Recorded image-source URLs restore as text; no photo is recovered." }),
@@ -580,7 +580,7 @@ function activityUndoShow(ctx) {
         el("dl", {}, ACTIVITY_UNDO_ACCESSORY_STOCK_FIELDS.flatMap(field => [el("dt", { text: words[field] || field.replaceAll("_", " ") }),
           el("dd", { class: ["notes", "link", "image_source"].includes(field) ? "activity-undo-note" : null,
             text: field === "owner" ? row.owner === "shared" ? "Shared" : state.profile?.name || row.owner
-              : field === "kind" ? { sleeves: "Sleeves", deck_box: "Deck box", playmat: "Playmat" }[row.kind] : text(row[field]) })]))));
+              : field === "kind" ? { sleeves: "Sleeves", deck_box: "Deck box", playmat: "Playmat" }[row.kind] : text(row[field]) })])))]);
     const id = "activity-undo-restore-" + sheet.heading.id;
     ownershipInput = el("input", { id, type: "checkbox" }); ownershipInput.checked = false;
     sheet.body.append(el("label", { class: "choice", for: id }, ownershipInput, el("span", { text: zero
@@ -628,13 +628,13 @@ function activityUndoShow(ctx) {
       accessoryRetyping ? el("p", { text: "Recorded quantity: " + kindCount(key === "before" ? preview.current : preview.restored) + "." }) : null));
     const identityText = field => preview.kind === "accessory" && field === "kind" ? { sleeves: "Sleeves", deck_box: "Deck box", playmat: "Playmat" }[preview.current.kind]
       : preview.kind === "accessory" && field === "owner" ? preview.current.owner === "shared" ? "Shared" : state.profile?.name || preview.current.owner : text(preview.current[field]);
-    sheet.body.append(el("p", { class: "sub", text: preview.kind === "accessory"
+    add(sheet.body, [el("p", { class: "sub", text: preview.kind === "accessory"
       ? "Review the recorded accessory details this Undo will restore. Saving creates one new audited change and retains the current photo and kit; the original change stays in Activity. A restored image-source URL is not checked against the current photo."
       : "Review the current row and the values this Undo will restore. Saving creates one new audited change; the original change stays in Activity." }),
       preview.kind === "accessory" && preview.fields.some(field => field.field === "capacity")
         ? el("p", { class: "sub", text: "Recorded box capacity is in sleeved cards. Fit warnings may change; kit assignments stay as they are." }) : null,
       identity.length ? el("dl", {}, identity.flatMap(field => [el("dt", { text: field === "number" ? "collector number" : field.replaceAll("_", " ") }), el("dd", { text: identityText(field) })])) : null,
-      el("div", { class: "panels" }, panels));
+      el("div", { class: "panels" }, panels)]);
     if (accessoryCounting) {
       const row = preview.restored, zero = row.quantity === "0", units = row.kind === "sleeves"
         ? row.quantity === "1" ? "individual sleeve" : "individual sleeves" : row.quantity === "1" ? "item" : "items";
@@ -688,10 +688,10 @@ function activityUndoShow(ctx) {
     }
     if (accessoryCorrecting) {
       const row = preview.restored, zero = row.quantity === "0", ownerChanged = preview.current.owner !== row.owner;
-      sheet.body.append(el("p", { class: "box box-warn", text: "Undo restores this whole recorded correction together. Review both complete records, including kind, count and whose accessories they are. The restored quantity replaces this record's current total. Current photos, crop and kit assignments stay as they are. Only an unused record can be recovered here; references are checked again when you save." }),
+      add(sheet.body, [el("p", { class: "box box-warn", text: "Undo restores this whole recorded correction together. Review both complete records, including kind, count and whose accessories they are. The restored quantity replaces this record's current total. Current photos, crop and kit assignments stay as they are. Only an unused record can be recovered here; references are checked again when you save." }),
         el("p", { class: "sub", text: zero ? "The restored entry is a zero-quantity reference record. No owned items are added."
           : "Confirm the restored kind and entire count still match the accessories you own. Sleeves count individual sleeves, loose ones included; boxes and playmats count items. If any facts differ, cancel and use Sleeves & boxes to record the actual details." }),
-        ownerChanged ? el("p", { class: "sub", text: "Both people at home can see and change Shared accessories; only you can change Mine. Read access also follows the destination owner's existing Public/Private kit setting. Undo does not change that setting." }) : null);
+        ownerChanged ? el("p", { class: "sub", text: "Both people at home can see and change Shared accessories; only you can change Mine. Read access also follows the destination owner's existing Public/Private kit setting. Undo does not change that setting." }) : null]);
       const id = "activity-undo-record-" + sheet.heading.id;
       ownershipInput = el("input", { id, type: "checkbox" }); ownershipInput.checked = false;
       sheet.body.append(el("label", { class: "choice", for: id }, ownershipInput, el("span", { text: zero

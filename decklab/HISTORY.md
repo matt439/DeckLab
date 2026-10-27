@@ -2,6 +2,12 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## PR integration checks (2026-10-27)
+
+Accessory Undo now adds optional review content through the shared null-filtering helper, so absent stock, capacity, identity and sharing paragraphs cannot become literal `null` text in the browser. The web write-path guard recognizes the crop preview's single explicit photo GET while continuing to require every write through `apiWrite`. The box-check clock has its own helper name, preserving saving's existing `_today` patch seam. Older deck-response and product-status assertions now include `box_checked_on` and `token_cards`.
+
+All 127 affected web/Undo UI checks, 88 API/box-check checks and 28 receive-order checks passed, with repository Ruff and whitespace checks clear. A separate broad recovery/privacy/migration selection covered 447 distinct tests, including disposable PostgreSQL and JavaScript UI checks; its four web privacy cases passed separately with CI's absent-config setup after an initial local harness name collision. No live migration or server activation was performed. Full Windows PR CI remains the merge gate.
+
 ## Restore a recorded crop on the current photo (2026-10-27; E11-S08)
 
 One complete global accessory UPDATE changing only crop now uses `accessory_crop_update`. Both RAW13 rows are canonical and every other cell stays exact, including a nonblank image filename. The review and receipt include the exact current-photo envelope (name, size, full SHA-256 and address-epoch version), with the photo bound into the review token. A narrow Undo-only reader requires the active transaction connection and locks/reads only the authorized target image; actual length/hash, normal format/dimension checks and metadata are proved at preview, locked operation and post-SQL verification. The trusted verifier explicitly binds/restores that connection, rather than relying on generic image reads (which open another connection). Actual uncommitted byte changes and excluded-from-equality image content cannot bypass final proof. One ordinary crop edit keeps current bytes, stock, kit and visibility, including held accessories, with exact raw/opposite-audit/photo receipts and an absent actual reason. Older actions keep their token shapes and do not read photo bytes for this feature.
