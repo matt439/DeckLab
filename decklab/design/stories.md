@@ -603,7 +603,7 @@ First slice: an `o:` (rules text) and `t:` (type line) term in find_cards, match
 
 How a player finds out whether a deck works before playing or buying cards: instant stats on the deck page's Stats tab, practice games on the Practice tab, Forge matchups and Rankings (#/matchups, #/matchup), the field rank on the Matchups tab, paired tests of a change from the editor (#/variant), and the simulations setting on #/settings. Matchups, fields, rankings and tests follow deck privacy: each viewer sees only results whose every side they may see, a member's field is their own space plus Public spaces, and a run may be stopped by whoever started it, anyone whose space's deck it uses, or an admin. Not yet covered: 4-player Commander pods, sideboard testing, comparing real games with Forge's predictions, and members asking for a run while only admins may start one. Forge results are files outside the database's backups by decision, since they can be replayed.
 
-Open: E3-S13, E3-S19, E3-S23, E3-S24.
+Open: E3-S13, E3-S19, E3-S23.
 
 **E3-S01** · Matt · must · M · built
 
@@ -838,7 +838,7 @@ Evidence:
 
 Gap: membership changes only by hand-editing `decklab/simulation.json`; there's no 'Who's in the field' view, page control, audit entry or count of lists left out by hand. Criteria 1, 3 and 4 weren't checked beyond that, so none is claimed met.
 
-**E3-S24** · Matt · could · S · missing
+**E3-S24** · Matt · could · S · built
 
 As a deck builder, I want the chance of drawing a card, or any of a group of cards, by a chosen turn, so that I know how reliably the deck finds its key pieces.
 
@@ -848,12 +848,11 @@ As a deck builder, I want the chance of drawing a card, or any of a group of car
 
 Decided (Matt, 2026-10-27): added from the comparison with TopDecked's hypergeometric calculator.
 
+Now: Built 2026-10-27 ([HISTORY.md, Chance to draw on the Stats tab](../HISTORY.md#chance-to-draw-on-the-stats-tab-2026-10-27-e3-s24)). The group is the cards ticked in the panel; once E2-S24's categories exist, a category is one more way to tick them.
+
 Evidence:
-- `decklab/web/practice.js`: mulligan and land-drop panels (simulated, E3-S04)
-
-Gap: No exact draw-odds calculation for a chosen card or group.
-
-First slice: a "Chance to draw" panel on the Stats tab for a single card picked from the list.
+- `decklab/web/stats.js`: drawOddsPanel, chanceOfAtLeastOne, cardsSeenBy
+- `decklab/tests/test_stats_draw_odds.py`: test_a_card_and_a_group_by_a_chosen_turn_on_the_play_or_draw, test_commander_draws_from_the_99_and_defaults_to_the_draw
 
 ## E4: Get ready, play and learn
 

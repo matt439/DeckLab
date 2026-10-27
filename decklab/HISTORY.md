@@ -2,6 +2,17 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Chance to draw on the Stats tab (2026-10-27; E3-S24)
+
+A deck's Stats tab has a **Chance to draw** panel, from the comparison with TopDecked's hypergeometric calculator. Tick a card, or several as a group (any of them counts), choose the turn (1 to 20) and On the play or On the draw, and it shows the exact chance of seeing at least one by then, with a row for turns 1 to 7.
+
+- **Worked out on the page** (`web/stats.js` drawOddsPanel, chanceOfAtLeastOne, cardsSeenBy): no API or server change. It counts the shown list's main deck (the Planned or Play-now list, whichever the page shows), one line per card name across printings; the sideboard and a companion aren't drawn from. The cards seen are the opening seven and a draw each turn, none on turn 1 on the play.
+- **Commander:** the commander starts in the command zone, so the library is the other 99, and the panel starts On the draw, since nobody skips their first draw at a multiplayer table.
+- **What it ignores:** the result and its explanation say mulligans and extra card draw, searching and looking aren't counted. A Beginner Box half (never played alone) and a list under seven cards get no panel.
+- **Not in this:** categories as groups (E2-S24 isn't built yet), and a chance of drawing two or more.
+
+Validation: the new `test_stats_draw_odds.py` checks the numbers against Python's exact `math.comb` hypergeometric, and a card, a group, play or draw, the turn's limits, All lands and Clear, Commander's 99, and no panel for a Beginner Box half or a tiny list. Checked by eye at 1440 px and 390 px, light and dark, with no page-wide scroll.
+
 ## Printings in box (2026-10-27; E11-S30 slice 13)
 
 Deck Lab now records which physical printing of a built deck's cards is in its box, to the short design Matt approved on 2026-10-27. Cards are still counted by name: nothing reserves by printing.

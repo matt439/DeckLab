@@ -34,6 +34,23 @@ details.explain > p, details.explain > .formula { max-width: 72ch; }
 @media (min-width: 1000px) {
   .panel[aria-labelledby="h-curve"] > :is(.tiles, .chart, .chart-detail) { max-width: 900px; }
 }
+/* Chance to draw (drawOddsPanel): the turn and play/draw, the answer, then the ticked cards' list. */
+.odds-settings { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--s-4); margin: var(--s-3) 0; }
+.odds-turn { width: 9em; }
+.odds-result { margin: var(--s-3) 0; }
+.odds-result p { margin: var(--s-2) 0; }
+.odds-table-wrap { max-width: 100%; overflow-x: auto; }
+.odds-table { border-collapse: collapse; margin-top: var(--s-2); font-variant-numeric: tabular-nums; }
+.odds-table th, .odds-table td { padding: var(--s-1) var(--s-2); text-align: right; font-size: var(--fs-sm); }
+@media (max-width: 480px) { .odds-table th, .odds-table td { padding: var(--s-1) 5px; } }
+.odds-table th[scope="row"] { text-align: left; padding-left: 0; color: var(--ink-2); font-weight: var(--fw-semibold); }
+.odds-table .is-current { font-weight: var(--fw-bold); }
+.odds-tools { display: flex; flex-wrap: wrap; gap: var(--s-2); align-items: center; }
+.odds-tools input[type="search"] { flex: 1 1 12em; min-width: 0; }
+.odds-cards { list-style: none; margin: var(--s-2) 0 0; padding: 0; max-height: 22em; overflow-y: auto;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(16em, 1fr)); column-gap: var(--s-4); }
+.odds-cards .odds-qty { min-width: 1.5em; text-align: right; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+
 @media (forced-colors: active) { .verdict { border: 1px solid CanvasText; } }
 
 /* Colour sources */
