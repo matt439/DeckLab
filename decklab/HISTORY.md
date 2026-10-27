@@ -12,6 +12,10 @@ The editor's card finder now takes Scryfall-style terms beside a card's name: `o
 
 Validation: new FindCardsTests in `test_editor_writeup.py` on the fixture card data; the suite's four shards passed locally on Linux. The page's wording was checked by reading only: no browser run on real card data.
 
+## Print proxies (2026-10-27; E4-S25)
+
+A deck's Planned list can be played at home before every card has arrived. The deck page's More menu has **Print proxies** for a viewer who sees the deck's space's inventory (offered on the Planned list when it has missing copies, and on the Play-now list, which reads the Planned list's answer first). It prints a first page naming each proxy in print order, the stand-in it covers (the deck's saved Planned-list markers, `Shock` or `any card`) and how many copies are on the way and not printed, then one 63 × 88 mm card per missing copy, nine to a page. Missing copies are counted as the Cards tab marks them (shared between sections, so a card's missing copies fall on the sideboard). Each card is the large picture (672 px), a double-faced card's back right after its front, and a card with no picture is printed as its name, cost, type and rules. The sheet waits up to 15 seconds for its pictures before the print dialog opens. Its own `cards` page has a 6 mm margin so three rows fit A4 and US Letter; at 100% each card measured 63 × 88 mm in Chromium's print layout, three pages for ten cards on both sizes. `printCardSheet` and `cardSizePages` (`deck-print.js`) are kept separate for the box label (E8-S21). Nothing is saved.
+
 ## Printings in box (2026-10-27; E11-S30 slice 13)
 
 Deck Lab now records which physical printing of a built deck's cards is in its box, to the short design Matt approved on 2026-10-27. Cards are still counted by name: nothing reserves by printing.

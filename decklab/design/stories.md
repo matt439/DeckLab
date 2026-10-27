@@ -859,7 +859,7 @@ First slice: a "Chance to draw" panel on the Stats tab for a single card picked 
 
 This epic covers getting physical decks onto the table and learning from the games played: choosing the decks, pulling and sleeving the cards from home's shared pool on Build decks (#/assembly, the packing plan), reading a deck's How to play and practising opening hands, playing with sideboard plans, and recording the result on the Game log (#/play). Each game is seen only by the spaces whose decks it names, a side whose deck the viewer may not see shows only as words such as "one of the home decks", and each space changes only its own side (E10-S32). Teaching the rules is left to products like the Beginner Box, so Deck Lab keeps teaching minimal. User1 uses Deck Lab on her phone, so Build decks and the Game log on a phone matter most.
 
-Open: E4-S09, E4-S16, E4-S18, E4-S19, E4-S25, E4-S26.
+Open: E4-S09, E4-S16, E4-S18, E4-S19, E4-S26.
 
 **E4-S01** · Matt · must · L · built
 
@@ -1176,7 +1176,7 @@ Evidence:
 - `decklab/web/assembly-sections.js`: packSideboardChoice, remainingIntentPart
 - `decklab/tests/test_assembled_model.py`, `decklab/tests/test_assembly_sections_ui.py`, `decklab/tests/test_assembly_sections_safeguards.py`
 
-**E4-S25** · Matt · could · S · missing
+**E4-S25** · Matt · could · S · built
 
 As a player who wants to play a Planned list before every card has arrived, I want to print proxies of the missing cards, so that we can play the deck as planned at home now.
 
@@ -1186,13 +1186,13 @@ As a player who wants to play a Planned list before every card has arrived, I wa
 
 Decided (Matt, 2026-10-27): added from the comparison with proxy sites. Proxies are for casual home games only, where legality is ignored.
 
+Built 2026-10-27: More's **Print proxies** on the deck page, for a viewer who sees the deck's space's inventory, prints one 63 × 88 mm picture (the large one, with a double-faced card's back after its front; a card with no picture as its words) for each missing Planned-list copy, nine to a page, after a first page listing them in print order with the stand-in each covers and the copies on the way (not printed). From the Play-now list it reads the Planned list first. Nothing is saved.
+
 Evidence:
-- `decklab/web/deck-tools.js`: printDeck (the printed list sheet, E4-S17)
-- `decklab/web/deck-standins.js`: the stand-ins
-
-Gap: No proxy print.
-
-First slice: Print proxies in the deck page's More menu, printing the missing cards' cached images at card size.
+- `decklab/web/deck-print.js`: printProxies, proxyCopies, proxyPiece, proxyIntro, offersProxies; printCardSheet and cardSizePages, the card-size layout a box label (E8-S21) can reuse
+- `decklab/web/deck.js`: deckMoreItems (Print proxies)
+- `decklab/web/deck-tools.css`: the `cards` page (6 mm margin) and `.card-page`, `.proxy-card`
+- `decklab/tests/test_deck_proxies_ui.py`
 
 **E4-S26** · Matt · could · M · missing
 
@@ -2631,6 +2631,7 @@ Decided (Matt, 2026-10-27): added from the comparison with TopDecked's QR sharin
 
 Evidence:
 - `decklab/web/deck-tools.js`: printDeck (a printed sheet already exists)
+- `decklab/web/deck-print.js`: printCardSheet and cardSizePages (E4-S25's card-size print layout)
 
 Gap: No box label or QR code.
 
