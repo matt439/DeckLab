@@ -135,6 +135,7 @@ called as before (from decklab.lib import api; api.<name>). Each part:
     card_rulings.py  GET /api/cards/rulings: a card's Scryfall rulings for the card viewer (E1-S25)
     deck_page.py     decks_index(), deck_view() (the space's inventory only for those who may
                      see it)
+    compare.py       GET /api/deck/compare: two visible lists' stats side by side (E1-S13)
     practice.py      practice hands: JOBS, goldfish()
     forge_runs.py    Forge matchups: FORGE_JOBS, matchups(), matchup(), run_matchup(),
                      stop_matchup(), stop_jobs(); COORD_JOBS (wave 3's coordinators)

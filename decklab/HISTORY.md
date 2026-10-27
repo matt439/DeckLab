@@ -8,6 +8,16 @@ A trade is now one change instead of an unlinked removal and a separate merge: `
 
 Decisions: no raw import is kept, since a trade isn't an import and the audit rows hold both sides; a printing can't be both given and got. Activity's Undo doesn't reverse part of a trade (both Undo reviews refuse it); a trade's own whole-change Undo and the Collection page's Record a trade are later slices of E7-S22. Validation: `test_collection_trade.py` (11 cases: the operation on files and on a disposable PostgreSQL 16 database, including one change set with a DELETE and an INSERT, no raw import and both Undo refusals, and the command in the Collection sandbox).
 
+## Compare two decks: stats (2026-10-27; E1-S13)
+
+The first slice of comparing two decks: a read-only Compare decks page (`#/compare?a=<id>&av=<v>&b=<id>&bv=<v>`, `web/compare.js`, under Decks in the nav) showing two lists' stats side by side, so choosing between two decks, or a deck's Planned and Play-now lists, doesn't mean flicking between pages.
+
+- **The data:** GET `/api/deck/compare` (`api/compare.py`) gives each list the deck page's own stats (`deck_page._deck_stats`) and only the summary fields that name the deck (no kit). Both decks go through `_deck_sections`, so a deck the viewer may not see, on either side, answers exactly as a missing one (404 "No deck <id>") before any stats are worked out. Nothing of the inventory is read.
+- **The page:** two deck pickers (the matchup sheet's `deckPicker`, over the viewer's own library) and Compare; the two decks' heads with their colours; an In brief table (cards, average mana value, creatures, other spells, lands against the formula, colour sources, bracket); both mana curves on one scale (the taller deck's, `drawCurve`'s new `scaleMax`), side by side from 600px; and tables with a column per deck for land count, colour sources and card types and roles.
+- **The entry:** the deck page's More menu has **Compare with…**, which opens the page with that deck and list first and the next deck in the library second.
+
+Validation: new `test_compare.py` (the answer, a deck's two lists, bad input, a hidden deck on either side for User2, User1 and Matt, the HTTP route) and `test_compare_ui.py` (the page under Node); the DOM double gained `select.options`. Checked with Playwright at 390, 820 and 2560px wide in light and dark on a static harness with made-up stats, not real card data. Cards both lists use and head to head are later slices.
+
 ## Card rulings in the card viewer (2026-10-27; E1-S25)
 
 The card viewer now shows a card's Scryfall rulings under its rules text, from the comparison with ManaBox and Dragon Shield.

@@ -336,6 +336,7 @@ function deckMoreItems(data) {
     home ? { label: routeH1("assembly"), href: `#/assembly?deck=${id}&version=${data.version}` } : null,
     { label: routeH1("play"), href: `#/play?id=${id}` },
     !s.read_only ? { label: "History", href: `#/history?id=${id}&v=${data.version}` } : null,
+    { label: "Compare with…", href: compareHref(s.id, data.version) },
     "sep",
     { label: "Copy decklist", onclick: () => copyDeck(data) },
     { label: "Download decklist", onclick: () => downloadDeck(data) },

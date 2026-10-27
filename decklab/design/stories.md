@@ -35,7 +35,7 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 
 | Epic | Stories | Built | Partial | Missing | Not wanted |
 |---|---:|---:|---:|---:|---:|
-| [E1: Find, plan and choose decks](#e1-find-plan-and-choose-decks) | 14 | 11 | 0 | 3 | 0 |
+| [E1: Find, plan and choose decks](#e1-find-plan-and-choose-decks) | 14 | 11 | 1 | 2 | 0 |
 | [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 19 | 14 | 1 | 3 | 1 |
 | [E3: Test a deck](#e3-test-a-deck) | 15 | 12 | 3 | 0 | 0 |
 | [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 22 | 16 | 1 | 4 | 1 |
@@ -46,7 +46,7 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E9: Commander nights](#e9-commander-nights) | 20 | 13 | 0 | 6 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 35 | 31 | 1 | 1 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 28 | 17 | 6 | 2 | 3 |
-| **Total** | **241** | **177** | **16** | **34** | **14** |
+| **Total** | **241** | **177** | **17** | **33** | **14** |
 
 Counted from the story headers on 2026-10-27.
 
@@ -178,7 +178,7 @@ Evidence:
 
 Gap: The Overview shows nothing about strength. The rank and range already exist on the Matchups tab and in #/matchups Rankings (E3-S10); the work is surfacing one line on the Overview.
 
-**E1-S13** · Matt · could · L · missing
+**E1-S13** · Matt · could · L · partial
 
 As a deck builder, I want to compare two decks side by side (curve, colours, lands, card types, cards they both want, and how they've done against each other), so that choosing between two decks, or between two versions of an idea, doesn't mean flicking between pages.
 
@@ -186,12 +186,14 @@ As a deck builder, I want to compare two decks side by side (curve, colours, lan
 - Given cards both lists use, when the comparison opens, then they are listed with how many copies the pool can cover for both.
 - Given saved Forge results or recorded games between them, when the comparison opens, then the latest result and the Head to head count are linked.
 
+Now: the stats slice built 2026-10-27 ([HISTORY.md](../HISTORY.md#compare-two-decks-stats-2026-10-27-e1-s13)): #/compare shows two visible lists' verdicts, curves on one scale, lands, colour sources and card types side by side, opened from a deck page's Compare with….
+
 Evidence:
-- `decklab/web/core.js`: ROUTES (no compare route)
+- `decklab/lib/api/compare.py`: compare_view (GET /api/deck/compare)
+- `decklab/web/compare.js`: showCompare, comparePicker, compareBrief, compareCurvePanel; `decklab/web/deck.js`: deckMoreItems
+- `decklab/tests/test_compare.py`, `decklab/tests/test_compare_ui.py`
 
-Gap: There's no compare view. The pieces are separate: each deck's Stats, #/matchups, Head to head in #/play, the Packing plan, and History's revision compare.
-
-First slice: a read-only compare page for two chosen decks with their curves, colours, land counts and card types side by side (the stats outcome only; shared cards and head to head follow).
+Gap: cards both lists use, with the copies the pool covers for both, and the latest Forge result and Head to head count between them, aren't shown yet.
 
 Review note: L with three separate outcomes; could split into stats, shared cards and head to head.
 
