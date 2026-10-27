@@ -8,6 +8,16 @@ A trade is now one change instead of an unlinked removal and a separate merge: `
 
 Decisions: no raw import is kept, since a trade isn't an import and the audit rows hold both sides; a printing can't be both given and got. Activity's Undo doesn't reverse part of a trade (both Undo reviews refuse it); a trade's own whole-change Undo and the Collection page's Record a trade are later slices of E7-S22. Validation: `test_collection_trade.py` (11 cases: the operation on files and on a disposable PostgreSQL 16 database, including one change set with a DELETE and an INSERT, no raw import and both Undo refusals, and the command in the Collection sandbox).
 
+## Rules-text and type-line search (2026-10-27; E2-S25)
+
+The editor's card finder now takes Scryfall-style terms beside a card's name: `o:` (or `oracle:`) searches rules text and `t:` (or `type:`) the type line, each a word or a quoted phrase (`o:"draw a card"`, a phone's curly quotes too), every term to match, as in `o:treasure t:creature` (`api/editor.py`, `_find_terms` and `_term_fits`).
+
+- **Matching:** loose (`cards.fold`) and anywhere in the text, as Scryfall does (`t:legend` finds Legendary). A multi-face card's every face counts, for its type line and its rules text; a `~` in an `o:` term stands for the card's own name (`o:"when ~ enters"`). A term with nothing after its colon yet counts for nothing, so typing one doesn't flash an error.
+- **With the rest:** the name words, and the colour, type and mana value filters, still apply; terms alone browse every paper card, and in My collection only cards with a copy free for this deck show. The name search's ordering and "did you mean" use the name words only, and the page offers no close spellings after a search with terms.
+- **Unknown terms:** any other `key:` answers 400 with the term named ("The search doesn't know the term c:red. It knows o: for rules text and t: for the type line…", `reason` "term"), shown as it is in the results. A colon in a card name ("Circle of Protection: Red") stays name text.
+
+Validation: new FindCardsTests in `test_editor_writeup.py` on the fixture card data; the suite's four shards passed locally on Linux. The page's wording was checked by reading only: no browser run on real card data.
+
 ## Chance to draw on the Stats tab (2026-10-27; E3-S24)
 
 A deck's Stats tab has a **Chance to draw** panel, from the comparison with TopDecked's hypergeometric calculator. Tick a card, or several as a group (any of them counts), choose the turn (1 to 20) and On the play or On the draw, and it shows the exact chance of seeing at least one by then, with a row for turns 1 to 7.

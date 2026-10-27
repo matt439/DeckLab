@@ -284,7 +284,7 @@ First slice: download and index Scryfall's rulings bulk file in `cards update`, 
 
 Covers making a deck and keeping it right: New deck and Start from, the full editor (from 600px) and the phone's Quick edit, Paste a list, the Planned and Play-now lists, owned vs needed against the space's pool and its other built decks, keeping the write-up current, history and undo, and the command-line route Claude Code uses (`deck pull`/`push`/`new`/`tables`). Drafts stay on the device they were started on, and the Play-now list's substitutes are hand-written (Packing's physical stand-ins, E4-S21, never change a list). Rename and retirement, with restore from History, are on the deck page (E1-S19). Legality badges on casual decks are deliberately not wanted.
 
-Open: E2-S16, E2-S22, E2-S23, E2-S24, E2-S25.
+Open: E2-S16, E2-S22, E2-S23, E2-S24.
 
 **E2-S01** · Matt · must · L · built
 
@@ -580,7 +580,7 @@ Gap: No per-card categories exist in the deck text or the pages.
 
 First slice: a category suffix on decklist lines that the parser keeps and the deck page can group by.
 
-**E2-S25** · Matt · could · M · missing
+**E2-S25** · Matt · could · M · built
 
 As a deck builder building from the pool, I want to search cards by rules text and type line (Scryfall-style terms such as `o:treasure t:creature`), so that I can find owned cards that do what a deck needs.
 
@@ -590,12 +590,12 @@ As a deck builder building from the pool, I want to search cards by rules text a
 
 Decided (Matt, 2026-10-27): added from the comparison with Archidekt, Moxfield and TopDecked.
 
+Now (2026-10-27): [built](../HISTORY.md#rules-text-and-type-line-search-2026-10-27-e2-s25): `o:` and `t:` terms (words or quoted phrases, all to match) beside the name words, in both scopes and with the filters; an unknown term is named back.
+
 Evidence:
-- `decklab/lib/api/editor.py`: find_cards, _fits (name search plus colour identity, type and mana value)
-
-Gap: The finder can't search rules text or type lines.
-
-First slice: an `o:` (rules text) and `t:` (type line) term in find_cards, matched against the local card data.
+- `decklab/lib/api/editor.py`: find_cards, _find_terms (the terms, an unknown one as a 400 naming it), _term_fits (every face's type line and rules text, `~` for the card's name), _fits
+- `decklab/web/editor-cards.js`: lookUp (an unknown term's message as it is, no close spellings after terms), hasFindTerms, the search box's tooltip
+- `decklab/tests/test_editor_writeup.py`: FindCardsTests (terms, phrases, filters, My collection, unknown terms, a colon in a card name)
 
 ---
 
