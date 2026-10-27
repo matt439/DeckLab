@@ -6,6 +6,7 @@ from unittest import mock
 
 from decklab.lib import access, decks
 from decklab.lib.api import product_label, settings
+from decklab.lib.decks.identity import CardIdentityError
 from decklab.tests.test_assembly_completion import PROFILES
 from decklab.tests.test_pool import PoolTestCase, setUpModule, tearDownModule  # noqa: F401
 
@@ -56,6 +57,13 @@ class ProductLabelTests(PoolTestCase):
         with access.using({"profile": "user2", "email": "", "remote": True}), \
                 mock.patch.object(decks, "_product_decks", side_effect=AssertionError("guard first")):
             self.assertIsNone(product_label.box_label(route))
+
+    def test_damaged_colour_data_leaves_only_the_colours_out(self):
+        with mock.patch.object(product_label, "deck_colors", side_effect=CardIdentityError("bad identity")),                 mock.patch.object(product_label.common, "_log") as log:
+            label = product_label.box_label(f"product/{STEM}/elves")
+        self.assertIsNone(label["colors"])
+        self.assertEqual([d["title"] for d in label["decks"]], ["Elves", "Control"])
+        log.assert_called_once()
 
     def test_a_failure_leaves_the_label_out(self):
         with mock.patch.object(decks, "_product_decks", side_effect=OSError("unreadable")), \

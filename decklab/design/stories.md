@@ -41,12 +41,12 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 22 | 16 | 1 | 4 | 1 |
 | [E5: Decide what to buy](#e5-decide-what-to-buy) | 22 | 15 | 0 | 5 | 2 |
 | [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 20 | 17 | 0 | 1 | 2 |
-| [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 28 | 20 | 3 | 5 | 0 |
-| [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 18 | 11 | 1 | 4 | 2 |
+| [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 28 | 20 | 4 | 4 | 0 |
+| [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 18 | 12 | 1 | 3 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 20 | 13 | 0 | 6 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 35 | 31 | 1 | 1 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 28 | 17 | 6 | 2 | 3 |
-| **Total** | **241** | **177** | **16** | **34** | **14** |
+| **Total** | **241** | **178** | **17** | **32** | **14** |
 
 Counted from the story headers on 2026-10-27.
 
@@ -2363,7 +2363,7 @@ First slice: a spike reading the set code and collector number from a photo of a
 
 The physical side of home's shared pool: each built deck and each product kept intact is in one sleeve design and one deck box, every other card sits unsleeved in the storage box, and moving a card between decks means changing its sleeve. Deck Lab records the sleeves, deck boxes and playmats (each Matt's, User1's or shared) on the Sleeves & boxes page, a built deck's Sleeves and Deck box lines and an intact product's kit, warns when a holder has too few sleeves or a box that is full or too small, and lets one sleeve design sleeve several holders. Choosing a deck's kit needs the right to edit that deck; an owner may make their kit public (read-only), and members never see private kit. Accessory prices are not wanted.
 
-Open: E8-S03, E8-S15, E8-S19, E8-S21, E8-S22.
+Open: E8-S03, E8-S15, E8-S19, E8-S22.
 
 **E8-S01** · Matt · must · M · built
 
@@ -2636,7 +2636,7 @@ Now: first slice built 2026-10-27 ([HISTORY.md](../HISTORY.md#print-a-deck-box-l
 
 Evidence:
 - `decklab/web/qr.js`: qrMatrix, qrSvg, qrReedSolomon
-- `decklab/web/deck-label.js`: offersBoxLabel, productBoxLabel, boxLabelAddress, boxLabelTarget, boxLabelPiece, printBoxLabel
+- `decklab/web/deck-label.js`: offersBoxLabel, productBoxLabel, boxLabelAddress, boxLabelTarget, boxLabelDecks, boxLabelPiece, printBoxLabel
 - `decklab/lib/api/product_label.py`: box_label (GET /api/deck's `box_label`, `decklab/lib/api/deck_page.py`: deck_view); `decklab/web/product-storage.js`: productBoxDecks
 - `decklab/web/deck.js`: deckMoreItems (Print box label)
 - `decklab/web/deck-print.js`: printCardSheet and cardSizePages (E4-S25's card-size print layout)

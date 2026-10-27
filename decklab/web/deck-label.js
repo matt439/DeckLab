@@ -41,6 +41,19 @@ function boxLabelTarget(data) {
   return product ? product.link : data.summary.id;
 }
 
+/* The most deck names one card-size label lists, in two columns past BOX_LABEL_ONE_COLUMN; with more, the
+   last place says how many more, so the list never pushes the QR code off the card (deck-tools.css). */
+const BOX_LABEL_ONE_COLUMN = 4, BOX_LABEL_MOST_DECKS = 12;
+
+/** An intact product's deck names for its label, one line each, at most BOX_LABEL_MOST_DECKS places. */
+function boxLabelDecks(decks) {
+  const names = decks.map((d) => d.title);
+  const shown = names.length > BOX_LABEL_MOST_DECKS
+    ? names.slice(0, BOX_LABEL_MOST_DECKS - 1).concat(`and ${names.length - BOX_LABEL_MOST_DECKS + 1} more`) : names;
+  return el("ul", {class: names.length > BOX_LABEL_ONE_COLUMN ? "box-label-decks box-label-decks-many" : "box-label-decks"},
+    shown.map((name) => el("li", {text: name, title: name})));
+}
+
 /** The label: colour symbols, title, who plays it (or a product's decks) and the QR code, card-size. */
 function boxLabelPiece(data) {
   const s = data.summary, product = productBoxLabel(data);
@@ -57,7 +70,7 @@ function boxLabelPiece(data) {
       identity.colours.map((c) => symbolImg(c, {alt: ""}))) : null,
     el("h1", {class: "box-label-title", text: title}),
     home ? el("p", {class: "box-label-player", text: `Played by ${playerWords(s.player)}`}) : null,
-    several ? el("ul", {class: "box-label-decks"}, product.decks.map((d) => el("li", {text: d.title}))) : null,
+    several ? boxLabelDecks(product.decks) : null,
     code,
     el("p", {class: "box-label-scan", text: several ? "Scan for its decks' pages" : "Scan for the deck page"}));
 }

@@ -13,7 +13,7 @@ decoration: anything that fails leaves it out and the page shows the deck as alw
 import traceback
 
 from decklab.lib import decks
-from decklab.lib.decks.identity import COLOR_ORDER, deck_colors
+from decklab.lib.decks.identity import COLOR_ORDER, CardIdentityError, deck_colors
 
 from . import common, guard
 
@@ -22,7 +22,7 @@ def box_label(deck_id):
     """{"name", "colors", "link", "decks": [{"id", "title"}]} for an intact product's deck page, else None.
 
     colors is the union of its decks' colour identities in WUBRG order ([] colourless), None when no deck's
-    could be read. A deck's title is its name in the product (the product's name for an unnamed deck)."""
+    could be read or a card's identity data is damaged (the label still prints, without symbols). A deck's title is its name in the product (the product's name for an unnamed deck)."""
     if not isinstance(deck_id, str) or not deck_id.startswith("product/") or not guard.sees_home_records():
         return None
     try:
@@ -36,11 +36,15 @@ def box_label(deck_id):
         if not routes:
             return None
         colours, known = set(), False
-        for route in routes:
-            found = deck_colors(route.get("sections") or {})
-            if found is not None:
-                known = True
-                colours.update(found)
+        try:
+            for route in routes:
+                found = deck_colors(route.get("sections") or {})
+                if found is not None:
+                    known = True
+                    colours.update(found)
+        except CardIdentityError:   # only the symbols are lost: a partial union would print wrong colours
+            common._log(f"The box label of {deck_id} has no colours:\n" + traceback.format_exc())
+            known = False
         return {"name": record["title"], "colors": [c for c in COLOR_ORDER if c in colours] if known else None,
                 "link": routes[0]["id"],
                 "decks": [{"id": route["id"], "title": route.get("deck") or record["title"]} for route in routes]}

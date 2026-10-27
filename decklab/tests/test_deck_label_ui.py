@@ -180,6 +180,24 @@ class DeckLabelUiTests(unittest.TestCase):
           assert.equal(productBoxDecks({...page, box_label: {...page.box_label, decks: page.box_label.decks.slice(0, 1)}}), null);
         """)
 
+    def test_a_product_with_many_decks_keeps_its_code_on_the_label(self):
+        self.run_js("""
+          const page = makePage(); page.summary = {...page.summary, id: 'product/box/d1', title: 'D1 (Box)', read_only: true};
+          const label = (n) => { page.box_label = {name: 'Box', colors: ['G'], link: 'product/box/d1',
+            decks: Array.from({length: n}, (_, i) => ({id: `product/box/d${i + 1}`, title: `Deck ${i + 1}`}))};
+            return boxLabelPiece(page).querySelector('.box-label-decks'); };
+          assert.equal(label(4).getAttribute('class'), 'box-label-decks');
+          assert.equal(label(5).getAttribute('class'), 'box-label-decks box-label-decks-many');
+          assert.equal(label(12).querySelectorAll('li').length, 12);
+          const many = label(15).querySelectorAll('li').map((li) => li.textContent);
+          assert.equal(many.length, 12);
+          same(many.slice(-2), ['Deck 11', 'and 4 more']);
+        """)
+        css = (WEB / "deck-tools.css").read_text(encoding="utf-8")
+        self.assertIn(".box-label .qr-code { width: 40mm; height: 40mm; margin-top: auto; flex-shrink: 0; }", css)
+        self.assertRegex(css, r"\.box-label-decks \{[^}]*min-height: 0; overflow: hidden;")
+        self.assertIn(".box-label-decks li { white-space: nowrap;", css)
+
     def test_a_single_deck_products_label(self):
         self.run_js("""
           const page = makePage(); page.summary = {...page.summary, id: 'product/solo', title: 'Solo', read_only: true};
