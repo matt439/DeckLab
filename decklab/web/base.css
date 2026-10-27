@@ -99,7 +99,7 @@ main { padding-bottom: var(--s-6); outline: none; }
 
 /* Selects and text inputs (design/visual-design.md 4.5): --input-h tall (44 on touch, 32 in the lab), --r-field
    corners (12 casual, 8 in the lab), a search field round, and --fs-input text, which is 16 px wherever there's
-   no fine pointer, so iOS never zooms in on the box. Focused: a teal edge and a 3 px --focus-halo (the outline
+   no fine pointer, so iOS never zooms in on the box. Focused: an accent edge and a 3 px --focus-halo (the outline
    is transparent, so a forced-colours screen still draws it). */
 
 :where(input:not([type="checkbox"], [type="radio"], [type="file"], [type="range"], [type="color"],

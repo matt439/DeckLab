@@ -81,7 +81,7 @@ function shopUnits(component) {
 }
 
 /** A state worth a chip on a delivery (the section already says "On the way"): part received (a neutral outline:
- * a delivery state isn't teal, visual-design.md section 6 question 2), preordered. */
+ * a delivery state isn't accent, visual-design.md section 6 question 2), preordered. */
 function shopOrderChip(order) {
   if (order.status === "partial") return status("outline", "Part received");
   const product = (order.components || []).find((c) => c.kind === "product" && c.status === "pending");
