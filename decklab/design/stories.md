@@ -35,7 +35,7 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 
 | Epic | Stories | Built | Partial | Missing | Not wanted |
 |---|---:|---:|---:|---:|---:|
-| [E1: Find, plan and choose decks](#e1-find-plan-and-choose-decks) | 14 | 11 | 0 | 3 | 0 |
+| [E1: Find, plan and choose decks](#e1-find-plan-and-choose-decks) | 14 | 11 | 1 | 2 | 0 |
 | [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 19 | 14 | 1 | 3 | 1 |
 | [E3: Test a deck](#e3-test-a-deck) | 15 | 12 | 3 | 0 | 0 |
 | [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 22 | 16 | 1 | 4 | 1 |
@@ -46,7 +46,7 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E9: Commander nights](#e9-commander-nights) | 20 | 13 | 0 | 6 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 35 | 31 | 1 | 1 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 28 | 17 | 6 | 2 | 3 |
-| **Total** | **241** | **177** | **16** | **34** | **14** |
+| **Total** | **241** | **177** | **17** | **33** | **14** |
 
 Counted from the story headers on 2026-10-27.
 
@@ -242,7 +242,7 @@ Evidence:
 - `decklab/web/card-viewer.js`: openCardViewer, stepViewer, flipViewer, toggleViewerText, viewerPointerUp, pushViewerEntry
 - `decklab/tests/test_card_inspector.py`: test_viewer_faces_reading_errors_dismissal_focus_groups_and_swipes
 
-**E1-S24** · Matt · could · M · missing
+**E1-S24** · Matt · could · M · partial
 
 As a deck builder starting from what we own, I want published precons ranked by how much of each one our free pool already covers, so that I can see which deck we could put together next with the fewest purchases.
 
@@ -255,10 +255,12 @@ Decided (Matt, 2026-10-27): added from the comparison with MTGGoldfish's Super B
 Evidence:
 - `decklab/lib/precons.py`: deck_list, search (MTGJSON's precon lists, already cached for Add a precon)
 - `decklab/lib/pool.py`: free copies per space
+- `decklab/lib/precon_coverage.py`: rank, score, fetch, main (`python -m decklab.lib.precons coverage|fetch`)
+- `decklab/tests/test_precon_coverage.py`
 
-Gap: No view ranks lists by how much of them the pool covers.
+Now: the first slice is built 2026-10-27 ([HISTORY.md](../HISTORY.md#precons-ranked-by-free-pool-coverage-2026-10-27-e1-s24)): `python -m decklab.lib.precons coverage [--space S] [--format commander|casual] [--limit N] [--json]` ranks the cached precons by the share of their cards (basic lands left out) with a copy free for a new deck, and `precons fetch [--format F]` caches the lists it ranks.
 
-First slice: a read-only command, `python -m decklab.lib.precons coverage [--space S] [--format F]`, printing the top precons by free-pool coverage.
+Gap: No page shows the ranking yet, nor a precon's missing cards with their AUD cost or Start a deck from it; the 403 for a viewer who may not see the inventory comes with the page.
 
 **E1-S25** · User1 · could · S · built
 

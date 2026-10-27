@@ -8,6 +8,18 @@ A trade is now one change instead of an unlinked removal and a separate merge: `
 
 Decisions: no raw import is kept, since a trade isn't an import and the audit rows hold both sides; a printing can't be both given and got. Activity's Undo doesn't reverse part of a trade (both Undo reviews refuse it); a trade's own whole-change Undo and the Collection page's Record a trade are later slices of E7-S22. Validation: `test_collection_trade.py` (11 cases: the operation on files and on a disposable PostgreSQL 16 database, including one change set with a DELETE and an INSERT, no raw import and both Undo refusals, and the command in the Collection sandbox).
 
+## Precons ranked by free-pool coverage (2026-10-27; E1-S24)
+
+The first slice of E1-S24, from the comparison with MTGGoldfish's Super Brew: a read-only command that ranks the published precons by how much of each one a space's free pool already covers, to see which deck could be put together next with the fewest purchases.
+
+- **`python -m decklab.lib.precons coverage [--space S] [--format commander|casual] [--limit N] [--json]`** (`lib/precon_coverage.py`): each precon's Commander, Deck and Sideboard lines (not its display commander), counted by exact Scryfall name with basic lands left out, against the copies free for a new idea deck (`pool.free_copies`: owned, on the way included, less what built decks and intact products hold). It lists the top 20 (`--limit 0` lists all) best first by share, then cards covered, then newest, with `have/total`, the precon's set and type, and its code (the `collection add-precon` CODE). `--format commander` is MTGJSON's Commander Decks only.
+- **Read-only and offline:** it reads only the MTGJSON lists `lib/precons.py` already caches for Add a precon (`data/mtgjson/`), never fetching, and ranks only the precons whose list is cached, saying how many of the listed ones aren't. With no deck list cached it says to run `fetch` and exits 1 before reading the pool. A summary of each deck file's lines (`data/mtgjson/coverage-summary.json`, keyed on the file's time and size) spares parsing every file on each run.
+- **`python -m decklab.lib.precons fetch [--format F]`** fills that cache, one deck file at a time with a short pause, for the listed paper decks not cached yet; it writes nothing but the gitignored cache.
+
+Decisions: the format is MTGJSON's type (only a Commander Deck is commander), so the counts agree with `fetch`; the page view, a precon's missing cards with their AUD cost, Start a deck from it and the 403 for a viewer who may not see the inventory are later slices.
+
+Validation: the new `test_precon_coverage.py` covers the ranking on a fixture precon set and fake pools (basic lands and display commanders left out, held copies not free, format, limit and tie order, nothing cached, an unreadable deck file, the summary kept and refreshed), `fetch` asking only for uncached listed decks, and the command line; one test of real card names skips without the card index.
+
 ## Card rulings in the card viewer (2026-10-27; E1-S25)
 
 The card viewer now shows a card's Scryfall rulings under its rules text, from the comparison with ManaBox and Dragon Shield.
