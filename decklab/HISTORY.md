@@ -2,6 +2,10 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Tests independent of a local config.json (2026-10-27)
+
+`test_db_check` and `test_web_no_personal_data` no longer depend on decklab/config.json, which CI never has. The nightly check's tests now run with the database's fixture profiles (`household_config.use`), so a config made from config.example.json no longer turns the fixture's sleeves (owned by `matt`) into an accessories warning, and they read the pool by hand as they already read the deck tables, so the Printings in box sub-check no longer warns where there's no card index; a new test covers its warning. The web privacy test leaves the stand-in names (Alex, Sam, Jordan, User1 to User5) out of a config's profile terms, so a config naming `alex` or `user1` no longer fails on the page's neutral examples, while real names, display names, spaces and emails are still checked.
+
 ## Printings in box (2026-10-27; E11-S30 slice 13)
 
 Deck Lab now records which physical printing of a built deck's cards is in its box, to the short design Matt approved on 2026-10-27. Cards are still counted by name: nothing reserves by printing.

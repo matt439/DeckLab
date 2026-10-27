@@ -10,11 +10,13 @@ import io
 import json
 from contextlib import redirect_stdout
 from datetime import datetime
+from types import SimpleNamespace
 from unittest import mock
 
 from decklab.db import backup, check, conn as db, inv_decks
-from decklab.lib import config, spaces, tokens
-from decklab.tests.test_inventory_contract import WATCH_HEADER, _tokens
+from decklab.lib import config, pool, spaces, tokens
+from decklab.tests import household_config
+from decklab.tests.test_inventory_contract import FIXTURE_PROFILES, WATCH_HEADER, _tokens
 from decklab.tests.test_inventory_pg_decks import _Db
 
 
@@ -33,6 +35,8 @@ class CheckTests(_Db):
 
     def setUp(self):
         super().setUp()
+        # The profiles and spaces are the database's fixture ones, never a local config.json's.
+        household_config.use(self, FIXTURE_PROFILES)
         # Token names are checked only with the card index, which a worktree may not have: never here.
         patcher = mock.patch.object(tokens, "_ready", lambda: False)
         patcher.start()
@@ -43,6 +47,11 @@ class CheckTests(_Db):
         # The deck tables need the card index, which a worktree may not have: judged here by hand.
         self.planned = []
         patcher = mock.patch.object(inv_decks, "plan_tables", lambda *a, **k: list(self.planned))
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        # So does the pool the Printings in box records are read from: its parts in use, by hand too.
+        self.in_use = []
+        patcher = mock.patch.object(pool, "load_pool", lambda *a, **k: SimpleNamespace(in_use=list(self.in_use)))
         patcher.start()
         self.addCleanup(patcher.stop)
 
@@ -120,6 +129,15 @@ class CheckTests(_Db):
         lines = check.history(dbname=self.dbname)
         self.assertIn("passed (2 warnings)", lines[0])
         self.assertIn("    warning deck tables: 1 deck with an out-of-date table: casual/test", "\n".join(lines))
+
+    def test_a_printing_record_that_cant_be_true_is_a_warning_not_a_failure(self):
+        self.import_tree()
+        self.in_use = [SimpleNamespace(title="Test", recorded_stale=["1 Opt (DOM) 60: the box holds none"])]
+        code, _, checks = self.run_check()
+        self.assertEqual(code, 0, self.said)
+        self.assertTrue(checks["printings in box"]["ok"])
+        self.assertTrue(checks["printings in box"]["warning"])
+        self.assertIn("Test: 1 Opt (DOM) 60: the box holds none", checks["printings in box"]["detail"])
 
     def test_a_deck_table_refresh_that_cant_be_worked_out_is_a_warning_saying_why(self):
         # A forced order leaves the pool incomplete until it arrives (AGENTS.md, "Placing an order"):
