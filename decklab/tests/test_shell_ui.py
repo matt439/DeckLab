@@ -81,7 +81,7 @@ class ShellUiTests(unittest.TestCase):
           same(names, { library: "Decks", collection: "Collection", shopping: "Shopping", matchups: "Matchups",
             tokens: "Tokens", accessories: "Sleeves & boxes", assembly: "Build decks", play: "Game log",
             wishlist: "Wishlist", activity: "Activity", visibility: "Who sees what", settings: "Settings", deck: "Deck", edit: "Edit deck",
-            new: "New deck", history: "History", variant: "Test of a change", receipt: "Receive delivery",
+            new: "New deck", history: "History", compare: "Compare decks", variant: "Test of a change", receipt: "Receive delivery",
             matchup: "Matchup" });
           for (const r of ROUTES) assert(r.nav || r.parent, r.path);
           // A child page sits under its parent's place in the nav.

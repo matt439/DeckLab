@@ -25,6 +25,16 @@ A built deck's More menu has **Print box label**, from the comparison with TopDe
 
 Validation: the new `test_deck_label_ui.py` checks whole symbols against python-qrcode's (versions 1, 4, 7, 8 and 10, as SHA-256 digests), the standard's "HELLO WORLD" Reed-Solomon example, format and version information, version limits, and that the menu offers the label only on built decks, the label's parts and its address; `test_tunnel.py` and `test_server.py` cover the new `address`. During development the encoder's symbols were also decoded by zxing-cpp, a rendered label included.
 
+## Compare two decks: stats (2026-10-27; E1-S13)
+
+The first slice of comparing two decks: a read-only Compare decks page (`#/compare?a=<id>&av=<v>&b=<id>&bv=<v>`, `web/compare.js`, under Decks in the nav) showing two lists' stats side by side, so choosing between two decks, or a deck's Planned and Play-now lists, doesn't mean flicking between pages.
+
+- **The data:** GET `/api/deck/compare` (`api/compare.py`) gives each list the deck page's own stats (`deck_page._deck_stats`) and only the summary fields that name the deck (no kit). Both decks go through `_deck_sections`, so a deck the viewer may not see, on either side, answers exactly as a missing one (404 "No deck <id>") before any stats are worked out. Nothing of the inventory is read.
+- **The page:** two deck pickers (the matchup sheet's `deckPicker`, over the viewer's own library) and Compare; the two decks' heads with their colours; an In brief table (cards, average mana value, creatures, other spells, lands against the formula, colour sources, bracket); both mana curves on one scale (the taller deck's, `drawCurve`'s new `scaleMax`), side by side from 600px; and tables with a column per deck for land count, colour sources and card types and roles.
+- **The entry:** the deck page's More menu has **Compare with…**, which opens the page with that deck and list first and the next deck in the library second.
+
+Validation: new `test_compare.py` (the answer, a deck's two lists, bad input, a hidden deck on either side for User2, User1 and Matt, the HTTP route) and `test_compare_ui.py` (the page under Node); the DOM double gained `select.options`. Checked with Playwright at 390, 820 and 2560px wide in light and dark on a static harness with made-up stats, not real card data. Cards both lists use and head to head are later slices.
+
 ## Card rulings in the card viewer (2026-10-27; E1-S25)
 
 The card viewer now shows a card's Scryfall rulings under its rules text, from the comparison with ManaBox and Dragon Shield.

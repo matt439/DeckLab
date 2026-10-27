@@ -38,7 +38,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 | id | status | pri | size | item |
 |---|---|---|---|---|
 | `E2-S22` | DECISION | must | M | Physical hardware/touch-usability follow-up on the household's iPhones and M2 11-inch iPad; the six-configuration Safari Simulator suite passes ([evidence](decklab/safari/EVIDENCE.md)). |
-| `E1-S13` | OPEN | could | L | Compare two decks side by side; first slice is their stats (curve, colours, lands, types). |
+| `E1-S13` | OPEN | could | L | Compare two decks side by side: the stats slice is built (#/compare); next the cards both use, then head to head. |
 | `E1-S24` | OPEN | could | M | Rank precons by how much of each the free pool covers, to pick the next deck to build. |
 | `E2-S23` | OPEN | could | S | A Considering list kept with each deck, outside its lists and tables. |
 | `E2-S24` | OPEN | could | M | Own card categories in a deck (ramp, draw, removal) with counts. |
