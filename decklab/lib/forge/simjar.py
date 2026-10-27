@@ -90,6 +90,11 @@ CHECKED_BUILDS = {V: V}
 # test_forge_simjar holds it to the source, so an edit to Deck Lab's Java fails the tests until
 # cardlog-check passes with the edit and this is updated.
 CHECKED_SOURCE = {V: "7ea9e41b75193f79d871e9f6f732572d69565913c9ed8715cf1040522e147e43"}
+# The fork build a new install downloads: its release on GitHub is tagged with the build name and
+# holds the whole install, with a checksum (SELF-HOSTING.md, "Forge simulations"; the fork's
+# decklab/RELEASE.md makes one). Move it with CHECKED when a new build is checked.
+RELEASE = V
+RELEASES = "https://github.com/matt439/forge/releases"
 del V
 MAIN = "decklab.DeckLabSim"
 JAVA = Path(__file__).resolve().parent / "java"     # Deck Lab's Java sources, in folders by package
@@ -153,7 +158,7 @@ NO_JAVA = "Java wasn't found, so the card log can't run."
 NO_JDK = "The card log needs a full Java JDK (with javac and jar), and the Java that runs Forge doesn't have them."
 NO_FORGE = "Forge can't run, so the card log can't either."
 NOT_FORK = ("This Forge isn't Deck Lab's own build (its fork's decklab branch), so the card log can't run "
-            "(C:/VSProjects/forge's decklab/install.py installs one).")
+            "(download Deck Lab's Forge: SELF-HOSTING.md, \"Forge simulations\").")
 CANT_BUILD = "The card log couldn't be built for Forge {version}."
 CANT_WRITE = "Deck Lab can't write the card log's files in its data folder."
 IN_USE = "Another run had the card log's jar open, so it couldn't be built again (the next run tries again)."
@@ -725,6 +730,32 @@ def _add_opens(forge_jar):
     to the jar it starts with -jar; the card log starts with -cp, so they go on the
     command line instead."""
     return _manifest_add_opens(_manifest(forge_jar))
+
+
+def release_url(build=None):
+    """The GitHub release of a fork build (RELEASE's by default)."""
+    return f"{RELEASES}/tag/{build or RELEASE}"
+
+
+def release_check(forge_jar):
+    """{"build": the installed jar's build or None, "expected": RELEASE, "matches": bool,
+    "advice": one plain sentence}: whether the Forge at forge_jar (None: none found) is the
+    build this Deck Lab expects, and what to do when it isn't. Never raises."""
+    build = forge_build(forge_jar) if forge_jar is not None else None
+    expected, url = RELEASE, release_url()
+    if build == expected:
+        advice = f"Forge is build {build}, the one this Deck Lab expects."
+    elif forge_jar is None:
+        advice = (f"No Forge was found: download Deck Lab's Forge {expected} ({url}), check its SHA-256, "
+                  f"unzip it and set forge_dir in config.json to its folder.")
+    elif build is None:
+        advice = (f"This Forge's build can't be read from its jar. This Deck Lab expects {expected}: "
+                  f"download it from {url} and set forge_dir to its folder.")
+    else:
+        advice = (f"This Forge is build {build}, not the {expected} this Deck Lab expects. Matchups still play, "
+                  f"but per-card stats need a build the card log was checked with: download {expected} "
+                  f"from {url} and set forge_dir to its folder, or run cardlog-check with this one.")
+    return {"build": build, "expected": expected, "matches": build == expected, "advice": advice}
 
 
 def forge_build(forge_jar):

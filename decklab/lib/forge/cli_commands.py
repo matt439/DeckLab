@@ -21,7 +21,21 @@ def _cmd_status(args):
         print(f"warm pool: {output._pool_line()}")
         for line in output._setup_lines(found):
             print(line)
+    print(f"build: {_release_advice(found)}")
     return 0 if found["ready"] else 1
+
+
+def _release_advice(found):
+    """status's line on whether the installed Forge is the release this Deck Lab expects
+    (simjar.release_check), and how to fix it when it isn't."""
+    forge_jar = None
+    if found["ready"]:
+        try:
+            setup = shared._setup()
+            forge_jar = shared.Path(setup["forge_dir"]) / setup["jar"]
+        except Exception:
+            forge_jar = None
+    return shared.simjar.release_check(forge_jar)["advice"]
 
 
 def _audit_args(sub):

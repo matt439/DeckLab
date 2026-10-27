@@ -489,6 +489,7 @@ class CommandLineTests(ForgeCase):
                                  "pilot_switches": []})
         self.assertEqual(out[end:].split("\n")[1:4], [f"java: {sys.executable}", f"card log: off. {NO_JDK}",
                                                      f"warm pool: {forge.cli._pool_line()}"])
+        self.assertTrue(out.rstrip("\n").split("\n")[-1].startswith("build: This Forge is build "))   # not the release
         jdk = self.tmp / "jdk" / "bin"          # a made-up JDK: java, javac and jar
         jdk.mkdir(parents=True)
         for name in ("java", "javac", "jar"):
@@ -499,6 +500,7 @@ class CommandLineTests(ForgeCase):
         code, out, _ = self.run_main("status")
         self.assertEqual(code, 1)
         self.assertIn("Forge isn't installed", out)
+        self.assertIn("\nbuild: No Forge was found: download Deck Lab's Forge ", out)
 
     def test_cards_without_card_data(self):
         with mock.patch.object(forge.cardstats, "list_cards", return_value=None) as list_cards:
