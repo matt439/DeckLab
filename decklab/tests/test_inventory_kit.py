@@ -165,8 +165,9 @@ class FileBackendTests(BackendCases, unittest.TestCase):
     def test_the_file_is_rendered_with_the_move(self):
         self.test_a_product_to_product_move()
         self.assertEqual((self.root / "magic/products/status.csv").read_text(encoding="utf-8"),
-                         STATUS_HEADER + "alpha.csv,owned,yes,,,\nbeta.csv,owned,yes,black,,\n"
-                         "gamma.csv,preordered,,,,\n")
+                         "file,status,intact,sleeves,deck_box,notes,token_cards\n"
+                         "alpha.csv,owned,yes,,,,\nbeta.csv,owned,yes,black,,,\n"
+                         "gamma.csv,preordered,,,,,\n")
 
 
 class DatabaseBackendTests(BackendCases, db_support.DbTestCase):
