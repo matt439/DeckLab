@@ -289,6 +289,12 @@ Overview and Cards tab show "Swaps from the Planned list" to every viewer of
 the deck, with "Edit notes" (`&tab=notes`) for whoever may change it. Late
 answers check the editor, route and person.
 
+`deck-considering.js` (after `deck-swaps.js`) draws the Cards tab's
+Considering part (E2-S23), right after the decklist: one read-only `cardRow`
+per line in its own `.card-list`, outside the filters and their counts, with a
+`status-good` "N free in the pool" or a plain "None free" chip only when
+`/api/deck` sent `free` (a viewer who sees the collection).
+
 `product-storage.js` supplies the product Overview's inventory-visible storage
 state and preview/confirm sheet. Its opaque review token binds both revisions;
 successful saves keep warnings visible until Done refreshes the deck page.

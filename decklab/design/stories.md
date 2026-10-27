@@ -547,7 +547,7 @@ Evidence:
 
 Gap: Still to check on the real devices: the receipt panel's navigation and Close before the image and its swipe margins, the Quick edit's Add cards sheet with the keyboard and its ⋯ menu, keyboard-open Save and Home Screen use on the iPad, the Commander bracket sentence's place on the phone (E9-S05), and everything on the iPhone 17 Pro.
 
-**E2-S23** · Matt · could · S · missing
+**E2-S23** · Matt · could · S · partial
 
 As a deck builder, I want a Considering list kept with each deck, so that cards I might add stay with the deck without counting in its lists, tables or packing.
 
@@ -558,11 +558,14 @@ As a deck builder, I want a Considering list kept with each deck, so that cards 
 Decided (Matt, 2026-10-27): added from the comparison with Moxfield's maybeboard.
 
 Evidence:
-- `decklab/web/editor-swaps.js` and E2-S19 (try a change without saving); the wishlist (E5-S14)
+- `decklab/lib/decks/deckfile.py`: parse_deck reads the fenced block under `## Considering` into DeckFile.considering (card lines only); render_deck_file copies it as written
+- `decklab/lib/api/deck_page.py`: _view_considering (GET /api/deck's "considering", with copies free in the pool)
+- `decklab/web/deck-considering.js`: deckConsideringSection, on the Cards tab after the decklist
+- `decklab/tests/test_decks_considering.py`: parsing, saves keeping it, and owned vs needed, the table, a built deck's in-use cards, the Forge list and the sleeve count skipping it; `test_deck_page_ui.py`: test_the_considering_list_shows_read_only_with_free_copies
 
-Gap: Ideas for a deck live in prose or the wishlist; the deck text has no considering section.
+Now: first slice built 2026-10-27 ([HISTORY.md](../HISTORY.md#a-considering-list-in-the-deck-text-2026-10-27-e2-s23)). The list is written with `deck pull`/`deck push` and shown read-only on the deck page, each card with how many copies the pool leaves free.
 
-First slice: a `Considering` section in the deck text format that the parser reads and every table, pool and packing reader skips.
+Gap: the page can't add a card to the list, remove one, or move one into the Planned list (in the same save) yet; that's the next slice, in the editor.
 
 **E2-S24** · Matt · could · M · missing
 

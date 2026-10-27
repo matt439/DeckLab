@@ -16,7 +16,7 @@ from . import common, guard
 from .opponents import add_usual_opponents, usual_opponent_ids, usual_opponents
 from .common import ApiError
 from .assembly import TOKEN_FAILED, _deck_tokens, held_tokens
-from .card_lookup import _line_json, _owned_json
+from .card_lookup import _line_json, _owned_json, _resolve
 from .carddata import _require_cards
 from .commits import _table_json
 from .deck_aliases import metadata
@@ -460,6 +460,29 @@ def _deck_stats(sections, kind, warnings):
         return None
 
 
+def _view_considering(deck_file, deck_id, sections, p, info, deck_sets):
+    """deck_view's "considering": the deck text's Considering list (E2-S23), as _line_json lines, each
+    with "free": the copies of it the pool leaves for this deck (owned and on the way, less what other
+    built decks and intact products hold and what the list shown already uses; pool.free_copies), None
+    for a basic land or a name that isn't a Scryfall card. Without p (a viewer who may not see the
+    space's inventory, or a pool that couldn't be read) no line has "free". None when the text has no
+    Considering block. Its cards count nowhere, so a name Scryfall doesn't know is only info."""
+    if deck_file.considering is None:
+        return None
+    lines = [_line_json(line, "Considering", info, deck_sets) for line in deck_file.considering]
+    if p is not None:
+        free = pool.free_copies(p, pool.self_ids(deck_id))
+        used = Counter()
+        for section in sections.values():
+            for line in section:
+                used[_resolve(line.name) or line.name] += line.quantity
+        for out, line in zip(lines, deck_file.considering):
+            name = _resolve(line.name)
+            out["free"] = None if name is None or decks.is_basic_land(name) \
+                else max(free.get(name, 0) - used.get(name, 0), 0)
+    return lines
+
+
 def _near_combos(sections, deck_id, p, commander, warnings):
     """combos.near_for_deck for the Commander checks (E9-S25): the shown list's combos one card
     away, the best NEAR_LIMIT of them, each missing card's availability only with the space's
@@ -560,6 +583,10 @@ def deck_view(deck_id, version="target", omit=()):
     separate from sections and their hashes; None for products and pairings. Its own warnings
     describe invalid saved mappings without changing the logical list.
 
+    considering is the deck text's Considering list (_view_considering: lines as in sections, each with
+    "free" for a viewer who sees the space's inventory); absent when the text has none, and for products
+    and pairings. Nothing else in the answer counts its cards.
+
     near_combos is a Commander deck's two-card combos one card away (combos.near_for_deck, E9-S25):
     the shown list's best NEAR_LIMIT and their total, each missing card's availability only
     for a viewer who may see the space's inventory; absent for other decks.
@@ -653,6 +680,8 @@ def deck_view(deck_id, version="target", omit=()):
         night = projection()
         if night is not None:
             answer["commander_night"] = night
+    if deck_file is not None and deck_file.considering is not None:
+        answer["considering"] = _view_considering(deck_file, deck_id, sections, p if sees else None, info, deck_sets)
     if sees:
         answer.update(owned=owned, tokens=_view_tokens(summary, version, sections, info), table=table)
         if deck_file is not None and space == spaces.HOME and guard.sees_home_records():

@@ -19,6 +19,16 @@ The first slice of E1-S24, from the comparison with MTGGoldfish's Super Brew: a 
 Decisions: the format is MTGJSON's type (only a Commander Deck is commander), so the counts agree with `fetch`; the page view, a precon's missing cards with their AUD cost, Start a deck from it and the 403 for a viewer who may not see the inventory are later slices.
 
 Validation: the new `test_precon_coverage.py` covers the ranking on a fixture precon set and fake pools (basic lands and display commanders left out, held copies not free, format, limit and tie order, nothing cached, an unreadable deck file, the summary kept and refreshed), `fetch` asking only for uncached listed decks, and the command line; one test of real card names skips without the card index.
+
+## A Considering list in the deck text (2026-10-27; E2-S23)
+
+A deck can now keep cards that might go in it, Moxfield's maybeboard, without counting them anywhere. This first slice is the deck text format and a read-only view.
+
+- **The format:** an optional `## Considering` heading (level 2, after the Decklist section) with its own fenced block of card lines in the decklist's format, no section headers. A separate block rather than a section inside the Decklist fence, so every existing reader of the lists (owned vs needed and the table, the pool's in-use counts, packing, tokens, stats, the Forge list, the sleeve and deck box counts, box checks) stays blind to it by construction, and an Arena export of the deck never carries it. `parse_deck` reads it into `DeckFile.considering` (a section header or a bad line is refused, naming the Considering list); `render_deck_file` copies it as written, so page saves, `deck tables` and table refreshes keep it byte for byte.
+- **The deck page:** the Cards tab shows it after the decklist, read-only, each card with "N free in the pool" or "None free" (owned and on the way, less what other built decks and intact products hold and what the list shown already uses) for viewers who see the space's collection (`GET /api/deck`'s `considering`, absent when the text has none). A name Scryfall doesn't know goes in the page's info, not its warnings.
+
+Decisions: the list is written with `deck pull`/`deck push` for now; adding, removing and moving a card into the Planned list in one save are the next slice, in the editor. Validation: `test_decks_considering.py` (parsing, a byte-identical round trip, a save of the lists, status, table and a new Play-now list keeping it, and owned vs needed, the table, a built deck's in-use cards, the Forge list and the sleeve count skipping it, and the page's free marks) and a Node test of the Cards tab part in `test_deck_page_ui.py`.
+
 ## Combos one card away (2026-10-27; E9-S25)
 
 A Commander deck's Stats tab now lists the two-card combos it is one card away from, from the comparison with Archidekt's Commander Spellbook tab: the cheap upgrades, and what each would add to the bracket.
