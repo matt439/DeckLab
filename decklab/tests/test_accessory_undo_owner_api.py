@@ -153,8 +153,15 @@ class AccessoryOwnerUndoApiTests(ApiTestCase):
             self.seed()
             self.store.audit[support.CHANGE_ID][0]["before"][field] = value
             with self.subTest(field=field):
-                self.assertEqual(self.view(), {"available": False, "id": support.CHANGE_ID, "reason": api.UNSUPPORTED})
-                self.refused(400, self.apply, expect="bad", confirm_owner=True)
+                if field in ("quantity", "kind"):
+                    preview = self.view()
+                    self.assertEqual(preview["action"], "accessory_record_update")
+                    self.assertIs(preview["record_confirmation_required"], True)
+                    self.assertNotIn("owner_confirmation_required", preview)
+                    self.refused(400, self.apply, expect=preview["expect"], confirm_owner=True)
+                else:
+                    self.assertEqual(self.view(), {"available": False, "id": support.CHANGE_ID, "reason": api.UNSUPPORTED})
+                    self.refused(400, self.apply, expect="bad", confirm_owner=True)
                 self.assertEqual(self.store.writes, [])
 
     def test_mixed_literal_details_and_later_target_reference_recheck_keep_normal_kit(self):

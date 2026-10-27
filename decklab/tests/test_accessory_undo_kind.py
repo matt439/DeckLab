@@ -111,8 +111,17 @@ class AccessoryKindUndoTests(unittest.TestCase):
                              ("image", "a-sleeves.png"), ("crop", "")):
             self.seed()
             self.source()["before"][field] = value
-            with self.subTest(field=field), self.assertRaises(undo.UndoUnsupported):
-                self.review()
+            with self.subTest(field=field):
+                if field in ("quantity", "owner"):
+                    plan, _ = self.review()
+                    self.assertEqual(plan["action"], "accessory_record_update")
+                    self.assertNotIn("kind_confirmation_required", plan)
+                    with self.assertRaises(inventory.Invalid):
+                        undo.MetadataRestore(support.CHANGE_ID, support.OWNERS, plan["expect"], store=self.store,
+                                             confirm_kind=True).run(self.store.snapshot)
+                else:
+                    with self.assertRaises(undo.UndoUnsupported):
+                        self.review()
 
     def test_complete_source_and_both_writable_owners_precede_private_validation(self):
         for mode in ("hidden", "owner_move", "mixed", "duplicate"):

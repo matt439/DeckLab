@@ -157,8 +157,15 @@ class AccessoryKindUndoApiTests(ApiTestCase):
             self.seed()
             self.store.audit[support.CHANGE_ID][0]["before"][field] = value
             with self.subTest(field=field):
-                self.assertEqual(self.view(), {"available": False, "id": support.CHANGE_ID, "reason": api.UNSUPPORTED})
-                self.refused(400, self.apply, expect="bad", confirm_kind=True)
+                if field in ("quantity", "owner"):
+                    preview = self.view()
+                    self.assertEqual(preview["action"], "accessory_record_update")
+                    self.assertIs(preview["record_confirmation_required"], True)
+                    self.assertNotIn("kind_confirmation_required", preview)
+                    self.refused(400, self.apply, expect=preview["expect"], confirm_kind=True)
+                else:
+                    self.assertEqual(self.view(), {"available": False, "id": support.CHANGE_ID, "reason": api.UNSUPPORTED})
+                    self.refused(400, self.apply, expect="bad", confirm_kind=True)
                 self.assertEqual(self.store.writes, [])
 
     def test_preview_is_not_authority_after_target_acquires_a_wrong_kind_or_unbuilt_reference(self):

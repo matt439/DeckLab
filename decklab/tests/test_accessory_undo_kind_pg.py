@@ -179,9 +179,12 @@ class AccessoryKindUndoPgTests(db_support.DbTestCase):
                        {"kind": "deck_box", "capacity": "100", "owner": "shared"}):
             cid = self.edit(fields)
             before = self.persisted()
-            self.assertIs(api.accessory_undo_view(cid)["available"], False)
+            preview = api.accessory_undo_view(cid)
+            self.assertEqual(preview["action"], "accessory_record_update")
+            self.assertIs(preview["record_confirmation_required"], True)
+            self.assertNotIn("kind_confirmation_required", preview)
             with self.assertRaises(api.ApiError) as error:
-                self.apply(cid, {"expect": "bad"})
+                self.apply(cid, preview)  # Kind-only consent cannot authorize the combined source.
             self.assertEqual(error.exception.status, 400)
             self.assertEqual(self.persisted(), before)
         for invalid in ("0", "01", " 40 ", "+40", "10000"):

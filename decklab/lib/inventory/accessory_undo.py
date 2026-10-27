@@ -20,6 +20,14 @@ STOCK_FIELDS = (*FIELDS, "quantity")
 STOCK_META = (*META, "quantity")
 OWNER_FIELDS = ("owner", *FIELDS)
 KIND_FIELDS = ("kind", *FIELDS)
+RECORD_FIELDS = ("owner", "kind", "quantity", *FIELDS)
+UPDATE_FIELDS = {"accessory_update": FIELDS, "accessory_stock_update": STOCK_FIELDS,
+                 "accessory_owner_update": OWNER_FIELDS, "accessory_kind_update": KIND_FIELDS,
+                 "accessory_record_update": RECORD_FIELDS}
+UPDATE_CONFIRMATIONS = {"accessory_stock_update": "stock_confirmation_required",
+                        "accessory_owner_update": "owner_confirmation_required",
+                        "accessory_kind_update": "kind_confirmation_required",
+                        "accessory_record_update": "record_confirmation_required"}
 RAW = frozenset(rules.ACCESSORY_FIELDS)
 
 
@@ -107,6 +115,15 @@ def stock_meta(raw):
     return {field: raw[field] for field in STOCK_META}
 
 
+def update_action(old, new):
+    """Whole-source category cardinality, shared by the inverse and its API proof."""
+    categories = [field for field in ("owner", "kind", "quantity") if old.get(field) != new.get(field)]
+    if len(categories) >= 2:
+        return "accessory_record_update"
+    return {"owner": "accessory_owner_update", "kind": "accessory_kind_update",
+            "quantity": "accessory_stock_update"}.get(categories[0] if categories else None, "accessory_update")
+
+
 def owner_pair(old, new):
     """Only one configured home owner's record and Shared, even for a script."""
     pair = {old.get("owner"), new.get("owner")}
@@ -124,10 +141,9 @@ def _unchanged(before, after):
 def _candidate(snapshot, source, owners):
     from . import ops_accessories
     old, new = source["before"], source["after"]
-    kind_change = old["kind"] != new["kind"]
-    ownership = old["owner"] != new["owner"]
-    fields = KIND_FIELDS if kind_change else OWNER_FIELDS if ownership else STOCK_FIELDS if old["quantity"] != new["quantity"] else FIELDS
-    if ownership or kind_change:
+    action = update_action(old, new)
+    fields = UPDATE_FIELDS[action]
+    if action in ("accessory_owner_update", "accessory_kind_update", "accessory_record_update"):
         from . import accessory_undo_remove
         accessory_undo_remove.unused(snapshot, new["id"])
     current = accessories.from_sheet(snapshot.accessories, strict=True)
@@ -188,14 +204,12 @@ def review(change_id, owners, snapshot, store=None):
     adding = source["op"] == "DELETE"
     old, new = None if removing else raw_row(source["before"]), None if adding else raw_row(source["after"])
     identity = old if adding else new
-    kind_change = not removing and not adding and old["kind"] != new["kind"]
-    ownership = not removing and not adding and old["owner"] != new["owner"]
-    stock = not removing and not adding and old["quantity"] != new["quantity"]
-    fields = KIND_FIELDS if kind_change else OWNER_FIELDS if ownership else STOCK_FIELDS if stock else FIELDS
+    action = "accessory_add" if adding else "accessory_remove" if removing else update_action(old, new)
+    fields = UPDATE_FIELDS.get(action, ())
     if source.get("key") != {"id": identity["id"]} or not adding and not removing and old["id"] != new["id"]:
         raise UndoUnsupported("The accessory's original identity cannot be checked.")
     if not removing and not adding:
-        if ownership and not owner_pair(old, new):
+        if old["owner"] != new["owner"] and not owner_pair(old, new):
             raise UndoUnsupported("Undo restores sharing only between Shared and one current home owner.")
         changed = {field for field in RAW if old[field] != new[field]}
         if not changed or changed - set(fields):
@@ -209,15 +223,13 @@ def review(change_id, owners, snapshot, store=None):
         raise UndoConflict("The accessory changed after the selected change.")
     after, expected = (_add_candidate if adding else _remove_candidate if removing else _candidate)(snapshot, source, owners)
     scope = _scope(owners)
-    project = stock_meta if stock or ownership or kind_change else meta
-    return {"change_id": change_id, "kind": "accessory", "action": "accessory_add" if adding else "accessory_remove" if removing else "accessory_kind_update" if kind_change else "accessory_owner_update" if ownership else "accessory_stock_update" if stock else "accessory_update",
+    project = stock_meta if action in UPDATE_CONFIRMATIONS else meta
+    return {"change_id": change_id, "kind": "accessory", "action": action,
             "label": identity["name"], "current": None if adding else new if removing else project(new),
             "restored": old if adding else None if removing else project(old),
             **({"confirmation_required": True} if adding else {"reason_required": True} if removing else {"fields": [
                 {"field": field, "before": new[field], "after": old[field]} for field in fields if new[field] != old[field]]}),
-            **({"stock_confirmation_required": True} if stock else {}),
-            **({"owner_confirmation_required": True} if ownership else {}),
-            **({"kind_confirmation_required": True} if kind_change else {}),
+            **({UPDATE_CONFIRMATIONS[action]: True} if action in UPDATE_CONFIRMATIONS else {}),
             "expect": _sha([change_id, source, scope, list_sha(rows, owners)]),
             "sha256": list_sha(expected, owners), "source": source, "raw_after": expected,
             "owners": scope, "row_change_id": source["id"]}, after
@@ -228,9 +240,6 @@ def verify_saved(before, after, plan, actual_rows):
     _unchanged(before, after)
     removing = plan["action"] == "accessory_remove"
     adding = plan["action"] == "accessory_add"
-    stock = plan["action"] == "accessory_stock_update"
-    ownership = plan["action"] == "accessory_owner_update"
-    kind_change = plan["action"] == "accessory_kind_update"
     if raw_rows(after, allow_empty=removing) != plan["raw_after"] or not isinstance(actual_rows, list) or len(actual_rows) != 1:
         raise UndoConflict("The accessory inverse result could not be confirmed.")
     source, actual = plan["source"], actual_rows[0]
@@ -242,7 +251,7 @@ def verify_saved(before, after, plan, actual_rows):
     digest = list_sha(raw_rows(after, allow_empty=removing), plan["owners"])
     if digest != plan["sha256"]:
         raise UndoConflict("The accessory inverse list could not be confirmed.")
-    return {"review": plan, "restored": actual["after"] if adding else None if removing else (stock_meta if stock or ownership or kind_change else meta)(actual["after"]), "sha256": digest,
+    return {"review": plan, "restored": actual["after"] if adding else None if removing else (stock_meta if plan["action"] in UPDATE_CONFIRMATIONS else meta)(actual["after"]), "sha256": digest,
             **({"added_id": source["before"]["id"]} if adding else {}),
             **({"removed_id": source["after"]["id"]} if removing else {}),
             "revision": str(actual["id"])}
@@ -252,7 +261,7 @@ class MetadataRestore:
     """Trusted operation with transaction-local verification in PgInventory.apply."""
     kind = "accessory.undo"
 
-    def __init__(self, change_id, owners, expect, *, store=None, reason=..., confirm_restore=..., confirm_stock=..., confirm_owner=..., confirm_kind=...):
+    def __init__(self, change_id, owners, expect, *, store=None, reason=..., confirm_restore=..., confirm_stock=..., confirm_owner=..., confirm_kind=..., confirm_record=...):
         self.change_id, self.owners, self.expect = change_id, owners, expect
         self.store = store
         self.reason = reason
@@ -260,6 +269,7 @@ class MetadataRestore:
         self.confirm_stock = confirm_stock
         self.confirm_owner = confirm_owner
         self.confirm_kind = confirm_kind
+        self.confirm_record = confirm_record
         self.params = {}
         self.plan = None
 
@@ -273,6 +283,12 @@ class MetadataRestore:
         stock = plan["action"] == "accessory_stock_update"
         ownership = plan["action"] == "accessory_owner_update"
         kind_change = plan["action"] == "accessory_kind_update"
+        record = plan["action"] == "accessory_record_update"
+        if record:
+            if self.confirm_record is not True:
+                raise Invalid("Confirm the whole restored accessory record before saving it.")
+        elif self.confirm_record is not ...:
+            raise Invalid("Only restoring a combined accessory correction takes record confirmation.")
         if kind_change:
             if self.confirm_kind is not True:
                 raise Invalid("Confirm the restored accessory kind and count units before saving it.")
@@ -298,8 +314,8 @@ class MetadataRestore:
         elif self.reason is not ...:
             raise Invalid("Only removing an added accessory takes a removal reason.")
         return after, Summary(f"Undo change #{self.change_id}: " + ("restore a deleted accessory record" if adding else "remove an unused added accessory" if removing else
-                              "restore the recorded accessory kind" if kind_change else "restore recorded accessory sharing" if ownership else "restore a recorded accessory count" if stock else "restore recorded accessory details"), {"undo": 1},
-                              {paths.ACCESSORIES: ["added"] if adding else ["removed"] if removing else list(KIND_FIELDS if kind_change else OWNER_FIELDS if ownership else STOCK_FIELDS if stock else FIELDS)},
+                              "restore a combined accessory correction" if record else "restore the recorded accessory kind" if kind_change else "restore recorded accessory sharing" if ownership else "restore a recorded accessory count" if stock else "restore recorded accessory details"), {"undo": 1},
+                              {paths.ACCESSORIES: ["added"] if adding else ["removed"] if removing else list(UPDATE_FIELDS[plan["action"]])},
                               {"undo_of": self.change_id, **({"undo_reason": self.reason} if removing else {})})
 
     def verify(self, before, after, actual_rows):

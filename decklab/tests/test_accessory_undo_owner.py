@@ -115,8 +115,17 @@ class AccessoryOwnerUndoTests(unittest.TestCase):
                              ("image", "a-sleeves.png"), ("crop", "")):
             self.seed()
             self.source()["before"][field] = value
-            with self.subTest(field=field), self.assertRaises(undo.UndoUnsupported):
-                self.review()
+            with self.subTest(field=field):
+                if field in ("quantity", "kind"):
+                    plan, _ = self.review()
+                    self.assertEqual(plan["action"], "accessory_record_update")
+                    self.assertNotIn("owner_confirmation_required", plan)
+                    with self.assertRaises(inventory.Invalid):
+                        undo.MetadataRestore(support.CHANGE_ID, support.OWNERS, plan["expect"], store=self.store,
+                                             confirm_owner=True).run(self.store.snapshot)
+                else:
+                    with self.assertRaises(undo.UndoUnsupported):
+                        self.review()
 
     def test_target_references_block_even_wrong_kind_unbuilt_strays_and_duplicate_headers(self):
         for status in ("idea", "building", "built"):

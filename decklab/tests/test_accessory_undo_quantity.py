@@ -89,8 +89,22 @@ class AccessoryQuantityUndoTests(unittest.TestCase):
                              ("image", "a-sleeves.png"), ("crop", "")):
             self.seed()
             self.source()["before"][field] = value
-            with self.subTest(field=field), self.assertRaises((undo.UndoMissing, undo.UndoUnsupported)):
-                self.review()
+            with self.subTest(field=field):
+                if field in ("kind", "owner"):
+                    with self.assertRaises(undo.UndoConflict):
+                        self.review()  # Combined corrections require the held row to be unused.
+                    deck = self.store.snapshot.deck("casual/fixture")
+                    self.store.snapshot = self.store.snapshot.with_deck(replace(
+                        deck, text=deck.text.replace("- **Sleeves:** a-sleeves\n", "")))
+                    plan, _ = self.review()
+                    self.assertEqual(plan["action"], "accessory_record_update")
+                    self.assertNotIn("stock_confirmation_required", plan)
+                    with self.assertRaises(inventory.Invalid):
+                        undo.MetadataRestore(support.CHANGE_ID, support.OWNERS, plan["expect"], store=self.store,
+                                             confirm_stock=True).run(self.store.snapshot)
+                else:
+                    with self.assertRaises((undo.UndoMissing, undo.UndoUnsupported)):
+                        self.review()
 
     def test_whole_source_and_writable_owners_precede_stock_or_private_label_validation(self):
         for mode in ("hidden", "owner_move", "mixed", "duplicate"):

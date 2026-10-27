@@ -50,7 +50,7 @@ class AuditAccessories:
         self.calls.append(("review", change_id, owners))
         return kernel.review(change_id, owners, self.snapshot, self)[0]
 
-    def accessory_undo_apply(self, change_id, owners, expect, actor, message, reason=..., confirm_restore=..., confirm_stock=..., confirm_owner=..., confirm_kind=...):
+    def accessory_undo_apply(self, change_id, owners, expect, actor, message, reason=..., confirm_restore=..., confirm_stock=..., confirm_owner=..., confirm_kind=..., confirm_record=...):
         self.calls.append(("apply", change_id, owners))
         if reason is not ...:
             source = kernel.source_record(self.undo_audit(change_id), owners)
@@ -61,24 +61,17 @@ class AuditAccessories:
             source = kernel.source_record(self.undo_audit(change_id), owners)
             if source["op"] != "DELETE" or confirm_restore is not True:
                 raise inventory.Invalid("Only an entire deleted accessory takes confirmation.")
-        if confirm_stock is not ...:
-            source = kernel.source_record(self.undo_audit(change_id), owners)
-            if source["op"] != "UPDATE" or confirm_stock is not True \
-                    or source["before"].get("quantity") == source["after"].get("quantity"):
-                raise inventory.Invalid("Only an entire restored accessory count takes stock confirmation.")
-        if confirm_owner is not ...:
-            source = kernel.source_record(self.undo_audit(change_id), owners)
-            if source["op"] != "UPDATE" or confirm_owner is not True \
-                    or source["before"].get("owner") == source["after"].get("owner"):
-                raise inventory.Invalid("Only restored accessory sharing takes owner confirmation.")
-        if confirm_kind is not ...:
-            source = kernel.source_record(self.undo_audit(change_id), owners)
-            if source["op"] != "UPDATE" or confirm_kind is not True \
-                    or source["before"].get("kind") == source["after"].get("kind"):
-                raise inventory.Invalid("Only the restored accessory kind takes kind confirmation.")
+        for value, action in ((confirm_stock, "accessory_stock_update"), (confirm_owner, "accessory_owner_update"),
+                              (confirm_kind, "accessory_kind_update"), (confirm_record, "accessory_record_update")):
+            if value is not ...:
+                source = kernel.source_record(self.undo_audit(change_id), owners)
+                if source["op"] != "UPDATE" or value is not True \
+                        or kernel.update_action(source["before"], source["after"]) != action:
+                    raise inventory.Invalid("Only the reviewed accessory correction takes this confirmation.")
         before = self.snapshot
         operation = kernel.MetadataRestore(change_id, owners, expect, reason=reason, confirm_restore=confirm_restore,
-                                           confirm_stock=confirm_stock, confirm_owner=confirm_owner, confirm_kind=confirm_kind)
+                                           confirm_stock=confirm_stock, confirm_owner=confirm_owner, confirm_kind=confirm_kind,
+                                           confirm_record=confirm_record)
         after, summary = operation.run(changes.detach(before))
         after = changes.prepare(before, after).replace(decks_revision="fixture-saved-decks")
         actual = support.actual_source(operation.plan, id=self.latest + 1)
