@@ -805,6 +805,35 @@ class PgInventory:
         applying = getattr(self._applying, "connection", None)
         return work(applying) if applying is not None else self._call(work)
 
+    def undo_audit_rows(self, change_id):
+        """Every original row of one change set, unfiltered, for a whole import or receipt
+        Undo (undo_mixed.MIXED_MAX rows; the reader returns one more so a larger change refuses)."""
+        from .undo_mixed import MIXED_MAX
+        def work(c):
+            return [{"id": rid, "table": table, "op": op, "key": key, "before": old, "after": new}
+                    for rid, table, op, key, old, new in c.execute(
+                        "select id,table_name,op,row_key,before,after from audit.row_change "
+                        "where change_set_id=%s order by id limit %s", (change_id, MIXED_MAX + 1)).fetchall()]
+        applying = getattr(self._applying, "connection", None)
+        return work(applying) if applying is not None else self._call(work)
+
+    def undo_latest_rows(self, keys):
+        """{(table, key as sorted JSON): latest audit row id} for [(table, key)], in one query
+        (undo_latest's rule for many keys at once)."""
+        from .undo_mixed import KEYS
+        if any(table not in KEYS for table, _ in keys):
+            raise Invalid("That row does not support Undo.")
+        if not keys:
+            return {}
+        def work(c):
+            found = c.execute(
+                "select r.table_name, r.row_key, max(r.id) from audit.row_change r "
+                "join unnest(%s::text[], %s::jsonb[]) as k(t, key) on r.table_name = k.t and r.row_key = k.key "
+                "group by 1, 2", ([table for table, _ in keys], [json.dumps(key) for _, key in keys])).fetchall()
+            return {(table, json.dumps(key, sort_keys=True)): rid for table, key, rid in found}
+        applying = getattr(self._applying, "connection", None)
+        return work(applying) if applying is not None else self._call(work)
+
     def undo_token_positions(self, space):
         """Persisted own-space token layout, on Undo's applying connection when set."""
         def work(c):
