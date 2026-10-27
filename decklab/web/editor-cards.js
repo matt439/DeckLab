@@ -14,7 +14,9 @@ Enter on a result adds one copy and the result says "Added ✓ (now 3)"; Shift a
 first ("4 bolt") adds that many. The results stay, with the text selected, so the next name can be typed
 at once. "Free copies only" and the colour, type and mana value filters (folded under "Filters") narrow
 it, and the filters alone browse every card; "My collection" lists the cards free for this deck in its
-colours. When few or no names have the typed text in them (and none is it), close spellings follow as
+colours. Scryfall-style terms in the text search rules text (o:, oracle:) and type lines (t:, type:), each a
+word or a quoted phrase, with the name words and filters (E2-S25); a term the server doesn't know comes
+back as its own message, and no close spellings follow a search with terms. When few or no names have the typed text in them (and none is it), close spellings follow as
 "Did you mean" cards. The thumbnails (or Alt+Enter) open the card viewer over the results. How to add is
 a tip the first time, until "Got it", then the search box's tooltip.
 
@@ -132,7 +134,7 @@ function cardSearch() {
     "aria-controls": "ac-list", "aria-describedby": "ac-help", autocomplete: "off",
     autocorrect: "off", autocapitalize: "none", spellcheck: "false", enterkeyhint: "search",
     placeholder: "Card name, e.g. 4 bolt", "aria-keyshortcuts": keyboardCharactersEnabled(ed.profile) ? "/ Alt+Enter" : "Alt+Enter",
-    title: "Enter or a click adds 1 copy; Shift adds 4; “4 bolt” adds 4. Alt+Enter shows the card big." });
+    title: "Enter or a click adds 1 copy; Shift adds 4; “4 bolt” adds 4. Alt+Enter shows the card big. o: searches rules text and t: the type line, as on Scryfall: o:treasure t:creature, o:\"draw a card\"." });
   ac.list = el("ul", { id: "ac-list", class: "ac-list", "aria-label": "Cards found", hidden: true });
   ac.live = el("p", { class: "sr-only", role: "status", "aria-live": "polite" });
   ac.more = el("button", { type: "button", class: "btn btn-quiet ac-more", hidden: true, text: "More",
@@ -181,7 +183,7 @@ function cardSearch() {
   ac.filters = el("div", { class: "ac-filters" });
   ac.wrap = el("div", { class: "ac-wrap" },
     el("div", { class: "ac" }, el("label", { for: "ac-input", class: "sr-only", text: "Card name" }), ac.input),
-    ac.filters, addTip(), el("p", { id: "ac-help", class: "sr-only", text: "Arrow keys choose a result. Enter adds it; Shift adds four. Alt+Enter opens the card. Tab reaches each result action." }),
+    ac.filters, addTip(), el("p", { id: "ac-help", class: "sr-only", text: "Arrow keys choose a result. Enter adds it; Shift adds four. Alt+Enter opens the card. Tab reaches each result action. o: searches rules text and t: the type line." }),
     ac.live, ac.list, ac.moreError, ac.more);
   drawSearchControls(ac);
   showResults(ac);
@@ -316,7 +318,7 @@ async function lookUp(ac, q, more = false) {
     // them, as cards to pick. Without any, what "Paste a list" makes of the text, which also covers a
     // server that doesn't send them.
     let guesses = [];
-    if (q && !more && ac.mode === "search" && !ac.owned) {
+    if (q && !more && ac.mode === "search" && !ac.owned && !hasFindTerms(q)) {
       const shown = new Set(found.map((c) => c.name));
       const close = (answer.did_you_mean || []).filter((name) => !shown.has(name)).slice(0, GUESS_LIMIT);
       guesses = close.length ? await cardsNamed(close) : [];
@@ -345,7 +347,8 @@ async function lookUp(ac, q, more = false) {
     drawOptions(ac);
   } catch (e) {
     if (!editorSearchCurrent(ac) || seq !== ac.seq || typed() !== q || scope !== editorSearchScope(ac)) return;
-    const words = e.status === 503 && e.data?.reason === "off" ? e.message
+    const words = e.status === 400 && e.data?.reason === "term" ? e.message
+      : e.status === 503 && e.data?.reason === "off" ? e.message
       : e.status === 503 && e.data?.reason !== "database" ? "The card data isn't ready yet: try again in a minute."
       : `The search didn't work: ${e.message}`;
     if (more && ac.items.length) {
@@ -358,6 +361,12 @@ async function lookUp(ac, q, more = false) {
         onclick: () => { if (editorSearchCurrent(ac)) { schedule(ac, 0); ac.input.focus({ preventScroll: true }); } } }) });
     }
   }
+}
+
+/** Whether the search text holds a rules-text or type-line term (o:, t:, E2-S25): its results are cards
+ * that match them, so no close spellings of the text follow. */
+function hasFindTerms(q) {
+  return /(?:^|\s)(?:o|oracle|t|type):/i.test(q);
 }
 
 /** Cards the name search can't find but a close spelling can (a typo such as "lightnig bolt", "fire/ice",

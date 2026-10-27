@@ -42,7 +42,6 @@ An index of open work, one row per item; each row points to the doc that owns th
 | `E1-S24` | OPEN | could | M | Rank precons by how much of each the free pool covers, to pick the next deck to build. |
 | `E2-S23` | OPEN | could | S | A Considering list kept with each deck, outside its lists and tables. |
 | `E2-S24` | OPEN | could | M | Own card categories in a deck (ramp, draw, removal) with counts. |
-| `E2-S25` | OPEN | could | M | Rules-text and type-line search (`o:`, `t:`) in the editor's card finder. |
 | `E4-S26` | OPEN | could | M | A phone life counter that ends by recording the game (multiplayer later, with `E4-S18`). |
 | `E8-S21` | OPEN | could | S | Printable deck box label with a QR code to the deck page. |
 | `E8-S22` | OPEN | could | M | A location (row, section) for storage copies, shown in the packing plan; with `E8-S19`'s storage count. |
@@ -78,7 +77,6 @@ An index of open work, one row per item; each row points to the doc that owns th
 | `E11-S28` | DECISION | should | M | Run the user-testing session with User2 from the prepared [checklist](decklab/design/user-testing-user2.md) (confirm his device first), then the follow-up review and stories. |
 | `FG#2` | WAITING | should | L+pc | Forge 2.0.16 (about mid-November 2026): rebase the fork, build, check the overrides, replay every matchup. The post-build checks are one command, built 2026-10-21: `python -m decklab.lib.forge upgrade-check` (`--plan forge-2.0.16` prints the rebase and build steps; `E11-S15`). |
 | `FG#3` | DEFERRED | could | M+pc | More experiment games (AI profiles, team-pump fix, override sets), decided with `FG#2`'s replay; the clean `fiery` test ran 2026-10-21 (C4 does what `fiery` does). |
-| `E3-S24` | OPEN | could | S | Chance to draw a card or group by a chosen turn, on the Stats tab. |
 
 ## Deck Lab: running it
 

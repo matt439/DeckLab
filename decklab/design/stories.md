@@ -36,8 +36,8 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | Epic | Stories | Built | Partial | Missing | Not wanted |
 |---|---:|---:|---:|---:|---:|
 | [E1: Find, plan and choose decks](#e1-find-plan-and-choose-decks) | 14 | 11 | 0 | 3 | 0 |
-| [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 19 | 13 | 1 | 4 | 1 |
-| [E3: Test a deck](#e3-test-a-deck) | 15 | 11 | 3 | 1 | 0 |
+| [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 19 | 14 | 1 | 3 | 1 |
+| [E3: Test a deck](#e3-test-a-deck) | 15 | 12 | 3 | 0 | 0 |
 | [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 22 | 16 | 1 | 4 | 1 |
 | [E5: Decide what to buy](#e5-decide-what-to-buy) | 22 | 15 | 0 | 5 | 2 |
 | [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 20 | 17 | 0 | 1 | 2 |
@@ -46,7 +46,7 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E9: Commander nights](#e9-commander-nights) | 20 | 13 | 0 | 6 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 35 | 31 | 1 | 1 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 28 | 17 | 6 | 2 | 3 |
-| **Total** | **241** | **175** | **16** | **36** | **14** |
+| **Total** | **241** | **177** | **16** | **34** | **14** |
 
 Counted from the story headers on 2026-10-27.
 
@@ -282,7 +282,7 @@ Evidence:
 
 Covers making a deck and keeping it right: New deck and Start from, the full editor (from 600px) and the phone's Quick edit, Paste a list, the Planned and Play-now lists, owned vs needed against the space's pool and its other built decks, keeping the write-up current, history and undo, and the command-line route Claude Code uses (`deck pull`/`push`/`new`/`tables`). Drafts stay on the device they were started on, and the Play-now list's substitutes are hand-written (Packing's physical stand-ins, E4-S21, never change a list). Rename and retirement, with restore from History, are on the deck page (E1-S19). Legality badges on casual decks are deliberately not wanted.
 
-Open: E2-S16, E2-S22, E2-S23, E2-S24, E2-S25.
+Open: E2-S16, E2-S22, E2-S23, E2-S24.
 
 **E2-S01** · Matt · must · L · built
 
@@ -578,7 +578,7 @@ Gap: No per-card categories exist in the deck text or the pages.
 
 First slice: a category suffix on decklist lines that the parser keeps and the deck page can group by.
 
-**E2-S25** · Matt · could · M · missing
+**E2-S25** · Matt · could · M · built
 
 As a deck builder building from the pool, I want to search cards by rules text and type line (Scryfall-style terms such as `o:treasure t:creature`), so that I can find owned cards that do what a deck needs.
 
@@ -588,12 +588,12 @@ As a deck builder building from the pool, I want to search cards by rules text a
 
 Decided (Matt, 2026-10-27): added from the comparison with Archidekt, Moxfield and TopDecked.
 
+Now (2026-10-27): [built](../HISTORY.md#rules-text-and-type-line-search-2026-10-27-e2-s25): `o:` and `t:` terms (words or quoted phrases, all to match) beside the name words, in both scopes and with the filters; an unknown term is named back.
+
 Evidence:
-- `decklab/lib/api/editor.py`: find_cards, _fits (name search plus colour identity, type and mana value)
-
-Gap: The finder can't search rules text or type lines.
-
-First slice: an `o:` (rules text) and `t:` (type line) term in find_cards, matched against the local card data.
+- `decklab/lib/api/editor.py`: find_cards, _find_terms (the terms, an unknown one as a 400 naming it), _term_fits (every face's type line and rules text, `~` for the card's name), _fits
+- `decklab/web/editor-cards.js`: lookUp (an unknown term's message as it is, no close spellings after terms), hasFindTerms, the search box's tooltip
+- `decklab/tests/test_editor_writeup.py`: FindCardsTests (terms, phrases, filters, My collection, unknown terms, a colon in a card name)
 
 ---
 
@@ -601,7 +601,7 @@ First slice: an `o:` (rules text) and `t:` (type line) term in find_cards, match
 
 How a player finds out whether a deck works before playing or buying cards: instant stats on the deck page's Stats tab, practice games on the Practice tab, Forge matchups and Rankings (#/matchups, #/matchup), the field rank on the Matchups tab, paired tests of a change from the editor (#/variant), and the simulations setting on #/settings. Matchups, fields, rankings and tests follow deck privacy: each viewer sees only results whose every side they may see, a member's field is their own space plus Public spaces, and a run may be stopped by whoever started it, anyone whose space's deck it uses, or an admin. Not yet covered: 4-player Commander pods, sideboard testing, comparing real games with Forge's predictions, and members asking for a run while only admins may start one. Forge results are files outside the database's backups by decision, since they can be replayed.
 
-Open: E3-S13, E3-S19, E3-S23, E3-S24.
+Open: E3-S13, E3-S19, E3-S23.
 
 **E3-S01** · Matt · must · M · built
 
@@ -836,7 +836,7 @@ Evidence:
 
 Gap: membership changes only by hand-editing `decklab/simulation.json`; there's no 'Who's in the field' view, page control, audit entry or count of lists left out by hand. Criteria 1, 3 and 4 weren't checked beyond that, so none is claimed met.
 
-**E3-S24** · Matt · could · S · missing
+**E3-S24** · Matt · could · S · built
 
 As a deck builder, I want the chance of drawing a card, or any of a group of cards, by a chosen turn, so that I know how reliably the deck finds its key pieces.
 
@@ -846,12 +846,11 @@ As a deck builder, I want the chance of drawing a card, or any of a group of car
 
 Decided (Matt, 2026-10-27): added from the comparison with TopDecked's hypergeometric calculator.
 
+Now: Built 2026-10-27 ([HISTORY.md, Chance to draw on the Stats tab](../HISTORY.md#chance-to-draw-on-the-stats-tab-2026-10-27-e3-s24)). The group is the cards ticked in the panel; once E2-S24's categories exist, a category is one more way to tick them.
+
 Evidence:
-- `decklab/web/practice.js`: mulligan and land-drop panels (simulated, E3-S04)
-
-Gap: No exact draw-odds calculation for a chosen card or group.
-
-First slice: a "Chance to draw" panel on the Stats tab for a single card picked from the list.
+- `decklab/web/stats.js`: drawOddsPanel, chanceOfAtLeastOne, cardsSeenBy
+- `decklab/tests/test_stats_draw_odds.py`: test_a_card_and_a_group_by_a_chosen_turn_on_the_play_or_draw, test_commander_draws_from_the_99_and_defaults_to_the_draw
 
 ## E4: Get ready, play and learn
 
