@@ -549,6 +549,10 @@ def deck_view(deck_id, version="target", omit=()):
     intent, independent of the displayed list version (assembly_intent.project). Cards
     outside the build can already be owned, on the way or missing; neither list is edited.
 
+    box_label is an owned intact product's box label (product_label.box_label: its name,
+    colours, decks and the deck page its QR code opens), only for a viewer who sees home's
+    records; absent otherwise.
+
     The space's inventory only for those who may see it (the phase 4 design's
     R6d, guard.sees_inventory: User2's decks only User2 and an admin,
     home's only Matt and User1): for anyone else the answer has no owned,
@@ -641,5 +645,9 @@ def deck_view(deck_id, version="target", omit=()):
         assembled = _assembled_view(summary, p, warnings, deck=deck_file, result=owned if version == "target" else None)
         if assembled is not None:
             answer["assembled"] = assembled
+    from .product_label import box_label
+    label = box_label(deck_id)
+    if label is not None:
+        answer["box_label"] = label
     answer.update(warnings=_unique(_scrub(warnings)), info=_unique(info))
     return metadata(answer, requested_id, deck_id)

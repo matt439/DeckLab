@@ -2622,7 +2622,7 @@ Evidence:
 - `decklab/lib/api/assembly.py`: _sleeve_notes
 - `decklab/tests/test_accessories.py`: test_shared_design_is_counted_per_holder, test_same_colour_different_design_is_no_warning; `decklab/tests/test_assembly_kit.py`: test_shared_sleeves_can_be_chosen_for_both_decks; `decklab/tests/test_editor_contracts.py`: test_sleeves_another_deck_uses_are_warned_about_before_they_are_chosen
 
-**E8-S21** · Matt · could · S · partial
+**E8-S21** · Matt · could · S · built
 
 As Matt, who keeps every built deck in its own box, I want to print a label for a deck box with the deck's name and a QR code to its deck page, so that scanning the box opens its list, plan and stand-ins.
 
@@ -2632,17 +2632,19 @@ As Matt, who keeps every built deck in its own box, I want to print a label for 
 
 Decided (Matt, 2026-10-27): added from the comparison with TopDecked's QR sharing and Delver's NFC tags.
 
-Now: first slice built 2026-10-27 ([HISTORY.md](../HISTORY.md#print-a-deck-box-label-with-a-qr-code-2026-10-27-e8-s21)). A built deck's More has **Print box label**: one 63 × 88 mm label with the deck's colour symbols, title, who plays it (home decks only) and a QR code to its deck page, drawn on the page by `web/qr.js` (byte mode, level M, versions 1 to 10). The code opens the tunnel's address when Deck Lab has one (GET /api/me's `address`), else the page's own. A scan by someone who may not see the deck gets the missing-deck answer, since the deck page asks /api/deck as always (E10-S30's 404). Intact product labels are the next slice.
+Now: first slice built 2026-10-27 ([HISTORY.md](../HISTORY.md#print-a-deck-box-label-with-a-qr-code-2026-10-27-e8-s21)). A built deck's More has **Print box label**: one 63 × 88 mm label with the deck's colour symbols, title, who plays it (home decks only) and a QR code to its deck page, drawn on the page by `web/qr.js` (byte mode, level M, versions 1 to 10). The code opens the tunnel's address when Deck Lab has one (GET /api/me's `address`), else the page's own. A scan by someone who may not see the deck gets the missing-deck answer, since the deck page asks /api/deck as always (E10-S30's 404). Intact product labels followed on 2026-10-28 ([HISTORY.md](../HISTORY.md#an-intact-products-box-label-2026-10-28-e8-s21)): an owned product kept intact gets **Print box label** in the More of each of its deck pages, one label for its one box with the product's name, the colours across its decks, each deck's name and one QR code to its first deck page (its own page for a single unnamed deck), from GET /api/deck's `box_label`, given only to viewers of home's records. That page's Product storage part lists **Decks in this box**, each a link, so a scan reaches every deck.
 
 Evidence:
 - `decklab/web/qr.js`: qrMatrix, qrSvg, qrReedSolomon
-- `decklab/web/deck-label.js`: offersBoxLabel, boxLabelAddress, boxLabelPiece, printBoxLabel
+- `decklab/web/deck-label.js`: offersBoxLabel, productBoxLabel, boxLabelAddress, boxLabelTarget, boxLabelPiece, printBoxLabel
+- `decklab/lib/api/product_label.py`: box_label (GET /api/deck's `box_label`, `decklab/lib/api/deck_page.py`: deck_view); `decklab/web/product-storage.js`: productBoxDecks
 - `decklab/web/deck.js`: deckMoreItems (Print box label)
 - `decklab/web/deck-print.js`: printCardSheet and cardSizePages (E4-S25's card-size print layout)
 - `decklab/lib/tunnel.py`: public_address; `decklab/lib/server_http.py`: GET /api/me's `address`
 - `decklab/tests/test_deck_label_ui.py`, `decklab/tests/test_tunnel.py`, `decklab/tests/test_server.py` (test_me_gives_the_tunnels_address_for_printed_links)
+- `decklab/tests/test_product_label.py`; `decklab/tests/test_api_decks.py` (test_a_product_kept_intact)
 
-Gap: An intact product's label, linking to its product deck pages.
+Gap: none for the story's criteria; not yet printed on a real printer or scanned from paper.
 
 **E8-S22** · Matt · could · M · missing
 

@@ -44,4 +44,7 @@ textarea.export-copy { width: 100%; font-family: var(--font-mono); }
   .box-label-player { font-size: 10pt; }
   .box-label .qr-code { width: 40mm; height: 40mm; margin-top: auto; }
   .box-label-scan { font-size: 7pt; }
+  /* An intact product's label names each deck in its box, so its code is a little smaller. */
+  .box-label-decks { list-style: none; margin: 0; padding: 0; font-size: 8pt; line-height: 1.2; overflow-wrap: anywhere; }
+  .box-label:has(.box-label-decks) .qr-code { width: 32mm; height: 32mm; }
 }
