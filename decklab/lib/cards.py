@@ -9,10 +9,11 @@ Usage (from the repo root):
 decklab/data/scryfall/ when they're missing or more than a week old (--force
 downloads them anyway), then rebuilds the small index everything else reads
 (decklab/data/scryfall/index.json.gz). Later start-ups only load the index.
-It also refreshes Commander Spellbook's combo list (decklab.lib.combos) on the
-same schedule, and once a day checks Wizards' sitemap for the newest Commander
-announcement (decklab.lib.official_lists), each a separate step whose failure
-never fails the update.
+It also refreshes Scryfall's rulings (decklab.lib.rulings) and Commander
+Spellbook's combo list (decklab.lib.combos) on the same schedule, and once a
+day checks Wizards' sitemap for the newest Commander announcement
+(decklab.lib.official_lists), each a separate step whose failure never fails
+the update.
 When Scryfall can't be reached or a download is cut off, the local files are
 kept and used; it only fails when there's no local copy at all. The index
 itself is built from the bulk files by decklab.lib.card_index.
@@ -274,6 +275,16 @@ def _update_combos(force, log):
         log(f"Combo list: not updated ({type(e).__name__}: {e}); keeping what's on the PC.")
 
 
+def _update_rulings(force, log):
+    """Scryfall's rulings for the card viewer (decklab.lib.rulings), a step of its own
+    like _update_combos: nothing it raises fails the update. Tests patch this out."""
+    try:
+        from decklab.lib import rulings
+        rulings.update(force=force, log=log)
+    except Exception as e:      # noqa: BLE001 (the card index matters more)
+        log(f"Rulings: not updated ({type(e).__name__}: {e}); keeping what's on the PC.")
+
+
 def _update_official_lists(force, log):
     """The newest Commander announcement in Wizards' sitemap
     (decklab.lib.official_lists), a step of its own like _update_combos: nothing
@@ -295,13 +306,14 @@ def write_index(index, path=INDEX_FILE):
 
 def update(force=False, log=print):
     """Download stale bulk files, then rebuild the index if it's missing or
-    older than them. Returns True when the index was rebuilt. The combo list
-    and the official lists' check come after the index (they don't need it), so
-    their downloads never hold it up."""
+    older than them. Returns True when the index was rebuilt. The rulings, the
+    combo list and the official lists' check come after the index (they don't
+    need it), so their downloads never hold it up."""
     downloaded = download_bulk(force, log)
     try:
         return _update_index(force, downloaded, log)
     finally:
+        _update_rulings(force, log)
         _update_combos(force, log)
         _update_official_lists(force, log)
 

@@ -35,10 +35,10 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 
 | Epic | Stories | Built | Partial | Missing | Not wanted |
 |---|---:|---:|---:|---:|---:|
-| [E1: Find, plan and choose decks](#e1-find-plan-and-choose-decks) | 14 | 10 | 0 | 4 | 0 |
-| [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 19 | 13 | 1 | 4 | 1 |
-| [E3: Test a deck](#e3-test-a-deck) | 15 | 11 | 3 | 1 | 0 |
-| [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 22 | 15 | 1 | 5 | 1 |
+| [E1: Find, plan and choose decks](#e1-find-plan-and-choose-decks) | 14 | 11 | 0 | 3 | 0 |
+| [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 19 | 14 | 1 | 3 | 1 |
+| [E3: Test a deck](#e3-test-a-deck) | 15 | 12 | 3 | 0 | 0 |
+| [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 22 | 16 | 1 | 4 | 1 |
 | [E5: Decide what to buy](#e5-decide-what-to-buy) | 22 | 15 | 0 | 5 | 2 |
 | [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 20 | 17 | 0 | 1 | 2 |
 | [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 28 | 20 | 3 | 5 | 0 |
@@ -46,7 +46,7 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E9: Commander nights](#e9-commander-nights) | 20 | 13 | 0 | 6 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 35 | 31 | 1 | 1 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 28 | 17 | 6 | 2 | 3 |
-| **Total** | **241** | **173** | **16** | **38** | **14** |
+| **Total** | **241** | **177** | **16** | **34** | **14** |
 
 Counted from the story headers on 2026-10-27.
 
@@ -56,7 +56,7 @@ Counted from the story headers on 2026-10-27.
 
 How Matt and User1 (and, more lightly, User2, User3, User4 and User5) find a deck in the library (#/library), choose its picture, open its deck page (#/deck) to see whether it can be built and how to play it, rename or retire it, and pick what to play tonight. Each viewer's library holds their own space's decks, plus any another space has made public. A plain "Deck Lab is off" message is enough while the PC is off (E11-S02); collector-value sorting and legality badges on casual decks aren't wanted.
 
-Open: E1-S12, E1-S13, E1-S24, E1-S25.
+Open: E1-S12, E1-S13, E1-S24.
 
 **E1-S01** · User1 · must · M · built
 
@@ -260,7 +260,7 @@ Gap: No view ranks lists by how much of them the pool covers.
 
 First slice: a read-only command, `python -m decklab.lib.precons coverage [--space S] [--format F]`, printing the top precons by free-pool coverage.
 
-**E1-S25** · User1 · could · S · missing
+**E1-S25** · User1 · could · S · built
 
 As a newer player reading a card, I want its official rulings under its rules text in the card viewer, so that I can settle a question at the table without searching the web.
 
@@ -271,12 +271,10 @@ As a newer player reading a card, I want its official rulings under its rules te
 Decided (Matt, 2026-10-27): added from the comparison with ManaBox and Dragon Shield. Rulings are Scryfall's, not explanations (E4-S07 stays not wanted).
 
 Evidence:
-- `decklab/web/card-viewer.js`: openCardViewer shows oracle text and faces, no rulings
-- `decklab/lib/cards.py`: update (where a rulings bulk download would join)
-
-Gap: Scryfall's rulings bulk file isn't downloaded and the viewer has no rulings part.
-
-First slice: download and index Scryfall's rulings bulk file in `cards update`, and serve them with the card's details.
+- `decklab/lib/rulings.py`: update (a step of `cards update`: Scryfall's rulings bulk file reduced to rulings.json.gz by oracle id), for_card, updated
+- `decklab/lib/api/card_rulings.py`: card_rulings (GET /api/cards/rulings)
+- `decklab/web/card-viewer.js`: viewerRulingsPart, viewerRulingsParts
+- `decklab/tests/test_rulings.py`: test_downloads_reduces_and_then_stays_fresh, test_failures_keep_the_rulings_on_the_pc, test_a_cards_rulings_none_and_not_yet, test_the_fold_none_not_yet_and_failures
 
 ---
 

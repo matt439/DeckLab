@@ -176,6 +176,8 @@ inventory writes answer 503 with "reason": "database":
     GET  /api/cards/search?q=<text>&limit=<n>[&detail=1]
                                          names for autocomplete (detail: type, cost, printing)
     GET  /api/cards/printings?name=<name>   the printing picker: owned counts, prices
+    GET  /api/cards/rulings?name=<name>    the card viewer's: {"name", "available", "updated", "rulings":
+                                         [{"date", "source", "text"}]} (lib/api/card_rulings.py)
     GET  /api/printings?name=<exact name>   the Add card sheet's: {"name", "printings": [{"set", "set_name",
                                          "collector_number", "finishes", "released"}]}, newest first
     GET  /api/collection?space=<id>&q=&color=&type=&role=&mv=&availability=&page=&limit=

@@ -4,7 +4,10 @@ Every file Deck Lab serves from web/ (server_http.static_files: the scripts, sty
 the manifest and the icons) is read by anyone signed in, a member such as User5 too, so its examples
 and comments use neutral names ("Alex", "Sam", "Jordan") and decks ("Boros Burn", "Krenko, Mob
 Boss: Goblin Horde"). This test fails on any configured profile's id, name or email, and on any of
-the household's real deck titles, matched case-insensitively as whole words. The titles come from the
+the household's real deck titles, matched case-insensitively as whole words, except the stand-in
+names (NEUTRAL_NAMES): a config.json made from config.example.json names "Alex", and one with the
+docs' stand-ins names "User1", which the page's examples use on purpose, so a local config.json never
+fails the test on them. The titles come from the
 test fixtures' deck files, the decks as the git tag pre-db-decks holds them, a database export when
 one is named (DECKLAB_DECK_EXPORT: a `deck pull --all -o DIR` or `inventory export DIR` folder, read
 for every deck text's `# ` title), and the list below, which keeps titles none of those hold (a deck
@@ -53,6 +56,11 @@ DECK_TITLES = (
 # short names, which the page shows on their own ("Giada" for a Commander deck's chip).
 OTHER_TERMS = ("Giada", "Gisa", "Ghalta", "Lathliss", "Alela", "Finneas", "Yoshimaru", "Krobus", "roningames",
                "a-flicker-in-the-deep", "Hare Raising")
+
+# The made-up names the page's examples use (the docstring's) and the repo's stand-ins for the household
+# (AGENTS.md: user1 to user5). A profile may carry one (config.example.json's "alex"), but none is
+# anyone's personal data, so profile_terms() leaves them out.
+NEUTRAL_NAMES = ("Alex", "Sam", "Jordan", "User1", "User2", "User3", "User4", "User5")
 
 # (served path, term) pairs that may stay, each with its reason. Keep it small.
 ALLOWED = {
@@ -130,9 +138,9 @@ def deck_title_terms(titles=DECK_TITLES):
     return terms
 
 
-def profile_terms(config_file=CONFIG_FILE):
+def profile_terms(config_file=CONFIG_FILE, neutral=NEUTRAL_NAMES):
     """Every configured profile's id, name, display name and emails (decklab/config.json, not the
-    DECKLAB_CONFIG_EXTRA overlay)."""
+    DECKLAB_CONFIG_EXTRA overlay), but for the stand-in names (NEUTRAL_NAMES)."""
     try:
         config = json.loads(Path(config_file).read_text(encoding="utf-8"))
     except FileNotFoundError:
@@ -143,7 +151,8 @@ def profile_terms(config_file=CONFIG_FILE):
             if isinstance(profile.get(key), str) and profile[key] != "home":
                 terms.add(profile[key])
         terms.update(e for e in profile.get("emails") or () if isinstance(e, str))
-    return {t.strip() for t in terms if t and t.strip()}
+    neutral = {name.lower() for name in neutral}
+    return {t.strip() for t in terms if t and t.strip() and t.strip().lower() not in neutral}
 
 
 def _pattern(term):
@@ -176,7 +185,7 @@ class NoPersonalDataTests(unittest.TestCase):
         files = static_files(WEB_DIR)
         self.assertIn("/core.js", files)                 # the real web/, not an empty folder
         terms = profile_terms() | deck_title_terms(deck_titles_found()) | set(OTHER_TERMS)
-        self.assertTrue(profile_terms() or not Path(CONFIG_FILE).exists())
+        self.assertTrue(profile_terms(neutral=()) or not Path(CONFIG_FILE).exists())    # a config.json is read
         found = hits(files, terms)
         self.assertEqual(found, [], "Use neutral names and decks in web/ (E10-S39): "
                          + "; ".join(f"{url}:{line} {term!r}" for url, line, term in found))
@@ -195,6 +204,22 @@ class NoPersonalDataTests(unittest.TestCase):
                 ("/a.js", 1, "User1"), ("/b.css", 1, "Gruul Ramp"), ("/c.js", 1, "Sai"), ("/icons/i.png", 3, "Matt")])
             # "pattern" holds "user5" but not as a word; an allowed pair is skipped.
             self.assertEqual(hits(static_files(web), {"User1"}, allowed={("/a.js", "User1")}), [])
+
+    def test_stand_in_profile_names_are_not_terms(self):
+        # A local config.json made from config.example.json (Alex) or with the docs' stand-ins (User1)
+        # adds no term; a real name, display name, space and email still do.
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "config.json"
+            path.write_text(json.dumps({"profiles": [
+                {"id": "alex", "name": "Alex", "space": "home", "emails": []},
+                {"id": "user1", "name": "User1", "space": "home", "emails": ["user1@example.com"]},
+                {"id": "robin", "name": "Robin", "display_name": "Rob", "space": "robin",
+                 "emails": ["robin@example.com"]},
+            ]}), encoding="utf-8")
+            self.assertEqual(profile_terms(path),
+                             {"user1@example.com", "robin", "Robin", "Rob", "robin@example.com"})
+            self.assertIn("Alex", profile_terms(path, neutral=()))
+        self.assertEqual(profile_terms(Path(tmp) / "missing.json"), set())
 
     def test_titles_come_from_fixtures_the_tag_and_an_export(self):
         found = deck_titles_found(environ={})

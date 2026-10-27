@@ -590,6 +590,10 @@ class Handler(BaseHTTPRequestHandler):
             if route == ["cards", "printings"]:
                 self._allow(*GET)
                 return self._send_json(200, api.printings(self._query(query, ("name",)).get("name", "")))
+            if route == ["cards", "rulings"]:
+                self._allow(*GET)
+                from decklab.lib.api.card_rulings import card_rulings
+                return self._send_json(200, card_rulings(self._query(query, ("name",)).get("name", "")))
             from decklab.lib.feature_routes import dispatch
             if dispatch(self, route, query):
                 return
