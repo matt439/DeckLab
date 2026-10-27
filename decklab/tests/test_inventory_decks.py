@@ -468,7 +468,7 @@ class PgDeckPartsTests(db_support.DbTestCase):
         (root / "magic/decks/casual").mkdir(parents=True)
         (root / "magic/decks/casual/test.md").write_bytes(DECK.encode())
         (root / "magic/products").mkdir()
-        (root / "magic/products/status.csv").write_bytes(b"file,status,intact,sleeves,deck_box,notes\n")
+        (root / "magic/products/status.csv").write_bytes(b"file,status,intact,sleeves,deck_box,notes,token_cards\n")
         (root / "magic/watchlist.csv").write_bytes((",".join(files.WatchRow.COLUMNS) + "\n").encode())
         inv = FileInventory(root).load()
         pg.write_model(inv, TESTER, "Import", dbname=self.dbname)
