@@ -10,7 +10,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 
 **Ready queue:** `E11-S30`, the visual redesign Matt chose on 2026-10-24 ("P1"). Slice 14 of [visual-design.md](decklab/design/visual-design.md#7-rollout) is implemented, as are slice 13's scoped recorded packing activity, verified intact-product storage review and per-card movable-copy priorities. Exact physical printing still needs a confirmed-printing model; independent ready reserve work can continue while it is designed. Slice 15's empty, loading and failed states are drawn and built, and dark mode was checked on full data (2026-10-27); Matchups with saved results in dark and device acceptance remain open. The approved desktop keyboard plan is built; global search has its separate decision below. Explicit original-row associations for newly added arrival checks are implemented, with component-wide verification retained; targeted backend/UI and isolated native checks passed. Casual inline verification placement is implemented for proven targets, with single canonical controls, component-wide semantics and verified fallback; final UI/native checks and caption review passed. Collection question 6 and touch/Safari acceptance remain separate gates, with Card colour matching the compatibility default.
 
-**Ready reserve:** after the redesign, the `OPEN` rows Matt added on 2026-10-25 have concrete first slices in their stories, in no fixed order unless Matt picks one. `E11-S08` retains broader recovery work beyond its implemented single-row Undo review. The 2026-10-26 audit checked the reserve against the code: no extra stories need promoting. Linux service/timer installation, device checks and Forge games retain their separate gates.
+**Ready reserve:** after the redesign, the `OPEN` rows Matt added on 2026-10-25 have concrete first slices in their stories, in no fixed order unless Matt picks one. `E11-S08` retains broader recovery work beyond its implemented single-row Undo review. The 2026-10-26 audit checked the reserve against the code: no extra stories need promoting. On 2026-10-27 Matt added the rows from the comparison with other card apps that fit Deck Lab (the `could` rows marked 2026-10-27 in their stories), also in no fixed order. Linux service/timer installation, device checks and Forge games retain their separate gates.
 
 **Needs Matt or another person — these don't block coding:**
 - **`E11-S31`: global-search scope.** Choose the sources (visible decks, the viewer's collection and/or all Scryfall cards) and result grouping before building. Library title, colour and archetype filters (`E1-S05`) are built independently of that decision.
@@ -38,6 +38,16 @@ An index of open work, one row per item; each row points to the doc that owns th
 | id | status | pri | size | item |
 |---|---|---|---|---|
 | `E2-S22` | DECISION | must | M | Physical hardware/touch-usability follow-up on the household's iPhones and M2 11-inch iPad; the six-configuration Safari Simulator suite passes ([evidence](decklab/safari/EVIDENCE.md)). |
+| `E1-S13` | OPEN | could | L | Compare two decks side by side; first slice is their stats (curve, colours, lands, types). |
+| `E1-S24` | OPEN | could | M | Rank precons by how much of each the free pool covers, to pick the next deck to build. |
+| `E1-S25` | OPEN | could | S | Scryfall rulings in the card viewer. |
+| `E2-S23` | OPEN | could | S | A Considering list kept with each deck, outside its lists and tables. |
+| `E2-S24` | OPEN | could | M | Own card categories in a deck (ramp, draw, removal) with counts. |
+| `E2-S25` | OPEN | could | M | Rules-text and type-line search (`o:`, `t:`) in the editor's card finder. |
+| `E4-S25` | OPEN | could | S | Print card-size proxies of a deck's missing Planned-list cards for home games. |
+| `E4-S26` | OPEN | could | M | A phone life counter that ends by recording the game (multiplayer later, with `E4-S18`). |
+| `E8-S21` | OPEN | could | S | Printable deck box label with a QR code to the deck page. |
+| `E8-S22` | OPEN | could | M | A location (row, section) for storage copies, shown in the packing plan; with `E8-S19`'s storage count. |
 
 ## Deck Lab: collection, orders and buying
 
@@ -47,6 +57,19 @@ An index of open work, one row per item; each row points to the doc that owns th
 |---|---|---|---|---|
 | `E5-S15` | DEFERRED | should | M | User1 asks from the page for a card or a Forge run, Matt approves (`E3-S13`); not urgent. |
 | `E5-S24` | DEFERRED | could | S | Copy one shop's list from Shopping's By shop, for pasting into the shop's search. |
+| `E5-S08` | OPEN | could | XL | Australian shop prices and stock, starting with a daily MTGMate snapshot for queued rows; then `E5-S19`'s back-in-stock alerts. |
+| `E6-S19` | OPEN | could | M | Tell User1, at the next visit, when a receipt brought cards for a deck User1 plays. |
+| `E7-S22` | OPEN | could | M | Record a trade as one change; first slice is a `collection trade` command. |
+| `E7-S32` | OPEN | could | L | Camera scanning into the collection; first slice is a recognition spike. ManaBox import stays the route meanwhile. |
+
+## Deck Lab: Commander nights
+
+**Owner:** [design/stories.md](decklab/design/stories.md#e9-commander-nights), E9.
+
+| id | status | pri | size | item |
+|---|---|---|---|---|
+| `E9-S07` | OPEN | could | L | EDHREC ideas for a commander, marked owned, free or to buy. |
+| `E9-S25` | OPEN | could | M | Two-card combos a Commander deck is one card away from, with the missing piece's availability. |
 
 ## Deck Lab: testing and Forge
 
@@ -57,6 +80,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 | `E11-S28` | DECISION | should | M | Run the user-testing session with User2 from the prepared [checklist](decklab/design/user-testing-user2.md) (confirm his device first), then the follow-up review and stories. |
 | `FG#2` | WAITING | should | L+pc | Forge 2.0.16 (about mid-November 2026): rebase the fork, build, check the overrides, replay every matchup. The post-build checks are one command, built 2026-10-21: `python -m decklab.lib.forge upgrade-check` (`--plan forge-2.0.16` prints the rebase and build steps; `E11-S15`). |
 | `FG#3` | DEFERRED | could | M+pc | More experiment games (AI profiles, team-pump fix, override sets), decided with `FG#2`'s replay; the clean `fiery` test ran 2026-10-21 (C4 does what `fiery` does). |
+| `E3-S24` | OPEN | could | S | Chance to draw a card or group by a chosen turn, on the Stats tab. |
 
 ## Deck Lab: running it
 
@@ -77,7 +101,6 @@ A new row for one of these gets its section back.
 | area | owner | a row returns with |
 |---|---|---|
 | Magic decks and buying | Deck Lab's deck list (`python -m decklab.db deck list`) and Shopping (`#/shopping`: deliveries, the purchase queue) | a deck or buying project that spans sessions |
-| Deck Lab: Commander nights | [design/stories.md](decklab/design/stories.md#e9-commander-nights), E9 | a Commander story promoted from its Open list |
 | Pokémon | `pokemon/collection.csv`, `pokemon/wishlist.csv` | a change Matt asks for |
 | Deck Lab's known low issues | HISTORY.md, each feature's "Known low issues" | one getting in the way |
 
