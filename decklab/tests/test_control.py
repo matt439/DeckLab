@@ -387,8 +387,8 @@ class StopTests(TempCase):
 
 class OffWindowsTests(unittest.TestCase):
 
-    def test_no_ops_off_windows(self):
-        with mock.patch.object(control.sys, "platform", "linux"):
+    def test_no_ops_off_windows_and_linux(self):
+        with mock.patch.object(control.sys, "platform", "darwin"):
             self.assertEqual(control.request_stop(50001, wait=0), "unsupported")
             listener = control.listen_for_stop(50001, lambda: None)
             listener.close()

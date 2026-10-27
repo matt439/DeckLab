@@ -233,10 +233,10 @@
  "purchases": {
   "coverage": [],
   "overview": {
-   "__error__": "FileNotFoundError: [Errno 2] No such file or directory: '<ROOT>\\\\magic\\\\watchlist.csv'"
+   "__error__": "FileNotFoundError: [Errno 2] No such file or directory: '<ROOT>/magic/watchlist.csv'"
   },
   "read_queue": {
-   "__error__": "FileNotFoundError: [Errno 2] No such file or directory: '<ROOT>\\\\magic\\\\watchlist.csv'"
+   "__error__": "FileNotFoundError: [Errno 2] No such file or directory: '<ROOT>/magic/watchlist.csv'"
   },
   "read_records": []
  },

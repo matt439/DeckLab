@@ -123,6 +123,21 @@ def _no_constants(name):
     raise ValueError(f"{name} isn't allowed")
 
 
+JSON_DEPTH = 200                    # far more than any request needs; deeper is refused
+
+
+def _depth_over(data, limit):
+    """True when data's lists and objects nest more than limit deep (counted without recursion)."""
+    stack = [(data, 1)]
+    while stack:
+        value, depth = stack.pop()
+        if isinstance(value, (list, dict)):
+            if depth > limit:
+                return True
+            stack.extend((v, depth + 1) for v in (value.values() if isinstance(value, dict) else value))
+    return False
+
+
 def _load_json(body, what):
     """body (bytes) as JSON, or ApiError 400 saying why not, with what
     ("The settings", "The request") as the subject. Besides bad UTF-8, bad
@@ -135,6 +150,9 @@ def _load_json(body, what):
         raise ApiError(400, f"{what} isn't valid JSON: {e}") from None
     except RecursionError:
         raise ApiError(400, f"{what} isn't valid JSON: it's nested too deeply") from None
+    if _depth_over(data, JSON_DEPTH):
+        # The same answer whatever stack this Python has: Linux's reads 20,000 deep where Windows' can't.
+        raise ApiError(400, f"{what} isn't valid JSON: it's nested too deeply")
     try:
         json.dumps(data, ensure_ascii=False).encode("utf-8")
     except UnicodeEncodeError:

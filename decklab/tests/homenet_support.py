@@ -228,6 +228,8 @@ class Guarded(unittest.TestCase):
         self.control.STATE_FILE = self.data / "server.json"
         self.control.LOG_FILE = self.data / "logs" / "server.log"
         self.patch("decklab.lib.homenet.commands.control", self.control)
+        # main's commands act on Task Scheduler's task here, on every system (service.py has its own tests).
+        self.patch("decklab.lib.homenet.commands.uses_systemd", return_value=False)
         self.schtasks = self.patch("decklab.lib.homenet.commands._schtasks",
                                    side_effect=AssertionError("schtasks reached without a mock"))
         self.patch("decklab.lib.homenet.gather.run_powershell", side_effect=AssertionError("PowerShell reached"))

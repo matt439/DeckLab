@@ -46,7 +46,9 @@ The server's side (server.py main()):
   the way Ctrl+C stops it (a Forge matchup saves the games it finished), and
   request_stop() waits until its process has ended (or, with no state file
   to name the process, until the server has closed the event), up to
-  STOP_WAIT seconds.
+  STOP_WAIT seconds. On Linux there's no named event: request_stop() sends
+  SIGTERM to the process the state file names (systemctl stop sends the
+  same), and the server's SIGTERM handler stops it the same way.
 - The stop marker (stop_marker_path: stopped-<port>.json beside the state
   file, so DECKLAB_STATE_FILE moves it too, and one per port) says the
   server on that port was stopped on purpose, so homenet's watchdog task
@@ -86,6 +88,7 @@ import io
 import itertools
 import json
 import os
+import signal
 import sys
 import threading
 import time
@@ -523,15 +526,47 @@ class _StopListener:
 def listen_for_stop(port, on_stop):
     """Call on_stop() (once, in a thread of its own) when request_stop(port)
     asks this process to stop. The answer's close() stops listening. Raises
-    OSError if the event can't be made. Does nothing off Windows.
+    OSError if the event can't be made. On Linux it's SIGTERM instead (what
+    request_stop and systemctl stop send), heard only from the main thread;
+    elsewhere, or from another thread, it does nothing.
 
     Call it once the server has the port, never before: a server that then
     found the port taken would already have opened (and reset) the running
     server's event. And call it before writing the state file, so whoever
     finds the server there can stop it."""
     if sys.platform != "win32":
+        if sys.platform.startswith("linux") and threading.current_thread() is threading.main_thread():
+            return _SignalListener(on_stop)
         return _NoListener()
     return _StopListener(port, on_stop)
+
+
+class _SignalListener:
+    """listen_for_stop()'s answer on Linux: SIGTERM calls on_stop() once, in a
+    thread of its own (it may wait for serve_forever(), which the main thread
+    runs), until close() puts the earlier handler back."""
+
+    def __init__(self, on_stop):
+        self._on_stop, self._lock, self._called = on_stop, threading.Lock(), False
+        self._before = signal.signal(signal.SIGTERM, self._heard)
+
+    def _heard(self, signum, frame):
+        with self._lock:
+            if self._called:
+                return
+            self._called = True
+        threading.Thread(target=self._stop, name="stop-listener", daemon=True).start()
+
+    def _stop(self):
+        try:
+            self._on_stop()
+        except Exception:
+            _log(f"Stopping failed:\n{traceback.format_exc()}")
+
+    def close(self):
+        if self._before is not None and threading.current_thread() is threading.main_thread():
+            signal.signal(signal.SIGTERM, self._before)
+            self._before = None
 
 
 def _event_exists(name):
@@ -549,8 +584,12 @@ def request_stop(port, wait=STOP_WAIT, path=None):
     "stopped": it has (its process has ended, or with no state file naming
     it, it has closed its stop event); "not running": no server listens for
     a stop on that port; "timeout": asked, but still running; "unsupported":
-    not Windows, or the server can't be signalled from here (it runs as
-    administrator or as another user). path is the state file (STATE_FILE)."""
+    not Windows or Linux, or the server can't be signalled from here (it runs as
+    administrator or as another user). path is the state file (STATE_FILE).
+    On Linux it sends SIGTERM to the process the state file names, once
+    /proc shows that process is still a Deck Lab server (_is_server)."""
+    if sys.platform.startswith("linux"):
+        return _request_stop_posix(port, wait, path)
     if sys.platform != "win32":
         return "unsupported"
     win = _win()
@@ -584,6 +623,35 @@ def request_stop(port, wait=STOP_WAIT, path=None):
     finally:
         if process:
             k32.CloseHandle(process)
+
+
+def _is_server(pid):
+    """True when Linux's /proc shows process pid runs decklab/server.py, so a
+    process id reused since the state file was written is never signalled."""
+    try:
+        args = Path(f"/proc/{int(pid)}/cmdline").read_bytes().split(b"\0")
+    except (OSError, ValueError):
+        return False
+    return any(Path(os.fsdecode(a)).name == "server.py" for a in args if a)
+
+
+def _request_stop_posix(port, wait, path):
+    state = read_state(path)
+    pid = (state or {}).get("pid")
+    if not state or state.get("port") != port or pid == os.getpid() or not _is_server(pid):
+        return "not running"
+    try:
+        os.kill(pid, signal.SIGTERM)
+    except ProcessLookupError:
+        return "stopped"
+    except PermissionError:
+        return "unsupported"
+    deadline = time.monotonic() + max(0.0, wait)
+    while process_alive(pid) and _is_server(pid):
+        if time.monotonic() >= deadline:
+            return "timeout"
+        time.sleep(0.1)
+    return "stopped"
 
 
 # ------------------------------------------------------- logging off, shutting down

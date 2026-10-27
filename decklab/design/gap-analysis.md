@@ -6,7 +6,7 @@ Story ids (such as E7-S09) are those in [stories.md](stories.md). Each story the
 
 ## Headline
 
-Deck Lab already does most of what Matt and User1 need. Of the must and should stories, Matt has 96 built and 3 partial; User1 has 32 built, 1 partial and 1 missing; Claude Code has 15 built, User5 4, the space members 4 and the Commander table 1, with no gaps. Across all 229 stories there are 171 built, 16 partial, 28 missing and 14 not wanted (recounted from the story headers on 2026-10-26). E9-S18 is now counted as not wanted.
+Deck Lab already does most of what Matt and User1 need. Of the must and should stories, Matt has 96 built and 3 partial; User1 has 32 built, 1 partial and 1 missing; Claude Code has 15 built, User5 4, the space members 4 and the Commander table 1, with no gaps. Across all 229 stories there are 172 built, 16 partial, 27 missing and 14 not wanted (recounted from the story headers on 2026-10-26; E7-S21 and E11-S33 built 2026-10-27). E9-S18 is now counted as not wanted.
 
 Matt's answers moved the work towards three things:
 
@@ -234,7 +234,7 @@ E11-S08 remains partial: Activity supports narrow single-row collection/token UP
 
 E10-S17 is built: a named home admin can add a new member with an empty Private own space or replace one existing non-home member email in Settings. Full raw-configuration and membership receipts bind one audited change, and a private journal gates profile/auth reads until exact-outcome publication is recovered. Creation fixes Member role server-side and refuses reused, departed or retained-data identities instead of inheriting their private records or visibility. Config-backed sync shares the claim and rereads its source after claiming it. Access-policy guidance is explicit, and local status reports known configuration sign-in blockers by position/code without changing tolerant request parsing. No real member change, external policy or per-address sign-in acceptance is claimed. E11-S02's separate signed-in household workflow checks remain open and do not verify every member/address.
 
-E11-S33 remains missing and OPEN. Interpreter paths and the stdout-only nightly systemd service/timer preview have isolated lexical/mocked checks; the preview passed 32 tests without skips and independent review. Explicit target paths, strict calendar/UTF-8 output and directive-specific literal handling add no host/config/data access or installation. Real Linux Python 3.14/full-suite and CI evidence, nightly integration/enabling/host acceptance and server lifecycle support remain. WSL discovery was denied and stopped; story counts are unchanged.
+E11-S33 is built (2026-10-27): the whole suite passes on Linux and runs there in CI, and the nightly timer and the server's service are systemd user units, checked under a real systemd in CI. See [HISTORY.md](../HISTORY.md#linux-support-2026-10-27-e11-s33). Built 171, missing 27.
 
 ## PLAN.md alignment
 

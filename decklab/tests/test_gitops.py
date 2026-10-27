@@ -49,6 +49,10 @@ def _new_repo():
     git(root, "config", "user.name", "Test Person")
     git(root, "config", "user.email", "test@example.com")
     git(root, "config", "core.autocrlf", "false")
+    # No background maintenance after the commit: its maintenance.lock can come and go while
+    # make_repo copies the template (seen with Linux's git 2.55).
+    git(root, "config", "maintenance.auto", "false")
+    git(root, "config", "gc.auto", "0")
     (root / "decks").mkdir()
     for name in ("a.md", "b.md"):
         (root / "decks" / name).write_bytes(f"{name}\n".encode())

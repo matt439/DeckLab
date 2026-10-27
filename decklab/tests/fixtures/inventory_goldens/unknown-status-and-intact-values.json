@@ -1024,7 +1024,7 @@
    "__error__": "ValueError: magic/products/x.csv: duplicate product or invalid status"
   },
   "read_queue": {
-   "__error__": "FileNotFoundError: [Errno 2] No such file or directory: '<ROOT>\\\\magic\\\\watchlist.csv'"
+   "__error__": "FileNotFoundError: [Errno 2] No such file or directory: '<ROOT>/magic/watchlist.csv'"
   },
   "read_records": []
  },

@@ -339,6 +339,11 @@ def _log_tail(path, lines=LOG_TAIL, start=0):
 
 # ------------------------------------------------------------ commands
 
+def uses_systemd():
+    """True on Linux, where main's commands act on a systemd user service (service.py)."""
+    return sys.platform.startswith("linux")
+
+
 def _windows_only():
     if sys.platform != "win32":
         say("Starting at logon uses Windows' Task Scheduler, so it only works on Windows.")
@@ -346,14 +351,22 @@ def _windows_only():
     return False
 
 
-def cmd_install(name, port, no_start=False, log_path=None, port_given=False, host=None, at_logon=False):
+def profiles_ok():
+    """True when config.json's profiles can be checked and pass; else False, after saying why
+    (install refuses then, on Windows and Linux alike)."""
     try:
         profiles.read_checked()
     except profiles.InvalidProfiles as problem:
         say(str(problem))
-        return 1
+        return False
     except (OSError, ValueError, TypeError):
         say("Profile configuration could not be checked. Fix decklab/config.json before installing.")
+        return False
+    return True
+
+
+def cmd_install(name, port, no_start=False, log_path=None, port_given=False, host=None, at_logon=False):
+    if not profiles_ok():
         return 1
     if _windows_only():
         return 1
@@ -563,8 +576,12 @@ def cmd_stop(port):
             + (f" (process {pid})." if pid else ".")
             + f" If it doesn't stop, end {program} in Task Manager.")
         return 1
+    if sys.platform.startswith("linux"):
+        say(f"Deck Lab{f' (process {pid})' if pid else ''} can't be signalled from here: it may be running as "
+            "another user. Stop it as that user, or press Ctrl+C in its terminal.")
+        return 1
     if sys.platform != "win32":
-        say("Stopping Deck Lab from here only works on Windows: press Ctrl+C in its window.")
+        say("Stopping Deck Lab from here only works on Windows and Linux: press Ctrl+C in its window.")
         return 1
     # The stop event is there but can't be set from here (control.request_stop).
     who = f"Deck Lab ({program}, process {pid})" if pid else f"The Deck Lab server on port {port}"
@@ -1011,6 +1028,13 @@ def main(argv=None):
                 "python -m decklab.lib.homenet stop --port 8642 (or status, or remove, with --port 8642).")
             return 1
     port = args.port if args.port is not None else default_port
+    if uses_systemd():
+        # A systemd user service instead of Task Scheduler's task (service.py, E11-S33).
+        from . import service
+        if args.command == "install":
+            return service.install(args.task, port, args.no_start, args.log, port_given=args.port is not None,
+                                       host=args.host, at_logon=args.at_logon)
+        return service.COMMANDS[args.command](args.task, port)
     if args.command == "install":
         return cmd_install(args.task, port, args.no_start, args.log, port_given=args.port is not None,
                            host=args.host, at_logon=args.at_logon)
