@@ -160,7 +160,7 @@ class ProductTokensUiTests(unittest.TestCase):
           const {sheet}=open();let writes=0;apiWrite=async()=>{writes++;return answer();};
           assert(productStorageSheets.has(sheet));closeProductStorageSheets();assert(sheet.closed);assert.equal(productStorageSheets.size,0);assert.equal(writes,0);
         ''')
-    
+
     def test_refresh_waits_for_sheet_history_back_and_does_not_rewrite_a_new_destination(self):
         self.run_js(r'''
           history.state={pos:4};history.length=5;const base=location.hash;let pendingBack;
