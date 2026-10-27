@@ -125,14 +125,17 @@ class VariantApiCase(ApiTestCase):
                                                                       opponents_, 0.03, by, None,
                                                                       (field_options or {}).get("space"))
         v._write_summary(summary, results_dir)
+        # The same detail each time: a report replaces the last one's, and run_test never reports None, so a
+        # None here would race the test's reading of next_look and pairs.
+        detail = {"mode": mode, "stage": 1, "next_look": 200, "games_per_opponent": 200,
+                  "pairs": {"k" * 64: {"opponent": {"id": RED_ID}, "done": 100, "total": 200,
+                                       "wins": 55, "other": 0, "playing": True}}}
         if progress is not None:
-            progress(100, 400, {"mode": mode, "stage": 1, "next_look": 200, "games_per_opponent": 200,
-                                "pairs": {"k" * 64: {"opponent": {"id": RED_ID}, "done": 100, "total": 200,
-                                                     "wins": 55, "other": 0, "playing": True}}})
+            progress(100, 400, detail)
         self.started.set()
         while not self.gate.wait(0.05):
             if progress is not None:
-                progress(100, 400, None)
+                progress(100, 400, detail)
         if extend:
             summary["mode"] = "ahead"
             for look in summary["looks"]:

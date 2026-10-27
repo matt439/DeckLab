@@ -968,7 +968,7 @@ function drawPreconPreview(ctx) {
     el("p", { class: "sub precon-meta" }, [d.set_name || d.code.toUpperCase(), d.type, d.released ? `released ${d.released}` : null].filter(Boolean).join(" · "),
       d.source ? [" · ", el("a", { href: d.source, target: "_blank", rel: "noopener noreferrer",
         text: fromWizards(d.source) ? "Wizards' list" : "Where the list is from" })] : null),
-    el("p", { class: "precon-summary" }, `${p.kind === "commander" ? "Commander deck" : "Casual deck"} · ${plural(total, "card")}. `,
+    el("p", { class: "precon-summary" }, `${p.kind === "commander" ? "Commander deck" : "60-card deck"} · ${plural(total, "card")}. `,
       el("b", { text: `${plural(adds.cards || 0, "card")} go into ${ctx.whose}` }),
       p.dropped_basics ? ` (plain basic lands left out)` : "", "."),
     p.problems && p.problems.length ? el("div", { class: "box box-warn" },

@@ -63,7 +63,7 @@ function drawDetails() {
       host.append(el("div", { class: "field" }, el("span", { text: "Format" }),
         el("p", { class: "field-fixed", text: KIND_WORDS[f.kind] })));
     } else {
-      host.append(choiceField("kind", "Format", [["casual", "Casual 60-card"], ["commander", "Commander"]]));
+      host.append(choiceField("kind", "Format", [["casual", "60-card"], ["commander", "Commander"]]));
     }
     add(host, [spaceField()]);
   }

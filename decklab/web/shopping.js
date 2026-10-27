@@ -646,7 +646,7 @@ function shopPlayer(player) {
  * plain words (an idea deck missing cards is normal, not an error); chips only for what's worth noticing,
  * always under the name: copies on the way, copies in the long-term plan. */
 function shopDeckMissing(deck, planned) {
-  const meta = [deck.kind === "commander" ? "Commander" : "Casual 60", shopPlayer(deck.player),
+  const meta = [deck.kind === "commander" ? "Commander" : "60-card", shopPlayer(deck.player),
     `${plural(deck.missing, "card")} missing`].filter(Boolean).join(" · ");
   const chips = [deck.on_the_way ? status("info", `${deck.on_the_way} on the way`) : null,
     planned ? status("good", `${planned} in the long-term plan`) : null].filter(Boolean);

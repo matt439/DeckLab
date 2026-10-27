@@ -819,7 +819,7 @@ function deckPicker(n, library, onChange) {
     const pairings = [...preferred].filter(id => !decks.some(deck => deck.id === id)).map(pairingChoice).filter(Boolean);
     const groups = [
       ["Usual opponents", [...decks.filter(d => preferred.has(d.id)), ...pairings]],
-      ["Casual decks", decks.filter((d) => !preferred.has(d.id) && d.kind !== "commander" && !d.id.startsWith("product/"))],
+      ["60-card decks", decks.filter((d) => !preferred.has(d.id) && d.kind !== "commander" && !d.id.startsWith("product/"))],
       ["Commander decks", decks.filter((d) => !preferred.has(d.id) && d.kind === "commander" && !d.id.startsWith("product/"))],
       ["Product decks", decks.filter((d) => !preferred.has(d.id) && d.id.startsWith("product/"))],
     ];

@@ -285,13 +285,13 @@ function deckPill(s) {
   return el("span", { class: "chip chip-plain deck-pill", text: words });
 }
 
-/** The head's one line: "Casual 60 · Alex · 60 cards + 2 sideboard · Bracket 2", the halves of a pairing as
+/** The head's one line: "60-card · Alex · 60 cards + 2 sideboard · Bracket 2", the halves of a pairing as
  * links, the built list of a two-list deck, and sleeves written as free text the accessories can't read. */
 function deckHeadMeta(data) {
   const s = data.summary;
   const parts = [];
   const format = s.kind === "commander" && !s.read_only ? "Commander" : s.kind === "casual" && !s.read_only
-    ? `Casual ${s.card_count >= 60 ? 60 : s.card_count}` : s.format;
+    ? "60-card" : s.format;
   if (format) parts.push(format);
   if (!s.read_only) parts.push(deckPlayerWords(s));
   // A product's format already says its size ("Challenger deck (60 cards + 15 sideboard)").

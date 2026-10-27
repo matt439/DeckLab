@@ -12,7 +12,7 @@ click selects a row (kept in the address as ?deck=), Enter or Open deck opens it
 selection. Products stay tiles in both.
 
 Decks are grouped by whose they are: the home decks first, then each person's (their own space, lib/spaces.py),
-by name, in a part that folds away; within each, casual then Commander. Products (sealed decks, read only)
+by name, in a part that folds away; within each, Commander then 60-card (kind "casual"). Products (sealed decks, read only)
 come last, folded until opened (remembered on this device). The filters (whose decks, format, status,
 colour identity, archetype, availability) and the sort (Ready first, Recently changed, Name) are kept in the address; on a phone they're
 behind a "Filter" sheet. Title search stays in sight, with its query in the address too. "Mine" is the
@@ -26,6 +26,8 @@ plays each deck. Nothing here runs at load.
 "use strict";
 
 const LIB_SORTS = { ready: "Ready first", recent: "Recently changed", name: "Name" };
+// The deck kinds' groups, in the order they show (decided 2026-10-27: Commander first).
+const LIB_KIND_ORDER = ["commander", "casual"];
 // The availability filter's words are the tiles' chips' words: "3 on the way", "8 to get", "Availability
 // needs checking"; a deck with every card here has no chip (it's the usual case, and Ready first puts it first).
 const LIB_READINESS = { ready: "All cards here", waiting: "Cards on the way", missing: "Cards to get",
@@ -487,14 +489,14 @@ function sortDecks(decks, sort) {
 
 // ------------------------------------------------------------------ groups
 
-/** The casual and Commander groups of some decks, under headings of level tag ("h2" or "h3"): tiles, or in the
- * lab rows under Built, Building and Ideas (statusRows). */
+/** The Commander and 60-card (kind "casual") groups of some decks, Commander first, under headings of level tag
+ * ("h2" or "h3"): tiles, or in the lab rows under Built, Building and Ideas (statusRows). */
 function kindGroups(decks, tag, ctx) {
   const groups = [];
-  for (const kind of ["casual", "commander"]) {
+  for (const kind of LIB_KIND_ORDER) {
     const group = decks.filter((d) => d.kind === kind);
     if (!group.length) continue;
-    const title = kind === "casual" ? "Casual decks" : "Commander decks";
+    const title = kind === "casual" ? "60-card decks" : "Commander decks";
     groups.push(el("section", { class: "deck-group", "aria-label": title },
       el(tag, {}, title, el("span", { class: "count", text: `(${group.length})` })),
       ctx.lab ? statusRows(group, ctx)
@@ -663,16 +665,22 @@ function libColours(d) {
 }
 
 /** The cover banner: the cover card's art on the deck's art placeholder colour while it loads, or (no art, or
- * it fails) the deck's tint, with the deck's pips over its bottom-left corner. */
-function deckCover(d, colours = libColours(d)) {
+ * it fails) the deck's tint, with the deck's pips over its bottom-left corner. wide: the lab's detail pane, wider
+ * than the art itself (Scryfall's art crop is about 626 px across), where the art keeps its own size in the middle
+ * over a blurred copy of itself filling the rest (decided 2026-10-27: stretched across the pane it looked soft). */
+function deckCover(d, colours = libColours(d), wide = false) {
   const art = d.cover && d.cover.art;
-  const cover = el("span", { class: "deck-cover" + (art || !colours ? "" : " deck-tint"), style: colours ? colours.vars(135) : null });
+  const cover = el("span", { class: "deck-cover" + (art || !colours ? "" : " deck-tint") + (wide ? " deck-cover-wide" : ""),
+    style: colours ? colours.vars(135) : null });
+  const failed = () => {
+    cover.querySelectorAll("img").forEach((i) => i.remove());
+    if (colours) cover.classList.add("deck-tint");
+  };
+  const backdrop = art && wide ? el("img", { class: "deck-cover-backdrop", src: art, alt: "", "aria-hidden": "true",
+    loading: "lazy", decoding: "async", draggable: "false" }) : null;
   const img = art ? el("img", { class: "deck-cover-img", src: art, alt: "", loading: "lazy", decoding: "async",
-    width: 626, height: 457, draggable: "false", onerror: (e) => {
-      e.currentTarget.remove();
-      if (colours) cover.classList.add("deck-tint");
-    } }) : null;
-  return add(cover, [img, colours ? colours.pips(20, { overArt: true, cls: "deck-pips" }) : null]);
+    width: 626, height: 457, draggable: "false", onerror: failed }) : null;
+  return add(cover, [backdrop, img, colours ? colours.pips(20, { overArt: true, cls: "deck-pips" }) : null]);
 }
 
 /** A deck's status pill (4.4): on a casual tile only Building and Idea (decided 2026-10-25: a Built tile
@@ -694,19 +702,15 @@ function libOwnedCounts(d) {
   return { owned: Math.max(0, total - counts.missing - counts.waiting), waiting: counts.waiting, missing: counts.missing, total };
 }
 
-/** The owned bar with its words (4.1, 4.2): "52 owned · 4 on the way · 4 to get" on a tile, or in the lab mono
- * "52 +4 · 4 to get" (the on-the-way count in --accent-strong, to get in --missing). null as libOwnedCounts. */
+/** The owned bar with its words (4.1, 4.2): "52 owned · 4 on the way · 4 to get", on a tile and in a lab row
+ * alike (decided 2026-10-27: the lab's shorter "52 +4" didn't say what the +4 was). In the lab they're mono, the
+ * on-the-way count in --accent-strong and to get in --missing. null as libOwnedCounts. */
 function deckOwned(d, lab = false) {
   const c = libOwnedCounts(d);
   if (!c) return null;
-  const words = lab
-    ? el("span", { class: "deck-owned-words sim-num" }, num(c.owned),
-      c.waiting ? el("span", { class: "deck-owned-way", text: ` +${num(c.waiting)}` }) : null,
-      c.missing ? el("span", { class: "deck-owned-get", text: ` · ${num(c.missing)} to get` }) : null)
-    : factLine("deck-owned-words", [`${num(c.owned)} owned`, c.waiting ? `${num(c.waiting)} on the way` : null,
-      c.missing ? `${num(c.missing)} to get` : null].filter(Boolean));
-  if (lab) words.setAttribute("aria-label", [`${num(c.owned)} owned`, c.waiting ? `${num(c.waiting)} on the way` : null,
-    c.missing ? `${num(c.missing)} to get` : null].filter(Boolean).join(", "));
+  const words = factLine("deck-owned-words" + (lab ? " sim-num" : ""), [`${num(c.owned)} owned`,
+    c.waiting ? (lab ? el("span", { class: "deck-owned-way", text: `${num(c.waiting)} on the way` }) : `${num(c.waiting)} on the way`) : null,
+    c.missing ? (lab ? el("span", { class: "deck-owned-get", text: `${num(c.missing)} to get` }) : `${num(c.missing)} to get`) : null]);
   return el("span", { class: "deck-owned" }, ownedBar(c.owned, c.waiting, c.total), words);
 }
 
@@ -830,7 +834,7 @@ function libDetail(d, ctx) {
   return el("section", { class: "lib-detail", "aria-label": `Selected deck: ${d.title}`, "data-id": d.id },
     el("div", { class: "lib-detail-card" },
       colours ? colours.stripe() : null,
-      deckCover(d, colours),
+      deckCover(d, colours, true),
       el("div", { class: "lib-detail-body" + (colours ? " deck-tint" : ""), style: colours ? colours.vars(90) : null },
        el("div", { class: "lib-detail-main" },
         el("h2", { class: "lib-detail-title", text: d.title }),
@@ -912,11 +916,11 @@ function libDetailForge(d) {
     el("a", { class: "btn btn-quiet btn-inline", href: `${deckHref(d.id, n.version)}&part=field`, text: "Field view" }));
 }
 
-/** The order the lab's rows show in (home first, then each person's; casual then Commander; Built, Building,
+/** The order the lab's rows show in (home first, then each person's; Commander then 60-card; Built, Building,
  * Ideas; then the sort): its first deck is selected when the address names none that's shown. */
 function libRowOrder(decks, sort) {
   const spaceKey = (d) => { const space = d.space || deckSpaceOf(d.id); return space === HOME_SPACE ? "" : spaceName(space); };
-  const kindAt = (d) => ["casual", "commander"].indexOf(d.kind);
+  const kindAt = (d) => LIB_KIND_ORDER.indexOf(d.kind);
   const statusAt = (d) => { const i = LIB_STATUS_GROUPS.findIndex(([status]) => status === d.status); return i < 0 ? 9 : i; };
   const at = new Map(sortDecks(decks, sort).map((d, i) => [d.id, i]));
   return decks.filter((d) => kindAt(d) >= 0).sort((a, b) => spaceKey(a).localeCompare(spaceKey(b))

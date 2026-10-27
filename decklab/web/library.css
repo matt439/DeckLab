@@ -257,6 +257,7 @@ button.deck-row { cursor: pointer; }
 .deck-row .deck-meta { color: var(--ink-3); }
 .deck-row-end { display: grid; gap: var(--s-1); justify-items: stretch; min-width: 0; }
 .deck-row-end .deck-owned-words { text-align: right; }
+.deck-row-end .deck-owned-words > .fact-line-in { justify-content: flex-end; }
 .deck-row-end .deck-missing { justify-content: flex-end; }
 /* The Forge field column (library.js deckRowForge): the inline win rate and range, a compact range bar and the
    freshness; "—" for a casual deck without a result, blank for a Commander deck. */
@@ -290,7 +291,21 @@ button.deck-row { cursor: pointer; }
 .lib-detail-card > .deck-stripe { position: absolute; inset: 0 0 auto; z-index: 1; }
 /* The art is 5:2 of the pane's width, but at most 240 px (or 30% of the window) high, so a wide pane (QHD: 1,600 px)
    doesn't push the deck's details below the fold. */
-.lib-detail-card > .deck-cover { width: 100%; aspect-ratio: 5 / 2; max-height: min(240px, 30vh); }
+.lib-detail-card > .deck-cover { width: 100%; aspect-ratio: 5 / 2; max-height: min(240px, 30vh); overflow: hidden; }
+/* Wider than the art (about 626 px), the art keeps its own width in the middle, so it's never scaled up past it,
+   over a blurred, dimmed copy of itself that fills the banner (library.js deckCover, wide). */
+.deck-cover-wide > .deck-cover-img { left: 50%; width: min(100%, 626px); translate: -50% 0; }
+.deck-cover-backdrop {
+  position: absolute; inset: -24px; display: block;
+  width: calc(100% + 48px); height: calc(100% + 48px);
+  object-fit: cover; filter: blur(18px) brightness(.7); transform: translateZ(0);
+}
+/* Once the pane is wider than the art, its edges fade into the blur rather than ending in a hard line. */
+@container (min-width: 680px) {
+  .deck-cover-wide > .deck-cover-img {
+    mask-image: linear-gradient(to right, transparent, #000 40px, #000 calc(100% - 40px), transparent);
+  }
+}
 .lib-detail-card > .deck-cover > .deck-pips { left: var(--s-4); bottom: var(--s-3); }
 .lib-detail-body { display: grid; gap: var(--s-4); padding: var(--s-4) var(--s-5) var(--s-5); }
 .lib-detail-main { display: grid; gap: var(--s-3); align-content: start; min-width: 0; }

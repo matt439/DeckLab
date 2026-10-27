@@ -170,37 +170,47 @@ class LibraryShelfTests(_Shelf):
           assert.equal(main.querySelectorAll(".deck-card").length, 2);          // only the products are tiles
           const rows = () => main.querySelectorAll(".deck-row");
           same(rows().map((r) => r.getAttribute("data-id")),
-               ["casual/gruul", "casual/angels", "casual/vampires", "casual/otters", "commander/giada"]);
-          same(main.querySelectorAll(".lib-status-head").map((h) => h.textContent), ["Built1", "Building3", "Building1"]);
+               ["commander/giada", "casual/gruul", "casual/angels", "casual/vampires", "casual/otters"]);
+          same(main.querySelectorAll(".lib-status-head").map((h) => h.textContent), ["Building1", "Built1", "Building3"]);
           // The rows have no pill (the heading says it), 16 px pips and the owned bar's mono words.
-          const gruul = rows()[0];
+          const gruul = rows()[1];
           assert.equal(gruul.querySelector(".deck-status"), null);
           assert(gruul.querySelector(".deck-pips").getAttribute("class").includes("id-pips-sm"));
-          assert.equal(rows()[3].querySelector(".deck-owned-words").getAttribute("aria-label"),
-                       "51 owned, 1 on the way, 8 to get");
+          // The row says what each count is, as a tile does (not "51 +1").
+          assert.equal(rows()[4].querySelector(".deck-owned-words").textContent, "51 owned · 1 on the way · 8 to get");
           // The first row is selected, and its detail is beside the list with every status pill and the ways in.
-          assert.equal(gruul.getAttribute("aria-current"), "true");
+          assert.equal(rows()[0].getAttribute("aria-current"), "true");
           let detail = main.querySelector(".lib-detail");
-          assert.equal(detail.getAttribute("data-id"), "casual/gruul");
-          assert.equal(detail.querySelector(".deck-status").textContent, "Built");
+          assert.equal(detail.getAttribute("data-id"), "commander/giada");
+          assert.equal(detail.querySelector(".deck-status").textContent, "Building");
           same(detail.querySelectorAll(".btn").map((b) => b.textContent), ["Edit deck", "Open deck"]);
-          assert.equal(detail.querySelector(".btn-primary").getAttribute("href"), editHref("casual/gruul"));
+          assert.equal(detail.querySelector(".btn-primary").getAttribute("href"), editHref("commander/giada"));
           // A click selects (the page stays) and keeps the choice in the address.
-          const click = rows()[3].fire("click", { detail: 1, button: 0 });
+          const click = rows()[4].fire("click", { detail: 1, button: 0 });
           assert(click.defaultPrevented);
           assert.equal(main.querySelector(".lib-detail").getAttribute("data-id"), "casual/otters");
           assert(addresses.at(-1).endsWith("deck=casual%2Fotters"));
-          assert.equal(rows()[3].getAttribute("aria-current"), "true");
+          assert.equal(rows()[4].getAttribute("aria-current"), "true");
           assert.equal(rows()[0].getAttribute("aria-current"), null);
           // Enter (a click with no pointer) and a modified click follow the link.
           assert(!rows()[2].fire("click", { detail: 0 }).defaultPrevented);
           assert(!rows()[2].fire("click", { detail: 1, button: 0, metaKey: true }).defaultPrevented);
           // J and K move the selection and the focus; not while typing.
-          document.fire("keydown", { key: "j", target: main });
+          document.fire("keydown", { key: "k", target: main });
+          assert.equal(main.querySelector(".lib-detail").getAttribute("data-id"), "casual/vampires");
+          assert.equal(document.activeElement.getAttribute("data-id"), "casual/vampires");
+          for (let i = 0; i < 3; i += 1) document.fire("keydown", { key: "k", target: main });
           assert.equal(main.querySelector(".lib-detail").getAttribute("data-id"), "commander/giada");
-          assert.equal(document.activeElement.getAttribute("data-id"), "commander/giada");
-          for (let i = 0; i < 4; i += 1) document.fire("keydown", { key: "k", target: main });
-          assert.equal(main.querySelector(".lib-detail").getAttribute("data-id"), "casual/gruul");
+          document.fire("keydown", { key: "j", target: main });
+          detail = main.querySelector(".lib-detail");
+          assert.equal(detail.getAttribute("data-id"), "casual/gruul");
+          assert.equal(detail.querySelector(".deck-status").textContent, "Built");
+          // Its art keeps its own size over a blurred copy of itself (a row's and a tile's have no copy).
+          assert(detail.querySelector(".deck-cover").getAttribute("class").includes("deck-cover-wide"));
+          assert.equal(detail.querySelector(".deck-cover-backdrop").getAttribute("src"), "/img/fdn/1/art_crop");
+          assert.equal(detail.querySelector(".deck-cover-backdrop").getAttribute("aria-hidden"), "true");
+          assert.equal(main.querySelectorAll(".deck-row .deck-cover-backdrop, .deck-card .deck-cover-backdrop").length, 0);
+          same(main.querySelectorAll(".deck-group").map((g) => g.getAttribute("aria-label")), ["Commander decks", "60-card decks"]);
           // A deck the visitor can't change has Open deck as its one primary.
           rows()[4].fire("click", { detail: 1, button: 0 });
           as("user1", MAY.user1);
