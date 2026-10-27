@@ -10,15 +10,15 @@
 
 /* Buttons (design/visual-design.md 4.5): round, 700, sized by --btn-h and --fs-btn (44 px on touch, 36 with a
    mouse under 1000 px, 32 in the lab). One .btn-primary per view.
-   - .btn alone is the secondary (.btn-secondary says so explicitly): a 1.5 px teal outline and teal words, on
+   - .btn alone is the secondary (.btn-secondary says so explicitly): a 1.5 px accent outline and accent words, on
      white in light and no fill in dark (--btn-bg).
-   - .btn-primary: the teal fill. With aria-disabled="true" it's a primary that can't act yet (Mark as built
+   - .btn-primary: the accent fill. With aria-disabled="true" it's a primary that can't act yet (Mark as built
      before every card is ticked): --track and --ink-3, still focusable, its reason beside it, and its click
      moves focus to the first thing in the way (the page's job). Native disabled stays for busy and frozen.
-   - .btn-quiet is the tertiary: teal words, no box. .btn-quiet.btn-inline lines up with the text above it.
+   - .btn-quiet is the tertiary: accent words, no box. .btn-quiet.btn-inline lines up with the text above it.
    - .btn-danger is a destructive tertiary (Remove…, Stop): red words, no box. The red fill
      (.btn-danger.btn-primary) is only for the last step of a confirm sheet.
-   - .btn-discard is "Discard changes": a tertiary in --ink-2, neither teal nor red. */
+   - .btn-discard is "Discard changes": a tertiary in --ink-2, neither accent nor red. */
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: var(--s-2);
   min-height: var(--btn-h); min-width: var(--btn-h);
@@ -50,8 +50,8 @@
 .btn-primary[aria-disabled="true"] {
   background: var(--track); color: var(--ink-3); border-color: transparent; box-shadow: none; filter: none; cursor: not-allowed;
 }
-/* The button that opened a menu (openMenu, menuButton) shows it's open (4.5: a 1 px teal ring). A tertiary (a
-   row's ⋯, More) draws exactly 1 px inside its transparent border; a secondary's 1.5 px teal border already is
+/* The button that opened a menu (openMenu, menuButton) shows it's open (4.5: a 1 px accent ring). A tertiary (a
+   row's ⋯, More) draws exactly 1 px inside its transparent border; a secondary's 1.5 px accent border already is
    the ring, so it takes --accent-soft rather than a thicker edge; on a primary the ring stands off the fill. */
 .btn[aria-haspopup="menu"][aria-expanded="true"] { box-shadow: inset 0 0 0 1px var(--accent); }
 .btn:not(.btn-primary, .btn-quiet, .btn-danger, .btn-discard)[aria-haspopup="menu"][aria-expanded="true"] { box-shadow: none; background: var(--accent-soft); }
@@ -147,7 +147,7 @@
 .form-error:empty { display: none; }
 
 /* A row of toggle buttons (aria-pressed) or links (aria-current): the one way to pick 2-6 options (4.5). A round
-   track (--seg-track) and the chosen segment filled teal. With a mouse the segments sit 3 px inside the track;
+   track (--seg-track) and the chosen segment filled accent. With a mouse the segments sit 3 px inside the track;
    on touch (--seg-pad 0, in the floor at the end of this file) each segment is the track's full 44 px, so the
    track stays 44 beside the buttons and fields. The track's corners are --r-seg, half its one-row height, not
    --r-pill: a control that wraps to two rows becomes a rounded rectangle, not a tall stadium that clips its end
@@ -178,7 +178,7 @@
   box-shadow: var(--shadow-primary);
 }
 /* Words inside the chosen segment (a deck page filter's count, a practice setup's sub-line, the editor's "(none
-   yet)") take its ink, not a page's grey, which is unreadable on teal. Weighted (0,3,0) to beat those page
+   yet)") take its ink, not a page's grey, which is unreadable on accent. Weighted (0,3,0) to beat those page
    rules, which load later. */
 .segmented.segmented > :is([aria-pressed="true"], [aria-current="page"]) * { color: inherit; }
 .segmented > :is(:disabled, [aria-disabled="true"]) { color: var(--ink-3); cursor: not-allowed; }
@@ -187,11 +187,11 @@
   .segmented > :hover:not([aria-pressed="true"], [aria-current="page"], :disabled, [aria-disabled="true"]) { color: var(--ink); background: var(--hover); }
 }
 
-/* A stepper: − [n] +, a round group (4.5). − and + in teal; the number Figtree 16 / 700 casual, mono 12.5 / 600
+/* A stepper: − [n] +, a round group (4.5). − and + in accent; the number Figtree 16 / 700 casual, mono 12.5 / 600
    in the lab; a typeable one (.qty-input, or any input in it) sits in a sunken well, a read-only <output> has no
    fill. A typed number is --fs-qty-input: --fs-qty, but 16 px wherever iOS might zoom on focus. A line the
-   person has changed and not saved (.is-changed or data-changed="true") gets a teal edge and a bold teal
-   number: teal is "yours, unsaved" there (decided 2026-10-24: visual-design.md section 6 question 2). */
+   person has changed and not saved (.is-changed or data-changed="true") gets an accent edge and a bold accent
+   number: accent is "yours, unsaved" there (decided 2026-10-24: visual-design.md section 6 question 2). */
 .stepper {
   display: inline-flex; align-items: center;
   min-height: var(--stepper-h);
@@ -261,7 +261,7 @@
   background-color: var(--series-1);
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M1.8 5h5.4M5.2 2.8L7.4 5 5.2 7.2' fill='none' stroke='%23fff' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
 }
-/* A delivery state ("Part received"): a neutral outline and a half-filled circle, never teal (teal is for what
+/* A delivery state ("Part received"): a neutral outline and a half-filled circle, never accent (accent is for what
    you can do, or what's selected, owned or done; visual-design.md section 6 question 2). */
 .chip-outline, .status-outline { background: transparent; color: var(--ink-2); box-shadow: inset 0 0 0 1px var(--ink-4); }
 .chip-outline::before, .status-outline::before {
@@ -283,8 +283,8 @@
 
 /* Filter chips: pills that narrow a list ("All · Decks · Collection"), links (aria-current="page") or toggle
    buttons (aria-pressed). The same pill is the toggle chip (4.5: "Owned only", "In storage only"), a filter
-   that's on or off: off white with a grey edge, on --accent-soft with a teal edge, teal words and a check (a
-   row of chips is never a row of teal fills). A toggle chip can also be a <label class="filter-chip"> round a
+   that's on or off: off white with a grey edge, on --accent-soft with an accent edge, accent words and a check (a
+   row of chips is never a row of accent fills). A toggle chip can also be a <label class="filter-chip"> round a
    checkbox, which is hidden and still focusable: the label takes the on look while it's ticked. They wrap;
    under 600px a .filter-chips-scroll row scrolls sideways instead, its right edge fading so a cut-off chip reads
    as "more this way" (the padding lets the last chip scroll clear). */
@@ -358,7 +358,7 @@
 }
 .deck-tint { background: var(--deck-tint), var(--surface); }
 
-/* The owned bar (ui.js ownedBar; design/visual-design.md 4.10): 4 px, teal for what's here, hatched for what's on
+/* The owned bar (ui.js ownedBar; design/visual-design.md 4.10): 4 px, accent for what's here, hatched for what's on
    the way, on --surface-3 (--accent-track in a selected row). */
 .owned-bar { display: flex; height: 4px; overflow: hidden; border-radius: var(--r-swatch); background: var(--surface-3); }
 .owned-bar-fill { flex: none; background: var(--accent); }
@@ -368,7 +368,7 @@
 
 /* Forge's result pieces (sim-ui.js; design/visual-design.md 4.9): the same at both densities, only their sizes
    change. Every Forge number is mono and in ink, never coloured good or bad: only the flags and the verdict pills
-   wear Forge's strong and weak colours, and always with words. None is teal but a run's own controls. */
+   wear Forge's strong and weak colours, and always with words. None is accent but a run's own controls. */
 .sim-num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
 
 /* The win-rate figure: inline in a row ("61% 59–63"), on a tile (with "Forge field"), or a hero beside its range
@@ -801,7 +801,7 @@ dialog.sheet::backdrop { background: var(--scrim); }
 /* An overflow menu ("More", a row's ...): a popover under its button (4.5). Items are --btn-h tall (44 on
    touch) in the button's type at 600; the one under the pointer or the arrow keys is --hover (with the focus
    ring too, as --hover alone is faint). Destructive items come last, after a .menu-sep, in --weak-ink
-   (.menu-danger, cards-ui.css). The button that opened it keeps a teal ring (the buttons above). */
+   (.menu-danger, cards-ui.css). The button that opened it keeps an accent ring (the buttons above). */
 .menu {
   position: absolute; z-index: 30;
   width: max-content; min-width: 200px; max-width: min(320px, calc(100vw - 2 * var(--s-4)));
@@ -1123,7 +1123,7 @@ table.data tr.group-row .group-count { font-family: var(--font-mono); font-weigh
 .fact { white-space: nowrap; min-width: 0; }
 .fact-sep { display: inline-block; width: 1em; text-align: center; }
 
-/* Circular navigation over deck art: the same opaque surface and teal ink in both themes. */
+/* Circular navigation over deck art: the same opaque surface and accent ink in both themes. */
 .btn.btn-art {
   width: var(--tap); height: var(--tap); min-width: var(--tap); min-height: var(--tap); padding: 0;
   border: 0; background: var(--art-control-bg); color: var(--art-control-ink); font-size: var(--fs-xl);

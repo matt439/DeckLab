@@ -1119,7 +1119,7 @@ function openSheet(title, opts = {}) {
 }
 
 /** Buttons for a sheet's foot: [{text, kind: "primary" | "danger" | "discard" | "", onclick}] ("discard" is
- * "Discard my changes": neither teal nor red; "danger" a destructive answer, "danger btn-quiet" Remove…). */
+ * "Discard my changes": neither accent nor red; "danger" a destructive answer, "danger btn-quiet" Remove…). */
 function sheetActions(sheet, actions) {
   clear(sheet.foot).append(...actions.filter(Boolean).map((a) => el("button", {
     type: "button", class: `btn${a.kind ? ` btn-${a.kind}` : ""}`, disabled: a.disabled || null, onclick: a.onclick,

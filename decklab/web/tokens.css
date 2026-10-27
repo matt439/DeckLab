@@ -8,8 +8,8 @@
    and follows the system as it changes; a small script in index.html's <head> does it before the first
    paint). So the dark colours are written once, in :root[data-theme="dark"].
 
-   The colours are P1's (decklab/design/visual-design.md 2.1, 2.2 and 2.6; E11-S30 slice 2). Teal (--accent
-   and its family) means "you can do something" or "this is selected, yours, owned or done"; links are teal
+   The colours are P1's (decklab/design/visual-design.md 2.1, 2.2 and 2.6; E11-S30 slice 2). The violet accent (--accent
+   and its family) means "you can do something" or "this is selected, yours, owned or done"; links are violet
    too (dark in light, light in dark), and only info boxes (--info-*) stay blue. Deck colour (--stripe-*, --tint-*, --art-*) belongs
    only to decks, Forge's strong and weak colours only to Forge results, and amber (--warn-*) is "look at
    this". The chart colours (--series-*) are the dataviz reference palette (series 1 blue, series 2 orange),
@@ -150,8 +150,8 @@
   --shadow-up: 0 -4px 14px rgb(20 40 38 / .07);                              /* a bar stuck to the bottom */
   --shadow-img: 0 2px 8px rgb(20 40 38 / .22);                               /* a card's picture */
   --shadow-img-sm: 0 1px 3px rgb(20 40 38 / .25);                            /* a thumbnail in a row */
-  --shadow-primary: 0 1px 2px rgb(15 110 106 / .35);                         /* a primary button */
-  --focus-halo: rgb(15 110 106 / .18);   /* the 3 px halo round a focused field (a focused control gets --focus's outline) */
+  --shadow-primary: 0 1px 2px rgb(98 54 196 / .35);                         /* a primary button */
+  --focus-halo: rgb(98 54 196 / .18);   /* the 3 px halo round a focused field (a focused control gets --focus's outline) */
 
   /* Colours */
   --page: #f1f0ec;              /* the body, a lab detail pane, the phone page */
@@ -172,22 +172,22 @@
   --border-strong: #d8d6ce;     /* buttons, inputs, kbd, steppers, chart baselines */
   --divider: #ebe9e3;           /* lines between table rows and groups */
   --rule: #dcdad2;              /* a phone section heading's hairline */
-  --accent: #0f6e6a;            /* deep teal, 5.9:1 on white */
-  --accent-strong: #0b5552;     /* teal text: on --accent-soft, a secondary button, the avatar fallback */
+  --accent: #6236c4;            /* violet, 7.4:1 on white: no mana colour is purple */
+  --accent-strong: #4a2799;     /* accent text: on --accent-soft, a secondary button, the avatar fallback */
   --accent-ink: #ffffff;        /* text on --accent */
-  --accent-soft: #e1efec;       /* the current nav pill, a selected row or tile, a run's details */
-  --accent-line: rgb(15 110 106 / .5);   /* the 1 px border of a selected row or chip */
-  --accent-track: #d3e2df;      /* the owned bar's track inside a selected row */
-  --ring-track: #bcd8d4;        /* a run's progress ring, behind its arc */
-  --link: #0a504d;
+  --accent-soft: #ece6f8;       /* the current nav pill, a selected row or tile, a run's details */
+  --accent-line: rgb(98 54 196 / .5);   /* the 1 px border of a selected row or chip */
+  --accent-track: #e0d7f4;      /* the owned bar's track inside a selected row */
+  --ring-track: #d3c7ee;        /* a run's progress ring, behind its arc */
+  --link: #43248f;
   --kbd-on-accent: rgb(255 255 255 / .45);   /* a kbd hint's box on a primary button */
   --art-control-bg: #ffffff;
-  --art-control-ink: #0b5552;
-  --art-control-hover: #e1efec;
+  --art-control-ink: #4a2799;
+  --art-control-hover: #ece6f8;
   --btn-bg: var(--surface);     /* a secondary button's fill: white in light, none in dark (4.5) */
   --bar-bg: rgb(255 255 255 / .97);   /* a sticky bottom bar: --surface at 97% */
   /* A tick drawn on --accent (a tile's tick, the printing picker's current printing): white in light, the
-     near-black --accent-ink in dark, where white on light teal is about 2:1. */
+     near-black --accent-ink in dark, where white on light violet is about 2.5:1. */
   --icon-tick-on-accent: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M2 5.2l2 2 4-4.4' fill='none' stroke='%23fff' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   --info-ink: #1c5cab;          /* info boxes only: links aren't blue */
   --info-soft: #e8f1fc;
@@ -213,7 +213,7 @@
   --crit-soft: #fbeaea;
   --on-crit: #ffffff;           /* text on a --crit fill (the confirm sheet's red last step) */
   --win: #3b8f52;               /* the matchup matrix's cells only, diverging around 50%: a calmer green
-                                   than --good's tick, beside the teal accent; 3.9:1 on white */
+                                   than --good's tick, beside the violet accent; 3.9:1 on white */
   --loss: var(--crit);
   --even: var(--surface-2);
   /* Forge results only: "strong against", +1 in a swap and a "better" verdict; "weak against", -1 and "worse"
@@ -224,7 +224,7 @@
   --weak-ink: #9b2f22;
   --range-band: rgb(28 33 31 / .22);   /* a range bar's 95% band */
   --range-track: #ebe9e3;
-  --run-line: rgb(15 110 106 / .28);   /* the 1 px edge of a run's details */
+  --run-line: rgb(98 54 196 / .28);   /* the 1 px edge of a run's details */
   --chip-on-tint: rgb(255 255 255 / .8);         /* a badge on a deck's tint ... */
   --chip-on-tint-line: rgb(20 40 38 / .14);      /* ... and its inset 1 px ring */
   /* Mana symbol fills (the printed symbols' colours); text on them is always dark. */
@@ -295,7 +295,7 @@
   /* Each person's colour (their initial on the avatar), white text on all three. */
   --avatar-1: #b8481d;
   --avatar-2: #2f7a3b;
-  --avatar-3: #6a4bb5;
+  --avatar-3: #1d6a85;
   --avatar-ink: #ffffff;
   /* Over pictures and behind overlays: the same in both themes. */
   --scrim: rgb(0 0 0 / .55);    /* behind a sheet */
@@ -311,7 +311,7 @@
   --viewer-btn: rgb(255 255 255 / .12);
   --viewer-line: rgb(255 255 255 / .24);
   --viewer-panel: rgb(32 32 36);  /* the viewer's text panel: a dark surface, as the viewer is dark in both themes */
-  --viewer-link: #4fbdb5;        /* readable teal on the always-dark viewer panel, in either page theme */
+  --viewer-link: #a68cf0;        /* readable violet on the always-dark viewer panel, in either page theme */
   --foil-sheen: linear-gradient(125deg, rgb(255 0 128 / .55), rgb(255 210 0 / .45) 28%, rgb(0 255 170 / .45) 52%,
     rgb(0 140 255 / .5) 76%, rgb(200 0 255 / .45));
 
@@ -338,7 +338,7 @@
   --shadow-img: 0 0 0 1px rgb(255 255 255 / .08), 0 4px 14px rgb(0 0 0 / .55);
   --shadow-img-sm: 0 0 0 1px rgb(255 255 255 / .08), 0 2px 6px rgb(0 0 0 / .5);
   --shadow-primary: 0 0 transparent;
-  --focus-halo: rgb(79 189 181 / .25);
+  --focus-halo: rgb(166 140 240 / .25);
   --page: #121614;
   --surface: #1a1f1d;
   --surface-2: #161a19;
@@ -357,18 +357,18 @@
   --border-strong: #3a4240;
   --divider: #252b29;
   --rule: #2c3331;
-  --accent: #4fbdb5;
-  --accent-strong: #7fd4cd;
-  --accent-ink: #06201f;        /* near-black on teal (7.5:1): white fails in dark */
-  --accent-soft: rgb(79 189 181 / .14);
-  --accent-line: rgb(79 189 181 / .55);
-  --accent-track: rgb(79 189 181 / .24);
-  --ring-track: #2f5a56;
-  --link: #7fd4cd;
-  --kbd-on-accent: rgb(6 32 31 / .4);
+  --accent: #a68cf0;
+  --accent-strong: #c6b5f7;
+  --accent-ink: #1b0d3d;        /* near-black on violet (6.5:1): white fails in dark */
+  --accent-soft: rgb(166 140 240 / .14);
+  --accent-line: rgb(166 140 240 / .55);
+  --accent-track: rgb(166 140 240 / .24);
+  --ring-track: #4b4567;
+  --link: #c6b5f7;
+  --kbd-on-accent: rgb(27 13 61 / .4);
   --btn-bg: transparent;
   --bar-bg: rgb(26 31 29 / .97);
-  --icon-tick-on-accent: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M2 5.2l2 2 4-4.4' fill='none' stroke='%2306201f' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  --icon-tick-on-accent: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M2 5.2l2 2 4-4.4' fill='none' stroke='%231b0d3d' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   --info-ink: #86b6ef;
   --info-soft: #16263b;
   --series-1: #3987e5;
@@ -395,7 +395,7 @@
   --weak-ink: #ff9a8a;
   --range-band: rgb(233 236 234 / .30);
   --range-track: #2c3331;
-  --run-line: rgb(79 189 181 / .3);
+  --run-line: rgb(166 140 240 / .3);
   --chip-on-tint: var(--surface-chip);
   --chip-on-tint-line: rgb(255 255 255 / .10);
   --mana-ring: rgb(0 0 0 / .28);
