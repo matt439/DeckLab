@@ -1738,7 +1738,7 @@ Evidence:
 
 How the inventory stays true to the physical cards. Each space's own people add, fix and remove cards on the Collection page (single cards, an app export, Add a precon) and token cards on the Tokens page; Matt and User1 both edit home's, each member only their own, and Claude does bulk and member upkeep from the PC (`collection merge`, `collection edit` and `collection apply`, `collection add-precon --space`). Repeat imports, sales and trades, and cards held by built decks are all flagged, other decks' out-of-date tables are listed with Update all rather than refreshed automatically, and the nightly `db check` looks for drift.
 
-Open: E7-S03, E7-S08, E7-S15, E7-S18, E7-S21, E7-S22, E7-S23, E7-S24.
+Open: E7-S03, E7-S08, E7-S15, E7-S18, E7-S22, E7-S23, E7-S24.
 
 **E7-S01** · Matt · must · M · built
 
@@ -1989,7 +1989,7 @@ Evidence:
 
 Gap: the Card list's rows are edited one at a time; only Receive delivery has a bulk condition and language fill.
 
-**E7-S21** · Matt · could · L · partial
+**E7-S21** · Matt · could · L · built
 
 As an owner of built decks in the shared pool, I want to check a built deck's box against its recorded list and note any card that's missing or extra, so that the records stay true to the physical decks after many swaps between games.
 
@@ -1998,7 +1998,7 @@ As an owner of built decks in the shared pool, I want to check a built deck's bo
 - Given a box check is saved, when the deck page is opened, then it shows the date the box was last checked.
 - Given a deck not checked for a long time, when the library is shown, then it can be filtered to decks due for a check.
 
-Now (2026-10-26): box reviews, historical dates, Library filters, Collection review and the [normal Editor handoff](../HISTORY.md#box-observations-beside-an-explicitly-chosen-intended-list-2026-10-26-e7-s21) are implemented for ordinary home built decks. A named observation can accompany a fresh Collection review or an explicitly chosen existing Planned/Play-now list, preserving ordinary draft restoration and leaving all edits to the user.
+Now (2026-10-27): box reviews, dates, Library filters, the Collection and Editor offers and [correcting the recorded box](../HISTORY.md#correct-the-recorded-box-from-a-box-check-2026-10-27-e7-s21) are built for ordinary home built decks. The correction previews, then saves the observed physical build and the check date as one change; lists, collection, kit and packed token cards stay as written.
 
 Evidence:
 - `decklab/lib/decks/boxcheck.py`, `decklab/lib/api/box_check.py`: section- and role-aware differences, exact source receipts, private date-only save through the normal deck write lock
@@ -2010,8 +2010,11 @@ Evidence:
 - `decklab/tests/test_box_collection_ui.py`: marker roles, scope/history/ownership guards, blank totals, duplicate-printing refusal, stale source and separate collection-only writes
 - `decklab/web/box-editor.js`, `assembly-boxcheck.js`, `editor.js`, `editor-screen.js`, `app.js`: existing-version choice, fresh source/permission checks and memory-only context after normal current/alias draft restoration/rebase, without applying observation values
 - `decklab/tests/test_box_editor_ui.py`, `test_box_editor_drafts_ui.py`: source and busy/ownership races, draft preservation, version/route guards, stale-context retirement and unchanged physical/date/packing state
+- `decklab/lib/decks/boxrepair.py`, `decklab/lib/api/box_repair.py` (POST /api/deck/box-repair): the observed build as the Assembled snapshot and installed stand-ins, read back exactly before a result-bound save, with freed/held cards, collection shortfalls and packed token cards in the preview
+- `decklab/web/box-repair.js`, `assembly-boxcheck.js`: Correct the recorded box in the difference review, Preview corrected box, Save corrected box
+- `decklab/tests/test_box_repair_api.py`, `test_box_repair_ui.py`: preview without writes, printings kept, markers dropped, reservations and stale tables, refusals
 
-Gap: physical-list repair remains. Member-space and product box checks are future scope. Native fixture checks passed, with real-device and household acceptance separate. The historical date and name-only art certify no current contents, printing or finish, and an intended-list edit does not reconcile the recorded physical build.
+Gap: none against the criteria. Member-space and product box checks are future scope, and real-device and household acceptance is separate. The date and name-only art certify no current contents, printing or finish.
 
 **E7-S22** · Matt · could · M · missing
 

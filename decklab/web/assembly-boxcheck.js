@@ -76,7 +76,7 @@ function packReviewBoxCheck(view, deck) {
   const data = view.data, root = view.root, seq = view.seq, original = JSON.stringify([deck.box_check, deck.take_apart]);
   const expected = [], extras = [], controls = [], repairButtons = [], acceptedValues = new WeakMap();
   let leavingForRepair = false, editorReading = false, sourceSha = evidence?.meta.expect;
-  let stage = "edit", pending = false, saved = false, needsRefresh = false, refreshed = false, review = null;
+  let stage = "edit", pending = false, saved = false, repaired = false, needsRefresh = false, refreshed = false, review = null;
   view.reviewing = true; packProgress(view);
   const ctx = openAssemblySheet(view, "Check " + deck.title + " box", { onClose: () => {
     if (!owner()) return;
@@ -147,7 +147,7 @@ function packReviewBoxCheck(view, deck) {
   function differences() {
     clear(reviewing).append(el("h3", { text: "Review differences" }),
       el("p", { text: plural(review.expected_cards, "recorded physical card") + "; " + plural(review.found_cards, "card") + " found, including extras." }),
-      el("p", { class: "sub", text: "Saving the check date keeps the deck's lists, collection, kit and reservations as recorded." }));
+      el("p", { class: "sub", text: "Saving the check date keeps the deck's lists, collection, kit and reservations as recorded. To record what the box really holds instead, use Correct the recorded box below." }));
     reviewing.append(el("p", { class: "sub", text: "Review collection copies closes this local box review and discards its counts and extras. It does not save a check date or change the collection. A missing card may still be in storage or another box." }));
     repairButtons.length = 0;
     for (const [key, label] of [["missing", "Missing"], ["extra", "Extra"]]) reviewing.append(el("section", {},
@@ -181,6 +181,16 @@ function packReviewBoxCheck(view, deck) {
         return item;
       })) : el("p", { text: "None recorded in this review." })));
     clear(editorChoices); reviewing.append(editorChoices);
+    if (evidence.meta.editable && (review.missing.length || review.extra.length)) {
+      const repairHost = el("section", { class: "box-repair" }); reviewing.append(repairHost);
+      boxRepairOffer(deck, evidence, review, { host: repairHost,
+        here: () => here() && !pending && !needsRefresh && !leavingForRepair && !repaired && ["review", "saved"].includes(stage)
+          && repairHost.isConnected && reviewing.contains(repairHost) && JSON.stringify(snapshot()) === JSON.stringify(review),
+        busy: value => { editorReading = value; if (current()) actions(); },
+        payload: () => ({ id: deck.id, expect: sourceSha, recipe_sha256: evidence.meta.recipe_sha256, rows: review.rows, extras: review.extras }),
+        saved: answer => { repaired = true; saved = true; stage = "saved"; sourceSha = answer.sha256; view.boxCheckRefresh = { data }; if (current()) actions(); },
+        stale: () => { needsRefresh = true; view.boxCheckRefresh = { data }; if (current()) actions(); } });
+    }
     if (!evidence.meta.editable) reviewing.append(el("p", { class: "sub", text: evidence.meta.why_not || "You cannot save a check date for this deck." }));
   }
   function actions() {
