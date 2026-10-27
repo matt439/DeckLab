@@ -204,6 +204,7 @@ function activityUndoEvidence(data, id, space, profile = state.profile?.id) {
       || typeof data.label !== "string" || !data.label.trim()) return null;
   if (data.kind === "wishlist") return activityUndoWishlistEvidence(data, profile) ? data : null;
   if (data.kind === "accessory") return activityUndoAccessoryEvidence(data, space, profile) ? data : null;
+  if (data.kind === "mixed") return activityUndoMixedEvidence(data, space) ? data : null;
   if (data.space !== space || !["collection", "tokens"].includes(data.kind)) return null;
   if (["batch_metadata", "batch_update"].includes(data.action)) return activityUndoBatchEvidence(data) ? data : null;
   if (["batch_add", "batch_remove"].includes(data.action)) return activityUndoPhysicalBatchEvidence(data) ? data : null;
@@ -333,7 +334,7 @@ function activityUndoOwner(ctx) {
 function activityUndoButton(view, change) {
   if (change.undo?.review !== true || !Number.isSafeInteger(change.id) || change.id < 1) return null;
   const id = change.id, root = view.days, endpoint = change.undo.kind === "wishlist" ? "/api/activity/wishlist-undo"
-    : change.undo.kind === "accessory" ? "/api/activity/accessory-undo" : "/api/activity/undo";
+    : change.undo.kind === "accessory" ? "/api/activity/accessory-undo" : change.undo.kind === "mixed" ? ACTIVITY_UNDO_MIXED_ENDPOINT : "/api/activity/undo";
   const button = el("button", { type: "button", class: "btn btn-quiet activity-review-undo", text: "Review undo", onclick: () => {
     if (view.undoBusy || view.undoRefreshNeeded || view.undoCtx || view.older?.disabled || root !== view.days || !root.isConnected
         || !button.isConnected || !root.contains(button) || view.token !== routeToken || view.profile !== state.profile?.id
@@ -417,7 +418,7 @@ function activityUndoPhotoPreview(ctx, frames, changed) {
 }
 
 function openActivityUndo(view, id, endpoint = "/api/activity/undo") {
-  if (!["/api/activity/undo", "/api/activity/wishlist-undo", "/api/activity/accessory-undo"].includes(endpoint)) return null;
+  if (!["/api/activity/undo", "/api/activity/wishlist-undo", "/api/activity/accessory-undo", ACTIVITY_UNDO_MIXED_ENDPOINT].includes(endpoint)) return null;
   const ctx = { view, id, endpoint, root: view.days, seq: view.seq, profile: state.profile?.id, space: ownSpace(), token: routeToken,
     hash: location.hash, filter: { ...view.filter }, filterSignature: JSON.stringify(view.filter),
     pending: false, saved: false, needsRefresh: false, refreshing: false, refreshed: false, preview: null };
@@ -441,9 +442,11 @@ function openActivityUndo(view, id, endpoint = "/api/activity/undo") {
         sheetActions(sheet, [{ text: "Close", onclick: () => sheet.close() }]); return;
       }
       const preview = activityUndoEvidence(data, id, ctx.space, ctx.profile);
-      const expectedEndpoint = preview?.kind === "wishlist" ? "/api/activity/wishlist-undo" : preview?.kind === "accessory" ? "/api/activity/accessory-undo" : "/api/activity/undo";
+      const expectedEndpoint = preview?.kind === "wishlist" ? "/api/activity/wishlist-undo" : preview?.kind === "accessory" ? "/api/activity/accessory-undo"
+        : preview?.kind === "mixed" ? ACTIVITY_UNDO_MIXED_ENDPOINT : "/api/activity/undo";
       if (!preview || endpoint !== expectedEndpoint) throw new Error("The Undo preview could not be checked.");
-      ctx.preview = preview; activityUndoShow(ctx);
+      ctx.preview = preview;
+      if (preview.kind === "mixed") activityUndoMixedShow(ctx); else activityUndoShow(ctx);
     }).catch(failure => {
       if (!ctx.current()) return;
       clear(sheet.body).append(errorBox("The Undo preview couldn't be loaded", failure, () => { if (ctx.here()) fetchPreview(); }, null));
@@ -764,6 +767,130 @@ function activityUndoShow(ctx) {
   }
   actions();
   startPhoto?.();
+}
+
+/* Whole-change Undo of a collection import or an order receipt: every row together, one reason. */
+const ACTIVITY_UNDO_MIXED_ENDPOINT = "/api/activity/mixed-undo";
+const ACTIVITY_UNDO_MIXED_KEYS = "action,available,cards,collection,components,expect,id,kind,label,products,reason_required,space,tokens,uploads";
+
+function activityUndoMixedPart(part, kind) {
+  if (!part || typeof part !== "object" || Array.isArray(part) || Object.keys(part).sort().join(",") !== "reduced,removed"
+      || !Array.isArray(part.removed) || !Array.isArray(part.reduced)) return false;
+  return part.removed.every(row => activityUndoRow(row, kind))
+    && part.reduced.every(item => item && typeof item === "object" && Object.keys(item).sort().join(",") === "current,restored"
+      && activityUndoRow(item.current, kind) && activityUndoRow(item.restored, kind) && item.restored.quantity < item.current.quantity);
+}
+
+function activityUndoMixedEvidence(data, space) {
+  if (Object.keys(data).sort().join(",") !== ACTIVITY_UNDO_MIXED_KEYS || data.space !== space || data.reason_required !== true
+      || !["import_undo", "receipt_undo"].includes(data.action) || !Number.isSafeInteger(data.cards) || data.cards < 0
+      || !activityUndoMixedPart(data.collection, "collection") || !activityUndoMixedPart(data.tokens, "tokens")
+      || !Array.isArray(data.components) || !Array.isArray(data.products) || !Array.isArray(data.uploads)
+      || data.uploads.some(name => typeof name !== "string" || !name)) return false;
+  const importing = data.action === "import_undo";
+  if (importing !== Boolean(data.uploads.length) || importing === Boolean(data.components.length)
+      || importing && (data.products.length || data.tokens.removed.length || data.tokens.reduced.length)) return false;
+  return data.components.every(item => item && typeof item === "object" && Object.keys(item).sort().join(",") === "checks,component,kind,order,received_on"
+      && ["order", "component", "kind", "received_on"].every(field => typeof item[field] === "string") && item.order && item.component
+      && Array.isArray(item.checks) && item.checks.every(check => typeof check === "string"))
+    && data.products.every(item => item && typeof item === "object" && Object.keys(item).sort().join(",") === "intact,product,status"
+      && ["ordered", "preordered"].includes(item.status) && ["yes", "no"].includes(item.intact) && typeof item.product === "string" && item.product);
+}
+
+function activityUndoMixedReceipt(answer, preview) {
+  const counts = { removed_rows: preview.collection.removed.length, restored_rows: preview.collection.reduced.length,
+    components: preview.components.length, products: preview.products.length };
+  return Boolean(answer && answer.saved === true && answer.source_id === preview.id && answer.expect === preview.expect
+    && answer.kind === "mixed" && answer.space === preview.space && answer.action === preview.action && answer.cards === preview.cards
+    && Object.entries(counts).every(([key, value]) => answer[key] === value)
+    && Number.isSafeInteger(answer.tables_refreshed) && answer.tables_refreshed >= 0 && typeof answer.tables_error === "boolean"
+    && typeof answer.revision === "string" && answer.revision.trim() && typeof answer.summary === "string" && answer.summary.trim());
+}
+
+function activityUndoMixedShow(ctx) {
+  const { sheet, preview, endpoint } = ctx, signature = JSON.stringify(preview), importing = preview.action === "import_undo";
+  const text = value => value === "" ? "Not recorded" : String(value);
+  const copies = n => n + (n === 1 ? " copy" : " copies");
+  const printing = row => row.name + " (" + row.set.toUpperCase() + " " + row.collector_number + ", " + row.finish + ")";
+  const facts = row => "Condition " + text(row.condition) + " · Language " + text(row.language) + (row.notes ? " · Notes: " + row.notes : "");
+  const tokenName = row => row.back ? row.front + " / " + row.back : row.front;
+  const list = (title, items) => items.length ? el("section", { class: "panel" }, el("h3", { text: title }),
+    el("ul", { class: "activity-undo-mixed-list" }, ...items.map(item => el("li", { class: "activity-undo-mixed-row" }, ...item)))) : null;
+  clear(sheet.body).append(el("h3", { text: preview.label }),
+    el("p", { class: "box box-warn", text: importing
+      ? "Save Undo takes every card this import added back out of the collection: " + copies(preview.cards) + " in all. The uploaded file stays kept as a record of what was sent."
+      : "Save Undo puts these order parts back on order, as if the delivery hadn't been received, and takes out the " + copies(preview.cards) + " and token cards it added. Their arrival checks come back to do again, and the deck tables are worked out again." }),
+    el("p", { class: "sub", text: "Every row below is undone together, with no partial selection. If anything here changes before you save, nothing is saved. Saving creates one new audited change; the original change stays in Activity." }));
+  add(sheet.body, [
+    list("Order parts going back on order", preview.components.map(item => [el("strong", { text: "Order " + item.order + ": " + item.component + " (" + item.kind + ")" }),
+      el("span", { class: "sub", text: " received " + text(item.received_on) + (item.checks.length ? " · checks to do again: " + item.checks.join("; ") : "") })])),
+    list("Products going back on order", preview.products.map(item => [el("strong", { text: item.product }),
+      el("span", { class: "sub", text: " back to " + item.status + (item.intact === "yes" ? " (it was kept intact)" : "") })])),
+    list("Collection rows to remove", preview.collection.removed.map(row => [el("strong", { text: printing(row) + " × " + row.quantity }),
+      el("span", { class: "sub activity-undo-note", text: " " + facts(row) })])),
+    list("Collection rows going back to fewer copies", preview.collection.reduced.map(item => [el("strong", { text: printing(item.current) + ": " + item.current.quantity + " → " + item.restored.quantity }),
+      el("span", { class: "sub activity-undo-note", text: " " + facts(item.restored) })])),
+    list("Token cards to remove", preview.tokens.removed.map(row => [el("strong", { text: tokenName(row) + " × " + row.quantity })])),
+    list("Token cards going back to fewer cards", preview.tokens.reduced.map(item => [el("strong", { text: tokenName(item.current) + ": " + item.current.quantity + " → " + item.restored.quantity })])),
+    list("Upload kept", preview.uploads.map(name => [el("span", { text: name })])),
+  ]);
+  let acceptedReason = "", reviewedReason = null;
+  const id = "activity-undo-reason-" + sheet.heading.id;
+  const reasonInput = el("input", { id, type: "text", maxlength: 400, autocomplete: "off", "aria-describedby": id + "-hint" });
+  const normalized = el("p", { class: "sub", role: "status", "aria-live": "polite" });
+  sheet.body.append(el("label", { class: "field", for: id }, el("span", { text: importing ? "Why undo this import? (required)" : "Why undo this receipt? (required)" }), reasonInput),
+    el("p", { class: "field-hint", id: id + "-hint", text: "Up to 200 characters. Enter why these cards should come back out of the collection." }), normalized);
+  const error = el("p", { class: "form-error", role: "alert", tabindex: "-1" }); sheet.body.append(error);
+  const changed = () => {
+    if (!ctx.here() || ctx.pending || ctx.saved || ctx.needsRefresh || !reasonInput.isConnected || !sheet.body.contains(reasonInput)
+        || ctx.preview !== preview || JSON.stringify(preview) !== signature) { reasonInput.value = acceptedReason; return; }
+    if (reasonInput.value === acceptedReason) return;
+    acceptedReason = reasonInput.value; reviewedReason = activityUndoRemovalReason(acceptedReason);
+    normalized.textContent = reviewedReason ? "Reason to be saved: " + reviewedReason : "Enter a nonblank reason of at most 200 characters.";
+    error.textContent = ""; actions();
+  };
+  reasonInput.addEventListener("input", changed); reasonInput.addEventListener("change", changed);
+  function actions() {
+    reasonInput.disabled = ctx.pending || ctx.saved || ctx.needsRefresh;
+    sheetActions(sheet, ctx.saved ? [{ text: "Done", kind: "primary", onclick: event => { if (ctx.here() && event.currentTarget.isConnected) sheet.close(); } }]
+      : ctx.needsRefresh ? [{ text: "Reload Activity", kind: "primary", onclick: event => { if (ctx.here() && event.currentTarget.isConnected) sheet.close(); } },
+        { text: "Close", onclick: () => sheet.close() }]
+        : [{ text: "Cancel", disabled: ctx.pending, onclick: () => sheet.close() },
+          { text: ctx.pending ? "Saving Undo." : "Save Undo", kind: "primary", disabled: ctx.pending || !reviewedReason, onclick: save }]);
+  }
+  async function save(event) {
+    if (!ctx.here() || ctx.pending || ctx.saved || ctx.needsRefresh || !event?.currentTarget?.isConnected || !sheet.foot.contains(event.currentTarget)
+        || ctx.endpoint !== endpoint || ctx.preview !== preview || JSON.stringify(preview) !== signature || !activityUndoEvidence(preview, ctx.id, ctx.space, ctx.profile)) return;
+    if (!reasonInput.isConnected || reasonInput.value !== acceptedReason || !reviewedReason || activityUndoRemovalReason(reasonInput.value) !== reviewedReason) {
+      error.textContent = "Enter and review a nonblank reason of at most 200 characters before saving Undo."; return;
+    }
+    ctx.pending = true; error.textContent = ""; actions();
+    try {
+      const answer = await apiWrite(endpoint, { id: ctx.id, expect: preview.expect, reason: reviewedReason });
+      state.library = null;
+      if (!activityUndoMixedReceipt(answer, preview)) throw new Error("The Undo result could not be confirmed.");
+      if (!activityUndoOwner(ctx)) return;
+      ctx.saved = true;
+      if (ctx.current()) {
+        const tables = answer.tables_error ? " The deck tables couldn't all be worked out again: see Tables out of date on the Decks page."
+          : answer.tables_refreshed ? " " + answer.tables_refreshed + (answer.tables_refreshed === 1 ? " deck table was" : " deck tables were") + " worked out again." : "";
+        const confirmation = el("p", { role: "status", tabindex: "-1", text: "Undo saved as a new change. " + answer.summary + tables });
+        sheet.body.append(confirmation); actions(); if (ctx.here()) confirmation.focus();
+      }
+    } catch (failure) {
+      state.library = null;
+      if (!activityUndoOwner(ctx)) return;
+      ctx.needsRefresh = true;
+      error.textContent = (failure.status ? failure.message : "The Undo result could not be confirmed.") + " Reload Activity before reviewing another Undo.";
+      if (ctx.current() && ctx.here()) error.focus();
+    } finally {
+      ctx.pending = false;
+      if (activityUndoOwner(ctx)) {
+        if (ctx.current()) actions(); else activityUndoAfterClose(ctx);
+      }
+    }
+  }
+  actions();
 }
 
 /** A bounded refresh keeps the filter and loaded page depth; old rows stay until every read succeeds. */
