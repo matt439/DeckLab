@@ -1,5 +1,6 @@
 /* Deck Lab's page: the deck view's "Stats" part (/api/deck's "stats": the mana curve, land count,
-colour sources, card types and roles, tribes, Commander checks, sideboard and sources), and the
+colour sources, card types and roles, tribes, Commander checks, sideboard and sources), its "Chance to
+draw" panel (worked out here from the shown list's main deck, E3-S24), and the
 hand-made chart helpers (chartJobs and drawCharts, tile, niceScale, columnPath, barPath, colourPips)
 that deck.js, practice.js and matchups.js use too.
 
@@ -56,6 +57,7 @@ function statsSection(data) {
     landPanel(st),
     colourPanel(st),
     st.commander ? commanderPanel(st, data.summary) : null,
+    drawOddsPanel(data),
     compositionPanel(st),
     tribesPanel(st),
     st.sideboard && st.sideboard.count ? sideboardPanel(st) : null,
@@ -572,6 +574,132 @@ function tribesPanel(st) {
     el("p", { class: "sub", text: "Abilities with a one-word name, like Flying or Trample; the card's reminder text explains each." }));
   if (keywords.length) topN(keywords, 6, (list) => barList(list, (k) => k.keyword), "keywords");
   else panel.append(el("p", { class: "sub", text: "No keywords." }));
+  return panel;
+}
+
+// Chance to draw -------------------------------------------------------------
+
+const ODDS_MAX_TURN = 20;
+const ODDS_TABLE_TURNS = 7;
+
+/** The chance that n cards drawn from a library of size cards, hits of which count, include at least one
+ * hit: 1 - C(size - hits, n) / C(size, n), multiplied out term by term so no binomial grows too big. */
+function chanceOfAtLeastOne(size, hits, n) {
+  if (hits <= 0 || n <= 0 || size <= 0) return 0;
+  if (n > size - hits) return 1;
+  let none = 1;
+  for (let i = 0; i < n; i++) none *= (size - hits - i) / (size - i);
+  return 1 - none;
+}
+
+/** How many cards a player has seen by the start of a turn's main phase: the opening seven and one draw a
+ * turn, except the first when on the play. Never more than the library holds. */
+function cardsSeenBy(turn, onPlay, size) {
+  return Math.min(size, 7 + turn - (onPlay ? 1 : 0));
+}
+
+/** A deck's "Chance to draw": pick a card, or several as a group (any of them counts), a turn and play or
+ * draw, and the exact chance of seeing at least one by then. Worked out on the page from the shown list's
+ * main deck (data.sections.Deck): a Commander's commander and a companion start outside the library, the
+ * sideboard isn't drawn from. It ignores mulligans and card draw, and says so. null for a Beginner Box half,
+ * which is never played on its own, and for a list too small to deal seven from. */
+function drawOddsPanel(data) {
+  if (!data.sections || (data.summary && data.summary.id.startsWith(BOX_PREFIX))) return null;
+  const lines = mergedLines(data.sections.Deck || []).sort((a, b) => {
+    const ga = typeGroup(a.card) === "Lands" ? 1 : 0, gb = typeGroup(b.card) === "Lands" ? 1 : 0;
+    return ga - gb || byCostThenName(a, b);
+  });
+  const size = copies(lines);
+  if (size < 7) return null;
+  const commander = data.summary && (data.summary.kind === "commander" || data.summary.id.split("/").includes("commander"));
+  const picked = new Set();
+  let turn = 3, onPlay = !commander;
+  const result = el("div", { class: "odds-result", "aria-live": "polite" });
+  const turnInput = el("input", { type: "number", min: "1", max: String(ODDS_MAX_TURN), step: "1", value: String(turn),
+    inputmode: "numeric",
+    oninput: () => {
+      const n = Number(turnInput.value);
+      if (Number.isInteger(n) && n >= 1 && n <= ODDS_MAX_TURN) { turn = n; show(); }
+    },
+    onchange: () => { turnInput.value = String(turn); } });
+  const seats = [[true, "On the play"], [false, "On the draw"]];
+  const seat = el("div", { class: "segmented", role: "group", "aria-label": "Play or draw" });
+  for (const [value, label] of seats) {
+    seat.append(el("button", { type: "button", text: label, "aria-pressed": String(onPlay === value),
+      onclick: () => {
+        onPlay = value;
+        Array.from(seat.children).forEach((b, i) => b.setAttribute("aria-pressed", String(seats[i][0] === value)));
+        show();
+      } }));
+  }
+  const boxes = [];
+  const list = el("ul", { class: "odds-cards", "aria-label": "Cards to look for" }, lines.map((line) => {
+    const box = el("input", { type: "checkbox", value: line.name, onchange: () => {
+      if (box.checked) picked.add(line.name); else picked.delete(line.name);
+      show();
+    } });
+    boxes.push([box, line]);
+    return el("li", { "data-name": line.name.toLowerCase() },
+      el("label", { class: "choice" }, box, el("span", { class: "odds-qty", text: `${line.qty}` }), el("span", { text: line.name })));
+  }));
+  const filter = el("input", { type: "search", placeholder: "Find a card", "aria-label": "Find a card in the list",
+    oninput: () => {
+      const words = filter.value.trim().toLowerCase();
+      for (const item of list.children) item.hidden = Boolean(words) && !item.dataset.name.includes(words);
+    } });
+  const setAll = (test) => {
+    for (const [box, line] of boxes) {
+      box.checked = test(line);
+      if (box.checked) picked.add(line.name); else picked.delete(line.name);
+    }
+    show();
+  };
+  const lands = boxes.some(([, line]) => typeGroup(line.card) === "Lands");
+  const panel = el("section", { class: "panel wide", "aria-labelledby": "h-odds" },
+    el("h3", { id: "h-odds", text: "Chance to draw" }),
+    el("p", { class: "sub", text: "Tick a card, or several to count any of them, then choose the turn." }),
+    el("div", { class: "odds-settings" },
+      el("label", { class: "field odds-turn" }, el("span", { text: `By turn (1 to ${ODDS_MAX_TURN})` }), turnInput),
+      seat),
+    result,
+    el("div", { class: "odds-picker" },
+      el("div", { class: "toolbar odds-tools" }, filter,
+        lands ? el("button", { type: "button", class: "btn btn-quiet", text: "All lands",
+          onclick: () => setAll((line) => typeGroup(line.card) === "Lands") }) : null,
+        el("button", { type: "button", class: "btn btn-quiet", text: "Clear", onclick: () => setAll(() => false) })),
+      list),
+    explain("How is this worked out?",
+      `It's the exact chance that the cards seen by then include at least one of those ticked: the opening seven, ` +
+      `then one draw each turn (none on turn 1 on the play), from a library of ${plural(size, "card")} shuffled at random.`,
+      commander ? "In Commander the commander starts in the command zone, so the library is the rest of the deck. " +
+        "At a multiplayer table nobody skips their first draw: choose On the draw." : null,
+      "It ignores mulligans and any extra cards drawn, searched for or looked at, so a real game usually finds them a little sooner."));
+  function show() {
+    clear(result);
+    const ticked = lines.filter((line) => picked.has(line.name));
+    if (!ticked.length) {
+      result.append(noneSelected("Tick a card below to see the chance of drawing it."));
+      return;
+    }
+    const hits = copies(ticked);
+    const seen = cardsSeenBy(turn, onPlay, size);
+    const what = ticked.length === 1 ? `the ${plural(hits, "copy", "copies")} of ${ticked[0].name}`
+      : `the ${ticked.length} cards ticked (${plural(hits, "copy", "copies")} in all)`;
+    const draws = seen - 7;
+    result.append(el("div", { class: "tiles" },
+      tile(`By turn ${turn}`, pct(chanceOfAtLeastOne(size, hits, seen)), onPlay ? "on the play" : "on the draw")),
+      el("p", { text: `The chance of seeing at least one of ${what} in your first ${seen} cards: the opening seven` +
+        (draws > 0 ? ` and ${plural(draws, "draw")}` : "") + `, from ${plural(size, "card")}. Mulligans and extra card draw aren't counted.` }),
+      el("div", { class: "odds-table-wrap" }, el("table", { class: "odds-table" },
+        el("caption", { class: "sr-only", text: "The chance by each turn" }),
+        el("thead", {}, el("tr", {}, el("th", { scope: "row", text: "Turn" }),
+          Array.from({ length: ODDS_TABLE_TURNS }, (_, i) => el("th", { scope: "col", text: String(i + 1) })))),
+        el("tbody", {}, el("tr", {}, el("th", { scope: "row", text: "Chance" }),
+          Array.from({ length: ODDS_TABLE_TURNS }, (_, i) => el("td", {
+            class: i + 1 === turn ? "is-current" : null,
+            text: pctShort(chanceOfAtLeastOne(size, hits, cardsSeenBy(i + 1, onPlay, size))) })))))));
+  }
+  show();
   return panel;
 }
 
