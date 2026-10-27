@@ -204,6 +204,8 @@ button.card-tile-open:focus-visible .card-tile-pic { outline: 3px solid var(--fo
   border-radius: var(--r-card); background: var(--surface-3);   /* its placeholder while it loads */
   box-shadow: 0 0 0 2px var(--badge-ring), var(--shadow-img);
 }
+/* Above the "Example art" ribbon, so the ribbon's words stay readable. */
+.token-tile .card-tile-pic:has(> .card-tile-ribbon:not([hidden])) > .card-tile-back { bottom: calc(var(--fs-xs) * 1.4 + 8px); }
 
 /* ------------------------------------------------------------- card viewer */
 
