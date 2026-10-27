@@ -40,7 +40,9 @@
 .rcpt-selected-code { font-family: var(--font-mono); }
 .rcpt-selected-words { display: none; }
 .rcpt-selected-summary .btn { max-width: 100%; margin-top: var(--s-3); white-space: normal; }
-.rcpt-row .card-row[aria-current="true"], .rcpt-picture-inspect[aria-current="true"] { box-shadow: inset 2px 0 var(--accent); }
+.rcpt-row .card-row[aria-current="true"] { box-shadow: inset 2px 0 var(--accent); }
+/* The pill under a picture can't take a left edge (it curves into a crescent): a whole ring instead. */
+.rcpt-picture-inspect[aria-current="true"] { box-shadow: inset 0 0 0 2px var(--accent); }
 @media (min-width: 1000px) {
   .rcpt-head-grid, .rcpt-layout-frame { grid-template-columns: minmax(0, 1fr) 452px; }
   .rcpt-guidance { position: sticky; top: calc(var(--shell-top) + var(--s-4));
