@@ -197,6 +197,10 @@ inventory writes answer 503 with "reason": "database":
                                          a ManaBox, Moxfield, Deckbox or collection-columns export
     POST /api/collection/import/apply    body {"profile", "space", "token", "sha256", "skip_problems"?}:
                                          merge it and keep the upload as a raw import, in one change
+    POST /api/collection/trade/preview   body {"profile", "space", "sha256", "gave": [{"set", "collector_number",
+                                         "finish", "quantity"}], "got": [rows], "with"?, "message"?}: what a
+                                         trade would do (E7-S22: held copies, tables left out of date)
+    POST /api/collection/trade           the same body and "confirm_in_use"?: the trade as one change set
     GET  /api/precons?q=<words>          paper precons MTGJSON lists, newest first (lib/api/precons.py)
     GET  /api/precons/preview?file=<f>&space=<id>   what adding one would do: its cards, list and tokens
     POST /api/precons/add                body {"profile", "space", "file", "title", "sha256", "fields"?}: add

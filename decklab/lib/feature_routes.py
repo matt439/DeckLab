@@ -9,7 +9,7 @@ and accessory saves with a local picture (accessories.MAX_SAVE_BODY).
 
 
 def dispatch(handler, route, query):
-    from decklab.lib.api import (accessories, accessory_undo, activity, activity_mixed_undo, activity_undo, assembly, assembly_completion, assembly_standins, assembly_ticks, box_check, box_repair, collection, collection_edit, cover, deck_printings, editor, history,
+    from decklab.lib.api import (accessories, accessory_undo, activity, activity_mixed_undo, activity_undo, assembly, assembly_completion, assembly_standins, assembly_ticks, box_check, box_repair, collection, collection_edit, collection_trade, cover, deck_printings, editor, history,
                                  library_forge, opponents, play_records, precons, products, product_tokens, rankings, receipts, rename, retirement, shopping, shopping_order_changes, shopping_orders, shopping_queue, swaps, token_cards, token_plan, tokens, visits, wishlist_undo)
     from decklab.lib.api.common import MAX_BODY
 
@@ -76,6 +76,8 @@ def dispatch(handler, route, query):
         ("collection", "bulk"): (collection_edit.bulk_set, collection_edit.MAX_BULK_BODY),
         ("collection", "import", "preview"): (collection_edit.import_preview, collection_edit.MAX_IMPORT_BODY),
         ("collection", "import", "apply"): collection_edit.import_apply,
+        ("collection", "trade", "preview"): (collection_trade.preview_trade, collection_trade.MAX_TRADE_BODY),
+        ("collection", "trade"): (collection_trade.save_trade, collection_trade.MAX_TRADE_BODY),
         ("precons", "add"): precons.add_precon,
         ("deck", "cover"): cover.save_cover,
         ("deck", "token-cards"): token_cards.save_token_cards,

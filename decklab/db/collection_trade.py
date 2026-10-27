@@ -22,11 +22,11 @@ from pathlib import Path
 
 from decklab.db import cli_actor
 from decklab.lib import inventory
+from decklab.lib.inventory import ops_collection as ops
 from decklab.lib.inventory import paths, rules
 
 OUT_COLUMNS = ("name", "set", "collector_number", "finish", "quantity")
 MAX_WITH = 80                       # characters of the who-with note
-NAMED = 10                          # cards each side of the message names before "and N more"
 
 
 def add_parser(verbs):
@@ -110,21 +110,6 @@ def read_out(path, rows):
     return out
 
 
-def _side(items):
-    """"2 Llanowar Elves (FDN 227), 1 Sol Ring (C21 263)": (row, copies) pairs, at most NAMED."""
-    parts = [f"{n} {row['name']} ({row['set'].upper()} {row['collector_number']}"
-             + ("" if row["finish"] == "nonfoil" else f" {row['finish']}") + ")" for row, n in items]
-    if len(parts) > NAMED:
-        parts = parts[:NAMED] + [f"and {len(parts) - NAMED} more"]
-    return ", ".join(parts)
-
-
-def describe(gave, got, who):
-    """The trade's words for the change set's message (both sides, no prices)."""
-    return (f"Trade{' with ' + who if who else ''}: gave {_side(gave)}; "
-            f"got {_side([(row, int(row['quantity'])) for row in got]) or 'nothing tracked'}")
-
-
 def trade(args):
     from decklab.db.inv_collection import _copies, _listed, _save, read_file
     message = args.message.strip()
@@ -143,11 +128,8 @@ def trade(args):
             _, summary = inventory.preview(op, refresh=False)
     except (inventory.Invalid, inventory.Conflict) as e:
         raise ValueError(f"The trade can't be saved: {e}") from None
-    kept = summary.extra["got"]
-    tracked = [row for row in kept if not rules.ordinary_basic(row)
-               or rules.ident(row) in {rules.ident(r) for r in rows}]
-    words = describe(gave, tracked, who)
-    full = f"{message}{'' if message[-1] in '.!?' else '.'} {words}"
+    tracked = ops.trade_tracked(summary.extra["got"], rows)
+    full = ops.trade_message(message, gave, tracked, who)
     lines = [f"  Gave {_copies({'quantity': str(n)})} of {row['name']} ({row['set'].upper()} "
              f"{row['collector_number']}, {row['finish']}): {row['quantity']} -> {int(row['quantity']) - n}"
              for row, n in gave]

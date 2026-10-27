@@ -27,7 +27,8 @@
  * collector number, finish), which the server merges on: adding a printing that's already listed adds to
  * its quantity ("merged"). An import is previewed first (problems listed, plain basics left out), then
  * added in one change. "Add a precon" (lib/api/precons.py)
- * finds a published precon, previews its cards, then adds them and makes its built deck in one go. */
+ * finds a published precon, previews its cards, then adds them and makes its built deck in one go.
+ * "Record a trade" (collection-trade.js) saves the copies that left and the cards that came in as one change. */
 "use strict";
 
 const COL_FIELDS = ["name", "set", "collector_number", "finish", "quantity", "condition", "language", "notes"];
@@ -279,7 +280,7 @@ async function downloadCollection(cv) {
 }
 
 /** The head of both views: the title with Add card (where the visitor may change this collection) and
- * More (Import cards, Add a precon, Download, Packing plan), then the space picker and Find cards / Card list. */
+ * More (Import cards, Add a precon, Record a trade, Download, Packing plan), then the space picker and Find cards / Card list. */
 function colHead(cv, query) {
   const spaces = sortSpaces(Array.isArray(cv.data.spaces) && cv.data.spaces.length ? cv.data.spaces : spaceList())
     .filter((s) => seesInventory(s.id));
@@ -293,6 +294,7 @@ function colHead(cv, query) {
   const more = [
     cv.editable ? { label: "Import cards…", onclick: () => openImportSheet(cv) } : null,
     cv.editable ? { label: "Add a precon…", onclick: () => openPreconSheet(cv) } : null,
+    cv.editable && !cv.unsupported ? { label: "Record a trade…", onclick: () => openTradeSheet(cv) } : null,
     cv.unsupported ? null : { label: "Download collection (CSV)", onclick: () => downloadCollection(cv) },
     cv.space === HOME_SPACE && seesInventory(HOME_SPACE) ? { label: routeH1("assembly"), href: "#/assembly" } : null];
   return [
