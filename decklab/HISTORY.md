@@ -2,6 +2,12 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Record a trade from the PC (2026-10-27; E7-S22)
+
+A trade is now one change instead of an unlinked removal and a separate merge: `python -m decklab.db collection trade --out GAVE.csv --in GOT.csv [--space S] [--with T] -m "..." [--allow-in-use] [--dry-run]` (`db/collection_trade.py`, the `collection.trade` operation in `inventory/ops_collection.py`). `--out` names the copies that left (rows matched on set, collector number and finish, the name checked, no more copies than the row has; a row given away entirely is removed), and `--in` is a file in the collection's columns, checked and merged as `collection merge` merges one (exact Scryfall names, ordinary basic lands left out). The change set's message is `-m` followed by both sides ("Trade with T: gave 1 Llanowar Elves (FDN 227); got 1 Sol Ring (ECC 57)"), its reason "Traded" or "Traded with T", with no prices. Copies built decks or intact products hold are named in the preview and refused without `--allow-in-use`, as `collection edit` refuses them; `--dry-run` also names the tables it would leave out of date, and a save names those now out of date, as merge does.
+
+Decisions: no raw import is kept, since a trade isn't an import and the audit rows hold both sides; a printing can't be both given and got. Activity's Undo doesn't reverse part of a trade (both Undo reviews refuse it); a trade's own whole-change Undo and the Collection page's Record a trade are later slices of E7-S22. Validation: `test_collection_trade.py` (11 cases: the operation on files and on a disposable PostgreSQL 16 database, including one change set with a DELETE and an INSERT, no raw import and both Undo refusals, and the command in the Collection sandbox).
+
 ## Card rulings in the card viewer (2026-10-27; E1-S25)
 
 The card viewer now shows a card's Scryfall rulings under its rules text, from the comparison with ManaBox and Dragon Shield.

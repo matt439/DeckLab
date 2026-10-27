@@ -9,6 +9,12 @@ the inventory registered with inventory.register, so the Collection page, "Add a
     collection.apply    {space, edits, removals, sha256?, whose?, expect_decks_revision?}
     collection.import   {space, sources, uploads?, sha256?, whose?, message?, limit?, fmt?,
                          problems?, dropped_basics?, expected_repeats?}
+    collection.trade    {space, gave, got, sha256?, whose?, expect_decks_revision?}
+
+collection.trade (E7-S22) is a trade as one change: gave is [[set, collector_number, finish,
+quantity]] of listed rows, each lowered by quantity (removed when none are left), and got is rows
+merged in as an import merges them (merge_rows), with no raw import kept: a trade isn't an import.
+A printing may not be both given and got, and no row may be given twice or more copies than it has.
 
 A row is collection.csv's eight columns as text; original is the [set, collector_number,
 finish] of the row as the page loaded it. sha256, when given, is the sha256 of the space's
@@ -338,6 +344,61 @@ def merge(inv, space, sources, uploads=(), sha256=None, whose=None, message=None
         "{cards}", str(counts["cards"])), repeats, uploads)
     return inv.with_collection(space, merged), Summary(
         text, counts=counts, extra={"body": body, "imports": imports, "raw": raw})
+
+
+# ------------------------------------------------------------------ trades
+
+def _copies_word(n):
+    return f"{n} {'copy' if n == 1 else 'copies'}"
+
+
+@register("collection.trade")
+def trade(inv, space, gave, got, sha256=None, whose=None, expect_decks_revision=None):
+    """The copies given lowered or removed and the copies got merged in, as one change (see the
+    module docstring). extra["gave"] is [(row before, copies given)], extra["got"] the rows got as
+    checked; counts are merge_rows' for the cards got plus "gave" (copies) and "removed" (rows)."""
+    whose = whose or collection_name(space)
+    _expect_decks(inv, expect_decks_revision)
+    rows = _rows(inv, space, sha256, whose)
+    by_key = {rules.ident(r): r for r in rows}
+    if not gave or not got:
+        raise Invalid("A trade needs both the cards that left and the cards that came in.")
+    given, seen = [], set()
+    for item in gave:
+        set_code, number, finish, quantity = (str(v) for v in item)
+        key = (set_code, number, finish)
+        if key in seen:
+            raise Invalid(f"{set_code.upper()} {number} {finish} is given twice; give each printing once.")
+        seen.add(key)
+        if not re.fullmatch(r"[0-9]+", quantity) or int(quantity) <= 0:
+            raise Invalid(f"{set_code.upper()} {number} {finish}: the copies given must be a positive whole "
+                          f"number, got {quantity!r}")
+        old = by_key.get(key)
+        if old is None:
+            raise Missing(space)
+        if int(quantity) > int(old["quantity"]):
+            raise Invalid(f"{_label(old)}: {whose} has {_copies_word(int(old['quantity']))}, "
+                          f"so {quantity} can't be given.")
+        given.append((dict(old), int(quantity)))
+    got = [_row(r, "A card got") for r in got]
+    both = sorted({_label(r) for r in got if rules.ident(r) in seen})
+    if both:
+        raise Invalid(f"{', '.join(both)} is both given and got; leave it out of both.")
+    kept, removed = [], 0
+    for row in rows:
+        left = next((n for old, n in given if rules.ident(old) == rules.ident(row)), 0)
+        if left and left == int(row["quantity"]):
+            removed += 1
+            continue
+        kept.append({**row, "quantity": str(int(row["quantity"]) - left)} if left else row)
+    try:
+        merged, counts = rules.merge_rows(kept, [("the cards got", got)])
+    except rules.InvalidCards as e:
+        raise Invalid(f"The cards got can't be added: {e}") from None
+    copies = sum(n for _, n in given)
+    text = f"trade in {whose}: gave {copies} {'card' if copies == 1 else 'cards'}, got {counts['cards']}"
+    return inv.with_collection(space, merged), Summary(
+        text, counts={**counts, "gave": copies, "removed": removed}, extra={"gave": given, "got": got})
 
 
 # ------------------------------------------------------------------ messages
