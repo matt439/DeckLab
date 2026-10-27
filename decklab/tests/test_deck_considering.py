@@ -187,6 +187,22 @@ class ConsideringApiTests(EditorTestCase):
         self.assertApiError(403, lambda: self.change("guest", action="remove", index=0))
         self.assertEqual(self.text("casual/table-test"), before)
 
+    def test_an_unknown_name_stays_in_considering_but_cant_be_moved(self):
+        # A misspelled name only gets in by deck push. Considering keeps it as written, but a move checks
+        # it as a new line, so it never reaches the Planned list, where it would stop the space's tables.
+        from decklab.tests.test_api import _write
+        _write(self.box.magic / "decks" / "casual" / "table-test.md",
+               CONSIDERING_DECK.replace("2 Elvish Mystic (CMM) 648", "1 Llanowar Elfs"))
+        before = self.text("casual/table-test")
+        refused = self.assertApiError(400, lambda: self.change(action="move", index=1))
+        self.assertIn("Llanowar Elfs", json.dumps(refused.extra.get("blocks")))
+        self.assertEqual(self.text("casual/table-test"), before)
+        answer = self.change(action="add", line={"name": "Llanowar Elves", "qty": 1})
+        self.assertTrue(answer["saved"])
+        deck = decks.parse_deck(self.text("casual/table-test").encode(), "table-test", "casual")
+        self.assertEqual([l.name for l in deck.considering], ["Black Lotus", "Llanowar Elfs", "Llanowar Elves"])
+        self.assertFalse(any(l.name == "Llanowar Elfs" for s in deck.target.values() for l in s))
+
     def test_the_editor_sends_it_too(self):
         view = api.edit_view("casual/table-test")
         self.assertEqual([l["name"] for l in view["lists"]["considering"]], ["Black Lotus", "Elvish Mystic"])

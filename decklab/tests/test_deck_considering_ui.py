@@ -72,14 +72,39 @@ class DeckConsideringUiTests(unittest.TestCase):
     def test_moves_removes_and_adds_are_saves(self):
         self.run_js("""
           const page = withConsidering();
-          showCards(page);
+          const part0 = showCards(page);
+          // Each row's ⋯ is a menu button (UI-KIT: a row's ⋯ is a menuButton).
+          const more = part0.querySelector('.menu-button');
+          assert.equal(more.getAttribute('aria-haspopup'), 'menu');
+          assert.equal(more.getAttribute('aria-label'), 'Black Lotus: move or remove');
+          location.hash = '#/deck?id=casual%2Ftest&tab=cards';
           await saveConsidering(page, {action: 'move', index: 1});
-          await saveConsidering(page, {action: 'remove', index: 0});
+          // A move gets the deck page's box about the save (its mark, table, warnings), not a toast.
+          assert.equal(state.saved.hash, location.hash);
+          same(state.saved.answer, {saved: true});
+          state.saved = null;
+          let undo = null, undoWords = null;
+          showToast = (text, opts) => { undoWords = text; undo = opts?.undo; return {close() {}}; };
+          api = async (path, opts) => { writes.push([path, JSON.parse(opts.body)]); return {saved: true, sha256: 'c'.repeat(64)}; };
+          await removeConsidering(page, 0);
           await settle();
-          same(writes.map(([path, body]) => [path, body.action, body.index, body.id, body.sha256.length]),
-            [['/api/deck/considering', 'move', 1, 'casual/test', 64], ['/api/deck/considering', 'remove', 0, 'casual/test', 64]]);
-          assert.equal(routed, 2);        // the page is drawn again from the saved deck
-          same(toasts, ['Moved into the Planned list.', 'Taken off Considering.']);
+          assert.equal(undoWords, 'Took Black Lotus off Considering.');
+          assert.equal(state.saved, null);
+          undo();
+          await settle();
+          same(writes.map(([path, body]) => [path, body.action, body.index ?? null, body.id, body.sha256]),
+            [['/api/deck/considering', 'move', 1, 'casual/test', 'a'.repeat(64)],
+             ['/api/deck/considering', 'remove', 0, 'casual/test', 'a'.repeat(64)],
+             ['/api/deck/considering', 'add', null, 'casual/test', 'c'.repeat(64)]]);
+          same(writes[2][1].line, {name: 'Black Lotus', qty: 1, set: 'lea', number: '232', finish: 'nonfoil'});
+          assert.equal(routed, 3);        // the page is drawn again from the saved deck
+          same(toasts.filter(Boolean), ['Added to Considering.']);
+          // Warnings or other decks' tables out of date after any save: the box, not the toast.
+          api = async (path, opts) => { writes.push([path, JSON.parse(opts.body)]);
+            return {saved: true, sha256: 'd'.repeat(64), warnings: ['4 copies'], stale_tables: [{id: 'casual/other'}]}; };
+          await saveConsidering(page, {action: 'add', line: {name: 'Bolt', qty: 1}});
+          same(state.saved.answer.stale_tables, [{id: 'casual/other'}]);
+          state.saved = null;
           const empty = makePage(); empty.considering = {sha256: 'b', lines: []};
           const part = showCards(empty);
           assert(part.textContent.includes('No cards being considered'));
@@ -89,5 +114,5 @@ class DeckConsideringUiTests(unittest.TestCase):
           name.value = 'Opt'; qty.value = '2';
           sheet.querySelectorAll('button').find((b) => b.textContent === 'Add').click();
           await settle();
-          same(writes[2][1].line, {name: 'Opt', qty: 2});
+          same(writes[4][1].line, {name: 'Opt', qty: 2});
         """)

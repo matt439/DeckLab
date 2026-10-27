@@ -40,36 +40,54 @@ function deckConsideringSection(data) {
         meta: free === null ? undefined : free, unknownMeta: free || "Not a card Deck Lab knows",
         viewerGroup: "deck-considering", caption: `${line.qty} x ${line.name}` });
       if (!editable) return row;
-      const actions = el("button", { type: "button", class: "btn btn-quiet", text: "⋯",
-        "aria-label": `${line.name}: move or remove`,
-        onclick: (e) => openMenu(e.currentTarget, [
-          { text: "Move to the Planned list", onclick: () => saveConsidering(data, { action: "move", index }) },
-          { text: "Move to the sideboard", onclick: () => saveConsidering(data, { action: "move", index, section: "Sideboard" }) },
-          { text: "Remove", danger: true, onclick: () => saveConsidering(data, { action: "remove", index }) },
-        ]) });
+      const actions = menuButton("⋯", [
+        { label: "Move to the Planned list", onclick: () => saveConsidering(data, { action: "move", index }) },
+        { label: "Move to the sideboard", onclick: () => saveConsidering(data, { action: "move", index, section: "Sideboard" }) },
+        "sep",
+        { label: "Remove", danger: true, onclick: () => removeConsidering(data, index) },
+      ], { aria: `${line.name}: move or remove`, buttonClass: "btn btn-quiet" });
       return el("div", { class: "deck-considering-row" }, row, actions);
     })),
     add);
   return section;
 }
 
-/** One change to the Considering list, saved with the deck; the page is drawn again from the saved deck. */
+/** One change to the Considering list, saved with the deck; the page is drawn again from the saved deck. A
+ * move, or a save with warnings or other decks' tables now out of date, gets the deck page's box about the
+ * save (editor-deckpage.js savedBox: the "Decklist changed" mark, the table, the warnings and Update their
+ * tables); anything else a toast. Returns the save's answer, or false when it was refused. */
 async function saveConsidering(data, change, onError = null) {
   const id = data.summary.id;
   try {
-    await apiWrite("/api/deck/considering", { id, sha256: data.considering.sha256, ...change });
+    const answer = await apiWrite("/api/deck/considering", { id, sha256: data.considering.sha256, ...change });
     state.library = null;
-    toast(change.action === "move" ? "Moved into the Planned list." : change.action === "add"
-      ? "Added to Considering." : "Taken off Considering.");
     const here = parseHash();
-    if (here.path === "deck" && addressDeckId(here.params.get("id") || "") === id) route();
-    return true;
+    const onDeck = here.path === "deck" && addressDeckId(here.params.get("id") || "") === id;
+    if (change.action === "move" || answer?.warnings?.length || answer?.stale_tables?.length) {
+      toast("");                      // an older note would cover the box about the save
+      if (onDeck) state.saved = { hash: location.hash, profile: state.profile?.id, answer };
+    } else if (change.action === "add") toast("Added to Considering.");
+    if (onDeck) route();
+    return answer || true;
   } catch (e) {
     if (!(e instanceof ApiError)) throw e;
     if (onError) onError(e.message + (e.status === 409 ? " Reload the deck, then try again." : ""));
     else toast(e.message);
     return false;
   }
+}
+
+/** Remove takes the line off at once, with an Undo toast that adds it back (at the end of the list) in
+ * another save, from the saved deck's sha. */
+async function removeConsidering(data, index) {
+  const line = data.considering.lines[index];
+  const answer = await saveConsidering(data, { action: "remove", index });
+  if (!answer || !line) return;
+  const back = { name: line.name, qty: line.qty, set: line.set, number: line.number, finish: line.finish };
+  showToast(`Took ${line.name} off Considering.`, { undo: () => {
+    if (typeof answer.sha256 !== "string") { toast("Reload the deck to add it back."); return; }
+    saveConsidering({ summary: data.summary, considering: { sha256: answer.sha256 } }, { action: "add", line: back });
+  } });
 }
 
 /** A card name and how many copies, added to the Considering list (the server checks the name). */

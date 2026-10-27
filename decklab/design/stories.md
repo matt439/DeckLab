@@ -553,14 +553,14 @@ As a deck builder, I want a Considering list kept with each deck, so that cards 
 
 Decided (Matt, 2026-10-27): added from the comparison with Moxfield's maybeboard.
 
-Now: Built 2026-10-28 ([Considering list](../HISTORY.md#considering-list-2026-10-28-e2-s23)): a `## Considering` block of card lines is read beside the Planned and Play-now lists, so no table, pool, packing, sleeve, stats, tokens, Forge, print, box-check or `deck_line` reader counts it. The Cards tab lists it with each card's free copies (only to viewers who see the collection) and adds, removes or moves a card into the Planned list or sideboard, each one save (`POST /api/deck/considering`).
+Now: Built 2026-10-28 ([Considering list](../HISTORY.md#considering-list-2026-10-28-e2-s23)): a `## Considering` block of card lines is read beside the Planned and Play-now lists, so no table, pool, packing, sleeve, stats, tokens, Forge, print, box-check or `deck_line` reader counts it. The Cards tab lists it with each card's free copies (only to viewers who see the collection) and adds, removes or moves a card into the Planned list or sideboard, each one save (`POST /api/deck/considering`): a move is checked as a new Planned line, so a misspelled Considering name (only `deck push` writes one, and push names it) never reaches the Planned list; after a move, or a save with warnings or other decks' tables out of date, the deck page's box about the save shows them; Remove has an Undo toast.
 Not yet: the editor has no Considering view of its own (its save and check take `lists.considering`), and `deck_line` SQL leaves Considering cards out.
 
 Evidence:
 - `decklab/lib/decks/considering.py`; `deckfile.py` parse_deck, `render.py` render_deck_file, `edit.py` apply_edit
-- `decklab/lib/api/considering.py` (view, save_considering); `deck_page.py` deck_view; `drafts.py` _read_draft; `saving.py` save_deck
-- `decklab/web/deck-considering.js`
-- `decklab/tests/test_deck_considering.py`, `decklab/tests/test_deck_considering_ui.py`
+- `decklab/lib/api/considering.py` (view, save_considering); `deck_page.py` deck_view; `drafts.py` _read_draft (known_considering); `saving.py` save_deck
+- `decklab/web/deck-considering.js` (saveConsidering, removeConsidering); `decklab/db/inv_decks.py` after_notes
+- `decklab/tests/test_deck_considering.py`, `decklab/tests/test_deck_considering_ui.py`, `decklab/tests/test_cli_write_previews.py`
 
 First slice: a `Considering` section in the deck text format that the parser reads and every table, pool and packing reader skips.
 

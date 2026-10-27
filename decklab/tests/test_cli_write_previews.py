@@ -155,6 +155,15 @@ class CliWritePreviewTests(_PreviewTree):
         self.assertEqual(code, 1, err)
         self.assertIn("no fenced decklist", err)
 
+    def test_push_reports_unknown_names_in_the_considering_list(self):
+        # E2-S23: a Considering card never counts, but one moved into the Planned list keeps its name.
+        sha = inventory.current().deck("casual/preview").sha256
+        source = self.source("deck.md", TEXT + "\n## Considering\n\n```\n1 Definitely Not A Card\n```\n")
+        code, out, err = self.run_cli("deck", "push", "casual/preview", source, "--expect", sha, "-m", "Consider")
+        self.assertEqual(code, 0, err)
+        self.assertIn("Not Scryfall card names in the Considering list: Definitely Not A Card", out)
+        self.assertNotIn("Card names: all checked names resolve", out)
+
     def test_push_preview_runs_the_real_kit_validation(self):
         source = self.source("deck.md", TEXT.replace("Status:** idea", "Status:** built\n- **Sleeves:** missing-kit"))
         sha = inventory.current().deck("casual/preview").sha256
