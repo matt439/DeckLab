@@ -218,6 +218,42 @@ class ForgeBuildTests(unittest.TestCase):
         self.assertIsNone(simjar.forge_build(self.jar))
 
 
+class ReleaseCheckTests(unittest.TestCase):
+    """release_check(): whether the installed Forge is the release this Deck Lab expects."""
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
+        self.jar = self.tmp / JAR_NAME
+        p = mock.patch.object(forge.common, "_log", lambda *a: None)
+        p.start()
+        self.addCleanup(p.stop)
+
+    def test_the_release_is_a_checked_build(self):
+        self.assertIn(simjar.RELEASE, simjar.CHECKED_BUILDS.values())
+        self.assertEqual(simjar.release_url(), f"https://github.com/matt439/forge/releases/tag/{simjar.RELEASE}")
+
+    def test_the_expected_build(self):
+        write_jar(self.jar, manifest=f"Implementation-Version: {simjar.RELEASE}\r\n")
+        found = simjar.release_check(self.jar)
+        self.assertEqual((found["build"], found["matches"]), (simjar.RELEASE, True))
+        self.assertNotIn("download", found["advice"])
+
+    def test_another_build_says_how_to_fix_it(self):
+        write_jar(self.jar, manifest=SNAPSHOT_MANIFEST)
+        found = simjar.release_check(self.jar)
+        self.assertEqual((found["build"], found["expected"], found["matches"]),
+                         ("2.0.15-SNAPSHOT-09.28", simjar.RELEASE, False))
+        self.assertIn(simjar.release_url(), found["advice"])
+        self.assertIn("cardlog-check", found["advice"])
+
+    def test_no_forge_or_an_unreadable_build(self):
+        for jar in (None, self.tmp / "missing.jar"):
+            found = simjar.release_check(jar)
+            self.assertEqual((found["build"], found["matches"]), (None, False))
+            self.assertIn(simjar.release_url(), found["advice"])
+
+
 # ============================================================ building the jar
 
 class BuildTests(SimjarCase):

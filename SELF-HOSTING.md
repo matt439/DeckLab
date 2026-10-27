@@ -9,7 +9,7 @@ This guide sets up Deck Lab on your own computer, from nothing, for you and your
 | | Windows 10 or 11 | Linux | macOS |
 |---|---|---|---|
 | The server, the database, the pages, the command line | Yes | Yes | Yes |
-| Forge simulations | Yes | Yes (the fork builds with JDK 21 and Maven) | Yes |
+| Forge simulations | Yes | Yes (the same download, with a JDK 21 or later) | Yes (the same download) |
 | Starting in the background and at logon (`homenet install`) | Yes (Task Scheduler) | Yes (a systemd user service) | No: run the server in a terminal, or under launchd |
 | The firewall script (`decklab/network-setup.ps1`) and `homenet status`'s network checks | Yes | No: open the port in your own firewall | No |
 | The nightly backup task (`python -m decklab.db schedule`) | Yes (Task Scheduler) | Yes (a systemd user timer) | No: run `python -m decklab.db nightly` from cron |
@@ -135,23 +135,44 @@ Some first steps:
 
 Matchups play full games with [Forge](https://github.com/Card-Forge/forge)'s computer players. Deck Lab needs its own build of Forge, from the fork [matt439/forge](https://github.com/matt439/forge), branch `decklab`, which adds the hooks the card log and game patches use. Deck Lab works without it: only the Matchups and Lab pages need it.
 
+You need a **Java JDK 21 or later** (a full JDK, with `javac` and `jar`: the card log is compiled on your PC), such as [Eclipse Temurin](https://adoptium.net/). Then get Deck Lab's Forge one of two ways.
+
+### Download it (the usual way)
+
+1. **Download the release** Deck Lab expects: [2.0.15-decklab-52387e83f](https://github.com/matt439/forge/releases/tag/2.0.15-decklab-52387e83f) (it's `RELEASE` in [decklab/lib/forge/simjar.py](decklab/lib/forge/simjar.py)). It's Forge 2.0.15 with the fork built in. Get both files: `forge-2.0.15-decklab-52387e83f.zip` and its `.zip.sha256`.
+2. **Check the checksum** matches the one in the `.sha256` file and the release's notes:
+   - Windows (PowerShell): `Get-FileHash forge-2.0.15-decklab-52387e83f.zip -Algorithm SHA256`
+   - Linux: `sha256sum -c forge-2.0.15-decklab-52387e83f.zip.sha256`
+   - macOS: `shasum -a 256 -c forge-2.0.15-decklab-52387e83f.zip.sha256`
+
+   If it doesn't match, the download is damaged: delete it and download it again.
+3. **Unzip it** somewhere of its own, such as `C:\Tools` or `~/tools`. It makes one folder, `forge-2.0.15-decklab-52387e83f`.
+4. Go on with "Point Deck Lab at it" below.
+
+### Or build it from source
+
+Only if you want to change Forge itself, or no release fits your Deck Lab. It needs Maven as well as the JDK.
+
 1. **Download the Forge 2.0.15 release** from [Forge's releases](https://github.com/Card-Forge/forge/releases/tag/forge-2.0.15) (the desktop archive) and unpack it into a folder of its own, such as `C:\Tools\forge` or `~/forge-2.0.15`. It should hold one `forge-gui-desktop-2.0.15-jar-with-dependencies.jar` and a `res` folder. The build copies its `res` folder and launch scripts, and never changes it.
 2. **Clone the fork with its history.** The build compares the branch with the `forge-2.0.15` tag, so don't make a shallow clone:
    ```
    git clone -b decklab https://github.com/matt439/forge forge-decklab-src
    ```
-   Deck Lab trusts the card log only from the fork build it was checked with: `V` in [decklab/lib/forge/simjar.py](decklab/lib/forge/simjar.py), such as `2.0.15-decklab-52387e83f`. If the branch has moved on since, check out that commit (`git checkout 52387e83f`). Any other build still plays matchups, but with plain Forge and without per-card stats.
-3. **Build and install it** with a JDK 21 or later and Maven on the PATH (`JAVA_HOME` set to the JDK). From the fork's folder:
+   Deck Lab trusts the card log only from the fork build it was checked with: `RELEASE` in [decklab/lib/forge/simjar.py](decklab/lib/forge/simjar.py), such as `2.0.15-decklab-52387e83f`. If the branch has moved on since, check out that commit (`git checkout 52387e83f`). Any other build still plays matchups, but with plain Forge and without per-card stats.
+3. **Build and install it** with `JAVA_HOME` set to the JDK and Maven on the PATH. From the fork's folder:
    ```
    python decklab/install.py --release <the release folder> --out <where to install it>
    ```
    The first build downloads Maven's dependencies and takes several minutes. The `--out` folder is made new; nothing else is changed.
-4. **Point Deck Lab at it** in `config.json`:
+
+### Point Deck Lab at it
+
+1. **Set `forge_dir`** in `config.json` to the folder you unzipped or installed:
    ```json
-   "forge_dir": "<where you installed it>",
+   "forge_dir": "<that folder>",
    ```
    Deck Lab looks for Java in `C:\Program Files\Java\jdk-*`, then `JAVA_HOME`, then (off Windows) the PATH. Set `"forge_java"` to the JDK's `java` (`java.exe` on Windows) if it picks the wrong one.
-5. **Check it:** `python -m decklab.lib.forge status` says whether Forge is ready. Then run `python -m decklab.lib.forge cardlog-check` once: it plays a few games several ways and turns on the card log when they match.
+2. **Check it:** `python -m decklab.lib.forge status` says whether Forge is ready, and its `build:` line whether it's the build this Deck Lab expects (and what to download if not). Then run `python -m decklab.lib.forge cardlog-check` once: it plays a few games several ways and turns on the card log when they match.
 
 Deck Lab runs up to 16 Forge workers at once, each with up to 1 GB of memory. That suits a 16-core PC with 32 GB or more. On a smaller one, set `"forge_workers"` in `config.json` to your number of cores or fewer (such as `"forge_workers": 4`), or admins can lower it on the Settings page.
 
