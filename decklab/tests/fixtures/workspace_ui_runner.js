@@ -69,6 +69,7 @@ class Node {
   }
   querySelectorAll(selector) { return this.children.flatMap((n) => [...(n.matches(selector) ? [n] : []), ...n.querySelectorAll(selector)]); }
   querySelector(selector) { return this.querySelectorAll(selector)[0] || null; }
+  get options() { return this.querySelectorAll("option"); }
   closest(selector) { return this.matches(selector) ? this : this.parentNode && this.parentNode.closest(selector); }
   focus(options) { if (this.disabled) return; document.activeElement = this; this.focusOptions = options; this.fire("focus"); }
   select() { this.selected = true; }

@@ -35,18 +35,18 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 
 | Epic | Stories | Built | Partial | Missing | Not wanted |
 |---|---:|---:|---:|---:|---:|
-| [E1: Find, plan and choose decks](#e1-find-plan-and-choose-decks) | 14 | 11 | 1 | 2 | 0 |
+| [E1: Find, plan and choose decks](#e1-find-plan-and-choose-decks) | 14 | 11 | 2 | 1 | 0 |
 | [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 19 | 14 | 1 | 3 | 1 |
 | [E3: Test a deck](#e3-test-a-deck) | 15 | 12 | 3 | 0 | 0 |
 | [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 22 | 16 | 1 | 4 | 1 |
 | [E5: Decide what to buy](#e5-decide-what-to-buy) | 22 | 15 | 0 | 5 | 2 |
 | [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 20 | 17 | 0 | 1 | 2 |
-| [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 28 | 20 | 3 | 5 | 0 |
-| [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 18 | 11 | 1 | 4 | 2 |
-| [E9: Commander nights](#e9-commander-nights) | 20 | 13 | 0 | 6 | 1 |
+| [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 28 | 20 | 4 | 4 | 0 |
+| [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 18 | 11 | 2 | 3 | 2 |
+| [E9: Commander nights](#e9-commander-nights) | 20 | 14 | 0 | 5 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 35 | 31 | 1 | 1 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 28 | 17 | 6 | 2 | 3 |
-| **Total** | **241** | **177** | **17** | **33** | **14** |
+| **Total** | **241** | **178** | **20** | **29** | **14** |
 
 Counted from the story headers on 2026-10-27.
 
@@ -178,7 +178,7 @@ Evidence:
 
 Gap: The Overview shows nothing about strength. The rank and range already exist on the Matchups tab and in #/matchups Rankings (E3-S10); the work is surfacing one line on the Overview.
 
-**E1-S13** · Matt · could · L · missing
+**E1-S13** · Matt · could · L · partial
 
 As a deck builder, I want to compare two decks side by side (curve, colours, lands, card types, cards they both want, and how they've done against each other), so that choosing between two decks, or between two versions of an idea, doesn't mean flicking between pages.
 
@@ -186,12 +186,14 @@ As a deck builder, I want to compare two decks side by side (curve, colours, lan
 - Given cards both lists use, when the comparison opens, then they are listed with how many copies the pool can cover for both.
 - Given saved Forge results or recorded games between them, when the comparison opens, then the latest result and the Head to head count are linked.
 
+Now: the stats slice built 2026-10-27 ([HISTORY.md](../HISTORY.md#compare-two-decks-stats-2026-10-27-e1-s13)): #/compare shows two visible lists' verdicts, curves on one scale, lands, colour sources and card types side by side, opened from a deck page's Compare with….
+
 Evidence:
-- `decklab/web/core.js`: ROUTES (no compare route)
+- `decklab/lib/api/compare.py`: compare_view (GET /api/deck/compare)
+- `decklab/web/compare.js`: showCompare, comparePicker, compareBrief, compareCurvePanel; `decklab/web/deck.js`: deckMoreItems
+- `decklab/tests/test_compare.py`, `decklab/tests/test_compare_ui.py`
 
-Gap: There's no compare view. The pieces are separate: each deck's Stats, #/matchups, Head to head in #/play, the Packing plan, and History's revision compare.
-
-First slice: a read-only compare page for two chosen decks with their curves, colours, land counts and card types side by side (the stats outcome only; shared cards and head to head follow).
+Gap: cards both lists use, with the copies the pool covers for both, and the latest Forge result and Head to head count between them, aren't shown yet.
 
 Review note: L with three separate outcomes; could split into stats, shared cards and head to head.
 
@@ -2172,15 +2174,17 @@ As a player who sometimes trades cards, I want to record a trade as one event, w
 
 Evidence:
 - `decklab/web/collection-guards.js`: colReasonControl (Traded as a removal reason, E7-S11)
-- `decklab/lib/api/collection_edit.py`: save_card (one card per change; no trade route)
+- `decklab/web/collection-trade.js`: openTradeSheet, previewTrade, drawTradeReview, saveTrade (the Collection page's Record a trade)
+- `decklab/lib/api/collection_trade.py`: preview_trade, save_trade (POST /api/collection/trade/preview and /api/collection/trade: the same `collection.trade`, held copies needing the preview's review token, the tables it would leave out of date)
 - `decklab/db/collection_trade.py`, `decklab/lib/inventory/ops_collection.py` (`collection.trade`): `collection trade --out FILE --in FILE [--with T] -m "..."` saves both sides as one change set, its message naming them and the who-with note and its reason "Traded", with no prices; `--dry-run` names the built decks that lose cards and the tables it would leave out of date, a save refuses held copies without `--allow-in-use` and names the tables now out of date
 - `decklab/tests/test_collection_trade.py`: the operation on files and PostgreSQL (one change set, no raw import, both Activity Undo reviews refuse it) and the command's preview, in-use refusal and file checks
+- `decklab/tests/test_collection_trade_api.py`, `decklab/tests/test_collection_trade_ui.py`: the page's preview and save, own people only, held copies, stale rows and the sheet
 
-Now (2026-10-27): the first slice is built: `collection trade` on the PC ([HISTORY.md](../HISTORY.md#record-a-trade-from-the-pc-2026-10-27-e7-s22)).
+Now (2026-10-27): `collection trade` on the PC ([HISTORY.md](../HISTORY.md#record-a-trade-from-the-pc-2026-10-27-e7-s22)) and the Collection page's Record a trade ([HISTORY.md](../HISTORY.md#record-a-trade-on-the-collection-page-2026-10-27-e7-s22)) are built.
 
-Gap: the Collection page has no Record a trade (pick the cards that left, enter the cards that came in, the same preview and warnings through `collection.trade`), and Activity offers no Undo for a trade.
+Gap: Activity offers no Undo for a trade.
 
-Next slice: the Collection page's Record a trade, calling `collection.trade` with its preview, then a whole-trade Undo beside the import Undo.
+Next slice: a whole-trade Undo beside the import Undo.
 
 **E7-S23** · Matt · could · M · missing
 
@@ -2622,7 +2626,7 @@ Evidence:
 - `decklab/lib/api/assembly.py`: _sleeve_notes
 - `decklab/tests/test_accessories.py`: test_shared_design_is_counted_per_holder, test_same_colour_different_design_is_no_warning; `decklab/tests/test_assembly_kit.py`: test_shared_sleeves_can_be_chosen_for_both_decks; `decklab/tests/test_editor_contracts.py`: test_sleeves_another_deck_uses_are_warned_about_before_they_are_chosen
 
-**E8-S21** · Matt · could · S · missing
+**E8-S21** · Matt · could · S · partial
 
 As Matt, who keeps every built deck in its own box, I want to print a label for a deck box with the deck's name and a QR code to its deck page, so that scanning the box opens its list, plan and stand-ins.
 
@@ -2632,13 +2636,17 @@ As Matt, who keeps every built deck in its own box, I want to print a label for 
 
 Decided (Matt, 2026-10-27): added from the comparison with TopDecked's QR sharing and Delver's NFC tags.
 
+Now: first slice built 2026-10-27 ([HISTORY.md](../HISTORY.md#print-a-deck-box-label-with-a-qr-code-2026-10-27-e8-s21)). A built deck's More has **Print box label**: one 63 × 88 mm label with the deck's colour symbols, title, who plays it (home decks only) and a QR code to its deck page, drawn on the page by `web/qr.js` (byte mode, level M, versions 1 to 10). The code opens the tunnel's address when Deck Lab has one (GET /api/me's `address`), else the page's own. A scan by someone who may not see the deck gets the missing-deck answer, since the deck page asks /api/deck as always (E10-S30's 404). Intact product labels are the next slice.
+
 Evidence:
-- `decklab/web/deck-tools.js`: printDeck (a printed sheet already exists)
+- `decklab/web/qr.js`: qrMatrix, qrSvg, qrReedSolomon
+- `decklab/web/deck-label.js`: offersBoxLabel, boxLabelAddress, boxLabelPiece, printBoxLabel
+- `decklab/web/deck.js`: deckMoreItems (Print box label)
 - `decklab/web/deck-print.js`: printCardSheet and cardSizePages (E4-S25's card-size print layout)
+- `decklab/lib/tunnel.py`: public_address; `decklab/lib/server_http.py`: GET /api/me's `address`
+- `decklab/tests/test_deck_label_ui.py`, `decklab/tests/test_tunnel.py`, `decklab/tests/test_server.py` (test_me_gives_the_tunnels_address_for_printed_links)
 
-Gap: No box label or QR code.
-
-First slice: Print box label in the deck page's More menu, with the QR code drawn on the page (no outside service).
+Gap: An intact product's label, linking to its product deck pages.
 
 **E8-S22** · Matt · could · M · missing
 
@@ -2663,7 +2671,7 @@ First slice: an optional location column on collection rows, editable on the car
 
 Getting the household's Commander decks ready for social Commander nights at a local shop, where staff make 4-player pods and the shop publishes a bracket range. The editor checks the Commander deck rules and a minimum bracket from Game Changers, mass land denial and extra turns; a Commander deck's Overview opens with a plain bracket sentence, what opponents will face and the dates of the card data behind them, and home admins can record the usual night's aim and house rules. Practice games use the free multiplayer mulligan, and Forge plays Commander decks 1v1 only, marked indicative. Two-card combos (from Commander Spellbook) and Wizards' latest Commander announcement are checked too (2026-10-21). Still open: 4-player pods on the page, EDHREC ideas, and pod games in the Game log.
 
-Open: E9-S07, E9-S11, E9-S16, E9-S21, E9-S22, E9-S25.
+Open: E9-S07, E9-S11, E9-S16, E9-S21, E9-S22.
 
 **E9-S02** · Matt · must · M · built
 
@@ -2957,7 +2965,7 @@ Evidence:
 - `decklab/web/commander-readiness.js`: commanderDataNote, officialNotes (also in `decklab/web/stats.js`'s commanderPanel)
 - `decklab/tests/test_official_lists.py`; `decklab/tests/test_commander_readiness.py`: OfficialListTests; `decklab/tests/test_commander_readiness_ui.py`: test_wizards_latest_announcement_is_shown_and_never_called_current_unless_checked
 
-**E9-S25** · Matt · could · M · missing
+**E9-S25** · Matt · could · M · built
 
 As a player building a Commander deck, I want to see combos the deck is one card away from, and whether that card is free in our pool, so that I spot cheap upgrades and know what I'd be adding to the bracket.
 
@@ -2966,12 +2974,13 @@ As a player building a Commander deck, I want to see combos the deck is one card
 
 Decided (Matt, 2026-10-27): added from the comparison with Archidekt's Commander Spellbook tab.
 
+Now: Built 2026-10-27 ([HISTORY.md](../HISTORY.md#combos-one-card-away-2026-10-27-e9-s25)). The Stats tab's Commander rules list two-card combos one card in the commander's colours away (not banned, never a must-be-commander piece), the missing card marked free, on the way, in another deck or to buy for viewers of the space's inventory, and the bracket it would raise; `python -m decklab.lib.combos near <deck-id>` lists them all. No prices yet.
+
 Evidence:
-- `decklab/lib/combos.py`: find (complete two-card combos, E9-S23)
-
-Gap: Only complete combos are found.
-
-First slice: a `near` mode in combos.find returning combos with exactly one piece in the list.
+- `decklab/lib/combos.py`: near, availability, near_for_deck, main (find: complete two-card combos, E9-S23)
+- `decklab/lib/api/deck_page.py`: _near_combos (deck_view's near_combos)
+- `decklab/web/stats.js`: nearCombosItem, commanderPanel
+- `decklab/tests/test_near_combos.py`; `decklab/tests/test_api_near_combos.py`; `decklab/tests/test_near_combos_ui.py`
 
 ---
 
