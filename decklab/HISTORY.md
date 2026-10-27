@@ -8,6 +8,17 @@ A trade is now one change instead of an unlinked removal and a separate merge: `
 
 Decisions: no raw import is kept, since a trade isn't an import and the audit rows hold both sides; a printing can't be both given and got. Activity's Undo doesn't reverse part of a trade (both Undo reviews refuse it); a trade's own whole-change Undo and the Collection page's Record a trade are later slices of E7-S22. Validation: `test_collection_trade.py` (11 cases: the operation on files and on a disposable PostgreSQL 16 database, including one change set with a DELETE and an INSERT, no raw import and both Undo refusals, and the command in the Collection sandbox).
 
+## Print a deck box label with a QR code (2026-10-27; E8-S21)
+
+A built deck's More menu has **Print box label**, from the comparison with TopDecked's QR sharing and Delver's NFC tags: one 63 × 88 mm label for the deck's box with its colour symbols, its title, who plays it (a home deck only: a person's deck is theirs by its space) and a QR code to its deck page. It prints through E4-S25's `printCardSheet` and `cardSizePages`, on the proxies' card-size page; nothing is saved.
+
+- **The QR code** (`web/qr.js`) is drawn on the page as one SVG path, with no outside service, library or CDN: byte mode (UTF-8), error correction M, the smallest of versions 1 to 10 (up to 213 bytes), and the mask the standard's penalty rules pick. Written for Deck Lab after Project Nayuki's MIT-licensed generator, whose layout steps it follows. A deck address too long for version 10 is refused with a toast rather than printed.
+- **Where it opens:** GET /api/me now answers `address`, the tunnel's `https://` address from config.json's `tunnel.hostname` (`tunnel.public_address`), or null; the label uses it when there is one, so a phone opens the deck from anywhere through Cloudflare Access's login, and otherwise the page's own address. The code holds only `#/deck?id=…`.
+- **Privacy:** the deck page asks /api/deck as always, so a scan by someone who may not see the deck gets E10-S30's missing-deck answer (404 "No deck '…'"); a person outside Cloudflare Access gets its login first.
+- **Not in this:** an intact product's label (the story's next slice). Not yet printed on a real printer or scanned from paper.
+
+Validation: the new `test_deck_label_ui.py` checks whole symbols against python-qrcode's (versions 1, 4, 7, 8 and 10, as SHA-256 digests), the standard's "HELLO WORLD" Reed-Solomon example, format and version information, version limits, and that the menu offers the label only on built decks, the label's parts and its address; `test_tunnel.py` and `test_server.py` cover the new `address`. During development the encoder's symbols were also decoded by zxing-cpp, a rendered label included.
+
 ## Card rulings in the card viewer (2026-10-27; E1-S25)
 
 The card viewer now shows a card's Scryfall rulings under its rules text, from the comparison with ManaBox and Dragon Shield.
