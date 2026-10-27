@@ -206,6 +206,15 @@ _FAILURES = (OSError, ValueError, EOFError, lzma.LZMAError, tarfile.TarError, ur
              http.client.HTTPException, precons.PreconError)
 
 
+def _down(error):
+    """Whether error says MTGJSON can't be reached at all, not just that one file is wrong: a
+    connection failure or a server error. An HTTPError is an OSError too, but a 4xx answer (a
+    deck's file missing) is about that one file, so the other decks are still read."""
+    if isinstance(error, urllib.error.HTTPError):
+        return error.code >= 500
+    return isinstance(error, (OSError, http.client.HTTPException))
+
+
 def refresh(listed=None, now=None, today=None):
     """Bring the index up to date for listed (deck_list()'s decks; read when None): the archive
     when it's due, then up to SINGLES due decks on their own. Returns the problems met, in words
@@ -231,7 +240,7 @@ def refresh(listed=None, now=None, today=None):
             index["decks"][file] = _read_one(file, now)
         except _FAILURES as e:
             problems.append(f"{file} couldn't be read ({precons._text(str(e), 300) or type(e).__name__})")
-            if isinstance(e, (OSError, urllib.error.URLError, http.client.HTTPException)):
+            if _down(e):
                 break                       # MTGJSON is down: the rest would fail the same way
         if n % SAVE_EVERY == SAVE_EVERY - 1:
             with _lock:

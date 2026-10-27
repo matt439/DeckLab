@@ -56,7 +56,7 @@ Counted from the story headers on 2026-10-27.
 
 How Matt and User1 (and, more lightly, User2, User3, User4 and User5) find a deck in the library (#/library), choose its picture, open its deck page (#/deck) to see whether it can be built and how to play it, rename or retire it, and pick what to play tonight. Each viewer's library holds their own space's decks, plus any another space has made public. A plain "Deck Lab is off" message is enough while the PC is off (E11-S02); collector-value sorting and legality badges on casual decks aren't wanted.
 
-Open: E1-S12, E1-S13, E1-S24.
+Open: E1-S12, E1-S13.
 
 **E1-S01** · User1 · must · M · built
 

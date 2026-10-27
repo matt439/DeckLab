@@ -13,6 +13,7 @@ import io
 import json
 import tarfile
 import time
+import urllib.error
 from unittest import mock
 
 from decklab.lib import precon_coverage as coverage
@@ -119,6 +120,36 @@ class RankingTests(CoverageTestCase):
         self.assertIn("archive couldn't be read", view["status"]["error"])
         self.ranked()
         self.opened.assert_called_once()
+
+    def test_one_missing_deck_file_doesnt_stop_the_others(self):
+        # A 404 for one deck's file is about that file: the other due decks are still read. A
+        # connection failure or a server error means MTGJSON is down, and the rest wait.
+        listed = [{"file": f} for f in ("Gone_TST", "Next_TST", "Last_TST")]
+
+        def missing(file, now):
+            if file == "Gone_TST":
+                raise urllib.error.HTTPError(f"https://mtgjson.com/{file}.json", 404, "Not Found", {}, None)
+            return {"at": now, "cards": []}
+
+        for error, read in ((None, ["Gone_TST", "Next_TST", "Last_TST"]),
+                            (urllib.error.HTTPError("u", 503, "Unavailable", {}, None), ["Gone_TST"]),
+                            (urllib.error.URLError("offline"), ["Gone_TST"])):
+            with self.subTest(error=error):
+                calls = []
+
+                def read_one(file, now, error=error):
+                    calls.append(file)
+                    if error is not None:
+                        raise error
+                    return missing(file, now)
+
+                with mock.patch.object(coverage, "_archive_due", lambda index, now: False), \
+                        mock.patch.object(coverage, "_read_one", read_one), \
+                        mock.patch.object(coverage, "_index", lambda: {"decks": {}}):
+                    problems = coverage.refresh(listed)
+                self.assertEqual(calls, read)
+                self.assertEqual(len(problems), 1)
+                self.assertIn("Gone_TST couldn't be read", problems[0])
 
     def test_unread_decks_are_counted_while_the_lists_are_read(self):
         # In the background: the ranking shows what's read so far and says so.
