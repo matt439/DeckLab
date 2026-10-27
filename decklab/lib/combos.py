@@ -22,6 +22,11 @@ From code:
     from decklab.lib import combos
     combos.find(commander_ids, deck_ids)   # {"timestamp", "version", "matches": [combo]}
     combos.bracket_floor(combo)            # 1, 3 or 4: what the combo means for the bracket
+    combos.near(commander_ids, deck_ids, fits)   # combos one card away (E9-S25), as find()
+    combos.near_for_deck(sections, p, exclude, minimum)   # ...for a decklist, with availability
+
+Usage (one card away, E9-S25):
+    python -m decklab.lib.combos near commander/giada-angels [--owned] [--all]
 
 A combo is {"id", "url", "cards": [{"oracle_id", "name", "must_be_commander"}],
 "results": [Spellbook's result names, standalone ones first], "class",
@@ -38,9 +43,11 @@ The list's credit and link are in decklab/lib/stats/constants.py SOURCES
 ("commander-spellbook"). Its data has no stated licence; Spellbook's API
 guidelines ask for credit and a link back.
 """
+import argparse
 import gzip
 import json
 import os
+import sys
 import threading
 import time
 import urllib.error
@@ -441,3 +448,178 @@ def find(commander_ids, deck_ids, path=None):
     matches.sort(key=lambda c: (-bracket_floor(c), CLASSES.index(c["class"]),
                                 [p["name"] for p in c["cards"]]))
     return {"timestamp": data["timestamp"], "version": data["version"], "matches": matches}
+
+
+# --- One card away (E9-S25) --------------------------------------------------
+
+# A missing piece's place in the deck's space, best first: a free copy in storage, a free copy still on the
+# way, copies other built decks or intact products hold (a swap), or none (to buy).
+AVAILABILITY = ("free", "on_the_way", "in_use", "buy")
+NEAR_LIMIT = 40         # near combos a deck page is sent, best first; the command line lists them all
+
+
+def _sort_key(combo):
+    return (-bracket_floor(combo), CLASSES.index(combo["class"]), [p["name"] for p in combo["cards"]])
+
+
+def near(commander_ids, deck_ids, fits, path=None):
+    """The two-card combos the main deck holds exactly one piece of (counted as
+    find() counts them), whose other piece could join it: fits(piece) says
+    whether that card may go in the deck (the commander's colour identity, the
+    ban list), and a piece that must be the commander never may. Returns
+    {"timestamp", "version", "matches": [{"combo", "held", "missing"}]} (the
+    two pieces), most serious first. Raises ComboListError when the list can't
+    be read."""
+    data = load(path)
+    commander_ids = set(commander_ids)
+    present = commander_ids | set(deck_ids)
+    matches, seen = [], set()
+    for oracle_id in present:
+        for i in data["by_oracle"].get(oracle_id, ()):
+            if i in seen:
+                continue
+            seen.add(i)
+            combo = data["combos"][i]
+            held = [p for p in combo["cards"]
+                    if p["oracle_id"] in (commander_ids if p["must_be_commander"] else present)]
+            if len(held) != 1:
+                continue
+            missing = next(p for p in combo["cards"] if p is not held[0])
+            if missing["must_be_commander"] or missing["oracle_id"] in present or not fits(missing):
+                continue
+            matches.append({"combo": combo, "held": held[0], "missing": missing})
+    matches.sort(key=lambda m: _sort_key(m["combo"]))
+    return {"timestamp": data["timestamp"], "version": data["version"], "matches": matches}
+
+
+def availability(name, p, exclude=()):
+    """Where a card stands in pool p (decklab.lib.pool.Pool) for a deck whose
+    in-use ids are exclude (pool.self_ids): {"state": one of AVAILABILITY,
+    "free": copies free now, "on_the_way": free copies not yet arrived,
+    "in_use": copies other built decks and intact products hold}."""
+    exclude = set(exclude)
+    owned = p.owned.get(name, 0)                    # on the way included
+    coming = sum(qty for _, qty in p.on_the_way.get(name, []))
+    held = sum(d.cards.get(name, 0) for d in p.in_use if d.id not in exclude)
+    spare = max(owned - held, 0)
+    free = max(owned - coming - held, 0)
+    state = "free" if free else "on_the_way" if spare else "in_use" if owned else "buy"
+    return {"state": state, "free": free, "on_the_way": spare - free, "in_use": min(held, owned)}
+
+
+def near_for_deck(sections, p=None, exclude=(), minimum=None, path=None, limit=None):
+    """The combos a Commander decklist {section: [DeckLine]} is one card away
+    from (near), the missing piece within its commanders' colour identity and
+    not banned. With pool p (the deck's space's, for a viewer who may see it),
+    each says where that card stands (availability; exclude is the deck's own
+    in-use ids, pool.self_ids, whose copies count as free); with minimum (the deck's minimum bracket), whether
+    adding it would raise that minimum ("raises_to": the combo's floor, else
+    None). Returns {"checked": True, "list_date", "version", "total", "matches":
+    [{"names": [held, missing], "held", "missing", "results", "class",
+    "standalone", "floor", "raises_to", "url"[, "availability"]}]}, the best
+    limit of them (all without one): with a pool, free cards first, then on the
+    way, in use, to buy; each most serious first. {"checked": False, "reason"}
+    when there's no commander or the combo list can't be read."""
+    from decklab.lib.stats.deckparts import resolve_entries
+    entries, _ = resolve_entries(sections, [])
+    commanders = [e for e in entries if e.section == "Commander"]
+    if not commanders:
+        return {"checked": False, "reason": "The deck has no commander, so its colour identity is unknown."}
+    identity = set()
+    for e in commanders:
+        identity.update(e.card.get("color_identity", []))
+    names = {e.card["oracle_id"]: e.name for e in entries if e.section in ("Commander", "Companion", "Deck")}
+
+    def card_of(piece):
+        exact = cards.resolve(piece["name"])
+        return cards.card(exact) if exact else None
+
+    def fits(piece):
+        card = card_of(piece)
+        return (card is not None and card.get("commander_legality") == "legal"
+                and set(card.get("color_identity", [])) <= identity)
+
+    try:
+        found = near([e.card["oracle_id"] for e in commanders],
+                     [e.card["oracle_id"] for e in entries if e.section in ("Companion", "Deck")], fits, path)
+    except ComboListError as error:
+        return {"checked": False, "reason": str(error)}
+    matches = []
+    for m in found["matches"]:
+        combo, held = m["combo"], names.get(m["held"]["oracle_id"], m["held"]["name"])
+        missing = card_of(m["missing"])["name"]
+        floor = bracket_floor(combo)
+        item = {"names": [held, missing], "held": held, "missing": missing, "results": list(combo["results"]),
+                "class": combo["class"], "standalone": combo["standalone"], "floor": floor,
+                "raises_to": floor if minimum is not None and floor > minimum else None, "url": combo["url"]}
+        if p is not None:
+            item["availability"] = availability(missing, p, exclude)
+        matches.append(item)
+    if p is not None:       # stable: each state keeps near()'s most-serious-first order
+        matches.sort(key=lambda m: AVAILABILITY.index(m["availability"]["state"]))
+    return {"checked": True, "list_date": found["timestamp"], "version": found["version"],
+            "total": len(matches), "matches": matches if limit is None else matches[:limit]}
+
+
+_STATE_WORDS = {"free": "free", "on_the_way": "on the way", "in_use": "in another deck", "buy": "to buy"}
+
+
+def _print_near(deck_id, result, target):
+    if not result["checked"]:
+        print(f"{deck_id}: combos one card away weren't checked: {result['reason']}")
+        return
+    date = (result["list_date"] or "")[:10] or "an unknown date"
+    print(f"{deck_id}: {result['total']} two-card combo{'' if result['total'] == 1 else 's'} one card away "
+          f"(Commander Spellbook's two-card combos, list of {date})")
+    for m in result["matches"]:
+        state = m.get("availability")
+        mark = f"[{_STATE_WORDS[state['state']]}]" if state else ""
+        what = ", ".join(m["results"][:2]) + (", ..." if len(m["results"]) > 2 else "")
+        bracket = ""
+        if m["raises_to"]:
+            bracket = f"; raises the minimum bracket to {m['raises_to']}"
+            if target and m["raises_to"] > target:
+                bracket += f", above the target {target}"
+        print(f"  {mark:17} add {m['missing']} (with {m['held']}): {what}{bracket}")
+        print(f"  {'':17} {m['url']}")
+
+
+def main(argv=None):
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(errors="replace")
+    parser = argparse.ArgumentParser(prog="python -m decklab.lib.combos",
+                                     description="Commander Spellbook's two-card combos for a deck.")
+    sub = parser.add_subparsers(dest="command", required=True)
+    near_cmd = sub.add_parser("near", help="the two-card combos a Commander deck is one card away from")
+    near_cmd.add_argument("deck", help="deck id, e.g. commander/giada-angels or user2/commander/elves")
+    near_cmd.add_argument("--owned", action="store_true", help="use the owned-only list")
+    args = parser.parse_args(argv)
+    from decklab.lib import decks, inventory, pool, spaces, stats
+    from decklab.lib.inventory import entry
+    with entry.command():           # the venv, and one inventory snapshot for the command
+        try:
+            summary = decks.find_summary(args.deck)
+            if summary is None:
+                raise decks.DeckNotFound(f"No deck {args.deck!r}")
+            if decks.engine_kind(summary) != "commander":
+                print(f"{summary['id']} isn't a Commander deck: near combos need a commander's colour identity.")
+                return 1
+            sections = decks.load_deck(summary["id"], "owned" if args.owned else "target")
+            commander = stats.deck_stats(sections, "commander")["commander"]
+            p = pool.load_pool(spaces.space_of(summary["id"]))
+            result = near_for_deck(sections, p, pool.self_ids(summary["id"]), commander["bracket"]["minimum"])
+        except (decks.DeckNotFound, spaces.SpaceNotFound) as e:
+            print(e)
+            return 1
+        except inventory.Unavailable as e:
+            print(e, file=sys.stderr)
+            return 2
+        except (FileNotFoundError, RuntimeError, ValueError) as e:
+            print(e, file=sys.stderr)
+            return 1
+        _print_near(summary["id"], result, summary.get("target_bracket"))
+        return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

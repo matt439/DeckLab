@@ -66,7 +66,6 @@ An index of open work, one row per item; each row points to the doc that owns th
 | id | status | pri | size | item |
 |---|---|---|---|---|
 | `E9-S07` | OPEN | could | L | EDHREC ideas for a commander, marked owned, free or to buy. |
-| `E9-S25` | OPEN | could | M | Two-card combos a Commander deck is one card away from, with the missing piece's availability. |
 
 ## Deck Lab: testing and Forge
 

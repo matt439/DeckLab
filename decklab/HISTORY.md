@@ -8,6 +8,20 @@ A trade is now one change instead of an unlinked removal and a separate merge: `
 
 Decisions: no raw import is kept, since a trade isn't an import and the audit rows hold both sides; a printing can't be both given and got. Activity's Undo doesn't reverse part of a trade (both Undo reviews refuse it); a trade's own whole-change Undo and the Collection page's Record a trade are later slices of E7-S22. Validation: `test_collection_trade.py` (11 cases: the operation on files and on a disposable PostgreSQL 16 database, including one change set with a DELETE and an INSERT, no raw import and both Undo refusals, and the command in the Collection sandbox).
 
+## Combos one card away (2026-10-27; E9-S25)
+
+A Commander deck's Stats tab now lists the two-card combos it is one card away from, from the comparison with Archidekt's Commander Spellbook tab: the cheap upgrades, and what each would add to the bracket.
+
+- **Finding them:** `combos.near` reads the same reduced Commander Spellbook list as the complete-combo check (E9-S23) and keeps the combos whose main deck (Commander, Companion and Deck sections, counted as `find` counts them) holds exactly one piece. `near_for_deck` keeps only those whose other piece is a Commander-legal card within the commanders' colour identity; a piece that must be the commander is never suggested.
+- **Availability:** with the deck's space's pool, each missing card is free (a copy in storage), on the way (a free copy not yet arrived), in another deck (owned, but other built decks or intact products hold every copy) or to buy (`combos.availability`); the deck's own copies count as free. The page shows these chips only to viewers who may see that space's inventory (`guard.sees_inventory`); anyone else gets the combos without them. With a pool, free cards come first, then on the way, in another deck and to buy, each most serious first.
+- **Bracket:** each combo says the minimum bracket it would bring (`bracket_floor`) when that is above the deck's current minimum, and whether it is above the deck's target.
+- **The page:** the Stats tab's Commander rules gain a "One card away: N" line under the two-card combos, its list folded away, each row naming the card to add, the piece it pairs with, what it does and a Commander Spellbook link. The deck answer carries the best 40 (`combos.NEAR_LIMIT`) and the total; a failure is a page warning, never a broken page. Draft checks in the editor don't show it.
+- **The command line:** `python -m decklab.lib.combos near <deck-id> [--owned]` lists them all with the same marks.
+
+Decisions: the missing card's price isn't shown yet (it would need a rate fetch per page); holders are counted, never named, so the line names no deck the viewer can't see.
+
+Validation: new `test_near_combos.py` (on the stats card and combo fixtures, so it runs on CI without card data), `test_api_near_combos.py` (the deck answer, with and without inventory access) and `test_near_combos_ui.py` (the page's line); the suite's four shards on Linux. Not yet tried on the PC's real decks and combo list.
+
 ## Card rulings in the card viewer (2026-10-27; E1-S25)
 
 The card viewer now shows a card's Scryfall rulings under its rules text, from the comparison with ManaBox and Dragon Shield.
