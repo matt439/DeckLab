@@ -513,15 +513,25 @@ function rcptChips(view, comp, row) {
   if (flag) chips.push(el("span", { class: "chip chip-plain rcpt-flag", title: flag, text: "⚑ Note" }));
   const decks = rcptDecks(comp, row);
   const waiting = decks.filter((d) => d.waiting > 0);
-  for (const d of waiting) chips.push(el("span", { class: "chip chip-info", title: `${d.title} counts on ${d.waiting} from this delivery` },
-    rcptDeckSwatch(d), `For ${rcptShortTitle(d.title)} ×${d.waiting}`));
-  if (!waiting.length) {
-    const using = decks.filter((d) => d.status === "built" || d.status === "building");
-    for (const d of using.slice(0, 2)) chips.push(el("span", { class: "chip chip-plain", title: `${d.title} lists ${d.uses}` },
-      rcptDeckSwatch(d), `${rcptShortTitle(d.title)} ×${d.uses}`));
-    if (using.length > 2) chips.push(el("span", { class: "chip chip-plain", text: `+${using.length - 2}` }));
-  }
+  const using = decks.filter((d) => d.status === "built" || d.status === "building");
+  const chip = rcptDeckChip(waiting.length ? waiting : using, !!waiting.length);
+  if (chip) chips.push(chip);
   return chips;
+}
+
+/** One chip for where a row goes, so a card several decks want stays one line under its picture: the deck by
+ * name when there's one, else "For 3 decks" with the names in its title. Inspect lists them. */
+function rcptDeckChip(decks, waiting) {
+  if (!decks.length) return null;
+  const count = (d) => waiting ? d.waiting : d.uses;
+  const lines = decks.map((d) => waiting ? `${d.title} counts on ${d.waiting} from this delivery` : `${d.title} lists ${d.uses}`);
+  const cls = "chip rcpt-deck-chip " + (waiting ? "chip-info" : "chip-plain");
+  if (decks.length === 1) return el("span", { class: cls, title: lines[0] },
+    rcptDeckSwatch(decks[0]), el("span", { class: "rcpt-deck-chip-text",
+      text: `${waiting ? "For " : ""}${rcptShortTitle(decks[0].title)} ×${count(decks[0])}` }));
+  return el("span", { class: cls, title: lines.join("\n") },
+    el("span", { class: "rcpt-deck-chip-text", text: `${waiting ? "For" : "In"} ${decks.length} decks` }),
+    el("span", { class: "sr-only", text: `: ${decks.map((d) => `${rcptShortTitle(d.title)} ×${count(d)}`).join(", ")}` }));
 }
 
 /** A row's notes worth a ⚑ (not the arrival notes, not "listed as …" provenance, not what Condition ? or
