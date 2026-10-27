@@ -14,7 +14,6 @@ def _status_args(sub):
 def _cmd_status(args):
     found = shared.status()
     print(shared.json.dumps(found, indent=1))
-    print(f"build: {_release_advice(found)}")
     if found["ready"]:
         print(f"java: {shared._setup()['java']}")
         log = found["card_log"]
@@ -22,6 +21,7 @@ def _cmd_status(args):
         print(f"warm pool: {output._pool_line()}")
         for line in output._setup_lines(found):
             print(line)
+    print(f"build: {_release_advice(found)}")
     return 0 if found["ready"] else 1
 
 
