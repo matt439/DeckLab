@@ -12,6 +12,17 @@ The editor's card finder now takes Scryfall-style terms beside a card's name: `o
 
 Validation: new FindCardsTests in `test_editor_writeup.py` on the fixture card data; the suite's four shards passed locally on Linux. The page's wording was checked by reading only: no browser run on real card data.
 
+## Chance to draw on the Stats tab (2026-10-27; E3-S24)
+
+A deck's Stats tab has a **Chance to draw** panel, from the comparison with TopDecked's hypergeometric calculator. Tick a card, or several as a group (any of them counts), choose the turn (1 to 20) and On the play or On the draw, and it shows the exact chance of seeing at least one by then, with a row for turns 1 to 7.
+
+- **Worked out on the page** (`web/stats.js` drawOddsPanel, chanceOfAtLeastOne, cardsSeenBy): no API or server change. It counts the shown list's main deck (the Planned or Play-now list, whichever the page shows), one line per card name across printings; the sideboard and a companion aren't drawn from. The cards seen are the opening seven and a draw each turn, none on turn 1 on the play.
+- **Commander:** the commander starts in the command zone, so the library is the other 99, and the panel starts On the draw, since nobody skips their first draw at a multiplayer table.
+- **What it ignores:** the result and its explanation say mulligans and extra card draw, searching and looking aren't counted. A Beginner Box half (never played alone) and a list under seven cards get no panel.
+- **Not in this:** categories as groups (E2-S24 isn't built yet), and a chance of drawing two or more.
+
+Validation: the new `test_stats_draw_odds.py` checks the numbers against Python's exact `math.comb` hypergeometric, and a card, a group, play or draw, the turn's limits, All lands and Clear, Commander's 99, and no panel for a Beginner Box half or a tiny list. Checked by eye at 1440 px and 390 px, light and dark, with no page-wide scroll.
+
 ## Print proxies (2026-10-27; E4-S25)
 
 A deck's Planned list can be played at home before every card has arrived. The deck page's More menu has **Print proxies** for a viewer who sees the deck's space's inventory (offered on the Planned list when it has missing copies, and on the Play-now list, which reads the Planned list's answer first). It prints a first page naming each proxy in print order, the stand-in it covers (the deck's saved Planned-list markers, `Shock` or `any card`) and how many copies are on the way and not printed, then one 63 × 88 mm card per missing copy, nine to a page. Missing copies are counted as the Cards tab marks them (shared between sections, so a card's missing copies fall on the sideboard). Each card is the large picture (672 px), a double-faced card's back right after its front, and a card with no picture is printed as its name, cost, type and rules. The sheet waits up to 15 seconds for its pictures before the print dialog opens. Its own `cards` page has a 6 mm margin so three rows fit A4 and US Letter; at 100% each card measured 63 × 88 mm in Chromium's print layout, three pages for ten cards on both sizes. `printCardSheet` and `cardSizePages` (`deck-print.js`) are kept separate for the box label (E8-S21). Nothing is saved.
