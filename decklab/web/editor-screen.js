@@ -66,6 +66,7 @@ function drawEditor() {
   drawBanners();
   drawCheck();
   drawBar();
+  if (typeof mountEditorForgeSummary === "function") mountEditorForgeSummary(ed);
   mountEditorSearchDock(ed);
   registerEditorKeyboardHelp(ed);
   if (focus) {
@@ -87,11 +88,13 @@ function spaceField() {
       onclick: () => {
         if (ed.space === space) return;
         const previousSpace = ed.space;
+        const previousFrame = keyboardEditorFrame(ed);
         ed.space = space;
         ed.fields.player = newDeckPlayer(space);
         drawDetails();
         drawTitleHint();
-        rebindEditorKeyboardSpace(ed, previousSpace);
+        if (rebindEditorKeyboardSpace(ed, previousSpace) && ed.dom.barParts?.owner.frame === previousFrame)
+          ed.dom.barParts.owner.frame = keyboardEditorFrame(ed);
         changed({ list: false });
       } }));
   }
@@ -214,6 +217,8 @@ function drawBanners() {
   const host = ed.dom.banners;
   if (!host) return;
   clear(host);
+  if (typeof boxEditorContextBanner === "function") add(host, [boxEditorContextBanner(ed)]);
+  if (typeof editorRetestNotice === "function") add(host, [editorRetestNotice(ed)]);
   if (ed.draftRemoveFailed) {
     host.append(el("div", { class: "box box-warn banner", role: "alert" },
       el("h2", { text: ed.pendingDraftKey ? "The deck was saved, but its old draft couldn't be removed"
@@ -272,12 +277,13 @@ function drawBanners() {
 }
 
 /** "Discard my changes" (the banner, the review, a save's 409) asks first; sheet: the one it's in, or null. */
-async function askDiscardChanges(sheet) {
+async function askDiscardChanges(sheet, guard = () => true) {
   const ed = editor;
+  if (!guard()) return;
   const choice = await ask("Discard your changes?", [
     "The editor loads the deck as it is now, and the changes you made here are gone. This can't be undone."],
   [{ value: "discard", text: "Discard my changes", kind: "danger" }, { value: "keep", text: "Keep them", kind: "primary" }]);
-  if (choice === "discard" && editor === ed) discardChanges(sheet);
+  if (choice === "discard" && editor === ed && guard()) discardChanges(sheet);
 }
 
 /** The heading for a deck deleted since it was loaded (conflict.reason "deleted"), and where the changes
@@ -346,6 +352,7 @@ function mainTabs() {
     notes ? el("div", { class: "tabs edit-tabs", role: "tablist", "aria-label": "Edit", onkeydown: tabArrows },
       tab("cards", "Cards"), tab("notes", "Notes"))
       : el("h2", { class: ed.quick ? "sr-only" : "edit-cards-title", text: ed.mode === "edit" ? listName(ed.version) : "Cards" }),
+    lookOffered ? editorManaSortButton() : null,
     lookOffered ? ed.dom.look : null);
 }
 
@@ -379,6 +386,7 @@ function drawLookSwitch() {
         showRowAvailability(currentAvailability());
       } }, label)));
   ed.dom.look.hidden = ed.tab !== "cards";
+  updateEditorManaSort();
 }
 
 /** The main column's body: the list, or the write-up. */
@@ -401,6 +409,7 @@ function drawMain() {
     projectEditorSearchDock();
     host.append(notesPart());
     if (ed.dom.look) ed.dom.look.hidden = true;
+    updateEditorManaSort();
     return;
   }
   host.append(ed.dom.lines);
@@ -929,6 +938,67 @@ function noOwnedList() {
   return ed.mode === "edit" && ed.version === "owned" && !ed.hasFileList && !ed.starting;
 }
 
+/** One change per exact card group, field, write-up section or current-marker choice, not per copy.
+ * List order/split changes can be dirty without changing any group's quantities or printings. */
+function editorBarChangeSummary(ed) {
+  if (ed.mode !== "edit" || !ed.hasFileList || ed.starting || ed.view?.lists?.[ed.version] == null) return null;
+  const before = tally(ed.base.lists), after = tally(ed.lists), groups = new Set(), totals = new Map();
+  const note = (items, side) => {
+    for (const item of items.values()) {
+      const key = `${item.section}\n${item.line.name}`;
+      if (!totals.has(key)) totals.set(key, { before: 0, after: 0 });
+      totals.get(key)[side] += item.qty;
+    }
+  };
+  note(before, "before"); note(after, "after");
+  for (const key of new Set([...before.keys(), ...after.keys()])) {
+    const old = before.get(key), now = after.get(key);
+    if ((old?.qty || 0) === (now?.qty || 0)) continue;
+    const item = now || old;
+    groups.add(`${item.section}\n${item.line.name}`);
+  }
+  let added = 0, removed = 0;
+  for (const item of totals.values()) {
+    added += Math.max(0, item.after - item.before);
+    removed += Math.max(0, item.before - item.after);
+  }
+  const structure = groups.size === 0 && listSignature(ed.lists) !== listSignature(ed.base.lists);
+  const count = groups.size + Number(structure) + Object.keys(changedFields()).length
+    + Object.keys(changedProse()).length + Number(!!ed.markCurrent);
+  return { count, added, removed };
+}
+
+/** These retained controls belong to one page, person and deck/version, including after confirmation. */
+function editorBarActionCurrent(ed, parts, key, confirming = false) {
+  const own = parts.owner, button = parts[key];
+  return !!(editorKeyboardCurrent(ed) && ed.dom.barParts === parts && ed.dom.bar === parts.bar
+    && own.page === ed.dom.page && own.frame === keyboardEditorFrame(ed)
+    && button?.isConnected && parts.bar.contains(button) && !button.hidden && !button.disabled
+    && !ed.saving && !ed.asking && !ed.leaving && !keyboardMenuOpen()
+    && (confirming || !document.querySelector("dialog[open]")));
+}
+
+function updateEditorBarChanges(ed, p) {
+  const summary = editorBarChangeSummary(ed), dirty = !!ed.dirty;
+  p.changes.hidden = !dirty;
+  p.changeCount.textContent = ed.readOnly ? "Trial changes" : ed.mode === "new" ? "Unsaved deck"
+    : summary ? plural(summary.count || 1, "unsaved change")
+      : ed.starting ? `Unsaved ${listName(ed.version, true)}` : "Unsaved changes";
+  const copies = summary && !ed.readOnly && (summary.added || summary.removed);
+  p.changeCopies.hidden = !copies;
+  p.changeSpoken.hidden = !copies;
+  p.added.textContent = summary?.added ? `+${summary.added}` : "";
+  p.removed.textContent = summary?.removed ? `−${summary.removed}` : "";
+  p.copySeparator.hidden = !(summary?.added && summary?.removed);
+  p.changeSpoken.textContent = copies
+    ? `${plural(summary.added, "copy", "copies")} added, ${plural(summary.removed, "copy", "copies")} removed.` : "";
+  p.historyActions.hidden = !dirty && !ed.history?.length;
+  p.bar.classList.toggle("has-history-actions", !p.historyActions.hidden);
+  p.undo.disabled = !ed.history?.length || !!ed.saving || !!ed.asking || !!ed.leaving;
+  p.discard.hidden = ed.mode !== "edit" || !!ed.readOnly || !dirty;
+  p.discard.disabled = !!ed.saving || !!ed.asking || !!ed.leaving;
+}
+
 /** The bar's count, its checks button, Add (the Quick edit's) and the split Save. Its elements are made
  * once and then changed in place: a check that comes back (or a quantity typed) while a finger is on Save
  * doesn't swap the button from under it. */
@@ -939,15 +1009,34 @@ function drawBar() {
   if (!bar) return;
   let p = ed.dom.barParts;
   if (!p || p.bar !== bar) {
-    p = ed.dom.barParts = { bar,
+    p = ed.dom.barParts = { bar, owner: { page: ed.dom.page, frame: keyboardEditorFrame(ed) },
       count: el("div", { class: "bar-count" }),
       checking: el("span", { class: "bar-checking", hidden: true },
         el("span", { class: "spinner spinner-small", "aria-hidden": "true" }), "Checking"),
       checks: el("button", { type: "button", class: "btn btn-quiet bar-warn", hidden: true, "data-focus": "bar:checks", onclick: jumpToChecks }),
       dot: el("span", { class: "dot", role: "img", "aria-label": "(unsaved changes)", hidden: true }) };
+    p.changeCount = el("span", { class: "bar-change-count" });
+    p.added = el("span", { class: "bar-change-added" });
+    p.removed = el("span", { class: "bar-change-removed" });
+    p.copySeparator = el("span", { text: " / " });
+    p.changeCopies = el("span", { class: "bar-change-copies", "aria-hidden": "true" },
+      p.added, p.copySeparator, p.removed, " copies");
+    p.changeSpoken = el("span", { class: "sr-only" });
+    p.changes = el("div", { class: "bar-changes", hidden: true }, p.changeCount, p.changeCopies, p.changeSpoken);
+    p.undo = el("button", { type: "button", class: "btn btn-quiet bar-undo", "data-focus": "bar:undo",
+      "aria-label": "Undo last change", text: "Undo", onclick: () => {
+        if (editorBarActionCurrent(ed, p, "undo")) undoLast();
+      } });
+    p.discard = el("button", { type: "button", class: "btn btn-discard bar-discard", "data-focus": "bar:discard",
+      "aria-label": "Discard changes", text: "Discard", onclick: () => {
+        if (ed.mode !== "edit" || ed.readOnly || !ed.dirty || !editorBarActionCurrent(ed, p, "discard")) return;
+        askDiscardChanges(null, () => editorBarActionCurrent(ed, p, "discard", true) && !!ed.dirty && !ed.readOnly);
+      } });
+    p.historyActions = el("div", { class: "bar-history-actions", hidden: true }, p.undo, p.discard);
     // The Quick edit's search sheet; below 1,100 px (editor.css) a jump to the Add panel above the list.
     p.addCards = noOwnedList() ? null : el("button", { type: "button", class: "btn bar-add" + (ed.quick ? "" : " bar-add-jump"),
-      "data-focus": "bar:add", onclick: ed.quick ? openAddSheet : focusSearch }, "Add cards");
+      "aria-label": "Add cards", "data-focus": "bar:add", onclick: ed.quick ? openAddSheet : focusSearch },
+      "Add", el("span", { class: "bar-add-detail", text: " cards" }));
     if (!ed.readOnly) {
       p.save = el("button", { type: "button", class: "btn btn-primary bar-save", onclick: () => saveNow(),
         "data-focus": "save" }, ed.mode === "new" ? "Create" : "Save", p.dot);
@@ -955,13 +1044,14 @@ function drawBar() {
         "aria-label": "More ways to save", "aria-haspopup": "menu", "data-focus": "bar:save-more", text: "▾",
         onclick: () => openMenu(p.saveMore, [{ text: ed.mode === "new" ? "Create & view deck" : "Save & view deck",
           onclick: () => saveNow({ viewAfter: true }) }]) });
+      p.saveGroup = el("div", { class: "bar-save-group" }, p.save, p.saveMore);
     }
     // The full editor's stable Forge panel owns the one original secondary Test row.
     p.test = ed.dom.forgeTest || null;
-    clear(bar).append(p.count, p.checking, p.checks);
+    clear(bar).append(p.count, p.changes, p.checking, p.checks);
     add(bar, [p.addCards]);
-    add(bar, [p.save]);
-    add(bar, [p.saveMore]);
+    add(bar, [p.historyActions]);
+    add(bar, [p.saveGroup]);
   }
   const kind = currentKind();
   const size = DECK_SIZE[kind];
@@ -992,6 +1082,7 @@ function drawBar() {
   p.checks.hidden = !words || !p.checking.hidden;
   if (words) clear(p.checks).append(words);
   p.dot.hidden = !(ed.dirty && ed.mode === "edit");
+  updateEditorBarChanges(ed, p);
   // One primary per view: Save is the main action only while there's something to save (an unstarted
   // play-now list has its own "Start it" button).
   const mainSave = ed.mode === "new" || (ed.dirty && !none);
@@ -1004,6 +1095,7 @@ function drawBar() {
     const why = p.test.vt && p.test.vt.why;
     if (why) p.test.vt.button.title = why.textContent || "";
   }
+  if (typeof syncEditorForgeSummary === "function") syncEditorForgeSummary(ed);
   drawSideTabs();
   refreshKeyboardHints();
 }

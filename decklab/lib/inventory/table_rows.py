@@ -30,6 +30,7 @@ can't tell a header-only file from a missing one).
 Nothing here touches a database (or imports psycopg).
 """
 import dataclasses
+import json
 
 from . import paths, rules
 from .model import QUEUE_FIELDS, Component, Order
@@ -39,15 +40,20 @@ TOKEN_COLUMNS = ("front", "back", "set_code", "front_collector_number", "back_co
                  "quantity", "front_details", "back_details", "notes")
 WATCH_COLUMNS = ("name", "set_code", "collector_number", "finish", "quantity", "for_deck", "printing",
                  "listed_aud", "listed_at", "in_stock", "checked", "notes", "state", "source")
-STATUS_COLUMNS = ("position", "status", "intact", "sleeves", "deck_box", "notes")
+STATUS_COLUMNS = ("position", "status", "intact", "sleeves", "deck_box", "notes", "token_cards")
 ORDER_COLUMNS = ("seller", "ordered_on", "sources", "notes", "audit_notes")
 COMPONENT_COLUMNS = ("position", "kind", "file_name", "status", "received_on", "checks", "verified_checks",
-                     "product_stem")
+                     "product_stem", "check_links")
 ITEM_TABLES = {"cards": "order_card_item", "tokens": "order_token_item"}
 ITEM_COLUMNS = {"order_card_item": CARD_COLUMNS, "order_token_item": TOKEN_COLUMNS}
 PAYLOAD_FIELDS = {"cards": tuple(rules.FIELDS), "tokens": tuple(rules.TOKEN_FIELDS)}
 ACCESSORY_COLUMNS = tuple(rules.ACCESSORY_FIELDS[1:])        # after the id
 DECK_TABLES = ("deck", "deck_text", "accessory", "accessory_image")
+
+
+@dataclasses.dataclass(frozen=True)
+class JsonColumn:
+    value: object
 
 
 class Unrepresentable(ValueError):
@@ -147,7 +153,7 @@ def _order_rows(order, inv, out, claimed, reasons, strict):
         components.append((position, c))
     rebuilt = Order.build(oid, d["seller"], d["ordered_on"], d["sources"], d["notes"],
                           [Component.build(c.id, c.kind, c.file_name, c.status, c.received_on, c.checks,
-                                           c.verified_checks) for _, c in components],
+                                           c.verified_checks, c.check_links) for _, c in components],
                           d.get("audit_notes"))
     if strict and rules.json_bytes(rebuilt.data) != rules.json_bytes(d):
         bad(f"{where}: its keys aren't the records' (version, id, seller, ordered_on, sources, notes, "
@@ -170,8 +176,16 @@ def _order_rows(order, inv, out, claimed, reasons, strict):
             continue
         claimed.add(c.path)
         verified = tuple(c.verified_checks) if c.verified_checks is not None else None
+        metadata = c.check_links
+        if metadata is not None:
+            try:
+                if len(json.dumps(metadata, ensure_ascii=False, allow_nan=False).encode("utf-8")) > 262144:
+                    raise ValueError("Too much arrival-check metadata")
+            except (TypeError, ValueError, RecursionError):
+                bad(f"{where}: arrival-check metadata isn't bounded JSON")
+                continue
         out["order_component"][key] = (position, c.kind, c.file_name, c.status, c.received_on, tuple(c.checks),
-                                       verified, stem)
+                                       verified, stem, JsonColumn(metadata) if metadata is not None else None)
         if c.kind == "product":
             continue
         sheet = inv.payloads.get(c.path)

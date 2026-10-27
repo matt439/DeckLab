@@ -6,14 +6,14 @@ An index of open work, one row per item; each row points to the doc that owns th
 
 **The only ordering in this file.** Keep every `DECISION` row here. Keep this block to the current aim and the next few actions; results go in their owners (HISTORY.md for what shipped).
 
-**Aim (updated 2026-10-26):** finish the visual redesign (`E11-S30`), then work through the rows Matt added on 2026-10-25: making Deck Lab easy to self-host for people outside the household (`E11-S32`, `E11-S33`, `E10-S17`) and finishing the token and kit work (`E7-S31`, `E7-S06`, `E8-S14`, `E7-S21`). The private member model is built and live (see Activation below); household device acceptance remains.
+**Aim (updated 2026-10-26):** finish the visual redesign (`E11-S30`), then work through the remaining rows Matt added on 2026-10-25: making Deck Lab easy to self-host for people outside the household (`E11-S32`, `E11-S33`) and finishing the token and kit work (`E7-S21`). The private member model is built and live (see Activation below); household device acceptance remains.
 
-**Ready queue:** `E11-S30`, the visual redesign Matt chose on 2026-10-24 ("P1"). Continue slice 14 of [visual-design.md](decklab/design/visual-design.md#7-rollout): selected rows/MV, remaining Forge presentation and the bar. Slice 13's exact-printing, presence, reallocation and intact-product take-apart/transfer work remains in that owner, followed by slice 15. The approved desktop keyboard plan is built; global search has its separate decision below. Collection question 6, authoritative Receive check-to-row association and touch/Safari acceptance remain separate gates, with Card colour matching the compatibility default.
+**Ready queue:** `E11-S30`, the visual redesign Matt chose on 2026-10-24 ("P1"). Slice 14 of [visual-design.md](decklab/design/visual-design.md#7-rollout) is implemented, as are slice 13's scoped recorded packing activity, verified intact-product storage review and per-card movable-copy priorities. Exact physical printing still needs a confirmed-printing model; independent ready reserve work can continue while it is designed. Slice 15's synthetic dark smoke passed; full-data and device acceptance remain open. The approved desktop keyboard plan is built; global search has its separate decision below. Explicit original-row associations for newly added arrival checks are implemented, with component-wide verification retained; targeted backend/UI and isolated native checks passed. Casual inline verification placement is implemented for proven targets, with single canonical controls, component-wide semantics and verified fallback; final UI/native checks and caption review passed. Collection question 6 and touch/Safari acceptance remain separate gates, with Card colour matching the compatibility default.
 
-**Ready reserve:** after the redesign, the `OPEN` rows Matt added on 2026-10-25 have concrete first slices in their stories, in no fixed order unless Matt picks one. Library search (`E1-S05`), real-game comparisons (`E4-S13`) and a first guarded Undo (`E11-S08`) also remain ready. The 2026-10-26 audit checked the reserve against the code: no extra stories need promoting. Release publication, Linux service/timer installation, device checks and Forge games retain their separate gates.
+**Ready reserve:** after the redesign, the `OPEN` rows Matt added on 2026-10-25 have concrete first slices in their stories, in no fixed order unless Matt picks one. `E11-S08` retains broader recovery work beyond its implemented single-row Undo review. The 2026-10-26 audit checked the reserve against the code: no extra stories need promoting. Release publication, Linux service/timer installation, device checks and Forge games retain their separate gates.
 
 **Needs Matt or another person — these don't block coding:**
-- **`E11-S31`: global-search scope.** Choose the sources (visible decks, the viewer's collection and/or all Scryfall cards) and result grouping before building. Library-only title search (`E1-S05`) is independently ready.
+- **`E11-S31`: global-search scope.** Choose the sources (visible decks, the viewer's collection and/or all Scryfall cards) and result grouping before building. Library title, colour and archetype filters (`E1-S05`) are built independently of that decision.
 - **`E2-S22`: physical-device follow-up.** Confirm hardware and touch usability on the household's actual iPhones and M2 11-inch iPad after the fixes. Keep prior results in the story; the [Safari Simulator suite](decklab/safari/EVIDENCE.md) covers repeat functional regressions.
 - **`E11-S02`: signed-in off-page check.** On a phone through decklab.example.com, save a deck edit, upload an accessory photo, and check the off page while Deck Lab is stopped.
 - **`E11-S28`: User2's user-testing session.** Confirm his device, then use the prepared [checklist](decklab/design/user-testing-user2.md).
@@ -29,7 +29,6 @@ An index of open work, one row per item; each row points to the doc that owns th
 | id | status | pri | size | item |
 |---|---|---|---|---|
 | `E10-S41` | DEFERRED | could | L | Per-deck public (decision A): only once someone wants it. |
-| `E10-S17` | OPEN | could | L | Add a member or change an email from Settings instead of editing config.json; first, report invalid profile entries instead of dropping them. |
 | `E10-S18` | DEFERRED | could | M | Small person-space items (`E10-S18` first-visit landing, `E4-S19` game players): only if a member asks. Check Settings, Visits first. |
 
 ## Deck Lab: decks, kit and the table
@@ -38,9 +37,6 @@ An index of open work, one row per item; each row points to the doc that owns th
 
 | id | status | pri | size | item |
 |---|---|---|---|---|
-| `E1-S05` | OPEN | could | S | Library title search kept in the address, then colour and archetype filters; independent of `E11-S31`'s scope choice. |
-| `E4-S13` | OPEN | could | M | Real head-to-head record beside Forge's predicted win rate for the same lists; "too few games" below 10 until Matt picks the number. |
-| `E8-S14` | OPEN | could | S | A take-apart checklist on Build decks: every card to unsleeve and put back, then the sleeves and deck box. |
 | `E2-S22` | DECISION | must | M | Physical hardware/touch-usability follow-up on the household's iPhones and M2 11-inch iPad; the six-configuration Safari Simulator suite passes ([evidence](decklab/safari/EVIDENCE.md)). |
 
 ## Deck Lab: collection, orders and buying
@@ -49,9 +45,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 
 | id | status | pri | size | item |
 |---|---|---|---|---|
-| `E7-S31` | OPEN | could | M | Intact products pack token cards (a `token_cards` field beside their sleeves and deck box), counted as in use and planned with the built decks. |
-| `E7-S06` | OPEN | could | M | Add a precon's token cards (printing and back unconfirmed) with the precon, in its one change. |
-| `E7-S21` | OPEN | could | L | Check a built deck's box against its list, list what's missing or extra, and record the date checked. |
+| `E7-S21` | OPEN | could | L | Box reviews, dates, Library filters and Collection/intended-list review offers are built. Physical-list repair remains. |
 | `E5-S15` | DEFERRED | should | M | User1 asks from the page for a card or a Forge run, Matt approves (`E3-S13`); not urgent. |
 | `E5-S24` | DEFERRED | could | S | Copy one shop's list from Shopping's By shop, for pasting into the shop's search. |
 
@@ -71,11 +65,11 @@ An index of open work, one row per item; each row points to the doc that owns th
 
 | id | status | pri | size | item |
 |---|---|---|---|---|
-| `E11-S30` | OPEN | should | L | Visual redesign P1 ([visual-design.md](decklab/design/visual-design.md)): finish slices 13-15, Collection's filter decision and Receive check-to-row association. Touch/Safari acceptance stays open. |
+| `E11-S30` | OPEN | should | L | Visual redesign P1 ([visual-design.md](decklab/design/visual-design.md)): finish slices 13-15 and Collection's filter decision. Inline check placement for proven targets is implemented and validated. New arrival-check row associations have targeted backend/UI and isolated native validation. Touch/Safari acceptance stays open. |
 | `E11-S31` | DECISION | could | M | Global search in the top bar ([stories.md](decklab/design/stories.md#e11-s31)): Matt chooses sources and result grouping before building. |
 | `E11-S32` | OPEN | could | M | A prebuilt release of the Forge fork, with a checksum, as SELF-HOSTING.md's first Forge route. |
-| `E11-S33` | OPEN | could | L | Full Linux support: reproduce and fix the failures from the dated self-host check, add Linux CI, then a nightly timer and server service. |
-| `E11-S08` | OPEN | could | L | Undo a wrong change from Activity; first, a single collection or token edit, with a preview and a conflict check. |
+| `E11-S33` | OPEN | could | L | Interpreter paths and nightly systemd unit previews have isolated checks. Real Linux 3.14/full suite, CI, service/timer integration and host acceptance remain. |
+| `E11-S08` | OPEN | could | L | Narrow inventory, wishlist and accessory recovery is built. Mixed receipts/imports and broader recovery remain. |
 | `E11-S02` | DECISION | should | S | The "Deck Lab is off" Worker is deployed (`decklab/cloudflare/`): Matt checks a signed-in save, a photo upload, and the page with Deck Lab stopped. |
 
 ## Areas with no open rows

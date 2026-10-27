@@ -13,12 +13,21 @@ checked, Mark as built saves the selected lists together; ticks alone never chan
 const PACK_MAX = 12;                    // decks in one plan (lib/api/assembly.py MAX_DECKS)
 const PACK_DELAY = 250;                 // ms after a change before the plan is worked out again
 const PACK_GROUPS = [["built", "Built"], ["building", "Being built"], ["idea", "Ideas"], ["product", "Products"]];
+let packProductReviewReturn = null;        // one-use, in-memory intent for one person and assembly address
 
 function showAssembly(params, token) {
+  const hash = location.hash, profile = state.profile?.id;
+  const returning = packProductReviewReturn;
+  if (returning && (returning.hash !== hash || returning.profile !== profile)) packProductReviewReturn = null;
   const query = new URLSearchParams();
   const id = params.get("deck") || params.get("id");
   if (id) { query.set("deck", id); query.set("version", params.get("version") || "target"); }
-  return load(`/api/assembly?${query}`, token, data => drawAssembly(data, token));
+  return load(`/api/assembly?${query}`, token, data => {
+    if (token !== routeToken || profile !== state.profile?.id || hash !== location.hash) return;
+    const restore = returning && packProductReviewReturn === returning;
+    if (restore) packProductReviewReturn = null;
+    return drawAssembly(data, token, restore ? returning.recipe : null);
+  });
 }
 
 /** The group a deck choice is listed under: its status, or "product" for a product's decks. */
@@ -27,10 +36,10 @@ function packGroupOf(choice) {
   return ["built", "building"].includes(choice.status) ? choice.status : "idea";
 }
 
-function drawAssembly(data, token) {
+function drawAssembly(data, token, restoredRecipe = null) {
   const sortKey = `packing-order.${state.profile?.id || "guest"}`;
-  const view = { token, profile: state.profile?.id, choices: data.choices.filter(item => !item.error && item.versions?.length),
-    selected: (data.selections || data.decks).map(packSelectedChoice), seq: 0, timer: null,
+  const view = { token, hash: location.hash, profile: state.profile?.id, choices: data.choices.filter(item => !item.error && item.versions?.length),
+    selected: (restoredRecipe || data.selections || data.decks).map(packSelectedChoice), seq: 0, timer: null,
     sortKey, order: local.get(sortKey) === "storage" ? "storage" : "name" };
   view.root = el("div", { class: "pack-page" });
   view.results = el("div", { class: "pack-results", "aria-live": "polite" });
@@ -78,7 +87,13 @@ function drawAssembly(data, token) {
   packInitSwitcher(view);
   packInitSteps(view);
   drawPackPicks(view);
-  renderAssemblyPlan(view, data);
+  if (restoredRecipe) {
+    // Fresh choices are useful immediately; allocations are never replayed from the departed plan or GET default.
+    view.productReturnRefresh = true;
+    view.sortControl.hidden = true;
+    packRun(view);
+  } else renderAssemblyPlan(view, data);
+  return view;
 }
 
 function assemblyActive(view) {
@@ -131,6 +146,7 @@ function drawPackPicks(view) {
 
 /** A choice changed: redraw the checklist and work the plan out again shortly after. */
 function packChanged(view) {
+  if (assemblyActive(view)) packProductReviewReturn = null;
   closeAssemblySheets(false);
   ++view.seq;
   view.builtMessage = null;
@@ -152,29 +168,115 @@ async function packRun(view) {
     const result = await apiWrite("/api/assembly/preview", { decks: view.selected.map(item => ({ ...item })) });
     if (!assemblyActive(view) || seq !== view.seq) return;
     view.previewing = false;
+    view.productReturnRefresh = false;
     view.builtMessage = null;
     view.finishError = null;
     view.message.textContent = "";
+    // A separately reviewed take-apart save (including a lost response) may have changed these statuses.
+    let statusesChanged = false;
+    view.choices = view.choices.map(choice => {
+      const status = result.decks?.find(deck => deck.id === choice.id)?.completion?.status;
+      if (!["idea", "building", "built"].includes(status) || status === choice.status) return choice;
+      statusesChanged = true;
+      return { ...choice, status };
+    });
     if (result.selections) {
       view.selected = result.selections.map(packSelectedChoice);
       drawPackPicks(view);
-    }
+    } else if (statusesChanged) drawPackPicks(view);
     renderAssemblyPlan(view, result);
   } catch (problem) {
     if (assemblyActive(view) && seq === view.seq) {
       view.previewing = false;
       view.message.textContent = problem.message;
       packClearBar(view);
+      packPreferenceBeforeRender(view);
       clear(view.results);
       view.sortControl.hidden = true;
       view.data = null;
       packStepsStart(view, null);
       packOverlapStart(view, null);
+      add(view.results, [packOverlapNotice(view)]);
       view.finish = null;
       view.bar = null;
       wirePackTicks(view);
+      if (view.productReturnRefresh) {
+        const retry = el("button", { type: "button", class: "btn", text: "Refresh plan", onclick: () => {
+          if (!assemblyActive(view) || view.hash !== location.hash || !retry.isConnected || !view.results.contains(retry)
+              || view.seq !== seq || view.data !== null || !view.productReturnRefresh || view.previewing || view.saving || view.reviewing) return;
+          retry.disabled = true; view.run();
+        } });
+        view.results.append(el("div", { class: "empty" },
+          el("p", { text: "Your selected decks and sideboard choices are kept. Refresh the plan before using its card instructions." }), retry));
+      }
     }
   }
+}
+
+/** A supplied verified relationship, never a product guessed from a holder's id or name. */
+function packIntactProduct(holder) {
+  const product = holder?.intact_product;
+  if (!product || typeof product !== "object" || Array.isArray(product)
+      || !["id", "title", "deck_id"].every(key => typeof product[key] === "string" && product[key].trim()
+        && product[key].length <= 1000 && !/[\u0000-\u001f\u007f]/.test(product[key]))
+      || !/^product\/[^?#\s]+$/.test(product.deck_id)) return null;
+  return product;
+}
+
+function packProductReviewHere(view, data, recipe, link) {
+  return assemblyActive(view) && view.hash === location.hash && seesHomeInventory(state.may)
+    && view.data === data && link.isConnected && view.results.contains(link)
+    && recipe === JSON.stringify(view.selected.map(packSelectedChoice));
+}
+
+/** Review the existing storage choice separately; one settled plan recipe survives Browser Back. */
+function packProductReviewLink(view, data, product) {
+  const href = `${deckHref(product.deck_id)}&tab=overview`, recipe = JSON.stringify(view.selected.map(packSelectedChoice));
+  const link = el("a", { class: "btn", href, text: `Review ${product.title}`, onclick: event => {
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button > 0) return;
+    event.preventDefault();
+    if (!packProductReviewHere(view, data, recipe, link)) return;
+    if (view.previewing || view.reviewing || view.saving || document.querySelector("dialog[open]")) {
+      packProductReviewReturn = null;
+      view.message.textContent = "Finish the current plan change before reviewing this product.";
+      return;
+    }
+    const progress = view.progress;
+    if (!progress?.loaded || progress.busy || progress.pending.size || progress.error) {
+      packProductReviewReturn = null;
+      view.message.textContent = progress?.error || progress?.pending.size
+        ? "Save the shared packing checks before reviewing this product."
+        : "Wait for the shared packing checks to finish loading, then review this product.";
+      return;
+    }
+    packProductReviewReturn = { profile: view.profile, hash: view.hash,
+      recipe: view.selected.map(packSelectedChoice) };
+    location.hash = href;
+  } });
+  return link;
+}
+
+function packIntactProductsPart(view, data) {
+  const groups = new Map();
+  for (const row of data.rows || []) {
+    if (!(Number.isSafeInteger(row.missing) && row.missing > 0 || Number.isSafeInteger(row.waiting) && row.waiting > 0)) continue;
+    for (const holder of row.held_elsewhere || []) {
+      const product = packIntactProduct(holder);
+      if (!product || !Number.isSafeInteger(holder.quantity) || holder.quantity <= 0) continue;
+      const key = product.id; // One physical product may have several verified generated deck routes.
+      if (!groups.has(key)) groups.set(key, { product, cards: new Map() });
+      const cards = groups.get(key).cards;
+      cards.set(row.name, (cards.get(row.name) || 0) + holder.quantity);
+    }
+  }
+  if (!groups.size) return null;
+  return el("section", { class: "panel pack-extra pack-intact-products", "aria-label": "Cards held in intact products" },
+    el("h2", { text: "Cards held in intact products" }),
+    el("p", { text: "These products keep their cards together. Review their storage choice before using any copies here. "
+      + "Use your browser's Back action to return to the same selected decks and refresh this plan." }),
+    [...groups.values()].map(({ product, cards }) => el("div", {}, el("h3", { text: product.title }),
+      el("ul", {}, [...cards].map(([name, quantity]) => el("li", { text: `${quantity} x ${name} held in this product` }))),
+      packProductReviewLink(view, data, product))));
 }
 
 /** A tick in a list; physical context distinguishes kit or token variants with the same label. */
@@ -367,7 +469,8 @@ function packDeck(view, deck) {
       el("h2", {}, el("a", { href: deckHref(deck.id, deck.version), text: deck.title })),
       el("p", { class: "sub", text: listName(deck.version) }),
       deck.build_scope ? el("p", { class: "sub pack-build-scope", text: packScopeWords(deck) }) : null,
-      deck.completion?.already_built ? status("good", "Built") : null),
+      deck.completion?.already_built ? status("good", "Built") : null,
+      packTakeApartButton(view, deck), packBoxCheckButton(view, deck)),
     packBulkControl(view, deck),
     packStandinsPart(view, deck),
     step("sleeves", "Sleeves", kitNode, sleeves && need ? el("ul", { class: "pack-list" },
@@ -393,6 +496,7 @@ function packDeck(view, deck) {
 function renderAssemblyPlan(view, data) {
   const presentation = packSwitcherBeforeRender(view);
   packClearBar(view);
+  packPreferenceBeforeRender(view);
   clear(view.results);
   view.data = data;
   packStepsStart(view, data);
@@ -429,12 +533,14 @@ function renderAssemblyPlan(view, data) {
   view.results.append(packAttachSwitcher(view, data, panels), el("div", { class: "pack-decks" }, panels.map(panel => panel.node)));
   const completion = packCompletion(view, data);
   if (completion) view.results.append(completion);
-  const held = data.rows.filter(row => row.missing && row.held_elsewhere.length);
+  const held = data.rows.filter(row => row.missing).map(row => ({ ...row,
+    held_elsewhere: (row.held_elsewhere || []).filter(holder => !packIntactProduct(holder)) })).filter(row => row.held_elsewhere.length);
   if (held.length) view.results.append(el("section", { class: "panel pack-extra" }, el("h2", { text: "Copies reserved elsewhere" }),
     el("p", { text: "These decks keep their cards. Add a donor deck with its revised saved list to plan a transfer." }),
     el("ul", {}, held.map(row => el("li", {}, `${row.name}: `,
       row.held_elsewhere.map((holder, index) => [index ? "; " : "", `${holder.quantity} in `,
         el("a", { href: deckHref(holder.id), text: holder.title })]))))));
+  add(view.results, [packIntactProductsPart(view, data)]);
   add(view.results, [warningsBox(data.token_problems || [], "Some token rows can't be read"),
     assemblySharedTokens(data)]);
   const tokens = data.tokens || [];

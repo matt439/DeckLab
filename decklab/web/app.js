@@ -118,6 +118,7 @@ async function chooseProfile(profile) {
   closeDeckRetirementSheets();
   closeAssemblySheets();
   closeProductStorageSheets();
+  closeTokenPlanSheets();
   closeAccessorySheets();
   closeReceiptSheets();
   state.profile = profile;
@@ -209,6 +210,7 @@ function drawWho() {
   closeDeckRetirementSheets();
   closeAssemblySheets();
   closeProductStorageSheets();
+  closeTokenPlanSheets();
   closeAccessorySheets();
   closeReceiptSheets();
   stopMatchupRefresh();
@@ -252,11 +254,14 @@ function route() {
   closeDeckRetirementSheets();
   closeAssemblySheets();
   closeProductStorageSheets();
+  closeTokenPlanSheets();
   closeAccessorySheets();
   closeReceiptSheets();
   stopMatchupRefresh();
   const token = ++routeToken;
   const { path, params } = parseHash();
+  boxCollectionRoute(path, token);
+  boxEditorRoute(path, token);
   closeEditor(path);                // editor.js: the editor on screen is left (its draft stays)
   if (!state.profile) return drawWho();
   noteVisit(path, params);

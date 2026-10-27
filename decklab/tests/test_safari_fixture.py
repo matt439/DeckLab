@@ -102,6 +102,26 @@ class SafariFixtureTests(unittest.TestCase):
                 self.assertIn(new.encode(), self.request(fixture, "/"))
         self.assertEqual(initial[0], initial[1])
 
+    def test_precon_opt_in_uses_only_seeded_cache_and_keeps_download_and_forge_guards(self):
+        from decklab.lib import precons
+        with FixtureServer() as fixture:
+            self.request(fixture, "/api/precons?q=fixture", status=403)
+        with FixtureServer(allow_precons=True) as fixture:
+            cache = fixture.root / "decklab/data/mtgjson"
+            self.assertEqual(precons.CACHE, cache)
+            cache.mkdir(parents=True)
+            (cache / "SetList.json").write_text(json.dumps({"data": []}), encoding="utf-8")
+            (cache / "DeckList.json").write_text(json.dumps({"data": [{
+                "fileName": "Fixture_SFT", "name": "Fixture", "code": "SFT", "type": "Starter Deck",
+                "releaseDate": "2000-01-01"}]}), encoding="utf-8")
+            answer = self.request(fixture, "/api/precons?q=fixture")
+            self.assertEqual([deck["file"] for deck in answer["decks"]], ["Fixture_SFT"])
+            with self.assertRaisesRegex(RuntimeError, "forbids"):
+                precons._fetch("https://example.com/never-requested", 100)
+            self.request(fixture, f"/api/goldfish?id={fixture.deck_id}", status=403)
+        with self.assertRaisesRegex(ValueError, "boolean"):
+            FixtureServer(allow_precons="yes")
+
     def test_fresh_process_does_not_read_production_data(self):
         # Importing decklab.tests sets protective defaults. The runner does not import
         # that package, so exercise its first import in a process without those defaults.

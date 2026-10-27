@@ -225,6 +225,7 @@ function renderSimulations(s) {
   state.simulations = s;
   syncSimulationsChips();
   syncRunControls();
+  if (typeof syncEditorForgeSummary === "function") syncEditorForgeSummary();
   const loading = $("#sim-loading");
   if (loading) loading.hidden = true;
   const box = $("#sim-settings");

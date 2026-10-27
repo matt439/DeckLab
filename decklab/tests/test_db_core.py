@@ -9,6 +9,7 @@ Run from the repo root: .venv\\Scripts\\python -m unittest decklab.tests.test_db
 """
 import hashlib
 import io
+import json
 import os
 import shutil
 import sys
@@ -22,6 +23,7 @@ from unittest import mock
 
 from decklab.db import conn as db, migrate, profiles_sync, setup, sql
 from decklab.db import __main__ as cli
+from decklab.lib import config
 from decklab.tests import db_support
 
 
@@ -540,9 +542,15 @@ class SetupTests(unittest.TestCase):
         name = db_support.create_empty_database("setup")
         self.addCleanup(db_support.drop_database, name)
         out = io.StringIO()
-        with redirect_stdout(out), redirect_stderr(out):
-            self.assertEqual(setup.run(dbname=name), 0)
-            self.assertEqual(setup.run(dbname=name), 0)
+        local_temp = Path(os.environ["USERPROFILE"]) / "AppData" / "Local" / "Temp" if os.name == "nt" else None
+        with tempfile.TemporaryDirectory(prefix="decklab-setup-config-", dir=local_temp) as folder:
+            config_file = Path(folder) / "config.json"
+            config_file.write_text(json.dumps({"database": s, "profiles": [
+                {"id": "matt", "name": "Matt", "role": "admin", "space": "home", "plays_as": "user", "emails": []}
+            ]}), encoding="utf-8")
+            with mock.patch.object(config, "CONFIG_FILE", config_file), redirect_stdout(out), redirect_stderr(out):
+                self.assertEqual(setup.run(dbname=name), 0)
+                self.assertEqual(setup.run(dbname=name), 0)
         printed = out.getvalue()
         leaked = any(pw and pw in printed for pw in passwords)
         passwords = None

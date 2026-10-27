@@ -386,6 +386,7 @@ function drawCollection(data, query, space = HOME_SPACE, token = null) {
   $("#main").append(root);
   registerCollectionKeyboardHelp(cv);
   colTakeNotice(cv);
+  boxCollectionConsume(cv);
   return cv;
 }
 
@@ -601,32 +602,58 @@ function colFindRows(cv, cards) {
 
 /** "Edit copies": the rows that hold a card (one per printing), each opening its sheet, and Add another
  * printing. */
-async function openCopiesSheet(cv, name) {
-  if (!colActive(cv) || cv.busy || !cv.editable) return;
+async function openCopiesSheet(cv, name, opts = {}) {
+  const repair = opts.repair;
+  const allowed = () => colActive(cv) && !cv.busy && cv.editable && (!repair || repair.here());
+  if (!allowed()) return;
   const sheet = colOpenSheet(`${name}: your copies`, { wide: true });
   const body = el("div", { class: "col-copies" }, loadingBox("Loading its rows…"));
+  if (repair) sheet.body.append(boxCollectionNotice(repair.difference));
   sheet.body.append(body);
   sheetActions(sheet, [{ text: "Close", onclick: () => sheet.close() }]);
   try {
-    await colEnsureRows(cv);
+    if (repair) {
+      const fresh = await api(colPath("/api/collection/rows", cv.space));
+      if (!allowed() || sheet.closed) return;
+      if (fresh?.editable !== true || fresh.space !== HOME_SPACE || !/^[a-f0-9]{64}$/.test(fresh.sha256 || "") || !boxCollectionRows(fresh.rows))
+        throw new Error("The current collection rows couldn't be verified.");
+      cv.sha256 = fresh.sha256; colTakeRows(cv, fresh);
+      if (fresh.pictures) Object.assign(cv.pictures, fresh.pictures);
+      const exact = await api(`/api/printings?name=${encodeURIComponent(name)}`);
+      if (!allowed() || sheet.closed) return;
+      if (!boxCollectionPrintings(exact, name)) throw new Error("The exact card name couldn't be matched.");
+    } else await colEnsureRows(cv);
   } catch (error) {
-    if (!sheet.closed) clear(body).append(el("div", { class: "box box-crit" }, el("p", { text: error.message })));
+    if (!sheet.closed && allowed()) clear(body).append(el("div", { class: "box box-crit" }, el("p", { text: repair
+      ? "This card's copies couldn't be checked. Close this review and search Collection for the exact card name manually; no copies were changed."
+      : error.message })));
     return;
   }
-  if (sheet.closed) return;
+  if (sheet.closed || !allowed()) return;
   const rows = (cv.rows || []).filter((r) => r.name === name);
-  const open = (row) => { sheet.close(); openCollectionSheet(cv, row); };
+  let opening = false;
+  const open = (row) => {
+    if (opening || sheet.closed || !allowed()) return;
+    opening = true;
+    if (repair) boxCollectionAfterSheet(sheet, allowed, () => openCollectionSheet(cv, row, { name, repair }));
+    else { sheet.close(); openCollectionSheet(cv, row); }
+  };
   add(clear(body), [
     rows.length ? el("div", { class: "col-copy-rows" }, rows.map((row) => cardRow(cv.pictures[colKey(row)] || null, {
       qty: Number(row.quantity), name: colPrinting(row), meta: colRowFacts(row) || "Condition and language recorded",
       aside: el("span", { class: "col-copy-edit", "aria-hidden": "true", text: "Edit" }),
-      onclick: () => open(row) }))) : el("p", { class: "sub", text: "None of its rows are recorded here: it's only on the way." })]);
+      onclick: () => open(row) }))) : el("p", { class: "sub", text: repair
+        ? "No printing is recorded for this card. Count copies across every location before adding a printing."
+        : "None of its rows are recorded here: it's only on the way." })]);
   // A row without a known card is a plain div: give it its own button.
   for (const [i, node] of [...body.querySelectorAll(".card-row")].entries()) {
     if (node.tagName !== "BUTTON") node.append(el("button", { type: "button", class: "btn", text: "Edit", onclick: () => open(rows[i]) }));
   }
   sheetActions(sheet, [
-    { text: "Add another printing", kind: "primary", onclick: () => { sheet.close(); openCollectionSheet(cv, null, { name }); } },
+    { text: "Add another printing", kind: "primary", onclick: () => {
+      if (repair) open(null);
+      else { sheet.close(); openCollectionSheet(cv, null, { name }); }
+    } },
     { text: "Close", onclick: () => sheet.close() }]);
 }
 
@@ -877,7 +904,7 @@ async function searchPrecons(ctx) {
   }
 }
 
-async function previewPrecon(ctx, deck) {
+async function previewPrecon(ctx, deck, keptTitle = null) {
   const cv = ctx.cv;
   clearTimeout(ctx.timer);            // a search typed just before the pick would cover the preview
   const seq = ++ctx.seq;
@@ -891,12 +918,13 @@ async function previewPrecon(ctx, deck) {
     const params = new URLSearchParams({ file: deck.file });
     if (cv.space !== HOME_SPACE) params.set("space", cv.space);
     const preview = await api(`/api/precons/preview?${params}`);
-    if (seq !== ctx.seq || ctx.sheet.closed) return;
+    if (seq !== ctx.seq || ctx.sheet.closed || !colActive(cv)) return;
     ctx.preview = preview;
+    ctx.keptTitle = keptTitle;
     clear(ctx.message);
     drawPreconPreview(ctx);
   } catch (error) {
-    if (seq !== ctx.seq || ctx.sheet.closed) return;
+    if (seq !== ctx.seq || ctx.sheet.closed || !colActive(cv)) return;
     clear(ctx.message).append(el("div", { class: "box box-crit", role: "alert" }, el("p", { text: error.message })));
   }
 }
@@ -914,7 +942,8 @@ function drawPreconPreview(ctx) {
   const total = Object.values(counts).reduce((a, b) => a + b, 0);
   const leftOut = Object.entries(p.left_out || {}).map(([what, n]) => plural(n, what));
   const adds = p.adds || { rows: 0, cards: 0 };
-  const titleInput = el("input", { id: `precon-title-${ctx.sheet.heading.id}`, type: "text", maxlength: "100", value: p.title });
+  const titleInput = el("input", { id: `precon-title-${ctx.sheet.heading.id}`, type: "text", maxlength: "100", value: ctx.keptTitle ?? p.title });
+  ctx.keptTitle = null;
   ctx.titleInput = titleInput;
   ctx.titleNote = el("p", { class: "field-problem precon-title-note", role: "status" });
   const sayTaken = () => {
@@ -946,54 +975,90 @@ function drawPreconPreview(ctx) {
     ctx.titleNote,
     leftOut.length || (p.tokens && p.tokens.length) ? el("p", { class: "sub" },
       leftOut.length ? `Not added: ${leftOut.join(", ")}. ` : "",
-      p.tokens && p.tokens.length ? ["Its token cards (", p.tokens.map((t) => `${t.count} ${t.name}`).join(", "),
+      !p.token_import && p.tokens && p.tokens.length ? ["Its token cards (", p.tokens.map((t) => `${t.count} ${t.name}`).join(", "),
         ") aren't added: record them on the ", el("a", { href: "#/tokens", text: "Tokens page" }), " once checked."] : null) : null,
+    preconTokenChoice(ctx),
     Object.entries(lists).map(([section, lines]) => el("section", { class: "precon-section" },
       el("h3", { text: `${section === "Deck" ? "Deck" : section} (${num(counts[section] || 0)})` }),
       el("div", { class: "card-tiles precon-tiles" }, lines.map((c) => tile(c, section)))))]);
   if (!p.editable) ctx.area.append(el("p", { class: "box box-info", text: "You can't add cards and decks here." }));
   sheetActions(ctx.sheet, [ctx.back,
-    p.ready && p.editable ? { text: `Add ${d.name}`, kind: "primary", value: "add", onclick: () => addPrecon(ctx) } : null]);
+    p.ready && p.editable ? { text: `Add ${d.name}`, kind: "primary", value: "add", onclick: event => {
+      if (preconAddHere(ctx, p, event.currentTarget)) addPrecon(ctx);
+    } } : null]);
+}
+
+function preconAddHere(ctx, preview, button) {
+  return ctx.preview === preview && !ctx.sheet.closed && button?.isConnected && ctx.sheet.foot.contains(button)
+    && [...document.querySelectorAll("dialog[open]")].at(-1) === ctx.sheet.dialog;
 }
 
 async function addPrecon(ctx) {
   const cv = ctx.cv;
   const p = ctx.preview;
-  if (ctx.busy || ctx.sheet.closed || !p || !colActive(cv)) return;
+  if (ctx.busy || ctx.sheet.closed || !p || !p.ready || !p.editable || !cv.editable || !canEditSpace(cv.space)
+      || !colActive(cv) || ctx.tokenPreviewStale) return;
+  const tokensChosen = ctx.tokenChoice?.node.checked === true;
+  const tokenReview = ctx.tokenChoice, tokenSelection = tokensChosen ? preconTokenSelection(ctx) : null;
+  if (tokensChosen && !tokenSelection) return;
+  const requestHash = location.hash;
   const title = ctx.titleInput.value.trim();
   if (!title) { ctx.titleNote.textContent = "The deck needs a title."; ctx.titleInput.focus(); return; }
   ctx.busy = true;
+  preconTokensBusy(ctx, true);
   for (const button of ctx.sheet.foot.querySelectorAll("button")) button.disabled = true;
   clear(ctx.message).append(loadingBox(`Adding ${p.deck.name}…`));
   try {
-    const answer = await apiWrite("/api/precons/add", { space: cv.space, file: p.deck.file, title, sha256: p.sha256 });
-    if (ctx.sheet.closed || !colActive(cv)) return;
+    const answer = await apiWrite("/api/precons/add", { space: cv.space, file: p.deck.file, title, sha256: p.sha256,
+      ...(tokensChosen ? { add_tokens: true, tokens_sha256: tokenSelection.offer.sha256,
+        tokens_source_sha256: tokenSelection.offer.source_sha256,
+        ...(tokenSelection.choices ? { tokens_choices: tokenSelection.choices } : {}) } : {}) });
+    cv.rows = null;
+    state.library = null; // The confirmed write stands even if its review is no longer the current UI.
+    if (ctx.sheet.closed || !colActive(cv) || ctx.preview !== p || requestHash !== location.hash
+        || tokensChosen && !preconTokenOwner(ctx, tokenReview)) return;
     const added = answer.collection && answer.collection.added;
     ctx.sheet.close();
-    cv.rows = null;
-    state.library = null;
     // The deck page's box about a new deck (editor-deckpage.js, savedBox), as the editor's Create leaves it:
     // warnings (no sleeves yet, the deck rules) and other decks' tables now out of date.
     const hash = deckHref(answer.deck.id, "target");
-    state.saved = { hash, version: "target", mode: "new", answer: { ...answer.deck,
-      precon: { name: p.deck.name, whose: ctx.whose, cards: added ? added.cards : 0 } } };
+    const tokenCount = tokensChosen && answer.tokens?.cards === tokenSelection.cards && answer.tokens?.rows === tokenSelection.rows
+      ? tokenSelection.cards : null;
+    state.saved = { hash, profile: state.profile?.id, version: "target", mode: "new", answer: { ...answer.deck,
+      precon: { name: p.deck.name, whose: ctx.whose, cards: added ? added.cards : 0,
+        ...(tokensChosen ? { tokens: tokenCount, tokens_uncertain: tokenCount === null } : {}) } } };
     state.scroll.delete(hash);        // open the deck at the top, where the box is
     toast("");                        // an older note would cover the box
     location.hash = hash;
   } catch (error) {
-    if (ctx.sheet.closed || !colActive(cv)) return;
+    if (error.status >= 500 || !error.data) { cv.rows = null; state.library = null; }
+    if (ctx.sheet.closed || !colActive(cv) || ctx.preview !== p || requestHash !== location.hash
+        || tokensChosen && !preconTokenOwner(ctx, tokenReview)) return;
     ctx.busy = false;
+    preconTokensBusy(ctx, false);
     for (const button of ctx.sheet.foot.querySelectorAll("button")) button.disabled = false;
     const data = error.data || {};
-    if (error.status === 500 || !error.data) {
+    if (error.status >= 500 || !error.data) {
       // No answer of Deck Lab's own (no connection, a proxy's error page), or an unexpected failure: the
       // save may have gone in, and adding again would add the cards twice.
       cv.rows = null;
       state.library = null;
+      ctx.tokenPreviewStale = true;
+      preconTokensBusy(ctx, true);
       clear(ctx.message).append(el("div", { class: "box box-crit", role: "alert" }, el("p", { text: error.message }),
-        el("p", { text: `It isn't known whether its cards went into ${ctx.whose}. Look there (and on the Decks page) before adding it again.` })));
+        el("p", { text: `It isn't known whether its cards went into ${ctx.whose}. Look there (and on the Decks page${tokensChosen ? " and Tokens page" : ""}) before adding it again.` })));
       sheetActions(ctx.sheet, [{ text: "Close", kind: "primary", value: "close",
         onclick: () => { ctx.sheet.close(); if (colActive(cv)) colReload(cv, error.message); } }]);
+      return;
+    }
+    if (error.status === 409 && (data.token_conflict || tokensChosen && data.sha256)) {
+      ctx.tokenPreviewStale = true;
+      preconTokensBusy(ctx, true);
+      clear(ctx.message).append(el("div", { class: "box box-warn", role: "alert" }, el("p", { text: error.message }),
+        el("p", { text: "Nothing was added. Preview again to review the current collection and token list, then choose whether to add the token cards." })));
+      sheetActions(ctx.sheet, [ctx.back, { text: "Preview again", kind: "primary", onclick: () => {
+        if (!ctx.sheet.closed && colActive(cv) && !ctx.busy && ctx.preview === p) previewPrecon(ctx, p.deck, ctx.titleInput.value.trim());
+      } }]);
       return;
     }
     if (error.status === 409 && data.sha256) {
@@ -1002,7 +1067,9 @@ async function addPrecon(ctx) {
       if (Array.isArray(data.rows)) colTakeRows(cv, data);
       clear(ctx.message).append(el("div", { class: "box box-warn", role: "alert" }, el("p", { text: error.message }),
         el("p", { text: "Nothing was added yet. A precon only adds cards, so it can go on top of the latest list." })));
-      sheetActions(ctx.sheet, [ctx.back, { text: "Add to the latest list", kind: "primary", value: "add", onclick: () => addPrecon(ctx) }]);
+      sheetActions(ctx.sheet, [ctx.back, { text: "Add to the latest list", kind: "primary", value: "add", onclick: event => {
+        if (preconAddHere(ctx, p, event.currentTarget)) addPrecon(ctx);
+      } }]);
       return;
     }
     const problems = data.problems || (data.blocks || []).map((b) => ({ message: b.problem }));

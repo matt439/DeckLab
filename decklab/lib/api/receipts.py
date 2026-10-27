@@ -139,6 +139,13 @@ def _board(inv, view, record):
     view.update(today=_receipt_today(), kits={}, face_names=[], keywords=sorted(token_details._keywords()))
     ready = _index_info()[0] is not None
     by_id = {component.id: component for component in record.components}
+    from . import arrival_checks
+    target_support = arrival_checks.supported()
+    for item in view["components"]:
+        component = by_id.get(item["id"])
+        if component is not None:
+            item.pop("check_links", None)  # Only authoritative projected proofs leave this boundary.
+            item.update(arrival_checks.projection(component, item.get("rows", []), item.get("fields", []), target_support))
     for item in view["components"]:
         if item["kind"] == "product":
             _product_items(inv, by_id.get(item["id"]), item)

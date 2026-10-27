@@ -712,6 +712,7 @@ function showEditor(params, token) {
   const version = params.get("v") === "owned" ? "owned" : "target";
   setTitle("Edit deck");
   load(`/api/deck/edit?id=${encodeURIComponent(id)}`, token, (view) => {
+    if (typeof boxEditorGuardView === "function" && !boxEditorGuardView(view, version, token)) return;
     canonicalDeckAddress(view.id);
     if (!view.editable && view.new_deck) {
       // A product deck or pairing is never edited in place: it's saved as a new deck.
@@ -817,6 +818,7 @@ function startEditor(opts) {
     }
     if (draft.addSection) ed.addSection = draft.addSection;
   }
+  if (typeof attachBoxEditorContext === "function") attachBoxEditorContext(ed);
   syncSections();
   ed.dirty = isDirty();
   ed.snap = snapshot(ed);

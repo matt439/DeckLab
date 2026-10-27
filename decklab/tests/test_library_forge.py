@@ -55,8 +55,8 @@ class LibraryForgeApiTests(unittest.TestCase):
         self.addCleanup(shutil.rmtree, self.results, True)
         self.forge = mock.Mock()
         self.forge.common._results_dir.return_value = self.results
-        self.forge.field.field_lists.return_value = [{"id": "casual/otters", "card_sha": "a"},
-                                                     {"id": "casual/hidden", "card_sha": "b"}]
+        self.forge.field.field_lists.return_value = [{"id": "casual/otters", "version": "target", "card_sha": "a"},
+                                                     {"id": "casual/hidden", "version": "target", "card_sha": "b"}]
         self.forge.field.averages.return_value = {
             "casual/otters": {"version": "target", "card_sha": "a", "average": AVERAGE, "games": 800,
                               "tested": "2026-10-22T10:00:00+10:00"},
@@ -75,7 +75,7 @@ class LibraryForgeApiTests(unittest.TestCase):
     def test_visible_decks_get_their_rate_and_date(self):
         answer = api.library_forge_view()
         self.assertEqual(answer, {"error": None, "decks": {"casual/otters": {
-            "version": "target", "rate": {"value": 0.61, "low": 0.59, "high": 0.63}, "partial": True, "counted": 3,
+            "version": "target", "card_sha": "a", "rate": {"value": 0.61, "low": 0.59, "high": 0.63}, "partial": True, "counted": 3,
             "of": 4, "games": 800, "tested": "2026-10-22T10:00:00+10:00"}}})
         args, options = self.forge.field.averages.call_args
         self.assertEqual(args, ("Constructed",))
@@ -90,7 +90,7 @@ class LibraryForgeApiTests(unittest.TestCase):
         (self.results / "abc.json").write_text("{}", encoding="utf-8")
         api.library_forge_view()
         self.assertEqual(self.forge.field.averages.call_count, 2)
-        self.forge.field.field_lists.return_value = [{"id": "casual/otters", "card_sha": "c"}]
+        self.forge.field.field_lists.return_value = [{"id": "casual/otters", "version": "target", "card_sha": "c"}]
         api.library_forge_view()
         self.assertEqual(self.forge.field.averages.call_count, 3)
         with mock.patch.object(api.time, "monotonic", return_value=api.time.monotonic() + api.CACHE_S + 1):
@@ -106,6 +106,14 @@ class LibraryForgeApiTests(unittest.TestCase):
         with mock.patch.object(api.common, "_log") as log:
             self.assertEqual(api.library_forge_view(), {"decks": {}, "error": api.NO_NUMBERS})
         log.assert_called_once()
+
+    def test_identical_playable_lists_switching_version_invalidate_cached_metadata(self):
+        self.assertEqual(api.library_forge_view()["decks"]["casual/otters"]["version"], "target")
+        self.forge.field.field_lists.return_value[0]["version"] = "owned"
+        self.forge.field.averages.return_value["casual/otters"]["version"] = "owned"
+        found = api.library_forge_view()["decks"]["casual/otters"]
+        self.assertEqual((found["version"], found["card_sha"]), ("owned", "a"))
+        self.assertEqual(self.forge.field.averages.call_count, 2)
 
 
 class LibraryForgeHttpTests(support.ServerTestCase):

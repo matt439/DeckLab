@@ -210,6 +210,7 @@ function resultPart(data, page, ctx = {}) {
   // The folded reading, in one column (beside the verdict from 1,600 px, from its top: MU-14).
   const reading = el("div", { class: "mu-reading" });
   section.append(reading);
+  add(reading, [matchupRealGames(data)]);
   reading.append(el("details", { class: "more mu-why" },
     el("summary", { text: "Why we're confident" }),
     el("p", {}, el("b", { text: `${ta} won ${rateWords(wr)} of ${gamesWords(r.games)}` }),

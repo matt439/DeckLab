@@ -12,9 +12,9 @@ class NarrowEditorRowSourceTests(unittest.TestCase):
         self.assertIn('.edit-page.has-editor-panes .edit-main { container-type: inline-size; container-name: editor-cards; }',css)
         compact=re.search(r'(?s)@container editor-cards \(max-width: 600px\) \{(.*?)\n\}',css).group(1)
         self.assertIn('.edit-list > .edit-row:not(.edit-removed)',compact)
-        self.assertIn('grid-template-areas: "step card card more" "step print badge more";',compact)
+        self.assertIn('grid-template-areas: "step card card card more" "step mv print badge more";',compact)
         for element,area in (('edit-stepper','step'),('edit-card','card'),('edit-print','print'),
-                             ('edit-badge-slot','badge'),('edit-more','more')):
+                             ('edit-badge-slot','badge'),('edit-more','more'),('edit-mv','mv')):
             self.assertRegex(compact,rf'\.edit-row > \.{element} \{{[^}}]*grid-area: {area};')
         self.assertIn('.edit-card .nm { flex-wrap: wrap; }',compact)
         self.assertIn('.edit-card .nm-text { white-space: normal; overflow-wrap: anywhere; }',compact)

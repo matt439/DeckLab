@@ -72,18 +72,25 @@ def _history_inventory(root):
 
 
 class FixtureServer:
-    """Context manager with base_url, fixture IDs, logs and advance_version()."""
+    """Disposable HTTP/UI context; allow_precons opts into seeded local lists only.
+
+    Precons remain blocked by default. Even when enabled, their cache is temporary
+    and downloads are forbidden, as are databases and simulation workers.
+    """
     deck_id = data.DECK_ID
     order_id = data.ORDER_ID
     profile_id = data.PROFILE_ID
     profile_name = data.PROFILE_NAME
 
-    def __init__(self):
+    def __init__(self, *, allow_precons=False):
+        if not isinstance(allow_precons, bool):
+            raise ValueError("allow_precons must be a boolean")
         self._stack = contextlib.ExitStack()
         self.logs = []
         self._generation = 0
         self.root = None
         self.base_url = None
+        self._allow_precons = allow_precons
 
     def __enter__(self):
         try:
@@ -131,8 +138,10 @@ class FixtureServer:
                             ("DATA", cache), ("MAGIC", self.root / "magic"),
                             ("CONFIG_FILE", self.root / "config.json")):
             self._patch(config, name, value)
-        from decklab.lib import cards, inventory, state
+        from decklab.lib import cards, inventory, precons, state
         from decklab.lib.state.memory import MemoryStore
+        for name, value in (("CACHE", cache / "mtgjson"), ("_fetch", _forbidden), ("_failed", {}), ("_kept", {})):
+            self._patch(precons, name, value)
         for name, value in (("SCRYFALL_DIR", cache / "scryfall"),
                             ("INDEX_FILE", cache / "scryfall/index.json.gz"),
                             ("FX_FILE", cache / "fx.json"), ("IMAGES_DIR", cache / "images"),
@@ -182,11 +191,15 @@ class FixtureServer:
         self._stack.callback(tokens.clear_cache)
         self.httpd = server_http.make_server("127.0.0.1", 0, web_dir=SOURCE_ROOT / "decklab/web")
 
+        allow_precons = self._allow_precons  # Only explicit local fixtures may use seeded lists; fetching stays forbidden.
+
         class FixtureHandler(server_http.Handler):
             def _route(self):
                 path = urlsplit(self.path).path
                 blocked = ("/api/goldfish", "/api/matchups", "/api/matchup", "/api/field",
-                           "/api/variant", "/api/variants", "/api/precons", "/api/accessories/fetch")
+                           "/api/variant", "/api/variants", "/api/accessories/fetch")
+                if not allow_precons:
+                    blocked += ("/api/precons",)
                 if any(path == prefix or path.startswith(prefix + "/") for prefix in blocked):
                     raise api.ApiError(403, "This disposable Safari fixture does not run simulations "
                                            "or fetch external data")

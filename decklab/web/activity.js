@@ -1,8 +1,9 @@
-/* The Activity page: who changed what in Deck Lab's database, newest first (GET /api/activity). It only reads.
+/* The Activity page: who changed what in Deck Lab's database, newest first (GET /api/activity).
  * The server decides which changes and which of their rows each viewer may see (lib/api/activity.py) and words
- * each change as a plain headline ("Alex received the Example Games order: 16 cards") from those rows alone. The
+ * each change as a plain headline ("User1 received the Example Games order: 16 cards") from those rows alone. The
  * page shows the first few rows of a change with "Show all", filter chips by kind and person (the server
- * filters, so "Load older" keeps to them), and links to the decks, cards (the card viewer) and orders. */
+ * filters, so "Load older" keeps to them), and links to the decks, cards (the card viewer) and orders.
+ * Candidate inventory edits can open a server-authorized Undo review; only its explicit save writes. */
 "use strict";
 
 const ACTIVITY_VIA = { home: "at home", tunnel: "away" };
@@ -63,11 +64,13 @@ function activityHref(filter) {
 
 /** The first page: the head, the filters, the changes grouped by day, and "Load older" while there are more. */
 function activityDraw(data, token, filter = { kind: null, actor: null }) {
-  const view = { token, filter, seq: 0, next: data.next, days: el("div", { class: "activity-days" }),
+  const view = { token, filter, seq: 0, profile: state.profile?.id, hash: location.hash, loadedPages: 1,
+    next: data.next, days: el("div", { class: "activity-days" }),
     lastDay: null, lastList: null, shown: 0, empty: null, everything: data.everything,
     cards: { ...(data.cards || {}) }, people: new Map(), peopleRow: null };
   const note = el("p", { class: "activity-note", role: "status", "aria-live": "polite", tabindex: "-1" });
   const older = el("button", { type: "button", class: "btn", text: "Load older" });
+  view.older = older; view.note = note;
   older.addEventListener("click", () => activityOlder(view, older, note));
   view.peopleRow = el("nav", { class: "activity-filter", "aria-label": "Whose changes" });
   activityAppend(view, data.changes);
@@ -82,6 +85,7 @@ function activityDraw(data, token, filter = { kind: null, actor: null }) {
     el("div", { class: "activity-layout" },
       el("div", { class: "activity-filters" }, activityKinds(filter), view.peopleRow),
       el("div", { class: "activity-main" }, view.days, view.empty, el("div", { class: "activity-more" }, older, note)))]);
+  return view;
 }
 
 /** The kind chips: All, then each kind this viewer can have changes of. */
@@ -183,14 +187,14 @@ function activityCard(change, when, view) {
   const message = change.message && !ACTIVITY_OWN_WORDS.includes(change.source)
     && change.message !== summaries.join("; ") && !activityCommandOnly(change.message) ? change.message : null;
   const rows = activityRows(change, view);
-  return el("article", { class: "activity-change", tabindex: "-1" },
+  return el("article", { class: "activity-change", "data-activity-id": change.id, tabindex: "-1" },
     el("h3", { class: "activity-headline" }, href ? el("a", { href, text: headline }) : headline),
     el("p", { class: "activity-meta" },
       el("time", { class: "activity-when", datetime: change.at, text: activityTime(when) }),
       where ? el("span", { class: "activity-where", text: where }) : null),
     message ? el("p", { class: "activity-message", text: `“${message}”` }) : null,
     change.reason ? el("p", { class: "activity-reason", text: `Why: ${change.reason}` }) : null,
-    rows);
+    rows, activityUndoButton(view, change));
 }
 
 /** A change's rows as a list, or null when its one row only repeats the headline. The rows past the first
@@ -253,6 +257,7 @@ function activityRowCard(row, record, view) {
  * When the button had focus and goes (the end of the trail), focus moves to the first change it
  * added, or to the note, rather than falling back to the top of the page. */
 async function activityOlder(view, button, note) {
+  if (view.undoBusy || view.undoRefreshNeeded) return;
   const seq = ++view.seq;
   const hadFocus = document.activeElement === button;
   button.disabled = true;
@@ -262,12 +267,14 @@ async function activityOlder(view, button, note) {
     if (view.token !== routeToken || seq !== view.seq) return;
     Object.assign(view.cards, data.cards || {});
     const first = activityAppend(view, data.changes);
+    view.loadedPages = (view.loadedPages || 1) + 1;
     view.next = data.next;
     button.hidden = !view.next;
     if (view.empty) view.empty.querySelector("p").textContent = activityNothing(view);
     note.textContent = data.changes.length ? (view.next ? "" : "That's every change.")
       : view.next ? "None you can see in that stretch: Load older looks further back." : "There are no older changes.";
-    if (hadFocus && button.hidden) (first || note).focus({ preventScroll: !first });
+    const stillOwned = document.activeElement === button || !document.activeElement || document.activeElement === document.body;
+    if (hadFocus && button.hidden && stillOwned) (first || note).focus({ preventScroll: !first });
   } catch (e) {
     if (view.token !== routeToken || seq !== view.seq) return;
     note.textContent = `Older changes couldn't be loaded: ${e.message}`;

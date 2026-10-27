@@ -234,8 +234,8 @@ class WatchRow(Row):
 
 
 class StatusRow(Row):
-    """A products/status.csv row: file, status, intact, sleeves, deck_box, notes (a legacy
-    4-column file's rows have no sleeves or deck_box column: get() gives None)."""
+    """A products/status.csv row, including the optional packed-token record.
+    Legacy rows lack kit or token columns: get() gives None for missing columns."""
     COLUMNS = tuple(rules.STATUS_FIELDS)
 
     file = property(lambda self: self.get("file"))
@@ -243,6 +243,7 @@ class StatusRow(Row):
     intact = property(lambda self: self.get("intact"))
     sleeves = property(lambda self: self.get("sleeves"))
     deck_box = property(lambda self: self.get("deck_box"))
+    token_cards = property(lambda self: self.get("token_cards"))
     notes = property(lambda self: self.get("notes"))
 
 
@@ -484,6 +485,7 @@ class Component:
     received_on = property(lambda self: self._get("received_on"))
     checks = property(lambda self: self._get("checks"))
     verified_checks = property(lambda self: self._get("verified_checks"))   # None when absent
+    check_links = property(lambda self: self._get("check_links"))
 
     @property
     def file_name(self):
@@ -497,13 +499,15 @@ class Component:
         return copy.deepcopy(self.data)
 
     @classmethod
-    def build(cls, id, kind, file_name, status="pending", received_on="", checks=(), verified_checks=None):
+    def build(cls, id, kind, file_name, status="pending", received_on="", checks=(), verified_checks=None, check_links=None):
         """A component in the records' key order: id, kind, path (derived from kind, status and
         file name), status, received_on, checks, then verified_checks only when given."""
         data = {"id": id, "kind": kind, "path": paths.payload(kind, status, file_name), "status": status,
                 "received_on": received_on, "checks": list(checks)}
         if verified_checks is not None:
             data["verified_checks"] = list(verified_checks)
+        if check_links is not None:
+            data["check_links"] = copy.deepcopy(check_links)
         return cls(data)
 
 
@@ -722,8 +726,8 @@ class Inventory:
         return self.replace(tokens=dict(sorted(tokens.items())))
 
     def with_status_rows(self, rows):
-        """products/status.csv holding rows (StatusRow's or mappings), always with the six
-        columns (a legacy four-column file is rewritten with blank sleeves and deck_box, as a
+        """products/status.csv holding rows (StatusRow's or mappings), always with the current
+        columns (a legacy file gains blank kit and packed-token columns, as a
         receipt does)."""
         made = tuple(coerce(StatusRow, row) for row in rows)
         return self.replace(status=Sheet(paths.STATUS, StatusRow.COLUMNS, made, True))
@@ -793,13 +797,20 @@ class Inventory:
 
     def update_component(self, order_id, component_id, **changes):
         """A component's fields changed (status, received_on, checks, verified_checks, path),
-        keeping the records' key order; verified_checks, when new, goes last. Lists are copied.
+        keeping the records' key order, including optional verified_checks and check_links. Values are copied.
         ValueError for an unknown order or component, or a field components don't have."""
         order, data, item = self._component(order_id, component_id)
         for key, value in changes.items():
             if key not in COMPONENT_KEYS:
                 raise ValueError(f"components have no field {key!r}")
-            item[key] = list(value) if isinstance(value, (list, tuple)) else value
+            if key == "check_links" and value is None:
+                item.pop(key, None)
+            else:
+                item[key] = copy.deepcopy(value) if key == "check_links" else list(value) if isinstance(value, (list, tuple)) else value
+        ordered = {key: item[key] for key in COMPONENT_KEYS if key in item}
+        ordered.update((key, value) for key, value in item.items() if key not in COMPONENT_KEYS)
+        item.clear()
+        item.update(ordered)
         return self.with_order(Order(order.file, data))
 
     def move_component(self, order_id, component_id, status, received_on=None):
@@ -829,11 +840,16 @@ class Inventory:
             raise ValueError(f"{component_id} is a {kind} component, which has no payload rows")
         cls = CardRow if kind == "cards" else TokenRow
         payloads = dict(self.payloads)
-        payloads[path] = Sheet(path, cls.COLUMNS, tuple(coerce(cls, row) for row in rows), True)
-        return self.replace(payloads=dict(sorted(payloads.items())))
+        made = Sheet(path, cls.COLUMNS, tuple(coerce(cls, row) for row in rows), True)
+        previous = payloads.get(path)
+        payloads[path] = made
+        after = self.replace(payloads=dict(sorted(payloads.items())))
+        if item.get("check_links") is not None and (previous is None or previous.rows != made.rows):
+            after = after.update_component(order_id, component_id, check_links=None)
+        return after
 
 
-COMPONENT_KEYS = ("id", "kind", "path", "status", "received_on", "checks", "verified_checks")
+COMPONENT_KEYS = ("id", "kind", "path", "status", "received_on", "checks", "verified_checks", "check_links")
 
 
 def coerce(cls, row):

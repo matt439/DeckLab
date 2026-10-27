@@ -542,6 +542,15 @@ def _status_problems(rows):
         if (sleeves or deck_box) and not (status == "owned" and intact == "yes"):
             out.append(f"{name} line {n}: {file} has sleeves or a deck box but isn't "
                        f"owned and kept intact; clear them, since its cards are stored unsleeved")
+        packed = (row.get("token_cards") or "").strip()
+        if packed:
+            if not (status == "owned" and intact == "yes"):
+                out.append(f"{name} line {n}: {file} has packed token cards but isn't owned and kept intact; clear them")
+            try:
+                from decklab.lib.decks.tokencards import parse_token_cards
+                parse_token_cards(packed)
+            except ValueError as error:
+                out.append(f"{name} line {n}: {file}'s packed token cards can't be read: {error}")
     return tuple(out)
 
 

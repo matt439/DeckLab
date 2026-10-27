@@ -75,6 +75,7 @@ import csv
 import dataclasses
 import hashlib
 import io
+import json
 import threading
 from collections import defaultdict
 from datetime import datetime
@@ -83,13 +84,13 @@ from decklab.db import conn as db, space_members
 from decklab.lib.state import Actor, Conflict, Invalid, Unavailable
 from decklab.lib.state import pg as state_pg
 
-from . import DECK_SAVES_PAUSED, changes, files, paths, pg_decks, pg_aliases, rules
+from . import DECK_SAVES_PAUSED, Summary, changes, files, paths, pg_decks, pg_aliases, pg_check_links, rules
 from .model import QUEUE_FIELDS, Component, ImageMeta, ImportInfo, Order
 # The snapshot-as-rows code is shared with the files backend (table_rows.py); these names stay
 # here for the callers and tests that use them as pg's.
 from .table_rows import (CARD_COLUMNS, COMPONENT_COLUMNS, ITEM_COLUMNS, ITEM_TABLES,  # noqa: F401
                          ORDER_COLUMNS, PAYLOAD_FIELDS, STATUS_COLUMNS, TOKEN_COLUMNS, WATCH_COLUMNS,
-                         Unrepresentable, deck_tables, reasons, representable, tables)
+                         JsonColumn, Unrepresentable, deck_tables, reasons, representable, tables)
 
 LOCK_KEY = "inventory"                       # the advisory lock every inventory write takes
 NOT_IMPORTED = ("the database holds no inventory: on a new install, run python -m decklab.db setup, which "
@@ -167,7 +168,32 @@ SELECTS = {
 
 
 def _select(c):
-    return {table: c.execute(query).fetchall() for table, query in SELECTS.items()}
+    columns = _status_columns(c)
+    status = "select file, " + ", ".join(column if column in columns else "''::text as token_cards"
+                                         for column in STATUS_COLUMNS) + " from product_status"
+    component = pg_check_links.select(c)
+    return {table: c.execute(status if table == "product_status" else component if table == "order_component" else query).fetchall()
+            for table, query in SELECTS.items()}
+
+
+def _status_columns(c):
+    """Probe the actual column, without caching absence across a later migration."""
+    ready = c.execute("select exists(select 1 from pg_catalog.pg_attribute "
+                      "where attrelid=to_regclass('public.product_status') and attname='token_cards' "
+                      "and not attisdropped)").fetchone()[0]
+    return STATUS_COLUMNS if ready else tuple(column for column in STATUS_COLUMNS if column != "token_cards")
+
+
+def _status_tables(t, columns):
+    """Old schemas can represent blank unknown packing, never discard a recorded value."""
+    if columns == STATUS_COLUMNS:
+        return t
+    token_at = STATUS_COLUMNS.index("token_cards")
+    if any(row[token_at] for row in t["product_status"].values()):
+        raise Invalid("Product packed token cards require migration 0014. Run the database migrations first.")
+    indices = [STATUS_COLUMNS.index(column) for column in columns]
+    return {**t, "product_status": {key: tuple(row[index] for index in indices)
+                                    for key, row in t["product_status"].items()}}
 
 
 def snapshot(data, revision):
@@ -209,9 +235,10 @@ def snapshot(data, revision):
         components[row[0]].append(row)
     for oid, seller, ordered_on, sources, notes, audit_notes in data["purchase_order"]:
         built = []
-        for _, cid, _, kind, file_name, status_, received_on, checks, verified, _ in \
-                sorted(components[oid], key=lambda r: r[2]):
-            built.append(Component.build(cid, kind, file_name, status_, received_on, checks, verified))
+        for row in sorted(components[oid], key=lambda r: r[2]):
+            _, cid, _, kind, file_name, status_, received_on, checks, verified, _ = row[:10]
+            metadata = row[10] if len(row) > 10 else None
+            built.append(Component.build(cid, kind, file_name, status_, received_on, checks, verified, metadata))
             if kind != "product":
                 rows = [cells for _, cells in sorted(payload_rows[(oid, cid)], key=lambda r: r[0])]
                 out[paths.payload(kind, status_, file_name)] = _render(PAYLOAD_FIELDS[kind], rows)[0]
@@ -285,18 +312,21 @@ def _insert(cur, table, columns, rows):
 
 def _db(value):
     """A Python value as psycopg should send it (tuples as arrays)."""
+    if isinstance(value, JsonColumn):
+        from psycopg.types.json import Jsonb
+        return Jsonb(value.value)
     return list(value) if isinstance(value, tuple) else value
 
 
-def _keyed_rows(table, t):
+def _keyed_rows(table, t, status_columns=STATUS_COLUMNS, component_columns=COMPONENT_COLUMNS):
     """(key columns, value columns, {key: values}) of one of t's keyed tables (tables()' shape)."""
     return {
         "collection_card": (("space_id", "set_code", "collector_number", "finish"),
                             ("name", "quantity", "condition", "language", "notes")),
         "product": (("stem",), ("name", "format", "columns")),
-        "product_status": (("file",), STATUS_COLUMNS),
+        "product_status": (("file",), status_columns),
         "purchase_order": (("id",), ORDER_COLUMNS),
-        "order_component": (("order_id", "id"), COMPONENT_COLUMNS),
+        "order_component": (("order_id", "id"), component_columns),
     }[table] + (t[table],)
 
 
@@ -310,8 +340,12 @@ def _plain_key(key):
 
 def _write_all(cur, t):
     """Insert every row of t (tables()' shape) into empty tables, parents first."""
+    status_columns = _status_columns(cur)
+    t = _status_tables(t, status_columns)  # Refuse unsupported data before any inventory DML.
+    component_columns = pg_check_links.columns(cur)
+    t = pg_check_links.compatible(t, component_columns)
     for table in PARENTS_FIRST:
-        keys, values, rows = _keyed_rows(table, t)
+        keys, values, rows = _keyed_rows(table, t, status_columns, component_columns)
         _insert(cur, table, keys + values, [(*_plain_key(k), *map(_db, v)) for k, v in rows.items()])
     _insert(cur, "product_item", ("product_stem", "position", "cells"),
             [(stem, n, list(cells)) for stem, found in t["product_item"].items() for n, cells in enumerate(found)])
@@ -332,6 +366,11 @@ def _diff(cur, old, new):
     """Write the difference between two tables() results, each kind of statement in one
     executemany batch (deletes children first, then inserts and updates parents first); returns
     how many rows it wrote."""
+    status_columns = _status_columns(cur)
+    new = _status_tables(new, status_columns)  # Preflight before deletes, inserts or updates.
+    old = _status_tables(old, status_columns)
+    component_columns = pg_check_links.columns(cur)
+    new, old = (pg_check_links.compatible(t, component_columns) for t in (new, old))
     count = 0
     pending = []
 
@@ -359,14 +398,14 @@ def _diff(cur, old, new):
     add("delete from product_item where product_stem = %s",
         [(stem,) for stem, found in old["product_item"].items() if found != new["product_item"].get(stem)])
     for table in reversed(PARENTS_FIRST):
-        keys, _, rows = _keyed_rows(table, old)
+        keys, _, rows = _keyed_rows(table, old, status_columns, component_columns)
         add(f"delete from {table} where {where(keys)}", [_plain_key(key) for key in rows.keys() - new[table].keys()])
     for table in ("token_card", "watchlist_item"):
         kept = {r[0] for r in new[table] if r[0]}
         add(f"delete from {table} where id = %s", [(row[0],) for row in old[table] if row[0] not in kept])
     # Inserts and updates, parents first.
     for table in PARENTS_FIRST:
-        keys, values, rows = _keyed_rows(table, new)
+        keys, values, rows = _keyed_rows(table, new, status_columns, component_columns)
         before = old[table]
         add(insert(table, keys + values),
             [(*_plain_key(key), *map(_db, value)) for key, value in rows.items() if key not in before])
@@ -674,6 +713,112 @@ class PgInventory:
             return {"at": at, "actor": actor, "name": name or actor, "source": source, "message": message}
         return self._call(work)
 
+    def undo_audit(self, change_id):
+        """Internal original rows, never Activity's filtered/capped projection.
+
+        Two rows suffice to prove a change is outside the single-row Undo slice.
+        During apply use this transaction's already-locked connection, not a second
+        snapshot that could race the inventory being changed.
+        """
+        def work(c):
+            return [{"id": rid, "table": table, "op": op, "key": key, "before": old, "after": new}
+                    for rid, table, op, key, old, new in c.execute(
+                        "select id,table_name,op,row_key,before,after from audit.row_change "
+                        "where change_set_id=%s order by id limit 2", (change_id,)).fetchall()]
+        applying = getattr(self._applying, "connection", None)
+        return work(applying) if applying is not None else self._call(work)
+
+    def undo_latest(self, table, key):
+        """Latest *audit row* touching this key. Change-set IDs are allocated before
+        the inventory lock and therefore cannot establish write order."""
+        if table not in ("collection_card", "token_card", "accessory"):
+            raise Invalid("That row does not support Undo.")
+        def work(c):
+            found = c.execute("select id from audit.row_change where table_name=%s and row_key=%s::jsonb "
+                              "order by id desc limit 1", (table, json.dumps(key))).fetchone()
+            return found[0] if found is not None else None
+        applying = getattr(self._applying, "connection", None)
+        return work(applying) if applying is not None else self._call(work)
+
+    def accessory_undo_review(self, change_id, owners):
+        """One locked accessory text review, with no audit change for the read."""
+        from . import accessory_undo
+        def work(c):
+            with c.transaction():
+                _take_lock(c)
+                space_members.admit(c, space_ids={"home"}, lock=False)
+                snapshot = self.load(conn=c)
+                previous = getattr(self._applying, "connection", None)
+                self._applying.connection = c
+                try:
+                    return accessory_undo.review(change_id, owners, snapshot, self)[0]
+                finally:
+                    self._applying.connection = previous
+        return self._call(work)
+
+    def accessory_undo_photo(self, name, sha256, size):
+        """Target-only current bytes, on Undo's already locked review/save connection."""
+        from decklab.lib.accessory_fetch import MAX_IMAGE
+        connection = getattr(self._applying, "connection", None)
+        if connection is None:
+            raise Invalid("Accessory photo proof needs its locked transaction.")
+        row = connection.execute("select content from accessory_image where file_name=%s and sha256=%s and size=%s "
+                                 "and size between 1 and %s for share", (name, sha256, size, MAX_IMAGE)).fetchone()
+        return None if row is None else bytes(row[0])
+
+    def accessory_undo_apply(self, change_id, owners, expect, actor, message, reason=..., confirm_restore=..., confirm_stock=..., confirm_owner=..., confirm_kind=..., confirm_record=..., confirm_photo=...):
+        from .accessory_undo import MetadataRestore, source_record, removal_reason, update_action
+        canonical = None
+        if any(value is not ... for value in (reason, confirm_restore, confirm_stock, confirm_owner, confirm_kind, confirm_record, confirm_photo)):
+            # Audit rows are immutable. Establish complete source ownership before
+            # validating the public reason; all mutable facts are rechecked in apply.
+            source = source_record(self.undo_audit(change_id), owners)
+            if reason is not ...:
+                if source["op"] != "INSERT":
+                    raise Invalid("Only removing an added accessory takes a removal reason.")
+                canonical = removal_reason(reason)
+            if confirm_restore is not ... and (source["op"] != "DELETE" or confirm_restore is not True):
+                raise Invalid("Confirm only the entire historical deleted accessory record.")
+            for value, action in ((confirm_stock, "accessory_stock_update"), (confirm_owner, "accessory_owner_update"),
+                                  (confirm_kind, "accessory_kind_update"), (confirm_record, "accessory_record_update"),
+                                  (confirm_photo, "accessory_crop_update")):
+                if value is not ... and (source["op"] != "UPDATE" or value is not True
+                        or update_action(source["before"], source["after"]) != action):
+                    raise Invalid("Confirm only the reviewed accessory correction.")
+        _, summary = self.apply(MetadataRestore(change_id, owners, expect, store=self,
+            reason=canonical if reason is not ... else ..., confirm_restore=confirm_restore, confirm_stock=confirm_stock,
+            confirm_owner=confirm_owner, confirm_kind=confirm_kind, confirm_record=confirm_record, confirm_photo=confirm_photo), actor, message,
+                                reason=canonical)
+        return summary.extra["accessory_undo"]
+
+    def undo_audit_batch(self, change_id):
+        """Unfiltered bounded original rows; the 51st row refuses a 50-row batch.
+
+        Keep undo_audit's two-row single-source contract unchanged. No Activity
+        projection or SQL ownership filter can make a mixed source look complete.
+        """
+        def work(c):
+            return [{"id": rid, "table": table, "op": op, "key": key, "before": old, "after": new}
+                    for rid, table, op, key, old, new in c.execute(
+                        "select id,table_name,op,row_key,before,after from audit.row_change "
+                        "where change_set_id=%s order by id limit 51", (change_id,)).fetchall()]
+        applying = getattr(self._applying, "connection", None)
+        return work(applying) if applying is not None else self._call(work)
+
+    def undo_token_positions(self, space):
+        """Persisted own-space token layout, on Undo's applying connection when set."""
+        def work(c):
+            return [{"id": rid, "position": position} for rid, position in c.execute(
+                "select id,position from token_card where space_id=%s order by position,id", (space,)).fetchall()]
+        applying = getattr(self._applying, "connection", None)
+        return work(applying) if applying is not None else self._call(work)
+
+    def supports_check_links(self):
+        def work(c):
+            return "check_links" in pg_check_links.columns(c)
+        applying = getattr(self._applying, "connection", None)
+        return work(applying) if applying is not None else self._call(work)
+
     # -------------------------------------------------------- writing
 
     def apply(self, op, actor, message, reason=None, expected_revision=None):
@@ -695,10 +840,13 @@ class PgInventory:
                     if expected_revision is not None and str(expected_revision) != before.revision:
                         raise Conflict(files.MOVED_MESSAGE)
                     self._applying.saves = deck_key is not None
+                    previous_connection = getattr(self._applying, "connection", None)
+                    self._applying.connection = c
                     try:
                         after, summary = op.run(changes.detach(before))
                     finally:
                         self._applying.saves = None
+                        self._applying.connection = previous_connection
                     after = changes.prepare(before, after)
                     decks_changed = any(paths.is_deck_part(rel) for rel in changes.changed(before, after))
                     if decks_changed and deck_key is None:
@@ -734,7 +882,32 @@ class PgInventory:
                         deck_key = self._decks_key(c)
                         part = pg_decks.deck_part(pg_decks.select(c), deck_key[2])
                         result["decks"] = (deck_key, part)
-                    return self._join(inv_part, deck_key, part), summary
+                    # This trusted accessory operation verifies actual SQL/audit effects
+                    # before commit, without changing existing inventory Undo protocols.
+                    from .accessory_undo import MetadataRestore
+                    if isinstance(op, MetadataRestore):
+                        # A failed verifier rolls this transaction back. Never cache its
+                        # provisional revision: a later writer can reuse that counter.
+                        saved = inv_part.replace(**part) if deck_key is not None else pg_decks.without_deck_parts(inv_part)
+                        actual = [{"id": rid, "table": table, "op": action, "key": key, "before": old, "after": new}
+                                  for rid, table, action, key, old, new in cur.execute(
+                                      "select id,table_name,op,row_key,before,after from audit.row_change "
+                                      "where change_set_id=%s order by id limit 2", (change_set,)).fetchall()]
+                        previous_verify_connection = getattr(self._applying, "connection", None)
+                        self._applying.connection = c
+                        try:
+                            receipt = op.verify(before, saved, actual)
+                        finally:
+                            self._applying.connection = previous_verify_connection
+                        if op.plan["action"] in ("accessory_remove", "accessory_add", "accessory_stock_update", "accessory_owner_update", "accessory_kind_update", "accessory_record_update", "accessory_crop_update"):
+                            recorded_reason = cur.execute("select reason from audit.change_set where id=%s", (change_set,)).fetchone()
+                            if recorded_reason is None or recorded_reason[0] != (op.reason if op.plan["action"] == "accessory_remove" else None):
+                                raise Conflict("The accessory Undo reason could not be confirmed.")
+                        summary = Summary(summary.text, summary.counts, summary.changed,
+                                          {**summary.extra, "accessory_undo": receipt})
+                    else:
+                        saved = self._join(inv_part, deck_key, part)
+                    return saved, summary
             except _Unchanged as u:
                 return u.result
         out = self._call(work)

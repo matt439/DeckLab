@@ -42,14 +42,14 @@ from html.parser import HTMLParser
 from decklab import server
 
 WEB = server.WEB_DIR
-MATCHUP_SCRIPTS = ("sim-ui.js", "matchups.js", "matchups-overview.js", "matchups-summary.js", "matchups-detail.js", "matchups-results.js",
+MATCHUP_SCRIPTS = ("sim-ui.js", "matchups.js", "matchups-overview.js", "matchups-summary.js", "matchups-detail.js", "matchups-results.js", "matchups-play.js",
                    "matchups-cards.js")
-PLAY_SCRIPTS = ("deck-tools.js", "collection.js", "collection-rows.js", "collection-cards.js", "collection-bulk.js", "collection-guards.js", "assembly.js", "assembly-chooser.js", "assembly-switcher.js", "assembly-finish.js", "assembly-steps.js", "assembly-overlap.js", "assembly-sections.js", "assembly-progress.js", "assembly-sheets.js", "hands.js", "play.js", "deck-sideboard.js", "deck-opponents.js", "deck-standins.js", "deck-swaps.js", "product-storage.js", "history.js", "activity.js",
-                "receipts.js", "receipt-tiles.js", "receipt-layout.js", "receipt-workflow.js", "accessories.js", "accessory-pictures.js", "tokens.js")
-SHELL_SCRIPTS = ("keyboard-help.js", "shell.js", "settings.js", "visibility.js")  # account pages, just before app.js
+PLAY_SCRIPTS = ("deck-tools.js", "collection.js", "precon-token-choices.js", "collection-rows.js", "collection-cards.js", "collection-bulk.js", "collection-guards.js", "assembly.js", "assembly-chooser.js", "assembly-switcher.js", "assembly-finish.js", "assembly-steps.js", "assembly-overlap.js", "assembly-sections.js", "assembly-progress.js", "assembly-sheets.js", "assembly-boxcheck.js", "box-collection.js", "box-editor.js", "hands.js", "play.js", "deck-sideboard.js", "deck-opponents.js", "deck-standins.js", "deck-swaps.js", "product-storage.js", "history.js", "activity.js", "activity-undo.js",
+                "order-check-targets.js", "receipts.js", "receipt-tiles.js", "receipt-layout.js", "receipt-workflow.js", "accessories.js", "accessory-pictures.js", "tokens.js", "token-plan.js", "product-tokens.js")
+SHELL_SCRIPTS = ("keyboard-help.js", "shell.js", "settings.js", "settings-members.js", "visibility.js")  # account pages, just before app.js
 CARD_SCRIPTS = ("ui.js", "symbols.js", "cards-ui.js", "card-viewer.js")     # the shared card pieces (UI-KIT.md)
-SCRIPTS = ("core.js", *CARD_SCRIPTS, "library.js", "library-glance.js", "library-tables.js", "cover.js", "deck-availability.js", "deck.js", "deck-header.js", "deck-overview.js", "deck-retirement.js", "deck-rename.js", "deck-prices.js", "guide.js", "stats.js", "commander-readiness.js", "commander-night.js", "practice.js", "version.js", "wishlist.js", "shopping.js", "shopping-buying.js", "shopping-queue.js", "shopping-reprints.js", "shopping-orders.js", "shopping-order-edit.js", "shopping-order-rows.js", "shopping-order-split.js", "app.js",
-           "editor.js", "editor-screen.js", "editor-details.js", "editor-lines.js", "editor-cards.js", "editor-search-quantity.js", "editor-search-dock.js", "editor-swaps.js", "editor-save.js", "editor-deckpage.js",
+SCRIPTS = ("core.js", *CARD_SCRIPTS, "library.js", "library-boxchecks.js", "library-glance.js", "library-tables.js", "cover.js", "deck-availability.js", "deck.js", "deck-header.js", "deck-overview.js", "deck-retirement.js", "deck-rename.js", "deck-prices.js", "guide.js", "stats.js", "commander-readiness.js", "commander-night.js", "practice.js", "version.js", "wishlist.js", "shopping.js", "shopping-buying.js", "shopping-queue.js", "shopping-reprints.js", "shopping-orders.js", "shopping-order-edit.js", "shopping-order-rows.js", "shopping-order-split.js", "app.js",
+           "editor.js", "editor-screen.js", "editor-details.js", "editor-lines.js", "editor-forge.js", "editor-cards.js", "editor-search-quantity.js", "editor-search-dock.js", "editor-swaps.js", "editor-save.js", "editor-deckpage.js",
            *MATCHUP_SCRIPTS, "field.js", "variant.js", "runs-pill.js", *PLAY_SCRIPTS, *SHELL_SCRIPTS)    # every script the page loads
 # The design tokens, the base and the shared components first (decklab/UI-REVIEW.md 2.1-2.3), then the shell
 # and the page files, which only lay the components out.
@@ -385,9 +385,9 @@ class WebFileTests(unittest.TestCase):
         # rest (practice.js reads its NAV_SPACE as it loads), and app.js last (its start() needs every other file).
         scripts = [url for tag, url in self.page.refs if tag == "script"]
         self.assertEqual(scripts, ["/editor.js", "/editor-screen.js", "/editor-details.js", "/editor-lines.js",
-                             "/editor-cards.js", "/editor-search-quantity.js", "/editor-search-dock.js", "/editor-swaps.js", "/editor-save.js", "/editor-deckpage.js", *["/" + name for name in MATCHUP_SCRIPTS], "/field.js",
+                         "/editor-forge.js", "/editor-cards.js", "/editor-search-quantity.js", "/editor-search-dock.js", "/editor-swaps.js", "/editor-save.js", "/editor-deckpage.js", *["/" + name for name in MATCHUP_SCRIPTS], "/field.js",
                                    "/variant.js", "/runs-pill.js", "/core.js", *["/" + name for name in CARD_SCRIPTS],
-                               "/library.js", "/library-glance.js", "/library-tables.js", "/cover.js", "/deck-availability.js", "/deck.js", "/deck-header.js", "/deck-overview.js", "/deck-retirement.js", "/deck-rename.js", "/deck-prices.js", "/guide.js", "/stats.js", "/commander-readiness.js", "/commander-night.js", "/practice.js", "/version.js", "/wishlist.js", "/shopping.js", "/shopping-buying.js", "/shopping-queue.js", "/shopping-reprints.js", "/shopping-orders.js", "/shopping-order-edit.js", "/shopping-order-rows.js", "/shopping-order-split.js",
+                               "/library.js", "/library-boxchecks.js", "/library-glance.js", "/library-tables.js", "/cover.js", "/deck-availability.js", "/deck.js", "/deck-header.js", "/deck-overview.js", "/deck-retirement.js", "/deck-rename.js", "/deck-prices.js", "/guide.js", "/stats.js", "/commander-readiness.js", "/commander-night.js", "/practice.js", "/version.js", "/wishlist.js", "/shopping.js", "/shopping-buying.js", "/shopping-queue.js", "/shopping-reprints.js", "/shopping-orders.js", "/shopping-order-edit.js", "/shopping-order-rows.js", "/shopping-order-split.js",
                                *["/" + name for name in PLAY_SCRIPTS], *["/" + name for name in SHELL_SCRIPTS], "/app.js"])
         self.assertEqual(sorted(s.lstrip("/") for s in scripts), sorted(SCRIPTS))
         # Every script in web/ is one the page loads (and so one these tests read).
@@ -442,8 +442,12 @@ class WebFileTests(unittest.TestCase):
             rest = _text(name).replace(helper, "")
             with self.subTest(script=name):
                 self.assertNotRegex(rest, r"method:\s*[\"'`](POST|PUT|PATCH|DELETE)")
-        # The only other fetch() is api()'s, the plain GET.
-        rest = _scripts().replace(helper, "")
+        # Crop Undo reads verified photo bytes with one explicit GET. All other
+        # reads use api(); this exception must not allow another write path.
+        photo = _function(_text("activity-undo.js"), "activityUndoPhotoPreview")
+        self.assertEqual(len(re.findall(r"\bfetch\(", photo)), 1)
+        self.assertEqual(re.findall(r"method:\s*[\"'`](\w+)[\"'`]", photo), ["GET"])
+        rest = _scripts().replace(helper, "").replace(photo, "")
         self.assertEqual(len(re.findall(r"\bfetch\(", rest)), 1)
         self.assertIn("fetch(", _function(rest, "api"))
 
@@ -589,7 +593,9 @@ class WebFileTests(unittest.TestCase):
         # renamed, so neither side spells it any more.)
         script = _scripts()
         server = _lib_text("api")
-        self.assertNotIn("moved_to", script)
+        # Ban the exact legacy identifier; removed_token_row_id is a distinct
+        # stable-row Undo receipt that legitimately contains this substring.
+        self.assertNotRegex(script, r"\bmoved_to\b")
         self.assertNotIn('"moved_to"', server)
         for key in ("did_you_mean", "warning_cards"):
             with self.subTest(key=key):

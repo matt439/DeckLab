@@ -92,6 +92,8 @@ def _editable_components(orders):
     even when pictures and deck counts cannot be read from the card cache.
     """
     snapshot = inventory.current()
+    from . import arrival_checks
+    target_support = arrival_checks.supported()
     edits_products = guard.allowed(guard.viewer(), "orders.edit")
     for record in orders:
         order = snapshot.order(record.get("id"))
@@ -100,8 +102,12 @@ def _editable_components(orders):
         marked = rules.extra_copies(order.audit_notes)
         components = {component.id: component for component in order.components}
         for shown in record.get("components", []):
+            shown.pop("check_links", None)
             component = components.get(shown.get("id"))
-            if component is None or component.status != "pending":
+            if component is None:
+                continue
+            shown.update(arrival_checks.projection(component, [], [], False))
+            if component.status != "pending":
                 continue
             if component.kind in ("cards", "product"):
                 shown["extra_copies"] = component.id in marked
@@ -110,6 +116,7 @@ def _editable_components(orders):
                 if sheet is not None and sheet.readable:
                     fields = order_ops.PAYLOAD_FIELDS[component.kind]
                     shown["edit_rows"] = [{key: row.text(key) for key in fields} for row in sheet.rows]
+                    shown.update(arrival_checks.projection(component, shown["edit_rows"], fields, target_support))
             elif component.kind == "product" and edits_products:
                 product = _editable_product(snapshot, component)
                 if product is not None:

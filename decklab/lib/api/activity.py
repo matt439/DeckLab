@@ -140,6 +140,10 @@ def activity_view(before=None, limit=None, kind=None, actor=None):
             return None
         if actor is not None and shown["actor"] != actor:
             return None
+        from . import activity_undo
+        hint = activity_undo.review_hint(change, shown, viewer)
+        if hint is not None:
+            shown["undo"] = hint
         return shown
 
     with state_errors():

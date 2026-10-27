@@ -1,0 +1,271 @@
+"""Complete batch Undo audit proof and atomicity in disposable PostgreSQL only."""
+import json
+import os
+import tempfile
+from pathlib import Path
+from unittest import mock
+
+from decklab.lib import access, config, inventory
+from decklab.lib.api import activity_undo
+from decklab.lib.inventory import Op, Summary, model, ops_collection, pg, rules, undo
+from decklab.lib.state import Invalid
+from decklab.tests import db_support, test_inventory_undo_pg as existing
+from decklab.tests import test_collection_edit as collection_fixture
+
+
+class BatchUndoPgTests(db_support.DbTestCase):
+    setUp = existing.UndoPgTests.setUp
+    fresh = existing.UndoPgTests.fresh
+    sql = existing.UndoPgTests.sql
+    persisted = existing.UndoPgTests.persisted
+    source = existing.UndoPgTests.source
+
+    @classmethod
+    def setUpClass(cls):
+        root = Path(os.environ["USERPROFILE"]) / "AppData" / "Local" / "Temp" if os.name == "nt" else None
+        folder = tempfile.TemporaryDirectory(prefix="decklab-undo-batch-pg-", dir=root)
+        cls.addClassCleanup(folder.cleanup)
+        path = Path(folder.name) / "config.json"
+        path.write_text(json.dumps(collection_fixture.ROLES), encoding="utf-8")
+        for patcher in (mock.patch.object(config, "CONFIG_FILE", path), mock.patch.dict(os.environ, {config.EXTRA_ENV: ""})):
+            patcher.start()
+            cls.addClassCleanup(patcher.stop)
+        super().setUpClass()
+        if not cls.dbname.startswith(db_support.PREFIX):
+            raise AssertionError("Metadata Undo requires a disposable database")
+        db_support.seed_membership(cls.dbname, collection_fixture.ROLES["profiles"])
+
+    def seed(self, count=2, *, notes=None, notes_only=False):
+        rows = [{"name": "Llanowar Elves", "set": "fdn", "collector_number": str(1000 + index), "finish": "nonfoil",
+                 "quantity": "2", "condition": "" if index % 2 == 0 else "legacy condition",
+                 "language": "" if index % 2 == 0 else "de",
+                 "notes": notes[index] if notes is not None else "Unchanged metadata note " + str(index)}
+                for index in range(count)]
+        class Seed:
+            kind = "fixture.metadata-seed"
+            def run(self, snapshot):
+                old = [row.as_dict() for row in snapshot.collection("home").rows]
+                return snapshot.with_collection("home", [*old, *rows]), Summary("Seed disposable metadata rows")
+        inventory.apply(Seed(), existing.ACTOR, "Fixture metadata seed")
+        edits = [(list(rules.ident(row)), {**row, **({} if notes_only else {"condition": "NM", "language": "en"}),
+                                         **({"notes": "Replaced metadata note " + str(index)} if notes is not None else {})})
+                 for index, row in enumerate(rows)]
+        inventory.apply(Op("collection.apply", {"space": "home", "edits": edits}), existing.ACTOR, "Fixture metadata update")
+        return self.source("collection_card"), rows
+
+    def apply(self, source, plan=None):
+        plan = inventory.undo_review(source, "home") if plan is None else plan
+        return inventory.apply(Op("inventory.undo", {"change_id": source, "space": "home", "expect": plan["expect"]}),
+                               existing.ACTOR, "Undo fixture metadata batch")
+
+    def quantity_seed(self, current, restored, *, main=None, recipe=None, mixed=False):
+        rows = [{"name": "Llanowar Elves", "set": "fdn", "collector_number": str(1000 + index), "finish": "nonfoil",
+                 "quantity": str(quantity), "condition": "", "language": "", "notes": "Exact prior note " + str(index)}
+                for index, quantity in enumerate(restored)]
+        class Seed:
+            kind = "fixture.quantity-seed"
+            def run(self, snapshot):
+                unrelated = [row.as_dict() for row in snapshot.collection("home").rows if row.name != "Llanowar Elves"]
+                after = snapshot.with_collection("home", [*unrelated, *rows])
+                if main:
+                    header = "- **Stand-ins:** " + json.dumps(recipe) + "\n" if recipe else ""
+                    text = "# Physical fixture\n\n- **Format:** Casual 60-card, 1v1\n- **Status:** built\n" \
+                        + header + "\n## Decklist\n\n```\nDeck\n" + main + "\n```\n"
+                    after = after.with_deck(model.Deck("home", "casual", "physical", text))
+                return after, Summary("Seed disposable quantity facts and physical recipe")
+        inventory.apply(Seed(), existing.ACTOR, "Fixture quantity seed")
+        edits = [(list(rules.ident(row)), {**row, "quantity": str(quantity),
+                                         **({"condition": "NM", "language": "en", "notes": "Updated note"} if mixed else {})})
+                 for row, quantity in zip(rows, current)]
+        inventory.apply(Op("collection.apply", {"space": "home", "edits": edits}), existing.ACTOR, "Fixture quantity update")
+        return self.source("collection_card"), rows
+
+    def test_complete_fifty_row_reader_keeps_single_default(self):
+        source, _ = self.seed(50)
+        self.assertEqual(len(self.backend.undo_audit(source)), 2)
+        self.assertEqual(len(self.backend.undo_audit_batch(source)), 50)
+        self.assertEqual(inventory.undo_review(source, "home")["row_count"], 50)
+
+    def test_fifty_first_row_refuses_without_truncated_authority(self):
+        source, _ = self.seed(51)
+        self.assertEqual(len(self.backend.undo_audit_batch(source)), 51)
+        before = self.persisted()
+        with self.assertRaises(undo.UndoMissing):
+            inventory.undo_review(source, "home")
+        self.assertEqual(self.persisted(), before)
+
+    def test_actual_api_restores_full_rows_in_one_new_audit_and_leaves_stock_and_source_unchanged(self):
+        source, rows = self.seed()
+        before = self.persisted()
+        original = self.sql("select id,op,row_key,before,after from audit.row_change where change_set_id=%s order by id", (source,))
+        with access.using({"profile": "matt", "email": "matt@example.com", "remote": True}):
+            preview = activity_undo.undo_view(id=str(source))
+            result = activity_undo.apply_undo(json.dumps({"profile": "matt", "id": source, "expect": preview["expect"]}).encode())
+        self.assertEqual(result["action"], "batch_metadata")
+        self.assertEqual(result["row_count"], 2)
+        expected = {rules.ident(row): {**row, "quantity": int(row["quantity"])} for row in rows}
+        self.assertEqual({rules.ident(item["row"]): item["row"] for item in result["restored_rows"]}, expected)
+        written = self.persisted()
+        self.assertEqual(len(written["audit.change_set"]), len(before["audit.change_set"]) + 1)
+        self.assertEqual(len(written["audit.row_change"]), len(before["audit.row_change"]) + 2)
+        self.assertEqual(self.sql("select id,op,row_key,before,after from audit.row_change where change_set_id=%s order by id", (source,)), original)
+        for table in ("token_card", "deck", "deck_text", "deck_line", "deck_revision", "decks_revision"):
+            self.assertEqual(written[table], before[table], table)
+        self.assertEqual(self.sql("select actor,source,via from audit.change_set order by id desc limit 1"), [("matt", "web", "tunnel")])
+
+    def test_mixed_global_source_never_authorizes_only_home_rows(self):
+        source, _ = self.seed()
+        class Mixed:
+            kind = "fixture.mixed-metadata"
+            def run(self, snapshot):
+                after = snapshot
+                for space in ("home", "user2"):
+                    row = next(row.as_dict() for row in after.collection(space).rows)
+                    after, _ = ops_collection.edit(after, space, list(rules.ident(row)), {**row, "language": "fr"})
+                return after, Summary("Fixture mixed private batch")
+        inventory.apply(Mixed(), existing.ACTOR, "Fixture mixed source")
+        source = self.source("collection_card")
+        before = self.persisted()
+        with self.assertRaises(undo.UndoMissing):
+            inventory.undo_review(source, "home")
+        self.assertEqual(self.persisted(), before)
+
+    def test_notes_only_restore_exact_text_and_empty_with_one_audited_batch(self):
+        notes = ["", 'Quoted "gift", café — 日本語 <b>literal text</b>']
+        source, rows = self.seed(notes=notes, notes_only=True)
+        plan = inventory.undo_review(source, "home")
+        self.assertEqual([[field["field"] for field in item["fields"]] for item in plan["rows"]], [["notes"], ["notes"]])
+        before = self.persisted()
+        original = self.sql("select id,op,row_key,before,after from audit.row_change where change_set_id=%s order by id", (source,))
+        after, summary = self.apply(source, plan)
+        self.assertEqual((summary.counts["edited"], summary.counts["removed"]), (2, 0))
+        self.assertEqual([item["row"]["notes"] for item in undo.restored_rows(after, plan)], notes)
+        self.assertEqual({rules.ident(item["row"]): item["row"] for item in undo.restored_rows(after, plan)},
+                         {rules.ident(row): {**row, "quantity": int(row["quantity"])} for row in rows})
+        written = self.persisted()
+        self.assertEqual(len(written["audit.change_set"]), len(before["audit.change_set"]) + 1)
+        self.assertEqual(len(written["audit.row_change"]), len(before["audit.row_change"]) + 2)
+        self.assertEqual(self.sql("select id,op,row_key,before,after from audit.row_change where change_set_id=%s order by id", (source,)), original)
+        for table in before.keys() - {"collection_card", "inventory_revision", "audit.change_set", "audit.row_change"}:
+            self.assertEqual(written[table], before[table], table)
+
+    def test_notes_with_condition_language_restore_full_actual_rows_through_api(self):
+        source, rows = self.seed(notes=["=literal historical note " + "é" * 600, " \tOriginal\r\nsecond line\rlast line  "])
+        with access.using({"profile": "matt", "email": "matt@example.com", "remote": True}):
+            preview = activity_undo.undo_view(id=str(source))
+            self.assertEqual([[field["field"] for field in item["fields"]] for item in preview["rows"]],
+                             [["condition", "language", "notes"], ["condition", "language", "notes"]])
+            result = activity_undo.apply_undo(json.dumps({"profile": "matt", "id": source, "expect": preview["expect"]}).encode())
+        self.assertEqual(result["restored_rows"], [{"key": item["key"], "row": item["restored"]} for item in preview["rows"]])
+        self.assertEqual({rules.ident(item["row"]): item["row"] for item in result["restored_rows"]},
+                         {rules.ident(row): {**row, "quantity": int(row["quantity"])} for row in rows})
+
+    def test_positive_quantity_api_restores_one_audited_keyed_batch_and_preserves_recipes(self):
+        recipe = {"target": [], "owned": [], "built": {"version": "target",
+                  "cards": [{"for": "Elvish Mystic", "using": "Llanowar Elves", "qty": 1}]}}
+        source, rows = self.quantity_seed([3, 3], [1, 5], main="1 Elvish Mystic\n59 Forest", recipe=recipe, mixed=True)
+        before, snapshot = self.persisted(), self.fresh()
+        original = self.sql("select id,op,row_key,before,after from audit.row_change where change_set_id=%s order by id", (source,))
+        with access.using({"profile": "matt", "email": "matt@example.com", "remote": True}):
+            preview = activity_undo.undo_view(id=str(source))
+            self.assertEqual(preview["action"], "batch_update")
+            result = activity_undo.apply_undo(json.dumps({"profile": "matt", "id": source, "expect": preview["expect"]}).encode())
+        self.assertEqual(result["action"], "batch_update")
+        self.assertEqual(result["restored_rows"], [{"key": item["key"], "row": item["restored"]} for item in preview["rows"]])
+        self.assertEqual({rules.ident(item["row"]): item["row"] for item in result["restored_rows"]},
+                         {rules.ident(row): {**row, "quantity": int(row["quantity"])} for row in rows})
+        written, after = self.persisted(), self.fresh()
+        self.assertEqual(len(written["audit.change_set"]), len(before["audit.change_set"]) + 1)
+        self.assertEqual(len(written["audit.row_change"]), len(before["audit.row_change"]) + 2)
+        self.assertEqual(self.sql("select id,op,row_key,before,after from audit.row_change where change_set_id=%s order by id", (source,)), original)
+        self.assertEqual(after.decks, snapshot.decks)
+        self.assertEqual(after.collection("user2"), snapshot.collection("user2"))
+        for table in before.keys() - {"collection_card", "inventory_revision", "audit.change_set", "audit.row_change"}:
+            self.assertEqual(written[table], before[table], table)
+
+    def test_cumulative_same_name_reductions_refuse_all_rows_and_audit(self):
+        source, _ = self.quantity_seed([3, 3], [1, 1], main="4 Llanowar Elves\n56 Forest")
+        before = self.persisted()
+        with self.assertRaises(undo.UndoConflict):
+            inventory.undo_review(source, "home")
+        with self.assertRaises(undo.UndoConflict):
+            self.apply(source, {"expect": "0" * 64})
+        self.assertEqual(self.persisted(), before)
+
+    def test_net_neutral_printing_offset_does_not_hide_unknown_physical_demand(self):
+        recipe = {"target": [], "owned": [], "built": {"version": "target",
+                  "cards": [{"for": "Elvish Mystic", "using": None, "qty": 1}]}}
+        source, _ = self.quantity_seed([3, 3], [1, 5], main="1 Elvish Mystic\n59 Forest", recipe=recipe)
+        before = self.persisted()
+        with self.assertRaises(undo.UndoConflict):
+            inventory.undo_review(source, "home")
+        self.assertEqual(self.persisted(), before)
+
+    def test_quantity_batch_stale_revisions_aba_and_late_failure_leave_complete_state_unchanged(self):
+        source, _ = self.quantity_seed([3, 3], [1, 5])
+        for table in ("inventory_revision", "decks_revision"):
+            plan = inventory.undo_review(source, "home")
+            with self.connect("owner") as connection:
+                connection.execute("update " + table + " set revision=revision+1")
+            before = self.persisted()
+            with self.subTest(table=table), self.assertRaises(undo.UndoConflict):
+                self.apply(source, plan)
+            self.assertEqual(self.persisted(), before)
+        plan, before = inventory.undo_review(source, "home"), self.persisted()
+        original_diff = pg._diff
+        def late(*args):
+            original_diff(*args)
+            raise Invalid("Synthetic late quantity SQL failure")
+        with mock.patch.object(pg, "_diff", side_effect=late), self.assertRaises(Invalid):
+            self.apply(source, plan)
+        self.assertEqual(self.persisted(), before)
+        row = next(row.as_dict() for row in self.fresh().collection("home").rows if row.collector_number == "1000")
+        for quantity in (4, 3):
+            inventory.apply(Op("collection.edit", {"space": "home", "original": list(rules.ident(row)),
+                                                     "row": {**row, "quantity": quantity}}), existing.ACTOR, "Fixture later quantity touch")
+        before = self.persisted()
+        with self.assertRaises(undo.UndoConflict):
+            inventory.undo_review(source, "home")
+        self.assertEqual(self.persisted(), before)
+
+    def test_one_later_touch_and_both_revisions_block_the_entire_batch(self):
+        source, rows = self.seed()
+        for table in ("inventory_revision", "decks_revision"):
+            with self.subTest(table=table):
+                plan = inventory.undo_review(source, "home")
+                with self.connect("owner") as c:
+                    c.execute("update " + table + " set revision=revision+1")
+                before = self.persisted()
+                with self.assertRaises(undo.UndoConflict):
+                    self.apply(source, plan)
+                self.assertEqual(self.persisted(), before)
+        row = next(row.as_dict() for row in self.fresh().collection("home").rows if rules.ident(row.as_dict()) == rules.ident(rows[0]))
+        for condition in ("LP", "NM"):
+            inventory.apply(Op("collection.edit", {"space": "home", "original": list(rules.ident(row)),
+                                                     "row": {**row, "condition": condition}}), existing.ACTOR, "Fixture later touch")
+        before = self.persisted()
+        with self.assertRaises(undo.UndoConflict):
+            inventory.undo_review(source, "home")
+        self.assertEqual(self.persisted(), before)
+
+    def test_late_sql_failure_rolls_back_every_row_and_same_connection_is_reused(self):
+        source, _ = self.seed(notes=["First note before change", "Second note before change"])
+        plan = inventory.undo_review(source, "home")
+        before = self.persisted()
+        original_diff, original_call = pg._diff, self.backend._call
+        def late(*args):
+            original_diff(*args)
+            raise Invalid("Synthetic late batch SQL failure")
+        with mock.patch.object(pg, "_diff", side_effect=late), self.assertRaises(Invalid):
+            self.apply(source, plan)
+        self.assertEqual(self.persisted(), before)
+        def no_nested(work):
+            self.assertIsNone(getattr(self.backend._applying, "connection", None), "Batch opened another applying connection")
+            return original_call(work)
+        with mock.patch.object(self.backend, "_call", side_effect=no_nested):
+            self.apply(source, plan)
+        saved = self.persisted()
+        with self.assertRaises(undo.UndoConflict):
+            self.apply(source, plan)
+        self.assertEqual(self.persisted(), saved)
+        self.assertIsNone(getattr(self.backend._applying, "connection", None))

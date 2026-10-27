@@ -86,7 +86,7 @@ def adapt(inv):
     """A fixture tree's snapshot as the database can hold it, as the files backend reads it
     (amendment Q2): each payload no record names gets a record of its own (id: its file
     stem, one component named for its kind, blank seller and dates, no sources); a legacy
-    four-column status.csv gets the six-column header; collections are put in sort order; a
+    four- or six-column status.csv gets the current header; collections are put in sort order; a
     collection or tokens file with no rows goes (a space with no cards has no file), except that
     an empty home collection gets one ordinary Plains (FILLER: basics count nowhere), since home
     with no file can't be read by today's pool; a missing watchlist becomes an empty one; the deck parts (phase 4) stay as read. Everything else stays as it is, so what representable()
@@ -105,8 +105,8 @@ def adapt(inv):
         taken.add(f"{order_id}.json")
         orders.append(Order.build(order_id, components=[Component.build(kind, kind, file_name, status)]))
     status = inv.status
-    if status.readable and status.columns == tuple(rules.LEGACY_STATUS_FIELDS):
-        rows = tuple(StatusRow.make({k: row.text(k) for k in rules.LEGACY_STATUS_FIELDS}, line=row.line)
+    if status.readable and status.columns in (tuple(rules.LEGACY_STATUS_FIELDS), tuple(rules.KIT_STATUS_FIELDS)):
+        rows = tuple(StatusRow.make({k: row.text(k) for k in rules.STATUS_FIELDS}, line=row.line)
                      for row in status.rows)
         status = Sheet(status.path, tuple(rules.STATUS_FIELDS), rows, True)
 
@@ -251,8 +251,8 @@ def built_decks_and_kits(t):
     """Built home decks with sleeves and deck boxes, an intact product with its kit, and an
     intact product whose card list isn't there."""
     t.beginner_box()
-    t.write("products/status.csv", STATUS_HEADER + "fdn-beginner-box.csv,owned,yes,black-sleeves,shared-box,\n"
-                                                   "lost-precon.csv,owned,yes,,,\n")
+    t.write("products/status.csv", STATUS_HEADER + "fdn-beginner-box.csv,owned,yes,black-sleeves,shared-box,,\n"
+                                                   "lost-precon.csv,owned,yes,,,,\n")
     t.write("accessories.csv", ACCESSORIES_HEADER + "black-sleeves,sleeves,shared,,Matte,black,100,,,,,,\n"
                                                     "red-sleeves,sleeves,matt,,Matte,red,60,,,,,,\n"
                                                     "shared-box,deck_box,shared,,Box,grey,2,100,,,,,\n")
@@ -322,9 +322,9 @@ def load_golden(name, adapted=False):
 
 
 def expected_p4(dump):
-    """dump normalised by gate_p4.EXPECTED_P4."""
-    from decklab.tests import golden_p4 as gate_p4
-    return gate_p4.normalise(dump)
+    """Documented historical differences, then narrow additive packing compatibility."""
+    from decklab.tests import golden_p4 as gate_p4, golden_packing
+    return golden_packing.normalise(gate_p4.normalise(dump))
 
 
 def _fixture_index():
@@ -589,7 +589,7 @@ def seed_tree(t):
         for n, name in enumerate(("Opt", "Shock", "Duress", "Negate"), 1)))
     t.cards_csv("people/user2/collection.csv", ("Shock", "m19", "156", "nonfoil", 3))
     recorded_orders(t)
-    t.write("products/status.csv", STATUS_HEADER + "precon.csv,preordered,,,,\n")
+    t.write("products/status.csv", STATUS_HEADER + "precon.csv,preordered,,,,,\n")
 
 
 @unittest.skipIf(db_support.unavailable(), db_support.unavailable() or "")

@@ -11,6 +11,17 @@ How Deck Lab's pages are built from shared pieces: the design tokens, the CSS co
 
 The scripts share one global scope, so a name may be defined only once across all of them (`test_web.test_no_name_is_defined_twice`). Nothing in the shared files runs at load. The sheet helpers (`openSheet`, `sheetActions`, `ask`, `busy`, `unbusy`) are in `editor.js`.
 
+Library title, colour-identity and archetype filters use only its already authorized
+summaries. Native Includes choices require every chosen WUBRG colour; known `[]`
+is colourless and null/malformed/unreadable stays unknown. Archetypes match whole
+normalized literal headers. `q`, `color` and `archetype` retain bookmarks alongside
+existing filters. Matching folds open temporarily and lab selection intent stays.
+The phone Filter sheet updates results immediately but defers URL replacement
+until its temporary history entry lands. Exact owner/profile/route/hash/position
+guards preserve Show, Close and Back without a new list read or stale takeover.
+`test_library_metadata_filters_ui.py` and `test_library_filter_history_ui.py`
+cover these contracts alongside the retained native title-search tests.
+
 `commander-readiness.js` follows `stats.js`. `commanderReadiness(data)` is the
 first Commander Overview section, and `commanderDataNote(bracket)` renders the
 same actual source dates and freshness note there and in the Stats panel. Both
@@ -108,6 +119,28 @@ progress, caption or readiness change is introduced.
 per-task identities and patches, pending-save status, polling and Clear/Undo.
 Sorting remains a browser preference. Progress is shared through the server;
 it never changes a deck's status without the explicit Mark as built action.
+The optional last-recorded-update line uses only the latest committed audit change
+for the current task scope: a known home profile's existing avatar colour, an
+absolute semantic date and the count of check updates, including unticks. Unknown
+actors are Someone. This is recorded activity, never an online/presence claim or a
+card-copy count. Identical polls retain the status nodes and Retry focus; changed
+scope, failures and pending tasks outside the current scope hide old metadata.
+Older servers without metadata keep the same usable checks.
+
+The packing recipe may carry per-choice `prefer: [canonical card names]` for
+movable copies. Both allocation passes keep existing copies and unselected
+reservations fixed; only storage/released surplus uses the preferred recipient,
+while arrivals keep their original waiting order. The server returns optional
+per-row `preference_options` and `preferred` only for confirmed, marker-free
+competition, excluding both saved versions' configured and installed mappings.
+The overlap's native select and Reset alter only the existing read-only preview
+recipe. Priorities remain in completion/context fingerprints, copy through
+product-review returns, and clear on the affected version/sideboard change.
+Stale/busy controls restore accepted values. Success/error redraws repair only
+owned focus to a fresh select, Reset, notice heading or attached chooser control;
+later focus and modal work win. After a rejected preview, Reset remains available
+without replaying old instructions. Tests are `test_assembly_preferences.py` and
+`test_assembly_preference_ui.py`.
 
 `assembly-sheets.js` follows the progress script. Its final review collects the
 built list and kit for one save, and its stand-in chooser saves only planned
@@ -116,6 +149,28 @@ late work checks the original viewer, route and plan. Anonymous spare markers
 have required card-task ticks; optional kit and token ticks stay optional.
 `deck-standins.js` supplies the inventory-visible mappings. Overview links to
 the represented card's rules; the printed play sheet records the text mapping.
+
+A built ordinary participant may expose `take_apart` from its saved physical
+assembly, or the defined legacy built-list fallback. All sections, basics,
+installed markers and recorded packed tokens are separate from current selected
+instructions; kit refs reuse existing visibility. Unavailable or malformed
+metadata never becomes an intended-list checklist. Its native local checks do
+not use shared progress. Only the explicit status-only deck save uses the reviewed
+SHA; all checks and edit eligibility are required. Success reconciles only the
+original owner, removes that participant and previews the remaining recipe.
+Uncertain/refused writes require Refresh rather than another save. Modal and
+focus guards retain later work, and known success still reconciles after Close.
+`test_assembly_takeapart.py` and `test_assembly_takeapart_ui.py` cover these rules.
+
+Build decks groups optional verified `held_elsewhere[].intact_product` evidence
+by its opaque product id, using one actual supplied readable deck route for the
+existing Product storage review. Only short/waiting cards contribute. The link
+keeps one in-memory, profile/address-scoped recipe after shared checks settle;
+Browser Back consumes it once and re-previews before showing card instructions.
+A refresh failure keeps choices for explicit Retry, never old counts. Pending or
+uncertain checks show guidance. No product mutation or transfer is automatic.
+`test_assembly_products.py` and `test_assembly_product_review_ui.py` guard source,
+privacy, multi-deck grouping and navigation/refresh ownership.
 
 Saved Editor headers use the casual Editing/name/stripe frame and the original
 lab context from 1000px. `editorDraftIdentity()` reads loaded cards with canonical
@@ -172,6 +227,28 @@ The side track reserves list width, and the named `editor-cards` container uses
 two-line full List rows at most 600px wide. Keep actual printing, cost and
 availability visible. Checks headings switch real classes rather than overriding
 the shared sr-only rule. Full Editor peek stays suppressed.
+
+Full List rows retain their mana costs beside numeric MV; the native MV button
+reverses sorting within each existing group. Unknown values remain unknown and
+sort last. Sort moves only presentation nodes, leaving the focused row attached
+and saved/request order intact. Changed rows use the teal row treatment only
+while no warning/block style applies.
+
+The bar retains change counts, copy deltas, Undo and guarded Discard alongside
+its original controls. Its split Save is one retained group. Phone history
+actions use two rows in the same native focus order; bar height remains measured
+by the Dock. `editor-forge.js` shows optional saved evidence only after exact
+ID/version/playable-fingerprint matching and current page/person/frame checks.
+The API computes hashes from the parsed edit snapshot; field cache identity
+includes version. Missing evidence supplies no numbers; partial coverage stays
+explicit.
+
+An unchecked post-save field choice is transient and available only for a full
+saved writable list. Simulation updates refresh its control/reason. A successful
+save submits at most once with the returned playable fingerprint, then finalizes
+the saved UI immediately. Deferred run outcomes update only the owned message;
+they never reload an editor, remove a draft or retry. Save-and-view receipts are
+profile-scoped. The read-only evidence path never starts games.
 
 `editorCurveBaseline()` compares only the current actual saved edit/version,
 including a readable trial, never a new/copy/unstarted list. Saved quantities

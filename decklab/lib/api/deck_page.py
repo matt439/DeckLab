@@ -63,12 +63,15 @@ def decks_index():
 
     A built ordinary deck also has "assembled": its saved physical main/sideboard
     counts and the real Planned cards still outside that build (assembly_intent.project).
+    A readable ordinary home built deck has "box_check": {checked_on: ISO date or None}
+    only for viewers of home's records and inventory. None means no reliable date
+    was recorded; it makes no claim about whether the physical box was checked.
 
     missing, on_the_way, availability_confirmed, assembled and tokens are left out of a
     deck whose space's inventory the visitor may not see (the phase 4
     design's R6d, guard.sees_inventory), and that space's pool isn't read."""
     _require_cards()
-    summaries = guard.visible_decks(decks.list_decks())
+    summaries = [dict(summary) for summary in guard.visible_decks(decks.list_decks())]
     opponents = usual_opponent_ids(summaries)
     add_usual_opponents(summaries, opponents)
     warnings = []
@@ -80,6 +83,7 @@ def decks_index():
     kits = _index_kits(summaries) if sees else None
     token_briefs = _index_tokens()
     for summary in summaries:
+        summary.pop("box_check", None)  # Always project private metadata afresh for this request.
         space = summary.get("space", spaces.HOME)
         if guard.sees_inventory(space):
             if space not in pools:
@@ -120,12 +124,12 @@ def _index_counts(summary, p, warnings):
     summary["missing"] = missing
     summary["on_the_way"] = waiting
     summary["availability_confirmed"] = confirmed
-    assembled = _assembled_view(summary, p, warnings, result=intended)
+    assembled = _assembled_view(summary, p, warnings, result=intended, check_date=True)
     if assembled is not None:
         summary["assembled"] = assembled
 
 
-def _assembled_view(summary, p, warnings, *, deck=None, result=None):
+def _assembled_view(summary, p, warnings, *, deck=None, result=None, check_date=False):
     """Inventory-only physical build and retained Planned intent; optional when unreadable."""
     if summary.get("status") != "built" or summary.get("error") or summary["id"].startswith(("product/", "pairing/")):
         return None
@@ -134,6 +138,12 @@ def _assembled_view(summary, p, warnings, *, deck=None, result=None):
             from decklab.lib.inventory.ops_decks import parsed_deck
             record = inventory.current().deck(summary["id"])
             deck = parsed_deck(record) if record is not None else None
+        # Reuse this already parsed request-snapshot record; public inventory or
+        # public decks alone never publish home's historical physical-check date.
+        if check_date and deck is not None and deck.space == spaces.HOME and deck.kind in decks.KINDS \
+                and deck.status == "built" and guard.sees_home_records() and guard.sees_inventory(spaces.HOME):
+            from decklab.lib.decks import boxcheck
+            summary["box_check"] = {"checked_on": boxcheck.checked_on(deck)}
         from .assembly_intent import project
         return project(deck, p, result)
     except (decks.DeckNotFound, decks.DeckFileError, OSError, ValueError) as error:
@@ -281,15 +291,18 @@ def _view_tokens(summary, version, sections, info):
     result = _deck_tokens(summary["id"], version, sections, inv, inc,
                           tokens.reserve.held_elsewhere(holds, summary["id"]))
     result = _with_shared(_with_examples(result), summary, inv, inc, holds)
-    if isinstance(result, dict) and "needs" in result and summary.get("status") == "built" \
-            and not summary["id"].startswith("product/"):
-        packed = _packed(summary, inv, holds, result)
-        if packed["written"] or packed["choices"]:     # nothing to say or choose: no part (as before)
+    from decklab.lib.tokens import products as product_tokens
+    product = product_tokens.for_route(summary["id"]) if guard.sees_home_records() \
+        and summary["id"].startswith("product/") else None
+    if isinstance(result, dict) and "needs" in result and (product is not None or
+            summary.get("status") == "built" and not summary["id"].startswith("product/")):
+        packed = _packed(summary, inv, holds, result, product=product)
+        if product is not None or packed["written"] or packed["choices"]:
             result = dict(result, packed=packed)
     return result
 
 
-def _packed(summary, inv, holds, result):
+def _packed(summary, inv, holds, result, product=None):
     """A built deck's packed token cards, for its Tokens part: {"written": whether its text has a
     Token cards line, "lines": [{"text", "quantity", "rows": [{row, front, back, quantity}]}]
     (the line's cards, by the rows that hold them; rows [] for a line no token card matches),
@@ -299,23 +312,38 @@ def _packed(summary, inv, holds, result):
     "tokens_sha256" (the token cards' list the rows index), for POST /api/deck/token-cards;
     "error" when the line can't be read}."""
     from decklab.lib.inventory.ops_decks import parsed_deck
-    stored = inventory.current().deck(summary["id"])
-    base = {"expect": stored.sha256 if stored is not None else None, "tokens_sha256": inv.sha256}
-    try:
-        parsed = parsed_deck(stored)
-        lines = decks.token_cards(parsed) if parsed is not None else []
-        written = parsed is not None and decks.has_token_cards(parsed)
-    except decks.DeckFileError as e:
-        return {**base, "written": True, "lines": [], "choices": [], "error": _scrub([str(e)])[0]}
-    hold = holds.get(summary["id"], {"rows": {}, "unmatched": []})
+    snapshot = inventory.current()
+    holder = product["holder"] if product is not None else summary["id"]
+    base = {"tokens_sha256": inv.sha256}
+    if product is not None:
+        from .product_tokens import status_sha256
+        receipt = status_sha256(snapshot)
+        base.update(expect=receipt, product={"stem": product["product"].stem, "status_sha256": receipt},
+                    editable=guard.allowed(guard.viewer(), "products.edit"))
+        lines, written = product["lines"], product["written"]
+        if product["error"]:
+            return {**base, "written": written, "lines": [], "choices": [], "editable": False,
+                    "error": product["error"]}
+    else:
+        stored = snapshot.deck(summary["id"])
+        base["expect"] = stored.sha256 if stored is not None else None
+        try:
+            parsed = parsed_deck(stored)
+            lines = decks.token_cards(parsed) if parsed is not None else []
+            written = parsed is not None and decks.has_token_cards(parsed)
+        except decks.DeckFileError as e:
+            return {**base, "written": True, "lines": [], "choices": [], "error": _scrub([str(e)])[0]}
+    hold = holds.get(holder, {"rows": {}, "unmatched": []})
     out = []
     for line in lines:
         rows = [i for i in sorted(hold["rows"]) if tokens.reserve.matches(line, inv.rows[i])]
         out.append({"text": line.text(), "quantity": line.quantity,
                     "rows": [{"row": i, "front": inv.rows[i]["front"], "back": inv.rows[i]["back"],
                               "quantity": hold["rows"][i]} for i in rows]})
-    elsewhere = tokens.reserve.held_elsewhere(holds, summary["id"])
-    offered = set(hold["rows"])
+    elsewhere = tokens.reserve.held_elsewhere(holds, holder)
+    # A product shares one box across all its generated deck routes, so its picker
+    # may choose any owned token row, even when this subdeck does not make that token.
+    offered = set(range(len(inv.rows))) if product is not None else set(hold["rows"])
     for need in result.get("needs", []):
         offered.update(c["row"] for c in need.get("cards", []))
         offered.update(c["row"] for c in need.get("stand_ins", []) if not c.get("close"))
@@ -353,7 +381,9 @@ def _with_shared(result, summary, inv, inc, holds=None):
 
     def others(row):
         holders = _seen_holders(shared.get(row, []), sees)
-        return [h for h in holders if h["deck"] != summary["id"]] if holders else []
+        from decklab.lib.tokens.products import holder_id
+        own = holder_id(summary["id"])
+        return [h for h in holders if h["deck"] != own] if holders else []
     if not any(others(card["row"]) for need in needs for card in need.get("cards") or []):
         return result
     out = dict(result)
@@ -594,6 +624,9 @@ def deck_view(deck_id, version="target", omit=()):
             answer["commander_night"] = night
     if sees:
         answer.update(owned=owned, tokens=_view_tokens(summary, version, sections, info), table=table)
+        if deck_file is not None and space == spaces.HOME and guard.sees_home_records():
+            from decklab.lib.decks import boxcheck
+            answer["box_checked_on"] = boxcheck.checked_on(deck_file)
         from .assembly_standins import project
         answer["standins"] = project(deck_file, version) if deck_file is not None else None
         assembled = _assembled_view(summary, p, warnings, deck=deck_file, result=owned if version == "target" else None)

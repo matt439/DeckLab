@@ -134,6 +134,12 @@ def register(sub):
                     help="who plays it (home only; default the --actor's plays_as, else no Played by line)")
     sp.add_argument("-m", "--message", required=True, help="what the change does, for the history")
     sp.add_argument("--dry-run", action="store_true", help="show what it would add and make; save nothing")
+    sp.add_argument("--add-tokens", action="store_true",
+                    help="also add token entries with explicit source counts; printing and reverse face stay unconfirmed")
+    sp.add_argument("--token-rows", metavar="FILE",
+                    help="confirmed physical token choices as CSV: source_row,front,quantity (0 skips an entry)")
+    sp.add_argument("--tokens-source-sha256", metavar="SHA",
+                    help="full source SHA shown by --dry-run; required with --token-rows")
     cli_actor.add_argument(sp)
     sp.set_defaults(func=_add_precon)
 
@@ -639,13 +645,73 @@ def _api_refusal(e):
     """The exit code (and stderr) for a refusal of the page's precon code (an ApiError): 2 when the
     database can't be reached, else 1, with each problem it lists."""
     print(f"Not added: {e.message}", file=sys.stderr)
-    for problem in (e.extra or {}).get("problems") or ():
+    problems = list((e.extra or {}).get("problems") or ())
+    problems.extend((e.extra or {}).get("token_problems") or ())
+    for problem in problems:
         line = problem.get("line")
         print(f"  {f'line {line}: ' if line else ''}{problem.get('message')}", file=sys.stderr)
     conflict = (e.extra or {}).get("conflict")
     if conflict and conflict.get("id"):
         print(f"  The deck {conflict['id']} already has that name: give another --title.", file=sys.stderr)
     return 2 if e.status == 503 else 1
+
+
+def _precon_token_choices(args):
+    try:
+        return _read_precon_token_choices(args)
+    except (csv.Error, UnicodeError):
+        raise ValueError("The token choices file must be a readable UTF-8 CSV with source_row,front,quantity") from None
+
+
+def _read_precon_token_choices(args):
+    """Read the deliberately small confirmation file, without changing the source cache."""
+    from decklab.lib import precon_tokens, precons
+    path, source_sha = args.token_rows, args.tokens_source_sha256
+    if not path:
+        if source_sha is not None:
+            raise ValueError("--tokens-source-sha256 needs --token-rows")
+        return {}
+    if not args.add_tokens:
+        raise ValueError("--token-rows needs --add-tokens")
+    if not isinstance(source_sha, str) or not re.fullmatch(r"[0-9a-f]{64}", source_sha):
+        raise ValueError("--token-rows needs --tokens-source-sha256 with the full source SHA from --dry-run")
+    file = Path(path)
+    if file.stat().st_size > 64 * 1024:
+        raise ValueError("The token choices CSV is too large")
+    with file.open(encoding="utf-8-sig", newline="") as stream:
+        reader = csv.DictReader(stream, strict=True)
+        fields = reader.fieldnames
+        if fields is None or len(fields) != 3 or set(fields) != {"source_row", "front", "quantity"}:
+            raise ValueError("The token choices CSV needs exactly these columns: source_row,front,quantity")
+        choices = []
+        for row in reader:
+            if len(choices) >= precon_tokens.MAX_ROWS:
+                raise ValueError("The token choices CSV has too many source entries")
+            if set(row) != set(fields) or any(value is None for value in row.values()):
+                raise ValueError("Every token choices CSV row needs source_row,front,quantity")
+            source_row, quantity = row["source_row"].strip(), row["quantity"].strip()
+            if not re.fullmatch(r"[0-9]{1,6}", source_row) or not 1 <= int(source_row) <= precon_tokens.MAX_ROWS:
+                raise ValueError("source_row must be a source token entry number from --dry-run")
+            if not re.fullmatch(r"[0-9]{1,6}", quantity) or not 0 <= int(quantity) <= precons.MAX_COUNT:
+                raise ValueError(f"quantity must be a whole number from 0 to {precons.MAX_COUNT}; 0 skips an entry")
+            choices.append({"source_row": int(source_row), "front": row["front"].strip(), "quantity": int(quantity)})
+    return {"tokens_choices": choices, "tokens_source_sha256": source_sha}
+
+
+def _precon_token_offer(candidate):
+    """Show public row meanings and their receipt, even when physical counts are absent."""
+    from decklab.lib import precon_tokens
+    options = candidate.get("options", [])
+    if not options:
+        return
+    print(f"Token source SHA: {precon_tokens.source_sha256(candidate)}")
+    print("Token choices CSV columns: source_row,front,quantity; include every source entry, using 0 to skip.")
+    for item in options:
+        quantity = f"declared quantity {item['quantity']}" if item["quantity"] is not None else "physical quantity unknown"
+        fronts = " | ".join(item["fronts"]) or "unavailable"
+        print(f"  Source token entry {item['source_row']}: {item['source_name']}; fronts: {fronts}; {quantity}.")
+    for problem in candidate.get("choice_problems", []):
+        print(f"  Token choice unavailable: {problem['message']}")
 
 
 def _add_precon(args):
@@ -661,6 +727,7 @@ def _add_precon(args):
     space = _space(args.space)
     if not args.message.strip():
         raise ValueError("-m needs a message saying what this change does")
+    token_params = _precon_token_choices(args)
     actor = cli_actor.resolve(args)
     player = args.played_by
     if player and args.space != spaces.HOME:
@@ -670,7 +737,7 @@ def _add_precon(args):
     try:
         # Checked with no profile: a script naming nobody may write every space, as the command line does.
         made = page.plan_add(args.space, args.code, args.title, {"player": player} if player else None, None,
-                             actor.name)
+                             actor.name, add_tokens=args.add_tokens, **token_params)
     except common.ApiError as e:
         return _api_refusal(e)
     built, plan, whose = made["built"], made["plan"], made["whose"]
@@ -679,7 +746,7 @@ def _add_precon(args):
     sections = ", ".join(f"{s} {sum(c['qty'] for c in lines)}" for s, lines in built["sections"].items())
     left = [f"{built['dropped']} ordinary basic lands"] if built["dropped"] else []
     left += [f"{n} {what}" for what, n in built["left_out"].items()]
-    tokens = ", ".join(f"{t['count']} {t['name']}" for t in built["tokens"])
+    tokens = page._token_words(built)
     if args.dry_run:
         print(f"Would add the {entry['name']} precon ({entry['set_name'] or entry['code'].upper()}, {entry['type']}) "
               f"to {whose}: {_plural(cards, 'card')} in {_plural(len(good), 'row')}.")
@@ -690,8 +757,16 @@ def _add_precon(args):
         print(f"Would make {made['deck_id']} ({plan['title']}), a built {plan['kind']} deck: {sections}.")
         if made["table"].get("note"):
             print(made["table"]["note"])
-        if tokens:
+        candidate = built["token_candidates"]
+        if args.add_tokens:
+            quantities = "confirmed physical quantities" if args.token_rows else "quantities as declared by MTGJSON"
+            print(f"Would add {_plural(candidate['cards'], 'token card')} in {_plural(len(candidate['rows']), 'separate row')}; "
+                  f"{quantities}, printing and reverse face unconfirmed.")
+            for item in candidate["rows"]:
+                print(f"  {item['row']['quantity']} {item['row']['front']} (source token entry {item['source_row']}; check physical pairing)")
+        elif tokens:
             print(f"Its token cards (in its Notes, not added to the token cards): {tokens}.")
+        _precon_token_offer(candidate)
         print("Nothing saved (--dry-run).")
         return 0
     try:
@@ -709,6 +784,9 @@ def _add_precon(args):
     from decklab.db import inv_decks
     inv_decks.stale_notes(args.space, exclude=(made["deck_id"],), other=True)
     added = counts.get("cards", 0) if good else 0
+    if args.add_tokens:
+        print(f"Added {_plural(counts['token_cards'], 'token card')} in {_plural(counts['token_rows'], 'separate row')}; "
+              "printing and reverse face unconfirmed.")
     print(f"Added {_plural(added, 'card')} ({counts.get('added_rows', 0) if good else 0} new rows) to {whose} "
           f"and made {made['deck_id']}.")
     return 0

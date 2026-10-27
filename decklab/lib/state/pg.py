@@ -534,18 +534,10 @@ class PgStore:
                 with self._change(c, actor, message, profile_ids=(pid,), orphan_profile_ids=orphans) as (cur, _):
                     self._lock(cur, f"wishlist:{pid}")
                     entries, positions = self._entries(cur, pid)
-                    if rules.add_plan(entries, new) == "exists":
-                        raise _Unchanged((False, entries))
-                    position, moves = rules.insert_slot(positions, at)
-                    for old, moved in moves:        # highest first: each into a free position
-                        cur.execute("update wishlist_entry set position = %s where profile_id = %s "
-                                    "and position = %s", (moved, pid, old))
-                    cur.execute("insert into wishlist_entry (profile_id, position, name, set_code, "
-                                "collector_number, notes, source) values (%s, %s, %s, %s, %s, %s, %s)",
-                                (pid, position, new["name"], new["set"] or None,
-                                 new["number"] or None, new["notes"], new["source"]))
-                    index = len(entries) if at is None else min(at, len(entries))
-                    return True, entries[:index] + [new] + entries[index:]
+                    changed, result = self._wishlist_add_at(cur, pid, entries, positions, new, at=at)
+                    if not changed:
+                        raise _Unchanged((False, result))
+                    return changed, result
             except _Unchanged as u:
                 return u.result
             except psycopg.errors.UniqueViolation:
@@ -567,12 +559,10 @@ class PgStore:
                 with self._change(c, actor, message, reason, profile_ids=(pid,), orphan_profile_ids=orphans) as (cur, _):
                     self._lock(cur, f"wishlist:{pid}")
                     entries, positions = self._entries(cur, pid)
-                    i = rules.find(entries, name)
-                    if i is None:
-                        raise _Unchanged((False, entries))
-                    cur.execute("delete from wishlist_entry where profile_id = %s and position = %s",
-                                (pid, positions[i]))
-                    return True, entries[:i] + entries[i + 1:]
+                    changed, result = self._wishlist_remove_at(cur, pid, entries, positions, name)
+                    if not changed:
+                        raise _Unchanged((False, result))
+                    return changed, result
             except _Unchanged as u:
                 return u.result
         return self._call(work)
@@ -592,20 +582,60 @@ class PgStore:
                 with self._change(c, actor, message, profile_ids=(pid,), orphan_profile_ids=orphans) as (cur, _):
                     self._lock(cur, f"wishlist:{pid}")
                     entries, positions = self._entries(cur, pid)
-                    i = rules.find(entries, name)
-                    if i is None:
-                        raise Invalid(f"{name} isn't on the wishlist")
-                    new = rules.edited(entries[i], notes=notes, source=source, set=set, number=number)
-                    if new == entries[i]:
-                        raise _Unchanged((False, entries))
-                    cur.execute("update wishlist_entry set set_code = %s, collector_number = %s, notes = %s, "
-                                "source = %s where profile_id = %s and position = %s",
-                                (new["set"] or None, new["number"] or None, new["notes"], new["source"],
-                                 pid, positions[i]))
-                    return True, entries[:i] + [new] + entries[i + 1:]
+                    changed, result = self._wishlist_set_at(cur, pid, entries, positions, name,
+                                                          notes=notes, source=source, set=set, number=number)
+                    if not changed:
+                        raise _Unchanged((False, result))
+                    return changed, result
             except _Unchanged as u:
                 return u.result
         return self._call(work)
+
+    @staticmethod
+    def _wishlist_add_at(cur, pid, entries, positions, new, *, at=None):
+        """Ordinary insertion, including its existing duplicate/no-op and position rules."""
+        new = rules.entry(new)
+        if rules.add_plan(entries, new) == "exists":
+            return False, entries
+        position, moves = rules.insert_slot(positions, at)
+        for old, moved in moves:
+            cur.execute("update wishlist_entry set position=%s where profile_id=%s and position=%s", (moved, pid, old))
+        cur.execute("insert into wishlist_entry(profile_id,position,name,set_code,collector_number,notes,source) "
+                    "values(%s,%s,%s,%s,%s,%s,%s)", (pid, position, new["name"], new["set"] or None,
+                    new["number"] or None, new["notes"], new["source"]))
+        index = len(entries) if at is None else min(at, len(entries))
+        return True, entries[:index] + [new] + entries[index:]
+
+    @staticmethod
+    def _wishlist_remove_at(cur, pid, entries, positions, name):
+        """Ordinary casefold removal on the same admitted/locked connection."""
+        i = rules.find(entries, name)
+        if i is None:
+            return False, entries
+        cur.execute("delete from wishlist_entry where profile_id=%s and position=%s", (pid, positions[i]))
+        return True, entries[:i] + entries[i + 1:]
+
+    @staticmethod
+    def _wishlist_set_at(cur, pid, entries, positions, name, **fields):
+        """The ordinary setter on an already admitted/locked cursor; never opens a connection."""
+        i = rules.find(entries, name)
+        if i is None:
+            raise Invalid(f"{name} isn't on the wishlist")
+        new = rules.edited(entries[i], **fields)
+        if new == entries[i]:
+            return False, entries
+        cur.execute("update wishlist_entry set set_code = %s, collector_number = %s, notes = %s, "
+                    "source = %s where profile_id = %s and position = %s",
+                    (new["set"] or None, new["number"] or None, new["notes"], new["source"], pid, positions[i]))
+        return True, entries[:i] + [new] + entries[i + 1:]
+
+    def wishlist_undo_review(self, change_id, profile_id):
+        from . import pg_wishlist_undo
+        return pg_wishlist_undo.preview(self, change_id, profile_id)
+
+    def wishlist_undo_apply(self, change_id, profile_id, expect, actor, message):
+        from . import pg_wishlist_undo
+        return pg_wishlist_undo.apply(self, change_id, profile_id, expect, actor, message)
 
     # ------------------------------------------------------------------ settings
 
@@ -677,6 +707,34 @@ class PgStore:
         """Checked physical-task hashes among ids. Shared by home, never per profile."""
         ids = rules.packing_ids(ids)
         return self._call(lambda c: self._packing_ticks(c.cursor(), ids))
+
+    def packing_activity(self, ids):
+        """Latest recorded tick/untick change affecting the requested task hashes, or None.
+
+        Return only its raw actor id, UTC timestamp and matching audit-row count. The table-name
+        filter uses the existing audit index; unrelated rows and task identities never leave SQL.
+        This read neither writes audit rows nor claims the actor is currently packing or online.
+        The current thread's unfinished batch is excluded until it commits, as in MemoryStore.
+        """
+        ids = rules.packing_ids(ids)
+        if not ids:
+            return None
+
+        def work(c):
+            batch = self._batch()
+            pending = batch.change_set if batch is not None else None
+            # Change sets are allocated before the packing lock. Audit-row IDs follow the actual
+            # serialized packing writes, even when an earlier transaction takes that lock later.
+            row = c.execute("with latest as (select r.change_set_id as id from audit.row_change r "
+                            "where r.table_name = 'packing_tick' and r.row_key->>'id' = any(%s::text[]) "
+                            "and (%s::bigint is null or r.change_set_id <> %s) order by r.id desc limit 1) "
+                            "select c.actor, c.at, count(r.id) from latest l "
+                            "join audit.change_set c on c.id = l.id "
+                            "join audit.row_change r on r.change_set_id = c.id "
+                            "where r.table_name = 'packing_tick' and r.row_key->>'id' = any(%s::text[]) "
+                            "group by c.id, c.actor, c.at", (ids, pending, pending, ids)).fetchone()
+            return {"actor": row[0], "at": row[1].astimezone(timezone.utc).isoformat(), "checks": row[2]} if row else None
+        return self._call(work)
 
     def packing_ticks_put(self, changes, actor, message, *, ids=None):
         """Atomically patch individual tasks, returning checked hashes within ids.

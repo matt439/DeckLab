@@ -224,7 +224,7 @@ class PageSourceTests(unittest.TestCase):
         self.assertIn("onClose: () => clearTimeout(ctx.timer)", _function(script, "openPreconSheet"))
         add = _function(script, "addPrecon")
         self.assertIn("state.saved = { hash", add)
-        self.assertIn("error.status === 500 || !error.data", add)
+        self.assertIn("error.status >= 500 || !error.data", add)
         self.assertIn("data.blocks", add)
         self.assertIn("a.precon", _function(_text("editor-deckpage.js"), "savedBox"))
         self.assertIn("cv.token === routeToken", _function(script, "colActive"))

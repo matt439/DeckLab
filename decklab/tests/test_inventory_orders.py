@@ -50,8 +50,8 @@ def orders_tree(t):
     t.cards_csv("collection.csv", ("Llanowar Elves", "fdn", "227", "nonfoil", 2))
     t.product("fdn-beginner-box.csv", ("Elves", "Llanowar Elves", 1))
     t.product("precon.csv", ("Main", "Elvish Mystic", 1), column="section")
-    t.write("products/status.csv", STATUS_HEADER + "fdn-beginner-box.csv,owned,yes,black-sleeves,shared-box,\n"
-                                                   "precon.csv,preordered,,,,due soon\n")
+    t.write("products/status.csv", STATUS_HEADER + "fdn-beginner-box.csv,owned,yes,black-sleeves,shared-box,,\n"
+                                                   "precon.csv,preordered,,,,due soon,\n")
     t.write("orders/records/product-fdn-beginner-box.json", record_json(
         "product-fdn-beginner-box", "", "", [component("product-fdn-beginner-box", "product",
                                                        "magic/products/fdn-beginner-box.csv", "received")]))
@@ -159,7 +159,7 @@ class OrderOps:
                          ["alpha-deck.csv", "fdn-beginner-box.csv", "precon.csv"])
         self.assertEqual(after.status.rows[0].as_dict(), {"file": "alpha-deck.csv", "status": "ordered",
                                                           "intact": "", "sleeves": "", "deck_box": "",
-                                                          "notes": "preorder"})
+                                                          "notes": "preorder", "token_cards": ""})
         queue = self.queue()
         self.assertEqual([(r["name"], r["quantity"]) for r in queue],
                          [("Elvish Mystic", "1"), ("Sol Ring", "1"), ("Sol Ring", "1")])
@@ -429,7 +429,7 @@ class OrderOps:
     def test_keeping_a_product_intact_or_breaking_it_up(self):
         after, _ = self.op("product.set_intact", stem="fdn-beginner-box", intact="no")
         self.assertEqual(after.status.rows[0].as_dict(), {"file": "fdn-beginner-box.csv", "status": "owned",
-                                                          "intact": "no", "sleeves": "", "deck_box": "", "notes": ""})
+                                                          "intact": "no", "sleeves": "", "deck_box": "", "notes": "", "token_cards": ""})
         after, _ = self.op("product.set_intact", stem="fdn-beginner-box", intact="yes")
         self.assertEqual(after.status.rows[0].text("intact"), "yes")
         self.refused("only an owned product", "product.set_intact", stem="precon", intact="yes")
@@ -518,8 +518,8 @@ class FileOrderOpsTests(OrderOps, unittest.TestCase):
             "name,set,collector_number,finish,quantity,rarity,notes\nSol Ring,ecc,57,nonfoil,1,uncommon,\n",
             encoding="utf-8", newline="\n")
         (self.root / "magic/products/status.csv").write_text(
-            STATUS_HEADER + "fdn-beginner-box.csv,owned,yes,black-sleeves,shared-box,\nloose.csv,owned,no,,,\n"
-                            "precon.csv,preordered,,,,due soon\n", encoding="utf-8", newline="\n")
+            STATUS_HEADER + "fdn-beginner-box.csv,owned,yes,black-sleeves,shared-box,,\nloose.csv,owned,no,,,,\n"
+                            "precon.csv,preordered,,,,due soon,\n", encoding="utf-8", newline="\n")
         (self.root / "magic/orders/records/product-loose.json").write_text(record_json(
             "product-loose", "", "", [component("product-loose", "product", "magic/products/loose.csv", "received")]),
             encoding="utf-8", newline="\n")
@@ -530,7 +530,7 @@ class FileOrderOpsTests(OrderOps, unittest.TestCase):
 
     def test_a_problem_already_there_doesnt_stop_an_unrelated_change(self):
         (self.root / "magic/products/status.csv").write_text(
-            STATUS_HEADER + "fdn-beginner-box.csv,owned,yes,,,\nlost.csv,owned,no,,,\nprecon.csv,preordered,,,,\n",
+            STATUS_HEADER + "fdn-beginner-box.csv,owned,yes,,,,\nlost.csv,owned,no,,,,\nprecon.csv,preordered,,,,,\n",
             encoding="utf-8", newline="\n")
         self.op("watchlist.remove", select="#4")
         self.assertEqual(len(self.queue()), 3)

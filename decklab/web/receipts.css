@@ -131,6 +131,15 @@
 }
 
 .rcpt-flag { cursor: help; }
+.rcpt-row-checks { min-width: 0; margin: var(--s-2) 0; padding: var(--s-2); border-left: 2px solid var(--warn-ink);
+  color: var(--ink-2); font-size: var(--fs-meta); overflow-wrap: anywhere; }
+.rcpt-row-checks p { margin: 0 0 var(--s-1); }
+.rcpt-row-checks ul { margin: 0; padding-left: var(--s-4); }
+.rcpt-row-check-controls .rcpt-check { min-height: 44px; padding: var(--s-2) 0; }
+.rcpt-check-scope { display: block; margin-top: var(--s-1); color: var(--ink-2); font-size: var(--fs-meta); overflow-wrap: anywhere; }
+.rcpt-row-checks.has-check-control > .rcpt-row-check-context { display: none; }
+.rcpt-row > .rcpt-row-checks { grid-column: 2; }
+.card-tile > .rcpt-row-checks { grid-column: 1 / -1; }
 
 /* A card checked as received: darker than other pages' ticked tiles (cards-ui.css), so what's
    still to find in a mixed parcel stands out. */

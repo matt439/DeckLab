@@ -80,6 +80,7 @@ def merge_orders(inv, *, order, others, renames=(), notes=None, repo="."):
             ids[c.id] = _component_id(new_id, taken, f"{order}.json")
             item = c.record()
             item["id"] = ids[c.id]
+            item.pop("check_links", None)  # Moved checks remain general; no cross-order row binding.
             record["components"].append(item)
         extra += [ids[cid] for cid in rules.extra_copies(o.audit_notes) if cid in ids]
         if theirs is not None:

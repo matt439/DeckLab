@@ -44,7 +44,7 @@ function deckActions(data) {
 /** The box at the top of the deck page after a save (state.saved), once. */
 function savedBox(id) {
   const saved = state.saved;
-  if (!saved || saved.hash !== location.hash) return null;
+  if (!saved || saved.hash !== location.hash || saved.profile && saved.profile !== state.profile?.id) return null;
   const a = saved.answer;
   const created = !!a.created;
   const box = el("section", { class: "box box-good saved-box", "aria-labelledby": "saved-title", tabindex: "-1" });
@@ -60,10 +60,15 @@ function savedBox(id) {
       : a.changed === false ? el("p", { text: "The deck already had these lists and details, so nothing was saved." })
         : el("p", { text: a.marked ? "Saved in Deck Lab: the deck has your changes, and the stats, practice hands and owned vs needed below follow the new list."
           : "Saved in Deck Lab: the deck has your changes to its details." }),
+    a.after_save_test ? saved.testNotice = el("p", { class: "sub", role: "status", text: a.after_save_test.text }) : null,
     // Added from a precon (collection.js, addPrecon): its cards went into the collection in the same save.
     a.precon ? el("p", { text: a.precon.cards
       ? `With it, ${plural(a.precon.cards, "card")} from the ${a.precon.name} precon went into ${a.precon.whose}.`
       : `The ${a.precon.name} precon had only plain basic lands for ${a.precon.whose}, so no cards were added.` }) : null,
+    a.precon && Number.isSafeInteger(a.precon.tokens) && a.precon.tokens > 0 ? el("p", { text:
+      `${plural(a.precon.tokens, "token card")} also added as unconfirmed rows. Check their printings and reverse faces on the Tokens page.` }) : null,
+    a.precon?.tokens_uncertain ? el("p", { class: "box box-warn", text:
+      "The token addition count was not confirmed. Check the Tokens page before adding any again." }) : null,
     a.marked ? el("p", { class: "sub", text: `The deck now says “Decklist changed in Deck Lab on ${a.marked}”, so the write-up under the list can be brought up to date later.` }) : null,
     table.rewritten && table.repriced && !table.note ? el("p", { class: "sub", text: "Its owned-vs-needed table was worked out again, with today's prices." }) : null,
     table.note ? el("p", { class: "sub", text: table.note }) : null,

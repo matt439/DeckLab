@@ -127,6 +127,8 @@ function rcptSyncSelected(view) {
   } else facts.append(el("p", { class: "sub", text: rcptBackOpen(row) ? "Reverse not confirmed" : v.back ? "Reverse recorded" : "Single-sided verified" }));
   if (parts.length > 1) facts.append(el("p", { class: "sub", text: `Part ${parts.indexOf(row) + 1} of ${parts.length}${row.ticked ? "" : "; still pending"}.` }));
   if (v.notes) facts.append(el("p", { class: "sub", text: `Notes: ${v.notes}` }));
+  const checks = rcptRowCheckStrip(comp, row);
+  if (checks) facts.append(checks);
   facts.append(el("p", { class: "sub", text: hidden ? "Hidden by the current view. Editing shows this row first." : "Details from this delivery; inspect to confirm what arrived." }));
   view.selectedInspect.textContent = hidden ? "Show row and edit details…" : "Edit details…";
   view.selectedInspect.setAttribute("aria-label", `${hidden ? "Show row and edit" : "Edit"} details for ${name}`);

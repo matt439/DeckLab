@@ -1023,6 +1023,7 @@ function tokensSection(data) {
   }
   const needs = t.needs || [], copies = t.copies || [], unlisted = t.unlisted || [];
   if (!needs.length) {
+    if (t.packed?.product) add(section, [deckPackedTokens(data)]);
     section.append(el("p", { class: "sub", text: "No tokens or reminders are linked to this list's cards on Scryfall." }));
   } else {
     const faces = tokFacesUsed(needs);
@@ -1030,7 +1031,7 @@ function tokensSection(data) {
     const main = merged.filter((n) => !n.sideboard_only), side = merged.filter((n) => n.sideboard_only);
     const words = tokCountWords(t.counts);
     if (words) section.append(el("p", { class: "deck-tokens-summary", text: words }));
-    if (t.packed) section.append(deckPackedTokens(data, faces));
+    if (t.packed) add(section, [deckPackedTokens(data, faces)]);
     if (main.length) section.append(tokenNeedList(main, faces));
     if (side.length) {
       section.append(el("h3", { class: "deck-tokens-group", text: "Only for sideboard cards" }), tokenNeedList(side, faces));
@@ -1057,6 +1058,7 @@ function tokensSection(data) {
  * sides or only one, which can be sleeved. */
 function deckPackedTokens(data, faces = null) {
   const p = data.tokens.packed;
+  if (p.product) return productPackedTokens(data);
   const lines = p.lines || [];
   const sides = (line) => [...new Set(line.rows.map((row) => tokSides(row, faces)).filter(Boolean))];
   const label = (line) => !line.rows.length ? `${line.text} (no token card matches)`

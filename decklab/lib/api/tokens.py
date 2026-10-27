@@ -149,7 +149,8 @@ def _packed_rows(holds, sees):
     out = {}
     for deck_id in sorted(holds):
         for i, qty in holds[deck_id]["rows"].items():
-            shown = _seen_use({"deck": deck_id, "title": holds[deck_id]["title"], "link": deck_id,
+            shown = _seen_use({"deck": deck_id, "title": holds[deck_id]["title"],
+                               "link": holds[deck_id].get("link", deck_id),
                                "token": "", "side": "", "state": ""}, sees)
             out.setdefault(i, []).append({"deck": shown["deck"], "title": shown["title"], "link": shown["link"],
                                           "quantity": qty})

@@ -145,6 +145,7 @@ Actions and their targets:
     "run.start"        the simulations setting's mode: "everyone", "admins" or "paused"
     "simulations.edit" no target
     "commander_night.edit" no target: a home admin, or an unnamed script
+    "members.edit"     no target: an explicitly named home admin (private Settings panel)
 
     from decklab.lib import permissions
     permissions.can(profile, "deck.edit", summary, script=False)
@@ -170,7 +171,7 @@ OWN_ACTIONS = ("wishlist.edit", "settings.edit")
 ADMIN_ACTIONS = ("receipts.apply", "products.edit", "orders.edit")
 ACTIONS = (DECK_ACTIONS + SPACE_ACTIONS + OWN_ACTIONS + ADMIN_ACTIONS
            + ("accessories.edit", "deck.create", "play.record", "run", "run.start", "run.stop",
-              "simulations.edit", "commander_night.edit"))
+              "simulations.edit", "commander_night.edit", "members.edit"))
 RUN_MODES = ("everyone", "admins", "paused")    # the simulations setting (lib/api/simulations.py)
 RUNS_PAUSED = "Simulations are paused for now, while the PC is busy. Saved results still show; try again later."
 RUNS_ADMINS = "Only an admin can start simulations right now. Saved results still show."
@@ -391,6 +392,9 @@ def reason(profile, action, target=None, *, script=False):
     caller, never a refusal)."""
     if action not in ACTIONS:
         raise ValueError(f"unknown action {action!r}")
+    if action == "members.edit":
+        return None if profile and profile.get("id") and profile.get("role") == "admin" \
+            and _space_of(profile) == HOME else "Member settings are private to a home admin."
     if action == "commander_night.edit":
         if not sees_commander_night(profile, script=script):
             return COMMANDER_NIGHT_PRIVATE

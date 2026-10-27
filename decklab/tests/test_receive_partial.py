@@ -29,7 +29,7 @@ def partial_tree(case):
                    ("Llanowar Elves", "fdn", "227", "nonfoil", 4))
     case.write("orders/tokens/partial.csv", rules.csv_bytes([RABBIT, DOG], rules.TOKEN_FIELDS).decode("utf-8"))
     case.cards_csv("products/kit.csv", ("Pick Your Poison", "mkm", "170", "nonfoil", 1))
-    case.write("products/status.csv", ",".join(rules.STATUS_FIELDS) + "\nkit.csv,ordered,,,,\n")
+    case.write("products/status.csv", ",".join(rules.STATUS_FIELDS) + "\nkit.csv,ordered,,,,,\n")
     record = Order.build("partial", seller="Fixture shop", ordered_on="2026-10-01", components=[
         Component.build("cards", "cards", "partial.csv", checks=CHECKS),
         Component.build("tokens", "tokens", "partial.csv", checks=["Check physical pairs"]),

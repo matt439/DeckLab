@@ -43,6 +43,69 @@ function countWords(n) { return n ? String(n) : ""; }
 /** Which way the list is drawn now: picture stacks or rows (the Quick edit always has rows). */
 function visualLook() { return editor.look === "visual" && !editor.quick; }
 
+/** Scryfall's mana value is a number; missing metadata never becomes a zero. */
+function editorManaValue(line) {
+  const value = line.card?.cmc;
+  return typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : null;
+}
+
+function compareEditorLines(a, b) {
+  if (editor.quick || visualLook()) return byCostThenName(a, b);
+  const av = editorManaValue(a), bv = editorManaValue(b);
+  if (av === null || bv === null) return (av === null) - (bv === null) || a.name.localeCompare(b.name);
+  return (av - bv) * (editor.mvDescending ? -1 : 1) || a.name.localeCompare(b.name);
+}
+
+/** Reorder the existing presentation only. Saved order, request indexes and Undo stay untouched. */
+function sortEditorRows(ed) {
+  if (!editorKeyboardCurrent(ed) || ed.quick || visualLook() || ed.tab !== "cards" || ed.leaving) return;
+  const active = document.activeElement;
+  const lines = new Map(Object.values(ed.lists).flat().map(line => [String(line.uid), line]));
+  const removed = new Map(ed.removed.map(g => [String(g.uid), g.line]));
+  for (const list of ed.dom.lines.querySelectorAll(".edit-list")) {
+    const rows = [...list.children];
+    const line = row => lines.get(row.dataset.uid) || removed.get(row.dataset.removed);
+    if (rows.some(row => !line(row))) continue;
+    rows.sort((a, b) => compareEditorLines(line(a), line(b)));
+    const anchored = rows.find(row => row.contains(active));
+    if (anchored) {
+      // Never detach the focused row: blur/change could commit a partially typed quantity.
+      const at = rows.indexOf(anchored);
+      for (const row of rows.slice(0, at)) list.insertBefore(row, anchored);
+      for (const row of rows.slice(at + 1)) list.append(row);
+    } else list.append(...rows);
+  }
+  // Moving a focused descendant can blur it in a browser; keep the same control and selection.
+  if (active?.isConnected && ed.dom.lines.contains(active) && document.activeElement !== active)
+    active.focus({ preventScroll: true });
+}
+
+function editorManaSortButton() {
+  const ed = editor;
+  const button = el("button", { type: "button", class: "btn btn-quiet edit-mv-sort", "data-focus": "sort:mv",
+    onclick: () => {
+      if (!editorKeyboardCurrent(ed) || ed.dom.mvSort !== button || button.hidden
+          || !button.isConnected || !ed.dom.page.contains(button) || ed.saving || ed.asking
+          || ed.quick || visualLook() || ed.tab !== "cards" || ed.leaving
+          || keyboardMenuOpen() || document.querySelector("dialog[open]")) return;
+      ed.mvDescending = !ed.mvDescending;
+      updateEditorManaSort();
+      sortEditorRows(ed);
+    } });
+  ed.dom.mvSort = button;
+  updateEditorManaSort();
+  return button;
+}
+
+function updateEditorManaSort() {
+  const ed = editor, button = ed.dom.mvSort;
+  if (!button) return;
+  button.hidden = !!ed.quick || visualLook() || ed.tab !== "cards" || noOwnedList();
+  button.textContent = ed.mvDescending ? "MV ↓" : "MV ↑";
+  button.setAttribute("aria-label", `MV: mana value, ${ed.mvDescending ? "high to low" : "low to high"}. Reverse sort within each group`);
+  button.title = "Sort each card group by mana value; saved list order stays unchanged";
+}
+
 function drawLines() {
   const ed = editor;
   const host = ed.dom.lines;
@@ -63,7 +126,7 @@ function drawLines() {
   const total = Object.values(ed.lists).reduce((n, lines) => n + lines.length, 0);
   if (!total && ed.mode === "new" && !ed.from) host.append(startFromPart());
   // A removed line stays where it was, as "Removed ... Undo", while the editor is open.
-  const rows = (entries) => entries.sort((a, b) => byCostThenName(a.line, b.line))
+  const rows = (entries) => entries.sort((a, b) => compareEditorLines(a.line, b.line))
     .map((x) => (x.gone ? removedRow(x.gone) : visual ? lineTile(x.line, x.section) : lineRow(x.line, x.section)));
   const list = (items) => el(visual ? "div" : "ul", { class: visual ? "edit-stacks" : "edit-list" }, items);
   for (const section of ed.sections) {
@@ -157,9 +220,14 @@ function lineRow(line, section) {
       "aria-label": `${line.name}: ${printingText(line)}. Change the printing`, onclick: () => openPrintings(line.uid) },
     printingText(line), el("span", { class: "caret", "aria-hidden": "true" }));
   const more = rowMenuButton(line);
+  const mv = editorManaValue(line);
+  const value = editor.quick ? null : el("span", { class: "edit-mv", title: "Mana value" },
+    el("span", { "aria-hidden": "true", text: mv === null ? "—" : String(mv) }),
+    el("span", { class: "sr-only", text: mv === null ? "Mana value not recorded" : `Mana value ${mv}` }));
   const row = peekable(el("li", { class: "edit-row" + (editor.flash === line.uid ? " flash" : ""), "data-uid": line.uid },
     stepper(line, "row"),
     open,
+    value,
     el("span", { class: "edit-badge-slot" }),
     print,
     more), card);
@@ -298,7 +366,7 @@ function editorUndoFocus(ed) {
   const host = ed.dom.lines, active = document.activeElement;
   if (!editorKeyboardCurrent(ed) || !active?.isConnected) return null;
   const address = { active, token: routeToken, profile: ed.profile, scope: JSON.stringify([ed.id, ed.version, ed.space]) };
-  const bar = ["addCards", "save", "saveMore", "checks"].find((key) => ed.dom.barParts?.[key] === active);
+  const bar = ["addCards", "save", "saveMore", "checks", "undo"].find((key) => ed.dom.barParts?.[key] === active);
   if (bar) return { ...address, bar };
   if (ed.dom.searchDock && editorSearchDockCurrent(ed.dom.searchDock) && ed.dom.searchDock.root.contains(active))
     return { ...address, bar: "addCards" }; // Undo redraws the Dock; recover at its current launcher or Cards.

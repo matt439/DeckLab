@@ -602,6 +602,7 @@ function drawReview(sheet, a) {
  * save the editor reloads the saved deck in place with a toast, or with viewAfter opens the deck page. */
 async function doSave(sheet, button, { viewAfter = false } = {}) {
   const ed = editor;
+  const retest = typeof editorRetestIntent === "function" ? editorRetestIntent(ed) : null;
   if (button) busy(button, "Saving...");
   let answer;
   try {
@@ -631,6 +632,17 @@ async function doSave(sheet, button, { viewAfter = false } = {}) {
     if (blocks) { ed.check = { warnings: [], ...(ed.check || {}), blocks }; drawCheck(); markRows(); drawBar(); }
     return;
   }
+  // A stale save response must not start a run or replace another page/person's editor.
+  if (retest && !editorForgeSummaryCurrent(retest.context)) {
+    ed.confirmedSave = answer;
+    if (button) unbusy(button);
+    return;
+  }
+  let retestTask = null;
+  if (retest) {
+    answer.after_save_test = { kind: "info", text: "The deck was saved. Requesting its field re-test..." };
+    retestTask = queueEditorRetest(retest, answer);
+  }
   if (button) unbusy(button);
   state.library = null;               // the library's counts changed
   const removed = removeDraft(ed);
@@ -638,10 +650,11 @@ async function doSave(sheet, button, { viewAfter = false } = {}) {
     ed.leaving = true;
     toast("");                          // an older note would cover the box about the save
     const hash = deckHref(answer.id, ed.mode === "new" ? "target" : ed.version);
-    state.saved = { hash, answer, version: ed.version, mode: ed.mode };
+    state.saved = { hash, answer, version: ed.version, mode: ed.mode, profile: ed.profile };
     state.scroll.delete(hash);          // open the deck at the top, where the box about the save is
     if (sheet) sheet.close();
     location.hash = hash;
+    if (retestTask) observeEditorRetest(retestTask, answer, { saved: state.saved });
     return;
   }
   // Stay in the editor, on the saved deck. When this browser couldn't remove the old draft, continue from
@@ -659,8 +672,10 @@ async function doSave(sheet, button, { viewAfter = false } = {}) {
   startEditor({ mode: "edit", view: answer.deck, version, restoreDraft: false, pendingDraftKey: oldKey });
   const now = editor;
   Object.assign(now, keep);
+  now.afterSaveTest = answer.after_save_test || null;
   if (answer.stale_tables && answer.stale_tables.length) now.notice = { kind: "saved", stale: answer.stale_tables };
   drawEditor();
+  if (retestTask) observeEditorRetest(retestTask, answer, { ed: now });
   if (!removed) {
     toast("The deck was saved in Deck Lab. This browser couldn't remove its old draft; the saved version is open below.");
     return;

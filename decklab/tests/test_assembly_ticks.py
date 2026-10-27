@@ -2,7 +2,9 @@
 import hashlib
 import json
 
-from decklab.lib import access
+from unittest import mock
+
+from decklab.lib import access, state
 from decklab.lib.api import activity, assembly_ticks
 from decklab.tests.test_api_permissions import PermissionTestCase
 
@@ -23,9 +25,9 @@ class AssemblyTicksTests(PermissionTestCase):
     def test_both_home_people_share_ticks_and_hidden_ids_never_come_back(self):
         self.patch([TASK, OTHER], [{"id": TASK, "done": True}, {"id": OTHER, "done": True}])
         with access.using({"profile": "user1", "email": "", "remote": True}):
-            self.assertEqual(self.read([TASK]), {"ticks": [TASK]})
-            self.assertEqual(self.patch([TASK], [{"id": TASK, "done": False}], "user1"), {"ticks": []})
-        self.assertEqual(self.read([OTHER]), {"ticks": [OTHER]})
+            self.assertEqual(self.read([TASK])["ticks"], [TASK])
+            self.assertEqual(self.patch([TASK], [{"id": TASK, "done": False}], "user1")["ticks"], [])
+        self.assertEqual(self.read([OTHER])["ticks"], [OTHER])
         # Auditing and persistence do not keep private kit labels or task semantics.
         trail = json.dumps(self.box.state.changes())
         self.assertNotIn("User1 private box", trail)
@@ -34,7 +36,7 @@ class AssemblyTicksTests(PermissionTestCase):
                          [hashlib.sha256(OTHER.encode()).hexdigest()])
 
     def test_reads_need_no_profile_and_never_write(self):
-        self.assertEqual(self.read([TASK]), {"ticks": []})
+        self.assertEqual(self.read([TASK]), {"ticks": [], "activity": None})
         self.assertEqual(self.box.state.changes(), [])
 
     def test_activity_names_home_progress_without_exposing_task_ids(self):
@@ -61,14 +63,14 @@ class AssemblyTicksTests(PermissionTestCase):
     def test_writer_must_match_the_home_chooser(self):
         with access.using(None), access.viewing("user1"):
             self.assertApiError(403, self.patch, [TASK], [{"id": TASK, "done": True}], "matt")
-            self.assertEqual(self.patch([TASK], [{"id": TASK, "done": True}], "user1"), {"ticks": [TASK]})
+            self.assertEqual(self.patch([TASK], [{"id": TASK, "done": True}], "user1")["ticks"], [TASK])
 
     def test_changes_require_a_known_actor_and_exact_scope(self):
         self.assertApiError(403, self.patch, [TASK], [], "unknown")
         self.assertApiError(400, self.patch, [TASK], [{"id": OTHER, "done": True}])
         self.assertApiError(400, self.patch, [TASK], [{"id": TASK, "done": 1}])
         self.assertApiError(400, self.patch, [TASK], [{"id": TASK, "done": True}] * 2)
-        self.assertEqual(self.read([TASK]), {"ticks": []})
+        self.assertEqual(self.read([TASK]), {"ticks": [], "activity": None})
 
     def test_ids_and_limits_are_checked(self):
         for ids in ("x", [""], [None], ["x\x00"], ["x" * 1001], [TASK] * 2001):
@@ -84,4 +86,45 @@ class AssemblyTicksTests(PermissionTestCase):
         ids = [f'{TASK}:{i}:' + "x" * 200 for i in range(1200)]
         body = json.dumps({"ids": ids}).encode()
         self.assertGreater(len(body), 256 * 1024)
-        self.assertEqual(assembly_ticks.packing_ticks(body), {"ticks": []})
+        self.assertEqual(assembly_ticks.packing_ticks(body), {"ticks": [], "activity": None})
+
+    def test_activity_is_scoped_counted_and_names_only_current_home_profiles(self):
+        self.patch([TASK, OTHER], [{"id": TASK, "done": True}, {"id": OTHER, "done": True}])
+        answer = self.read([TASK])
+        last = self.box.state.changes()[-1]
+        self.assertEqual(answer["activity"], {"profile": "matt", "by": "Matt", "at": last["at"], "checks": 1})
+        with access.using(None), access.viewing("user1"):
+            cleared = self.patch([TASK], [{"id": TASK, "done": False}], "user1")
+        self.assertEqual(cleared["activity"]["profile"], "user1")
+        self.assertEqual(cleared["activity"]["checks"], 1)
+        self.assertNotIn(OTHER, json.dumps(answer))
+        self.assertEqual(set(answer["activity"]), {"profile", "by", "at", "checks"})
+        before = self.box.state.changes()
+        self.assertEqual(self.read([TASK])["activity"], cleared["activity"])
+        self.assertEqual(self.box.state.changes(), before)
+
+    def test_outside_unknown_or_removed_actor_is_generic_and_no_identifier_leaves(self):
+        task_hash = hashlib.sha256(TASK.encode()).hexdigest()
+        for actor in ("user2", "removed-profile", "system"):
+            self.box.state.packing_ticks_put({task_hash: True}, state.Actor(actor, "Private name"), "Tick")
+            response = self.read([TASK])["activity"]
+            self.assertIsNone(response["profile"])
+            self.assertEqual(response["by"], "Someone")
+            self.assertNotIn(actor, json.dumps(response))
+            self.assertNotIn("Private name", json.dumps(response))
+            self.box.state.packing_ticks_put({task_hash: False}, state.Actor(actor, "Private name"), "Untick")
+
+    def test_optional_activity_failure_does_not_turn_a_saved_tick_into_failed_write(self):
+        with mock.patch.object(self.box.state, "packing_activity", side_effect=state.Unavailable("fixture down")), \
+                mock.patch.object(assembly_ticks.common, "_log") as log:
+            response = self.patch([TASK], [{"id": TASK, "done": True}])
+        self.assertEqual(response, {"ticks": [TASK], "activity": None})
+        self.assertEqual(self.read([TASK])["ticks"], [TASK])
+        log.assert_called_once()
+
+    def test_optional_activity_logger_failure_also_preserves_the_successful_tick(self):
+        with mock.patch.object(self.box.state, "packing_activity", side_effect=state.Unavailable("fixture down")), \
+                mock.patch.object(assembly_ticks.common, "_log", side_effect=OSError("fixture log down")):
+            self.assertEqual(self.patch([TASK], [{"id": TASK, "done": True}]),
+                             {"ticks": [TASK], "activity": None})
+        self.assertEqual(self.read([TASK])["ticks"], [TASK])

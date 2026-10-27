@@ -9,8 +9,8 @@ and accessory saves with a local picture (accessories.MAX_SAVE_BODY).
 
 
 def dispatch(handler, route, query):
-    from decklab.lib.api import (accessories, activity, assembly, assembly_completion, assembly_standins, assembly_ticks, collection, collection_edit, cover, editor, history,
-                                 library_forge, opponents, play_records, precons, products, rankings, receipts, rename, retirement, shopping, shopping_order_changes, shopping_orders, shopping_queue, swaps, token_cards, token_plan, tokens, visits)
+    from decklab.lib.api import (accessories, accessory_undo, activity, activity_undo, assembly, assembly_completion, assembly_standins, assembly_ticks, box_check, collection, collection_edit, cover, editor, history,
+                                 library_forge, opponents, play_records, precons, products, product_tokens, rankings, receipts, rename, retirement, shopping, shopping_order_changes, shopping_orders, shopping_queue, swaps, token_cards, token_plan, tokens, visits, wishlist_undo)
     from decklab.lib.api.common import MAX_BODY
 
     gets = {
@@ -39,9 +39,15 @@ def dispatch(handler, route, query):
         ("tokens",): (tokens.tokens_view, ("space",)),
         ("tokens", "plan"): (token_plan.plan_view, ("space",)),
         ("activity",): (activity.activity_view, ("before", "limit", "kind", "actor")),
+        ("activity", "undo"): (activity_undo.undo_view, ("id",)),
+        ("activity", "wishlist-undo"): (wishlist_undo.wishlist_undo_view, ("id",)),
+        ("activity", "accessory-undo"): (accessory_undo.accessory_undo_view, ("id",)),
         ("visits",): (visits.visits_view, ("days", "who")),
     }
     posts = {
+        ("activity", "undo"): activity_undo.apply_undo,
+        ("activity", "wishlist-undo"): wishlist_undo.apply_wishlist_undo,
+        ("activity", "accessory-undo"): accessory_undo.apply_accessory_undo,
         ("assembly", "preview"): assembly.assembly_preview,
         ("assembly", "built"): assembly_completion.mark_built,
         ("assembly", "ticks"): (assembly_ticks.packing_ticks, assembly_ticks.MAX_BODY),
@@ -52,6 +58,7 @@ def dispatch(handler, route, query):
         ("receipt", "apply"): receipts.apply_receipt,
         ("product", "intact", "preview"): products.preview_storage,
         ("product", "intact", "apply"): products.apply_storage,
+        ("product", "token-cards"): product_tokens.save_product_tokens,
         ("shopping", "check"): shopping.resolve_check,
         ("shopping", "queue"): shopping_queue.save_queue_state,
         ("shopping", "order", "preview"): shopping_orders.preview_order,
@@ -70,6 +77,7 @@ def dispatch(handler, route, query):
         ("precons", "add"): precons.add_precon,
         ("deck", "cover"): cover.save_cover,
         ("deck", "token-cards"): token_cards.save_token_cards,
+        ("deck", "box-check"): box_check.save_box_check,
         ("deck", "opponents"): opponents.save_opponents,
         ("deck", "swaps"): swaps.suggest_draft_swaps,      # a dry run: nothing is written
         ("deck", "retire"): retirement.retire_deck,
@@ -83,7 +91,7 @@ def dispatch(handler, route, query):
         handler._allow("GET", "HEAD")
         function, names = gets[key]
         params = handler._query(query, names)
-        if "id" in names:
+        if "id" in names and key not in {("activity", "undo"), ("activity", "wishlist-undo"), ("activity", "accessory-undo")}:
             params["deck_id"] = handler._deck_id(params) if "id" in params else None
             params.pop("id", None)
         handler._send_json(200, function(**params))

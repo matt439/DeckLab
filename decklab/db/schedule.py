@@ -38,6 +38,17 @@ def _homenet():
     return commands
 
 
+def preview_systemd(unit, python, workdir, at=None, say=print):
+    """Print one unit preview. This never inspects the host, reads data or installs units."""
+    from decklab.db import systemd_units
+    if unit not in ("service", "timer"):
+        raise ValueError("preview-systemd requires --unit service or --unit timer.")
+    units = systemd_units.nightly_units(python, workdir, AT if at is None else at)
+    name = systemd_units.SERVICE if unit == "service" else systemd_units.TIMER
+    say(units[name].rstrip("\n"))
+    return 0
+
+
 def task_xml(command, workdir, user, start=None, at=AT, name=TASK_NAME):
     """The task's definition as Task Scheduler's XML (every value escaped). start is the
     first day (default today); the trigger repeats daily from there at `at`, local time."""

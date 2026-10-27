@@ -8,8 +8,8 @@ deck's matchups against the field through forge.field.run_field.
                         "done" or "error"), "job", "budgets", "field_lists", "default_budget",
                         "notice", "error" and "forge"; the server answers 202 while status is
                         "queued" or "running"
-    run_field(body)     body {"profile", "id", "version"?, "budget"?}: start (or join) a field
-                        run; the answer as field_view's
+    run_field(body)     body {"profile", "id", "version"?, "budget"?, "expected_card_sha"?}:
+                        start (or join) a field run; the answer as field_view's
     stop_field(body)    body {"profile", "id", "version"?}: Stop; the answer as field_view's
 
 A field run's job holds a _FieldJob, whose "via" (kind, title, link) and "by" the matchup page
@@ -27,7 +27,7 @@ from urllib.parse import quote
 from decklab.lib import decks, jobs, permissions
 
 from . import common, forge_runs
-from .common import MAX_BODY, MAX_EDIT_BODY, ApiError, _keys, _parse_body, _public
+from .common import MAX_BODY, MAX_EDIT_BODY, ApiError, _keys, _parse_body, _public, _SHA_RE
 from .library import _deck_sections, _half_title, check_deck_id, is_half
 from . import guard
 from .settings import _current_settings, _require_profile, _writer, own_settings_id
@@ -216,22 +216,31 @@ def field_view(deck_id, version="target", profile=None):
 
 
 def run_field(body):
-    """POST /api/field/run {"profile", "id", "version"?, "budget"?} (section 10.5): play the deck's
+    """POST /api/field/run {"profile", "id", "version"?, "budget"?, "expected_card_sha"?}: play the deck's
     list against the field. budget is one of forge.field.BUDGETS (the profile's field_budget
     when it's left out). A field run of the same list that's already waiting or playing is
     joined. Returns field_view's answer. ApiError as field_view, 400 for a budget that isn't
     one or a list the field has no opponent for (forge.field.NO_OPPONENTS), 403 without a
     profile or while the simulations setting refuses (api/simulations.py), and 503 when Forge isn't ready, COORD_JOBS has 4 waiting, or the server is
-    stopping."""
+    stopping. An optional expected_card_sha (64 lowercase hex characters) guards the exact
+    playable saved list: 409 if it changed, before checking Forge or submitting a job. Normal
+    deck visibility and version refusals still apply before that comparison."""
     data = _parse_body(body, MAX_EDIT_BODY)
     profile = _writer(data)
     guard.require_start(profile)        # the simulations setting (api/simulations.py)
-    _keys(data, ("profile", "id"), ("version", "budget"))
+    _keys(data, ("profile", "id"), ("version", "budget", "expected_card_sha"))
     forge = forge_runs._forge_module()
     budget = data.get("budget") or _field_budget(profile["id"])
     if budget not in forge.field.BUDGETS:
         raise ApiError(400, f"budget must be one of: {', '.join(forge.field.BUDGETS)}")
     summary, entry = _field_entry(forge, data["id"], data.get("version"))
+    if "expected_card_sha" in data:
+        expected = data["expected_card_sha"]
+        if not isinstance(expected, str) or not _SHA_RE.fullmatch(expected):
+            raise ApiError(400, "expected_card_sha must be 64 lowercase hexadecimal characters")
+        if expected != entry["card_sha"]:
+            raise ApiError(409, "The saved list changed before its field run could start. "
+                           "Reload the saved deck before testing it again.")
     seen = forge_runs._Seen(profile)
     options = _field_options(forge, entry, seen)
     state = forge.status()

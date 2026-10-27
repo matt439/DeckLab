@@ -35,18 +35,18 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 
 | Epic | Stories | Built | Partial | Missing | Not wanted |
 |---|---:|---:|---:|---:|---:|
-| [E1: Find, plan and choose decks](#e1-find-plan-and-choose-decks) | 12 | 9 | 0 | 3 | 0 |
+| [E1: Find, plan and choose decks](#e1-find-plan-and-choose-decks) | 12 | 10 | 0 | 2 | 0 |
 | [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 16 | 13 | 1 | 1 | 1 |
 | [E3: Test a deck](#e3-test-a-deck) | 14 | 11 | 3 | 0 | 0 |
-| [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 20 | 14 | 1 | 4 | 1 |
+| [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 20 | 15 | 1 | 3 | 1 |
 | [E5: Decide what to buy](#e5-decide-what-to-buy) | 22 | 15 | 0 | 5 | 2 |
 | [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 20 | 17 | 0 | 1 | 2 |
-| [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 27 | 17 | 4 | 6 | 0 |
-| [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 16 | 10 | 1 | 3 | 2 |
+| [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 27 | 19 | 4 | 4 | 0 |
+| [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 16 | 11 | 1 | 2 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 19 | 13 | 0 | 5 | 1 |
-| [E10: Members, access and privacy](#e10-members-access-and-privacy) | 35 | 30 | 1 | 2 | 2 |
+| [E10: Members, access and privacy](#e10-members-access-and-privacy) | 35 | 31 | 1 | 1 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 28 | 15 | 6 | 4 | 3 |
-| **Total** | **229** | **164** | **17** | **34** | **14** |
+| **Total** | **229** | **170** | **17** | **28** | **14** |
 
 Counted from the story headers on 2026-10-26.
 
@@ -56,7 +56,7 @@ Counted from the story headers on 2026-10-26.
 
 How Matt and User1 (and, more lightly, User2, User3, User4 and User5) find a deck in the library (#/library), choose its picture, open its deck page (#/deck) to see whether it can be built and how to play it, rename or retire it, and pick what to play tonight. Each viewer's library holds their own space's decks, plus any another space has made public. A plain "Deck Lab is off" message is enough while the PC is off (E11-S02); collector-value sorting and legality badges on casual decks aren't wanted.
 
-Open: E1-S05, E1-S12, E1-S13.
+Open: E1-S12, E1-S13.
 
 **E1-S01** · User1 · must · M · built
 
@@ -115,7 +115,7 @@ Evidence:
 - `decklab/web/library.js`: LIB_SORTS, LIB_READINESS, libraryFilters, filtersHash, libFilterSheet
 - `decklab/tests/test_library_ui.py`: test_sorts_ready_first_recently_changed_and_name, test_the_phone_filter_sheet_counts_and_applies_filters
 
-**E1-S05** · Matt · could · S · missing
+**E1-S05** · Matt · could · S · built
 
 As a deck builder, I want to find a deck by typing part of its name, or by colour or archetype, so that I can reach it quickly once the shelf holds many decks and spaces.
 
@@ -125,11 +125,10 @@ As a deck builder, I want to find a deck by typing part of its name, or by colou
 - Given a search, when the address is bookmarked, then the search is kept like the other filters.
 
 Evidence:
-- `decklab/web/library.js`: libraryFilters, libVisibleDecks (no title, colour or archetype test)
+- `decklab/web/library.js`: retained native title input, `libMatchesColour`, exact normalized archetypes, `filtersHash` and guarded phone history landing
+- `decklab/tests/test_library_title_search_ui.py`, `test_library_metadata_filters_ui.py` and `test_library_filter_history_ui.py`: matching, bookmarks, filter composition, scope, selection and native-history lifecycle
 
-Gap: The library has no text search and no colour or archetype filter.
-
-First slice: a title search box on the library (kept in the address like the other filters), then the colour and archetype filters. This is ready independently of E11-S31's global-search scope choice; shared matching can be reused later.
+Now: built 2026-10-27 ([HISTORY.md](../HISTORY.md#library-colour-and-archetype-filters-2026-10-27-e1-s05)); all filters use existing authorized summaries. Includes colour choices allow additional colours; unknown and known colourless remain separate. Phone sheet closing retains the query without another list read.
 
 **E1-S07** · User1 · should · M · built
 
@@ -753,7 +752,7 @@ Gap: membership changes only by hand-editing `decklab/simulation.json`; there's 
 
 This epic covers getting physical decks onto the table and learning from the games played: choosing the decks, pulling and sleeving the cards from home's shared pool on Build decks (#/assembly, the packing plan), reading a deck's How to play and practising opening hands, playing with sideboard plans, and recording the result on the Game log (#/play). Each game is seen only by the spaces whose decks it names, a side whose deck the viewer may not see shows only as words such as "one of the home decks", and each space changes only its own side (E10-S32). Teaching the rules is left to products like the Beginner Box, so Deck Lab keeps teaching minimal. User1 uses Deck Lab on her phone, so Build decks and the Game log on a phone matter most.
 
-Open: E4-S09, E4-S13, E4-S16, E4-S18, E4-S19.
+Open: E4-S09, E4-S16, E4-S18, E4-S19.
 
 **E4-S01** · Matt · must · L · built
 
@@ -900,7 +899,7 @@ Evidence:
 - `decklab/lib/api/play_records.py`: play_overview
 - `decklab/tests/test_play_ui.py`: test_session_summary_balances_seats_and_keeps_list_revisions_separate
 
-**E4-S13** · Matt · could · M · missing
+**E4-S13** · Matt · could · M · built
 
 As a player who uses Forge to judge decks, I want to see our real head-to-head record next to Forge's predicted win rate for the same two lists, so that I know how far Forge's verdicts hold up for our decks and our play.
 
@@ -908,14 +907,14 @@ As a player who uses Forge to judge decks, I want to see our real head-to-head r
 - Given only a few real games, then the page says the real record can't confirm or contradict Forge yet.
 - Given the lists differ from Forge's (an older list), then they aren't paired.
 
+Now (2026-10-26): [Real games is shown beside the Forge result](../HISTORY.md#real-games-beside-forge-results-2026-10-26-e4-s13) on a pair's matchup page. Only the same deck identities and historical main-deck/commander cards actually played count, with rename aliases and either recorded seat order handled. The separate human wins/draws/sample and plain wins-per-all-games share use a below-10 warning; ten or more games remain observational, not certification.
+
 Evidence:
-- `decklab/web/play.js`, `decklab/web/deck-sideboard.js`: the only pages that read /api/play; no matchup, field or rankings page uses play records
+- `decklab/lib/api/play_comparison.py`, `forge_runs.py`: read-only aggregate over visible historical played sections, exact pair identities/cards, rename and seat mapping; printing choices and unused Sideboard/Companion sections are outside this comparison
+- `decklab/web/matchups-play.js`, `matchups-results.js`: static Real games panel beside the verdict, explicit plain human denominator versus Forge's balanced headline, matching-scope note and honest unavailable/unsupported states without false zero counts
+- `decklab/tests/test_play_comparison.py`, `test_matchups_play_ui.py`: historical changed/sideboarded cards, permissions, generic failures, strict counts/dates, reverse sides, zero/draws, 9/10 threshold, text escaping and no actions or extra reads
 
-Gap: Real games are never compared with Forge's predictions and don't feed the field rating.
-
-First slice: the real record beside Forge's rate on the matchup page for lists that match, with "too few games" below 10 real games until Matt picks the number.
-
-Review note: criterion 2 needs a number of games as its threshold (Matt's call).
+The panel exposes only aggregate counts and dates, with no player names, notes or game-record ids. It neither starts simulations nor changes Forge field ratings.
 
 **E4-S14** · Matt · should · M · built
 
@@ -1739,7 +1738,7 @@ Evidence:
 
 How the inventory stays true to the physical cards. Each space's own people add, fix and remove cards on the Collection page (single cards, an app export, Add a precon) and token cards on the Tokens page; Matt and User1 both edit home's, each member only their own, and Claude does bulk and member upkeep from the PC (`collection merge`, `collection edit` and `collection apply`, `collection add-precon --space`). Repeat imports, sales and trades, and cards held by built decks are all flagged, other decks' out-of-date tables are listed with Update all rather than refreshed automatically, and the nightly `db check` looks for drift.
 
-Open: E7-S03, E7-S06, E7-S08, E7-S15, E7-S18, E7-S21, E7-S22, E7-S23, E7-S24, E7-S31.
+Open: E7-S03, E7-S08, E7-S15, E7-S18, E7-S21, E7-S22, E7-S23, E7-S24.
 
 **E7-S01** · Matt · must · M · built
 
@@ -1819,7 +1818,7 @@ Evidence:
 - `decklab/tests/test_precons.py`: test_adds_the_cards_and_the_deck_in_one_change, test_refusals_change_nothing
 - `decklab/tests/test_precon_cli.py`: test_the_same_deck_as_the_page, test_a_dry_run_previews_the_cards_and_the_deck_and_saves_nothing
 
-**E7-S06** · Matt · could · M · partial
+**E7-S06** · Matt · could · M · built
 
 As a deck builder, I want a precon's token cards offered for adding when I add the precon, so that its decks' token needs are met without typing each token.
 
@@ -1827,11 +1826,14 @@ As a deck builder, I want a precon's token cards offered for adding when I add t
 - Given I skip them, then the deck page's Tokens part still shows them as not owned.
 
 Evidence:
-- `decklab/web/collection.js`: drawPreconPreview (its token cards 'aren't added: record them on the Tokens page')
+- `decklab/web/precon-token-choices.js`, `collection.js`: explicit per-entry physical quantities/front choices, default unchecked, exact receipts, fresh-preview conflicts and owned controls
+- `decklab/lib/precon_tokens.py`, `decklab/lib/api/precons.py`, `decklab/lib/inventory/ops_decks.py`: explicit source counts, unconfirmed separate rows, one atomic precon change
+- `decklab/db/inv_collection.py`: add-precon --add-tokens; `decklab/tests/test_precon_tokens.py`, `test_precon_tokens_cli.py`, `test_precon_tokens_ui.py`
+- `decklab/tests/test_precon_token_choices.py`, `test_precon_token_choices_api.py`, `test_precon_token_choices_cli.py`, `test_precon_token_choices_pg.py`, `test_precon_token_choices_ui.py`: unknown counts, paired-face choices, zero skips, bound CSV, atomic persistence and UI ownership
 
-Gap: there's no option to add the precon's token cards; the preview only names them and points to the Tokens page. The second criterion holds through the deck's Tokens part.
+Now (2026-10-27): unknown counts remain blank for explicit confirmation; one face is chosen for an ambiguous entry, and zero skips an entry. Users count each physical card once across paired-face source entries. Every positive entry remains a separate row with printing, finish and reverse face unknown, saved with collection/deck as one change. Skipping is still the default; CLI choice files bind the reviewed source hash.
 
-First slice: an "Add its token cards too" choice in the precon preview, adding each as a token row with printing and back unconfirmed, in the precon's one change.
+Validation: 200 affected checks passed, including guarded disposable PostgreSQL cases, and twelve synthetic browser width/theme cases passed. Malformed or unchecked names still refuse only the optional batch. No count, pairing or printing is inferred; household data and real-device acceptance were untouched.
 
 **E7-S07** · Matt · must · L · built
 
@@ -1987,7 +1989,7 @@ Evidence:
 
 Gap: the Card list's rows are edited one at a time; only Receive delivery has a bulk condition and language fill.
 
-**E7-S21** · Matt · could · L · missing
+**E7-S21** · Matt · could · L · partial
 
 As an owner of built decks in the shared pool, I want to check a built deck's box against its recorded list and note any card that's missing or extra, so that the records stay true to the physical decks after many swaps between games.
 
@@ -1996,12 +1998,20 @@ As an owner of built decks in the shared pool, I want to check a built deck's bo
 - Given a box check is saved, when the deck page is opened, then it shows the date the box was last checked.
 - Given a deck not checked for a long time, when the library is shown, then it can be filtered to decks due for a check.
 
+Now (2026-10-26): box reviews, historical dates, Library filters, Collection review and the [normal Editor handoff](../HISTORY.md#box-observations-beside-an-explicitly-chosen-intended-list-2026-10-26-e7-s21) are implemented for ordinary home built decks. A named observation can accompany a fresh Collection review or an explicitly chosen existing Planned/Play-now list, preserving ordinary draft restoration and leaving all edits to the user.
+
 Evidence:
-- `decklab/web/assembly.js`, `decklab/web/assembly-progress.js`: Build decks' ticks are shared across devices but never change the inventory or record a check date
+- `decklab/lib/decks/boxcheck.py`, `decklab/lib/api/box_check.py`: section- and role-aware differences, exact source receipts, private date-only save through the normal deck write lock
+- `decklab/web/assembly-boxcheck.js`, `decklab/web/assembly.js`, `decklab/web/deck-availability.js`: blank local counts, picture ticks, reviewed differences, guarded Save check date and a private historical date note
+- `decklab/tests/test_box_check_model.py`, `test_box_check_api.py`, `test_box_check_ui.py`, `test_box_check_pg.py`: model, permissions, stale/uncertain outcomes, unchanged-list/date-only persistence and disposable database checks
+- `decklab/lib/api/deck_page.py`, `decklab/web/library-boxchecks.js`, `decklab/web/library.js`: private request-local index dates, strict cutoff/unrecorded filters and historical selected-deck note
+- `decklab/tests/test_library_box_check_api.py`, `test_library_boxchecks_ui.py`, `test_library_boxchecks_history_ui.py`: date scope and privacy, malformed/omitted summaries, combined filters, retained input, URL and phone Back behavior
+- `decklab/web/box-collection.js`, `assembly-boxcheck.js`, `collection.js`, `collection-cards.js`: one-shot guarded handoff, source-deck/current-row/exact-name checks, explicit printing/finish/total and fresh conflict review through ordinary collection writes
+- `decklab/tests/test_box_collection_ui.py`: marker roles, scope/history/ownership guards, blank totals, duplicate-printing refusal, stale source and separate collection-only writes
+- `decklab/web/box-editor.js`, `assembly-boxcheck.js`, `editor.js`, `editor-screen.js`, `app.js`: existing-version choice, fresh source/permission checks and memory-only context after normal current/alias draft restoration/rebase, without applying observation values
+- `decklab/tests/test_box_editor_ui.py`, `test_box_editor_drafts_ui.py`: source and busy/ownership races, draft preservation, version/route guards, stale-context retirement and unchanged physical/date/packing state
 
-Gap: there's no way to reconcile a physical deck with its record, and no record of when a box was last checked.
-
-First slice: a box check on Build decks (picture tiles with ticks over the built list) that lists what's missing or extra and saves the date checked; the fix-the-list offers come after.
+Gap: physical-list repair remains. Member-space and product box checks are future scope. Native fixture checks passed, with real-device and household acceptance separate. The historical date and name-only art certify no current contents, printing or finish, and an intended-list edit does not reconcile the recorded physical build.
 
 **E7-S22** · Matt · could · M · missing
 
@@ -2155,7 +2165,7 @@ Evidence:
 - `decklab/tests/test_accounts_ui.py`: test_download_saves_the_spaces_collection_for_whoever_sees_it
 - Not checked in a browser or on a phone: saving a Blob through a link's `download` is how the deck page's Download decklist already works
 
-**E7-S31** · Matt · could · M · missing
+**E7-S31** · Matt · could · M · built
 
 As Matt, who keeps some products intact in their own box, I want an intact product to say which token cards it packs, as a built deck's Token cards line does, so that other decks don't count those cards as free and the product isn't told it has none.
 
@@ -2165,12 +2175,16 @@ As Matt, who keeps some products intact in their own box, I want an intact produ
 - Given a product with no packed token cards, then the too-few warning still counts it as wanting one card of each row it uses, as now.
 
 Evidence:
-- `decklab/lib/tokens/__init__.py`: intact products count as holders for the warning only
-- `decklab/lib/tokens/optimise.py`: plans built decks only ("not intact products, which have no line")
+- `decklab/db/migrations/0014_product_token_cards.sql`, `decklab/lib/inventory/ops_products.py`, `decklab/db/product_tokens.py`: a guarded product record, legacy status readers and atomic clearing on break-up
+- `decklab/lib/tokens/products.py`, `plan_products.py`, `reserve.py`, `optimise.py`: actual producer relation, separate subdeck demands sharing physical capacity, one product record and conservative fixed fallback
+- `decklab/lib/inventory/ops_token_plan.py`, `decklab/lib/api/token_plan.py`, `decklab/web/token-plan.js`: one reviewed mixed plan, all changed permissions and original receipts checked before any writes
+- `decklab/lib/api/product_tokens.py`, `deck_page.py`, `decklab/web/product-tokens.js`: home-only picker shared across generated product deck routes; no product record or status receipt through public collection/deck access
+- `decklab/tests/test_product_tokens.py`, `test_product_tokens_api.py`, `test_product_tokens_cli.py`, `test_product_tokens_pg.py`, `test_product_token_reservations.py`, `test_product_tokens_ui.py`
+- `decklab/tests/test_product_token_planning.py`, `test_token_plan_mixed.py`, `test_token_plan_mixed_pg.py`, `test_product_token_plan_ui.py`: physical quantities, product membership, atomic mixed writes, permissions, races, scoped UI and uncertain outcomes
 
-Gap: everything. Raised 2026-10-25, the follow-up left by the Token cards line (E4 token work, PRs #7 to #10).
+Now (2026-10-27): manual records and automatic mixed planning are implemented. Each actual product subdeck has its own demand, with one physical capacity and one saved record for the box. Products whose complete token needs cannot be calculated, or with no detected needs, retain their records; blank still means unknown packing. Break-up clears the record with kit. Migration 0014 and activation have not been performed on the live database or server.
 
-First slice: a `token_cards` field in the product's status, read and written like its `sleeves` and `deck_box`, counted as in use, and cleared by a break-up.
+Validation includes 296 affected checks and twelve synthetic Chromium width/theme cases with one guarded fixture mixed save. Household data, actual devices and Forge were not used.
 
 ---
 
@@ -2178,7 +2192,7 @@ First slice: a `token_cards` field in the product's status, read and written lik
 
 The physical side of home's shared pool: each built deck and each product kept intact is in one sleeve design and one deck box, every other card sits unsleeved in the storage box, and moving a card between decks means changing its sleeve. Deck Lab records the sleeves, deck boxes and playmats (each Matt's, User1's or shared) on the Sleeves & boxes page, a built deck's Sleeves and Deck box lines and an intact product's kit, warns when a holder has too few sleeves or a box that is full or too small, and lets one sleeve design sleeve several holders. Choosing a deck's kit needs the right to edit that deck; an owner may make their kit public (read-only), and members never see private kit. Accessory prices are not wanted.
 
-Open: E8-S03, E8-S14, E8-S15, E8-S19.
+Open: E8-S03, E8-S15, E8-S19.
 
 **E8-S01** · Matt · must · M · built
 
@@ -2334,7 +2348,7 @@ Evidence:
 - `decklab/tests/test_product_storage.py`: test_break_preview_matches_shared_operation_without_writing_then_saves_once, test_keep_intact_reserves_cards_without_adding_to_collection_or_restoring_old_kit, test_private_old_kit_is_masked_and_admin_cannot_clear_it
 - `decklab/tests/test_product_storage_ui.py`
 
-**E8-S14** · Matt · could · S · missing
+**E8-S14** · Matt · could · S · built
 
 As Matt, taking a built deck apart, I want one list of every card to unsleeve and return to storage, with the sleeves and box to put away, so that nothing is left in the box.
 
@@ -2342,11 +2356,11 @@ As Matt, taking a built deck apart, I want one list of every card to unsleeve an
 - Given that checklist, then it also names the sleeves and deck box to put away.
 
 Evidence:
-- `decklab/web/assembly.js` (the Put back step covers only cards a chosen list stopped using)
+- `decklab/lib/api/assembly_takeapart.py`: authoritative physical sections, installed markers, packed tokens and authorized kit refs
+- `decklab/web/assembly-sheets.js`: local checks and explicit existing SHA-bound status save
+- `decklab/tests/test_assembly_takeapart.py`, `test_assembly_takeapart_ui.py`: source fidelity, malformed records, privacy, lifecycle and safe completion
 
-Gap: there is no whole-deck take-apart checklist. Clearing the kit lines when a deck is unbuilt is in E8-S05, and `deck delete`'s refusal in E8-S18.
-
-First slice: a Take apart checklist on Build decks for a built deck: every card in every section, then its sleeves and deck box.
+Now: built 2026-10-27 ([HISTORY.md](../HISTORY.md#whole-deck-take-apart-checklist-2026-10-27-e8-s14)); every recorded physical card and kit item is checked before the optional status save. Newer intended lists stay saved, and only the taken-apart participant leaves the refreshed plan.
 
 Related scope: E11-S30's [slice 13](visual-design.md#7-rollout) owns intact-product take-apart and transfer. Reuse presentation where useful, while keeping this whole-deck checklist's acceptance separate.
 
@@ -2739,7 +2753,7 @@ Evidence:
 
 Who Deck Lab's profiles are, where each one's cards and decks live, and who may see or change what. Matt (admin) and User1 share the home space; User2, User3, User4 and User5 (`user5`, the template for every member, [member-template.md](member-template.md)) each have their own, and sign in only through decklab.example.com. Each space's collection, decks and games, and each kit owner's accessories, are private unless the owner makes them public: read-only, to everyone signed in through Cloudflare Access, with no admin override ([privacy-by-default.md](privacy-by-default.md)). The command line still reads every space, so Claude relays upkeep, not contents, and adding a person still means editing config.json and the Access policy by hand.
 
-Open: E10-S17, E10-S18, E10-S41.
+Open: E10-S18, E10-S41.
 
 **E10-S01** · Matt · must · L · built
 
@@ -2930,7 +2944,7 @@ Evidence:
 - `decklab/lib/api/activity.py`: visible_change, _row
 - `decklab/tests/test_activity.py`: VisibilityTests
 
-**E10-S17** · Matt · could · L · missing
+**E10-S17** · Matt · could · L · built
 
 As Matt, the admin, I want to add a member or change someone's email without editing files on the PC, so that bringing someone in is quick and I can't break config.json with a typo.
 
@@ -2939,16 +2953,20 @@ As Matt, the admin, I want to add a member or change someone's email without edi
 - Given a new email, then the page reminds him to add it to the Cloudflare Access policy, and `homenet status` warns about profiles whose email can't sign in.
 - Given emails, then they are never sent to the page except to the admin on this panel.
 
+Now: built 2026-10-26 ([HISTORY.md](../HISTORY.md#local-sign-in-readiness-and-member-management-completion-2026-10-26-e10-s17)). Settings can add a private own-space member or replace an existing member email through reviewed, audited publication and recovery. Local status reports known configuration blockers; no real member change, Access policy or sign-in is claimed.
+
 Evidence:
-- `decklab/lib/profiles.py`: RESERVED_IDS
-- `decklab/db/profiles_sync.py`
-- `decklab/web/settings.js`
+- `decklab/lib/profiles.py`: tolerant parsing, position/code diagnostics, strict local `read_checked` and shared `supported_email` validator
+- `decklab/lib/homenet/profile_config.py`: local-only static sign-in positions/codes for legacy roles, absent/unsupported aliases and cross-profile duplicates; `commands.py`: install preflight
+- `decklab/db/profiles_sync.py`, `setup.py`: refusal before connection/setup and one validated snapshot
+- `test_profile_config_validation.py`, `test_homenet_profile_diagnostics.py`, `test_profile_config_privacy.py`: compatibility, side-effect gates and request privacy
+- `decklab/lib/profile_config.py`, `decklab/db/profile_edits.py`, `decklab/db/profiles_sync.py`: raw-config and membership receipts, exact web-actor audit, private pending publication journal and coordinated local recovery/sync
+- `decklab/lib/api/members.py`, `decklab/web/settings-members.js`: named-home-admin-only member creation/email review, guarded receipts, private panel lifetime and explicit Access-policy reminder
+- `test_members_api.py`, `test_settings_members_ui.py`: authorization-before-read, strict payload scope, stale and uncertain outcomes, exact receipt validation and retired form controls
+- `decklab/db/profile_admission.py`, `profile_edits.create`, `POST /api/settings/member`: strict unused-id admission, fixed Member/own-space creation, exact three-row INSERT audit and guarded append-publication recovery
+- `test_profile_admission.py`, `test_profile_create_pg.py`: creation validation, retained membership/private/audit/Forge provenance and disposable persistence/recovery coverage
 
-Gap: Settings has no profile or email management, and `lib/profiles.py` silently drops invalid entries (reserved ids, a bad space, a missing plays_as) instead of reporting them.
-
-First slice: report invalid profile entries (reserved id, bad space, missing plays_as) in `homenet status` and setup instead of dropping them; the Settings editor follows.
-
-Review note: L for a could bundles a profile editor, validation, an Access reminder and a status check; the second criterion could be its own small story.
+Verification limits: status diagnoses known local blockers only, without querying the Access policy or verifying a real sign-in. Each intended address still needs its separate policy and sign-in check. [E11-S02](#e11-s02) retains the signed-in household workflow checks; those do not establish coverage for every new member/address. Local parsing remains tolerant outside pending-publication refusal, and household activation remains separate.
 
 **E10-S18** · Space members · could · M · partial
 
@@ -3509,13 +3527,57 @@ As Matt, the household admin, I want to undo a wrong change from the audit trail
 - Given rows have changed since, when I try to undo, then I'm told which rows conflict and nothing is written.
 - Given a deck change, when I want it back, then the deck's History opens the old revision as a draft to save.
 
+Now (2026-10-26): Activity Undo supports narrow row UPDATE and collection INSERT/DELETE inverses, [removal of an unused added token-card row](../HISTORY.md#undo-one-unused-added-token-card-row-2026-10-26-e11-s08), and complete batches of 2-50 collection positive-quantity/condition/language/notes updates. Each uses an authoritative complete-source review and a separate audited inverse, with no partial batch selection. Quantity batches use `batch_update`; metadata-only sources retain `batch_metadata`. Decreases require full holder/Stand-ins certainty and whole-candidate aggregate capacity, without claiming printing freedom or moving packed cards. Historical notes restore verbatim as database text and display as wrapping literal text; malformed representations refuse before the inverse. The quantity extension passed 61 backend checks (12 actual PostgreSQL), 22 UI checks without skips and 12 isolated native light/dark cases with zero actual browser writes; the final combined Undo regression passed all 231 checks without skips. See [HISTORY.md](../HISTORY.md#undo-positive-collection-quantities-in-a-bounded-batch-2026-10-26-e11-s08). Deck History still opens an old revision as a draft.
+
 Evidence:
-- `decklab/web/history.js`: historySheet, showRevisionEditor (Open as a draft)
-- `decklab/web/activity.js`, `decklab/lib/api/activity.py` (read-only)
+- `decklab/lib/inventory/undo.py`, `pg.py`, `decklab/lib/state/pg.py`: complete original audit source, latest original audit-row id, full after-state and inventory/deck revision checks under the normal write lock; one new inverse audit without changing the original
+- `decklab/lib/api/activity_undo.py`, `activity.py`: advisory candidate hint, separate authorized own-space preview/apply, protected row-label conflicts and actual restored-row/save receipts
+- `decklab/web/activity-undo.js`, `activity.js`, `history.js`: explicit Save Undo, no display-row write authority, unknown/stale outcomes require reload, bounded filter/page-depth refresh, and Open as a draft for deck revisions
+- `decklab/tests/test_inventory_undo.py`, `test_activity_undo_api.py`, `test_activity_undo_ui.py`: source scope, collisions, changed/touched rows, held reductions, exact preview/receipt values and current UI ownership
+- `decklab/tests/test_inventory_undo_insert.py`, `test_inventory_undo_insert_pg.py`, `test_activity_undo_insert_api.py`, `test_activity_undo_remove_ui.py`: single global INSERT eligibility, whole-row removal, strict physical-use proof, required reason/audit, null-restored absence receipts and unchanged UPDATE protocol
+- `decklab/tests/test_inventory_undo_delete.py`, `test_inventory_undo_delete_pg.py`, `test_activity_undo_delete_api.py`, `test_activity_undo_add_ui.py`: single global DELETE scope, latest absent key, canonical paper/finish and exact add simulation, explicit whole-quantity ownership confirmation, full restored-row/added-key receipts and unchanged earlier protocols
+- `decklab/tests/test_inventory_undo_batch.py`, `test_inventory_undo_batch_pg.py`, `test_activity_undo_batch_api.py`, `test_activity_undo_batch_ui.py`: 2-50 global positive-quantity/condition/language/notes UPDATE rows, unfiltered 51-row bound, own-space privacy before labels, unique/latest/full-current receipts, whole-candidate holder/Stand-ins and aggregate reduction checks, verbatim notes and malformed-text refusal, exact atomic inverse, complete keyed save receipts and literal wrapping UI text
+- `decklab/lib/inventory/undo_tokens.py`, `test_inventory_undo_token_insert.py`, `test_inventory_undo_token_insert_pg.py`, `test_activity_undo_token_insert_api.py`, `test_activity_undo_token_remove_ui.py`: verified token INSERT pairing and stable id/position, duplicate/packing/allocation refusals, one-row removal with unchanged survivors, physical-card totals and exact stable-id receipts
 
-Gap: only deck revisions can be restored. Activity has no Undo, no inverse-change preview and no conflict check for inventory, token, wishlist or accessory change sets.
+- `decklab/tests/test_inventory_undo_batch_insert.py`, `test_inventory_undo_batch_insert_pg.py`, `test_activity_undo_batch_insert_api.py`, `test_activity_undo_batch_remove_ui.py`: complete INSERT-only scope and 50/51 bounds, strict physical proofs, exact survivors/absence, real restoration/removal cycle, mixed raw-import refusal, reason, stale/ABA guards, atomic rollback and literal full-row UI
 
-First slice: Undo on Activity for a single collection or token edit: an inverse change previewed, a conflict refused naming the rows, saved as a new change set.
+- `decklab/lib/state/wishlist_undo.py`, `pg_wishlist_undo.py`, `api/wishlist_undo.py`, `test_wishlist_undo.py`, `test_wishlist_undo_api.py`, `test_wishlist_undo_pg.py`, `test_activity_wishlist_undo_ui.py`: exact profile ownership before source/body authority, complete source, raw/null identity and list fences, audit ABA versions, same-connection inverse, exact actual audit/list receipt, rollback, unknown reply and literal metadata UI
+
+Latest-owner wishlist entry additions/removals are implemented as `wishlist_remove`/`wishlist_add`, with explicit null/full-entry previews and no diff fields or stock controls. Only a single complete source that is still the latest own-list audit row qualifies, preventing logical-name ABA at another position. Ordinary same-cursor helpers must reproduce exact survivors or the old free position without moves; sparse/occupied slots refuse. Receipts prove actual full restoration or exact name absence, the whole list and a newer audit version. All 300 targeted checks passed without skips, including 45 guarded PostgreSQL and 129 UI checks; both actions passed 24 native cases with zero actual writes. See [HISTORY.md](../HISTORY.md#undo-the-latest-wishlist-entry-addition-or-removal-2026-10-26-e11-s08).
+
+One exact owner-profile wishlist printing/notes/source UPDATE inverse is implemented through `/api/activity/wishlist-undo`. It preserves raw name/profile/position, validates both nullable printing pairs and proves the full global source and ordered list with latest target/owner audit evidence, and saves through one admitted connection and wishlist lock. Scripts, home companions and admins gain no override; historical source remains literal text without enrichment. The distinct profile-only protocol proves the actual entry, expected whole-list digest and a newer bigint audit revision. All 271 targeted checks passed without skips, including 39 guarded PostgreSQL and 120 UI checks; 12 isolated native cases passed with zero actual writes. Broader wishlist changes remain; see [HISTORY.md](../HISTORY.md#undo-a-wishlist-printing-preference-2026-10-26-e11-s08).
+
+Whole added-row batch removal is implemented as `batch_remove`: 2-50 global own-space INSERTs, unique/latest/full current rows and both revisions, one complete ordinary-removal candidate and strict per-target nonbasic/unheld physical proofs. Any same-name holder refuses despite surplus. Exact survivors and other data, valid empty collections and actual unique removed-key receipts are checked; one reviewed removal reason covers the batch with no partial selection. Imports and receipts remain unavailable when their complete global audit includes other rows. All 387 final checks passed without skips, including 55 guarded disposable PostgreSQL and 104 UI cases. Twelve final isolated native cases passed, including focused reason visibility and zero actual browser writes. See [HISTORY.md](../HISTORY.md#remove-a-complete-unused-added-collection-batch-2026-10-26-e11-s08).
+
+Whole deleted-row batch restoration is implemented as `batch_add`: 2-50 global own-space DELETE rows, unique/latest absent keys, exact canonical paper/finish and ordinary Add round-trips, both revisions and one atomic candidate/audit. Preview marks physical confirmation required and supplies full historical rows with `current: null`, never zero or UPDATE fields. One initially unchecked confirmation covers every recorded copy across all printings; cancel/reopen resets it, and fewer copies require manual Collection entry. All actual restored rows must match keyed receipts, with no partial selection or mixed UPDATE/DELETE source. The final combined group passed all 292 checks without skips, including 47 guarded disposable PostgreSQL and 46 UI checks; 12 native light/dark cases passed with zero actual browser writes. Independent final source/test/UI review is clear. See [HISTORY.md](../HISTORY.md#restore-a-complete-deleted-collection-row-batch-2026-10-26-e11-s08).
+
+Accessory text-row Undo is implemented (2026-10-27) for one global UPDATE changing only brand/name/colour/notes, using normal owner/shared permissions and exact full-row round-trips. It retains the current photo and kit, including unaudited image bytes; no historical-photo inverse is claimed. Complete source/latest-target and owner-scoped list receipts are rechecked under the inventory lock, without exposing global revisions or invalidating on another owner's private changes. The ordinary edit must produce exactly one opposite audit row and the full expected snapshot before commit. Verification builds an uncached provisional snapshot, preventing failed inverses from leaking into a later reused revision. All 644 final targeted checks passed without skips (106 guarded disposable PostgreSQL, 140 Undo UI); 12 isolated native cases passed with zero actual writes. See [HISTORY.md](../HISTORY.md#undo-accessory-text-details-2026-10-27-e11-s08).
+
+The same accessory UPDATE protocol now also restores saved product-link/image-source URL strings, alone or mixed with the four earlier fields. Current/restored entries contain all ten metadata fields; diff membership includes the six text fields and recorded capacity. Exact ordinary URL forms/limits and raw round-trips remain required, without hostname normalization, fetching or clickable rendering. A restored image-source URL is explicitly not verified against the retained current photograph. New pure/API/PostgreSQL/UI coverage and the final focused result are recorded in [HISTORY.md](../HISTORY.md#restore-recorded-accessory-links-2026-10-27-e11-s08); the story remains partial.
+
+One complete global image-free accessory INSERT can now be reversed as `accessory_remove`, removing the whole current record with one explicit audited reason. Full13 TEXT stock/capacity facts and null restoration have a distinct protocol from UPDATE meta10; exact source/current/latest/owner-scoped evidence, ordinary removal, complete survivors/other data and one actual DELETE receipt are required, including final-empty lists. Strict home deck/product/status and kit certainty refuse target references, wrong-kind/unresolved/legacy links, strays, malformed sources and photos/orphans. Eligibility is checked again under the same inventory lock; unrelated kit edits are preserved without a global revision receipt. See [HISTORY.md](../HISTORY.md#remove-one-unused-added-accessory-record-2026-10-27-e11-s08) for focused validation. Other accessory recovery remains.
+
+Evidence: `decklab/lib/inventory/accessory_undo.py`, `api/accessory_undo.py`, `inventory/pg.py`, `web/activity-undo.js`; `test_accessory_undo.py`, `test_accessory_undo_api.py`, `test_accessory_undo_pg.py`, `test_activity_accessory_undo_ui.py` cover source/ownership, exact candidate/actual audit, rollback-cache revision reuse, scoped privacy and literal text review.
+
+One image-free global accessory DELETE is also restorable as `accessory_add`, but only when ordinary Add derives the exact historical id/full13 row, leaving all survivors, kit and photos unchanged. Existing or later-touched ids, nonreproducible renamed identities, photo/orphan or uncertain/target kit references refuse generically without leaking candidate ids or a hidden namespace. Canonical empty current lists and reproducible suffixes are supported. Distinct null/full13/confirmation-required review and exact added-id/restored-row/scoped-digest/new-audit receipts require explicit `confirm_restore: true`. Positive stock is confirmed in addition to existing records; zero stock confirms reference-record intent without claiming owned stock increases. See [HISTORY.md](../HISTORY.md#restore-one-image-free-deleted-accessory-record-2026-10-27-e11-s08); broader recovery remains.
+
+Recorded box capacity is also supported in the same UPDATE protocol, alone or with text details: exact blank/1-9999 TEXT on deck boxes, blank on other kinds, with META10/FIELDS7 and the same source/current/latest/scoped/actual-row proofs. Normal Edit semantics permit a held-box correction; existing fit warnings may change, while stock, kit assignments and photos stay unchanged. The review names sleeved-card capacity without claiming physical fit or adding ownership/reason controls. ADD/REMOVE retain independent exact13 schemas. See [HISTORY.md](../HISTORY.md#restore-recorded-box-capacity-2026-10-27-e11-s08); the story remains partial.
+
+Recorded accessory quantity correction is also implemented as distinct `accessory_stock_update`: one global UPDATE must actually change canonical TEXT quantity 0-9999, optionally with the seven supported recorded details. Exact META11 current/restored facts and actual full-row audit proof preserve id/kind/owner/image/crop, current photographs and kit. Normal held-row Edit semantics retain shortage/availability warnings. Explicit whole-count consent distinguishes individual sleeves, items and a zero-stock reference record; Save sends source/expect plus `confirm_stock: true`, never proposed quantities or metadata. Other actions reject that flag. See [HISTORY.md](../HISTORY.md#restore-recorded-accessory-counts-2026-10-27-e11-s08); broader recovery and status counts remain unchanged.
+
+An unused record's own/Shared owner correction is also implemented as distinct `accessory_owner_update`, with exact META11 including unchanged quantity and a separately confirmed access change. Both source owners must be writable and form exactly Shared plus one configured home profile, even for scripts. Complete kit certainty refuses held, stray, wrong-kind or unreadable references; a new reference blocks the locked save. Ordinary Edit retains photos/kit and exact source/latest/scoped/actual-audit proofs, including an absent audit reason. Supported details may accompany the owner change, while id/kind/stock/image/crop and all Public/Private switches remain unchanged. See [HISTORY.md](../HISTORY.md#restore-unused-accessory-sharing-2026-10-27-e11-s08); the story remains partial with unchanged counts.
+
+An unused record's kind correction is also implemented as distinct `accessory_kind_update`/META11: a real kind difference, immutable id/owner/numeric quantity/image/crop, optional supported recorded details/capacity and explicit classification/whole-count consent. Both sides show their own sleeve/item units; zero retains reference-record intent. Complete kit certainty is checked before review and locked save, ordinary Edit retains photos/kit, and the exact restored list is sorted by kind/id with all survivors proved. Opposite actual audit and eleven-cell receipts retain the scoped/source/latest fences and absent audit reason. See [HISTORY.md](../HISTORY.md#restore-unused-accessory-kinds-2026-10-27-e11-s08); broader recovery and story counts remain unchanged.
+
+Combined corrections made by ordinary accessory Edit are also implemented as `accessory_record_update`/META11 when at least two of owner/kind/quantity actually change. Both complete records and side-specific units are reviewed with one explicit classification/count/sharing confirmation. Id/image/crop stay exact; all supported recorded details may accompany the correction. Existing writable-owner and configured Shared/home pair rules, strict unused proof, normal Edit, sorted full survivors, actual opposite audit/absent reason, scoped latest/source/current fences and exact eleven-cell receipt apply. Earlier single-category action/flag contracts remain separate, and no partial correction is saved. See [HISTORY.md](../HISTORY.md#restore-combined-accessory-corrections-2026-10-27-e11-s08); broader recovery and story counts remain unchanged.
+
+Crop-only recovery is also implemented as `accessory_crop_update`: exact RAW13 current/restored rows, one crop diff, pinned current-photo name/size/full hash/epoch version and explicit current-photo acknowledgement after both read-only views decode. Historical coordinates apply to the verified current bytes; no historical photograph is recovered. Source/current/latest/scoped and full photo fences are rechecked under the write lock, with actual target-byte reads on that same connection before and after ordinary Edit; changed current bytes, actual crop/photo drift or an unexpected audit reason roll back. Other cells, photos, stock, kit and visibility remain exact, including held rows, with exclusive photo consent and full raw/photo receipts. See [HISTORY.md](../HISTORY.md#restore-a-recorded-crop-on-the-current-photo-2026-10-27-e11-s08); broader recovery and story counts remain unchanged.
+
+Deletion-restoration evidence: `test_accessory_undo_delete.py`, `test_accessory_undo_delete_api.py`, `test_accessory_undo_delete_pg.py`, `test_activity_accessory_add_undo_ui.py` cover ordinary-id reproduction, hidden namespace changes, empty current stock, additive/zero consent, exact actual INSERT, rollback, replay and literal historical review.
+
+Insertion-removal evidence: `decklab/lib/inventory/accessory_undo_remove.py`, `test_accessory_undo_insert.py`, `test_accessory_undo_insert_api.py`, `test_accessory_undo_insert_pg.py`, `test_activity_accessory_remove_undo_ui.py` cover complete kit certainty, current/actual absence, audited reasons, empty stock, kit races and source-only UI recovery.
+
+Gap: broader imports, receipts, merges, other removal recovery, identity changes and other multi-row recovery, plus other accessory and broader wishlist inverses, remain beyond this slice. Eligibility follows the complete global audited row set, without an inferred operation label. UPDATE batches cannot restore zero/removal or identity changes; DELETE batches are separate complete historical restorations, with no partial selection or mixed source. Token DELETE needs a separate identity policy. Metadata-only protocol remains separate from quantity updates. Unknown, conflicting or unsafe aggregate reductions refuse, without establishing printing-level physical freedom; collection INSERT Undo also refuses any target-name physical holder despite other surplus, uncertain/anonymous marker evidence and basic lands. Token INSERT Undo requires verified physical pairing and refuses duplicate identities, unknown packing, in-use rows or any surviving-card reallocation. Deleted collection-row restoration refuses existing or later-touched keys and any historical row that cannot be added unchanged; fewer physically owned copies require manual Collection entry. An in-use acknowledgement remains the normal editor's separate action. Undo supplies no automatic retry or already-done/idempotent result claim. Live household activation remains separate.
 
 **E11-S09** · Claude Code · must · L · built
 
@@ -3866,7 +3928,15 @@ Slice 14's retained Forge action panel built 2026-10-26: the existing secondary 
 
 Slice 14's retained nonmodal search Dock built 2026-10-26: original search/query/controls, measured Save-bar and outside-focus clearance, exact Back/Paste/history takeover, guarded Escape and current keyboard/help/Undo integration. 560 guarded integrated checks plus 15 Chromium interactions and two final layout spot checks passed with actual writes blocked. Device acceptance and remaining row/MV/bar/Forge work stay open. See [HISTORY.md](../HISTORY.md#retained-nonmodal-editor-search-dock-2026-10-26-e11-s30-slice-14).
 
-Gap: slices 9 to 12's touch/Safari acceptance, Collection's open colour-filter choice and Receive's check-to-row association; then slices 13 to 15 (criteria 1 to 3 and 6). Independent coding through slice 12 is built; component checks stay separate until their row association is authoritative. Device checks do not block coding. Section 6's question 4 is settled (Matt, 2026-10-25: only Building and Idea tiles show a status pill). The lab top bar's search is E11-S31.
+Now: slice 14 is implemented; slice 13 includes recorded activity, verified intact-product review and per-card movable-copy priorities (2026-10-27; [HISTORY.md](../HISTORY.md#per-card-packing-priorities-2026-10-27-e11-s30-slice-13)). Synthetic dark layout smoke is recorded; it does not claim full-data or device acceptance.
+
+Receive's first explicit check-to-row slice is implemented: a newly authored check on an existing pending cards/tokens part can name one original row, backed by canonical payload/full-row and check ordinal/text proof. General stays the default, and Receive's inline context shares the original component-wide verification through local edits and splits. Persisted payload edits, shipment splits, merges and receipt invalidate links; uncertain saves require refresh and inspection. Migration 0015 is code only, with no live activation. The final backend run passed 214 of 216 tests with two existing private golden-commit fixture skips and no feature/database skips; all 194 UI/source checks and 12 native light/dark cases passed. One disposable check add/reload preserved all unrelated data, with zero arrival writes; real device acceptance remains open. See [HISTORY.md](../HISTORY.md#explicit-original-row-context-for-arrival-checks-2026-10-26-e11-s30-slice-12).
+
+Inline verification placement is implemented for proven targets: the original single label/input moves to the first visible original-row piece, with general/unproved/hidden/unselected fallback in To check. Targeted fallback retains a visible original-row/printing caption. Node identity, checked state and owned focus survive filter/layout/rebuild/split/merge/Undo and explicit Resume; whole-part verification and requests/drafts remain unchanged. The full 208 UI checks and final 70-check caption delta passed without skips; independent caption review and 12 native light/dark cases are clear, with zero API writes and all fixture data unchanged. Actual device acceptance remains open; see [HISTORY.md](../HISTORY.md#inline-original-row-arrival-checks-2026-10-26-e11-s30-slice-12).
+
+Gap: exact physical printing needs a confirmed-printing model; Collection's open colour-filter choice, full-data dark states and touch/Safari/household-device acceptance remain. Independent ready reserve coding can continue. Section 6's question 4 is settled (Matt, 2026-10-25: only Building and Idea tiles show a status pill). The lab top bar's global search is E11-S31.
+
+Slice 14 implementation finished 2026-10-26: numeric MV and retained sorting, changed-row treatment, the owned action bar, exact saved-list Forge evidence and the guarded explicit post-save field choice are built. The field response never delays the successful-save UI or replaces later edits; the remaining physical/Safari checks, slice 13 contracts and slice 15 remain with the visual-design owner. Validation and limits are recorded in HISTORY.md.
 
 <a id="e11-s31"></a>
 
@@ -3880,7 +3950,7 @@ As Matt, I want one search in the top bar that finds a deck or a card from any p
 
 Decided (Matt, 2026-10-25): left out of E11-S30's slice 7 (the shell) as its own story, since Deck Lab had no global search to restyle. Still to settle before building: what it searches (decks, the viewer's collection, every Scryfall card) and how results are grouped.
 
-Next step: Matt chooses the sources and result grouping; this is a DECISION in TODO until then. E1-S05's local library title search is independently ready.
+Next step: Matt chooses the sources and result grouping; this is a DECISION in TODO until then. E1-S05's local Library title, colour and archetype filters are built independently of this decision.
 
 Gap: everything; nothing built.
 
@@ -3909,11 +3979,17 @@ As Matt, publishing Deck Lab for others to run on their own PC, I want Deck Lab 
 - Given Linux, when `python -m decklab.lib.homenet` installs or restarts the server, then it uses a systemd user service, and `status` reports it as on Windows.
 - Given SELF-HOSTING.md, then the Linux route has no "a few tests fail" caveat and no hand-written service step.
 
+Now (2026-10-26): [interpreter-path semantics have a targeted fix](../HISTORY.md#interpreter-path-semantics-portability-2026-10-26-e11-s33), with isolated lexical/mocked validation on Windows. Explicit POSIX paths preserve their flavour, while Windows strings retain drive/UNC directories. No full Linux acceptance criterion has passed, so the story remains missing.
+
 Evidence:
-- `decklab/db/schedule.py`: Task Scheduler XML through schtasks only
-- `SELF-HOSTING.md`: Linux runs the server under the user's own service manager; a few tests fail on Linux
+- `decklab/db/schedule.py`: Windows Task Scheduler management, plus stdout-only candidate systemd nightly unit previews
+- `SELF-HOSTING.md`: Linux still uses the user's own service manager and manual nightly scheduling; the current Linux full suite is unverified
 - The 2026-10-25 self-host check: 31 of 6188 tests failed on Linux
+- `decklab/lib/homenet/commands.py`: `_python_sibling`, `pythonw_path`, `this_pythons`, preserving explicit POSIX path types before the Windows string heuristic
+- `test_homenet_executable_paths.py`, `test_gitops.py`: injected lexical path flavours, typed PathLike/default interpreter cases and a genuinely Windows lexical diagnostic fixture
 
-Gap: everything. Raised 2026-10-25 by the self-host check.
+The independent nightly preview slice is implemented: `schedule preview-systemd --unit service|timer --python PATH --workdir DIR [--at HH:MM]` prints fixed-name candidate units, with explicit POSIX paths, directive-specific literal escaping and strict UTF-8/LF output. All 32 focused renderer/CLI/Windows-XML checks passed without skips, and independent review is clear. It reads no host/config/data and installs nothing. See [HISTORY.md](../HISTORY.md#preview-linux-nightly-service-and-timer-files-2026-10-26-e11-s33).
 
-First slice: reproduce and record the current Linux failures under Python 3.14, fix Windows path and case assumptions, then add a Linux CI run so they stay fixed. The 31 failures out of 6188 tests are the dated 2026-10-25 baseline, not a current count. Generate and test the later service/timer files separately from installing or enabling them on a host.
+Gap: a real Linux Python 3.14 reproduction and full-suite pass, Linux CI, nightly installation/enabling/integration and server-service support remain. The targeted previews establish no Linux runtime or service-manager acceptance. Read-only WSL distribution discovery was denied with `Wsl/EnumerateDistros/Service/E_ACCESSDENIED` and stopped, so real Linux validation needs an available authorized environment.
+
+Next slice: reproduce and record the current Linux failures under Python 3.14, continue fixing platform path/case assumptions, then add a Linux CI run so they stay fixed. The 31 failures out of 6188 tests are the dated 2026-10-25 baseline, not a current count. Exercise the generated nightly units in an authorized Linux environment before integration; server-unit generation and lifecycle integration remain separate work. Host installation/enabling stays separate from rendering.

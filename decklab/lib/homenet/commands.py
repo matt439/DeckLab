@@ -25,11 +25,11 @@ import tempfile
 import threading
 import time
 from datetime import datetime
-from pathlib import Path
+from pathlib import Path, PurePosixPath, PureWindowsPath
 
-from decklab.lib import access, config, control, tunnel
+from decklab.lib import access, config, control, profiles, tunnel
 
-from . import gather, watchdog
+from . import gather, profile_config, watchdog
 from . import mdns as multicast         # not "mdns": cmd_status has a variable of that name
 from .checks import check_addresses, check_firewall, check_network, check_sleep, exit_code, format_report, lan_of
 from .common import (
@@ -44,16 +44,26 @@ from .task import _task_file, parse_task_xml, server_arguments, task_xml, watchd
 
 # ------------------------------------------------------------ the task
 
+def _python_sibling(executable, name):
+    """Typed POSIX paths keep their flavour; ambiguous drive/backslash strings use Windows'."""
+    executable = executable or sys.executable
+    if isinstance(executable, PurePosixPath):
+        return executable.with_name(name)
+    text = os.fspath(executable)
+    windows = bool(ntpath.splitdrive(text)[0]) or "\\" in text and not text.startswith("/")
+    sibling = PureWindowsPath(text).with_name(name) if windows else Path(text).with_name(name)
+    return Path(str(sibling))
+
+
 def pythonw_path(executable=None):
     """The windowless pythonw.exe beside this Python (sys.executable)."""
-    return Path(executable or sys.executable).with_name("pythonw.exe")
+    return _python_sibling(executable, "pythonw.exe")
 
 
 def this_pythons(executable=None):
     """This Python's python.exe and pythonw.exe (Windows' firewall prompt
     makes rules for each)."""
-    executable = Path(executable or sys.executable)
-    return [executable.with_name("python.exe"), executable.with_name("pythonw.exe")]
+    return [_python_sibling(executable, "python.exe"), _python_sibling(executable, "pythonw.exe")]
 
 
 def pc_name():
@@ -337,6 +347,14 @@ def _windows_only():
 
 
 def cmd_install(name, port, no_start=False, log_path=None, port_given=False, host=None, at_logon=False):
+    try:
+        profiles.read_checked()
+    except profiles.InvalidProfiles as problem:
+        say(str(problem))
+        return 1
+    except (OSError, ValueError, TypeError):
+        say("Profile configuration could not be checked. Fix decklab/config.json before installing.")
+        return 1
     if _windows_only():
         return 1
     pythonw = pythonw_path()
@@ -932,7 +950,7 @@ def cmd_status(name, port):
     server_programs.append(task["command"] if task and task.get("command") else str(pythonw_path()))
     python_programs = this_pythons()
 
-    lines = []
+    lines = profile_config.check(settings)
     lines += check_server(mine, answer, port, log_file, newest_code_mtime(), other)
     lines += check_task(task, task_facts if isinstance(task_facts, dict) else {}, str(SERVER_SCRIPT),
                         exists=file_exists, error=task_error, user=task_user(), pythonw=str(pythonw_path()))

@@ -231,17 +231,21 @@ def accessory_sort_key(row):
 
 # sleeves and deck_box hold an accessory id or free text and mean something only while the
 # product is owned and kept intact.
-STATUS_FIELDS = ["file", "status", "intact", "sleeves", "deck_box", "notes"]
+STATUS_FIELDS = ["file", "status", "intact", "sleeves", "deck_box", "notes", "token_cards"]
+KIT_STATUS_FIELDS = ["file", "status", "intact", "sleeves", "deck_box", "notes"]
 LEGACY_STATUS_FIELDS = ["file", "status", "intact", "notes"]
 
 
 def parse_status(text, where):
-    """status.csv's text as STATUS_FIELDS rows; a legacy 4-column file gets blank kit columns
+    """status.csv's text as STATUS_FIELDS rows; legacy 4/6-column files get blank new columns
     (the old receive_order.read_status_csv's rule). ValueError naming where for any other header."""
     fields = next(csv.reader(io.StringIO(text, newline="")), None)
     if fields == LEGACY_STATUS_FIELDS:
-        return [{**row, "sleeves": "", "deck_box": ""}
+        return [{**row, "sleeves": "", "deck_box": "", "token_cards": ""}
                 for row in parse_csv(io.StringIO(text, newline=""), LEGACY_STATUS_FIELDS, where)]
+    if fields == KIT_STATUS_FIELDS:
+        return [{**row, "token_cards": ""}
+                for row in parse_csv(io.StringIO(text, newline=""), KIT_STATUS_FIELDS, where)]
     return parse_csv(io.StringIO(text, newline=""), STATUS_FIELDS, where)
 
 
@@ -249,7 +253,7 @@ def set_intact(row, intact):
     """Set a status row's intact choice; a broken-up product's cards go back unsleeved."""
     row["intact"] = intact
     if intact == "no":
-        row["sleeves"] = row["deck_box"] = ""
+        row["sleeves"] = row["deck_box"] = row["token_cards"] = ""
 
 
 # ------------------------------------------------------------------ token rows

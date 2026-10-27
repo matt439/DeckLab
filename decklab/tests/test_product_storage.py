@@ -44,7 +44,7 @@ class _ProductFixture:
 
     def set_status(self, intact, *, status="owned", sleeves="shared-sleeves", box="shared-box"):
         self.write("products/status.csv", ",".join(rules.STATUS_FIELDS) + "\n"
-                   + f"{STEM}.csv,{status},{intact},{sleeves},{box},Keep product notes\n")
+                   + f"{STEM}.csv,{status},{intact},{sleeves},{box},Keep product notes,\n")
 
     def state(self):
         return api.product_state(STEM)

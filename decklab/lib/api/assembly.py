@@ -2,6 +2,7 @@
 with the token cards each deck would grab (lib/tokens)."""
 from collections import Counter
 import csv
+from functools import partial
 import traceback
 
 from decklab.lib import accessories, cards, decks, inventory, pool, spaces, tokens
@@ -40,10 +41,18 @@ def _deck_tokens(deck_id, version, sections, inv, inc, held=None):
 
 
 def held_tokens(inv, space=spaces.HOME):
-    """tokens.reserve.holds of a space's built decks, or {} (logged) when they can't be worked out:
-    the plan and pages then show every token card as free, as before reservations."""
+    """Packed holders with private titles redacted for this request, or {} on read failure.
+
+    Quantities stay available to public inventory readers; product identities remain home's.
+    """
     try:
-        return tokens.reserve.holds(inv, space)
+        found = tokens.reserve.holds(inv, space)
+        from . import guard
+        from .inventory_views import named_holder
+        sees = guard.deck_reader()
+        return {holder: hold if named_holder(holder, sees) else
+                dict(hold, title=guard.hidden_deck(holder), link=None)
+                for holder, hold in found.items()}
     except Exception:
         common._log("The packed token cards couldn't be worked out:\n" + traceback.format_exc())
         return {}
@@ -145,9 +154,16 @@ def assembly_view(deck=None, version="target"):
     basics. These describe the list, not physical copies allocated from
     storage, other decks or returns; allocation remains by card name.
 
+    A held_elsewhere row may include optional intact_product {id, title, deck_id}:
+    an owned/intact product with a verified readable deck route, never permission to move it.
+
     Selected participants also carry optional canonical Planned/library "colors" from the
     summary already read, independent of the selected list/physical recipe. None is unknown;
     [] is known colourless. No extra deck or inventory read is made for that decoration.
+
+    A selected built ordinary home deck has "take_apart": the current physical snapshot (or
+    legacy built list), all sections and installed markers, packed token cards and visible kit.
+    It supplies the deck SHA for an ordinary explicit status save; no checklist read changes it.
 
     The plan is the home pool's: 403 for anyone outside the home
     (guard.require_sees_home_records), here and in assembly_preview."""
@@ -200,6 +216,9 @@ def assembly_preview(body):
 
 
 def _preview(selected, profile=False):
+    if not inventory.is_pinned():
+        with inventory.pinned():
+            return _preview(selected, profile=profile)
     if not isinstance(selected, list) or len(selected) > MAX_DECKS:
         raise ApiError(400, f"Choose up to {MAX_DECKS} decks")
     p, participants, aliases, unresolved = pool.load_pool(), [], set(), {}
@@ -218,12 +237,14 @@ def _preview(selected, profile=False):
     for choice in selected:
         if not isinstance(choice, dict):
             raise ApiError(400, "Each selected deck needs an id and version")
-        _keys(choice, ("id", "version"), ("sideboard",))
+        _keys(choice, ("id", "version"), ("sideboard", "prefer"))
         summary, intended = _deck_sections(choice["id"], choice["version"])
         sections = assembly_sections.recipe(choice, summary, intended)
         normalized = {"id": summary["id"], "version": choice["version"]}
         if "sideboard" in choice:
             normalized["sideboard"] = {name: qty for name, qty in sorted(choice["sideboard"].items()) if qty}
+        if "prefer" in choice:
+            normalized["prefer"] = choice["prefer"]
         selections.append(normalized)
         recipes[summary["id"]] = sections
         if summary.get("space", "home") != "home":
@@ -259,6 +280,8 @@ def _preview(selected, profile=False):
                     basics[name] += line.quantity
         shown = sees and guard.sees_kit(summary, owners)
         sleeves, kit = _kit(summary, sections, inv, usage, owners) if shown else (None, None)
+        from .assembly_takeapart import project as take_apart
+        checklist = take_apart(parsed, stored, kit, profile)
         participants.append({"id": summary["id"], "title": summary["title"], "version": choice["version"],
                              "colors": list(summary["colors"]) if isinstance(summary.get("colors"), list) else None,
                              "rename_version": stored.rename_version if stored is not None else 0,
@@ -276,8 +299,19 @@ def _preview(selected, profile=False):
                              "finishes": {name: [{"finish": finish, "quantity": qty} for finish, qty in counts.items()]
                                           for name, counts in finishes.items()},
                              "steps": [], "returns": []})
+        if checklist is not None:
+            participants[-1]["take_apart"] = checklist
+            from .box_check import project as box_check
+            checked = box_check(parsed, stored, checklist, profile)
+            if checked is not None:
+                participants[-1]["box_check"] = checked
+    from . import assembly_preferences
+    selections, priorities = assembly_preferences.normalize(selections, participants)
     from .assembly_markers import plan_standins
-    answer = plan_standins(p, participants, aliases, unresolved, profile, plan_counts)
+    answer = plan_standins(p, participants, aliases, unresolved, profile,
+                          partial(plan_counts, priorities=priorities), priorities=priorities)
+    from .assembly_products import annotate
+    answer = annotate(answer, p, inventory.current())
     answer["selections"] = selections
     from .assembly_intent import project
     for item in answer["decks"]:
@@ -292,6 +326,12 @@ def _preview(selected, profile=False):
     answer["rename_versions"] = {item["id"]: item["rename_version"] for item in participants}
     answer["assembly_keys"] = {item["id"]: item["assembly_key"] for item in participants if item.get("assembly_key")}
     answer["cards"] = _plan_cards(answer, answer["decks"], pictured)
+    if any(item.get("box_check") is not None for item in answer["decks"]):
+        # Separate representative art: intended printing choices cannot certify the cards in a box.
+        names = {row["name"] for item in answer["decks"]
+                 for section in item.get("take_apart", {}).get("sections", {}).values()
+                 for row in section if row["name"] is not None}
+        answer["box_check_cards"] = _plan_cards({"rows": [{"name": name} for name in sorted(names)]}, [], {})
     answer["sleeve_notes"] = _sleeve_notes(participants)
     answer["token_plan"] = _token_plan(participants, token_inv)
     answer["token_plan_note"] = TOKEN_PLAN_NOTE
@@ -334,7 +374,7 @@ def _plan_cards(answer, participants, pictured):
     return out
 
 
-def plan_counts(p, participants, aliases, unresolved):
+def plan_counts(p, participants, aliases, unresolved, *, priorities=None):
     """Allocate each physical copy once, keeping existing participant copies first.
 
     Nonparticipants remain reserved. Released participant cards can move between
@@ -359,43 +399,23 @@ def plan_counts(p, participants, aliases, unresolved):
         if not cards.card(name):
             unknown.add(name)
         storage = max(0, owned - all_held)
-        remaining_incoming = incoming
-        released = [{"deck": item, "quantity": max(0, item["current"][name] - item["need"][name])}
-                    for item in participants]
+        from .assembly_preferences import allocate
+        allocated = allocate(name, participants, storage, incoming, (priorities or {}).get(name))
         aggregate = {"name": name, "need": 0, "owned_now": owned, "kept": 0, "from_storage": 0,
                      "transfers": [], "waiting": 0, "missing": 0, "held_elsewhere": elsewhere,
                      "incoming_from": [{"source": source, "quantity": qty}
                                        for source, qty in p.on_the_way.get(name, [])]}
-        for item in participants:
-            needed = item["need"][name]
-            if not needed:
+        for item, step in zip(participants, allocated["steps"]):
+            if step is None:
                 continue
-            keep = min(needed, item["current"][name])
-            need = needed - keep
-            pull = min(need, storage)
-            storage -= pull
-            need -= pull
-            transfers = []
-            for donor in released:
-                moved = min(need, donor["quantity"])
-                if moved:
-                    donor["quantity"] -= moved
-                    need -= moved
-                    transfer = {"from": donor["deck"]["id"], "from_title": donor["deck"]["title"],
-                                "to": item["id"], "to_title": item["title"], "quantity": moved}
-                    transfers.append(transfer)
-                    aggregate["transfers"].append(transfer)
-            wait = min(need, remaining_incoming)
-            remaining_incoming -= wait
-            need -= wait
-            item["steps"].append({"name": name, "need": needed, "keep": keep, "storage": pull,
-                                  "transfers": transfers, "waiting": wait, "missing": need,
-                                  "resolved": name not in unknown})
-            for key, qty in (("need", needed), ("kept", keep), ("from_storage", pull), ("waiting", wait), ("missing", need)):
-                aggregate[key] += qty
-        for donor in released:
-            if donor["quantity"]:
-                donor["deck"]["returns"].append({"name": name, "quantity": donor["quantity"]})
+            item["steps"].append({**step, "resolved": name not in unknown})
+            for key, source in (("need", "need"), ("kept", "keep"), ("from_storage", "storage"),
+                                ("waiting", "waiting"), ("missing", "missing")):
+                aggregate[key] += step[source]
+        aggregate["transfers"] = allocated["transfers"]
+        for item, quantity in zip(participants, allocated["returns"]):
+            if quantity:
+                item["returns"].append({"name": name, "quantity": quantity})
         if aggregate["need"]:
             rows.append(aggregate)
     totals = {key: sum(row[key] for row in rows) for key in ("need", "kept", "from_storage", "waiting", "missing")}

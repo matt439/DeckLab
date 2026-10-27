@@ -148,7 +148,7 @@ def _operation(data, before):
                                                   "undo": data["undo"]})
     if action != "checks":
         raise ApiError(400, "Choose a record, arrival-check, row, product, split, cancellation, removal or extra-copies change")
-    _keys(data, ("profile", "expect", "order", "action", "component"), ("add", "withdraw"))
+    _keys(data, ("profile", "expect", "order", "action", "component"), ("add", "withdraw", "target"))
     component_id = _text(data["component"], "component", blank=False, limit=100)
     params = {"order": order_id, "component": component_id}
     if ("add" in data) == ("withdraw" in data):
@@ -158,7 +158,13 @@ def _operation(data, before):
         if len(added) != 1:
             raise ApiError(400, "Add one arrival check at a time")
         params["add"] = added[0]
+        if "target" in data:
+            target = _object(data["target"], "target")
+            _keys(target, ("row", "payload_sha256"))
+            params["target"] = dict(target)  # The operation validates exact row/payload proof under the lock.
     else:
+        if "target" in data:
+            raise ApiError(400, "Only a new arrival check may target a row")
         numbers = data["withdraw"]
         if (not isinstance(numbers, list) or len(numbers) != 1
                 or isinstance(numbers[0], bool) or not isinstance(numbers[0], int) or numbers[0] < 1):
@@ -212,6 +218,18 @@ def _result(before, after, summary, operation):
         result["component"] = {"id": component.id, "kind": component.kind,
                                "product": _editable_product(after, component),
                                "extra_copies": component.id in rules.extra_copies(order.audit_notes)}
+    elif operation.kind == "order.checks" and operation.params.get("target") is not None:
+        from . import arrival_checks
+        _, component = orders._component(after, order.id, operation.params["component"])
+        fields = orders.PAYLOAD_FIELDS[component.kind]
+        rows = [{key: row.text(key) for key in fields} for row in after.payloads[component.path].rows]
+        projected = arrival_checks.projection(component, rows, fields, True)
+        index = len(component.checks) - 1
+        proof = projected["check_targets"][index]
+        if proof is None:
+            raise inventory.Invalid("The new check's row association could not be confirmed")
+        result["targeted_check"] = {"component": component.id, "check": index + 1, "text": component.checks[index],
+                                    **proof, "payload_sha256": projected["check_targeting"]["payload_sha256"]}
     return result
 
 
@@ -220,7 +238,7 @@ def preview_order_change(body):
     actor = _authorize(data)
     _keys(data, ("profile", "expect", "order", "action"),
           ("values", "component", "add", "withdraw", "rows", "undo", "csv", "columns",
-           "new_id", "take", "move_checks", "keep_checks", "reason", "restore_queue"))
+           "new_id", "take", "move_checks", "keep_checks", "reason", "restore_queue", "target"))
     _text(data["expect"], "expect", blank=False, limit=256)
     expect = data["expect"]
     try:

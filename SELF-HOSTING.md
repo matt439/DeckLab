@@ -14,7 +14,7 @@ This guide sets up Deck Lab on your own computer, from nothing, for you and your
 | The firewall script (`decklab/network-setup.ps1`) and `homenet status`'s network checks | Yes | No |
 | The nightly backup task (`python -m decklab.db schedule`) | Yes | No: run `python -m decklab.db nightly` from cron or a systemd timer |
 
-Deck Lab is built and used every day on Windows. On Linux a few tests fail because of Windows assumptions in the tests themselves (paths, a case-insensitive file system); they don't affect running it.
+Deck Lab is built and used every day on Windows. The dated Linux self-host check of 2026-10-25 found platform assumptions. Interpreter paths and Windows-path test fixtures now have targeted lexical/mocked checks on Windows; a fresh Linux Python 3.14 full-suite pass remains unverified. Linux service and nightly-job installation still use the manual steps below; full support remains [E11-S33](decklab/design/stories.md#e11-s33).
 
 ## 1. What to install
 
@@ -167,6 +167,15 @@ Deck Lab runs up to 16 Forge workers at once, each with up to 1 GB of memory. Th
 - **The nightly job:** `python -m decklab.db nightly` runs the backup, its pruning, a restore check now and then, and the data's check. It also exports the data as plain files into a git repo of their own, `../DeckLabData` beside this repo, unless `database.export_repo` says where. On Windows, `python -m decklab.db schedule install` runs it every night; elsewhere, schedule it with cron.
 - **pg_dump:** Deck Lab finds it in `C:\Program Files\PostgreSQL\<version>\bin` or on the PATH. Set `database.pg_bin` to its folder if it's somewhere else.
 - **Updating:** `git pull`, then `python -m decklab.db migrate`, then restart the server.
+
+To review candidate Linux nightly units, use `schedule preview-systemd` with the target machine's absolute paths:
+
+```
+python -m decklab.db schedule preview-systemd --unit service --python /usr/bin/python3.14 --workdir /srv/DeckLab
+python -m decklab.db schedule preview-systemd --unit timer --python /usr/bin/python3.14 --workdir /srv/DeckLab --at 03:30
+```
+
+Each command prints one complete unit (`decklab-nightly.service` or `decklab-nightly.timer`) as UTF-8 text. The time is local HH:MM and defaults to 03:30. This preview is available on Windows too and makes no host, database or filesystem changes. Generated units still need Linux runtime and manager validation; installing/enabling them and Linux server-service support remain unfinished. See the reference's [nightly task](decklab/README.md#the-nightly-task) for the preview contract.
 
 ## 10. From outside your home (optional)
 

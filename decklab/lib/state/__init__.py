@@ -21,6 +21,12 @@ tests/test_state_contract.py checks):
 - Wishlist writes also accept allow_orphan=False: an explicit CLI-only option for upkeep of
   retained lists without a profile. It never permits writes for a departed member or exempts
   the actor from membership checks.
+- PostgreSQL wishlist_undo_review(change_id, profile_id) and wishlist_undo_apply(change_id,
+  profile_id, expect, actor, message) review/apply one owner-only printing/notes/source UPDATE inverse
+  or the latest own-wishlist INSERT/DELETE presence inverse with an exact unchanged row position.
+  They require an independent transaction, exact global audit/current/list evidence and the
+  shared wishlist lock. The saved receipt's decimal revision is the owner's latest audit-row
+  id, not an inventory/deck revision. Memory-only tests use an explicit audit-shaped adapter.
 - settings(profile_id) -> {key: value} as saved, in key order (api/settings.py checks values
   and fills in defaults); settings_put(profile_id, values, actor, message) -> {key: value},
   None removing a key; settings_cached(profile_id) -> {key: value}, the last good values
@@ -36,6 +42,7 @@ tests/test_state_contract.py checks):
 - play_get(kind, id) -> record or None; play_list(kind) -> [record] in id order;
   play_put(kind, record, expected_sha, actor, message) -> record
 - packing_ticks(ids) -> [checked task hash] among ids, shared across home profiles;
+  packing_activity(ids) -> latest scoped recorded {actor, at, checks} or None (never online presence);
   packing_ticks_put(changes, actor, message, *, ids=None) -> [checked task hash] among ids
   (defaults to changes' keys); changes maps opaque SHA-256 hashes to bool, patches only
   those tasks, and stores no task text or private kit labels
