@@ -774,6 +774,7 @@ class TestUpdateOffline(unittest.TestCase):
                         # The combo list is decklab.lib.combos' (test_combos); never the PC's here.
                         mock.patch.object(cards, "_update_combos"),
                         mock.patch.object(cards, "_update_official_lists"),
+                        mock.patch.object(cards, "_update_rulings"),
                         mock.patch.object(cards, "_index", None)):
             patcher.start()
             self.addCleanup(patcher.stop)
@@ -878,6 +879,7 @@ class TestUpdateNetwork(unittest.TestCase):
                         mock.patch.object(cards, "BULK_META_FILE", self.tmp / "bulk.json"),
                         mock.patch.object(cards, "_update_combos"),
                         mock.patch.object(cards, "_update_official_lists"),
+                        mock.patch.object(cards, "_update_rulings"),
                         mock.patch.object(cards, "_index", None)):
             patcher.start()
             self.addCleanup(patcher.stop)

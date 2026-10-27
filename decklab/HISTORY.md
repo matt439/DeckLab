@@ -2,6 +2,16 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Card rulings in the card viewer (2026-10-27; E1-S25)
+
+The card viewer now shows a card's Scryfall rulings under its rules text, from the comparison with ManaBox and Dragon Shield.
+
+- **The data:** `cards update` has a rulings step (`lib/rulings.py`), run after the index like the combo list's, so its failure never fails the update. On the same weekly schedule as the card files, and only when Scryfall lists a newer file, it downloads Scryfall's `rulings` bulk file, reduces it to `data/scryfall/rulings.json.gz` (each card's rulings by oracle id: date, source and text, oldest first) and deletes the download. A failed download or an unreadable file keeps the rulings already on the PC. Its dates are in `bulk.json` under `rulings`.
+- **The endpoint:** GET `/api/cards/rulings?name=` (`api/card_rulings.py`) answers the exact name, whether the PC has rulings yet, the file's date and the card's rulings. Rulings are public card data, so every viewer gets the same answer.
+- **The viewer:** under the card's words (the Text panel on a phone, beside the picture on a wide screen) a closed **Rulings (N)** fold lists each ruling's date, its source (Wizards of the Coast or Scryfall) and its text with mana symbols, ending "From Scryfall, <date>". A card with no rulings, or a name that isn't a card (a token), shows nothing; without the rulings file it says "Rulings aren't available yet."; a failed request says so and is asked again next time. Each name is asked once per page load.
+
+Validation: the new `test_rulings.py` covers reducing JSON, JSON Lines and gzipped files, refusing damaged ones, freshness, Scryfall's unchanged file, force, every failure keeping the old rulings, the endpoint's answers and errors, and the viewer's fold, no-rulings, not-yet, token and failure cases under Node.js. Scryfall is blocked in the cloud container, so the real bulk file wasn't downloaded: the first real download happens on the PC's next `cards update` or server restart. The fold was checked in Chromium on a stand-in page (dark at 1440 px, light at 390 px); touch, Safari and device acceptance are not claimed.
+
 ## Printings in box (2026-10-27; E11-S30 slice 13)
 
 Deck Lab now records which physical printing of a built deck's cards is in its box, to the short design Matt approved on 2026-10-27. Cards are still counted by name: nothing reserves by printing.

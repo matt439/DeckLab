@@ -381,6 +381,15 @@ dialog.viewer.show-text[open] {
 .viewer-face .oracle { margin: 0 0 var(--s-2); line-height: var(--lh-body); overflow-wrap: break-word; }
 .viewer-numbers { margin: 0; font-weight: var(--fw-semibold); }
 .viewer-caption { margin: 0 0 var(--s-3); color: var(--ink-2); font-size: var(--fs-sm); }
+/* The card's rulings (E1-S25): a fold under its words, each ruling's date over its text. */
+.viewer-rulings:empty { display: none; }
+.viewer-rulings { margin-top: var(--s-4); padding-top: var(--s-3); border-top: 1px solid var(--viewer-line); }
+.viewer-rulings-fold > summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; font-weight: var(--fw-semibold); }
+.viewer-rulings-list { margin: var(--s-2) 0 0; padding: 0; list-style: none; }
+.viewer-ruling + .viewer-ruling { margin-top: var(--s-3); }
+.viewer-ruling-meta, .viewer-rulings-note { margin: 0; color: var(--on-scrim-2); font-size: var(--fs-sm); }
+.viewer-ruling-text { margin: var(--s-1) 0 0; }
+.viewer-rulings-fold .viewer-rulings-note { margin-top: var(--s-3); }
 
 /* A wide screen: the card, Previous and Next right either side of it, and the text beside them, the group
    centred. The card's column is as wide as the card can be drawn (the stage's height decides, as .viewer-frame
