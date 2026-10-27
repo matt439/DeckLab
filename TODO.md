@@ -43,7 +43,6 @@ An index of open work, one row per item; each row points to the doc that owns th
 | `E2-S23` | OPEN | could | S | A Considering list kept with each deck, outside its lists and tables. |
 | `E2-S24` | OPEN | could | M | Own card categories in a deck (ramp, draw, removal) with counts. |
 | `E2-S25` | OPEN | could | M | Rules-text and type-line search (`o:`, `t:`) in the editor's card finder. |
-| `E4-S25` | OPEN | could | S | Print card-size proxies of a deck's missing Planned-list cards for home games. |
 | `E4-S26` | OPEN | could | M | A phone life counter that ends by recording the game (multiplayer later, with `E4-S18`). |
 | `E8-S21` | OPEN | could | S | Printable deck box label with a QR code to the deck page. |
 | `E8-S22` | OPEN | could | M | A location (row, section) for storage copies, shown in the packing plan; with `E8-S19`'s storage count. |
