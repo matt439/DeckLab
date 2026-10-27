@@ -93,15 +93,17 @@ function activityUndoAccessoryUrl(value, limit) {
 }
 
 function activityUndoAccessoryEvidence(data, space, profile) {
-  const removing = data.action === "accessory_remove";
-  const keys = ["action", "available", "current", "expect", "id", "kind", "label", "restored", removing ? "reason_required" : "fields"];
-  if ((!removing && data.action !== "accessory_update") || space !== "home" || typeof profile !== "string" || !profile
+  const removing = data.action === "accessory_remove", adding = data.action === "accessory_add";
+  const stock = removing || adding, row = adding ? data.restored : data.current;
+  const keys = ["action", "available", "current", "expect", "id", "kind", "label", "restored", removing ? "reason_required" : adding ? "confirmation_required" : "fields"];
+  if ((!stock && data.action !== "accessory_update") || space !== "home" || typeof profile !== "string" || !profile
       || Object.keys(data).sort().join(",") !== keys.sort().join(",")
-      || (removing ? !activityUndoAccessoryStock(data.current) : !activityUndoRow(data.current, "accessory") || !activityUndoRow(data.restored, "accessory"))
-      || (removing ? [data.current] : [data.current, data.restored]).some(row => !activityUndoAccessoryUrl(row.link, 500) || !activityUndoAccessoryUrl(row.image_source, 2000))
-      || !data.current.id.trim() || !["sleeves", "deck_box", "playmat"].includes(data.current.kind)
-      || ![profile, "shared"].includes(data.current.owner) || data.label !== data.current.name) return false;
+      || (stock ? !activityUndoAccessoryStock(row) : !activityUndoRow(data.current, "accessory") || !activityUndoRow(data.restored, "accessory"))
+      || (stock ? [row] : [data.current, data.restored]).some(item => !activityUndoAccessoryUrl(item.link, 500) || !activityUndoAccessoryUrl(item.image_source, 2000))
+      || !row.id.trim() || !["sleeves", "deck_box", "playmat"].includes(row.kind)
+      || ![profile, "shared"].includes(row.owner) || data.label !== row.name) return false;
   if (removing) return data.reason_required === true && data.restored === null;
+  if (adding) return data.confirmation_required === true && data.current === null;
   if (["id", "kind", "owner"].some(field => data.current[field] !== data.restored[field])) return false;
   const changed = ACTIVITY_UNDO_EDITABLE.accessory.filter(field => data.current[field] !== data.restored[field]);
   return changed.length > 0 && Array.isArray(data.fields) && data.fields.length === changed.length
@@ -155,15 +157,17 @@ function activityUndoEvidence(data, id, space, profile = state.profile?.id) {
 
 function activityUndoReceipt(answer, preview) {
   if (preview.kind === "accessory") {
-    const removing = preview.action === "accessory_remove";
-    const keys = ["action", "expect", "kind", "restored", "revision", "saved", "sha256", "source_id", "summary", ...(removing ? ["removed_id"] : [])];
+    const removing = preview.action === "accessory_remove", adding = preview.action === "accessory_add";
+    const keys = ["action", "expect", "kind", "restored", "revision", "saved", "sha256", "source_id", "summary", ...(removing ? ["removed_id"] : adding ? ["added_id"] : [])];
     return Boolean(answer && answer.saved === true && answer.source_id === preview.id && answer.expect === preview.expect
-      && answer.kind === "accessory" && answer.action === preview.action && ["accessory_update", "accessory_remove"].includes(preview.action)
+      && answer.kind === "accessory" && answer.action === preview.action && ["accessory_update", "accessory_remove", "accessory_add"].includes(preview.action)
       && Object.keys(answer).sort().join(",") === keys.sort().join(",")
       && typeof answer.sha256 === "string" && /^[a-f0-9]{64}$/.test(answer.sha256) && activityUndoAuditVersion(answer.revision)
       && typeof answer.summary === "string" && answer.summary.trim()
       && (removing ? answer.restored === null && answer.removed_id === preview.current.id
-        : activityUndoRow(answer.restored, "accessory") && ACTIVITY_UNDO_FIELDS.accessory.every(field => answer.restored[field] === preview.restored[field])));
+        : adding ? answer.added_id === preview.restored.id && activityUndoAccessoryStock(answer.restored)
+          && ACTIVITY_UNDO_ACCESSORY_STOCK_FIELDS.every(field => answer.restored[field] === preview.restored[field])
+          : activityUndoRow(answer.restored, "accessory") && ACTIVITY_UNDO_FIELDS.accessory.every(field => answer.restored[field] === preview.restored[field])));
   }
   if (preview.kind === "wishlist") {
     const removing = preview.action === "wishlist_remove";
@@ -293,8 +297,9 @@ function openActivityUndo(view, id, endpoint = "/api/activity/undo") {
 function activityUndoShow(ctx) {
   const { sheet, preview, view, endpoint } = ctx, signature = JSON.stringify(preview);
   const accessoryRemoving = preview.kind === "accessory" && preview.action === "accessory_remove";
+  const accessoryAdding = preview.kind === "accessory" && preview.action === "accessory_add";
   const batchRemoving = preview.action === "batch_remove", removing = batchRemoving || accessoryRemoving || preview.action === "remove";
-  const batchAdding = preview.action === "batch_add", adding = batchAdding || preview.action === "add";
+  const batchAdding = preview.action === "batch_add", adding = batchAdding || accessoryAdding || preview.action === "add";
   const wishlistPresence = preview.kind === "wishlist" && ["wishlist_add", "wishlist_remove"].includes(preview.action);
   const stock = preview.action === "batch_update", batch = stock || preview.action === "batch_metadata";
   const words = { quantity: "Quantity", condition: "Condition", language: "Language", notes: "Notes", source: "Source", set: "Set", number: "Collector number", brand: "Brand", name: "Name", colour: "Colour", link: "Product link", image_source: "Recorded image source", capacity: "Box capacity", image: "Photo", crop: "Photo crop" };
@@ -367,6 +372,29 @@ function activityUndoShow(ctx) {
       if (document.activeElement === reasonInput) reasonInput.scrollIntoView?.({ block: "nearest" });
     };
     reasonInput.addEventListener("input", changed); reasonInput.addEventListener("change", changed);
+  } else if (accessoryAdding) {
+    const row = preview.restored, zero = row.quantity === "0", units = row.kind === "sleeves"
+      ? row.quantity === "1" ? "individual sleeve" : "individual sleeves" : row.quantity === "1" ? "item" : "items";
+    sheet.body.append(el("p", { class: "box box-warn", text: zero
+      ? "Restore this zero-quantity reference record. No owned items are added."
+      : "Undo restores all " + row.quantity + " " + units + " in this historical accessory record, in addition to the quantities already recorded in Sleeves & boxes." }),
+      el("p", { class: "sub", text: "Saving creates one new audited change; the original audit stays in Activity. No photo or kit assignments are restored. Recorded image-source URLs restore as text; no photo is recovered." }),
+      zero ? null : el("p", { class: "sub", text: "Confirm only if the entire quantity is still physically owned in addition to the existing records. If you own fewer, cancel and use Sleeves & boxes to add the actual quantity." }),
+      el("section", { class: "panel" }, el("h3", { text: "Historical accessory record to restore" }),
+        el("dl", {}, ACTIVITY_UNDO_ACCESSORY_STOCK_FIELDS.flatMap(field => [el("dt", { text: words[field] || field.replaceAll("_", " ") }),
+          el("dd", { class: ["notes", "link", "image_source"].includes(field) ? "activity-undo-note" : null,
+            text: field === "owner" ? row.owner === "shared" ? "Shared" : state.profile?.name || row.owner
+              : field === "kind" ? { sleeves: "Sleeves", deck_box: "Deck box", playmat: "Playmat" }[row.kind] : text(row[field]) })]))));
+    const id = "activity-undo-restore-" + sheet.heading.id;
+    ownershipInput = el("input", { id, type: "checkbox" }); ownershipInput.checked = false;
+    sheet.body.append(el("label", { class: "choice", for: id }, ownershipInput, el("span", { text: zero
+      ? "I confirm this zero-quantity accessory record should be restored."
+      : "I confirm all " + row.quantity + " " + units + " are still physically owned in addition to the quantities already recorded." })));
+    ownershipInput.addEventListener("change", () => {
+      if (!ctx.here() || ctx.pending || ctx.saved || ctx.needsRefresh || !ownershipInput.isConnected || !sheet.body.contains(ownershipInput)
+          || ctx.preview !== preview || JSON.stringify(preview) !== signature) { ownershipInput.checked = confirmedOwned; return; }
+      confirmedOwned = ownershipInput.checked === true; ownershipInput.checked = confirmedOwned; error.textContent = ""; actions();
+    });
   } else if (adding) {
     const copies = batchAdding ? preview.rows.reduce((sum, item) => sum + item.restored.quantity, 0) : preview.restored.quantity;
     const scope = batchAdding ? " across all " + plural(preview.row_count, "printing") : " of this printing";
@@ -419,14 +447,15 @@ function activityUndoShow(ctx) {
       error.textContent = "Enter and review a nonblank reason of at most 200 characters before saving Undo."; return;
     }
     if (adding && (!ownershipInput?.isConnected || !sheet.body.contains(ownershipInput) || !confirmedOwned || ownershipInput.checked !== true)) {
-      error.textContent = "Confirm that every recorded copy is still physically owned before saving Undo."; return;
+      error.textContent = accessoryAdding ? "Review and confirm this historical accessory record before saving Undo."
+        : "Confirm that every recorded copy is still physically owned before saving Undo."; return;
     }
     const trigger = document.activeElement;
     const focusOwned = () => document.activeElement === trigger || document.activeElement === document.body || !document.activeElement?.isConnected;
     ctx.pending = true; error.textContent = ""; actions();
     try {
       const answer = await apiWrite(endpoint, { id: ctx.id, expect: preview.expect,
-        ...(removing ? { reason: reviewedReason } : {}), ...(adding ? { confirm_owned: true } : {}) });
+        ...(removing ? { reason: reviewedReason } : {}), ...(accessoryAdding ? { confirm_restore: true } : adding ? { confirm_owned: true } : {}) });
       if (preview.kind !== "wishlist") state.library = null;
       if (!activityUndoReceipt(answer, preview)) throw new Error("The Undo result could not be confirmed.");
       if (!activityUndoOwner(ctx)) return;

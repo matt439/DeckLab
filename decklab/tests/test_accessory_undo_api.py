@@ -49,15 +49,19 @@ class AuditAccessories:
         self.calls.append(("review", change_id, owners))
         return kernel.review(change_id, owners, self.snapshot, self)[0]
 
-    def accessory_undo_apply(self, change_id, owners, expect, actor, message, reason=...):
+    def accessory_undo_apply(self, change_id, owners, expect, actor, message, reason=..., confirm_restore=...):
         self.calls.append(("apply", change_id, owners))
         if reason is not ...:
             source = kernel.source_record(self.undo_audit(change_id), owners)
             if source["op"] != "INSERT":
                 raise inventory.Invalid("Restoring accessory text does not take a removal reason.")
             reason = kernel.removal_reason(reason)
+        if confirm_restore is not ...:
+            source = kernel.source_record(self.undo_audit(change_id), owners)
+            if source["op"] != "DELETE" or confirm_restore is not True:
+                raise inventory.Invalid("Only an entire deleted accessory takes confirmation.")
         before = self.snapshot
-        operation = kernel.MetadataRestore(change_id, owners, expect)
+        operation = kernel.MetadataRestore(change_id, owners, expect, reason=reason, confirm_restore=confirm_restore)
         after, summary = operation.run(changes.detach(before))
         after = changes.prepare(before, after).replace(decks_revision="fixture-saved-decks")
         actual = support.actual_source(operation.plan, id=self.latest + 1)

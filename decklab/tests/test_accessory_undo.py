@@ -108,7 +108,10 @@ class AccessoryUndoTests(unittest.TestCase):
                 source["before" if mode == "insert" else "after"] = None
             else:
                 source["before"] = copy.deepcopy(source["after"])
-            with self.subTest(mode=mode), self.assertRaises((undo.UndoMissing, undo.UndoUnsupported)):
+            # DELETE is supported now, but this fixture deliberately leaves its
+            # recorded row present: the exact absence guard must reject it.
+            refusal = undo.UndoConflict if mode == "delete" else (undo.UndoMissing, undo.UndoUnsupported)
+            with self.subTest(mode=mode), self.assertRaises(refusal):
                 self.review()
 
     def test_raw_validation_refuses_silent_text_numeric_crop_and_url_normalization(self):

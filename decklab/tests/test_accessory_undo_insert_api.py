@@ -28,7 +28,7 @@ class InsertAuditAccessories(AuditAccessories):
         super().__init__(snapshot)
         self._initial = snapshot
 
-    def accessory_undo_apply(self, change_id, owners, expect, actor, message, reason=...):
+    def accessory_undo_apply(self, change_id, owners, expect, actor, message, reason=..., confirm_restore=...):
         self.calls.append(("apply", change_id, owners))
         canonical = None
         if reason is not ...:
@@ -36,8 +36,13 @@ class InsertAuditAccessories(AuditAccessories):
             if source["op"] != "INSERT":
                 raise inventory.Invalid("Restoring accessory text does not take a removal reason.")
             canonical = kernel.removal_reason(reason)
+        if confirm_restore is not ...:
+            source = kernel.source_record(self.undo_audit(change_id), owners)
+            if source["op"] != "DELETE" or confirm_restore is not True:
+                raise inventory.Invalid("Only an entire deleted accessory takes confirmation.")
         before = self.snapshot
-        operation = kernel.MetadataRestore(change_id, owners, expect, reason=canonical, store=self)
+        operation = kernel.MetadataRestore(change_id, owners, expect, reason=canonical if reason is not ... else ...,
+                                           confirm_restore=confirm_restore, store=self)
         after, summary = operation.run(changes.detach(before))
         after = changes.prepare(before, after).replace(decks_revision="fixture-saved-decks")
         source = operation.plan["source"]

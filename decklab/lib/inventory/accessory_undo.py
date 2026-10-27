@@ -1,4 +1,4 @@
-"""Guarded accessory text/link UPDATE and unused image-free INSERT inverses.
+"""Guarded accessory metadata UPDATE and image-free INSERT/DELETE inverses.
 
 Accessory image bytes are not audited. This restores only recorded text/links;
 an old source URL makes no claim about the retained photograph.
@@ -39,11 +39,12 @@ def source_record(rows, owners):
         raise UndoMissing()
     row = rows[0]
     old, new = row.get("before"), row.get("after")
-    insert = row.get("op") == "INSERT" and "before" in row and old is None
-    if row.get("table") != "accessory" or not (insert or row.get("op") == "UPDATE" and isinstance(old, dict)) \
-            or not isinstance(new, dict) \
+    insert = row.get("op") == "INSERT" and "before" in row and old is None and isinstance(new, dict)
+    delete = row.get("op") == "DELETE" and "after" in row and new is None and isinstance(old, dict)
+    if row.get("table") != "accessory" or not (insert or delete or row.get("op") == "UPDATE"
+            and isinstance(old, dict) and isinstance(new, dict)) \
             or any(not isinstance(side.get("owner"), str) or scope is not None and side["owner"] not in scope
-                   for side in ((new,) if insert else (old, new))):
+                   for side in ((new,) if insert else (old,) if delete else (old, new))):
         raise UndoMissing()
     return row
 
@@ -137,6 +138,25 @@ def _remove_candidate(snapshot, source, owners):
     return after, expected
 
 
+def _add_candidate(snapshot, source, owners):
+    from . import accessory_undo_remove, ops_accessories
+    old = source["before"]
+    if old["image"] or old["crop"] or any(name.rsplit(".", 1)[0] == old["id"] for name in snapshot.accessory_images):
+        raise UndoUnsupported("Use Accessories for a row with a recorded or orphaned picture.")
+    accessory_undo_remove.unused(snapshot, old["id"])
+    listing = accessories.from_sheet(snapshot.accessories, strict=True)
+    # Ordinary Add owns ID derivation. Never force an old ID or reveal the candidate
+    # chosen from the complete, potentially private namespace.
+    after, summary = ops_accessories.add_accessory(snapshot, row={field: old[field] for field in accessories.ROW_KEYS},
+        owners=owners, image=None, sha256=accessories.view_sha256(listing, owners))
+    after = changes.prepare(snapshot, after)
+    _unchanged(snapshot, after)
+    expected = sorted([*raw_rows(snapshot, allow_empty=True), old], key=rules.accessory_sort_key)
+    if summary.extra.get("id") != old["id"] or raw_rows(after) != expected:
+        raise UndoUnsupported("This recorded accessory cannot be restored exactly. Use the normal editor.")
+    return after, expected
+
+
 def review(change_id, owners, snapshot, store=None):
     """Called with one inventory snapshot/connection under its ordinary write lock."""
     _identifier(change_id)
@@ -144,25 +164,28 @@ def review(change_id, owners, snapshot, store=None):
     source = source_record(store.undo_audit(change_id), owners)
     _identifier(source.get("id"))
     removing = source["op"] == "INSERT"
-    old, new = None if removing else raw_row(source["before"]), raw_row(source["after"])
-    if source.get("key") != {"id": new["id"]} or old is not None and old["id"] != new["id"]:
+    adding = source["op"] == "DELETE"
+    old, new = None if removing else raw_row(source["before"]), None if adding else raw_row(source["after"])
+    identity = old if adding else new
+    if source.get("key") != {"id": identity["id"]} or not adding and not removing and old["id"] != new["id"]:
         raise UndoUnsupported("The accessory's original identity cannot be checked.")
-    if not removing:
+    if not removing and not adding:
         changed = {field for field in RAW if old[field] != new[field]}
         if not changed or changed - set(FIELDS):
             raise UndoUnsupported("Undo restores only recorded accessory text and links, keeping the current photo and kit.")
     latest = store.undo_latest("accessory", source["key"])
     if type(latest) is not int or latest != source["id"]:
         raise UndoConflict("The accessory was touched after the selected change.")
-    rows = raw_rows(snapshot)
-    found = [row for row in rows if row["id"] == new["id"]]
-    if found != [new]:
+    rows = raw_rows(snapshot, allow_empty=adding)
+    found = [row for row in rows if row["id"] == identity["id"]]
+    if found != ([] if adding else [new]):
         raise UndoConflict("The accessory changed after the selected change.")
-    after, expected = (_remove_candidate if removing else _candidate)(snapshot, source, owners)
+    after, expected = (_add_candidate if adding else _remove_candidate if removing else _candidate)(snapshot, source, owners)
     scope = _scope(owners)
-    return {"change_id": change_id, "kind": "accessory", "action": "accessory_remove" if removing else "accessory_update",
-            "label": new["name"], "current": new if removing else meta(new), "restored": None if removing else meta(old),
-            **({"reason_required": True} if removing else {"fields": [
+    return {"change_id": change_id, "kind": "accessory", "action": "accessory_add" if adding else "accessory_remove" if removing else "accessory_update",
+            "label": identity["name"], "current": None if adding else new if removing else meta(new),
+            "restored": old if adding else None if removing else meta(old),
+            **({"confirmation_required": True} if adding else {"reason_required": True} if removing else {"fields": [
                 {"field": field, "before": new[field], "after": old[field]} for field in FIELDS if new[field] != old[field]]}),
             "expect": _sha([change_id, source, scope, list_sha(rows, owners)]),
             "sha256": list_sha(expected, owners), "source": source, "raw_after": expected,
@@ -173,18 +196,20 @@ def verify_saved(before, after, plan, actual_rows):
     """Exact actual snapshot and ONE new opposite audit row, before commit."""
     _unchanged(before, after)
     removing = plan["action"] == "accessory_remove"
+    adding = plan["action"] == "accessory_add"
     if raw_rows(after, allow_empty=removing) != plan["raw_after"] or not isinstance(actual_rows, list) or len(actual_rows) != 1:
         raise UndoConflict("The accessory inverse result could not be confirmed.")
     source, actual = plan["source"], actual_rows[0]
     if not isinstance(actual, dict) or set(actual) != {"id", "table", "op", "key", "before", "after"} or type(actual.get("id")) is not int \
             or not source["id"] < actual["id"] < 2 ** 63 or actual.get("table") != "accessory" \
-            or actual.get("op") != ("DELETE" if removing else "UPDATE") or actual.get("key") != source["key"] \
+            or actual.get("op") != ("INSERT" if adding else "DELETE" if removing else "UPDATE") or actual.get("key") != source["key"] \
             or actual.get("before") != source["after"] or actual.get("after") != source["before"]:
         raise UndoConflict("The accessory inverse audit could not be confirmed.")
     digest = list_sha(raw_rows(after, allow_empty=removing), plan["owners"])
     if digest != plan["sha256"]:
         raise UndoConflict("The accessory inverse list could not be confirmed.")
-    return {"review": plan, "restored": None if removing else meta(actual["after"]), "sha256": digest,
+    return {"review": plan, "restored": actual["after"] if adding else None if removing else meta(actual["after"]), "sha256": digest,
+            **({"added_id": source["before"]["id"]} if adding else {}),
             **({"removed_id": source["after"]["id"]} if removing else {}),
             "revision": str(actual["id"])}
 
@@ -193,10 +218,11 @@ class MetadataRestore:
     """Trusted operation with transaction-local verification in PgInventory.apply."""
     kind = "accessory.undo"
 
-    def __init__(self, change_id, owners, expect, *, store=None, reason=None):
+    def __init__(self, change_id, owners, expect, *, store=None, reason=..., confirm_restore=...):
         self.change_id, self.owners, self.expect = change_id, owners, expect
         self.store = store
         self.reason = reason
+        self.confirm_restore = confirm_restore
         self.params = {}
         self.plan = None
 
@@ -206,13 +232,19 @@ class MetadataRestore:
             raise UndoConflict("The accessories changed. Review this Undo again.")
         self.plan = plan
         removing = plan["action"] == "accessory_remove"
+        adding = plan["action"] == "accessory_add"
+        if adding:
+            if self.confirm_restore is not True:
+                raise Invalid("Confirm the entire historical accessory record before restoring it.")
+        elif self.confirm_restore is not ...:
+            raise Invalid("Only restoring a deleted accessory takes confirmation.")
         if removing:
-            self.reason = removal_reason(self.reason)
-        elif self.reason is not None:
-            raise Invalid("Restoring accessory text does not take a removal reason.")
-        return after, Summary(f"Undo change #{self.change_id}: " + ("remove an unused added accessory" if removing else
+            self.reason = removal_reason(None if self.reason is ... else self.reason)
+        elif self.reason is not ...:
+            raise Invalid("Only removing an added accessory takes a removal reason.")
+        return after, Summary(f"Undo change #{self.change_id}: " + ("restore a deleted accessory record" if adding else "remove an unused added accessory" if removing else
                               "restore recorded accessory text and links"), {"undo": 1},
-                              {paths.ACCESSORIES: ["removed"] if removing else list(FIELDS)},
+                              {paths.ACCESSORIES: ["added"] if adding else ["removed"] if removing else list(FIELDS)},
                               {"undo_of": self.change_id, **({"undo_reason": self.reason} if removing else {})})
 
     def verify(self, before, after, actual_rows):

@@ -756,17 +756,21 @@ class PgInventory:
                     self._applying.connection = previous
         return self._call(work)
 
-    def accessory_undo_apply(self, change_id, owners, expect, actor, message, reason=...):
+    def accessory_undo_apply(self, change_id, owners, expect, actor, message, reason=..., confirm_restore=...):
         from .accessory_undo import MetadataRestore, source_record, removal_reason
         canonical = None
-        if reason is not ...:
+        if reason is not ... or confirm_restore is not ...:
             # Audit rows are immutable. Establish complete source ownership before
             # validating the public reason; all mutable facts are rechecked in apply.
             source = source_record(self.undo_audit(change_id), owners)
-            if source["op"] != "INSERT":
-                raise Invalid("Restoring accessory text does not take a removal reason.")
-            canonical = removal_reason(reason)
-        _, summary = self.apply(MetadataRestore(change_id, owners, expect, store=self, reason=canonical), actor, message,
+            if reason is not ...:
+                if source["op"] != "INSERT":
+                    raise Invalid("Only removing an added accessory takes a removal reason.")
+                canonical = removal_reason(reason)
+            if confirm_restore is not ... and (source["op"] != "DELETE" or confirm_restore is not True):
+                raise Invalid("Confirm only the entire historical deleted accessory record.")
+        _, summary = self.apply(MetadataRestore(change_id, owners, expect, store=self,
+            reason=canonical if reason is not ... else ..., confirm_restore=confirm_restore), actor, message,
                                 reason=canonical)
         return summary.extra["accessory_undo"]
 
@@ -873,9 +877,9 @@ class PgInventory:
                                       "select id,table_name,op,row_key,before,after from audit.row_change "
                                       "where change_set_id=%s order by id limit 2", (change_set,)).fetchall()]
                         receipt = op.verify(before, saved, actual)
-                        if op.plan["action"] == "accessory_remove":
+                        if op.plan["action"] in ("accessory_remove", "accessory_add"):
                             recorded_reason = cur.execute("select reason from audit.change_set where id=%s", (change_set,)).fetchone()
-                            if recorded_reason is None or recorded_reason[0] != op.reason:
+                            if recorded_reason is None or recorded_reason[0] != (op.reason if op.plan["action"] == "accessory_remove" else None):
                                 raise Conflict("The accessory removal reason could not be confirmed.")
                         summary = Summary(summary.text, summary.counts, summary.changed,
                                           {**summary.extra, "accessory_undo": receipt})

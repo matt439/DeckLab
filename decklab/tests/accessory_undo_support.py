@@ -101,3 +101,25 @@ def seed_insert(store, owner="matt", only=False):
     store.latest = ROW_ID
     store.writes.clear()
     return current
+
+
+def seed_delete(store, owner="matt", only=False, *, id=None, row=None, taken=()):
+    """An image-free deletion whose ID the ordinary add can derive again."""
+    from dataclasses import replace
+    historical = globals()["row"](owner=owner, image="", crop="")
+    historical.update(row or {})
+    rows = [] if only else [found.as_dict() for found in store._initial.accessories.rows]
+    rows.extend(copy.deepcopy(list(taken)))
+    historical["id"] = accessories.new_id(historical, [found["id"] for found in rows]) if id is None else id
+    snapshot = store._initial.with_accessories(rows)
+    if not rows:
+        snapshot = snapshot.replace(accessories=model.Sheet(paths.ACCESSORIES))
+    deck = snapshot.deck("casual/fixture")
+    if deck is not None and deck.text is not None:
+        snapshot = snapshot.with_deck(replace(deck, text=deck.text.replace("- **Sleeves:** a-sleeves\n", "")))
+    store.snapshot = snapshot
+    store.audit = {CHANGE_ID: [{"id": ROW_ID, "table": "accessory", "op": "DELETE", "key": {"id": historical["id"]},
+                              "before": copy.deepcopy(historical), "after": None}]}
+    store.latest = ROW_ID
+    store.writes.clear()
+    return historical
