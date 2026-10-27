@@ -29,3 +29,19 @@ textarea.export-copy { width: 100%; font-family: var(--font-mono); }
   .proxy-type { border-block: .2mm solid #000; padding-block: 1mm; }
   .proxy-stats { text-align: right; font-weight: bold; }
 }
+
+/* Print box label (deck-label.js): one card-size label for a deck's box, on the proxies' page, with a thin
+   edge to cut along. */
+@media print {
+  .label-sheet { page: cards; }
+  .box-label { width: 63mm; height: 88mm; box-sizing: border-box; padding: 4mm; overflow: hidden; break-inside: avoid;
+    display: flex; flex-direction: column; align-items: center; text-align: center; gap: 1.5mm;
+    outline: .1mm solid #999; outline-offset: -.05mm; }
+  .box-label p, .box-label h1 { margin: 0; }
+  .box-label-colours { display: flex; gap: 1mm; }
+  .box-label-colours img { width: 6mm; height: 6mm; }
+  .box-label .box-label-title { font-size: 15pt; line-height: 1.15; overflow-wrap: anywhere; }
+  .box-label-player { font-size: 10pt; }
+  .box-label .qr-code { width: 40mm; height: 40mm; margin-top: auto; }
+  .box-label-scan { font-size: 7pt; }
+}

@@ -449,7 +449,9 @@ class Handler(BaseHTTPRequestHandler):
                     identity = access.me(self.identity)
                 except PendingProfileEdit:
                     raise api.ApiError(503, "Member settings need local recovery before sign-in can continue.") from None
-                return self._send_json(200, identity)
+                from decklab.lib import tunnel
+                # Where a printed link (a box label's QR code) should point: the tunnel's address, or the page's own.
+                return self._send_json(200, {**identity, "address": tunnel.public_address(config.load())})
             if route == ["visibility"]:
                 from decklab.lib.api import visibility as visibility_api
                 self._allow(*GET, "PUT")
