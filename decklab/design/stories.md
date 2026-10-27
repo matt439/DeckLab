@@ -3956,7 +3956,7 @@ Next step: Matt chooses the sources and result grouping; this is a DECISION in T
 
 Gap: everything; nothing built.
 
-**E11-S32** · Matt · could · M · missing
+**E11-S32** · Matt · could · M · partial
 
 As Matt, publishing Deck Lab for others to run on their own PC, I want a ready-built copy of Deck Lab's Forge fork to download, so that a newcomer gets simulations without cloning and building Forge with Maven.
 
@@ -3968,7 +3968,9 @@ As Matt, publishing Deck Lab for others to run on their own PC, I want a ready-b
 Evidence:
 - `SELF-HOSTING.md`: the Forge steps (download Forge's release, clone the fork with its tags, build, `decklab/install.py`)
 
-Gap: everything; there's no prebuilt release. Raised 2026-10-25 by the self-host check.
+Now (2026-10-27): the fork has `decklab/package.py` (packs an install as `forge-<build>.zip` with a `.sha256` and release notes, refusing a dirty or mismatched build), a hand-run **Deck Lab release** workflow that builds a commit on Linux with JDK 21 and can make a draft release tagged with the build name, and `decklab/RELEASE.md`. Here `simjar.RELEASE` names the expected build, `python -m decklab.lib.forge status` prints a `build:` line saying whether the installed Forge is that build and what to download if not, SELF-HOSTING.md's Forge step offers the download first and building second, and the README's Forge upgrade has the release as step 6. Still missing: the published 2.0.15 release itself, which waits for Matt's OK.
+
+Gap: no release is published yet, so SELF-HOSTING.md's download link doesn't resolve. Raised 2026-10-25 by the self-host check.
 
 First slice: add and locally verify a script in the Forge fork that packs the distributable installed build as an archive, records the base Forge version and build metadata, writes a SHA-256 checksum and documents the repeatable release procedure. Publishing a real 2.0.15 release and updating SELF-HOSTING.md to its verified download link follow as separately authorized steps.
 
