@@ -756,10 +756,10 @@ class PgInventory:
                     self._applying.connection = previous
         return self._call(work)
 
-    def accessory_undo_apply(self, change_id, owners, expect, actor, message, reason=..., confirm_restore=..., confirm_stock=...):
+    def accessory_undo_apply(self, change_id, owners, expect, actor, message, reason=..., confirm_restore=..., confirm_stock=..., confirm_owner=...):
         from .accessory_undo import MetadataRestore, source_record, removal_reason
         canonical = None
-        if reason is not ... or confirm_restore is not ... or confirm_stock is not ...:
+        if reason is not ... or confirm_restore is not ... or confirm_stock is not ... or confirm_owner is not ...:
             # Audit rows are immutable. Establish complete source ownership before
             # validating the public reason; all mutable facts are rechecked in apply.
             source = source_record(self.undo_audit(change_id), owners)
@@ -772,8 +772,12 @@ class PgInventory:
             if confirm_stock is not ... and (source["op"] != "UPDATE" or confirm_stock is not True
                     or source["before"].get("quantity") == source["after"].get("quantity")):
                 raise Invalid("Confirm only the entire restored accessory count.")
+            if confirm_owner is not ... and (source["op"] != "UPDATE" or confirm_owner is not True
+                    or source["before"].get("owner") == source["after"].get("owner")):
+                raise Invalid("Confirm only restored accessory sharing.")
         _, summary = self.apply(MetadataRestore(change_id, owners, expect, store=self,
-            reason=canonical if reason is not ... else ..., confirm_restore=confirm_restore, confirm_stock=confirm_stock), actor, message,
+            reason=canonical if reason is not ... else ..., confirm_restore=confirm_restore, confirm_stock=confirm_stock,
+            confirm_owner=confirm_owner), actor, message,
                                 reason=canonical)
         return summary.extra["accessory_undo"]
 
@@ -880,7 +884,7 @@ class PgInventory:
                                       "select id,table_name,op,row_key,before,after from audit.row_change "
                                       "where change_set_id=%s order by id limit 2", (change_set,)).fetchall()]
                         receipt = op.verify(before, saved, actual)
-                        if op.plan["action"] in ("accessory_remove", "accessory_add", "accessory_stock_update"):
+                        if op.plan["action"] in ("accessory_remove", "accessory_add", "accessory_stock_update", "accessory_owner_update"):
                             recorded_reason = cur.execute("select reason from audit.change_set where id=%s", (change_set,)).fetchone()
                             if recorded_reason is None or recorded_reason[0] != (op.reason if op.plan["action"] == "accessory_remove" else None):
                                 raise Conflict("The accessory Undo reason could not be confirmed.")
