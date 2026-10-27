@@ -110,7 +110,7 @@ function rcptSyncSelected(view) {
   const facts = clear(view.selectedFacts);
   if (!allowed) return;
   if (!current) {
-    facts.append(el("p", { class: "sub", text: "Choose an arrived card or token part, then inspect a visible row. Whole products keep their own choices." }));
+    facts.append(noneSelected("Tick “This arrived” on a part, then pick a visible card to see its details."));
     return;
   }
   const { comp, row } = current, v = row.values;
@@ -232,12 +232,12 @@ function rcptSyncLayout(view, progress) {
   add(clear(view.guidanceBody), [el("section", { class: "rcpt-guidance-checks" }, el("h3", { text: "To check" }),
     blockers.length ? el("ul", {}, blockers.map((item) => el("li", {}, el("button", { type: "button", class: "rcpt-blocker",
       text: item.text, onclick: () => { if (receiptEditable(view)) rcptGoTo(view, item); } }))))
-      : el("p", { class: "sub", text: view.comps.some((comp) => comp.selected)
-        ? "Ready for server preview." : "Select the parts that arrived." }),
+      : view.comps.some((comp) => comp.selected) ? el("p", { class: "sub", text: "Nothing left to check: Record arrival when ready." })
+        : noneSelected("Tick “This arrived” on the parts that came."),
     progress.blanks ? el("p", { class: "sub", text: `${plural(progress.blanks, "checked card copy", "checked card copies")} ${progress.blanks === 1 ? "still lacks" : "still lack"} condition or language; the preview states what stays blank.` }) : null),
     el("section", { class: "rcpt-guidance-where" }, el("h3", { text: "Where these go" }),
       destinations.length ? el("ul", { class: "rcpt-guidance-destinations" }, destinations)
-        : el("p", { class: "sub", text: "Tick the cards that arrived to see guidance for those copies." })),
+        : noneSelected("Tick the cards that arrived to see where they go.")),
     el("p", { class: "sub rcpt-guidance-note", text: "Guidance uses the loaded deck needs. Preview still checks the exact changes; nothing is recorded before confirmation." })]);
 }
 

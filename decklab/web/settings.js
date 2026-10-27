@@ -44,18 +44,20 @@ function showSettings(params, token) {
           el("div", { class: "field" }, el("span", { id: "sim-mode-label", text: "Who can start them" }), mode),
           el("label", { class: "field", for: "sim-workers" }, el("span", { text: "Forge workers at once" }), workers),
           el("p", { class: "sub", id: "sim-since" })),
-        el("p", { class: "sub", id: "sim-loading", text: "Loading the simulations setting…" })),
+        el("div", { id: "sim-loading" }, loadingBox("Loading the simulations setting…", { small: true }))),
       commanderNightSettings(),
       settingsMembersPanel(),
       el("section", { class: "panel settings-part", id: "settings-visits", "aria-labelledby": "settings-visits-title" },
         el("h2", { id: "settings-visits-title", text: "Visits" }),
         el("p", { class: "sub", text: `Who has opened Deck Lab, and which pages. The last ${VISIT_DAYS} days unless it says otherwise.` }),
-        el("div", { class: "visits-list", id: "visits-list" }, loadingBox("Loading visits…"))),
+        el("div", { class: "visits-list", id: "visits-list" }, loadingBox("Loading visits…", { small: true }))),
       el("section", { class: "panel settings-part", id: "settings-about", "aria-labelledby": "settings-about-title" },
         el("h2", { id: "settings-about-title", text: "About Deck Lab" }),
-        el("div", { class: "build-footer" }, el("span", { id: "build-version", text: "Checking server version…" })),
+        // Not a live region: the version line is rewritten on every check. The spinner goes with the first answer.
+        el("div", { class: "build-footer" }, el("span", { id: "build-version" },
+          el("span", { class: "spinner spinner-small", "aria-hidden": "true" }), " Checking the version…")),
         el("p", { class: "sub", id: "build-checked" }),
-        el("p", { class: "sub", id: "settings-cards" }),
+        el("p", { class: "sub", id: "settings-cards", role: "status" }),
         el("div", { class: "actions" }, check)))]);
   byId("sim-settings").hidden = true;
   afterRender();
@@ -65,11 +67,23 @@ function showSettings(params, token) {
   }
   if (state.simulations) renderSimulations(state.simulations);
   if (state.status) renderVersionStatus(state.status);
-  loadSimulations();
+  settingsSimulations(token);
   loadCommanderNightSettings(token);
   loadSettingsMembers(token);
   loadVisits(token);
   showFooter();
+}
+
+/** Load the simulations setting into its part; a failure is said there, with Try again (loadSimulations
+ * itself keeps quiet, since the footer's version check says when Deck Lab can't be reached). */
+async function settingsSimulations(token) {
+  await loadSimulations();
+  const part = byId("sim-loading");
+  if (token !== routeToken || !part || !state.profile || state.simulations) return;
+  clear(part).append(loadFailed("The simulations setting", state.simulationsError, () => {
+    clear(part).append(loadingBox("Loading the simulations setting…", { small: true }));
+    settingsSimulations(token);
+  }));
 }
 
 // ----------------------------------------------------------------- visits
@@ -84,7 +98,10 @@ async function loadVisits(token) {
     data = await api(`/api/visits?days=${VISIT_DAYS}`);
   } catch (e) {
     const box = byId("visits-list");
-    if (box && token === routeToken) clear(box).append(el("p", { class: "sub", text: e.message }));
+    if (box && token === routeToken) clear(box).append(loadFailed("Visits", e, () => {
+      clear(box).append(loadingBox("Loading visits…", { small: true }));
+      loadVisits(token);
+    }));
     return;
   }
   if (token === routeToken) renderVisits(data);
@@ -125,5 +142,5 @@ function renderVisits(data) {
       pages("Recently", person.recent || [], false),
       pages("Most opened", person.often || [], true)));
   }
-  if (!box.children.length) box.append(el("p", { class: "empty", text: "There are no profiles in decklab/config.json yet." }));
+  if (!box.children.length) box.append(emptyBox("No one has been added to Deck Lab yet."));
 }

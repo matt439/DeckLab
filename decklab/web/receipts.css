@@ -104,7 +104,7 @@
 @media (max-width: 429px) {
   .rcpt-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
-.rcpt-none, .rcpt-all-blank { grid-column: 1 / -1; }
+.rcpt-none, .rcpt-all-blank, .rcpt-grid > .empty, .rcpt-grid > .load-failed { grid-column: 1 / -1; }
 .rcpt-all-blank { margin: 0; font-size: var(--fs-sm); color: var(--ink-2); }
 /* The tick under the picture, at the end of the chips' row, so it never covers the card's mana cost. */
 .rcpt-grid .card-tile { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; column-gap: var(--s-1); }
@@ -213,7 +213,7 @@
 .rcpt-sheet-pic {
   display: block; width: min(244px, 62vw); aspect-ratio: 488 / 680; padding: 0;
   border: 0; border-radius: var(--r-card); overflow: hidden;
-  background: var(--surface-3); box-shadow: var(--shadow-img);
+  background: var(--track); box-shadow: var(--shadow-img);
   cursor: zoom-in; touch-action: pan-y;
 }
 /* Phone inspection: a readable card with a full-width swipe area around it. */

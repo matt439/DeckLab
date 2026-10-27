@@ -89,7 +89,7 @@ class VisibilityUiTests(unittest.TestCase):
           assert(main.textContent.includes('Collection and tokens'));
           assert.equal(row('home','decks'),undefined);
           await openVisibility([]);
-          assert(main.textContent.includes('No Public switches are available yet'));
+          assert(main.textContent.includes('No Public switches yet'));
           assert.equal(main.querySelectorAll('[data-public]').length,0);
           assert.equal(routeVisible(routeFor('visibility')),false);
         """)

@@ -86,7 +86,11 @@ function packProgressNotice(view) {
     : p.pending.size ? "Saving ticks…" : !p.loaded ? "Loading shared ticks…" : "Ticks saved for both of you.";
   if (p.messageKey !== words) {
     p.messageKey = words;
-    clear(p.message).append(el("span", { class: p.error ? "box box-warn" : "sub", text: words }));
+    // Waiting words get the small spinner (the .loading-small piece); the saved line stays plain.
+    const waiting = !p.error && (p.pending.size || !p.loaded);
+    clear(p.message).append(waiting
+      ? el("span", { class: "loading loading-small" }, el("span", { class: "spinner spinner-small", "aria-hidden": "true" }), words)
+      : el("span", { class: p.error ? "box box-warn" : "sub", text: words }));
     if (p.error) p.message.append(el("button", { type: "button", class: "btn btn-quiet", text: "Retry",
       onclick: () => packSync(view) }));
   }

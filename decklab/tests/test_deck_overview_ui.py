@@ -56,7 +56,7 @@ class DeckOverviewUiTests(unittest.TestCase):
           await Promise.resolve(); await Promise.resolve();
           const forge = panel('overview').querySelector('.deck-overview-forge');
           assert(forge.textContent.includes("couldn't be loaded"));
-          assert(panel('overview').textContent.includes('No tests yet'));
+          assert(panel('overview').textContent.includes('No swap tests yet.'));
           fail = false; buttonText(forge, 'Try again').click();
           await Promise.resolve(); await Promise.resolve();
           assert(forge.textContent.includes('No other decks'));
@@ -103,7 +103,7 @@ class DeckOverviewUiTests(unittest.TestCase):
           const tests = variantTestsSection(page); main.append(tests);
           assert.equal(tests.getAttribute('id'), 'sec-tests');
           await Promise.resolve();
-          assert(tests.textContent.includes('No tests yet'));
+          assert(tests.textContent.includes('No tests of changes yet'));
           page.summary.read_only = true; assert.equal(variantTestsSection(page), null);
         """)
 

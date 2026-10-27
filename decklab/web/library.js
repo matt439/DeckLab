@@ -618,16 +618,23 @@ function drawLibraryResults(target, data, filters, view = {}, redraw = null) {
   if (showProducts) results.append(productsGroup(data, products, ctx, filters.format === "product" || ctx.searching));
 
   if (!shown.length && !showProducts) {
-    const any = libFilterCount(filters) || libTitleQuery(filters.q) || !filters.all;
-    results.append(el("div", { class: "empty" },
-      el("p", { text: checkIssue.blocking ? "Update the check-date filter to see matches." : any ? "No decks match these filters." : "There are no decks yet." }),
-      any ? el("a", { class: "btn", href: "#/library?all=1", text: "Show every deck",
-        onclick: (e) => { e.preventDefault();
-          if (!target.isConnected || view.current && !view.current()) return;
-          Object.assign(filters, { all: true, format: "", status: "", color: "", archetype: "", readiness: "", box_check: "", checked_before: "", q: "" });
-          history.replaceState(history.state, "", filtersHash(filters)); clear($("#main"));
-          drawLibrary(state.library || data, filters); } })
-        : createTargets().length ? el("a", { class: "btn btn-primary", href: newDeckHref(), text: "New deck" }) : null));
+    const chosen = libFilterCount(filters) || libTitleQuery(filters.q);
+    // A button that clears the given filters and draws the Library again with the rest.
+    const reset = (words, cleared) => el("a", { class: "btn", href: filtersHash({ ...filters, ...cleared }), text: words,
+      onclick: (e) => { e.preventDefault();
+        if (!target.isConnected || view.current && !view.current()) return;
+        Object.assign(filters, cleared);
+        history.replaceState(history.state, "", filtersHash(filters)); clear($("#main"));
+        drawLibrary(state.library || data, filters); } });
+    // A blocking check-date filter is already explained by the guidance line above: clear only that filter.
+    // The head has the page's New deck primary, so the empty state's is a plain button.
+    results.append(checkIssue.blocking
+      ? emptyBox("No decks shown.", reset("Clear the check-date filter", { box_check: "", checked_before: "" }), { live: true })
+      : chosen || !filters.all
+        ? emptyBox(chosen ? "No decks match these filters." : "You don't play any decks yet.",
+          reset("Show every deck", { all: true, format: "", status: "", color: "", archetype: "", readiness: "", box_check: "", checked_before: "", q: "" }),
+          { live: Boolean(chosen) })
+        : emptyBox("There are no decks yet.", createTargets().length ? el("a", { class: "btn", href: newDeckHref(), text: "New deck" }) : null));
   }
   // Decks are seen only in their own space (E10-S30): a member with nothing else to see is told why.
   const others = data.decks.some((d) => (d.space || deckSpaceOf(d.id)) !== ownSpace());

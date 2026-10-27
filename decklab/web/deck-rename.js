@@ -38,7 +38,7 @@ function openRenameDeck(data) {
 async function loadRenameDeck(ctx) {
   if (!retirementHere(ctx) || ctx.sending) return;
   const generation = ++ctx.generation; ctx.valid = false; ctx.review = null;
-  clear(ctx.sheet.body).append(loadingBox("Checking the deck before renaming it."));
+  clear(ctx.sheet.body).append(loadingBox("Checking the deck before renaming it…"));
   sheetActions(ctx.sheet, [{ text: "Cancel", onclick: () => ctx.sheet.close() }]);
   try {
     const meta = await api(`/api/deck/rename?id=${encodeURIComponent(ctx.id)}`);

@@ -80,6 +80,7 @@ function shopOrderSheet(view) {
       preview ? {text: "Edit order", disabled: busyNow, onclick: () => { invalidate(); error.hidden = true; }} : null,
       {text: preview ? "Save order" : "Preview order", kind: "primary", disabled: busyNow || view.stale,
         onclick: () => preview ? save() : review()}]);
+    shopSheetBusy(sheet, busyNow, preview ? "Saving…" : "Previewing…");
   }
   const metadata = el("div", {class: "shop-order-grid"});
   field(metadata, "seller", "Seller (if known)", "input", {type: "text", maxlength: 200});

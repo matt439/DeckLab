@@ -131,7 +131,7 @@ function openTokenPlan(view) {
         || !sheet.foot.contains(event.currentTarget))) return;
     const request = ++ctx.request;
     ctx.plan = null;
-    clear(sheet.body).append(loadingBox("Working out the plan."));
+    clear(sheet.body).append(loadingBox("Working out the plan…"));
     sheetActions(sheet, [{ text: "Cancel", onclick: () => sheet.close() }]);
     try {
       const plan = await api(path);
@@ -162,15 +162,17 @@ function tokPlanShow(view, sheet, plan, reload) {
       + "The whole-product totals count physical cards. Check paired-card faces before sleeving." }),
     decks.length ? el("ul", { class: "pack-plain tok-plan" }, decks.map(tokPlanDeck)) : "",
     products.length ? el("ul", { class: "pack-plain tok-plan", "aria-label": "Whole intact products" }, products.map(tokPlanProduct)) : "",
-    !decks.length && !products.length ? el("p", { text: "There are no built decks or intact products to plan for." }) : "",
+    !decks.length && !products.length ? emptyBox("There are no built decks or intact products to plan for.") : "",
     warningsBox(plan.warnings || [], "Worth checking") || "",
     evidence.blocked.length ? el("p", { class: "box box-warn", text: "You can't change " + evidence.blocked.map(item => item.title).join(" and ")
       + ", so the plan can't be applied." }) : "");
   const message = el("p", { class: "box box-crit", role: "alert", tabindex: "-1", hidden: true });
   sheet.body.append(message);
-  const actions = () => sheetActions(sheet, ctx.needsRefresh ? [{ text: "Cancel", onclick: () => sheet.close() },
+  // With nothing to plan for, Close is the only way on (no disabled Apply).
+  const actions = () => sheetActions(sheet, !decks.length && !products.length && !ctx.needsRefresh
+    ? [{ text: "Close", onclick: () => sheet.close() }] : ctx.needsRefresh ? [{ text: "Cancel", onclick: () => sheet.close() },
     { text: "Reload plan", kind: "primary", onclick: reload }] : [{ text: "Cancel", disabled: ctx.pending, onclick: () => sheet.close() },
-    { text: ctx.pending ? "Applying." : words ? "Apply to " + words : "Nothing to change", kind: "primary", value: "apply",
+    { text: ctx.pending ? "Applying…" : words ? "Apply to " + words : "Nothing to change", kind: "primary", value: "apply",
       disabled: ctx.pending || !words || Boolean(blocked()), onclick: apply }]);
   async function apply(event) {
     if (!ctx.here() || !event?.currentTarget?.isConnected || !sheet.foot.contains(event.currentTarget)

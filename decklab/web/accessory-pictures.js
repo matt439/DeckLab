@@ -84,7 +84,7 @@ async function accReadPhoto(ctx, file) {
   }
   const sequence = ctx.photoSeq = (ctx.photoSeq || 0) + 1;
   accSheetBusy(ctx, true);
-  clear(ctx.message).append(loadingBox("Reading the photo on this device."));
+  clear(ctx.message).append(loadingBox("Reading the photo on this device…"));
   let reader;
   try {
     const result = await new Promise((resolve, reject) => {
@@ -179,7 +179,16 @@ function openCropper(ctx, url) {
   // The shading outside the box is clipped to the picture; the box and its handles aren't, so a corner at
   // the picture's edge can still be grabbed.
   const shade = el("div", { class: "acc-crop-shade" });
-  const stage = el("div", { class: "acc-crop-stage" }, img, el("div", { class: "acc-crop-clip", "aria-hidden": "true" }, shade), box);
+  // Until the picture loads the stage is a square of the picture placeholder's colour; a picture that won't
+  // load says so instead of leaving a cropper with nothing in it.
+  const stage = el("div", { class: "acc-crop-stage acc-crop-loading" }, img, el("div", { class: "acc-crop-clip", "aria-hidden": "true" }, shade), box);
+  img.addEventListener("load", () => stage.classList.remove("acc-crop-loading"));
+  img.addEventListener("error", () => {
+    if (!accSheetHere(ctx) || !stage.isConnected) return;
+    clear(ctx.picture).append(el("div", { class: "acc-cropper" },
+      el("p", { class: "form-error", role: "alert", text: "The picture couldn't be loaded for cropping." }),
+      el("div", { class: "acc-picture-actions" }, button("Back", close))));
+  });
   const clamp = (n, lo, hi) => Math.min(hi, Math.max(lo, n));
   const draw = () => {
     const place = { left: `${r.x * 100}%`, top: `${r.y * 100}%`, width: `${r.w * 100}%`, height: `${r.h * 100}%` };

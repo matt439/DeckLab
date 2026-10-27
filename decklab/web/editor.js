@@ -1149,12 +1149,14 @@ function busy(button, text) {
     button.dataset.text = button.textContent;
   }
   button.dataset.busy = "1";
+  button.setAttribute("aria-busy", "true");
   clear(button).append(el("span", { class: "spinner spinner-small", "aria-hidden": "true" }), text);
 }
 
 function unbusy(button) {
   button.disabled = false;
   delete button.dataset.busy;
+  button.removeAttribute("aria-busy");
   const nodes = busyNodes.get(button);
   busyNodes.delete(button);
   if (nodes && nodes.length) clear(button).append(...nodes);

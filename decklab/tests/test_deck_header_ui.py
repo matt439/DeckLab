@@ -89,7 +89,7 @@ class DeckHeaderUiTests(unittest.TestCase):
         self.run_js("""
           api = async (url) => { if (url === '/api/decks') throw new Error('offline'); return {}; };
           open('#/deck?id=casual%2Ftest&v=target'); await settle();
-          assert(navigation().textContent.includes('unavailable'));
+          assert(navigation().textContent.includes("couldn't be loaded"));
           shelfApi(); buttonText(navigation(), 'Try again').click(); await settle();
           assert(navigation().textContent.includes('2 of 3'));
           assert.equal(deckChangedDate(null), null); assert.equal(deckChangedDate('bad date'), null);

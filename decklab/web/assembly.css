@@ -6,6 +6,8 @@
 .pack-message:empty { display: none; }
 .pack-message-slot:empty, .pack-message-slot:has(> .pack-message:empty) { display: none; }
 .pack-message { margin: 0; color: var(--ink-2); }
+/* "Working out the plan…" with the small spinner (the .loading-small piece, on the one status line). */
+.pack-message:has(> .spinner) { display: flex; align-items: center; gap: var(--s-2); font-size: var(--fs-sm); }
 .pack-sort { gap: var(--s-3); }
 .pack-sort[hidden] { display: none; }
 .pack-completion { margin-top: var(--s-4); }
@@ -27,6 +29,8 @@
 .pack-chooser-launcher { justify-self: start; max-width: 100%; white-space: normal; }
 .pack-chooser-launcher[hidden], .pack-chooser-slot[hidden], .pack-chooser-rail[hidden], .pack-chooser-empty[hidden] { display: none; }
 .pack-chooser-empty { margin: var(--s-3) var(--s-4); }
+/* With no decks to choose, the presets have nothing to pick. */
+.pack-choose:has(> .pack-chooser-empty:not([hidden])) .pack-presets { display: none; }
 .pack-decks-sheet .sheet-inner { min-height: 0; }
 .pack-decks-sheet .sheet-head, .pack-decks-sheet .sheet-foot { flex: none; }
 .pack-decks-sheet .sheet-body { min-height: 0; }

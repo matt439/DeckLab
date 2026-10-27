@@ -3,7 +3,7 @@
  * phones as well as desktops. A double-sided card counts once and shows one face at a time.
  *
  * Also the pieces other pages use (deck.js, library.js and assembly.js):
- *     tokenThumb(url, px, label)      a token's small picture from Deck Lab's /img/ route, with a fallback
+ *     tokenThumb(url, px, pt)         a token's small picture from Deck Lab's /img/ route, with a fallback
  *     tokenStateChip(state, words)    a need's state as a chip: "Have it: 8 cards", "None owned", ...
  *     tokenNeedList(needs, faces)     a deck's needs as a list (lib/tokens deck_tokens's "needs")
  *     tokFacesUsed(needs)             the faces of each token card a deck uses, for tokSides
@@ -40,11 +40,13 @@ const TOK_STATES = {
 
 // ------------------------------------------------------------ shared pieces
 
-/** A token's picture, px square (the whole card shown), from Deck Lab's own /img/ route; anything else,
- * or a picture that won't load, shows the name's first letter. The name is always beside it as text. */
-function tokenThumb(url, px, label = "") {
-  const fallback = el("span", { class: "tok-thumb-fallback", "aria-hidden": "true",
-    text: (String(label).trim()[0] || "?").toUpperCase() });
+/** A token's picture, px wide (the whole card shown), from Deck Lab's own /img/ route; anything else, or a
+ * picture that won't load, shows the token placeholder (4.10): a disc with its P/T ("2/2") when known, else
+ * a target glyph. The name is always beside it as text. */
+function tokenThumb(url, px, pt = "") {
+  const words = String(pt || "").trim();
+  const fallback = el("span", { class: words ? "tok-thumb-fallback" : "tok-thumb-fallback tok-thumb-target",
+    "aria-hidden": "true", text: words || null });
   const box = el("span", { class: "tok-thumb", style: `--tok-thumb: ${px}px` }, fallback);
   if (typeof url === "string" && url.startsWith("/img/")) {
     const img = el("img", { src: url, alt: "", loading: "lazy", decoding: "async", width: px,
@@ -139,8 +141,8 @@ function tokenNeed(need, faces = null) {
   // A token without a picture of its own shows example art of a token with its name, labelled as such.
   const example = !need.image && need.example ? need.example : null;
   return el("li", { class: `token-need token-need-${need.state}` },
-    example ? el("span", { class: "token-need-pic" }, tokenThumb(example, 64, need.name),
-      el("small", { class: "token-need-example", text: "Example art" })) : tokenThumb(need.image, 64, need.name),
+    example ? el("span", { class: "token-need-pic" }, tokenThumb(example, 64, need.pt),
+      el("small", { class: "token-need-example", text: "Example art" })) : tokenThumb(need.image, 64, need.pt),
     el("div", { class: "token-need-body" },
       el("p", { class: "token-need-name" }, el("b", { text: need.name }), desc ? ` ${desc}` : null),
       tokMadeBy(need.made_by),
@@ -642,6 +644,7 @@ function drawTokens(data, token, space = HOME_SPACE) {
   const search = el("input", { id: "tok-search", type: "search", autocomplete: "off", spellcheck: "false",
     placeholder: "Search: Zombie, Treasure…", value: view.search,
     oninput: () => { view.search = search.value; local.set("tokens.search", search.value); drawTokenList(view); } });
+  view.searchInput = search;
   add(root, [
     ...pageHead({ title: space === HOME_SPACE ? routeH1("tokens") : `${spaceName(space)}'s tokens`,
       description: "Token and reminder cards. A double-sided card counts once.",
@@ -740,7 +743,16 @@ function drawTokenList(view) {
       view.canEdit ? el("button", { type: "button", class: "btn tok-mutate", text: "Add a token card",
         onclick: () => addToken(view) }) : null));
   } else if (!shown.length) {
-    view.lists.append(el("div", { class: "empty" }, el("p", { text: "No token cards match." })));
+    // Emptied by the search or the filter: the one way back is to clear them.
+    view.lists.append(emptyBox("No token cards match the search and filter.", el("button", { type: "button", class: "btn",
+      text: "Clear the search and filter", onclick: () => {
+        if (!tokensActive(view)) return;
+        view.search = ""; view.filter = "all";
+        local.set("tokens.search", ""); local.set("tokens.filter", "all");
+        if (view.searchInput) view.searchInput.value = "";
+        updateTokens(view);
+        if (view.searchInput) view.searchInput.focus();
+      } }), { live: true }));
   } else {
     view.lists.append(el("div", { class: "card-tiles tok-grid" }, shown.map((row) => tokCard(view, row))));
   }
@@ -966,7 +978,7 @@ async function refreshTokens(view) {
     if (!tokensActive(view) || seq !== view.seq) return;
     tokShow(view, data, "The tokens list is up to date.");
   } catch (error) {
-    if (tokensActive(view)) clear(view.message).append(errorBox("The list couldn't be loaded", error, null));
+    if (tokensActive(view)) clear(view.message).append(loadFailed("The latest tokens list", error, () => refreshTokens(view)));
   } finally {
     if (tokensActive(view)) setTokensBusy(view, false);
   }
@@ -1118,7 +1130,8 @@ function tokSheetSummary(ctx, row, onZoom) {
     pics.length ? el("div", { class: "tok-sheet-pics" },
       el("button", { type: "button", class: "tok-sheet-zoom", "aria-label": `Zoom: ${tokLabel(row)}`,
         disabled: onZoom ? null : true, onclick: () => { ctx.sheet.close(); if (onZoom) onZoom(); } },
-      pics.map((src) => el("img", { src, alt: "", width: 100, height: 140, loading: "lazy" }))),
+      pics.map((src) => el("img", { src, alt: "", width: 100, height: 140, loading: "lazy",
+        onerror: (event) => { event.currentTarget.hidden = true; } }))),
       example ? el("p", { class: "result-count", text: "Example art: the printing isn't recorded." }) : null) : null,
     el("div", { class: "tok-sheet-uses" },
       (row.shared || []).length ? el("p", { class: "box box-warn tok-shared", text: tokSharedWords(row) }) : null,

@@ -67,7 +67,9 @@ function drawAssembly(data, token, restoredRecipe = null) {
         view.selected = []; view.sideboardChoosing?.clear(); packChanged(view);
       } })),
     view.picks);
-  view.chooserEmpty = el("p", { class: "sub pack-chooser-empty", text: "No decks available for this plan." });
+  // Nothing to choose: the presets above hide with the list (assembly.css), and the library is where decks are made.
+  view.chooserEmpty = emptyBox("No decks to choose yet.", el("a", { class: "btn", href: "#/library", text: "Go to the library" }));
+  view.chooserEmpty.classList.add("pack-chooser-empty");
   view.chooser.append(view.chooserEmpty);
   view.chooserLaunch = el("button", { type: "button", class: "btn pack-chooser-launcher", text: "Decks",
     "aria-haspopup": "dialog", "aria-expanded": "false", onclick: () => packRevealChooser(view) });
@@ -163,7 +165,9 @@ async function packRun(view) {
   const seq = ++view.seq;
   view.previewing = true;
   packProgress(view);
-  view.message.textContent = view.selected.length ? "Working out the plan…" : "";
+  // Waiting words with a small spinner; any later textContent write drops the spinner with them.
+  clear(view.message);
+  if (view.selected.length) view.message.append(el("span", { class: "spinner spinner-small", "aria-hidden": "true" }), "Working out the plan…");
   try {
     const result = await apiWrite("/api/assembly/preview", { decks: view.selected.map(item => ({ ...item })) });
     if (!assemblyActive(view) || seq !== view.seq) return;
@@ -200,14 +204,24 @@ async function packRun(view) {
       view.finish = null;
       view.bar = null;
       wirePackTicks(view);
-      if (view.productReturnRefresh) {
+      // Running the same choices again is the retry; after a product review it's the stale note's Refresh plan.
+      // The reason stays on the status line (it follows the chooser into its sheet), so this note isn't announced again.
+      const again = (button) => {
+        if (!assemblyActive(view) || view.hash !== location.hash || !button.isConnected || !view.results.contains(button)
+            || view.seq !== seq || view.data !== null || view.previewing || view.saving || view.reviewing) return;
+        button.disabled = true; view.run();
+      };
+      if (!view.productReturnRefresh) {
+        const retry = problem.status === 400 ? null
+          : el("button", { type: "button", class: "btn", text: "Try again", onclick: () => again(retry) });
+        view.results.append(el("div", { class: "note note-crit pack-failed" },
+          el("p", { text: "The plan couldn't be worked out. Your decks are still chosen." }), retry));
+      } else {
         const retry = el("button", { type: "button", class: "btn", text: "Refresh plan", onclick: () => {
-          if (!assemblyActive(view) || view.hash !== location.hash || !retry.isConnected || !view.results.contains(retry)
-              || view.seq !== seq || view.data !== null || !view.productReturnRefresh || view.previewing || view.saving || view.reviewing) return;
-          retry.disabled = true; view.run();
+          if (view.productReturnRefresh) again(retry);
         } });
-        view.results.append(el("div", { class: "empty" },
-          el("p", { text: "Your selected decks and sideboard choices are kept. Refresh the plan before using its card instructions." }), retry));
+        view.results.append(el("div", { class: "note note-stale" },
+          el("p", { text: "Refresh the plan to see its card instructions. Your decks and sideboard choices are kept." }), retry));
       }
     }
   }
@@ -551,7 +565,8 @@ function renderAssemblyPlan(view, data) {
       `${item.quantity} physical ${item.quantity === 1 ? "card" : "cards"}: ${item.front}${item.front_details ? ` (${item.front_details})` : ""}`
       + `${item.back ? ` / ${item.back}${item.back_details ? ` (${item.back_details})` : ""}`
         : /single-sided verified/i.test(item.notes || "") ? " / single-sided (verified)" : " / reverse not recorded"}`
-      + `${item.notes ? `. ${item.notes}` : ""}` }))) : el("p", { text: "No physical tokens have been recorded." })));
+      + `${item.notes ? `. ${item.notes}` : ""}` })))
+      : emptyBox("No token cards recorded yet.", el("a", { class: "btn", href: "#/tokens", text: "Add token cards" }))));
   view.results.append(el("p", { class: "sub", text: data.note }));
   view.bar = packBuildBar(view);
   view.planMain.append(view.bar.node);

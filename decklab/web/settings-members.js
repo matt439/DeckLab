@@ -10,7 +10,7 @@ function settingsMembersPanel() {
   return el("section", { class: "panel settings-part", id: "settings-members", "aria-labelledby": "settings-members-title" },
     el("h2", { id: "settings-members-title", text: "Members" }),
     el("p", { class: "sub", text: "Add a member with their own space, or replace one of an existing member's sign-in emails." }),
-    el("div", { id: "settings-members-content" }, loadingBox("Loading member emails.")));
+    el("div", { id: "settings-members-content" }, loadingBox("Loading member emails…")));
 }
 
 function settingsMemberEmail(value) {
@@ -63,7 +63,7 @@ async function loadSettingsMembers(token) {
   const sequence = host.memberRequest = (host.memberRequest || 0) + 1;
   const here = () => host.isConnected && byId("settings-members-content") === host && token === routeToken
     && sequence === host.memberRequest && state.profile === profile && settingsMembersAdmin() && parseHash().path === "settings";
-  clear(host).append(loadingBox("Loading member emails."));
+  clear(host).append(loadingBox("Loading member emails…"));
   try {
     const data = await api("/api/settings/members");
     if (!here()) return;
@@ -81,8 +81,7 @@ async function loadSettingsMembers(token) {
 /** All fetched addresses and request receipts stay inside this form's lifetime. */
 function drawSettingsMembers(host, data, members, token, profile, owner) {
   if (!members.length) {
-    const empty = el("div", {}, el("p", { class: "sub", text: "No members with their own space have an email available to replace." }));
-    empty.append(el("button", { type: "button", class: "btn btn-secondary", text: "Add member", onclick: () => {
+    const empty = emptyBox("No members have their own space and an email yet.", el("button", { type: "button", class: "btn btn-secondary", text: "Add member", onclick: () => {
       if (owner() && empty.isConnected && host.contains(empty)) drawSettingsMemberAdd(host, data, members, token, profile, owner);
     } }));
     clear(host).append(empty);

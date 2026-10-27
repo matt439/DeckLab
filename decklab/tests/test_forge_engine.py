@@ -646,14 +646,14 @@ class PageTests(EngineCase):
             f"cardStatsCoverage({json.dumps(stats(games=400, of=400, matchups=1, enough=True, other_engine_games=3600))}, true)",
             f"cardStatsCoverage({json.dumps(stats(old=200, of=200, other_engine_games=3600))}, true)",
             f"{stub}deckCardStats({json.dumps(dict(current, cards=stats(other_engine_games=3600)))}, 'target list')"])
-        self.assertEqual(only, "This list's 3,600 games were played with an earlier engine, or without the card log, "
-                               "and these numbers count only today's engine's games, so there are none yet: play more "
+        self.assertEqual(only, "No per-card numbers yet.This list's 3,600 games were played with an earlier engine, or "
+                               "without the card log, and these numbers count only today's engine's games. Play more "
                                "games, or replay those matchups with today's engine, to get some.")
-        self.assertTrue(one.startswith("This list's 1 game was played with an earlier engine"), one)
+        self.assertTrue(one.startswith("No per-card numbers yet.This list's 1 game was played with an earlier engine"), one)
         self.assertEqual(some, "From this list's 400 games, across 1 matchup, every one with card data. 3,600 more of "
                                "this list's games were played with an earlier engine, or without the card log, so "
                                "they're left out: replaying those matchups with today's engine plays them again.")
-        self.assertTrue(also_old.endswith("play more games to get some. 3,600 more were played with an earlier "
+        self.assertTrue(also_old.endswith("Play more games to get some. 3,600 more were played with an earlier "
                                           "engine, or without the card log, so they're left out."), also_old)
         self.assertEqual(page, "How its cards played" + only)
         self.assertNotIn("played with the card log,", page)

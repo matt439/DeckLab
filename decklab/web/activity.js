@@ -261,7 +261,8 @@ async function activityOlder(view, button, note) {
   const seq = ++view.seq;
   const hadFocus = document.activeElement === button;
   button.disabled = true;
-  note.textContent = "Loading older changes…";
+  // The spinner goes when the answer's words replace the note's text.
+  note.replaceChildren(el("span", { class: "spinner spinner-small", "aria-hidden": "true" }), " Loading older changes…");
   try {
     const data = await api(activityPath(view.filter, view.next));
     if (view.token !== routeToken || seq !== view.seq) return;

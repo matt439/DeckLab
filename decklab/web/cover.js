@@ -27,6 +27,16 @@ function coverArtOf(set, number) {
   return set && number ? `/img/${encodeURIComponent(set)}/${encodeURIComponent(number)}/art_crop` : null;
 }
 
+/** The deck's colour pieces (ui.js deckColourPieces) for the picker's tiles: the library's colours for it when
+ * the library has been read, else the colour identity of the cards the picker got; null without either. */
+function coverColours(deckId, cards) {
+  const listed = state.library && (state.library.decks || []).find((d) => d.id === deckId);
+  if (listed) return listed.error || !listed.card_count || !listed.colors ? null : deckColourPieces(listed.colors);
+  const found = new Set();
+  for (const item of cards) for (const c of (item.card && item.card.color_identity) || []) found.add(c);
+  return cards.some((item) => item.card) ? deckColourPieces("WUBRG".split("").filter((c) => found.has(c))) : null;
+}
+
 /** Same card name? (Scryfall's names, compared without case.) */
 function coverSameName(a, b) {
   return Boolean(a && b) && String(a).toLowerCase() === String(b).toLowerCase();
@@ -48,15 +58,21 @@ function saveCover(deckId, cover, expect) {
 /** Opens the picture picker for a deck (see the file's comment). */
 function openCoverPicker(deckId, onDone) {
   const sheet = openSheet({ title: "Deck picture", wide: true });
-  const body = el("div", { class: "cover-picker" }, loadingBox("Getting the deck's cards…"));
+  const body = el("div", { class: "cover-picker" });
   sheet.body.append(body);
-  sheetActions(sheet, [{ text: "Cancel", onclick: () => sheet.close() }]);
-  api(`/api/deck/cards?id=${encodeURIComponent(deckId)}`).then((data) => {
-    if (!sheet.closed) drawCoverPicker(sheet, body, deckId, data, onDone);
-  }).catch((e) => {
-    if (!(e instanceof ApiError)) throw e;
-    if (!sheet.closed) add(clear(body), [el("div", { class: "box box-crit" }, el("p", { text: e.message }))]);
-  });
+  // Get the deck's cards (again, for Try again) and draw the picker.
+  const fetchCards = () => {
+    if (sheet.closed) return;
+    add(clear(body), [loadingBox("Getting the deck's cards…")]);
+    sheetActions(sheet, [{ text: "Cancel", onclick: () => sheet.close() }]);
+    api(`/api/deck/cards?id=${encodeURIComponent(deckId)}`).then((data) => {
+      if (!sheet.closed) drawCoverPicker(sheet, body, deckId, data, onDone);
+    }).catch((e) => {
+      if (!(e instanceof ApiError)) throw e;
+      if (!sheet.closed) add(clear(body), [loadFailed("The deck's cards", e, fetchCards)]);
+    });
+  };
+  fetchCards();
   return sheet;
 }
 
@@ -76,8 +92,9 @@ function drawCoverPicker(sheet, body, deckId, data, onDone) {
   const tiles = [];
   const error = el("p", { class: "form-error", role: "alert" });
 
+  // A picture that can't be had leaves its tile's colour and says so in a quiet line.
   const artImg = (art) => (art ? el("img", { src: art, alt: "", loading: "lazy", decoding: "async", width: 626, height: 457,
-    onerror: (e) => e.currentTarget.remove() }) : null);
+    onerror: (e) => e.currentTarget.replaceWith(el("span", { class: "cover-tile-none", text: "No picture" })) }) : null);
 
   // A card's tile: a printing the deck page shows for it (item.set, item.number), in the viewer group.
   const cardTile = (item) => {
@@ -121,9 +138,19 @@ function drawCoverPicker(sheet, body, deckId, data, onDone) {
     oninput: () => {
       const q = search.value.trim().toLowerCase();
       for (const t of tiles) t.node.hidden = Boolean(q) && !t.isAuto && !t.node.dataset.name.includes(q);
+      // Only Automatic left: say no card matched, with a way back to them all.
+      clear(nothing);
+      if (q && !tiles.some((t) => !t.isAuto && !t.node.hidden)) {
+        nothing.append(emptyBox(`No cards match “${search.value.trim()}”.`, el("button", { type: "button", class: "btn",
+          text: "Clear search", onclick: () => { search.value = ""; search.dispatchEvent(new Event("input")); search.focus(); } }),
+        { live: true }));
+      }
     } });
+  const nothing = el("div", { class: "cover-nothing" });
   const printing = el("p", { class: "cover-printing" });
-  const grid = el("div", { class: "cover-grid" }, autoTile(), cards.map(cardTile));
+  // The tiles' art loads on the deck's art placeholder colour (as the library's covers do).
+  const colours = coverColours(deckId, cards);
+  const grid = el("div", { class: "cover-grid", style: colours ? colours.vars() : null }, autoTile(), cards.map(cardTile));
 
   function sync() {
     for (const t of tiles) {
@@ -189,7 +216,7 @@ function drawCoverPicker(sheet, body, deckId, data, onDone) {
       current && current.auto ? " (automatic: the commander, or the card with the most copies)" : null),
     current && current.problem ? el("div", { class: "note note-warn" }, el("p", { text: `${current.problem}, so the picture is automatic.` })) : null,
     cards.length > 8 ? search : null,
-    grid, printing, error]);
+    grid, nothing, printing, error]);
   sync();
   const mark = tiles.find((t) => t.node.classList.contains("is-chosen"));
   if (mark) mark.pick.focus();

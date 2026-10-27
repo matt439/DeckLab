@@ -18,7 +18,7 @@ function deckSideboardHere(ctx) {
 
 async function deckSideboardLoad(ctx) {
   const generation = ++ctx.generation;
-  clear(ctx.body).append(loadingBox("Loading sideboard plans..."));
+  clear(ctx.body).append(loadingBox("Loading sideboard plans…"));
   try {
     const answer = await api(`/api/play?id=${encodeURIComponent(ctx.data.summary.id)}`);
     if (!deckSideboardHere(ctx) || generation !== ctx.generation) return;
@@ -62,6 +62,12 @@ function deckSideboardDraw(ctx, answer) {
         || { ...record.opponent, historical: true });
     }
   }
+  // No other list and no saved plan: nothing to choose, so no picker.
+  if (!opponents.length) {
+    add(ctx.body, [emptyBox("No other decks to plan against yet."), deckSideboardNotes(data)]);
+    deckSideboardWarnings(ctx, answer);
+    return;
+  }
   const picker = el("select", { "aria-label": "Opponent's deck and list" },
     el("option", { value: "", text: "Choose an opponent" }),
     opponents.map((list, i) => el("option", { value: String(i),
@@ -79,26 +85,32 @@ function deckSideboardDraw(ctx, answer) {
     // A hidden opponent can't be checked against its current list (as on the Game log): only this deck's is.
     const current = entry && own && entry.record.deck.sha256 === own.sha256
       && (opponent.hidden || opponent.removed || (!opponent.historical && entry.record.opponent.sha256 === opponent.sha256));
-    if (entry) plan.append(deckSideboardPlan(entry, current));
-    else add(plan, [el("p", { class: "empty", text: opponent
-      ? "No saved plan for this opponent and these list versions yet."
-      : "Choose the deck and list you're facing to see a saved plan." }), deckSideboardNotes(data)]);
-    if (!opponent) return;
+    if (!opponent) {
+      add(plan, [noneSelected("Choose an opponent to see a saved plan."), deckSideboardNotes(data)]);
+      return;
+    }
     const canMake = own && !opponent.historical && (answer.decks[own.id]?.can_record || answer.decks[opponent.id]?.can_record);
     const canRevise = entry && entry.editable && own && (!opponent.historical || opponent.removed);
-    if (entry ? canRevise : canMake) plan.append(el("button", { type: "button", class: "btn", text: entry ? "Revise this plan" : "Make a sideboard plan",
+    const action = (entry ? canRevise : canMake) ? el("button", { type: "button", class: "btn", text: entry ? "Revise this plan" : "Make a sideboard plan",
       onclick: () => {
         if (!deckSideboardHere(ctx)) return;
         playPlanForm(answer, data.summary.id, entry, { deck: own, opponent,
           onSaved: () => { if (deckSideboardHere(ctx)) deckSideboardLoad(ctx); } });
-      } }));
+      } }) : null;
+    // No plan yet: Make a sideboard plan sits in the empty state with its line, and the notes come after.
+    if (entry) add(plan, [deckSideboardPlan(entry, current), action]);
+    else add(plan, [emptyBox("No saved plan against this deck yet.", action), deckSideboardNotes(data)]);
   };
   picker.addEventListener("change", redraw);
   ctx.body.append(playField("Opponent's deck and list", picker), plan);
+  deckSideboardWarnings(ctx, answer);
+  redraw();
+}
+
+function deckSideboardWarnings(ctx, answer) {
   if (answer.warnings.length) ctx.body.append(el("details", { class: "play-snapshots" },
     el("summary", { text: "Some lists or records couldn't be shown" }),
     el("ul", {}, answer.warnings.map(text => el("li", { text })))));
-  redraw();
 }
 
 function deckSideboardPlan(entry, current) {

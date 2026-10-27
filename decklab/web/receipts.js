@@ -33,7 +33,8 @@ let rcptKeys = 0;
 
 function showReceipt(params, token) {
   return load(`/api/receipt?order=${encodeURIComponent(params.get("order") || "")}`, token,
-    data => drawReceipt(data, token));
+    data => drawReceipt(data, token),
+    { title: "This delivery couldn't be loaded", back: ["#/shopping", "Back to Shopping"] });
 }
 
 
@@ -124,6 +125,8 @@ function drawReceiptReadOnly(view, data) {
     }
     comp.grid = el("div", { class: "card-tiles card-tiles-printing rcpt-grid" });
     if (c.kind === "product") rcptProductGrid(view, comp, true);
+    else if (!comp.rows.length) comp.grid.append(emptyBox(c.kind === "tokens"
+      ? "No token cards are recorded for this part." : "No cards are recorded for this part."));
     else comp.grid.append(...comp.rows.map((row) => rcptTile(view, comp, row, true)));
     section.append(comp.grid);
     view.root.append(section);
@@ -709,7 +712,9 @@ function rcptSheetPicture(view, comp, row) {
   const card = rcptCard(comp, row);
   const src = card && (card.img || card.img_small);
   const name = comp.kind === "tokens" ? row.values.front : row.values.name;
-  const pic = src ? el("img", { src, alt: "", width: 244, height: 340, decoding: "async" })
+  // A picture that can't load falls back to the name, as a card without one does.
+  const pic = src ? el("img", { src, alt: "", width: 244, height: 340, decoding: "async",
+    onerror: (e) => e.currentTarget.replaceWith(el("span", { class: "rcpt-sheet-text", text: name })) })
     : el("span", { class: "rcpt-sheet-text", text: name });
   let drag = null, swiped = false;
   const button = el("button", { type: "button", class: "rcpt-sheet-pic", disabled: card ? null : true,
@@ -1078,7 +1083,8 @@ function rcptProductGrid(view, comp, readOnly) {
     const [da, sa] = a.split("|"), [db, sb] = b.split("|");
     return da.localeCompare(db) || order(sa) - order(sb) || sa.localeCompare(sb);
   });
-  if (!comp.rows.length) { comp.grid.append(el("p", { class: "sub", text: "Its card list couldn't be read." })); return; }
+  // The check in progress is kept per order, so reloading the delivery to read the list again loses nothing.
+  if (!comp.rows.length) { comp.grid.append(loadFailed("This product's card list", null, route)); return; }
   for (const key of keys) {
     const [deck, section] = key.split("|");
     const rows = groups.get(key);

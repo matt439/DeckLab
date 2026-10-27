@@ -74,13 +74,17 @@ function muSelectedSummary(view, library, data, deck) {
 
 function muSelectedFailure(host, view, kind, error) {
   const key = view.selectedSummary.key;
-  add(host, [el("p", { class: "sub", role: "status", text: error }),
-    el("button", { type: "button", class: "btn", text: "Try again", onclick: () => {
-      if (!muSelectedSummaryHere(view) || view.selectedSummary.key !== key) return;
-      const panel = view.selectedCache.get(key).panels[kind];
-      panel.error = null; panel.answer = null;
-      muReadSelectedPanel(view, kind);
-    } })]);
+  const failed = view.selectedCache.get(key).panels[kind];
+  const box = loadFailed(kind === "field" ? "The Forge field" : "The latest test", { message: error }, () => {
+    if (!muSelectedSummaryHere(view) || view.selectedSummary.key !== key) return;
+    const panel = view.selectedCache.get(key).panels[kind];
+    panel.error = null; panel.answer = null; panel.errorSaid = null;
+    muReadSelectedPanel(view, kind);
+  });
+  // Announced once: the summary is drawn afresh in a new host on every list update while runs go, and an
+  // alert inserted each time would repeat the failure.
+  if (failed.errorSaid === error) box.removeAttribute("role"); else failed.errorSaid = error;
+  host.append(box);
 }
 
 function muDrawSelectedSummary(view) {
@@ -97,14 +101,16 @@ function muDrawSelectedSummary(view) {
 function muDrawSelectedPanel(host, view, kind, panel) {
   clear(host); host.setAttribute("aria-busy", String(panel.loading));
   if (panel.error) { muSelectedFailure(host, view, kind, panel.error); return; }
-  if (!panel.answer) { host.append(loadingBox(kind === "field" ? "Loading the Forge field..." : "Loading the latest test...")); return; }
+  if (!panel.answer) { host.append(loadingBox(kind === "field" ? "Loading the Forge field…" : "Loading the latest test…")); return; }
   const a = panel.answer;
   if (kind === "swap") {
     add(host, [a.tests[0] ? el("p", { class: "sub", text: "Recorded tests keep the cards they tested. Open the test for its exact cards." }) : null,
       a.tests[0] ? el("ul", { class: "vt-test-list" }, vtTestItem(a.tests[0]))
-        : el("p", { class: "sub", text: "No tests of this list yet." })]);
+        : emptyBox("No tests of this list yet.", canEditDeckId(view.selectedSummary.id)
+          ? el("a", { class: "btn", href: editHref(view.selectedSummary.id, view.selectedSummary.version), text: "Try a change" }) : null)]);
   } else if (!(a.opponents || []).length) {
-    host.append(el("p", { class: "empty", text: "No other decks in this field yet." }));
+    host.append(emptyBox("No other decks in this field yet.",
+      createTargets().length ? el("a", { class: "btn", href: newDeckHref(), text: "New deck" }) : null));
   } else {
     add(host, [fvHeadline(a, { panel: false }), fvChips(a),
       Number.isFinite(a.rating?.h_points) ? el("p", { class: "sub" }, simNumbers(
@@ -117,13 +123,13 @@ function muDrawSelectedPanel(host, view, kind, panel) {
 function muCheckSelectedAnswer(kind, answer, c) {
   if (!answer || (kind === "field" && (!answer.deck || answer.format !== c.format)) ||
       (answer.deck && (answer.deck.id !== c.id || answer.deck.version !== c.version))) {
-    throw new Error("The answer describes a different list. Try again.");
+    throw new Error("The answer describes a different list.");
   }
   if (kind === "field" && (!Array.isArray(answer.opponents) ||
       !answer.opponents.every((o) => o && typeof o === "object" && !Array.isArray(o)))) {
-    throw new Error("The field opponents couldn't be read. Try again.");
+    throw new Error("The field opponents couldn't be read.");
   }
-  if (kind === "swap" && !Array.isArray(answer.tests)) throw new Error("The saved tests couldn't be read. Try again.");
+  if (kind === "swap" && !Array.isArray(answer.tests)) throw new Error("The saved tests couldn't be read.");
   return answer;
 }
 
@@ -138,7 +144,7 @@ async function muReadSelectedPanel(view, kind, refresh = false) {
     panel.cancel = () => { controller.abort(); reject(new Error("Cancelled")); };
   });
   const timeout = new Promise((resolve, reject) => {
-    deadline = setTimeout(() => { controller.abort(); reject(new Error("The PC took too long to answer. Try again.")); }, MU_SELECTED_TIMEOUT_MS);
+    deadline = setTimeout(() => { controller.abort(); reject(new Error("The PC took too long to answer.")); }, MU_SELECTED_TIMEOUT_MS);
   });
   panel.loading = true; muDrawSelectedSummary(view);
   const url = `/api/${kind === "field" ? "field" : "variants"}?id=${encodeURIComponent(c.id)}&version=${c.version}`;
@@ -147,7 +153,7 @@ async function muReadSelectedPanel(view, kind, refresh = false) {
     if (!valid() || controller.signal.aborted) return;
     panel.answer = muCheckSelectedAnswer(kind, answer, c); panel.answeredAt = Date.now();
   } catch (error) {
-    if (valid()) panel.error = `${kind === "field" ? "The Forge field" : "The latest test"} couldn't be loaded. ${error.message}`;
+    if (valid()) panel.error = error.message;       // muSelectedFailure says what couldn't be loaded
   } finally {
     clearTimeout(deadline);
     if (panel.sequence === sequence) { panel.loading = false; panel.cancel = null; }

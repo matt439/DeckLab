@@ -141,8 +141,10 @@ function sleevesField() { return kitField("sleeves"); }
 function deckBoxField() { return kitField("deck_box"); }
 
 const KIT_PICK_WORDS = {
-  sleeves: { add: "+ Add new sleeves", stray: "The deck has a Sleeves line, but it isn't built: only a built deck has sleeves." },
-  deck_box: { add: "+ Add a new deck box", stray: "The deck has a Deck box line, but it isn't built: only a built deck has one." },
+  sleeves: { add: "+ Add new sleeves", stray: "The deck has a Sleeves line, but it isn't built: only a built deck has sleeves.",
+    loading: "Loading your sleeves…", what: "Your sleeves" },
+  deck_box: { add: "+ Add a new deck box", stray: "The deck has a Deck box line, but it isn't built: only a built deck has one.",
+    loading: "Loading your deck boxes…", what: "Your deck boxes" },
 };
 
 /** A Sleeves or Deck box field (role=radiogroup): None, every row of that kind in the accessories list
@@ -176,7 +178,8 @@ function kitField(key) {
   return el("div", { class: "field field-wide kit-field", "data-kit": key }, el("span", { id, text: FIELD_WORDS[key] }),
     group, addButton,
     others.length ? el("small", { class: "field-hint", text: `Other decks' sleeves: ${others.join(", ")}.` }) : null,
-    ed.accLoad === "failed" ? el("small", { class: "field-hint field-problem", text: "The accessories list couldn't be loaded." }) : null);
+    ed.accLoad === "loading" ? loadingBox(words.loading, { small: true })
+      : ed.accLoad === "failed" ? loadFailed(words.what, ed.accError, retryKitRows) : null);
 }
 
 /** One tile of a kit picker: a radio with the row's picture, name and, for sleeves, whether there are
@@ -276,11 +279,22 @@ function loadKitRows() {
     ed.accRows = kitRowsOf(data.items, accessoryOwnerOf(ed.fields.player));
     ed.accLoad = "done";
     redrawKitFields();
-  }, () => {
+  }, (error) => {
     if (editor !== ed) return;
     ed.accLoad = "failed";
+    ed.accError = error;
     redrawKitFields();
   });
+}
+
+/** Try again after the accessories list couldn't be loaded: load it, showing the pickers' loading line. */
+function retryKitRows() {
+  const ed = editor;
+  if (!ed || ed.accLoad !== "failed") return;
+  ed.accLoad = null;
+  ed.accError = null;
+  loadKitRows();
+  redrawKitFields();
 }
 
 /** Draw the kit pickers again in place (the rest of Deck details, and what has focus there, stays). */

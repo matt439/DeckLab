@@ -129,10 +129,14 @@ function showVariant(params, token) {
     afterRender();
     return;
   }
-  const page = { token, test, host: null, timer: 0, data: null };
+  const page = { token, test, host: null, timer: 0, data: null, phase: null };
   load(`/api/variant?test=${test}`, token, (data) => {
     page.host = el("div", { class: "vt-page" });
-    $("#main").append(page.host);
+    // Kept outside the redrawn page: a lost connection, said once and cleared by the next answer, and the
+    // test's phase (waiting, playing, done) for a screen reader, said only when it changes.
+    page.problem = el("p", { class: "vt-refresh-error", role: "status" });
+    page.announcer = el("p", { class: "sr-only", role: "status" });
+    $("#main").append(page.problem, page.announcer, page.host);
     vtDraw(page, data);
   }, { title: "This test couldn't be shown" });
 }
@@ -160,6 +164,7 @@ function vtDraw(page, data) {
       vtRows(data, vtSpan(data))),
   ]);
   afterRender();
+  vtAnnounce(page, data);
   clearTimeout(page.timer);
   if (vtLive(data)) page.timer = setTimeout(() => vtRefresh(page), POLL_MS);
 }
@@ -167,11 +172,25 @@ function vtDraw(page, data) {
 async function vtRefresh(page) {
   if (page.token !== routeToken || !page.host || !page.host.isConnected) return;
   try {
-    vtDraw(page, await api(`/api/variant?test=${page.test}`));
+    const data = await api(`/api/variant?test=${page.test}`);
+    if (page.problem) page.problem.textContent = "";
+    vtDraw(page, data);
   } catch (e) {
     if (page.token !== routeToken) return;
+    const words = "The PC isn't answering, so this may be out of date. Trying again automatically.";
+    if (page.problem && page.problem.textContent !== words) page.problem.textContent = words;
     page.timer = setTimeout(() => vtRefresh(page), POLL_MS * 3);      // the PC didn't answer: try again later
   }
+}
+
+/** Say when the test starts waiting, starts playing and is over, once each (not its game counts). */
+function vtAnnounce(page, data) {
+  if (!page.announcer) return;
+  const live = vtLive(data);
+  const phase = live ? (data.status === "queued" ? "Waiting to start the test." : "Playing the test's games.")
+    : page.phase ? "The test is over." : "";
+  page.phase = live ? data.status : null;
+  if (phase && page.announcer.textContent !== phase) page.announcer.textContent = phase;
 }
 
 function vtLivePanel(page, data) {
@@ -187,8 +206,10 @@ function vtLivePanel(page, data) {
   }
   const pairs = Object.values(job.pairs || {});
   const live = job.range;
-  return el("section", { class: "vt-panel vt-live", "aria-live": "polite" },
-    el("h2", { text: data.status === "queued" ? "Waiting to start" : "Playing" }),
+  // Not a live region: it's drawn afresh on every answer; vtAnnounce says what changes.
+  return el("section", { class: "vt-panel vt-live" },
+    el("div", { class: "vt-live-head" }, el("span", { class: "spinner", "aria-hidden": "true" }),
+      el("h2", { text: data.status === "queued" ? "Waiting to start" : "Playing" })),
     data.status === "queued" ? el("p", { text: job.ahead ? `${plural(job.ahead, "test or field run")} ahead of it.`
       : "It starts in a moment." }) : null,
     bar.node,
@@ -379,7 +400,7 @@ function variantTestsSection(data) {
   const s = data && data.summary;
   if (!s || s.read_only || !/^(?:[^/]+\/)?(?:casual|commander)\//.test(s.id)) return null;
   const version = data.version === "owned" ? "owned" : "target";
-  const body = el("div", { class: "vt-tests-body" }, loadingBox("Loading tests of changes..."));
+  const body = el("div", { class: "vt-tests-body" }, loadingBox("Loading tests of changes…", { small: true }));
   const section = el("section", { id: "sec-tests", class: "vt-tests", "aria-labelledby": "h-tests" },
     el("h2", { id: "h-tests", text: "Tests of changes" }), body);
   const token = routeToken, viewer = state.profile?.id;
@@ -388,18 +409,25 @@ function variantTestsSection(data) {
       if (token === routeToken && viewer === state.profile?.id && section.isConnected) jumpTo("sec-tests");
     }, 0);
   }
-  api(`/api/variants?id=${encodeURIComponent(s.id)}&version=${version}`).then((answer) => {
+  const read = () => api(`/api/variants?id=${encodeURIComponent(s.id)}&version=${version}`).then((answer) => {
     clear(body);
     const tests = answer.tests || [];
     if (!tests.length) {
-      body.append(el("p", { class: "sub", text: "No tests yet. In the editor, change some cards and tap \"Test this change\" to see whether the change helps." }));
+      // The editor's "Test this change" starts one.
+      body.append(emptyBox("No tests of changes yet.", canEditDeck(s)
+        ? el("a", { class: "btn", href: editHref(s.id, version), text: "Try a change" }) : null));
       return;
     }
     body.append(el("ul", { class: "vt-test-list" }, tests.map(vtTestItem)));
   }).catch((e) => {
     if (e.status === 501) section.remove();
-    else clear(body).append(el("p", { class: "sub", text: `The tests couldn't be loaded: ${e.message}` }));
+    else clear(body).append(loadFailed("The tests", e, () => {
+      if (token !== routeToken || viewer !== state.profile?.id || !section.isConnected) return;
+      clear(body).append(loadingBox("Loading tests of changes…", { small: true }));
+      read();
+    }));
   });
+  read();
   return section;
 }
 
@@ -498,7 +526,13 @@ async function vtOpenTestSheet() {
     howHost, problem, runsAllowed() ? null : el("p", { class: "run-blocked", text: runGate().why })]);
   let library = state.library;
   if (!library) {
-    try { library = state.library = await api("/api/decks"); } catch (e) { library = { decks: [] }; }
+    try { library = state.library = await api("/api/decks"); } catch (e) {
+      // Not an empty library: say so, with Try again (the sheet opened afresh), and no Start.
+      if (sheet.closed) return;
+      clear(sheet.body).append(loadFailed("The decks to test against", e, () => { sheet.close(); vtOpenTestSheet(); }));
+      sheetActions(sheet, [{ text: "Cancel", onclick: () => sheet.close() }]);
+      return;
+    }
   }
   const others = (library.decks || []).filter((d) => !d.error && d.id !== ed.id && (d.kind === "commander") === (kind === "commander")
     && !d.id.startsWith(BOX_PREFIX));

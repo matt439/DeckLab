@@ -21,7 +21,7 @@ function drawVisibility(data, token) {
     el("p", { class: "sub", text: "Everything starts Private. Only you can change your switches; either home profile can change the home and shared switches." })]);
   const switches = Array.isArray(data && data.switches) ? data.switches : [];
   if (!switches.length) {
-    main.append(el("p", { class: "box box-info", text: "No Public switches are available yet. Everything stays Private." }));
+    main.append(emptyBox("No Public switches yet. Everything stays Private."));
     return;
   }
   for (const row of switches) {

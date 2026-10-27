@@ -125,7 +125,8 @@ function shopOrderEndSheet(order, view, component = null) {
     if (!reason.value.trim()) throw new Error(removing ? "Enter why this order should be removed." : "Enter why this part is being cancelled.");
     return removing ? {action: "remove", reason: reason.value.trim()}
       : {action: "cancel", component: component.id, reason: reason.value.trim(), restore_queue: restore.checked};
-  }, {saveText: removing ? "Remove order" : "Cancel part", saveKind: "danger btn-primary", retainResult: true});
+  }, {saveText: removing ? "Remove order" : "Cancel part", saveKind: "danger btn-primary",
+    busyText: removing ? "Removing…" : "Cancelling…", retainResult: true});
   reason.id = `order-reason-${edit.sheet.heading.id}`;
   form.append(el("p", {text: shopOrderTitle(order)}),
     el("p", {text: removing ? "Remove this record, its parts and any never-received product. Its cards will stop counting as on the way."
@@ -202,11 +203,12 @@ function shopOrderChangeSheet(order, view, title, form, values, options = {}) {
   const problem = words => {error.textContent = words; error.hidden = false;};
   sheet.queueError = error;
   function actions() {
-    if (saved) {sheetActions(sheet, [{text: "Done", kind: "primary", onclick: () => sheet.close()}]); return;}
+    if (saved) {sheetActions(sheet, [{text: "Done", kind: "primary", onclick: () => sheet.close()}]); shopSheetBusy(sheet, false); return;}
     sheetActions(sheet, [{text: "Cancel", disabled: busyNow || picking, onclick: () => sheet.close()},
       preview ? {text: "Back to edit", disabled: busyNow || view.busy, onclick: () => {invalidate(); error.hidden = true;}} : null,
       {text: preview ? options.saveText || "Save change" : "Preview change", kind: preview ? options.saveKind || "primary" : "primary", disabled: busyNow || picking || view.busy || view.stale,
         onclick: () => preview ? save() : review()}]);
+    shopSheetBusy(sheet, busyNow, preview ? options.busyText || "Saving…" : "Previewing…");
   }
   function invalidate() {
     if (saved) return;

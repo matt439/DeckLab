@@ -231,8 +231,7 @@ function drawWho() {
       el("span", {},
         el("span", { class: "who-name", text: p.name }),
         el("span", { class: "who-sub", text: p.id === last ? "Last time on this device" : "Tap to continue" }))))),
-    ordered.length ? null : el("p", { class: "box box-warn",
-      text: "There are no profiles in decklab/config.json yet." })));
+    ordered.length ? null : emptyBox("No one has been added to Deck Lab yet.")));
   afterRender();
 }
 
@@ -477,10 +476,10 @@ async function start() {
       if (!(e instanceof ApiError)) throw e;
       // Retry on the button, or by itself after a while (the server may still be starting).
       await new Promise((resolve) => {
-        clear(main).append(errorBox("Deck Lab couldn't start", e, resolve));
+        clear(main).append(errorBox("Deck Lab couldn't start", e, resolve, null));
         setTimeout(resolve, RETRY_SECONDS * 1000);
       });
-      clear(main).append(loadingBox("Loading Deck Lab..."));
+      clear(main).append(loadingBox("Loading Deck Lab…"));
     }
   }
   state.me = me;

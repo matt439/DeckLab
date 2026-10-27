@@ -292,7 +292,15 @@ async function previewDelivery(view) {
     view.preview = { token: answer.preview, key, answer, received };
     rcptPreviewSheet(view, answer);
   } catch (error) {
-    if (receiptActive(view) && seq === view.seq) clear(view.message).append(rcptError("The preview couldn't be prepared", error));
+    if (receiptActive(view) && seq === view.seq) {
+      // A changed delivery (409) needs a reload; anything else may work on a second try, as Record arrival offers.
+      const changed = error.status === 409;
+      clear(view.message).append(rcptError("The preview couldn't be prepared", error),
+        el("button", { type: "button", class: "btn", text: changed ? "Reload the delivery" : "Try again", onclick: () => {
+          if (!receiptActive(view) || view.busy) return;
+          if (changed) route(); else previewDelivery(view);
+        } }));
+    }
   } finally {
     if (receiptActive(view)) { unbusy(view.primary); receiptBusy(view, false); rcptSync(view); }
   }

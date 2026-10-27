@@ -371,7 +371,7 @@ async function showMatchups(params, token) {
   // answer 503, and the page still works with the matchup answers' defaults. The loading state shows
   // at once, so a slow answer doesn't leave the last page on screen.
   const pending = api(`/api/profiles/${encodeURIComponent(state.profile.id)}/settings`).catch(() => null);
-  clear($("#main")).append(loadingBox());
+  clear($("#main")).append(loadingBox("Loading matchups…"));
   const mine = await pending;
   if (token !== routeToken) return;
   return load(["/api/decks", "/api/matchups"], token, ([library, matchups]) => {
@@ -501,8 +501,15 @@ function deckMatchupList(deck, decks, pairs, format, engines = false) {
     entries.length ? olderKey(entries.map(({ item }) => ({ item, deckId: deck.id }))) : null,
     entries.length ? el("ul", { class: "mu-list" }, entries.map(({ item, engineTag }) =>
       resultRow(item, { against: true, deckId: deck.id, engineTag })))
-      : el("p", { class: "empty", text: `${deck.title} hasn't played a matchup yet.` }),
+      : noDeckMatchups(deck),
     notPlayedLine(deck, others)];
+}
+
+/** One deck with no matchups yet: the line, and Play a matchup with it picked when play (a function taking
+ * the sheet's preset) is given and the viewer may start runs. */
+function noDeckMatchups(deck, play = null) {
+  return emptyBox(`${deck.title} hasn't played a matchup yet.`, play && runsAllowed()
+    ? el("button", { type: "button", class: "btn", text: "Play a matchup", onclick: () => play({ a: deck.id }) }) : null);
 }
 
 function drawMatchups(library, matchups, params, token) {
@@ -514,6 +521,8 @@ function drawMatchups(library, matchups, params, token) {
   const view = { format: null, deck: null, mode: local.get(HOME_VIEW_KEY) === "rankings" ? "rankings" : "matchups",
     token, profile: state.profile?.id, rankings: new Map() };
   const opener = () => openPlaySheet(library, () => data, token, {}, view.format);
+  // The empty states' Play a matchup (drawHome), with a deck picked or this format's first.
+  view.openPlay = (preset = {}) => openPlaySheet(library, () => data, token, preset, view.format);
   const play = gate.may ? el("button", { type: "button", class: "btn btn-primary", text: "Play a matchup",
     onclick: opener }) : null;
   add(main, [
@@ -531,7 +540,7 @@ function drawMatchups(library, matchups, params, token) {
     library = current; state.library = current;
     return true;
   };
-  if (needsLibrary(data)) lists.append(loadingBox("Updating the decks in Matchups."));
+  if (needsLibrary(data)) lists.append(loadingBox("Updating the decks in Matchups…"));
   else drawHome(lists, data, library, view);
   const watcher = followList(lists, token, data, updates, (fresh) => { data = fresh; }, (fresh) => drawHome(lists, fresh, library, view),
     fresh => { if (view.mode === "rankings") muRefreshRankings(view, fresh); else muRefreshSelectedSummary(view); },
@@ -575,11 +584,13 @@ function drawHome(host, data, library, view) {
     muCancelSelectedSummary(view);
     view.token ??= routeToken; view.profile ??= state.profile?.id; view.rankings ||= new Map();
     view.rankingsHost = el("div", { class: "mu-rankings" }); section.append(view.rankingsHost);
+    view.rankingsHost.openPlay = view.openPlay;
     muRefreshRankings(view, data); return;
   }
   if (!formats.length) {
     muCancelSelectedSummary(view);
-    section.append(el("p", { class: "empty", text: "There are no two decks of one format to play yet." })); return;
+    section.append(emptyBox("There are no two decks of one format to play yet.",
+      createTargets().length ? el("a", { class: "btn", href: newDeckHref(), text: "New deck" }) : null)); return;
   }
   const decks = matrixDecks(library, results, view.format), shown = results.filter(r => r.format === view.format);
   const canonicalPick = id => library.decks.find(d => d.id === id || d.aliases?.includes(id))?.id || id;
@@ -587,7 +598,9 @@ function drawHome(host, data, library, view) {
   const storedPick = local.get(HOME_DECK_KEY), keptPick = canonicalPick(storedPick);
   if (keptPick !== storedPick) local.set(HOME_DECK_KEY, keptPick);
   const pairs = pairsOf(results);
-  if (!shown.length) section.append(el("p", { class: "empty", text: "No matchups have been played yet." }));
+  const playButton = (preset = {}) => view.openPlay && runGate().may
+    ? el("button", { type: "button", class: "btn", text: "Play a matchup", onclick: () => view.openPlay(preset) }) : null;
+  if (!shown.length) section.append(emptyBox("No matchups have been played yet.", playButton()));
   add(section, [allEarlierLine(shown)]);
   const choose = (id) => {
     view.deck = id;
@@ -612,7 +625,8 @@ function drawHome(host, data, library, view) {
     el("p", { class: "sub", text: "Saved matchup rows below may use different lists or earlier engines. Open a row for its exact lists." }),
     el("div", { class: "mu-opponents" }, entries.length
       ? [matchupOpponentTable(entries), matchupOpponentLinks(entries)]
-      : el("p", { class: "empty", text: `${deck.title} hasn't played a matchup yet.` })),
+      // With no matchups of this format at all, the empty state above already says so.
+      : shown.length ? noDeckMatchups(deck, view.openPlay) : null),
     notPlayedLine(deck, others)]);
   section.append(body);
 }
@@ -740,7 +754,8 @@ function muRankingContent(host, entry, format) {
   if (entry.error || answer?.error) host.append(markedBox("warn", "h3", "Rankings aren't available", [
     el("p", { text: (entry.error || answer.error) + " Trying again automatically." }),
     answer ? el("p", { text: "The saved display below may be out of date." }) : null], { role: "status" }));
-  if (entry.loading) host.append(el("p", { class: "sub", text: answer ? "Updating rankings…" : "Loading rankings…" }));
+  // First load: the page's waiting state; over a saved answer, a small one above it.
+  if (entry.loading) host.append(loadingBox(answer ? "Updating rankings…" : "Loading rankings…", { small: !!answer }));
   if (!answer) return;
   const rows = answer.rows || [], groups = answer.groups || [];
   host.append(el("p", { text: `Current ${format === "Constructed" ? "60-card" : format} lists, using saved games with today's engine. ` +
@@ -760,7 +775,8 @@ function muRankingContent(host, entry, format) {
       .sort((a, b) => b.rating.value - a.rating.value || a.title.localeCompare(b.title))));
   section("Unsettled without a rating", rows.filter(row => !shown.has(row) && row.in_field !== false));
   section("Outside the field", rows.filter(row => !shown.has(row)));
-  if (!rows.length && !answer.error && !entry.error) host.append(el("p", { class: "empty", text: "There are no current lists of this format to rank." }));
+  if (!rows.length && !answer.error && !entry.error) host.append(emptyBox("There are no current lists of this format to rank.",
+    host.openPlay && runsAllowed() ? el("button", { type: "button", class: "btn", text: "Play a matchup", onclick: () => host.openPlay() }) : null));
   if (answer.notes?.length) host.append(el("details", { class: "more" }, el("summary", { text: "How rankings are worked out" }),
     el("ul", {}, answer.notes.map(text => el("li", { text })))));
 }
@@ -1086,7 +1102,8 @@ function deckResultParts(m, s, version, library, listVersion = "target") {
       earlier.length ? el("details", { class: "more mu-earlier-results" },
         el("summary", { text: `Earlier results (${earlier.length})` }),
         el("ul", { class: "mu-list" }, earlier.map((item) => resultRow(item, { against: true })))) : null]
-      : el("p", { class: "empty", text: `No matchups played with this ${version} yet.` }),
+      // The tab's own Play a matchup follows this part, so the empty state needs no second one.
+      : emptyBox(`No matchups played with this ${version} yet.`),
     notPlayedLine({ id: s.id, version: listVersion }, others)];
 }
 

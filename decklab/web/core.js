@@ -889,9 +889,31 @@ function apiWrite(path, body, method = "POST") {
   });
 }
 
-function loadingBox(text) {
-  return el("p", { class: "loading", role: "status" },
-    el("span", { class: "spinner", "aria-hidden": "true" }), text || "Loading...");
+/** Waiting: a spinner and words ending in "…" ("Loading…", "Working out the plan…"). small: the inline
+ * size, for a part of a page or a sheet rather than the whole page. */
+function loadingBox(text, { small = false } = {}) {
+  return el("p", { class: small ? "loading loading-small" : "loading", role: "status" },
+    el("span", { class: small ? "spinner spinner-small" : "spinner", "aria-hidden": "true" }), text || "Loading…");
+}
+
+/** An empty list: one line, and at most the one action that fills it (an element, or null). live: the
+ * list emptied because of a search or a filter the viewer just changed, so say so. */
+function emptyBox(line, action = null, { live = false } = {}) {
+  return el("div", { class: "empty", role: live ? "status" : null }, el("p", { text: line }), action);
+}
+
+/** A pane with nothing chosen yet: one quiet line ("Pick a card to see its copies."). */
+function noneSelected(line) {
+  return el("p", { class: "none-selected", text: line });
+}
+
+/** A part of a page (not the page itself) that couldn't be loaded: one line saying what, the server's
+ * reason, and Try again when retry is given. Announced. */
+function loadFailed(what, error, retry = null) {
+  const reason = error && error.message ? ` ${error.message}${error.status ? ` (error ${error.status})` : ""}` : "";
+  return el("div", { class: "note note-crit load-failed", role: "alert" },
+    el("p", { text: `${what} couldn't be loaded.${reason}` }),
+    retry ? el("button", { type: "button", class: "btn", text: "Try again", onclick: () => retry() }) : null);
 }
 
 /** Fetch path and hand the answer to draw(); a list of paths is fetched at once, and draw() gets the
@@ -931,16 +953,18 @@ async function load(path, token, draw, { title = "This page couldn't be loaded",
 
 /** An error in place of a page: the message, "Try again" (retry; none when it's null, or when loading
  * the page again can't help: a bad address, 400, or something that isn't there, 404; another retry,
- * like Deck Lab's start-up, is always offered), and a way back: back is [href, words]. */
-function errorBox(title, error, retry = route, back = ["#/library", "Back to the library"]) {
+ * like Deck Lab's start-up, is always offered), and a way back: back is [href, words], or null for none
+ * (the default when retry is null: the box is in a sheet or a part of a page, so there's nowhere to go back to). */
+function errorBox(title, error, retry = route, back = retry === null ? null : ["#/library", "Back to the library"]) {
   const code = error.status ? ` (error ${error.status})` : "";
   const again = retry && (retry !== route || (error.status !== 400 && error.status !== 404));
-  return el("div", { class: "box box-crit" },
+  const way = back ? el("a", { class: again ? "btn" : "btn btn-primary", href: back[0], text: back[1] }) : null;
+  return el("div", { class: "box box-crit", role: "alert" },
     el("h2", { class: "box-head", text: title }),
     el("p", { text: error.message + code }),
-    el("div", { class: "actions" },
+    again || way ? el("div", { class: "actions" },
       again ? el("button", { type: "button", class: "btn btn-primary", text: "Try again", onclick: () => retry() }) : null,
-      el("a", { class: again ? "btn" : "btn btn-primary", href: back[0], text: back[1] })));
+      way) : null);
 }
 
 /** Show why the card data isn't ready (or, with reason "off" from the off page's Worker, that Deck Lab

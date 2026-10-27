@@ -133,10 +133,13 @@ function renderVersionStatus(s) {
   if (version) version.textContent = view.label;
   showVersionWarning(buildLine ? view.messages : view.forEveryone, view.reload, databaseMessages(s.database));
   const cards = $("#settings-cards");
-  if (cards) cards.textContent = s.cards?.ready
+  const cardWords = s.cards?.ready
     ? `Card data from Scryfall, index built ${(s.cards.built_at || "").slice(0, 10)}` +
       (s.cards.price_date ? `, prices of ${s.cards.price_date}` : "") + (s.fx ? `. 1 USD = ${s.fx.rate} AUD (ECB rate of ${s.fx.date})` : "") + "."
-    : s.updating ? "Card data is being downloaded from Scryfall." : "No card data yet.";
+    : s.updating ? "Card data is being downloaded from Scryfall…" : "No card data yet. Deck Lab downloads it from Scryfall when it starts.";
+  // A status region: rewritten only when the words change, so it announces the download starting and finishing,
+  // not every check.
+  if (cards && cards.textContent !== cardWords) cards.textContent = cardWords;
   const footer = $("#footer-data");
   if (footer) footer.textContent = footerLine(s);
 }
@@ -209,8 +212,10 @@ async function loadSimulations() {
   simRequest = (async () => {
     try {
       renderSimulations(await api("/api/simulations"));
+      state.simulationsError = null;
     } catch (e) {
-      /* the footer's version check says when the server can't be reached */
+      /* the footer's version check says when the server can't be reached; the Settings page says it in its part */
+      state.simulationsError = e;
     } finally {
       simRequest = null;
     }

@@ -28,17 +28,22 @@ function deckSwapFinder(screen) {
   if (screen.view.filter !== "missing" || !deckSwapsOffered(data)) return null;
   const box = el("section", { class: "box deck-swap-finder", "aria-labelledby": "h-swap-finder" },
     el("h3", { id: "h-swap-finder", text: "Owned stand-ins" }));
-  const body = el("div", {}, loadingBox("Looking for stand-ins…"));
+  const body = el("div", {}, loadingBox("Looking for stand-ins…", { small: true }));
   box.append(body);
   if (!screen.swapFinder || screen.swapFinder.version !== data.version) {
     screen.swapFinder = { version: data.version,
       answer: api(`/api/deck/swaps?id=${encodeURIComponent(data.summary.id)}&version=${data.version}`) };
   }
-  screen.swapFinder.answer.then((answer) => {
+  const asked = screen.swapFinder;
+  asked.answer.then((answer) => {
     if (deckScreen !== screen || !body.isConnected) return;
     drawSwapFinder(body, data, answer);
   }, (e) => {
-    if (deckScreen === screen) clear(body).append(el("p", { class: "sub", text: e.message }));
+    // A failure isn't kept: Try again (or the next redraw) asks again.
+    if (screen.swapFinder === asked) screen.swapFinder = null;
+    if (deckScreen === screen && body.isConnected) clear(body).append(loadFailed("Stand-ins", e, () => {
+      if (deckScreen === screen) redrawCards(screen);
+    }));
   });
   return box;
 }

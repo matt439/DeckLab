@@ -10,7 +10,7 @@ function commanderNightPart(data) {
   const saved = data.commander_night;
   if (!saved) return null;
   if (saved.unavailable) return el("div", { class: "commander-night" },
-    el("p", { class: "sub", text: "The recorded Commander night is unavailable. Check the venue's expectations before playing." }));
+    note("The recorded Commander night couldn't be loaded. Check the venue's expectations before playing."));
   const night = saved.night;
   if (!night) return null;
   const target = data.summary.target_bracket, aim = night.target_bracket;
@@ -39,7 +39,7 @@ function commanderNightSettings() {
   return el("section", { class: "panel settings-part", id: "settings-commander-night", "aria-labelledby": "settings-night-title" },
     el("h2", { id: "settings-night-title", text: "Commander night" }),
     el("p", { class: "sub", text: "Record the household's usual night and what its table expects. Everyone at home sees these notes on home Commander deck pages. Only home admins change them." }),
-    el("div", { id: "commander-night-settings" }, loadingBox("Loading the recorded Commander night.")));
+    el("div", { id: "commander-night-settings" }, loadingBox("Loading the recorded Commander night…")));
 }
 
 /** A late load must not cross a route/profile switch or replace a newer request or edit form. */
@@ -49,7 +49,7 @@ async function loadCommanderNightSettings(token) {
   const sequence = host.nightRequest = (host.nightRequest || 0) + 1;
   const here = () => host.isConnected && token === routeToken && sequence === host.nightRequest
     && profile === (state.profile && state.profile.id) && commanderNightAdmin();
-  clear(host).append(loadingBox("Loading the recorded Commander night."));
+  clear(host).append(loadingBox("Loading the recorded Commander night…"));
   try {
     const data = await api("/api/commander-night");
     if (here()) drawCommanderNightSettings(host, data, token, profile);

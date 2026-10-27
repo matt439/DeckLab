@@ -12,9 +12,11 @@ function guideSection(data) {
   if (guide && guide.changed_on) section.append(el("div", { class: "note note-warn guide-stale", role: "note" },
     el("p", { text: `The list changed on ${guide.changed_on}, so this guide may be out of date. Check its cards against the list.` })));
   if (!parts.length) {
-    section.append(el("p", { class: "empty", text: data.summary.read_only
-      ? "No play guide is recorded for this deck yet."
-      : "No play guide yet. Game plan, mulligan and sideboard notes show here once they're in the deck's Notes." }));
+    // Whoever may edit the deck gets the editor's Notes, where the game plan is written.
+    const s = data.summary;
+    section.append(canEditDeck(s)
+      ? emptyBox("No play guide yet.", el("a", { class: "btn", href: `${editHref(s.id, data.version)}&tab=notes`, text: "Write a game plan" }))
+      : el("p", { class: "empty", text: "No play guide is recorded for this deck yet." }));
     return section;
   }
   section.append(el("div", { class: "guide-topics" }, parts.map((part, i) => el("details", { class: "guide-topic", open: i === 0 },

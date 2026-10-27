@@ -262,7 +262,7 @@ class FeatureUiTests(unittest.TestCase):
           drawAssembly({choices,decks:[],rows:[],ready:false,counts_confirmed:true,unresolved:[],warnings:[],note:'',
             token_note:'',totals:{waiting:0,missing:0},tokens:[],token_plan:[]},routeToken);
           // Nothing chosen: one line and the one action.
-          assert(main.querySelector('.empty').textContent.includes('Choose the decks you want to play.'));
+          assert(main.querySelector('.pack-results').querySelector('.empty').textContent.includes('Choose the decks you want to play.'));
           // Built and being built are open; ideas and products are folded.
           same(main.querySelectorAll('.pack-group').map(g => g.tag), ['div', 'div', 'details', 'details']);
           const chooser = main.querySelector('.pack-choose');

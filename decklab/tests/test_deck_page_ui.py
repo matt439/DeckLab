@@ -305,9 +305,10 @@ class DeckPageUiTests(unittest.TestCase):
           assert.equal(needs[0].querySelector('img').getAttribute('src'), '/img/tx/9/small');
           assert.equal(needs[1].querySelector('.token-need-example'), null);
           assert.equal(needs[1].querySelector('img').getAttribute('src'), '/img/tm/1/small');
-          // No picture and no example: the letter, unlabelled.
+          // No picture and no example: the token placeholder (a target glyph, the P/T not known), unlabelled.
           assert.equal(needs[2].querySelector('.token-need-example'), null);
-          assert.equal(needs[2].querySelector('.tok-thumb-fallback').textContent, 'M');
+          assert(needs[2].querySelector('.tok-thumb-target'));
+          assert.equal(needs[2].querySelector('.tok-thumb-fallback').textContent, '');
         """)
 
     def test_field_budget_choice_is_saved_for_the_profile_and_survives_a_failed_save(self):

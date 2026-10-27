@@ -126,8 +126,11 @@ function deckMatchupsPart(data) {
   section.append(content);
   let m = data.matchups;
   const place = (change) => typeof keepPlace === "function" ? keepPlace(change) : change();
-  const draw = () => place(() => drawDeckMatchups(content, data, m));
+  const draw = () => place(() => drawDeckMatchups(content, data, m, load));
+  let watching = false;
   const watch = () => {
+    if (watching) return;
+    watching = true;
     section.append(updates.node);
     watchMatchupUpdates({token, host: () => section, url, view: updates,
       active: () => (m?.running || []).length > 0,
@@ -137,11 +140,10 @@ function deckMatchupsPart(data) {
         replaceMatchupContent(content, draw);
       }});
   };
-  if ("matchups" in data) {
-    draw();
-    watch();
-  } else {
-    content.append(loadingBox("Loading this list's matchups…"));
+  // Fetch the list's matchups (again, for Try again) and draw them.
+  function load() {
+    if (token !== routeToken) return;
+    clear(content).append(loadingBox("Loading this list's matchups…"));
     api(url).then((fresh) => {
       if (token !== routeToken) return;
       m = data.matchups = fresh.matchups;
@@ -149,23 +151,28 @@ function deckMatchupsPart(data) {
       watch();
     }).catch((e) => {
       if (token !== routeToken) return;
-      place(() => clear(content).append(el("div", {class: "box box-warn"}, el("h3", {text: "Matchups can't be shown"}),
-        el("p", {text: e.message}))));
+      place(() => clear(content).append(loadFailed("This list's matchups", e, load)));
     });
+  }
+  if ("matchups" in data) {
+    draw();
+    watch();
+  } else {
+    load();
   }
   return section;
 }
 
 
-/** Draw the Matchups tab's content from m (/api/deck's "matchups"; null when the server couldn't load them),
+/** Draw the Matchups tab's content from m (/api/deck's "matchups"; null when the server couldn't load them,
+ * then retry, when given, fetches them again),
  * with the matchup screens' pieces (matchups-overview.js deckResultParts, earlierEngineLine, earlierFlags;
  * matchups.js aiLimitsParts; matchups-cards.js deckCardStats; matchups-results.js pilotFlag). */
-function drawDeckMatchups(host, data, m) {
+function drawDeckMatchups(host, data, m, retry = null) {
   const s = data.summary;
   clear(host);
   if (!m) {
-    host.append(el("div", {class: "box box-warn"}, el("h3", {text: "Matchups can't be shown"}),
-      el("p", {text: "The server couldn't load its Forge part. The server log has the details."})));
+    host.append(loadFailed("Forge's results", null, retry));
     return;
   }
   const version = data.versions.length > 1 ? listName(data.version, true) : "list";
@@ -177,7 +184,7 @@ function drawDeckMatchups(host, data, m) {
       if (token !== routeToken) return;           // the page was left: nothing to draw
       state.library = state.library || library;
       if (host.isConnected) {
-        const redraw = () => drawDeckMatchups(host, data, m);
+        const redraw = () => drawDeckMatchups(host, data, m, retry);
         if (typeof keepPlace === "function") keepPlace(redraw); else redraw();
       }
     }).catch(() => {});

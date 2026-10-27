@@ -99,16 +99,16 @@ function cardStatsCoverage(stats, deckPage = false, { otherSaid = false } = {}) 
     const badWords = `${bad === 1 ? "it" : "each game's log"} failed its checks ${checks}`;
     const left = other ? ` ${thousands(other)} more ${other === 1 ? "was" : "were"} ${otherEngine}, so ` +
       `${other === 1 ? "it's" : "they're"} left out.` : "";
-    parts.push(el("p", { class: "sub", text: old
+    // One short line, then why (none when nothing was counted at all).
+    const why = old
       ? `${whose} ${earlier}${bad ? `, and the card log was kept for ${thousands(bad)} more ` +
-          `game${bad === 1 ? "" : "s"}, but ${badWords}` : ""}, so there are no per-card numbers yet: play ` +
-        "more games to get some." + left
-      : bad ? `The card log was kept for ${gamesWords(bad)}, but ${badWords}, so there are no per-card numbers ` +
-          "yet." + left
+          `game${bad === 1 ? "" : "s"}, but ${badWords}` : ""}. Play more games to get some.` + left
+      : bad ? `The card log was kept for ${gamesWords(bad)}, but ${badWords}.` + left
         : other ? `This list's ${gamesWords(other)} ${other === 1 ? "was" : "were"} ${otherEngine}, and these ` +
-            "numbers count only today's engine's games, so there are none yet: play more games, or replay those " +
-            "matchups with today's engine, to get some."
-          : "No game with card data has been counted yet, so there are no per-card numbers." }));
+            "numbers count only today's engine's games. Play more games, or replay those matchups with today's " +
+            "engine, to get some."
+          : "";
+    parts.push(emptyBox("No per-card numbers yet."), why ? el("p", { class: "sub", text: why }) : null);
     return parts;
   }
   const why = [];

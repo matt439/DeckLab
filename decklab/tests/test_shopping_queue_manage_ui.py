@@ -530,7 +530,7 @@ class ShoppingQueueManagementInteractionTests(unittest.TestCase):
               same(buttons.map(button => button.disabled), disabled);
               assert.equal(document.activeElement, focused);
               if (nextStatus === "pending") {
-                assert(action(nextSheet, "Add card").disabled);
+                assert(action(nextSheet, "Saving…").disabled);
                 requests[1].resolve(saved(requests[1].body, row("Beta", requests[1].body.values), "queue-new-2"));
                 await settle();
                 assert(nextSheet.closed);

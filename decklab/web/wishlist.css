@@ -19,7 +19,8 @@
 .wishlist-sheet-message:empty { display: none; }
 .wishlist-sheet-top { display: flex; flex-wrap: wrap; gap: var(--s-4); align-items: flex-start; }
 .wishlist-sheet-pic { flex: none; padding: 0; border: 0; background: none; cursor: zoom-in; border-radius: var(--r-card); overflow: hidden; box-shadow: var(--shadow-img); }
-.wishlist-sheet-pic img { display: block; width: 112px; height: auto; }
+/* While it loads it holds the card's shape on the art placeholder colour, so the facts beside it don't jump. */
+.wishlist-sheet-pic img { display: block; width: 112px; height: auto; aspect-ratio: 488 / 680; background: var(--surface-3); }
 .wishlist-sheet-facts { flex: 1 1 200px; min-width: 0; display: grid; gap: var(--s-2); }
 .wishlist-sheet-facts p { margin: 0; }
 .wishlist-source { color: var(--ink-2); font-size: var(--fs-sm); overflow-wrap: break-word; }

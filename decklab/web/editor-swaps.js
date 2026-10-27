@@ -136,17 +136,21 @@ async function openSwapSheet(uid) {
   const here = () => editor === ed && !ed.leaving && location.hash === hash && (state.profile && state.profile.id) === profile;
   const sheet = openSheet({ title: `Stand-ins for ${name}`, side: true });
   sheet.dialog.classList.add("swap-sheet");
-  sheet.body.append(loadingBox("Looking through your cards…"));
-  let answer;
-  try {
-    answer = await apiWrite("/api/deck/swaps", { id: ed.id, list: sendList(ed.lists), card: name });
-  } catch (e) {
-    if (!(e instanceof ApiError)) throw e;
-    if (here() && !sheet.closed) clear(sheet.body).append(el("p", { class: "form-error", role: "alert", text: e.message }));
-    return;
-  }
-  if (!here() || sheet.closed) return;          // a late answer: the editor, the page or the person changed
-  drawSwapSheet(sheet, uid, answer.cards[0], answer);
+  // Asked again in place by Try again, with the list as it is then.
+  const ask = async () => {
+    clear(sheet.body).append(loadingBox("Looking through your cards…"));
+    let answer;
+    try {
+      answer = await apiWrite("/api/deck/swaps", { id: ed.id, list: sendList(ed.lists), card: name });
+    } catch (e) {
+      if (!(e instanceof ApiError)) throw e;
+      if (here() && !sheet.closed) clear(sheet.body).append(loadFailed("The stand-ins", e, () => { if (here() && !sheet.closed) ask(); }));
+      return;
+    }
+    if (!here() || sheet.closed) return;          // a late answer: the editor, the page or the person changed
+    drawSwapSheet(sheet, uid, answer.cards[0], answer);
+  };
+  await ask();
 }
 
 function drawSwapSheet(sheet, uid, entry, answer) {

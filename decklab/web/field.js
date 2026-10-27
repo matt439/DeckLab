@@ -34,7 +34,7 @@ const FV_VERDICTS = { ahead: "ahead", slightly_ahead: "slightly ahead", about_ev
 function fieldSection(data) {
   const s = data.summary;
   if (s.id.startsWith(BOX_PREFIX)) return null;
-  const content = el("div", { class: "fv-content" }, loadingBox("Loading how this list does against the field..."));
+  const content = el("div", { class: "fv-content" }, loadingBox("Loading how this list does against the field…"));
   const section = el("section", { class: "deck-section fv-section", id: "sec-field", "aria-labelledby": "h-field" },
     el("h2", { id: "h-field", text: "Against the field" }), content);
   const profile = state.profile ? `&profile=${encodeURIComponent(state.profile.id)}` : "";
@@ -68,11 +68,7 @@ async function fvRefresh(ctx) {
   } catch (e) {
     if (!fvHere(ctx) || ctx.busy) return;
     fvKeepPlace(() => {
-      clear(ctx.content).append(el("div", { class: "box box-warn" },
-        el("h3", { class: "box-head", text: "The field can't be shown" }),
-        el("p", { text: e.message || String(e) }),
-        el("div", { class: "actions" },
-          el("button", { type: "button", class: "btn", text: "Try again", onclick: () => fvRefresh(ctx) }))));
+      clear(ctx.content).append(loadFailed("How this list does against the field", e, () => fvRefresh(ctx)));
     });
     return;
   }
@@ -94,23 +90,26 @@ function fvPlaying(answer) { return answer.status === "queued" || answer.status 
 
 function fvDraw(ctx, a) {
   ctx.answer = a;
+  fvAnnounce(ctx, a);
   if (!ctx.budget) ctx.budget = a.default_budget || "standard";
   clear(ctx.content);
   const opponents = a.opponents || [];
   const played = opponents.some((o) => o.games);
   const list = ctx.version === "owned" ? listName("owned", true) : "list";
   if (!opponents.length) {
-    ctx.content.append(el("p", { class: "empty", text: `There's no other ${a.format} deck in the field for it to play.` }));
+    ctx.content.append(emptyBox(`There's no other ${a.format} deck in the field for it to play.`,
+      createTargets().length ? el("a", { class: "btn", href: newDeckHref(), text: "New deck" }) : null));
     return;
   }
   if (!played && !fvPlaying(a)) {
     // One empty state, with the one action that fills it (MU-08). Only today's engine's games count here, so
     // a list whose matchups were all an earlier engine's is still empty: said, so it doesn't contradict them.
     ctx.content.append(el("div", { class: "empty fv-empty" },
-      el("p", { text: (ctx.earlierOnly ? "No field games with today's engine yet (earlier results don't count " +
-        "here). " : "No games against the field yet. ") + `Play the field to see how this ${list} does against the ` +
+      el("p", { text: ctx.earlierOnly ? "No field games with today's engine yet." : "No games against the field yet." }),
+      el("p", { class: "sub", text: (ctx.earlierOnly ? "Earlier results don't count here. " : "") +
+        `Play the field to see how this ${list} does against the ` +
         `${plural(opponents.length, `other ${a.format} deck`)} of the house.` }),
-      fvPlayBox(ctx, a)));
+      fvPlayBox(ctx, a, { inEmpty: true })));
     return;
   }
   add(ctx.content, [
@@ -229,7 +228,21 @@ function fvHow(a) {
     el("ul", { class: "fv-notes" }, items));
 }
 
-function fvPlayBox(ctx, a) {
+/** Say when a field run starts waiting, starts playing and finishes, once each, in a line kept outside the
+ * part's redrawn content (its per-game counts aren't announced). */
+function fvAnnounce(ctx, a) {
+  if (!ctx.announcer) {
+    ctx.announcer = el("p", { class: "sr-only", role: "status" });
+    ctx.section.append(ctx.announcer);
+  }
+  const phase = a.status === "queued" ? "Waiting to play the field." : a.status === "running" ? "Playing the field."
+    : ctx.phase ? "Finished playing the field." : "";
+  if (fvPlaying(a) || ctx.phase) ctx.phase = fvPlaying(a) ? a.status : null;
+  if (phase && ctx.announcer.textContent !== phase) ctx.announcer.textContent = phase;
+}
+
+/** inEmpty: inside the empty state, whose line already says what to do, so no "Play the field" heading. */
+function fvPlayBox(ctx, a, { inEmpty = false } = {}) {
   const box = el("div", { class: "fv-play" });
   if (a.notice) box.append(el("p", { class: "fv-small", text: a.notice }));
   if (a.error) box.append(el("div", { class: "box box-crit" }, el("p", { text: a.error })));
@@ -244,7 +257,7 @@ function fvPlayBox(ctx, a) {
   // A viewer who may not start runs sees the disabled button and why (syncRunControls), not the choice too, as
   // on a matchup's page. The button is the outlined kind: the deck page has its own primary action.
   choice.node.hidden = !runsAllowed();
-  add(box, [el("h3", { text: "Play the field" }), choice.node,
+  add(box, [inEmpty ? null : el("h3", { text: "Play the field" }), choice.node,
     ready ? null : el("p", { class: "fv-small", text: (a.forge && a.forge.problem) || "Forge isn't ready on the PC." }),
     el("div", { class: "actions" }, el("button", { type: "button", class: "btn", text: "Play the field",
       disabled: !ready || !state.profile, "data-run": true, onclick: () => fvPlay(ctx) }))]);
@@ -294,11 +307,11 @@ function fvLive(ctx, a) {
   const playing = pairs.filter((p) => p.playing).map((p) => p.opponent.title);
   const waiting = pairs.filter((p) => !p.playing && !p.dropped && p.done < p.total).length;
   const words = a.status === "queued"
-    ? (job.ahead > 0 ? `Waiting: ${plural(job.ahead, "run")} ahead of it` : "Starting...")
+    ? (job.ahead > 0 ? `Waiting: ${plural(job.ahead, "run")} ahead of it` : "Starting…")
     : playing.length ? `Playing: ${playing.join(", ")}` + (waiting ? ` (${waiting} waiting)` : "")
-      : "Choosing the next decks to play...";
+      : "Choosing the next decks to play…";
   return [
-    el("h3", { text: "Playing the field" }),
+    el("h3", {}, el("span", { class: "spinner spinner-small", "aria-hidden": "true" }), " Playing the field"),
     bar.node,
     el("p", { class: "fv-small" }, status("info", a.status === "queued" ? "Waiting" : "Playing"), " ",
       `${thousands(job.done || 0)} of ${thousands(job.total || 0)} games · ${words}`),

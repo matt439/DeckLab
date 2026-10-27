@@ -21,7 +21,8 @@ SCRIPT = _text("variant.js")
 CSS = _text("variant.css")
 # Classes of the page's own that variant.css styles only in context (it makes none of them).
 SHARED = {"edit-bar", "sheet-inner", "progress", "btn", "sub", "actions", "crumbs", "run-blocked",
-          "fresh"}      # sim-ui.js's freshness badge, beside a test in the deck page's list
+          "fresh",      # sim-ui.js's freshness badge, beside a test in the deck page's list
+          "spinner", "sr-only"}   # core's waiting spinner, and a status line only a screen reader hears
 
 
 class VariantPageTests(unittest.TestCase):

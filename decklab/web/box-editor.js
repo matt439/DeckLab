@@ -36,7 +36,7 @@ async function boxEditorChoices(deck, evidence, row, direction, options) {
   const here = () => observation && options.here() && profile === state.profile && token === routeToken && hash === location.hash
     && options.sourceSha() === observation.deck_sha256 && boxEditorScope();
   if (!here()) return;
-  options.busy(true); clear(options.host).append(loadingBox("Checking the saved deck lists."));
+  options.busy(true); clear(options.host).append(loadingBox("Checking the saved deck lists…"));
   try {
     const view = await api(`/api/deck/edit?id=${encodeURIComponent(observation.id)}`);
     if (!here()) return;
@@ -54,9 +54,16 @@ async function boxEditorChoices(deck, evidence, row, direction, options) {
           options.leave(() => boxEditorNavigate(observation, version));
         } }))));
   } catch (failure) {
-    if (here()) clear(options.host).append(el("p", { class: "form-error", role: "alert", text: failure.status
+    // Not reached, or the PC failed: asking again may help. A changed deck or permission needs the plan again.
+    const retry = failure instanceof ApiError && (failure.status === 0 || failure.status >= 500);
+    if (here()) add(clear(options.host), [el("p", { class: "form-error", role: "alert", text: retry && failure.status
+      ? "The saved deck lists couldn't be checked. Try again in a moment."
+      : failure.status
       ? "The saved deck lists couldn't be checked. Reload the plan before choosing a list."
-      : failure.message || "The saved deck lists couldn't be checked." }));
+      : failure.message || "The saved deck lists couldn't be checked." }),
+    retry ? el("button", { type: "button", class: "btn btn-quiet", text: "Try again", onclick: event => {
+      if (event.currentTarget.isConnected && options.host.contains(event.currentTarget)) boxEditorChoices(deck, evidence, row, direction, options);
+    } }) : null]);
   } finally { options.busy(false); } // The caller updates controls only while it still owns the original sheet.
 }
 

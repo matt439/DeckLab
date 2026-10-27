@@ -316,7 +316,7 @@ class AssemblyChooserTests(unittest.TestCase):
           assert.equal(document.body.querySelectorAll('.pack-message').filter(n=>n.isConnected).length,1);assert(!v.messageSlot.contains(v.message));
           v.chooserDismiss.click();assert(v.messageSlot.contains(v.message));assert(v.message.textContent.includes('Fixture preview unavailable'));
           closeAssemblySheets();clear(main);const none=chooserData(0);none.choices=[];none.decks=[];drawAssembly(none,routeToken);await settle();
-          packRevealChooser(current());assert(!current().chooserEmpty.hidden);assert(current().chooser.textContent.includes('No decks available'));
+          packRevealChooser(current());assert(!current().chooserEmpty.hidden);assert(current().chooser.textContent.includes('No decks to choose yet'));
         """)
 
     def test_finish_review_list_change_reveals_phone_chooser_after_review_flag_clears(self):

@@ -627,13 +627,21 @@
 .empty, .shopping-empty, .activity-empty {
   padding: var(--s-5) var(--s-4);
   border: 1px dashed var(--border-strong);
-  border-radius: var(--r-lg);
+  border-radius: var(--r-panel);
   background: var(--surface-2);
   color: var(--ink-2);
   font-size: var(--fs-sm);
 }
 .empty > p { margin: 0 0 var(--s-3); }
 .empty > :last-child { margin-bottom: 0; }
+
+/* A pane with nothing chosen yet: one quiet line, no box. */
+.none-selected { margin: var(--s-3) 0; color: var(--ink-3); font-size: var(--fs-sm); }
+
+/* A part of a page that couldn't be loaded (loadFailed): a crit note with its Try again. In a narrow part (a
+   phone, a half-width card) Try again drops under the words rather than squeezing them into a thin column. */
+.load-failed { margin: var(--s-3) 0; flex-wrap: wrap; }
+.load-failed > p { flex: 1 1 15em; min-width: 0; }
 
 /* ---------------------------------------------------------- loading, progress */
 
@@ -650,6 +658,7 @@
   animation: spin .9s linear infinite;
 }
 .spinner-small { width: 14px; height: 14px; border-width: 2px; }
+.loading-small { gap: var(--s-2); padding: var(--s-3) 0; font-size: var(--fs-sm); }
 @keyframes spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 3s; } }
 

@@ -72,27 +72,32 @@ function drawPlay(data, deckId) {
     seen.add(list.id); filter.append(el("option", { value: list.id, text: list.title, selected: list.id === deckId }));
   }
   const fromDeck = deckId && data.lists.find((list) => list.id === deckId);
+  // While there are no plans, the empty state holds this one action instead of the section head.
   const planButton = el("button", { class: "btn", type: "button", text: "New sideboard plan", disabled: !data.lists.length || null,
-    onclick: () => playPlanForm(data, deckId) });
+    hidden: !data.sideboards.length || null, onclick: () => playPlanForm(data, deckId) });
+  const recordButton = data.lists.length ? el("button", { type: "button", class: "btn btn-quiet", text: "Record a game",
+    onclick: () => { const first = document.getElementById("play-quick-deck-0"); if (first) first.focus(); } }) : null;
   add(main, [
     pageHead({ crumb: fromDeck ? [deckHref(fromDeck.id, fromDeck.version), fromDeck.title] : null, title: routeH1("play"),
       description: "Games you've played at home, and sideboard plans. Separate from Forge's simulations." }),
     warningsBox(data.warnings, "Some play records or deck lists could not be loaded"),
     data.lists.length ? playQuickRecord(data, deckId)
-      : el("div", { class: "empty" }, el("p", { text: "There are no decks to record a game with yet." }),
-        el("a", { class: "btn", href: "#/library", text: routeFor("library").label })),
+      : emptyBox("There are no decks to record a game with yet.", createTargets().length && typeof newDeckHref === "function"
+        ? el("a", { class: "btn", href: newDeckHref(), text: "New deck" })
+        : el("a", { class: "btn", href: "#/library", text: routeFor("library").label })),
     el("section", { class: "play-section", "aria-labelledby": "play-games-title" },
       el("div", { class: "play-section-head" }, el("h2", { id: "play-games-title", text: "Played games" }),
         data.lists.length && (data.games.length || deckId) ? el("label", { class: "field play-filter", for: "play-filter" },
           el("span", { class: "sr-only", text: "Show games with" }), filter) : null),
       data.games.length ? el("div", { class: "play-records" }, data.games.map(entry => playGameCard(entry, data)))
-        : el("p", { class: "sub", text: deckId ? "No games with this deck yet." : playNoGamesWords() })),
+        : emptyBox(deckId ? "No games with this deck yet." : playNoGamesWords(), recordButton)),
     playSummarySection(data.games),
     el("section", { class: "play-section", "aria-labelledby": "play-plans-title" },
       el("div", { class: "play-section-head" }, el("h2", { id: "play-plans-title", text: "Sideboard plans" }), planButton),
       el("p", { class: "sub", text: "A plan says which cards to swap in against one opponent. It never changes your deck." }),
       data.sideboards.length ? el("div", { class: "play-records" }, data.sideboards.map(entry => playPlanCard(entry, data)))
-        : el("p", { class: "sub", text: "No sideboard plans yet." }))]);
+        : emptyBox("No sideboard plans yet.", data.lists.length ? el("button", { class: "btn", type: "button",
+          text: "New sideboard plan", onclick: () => playPlanForm(data, deckId) }) : null))]);
 }
 
 /** The two players a quick record is for: the visitor, and the other person of their space (the two home
@@ -517,7 +522,12 @@ function playPlanForm(data, deckId, entry = null, preferred = {}) {
         controls.push({ direction, name, input });
         box.append(el("label", { class: "play-move" }, el("span", { text: `${name} (${count} available)` }), input));
       }
-      if (!counts.size) box.append(el("p", { class: "sub", text: "No cards in this section. Add a sideboard in the desktop deck editor before making a plan." }));
+      if (!counts.size) {
+        const deck = own.get();
+        box.append(section === "Sideboard" ? emptyBox("No sideboard cards yet.", canEditDeckId(deck.id)
+          ? el("a", { class: "btn btn-quiet", href: editHref(deck.id, deck.version), text: "Edit deck" }) : null)
+          : el("p", { class: "sub", text: "No main-deck cards." }));
+      }
       moves.append(box);
     }
   };

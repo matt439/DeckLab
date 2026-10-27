@@ -24,9 +24,9 @@ function matchupRealGames(data) {
   const summary = matchupPlaySummary(data.real_games);
   if (!summary || !Array.isArray(data.sides) || data.sides.length !== 2 || data.sides.some(side => !side || typeof side.title !== "string"
       || !side.title.trim() || /[\u0000-\u001f\u007f]/.test(side.title))) {
-    panel.append(el("p", { class: "sub", text: data.real_games?.status === "unsupported"
-      ? "A recorded human-game comparison is not supported for this result."
-      : "The recorded human games could not be checked. No comparison is shown." }));
+    panel.append(data.real_games?.status === "unsupported"
+      ? el("p", { class: "sub", text: "A recorded human-game comparison is not supported for this result." })
+      : note("The recorded human games could not be checked, so no comparison is shown."));
     return panel;
   }
   const [first, second] = sideTitles(data.sides), [wins, other] = summary.wins;

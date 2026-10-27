@@ -145,7 +145,7 @@ class AssemblyProductReviewUiTests(unittest.TestCase):
             if(fail)throw Error('Fixture preview unavailable');return chosenPlan();});
           const initial=chosenPlan(),view=drawAssembly(initial,routeToken,expected);await settle();
           same(view.selected,expected);assert.equal(view.data,null);assert.equal(view.results.querySelector('.pack-deck'),null);
-          assert(view.results.textContent.includes('selected decks and sideboard choices are kept'));
+          assert(view.results.textContent.includes('Your decks and sideboard choices are kept'));
           const retry=view.results.querySelector('button');assert.equal(retry.textContent,'Refresh plan');fail=false;retry.click();await settle();
           assert.equal(previews.length,2);same(previews[1],{decks:expected});assert(view.results.querySelector('.pack-deck'));
           assert(!view.productReturnRefresh);assert(view.progress.loaded);

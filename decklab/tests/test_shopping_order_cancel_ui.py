@@ -119,7 +119,7 @@ class ShoppingOrderCancelInteractionTests(unittest.TestCase):
           type(sheet, 'reason', 'Accidental duplicate order'); action(sheet, 'Preview change').click(); await settle();
           same(requests[0][1], {profile: 'matt', expect: 'revision-1', order: pending.id, action: 'remove',
             reason: 'Accidental duplicate order'});
-          action(sheet, 'Remove order').click(); action(sheet, 'Remove order').click(); await settle();
+          action(sheet, 'Remove order').click(); action(sheet, 'Removing.').click(); await settle();
           same(applyRequests()[0], ['/api/shopping/order/change/apply', {profile: 'matt', preview: 'signed-cancel'}]);
           assert.equal(applyRequests().length, 1); assert(!sheet.closed); assert.equal(refreshes, 0);
           assert(sheet.body.textContent.includes('Opt')); assert(sheet.body.textContent.includes('Keep this saved warning'));
@@ -192,11 +192,11 @@ class ShoppingOrderCancelInteractionTests(unittest.TestCase):
         self.run_js(r"""
           const preview = held(); respond = () => preview.promise;
           const sheet = openCancel(); type(sheet, 'reason', 'Unavailable');
-          action(sheet, 'Preview change').click(); action(sheet, 'Preview change').click();
+          action(sheet, 'Preview change').click(); action(sheet, 'Previewing.').click();
           assert.equal(requests.length, 1); assert(main.querySelector('.shop-order-edit').disabled);
           preview.resolve(previewAnswer); await settle();
           const applied = held(); respond = () => applied.promise;
-          action(sheet, 'Cancel part').click(); action(sheet, 'Cancel part').click();
+          action(sheet, 'Cancel part').click(); action(sheet, 'Cancelling.').click();
           assert.equal(applyRequests().length, 1);
           applied.resolve({...previewAnswer, saved: true}); await settle();
           assert(!sheet.closed); assert.equal(refreshes, 0); assert(sheet.body.textContent.includes('Opt'));

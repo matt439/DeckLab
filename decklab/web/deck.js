@@ -635,6 +635,14 @@ function redrawCards(screen) {
   if (view.filter !== "all" && !counts.get(view.filter)) view.filter = "all";
   const filters = CARD_FILTERS.filter(([name]) => name === "all" || counts.get(name) > 0);
   const choose = (patch) => { Object.assign(view, patch); redrawCards(screen); deckAddress(screen); };
+  // A list with no cards (a new idea with an empty decklist): no toolbar, one line and the editor to fill it.
+  if (!all.length) {
+    const s = data.summary;
+    clear(screen.cardsBar);
+    add(clear(screen.cardsHost), [emptyBox("This list has no cards yet.", canEditDeck(s)
+      ? el("a", { class: "btn", href: editHref(s.id, data.version), text: "Add cards" }) : null)]);
+    return;
+  }
   add(clear(screen.cardsBar), [
     filters.length > 1 ? el("div", { class: "segmented deck-filter", role: "group", "aria-label": "Show" },
       filters.map(([name, words]) => el("button", { type: "button", "aria-pressed": String(view.filter === name),
@@ -980,8 +988,14 @@ function pairingLinks(halfId, label = "Shuffle it with another half:", marks = n
       });
     }
   };
+  // Without the library yet: a small loader in the list, and on a failure the reason and Try again.
+  const fetchHalves = () => {
+    add(clear(list), [el("li", {}, loadingBox("Getting the other halves…", { small: true }))]);
+    api("/api/decks").then((data) => { state.library = data; clear(list); fill(data.halves); })
+      .catch((e) => { add(clear(list), [el("li", {}, loadFailed("The other halves", e, fetchHalves))]); });
+  };
   if (state.library) fill(state.library.halves);
-  else api("/api/decks").then((data) => { state.library = data; fill(data.halves); }).catch(() => box.remove());
+  else fetchHalves();
   return box;
 }
 
@@ -1017,8 +1031,10 @@ function tokensSection(data) {
   const section = el("section", { class: "deck-section token-part", id: "sec-tokens", "aria-labelledby": "h-tokens" },
     el("h2", { id: "h-tokens", text: "Tokens and reminders" }));
   const edit = el("p", { class: "deck-tokens-edit" }, el("a", { href: "#/tokens", text: "Edit your tokens" }));
+  // Not for this viewer: a plain explanation. A failure is a notice (it came with the page: no Try again).
   if (t.unavailable || t.error) {
-    section.append(el("p", { class: "sub", text: t.unavailable || t.error }));
+    section.append(t.unavailable ? el("p", { class: "sub", text: t.unavailable })
+      : el("div", { class: "note note-warn", role: "alert" }, el("p", { text: t.error })));
     return section;
   }
   const needs = t.needs || [], copies = t.copies || [], unlisted = t.unlisted || [];

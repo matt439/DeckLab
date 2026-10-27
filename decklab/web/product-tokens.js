@@ -51,17 +51,21 @@ function productPackedTokens(data) {
   if (!productTokensVisible()) return null;
   const packed = data.tokens?.packed, evidence = productTokenEvidence(packed);
   const root = el("div", { class: "deck-tokens-packed product-tokens" });
-  const error = packed?.error || (!evidence ? "The product's packed-token record cannot be checked. Reload the product before changing it." : "");
-  const words = error || (packed.written ? packed.lines.length
-    ? "Packed for the whole product: " + packed.lines.map(line => line.text).join("; ")
-    : "The product has an empty packed-token record; check its physical token cards."
-    : "Packed token cards are not recorded for this product. The shared-card warning assumes one card per token row it uses; check the cards in the box before recording quantities.");
-  root.append(el("p", { class: error || !packed?.written ? "box box-warn" : "sub", text: words }),
-    el("p", { class: "sub", text: "One record covers the whole product, including all its decks." }));
+  const error = packed?.error || (!evidence ? "This product's token cards couldn't be checked." : "");
+  if (error) {
+    // Loading the deck page again fetches a fresh record; nothing here can be changed until then.
+    root.append(el("div", { class: "note note-warn" }, el("p", { text: error }),
+      el("button", { type: "button", class: "btn", text: "Reload", onclick: () => { if (root.isConnected) route(); } })));
+  } else if (packed.written && packed.lines.length) {
+    root.append(el("p", { class: "sub", text: "Packed for the whole product: " + packed.lines.map(line => line.text).join("; ") }),
+      el("p", { class: "sub", text: "One record covers the whole product, including all its decks." }));
+  } else root.append(el("p", { class: "box box-warn", text: packed.written
+    ? "This product packs no token cards. Check the box to be sure." : "No packed token cards recorded for this product." }));
   if (evidence && packed.editable && mayDo("products") && !packed.error) {
     const ctx = { data, packed, evidence, root, signature: JSON.stringify(packed), hash: location.hash,
       screen: deckScreen, token: routeToken, profile: state.profile?.id, busy: false };
-    const button = el("button", { type: "button", class: "btn btn-quiet", text: "Change product packed token cards.",
+    const button = el("button", { type: "button", class: "btn btn-quiet product-tokens-change",
+      text: packed.written ? "Change packed token cards" : "Record packed token cards",
       onclick: () => {
         if (productTokensOwner(ctx) && !ctx.busy && !ctx.confirmed && !ctx.needsRefresh && button.isConnected && root.contains(button)
             && !document.querySelector("dialog[open]")) openProductPackedTokens(ctx);
@@ -107,6 +111,7 @@ function openProductPackedTokens(ctx) {
   const inputs = [];
   const message = el("p", { class: "form-error", role: "alert", tabindex: "-1", hidden: true });
   sheet.body.append(el("p", { text: "Check the physical token cards kept with the whole product, including all its decks. These quantities reserve existing cards; they do not add cards to your collection." }),
+    ...(ctx.packed.written ? [] : [el("p", { class: "sub", text: "Until they're recorded, the shared-card warning assumes one card per token row it uses." })]),
     el("p", { class: "sub", text: "Clearing this record leaves its packed quantities unknown. It does not record that the product packs no token cards." }),
     el("ul", { class: "pack-plain deck-packed-choices" }, ctx.packed.choices.map(choice => {
       const id = "product-packed-" + sheet.heading.id + "-" + choice.row;

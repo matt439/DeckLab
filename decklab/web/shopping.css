@@ -89,7 +89,7 @@
   position: relative; display: flex; align-items: center; justify-content: center;
   width: 100%; aspect-ratio: 488 / 680; padding: 0; overflow: hidden;
   border: 1px solid var(--border); border-radius: var(--r-sm);
-  background: var(--surface-2); color: var(--ink-2); cursor: pointer; font: inherit;
+  background: var(--track); color: var(--ink-2); cursor: pointer; font: inherit;
 }
 .shop-thumb img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .shop-thumb:hover { border-color: var(--border-strong); }
@@ -100,7 +100,8 @@
   border-radius: var(--r-pill); background: var(--badge-bg); color: var(--badge-ink);
   font-size: var(--fs-xs); font-weight: var(--fw-bold);
 }
-.shop-thumb-more { font-weight: var(--fw-bold); color: var(--ink); }
+/* "+N" is a button, not a picture: it keeps the plain surface rather than the card placeholder. */
+.shop-thumb-more { font-weight: var(--fw-bold); color: var(--ink); background: var(--surface-2); }
 /* Six pictures on a phone, eight from 600 px: each width has its own "+N" (shopStrip). */
 @media (max-width: 599px) { .shop-strip .shop-wide-only { display: none; } }
 @media (min-width: 600px) { .shop-strip .shop-narrow-only { display: none; } }

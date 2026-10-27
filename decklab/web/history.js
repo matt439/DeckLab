@@ -227,7 +227,9 @@ function historyPictures(entries, group, past = 0, onMore = null) {
     const words = historyCardWords(c);
     const button = el("button", { type: "button", class: "history-pic", "aria-label": `${words}: show the card`,
       "aria-haspopup": "dialog", onclick: (e) => openCard(c.card, e.currentTarget) },
-      el("img", { src: c.card.img_small, alt: "", loading: "lazy", decoding: "async", width: 60, height: 84 }),
+      // A picture that won't load leaves the card-shaped frame, not a broken-image mark.
+      el("img", { src: c.card.img_small, alt: "", loading: "lazy", decoding: "async", width: 60, height: 84,
+        onerror: (e) => e.currentTarget.replaceWith(el("span", { class: "history-pic-frame", "aria-hidden": "true" })) }),
       el("span", { class: "history-delta" + (c.delta < 0 && !c.from ? " history-out" : ""), "aria-hidden": "true",
         text: historyBadge(c) }));
     viewerItem(button, c.card, group, `${words} (${listName(c.list)})`);
@@ -394,7 +396,8 @@ async function historyCompare(box, rev, id, version, token) {
       changes.length ? el("ul", { class: "history-field-list" }, changes.map((c) => el("li", { text: changeWords(c) })))
         : el("p", { text: "The cards match the deck now." })]);
   } catch (e) {
-    if (token === routeToken && profile === state.profile?.id && box.isConnected) clear(box).append(errorBox("The revision couldn't be loaded", e, null));
+    if (token === routeToken && profile === state.profile?.id && box.isConnected) clear(box).append(errorBox("The revision couldn't be loaded", e,
+      () => historyCompare(box, rev, id, version, token), null));
   }
 }
 

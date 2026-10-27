@@ -15,43 +15,63 @@ The Collection page's note after a save (staleTablesNote) and Receive delivery's
 
 const TABLES_HREF = "#/library?tables=1";
 
-/** The "Tables out of date" panel: hidden until GET /api/tables/stale has something to show (any failure
- * leaves it hidden: the shelf is what matters). scrolled: the address asked for it (?tables=1), so it's
- * scrolled to once it's filled, and then called (the address drops the ask). onUpdated: after Update all. */
+/** The "Tables out of date" panel: hidden until GET /api/tables/stale has something to show. A failure leaves it
+ * hidden on a normal visit (the shelf is what matters), but when the address asked for it (?tables=1) the panel
+ * says so with Try again. scrolled: the address asked for it, so it's scrolled to once it's filled (or failed),
+ * and then called (the address drops the ask). onUpdated: after Update all. */
 function libTablesPanel(scrolled, onUpdated) {
   const host = el("section", { class: "box box-stale lib-tables", id: "stale-tables", tabindex: "-1",
     "aria-label": "Tables out of date", hidden: true });
-  (async () => {
+  const asked = Boolean(scrolled);
+  const show = () => { host.hidden = false; host.removeAttribute("hidden"); };
+  // Failed or loading again, the panel is only its crit note or spinner line: not inside the stale box's
+  // colours and refresh icon (a failure never looks like a notice of out-of-date tables).
+  const boxed = (on) => { host.classList.toggle("box", on); host.classList.toggle("box-stale", on); };
+  const fill = async () => {
     let data;
     try {
       data = await api("/api/tables/stale");
     } catch (e) {
+      if (!host.isConnected) return;
+      if (asked) {
+        boxed(false);
+        clear(host).append(loadFailed("The out-of-date tables", e, () => {
+          clear(host).append(loadingBox("Loading the out-of-date tables…", { small: true }));
+          fill();
+        }));
+        show();
+      }
+      if (scrolled) { host.scrollIntoView({ block: "start" }); scrolled(); scrolled = null; }
       return;
     }
     if (!host.isConnected) return;
+    clear(host);
+    boxed(true);
+    host.hidden = true;
     const stale = data.stale || [];
     const blocked = data.blocked || [];
     const held = data.held || [];
     if (stale.length || blocked.length || held.length) {
       host.append(staleTablesPart(stale, { standalone: true, blocked, held, after: blockedTablesPart, onUpdated }));
-      host.hidden = false;
-      host.removeAttribute("hidden");
+      show();
       if (scrolled) host.scrollIntoView({ block: "start" });
     }
-    if (scrolled) scrolled();
-  })();
+    if (scrolled) { scrolled(); scrolled = null; }
+  };
+  fill();
   return host;
 }
 
 /** The library's decks fetched again after Update all (their missing-card counts follow the tables), and the
- * shelf redrawn by refresh() (drawLibrary's: false once the library has been left). Quiet on a failure. */
+ * shelf redrawn by refresh() (drawLibrary's: false once the library has been left). On a failure a toast says
+ * the tables were updated but the shelf's counts are as they were. */
 async function libReloadShelf(data, refresh) {
   try {
     const fresh = await api("/api/decks");
     Object.assign(data, fresh);
     if (refresh()) state.library = data;
   } catch (e) {
-    /* the shelf as it was: its counts come right on the next visit */
+    toast("Tables updated. Reload Decks to see the new counts.");
   }
 }
 

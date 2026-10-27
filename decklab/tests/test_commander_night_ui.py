@@ -89,7 +89,7 @@ class CommanderNightUiTests(unittest.TestCase):
           data.commander_night = savedNight(null);
           assert.equal(commanderNightPart(data),null);
           data.commander_night = {unavailable:true};
-          assert(commanderNightPart(data).textContent.includes('recorded Commander night is unavailable'));
+          assert(commanderNightPart(data).textContent.includes("recorded Commander night couldn't be loaded"));
           data.commander_night = savedNight(); data.summary.kind = 'casual';
           assert.equal(commanderNightPart(data),null);
           data.summary.kind = 'commander'; data.summary.id = 'user2/commander/fixture';

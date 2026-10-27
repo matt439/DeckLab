@@ -33,7 +33,15 @@ function emptyPart(section) {
         focusSearch();
       } }));
   }
-  if (section === "Deck") return el("p", { class: "sub empty-section", text: "No cards yet." });
+  if (section === "Deck") {
+    return el("p", { class: "sub empty-section" }, "No cards yet.",
+      noOwnedList() ? null : el("button", { type: "button", class: "btn", text: "Add cards", onclick: () => {
+        ed.addSection = "Deck";
+        drawAddTo();
+        queueDraft();
+        focusSearch();
+      } }));
+  }
   return null;
 }
 

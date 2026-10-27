@@ -22,7 +22,7 @@ class ProductTokensUiTests(unittest.TestCase):
             const data={summary:{id:'product/starter/green',space:'home',read_only:true,player:null},
               tokens:{needs:[],copies:[],unlisted:[],packed:packed(extra)}};
             deckScreen={data};const section=tokensSection(data);main.append(section);
-            const root=section.querySelector('.product-tokens'),trigger=root?.querySelector('button');return {data,root,trigger};
+            const root=section.querySelector('.product-tokens'),trigger=root?.querySelector('.product-tokens-change');return {data,root,trigger};
           };
           const currentSheet=()=>[...productStorageSheets].at(-1);
           const open=(extra={})=>{const view=mount(extra);view.trigger.click();return {...view,sheet:currentSheet()};};
@@ -41,8 +41,8 @@ class ProductTokensUiTests(unittest.TestCase):
 
     def test_legacy_record_is_unknown_and_does_not_prefill_estimates_as_verified_quantities(self):
         self.run_js(r'''
-          const {root,sheet}=open({written:false,lines:[]});assert(root.textContent.includes('not recorded'));
-          assert(root.textContent.includes('shared-card warning assumes one card per token row it uses'));
+          const {root,sheet}=open({written:false,lines:[]});assert(root.textContent.includes('No packed token cards recorded'));
+          assert(sheet.body.textContent.includes('shared-card warning assumes one card per token row it uses'));
           same(counts(sheet).map(input=>input.value),['0','0']);
           assert(sheet.body.textContent.includes('leaves its packed quantities unknown'));
           assert(sheet.body.textContent.includes('does not record that the product packs no token cards'));
@@ -83,7 +83,7 @@ class ProductTokensUiTests(unittest.TestCase):
             assert.equal(productTokenEvidence({...packed(),product}),null);
           }
           view=mount({product:{stem:'verified-holder',status_sha256:'short'}});assert(!view.trigger);
-          assert(view.root.textContent.includes('cannot be checked'));
+          assert(view.root.textContent.includes("couldn't be checked"));
         ''')
 
     def test_home_inventory_and_product_edit_permissions_control_physical_metadata_and_writes(self):

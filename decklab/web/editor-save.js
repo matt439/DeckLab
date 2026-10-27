@@ -177,7 +177,7 @@ function drawCheck() {
     return;
   }
   if (!a) {
-    host.append(loadingBox("Checking the deck..."));
+    host.append(loadingBox("Checking the deck…"));
     return;
   }
   const title = typedTitleProblem();
@@ -440,7 +440,7 @@ async function reviewSave(answer = undefined) {
   const ed = editor;
   if (ed.readOnly) return;            // someone else's deck: tried and tested, never saved here
   const sheet = openSheet(ed.mode === "new" ? "Create this deck?" : `Save ${ed.title}?`, { wide: true });
-  sheet.body.append(loadingBox("Checking the deck..."));
+  sheet.body.append(loadingBox("Checking the deck…"));
   sheetActions(sheet, [{ text: "Keep editing", onclick: () => sheet.close() }]);
   if (answer === undefined) answer = await runCheck(ed);
   if (sheet.closed || editor !== ed) return;

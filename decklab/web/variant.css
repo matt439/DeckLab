@@ -16,6 +16,11 @@
 .vt-grid { display: grid; gap: var(--s-4); grid-template-columns: minmax(0, 1fr); }
 .vt-panel { padding: var(--s-4) var(--s-4); border: 1px solid var(--border); border-radius: var(--r-lg); background: var(--surface); }
 .vt-panel h2 { margin-top: 0; font-size: var(--fs-lg); }
+/* A test playing: the spinner beside its heading; and the line saying the PC stopped answering (empty: hidden). */
+.vt-live-head { display: flex; align-items: center; gap: var(--s-3); margin-bottom: var(--s-3); }
+.vt-live-head h2 { margin: 0; }
+.vt-refresh-error { margin: var(--s-3) 0; color: var(--warn-text); font-size: var(--fs-sm); font-weight: var(--fw-semibold); }
+.vt-refresh-error:empty { display: none; }
 .vt-verdict.vt-good { border-left: 6px solid var(--good); }
 .vt-verdict.vt-warn { border-left: 6px solid var(--warn); }
 .vt-verdict.vt-crit { border-left: 6px solid var(--crit); }

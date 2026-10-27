@@ -198,8 +198,12 @@ async function loadColPrintings(ctx, typed, keep = null) {
     }
   } catch (error) {
     if (seq !== ctx.printSeq || ctx.sheet.closed || !boxCollectionEditorHere(ctx)) return;
-    clear(ctx.strip).append(el("p", { class: "sub", text: "No printings found." }));
-    ctx.printingNote.textContent = ctx.boxRepair ? "Close this review and search Collection for the exact card manually." : error.message;
+    // A name that isn't a card's (400, 404) is an empty answer; anything else failed, and may work again.
+    const unknown = error instanceof ApiError && (error.status === 400 || error.status === 404);
+    clear(ctx.strip).append(unknown ? el("p", { class: "sub", text: "No printings found. Check the spelling." })
+      : loadFailed("Its printings", error, () => loadColPrintings(ctx, ctx.inputs.name.value, keep)));
+    ctx.printingNote.textContent = ctx.boxRepair ? "Close this review and search Collection for the exact card manually."
+      : unknown ? error.message : "";
     ctx.printings = [];
     ctx.chosen = -1;
     colFillFinishes(ctx);
@@ -255,7 +259,8 @@ function drawColStrip(ctx) {
       el("button", { type: "button", class: "btn col-sheet-mutate", text: "Bigger pictures…",
         onclick: () => colPickBig(ctx, name) })) : null,
     ctx.printings.length ? el("div", { class: "col-strip", role: "group", "aria-label": `Printings of ${name}` }, tiles)
-      : el("p", { class: "sub", text: "No printings found." })]);
+      : emptyBox("No printings found. Check the card's name.", el("button", { type: "button", class: "btn",
+        text: "Change the name", onclick: () => { if (!ctx.sheet.closed) ctx.inputs.name.focus(); } }))]);
   const chosen = ctx.strip.querySelector('[aria-pressed="true"]');
   if (chosen && chosen.scrollIntoView) chosen.scrollIntoView({ block: "nearest", inline: "center" });
   colSheetPicture(ctx);

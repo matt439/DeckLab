@@ -345,7 +345,9 @@ class LibraryShelfTests(_Shelf):
           // No zero counts: User2 has no decks of his own, so no "Showing 0 decks".
           clear(main); drawLibrary(DATA, libraryFilters(new URLSearchParams()));
           assert(!main.textContent.includes("Showing 0"));
-          assert(main.querySelector(".empty").textContent.includes("No decks match"));
+          // Only Mine is on (no filter chosen): it says so, and offers every deck.
+          assert(main.querySelector(".empty").textContent.includes("You don't play any decks yet."));
+          assert(main.querySelector(".empty").textContent.includes("Show every deck"));
         """)
 
     def test_the_phone_filter_sheet_counts_and_applies_filters(self):

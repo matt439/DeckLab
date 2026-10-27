@@ -325,7 +325,7 @@ function packReviewBuilt(view) {
     async function load() {
       if (!assemblySheetHere(ctx)) return;
       loading = true; failed = false; error.textContent = "";
-      clear(fields).append(loadingBox("Loading sleeves and deck boxes...")); actions();
+      clear(fields).append(loadingBox("Loading sleeves and deck boxes…", { small: true })); actions();
       try {
         const data = await api("/api/accessories");
         if (!assemblySheetHere(ctx)) return;

@@ -101,17 +101,32 @@ async function boxCollectionConsume(cv) {
   const hash = location.hash, profile = state.profile;
   const here = () => colActive(cv) && state.profile === profile && boxCollectionScope() && cv.space === HOME_SPACE
     && cv.editable && location.hash === hash && parseHash().path === "collection";
+  await boxCollectionCheckSource(cv, handoff.difference, here);
+}
+
+/** The box review's deck is still the one it checked, then the copies sheet; else why not, with the way back
+ * to Build decks (and Try again when the PC couldn't answer). */
+async function boxCollectionCheckSource(cv, difference, here) {
+  const waiting = loadingBox("Checking the box review's deck…", { small: true });
+  clear(cv.message).append(waiting);
+  const back = () => el("a", { class: "btn btn-quiet", href: "#/assembly", text: "Back to Build decks" });
   try {
-    const source = await api(`/api/deck/edit?id=${encodeURIComponent(handoff.difference.id)}`);
+    const source = await api(`/api/deck/edit?id=${encodeURIComponent(difference.id)}`);
     if (!here()) return;
-    if (source?.id !== handoff.difference.id || source.sha256 !== handoff.difference.deck_sha256) {
-      colSay(cv, "The deck changed after this box review. Open a fresh box check before reviewing its collection copies."); return;
+    if (source?.id !== difference.id || source.sha256 !== difference.deck_sha256) {
+      colSay(cv, "The deck changed after this box review. Open a fresh box check before reviewing its collection copies.");
+      cv.message.append(el("div", { class: "actions" }, back()));
+      return;
     }
   } catch (error) {
-    if (here()) colSay(cv, "The source deck couldn't be checked. Open a fresh box check before reviewing its collection copies.");
+    if (!here()) return;
+    colSay(cv, "The source deck couldn't be checked. Open a fresh box check before reviewing its collection copies.");
+    const retry = error instanceof ApiError && (error.status === 0 || error.status >= 500);
+    cv.message.append(el("div", { class: "actions" }, retry ? el("button", { type: "button", class: "btn", text: "Try again",
+      onclick: () => { if (here()) boxCollectionCheckSource(cv, difference, here); } }) : null, back()));
     return;
-  }
-  openCopiesSheet(cv, handoff.difference.name, { repair: Object.freeze({ difference: handoff.difference, here }) });
+  } finally { waiting.remove(); }
+  openCopiesSheet(cv, difference.name, { repair: Object.freeze({ difference, here }) });
 }
 
 function boxCollectionEditorHere(ctx) { return !ctx.boxRepair || ctx.boxRepair.here(); }

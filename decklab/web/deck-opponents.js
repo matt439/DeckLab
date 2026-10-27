@@ -17,10 +17,7 @@ function deckOpponentsSection(data) {
   function draw() {
     clear(section).append(el("h2", { id: "h-opponents", text: "Usual opponents" }));
     const opponents = data.usual_opponents || [];
-    section.append(opponents.length
-      ? el("ul", {}, opponents.map(item => el("li", {}, el("a", { href: deckHref(item.id), text: item.title }))))
-      : el("p", { class: "empty", text: "No usual opponents chosen yet." }));
-    if (editable) section.append(el("button", { type: "button", class: "btn", text: "Choose usual opponents",
+    const choose = editable ? el("button", { type: "button", class: "btn", text: "Choose usual opponents",
       onclick: () => {
         if (!here()) return;
         openDeckOpponents(data.summary.id, answer => {
@@ -29,7 +26,12 @@ function deckOpponentsSection(data) {
           data.summary.usual_opponents = answer.usual_opponents.map(item => item.id);
           draw();
         });
-      } }));
+      } }) : null;
+    // None chosen: the button that fills the list goes in the empty state with its line.
+    section.append(opponents.length
+      ? el("ul", {}, opponents.map(item => el("li", {}, el("a", { href: deckHref(item.id), text: item.title }))))
+      : emptyBox("No usual opponents chosen yet.", choose));
+    if (opponents.length && choose) section.append(choose);
   }
   draw();
   return section;
@@ -50,7 +52,7 @@ function openDeckOpponents(id, onSaved) {
 async function loadDeckOpponents(ctx) {
   if (!opponentSheetHere(ctx) || ctx.sending) return;
   const generation = ++ctx.generation;
-  clear(ctx.sheet.body).append(loadingBox("Loading usual opponents..."));
+  clear(ctx.sheet.body).append(loadingBox("Loading usual opponents…"));
   sheetActions(ctx.sheet, [{ text: "Cancel", onclick: () => ctx.sheet.close() }]);
   try {
     const answer = await api(`/api/deck/opponents?id=${encodeURIComponent(ctx.id)}`);

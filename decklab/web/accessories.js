@@ -66,6 +66,33 @@ function accImgSrc(url) {
   return `${bare}${bare.includes("?") ? "&" : "?"}viewer=${encodeURIComponent(state.profile.id)}`;
 }
 
+// Stroke icons for a deck box or playmat with no picture (24 px, drawn in currentColor).
+const ACC_PLACEHOLDER_ICONS = {
+  deck_box: "M5 8h14v12H5zM5 8l2-4h10l2 4M10 12h4",
+  playmat: "M3 7h18v10H3zM7 11h4",
+};
+
+/** What stands in a picture's place (no picture, or one that won't load): sleeves a card-shaped swatch of their
+ * colour (when it's one the browser knows), a deck box or playmat its stroke icon, anything else of unknown kind
+ * its name's first letter in a small box and "No picture" in a large one. */
+function accThumbPlaceholder(ref, label, small) {
+  const kind = ref && ref.kind;
+  const words = small ? null : el("span", { class: "sr-only", text: "No picture" });
+  if (kind === "sleeves") {
+    const colour = String(ref.colour || "").trim();
+    const known = colour && typeof CSS !== "undefined" && CSS.supports && CSS.supports("color", colour);
+    return el("span", { class: "acc-thumb-fallback acc-thumb-swatch", style: known ? `--acc-swatch: ${colour}` : null },
+      words);
+  }
+  if (ACC_PLACEHOLDER_ICONS[kind]) {
+    return el("span", { class: "acc-thumb-fallback acc-thumb-icon" },
+      svgEl("svg", { viewBox: "0 0 24 24", width: 24, height: 24, "aria-hidden": "true", focusable: "false" },
+        svgEl("path", { d: ACC_PLACEHOLDER_ICONS[kind] })), words);
+  }
+  return el("span", { class: "acc-thumb-fallback", "aria-hidden": small ? "true" : null,
+    text: small ? (label.trim()[0] || "?").toUpperCase() : "No picture" });
+}
+
 /** A row's (or a Ref's) picture in a square box of px (none: as wide as its container), only its crop
  * when it has one. The name is always shown beside it as text, so the picture is decorative; a picture
  * that won't load shows "No picture" (or, in a small box, the name's first letter) instead. */
@@ -78,8 +105,7 @@ function accessoryThumb(ref, px, localPreview = false) {
   }
   const label = String((ref && (ref.label || ref.name || ref.value)) || "");
   const small = Boolean(px) && px < 80;
-  const fallback = el("span", { class: "acc-thumb-fallback", "aria-hidden": small ? "true" : null,
-    text: small ? (label.trim()[0] || "?").toUpperCase() : "No picture" });
+  const fallback = accThumbPlaceholder(ref, label, small);
   const box = el("span", { class: px ? "acc-thumb" : "acc-thumb acc-thumb-fill",
     style: px ? `--acc-thumb: ${px}px` : null }, fallback);
   const url = ref && ref.image_url;
@@ -253,12 +279,10 @@ function updateAccessories(view) {
   add(view.products, [accUnsleevedPanel(view), accProductsPanel(view)]);
   clear(view.lists);
   const items = data.items || [];
-  if (!items.length) {
-    view.lists.append(el("div", { class: "empty" },
-      el("p", { text: "No sleeves, deck boxes or playmats yet. Paste a shop link when you add one and Deck Lab finds its picture." }),
-      // The head's Add is the page's one primary button.
-      view.canEdit ? el("button", { type: "button", class: "btn acc-mutate", text: "Add", onclick: () => addAccessory(view) }) : null));
-  }
+  // The head's Add is the page's one primary button.
+  const addButton = () => view.canEdit
+    ? el("button", { type: "button", class: "btn acc-mutate", text: "Add", onclick: () => addAccessory(view) }) : null;
+  if (!items.length) view.lists.append(emptyBox("No sleeves, deck boxes or playmats yet.", addButton()));
   const owners = [...new Set(items.map((item) => item.owner || "shared"))];
   for (const owner of owners) {
     const owned = items.filter((item) => (item.owner || "shared") === owner);
@@ -267,13 +291,16 @@ function updateAccessories(view) {
     for (const [kind, words] of Object.entries(ACC_KINDS)) {
     if (view.filter !== "all" && view.filter !== kind) continue;
     const mine = owned.filter((item) => item.kind === kind);
-    if (!mine.length && (view.filter === "all" || !items.length)) continue;
+    if (!mine.length) continue;
     const id = `acc-${owner}-${kind}-title`;
     view.lists.append(el("section", { class: "acc-section", "aria-labelledby": id },
       el("h2", { id, text: `${words.title} (${mine.length})` }),
-      mine.length ? el("ul", { class: "acc-grid" }, mine.map((item) => accCard(view, item)))
-        : el("p", { class: "empty", text: `No ${words.title.toLowerCase()} yet.` })));
+      el("ul", { class: "acc-grid" }, mine.map((item) => accCard(view, item)))));
     }
+  }
+  // Rows, but none of the kind the filter shows.
+  if (items.length && !view.lists.children.length) {
+    view.lists.append(emptyBox(`No ${ACC_KINDS[view.filter].title.toLowerCase()} yet.`, addButton(), { live: true }));
   }
   setAccessoriesBusy(view, view.busy);
   window.scrollTo(0, y);
@@ -400,12 +427,13 @@ async function refreshAccessories(view) {
   if (!accessoriesActive(view) || view.busy) return;
   const seq = ++view.seq;
   setAccessoriesBusy(view, true);
+  clear(view.message).append(loadingBox("Refreshing the list…", { small: true }));
   try {
     const data = await api("/api/accessories");
     if (!accessoriesActive(view) || seq !== view.seq) return;
     accShow(view, data, "The accessories list is up to date.");
   } catch (error) {
-    if (accessoriesActive(view)) clear(view.message).append(errorBox("The list couldn't be loaded", error, null));
+    if (accessoriesActive(view)) clear(view.message).append(errorBox("The list couldn't be refreshed", error, () => refreshAccessories(view), null));
   } finally {
     if (accessoriesActive(view)) setAccessoriesBusy(view, false);
   }
@@ -547,7 +575,7 @@ function openAccessorySheet({ kind = "sleeves", onSaved, onLatest, row = null, s
     el("label", { class: "field", for: link.id }, el("span", { text: "Link to the product or its picture" }), link),
     ctx.find);
   add(ctx.form, [
-    !editing ? el("p", { class: "sub", text: "Add sleeves, a deck box or a playmat." }) : null,
+    !editing ? el("p", { class: "sub", text: "Add sleeves, a deck box or a playmat. Paste a shop link and Deck Lab finds its picture." }) : null,
     ctx.linkField, accPhotoControls(ctx), ctx.message, ctx.picture, accFields(ctx, row, row ? row.kind : kind),
     editing && removeBlocked ? el("p", { id: `acc-why-${sheet.heading.id}`, class: "field-hint acc-why", text: removeBlocked }) : null]);
   sheet.body.append(ctx.form);
@@ -862,7 +890,7 @@ async function loadKitPicker(ctx) {
     }
     drawKitPicker(ctx);
   } catch (error) {
-    if (accDialogHere(ctx.sheet)) clear(ctx.grid).append(el("div", { class: "box box-crit", role: "alert" }, el("p", { text: error.message })));
+    if (accDialogHere(ctx.sheet)) clear(ctx.grid).append(loadFailed("The accessories list", error, () => loadKitPicker(ctx)));
   }
 }
 
@@ -900,6 +928,10 @@ function drawKitPicker(ctx) {
       onclick: () => addFromPicker(ctx) }, el("span", { class: "acc-pick-text" }, el("strong", { text: ctx.words.add })))));
   }
   clear(ctx.grid);
+  if (!items.length) {
+    ctx.grid.append(noneSelected(`No ${ACC_KINDS[ctx.field].title.toLowerCase()} you can use here yet.`
+      + (mayDo("accessories") ? " Add one below." : "")));
+  }
   if (ctx.current && !linked) {
     add(ctx.grid, [note(`Now: “${ctx.current}” (not in the accessories list). Choose one below to link it.`)]);
   }

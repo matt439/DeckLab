@@ -393,6 +393,15 @@ function shopQueueBusy(view, busy) {
   refreshKeyboardHints();
 }
 
+/** An order sheet previewing or saving: its primary action (just redrawn by the sheet's actions()) shows a
+ * spinner and words, and the sheet says it's busy, so the greyed form doesn't look frozen. */
+function shopSheetBusy(sheet, busyNow, words) {
+  if (busyNow) sheet.body.setAttribute("aria-busy", "true");
+  else sheet.body.removeAttribute("aria-busy");
+  const primary = busyNow ? [...sheet.foot.querySelectorAll(".btn-primary")].pop() : null;
+  if (primary) busy(primary, words);
+}
+
 function shopQueueActive(view) {
   return view.root.isConnected && view.token === routeToken && state.profile && state.profile.id === view.profile;
 }
@@ -415,7 +424,8 @@ function shopQueueSheet(view, card = null) {
     const names = el("datalist", { id: `shop-names-${sheet.heading.id}` });
     const name = field("name", "Card name", "input", { type: "text", required: true, maxlength: 150,
       autocomplete: "off", autocapitalize: "none", spellcheck: "false", list: names.id });
-    form.append(names);
+    const searchHint = el("p", { class: "field-hint", role: "status", hidden: true });
+    form.append(names, searchHint);
     name.addEventListener("input", () => {
       clearTimeout(timer);
       const seq = ++nameSeq, query = name.value.trim();
@@ -429,7 +439,14 @@ function shopQueueSheet(view, card = null) {
           const answer = await api(`/api/cards/search?q=${encodeURIComponent(query)}&limit=8`);
           if (alive() && seq === nameSeq && name.value.trim() === query)
             add(names, (answer.cards || []).map((item) => el("option", { value: item.name })));
-        } catch (error) { /* The server validates the entered name on Save. */ }
+          if (alive() && seq === nameSeq) searchHint.hidden = true;
+        } catch (failure) {
+          // Save still checks the entered name; say the suggestions are missing, as Record an order does.
+          if (alive() && seq === nameSeq) {
+            searchHint.textContent = `Card search couldn't load: ${failure.message}. You can still enter its full name.`;
+            searchHint.hidden = false;
+          }
+        }
       }, 180);
     });
   } else form.append(el("p", { class: "sub", text: [card.for, shopPrinting(card)].filter(Boolean).join(" · ") }));
@@ -521,6 +538,10 @@ async function shopSaveQueue(view, sheet, error, body, card) {
   const row = card && card.queue_row, expect = view.data.queue_revision;
   shopQueueBusy(view, true);
   sheet.dialog.querySelectorAll("button").forEach((button) => { button.disabled = true; });
+  // The sheet's one primary action shows the wait in words, so the form doesn't just go grey.
+  const pressed = [...sheet.foot.querySelectorAll(".btn-primary")].pop() || null;
+  if (pressed) busy(pressed, body.action === "remove" ? "Removing…" : "Saving…");
+  sheet.body.setAttribute("aria-busy", "true");
   error.hidden = true;
   let focusAfter = null;
   try {
@@ -567,6 +588,9 @@ async function shopSaveQueue(view, sheet, error, body, card) {
     }
     return false;
   } finally {
+    // Back to its words first: the enabling below goes by each button's text.
+    if (pressed) unbusy(pressed);
+    sheet.body.removeAttribute("aria-busy");
     shopQueueBusy(view, false);
     if (!sheet.closed) sheet.dialog.querySelectorAll("button").forEach((button) => {
       button.disabled = view.stale && (button.textContent === "Save" || button.textContent === "Add card" || button.textContent === "Remove card");
@@ -708,7 +732,7 @@ function drawShopping(data) {
   const followUps = checks.filter((check) => check.status === "received");
   const onArrival = (order) => checks.filter((check) => check.order_id === order.id && check.status === "pending");
   const decks = data.decks_missing || [];
-  const emptyBox = el("div", { class: "empty shop-empty" }, el("p", { text: "Nothing to buy, and nothing on the way." }),
+  const pageEmpty = el("div", { class: "empty shop-empty" }, el("p", { text: "Nothing to buy, and nothing on the way." }),
     el("a", { class: "btn", href: "#/wishlist", text: "Open your wishlist" }));
   const buySlot = el("div", { class: "shop-queue-slot" });
   const deckSlot = el("div", { class: "shop-queue-slot" });
@@ -724,7 +748,9 @@ function drawShopping(data) {
   const main = [
     shopSection("shop-on-the-way", "On the way", waiting.length, null,
       waiting.length ? el("div", { class: "shop-deliveries" }, waiting.map((order) => shopDelivery(order, onArrival(order), view)))
-        : el("div", { class: "empty" }, el("p", { text: "Nothing is on the way." }))),
+        : emptyBox("Nothing is on the way.", isAdminProfile() && mayDo("orders") && data.queue_revision
+          ? el("button", { type: "button", class: "btn shop-queue-write", text: "Record an order", onclick: () => shopOrderSheet(view) })
+          : null)),
     followUps.length ? shopSection("shop-follow-ups", "Follow-ups", followUps.length,
       "Checks left open on deliveries that have arrived.",
       el("ul", { class: "shop-followups" }, followUps.map((check) => shopFollowUp(check, orders.find((o) => o.id === check.order_id))))) : null,
@@ -758,7 +784,7 @@ function drawShopping(data) {
     const missing = data.missing_cards;
     const missingShown = missing && (!missing.ready || (missing.rows || []).length || (missing.errors || []).length || (missing.warnings || []).length);
     sideNode.hidden = !immediate.length && !decks.length && !later.length && !missingShown;
-    emptyBox.hidden = Boolean(waiting.length || followUps.length || immediate.length || later.length || decks.length || missingShown);
+    pageEmpty.hidden = Boolean(waiting.length || followUps.length || immediate.length || later.length || decks.length || missingShown);
     const jumps = shopJumps([
       { id: "shop-on-the-way", label: "On the way", count: waiting.length, number: waiting.length },
       { id: "shop-to-buy", label: "To buy", count: immediate.length, number: immediate.length },
@@ -774,7 +800,7 @@ function drawShopping(data) {
   view.redraw();
   const layout = el("div", { class: "shop-layout" }, el("div", { class: "shop-main shop-list-pane" }, main), sideNode);
   const layoutSlot = el("div");
-  if (emptyBox.hidden) layoutSlot.append(layout);
+  if (pageEmpty.hidden) layoutSlot.append(layout);
   const root = el("div", { class: "shop-page" },
     pageHead({ title: routeH1("shopping"), description: "What's on the way, what to check and what to buy.",
       primary: mayDo("orders") && data.queue_revision ? [
@@ -785,7 +811,7 @@ function drawShopping(data) {
       more: [{ label: routeFor("wishlist").label, href: "#/wishlist" }, { label: "Refresh", onclick: () => route() }] }),
     warningsBox(data.warnings, "Some shopping records need attention"),
     jumpSlot,
-    emptyBox,
+    pageEmpty,
     layoutSlot,
     history.length ? el("details", { class: "shop-history" },
       el("summary", { text: `Order history · ${plural(history.length, "order")}` }),
@@ -795,7 +821,7 @@ function drawShopping(data) {
   const redraw = view.redraw;
   view.redraw = () => {
     redraw();
-    if (!emptyBox.hidden) layout.remove();
+    if (!pageEmpty.hidden) layout.remove();
     else if (!layout.parentNode) layoutSlot.append(layout);
     shopSyncQueueControls(view);
     registerShoppingKeyboardHelp(view);

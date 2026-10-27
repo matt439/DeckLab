@@ -56,7 +56,7 @@ function deckNeighbours(data) {
       nav.hidden = false;
     } catch (error) {
       if (!here() || request !== sequence) return;
-      clear(nav).append(el("span", { class: "sub", text: "Deck navigation unavailable" }),
+      clear(nav).append(el("span", { class: "sub", role: "status", text: "Previous and next decks couldn't be loaded." }),
         el("button", { type: "button", class: "btn", text: "Try again", onclick: () => { if (here()) refresh(); } }));
       nav.hidden = false;
     }

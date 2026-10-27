@@ -22,8 +22,8 @@
 .history-pictures { list-style: none; margin: var(--s-3) 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--s-2); }
 .history-pic, .history-pic-more { position: relative; display: block; width: 60px; padding: 0; border: 0; background: none;
   cursor: pointer; border-radius: var(--r-card); }
-.history-pic img { display: block; width: 60px; height: 84px; border-radius: var(--r-card); box-shadow: var(--shadow-img);
-  background: var(--surface-3); object-fit: cover; }
+.history-pic img, .history-pic-frame { display: block; width: 60px; height: 84px; border-radius: var(--r-card); box-shadow: var(--shadow-img);
+  background: var(--track); object-fit: cover; }
 .history-delta { position: absolute; left: var(--s-1); bottom: var(--s-1); padding: 0 var(--s-1); border-radius: var(--r-sm);
   background: var(--badge-bg); color: var(--badge-ink); font-size: var(--fs-xs); font-weight: var(--fw-bold);
   font-variant-numeric: tabular-nums; white-space: nowrap; }

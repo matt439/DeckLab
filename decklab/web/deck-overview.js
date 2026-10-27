@@ -16,7 +16,7 @@ function deckOverviewContext() {
 /** A read-only field summary; the Matchups tab keeps the full table and the explicit run controls. */
 function deckOverviewForge(data) {
   if (data.summary.id.startsWith(BOX_PREFIX)) return null;
-  const body = el("div", { class: "deck-overview-forge-body" }, loadingBox("Loading the Forge field..."));
+  const body = el("div", { class: "deck-overview-forge-body" }, loadingBox("Loading the Forge field…", { small: true }));
   const section = el("section", { class: "deck-section deck-overview-forge", "aria-labelledby": "h-overview-forge" },
     el("div", { class: "deck-section-head" }, el("h2", { id: "h-overview-forge", text: "Forge field" }),
       el("button", { type: "button", class: "btn", text: "Field view",
@@ -40,12 +40,11 @@ function deckOverviewForge(data) {
         el("p", { class: "sub", text: "Forge's AI, best of one. The field view has each matchup and the limits of these estimates." })]);
     } catch (error) {
       if (!deckOverviewHere(section, context)) return;
-      clear(body).append(el("p", { class: "sub", text: "The Forge field couldn't be loaded." }),
-        el("button", { type: "button", class: "btn", text: "Try again", onclick: () => {
-          if (!deckOverviewHere(section, context)) return;
-          clear(body).append(loadingBox("Loading the Forge field..."));
-          load();
-        } }));
+      clear(body).append(loadFailed("The Forge field", error, () => {
+        if (!deckOverviewHere(section, context)) return;
+        clear(body).append(loadingBox("Loading the Forge field…", { small: true }));
+        load();
+      }));
     }
   };
   load();
@@ -55,23 +54,30 @@ function deckOverviewForge(data) {
 /** The newest test the server returns, preserving running and inconclusive states through vtTestItem. */
 function deckOverviewSwap(data) {
   if (data.summary.read_only) return null;
-  const body = el("div", {}, loadingBox("Loading the latest test..."));
+  const body = el("div", {}, loadingBox("Loading the latest test…", { small: true }));
   const section = el("section", { class: "deck-section deck-overview-swap", "aria-labelledby": "h-overview-swap" },
     el("div", { class: "deck-section-head" }, el("h2", { id: "h-overview-swap", text: "Latest swap test" }),
       el("button", { type: "button", class: "btn btn-quiet deck-more-link", text: "All tests",
         onclick: () => openDeckTab("matchups", { to: "sec-tests" }) })), body);
   const context = deckOverviewContext();
-  api(`/api/variants?id=${encodeURIComponent(data.summary.id)}&version=${data.version}`).then((answer) => {
+  const load = () => api(`/api/variants?id=${encodeURIComponent(data.summary.id)}&version=${data.version}`).then((answer) => {
     if (!deckOverviewHere(section, context)) return;
     clear(body);
     const latest = (answer.tests || [])[0];
+    // None yet: the editor is where a change is tested (Test this change), for whoever may edit the deck.
     body.append(latest ? el("ul", { class: "vt-test-list" }, vtTestItem(latest))
-      : el("p", { class: "sub", text: "No tests yet. In the editor, change some cards and choose Test this change." }));
+      : emptyBox("No swap tests yet.", canEditDeck(data.summary)
+        ? el("a", { class: "btn", href: editHref(data.summary.id, data.version), text: "Try a change in the editor" }) : null));
   }).catch((error) => {
     if (!deckOverviewHere(section, context)) return;
     if (error.status === 501) section.remove();
-    else clear(body).append(el("p", { class: "sub", text: "The latest test couldn't be loaded. Open All tests to try again." }));
+    else clear(body).append(loadFailed("The latest test", error, () => {
+      if (!deckOverviewHere(section, context)) return;
+      clear(body).append(loadingBox("Loading the latest test…", { small: true }));
+      load();
+    }));
   });
+  load();
   return section;
 }
 

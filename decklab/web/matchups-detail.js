@@ -344,12 +344,16 @@ function follow(page) {
 /** The box of a run that's waiting or going: progress (marked at the planned checks, MU-11), the score so far,
  * speed, time left and Stop. */
 function liveBox(page) {
-  const title = el("h2", { id: "h-live", text: "Getting ready..." });
+  const title = el("h2", { id: "h-live", text: "Getting ready…" });
   const bar = checkBar("Games played");
-  const played = el("p", { class: "mu-played", role: "status" });
+  // The count changes on every answer, so it isn't announced; the phase line is, only when the title changes
+  // (waiting, playing, a new stage). The result itself takes the focus when it comes (focusNews).
+  const played = el("p", { class: "mu-played" });
+  const phase = el("p", { class: "sr-only", role: "status" });
+  const announce = () => { if (phase.textContent !== title.textContent) phase.textContent = title.textContent; };
   const score = el("dl", { class: "mu-score" });
   const pace = el("p", { class: "sub" });
-  const lost = el("p", { class: "sub mu-lost" });
+  const lost = el("p", { class: "sub mu-lost", role: "status" });
   const stop = el("button", { type: "button", class: "btn btn-danger", text: "Stop",
     onclick: () => stopRun(page, stop) });
   // An adaptive run's plan ("Next check at 800 games") and every run's live range, dashed: the anytime-valid range,
@@ -361,7 +365,7 @@ function liveBox(page) {
   const actions = el("div", { class: "actions", hidden: true }, stop);
   const node = el("section", { class: "box box-info mu-running", "aria-labelledby": "h-live" },
     el("div", { class: "mu-running-head" }, el("span", { class: "spinner", "aria-hidden": "true" }), title),
-    bar.node, played, planLine, rangeHost, score, pace, lost,
+    phase, bar.node, played, planLine, rangeHost, score, pace, lost,
     actions, via,
     el("p", { class: "sub", text: "You can leave this page: the games go on on the PC, and the result is saved." }));
   return {
@@ -403,7 +407,8 @@ function liveBox(page) {
       const progress = runProgress(job);
       if (job.status === "queued") {
         const n = job.ahead || 0;
-        title.textContent = n > 0 ? "Waiting for another matchup" : "Starting...";
+        title.textContent = n > 0 ? "Waiting for another matchup" : "Starting…";
+        announce();
         played.textContent = n > 0 ? `${plural(n, "other run")} ${n === 1 ? "is" : "are"} ahead of this one; ` +
           `it starts as soon as ${n === 1 ? "that's" : "they're"} done.`
           : job.plan || job.mode === "assess" || job.mode === "ahead" ? "The games are about to start."
@@ -415,15 +420,16 @@ function liveBox(page) {
       }
       if (plan) {
         const before = plan.games_before || 0;
-        title.textContent = plan.mode === "ahead" ? "Settle it: playing until one deck is clearly ahead..."
-          : "Precise: playing until the win rate is known to within 3 points...";
+        title.textContent = plan.mode === "ahead" ? "Settle it: playing until one deck is clearly ahead…"
+          : "Precise: playing until the win rate is known to within 3 points…";
         played.textContent = job.waiting || `${thousands(before + (job.done || 0))} of up to ` +
           `${thousands(plan.max || 3200)} games` + (before ? ` (${thousands(before)} from before).` : ".");
       } else {
-        title.textContent = `Playing ${thousands(job.total || 0)} games...`;
+        title.textContent = `Playing ${thousands(job.total || 0)} games…`;
         // job.waiting: none of its Forge processes can play yet, as other runs on the PC hold every slot.
         played.textContent = job.waiting || `${thousands(job.done || 0)} of ${thousands(job.total || 0)} games played.`;
       }
+      announce();
       bar.set(progress.done, progress.total, progress.checks);
       const wins = job.wins || [0, 0];
       const cells = [[ta, wins[0]], [tb, wins[1]]];
@@ -442,7 +448,9 @@ function liveBox(page) {
       pace.textContent = capitalise(bits.join(", ")) + (bits.length ? "." : "");
     },
     lost(error) {
-      lost.textContent = `The PC isn't answering (${error.message}). Trying again...`;
+      // Said once when the answers stop, not again on each failed try.
+      const words = `The PC isn't answering (${error.message}). Trying again…`;
+      if (lost.textContent !== words) lost.textContent = words;
     },
   };
 }

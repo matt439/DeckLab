@@ -184,7 +184,7 @@ class SettingsMembersUiTests(unittest.TestCase):
 
     def test_empty_list_is_quiet_without_inventing_a_profile_or_add_member_action(self):
         self.run_js(r'''
-          list={...memberList(),members:[]};await openMembers();assert(main.textContent.includes('No members with their own space have an email available to replace'));
+          list={...memberList(),members:[]};await openMembers();assert(main.textContent.includes('No members have their own space and an email yet'));
           assert.equal(byId('settings-member-new-email'),null);assert.equal(writes.length,0);
         ''')
 

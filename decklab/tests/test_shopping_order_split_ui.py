@@ -96,7 +96,7 @@ class ShoppingOrderSplitInteractionTests(unittest.TestCase):
           for (const section of sections) assert(section.textContent.includes("Inspect the art"));
           for (const text of [originalCard.notes, "Elves", "Old list", "Existing table needs attention", "Check the resulting parts"])
             assert(preview.textContent.includes(text), text);
-          action(sheet, "Save change").click(); action(sheet, "Save change").click(); await settle();
+          action(sheet, "Save change").click(); action(sheet, "Saving…").click(); await settle();
           same(writes[1], ["/api/shopping/order/change/apply", {preview: "signed-change"}]);
           assert.equal(writes.length, 2); assert(sheet.closed); assert.equal(refreshes, 1);
           assert.equal(originalCard.quantity, "3"); assert.equal(otherCard.quantity, "1");

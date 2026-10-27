@@ -18,13 +18,13 @@ function productStorageSection(data) {
   if (!id.startsWith("product/") || !seesInventory(HOME_SPACE)) return null;
   const root = el("section", { class: "deck-section product-storage", "aria-labelledby": "h-product-storage" },
     el("h2", { id: "h-product-storage", text: "Product storage" }));
-  const content = el("div", { "aria-live": "polite" });
+  const content = el("div");
   root.append(content);
   const ctx = { root, content, id, stem: id.split("/")[1], token: routeToken,
     profile: state.profile?.id, seq: 0, busy: false, product: null };
   ctx.refresh = async () => {
     const seq = ++ctx.seq;
-    clear(content).append(loadingBox("Loading product storage..."));
+    clear(content).append(loadingBox("Loading product storage…", { small: true }));
     try {
       const product = await api(`/api/product?stem=${encodeURIComponent(ctx.stem)}`);
       if (!productStorageHere(ctx) || seq !== ctx.seq) return;
@@ -33,10 +33,9 @@ function productStorageSection(data) {
     } catch (failure) {
       if (!productStorageHere(ctx) || seq !== ctx.seq) return;
       if ([403, 404].includes(failure.status)) { root.hidden = true; return; }
-      clear(content).append(el("p", { class: "form-error", role: "alert", text: failure.message }),
-        el("button", { type: "button", class: "btn", text: "Try again", onclick: () => {
-          if (productStorageHere(ctx)) ctx.refresh();
-        } }));
+      clear(content).append(loadFailed("Product storage", failure, () => {
+        if (productStorageHere(ctx)) ctx.refresh();
+      }));
     }
   };
   ctx.refresh();
@@ -84,7 +83,7 @@ function openProductStorage(ctx, intact) {
     if (productStorageHere(ctx)) drawProductStorage(ctx);
     if (review.saved) setTimeout(() => { if (productStorageHere(ctx)) route(); }, 0);
   } });
-  const review = { saved: false, sending: false, stale: false };
+  const review = { saved: false, sending: false, stale: false, failed: false };
   productStorageSheets.add(sheet);
   const here = () => !sheet.closed && productStorageHere(ctx);
   const error = el("p", { class: "form-error", role: "alert" });
@@ -93,7 +92,8 @@ function openProductStorage(ctx, intact) {
     sheetActions(sheet, [review.stale ? { text: "Refresh product", kind: "primary", onclick: () => {
       if (!here()) return;
       sheet.close(); ctx.refresh();
-    } } : preview?.ready ? { text: intact === "yes" ? "Keep intact" : "Break up", kind: "primary",
+    } } : review.failed ? { text: "Try again", kind: "primary", onclick: () => { if (here() && review.failed) check(); } }
+      : preview?.ready ? { text: intact === "yes" ? "Keep intact" : "Break up", kind: "primary",
       disabled: review.sending, onclick: apply } : null,
     { text: preview?.ready ? "Cancel" : "Close", disabled: review.sending, onclick: () => sheet.close() }]);
   }
@@ -119,8 +119,10 @@ function openProductStorage(ctx, intact) {
       if (here() && !review.saved) actions();
     }
   }
-  clear(sheet.body).append(loadingBox("Checking the storage change...")); actions();
-  (async () => {
+  /** The preview: a stale product (409) is refreshed on the page; any other failure can simply be checked again. */
+  async function check() {
+    review.failed = false; error.textContent = "";
+    clear(sheet.body).append(loadingBox("Checking the storage change…", { small: true })); actions();
     try {
       preview = await apiWrite("/api/product/intact/preview", { stem: ctx.stem, intact,
         fingerprint: ctx.product.fingerprint });
@@ -136,8 +138,10 @@ function openProductStorage(ctx, intact) {
     } catch (failure) {
       if (!here()) return;
       review.stale = failure.status === 409;
+      review.failed = !review.stale;
       clear(sheet.body).append(error); error.textContent = failure.message; actions();
     }
-  })();
+  }
+  check();
   return sheet;
 }

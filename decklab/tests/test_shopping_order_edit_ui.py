@@ -71,7 +71,7 @@ class ShoppingOrderEditInteractionTests(unittest.TestCase):
           assert(sheet.body.querySelector(".shop-order-preview").textContent.includes("Updated delivery note"));
           assert(sheet.body.querySelector(".shop-order-preview").textContent.includes("magic/buylists/new.md"));
           assert(sheet.body.querySelector(".shop-order-preview").textContent.includes("Confirm the art"));
-          action(sheet, "Save change").click(); action(sheet, "Save change").click(); await settle();
+          action(sheet, "Save change").click(); action(sheet, "Saving…").click(); await settle();
           same(writes[1], ["/api/shopping/order/change/apply", {preview: "signed-change"}]);
           assert.equal(writes.length, 2); assert(sheet.closed); assert.equal(refreshes, 1); same(messages, ["Order updated."]);
         """)

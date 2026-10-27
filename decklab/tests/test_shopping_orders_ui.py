@@ -121,7 +121,7 @@ class ShoppingOrderInteractionTests(unittest.TestCase):
           same(body.product, {stem: "fdc-product", name: "The Product", status: "preordered", csv: productCSV, checks: []});
           assert(sheet.body.textContent.includes("Dog,Beast")); assert(sheet.body.textContent.includes("The Product · preordered"));
           assert(sheet.body.textContent.includes("deck,First")); assert(!sheet.body.textContent.includes("null"));
-          action(sheet, "Save order").click(); action(sheet, "Save order").click(); await settle();
+          action(sheet, "Save order").click(); action(sheet, "Saving…").click(); await settle();
           same(writes[1], ["/api/shopping/order/apply", {preview: "signed-preview"}]);
           assert.equal(writes.length, 2); assert(sheet.closed); assert.equal(refreshes, 1);
           assert(messages[0].includes("On the way"));

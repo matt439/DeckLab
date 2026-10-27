@@ -17,7 +17,7 @@
   border: 0; background: none; color: var(--ink); font: inherit; text-align: left;
 }
 button.acc-tile { cursor: pointer; }
-.acc-tile .acc-thumb-fill { border-radius: var(--r-lg); border: 1px solid var(--border); background: var(--surface); }
+.acc-tile .acc-thumb-fill { border-radius: var(--r-lg); border: 1px solid var(--border); background: var(--surface-chip); }
 button.acc-tile:hover .acc-thumb-fill { border-color: var(--accent); }
 .acc-tile-words { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .acc-tile-name {
@@ -57,7 +57,7 @@ button.acc-tile:hover .acc-thumb-fill { border-color: var(--accent); }
   --acc-thumb: 64px;
   display: inline-flex; align-items: center; justify-content: center; flex: none;
   width: var(--acc-thumb); height: var(--acc-thumb);
-  border-radius: var(--r-sm); overflow: hidden; background: var(--surface-2); color: var(--ink-2);
+  border-radius: var(--r-sm); overflow: hidden; background: var(--surface-chip); color: var(--ink-2);
 }
 .acc-thumb-fill { display: flex; width: 100%; height: auto; aspect-ratio: 1 / 1; border-radius: 0; }
 .acc-thumb img { display: block; width: 100%; height: 100%; object-fit: contain; }
@@ -68,6 +68,12 @@ button.acc-tile:hover .acc-thumb-fill { border-color: var(--accent); }
 /* Nothing chosen: a dashed empty slot. */
 .acc-slot-none { background: transparent; border: 2px dashed var(--border-strong); }
 .acc-thumb-fallback { padding: var(--s-2); font-size: var(--fs-sm); font-weight: var(--fw-semibold); text-align: center; }
+/* No picture (visual-design 4.10): sleeves a 28 x 38 swatch of their colour (--track when it isn't one the
+   browser knows), a deck box or playmat its stroke icon, on the frame's --surface-chip. */
+.acc-thumb-swatch { box-sizing: border-box; height: min(38px, 86%); aspect-ratio: 28 / 38; padding: 0; border-radius: var(--r-card);
+  border: 1px solid var(--border); background: var(--acc-swatch, var(--track)); }
+.acc-thumb-icon { display: inline-flex; padding: 0; color: var(--ink-4); }
+.acc-thumb-icon svg { fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
 
 /* The add/edit sheet. */
 .acc-form { display: grid; gap: var(--s-4); }
@@ -83,10 +89,12 @@ button.acc-tile:hover .acc-thumb-fill { border-color: var(--accent); }
 /* The cropper: the whole picture, shaded outside the box, with corner handles big enough for a finger. */
 .acc-cropper { display: grid; gap: var(--s-2); }
 .acc-cropper > p { margin: 0; }
-.acc-crop-stage { position: relative; justify-self: start; margin: 14px; background: var(--surface-2); user-select: none; -webkit-user-select: none; }
+.acc-crop-stage { position: relative; justify-self: start; margin: 14px; background: var(--surface-chip); user-select: none; -webkit-user-select: none; }
 .acc-crop-clip { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
 .acc-crop-shade { position: absolute; box-shadow: 0 0 0 9999px var(--scrim); }
 .acc-crop-stage img { display: block; max-width: 100%; max-height: min(60vh, 480px); pointer-events: none; }
+.acc-crop-stage.acc-crop-loading { width: min(100%, 240px); aspect-ratio: 1 / 1; background: var(--surface-chip); }
+.acc-crop-loading > img, .acc-crop-loading > .acc-crop-clip { visibility: hidden; }
 .acc-crop-box {
   position: absolute; box-sizing: border-box; cursor: move; touch-action: none;
   border: 2px solid var(--on-scrim); outline: 1px solid var(--scrim-edge);

@@ -108,7 +108,7 @@ class GuideApiTests(ApiTestCase):
 @unittest.skipUnless(shutil.which("node"), "Node.js isn't installed")
 class GuideRenderingTests(unittest.TestCase):
     def run_js(self, expression):
-        inputs = [[str(WEB / "core.js"), str(WEB / "deck-tools.js"), str(WEB / "guide.js")], [expression]]
+        inputs = [[str(WEB / "core.js"), str(WEB / "editor.js"), str(WEB / "deck-tools.js"), str(WEB / "guide.js")], [expression]]
         done = subprocess.run([shutil.which("node"), "-e", NODE_RUNNER], input=json.dumps(inputs),
                               capture_output=True, text=True, encoding="utf-8", check=True)
         return json.loads(done.stdout)[0]
@@ -136,10 +136,14 @@ class GuideRenderingTests(unittest.TestCase):
         self.assertIn("<img", children[0]["data"])
 
     def test_stale_warning_and_product_empty_state(self):
-        page = {"summary": {"read_only": False}, "guide": {"sections": [], "changed_on": "2026-10-01"}}
+        page = {"summary": {"id": "casual/test", "read_only": False}, "version": "target",
+                "guide": {"sections": [], "changed_on": "2026-10-01"}}
         rendered = self.run_js(f"guideSection({json.dumps(page)})")
         self.assertIn("may be out of date", rendered)
         self.assertIn("2026-10-01", rendered)
+        # Whoever may edit the deck is offered the editor's Notes to write one.
+        self.assertIn("No play guide yet.", rendered)
+        self.assertIn("Write a game plan", rendered)
         rendered = self.run_js('guideSection({summary: {read_only: true}, guide: null})')
         self.assertIn("No play guide is recorded", rendered)
 

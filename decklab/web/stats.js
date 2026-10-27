@@ -38,8 +38,11 @@ function statsSection(data) {
   const section = el("section", { class: "deck-section", id: "sec-stats", "aria-labelledby": "h-stats" },
     el("h2", { id: "h-stats", class: "sr-only", text: "Stats" }));
   if (!st) {
-    section.append(el("div", { class: "box box-warn", text: "The stats couldn't be worked out for this deck. " +
-      "The warnings at the top say more, and the server log has the details." }));
+    // They come with the deck, so Try again loads the deck page again.
+    section.append(el("div", { class: "box box-warn" },
+      el("h3", { class: "box-head", text: "The stats couldn't be worked out" }),
+      el("p", { text: "The warnings at the top say why." }),
+      el("div", { class: "actions" }, el("button", { type: "button", class: "btn", text: "Try again", onclick: () => route() }))));
     return section;
   }
   const notes = [];
@@ -132,7 +135,7 @@ function curvePanel(st) {
   const curve = st.curve;
   const chart = el("div", { class: "chart" });
   const detail = el("div", { class: "chart-detail", "aria-live": "polite" },
-    el("p", { class: "sub", text: "Tap or point at a bar to list its cards." }));
+    noneSelected("Tap or point at a bar to list its cards."));
   const panel = el("section", { class: "panel wide", "aria-labelledby": "h-curve" },
     el("h3", { id: "h-curve", text: "Mana curve" }),
     // The average mana value is in the verdict strip above the panels (statsVerdict), so not here again.

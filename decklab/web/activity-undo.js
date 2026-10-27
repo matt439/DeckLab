@@ -353,7 +353,7 @@ function activityUndoPhotoPreview(ctx, frames, changed) {
     if (!active) return;
     active = false; controller.abort(); photo.ready = false;
     for (const img of photo.images) { img.onload = null; img.onerror = null; img.removeAttribute("src"); }
-    for (const frame of frames) frame.box.style.visibility = "hidden";
+    for (const frame of frames) for (const clip of frame.box.querySelectorAll(".acc-crop")) clip.style.visibility = "hidden";
     if (photo.url !== null) { URL.revokeObjectURL(photo.url); photo.url = null; }
   };
   ctx.photoRelease = release;
@@ -363,7 +363,8 @@ function activityUndoPhotoPreview(ctx, frames, changed) {
   const load = frame => new Promise((resolve, reject) => {
     const img = el("img", { alt: frame.label, decoding: "async" }), [x, y, w, h] = activityUndoAccessoryCrop(frame.crop);
     Object.assign(img.style, { width: `${100 / w}%`, height: `${100 / h}%`, left: `${-100 * x / w}%`, top: `${-100 * y / h}%` });
-    const clipped = el("span", { class: "acc-crop" }, img); frame.box.append(clipped); photo.images.push(img);
+    // Only the photo waits hidden; its frame shows its placeholder colour meanwhile.
+    const clipped = el("span", { class: "acc-crop", style: "visibility: hidden" }, img); frame.box.append(clipped); photo.images.push(img);
     const loaded = () => {
       if (!current() || img.src !== photo.url || !img.complete || !img.naturalWidth || !img.naturalHeight) { reject(Error("The photo did not decode.")); return; }
       const ratio = w * img.naturalWidth / (h * img.naturalHeight);
@@ -406,7 +407,7 @@ function activityUndoPhotoPreview(ctx, frames, changed) {
     await Promise.all(frames.map(load));
     if (!current()) { release(); return; }
     if (photo.images[0].naturalWidth !== photo.images[1].naturalWidth || photo.images[0].naturalHeight !== photo.images[1].naturalHeight) throw Error("The photo views disagree.");
-    for (const frame of frames) frame.box.style.visibility = "";
+    for (const frame of frames) for (const clip of frame.box.querySelectorAll(".acc-crop")) clip.style.visibility = "";
     photo.ready = true; changed();
   }).catch(() => {
     if (!current()) { release(); return; }
@@ -429,23 +430,27 @@ function openActivityUndo(view, id, endpoint = "/api/activity/undo") {
   } });
   ctx.current = () => activityUndoOwner(ctx) && ctx.endpoint === endpoint && !sheet.closed;
   ctx.here = () => ctx.current() && [...document.querySelectorAll("dialog[open]")].at(-1) === sheet.dialog;
-  clear(sheet.body).append(loadingBox("Checking whether this change can be undone."));
-  sheetActions(sheet, [{ text: "Cancel", onclick: () => sheet.close() }]);
-  api(endpoint + "?" + new URLSearchParams({ id })).then(data => {
-    if (!ctx.current()) return;
-    if (data?.available === false && data.id === id && typeof data.reason === "string") {
-      clear(sheet.body).append(el("p", { text: "Undo is not available for this change." }), el("p", { class: "sub", text: data.reason }));
-      sheetActions(sheet, [{ text: "Close", onclick: () => sheet.close() }]); return;
-    }
-    const preview = activityUndoEvidence(data, id, ctx.space, ctx.profile);
-    const expectedEndpoint = preview?.kind === "wishlist" ? "/api/activity/wishlist-undo" : preview?.kind === "accessory" ? "/api/activity/accessory-undo" : "/api/activity/undo";
-    if (!preview || endpoint !== expectedEndpoint) throw new Error("The Undo preview could not be checked.");
-    ctx.preview = preview; activityUndoShow(ctx);
-  }).catch(failure => {
-    if (!ctx.current()) return;
-    clear(sheet.body).append(errorBox("The Undo preview couldn't be loaded", failure, null));
-    sheetActions(sheet, [{ text: "Close", onclick: () => sheet.close() }]);
-  });
+  // Fetch the preview; Try again on a failure runs this again in the same sheet.
+  const fetchPreview = () => {
+    clear(sheet.body).append(loadingBox("Checking whether this change can be undone…"));
+    sheetActions(sheet, [{ text: "Cancel", onclick: () => sheet.close() }]);
+    api(endpoint + "?" + new URLSearchParams({ id })).then(data => {
+      if (!ctx.current()) return;
+      if (data?.available === false && data.id === id && typeof data.reason === "string") {
+        clear(sheet.body).append(el("p", { text: "Undo is not available for this change." }), el("p", { class: "sub", text: data.reason }));
+        sheetActions(sheet, [{ text: "Close", onclick: () => sheet.close() }]); return;
+      }
+      const preview = activityUndoEvidence(data, id, ctx.space, ctx.profile);
+      const expectedEndpoint = preview?.kind === "wishlist" ? "/api/activity/wishlist-undo" : preview?.kind === "accessory" ? "/api/activity/accessory-undo" : "/api/activity/undo";
+      if (!preview || endpoint !== expectedEndpoint) throw new Error("The Undo preview could not be checked.");
+      ctx.preview = preview; activityUndoShow(ctx);
+    }).catch(failure => {
+      if (!ctx.current()) return;
+      clear(sheet.body).append(errorBox("The Undo preview couldn't be loaded", failure, () => { if (ctx.here()) fetchPreview(); }, null));
+      sheetActions(sheet, [{ text: "Close", onclick: () => sheet.close() }]);
+    });
+  };
+  fetchPreview();
   return sheet;
 }
 
@@ -486,7 +491,7 @@ function activityUndoShow(ctx) {
           el("dd", { class: ["notes", "source"].includes(field) ? "activity-undo-note" : null, text: text(row[field]) })]))));
   } else if (accessoryCropping) {
     const frames = [["Current crop", preview.current], ["Restored crop", preview.restored]].map(([title, row]) => {
-      const box = el("span", { class: "acc-thumb acc-thumb-fill", style: "visibility: hidden" });
+      const box = el("span", { class: "acc-thumb acc-thumb-fill" });
       return { box, crop: row.crop, label: title + " on the current photo", panel: el("figure", { class: "panel" },
         el("h4", { text: title }), el("p", { class: "sub", text: row.crop ? "Recorded crop: " + row.crop : "Whole current photo" }), box) };
     });

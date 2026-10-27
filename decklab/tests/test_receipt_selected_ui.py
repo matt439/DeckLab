@@ -86,7 +86,7 @@ class ReceiptSelectedTests(unittest.TestCase):
           assert.equal(view.filter,'all');assert(!row.tile.hidden);assert(view.sheet.row===row);
           assert.equal(rcptRequestKey(view),request);closeReceiptSheets();assert(document.activeElement===row.open);
           rcptSetFilter(view,'ticked');view.selectedRow=null;rcptSyncSelected(view);
-          assert(view.selectedInspect.hidden);assert(view.selectedFacts.textContent.includes('visible row'));
+          assert(view.selectedInspect.hidden);assert(view.selectedFacts.textContent.includes('pick a visible card'));
           assert(!view.selectedFacts.textContent.includes('Alpha'));rcptSetFilter(view,'all');
           same(view.selectedRow,{comp:'cards',key:row.key});assert(!view.selectedInspect.hidden);
           rcptTick(view,comp,comp.rows[1],true);rcptSetFilter(view,'ticked');view.selectedRow=null;rcptSyncSelected(view);
@@ -141,7 +141,7 @@ class ReceiptSelectedTests(unittest.TestCase):
           const d=delivery();d.components=[{id:'kit',kind:'product',status:'pending',checks:[],fields:[],rows:[],
             product:{name:'Fixture product'},items:[{name:'Unchosen product card',quantity:'60'}],pictures:[],decks:[]}];
           const product=drawReceipt(d,routeToken);assert.equal(product.selectedRow,null);assert(product.selectedInspect.hidden);
-          assert(product.selectedFacts.textContent.includes('Whole products keep their own choices'));
+          assert(product.selectedFacts.querySelector('.none-selected'));
           assert(!product.selectedFacts.textContent.includes('Unchosen product card'));assert(!product.sheet);
           state.may={receipts:false};const readOnly=drawReceipt(delivery(),routeToken);
           assert(readOnly.readOnly);assert(!readOnly.root.querySelector('.rcpt-selected-summary'));assert(!readOnly.selectedRow);

@@ -77,7 +77,7 @@ function commanderReadiness(data) {
   add(section, [commanderNightPart(data)]);
   const k = data.stats && data.stats.commander, br = k && k.bracket;
   if (!br) {
-    section.append(el("p", { text: "Commander checks are unavailable. Check this list before naming a bracket." }));
+    section.append(note("Commander checks are unavailable, so check this list before naming a bracket."));
     return section;
   }
   const groups = [["Game Changers", br.game_changers], ["Mass land denial", br.mass_land_denial], ["Extra turns", br.extra_turns]];

@@ -380,7 +380,9 @@ function drawCollection(data, query, space = HOME_SPACE, token = null) {
   cv.root = root;
   if (!cv.unsupported) {
     cv.results = el("div", { class: "col-results" });
-    add(root, [colFilters(cv), cv.results]);
+    // While a search is fetched: a small spinner and words over the dimmed old results.
+    cv.findLoading = el("div", { class: "col-find-loading" });
+    add(root, [colFilters(cv), cv.findLoading, cv.results]);
     drawCollectionResults(cv, data);
   }
   $("#main").append(root);
@@ -480,6 +482,7 @@ async function colLoadFind(cv, query, paging) {
   history.replaceState(history.state, "", colHash(cv.space, "find", query));
   const seq = ++cv.findSeq;
   cv.results.setAttribute("aria-busy", "true");
+  if (cv.findLoading && !cv.findLoading.firstChild) cv.findLoading.append(loadingBox("Loading cards…", { small: true }));
   try {
     const asked = new URLSearchParams(query);
     asked.set("limit", String(colPageSize()));
@@ -498,7 +501,10 @@ async function colLoadFind(cv, query, paging) {
     if (!colActive(cv) || seq !== cv.findSeq) return;
     clear(cv.results).append(errorBox("The cards couldn't be loaded", error, () => colLoadFind(cv, query, paging)));
   } finally {
-    if (colActive(cv) && seq === cv.findSeq) cv.results.removeAttribute("aria-busy");
+    if (colActive(cv) && seq === cv.findSeq) {
+      cv.results.removeAttribute("aria-busy");
+      if (cv.findLoading) clear(cv.findLoading);
+    }
   }
 }
 
@@ -588,7 +594,7 @@ function colFindRows(cv, cards) {
       : cv.editable ? () => openCopiesSheet(cv, row.name) : null;
     const node = el(open ? "button" : "div", { class: "col-find-open", type: open ? "button" : null,
       "aria-label": open ? `${row.name}, ${words}` : null, "aria-haspopup": open ? "dialog" : null, onclick: open },
-      el("span", { class: "col-find-picture", "aria-hidden": "true" }, row.card?.img_small
+      el("span", { class: row.card?.img_small ? "col-find-picture" : "col-find-picture thumb-missing", "aria-hidden": "true" }, row.card?.img_small
         ? el("img", { src: row.card.img_small, alt: "", loading: "lazy", decoding: "async", width: 56, height: 78 }) : null),
       el("span", { class: "col-find-heading" }, el("span", { class: "col-find-name", text: row.name }), colFindIdentity(row.card, 20)),
       el("span", { class: "col-find-count", text: `${row.owned || 0} owned` }),
@@ -624,9 +630,9 @@ async function openCopiesSheet(cv, name, opts = {}) {
       if (!boxCollectionPrintings(exact, name)) throw new Error("The exact card name couldn't be matched.");
     } else await colEnsureRows(cv);
   } catch (error) {
-    if (!sheet.closed && allowed()) clear(body).append(el("div", { class: "box box-crit" }, el("p", { text: repair
-      ? "This card's copies couldn't be checked. Close this review and search Collection for the exact card name manually; no copies were changed."
-      : error.message })));
+    if (!sheet.closed && allowed()) clear(body).append(repair ? el("div", { class: "box box-crit", role: "alert" }, el("p", { text:
+      "This card's copies couldn't be checked. Close this review and search Collection for the exact card name manually; no copies were changed." }))
+      : loadFailed("Its rows", error, () => { if (!allowed()) return; sheet.close(); openCopiesSheet(cv, name, opts); }));
     return;
   }
   if (sheet.closed || !allowed()) return;
@@ -642,15 +648,15 @@ async function openCopiesSheet(cv, name, opts = {}) {
     rows.length ? el("div", { class: "col-copy-rows" }, rows.map((row) => cardRow(cv.pictures[colKey(row)] || null, {
       qty: Number(row.quantity), name: colPrinting(row), meta: colRowFacts(row) || "Condition and language recorded",
       aside: el("span", { class: "col-copy-edit", "aria-hidden": "true", text: "Edit" }),
-      onclick: () => open(row) }))) : el("p", { class: "sub", text: repair
+      onclick: () => open(row) }))) : emptyBox(repair
         ? "No printing is recorded for this card. Count copies across every location before adding a printing."
-        : "None of its rows are recorded here: it's only on the way." })]);
+        : "None of its rows are recorded here: it's only on the way.")]);
   // A row without a known card is a plain div: give it its own button.
   for (const [i, node] of [...body.querySelectorAll(".card-row")].entries()) {
     if (node.tagName !== "BUTTON") node.append(el("button", { type: "button", class: "btn", text: "Edit", onclick: () => open(rows[i]) }));
   }
   sheetActions(sheet, [
-    { text: "Add another printing", kind: "primary", onclick: () => {
+    { text: rows.length ? "Add another printing" : "Add a printing", kind: "primary", onclick: () => {
       if (repair) open(null);
       else { sheet.close(); openCollectionSheet(cv, null, { name }); }
     } },
@@ -772,7 +778,8 @@ function drawImportPreview(ctx) {
       value: "import", onclick: () => applyImport(ctx, true) });
     ctx.area.append(el("p", { class: "sub", text: "Or fix the file and choose it again to import every row." }));
   } else {
-    ctx.area.append(el("p", { class: "box box-info", text: "There's nothing in this file to add." }));
+    ctx.area.append(emptyBox("There's nothing in this file to add.", el("button", { type: "button", class: "btn",
+      text: "Choose another file", onclick: () => { if (!ctx.busy && !ctx.sheet.closed) ctx.input.click(); } })));
   }
   sheetActions(ctx.sheet, actions);
 }
@@ -893,14 +900,14 @@ async function searchPrecons(ctx) {
           el("span", { class: "precon-pick-words" }, el("strong", { text: d.name }),
             el("small", { text: [d.set_name || d.code.toUpperCase(), d.type].filter(Boolean).join(" · ") })),
           d.released ? el("small", { class: "precon-pick-date", text: String(d.released).slice(0, 4) }) : null))))
-        : el("p", { class: "empty", text: q
+        : emptyBox(q
           ? "No precon matches that. Only decks whose list has been published are here."
-          : "No precons are listed." }),
+          : "No precons are listed.", null, { live: !!q }),
       answer.more ? el("p", { class: "result-count", text: "More match: type more of the name to narrow the list." }) : null,
       el("p", { class: "result-count", text: `Lists from MTGJSON${answer.date ? ` (updated ${answer.date})` : ""}, most from Wizards' published lists.` })]);
   } catch (error) {
     if (seq !== ctx.seq || ctx.sheet.closed) return;
-    clear(ctx.message).append(el("div", { class: "box box-crit", role: "alert" }, el("p", { text: error.message })));
+    clear(ctx.message).append(loadFailed("The list of precons", error, () => searchPrecons(ctx)));
   }
 }
 
@@ -925,7 +932,7 @@ async function previewPrecon(ctx, deck, keptTitle = null) {
     drawPreconPreview(ctx);
   } catch (error) {
     if (seq !== ctx.seq || ctx.sheet.closed || !colActive(cv)) return;
-    clear(ctx.message).append(el("div", { class: "box box-crit", role: "alert" }, el("p", { text: error.message })));
+    clear(ctx.message).append(loadFailed(deck.name, error, () => previewPrecon(ctx, deck, keptTitle)));
   }
 }
 

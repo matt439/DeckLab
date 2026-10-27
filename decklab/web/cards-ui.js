@@ -216,7 +216,8 @@ function pickPrinting(name, opts = {}) {
       ...(opts.actions || []).map((a) => ({ text: a.text, kind: a.kind || "", value: a.value,
         onclick: () => { chosen = { action: a.value }; sheet.close(); } }))]);
     const pick = (p, finish) => { chosen = { ...p, finish }; delete chosen.finishes; sheet.close(); };
-    api(`/api/cards/printings?name=${encodeURIComponent(name)}`).then((a) => {
+    // Fetch and draw the printings; Try again after a failure runs it once more.
+    const load = () => api(`/api/cards/printings?name=${encodeURIComponent(name)}`).then((a) => {
       if (sheet.closed) return;
       const current = opts.current || null;
       // One tile per printing; its finishes (one row each in the answer) are buttons under it.
@@ -251,14 +252,19 @@ function pickPrinting(name, opts = {}) {
         a.basic ? el("div", { class: "actions" }, el("button", { type: "button", class: "btn",
           "aria-pressed": String(Boolean(current && !current.set)),
           onclick: () => pick({ set: null, number: null }, "nonfoil") }, "Any printing")) : null,
-        tiles.length ? el("div", { class: "pp-grid" }, tiles) : el("p", { class: "empty", text: "No paper printings found." }),
+        tiles.length ? el("div", { class: "pp-grid" }, tiles) : emptyBox("No paper printings found."),
         a.total > (a.printings || []).length ? el("p", { class: "sub",
           text: `Showing the ${(a.printings || []).length} likeliest of ${a.total}: the ones you have first, then the cheapest.` }) : null]);
       const mark = body.querySelector(".is-ticked .card-tile-open") || body.querySelector(".card-tile-open");
       if (mark) mark.focus();
     }).catch((e) => {
       if (!(e instanceof ApiError)) throw e;
-      if (!sheet.closed) add(clear(body), [el("div", { class: "box box-crit" }, el("p", { text: e.message }))]);
+      if (!sheet.closed) clear(body).append(loadFailed("Its printings", e, () => {
+        if (sheet.closed) return;
+        clear(body).append(loadingBox("Looking up its printings…"));
+        load();
+      }));
     });
+    load();
   });
 }

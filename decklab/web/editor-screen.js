@@ -909,9 +909,10 @@ function drawStats() {
   if (!s.total) {
     const removedSpells = before?.some(n => n > 0);
     if (removedSpells) host.append(editorCurvePart(ed, s, before));
-    host.append(el("p", { class: "empty", text: removedSpells
+    host.append(emptyBox(removedSpells
       ? "No cards in this draft. The curve compares it with the saved list."
-      : "Add cards to see the curve, lands and colours." }));
+      : "Add cards to see the curve, lands and colours.",
+    noOwnedList() ? null : el("button", { type: "button", class: "btn btn-quiet", text: "Add cards", onclick: focusSearch })));
     return;
   }
   add(host, [

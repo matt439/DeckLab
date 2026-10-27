@@ -200,8 +200,8 @@ button.card-tile-open:focus-visible .card-tile-pic { outline: 3px solid var(--fo
 
 /* A token's back, overlapping its front's corner (tokenTile). */
 .token-tile .card-tile-back {
-  position: absolute; right: 5%; bottom: 5%; width: 40%; height: auto;
-  border-radius: var(--r-card);
+  position: absolute; right: 5%; bottom: 5%; width: 40%; height: auto; aspect-ratio: 488 / 680;
+  border-radius: var(--r-card); background: var(--surface-3);   /* its placeholder while it loads */
   box-shadow: 0 0 0 2px var(--badge-ring), var(--shadow-img);
 }
 

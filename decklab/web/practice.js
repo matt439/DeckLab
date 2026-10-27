@@ -87,13 +87,16 @@ async function runPractice(body, data, token, retry) {
 }
 
 function practiceProgress() {
-  const title = el("h3", { text: "Getting the practice games ready..." });
+  const title = el("h3", { text: "Getting the practice games ready…" });
   const bar = progressBar("Practice games played");
   const setBar = bar.set;
-  const text = el("p", { role: "status", text: "Asking the PC..." });
+  // The count changes on every answer, so it isn't announced; the title is, only when it changes.
+  const text = el("p", { text: "Asking the PC…" });
+  const phase = el("p", { class: "sr-only", role: "status" });
+  const announce = () => { if (phase.textContent !== title.textContent) phase.textContent = title.textContent; };
   const node = el("div", { class: "box box-info practice-running" },
     el("div", { class: "practice-running-head" }, el("span", { class: "spinner", "aria-hidden": "true" }), title),
-    bar.node, text,
+    phase, bar.node, text,
     el("p", { class: "sub", text: "It takes a second or two on the PC, once for each list. After that the " +
       "results are saved and show at once." }));
   return {
@@ -108,13 +111,14 @@ function practiceProgress() {
           `it starts as soon as ${n === 1 ? "that's" : "they're"} done.`;
         setBar(0);
       } else if (total) {
-        title.textContent = "Playing practice games...";
+        title.textContent = "Playing practice games…";
         text.textContent = `${thousands(done)} of ${thousands(total)} games played.`;
         setBar(done / total);
       } else {
-        title.textContent = "Playing practice games...";
-        text.textContent = "Starting...";
+        title.textContent = "Playing practice games…";
+        text.textContent = "Starting…";
       }
+      announce();
     },
   };
 }
@@ -252,7 +256,7 @@ function landDropPanel(r) {
   const turns = [2, 3, 4, 5].filter((t) => onTime[t - 1] && mana[t - 1]);
   const chart = el("div", { class: "chart" });
   const detail = el("div", { class: "chart-detail", "aria-live": "polite" },
-    el("p", { class: "sub", text: "Tap or point at a turn for its numbers." }));
+    noneSelected("Tap or point at a turn for its numbers."));
   const groups = turns.map((t) => ({
     label: `Turn ${t}`,
     values: [onTime[t - 1].chance, mana[t - 1].chance],
@@ -457,7 +461,7 @@ function firstBigPanel(r, result) {
     words: `${pct(b.never)} of games hadn't cast one by turn ${lastTurn}.` });
   const chart = el("div", { class: "chart" });
   const detail = el("div", { class: "chart-detail", "aria-live": "polite" },
-    el("p", { class: "sub", text: "Tap or point at a turn for its numbers." }));
+    noneSelected("Tap or point at a turn for its numbers."));
   let active = -1;
   const show = (i) => {
     active = i;

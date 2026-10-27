@@ -133,7 +133,16 @@ function drawColRowList(cv) {
       cv.editable ? el("button", { type: "button", class: "btn col-mutate", text: "Add card",
         onclick: () => openCollectionSheet(cv) }) : null));
   } else if (!shown.length) {
-    cv.list.append(el("div", { class: "empty" }, el("p", { text: "No rows match." })));
+    // Emptied by the search or the filters: the one way back is to clear them.
+    cv.list.append(emptyBox("No rows match the search and filters.", el("button", { type: "button", class: "btn",
+      text: "Clear the search and filters", onclick: () => {
+        if (!colActive(cv)) return;
+        cv.search = ""; if (cv.rowSearch) cv.rowSearch.value = "";
+        cv.unrecordedOnly = false; cv.unrecorded.checked = false;
+        cv.storageOnly = false; if (cv.storageBox) cv.storageBox.checked = false;
+        cv.page = 1; cv.casualLimit = COL_CASUAL_ROWS; drawColRowList(cv);
+        if (cv.rowSearch) cv.rowSearch.focus();
+      } }), { live: true }));
   } else {
     const page = shown.slice((cv.page - 1) * COL_ROWS_PAGE, cv.page * COL_ROWS_PAGE);
     add(cv.list, [el("div", { class: "col-row-lab" }, colPager(cv.page, pages, go, "Pages, top"),
@@ -235,7 +244,7 @@ function colRowLine(cv, row) {
     ? viewerItem(el("button", { type: "button", class: "col-thumb", "aria-haspopup": "dialog",
       "aria-label": `Show ${row.name} (${colPrinting(row)})`, onclick: (e) => openCard(card, e.currentTarget) },
       el("img", { src: card.img_small, alt: "", loading: "lazy", decoding: "async", width: 40, height: 56 })), card, "collection-rows", caption)
-    : el("span", { class: "col-thumb col-thumb-none", "aria-hidden": "true" });
+    : el("span", { class: "col-thumb col-thumb-none thumb-missing", "aria-hidden": "true" });
   const open = () => colSelectRow(cv, key);
   const language = COL_LANGUAGES.find(([v]) => v === row.language);
   const condition = COL_CONDITIONS.find(([v]) => v === row.condition);
@@ -385,15 +394,16 @@ function colEditSelected(cv, key) {
 function colDrawPreview(cv, row) {
   if (!cv.preview) return;
   clear(cv.preview);
-  if (!row) { cv.preview.append(el("p", { class: "sub", text: "Pick a card to see its copies" })); return; }
+  if (!row) { cv.preview.append(noneSelected("Pick a card to see its copies.")); return; }
   const key = colKey(row), card = cv.pictures[key], price = colPrice(cv, row);
   const colours = deckColourPieces(card?.color_identity);
   const field = (name, value) => [el("dt", { text: name }), el("dd", {}, value)];
   add(cv.preview, [el("h2", { class: "col-preview-title", text: row.name }),
     card?.img ? el("button", { type: "button", class: "col-preview-picture", "aria-label": `Show ${row.name}`,
       onclick: (event) => { if (colActive(cv)) openCard(card, event.currentTarget); } },
-    el("img", { src: card.img, alt: "", loading: "lazy", decoding: "async" }))
-      : el("p", { class: "sub col-preview-no-picture", text: "Picture not available" }),
+    el("img", { src: card.img, alt: "", loading: "lazy", decoding: "async", width: 488, height: 680 }))
+      : el("p", { class: "col-preview-no-picture" }, el("span", { class: "col-preview-missing thumb-missing", "aria-hidden": "true" }),
+        el("span", { class: "sub", text: "Picture not available" })),
     card?.exact === false ? el("p", { class: "sub", text: "Picture of another printing" }) : null,
     el("dl", { class: "col-preview-facts" },
       field("Printing", el("span", { text: colPrinting(row) })),
@@ -428,7 +438,7 @@ function colCasualRow(cv, row) {
     : cv.editable ? () => colEditSelected(cv, key) : null;
   const node = el(open ? "button" : "div", { type: open ? "button" : null, class: "col-casual-open",
     "aria-label": open ? `${card ? "Show" : "Edit"} ${row.name} (${colPrinting(row)})` : null, onclick: open },
-    el("span", { class: "col-casual-picture", "aria-hidden": "true" }, card?.img_small
+    el("span", { class: card?.img_small ? "col-casual-picture" : "col-casual-picture thumb-missing", "aria-hidden": "true" }, card?.img_small
       ? el("img", { src: card.img_small, alt: "", loading: "lazy", decoding: "async", width: 56, height: 78 }) : null),
     el("span", { class: "col-casual-name", text: row.name }),
     el("span", { class: "col-casual-price" }, price == null ? colUnknown("No price") : `~A$${price.toFixed(2)} each`),

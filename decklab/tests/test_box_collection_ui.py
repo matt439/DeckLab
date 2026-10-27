@@ -31,7 +31,7 @@ class BoxCollectionUiTests(unittest.TestCase):
           };
           const chooser=()=>[...colSheets].at(-1);
           const chooseExisting=async()=>{button(chooser().body,'Edit').click();await settle();return editCtx;};
-          const chooseNew=async()=>{button(chooser().dialog,'Add another printing').click();await settle();return editCtx;};
+          const chooseNew=async()=>{(button(chooser().dialog,'Add another printing')||button(chooser().dialog,'Add a printing')).click();await settle();return editCtx;};
           const selectPrinting=(ctx,index,finish='nonfoil')=>{ctx.strip.querySelectorAll('.col-strip-tile')[index].click();
             if(finish)ctx.finishBox.querySelectorAll('button').find(node=>node.dataset.value===finish).click();};
           const writeReplies=()=>{writes=[];apiWrite=async(path,body)=>{writes.push([path,body]);return{ok:true,sha256:'f'.repeat(64),rows:[body.row]};};colReload=()=>{};};

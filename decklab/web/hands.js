@@ -56,23 +56,32 @@ function manualHandsSection(data) {
   const body = el("div", { class: "hands-body" });
   const version = el("select", { "aria-label": "List to deal from" }, data.versions.map(v => el("option", {
     value: v, selected: v === data.version, text: listName(v) })));
-  version.addEventListener("change", async () => {
+  // A list that couldn't be loaded: said above the hand, which stays as it was, with Try again.
+  const notice = el("div", { class: "hands-notice" });
+  async function loadVersion(wanted) {
     const request = ++sequence;
     loading = true; free.disabled = true;
+    clear(notice);
     clear(body).append(loadingBox("Loading that list…"));
     try {
-      const answer = await api(`/api/deck?id=${encodeURIComponent(data.summary.id)}&version=${version.value}&omit=matchups`);
+      const answer = await api(`/api/deck?id=${encodeURIComponent(data.summary.id)}&version=${wanted}&omit=matchups`);
       if (request !== sequence || !section.isConnected) return;
       shown = answer; version.value = answer.version; reset();
     } catch (error) {
       if (request === sequence && section.isConnected) {
         version.value = shown.version;
-        clear(body).append(el("p", { role: "alert", text: `${error.message} The selected list is still the ${listName(shown.version, true)}.` }));
+        if (model) draw(); else reset();
+        notice.append(el("div", { class: "note note-warn", role: "alert" },
+          el("div", {}, el("p", { text: `${error.message} The selected list is still the ${listName(shown.version, true)}.` })),
+          el("button", { type: "button", class: "btn btn-quiet", text: "Try again", onclick: () => {
+            if (!loading) { version.value = wanted; loadVersion(wanted); }
+          } })));
       }
     } finally {
       if (request === sequence) { loading = false; free.disabled = false; }
     }
-  });
+  }
+  version.addEventListener("change", () => loadVersion(version.value));
   const free = el("input", { type: "checkbox", onchange: event => {
     if (loading) { event.target.checked = freeFirst; return; }
     freeFirst = event.target.checked; reset();
@@ -81,10 +90,14 @@ function manualHandsSection(data) {
     data.versions.length > 1 ? el("label", { class: "field" }, el("span", { text: "Deal from" }), version) : null,
     commander ? el("label", { class: "choice hands-free" }, free, " First mulligan is free (multiplayer)") : null];
   if (settings.some(Boolean)) section.append(el("div", { class: "hands-settings" }, settings));
-  section.append(body);
+  section.append(notice, body);
   function reset() {
     try { model = new OpeningHand(shown.sections.Deck, { freeFirst }); draw(); }
-    catch (error) { clear(body).append(el("p", { class: "sub", text: error.message })); }
+    catch (error) {
+      // No retry: the list itself is what can't be dealt.
+      model = null;
+      clear(body).append(note(`This list can't be dealt from: ${error.message}`));
+    }
   }
   function draw() {
     const chosen = [];

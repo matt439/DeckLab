@@ -645,15 +645,13 @@ class PageScriptTests(unittest.TestCase):
             # An older server's stats have no "old": as before.
             "cardStatsCoverage({games: 100, bad: 0, of: 300, enough: true})",
         ])
-        self.assertEqual(only, f"The 400 games were {earlier}, so there are no per-card numbers yet: play more "
-                               "games to get some.")
-        self.assertEqual(deck, f"This list's 400 games were {earlier}, so there are no per-card numbers yet: play "
-                               "more games to get some.")
-        self.assertEqual(one, f"The 1 game was {earlier}, so there are no per-card numbers yet: play more games "
-                              "to get some.")
-        self.assertEqual(also_bad, f"400 of the 502 games were {earlier}, and the card log was kept for 2 more "
-                                   "games, but each game's log failed its checks (which make sure every card move "
-                                   "adds up), so there are no per-card numbers yet: play more games to get some.")
+        self.assertEqual(only, f"No per-card numbers yet.The 400 games were {earlier}. Play more games to get some.")
+        self.assertEqual(deck, f"No per-card numbers yet.This list's 400 games were {earlier}. Play more games to "
+                               "get some.")
+        self.assertEqual(one, f"No per-card numbers yet.The 1 game was {earlier}. Play more games to get some.")
+        self.assertEqual(also_bad, f"No per-card numbers yet.400 of the 502 games were {earlier}, and the card log was "
+                                   "kept for 2 more games, but each game's log failed its checks (which make sure "
+                                   "every card move adds up). Play more games to get some.")
         self.assertEqual(mixed, "From 200 of this list's 802 games, across 2 matchups: 200 were played without "
                                 f"the card log (before Deck Lab kept one, or while it was off); 400 were {earlier}, "
                                 "so they're left out; 2 games' card logs failed their checks (which make sure "
@@ -679,14 +677,14 @@ class PageScriptTests(unittest.TestCase):
             f"{stub}castsPart({json.dumps(result)}, {json.dumps(sides)})",
             f"castsPart({json.dumps(no_casts)}, {json.dumps(sides)})",
         ])
-        self.assertEqual(page, f"How its cards playedThis list's 400 games were {earlier}, so there are no "
-                               "per-card numbers yet: play more games to get some.")
+        self.assertEqual(page, f"How its cards playedNo per-card numbers yet.This list's 400 games were {earlier}. "
+                               "Play more games to get some.")
         self.assertIn("None of this list's saved games was played with the card log", none)
         self.assertIn("What each deck cast", casts)
         self.assertIn(f"The 400 games were {earlier}", casts)
         self.assertIn("Shock", casts)
-        self.assertEqual(alone, f"How each deck's cards playedThe 400 games were {earlier}, so there are no "
-                                "per-card numbers yet: play more games to get some.")
+        self.assertEqual(alone, f"How each deck's cards playedNo per-card numbers yet.The 400 games were {earlier}. "
+                                "Play more games to get some.")
 
     def test_the_deck_pages_lead_never_lists_a_land(self):
         # "Clear win-rate differences" lists judged rows, and a land never is: Plains "+43 points" read as
@@ -763,7 +761,7 @@ class PageScriptTests(unittest.TestCase):
         empty = dict(answer, opponents=[dict(o, games=0, rate=None, lead=None, residual=None) for o in answer["opponents"]],
                      average=None, rating=None)
         none, = _run_page([style, draw.format(answer=json.dumps(empty))][1:], ("core.js", *MATCHUP_SCRIPTS, "field.js"))
-        self.assertTrue(none.startswith("No games against the field yet. Play the field to see how this list does "
+        self.assertTrue(none.startswith("No games against the field yet.Play the field to see how this list does "
                                         "against the 2 other Constructed decks of the house."), none)
         self.assertEqual(none.count("Against each deck"), 0)
 

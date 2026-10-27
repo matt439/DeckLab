@@ -307,7 +307,7 @@ async function lookUp(ac, q, more = false) {
   const page = ac.page;
   if (more) { ac.morePending = true; ac.more.setAttribute("aria-disabled", "true"); }
   const typed = () => parseQuery(ac.input.value).q;
-  if (!ac.items.length) listMessage(ac, "Looking up cards…");
+  if (!ac.items.length) listMessage(ac, "Looking up cards…", { kind: "loading" });
   try {
     const answer = await api(findUrl(ac, q));
     if (!editorSearchCurrent(ac) || seq !== ac.seq || typed() !== q || scope !== editorSearchScope(ac)) return;
@@ -352,7 +352,11 @@ async function lookUp(ac, q, more = false) {
       resetSearchMore(ac); ac.page = Math.max(1, page - 1);
       ac.more.textContent = "Retry more"; ac.more.hidden = !(ac.page < ac.pages);
       ac.moreError.textContent = words; ac.moreError.hidden = false;
-    } else { ac.items = []; listMessage(ac, words); }
+    } else {
+      ac.items = [];
+      listMessage(ac, words, { kind: "problem", action: el("button", { type: "button", class: "btn btn-quiet", text: "Try again",
+        onclick: () => { if (editorSearchCurrent(ac)) { schedule(ac, 0); ac.input.focus({ preventScroll: true }); } } }) });
+    }
   }
 }
 
@@ -383,13 +387,19 @@ async function cardsNamed(names) {
   return found.filter(Boolean);
 }
 
-function listMessage(ac, text) {
+/** One line in place of the results: kind "loading" (a small spinner first) or "problem" (crit words), and at
+ * most the one action that helps. The words also go to ac.live, the search's one live region (a line put
+ * into the list isn't read out), and are taken back from it when results come (drawOptions). */
+function listMessage(ac, text, { kind = "", action = null } = {}) {
   if (!editorSearchCurrent(ac, true)) return;
   ac.list.hidden = false;
   ac.rendered = null;
   resetSearchMore(ac);
-  clear(ac.list).append(el("li", { class: "ac-message", role: "presentation", text }));
+  clear(ac.list).append(el("li", { class: "ac-message" + (kind ? ` ac-message-${kind}` : ""), role: "presentation" },
+    kind === "loading" ? el("span", { class: "spinner spinner-small", "aria-hidden": "true" }) : null,
+    el("span", { text }), action));
   ac.more.hidden = true;
+  ac.live.textContent = ac.liveMessage = text;
 }
 
 /** The results; nothing (no empty box) until a name is typed or a filter is set. */
@@ -397,7 +407,7 @@ function showResults(ac) {
   if (!editorSearchCurrent(ac, true)) return;
   if (ac.items.length) { drawOptions(ac); return; }
   if (browsing(ac)) {
-    listMessage(ac, ac.mode === "collection" ? "Looking through your collection…" : "Looking up cards…");
+    listMessage(ac, ac.mode === "collection" ? "Looking through your collection…" : "Looking up cards…", { kind: "loading" });
     schedule(ac, 0);
     return;
   }
@@ -462,9 +472,18 @@ function drawOptions(ac) {
       ? (ac.query ? `None of your free cards have “${ac.query}” in their name with these filters.` : "No free cards with these filters.")
       : !ac.query ? "No cards fit these filters."
         : filterCount(ac) ? `No card names with “${ac.query}” in them fit these filters.`
-          : `No card names have “${ac.query}” in them, and none are spelt close to it.`);
+          : `No card names have “${ac.query}” in them, and none are spelt close to it.`,
+    { action: filterCount(ac) ? el("button", { type: "button", class: "btn btn-quiet", text: "Clear filters", onclick: () => {
+      if (!editorSearchCurrent(ac)) return;
+      ac.colors.clear(); ac.type = ""; ac.mv = "";
+      refilter(ac);
+      ac.input.focus({ preventScroll: true });
+    } }) : null });
     return;
   }
+  // Results came: a waiting or nothing-found line said through ac.live is over (an "added" one stays).
+  if (ac.liveMessage && ac.live.textContent === ac.liveMessage) ac.live.textContent = "";
+  ac.liveMessage = null;
   ac.list.hidden = false;
   ac.resultScope = editorSearchScope(ac);
   const prior = ac.rendered;
@@ -492,7 +511,7 @@ function drawOptions(ac) {
         onclick: (e) => { e.stopPropagation(); if (editorSearchActionCurrent(ac, c, i, e.currentTarget)) openCard(card, e.currentTarget); } },
       el("img", { class: "ac-thumb", src: c.img_small, alt: "", width: 40, height: 56, loading: "lazy", decoding: "async" })),
       card, "editor-results", c.type_line)
-      : el("span", { class: "ac-thumb", "aria-hidden": "true" });
+      : el("span", { class: "ac-thumb thumb-missing", "aria-hidden": "true" });
     const addButton = el("button", { type: "button", class: "ac-add", "aria-label": `Add ${c.name}`, "aria-describedby": `ac-type-${i} ac-side-${i}`,
       onclick: e => {
         if (e.currentTarget.hidden || !editorSearchActionCurrent(ac, c, i, e.currentTarget)) return;
@@ -1008,36 +1027,44 @@ function afterBulkChange(sections) {
 /** A new deck with no cards yet: start from a paste, a precon or another deck. */
 function startFromPart() {
   const ed = editor;
+  const precon = seesInventory(ed.space || HOME_SPACE);
+  // One action that fills it (a pasted list); a precon and another deck are quieter ways to the same start.
   return el("div", { class: "empty edit-start" },
-    el("p", { text: "Start from" }),
+    el("p", { text: precon ? "Add cards with the search, or start from a pasted list, a precon or another deck."
+      : "Add cards with the search, or start from a pasted list or another deck." }),
     el("div", { class: "actions" },
-      el("button", { type: "button", class: "btn", text: "A pasted list", onclick: openPaste }),
-      seesInventory(ed.space || HOME_SPACE) ? el("button", { type: "button", class: "btn", text: "A precon", onclick: openPreconStart }) : null,
-      el("button", { type: "button", class: "btn", text: "Another deck", onclick: openDeckStart })));
+      el("button", { type: "button", class: "btn", text: "Paste a list…", onclick: openPaste }),
+      precon ? el("button", { type: "button", class: "btn btn-quiet", text: "A precon…", onclick: openPreconStart }) : null,
+      el("button", { type: "button", class: "btn btn-quiet", text: "Another deck…", onclick: openDeckStart })));
 }
 
-/** A sheet with a search box and a list of choices drawn by find(text) → Promise<[{label, sub, value}]>. */
-function choiceSheet(title, placeholder, find, onPick) {
+/** A sheet with a search box and a list of choices drawn by find(text) → Promise<[{label, sub, value}]>.
+ * words: what it says while it looks ("Looking for precons…"), what failed ("The precons", for loadFailed),
+ * none (nothing at all) and noMatch(text) (nothing for that search). */
+function choiceSheet(title, placeholder, words, find, onPick) {
   const sheet = openSheet({ title, wide: true });
   const input = el("input", { type: "search", class: "search-input", placeholder, "aria-label": placeholder, autocomplete: "off" });
   const list = el("ul", { class: "choice-list", "aria-live": "polite" });
   let seq = 0, timer = 0;
   const run = async () => {
     const mine = ++seq;
-    clear(list).append(el("li", { class: "sub", text: "Looking…" }));
+    clear(list).append(el("li", {}, loadingBox(words.looking, { small: true })));
+    const q = input.value.trim();
     let items;
     try {
-      items = await find(input.value.trim());
+      items = await find(q);
     } catch (e) {
       if (!(e instanceof ApiError)) throw e;
-      if (mine === seq) clear(list).append(el("li", { class: "form-error", text: e.message }));
+      if (mine === seq && !sheet.closed) clear(list).append(el("li", {}, loadFailed(words.what, e, () => run())));
       return;
     }
     if (mine !== seq || sheet.closed) return;
     clear(list).append(...(items.length ? items.map((item) => el("li", {}, el("button", { type: "button", class: "choice-item",
       onclick: async (e) => { busy(e.currentTarget, "Loading…"); if (await onPick(item.value)) sheet.close(); else unbusy(e.currentTarget); } },
     el("b", { text: item.label }), item.sub ? el("small", { text: item.sub }) : null)))
-      : [el("li", { class: "sub", text: "Nothing matches." })]));
+      : [el("li", {}, q ? emptyBox(words.noMatch(q), el("button", { type: "button", class: "btn btn-quiet", text: "Clear the search",
+        onclick: () => { input.value = ""; clearTimeout(timer); run(); input.focus(); } }))
+        : emptyBox(words.none))]));
   };
   input.addEventListener("input", () => { clearTimeout(timer); timer = setTimeout(run, 250); });
   sheet.body.append(input, list);
@@ -1051,7 +1078,8 @@ function choiceSheet(title, placeholder, find, onPick) {
  * changes nothing) go into the new deck. */
 function openPreconStart() {
   const ed = editor;
-  choiceSheet("Start from a precon", "Search precons, e.g. Goblins", async (q) => {
+  choiceSheet("Start from a precon", "Search precons, e.g. Goblins", { looking: "Looking for precons…", what: "The precons",
+    none: "No precons found.", noMatch: (q) => `No precons have “${q}” in their name.` }, async (q) => {
     const a = await api(`/api/precons${q ? `?q=${encodeURIComponent(q)}` : ""}`);
     return (a.decks || []).map((d) => ({ label: d.name, sub: [d.set_name || d.code.toUpperCase(), d.type, d.released].filter(Boolean).join(" · "),
       value: d }));
@@ -1077,7 +1105,8 @@ function openPreconStart() {
 /** "Another deck": any deck in the library; its planned list goes into the new deck (it stays as it is). */
 function openDeckStart() {
   const ed = editor;
-  choiceSheet("Start from another deck", "Search decks", async (q) => {
+  choiceSheet("Start from another deck", "Search decks", { looking: "Looking for decks…", what: "The decks",
+    none: "No decks yet.", noMatch: (q) => `No decks have “${q}” in their title.` }, async (q) => {
     if (!state.library) state.library = await api("/api/decks");
     const words = q.toLowerCase().split(/\s+/).filter(Boolean);
     return state.library.decks.filter((d) => words.every((w) => d.title.toLowerCase().includes(w)))

@@ -21,7 +21,18 @@
   border-radius: var(--r-sm); overflow: hidden; background: var(--surface-2); color: var(--ink-2);
 }
 .tok-thumb img { display: block; width: 100%; height: 100%; object-fit: contain; }
-.tok-thumb-fallback { font-weight: var(--fw-bold); font-size: var(--fs-md); }
+/* No art (4.10): a disc with an --ink-3 ring and the P/T inside, or a target glyph when the P/T isn't known. */
+.tok-thumb-fallback {
+  display: inline-flex; align-items: center; justify-content: center; position: relative;
+  width: 76%; aspect-ratio: 1; border-radius: 50%;
+  background: var(--surface); box-shadow: inset 0 0 0 1px var(--ink-3); color: var(--ink);
+  font-weight: var(--fw-bold); font-size: var(--fs-sm); font-variant-numeric: tabular-nums;
+}
+.tok-thumb-target::after {
+  content: ""; width: 56%; aspect-ratio: 1; background: var(--ink-4);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Ccircle cx='10' cy='10' r='8.5' fill='none' stroke='%23000' stroke-width='1.5'/%3E%3Ccircle cx='10' cy='10' r='4.5' fill='none' stroke='%23000' stroke-width='1.5'/%3E%3Ccircle cx='10' cy='10' r='1.5'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Ccircle cx='10' cy='10' r='8.5' fill='none' stroke='%23000' stroke-width='1.5'/%3E%3Ccircle cx='10' cy='10' r='4.5' fill='none' stroke='%23000' stroke-width='1.5'/%3E%3Ccircle cx='10' cy='10' r='1.5'/%3E%3C/svg%3E") center / contain no-repeat;
+}
 
 /* The token tiles: three a row on a phone (cards-ui.css), wider steps elsewhere. */
 .tok-grid { margin-top: var(--s-3); }
@@ -67,7 +78,9 @@
 .tok-sheet-top { display: flex; flex-wrap: wrap; gap: var(--s-4); align-items: flex-start; }
 .tok-sheet-pics { display: flex; flex-direction: column; gap: var(--s-1); }
 .tok-sheet-zoom { display: flex; gap: var(--s-2); padding: 0; border: 0; background: none; cursor: zoom-in; }
-.tok-sheet-zoom img { width: 100px; height: auto; border-radius: var(--r-card); box-shadow: var(--shadow-img); object-fit: contain; }
+/* While they load they hold the card's shape on the art placeholder colour; one that fails is hidden (tokens.js). */
+.tok-sheet-zoom img { width: 100px; height: auto; aspect-ratio: 488 / 680; border-radius: var(--r-card); box-shadow: var(--shadow-img);
+  object-fit: contain; background: var(--surface-3); }
 .tok-sheet-uses { flex: 1 1 220px; min-width: 0; }
 .tok-sheet-uses h3 { font-size: var(--fs-md); margin: 0 0 var(--s-1); }
 .tok-sheet-uses ul { margin: 0; padding-left: var(--s-4); font-size: var(--fs-sm); }

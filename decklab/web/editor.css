@@ -406,7 +406,11 @@ button.edit-card:hover { background: var(--hover); }
 .ac-side { display: flex; flex-direction: column; align-items: flex-end; gap: var(--s-1); text-align: right; }
 .ac-price { font-size: var(--fs-sm); font-weight: var(--fw-semibold); font-variant-numeric: tabular-nums; }
 .ac-added { color: var(--good-ink); font-size: var(--fs-sm); font-weight: var(--fw-bold); white-space: nowrap; }
-.ac-message { padding: var(--s-3); color: var(--ink-2); font-size: var(--fs-sm); }
+.ac-message { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-1) var(--s-2);
+  padding: var(--s-3); color: var(--ink-2); font-size: var(--fs-sm); }
+.ac-message-problem { color: var(--crit-ink); }
+/* A result with no picture: the card-shaped --track frame of 4.10, with .thumb-missing's card glyph. */
+.ac-thumb.thumb-missing { justify-self: center; background: var(--track); }
 .ac-guess { padding-bottom: var(--s-1); }
 .ac-option + .ac-guess { margin-top: var(--s-1); padding-top: var(--s-3); border-top: 1px solid var(--border-strong); }
 .ac-more { justify-self: center; }

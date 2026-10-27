@@ -106,7 +106,7 @@ class ShoppingCheckTargetsUiTests(unittest.TestCase):
             add:['Inspect the exact printing'],target:{row:2,payload_sha256:payloadHash}}]);
           const proof=sheet.body.querySelector('.shop-order-check-target');assert(proof);assert(proof.textContent.includes('Row 2: 1 x Fixture Card'));
           assert(proof.textContent.includes('TST 9'));assert(proof.textContent.includes('foil'));assert(proof.textContent.includes('Inspect the exact printing'));
-          assert(proof.textContent.includes('whole delivery part'));action(sheet,'Save change').click();action(sheet,'Save change').click();await settle();
+          assert(proof.textContent.includes('whole delivery part'));action(sheet,'Save change').click();action(sheet,'Saving…').click();await settle();
           same(writes[1],['/api/shopping/order/change/apply',{preview:'signed-change'}]);assert.equal(writes.length,2);assert.equal(refreshes,1);
           assert.equal(writes[0][1].target.row_sha256,undefined);assert.equal(writes[0][1].target.name,undefined);
         ''')
