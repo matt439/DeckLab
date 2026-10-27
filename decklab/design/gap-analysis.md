@@ -6,7 +6,7 @@ Story ids (such as E7-S09) are those in [stories.md](stories.md). Each story the
 
 ## Headline
 
-Deck Lab already does most of what Matt and User1 need. Of the must and should stories, Matt has 96 built and 3 partial; User1 has 32 built, 1 partial and 1 missing; Claude Code has 15 built, User5 4, the space members 4 and the Commander table 1, with no gaps. Across all 229 stories there are 170 built, 17 partial, 28 missing and 14 not wanted (recounted from the story headers on 2026-10-26). E9-S18 is now counted as not wanted.
+Deck Lab already does most of what Matt and User1 need. Of the must and should stories, Matt has 96 built and 3 partial; User1 has 32 built, 1 partial and 1 missing; Claude Code has 15 built, User5 4, the space members 4 and the Commander table 1, with no gaps. Across all 229 stories there are 171 built, 16 partial, 28 missing and 14 not wanted (recounted from the story headers on 2026-10-26). E9-S18 is now counted as not wanted.
 
 Matt's answers moved the work towards three things:
 
@@ -202,7 +202,7 @@ Dropped from the roadmap by the decisions: the expected arrival date (E6-S23), k
 
 The bounded reserve of 2026-10-18 (Stats disclosure dates E3-S01, linked CLI receipt previews E11-S20 and non-writing previews E11-S25) is built, and so is member departure. The 2026-10-26 audit confirms that the current queue has substantial coding work: continue E11-S30, then the self-hosting, token and kit stories already admitted by NOW. Their [story owners](stories.md) specify the first slices; [TODO.md](../../TODO.md) separates ready work from decisions, dates, deferred items and costly runs. No additional stories are needed to keep the queue supplied. E11-S12 (legacy error wording) and E11-S21 (command-line privacy labels) remain could, outside the active queue unless a concrete need picks them.
 
-E7-S21 now has box review, Library date filters, guarded Collection review and an intended-list Editor offer. A named observation can accompany an explicitly chosen existing Planned/Play-now list after fresh source/permission checks and ordinary current/alias draft restoration or rebase. The note applies no quantities, printing, version or other edits, and source changes retire its context. Collection corrections still require an explicit printing and total owned count as a separate audited change. Date filtering infers no age policy, and the historical date certifies no observations or physical facts. Physical-list repair, member/product expansion and physical-device/household acceptance remain. It stays open as partial work, with counts unchanged.
+E7-S21 is built (2026-10-27): box review, Library date filters, guarded Collection review, an intended-list Editor offer and Correct the recorded box, which previews and then saves the observed physical build and the check date as one change, keeping the lists, collection, kit and packed token cards as written. Member/product box checks and physical-device/household acceptance remain outside it.
 
 E4-S13 is built: the pair matchup page places the visible human record beside Forge's verdict for the same deck identities and historical cards actually played. The below-10 warning, separate denominators and failure states keep a small or unavailable record from appearing to validate the simulation. This does not change field ratings.
 
