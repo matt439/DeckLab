@@ -6,6 +6,7 @@ import tempfile
 from pathlib import Path
 from unittest import mock
 
+from decklab.db import conn as db
 from decklab.lib import access, accessories, cards, config, inventory
 from decklab.lib.api import accessory_undo as api
 from decklab.lib.inventory import Op, accessory_undo as undo, pg, rules
@@ -151,13 +152,15 @@ class AccessoryUndoPgTests(db_support.DbTestCase):
             kind = "fixture.photo-text"
             def run(inner, snapshot):
                 after, _ = Op("image.put", {"name": "a-sleeves.jpg", "content": jpeg()}).run(snapshot)
-                return Op("accessory.edit", {"id": "a-sleeves", "row": {"notes": "New photo and text"},
+                return Op("accessory.edit", {"id": "a-sleeves", "row": {"notes": "New photo and text",
+                    "image_source": "https://example.com/current-photo"},
                     "sha256": accessories.view_sha256(current, fixture.OWNERS), "owners": fixture.OWNERS, "image": "keep"}).run(after)
         inventory.apply(PhotoText(), ACTOR, "Same-file disposable picture and text")
         cid = self.sql("select max(id) from audit.change_set")[0][0]
         self.assertEqual(len(self.backend.undo_audit(cid)), 1)
         photos = self.sql("select file_name,sha256,content from accessory_image order by file_name")
-        self.apply(cid)
+        receipt = self.apply(cid)
+        self.assertEqual(receipt["restored"]["image_source"], fixture.row()["image_source"])
         self.assertEqual(self.sql("select file_name,sha256,content from accessory_image order by file_name"), photos)
 
     def test_preview_and_apply_use_one_locked_connection_and_preview_writes_no_audit(self):
@@ -240,3 +243,67 @@ class AccessoryUndoPgTests(db_support.DbTestCase):
                          preview["current"])
         self.assertEqual(next(row for row in undo.raw_rows(actual) if row["id"] == "c-hidden")["notes"],
                          "Other backend's committed private metadata")
+
+    def test_each_recorded_url_blank_boundary_and_mixed_text_restore_without_fetch(self):
+        cases = [({"link": "https://example.com/" + "p" * (500 - len("https://example.com/"))}, {"link": ""}),
+                 ({"image_source": "https://example.com/" + "s" * (2000 - len("https://example.com/"))}, {"image_source": ""}),
+                 ({"link": "", "image_source": ""}, {"link": "https://example.com/new", "image_source": "http://example.com/new"}),
+                 ({"link": "https://example.com/旧記録?q=é", "image_source": "https://example.com/旧画像", "notes": "Original URL facts"},
+                  {"link": "https://example.com/current", "image_source": "https://example.com/current-image", "notes": "Edited URL facts"})]
+        for historical, edited in cases:
+            with self.subTest(fields=historical):
+                self.edit(historical)
+                self.edit(edited)
+                cid = self.sql("select max(id) from audit.change_set")[0][0]
+                source, before = self.backend.undo_audit(cid), self.persisted()
+                photos = self.sql("select file_name,content,sha256 from accessory_image order by file_name")
+                with mock.patch("urllib.request.urlopen", side_effect=AssertionError("No URL fetch")), \
+                        mock.patch.object(inventory, "image", side_effect=AssertionError("No image bytes")):
+                    preview, receipt = api.accessory_undo_view(cid), self.apply(cid)
+                for field, value in historical.items():
+                    self.assertEqual(receipt["restored"][field], value)
+                self.assertEqual(receipt["restored"], preview["restored"])
+                self.assertEqual(self.backend.undo_audit(cid), source)
+                self.assertEqual(self.sql("select file_name,content,sha256 from accessory_image order by file_name"), photos)
+                after = self.persisted()
+                for table in TABLES:
+                    if table not in ("accessory", "decks_revision", "audit.change_set", "audit.row_change"):
+                        self.assertEqual(after[table], before[table], table)
+
+    def test_actual_invalid_historical_urls_refuse_before_any_inverse_or_normalization(self):
+        # Deliberately imperfect historical TEXT rows in this disposable fixture only.
+        # The production inverse never issues SQL to restore or normalize these facts.
+        for field, limit in (("link", 500), ("image_source", 2000)):
+            for invalid in ("javascript:alert(1)", "ftp://example.com/item", " https://example.com/space ",
+                            "https://example.com/" + "x" * limit):
+                with self.subTest(field=field, invalid=invalid[:30]):
+                    for value in (invalid, "https://example.com/current"):
+                        with self.connect() as connection, db.change(ACTOR.id, ACTOR.source, "Imperfect disposable URL history",
+                                                                    conn=connection, via=ACTOR.via) as (cur, cid):
+                            pg._take_lock(cur)
+                            cur.execute(f"update accessory set {field}=%s where id='a-sleeves'", (value,))
+                            cur.execute("update decks_revision set revision=revision+1")
+                    self.assertEqual(self.backend.undo_audit(cid)[0]["before"][field], invalid)
+                    before = self.persisted()
+                    self.assertIs(api.accessory_undo_view(cid)["available"], False)
+                    with self.assertRaises(api.ApiError) as refused:
+                        self.apply(cid, {"expect": "bad"})
+                    self.assertEqual(refused.exception.status, 400)
+                    self.assertEqual(self.persisted(), before)
+
+    def test_wrong_actual_restored_url_rolls_back_row_and_entire_audit(self):
+        self.edit({"link": "https://example.com/changed-link", "image_source": "https://example.com/changed-source"})
+        cid = self.sql("select max(id) from audit.change_set")[0][0]
+        preview, before = api.accessory_undo_view(cid), self.persisted()
+        original = undo.verify_saved
+        for field in ("link", "image_source"):
+            def wrong(old, after, plan, actual):
+                actual = copy.deepcopy(actual)
+                actual[0]["after"][field] = "https://example.com/unreviewed"
+                return original(old, after, plan, actual)
+            with self.subTest(field=field), mock.patch.object(undo, "verify_saved", side_effect=wrong), \
+                    self.assertRaises(api.ApiError) as refused:
+                self.apply(cid, preview)
+            self.assertEqual(refused.exception.status, 409)
+            self.assertEqual(self.persisted(), before)
+        self.apply(cid, preview)

@@ -1,4 +1,4 @@
-"""Review an accessory text-row inverse, preserving current photographs and kit."""
+"""Review recorded accessory text/links while retaining current photographs and kit."""
 import re
 
 from decklab.lib import accessories, inventory
@@ -9,7 +9,7 @@ from .common import ApiError, DATABASE_DOWN, _keys, _parse_body
 from .settings import _web_actor, _writer
 
 NO_CHANGE = "No undoable accessory change at that ID."
-UNSUPPORTED = "Undo restores one accessory's brand, name, colour or notes. Current photographs and kit are kept."
+UNSUPPORTED = "Undo restores recorded accessory text and links. The current photo and kit are kept; an old source link may describe another photo."
 CHANGED = "The accessories changed. Reload Activity and review this Undo again."
 UNCONFIRMED = "The accessory Undo result could not be confirmed. Reload Activity before trying again."
 REVISION = re.compile(r"[1-9][0-9]{0,18}")
@@ -98,7 +98,7 @@ def apply_accessory_undo(body):
     _keys(data, ("profile", "id", "expect"))
     change_id = _id(data["id"])
     result = _call("accessory_undo_apply", change_id, owners, data["expect"], _web_actor(writer),
-                   f"Undo accessory text change {change_id}")
+                   f"Undo accessory recorded text and links change {change_id}")
     if not isinstance(result, dict):
         raise ApiError(503, UNCONFIRMED)
     raw_plan = result.get("review")
@@ -113,4 +113,4 @@ def apply_accessory_undo(body):
         raise ApiError(503, UNCONFIRMED)
     return {"saved": True, "source_id": change_id, "expect": plan["expect"], "kind": "accessory",
             "action": "accessory_update", "restored": actual, "sha256": result["sha256"],
-            "revision": result["revision"], "summary": f"Undo change #{change_id}: restore accessory text"}
+            "revision": result["revision"], "summary": f"Undo change #{change_id}: restore recorded accessory text and links"}

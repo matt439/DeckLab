@@ -8,7 +8,7 @@ CHANGE_ID = 17
 ROW_ID = 101
 NEW_ROW_ID = 110
 OWNERS = frozenset({"matt", "shared"})
-FIELDS = ("brand", "name", "colour", "notes")
+FIELDS = ("brand", "name", "colour", "notes", "link", "image_source")
 META = ("id", "kind", "owner", *FIELDS)
 
 
@@ -56,7 +56,9 @@ class AuditAccessoryInventory:
     def seed(self, owner="matt"):
         current = row(owner=owner)
         restored = {**current, "brand": "Original brand", "name": "Original sleeves",
-                    "colour": "blue", "notes": "Original fixture note"}
+                    "colour": "blue", "notes": "Original fixture note",
+                    "link": "http://example.com/original-product?fixture=1",
+                    "image_source": "https://example.com/original-image.jpg#fixture"}
         rows = [current if found.accessory_id == current["id"] else found.as_dict() for found in self._initial.accessories.rows]
         if not any(found["id"] == current["id"] for found in rows):
             rows.append(current)

@@ -3,7 +3,7 @@ import copy
 import unittest
 from unittest import mock
 
-from decklab.lib import accessories, inventory, profiles
+from decklab.lib import accessories, accessory_fetch, inventory, profiles
 from decklab.lib.inventory import accessory_undo as undo, changes, paths
 from decklab.tests import accessory_undo_support as fixture, household_config
 
@@ -26,12 +26,13 @@ class AccessoryUndoTests(unittest.TestCase):
         return undo.verify_saved(self.store.snapshot, after, plan,
                                  fixture.actual_source(plan) if rows is None else rows)
 
-    def test_exact_review_projects_only_seven_metadata_fields_and_preserves_inputs(self):
+    def test_exact_review_projects_only_nine_metadata_fields_and_preserves_inputs(self):
         before, audit = self.store.snapshot, copy.deepcopy(self.store.audit)
         plan, after = self.review()
         self.assertEqual((plan["kind"], plan["action"], plan["label"]), ("accessory", "accessory_update", "Current sleeves"))
         self.assertEqual(plan["current"], fixture.meta(self.source()["after"]))
         self.assertEqual(plan["restored"], fixture.meta(self.source()["before"]))
+        self.assertEqual(set(plan["current"]), {"id", "kind", "owner", "brand", "name", "colour", "notes", "link", "image_source"})
         self.assertEqual(plan["fields"], [{"field": field, "before": self.source()["after"][field],
                                           "after": self.source()["before"][field]} for field in fixture.FIELDS])
         self.assertEqual((plan["owners"], plan["row_change_id"]), (["matt", "shared"], fixture.ROW_ID))
@@ -40,9 +41,11 @@ class AccessoryUndoTests(unittest.TestCase):
         self.assertEqual(self.store.audit, audit)
         self.assertNotEqual(after.accessories, before.accessories)
 
-    def test_each_allowed_text_field_and_empty_brand_colour_notes_restore_exactly(self):
+    def test_each_allowed_text_field_and_permitted_blanks_restore_exactly(self):
         for field in fixture.FIELDS:
-            for old in (("Original name",) if field == "name" else ("Original " + field, "")):
+            values = ("Original name",) if field == "name" else (
+                ("https://example.com/original-" + field, "") if field in ("link", "image_source") else ("Original " + field, ""))
+            for old in values:
                 self.store.seed()
                 self.source()["before"] = copy.deepcopy(self.source()["after"])
                 self.source()["before"][field] = old
@@ -118,9 +121,8 @@ class AccessoryUndoTests(unittest.TestCase):
             with self.subTest(changed=changed), self.assertRaises(undo.UndoUnsupported):
                 undo.raw_row(fixture.row(**changed))
 
-    def test_quantity_capacity_kind_owner_links_image_and_crop_changes_are_not_text_undo(self):
+    def test_quantity_capacity_kind_owner_image_and_crop_changes_are_not_text_undo(self):
         cases = ({"quantity": "101"}, {"kind": "playmat"}, {"owner": "shared"},
-                 {"link": "https://example.com/old-product"}, {"image_source": "https://example.com/old-image"},
                  {"image": "", "crop": ""}, {"crop": "0,0,1,1"})
         for changed in cases:
             self.store.seed()
@@ -132,6 +134,62 @@ class AccessoryUndoTests(unittest.TestCase):
         self.source()["after"].update(kind="deck_box", quantity="1", capacity="100")
         with self.assertRaises(undo.UndoUnsupported):
             self.review()
+
+    def test_url_fields_restore_individually_as_blank_http_or_https_preferences(self):
+        pairs = (("", "https://example.com/current"), ("http://example.com/original", ""),
+                 ("https://example.com/unknown/path?q=fixture%2Fvalue&v=2#image", "HTTP://example.com/current"))
+        for field in ("link", "image_source"):
+            limit = accessories.MAX_LINK if field == "link" else accessories.MAX_SOURCE
+            prefix = "https://example.com/"
+            for old, current in (*pairs, (prefix + "a" * (limit - len(prefix)), "")):
+                self.store.seed()
+                self.source()["before"] = copy.deepcopy(self.source()["after"])
+                self.source()["before"][field], self.source()["after"][field] = old, current
+                rows = [row.as_dict() for row in self.store.snapshot.accessories.rows]
+                rows[0][field] = current
+                self.store.snapshot = self.store.snapshot.with_accessories(rows)
+                inputs = copy.deepcopy(self.store.audit), self.store.snapshot
+                with self.subTest(field=field, old=old, current=current):
+                    plan, after = self.review()
+                    self.assertEqual(plan["fields"], [{"field": field, "before": current, "after": old}])
+                    self.assertEqual(self.saved(plan, after)["restored"][field], old)
+                    self.assertEqual(next(row for row in undo.raw_rows(after) if row["id"] == "a-sleeves"), self.source()["before"])
+                    self.assertEqual((self.store.audit, self.store.snapshot), inputs)
+
+    def test_historical_and_current_url_errors_or_normalization_never_restore_silently(self):
+        for field, limit in (("link", accessories.MAX_LINK), ("image_source", accessories.MAX_SOURCE)):
+            invalid = (None, 1, "ftp://example.com/image", "javascript:alert(1)", "https://example.com/two words",
+                       " https://example.com/padded ", "https://example.com/line\nbreak", "https://example.com/tab\tbreak",
+                       "https://example.com/nul\0byte", "https://example.com/" + "a" * limit)
+            for side in ("before", "after"):
+                for value in invalid:
+                    self.store.seed()
+                    self.source()[side][field] = value
+                    if side == "after":
+                        rows = [row.as_dict() for row in self.store.snapshot.accessories.rows]
+                        rows[0][field] = value
+                        self.store.snapshot = self.store.snapshot.with_accessories(rows)
+                    with self.subTest(field=field, side=side, value=value), self.assertRaises(undo.UndoUnsupported):
+                        self.review()
+
+    def test_mixed_url_inverse_keeps_current_photos_crop_and_provenance_without_fetching(self):
+        self.source()["before"] = copy.deepcopy(self.source()["after"])
+        self.source()["before"].update(link="http://example.com/unknown-product?fixture=1",
+                                        image_source="https://example.com/unknown-image?fixture=2#literal")
+        before = self.store.snapshot
+        with mock.patch.object(accessory_fetch, "fetch", side_effect=AssertionError("No URL fetch or enrichment")), \
+                mock.patch.object(accessory_fetch, "_download", side_effect=AssertionError("No download")), \
+                mock.patch.object(accessory_fetch, "staged_file", side_effect=AssertionError("No staging read")):
+            plan, after = self.review()
+            result = self.saved(plan, after)
+        self.assertEqual([field["field"] for field in plan["fields"]], ["link", "image_source"])
+        self.assertEqual(result["restored"], fixture.meta(self.source()["before"]))
+        self.assertEqual(after.accessory_images, before.accessory_images)
+        target = next(row for row in undo.raw_rows(after) if row["id"] == "a-sleeves")
+        for field in ("image", "crop", "quantity", "capacity"):
+            self.assertEqual(target[field], self.source()["after"][field])
+        self.assertEqual(after.replace(accessories=before.accessories, revision=before.revision,
+                                       decks_revision=before.decks_revision), before)
 
     def test_current_full_row_and_latest_target_refuse_missing_edits_and_same_value_aba(self):
         for mode in ("missing", "notes", "link", "quantity", "latest", "float-latest", "missing-latest"):

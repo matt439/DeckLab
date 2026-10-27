@@ -5,9 +5,9 @@ const ACTIVITY_UNDO_FIELDS = {
   collection: ["name", "set", "collector_number", "finish", "quantity", "condition", "language", "notes"],
   tokens: ["front", "back", "set", "front_collector_number", "back_collector_number", "finish", "quantity", "front_details", "back_details", "notes"],
   wishlist: ["name", "set", "number", "notes", "source"],
-  accessory: ["id", "kind", "owner", "brand", "name", "colour", "notes"],
+  accessory: ["id", "kind", "owner", "brand", "name", "colour", "notes", "link", "image_source"],
 };
-const ACTIVITY_UNDO_EDITABLE = { collection: ["quantity", "condition", "language", "notes"], tokens: ["quantity", "notes"], wishlist: ["set", "number", "notes", "source"], accessory: ["brand", "name", "colour", "notes"] };
+const ACTIVITY_UNDO_EDITABLE = { collection: ["quantity", "condition", "language", "notes"], tokens: ["quantity", "notes"], wishlist: ["set", "number", "notes", "source"], accessory: ["brand", "name", "colour", "notes", "link", "image_source"] };
 
 function activityUndoRow(row, kind) {
   if (!["collection", "tokens", "wishlist", "accessory"].includes(kind)) return false;
@@ -85,10 +85,17 @@ function activityUndoWishlistEvidence(data, profile) {
       && item.before === data.current[item.field] && item.after === data.restored[item.field]);
 }
 
+function activityUndoAccessoryUrl(value, limit) {
+  // Match the ordinary Python URL form/whitespace and codepoint limit, without URL normalization.
+  return typeof value === "string" && [...value].length <= limit && !/[\u0000\ud800-\udfff]/u.test(value)
+    && (value === "" || /^https?:\/\/[^\u0009-\u000d\u001c-\u0020\u0085\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]+$/iu.test(value));
+}
+
 function activityUndoAccessoryEvidence(data, space, profile) {
   if (data.action !== "accessory_update" || space !== "home" || typeof profile !== "string" || !profile
       || Object.keys(data).sort().join(",") !== "action,available,current,expect,fields,id,kind,label,restored"
       || !activityUndoRow(data.current, "accessory") || !activityUndoRow(data.restored, "accessory")
+      || [data.current, data.restored].some(row => !activityUndoAccessoryUrl(row.link, 500) || !activityUndoAccessoryUrl(row.image_source, 2000))
       || !data.current.id.trim() || !["sleeves", "deck_box", "playmat"].includes(data.current.kind)
       || ![profile, "shared"].includes(data.current.owner) || data.label !== data.current.name
       || ["id", "kind", "owner"].some(field => data.current[field] !== data.restored[field])) return false;
@@ -271,7 +278,7 @@ function activityUndoShow(ctx) {
   const batchAdding = preview.action === "batch_add", adding = batchAdding || preview.action === "add";
   const wishlistPresence = preview.kind === "wishlist" && ["wishlist_add", "wishlist_remove"].includes(preview.action);
   const stock = preview.action === "batch_update", batch = stock || preview.action === "batch_metadata";
-  const words = { quantity: "Quantity", condition: "Condition", language: "Language", notes: "Notes", source: "Source", set: "Set", number: "Collector number", brand: "Brand", name: "Name", colour: "Colour" };
+  const words = { quantity: "Quantity", condition: "Condition", language: "Language", notes: "Notes", source: "Source", set: "Set", number: "Collector number", brand: "Brand", name: "Name", colour: "Colour", link: "Product link", image_source: "Recorded image source" };
   const identity = preview.kind === "wishlist" ? ["name", ...["set", "number"].filter(field => !preview.fields?.some(item => item.field === field))]
     : ACTIVITY_UNDO_FIELDS[preview.kind].filter(field => !ACTIVITY_UNDO_EDITABLE[preview.kind].includes(field));
   const text = value => value === "" ? "Not recorded" : String(value);
@@ -358,11 +365,11 @@ function activityUndoShow(ctx) {
   } else {
     const panels = [["Current", "before"], ["Restored by Undo", "after"]].map(([title, key]) => el("section", { class: "panel" },
       el("h3", { text: title }), preview.fields.map(field => el("p", {}, el("b", { text: words[field.field] + ": " }),
-        el("span", { class: ["notes", "source"].includes(field.field) ? "activity-undo-note" : null, text: text(field[key]) })))));
+        el("span", { class: ["notes", "source", "link", "image_source"].includes(field.field) ? "activity-undo-note" : null, text: text(field[key]) })))));
     const identityText = field => preview.kind === "accessory" && field === "kind" ? { sleeves: "Sleeves", deck_box: "Deck box", playmat: "Playmat" }[preview.current.kind]
       : preview.kind === "accessory" && field === "owner" ? preview.current.owner === "shared" ? "Shared" : state.profile?.name || preview.current.owner : text(preview.current[field]);
     sheet.body.append(el("p", { class: "sub", text: preview.kind === "accessory"
-      ? "Review the accessory text details this Undo will restore. Saving creates one new audited change and retains the current photo and kit; the original change stays in Activity."
+      ? "Review the accessory text and recorded links this Undo will restore. Saving creates one new audited change and retains the current photo and kit; the original change stays in Activity. A restored image-source URL is not checked against the current photo."
       : "Review the current row and the values this Undo will restore. Saving creates one new audited change; the original change stays in Activity." }),
       el("dl", {}, identity.flatMap(field => [el("dt", { text: field === "number" ? "collector number" : field.replaceAll("_", " ") }), el("dd", { text: identityText(field) })])),
       el("div", { class: "panels" }, panels));

@@ -10,7 +10,7 @@ class AccessoryUndoUiTests(unittest.TestCase):
     def run_js(self, scenario):
         updates.ActivityUndoUiTests.run_js(self, r'''
           const accRow=extra=>({id:'fixture-box',kind:'deck_box',owner:state.profiles[0].id,brand:'Current brand',
-            name:'Current fixture box',colour:'Blue',notes:'Current fixture note',...extra});
+            name:'Current fixture box',colour:'Blue',notes:'Current fixture note',link:'https://example.com/current-product',image_source:'https://example.com/current-image',...extra});
           const accPreview=(extra={})=>{const current=accRow(),restored=accRow({brand:'Original brand',name:'Original fixture box',colour:'',notes:'Historical <img src=x onerror=alert(1)>'});
             return{available:true,id:42,expect:'a'.repeat(64),kind:'accessory',action:'accessory_update',label:current.name,current,restored,
               fields:['brand','name','colour','notes'].map(field=>({field,before:current[field],after:restored[field]})),...extra};};
@@ -45,7 +45,7 @@ class AccessoryUndoUiTests(unittest.TestCase):
           assert.equal(activityUndoEvidence(accPreview(),42,'user2',state.profiles[0].id),null);assert.equal(activityUndoEvidence(accPreview(),42,'home',null),null);
         ''')
 
-    def test_exact_meta7_shapes_ids_kinds_owners_and_changed_fields_are_required(self):
+    def test_exact_meta9_shapes_ids_kinds_owners_and_changed_fields_are_required(self):
         self.run_js(r'''
           const p=accPreview(),bad=[{space:'home'},{profile:state.profiles[0].id},{action:'update'},{action:'wishlist_update'},{kind:'sleeves'},
             {current:{...p.current,quantity:'1'}},{restored:{...p.restored,image:'private.png'}},{restored:{...p.restored,id:'another-box'}},
@@ -61,6 +61,49 @@ class AccessoryUndoUiTests(unittest.TestCase):
         self.run_js(r'''
           for(const field of ['brand','name','colour','notes']){const p=accPreview();for(const other of ['brand','name','colour','notes'])if(other!==field)p.restored[other]=p.current[other];
             p.fields=p.fields.filter(item=>item.field===field);const {sheet}=await openAcc(p);assert(save(sheet));assert(sheet.body.textContent.includes('fixture-box'));
+          }
+        ''')
+
+    def test_recorded_links_restore_as_literal_wrapping_text_with_photo_provenance_warning(self):
+        self.run_js(r'''
+          const p=accPreview();p.restored.link='HTTPS://example.com/old-product?<literal>';
+          p.restored.image_source='https://example.com/'+ 'x'.repeat(1800)+'/<img-src=x>';
+          for(const field of ['link','image_source'])p.fields.push({field,before:p.current[field],after:p.restored[field]});
+          const {sheet}=await openAcc(p),text=sheet.body.textContent;
+          for(const word of ['Product link:','Recorded image source:',p.current.link,p.restored.link,p.current.image_source,p.restored.image_source,
+            'A restored image-source URL is not checked against the current photo.'])assert(text.includes(word),word);
+          assert.equal(sheet.body.querySelectorAll('.activity-undo-note').length,6);
+          assert.equal(sheet.body.querySelector('a,img,input,textarea,select'),null);assert(save(sheet));
+        ''')
+
+    def test_each_recorded_url_can_restore_or_clear_without_other_metadata_changes(self):
+        self.run_js(r'''
+          for(const field of ['link','image_source'])for(const value of ['', 'HTTPS://example.com/old/'+field]){
+            const p=accPreview();p.restored={...p.current,[field]:value};p.fields=[{field,before:p.current[field],after:value}];
+            const {sheet}=await openAcc(p);assert(save(sheet));assert(sheet.body.textContent.includes(value||'Not recorded'));
+            assert.equal(sheet.body.querySelector('a,img'),null);assert(activityUndoReceipt(accSaved(p),p));
+          }
+        ''')
+
+    def test_url_forms_match_ordinary_lengths_and_unicode_without_normalizing_hostnames(self):
+        self.run_js(r'''
+          for(const field of ['link','image_source']){
+            const limit=field==='link'?500:2000;
+            const valid=['','HTTP://EXAMPLE.COM/A#Fragment','http\u017f://example.com/old','https://x/<literal>','https://x/\ufeffinside',
+              'https://x/'+'😀'.repeat(limit-10)];
+            const bad=['javascript:alert(1)','data:image/png;base64,x','https://',' https://example.com','https://example.com ',
+              'https://x/\n','https://x/\u001c','https://x/\u0085','https://x/\0','https://x/\ud800','https://x/'+'x'.repeat(limit-9)];
+            for(const value of valid){const p=accPreview();p.restored={...p.current,[field]:value};p.fields=[{field,before:p.current[field],after:value}];assert(activityUndoEvidence(p,42,'home',state.profiles[0].id),field+':'+value);[p.current,p.restored]=[p.restored,p.current];p.fields=p.fields.map(item=>({...item,before:item.after,after:item.before}));assert(activityUndoEvidence(p,42,'home',state.profiles[0].id),field+':current:'+value);}
+            for(const side of ['current','restored'])for(const value of bad){const p=accPreview();p[side][field]=value;assert.equal(activityUndoEvidence(p,42,'home',state.profiles[0].id),null,field+':'+value);}
+          }
+        ''')
+
+    def test_recorded_link_receipt_and_late_changes_cannot_confirm_or_authorize_a_save(self):
+        self.run_js(r'''
+          for(const field of ['link','image_source']){
+            const p=accPreview();p.restored={...p.current,[field]:'https://example.com/historical'};p.fields=[{field,before:p.current[field],after:p.restored[field]}];
+            assert.equal(activityUndoReceipt(accSaved(p,{restored:{...p.restored,[field]:'https://example.com/wrong'}}),p),false);
+            const {sheet}=await openAcc(p);const old=save(sheet);let writes=0;apiWrite=async()=>{writes++;return accSaved(p);};p.restored[field]+='/later';p.fields[0].after=p.restored[field];old.fire('click');await settle();assert.equal(writes,0);
           }
         ''')
 

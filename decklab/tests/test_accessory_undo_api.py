@@ -8,7 +8,7 @@ import json
 import unittest
 from unittest import mock
 
-from decklab.lib import access, cards, feature_routes, inventory
+from decklab.lib import access, accessories, accessory_fetch, cards, feature_routes, inventory
 from decklab.lib.api import accessory_undo, activity_undo, guard
 from decklab.lib.api.common import ApiError, DATABASE_DOWN
 from decklab.lib.inventory import accessory_undo as kernel
@@ -100,7 +100,7 @@ class AccessoryUndoApiTests(ApiTestCase):
         self.assertEqual(caught.exception.status, status, caught.exception.message)
         return caught.exception
 
-    def test_preview_has_exact_seven_plain_fields_without_images_cards_or_global_counters(self):
+    def test_preview_has_exact_nine_plain_fields_without_images_cards_or_global_counters(self):
         current, restored = self.seed()
         before = copy.deepcopy(self.store.audit)
         with mock.patch.object(inventory, "image", side_effect=AssertionError("No image read")), \
@@ -110,8 +110,9 @@ class AccessoryUndoApiTests(ApiTestCase):
         self.assertEqual((result["kind"], result["action"], result["label"]), ("accessory", "accessory_update", current["name"]))
         self.assertEqual(result["current"], kernel.meta(current))
         self.assertEqual(result["restored"], kernel.meta(restored))
-        self.assertEqual(set(result["current"]), {"id", "kind", "owner", "brand", "name", "colour", "notes"})
-        self.assertEqual(result["fields"], [{"field": field, "before": current[field], "after": restored[field]} for field in kernel.FIELDS])
+        self.assertEqual(set(result["current"]), {"id", "kind", "owner", "brand", "name", "colour", "notes", "link", "image_source"})
+        self.assertEqual(result["fields"], [{"field": field, "before": current[field], "after": restored[field]}
+                                            for field in kernel.FIELDS if current[field] != restored[field]])
         self.assertEqual((self.store.audit, self.store.writes), (before, []))
 
     def test_own_and_shared_saves_return_actual_metadata_and_one_web_actor_audit(self):
@@ -128,7 +129,7 @@ class AccessoryUndoApiTests(ApiTestCase):
             self.assertEqual(result["revision"], str(self.store.latest))
             actor, message, summary, rows = self.store.writes[-1]
             self.assertEqual((actor.id, actor.source, actor.via), (viewer, "web", "tunnel"))
-            self.assertEqual(message, f"Undo accessory text change {CHANGE_ID}")
+            self.assertEqual(message, f"Undo accessory recorded text and links change {CHANGE_ID}")
             self.assertEqual((rows[0]["before"], rows[0]["after"]), (before[CHANGE_ID][0]["after"], before[CHANGE_ID][0]["before"]))
             self.assertEqual(self.store.audit, before)
             self.assertEqual(summary.counts["undo"], 1)
@@ -185,6 +186,7 @@ class AccessoryUndoApiTests(ApiTestCase):
 
     def test_strict_three_field_body_and_id_refuse_browser_overrides(self):
         for extra in ({"space": "home"}, {"owner": "shared"}, {"notes": "Override"}, {"restored": {}}, {"rows": []},
+                      {"link": "https://example.com/override"}, {"image_source": "https://example.com/override-image"},
                       {"reason": "Override"}, {"confirm_owned": True}, {"revision": "1"}, {"sha256": "a" * 64}, {"action": "accessory_update"}):
             with self.subTest(extra=extra):
                 self.refused(400, self.apply, expect="a" * 64, **extra)
@@ -200,7 +202,7 @@ class AccessoryUndoApiTests(ApiTestCase):
         preview = self.view()
         self.store.latest += 1
         self.assertEqual(self.refused(409, self.apply, expect=preview["expect"]).message, accessory_undo.CHANGED)
-        for field, value in (("quantity", "99"), ("image", "fixture-sleeves.png"), ("link", "https://shop.example.com/item")):
+        for field, value in (("quantity", "99"), ("image", "fixture-sleeves.png"), ("kind", "playmat")):
             self.seed()
             self.store.audit[CHANGE_ID][0]["before"][field] = value
             with self.subTest(field=field):
@@ -224,6 +226,83 @@ class AccessoryUndoApiTests(ApiTestCase):
                             {**result, "review": changed_source}, {**result, "review": {**plan, "owners": None}},
                             {**result, "review": {**plan, "fields": []}}):
             with self.subTest(result=replacement), mock.patch.object(self.store, "accessory_undo_apply", return_value=replacement):
+                self.assertEqual(self.refused(503, self.apply, expect=plan["expect"]).message, accessory_undo.UNCONFIRMED)
+        self.assertEqual(self.store.writes, [])
+
+    def test_recorded_urls_restore_each_blank_and_mixed_plain_value_without_fetching(self):
+        cases = (
+            ({"link": "https://example.com/current"}, {"link": "https://example.com/former?text=<b>literal</b>&q=1"}),
+            ({"image_source": "https://example.com/current-image"}, {"image_source": "https://example.com/former-image?text=<script>literal</script>"}),
+            ({"link": "https://example.com/current", "image_source": "https://example.com/current-image"}, {"link": "", "image_source": ""}),
+            ({"link": "", "image_source": ""}, {"link": "https://example.com/former", "image_source": "https://example.com/former-image",
+                                                   "notes": "Historical <b>plain text</b>", "colour": "green"}),
+        )
+        for current_values, historical_values in cases:
+            current, restored = self.seed()
+            restored.update(current)
+            current.update(current_values)
+            restored.update(historical_values)
+            self.store.snapshot = self.store.snapshot.with_accessories([current])
+            before, writes = self.store.snapshot, len(self.store.writes)
+            with self.subTest(current=current_values, restored=historical_values), \
+                    mock.patch.object(accessory_fetch, "fetch", side_effect=AssertionError("No URL fetch")), \
+                    mock.patch.object(accessory_fetch, "_download", side_effect=AssertionError("No image download")), \
+                    mock.patch.object(accessory_fetch, "check_host", side_effect=AssertionError("No DNS or host check")), \
+                    mock.patch.object(inventory, "image", side_effect=AssertionError("No image read")):
+                preview = self.view()
+                self.assertEqual(preview["fields"], [{"field": field, "before": current[field], "after": restored[field]}
+                                                      for field in kernel.FIELDS if current[field] != restored[field]])
+                self.assertEqual((preview["current"], preview["restored"]), (kernel.meta(current), kernel.meta(restored)))
+                result = self.apply(expect=preview["expect"])
+            self.assertEqual((result["restored"], result["action"]), (kernel.meta(restored), "accessory_update"))
+            self.assertEqual(kernel.raw_rows(self.store.snapshot), [restored])
+            self.assertEqual(self.store.snapshot.accessory_images, before.accessory_images)
+            self.assertEqual(len(self.store.writes), writes + 1)
+            audit = self.store.writes[-1][3][0]
+            self.assertEqual((audit["before"], audit["after"]), (current, restored))
+
+    def test_invalid_historical_or_current_urls_refuse_without_normalizing_or_fetching(self):
+        bad_values = (
+            ("link", "javascript:alert(1)"), ("link", "ftp://example.com/item"), ("image_source", "data:image/png;base64,AAAA"),
+            ("link", "example.com/item"), ("link", " https://example.com/item"), ("image_source", "https://example.com/image "),
+            ("link", "https://example.com/a\nb"), ("link", " "),
+            ("link", "https://example.com/" + "x" * accessories.MAX_LINK),
+            ("image_source", "https://example.com/" + "x" * accessories.MAX_SOURCE),
+        )
+        for side in ("before", "after"):
+            for field, value in bad_values:
+                self.seed()
+                self.store.audit[CHANGE_ID][0][side][field] = value
+                before = self.store.snapshot
+                with self.subTest(side=side, field=field, value=value), \
+                        mock.patch.object(accessory_fetch, "fetch", side_effect=AssertionError("No fetch for URL proof")):
+                    self.assertEqual(self.view(), {"available": False, "id": CHANGE_ID, "reason": accessory_undo.UNSUPPORTED})
+                    self.assertEqual(self.refused(400, self.apply, expect="bad").message, accessory_undo.UNSUPPORTED)
+                self.assertEqual(self.store.snapshot, before)
+        self.assertEqual(self.store.writes, [])
+
+    def test_actual_url_receipts_and_full_raw_immutable_proofs_must_match(self):
+        current, restored = self.seed()
+        current.update(link="https://example.com/current", image_source="https://example.com/current-image")
+        restored.update(link="https://example.com/former", image_source="https://example.com/former-image")
+        self.store.snapshot = self.store.snapshot.with_accessories([current])
+        plan = self.store.accessory_undo_review(CHANGE_ID, frozenset({"matt", "shared"}))
+        result = {"review": plan, "restored": plan["restored"], "sha256": plan["sha256"], "revision": str(ROW_ID + 1)}
+        changed_image = copy.deepcopy(plan)
+        changed_image["source"]["before"]["image"] = "fixture-sleeves.png"
+        changed_key = copy.deepcopy(plan)
+        changed_key["source"]["key"] = {"id": "different-accessory"}
+        changed_owner = copy.deepcopy(plan)
+        changed_owner["source"]["before"]["owner"] = "shared"
+        replacements = (
+            {**result, "restored": {**plan["restored"], "link": "https://example.com/wrong-actual"}},
+            {**result, "restored": {**plan["restored"], "image_source": "https://example.com/wrong-actual-image"}},
+            {**result, "restored": {**plan["restored"], "link": "javascript:alert(1)"}},
+            *({**result, "review": changed} for changed in (changed_image, changed_key, changed_owner)),
+        )
+        for replacement in replacements:
+            with self.subTest(result=replacement), mock.patch.object(self.store, "accessory_undo_apply", return_value=replacement), \
+                    mock.patch.object(accessory_fetch, "fetch", side_effect=AssertionError("No receipt URL fetch")):
                 self.assertEqual(self.refused(503, self.apply, expect=plan["expect"]).message, accessory_undo.UNCONFIRMED)
         self.assertEqual(self.store.writes, [])
 

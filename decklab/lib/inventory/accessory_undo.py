@@ -1,7 +1,7 @@
-"""One audited accessory text UPDATE inverse, preserving current photos and kit.
+"""One audited accessory text/link UPDATE inverse, preserving current photos and kit.
 
-Accessory image bytes are not audited. This restores only the four reviewed text
-fields; it makes no claim to reverse the original command or its photographs.
+Accessory image bytes are not audited. This restores only recorded text/links;
+an old source URL makes no claim about the retained photograph.
 """
 import csv
 import hashlib
@@ -14,7 +14,7 @@ from decklab.lib.state import Invalid
 from . import Summary, backend, changes, paths, rules
 from .undo import SHA, UndoConflict, UndoMissing, UndoUnsupported, _identifier
 
-FIELDS = ("brand", "name", "colour", "notes")
+FIELDS = ("brand", "name", "colour", "notes", "link", "image_source")
 META = ("id", "kind", "owner", *FIELDS)
 RAW = frozenset(rules.ACCESSORY_FIELDS)
 
@@ -126,7 +126,7 @@ def review(change_id, owners, snapshot, store=None):
         raise UndoUnsupported("The accessory's original identity cannot be checked.")
     changed = {field for field in RAW if old[field] != new[field]}
     if not changed or changed - set(FIELDS):
-        raise UndoUnsupported("Undo restores only accessory brand, name, colour and notes.")
+        raise UndoUnsupported("Undo restores only recorded accessory text and links, keeping the current photo and kit.")
     latest = store.undo_latest("accessory", source["key"])
     if type(latest) is not int or latest != source["id"]:
         raise UndoConflict("The accessory was touched after the selected change.")
@@ -178,7 +178,7 @@ class MetadataRestore:
         if not isinstance(self.expect, str) or not SHA.fullmatch(self.expect) or self.expect != plan["expect"]:
             raise UndoConflict("The accessories changed. Review this Undo again.")
         self.plan = plan
-        return after, Summary(f"Undo change #{self.change_id}: restore accessory text", {"undo": 1},
+        return after, Summary(f"Undo change #{self.change_id}: restore recorded accessory text and links", {"undo": 1},
                               {paths.ACCESSORIES: list(FIELDS)}, {"undo_of": self.change_id})
 
     def verify(self, before, after, actual_rows):
