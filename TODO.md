@@ -6,7 +6,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 
 **The only ordering in this file.** Keep every `DECISION` row here. Keep this block to the current aim and the next few actions; results go in their owners (HISTORY.md for what shipped).
 
-**Aim (updated 2026-10-26):** finish the visual redesign (`E11-S30`), then work through the remaining rows Matt added on 2026-10-25: making Deck Lab easy to self-host for people outside the household (`E11-S33`; the prebuilt Forge release, `E11-S32`, shipped 2026-10-27) and finishing the token and kit work (`E7-S21`). The private member model is built and live (see Activation below); household device acceptance remains.
+**Aim (updated 2026-10-26):** finish the visual redesign (`E11-S30`), then work through the remaining rows Matt added on 2026-10-25: making Deck Lab easy to self-host for people outside the household (`E11-S33`; the prebuilt Forge release, `E11-S32`, shipped 2026-10-27) and finishing the token and kit work (`E7-S21`, built 2026-10-27). The private member model is built and live (see Activation below); household device acceptance remains.
 
 **Ready queue:** `E11-S30`, the visual redesign Matt chose on 2026-10-24 ("P1"). Slice 14 of [visual-design.md](decklab/design/visual-design.md#7-rollout) is implemented, as are slice 13's scoped recorded packing activity, verified intact-product storage review and per-card movable-copy priorities. Exact physical printing still needs a confirmed-printing model; independent ready reserve work can continue while it is designed. Slice 15's empty, loading and failed states are drawn and built (2026-10-27); full-data dark and device acceptance remain open. The approved desktop keyboard plan is built; global search has its separate decision below. Explicit original-row associations for newly added arrival checks are implemented, with component-wide verification retained; targeted backend/UI and isolated native checks passed. Casual inline verification placement is implemented for proven targets, with single canonical controls, component-wide semantics and verified fallback; final UI/native checks and caption review passed. Collection question 6 and touch/Safari acceptance remain separate gates, with Card colour matching the compatibility default.
 
@@ -45,7 +45,6 @@ An index of open work, one row per item; each row points to the doc that owns th
 
 | id | status | pri | size | item |
 |---|---|---|---|---|
-| `E7-S21` | OPEN | could | L | Box reviews, dates, Library filters and Collection/intended-list review offers are built. Physical-list repair remains. |
 | `E5-S15` | DEFERRED | should | M | User1 asks from the page for a card or a Forge run, Matt approves (`E3-S13`); not urgent. |
 | `E5-S24` | DEFERRED | could | S | Copy one shop's list from Shopping's By shop, for pasting into the shop's search. |
 

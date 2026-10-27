@@ -57,17 +57,11 @@ def _exact_name(name):
     return exact
 
 
-def save_box_check(body):
-    """POST /api/deck/box-check {profile,id,expect,recipe_sha256,rows,extras}.
+def checked(data, profile):
+    """The guarded, receipt-bound box check a write is about: (stored, deck, version, sections, recipe, result).
 
-    rows enumerate every server-derived physical section row exactly once, with the
-    observed quantity. extras name additional cards explicitly. Both original text and
-    canonical recipe receipts must match before row indices are interpreted. One normal
-    deck.save writes only Box checked; quantities never enter text or the audit message.
-    """
-    data = _parse_body(body)
-    profile = _writer(data)
-    _keys(data, ("profile", "id", "expect", "recipe_sha256", "rows", "extras"))
+    Both the original text and canonical recipe receipts must match before row indices
+    are interpreted; result is boxcheck.compare's answer."""
     kind, slug, path = _deck_file(data["id"])
     stored = _stored(data["id"], viewer=profile)
     guard.require_sees_home_records(profile)
@@ -83,11 +77,7 @@ def save_box_check(body):
         raise ApiError(400, "Only a built deck has a physical box to check.")
     _require_cards()
     try:
-        assembled.get(deck)
-        assembled.generation(deck)
-        decks.token_cards(deck)  # Match the existing take-apart checklist's physical-metadata validity.
-        version = assembled.version(deck)
-        sections = assembly_takeapart._physical_rows(deck, assembled.sections(deck), version)
+        version, sections = physical(deck)
     except (ValueError, decks.DeckFileError) as error:
         raise ApiError(409, "The saved physical build cannot be checked: " + _public(error)) from None
     except cards.INDEX_ERRORS:
@@ -99,6 +89,33 @@ def save_box_check(body):
         raise ApiError(409, "The physical checklist changed. Refresh the plan before saving this box check.")
     try:
         result = boxcheck.compare(sections, data["rows"], data["extras"], canonical_name=_exact_name)
+    except (ValueError, decks.DeckFileError) as error:
+        raise ApiError(400, _public(error)) from None
+    return stored, deck, version, sections, recipe, result
+
+
+def physical(deck):
+    """(version, physical rows) of a built deck's saved physical build, as the take-apart checklist reads it."""
+    assembled.get(deck)
+    assembled.generation(deck)
+    decks.token_cards(deck)  # Match the existing take-apart checklist's physical-metadata validity.
+    version = assembled.version(deck)
+    return version, assembly_takeapart._physical_rows(deck, assembled.sections(deck), version)
+
+
+def save_box_check(body):
+    """POST /api/deck/box-check {profile,id,expect,recipe_sha256,rows,extras}.
+
+    rows enumerate every server-derived physical section row exactly once, with the
+    observed quantity. extras name additional cards explicitly. Both original text and
+    canonical recipe receipts must match before row indices are interpreted. One normal
+    deck.save writes only Box checked; quantities never enter text or the audit message.
+    """
+    data = _parse_body(body)
+    profile = _writer(data)
+    _keys(data, ("profile", "id", "expect", "recipe_sha256", "rows", "extras"))
+    stored, deck, _version, _sections, recipe, result = checked(data, profile)
+    try:
         checked_on = _box_check_today()
         boxcheck.record_date(deck, checked_on)
         text = decks.render_deck_file(deck)
