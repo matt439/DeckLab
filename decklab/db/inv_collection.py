@@ -9,6 +9,8 @@
                      [--remove-missing] [--dry-run]    many rows changed or removed, as one change
     collection precons [QUERY ...]                     published precons' CODEs (MTGJSON's paper decks)
     collection add-precon CODE [--space S] [--title T] [--played-by P] -m MESSAGE [--dry-run]
+    collection trade --out FILE --in FILE [--space S] [--with T] -m MESSAGE [--dry-run]
+                                                       a trade as one change (collection_trade.py)
 
 merge replaces scripts/merge_cards.py: each FILE (collection.csv's columns, or a product list's)
 is checked as the importer always checked it (rules.parse_cards: every column, a set code, a
@@ -142,6 +144,8 @@ def register(sub):
                     help="full source SHA shown by --dry-run; required with --token-rows")
     cli_actor.add_argument(sp)
     sp.set_defaults(func=_add_precon)
+    from decklab.db import collection_trade
+    collection_trade.add_parser(verbs)
 
 
 def _space(space):
@@ -402,11 +406,11 @@ def _matched(new):
     return new
 
 
-def _save(args, op, snapshot, title, actor, reason, would, did):
-    """edit's and apply's shared end: op previewed against snapshot, then for --dry-run the lines
-    would, the in-use warnings and the tables it would leave out of date, else op saved and the
-    lines did. A reduction below what built decks or intact products hold is refused (exit 1)
-    unless --allow-in-use."""
+def _save(args, op, snapshot, title, actor, reason, would, did, message=None):
+    """edit's, apply's and trade's shared end: op previewed against snapshot, then for --dry-run
+    the lines would, the in-use warnings and the tables it would leave out of date, else op saved
+    (with message, -m when not given) and the lines did. A reduction below what built decks or
+    intact products hold is refused (exit 1) unless --allow-in-use."""
     with inventory.pinned(snapshot):
         after, _ = inventory.preview(op, refresh=False)
     in_use = _in_use(snapshot, after, args.space)
@@ -432,7 +436,8 @@ def _save(args, op, snapshot, title, actor, reason, would, did):
         print("Check with Matt, then run it again with --allow-in-use.", file=sys.stderr)
         return 1
     try:
-        inventory.apply(op, actor, args.message.strip(), reason=reason or None, expected_revision=snapshot.revision)
+        inventory.apply(op, actor, message or args.message.strip(), reason=reason or None,
+                        expected_revision=snapshot.revision)
     except (ops.Stale, ops.Missing, ops.DemandChanged):
         raise inventory.Conflict(f"{title} changed meanwhile; list it again and retry.") from None
     except inventory.Conflict as e:

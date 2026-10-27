@@ -59,7 +59,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 | `E5-S24` | DEFERRED | could | S | Copy one shop's list from Shopping's By shop, for pasting into the shop's search. |
 | `E5-S08` | OPEN | could | XL | Australian shop prices and stock, starting with a daily MTGMate snapshot for queued rows; then `E5-S19`'s back-in-stock alerts. |
 | `E6-S19` | OPEN | could | M | Tell User1, at the next visit, when a receipt brought cards for a deck User1 plays. |
-| `E7-S22` | OPEN | could | M | Record a trade as one change; first slice is a `collection trade` command. |
+| `E7-S22` | OPEN | could | M | `collection trade` is built; next the Collection page's Record a trade, then a whole-trade Undo. |
 | `E7-S32` | OPEN | could | L | Camera scanning into the collection; first slice is a recognition spike. ManaBox import stays the route meanwhile. |
 
 ## Deck Lab: Commander nights
