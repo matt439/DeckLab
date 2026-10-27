@@ -2170,15 +2170,17 @@ As a player who sometimes trades cards, I want to record a trade as one event, w
 
 Evidence:
 - `decklab/web/collection-guards.js`: colReasonControl (Traded as a removal reason, E7-S11)
-- `decklab/lib/api/collection_edit.py`: save_card (one card per change; no trade route)
+- `decklab/web/collection-trade.js`: openTradeSheet, previewTrade, drawTradeReview, saveTrade (the Collection page's Record a trade)
+- `decklab/lib/api/collection_trade.py`: preview_trade, save_trade (POST /api/collection/trade/preview and /api/collection/trade: the same `collection.trade`, held copies needing the preview's review token, the tables it would leave out of date)
 - `decklab/db/collection_trade.py`, `decklab/lib/inventory/ops_collection.py` (`collection.trade`): `collection trade --out FILE --in FILE [--with T] -m "..."` saves both sides as one change set, its message naming them and the who-with note and its reason "Traded", with no prices; `--dry-run` names the built decks that lose cards and the tables it would leave out of date, a save refuses held copies without `--allow-in-use` and names the tables now out of date
 - `decklab/tests/test_collection_trade.py`: the operation on files and PostgreSQL (one change set, no raw import, both Activity Undo reviews refuse it) and the command's preview, in-use refusal and file checks
+- `decklab/tests/test_collection_trade_api.py`, `decklab/tests/test_collection_trade_ui.py`: the page's preview and save, own people only, held copies, stale rows and the sheet
 
-Now (2026-10-27): the first slice is built: `collection trade` on the PC ([HISTORY.md](../HISTORY.md#record-a-trade-from-the-pc-2026-10-27-e7-s22)).
+Now (2026-10-27): `collection trade` on the PC ([HISTORY.md](../HISTORY.md#record-a-trade-from-the-pc-2026-10-27-e7-s22)) and the Collection page's Record a trade ([HISTORY.md](../HISTORY.md#record-a-trade-on-the-collection-page-2026-10-27-e7-s22)) are built.
 
-Gap: the Collection page has no Record a trade (pick the cards that left, enter the cards that came in, the same preview and warnings through `collection.trade`), and Activity offers no Undo for a trade.
+Gap: Activity offers no Undo for a trade.
 
-Next slice: the Collection page's Record a trade, calling `collection.trade` with its preview, then a whole-trade Undo beside the import Undo.
+Next slice: a whole-trade Undo beside the import Undo.
 
 **E7-S23** · Matt · could · M · missing
 

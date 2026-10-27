@@ -109,6 +109,20 @@ button.col-find-open { cursor: pointer; }
  * sheet's choices are a plain fieldset (disabled while saving), and its summary stands out. */
 .col-bulk-fields { display: grid; gap: var(--s-4); margin: 0; padding: 0; border: 0; min-width: 0; }
 .col-bulk-summary { font-weight: var(--fw-semibold); }
+/* Record a trade (collection-trade.js): the two sides one above the other, each a list of lines that wrap on a phone. */
+.col-trade { display: grid; gap: var(--s-4); }
+.col-trade-side { display: grid; gap: var(--s-2); min-width: 0; }
+.col-trade-side h3, .col-trade-review h3 { margin: 0; }
+.col-trade-review { display: grid; gap: var(--s-3); }
+.col-trade-review h3:focus:not(:focus-visible) { outline: none; }
+.col-trade-list { display: grid; gap: var(--s-2); margin: 0; padding: 0; list-style: none; }
+.col-trade-line { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2); }
+.col-trade-what { flex: 1 1 14rem; min-width: 0; overflow-wrap: anywhere; font-weight: var(--fw-semibold); }
+.col-trade-choices { display: flex; flex-direction: column; align-items: flex-start; gap: var(--s-1); }
+.col-trade-pick { text-align: left; white-space: normal; }
+.col-trade-adder { display: grid; gap: var(--s-2); padding-top: var(--s-2); border-top: 1px solid var(--border); }
+.col-trade-words q { overflow-wrap: anywhere; }
+.col-trade-adder-title { margin: 0; font-weight: var(--fw-semibold); }
 .col-held { display: block; color: var(--ink-2); font-size: var(--fs-sm); font-weight: normal; line-height: 1.2;
   white-space: normal; overflow-wrap: anywhere; }
 .col-held-guess { color: var(--warn-text); cursor: help; }

@@ -401,6 +401,40 @@ def trade(inv, space, gave, got, sha256=None, whose=None, expect_decks_revision=
         text, counts={**counts, "gave": copies, "removed": removed}, extra={"gave": given, "got": got})
 
 
+TRADE_NAMED = 10                    # cards each side of a trade's words names before "and N more"
+
+
+def _trade_side(items):
+    """"2 Llanowar Elves (FDN 227), 1 Sol Ring (C21 263)": (row, copies) pairs, at most TRADE_NAMED."""
+    parts = [f"{n} {row['name']} ({row['set'].upper()} {row['collector_number']}"
+             + ("" if row["finish"] == "nonfoil" else f" {row['finish']}") + ")" for row, n in items]
+    if len(parts) > TRADE_NAMED:
+        parts = parts[:TRADE_NAMED] + [f"and {len(parts) - TRADE_NAMED} more"]
+    return ", ".join(parts)
+
+
+def trade_words(gave, got, who=""):
+    """A trade's words for its change set's message, both sides and no prices ("Trade with T:
+    gave 2 Llanowar Elves (FDN 227); got 1 Sol Ring (C21 263)"): gave [(row, copies)], got the
+    rows kept (trade_tracked)."""
+    return (f"Trade{' with ' + who if who else ''}: gave {_trade_side(gave)}; "
+            f"got {_trade_side([(row, int(row['quantity'])) for row in got]) or 'nothing tracked'}")
+
+
+def trade_tracked(got, rows):
+    """The rows got that a trade keeps: an ordinary basic land only when rows (the collection
+    before it) already track that printing, as merge_rows keeps it."""
+    keys = {rules.ident(r) for r in rows}
+    return [row for row in got if not rules.ordinary_basic(row) or rules.ident(row) in keys]
+
+
+def trade_message(message, gave, got, who=""):
+    """The change set's message: message (the caller's words, may be blank), then trade_words."""
+    words = trade_words(gave, got, who)
+    message = (message or "").strip()
+    return f"{message}{'' if message[-1] in '.!?' else '.'} {words}" if message else words
+
+
 # ------------------------------------------------------------------ messages
 
 def message(inv, kind, params):
