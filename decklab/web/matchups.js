@@ -67,7 +67,7 @@ const IDLE_MATCHUP_POLL_MS = 15000;      // discover games started on another de
 const MAX_BACKOFF = 5;                  // while the PC doesn't answer, ask at most every MAX_BACKOFF × POLL_MS
 // After the matchup page is drawn afresh, the first of these on it gets the focus (focusNews).
 const NEWS_IDS = ["mu-error", "mu-notice", "h-live", "h-result", "h-not-played"];
-const SIDE_KIND_WORDS = { casual: "Casual", commander: "Commander", product: "Product deck", pairing: "Beginner Box pairing" };
+const SIDE_KIND_WORDS = { casual: "60-card", commander: "Commander", product: "Product deck", pairing: "Beginner Box pairing" };
 const SEAT_BLOCK = 25;                  // the card log's engine swaps the decks' seats every this many games (forge/seeds.py)
 // A deck Forge's AI plays with its auto-profile on (forge's side "auto_profile"), as cli.AUTO_PROFILE_WORDS says it.
 const AUTO_PROFILE_WORDS = "Forge's AI plays this deck as a slower, non-aggro deck in every game";

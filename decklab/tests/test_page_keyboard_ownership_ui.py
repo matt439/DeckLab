@@ -28,7 +28,7 @@ LIBRARY_KEYS = r"""
     closeMenus();
     clear(main);
     state.profile = PROFILES[0]; state.may = MAY.admin;
-    location.hash = '#/library?all=1&deck=casual%2Fgruul';
+    location.hash = '#/library?all=1&deck=commander%2Fgiada';
     state.library = DATA;
     drawLibrary(DATA, libraryFilters(parseHash().params));
     const root = main.querySelector('.results');

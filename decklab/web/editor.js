@@ -64,7 +64,7 @@ const FIELD_WORDS = { title: "Title", kind: "Format", status: "Status", player: 
   deck_box: "Deck box", prose: "Write-up" };
 // A built deck's kit: header lines holding an accessory id (the accessories, in the database) or older free text.
 const KIT_FIELDS = ["sleeves", "deck_box"];
-const KIND_WORDS = { casual: "Casual 60-card, 1v1", commander: "Commander (100 cards)" };
+const KIND_WORDS = { casual: "60-card, 1v1", commander: "Commander (100 cards)" };
 const OFFERED_SECTIONS = { casual: ["Deck", "Sideboard"], commander: ["Commander", "Deck", "Sideboard"] };
 const SECTION_ORDER = ["Commander", "Companion", "Deck", "Sideboard"];
 // Letters NFKD doesn't take apart, as decks.title_slug() writes them.

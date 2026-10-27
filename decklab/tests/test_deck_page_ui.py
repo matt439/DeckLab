@@ -209,7 +209,7 @@ class DeckPageUiTests(unittest.TestCase):
           const head = main.querySelector('.deck-page-head');
           assert.equal(head.querySelector('h1').textContent, 'Test Deck');
           assert(head.textContent.includes('Building'));
-          assert(head.textContent.includes('Casual 29 · Matt · 29 cards'));
+          assert(head.textContent.includes('60-card · Matt · 29 cards'));
           // The deck's colour identity as P1 pips (ui.js deckColourPieces), 22 px, never cost symbols.
           const pips = head.querySelector('.deck-head-pips');
           assert.equal(pips.getAttribute('role'), 'img');
