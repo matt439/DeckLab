@@ -130,10 +130,11 @@ def tree_files(root, import_bytes=False):
     magic = root / "magic"
     candidates = [magic / "collection.csv", magic / "tokens.csv", magic / "watchlist.csv"]
     for pattern in ("imports/*", "people/*/collection.csv", "people/*/tokens.csv", "people/*/imports/*",
-                    "products/*.csv", "orders/records/*.json"):
+                    "orders/records/*.json"):
         candidates += sorted(magic.glob(pattern))
-    for folder in paths.PAYLOAD_FOLDERS:
-        candidates += sorted((root / folder).glob("*.csv"))
+    # *.csv in any case, as Windows' glob finds them, so an X.CSV is named below on every system.
+    for folder in [magic / "products", *(root / folder for folder in paths.PAYLOAD_FOLDERS)]:
+        candidates += sorted(p for p in folder.glob("*") if p.suffix.lower() == ".csv")
     out = {}
     for path in candidates:
         rel = path.relative_to(root).as_posix()

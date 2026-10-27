@@ -443,8 +443,11 @@ def _stop_message(result, port):
     if result == "timeout":
         return (f"Deck Lab (port {port}) was asked to stop, but it's still running after {control.STOP_WAIT} "
                 f"seconds. Try again in a minute, or end its pythonw.exe (or python.exe) in Task Manager.")
+    if sys.platform.startswith("linux"):
+        return (f"Deck Lab on port {port} can't be signalled from here, perhaps because it runs as another user: "
+                "stop it as that user, or press Ctrl+C in its terminal.")
     if sys.platform != "win32":
-        return "Stopping the server from another window only works on Windows: press Ctrl+C in its window."
+        return "Stopping the server from another window only works on Windows and Linux: press Ctrl+C in its window."
     return (f"Deck Lab on port {port} can't be stopped from here, perhaps because it runs as administrator: "
             f"stop it from an administrator prompt, or end it in Task Manager.")
 
@@ -496,6 +499,10 @@ def _parse_args(argv):
     parser.add_argument("--log", metavar="FILE",
                         help="write the log to FILE (rotated at 2 MB, 3 old files kept). Without "
                              "--log, a server with no window (pythonw) logs to decklab/data/logs/server.log")
+    parser.add_argument("--background", action="store_true",
+                        help="run as the background server, as with no window: log to "
+                             "decklab/data/logs/server.log (or --log). The systemd service homenet installs "
+                             "on Linux gives it")
     parser.add_argument("--stop", action="store_true",
                         help="stop the Deck Lab server running on the port (as Ctrl+C would), then exit")
     return parser.parse_args(argv)
@@ -519,14 +526,17 @@ def main(argv=None):
             return _stop(args.port)
         settings = config.load()
         port = settings.get("port", 8642) if args.port is None else args.port
-        log_path = None if console else str(control.LOG_FILE)
+        background = not console or args.background
+        log_path = str(control.LOG_FILE) if background else None
+        if args.background and console and not args.log:
+            stream = _log_to(control.LOG_FILE, announce=False)
         if args.log:
             if stream is not None:
                 stream.close()
             log_path = os.path.abspath(args.log)
             stream = _log_to(log_path, announce=console)
         host = settings.get("host", "0.0.0.0") if args.host is None else args.host
-        return server_run._serve(host, port, args.no_update, settings, log_path, background=not console)
+        return server_run._serve(host, port, args.no_update, settings, log_path, background=background)
     except Exception:
         server_http.log(f"{server_run._stamp()} Deck Lab stopped with an error:\n{traceback.format_exc()}")
         return 1

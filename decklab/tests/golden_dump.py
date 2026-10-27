@@ -74,6 +74,7 @@ import dataclasses
 import hashlib
 import importlib
 import json
+import re
 import subprocess
 import sys
 from collections.abc import Mapping
@@ -289,11 +290,16 @@ def pointed(root):
 # standin_names, printing_version and planned_colors index recipe/list facts captured by deck projections.
 _NOT_RECORDED = frozenset({"warning_decks", "printings", "standin_names", "printing_version", "planned_colors"})
 
+_UNDER_ROOT = re.compile(r"<ROOT>[^'\"\s]*")
+
+
 def _plain(value, root):
     """value as JSON-able data (see the module docstring)."""
     if isinstance(value, str):      # the root as written, as a repr writes it (an OSError's text) and with /
         text = value.replace(str(root), "<ROOT>").replace(repr(str(root))[1:-1], "<ROOT>")
-        return text.replace(root.as_posix(), "<ROOT>")
+        text = text.replace(root.as_posix(), "<ROOT>")
+        # A path under the root with / on every system, so goldens recorded on Windows hold on Linux.
+        return _UNDER_ROOT.sub(lambda m: re.sub(r"\\+", "/", m.group()), text)
     if value is None or isinstance(value, (bool, int, float)):
         return value
     if isinstance(value, Path):

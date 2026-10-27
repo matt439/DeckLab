@@ -547,7 +547,7 @@ class CommandTests(Guarded):
         return [c[0] for c in self.calls]
 
     def test_start_needs_the_task(self):
-        with Quiet() as q:
+        with mock.patch.object(sys, "platform", "win32"), Quiet() as q:
             self.assertEqual(homenet.commands.cmd_start("Deck Lab test", 18642), 1)
         self.assertIn("run python -m decklab.lib.homenet install first", q.text)
         self.assertNotIn("/Run", self.commands())
@@ -670,10 +670,13 @@ class CommandTests(Guarded):
         with mock.patch.object(sys, "platform", "win32"), Quiet() as q:
             self.assertEqual(homenet.commands.cmd_stop(18642), 1)
         self.assertIn("The Deck Lab server on port 18642 can't be signalled", q.text)
-        # Off Windows there's no stop event at all.
+        # On Linux it's a SIGTERM the server's user may send, and elsewhere there's nothing to send.
         with mock.patch.object(sys, "platform", "linux"), Quiet() as q:
             self.assertEqual(homenet.commands.cmd_stop(18642), 1)
-        self.assertIn("only works on Windows", q.text)
+        self.assertIn("can't be signalled from here: it may be running as another user", q.text)
+        with mock.patch.object(sys, "platform", "darwin"), Quiet() as q:
+            self.assertEqual(homenet.commands.cmd_stop(18642), 1)
+        self.assertIn("only works on Windows and Linux", q.text)
 
     def test_stop_when_an_old_server_answers(self):
         self.find.return_value = (None, {"answered": True, "deck_lab": True})
@@ -944,11 +947,11 @@ class PatchTargetTests(unittest.TestCase):
     nothing (and letting the real schtasks, PowerShell, stop requests or
     multicast through)."""
 
-    MODULES = ("common", "task", "commands", "gather", "mdns", "checks", "watchdog")
+    MODULES = ("common", "task", "commands", "gather", "mdns", "checks", "watchdog", "service")
     REPLACED = {
         "commands": ("control", "_schtasks", "_start_task", "find_server", "probe", "local_ipv4", "file_exists",
                      "pythonw_path", "task_user", "pc_name", "this_pythons", "newest_code_mtime", "cmd_status",
-                     "cmd_stop", "cmd_start", "cmd_remove", "time"),
+                     "cmd_stop", "cmd_start", "cmd_remove", "time", "uses_systemd"),
         "gather": ("run_powershell", "gather_facts"),
         "mdns": ("MDNS_GROUP", "mdns_lookup"),
     }

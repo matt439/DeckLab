@@ -1,8 +1,11 @@
 # The whole unittest suite on code changes, weekly and by hand (Actions, tests, Run workflow),
-# split across 4 parallel Windows jobs (scripts/test_shard.py) so it takes about 5 minutes instead of 15.
-# Standard GitHub-hosted runners are free on a public repo; the shards count against the account's
-# 20 concurrent jobs. There's no PostgreSQL service, .venv or card data here: the database tests skip
-# (decklab/tests/db_support.py), as do the real-Forge games. Windows, because Deck Lab only runs there.
+# split across 4 parallel jobs (scripts/test_shard.py) so it takes about 5 minutes instead of 15, on
+# Windows (where the household runs Deck Lab) and on Linux (where self-hosters may: E11-S33). The
+# linux-services job installs the nightly timer and the server's service under a real systemd user
+# manager (scripts/linux_services_check.sh). Standard GitHub-hosted runners are free on a public
+# repo; the 9 jobs count against the account's 20 concurrent jobs. There's no PostgreSQL service,
+# .venv or card data in the shards: the database tests skip (decklab/tests/db_support.py), as do the
+# real-Forge games.
 name: tests
 
 on:
@@ -34,13 +37,15 @@ jobs:
   shard:
     needs: changes
     if: needs.changes.outputs.run_tests == 'true'
-    name: shard ${{ matrix.name }}
-    runs-on: windows-latest
+    name: ${{ matrix.os == 'windows-latest' && 'Windows' || 'Linux' }} shard ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
-        include:              # index is test_shard.py's (from 0); expressions can't subtract
+        os: [windows-latest, ubuntu-latest]
+        index: [0, 1, 2, 3]   # test_shard.py's (from 0); expressions can't add, hence name
+        include:
           - { index: 0, name: 1 of 4 }
           - { index: 1, name: 2 of 4 }
           - { index: 2, name: 3 of 4 }
@@ -56,9 +61,37 @@ jobs:
       - name: Tests (no database)
         run: python scripts/test_shard.py ${{ matrix.index }} 4 --hang-after 600
 
+  linux-services:
+    needs: changes
+    if: needs.changes.outputs.run_tests == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+      - name: A systemd user manager for the runner's user
+        run: |
+          sudo loginctl enable-linger "$USER"
+          echo "XDG_RUNTIME_DIR=/run/user/$(id -u)" >> "$GITHUB_ENV"
+          for _ in $(seq 30); do [ -S "/run/user/$(id -u)/bus" ] && break; sleep 1; done
+      - name: The .venv and a config.json, as SELF-HOSTING.md sets them up
+        run: |
+          python -m venv .venv
+          .venv/bin/python -m pip install -r decklab/requirements.txt
+          cp decklab/config.example.json decklab/config.json
+      - name: Install, check, restart, stop and remove the timer and the service
+        run: PYTHON=python scripts/linux_services_check.sh
+      - name: What systemd and the server said
+        if: failure()
+        run: |
+          journalctl --user --no-pager -n 200 || true
+          tail -n 100 decklab/data/logs/*.log || true
+
   # Keep this required check present for docs-only PRs, without starting the shards.
   tests:
-    needs: [changes, shard]
+    needs: [changes, shard, linux-services]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 2
@@ -68,11 +101,14 @@ jobs:
           CHANGES_RESULT: ${{ needs.changes.result }}
           RUN_TESTS: ${{ needs.changes.outputs.run_tests }}
           SHARD_RESULT: ${{ needs.shard.result }}
+          SERVICES_RESULT: ${{ needs.linux-services.result }}
         run: |
           test "$CHANGES_RESULT" = success
           if [ "$RUN_TESTS" = false ]; then
             test "$SHARD_RESULT" = skipped
+            test "$SERVICES_RESULT" = skipped
           else
             test "$RUN_TESTS" = true
             test "$SHARD_RESULT" = success
+            test "$SERVICES_RESULT" = success
           fi
