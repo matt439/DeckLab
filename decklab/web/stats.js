@@ -219,13 +219,14 @@ function barPath(x, y, w, h, r) {
   return `M${x},${y}H${x + w - r}A${r},${r} 0 0 1 ${x + w},${y + r}V${y + h - r}A${r},${r} 0 0 1 ${x + w - r},${y + h}H${x}Z`;
 }
 
-function drawCurve(host, curve, width, onPick) {
+/** The curve's bars; scaleMax (optional) is the most cards the y-axis must reach, so two curves share a scale. */
+function drawCurve(host, curve, width, onPick, scaleMax = 1) {
   const buckets = curve.buckets;
   const height = 236;
   const m = { top: 22, right: 6, bottom: 48, left: 30 };
   const plotW = width - m.left - m.right;
   const plotH = height - m.top - m.bottom;
-  const { top, step } = niceScale(Math.max(1, ...buckets.map((b) => b.total)));
+  const { top, step } = niceScale(Math.max(1, scaleMax, ...buckets.map((b) => b.total)));
   const y = (v) => m.top + plotH * (1 - v / top);
   const base = y(0);
   const band = plotW / buckets.length;
