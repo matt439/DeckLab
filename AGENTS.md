@@ -231,6 +231,7 @@ Each deck's text has these parts, in this order:
    Sideboard
    2 Card Name (SET) 45
    ```
+   Optionally, a `## Considering` heading straight after the Decklist section, with its own fenced block of card lines in the same format but no section headers: cards that might go in the deck (E2-S23). They aren't in either list, so nothing counts them: no owned-vs-needed table, pool, in-use count, packing plan, tokens, stats, Forge list, sleeve count or box check. Deck Lab keeps the block as written on every save and table refresh; the deck page's Cards tab shows it read-only, with the copies free in the pool. Change it with `deck pull`/`deck push` for now.
 3. **Owned vs needed:** a table of each card with the quantity needed, owned, and missing, plus an estimated cost in AUD. Its header is `| Card | Need | Owned | Missing | ~AUD each | ~AUD missing | Notes |`.
 4. **Substitutes:** cards already owned, or cheaper ones, that could replace expensive missing cards, noting what each swap costs the deck in strength.
 5. **Notes:** game plan, mulligan guidance, and a sideboard guide once one exists.
@@ -245,6 +246,7 @@ Deck Lab rewrites only the parts it owns (on a page save, "Update their tables",
 So that Deck Lab can find these parts:
 - Keep the header lines together under the title as `- **Key:** value`.
 - Put the target list in a fenced block under a `## Decklist` heading. A text without one is refused by `push` and `new`.
+- Put a Considering list in a fenced block under a `## Considering` heading (level 2, the exact word), card lines only.
 - Put the substitute list under `### Substitute version (owned and incoming cards)`. Deck Lab also reads the older `### Owned-only version` heading; its internal version key remains `owned`. Incoming copies must arrive before the list can be assembled.
 - Write hand notes after Deck Lab's labels, and don't start them in a label's exact form. Hand notes like `on the way (eBay order, due 2026-10-05)` are kept.
 

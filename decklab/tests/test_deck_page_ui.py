@@ -94,6 +94,28 @@ class DeckPageUiTests(unittest.TestCase):
           assert(availabilityBanner(page, {view: {tab: 'overview'}}).textContent.includes('Ready once 2 cards arrive'));
         """)
 
+    def test_the_considering_list_shows_read_only_with_free_copies(self):
+        # E2-S23: after the decklist, its own part, outside the filters and the counts; no part without one.
+        self.run_js("""
+          const page = makePage();
+          page.considering = [{qty: 2, name: 'Bolt', set: null, number: null, finish: 'nonfoil', card: bolt, free: 1},
+            {qty: 1, name: 'Elf', set: null, number: null, finish: 'nonfoil', card: elf, free: 0},
+            {qty: 1, name: 'Ghost Card', set: null, number: null, finish: 'nonfoil', card: null, free: null}];
+          clear(main); location.hash = '#/deck?id=casual%2Ftest&v=target&tab=cards';
+          drawDeck(page, deckViewOf(parseHash().params));
+          const part = panel('cards').querySelector('#sec-considering');
+          assert(part.textContent.includes('Considering(4)'), part.textContent);
+          assert(part.textContent.includes('1 free in the pool') && part.textContent.includes('None free'));
+          assert(part.textContent.includes('Ghost Card'));
+          assert.equal(part.querySelectorAll('input').length, 0);
+          assert(!panel('cards').querySelector('.deck-cards').textContent.includes('Ghost Card'));
+          // A viewer without the collection gets no marks; a deck without the list, no part.
+          page.considering.forEach((line) => delete line.free);
+          assert(!deckConsideringSection(page).textContent.includes('free'));
+          delete page.considering;
+          assert.equal(deckConsideringSection(page), null);
+        """)
+
     def test_viewer_who_may_not_see_the_collection_gets_no_marks(self):
         self.run_js("""
           const page = makePage(); delete page.owned; delete page.tokens; delete page.table;

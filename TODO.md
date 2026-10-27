@@ -40,7 +40,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 | `E2-S22` | DECISION | must | M | Physical hardware/touch-usability follow-up on the household's iPhones and M2 11-inch iPad; the six-configuration Safari Simulator suite passes ([evidence](decklab/safari/EVIDENCE.md)). |
 | `E1-S13` | OPEN | could | L | Compare two decks side by side; first slice is their stats (curve, colours, lands, types). |
 | `E1-S24` | OPEN | could | M | Rank precons by how much of each the free pool covers, to pick the next deck to build. |
-| `E2-S23` | OPEN | could | S | A Considering list kept with each deck, outside its lists and tables. |
+| `E2-S23` | OPEN | could | S | A Considering list kept with each deck: in the deck text and shown read-only; next, adding and moving cards in the editor. |
 | `E2-S24` | OPEN | could | M | Own card categories in a deck (ramp, draw, removal) with counts. |
 | `E4-S26` | OPEN | could | M | A phone life counter that ends by recording the game (multiplayer later, with `E4-S18`). |
 | `E8-S21` | OPEN | could | S | Printable deck box label with a QR code to the deck page. |

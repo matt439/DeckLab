@@ -180,6 +180,7 @@ class DeckFile:
     prices: PriceStamp | None = None    # the stamp above the table, if it has one
     spans: dict = field(default_factory=dict, repr=False)
     space: str = "home"             # lib/spaces.py: "home", or the person whose deck folder holds it
+    considering: list | None = None     # [DeckLine] under "## Considering" (E2-S23), None without that block
 
     @property
     def deck_id(self):
@@ -445,6 +446,25 @@ def parse_deck(data, slug, kind, path=None, space=None):
             except DecklistError as e:
                 raise DecklistError(f"decklist: {e}") from None
 
+    # Considering list (E2-S23): the first fenced block under "## Considering", card lines only.
+    # Cards that might go in the deck: kept with it but counted nowhere. Only DeckFile.considering
+    # holds them, so no table, pool, packing, token, stats, Forge or sleeve reader (which all read
+    # target and owned) sees them, and render_deck_file copies the block as written.
+    considering = None
+    found = heading(lambda h: h == "considering", 2)
+    if found:
+        block = _find_block(lines, found[0] + 1, _section_end(lines, headings, found[0], 2), "considering")
+        if block:
+            spans["considering"] = (lines[block[0]].end, lines[block[1]].start)
+            try:
+                listed = parse_decklist(text[slice(*spans["considering"])])
+            except DecklistError as e:
+                raise DecklistError(f"Considering list: {e}") from None
+            if set(listed) - {"Deck"}:
+                raise DecklistError("Considering list: card lines only, with no section headers "
+                                    f"({', '.join(sorted(set(listed) - {'Deck'}))})")
+            considering = listed.get("Deck", [])
+
     # Owned-only list: the first fenced block under "### Owned-only version".
     owned = None
     found = owned_heading
@@ -520,7 +540,8 @@ def parse_deck(data, slug, kind, path=None, space=None):
         path=Path(path) if path else None, slug=slug, kind=kind, title=title,
         header=header, target=target, owned=owned, rows=rows, total=total,
         changed_on=changed_on, sha256=hashlib.sha256(data).hexdigest(),
-        text=text, newline=newline, prices=prices, spans=spans, space=space or _space_of(path))
+        text=text, newline=newline, prices=prices, spans=spans, space=space or _space_of(path),
+        considering=considering)
 
 
 def _space_of(path):

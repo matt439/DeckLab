@@ -8,6 +8,15 @@ A trade is now one change instead of an unlinked removal and a separate merge: `
 
 Decisions: no raw import is kept, since a trade isn't an import and the audit rows hold both sides; a printing can't be both given and got. Activity's Undo doesn't reverse part of a trade (both Undo reviews refuse it); a trade's own whole-change Undo and the Collection page's Record a trade are later slices of E7-S22. Validation: `test_collection_trade.py` (11 cases: the operation on files and on a disposable PostgreSQL 16 database, including one change set with a DELETE and an INSERT, no raw import and both Undo refusals, and the command in the Collection sandbox).
 
+## A Considering list in the deck text (2026-10-27; E2-S23)
+
+A deck can now keep cards that might go in it, Moxfield's maybeboard, without counting them anywhere. This first slice is the deck text format and a read-only view.
+
+- **The format:** an optional `## Considering` heading (level 2, after the Decklist section) with its own fenced block of card lines in the decklist's format, no section headers. A separate block rather than a section inside the Decklist fence, so every existing reader of the lists (owned vs needed and the table, the pool's in-use counts, packing, tokens, stats, the Forge list, the sleeve and deck box counts, box checks) stays blind to it by construction, and an Arena export of the deck never carries it. `parse_deck` reads it into `DeckFile.considering` (a section header or a bad line is refused, naming the Considering list); `render_deck_file` copies it as written, so page saves, `deck tables` and table refreshes keep it byte for byte.
+- **The deck page:** the Cards tab shows it after the decklist, read-only, each card with "N free in the pool" or "None free" (owned and on the way, less what other built decks and intact products hold and what the list shown already uses) for viewers who see the space's collection (`GET /api/deck`'s `considering`, absent when the text has none). A name Scryfall doesn't know goes in the page's info, not its warnings.
+
+Decisions: the list is written with `deck pull`/`deck push` for now; adding, removing and moving a card into the Planned list in one save are the next slice, in the editor. Validation: `test_decks_considering.py` (parsing, a byte-identical round trip, a save of the lists, status, table and a new Play-now list keeping it, and owned vs needed, the table, a built deck's in-use cards, the Forge list and the sleeve count skipping it, and the page's free marks) and a Node test of the Cards tab part in `test_deck_page_ui.py`.
+
 ## Card rulings in the card viewer (2026-10-27; E1-S25)
 
 The card viewer now shows a card's Scryfall rulings under its rules text, from the comparison with ManaBox and Dragon Shield.
