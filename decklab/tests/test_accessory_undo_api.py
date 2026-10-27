@@ -50,7 +50,7 @@ class AuditAccessories:
         self.calls.append(("review", change_id, owners))
         return kernel.review(change_id, owners, self.snapshot, self)[0]
 
-    def accessory_undo_apply(self, change_id, owners, expect, actor, message, reason=..., confirm_restore=..., confirm_stock=..., confirm_owner=...):
+    def accessory_undo_apply(self, change_id, owners, expect, actor, message, reason=..., confirm_restore=..., confirm_stock=..., confirm_owner=..., confirm_kind=...):
         self.calls.append(("apply", change_id, owners))
         if reason is not ...:
             source = kernel.source_record(self.undo_audit(change_id), owners)
@@ -71,9 +71,14 @@ class AuditAccessories:
             if source["op"] != "UPDATE" or confirm_owner is not True \
                     or source["before"].get("owner") == source["after"].get("owner"):
                 raise inventory.Invalid("Only restored accessory sharing takes owner confirmation.")
+        if confirm_kind is not ...:
+            source = kernel.source_record(self.undo_audit(change_id), owners)
+            if source["op"] != "UPDATE" or confirm_kind is not True \
+                    or source["before"].get("kind") == source["after"].get("kind"):
+                raise inventory.Invalid("Only the restored accessory kind takes kind confirmation.")
         before = self.snapshot
         operation = kernel.MetadataRestore(change_id, owners, expect, reason=reason, confirm_restore=confirm_restore,
-                                           confirm_stock=confirm_stock, confirm_owner=confirm_owner)
+                                           confirm_stock=confirm_stock, confirm_owner=confirm_owner, confirm_kind=confirm_kind)
         after, summary = operation.run(changes.detach(before))
         after = changes.prepare(before, after).replace(decks_revision="fixture-saved-decks")
         actual = support.actual_source(operation.plan, id=self.latest + 1)
@@ -240,7 +245,7 @@ class AccessoryUndoApiTests(ApiTestCase):
         preview = self.view()
         self.store.latest += 1
         self.assertEqual(self.refused(409, self.apply, expect=preview["expect"]).message, accessory_undo.CHANGED)
-        for field, value in (("image", "fixture-sleeves.png"), ("kind", "playmat")):
+        for field, value in (("image", "fixture-sleeves.png"),):
             self.seed()
             self.store.audit[CHANGE_ID][0]["before"][field] = value
             with self.subTest(field=field):

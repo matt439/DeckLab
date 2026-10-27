@@ -9,7 +9,7 @@ from .common import ApiError, DATABASE_DOWN, _keys, _parse_body
 from .settings import _web_actor, _writer
 
 NO_CHANGE = "No undoable accessory change at that ID."
-UNSUPPORTED = "Undo restores recorded accessory details, box capacity, confirmed counts or unused own/Shared ownership, removes an unused image-free addition or restores an exact image-free deleted record. Current photos and kit are kept; recorded counts and capacity may change warnings."
+UNSUPPORTED = "Undo restores recorded accessory details, box capacity, confirmed counts or unused kind/ownership corrections, removes an unused image-free addition or restores an exact image-free deleted record. Current photos and kit are kept; recorded counts and capacity may change warnings."
 CHANGED = "The accessories changed. Reload Activity and review this Undo again."
 UNCONFIRMED = "The accessory Undo result could not be confirmed. Reload Activity before trying again."
 REVISION = re.compile(r"[1-9][0-9]{0,18}")
@@ -55,7 +55,7 @@ def _meta(value, stock=False):
 
 def _project(plan, change_id, owners):
     if not isinstance(plan, dict) or plan.get("change_id") != change_id or plan.get("kind") != "accessory" \
-            or plan.get("action") not in ("accessory_update", "accessory_stock_update", "accessory_owner_update", "accessory_remove", "accessory_add") or plan.get("owners") != (None if owners is None else sorted(owners)) \
+            or plan.get("action") not in ("accessory_update", "accessory_stock_update", "accessory_owner_update", "accessory_kind_update", "accessory_remove", "accessory_add") or plan.get("owners") != (None if owners is None else sorted(owners)) \
             or not isinstance(plan.get("expect"), str) or not undo.SHA.fullmatch(plan["expect"]):
         raise ApiError(503, UNCONFIRMED)
     try:
@@ -64,6 +64,7 @@ def _project(plan, change_id, owners):
         adding = plan["action"] == "accessory_add"
         stock = plan["action"] == "accessory_stock_update"
         ownership = plan["action"] == "accessory_owner_update"
+        kind_change = plan["action"] == "accessory_kind_update"
         if source["op"] != ("DELETE" if adding else "INSERT" if removing else "UPDATE"):
             raise inventory.Invalid("Bad source action")
         new, old = None if adding else undo.raw_row(source["after"]), None if removing else undo.raw_row(source["before"])
@@ -72,40 +73,42 @@ def _project(plan, change_id, owners):
                 or type(source.get("id")) is not int or not 0 < source["id"] < 10 ** 18 \
                 or not removing and not adding and (stock != (old["quantity"] != new["quantity"]) \
                     or ownership != (old["owner"] != new["owner"]) or ownership and not undo.owner_pair(old, new) \
-                    or {field for field in undo.RAW if old[field] != new[field]} - set(undo.OWNER_FIELDS if ownership else undo.STOCK_FIELDS if stock else undo.FIELDS)):
+                    or kind_change != (old["kind"] != new["kind"]) \
+                    or {field for field in undo.RAW if old[field] != new[field]} - set(undo.KIND_FIELDS if kind_change else undo.OWNER_FIELDS if ownership else undo.STOCK_FIELDS if stock else undo.FIELDS)):
             raise inventory.Invalid("Bad source proof")
-        project = undo.stock_meta if stock or ownership else undo.meta
+        project = undo.stock_meta if stock or ownership or kind_change else undo.meta
         current, restored = (None, old) if adding else (new, None) if removing else (project(new), project(old))
     except (inventory.Invalid, KeyError):
         raise ApiError(503, UNCONFIRMED) from None
     if adding:
         if old["image"] or old["crop"] or "current" not in plan or plan["current"] is not None \
                 or plan.get("restored") != restored or plan.get("confirmation_required") is not True \
-                or "fields" in plan or "reason_required" in plan or "stock_confirmation_required" in plan or "owner_confirmation_required" in plan or plan.get("label") != old["name"]:
+                or "fields" in plan or "reason_required" in plan or "stock_confirmation_required" in plan or "owner_confirmation_required" in plan or "kind_confirmation_required" in plan or plan.get("label") != old["name"]:
             raise ApiError(503, UNCONFIRMED)
         return {"available": True, "id": change_id, "expect": plan["expect"], "kind": "accessory",
                 "action": "accessory_add", "label": old["name"], "current": None,
                 "restored": restored, "confirmation_required": True}
     if removing:
         if new["image"] or new["crop"] or plan.get("current") != current or "restored" not in plan \
-                or plan["restored"] is not None or plan.get("reason_required") is not True or "fields" in plan or "confirmation_required" in plan or "stock_confirmation_required" in plan or "owner_confirmation_required" in plan \
+                or plan["restored"] is not None or plan.get("reason_required") is not True or "fields" in plan or "confirmation_required" in plan or "stock_confirmation_required" in plan or "owner_confirmation_required" in plan or "kind_confirmation_required" in plan \
                 or plan.get("label") != current["name"]:
             raise ApiError(503, UNCONFIRMED)
         return {"available": True, "id": change_id, "expect": plan["expect"], "kind": "accessory",
                 "action": "accessory_remove", "label": current["name"], "current": current,
                 "restored": None, "reason_required": True}
-    current, restored = _meta(current, stock or ownership), _meta(restored, stock or ownership)
-    fields = [{"field": field, "before": current[field], "after": restored[field]} for field in (undo.OWNER_FIELDS if ownership else undo.STOCK_FIELDS if stock else undo.FIELDS)
+    current, restored = _meta(current, stock or ownership or kind_change), _meta(restored, stock or ownership or kind_change)
+    fields = [{"field": field, "before": current[field], "after": restored[field]} for field in (undo.KIND_FIELDS if kind_change else undo.OWNER_FIELDS if ownership else undo.STOCK_FIELDS if stock else undo.FIELDS)
               if current[field] != restored[field]]
-    if not fields or any(current[field] != restored[field] for field in (("id", "kind", "quantity") if ownership else ("id", "kind", "owner"))) \
+    if not fields or any(current[field] != restored[field] for field in (("id", "owner", "quantity") if kind_change else ("id", "kind", "quantity") if ownership else ("id", "kind", "owner"))) \
             or plan.get("current") != current or plan.get("restored") != restored or plan.get("fields") != fields \
             or plan.get("label") != current["name"] or "reason_required" in plan or "confirmation_required" in plan \
             or (plan.get("stock_confirmation_required") is not True if stock else "stock_confirmation_required" in plan) \
-            or (plan.get("owner_confirmation_required") is not True if ownership else "owner_confirmation_required" in plan):
+            or (plan.get("owner_confirmation_required") is not True if ownership else "owner_confirmation_required" in plan) \
+            or (plan.get("kind_confirmation_required") is not True if kind_change else "kind_confirmation_required" in plan):
         raise ApiError(503, UNCONFIRMED)
     return {"available": True, "id": change_id, "expect": plan["expect"], "kind": "accessory",
-            "action": "accessory_owner_update" if ownership else "accessory_stock_update" if stock else "accessory_update", "label": current["name"], "current": current, "restored": restored,
-            "fields": fields, **({"stock_confirmation_required": True} if stock else {}), **({"owner_confirmation_required": True} if ownership else {})}
+            "action": "accessory_kind_update" if kind_change else "accessory_owner_update" if ownership else "accessory_stock_update" if stock else "accessory_update", "label": current["name"], "current": current, "restored": restored,
+            "fields": fields, **({"stock_confirmation_required": True} if stock else {}), **({"owner_confirmation_required": True} if ownership else {}), **({"kind_confirmation_required": True} if kind_change else {})}
 
 
 def accessory_undo_view(id=None):
@@ -125,9 +128,9 @@ def apply_accessory_undo(body):
     writer = _writer(data)
     guard.require(writer, "accessories.edit")
     owners = guard.accessory_owners(writer)
-    _keys(data, ("profile", "id", "expect"), ("reason", "confirm_restore", "confirm_stock", "confirm_owner"))
+    _keys(data, ("profile", "id", "expect"), ("reason", "confirm_restore", "confirm_stock", "confirm_owner", "confirm_kind"))
     change_id = _id(data["id"])
-    options = [data.get("reason", ...), data.get("confirm_restore", ...), data.get("confirm_stock", ...), data.get("confirm_owner", ...)]
+    options = [data.get("reason", ...), data.get("confirm_restore", ...), data.get("confirm_stock", ...), data.get("confirm_owner", ...), data.get("confirm_kind", ...)]
     while options and options[-1] is ...:
         options.pop()
     result = _call("accessory_undo_apply", change_id, owners, data["expect"], _web_actor(writer),
@@ -140,8 +143,9 @@ def apply_accessory_undo(body):
     adding = plan["action"] == "accessory_add"
     stock = plan["action"] == "accessory_stock_update"
     ownership = plan["action"] == "accessory_owner_update"
+    kind_change = plan["action"] == "accessory_kind_update"
     try:
-        actual = undo.raw_row(result.get("restored")) if adding else None if removing else _meta(result.get("restored"), stock or ownership)
+        actual = undo.raw_row(result.get("restored")) if adding else None if removing else _meta(result.get("restored"), stock or ownership or kind_change)
     except inventory.Invalid:
         raise ApiError(503, UNCONFIRMED) from None
     if actual != plan["restored"] or data["expect"] != plan["expect"] \
@@ -160,4 +164,4 @@ def apply_accessory_undo(body):
             **({"removed_id": result["removed_id"]} if removing else {}),
             **({"added_id": result["added_id"]} if adding else {}),
             "revision": result["revision"], "summary": f"Undo change #{change_id}: " + (
-                "restore a deleted accessory record" if adding else "remove an unused added accessory" if removing else "restore recorded accessory sharing" if ownership else "restore a recorded accessory count" if stock else "restore recorded accessory details")}
+                "restore a deleted accessory record" if adding else "remove an unused added accessory" if removing else "restore the recorded accessory kind" if kind_change else "restore recorded accessory sharing" if ownership else "restore a recorded accessory count" if stock else "restore recorded accessory details")}

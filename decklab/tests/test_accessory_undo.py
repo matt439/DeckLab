@@ -141,9 +141,8 @@ class AccessoryUndoTests(unittest.TestCase):
             with self.subTest(changed=changed), self.assertRaises(undo.UndoUnsupported):
                 undo.raw_row(fixture.row(**changed))
 
-    def test_kind_image_and_crop_changes_are_not_details_undo(self):
-        cases = ({"kind": "playmat"},
-                 {"image": "", "crop": ""}, {"crop": "0,0,1,1"})
+    def test_image_and_crop_changes_are_not_details_undo(self):
+        cases = ({"image": "", "crop": ""}, {"crop": "0,0,1,1"})
         for changed in cases:
             self.store.seed()
             self.source()["before"].update(changed)
