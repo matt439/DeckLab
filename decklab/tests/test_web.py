@@ -44,7 +44,7 @@ from decklab import server
 WEB = server.WEB_DIR
 MATCHUP_SCRIPTS = ("sim-ui.js", "matchups.js", "matchups-overview.js", "matchups-summary.js", "matchups-detail.js", "matchups-results.js", "matchups-play.js",
                    "matchups-cards.js")
-PLAY_SCRIPTS = ("deck-tools.js", "deck-print.js", "qr.js", "deck-label.js", "collection.js", "precon-token-choices.js", "collection-rows.js", "collection-cards.js", "collection-bulk.js", "collection-guards.js", "collection-trade.js", "assembly.js", "assembly-chooser.js", "assembly-switcher.js", "assembly-finish.js", "assembly-steps.js", "assembly-overlap.js", "assembly-sections.js", "assembly-progress.js", "assembly-sheets.js", "assembly-boxcheck.js", "box-collection.js", "box-editor.js", "box-repair.js", "hands.js", "play.js", "deck-sideboard.js", "deck-opponents.js", "deck-standins.js", "printings-in-box.js", "deck-swaps.js", "deck-considering.js", "product-storage.js", "history.js", "activity.js", "activity-undo.js",
+PLAY_SCRIPTS = ("deck-tools.js", "deck-print.js", "qr.js", "deck-label.js", "collection.js", "precon-token-choices.js", "collection-rows.js", "collection-cards.js", "collection-bulk.js", "collection-guards.js", "collection-trade.js", "assembly.js", "assembly-chooser.js", "assembly-switcher.js", "assembly-finish.js", "assembly-steps.js", "assembly-overlap.js", "assembly-sections.js", "assembly-progress.js", "assembly-sheets.js", "assembly-boxcheck.js", "box-collection.js", "box-editor.js", "box-repair.js", "hands.js", "play.js", "deck-sideboard.js", "deck-opponents.js", "deck-standins.js", "printings-in-box.js", "deck-swaps.js", "deck-considering.js", "product-storage.js", "history.js", "compare.js", "activity.js", "activity-undo.js",
                 "order-check-targets.js", "receipts.js", "receipt-tiles.js", "receipt-layout.js", "receipt-workflow.js", "accessories.js", "accessory-pictures.js", "tokens.js", "token-plan.js", "product-tokens.js")
 SHELL_SCRIPTS = ("keyboard-help.js", "shell.js", "settings.js", "settings-members.js", "visibility.js")  # account pages, just before app.js
 CARD_SCRIPTS = ("ui.js", "symbols.js", "cards-ui.js", "card-viewer.js")     # the shared card pieces (UI-KIT.md)
@@ -56,7 +56,7 @@ SCRIPTS = ("core.js", *CARD_SCRIPTS, "library.js", "library-boxchecks.js", "libr
 FOUNDATION = ("tokens.css", "base.css", "components.css")
 STYLES = (*FOUNDATION, "cards-ui.css", "shell.css", "library.css", "deck.css", "deck-overview.css", "stats.css", "matchups.css", "field.css", "variant.css",
           "editor.css", "guide.css", "wishlist.css", "shopping.css", "shopping-orders.css", "collection.css", "play.css", "assembly.css", "assembly-steps.css", "assembly-overlap.css",
-          "deck-tools.css", "receipts.css", "accessories.css", "tokens-page.css", "activity.css", "history.css")
+          "deck-tools.css", "receipts.css", "accessories.css", "tokens-page.css", "activity.css", "history.css", "compare.css")
 SVG_NAMESPACE = "http://www.w3.org/2000/svg"     # a name, not something loaded
 
 

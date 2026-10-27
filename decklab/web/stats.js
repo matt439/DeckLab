@@ -219,21 +219,23 @@ function barPath(x, y, w, h, r) {
   return `M${x},${y}H${x + w - r}A${r},${r} 0 0 1 ${x + w},${y + r}V${y + h - r}A${r},${r} 0 0 1 ${x + w - r},${y + h}H${x}Z`;
 }
 
-function drawCurve(host, curve, width, onPick) {
+/** The curve's chart, width wide; onPick(i) on a bar's tap, hover or focus. top: the scale's least top, so two
+ * curves drawn side by side (compare.js) share one scale. */
+function drawCurve(host, curve, width, onPick, top = 0) {
   const buckets = curve.buckets;
   const height = 236;
   const m = { top: 22, right: 6, bottom: 48, left: 30 };
   const plotW = width - m.left - m.right;
   const plotH = height - m.top - m.bottom;
-  const { top, step } = niceScale(Math.max(1, ...buckets.map((b) => b.total)));
-  const y = (v) => m.top + plotH * (1 - v / top);
+  const scale = niceScale(Math.max(1, top, ...buckets.map((b) => b.total)));
+  const y = (v) => m.top + plotH * (1 - v / scale.top);
   const base = y(0);
   const band = plotW / buckets.length;
   const barW = Math.min(24, band * 0.62);
   const gap = 2;
   const svg = svgEl("svg", { width, height, viewBox: `0 0 ${width} ${height}`, role: "group",
     "aria-label": `Mana curve: ${buckets.map((b) => `${b.total} at ${b.mv}`).join(", ")}` });
-  for (let v = step; v <= top; v += step) {
+  for (let v = scale.step; v <= scale.top; v += scale.step) {
     svg.append(svgEl("line", { class: "grid", x1: m.left, x2: width - m.right, y1: y(v), y2: y(v) }),
       svgEl("text", { class: "axis-text", x: m.left - 8, y: y(v) + 4, "text-anchor": "end", text: String(v) }));
   }

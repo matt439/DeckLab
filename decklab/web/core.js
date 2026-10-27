@@ -434,6 +434,7 @@ const ROUTES = [
   { path: "edit", label: "Edit deck", h1: "Edit deck", title: "Edit deck", parent: "deck" },
   { path: "new", label: "New deck", h1: "New deck", title: "New deck", parent: "library" },
   { path: "history", label: "History", h1: "History", title: "Deck history", parent: "deck" },
+  { path: "compare", label: "Compare decks", h1: "Compare decks", title: "Compare decks", parent: "library" },
   { path: "variant", label: "Test of a change", h1: "Test of a change", title: "Test of a change", parent: "deck" },
   { path: "receipt", label: "Receive delivery", h1: "Receive delivery", title: "Receive delivery", parent: "shopping" },
   { path: "matchup", label: "Matchup", h1: "Matchup", title: "Matchup", parent: "matchups" },
