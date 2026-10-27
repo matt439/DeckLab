@@ -38,7 +38,7 @@ SOURCES = ("wotc", "scryfall")
 
 READ_ERRORS = (OSError, EOFError, ValueError, KeyError, TypeError, zlib.error)
 
-_loaded = None              # (path, mtime_ns, data) of the file read last
+_loaded = None              # (path, (mtime_ns, size), data) of the file read last
 _lock = threading.Lock()
 
 
@@ -169,9 +169,10 @@ def _data():
     global _loaded
     path = index_path()
     try:
-        mtime = path.stat().st_mtime_ns
+        stat = path.stat()
     except OSError:
         return None
+    mtime = (stat.st_mtime_ns, stat.st_size)    # the size too: a coarse clock can give a new file the old time
     with _lock:
         if _loaded and _loaded[0] == path and _loaded[1] == mtime:
             return _loaded[2]

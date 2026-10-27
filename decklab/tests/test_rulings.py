@@ -153,23 +153,23 @@ class UpdateTests(RulingsFiles):
         self.assertTrue(rulings.available())
         path = self.tmp / "rulings.json.gz"
         path.write_bytes(b"\x1f\x8b damaged")
-        os.utime(path, ns=(1, 1))
+        os.utime(path, ns=(10**9, 10**9))
         self.assertIsNone(rulings.for_card({"oracle_id": LLANOWAR}))
         rulings._write({}, NEWER, path)
         with gzip.open(path, "rt", encoding="utf-8") as f:
             data = json.load(f)
         with gzip.open(path, "wt", encoding="utf-8") as f:
             json.dump({**data, "format": rulings.FORMAT + 1}, f)
-        os.utime(path, ns=(2, 2))
+        os.utime(path, ns=(2 * 10**9, 2 * 10**9))
         self.assertFalse(rulings.available())
 
     def test_a_new_file_is_read_again(self):
         rulings._write({LLANOWAR: [["2020-01-01", "wotc", "One"]]}, OLDER, rulings.index_path())
-        os.utime(rulings.index_path(), ns=(1, 1))
+        os.utime(rulings.index_path(), ns=(10**9, 10**9))
         self.assertEqual(len(rulings.for_card({"oracle_id": LLANOWAR})), 1)
         rulings._write({LLANOWAR: [["2020-01-01", "wotc", "One"], ["2021-01-01", "wotc", "Two"]]}, NEWER,
                        rulings.index_path())
-        os.utime(rulings.index_path(), ns=(2, 2))
+        os.utime(rulings.index_path(), ns=(2 * 10**9, 2 * 10**9))
         self.assertEqual(len(rulings.for_card({"oracle_id": LLANOWAR})), 2)
 
 
