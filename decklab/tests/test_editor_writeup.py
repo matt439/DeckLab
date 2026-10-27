@@ -5,9 +5,10 @@ Runs in test_editor's EditorTestCase (test_api's Sandbox with the files backend,
 2026-10-05), so a save's stored text is read back from the deck's file.
 """
 import json
+from unittest import mock
 
-from decklab.lib import access, api, decks
-from decklab.lib.api import drafts
+from decklab.lib import access, api, cards, decks
+from decklab.lib.api import drafts, editor
 from decklab.tests.test_api import _write
 from decklab.tests.test_editor import MARKER, TODAY, EditorTestCase
 
@@ -130,6 +131,41 @@ class FindCardsTests(EditorTestCase):
             with self.subTest(bad=bad):
                 self.assertApiError(400, lambda: api.find_cards(**{"q": "elf", **bad}))
         self.assertApiError(404, lambda: api.find_cards("elf", space="nobody"))
+
+    def test_rules_text_and_type_line_terms(self):
+        def names(q, **kw):
+            return {c["name"] for c in api.find_cards(q, limit="60", **kw)["cards"]}
+        mana = names('o:"add {g}"')
+        self.assertTrue({"Llanowar Elves", "Elvish Mystic"} <= mana, mana)
+        self.assertNotIn("Sol Ring", mana)
+        self.assertEqual(names("o:\u201cdestroy all creatures\u201d"), {"Wrath of God"})   # a phone's quotes
+        self.assertEqual(names("ORACLE:destroy type:sorcery"), {"Wrath of God"})
+        self.assertEqual(names("llan o:add t:elf"), {"Llanowar Elves"})                   # name words too
+        self.assertEqual(names("t:creature o:{t}: t:druid"), {"Llanowar Elves", "Elvish Mystic"})
+        self.assertIn("Ghalta, Primal Hunger", names("t:legend"))                        # anywhere in the line
+        self.assertIn("Bushi Tenderfoot // Kenzo the Hardhearted", names("t:samurai"))    # a back face's type
+        oracle = cards.card("Oracle of the Alpha")                                        # ~ is the card's name
+        self.assertTrue(editor._term_fits(oracle, [("o", "when ~ enters")]))
+        self.assertFalse(editor._term_fits(oracle, [("o", "when ~ dies")]))
+        self.assertTrue(editor._term_fits(oracle, [("o", "when oracle of the alpha enters")]))
+        self.assertEqual(names('o:"add {g}"', colors="G", mv="1"), mana & names("", colors="G", mv="1"))
+        self.assertEqual(names("o:"), set())                                              # still being typed
+        self.assertEqual(api.find_cards("o:add t:elf")["did_you_mean"], [])
+        error = self.assertApiError(400, lambda: api.find_cards("c:red o:add"), contains="c:red")
+        self.assertEqual(error.extra, {"reason": "term", "term": "c:red"})
+
+    def test_a_colon_in_a_card_name_isnt_an_unknown_term(self):
+        with mock.patch.object(cards, "search_names", return_value=["Circle of Protection: Red"]):
+            self.assertEqual(editor._find_terms("circle of protection: red t:enchantment"),
+                             ("circle of protection: red", [("t", "enchantment")]))
+
+    def test_my_collection_with_terms_lists_only_free_matching_cards(self):
+        everything = api.find_cards(scope="owned", deck_id="casual/table-test", limit="60")["cards"]
+        found = api.find_cards('o:"add {g}"', scope="owned", deck_id="casual/table-test", limit="60")["cards"]
+        self.assertTrue(found)
+        self.assertTrue(all(c["free"] > 0 and "add {g}" in c["oracle_text"].lower() for c in found))
+        self.assertEqual({c["name"] for c in found},
+                         {c["name"] for c in everything if "add {g}" in c["oracle_text"].lower()})
 
     def test_my_collection_lists_free_copies_in_the_decks_colours(self):
         answer = api.find_cards(scope="owned", deck_id="casual/table-test", colors="G", limit="60")
