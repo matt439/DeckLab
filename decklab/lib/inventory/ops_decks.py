@@ -44,6 +44,14 @@ free text: guard.require_kit_choice's rule; refused with code 400 or 403, reason
 a person's own space has no Played by, Sleeves or Deck box line (drafts._HOME_ONLY): a text adding
 one, or changing one already there, is refused (Invalid); a value already in the file may stay.
 
+A deck's Printings in box line (lib/decks/printings.py) is checked when a save or a new deck
+changes it: it must describe what the built box holds (DeckRefused, code 400, reason
+"printings"), and the space's built decks may not then record more copies of a printing than its
+collection has where they recorded fewer before (code 409, reason "printings"). A save given
+defer_printings (Finish building's several saves) leaves that check to its caller
+(check_printings). A save whose physical build changes (allow_assembled) drops the parts the new
+box can't hold.
+
 kit.set, accessory.* and image.* are in ops_accessories.py (registered when this module is
 imported).
 """
@@ -56,7 +64,8 @@ MAX_TEXT = 1024 * 1024                  # a deck text's most bytes (the history'
 # The header fields a deck in a person's own space doesn't have (drafts._HOME_ONLY's).
 HOME_ONLY = {"Played by": "a deck in a person's own space has no Played by: it's theirs by where it's kept",
              "Sleeves": "sleeves are recorded only for the home decks (the accessories are home's)",
-             "Deck box": "deck boxes are recorded only for the home decks (the accessories are home's)"}
+             "Deck box": "deck boxes are recorded only for the home decks (the accessories are home's)",
+             "Printings in box": "printings in box are recorded only for the home decks (Build decks is home's)"}
 KIT_FIELDS = ("sleeves", "deck_box")    # kit.set's fields, the header lines Sleeves and Deck box
 KIT_ONLY = ("{deck_id}: the Sleeves and Deck box lines are chosen on their own (kit.set), not in a save "
             "of the deck's text")
@@ -192,6 +201,71 @@ def _current(inv, deck_id, base_sha256):
     return deck
 
 
+def space_printings(inv, space):
+    """{deck_id: [PrintingLine]} of a space's built decks with a readable Printings in box line."""
+    from decklab.lib.decks import printings
+    out = {}
+    for deck in inv.decks.values():
+        if deck.space != space:
+            continue
+        parsed = parsed_deck(deck)
+        if parsed is None or parsed.status != "built":
+            continue
+        try:
+            lines = printings.printings(parsed)
+        except Exception:       # an unreadable line is the deck's own problem (db check), not this save's
+            continue
+        if lines:
+            out[deck.id] = lines
+    return out
+
+
+def check_printings(before, after, deck_ids):
+    """DeckRefused when a deck of deck_ids whose Printings in box line differs between the
+    snapshots before and after has a record its box can't hold (code 400), or when after's built
+    decks record more copies of a printing than the collection has, and more than before did
+    (code 409). Parts no save here changed stay as they are."""
+    from decklab.lib.decks import printings
+    changed, spaces_seen = [], set()
+    for deck_id in deck_ids:
+        new = after.deck(deck_id)
+        parsed = parsed_deck(new)
+        if parsed is None:
+            continue
+        old = parsed_deck(before.deck(deck_id))
+        try:
+            lines = printings.printings(parsed) if parsed.status == "built" else []
+        except Exception as e:
+            raise DeckRefused(f"{deck_id}: {e}", 400, "printings", [deck_id]) from None
+        try:
+            was = printings.printings(old) if old is not None and old.status == "built" else []
+        except Exception:
+            was = None
+        if lines == was:
+            continue
+        problems = printings.local_problems(lines, printings.held_counts(parsed))
+        if problems:
+            raise DeckRefused(f"{parsed.title}: the printings in box don't fit the box: " + "; ".join(problems),
+                              400, "printings", [deck_id])
+        changed.append((deck_id, parsed, lines))
+        spaces_seen.add(new.space)
+    for space in spaces_seen:
+        owned = printings.capacity(after.collection(space).rows)
+        for deck_id, parsed, lines in changed:
+            if after.deck(deck_id).space == space:
+                problems = printings.problems_against(lines, owned)
+                if problems:
+                    raise DeckRefused(f"{parsed.title}: " + "; ".join(problems), 400, "printings", [deck_id])
+        was, now = printings.totals(space_printings(before, space)), printings.totals(space_printings(after, space))
+        for key, copies in sorted(now.items()):
+            have = owned.get(key, ("", 0))
+            if copies > have[1] and copies > was.get(key, 0):
+                label = printings.PrintingLine(1, have[0], *key).label()
+                ids = [deck_id for deck_id, _, lines in changed if any(line.key == key for line in lines)]
+                raise DeckRefused(f"{have[0] or 'A card'} {label}: the built decks would record {copies} "
+                                  f"in their boxes, but the collection has {have[1]}.", 409, "printings", ids)
+
+
 def _physical_save(deck_id, before, after, allow_assembled=False):
     """Old clients cannot overwrite physical reservations through a text save."""
     from decklab.lib import decks
@@ -219,11 +293,19 @@ def _physical_save(deck_id, before, after, allow_assembled=False):
         if (assembled.version(before) == assembled.version(after)
                 and decks.clean_sections(assembled.sections(before)) != decks.clean_sections(assembled.sections(after))):
             assembled.install(after, assembled.version(before), assembled.sections(before))
+    if allow_assembled:
+        from decklab.lib.decks import printings
+        try:
+            lines = printings.printings(after)
+        except decks.DeckFileError:
+            lines = None
+        if lines:
+            printings.set_printings(after, printings.trim(lines, printings.held_counts(after)))
     return decks.render_deck_file(after)
 
 
 @register("deck.save")
-def save(inv, *, deck_id, text, base_sha256, allow_assembled=False):
+def save(inv, *, deck_id, text, base_sha256, allow_assembled=False, defer_printings=False):
     """The deck's text replaced by text (see the module docstring)."""
     deck = _current(inv, deck_id, base_sha256)
     before = parsed_deck(deck)
@@ -232,7 +314,10 @@ def save(inv, *, deck_id, text, base_sha256, allow_assembled=False):
     if text == deck.text:
         return inv, Summary("Nothing to change")
     same_kit(deck_id, before, parsed)
-    return inv.with_deck(deck.replace(text=text)), Summary(
+    out = inv.with_deck(deck.replace(text=text))
+    if not defer_printings:
+        check_printings(inv, out, [deck_id])
+    return out, Summary(
         f"Saved {parsed.title}", {"decks": 1}, {deck.path: ["text"]}, {"deck": deck_id})
 
 
@@ -257,7 +342,11 @@ def create(inv, *, space, kind, slug, text, owners=frozenset()):
         raise DeckRefused("That deck id is retained as a former name of another deck.", 409, "exists", [former])
     parsed = _parse(deck.id, text, space, kind, slug)
     check_kit(inv, deck.id, parsed, _owners(owners))
-    return inv.with_deck(deck), Summary(f"Created {parsed.title}", {"decks": 1}, {deck.path: ["created"]},
+    if parsed.status != "built" and _field(parsed, "Printings in box"):
+        raise DeckRefused(f"{deck.id}: only a built deck has printings in its box.", 400, "printings", [deck.id])
+    out = inv.with_deck(deck)
+    check_printings(inv, out, [deck.id])
+    return out, Summary(f"Created {parsed.title}", {"decks": 1}, {deck.path: ["created"]},
                                         {"deck": deck.id})
 
 

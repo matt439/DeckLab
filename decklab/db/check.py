@@ -15,6 +15,9 @@ as {name, ok, warning, detail, seconds}:
   tables"); a refresh that can't be worked out (no card data, an incomplete pool while a forced
   order is on the way, an unknown card) is a warning too, saying why: the decks' own
   invariants below fail for a deck whose text is missing or wrong;
+- printings in box: built home decks whose Printings in box line can't all be true (a card the
+  box no longer holds, a printing the collection no longer has enough copies of), as a WARNING
+  only: a collection edit may make a record stale, and the deck page says so until it's fixed;
 - the decks' invariants, in SQL and Python: aliases are flat, keep one space and kind, refer
   to historical identities and never replace a current deck; revisions are unique throughout
   each alias lineage; every deck's revision is its lineage's newest deck_revision,
@@ -139,6 +142,18 @@ def _deck_tables():
                             + _listed(deck_id for deck_id, *_ in planned)
                             + " (python -m decklab.db deck tables --apply)")
     return True, False, "every table is up to date"
+
+
+def _printings_in_box():
+    from decklab.lib import pool
+    try:
+        in_use = pool.load_pool().in_use
+    except (ValueError, OSError, RuntimeError) as e:
+        return True, True, f"not checked: the pool can't be read ({e})"
+    stale = [f"{item.title}: {why}" for item in in_use for why in item.recorded_stale]
+    if stale:
+        return True, True, f"{_plural(len(stale), 'part')} out of date: " + _listed(stale)
+    return True, False, "every record can be true"
 
 
 # ------------------------------------------------------------------ the database's invariants
@@ -448,6 +463,7 @@ def run(dbname=None, say=backup.say):
                     result.sub(f"tokens ({space})", _tokens(space))
                 result.sub("orders and queue", _orders)
                 result.sub("deck tables", _deck_tables)
+                result.sub("printings in box", _printings_in_box)
         result.sub("deck aliases", _deck_aliases(c), c)
         result.sub("deck revisions", _deck_revisions(c), c)
         result.sub("deck texts", _deck_texts(c), c)

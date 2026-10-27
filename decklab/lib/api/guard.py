@@ -56,6 +56,7 @@ The routes and what each checks:
     POST /api/deck/cover                          deck.edit on the deck as stored (as a save of its text)
     POST /api/deck/token-cards                    deck.edit on the deck as stored (as a save of its text), and
                                                   its space's inventory (require_sees_inventory)
+    POST /api/deck/printings                      the same as /api/deck/token-cards (a home deck only)
     POST /api/deck/box-check, /api/deck/box-repair  deck.edit on the home deck as stored, and home's records
                                                   (require_sees_home_records); box-repair's preview writes nothing
     POST /api/tokens/plan                         its space's inventory (require_sees_inventory), and

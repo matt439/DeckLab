@@ -171,6 +171,9 @@ called as before (from decklab.lib import api; api.<name>). Each part:
                      deck.save). Imported when first asked (feature_routes.dispatch)
     token_cards.py   POST /api/deck/token-cards: save_token_cards() sets a built deck's Token
                      cards line, the token cards it packs (one deck.save). Imported when first asked
+    deck_printings.py POST /api/deck/printings: save_printings() sets a built deck's Printings in
+                     box line, which printing of its cards is in its box (one deck.save); view() is
+                     the deck page's part. assembly_printings.py: Build decks' "Which printing?"
     box_check.py     POST /api/deck/box-check: save_box_check() records a built deck's Box checked date (one deck.save)
     box_repair.py    POST /api/deck/box-repair: repair_box() previews, then saves, a built deck's physical build corrected
                      from a box check, with its check date (one deck.save). Both imported when first asked

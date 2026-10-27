@@ -312,6 +312,8 @@ def _preview(selected, profile=False):
                           partial(plan_counts, priorities=priorities), priorities=priorities)
     from .assembly_products import annotate
     answer = annotate(answer, p, inventory.current())
+    from . import assembly_printings
+    answer = assembly_printings.annotate(answer, p)
     answer["selections"] = selections
     from .assembly_intent import project
     for item in answer["decks"]:

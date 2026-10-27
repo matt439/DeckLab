@@ -541,6 +541,10 @@ def deck_view(deck_id, version="target", omit=()):
     separate from sections and their hashes; None for products and pairings. Its own warnings
     describe invalid saved mappings without changing the logical list.
 
+    printings_in_box is a built home deck's Printings in box record (deck_printings.view: what it
+    records that can still be true, why the rest is ignored, and its sheet's choices); absent
+    otherwise.
+
     assembled describes a built ordinary deck's physical snapshot and remaining Planned
     intent, independent of the displayed list version (assembly_intent.project). Cards
     outside the build can already be owned, on the way or missing; neither list is edited.
@@ -548,7 +552,7 @@ def deck_view(deck_id, version="target", omit=()):
     The space's inventory only for those who may see it (the phase 4 design's
     R6d, guard.sees_inventory: User2's decks only User2 and an admin,
     home's only Matt and User1): for anyone else the answer has no owned,
-    tokens, table, standins or assembled at all (an absent key, not None, which means "couldn't be
+    tokens, table, standins, printings_in_box or assembled at all (an absent key, not None, which means "couldn't be
     worked out"), and the space's pool and tokens aren't read, so none of
     their warnings show. The decklist, guide, stats, practice and matchups
     stay.
@@ -629,6 +633,11 @@ def deck_view(deck_id, version="target", omit=()):
             answer["box_checked_on"] = boxcheck.checked_on(deck_file)
         from .assembly_standins import project
         answer["standins"] = project(deck_file, version) if deck_file is not None else None
+        if deck_file is not None and space == spaces.HOME:
+            from .deck_printings import view as printings_view
+            found = printings_view(deck_file, inventory.current().deck(deck_id), p)
+            if found is not None:
+                answer["printings_in_box"] = found
         assembled = _assembled_view(summary, p, warnings, deck=deck_file, result=owned if version == "target" else None)
         if assembled is not None:
             answer["assembled"] = assembled

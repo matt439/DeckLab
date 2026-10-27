@@ -340,7 +340,8 @@ function colListedHolders(cv, row) {
     // Optional colours describe the deck's current Planned identity, independently of the hint's list kind.
     const colors = Array.isArray(hint.colors) && hint.colors.every((color) => typeof color === "string" && /^[WUBRG]$/.test(color))
       ? [...hint.colors] : null;
-    holders.push({ id: hint.id, title: hint.title, quantity: hint.quantity, version: hint.version, colors });
+    holders.push({ id: hint.id, title: hint.title, quantity: hint.quantity, version: hint.version, colors,
+      recorded: hint.recorded === true });
   }
   if (holders.length && saved.held > Number(row.quantity)) return null;
   return total === saved.held ? { holders, unattributed: saved.unattributed } : null;
@@ -353,26 +354,32 @@ function colPackingLink(cv, row, hint) {
     if (!colActive(cv)) return false;
     const record = (cv.rows || []).find((item) => colKey(item) === key);
     return record && colListedHolders(cv, record)?.holders.some((item) => item.id === hint.id
-      && item.version === hint.version && item.quantity === hint.quantity && item.title === hint.title);
+      && item.version === hint.version && item.quantity === hint.quantity && item.title === hint.title
+      && item.recorded === hint.recorded);
   };
   return el("a", { href, onclick: (event) => {
     event.preventDefault();
     if (!event.currentTarget.isConnected || !current()) return;
     colAfterViewer(() => { if (current()) location.hash = href; });
   } }, deckColourPieces(hint.colors)?.swatch(),
-    el("span", { text: `${hint.quantity} \u00d7 ${hint.title} (${listName(hint.version)})` }));
+    el("span", { text: hint.recorded ? `${hint.quantity} \u00d7 ${hint.title}`
+      : `${hint.quantity} \u00d7 ${hint.title} (${listName(hint.version)})` }));
 }
 
-/** Names describe saved hints, never verified physical copies or a guaranteed current revision. */
+/** A recorded holder is its Printings in box line (what went in the box); the others are saved
+ * hints, never verified physical copies or a guaranteed current revision. */
 function colPackingHints(cv, row) {
   const listed = colListedHolders(cv, row);
   if (!listed?.holders.length) return null;
+  const inBox = listed.holders.filter((hint) => hint.recorded), hints = listed.holders.filter((hint) => !hint.recorded);
   return el("span", { class: "col-viewer-decks col-packing-hints" },
-    el("span", { class: "col-packing-label", text: "Saved packing-list hints:" }),
-    listed.holders.map((hint) => el("span", { class: "col-packing-hint" }, colPackingLink(cv, row, hint))),
+    inBox.length ? el("span", { class: "col-packing-label", text: "Recorded in the box:" }) : null,
+    inBox.map((hint) => el("span", { class: "col-packing-hint" }, colPackingLink(cv, row, hint))),
+    hints.length ? el("span", { class: "col-packing-label", text: "Saved packing-list hints:" }) : null,
+    hints.map((hint) => el("span", { class: "col-packing-hint" }, colPackingLink(cv, row, hint))),
     listed.unattributed ? el("span", { class: "col-viewer-note",
       text: `${plural(listed.unattributed, "held copy", "held copies")} without a named hint.` }) : null,
-    el("span", { class: "col-viewer-note", text: COL_PACKING_HINT_WORDS }));
+    hints.length ? el("span", { class: "col-viewer-note", text: COL_PACKING_HINT_WORDS }) : null);
 }
 
 /** Resolve the key from the current filtered rows; detached/stale callbacks never restore old details. */
@@ -510,8 +517,15 @@ function colHeldCell(cv, row) {
   return add(cell, [el("span", { class: `col-held${guess ? " col-held-guess" : ""}`,
     title: colStorageWords(cv, row) + (guess ? `. ${COL_GUESS_WORDS}` : "") }, simNumbers(words)),
     guess ? el("span", { class: "sr-only", text: "Printing allocation uncertain." }) : null,
-    colListedHolders(cv, row)?.holders.length ? el("span", { class: "col-packing-marker",
-      text: "Saved list hints", title: COL_PACKING_HINT_WORDS }) : null]);
+    colPackingMarker(colListedHolders(cv, row)?.holders || [])]);
+}
+
+/** "Recorded in boxes" when every named holder's copies are its Printings in box record, else the hints'. */
+function colPackingMarker(holders) {
+  if (!holders.length) return null;
+  return holders.every((hint) => hint.recorded)
+    ? el("span", { class: "col-packing-marker", text: "Recorded in boxes" })
+    : el("span", { class: "col-packing-marker", text: "Saved list hints", title: COL_PACKING_HINT_WORDS });
 }
 
 

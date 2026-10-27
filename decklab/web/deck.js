@@ -612,7 +612,7 @@ function cardsParts(data, screen) {
   screen.cardsHost = list;
   screen.cardsBar = el("div", { class: "toolbar deck-cards-bar" });
   redrawCards(screen);
-  return [screen.cardsBar, list, deckSwapsSection(data), tokensSection(data), ownedSection(data)];
+  return [screen.cardsBar, list, deckSwapsSection(data), tokensSection(data), deckPrintingsSection(data), ownedSection(data)];
 }
 
 /** The remembered List or Pictures choice; the first time, pictures where the screen is wide. */

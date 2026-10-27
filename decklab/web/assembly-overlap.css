@@ -19,3 +19,16 @@
   .pack-overlap-short { display: none; }
   .pack-overlap-full { position: static; width: auto; height: auto; margin: 0; overflow: visible; clip-path: none; white-space: normal; }
 }
+
+/* Printings in box: the pull tile's "Which printing?" (printings-in-box.js), outside the card and tick hit areas. */
+.pack-tiles .pack-printing { justify-self: start; align-self: start; max-width: 100%; width: fit-content;
+  min-height: 32px; padding: 2px var(--s-2); font-size: var(--fs-meta); white-space: normal; overflow-wrap: anywhere;
+  text-align: left; color: var(--ink-2); font-weight: var(--fw-regular); }
+.pack-tiles .pack-printing.is-chosen { color: var(--ink); }
+.pack-printing-choices, .deck-printings-choices { display: grid; gap: var(--s-2); }
+.pack-printing-choices input, .deck-printings-choices input { width: 6ch; }
+.deck-printings-choices > li { display: grid; gap: var(--s-1); }
+.deck-printings-name { font-weight: var(--fw-medium); }
+@media (min-width: 1000px) {
+  .pack-tiles .pack-printing { grid-column: 1 / -1; margin: 0 44px var(--s-1) 36px; }
+}

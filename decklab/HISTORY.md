@@ -2,6 +2,19 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Printings in box (2026-10-27; E11-S30 slice 13)
+
+Deck Lab now records which physical printing of a built deck's cards is in its box, to the short design Matt approved on 2026-10-27. Cards are still counted by name: nothing reserves by printing.
+
+- **The record:** an optional `- **Printings in box:** 2 Llanowar Elves (FDN) 227; 2 Llanowar Elves (M19) 314 foil` header line on a built home deck (`lib/decks/printings.py`). It may be partial and never names basic lands. Taking a deck apart removes it, as it does Token cards; a person's deck can't gain one.
+- **Capture while packing:** each pull tile on Build decks has **Which printing?** (`web/printings-in-box.js`), listing the collection's printings of that card whose copies aren't all recorded in other boxes (`api/assembly_printings.py`, the plan's `printing_choices`). When only one printing can be in storage it's filled in and says "only printing in storage", which is certain, not a guess. Skipping never blocks: Finish building takes optional `printings` and writes the line in the same save, keeping the deck's earlier record for copies the box already held.
+- **Fix it later:** the deck page's Cards tab has a Printings in box part with **Printings in box…**, a count per printing of each card the box holds, saved as one revision-checked change (POST `/api/deck/printings`, `api/deck_printings.py`). `deck pull`/`deck push` edit the line by hand.
+- **Keeping it honest:** `deck.save` and `deck.create` refuse a changed line that names a card the box doesn't hold, more copies than it holds or a printing the collection doesn't have of that card (400), and one after which the built decks would record more copies of a printing than the collection has, where they recorded fewer before (409). Finish building checks once after all its saves, so cards moving between selected decks don't trip it. A repack drops parts the new box can't hold. A record a later collection edit makes impossible stays as written: the pool ignores that part (`InUse.recorded`, `recorded_stale`), the deck page shows **Printings in box out of date**, and `db check` warns ("printings in box").
+- **Collection:** storage counts give each printing's recorded copies first and exactly (`recorded` on the row), before saved-list hints and the cheapest guesses. The copies' deck is named under "Recorded in the box", and a fully recorded row's marker says "Recorded in boxes".
+- **Not in this:** reservation by printing, inference from art or the decklist, intact products, members' spaces, and Box check confirming printings.
+
+Validation: the new `test_printings_in_box.py` covers the line's format, trimming, out-of-date records, push refusals, take-apart, members' decks and Finish building's offers, writes and refusals; the inventory goldens normalise only well-formed `printing_choices` and an empty `printings_in_box`. In a full-data sandbox (synthetic cards, local PostgreSQL), the picker, its prefill, the deck page sheet's save and Collection's recorded holders were checked in Chromium with no script errors. Touch, Safari and device acceptance are not claimed.
+
 ## Linux support (2026-10-27; E11-S33)
 
 Deck Lab now runs on Linux as fully as on Windows.

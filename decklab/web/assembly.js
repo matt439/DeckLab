@@ -301,7 +301,7 @@ function assemblyTick(text, count = 1, context = null, key = text) {
 }
 
 /** A card to pull as a picture tile with a tick on its corner; id is its key for the saved ticks. */
-function packTile(view, name, { qty, meta, caption, id, finishes = [], overlap = null }) {
+function packTile(view, name, { qty, meta, caption, id, finishes = [], overlap = null, printing = null }) {
   const card = (view.cards || {})[name] || null;
   // These are the selected list's finishes; allocation still counts interchangeable copies by name.
   const special = finishes.some(item => ["foil", "etched"].includes(item.finish));
@@ -329,6 +329,7 @@ function packTile(view, name, { qty, meta, caption, id, finishes = [], overlap =
   packRegisterCard(view, tile, card, description);
   const pill = packOverlapPill(view, name, overlap);
   if (pill) tile.append(pill);
+  if (printing) tile.append(printing);
   return tile;
 }
 
@@ -451,7 +452,8 @@ function packDeck(view, deck) {
   const participant = { id: deck.id, version: deck.version };
   const tiles = (rows) => packCardGroups(view, rows);
   const pulls = steps.filter(s => s.storage).map(s => ({ name: s.name, qty: s.storage, meta: null, finishes: deck.finishes?.[s.name],
-    caption: `Pull ${s.storage} from storage for ${deck.title}`, id: `pull|${s.name}`, overlap: participant }));
+    caption: `Pull ${s.storage} from storage for ${deck.title}`, id: `pull|${s.name}`, overlap: participant,
+    printing: deck.completion?.already_built ? null : packPrintingControl(view, deck, s.name, s.storage) }));
   const moves = steps.flatMap(s => s.transfers.map(t => ({ name: s.name, qty: t.quantity, meta: `From ${t.from_title}`, finishes: deck.finishes?.[s.name],
     caption: `Move ${t.quantity} from ${t.from_title} to ${deck.title}; change sleeves`, id: `move|${s.name}|${t.from}`, overlap: participant })));
   const basics = (deck.basics || []).map(b => ({ name: b.name, qty: b.quantity, meta: null, finishes: deck.finishes?.[b.name],
@@ -644,10 +646,12 @@ async function packMarkBuilt(view) {
     packProgress(view);
     if (!review || !packCanFinish(view)) return;
   }
+  const printings = packPrintingsBody(view, data);
   packSaving(view, true);
   try {
     const answer = await apiWrite("/api/assembly/built", { decks: selected,
-      fingerprint: data.completion.fingerprint, confirmed: true, ...(review ? { kit: review.kit } : {}) });
+      fingerprint: data.completion.fingerprint, confirmed: true, ...(review ? { kit: review.kit } : {}),
+      ...(Object.keys(printings).length ? { printings } : {}) });
     if (!assemblyActive(view) || view.data !== data) return;
     packSaving(view, false);
     const updated = answer.plan;
@@ -662,6 +666,7 @@ async function packMarkBuilt(view) {
           build_scope: saved.build_scope, remaining_intent: saved.remaining_intent } : {}) };
       }) };
     view.buildKit = {};
+    view.boxPrintings = {};
     const built = new Set(answer.built.map(deck => deck.id));
     view.choices = view.choices.map(choice => built.has(choice.id) ? { ...choice, status: "built" } : choice);
     view.finishError = null;

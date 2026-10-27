@@ -12,6 +12,8 @@ historical date on an ordinary home deck page is omitted. Written dates,
 malformed metadata and existing packing counts/differences remain comparable.
 At the Library index, only a clean null check date on a readable ordinary home
 built summary is omitted, for the fixture's home viewers and top-level script.
+Build decks' printing_choices (the "Which printing?" offers) are omitted only when
+well formed, and a deck page's printings_in_box only when it records nothing.
 """
 import copy
 import hashlib
@@ -168,6 +170,32 @@ def _default_library_box_check(summary):
             and isinstance(summary.get("box_check"), dict) and summary["box_check"] == {"checked_on": None})
 
 
+OPTION_KEYS = {"set", "collector_number", "finish", "label", "free"}
+
+
+def _printing_choices(value):
+    """True for a well-formed printing_choices map (assembly_printings.annotate)."""
+    if not isinstance(value, dict):
+        return False
+    for name, offered in value.items():
+        if (not _named(name) or not isinstance(offered, dict) or set(offered) != {"options", "only"}
+                or not isinstance(offered["options"], list) or not offered["options"]):
+            return False
+        for option in offered["options"]:
+            if (not isinstance(option, dict) or set(option) != OPTION_KEYS or type(option["free"]) is not int
+                    or option["free"] < 1 or not all(isinstance(option[k], str) for k in OPTION_KEYS - {"free"})):
+                return False
+        if offered["only"] is not None and (len(offered["options"]) != 1 or offered["only"] != offered["options"][0]):
+            return False
+    return True
+
+
+def _empty_printings(value):
+    return (isinstance(value, dict) and value.get("recorded") == [] and value.get("stale") == []
+            and isinstance(value.get("cards"), list) and _hash(value.get("expect")) and type(value.get("editable")) is bool
+            and set(value) == {"recorded", "stale", "cards", "expect", "editable"})
+
+
 def normalise(dump):
     out = copy.deepcopy(dump)
     for viewer, mine in [(None, out), *((out.get("by_viewer") or {}).items())]:
@@ -197,6 +225,8 @@ def normalise(dump):
                             names.update(named)
                             deck.pop("box_check")
                     deck.pop("take_apart", None)
+                    if _printing_choices(deck.get("printing_choices")):
+                        deck.pop("printing_choices")
             if default_boxes and all_default and _default_box_art(plan.get("box_check_cards"), names):
                 plan.pop("box_check_cards")
             for row in plan.get("rows", []):
@@ -208,6 +238,8 @@ def normalise(dump):
             if not isinstance(view, dict):
                 continue
             summary = view.get("summary")
+            if _empty_printings(view.get("printings_in_box")):
+                view.pop("printings_in_box")
             if view.get("box_checked_on", False) is None and _ordinary_home_summary(summary):
                 view.pop("box_checked_on")
             stem = _product(summary)
