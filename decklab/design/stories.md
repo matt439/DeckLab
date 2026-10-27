@@ -3398,7 +3398,7 @@ Evidence:
 
 Keeping Deck Lab running, safe and believable, by Matt as the household's admin and by Claude Code working for him at the PC. It covers the server and its Cloudflare tunnel and "Deck Lab is off" page, the PostgreSQL database with its nightly backup, export, check and restore check, the audit trail on #/activity, the `python -m decklab.db` commands Claude works through (previews, `--expect` guards, `-m` messages, exit codes), the card data's background refresh, Forge upkeep and the Safari Simulator suite. Every write is one audited change set, Matt's own command-line writes are recorded as his, and backups are checked by restoring them.
 
-Open: E11-S02, E11-S08, E11-S12, E11-S16, E11-S21, E11-S28, E11-S30, E11-S31, E11-S32, E11-S33.
+Open: E11-S02, E11-S08, E11-S12, E11-S16, E11-S21, E11-S28, E11-S30, E11-S31, E11-S33.
 
 **E11-S01** · Matt · must · M · built
 
@@ -3956,7 +3956,7 @@ Next step: Matt chooses the sources and result grouping; this is a DECISION in T
 
 Gap: everything; nothing built.
 
-**E11-S32** · Matt · could · M · partial
+**E11-S32** · Matt · could · M · built
 
 As Matt, publishing Deck Lab for others to run on their own PC, I want a ready-built copy of Deck Lab's Forge fork to download, so that a newcomer gets simulations without cloning and building Forge with Maven.
 
@@ -3966,13 +3966,11 @@ As Matt, publishing Deck Lab for others to run on their own PC, I want a ready-b
 - Given FG#2's rebase onto a new Forge, then making the next release is one documented step of the upgrade.
 
 Evidence:
-- `SELF-HOSTING.md`: the Forge steps (download Forge's release, clone the fork with its tags, build, `decklab/install.py`)
-
-Now (2026-10-27): the fork has `decklab/package.py` (packs an install as `forge-<build>.zip` with a `.sha256` and release notes, refusing a dirty or mismatched build), a hand-run **Deck Lab release** workflow that builds a commit on Linux with JDK 21 and can make a draft release tagged with the build name, and `decklab/RELEASE.md`. Here `simjar.RELEASE` names the expected build, `python -m decklab.lib.forge status` prints a `build:` line saying whether the installed Forge is that build and what to download if not, SELF-HOSTING.md's Forge step offers the download first and building second, and the README's Forge upgrade has the release as step 6. Still missing: the published 2.0.15 release itself, which waits for Matt's OK.
-
-Gap: no release is published yet, so SELF-HOSTING.md's download link doesn't resolve. Raised 2026-10-25 by the self-host check.
-
-First slice: add and locally verify a script in the Forge fork that packs the distributable installed build as an archive, records the base Forge version and build metadata, writes a SHA-256 checksum and documents the repeatable release procedure. Publishing a real 2.0.15 release and updating SELF-HOSTING.md to its verified download link follow as separately authorized steps.
+- The release [2.0.15-decklab-52387e83f](https://github.com/matt439/forge/releases/tag/2.0.15-decklab-52387e83f) on matt439/forge (published 2026-10-27): `forge-2.0.15-decklab-52387e83f.zip` and its `.sha256`, notes naming Forge 2.0.15, the build, commit and res hash
+- The fork's `decklab/package.py`, `.github/workflows/decklab-release.yml` ("Deck Lab release") and `decklab/RELEASE.md`
+- `SELF-HOSTING.md`, "Forge simulations": Download it, then Or build it from source
+- `decklab/lib/forge/simjar.py`: `RELEASE`, `release_url`, `release_check`; `python -m decklab.lib.forge status`'s `build:` line
+- `decklab/README.md`, "Deck Lab's own Forge": step 6 and "Moving to a new Forge release"
 
 **E11-S33** · Matt · could · L · missing
 
