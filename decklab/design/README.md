@@ -57,7 +57,7 @@ Each epic has a journey in [journeys.md](journeys.md) and its stories in [storie
 | Epic | Title | What it covers | Built | Partial | Missing | Not wanted |
 |---|---|---|---|---|---|---|
 | E1 | Find, plan and choose decks | The library (`#/library`), deck ideas, cover pictures, the deck page's banner and Overview, choosing what to play | 10 | 0 | 4 | 0 |
-| E2 | Build and edit a deck | New deck, the editor and the phone Quick edit, Planned and Play-now lists, owned vs needed, history; `deck pull/push/new/tables` | 13 | 1 | 4 | 1 |
+| E2 | Build and edit a deck | New deck, the editor and the phone Quick edit, Planned and Play-now lists, owned vs needed, history; `deck pull/push/new/tables` | 14 | 1 | 3 | 1 |
 | E3 | Test a deck | Stats, Practice, Forge matchups (`#/matchups`, `#/matchup`), field rank, Test this change (`#/variant`), the simulations setting | 11 | 3 | 1 | 0 |
 | E4 | Get ready, play and learn | The Packing plan (`#/assembly`), tokens to grab, How to play, practice hands, the Game log (`#/play`) and sideboard plans | 15 | 1 | 5 | 1 |
 | E5 | Decide what to buy | Missing cards and estimated costs, the purchase queue on `#/shopping`, AU shop checks, buylists, `watchlist` and `order add --fulfils` | 15 | 0 | 5 | 2 |

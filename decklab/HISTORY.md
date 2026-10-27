@@ -2,6 +2,16 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Rules-text and type-line search (2026-10-27; E2-S25)
+
+The editor's card finder now takes Scryfall-style terms beside a card's name: `o:` (or `oracle:`) searches rules text and `t:` (or `type:`) the type line, each a word or a quoted phrase (`o:"draw a card"`, a phone's curly quotes too), every term to match, as in `o:treasure t:creature` (`api/editor.py`, `_find_terms` and `_term_fits`).
+
+- **Matching:** loose (`cards.fold`) and anywhere in the text, as Scryfall does (`t:legend` finds Legendary). A multi-face card's every face counts, for its type line and its rules text; a `~` in an `o:` term stands for the card's own name (`o:"when ~ enters"`). A term with nothing after its colon yet counts for nothing, so typing one doesn't flash an error.
+- **With the rest:** the name words, and the colour, type and mana value filters, still apply; terms alone browse every paper card, and in My collection only cards with a copy free for this deck show. The name search's ordering and "did you mean" use the name words only, and the page offers no close spellings after a search with terms.
+- **Unknown terms:** any other `key:` answers 400 with the term named ("The search doesn't know the term c:red. It knows o: for rules text and t: for the type line…", `reason` "term"), shown as it is in the results. A colon in a card name ("Circle of Protection: Red") stays name text.
+
+Validation: new FindCardsTests in `test_editor_writeup.py` on the fixture card data; the suite's four shards passed locally on Linux. The page's wording was checked by reading only: no browser run on real card data.
+
 ## Printings in box (2026-10-27; E11-S30 slice 13)
 
 Deck Lab now records which physical printing of a built deck's cards is in its box, to the short design Matt approved on 2026-10-27. Cards are still counted by name: nothing reserves by printing.
