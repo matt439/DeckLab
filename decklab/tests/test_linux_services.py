@@ -72,6 +72,7 @@ class FakeSystemctl:
         return 0, "", ""
 
 
+@unittest.skipUnless(LINUX, "the units are written for this Python and repo, as POSIX paths")
 class SystemdCase(unittest.TestCase):
     """A unit folder of the test's own ($XDG_CONFIG_HOME), a fake systemctl, and lingering off."""
 
