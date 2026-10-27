@@ -8,7 +8,7 @@ CHANGE_ID = 17
 ROW_ID = 101
 NEW_ROW_ID = 110
 OWNERS = frozenset({"matt", "shared"})
-FIELDS = ("brand", "name", "colour", "notes", "link", "image_source")
+FIELDS = ("brand", "name", "colour", "notes", "link", "image_source", "capacity")
 META = ("id", "kind", "owner", *FIELDS)
 
 

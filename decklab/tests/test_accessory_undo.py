@@ -1,5 +1,6 @@
 """Pure accessory metadata inverses, using only explicit in-memory snapshots."""
 import copy
+from dataclasses import replace
 import unittest
 from unittest import mock
 
@@ -26,15 +27,29 @@ class AccessoryUndoTests(unittest.TestCase):
         return undo.verify_saved(self.store.snapshot, after, plan,
                                  fixture.actual_source(plan) if rows is None else rows)
 
-    def test_exact_review_projects_only_nine_metadata_fields_and_preserves_inputs(self):
+    def box_source(self, original="40", current="100", *, mixed=False):
+        self.store.seed()
+        self.source()["after"].update(kind="deck_box", quantity="1", capacity=current)
+        if not mixed:
+            self.source()["before"] = copy.deepcopy(self.source()["after"])
+        self.source()["before"].update(kind="deck_box", quantity="1", capacity=original)
+        rows = [self.source()["after"] if row.accessory_id == "a-sleeves" else row.as_dict()
+                for row in self.store.snapshot.accessories.rows]
+        self.store.snapshot = self.store.snapshot.with_accessories(rows)
+        deck = self.store.snapshot.deck("casual/fixture")
+        self.store.snapshot = self.store.snapshot.with_deck(replace(
+            deck, text=deck.text.replace("- **Sleeves:** a-sleeves\n", "- **Deck box:** a-sleeves\n")))
+
+    def test_exact_review_projects_only_ten_metadata_fields_and_preserves_inputs(self):
         before, audit = self.store.snapshot, copy.deepcopy(self.store.audit)
         plan, after = self.review()
         self.assertEqual((plan["kind"], plan["action"], plan["label"]), ("accessory", "accessory_update", "Current sleeves"))
         self.assertEqual(plan["current"], fixture.meta(self.source()["after"]))
         self.assertEqual(plan["restored"], fixture.meta(self.source()["before"]))
-        self.assertEqual(set(plan["current"]), {"id", "kind", "owner", "brand", "name", "colour", "notes", "link", "image_source"})
+        self.assertEqual(set(plan["current"]), {"id", "kind", "owner", "brand", "name", "colour", "notes", "link", "image_source", "capacity"})
         self.assertEqual(plan["fields"], [{"field": field, "before": self.source()["after"][field],
-                                          "after": self.source()["before"][field]} for field in fixture.FIELDS])
+                                          "after": self.source()["before"][field]} for field in fixture.FIELDS
+                                         if self.source()["after"][field] != self.source()["before"][field]])
         self.assertEqual((plan["owners"], plan["row_change_id"]), (["matt", "shared"], fixture.ROW_ID))
         self.assertRegex(plan["expect"], r"^[a-f0-9]{64}$")
         self.assertEqual(self.store.snapshot, before)
@@ -43,6 +58,8 @@ class AccessoryUndoTests(unittest.TestCase):
 
     def test_each_allowed_text_field_and_permitted_blanks_restore_exactly(self):
         for field in fixture.FIELDS:
+            if field == "capacity":
+                continue  # Its canonical numeric/blank values require the deck-box fixture below.
             values = ("Original name",) if field == "name" else (
                 ("https://example.com/original-" + field, "") if field in ("link", "image_source") else ("Original " + field, ""))
             for old in values:
@@ -124,7 +141,7 @@ class AccessoryUndoTests(unittest.TestCase):
             with self.subTest(changed=changed), self.assertRaises(undo.UndoUnsupported):
                 undo.raw_row(fixture.row(**changed))
 
-    def test_quantity_capacity_kind_owner_image_and_crop_changes_are_not_text_undo(self):
+    def test_quantity_kind_owner_image_and_crop_changes_are_not_details_undo(self):
         cases = ({"quantity": "101"}, {"kind": "playmat"}, {"owner": "shared"},
                  {"image": "", "crop": ""}, {"crop": "0,0,1,1"})
         for changed in cases:
@@ -133,10 +150,63 @@ class AccessoryUndoTests(unittest.TestCase):
             with self.subTest(changed=changed), self.assertRaises(undo.UndoUnsupported):
                 self.review()
         self.store.seed()
-        self.source()["before"].update(kind="deck_box", quantity="1", capacity="80")
-        self.source()["after"].update(kind="deck_box", quantity="1", capacity="100")
+        self.source()["before"]["capacity"] = "80"  # Sleeves cannot acquire box capacity.
         with self.assertRaises(undo.UndoUnsupported):
             self.review()
+
+    def test_box_capacity_restores_canonical_lower_unknown_and_maximum_values(self):
+        for old, current in (("40", "100"), ("", "100"), ("9999", "100"), ("1", "100"), ("100", "")):
+            self.box_source(old, current)
+            before, audit = self.store.snapshot, copy.deepcopy(self.store.audit)
+            with self.subTest(original=old, current=current):
+                plan, after = self.review()
+                self.assertEqual(plan["fields"], [{"field": "capacity", "before": current, "after": old}])
+                self.assertEqual((plan["current"]["capacity"], plan["restored"]["capacity"]), (current, old))
+                self.assertEqual(self.saved(plan, after)["restored"]["capacity"], old)
+                self.assertEqual(next(row for row in undo.raw_rows(after) if row["id"] == "a-sleeves"), self.source()["before"])
+                self.assertEqual((self.store.snapshot, self.store.audit), (before, audit))
+
+    def test_box_capacity_requires_canonical_bounded_text_and_other_kinds_stay_blank(self):
+        invalid = (None, True, 1, "0", "-1", "10000", "01", "+40", "40.0", " 40 ", "40\t", "1,000", "\uff11\uff12")
+        for side in ("before", "after"):
+            for value in invalid:
+                self.box_source()
+                self.source()[side]["capacity"] = value
+                if side == "after":
+                    rows = [row.as_dict() for row in self.store.snapshot.accessories.rows]
+                    next(row for row in rows if row["id"] == "a-sleeves")["capacity"] = value
+                    self.store.snapshot = self.store.snapshot.with_accessories(rows)
+                with self.subTest(side=side, capacity=value), self.assertRaises(undo.UndoUnsupported):
+                    self.review()
+        for kind in ("sleeves", "playmat"):
+            with self.subTest(kind=kind), self.assertRaises(undo.UndoUnsupported):
+                undo.raw_row(fixture.row(kind=kind, capacity="40"))
+
+    def test_held_box_mixed_details_restore_without_unused_or_fit_gate_and_receipt_stays_exact(self):
+        from decklab.lib.inventory import accessory_undo_remove, ops_accessories
+        self.box_source(mixed=True)
+        before = self.store.snapshot
+        _, usage = ops_accessories.usage(before)
+        self.assertEqual([(use["field"], use["holder"], use["need"]) for use in usage.get("a-sleeves", ())],
+                         [("deck_box", "casual/fixture", 60)])
+        with mock.patch.object(accessory_undo_remove, "unused", side_effect=AssertionError("Details do not remove kit")), \
+                mock.patch.object(accessory_fetch, "fetch", side_effect=AssertionError("No photo fetch")):
+            plan, after = self.review()
+            result = self.saved(plan, after)
+        self.assertEqual([field["field"] for field in plan["fields"]], list(fixture.FIELDS))
+        self.assertEqual(result["restored"]["capacity"], "40")  # The recorded value may describe a box too small for its current deck.
+        self.assertEqual(after.accessory_images, before.accessory_images)
+        self.assertEqual(ops_accessories.usage(after)[1], usage)
+        self.assertEqual(after.replace(accessories=before.accessories, revision=before.revision,
+                                       decks_revision=before.decks_revision), before)
+        actual = fixture.actual_source(plan)
+        actual[0]["after"]["capacity"] = "41"
+        with self.assertRaises(undo.UndoConflict):
+            self.saved(plan, after, actual)
+        rows = [row.as_dict() for row in after.accessories.rows]
+        next(row for row in rows if row["id"] == "a-sleeves")["capacity"] = "41"
+        with self.assertRaises(undo.UndoConflict):
+            self.saved(plan, after.with_accessories(rows), actual)
 
     def test_url_fields_restore_individually_as_blank_http_or_https_preferences(self):
         pairs = (("", "https://example.com/current"), ("http://example.com/original", ""),

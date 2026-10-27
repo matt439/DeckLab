@@ -6,6 +6,7 @@ used here. The kernel and guarded PostgreSQL tests prove the inverse itself.
 import copy
 import json
 import unittest
+from dataclasses import replace
 from unittest import mock
 
 from decklab.lib import access, accessories, accessory_fetch, cards, feature_routes, inventory
@@ -95,6 +96,22 @@ class AccessoryUndoApiTests(ApiTestCase):
         self.store.latest = ROW_ID
         return current, old
 
+    def seed_capacity(self, current_value="100", restored_value="60", *, owner="matt", held=False):
+        current, restored = self.seed(owner)
+        current.update(kind="deck_box", capacity=current_value)
+        restored.update(current)
+        restored["capacity"] = restored_value
+        if held:
+            snapshot = support.build_snapshot([current])
+            deck = snapshot.deck("casual/fixture")
+            deck = replace(deck, text=deck.text.replace("- **Sleeves:** a-sleeves\n", "- **Deck box:** fixture-sleeves\n"))
+            self.store.snapshot = snapshot.with_deck(deck)
+        else:
+            self.store.snapshot = self.store.snapshot.with_accessories([current])
+        self.store.writes.clear()
+        self.store.calls.clear()
+        return current, restored
+
     def view(self, change_id=CHANGE_ID):
         return accessory_undo.accessory_undo_view(id=change_id)
 
@@ -109,7 +126,7 @@ class AccessoryUndoApiTests(ApiTestCase):
         self.assertEqual(caught.exception.status, status, caught.exception.message)
         return caught.exception
 
-    def test_preview_has_exact_nine_plain_fields_without_images_cards_or_global_counters(self):
+    def test_preview_has_exact_ten_plain_fields_without_images_cards_or_global_counters(self):
         current, restored = self.seed()
         before = copy.deepcopy(self.store.audit)
         with mock.patch.object(inventory, "image", side_effect=AssertionError("No image read")), \
@@ -119,7 +136,7 @@ class AccessoryUndoApiTests(ApiTestCase):
         self.assertEqual((result["kind"], result["action"], result["label"]), ("accessory", "accessory_update", current["name"]))
         self.assertEqual(result["current"], kernel.meta(current))
         self.assertEqual(result["restored"], kernel.meta(restored))
-        self.assertEqual(set(result["current"]), {"id", "kind", "owner", "brand", "name", "colour", "notes", "link", "image_source"})
+        self.assertEqual(set(result["current"]), {"id", "kind", "owner", "brand", "name", "colour", "notes", "link", "image_source", "capacity"})
         self.assertEqual(result["fields"], [{"field": field, "before": current[field], "after": restored[field]}
                                             for field in kernel.FIELDS if current[field] != restored[field]])
         self.assertEqual((self.store.audit, self.store.writes), (before, []))
@@ -196,6 +213,7 @@ class AccessoryUndoApiTests(ApiTestCase):
     def test_strict_three_field_body_and_id_refuse_browser_overrides(self):
         for extra in ({"space": "home"}, {"owner": "shared"}, {"notes": "Override"}, {"restored": {}}, {"rows": []},
                       {"link": "https://example.com/override"}, {"image_source": "https://example.com/override-image"},
+                      {"capacity": "100"},
                       {"reason": "Override"}, {"confirm_owned": True}, {"revision": "1"}, {"sha256": "a" * 64}, {"action": "accessory_update"}):
             with self.subTest(extra=extra):
                 self.refused(400, self.apply, expect="a" * 64, **extra)
@@ -312,6 +330,79 @@ class AccessoryUndoApiTests(ApiTestCase):
         for replacement in replacements:
             with self.subTest(result=replacement), mock.patch.object(self.store, "accessory_undo_apply", return_value=replacement), \
                     mock.patch.object(accessory_fetch, "fetch", side_effect=AssertionError("No receipt URL fetch")):
+                self.assertEqual(self.refused(503, self.apply, expect=plan["expect"]).message, accessory_undo.UNCONFIRMED)
+        self.assertEqual(self.store.writes, [])
+
+    def test_capacity_blank_bounds_mixed_metadata_and_held_box_restore_exact_plain_strings(self):
+        cases = (("", "1", False, False), ("1", "", False, False), ("9999", "1", False, False),
+                 ("1", "9999", False, False), ("100", "60", True, False), ("100", "1", False, True))
+        for current_value, restored_value, mixed, held in cases:
+            current, restored = self.seed_capacity(current_value, restored_value, held=held)
+            if mixed:
+                restored.update(notes="Former <b>plain note</b>", link="https://example.com/former-box")
+            before, source = self.store.snapshot, copy.deepcopy(self.store.audit)
+            with self.subTest(current=current_value, restored=restored_value, held=held), \
+                    mock.patch.object(inventory, "image", side_effect=AssertionError("No picture bytes")), \
+                    mock.patch.object(accessory_fetch, "fetch", side_effect=AssertionError("No URL fetch")), \
+                    mock.patch.object(cards, "resolve", side_effect=AssertionError("No card index or fit validation")):
+                preview = self.view()
+                self.assertEqual(preview["fields"], [{"field": field, "before": current[field], "after": restored[field]}
+                                                      for field in kernel.FIELDS if current[field] != restored[field]])
+                self.assertEqual((preview["current"]["capacity"], preview["restored"]["capacity"]), (current_value, restored_value))
+                self.assertEqual(set(preview["restored"]), set(kernel.META))
+                result = self.apply(expect=preview["expect"])
+            self.assertEqual((result["action"], result["restored"]), ("accessory_update", kernel.meta(restored)))
+            self.assertEqual(kernel.raw_rows(self.store.snapshot), [restored])
+            self.assertEqual(self.store.audit, source)
+            self.assertEqual(len(self.store.writes), 1)
+            self.assertEqual((self.store.writes[0][3][0]["before"], self.store.writes[0][3][0]["after"]), (current, restored))
+            self.assertEqual(self.store.snapshot.replace(accessories=before.accessories, revision=before.revision,
+                                                         decks_revision=before.decks_revision), before)
+            if held:
+                self.assertIn("- **Deck box:** fixture-sleeves\n", self.store.snapshot.deck("casual/fixture").text)
+                self.assertEqual(self.store.snapshot.deck("casual/fixture"), before.deck("casual/fixture"))
+
+    def test_capacity_invalid_noncanonical_and_hidden_facts_refuse_without_normalization_or_leak(self):
+        for side in ("before", "after"):
+            for value in (None, True, 1, "0", "10000", "-1", "+1", "01", " 1", "1 ", "1.0", " "):
+                self.seed_capacity()
+                self.store.audit[CHANGE_ID][0][side]["capacity"] = value
+                before = self.store.snapshot
+                with self.subTest(side=side, capacity=value):
+                    self.assertEqual(self.view(), {"available": False, "id": CHANGE_ID, "reason": accessory_undo.UNSUPPORTED})
+                    self.assertEqual(self.refused(400, self.apply, expect="bad").message, accessory_undo.UNSUPPORTED)
+                self.assertEqual((self.store.snapshot, self.store.writes), (before, []))
+        for kind in ("sleeves", "playmat"):
+            current, restored = self.seed_capacity()
+            current["kind"] = restored["kind"] = kind
+            self.store.snapshot = self.store.snapshot.with_accessories([current])
+            with self.subTest(kind=kind):
+                self.assertEqual(self.view(), {"available": False, "id": CHANGE_ID, "reason": accessory_undo.UNSUPPORTED})
+                self.refused(400, self.apply, expect="bad")
+        self.seed_capacity(restored_value="01", owner="user1")
+        self.box.state.visibility_set("user1", "accessories", True, inventory.Actor("test", "Fixture"), "Public fixture kit")
+        with mock.patch.object(kernel, "raw_row", side_effect=AssertionError("No hidden capacity proof")):
+            for function in (self.view, lambda: self.apply(expect="bad")):
+                error = self.refused(404, function)
+                self.assertEqual((error.message, error.extra), (accessory_undo.NO_CHANGE, {}))
+        self.assertEqual(self.store.writes, [])
+
+    def test_capacity_actual_receipt_metadata_and_full_raw_immutable_proofs_must_match(self):
+        self.seed_capacity()
+        plan = self.store.accessory_undo_review(CHANGE_ID, frozenset({"matt", "shared"}))
+        result = {"review": plan, "restored": plan["restored"], "sha256": plan["sha256"], "revision": str(ROW_ID + 1)}
+        raw_quantity = copy.deepcopy(plan)
+        raw_quantity["source"]["before"]["quantity"] = "99"
+        raw_capacity = copy.deepcopy(plan)
+        raw_capacity["source"]["before"]["capacity"] = "060"
+        raw_kind = copy.deepcopy(plan)
+        raw_kind["source"]["before"]["kind"] = "sleeves"
+        for replacement in ({**result, "restored": {**plan["restored"], "capacity": "61"}},
+                            {**result, "restored": {**plan["restored"], "capacity": 60}},
+                            {**result, "restored": {**plan["restored"], "capacity": ""}},
+                            {**result, "review": {**plan, "current": {**plan["current"], "capacity": "101"}}},
+                            *({**result, "review": changed} for changed in (raw_quantity, raw_capacity, raw_kind))):
+            with self.subTest(result=replacement), mock.patch.object(self.store, "accessory_undo_apply", return_value=replacement):
                 self.assertEqual(self.refused(503, self.apply, expect=plan["expect"]).message, accessory_undo.UNCONFIRMED)
         self.assertEqual(self.store.writes, [])
 

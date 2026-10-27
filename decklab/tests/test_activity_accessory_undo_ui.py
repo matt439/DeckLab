@@ -10,7 +10,7 @@ class AccessoryUndoUiTests(unittest.TestCase):
     def run_js(self, scenario):
         updates.ActivityUndoUiTests.run_js(self, r'''
           const accRow=extra=>({id:'fixture-box',kind:'deck_box',owner:state.profiles[0].id,brand:'Current brand',
-            name:'Current fixture box',colour:'Blue',notes:'Current fixture note',link:'https://example.com/current-product',image_source:'https://example.com/current-image',...extra});
+            name:'Current fixture box',colour:'Blue',notes:'Current fixture note',link:'https://example.com/current-product',image_source:'https://example.com/current-image',capacity:'',...extra});
           const accPreview=(extra={})=>{const current=accRow(),restored=accRow({brand:'Original brand',name:'Original fixture box',colour:'',notes:'Historical <img src=x onerror=alert(1)>'});
             return{available:true,id:42,expect:'a'.repeat(64),kind:'accessory',action:'accessory_update',label:current.name,current,restored,
               fields:['brand','name','colour','notes'].map(field=>({field,before:current[field],after:restored[field]})),...extra};};
@@ -45,7 +45,7 @@ class AccessoryUndoUiTests(unittest.TestCase):
           assert.equal(activityUndoEvidence(accPreview(),42,'user2',state.profiles[0].id),null);assert.equal(activityUndoEvidence(accPreview(),42,'home',null),null);
         ''')
 
-    def test_exact_meta9_shapes_ids_kinds_owners_and_changed_fields_are_required(self):
+    def test_exact_meta10_shapes_ids_kinds_owners_and_changed_fields_are_required(self):
         self.run_js(r'''
           const p=accPreview(),bad=[{space:'home'},{profile:state.profiles[0].id},{action:'update'},{action:'wishlist_update'},{kind:'sleeves'},
             {current:{...p.current,quantity:'1'}},{restored:{...p.restored,image:'private.png'}},{restored:{...p.restored,id:'another-box'}},
@@ -105,6 +105,40 @@ class AccessoryUndoUiTests(unittest.TestCase):
             assert.equal(activityUndoReceipt(accSaved(p,{restored:{...p.restored,[field]:'https://example.com/wrong'}}),p),false);
             const {sheet}=await openAcc(p);const old=save(sheet);let writes=0;apiWrite=async()=>{writes++;return accSaved(p);};p.restored[field]+='/later';p.fields[0].after=p.restored[field];old.fire('click');await settle();assert.equal(writes,0);
           }
+        ''')
+
+    def test_recorded_capacity_review_uses_sleeved_cards_and_existing_fit_warning_semantics(self):
+        self.run_js(r'''
+          const p=accPreview();p.current.capacity='100';p.restored={...p.current,capacity:'40'};p.fields=[{field:'capacity',before:'100',after:'40'}];
+          const {sheet}=await openAcc(p),text=sheet.body.textContent;
+          for(const word of ['Box capacity (sleeved cards):','100','40','Recorded box capacity is in sleeved cards',
+            'Fit warnings may change; kit assignments stay as they are','retains the current photo and kit'])assert(text.includes(word),word);
+          assert.equal(sheet.body.querySelector('input,textarea,select,img,a'),null);assert(!text.includes('physically owned'));assert(!text.includes('Reason for removing'));assert(save(sheet));
+        ''')
+
+    def test_capacity_is_canonical_blank_or_positive_text_only_on_deck_boxes_on_both_sides(self):
+        self.run_js(r'''
+          for(const capacity of ['', '1','9999']){const p=accPreview();p.current.capacity='100';p.restored={...p.current,capacity};p.fields=[{field:'capacity',before:'100',after:capacity}];
+            assert(activityUndoEvidence(p,42,'home',state.profiles[0].id));[p.current,p.restored]=[p.restored,p.current];p.fields=p.fields.map(item=>({...item,before:item.after,after:item.before}));assert(activityUndoEvidence(p,42,'home',state.profiles[0].id));}
+          for(const side of ['current','restored'])for(const capacity of [0,null,'0','0100',' 100','100 ','1.0','10000','100\n','100\r','100\r\n','100\u2028','100\u2029']){
+            const p=accPreview();p[side].capacity=capacity;p.fields.push({field:'capacity',before:p.current.capacity,after:p.restored.capacity});
+            assert.equal(activityUndoEvidence(p,42,'home',state.profiles[0].id),null,side+':'+capacity);
+            const row={...accRow({capacity}),quantity:'1',image:'',crop:''};assert.equal(activityUndoAccessoryStock(row),false);
+            const common={available:true,id:42,expect:'a'.repeat(64),kind:'accessory',label:row.name};
+            assert.equal(activityUndoEvidence({...common,action:'accessory_add',current:null,restored:row,confirmation_required:true},42,'home',state.profiles[0].id),null);
+            assert.equal(activityUndoEvidence({...common,action:'accessory_remove',current:row,restored:null,reason_required:true},42,'home',state.profiles[0].id),null);}
+          for(const kind of ['sleeves','playmat']){const p=accPreview();p.current.kind=p.restored.kind=kind;assert(activityUndoEvidence(p,42,'home',state.profiles[0].id));
+            for(const side of ['current','restored']){const bad=structuredClone(p);bad[side].capacity='100';assert.equal(activityUndoEvidence(bad,42,'home',state.profiles[0].id),null);}}
+        ''')
+
+    def test_capacity_can_mix_with_text_but_actual_meta10_and_source_only_save_must_stay_exact(self):
+        self.run_js(r'''
+          const p=accPreview();p.current.capacity='100';p.restored.capacity='40';p.fields.push({field:'capacity',before:'100',after:'40'});
+          const {sheet}=await openAcc(p);let sent;apiWrite=async(path,body)=>{sent=[path,body];return accSaved(p);};save(sheet).click();await settle();
+          same(sent,['/api/activity/accessory-undo',{id:42,expect:'a'.repeat(64)}]);assert(button(sheet.dialog,'Done'));
+          for(const capacity of ['60','',40])assert.equal(activityUndoReceipt(accSaved(p,{restored:{...p.restored,capacity}}),p),false);
+          const missing=accSaved(p);delete missing.restored.capacity;assert.equal(activityUndoReceipt(missing,p),false);
+          const fresh=await openAcc(p),old=save(fresh.sheet);let writes=0;apiWrite=async()=>{writes++;return accSaved(p);};p.restored.capacity='60';p.fields.at(-1).after='60';old.fire('click');await settle();assert.equal(writes,0);
         ''')
 
     def test_save_is_one_source_receipt_request_without_metadata_or_physical_payload(self):

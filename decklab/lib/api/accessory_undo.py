@@ -9,7 +9,7 @@ from .common import ApiError, DATABASE_DOWN, _keys, _parse_body
 from .settings import _web_actor, _writer
 
 NO_CHANGE = "No undoable accessory change at that ID."
-UNSUPPORTED = "Undo restores recorded accessory text/links, removes an unused image-free addition or restores an exact image-free deleted record. Current photos and kit are kept."
+UNSUPPORTED = "Undo restores recorded accessory details and box capacity, removes an unused image-free addition or restores an exact image-free deleted record. Current photos and kit are kept; capacity may change fit warnings."
 CHANGED = "The accessories changed. Reload Activity and review this Undo again."
 UNCONFIRMED = "The accessory Undo result could not be confirmed. Reload Activity before trying again."
 REVISION = re.compile(r"[1-9][0-9]{0,18}")
@@ -151,4 +151,4 @@ def apply_accessory_undo(body):
             **({"removed_id": result["removed_id"]} if removing else {}),
             **({"added_id": result["added_id"]} if adding else {}),
             "revision": result["revision"], "summary": f"Undo change #{change_id}: " + (
-                "restore a deleted accessory record" if adding else "remove an unused added accessory" if removing else "restore recorded accessory text and links")}
+                "restore a deleted accessory record" if adding else "remove an unused added accessory" if removing else "restore recorded accessory details")}

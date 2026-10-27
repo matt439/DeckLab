@@ -1,6 +1,6 @@
 """Guarded accessory metadata UPDATE and image-free INSERT/DELETE inverses.
 
-Accessory image bytes are not audited. This restores only recorded text/links;
+Accessory image bytes are not audited. UPDATE restores recorded details/capacity;
 an old source URL makes no claim about the retained photograph.
 """
 import csv
@@ -14,7 +14,7 @@ from decklab.lib.state import Invalid
 from . import Summary, backend, changes, paths, rules
 from .undo import SHA, UndoConflict, UndoMissing, UndoUnsupported, _identifier, removal_reason
 
-FIELDS = ("brand", "name", "colour", "notes", "link", "image_source")
+FIELDS = ("brand", "name", "colour", "notes", "link", "image_source", "capacity")
 META = ("id", "kind", "owner", *FIELDS)
 RAW = frozenset(rules.ACCESSORY_FIELDS)
 
@@ -172,7 +172,7 @@ def review(change_id, owners, snapshot, store=None):
     if not removing and not adding:
         changed = {field for field in RAW if old[field] != new[field]}
         if not changed or changed - set(FIELDS):
-            raise UndoUnsupported("Undo restores only recorded accessory text and links, keeping the current photo and kit.")
+            raise UndoUnsupported("Undo restores only recorded accessory details and box capacity, keeping current stock, photo and kit.")
     latest = store.undo_latest("accessory", source["key"])
     if type(latest) is not int or latest != source["id"]:
         raise UndoConflict("The accessory was touched after the selected change.")
@@ -243,7 +243,7 @@ class MetadataRestore:
         elif self.reason is not ...:
             raise Invalid("Only removing an added accessory takes a removal reason.")
         return after, Summary(f"Undo change #{self.change_id}: " + ("restore a deleted accessory record" if adding else "remove an unused added accessory" if removing else
-                              "restore recorded accessory text and links"), {"undo": 1},
+                              "restore recorded accessory details"), {"undo": 1},
                               {paths.ACCESSORIES: ["added"] if adding else ["removed"] if removing else list(FIELDS)},
                               {"undo_of": self.change_id, **({"undo_reason": self.reason} if removing else {})})
 

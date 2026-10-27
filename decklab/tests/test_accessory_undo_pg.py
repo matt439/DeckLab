@@ -307,3 +307,100 @@ class AccessoryUndoPgTests(db_support.DbTestCase):
             self.assertEqual(refused.exception.status, 409)
             self.assertEqual(self.persisted(), before)
         self.apply(cid, preview)
+
+    def box(self, capacity=100):
+        from decklab.tests.test_accessory_fetch import jpeg
+        listing = accessories.from_sheet(self.fresh().accessories, strict=True)
+        _, summary = inventory.apply(Op("accessory.add", {"row": {"kind": "deck_box", "owner": "matt",
+            "brand": "Fixture", "name": "Held box", "colour": "black", "quantity": 1, "capacity": capacity},
+            "owners": fixture.OWNERS, "image": jpeg(), "sha256": accessories.view_sha256(listing, fixture.OWNERS)}),
+            ACTOR, "Add disposable box capacity fixture")
+        return summary.extra["id"]
+
+    def test_held_sixty_card_box_capacity_restores_forty_and_fit_warning_without_moving_any_kit(self):
+        rid = self.box()
+        deck = self.fresh().deck("casual/fixture")
+        inventory.apply(Op("kit.set", {"holders": [{"id": deck.id, "expected": deck.sha256}],
+            "changes": [{"holder": deck.id, "field": "deck_box", "value": rid}], "owners": fixture.OWNERS}),
+            ACTOR, "Use disposable box for sixty-card fixture")
+        self.edit({"capacity": 40}, rid)
+        self.edit({"capacity": 100}, rid)
+        cid = self.sql("select max(id) from audit.change_set")[0][0]
+        before, snapshot = self.persisted(), self.fresh()
+        with inventory.pinned(snapshot):
+            prior_kit = accessories.kit("casual/fixture", owners=fixture.OWNERS)
+        self.assertEqual(prior_kit["need"], 60)
+        self.assertFalse(any("Too big" in warning for warning in prior_kit["warnings"]))
+        with mock.patch("urllib.request.urlopen", side_effect=AssertionError("No URL lookup")), \
+                mock.patch.object(cards, "resolve", side_effect=AssertionError("No card index")):
+            preview = api.accessory_undo_view(cid)
+            receipt = self.apply(cid, preview)
+        self.assertEqual(preview["fields"], [{"field": "capacity", "before": "100", "after": "40"}])
+        self.assertEqual(receipt["restored"]["capacity"], "40")
+        current = self.fresh()
+        with inventory.pinned(current):
+            kit = accessories.kit("casual/fixture", owners=fixture.OWNERS)
+        self.assertEqual((kit["need"], kit["deck_box"]["id"]), (60, rid))
+        self.assertTrue(any("Too big" in warning and "60" in warning and "40" in warning for warning in kit["warnings"]))
+        after = self.persisted()
+        for table in TABLES:
+            if table not in ("accessory", "decks_revision", "audit.change_set", "audit.row_change"):
+                self.assertEqual(after[table], before[table], table)
+        self.assertEqual(current.accessory_images, snapshot.accessory_images)
+        self.assertEqual(self.sql("select op,before->>'capacity',after->>'capacity' from audit.row_change "
+                                  "where change_set_id=(select max(id) from audit.change_set)"), [("UPDATE", "100", "40")])
+
+    def test_capacity_blank_boundaries_and_mixed_details_restore_exactly_with_receipt_rollback(self):
+        rid = self.box()
+        for historical in ("", "1", "9999", "40"):
+            self.edit({"capacity": historical, "notes": "Historical box notes", "link": "https://example.com/former"}, rid)
+            self.edit({"capacity": "100", "notes": "Edited box notes", "link": "https://example.com/current"}, rid)
+            cid = self.sql("select max(id) from audit.change_set")[0][0]
+            source, before = self.backend.undo_audit(cid), self.persisted()
+            preview = api.accessory_undo_view(cid)
+            self.assertEqual([item["field"] for item in preview["fields"]], ["notes", "link", "capacity"])
+            receipt = self.apply(cid, preview)
+            self.assertEqual(receipt["restored"]["capacity"], historical)
+            self.assertEqual(receipt["restored"], undo.meta(source[0]["before"]))
+            after = self.persisted()
+            for table in TABLES:
+                if table not in ("accessory", "decks_revision", "audit.change_set", "audit.row_change"):
+                    self.assertEqual(after[table], before[table], table)
+        self.edit({"capacity": "100"}, rid)
+        cid = self.sql("select max(id) from audit.change_set")[0][0]
+        preview, before = api.accessory_undo_view(cid), self.persisted()
+        original = undo.verify_saved
+        def wrong(old, after, plan, actual):
+            actual = copy.deepcopy(actual)
+            actual[0]["after"]["capacity"] = "41"
+            return original(old, after, plan, actual)
+        with mock.patch.object(undo, "verify_saved", side_effect=wrong), self.assertRaises(api.ApiError) as refused:
+            self.apply(cid, preview)
+        self.assertEqual(refused.exception.status, 409)
+        self.assertEqual(self.persisted(), before)
+        self.apply(cid, preview)
+
+    def test_actual_noncanonical_historical_box_or_nonbox_capacity_is_never_normalized(self):
+        rid = self.box()
+        for target, current, invalid in ((rid, "100", value) for value in ("0", "10000", "01", " 40 ", "+40", "٤٠")):
+            for value in (invalid, current):
+                with self.connect() as connection, db.change(ACTOR.id, ACTOR.source, "Imperfect disposable capacity history",
+                                                            conn=connection, via=ACTOR.via) as (cur, cid):
+                    pg._take_lock(cur)
+                    cur.execute("update accessory set capacity=%s where id=%s", (value, target))
+                    cur.execute("update decks_revision set revision=revision+1")
+            before = self.persisted()
+            self.assertIs(api.accessory_undo_view(cid)["available"], False)
+            with self.assertRaises(api.ApiError) as refused:
+                self.apply(cid, {"expect": "bad"})
+            self.assertEqual(refused.exception.status, 400)
+            self.assertEqual(self.persisted(), before)
+        for value in ("40", ""):
+            with self.connect() as connection, db.change(ACTOR.id, ACTOR.source, "Imperfect non-box capacity history",
+                                                        conn=connection, via=ACTOR.via) as (cur, cid):
+                pg._take_lock(cur)
+                cur.execute("update accessory set capacity=%s where id='a-sleeves'", (value,))
+                cur.execute("update decks_revision set revision=revision+1")
+        before = self.persisted()
+        self.assertIs(api.accessory_undo_view(cid)["available"], False)
+        self.assertEqual(self.persisted(), before)
