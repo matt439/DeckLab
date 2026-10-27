@@ -9,7 +9,7 @@ from unittest import mock
 
 from decklab.lib import config, pool
 from decklab.lib.api import (accessories, activity, activity_undo, assembly, assembly_completion, assembly_ticks, collection, cover, editor, history, play_records,
-                             receipts, shopping, shopping_order_changes, shopping_orders, shopping_queue, tokens)
+                             precon_coverage, receipts, shopping, shopping_order_changes, shopping_orders, shopping_queue, tokens)
 from decklab.tests.test_server import ServerTestCase, WRITE
 
 
@@ -30,6 +30,10 @@ GETS = (
     ("/api/activity", activity, "activity_view", "before=10&limit=50&kind=decks&actor=matt",
      {"before": "10", "limit": "50", "kind": "decks", "actor": "matt"}),
     ("/api/activity/undo", activity_undo, "undo_view", "id=17", {"id": "17"}),
+    ("/api/precons/coverage", precon_coverage, "coverage_view", "space=user2&format=commander&type=Theme+Deck&limit=5",
+     {"space": "user2", "format": "commander", "type": "Theme Deck", "limit": "5"}),
+    ("/api/precons/coverage/deck", precon_coverage, "coverage_deck", "file=TestDinos_TST&space=user2",
+     {"file": "TestDinos_TST", "space": "user2"}),
 )
 POSTS = (
     ("/api/activity/undo", activity_undo, "apply_undo"),
@@ -50,6 +54,7 @@ POSTS = (
     ("/api/accessories/save", accessories, "save_accessory"),
     ("/api/accessories/assign", accessories, "assign_accessory"),
     ("/api/tokens/save", tokens, "save_token"),
+    ("/api/precons/start", precon_coverage, "start_deck"),
 )
 
 

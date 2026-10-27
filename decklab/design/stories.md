@@ -242,7 +242,7 @@ Evidence:
 - `decklab/web/card-viewer.js`: openCardViewer, stepViewer, flipViewer, toggleViewerText, viewerPointerUp, pushViewerEntry
 - `decklab/tests/test_card_inspector.py`: test_viewer_faces_reading_errors_dismissal_focus_groups_and_swipes
 
-**E1-S24** · Matt · could · M · missing
+**E1-S24** · Matt · could · M · built
 
 As a deck builder starting from what we own, I want published precons ranked by how much of each one our free pool already covers, so that I can see which deck we could put together next with the fewest purchases.
 
@@ -252,13 +252,15 @@ As a deck builder starting from what we own, I want published precons ranked by 
 
 Decided (Matt, 2026-10-27): added from the comparison with MTGGoldfish's Super Brew.
 
+Now: built 2026-10-28 ([HISTORY.md](../HISTORY.md#rank-precons-by-how-much-of-each-the-free-pool-covers-2026-10-28-e1-s24)). The Collection page's More has **Precons we could build…**: MTGJSON's paper precons ranked by the share of each one's cards (plain basics left out) with a copy free in the space (pool.free_copies: owned or on the way, less built decks and intact products), best first, then the fewest to find, with Commander / 60-card and kind-of-deck filters. Opening one lists its missing cards with AUD estimates and the rate and dates (pool.compare's prices), and **Start a deck from it** makes an idea deck with its list through POST /api/decks's path (deck.create), then opens it. Every list is kept in a compact index (`data/mtgjson/coverage.json`) filled in the background from MTGJSON's AllDeckFiles archive and, for new or recent decks, their own files; the ranking shows what's read meanwhile. Viewers who may not see the space's inventory get the Collection page's 403; nothing names the decks holding copies. On the PC, `python -m decklab.lib.precons coverage` prints the ranking.
+
 Evidence:
-- `decklab/lib/precons.py`: deck_list, search (MTGJSON's precon lists, already cached for Add a precon)
-- `decklab/lib/pool.py`: free copies per space
-
-Gap: No view ranks lists by how much of them the pool covers.
-
-First slice: a read-only command, `python -m decklab.lib.precons coverage [--space S] [--format F]`, printing the top precons by free-pool coverage.
+- `decklab/lib/precon_coverage.py`: refresh, ensure, rank, _read_archive, _read_one, main (`python -m decklab.lib.precons coverage`)
+- `decklab/lib/api/precon_coverage.py`: coverage_view, coverage_deck, start_deck (GET /api/precons/coverage, GET /api/precons/coverage/deck, POST /api/precons/start)
+- `decklab/lib/precons.py`: deck_list, deck, cards_of (MTGJSON's precon lists)
+- `decklab/lib/pool.py`: free_copies, compare
+- `decklab/web/precon-coverage.js`: openCoverageSheet, rankPrecons, drawRanking, openCoveragePrecon, startCoverageDeck; `decklab/web/collection.js`: colHead
+- `decklab/tests/test_precon_coverage.py`, `decklab/tests/test_precon_coverage_ui.py`
 
 **E1-S25** · User1 · could · S · built
 

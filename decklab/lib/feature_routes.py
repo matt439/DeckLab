@@ -10,7 +10,7 @@ and accessory saves with a local picture (accessories.MAX_SAVE_BODY).
 
 def dispatch(handler, route, query):
     from decklab.lib.api import (accessories, accessory_undo, activity, activity_mixed_undo, activity_undo, assembly, assembly_completion, assembly_standins, assembly_ticks, box_check, box_repair, collection, collection_edit, collection_trade, cover, deck_printings, editor, history,
-                                 library_forge, opponents, play_records, precons, products, product_tokens, rankings, receipts, rename, retirement, shopping, shopping_order_changes, shopping_orders, shopping_queue, swaps, token_cards, token_plan, tokens, visits, wishlist_undo)
+                                 library_forge, opponents, play_records, precon_coverage, precons, products, product_tokens, rankings, receipts, rename, retirement, shopping, shopping_order_changes, shopping_orders, shopping_queue, swaps, token_cards, token_plan, tokens, visits, wishlist_undo)
     from decklab.lib.api.common import MAX_BODY
 
     gets = {
@@ -21,6 +21,8 @@ def dispatch(handler, route, query):
         ("printings",): (collection_edit.printings_view, ("name",)),
         ("precons",): (precons.precons_view, ("q",)),
         ("precons", "preview"): (precons.precon_preview, ("file", "space")),
+        ("precons", "coverage"): (precon_coverage.coverage_view, ("space", "format", "type", "limit")),
+        ("precons", "coverage", "deck"): (precon_coverage.coverage_deck, ("file", "space")),
         ("assembly",): (assembly.assembly_view, ("deck", "version")),
         ("play",): (play_records.play_overview, ("id",)),
         ("deck", "history"): (history.deck_history, ("id",)),
@@ -79,6 +81,7 @@ def dispatch(handler, route, query):
         ("collection", "trade", "preview"): (collection_trade.preview_trade, collection_trade.MAX_TRADE_BODY),
         ("collection", "trade"): (collection_trade.save_trade, collection_trade.MAX_TRADE_BODY),
         ("precons", "add"): precons.add_precon,
+        ("precons", "start"): precon_coverage.start_deck,
         ("deck", "cover"): cover.save_cover,
         ("deck", "token-cards"): token_cards.save_token_cards,
         ("deck", "printings"): deck_printings.save_printings,
