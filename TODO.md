@@ -67,7 +67,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 | `E11-S30` | OPEN | should | L | Visual redesign P1 ([visual-design.md](decklab/design/visual-design.md)): slice 13's confirmed-printing model, slice 15's full-data dark pass, and Collection's filter decision. Empty/loading/failed states are built. Touch/Safari acceptance stays open. |
 | `E11-S31` | DECISION | could | M | Global search in the top bar ([stories.md](decklab/design/stories.md#e11-s31)): Matt chooses sources and result grouping before building. |
 | `E11-S33` | OPEN | could | L | Interpreter paths and nightly systemd unit previews have isolated checks. Real Linux 3.14/full suite, CI, service/timer integration and host acceptance remain. |
-| `E11-S08` | OPEN | could | L | Narrow inventory, wishlist and accessory recovery is built. Mixed receipts/imports and broader recovery remain. |
+| `E11-S08` | OPEN | could | L | Narrow inventory, wishlist and accessory recovery is built, and whole imports and receipts (2026-10-27). Other removals, merges outside an import and broader recovery remain. |
 | `E11-S02` | DECISION | should | S | The "Deck Lab is off" Worker is deployed (`decklab/cloudflare/`): Matt checks a signed-in save, a photo upload, and the page with Deck Lab stopped. |
 
 ## Areas with no open rows

@@ -435,4 +435,11 @@ def undo_review(change_id, space, snapshot=None):
     return review(change_id, space, snapshot)
 
 
+def undo_mixed_review(change_id, space, snapshot=None):
+    """A whole collection import or order receipt in this authorized space, or a guarded refusal."""
+    from .undo_mixed import review
+    return review(change_id, space, snapshot)
+
+
 from . import undo  # noqa: E402,F401  (registers inventory.undo after this interface is defined)
+from . import undo_mixed  # noqa: E402,F401  (registers inventory.undo_mixed)
