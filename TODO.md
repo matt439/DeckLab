@@ -38,12 +38,12 @@ An index of open work, one row per item; each row points to the doc that owns th
 | id | status | pri | size | item |
 |---|---|---|---|---|
 | `E2-S22` | DECISION | must | M | Physical hardware/touch-usability follow-up on the household's iPhones and M2 11-inch iPad; the six-configuration Safari Simulator suite passes ([evidence](decklab/safari/EVIDENCE.md)). |
-| `E1-S13` | OPEN | could | L | Compare two decks side by side; first slice is their stats (curve, colours, lands, types). |
-| `E1-S24` | OPEN | could | M | Rank precons by how much of each the free pool covers, to pick the next deck to build. |
+| `E1-S13` | OPEN | could | L | Compare two decks side by side: the stats slice is built (#/compare); next the cards both use, then head to head. |
+| `E1-S24` | OPEN | could | M | `precons coverage` ranks precons by free-pool coverage from the PC; next the page view with missing cards and their cost, then Start a deck from it. |
 | `E2-S23` | OPEN | could | S | A Considering list kept with each deck: in the deck text and shown read-only; next, adding and moving cards in the editor. |
 | `E2-S24` | OPEN | could | M | Own card categories in a deck (ramp, draw, removal) with counts. |
 | `E4-S26` | OPEN | could | M | A phone life counter that ends by recording the game (multiplayer later, with `E4-S18`). |
-| `E8-S21` | OPEN | could | S | Printable deck box label with a QR code to the deck page. |
+| `E8-S21` | OPEN | could | S | Deck box labels with a QR code are built for built decks; next an intact product's label, linking to its product deck pages. |
 | `E8-S22` | OPEN | could | M | A location (row, section) for storage copies, shown in the packing plan; with `E8-S19`'s storage count. |
 
 ## Deck Lab: collection, orders and buying
@@ -56,7 +56,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 | `E5-S24` | DEFERRED | could | S | Copy one shop's list from Shopping's By shop, for pasting into the shop's search. |
 | `E5-S08` | OPEN | could | XL | Australian shop prices and stock, starting with a daily MTGMate snapshot for queued rows; then `E5-S19`'s back-in-stock alerts. |
 | `E6-S19` | OPEN | could | M | Tell User1, at the next visit, when a receipt brought cards for a deck User1 plays. |
-| `E7-S22` | OPEN | could | M | `collection trade` is built; next the Collection page's Record a trade, then a whole-trade Undo. |
+| `E7-S22` | OPEN | could | M | `collection trade` and the Collection page's Record a trade are built; next a whole-trade Undo. |
 | `E7-S32` | OPEN | could | L | Camera scanning into the collection; first slice is a recognition spike. ManaBox import stays the route meanwhile. |
 
 ## Deck Lab: Commander nights
@@ -66,7 +66,6 @@ An index of open work, one row per item; each row points to the doc that owns th
 | id | status | pri | size | item |
 |---|---|---|---|---|
 | `E9-S07` | OPEN | could | L | EDHREC ideas for a commander, marked owned, free or to buy. |
-| `E9-S25` | OPEN | could | M | Two-card combos a Commander deck is one card away from, with the missing piece's availability. |
 
 ## Deck Lab: testing and Forge
 

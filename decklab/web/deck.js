@@ -336,12 +336,15 @@ function deckMoreItems(data) {
     home ? { label: routeH1("assembly"), href: `#/assembly?deck=${id}&version=${data.version}` } : null,
     { label: routeH1("play"), href: `#/play?id=${id}` },
     !s.read_only ? { label: "History", href: `#/history?id=${id}&v=${data.version}` } : null,
+    { label: "Compare with…", href: compareHref(s.id, data.version) },
     "sep",
     { label: "Copy decklist", onclick: () => copyDeck(data) },
     { label: "Download decklist", onclick: () => downloadDeck(data) },
     { label: "Print play sheet", onclick: () => printDeck(data) },
     typeof offersProxies === "function" && offersProxies(data)
       ? { label: "Print proxies", onclick: () => printProxies(data) } : null,
+    typeof offersBoxLabel === "function" && offersBoxLabel(data)
+      ? { label: "Print box label", onclick: () => printBoxLabel(data) } : null,
     cover ? "sep" : null,
     // The library package's cover picker (cover.js), when it's there. A save (or its Undo) draws the page
     // again, so the head shows the new picture; the library is read again when it next opens.

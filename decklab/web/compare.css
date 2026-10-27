@@ -1,0 +1,43 @@
+/* The Compare page (compare.js): the two deck pickers, the two decks' heads, then the panels (components.css),
+   each holding both decks: a table with a column per deck, or the two mana curves side by side. */
+
+.cmp-pick { margin: 0 0 var(--s-4); }
+.cmp-pick-decks { display: grid; gap: var(--s-3); grid-template-columns: minmax(0, 1fr); align-items: start; }
+.cmp-pick-decks .mu-pick { min-width: 0; }
+.cmp-pick-decks select { width: 100%; max-width: 100%; }
+.cmp-pick .actions { margin-top: var(--s-2); }
+
+.cmp { display: grid; gap: var(--s-4); }
+/* The heads are short (a title and one line), so they sit side by side even on a phone. */
+.cmp-heads { display: grid; gap: var(--s-2); grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.cmp-head { min-width: 0; overflow: hidden; border-radius: var(--r-md); background: var(--surface); border: 1px solid var(--border); }
+.cmp-head-in { display: flex; flex-direction: column; align-items: flex-start; gap: var(--s-1); padding: var(--s-2) var(--s-3); min-width: 0; }
+.cmp-head-n { color: var(--ink-2); font-size: var(--fs-sm); font-weight: var(--fw-semibold); }
+.cmp-head-title { margin: 0; font-size: var(--fs-lg); line-height: var(--lh-tight); overflow-wrap: anywhere; }
+.cmp-head-facts { color: var(--ink-2); font-size: var(--fs-sm); }
+
+.cmp-panel-head { font-size: var(--fs-lg); margin: 0 0 var(--s-2); }
+.cmp-sub-head { margin: var(--s-4) 0 var(--s-2); }
+.cmp-table { width: 100%; table-layout: fixed; font-variant-numeric: tabular-nums; }
+.cmp-table .cmp-col-label { width: 40%; }
+.cmp-table thead th { overflow-wrap: anywhere; }
+.cmp-table th[scope="row"] { font-weight: var(--fw-semibold); overflow-wrap: anywhere; }
+.cmp-cell { display: inline-flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: var(--s-1); }
+.cmp-hint { color: var(--ink-2); font-size: var(--fs-sm); }
+.cmp-colour { display: inline-flex; align-items: center; gap: var(--s-1); }
+
+/* The curves: one above the other on a phone, side by side from a tablet. */
+.cmp-pair { display: grid; gap: var(--s-4); grid-template-columns: minmax(0, 1fr); }
+.cmp-figure { margin: 0; min-width: 0; }
+.cmp-figure-title { font-weight: var(--fw-semibold); margin-bottom: var(--s-1); overflow-wrap: anywhere; }
+
+@media (min-width: 600px) {
+  .cmp-pick-decks { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .cmp-pair { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .cmp-table .cmp-col-label { width: 34%; }
+}
+/* A QHD screen: the brief and the curve keep a readable width rather than the whole 2,560 px. */
+@media (min-width: 2200px) {
+  .cmp-heads, .cmp-pick-decks { max-width: 1400px; }
+  .cmp-brief { max-width: 1400px; }
+}

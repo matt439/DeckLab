@@ -135,6 +135,7 @@ called as before (from decklab.lib import api; api.<name>). Each part:
     card_rulings.py  GET /api/cards/rulings: a card's Scryfall rulings for the card viewer (E1-S25)
     deck_page.py     decks_index(), deck_view() (the space's inventory only for those who may
                      see it)
+    compare.py       GET /api/deck/compare: two visible lists' stats side by side (E1-S13)
     practice.py      practice hands: JOBS, goldfish()
     forge_runs.py    Forge matchups: FORGE_JOBS, matchups(), matchup(), run_matchup(),
                      stop_matchup(), stop_jobs(); COORD_JOBS (wave 3's coordinators)
@@ -165,6 +166,8 @@ called as before (from decklab.lib import api; api.<name>). Each part:
     collection_edit.py   the Collection page's edits and imports: rows_view(), save_card(),
                      import_preview(), import_apply(), printings_view(),
                      each write one inventory.apply. Imported when first asked, as tokens.py
+    collection_trade.py  the Collection page's Record a trade (E7-S22): preview_trade(), save_trade(),
+                     one collection.trade. Imported when first asked, as tokens.py
     precons.py       the Collection page's "Add a precon": precons_view(), precon_preview(),
                      add_precon() (the cards and the deck in one inventory change)
     cover.py         GET /api/deck/cards: cover_cards(), the picture picker's cards; POST

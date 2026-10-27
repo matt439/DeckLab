@@ -322,3 +322,10 @@ def cards_of(data):
             tokens[name] = tokens.get(name, 0) + count
     return {"lines": lines, "display": display, "problems": problems, "left_out": left_out,
             "tokens": [{"name": n, "count": c} for n, c in sorted(tokens.items())]}
+
+
+if __name__ == "__main__":         # python -m decklab.lib.precons coverage|fetch (lib/precon_coverage.py)
+    import sys
+
+    from decklab.lib import precon_coverage
+    sys.exit(precon_coverage.main())

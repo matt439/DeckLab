@@ -9,6 +9,8 @@ feature_routes.dispatch, like the Tokens page's API.
     POST /api/collection/bulk               bulk_set(body): set many rows' condition and language at once
     POST /api/collection/import/preview     import_preview(body): read an upload, match it to Scryfall
     POST /api/collection/import/apply       import_apply(body): merge a preview, with the raw file
+    POST /api/collection/trade/preview      collection_trade.preview_trade(body): a trade's preview (E7-S22)
+    POST /api/collection/trade              collection_trade.save_trade(body): a trade as one change
     GET  /api/printings?name=<exact name>   printings_view(): a card's paper printings, newest first
 
 A space (lib/spaces.py; "space" in the query or body, home by default) is
@@ -365,8 +367,8 @@ def _request_sha(value):
     raise ApiError(400, "sha256 must be the 64-character hash /api/collection/rows gave")
 
 
-def _apply(space, op, actor, reason=None, expected_revision=None):
-    """Run op through inventory.apply, with the message the Summary's text will have
+def _apply(space, op, actor, reason=None, expected_revision=None, message=None):
+    """Run op through inventory.apply, with message, or else the message the Summary's text will have
     (ops.message words it from the request's collection, without running op twice): (the
     space's collection Sheet after, the Summary). Held under saving.inventory_write_lock()
     (_save_lock with the files backend; the lock order: it first, then the backend's own lock),
@@ -374,8 +376,9 @@ def _apply(space, op, actor, reason=None, expected_revision=None):
     the page's answers: Stale 409 with the collection as it is now, Missing 409 likewise, Invalid 400,
     Conflict 409, Unavailable 503, each with no absolute path in its words."""
     from . import saving
-    with common.state_errors():
-        message = ops.message(inventory.current(), op.kind, op.params)
+    if message is None:
+        with common.state_errors():
+            message = ops.message(inventory.current(), op.kind, op.params)
     try:
         with saving.inventory_write_lock():
             after, summary = inventory.apply(op, actor, message, reason=reason or None,
