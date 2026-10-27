@@ -19,6 +19,7 @@ from .assembly import TOKEN_FAILED, _deck_tokens, held_tokens
 from .card_lookup import _line_json, _owned_json
 from .carddata import _require_cards
 from .commits import _table_json
+from .considering import view as considering_view
 from .deck_aliases import metadata
 from .common import _jsonable, _public, _scrub, _unique
 from .forge_runs import _deck_matchups
@@ -560,6 +561,11 @@ def deck_view(deck_id, version="target", omit=()):
     worked out"), and the space's pool and tokens aren't read, so none of
     their warnings show. The decklist, guide, stats, practice and matchups
     stay.
+
+    considering is the deck text's Considering list (api/considering.py view: its lines, each with
+    "free" and "on_the_way" only for a viewer who sees the space's inventory, and the text's sha256),
+    None for a product, a pairing or a text that can't be read. It is never in sections, stats,
+    owned, tokens or matchups.
     """
     requested_id = deck_id
     summary, sections = _deck_sections(deck_id, version)
@@ -622,6 +628,8 @@ def deck_view(deck_id, version="target", omit=()):
         "guide": playing_guide(deck_file),
         "usual_opponents": usual_opponents(deck_id),
         "swaps": view_swaps(deck_file),
+        # The Considering list (E2-S23): its free counts only for a viewer who sees the inventory.
+        "considering": considering_view(deck_file, deck_id, p, sees, warnings),
     }
     if "matchups" not in omit:
         answer["matchups"] = _deck_matchups(summary, version, sections)

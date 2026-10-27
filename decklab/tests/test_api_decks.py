@@ -170,8 +170,9 @@ class DeckViewTests(ApiTestCase):
         view = api.deck_view("casual/gruul-test")
         self.assertEqual(set(view), {"summary", "version", "versions", "sections", "stats", "owned", "practice",
                                      "matchups", "guide", "tokens", "table", "warnings", "info", "usual_opponents", "standins", "swaps",
-                                     "box_checked_on"})
+                                     "box_checked_on", "considering"})
         self.assertIsNone(view["box_checked_on"])
+        self.assertEqual(view["considering"]["lines"], [])        # E2-S23: none written in this deck
         self.assertEqual(view["usual_opponents"], [])
         self.assertEqual((view["version"], view["versions"]), ("target", ["target", "owned"]))
         # Gruul Test has no owned-vs-needed table; products and pairings have no file table at all.

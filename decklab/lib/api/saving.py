@@ -243,7 +243,7 @@ def save_deck(body):
     warnings = []
     try:
         changes = decks.apply_edit(deck, draft.lists["target"], draft.lists["owned"], draft.fields,
-                                   _today(), _bracket_names())
+                                   _today(), _bracket_names(), considering=draft.lists["considering"])
     except ValueError as e:
         raise ApiError(400, f"The deck can't be saved: {e}") from None
     if mark_current:
@@ -291,7 +291,8 @@ def _with_prose(out, prose, deck, slug, kind, path):
         now = decks.parse_deck(text.encode("utf-8"), slug, kind, path, deck.space)
     except decks.DeckFileError as e:
         raise ApiError(400, f"The write-up can't be saved: {_public(e)}") from None
-    same = lambda d: (d.title, d.fields, d.target, d.owned, d.rows, d.total, d.changed_on, d.prices)  # noqa: E731
+    same = lambda d: (d.title, d.fields, d.target, d.owned, d.considering, d.rows, d.total, d.changed_on,  # noqa: E731
+                      d.prices)
     if same(was) != same(now):
         raise ApiError(400, "The write-up can't be saved: it would change how the deck's lists, table or header "
                             "are read")

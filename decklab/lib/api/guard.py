@@ -54,6 +54,7 @@ The routes and what each checks:
                                                   stored owner's kit must be the profile's to see,
                                                   saving._require_kit_moves)
     POST /api/deck/cover                          deck.edit on the deck as stored (as a save of its text)
+    POST /api/deck/considering                    as /api/deck/save (it is one): deck.edit on the deck as stored
     POST /api/deck/token-cards                    deck.edit on the deck as stored (as a save of its text), and
                                                   its space's inventory (require_sees_inventory)
     POST /api/deck/printings                      the same as /api/deck/token-cards (a home deck only)

@@ -138,7 +138,7 @@ def mark_decklist_changed(deck, date):
     deck.changed_on = date
 
 
-def apply_edit(deck, target=None, owned=None, fields=None, date=None, bracket_names=None):
+def apply_edit(deck, target=None, owned=None, fields=None, date=None, bracket_names=None, considering=None):
     """Apply an edit from the editor to a parsed deck file (PLAN.md part 2).
 
     target and owned are the lists {section: [DeckLine]} as they should be
@@ -153,12 +153,22 @@ def apply_edit(deck, target=None, owned=None, fields=None, date=None, bracket_na
     after "either" in "Played by: either. Suits whoever..." stay. When either list changes and date is given, the
     'Decklist changed' line gets that date; header-only edits don't add it.
 
-    Returns {"decklist": bool, "fields": [the keys that changed]}. Raises
+    considering is the Considering list as it should be ([DeckLine]; None
+    leaves it). It is no decklist: a change to it alone doesn't add the
+    'Decklist changed' line or change the table, and a card moved into the
+    Planned list leaves it in the same save.
+
+    Returns {"decklist": bool, "fields": [the keys that changed]}, and
+    "considering": bool when considering was given. Raises
     ValueError for anything the file can't take (a Commander section in a
     casual deck, an unknown field, a value with a line break); the deck may
     then be half-edited, so read it again rather than render it.
     """
     changes = {"decklist": False, "fields": []}
+    if considering is not None:
+        changes["considering"] = list(considering) != (deck.considering or [])
+        if changes["considering"]:
+            deck.considering = list(considering)
     for version, sections in (("target", target), ("owned", owned)):
         if sections is None:
             continue
