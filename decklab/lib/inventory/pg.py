@@ -84,7 +84,7 @@ from decklab.db import conn as db, space_members
 from decklab.lib.state import Actor, Conflict, Invalid, Unavailable
 from decklab.lib.state import pg as state_pg
 
-from . import DECK_SAVES_PAUSED, changes, files, paths, pg_decks, pg_aliases, pg_check_links, rules
+from . import DECK_SAVES_PAUSED, Summary, changes, files, paths, pg_decks, pg_aliases, pg_check_links, rules
 from .model import QUEUE_FIELDS, Component, ImageMeta, ImportInfo, Order
 # The snapshot-as-rows code is shared with the files backend (table_rows.py); these names stay
 # here for the callers and tests that use them as pg's.
@@ -731,7 +731,7 @@ class PgInventory:
     def undo_latest(self, table, key):
         """Latest *audit row* touching this key. Change-set IDs are allocated before
         the inventory lock and therefore cannot establish write order."""
-        if table not in ("collection_card", "token_card"):
+        if table not in ("collection_card", "token_card", "accessory"):
             raise Invalid("That row does not support Undo.")
         def work(c):
             found = c.execute("select id from audit.row_change where table_name=%s and row_key=%s::jsonb "
@@ -739,6 +739,27 @@ class PgInventory:
             return found[0] if found is not None else None
         applying = getattr(self._applying, "connection", None)
         return work(applying) if applying is not None else self._call(work)
+
+    def accessory_undo_review(self, change_id, owners):
+        """One locked accessory text review, with no audit change for the read."""
+        from . import accessory_undo
+        def work(c):
+            with c.transaction():
+                _take_lock(c)
+                space_members.admit(c, space_ids={"home"}, lock=False)
+                snapshot = self.load(conn=c)
+                previous = getattr(self._applying, "connection", None)
+                self._applying.connection = c
+                try:
+                    return accessory_undo.review(change_id, owners, snapshot, self)[0]
+                finally:
+                    self._applying.connection = previous
+        return self._call(work)
+
+    def accessory_undo_apply(self, change_id, owners, expect, actor, message):
+        from .accessory_undo import MetadataRestore
+        _, summary = self.apply(MetadataRestore(change_id, owners, expect, store=self), actor, message)
+        return summary.extra["accessory_undo"]
 
     def undo_audit_batch(self, change_id):
         """Unfiltered bounded original rows; the 51st row refuses a 50-row batch.
@@ -831,7 +852,23 @@ class PgInventory:
                         deck_key = self._decks_key(c)
                         part = pg_decks.deck_part(pg_decks.select(c), deck_key[2])
                         result["decks"] = (deck_key, part)
-                    return self._join(inv_part, deck_key, part), summary
+                    # This trusted text-only operation verifies actual SQL/audit effects
+                    # before commit, without changing existing inventory Undo protocols.
+                    from .accessory_undo import MetadataRestore
+                    if isinstance(op, MetadataRestore):
+                        # A failed verifier rolls this transaction back. Never cache its
+                        # provisional revision: a later writer can reuse that counter.
+                        saved = inv_part.replace(**part) if deck_key is not None else pg_decks.without_deck_parts(inv_part)
+                        actual = [{"id": rid, "table": table, "op": action, "key": key, "before": old, "after": new}
+                                  for rid, table, action, key, old, new in cur.execute(
+                                      "select id,table_name,op,row_key,before,after from audit.row_change "
+                                      "where change_set_id=%s order by id limit 2", (change_set,)).fetchall()]
+                        receipt = op.verify(before, saved, actual)
+                        summary = Summary(summary.text, summary.counts, summary.changed,
+                                          {**summary.extra, "accessory_undo": receipt})
+                    else:
+                        saved = self._join(inv_part, deck_key, part)
+                    return saved, summary
             except _Unchanged as u:
                 return u.result
         out = self._call(work)

@@ -49,6 +49,14 @@ def review_hint(change, shown, profile):
     if total == 1 and len(rows) == 1 and not change.get("more") and not change.get("groups") and profile \
             and shown.get("id") == change.get("id"):
         row = rows[0]
+        from decklab.lib.inventory import accessory_undo
+        if guard.allowed(profile, "accessories.edit"):
+            try:
+                accessory_undo.source_record(rows, guard.accessory_owners(profile))
+            except accessory_undo.UndoMissing:
+                pass
+            else:
+                return {"review": True, "kind": "accessory"}
         from decklab.lib.state import wishlist_undo
         try:
             wishlist_undo.source_record(rows, profile.get("id"))

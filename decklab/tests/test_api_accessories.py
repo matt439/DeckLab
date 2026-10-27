@@ -21,7 +21,7 @@ from decklab.lib import access, accessories, accessory_fetch, config, decks, inv
 from decklab.lib.api import accessories as api_acc
 from decklab.lib.api import common
 from decklab.lib.api.common import ApiError
-from decklab.lib.inventory import files, ops_accessories
+from decklab.lib.inventory import files, ops_accessories, rules
 from decklab.lib.inventory import kit as product_kit
 from decklab.lib.inventory.files import FileInventory
 from decklab.lib.state import Actor
@@ -37,6 +37,7 @@ BOX = "ultimate-guard-boulder-100-black"
 PRODUCT = "deck,section,name,quantity,finish,set,collector_number\nRed,deck,Lightning Bolt,60,nonfoil,lea,161\n"
 NAMES = {p["id"]: p["name"] for p in PROFILES["profiles"]}
 BY_ID = {p["id"]: p for p in PROFILES["profiles"]}
+CURRENT_STATUS_HEADER = ",".join(rules.STATUS_FIELDS) + "\n"
 
 
 def sha(data):
@@ -371,7 +372,8 @@ class AssignTests(AccessoriesApiTestCase):
     def test_a_product_gets_its_status_row(self):
         answer = self.assign("product/test-product", BLACK)
         text = (self.magic / "products/status.csv").read_text(encoding="utf-8")
-        self.assertEqual(text, STATUS_HEADER + f"test-product.csv,owned,yes,{BLACK},,\n")
+        # Legacy input remains readable; an ordinary write uses the full current schema.
+        self.assertEqual(text, CURRENT_STATUS_HEADER + f"test-product.csv,owned,yes,{BLACK},,,\n")
         self.assertEqual(answer["holder"]["need"], 60)
         products = answer["data"]["products"]
         self.assertEqual((products[0]["holder"], products[0]["sleeves"]["id"]), ("product/test-product", BLACK))
@@ -424,7 +426,7 @@ class AssignTests(AccessoriesApiTestCase):
                          ["move sleeves from Izzet Otters to test-product",
                           "move sleeves from test-product to Izzet Otters"])
         self.assertEqual((self.magic / "products/status.csv").read_text(encoding="utf-8"),
-                         STATUS_HEADER + "test-product.csv,owned,yes,,,\n")
+                         CURRENT_STATUS_HEADER + "test-product.csv,owned,yes,,,,\n")
         self.assertIn(f"Sleeves:** {BLACK}", self.deck_text("otters"))
 
     def test_a_refused_move_changes_neither_holder(self):
