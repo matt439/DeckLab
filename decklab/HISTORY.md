@@ -2,9 +2,15 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
-## Tests independent of a local config.json (2026-10-27)
+## Rules-text and type-line search (2026-10-27; E2-S25)
 
-`test_db_check` and `test_web_no_personal_data` no longer depend on decklab/config.json, which CI never has. The nightly check's tests now run with the database's fixture profiles (`household_config.use`), so a config made from config.example.json no longer turns the fixture's sleeves (owned by `matt`) into an accessories warning, and they read the pool by hand as they already read the deck tables, so the Printings in box sub-check no longer warns where there's no card index; a new test covers its warning. The web privacy test leaves the stand-in names (Alex, Sam, Jordan, User1 to User5) out of a config's profile terms, so a config naming `alex` or `user1` no longer fails on the page's neutral examples, while real names, display names, spaces and emails are still checked.
+The editor's card finder now takes Scryfall-style terms beside a card's name: `o:` (or `oracle:`) searches rules text and `t:` (or `type:`) the type line, each a word or a quoted phrase (`o:"draw a card"`, a phone's curly quotes too), every term to match, as in `o:treasure t:creature` (`api/editor.py`, `_find_terms` and `_term_fits`).
+
+- **Matching:** loose (`cards.fold`) and anywhere in the text, as Scryfall does (`t:legend` finds Legendary). A multi-face card's every face counts, for its type line and its rules text; a `~` in an `o:` term stands for the card's own name (`o:"when ~ enters"`). A term with nothing after its colon yet counts for nothing, so typing one doesn't flash an error.
+- **With the rest:** the name words, and the colour, type and mana value filters, still apply; terms alone browse every paper card, and in My collection only cards with a copy free for this deck show. The name search's ordering and "did you mean" use the name words only, and the page offers no close spellings after a search with terms.
+- **Unknown terms:** any other `key:` answers 400 with the term named ("The search doesn't know the term c:red. It knows o: for rules text and t: for the type line…", `reason` "term"), shown as it is in the results. A colon in a card name ("Circle of Protection: Red") stays name text.
+
+Validation: new FindCardsTests in `test_editor_writeup.py` on the fixture card data; the suite's four shards passed locally on Linux. The page's wording was checked by reading only: no browser run on real card data.
 
 ## Chance to draw on the Stats tab (2026-10-27; E3-S24)
 
@@ -20,6 +26,10 @@ Validation: the new `test_stats_draw_odds.py` checks the numbers against Python'
 ## Print proxies (2026-10-27; E4-S25)
 
 A deck's Planned list can be played at home before every card has arrived. The deck page's More menu has **Print proxies** for a viewer who sees the deck's space's inventory (offered on the Planned list when it has missing copies, and on the Play-now list, which reads the Planned list's answer first). It prints a first page naming each proxy in print order, the stand-in it covers (the deck's saved Planned-list markers, `Shock` or `any card`) and how many copies are on the way and not printed, then one 63 × 88 mm card per missing copy, nine to a page. Missing copies are counted as the Cards tab marks them (shared between sections, so a card's missing copies fall on the sideboard). Each card is the large picture (672 px), a double-faced card's back right after its front, and a card with no picture is printed as its name, cost, type and rules. The sheet waits up to 15 seconds for its pictures before the print dialog opens. Its own `cards` page has a 6 mm margin so three rows fit A4 and US Letter; at 100% each card measured 63 × 88 mm in Chromium's print layout, three pages for ten cards on both sizes. `printCardSheet` and `cardSizePages` (`deck-print.js`) are kept separate for the box label (E8-S21). Nothing is saved.
+
+## Tests independent of a local config.json (2026-10-27)
+
+`test_db_check` and `test_web_no_personal_data` no longer depend on decklab/config.json, which CI never has. The nightly check's tests now run with the database's fixture profiles (`household_config.use`), so a config made from config.example.json no longer turns the fixture's sleeves (owned by `matt`) into an accessories warning, and they read the pool by hand as they already read the deck tables, so the Printings in box sub-check no longer warns where there's no card index; a new test covers its warning. The web privacy test leaves the stand-in names (Alex, Sam, Jordan, User1 to User5) out of a config's profile terms, so a config naming `alex` or `user1` no longer fails on the page's neutral examples, while real names, display names, spaces and emails are still checked.
 
 ## Printings in box (2026-10-27; E11-S30 slice 13)
 

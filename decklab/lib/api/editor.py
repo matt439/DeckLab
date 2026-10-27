@@ -549,10 +549,74 @@ def _find_int(value, name, default, low, high):
     return int(value)
 
 
-def _fits(card, colors, type_, mv):
+FIND_TERMS = {"o": "o", "oracle": "o", "t": "t", "type": "t"}     # Scryfall's keys the finder knows (E2-S25)
+# A term: a key, a colon and a value, quoted ("o:\"draw a card\"", a quote left open running to the end, as
+# while it's typed) or up to the next space; it starts the text or follows a space.
+_TERM_RE = re.compile(r'(?<!\S)([A-Za-z]+):("[^"]*"?|\S*)')
+_CURLY_DOUBLE = str.maketrans({"\u201c": '"', "\u201d": '"', "\u201e": '"'})   # phones' quotes
+
+
+def _find_terms(q):
+    """The finder's text split into the name words and the Scryfall-style terms (E2-S25): o: (or oracle:)
+    for rules text, t: (or type:) for the type line, each a word or a quoted phrase, all of them to match.
+    Returns (the name text, [(key "o" or "t", the folded value)]); a term with nothing after its colon (still
+    being typed) counts for nothing. A colon after any other word is a term the finder doesn't know: an
+    ApiError 400 naming it, unless the text with it is a card name's ("Circle of Protection: Red"), when
+    it stays name text."""
+    q = q.translate(_CURLY_DOUBLE)
+    terms, rest, unknown = [], [], None
+    last = 0
+    for m in _TERM_RE.finditer(q):
+        key = FIND_TERMS.get(m.group(1).lower())
+        if key is None:
+            unknown = unknown or m.group(0)
+            continue
+        rest.append(q[last:m.start()])
+        last = m.end()
+        value = cards.fold(m.group(2).strip('"'))
+        if value:
+            terms.append((key, value))
+    rest.append(q[last:])
+    name = " ".join("".join(rest).split())
+    if unknown and not cards.search_names(name, 1):
+        raise ApiError(400, f"The search doesn't know the term {unknown}. It knows o: for rules text and t: "
+                            "for the type line, such as o:treasure t:creature or o:\"draw a card\".",
+                       reason="term", term=unknown)
+    return name, terms
+
+
+def _term_fits(card, terms):
+    """Whether a card matches every term (_find_terms): t: in its type line (every face's), o: in its rules
+    text (every face's), loosely (cards.fold) and anywhere in it, as Scryfall matches them ("t:legend" finds
+    Legendary). A ~ in an o: term stands for the card's own name, as on Scryfall ("o:\"~ deals\"")."""
+    if not terms:
+        return True
+    faces = card.get("faces") or []
+    types = cards.fold(" // ".join(f.get("type_line", "") for f in faces) if faces else card["type_line"])
+    text = cards.fold(card.get("oracle_text") or "")
+    named = None
+    for key, value in terms:
+        if key == "t":
+            if value not in types:
+                return False
+            continue
+        if "~" in value:
+            if named is None:
+                named = text
+                for own in sorted({card["name"], *(f.get("name", "") for f in faces)} - {""}, key=len,
+                                  reverse=True):
+                    named = named.replace(cards.fold(own), "~")
+            if value not in named:
+                return False
+        elif value not in text:
+            return False
+    return True
+
+
+def _fits(card, colors, type_, mv, terms=()):
     """Whether a card passes the finder's filters: its colour identity within colors (a set of WUBRG letters;
-    None: any; colourless always fits), its front face's type line naming type_, and its mana value mv (7:
-    7 or more)."""
+    None: any; colourless always fits), its front face's type line naming type_, its mana value mv (7:
+    7 or more) and every rules-text and type-line term (_term_fits)."""
     if card is None:
         return False
     if colors is not None and not set(card["color_identity"]) <= colors:
@@ -561,7 +625,7 @@ def _fits(card, colors, type_, mv):
         return False
     if mv is not None and (card["cmc"] < 7 if mv == 7 else card["cmc"] != mv):
         return False
-    return True
+    return _term_fits(card, terms)
 
 
 def _name_rank(name, q):
@@ -577,6 +641,10 @@ def find_cards(q=None, scope=None, colors=None, type=None, mv=None, deck_id=None
                page=None):
     """GET /api/deck/find?q=&scope=all|owned&colors=&type=&mv=&id=|space=&limit=&page=: the editor's card
     finder.
+
+    q may hold Scryfall-style terms besides the name words (_find_terms: o: rules text, t: type line, all of
+    them to match, E2-S25); the name search and "did you mean" use only the name words, and a term the
+    finder doesn't know is a 400 naming it (with reason "term" and the term).
 
     scope "all" (the default) searches every paper card's name (cards.search_names), keeps the ones that pass
     the filters, and puts the name typed first, then the deck's space's cards (owned or on the way), then
@@ -630,6 +698,7 @@ def find_cards(q=None, scope=None, colors=None, type=None, mv=None, deck_id=None
         guard.require_sees_inventory(space)
     wanted = set(colors) if colors else None
     _require_cards()
+    q, terms = _find_terms(q)
     counts = drafts._visible_counts(space)
 
     def have_of(card):
@@ -651,15 +720,15 @@ def find_cards(q=None, scope=None, colors=None, type=None, mv=None, deck_id=None
             if not all(w in name.casefold() for w in words):
                 continue
             spare = spares[name]
-            if _fits(cards.card(name), wanted, type_, mv):
+            if _fits(cards.card(name), wanted, type_, mv, terms):
                 names.append(name)
                 free[name] = spare
-    elif q or wanted is not None or type_ or mv is not None:
+    elif q or terms or wanted is not None or type_ or mv is not None:
         found = cards.search_names(q, FIND_NAMES) if q else cards.card_names()
         if q and len(found) < DID_YOU_MEAN and not any(cards.fold(name) == cards.fold(q) for name in found):
             did_you_mean = [name for name in cards.close_names(q, len(found) + DID_YOU_MEAN)
                             if name not in found][:DID_YOU_MEAN]
-        names = [name for name in found if _fits(cards.card(name), wanted, type_, mv)]
+        names = [name for name in found if _fits(cards.card(name), wanted, type_, mv, terms)]
         # The space's cards (any printing owned or on the way), from its counts: no card is looked through.
         space_names = set()
         for (set_code, number, _), have in counts.items():
