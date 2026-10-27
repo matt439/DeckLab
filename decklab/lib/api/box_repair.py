@@ -9,11 +9,11 @@ Intended lists, the collection, kit and packed token cards are never changed her
 from decklab.lib import cards, decks, inventory, tokens
 from decklab.lib.decks import assembled, boxcheck, boxrepair
 
-from . import assembly_takeapart, box_check
+from . import assembly_takeapart, box_check, saving
 from .box_check import SHA, checked, physical, recipe_sha256
 from .common import ApiError, _flag, _keys, _parse_body, _public
 from .library import _load_pool
-from .saving import _deck_refused, _stale_after, apply_op
+from .saving import _deck_refused, apply_op
 from .settings import _writer
 
 
@@ -105,7 +105,7 @@ def repair_box(body):
     after_inv, _ = apply_op(op, profile, f"Correct the recorded box for {deck.title}",
                             _deck_refused(stored.id, deck.title, profile))
     held_record = after_inv.deck(stored.id)
-    stale = _stale_after({stored.id}, [])
+    stale = saving._stale_after({stored.id}, [])
     return {"saved": True, "id": stored.id, "revision": held_record.revision, "sha256": held_record.sha256,
             "checked_on": checked_on, "recipe_sha256": recipe, "result_sha256": outcome,
             "freed": _counts(freed), "held": _counts(held), "stale_tables": stale, **result}
