@@ -147,7 +147,9 @@ class BatchInsertUndoApiTests(unittest.TestCase):
             self.assertIsNone(activity_undo.review_hint(item, shown, guard.viewer()))
         for table in ("collection_import", "order_component", "deck"):
             rows[-1]["table"] = table
-            self.assertIsNone(activity_undo.review_hint(change, shown, guard.viewer()))
+            # A kept upload makes it look like a whole import, which has its own review (E11-S08).
+            self.assertEqual(activity_undo.review_hint(change, shown, guard.viewer()),
+                             {"review": True, "kind": "mixed"} if table == "collection_import" else None)
         rows[-1]["table"], rows[-1]["op"] = "collection_card", "UPDATE"
         rows[-1]["before"] = copy.deepcopy(rows[-1]["after"])
         self.assertIsNone(activity_undo.review_hint(change, shown, guard.viewer()))

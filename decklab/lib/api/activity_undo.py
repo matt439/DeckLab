@@ -46,6 +46,10 @@ def review_hint(change, shown, profile):
     """
     rows = change.get("rows") or ()
     total = change.get("total", len(rows))
+    from . import activity_mixed_undo
+    mixed = activity_mixed_undo.hint(change, shown, profile)
+    if mixed is not None:
+        return mixed
     if total == 1 and len(rows) == 1 and not change.get("more") and not change.get("groups") and profile \
             and shown.get("id") == change.get("id"):
         row = rows[0]
