@@ -9,7 +9,7 @@ from .common import ApiError, DATABASE_DOWN, _keys, _parse_body
 from .settings import _web_actor, _writer
 
 NO_CHANGE = "No undoable accessory change at that ID."
-UNSUPPORTED = "Undo restores recorded accessory details and box capacity, removes an unused image-free addition or restores an exact image-free deleted record. Current photos and kit are kept; capacity may change fit warnings."
+UNSUPPORTED = "Undo restores recorded accessory details, box capacity and confirmed counts, removes an unused image-free addition or restores an exact image-free deleted record. Current photos and kit are kept; recorded counts and capacity may change warnings."
 CHANGED = "The accessories changed. Reload Activity and review this Undo again."
 UNCONFIRMED = "The accessory Undo result could not be confirmed. Reload Activity before trying again."
 REVISION = re.compile(r"[1-9][0-9]{0,18}")
@@ -38,13 +38,15 @@ def _call(method, *args):
         raise ApiError(400, UNSUPPORTED) from None
 
 
-def _meta(value):
-    if not isinstance(value, dict) or set(value) != set(undo.META) or any(not isinstance(v, str) for v in value.values()):
+def _meta(value, stock=False):
+    if not isinstance(value, dict) or set(value) != set(undo.STOCK_META if stock else undo.META) or any(not isinstance(v, str) for v in value.values()):
         raise ApiError(503, UNCONFIRMED)
     raw = {field: "" for field in accessories.FIELDS}
-    raw.update(value, quantity="0")
+    raw.update(value)
+    if not stock:
+        raw["quantity"] = "0"
     try:
-        if undo.meta(undo.raw_row(raw)) != value:
+        if (undo.stock_meta if stock else undo.meta)(undo.raw_row(raw)) != value:
             raise inventory.Invalid("Bad metadata")
     except inventory.Invalid:
         raise ApiError(503, UNCONFIRMED) from None
@@ -53,50 +55,54 @@ def _meta(value):
 
 def _project(plan, change_id, owners):
     if not isinstance(plan, dict) or plan.get("change_id") != change_id or plan.get("kind") != "accessory" \
-            or plan.get("action") not in ("accessory_update", "accessory_remove", "accessory_add") or plan.get("owners") != (None if owners is None else sorted(owners)) \
+            or plan.get("action") not in ("accessory_update", "accessory_stock_update", "accessory_remove", "accessory_add") or plan.get("owners") != (None if owners is None else sorted(owners)) \
             or not isinstance(plan.get("expect"), str) or not undo.SHA.fullmatch(plan["expect"]):
         raise ApiError(503, UNCONFIRMED)
     try:
         source = undo.source_record([plan.get("source")], owners)
         removing = plan["action"] == "accessory_remove"
         adding = plan["action"] == "accessory_add"
+        stock = plan["action"] == "accessory_stock_update"
         if source["op"] != ("DELETE" if adding else "INSERT" if removing else "UPDATE"):
             raise inventory.Invalid("Bad source action")
         new, old = None if adding else undo.raw_row(source["after"]), None if removing else undo.raw_row(source["before"])
         identity = old if adding else new
         if source.get("key") != {"id": identity["id"]} or source.get("id") != plan.get("row_change_id") \
                 or type(source.get("id")) is not int or not 0 < source["id"] < 10 ** 18 \
-                or not removing and not adding and {field for field in undo.RAW if old[field] != new[field]} - set(undo.FIELDS):
+                or not removing and not adding and (stock != (old["quantity"] != new["quantity"]) \
+                    or {field for field in undo.RAW if old[field] != new[field]} - set(undo.STOCK_FIELDS if stock else undo.FIELDS)):
             raise inventory.Invalid("Bad source proof")
-        current, restored = (None, old) if adding else (new, None) if removing else (undo.meta(new), undo.meta(old))
+        project = undo.stock_meta if stock else undo.meta
+        current, restored = (None, old) if adding else (new, None) if removing else (project(new), project(old))
     except (inventory.Invalid, KeyError):
         raise ApiError(503, UNCONFIRMED) from None
     if adding:
         if old["image"] or old["crop"] or "current" not in plan or plan["current"] is not None \
                 or plan.get("restored") != restored or plan.get("confirmation_required") is not True \
-                or "fields" in plan or "reason_required" in plan or plan.get("label") != old["name"]:
+                or "fields" in plan or "reason_required" in plan or "stock_confirmation_required" in plan or plan.get("label") != old["name"]:
             raise ApiError(503, UNCONFIRMED)
         return {"available": True, "id": change_id, "expect": plan["expect"], "kind": "accessory",
                 "action": "accessory_add", "label": old["name"], "current": None,
                 "restored": restored, "confirmation_required": True}
     if removing:
         if new["image"] or new["crop"] or plan.get("current") != current or "restored" not in plan \
-                or plan["restored"] is not None or plan.get("reason_required") is not True or "fields" in plan or "confirmation_required" in plan \
+                or plan["restored"] is not None or plan.get("reason_required") is not True or "fields" in plan or "confirmation_required" in plan or "stock_confirmation_required" in plan \
                 or plan.get("label") != current["name"]:
             raise ApiError(503, UNCONFIRMED)
         return {"available": True, "id": change_id, "expect": plan["expect"], "kind": "accessory",
                 "action": "accessory_remove", "label": current["name"], "current": current,
                 "restored": None, "reason_required": True}
-    current, restored = _meta(current), _meta(restored)
-    fields = [{"field": field, "before": current[field], "after": restored[field]} for field in undo.FIELDS
+    current, restored = _meta(current, stock), _meta(restored, stock)
+    fields = [{"field": field, "before": current[field], "after": restored[field]} for field in (undo.STOCK_FIELDS if stock else undo.FIELDS)
               if current[field] != restored[field]]
     if not fields or any(current[field] != restored[field] for field in ("id", "kind", "owner")) \
             or plan.get("current") != current or plan.get("restored") != restored or plan.get("fields") != fields \
-            or plan.get("label") != current["name"] or "reason_required" in plan or "confirmation_required" in plan:
+            or plan.get("label") != current["name"] or "reason_required" in plan or "confirmation_required" in plan \
+            or (plan.get("stock_confirmation_required") is not True if stock else "stock_confirmation_required" in plan):
         raise ApiError(503, UNCONFIRMED)
     return {"available": True, "id": change_id, "expect": plan["expect"], "kind": "accessory",
-            "action": "accessory_update", "label": current["name"], "current": current, "restored": restored,
-            "fields": fields}
+            "action": "accessory_stock_update" if stock else "accessory_update", "label": current["name"], "current": current, "restored": restored,
+            "fields": fields, **({"stock_confirmation_required": True} if stock else {})}
 
 
 def accessory_undo_view(id=None):
@@ -116,13 +122,11 @@ def apply_accessory_undo(body):
     writer = _writer(data)
     guard.require(writer, "accessories.edit")
     owners = guard.accessory_owners(writer)
-    _keys(data, ("profile", "id", "expect"), ("reason", "confirm_restore"))
+    _keys(data, ("profile", "id", "expect"), ("reason", "confirm_restore", "confirm_stock"))
     change_id = _id(data["id"])
-    options = []
-    if "reason" in data or "confirm_restore" in data:
-        options.append(data.get("reason", ...))
-    if "confirm_restore" in data:
-        options.append(data["confirm_restore"])
+    options = [data.get("reason", ...), data.get("confirm_restore", ...), data.get("confirm_stock", ...)]
+    while options and options[-1] is ...:
+        options.pop()
     result = _call("accessory_undo_apply", change_id, owners, data["expect"], _web_actor(writer),
                    f"Undo accessory change {change_id}", *options)
     if not isinstance(result, dict):
@@ -131,8 +135,9 @@ def apply_accessory_undo(body):
     plan = _project(raw_plan, change_id, owners)
     removing = plan["action"] == "accessory_remove"
     adding = plan["action"] == "accessory_add"
+    stock = plan["action"] == "accessory_stock_update"
     try:
-        actual = undo.raw_row(result.get("restored")) if adding else None if removing else _meta(result.get("restored"))
+        actual = undo.raw_row(result.get("restored")) if adding else None if removing else _meta(result.get("restored"), stock)
     except inventory.Invalid:
         raise ApiError(503, UNCONFIRMED) from None
     if actual != plan["restored"] or data["expect"] != plan["expect"] \
@@ -151,4 +156,4 @@ def apply_accessory_undo(body):
             **({"removed_id": result["removed_id"]} if removing else {}),
             **({"added_id": result["added_id"]} if adding else {}),
             "revision": result["revision"], "summary": f"Undo change #{change_id}: " + (
-                "restore a deleted accessory record" if adding else "remove an unused added accessory" if removing else "restore recorded accessory details")}
+                "restore a deleted accessory record" if adding else "remove an unused added accessory" if removing else "restore a recorded accessory count" if stock else "restore recorded accessory details")}
