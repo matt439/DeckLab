@@ -1641,7 +1641,7 @@ With PostgreSQL running they include the database tests (see "Tests" under Datab
 
 ## Command-line helpers
 
-- `python -m decklab.lib.cards update`: download the card data and build the index without the server.
+- `python -m decklab.lib.cards update`: download the card data and build the index without the server (and refresh Scryfall's rulings for the card viewer, the combo list and the official lists' check, each a step whose failure never fails the update).
 - `python -m decklab.lib.stats casual/gruul-ramp`: a deck's stats as text.
 - `python -m decklab.lib.pool casual/gruul-ramp`: owned vs needed for one deck. A person's deck id (`user2/casual/elves`) is checked against their own collection; with no deck, `--space user2` shows a person's pool.
 - `python -m decklab.lib.purchases --check`: check the order records, receipt states and the purchase queue; exits 1 if something's wrong, 2 when the database can't be used.

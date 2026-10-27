@@ -6,7 +6,8 @@ screen on a dark background, and a swipe left or right (it follows the finger, t
 of the width, or a flick) goes to the next or previous card, with "3 / 15" under it. On a wider screen the
 card is in the middle with Previous and Next beside it, and the arrow keys (Home and End too) do the same;
 Escape closes. A double-faced card has Flip, which shows its back's picture. The card's rules text is a
-panel: beside the picture from 1,000 px, behind the Text button on smaller screens.
+panel: beside the picture from 1,000 px, behind the Text button on smaller screens. Under the words are the
+card's Scryfall rulings, dated and folded away (GET /api/cards/rulings).
 On portrait touch screens Text overlays the picture instead of shrinking it; each new opening starts closed. The cards either side
 are already drawn, and the next two are fetched ahead, so a swipe never waits for its picture.
 
@@ -35,6 +36,7 @@ let viewerDom = null;           // the viewer's elements, made the first time it
 let viewerState = null;         // the open viewer: its items, the card shown, the drag going on, ...
 let viewerTextOpen = false;     // Text stays open from card to card within this opening
 let viewerSeq = 0;              // each opening's own mark on its history entry (history.state.cardViewer)
+const viewerRulings = new Map(); // card name -> the promise of its rulings' answer (viewerRulingsPart)
 
 
 /** The card overlay every page uses: card big, or card's viewer group (cards-ui.js viewerItem) when trigger
@@ -188,7 +190,8 @@ function drawViewer() {
   d.flip.setAttribute("aria-pressed", String(s.face === 1));
   d.flip.setAttribute("aria-label", s.face === 1 ? "Show the front" : "Show the back");
   [-1, 0, 1].forEach((at, k) => fillSlide(d.slides[k], s.items[s.index + at], at === 0 ? s.face : 0, at === 0));
-  add(clear(d.text), cardTextParts(card, s.face, item.caption || (s.caption ? s.caption(card, s.index) : null)));
+  add(clear(d.text), [cardTextParts(card, s.face, item.caption || (s.caption ? s.caption(card, s.index) : null)),
+    viewerRulingsPart(card)]);
   const marks = typeof item.status === "function" ? item.status() || [] : [];
   add(clear(d.marks), marks);
   d.marks.hidden = !marks.length;
@@ -316,6 +319,47 @@ function cardTextParts(card, face, caption) {
             : f.oracle_text ? oracleParagraphs(f.oracle_text) : el("p", { class: "oracle", text: "No rules text." }),
         numbers.length ? el("p", { class: "viewer-numbers", text: numbers.join(" · ") }) : null);
     })];
+}
+
+
+/** The card's Scryfall rulings under its words (E1-S25), folded away until opened: filled in when the server's
+ * answer comes (each name is asked once an opening of the page; a failure is asked again next time). Nothing
+ * shows for a card without rulings, or a name that isn't a card (a token); a line says so while the PC has no
+ * rulings file yet. */
+function viewerRulingsPart(card) {
+  const box = el("div", { class: "viewer-rulings" });
+  const name = card && card.name;
+  if (!name) return box;
+  let answer = viewerRulings.get(name);
+  if (!answer) {
+    answer = api(`/api/cards/rulings?name=${encodeURIComponent(name)}`).catch((e) => {
+      viewerRulings.delete(name);
+      return { error: e };
+    });
+    viewerRulings.set(name, answer);
+  }
+  answer.then((data) => { if (box.isConnected) add(box, [viewerRulingsParts(data)]); });
+  return box;
+}
+
+/** What viewerRulingsPart shows for the server's answer (or {error}). */
+function viewerRulingsParts(data) {
+  if (data.error) {
+    return data.error.status === 404 ? null
+      : el("p", { class: "viewer-rulings-note", text: "Rulings couldn't load. Open the card again to retry." });
+  }
+  if (!data.available) return el("p", { class: "viewer-rulings-note", text: "Rulings aren't available yet." });
+  const list = data.rulings || [];
+  if (!list.length) return null;
+  const source = (r) => (r.source === "wotc" ? "Wizards of the Coast" : r.source === "scryfall" ? "Scryfall" : null);
+  return el("details", { class: "viewer-rulings-fold" },
+    el("summary", {}, `Rulings (${list.length})`),
+    el("ol", { class: "viewer-rulings-list" }, list.map((r) => el("li", { class: "viewer-ruling" },
+      el("p", { class: "viewer-ruling-meta" }, r.date ? el("time", { datetime: r.date, text: r.date }) : null,
+        r.date && source(r) ? " · " : null, source(r)),
+      String(r.text || "").split("\n").filter((line) => line.trim())
+        .map((line) => el("p", { class: "viewer-ruling-text" }, renderSymbols(line)))))),
+    el("p", { class: "viewer-rulings-note" }, "From Scryfall", data.updated ? `, ${data.updated}` : "", "."));
 }
 
 
