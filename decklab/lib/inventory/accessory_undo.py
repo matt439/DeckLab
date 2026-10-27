@@ -1,4 +1,4 @@
-"""One audited accessory text/link UPDATE inverse, preserving current photos and kit.
+"""Guarded accessory text/link UPDATE and unused image-free INSERT inverses.
 
 Accessory image bytes are not audited. This restores only recorded text/links;
 an old source URL makes no claim about the retained photograph.
@@ -12,7 +12,7 @@ from decklab.lib import accessories
 from decklab.lib.state import Invalid
 
 from . import Summary, backend, changes, paths, rules
-from .undo import SHA, UndoConflict, UndoMissing, UndoUnsupported, _identifier
+from .undo import SHA, UndoConflict, UndoMissing, UndoUnsupported, _identifier, removal_reason
 
 FIELDS = ("brand", "name", "colour", "notes", "link", "image_source")
 META = ("id", "kind", "owner", *FIELDS)
@@ -39,10 +39,11 @@ def source_record(rows, owners):
         raise UndoMissing()
     row = rows[0]
     old, new = row.get("before"), row.get("after")
-    if row.get("table") != "accessory" or row.get("op") != "UPDATE" \
-            or not isinstance(old, dict) or not isinstance(new, dict) \
+    insert = row.get("op") == "INSERT" and "before" in row and old is None
+    if row.get("table") != "accessory" or not (insert or row.get("op") == "UPDATE" and isinstance(old, dict)) \
+            or not isinstance(new, dict) \
             or any(not isinstance(side.get("owner"), str) or scope is not None and side["owner"] not in scope
-                   for side in (old, new)):
+                   for side in ((new,) if insert else (old, new))):
         raise UndoMissing()
     return row
 
@@ -65,8 +66,12 @@ def raw_row(raw):
     return dict(raw)
 
 
-def raw_rows(snapshot):
+def raw_rows(snapshot, *, allow_empty=False):
     sheet = snapshot.accessories
+    if allow_empty and not sheet.exists:
+        from .model import Sheet
+        if sheet == Sheet(paths.ACCESSORIES):
+            return []
     if not sheet.exists or sheet.error is not None or sheet.strict_error or sheet.problems \
             or tuple(sheet.columns or ()) != tuple(rules.ACCESSORY_FIELDS):
         raise UndoUnsupported("The accessories list cannot be checked exactly.")
@@ -115,18 +120,37 @@ def _candidate(snapshot, source, owners):
     return after, expected
 
 
+def _remove_candidate(snapshot, source, owners):
+    from . import accessory_undo_remove, ops_accessories
+    new = source["after"]
+    if new["image"] or new["crop"] or any(name.rsplit(".", 1)[0] == new["id"] for name in snapshot.accessory_images):
+        raise UndoUnsupported("Use Accessories for a row with a current or orphaned picture.")
+    accessory_undo_remove.unused(snapshot, new["id"])
+    current = accessories.from_sheet(snapshot.accessories, strict=True)
+    after, _ = ops_accessories.remove_accessory(snapshot, id=new["id"], owners=owners,
+        sha256=accessories.view_sha256(current, owners))
+    after = changes.prepare(snapshot, after)
+    _unchanged(snapshot, after)
+    expected = [row for row in raw_rows(snapshot) if row["id"] != new["id"]]
+    if raw_rows(after, allow_empty=True) != expected:
+        raise UndoConflict("The accessory removal cannot preserve the complete list.")
+    return after, expected
+
+
 def review(change_id, owners, snapshot, store=None):
     """Called with one inventory snapshot/connection under its ordinary write lock."""
     _identifier(change_id)
     store = backend() if store is None else store
     source = source_record(store.undo_audit(change_id), owners)
     _identifier(source.get("id"))
-    old, new = raw_row(source["before"]), raw_row(source["after"])
-    if source.get("key") != {"id": new["id"]} or old["id"] != new["id"]:
+    removing = source["op"] == "INSERT"
+    old, new = None if removing else raw_row(source["before"]), raw_row(source["after"])
+    if source.get("key") != {"id": new["id"]} or old is not None and old["id"] != new["id"]:
         raise UndoUnsupported("The accessory's original identity cannot be checked.")
-    changed = {field for field in RAW if old[field] != new[field]}
-    if not changed or changed - set(FIELDS):
-        raise UndoUnsupported("Undo restores only recorded accessory text and links, keeping the current photo and kit.")
+    if not removing:
+        changed = {field for field in RAW if old[field] != new[field]}
+        if not changed or changed - set(FIELDS):
+            raise UndoUnsupported("Undo restores only recorded accessory text and links, keeping the current photo and kit.")
     latest = store.undo_latest("accessory", source["key"])
     if type(latest) is not int or latest != source["id"]:
         raise UndoConflict("The accessory was touched after the selected change.")
@@ -134,12 +158,12 @@ def review(change_id, owners, snapshot, store=None):
     found = [row for row in rows if row["id"] == new["id"]]
     if found != [new]:
         raise UndoConflict("The accessory changed after the selected change.")
-    after, expected = _candidate(snapshot, source, owners)
+    after, expected = (_remove_candidate if removing else _candidate)(snapshot, source, owners)
     scope = _scope(owners)
-    return {"change_id": change_id, "kind": "accessory", "action": "accessory_update",
-            "label": new["name"], "current": meta(new), "restored": meta(old),
-            "fields": [{"field": field, "before": new[field], "after": old[field]} for field in FIELDS
-                       if new[field] != old[field]],
+    return {"change_id": change_id, "kind": "accessory", "action": "accessory_remove" if removing else "accessory_update",
+            "label": new["name"], "current": new if removing else meta(new), "restored": None if removing else meta(old),
+            **({"reason_required": True} if removing else {"fields": [
+                {"field": field, "before": new[field], "after": old[field]} for field in FIELDS if new[field] != old[field]]}),
             "expect": _sha([change_id, source, scope, list_sha(rows, owners)]),
             "sha256": list_sha(expected, owners), "source": source, "raw_after": expected,
             "owners": scope, "row_change_id": source["id"]}, after
@@ -148,18 +172,20 @@ def review(change_id, owners, snapshot, store=None):
 def verify_saved(before, after, plan, actual_rows):
     """Exact actual snapshot and ONE new opposite audit row, before commit."""
     _unchanged(before, after)
-    if raw_rows(after) != plan["raw_after"] or not isinstance(actual_rows, list) or len(actual_rows) != 1:
+    removing = plan["action"] == "accessory_remove"
+    if raw_rows(after, allow_empty=removing) != plan["raw_after"] or not isinstance(actual_rows, list) or len(actual_rows) != 1:
         raise UndoConflict("The accessory inverse result could not be confirmed.")
     source, actual = plan["source"], actual_rows[0]
-    if not isinstance(actual, dict) or type(actual.get("id")) is not int \
+    if not isinstance(actual, dict) or set(actual) != {"id", "table", "op", "key", "before", "after"} or type(actual.get("id")) is not int \
             or not source["id"] < actual["id"] < 2 ** 63 or actual.get("table") != "accessory" \
-            or actual.get("op") != "UPDATE" or actual.get("key") != source["key"] \
+            or actual.get("op") != ("DELETE" if removing else "UPDATE") or actual.get("key") != source["key"] \
             or actual.get("before") != source["after"] or actual.get("after") != source["before"]:
         raise UndoConflict("The accessory inverse audit could not be confirmed.")
-    digest = list_sha(raw_rows(after), plan["owners"])
+    digest = list_sha(raw_rows(after, allow_empty=removing), plan["owners"])
     if digest != plan["sha256"]:
         raise UndoConflict("The accessory inverse list could not be confirmed.")
-    return {"review": plan, "restored": meta(actual["after"]), "sha256": digest,
+    return {"review": plan, "restored": None if removing else meta(actual["after"]), "sha256": digest,
+            **({"removed_id": source["after"]["id"]} if removing else {}),
             "revision": str(actual["id"])}
 
 
@@ -167,9 +193,10 @@ class MetadataRestore:
     """Trusted operation with transaction-local verification in PgInventory.apply."""
     kind = "accessory.undo"
 
-    def __init__(self, change_id, owners, expect, *, store=None):
+    def __init__(self, change_id, owners, expect, *, store=None, reason=None):
         self.change_id, self.owners, self.expect = change_id, owners, expect
         self.store = store
+        self.reason = reason
         self.params = {}
         self.plan = None
 
@@ -178,8 +205,15 @@ class MetadataRestore:
         if not isinstance(self.expect, str) or not SHA.fullmatch(self.expect) or self.expect != plan["expect"]:
             raise UndoConflict("The accessories changed. Review this Undo again.")
         self.plan = plan
-        return after, Summary(f"Undo change #{self.change_id}: restore recorded accessory text and links", {"undo": 1},
-                              {paths.ACCESSORIES: list(FIELDS)}, {"undo_of": self.change_id})
+        removing = plan["action"] == "accessory_remove"
+        if removing:
+            self.reason = removal_reason(self.reason)
+        elif self.reason is not None:
+            raise Invalid("Restoring accessory text does not take a removal reason.")
+        return after, Summary(f"Undo change #{self.change_id}: " + ("remove an unused added accessory" if removing else
+                              "restore recorded accessory text and links"), {"undo": 1},
+                              {paths.ACCESSORIES: ["removed"] if removing else list(FIELDS)},
+                              {"undo_of": self.change_id, **({"undo_reason": self.reason} if removing else {})})
 
     def verify(self, before, after, actual_rows):
         if self.plan is None:

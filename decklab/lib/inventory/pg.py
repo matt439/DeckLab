@@ -756,9 +756,18 @@ class PgInventory:
                     self._applying.connection = previous
         return self._call(work)
 
-    def accessory_undo_apply(self, change_id, owners, expect, actor, message):
-        from .accessory_undo import MetadataRestore
-        _, summary = self.apply(MetadataRestore(change_id, owners, expect, store=self), actor, message)
+    def accessory_undo_apply(self, change_id, owners, expect, actor, message, reason=...):
+        from .accessory_undo import MetadataRestore, source_record, removal_reason
+        canonical = None
+        if reason is not ...:
+            # Audit rows are immutable. Establish complete source ownership before
+            # validating the public reason; all mutable facts are rechecked in apply.
+            source = source_record(self.undo_audit(change_id), owners)
+            if source["op"] != "INSERT":
+                raise Invalid("Restoring accessory text does not take a removal reason.")
+            canonical = removal_reason(reason)
+        _, summary = self.apply(MetadataRestore(change_id, owners, expect, store=self, reason=canonical), actor, message,
+                                reason=canonical)
         return summary.extra["accessory_undo"]
 
     def undo_audit_batch(self, change_id):
@@ -864,6 +873,10 @@ class PgInventory:
                                       "select id,table_name,op,row_key,before,after from audit.row_change "
                                       "where change_set_id=%s order by id limit 2", (change_set,)).fetchall()]
                         receipt = op.verify(before, saved, actual)
+                        if op.plan["action"] == "accessory_remove":
+                            recorded_reason = cur.execute("select reason from audit.change_set where id=%s", (change_set,)).fetchone()
+                            if recorded_reason is None or recorded_reason[0] != op.reason:
+                                raise Conflict("The accessory removal reason could not be confirmed.")
                         summary = Summary(summary.text, summary.counts, summary.changed,
                                           {**summary.extra, "accessory_undo": receipt})
                     else:

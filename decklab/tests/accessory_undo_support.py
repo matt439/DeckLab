@@ -83,3 +83,21 @@ def actual_source(plan, id=NEW_ROW_ID):
     source = plan["source"]
     return [{"id": id, "table": "accessory", "op": "UPDATE", "key": copy.deepcopy(source["key"]),
              "before": copy.deepcopy(source["after"]), "after": copy.deepcopy(source["before"])}]
+
+
+def seed_insert(store, owner="matt", only=False):
+    """An unused photo-free insertion; leave the UPDATE fixture's initial state intact."""
+    current = row(owner=owner, image="", crop="")
+    rows = [current] if only else [current if found.accessory_id == current["id"] else found.as_dict()
+                                  for found in store._initial.accessories.rows]
+    snapshot = store._initial.with_accessories(rows).without_image("a-sleeves.jpg")
+    deck = snapshot.deck("casual/fixture")
+    if deck is not None and deck.text is not None:
+        from dataclasses import replace
+        snapshot = snapshot.with_deck(replace(deck, text=deck.text.replace("- **Sleeves:** a-sleeves\n", "")))
+    store.snapshot = snapshot
+    store.audit = {CHANGE_ID: [{"id": ROW_ID, "table": "accessory", "op": "INSERT", "key": {"id": current["id"]},
+                              "before": None, "after": copy.deepcopy(current)}]}
+    store.latest = ROW_ID
+    store.writes.clear()
+    return current

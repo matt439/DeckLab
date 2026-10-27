@@ -49,8 +49,13 @@ class AuditAccessories:
         self.calls.append(("review", change_id, owners))
         return kernel.review(change_id, owners, self.snapshot, self)[0]
 
-    def accessory_undo_apply(self, change_id, owners, expect, actor, message):
+    def accessory_undo_apply(self, change_id, owners, expect, actor, message, reason=...):
         self.calls.append(("apply", change_id, owners))
+        if reason is not ...:
+            source = kernel.source_record(self.undo_audit(change_id), owners)
+            if source["op"] != "INSERT":
+                raise inventory.Invalid("Restoring accessory text does not take a removal reason.")
+            reason = kernel.removal_reason(reason)
         before = self.snapshot
         operation = kernel.MetadataRestore(change_id, owners, expect)
         after, summary = operation.run(changes.detach(before))
@@ -129,7 +134,7 @@ class AccessoryUndoApiTests(ApiTestCase):
             self.assertEqual(result["revision"], str(self.store.latest))
             actor, message, summary, rows = self.store.writes[-1]
             self.assertEqual((actor.id, actor.source, actor.via), (viewer, "web", "tunnel"))
-            self.assertEqual(message, f"Undo accessory recorded text and links change {CHANGE_ID}")
+            self.assertEqual(message, f"Undo accessory change {CHANGE_ID}")
             self.assertEqual((rows[0]["before"], rows[0]["after"]), (before[CHANGE_ID][0]["after"], before[CHANGE_ID][0]["before"]))
             self.assertEqual(self.store.audit, before)
             self.assertEqual(summary.counts["undo"], 1)

@@ -8,6 +8,7 @@ const ACTIVITY_UNDO_FIELDS = {
   accessory: ["id", "kind", "owner", "brand", "name", "colour", "notes", "link", "image_source"],
 };
 const ACTIVITY_UNDO_EDITABLE = { collection: ["quantity", "condition", "language", "notes"], tokens: ["quantity", "notes"], wishlist: ["set", "number", "notes", "source"], accessory: ["brand", "name", "colour", "notes", "link", "image_source"] };
+const ACTIVITY_UNDO_ACCESSORY_STOCK_FIELDS = [...ACTIVITY_UNDO_FIELDS.accessory, "quantity", "capacity", "image", "crop"];
 
 function activityUndoRow(row, kind) {
   if (!["collection", "tokens", "wishlist", "accessory"].includes(kind)) return false;
@@ -92,18 +93,30 @@ function activityUndoAccessoryUrl(value, limit) {
 }
 
 function activityUndoAccessoryEvidence(data, space, profile) {
-  if (data.action !== "accessory_update" || space !== "home" || typeof profile !== "string" || !profile
-      || Object.keys(data).sort().join(",") !== "action,available,current,expect,fields,id,kind,label,restored"
-      || !activityUndoRow(data.current, "accessory") || !activityUndoRow(data.restored, "accessory")
-      || [data.current, data.restored].some(row => !activityUndoAccessoryUrl(row.link, 500) || !activityUndoAccessoryUrl(row.image_source, 2000))
+  const removing = data.action === "accessory_remove";
+  const keys = ["action", "available", "current", "expect", "id", "kind", "label", "restored", removing ? "reason_required" : "fields"];
+  if ((!removing && data.action !== "accessory_update") || space !== "home" || typeof profile !== "string" || !profile
+      || Object.keys(data).sort().join(",") !== keys.sort().join(",")
+      || (removing ? !activityUndoAccessoryStock(data.current) : !activityUndoRow(data.current, "accessory") || !activityUndoRow(data.restored, "accessory"))
+      || (removing ? [data.current] : [data.current, data.restored]).some(row => !activityUndoAccessoryUrl(row.link, 500) || !activityUndoAccessoryUrl(row.image_source, 2000))
       || !data.current.id.trim() || !["sleeves", "deck_box", "playmat"].includes(data.current.kind)
-      || ![profile, "shared"].includes(data.current.owner) || data.label !== data.current.name
-      || ["id", "kind", "owner"].some(field => data.current[field] !== data.restored[field])) return false;
+      || ![profile, "shared"].includes(data.current.owner) || data.label !== data.current.name) return false;
+  if (removing) return data.reason_required === true && data.restored === null;
+  if (["id", "kind", "owner"].some(field => data.current[field] !== data.restored[field])) return false;
   const changed = ACTIVITY_UNDO_EDITABLE.accessory.filter(field => data.current[field] !== data.restored[field]);
   return changed.length > 0 && Array.isArray(data.fields) && data.fields.length === changed.length
     && new Set(data.fields.map(item => item?.field)).size === changed.length
     && [...data.fields].every(item => item && Object.keys(item).sort().join(",") === "after,before,field" && changed.includes(item.field)
       && item.before === data.current[item.field] && item.after === data.restored[item.field]);
+}
+
+function activityUndoAccessoryStock(row) {
+  return row && typeof row === "object" && !Array.isArray(row)
+    && Object.keys(row).sort().join(",") === [...ACTIVITY_UNDO_ACCESSORY_STOCK_FIELDS].sort().join(",")
+    && ACTIVITY_UNDO_ACCESSORY_STOCK_FIELDS.every(field => typeof row[field] === "string")
+    && activityUndoRow(Object.fromEntries(ACTIVITY_UNDO_FIELDS.accessory.map(field => [field, row[field]])), "accessory")
+    && /^(?:0|[1-9][0-9]{0,3})$/.test(row.quantity) && row.image === "" && row.crop === ""
+    && (row.capacity === "" || row.kind === "deck_box" && /^[1-9][0-9]{0,3}$/.test(row.capacity));
 }
 
 function activityUndoAuditVersion(value) {
@@ -141,12 +154,17 @@ function activityUndoEvidence(data, id, space, profile = state.profile?.id) {
 }
 
 function activityUndoReceipt(answer, preview) {
-  if (preview.kind === "accessory") return Boolean(answer && answer.saved === true && answer.source_id === preview.id
-    && answer.expect === preview.expect && answer.kind === "accessory" && answer.action === "accessory_update"
-    && Object.keys(answer).sort().join(",") === "action,expect,kind,restored,revision,saved,sha256,source_id,summary"
-    && typeof answer.sha256 === "string" && /^[a-f0-9]{64}$/.test(answer.sha256) && activityUndoAuditVersion(answer.revision)
-    && typeof answer.summary === "string" && answer.summary.trim() && activityUndoRow(answer.restored, "accessory")
-    && ACTIVITY_UNDO_FIELDS.accessory.every(field => answer.restored[field] === preview.restored[field]));
+  if (preview.kind === "accessory") {
+    const removing = preview.action === "accessory_remove";
+    const keys = ["action", "expect", "kind", "restored", "revision", "saved", "sha256", "source_id", "summary", ...(removing ? ["removed_id"] : [])];
+    return Boolean(answer && answer.saved === true && answer.source_id === preview.id && answer.expect === preview.expect
+      && answer.kind === "accessory" && answer.action === preview.action && ["accessory_update", "accessory_remove"].includes(preview.action)
+      && Object.keys(answer).sort().join(",") === keys.sort().join(",")
+      && typeof answer.sha256 === "string" && /^[a-f0-9]{64}$/.test(answer.sha256) && activityUndoAuditVersion(answer.revision)
+      && typeof answer.summary === "string" && answer.summary.trim()
+      && (removing ? answer.restored === null && answer.removed_id === preview.current.id
+        : activityUndoRow(answer.restored, "accessory") && ACTIVITY_UNDO_FIELDS.accessory.every(field => answer.restored[field] === preview.restored[field])));
+  }
   if (preview.kind === "wishlist") {
     const removing = preview.action === "wishlist_remove";
     const keys = ["action", "expect", "kind", "profile", "restored", "revision", "saved", "sha256", "source_id", "summary", ...(removing ? ["removed_name"] : [])];
@@ -274,11 +292,12 @@ function openActivityUndo(view, id, endpoint = "/api/activity/undo") {
 
 function activityUndoShow(ctx) {
   const { sheet, preview, view, endpoint } = ctx, signature = JSON.stringify(preview);
-  const batchRemoving = preview.action === "batch_remove", removing = batchRemoving || preview.action === "remove";
+  const accessoryRemoving = preview.kind === "accessory" && preview.action === "accessory_remove";
+  const batchRemoving = preview.action === "batch_remove", removing = batchRemoving || accessoryRemoving || preview.action === "remove";
   const batchAdding = preview.action === "batch_add", adding = batchAdding || preview.action === "add";
   const wishlistPresence = preview.kind === "wishlist" && ["wishlist_add", "wishlist_remove"].includes(preview.action);
   const stock = preview.action === "batch_update", batch = stock || preview.action === "batch_metadata";
-  const words = { quantity: "Quantity", condition: "Condition", language: "Language", notes: "Notes", source: "Source", set: "Set", number: "Collector number", brand: "Brand", name: "Name", colour: "Colour", link: "Product link", image_source: "Recorded image source" };
+  const words = { quantity: "Quantity", condition: "Condition", language: "Language", notes: "Notes", source: "Source", set: "Set", number: "Collector number", brand: "Brand", name: "Name", colour: "Colour", link: "Product link", image_source: "Recorded image source", capacity: "Box capacity", image: "Photo", crop: "Photo crop" };
   const identity = preview.kind === "wishlist" ? ["name", ...["set", "number"].filter(field => !preview.fields?.some(item => item.field === field))]
     : ACTIVITY_UNDO_FIELDS[preview.kind].filter(field => !ACTIVITY_UNDO_EDITABLE[preview.kind].includes(field));
   const text = value => value === "" ? "Not recorded" : String(value);
@@ -308,26 +327,34 @@ function activityUndoShow(ctx) {
   } else if (removing) {
     const tokenCards = preview.kind === "tokens";
     const copies = batchRemoving ? preview.rows.reduce((sum, item) => sum + item.current.quantity, 0) : preview.current.quantity;
-    const warning = batchRemoving ? "Undo removes all " + plural(copies, "recorded copy", "recorded copies") + " across all " + plural(preview.row_count, "printing") + ". Every added row will be removed together."
+    const warning = accessoryRemoving ? "Undo removes this entire accessory record, including its recorded quantity of " + preview.current.quantity
+      + (preview.current.kind === "sleeves" ? " individual sleeves." : Number(preview.current.quantity) === 1 ? " item." : " items.")
+      : batchRemoving ? "Undo removes all " + plural(copies, "recorded copy", "recorded copies") + " across all " + plural(preview.row_count, "printing") + ". Every added row will be removed together."
       : tokenCards ? "Undo removes all " + plural(preview.current.quantity, "physical token card") + " recorded in this row."
       + (preview.current.back.trim() ? " Each front/back pair is one physical card." : "")
       : "Undo removes all " + plural(preview.current.quantity, "recorded copy", "recorded copies")
         + " of this printing from the collection. The entire added row will be removed.";
     sheet.body.append(el("p", { class: "box box-warn", text: warning }),
     el("p", { class: "sub", text: "Saving creates one new audited change; the original change stays in Activity. "
-      + (batchRemoving ? "The rows and their physical uses are checked again when you save." : "The row and its physical uses are checked again when you save.") }));
-    const currentRow = row => el("dl", {}, ACTIVITY_UNDO_FIELDS[preview.kind].flatMap(field => [el("dt", { text: field.replaceAll("_", " ") }),
-      el("dd", { class: field === "notes" ? "activity-undo-note" : null, text: text(row[field]) })]));
+      + (accessoryRemoving ? "Only an unused added record without a photo can be removed here. Deck and product references are checked again when you save; kit and photos stay as they are."
+        : batchRemoving ? "The rows and their physical uses are checked again when you save." : "The row and its physical uses are checked again when you save.") }));
+    const currentRow = row => el("dl", {}, (accessoryRemoving ? ACTIVITY_UNDO_ACCESSORY_STOCK_FIELDS : ACTIVITY_UNDO_FIELDS[preview.kind]).flatMap(field => [el("dt", { text: accessoryRemoving && words[field] ? words[field] : field.replaceAll("_", " ") }),
+      el("dd", { class: ["notes", "link", "image_source"].includes(field) ? "activity-undo-note" : null,
+        text: accessoryRemoving && field === "owner" ? row.owner === "shared" ? "Shared" : state.profile?.name || row.owner
+          : accessoryRemoving && field === "kind" ? { sleeves: "Sleeves", deck_box: "Deck box", playmat: "Playmat" }[row.kind] : text(row[field]) })]));
     if (batchRemoving) sheet.body.append(el("p", { class: "sub", text: "Review every current row below. There is no partial selection." }),
       el("div", { class: "panels" }, preview.rows.map(item => el("section", { class: "panel activity-undo-batch-row" },
         el("h4", { text: item.label }), currentRow(item.current)))));
-    else sheet.body.append(el("section", { class: "panel" }, el("h3", { text: tokenCards ? "Current token-card row to remove" : "Current row to remove" }), currentRow(preview.current)));
+    else sheet.body.append(el("section", { class: "panel" }, el("h3", { text: accessoryRemoving ? "Current accessory record to remove" : tokenCards ? "Current token-card row to remove" : "Current row to remove" }), currentRow(preview.current)));
     const id = "activity-undo-reason-" + sheet.heading.id;
     reasonInput = el("input", { id, type: "text", maxlength: 400, autocomplete: "off", "aria-describedby": id + "-hint" });
     const normalized = el("p", { class: "sub", role: "status", "aria-live": "polite" });
-    sheet.body.append(el("label", { class: "field", for: id }, el("span", { text: tokenCards
+    sheet.body.append(el("label", { class: "field", for: id }, el("span", { text: accessoryRemoving
+      ? "Reason for removing this added accessory record (required)" : tokenCards
       ? "Reason for removing this added token-card row (required)" : batchRemoving ? "Reason for removing all these added rows (required)" : "Reason for removing this added row (required)" }), reasonInput),
-      el("p", { class: "field-hint", id: id + "-hint", text: tokenCards
+      el("p", { class: "field-hint", id: id + "-hint", text: accessoryRemoving
+        ? "Up to 200 characters. Enter why this entire record should be removed from Sleeves & boxes."
+        : tokenCards
         ? "Up to 200 characters. Enter why these physical token cards should be removed from the recorded tokens."
         : "Up to 200 characters. Enter why these copies should be removed from the collection." }), normalized);
     const changed = () => {
