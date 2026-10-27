@@ -103,7 +103,7 @@ class _BuildPlan:
     def run(self, snapshot):
         if (snapshot.revision, snapshot.decks_revision) != self.revision:
             raise inventory.Conflict(CHANGED)
-        changed, kit_items = {}, []
+        changed, kit_items, start = {}, [], snapshot
         for item in self.params["items"]:
             # First make every selected holder built, preserving its current kit.
             # A single kit.set below then validates final assignments together,
@@ -111,7 +111,8 @@ class _BuildPlan:
             text = saving._with_kit(item["text"], snapshot.deck(item["deck_id"]))
             op = inventory.Op("deck.save", {"deck_id": item["deck_id"], "text": text,
                                               "base_sha256": item["base_sha256"],
-                                              "allow_assembled": item.get("allow_assembled", False)})
+                                              "allow_assembled": item.get("allow_assembled", False),
+                                              "defer_printings": True})
             snapshot, summary = op.run(snapshot)
             changed.update(summary.changed)
             if item.get("kit_changes"):
@@ -127,6 +128,8 @@ class _BuildPlan:
             snapshot, summary = op.run(snapshot)
             for source, fields in summary.changed.items():
                 changed.setdefault(source, []).extend(field for field in fields if field not in changed.get(source, []))
+        # Cards can move between the selected decks, so their printings are checked once all are saved.
+        ops_decks.check_printings(start, snapshot, [item["deck_id"] for item in self.params["items"]])
         return snapshot, inventory.Summary("Marked assembled decks built", {"decks": len(changed)}, changed)
 
 
@@ -207,8 +210,10 @@ class _TokenPacking:
             self.extra[deck.deck_id] = (deck.title, list(lines.values()))
 
 
-def _texts(plan, profile, kit=None):
-    """Prepare editor validation and installed stand-ins before one atomic write."""
+def _texts(plan, profile, kit=None, chosen=None):
+    """Prepare editor validation and installed stand-ins before one atomic write. chosen: the
+    printings picked for each deck's pulled cards (assembly_printings.picks)."""
+    from .assembly_printings import record
     snapshot = inventory.current()
     kit = _kit_fields(plan, kit, profile)
     participants = {item["id"]: item for item in plan["decks"]}
@@ -240,6 +245,7 @@ def _texts(plan, profile, kit=None):
         proposed = participants[item["id"]].get("standins")
         if proposed is not None:
             standins.install_stand_ins(parsed, item["version"], proposed["rows"], proposed["choices"])
+        record(parsed, (chosen or {}).get(item["id"], []))
         text = decks.render_deck_file(parsed)
         before = ops_decks.parsed_deck(stored)
         changes = saving._kit_changes(stored.id, before, parsed)
@@ -278,18 +284,21 @@ def _texts(plan, profile, kit=None):
 
 
 def mark_built(body):
-    """POST /api/assembly/built {profile,decks:[{id,version}],fingerprint,confirmed:true,kit?}.
+    """POST /api/assembly/built {profile,decks:[{id,version}],fingerprint,confirmed:true,kit?,printings?}.
 
     Confirmation is the person's checked physical-card tasks (tokens and kit are
     optional). kit maps changed deck ids to {sleeves,deck_box}, each an accessory
-    id or null; omitting it preserves the stored kit. All mutable changed
+    id or null; omitting it preserves the stored kit. printings maps deck ids to the printings
+    chosen for the cards they pull ([{name, set, collector_number, finish, quantity}], one of the
+    plan's printing_choices), written as their Printings in box lines; leaving a card out, or
+    the whole key, records nothing for it. All mutable changed
     participants are saved together, so transfers between selected decks cannot
     leave copies reserved twice. Synthetic product
     decks and pairings remain read-only. The result includes the fresh plan.
     """
     from . import assembly
     data = _parse_body(body)
-    _keys(data, ("profile", "decks", "fingerprint", "confirmed"), ("kit",))
+    _keys(data, ("profile", "decks", "fingerprint", "confirmed"), ("kit", "printings"))
     profile = _writer(data)
     guard.require_sees_home_records(profile)
     if "kit" in data and not isinstance(data["kit"], dict):
@@ -309,7 +318,11 @@ def mark_built(body):
         if not plan["completion"]["can_mark_built"]:
             raise ApiError(409, plan["completion"]["reason"])
         built = plan["completion"]["decks"]
-        items, warnings, tables = _texts(plan, profile, data.get("kit"))
+        from .assembly_printings import picks
+        chosen = picks(data.get("printings"), plan)
+        if set(chosen) - {item["id"] for item in built}:
+            raise ApiError(400, "printings may name only the decks this save marks built")
+        items, warnings, tables = _texts(plan, profile, data.get("kit"), chosen)
         snapshot = inventory.current()
         saving.apply_op(_BuildPlan(snapshot, items), profile,
                         "mark built: " + ", ".join(item["title"] for item in built))

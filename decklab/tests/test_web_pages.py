@@ -173,7 +173,7 @@ class PageSourceTests(unittest.TestCase):
         self.assertIn("font-size: var(--fs-input)", _text("base.css"))
         # The deck page's Tokens part is on its Cards tab, right after the decklist and before the prices.
         cards = _function(_text("deck.js"), "cardsParts")
-        self.assertIn("return [screen.cardsBar, list, deckSwapsSection(data), tokensSection(data), ownedSection(data)];", cards)
+        self.assertIn("return [screen.cardsBar, list, deckSwapsSection(data), tokensSection(data), deckPrintingsSection(data), ownedSection(data)];", cards)
         self.assertIn('id: "sec-tokens"', _function(_text("deck.js"), "tokensSection"))
         # The shell's navigation (core.js's routes table) and the packing plan link to it.
         self.assertIn('{ path: "tokens", label: "Tokens"', _text("core.js"))

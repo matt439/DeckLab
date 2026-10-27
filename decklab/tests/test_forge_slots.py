@@ -398,7 +398,9 @@ class RunSlotTests(SlotFolder, test_forge.ForgeCase):
         self.fake("delay=0.02")
         most = []
         result = self.run_matchup(progress=lambda *a: most.append(self.held_by(4, "matchup ")))
-        self.assertEqual(max(most), 1)          # one slot free: one process at a time
+        # One slot free: one process at a time. Progress may be read after a batch gave its slot
+        # back (a runner's slow scheduling), so 0 is fine; the start times below show the order.
+        self.assertLessEqual(max(most), 1)
         self.assertEqual(len(result["batches"]), 4)
         self.assertEqual(sum(len(b["games"]) for b in result["batches"]), 40)
         times = sorted(t for _, _, t in self.starts())

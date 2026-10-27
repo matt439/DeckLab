@@ -1,6 +1,8 @@
 """Visible saved-list printing hints beside Collection storage counts.
 
-These are ``listed_holders``, not verified physical-printing assignments. The existing
+These are ``listed_holders``. A hint is a saved list's printing, not a verified physical
+printing; a holder's Printings in box record (pool.InUse.recorded, lib/decks/printings.py) is
+what went in its box, and is marked recorded. The existing
 ``held`` and ``guess`` allocation stays unchanged. Hidden holders, cheapest-printing
 remainders, inconsistent physical demand and competing hints remain ``unattributed``.
 The projection consumes the already-loaded pool, canonical rows and caller's visibility
@@ -28,10 +30,21 @@ def _row_key(row):
 
 
 def _evidence(holder):
-    """A holder's valid list hints and per-name totals, before any attribution."""
+    """A holder's valid list hints and per-name totals, before any attribution, and the keys its
+    Printings in box line records (recorded copies replace every hint for that card's name)."""
     hints, totals = Counter(), Counter()
     valid = not holder.standin_warnings and holder.printing_version in ("target", "owned")
+    recorded = getattr(holder, "recorded", None) or Counter()
+    exact = {key for key, quantity in recorded.items() if quantity > 0}
+    names = {key[0] for key in exact}
+    for key, quantity in recorded.items():
+        if quantity > 0:
+            hints[key] += quantity
+            totals[key[0]] += quantity
     for key, quantity in holder.printings.items():
+        if isinstance(key, tuple) and len(key) == 4 and key[0] in names:
+            continue
+
         if not isinstance(key, tuple) or len(key) != 4 or not isinstance(quantity, int) \
                 or isinstance(quantity, bool) or quantity < 0:
             valid = False
@@ -39,14 +52,14 @@ def _evidence(holder):
         if quantity:
             hints[key] += quantity
             totals[key[0]] += quantity
-    return holder, hints, totals, valid
+    return holder, hints, totals, valid, exact
 
 
 def annotate(storage, holders, by_name, *, sees, records):
     """Clone storage with visible uncontested list hints and an anonymous remainder.
 
     ``by_name`` is _storage's existing canonical-name -> rows grouping. Each output row
-    retains held/guess, with listed_holders [{id, title, quantity, version}] and unattributed
+    retains held/guess, with listed_holders [{id, title, quantity, version, recorded (only when true)}] and unattributed
     (held minus the visible listed quantities, None when allocation isn't tracked).
     No hidden identity, holder count, kind or hint provenance is exposed.
 
@@ -74,7 +87,7 @@ def annotate(storage, holders, by_name, *, sees, records):
         return visible[holder.id]
 
     for name, rows in by_name.items():
-        if sum(holder.cards.get(name, 0) for holder, _, _, _ in evidence) > sum(int(row["quantity"]) for row in rows):
+        if sum(holder.cards.get(name, 0) for holder, *_ in evidence) > sum(int(row["quantity"]) for row in rows):
             continue                   # Capped legacy counts cannot choose which holder's demand fits.
         for row in rows:
             entry = projected["rows"].get(_row_key(row))
@@ -83,14 +96,17 @@ def annotate(storage, holders, by_name, *, sees, records):
             key = (name, row["set"].lower(), row["collector_number"], row["finish"] or "nonfoil")
             # Ineligible hints still participate in conflict detection: ignoring one
             # must not assign its potentially competing copy to a different holder.
-            claimed = sum(hints[key] for _, hints, _, _ in evidence)
+            claimed = sum(hints[key] for _, hints, *_ in evidence)
             if claimed > entry["held"] or claimed > int(row["quantity"]):
                 continue
             listed = []
-            for holder, hints, totals, valid in evidence:
+            for holder, hints, totals, valid, exact in evidence:
                 quantity = hints[key]
                 physical = holder.cards.get(name, 0)
-                if not quantity or not valid or name in holder.standin_names or physical <= 0 or totals[name] > physical:
+                if key in exact:
+                    if not quantity or physical <= 0 or totals[name] > physical:
+                        continue
+                elif not quantity or not valid or name in holder.standin_names or physical <= 0 or totals[name] > physical:
                     continue
                 allowed = may_name(holder)
                 if allowed is None:
@@ -98,6 +114,8 @@ def annotate(storage, holders, by_name, *, sees, records):
                 if allowed:
                     source = {"id": holder.id, "title": holder.title, "quantity": quantity,
                               "version": holder.printing_version}
+                    if key in exact:
+                        source["recorded"] = True
                     if holder.planned_colors is not None:
                         source["colors"] = list(holder.planned_colors)
                     listed.append(source)

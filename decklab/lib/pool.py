@@ -167,6 +167,11 @@ class InUse:
     standin_names: set = field(default_factory=set)
     printing_version: str = "target"   # list supplying printings, including the installed assembly snapshot
     planned_colors: list | None = None # canonical Planned identity, independent of the hint's source version
+    # (name, set, collector number, finish) -> copies the deck's Printings in box line records
+    # (lib/decks/printings.py), only the parts that can still be true; recorded_stale says why
+    # the rest are ignored (the deck page's "Printings in box out of date")
+    recorded: Counter = field(default_factory=Counter)
+    recorded_stale: list = field(default_factory=list)
 
 
 @dataclass
@@ -462,7 +467,7 @@ def _built_in_use(space, intact, found, unresolved, warnings, decks_of=None):
     """[InUse] of a space's built deck files, and (home's) the decks of the
     intact products whose stems are in intact; found gets every product stem seen;
     decks_of (a dict) gets {warning text: the deck id it is about} of the warnings it adds."""
-    in_use = []
+    in_use, records = [], {}
     for summary in decks.list_decks():
         before = len(warnings)
         try:
@@ -519,13 +524,48 @@ def _built_in_use(space, intact, found, unresolved, warnings, decks_of=None):
                         warnings.append(f"{source}: installed stand-ins can't be read: {error}")
                         continue
             warnings.extend(standin_warnings)
+            if why == "built" and parsed is not None:
+                from decklab.lib.decks import printings
+                try:
+                    lines = printings.printings(parsed)
+                except decks.DeckFileError as error:
+                    lines = []
+                    records[deck_id] = error
+                if lines:
+                    records[deck_id] = lines
             in_use.append(InUse(deck_id, summary["title"], why, held, standin_warnings,
                                 _count_printings(sections, source, unresolved), standin_names,
                                 printing_version=version, planned_colors=_planned_colors(parsed, sections, why)))
         finally:
             if decks_of is not None:      # which deck each warning is about (Pool.warning_decks)
                 decks_of.update((text, summary["id"]) for text in warnings[before:])
+    if records:
+        _recorded(space, in_use, records, unresolved)
     return in_use
+
+
+def _recorded(space, in_use, records, unresolved):
+    """Fill in_use's recorded and recorded_stale from records ({deck id: [PrintingLine] or the
+    DeckFileError its line gave}). Never a pool warning: a stale record blocks nothing."""
+    from decklab.lib.decks import printings
+    canon = lambda name: _canonical(name, "Printings in box", {})   # noqa: E731
+    try:
+        owned = printings.capacity(_rows(inventory.current().collection(space)), canon)
+    except (OSError, UnicodeDecodeError, csv.Error, RuntimeError):
+        owned = {}
+    by_id = {item.id: item for item in in_use}
+    readable = {deck_id: lines for deck_id, lines in records.items() if isinstance(lines, list)}
+    kept, stale = printings.effective(readable, {deck_id: by_id[deck_id].cards for deck_id in readable},
+                                      owned, canon)
+    for deck_id, lines in records.items():
+        item = by_id.get(deck_id)
+        if item is None:
+            continue
+        if not isinstance(lines, list):
+            item.recorded_stale = [f"The Printings in box line can't be read: {lines}"]
+            continue
+        item.recorded = kept.get(deck_id, Counter())
+        item.recorded_stale = stale.get(deck_id, [])
 
 
 def _printing_rows(source):

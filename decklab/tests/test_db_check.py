@@ -60,7 +60,7 @@ class CheckTests(_Db):
         self.assertEqual(code, 0, self.said)
         self.assertEqual((data["revision"], data["decks_revision"]), ("1", "1"))
         expected = (["accessories"] + [f"tokens ({s})" for s in spaces.space_ids()]
-                    + ["orders and queue", "deck tables", "deck aliases", "deck revisions", "deck texts", "deck lines",
+                    + ["orders and queue", "deck tables", "printings in box", "deck aliases", "deck revisions", "deck texts", "deck lines",
                        "deck headers", "revision rows", "audit trail", "Commander-night notes", "visibility",
                        "member departures", "files round trip"])
         self.assertEqual(list(checks), expected)

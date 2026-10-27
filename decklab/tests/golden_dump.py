@@ -287,8 +287,11 @@ def pointed(root):
 # Dataclass fields the recorded goldens predate and that only index what they already hold:
 # pool.Pool.warning_decks (E10-S29), which deck each of its warnings is about, and pool.InUse.printings
 # (E7-S28), the printings a holder's list names for the copies its cards already count;
-# standin_names, printing_version and planned_colors index recipe/list facts captured by deck projections.
-_NOT_RECORDED = frozenset({"warning_decks", "printings", "standin_names", "printing_version", "planned_colors"})
+# standin_names, printing_version and planned_colors index recipe/list facts captured by deck projections;
+# recorded and recorded_stale are the Printings in box line's (lib/decks/printings.py), which no golden deck has
+# (tests/test_printings_in_box.py covers them).
+_NOT_RECORDED = frozenset({"warning_decks", "printings", "standin_names", "printing_version", "planned_colors",
+                           "recorded", "recorded_stale"})
 
 _UNDER_ROOT = re.compile(r"<ROOT>[^'\"\s]*")
 
