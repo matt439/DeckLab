@@ -336,6 +336,10 @@ function deckMoreItems(data) {
     home ? { label: routeH1("assembly"), href: `#/assembly?deck=${id}&version=${data.version}` } : null,
     { label: routeH1("play"), href: `#/play?id=${id}` },
     !s.read_only ? { label: "History", href: `#/history?id=${id}&v=${data.version}` } : null,
+    // compare.js: the other deck is chosen from the decks this viewer sees.
+    typeof openCompareChooser === "function" ? { label: "Compare with…", onclick: () => {
+      if (token === routeToken && profile === state.profile?.id) openCompareChooser(data);
+    } } : null,
     "sep",
     { label: "Copy decklist", onclick: () => copyDeck(data) },
     { label: "Download decklist", onclick: () => downloadDeck(data) },
