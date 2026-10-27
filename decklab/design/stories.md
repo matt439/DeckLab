@@ -35,20 +35,20 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 
 | Epic | Stories | Built | Partial | Missing | Not wanted |
 |---|---:|---:|---:|---:|---:|
-| [E1: Find, plan and choose decks](#e1-find-plan-and-choose-decks) | 12 | 10 | 0 | 2 | 0 |
-| [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 16 | 13 | 1 | 1 | 1 |
-| [E3: Test a deck](#e3-test-a-deck) | 14 | 11 | 3 | 0 | 0 |
-| [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 20 | 15 | 1 | 3 | 1 |
+| [E1: Find, plan and choose decks](#e1-find-plan-and-choose-decks) | 14 | 10 | 0 | 4 | 0 |
+| [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 19 | 13 | 1 | 4 | 1 |
+| [E3: Test a deck](#e3-test-a-deck) | 15 | 11 | 3 | 1 | 0 |
+| [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 22 | 15 | 1 | 5 | 1 |
 | [E5: Decide what to buy](#e5-decide-what-to-buy) | 22 | 15 | 0 | 5 | 2 |
 | [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 20 | 17 | 0 | 1 | 2 |
-| [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 27 | 19 | 4 | 4 | 0 |
-| [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 16 | 11 | 1 | 2 | 2 |
-| [E9: Commander nights](#e9-commander-nights) | 19 | 13 | 0 | 5 | 1 |
+| [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 28 | 20 | 3 | 5 | 0 |
+| [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 18 | 11 | 1 | 4 | 2 |
+| [E9: Commander nights](#e9-commander-nights) | 20 | 13 | 0 | 6 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 35 | 31 | 1 | 1 | 2 |
-| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 28 | 15 | 6 | 4 | 3 |
-| **Total** | **229** | **170** | **17** | **28** | **14** |
+| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 28 | 17 | 6 | 2 | 3 |
+| **Total** | **241** | **173** | **16** | **38** | **14** |
 
-Counted from the story headers on 2026-10-26.
+Counted from the story headers on 2026-10-27.
 
 ---
 
@@ -56,7 +56,7 @@ Counted from the story headers on 2026-10-26.
 
 How Matt and User1 (and, more lightly, User2, User3, User4 and User5) find a deck in the library (#/library), choose its picture, open its deck page (#/deck) to see whether it can be built and how to play it, rename or retire it, and pick what to play tonight. Each viewer's library holds their own space's decks, plus any another space has made public. A plain "Deck Lab is off" message is enough while the PC is off (E11-S02); collector-value sorting and legality badges on casual decks aren't wanted.
 
-Open: E1-S12, E1-S13.
+Open: E1-S12, E1-S13, E1-S24, E1-S25.
 
 **E1-S01** · User1 · must · M · built
 
@@ -191,6 +191,8 @@ Evidence:
 
 Gap: There's no compare view. The pieces are separate: each deck's Stats, #/matchups, Head to head in #/play, the Packing plan, and History's revision compare.
 
+First slice: a read-only compare page for two chosen decks with their curves, colours, land counts and card types side by side (the stats outcome only; shared cards and head to head follow).
+
 Review note: L with three separate outcomes; could split into stats, shared cards and head to head.
 
 **E1-S18** · User1 · could · S · built
@@ -240,13 +242,49 @@ Evidence:
 - `decklab/web/card-viewer.js`: openCardViewer, stepViewer, flipViewer, toggleViewerText, viewerPointerUp, pushViewerEntry
 - `decklab/tests/test_card_inspector.py`: test_viewer_faces_reading_errors_dismissal_focus_groups_and_swipes
 
+**E1-S24** · Matt · could · M · missing
+
+As a deck builder starting from what we own, I want published precons ranked by how much of each one our free pool already covers, so that I can see which deck we could put together next with the fewest purchases.
+
+- Given MTGJSON's precon lists and a space's pool, when the ranking opens, then each precon shows the share of its cards (plain basics left out) with a copy free for a new deck, best first, filtered by format.
+- Given a precon in the ranking, when it is opened, then its missing cards show with their estimated AUD cost, and Start a deck from it makes a new idea deck with that list.
+- Given a viewer who may not see the space's inventory, when the ranking is asked for, then it answers as the Collection page does (403, naming no one).
+
+Decided (Matt, 2026-10-27): added from the comparison with MTGGoldfish's Super Brew.
+
+Evidence:
+- `decklab/lib/precons.py`: deck_list, search (MTGJSON's precon lists, already cached for Add a precon)
+- `decklab/lib/pool.py`: free copies per space
+
+Gap: No view ranks lists by how much of them the pool covers.
+
+First slice: a read-only command, `python -m decklab.lib.precons coverage [--space S] [--format F]`, printing the top precons by free-pool coverage.
+
+**E1-S25** · User1 · could · S · missing
+
+As a newer player reading a card, I want its official rulings under its rules text in the card viewer, so that I can settle a question at the table without searching the web.
+
+- Given a card open in the card viewer, when it has rulings, then they show under its rules text, dated, folded away by default.
+- Given a card with no rulings, when it is open, then nothing extra shows.
+- Given card data without the rulings file, when a card is open, then the viewer says rulings aren't available yet.
+
+Decided (Matt, 2026-10-27): added from the comparison with ManaBox and Dragon Shield. Rulings are Scryfall's, not explanations (E4-S07 stays not wanted).
+
+Evidence:
+- `decklab/web/card-viewer.js`: openCardViewer shows oracle text and faces, no rulings
+- `decklab/lib/cards.py`: update (where a rulings bulk download would join)
+
+Gap: Scryfall's rulings bulk file isn't downloaded and the viewer has no rulings part.
+
+First slice: download and index Scryfall's rulings bulk file in `cards update`, and serve them with the card's details.
+
 ---
 
 ## E2: Build and edit a deck
 
 Covers making a deck and keeping it right: New deck and Start from, the full editor (from 600px) and the phone's Quick edit, Paste a list, the Planned and Play-now lists, owned vs needed against the space's pool and its other built decks, keeping the write-up current, history and undo, and the command-line route Claude Code uses (`deck pull`/`push`/`new`/`tables`). Drafts stay on the device they were started on, and the Play-now list's substitutes are hand-written (Packing's physical stand-ins, E4-S21, never change a list). Rename and retirement, with restore from History, are on the deck page (E1-S19). Legality badges on casual decks are deliberately not wanted.
 
-Open: E2-S16, E2-S22.
+Open: E2-S16, E2-S22, E2-S23, E2-S24, E2-S25.
 
 **E2-S01** · Matt · must · L · built
 
@@ -507,13 +545,65 @@ Evidence:
 
 Gap: Still to check on the real devices: the receipt panel's navigation and Close before the image and its swipe margins, the Quick edit's Add cards sheet with the keyboard and its ⋯ menu, keyboard-open Save and Home Screen use on the iPad, the Commander bracket sentence's place on the phone (E9-S05), and everything on the iPhone 17 Pro.
 
+**E2-S23** · Matt · could · S · missing
+
+As a deck builder, I want a Considering list kept with each deck, so that cards I might add stay with the deck without counting in its lists, tables or packing.
+
+- Given a deck, when cards are added to its Considering list, then they are saved with the deck, outside the Planned and Play-now lists, and never counted as needed, missing or in use.
+- Given a card on the Considering list, when it is moved into the Planned list, then it leaves Considering in the same save.
+- Given the Considering list, when it is shown, then each card says whether a copy is free in the pool.
+
+Decided (Matt, 2026-10-27): added from the comparison with Moxfield's maybeboard.
+
+Evidence:
+- `decklab/web/editor-swaps.js` and E2-S19 (try a change without saving); the wishlist (E5-S14)
+
+Gap: Ideas for a deck live in prose or the wishlist; the deck text has no considering section.
+
+First slice: a `Considering` section in the deck text format that the parser reads and every table, pool and packing reader skips.
+
+**E2-S24** · Matt · could · M · missing
+
+As a deck builder, especially for Commander, I want to tag a deck's cards with my own categories (ramp, draw, removal, win condition) and see the count per category, so that I can check a deck's balance at a glance.
+
+- Given a deck's list, when a card is given a category, then it is saved with the deck and the list can be grouped by category instead of card type.
+- Given a deck with categories, when its Stats open, then each category's card count shows.
+- Given a card without a category, when the list is grouped by category, then it shows under Uncategorised.
+
+Decided (Matt, 2026-10-27): added from the comparison with Archidekt's categories and Moxfield's tags.
+
+Evidence:
+- `decklab/web/editor-lines.js`, `decklab/web/deck.js`: lists grouped by card type
+- `decklab/lib/stats/`: type and curve stats
+
+Gap: No per-card categories exist in the deck text or the pages.
+
+First slice: a category suffix on decklist lines that the parser keeps and the deck page can group by.
+
+**E2-S25** · Matt · could · M · missing
+
+As a deck builder building from the pool, I want to search cards by rules text and type line (Scryfall-style terms such as `o:treasure t:creature`), so that I can find owned cards that do what a deck needs.
+
+- Given the editor's card finder, when I type rules-text or type-line terms, then cards matching them show, with the existing colour, type and mana value filters still applying.
+- Given the finder's My collection scope, when I search by rules text, then only cards with a copy free for this deck show.
+- Given an unknown search term, when I search, then the finder says which term it didn't understand.
+
+Decided (Matt, 2026-10-27): added from the comparison with Archidekt, Moxfield and TopDecked.
+
+Evidence:
+- `decklab/lib/api/editor.py`: find_cards, _fits (name search plus colour identity, type and mana value)
+
+Gap: The finder can't search rules text or type lines.
+
+First slice: an `o:` (rules text) and `t:` (type line) term in find_cards, matched against the local card data.
+
 ---
 
 ## E3: Test a deck
 
 How a player finds out whether a deck works before playing or buying cards: instant stats on the deck page's Stats tab, practice games on the Practice tab, Forge matchups and Rankings (#/matchups, #/matchup), the field rank on the Matchups tab, paired tests of a change from the editor (#/variant), and the simulations setting on #/settings. Matchups, fields, rankings and tests follow deck privacy: each viewer sees only results whose every side they may see, a member's field is their own space plus Public spaces, and a run may be stopped by whoever started it, anyone whose space's deck it uses, or an admin. Not yet covered: 4-player Commander pods, sideboard testing, comparing real games with Forge's predictions, and members asking for a run while only admins may start one. Forge results are files outside the database's backups by decision, since they can be replayed.
 
-Open: E3-S13, E3-S19, E3-S23.
+Open: E3-S13, E3-S19, E3-S23, E3-S24.
 
 **E3-S01** · Matt · must · M · built
 
@@ -748,11 +838,28 @@ Evidence:
 
 Gap: membership changes only by hand-editing `decklab/simulation.json`; there's no 'Who's in the field' view, page control, audit entry or count of lists left out by hand. Criteria 1, 3 and 4 weren't checked beyond that, so none is claimed met.
 
+**E3-S24** · Matt · could · S · missing
+
+As a deck builder, I want the chance of drawing a card, or any of a group of cards, by a chosen turn, so that I know how reliably the deck finds its key pieces.
+
+- Given a deck and a card or category (E2-S24) in it, when I pick a turn and play or draw, then the exact chance of seeing at least one by that turn shows.
+- Given a Commander deck, when the chance is worked out, then the library size and starting hand follow Commander's.
+- Given the result, when it shows, then it says it ignores mulligans and card draw.
+
+Decided (Matt, 2026-10-27): added from the comparison with TopDecked's hypergeometric calculator.
+
+Evidence:
+- `decklab/web/practice.js`: mulligan and land-drop panels (simulated, E3-S04)
+
+Gap: No exact draw-odds calculation for a chosen card or group.
+
+First slice: a "Chance to draw" panel on the Stats tab for a single card picked from the list.
+
 ## E4: Get ready, play and learn
 
 This epic covers getting physical decks onto the table and learning from the games played: choosing the decks, pulling and sleeving the cards from home's shared pool on Build decks (#/assembly, the packing plan), reading a deck's How to play and practising opening hands, playing with sideboard plans, and recording the result on the Game log (#/play). Each game is seen only by the spaces whose decks it names, a side whose deck the viewer may not see shows only as words such as "one of the home decks", and each space changes only its own side (E10-S32). Teaching the rules is left to products like the Beginner Box, so Deck Lab keeps teaching minimal. User1 uses Deck Lab on her phone, so Build decks and the Game log on a phone matter most.
 
-Open: E4-S09, E4-S16, E4-S18, E4-S19.
+Open: E4-S09, E4-S16, E4-S18, E4-S19, E4-S25, E4-S26.
 
 **E4-S01** · Matt · must · L · built
 
@@ -1069,6 +1176,41 @@ Evidence:
 - `decklab/web/assembly-sections.js`: packSideboardChoice, remainingIntentPart
 - `decklab/tests/test_assembled_model.py`, `decklab/tests/test_assembly_sections_ui.py`, `decklab/tests/test_assembly_sections_safeguards.py`
 
+**E4-S25** · Matt · could · S · missing
+
+As a player who wants to play a Planned list before every card has arrived, I want to print proxies of the missing cards, so that we can play the deck as planned at home now.
+
+- Given a deck with missing Planned-list cards, when Print proxies is chosen, then a page of card-sized images of those cards (one per missing copy) opens ready to print.
+- Given the printed page, when it is printed at 100%, then each card is 63 × 88 mm.
+- Given a card in the Play-now list's stand-ins, when proxies are printed, then the sheet notes which stand-in each proxy covers.
+
+Decided (Matt, 2026-10-27): added from the comparison with proxy sites. Proxies are for casual home games only, where legality is ignored.
+
+Evidence:
+- `decklab/web/deck-tools.js`: printDeck (the printed list sheet, E4-S17)
+- `decklab/web/deck-standins.js`: the stand-ins
+
+Gap: No proxy print.
+
+First slice: Print proxies in the deck page's More menu, printing the missing cards' cached images at card size.
+
+**E4-S26** · Matt · could · M · missing
+
+As a player at the table, I want a life counter on my phone (life, poison, commander damage, a timer) that ends by recording the game, so that keeping score and logging the result are one step.
+
+- Given two decks chosen from the Game log, when the counter starts, then each player's life (20, or 40 for Commander) shows full screen with large tap targets.
+- Given a game in progress, when a player reaches 0 or concedes, then Record result opens with the winner filled in.
+- Given a Commander game, when commander damage is tracked, then it is kept per opponent and 21 ends the game.
+
+Decided (Matt, 2026-10-27): added from the comparison with TopDecked. Multiplayer results remain E4-S18.
+
+Evidence:
+- `decklab/web/play.js`, `decklab/lib/api/play_records.py`: one-tap game records (E4-S11)
+
+Gap: No life counter.
+
+First slice: a two-player life counter on the Game log that opens Record result when the game ends.
+
 ---
 
 ## E5: Decide what to buy
@@ -1189,6 +1331,8 @@ Evidence:
 - `decklab/web/deck-prices.js`: ownedSection (the converted-estimate note)
 
 Gap: No retailer price source exists anywhere in `decklab/lib`; Australian prices are only the queue's manually recorded reference prices.
+
+First slice: a daily snapshot of one shop (MTGMate first) for the purchase queue's rows only, shown beside the recorded reference price with its fetch time; E5-S19's back-in-stock highlight builds on it.
 
 Review note: XL and dependent on retailers with no public API; split per shop (MTGMate first) and into fetching vs showing, and a daily snapshot may do.
 
@@ -1678,6 +1822,8 @@ As User1, the themed-deck player, I want to be told when a delivery holding card
 
 Gap: Deck Lab has no arrival notice; the receipt's list of changed decks (`decklab/lib/api/receipts.py`) would be its source.
 
+First slice: record, with each receipt, the decks Played by each home profile whose missing cards it supplied, and show that profile a dismissable notice on their next visit.
+
 **E6-S20** · Claude Code · should · S · built
 
 As Claude Code, operating for Matt, I want a check of every order, receipt state and queue field after changing orders, so that broken records are caught before they confuse a deck's counts.
@@ -1738,7 +1884,7 @@ Evidence:
 
 How the inventory stays true to the physical cards. Each space's own people add, fix and remove cards on the Collection page (single cards, an app export, Add a precon) and token cards on the Tokens page; Matt and User1 both edit home's, each member only their own, and Claude does bulk and member upkeep from the PC (`collection merge`, `collection edit` and `collection apply`, `collection add-precon --space`). Repeat imports, sales and trades, and cards held by built decks are all flagged, other decks' out-of-date tables are listed with Update all rather than refreshed automatically, and the nightly `db check` looks for drift.
 
-Open: E7-S03, E7-S08, E7-S15, E7-S18, E7-S22, E7-S23, E7-S24.
+Open: E7-S03, E7-S08, E7-S15, E7-S18, E7-S22, E7-S23, E7-S24, E7-S32.
 
 **E7-S01** · Matt · must · M · built
 
@@ -2031,6 +2177,8 @@ Evidence:
 
 Gap: E7-S11 records the reason on the removal side only; a trade is still an unlinked removal and a separate addition.
 
+First slice: `python -m decklab.db collection trade --out FILE --in FILE [--with T] -m "..."`, saving the removal and the merge as one change set with a preview, before any page.
+
 **E7-S23** · Matt · could · M · missing
 
 As a player, I want the tokens a deck's cards make for the opponent listed apart from its own, so that I know which markers to hand across the table.
@@ -2189,13 +2337,30 @@ Now (2026-10-27): manual records and automatic mixed planning are implemented. E
 
 Validation includes 296 affected checks and twelve synthetic Chromium width/theme cases with one guarded fixture mixed save. Household data, actual devices and Forge were not used.
 
+**E7-S32** · Matt · could · L · missing
+
+As a person adding a stack of new cards, I want to scan them with my phone's camera into the collection, so that I don't need another app's export to add cards.
+
+- Given the Collection page on a phone, when Scan cards is chosen, then each card held to the camera is recognised with its set and collector number, and added to a pending list.
+- Given the pending list, when it is reviewed, then each row can be corrected (printing, finish, condition) before Add saves them all as one change, as an import does.
+- Given a card the scanner can't read, when it fails, then the row can be typed in by name.
+
+Decided (Matt, 2026-10-27): added from the comparison with ManaBox, Dragon Shield and Delver Lens. Scanning in ManaBox and importing (E7-S02) remains the route until this is built.
+
+Evidence:
+- `decklab/lib/api/collection_edit.py`: import_preview, import_apply (the import route a scan would feed)
+
+Gap: No camera recognition in Deck Lab.
+
+First slice: a spike reading the set code and collector number from a photo of a modern card's bottom line, to judge whether recognition is practical.
+
 ---
 
 ## E8: Sleeves, boxes and storage
 
 The physical side of home's shared pool: each built deck and each product kept intact is in one sleeve design and one deck box, every other card sits unsleeved in the storage box, and moving a card between decks means changing its sleeve. Deck Lab records the sleeves, deck boxes and playmats (each Matt's, User1's or shared) on the Sleeves & boxes page, a built deck's Sleeves and Deck box lines and an intact product's kit, warns when a holder has too few sleeves or a box that is full or too small, and lets one sleeve design sleeve several holders. Choosing a deck's kit needs the right to edit that deck; an owner may make their kit public (read-only), and members never see private kit. Accessory prices are not wanted.
 
-Open: E8-S03, E8-S15, E8-S19.
+Open: E8-S03, E8-S15, E8-S19, E8-S21, E8-S22.
 
 **E8-S01** · Matt · must · M · built
 
@@ -2427,6 +2592,8 @@ As Matt, I want to know roughly how full the storage box is, so that I know befo
 
 Gap: nothing counts the cards in storage or records the box's capacity. Which cards count (plain basics, tokens) isn't defined yet.
 
+First slice: count home's storage copies (collection less built decks and intact products, plain basics excluded) on the Collection page against a configured capacity of 2,400.
+
 **E8-S20** · Matt · must · M · built
 
 As Matt, with more decks than sleeve designs, I want several built decks and intact products to use the same sleeves row, so that I can sleeve decks in the sleeves we have, and it's up to us not to play two decks in the same sleeves against each other.
@@ -2452,13 +2619,47 @@ Evidence:
 - `decklab/lib/api/assembly.py`: _sleeve_notes
 - `decklab/tests/test_accessories.py`: test_shared_design_is_counted_per_holder, test_same_colour_different_design_is_no_warning; `decklab/tests/test_assembly_kit.py`: test_shared_sleeves_can_be_chosen_for_both_decks; `decklab/tests/test_editor_contracts.py`: test_sleeves_another_deck_uses_are_warned_about_before_they_are_chosen
 
+**E8-S21** · Matt · could · S · missing
+
+As Matt, who keeps every built deck in its own box, I want to print a label for a deck box with the deck's name and a QR code to its deck page, so that scanning the box opens its list, plan and stand-ins.
+
+- Given a built deck, when Print box label is chosen, then a label with the title, colours, who plays it and a QR code to its deck page opens ready to print.
+- Given the QR code, when it is scanned by a signed-in person who may see the deck, then the deck page opens; anyone else sees what a missing deck shows.
+- Given an intact product, when its label is printed, then it links to its product deck pages.
+
+Decided (Matt, 2026-10-27): added from the comparison with TopDecked's QR sharing and Delver's NFC tags.
+
+Evidence:
+- `decklab/web/deck-tools.js`: printDeck (a printed sheet already exists)
+
+Gap: No box label or QR code.
+
+First slice: Print box label in the deck page's More menu, with the QR code drawn on the page (no outside service).
+
+**E8-S22** · Matt · could · M · missing
+
+As a player pulling cards from the 4-row storage box, I want each storage copy to have a place (row and section), so that the packing plan tells me where to find it.
+
+- Given a collection row, when a location is set (such as row 2, section G-K, or a binder), then it is saved with the row.
+- Given the packing plan, when it lists a card to pull from storage, then its location shows beside it.
+- Given cards put back from a deck, when the put-back steps show, then each card's location shows too.
+
+Decided (Matt, 2026-10-27): added from the comparison with ManaBox's card locations. It pairs with E8-S19 (how full the box is).
+
+Evidence:
+- `decklab/lib/pool.py`: storage vs held copies; `decklab/web/assembly-steps.js`: pull and put-back steps
+
+Gap: The collection knows a copy is in storage but not where.
+
+First slice: an optional location column on collection rows, editable on the card sheet, shown in the packing plan.
+
 ---
 
 ## E9: Commander nights
 
 Getting the household's Commander decks ready for social Commander nights at a local shop, where staff make 4-player pods and the shop publishes a bracket range. The editor checks the Commander deck rules and a minimum bracket from Game Changers, mass land denial and extra turns; a Commander deck's Overview opens with a plain bracket sentence, what opponents will face and the dates of the card data behind them, and home admins can record the usual night's aim and house rules. Practice games use the free multiplayer mulligan, and Forge plays Commander decks 1v1 only, marked indicative. Two-card combos (from Commander Spellbook) and Wizards' latest Commander announcement are checked too (2026-10-21). Still open: 4-player pods on the page, EDHREC ideas, and pod games in the Game log.
 
-Open: E9-S07, E9-S11, E9-S16, E9-S21, E9-S22.
+Open: E9-S07, E9-S11, E9-S16, E9-S21, E9-S22, E9-S25.
 
 **E9-S02** · Matt · must · M · built
 
@@ -2561,6 +2762,8 @@ Evidence:
 - `decklab/web/editor-cards.js`: the Add panel offers search and My collection only
 
 Gap: there's no EDHREC fetch or ideas panel; EDHREC appears in Deck Lab only as a cited source.
+
+First slice: fetch and cache one commander's EDHREC card list on the PC (dated, with a failure that leaves the editor working), and print it marked owned, free or to buy from the command line.
 
 **E9-S08** · Matt · must · M · built
 
@@ -2749,6 +2952,22 @@ Evidence:
 - `decklab/lib/stats/commander.py`: _official, _data_dates
 - `decklab/web/commander-readiness.js`: commanderDataNote, officialNotes (also in `decklab/web/stats.js`'s commanderPanel)
 - `decklab/tests/test_official_lists.py`; `decklab/tests/test_commander_readiness.py`: OfficialListTests; `decklab/tests/test_commander_readiness_ui.py`: test_wizards_latest_announcement_is_shown_and_never_called_current_unless_checked
+
+**E9-S25** · Matt · could · M · missing
+
+As a player building a Commander deck, I want to see combos the deck is one card away from, and whether that card is free in our pool, so that I spot cheap upgrades and know what I'd be adding to the bracket.
+
+- Given a Commander deck, when its Commander checks open, then two-card combos with one piece in the deck and the other in the commander's colours are listed, the missing piece marked free, on the way or to buy.
+- Given a deck aimed at a bracket, when a near combo would raise its minimum bracket, then the list says so.
+
+Decided (Matt, 2026-10-27): added from the comparison with Archidekt's Commander Spellbook tab.
+
+Evidence:
+- `decklab/lib/combos.py`: find (complete two-card combos, E9-S23)
+
+Gap: Only complete combos are found.
+
+First slice: a `near` mode in combos.find returning combos with exactly one piece in the list.
 
 ---
 
