@@ -6,6 +6,7 @@ themselves are tested with the fake Forge in test_forge_pool.py.
 Run from the repo root: python -m unittest decklab.tests.test_forge_runhooks
 """
 import json
+import sys
 import shutil
 import tempfile
 import threading
@@ -36,6 +37,15 @@ def v2_result(key=KEY, **more):
 PAIRED = {"base_key": "b" * 64, "base_side": 0, "variant_side": 1,
           "variant": {"card_sha": "3" * 64, "dck_sha": "4" * 64, "aligned_to": "1" * 64,
                       "changes": {"remove": [[1, "Fiery Annihilation"]], "add": [[1, "Rabid Gnaw"]]}}}
+
+
+
+def assert_lock_given_up(test, folder, key):
+    """The matchup's lock (runner._claim) is free again: another claim gets it. On Windows its
+    file is gone too; elsewhere it stays, a 0-byte file (runner._release)."""
+    if sys.platform == "win32":
+        test.assertFalse((folder / f"{key}.lock").exists())
+    runner._release(runner._claim(folder, key), folder / f"{key}.lock")
 
 
 class IsResultTests(unittest.TestCase):
@@ -97,7 +107,7 @@ class UpdateResultTests(unittest.TestCase):
         # A function may return the new result instead.
         out = runner.update_result(KEY, self.tmp, lambda result: dict(result, adaptive=[]))
         self.assertEqual((out["adaptive"], self.read()["adaptive"]), ([], []))
-        self.assertFalse((self.tmp / f"{KEY}.lock").exists())         # the lock is given up
+        assert_lock_given_up(self, self.tmp, KEY)
 
     def test_no_result_no_change(self):
         called = []
@@ -144,7 +154,7 @@ class UpdateResultTests(unittest.TestCase):
             runner.update_result(KEY, self.tmp, lambda r: r.update(note=1))
         self.assertEqual(str(caught.exception), runner.NOT_SAVED)
         self.assertEqual(self.read(), before)
-        self.assertFalse((self.tmp / f"{KEY}.lock").exists())
+        assert_lock_given_up(self, self.tmp, KEY)
 
 
 if __name__ == "__main__":

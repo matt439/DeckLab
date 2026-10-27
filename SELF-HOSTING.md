@@ -6,15 +6,15 @@ This guide sets up Deck Lab on your own computer, from nothing, for you and your
 
 ## What runs where
 
-| | Windows 10 or 11 | Linux and macOS |
-|---|---|---|
-| The server, the database, the pages, the command line | Yes | Yes |
-| Forge simulations | Yes | Yes (the same download, with a JDK 21 or later) |
-| Starting in the background and at logon (`homenet install`) | Yes | No: run the server in a terminal, or with your own service manager |
-| The firewall script (`decklab/network-setup.ps1`) and `homenet status`'s network checks | Yes | No |
-| The nightly backup task (`python -m decklab.db schedule`) | Yes | No: run `python -m decklab.db nightly` from cron or a systemd timer |
+| | Windows 10 or 11 | Linux | macOS |
+|---|---|---|---|
+| The server, the database, the pages, the command line | Yes | Yes | Yes |
+| Forge simulations | Yes | Yes (the same download, with a JDK 21 or later) | Yes (the same download) |
+| Starting in the background and at logon (`homenet install`) | Yes (Task Scheduler) | Yes (a systemd user service) | No: run the server in a terminal, or under launchd |
+| The firewall script (`decklab/network-setup.ps1`) and `homenet status`'s network checks | Yes | No: open the port in your own firewall | No |
+| The nightly backup task (`python -m decklab.db schedule`) | Yes (Task Scheduler) | Yes (a systemd user timer) | No: run `python -m decklab.db nightly` from cron |
 
-Deck Lab is built and used every day on Windows. The dated Linux self-host check of 2026-10-25 found platform assumptions. Interpreter paths and Windows-path test fixtures now have targeted lexical/mocked checks on Windows; a fresh Linux Python 3.14 full-suite pass remains unverified. Linux service and nightly-job installation still use the manual steps below; full support remains [E11-S33](decklab/design/stories.md#e11-s33).
+Deck Lab is built and used every day on Windows. On Linux the whole test suite passes, and CI runs it there on every change, beside Windows, together with a check that installs, restarts, stops and removes the systemd service and timer under a real systemd.
 
 ## 1. What to install
 
@@ -179,24 +179,26 @@ Deck Lab runs up to 16 Forge workers at once, each with up to 1 GB of memory. Th
 ## 9. Keep it running and backed up
 
 - **Windows, in the background:** `python -m decklab.lib.homenet install --no-start`, then `python -m decklab.lib.homenet start` (the reference's "Start it" covers starting at logon and the restart watchdog).
-- **Linux and macOS:** run `python decklab/server.py` under your service manager (a systemd user service, launchd), from the repo root.
+- **Linux, in the background:** `python -m decklab.lib.homenet install --at-logon` writes a systemd user service, `~/.config/systemd/user/decklab.service`, which runs `python decklab/server.py --background` in the repo with the Python you ran install with, enables it and starts it. `start`, `stop`, `restart`, `remove` and `status` work as on Windows; without `--at-logon` it starts only when you run `homenet start`. If the server stops with an error, systemd starts it again after 10 seconds; `homenet stop` leaves it stopped. Its log is `decklab/data/logs/server.log` (and `journalctl --user -u decklab.service` shows what systemd saw). Give `install` the same `--port` and `--host` you'd give the server.
+- **Linux, at boot:** systemd runs your own services only while you're logged in. For Deck Lab to start at boot and keep running after you log out, turn on lingering once: `loginctl enable-linger` (on some systems, `sudo loginctl enable-linger $USER`). `install` and `status` remind you while it's off.
+- **macOS:** run `python decklab/server.py` under launchd, from the repo root.
 - **Backups:** `python -m decklab.db backup` writes a dump to `decklab/data/backups/` and copies it to `database.backup_dir` in `config.json`, a folder on another disk or a NAS:
   ```json
   "database": {"backup_dir": "D:\\Backups\\DeckLab"}
   ```
   Set it on Windows, where the default is the original household's NAS share and the copy fails without it. Off Windows there's no default, and the dumps stay in `decklab/data/backups/` only.
-- **The nightly job:** `python -m decklab.db nightly` runs the backup, its pruning, a restore check now and then, and the data's check. It also exports the data as plain files into a git repo of their own, `../DeckLabData` beside this repo, unless `database.export_repo` says where. On Windows, `python -m decklab.db schedule install` runs it every night; elsewhere, schedule it with cron.
+- **The nightly job:** `python -m decklab.db nightly` runs the backup, its pruning, a restore check now and then, and the data's check. It also exports the data as plain files into a git repo of their own, `../DeckLabData` beside this repo, unless `database.export_repo` says where. `python -m decklab.db schedule install` runs it every night at 03:30: on Windows as a Task Scheduler task, on Linux as a systemd user timer (`decklab-nightly.timer` and `decklab-nightly.service` in `~/.config/systemd/user`), which catches up a night the computer was off, as soon as it's on again. `schedule status` shows the next and last run, and `schedule remove` takes it away. Run `schedule install` with the Python you run Deck Lab with, after installing psycopg (step 3), and again after moving the repo or upgrading Python; `status` warns when its units are out of date. Lingering (above) lets it run while you're logged out. On macOS, schedule it with cron.
 - **pg_dump:** Deck Lab finds it in `C:\Program Files\PostgreSQL\<version>\bin` or on the PATH. Set `database.pg_bin` to its folder if it's somewhere else.
 - **Updating:** `git pull`, then `python -m decklab.db migrate`, then restart the server.
 
-To review candidate Linux nightly units, use `schedule preview-systemd` with the target machine's absolute paths:
+To see the nightly units without installing anything (for another computer, say), `schedule preview-systemd` prints one, for the paths you give:
 
 ```
 python -m decklab.db schedule preview-systemd --unit service --python /usr/bin/python3.14 --workdir /srv/DeckLab
 python -m decklab.db schedule preview-systemd --unit timer --python /usr/bin/python3.14 --workdir /srv/DeckLab --at 03:30
 ```
 
-Each command prints one complete unit (`decklab-nightly.service` or `decklab-nightly.timer`) as UTF-8 text. The time is local HH:MM and defaults to 03:30. This preview is available on Windows too and makes no host, database or filesystem changes. Generated units still need Linux runtime and manager validation; installing/enabling them and Linux server-service support remain unfinished. See the reference's [nightly task](decklab/README.md#the-nightly-task) for the preview contract.
+To check the Linux services on your computer from end to end, `scripts/linux_services_check.sh` installs the timer and the service on port 18642, restarts the server, kills it to see systemd start it again, stops it and removes both (`PYTHON=<your python> scripts/linux_services_check.sh`).
 
 ## 10. From outside your home (optional)
 

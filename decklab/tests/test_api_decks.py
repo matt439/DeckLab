@@ -3,6 +3,7 @@ import hashlib
 import json
 import unittest
 import sys
+from pathlib import Path, PureWindowsPath
 from unittest import mock
 from decklab.lib import accessories, api, cards, config, decks, inventory, pool, tokens
 from decklab.lib.inventory import rules
@@ -125,10 +126,9 @@ class DecksIndexTests(ApiTestCase):
         with mock.patch.object(pool, "load_pool", side_effect=load_pool):
             view = api.deck_view("casual/gruul-test")
             index = api.decks_index()
-        self.assertIn("x.csv can't be read: [Errno 13] Permission denied: 'magic\\\\orders\\\\x.csv'",
-                      view["owned"]["warnings"])
-        self.assertIn("x.csv can't be read: [Errno 13] Permission denied: 'magic\\\\orders\\\\x.csv'",
-                      index["warnings"])
+        relative = str(Path("magic", "orders", "x.csv"))         # as the OS writes it: \\ on Windows
+        self.assertIn(f"x.csv can't be read: [Errno 13] Permission denied: {relative!r}", view["owned"]["warnings"])
+        self.assertIn(f"x.csv can't be read: [Errno 13] Permission denied: {relative!r}", index["warnings"])
         self.assertEqual(view["stats"]["warnings"],
                          ["Scryfall's oracle tags couldn't be read ([Errno 2] No such file: "
                           "'oracle_tags.jsonl.gz')"])
@@ -145,10 +145,11 @@ class DecksIndexTests(ApiTestCase):
                          "No card index at index.json.gz. Run it")
         self.assertEqual(api._strip_paths(r"'C:\\Users\\someone\\x.csv' and \\server\share\y.txt"),
                          "'x.csv' and y.txt")
-        # The Unix way a hook's shell (Git for Windows' sh), WSL or Cygwin writes them.
-        msys = "/" + config.REPO.as_posix()[0].lower() + config.REPO.as_posix()[2:]
-        for form in (msys, "/mnt" + msys, "/cygdrive" + msys):
-            self.assertEqual(api._strip_paths(form + "/magic/x.md: bad"), "magic/x.md: bad")
+        # The Unix way a hook's shell (Git for Windows' sh), WSL or Cygwin writes them (a repo on a drive only).
+        if PureWindowsPath(config.REPO).drive:
+            msys = "/" + config.REPO.as_posix()[0].lower() + config.REPO.as_posix()[2:]
+            for form in (msys, "/mnt" + msys, "/cygdrive" + msys):
+                self.assertEqual(api._strip_paths(form + "/magic/x.md: bad"), "magic/x.md: bad")
         self.assertEqual(api._strip_paths("see /c/Users/someone/lint/report.txt and /tmp/claude/abc/y.log"),
                          "see report.txt and y.log")
         self.assertEqual(api._strip_paths("(/home/matt/x.log) and /Users/matt/.hooks/z"), "(x.log) and z")

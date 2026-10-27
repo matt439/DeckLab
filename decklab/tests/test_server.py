@@ -898,8 +898,15 @@ class ProtocolTests(ServerTestCase):
         before = len(self.log)
         self.request("GET", "/api/profiles")
         self.request("GET", "/api/nope?x=%0d%0aFAKE")
-        lines = self.log[before:]
-        self.assertEqual(len(lines), 2)
+        # A request's line is written once its answer has gone, so it may come a moment after the
+        # client has it; and other threads (the card data's) may log meanwhile.
+        deadline = time.monotonic() + 5
+        while True:
+            lines = [line for line in self.log[before:] if " GET /api/" in line]
+            if len(lines) >= 2 or time.monotonic() > deadline:
+                break
+            time.sleep(0.01)
+        self.assertEqual(len(lines), 2, self.log[before:])
         self.assertRegex(lines[0], r" 127\.0\.0\.1 GET /api/profiles 200 \d+ ms$")
         self.assertRegex(lines[1], r" GET /api/nope\?x=%0d%0aFAKE 404 \d+ ms$")
 

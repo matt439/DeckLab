@@ -3401,7 +3401,7 @@ Evidence:
 
 Keeping Deck Lab running, safe and believable, by Matt as the household's admin and by Claude Code working for him at the PC. It covers the server and its Cloudflare tunnel and "Deck Lab is off" page, the PostgreSQL database with its nightly backup, export, check and restore check, the audit trail on #/activity, the `python -m decklab.db` commands Claude works through (previews, `--expect` guards, `-m` messages, exit codes), the card data's background refresh, Forge upkeep and the Safari Simulator suite. Every write is one audited change set, Matt's own command-line writes are recorded as his, and backups are checked by restoring them.
 
-Open: E11-S02, E11-S08, E11-S12, E11-S16, E11-S21, E11-S28, E11-S30, E11-S31, E11-S33.
+Open: E11-S02, E11-S08, E11-S12, E11-S16, E11-S21, E11-S28, E11-S30, E11-S31.
 
 **E11-S01** · Matt · must · M · built
 
@@ -3943,7 +3943,7 @@ Inline verification placement is implemented for proven targets: the original si
 
 Slice 15's empty, loading and failed states built 2026-10-27: core.js `emptyBox`, `noneSelected`, `loadingBox` and `loadFailed`, every page brought to 4.10's rules, and failures that read as empty lists made into real failures with Try again. `test_empty_loading_ui.py` covers the pieces; 226 disposable-fixture Chromium renders at four sizes in both themes had no overflow. See [HISTORY.md](../HISTORY.md#empty-loading-and-failed-states-2026-10-27-e11-s30-slice-15).
 
-Gap: exact physical printing needs a confirmed-printing model; Collection's open colour-filter choice, full-data dark states and touch/Safari/household-device acceptance remain. Independent ready reserve coding can continue. Section 6's question 4 is settled (Matt, 2026-10-25: only Building and Idea tiles show a status pill). The lab top bar's global search is E11-S31.
+Gap: exact physical printing needs a confirmed-printing model; Collection's open colour-filter choice, dark Matchups with saved results (the rest of full-data dark was checked 2026-10-27) and touch/Safari/household-device acceptance remain. Independent ready reserve coding can continue. Section 6's question 4 is settled (Matt, 2026-10-25: only Building and Idea tiles show a status pill). The lab top bar's global search is E11-S31.
 
 Slice 14 implementation finished 2026-10-26: numeric MV and retained sorting, changed-row treatment, the owned action bar, exact saved-list Forge evidence and the guarded explicit post-save field choice are built. The field response never delays the successful-save UI or replaces later edits; the remaining physical/Safari checks, slice 13 contracts and slice 15 remain with the visual-design owner. Validation and limits are recorded in HISTORY.md.
 
@@ -3979,7 +3979,7 @@ Evidence:
 - `decklab/lib/forge/simjar.py`: `RELEASE`, `release_url`, `release_check`; `python -m decklab.lib.forge status`'s `build:` line
 - `decklab/README.md`, "Deck Lab's own Forge": step 6 and "Moving to a new Forge release"
 
-**E11-S33** · Matt · could · L · missing
+**E11-S33** · Matt · could · L · built
 
 As Matt, publishing Deck Lab for others to run on their own PC, I want Deck Lab to run on Linux as fully as it does on Windows, so that a self-hoster on Linux doesn't hit Windows-only steps or failing tests.
 
@@ -3988,17 +3988,9 @@ As Matt, publishing Deck Lab for others to run on their own PC, I want Deck Lab 
 - Given Linux, when `python -m decklab.lib.homenet` installs or restarts the server, then it uses a systemd user service, and `status` reports it as on Windows.
 - Given SELF-HOSTING.md, then the Linux route has no "a few tests fail" caveat and no hand-written service step.
 
-Now (2026-10-26): [interpreter-path semantics have a targeted fix](../HISTORY.md#interpreter-path-semantics-portability-2026-10-26-e11-s33), with isolated lexical/mocked validation on Windows. Explicit POSIX paths preserve their flavour, while Windows strings retain drive/UNC directories. No full Linux acceptance criterion has passed, so the story remains missing.
+Built (2026-10-27): [Linux support](../HISTORY.md#linux-support-2026-10-27-e11-s33). The whole suite passes on Linux with Python 3.14, and CI runs it there on every change in 4 Linux shards beside the 4 Windows ones; the database tests also passed against PostgreSQL 16 on Linux (apart from two that read the PC's own `config.json`, on any system). `schedule install|remove|status` manage a systemd user timer, `homenet install|start|stop|restart|remove|status` a systemd user service, and the server stops cleanly on SIGTERM. CI's `linux-services` job runs both under a real systemd user manager: install, restart, a crash that systemd restarts, stop, a terminal server stopped by SIGTERM, remove.
 
 Evidence:
-- `decklab/db/schedule.py`: Windows Task Scheduler management, plus stdout-only candidate systemd nightly unit previews
-- `SELF-HOSTING.md`: Linux still uses the user's own service manager and manual nightly scheduling; the current Linux full suite is unverified
-- The 2026-10-25 self-host check: 31 of 6188 tests failed on Linux
-- `decklab/lib/homenet/commands.py`: `_python_sibling`, `pythonw_path`, `this_pythons`, preserving explicit POSIX path types before the Windows string heuristic
-- `test_homenet_executable_paths.py`, `test_gitops.py`: injected lexical path flavours, typed PathLike/default interpreter cases and a genuinely Windows lexical diagnostic fixture
-
-The independent nightly preview slice is implemented: `schedule preview-systemd --unit service|timer --python PATH --workdir DIR [--at HH:MM]` prints fixed-name candidate units, with explicit POSIX paths, directive-specific literal escaping and strict UTF-8/LF output. All 32 focused renderer/CLI/Windows-XML checks passed without skips, and independent review is clear. It reads no host/config/data and installs nothing. See [HISTORY.md](../HISTORY.md#preview-linux-nightly-service-and-timer-files-2026-10-26-e11-s33).
-
-Gap: a real Linux Python 3.14 reproduction and full-suite pass, Linux CI, nightly installation/enabling/integration and server-service support remain. The targeted previews establish no Linux runtime or service-manager acceptance. Read-only WSL distribution discovery was denied with `Wsl/EnumerateDistros/Service/E_ACCESSDENIED` and stopped, so real Linux validation needs an available authorized environment.
-
-Next slice: reproduce and record the current Linux failures under Python 3.14, continue fixing platform path/case assumptions, then add a Linux CI run so they stay fixed. The 31 failures out of 6188 tests are the dated 2026-10-25 baseline, not a current count. Exercise the generated nightly units in an authorized Linux environment before integration; server-unit generation and lifecycle integration remain separate work. Host installation/enabling stays separate from rendering.
+- `decklab/lib/systemd.py`, `decklab/db/schedule.py` (install_systemd, remove_systemd, status_systemd), `decklab/lib/homenet/service.py`, `decklab/lib/control.py` (_SignalListener, _request_stop_posix)
+- `decklab/tests/test_linux_services.py`; `scripts/linux_services_check.sh` and `.github/workflows/tests.yml` (linux-services)
+- `SELF-HOSTING.md`: the Linux route, with no caveat and no hand-written service step
