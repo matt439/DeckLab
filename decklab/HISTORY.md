@@ -2,6 +2,20 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Dark mode on full data (2026-10-27; E11-S30 slice 15)
+
+The dark pass on realistic data. A disposable Deck Lab ran on its own PostgreSQL database with the 11 fixture decks (3 built with sleeves and deck boxes, 2 being built, Commander and 60-card), about 1,100 cards, a pending order with a check, a preordered and an intact received precon, the purchase queue, token cards, sleeves, deck boxes and a playmat with pictures, a wishlist and the Activity trail. Scryfall couldn't be reached, so its card data and pictures were stand-ins (each card coloured by the decks it's in); nothing of it reached the household's data. 19 routes (the library, four deck pages and the Cards tab, the editor, History, Collection, Shopping, Receive delivery, Matchups, Tokens, Sleeves & boxes, Build decks, the Game log, Wishlist, Activity, Settings and New deck) were drawn at 390 (touch), 820 (touch), 1440 and 2560px in dark, then light to compare. A script measured every visible text run against its solid background: in dark none was below 4.5:1 (3:1 for large text).
+
+Five problems were found and fixed:
+
+- The deck page's previous/next buttons kept the over-the-art style (an opaque white disc) above 1,280px, where they sit on the page instead: two white discs on a dark page. There they're the plain secondary button now; between 1,000 and 1,280px, over the art, they're unchanged.
+- The library's detail pane clipped its At a glance tiles when there were five (a Commander deck's Bracket tile): the part's implicit grid column grew to the tiles' width. It's one column the part's width now, so the tiles wrap.
+- Receive delivery's selected picture marked its Inspect pill with a left edge, which a pill's curve turns into a crescent (the ring "seen once and not confirmed" in the entry below). It takes a whole 2px ring.
+- A double-sided token card's back covered its "Example art" ribbon on the Tokens page. The back sits above the ribbon while one shows.
+- Sleeves & boxes headed the shared group "shared"; it's "Shared", with space above it after the previous owner's last chips.
+
+Matchups had no saved Forge results in the disposable database (no Forge), so its full-data dark states are still to see; so are touch hardware, Safari and the household's devices. Story counts are unchanged.
+
 ## Empty, loading and failed states (2026-10-27; E11-S30 slice 15)
 
 The round never drew these, so slice 15 set them down in words ([visual-design.md 4.10](design/visual-design.md#410-other-pieces-the-round-needed), UI-KIT.md's `.empty`, `.none-selected`, `.loading` and `.load-failed`) and built them across every page. core.js has four shared pieces: `emptyBox(line, action, {live})` (one line and at most the one action that fills it, announced when a search or filter emptied it), `noneSelected(line)` (one `--ink-3` line), `loadingBox(words, {small})` (words ending in "…") and `loadFailed(what, error, retry)` (a crit alert, "<what> couldn't be loaded.", with Try again). `errorBox` is an alert now, and when it's in a sheet or part of a page (retry null) it no longer adds a primary "Back to the library". `.empty` takes `--r-panel` corners.
