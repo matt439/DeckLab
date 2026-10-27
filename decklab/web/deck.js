@@ -893,9 +893,9 @@ function openDistinct(card, node) {
   return openCardViewer(items, at.get(card.name) || 0, { trigger: node });
 }
 
-function cardNames(entries) {
+function cardNames(entries, group = "names") {
   if (!entries || !entries.length) return null;
-  return el("ul", { class: "card-names" }, entries.map((entry) => el("li", {}, cardLink(entry))));
+  return el("ul", { class: "card-names" }, entries.map((entry) => el("li", {}, cardLink(entry, group))));
 }
 
 

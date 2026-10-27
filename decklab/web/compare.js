@@ -33,9 +33,15 @@ function compareLabel(data, sameDeck) {
   return sameDeck ? listName(data.version) : data.summary.title;
 }
 
+/** Whether the sides are one deck's two lists (a pairing's halves in either order count as one deck); one list
+ * against itself isn't, so its sides keep the deck's title. */
+function compareTwoLists(a, b) {
+  return sameDeckId(a.summary.id) === sameDeckId(b.summary.id) && a.version !== b.version;
+}
+
 function compareDraw(sides) {
   const [a, b] = sides;
-  const sameDeck = a.summary.id === b.summary.id;
+  const sameDeck = compareTwoLists(a, b);
   const labels = sides.map((d) => compareLabel(d, sameDeck));
   setTitle(sameDeck ? `${a.summary.title}: its two lists` : `${a.summary.title} and ${b.summary.title}`);
   // The card names this page shows open the card viewer with the two lists' cards.
@@ -145,7 +151,8 @@ function compareBrief(sides, labels) {
 function compareCurves(sides, labels) {
   const curves = sides.map((d) => (d.stats && d.stats.curve) || null);
   const top = Math.max(1, ...curves.flatMap((c) => (c ? c.buckets.map((b) => b.total) : [])));
-  const charts = el("div", { class: "compare-charts" }, curves.map((curve, i) => compareCurve(curve, labels[i], top)));
+  const charts = el("div", { class: "compare-charts" },
+    curves.map((curve, i) => compareCurve(curve, labels[i], top, `compare-${i}`)));
   const shown = curves.find(Boolean);
   const table = shown ? el("details", { class: "more" }, el("summary", { text: "The curves as a table" }),
     compareTable("Cards at each mana value", labels, shown.buckets.map((b, at) =>
@@ -158,7 +165,8 @@ function compareCurves(sides, labels) {
     charts, table);
 }
 
-function compareCurve(curve, label, top) {
+// Each side's bar cards are their own viewer group (compare-0, compare-1), so a swipe stays in one deck's list.
+function compareCurve(curve, label, top, group) {
   const figure = el("div", { class: "compare-chart" }, el("h3", { text: label }));
   if (!curve) {
     figure.append(el("p", { class: "sub", text: "No curve: the stats couldn't be worked out." }));
@@ -173,7 +181,7 @@ function compareCurve(curve, label, top) {
     const b = curve.buckets[i];
     for (const g of chart.querySelectorAll(".col")) g.classList.toggle("active", Number(g.dataset.i) === i);
     add(clear(detail), [el("p", {}, el("b", { text: `Mana value ${b.mv}: ${plural(b.total, "card")}` })),
-      b.cards && b.cards.length ? cardNames(b.cards) : null]);
+      b.cards && b.cards.length ? cardNames(b.cards, group) : null]);
   };
   chartJobs.push([chart, (width) => {
     drawCurve(chart, curve, width, show, top);

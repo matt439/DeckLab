@@ -125,6 +125,38 @@ class CompareUiTests(unittest.TestCase):
           same(main.querySelector('thead').querySelectorAll('th').slice(1, 3).map((th) => th.textContent), ['Planned list', 'Play-now list']);
         """)
 
+    def test_each_sides_bar_cards_are_their_own_viewer_group(self):
+        self.run_js("""
+          answers = {'/api/deck?id=casual%2Ftest&': deckA(), '/api/deck?id=casual%2Fburn&': deckB()};
+          const picks = [];
+          drawCurve = (host, curve, width, pick) => picks.push(pick);
+          Node.prototype.clientWidth = 320;
+          await show('#/compare?a=casual%2Ftest&b=casual%2Fburn');
+          delete Node.prototype.clientWidth;
+          picks[0](2); picks[1](2);
+          // A swipe through deck A's cards never runs on into deck B's.
+          same(main.querySelectorAll('.chart-detail').map((d) =>
+            d.querySelectorAll('[data-viewer]').map((n) => n.getAttribute('data-viewer'))), [['compare-0'], ['compare-1']]);
+        """)
+
+    def test_one_list_against_itself_or_a_pairing_either_way(self):
+        self.run_js("""
+          answers = {'/api/deck?id=casual%2Ftest&': deckA()};
+          await show('#/compare?a=casual%2Ftest&b=casual%2Ftest');
+          // The same list twice isn't "its two lists": the sides keep the deck's title.
+          assert.equal(document.title, 'Test Deck and Test Deck – Deck Lab');
+          same(main.querySelector('thead').querySelectorAll('th').slice(1, 3).map((th) => th.textContent), ['Test Deck', 'Test Deck']);
+          const pairing = (id) => { const p = deckA(); Object.assign(p.summary, {id, title: 'Cats + Vampires'}); return p; };
+          const owned = pairing('pairing/vampires+cats'); owned.version = 'owned';
+          answers = {'/api/deck?id=pairing%2Fcats%2Bvampires&': pairing('pairing/cats+vampires'),
+            '/api/deck?id=pairing%2Fvampires%2Bcats&': owned};
+          clear(main); asked.length = 0;
+          await show('#/compare?a=pairing%2Fcats%2Bvampires&b=pairing%2Fvampires%2Bcats&bv=owned');
+          // A pairing's halves in either order are one deck, so these are its two lists.
+          assert.equal(document.title, 'Cats + Vampires: its two lists – Deck Lab');
+          same(main.querySelector('thead').querySelectorAll('th').slice(1, 3).map((th) => th.textContent), ['Planned list', 'Play-now list']);
+        """)
+
     def test_missing_stats_say_why(self):
         self.run_js("""
           const b = deckB(); b.stats = null;
