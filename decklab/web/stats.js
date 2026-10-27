@@ -56,7 +56,7 @@ function statsSection(data) {
     curvePanel(st),
     landPanel(st),
     colourPanel(st),
-    st.commander ? commanderPanel(st, data.summary) : null,
+    st.commander ? commanderPanel(st, data.summary, data.near_combos) : null,
     drawOddsPanel(data),
     compositionPanel(st),
     tribesPanel(st),
@@ -715,7 +715,43 @@ function checkItem(ok, what, ...detail) {
     detail.length ? el("div", { class: "detail" }, detail) : null);
 }
 
-function commanderPanel(st, summary) {
+// Where a near combo's missing card stands in the deck's space (combos.AVAILABILITY), as a chip.
+const NEAR_STATES = { free: ["good", "Free"], on_the_way: ["info", "On the way"], in_use: ["plain", "In another deck"],
+  buy: ["outline", "To buy"] };
+
+/** Two-card combos one card away (E9-S25, the deck answer's near_combos): the card to add, the piece the
+ * list holds, what it does, where the card stands (only for those who may see the space's cards) and
+ * whether it would raise the minimum bracket. Nothing from a server without the check, or for a draft. */
+function nearCombosItem(near, target) {
+  if (!near) return null;
+  if (near.checked !== true) return checkItem(null, "One card away: not checked", near.reason || null);
+  const date = (near.list_date || "").slice(0, 10) || "an unknown date";
+  if (!near.total) return checkItem(true, "One card away: 0",
+    `No two-card combo in Commander Spellbook's list (of ${date}) is one card in the commander's colours away.`);
+  const items = near.matches.map((m) => {
+    const results = m.results || [];
+    const what = results.slice(0, 2).join(", ") + (results.length > 2 ? ", …" : "");
+    const state = m.availability && NEAR_STATES[m.availability.state];
+    let bracket = "";
+    if (m.raises_to) {
+      bracket = ` Would raise the minimum bracket to ${m.raises_to}`;
+      bracket += target && m.raises_to > target ? `, above the target Bracket ${target}.` : ".";
+    }
+    return el("li", {}, state ? status(state[0], state[1]) : null, state ? " " : null,
+      "Add ", cardLink({ name: m.missing }, "names", { inline: true }), " (with ",
+      cardLink({ name: m.held }, "names", { inline: true }), `)${what ? `: ${what}.` : "."}${bracket} `,
+      el("a", { href: m.url, target: "_blank", rel: "noopener", text: "Commander Spellbook" }));
+  });
+  const more = near.total > near.matches.length ? el("p", { class: "sub",
+    text: `The first ${near.matches.length} of ${near.total}; python -m decklab.lib.combos near lists them all.` }) : null;
+  return checkItem(true, `One card away: ${near.total}`,
+    el("details", { class: "more" }, el("summary", { text: near.total === 1 ? "Show the combo" : "Show the combos" }),
+      el("p", { class: "sub", text: `Two-card combos whose other piece fits the commander's colours (Commander Spellbook, list of ${date})` +
+        (near.matches.some((m) => m.availability) ? ", free cards first." : ".") }),
+      el("ul", { class: "commander-combos" }, items), more));
+}
+
+function commanderPanel(st, summary, near) {
   const k = st.commander;
   const br = k.bracket || {};
   const names = (list) => (list && list.length ? cardNames(list.map((x) => (typeof x === "string" ? { name: x } : x))) : null);
@@ -742,7 +778,8 @@ function commanderPanel(st, summary) {
     checkItem(br.extra_turns == null ? null : true, `Extra turns: ${br.extra_turns == null ? "not checked" : br.extra_turns.length}`,
       names(br.extra_turns)),
     checkItem(comboCheck(br) ? true : null, `Two-card combos: ${comboCheck(br) ? comboCheck(br).matches.length : "not checked"}`,
-      comboFindings(br, "names", false)));
+      comboFindings(br, "names", false)),
+    nearCombosItem(near, summary.target_bracket));
   const target = summary.target_bracket;
   const panel = el("section", { class: "panel", "aria-labelledby": "h-commander" },
     el("h3", { id: "h-commander", text: "Commander rules" }),

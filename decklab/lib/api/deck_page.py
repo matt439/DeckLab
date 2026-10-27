@@ -460,6 +460,25 @@ def _deck_stats(sections, kind, warnings):
         return None
 
 
+def _near_combos(sections, deck_id, p, commander, warnings):
+    """combos.near_for_deck for the Commander checks (E9-S25): the shown list's combos one card
+    away, the best NEAR_LIMIT of them, each missing card's availability only with the space's
+    pool p (None for a viewer who may not see its inventory). None with a warning on failure."""
+    try:
+        from decklab.lib import combos
+        from decklab.lib.stats import commander as checks      # its COMBO_FILE: the list the checks read
+        minimum = (commander.get("bracket") or {}).get("minimum")
+        exclude = pool.self_ids(deck_id) if p is not None else ()
+        result = _jsonable(combos.near_for_deck(sections, p, exclude, minimum, checks.COMBO_FILE,
+                                                limit=combos.NEAR_LIMIT))
+        json.dumps(result, allow_nan=False)
+        return result
+    except Exception:           # the page still shows the deck; the log has the details
+        common._log("Near combos failed:\n" + traceback.format_exc())
+        warnings.append("The combos one card away couldn't be worked out (the server log says why)")
+        return None
+
+
 # The parts of deck_view's answer a page may ask to leave out (GET /api/deck's omit=, comma separated): the
 # deck page asks for its matchups, the answer's slowest part, only when its Matchups tab opens.
 OMITTABLE = frozenset({"matchups"})
@@ -541,6 +560,10 @@ def deck_view(deck_id, version="target", omit=()):
     separate from sections and their hashes; None for products and pairings. Its own warnings
     describe invalid saved mappings without changing the logical list.
 
+    near_combos is a Commander deck's two-card combos one card away (combos.near_for_deck, E9-S25):
+    the shown list's best NEAR_LIMIT and their total, each missing card's availability only
+    for a viewer who may see the space's inventory; absent for other decks.
+
     printings_in_box is a built home deck's Printings in box record (deck_printings.view: what it
     records that can still be true, why the rest is ignored, and its sheet's choices); absent
     otherwise.
@@ -621,6 +644,10 @@ def deck_view(deck_id, version="target", omit=()):
     }
     if "matchups" not in omit:
         answer["matchups"] = _deck_matchups(summary, version, sections)
+    if decks.engine_kind(summary) == "commander" and stats and stats.get("commander"):
+        near = _near_combos(sections, deck_id, p if sees else None, stats["commander"], warnings)
+        if near is not None:
+            answer["near_combos"] = near
     if summary.get("kind") == "commander" and space == spaces.HOME:
         from .commander_night import projection
         night = projection()

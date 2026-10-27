@@ -60,6 +60,7 @@ decklab/                # Deck Lab, the home-network deck page: what is still to
   lib/                  # card data, the deck text format (lib/decks/), stats, owned vs needed (python -m decklab.lib.pool <deck-id>), Forge matchups (python -m decklab.lib.forge play <deck-id> <deck-id>)
                         #   a deck against its format's field (python -m decklab.lib.forge field <deck-id>; --show prints it without playing), a card swap tested on the deck's own games (python -m decklab.lib.forge variant <deck-id> --remove "1 A" --add "1 B" --field)
                         #   the tokens a deck makes against those owned (python -m decklab.lib.tokens <deck-id>), the token cards' rules (python -m decklab.lib.tokens --check)
+                        #   a Commander deck's two-card combos one card away, each missing card free, on the way, in another deck or to buy (python -m decklab.lib.combos near <deck-id>)
                         #   a new fork build checked against the installed one, same seeded games line for line (python -m decklab.lib.forge engine-check --old <dir> --new <dir>)
     inventory/          # the inventory, decks and accessories: one snapshot per request or command, read from the database (or, for the tests, from the old files' formats), and every change as one operation (orders.py, receive.py, ops_collection.py, ops_decks.py, ops_accessories.py, kit.py; lib/tokens/ops.py)
     state/              # the state store: wishlists, profile settings, the simulations mode and play records, in the database (an in-memory store for the tests)

@@ -2669,7 +2669,7 @@ First slice: an optional location column on collection rows, editable on the car
 
 Getting the household's Commander decks ready for social Commander nights at a local shop, where staff make 4-player pods and the shop publishes a bracket range. The editor checks the Commander deck rules and a minimum bracket from Game Changers, mass land denial and extra turns; a Commander deck's Overview opens with a plain bracket sentence, what opponents will face and the dates of the card data behind them, and home admins can record the usual night's aim and house rules. Practice games use the free multiplayer mulligan, and Forge plays Commander decks 1v1 only, marked indicative. Two-card combos (from Commander Spellbook) and Wizards' latest Commander announcement are checked too (2026-10-21). Still open: 4-player pods on the page, EDHREC ideas, and pod games in the Game log.
 
-Open: E9-S07, E9-S11, E9-S16, E9-S21, E9-S22, E9-S25.
+Open: E9-S07, E9-S11, E9-S16, E9-S21, E9-S22.
 
 **E9-S02** · Matt · must · M · built
 
@@ -2963,7 +2963,7 @@ Evidence:
 - `decklab/web/commander-readiness.js`: commanderDataNote, officialNotes (also in `decklab/web/stats.js`'s commanderPanel)
 - `decklab/tests/test_official_lists.py`; `decklab/tests/test_commander_readiness.py`: OfficialListTests; `decklab/tests/test_commander_readiness_ui.py`: test_wizards_latest_announcement_is_shown_and_never_called_current_unless_checked
 
-**E9-S25** · Matt · could · M · missing
+**E9-S25** · Matt · could · M · built
 
 As a player building a Commander deck, I want to see combos the deck is one card away from, and whether that card is free in our pool, so that I spot cheap upgrades and know what I'd be adding to the bracket.
 
@@ -2972,12 +2972,13 @@ As a player building a Commander deck, I want to see combos the deck is one card
 
 Decided (Matt, 2026-10-27): added from the comparison with Archidekt's Commander Spellbook tab.
 
+Now: Built 2026-10-27 ([HISTORY.md](../HISTORY.md#combos-one-card-away-2026-10-27-e9-s25)). The Stats tab's Commander rules list two-card combos one card in the commander's colours away (not banned, never a must-be-commander piece), the missing card marked free, on the way, in another deck or to buy for viewers of the space's inventory, and the bracket it would raise; `python -m decklab.lib.combos near <deck-id>` lists them all. No prices yet.
+
 Evidence:
-- `decklab/lib/combos.py`: find (complete two-card combos, E9-S23)
-
-Gap: Only complete combos are found.
-
-First slice: a `near` mode in combos.find returning combos with exactly one piece in the list.
+- `decklab/lib/combos.py`: near, availability, near_for_deck, main (find: complete two-card combos, E9-S23)
+- `decklab/lib/api/deck_page.py`: _near_combos (deck_view's near_combos)
+- `decklab/web/stats.js`: nearCombosItem, commanderPanel
+- `decklab/tests/test_near_combos.py`; `decklab/tests/test_api_near_combos.py`; `decklab/tests/test_near_combos_ui.py`
 
 ---
 

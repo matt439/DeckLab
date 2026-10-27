@@ -169,7 +169,11 @@ After reviewing the rules against a new announcement, set that date to the
 announcement's. These checks describe the displayed Planned or Play-now list,
 independently of inventory access. They do not certify a bracket: combos of three
 or more cards, chained extra turns, speed and intent still need a conversation
-with the other players.
+with the other players. The Stats tab's Commander rules also list the two-card
+combos the list is one card away from (E9-S25): the missing card is within the
+commander's colours, marked free, on the way, in another deck or to buy for
+viewers of the space's inventory, with the bracket it would raise;
+`python -m decklab.lib.combos near <deck-id>` lists them all on the PC.
 
 **Commander night** (E9-S20, built 2026-10-16) is one optional household record,
 edited in Settings by a home admin. Give it a name; venue, household target
