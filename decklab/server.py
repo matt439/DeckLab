@@ -206,6 +206,11 @@ inventory writes answer 503 with "reason": "database":
     POST /api/precons/add                body {"profile", "space", "file", "title", "sha256", "fields"?}: add
                                          its cards to the collection and make its built deck, as one
                                          change
+    GET  /api/precons/coverage?space=<id>&format=<f>&type=<t>   precons ranked by how much of each the space's
+                                         free pool covers (E1-S24, lib/api/precon_coverage.py), best first
+    GET  /api/precons/coverage/deck?file=<f>&space=<id>   one precon's missing cards, with estimated AUD costs
+    POST /api/precons/start              body {"profile", "space", "file", "title"}: a new idea deck from
+                                         its list, as POST /api/decks makes one (nothing is added)
     GET  /api/play[?id=<deck id>]        list snapshots, and the played games and sideboard plans the
                                          viewer may see (permissions.sees_play_record: those with a deck
                                          of their own space; an admin or a script every one)
@@ -286,7 +291,7 @@ collection and tokens, and the shopping list, orders, checks and receipts that
 are home's alone, only by the home profiles, and a person's own collection and
 tokens only by that person and an admin, so /api/shopping, /api/receipt (and
 its preview and apply), /api/assembly (and its preview), and /api/collection,
-/api/collection/rows, /api/tokens and /api/precons/preview for such a space
+/api/collection/rows, /api/tokens, /api/precons/preview and /api/precons/coverage for such a space
 answer 403 to anyone else, the collection's "spaces" lists only the ones the
 viewer sees, and the printing picker's copy counts (/api/cards/printings,
 /api/cards/search with detail) are home's only for the home profiles and a

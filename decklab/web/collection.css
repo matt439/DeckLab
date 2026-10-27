@@ -234,10 +234,23 @@ button.col-find-open { cursor: pointer; }
 .precon-section { margin-top: var(--s-4); }
 .precon-section h3 { font-size: var(--fs-md); margin-bottom: var(--s-2); }
 @media (max-width: 599px) { .precon-tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+/* Precons we could build (precon-coverage.js): the ranking's filters and rows, each with its share as a meter. */
+.pcov-filters { display: grid; gap: var(--s-2); margin-bottom: var(--s-3); }
+.pcov-filters .sub { margin: 0; }
+.pcov-type select { width: 100%; }
+.pcov-list { list-style: none; margin: var(--s-3) 0; padding: 0; display: grid; gap: var(--s-2); }
+@media (min-width: 768px) { .pcov-list { grid-template-columns: 1fr 1fr; } }
+.pcov-pick { display: grid; gap: var(--s-1); width: 100%; min-height: 56px; padding: var(--s-2) var(--s-3); text-align: left;
+  border: 1px solid var(--border); border-radius: var(--r-md); background: var(--surface); color: inherit; font: inherit; cursor: pointer; }
+.pcov-pick:hover, .pcov-pick:focus-visible { border-color: var(--accent); background: var(--accent-soft); }
+.pcov-pick-words { display: flex; flex-direction: column; gap: 2px; min-width: 0; overflow-wrap: anywhere; }
+.pcov-pick-words small, .pcov-missing { color: var(--ink-2); font-size: var(--fs-sm); }
+.pcov-share { display: block; font-variant-numeric: tabular-nums; }
+.pcov-rate { margin-top: 0; }
 
 @media (forced-colors: active) {
   .col-import-table tr.col-problem td { outline: 1px solid CanvasText; }
-  .precon-pick, .col-strip-tile { border: 1px solid CanvasText; }
+  .precon-pick, .pcov-pick, .col-strip-tile { border: 1px solid CanvasText; }
   .col-strip-tile[aria-pressed="true"] { outline: 3px solid Highlight; }
 }
 
