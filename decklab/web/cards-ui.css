@@ -475,7 +475,7 @@ dialog.viewer.show-text[open] {
 /* Undo: a tertiary in the toast's own (inverted) colours, --btn-h tall (44 on touch). */
 .toast-undo .btn { color: var(--page); text-decoration: underline; }
 .toast-undo .btn:hover, .toast-undo .btn:active { background: transparent; }
-/* Its focus ring in the toast's words' colour: --focus (teal) is under 3:1 on the inverted --ink. */
+/* Its focus ring in the toast's words' colour: --focus (accent) is under 3:1 on the inverted --ink. */
 .toast-undo .btn:focus-visible { outline-color: var(--page); }
 body:is(.has-edit-bar, :has(#main .action-bar)) .toast-undo { bottom: calc(max(var(--s-2), env(safe-area-inset-bottom)) + var(--bar-h) + var(--s-2)); }
 

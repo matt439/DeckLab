@@ -502,9 +502,9 @@ class WebFileTests(unittest.TestCase):
         for token in ("--accent", "--link", "--page", "--surface", "--ink", "--shadow-1", "--shadow-2"):
             with self.subTest(token=token):
                 self.assertIn(token, names(dark))
-        self.assertIn("--accent: #0f6e6a;", light)              # the owner's teal
-        self.assertIn("--accent: #4fbdb5;", dark)
-        self.assertIn("--link: #0a504d;", light)               # P1: links dark teal, info boxes blue
+        self.assertIn("--accent: #6236c4;", light)              # violet: no mana colour is purple
+        self.assertIn("--accent: #a68cf0;", dark)
+        self.assertIn("--link: #43248f;", light)               # links dark violet, info boxes blue
         self.assertIn("background: var(--page)", _styles())
         head = _text("index.html").split("</head>")[0]
         self.assertIn('matchMedia("(prefers-color-scheme: dark)")', head)

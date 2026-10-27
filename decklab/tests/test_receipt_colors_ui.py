@@ -75,9 +75,10 @@ class ReceiptColorsTests(unittest.TestCase):
           assert.equal(label.tag,'label');assert.equal(label.querySelectorAll('a').length,0);assert.equal(label.querySelectorAll('button').length,0);
           const waiting=label.querySelectorAll('.chip').find(n=>n.textContent==='For Alpha Deck \u00d71');assert(waiting);
           assert.equal(waiting.tag,'span');assert(waiting.querySelector('.deck-swatch'));
-          const chips=second.tile.querySelectorAll('.chip'),known=chips.find(n=>n.textContent==='Colorless Deck \u00d72'),missing=chips.find(n=>n.textContent==='Unknown Deck \u00d71');
-          assert(known.querySelector('.deck-swatch'));assert(known.querySelector('.deck-swatch').getAttribute('style').includes('--stripe-c'));
-          assert(!missing.querySelector('.deck-swatch'));assert.equal(first.tile.querySelectorAll('input').length,1);
+          const chips=second.tile.querySelectorAll('.rcpt-deck-chip');assert.equal(chips.length,1);
+          assert.equal(chips[0].textContent,'In 2 decks: Colorless Deck \u00d72, Unknown Deck \u00d71');
+          assert.equal(chips[0].getAttribute('title'),'Colorless Deck lists 2\\nUnknown Deck lists 1');
+          assert(!chips[0].querySelector('.deck-swatch'));assert.equal(first.tile.querySelectorAll('input').length,1);
           assert.equal(first.tile.querySelector('.rcpt-tick').getAttribute('aria-label'),'Check off 2 copies of Alpha');
           first.open.click();assert(v.sheet);let links=v.sheet.sheet.body.querySelector('.rcpt-decks').querySelectorAll('a');
           assert.equal(links.length,1);assert.equal(links[0].textContent,'Alpha Deck');assert.equal(links[0].getAttribute('href'),'#/deck?id=casual%2Fa&v=target');
@@ -85,6 +86,19 @@ class ReceiptColorsTests(unittest.TestCase):
           links=v.sheet.sheet.body.querySelector('.rcpt-decks').querySelectorAll('a');assert.equal(links.length,2);
           assert(links.find(a=>a.textContent==='Colorless Deck').querySelector('.deck-swatch'));
           assert(!links.find(a=>a.textContent==='Unknown Deck').querySelector('.deck-swatch'));assert(!second.ticked);
+        """,draw=False)
+
+    def test_a_row_several_decks_wait_for_is_one_chip_and_inspect_names_them(self):
+        self.run_js("""
+          const d=delivery(),c=d.components[0];
+          const deck=(id,title,waiting)=>({id:'casual/'+id,title,status:'built',uses:4,waiting,colors:['B']});
+          c.decks=[[deck('a','Alpha Deck',1)],[deck('b','Mono-Black Midrange',3),deck('c','Orzhov Removal: Midrange',2),deck('z','Zombies',1)]];
+          const v=drawReceipt(d,routeToken),row=v.comps[0].rows[1];
+          const chips=row.tile.querySelectorAll('.rcpt-deck-chip');assert.equal(chips.length,1);
+          assert(chips[0].getAttribute('class').includes('chip-info'));
+          assert(chips[0].textContent.startsWith('For 3 decks'));assert(chips[0].textContent.includes('Orzhov Removal \u00d72'));
+          assert.equal(chips[0].getAttribute('title').split('\\n').length,3);
+          row.open.click();assert.equal(v.sheet.sheet.body.querySelector('.rcpt-decks').querySelectorAll('a').length,3);
         """,draw=False)
 
     def test_decoration_never_changes_canonical_rows_draft_or_preview_and_performs_no_new_requests(self):

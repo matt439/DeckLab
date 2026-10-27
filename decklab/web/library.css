@@ -131,7 +131,7 @@ button.deck-card { cursor: pointer; }
 .deck-card.is-compact .deck-cover > .deck-pips:has(> .id-pip:nth-child(4)) { left: var(--s-1); gap: 0; }
 .deck-card.is-compact .deck-cover { width: 88px; }
 
-/* A status pill (4.4): Built filled teal, Building a teal outline, Idea a dashed grey one. A casual tile shows
+/* A status pill (4.4): Built filled accent, Building an accent outline, Idea a dashed grey one. A casual tile shows
    only Building and Idea; the lab's detail pane every status. */
 .deck-status {
   align-self: flex-start;

@@ -271,11 +271,11 @@ class ComponentTests(unittest.TestCase):
         # The focus ring follows an element's corners; it never squares a round button.
         self.assertNotIn("border-radius", re.search(r"^:focus-visible \{([^}]*)\}", base, re.M).group(1))
 
-    def test_the_selected_and_changed_states_are_teal_and_delivery_states_are_not(self):
+    def test_the_selected_and_changed_states_are_the_accent_and_delivery_states_are_not(self):
         css = _css("components.css")
         self.assertRegex(css, r'\.segmented > \[aria-pressed="true"\], \.segmented > \[aria-current="page"\] \{[^}]*background: var\(--accent\)')
         self.assertRegex(css, r'\.stepper:is\(\.is-changed, \[data-changed="true"\]\) \{ border-color: var\(--accent\); \}')
-        # "Part received" is a neutral outline (Matt, 2026-10-24: section 6 question 2), never teal.
+        # "Part received" is a neutral outline (Matt, 2026-10-24: section 6 question 2), never the accent.
         outline = re.search(r"\.chip-outline, \.status-outline \{([^}]*)\}", css).group(1)
         self.assertNotIn("accent", outline)
         self.assertIn('status("outline", "Part received")', _function(_scripts(), "shopOrderChip"))
@@ -584,7 +584,7 @@ class SimComponentTests(unittest.TestCase):
             with self.subTest(selector=selector):
                 self.assertIn("font-family: var(--font-mono)", _rule(css, selector))
         self.assertIn("color: var(--ink)", _rule(css, ".wr"))
-        # Nothing of the figure, the range bar or the badge is teal, green or red.
+        # Nothing of the figure, the range bar or the badge is the accent, green or red.
         figure = "\n".join(line for line in css.splitlines() if re.match(r"\.(wr|range|fresh)", line))
         self.assertNotRegex(figure, r"--accent|--strong|--weak|--win|--loss|--good|--crit")
         self.assertIn("background: var(--range-band)", _rule(css, ".range-band"))

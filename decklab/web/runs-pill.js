@@ -211,7 +211,7 @@ function runLeftWords(seconds) {
   return m < 60 ? `${m} min` : `${Math.floor(m / 60)} h${m % 60 ? ` ${m % 60} min` : ""}`;
 }
 
-/** A progress ring (role="progressbar"): its track in --ring-track and the share played as a teal arc. */
+/** A progress ring (role="progressbar"): its track in --ring-track and the share played as an accent arc. */
 function progressRing(share, label) {
   const n = Math.round(Math.max(0, Math.min(1, share || 0)) * 100);
   return el("span", { class: "run-ring", role: "progressbar", "aria-label": label, "aria-valuemin": 0,

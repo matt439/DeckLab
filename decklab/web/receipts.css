@@ -109,10 +109,17 @@
 .rcpt-none, .rcpt-all-blank, .rcpt-grid > .empty, .rcpt-grid > .load-failed { grid-column: 1 / -1; }
 .rcpt-all-blank { margin: 0; font-size: var(--fs-sm); color: var(--ink-2); }
 /* The tick under the picture, at the end of the chips' row, so it never covers the card's mana cost. */
-.rcpt-grid .card-tile { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; column-gap: var(--s-1); }
+/* align-content: start keeps every picture at the top of its row, however many chips a neighbour has. */
+.rcpt-grid .card-tile { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; align-content: start;
+  column-gap: var(--s-1); }
 .rcpt-grid .card-tile > .card-tile-open { grid-column: 1 / -1; }
 .rcpt-grid .card-tile > .card-tile-chips { grid-column: 1; grid-row: 2; }
 .rcpt-grid .card-tile > .card-tile-state { position: static; grid-column: 2; grid-row: 2; justify-self: end; }
+
+/* Where a row goes is one chip on one line; Inspect lists the decks. */
+.card-tile-chips .rcpt-deck-chip { display: inline-flex; align-items: center; gap: var(--s-1); max-width: 100%; min-width: 0;
+  white-space: nowrap; }
+.rcpt-deck-chip-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 
 /* Checking a Pictures tile is native label activation; Inspect is its separate sheet/viewer action. */
 .rcpt-check-tile { display: grid; grid-template-rows: 1fr auto; gap: var(--s-1); min-width: 0; }

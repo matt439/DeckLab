@@ -129,7 +129,7 @@ function actionBar({ status: words = null, actions = [] } = {}) {
 
 const PIP_SIZES = { 16: "sm", 20: "md", 22: "lg", 24: "xl" };   // tokens.css --pip-sm ... --pip-xl
 
-/** The owned bar (design/visual-design.md 4.10): how much of a list is here, teal, then what's on the way,
+/** The owned bar (design/visual-design.md 4.10): how much of a list is here, accent, then what's on the way,
  * hatched, on a --surface-3 track; aria-hidden, so put the words beside it. owned, waiting and total are copies. */
 function ownedBar(owned, waiting, total) {
   const share = (n) => `${Math.round(Math.max(0, Math.min(1, total ? n / total : 0)) * 1000) / 10}%`;
