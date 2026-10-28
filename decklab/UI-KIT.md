@@ -683,6 +683,17 @@ Per-viewer conveniences only, through core.js's `local` (every key gets the pref
 
 The deck Overview's opponent-specific sideboard section (`deck-sideboard.js`) uses `cardTile` in the shared `card-tiles` grid for historical in/out printings, in two columns that stack on phones. It loads viewer-filtered play records only when Overview is drawn, checks route/profile/node before applying replies, and uses the Game log's preview/save sheet with both chosen list versions. Stored records and their hashes contain no presentation fields.
 
+`play-pods.js` follows `play.js` and owns the separate Commander-pod section,
+three/four-seat form and explicit review/Save sheets. It uses ordinary fields,
+literal player/commander labels and recorded-list details. Eligibility and edit
+controls require positive server flags. Historic selections survive corrections;
+inactive seat choices and failed drafts stay in the open form only. Async replies
+and Save belong to the original profile object, space, route, main/frame, source
+control, data, record/hash, draft generation and connected sheet controls. A late
+reply cannot take over a replacement page or sheet. There is no timer, hide-save,
+local-storage draft or automatic refresh/rebase. Pod counts and cards remain
+separate from two-player summaries, defaults, Compare and the life counter.
+
 The Overview's `deck-opponents.js` section uses ordinary links and a checkbox
 sheet for usual opponents. The API resolves reciprocal links and filters both
 ends for visibility. Saves use the reviewed text hash; a conflict requires

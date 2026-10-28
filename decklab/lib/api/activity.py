@@ -344,6 +344,11 @@ def _row(row, scope, profiles, space_of, me=None, spaces=None, *, own=None, orde
         return ({"table": table, "op": op, "summary": "Packing progress updated"}
                 if _home_viewer(scope, profiles, me) else None)
     if table == "play_record":
+        for value in (before, after):
+            content = _dict(value.get("content"))
+            if (value.get("kind") == "games" and ("mode" in content or "game_version" in content)
+                    and not _play_owners(value)):
+                return None     # validate marked games before iterating untrusted indexed ids
         decks = [d for r in (before, after) for d in (r.get("deck_ids") or ())]
         # The Game log's rule (permissions.sees_play_record, over a game's sides and a plan's deck
         # only, E10-S32), for the viewer scope stands for; a named admin only his own space's

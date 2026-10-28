@@ -2,6 +2,54 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Reviewed Commander pod records (2026-10-28; E4-S18, E9-S16)
+
+Game log now has a separate **Commander pods** section, also when filtered to a
+deck. Record three or four stable seats using saved Commander lists from the
+recording collection or private external player/commander labels, then choose
+a winner or draw, date and notes. At least one captured deck is required.
+**Review pod game** shows the exact record before **Save pod game**; there is no
+timer or save on hide. Corrections preserve unchanged historical snapshots,
+and changed records/lists refuse stale saves. Failed or rejected reviews keep
+the open draft, including inactive choices. Drafts are not stored on the device.
+
+The existing version-1 store envelope and legacy record bytes remain unchanged.
+An exact content discriminator selects the new stable-seat schema. Both save
+routes refuse conversion between pods and two-player games. Raw deck visibility
+is checked before loading inventory; one pinned snapshot then resolves and
+checks every canonical identity before conflicts or captured-list reads.
+New/replacement lists must be Commander decks in the recording space. Existing
+aggregate recording permissions, record CAS and membership admission remain.
+
+Public games stay read-only outside their space. Every player/external commander
+label, notes and saver remain private; outsiders receive numbered seats and only
+deck snapshots they may read. Public decks alone never publish games. Activity
+records one own-space change with a generic player-count summary. Damaged pod
+audit metadata fails closed before ownership/iteration; guarded member removal
+deletes the recording space's whole pod. No migration is needed. Separate API
+buckets and explicit consumer guards keep pods out of 1v1 Head to head, Forge
+comparison summaries, quick-record defaults and the unchanged two-player counter.
+
+The form uses literal labels and positive eligibility/edit flags. Review and Save
+validate response shape and captured-list metadata, and bind async work to its
+original profile object, route, frame, data, record hash, draft and connected
+controls. Review caught and corrected malformed-preview and hidden-metadata
+paths; no material source findings remain.
+
+Root's protected 22-target integration passed **432 tests with five intentional
+PostgreSQL skips**, including **120 new model, store, lifecycle, API and DOM
+cases**. Explicit fake PostgreSQL adapters cover CAS, admission and rollback;
+they do not qualify a real database. Node syntax, real-error Ruff, whitespace
+and the source-length guard pass (1,177 owned files, none above 1,200 lines).
+The local evidence folder is `decklab-pods-8fd6617d`: integration log and host
+exit 0, unchanged hashes for all 22 owned source/test files during the run, and
+proof that the 112 preserved dirty test headers stayed AST-equivalent and
+byte-unchanged. Final staged whitespace review removed one extra test-file EOF
+blank line; AST and all non-trailing content were verified identical afterward.
+No live server, database, household records or real Forge runtime was accessed
+for this qualification. Browser/device and actual Commander-night acceptance
+remain separate; the multiplayer counter is now an independent ready slice.
+
 ## Saved-shop URL validation and asset contract (2026-10-28)
 
 The frozen checkpoint on `5d625a9` discovered 10,077 unique cases, preserving all

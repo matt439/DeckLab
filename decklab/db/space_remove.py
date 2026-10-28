@@ -8,6 +8,7 @@ import copy
 
 from decklab.db import space_export
 from decklab.lib import spaces
+from decklab.lib.state import Invalid, pods
 from decklab.lib.state.play import REMOVED_DECK, is_removed_deck
 
 APPLY_GATE = ("Apply requires a matching export, a cooperative Forge runtime and exclusive lifecycle/database locks; "
@@ -59,6 +60,16 @@ def transformed_record(space, row):
     if not isinstance(content, dict):
         raise ValueError("A related play record has damaged content")
     if row.get("kind") == "games":
+        try:
+            if pods.mode(content) == "pod":
+                ids = pods.record_deck_ids(content)
+                if row.get("deck_ids") != ids:
+                    raise Invalid("The pod's recorded decks do not match its seats")
+                # Every selected deck belongs to its recording space. External
+                # seats have no independent record to retain after its removal.
+                return None if content["space"] == space else out
+        except Invalid:
+            raise ValueError("A related pod game has damaged content or ownership") from None
         sides = content.get("sides")
         if not isinstance(sides, list) or len(sides) != 2:
             raise ValueError("A related game needs two recorded sides")

@@ -236,8 +236,11 @@ def play_id(value):
 
 def split_record(kind, record):
     """A record dict checked and split into (header, content, deck_ids): header the PLAY_HEADER
-    fields, content the kind's own (games: date, sides, result, notes; sideboards: deck,
-    opponent, out, in, after, notes), deck_ids the decks it involves."""
+    fields, content the kind's own (legacy games: date, sides, result, notes;
+    pods: explicit mode/game_version, seats and recording space; sideboards:
+    deck, opponent, out, in, after, notes), deck_ids the actual decks it involves.
+    Pod opponent labels never become deck references. The envelope stays v1.
+    """
     if not isinstance(record, dict) or not set(PLAY_HEADER) <= set(record):
         raise Invalid(f"A play record needs {', '.join(PLAY_HEADER)}")
     header = {key: record[key] for key in PLAY_HEADER}

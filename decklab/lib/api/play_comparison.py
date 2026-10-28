@@ -9,6 +9,7 @@ from datetime import date
 import re
 
 from decklab.lib import decks, inventory, spaces, state
+from decklab.lib.state import pods
 
 from . import guard, play_records
 from .common import ApiError
@@ -87,6 +88,11 @@ def _summary(sides, fmt, profile, script):
         raise ValueError("Invalid game listing")
     wins, draws, days = [0, 0], 0, []
     for record in records:
+        try:
+            if pods.mode(record) != "legacy":
+                continue
+        except state.Invalid:
+            continue
         if not isinstance(record, dict) or not play_records._sees_record("games", record, profile, script):
             continue
         # Malformed records without two readable sides cannot identify this exact pair.

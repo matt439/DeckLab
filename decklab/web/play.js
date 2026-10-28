@@ -21,13 +21,21 @@ function playChoice(list) { return list.removed ? { removed: true, title: "a rem
   : { id: list.id, version: list.version, sha256: list.sha256 }; }
 function playNames(moves) { return moves.map(line => `${line.qty} ${line.name}`).join(", ") || "None"; }
 function playResult(record) {
+  if (!playLegacyGame(record)) return "Result unavailable";
   const winner = record.sides[record.result === "a" ? 0 : 1];
   return record.result === "draw" ? "Draw" : `${winner.player || winner.title} won`;
+}
+
+/** Only the original two-seat schema contributes to 1v1 totals and quick-record defaults. */
+function playLegacyGame(record) {
+  return !!record && !Object.hasOwn(record, "mode") && !Object.hasOwn(record, "game_version") &&
+    Array.isArray(record.sides) && record.sides.length === 2;
 }
 
 function playMatchupSummaries(games) {
   const groups = new Map();
   for (const { record } of games) {
+    if (!playLegacyGame(record)) continue;
     const sides = [...record.sides].sort((a, b) => playSideKey(a).localeCompare(playSideKey(b)));
     const key = sides.map(playSideKey).join(":");
     if (!groups.has(key)) groups.set(key, { sides, games: 0, wins: [0, 0], draws: 0,
@@ -41,6 +49,7 @@ function playMatchupSummaries(games) {
 }
 
 function playSummarySection(games) {
+  games = games.filter(entry => playLegacyGame(entry?.record));
   if (!games.length) return null;
   return el("section", { class: "play-section", "aria-labelledby": "play-summary-title" },
     el("h2", { id: "play-summary-title", text: "Head to head" }),
@@ -63,6 +72,7 @@ function playNoGamesWords() {
 }
 
 function drawPlay(data, deckId) {
+  const games = data.games.filter(entry => playLegacyGame(entry?.record));
   const main = $("#main");
   const filter = el("select", { id: "play-filter", onchange: event => {
     location.hash = `#/play${event.target.value ? `?id=${encodeURIComponent(event.target.value)}` : ""}`;
@@ -79,19 +89,21 @@ function drawPlay(data, deckId) {
     onclick: () => { const first = document.getElementById("play-quick-deck-0"); if (first) first.focus(); } }) : null;
   add(main, [
     pageHead({ crumb: fromDeck ? [deckHref(fromDeck.id, fromDeck.version), fromDeck.title] : null, title: routeH1("play"),
-      description: "Games you've played at home, and sideboard plans. Separate from Forge's simulations." }),
+      description: "Played games, Commander pods and sideboard plans. Separate from Forge's simulations." }),
     warningsBox(data.warnings, "Some play records or deck lists could not be loaded"),
     data.lists.length ? playQuickRecord(data, deckId)
       : emptyBox("There are no decks to record a game with yet.", createTargets().length && typeof newDeckHref === "function"
         ? el("a", { class: "btn", href: newDeckHref(), text: "New deck" })
         : el("a", { class: "btn", href: "#/library", text: routeFor("library").label })),
     el("section", { class: "play-section", "aria-labelledby": "play-games-title" },
-      el("div", { class: "play-section-head" }, el("h2", { id: "play-games-title", text: "Played games" }),
+      el("div", { class: "play-section-head" }, el("h2", { id: "play-games-title", text: data.pods?.length ? "Played 1v1 games" : "Played games" }),
         data.lists.length && (data.games.length || deckId) ? el("label", { class: "field play-filter", for: "play-filter" },
           el("span", { class: "sr-only", text: "Show games with" }), filter) : null),
-      data.games.length ? el("div", { class: "play-records" }, data.games.map(entry => playGameCard(entry, data)))
-        : emptyBox(deckId ? "No games with this deck yet." : playNoGamesWords(), recordButton)),
-    playSummarySection(data.games),
+      games.length ? el("div", { class: "play-records" }, games.map(entry => playGameCard(entry, data)))
+        : emptyBox(data.pods?.length ? "No 1v1 games have been recorded here yet."
+          : deckId ? "No games with this deck yet." : playNoGamesWords(), recordButton)),
+    playSummarySection(games),
+    typeof playPodSection === "function" ? playPodSection(data, deckId) : null,
     el("section", { class: "play-section", "aria-labelledby": "play-plans-title" },
       el("div", { class: "play-section-head" }, el("h2", { id: "play-plans-title", text: "Sideboard plans" }), planButton),
       el("p", { class: "sub", text: "A plan says which cards to swap in against one opponent. It never changes your deck." }),
@@ -113,6 +125,7 @@ function playPlayers() {
  * -1 when they haven't played one that still exists. skip: a deck id not to choose (the other side's). */
 function playLastList(lists, games, player, skip = null) {
   for (const { record } of games) {
+    if (!playLegacyGame(record)) continue;
     const side = (record.sides || []).find((s) => s.player === player);
     if (!side || side.id === skip) continue;
     const at = lists.findIndex((l) => l.id === side.id && l.version === side.version);

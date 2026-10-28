@@ -7,7 +7,7 @@ tables, its counted item tables, its spaced tables); activity.py's _row decides 
 is shown at all, and re-exports the table names it reads from here.
 """
 from decklab.lib import permissions
-from decklab.lib.state import rules
+from decklab.lib.state import Invalid, pods, rules
 
 from . import activity_aliases
 
@@ -118,6 +118,13 @@ def _play_owners(r):
     """The deck ids of a play_record row whose spaces see it: a game's sides, a sideboard plan's
     deck only (E10-S32: a plan belongs to its deck's space)."""
     ids = r.get("deck_ids") or ()
+    if r.get("kind") == "games":
+        try:
+            if pods.mode(_dict(r.get("content"))) == "pod":
+                found = pods.record_deck_ids(r["content"])
+                return found if r.get("deck_ids") == found else []
+        except Invalid:
+            return []        # malformed or mismatched pod ownership grants nobody a read
     if r.get("kind") == "sideboards":
         deck = _dict(_dict(r.get("content")).get("deck")).get("id")
         return [deck] if isinstance(deck, str) else list(ids)[:1]
@@ -164,6 +171,14 @@ def _play_summary(op, record, seen=None, profiles=None, space_of=None):
         return _title(snapshot)
     if record.get("kind") == "sideboards":
         return f"{verb} a sideboard plan: {title(content.get('deck'))} vs {title(content.get('opponent'))}"
+    if record.get("kind") == "games":
+        try:
+            if pods.mode(content) == "pod":
+                if not _play_owners(record):
+                    return f"{verb} a play record"
+                return f"{verb} a {len(content['seats'])}-player pod game"
+        except Invalid:
+            return f"{verb} a play record"
     sides = content.get("sides") if isinstance(content.get("sides"), list) else []
     a, b = (title(sides[i]) if i < len(sides) else "a deck" for i in (0, 1))
     result = content.get("result")

@@ -41,6 +41,9 @@ tests/test_state_contract.py checks):
   grant request access: public readers and owner-only controls must be ready before activation.
 - play_get(kind, id) -> record or None; play_list(kind) -> [record] in id order;
   play_put(kind, record, expected_sha, actor, message) -> record
+  Games retain their version-1 envelope. Explicit pod content uses stable seats
+  and a separate game_version; legacy two-player bytes and hashes stay unchanged.
+  Pod opponent labels carry no deck reference or invented captured list.
 - packing_ticks(ids) -> [checked task hash] among ids, shared across home profiles;
   packing_activity(ids) -> latest scoped recorded {actor, at, checks} or None (never online presence);
   packing_ticks_put(changes, actor, message, *, ids=None) -> [checked task hash] among ids

@@ -38,15 +38,15 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E1: Find, plan and choose decks](#e1-find-plan-and-choose-decks) | 15 | 14 | 1 | 0 | 0 |
 | [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 20 | 17 | 1 | 1 | 1 |
 | [E3: Test a deck](#e3-test-a-deck) | 15 | 12 | 3 | 0 | 0 |
-| [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 22 | 16 | 3 | 2 | 1 |
+| [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 22 | 17 | 3 | 1 | 1 |
 | [E5: Decide what to buy](#e5-decide-what-to-buy) | 22 | 18 | 1 | 1 | 2 |
 | [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 20 | 18 | 0 | 0 | 2 |
 | [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 28 | 24 | 0 | 4 | 0 |
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 19 | 16 | 0 | 1 | 2 |
-| [E9: Commander nights](#e9-commander-nights) | 20 | 14 | 1 | 4 | 1 |
+| [E9: Commander nights](#e9-commander-nights) | 20 | 15 | 1 | 3 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 35 | 31 | 1 | 1 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 39 | 28 | 6 | 2 | 3 |
-| **Total** | **255** | **208** | **17** | **16** | **14** |
+| **Total** | **255** | **210** | **17** | **14** | **14** |
 
 Counted from the story headers on 2026-10-28 after the current feature and maintenance work. The reviews added five feature stories and eight hygiene stories, then the fixture-only entry-point story E11-S44, and corrected E1-S12 from missing to partial.
 
@@ -928,7 +928,7 @@ Evidence:
 
 This epic covers getting physical decks onto the table and learning from the games played: choosing the decks, pulling and sleeving the cards from home's shared pool on Build decks (#/assembly, the packing plan), reading a deck's How to play and practising opening hands, playing with sideboard plans, and recording the result on the Game log (#/play). Each game is seen only by the spaces whose decks it names, a side whose deck the viewer may not see shows only as words such as "one of the home decks", and each space changes only its own side (E10-S32). Teaching the rules is left to products like the Beginner Box, so Deck Lab keeps teaching minimal. User1 uses Deck Lab on her phone, so Build decks and the Game log on a phone matter most.
 
-Open: E4-S09, E4-S16, E4-S18, E4-S19, E4-S26.
+Open: E4-S09, E4-S16, E4-S19, E4-S26.
 
 **E4-S01** · Matt · must · L · built
 
@@ -1153,7 +1153,7 @@ Evidence:
 - `decklab/web/deck-tools.js`: exportedDeck, downloadDeck, copyDeck, printDeck
 - `decklab/tests/test_deck_tools.py`: test_export_preserves_selected_cards_faces_sections_and_printing
 
-**E4-S18** · Matt · could · M · missing
+**E4-S18** · Matt · could · M · built
 
 As a player at a social Commander night, I want to record a multiplayer game, including opponents who have no deck in Deck Lab, so that our Commander decks' real results are kept alongside our games at home.
 
@@ -1161,12 +1161,16 @@ As a player at a social Commander night, I want to record a multiplayer game, in
 - Given an opponent with no Deck Lab deck, then no deck snapshot is needed for that seat.
 - Given these games, then Head to head keeps them apart from 1v1 games at home.
 
+Now: Built 2026-10-28 ([HISTORY.md, Reviewed Commander pod records](../HISTORY.md#reviewed-commander-pod-records-2026-10-28-e4-s18-e9-s16)). Three or four stable seats, captured own-space Commander lists, private external labels, winner/draw, date and notes use explicit review/Save. Pods have their own cards and count, outside 1v1 results.
+
 Evidence:
-- `decklab/lib/api/play_records.py`: _game ('A game needs exactly two players and deck lists')
+- `lib/state/pods.py`, `lib/state/play.py`: strict content discriminator, actual deck references and stable-seat validation, with unchanged legacy record bytes.
+- `lib/api/play_pods.py`, `lib/api/play_records.py`, `lib/feature_routes.py`: permission-checked selectors, historical snapshot reuse, reviewed saves and separate overview buckets.
+- `web/play-pods.js`, `web/play.js`, `web/compare.js`, `lib/api/play_comparison.py`: explicit form/review, literal labels, original-context guards and strict 1v1 separation.
+- `lib/api/activity.py`, `lib/api/activity_summaries.py`, `db/space_remove.py`: private generic Activity and whole-record departure handling.
+- `tests/test_pod_model.py`, `test_pod_store.py`, `test_pod_lifecycle.py`, `test_play_pods.py`, `test_play_pods_ui.py`: isolated model, fake-store, privacy, lifecycle, API and DOM fixtures. Genuine PostgreSQL, browser/device and Commander-night acceptance remain separate.
 
-Gap: Only 1v1 between two Deck Lab lists can be recorded; no pods and no free-text opponent seats.
-
-First slice (reserve review, 2026-10-28): version the game record to accept 3–4 seats, with at least one deck from the recording space and external seats recorded as private free text (opponent/commander labels, no invented deck snapshots), plus winner or draw, date and notes. Keep existing two-seat records readable and pod aggregates separate from 1v1 Head to head. Apply the existing recording-space and visible-deck rules to every seat. Start with model/API and UI fixtures, then the recording form and pod summary; this also supplies E9-S16. E4-S26's multiplayer counter follows the record model. No Forge pod engine or real Commander night is needed to develop it.
+Implementation boundary: the version-1 envelope is preserved; explicit pod content has its own game version and seat list. Every captured deck belongs to the recording space. New/replacement selections require a current visible Commander list; corrections keep unchanged historical snapshots. Player/external commander labels remain private even when games are Public. Closing a form never saves. No migration or Forge pod engine is needed. This bounded slice preceded cross-device editor drafts because the game store already supplies revision checks and snapshots, while drafts need a separate private store and lifecycle. E4-S26's multiplayer counter can now build on this model.
 
 **E4-S19** · Space members · could · S · partial
 
@@ -1293,7 +1297,7 @@ Evidence:
 
 Gap: Two players only; no multiplayer counter (E4-S18).
 
-Next slice: after E4-S18's pod record model and result form, extend the counter to its seats, preserve per-commander damage and resume state, and hand the result to that same review form. Until the prerequisite lands this is BLOCKED in TODO, rather than an independent ready coding item.
+Next slice: extend the counter to E4-S18's built pod model, preserve per-commander damage and resume state, and hand the result to that same explicit review form. The record-model prerequisite is built; counter fixtures can proceed without a real Commander night.
 
 ---
 
@@ -2859,9 +2863,9 @@ Evidence:
 
 ## E9: Commander nights
 
-Getting the household's Commander decks ready for social Commander nights at a local shop, where staff make 4-player pods and the shop publishes a bracket range. The editor checks the Commander deck rules and a minimum bracket from Game Changers, mass land denial and extra turns; a Commander deck's Overview opens with a plain bracket sentence, what opponents will face and the dates of the card data behind them, and home admins can record the usual night's aim and house rules. Practice games use the free multiplayer mulligan, and Forge plays Commander decks 1v1 only, marked indicative. Two-card combos (from Commander Spellbook) and Wizards' latest Commander announcement are checked too (2026-10-21). Still open: 4-player pods on the page, EDHREC ideas, and pod games in the Game log.
+Getting the household's Commander decks ready for social Commander nights at a local shop, where staff make 4-player pods and the shop publishes a bracket range. The editor checks the Commander deck rules and a minimum bracket from Game Changers, mass land denial and extra turns; a Commander deck's Overview opens with a plain bracket sentence, what opponents will face and the dates of the card data behind them, and home admins can record the usual night's aim and house rules. Practice games use the free multiplayer mulligan, and Forge plays Commander decks 1v1 only, marked indicative. Two-card combos (from Commander Spellbook) and Wizards' latest Commander announcement are checked too (2026-10-21). The Game log records three/four-player pods separately from 1v1 (E4-S18/E9-S16, 2026-10-28). Multiplayer counters/simulations and editor EDHREC ideas remain separate work.
 
-Open: E9-S07, E9-S11, E9-S16, E9-S21, E9-S22.
+Open: E9-S07, E9-S11, E9-S21, E9-S22.
 
 **E9-S02** · Matt · must · M · built
 
@@ -3046,19 +3050,20 @@ Evidence:
 - `decklab/tests/test_shopping_ui.py`: test_decks_still_missing_cards_and_the_long_term_plan
 - `decklab/tests/test_order_fulfilment.py`
 
-**E9-S16** · User1 · could · M · missing
+**E9-S16** · User1 · could · M · built
 
 As a player back from a Commander night, I want to note how my deck did in each pod, against which commanders, so that we remember what worked and change the deck with the table in mind.
 
 - Given the Game log, when I record a pod game, then I can enter up to four players, the commanders faced (opponents without a Deck Lab deck included) and who won.
 - Given recorded pod games, when I open my deck's Game log, then they show apart from 1v1 games at home.
-- Given a pod record, when it's saved, then it's one change set in Activity by me, seen only in my space unless the Game log is public.
+- Given a pod record, when it's saved, then it's one change set in Activity by me, seen only in my space. Making the Game log Public shares the read-only result, not Activity or private opponent labels.
+
+Now: Built 2026-10-28 with E4-S18 ([HISTORY.md](../HISTORY.md#reviewed-commander-pod-records-2026-10-28-e4-s18-e9-s16)). The deck-filtered Game log has separate pod records, private external commander labels and explicit review/Save; results never enter 1v1 totals.
 
 Evidence:
-- `decklab/lib/api/play_records.py`: _checked (a game has exactly two sides, each a Deck Lab deck)
-- `decklab/web/play.js`
-
-Gap: only 1v1 games between two Deck Lab decks can be recorded (of one space or two).
+- `lib/api/play_pods.py`, `lib/api/play_records.py`, `web/play-pods.js`: recorded lists or private external opponents in three/four stable seats, winner/draw and corrections.
+- `lib/api/activity.py`, `lib/api/activity_summaries.py`, `db/space_remove.py`: one own-space change, generic summary and departure cleanup through the existing guarded workflow.
+- `tests/test_play_pods.py`, `test_play_pods_ui.py`, `test_pod_lifecycle.py`: deck filters, privacy/Public projections, review/conflicts, literal labels and private audit fixtures. Real devices, PostgreSQL and a Commander night were not used to qualify it.
 
 **E9-S17** · Space members · could · S · built
 

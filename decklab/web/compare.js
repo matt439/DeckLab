@@ -445,6 +445,8 @@ function compareGameParts(answer, a, b, labels) {
   const wins = [0, 0];
   for (const entry of answer.games || []) {
     const record = (entry && entry.record) || {};
+    if (Object.hasOwn(record, "mode") || Object.hasOwn(record, "game_version") ||
+        !Array.isArray(record.sides) || record.sides.length !== 2) continue;
     const [x, y] = record.sides || [];
     const straight = compareIsSide(x, a) && compareIsSide(y, b), turned = compareIsSide(x, b) && compareIsSide(y, a);
     if (!straight && !turned) continue;

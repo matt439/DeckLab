@@ -1,5 +1,5 @@
 """Stored play-record identity, including strict irreversible-removal markers."""
-from . import Invalid
+from . import Invalid, pods
 
 REMOVED_DECK = {"removed": True, "title": "a removed deck"}
 
@@ -18,6 +18,8 @@ def record_deck_ids(kind, content):
     """
     if not isinstance(content, dict):
         raise Invalid("A play record must name its decks")
+    if kind == "games" and pods.mode(content) == "pod":
+        return pods.record_deck_ids(content)
     try:
         sides = content["sides"] if kind == "games" else [content["deck"], content["opponent"]]
         removed = [is_removed_deck(side) for side in sides]
