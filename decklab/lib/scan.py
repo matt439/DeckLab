@@ -191,9 +191,13 @@ def _message(read, name, proposals):
 
 # Windows.Media.Ocr through Windows PowerShell 5.1, whose WinRT bridge needs no
 # install. The photo's path comes in an environment variable, not the command
-# line, so no quoting can break it; each line read is printed on its own.
+# line, so no quoting can break it; each line read is printed on its own. With
+# stderr redirected, PowerShell writes progress and error records as one line of
+# CLIXML, so progress is silenced and every failure is caught and told as one
+# plain sentence instead.
 _WINDOWS_OCR = r"""
 $ErrorActionPreference = 'Stop'
+$ProgressPreference = 'SilentlyContinue'
 [Console]::OutputEncoding = [Text.Encoding]::UTF8
 Add-Type -AssemblyName System.Runtime.WindowsRuntime
 $null = [Windows.Storage.StorageFile, Windows.Storage, ContentType = WindowsRuntime]
@@ -206,11 +210,17 @@ function Await($op, [Type]$t) { $task = $asTask.MakeGenericMethod($t).Invoke($nu
 $engine = [Windows.Media.Ocr.OcrEngine]::TryCreateFromUserProfileLanguages()
 if ($null -eq $engine) { [Console]::Error.WriteLine('no OCR language installed'); exit 3 }
 if (-not $env:DECKLAB_SCAN_IMAGE) { exit 0 }
-$file = Await ([Windows.Storage.StorageFile]::GetFileFromPathAsync($env:DECKLAB_SCAN_IMAGE)) ([Windows.Storage.StorageFile])
-$stream = Await ($file.OpenAsync([Windows.Storage.FileAccessMode]::Read)) ([Windows.Storage.Streams.IRandomAccessStream])
-$decoder = Await ([Windows.Graphics.Imaging.BitmapDecoder]::CreateAsync($stream)) ([Windows.Graphics.Imaging.BitmapDecoder])
-$bitmap = Await ($decoder.GetSoftwareBitmapAsync()) ([Windows.Graphics.Imaging.SoftwareBitmap])
-$result = Await ($engine.RecognizeAsync($bitmap)) ([Windows.Media.Ocr.OcrResult])
+try {
+    $file = Await ([Windows.Storage.StorageFile]::GetFileFromPathAsync($env:DECKLAB_SCAN_IMAGE)) ([Windows.Storage.StorageFile])
+    $stream = Await ($file.OpenAsync([Windows.Storage.FileAccessMode]::Read)) ([Windows.Storage.Streams.IRandomAccessStream])
+} catch { [Console]::Error.WriteLine("the photo couldn't be opened"); exit 4 }
+try {
+    $decoder = Await ([Windows.Graphics.Imaging.BitmapDecoder]::CreateAsync($stream)) ([Windows.Graphics.Imaging.BitmapDecoder])
+    $bitmap = Await ($decoder.GetSoftwareBitmapAsync()) ([Windows.Graphics.Imaging.SoftwareBitmap])
+} catch { [Console]::Error.WriteLine("it isn't a picture Windows can open (JPEG or PNG)"); exit 5 }
+try {
+    $result = Await ($engine.RecognizeAsync($bitmap)) ([Windows.Media.Ocr.OcrResult])
+} catch { [Console]::Error.WriteLine('the OCR engine failed on it (a picture over 10,000 pixels across is too big)'); exit 6 }
 foreach ($line in $result.Lines) { [Console]::Out.WriteLine($line.Text) }
 """
 
@@ -230,9 +240,12 @@ def _run(command, env=None):
     except OSError as e:
         raise OcrUnavailable(f"The OCR engine couldn't start ({e.strerror or e}).") from None
     if done.returncode != 0:
-        error = done.stderr.decode("utf-8", "replace").strip().splitlines()
+        # Only plain lines: PowerShell's CLIXML records (a "#< CLIXML" line, then
+        # one "<Objs ...>" line) are never shown.
+        error = [line.strip() for line in done.stderr.decode("utf-8", "replace").splitlines()
+                 if line.strip() and not line.lstrip().startswith(("#< CLIXML", "<Objs", "<"))]
         raise OcrUnavailable("The OCR engine couldn't read the photo"
-                             + (f": {error[-1]}" if error else "."))
+                             + (f": {error[-1]}." if error else "."))
     return [line for line in done.stdout.decode("utf-8-sig", "replace").splitlines() if line.strip()]
 
 

@@ -2378,12 +2378,12 @@ Now: the recognition spike is done (2026-10-28, [scanning-spike.md](scanning-spi
 
 Evidence:
 - `decklab/lib/scan.py`: read_lines, propose, windows_ocr, tesseract_ocr, ocr, main
-- `decklab/tests/test_scan.py`: test_name_and_bottom_line_agree, test_ocr_confusions_in_the_set_code_are_tried, test_windows_engine_reads_a_synthetic_bottom_line; `decklab/tests/scan_image.py` (a synthetic bottom line, no card scan)
+- `decklab/tests/test_scan.py`: test_name_and_bottom_line_agree, test_ocr_confusions_in_the_set_code_are_tried, test_failures_are_plain_messages, test_windows_engine_says_plainly_that_a_file_isnt_a_picture, test_windows_engine_reads_a_synthetic_bottom_line; `decklab/tests/scan_image.py` (a synthetic bottom line, no card scan)
 - `decklab/lib/api/collection_edit.py`: import_preview, import_apply (the import route a scan would feed)
 
 Gap: No Scan cards on the Collection page: nothing takes a photo from a phone, keeps a pending list or saves it. Not yet tried on real phone photos (foils, sleeves, glare). Scanning needs Windows' engine or Tesseract, so a Linux host needs `tesseract-ocr` installed.
 
-Next slice: `POST /api/collection/scan` (one photo of at most 4 MiB, the space's own people only, read from a temporary file and not kept) answering `scan.propose`'s proposals, and the Collection page's **Scan cards** sheet taking photos with the file input, adding each first proposal to a pending list in the browser, with the name finder when a card can't be read; then the list's review and Add through import_preview/import_apply.
+Next slice: `POST /api/collection/scan` (one photo, shrunk in the page on a canvas to at most 2000 px on its long side and sent as a JPEG, so a full-size phone photo stays under the 4 MiB cap, the space's own people only, read from a temporary file and not kept) answering `scan.propose`'s proposals, and the Collection page's **Scan cards** sheet taking photos with the file input, adding each first proposal to a pending list in the browser, with the name finder when a card can't be read; then the list's review and Add through import_preview/import_apply.
 
 ---
 

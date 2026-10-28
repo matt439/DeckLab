@@ -143,6 +143,33 @@ class EngineTests(unittest.TestCase):
                 mock.patch.object(scan.subprocess, "run", return_value=failed):
             with self.assertRaisesRegex(scan.OcrUnavailable, "no OCR language installed"):
                 scan.windows_ocr(self.photo)
+        # PowerShell's CLIXML error records are never shown, only the plain line before them.
+        clixml = (b"#< CLIXML\r\nit isn't a picture Windows can open (JPEG or PNG)\r\n"
+                  b'<Objs Version="1.1.0.1"><S S="Error">Exception calling "Wait"</S></Objs>\r\n')
+        failed = subprocess.CompletedProcess([], 5, stdout=b"", stderr=clixml)
+        with mock.patch.object(scan, "_powershell", return_value="powershell.exe"), \
+                mock.patch.object(scan.subprocess, "run", return_value=failed):
+            with self.assertRaises(scan.OcrUnavailable) as caught:
+                scan.windows_ocr(self.photo)
+        self.assertEqual(str(caught.exception),
+                         "The OCR engine couldn't read the photo: it isn't a picture Windows can open (JPEG or PNG).")
+        only_xml = subprocess.CompletedProcess([], 1, stdout=b"", stderr=b"#< CLIXML\r\n<Objs><S/></Objs>\r\n")
+        with mock.patch.object(scan, "_powershell", return_value="powershell.exe"), \
+                mock.patch.object(scan.subprocess, "run", return_value=only_xml):
+            with self.assertRaisesRegex(scan.OcrUnavailable, r"^The OCR engine couldn't read the photo\.$"):
+                scan.windows_ocr(self.photo)
+
+    @unittest.skipUnless(sys.platform == "win32", "Windows' OCR engine is only on Windows")
+    def test_windows_engine_says_plainly_that_a_file_isnt_a_picture(self):
+        not_a_picture = Path(self.folder.name) / "notes.jpg"
+        not_a_picture.write_text("not a picture\n", encoding="utf-8")
+        with self.assertRaises(scan.OcrUnavailable) as caught:
+            scan.windows_ocr(not_a_picture)
+        message = str(caught.exception)
+        if "no OCR language installed" in message:
+            self.skipTest("Windows OCR has no language here")
+        self.assertIn("isn't a picture Windows can open", message)
+        self.assertNotIn("<", message)
 
     def test_auto_names_every_engine_missing(self):
         with mock.patch.object(scan, "_powershell", return_value=None), \
