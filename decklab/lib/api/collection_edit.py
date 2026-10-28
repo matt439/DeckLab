@@ -1,9 +1,9 @@
 """The Collection page's edits: single cards added, changed or removed in a
-space's collection.csv, and CSV imports from scanner and collection apps
+space's collection, and CSV imports from scanner and collection apps
 (HISTORY.md, "Accounts and member collections"). Imported when first needed, by
 feature_routes.dispatch, like the Tokens page's API.
 
-    GET  /api/collection/rows?space=<id>    rows_view(): the file's rows as they are, its sha256
+    GET  /api/collection/rows?space=<id>    rows_view(): the snapshot's rows and sha256
     GET  /api/collection/download?space=<id>    download_view(): the collection as a CSV to save (E7-S30)
     POST /api/collection/save               save_card(body): add, edit or remove one row
     POST /api/collection/bulk               bulk_set(body): set many rows' condition and language at once
@@ -14,8 +14,8 @@ feature_routes.dispatch, like the Tokens page's API.
     GET  /api/printings?name=<exact name>   printings_view(): a card's paper printings, newest first
 
 A space (lib/spaces.py; "space" in the query or body, home by default) is
-whose collection: home's (magic/collection.csv), or a person's
-(magic/people/<id>/collection.csv, made by the first write). Every write needs
+whose collection: the shared home space or a member's own space in the
+inventory database. Runtime writes create no collection files. Every write needs
 collection.edit on the space (guard.py, after the read rule): only its own
 profiles, home's Matt and User1 (E10-S29, E10-S43). Receipts stay the route for recorded orders and
 products (python -m decklab.db receive, the Receipts page): this is for cards
@@ -23,23 +23,27 @@ that come from nowhere Deck Lab records.
 
 The collection is the inventory's (decklab/lib/inventory): the page reads
 inventory.current() and every write is one inventory.apply of the
-collection's operations (inventory/ops_collection.py), on whichever backend
-config.json names. It keeps collection.csv's rules (AGENTS.md): its eight
+collection's operations (inventory/ops_collection.py). Runtime uses the database;
+tests may use the file inventory backend. It keeps the CSV rules (AGENTS.md): eight
 columns, one row per identity key (set, collector_number, finish), sorted by
 set and then collector number (rules.sort_key). The page sends the sha256 it
-loaded: that of the collection rendered as collection.csv (the file's own
-bytes, for a file Deck Lab wrote; the sha256 of nothing while the space has
-no cards), checked by the operation under the backend's lock; 409 {"error",
+loaded: that of the collection's canonical CSV bytes (the sha256 of nothing
+while the space has no cards), checked by the operation under the backend's
+lock; 409 {"error",
 "sha256", "rows"} with the collection as it is now otherwise. Each change has
 a message and the actor who made it:
 
     add card Llanowar Elves (FDN 227) in User2's collection           (by User2)
     import 42 cards into the home collection from manabox.csv           (by Matt)
 
-Each is one audited change set in the database (the files backend, the tests'
-and the rollback's, writes plain files); nothing is committed to git.
+Each is one audited change set in the database. The file backend writes plain
+files only in test fixtures; it is not a runtime rollback route. Inventory
+changes are not committed to git.
 
-Imports: the upload (at most MAX_IMPORT bytes of text and MAX_IMPORT_ROWS
+Imports: collection_import owns CSV detection, format conversion and upload
+reading; the original parser names remain available here. This module keeps
+the matching rules, mutable limits and persisted preview lifecycle.
+The upload (at most MAX_IMPORT bytes of text and MAX_IMPORT_ROWS
 rows) is read as one of FORMATS, told apart by its header row (column names
 compared without case):
 
@@ -82,8 +86,8 @@ at a time (_preview_lock): a second preview while one is being checked is
 refused at once with 429 ("another import is being checked"), rather than
 holding another upload in memory while it waits. Applying a preview keeps
 the upload unchanged (as UTF-8 text) as one of the space's raw imports,
-<date>-<file name>.csv (the imports/ folder's file, or the database's
-collection_import), unless they would then hold more than
+named <date>-<file name>.csv in the inventory (stored in the database;
+file-backend tests use an imports/ folder), unless they would then hold more than
 MAX_IMPORTS_FOLDER bytes (413), and merges it additively
 (rules.merge_rows: quantities add on the identity key), in one change with
 the raw file. Rows with problems block the apply unless "skip_problems"
@@ -97,7 +101,6 @@ good, so a space's raw imports are capped at 50 MB in all.
 import csv
 import hashlib
 import hmac
-import io
 import json
 import re
 import secrets
@@ -117,6 +120,9 @@ from .carddata import _index_info, _require_cards
 from .collection import space_param
 from .common import MAX_NAME, NUMBER_RE, SET_RE, _CONTROL_RE, ApiError, _keys, _parse_body, _public, _unique
 from .settings import _web_actor, _writer
+# Parser helpers have one implementation; their limits and matching stay here.
+from .collection_import import (_condition, _finish, _language, _norm, _source_rows, _too_many_rows,
+                                detect, read_upload)
 
 # Import previews waiting to be applied. Tests patch it.
 IMPORTS_DIR = config.DATA / "collection-imports"
@@ -755,156 +761,6 @@ def bulk_set(body):
 
 
 # ---- imports
-
-def _norm(header):
-    return " ".join(str(header or "").replace("﻿", "").strip().lower().replace("_", " ").split())
-
-
-def detect(headers):
-    """The FORMATS name of an upload's header row, or None."""
-    names = {_norm(h) for h in headers}
-    if {"name", "set", "collector number", "finish", "quantity"} <= names:
-        return "collection"
-    if {"name", "set code", "collector number", "quantity"} <= names:
-        return "manabox"
-    if {"count", "name", "edition", "card number"} <= names:
-        return "deckbox"
-    if {"count", "name", "edition", "collector number"} <= names:
-        return "moxfield"
-    return None
-
-
-def _condition(value, fmt):
-    word = " ".join(str(value or "").strip().lower().replace("_", " ").replace("-", " ").split())
-    if not word:
-        return ""
-    if fmt == "collection" and value.strip().upper() in CONDITIONS:
-        return value.strip().upper()
-    return _CONDITION_FORMAT.get(fmt, {}).get(word) or _CONDITION_WORDS.get(word, "")
-
-
-def _language(value):
-    word = str(value or "").strip().lower()
-    return _LANGUAGE_WORDS.get(word, "") if word else ""
-
-
-def _finish(value, fmt):
-    word = str(value or "").strip().lower()
-    if fmt == "collection":
-        return word
-    if word in ("", "normal", "nonfoil", "non-foil", "false", "no", "0"):
-        return "nonfoil"
-    if word in ("etched", "etched foil", "foil etched"):
-        return "etched"
-    if word in ("foil", "true", "yes", "1", "pre-release foil", "prerelease foil", "promo foil"):
-        return "foil"
-    return word
-
-
-def _too_many_rows():
-    return ApiError(400, f"That file has more than {MAX_IMPORT_ROWS:,} rows of cards, and an import is limited to "
-                         f"{MAX_IMPORT_ROWS:,}: split it into smaller files and import each one.")
-
-
-def _source_rows(text, fmt, reader):
-    """[(line, row, set_name, problem)] of an upload in fmt: collection.csv's
-    columns as text, before Scryfall matching. ApiError 400 for more than
-    MAX_IMPORT_ROWS rows (reading stops at the first one over)."""
-    out = []
-    for raw in reader:
-        line = reader.line_num
-        values = {_norm(k): (v or "").strip() for k, v in raw.items() if k is not None}
-        if not any(values.values()):
-            continue
-        if len(out) >= MAX_IMPORT_ROWS:
-            raise _too_many_rows()
-        get = values.get
-        if fmt == "collection":
-            row = {"name": get("name", ""), "set": get("set", "").lower(),
-                   "collector_number": get("collector number", ""), "finish": _finish(get("finish"), fmt),
-                   "quantity": get("quantity", ""), "condition": _condition(get("condition"), fmt),
-                   "language": _language(get("language")), "notes": get("notes", "")}
-            set_name = None
-        elif fmt == "manabox":
-            row = {"name": get("name", ""), "set": get("set code", "").lower(),
-                   "collector_number": get("collector number", ""), "finish": _finish(get("foil"), fmt),
-                   "quantity": get("quantity", ""), "condition": _condition(get("condition"), fmt),
-                   "language": _language(get("language")), "notes": ""}
-            set_name = get("set name")
-        else:
-            code = get("edition code", "") if fmt == "deckbox" else get("edition", "")
-            row = {"name": get("name", ""), "set": code.lower(),
-                   "collector_number": get("card number" if fmt == "deckbox" else "collector number", ""),
-                   "finish": _finish(get("foil"), fmt), "quantity": get("count", ""),
-                   "condition": _condition(get("condition"), fmt), "language": _language(get("language")),
-                   "notes": ""}
-            set_name = get("edition") if fmt == "deckbox" else None
-        problem = None
-        if not re.fullmatch(r"\d{1,4}", row["quantity"]) or not 1 <= int(row["quantity"]) <= MAX_QUANTITY:
-            problem = f"quantity {row['quantity']!r} isn't a whole number from 1 to {MAX_QUANTITY}"
-        elif row["finish"] not in FINISHES:
-            problem = f"unknown finish {row['finish']!r}"
-        elif row["set"] and not SET_RE.fullmatch(row["set"]):
-            problem = f"unknown set code {row['set']!r}"
-        elif row["collector_number"] and not NUMBER_RE.fullmatch(row["collector_number"]):
-            problem = f"unknown collector number {row['collector_number']!r}"
-        elif len(row["name"]) > MAX_NAME or any(_CONTROL_RE.search(v) for v in (*row.values(), set_name or "")):
-            problem = ("a field has a control character (a tab or line break inside a cell, say), "
-                       "or the name is too long")
-        elif row["notes"].startswith(FORMULA_STARTS):
-            problem = "the notes start with = + - or @, which a spreadsheet would run as a formula"
-        else:
-            row["quantity"] = str(int(row["quantity"]))
-        for key in ("condition", "language", "notes"):
-            row[key] = row[key][:MAX_TEXT[key]]
-        out.append((line, row, set_name, problem))
-    return out
-
-
-def read_upload(text, existing=()):
-    """(format, rows, problems, dropped_basics) of an upload's text: rows
-    [{the eight columns, "line", "problem"}] matched to Scryfall, ordinary
-    basics dropped (dropped_basics: their cards) unless existing (identity
-    keys already in the collection) has them, rows naming one identity key
-    merged (at the first one's line). problems [{"line", "message"}].
-    ApiError 400 for an upload that isn't one of FORMATS."""
-    text = text.lstrip("﻿")
-    try:
-        reader = csv.DictReader(io.StringIO(text, newline=""), strict=True)
-        headers = reader.fieldnames or []
-        fmt = detect(headers)
-        if fmt is None:
-            raise ApiError(400, "That file isn't a ManaBox, Moxfield, Deckbox or collection-columns export: its first "
-                                "line should name the columns (Name, Set code, Collector number, Quantity, ...)")
-        source = _source_rows(text, fmt, reader)
-    except csv.Error as e:
-        raise ApiError(400, f"That file can't be read as CSV: {_public(e)}") from None
-    existing = set(existing)
-    rows, by_key, dropped = [], {}, 0
-    for line, row, set_name, problem in source:
-        # Basics first: they're dropped whatever their printing (rules.merge_rows' rule).
-        if problem is None and rules.ordinary_basic(row) and rules.ident(row) not in existing:
-            dropped += int(row["quantity"])
-            continue
-        if problem is None:
-            row, problem = match(row, set_name)
-        if problem is None and rules.ident(row) in by_key:
-            first = by_key[rules.ident(row)]
-            first["quantity"] = str(int(first["quantity"]) + int(row["quantity"]))
-            first["notes"] = rules.merge_notes(first["notes"], row["notes"])
-            for key in ("condition", "language"):
-                if first[key] != row[key]:
-                    first[key] = ""
-                    first["notes"] = rules.merge_notes(
-                        first["notes"], f"Merged copies have differing or unreported {key}")
-            continue
-        entry = {**{k: row.get(k, "") for k in FIELDS}, "line": line, "problem": problem}
-        rows.append(entry)
-        if problem is None:
-            by_key[rules.ident(entry)] = entry
-    problems = [{"line": r["line"], "message": r["problem"]} for r in rows if r["problem"]]
-    return fmt, rows, problems, dropped
-
 
 def _imports_dir():
     return Path(IMPORTS_DIR)

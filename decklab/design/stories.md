@@ -45,10 +45,10 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 19 | 13 | 2 | 2 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 20 | 14 | 1 | 4 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 35 | 31 | 1 | 1 | 2 |
-| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 38 | 20 | 6 | 9 | 3 |
-| **Total** | **254** | **190** | **21** | **29** | **14** |
+| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 38 | 21 | 6 | 8 | 3 |
+| **Total** | **254** | **191** | **21** | **28** | **14** |
 
-Counted from the story headers on 2026-10-28 after the feature-reserve and maintenance reviews and completion of E11-S36, E11-S37 and E11-S43. The reviews added five feature stories and eight hygiene stories, and corrected E1-S12 from missing to partial.
+Counted from the story headers on 2026-10-28 after the feature-reserve and maintenance reviews and completion of E11-S36, E11-S37, E11-S38 and E11-S43. The reviews added five feature stories and eight hygiene stories, and corrected E1-S12 from missing to partial.
 
 ---
 
@@ -3771,7 +3771,7 @@ Evidence:
 
 Keeping Deck Lab running, safe and believable, by Matt as the household's admin and by Claude Code working for him at the PC. It covers the server and its Cloudflare tunnel and "Deck Lab is off" page, the PostgreSQL database with its nightly backup, export, check and restore check, the audit trail on #/activity, the `python -m decklab.db` commands Claude works through (previews, `--expect` guards, `-m` messages, exit codes), the card data's background refresh, Forge upkeep and the Safari Simulator suite. Every write is one audited change set, Matt's own command-line writes are recorded as his, and backups are checked by restoring them.
 
-Open: E11-S02, E11-S08, E11-S12, E11-S16, E11-S21, E11-S28, E11-S30, E11-S31, E11-S34, E11-S35, E11-S38, E11-S39, E11-S40, E11-S41, E11-S42.
+Open: E11-S02, E11-S08, E11-S12, E11-S16, E11-S21, E11-S28, E11-S30, E11-S31, E11-S34, E11-S35, E11-S39, E11-S40, E11-S41, E11-S42.
 
 **E11-S01** · Matt · must · M · built
 
@@ -4432,7 +4432,7 @@ Evidence:
 - 347 editor tests passed, plus focused asset/workspace checks and both JavaScript syntax checks.
 - Independent moved-body, loader and state-ownership review found no issues. See [SOURCE_AUDIT.md](../SOURCE_AUDIT.md#maintenance-backlog).
 
-**E11-S38** · Claude Code · should · M · missing
+**E11-S38** · Claude Code · should · M · built
 
 As the operator maintaining collection imports, I want CSV parsing separate from HTTP collection edits, so that changes to import formats and grouped problems can be reviewed without navigating unrelated writes.
 
@@ -4440,11 +4440,12 @@ As the operator maintaining collection imports, I want CSV parsing separate from
 - Given callers or tests using the existing parser functions and mutable limits, then they still reach the authoritative implementation and limits rather than copied bindings.
 - Given the import preview/apply flow, then permissions, preview lifetime, locking, stale checks and raw-upload retention remain unchanged.
 
-Evidence of gap (2026-10-28): `decklab/lib/api/collection_edit.py` is 1,116 lines; detect, _source_rows and read_upload share a module with row views, single/bulk writes and persisted preview handling.
+Now (2026-10-28): eight CSV detection, conversion and upload-reading helpers live in `collection_import.py`, re-exported as the same function objects through `collection_edit.py`. Matching, mutable limits, previews, locks and writes retain their original owner. Both direct import orders work.
 
-Gap: import parsing has no focused owner apart from the HTTP edit module.
-
-First slice: move format detection, row conversion and upload reading to a parser module while retaining route/preview ownership and compatibility for read_upload, match and patched limits. Keep grouped import problems (E7-S03) as a separate feature change. [SOURCE_AUDIT.md](../SOURCE_AUDIT.md#maintenance-backlog) specifies the exact preservation and test scope.
+Evidence:
+- `collection_edit.py`: 972 lines; `collection_import.py`: 169 lines.
+- `test_collection_import_module.py`: five patch-ownership and import-order guards; all 166 focused parser/collection/precon/trade/scan/merge checks passed.
+- AST review preserved all eight moved and 40 retained function bodies after owner-reference normalization. The integrated attempt and runtime limits are recorded in [HISTORY.md](../HISTORY.md#editor-import-workflow-split-2026-10-28-e11-s37).
 
 **E11-S39** · Claude Code · could · M · missing
 

@@ -289,12 +289,22 @@ itself adds no EDHREC behaviour.
 
 ### Collection parsing and database snapshots: E11-S38, E11-S39
 
-For collection imports, extract detect/_source_rows/read_upload and their
-format conversion helpers. Preserve callers of collection_edit.read_upload
-and match, and the behaviour of patched MAX_IMPORT_ROWS/MAX_IMPORT. Keep preview
-storage, _upload_date, IMPORT_TTL/IMPORTS_DIR and locking in their existing
-owner. Validate supported/malformed exports, scanner and merge consumers,
-precon/trade callers and exact refusal outputs. E7-S03's grouping is separate.
+The collection parser split is built (2026-10-28). Eight helpers from _norm
+through read_upload moved to `lib/api/collection_import.py` (169 lines), leaving
+`collection_edit.py` at 972 lines. Existing parser entry points re-export the
+same function objects. The parser reads matching, validation tables and mutable
+limits through the original module at call time; no copied mutable binding is
+introduced. Importing either module first works because parser definitions
+precede its import of their owner. Preview storage, _upload_date,
+IMPORT_TTL/IMPORTS_DIR, locking and writes stay in collection_edit.
+
+AST comparison accounts for all eight moved and 40 retained function bodies,
+with only explicit owner references normalized. All 166 focused tests pass,
+including five ownership/import-order guards and supported/malformed uploads,
+scanner, merge, precon and trade consumers. The integrated attempt and six
+corrected-harness reruns are in HISTORY.md's E11-S37 entry; Windows runtime
+checks and database qualification retain their stated limits. No golden or
+API output changed. E7-S03's grouping remains a separate feature.
 
 For PostgreSQL snapshots, extract snapshot/_render and fixed row conversion
 helpers. Leave PgInventory, _diff, _take_lock, revision/cache ownership and

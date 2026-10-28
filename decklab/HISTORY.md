@@ -2,6 +2,22 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Collection upload parser split (2026-10-28; E11-S38)
+
+CSV detection, format conversion and upload reading now live in
+`lib/api/collection_import.py` (169 lines), apart from the Collection HTTP
+module (972 lines). All eight original parser entry points remain available as
+the same function objects. Mutable limits, matching, preview storage and locks,
+raw-upload retention and writes keep their existing owner. Both import orders
+work; call-time owner lookups preserve existing patches.
+
+Validation: all 166 focused parser, collection, precon, trade, scanner and merge
+checks passed, including five ownership/import-order guards. AST comparison
+preserves eight moved and 40 retained bodies after owner-reference normalization.
+Syntax, Ruff and diff checks pass. The integrated attempt and corrected-harness
+reruns are recorded below under E11-S37, with Windows runtime and database gates
+explicitly unqualified. No household data or live migration was changed.
+
 ## Editor import workflow split (2026-10-28; E11-S37)
 
 Paste/replace and Start from now live in `web/editor-import.js`, loaded directly
