@@ -38,12 +38,9 @@ An index of open work, one row per item; each row points to the doc that owns th
 | id | status | pri | size | item |
 |---|---|---|---|---|
 | `E2-S22` | DECISION | must | M | Physical hardware/touch-usability follow-up on the household's iPhones and M2 11-inch iPad; the six-configuration Safari Simulator suite passes ([evidence](decklab/safari/EVIDENCE.md)). |
-| `E1-S13` | OPEN | could | L | Compare two decks side by side; first slice is their stats (curve, colours, lands, types). |
-| `E1-S24` | OPEN | could | M | Rank precons by how much of each the free pool covers, to pick the next deck to build. |
-| `E2-S23` | OPEN | could | S | A Considering list kept with each deck, outside its lists and tables. |
+| `E1-S13` | OPEN | could | L | Compare two decks: the stats slice is built (`#/compare`); next the cards both lists use with the pool's cover, then head to head. |
 | `E2-S24` | OPEN | could | M | Own card categories in a deck (ramp, draw, removal) with counts. |
 | `E4-S26` | OPEN | could | M | A phone life counter that ends by recording the game (multiplayer later, with `E4-S18`). |
-| `E8-S21` | OPEN | could | S | Deck box labels with a QR code are built for built decks; next an intact product's label, linking to its product deck pages. |
 | `E8-S22` | OPEN | could | M | A location (row, section) for storage copies, shown in the packing plan; with `E8-S19`'s storage count. |
 
 ## Deck Lab: collection, orders and buying

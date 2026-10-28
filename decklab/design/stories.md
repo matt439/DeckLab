@@ -35,8 +35,8 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 
 | Epic | Stories | Built | Partial | Missing | Not wanted |
 |---|---:|---:|---:|---:|---:|
-| [E1: Find, plan and choose decks](#e1-find-plan-and-choose-decks) | 14 | 11 | 0 | 3 | 0 |
-| [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 19 | 14 | 1 | 3 | 1 |
+| [E1: Find, plan and choose decks](#e1-find-plan-and-choose-decks) | 14 | 12 | 1 | 1 | 0 |
+| [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 19 | 15 | 1 | 2 | 1 |
 | [E3: Test a deck](#e3-test-a-deck) | 15 | 12 | 3 | 0 | 0 |
 | [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 22 | 16 | 1 | 4 | 1 |
 | [E5: Decide what to buy](#e5-decide-what-to-buy) | 22 | 15 | 0 | 5 | 2 |
@@ -46,7 +46,7 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E9: Commander nights](#e9-commander-nights) | 20 | 13 | 0 | 6 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 35 | 31 | 1 | 1 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 28 | 17 | 6 | 2 | 3 |
-| **Total** | **241** | **178** | **17** | **32** | **14** |
+| **Total** | **241** | **180** | **18** | **29** | **14** |
 
 Counted from the story headers on 2026-10-27.
 
@@ -291,7 +291,7 @@ Evidence:
 
 Covers making a deck and keeping it right: New deck and Start from, the full editor (from 600px) and the phone's Quick edit, Paste a list, the Planned and Play-now lists, owned vs needed against the space's pool and its other built decks, keeping the write-up current, history and undo, and the command-line route Claude Code uses (`deck pull`/`push`/`new`/`tables`). Drafts stay on the device they were started on, and the Play-now list's substitutes are hand-written (Packing's physical stand-ins, E4-S21, never change a list). Rename and retirement, with restore from History, are on the deck page (E1-S19). Legality badges on casual decks are deliberately not wanted.
 
-Open: E2-S16, E2-S22, E2-S23, E2-S24.
+Open: E2-S16, E2-S22, E2-S24.
 
 **E2-S01** · Matt · must · L · built
 
