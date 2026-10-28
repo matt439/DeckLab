@@ -6,11 +6,11 @@ An index of open work, one row per item; each row points to the doc that owns th
 
 **The only ordering in this file.** Keep every `DECISION` row here. Keep this block to the current aim and the next few actions; results go in their owners (HISTORY.md for what shipped).
 
-**Aim (updated 2026-10-26):** finish the visual redesign (`E11-S30`), then work through the remaining rows Matt added on 2026-10-25: making Deck Lab easy to self-host for people outside the household (both built 2026-10-27: the prebuilt Forge release, `E11-S32`, and Linux support, `E11-S33`) and finishing the token and kit work (`E7-S21`, built 2026-10-27). The private member model is built and live (see Activation below); household device acceptance remains.
+**Aim (updated 2026-10-28):** finish the visual redesign (`E11-S30`), then keep improving physical deck building, collection filing, buying and play, with a substantial reserve of coding work. The prebuilt Forge release (`E11-S32`), Linux support (`E11-S33`) and box-review work (`E7-S21`) are built. The private member model is built and live (see Activation below); household device acceptance remains.
 
 **Ready queue:** `E11-S30`, the visual redesign Matt chose on 2026-10-24 ("P1"). Slice 14 of [visual-design.md](decklab/design/visual-design.md#7-rollout) is implemented, as are slice 13's scoped recorded packing activity, verified intact-product storage review and per-card movable-copy priorities. Exact physical printing is recorded as a built deck's Printings in box line (2026-10-27). Slice 15's empty, loading and failed states are drawn and built, and dark mode was checked on full data (2026-10-27); Matchups with saved results in dark and device acceptance remain open. The approved desktop keyboard plan is built; global search has its separate decision below. Explicit original-row associations for newly added arrival checks are implemented, with component-wide verification retained; targeted backend/UI and isolated native checks passed. Casual inline verification placement is implemented for proven targets, with single canonical controls, component-wide semantics and verified fallback; final UI/native checks and caption review passed. Collection question 6 and touch/Safari acceptance remain separate gates, with Card colour matching the compatibility default.
 
-**Ready reserve:** after the redesign, the `OPEN` rows Matt added on 2026-10-25 have concrete first slices in their stories, in no fixed order unless Matt picks one. `E11-S08` retains broader recovery work beyond its implemented single-row Undo review. The 2026-10-26 audit checked the reserve against the code: no extra stories need promoting. On 2026-10-27 Matt added the rows from the comparison with other card apps that fit Deck Lab (the `could` rows marked 2026-10-27 in their stories), also in no fixed order. Linux service/timer installation, device checks and Forge games retain their separate gates.
+**Ready reserve (reviewed 2026-10-28):** after the redesign, choose an `OPEN` row below; there is no fixed order within the reserve. Useful independent starts include Compare's card differences (`E1-S26`), Considering in the editor (`E2-S26`), grouped import problems (`E7-S03`), post-import filing help (`E7-S15`) and bulk storage locations (`E8-S23`). Other ready work covers drafts across devices, pod game records, tested swaps to Shopping, field membership, storage forecasts and self-hosting diagnostics. Every `OPEN` story names a concrete first slice and its later dependencies. Fixture-based work needs no new Forge games, household records or physical devices; real-device acceptance, live installations/migrations, purchases and Forge runs retain their separate gates. The multiplayer life counter follows pod game records (`E4-S18`).
 
 **Needs Matt or another person — these don't block coding:**
 - **`E11-S31`: global-search scope.** Choose the sources (visible decks, the viewer's collection and/or all Scryfall cards) and result grouping before building. Library title, colour and archetype filters (`E1-S05`) are built independently of that decision.
@@ -37,8 +37,16 @@ An index of open work, one row per item; each row points to the doc that owns th
 
 | id | status | pri | size | item |
 |---|---|---|---|---|
+| `E1-S12` | OPEN | could | S | Add the known poor-AI caveat beside the Overview's existing field summary; the rank and empty state are already built. |
+| `E1-S26` | OPEN | could | M | Compare the cards only in either list and quantity changes, keeping main deck, commander and sideboard apart. |
+| `E2-S16` | OPEN | could | L | Save an unsaved editor draft privately for the same profile to resume on another device, with revision conflicts reviewed. |
+| `E2-S26` | OPEN | could | M | Edit Considering alongside Planned and Play-now, preserving it in drafts and moving cards in one reviewed deck save. |
 | `E2-S22` | DECISION | must | M | Physical hardware/touch-usability follow-up on the household's iPhones and M2 11-inch iPad; the six-configuration Safari Simulator suite passes ([evidence](decklab/safari/EVIDENCE.md)). |
-| `E4-S26` | OPEN | could | M | The two-player life counter is built (Game log, ends in Record result); multiplayer comes with `E4-S18`. |
+| `E4-S18` | OPEN | could | M | Record 3–4-player games with external opponent seats; keep pod results apart from 1v1. Also covers `E9-S16`. |
+| `E4-S26` | BLOCKED | could | M | Extend the built two-player life counter to pods after `E4-S18` supplies multiplayer game records. |
+| `E8-S15` | OPEN | could | S | Resolve incompatible sleeves and box while changing Played by, using permitted replacements or clearing them in the same save. |
+| `E8-S19` | OPEN | could | M | Show a labelled storage-box forecast for pending deliveries, with intact products and unknown quantities handled explicitly. |
+| `E8-S23` | OPEN | could | M | Filter collection rows by storage location and assign or clear a reviewed batch's location in one change. |
 
 ## Deck Lab: collection, orders and buying
 
@@ -47,9 +55,13 @@ An index of open work, one row per item; each row points to the doc that owns th
 | id | status | pri | size | item |
 |---|---|---|---|---|
 | `E5-S15` | DEFERRED | should | M | User1 asks from the page for a card or a Forge run, Matt approves (`E3-S13`); not urgent. |
-| `E5-S24` | DEFERRED | could | S | Copy one shop's list from Shopping's By shop, for pasting into the shop's search. |
+| `E5-S24` | OPEN | could | S | Copy one shop's list from Shopping's By shop, preserving quantities and exact-printing requests. |
 | `E5-S08` | OPEN | could | XL | MTGMate's daily snapshot for queued rows and `E5-S19`'s Back in stock are built; next the deck tables' missing cards, then a second shop. |
-| `E7-S32` | OPEN | could | L | Spike done ([scanning-spike.md](decklab/design/scanning-spike.md)): Windows OCR reads the bottom line; next try real phone photos, then a Scan cards sheet on the Collection page. |
+| `E5-S17` | OPEN | could | M | Show dated buying information on a saved swap-test result, then explicitly queue its missing additions without duplicate rows. |
+| `E7-S03` | OPEN | could | M | Group import problems by source set and review which groups to skip, keeping the original upload unchanged. |
+| `E7-S15` | OPEN | could | M | Show Where these go after a collection import, assigning each added copy once to a waiting deck or storage. |
+| `E7-S18` | OPEN | could | S | Select a subset of Card list rows for the built bulk condition/language action; filtered whole-list editing already works. |
+| `E7-S32` | OPEN | could | L | Build Scan cards' photo and pending-list flow from the [recognition spike](decklab/design/scanning-spike.md); fixtures first, real phone-photo acceptance separately. |
 
 ## Deck Lab: Commander nights
 
@@ -65,6 +77,9 @@ An index of open work, one row per item; each row points to the doc that owns th
 
 | id | status | pri | size | item |
 |---|---|---|---|---|
+| `E3-S23` | OPEN | could | M | Start with Who's in the field and exclusion reasons; audited membership changes follow, with no automatic Forge runs. |
+| `E4-S16` | OPEN | could | L | Validate a saved sideboard plan and preview its post-board lists and simulation work before any authorised games. |
+| `E11-S16` | OPEN | could | L | Estimate the time for an experiment's remaining games in --dry-run, using measured speeds or labelled fallback assumptions. |
 | `E11-S28` | DECISION | should | M | Run the user-testing session with User2 from the prepared [checklist](decklab/design/user-testing-user2.md) (confirm his device first), then the follow-up review and stories. |
 | `FG#2` | WAITING | should | L+pc | Forge 2.0.16 (about mid-November 2026): rebase the fork, build, check the overrides, replay every matchup. The post-build checks are one command, built 2026-10-21: `python -m decklab.lib.forge upgrade-check` (`--plan forge-2.0.16` prints the rebase and build steps; `E11-S15`). |
 | `FG#3` | DEFERRED | could | M+pc | More experiment games (AI profiles, team-pump fix, override sets), decided with `FG#2`'s replay; the clean `fiery` test ran 2026-10-21 (C4 does what `fiery` does). |
@@ -77,8 +92,10 @@ An index of open work, one row per item; each row points to the doc that owns th
 |---|---|---|---|---|
 | `E11-S30` | OPEN | should | L | Visual redesign P1 ([visual-design.md](decklab/design/visual-design.md)): slice 15's dark Matchups with saved results, and Collection's filter decision. Empty/loading/failed states are built. Touch/Safari acceptance stays open. |
 | `E11-S31` | DECISION | could | M | Global search in the top bar ([stories.md](decklab/design/stories.md#e11-s31)): Matt chooses sources and result grouping before building. |
-| `E11-S33` | OPEN | could | L | Interpreter paths and nightly systemd unit previews have isolated checks. Real Linux 3.14/full suite, CI, service/timer integration and host acceptance remain. |
-| `E11-S08` | OPEN | could | L | Narrow inventory, wishlist and accessory recovery is built, and whole imports and receipts (2026-10-27). Other removals, merges outside an import and broader recovery remain. |
+| `E11-S08` | OPEN | could | L | Whole imports, supported receipts and trades have Undo. Next review safe restoration of one deleted token row; broader recovery remains. |
+| `E11-S21` | OPEN | could | S | Label private CLI reads without changing CSV/JSON stdout; check current visibility before claiming data is public. |
+| `E11-S34` | OPEN | could | M | Add a read-only self-hosting preflight for runtime, configuration, database, card data and optional Forge readiness. |
+| `E11-S35` | OPEN | could | M | Show database-maintenance history in Settings: latest attempt and last success for backup, export, check and restore check. |
 | `E11-S02` | DECISION | should | S | The "Deck Lab is off" Worker is deployed (`decklab/cloudflare/`): Matt checks a signed-in save, a photo upload, and the page with Deck Lab stopped. |
 
 ## Areas with no open rows

@@ -3,7 +3,7 @@
 A formal, user-centred design model of Deck Lab, first written on 2026-10-13: who it's for, what they're trying to do, what each of them needs, and how much of that is built.
 
 - **Written:** 2026-10-13
-- **Coverage updated:** 2026-10-19. Every story was rechecked against the code and rewritten in a slimmer format (Decided, Now, Evidence, Gap), and the counts below were recounted from the story headers. Private by default is built and live since migrations 0012 and 0013 were applied on 2026-10-19 (nothing is switched Public yet), and so is guarded member departure. E2-S04 was folded into E2-S22 and E5-S13 into E6-S01; E7-S23 and E7-S24 were split from E7-S08, E9-S21 and E9-S22 from E9-S11, E9-S23 (two-card combos) from E9-S06 and E9-S24 (official list changes) from E9-S04. Physical-device acceptance remains E2-S22.
+- **Coverage updated:** the full code recheck was 2026-10-19. A targeted reserve review on 2026-10-28 checked proposed work against current code, added five stories and corrected stale E1-S12 and E7-S18 summaries; the counts below were recounted from all story headers. Private by default and guarded member departure are built and live since migrations 0012 and 0013 were applied on 2026-10-19. Physical-device acceptance remains E2-S22.
 - **Covers:** Deck Lab, the home-network and decklab.example.com deck page, and the `python -m decklab.db` commands Claude Code works through. Magic only.
 - **Doesn't replace:** [TODO.md](../../TODO.md) (the open-work index and NOW order), [PLAN.md](../PLAN.md) (the details of non-story work), [HISTORY.md](../HISTORY.md) (what shipped), [UI-KIT.md](../UI-KIT.md) and [UI-REVIEW.md](../UI-REVIEW.md) (the page's pieces and the redesign's reasons).
 
@@ -56,25 +56,25 @@ Each epic has a journey in [journeys.md](journeys.md) and its stories in [storie
 
 | Epic | Title | What it covers | Built | Partial | Missing | Not wanted |
 |---|---|---|---|---|---|---|
-| E1 | Find, plan and choose decks | The library (`#/library`), deck ideas, cover pictures, the deck page's banner and Overview, choosing what to play | 11 | 0 | 3 | 0 |
-| E2 | Build and edit a deck | New deck, the editor and the phone Quick edit, Planned and Play-now lists, owned vs needed, history; `deck pull/push/new/tables` | 14 | 1 | 3 | 1 |
+| E1 | Find, plan and choose decks | The library (`#/library`), deck ideas, cover pictures, the deck page's banner and Overview, choosing what to play | 13 | 1 | 1 | 0 |
+| E2 | Build and edit a deck | New deck, the editor and the phone Quick edit, Planned and Play-now lists, owned vs needed, history; `deck pull/push/new/tables` | 16 | 1 | 2 | 1 |
 | E3 | Test a deck | Stats, Practice, Forge matchups (`#/matchups`, `#/matchup`), field rank, Test this change (`#/variant`), the simulations setting | 12 | 3 | 0 | 0 |
-| E4 | Get ready, play and learn | The Packing plan (`#/assembly`), tokens to grab, How to play, practice hands, the Game log (`#/play`) and sideboard plans | 16 | 1 | 4 | 1 |
-| E5 | Decide what to buy | Missing cards and estimated costs, the purchase queue on `#/shopping`, AU shop checks, buylists, `watchlist` and `order add --fulfils` | 15 | 0 | 5 | 2 |
-| E6 | Record orders and receive cards | `order add\|edit\|checks\|split\|cancel`, products, on the way, Receive delivery (`#/receipt`), follow-ups, keeping a product intact | 17 | 0 | 1 | 2 |
-| E7 | Keep the collection accurate | The Collection page (`#/collection`), imports and Add a precon, `collection merge`, Tokens (`#/tokens`), removals, stale tables, `db check` | 20 | 4 | 4 | 0 |
-| E8 | Sleeves, boxes and storage | Sleeves & boxes (`#/accessories`), Sleeves and Deck box lines, the Choose… picker, kit warnings, put-back steps, the storage box | 12 | 1 | 3 | 2 |
-| E9 | Commander nights | Commander checks and the minimum bracket, multiplayer practice, Forge's Commander field, getting ready for the social Commander night | 13 | 0 | 6 | 1 |
+| E4 | Get ready, play and learn | The Packing plan (`#/assembly`), tokens to grab, How to play, practice hands, the Game log (`#/play`) and sideboard plans | 16 | 2 | 3 | 1 |
+| E5 | Decide what to buy | Missing cards and estimated costs, the purchase queue on `#/shopping`, AU shop checks, buylists, `watchlist` and `order add --fulfils` | 16 | 1 | 3 | 2 |
+| E6 | Record orders and receive cards | `order add\|edit\|checks\|split\|cancel`, products, on the way, Receive delivery (`#/receipt`), follow-ups, keeping a product intact | 18 | 0 | 0 | 2 |
+| E7 | Keep the collection accurate | The Collection page (`#/collection`), imports and Add a precon, `collection merge`, Tokens (`#/tokens`), removals, stale tables, `db check` | 21 | 3 | 4 | 0 |
+| E8 | Sleeves, boxes and storage | Sleeves & boxes (`#/accessories`), Sleeves and Deck box lines, the Choose… picker, kit warnings, put-back steps, the storage box | 13 | 2 | 2 | 2 |
+| E9 | Commander nights | Commander checks and the minimum bracket, multiplayer practice, Forge's Commander field, getting ready for the social Commander night | 14 | 1 | 4 | 1 |
 | E10 | Members, access and privacy | Roles and spaces, the read and write rules, "Who are you?", decklab.example.com behind Cloudflare Access, Activity (`#/activity`), Visits on Settings, private by default | 31 | 1 | 1 | 2 |
-| E11 | Run and trust the system | The server and tunnel, the database's nightly backup, export, check and restore check, the audit trail, typed commands, Forge upkeep, Settings and Safari Simulator regressions, the visual design | 17 | 6 | 2 | 3 |
+| E11 | Run and trust the system | The server and tunnel, the database's nightly backup, export, check and restore check, the audit trail, typed commands, Forge upkeep, Settings and Safari Simulator regressions, the visual design | 17 | 6 | 4 | 3 |
 
 ## Headline counts
 
 - **9 personas:** two primary, two secondary (User5 and the space members), one supplementary, one non-human actor and three anti-personas.
-- **11 epics, 241 stories:** 187 built, 20 partial, 20 missing and 14 not wanted (recounted 2026-10-28, after the 2026-10-28 reserve stories).
+- **11 epics, 246 stories:** 187 built, 21 partial, 24 missing and 14 not wanted (recounted 2026-10-28 after the reserve review).
 - **Must and should stories:** Matt has 96 built and 3 partial; User1 has 32 built, 1 partial and 1 missing; Claude Code has 15 built; User5 has 4 built; the space members have 4 built; the Commander table has 1 built. None of the last four has a must or should gap. (Recounted from the story headers on 2026-10-26.)
 
-Deck Lab already does most of what Matt and User1 need. Private by default is built and live since 2026-10-19, when migrations 0012 and 0013 were applied and the server restarted on committed code; nothing has been switched Public yet. Guarded member departure is built and live too; no member has left. The visual redesign (E11-S30) has ready coding slices, followed by the self-hosting, token and kit work Matt added on 2026-10-25. [TODO.md](../../TODO.md) owns their order and readiness; each story owns its first slice and later gates. The other must and should gaps are the physical-device follow-up (E2-S22), the signed-in off-page check (E11-S02) and User2's testing session (E11-S28), which need the people involved; and User1's purchase requests (E5-S15), which are deferred. Stand-in suggestions (E2-S07, 2026-10-20), combo detection (E9-S23) and noticing official list changes (E9-S24, both 2026-10-21) are built, and so is the Forge upgrade check (E11-S15, 2026-10-21).
+Deck Lab already does most of what Matt and User1 need. Private by default and guarded member departure are built and live since 2026-10-19. The visual redesign (E11-S30) stays first, followed by the expanded reserve of deck-building, collection, buying, play and self-hosting work reviewed on 2026-10-28. [TODO.md](../../TODO.md) owns their order and readiness; each story owns its first slice and later gates. The other must and should gaps are the physical-device follow-up (E2-S22), the signed-in off-page check (E11-S02) and User2's testing session (E11-S28), which need the people involved; and User1's purchase requests (E5-S15), which are deferred. Stand-in suggestions, combo detection, official-list change detection, the Forge upgrade check, the prebuilt Forge release and Linux support are already built.
 
 ## Decisions
 
