@@ -2,6 +2,32 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Shared missing-card counting (2026-10-28; E5-S08 foundation)
+
+`lib/buying_needs.py` now owns the existing saved-target counting phase: one
+home pool, individual Planned shortfalls without prices, canonical-name sums,
+physical reservations, per-deck errors and whole-pool uncertainty. Explicit
+no-target, unavailable and counted phases preserve the old early returns and
+distinguish a complete empty result from unknown data. Callers supply name,
+message and logging functions; the helper has no HTTP, pictures, queue matching,
+shop-cache behavior or inventory pin of its own.
+
+Shopping's adapter keeps its public/helper seams, queue annotations, card
+pictures, sort order, totals and legacy per-deck results. This structural slice
+changes no request list, nightly behavior or visible result; it prepares the
+nightly caller to reuse the same physical-card calculation rather than duplicate
+it or import a web endpoint.
+
+Root's protected seven-target group passed **113 tests without skips**, including
+22 new kernel/adapter cases, disposable HTTP, queued snapshot/matching and
+existing partial/unavailable behavior. The broader initial check found the
+separate field-route fixture import problem fixed in `ce788cb`; the final group
+includes the formerly failing Shopping HTTP checks. Independent review, Ruff,
+whitespace and the source-length guard pass (1,180 owned files, none above 1,200
+lines). Logs and host exit 0 are in `decklab-buying-kernel-61918739`. No real
+inventory, configured database, saved shop cache, retailer or live server was
+used for qualification. The 112 preserved dirty headers remain unchanged.
+
 ## Isolated field-route imports (2026-10-28)
 
 A standalone Shopping HTTP regression returned 500 instead of its expected 405:
