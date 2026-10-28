@@ -208,7 +208,7 @@ class PageSourceTests(unittest.TestCase):
     def test_the_collection_page_edits_a_space(self):
         # The Collection page (collection.js): spaces, the endpoints of the accounts milestone, writes tied to
         # the page that started them, conflicts put back on top field by field, and a phone-first layout.
-        script = "\n".join(_text(name) for name in ("collection.js", "collection-rows.js", "collection-cards.js", "collection-bulk.js",
+        script = "\n".join(_text(name) for name in ("collection.js", "collection-import-groups.js", "collection-rows.js", "collection-cards.js", "collection-bulk.js",
                                                      "collection-guards.js", "collection-trade.js", "precon-coverage.js"))
         self.assertIn('if (path === "collection") return showCollection(params, token);', _function(_text("app.js"), "route"))
         for path in ('"/api/collection"', '"/api/collection/rows"', '"/api/collection/save"', '"/api/collection/bulk"',

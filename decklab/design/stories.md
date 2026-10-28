@@ -41,14 +41,14 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 22 | 16 | 2 | 3 | 1 |
 | [E5: Decide what to buy](#e5-decide-what-to-buy) | 22 | 17 | 1 | 2 | 2 |
 | [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 20 | 18 | 0 | 0 | 2 |
-| [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 28 | 22 | 2 | 4 | 0 |
+| [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 28 | 23 | 1 | 4 | 0 |
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 19 | 13 | 2 | 2 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 20 | 14 | 1 | 4 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 35 | 31 | 1 | 1 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 39 | 23 | 6 | 7 | 3 |
-| **Total** | **255** | **196** | **20** | **25** | **14** |
+| **Total** | **255** | **197** | **19** | **25** | **14** |
 
-Counted from the story headers on 2026-10-28 after the feature-reserve and maintenance reviews and the completed Compare and maintenance slices below. The reviews added five feature stories and eight hygiene stories, and corrected E1-S12 from missing to partial.
+Counted from the story headers on 2026-10-28 after the current feature and maintenance work. The reviews added five feature stories and eight hygiene stories, and corrected E1-S12 from missing to partial.
 
 ---
 
@@ -1976,7 +1976,7 @@ Evidence:
 
 How the inventory stays true to the physical cards. Each space's own people add, fix and remove cards on the Collection page (single cards, an app export, Add a precon) and token cards on the Tokens page; Matt and User1 both edit home's, each member only their own, and Claude does bulk and member upkeep from the PC (`collection merge`, `collection edit` and `collection apply`, `collection add-precon --space`). Repeat imports, sales and trades, and cards held by built decks are all flagged, other decks' out-of-date tables are listed with Update all rather than refreshed automatically, and the nightly `db check` looks for drift.
 
-Open: E7-S03, E7-S08, E7-S15, E7-S23, E7-S24, E7-S32.
+Open: E7-S08, E7-S15, E7-S23, E7-S24, E7-S32.
 
 **E7-S01** · Matt · must · M · built
 
@@ -2009,7 +2009,7 @@ Evidence:
 - `decklab/web/collection.js`: openImportSheet, drawImportPreview
 - `decklab/tests/test_collection_ops.py`: test_import_merges_and_keeps_the_raw_file; `decklab/tests/test_collection_edit.py`: test_ordinary_basics_are_not_added
 
-**E7-S03** · Space members · could · M · partial
+**E7-S03** · Space members · could · M · built
 
 As an experienced player with older cards, I want import problems shown grouped by set, with a way to leave out a whole set at once, so that I can fix or skip an old set's rows quickly in a large export.
 
@@ -2017,17 +2017,15 @@ As an experienced player with older cards, I want import problems shown grouped 
 - Given a group, when I choose to leave it out, then every row in it is skipped and the rest can be applied.
 - Given a 5,000-row export, when I preview it, then the preview finishes and lists the groups before anything is applied.
 
-Now (2026-10-28): the backend preserves checked source contributions before matching identities merge, and previews include source-set groups with explicit problem/valid-copy counts. Optional token-bound `skip_groups` excludes only reviewed source groups, remerges retained facts without rematching, and records deliberate valid exclusions with exact source lines. The original raw upload and legacy `skip_problems` flow remain intact.
+Now (2026-10-28): the import preview groups source-set problems and offers unchecked whole-group exclusions, explicitly counting valid copies too. Every excluded source row is reviewable. Retained counts use unmerged contributions, so groups sharing a final printing remain independent. Apply sends only the frozen token-bound IDs and keeps unresolved retained problems blocking.
 
 Evidence:
-- `decklab/lib/api/collection_import.py`: read_review, review_rows; read_upload retains its four-value compatibility contract.
-- `decklab/lib/api/collection_edit.py`: import_preview, _selected_import, import_apply; persisted preview version 4 retains server-owned group meanings and accepts older flat previews through the legacy flow.
-- `decklab/lib/inventory/ops_collection.py`: deliberate exclusions are separate from malformed rows and retained in the durable audit message.
-- `decklab/tests/test_collection_import_groups.py`: 16 group cases include shared final identities, BOM/CRLF preservation, stale/repeat/profile fences, malformed selections and a 5,000-row preview. Protected consumer qualification ran 204 tests with four database-class skips; root's 41 combined group/selection checks passed with database connections prohibited.
+- `decklab/lib/api/collection_import.py`: read_review, review_rows; `collection_edit.py`: import_preview, _selected_import, import_apply; `inventory/ops_collection.py`: durable deliberate-exclusion audit text.
+- `decklab/web/collection-import-groups.js`: source-group projection and native review controls, retained/excluded source facts and current-context guards; `collection.js`: small lifecycle/apply hooks and legacy flat fallback.
+- `test_collection_import_groups.py`: 16 backend cases, including stale/repeat/profile fences, raw BOM/CRLF preservation, shared final identities and a 5,000-row preview.
+- `test_collection_import_groups_ui.py`: 12 cases including exact identities, frozen choices, late permission checks, stale repreview and a 5,000-row render with zero writes. The broader protected UI/source run passed 86 checks; final affected assertions passed.
 
-Gap: the Collection import UI still shows flat problems and has no source-group choices or explicit excluded-row review.
-
-Next slice: add initially unchecked source-set controls, visible valid-copy exclusions and every excluded source row, using the exact preview's groups and contributions. Preserve focused controls, pending/late guards and legacy-server fallback; keep unresolved retained problems blocking. Do not infer source membership from a merged printing or first line.
+Browser/device performance and native acceptance remain unverified. Qualifying checks use fixtures with database connections disabled; real PostgreSQL qualification is not claimed. See [HISTORY.md](../HISTORY.md#import-source-groups-review-ui-2026-10-28-e7-s03).
 
 **E7-S04** · Matt · should · S · built
 

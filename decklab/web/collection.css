@@ -206,6 +206,11 @@ button.col-find-open { cursor: pointer; }
 
 /* Import. */
 .col-file-field input { padding: var(--s-2); }
+.col-import-groups { display: grid; gap: var(--s-3); }
+.col-import-group, .col-import-group-outcome { min-width: 0; overflow-wrap: anywhere; }
+.col-import-group h3 { margin-top: 0; }
+.col-import-source-list { max-height: 35vh; overflow: auto; padding-left: var(--s-4); overflow-wrap: anywhere; }
+.col-import-group summary, .col-import-excluded > summary { min-height: var(--tap); cursor: pointer; }
 .col-import-summary { margin: var(--s-3) 0; }
 .col-import-problems ul { margin: var(--s-2) 0 0; padding-left: var(--s-4); }
 .col-import-table { max-width: 100%; overflow: auto; max-height: 50vh; margin-top: var(--s-3);

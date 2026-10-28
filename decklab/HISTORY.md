@@ -2,6 +2,28 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Import source groups: review UI (2026-10-28; E7-S03)
+
+Collection import previews now show source-set problem counts and unchecked
+whole-group exclusions. Each choice explicitly warns how many valid source
+rows/cards it also excludes; disclosures list every excluded source row with
+its original line and facts. Retained source rows are labelled before combining
+printings, with exact distinct-printing counts and no invented merged details.
+
+One frozen preview owns the choices. Checkbox focus survives projections;
+pending imports freeze IDs, and context/permission checks run again after the
+rows read. Unresolved retained problems and empty outcomes block Import. Old
+flat responses retain the existing explicit skip-problems flow; malformed
+partial group metadata blocks safely instead of widening that fallback.
+
+The focused helper loads explicitly after collection.js, with only small
+lifecycle/apply hooks in the existing module. All 86 broader protected UI/source
+checks passed; 12 final group cases and affected follow-ups include a 5,000-row
+render with no writes. Independent review, syntax, diff and source-length checks
+pass. Browser/device performance and native acceptance remain unverified.
+Backend fixture evidence is recorded below; real PostgreSQL acceptance is not
+claimed by these source-only checks.
+
 ## Select collection rows for details (2026-10-28; E7-S18)
 
 Card list now has native checks for selecting exact printing rows, mirrored by

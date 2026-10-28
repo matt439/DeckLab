@@ -705,6 +705,7 @@ function openImportSheet(cv) {
     if (ctx.busy) return;
     const selection = ++ctx.seq;
     ctx.preview = null;
+    ctx.groupReview = null;
     clear(ctx.area);
     sheetActions(sheet, [{ text: "Cancel", onclick: () => sheet.close() }]);
     const file = input.files && input.files[0];
@@ -739,6 +740,7 @@ async function previewImport(ctx, filename, text) {
   const seq = ++ctx.seq;
   ctx.source = { filename, text };
   ctx.preview = null;
+  ctx.groupReview = null;
   clear(ctx.area);
   clear(ctx.message).append(loadingBox(`Reading ${filename}…`));
   sheetActions(ctx.sheet, [{ text: "Cancel", value: "cancel", onclick: () => ctx.sheet.close() }]);
@@ -756,6 +758,8 @@ async function previewImport(ctx, filename, text) {
 
 function drawImportPreview(ctx) {
   const p = ctx.preview;
+  if (colImportHasGroups(p)) return drawImportGroups(ctx);
+  ctx.groupReview = null;
   const problems = p.problems || [];
   const bad = new Set(problems.map((x) => x.line));
   const rows = p.rows || [];
@@ -794,18 +798,23 @@ function drawImportPreview(ctx) {
 async function applyImport(ctx, skipProblems) {
   const cv = ctx.cv;
   if (ctx.busy || ctx.sheet.closed || !ctx.preview || !colActive(cv)) return;
+  const groups = colImportGroupRequest(ctx);
+  if (groups?.blocked) return;
   const reviewed = ctx.preview, selection = ctx.seq;
   ctx.busy = true;
   ctx.input.disabled = true;
+  colImportGroupBusy(ctx, true, reviewed);
   for (const button of ctx.sheet.foot.querySelectorAll("button")) button.disabled = true;
   clear(ctx.message).append(loadingBox("Importing…"));
   try {
     await colEnsureRows(cv);
-    if (ctx.sheet.closed || !colActive(cv) || selection !== ctx.seq || ctx.preview !== reviewed) {
-      ctx.busy = false; ctx.input.disabled = false; return;
+    if (ctx.sheet.closed || !colActive(cv) || selection !== ctx.seq || ctx.preview !== reviewed
+      || (groups && (!ctx.groupReview || !colImportGroupsHere(ctx, ctx.groupReview)))) {
+      ctx.busy = false; ctx.input.disabled = false; colImportGroupBusy(ctx, false, reviewed); return;
     }
     const body = { space: cv.space, token: reviewed.token, sha256: cv.sha256 };
-    if (skipProblems) body.skip_problems = true;
+    if (groups) body.skip_groups = groups.ids;
+    else if (skipProblems) body.skip_problems = true;
     const answer = await apiWrite("/api/collection/import/apply", body);
     const added = answer.added || { rows: 0, cards: 0 };
     ctx.sheet.close();
@@ -813,15 +822,17 @@ async function applyImport(ctx, skipProblems) {
     if (answer.sha256) cv.sha256 = answer.sha256;
     state.library = null;
     const words = `Imported ${plural(added.cards || 0, "card")} (${plural(added.rows || 0, "row")}).`
-      + (answer.skipped ? ` ${plural(answer.skipped, "row")} with problems skipped.` : "");
+      + (answer.skipped ? ` ${plural(answer.skipped, "row")} with problems skipped.` : "") + colImportExcludedWords(answer);
     if (colActive(cv)) colReload(cv, words, answer.stale_tables);
     else if (state.profile?.id === cv.profile) toast(words);
   } catch (error) {
-    if (ctx.sheet.closed || !colActive(cv)) return;
+    if (ctx.sheet.closed || !colActive(cv) || selection !== ctx.seq || ctx.preview !== reviewed) return;
     ctx.busy = false;
     ctx.input.disabled = false;
+    colImportGroupBusy(ctx, false, reviewed);
     if (error.status === 409 && error.data?.repreview_required) {
       ctx.preview = null;
+      ctx.groupReview = null;
       clear(ctx.area);
       clear(ctx.message).append(el("p", { class: "box box-warn", text: error.message }));
       sheetActions(ctx.sheet, [{ text: "Cancel", onclick: () => ctx.sheet.close() },
