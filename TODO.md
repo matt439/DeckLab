@@ -70,7 +70,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 
 | id | status | pri | size | item |
 |---|---|---|---|---|
-| `E3-S23` | OPEN | could | M | Start with Who's in the field and exclusion reasons; audited membership changes follow, with no automatic Forge runs. |
+| `E3-S23` | OPEN | could | M | Read-only membership and reasons are built; next revision-checked audited home-admin edits and manual-exclusion counts in field ranks. |
 | `E4-S16` | OPEN | could | L | Validate a saved sideboard plan and preview its post-board lists and simulation work before any authorised games. |
 | `E11-S16` | OPEN | could | L | Estimate the time for an experiment's remaining games in --dry-run, using measured speeds or labelled fallback assumptions. |
 | `E11-S28` | DECISION | should | M | Run the user-testing session with User2 from the prepared [checklist](decklab/design/user-testing-user2.md) (confirm his device first), then the follow-up review and stories. |

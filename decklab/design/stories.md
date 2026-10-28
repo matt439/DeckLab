@@ -898,7 +898,11 @@ Evidence:
 - `decklab/lib/forge/field.py`: _simulation_edits (reads `decklab/simulation.json`'s field add/remove)
 - `decklab/lib/forge/rankings.py`: _excluded (exclusion reasons shown in Rankings)
 
-Gap: membership changes only by hand-editing `decklab/simulation.json`; there's no 'Who's in the field' view, page control, audit entry or count of lists left out by hand. Criteria 1, 3 and 4 weren't checked beyond that, so none is claimed met.
+Now: read-only membership slice built 2026-10-28 ([HISTORY.md](../HISTORY.md#read-only-field-membership-2026-10-28-e3-s23-slice)). Who's in the field shows current canonical lists/versions, fixed inclusion/exclusion reasons and visible manual-exclusion counts, with the assessed deck's membership separate from self-opponent eligibility. Members see only their visible field; names/counts and pairing readers follow visibility. The optional selector trace preserves legacy results and notes; incomplete/capped answers expose no partial totals. The bounded disclosure remains useful without games and keeps current membership apart from saved results. Root's 205 protected checks passed without skips, including 43 new fixtures and existing regressions; source checks and independent review pass.
+
+Further evidence: `forge/field_membership.py`, optional `field._field` trace, `api/field_membership.py`, GET/HEAD route in `feature_routes.py`, `web/field-membership.js`, `field.js` retained mount, explicit script/source-contract registrations, and the three `test_field_membership*` modules.
+
+Gap: revision-checked, audited home-admin membership edits and manual-exclusion counts beside field ranks remain. Existing config removals record no human reason, so the view does not invent one. The separately denied E1-S12 temporary correction/poor-AI caveat remains stopped; `api/field_page.py` is unchanged. Genuine PostgreSQL, Forge and browser/device qualification remain unrun.
 
 First slice (reserve review, 2026-10-28): a read-only Who's in the field view using the existing membership and exclusion calculations, filtered through the viewer's deck visibility before returning names or counts. Cover current lists, explicit exclusions, poor-AI reasons and missing results with fixtures. Follow with revision-checked, audited home-admin membership changes that invalidate the field view but start no games; do not change the household's real field during development. E3-S19's chosen-opponent runs are a later dependent slice, not a second membership implementation.
 

@@ -2,6 +2,41 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Read-only field membership (2026-10-28; E3-S23 slice)
+
+The deck's field view now offers Who's in the field, including when it has no
+opponents or saved games. Its lazily loaded disclosure explains current canonical
+lists and versions, inclusion/exclusion reasons, visible manual exclusions and
+which members are opponents of the assessed deck. Another version of that same
+deck never counts as a self-opponent. Membership remains separate from saved
+game evidence; this panel neither reads results nor starts games.
+
+`GET /api/field/membership` uses the existing selector with an optional structured
+trace. Legacy entries, notes, add/remove precedence and alias behavior are
+preserved. One pinned snapshot covers the initial raw visibility guard, canonical
+entry and membership. Names/counts follow visibility before emission; hidden
+configuration references and raw notes never become placeholders or counts.
+Product reasons remain generic outside home-record rights, and a member whose
+field cannot see home never enumerates home's pairing recipes. Failures or the
+1,000-row cap give an explicit unavailable answer without partial totals.
+
+The UI validates bounded identities/titles/reasons and counts, initially renders
+at most 40 rows, then expands locally in batches of 20 with exact shown/total
+counts and retained focus. Refresh retires old controls immediately. Profile,
+route, deck/list/view/data identity, disclosure/host attachment and modal/menu
+ownership prevent stale reads or expansion. Fixed errors expose no raw details.
+Explicit script-order and isolated source contracts include the new helper.
+
+Root's final protected 14-target integration passed 205 tests without skips,
+including 14 new model, 11 new API/route and 18 new UI fixtures plus existing
+membership/privacy/ranking/field and UI contracts. Independent/root review,
+Node syntax, Ruff, diff and source-length checks pass. E3-S23 remains partial:
+revision-checked audited home-admin membership edits and manual-exclusion counts
+in field ranks are still open. Human rationale is not invented for existing
+configuration removals. The denied E1-S12 correction/poor-AI caveat is untouched;
+`api/field_page.py` is unchanged. Genuine PostgreSQL, Forge and browser/device
+acceptance remain separate; no live field, game, server or service action occurred.
+
 ## Guidance after a private-kit refusal (2026-10-28; E8-S15)
 
 Check and Save now explain the hand-off path after an actual private-kit

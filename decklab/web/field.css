@@ -86,6 +86,19 @@ a.fv-row:hover { border-color: var(--border-strong); }
 .fv-notes { margin: var(--s-2) 0 0; padding-left: var(--s-5); font-size: var(--fs-sm); color: var(--ink-2); max-width: 75ch; }
 .fv-notes li + li { margin-top: var(--s-1); }
 
+/* Current membership stays outside the game-results redraw and keeps its disclosure and focus. */
+.fv-membership { margin-top: var(--s-3); }
+.fv-membership > summary { min-height: 44px; align-content: center; }
+.fv-membership-body { padding-top: var(--s-2); }
+.fv-membership-rows { display: grid; gap: var(--s-2); }
+.fv-membership-group > h3 { margin: var(--s-3) 0 var(--s-2); }
+.fv-membership-list { list-style: none; padding: 0; margin: 0; display: grid; gap: var(--s-2); }
+.fv-membership-list > li { border: 1px solid var(--border); border-radius: var(--r-md); padding: var(--s-2) var(--s-3); }
+.fv-membership-list p { margin: var(--s-1) 0 0; overflow-wrap: anywhere; }
+.fv-membership-link { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-1) var(--s-3);
+  min-height: 44px; overflow-wrap: anywhere; }
+.fv-membership-more { margin-top: var(--s-2); }
+
 @media (min-width: 600px) {
   .fv-minis { display: grid; gap: var(--s-2); }
 }

@@ -21,7 +21,7 @@ class PageSourceTests(unittest.TestCase):
         self.assertEqual({name for name in own if not name.startswith("fv-")}, set())
         others = "\n".join(_text(name) for name in STYLES if name != "field.css")
         shared = set(re.findall(r"\.([A-Za-z][\w-]*)", re.sub(r"/\*.*?\*/", "", others, flags=re.S)))
-        script = _text("field.js")
+        script = _scripts(["field.js", "field-membership.js"])
         used = {name for value in re.findall(r'class: "([^"]+)"', script) for name in value.split()}
         used |= set(re.findall(r"`(fv-[\w-]+)", script))
         self.assertEqual({name for name in used if not name.startswith("fv-") and name not in shared}, set())

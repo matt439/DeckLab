@@ -36,7 +36,7 @@ function fieldSection(data) {
   if (s.id.startsWith(BOX_PREFIX)) return null;
   const content = el("div", { class: "fv-content" }, loadingBox("Loading how this list does against the field…"));
   const section = el("section", { class: "deck-section fv-section", id: "sec-field", "aria-labelledby": "h-field" },
-    el("h2", { id: "h-field", text: "Against the field" }), content);
+    el("h2", { id: "h-field", text: "Against the field" }), content, fieldMembership(data));
   const profile = state.profile ? `&profile=${encodeURIComponent(state.profile.id)}` : "";
   const ctx = { section, content, token: routeToken, id: s.id, version: data.version, title: s.title,
     url: `/api/field?id=${encodeURIComponent(s.id)}&version=${data.version}${profile}`,
