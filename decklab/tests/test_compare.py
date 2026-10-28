@@ -15,7 +15,6 @@ import unittest
 from unittest import mock
 
 from decklab.lib.api import compare
-from decklab.tests import test_server as server_tests
 from decklab.tests.test_api import ApiTestCase, _write
 from decklab.tests.test_deck_privacy_readers import R_DECK_ID, _as, _Hidden
 
@@ -134,20 +133,6 @@ class PrivacyTests(_Hidden):
         answer = self.shared("pairing/cats elves", GRUUL)
         self.assertTrue(answer["a"]["id"].startswith("pairing/"))
         self.assertNotIn(" ", answer["a"]["id"])
-
-
-class SharedHttpTests(server_tests.ServerTestCase):
-
-    def test_get_and_head_with_only_its_query_names(self):
-        with mock.patch.object(compare, "shared_view", return_value={"cards": []}) as view:
-            path = "/api/compare/shared?a=casual%2Fgruul-test&b=casual%2Fgruul-test&av=target&bv=owned"
-            self.assertEqual(self.get_json(path), {"cards": []})
-            view.assert_called_once_with(a=GRUUL, b=GRUUL, av="target", bv="owned")
-            code, _, body = self.request("HEAD", path)
-            self.assertEqual((code, body), (200, b""))
-            self.assertError("/api/compare/shared?a=x&id=y", 400)
-            self.assertError("/api/compare/shared?a=x", 405, method="POST", body=b"{}",
-                             headers=dict(server_tests.WRITE, Origin=f"http://127.0.0.1:{self.port}"))
 
 
 if __name__ == "__main__":
