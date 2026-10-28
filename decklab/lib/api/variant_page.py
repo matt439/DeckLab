@@ -196,6 +196,15 @@ def _view(forge, test, seen=None):
                               total=sum(p.get("total") or 0 for p in shown.values()))
     if status in WAITING:
         out["words"] = None             # no verdict words while it plays (section 11.6)
+    base_id = (out["test"].get("base") or {}).get("id")
+    if status == "done" and isinstance(base_id, str) and base_id.startswith(("casual/", "commander/")) \
+            and guard.sees_home_records():
+        from . import variant_buying
+        try:
+            out["buying"] = variant_buying.build(out["test"])
+        except Exception as error:
+            common._log(f"Variant buying evidence unavailable: {type(error).__name__}")
+            out["buying"] = variant_buying.unavailable("Current buying information could not be read.")
     return seen.mask(out)
 
 

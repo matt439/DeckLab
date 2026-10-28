@@ -2,6 +2,42 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Buying information for saved test additions (2026-10-28; E5-S17 read-only slice)
+
+Finished visible home variant results now include bounded buying facts for home
+record readers. Saved Commander/Main cards provide the recipe; preserved current
+Sideboard/Companion demand is included only when today's playable fingerprint
+matches the saved base or variant. Divergent or incomplete recipes say
+availability unknown. Other holders/self identity and full recipe demand prevent
+reusing copies already needed by unchanged cards. Ready, incoming and missing
+addition counts are distinct; queue intent is never deducted as stock.
+
+Existing requests retain all states/purposes and printing/finish context.
+Applicable recorded AUD references show shop and check date, zero prices included.
+Fallback estimates read cached Scryfall prices and validated cached FX only,
+showing printing/finish, numeric exchange rate/date and price date. No network,
+FX-cache write, engine/status check or game runs are used. The optional builder
+pins one buying snapshot and cannot turn missing evidence into a lost verdict or
+an empty success. Home-record authorization precedes all evidence readers,
+including when home's collection/decks are public.
+
+The UI displays partial/unknown/unpriced facts and explicit independent omission
+counts. Initial loads, refreshes and retries belong to their profile/route and
+sequence; older successes/errors or pending timers cannot replace newer evidence.
+There is no queue write/control in this slice, only Open Shopping.
+
+Root's combined protected API/UI/privacy run passed 66 tests without skips,
+including 31 new backend and 11 new UI cases. Independent and root review, Node
+syntax, whole-repo real-error Ruff, diff and source-length guards pass. Guarded
+final discovery has 9,353 unique cases, preserving all 9,123 baseline cases under
+the three-class move map with no losses, duplicates or import errors. This is
+discovery evidence; the earlier full integrated fixture run and subsequent
+feature qualification remain separately recorded.
+
+Explicit reviewed queue saves remain on E5-S17. Browser/device and genuine
+PostgreSQL/native/runtime acceptance are unverified; no live action or real data
+was used in implementing this slice.
+
 ## Atomic Considering draft moves (2026-10-28; E2-S26)
 
 Full and Quick edit move an alternative's complete copies to Planned or its

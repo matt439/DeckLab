@@ -103,3 +103,14 @@
 
 /* A deep link to saved tests clears the shell and the sticky deck tabs. */
 .vt-tests { scroll-margin-top: calc(var(--shell-top) + var(--tap) + var(--s-2)); }
+
+/* Read-only buying facts for a saved test's additions. */
+.vt-buying { margin-top: var(--s-4); }
+.vt-buying-list { list-style: none; padding: 0; margin: 0; }
+.vt-buying-row { padding-block: var(--s-3); border-bottom: 1px solid var(--border); overflow-wrap: anywhere; }
+.vt-buying-row:last-child { border-bottom: 0; }
+.vt-buying-row h3 { margin: 0 0 var(--s-2); }
+.vt-buying-prices, .vt-buying-queue ul { padding-inline-start: var(--s-4); }
+.vt-buying-price, .vt-buying-coverage, .vt-buying-queue p { margin-block: var(--s-2); }
+.vt-buying-problem { padding: var(--s-3); border-inline-start: 3px solid var(--warn); overflow-wrap: anywhere; }
+.vt-buying > .btn { margin-block-start: var(--s-2); margin-inline-end: var(--s-2); }

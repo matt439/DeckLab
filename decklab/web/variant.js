@@ -129,8 +129,9 @@ function showVariant(params, token) {
     afterRender();
     return;
   }
-  const page = { token, test, host: null, timer: 0, data: null, phase: null };
+  const page = { token, test, profile: state.profile?.id, host: null, timer: 0, refreshSeq: 0, data: null, phase: null };
   load(`/api/variant?test=${test}`, token, (data) => {
+    if (page.profile !== state.profile?.id) return;
     page.host = el("div", { class: "vt-page" });
     // Kept outside the redrawn page: a lost connection, said once and cleared by the next answer, and the
     // test's phase (waiting, playing, done) for a screen reader, said only when it changes.
@@ -144,8 +145,10 @@ function showVariant(params, token) {
 function vtLive(data) { return Boolean(data && VT_LIVE.includes(data.status)); }
 
 function vtDraw(page, data) {
-  page.data = data;
   if (page.token !== routeToken || !page.host || !page.host.isConnected) return;
+  if (Object.hasOwn(page, "profile") && page.profile !== state.profile?.id) return;
+  page.refreshSeq = (page.refreshSeq || 0) + 1;
+  page.data = data;
   const t = data.test || {};
   const base = t.base || {};
   setTitle(`Test of a change to ${base.title || "a deck"}`);
@@ -162,6 +165,7 @@ function vtDraw(page, data) {
     el("div", { class: "vt-grid" },
       vtLive(data) ? vtLivePanel(page, data) : vtVerdictPanel(page, data),
       vtRows(data, vtSpan(data))),
+    vtBuyingSection(page, data),
   ]);
   afterRender();
   vtAnnounce(page, data);
@@ -170,18 +174,25 @@ function vtDraw(page, data) {
 }
 
 async function vtRefresh(page) {
-  if (page.token !== routeToken || !page.host || !page.host.isConnected) return;
+  if (page.token !== routeToken || !page.host || !page.host.isConnected
+      || (Object.hasOwn(page, "profile") && page.profile !== state.profile?.id)) return;
+  clearTimeout(page.timer); page.timer = 0;
+  const seq = page.refreshSeq = (page.refreshSeq || 0) + 1;
+  const current = () => seq === page.refreshSeq && page.token === routeToken && page.host.isConnected
+    && (!Object.hasOwn(page, "profile") || page.profile === state.profile?.id);
   try {
     const data = await api(`/api/variant?test=${page.test}`);
+    if (!current()) return;
     if (page.problem) page.problem.textContent = "";
     vtDraw(page, data);
   } catch (e) {
-    if (page.token !== routeToken) return;
+    if (!current()) return;
     const words = "The PC isn't answering, so this may be out of date. Trying again automatically.";
     if (page.problem && page.problem.textContent !== words) page.problem.textContent = words;
-    page.timer = setTimeout(() => vtRefresh(page), POLL_MS * 3);      // the PC didn't answer: try again later
+    page.timer = setTimeout(() => vtRefresh(page), POLL_MS * 3);
   }
 }
+
 
 /** Say when the test starts waiting, starts playing and is over, once each (not its game counts). */
 function vtAnnounce(page, data) {
@@ -191,6 +202,95 @@ function vtAnnounce(page, data) {
     : page.phase ? "The test is over." : "";
   page.phase = live ? data.status : null;
   if (phase && page.announcer.textContent !== phase) page.announcer.textContent = phase;
+}
+
+/** Saved test additions against current home inventory; queue intent remains a separate annotation. */
+function vtBuyingAllowed() {
+  return !!state.profile?.id && ownSpace() === HOME_SPACE && seesHomeInventory(state.may);
+}
+function vtBuyingMoney(value) {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0 ? `A$${value.toFixed(2)}` : null;
+}
+function vtBuyingPrinting(row) {
+  const printing = row.printing === "exact" || row.set
+    ? `${String(row.set || "").toUpperCase()} ${row.collector_number || ""}`.trim() : "any printing";
+  return `${printing}${row.finish ? `, ${row.finish}` : ""}`;
+}
+function vtBuyingCounts(row, available) {
+  const values = [row.ready_added, row.incoming_added, row.missing_added];
+  if (!available || !values.every(n => Number.isSafeInteger(n) && n >= 0)
+      || values.reduce((sum, n) => sum + n, 0) !== row.added) return "Availability unknown.";
+  const parts = [];
+  if (row.ready_added) parts.push(`${row.ready_added} ready from the collection`);
+  if (row.incoming_added) parts.push(`${row.incoming_added} on the way`);
+  if (row.missing_added) parts.push(`${row.missing_added} still to find`);
+  return parts.join("; ") + ".";
+}
+function vtBuyingPrice(row) {
+  const refs = (Array.isArray(row.references) ? row.references : []).filter(ref => ref && vtBuyingMoney(ref.aud) !== null);
+  if (refs.length) return el("ul", { class: "vt-buying-prices", "aria-label": `${row.name}: recorded references` },
+    refs.map(ref => el("li", { text: `${vtBuyingMoney(ref.aud)} each at ${ref.shop || "recorded shop"}; `
+      + `checked ${ref.checked || "date unavailable"}; ${vtBuyingPrinting(ref)}.` })));
+  const estimate = row.estimate, amount = estimate && vtBuyingMoney(estimate.aud);
+  const dated = estimate && typeof estimate.rate === "number" && Number.isFinite(estimate.rate) && estimate.rate > 0
+    && /^\d{4}-\d{2}-\d{2}$/.test(estimate.price_date || "") && /^\d{4}-\d{2}-\d{2}$/.test(estimate.rate_date || "");
+  return el("p", { class: "vt-buying-price", text: amount === null || !dated ? "No dated price available."
+    : `Cached Scryfall estimate: ${amount} each; ${vtBuyingPrinting(estimate)}. `
+      + `Prices ${estimate.price_date}; 1 USD = ${estimate.rate} AUD (${estimate.rate_date}).` });
+}
+function vtBuyingRequests(row, checked) {
+  if (!checked) return el("p", { class: "vt-buying-queue", text: "Existing queue requests could not be checked." });
+  const rows = Array.isArray(row.queued) ? row.queued : [];
+  if (!rows.length) return el("p", { class: "vt-buying-queue", text: "No existing queue request for this card." });
+  const states = { ready: "Ready", waiting_for_stock: "Waiting for stock", waiting_for_reprint: "Waiting for a reprint",
+    deferred: "Deferred", long_term: "Long term" };
+  return el("div", { class: "vt-buying-queue" }, el("p", { text: "Existing queue requests:" }),
+    el("ul", {}, rows.map(request => el("li", { text: `${plural(request.quantity, "copy", "copies")}: `
+      + `${states[request.state] || "Recorded request"}${request.purpose ? ` for ${request.purpose}` : ""}; `
+      + `${vtBuyingPrinting(request)}.` }))),
+    el("p", { class: "sub", text: "Queued requests are shown separately from collection and incoming coverage." }));
+}
+function vtBuyingSection(page, data) {
+  const buying = data.buying;
+  if (!buying || typeof buying !== "object" || vtLive(data) || !vtBuyingAllowed()) return null;
+  const section = el("section", { class: "vt-panel vt-buying", "aria-label": "Buying information for the additions" },
+    el("h2", { text: "Buying information for the additions" }));
+  if (buying.basis) section.append(el("p", { class: "sub", text: buying.basis }));
+  const reasons = [...new Set([buying.availability_problem, buying.queue_problem].filter(Boolean))];
+  if (!reasons.length && buying.reason) reasons.push(buying.reason);
+  if (reasons.length) section.append(el("div", { class: "vt-buying-problem", role: "status" },
+    reasons.map(text => el("p", { text }))));
+  const rows = (Array.isArray(buying.rows) ? buying.rows : []).filter(row => typeof row.name === "string"
+    && Number.isSafeInteger(row.added) && row.added > 0);
+  if (rows.length) section.append(el("ul", { class: "vt-buying-list" }, rows.map(row => {
+    return el("li", { class: "vt-buying-row" }, el("h3", { text: `${row.name}: ${plural(row.added, "added copy", "added copies")}` }),
+      el("p", { class: "vt-buying-coverage", text: vtBuyingCounts(row, buying.availability_ready) }),
+      vtBuyingPrice(row), vtBuyingRequests(row, buying.queue_ready));
+  })));
+  const basics = (Array.isArray(buying.basic_added) ? buying.basic_added : []).filter(row => row
+    && typeof row.name === "string" && Number.isSafeInteger(row.added) && row.added > 0);
+  if (basics.length) section.append(el("p", { class: "vt-buying-basics", text: "Basic land additions: "
+    + basics.map(row => `${row.added} ${row.name}`).join(", ") + ". Plain basic lands are assumed available." }));
+  const omitted = buying.omitted || {};
+  const limits = [["rows", "additional added card names"], ["basic_added", "additional basic land names"],
+    ["queued", "additional queue requests"], ["references", "additional recorded price references"]]
+    .filter(([key]) => Number.isSafeInteger(omitted[key]) && omitted[key] > 0)
+    .map(([key, words]) => `${num(omitted[key])} ${words}`);
+  if (limits.length) section.append(el("p", { class: "vt-buying-limit", text: `Summary limit: ${limits.join("; ")} omitted.` }));
+  if (!rows.length && !basics.length) section.append(el("p", { class: "vt-buying-empty", text: buying.ready
+    ? "This saved test has no card additions to price." : "Buying information could not be checked." }));
+  section.append(el("a", { class: "btn btn-quiet", href: "#/shopping", text: "Open Shopping" }));
+  if (!buying.ready) {
+    const retry = el("button", { type: "button", class: "btn btn-quiet", text: "Check again", onclick: async () => {
+      if (retry.disabled || !retry.isConnected || !section.contains(retry) || !page.host?.contains(section) || page.data !== data
+          || page.token !== routeToken || page.profile !== state.profile?.id || !vtBuyingAllowed()) return;
+      retry.disabled = true;
+      await vtRefresh(page);
+      if (retry.isConnected) retry.disabled = false;
+    } });
+    section.append(retry);
+  }
+  return section;
 }
 
 function vtLivePanel(page, data) {

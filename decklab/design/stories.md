@@ -39,14 +39,14 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 20 | 17 | 1 | 1 | 1 |
 | [E3: Test a deck](#e3-test-a-deck) | 15 | 12 | 3 | 0 | 0 |
 | [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 22 | 16 | 2 | 3 | 1 |
-| [E5: Decide what to buy](#e5-decide-what-to-buy) | 22 | 17 | 1 | 2 | 2 |
+| [E5: Decide what to buy](#e5-decide-what-to-buy) | 22 | 17 | 2 | 1 | 2 |
 | [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 20 | 18 | 0 | 0 | 2 |
 | [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 28 | 23 | 1 | 4 | 0 |
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 19 | 14 | 2 | 1 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 20 | 14 | 1 | 4 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 35 | 31 | 1 | 1 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 39 | 25 | 6 | 5 | 3 |
-| **Total** | **255** | **201** | **19** | **21** | **14** |
+| **Total** | **255** | **201** | **20** | **20** | **14** |
 
 Counted from the story headers on 2026-10-28 after the current feature and maintenance work. The reviews added five feature stories and eight hygiene stories, and corrected E1-S12 from missing to partial.
 
@@ -1532,7 +1532,7 @@ Evidence:
 - `decklab/web/shopping.js`: shopQueueRow, shopLongTerm
 - `decklab/tests/test_shopping_ui.py`: test_a_member_sees_delivery_details_not_receive_or_done, test_queue_links_deck_titles_without_interfering_with_the_card_viewer
 
-**E5-S17** · Matt · could · M · missing
+**E5-S17** · Matt · could · M · partial
 
 As a deck builder, I want a tested swap that needs a card I don't own to show what that card costs in Australia, and let me put it in the queue, so that I can act on a "Better" verdict right away, judging improvement per dollar.
 
@@ -1540,13 +1540,16 @@ As a deck builder, I want a tested swap that needs a card I don't own to show wh
 - Given I'm an admin, when I choose to queue it, then a queue row is added for that deck with the test as its source, as one audited change.
 - Given the card is already queued, then the result says so instead.
 
+Built read-only slice (2026-10-28): finished visible home variant results include Buying information for the additions for home-record readers only. Saved Commander/Main cards supply the tested recipe; current preserved Sideboard/Companion are included only when the current playable fingerprint matches the saved base or variant. A divergent, incomplete or unavailable recipe has unknown availability, while the saved verdict remains readable.
+
+Full recipe demand consumes existing copies before attributing readiness, incoming coverage and missing copies to net additions. Other built decks/intact holds and the tested deck's own identity are handled through normal pool semantics; queue intent is a separate annotation. Every matching queued state/purpose retains its printing/finish context. Applicable recorded AUD references show shop/check date; otherwise a labelled cached Scryfall estimate shows printing/finish and both the numeric FX rate/date and price date. No network/FX refresh or queue write occurs.
+
 Evidence:
-- `decklab/web/variant.js`: no price or queue references
-- `decklab/lib/api/variant_page.py`
+- `api/variant_buying.py`, guarded `variant_page.py` enrichment: one pinned buying snapshot, conservative recipe/delta validation, bounded/explicit omissions and unavailable fallback without losing the verdict.
+- `variant.js`/CSS: home-only read-only facts, partial/unknown/unpriced and zero-AUD handling, explicit omission labels and sequenced profile/route-bound refreshes.
+- Root's combined protected API/UI/privacy batch passed 66 tests without skips, including 31 new backend and 11 new UI cases. Independent/root review, whole-repo Ruff, syntax, length and diff checks pass. Final guarded discovery preserved all 9,123 baseline cases under the class-move map; 9,353 current cases are unique with no import errors.
 
-Gap: The variant result has no price and no queue link. It would benefit from E5-S08.
-
-First slice (reserve review, 2026-10-28): a read-only buying summary for a saved home variant's net added copies, using the existing pool semantics for copies free to that tested deck after other built decks and intact products, with on-the-way and already-queued quantities separate. Show a dated recorded Australian reference where one exists, otherwise the existing labelled estimate; E5-S08's additional shops are not a prerequisite. Then offer an explicit reviewed queue save to home admins, preserving exact-printing choices or defaulting to any nonfoil printing. Use the deck as a supported queue source and keep the saved test reference as provenance unless source validation is deliberately extended for durable test ids. Existing queued quantities are reviewed rather than silently duplicated. Saved-result fixtures need no new Forge run or purchase.
+Gap: an explicit reviewed queue save for home admins, binding current source/supply/queue state and showing existing requests rather than silently duplicating them. Preserve any chosen printing/finish, default to any nonfoil otherwise, and use the deck as the supported queue source with the saved test reference as provenance unless durable test-source validation is deliberately extended. This remains source implementation work; browser/device and genuine runtime qualification are separate. See [HISTORY.md](../HISTORY.md#buying-information-for-saved-test-additions-2026-10-28-e5-s17-read-only-slice).
 
 **E5-S18** · Matt · must · S · built
 
