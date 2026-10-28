@@ -2,6 +2,42 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Remaining experiment game-time estimates (2026-10-28; E11-S16 slice)
+
+Experiment dry runs now add a labelled remaining-game time guide in text and an
+additive `estimate` object in JSON. Existing controls, arms, totals, cached work,
+skips, extra seed controls and exit paths remain unchanged. The adapter reuses
+the exact saved snapshots already selected by the layout, including external
+control folders; it performs no second result reads or directory scan. Conflicting
+same-key snapshots cannot establish a rate. Zero work skips timing metadata;
+optional reader/estimator failures keep the game plan and give fixed unavailable
+timing without raw errors. Optional rates and configured workers are read quietly,
+without host, pool or readiness probes, through an isolated fixture seam.
+
+The pure estimator labels measured control speed, prior-arm proxy, control proxy,
+format fallback or mixed provenance. Arm keys do not prove recipe compatibility.
+Valid v2 pool observations use weighted aggregate games/wall time, never another
+worker division; a known worker mismatch rejects that observation, while unknown
+context stays explicit. V1 requires 20 valid observations. V1/fallback scaling
+uses configured workers or a labelled 16-worker assumption. The range has a 20%
+heuristic tail allowance, not confidence coverage, and excludes queue wait, cold
+startup, deployment and changing shared load. Existing arm-folder/spec compatibility
+and actual run readiness remain separate checks.
+
+Positive raw JSON spans stay positive, including a single fast remaining game;
+text says under 1 minute instead of zero. Exact zero is reserved for no remaining
+games. Arbitrary pending configuration arms have no supported model, so the whole
+time stays unavailable while any row details remain separate, never a partial
+total presented as the whole experiment.
+
+Root's final protected nine-module integration passed 195 tests without skips,
+including 26 new estimator, 11 new adapter and 17 new CLI cases plus the read-only
+prerequisite and existing engine/experiment/rankings/rate regressions. Independent
+and root review, Ruff, whitespace and source-length checks pass. E11-S16 remains
+partial for supported configuration-arm assumptions and adoption controls. No real
+timing/result/config data, process probe, Forge game, server or service action was
+used for qualification; fixture previews neither deploy nor write reports.
+
 ## Read-only experiment planning (2026-10-28; E11-S16 prerequisite)
 
 Experiment dry runs previously shared a layout path that could deploy adopted

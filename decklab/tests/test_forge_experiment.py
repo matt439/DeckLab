@@ -521,6 +521,7 @@ class ArmBase(test_forge.ForgeCase):
                   mock.patch.object(decks, "load_deck",
                                     side_effect=lambda deck_id, version: sections(self.lists[deck_id])),
                   mock.patch.object(decks, "engine_kind", return_value="constructed"),
+                  mock.patch.object(experiment, "_plan_timing_metadata", side_effect=lambda: ({}, self.settings["forge_workers"])),
                   mock.patch.object(forge.pool, "session", self.stand_in_session),
                   mock.patch.object(forge.runner, "run", self.stand_in_run),
                   mock.patch.object(forge.engine, "side_list", side_list, create=True),

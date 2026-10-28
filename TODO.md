@@ -71,7 +71,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 |---|---|---|---|---|
 | `E3-S23` | OPEN | could | M | Read-only membership and reasons are built; next revision-checked audited home-admin edits and manual-exclusion counts in field ranks. |
 | `E4-S16` | OPEN | could | L | Validate a saved sideboard plan and preview its post-board lists and simulation work before any authorised games. |
-| `E11-S16` | OPEN | could | L | Dry-run planning is read-only; add remaining-game time estimates with measured or labelled fallback speeds. |
+| `E11-S16` | OPEN | could | L | Remaining-work estimates are built; next handle explicit supported configuration-arm assumptions and adoption controls. |
 | `E11-S28` | DECISION | should | M | Run the user-testing session with User2 from the prepared [checklist](decklab/design/user-testing-user2.md) (confirm his device first), then the follow-up review and stories. |
 | `FG#2` | WAITING | should | L+pc | Forge 2.0.16 (about mid-November 2026): rebase the fork, build, check the overrides, replay every matchup. The post-build checks are one command, built 2026-10-21: `python -m decklab.lib.forge upgrade-check` (`--plan forge-2.0.16` prints the rebase and build steps; `E11-S15`). |
 | `FG#3` | DEFERRED | could | M+pc | More experiment games (AI profiles, team-pump fix, override sets), decided with `FG#2`'s replay; the clean `fiery` test ran 2026-10-21 (C4 does what `fiery` does). |

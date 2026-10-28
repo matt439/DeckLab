@@ -30,6 +30,7 @@ class ReadOnlyExperimentPlanTests(unittest.TestCase):
             (experiment, "_adopted", mock.Mock(return_value=[])),
             (experiment, "_given_controls", mock.Mock(return_value=None)),
             (experiment, "load_spec", mock.Mock(side_effect=lambda path: copy.deepcopy(self.spec))),
+            (experiment, "_plan_timing_metadata", mock.Mock(return_value=({}, 2))),
             (experiment.engine, "today", mock.Mock(side_effect=lambda *args, **kwargs: copy.deepcopy(self.identity))),
             (experiment.engine, "key", mock.Mock(side_effect=self.key)),
             (experiment.saved, "load", mock.Mock(side_effect=self.saved)),
@@ -86,7 +87,7 @@ class ReadOnlyExperimentPlanTests(unittest.TestCase):
     def test_plan_uses_explicit_readonly_identity_and_preserves_its_existing_public_shape(self):
         found = self.plan()
         experiment.engine.today.assert_called_once_with(experiment.engine.KIND_DECKLAB, read_only=True)
-        self.assertEqual(set(found), {"experiment", "results_dir", "logs_dir", "games", "controls", "arms", "totals"})
+        self.assertEqual(set(found), {"experiment", "results_dir", "logs_dir", "games", "controls", "arms", "totals", "estimate"})
         self.assertEqual(found["totals"], {"control_games": 20, "arm_games": 10, "games": 30})
         self.assertEqual(found["arms"][0]["missing"], 10)
         self.assertTrue(found["arms"][1]["skipped"])
