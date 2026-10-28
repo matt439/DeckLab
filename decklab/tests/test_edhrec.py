@@ -146,6 +146,47 @@ class FetchTests(CacheTestCase):
         with self.assertRaises(edhrec.NoPage):
             edhrec.fetch(["Ghalta, Primal Hunger"])
 
+    def test_a_redirect_page_is_followed_and_kept(self):
+        # EDHREC answers the pair's other order with only {"redirect": ...} (Wilson and Raised by
+        # Giants, checked 2026-10-28): the alphabetical order is the redirect here.
+        def get(slug):
+            if slug == "raised-by-giants-wilson-refined-grizzly":
+                return {"redirect": "/commanders/wilson-refined-grizzly-raised-by-giants"}
+            if slug == "wilson-refined-grizzly-raised-by-giants":
+                return PAGE
+            raise AssertionError(slug)
+        self.get.side_effect = get
+        got = edhrec.fetch(["Wilson, Refined Grizzly", "Raised by Giants"])
+        self.assertEqual(got["slug"], "wilson-refined-grizzly-raised-by-giants")
+        self.assertEqual(got["url"], "https://edhrec.com/commanders/wilson-refined-grizzly-raised-by-giants")
+        self.assertIsNone(got["stale"])
+        self.assertEqual([c.args[0] for c in self.get.call_args_list],
+                         ["raised-by-giants-wilson-refined-grizzly", "wilson-refined-grizzly-raised-by-giants"])
+        self.assertEqual(edhrec._failed, {})
+        edhrec.fetch(["Wilson, Refined Grizzly", "Raised by Giants"])
+        self.assertEqual(self.get.call_count, 2)        # the redirect and the page both kept
+
+    def test_redirects_deck_lab_cant_follow(self):
+        self.assertIsNone(edhrec.redirect_slug(PAGE))
+        self.assertEqual(edhrec.redirect_slug({"redirect": "commanders/a-b"}), "a-b")
+        for target in ("https://evil.example/x", "/commanders/../x", "/combos/a-b", None, "/commanders/"):
+            with self.subTest(target=target):
+                self.assertEqual(edhrec.redirect_slug({"redirect": target}), "")
+        # One it can't follow counts as no page, so the other order is still tried.
+        def get(slug):
+            if slug.startswith("thrasios"):
+                return {"redirect": "https://evil.example/x"}
+            return PAGE
+        self.get.side_effect = get
+        self.assertEqual(edhrec.fetch(["Tymna the Weaver", "Thrasios, Triton Hero"])["slug"],
+                         "tymna-the-weaver-thrasios-triton-hero")
+        # Redirects round in a circle end as no page, each slug asked once.
+        self.get.reset_mock()
+        self.get.side_effect = lambda slug: {"redirect": "/commanders/" + ("b-a" if slug == "a-b" else "a-b")}
+        with mock.patch.object(edhrec, "commander_slugs", return_value=["a-b", "b-a"]),                 self.assertRaises(edhrec.NoPage):
+            edhrec.fetch(["A", "B"])
+        self.assertEqual(sorted(c.args[0] for c in self.get.call_args_list), ["a-b", "b-a"])
+
     def test_an_unreadable_page_is_refused(self):
         for page in ({}, {"container": {"json_dict": {"cardlists": "no"}}},
                      {"container": {"json_dict": {"cardlists": [{"header": "X", "cardviews": []}]}}}):

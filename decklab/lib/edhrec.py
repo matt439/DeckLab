@@ -10,7 +10,10 @@ as EDHREC writes it in its addresses (commander_slug): the front face of a
 two-faced card, accents dropped, lowercase, apostrophes and commas removed and
 every other run of non-letters a hyphen; two commanders (partners, a
 Background) are both slugs joined, in alphabetical order first and, when
-EDHREC has no page for that, the other order.
+EDHREC has no page for that, the other order. For a pair, the order EDHREC
+doesn't use answers 200 with only {"redirect": "/commanders/<its slug>"}
+(checked 2026-10-28 with Thrasios and Tymna, and Wilson and Raised by
+Giants): that's kept like a page (redirect_slug) and its slug followed.
 
 fetch() keeps each page, reduced to its card lists, in decklab/data/edhrec/
 <slug>.json with the time it was fetched, and fetches again only when that
@@ -142,6 +145,19 @@ def _get(slug):
         raise EdhrecError("EDHREC sent a page Deck Lab can't read") from None
 
 
+_SLUG = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*")
+
+
+def redirect_slug(page):
+    """The commander slug EDHREC's {"redirect": "/commanders/<slug>"} page points to, None for any other
+    page, or "" for a redirect Deck Lab can't follow (treated as no page)."""
+    if not isinstance(page, dict) or "redirect" not in page:
+        return None
+    match = re.fullmatch(r"/?commanders/([^/?#]+)/?", page["redirect"]) if isinstance(page["redirect"], str) else None
+    slug = match.group(1) if match else ""
+    return slug if _SLUG.fullmatch(slug) and len(slug) <= 200 else ""
+
+
 def _number(value):
     return value if isinstance(value, (int, float)) and not isinstance(value, bool) else None
 
@@ -234,7 +250,14 @@ def _one(slug, refresh):
         raise EdhrecError("EDHREC couldn't be reached a few minutes ago; try again later.")
     fetched = _now()
     try:
-        made = reduce_page(_get(slug), slug, fetched)
+        page = _get(slug)
+        target = redirect_slug(page)
+        if target == "":
+            raise NoPage(f"EDHREC sent {slug} somewhere Deck Lab can't follow")
+        if target:
+            made = {"format": FORMAT, "slug": slug, "redirect": target, "fetched": fetched.isoformat(timespec="seconds")}
+        else:
+            made = reduce_page(page, slug, fetched)
     except NoPage:
         _failed.pop(slug, None)
         made = {"format": FORMAT, "slug": slug, "missing": True, "fetched": fetched.isoformat(timespec="seconds")}
@@ -259,11 +282,19 @@ def fetch(commanders, refresh=False):
     slugs = commander_slugs(commanders)
     if not slugs:
         raise NoPage("The commander has no name EDHREC could know it by")
+    tried = set()
     with _lock:
         for slug in slugs:
-            kept, note = _one(slug, refresh)
-            if not kept.get("missing"):
-                return dict(kept, stale=note)
+            hops = 0
+            while slug not in tried and hops < 3:     # a redirect is followed, but never round in circles
+                tried.add(slug)
+                kept, note = _one(slug, refresh)
+                if kept.get("redirect"):
+                    slug, hops = kept["redirect"], hops + 1
+                    continue
+                if not kept.get("missing"):
+                    return dict(kept, stale=note)
+                break
     raise NoPage(f"EDHREC has no page for {' and '.join(commanders)}")
 
 
