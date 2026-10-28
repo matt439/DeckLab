@@ -2,6 +2,21 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Deterministic warm-worker slot preference check (2026-10-28)
+
+The integrated fixture run exposed a timing assumption in one pool test: its
+status observer briefly locks free slots, so a worker may legitimately take a
+different slot when its preferred one is temporarily occupied. The allocator
+promises preference when free, rather than a lifetime slot assignment.
+
+The lifecycle test retains held/released, idle, PID and pin-budget assertions.
+A separate deterministic pool-boundary check holds actual disposable leases:
+prefer slot 2 when free, use slot 0 while 2 is held, then prefer 2 after release.
+It launches no worker and catches losing the pool's preference forwarding.
+Production pool/allocator behavior is unchanged. Independent source review found
+no production bug. All three affected pool/allocator fixture checks passed in
+0.815 seconds; the affected integrated shard is qualified separately below.
+
 ## Fixture-only default test runner (2026-10-28; E11-S44)
 
 `python scripts/test_fixtures.py` is now the default source-check command, and
