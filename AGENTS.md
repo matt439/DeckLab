@@ -309,7 +309,7 @@ name,set,set_code,number,rarity,art_type,language,condition,grade,quantity,purch
 - **Prices:** show everything in **AUD**, along with the date the price was pulled.
   - Scryfall only gives USD and EUR. Convert with a current exchange rate, state the rate you used, and label the result as an estimate.
   - For purchases that matter, check real prices at Australian retailers, e.g. MTGMate.
-- **Commander deck ideas:** EDHREC, for what's commonly played with a given commander.
+- **Commander deck ideas:** EDHREC, for what's commonly played with a given commander. `python -m decklab.lib.edhrec <commander deck-id>` prints the commander's EDHREC card list (cached a week in `decklab/data/edhrec/`, `--refresh` to fetch again) marked free, in use or to buy in the deck's space; the deck page's Cards tab has the same as **See EDHREC ideas…**.
 
 Card names in any file or deck must match Scryfall exactly. A misspelled name silently breaks the diff between a deck and the collection (and an unknown name in a deck stops its space's table refreshes).
 

@@ -627,14 +627,15 @@ function printingWords(printings) {
 }
 
 /** The Cards tab: the toolbar (filters for a visitor who sees the collection, List or Pictures), the
- * decklist, its Considering list (deck-considering.js), the Tokens part and the price table. */
+ * decklist, its Considering list (deck-considering.js), a Commander deck's EDHREC ideas (deck-edhrec.js),
+ * the Tokens part and the price table. */
 function cardsParts(data, screen) {
   screen.view.mode = cardsMode();
   const list = el("div", { class: "deck-cards", id: "sec-cards" });
   screen.cardsHost = list;
   screen.cardsBar = el("div", { class: "toolbar deck-cards-bar" });
   redrawCards(screen);
-  return [screen.cardsBar, list, deckConsideringSection(data), deckSwapsSection(data), tokensSection(data),
+  return [screen.cardsBar, list, deckConsideringSection(data), deckEdhrecSection(data), deckSwapsSection(data), tokensSection(data),
     deckPrintingsSection(data), ownedSection(data)];
 }
 

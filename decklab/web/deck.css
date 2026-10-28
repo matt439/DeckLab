@@ -469,3 +469,7 @@ table.data tfoot .total-cost { font-weight: var(--fw-semibold); text-align: left
 .deck-considering-row .menu-button { min-width: var(--tap); justify-content: center; }
 .deck-considering-row .menu-caret { display: none; }
 .deck-considering-row .menu { top: calc(100% + var(--s-1)); right: 0; }
+/* EDHREC ideas (deck-edhrec.js): the filters wrap on a phone, and each category's rows sit under its heading. */
+.edhrec-filters { flex-wrap: wrap; margin: var(--s-2) 0; }
+.edhrec-group h3 { margin-top: var(--s-4); }
+.edhrec-row > .btn { min-width: var(--tap); }
