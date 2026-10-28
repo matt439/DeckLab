@@ -35,18 +35,18 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 
 | Epic | Stories | Built | Partial | Missing | Not wanted |
 |---|---:|---:|---:|---:|---:|
-| [E1: Find, plan and choose decks](#e1-find-plan-and-choose-decks) | 14 | 12 | 1 | 1 | 0 |
-| [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 19 | 15 | 1 | 2 | 1 |
+| [E1: Find, plan and choose decks](#e1-find-plan-and-choose-decks) | 14 | 13 | 0 | 1 | 0 |
+| [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 19 | 16 | 1 | 1 | 1 |
 | [E3: Test a deck](#e3-test-a-deck) | 15 | 12 | 3 | 0 | 0 |
-| [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 22 | 16 | 1 | 4 | 1 |
+| [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 22 | 16 | 2 | 3 | 1 |
 | [E5: Decide what to buy](#e5-decide-what-to-buy) | 22 | 15 | 0 | 5 | 2 |
-| [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 20 | 17 | 0 | 1 | 2 |
-| [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 28 | 20 | 4 | 4 | 0 |
+| [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 20 | 18 | 0 | 0 | 2 |
+| [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 28 | 21 | 3 | 4 | 0 |
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 18 | 12 | 1 | 3 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 20 | 13 | 0 | 6 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 35 | 31 | 1 | 1 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 28 | 17 | 6 | 2 | 3 |
-| **Total** | **241** | **180** | **18** | **29** | **14** |
+| **Total** | **241** | **184** | **17** | **26** | **14** |
 
 Counted from the story headers on 2026-10-27.
 
@@ -56,7 +56,7 @@ Counted from the story headers on 2026-10-27.
 
 How Matt and User1 (and, more lightly, User2, User3, User4 and User5) find a deck in the library (#/library), choose its picture, open its deck page (#/deck) to see whether it can be built and how to play it, rename or retire it, and pick what to play tonight. Each viewer's library holds their own space's decks, plus any another space has made public. A plain "Deck Lab is off" message is enough while the PC is off (E11-S02); collector-value sorting and legality badges on casual decks aren't wanted.
 
-Open: E1-S12, E1-S13.
+Open: E1-S12.
 
 **E1-S01** · User1 · must · M · built
 
@@ -288,7 +288,7 @@ Evidence:
 
 Covers making a deck and keeping it right: New deck and Start from, the full editor (from 600px) and the phone's Quick edit, Paste a list, the Planned and Play-now lists, owned vs needed against the space's pool and its other built decks, keeping the write-up current, history and undo, and the command-line route Claude Code uses (`deck pull`/`push`/`new`/`tables`). Drafts stay on the device they were started on, and the Play-now list's substitutes are hand-written (Packing's physical stand-ins, E4-S21, never change a list). Rename and retirement, with restore from History, are on the deck page (E1-S19). Legality badges on casual decks are deliberately not wanted.
 
-Open: E2-S16, E2-S22, E2-S24.
+Open: E2-S16, E2-S22.
 
 **E2-S01** · Matt · must · L · built
 
@@ -1574,7 +1574,7 @@ Gap: By shop has no copy action; checking shops is still done by hand (a step sh
 
 Home's buying, from placing an order to its cards sitting in the right deck or in storage: singles, token singles, sealed products, pending orders shown as on the way, correcting, splitting, cancelling and removing pending orders, the Receive delivery check-off board, arrival checks and follow-ups. Each change has a page control on Shopping or Receive delivery and a command (`order …`, `product add|edit`, `receive [--expect]`), saved as one audited change with the deck tables it refreshes. Order changes, receipts and follow-ups need a home admin; User1 sees the same pages read-only, and nobody outside home sees them at all, since person spaces have no orders, products or deliveries. Orders never store prices or spending totals, and physical-device acceptance is tracked in E2-S22.
 
-Open: E6-S19.
+Open: none.
 
 **E6-S01** · Claude Code · must · L · built
 
@@ -1905,7 +1905,7 @@ Evidence:
 
 How the inventory stays true to the physical cards. Each space's own people add, fix and remove cards on the Collection page (single cards, an app export, Add a precon) and token cards on the Tokens page; Matt and User1 both edit home's, each member only their own, and Claude does bulk and member upkeep from the PC (`collection merge`, `collection edit` and `collection apply`, `collection add-precon --space`). Repeat imports, sales and trades, and cards held by built decks are all flagged, other decks' out-of-date tables are listed with Update all rather than refreshed automatically, and the nightly `db check` looks for drift.
 
-Open: E7-S03, E7-S08, E7-S15, E7-S18, E7-S22, E7-S23, E7-S24, E7-S32.
+Open: E7-S03, E7-S08, E7-S15, E7-S18, E7-S23, E7-S24, E7-S32.
 
 **E7-S01** · Matt · must · M · built
 

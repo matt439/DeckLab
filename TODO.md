@@ -38,9 +38,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 | id | status | pri | size | item |
 |---|---|---|---|---|
 | `E2-S22` | DECISION | must | M | Physical hardware/touch-usability follow-up on the household's iPhones and M2 11-inch iPad; the six-configuration Safari Simulator suite passes ([evidence](decklab/safari/EVIDENCE.md)). |
-| `E1-S13` | OPEN | could | L | Compare two decks: the stats slice is built (`#/compare`); next the cards both lists use with the pool's cover, then head to head. |
-| `E2-S24` | OPEN | could | M | Own card categories in a deck (ramp, draw, removal) with counts. |
-| `E4-S26` | OPEN | could | M | A phone life counter that ends by recording the game (multiplayer later, with `E4-S18`). |
+| `E4-S26` | OPEN | could | M | The two-player life counter is built (Game log, ends in Record result); multiplayer comes with `E4-S18`. |
 | `E8-S22` | OPEN | could | M | A location (row, section) for storage copies, shown in the packing plan; with `E8-S19`'s storage count. |
 
 ## Deck Lab: collection, orders and buying
@@ -52,8 +50,6 @@ An index of open work, one row per item; each row points to the doc that owns th
 | `E5-S15` | DEFERRED | should | M | User1 asks from the page for a card or a Forge run, Matt approves (`E3-S13`); not urgent. |
 | `E5-S24` | DEFERRED | could | S | Copy one shop's list from Shopping's By shop, for pasting into the shop's search. |
 | `E5-S08` | OPEN | could | XL | Australian shop prices and stock, starting with a daily MTGMate snapshot for queued rows; then `E5-S19`'s back-in-stock alerts. |
-| `E6-S19` | OPEN | could | M | Tell User1, at the next visit, when a receipt brought cards for a deck User1 plays. |
-| `E7-S22` | OPEN | could | M | `collection trade` and the Collection page's Record a trade are built; next a whole-trade Undo. |
 | `E7-S32` | OPEN | could | L | Camera scanning into the collection; first slice is a recognition spike. ManaBox import stays the route meanwhile. |
 
 ## Deck Lab: Commander nights
