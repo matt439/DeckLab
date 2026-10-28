@@ -3,6 +3,12 @@ design in decklab/design/commander-sources.md).
 
 Usage (from the repo root):
     python -m decklab.lib.cards update [--force]    also refreshes the combo list
+    python -m decklab.lib.combos near <commander deck-id> [--owned]
+        the two-card combos the deck is one card away from (E9-S25), as its
+        Stats tab's One card away panel lists them (free first): the missing
+        card's AUD estimate, what it would do to the minimum bracket, and
+        whether a copy is free, on the way, in another deck or to buy in the
+        deck's own space
 
 `cards.update()` calls update() here as a step of its own: it downloads
 Commander Spellbook's public export (variants.json.gz, about 30 MB) into
@@ -39,9 +45,11 @@ The list's credit and link are in decklab/lib/stats/constants.py SOURCES
 ("commander-spellbook"). Its data has no stated licence; Spellbook's API
 guidelines ask for credit and a link back.
 """
+import argparse
 import gzip
 import json
 import os
+import sys
 import threading
 import time
 import urllib.error
@@ -463,3 +471,91 @@ def find(commander_ids, deck_ids, path=None, near=False):
             matches.append(dict(combo, missing=missing))
     matches.sort(key=_sort_key)
     return {"timestamp": data["timestamp"], "version": data["version"], "matches": matches}
+
+
+# --- The command line: combos one card away (E9-S25) -------------------------
+
+_STATES = {"free": "free", "on_the_way": "on the way", "in_use": "in another deck", "to_buy": "to buy"}
+
+
+def near_for_deck(deck_id, version="target"):
+    """A Commander deck's combos one card away for the command line: (its summary, its near_combos
+    as the deck page has them, availability included and free first), or (summary, {"checked":
+    False, "reason"}). The command line reads every space (AGENTS.md), so availability is always
+    worked out, in the deck's own space. Raises decks.DeckNotFound, decks.DeckFileError,
+    spaces.SpaceNotFound, ValueError for a deck that isn't Commander, or inventory.Unavailable."""
+    from decklab.lib import decks, pool, spaces, stats
+    from decklab.lib.api import near_combos
+    summary = decks.find_summary(deck_id)
+    if summary is None:
+        raise decks.DeckNotFound(f"No deck {deck_id!r}")
+    if decks.engine_kind(summary) != "commander":
+        raise ValueError(f"{summary['id']} isn't a Commander deck: combos one card away need a commander's "
+                         "colour identity.")
+    result = stats.deck_stats(decks.load_deck(summary["id"], version), "commander")
+    bracket = (result.get("commander") or {}).get("bracket") or {}
+    near = bracket.get("near_combos")
+    if near is None:
+        combos_check = bracket.get("combos") or {}
+        reason = (combos_check.get("reason") if combos_check.get("checked") is False
+                  else "The deck has no commander, so its colour identity is unknown.")
+        return summary, {"checked": False, "reason": reason}
+    p = pool.load_pool(spaces.space_of(summary["id"]))
+    near_combos.annotate(result, summary["id"], p, True, None)
+    order = tuple(_STATES)
+    near["matches"].sort(key=lambda m: order.index(m["availability"]))     # stable: free first, as the page
+    return summary, near
+
+
+def _print_near(deck_id, near, target):
+    if not near.get("checked"):
+        print(f"{deck_id}: combos one card away weren't checked: {near.get('reason')}")
+        return
+    total, shown = near["total"], len(near["matches"])
+    print(f"{deck_id}: {total} two-card combo{'' if total == 1 else 's'} one card away (Commander Spellbook's "
+          "list)" + (f", the {shown} most serious shown" if shown < total else ""))
+    for m in near["matches"]:
+        held = [name for name in m["names"] if name != m["missing"]]
+        what = ", ".join(m["results"][:2]) + (", ..." if len(m["results"]) > 2 else "")
+        bracket = ""
+        if m["raises_minimum"]:
+            bracket = f"; raises the minimum bracket to {m['minimum_with']}"
+            if target and m["minimum_with"] > target:
+                bracket += f", above the target {target}"
+        aud = f" ~A${m['aud']:.2f}" if m.get("aud") is not None else ""
+        state = f"[{_STATES[m['availability']]}] " if "availability" in m else ""
+        print(f"  {state}add {m['missing']}{aud} (with {', '.join(held)}): {what}{bracket}")
+        print(f"      {m['url']}")
+    rates = near.get("prices")
+    if rates:
+        print(f"AUD estimates: 1 USD = {rates['rate']} AUD ({rates['rate_date']}), card prices of "
+              f"{rates['price_date']}.")
+
+
+def main(argv=None):
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(errors="replace")
+    parser = argparse.ArgumentParser(prog="python -m decklab.lib.combos",
+                                     description="Commander Spellbook's two-card combos for a Commander deck.")
+    sub = parser.add_subparsers(dest="command", required=True)
+    near_cmd = sub.add_parser("near", help="the two-card combos a Commander deck is one card away from")
+    near_cmd.add_argument("deck", help="a Commander deck's id, e.g. commander/giada-angels or user2/commander/<slug>")
+    near_cmd.add_argument("--owned", action="store_true", help="use the Play-now (owned-only) list")
+    args = parser.parse_args(argv)
+    from decklab.lib import decks, inventory, spaces
+    from decklab.lib.inventory import entry
+    with entry.command():           # the venv, and one inventory snapshot for the command
+        try:
+            summary, near = near_for_deck(args.deck, "owned" if args.owned else "target")
+        except (decks.DeckNotFound, decks.DeckFileError, spaces.SpaceNotFound, ValueError) as e:
+            print(e, file=sys.stderr)
+            return 1
+        except inventory.Unavailable as e:
+            print(e, file=sys.stderr)
+            return 2
+        _print_near(summary["id"], near, summary.get("target_bracket"))
+        return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

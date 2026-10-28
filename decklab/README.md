@@ -180,7 +180,9 @@ rate), and what it would do to the minimum bracket against the deck's aim; a
 viewer who sees the space's collection also sees whether a copy is free, on the
 way, in another deck or to buy (free first). Whoever may edit the deck can **Add
 to Considering** (E2-S23), never straight into the lists. At most 100 are sent,
-most serious first, with the total.
+most serious first, with the total. On the PC, `python -m decklab.lib.combos near
+<deck-id> [--owned]` prints the same list, free first, with each card's place in
+the deck's own space (the command line reads every space).
 
 **Commander night** (E9-S20, built 2026-10-16) is one optional household record,
 edited in Settings by a home admin. Give it a name; venue, household target
