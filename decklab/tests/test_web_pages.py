@@ -6,7 +6,7 @@ no network, no server. The shared helpers stay in test_web.
 import re
 import unittest
 
-from decklab.tests.test_web import STYLES, _function, _text
+from decklab.tests.test_web import STYLES, _function, _scripts, _text
 
 
 class PageSourceTests(unittest.TestCase):
@@ -114,9 +114,9 @@ class PageSourceTests(unittest.TestCase):
         self.assertIn("rebaseFields(mine, base, theirs, ACC_ROW_KEYS)", _function(script, "rebaseAccessory"))
 
     def test_the_tokens_page(self):
-        # The Tokens page (tokens.js, tokens-page.css): its route, the globals the deck page, library and packing plan
+        # The Tokens page (tokens.js, tokens-edit.js, tokens-page.css): its route, the globals the deck page, library and packing plan
         # use, the endpoints it calls, the active-page guard on writes, and the phone-first layout.
-        script = _text("tokens.js")
+        script = _scripts(("tokens.js", "tokens-edit.js"))
         for name in ("showTokens", "drawTokens", "updateTokens", "tokensActive", "tokenStateChip", "tokenNeedList",
                      "tokenThumb", "openTokenSheet"):
             with self.subTest(name=name):

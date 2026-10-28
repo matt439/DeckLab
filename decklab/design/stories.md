@@ -45,10 +45,10 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 19 | 13 | 2 | 2 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 20 | 14 | 1 | 4 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 35 | 31 | 1 | 1 | 2 |
-| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 38 | 17 | 6 | 12 | 3 |
-| **Total** | **254** | **187** | **21** | **32** | **14** |
+| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 38 | 19 | 6 | 10 | 3 |
+| **Total** | **254** | **189** | **21** | **30** | **14** |
 
-Counted from the story headers on 2026-10-28 after the feature-reserve and maintenance reviews. They add five feature stories and eight hygiene stories, and correct E1-S12 from missing to partial; no new implementation is claimed shipped by these backlog edits.
+Counted from the story headers on 2026-10-28 after the feature-reserve and maintenance reviews and completion of E11-S36 and E11-S43. The reviews added five feature stories and eight hygiene stories, and corrected E1-S12 from missing to partial.
 
 ---
 
@@ -3771,7 +3771,7 @@ Evidence:
 
 Keeping Deck Lab running, safe and believable, by Matt as the household's admin and by Claude Code working for him at the PC. It covers the server and its Cloudflare tunnel and "Deck Lab is off" page, the PostgreSQL database with its nightly backup, export, check and restore check, the audit trail on #/activity, the `python -m decklab.db` commands Claude works through (previews, `--expect` guards, `-m` messages, exit codes), the card data's background refresh, Forge upkeep and the Safari Simulator suite. Every write is one audited change set, Matt's own command-line writes are recorded as his, and backups are checked by restoring them.
 
-Open: E11-S02, E11-S08, E11-S12, E11-S16, E11-S21, E11-S28, E11-S30, E11-S31, E11-S34, E11-S35, E11-S36, E11-S37, E11-S38, E11-S39, E11-S40, E11-S41, E11-S42, E11-S43.
+Open: E11-S02, E11-S08, E11-S12, E11-S16, E11-S21, E11-S28, E11-S30, E11-S31, E11-S34, E11-S35, E11-S37, E11-S38, E11-S39, E11-S40, E11-S41, E11-S42.
 
 **E11-S01** · Matt · must · M · built
 
@@ -4402,7 +4402,7 @@ Gap: the bounded read API and Settings view remain to build.
 
 First slice: return a limited recent history plus last-success summaries from the existing maintenance-run records, using the normal admin guard and sanitised outcome codes. Build the Settings view with success/failure/no-history/database-down fixtures and a still-current restore check older than the newest backup; opening it must never call backup, export, check or restore-check execution. No real job or restore is needed to develop it.
 
-**E11-S36** · Claude Code · should · M · missing
+**E11-S36** · Claude Code · should · M · built
 
 As the operator maintaining Deck Lab, I want the Tokens page split at its editing boundary, so that adding token features does not require working in an oversized script.
 
@@ -4410,11 +4410,12 @@ As the operator maintaining Deck Lab, I want the Tokens page split at its editin
 - Given classic browser loading and the test runners, then every new script is registered in the required order and existing global callers keep working.
 - Given the length audit, then tokens.js and its extracted module are each at or below the existing 1,200-line limit, with no raised threshold or compressed code.
 
-Evidence of gap (2026-10-28): `python scripts/audit_source_lengths.py --check` fails on `decklab/web/tokens.js` at 1,460 lines; it is the only owned file above the limit.
+Now (2026-10-28): `tokens-edit.js` owns the unchanged add/edit/conflict workflow; `tokens.js` keeps the page, shared pieces and details parser. Both are below 1,200 lines. See [HISTORY.md](../HISTORY.md#tokens-workflow-split-and-source-length-ci-guard-2026-10-28-e11-s36-e11-s43).
 
-Gap: the workflow extraction and loader/test updates remain to build.
-
-First slice: move the contiguous add/edit workflow from openTokenSheet through showTokenConflict into a focused script, preserving function bodies and shared-state ownership. Check token UI/conflicts, details-parser parity and explicit asset order. [SOURCE_AUDIT.md](../SOURCE_AUDIT.md#maintenance-backlog) owns the measured boundary and verification plan; no token data is changed.
+Evidence:
+- `decklab/web/tokens.js`, `decklab/web/tokens-edit.js`: all 16 extracted functions retain their bodies and global names, with shared state unchanged.
+- `decklab/web/index.html`, `decklab/tests/test_web.py`: deferred browser and Node script registration directly after `tokens.js`, with an explicit ordering assertion.
+- `decklab/tests/test_feature_ui_tokens.py`, `test_token_details_js.py`, `test_web_pages.py`: UI/conflict, parser-only parity and combined source contracts.
 
 **E11-S37** · Claude Code · should · M · missing
 
@@ -4500,7 +4501,7 @@ Gap: these instructions and their matching README examples need reconciliation.
 
 First slice: compare the named AGENTS.md instructions and matching README examples with inv_receive.py and the product-kit parser/operation, correct the contradictions, and check safe command help. Do not run an apply or touch household records. The [maintenance owner](../SOURCE_AUDIT.md#maintenance-backlog) records the finite scope and evidence.
 
-**E11-S43** · Claude Code · should · S · missing
+**E11-S43** · Claude Code · should · S · built
 
 As the operator keeping source files maintainable, I want CI to run the existing length guard, so that files cannot silently grow beyond the repository's established review limit.
 
@@ -4508,8 +4509,9 @@ As the operator keeping source files maintainable, I want CI to run the existing
 - Given ignored caches, pinned upstream exclusions or tracked/untracked source, then the check retains the existing inventory semantics and boundary, without needing PostgreSQL, card data or Forge.
 - Given the workflow change, then lint's existing real-error rules remain in place and temporary-repository fixtures cover the check's boundary and exclusions.
 
-Evidence of gap (2026-10-28): .github/workflows/lint.yml runs Ruff only and no workflow invokes audit_source_lengths.py; the local guard currently fails on tokens.js.
+Now (2026-10-28): lint runs the existing source-length guard and its isolated regression tests alongside the unchanged real-error Ruff command. The local inventory is green; hosted CI has not run for this change. See [HISTORY.md](../HISTORY.md#tokens-workflow-split-and-source-length-ci-guard-2026-10-28-e11-s36-e11-s43).
 
-Gap: CI invocation and its regression coverage remain to build after E11-S36 clears the known violation.
-
-First slice: after the Tokens split, add the existing guard to the cheap lint workflow and verify its 1,200/1,201-line boundary with temporary Git fixtures. Keep its upstream exclusions and threshold unchanged. This row is BLOCKED on E11-S36, with no baseline exception that would hide the current excess; [SOURCE_AUDIT.md](../SOURCE_AUDIT.md#maintenance-backlog) owns the gate.
+Evidence:
+- `.github/workflows/lint.yml`: focused inventory tests and `python scripts/audit_source_lengths.py --check` on every push and pull request.
+- `scripts/audit_source_lengths.py`: unchanged threshold, inventory and upstream exclusions.
+- `decklab/tests/test_source_lengths.py`: seven temporary-Git tests cover 1,200/1,201 lines, tracked/untracked files, ignores, upstream copies, source suffixes, deleted files and report-only output without app data or services.

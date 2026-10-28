@@ -2,6 +2,35 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Tokens workflow split and source-length CI guard (2026-10-28; E11-S36, E11-S43)
+
+Tokens' add/edit/conflict sheets now live in `web/tokens-edit.js` (370 lines),
+loaded directly after `tokens.js` (1,093 lines) by both the browser and the shared
+Node runners. All 16 moved functions retain their bodies and global names;
+shared constants, parser and page state stay in their existing owner. The
+parser-only loader is unchanged. This is a structural split with no token-data
+or permission changes.
+
+The cheap lint workflow now runs the existing source-length guard and seven
+isolated temporary-Git tests alongside its unchanged real-error Ruff command.
+The guard retains its 1,200-line threshold, tracked/untracked inventory,
+gitignore handling and pinned-upstream exclusions. It passes on all 1,086 owned
+source files. Fixtures cover the 1,200/1,201 boundary, UTF-8 BOM and missing final
+newline, current tracked/untracked contents, ignored caches, exact upstream
+directory, source types, deleted tracked files and report-only output.
+
+Validation: 58 focused Tokens/UI/parser/asset tests and seven guard tests passed
+without skips; both JavaScript syntax checks passed. Independent source-body,
+loader and guard review is clear. The full integrated suite ran **9,050 tests
+in 2,234.874 seconds: OK, 74 skipped**, including all seven guard cases. Skips
+were 31 opt-in real Forge/JDK checks, 22 POSIX/Linux checks, 20 unavailable
+private-history fixtures and one Windows symbolic-link privilege check.
+Discovery retains all 9,049 existing cases plus seven new ones, with no
+duplicate identities or import errors; class-setup skips reduce the run count.
+Ruff's real-error checks and `git diff --check` passed.
+Hosted CI has not run for this local change. No household data, live migration
+or Forge games were involved; physical-device acceptance remains separate.
+
 ## MTGMate daily prices for the purchase queue (2026-10-28; E5-S08, E5-S19)
 
 Shopping's queued rows now show MTGMate's own AUD price and stock from a daily snapshot, under each row's recorded reference price, with the time it was fetched and a link to that printing on MTGMate. `python -m decklab.lib.shops snapshot` (also the nightly task's last step) reads MTGMate's robots.txt first (its search is disallowed and never used; its 60-second Crawl-delay spaces the requests), then makes one request per distinct queue card name: MTGMate's page of every printing with that name, whose card table gives price, stock, set, number and finish. It saves the result in the gitignored `decklab/data/shops/mtgmate.json`, at most once in 20 hours unless `--force`. The nightly run gets at most 45 minutes of requests at robots.txt's delay: the names read longest ago go first, and those it doesn't reach keep the last result with its own fetch time, so a long queue is read over a few nights and the task's two-hour limit never cuts a run off. An OS lock on `mtgmate.lock` keeps two runs from overlapping and goes with the process however it ends. Shopping only reads the file, so a page load never reaches the shop, and without a snapshot its answer is unchanged. An exact row matches its printing and finish; any other row shows the cheapest nonfoil in stock. A shop that couldn't be read shows "price unknown", never a converted US price, and three failures in a row stop the run. A Waiting for stock row the snapshot finds in stock is highlighted **Back in stock** (E5-S19); a row in stock now but not in the snapshot before is marked **Newly in stock**. The snapshot never changes the watchlist. `shops show` prints the queue beside it and `shops lookup NAME` checks one name. The tests use a snapshot path of their own (`DECKLAB_SHOP_SNAPSHOT`), never the PC's file. Code: `decklab/lib/shops.py`, `decklab/lib/api/shop_prices.py`, `decklab/web/shopping-snapshot.js`, `decklab/db/nightly.py`; tests `test_shops.py`, `test_shopping_snapshot_ui.py`, `test_db_ops.py` NightlyTests.

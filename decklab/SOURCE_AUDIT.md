@@ -190,7 +190,7 @@ finish its stated scope, record the result here/HISTORY.md and remove its TODO
 row. A later audit may identify another concrete task. The dated audits above
 remain historical evidence, not measurements of today's checkout.
 
-## Current evidence
+## Starting evidence
 
 The inventory check on `c678f10` reads **1,084 owned source files**. **One exceeds
 1,200 lines:** `web/tokens.js`, at **1,460**. `--check` exits **1**; this backlog
@@ -198,6 +198,35 @@ change does not fix or waive that failure. There are 29 owned source files over
 1,000 lines, including tests. Being below the threshold is not proof of a good
 module boundary, and being large is not by itself a reason to split a cohesive
 file. No lower blanket threshold is introduced.
+
+## Tokens and CI guard completed: E11-S36, E11-S43
+
+Built 2026-10-28. `web/tokens.js` is now **1,093 lines**; the extracted
+`web/tokens-edit.js` is **370 lines**. All 16 workflow functions, from
+openTokenSheet through showTokenConflict, retain their original bodies and
+global names. The original file retains its shared constants, parser and page
+state; only two trailing blank lines were trimmed. Browser and shared Node
+loaders register the new deferred script directly after tokens.js. The
+parser-only test loader is unchanged.
+
+The inventory now contains **1,086 owned source files**, with **none above
+1,200 lines**. The existing audit implementation, threshold and exclusions are
+unchanged. lint.yml runs its seven new temporary-Git regression tests and
+`--check` alongside the existing Ruff command. Hosted CI has not run for this
+local change.
+
+Verification: 58 focused Tokens/UI/parser/asset checks and seven guard checks
+passed without skips, both JavaScript syntax checks pass, and independent
+source-body/loader/guard review is clear. The full integrated suite ran
+**9,050 tests in 2,234.874 seconds: OK, 74 skipped**, including all seven guard
+cases. Skips: 31 opt-in real Forge/JDK checks, 22 POSIX/Linux checks, 20 absent
+private-history fixtures and one Windows symbolic-link privilege check.
+Discovery preserves all 9,049 existing cases plus seven new ones, with no
+duplicates or import errors; class-setup skips reduce the run count. Ruff's
+real-error checks and `git diff --check` pass.
+No household data or migration was changed, and no Forge games were run.
+
+## Starting measured targets
 
 | id | Measured target | First structural boundary |
 |---|---|---|
@@ -234,11 +263,11 @@ ownership plan rather than a generic facade.
 
 ### Tokens and editor workflows: E11-S36, E11-S37
 
-For Tokens, extract the contiguous sheet workflow into a focused classic
-script, keeping current globals and state lookup. Retain parser-only loading
-for test_token_details_js.py or update its file list explicitly if it now needs
-the extraction. Verify token UI/conflicts, physical row identities, details
-parity and asset order; then the source-length check must pass.
+The completed Tokens split extracts the contiguous sheet workflow into a
+focused classic script, keeping current globals and state lookup. Parser-only
+loading for test_token_details_js.py is unchanged. Token UI/conflicts, physical
+row identities, details parity and asset order remain the verification contract;
+the source-length check now passes.
 
 For the editor, start with mergedLists/openPaste/mergeLines/replaceLines and
 startFromPart/choiceSheet/openPreconStart/openDeckStart. Keep search and viewport
@@ -317,11 +346,12 @@ to command behaviour are outside this documentation task.
 
 ## Continuous source-length guard: E11-S43
 
-No current workflow invokes audit_source_lengths.py. After E11-S36 clears the
-known failure, add its existing --check invocation to the cheap lint workflow,
-alongside the existing real-error Ruff checks. Keep the 1,200-line threshold,
-ignored-cache rules, tracked/untracked inventory and pinned-upstream exclusion
-policy. Do not introduce a temporary exception for tokens.js. Temporary Git
-fixtures must exercise the 1,200/1,201 boundary and inventory/exclusion rules;
-the job must require no database, card cache or Forge installation. Real CI
-results are recorded when the workflow runs, separately from local validation.
+Built 2026-10-28 after E11-S36 cleared the known failure. The cheap lint workflow
+runs the existing --check invocation alongside its unchanged real-error Ruff
+checks. The 1,200-line threshold, ignored-cache rules, tracked/untracked inventory
+and pinned-upstream exclusion policy are unchanged, with no Tokens exception.
+`test_source_lengths.py` uses temporary Git fixtures for the 1,200/1,201 boundary,
+UTF-8 BOM and missing final newline, tracked/untracked/current contents, ignored
+caches, exact upstream directory, all six source suffixes, deleted tracked files
+and report-only behaviour. The job requires no database, card cache or Forge
+installation. Hosted CI results remain separate from local validation.

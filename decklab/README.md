@@ -1658,7 +1658,7 @@ Xcode 27.0 and iOS 27.0 across all six configurations. E2-S22 keeps the remainin
 physical hardware and touch-usability checks separate from this Simulator coverage.
 
 The [source-length audit](SOURCE_AUDIT.md) records the module boundaries and the
-upstream Forge exceptions. Check for files growing past the 1,200-line review threshold:
+upstream Forge exceptions. The lint workflow runs the guard and its isolated inventory tests alongside Ruff on every push and pull request. To check locally for files growing past the 1,200-line review threshold:
 
 ```
 python scripts/audit_source_lengths.py --check

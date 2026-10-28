@@ -66,13 +66,13 @@ Each epic has a journey in [journeys.md](journeys.md) and its stories in [storie
 | E8 | Sleeves, boxes and storage | Sleeves & boxes (`#/accessories`), Sleeves and Deck box lines, the Choose… picker, kit warnings, put-back steps, the storage box | 13 | 2 | 2 | 2 |
 | E9 | Commander nights | Commander checks and the minimum bracket, multiplayer practice, Forge's Commander field, getting ready for the social Commander night | 14 | 1 | 4 | 1 |
 | E10 | Members, access and privacy | Roles and spaces, the read and write rules, "Who are you?", decklab.example.com behind Cloudflare Access, Activity (`#/activity`), Visits on Settings, private by default | 31 | 1 | 1 | 2 |
-| E11 | Run and trust the system | The server and tunnel, database maintenance, audit trail, typed commands, Forge upkeep, Settings, Safari regressions, visual design and code hygiene | 17 | 6 | 12 | 3 |
+| E11 | Run and trust the system | The server and tunnel, database maintenance, audit trail, typed commands, Forge upkeep, Settings, Safari regressions, visual design and code hygiene | 19 | 6 | 10 | 3 |
 
 ## Headline counts
 
 - **9 personas:** two primary, two secondary (User5 and the space members), one supplementary, one non-human actor and three anti-personas.
-- **11 epics, 254 stories:** 187 built, 21 partial, 32 missing and 14 not wanted (recounted 2026-10-28 after the feature and maintenance reviews).
-- **Must and should stories:** Matt has 96 built and 3 partial; User1 has 32 built, 1 partial and 1 missing; Claude Code has 15 built and 7 missing maintenance stories; User5 has 4 built; the space members have 4 built; the Commander table has 1 built. The last three have no must or should gap. (Recounted from the story headers on 2026-10-28.)
+- **11 epics, 254 stories:** 189 built, 21 partial, 30 missing and 14 not wanted (recounted 2026-10-28 after the feature and maintenance reviews and completion of E11-S36 and E11-S43).
+- **Must and should stories:** Matt has 96 built and 3 partial; User1 has 32 built, 1 partial and 1 missing; Claude Code has 17 built and 5 missing maintenance stories; User5 has 4 built; the space members have 4 built; the Commander table has 1 built. The last three have no must or should gap. (Recounted from the story headers on 2026-10-28.)
 
 Deck Lab already does most of what Matt and User1 need. Private by default and guarded member departure are built and live since 2026-10-19. The visual redesign (E11-S30) stays first, followed by the expanded reserve of deck-building, collection, buying, play and self-hosting work reviewed on 2026-10-28. [TODO.md](../../TODO.md) owns their order and readiness; each story owns its first slice and later gates. The other must and should gaps are the physical-device follow-up (E2-S22), the signed-in off-page check (E11-S02) and User2's testing session (E11-S28), which need the people involved; and User1's purchase requests (E5-S15), which are deferred. Stand-in suggestions, combo detection, official-list change detection, the Forge upgrade check, the prebuilt Forge release and Linux support are already built.
 

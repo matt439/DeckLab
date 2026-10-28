@@ -45,7 +45,7 @@ WEB = server.WEB_DIR
 MATCHUP_SCRIPTS = ("sim-ui.js", "matchups.js", "matchups-overview.js", "matchups-summary.js", "matchups-detail.js", "matchups-results.js", "matchups-play.js",
                    "matchups-cards.js")
 PLAY_SCRIPTS = ("deck-tools.js", "deck-print.js", "qr.js", "deck-label.js", "collection.js", "precon-token-choices.js", "precon-coverage.js", "collection-rows.js", "collection-cards.js", "collection-bulk.js", "collection-guards.js", "collection-trade.js", "storage-locations.js", "assembly.js", "assembly-chooser.js", "assembly-switcher.js", "assembly-finish.js", "assembly-steps.js", "assembly-overlap.js", "assembly-sections.js", "assembly-progress.js", "assembly-sheets.js", "assembly-boxcheck.js", "box-collection.js", "box-editor.js", "box-repair.js", "hands.js", "play.js", "life-counter.js", "deck-sideboard.js", "deck-opponents.js", "deck-standins.js", "printings-in-box.js", "deck-swaps.js", "deck-considering.js", "deck-edhrec.js", "deck-categories.js", "product-storage.js", "history.js", "compare.js", "activity.js", "activity-undo.js",
-                "order-check-targets.js", "receipts.js", "receipt-tiles.js", "receipt-layout.js", "receipt-workflow.js", "accessories.js", "accessory-pictures.js", "tokens.js", "token-plan.js", "product-tokens.js")
+                "order-check-targets.js", "receipts.js", "receipt-tiles.js", "receipt-layout.js", "receipt-workflow.js", "accessories.js", "accessory-pictures.js", "tokens.js", "tokens-edit.js", "token-plan.js", "product-tokens.js")
 SHELL_SCRIPTS = ("keyboard-help.js", "shell.js", "settings.js", "settings-members.js", "visibility.js", "arrival-notices.js")  # account pages, just before app.js
 CARD_SCRIPTS = ("ui.js", "symbols.js", "cards-ui.js", "card-viewer.js")     # the shared card pieces (UI-KIT.md)
 SCRIPTS = ("core.js", *CARD_SCRIPTS, "library.js", "library-boxchecks.js", "library-glance.js", "library-tables.js", "cover.js", "deck-availability.js", "deck.js", "deck-header.js", "deck-overview.js", "deck-retirement.js", "deck-rename.js", "deck-prices.js", "guide.js", "stats.js", "commander-readiness.js", "deck-near-combos.js", "commander-night.js", "practice.js", "version.js", "wishlist.js", "shopping.js", "shopping-buying.js", "shopping-queue.js", "shopping-reprints.js", "shopping-snapshot.js", "shopping-orders.js", "shopping-order-edit.js", "shopping-order-rows.js", "shopping-order-split.js", "app.js",
@@ -390,6 +390,10 @@ class WebFileTests(unittest.TestCase):
                                "/library.js", "/library-boxchecks.js", "/library-glance.js", "/library-tables.js", "/cover.js", "/deck-availability.js", "/deck.js", "/deck-header.js", "/deck-overview.js", "/deck-retirement.js", "/deck-rename.js", "/deck-prices.js", "/guide.js", "/stats.js", "/commander-readiness.js", "/deck-near-combos.js", "/commander-night.js", "/practice.js", "/version.js", "/wishlist.js", "/shopping.js", "/shopping-buying.js", "/shopping-queue.js", "/shopping-reprints.js", "/shopping-snapshot.js", "/shopping-orders.js", "/shopping-order-edit.js", "/shopping-order-rows.js", "/shopping-order-split.js",
                                *["/" + name for name in PLAY_SCRIPTS], *["/" + name for name in SHELL_SCRIPTS], "/app.js"])
         self.assertEqual(sorted(s.lstrip("/") for s in scripts), sorted(SCRIPTS))
+        # Tokens keeps shared row/parser helpers before its sheets and both before packing workflows.
+        token_start = scripts.index("/tokens.js")
+        self.assertEqual(scripts[token_start:token_start + 3],
+                         ["/tokens.js", "/tokens-edit.js", "/token-plan.js"])
         # Every script in web/ is one the page loads (and so one these tests read).
         self.assertEqual(sorted(path.name for path in WEB.glob("*.js")), sorted(SCRIPTS))
 
