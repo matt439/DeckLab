@@ -2,6 +2,56 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Review one deleted token-card record (2026-10-28; E11-S08 slice)
+
+Activity can now **Review deleted token card** for one standalone own-space
+deletion. The distinct read-only result shows all ten exact historical token
+fields and the physical quantity, counting a front/back pair as one card. It
+offers Close and manual Refresh eligibility, with no input, confirmation box,
+Save Undo or write request. Notes remain literal owned row facts; original audit
+messages/reasons and database identity/position fields are not projected.
+
+The backend reads the complete original source, verifies its exact row shape,
+old identity/position and supported ordinary text forms, then checks current
+paper printings, finish and physical pairing. Both the original key and the
+whole own-space token list must still have that deletion as their latest audit
+row. Missing fences and later changes, including a fresh-ID restore/remove
+cycle, refuse. Current stock must have settled IDs, order and persisted layout.
+Duplicate or reversed printing identities and incomplete survivors sharing a
+possible face refuse; an unknown reverse cannot count as a different card.
+
+Recorded deck/product packing must be complete and readable. Any line that
+could claim the restored card refuses, even if another printing currently meets
+it. The review preserves every survivor and allocation and never creates a
+hypothetical replacement ID. Stock, holder, text, line and allocation-work caps
+refuse the whole review. Its opaque evidence binds source, exact facts, layout,
+stock hash and both revisions without publishing those internal details.
+
+The PostgreSQL adapter uses one explicit read-only READ COMMITTED transaction,
+the existing inventory advisory claim, plain membership/departure checks and
+fresh same-connection snapshot, source, latest-row and position readers. It
+creates no audit change and issues no DML. API POST refuses this action before
+`saving.apply_op`; direct operation execution also refuses before an inverse.
+A direct generic `PgInventory.apply` attempt would first enter its existing
+audit transaction and must roll back on refusal; that path was not run against
+PostgreSQL and is not described as issuing no DML.
+
+The specified future identity policy uses ordinary Add with a fresh ID,
+explicit whole-quantity physical ownership confirmation and transaction-local
+proof of one exact actual INSERT with unchanged survivors/positions/packing.
+The old ID is never reused or guessed, and earlier packing is not reconnected.
+That inverse remains a later slice; this eligibility review promises no save.
+
+Root's final protected eighteen-module integration passed 272 tests with zero
+skips, including 37 backend/API/fake-cursor and 18 UI cases plus prior Undo,
+token INSERT, collection INSERT/DELETE and loader regressions. One old blanket
+DELETE-404 assertion now expects an unavailable review for unverified facts,
+retaining its no-write checks and adding explicit POST refusal. Independent and
+root review, Node syntax, Ruff, source lengths and whitespace pass. Qualification
+used fake transactions/backends, disposable fixtures and Node DOM only; actual
+PostgreSQL, browser and device behavior remain unrun. No live records, server,
+configuration, service, packing or game was changed or probed.
+
 ## Saved sideboard-plan preview (2026-10-28; E4-S16 slice)
 
 Saved plans in Game log and the deck's Sideboard plan now offer **Preview

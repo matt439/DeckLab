@@ -199,6 +199,8 @@ function activityUndoAuditVersion(value) {
 }
 
 function activityUndoEvidence(data, id, space, profile = state.profile?.id) {
+  if (data && (data.action === "token_restore_review" || Object.hasOwn(data, "read_only") ||
+      Object.hasOwn(data, "identity_policy") || Object.hasOwn(data, "packing_restored"))) return null;
   if (!data || data.available !== true || data.id !== id
       || typeof data.expect !== "string" || !/^[a-f0-9]{64}$/.test(data.expect)
       || typeof data.label !== "string" || !data.label.trim()) return null;
@@ -332,6 +334,8 @@ function activityUndoOwner(ctx) {
 }
 
 function activityUndoButton(view, change) {
+  if (change.undo && (Object.hasOwn(change.undo, "read_only") || change.undo.action === "token_restore_review"))
+    return typeof activityTokenReviewButton === "function" ? activityTokenReviewButton(view, change) : null;
   if (change.undo?.review !== true || !Number.isSafeInteger(change.id) || change.id < 1) return null;
   const id = change.id, root = view.days, endpoint = change.undo.kind === "wishlist" ? "/api/activity/wishlist-undo"
     : change.undo.kind === "accessory" ? "/api/activity/accessory-undo" : change.undo.kind === "mixed" ? ACTIVITY_UNDO_MIXED_ENDPOINT : "/api/activity/undo";

@@ -305,6 +305,8 @@ Per-viewer conveniences only, in the browser's `localStorage` under keys startin
 
 - **Preview post-board list** on a saved Sideboard plan (Game log or the deck Overview) checks that the record and both visible lists are still exact. It shows per-section printing/finish changes and the full proposed list without changing the deck or plan. For known matching formats it also shows fresh paired-game upper bounds; mixed or unconfirmed formats keep the list preview with no numeric game guide. Saved games and simulation setup are not checked, remaining games are unknown, and this action starts no test. Changed or unavailable lists require reviewing a new plan revision.
 
+- **Review deleted token card** on Activity is an eligibility check for one latest standalone deletion in your own space. It shows the exact historical row and physical quantity, with no Save Undo. Later token changes, possible duplicate identities, uncertain pairing or packing refuse review. A future recovery would create a new record after explicit physical-count confirmation; earlier packing would not reconnect automatically. This check restores nothing and changes no surviving cards, decks or products.
+
 ## People's own collections (spaces)
 
 Each profile in `decklab/config.json` has a `space` (`lib/spaces.py`). Matt and User1 share `home`: the shared collection, token cards and decks, with the products, orders, receipts, accessories and watchlist, which only home has. User2, User3 and User4 each have their own space: a collection, token cards (with their raw imports) and decks, all in the database. Nothing is made in advance: a space with no rows reads as empty.

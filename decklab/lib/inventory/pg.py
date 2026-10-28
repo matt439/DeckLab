@@ -877,6 +877,15 @@ class PgInventory:
         applying = getattr(self._applying, "connection", None)
         return work(applying) if applying is not None else self._call(work)
 
+    def undo_token_latest(self, space):
+        from .undo_token_delete import latest
+        applying = getattr(self._applying, "connection", None)
+        return latest(applying, space) if applying is not None else self._call(lambda c: latest(c, space))
+
+    def undo_token_delete_review(self, change_id, space):
+        from .undo_token_delete import read_review
+        return read_review(self, change_id, space, _take_lock)
+
     def supports_check_links(self):
         def work(c):
             return "check_links" in pg_check_links.columns(c)
