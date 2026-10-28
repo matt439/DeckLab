@@ -1344,7 +1344,7 @@ Now (2026-10-28): the first slice is built ([HISTORY.md](../HISTORY.md#mtgmate-d
 
 Evidence:
 - `decklab/lib/shops.py`: robots_rules/allowed (robots.txt read first, every `*` group merged, its Crawl-delay kept), Session (one request a name, spaced), parse_name_page (MTGMate's name page's card table), take/refresh (the snapshot in `decklab/data/shops/mtgmate.json`, at most once in 20 hours), pick/match (a row's printing and finish, cheapest nonfoil in stock for an any-printing row), nightly; `python -m decklab.lib.shops snapshot|show|lookup`
-- `decklab/db/nightly.py`: `_shop_prices`, the nightly task's last step (never a failed night; skipped over 60 names)
+- `decklab/db/nightly.py`: `_shop_prices`, the nightly task's last step (never a failed night; at most 45 minutes of requests a night, the names least recently read first, the rest keeping their last result)
 - `decklab/lib/api/shop_prices.py`: enrich/for_row (GET /api/shopping's `shop_snapshot` and each queued row's; the queue write's answer again), home records viewers only through `shopping.py`'s guard
 - `decklab/web/shopping-snapshot.js`: shopSnapshotLine (the shop's price, stock, printing link and fetch time, or unknown/not listed)
 - `decklab/lib/cards.py`: cheapest_usd (Scryfall USD only); `decklab/web/deck-prices.js`: ownedSection (the converted-estimate note)

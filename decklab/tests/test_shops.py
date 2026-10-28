@@ -178,6 +178,33 @@ class SnapshotTests(unittest.TestCase):
             path.write_text("not json", encoding="utf-8")
             self.assertIsNone(shops.load(path))
 
+    def test_a_time_budget_stops_at_robots_delay_and_keeps_what_was_read_before(self):
+        shop, clock = FakeShop({"Sol%20Ring": SOL_RING}), Clock()
+        previous = shops.take(["Sol Ring", "Nothing"], session=session(FakeShop({"Sol%20Ring": SOL_RING})))
+        names = shops.oldest_first(["Sol Ring", "Nothing", "New"], previous)
+        self.assertEqual(names[0], "New")
+        delays = []
+        data = shops.take(names, session=session(shop, clock), previous=previous, budget=100,
+                          started=delays.append)
+        self.assertEqual(delays, [60.0])
+        self.assertEqual([url.rsplit("/", 1)[1] for url in shop.urls], ["robots.txt", "New"])
+        self.assertEqual(data["cards"]["New"]["status"], "not_listed")
+        kept = data["cards"]["Sol Ring"]
+        self.assertTrue(kept["carried"])
+        self.assertEqual(kept["at"], previous["cards"]["Sol Ring"]["at"])
+        shown = shops.match({"name": "Sol Ring", "printing": "any", "state": "ready"}, data)
+        self.assertEqual((shown["status"], shown["carried"], shown["fetched_at"]), ("in_stock", True, kept["at"]))
+        self.assertFalse(shops.match({"name": "New", "printing": "any"}, data)["carried"])
+
+    def test_a_slower_crawl_delay_shortens_the_run_not_the_politeness(self):
+        slow, shop, clock = ROBOTS.replace("Crawl-delay: 60", "Crawl-delay: 120"), FakeShop({}), Clock()
+        sess = shops.Session(fetch=lambda url: slow if url.endswith("/robots.txt") else shop(url),
+                             sleep=clock.sleep, clock=clock)
+        data = shops.take(["A", "B", "C"], session=sess, budget=250)
+        self.assertEqual(clock.slept, [120.0, 120.0])
+        self.assertEqual(data["cards"]["B"]["status"], "not_listed")
+        self.assertIn("time ran out", data["cards"]["C"]["error"])
+
     def test_queue_names_are_distinct_in_queue_order(self):
         self.assertEqual(shops.queue_names([{"name": "B"}, {"name": "a"}, {"name": "b"}, {"name": ""}]), ["B", "a"])
 
@@ -197,7 +224,7 @@ class RefreshTests(unittest.TestCase):
         said, shop = [], FakeShop({"Sol%20Ring": SOL_RING})
         self.assertEqual(shops.refresh(say=said.append, session=session(shop)), 0)
         self.assertEqual(shops.load(self.path)["cards"]["Sol Ring"]["status"], "ok")
-        self.assertFalse(self.path.with_name("mtgmate.lock").exists())
+        self.assertIn("60 seconds apart", " ".join(said))
         again = FakeShop({})
         self.assertEqual(shops.refresh(say=said.append, session=session(again)), 0)
         self.assertEqual(again.urls, [])
@@ -206,11 +233,32 @@ class RefreshTests(unittest.TestCase):
         self.assertEqual(shops.load(self.path)["cards"]["Sol Ring"]["status"], "not_listed")
         self.assertEqual(shops.load(self.path)["previous"]["Sol Ring"]["listings"][0]["set"], "40k")
 
-    def test_too_many_names_for_the_night_fetch_nothing(self):
-        said, shop = [], FakeShop({})
-        self.assertEqual(shops.refresh(say=said.append, session=session(shop), max_names=0), 1)
-        self.assertEqual(shop.urls, [])
-        self.assertFalse(self.path.exists())
+    def test_a_run_cut_short_saves_what_it_read_and_says_so(self):
+        said, shop = [], FakeShop({"Sol%20Ring": SOL_RING})
+        with mock.patch.object(shops, "_queue", return_value=[{"name": "Sol Ring"}, {"name": "Other"}]):
+            self.assertEqual(shops.refresh(say=said.append, session=session(shop), budget=90), 0)
+        self.assertEqual(shops.load(self.path)["cards"]["Sol Ring"]["status"], "ok")
+        self.assertIn("time ran out", shops.load(self.path)["cards"]["Other"]["error"])
+        self.assertIn("stops after about 2 minutes", said[0])
+
+    def test_a_running_snapshot_holds_an_os_lock_that_goes_with_it(self):
+        held = shops._lock()
+        self.assertIsNotNone(held)
+        try:
+            said, shop = [], FakeShop({})
+            self.assertEqual(shops.refresh(say=said.append, session=session(shop)), 1)
+            self.assertIn("Another MTGMate snapshot is running", said[-1])
+            self.assertEqual(shop.urls, [])
+        finally:
+            shops._unlock(held)
+        # the lock file a killed run leaves holds nothing: the next run goes ahead
+        self.assertTrue(self.path.with_name("mtgmate.lock").exists())
+        self.assertEqual(shops.refresh(say=said.append, session=session(FakeShop({"Sol%20Ring": SOL_RING}))), 0)
+
+    def test_the_nightly_step_has_a_time_budget(self):
+        with mock.patch.object(shops, "refresh", return_value=0) as refresh:
+            shops.nightly(lambda words: None)
+        self.assertEqual(refresh.call_args.kwargs["budget"], shops.NIGHTLY_BUDGET)
 
     def test_the_nightly_step_never_fails_the_night(self):
         logged = []
@@ -236,13 +284,16 @@ class ApiTests(unittest.TestCase):
         self.assertTrue(answer["to_buy"][0]["shop_snapshot"]["back_in_stock"])
         self.assertEqual(answer["to_buy"][1]["shop_snapshot"]["status"], "not_checked")
 
-    def test_without_a_snapshot_rows_say_nothing(self):
+    def test_without_a_snapshot_the_answer_is_unchanged(self):
         answer = {"to_buy": [{"name": "Sol Ring"}]}
         with tempfile.TemporaryDirectory() as folder, \
                 mock.patch.object(shops, "SNAPSHOT", Path(folder) / "none.json"):
             shop_prices.enrich(answer)
-        self.assertIsNone(answer["shop_snapshot"])
-        self.assertIsNone(answer["to_buy"][0]["shop_snapshot"])
+        self.assertEqual(answer, {"to_buy": [{"name": "Sol Ring"}]})
+
+    def test_the_test_run_never_reads_the_checkouts_real_snapshot(self):
+        self.assertNotIn("decklab/data/shops", shops.snapshot_path().as_posix())
+        self.assertIsNone(shops.load())
 
 
 if __name__ == "__main__":

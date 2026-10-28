@@ -19,8 +19,12 @@ How it asks: one request per card name, MTGMate's page of every printing with th
 and its Crawl-delay (60 seconds when this was written) spaces the requests, so a queue of 30
 names takes about half an hour. A failure, a timeout or an unreadable page leaves that name's
 price unknown ("error"), never a converted US price; three failures in a row stop the run
-and leave the rest unknown. Nothing here changes the watchlist, and Shopping only reads the
-file (match() below), so a page load never reaches the shop.
+and leave the rest unknown. The nightly task gives a run NIGHTLY_BUDGET of requests at
+robots.txt's delay: the names least recently read go first, and those it doesn't reach keep
+the earlier run's result with that run's time ("carried"), so a long queue is read over a few
+nights rather than the task being stopped partway. Two runs never overlap (an OS lock on
+mtgmate.lock, let go however the process ends). Nothing here changes the watchlist, and
+Shopping only reads the file (match() below), so a page load never reaches the shop.
 
     python -m decklab.lib.shops snapshot [--force] [--dry-run]
         look the queue's names up (at most once in MIN_AGE unless --force); --dry-run lists
@@ -44,20 +48,26 @@ from pathlib import Path
 
 from decklab.lib import config
 
+if sys.platform == "win32":
+    import msvcrt
+else:
+    import fcntl
+
 SHOP = "MTGMate"
 SITE = "https://www.mtgmate.com.au"
 ROBOTS_PATH = "/robots.txt"
 NAME_PATH = "/cards/"                       # + the card name, quoted whole ("Sol%20Ring")
 USER_AGENT = config.USER_AGENT + " purchase-queue price check"
-SNAPSHOT = None                             # the tests' path; else snapshot_path() under config.REPO
+SNAPSHOT = None                             # a test's own path; else snapshot_path()
+SNAPSHOT_ENV = "DECKLAB_SHOP_SNAPSHOT"      # the test run's (decklab/tests/__init__.py): never the real file
 MIN_AGE = timedelta(hours=20)               # "daily": a nightly run a little early still counts
 DEFAULT_DELAY = 60                          # seconds between requests when robots.txt names none
 MIN_DELAY = 10                              # never faster than this, whatever robots.txt says
 TIMEOUT = 30
 MAX_PAGE = 5 * 1024 * 1024
 MAX_FAILURES = 3                            # failures in a row before the shop counts as down
-LOCK_STALE = timedelta(hours=6)
-NIGHTLY_MAX_NAMES = 60                      # about an hour: the nightly task stops after two (schedule.py)
+LOCK_AT = 1 << 20                           # the lock file's byte locked (as lib/forge/slots.py)
+NIGHTLY_BUDGET = 45 * 60                    # seconds of requests a night: the task stops after two (schedule.py)
 FINISHES = {"nonfoil", "foil", "etched"}
 
 
@@ -252,9 +262,14 @@ class Session:
 # --- the snapshot file ---------------------------------------------------------------------
 
 def snapshot_path():
-    """decklab/data/shops/mtgmate.json in this checkout (gitignored), read at call time so a
-    test that points config.REPO elsewhere never sees a real snapshot."""
-    return SNAPSHOT or Path(config.REPO) / "decklab" / "data" / "shops" / "mtgmate.json"
+    """decklab/data/shops/mtgmate.json in this checkout (gitignored), worked out at call time;
+    DECKLAB_SHOP_SNAPSHOT names another file (the test run's own, which doesn't exist, so no
+    test reads the PC's real snapshot)."""
+    if SNAPSHOT:
+        return Path(SNAPSHOT)
+    if os.environ.get(SNAPSHOT_ENV):
+        return Path(os.environ[SNAPSHOT_ENV])
+    return Path(config.REPO) / "decklab" / "data" / "shops" / "mtgmate.json"
 
 
 def load(path=None):
@@ -293,17 +308,54 @@ def queue_names(rows):
     return names
 
 
-def take(names, *, session=None, previous=None, now=None, progress=None):
-    """A new snapshot of names. previous is the snapshot before (or None)."""
+def _last_read(previous):
+    """{casefolded name: when the snapshot before read it} for its names that were read."""
+    return {name.casefold(): str(entry.get("at") or "") for name, entry in ((previous or {}).get("cards") or {}).items()
+            if isinstance(entry, dict) and entry.get("status") in ("ok", "not_listed")}
+
+
+def oldest_first(names, previous):
+    """names with those not read last time first, then the longest since read, so a run cut
+    short by its time budget reaches the rest next time."""
+    read = _last_read(previous)
+    return sorted(names, key=lambda name: (name.casefold() in read, read.get(name.casefold(), "")))
+
+
+OUT_OF_TIME = "out of time"
+
+
+def take(names, *, session=None, previous=None, now=None, progress=None, budget=None, started=None):
+    """A new snapshot of names. previous is the snapshot before (or None). budget: the most
+    seconds of requests after robots.txt; a name the run can't reach in it keeps what the
+    snapshot before read, with its time ("carried"), else is unknown. started(delay) is told
+    the delay robots.txt gave, once it's read."""
     session = session or Session()
     now = now or _now
-    started = now()
+    begun = now()
     cards_out, failures, stop = {}, 0, None
     try:
         session.start()
     except ShopError as error:
         stop = str(error)
+    else:
+        if started:
+            started(session.delay)
+    first = session.clock()
+    before = (previous or {}).get("cards")
     for count, name in enumerate(names, 1):
+        if stop is None and budget is not None and session.clock() - first + session.delay > budget:
+            stop = OUT_OF_TIME
+        if stop == OUT_OF_TIME:
+            old = _by_name(before, name)
+            if old is not None and old.get("status") in ("ok", "not_listed"):
+                cards_out[name] = {"status": old["status"], "at": old.get("at"), "listings": old.get("listings") or [],
+                                   "carried": True}
+            else:
+                cards_out[name] = {"status": "error", "at": _iso(now()), "listings": [],
+                                   "error": "Not checked: this run's time ran out"}
+            if progress:
+                progress(count, len(names), name, cards_out[name])
+            continue
         if stop is not None:
             cards_out[name] = {"status": "error", "at": _iso(now()), "listings": [],
                                "error": f"Not checked: {stop}"}
@@ -327,7 +379,7 @@ def take(names, *, session=None, previous=None, now=None, progress=None):
     for name, entry in ((previous or {}).get("cards") or {}).items():
         if isinstance(entry, dict) and entry.get("status") in ("ok", "not_listed"):
             kept[name] = {"at": entry.get("at"), "listings": entry.get("listings") or []}
-    return {"version": 1, "shop": SHOP, "site": SITE, "started_at": _iso(started), "fetched_at": _iso(now()),
+    return {"version": 1, "shop": SHOP, "site": SITE, "started_at": _iso(begun), "fetched_at": _iso(now()),
             "crawl_delay": session.delay, "cards": cards_out, "previous": kept}
 
 
@@ -375,19 +427,22 @@ def match(row, data):
     """What the snapshot says about one queue row, or None when there is no snapshot:
     {"shop", "status": "in_stock" | "out_of_stock" | "not_listed" | "unknown" | "not_checked",
      "fetched_at", "price_aud", "stock", "set", "collector_number", "finish", "url",
-     "in_stock_printings", "error", "back_in_stock", "newly_in_stock"}.
+     "in_stock_printings", "error", "back_in_stock", "newly_in_stock", "carried"}.
     back_in_stock: a waiting_for_stock row the snapshot finds in stock (E5-S19's highlight);
-    newly_in_stock: in stock now and not in the snapshot before."""
+    newly_in_stock: in stock now and not in the snapshot before; carried: a name the last run
+    didn't reach in its time, shown as an earlier run read it (fetched_at is then that run's)."""
     if not data:
         return None
     name = str(row.get("name") or "")
     entry = _by_name(data.get("cards"), name)
     shown = {"shop": data.get("shop") or SHOP, "status": "not_checked", "fetched_at": None, "price_aud": None,
              "stock": None, "set": None, "collector_number": None, "finish": None, "url": None,
-             "in_stock_printings": 0, "error": None, "back_in_stock": False, "newly_in_stock": False}
+             "in_stock_printings": 0, "error": None, "back_in_stock": False, "newly_in_stock": False,
+             "carried": False}
     if entry is None:
         return shown
     shown["fetched_at"] = entry.get("at") or data.get("fetched_at")
+    shown["carried"] = bool(entry.get("carried"))
     status = entry.get("status")
     if status == "error":
         shown.update(status="unknown", error=str(entry.get("error") or f"{SHOP} couldn't be read"))
@@ -426,23 +481,35 @@ def _queue():
         return [{key: row.text(key) for key in purchases.QUEUE_FIELDS} for row in inventory.current().watchlist.rows]
 
 
-def _lock(now):
+def _lock():
+    """The open lock file's descriptor once this process holds its OS lock, else None. The OS
+    lets go of it however the process ends (a nightly task stopped at its time limit too), so a
+    killed run never blocks the next; the file itself stays."""
     lock = snapshot_path().with_name("mtgmate.lock")
     lock.parent.mkdir(parents=True, exist_ok=True)
+    fd = os.open(lock, os.O_RDWR | os.O_CREAT | getattr(os, "O_BINARY", 0), 0o666)
     try:
-        handle = os.open(lock, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
-    except FileExistsError:
-        try:
-            age = now.timestamp() - lock.stat().st_mtime
-        except OSError:
-            age = 0
-        if age < LOCK_STALE.total_seconds():
-            return False
-        lock.unlink(missing_ok=True)
-        return _lock(now)
-    os.write(handle, str(os.getpid()).encode())
-    os.close(handle)
-    return True
+        if sys.platform == "win32":
+            os.lseek(fd, LOCK_AT, os.SEEK_SET)
+            msvcrt.locking(fd, msvcrt.LK_NBLCK, 1)
+        else:
+            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        os.close(fd)
+        return None
+    return fd
+
+
+def _unlock(fd):
+    try:
+        if sys.platform == "win32":
+            os.lseek(fd, LOCK_AT, os.SEEK_SET)
+            msvcrt.locking(fd, msvcrt.LK_UNLCK, 1)
+        else:
+            fcntl.flock(fd, fcntl.LOCK_UN)
+    except OSError:
+        pass
+    os.close(fd)
 
 
 def _describe(shown):
@@ -453,19 +520,21 @@ def _describe(shown):
         price = f"A${shown['price_aud']}" if shown["price_aud"] else "price not shown"
         stock = f"{shown['stock']} in stock" if shown["status"] == "in_stock" else "out of stock"
         flags = " BACK IN STOCK" if shown["back_in_stock"] else (" new" if shown["newly_in_stock"] else "")
-        return f"{price}, {stock} ({where}){flags}"
+        when = f", as read {shown['fetched_at']}" if shown.get("carried") else ""
+        return f"{price}, {stock} ({where}){flags}{when}"
     return {"not_listed": "not listed", "not_checked": "not in the snapshot"}.get(
         shown["status"], f"price unknown: {shown['error']}")
 
 
-def _minutes(names):
-    return max(1, round(len(names) * DEFAULT_DELAY / 60))
+def _minutes(names, delay=DEFAULT_DELAY):
+    return max(1, round(len(names) * delay / 60))
 
 
-def refresh(*, force=False, say=print, progress=True, session=None, max_names=None):
+def refresh(*, force=False, say=print, progress=True, session=None, budget=None):
     """Take and save a new snapshot of the queue's names, unless the last one is less than
-    MIN_AGE old (or force). say(words) reports; 0 done or nothing due, 1 refused, too many
-    names (over max_names) or every name unknown, 2 the purchase queue couldn't be read."""
+    MIN_AGE old (or force). budget: take()'s, the most seconds of requests (the names least
+    recently read go first, so the rest come next time). say(words) reports; 0 done or nothing
+    due, 1 refused (another run going) or every name unknown, 2 the purchase queue couldn't be read."""
     from decklab.lib.inventory import Unavailable
     now = _now()
     try:
@@ -481,27 +550,35 @@ def refresh(*, force=False, say=print, progress=True, session=None, max_names=No
     if not names:
         say("The purchase queue is empty; nothing to look up.")
         return 0
-    if max_names is not None and len(names) > max_names:
-        say(f"{len(names)} names would take about {_minutes(names)} minutes, more than this run allows; "
-            "run python -m decklab.lib.shops snapshot by hand.")
-        return 1
-    if not _lock(now):
+    lock = _lock()
+    if lock is None:
         say(f"Another {SHOP} snapshot is running ({snapshot_path().with_name('mtgmate.lock')}).")
         return 1
     try:
-        say(f"Looking up {len(names)} names on {SHOP}, one request each, spaced as its robots.txt asks "
-            f"(about {_minutes(names)} minutes).")
+        names = oldest_first(names, previous)
+
+        def started(delay):
+            fits = "" if budget is None or len(names) * delay <= budget else (
+                f"; this run stops after about {round(budget / 60)} minutes and the rest keep their last results")
+            say(f"Looking up {len(names)} names on {SHOP}, one request each, {delay:g} seconds apart as its "
+                f"robots.txt asks (about {_minutes(names, delay)} minutes{fits}).")
 
         def step(count, total, name, entry):
             words = {"ok": f"{len(entry['listings'])} listings", "not_listed": "not listed"}.get(
                 entry["status"], entry.get("error", "error"))
+            if entry.get("carried"):
+                words = f"not reached; kept the result read {entry.get('at')}"
             say(f"  {count}/{total} {name}: {words}")
-        data = take(names, session=session, previous=previous, progress=step if progress else None)
+        data = take(names, session=session, previous=previous, progress=step if progress else None,
+                    budget=budget, started=started)
         _write(data, snapshot_path())
     finally:
-        snapshot_path().with_name("mtgmate.lock").unlink(missing_ok=True)
-    failed = sum(entry["status"] == "error" for entry in data["cards"].values())
-    say(f"Saved {snapshot_path()} ({len(names) - failed} read, {failed} unknown).")
+        _unlock(lock)
+    entries = list(data["cards"].values())
+    failed = sum(entry["status"] == "error" for entry in entries)
+    carried = sum(bool(entry.get("carried")) for entry in entries)
+    kept = f", {carried} not reached and kept from before" if carried else ""
+    say(f"Saved {snapshot_path()} ({len(names) - failed - carried} read{kept}, {failed} unknown).")
     return 1 if failed == len(names) else 0
 
 
@@ -510,7 +587,7 @@ def nightly(log):
     a shop that can't be reached is no failure of the database's night, and the log says why."""
     try:
         refresh(say=lambda words: log(f"Nightly: {SHOP} prices: {words.strip()}"), progress=False,
-                max_names=NIGHTLY_MAX_NAMES)
+                budget=NIGHTLY_BUDGET)
     except Exception as error:  # a broken shop page must not mark the backup night failed
         log(f"Nightly: {SHOP} prices failed: {type(error).__name__}: {error}")
     return 0

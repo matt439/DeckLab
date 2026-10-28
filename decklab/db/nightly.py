@@ -2,7 +2,8 @@
 the visits older than about a year deleted (visits.py), an export, the check of the data
 (check.py), a restore check when the last one that worked is more than restore_check_days
 old (28: about monthly), and last MTGMate's daily snapshot of the purchase queue's prices
-(lib/shops.py: one request a card name, a minute apart as its robots.txt asks; never a failed
+(lib/shops.py: one request a card name, a minute apart as its robots.txt asks, for at most
+NIGHTLY_BUDGET (45 minutes), so the task's two-hour limit never cuts it off; never a failed
 night, since a shop that can't be reached is nothing wrong with the database).
 
 Every step runs even when an earlier one failed (an unreachable NAS is no reason to skip the

@@ -41,7 +41,7 @@ def shopping_overview():
         it's for (its source naming a deck, or its "for" naming one by title), or None;
       - each product component's "product_status" (status.csv's: owned, ordered, preordered);
       - "shop_snapshot": MTGMate's daily snapshot's shop and fetch time (shop_prices.py), and each
-        queued card's "shop_snapshot", what it says about that row (lib/shops.match); None without one;
+        queued card's "shop_snapshot", what it says about that row (lib/shops.match); left out without one;
       - "decks_missing": the home decks whose planned list still misses cards;
       - "missing_cards": {ready, rows, warnings, errors, totals}, one canonical card
         per row with summed individual deck shortfalls, wanting decks and every matching

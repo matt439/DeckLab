@@ -25,9 +25,12 @@ def for_row(row, data=None):
 
 def enrich(answer):
     """Each queued card's "shop_snapshot" and the answer's "shop_snapshot" (the snapshot's
-    shop and fetch time), both None without a snapshot. The queue itself never changes."""
+    shop and fetch time), only while there is a snapshot: without one the answer stays exactly
+    as it was. The queue itself never changes."""
     data = _snapshot()
+    if not data:
+        return answer
     answer["shop_snapshot"] = shops.summary(data)
     for row in answer.get("to_buy", []):
-        row["shop_snapshot"] = shops.match(row, data) if data else None
+        row["shop_snapshot"] = shops.match(row, data)
     return answer
