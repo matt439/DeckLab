@@ -2,6 +2,33 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Where CLI-merged copies go (2026-10-28; E7-S15)
+
+Real `collection merge` now captures locked positive printing deltas and prints
+Where these go after the existing counts, raw-import paths and stale-table
+notes. Both notes and guide use the exact returned snapshot. The explicit
+internal CLI allocator reads only the selected space, with no manufactured
+profile or actor access rule; web guards/defaults remain unchanged. When
+relaying member upkeep outside that space, counts/completion remain the limit.
+
+The console guide groups each added printing copy once by waiting deck and
+storage, using the shared prior-stock/new-copy ledger. At most 100 printing
+lines are printed, with exact omitted counts. Zero tracked copies says nothing
+to file; invalid/incomplete/capped calculations say Destination unknown. Dry-run,
+raw source bytes, repeat/refusal behavior, attribution and exit contracts stay
+unchanged. Advice/format failures, including closed stdout and failed stderr
+fallbacks, cannot fail an already-saved merge or suggest repeating it.
+
+Root's protected nine-module/class integration passed 107 tests without skips.
+Independent review then found closed text streams' ValueError case; root fixed
+both optional report catches and passed the final 14-case CLI module, including
+the new regression. Coverage includes 10 new allocator cases, 14 new CLI cases,
+page/precon advice and legacy merge/preview/actor behavior. Root review, Ruff,
+diff and length checks pass. E7-S15 is implemented across CSV imports, precons,
+single-card Add and CLI merge; Receive delivery retains its existing grouping.
+Genuine PostgreSQL and browser/device qualification remain unrun. No live
+collection, database/server or other runtime action was used for this slice.
+
 ## Recorded maintenance history in Settings (2026-10-28; E11-S35)
 
 Selected admins can read backup, export, integrity-check and restore-check history

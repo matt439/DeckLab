@@ -41,12 +41,12 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 22 | 16 | 2 | 3 | 1 |
 | [E5: Decide what to buy](#e5-decide-what-to-buy) | 22 | 18 | 1 | 1 | 2 |
 | [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 20 | 18 | 0 | 0 | 2 |
-| [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 28 | 23 | 1 | 4 | 0 |
+| [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 28 | 24 | 0 | 4 | 0 |
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 19 | 14 | 2 | 1 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 20 | 14 | 1 | 4 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 35 | 31 | 1 | 1 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 39 | 26 | 6 | 4 | 3 |
-| **Total** | **255** | **203** | **19** | **19** | **14** |
+| **Total** | **255** | **204** | **18** | **19** | **14** |
 
 Counted from the story headers on 2026-10-28 after the current feature and maintenance work. The reviews added five feature stories and eight hygiene stories, and corrected E1-S12 from missing to partial.
 
@@ -1990,7 +1990,7 @@ Evidence:
 
 How the inventory stays true to the physical cards. Each space's own people add, fix and remove cards on the Collection page (single cards, an app export, Add a precon) and token cards on the Tokens page; Matt and User1 both edit home's, each member only their own, and Claude does bulk and member upkeep from the PC (`collection merge`, `collection edit` and `collection apply`, `collection add-precon --space`). Repeat imports, sales and trades, and cards held by built decks are all flagged, other decks' out-of-date tables are listed with Update all rather than refreshed automatically, and the nightly `db check` looks for drift.
 
-Open: E7-S08, E7-S15, E7-S23, E7-S24, E7-S32.
+Open: E7-S08, E7-S23, E7-S24, E7-S32.
 
 **E7-S01** · Matt · must · M · built
 
@@ -2189,7 +2189,7 @@ Evidence:
 - `decklab/tests/test_collection_assembly.py`: test_owned_free_held_and_incoming_are_distinct, test_availability_filters
 - `decklab/tests/test_public_collection_games.py`: test_public_collection_is_read_only_for_admins_and_members, test_home_public_collection_keeps_records_private_and_holders_anonymous
 
-**E7-S15** · Matt · could · M · partial
+**E7-S15** · Matt · could · M · built
 
 As a person filing new cards, I want after an import or merge a list of which new cards a deck is waiting for and which go to storage, so that I sleeve them into the right deck straight away.
 
@@ -2213,7 +2213,11 @@ Evidence:
 - `api/collection_filing.py`, `web/collection-filing.js` and small Collection/loader hooks: bounded own-space allocation and read-only destination panels. No receipt structural extraction or whole Inventory in Summary.extra.
 - Root's final protected integration passed 113 tests without skips (23 new backend, 15 new UI, existing collection-edit and group consumers). Additional protected UI/source and nine precon compatibility checks passed. Root review and independent source checks are clear; source-length, Ruff, syntax and diff checks pass.
 
-Gap: `collection merge` still needs the filing handoff. Receive delivery retains its existing grouping. No packing, reservation, deck, status or location changes are made by advice. Genuine PostgreSQL and browser/device qualification remain unverified. See [HISTORY.md](../HISTORY.md#where-single-card-additions-go-2026-10-28-e7-s15-add-slice) and the earlier precon/CSV slices.
+Built CLI merge handoff (2026-10-28): real merges opt into locked printing facts and use the exact returned snapshot for both stale-table notes and filing advice. An explicit internal CLI path reads only that selected space, without a synthetic profile or actor permissions; web guards/defaults stay unchanged. The bounded console guide groups printing copies by deck/storage, labels unknown and zero-copy results, and counts omitted lines after the 100-line display cap. Advice/format/output failure never changes a successful merge to failure or suggests repeating it. Dry-run, raw bytes, repeat/refusal, attribution and existing exit contracts remain intact.
+
+CLI evidence: `db/inv_collection.py`, explicit `api/collection_filing.after_cli_merge`, 10 new allocator and 14 new CLI fixture cases. Root's protected integration passed 107 tests without skips; after the independent review's closed-stream finding was fixed, the final 14-case CLI module passed. Ruff, diff and length guards pass.
+
+Receive delivery retains its existing grouping. Advice changes no packing, reservations, deck/status or locations. Genuine PostgreSQL and browser/device qualification remain unverified. Member upkeep relayed outside that space still reports counts/completion only. See [HISTORY.md](../HISTORY.md#where-cli-merged-copies-go-2026-10-28-e7-s15).
 
 **E7-S16** · Matt · should · M · built
 

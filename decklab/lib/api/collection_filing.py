@@ -21,6 +21,7 @@ MAX_DESTINATIONS = 20000
 UNKNOWN = "Destination unknown. The import was saved; check where these copies belong."
 PRECON_UNKNOWN = "Destination unknown. The precon was saved; check where these copies belong."
 ADD_UNKNOWN = "Destination unknown. The card was added; check where these copies belong."
+MERGE_UNKNOWN = "Destination unknown. The merge was saved; check where these copies belong."
 ROW_FIELDS = ("name", "set", "collector_number", "finish")
 
 
@@ -61,16 +62,17 @@ def _validated_added(after, space, facts, total):
     return added
 
 
-def _candidate_decks(after, space, profile, work):
+def _candidate_decks(after, space, profile, work, *, cli_owned=False):
     records = after.space_decks(space)
     if len(records) > MAX_DECKS:
         raise ValueError("Too many candidate decks")
-    sees = guard.deck_reader(profile)
+    # The command line may maintain any selected space; --actor is attribution, not a viewer.
+    sees = None if cli_owned else guard.deck_reader(profile)
     candidates = []
     for record in records:
         if record.kind not in ("casual", "commander"):
             continue
-        if record.error is not None or record.data is None or not sees(record.id):
+        if record.error is not None or record.data is None or sees is not None and not sees(record.id):
             raise ValueError("A candidate deck is unavailable")
         work[0] += record.text.count("\n") + 1
         if work[0] > MAX_WORK:
@@ -101,12 +103,12 @@ def _created_deck(after, space, profile, proof):
     return {"id": record.id, "title": parsed.title, "status": parsed.status or "idea"}
 
 
-def _allocate(after, space, profile, added, created=None):
+def _allocate(after, space, profile, added, created=None, *, cli_owned=False):
     """Allocate names globally, then spend each exact printing's quantity only once."""
     work = [len(added) + len(after.collection(space).rows)]
     if work[0] > MAX_WORK:
         raise ValueError("Too much filing work")
-    candidates = _candidate_decks(after, space, profile, work)
+    candidates = _candidate_decks(after, space, profile, work, cli_owned=cli_owned)
     found = pool.load_pool(space)
     if found.space != space or found.warnings or found.unresolved:
         raise ValueError("Incomplete physical pool")
@@ -224,6 +226,28 @@ def after_import(after, space, profile, facts, total):
                 "added": added, "destinations": destinations}
     except Exception:           # advice is optional; saved cards and raw imports remain saved
         return unknown(space, profile, facts if authorized else None, total if authorized else 0)
+
+
+def after_cli_merge(after, space, facts, total):
+    """CLI-only advice for a saved merge: no request viewer or actor permission semantics.
+
+    Read only the selected space in the exact returned snapshot. Web entry points keep their
+    inventory/deck guards; this internal path does not manufacture a profile or request context.
+    """
+    safe_total = total if type(total) is int and total >= 0 else 0
+    try:
+        if type(total) is int and total == 0 and facts == []:
+            return {"space": space, "status": "ready", "cards": 0, "added": [], "destinations": []}
+        with inventory.pinned(after):
+            added = _validated_added(after, space, facts, total)
+            destinations = _allocate(after, space, None, added, cli_owned=True)
+        return {"space": space, "status": "ready", "cards": total, "added": added, "destinations": destinations}
+    except Exception:           # the merge stands even when optional filing advice cannot be proved
+        added = _public_added(facts)
+        destinations = ([{"kind": "unknown", "row": i, "quantity": row["quantity"]}
+                         for i, row in enumerate(added)] if len(added) <= MAX_DESTINATIONS else [])
+        return {"space": space, "status": "unknown", "cards": safe_total, "added": added,
+                "destinations": destinations, "message": MERGE_UNKNOWN}
 
 
 def after_add(after, space, profile, facts, total):
