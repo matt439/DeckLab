@@ -2,6 +2,29 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Import source groups: backend (2026-10-28; E7-S03 partial)
+
+Collection import previews now retain each checked source contribution and its
+original source set before equal printing identities merge. Preview version 4
+includes server-generated group IDs, original lines, problem and valid-row/card
+counts, while older flat previews and the parser's four-value contract remain
+supported. Explicit `skip_groups` is bound to that saved preview and excludes
+all selected source rows, including clearly counted valid copies.
+
+Apply validates IDs and remerges retained facts without rematching. Unselected
+problems still block; collection SHA, repeat-import, owner, expiry and replacement
+fences remain. The upload stays byte-for-byte original. Durable audit messages
+separate deliberate valid exclusions from malformed rows and retain exact source
+line ranges. The bounded apply payload accommodates the source-row limit.
+
+Protected qualification ran 204 consumer tests with four database-class skips,
+including 16 group cases and a 5,000-row preview; final membership/payload checks
+passed with connections prohibited. Root's combined 41 group/row-selection checks
+also passed with `conn.connect` prohibited. Independent review, syntax, Ruff,
+diff and source-length checks pass. PostgreSQL runtime qualification is not
+claimed. The story remains partial: import group controls and excluded-row
+review are the next UI slice; the existing flat UI remains compatible.
+
 ## Copy one shop's list (2026-10-28; E5-S24)
 
 Shopping's permanent By shop groups now have one sibling Copy list control per

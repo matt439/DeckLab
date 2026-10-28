@@ -2017,13 +2017,17 @@ As an experienced player with older cards, I want import problems shown grouped 
 - Given a group, when I choose to leave it out, then every row in it is skipped and the rest can be applied.
 - Given a 5,000-row export, when I preview it, then the preview finishes and lists the groups before anything is applied.
 
+Now (2026-10-28): the backend preserves checked source contributions before matching identities merge, and previews include source-set groups with explicit problem/valid-copy counts. Optional token-bound `skip_groups` excludes only reviewed source groups, remerges retained facts without rematching, and records deliberate valid exclusions with exact source lines. The original raw upload and legacy `skip_problems` flow remain intact.
+
 Evidence:
-- `decklab/lib/api/collection_edit.py`: read_upload (problems as a flat list of line and message), import_apply (skip_problems)
-- `decklab/web/collection.js`: drawImportPreview
+- `decklab/lib/api/collection_import.py`: read_review, review_rows; read_upload retains its four-value compatibility contract.
+- `decklab/lib/api/collection_edit.py`: import_preview, _selected_import, import_apply; persisted preview version 4 retains server-owned group meanings and accepts older flat previews through the legacy flow.
+- `decklab/lib/inventory/ops_collection.py`: deliberate exclusions are separate from malformed rows and retained in the durable audit message.
+- `decklab/tests/test_collection_import_groups.py`: 16 group cases include shared final identities, BOM/CRLF preservation, stale/repeat/profile fences, malformed selections and a 5,000-row preview. Protected consumer qualification ran 204 tests with four database-class skips; root's 41 combined group/selection checks passed with database connections prohibited.
 
-Gap: problems are listed by file line with no set grouping or counts, and skip_problems leaves out every problem row or none, so one set can't be left out. Only the third criterion (a large export previews before applying) holds.
+Gap: the Collection import UI still shows flat problems and has no source-group choices or explicit excluded-row review.
 
-First slice (reserve review, 2026-10-28): retain each problem's source set and group problems with counts in the import preview, including an Unknown set group. Add explicit skip-group choices bound to the exact upload/preview; list every excluded row, keep other unresolved problems blocking and never drop a valid row silently. Save only the reviewed retained rows while keeping the original raw upload unchanged. Fixture exports with several sets and stale reviews need no member records.
+Next slice: add initially unchecked source-set controls, visible valid-copy exclusions and every excluded source row, using the exact preview's groups and contributions. Preserve focused controls, pending/late guards and legacy-server fallback; keep unresolved retained problems blocking. Do not infer source membership from a merged printing or first line.
 
 **E7-S04** · Matt · should · S · built
 

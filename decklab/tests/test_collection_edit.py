@@ -739,7 +739,10 @@ class ImportTests(CollectionEditTestCase):
         preview = self.preview(MANABOX)
         record = json.loads((self.box.data / "collection-imports" / "matt.json").read_text(encoding="utf-8"))
         self.assertEqual(set(record), {"version", "token", "space", "profile", "filename", "text", "format", "good",
-                                    "problems", "dropped_basics", "repeat_imports"})
+                                    "problems", "dropped_basics", "repeat_imports", "source_rows", "groups"})
+        self.assertEqual(record["version"], 4)
+        self.assertEqual(record["source_rows"], preview["source_rows"])
+        self.assertEqual(record["groups"], preview["groups"])
         self.assertEqual(record["token"], preview["token"])
         self.assertTrue(all(set(r) == set(ce.FIELDS) for r in record["good"]))
         self.assertEqual(record["problems"], [{"line": 6, "message": "Scryfall has no card named 'Nonsense Card'"}])

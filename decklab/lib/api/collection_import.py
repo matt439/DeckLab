@@ -119,13 +119,8 @@ def _source_rows(text, fmt, reader):
     return out
 
 
-def read_upload(text, existing=()):
-    """(format, rows, problems, dropped_basics) of an upload's text: rows
-    [{the eight columns, "line", "problem"}] matched to Scryfall, ordinary
-    basics dropped (dropped_basics: their cards) unless existing (identity
-    keys already in the collection) has them, rows naming one identity key
-    merged (at the first one's line). problems [{"line", "message"}].
-    ApiError 400 for an upload that isn't one of FORMATS."""
+def _read_source(text):
+    """The detected format and converted source rows, before matching or merging."""
     text = text.lstrip("﻿")
     try:
         reader = csv.DictReader(io.StringIO(text, newline=""), strict=True)
@@ -137,15 +132,24 @@ def read_upload(text, existing=()):
         source = _source_rows(text, fmt, reader)
     except csv.Error as e:
         raise ApiError(400, f"That file can't be read as CSV: {_public(e)}") from None
-    existing = set(existing)
+    return fmt, source
+
+
+def review_rows(source_rows, skip_groups=()):
+    """Merge retained, already checked source contributions without matching again.
+
+    Source lines and groups belong to the preview, before equal printing identities
+    merge. Work on copies so a review never changes that immutable source evidence.
+    """
+    excluded = set(skip_groups)
     rows, by_key, dropped = [], {}, 0
-    for line, row, set_name, problem in source:
-        # Basics first: they're dropped whatever their printing (rules.merge_rows' rule).
-        if problem is None and rules.ordinary_basic(row) and rules.ident(row) not in existing:
+    for source in source_rows:
+        if source["group"] in excluded:
+            continue
+        row, line, problem = source["row"], source["line"], source["problem"]
+        if source["dropped_basic"]:
             dropped += int(row["quantity"])
             continue
-        if problem is None:
-            row, problem = owner.match(row, set_name)
         if problem is None and rules.ident(row) in by_key:
             first = by_key[rules.ident(row)]
             first["quantity"] = str(int(first["quantity"]) + int(row["quantity"]))
@@ -161,7 +165,64 @@ def read_upload(text, existing=()):
         if problem is None:
             by_key[rules.ident(entry)] = entry
     problems = [{"line": r["line"], "message": r["problem"]} for r in rows if r["problem"]]
-    return fmt, rows, problems, dropped
+    return rows, problems, dropped
+
+
+def _set_label(code, name):
+    """A bounded single-line display label; source values remain in the review rows."""
+    label = f"{name} ({code.upper()})" if name and code else name or code.upper() or "Unknown set"
+    return " ".join(owner._CONTROL_RE.sub(" ", label).split())[:owner.MAX_NAME] or "Unknown set"
+
+
+def read_review(text, existing=()):
+    """An upload's original source groups and unmerged checked contributions.
+
+    Group by the supplied set code, else its supplied name, else Unknown set.
+    Matching may resolve a different final printing; it never changes group membership.
+    Group ids are short server-assigned labels meaningful only with this preview token.
+    """
+    fmt, source = _read_source(text)
+    existing = set(existing)
+    source_rows, groups, by_set = [], [], {}
+    for line, row, set_name, problem in source:
+        code, name = row["set"], set_name or ""
+        key = ("code", code.casefold()) if code else ("name", name.casefold()) if name else ("unknown", "")
+        if key not in by_set:
+            group = {"id": f"g{len(groups) + 1}", "code": code, "name": name, "label": _set_label(code, name),
+                     "rows": 0, "problem_rows": 0, "valid_rows": 0, "valid_cards": 0,
+                     "dropped_basics": 0, "lines": []}
+            by_set[key] = group
+            groups.append(group)
+        group = by_set[key]
+        # Basics are checked before matching, as read_upload has always done.
+        basic = problem is None and rules.ordinary_basic(row) and rules.ident(row) not in existing
+        if problem is None and not basic:
+            row, problem = owner.match(row, set_name)
+        source_rows.append({"line": line, "group": group["id"], "source_set": {"code": code, "name": name},
+                            "row": {k: row.get(k, "") for k in owner.FIELDS}, "problem": problem,
+                            "dropped_basic": basic})
+        group["rows"] += 1
+        group["lines"].append(line)
+        if problem is not None:
+            group["problem_rows"] += 1
+        elif basic:
+            group["dropped_basics"] += int(row["quantity"])
+        else:
+            group["valid_rows"] += 1
+            group["valid_cards"] += int(row["quantity"])
+    rows, problems, dropped = review_rows(source_rows)
+    return {"format": fmt, "rows": rows, "problems": problems, "dropped_basics": dropped,
+            "source_rows": source_rows, "groups": groups}
+
+
+def read_upload(text, existing=()):
+    """(format, rows, problems, dropped_basics), preserving the existing parser contract.
+
+    Matched rows have the eight collection fields, line and problem; duplicate printing
+    identities merge at the first line, and ordinary basics are omitted unless tracked.
+    """
+    review = read_review(text, existing)
+    return review["format"], review["rows"], review["problems"], review["dropped_basics"]
 
 
 # Define the re-exported functions before importing their mutable owner, so

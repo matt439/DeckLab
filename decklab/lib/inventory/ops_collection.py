@@ -8,7 +8,7 @@ the inventory registered with inventory.register, so the Collection page, "Add a
     collection.remove   {space, original, sha256?, whose?, expect_decks_revision?}
     collection.apply    {space, edits, removals, sha256?, whose?, expect_decks_revision?}
     collection.import   {space, sources, uploads?, sha256?, whose?, message?, limit?, fmt?,
-                         problems?, dropped_basics?, expected_repeats?}
+                         problems?, dropped_basics?, expected_repeats?, excluded_groups?}
     collection.trade    {space, gave, got, sha256?, whose?, expect_decks_revision?}
 
 collection.trade (E7-S22) is a trade as one change: gave is [[set, collector_number, finish,
@@ -48,6 +48,8 @@ caps the bytes the space's raw imports may hold in all (TooLarge). message words
 "{cards}" standing for the cards merged.
 expected_repeats, when given, is the earlier matching raw-import filenames the caller reviewed;
 a different set refuses with RepeatsChanged before either the cards or imports are written.
+excluded_groups records source sets deliberately left out of a reviewed upload, including their
+valid rows. It is separate from malformed rows in problems; the original raw upload stays intact.
 
 Each Summary's text is the change's message ("add card Llanowar Elves (FDN 227) in User2's
 collection"); counts are merge_rows' ({cards, added_rows, bumped_rows, skipped_basics}, plus
@@ -342,9 +344,29 @@ def _repeat_message(text, repeats, uploads):
     return text
 
 
+def _excluded_message(text, groups):
+    """Keep deliberate valid exclusions in the durable audit message, tied to raw source lines."""
+    groups = list(groups)
+    if not groups:
+        return text
+    lines = sorted({line for group in groups for line in group["lines"]})
+    ranges = []
+    for line in lines:
+        if ranges and line == ranges[-1][1] + 1:
+            ranges[-1][1] = line
+        else:
+            ranges.append([line, line])
+    named = ", ".join(str(first) if first == last else f"{first}-{last}" for first, last in ranges)
+    rows = sum(group["rows"] for group in groups)
+    valid = sum(group["valid_rows"] for group in groups)
+    cards = sum(group["valid_cards"] for group in groups)
+    return (f"{text}; deliberately left out {len(groups)} source sets: {rows} source rows, including "
+            f"{valid} valid rows ({cards} cards); source lines {named}")
+
+
 @register("collection.import")
 def merge(inv, space, sources, uploads=(), sha256=None, whose=None, message=None, limit=None, fmt="",
-          problems=(), dropped_basics=0, expected_repeats=None):
+          problems=(), dropped_basics=0, expected_repeats=None, excluded_groups=()):
     """Rows merged in additively from sources, each upload kept as a raw import (see the module
     docstring)."""
     whose = whose or collection_name(space)
@@ -380,10 +402,17 @@ def merge(inv, space, sources, uploads=(), sha256=None, whose=None, message=None
                     + (" ..." if len(problems) > 20 else ""))
     if dropped_basics:
         body.append(f"Left out {dropped_basics} ordinary basic lands.")
-    text = _repeat_message((message or "import {cards} cards into " + whose).replace(
-        "{cards}", str(counts["cards"])), repeats, uploads)
+    excluded_groups = list(excluded_groups)
+    for group in excluded_groups:
+        body.append(f"Left out source set {group['label']}: {group['rows']} source rows, including "
+                    f"{group['valid_rows']} valid rows ({group['valid_cards']} cards), "
+                    f"{group['problem_rows']} rows with problems and {group['dropped_basics']} ordinary basic lands; "
+                    f"source lines " + ", ".join(str(line) for line in group["lines"]) + ".")
+    text = _excluded_message(_repeat_message((message or "import {cards} cards into " + whose).replace(
+        "{cards}", str(counts["cards"])), repeats, uploads), excluded_groups)
     return inv.with_collection(space, merged), Summary(
-        text, counts=counts, extra={"body": body, "imports": imports, "raw": raw})
+        text, counts=counts, extra={"body": body, "imports": imports, "raw": raw,
+                                  **({"excluded_groups": excluded_groups} if excluded_groups else {})})
 
 
 # ------------------------------------------------------------------ trades
@@ -497,9 +526,9 @@ def message(inv, kind, params):
             return f"{' and '.join(words) or 'change no rows'} in {whose}"
         if kind == "collection.import":
             _, counts = rules.merge_rows(rows, _sources(params["sources"]))
-            return _repeat_message((params.get("message") or "import {cards} cards into " + whose).replace(
+            return _excluded_message(_repeat_message((params.get("message") or "import {cards} cards into " + whose).replace(
                 "{cards}", str(counts["cards"])), repeat_imports(inv, space, params.get("uploads", ())),
-                params.get("uploads", ()))
+                params.get("uploads", ())), params.get("excluded_groups", ()))
     except (Invalid, Conflict, rules.InvalidCards):
         pass
     return f"change {whose}"

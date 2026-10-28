@@ -78,9 +78,9 @@ language only ever hold their known values or nothing, and names must be
 Scryfall's (so "+2 Mace" is fine).
 
 The preview is kept in IMPORTS_DIR as <profile>.json for IMPORT_TTL seconds,
-holding only what the apply needs (the upload's text, its file name and
-format, the rows without problems, the problems and the count of basics left
-out) and the token that names it: one pending preview per profile, so a new
+holding the upload's text, its file name and format, checked source rows and
+source-set groups before merging, the problems and basics left out, and the
+token that names it: one pending preview per profile, so a new
 preview replaces the last (whose token then gets 410). Previews are read one
 at a time (_preview_lock): a second preview while one is being checked is
 refused at once with 429 ("another import is being checked"), rather than
@@ -91,7 +91,9 @@ file-backend tests use an imports/ folder), unless they would then hold more tha
 MAX_IMPORTS_FOLDER bytes (413), and merges it additively
 (rules.merge_rows: quantities add on the identity key), in one change with
 the raw file. Rows with problems block the apply unless "skip_problems"
-leaves them out.
+leaves them out, or explicit "skip_groups" names every unresolved source set.
+Group selection leaves out all that set's source rows, valid ones included,
+then merges the retained contributions; the upload itself stays unchanged.
 
 The limits: 20,000 rows is a large collection. A ManaBox export's row is
 about 120-180 bytes (its Scryfall ID alone is 36), so 20,000 rows are about
@@ -122,7 +124,7 @@ from .common import MAX_NAME, NUMBER_RE, SET_RE, _CONTROL_RE, ApiError, _keys, _
 from .settings import _web_actor, _writer
 # Parser helpers have one implementation; their limits and matching stay here.
 from .collection_import import (_condition, _finish, _language, _norm, _source_rows, _too_many_rows,
-                                detect, read_upload)
+                                detect, read_review, read_upload, review_rows)
 
 # Import previews waiting to be applied. Tests patch it.
 IMPORTS_DIR = config.DATA / "collection-imports"
@@ -135,6 +137,7 @@ MAX_BULK_BODY = 4 * 1024 * 1024     # bytes of its request (about 70 a key)
 MAX_IMPORT = 4 * 1024 * 1024        # bytes of an upload's text (20,000 ManaBox rows are about 3 MB)
 MAX_IMPORT_BODY = 2 * MAX_IMPORT + 64 * 1024    # bytes of its request (JSON escapes quotes and line ends)
 MAX_IMPORT_ROWS = 20000             # rows of an upload read at most
+MAX_IMPORT_APPLY_BODY = 256 * 1024  # the 20,000 short group ids fit; within the HTTP edit-body limit
 MAX_IMPORTS_FOLDER = ops.MAX_IMPORTS     # bytes a space's raw imports may hold in all
 MAX_FILENAME = 200
 MAX_QUANTITY = 9999
@@ -804,7 +807,8 @@ def import_preview(body):
     cards without problems that the apply would merge), dropped_basics
     (ordinary basic lands left out, in cards), sha256 (the collection's now), repeat_imports
     [{name, imported_at, imported_by}] (identical earlier uploads in this space; unknown
-    provenance is null, and no raw contents are returned)}."""
+    provenance is null, and no raw contents are returned), groups (source-set counts and
+    original lines), source_rows (unmerged checked rows with source group, set and problem)}."""
     data = _parse_body(body, MAX_IMPORT_BODY)
     profile = _writer(data)
     space = space_param(data.get("space"))
@@ -824,15 +828,18 @@ def import_preview(body):
         raise ApiError(429, "Another import is being checked right now; try again in a moment.")
     try:
         existing, sha = _read(space)
-        fmt, rows, problems, dropped = read_upload(text, {rules.ident(r) for r in existing})
+        review = read_review(text, {rules.ident(r) for r in existing})
+        fmt, rows, problems, dropped = (review[k] for k in ("format", "rows", "problems", "dropped_basics"))
         good = [r for r in rows if not r["problem"]]
         repeats = ops.repeat_imports(inventory.current(), space, [(filename, text)])
         token = secrets.token_hex(16)
         _prune_previews()
-        # Only what the apply needs: the page has the rest from this answer.
-        record = {"version": 3, "token": token, "space": space, "profile": profile["id"], "filename": filename,
+        # Retain unmerged contributions so leaving out a source set never removes another
+        # group's copies merely because matching gave them the same final printing identity.
+        record = {"version": 4, "token": token, "space": space, "profile": profile["id"], "filename": filename,
                   "text": text, "format": fmt, "good": [{k: r[k] for k in FIELDS} for r in good],
-                  "problems": problems, "dropped_basics": dropped, "repeat_imports": repeats}
+                  "problems": problems, "dropped_basics": dropped, "repeat_imports": repeats,
+                  "source_rows": review["source_rows"], "groups": review["groups"]}
         try:
             inventory_files.atomic_write(_preview_path(profile),
                                          json.dumps(record, ensure_ascii=False).encode("utf-8"))
@@ -842,7 +849,8 @@ def import_preview(body):
         _preview_lock.release()
     return {"token": token, "format": fmt, "rows": rows, "problems": problems,
             "adds": {"rows": len(good), "cards": sum(int(r["quantity"]) for r in good)},
-            "dropped_basics": dropped, "sha256": sha, "repeat_imports": repeats}
+            "dropped_basics": dropped, "sha256": sha, "repeat_imports": repeats,
+            "source_rows": review["source_rows"], "groups": review["groups"]}
 
 
 def _load_preview(token, space, profile):
@@ -858,7 +866,7 @@ def _load_preview(token, space, profile):
         record = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, ValueError):
         raise gone from None
-    if not isinstance(record, dict) or record.get("version") != 3 \
+    if not isinstance(record, dict) or record.get("version") not in (3, 4) \
             or not hmac.compare_digest(str(record.get("token") or ""), token):
         raise gone
     if record.get("space") != space or record.get("profile") != profile["id"]:
@@ -866,32 +874,67 @@ def _load_preview(token, space, profile):
     return path, record
 
 
+def _selected_import(record, value):
+    """The reviewed retained import and its unresolved problems, from server-owned groups.
+
+    Group ids name this token's original source rows. No client row facts are accepted,
+    and selecting groups never rematches cards against a possibly changed card index.
+    """
+    if not isinstance(value, list) or len(value) > MAX_IMPORT_ROWS \
+            or any(not isinstance(ident, str) or not re.fullmatch(r"g[1-9]\d{0,4}", ident) for ident in value):
+        raise ApiError(400, f"skip_groups must list at most {MAX_IMPORT_ROWS:,} source group ids from this preview")
+    if len(set(value)) != len(value):
+        raise ApiError(400, "skip_groups names a source group more than once")
+    if record.get("version") != 4:
+        raise ApiError(409, "Upload the file again to review its source sets.", repreview_required=True)
+    groups = {group["id"]: group for group in record["groups"]}
+    if any(ident not in groups for ident in value):
+        raise ApiError(400, "skip_groups must name source groups from this preview")
+    selected = set(value)
+    rows, problems, dropped = review_rows(record["source_rows"], selected)
+    skipped = [{"line": source["line"], "message": source["problem"]} for source in record["source_rows"]
+               if source["group"] in selected and source["problem"] is not None]
+    reviewed = {**record, "good": [{k: row[k] for k in FIELDS} for row in rows if row["problem"] is None],
+                "problems": skipped, "dropped_basics": dropped,
+                "excluded_groups": [group for group in record["groups"] if group["id"] in selected]}
+    return reviewed, problems
+
+
 def import_apply(body):
     """POST /api/collection/import/apply {"profile", "space"?, "token",
-    "sha256", "skip_problems"?}: merge a preview into the space's
+    "sha256", "skip_problems"? | "skip_groups"?}: merge a preview into the space's
     collection, additively (rules.merge_rows), and keep the upload
     unchanged as imports/<date>-<file name>.csv, in one change "import <n>
     cards into <User2's collection | the home collection> from <file
     name>" (merge_upload). Rows with problems refuse the apply (400 with
-    "problems") unless skip_problems leaves them out. Returns {ok, sha256,
+    "problems") unless skip_problems leaves them out, or every unresolved source set is
+    explicitly selected in skip_groups. A selected group leaves out all its source rows,
+    valid ones included; excluded_groups reports those separately. The choices are mutually
+    exclusive. Returns {ok, sha256,
     rows (the whole new list), prices and storage (_extras), added {"rows" (new rows), "cards"}, skipped
-    (rows left out), raw (the saved upload's repo path), stale_tables (_stale_tables)}; 409
+    (problem rows left out), raw (the saved upload's repo path), stale_tables (_stale_tables)}; 409
     {error, sha256, rows} when the collection changed since sha256, 410 for
     an expired preview. If the matching earlier uploads changed, 409 with
     repreview_required:true asks for a fresh preview before anything is written."""
-    data = _parse_body(body, MAX_SAVE_BODY)
+    data = _parse_body(body, MAX_IMPORT_APPLY_BODY)
     profile = _writer(data)
     space = space_param(data.get("space"))
     guard.require_space_write(profile, "collection.edit", space)
-    _keys(data, ("profile", "token", "sha256"), ("space", "skip_problems"))
+    _keys(data, ("profile", "token", "sha256"), ("space", "skip_problems", "skip_groups"))
     sha = _request_sha(data["sha256"])
     skip = common._flag(data, "skip_problems")
     preview_path, record = _load_preview(data["token"], space, profile)
     problems = record["problems"]
+    if "skip_groups" in data:
+        if "skip_problems" in data:
+            raise ApiError(400, "Choose skip_groups or skip_problems, not both")
+        record, problems = _selected_import(record, data["skip_groups"])
     if problems and not skip:
         raise ApiError(400, f"{len(problems)} {'row has a problem' if len(problems) == 1 else 'rows have problems'}"
                             f": fix the file, or import the rest without them.", problems=problems)
     if not record["good"]:
+        if record.get("excluded_groups"):
+            raise ApiError(400, "There's nothing to import after leaving out those source sets.")
         raise ApiError(400, "There's nothing to import: every row has a problem or is an ordinary basic land.")
     answer = merge_upload(space, profile, sha, record)
     preview_path.unlink(missing_ok=True)
@@ -920,7 +963,8 @@ def merge_upload(space, profile, sha, record, message=None):
     shown = _rows_json(rows)
     return {"ok": True, "sha256": now, "rows": shown, **_extras(space, shown),
             "added": {"rows": counts["added_rows"], "cards": counts["cards"]}, "skipped": len(problems),
-            "raw": summary.extra["raw"][0], "stale_tables": _stale_tables(space)}
+            "raw": summary.extra["raw"][0], "stale_tables": _stale_tables(space),
+            **({"excluded_groups": record["excluded_groups"]} if "excluded_groups" in record else {})}
 
 
 def import_params(space, sha, record, message=None):
@@ -934,6 +978,7 @@ def import_params(space, sha, record, message=None):
             "message": message or f"import {{cards}} cards into {whose} from {record['filename']}",
             "limit": MAX_IMPORTS_FOLDER, "fmt": record["format"], "problems": record["problems"],
             "dropped_basics": record.get("dropped_basics") or 0,
+            **({"excluded_groups": record["excluded_groups"]} if "excluded_groups" in record else {}),
             "expected_repeats": [r["name"] for r in record["repeat_imports"]]
             if "repeat_imports" in record else None}
 
