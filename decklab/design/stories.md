@@ -1207,7 +1207,7 @@ Evidence:
 - `decklab/web/deck-tools.css`: the `cards` page (6 mm margin) and `.card-page`, `.proxy-card`
 - `decklab/tests/test_deck_proxies_ui.py`
 
-**E4-S26** · Matt · could · M · missing
+**E4-S26** · Matt · could · M · partial
 
 As a player at the table, I want a life counter on my phone (life, poison, commander damage, a timer) that ends by recording the game, so that keeping score and logging the result are one step.
 
@@ -1217,12 +1217,16 @@ As a player at the table, I want a life counter on my phone (life, poison, comma
 
 Decided (Matt, 2026-10-27): added from the comparison with TopDecked. Multiplayer results remain E4-S18.
 
+Now: first slice built 2026-10-28 ([HISTORY.md](../HISTORY.md#phone-life-counter-2026-10-28-e4-s26)). The Game log's quick record has **Life counter** for the two decks and names chosen there: full screen, life 20 (40 with a Commander), − and + (held, 5 at a time), −5 and +5, optional poison, commander damage, a game timer, kept in localStorage per profile (Resume after a refresh). A player out (0 life, 10 poison, 21 commander damage) or End game opens Record a played game filled in with the decks, names and winner, for its usual review and save; a viewer who may not record those decks only counts.
+
 Evidence:
-- `decklab/web/play.js`, `decklab/lib/api/play_records.py`: one-tap game records (E4-S11)
+- `decklab/web/life-counter.js`: lifeNewGame, lifeChange, lifeSaved, lifeCounterLauncher, openLifeCounter, lifeRecord, closeLifeCounter
+- `decklab/web/play.js`: playQuickRecord (Life counter), playGameForm's preset (decks, names, result, onSaved)
+- `decklab/web/play.css` (`.life-*`), `decklab/web/tokens.css` (`--fs-life`, `--fs-life-sign`)
+- `decklab/tests/test_life_counter_ui.py`
+- `decklab/lib/api/play_records.py`: one-tap game records (E4-S11), the only write
 
-Gap: No life counter.
-
-First slice: a two-player life counter on the Game log that opens Record result when the game ends.
+Gap: Two players only; no multiplayer counter (E4-S18).
 
 ---
 

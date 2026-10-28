@@ -40,3 +40,42 @@
   .play-outcomes { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
   .play-outcomes > :last-child { grid-column: 1 / -1; }
 }
+
+/* The life counter (life-counter.js): the whole screen, one half per player; on a phone held upright the top
+   half is turned to face the player across the table. Side by side in landscape. */
+.play-counter { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2) var(--s-3); }
+dialog.life-counter { position: fixed; inset: 0; width: 100%; height: 100%; max-width: none; max-height: none; margin: 0;
+  padding: 0; border: 0; border-radius: 0; background: var(--page); color: var(--ink); overflow: hidden; }
+dialog.life-counter::backdrop { background: var(--page); }
+.life-inner { box-sizing: border-box; height: 100%; display: grid; gap: var(--s-2);
+  grid-template: "a" minmax(0, 1fr) "bar" auto "b" minmax(0, 1fr) / minmax(0, 1fr);
+  padding: max(var(--s-2), env(safe-area-inset-top)) var(--s-4) max(var(--s-2), env(safe-area-inset-bottom)); }
+.life-seat { min-width: 0; min-height: 0; overflow: auto; display: grid; align-content: center; justify-items: center;
+  gap: var(--s-2); padding: var(--s-3); background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-panel); }
+.life-seat-0 { grid-area: a; transform: rotate(180deg); }
+.life-seat-1 { grid-area: b; }
+.life-seat.is-out { background: var(--warn-soft); border-color: var(--warn-line); }
+.life-name { margin: 0; display: grid; justify-items: center; text-align: center; overflow-wrap: anywhere; }
+.life-main { width: 100%; display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: var(--s-3); }
+/* Taps and holds only count: no double-tap zoom, text selection or iOS callout on the buttons and totals. */
+dialog.life-counter button, .life-total, .life-small-value { touch-action: manipulation; -webkit-user-select: none;
+  user-select: none; -webkit-touch-callout: none; }
+.life-adjust { min-height: calc(var(--tap) * 2); width: 100%; }
+.life-sign { font-size: var(--fs-life-sign); line-height: 1; }
+.life-total { min-width: 2ch; text-align: center; font-family: var(--font-num); font-size: var(--fs-life); font-weight: var(--fw-heavy);
+  line-height: 1; font-variant-numeric: tabular-nums; }
+.life-extras { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: var(--s-1) var(--s-3); }
+.life-small { display: flex; align-items: center; gap: var(--s-1); }
+.life-small-label { color: var(--ink-2); }
+.life-small-value { min-width: 2ch; text-align: center; font-family: var(--font-num); font-size: var(--fs-lg); font-weight: var(--fw-bold); }
+.life-bar { grid-area: bar; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: var(--s-1) var(--s-2); }
+.life-clock { min-width: 5ch; text-align: center; font-family: var(--font-num); font-variant-numeric: tabular-nums; color: var(--ink-2); }
+.life-end { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); box-sizing: border-box;
+  width: min(440px, calc(100% - 2 * var(--s-4))); display: grid; gap: var(--s-3); padding: var(--s-5);
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-panel); box-shadow: var(--shadow-2); }
+.life-end > h2, .life-end > p { margin: 0; }
+.life-end-actions { display: flex; flex-wrap: wrap; gap: var(--s-2); }
+@media (orientation: landscape) {
+  .life-inner { grid-template: "a b" minmax(0, 1fr) "bar bar" auto / minmax(0, 1fr) minmax(0, 1fr); }
+  .life-seat-0 { transform: none; }
+}
