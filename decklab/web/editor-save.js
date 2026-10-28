@@ -56,7 +56,7 @@ function draftBody() {
     (body.lists || (body.lists = {})).considering = ed.considering.map(sendLine);
   }
   addEditorPromotionBody(body, ed);
-  const fields = changedFields();
+  const fields = editorPlayerKitFields(ed, changedFields(), body);
   if (Object.keys(fields).length) body.fields = fields;
   const prose = changedProse();
   if (Object.keys(prose).length) body.prose = prose;
@@ -774,7 +774,7 @@ async function reapplyLatest(sheet, error, button) {
     toast(view.why_not || "This deck can't be edited any more.");
     return;
   }
-  const mine = { lists: ed.lists, fields: ed.fields, starting: ed.starting,
+  const mine = { lists: ed.lists, fields: ed.fields, starting: ed.starting, ...editorPlayerKitSnapshot(ed),
     prose: ed.prose, markCurrent: ed.markCurrent, ...editorConsideringSnapshot(ed) };
   const notes = rebase(ed, view, mine, ed.base);
   ed.notice = { kind: "reapplied", why: error ? error.message : null, notes };

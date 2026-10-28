@@ -2,6 +2,35 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Review player and permitted kit together (2026-10-28; E8-S15 slice)
+
+Saved built home decks with visible editable kit can review Played by, sleeves
+and deck box together, choosing permitted replacements or explicit clearing in
+one local history/Undo step. Normal check/Save sends the complete final triple.
+The compound inventory operation clears old kit, saves the player without kit
+and assigns final kit against that player. Unchanged shared-kit handoffs also
+receive fresh validation; existing private-owner refusals remain unchanged.
+
+Optional bounded recognized-choice intent is checked against complete fields and
+deck/kit authority before accessory readers, then against fresh IDs/kinds/owners
+inside the operation. It survives drafts, resume, Undo and rebase. Deleted IDs
+cannot become unchecked legacy text, while genuine older text stays compatible.
+Malformed/mismatched intent remains blocking until explicit review; it grants
+no access. Resumed changed-player pickers fetch bounded own/shared catalogs,
+preserve drafts during loading/failure, and reject old view/profile/route/control
+responses and known-ID legacy fallbacks. Full catalog data is not persisted.
+
+Root's protected nine-module/class integration passed 208 tests without skips,
+including 29 new backend and 30 new UI fixtures, normal/Quick editing, contracts
+and Considering promotions. Independent/root source review, isolated loader
+audit, Node syntax, Ruff, diff and length guards pass. The one necessary isolated
+loader tuple was updated; editor.js remains 1,198 lines.
+
+E8-S15 remains partial: helpful guidance after an actual hidden-kit refusal is
+still open. Hidden nulls never trigger a kit-existence assumption, and no private
+owner permission was expanded. Genuine PostgreSQL and browser/device acceptance
+remain unrun; no real kit, database/server, service or Forge action was performed.
+
 ## Where CLI-merged copies go (2026-10-28; E7-S15)
 
 Real `collection merge` now captures locked positive printing deltas and prints

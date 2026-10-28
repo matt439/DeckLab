@@ -47,6 +47,7 @@ function detailsPart() {
 function drawDetails() {
   const ed = editor;
   const host = ed.dom.details;
+  invalidatePlayerKitCatalog(ed);
   clear(host);
   const rest = ed.dom.more ? clear(ed.dom.more) : host;
   ed.kitNeeds = [];
@@ -85,6 +86,11 @@ function drawDetails() {
   (ed.quick && ed.mode === "edit" ? host : rest).append(status_);
   // A person's deck has no Played by (unless its text has one); at home a member picks only their own.
   if (ed.space === HOME_SPACE || ed.base.fields.player) rest.append(choiceField("player", "Played by", allowedPlayers()));
+  if (editorPlayerKitVisible(ed) && (Object.hasOwn(ed, "playerKitRows") || ed.fields.player !== ed.base.fields.player)) {
+    rest.append(el("button", {type: "button", class: "btn", text: "Review player and kit", onclick: event => {
+      if (event.currentTarget.isConnected && ed.dom.page?.contains(event.currentTarget) && editor === ed) reviewPlayerKit(ed.fields.player);
+    }}));
+  }
   const archetype = el("input", { type: "text", id: "f-archetype", value: f.archetype || "", maxlength: 300,
     autocomplete: "off", enterkeyhint: "done", placeholder: "e.g. Boros burn: cheap attackers, then burn to finish",
     oninput: (e) => { f.archetype = e.target.value; changed({ list: false }); } });
@@ -114,7 +120,10 @@ function choiceField(key, label, options, hint) {
   const group = el("div", { class: "segmented", role: "group", "aria-labelledby": id });
   for (const [value, text] of options) {
     group.append(el("button", { type: "button", "aria-pressed": String(ed.fields[key] === value),
-      "data-focus": `field:${key}:${value}`, onclick: () => setField(key, value) }, text));
+      "data-focus": `field:${key}:${value}`, onclick: event => {
+        if (key === "player" && (editor !== ed || !event.currentTarget.isConnected || !ed.dom.page?.contains(event.currentTarget))) return;
+        setField(key, value);
+      } }, text));
   }
   const fileText = fileWords(key);
   return el("div", { class: "field" }, el("span", { id, text: label }), group,
@@ -159,12 +168,13 @@ function kitField(key) {
     return choiceField(key, FIELD_WORDS[key], [[was, `Keep “${kitName(key, was)}”`], [null, "Remove it"]], words.stray);
   }
   loadKitRows();
+  if (editorPlayerKitCatalogNeeded(ed)) return playerKitCatalogField(ed, key);
   const id = `f-${key}`;
   const current = norm(key, ed.fields[key]);
   const rows = kitRows(key);
   // Older free text (the file's, or the draft's) stays pickable until something else is saved.
   const texts = [...new Set([ed.mode === "edit" ? norm(key, ed.base.fields[key]) : null, current])]
-    .filter((v) => v && !rows.some((row) => row.id === v));
+    .filter((v) => v && !rows.some((row) => row.id === v) && (!ed.playerKitItems || !editorPlayerKitKnownId(ed, v)));
   const options = [{ value: null, text: "None", sub: "Not recorded yet" },
     ...texts.map((v) => ({ value: v, text: `Keep “${v}”`, sub: "Not in the accessories list" })),
     ...rows.map((row) => ({ value: row.id, row }))];
@@ -177,6 +187,8 @@ function kitField(key) {
   const others = key === "sleeves" ? (ed.view && ed.view.other_sleeves || []).map((o) => `${o.sleeves} (${o.title})`) : [];
   return el("div", { class: "field field-wide kit-field", "data-kit": key }, el("span", { id, text: FIELD_WORDS[key] }),
     group, addButton,
+    current && !options.some(option => option.value === current) ? el("p", {class: "field-hint", text:
+      `Current draft choice: ${current} is unavailable for this player. Choose a replacement or None; the draft is kept until you choose.`}) : null,
     others.length ? el("small", { class: "field-hint", text: `Other decks' sleeves: ${others.join(", ")}.` }) : null,
     ed.accLoad === "loading" ? loadingBox(words.loading, { small: true })
       : ed.accLoad === "failed" ? loadFailed(words.what, ed.accError, retryKitRows) : null);
@@ -272,6 +284,8 @@ function kitArrow(e, key) {
 /** A new deck from scratch has no edit view: its pickers load the accessories list once. */
 function loadKitRows() {
   const ed = editor;
+  if (editorPlayerKitCatalogNeeded(ed)) { loadPlayerKitCatalog(ed); return; }
+  if (ed.playerKitCatalog) { ed.playerKitCatalog = null; ed.accLoad = null; ed.accError = null; }
   if (ed.mode !== "new" || ed.accRows || (ed.view && ed.view.accessories) || ed.accLoad) return;
   ed.accLoad = "loading";
   api("/api/accessories").then((data) => {
@@ -285,6 +299,71 @@ function loadKitRows() {
     ed.accError = error;
     redrawKitFields();
   });
+}
+
+/** The edit view's owner-filtered, ownerless rows cannot serve a different player after resume/rebase. */
+function editorPlayerKitCatalogNeeded(ed) {
+  return editorPlayerKitEditable(ed) && ed.fields.status === "built" && !ed.playerKitItems
+    && norm("player", ed.fields.player) !== norm("player", ed.base.fields.player);
+}
+function editorPlayerKitKnownId(ed, id) {
+  return ed.playerKitItems?.some(row => row.id === id) || copiedPlayerKitRows(ed.playerKitRows)?.some(row => row.id === id)
+    || KIT_FIELDS.some(key => ed.view?.accessories?.[key]?.some(row => row.id === id));
+}
+function playerKitCatalogKey(ed) {
+  return JSON.stringify([ed.id, ed.version, ed.space, ed.sha256, ed.base.fields.player,
+    ed.fields.player, ed.fields.status, ed.fields.sleeves, ed.fields.deck_box, ed.playerKitRows]);
+}
+function invalidatePlayerKitCatalog(ed) {
+  const record = ed.playerKitCatalog;
+  if (record && (record.key !== playerKitCatalogKey(ed) || record.host !== ed.dom.details || record.view !== ed.view
+      || record.token !== routeToken || record.profile !== state.profile?.id)) {
+    ed.playerKitCatalog = null; ed.accLoad = null; ed.accError = null;
+  }
+}
+function playerKitCatalogCurrent(ed, record) {
+  return editor === ed && ed.playerKitCatalog === record && ed.profile === state.profile?.id && record.profile === ed.profile
+    && record.token === routeToken && record.view === ed.view && record.host === ed.dom.details && record.host.isConnected
+    && ed.dom.page?.contains(record.host) && !ed.leaving && editorPlayerKitCatalogNeeded(ed) && record.key === playerKitCatalogKey(ed);
+}
+function loadPlayerKitCatalog(ed) {
+  if (editor !== ed || ed.profile !== state.profile?.id || ed.leaving || !ed.dom?.details
+      || ed.entryToken != null && ed.entryToken !== routeToken) return;
+  const key = playerKitCatalogKey(ed), previous = ed.playerKitCatalog;
+  if (previous && previous.key === key && previous.host === ed.dom.details && previous.view === ed.view
+      && previous.token === routeToken && previous.profile === state.profile?.id) return;
+  const record = {key, host: ed.dom.details, view: ed.view, token: routeToken, profile: ed.profile, status: "loading", error: null};
+  ed.playerKitCatalog = record; ed.accLoad = "loading"; ed.accError = null;
+  if (!["shared", ed.profile].includes(accessoryOwnerOf(ed.fields.player))) {
+    record.status = "blocked"; ed.accLoad = null; return;
+  }
+  api("/api/accessories").then(answer => {
+    if (!playerKitCatalogCurrent(ed, record)) return;
+    ed.playerKitItems = editorPlayerKitItems(answer.items);
+    ed.playerKitCatalog = null; ed.accLoad = "done"; ed.accError = null;
+    redrawKitFields();
+  }).catch(error => {
+    if (!playerKitCatalogCurrent(ed, record)) return;
+    record.status = "failed"; record.error = error; ed.accLoad = "failed"; ed.accError = error;
+    redrawKitFields();
+  });
+}
+function playerKitCatalogField(ed, key) {
+  const record = ed.playerKitCatalog, words = KIT_PICK_WORDS[key];
+  const field = el("div", {class: "field field-wide kit-field", "data-kit": key}, el("span", {text: FIELD_WORDS[key]}),
+    el("p", {class: "field-hint", text: `Current draft: ${norm(key, ed.fields[key]) || "None"}. Choices for this player have not been checked yet.`}));
+  if (record?.status === "blocked") {
+    field.append(el("p", {class: "field-hint", text: "That player's kit is theirs to choose. Ask its owner to hand the deck on."}));
+  } else if (record?.status === "failed") {
+    const problem = loadFailed(words.what, record.error, () => {
+      const button = problem.querySelector("button");
+      if (!button?.isConnected || !field.contains(button) || record.status !== "failed" || !playerKitCatalogCurrent(ed, record)) return;
+      ed.playerKitCatalog = null; ed.accLoad = null; ed.accError = null;
+      loadKitRows(); redrawKitFields();
+    });
+    field.append(problem);
+  } else field.append(loadingBox(words.loading, {small: true}));
+  return field;
 }
 
 /** Try again after the accessories list couldn't be loaded: load it, showing the pickers' loading line. */
@@ -316,6 +395,10 @@ function addKitRow(key) {
   openAccessorySheet({ kind: key, lockKind: true, owner, onSaved: (answer, words) => {
     toast(words);
     if (editor !== ed) return;
+    if (ed.playerKitItems) {
+      // A successful accessory add must stay successful even when its optional cache cannot be refreshed.
+      try { ed.playerKitItems = editorPlayerKitItems(answer.data?.items); } catch (_) { ed.playerKitItems = null; }
+    }
     ed.accRows = kitRowsOf(answer.data && answer.data.items, owner);
     const row = kitRows(key).find((r) => r.id === answer.changed_id);
     if (row && fieldOffered(key) && !strayKit(key)) setField(key, row.id);
@@ -345,7 +428,11 @@ function drawTitleHint() {
 
 function setField(key, value, redraw = true) {
   const ed = editor;
+  if (key === "player" && value !== ed.fields.player && editorPlayerKitVisible(ed)) {
+    reviewPlayerKit(value); return;
+  }
   ed.fields[key] = value;
+  if (KIT_FIELDS.includes(key)) updateEditorPlayerKitChoice(ed, key, value);
   if (key === "kind") {
     // A casual deck has no Commander section: its cards go into the Deck.
     const commanders = ed.lists.Commander || [];
@@ -374,6 +461,184 @@ function setField(key, value, redraw = true) {
     const again = host.querySelector(`[data-focus="field:${key}:${value}"]`);
     if (again) again.focus({ preventScroll: true });
   }
+}
+
+function editorPlayerKitEditable(ed) {
+  return ed?.mode === "edit" && ed.space === HOME_SPACE && !ed.readOnly
+    && mayDo("accessories") && KIT_FIELDS.every(key => ed.view?.editable_fields?.includes(key));
+}
+/** Hidden null kit fields never prove a held kit exists. Only an editable visible kit prompts here. */
+function editorPlayerKitVisible(ed) {
+  return editorPlayerKitEditable(ed) && ed.fields.status === "built"
+    && KIT_FIELDS.some(key => norm(key, ed.fields[key]) || norm(key, ed.base.fields[key]));
+}
+
+/** A player change carries its complete final kit through normal check/Save, including explicit clears. */
+function editorPlayerKitFields(ed, fields, body) {
+  const marked = Object.hasOwn(ed, "playerKitRows");
+  const rows = marked ? copiedPlayerKitRows(ed.playerKitRows) : null;
+  // A valid marker is irrelevant while taking the deck apart, when its kit is cleared.
+  // Keep it locally for Undo/toggling back; a damaged marker always stays a blocking request.
+  if (body && marked && (rows === null || ed.fields.status === "built")) body.kit_rows = rows;
+  if (editorPlayerKitEditable(ed) && ed.fields.status === "built"
+      && (marked || norm("player", ed.fields.player) !== norm("player", ed.base.fields.player))) {
+    fields.player = norm("player", ed.fields.player);
+    for (const key of KIT_FIELDS) fields[key] = norm(key, ed.fields[key]);
+  }
+  return fields;
+}
+
+/** Missing old metadata remains legacy-compatible; malformed present intent stays an explicit invalid marker. */
+function copiedPlayerKitRows(raw) {
+  if (!Array.isArray(raw) || raw.length > 2) return null;
+  const seen = new Set(), out = [];
+  for (const row of raw) {
+    if (!row || Object.keys(row).sort().join(",") !== "field,id" || !KIT_FIELDS.includes(row.field) || seen.has(row.field)
+        || typeof row.id !== "string" || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(row.id) || row.id.length > 40) return null;
+    seen.add(row.field); out.push(Object.freeze({field: row.field, id: row.id}));
+  }
+  return Object.freeze(out.sort((a, b) => KIT_FIELDS.indexOf(a.field) - KIT_FIELDS.indexOf(b.field)));
+}
+function editorPlayerKitSnapshot(ed) {
+  return Object.hasOwn(ed, "playerKitRows") ? {playerKitRows: copiedPlayerKitRows(ed.playerKitRows)} : {};
+}
+function restoreEditorPlayerKit(ed, saved) {
+  if (Object.hasOwn(saved, "playerKitRows")) ed.playerKitRows = copiedPlayerKitRows(saved.playerKitRows);
+  else delete ed.playerKitRows;
+  return saved;
+}
+function updateEditorPlayerKitChoice(ed, field, value) {
+  const marked = Object.hasOwn(ed, "playerKitRows");
+  if (!marked && !(ed.playerKitItems && ed.mode === "edit" && ed.fields.player !== ed.base.fields.player)) return;
+  const rows = marked ? copiedPlayerKitRows(ed.playerKitRows) : [];
+  if (rows === null) return; // only a full explicit review replaces damaged intent
+  const next = rows.filter(row => row.field !== field), row = kitRows(field).find(item => item.id === norm(field, value));
+  if (row) next.push({field, id: row.id});
+  ed.playerKitRows = copiedPlayerKitRows(next);
+}
+
+/** A copied, bounded choice cache keeps Undo's current player independent of the prior filtered view. */
+function editorPlayerKitItems(items) {
+  if (!Array.isArray(items) || items.length > 1000) throw new Error("The accessories list could not be checked.");
+  let holders = 0;
+  return Object.freeze(items.filter(item => item && item.editable !== false && KIT_FIELDS.includes(item.kind)
+    && (item.owner === "shared" || item.owner === state.profile?.id)).map(item => {
+    if (!["id", "owner", "label"].every(key => typeof item[key] === "string" && item[key].length <= 500)
+        || !Number.isInteger(item.quantity) || item.quantity < 0 || item.quantity > 9999
+        || item.capacity != null && (!Number.isInteger(item.capacity) || item.capacity < 1 || item.capacity > 9999)
+        || item.colour != null && (typeof item.colour !== "string" || item.colour.length > 500)
+        || item.image_url != null && (typeof item.image_url !== "string" || item.image_url.length > 3000)
+        || !Array.isArray(item.used_by) || (holders += item.used_by.length) > 20000
+        || item.used_by.some(holder => !holder || typeof holder.title !== "string" || holder.title.length > 500
+          || holder.holder != null && (typeof holder.holder !== "string" || holder.holder.length > 500)))
+      throw new Error("The accessories list could not be checked.");
+    return Object.freeze({id: item.id, kind: item.kind, owner: item.owner, label: item.label, editable: true,
+      colour: item.colour || null, quantity: item.quantity, capacity: item.capacity ?? null, image_url: item.image_url || null,
+      used_by: Object.freeze(item.used_by.map(holder => Object.freeze({holder: holder.holder, title: holder.title,
+        kind: typeof holder.kind === "string" ? holder.kind : null, need: Number.isSafeInteger(holder.need) ? holder.need : null})))});
+  }));
+}
+
+/** Review the player and both kit fields as one local draft step; no accessory or deck write happens here. */
+async function reviewPlayerKit(player) {
+  const ed = editor;
+  if (!editorPlayerKitVisible(ed) || ed.saving || ed.asking || ed.promoting || ed.leaving || ed.profile !== state.profile?.id
+      || !ed.dom.page?.isConnected || !allowedPlayers().some(([value]) => value === player)) return null;
+  const initial = JSON.stringify([ed.sha256, ed.fields, ed.lists]), token = routeToken;
+  const sheet = openSheet({title: "Review player and kit", wide: true});
+  const owner = editorWriteOwner(ed, sheet);
+  const current = () => owner() && !ed.saving && !ed.asking && !ed.promoting && token === routeToken
+    && initial === JSON.stringify([ed.sha256, ed.fields, ed.lists]);
+  const nextOwner = accessoryOwnerOf(player);
+  const playerName = player === "either" ? "Either" : playerWords(player);
+  sheet.body.append(el("p", {text: `Change Played by to ${playerName}, with sleeves and a deck box chosen for that player.`}));
+  const cancel = () => sheet.close();
+  sheetActions(sheet, [{text: "Keep editing", onclick: cancel}]);
+  // Read access to another owner's public kit grants no choice or hand-off authority.
+  if (nextOwner !== "shared" && nextOwner !== state.profile.id) {
+    sheet.body.append(el("p", {class: "box box-info", text:
+      "That player's kit is theirs to choose. Ask its owner to hand the deck on; this draft stays as it is."}));
+    return sheet;
+  }
+  const body = el("div", {}, loadingBox("Loading permitted sleeves and deck boxes."));
+  sheet.body.append(body);
+  let items;
+  try {
+    const answer = await api("/api/accessories");
+    if (!current()) return sheet;
+    items = editorPlayerKitItems(answer.items);
+  } catch (error) {
+    if (current()) {
+      clear(body).append(loadFailed("Permitted sleeves and deck boxes", error, () => {
+        if (!current()) return; sheet.close(); reviewPlayerKit(player);
+      }));
+    }
+    return sheet;
+  }
+  clear(body);
+  const choices = Object.fromEntries(KIT_FIELDS.map(key => [key, norm(key, ed.fields[key])]));
+  const permitted = items.filter(item => item && item.editable !== false && accessoryUsable(item, nextOwner));
+  const known = new Set([...items.map(row => row.id), ...KIT_FIELDS.flatMap(key => kitRows(key).map(row => row.id))]);
+  const rows = Object.fromEntries(KIT_FIELDS.map(key => [key, permitted.filter(row => row.kind === key)]));
+  const controls = {}, review = el("dl", {class: "review-facts"}), sharing = el("p", {class: "box box-info", hidden: true});
+  const acceptedSharing = el("input", {type: "checkbox"});
+  const shareControl = el("label", {class: "field", hidden: true}, acceptedSharing,
+    el("span", {text: "Use this sleeves design here too; these decks won't play each other."}));
+  let applyButton = null;
+  const words = (key, value) => value == null ? "None" : rows[key].find(row => row.id === value)?.label || value;
+  function drawReview() {
+    if (!current()) return;
+    acceptedSharing.checked = false;
+    clear(review).append(el("div", {}, el("dt", {text: "Played by"}), el("dd", {text: playerName})),
+      ...KIT_FIELDS.map(key => el("div", {}, el("dt", {text: FIELD_WORDS[key]}), el("dd", {text:
+        choices[key] === "__choose__" ? "Choose a replacement or clear it" : words(key, choices[key])}))));
+    const selected = rows.sleeves.find(row => row.id === choices.sleeves);
+    const others = (selected?.used_by || []).filter(holder => holder.holder !== ed.id);
+    sharing.hidden = shareControl.hidden = !others.length;
+    sharing.textContent = others.length ? `This sleeves design is also used by ${others.map(holder => holder.title).join(", ")}.` : "";
+    if (applyButton) applyButton.disabled = Object.values(choices).includes("__choose__") || !!others.length;
+  }
+  for (const key of KIT_FIELDS) {
+    const value = choices[key], compatible = value == null || rows[key].some(row => row.id === value);
+    const legacy = value && !known.has(value);
+    if (!compatible && !legacy) choices[key] = "__choose__";
+    const select = el("select", {id: `player-kit-${key}-${sheet.heading.id}`, "data-player-kit": key,
+      onchange: event => {
+        if (!current() || !event.currentTarget.isConnected || !body.contains(event.currentTarget)) return;
+        choices[key] = event.currentTarget.value || null; drawReview();
+      }},
+    el("option", {value: "__choose__", text: "Choose a replacement or clear it", disabled: true}),
+    el("option", {value: "", text: "None — clear this field"}),
+    legacy ? el("option", {value, text: `Keep text: ${value}`}) : null,
+    rows[key].map(row => {
+      const taken = kitTaken(key, row);
+      return el("option", {value: row.id, text: row.label, disabled: taken.taken && row.id !== value || null});
+    }));
+    select.value = choices[key] || ""; controls[key] = select;
+    body.append(el("label", {class: "field", for: select.id}, el("span", {text: FIELD_WORDS[key]}), select),
+      el("p", {class: "field-hint", text: `Now: ${kitName(key, ed.fields[key]) || "None"}.`}));
+  }
+  body.append(review, sharing, shareControl,
+    el("p", {class: "sub", text: "This changes the local draft. Save the deck to record the player and kit together."}));
+  sheetActions(sheet, [{text: "Use this player and kit", kind: "primary", onclick: event => {
+    if (!current() || !event.currentTarget.isConnected || event.currentTarget !== applyButton || applyButton.disabled
+        || !sheet.foot.contains(applyButton) || KIT_FIELDS.some(key => controls[key].value !== (choices[key] || ""))) return;
+    const final = {player, ...choices};
+    // Apply all three fields before changed() records history and persists/checks the draft.
+    Object.assign(ed.fields, final); ed.playerKitItems = items;
+    ed.playerKitRows = copiedPlayerKitRows(KIT_FIELDS.flatMap(field => items.some(item => item.kind === field && item.id === final[field])
+      ? [{field, id: final[field]}] : []));
+    sheet.close(); drawDetails(); changed({list: false});
+    const again = ed.dom.page.querySelector(`[data-focus="field:player:${player}"]`);
+    if (again) again.focus({preventScroll: true});
+  }}, {text: "Keep editing", onclick: cancel}]);
+  applyButton = sheet.foot.querySelector(".btn-primary");
+  acceptedSharing.addEventListener("change", event => {
+    if (!current() || event.currentTarget !== acceptedSharing || !acceptedSharing.isConnected || shareControl.hidden) return;
+    applyButton.disabled = Object.values(choices).includes("__choose__") || !acceptedSharing.checked;
+  });
+  drawReview();
+  return sheet;
 }
 
 /** Back from Built to a status that isn't: a line the file has though the deck isn't built is offered

@@ -455,7 +455,7 @@ function fieldValueWords(key, value) {
  * list loaded since (after a row is added here, or for a new deck from scratch, which has no edit view). */
 function kitRows(key) {
   const ed = editor;
-  const rows = ed.accRows || (ed.view && ed.view.accessories) || {};
+  const rows = ed.playerKitItems ? kitRowsOf(ed.playerKitItems, accessoryOwnerOf(ed.fields.player)) : editorPlayerKitCatalogNeeded(ed) ? {} : ed.accRows || (ed.view && ed.view.accessories) || {};
   return rows[key] || [];
 }
 
@@ -647,7 +647,7 @@ function rebase(ed, view, mine, base) {
     view, sha256: view.sha256, title: view.title, kind: view.kind, sections: view.sections,
     brackets: view.brackets || [], hasFileList: latest != null, starting,
     base: { lists: copyList(latest || {}), fields: latestFields, prose: latestProse },
-    lists, fields: f.fields, removed: [], accRows: null, prose, markCurrent: !!(mine.markCurrent && view.changed_on),
+    lists, fields: f.fields, removed: [], accRows: null, prose, markCurrent: !!(mine.markCurrent && view.changed_on), ...editorPlayerKitSnapshot(mine),
   });
   if (typeof rebaseEditorConsidering === "function") rebaseEditorConsidering(ed, view, mine, base, notes);
   return [...notes, ...f.notes];
@@ -683,7 +683,7 @@ function saveDraft(ed) {
   const saved = local.set(draftKey(ed), JSON.stringify({
     v: 1, saved: Date.now(), sha256: ed.sha256 || null, starting: !!ed.starting,
     base: { lists: sendList(ed.base.lists), fields: ed.base.fields, prose: ed.base.prose || null, ...editorConsideringBase(ed) },
-    lists: keepList(ed.lists), fields: ed.fields, addSection: ed.addSection, ...editorConsideringSnapshot(ed),
+    lists: keepList(ed.lists), fields: ed.fields, addSection: ed.addSection, ...editorConsideringSnapshot(ed), ...editorPlayerKitSnapshot(ed),
     prose: ed.prose || null, markCurrent: !!ed.markCurrent }));
   draftStored(ed, saved);
   return saved;
@@ -835,14 +835,14 @@ function startEditor(opts) {
   const draft = opts.restoreDraft === false ? null : readDraft(ed);
   if (draft) {
     const mine = { lists: draft.lists, fields: draft.fields, starting: draft.starting, prose: draft.prose,
-      markCurrent: draft.markCurrent, ...editorConsideringDraft(draft) };
+      markCurrent: draft.markCurrent, ...editorConsideringDraft(draft), ...editorPlayerKitSnapshot(draft) };
     if (ed.mode === "edit" && draft.sha256 !== ed.sha256) {
       const notes = rebase(ed, ed.view, mine, draft.base);
       ed.notice = { kind: "draft-changed", saved: draft.saved, notes };
     } else {
       ed.lists = copyList(draft.lists);
       restoreEditorConsidering(ed, draft);
-      ed.fields = { ...ed.fields, ...draft.fields };
+      ed.fields = { ...ed.fields, ...restoreEditorPlayerKit(ed, draft).fields };
       if (ed.prose && draft.prose) ed.prose = { ...ed.prose, ...draft.prose };
       ed.markCurrent = !!(draft.markCurrent && ed.view && ed.view.changed_on);
       ed.starting = !!draft.starting && ed.mode === "edit" && !ed.hasFileList;
@@ -1024,7 +1024,7 @@ document.addEventListener("visibilitychange", () => {
 /** What Ctrl+Z goes back to: the lists, the header fields, the Add-to section and the write-up, as text. */
 function snapshot(ed) {
   return JSON.stringify({ lists: keepList(ed.lists), fields: ed.fields, addSection: ed.addSection,
-    prose: ed.prose, markCurrent: !!ed.markCurrent, starting: !!ed.starting, ...editorConsideringSnapshot(ed) });
+    prose: ed.prose, markCurrent: !!ed.markCurrent, starting: !!ed.starting, ...editorConsideringSnapshot(ed), ...editorPlayerKitSnapshot(ed) });
 }
 
 /** After a change (editor-screen.js changed()): the state before it goes on the history. */
@@ -1046,7 +1046,7 @@ function undoLast() {
   const was = JSON.parse(ed.history.pop());
   ed.lists = copyList(was.lists);
   restoreEditorConsidering(ed, was);
-  ed.fields = was.fields;
+  ed.fields = restoreEditorPlayerKit(ed, was).fields;
   ed.addSection = was.addSection || "Deck";
   if (was.prose) ed.prose = was.prose;
   ed.markCurrent = !!was.markCurrent;

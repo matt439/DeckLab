@@ -2685,9 +2685,13 @@ Evidence:
 - `decklab/lib/api/guard.py`: require_kit_choice
 - `decklab/lib/accessories.py`: _not_theirs (the warning for kit written outside the page)
 
-Gap (rechecked 2026-10-28): the guided combined player/kit review is missing. The server already validates the final combined player and kit fields in one save; the editor still presents them separately.
+Built permitted-transition slice (2026-10-28): visible editable kit is reviewed with Played by, both fields and permitted replacements/clears, as one local history/Undo step. Normal check/Save carries the complete triple. A real compound operation clears old kit, saves the player without kit and assigns the final kit against that player, including unchanged shared-kit handoffs. Existing private-owner policy is unchanged.
 
-First slice (reserve review, 2026-10-28): review player and kit together before saving, reusing `saving._require_kit_moves`' validation of the final combined fields. Offer permitted replacements or an explicit clear in that same deck save; identify private accessories only when the viewer may see them. An owner transferring their accessories remains a separate owner-authorised action. Check player-only refusals, clearing, shared replacements and stale kit with fixtures; do not assume Matt can choose User1's private kit.
+Recognized-choice intent is optional, bounded and never authorization: both APIs require complete matching fields and owner/deck authority before accessory readers, then recheck recognized IDs/kinds/ownership in the fresh operation. Deleted IDs cannot silently become legacy text; genuine old text remains compatible. Markers survive drafts, resume, Undo and rebase, with malformed or mismatched intent kept blocking until explicit review. Resumed changed-player catalogs use bounded own/shared facts and current ownership, preserve fields/markers through loading/failure, and refuse stale requests, detached retries, old-player catalogs and legacy fallback for known IDs.
+
+Further evidence: `api/editor.py`, `saving._KitThenSave`/`reviewed_kit_rows`, `editor-details.js`, normal `editor-save.js` payload and minimal `editor.js` persistence/cache hooks. Root's protected nine-module/class integration passed 208 tests without skips, including 29 new backend and 30 new UI cases, contracts, old/Quick editing and Considering promotions. The necessary isolated contract loader was updated; editor.js remains 1,198 lines. Independent/root review, syntax, Ruff, diff and length checks pass.
+
+Gap: add helpful owner hand-off guidance after the actual hidden-kit refusal, without a new kit-existence preflight or naming private accessories. Hidden null fields cannot prove that a kit exists. An owner transferring their accessories remains separately owner-authorized; Matt does not gain User1's private kit choices. Genuine PostgreSQL and browser/device qualification remain unrun. See [HISTORY.md](../HISTORY.md#review-player-and-permitted-kit-together-2026-10-28-e8-s15-slice).
 
 **E8-S16** · Space members · should · S · built
 

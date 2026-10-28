@@ -450,7 +450,7 @@ def check_draft(body):
     data = _parse_body(body)
     profile = _writer(data)
     _keys(data, ("profile",), ("lists", "fields", "id", "sha256", "kind", "from", "space", "confirm_empty",
-                               "prose", "mark_current"))
+                               "prose", "mark_current", "kit_rows"))
     _flag(data, "confirm_empty")
     _flag(data, "mark_current")
     prose_problems = []
@@ -473,6 +473,9 @@ def check_draft(body):
         _require_cards()
         kind, source, _ = _new_source(data)
     draft = drafts._read_draft(data, kind, deck, source, space)
+    if "kit_rows" in data:
+        from .saving import reviewed_kit_rows
+        reviewed_kit_rows(data, deck, draft.fields, profile)
     if deck is None:
         if draft.lists["target"] is None:
             draft.lists["target"] = decks.clean_sections(source)      # as create_deck would start it

@@ -659,6 +659,18 @@ yours and the shared ones, marked **Shared**. A deck takes only its player's or 
 "either" deck or an intact product only shared ones, so the pickers offer just those. A shared row
 used by the other person's deck says "one of User1's decks", without a link or a move.
 
+On a saved built home deck, changing **Played by** with visible editable kit opens
+**Review player and kit** (E8-S15 permitted-transition slice). Review the player,
+sleeves and deck box together, choose permitted replacements or **None** to clear
+each field, then **Use this player and kit** changes one local draft/Undo step.
+Normal Save records them together. Shared sleeves retain their usual acknowledgment;
+unavailable boxes cannot be chosen. Another owner's kit remains theirs to choose.
+Recognized choices survive draft resume and rebase, and a deleted or changed choice
+requires another review instead of becoming unchecked older text. Resumed changed-player
+pickers load the appropriate choices; loading or failure keeps the draft and hides the
+old player's catalog. Existing privacy refusals remain in force; additional guidance
+after an actual hidden-kit refusal is still open.
+
 - **Adding:** **Add**, then paste a link to the shop's product page or to the picture itself and
   choose **Find picture**. Deck Lab downloads the page, finds the picture the page shares (its
   `og:image`, or the like) and shows it with guesses for the kind, brand, name and, for sleeves,

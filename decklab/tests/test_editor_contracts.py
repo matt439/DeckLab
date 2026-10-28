@@ -753,7 +753,7 @@ class SleevesPageTests(unittest.TestCase):
                  "JSON.stringify(newDeckFacts().map(([k]) => k))",
                  "editor.fields.status = 'built'; JSON.stringify(newDeckFacts().filter(([k]) => k === 'Sleeves'))",
                  "editor.fields.sleeves = ''; JSON.stringify(newDeckFacts().filter(([k]) => k === 'Sleeves'))"]
-        self.assertEqual(_run_page(calls, ("core.js", "editor.js", "editor-considering.js", "editor-screen.js", "editor-save.js"))[1:],
+        self.assertEqual(_run_page(calls, ("core.js", "editor.js", "editor-considering.js", "editor-screen.js", "editor-details.js", "editor-save.js"))[1:],
                          ['["Title","Format","Played by","Status","Archetype"]', '[["Sleeves","Pink"]]',
                           '[["Sleeves","not set"]]'])
 
