@@ -2,6 +2,36 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Atomic Considering draft moves (2026-10-28; E2-S26)
+
+Full and Quick edit move an alternative's complete copies to Planned or its
+sideboard in one draft/history step. The authoritative check runs first; invalid,
+overflowing or lossy proposals keep the alternative. Fidelity compares copy
+capacities, printing, finish and category, then pins checked default dimensions
+and canonical names so a later inventory-default change cannot choose another
+finish during Save. Existing valid duplicate-row/per-line quantity semantics
+are preserved.
+
+Play-now keeps its own list unchanged and carries a separate Planned working
+copy/baseline with dirty state, payload, full review and target-specific error/
+hydration mapping. Check/Save sends both changed lists through one existing deck
+save; Undo reverses both without starting an owned list.
+
+Linked intent survives drafts and rebases as a complete Planned/Considering pair.
+Latest outcomes already equal to the accepted move become clean; divergent pairs
+need SHA/full-pair-bound acknowledgment of both replacement lists, enforced in
+doSave itself. Missing capabilities preserve the private draft until fetched.
+Acknowledgments belong to the current mounted review control, so a detached old
+checkbox cannot enable a newly drawn Save, including on the same pair and SHA.
+
+Protected checks passed 31 new UI and 11 backend cases, affected 139- and 68-case
+regression batches, and the final 64-case UI rerun after the stale-control fix.
+Root's combined promotion/first-slice/contracts integration passed 129 tests with
+no skips. Independent review, root review, Ruff, syntax, diff and length checks
+are clear; editor.js is 1,198 lines. E2-S26's implementation is complete. Browser/
+device and live-runtime acceptance remain unverified, with no real data, live
+database, service or Forge actions used for qualification.
+
 ## Where imported copies go (2026-10-28; E7-S15 ordinary CSV slice)
 
 Successful Collection CSV imports now carry a read-only Where these go guide.

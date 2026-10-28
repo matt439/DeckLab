@@ -409,7 +409,7 @@ function isDirty() {
       || NEW_FIELDS.some((k) => norm(k, ed.fields[k]) !== norm(k, ed.base.fields[k]));
   }
   return listChanged() || Object.keys(changedFields()).length > 0 || Object.keys(changedProse()).length > 0
-    || !!ed.markCurrent || (typeof editorConsideringChanged === "function" && editorConsideringChanged(ed));
+    || !!ed.markCurrent || (typeof editorConsideringChanged === "function" && (editorConsideringChanged(ed) || editorPromotionChanged(ed)));
 }
 
 /** The write-up's sections that differ from the saved deck ({key: text}), as a save sends them. */
@@ -624,6 +624,8 @@ function rebase(ed, view, mine, base) {
     lists = copyList(mine.lists);
     starting = latest == null;
     if (!starting) notes.push(`The latest version already has a ${listName("owned", true)}: saving replaces it with this one.`);
+  } else if (ed.version === "target" && typeof editorHasLinkedPromotion === "function" && editorHasLinkedPromotion(ed, mine, base)) {
+    lists = copyList(mine.lists); // The linked pair is reconciled together below, without quantity deltas.
   } else {
     ({ lists, notes } = reapplyList(base.lists, mine.lists, latest || {}));
   }
@@ -833,7 +835,7 @@ function startEditor(opts) {
   const draft = opts.restoreDraft === false ? null : readDraft(ed);
   if (draft) {
     const mine = { lists: draft.lists, fields: draft.fields, starting: draft.starting, prose: draft.prose,
-      markCurrent: draft.markCurrent, ...(Array.isArray(draft.considering) ? { considering: draft.considering } : {}) };
+      markCurrent: draft.markCurrent, ...editorConsideringDraft(draft) };
     if (ed.mode === "edit" && draft.sha256 !== ed.sha256) {
       const notes = rebase(ed, ed.view, mine, draft.base);
       ed.notice = { kind: "draft-changed", saved: draft.saved, notes };
@@ -1038,7 +1040,7 @@ function recordHistory(ed = editor) {
 /** Ctrl+Z: back to the state before the last change. False when there's nothing to undo. */
 function undoLast() {
   const ed = editor;
-  if (!editorKeyboardCurrent(ed) || ed.saving || ed.asking || ed.leaving || !ed.history?.length
+  if (!editorKeyboardCurrent(ed) || ed.saving || ed.promoting || ed.asking || ed.leaving || !ed.history?.length
     || document.querySelector("dialog[open]") || keyboardMenuOpen()) return false;
   const focus = editorUndoFocus(ed), consideringFocus = editorConsideringUndoFocus(ed);
   const was = JSON.parse(ed.history.pop());

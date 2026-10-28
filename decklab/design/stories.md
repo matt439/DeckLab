@@ -36,7 +36,7 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | Epic | Stories | Built | Partial | Missing | Not wanted |
 |---|---:|---:|---:|---:|---:|
 | [E1: Find, plan and choose decks](#e1-find-plan-and-choose-decks) | 15 | 14 | 1 | 0 | 0 |
-| [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 20 | 16 | 2 | 1 | 1 |
+| [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 20 | 17 | 1 | 1 | 1 |
 | [E3: Test a deck](#e3-test-a-deck) | 15 | 12 | 3 | 0 | 0 |
 | [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 22 | 16 | 2 | 3 | 1 |
 | [E5: Decide what to buy](#e5-decide-what-to-buy) | 22 | 17 | 1 | 2 | 2 |
@@ -46,7 +46,7 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E9: Commander nights](#e9-commander-nights) | 20 | 14 | 1 | 4 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 35 | 31 | 1 | 1 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 39 | 25 | 6 | 5 | 3 |
-| **Total** | **255** | **200** | **20** | **21** | **14** |
+| **Total** | **255** | **201** | **19** | **21** | **14** |
 
 Counted from the story headers on 2026-10-28 after the current feature and maintenance work. The reviews added five feature stories and eight hygiene stories, and corrected E1-S12 from missing to partial.
 
@@ -313,7 +313,7 @@ History-revision comparisons remain separate future work. Browser geometry and t
 
 Covers making a deck and keeping it right: New deck and Start from, the full editor (from 600px) and the phone's Quick edit, Paste a list, the Planned and Play-now lists, owned vs needed against the space's pool and its other built decks, keeping the write-up current, history and undo, and the command-line route Claude Code uses (`deck pull`/`push`/`new`/`tables`). Drafts stay on the device they were started on, and the Play-now list's substitutes are hand-written (Packing's physical stand-ins, E4-S21, never change a list). Rename and retirement, with restore from History, are on the deck page (E1-S19). Legality badges on casual decks are deliberately not wanted.
 
-Open: E2-S16, E2-S22, E2-S26.
+Open: E2-S16, E2-S22.
 
 **E2-S01** · Matt · must · L · built
 
@@ -587,7 +587,7 @@ As a deck builder, I want a Considering list kept with each deck, so that cards 
 Decided (Matt, 2026-10-27): added from the comparison with Moxfield's maybeboard.
 
 Now: Built 2026-10-28 ([Considering list](../HISTORY.md#considering-list-2026-10-28-e2-s23)): a `## Considering` block of card lines is read beside the Planned and Play-now lists, so no table, pool, packing, sleeve, stats, tokens, Forge, print, box-check or `deck_line` reader counts it. The Cards tab lists it with each card's free copies (only to viewers who see the collection) and adds, removes or moves a card into the Planned list or sideboard, each one save (`POST /api/deck/considering`): a move is checked as a new Planned line, so a misspelled Considering name (only `deck push` writes one, and push names it) never reaches the Planned list; after a move, or a save with warnings or other decks' tables out of date, the deck page's box about the save shows them; Remove has an Undo toast.
-E2-S26 now supplies saved-deck Considering CRUD, local drafts and normal Save in full and Quick edit; editor promotions are next. `deck_line` SQL intentionally leaves Considering cards out.
+E2-S26 supplies saved-deck Considering CRUD, local drafts, normal Save and atomic Planned/sideboard draft moves in full and Quick edit. `deck_line` SQL intentionally leaves Considering cards out.
 
 Evidence:
 - `decklab/lib/decks/considering.py`; `deckfile.py` parse_deck, `render.py` render_deck_file, `edit.py` apply_edit
@@ -637,7 +637,7 @@ Evidence:
 
 ---
 
-**E2-S26** · Matt · could · M · partial
+**E2-S26** · Matt · could · M · built
 
 As a deck builder using the editor, I want to work on Considering alongside the deck's lists, so that I can collect alternatives and try them without leaving or saving my current edit.
 
@@ -646,16 +646,18 @@ As a deck builder using the editor, I want to work on Considering alongside the 
 - Given an unsaved edit, when a local draft is resumed or the edit is checked and saved, then Considering is preserved alongside the other lists in the same reviewed deck save.
 - Given only Considering changes, then collection availability, packing, sleeve counts and the Decklist changed mark are unaffected; existing deck edit and inventory-read permissions still apply.
 
-Built first slice (2026-10-28): saved decks have a separate Considering area in full and Quick edit, with add, remove and quantity changes. Separate alternatives/base state joins dirty detection, local drafts/resume, history/Undo, discard, check/review and normal Save. An unstarted Play-now list stays unstarted after a Considering-only save.
+Built 2026-10-28: saved decks have a separate Considering area in full and Quick edit, with CRUD, local drafts/history/Undo, rebase, discard, check/review and normal Save. Alternatives remain outside playable counts, availability, packing and Forge. Missing legacy data and explicit empty arrays retain their distinct meanings; unknown baselines survive persistence until fetched.
 
-Missing legacy draft/API values preserve existing data; explicit empty arrays clear it. Unknown baselines remain absent through repeated persistence and rebase until a real baseline is fetched. Whole-list three-way rebase preserves categories, ordering and duplicate occurrences and reports concurrent edits for review. Normalized review rows show canonical names and merged quantities as they will save.
+Move to Planned or its sideboard validates the complete proposed pair before changing either list. It preserves every copy and supplied printing/finish/category, then pins checked defaults and commits one draft/Undo step. Play-now editors keep separate Planned state, so hidden Planned-only changes stay dirty and savable without starting or changing Play-now. Save/check use one existing atomic deck save.
+
+Linked rebases compare complete pairs instead of replaying quantity deltas. Already-applied outcomes become clean; divergent latest data requires SHA/pair-bound acknowledgment of both complete replacement lists. Missing capabilities retain the local pair. Stale/detached controls, late checks/reloads/saves and replaced acknowledgment controls cannot authorize another state.
 
 Evidence:
-- `editor-considering.js`: separate lifecycle/UI, connected row/modal ownership, composition commit, semantic Undo focus and normalized review; thin hooks in editor.js, editor-screen.js and editor-save.js. The helper is registered in all affected explicit loaders.
-- `api/editor.py`: normalized flat Considering rows in check answers and separate change reporting for blocked alternatives; playable counts/availability remain separate.
-- Protected runs passed 33 new UI cases; an 80-case editor/Quick/contracts/backend batch includes nine new backend cases. Additional affected regression runs passed. Root's final combined feature/API/shared-script/privacy integration passed 161 tests without skips. Independent review and root review are clear; source-length, Ruff, syntax and diff checks pass.
+- `editor-considering.js` and thin editor/save/screen hooks: separate lifecycle and normalized reviews, preflight fidelity, linked pair/acceptance state and owned-editor target hydration/errors. No new route, loader or backend mutation path was needed for promotions.
+- First-slice evidence: 33 new UI and nine backend cases, affected regressions and root's 161-case joint integration passed without skips.
+- Promotion evidence: 31 new UI, 11 backend and affected regressions passed. Root's final promotion/first-slice/contracts integration passed 129 tests with no skips. Independent and root review, Ruff, syntax, diff and source-length checks are clear; editor.js is 1,198 lines.
 
-Gap: atomic promotion into Planned or its sideboard in the same draft, reversible with Undo. This remains the next bounded slice in both editor densities. Controls for a new deck wait until its first save. Browser/device and live-runtime acceptance remain unverified; no new Forge game, database connection or real-data save was used. See [HISTORY.md](../HISTORY.md#considering-in-saved-deck-editors-2026-10-28-e2-s26-first-slice).
+New-deck controls wait until its first save. Browser/device and live-runtime acceptance remain unverified; no real-data save, database connection or Forge game qualified this work. See [HISTORY.md](../HISTORY.md#atomic-considering-draft-moves-2026-10-28-e2-s26).
 
 ---
 

@@ -55,6 +55,7 @@ function draftBody() {
   if (editorConsideringSupported(ed) && editorConsideringChanged(ed)) {
     (body.lists || (body.lists = {})).considering = ed.considering.map(sendLine);
   }
+  addEditorPromotionBody(body, ed);
   const fields = changedFields();
   if (Object.keys(fields).length) body.fields = fields;
   const prose = changedProse();
@@ -72,6 +73,9 @@ function sentUids(body) {
   const list = body.lists && (body.lists[editor.mode === "new" ? "target" : editor.version]);
   const out = {};
   if (body.lists?.considering) out.considering = editor.considering.map(l => l.uid);
+  if (editor.version === "owned" && body.lists?.target && editor.planned) {
+    out.planned = Object.fromEntries(Object.entries(editor.planned).map(([s, lines]) => [s, lines.map(l => l.uid)]));
+  }
   if (!list) return out;
   for (const section of Object.keys(list)) out[section] = editor.lists[section].map((l) => l.uid);
   return out;
@@ -142,6 +146,7 @@ function fillCards(answer, sent) {
   if (!lists) return;
   let filled = false;
   for (const [section, uids] of Object.entries(sent || {})) {
+    if (!Array.isArray(uids)) continue;
     (uids || []).forEach((uid, i) => {
       const found = findLine(uid);
       const line = found && found.line;
@@ -414,7 +419,7 @@ function ownedPreview(o, version = "target") {
  * the deck once it's saved ("Save & view deck"). */
 async function saveNow({ viewAfter = false } = {}) {
   const ed = editor;
-  if (!ed || ed.readOnly || ed.saving || ed.leaving || ed.profile !== state.profile?.id || ed.consideringUnavailable) return;
+  if (!ed || ed.readOnly || ed.saving || ed.promoting || ed.leaving || ed.profile !== state.profile?.id || ed.consideringUnavailable || ed.promotionUnavailable) return;
   const current = editorWriteOwner(ed);
   ed.viewAfter = viewAfter;
   const button = ed.dom.barParts && ed.dom.barParts.save;
@@ -433,7 +438,7 @@ async function saveNow({ viewAfter = false } = {}) {
     if (!current()) return;
     if (button) unbusy(button);
     const title = ed.mode === "new" ? titleProblem() : null;
-    if (!answer || answer.file_changed || answer.blocks.length || title) {
+    if (!answer || answer.file_changed || answer.blocks.length || title || editorPromotionReviewNeeded(ed)) {
       reviewSave(answer);
       return;
     }
@@ -573,6 +578,7 @@ function drawReview(sheet, a) {
         el("span", { class: "review-mark", "aria-hidden": "true", text: "~" }), categoryChangeWords(c)))));
   }
   editorConsideringReview(body, a);
+  const promotionAck = editorPromotionReview(body, a, sheet);
   if (proseChanges.length || marker) {
     body.append(el("h3", { text: "Changes to the write-up:" }),
       el("ul", { class: "review-list" },
@@ -620,7 +626,7 @@ function drawReview(sheet, a) {
         : `Works out the deck's owned-vs-needed table again, from the ${listName("target", true)}, with today's prices.` }) : null,
       el("li", { text: `The change is kept in the deck's history, under your name (${who}).` }))));
   sheetActions(sheet, [
-    { text: isNew ? "Create" : "Save", kind: "primary", disabled: blocks.length > 0, value: "save",
+    { text: isNew ? "Create" : "Save", kind: "primary", disabled: blocks.length > 0 || promotionAck, value: "save",
       onclick: (e) => doSave(sheet, e.currentTarget, { viewAfter: !!ed.viewAfter }) },
     { text: "Keep editing", onclick: () => sheet.close() }]);
 }
@@ -630,7 +636,7 @@ function drawReview(sheet, a) {
 async function doSave(sheet, button, { viewAfter = false } = {}) {
   const ed = editor;
   const current = editorWriteOwner(ed, sheet);
-  if (!current() || ed.consideringUnavailable) return;
+  if (!current() || ed.consideringUnavailable || ed.promotionUnavailable || ed.promoting || editorPromotionReviewNeeded(ed)) return;
   const retest = typeof editorRetestIntent === "function" ? editorRetestIntent(ed) : null;
   if (button) busy(button, "Saving...");
   let answer;

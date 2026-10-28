@@ -703,6 +703,10 @@ body.has-editor-search-dock.is-searching.keyboard-up .edit-bar { display: flex; 
 .editor-considering-category, .editor-considering-row .edit-block { grid-column: 1 / -1; margin: 0; }
 .editor-considering-row.is-blocked { border-left: 3px solid var(--crit); padding-left: var(--s-2); }
 .editor-considering-add { margin-top: var(--s-2); }
+.editor-considering-moves { grid-column: 1 / -1; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--s-2); }
+.editor-planned-draft, .editor-promotion-error { margin-top: var(--s-3); }
+.editor-planned-row { margin: var(--s-1) 0; }
+.editor-planned-row .edit-block { display: block; }
 @media (max-width: 599px) {
   .editor-considering-row { grid-template-columns: minmax(0, 1fr); }
   .editor-considering-actions { justify-content: flex-end; flex-wrap: wrap; }
