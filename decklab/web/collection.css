@@ -396,6 +396,11 @@ button.col-casual-open { cursor: pointer; }
 .col-location-actions .btn { max-width: 100%; white-space: normal; }
 .col-location-batch-note { flex-basis: 100%; margin: 0; }
 .col-location-review-list { max-height: 18rem; overflow: auto; padding-inline-start: var(--s-5); overflow-wrap: anywhere; }
+.col-filing-guide { margin-block: var(--s-5); }
+.col-filing-panels { display: grid; gap: var(--s-3); grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr)); }
+.col-filing-panel { min-width: 0; }
+.col-filing-panel h3 { margin-top: 0; overflow-wrap: anywhere; }
+.col-filing-lines { max-height: 20rem; overflow: auto; padding-inline-start: var(--s-5); overflow-wrap: anywhere; }
 @media (min-width: 1000px) and (pointer: fine) {
   .col-row-lab .col-bulk-row-choice { min-height: calc(var(--row-h) - 1px); }
   .col-row-lab .col-table.has-bulk-selection .col-th-name { width: 13rem; }

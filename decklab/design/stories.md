@@ -2189,13 +2189,16 @@ As a person filing new cards, I want after an import or merge a list of which ne
 - Given an import or a precon added, when it's applied, then a 'Where these go' list groups the new cards by the deck waiting for them, and the rest under storage.
 - Given Receive delivery, then the same grouping shows after an arrival.
 
+Built ordinary-import slice (2026-10-28): a successful Collection CSV import now offers Where these go, grouped by waiting own-space deck and storage. Exact positive printing deltas come from the locked merge after exclusions; the exact committed snapshot supplies one pool. Existing free copies are consumed globally before allocating new copies, so each added copy is assigned at most once. Physical holds, Assembled/stand-ins and incoming copies remain distinct; Considering is outside deck demand.
+
+The response is informational. Invalid, incomplete or oversized calculations say Destination unknown without failing a saved import or inferring storage. Only the initiating profile/space receives the one-use frozen notice; detached, closed, route/profile and late-answer guards preserve it. First paint is capped at 100 printing lines across groups, with bounded Show more.
+
 Evidence:
-- `decklab/web/receipt-workflow.js`: rcptWhereTheyGo
-- `decklab/web/collection.js`: drawImportPreview (the result is counts only), openPreconSheet (opens the new deck page)
+- `inventory/ops_collection.py`: opt-in JSON-only added-printing receipts; `api/collection_edit.py`: compatible optional exact-snapshot return and saved-import hook.
+- `api/collection_filing.py`, `web/collection-filing.js` and small Collection/loader hooks: bounded own-space allocation and read-only destination panels. No receipt structural extraction or whole Inventory in Summary.extra.
+- Root's final protected integration passed 113 tests without skips (23 new backend, 15 new UI, existing collection-edit and group consumers). Additional protected UI/source and nine precon compatibility checks passed. Root review and independent source checks are clear; source-length, Ruff, syntax and diff checks pass.
 
-Gap: only Receive delivery shows 'Where these go'. Imports, precon adds, single-card adds and `collection merge` don't.
-
-First slice (reserve review, 2026-10-28): return an informational Where these go summary after an ordinary collection import, reusing the receipt's destination presentation and the same-space before/after availability calculation. Allocate each newly added physical copy at most once, show genuinely unassigned copies as storage, and never name an invisible deck. An unavailable calculation says Destination unknown; it never mislabels cards as storage or turns a saved import into a failed write. The summary assigns no cards, changes no build status and does not claim they have been sleeved. Precon adds and CLI merges follow; fixtures cover competing waiting decks, shared card names and failed destination calculation.
+Gap: precon adds, single-card adds and `collection merge` still need the same filing handoff. Receive delivery retains its existing grouping. No packing, reservation, deck, status or location changes are made by advice. Genuine PostgreSQL and browser/device qualification remain unverified. See [HISTORY.md](../HISTORY.md#where-imported-copies-go-2026-10-28-e7-s15-ordinary-csv-slice).
 
 **E7-S16** · Matt · should · M · built
 

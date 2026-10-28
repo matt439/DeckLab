@@ -368,8 +368,8 @@ function colChanged(cv, answer, words) {
 
 /** Load the view again from the server, then say what happened there: the Find cards counts, or the Card
  * list after an import, come from the server. */
-function colReload(cv, words, stale) {
-  state.colNotice = { space: cv.space, words, stale };
+function colReload(cv, words, stale, filing = null) {
+  state.colNotice = { space: cv.space, profile: cv.profile, words, stale, filing };
   route();
 }
 
@@ -377,7 +377,10 @@ function colReload(cv, words, stale) {
 function colTakeNotice(cv) {
   const notice = state.colNotice;
   state.colNotice = null;
-  if (notice && notice.space === cv.space && notice.words) colSay(cv, notice.words, notice.stale);
+  if (notice && notice.space === cv.space && (!notice.profile || notice.profile === cv.profile) && notice.words) {
+    colSay(cv, notice.words, notice.stale);
+    if (notice.filing) add(cv.message, [colFilingGuide(cv, notice.filing)]);
+  }
 }
 
 
@@ -821,13 +824,15 @@ async function applyImport(ctx, skipProblems) {
     else if (skipProblems) body.skip_problems = true;
     const answer = await apiWrite("/api/collection/import/apply", body);
     const added = answer.added || { rows: 0, cards: 0 };
+    const here = !ctx.sheet.closed && colActive(cv) && selection === ctx.seq && ctx.preview === reviewed;
+    ctx.busy = false;
     ctx.sheet.close();
-    cv.rows = null;                     // the answer has no rows: the next write fetches them again
+    cv.rows = null;                     // the next write fetches rows for its own current view
     if (answer.sha256) cv.sha256 = answer.sha256;
     state.library = null;
     const words = `Imported ${plural(added.cards || 0, "card")} (${plural(added.rows || 0, "row")}).`
       + (answer.skipped ? ` ${plural(answer.skipped, "row")} with problems skipped.` : "") + colImportExcludedWords(answer);
-    if (colActive(cv)) colReload(cv, words, answer.stale_tables);
+    if (here && !document.querySelector("dialog[open]")) colReload(cv, words, answer.stale_tables, colFilingSnapshot(answer, cv));
     else if (state.profile?.id === cv.profile) toast(words);
   } catch (error) {
     if (ctx.sheet.closed || !colActive(cv) || selection !== ctx.seq || ctx.preview !== reviewed) return;

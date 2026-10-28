@@ -100,6 +100,7 @@ about 120-180 bytes (its Scryfall ID alone is 36), so 20,000 rows are about
 3 MB, and MAX_IMPORT is 4 MB (200 bytes a row). The raw files are kept for
 good, so a space's raw imports are capped at 50 MB in all.
 """
+import contextlib
 import csv
 import hashlib
 import hmac
@@ -380,14 +381,15 @@ def _request_sha(value):
     raise ApiError(400, "sha256 must be the 64-character hash /api/collection/rows gave")
 
 
-def _apply(space, op, actor, reason=None, expected_revision=None, message=None):
+def _apply(space, op, actor, reason=None, expected_revision=None, message=None, return_snapshot=False):
     """Run op through inventory.apply, with message, or else the message the Summary's text will have
     (ops.message words it from the request's collection, without running op twice): (the
     space's collection Sheet after, the Summary). Held under saving.inventory_write_lock()
     (_save_lock with the files backend; the lock order: it first, then the backend's own lock),
     so a collection save waits for another save in the server. The operations' refusals become
     the page's answers: Stale 409 with the collection as it is now, Missing 409 likewise, Invalid 400,
-    Conflict 409, Unavailable 503, each with no absolute path in its words."""
+    Conflict 409, Unavailable 503, each with no absolute path in its words. return_snapshot
+    opts into the exact committed Inventory instead of its collection Sheet (filing advice)."""
     from . import saving
     if message is None:
         with common.state_errors():
@@ -416,7 +418,7 @@ def _apply(space, op, actor, reason=None, expected_revision=None, message=None):
         raise ApiError(409, _public(e)) from None
     except ValueError as e:      # an upload's name already taken on disk
         raise ApiError(409, _public(e)) from None
-    return after.collection(space), summary
+    return (after if return_snapshot else after.collection(space)), summary
 
 
 # ---- reading rows
@@ -936,12 +938,12 @@ def import_apply(body):
         if record.get("excluded_groups"):
             raise ApiError(400, "There's nothing to import after leaving out those source sets.")
         raise ApiError(400, "There's nothing to import: every row has a problem or is an ordinary basic land.")
-    answer = merge_upload(space, profile, sha, record)
+    answer = merge_upload(space, profile, sha, record, filing=True)
     preview_path.unlink(missing_ok=True)
     return answer
 
 
-def merge_upload(space, profile, sha, record, message=None):
+def merge_upload(space, profile, sha, record, message=None, filing=False):
     """Merge record's good rows (a preview's record: filename, text, format,
     good, problems, dropped_basics) into the space's collection, and keep
     its text as the upload, in one change (import_apply's: the operation
@@ -951,23 +953,35 @@ def merge_upload(space, profile, sha, record, message=None):
     The caller has checked collection.edit. Returns import_apply's answer."""
     problems = record["problems"]
     whose = _whose(space)
-    op = inventory.Op("collection.import", import_params(space, sha, record, message))
+    if filing:
+        from . import collection_filing
+    op = inventory.Op("collection.import", import_params(space, sha, record, message, capture_additions=filing))
     try:
-        sheet, summary = _apply(space, op, _web_actor(profile))
+        result, summary = _apply(space, op, _web_actor(profile), **({"return_snapshot": True} if filing else {}))
     except ops.TooLarge as e:
         raise ApiError(413, f"The imports folder of {whose} holds {_mb(e.held)}, and this file ({_mb(e.size)}) "
                             f"would take it over its limit of {e.limit // (1024 * 1024)} MB (the raw files are "
                             f"kept for good): ask an admin to tidy {ops.paths.imports_dir(space)} first.") from None
+    sheet = result.collection(space) if filing else result
     rows, now = _view(sheet)
     counts = summary.counts
     shown = _rows_json(rows)
-    return {"ok": True, "sha256": now, "rows": shown, **_extras(space, shown),
-            "added": {"rows": counts["added_rows"], "cards": counts["cards"]}, "skipped": len(problems),
-            "raw": summary.extra["raw"][0], "stale_tables": _stale_tables(space),
-            **({"excluded_groups": record["excluded_groups"]} if "excluded_groups" in record else {})}
+    with inventory.pinned(result) if filing else contextlib.nullcontext():
+        answer = {"ok": True, "sha256": now, "rows": shown, **_extras(space, shown),
+                  "added": {"rows": counts["added_rows"], "cards": counts["cards"]}, "skipped": len(problems),
+                  "raw": summary.extra["raw"][0], "stale_tables": _stale_tables(space),
+                  **({"excluded_groups": record["excluded_groups"]} if "excluded_groups" in record else {})}
+        if filing:
+            facts = summary.extra.get("added_printings")
+            try:
+                answer["filing"] = collection_filing.after_import(result, space, profile, facts, counts["cards"])
+            except Exception:       # optional advice must never turn a committed import into a failed save
+                common._log("Post-import filing advice could not be calculated; the import was saved.")
+                answer["filing"] = collection_filing.unknown(space, profile, facts, counts["cards"])
+    return answer
 
 
-def import_params(space, sha, record, message=None):
+def import_params(space, sha, record, message=None, capture_additions=False):
     """The collection.import operation's parameters for merge_upload's record (also the
     precon add's, api/precons.py, inside its precon.add): no upload kept when record has no
     good rows."""
@@ -980,7 +994,8 @@ def import_params(space, sha, record, message=None):
             "dropped_basics": record.get("dropped_basics") or 0,
             **({"excluded_groups": record["excluded_groups"]} if "excluded_groups" in record else {}),
             "expected_repeats": [r["name"] for r in record["repeat_imports"]]
-            if "repeat_imports" in record else None}
+            if "repeat_imports" in record else None,
+            **({"capture_additions": True} if capture_additions else {})}
 
 
 def _upload_date():

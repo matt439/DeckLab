@@ -9,7 +9,7 @@ the inventory registered with inventory.register, so the Collection page, "Add a
     collection.apply    {space, edits, removals, sha256?, whose?, expect_decks_revision?}
     collection.locations {space, keys, sha256, locations_sha256, location, whose?}
     collection.import   {space, sources, uploads?, sha256?, whose?, message?, limit?, fmt?,
-                         problems?, dropped_basics?, expected_repeats?, excluded_groups?}
+                         problems?, dropped_basics?, expected_repeats?, excluded_groups?, capture_additions?}
     collection.trade    {space, gave, got, sha256?, whose?, expect_decks_revision?}
 
 collection.trade (E7-S22) is a trade as one change: gave is [[set, collector_number, finish,
@@ -424,7 +424,7 @@ def _excluded_message(text, groups):
 
 @register("collection.import")
 def merge(inv, space, sources, uploads=(), sha256=None, whose=None, message=None, limit=None, fmt="",
-          problems=(), dropped_basics=0, expected_repeats=None, excluded_groups=()):
+          problems=(), dropped_basics=0, expected_repeats=None, excluded_groups=(), capture_additions=False):
     """Rows merged in additively from sources, each upload kept as a raw import (see the module
     docstring)."""
     whose = whose or collection_name(space)
@@ -468,9 +468,20 @@ def merge(inv, space, sources, uploads=(), sha256=None, whose=None, message=None
                     f"source lines " + ", ".join(str(line) for line in group["lines"]) + ".")
     text = _excluded_message(_repeat_message((message or "import {cards} cards into " + whose).replace(
         "{cards}", str(counts["cards"])), repeats, uploads), excluded_groups)
+    extra = {}
+    if capture_additions:
+        # JSON-only facts from the operation's actual locked rows, after retained source
+        # groups/basic exclusions have been merged. No snapshots or raw source rows escape.
+        was = {rules.ident(row): int(row["quantity"]) for row in rows}
+        extra["added_printings"] = [
+            {**{key: row[key] for key in ("name", "set", "collector_number", "finish")},
+             "quantity": int(row["quantity"]) - was.get(rules.ident(row), 0),
+             "before_quantity": was.get(rules.ident(row), 0), "after_quantity": int(row["quantity"])}
+            for row in sorted(merged, key=rules.sort_key)
+            if int(row["quantity"]) > was.get(rules.ident(row), 0)]
     return inv.with_collection(space, merged), Summary(
         text, counts=counts, extra={"body": body, "imports": imports, "raw": raw,
-                                  **({"excluded_groups": excluded_groups} if excluded_groups else {})})
+                                  **({"excluded_groups": excluded_groups} if excluded_groups else {}), **extra})
 
 
 # ------------------------------------------------------------------ trades

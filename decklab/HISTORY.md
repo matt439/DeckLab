@@ -2,6 +2,37 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Where imported copies go (2026-10-28; E7-S15 ordinary CSV slice)
+
+Successful Collection CSV imports now carry a read-only Where these go guide.
+The locked merge captures JSON-only exact printing deltas after exclusions;
+`_apply` optionally returns its exact committed snapshot while retaining the old
+Sheet default. One pinned pool supplies own-space deck demand, physical holds
+and incoming stock. Existing free copies are consumed globally first, then each
+new printing copy is allocated once by built/building/other priority and deck ID.
+Proven leftovers go to storage; incomplete, invalid or capped advice is unknown.
+
+Advice cannot turn a saved import into a failed save. It exposes no global
+revision or private kit, and performs no packing, reservation, deck, status or
+location writes. Precon/import-parameter default shapes remain unchanged.
+The profile/space-bound one-use notice validates and freezes printing facts and
+conservation, guards closed/late/profile/route replies, and renders at most 100
+printing lines initially across all groups with bounded, focus-preserving Show
+more. A coherent Collection helper uses existing UI primitives; no receipt
+structural extraction was introduced.
+
+Root's combined protected qualification passed 113 tests with no skips: 23 new
+backend, 15 new UI, 59 existing collection-edit and 16 group checks. Other
+import/account UI, source/layout and nine actual precon fixture cases passed.
+Cases cover competing decks, prior stock, Assembled/installed stand-ins, hidden
+spaces, unknown authorization, exact saved snapshots, group convergence and
+exclusions, caps and successful-save calculation failures. Root review, Ruff,
+syntax, diff and source-length checks pass.
+
+Precon adds, single-card adds and CLI merges remain on E7-S15. Genuine PostgreSQL
+and browser/device qualification are unverified. No live operation, server
+restart, migration or real-data change was used for this implementation.
+
 ## Considering in saved-deck editors (2026-10-28; E2-S26 first slice)
 
 Full and Quick edit now add, remove and change quantities in a saved deck's

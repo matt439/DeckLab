@@ -57,7 +57,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 | `E5-S15` | DEFERRED | should | M | User1 asks from the page for a card or a Forge run, Matt approves (`E3-S13`); not urgent. |
 | `E5-S08` | OPEN | could | XL | MTGMate's daily snapshot for queued rows and `E5-S19`'s Back in stock are built; next the deck tables' missing cards, then a second shop. |
 | `E5-S17` | OPEN | could | M | Show dated buying information on a saved swap-test result, then explicitly queue its missing additions without duplicate rows. |
-| `E7-S15` | OPEN | could | M | Show Where these go after a collection import, assigning each added copy once to a waiting deck or storage. |
+| `E7-S15` | OPEN | could | M | Extend the saved ordinary-import filing guide to precon adds, single-card adds and CLI merges; CSV advice is built. |
 | `E7-S32` | OPEN | could | L | Build Scan cards' photo and pending-list flow from the [recognition spike](decklab/design/scanning-spike.md); fixtures first, real phone-photo acceptance separately. |
 
 ## Deck Lab: Commander nights
