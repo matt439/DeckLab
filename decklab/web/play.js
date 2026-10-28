@@ -385,6 +385,7 @@ function playPlanCard(entry, data) {
     plan.notes ? el("p", { class: "play-note", text: plan.notes }) : null,
     el("p", { class: "sub", text: `Revision ${plan.revision}; last saved by ${plan.updated_by}.` }),
     playSnapshotDetails([{ ...plan.deck, sections: plan.after }]),
+    typeof sideboardPreviewAction === "function" ? sideboardPreviewAction(entry) : null,
     el("button", { class: "btn", type: "button", text: "Revise this plan", disabled: !data.lists.length || null,
       onclick: () => playPlanForm(data, "", entry) }));
 }

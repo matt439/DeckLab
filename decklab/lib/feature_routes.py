@@ -10,7 +10,7 @@ and accessory saves with a local picture (accessories.MAX_SAVE_BODY).
 
 def dispatch(handler, route, query):
     from decklab.lib.api import (accessories, accessory_undo, activity, arrivals, activity_mixed_undo, activity_undo, assembly, assembly_completion, assembly_standins, assembly_ticks, box_check, box_repair, collection, compare, considering, collection_edit, collection_locations, collection_trade, cover, deck_printings, edhrec, editor, history,
-                                 field_membership, library_forge, maintenance, opponents, play_records, precon_coverage, precons, products, product_tokens, rankings, receipts, rename, retirement, shopping, shopping_order_changes, shopping_orders, shopping_queue, swaps, token_cards, token_plan, tokens, variant_queue, visits, wishlist_undo)
+                                 field_membership, library_forge, maintenance, opponents, play_records, precon_coverage, precons, products, product_tokens, rankings, receipts, rename, retirement, shopping, shopping_order_changes, shopping_orders, shopping_queue, sideboard_preview, swaps, token_cards, token_plan, tokens, variant_queue, visits, wishlist_undo)
     from decklab.lib.api.common import MAX_BODY
 
     gets = {
@@ -27,6 +27,7 @@ def dispatch(handler, route, query):
         ("assembly",): (assembly.assembly_view, ("deck", "version")),
         ("compare", "shared"): (compare.shared_view, ("a", "av", "b", "bv")),
         ("play",): (play_records.play_overview, ("id",)),
+        ("play", "sideboard-preview"): (sideboard_preview.preview_sideboard, ("id", "sha256")),
         ("deck", "history"): (history.deck_history, ("id",)),
         ("deck", "retire"): (retirement.retirement_view, ("id",)),
         ("deck", "rename"): (rename.rename_view, ("id",)),
@@ -111,7 +112,7 @@ def dispatch(handler, route, query):
         function, names = gets[key]
         params = handler._query(query, names)
         if "id" in names and key not in {("activity", "undo"), ("activity", "wishlist-undo"), ("activity", "accessory-undo"),
-                                         ("activity", "mixed-undo")}:
+                                         ("activity", "mixed-undo"), ("play", "sideboard-preview")}:
             params["deck_id"] = handler._deck_id(params) if "id" in params else None
             params.pop("id", None)
         handler._send_json(200, function(**params))

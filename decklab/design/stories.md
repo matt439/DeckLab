@@ -38,7 +38,7 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E1: Find, plan and choose decks](#e1-find-plan-and-choose-decks) | 15 | 14 | 1 | 0 | 0 |
 | [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 20 | 17 | 1 | 1 | 1 |
 | [E3: Test a deck](#e3-test-a-deck) | 15 | 12 | 3 | 0 | 0 |
-| [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 22 | 16 | 2 | 3 | 1 |
+| [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 22 | 16 | 3 | 2 | 1 |
 | [E5: Decide what to buy](#e5-decide-what-to-buy) | 22 | 18 | 1 | 1 | 2 |
 | [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 20 | 18 | 0 | 0 | 2 |
 | [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 28 | 24 | 0 | 4 | 0 |
@@ -46,7 +46,7 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E9: Commander nights](#e9-commander-nights) | 20 | 14 | 1 | 4 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 35 | 31 | 1 | 1 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 39 | 28 | 6 | 2 | 3 |
-| **Total** | **255** | **208** | **16** | **17** | **14** |
+| **Total** | **255** | **208** | **17** | **16** | **14** |
 
 Counted from the story headers on 2026-10-28 after the current feature and maintenance work. The reviews added five feature stories and eight hygiene stories, then the fixture-only entry-point story E11-S44, and corrected E1-S12 from missing to partial.
 
@@ -1121,20 +1121,23 @@ Evidence:
 - `decklab/lib/api/play_records.py`: play_overview, _plan_cards
 - `decklab/tests/test_deck_sideboard_ui.py`: DeckSideboardUiTests
 
-**E4-S16** · Matt · could · L · missing
+**E4-S16** · Matt · could · L · partial
 
 As a player planning sideboards, I want to test a sideboard plan against its opponent in simulated games, so that I know the swap helps before relying on it in a real best of three.
 
+- Given a saved plan, when I preview it, then its exact still-visible deck snapshots produce a printing-aware post-board list and a conditional game-budget guide, without changing lists or starting games; stale or unavailable pairs refuse safely.
 - Given a sideboard plan, when I start a test, then Forge plays the sideboarded list against the opponent on the base list's games and gives a Better / Worse / Makes little difference verdict.
 - Given the simulations setting doesn't let me start runs, then the reason shows beside Start.
 - Given the plan's lists change, then the old test is marked as for an older list.
 
+Now (2026-10-28): Game log and the deck's saved Sideboard plan offer an explicit read-only post-board preview. It checks exact record/list hashes and preserves listed printings; mixed or unknown formats keep the list preview without numeric game budgets. See [HISTORY.md](../HISTORY.md#saved-sideboard-plan-preview-2026-10-28-e4-s16-slice).
+
 Evidence:
-- `decklab/web/variant.js`: Test this change (best-of-one games only)
+- `lib/api/sideboard_preview.py` and the GET-only `feature_routes.py` registration: own-space record visibility before validation, fixed hidden/removed-opponent refusals, one pinned current inventory, bounded complete rows, authoritative plan transfers and derived snapshot digest.
+- `web/sideboard-preview.js`, `play.js` and `deck-sideboard.js`: explicit fetch, literal section/printing comparisons and full post-board list, bounded local pagination, fixed errors and original profile/page/sheet/control guards. No save or run action is offered.
+- Root's protected eight-module integration passed 150 tests with no skips, including 24 new backend and 22 new UI cases plus existing play, removed-record, deck-sideboard and script-loader regressions.
 
-Gap: Plans are recorded, not simulated, and Forge games are best of one. Testing sideboard plans is on PLAN.md's Still to do list.
-
-First slice (reserve review, 2026-10-28): a non-writing preview that applies a saved plan to the exact chosen deck revision, validates outgoing copies and sideboard quantities, and shows the post-board list differences plus a dry-run game plan. Preserve the original lists and plan, refuse stale or invisible opponents, and test plan derivation with fixtures. A later explicit run compares post-board lists using the existing simulation permission and idle-PC gates; qualification games are separate from this ready preview work.
+Gap: the preview does not simulate plans. Explicit permission-checked paired runs on the base games, a verdict and stale-test results remain to build; Forge games are still best of one. The guide uses fresh paired-game upper bounds only, without cached work, engine compatibility, timing or execution qualification. Real Forge games retain the separate authorization and idle-PC gates. Browser/device and actual PostgreSQL qualification were not run for this slice.
 
 **E4-S17** · User1 · should · S · built
 

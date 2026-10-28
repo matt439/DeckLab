@@ -2,6 +2,48 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Saved sideboard-plan preview (2026-10-28; E4-S16 slice)
+
+Saved plans in Game log and the deck's Sideboard plan now offer **Preview
+post-board list**. The explicit read checks the saved record hash and both exact
+current list snapshots, including sections, printing and finish. It reuses the
+ordinary plan transfer rules, preserving split-printing order and every other
+section in a separate derived snapshot. The sheet shows counts, printing-aware
+differences and the full post-board list, with bounded local pagination. Original
+decks, plans, audit history, packed cards and simulation data stay unchanged.
+
+The GET-only API checks the raw plan's own-space visibility before validation or
+hashing, then both deck identities before current readers. Public decks do not
+publish private plans. Hidden or removed opponents give fixed generic guidance
+without their identifiers, lists or raw errors. One lazy inventory pin covers
+both current lists; current visibility is checked again on canonical summaries.
+Complete row/text/response caps precede costly work. Stale records and even
+printing-only list changes refuse rather than silently rebasing the plan.
+
+For known compatible formats, the guide uses the existing quick and paired-ahead
+targets: up to 400 or 6,400 fresh games across base and post-board lists. Known
+mixed or unconfirmed formats retain the list preview with the game guide
+unavailable and no numeric budget. These are proposed fresh upper bounds only:
+saved games, remaining work, timing, engine compatibility and actual execution
+readiness are not established. No simulation permission is needed to read a
+preview; no Start, Save or verdict is offered.
+
+The UI validates and copies the bounded public contract, enforces whole-card and
+section conservation and rejects contradictory moves or totals. Requests and
+pagination retain their original profile object/ID, route, page, plan/list hashes,
+deck screen, sheet and connected footer controls. Closing/reopening sheets,
+replacing profiles or moving controls invalidates late replies and actions;
+errors keep fixed guidance and manual retry.
+
+Root's final protected eight-module integration passed 150 tests without skips,
+including 24 backend and 22 UI feature cases plus existing play, removed-record,
+deck-sideboard and script-loader checks. Independent/root review, Node syntax,
+Ruff, source lengths and whitespace checks pass. Only disposable fixtures,
+MemoryStore and a fake Node DOM qualified this slice; actual PostgreSQL, browser,
+device and Forge qualification remain unrun. E4-S16 is partial for permission-
+checked paired runs, verdicts and stale saved-test results. No live server,
+configuration, collection, service or game was changed or probed.
+
 ## Read-only self-hosting doctor (2026-10-28; E11-S34)
 
 `python -m decklab.doctor [--json]` now checks the supported runtime, captured

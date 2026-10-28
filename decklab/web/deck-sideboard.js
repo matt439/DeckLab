@@ -126,7 +126,8 @@ function deckSideboardPlan(entry, current) {
     current ? null : el("p", { class: "box box-warn", text: "A decklist has changed since this plan was saved. Check these swaps against the current lists before using it." }),
     el("div", { class: "play-sides" }, sides),
     plan.notes ? el("p", { class: "play-note", text: plan.notes }) : null,
-    el("p", { class: "sub", text: `Revision ${plan.revision}; last saved by ${plan.updated_by}.` }));
+    el("p", { class: "sub", text: `Revision ${plan.revision}; last saved by ${plan.updated_by}.` }),
+    typeof sideboardPreviewAction === "function" ? sideboardPreviewAction(entry) : null);
 }
 
 function deckSideboardNotes(data) {
