@@ -390,6 +390,12 @@ button.col-casual-open { cursor: pointer; }
 .col-casual-row.has-bulk-choice > .col-bulk-row-choice { align-self: stretch; }
 .col-casual-row.has-bulk-choice > .col-casual-note { grid-column: 2; }
 .col-bulk-selected-list { max-height: 18rem; overflow: auto; padding-inline-start: var(--s-5); overflow-wrap: anywhere; }
+.col-location-filter-field { min-width: 0; max-width: 22rem; }
+.col-location-filter { max-width: 100%; }
+.col-location-actions { display: flex; align-items: center; flex-wrap: wrap; gap: var(--s-2); margin-block: var(--s-2) var(--s-3); }
+.col-location-actions .btn { max-width: 100%; white-space: normal; }
+.col-location-batch-note { flex-basis: 100%; margin: 0; }
+.col-location-review-list { max-height: 18rem; overflow: auto; padding-inline-start: var(--s-5); overflow-wrap: anywhere; }
 @media (min-width: 1000px) and (pointer: fine) {
   .col-row-lab .col-bulk-row-choice { min-height: calc(var(--row-h) - 1px); }
   .col-row-lab .col-table.has-bulk-selection .col-th-name { width: 13rem; }

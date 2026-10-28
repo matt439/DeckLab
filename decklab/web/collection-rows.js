@@ -32,6 +32,7 @@ function drawCollectionRows(data, space, token = null) {
   cv.page = 1;
   cv.unrecordedOnly = false;
   cv.storageOnly = false;
+  cv.locationFilter = "all";
   const saved = String(local.get("collection.rowsSort") || "name:1").split(":");
   cv.sort = { key: COL_SORTS[saved[0]] ? saved[0] : "name", dir: saved[1] === "-1" ? -1 : 1 };
   const search = el("input", { id: "col-row-search", type: "search", autocomplete: "off", spellcheck: "false",
@@ -59,10 +60,11 @@ function drawCollectionRows(data, space, token = null) {
       onclick: () => colRowFilters(cv) }, svgEl("svg", { viewBox: "0 0 20 20", width: 20, height: 20,
         "aria-hidden": "true", focusable: "false" }, svgEl("path", { d: "M3 4h14l-5.5 6.5V16l-3-1.5v-4L3 4Z",
         fill: "none", stroke: "currentColor", "stroke-width": 1.6, "stroke-linejoin": "round" }))),
-    el("div", { class: "filter-chips filter-chips-scroll col-row-filter-options" }, cv.storageChoice));
+    el("div", { class: "filter-chips filter-chips-scroll col-row-filter-options" }, cv.storageChoice, colLocationFilter(cv)));
   const root = el("div", { class: "collection-page col-rows-page" }, colHead(cv),
     cv.unsupported ? null : [cv.boxNote, cv.unrecordedChoice, tools,
       el("div", { class: "actions col-row-actions" }, colBulkButton(cv), colBulkSelectionTools(cv), cv.count),
+      colLocationBatchTools(cv),
       el("div", { class: "col-row-layout" }, cv.list, cv.preview), cv.priceNote]);
   cv.root = root;
   $("#main").append(root);
@@ -75,7 +77,7 @@ function drawCollectionRows(data, space, token = null) {
 function colShownRows(cv) {
   const words = tokFold(cv.search || "");
   const rows = (cv.rows || []).filter((row) => (!words || tokFold(row.name).includes(words) || tokFold(row.set).includes(words))
-    && (!cv.unrecordedOnly || colUnrecorded(row)) && (!cv.storageOnly || colInStorage(cv, row)));
+    && (!cv.unrecordedOnly || colUnrecorded(row)) && (!cv.storageOnly || colInStorage(cv, row)) && colLocationMatches(cv, row));
   const { key, dir } = cv.sort;
   if (key === "price") {
     // Unpriced rows stay last whichever way it's sorted; equal prices go by name.
@@ -115,6 +117,7 @@ function drawColRowList(cv) {
     cv.storageChoice.hidden = !stored || !rows.length;
     if (!stored) { cv.storageOnly = false; cv.storageBox.checked = false; }
   }
+  colLocationFiltersSync(cv);
   const shown = colShownRows(cv);
   const selected = shown.find((row) => colKey(row) === cv.selectedKey);
   if (!selected) cv.selectedKey = null;
@@ -141,6 +144,7 @@ function drawColRowList(cv) {
         cv.search = ""; if (cv.rowSearch) cv.rowSearch.value = "";
         cv.unrecordedOnly = false; cv.unrecorded.checked = false;
         cv.storageOnly = false; if (cv.storageBox) cv.storageBox.checked = false;
+        cv.locationFilter = "all";
         cv.page = 1; cv.casualLimit = COL_CASUAL_ROWS; drawColRowList(cv);
         if (cv.rowSearch) cv.rowSearch.focus();
       } }), { live: true }));
@@ -495,6 +499,7 @@ function colRowFilters(cv) {
   add(sheet.body, [
     checkbox("Condition or language not recorded", cv.unrecordedOnly, (on) => { cv.unrecordedOnly = on; cv.unrecorded.checked = on; }),
     checkbox("In storage only", cv.storageOnly, (on) => { cv.storageOnly = on; cv.storageBox.checked = on; }, !cv.storage || !!cv.storage.error),
+    colLocationFilter(cv, sheet),
     el("label", { class: "field" }, el("span", { text: "Sort" }), sort)]);
   sheetActions(sheet, [{ text: "Done", onclick: () => sheet.close() }]);
 }

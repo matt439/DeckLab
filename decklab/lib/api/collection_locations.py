@@ -2,7 +2,7 @@
 apart from the rows like their prices and storage counts, in every answer that sends rows
 (collection_edit._extras):
 
-    "locations":   {"ready", "rows": {"set|number|finish": "Row 2, B"}}
+    "locations":   {"ready", "sha256", "rows": {"set|number|finish": "Row 2, B"}}
     "storage_box": {"cards", "capacity", "over", "not_counted", "elsewhere"} (home only), or None
 
 locations' ready is False while the database lacks migration 0016: the page then shows locations
@@ -20,8 +20,9 @@ that can't be worked out (the pool can't be read) is None rather than a guess.
 import re
 
 from decklab.lib import config, inventory, spaces
-from decklab.lib.inventory import rules
+from decklab.lib.inventory import ops_collection as ops, rules
 
+from . import common, guard
 from .common import ApiError
 
 CAPACITY = 2400
@@ -44,13 +45,72 @@ def location_input(value):
 
 
 def locations(space, key):
-    """{"ready", "rows"} of a space's storage locations (see the module docstring); key words a
-    row's identity key as the page does."""
+    """Locations and their independent receipt; an invalid source has no writable receipt.
+
+    Keep the page's collection rows readable, but do not describe an unreadable location
+    source as an empty one: its explanation disables batch writes until it can be repaired.
+    """
     inv = inventory.current()
     found = inv.locations_of(space)
-    return {"ready": bool(inv.locations_ready),
-            "rows": {key({"set": k[0], "collector_number": k[1], "finish": k[2]}): text
-                     for k, text in sorted(found.items())}}
+    answer = {"ready": bool(inv.locations_ready),
+              "rows": {key({"set": k[0], "collector_number": k[1], "finish": k[2]}): text
+                       for k, text in sorted(found.items())}}
+    try:
+        answer["sha256"] = ops.locations_sha256_of(inv, space)
+    except ops.Unreadable as e:
+        answer.update(sha256=None, error=common._public(e))
+    return answer
+
+
+def _bulk_conflict(space, message):
+    """One fresh snapshot for a refused batch's rows, locations and both review receipts."""
+    from . import collection_edit as ce
+    with common.state_errors():
+        fresh = inventory.backend().load()
+    with inventory.pinned(fresh):
+        rows, sha = ce._view(fresh.collection(space))
+        shown = ce._rows_json(rows)
+        return ApiError(409, message, sha256=sha, rows=shown, **ce._extras(space, shown))
+
+
+def bulk_set(body):
+    """POST /api/collection/locations/bulk: assign or explicitly clear exact reviewed rows.
+
+    Required: profile, keys, sha256, locations_sha256 and location (text, "" clears).
+    space is optional. Both receipts and every named printing are rechecked by the one
+    location-only operation under the write lock, including when nothing would change.
+    """
+    from . import collection_edit as ce
+    from .settings import _web_actor, _writer
+    data = common._parse_body(body, ce.MAX_BULK_BODY)
+    profile = _writer(data)
+    space = ce.space_param(data.get("space"))
+    guard.require_space_write(profile, "collection.edit", space)
+    common._keys(data, ("profile", "sha256", "locations_sha256", "keys", "location"), ("space",))
+    sha = ce._request_sha(data["sha256"])
+    location_sha = data["locations_sha256"]
+    if not isinstance(location_sha, str) or not common._SHA_RE.fullmatch(location_sha):
+        raise ApiError(400, "locations_sha256 must be the 64-character hash the locations answer gave")
+    keys = ce._bulk_keys(data["keys"])
+    if not isinstance(data["location"], str):
+        raise ApiError(400, "location must be text; use an empty string to clear it")
+    try:
+        wanted = rules.clean_location(data["location"])
+    except ValueError as e:
+        raise ApiError(400, str(e)) from None
+    op = inventory.Op("collection.locations", {"space": space, "sha256": sha,
+                      "locations_sha256": location_sha, "keys": keys, "location": wanted, "whose": ce._whose(space)})
+    try:
+        sheet, summary = ce._apply(space, op, _web_actor(profile),
+                                   message=f"set storage locations in {ce._whose(space)}")
+    except ApiError as e:
+        if e.status == 409:
+            raise _bulk_conflict(space, e.message) from None
+        raise
+    rows, now = ce._view(sheet)
+    shown = ce._rows_json(rows)
+    return {"ok": True, "sha256": now, "rows": shown, **ce._extras(space, shown),
+            "changed": summary.counts["changed"], "stale_tables": []}
 
 
 def capacity():

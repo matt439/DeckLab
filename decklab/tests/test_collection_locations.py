@@ -4,9 +4,10 @@ Collection page's answers and card-sheet save, Build decks' storage_locations, a
 line's collection edit --location and collection locations. The database's column (migration
 0016), and the schema before it, are test_collection_locations_pg's.
 
-Run from the repo root: python -m unittest decklab.tests.test_collection_locations
+Run from the repo root: python scripts/test_fixtures.py decklab.tests.test_collection_locations
 """
 import contextlib
+import hashlib
 import io
 from types import SimpleNamespace
 from unittest import mock
@@ -43,7 +44,9 @@ class LocationOpTests(CollectionEditTestCase):
         before = self.edit(location="Row 1")         # the fixture's file is rewritten in Deck Lab's order first
         self.writes.clear()
         answer = self.edit(location=" Row 2,  B ")
-        self.assertEqual(answer["locations"], {"ready": True, "rows": {"fdn|227|nonfoil": "Row 2, B"}})
+        self.assertEqual(answer["locations"], {"ready": True, "sha256": hashlib.sha256(
+                         (self.box.magic / "locations.csv").read_bytes()).hexdigest(),
+                                               "rows": {"fdn|227|nonfoil": "Row 2, B"}})
         self.assertEqual(answer["sha256"], before["sha256"])         # the eight columns didn't change
         self.assertEqual((self.box.magic / "locations.csv").read_text(encoding="utf-8"),
                          'set,collector_number,finish,location\nfdn,227,nonfoil,"Row 2, B"\n')
@@ -98,7 +101,7 @@ class LocationOpTests(CollectionEditTestCase):
             return loaded().replace(locations_ready=False)
         with mock.patch.object(self.backend, "load", old_schema):
             view = self.rows()
-            self.assertEqual(view["locations"], {"ready": False, "rows": {}})
+            self.assertEqual(view["locations"], {"ready": False, "sha256": ce.EMPTY_SHA, "rows": {}})
             self.assertApiError(409, self.edit, location="Row 1", contains="migration 0016")
             self.edit(quantity="5")                                   # other edits go on
             self.edit(location="")                                    # a blank one isn't a location

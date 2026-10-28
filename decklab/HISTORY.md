@@ -2,6 +2,33 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Reviewed bulk storage locations (2026-10-28; E8-S23)
+
+Card list now filters by a recorded location or No location recorded alongside
+its other filters. Zero-match location choices remain selected. Separate shown
+and selected actions reuse one selection and freeze exact printing keys; the
+review shows each row's copies and old/new location, with explicit clearing.
+
+`collection.locations` changes locations only, with no deck-table refresh. Both
+collection and location receipts, capability, exact keys and source validity are
+checked under the backend lock, even for no-ops. Location-only races return a
+fresh, pinned conflict snapshot; renewed reviews can only lose keys, never admit
+new ones. Invalid/orphan location rows block rebuilding. Generic audit wording
+avoids computing a changed-row count from an older request pin; actual operation
+summaries retain their row details. Quantities and all other data stay unchanged.
+
+Reviews preserve focus, pending/context guards and read-only/capability gates.
+The 50,000-key/4 MiB bounds include apiWrite's injected profile bytes. Protected
+runs passed 41 focused backend, 59 existing collection-edit and 106 UI/source
+checks, without skips. Independent and root review are clear. The earlier 129
+run had two failures: an old layout fixture's first-select assumption was fixed
+to use the Sort label; a parallel editor script-list mismatch was left to its
+owner and has since been reconciled. All source files remain below 1,200 lines.
+
+Genuine PostgreSQL audit/rollback and browser/device qualification remain
+unverified. No household migration, real-data operation, server restart or other
+live-runtime action was used for this implementation.
+
 ## Use fixture protections for source-length CI (2026-10-28; E11-S44 follow-up)
 
 The source-length inventory step in lint.yml now uses the protected fixture

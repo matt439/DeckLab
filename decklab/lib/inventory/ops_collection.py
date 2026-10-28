@@ -7,6 +7,7 @@ the inventory registered with inventory.register, so the Collection page, "Add a
     collection.edit     {space, original, row, sha256?, whose?, expect_decks_revision?, location?}
     collection.remove   {space, original, sha256?, whose?, expect_decks_revision?}
     collection.apply    {space, edits, removals, sha256?, whose?, expect_decks_revision?}
+    collection.locations {space, keys, sha256, locations_sha256, location, whose?}
     collection.import   {space, sources, uploads?, sha256?, whose?, message?, limit?, fmt?,
                          problems?, dropped_basics?, expected_repeats?, excluded_groups?}
     collection.trade    {space, gave, got, sha256?, whose?, expect_decks_revision?}
@@ -137,6 +138,23 @@ def rows_of(sheet):
 
 def sha256_of(sheet):
     """The version a page holds of a collection: the sha256 of it rendered as collection.csv."""
+    return files.rendered_sha256(sheet)
+
+
+def locations_sha256_of(inv, space):
+    """The space's canonical locations version, refusing an unreadable or invalid source.
+
+    Collection row hashes deliberately exclude these values. Keep this independent receipt
+    beside that hash so a reviewed batch cannot overwrite a location-only concurrent change.
+    """
+    sheet = inv.location_sheet(space)
+    problem = sheet.error or sheet.csv_error or sheet.strict_error or next(iter(sheet.problems), None)
+    if sheet.exists and problem:
+        raise Unreadable(f"The storage locations can't be changed: {problem}. Fix them on the PC first.")
+    listed = {rules.ident(row) for row in inv.collection(space).rows}
+    if any(row.key not in listed for row in sheet.rows):
+        raise Unreadable("The storage locations name a printing that isn't in the collection. "
+                         "Fix them on the PC first.")
     return files.rendered_sha256(sheet)
 
 
@@ -290,6 +308,46 @@ def apply_rows(inv, space, edits=(), removals=(), sha256=None, whose=None, expec
 
 def _rows_word(n):
     return f"{n} row{'' if n == 1 else 's'}"
+
+
+@register("collection.locations", refresh=False)
+def bulk_locations(inv, space, keys, sha256, locations_sha256, location, whose=None):
+    """Set only exact rows' locations after both reviewed receipts are checked under the lock.
+
+    No collection rows are rewritten, and every check also applies to an apparent no-op.
+    Missing keys refuse the whole batch before with_locations can drop any of them.
+    """
+    whose = whose or collection_name(space)
+    if not all(isinstance(value, str) and re.fullmatch(r"[a-f0-9]{64}", value)
+               for value in (sha256, locations_sha256)):
+        raise Invalid("Collection and storage location hashes must be 64-character hashes.")
+    if not isinstance(location, str):
+        raise Invalid("A storage location must be text; use an empty string to clear it.")
+    wanted = _location(location)
+    rows = _rows(inv, space, sha256, whose)
+    if locations_sha256_of(inv, space) != locations_sha256:
+        raise Stale(space, "The storage locations")
+    if not inv.locations_ready:
+        raise Conflict(rules.LOCATION_REQUIRED)
+    if not isinstance(keys, (list, tuple)) or not keys:
+        raise Invalid("Name at least one exact printing key.")
+    checked = []
+    for key in keys:
+        if not isinstance(key, (list, tuple)) or len(key) != 3 or not all(isinstance(v, str) for v in key):
+            raise Invalid("Each printing key needs a set, collector number and finish.")
+        checked.append(tuple(key))
+    if len(set(checked)) != len(checked):
+        raise Invalid("Each printing key must be named only once.")
+    by_key = {rules.ident(row): row for row in rows}
+    if any(key not in by_key for key in checked):
+        raise Missing(space)
+    found = inv.locations_of(space)
+    changed = [key for key in checked if found.get(key, "") != wanted]
+    body = [f"{_label(by_key[key])} [{key[2]}]: storage location "
+            f"{found.get(key) or '(not recorded)'} -> {wanted or '(not recorded)'}." for key in changed]
+    after = inv.with_locations(space, {**found, **{key: wanted for key in changed}}) if changed else inv
+    return after, Summary(f"set storage location for {_rows_word(len(changed))} in {whose}",
+                          counts={"changed": len(changed)}, extra={"body": body})
 
 
 # ------------------------------------------------------------------ imports

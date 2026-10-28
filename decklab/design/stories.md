@@ -42,11 +42,11 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E5: Decide what to buy](#e5-decide-what-to-buy) | 22 | 17 | 1 | 2 | 2 |
 | [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 20 | 18 | 0 | 0 | 2 |
 | [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 28 | 23 | 1 | 4 | 0 |
-| [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 19 | 13 | 2 | 2 | 2 |
+| [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 19 | 14 | 2 | 1 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 20 | 14 | 1 | 4 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 35 | 31 | 1 | 1 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 39 | 25 | 6 | 5 | 3 |
-| **Total** | **255** | **199** | **19** | **23** | **14** |
+| **Total** | **255** | **200** | **19** | **22** | **14** |
 
 Counted from the story headers on 2026-10-28 after the current feature and maintenance work. The reviews added five feature stories and eight hygiene stories, and corrected E1-S12 from missing to partial.
 
@@ -2473,7 +2473,7 @@ Next slice: `POST /api/collection/scan` (one photo, shrunk in the page on a canv
 
 The physical side of home's shared pool: each built deck and each product kept intact is in one sleeve design and one deck box, every other card sits unsleeved in the storage box, and moving a card between decks means changing its sleeve. Deck Lab records the sleeves, deck boxes and playmats (each Matt's, User1's or shared) on the Sleeves & boxes page, a built deck's Sleeves and Deck box lines and an intact product's kit, warns when a holder has too few sleeves or a box that is full or too small, and lets one sleeve design sleeve several holders. Choosing a deck's kit needs the right to edit that deck; an owner may make their kit public (read-only), and members never see private kit. Accessory prices are not wanted.
 
-Open: E8-S03, E8-S15, E8-S19, E8-S23.
+Open: E8-S03, E8-S15, E8-S19.
 
 **E8-S01** · Matt · must · M · built
 
@@ -2790,7 +2790,7 @@ Gap: migration 0016 not applied to the live database; not tried with real cards 
 
 ---
 
-**E8-S23** · Matt · could · M · missing
+**E8-S23** · Matt · could · M · built
 
 As a person filing a batch of cards, I want to filter by storage location and set one location for several rows at once, so that recording where I put the cards does not mean opening every card sheet.
 
@@ -2799,11 +2799,15 @@ As a person filing a batch of cards, I want to filter by storage location and se
 - Given a collection row or its location changed after review, then nothing is silently overwritten and the batch is re-reviewed without adding other rows.
 - Given the save, then quantities, condition, language, notes, deck lists and physical holdings stay unchanged; only the space's own people may edit and missing migration support is explained.
 
-Evidence of gap (2026-10-28): `decklab/web/storage-locations.js` edits a single card; `collection-rows.js` has no location filter; `decklab/lib/api/collection_edit.py` bulk_set accepts condition/language only. E8-S22's single-row locations and E7-S29's bulk review are built.
+Built 2026-10-28: Card list filters by All locations, No location recorded or an exact location, alongside existing filters. A chosen location remains selected at zero matches. Shown-row and selected-row actions use one selection owner and freeze exact printing keys. Reviews show each printing, copy count and old/new location; clearing is explicit.
 
-Gap: location filtering and reviewed batch updates remain to build.
+The location-only operation validates both the collection and independent location hashes, keys, capability and readable/valid source under the backend lock, including no-ops. Conflicts return one coherent fresh snapshot and narrow the review without admitting other rows. Invalid/orphan source rows block rebuilding. Quantities, notes, other row facts, deck bytes and holdings are unchanged, and no table refresh runs.
 
-First slice: add the filter and a Set storage location review for the exact shown keys, initially using E7-S29's whole-filter batch pattern; E7-S18 can later supply arbitrary selection. Bind review to both collection keys and current location values, because the collection row SHA intentionally excludes locations. Use migration 0016 in disposable database checks; do not apply it to the household database as part of development.
+Evidence:
+- `storage-locations.js`, small hooks in `collection-rows.js`, `collection-bulk.js` and `collection.js`: stable native filters, frozen reviews, pending/context/focus guards and a 50,000-key/4 MiB cap including the injected profile envelope.
+- `api/collection_locations.py`, `feature_routes.py`, `inventory/ops_collection.py`: the protected `POST /api/collection/locations/bulk` route and pure `collection.locations` operation (`refresh=False`).
+- Protected runs passed 41 focused backend, 59 existing collection-edit and 106 UI/source checks, without skips. Independent backend/UI review and root review are clear; source files remain below 1,200 lines.
+- [HISTORY.md](../HISTORY.md#reviewed-bulk-storage-locations-2026-10-28-e8-s23) records the initial fixture-selector correction and separate parallel script-list integration. Genuine PostgreSQL audit/rollback and browser/device qualification remain unverified; no household migration or server action was performed.
 
 ---
 

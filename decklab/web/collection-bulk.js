@@ -46,7 +46,7 @@ function colBulkRowChoice(cv, row) {
   if (!cv.editable || !seesInventory(cv.space) || !canEditSpace(cv.space)) return null;
   const key = colBulkKey(row), revision = cv.sha256, rows = cv.rows;
   const input = el("input", { type: "checkbox", class: "col-mutate col-bulk-check", "data-bulk-key": key,
-    "aria-label": `Select ${row.name} (${colPrinting(row)}) for condition and language`,
+    "aria-label": `Select ${row.name} (${colPrinting(row)}) for batch changes`,
     onchange: () => {
       const current = colBulkActionCurrent(cv, input) && cv.list?.contains(input)
         && cv.sha256 === revision && cv.rows === rows && colShownRows(cv).some(item => colBulkKey(item) === key);
@@ -85,6 +85,7 @@ function colBulkSync(cv, shown) {
   for (const input of cv.list?.querySelectorAll(".col-bulk-check") || []) {
     input.checked = cv.bulkSelected.has(input.getAttribute("data-bulk-key"));
   }
+  colLocationBatchSync(cv, shown);
 }
 
 /** A language code's name ("English"), or the code itself. */

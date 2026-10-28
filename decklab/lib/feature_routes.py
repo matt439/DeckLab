@@ -9,7 +9,7 @@ and accessory saves with a local picture (accessories.MAX_SAVE_BODY).
 
 
 def dispatch(handler, route, query):
-    from decklab.lib.api import (accessories, accessory_undo, activity, arrivals, activity_mixed_undo, activity_undo, assembly, assembly_completion, assembly_standins, assembly_ticks, box_check, box_repair, collection, compare, considering, collection_edit, collection_trade, cover, deck_printings, edhrec, editor, history,
+    from decklab.lib.api import (accessories, accessory_undo, activity, arrivals, activity_mixed_undo, activity_undo, assembly, assembly_completion, assembly_standins, assembly_ticks, box_check, box_repair, collection, compare, considering, collection_edit, collection_locations, collection_trade, cover, deck_printings, edhrec, editor, history,
                                  library_forge, opponents, play_records, precon_coverage, precons, products, product_tokens, rankings, receipts, rename, retirement, shopping, shopping_order_changes, shopping_orders, shopping_queue, swaps, token_cards, token_plan, tokens, visits, wishlist_undo)
     from decklab.lib.api.common import MAX_BODY
 
@@ -80,6 +80,7 @@ def dispatch(handler, route, query):
         ("tokens", "plan"): token_plan.apply_plan,
         ("collection", "save"): collection_edit.save_card,
         ("collection", "bulk"): (collection_edit.bulk_set, collection_edit.MAX_BULK_BODY),
+        ("collection", "locations", "bulk"): (collection_locations.bulk_set, collection_edit.MAX_BULK_BODY),
         ("collection", "import", "preview"): (collection_edit.import_preview, collection_edit.MAX_IMPORT_BODY),
         ("collection", "import", "apply"): collection_edit.import_apply,
         ("collection", "trade", "preview"): (collection_trade.preview_trade, collection_trade.MAX_TRADE_BODY),

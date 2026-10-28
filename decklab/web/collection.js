@@ -319,6 +319,10 @@ function setCollectionBusy(cv, busy) {
   if (!cv.root) return;
   cv.root.setAttribute("aria-busy", String(busy));
   for (const control of cv.root.querySelectorAll(".col-mutate")) control.disabled = busy;
+  if (cv.kind === "rows") {
+    colLocationFiltersSync(cv);
+    colLocationBatchSync(cv, colShownRows(cv));
+  }
   refreshKeyboardHints();
 }
 
