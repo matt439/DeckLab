@@ -606,6 +606,7 @@ def deck_view(deck_id, version="target", omit=()):
                 owned = _owned_json(pool.owned_vs_needed(deck_id, version, pool=p), p)
                 from .reprints import enrich
                 enrich(owned["rows"])
+                _saved_shop_prices(owned, space, requested_id)
             except (decks.DeckNotFound, decks.DeckFileError, OSError) as e:
                 warnings.append(f"Owned vs needed can't be worked out: {_public(e)}")
     if guard.sees_kit(summary):
@@ -668,3 +669,26 @@ def deck_view(deck_id, version="target", omit=()):
         answer["box_label"] = label
     answer.update(warnings=_unique(_scrub(warnings)), info=_unique(info))
     return metadata(answer, requested_id, deck_id)
+
+
+def _saved_shop_prices(owned, space, requested_id):
+    """Saved generic nonfoil evidence stays with home's private buying context.
+
+    Public inventory grants counts, not access to household cache coverage. The
+    ordinary deck reader has already authorized the resolved deck. The original
+    requested id and both home read rules must also allow this optional capture.
+    Failed comparisons and fully covered lists have no missing-card lookup intent.
+    """
+    if (space != spaces.HOME or not guard.sees_deck(requested_id) or not guard.sees_inventory(spaces.HOME) or
+            not guard.sees_home_records() or not isinstance(owned, dict)):
+        return
+    source = owned.get("rows")
+    if not isinstance(source, list):
+        return
+    rows = [row for row in source if isinstance(row, dict) and
+            type(row.get("missing")) is int and row["missing"] > 0]
+    if not rows:
+        return
+    from . import shop_missing_prices, shop_prices
+    captured = shop_prices.capture()
+    shop_missing_prices.enrich(rows, captured, shop_prices._loaded_resolver())

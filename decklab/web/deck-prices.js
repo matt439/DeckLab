@@ -30,12 +30,13 @@ function ownedSection(data) {
   if (t.missing || coming) {
     const cost = t.missing && !o.price_error ? `, about ${aud(t.aud_missing)}` : "";
     const summary = t.missing ? `${t.missing} missing${cost}` : `${coming} on the way`;
-    section.append(el("details", { class: "more deck-price-table" },
+    const details = el("details", { class: "more deck-price-table" },
       el("summary", { text: `Price table: ${summary}` }),
       el("p", { class: "sub", text: "Cards on the way (ordered or preordered) count as owned. A card can only be in " +
         "one deck at a time, so copies held by built decks or by products kept together aren't free for this one. " +
-        "Basic lands aren't counted." }),
-      ownedTable(o), priceNote));
+        "Basic lands aren't counted." }));
+    details.append(ownedTable(o, { frame: details, owner: section, data }), priceNote);
+    section.append(details);
   }
   add(section, [staleTableBox(data)]);    // editor-deckpage.js: the deck's own table is out of date (null otherwise)
   if (o.conflicts && o.conflicts.length) section.append(conflictsBox(o.conflicts));
@@ -59,7 +60,7 @@ function ownedMissingPrice(row, priceError = false) {
   return !priceError && Number.isFinite(cost) && cost >= 0 ? cost : null;
 }
 
-function ownedTable(o) {
+function ownedTable(o, ownership = {}) {
   // Only the cards worth a look: missing, on the way or held by another deck. The rest are simply owned.
   const rows = [...o.rows].filter((r) => r.missing > 0 || rowLabels(r).on_the_way.length || rowLabels(r).in_use.length)
     .sort((a, b) => rowOrder(a) - rowOrder(b) || b.missing - a.missing || a.name.localeCompare(b.name));
@@ -67,12 +68,24 @@ function ownedTable(o) {
   const usable = (r) => Math.min(r.available, r.need);
   const available = o.rows.reduce((n, r) => n + usable(r), 0);
   const table = el("table", { class: "data owned-table" }), headings = new Map();
-  const viewer = state.profile?.id, token = routeToken;
+  const profile = state.profile, viewer = profile?.id, space = profile?.space || HOME_SPACE, token = routeToken;
+  const main = $("#main"), hash = location.hash, originalRows = o.rows;
+  const screen = ownership.data && deckScreen?.data === ownership.data ? deckScreen : null;
+  const screenView = screen?.view;
+  const wrap = el("div", {class: "table-wrap"});
+  let frame = ownership.frame || null, frameParent = ownership.owner || null;
   let sort = null;
   const sortable = (key, text, cls = "") => {
     const button = el("button", {type: "button", class: "th-sort", text, "data-owned-sort": key,
       onclick: () => {
-        if (!table.isConnected || viewer !== state.profile?.id || token !== routeToken) return;
+        if (!profile || profile !== state.profile || viewer !== state.profile?.id || space !== (state.profile?.space || HOME_SPACE) ||
+            token !== routeToken || (screen ? screen !== deckScreen || screen.data !== ownership.data ||
+              screen.view !== screenView || !priceTableRoute(screen) : hash !== location.hash) || main !== $("#main") || !main.isConnected ||
+            !table.isConnected || table.parentNode !== wrap || !main.contains(wrap) || o.rows !== originalRows ||
+            ownership.data && ownership.data.owned !== o ||
+            !button.isConnected || button.parentNode !== heading || !head.contains(heading) || head.parentNode !== table ||
+            headings.get(key) !== heading || frame && (wrap.parentNode !== frame || frame.parentNode !== frameParent)) return;
+        if (!frame) { frame = wrap.parentNode; frameParent = frame.parentNode; }
         sort = {key, dir: sort?.key === key ? -sort.dir : key === "name" ? 1 : -1};
         draw(); button.focus({preventScroll: true});
       }});
@@ -110,7 +123,8 @@ function ownedTable(o) {
     clear(table).append(caption, columns, head, ...ordered.map(row => bodies.get(row)), foot);
   }
   draw();
-  return el("div", {class: "table-wrap"}, table);
+  wrap.append(table);
+  return wrap;
 }
 
 function ownedRow(r, usable, priceError = false) {
@@ -125,6 +139,8 @@ function ownedRow(r, usable, priceError = false) {
   const priced = !priceError && Number.isFinite(r.aud_each) && r.aud_each >= 0;
   if (r.priced_finish && r.priced_finish !== "nonfoil" && priced) labels.push(status("plain", `${r.priced_finish} price`));
   const reprints = r.missing > 0 ? reprintInfo(r) : null;
+  const savedShop = Number.isSafeInteger(r.missing) && r.missing > 0 && Object.hasOwn(r, "shop_snapshot") && typeof shopMissingSnapshotLine === "function"
+    ? shopMissingSnapshotLine(r) : null;
   // One <tbody> per card: its numbers, then its labels across the whole width.
   return el("tbody", { class: r.missing > 0 ? "is-missing" : null },
     el("tr", {},
@@ -136,7 +152,17 @@ function ownedRow(r, usable, priceError = false) {
       el("td", { class: "num", text: ownedMissingPrice(r, priceError) === null ? "-" : ownedMissingPrice(r, priceError).toFixed(2) })),
     labels.length ? el("tr", { class: "label-row" },
       el("td", { colspan: 5 }, el("div", { class: "row-labels" }, labels))) : null,
-    reprints ? el("tr", {class: "label-row reprint-row"}, el("td", {colspan: 5}, reprints)) : null);
+    reprints ? el("tr", {class: "label-row reprint-row"}, el("td", {colspan: 5}, reprints)) : null,
+    savedShop ? el("tr", {class: "label-row deck-shop-row"}, el("td", {colspan: 5},
+      el("p", {class: "sub", text: "Saved shop check: any nonfoil printing. It may differ from the printing or finish in your list. Price is per card; stock may cover fewer copies than you need." }),
+      savedShop)) : null);
+}
+
+/** Cards-tab filters may change in this screen; a different deck or saved-list route may not own its table. */
+function priceTableRoute(screen) {
+  const address = parseHash();
+  return address.path === "deck" && address.params.get("id") === screen.data.summary.id &&
+    (address.params.get("v") === "owned" ? "owned" : "target") === screen.data.version && screen.view.tab === "cards";
 }
 
 function conflictsBox(conflicts) {

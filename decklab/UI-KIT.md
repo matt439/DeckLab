@@ -313,8 +313,15 @@ Its five columns keep the unit estimate under the card name and the extended
 missing cost in the last column. Native `.th-sort` buttons for Card, Missing and
 ~AUD missing maintain `aria-sort` and focus, reorder each whole per-card `tbody`
 with its labels, and leave the total footer last. Sorting copies the row list,
-keeps unknown costs last in either direction, and makes no fetch or write. Late
-controls check the original person, route and connected table.
+keeps unknown costs last in either direction, and makes no fetch or write. Missing
+home rows may add the existing strict saved-shop line inside that same `tbody`,
+with a full-width caption distinguishing generic nonfoil unit prices from the
+list's named printing/finish. Retailer facts never change estimates or totals.
+Their API capture requires original-selector visibility plus both home inventory
+and home-record access; Public collections alone grant no cache coverage. Late
+sort controls check the original profile object/id/space, screen/data/owned rows,
+canonical deck/list route, main, table/wrapper/frame and header/button identity.
+Legitimate Cards filters and returning to the same Cards tab retain sorting.
 
 `shopping-buying.js` follows `shopping.js`. It draws dated reference-price footers,
 Missing cards across decks and the folded By shop view from the current Shopping

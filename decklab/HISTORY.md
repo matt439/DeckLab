@@ -2,6 +2,45 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Saved shop checks in deck Prices (2026-10-28; E5-S08 slice)
+
+Missing cards in a home deck's Prices table now show the existing saved MTGMate
+nonfoil check: per-card AUD price, stock for the selected printing, safe link
+and that entry's original fetch date including year. A caption distinguishes
+any-nonfoil evidence from the printing or finish in the deck's list. Estimates,
+rate dates, counts, sections, totals and reprint notices remain unchanged; no
+retailer price is multiplied into a basket total or presented as enough stock.
+
+The optional capture requires visibility of the original selector and both
+home inventory and home-record access after the ordinary reader authorizes
+the resolved deck. A Public collection/deck alone grants no household cache
+coverage, and member-space decks never use it. Trusted script reads retain their
+existing rights; ordinary anonymous requests get no capture. Failed comparisons,
+malformed row containers and lists with no actual missing cards do no cache work.
+One explicit capture, including absence, feeds the existing bounded projection
+and already-loaded resolver. The page starts no retailer request or write.
+
+The existing renderer lives inside each card's full-width `tbody`, so sorting
+retains the card, its facts, labels and reprints together. Sorting also binds
+the original profile object, screen/data/rows, canonical deck/list route, main,
+table/wrapper/frame and original header/button. Cards filters and returning to
+the same Cards tab remain usable; detached/replaced controls and same-ID profile
+replacement cannot act on stale tables. No script, CSS or asynchronous reader
+was added.
+
+Root's protected ten-target integration passed **169 tests without skips**,
+including **33 new API and DOM cases** plus existing aliases, private readers,
+deck/table behavior, strict Shopping facts and asset checks. The fixtures cover
+Public collections separately from home records, hidden raw aliases, script vs
+anonymous access, failed/absent captures, exact foil intent, malformed facts,
+safe literal rendering, paired sorting and stale controls. The owner's initial
+UI run found fixture setup/assertion issues; corrected fixtures and two focused
+65-test runs passed before root's broader check. Node syntax, Ruff, whitespace
+and source lengths pass (1,182 owned files, none over 1,200 lines). Local logs
+and host exit 0 are in `decklab-deck-shop-b3ca884b`. No real inventory/cache,
+configured database, running server or retailer was accessed for qualification;
+browser/device acceptance and live activation remain separate.
+
 ## Shared missing-card counting (2026-10-28; E5-S08 foundation)
 
 `lib/buying_needs.py` now owns the existing saved-target counting phase: one
