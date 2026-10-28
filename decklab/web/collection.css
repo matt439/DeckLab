@@ -373,3 +373,19 @@ button.col-casual-open { cursor: pointer; }
 .col-packing-label, .col-packing-hint, .col-packing-hints > .col-viewer-note { display: block; }
 .col-packing-hints a { max-width: 100%; min-width: 0; gap: var(--s-1); white-space: normal; overflow-wrap: anywhere; }
 .col-packing-hints a > span:not(.deck-swatch) { min-width: 0; }
+
+/* Native subset checks are siblings of the inspector/viewer, sharing one exact-key selection. */
+.col-bulk-selection-tools { display: flex; align-items: center; flex-wrap: wrap; gap: var(--s-2); min-width: 0; }
+.col-bulk-selection-tools .btn { max-width: 100%; white-space: normal; }
+.col-bulk-selection-count { overflow-wrap: anywhere; }
+.col-row-name-choice { display: grid; grid-template-columns: 44px minmax(0, 1fr); align-items: center; }
+.col-bulk-row-choice { display: flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; cursor: pointer; }
+.col-bulk-check { width: 18px; height: 18px; margin: 0; accent-color: var(--accent); }
+.col-casual-row.has-bulk-choice { display: grid; grid-template-columns: 44px minmax(0, 1fr); }
+.col-casual-row.has-bulk-choice > .col-bulk-row-choice { align-self: stretch; }
+.col-casual-row.has-bulk-choice > .col-casual-note { grid-column: 2; }
+.col-bulk-selected-list { max-height: 18rem; overflow: auto; padding-inline-start: var(--s-5); overflow-wrap: anywhere; }
+@media (min-width: 1000px) and (pointer: fine) {
+  .col-row-lab .col-bulk-row-choice { min-height: calc(var(--row-h) - 1px); }
+  .col-row-lab .col-table.has-bulk-selection .col-th-name { width: 13rem; }
+}

@@ -62,7 +62,7 @@ function drawCollectionRows(data, space, token = null) {
     el("div", { class: "filter-chips filter-chips-scroll col-row-filter-options" }, cv.storageChoice));
   const root = el("div", { class: "collection-page col-rows-page" }, colHead(cv),
     cv.unsupported ? null : [cv.boxNote, cv.unrecordedChoice, tools,
-      el("div", { class: "actions col-row-actions" }, colBulkButton(cv), cv.count),
+      el("div", { class: "actions col-row-actions" }, colBulkButton(cv), colBulkSelectionTools(cv), cv.count),
       el("div", { class: "col-row-layout" }, cv.list, cv.preview), cv.priceNote]);
   cv.root = root;
   $("#main").append(root);
@@ -223,7 +223,7 @@ function colRowTable(cv, rows) {
     onkeydown: (event) => colTableKeys(cv, event) },
     el("p", { class: "col-key-hint" }, el("span", {class: "keyboard-character-hint", hidden: true},
       el("kbd", { text: "J" }), " / ", el("kbd", { text: "K" }), " move \u00b7 "), el("kbd", { text: "Enter" }), " opens"),
-    el("table", { class: "data col-table" },
+    el("table", { class: `data col-table${cv.editable && seesInventory(cv.space) && canEditSpace(cv.space) ? " has-bulk-selection" : ""}` },
     el("thead", {}, el("tr", {},
       el("th", { scope: "col", class: "col-th-pic" }, el("span", { class: "sr-only", text: "Picture" })),
       sortable("name"),
@@ -263,10 +263,12 @@ function colRowLine(cv, row) {
   const choice = viewerItem(el("button", { type: "button", class: "col-open col-mutate", "data-focus": `edit-${key}`,
     "aria-label": `View ${row.name} (${colPrinting(row)})`,
     "aria-current": key === cv.selectedKey ? "true" : null, onclick: open }, name), card, "collection-lab-rows", choiceCaption);
+  const bulkChoice = colBulkRowChoice(cv, row);
   return el("tr", { "data-key": key, "data-selected": key === cv.selectedKey ? true : null,
     class: colUnrecorded(row) ? "is-unrecorded" : null },
     el("td", { class: "col-td-pic" }, thumb),
-    el("td", { class: "col-td-name" }, choice),
+    el("td", { class: "col-td-name" }, bulkChoice
+      ? el("div", { class: "col-row-name-choice" }, bulkChoice, choice) : choice),
     colIdentityCell(card), colTypeCell(card),
     el("td", { class: "col-wide col-td-printing", text: colPrinting({ ...row, finish: "nonfoil" }) }),
     el("td", { class: "col-td-finish" }, colFinishLabel(row)),
@@ -454,7 +456,9 @@ function colCasualRow(cv, row) {
     el("span", { class: "col-casual-meta", text: [plural(Number(row.quantity), "copy", "copies"), colPrinting(row), ...details].join(" \u00b7 ") }),
     el("span", { class: "col-casual-storage", text: colStorageWords(cv, row) }));
   if (card) viewerItem(node, card, "collection-casual-rows", caption);
-  return el("li", { class: "col-casual-row", "data-key": key }, node,
+  const bulkChoice = colBulkRowChoice(cv, row);
+  return el("li", { class: `col-casual-row${bulkChoice ? " has-bulk-choice" : ""}`, "data-key": key },
+    bulkChoice, node,
     row.notes ? el("p", { class: "col-casual-note", text: row.notes }) : null);
 }
 

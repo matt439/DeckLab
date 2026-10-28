@@ -60,7 +60,6 @@ An index of open work, one row per item; each row points to the doc that owns th
 | `E5-S17` | OPEN | could | M | Show dated buying information on a saved swap-test result, then explicitly queue its missing additions without duplicate rows. |
 | `E7-S03` | OPEN | could | M | Add source-set group choices and excluded-row review to the import UI; token-bound backend provenance and exclusions are built. |
 | `E7-S15` | OPEN | could | M | Show Where these go after a collection import, assigning each added copy once to a waiting deck or storage. |
-| `E7-S18` | OPEN | could | S | Select a subset of Card list rows for the built bulk condition/language action; filtered whole-list editing already works. |
 | `E7-S32` | OPEN | could | L | Build Scan cards' photo and pending-list flow from the [recognition spike](decklab/design/scanning-spike.md); fixtures first, real phone-photo acceptance separately. |
 
 ## Deck Lab: Commander nights

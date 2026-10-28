@@ -41,12 +41,12 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 22 | 16 | 2 | 3 | 1 |
 | [E5: Decide what to buy](#e5-decide-what-to-buy) | 22 | 17 | 1 | 2 | 2 |
 | [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 20 | 18 | 0 | 0 | 2 |
-| [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 28 | 21 | 3 | 4 | 0 |
+| [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 28 | 22 | 2 | 4 | 0 |
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 19 | 13 | 2 | 2 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 20 | 14 | 1 | 4 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 35 | 31 | 1 | 1 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 38 | 23 | 6 | 6 | 3 |
-| **Total** | **254** | **195** | **21** | **24** | **14** |
+| **Total** | **254** | **196** | **20** | **24** | **14** |
 
 Counted from the story headers on 2026-10-28 after the feature-reserve and maintenance reviews and the completed Compare and maintenance slices below. The reviews added five feature stories and eight hygiene stories, and corrected E1-S12 from missing to partial.
 
@@ -1976,7 +1976,7 @@ Evidence:
 
 How the inventory stays true to the physical cards. Each space's own people add, fix and remove cards on the Collection page (single cards, an app export, Add a precon) and token cards on the Tokens page; Matt and User1 both edit home's, each member only their own, and Claude does bulk and member upkeep from the PC (`collection merge`, `collection edit` and `collection apply`, `collection add-precon --space`). Repeat imports, sales and trades, and cards held by built decks are all flagged, other decks' out-of-date tables are listed with Update all rather than refreshed automatically, and the nightly `db check` looks for drift.
 
-Open: E7-S03, E7-S08, E7-S15, E7-S18, E7-S23, E7-S24, E7-S32.
+Open: E7-S03, E7-S08, E7-S15, E7-S23, E7-S24, E7-S32.
 
 **E7-S01** · Matt · must · M · built
 
@@ -2222,20 +2222,21 @@ Evidence:
 - `decklab/lib/inventory/ops_collection.py`: merge
 - `decklab/tests/test_collection_ops.py`: test_merge_refuses_a_name_that_isnt_scryfalls
 
-**E7-S18** · Matt · could · S · partial
+**E7-S18** · Matt · could · S · built
 
 As a person filling in old entries, I want to find rows with no condition or language and set several at once, so that the details get recorded in one sitting.
 
 - Given the Card list, when I filter to rows whose condition or language isn't recorded, then only those show.
 - Given a filtered set, when I choose one condition and language for the ticked rows, then they're saved in one change.
 
+Now (2026-10-28): native Card list checks select exact printing keys independently of the inspector. A separate selected-row review lists the frozen keys and their facts; the original whole-filter action remains available. Filtering, refreshes and conflicts only narrow a selected batch, with dropped selections disclosed before another save.
+
 Evidence:
-- `decklab/web/collection.js`: drawCollectionRows, colUnrecorded (the 'not recorded' filter)
-- `decklab/web/collection-bulk.js`: openBulkSheet, saveBulk; `decklab/lib/api/collection_edit.py`: bulk_set (E7-S29's built action on all filtered rows)
+- `decklab/web/collection-rows.js`: lab/casual row checks and selected/shown counts; `collection-bulk.js`: one shared selection Set, exact-key review, revision/conflict narrowing, pending guards and focus recovery.
+- `decklab/lib/api/collection_edit.py`: the existing bulk_set operation still saves condition/language as one change, preserving Only fill in blanks, quantities and notes.
+- `decklab/tests/test_collection_selection_ui.py`: 25 new cases; all 163 focused UI/source checks pass. Root's 41 combined group/selection checks passed with database connections prohibited.
 
-Gap (rechecked 2026-10-28): filtering blanks and editing every filtered row in one change are built under E7-S29. Only arbitrary ticked-row selection within the filtered result remains.
-
-First slice: add explicit Card list row selection and let the existing bulk condition/language review act on those exact printing keys. Show selected/shown counts, preserve Only fill in blanks and notes, and drop or re-review stale/missing keys without widening the batch after a filter or collection refresh. Keep E7-S29's existing whole-filter action available. This is selection work, not another bulk-edit implementation.
+Browser geometry, touch/Safari and household-device acceptance remain unverified. See [HISTORY.md](../HISTORY.md#select-collection-rows-for-details-2026-10-28-e7-s18).
 
 **E7-S21** · Matt · could · L · built
 

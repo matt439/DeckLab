@@ -2,6 +2,26 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Select collection rows for details (2026-10-28; E7-S18)
+
+Card list now has native checks for selecting exact printing rows, mirrored by
+one Set across the existing lab and casual layouts. Selection is independent
+of the row inspector, and a separate action reviews every selected printing,
+quantity and detail before the existing bulk condition/language save. The
+whole-filter action remains available.
+
+Selected reviews freeze keys and only narrow after filters, refreshes or
+conflicts; removed selections are disclosed and fresh facts require review.
+Only fill in blanks, notes and one-operation writes are retained. Pending
+requests lock the original view even after its sheet closes; late outcomes,
+revoked permissions and hidden openers have guarded focus recovery.
+
+All 163 focused UI/source checks pass, including 25 new selection cases;
+root's combined 41 group/selection checks passed with connections prohibited.
+Independent review, syntax, Ruff and diff checks are clear. Browser geometry,
+touch/Safari and actual household devices remain unverified. No backend bulk
+operation or permission rule was changed.
+
 ## Import source groups: backend (2026-10-28; E7-S03 partial)
 
 Collection import previews now retain each checked source contribution and its
