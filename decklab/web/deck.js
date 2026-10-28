@@ -568,16 +568,18 @@ function markChips(mark, full = false) {
 }
 
 /** The decklist's sections in the order shown, each as groups of lines: [{section, title, lines}]. The main
- * deck is split by card type. A card written twice in one section (two printings) is one line, its
- * printings in its subtitle. */
-function deckGroups(data) {
+ * deck is split by card type, or with by "category" by the builder's own categories (deck-categories.js).
+ * A card written twice in one section (two printings) is one line, its printings in its subtitle. */
+function deckGroups(data, by = "type") {
   const names = Object.keys(data.sections);
   const order = ["Commander", "Companion", "Deck", ...names.filter((n) => !["Commander", "Companion", "Deck", "Sideboard"].includes(n)), "Sideboard"];
   const groups = [];
   for (const section of order) {
     const lines = mergedLines(data.sections[section] || []);
     if (!lines.length) continue;
-    if (section === "Deck") {
+    if (section === "Deck" && by === "category") {
+      groups.push(...categoryGroups(section, lines));
+    } else if (section === "Deck") {
       const byType = new Map(TYPE_GROUPS.map((g) => [g, []]));
       for (const line of lines) byType.get(typeGroup(line.card)).push(line);
       for (const [title, members] of byType) if (members.length) groups.push({ section, title, lines: members.sort(byCostThenName) });
@@ -594,8 +596,9 @@ function mergedLines(lines) {
   for (const line of lines) {
     const same = byName.get(line.name);
     const printing = { set: line.set, number: line.number, finish: line.finish, qty: line.qty };
-    if (same) { same.qty += line.qty; same.printings.push(printing); continue; }
-    byName.set(line.name, { qty: line.qty, name: line.name, card: line.card, printings: [printing] });
+    if (same) { same.qty += line.qty; same.printings.push(printing); same.category = same.category || line.category || null; continue; }
+    byName.set(line.name, { qty: line.qty, name: line.name, card: line.card, printings: [printing],
+      category: line.category || null });
   }
   return [...byName.values()];
 }
@@ -629,7 +632,7 @@ function cardsMode() {
 /** Draw the Cards tab's toolbar and list again (a filter or the view changed). */
 function redrawCards(screen) {
   const { data, view } = screen;
-  const groups = deckGroups(data);
+  const groups = deckGroups(data, cardsGrouping(data));
   const all = groups.flatMap((g) => g.lines);
   const marks = lineMarks(groups, screen.marks);
   // A filter's count is copies, as the banner's are ("32 missing"); the line under it counts different cards.
@@ -655,7 +658,8 @@ function redrawCards(screen) {
     el("div", { class: "segmented deck-mode", role: "group", "aria-label": "Show the cards as" },
       [["list", "List"], ["pictures", "Pictures"]].map(([mode, words]) => el("button", { type: "button",
         "aria-pressed": String(view.mode === mode), text: words,
-        onclick: () => { local.set(CARDS_VIEW_KEY, mode); choose({ mode }); } })))]);
+        onclick: () => { local.set(CARDS_VIEW_KEY, mode); choose({ mode }); } }))),
+    cardsGroupingToggle(data, () => redrawCards(screen))]);
   const shown = new Set(), parts = [];
   const filterWords = { missing: "missing", coming: "on the way", held: "in other decks" }[view.filter];
   for (const group of groups) {
@@ -685,7 +689,7 @@ function redrawCards(screen) {
  * half greyed. */
 function deckCardRow(line, section, mark) {
   const card = line.card;
-  const printing = printingWords(line.printings || [line]);
+  const printing = [printingWords(line.printings || [line]), line.category].filter(Boolean).join(" · ");
   const row = cardRow(card, {
     qty: line.qty, name: line.name, meta: card ? card.type_line + (printing ? ` · ${printing}` : "") : undefined,
     unknownMeta: "Not a Scryfall card name, so there's no card data" + (printing ? ` · ${printing}` : ""),

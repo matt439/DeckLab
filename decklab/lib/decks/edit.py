@@ -10,7 +10,7 @@ from decklab.lib.cards import fold
 
 from .deckfile import (BUILT_VERSIONS, OWNED_FIELDS, PLAYERS, STATUSES, HeaderField, TableRow, TotalRow,
                        _leading_word, _one_line)
-from .decklist import _BASIC_KEYS, clean_sections
+from .decklist import _BASIC_KEYS, categories, clean_sections
 
 # The header fields the editor changes (apply_edit), by the name the page uses.
 EDIT_FIELDS = {"status": "Status", "player": "Played by", "archetype": "Archetype",
@@ -153,7 +153,9 @@ def apply_edit(deck, target=None, owned=None, fields=None, date=None, bracket_na
     after "either" in "Played by: either. Suits whoever..." stay. When either list changes and date is given, the
     'Decklist changed' line gets that date; header-only edits don't add it.
 
-    Returns {"decklist": bool, "fields": [the keys that changed]}. Raises
+    Returns {"decklist": bool, "fields": [the keys that changed]}, with
+    "categories": True when a list changed only in its lines' categories
+    (E2-S24; "decklist" stays False). Raises
     ValueError for anything the file can't take (a Commander section in a
     casual deck, an unknown field, a value with a line break); the deck may
     then be half-edited, so read it again rather than render it.
@@ -173,6 +175,11 @@ def apply_edit(deck, target=None, owned=None, fields=None, date=None, bracket_na
         if current is None or clean_sections(current) != sections:
             setattr(deck, version, sections)
             changes["decklist"] = True
+        elif categories(clean_sections(current)) != categories(sections):
+            # Only the builder's own categories (E2-S24): the same cards, so no
+            # "Decklist changed" line and no table to work out again.
+            setattr(deck, version, sections)
+            changes["categories"] = True
 
     for key, value in (fields or {}).items():
         if key not in EDIT_FIELDS:

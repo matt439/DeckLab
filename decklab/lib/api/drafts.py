@@ -114,12 +114,17 @@ def _read_line(draft, raw, where):
     if finish not in LINE_FINISHES:
         draft.block(f"{name}: the finish must be one of {', '.join(LINE_FINISHES)}", **where)
         return None
+    try:
+        category = decks.clean_category(raw.get("category"))
+    except ValueError as e:
+        draft.block(f"{name}: {e}", **where)
+        return None
     if (name, set_code, number, finish) in draft.known:
         if _resolve(name) is None:
             draft.warn(f"{name!r} isn't a card name in the card data; it was already in the file, "
                        f"so it's kept as written", [name])
         where["known"] = True
-        return _checked_line(draft, decks.DeckLine(qty, name, set_code, number, finish), where)
+        return _checked_line(draft, decks.DeckLine(qty, name, set_code, number, finish, category), where)
 
     exact = _resolve(name)
     if exact is None:
@@ -162,7 +167,7 @@ def _read_line(draft, raw, where):
             draft.block(f"{exact}'s {set_code.upper()} printing is {_not_paper(in_set[0])}, not a card to play "
                         f"with: pick one from its printings", **where)
             return None
-    return _checked_line(draft, decks.DeckLine(qty, exact, set_code, number, finish), where)
+    return _checked_line(draft, decks.DeckLine(qty, exact, set_code, number, finish, category), where)
 
 
 def _read_sections(draft, version, raw):
@@ -202,6 +207,7 @@ def _read_sections(draft, version, raw):
                 continue
             same = kept[first[key]]
             same.quantity += line.quantity
+            same.category = same.category or line.category
             if same.quantity > MAX_QTY:
                 draft.block(f"{line.name} is listed more than once in the {section}, adding up to more than "
                             f"{MAX_QTY} copies", **dict(where, index=index, name=line.name))

@@ -124,6 +124,9 @@ def _line_json(line, section, warnings, deck_sets=()):
     deck_sets: the sets the deck's lines name, most used first, for lines that name none."""
     out = {"qty": line.quantity, "name": line.name, "set": line.set, "number": line.number,
            "finish": line.finish, "card": None}
+    category = getattr(line, "category", None)      # activity.row_cards passes a plain namespace
+    if category:
+        out["category"] = category          # the builder's own (E2-S24); absent when it has none
     exact = _resolve(line.name)
     card = cards.card(exact) if exact else None
     if card is None:

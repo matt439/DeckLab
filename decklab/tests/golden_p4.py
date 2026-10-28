@@ -80,6 +80,10 @@ older code (the committed tests/fixtures/inventory_goldens):
 - "assembly-colors": packing participants carry the Planned/library "colors" already in their
   deck summaries. Only that new key is dropped from assembly answers; test_assembly_colors
   checks its values and privacy.
+- "category-defaults": E2-S24 adds DeckLine.category, the builder's own category on a decklist
+  line, so a line dumped as a whole object ({quantity, name, set, number, finish}) gains
+  "category". Only a None category on exactly such an object is dropped: a line with a
+  category, and every other field, still compares. test_deck_categories checks the categories.
 """
 import copy
 import re
@@ -466,6 +470,21 @@ def assembly_colors(dump):
                     deck.pop("colors", None)
 
 
+_LINE_KEYS = {"quantity", "name", "set", "number", "finish", "category"}
+
+
+def category_defaults(value):
+    """Drop only E2-S24's empty "category" on whole decklist-line objects, anywhere in the dump."""
+    if isinstance(value, dict):
+        if value.keys() == _LINE_KEYS and value["category"] is None:
+            value.pop("category")
+        for item in value.values():
+            category_defaults(item)
+    elif isinstance(value, list):
+        for item in value:
+            category_defaults(item)
+
+
 def rename_defaults(dump):
     """Only additive default generations; retain malformed or changed rename evidence."""
     for mine in [dump, *((dump.get("by_viewer") or {}).values())]:
@@ -639,7 +658,7 @@ EXPECTED_P5 = (("deck-id-messages", deck_id_messages), ("phase-5-wording", phase
                ("assembly-progress", assembly_progress), ("usual-opponents", usual_opponents),
                ("stand-in-defaults", standin_defaults), ("rename-defaults", rename_defaults),
                ("assembly-section-defaults", assembly_section_defaults), ("swap-defaults", swap_defaults),
-               ("assembly-colors", assembly_colors))
+               ("assembly-colors", assembly_colors), ("category-defaults", category_defaults))
 
 
 def normalise(dump):

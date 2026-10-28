@@ -103,7 +103,7 @@ function showDesktopHandoff(params) {
 
 function newLine(raw) {
   return { uid: ++lineIds, qty: raw.qty, name: raw.name, set: raw.set || null, number: raw.number || null,
-    finish: raw.finish || "nonfoil", card: raw.card || null };
+    finish: raw.finish || "nonfoil", category: raw.category || null, card: raw.card || null };
 }
 
 /** Put a new line where a person would write it: after the section's last card of the same type (a
@@ -143,6 +143,7 @@ function sendLine(line) {
     if (line.number) out.number = line.number;
   }
   if (line.finish && line.finish !== "nonfoil") out.finish = line.finish;
+  if (line.category) out.category = line.category;     // the builder's own (deck-categories.js)
   return out;
 }
 
@@ -163,7 +164,7 @@ function keepList(sections) {
 
 function listSignature(sections) {
   return JSON.stringify(Object.keys(sections || {}).filter((n) => sections[n].length).sort()
-    .map((n) => [n, sections[n].map((l) => [l.qty, lineKey(l)])]));
+    .map((n) => [n, sections[n].map((l) => [l.qty, lineKey(l), l.category || ""])]));
 }
 
 function sectionCount(sections, names) {

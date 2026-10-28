@@ -201,7 +201,8 @@ function startOwned() {
 
 /** The viewer's line for a line of the list: "2 copies · Deck · FDN 227". */
 function lineCaption(line, section) {
-  return `${plural(line.qty, "copy", "copies")} · ${sectionTitle(section)} · ${printingText(line)}`;
+  return `${plural(line.qty, "copy", "copies")} · ${sectionTitle(section)} · ${printingText(line)}`
+    + (line.category ? ` · ${line.category}` : "");
 }
 
 /** One line of the list, a dense row: − n +, the card (its art and name, which open the card viewer over
@@ -216,10 +217,11 @@ function lineRow(line, section) {
     card.img_small ? el("img", { class: "edit-thumb", src: card.img_small, alt: "", loading: "lazy", decoding: "async",
       width: 40, height: 56 }) : el("span", { class: "edit-thumb thumb-missing", "aria-hidden": "true" }),
     el("span", { class: "nm" }, change.dot, el("span", { class: "nm-text", text: line.name }), change.was,
-      editor.quick ? null : manaCost(card.mana_cost, true))),
+      categoryTag(line), editor.quick ? null : manaCost(card.mana_cost, true))),
     card, "editor", lineCaption(line, section))
     : el("span", { class: "edit-card" }, el("span", { class: "edit-thumb thumb-missing", "aria-hidden": "true" }),
-      el("span", { class: "nm" }, change.dot, el("span", { class: "nm-text", text: line.name }), change.was));
+      el("span", { class: "nm" }, change.dot, el("span", { class: "nm-text", text: line.name }), change.was,
+        categoryTag(line)));
   // The Quick edit shows the printing as words under the name; its ⋯ changes it (a 44 px row stays one row).
   // On a phone the name has the first line to itself; the cost goes before the printing on the second.
   const print = editor.quick ? el("span", { class: "edit-print-words" }, card ? manaCost(card.mana_cost, true) : null,
@@ -251,7 +253,8 @@ function lineTile(line, section) {
   // The badge sits on the picture's corner and the finish is in the meta line ("FDN 227 · foil", with the
   // sheen), so every tile's footer is − n + and ⋯ on one line.
   const more = rowMenuButton(line);
-  const tile = cardTile(line.card, { qty: line.qty, name: line.name, meta: printingText(line),
+  const tile = cardTile(line.card, { qty: line.qty, name: line.name,
+    meta: printingText(line) + (line.category ? ` · ${line.category}` : ""),
     viewerGroup: "editor", caption: lineCaption(line, section), state: el("span", { class: "edit-badge-slot" }),
     chips: [stepper(line, "tile"), more] });
   tile.classList.add("edit-row", "edit-tile");
@@ -325,8 +328,8 @@ function syncEditorRowChanges(ed = editor) {
   }
 }
 
-/** A line's ⋯ menu: a short Play-now line's stand-ins (editor-swaps.js), its printing,
- * moving it to another section, and Remove (last). */
+/** A line's ⋯ menu: a short Play-now line's stand-ins (editor-swaps.js), its printing, its category
+ * (deck-categories.js), moving it to another section, and Remove (last). */
 function rowMenuButton(line) {
   const uid = line.uid;
   const button = el("button", { type: "button", class: "btn btn-quiet edit-more", "data-focus": `more:${uid}`,
@@ -337,11 +340,19 @@ function rowMenuButton(line) {
       openMenu(button, [
         swapsAvailableFor(found.line) ? { text: "Stand-ins…", onclick: () => openSwapSheet(uid) } : null,
         { text: "Change printing…", onclick: () => openPrintings(uid) },
+        // deck-categories.js's sheet; a page without that script has no Category… item.
+        typeof openCategorySheet === "function" ? { text: found.line.category ? `Category: ${found.line.category}…`
+          : "Category…", onclick: () => openCategorySheet(uid) } : null,
         ...moveTargets(found.section).map((s) => ({ text: `Move to ${moveWords(s)}`, onclick: () => moveLine(uid, s) })),
         "-",
         { text: "Remove", danger: true, onclick: () => removeLine(uid) }]);
     } });
   return button;
+}
+
+/** A line's own category (E2-S24) beside its name: a quiet label, nothing when it has none. */
+function categoryTag(line) {
+  return line && line.category ? el("span", { class: "edit-category", text: line.category }) : null;
 }
 
 /** The sections a line in section may move to. */

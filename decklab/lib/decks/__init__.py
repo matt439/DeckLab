@@ -128,9 +128,9 @@ from .deckfile import (
     _one_line, _paragraphs, _parse_row, _rate_in, _section_end, _unbold, _without_stamp, parse_deck,
     read_deck_file)
 from .decklist import (
-    _BASIC_KEYS, BASIC_LANDS, LINE_RE, MAIN_SECTIONS, SECTIONS, SET_IN_NAME_RE, DeckFileError,
-    DeckLine, DecklistError, _section_name, card_count, clean_sections, format_decklist,
-    format_line, is_basic_land, parse_decklist, parse_line, section_header)
+    _BASIC_KEYS, BASIC_LANDS, CATEGORY_MAX, LINE_RE, MAIN_SECTIONS, SECTIONS, SET_IN_NAME_RE, DeckFileError,
+    DeckLine, DecklistError, _section_name, card_count, categories, clean_category, clean_sections,
+    format_decklist, format_line, is_basic_land, parse_decklist, parse_line, section_header)
 from .edit import (
     BRACKET_NUMBERS, EDIT_FIELDS, LABEL_RE, _card_key, _check_rows_match_target, _merge_notes,
     _owned_key, _set_leading_word, _split_notes, apply_edit, clean_label, format_aud,

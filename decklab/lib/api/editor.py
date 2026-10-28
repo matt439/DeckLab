@@ -375,10 +375,12 @@ def parse_list(body):
         except decks.DecklistError as e:
             errors.append({"line": number, "text": shown, "error": str(e)})
             continue
+        found.category = line.category      # a pasted " #Ramp" (Moxfield's tags) stays the line's category
         merged = sections.setdefault(current, {})
         key = (found.name, found.set, found.number, found.finish)
         if key in merged:
             merged[key].quantity += found.quantity
+            merged[key].category = merged[key].category or found.category
         else:
             merged[key] = found
     ordered = {name: list(sections[name].values()) for name in decks.SECTIONS if sections.get(name)}

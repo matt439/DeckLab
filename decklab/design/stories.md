@@ -560,7 +560,7 @@ Gap: Ideas for a deck live in prose or the wishlist; the deck text has no consid
 
 First slice: a `Considering` section in the deck text format that the parser reads and every table, pool and packing reader skips.
 
-**E2-S24** · Matt · could · M · missing
+**E2-S24** · Matt · could · M · built
 
 As a deck builder, especially for Commander, I want to tag a deck's cards with my own categories (ramp, draw, removal, win condition) and see the count per category, so that I can check a deck's balance at a glance.
 
@@ -570,13 +570,16 @@ As a deck builder, especially for Commander, I want to tag a deck's cards with m
 
 Decided (Matt, 2026-10-27): added from the comparison with Archidekt's categories and Moxfield's tags.
 
+Now (2026-10-28): [built](../HISTORY.md#own-card-categories-in-a-deck-2026-10-28-e2-s24): a decklist line may end with Moxfield's tag form, `1 Sol Ring (CMM) 410 #Ramp` (one per line). The parser keeps it as the line's category, saves write it back, and it's never part of the card's identity, so tables, pools, packing, the Assembled snapshot and Forge read the line without it. The editor's ⋯ > Category… sets or clears it (the deck's other categories offered), and a category-only save adds no "Decklist changed" line and leaves the table alone; a pasted Moxfield list keeps its tags. The Cards tab's Group by Type | Category groups the 99 or main deck by category (Uncategorised last), the Stats tab's Your categories counts each one's copies in the Commander and Deck, and the Chance to draw panel has a button per category that ticks its cards.
+
 Evidence:
-- `decklab/web/editor-lines.js`, `decklab/web/deck.js`: lists grouped by card type
-- `decklab/lib/stats/`: type and curve stats
+- `decklab/lib/decks/decklist.py`: CATEGORY_TAIL_RE, clean_category, DeckLine.category (compare=False), parse_line, format_line(category=False), categories
+- `decklab/lib/decks/edit.py` apply_edit's "categories" change and `render.py` _block_text; `assembled.py` _value and `api/assembly_sections.py` task_key leave categories out
+- `decklab/lib/api/drafts.py` _read_line (a line's "category", blocked when a line can't hold it), `card_lookup.py` _line_json ("category" only when set), `editor.py` parse_list
+- `decklab/web/deck-categories.js`: categoryGroups, cardsGroupingToggle, categoryCounts, categoriesPanel, oddsCategoryButtons, openCategorySheet; `editor.js` newLine/sendLine/listSignature, `editor-lines.js` the ⋯ menu and categoryTag, `deck.js` deckGroups(data, by)
+- `decklab/tests/test_deck_categories.py`; the goldens' "category-defaults" (`decklab/tests/golden_p4.py`)
 
-Gap: No per-card categories exist in the deck text or the pages.
-
-First slice: a category suffix on decklist lines that the parser keeps and the deck page can group by.
+Gap: One category per card (Archidekt and Moxfield allow several); the `deck_line` table has no category column, so SQL can't ask which cards are tagged Ramp; product and pairing lists have none.
 
 **E2-S25** · Matt · could · M · built
 

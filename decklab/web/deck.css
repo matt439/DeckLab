@@ -199,6 +199,7 @@
 
 .deck-cards-bar { margin-top: var(--s-4); }
 .deck-cards-bar > .deck-mode { flex: none; margin-left: auto; }
+.deck-cards-bar > .deck-group-by { flex: none; }
 .deck-cards-bar > .deck-filter { flex: 0 1 auto; }
 .deck-filter-n { margin-left: var(--s-1); font-variant-numeric: tabular-nums; color: var(--ink-2); font-weight: var(--fw-regular); }
 .deck-cards .result-count { display: flex; align-items: center; flex-wrap: wrap; gap: var(--s-2); margin: 0 0 var(--s-2); }

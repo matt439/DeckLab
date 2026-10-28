@@ -9,7 +9,7 @@ from dataclasses import astuple
 from .deckfile import (DATE_RE, FIELD_RE, KINDS, MARKER, OWNED_FIELDS, PRICE_NOTE, PRICE_STAMP,
                        PRICE_STAMP_RE, TABLE_HEADER, TABLE_RULE, _QUOTE_CUT_RE, PriceStamp, _lines,
                        _one_line, _parse_row, _rate_in, _without_stamp)
-from .decklist import DeckFileError, DecklistError, format_decklist, parse_decklist
+from .decklist import DeckFileError, DecklistError, categories, format_decklist, parse_decklist
 from .edit import _merge_notes
 
 
@@ -115,7 +115,9 @@ def _block_text(deck, key, sections, nl):
         try:
             # parse_decklist drops empty sections, so an empty one in the
             # model ("Sideboard": []) is the same list.
-            if parse_decklist(original) == {name: lines for name, lines in sections.items() if lines}:
+            kept = {name: lines for name, lines in sections.items() if lines}
+            parsed = parse_decklist(original)
+            if parsed == kept and categories(parsed) == categories(kept):
                 return original
         except DecklistError:
             pass

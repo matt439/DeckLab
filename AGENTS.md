@@ -231,6 +231,7 @@ Each deck's text has these parts, in this order:
    Sideboard
    2 Card Name (SET) 45
    ```
+   A line may end with the builder's own category, Moxfield's tag form: `1 Sol Ring (CMM) 410 #Ramp` (E2-S24; one per line, 1-30 letters, digits, spaces and `- ' & / + .`, starting and ending with a letter or digit). It's a note about the card, never part of it: tables, pools, packing and Forge read the line without it, and the Assembled snapshot leaves it out. The editor's ⋯ > **Category…** sets it; a change of categories alone adds no "Decklist changed" line and leaves the table as it is.
 3. **Owned vs needed:** a table of each card with the quantity needed, owned, and missing, plus an estimated cost in AUD. Its header is `| Card | Need | Owned | Missing | ~AUD each | ~AUD missing | Notes |`.
 4. **Substitutes:** cards already owned, or cheaper ones, that could replace expensive missing cards, noting what each swap costs the deck in strength.
 5. **Notes:** game plan, mulligan guidance, and a sideboard guide once one exists.

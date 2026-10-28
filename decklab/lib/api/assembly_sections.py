@@ -60,7 +60,7 @@ def task_key(parsed, choice, sections):
     current = assembled.key(parsed) if parsed is not None else None
     if current is None and "sideboard" not in choice:
         return None
-    selected = {key: [decks.format_line(line) for line in lines] for key, lines in sections.items()}
+    selected = {key: [decks.format_line(line, category=False) for line in lines] for key, lines in sections.items()}
     return hashlib.sha256(json.dumps([current, choice["version"], selected], sort_keys=True,
                                     separators=(",", ":")).encode()).hexdigest()
 

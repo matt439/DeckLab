@@ -1,5 +1,6 @@
 /* Deck Lab's page: the deck view's "Stats" part (/api/deck's "stats": the mana curve, land count,
-colour sources, card types and roles, tribes, Commander checks, sideboard and sources), its "Chance to
+colour sources, card types and roles, tribes, Commander checks, sideboard and sources), the builder's own
+categories (deck-categories.js categoriesPanel, E2-S24), its "Chance to
 draw" panel (worked out here from the shown list's main deck, E3-S24), and the
 hand-made chart helpers (chartJobs and drawCharts, tile, niceScale, columnPath, barPath, colourPips)
 that deck.js, practice.js and matchups.js use too.
@@ -59,6 +60,7 @@ function statsSection(data) {
     st.commander ? commanderPanel(st, data.summary) : null,
     drawOddsPanel(data),
     compositionPanel(st),
+    categoriesPanel(data),
     tribesPanel(st),
     st.sideboard && st.sideboard.count ? sideboardPanel(st) : null,
     sourcesPanel(st)));
@@ -666,6 +668,7 @@ function drawOddsPanel(data) {
       el("div", { class: "toolbar odds-tools" }, filter,
         lands ? el("button", { type: "button", class: "btn btn-quiet", text: "All lands",
           onclick: () => setAll((line) => typeGroup(line.card) === "Lands") }) : null,
+        ...oddsCategoryButtons(lines, setAll),
         el("button", { type: "button", class: "btn btn-quiet", text: "Clear", onclick: () => setAll(() => false) })),
       list),
     explain("How is this worked out?",

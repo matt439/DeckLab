@@ -2,9 +2,15 @@
 *F*" line (parse_line, format_line), whole blocks with section headers
 (parse_decklist, format_decklist), card counts and basic lands. Also the
 DeckFileError and DecklistError every other part of decks raises.
+
+A line may end with the deck builder's own category (E2-S24), Moxfield's
+tag form: "1 Sol Ring (CMM) 410 #Ramp". parse_line keeps it as
+DeckLine.category and format_line writes it back; it never counts as part
+of the card's identity (DeckLine equality ignores it), so every reader of
+names, printings and quantities reads the line as if it had none.
 """
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from decklab.lib.cards import fold
 
@@ -26,6 +32,14 @@ LINE_RE = re.compile(
     r"(?: +\(([A-Za-z0-9]{2,8})\) +([^\s*(]\S*)|"      # (SET) 123, the set in any case
     r" +\(([A-Z0-9]{2,8})\))?"                          # (SET) alone, in capitals
     r"(?: +\*([FfEe])\*)?$")
+# A category at the end of a line: " #Ramp", " #Win condition" (Moxfield's
+# "#!Ramp" global-tag form is read too, without its "!"). One per line: letters,
+# digits, spaces and a little punctuation, at most CATEGORY_MAX characters.
+# No Scryfall card name has a "#" in it.
+CATEGORY_MAX = 30
+CATEGORY_TEXT = rf"[^\W_](?:[\w '&/+.-]{{0,{CATEGORY_MAX - 2}}}[^\W_])?"
+CATEGORY_RE = re.compile(CATEGORY_TEXT)
+CATEGORY_TAIL_RE = re.compile(rf"\s+#!?({CATEGORY_TEXT})\s*$")
 # A "(SET)" with more text after it inside a parsed name means the rest of the
 # line was garbled ("1 Opt (FDN) 512 extra").
 SET_IN_NAME_RE = re.compile(r"\([A-Za-z0-9]{2,8}\) +\S")
@@ -47,6 +61,31 @@ class DeckLine:
     set: str | None = None          # lowercase Scryfall set code
     number: str | None = None       # collector number, as printed ("227", "ELD-97")
     finish: str = "nonfoil"         # nonfoil | foil | etched
+    # The deck builder's own category ("Ramp"), or None. Not part of the line's
+    # identity: two lines differing only in it compare equal.
+    category: str | None = field(default=None, compare=False)
+
+
+def clean_category(text):
+    """A category as a line holds it: spaces squeezed, None for a blank one.
+    Raises ValueError for one a line can't hold (see CATEGORY_RE)."""
+    if text is None:
+        return None
+    if not isinstance(text, str):
+        raise ValueError("a category must be text")
+    text = " ".join(text.split()).lstrip("#")
+    if not text:
+        return None
+    if not CATEGORY_RE.fullmatch(text):
+        raise ValueError(f"a category is 1-{CATEGORY_MAX} letters, digits, spaces and - ' & / + . "
+                         f"(starting and ending with a letter or digit): {text!r}")
+    return text
+
+
+def categories(sections):
+    """{section: [category of each line]}: what DeckLine equality leaves out, so
+    two lists are the same as written when they're equal and this is too."""
+    return {name: [line.category for line in lines] for name, lines in sections.items()}
 
 
 def is_basic_land(name):
@@ -55,8 +94,16 @@ def is_basic_land(name):
 
 
 def parse_line(text):
-    """Parse one '4 Card Name (SET) 123 *F*' line into a DeckLine."""
-    m = LINE_RE.match(text.strip())
+    """Parse one '4 Card Name (SET) 123 *F* #Category' line into a DeckLine."""
+    text = text.strip()
+    category = None
+    tail = CATEGORY_TAIL_RE.search(text)
+    if tail:
+        category = clean_category(tail.group(1))
+        text = text[:tail.start()]
+    if "#" in text:
+        raise DecklistError(f"a card line takes one category at its end (\" #Ramp\"): {text!r}")
+    m = LINE_RE.match(text)
     if not m:
         raise DecklistError(f"not a decklist line: {text.strip()!r}")
     qty, name, set_code, number, bare_set, finish = m.groups()
@@ -67,11 +114,13 @@ def parse_line(text):
         raise DecklistError(f"can't tell the card name from the set and number: {text.strip()!r}")
     finish = {"f": "foil", "e": "etched"}.get((finish or "").lower(), "nonfoil")
     return DeckLine(int(qty), name.strip(), set_code.lower() if set_code else None,
-                    number, finish)
+                    number, finish, category)
 
 
-def format_line(line):
-    """The Arena/MTGO text for one DeckLine.
+def format_line(line, category=True):
+    """The Arena/MTGO text for one DeckLine, with its category at the end
+    unless category is False (a physical record such as Assembled, which
+    holds cards, not the builder's notes about them).
 
     Raises ValueError for a line that wouldn't read back the same (a newline
     in the name, a quantity below 1, a number without a set, an unknown
@@ -86,13 +135,18 @@ def format_line(line):
         text += " *F*"
     elif line.finish == "etched":
         text += " *E*"
+    tag = clean_category(line.category) if category else None
+    if category and tag != line.category:
+        raise ValueError(f"can't write {line!r} as a decklist line: its category isn't as a line holds it")
+    if tag:
+        text += f" #{tag}"
     try:
         back = parse_line(text) if "\n" not in text and "\r" not in text else None
     except DecklistError:
         back = None
     expected = DeckLine(line.quantity, line.name, line.set.lower() if line.set else None,
                         line.number or None, line.finish)
-    if back != expected:
+    if back != expected or back.category != tag:
         raise ValueError(f"can't write {line!r} as a decklist line")
     return text
 

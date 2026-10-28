@@ -273,6 +273,8 @@ button.edit-card:hover { background: var(--hover); }
 .edit-unsaved-dot { display: inline-block; flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); vertical-align: .05em; }
 .edit-was { flex: none; color: var(--ink-2); font-size: var(--fs-sm); font-weight: var(--fw-medium); white-space: nowrap; }
 .edit-unsaved-dot[hidden], .edit-was[hidden] { display: none; }
+/* A line's own category (deck-categories.js): a quiet label beside the name, never the name's colour. */
+.edit-category { flex: none; max-width: 12em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 var(--s-2); border: 1px solid var(--border); border-radius: var(--r-pill); color: var(--ink-2); font-size: var(--fs-sm); font-weight: var(--fw-regular); }
 .edit-tile .edit-unsaved-dot { margin-right: var(--s-1); }
 .edit-tile .card-tile-open > .edit-was { margin: 0; padding: 0 2px; }
 /* A removed line, where it was, until the list is drawn afresh: "Removed 2 Llanowar Elves (FDN 227). Undo". */

@@ -75,7 +75,8 @@ def get(deck):
 
 def _value(version, sections):
     return json.dumps({"version": version, "sections": {
-        key: [format_line(line) for line in lines] for key, lines in clean_sections(sections).items()}},
+        key: [format_line(line, category=False) for line in lines]
+        for key, lines in clean_sections(sections).items()}},
         ensure_ascii=False, separators=(",", ":"))
 
 
