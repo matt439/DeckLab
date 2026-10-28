@@ -169,6 +169,8 @@ called as before (from decklab.lib import api; api.<name>). Each part:
                      one collection.trade. Imported when first asked, as tokens.py
     precons.py       the Collection page's "Add a precon": precons_view(), precon_preview(),
                      add_precon() (the cards and the deck in one inventory change)
+    precon_coverage.py   the Collection page's "Precons we could build" (E1-S24): coverage_view(),
+                     coverage_deck(), start_deck() (a new idea deck). Imported when first asked
     cover.py         GET /api/deck/cards: cover_cards(), the picture picker's cards; POST
                      /api/deck/cover: save_cover() sets or clears a deck's Cover card line (one
                      deck.save). Imported when first asked (feature_routes.dispatch)

@@ -505,6 +505,7 @@ Groups wired so far:
 |---|---|
 | Deck page | the decklist (`deck`), the stand-ins sheet and the Play-now list's swaps (`deck-swaps`), the Overview's key cards (`key`), the test hand (`hand`), the play guide's names (`guide`, opened with each card once), other card names drawn with `cardLink` (`names`; `owned-table` for the price table) |
 | Matchups | the pair page's per-card tables (`matchup-cards-0`/`-1`), its casts tables (`matchup-casts-0`/`-1`) and its AI-limits names |
+| Compare decks | each side's mana-curve bar cards (`compare-0`/`-1`) |
 | Library | the picture picker's cards (`cover`; its Automatic tile opens the viewer at its card's own tile) |
 | Editor | the rows and picture stacks (`editor`), the search results' thumbnails (`editor-results`), a missing card's stand-ins (`editor-swaps`) |
 | Receipts | each part's grid (`receipt-<n>`, the part's index) |
@@ -601,7 +602,7 @@ The Shopping link's count of deliveries waiting (`.nav-badge`, in the top bar an
 
 ### The routes table
 
-`ROUTES` in `core.js` is the one place a page's name lives. Each entry is `{path, label, h1, title, icon, nav, visible}` for a top-level page (`nav` is `"main"`, `"more"` or `"account"`) or `{path, label, h1, title, parent}` for a child page (`deck`, `edit`, `new`, `history`, `variant`, `receipt`, `matchup`). `visible(profile, may)` hides a page from people who may not use it (Shopping and Build decks need home's inventory, Sleeves & boxes a home profile, Settings an admin).
+`ROUTES` in `core.js` is the one place a page's name lives. Each entry is `{path, label, h1, title, icon, nav, visible}` for a top-level page (`nav` is `"main"`, `"more"` or `"account"`) or `{path, label, h1, title, parent}` for a child page (`deck`, `edit`, `new`, `history`, `variant`, `receipt`, `matchup`, `compare`). `visible(profile, may)` hides a page from people who may not use it (Shopping and Build decks need home's inventory, Sleeves & boxes a home profile, Settings an admin).
 
 | Helper | What it gives |
 |---|---|

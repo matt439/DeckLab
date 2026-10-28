@@ -19,6 +19,7 @@ from .assembly import TOKEN_FAILED, _deck_tokens, held_tokens
 from .card_lookup import _line_json, _owned_json
 from .carddata import _require_cards
 from .commits import _table_json
+from .considering import view as considering_view
 from .deck_aliases import metadata
 from .common import _jsonable, _public, _scrub, _unique
 from .forge_runs import _deck_matchups
@@ -549,6 +550,10 @@ def deck_view(deck_id, version="target", omit=()):
     intent, independent of the displayed list version (assembly_intent.project). Cards
     outside the build can already be owned, on the way or missing; neither list is edited.
 
+    box_label is an owned intact product's box label (product_label.box_label: its name,
+    colours, decks and the deck page its QR code opens), only for a viewer who sees home's
+    records; absent otherwise.
+
     The space's inventory only for those who may see it (the phase 4 design's
     R6d, guard.sees_inventory: User2's decks only User2 and an admin,
     home's only Matt and User1): for anyone else the answer has no owned,
@@ -556,6 +561,11 @@ def deck_view(deck_id, version="target", omit=()):
     worked out"), and the space's pool and tokens aren't read, so none of
     their warnings show. The decklist, guide, stats, practice and matchups
     stay.
+
+    considering is the deck text's Considering list (api/considering.py view: its lines, each with
+    "free" and "on_the_way" only for a viewer who sees the space's inventory, and the text's sha256),
+    None for a product, a pairing or a text that can't be read. It is never in sections, stats,
+    owned, tokens or matchups.
     """
     requested_id = deck_id
     summary, sections = _deck_sections(deck_id, version)
@@ -618,6 +628,8 @@ def deck_view(deck_id, version="target", omit=()):
         "guide": playing_guide(deck_file),
         "usual_opponents": usual_opponents(deck_id),
         "swaps": view_swaps(deck_file),
+        # The Considering list (E2-S23): its free counts only for a viewer who sees the inventory.
+        "considering": considering_view(deck_file, deck_id, p, sees, warnings),
     }
     if "matchups" not in omit:
         answer["matchups"] = _deck_matchups(summary, version, sections)
@@ -641,5 +653,9 @@ def deck_view(deck_id, version="target", omit=()):
         assembled = _assembled_view(summary, p, warnings, deck=deck_file, result=owned if version == "target" else None)
         if assembled is not None:
             answer["assembled"] = assembled
+    from .product_label import box_label
+    label = box_label(deck_id)
+    if label is not None:
+        answer["box_label"] = label
     answer.update(warnings=_unique(_scrub(warnings)), info=_unique(info))
     return metadata(answer, requested_id, deck_id)

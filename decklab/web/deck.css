@@ -461,3 +461,10 @@ table.data tfoot .total-cost { font-weight: var(--fw-semibold); text-align: left
     background: var(--scrim-strong); color: var(--on-scrim); }
   .deck-neighbours > .sub { background: var(--surface); color: var(--ink); padding: var(--s-1); }
 }
+
+/* The Considering list (deck-considering.js): each card row with its ⋯ (move or remove) beside it. */
+.deck-considering-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--s-2); }
+.deck-considering-row > .card-row { min-width: 0; }
+.deck-considering-row .menu-button { min-width: var(--tap); justify-content: center; }
+.deck-considering-row .menu-caret { display: none; }
+.deck-considering-row .menu { top: calc(100% + var(--s-1)); right: 0; }

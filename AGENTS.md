@@ -235,6 +235,8 @@ Each deck's text has these parts, in this order:
 4. **Substitutes:** cards already owned, or cheaper ones, that could replace expensive missing cards, noting what each swap costs the deck in strength.
 5. **Notes:** game plan, mulligan guidance, and a sideboard guide once one exists.
 
+A deck may also have a **Considering** list (E2-S23), cards that might go in: a `## Considering` heading (level 2 only) with one fenced block of card lines in the decklist format and no section headers, placed after the Decklist section (where Deck Lab adds it). It's outside the Planned and Play-now lists: its cards are never needed, missing, in use, packed, sleeved, priced in the table, played by Forge or in `deck_line`. The deck page's Cards tab lists it with whether a copy is free in the pool, and adds, removes or moves a card into the Planned list (or its sideboard) in one save (`POST /api/deck/considering`); by hand, `deck pull`, edit the block, `deck push` (which names any of its cards that aren't Scryfall names; use exact names anyway, since a card moved into the Planned list must be one).
+
 Deck Lab rewrites only the parts it owns (on a page save, "Update their tables", `deck tables` and an inventory change's table refresh) and keeps everything else as written:
 - the header fields Format, Archetype, Played by, Status, Built version, Target bracket, Sleeves and Deck box (a `Cover card` line isn't one of them: a page save, `deck tables` and a table refresh keep it as written, and only the picture picker changes it);
 - the decklist blocks;

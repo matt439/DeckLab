@@ -173,7 +173,8 @@ class PageSourceTests(unittest.TestCase):
         self.assertIn("font-size: var(--fs-input)", _text("base.css"))
         # The deck page's Tokens part is on its Cards tab, right after the decklist and before the prices.
         cards = _function(_text("deck.js"), "cardsParts")
-        self.assertIn("return [screen.cardsBar, list, deckSwapsSection(data), tokensSection(data), deckPrintingsSection(data), ownedSection(data)];", cards)
+        self.assertIn("return [screen.cardsBar, list, deckConsideringSection(data), deckSwapsSection(data), tokensSection(data),\n"
+                      "    deckPrintingsSection(data), ownedSection(data)];", cards)
         self.assertIn('id: "sec-tokens"', _function(_text("deck.js"), "tokensSection"))
         # The shell's navigation (core.js's routes table) and the packing plan link to it.
         self.assertIn('{ path: "tokens", label: "Tokens"', _text("core.js"))
@@ -208,16 +209,18 @@ class PageSourceTests(unittest.TestCase):
         # The Collection page (collection.js): spaces, the endpoints of the accounts milestone, writes tied to
         # the page that started them, conflicts put back on top field by field, and a phone-first layout.
         script = "\n".join(_text(name) for name in ("collection.js", "collection-rows.js", "collection-cards.js", "collection-bulk.js",
-                                                     "collection-guards.js", "collection-trade.js"))
+                                                     "collection-guards.js", "collection-trade.js", "precon-coverage.js"))
         self.assertIn('if (path === "collection") return showCollection(params, token);', _function(_text("app.js"), "route"))
         for path in ('"/api/collection"', '"/api/collection/rows"', '"/api/collection/save"', '"/api/collection/bulk"',
                      '"/api/collection/import/preview"', '"/api/collection/import/apply"', "/api/printings?name=",
                      '"/api/collection/trade/preview"', '"/api/collection/trade"',
-                     "/api/cards/search?q=", "/api/precons?", "/api/precons/preview?", '"/api/precons/add"'):
+                     "/api/cards/search?q=", "/api/precons?", "/api/precons/preview?", '"/api/precons/add"',
+                     "/api/precons/coverage?", "/api/precons/coverage/deck?", '"/api/precons/start"'):
             with self.subTest(path=path):
                 self.assertIn(path, script)
         self.assertIn("openPreconSheet(cv)", _function(script, "colHead"))
         self.assertIn("openTradeSheet(cv)", _function(script, "colHead"))
+        self.assertIn("openCoverageSheet(cv)", _function(script, "colHead"))
         self.assertIn("seq !== ctx.seq", _function(script, "searchPrecons"))
         self.assertIn("seq !== ctx.seq", _function(script, "previewPrecon"))
         # A search typed just before a pick doesn't cover the preview; an add leaves the deck page's box about

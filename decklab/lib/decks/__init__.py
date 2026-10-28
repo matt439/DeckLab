@@ -79,6 +79,8 @@ Where things are (every name in the submodules is also decks.<name>):
   (parse_token_cards, set_token_cards), which other decks then count as in use;
 - printings.py: a built deck's optional "Printings in box" header line, which physical printing
   of its cards is in the box (parse_printings, set_printings), a record that reserves nothing;
+- considering.py: the "## Considering" block, cards that might go in (DeckFile.considering),
+  outside both lists, so nothing that reads the lists counts them;
 - cover.py: the optional "Cover card" header line (parse_cover, set_cover) and the automatic
   cover (auto_cover_line), the card whose art stands for the deck in the library;
 - this file: everything that uses the folders (DECKS_DIR, and each person
@@ -119,6 +121,7 @@ from .tokencards import (TOKEN_CARDS_FIELD, TokenCardLine, format_token_cards, h
 from .printings import (PRINTINGS_FIELD, PrintingLine, format_printings, has_printings, parse_printings,
                         set_printings)
 from .opponents import USUAL_OPPONENTS_FIELD, parse_usual_opponents, set_usual_opponents
+from .considering import format_considering, parse_considering
 from .deckfile import (
     _ABOUT, _AMOUNT_AFTER_RE, _AMOUNT_BEFORE_RE, _CONTEXT_START_RE, _CUR, _NUM, _ONE, _QUOTE_CUT_RE,
     BUILT_VERSIONS, COUNT_RE, DATE_RE, FIELD_RE, FORMATS, HEADING_RE, KINDS, MARKER, MARKER_RE,

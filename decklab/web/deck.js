@@ -336,6 +336,10 @@ function deckMoreItems(data) {
     home ? { label: routeH1("assembly"), href: `#/assembly?deck=${id}&version=${data.version}` } : null,
     { label: routeH1("play"), href: `#/play?id=${id}` },
     !s.read_only ? { label: "History", href: `#/history?id=${id}&v=${data.version}` } : null,
+    // compare.js: the other deck is chosen from the decks this viewer sees.
+    typeof openCompareChooser === "function" ? { label: "Compare with…", onclick: () => {
+      if (token === routeToken && profile === state.profile?.id) openCompareChooser(data);
+    } } : null,
     "sep",
     { label: "Copy decklist", onclick: () => copyDeck(data) },
     { label: "Download decklist", onclick: () => downloadDeck(data) },
@@ -609,14 +613,15 @@ function printingWords(printings) {
 }
 
 /** The Cards tab: the toolbar (filters for a visitor who sees the collection, List or Pictures), the
- * decklist, the Tokens part and the price table. */
+ * decklist, its Considering list (deck-considering.js), the Tokens part and the price table. */
 function cardsParts(data, screen) {
   screen.view.mode = cardsMode();
   const list = el("div", { class: "deck-cards", id: "sec-cards" });
   screen.cardsHost = list;
   screen.cardsBar = el("div", { class: "toolbar deck-cards-bar" });
   redrawCards(screen);
-  return [screen.cardsBar, list, deckSwapsSection(data), tokensSection(data), deckPrintingsSection(data), ownedSection(data)];
+  return [screen.cardsBar, list, deckConsideringSection(data), deckSwapsSection(data), tokensSection(data),
+    deckPrintingsSection(data), ownedSection(data)];
 }
 
 /** The remembered List or Pictures choice; the first time, pictures where the screen is wide. */
@@ -889,9 +894,9 @@ function openDistinct(card, node) {
   return openCardViewer(items, at.get(card.name) || 0, { trigger: node });
 }
 
-function cardNames(entries) {
+function cardNames(entries, group = "names") {
   if (!entries || !entries.length) return null;
-  return el("ul", { class: "card-names" }, entries.map((entry) => el("li", {}, cardLink(entry))));
+  return el("ul", { class: "card-names" }, entries.map((entry) => el("li", {}, cardLink(entry, group))));
 }
 
 
