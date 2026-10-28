@@ -2,6 +2,17 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Experiment timing budget scope (2026-10-28; E11-S16)
+
+The fixed timing assumptions now explicitly say that per-job times are added as
+a serial budget and overlapping pair jobs can reduce elapsed time. This follows
+the existing inflight scheduler in `experiment._play_group`; timing math, schema
+and scheduling are unchanged. The 17 protected CLI fixtures pass without skips.
+Worker-only configuration feasibility was also checked from source: a requested
+ticket cap is not the shared server budget or effective activity. A future
+conditional local-worker model needs explicit placement intent and assumptions;
+current configuration-arm totals remain unknown. No runtime probe or game ran.
+
 ## Remaining experiment game-time estimates (2026-10-28; E11-S16 slice)
 
 Experiment dry runs now add a labelled remaining-game time guide in text and an

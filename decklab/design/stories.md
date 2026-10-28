@@ -4118,6 +4118,8 @@ Prerequisite built 2026-10-28 ([HISTORY.md](../HISTORY.md#read-only-experiment-p
 
 Next slice: support only explicit configuration knobs whose worker/performance assumptions can be justified, leaving other combinations unknown; preserve the read-only boundary and complete-total rule. Adoption/replay-impact controls and actual experiments remain later work with the existing gates. No real settings, saved arm folders or games need changing to test these source paths.
 
+Source feasibility note (2026-10-28): a `forge_workers=N` arm sets a per-ticket cap; server pool budgets, global slots, available chunks and concurrent pair jobs determine actual activity. The current plan carries no local/remote placement intent, so this is not proven effective capacity. A future format fallback may assume requested local workers before caps/contention, but must state that assumption and never rescale historical aggregate v2 throughput. Per-job estimates are currently added as a serial budget; overlapping pair jobs can reduce elapsed time. See `experiment._play_knob_arm`/`_play_group`, `pool_service._service_job`, `pool_models.Ticket` and `slots._limited`. This source review performed no probes or games.
+
 Review note: holds two needs (adopting fixes, running experiments) and overlaps E3-S20; adoption without hand edits could be its own story.
 
 **E11-S17** · Matt · wont · M · not_wanted

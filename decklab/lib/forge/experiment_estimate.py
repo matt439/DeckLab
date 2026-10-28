@@ -22,6 +22,7 @@ BASE_ASSUMPTIONS = (
     "The range is a heuristic with a 20% tail allowance, not a confidence interval.",
     "No allowance is added for queue wait, cold startup, deployment or changes in shared PC load.",
     "Remaining counts follow the cache plan; arm-folder/spec compatibility and run readiness are not verified.",
+    "Per-job times are added as a serial budget; overlapping pair jobs can reduce elapsed time.",
 )
 UNKNOWN_WORKERS = "Planning workers are unknown; v1 and format fallbacks assume 16 workers."
 POOL_UNKNOWN = "The saved pool timing has unknown worker context; it is not confirmed to match the next run."
