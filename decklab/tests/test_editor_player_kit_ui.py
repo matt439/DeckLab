@@ -377,3 +377,128 @@ class EditorPlayerKitUiTests(unittest.TestCase):
           assert(!picker.textContent.includes('Not in the accessories list'));
           assert.equal(JSON.stringify([ed.fields,ed.playerKitRows]),before);assert.equal(writes.length,0);
         """)
+
+    def test_tagged_check_refusal_gives_generic_guidance_without_reads_or_draft_changes(self):
+        self.run_js("""
+          const ed=make({editable_fields:['status','player','archetype'],fields:{status:'built',player:'wife',sleeves:null,deck_box:null}});
+          ed.fields.player='user';ed.fields.archetype='My unsaved plan';const before=snapshot(ed),base=JSON.stringify(ed.base);
+          const error=new ApiError(403,'Private owner User1 and private-sleeves are not for display',
+            {reason:'kit_ownership',owner:'user1',kit:'private-sleeves'});
+          apiWrite=async(path,body)=>{writes.push([path,body]);throw error;};await runCheck(ed);await reviewSave(null);
+          const sheet=document.querySelector('dialog'),text=sheet.textContent;
+          assert(text.includes("The kit's owner needs to prepare this hand-off"));assert(text.includes('Your changes are still in this open editor'));
+          assert(text.includes('Ask the owner'));assert(text.includes('Keep editing'));assert(text.includes('Refresh and reapply draft'));
+          for(const hidden of ['User1','user1','private-sleeves','Private owner'])assert(!text.includes(hidden));
+          assert.equal(calls.length,0);assert.equal(writes.length,1);assert.equal(writes[0][0],'/api/deck/check');
+          assert.equal(snapshot(ed),before);assert.equal(JSON.stringify(ed.base),base);
+          sheet.querySelectorAll('button').find(button=>button.textContent==='Keep editing').click();
+          assert.equal(document.querySelector('dialog'),null);assert.equal(snapshot(ed),before);assert.equal(calls.length,0);
+        """)
+
+    def test_tagged_save_refusal_never_sends_an_automatic_read_retry_or_extra_write(self):
+        self.run_js("""
+          const ed=make();ed.fields.archetype='My unsaved plan';const before=snapshot(ed),base=JSON.stringify(ed.base);
+          apiWrite=async(path,body)=>{writes.push([path,body]);throw new ApiError(403,'Private details',{reason:'kit_ownership'});};
+          await doSave(null,null);const sheet=document.querySelector('dialog');assert(sheet.textContent.includes('Nothing was saved'));
+          assert.equal(calls.length,0);assert.equal(writes.length,1);assert.equal(writes[0][0],'/api/deck/save');
+          assert.equal(snapshot(ed),before);assert.equal(JSON.stringify(ed.base),base);assert(!sheet.textContent.includes('Private details'));
+          assert(!sheet.querySelectorAll('button').some(button=>button.textContent==='Try again'));
+        """)
+
+    def test_explicit_refresh_rebases_the_current_draft_without_a_second_save(self):
+        self.run_js("""
+          const ed=make({editable_fields:['status','player','archetype'],fields:{status:'built',player:'wife',sleeves:null,deck_box:null}});
+          ed.fields.player='user';ed.fields.archetype='My unsaved plan';
+          apiWrite=async(path,body)=>{writes.push([path,body]);throw new ApiError(403,'Private details',{reason:'kit_ownership'});};
+          await doSave(null,null);const sheet=document.querySelector('dialog'),pending=deferred();
+          api=path=>{calls.push(path);return pending.promise;};let stored=0;local.set=()=>{stored++;return true;};drawEditor=()=>{};
+          const refresh=sheet.querySelectorAll('button').find(button=>button.textContent==='Refresh and reapply draft');
+          refresh.click();refresh.fire('click');assert.equal(calls.length,1);assert.equal(writes.length,1);
+          pending.resolve({...ed.view,sha256:'b'.repeat(64),editable:true});await finish();
+          assert.equal(ed.sha256,'b'.repeat(64));assert.equal(ed.fields.player,'user');assert.equal(ed.fields.archetype,'My unsaved plan');
+          assert.equal(ed.notice.kind,'reapplied');assert.equal(ed.notice.why,null);
+          assert.equal(document.querySelector('dialog'),null);assert.equal(writes.length,1);assert(stored>0);
+        """)
+
+    def test_failed_explicit_refresh_preserves_draft_and_allows_a_deliberate_retry(self):
+        self.run_js("""
+          const ed=make();ed.fields.archetype='Keep this plan';const before=snapshot(ed),base=JSON.stringify(ed.base);
+          const notices=[];toast=text=>notices.push(text);
+          apiWrite=async(path,body)=>{writes.push([path,body]);throw new ApiError(403,'Private details',{reason:'kit_ownership'});};
+          await doSave(null,null);const sheet=document.querySelector('dialog');
+          api=async path=>{calls.push(path);throw new ApiError(503,'Temporarily unavailable');};
+          const refresh=sheet.querySelectorAll('button').find(button=>button.textContent==='Refresh and reapply draft');
+          refresh.click();await finish();assert.equal(calls.length,1);assert(!refresh.disabled);
+          assert.equal(snapshot(ed),before);assert.equal(JSON.stringify(ed.base),base);assert(sheet.isConnected);
+          assert(notices.some(text=>text.includes('Temporarily unavailable')));assert.equal(writes.length,1);
+          refresh.click();await finish();assert.equal(calls.length,2);assert.equal(snapshot(ed),before);assert.equal(writes.length,1);
+        """)
+
+    def test_keep_editing_can_close_a_pending_refresh_and_late_result_is_ignored(self):
+        self.run_js("""
+          const ed=make();ed.fields.archetype='Keep this plan';const before=snapshot(ed),base=JSON.stringify(ed.base),sha=ed.sha256;
+          apiWrite=async()=>{throw new ApiError(403,'Private details',{reason:'kit_ownership'});};await doSave(null,null);
+          const sheet=document.querySelector('dialog'),pending=deferred();api=path=>{calls.push(path);return pending.promise;};
+          const refresh=sheet.querySelectorAll('button').find(button=>button.textContent==='Refresh and reapply draft');
+          refresh.click();sheet.querySelectorAll('button').find(button=>button.textContent==='Keep editing').click();
+          refresh.fire('click');assert.equal(calls.length,1);pending.resolve({...ed.view,sha256:'b'.repeat(64),editable:true});await finish();
+          assert.equal(ed.sha256,sha);assert.equal(snapshot(ed),before);assert.equal(JSON.stringify(ed.base),base);
+          assert.equal(document.querySelector('dialog'),null);
+        """)
+
+    def test_refresh_and_keep_actions_from_detached_footers_never_affect_new_context(self):
+        self.run_js("""
+          const ed=make(),error=new ApiError(403,'Private details',{reason:'kit_ownership'}),sheet=openSheet('Save');
+          assert(showEditorKitOwnership(sheet,error));const old=[...sheet.foot.querySelectorAll('button')];
+          assert(showEditorKitOwnership(sheet,error));old.forEach(button=>button.fire('click'));await finish();
+          assert.equal(calls.length,0);assert(!sheet.closed);
+          const current=[...sheet.foot.querySelectorAll('button')];state.profile=state.profiles[1];current.forEach(button=>button.fire('click'));await finish();
+          assert.equal(calls.length,0);assert(!sheet.closed);assert.equal(ed.history.length,0);
+        """)
+
+    def test_replacing_guidance_footer_during_refresh_discards_its_late_result(self):
+        self.run_js("""
+          const ed=make(),error=new ApiError(403,'Private details',{reason:'kit_ownership'}),sheet=openSheet('Save');
+          ed.fields.archetype='Keep this draft';const before=snapshot(ed),base=JSON.stringify(ed.base),sha=ed.sha256;
+          showEditorKitOwnership(sheet,error);const pending=deferred();api=path=>{calls.push(path);return pending.promise;};
+          const old=sheet.foot.querySelectorAll('button').find(button=>button.textContent==='Refresh and reapply draft');old.click();
+          showEditorKitOwnership(sheet,error);old.fire('click');assert.equal(calls.length,1);
+          pending.resolve({...ed.view,sha256:'b'.repeat(64),editable:true});await finish();
+          assert.equal(ed.sha256,sha);assert.equal(snapshot(ed),before);assert.equal(JSON.stringify(ed.base),base);
+          assert(!sheet.closed);assert.equal(writes.length,0);
+        """)
+
+    def test_late_refresh_success_or_failure_cannot_cross_profile_route_sheet_or_frame(self):
+        self.run_js("""
+          for(const failed of [false,true])for(const mode of ['profile','route','sheet','frame']) {
+            state.profile=state.profiles[0];state.may=deriveMay(state.profile,false);const ed=make();ed.fields.archetype='Draft';
+            const before=snapshot(ed),base=JSON.stringify(ed.base),sha=ed.sha256,error=new ApiError(403,'Private details',{reason:'kit_ownership'});
+            const sheet=openSheet('Save');showEditorKitOwnership(sheet,error);const pending=deferred();api=()=>pending.promise;
+            sheet.foot.querySelectorAll('button').find(button=>button.textContent==='Refresh and reapply draft').click();
+            if(mode==='profile')state.profile=state.profiles[1];if(mode==='route')routeToken++;
+            if(mode==='sheet')sheet.close();if(mode==='frame')ed.version='owned';
+            if(failed)pending.reject(new ApiError(503,'Old error'));else pending.resolve({...ed.view,sha256:'b'.repeat(64),editable:true});await finish();
+            assert.equal(ed.sha256,sha);assert.equal(snapshot(ed),before);assert.equal(JSON.stringify(ed.base),base);sheet.close();
+          }
+        """)
+
+    def test_untagged_permissions_and_404_keep_normal_error_handling_and_409_goes_first(self):
+        self.run_js("""
+          for(const [status,data] of [[403,{}],[403,{reason:'other'}],[404,{reason:'kit_ownership'}]]) {
+            make();apiWrite=async()=>{throw new ApiError(status,'Normal refusal',data);};await doSave(null,null);
+            const sheet=document.querySelector('dialog');assert(sheet.textContent.includes('Normal refusal'));
+            assert(!sheet.textContent.includes('Refresh and reapply draft'));sheet.querySelector('[aria-label="Close"]').click();
+          }
+          make();let conflicts=0;showConflict=(sheet,error)=>{conflicts++;};
+          apiWrite=async()=>{throw new ApiError(409,'Changed',{reason:'kit_ownership'});};await doSave(null,null);assert.equal(conflicts,1);
+        """)
+
+    def test_check_rename_precedes_tagged_ownership_and_untagged_check_remains_normal(self):
+        self.run_js("""
+          const ed=make();ed.checkError=new ApiError(403,'Normal check refusal');await reviewSave(null);
+          let sheet=document.querySelector('dialog');assert(sheet.textContent.includes('Normal check refusal'));
+          assert(!sheet.textContent.includes('Refresh and reapply draft'));sheet.querySelector('[aria-label="Close"]').click();
+          ed.checkError=new ApiError(403,'Tagged refusal',{reason:'kit_ownership'});let renamed=0;
+          renamedEditorConflict=()=>{renamed++;return true;};await reviewSave(null);sheet=document.querySelector('dialog');
+          assert.equal(renamed,1);assert(!sheet.textContent.includes('Refresh and reapply draft'));
+        """)

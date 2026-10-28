@@ -42,11 +42,11 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E5: Decide what to buy](#e5-decide-what-to-buy) | 22 | 18 | 1 | 1 | 2 |
 | [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 20 | 18 | 0 | 0 | 2 |
 | [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 28 | 24 | 0 | 4 | 0 |
-| [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 19 | 14 | 2 | 1 | 2 |
+| [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 19 | 15 | 1 | 1 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 20 | 14 | 1 | 4 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 35 | 31 | 1 | 1 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 39 | 27 | 6 | 3 | 3 |
-| **Total** | **255** | **205** | **18** | **18** | **14** |
+| **Total** | **255** | **206** | **17** | **18** | **14** |
 
 Counted from the story headers on 2026-10-28 after the current feature and maintenance work. The reviews added five feature stories and eight hygiene stories, and corrected E1-S12 from missing to partial.
 
@@ -2500,7 +2500,7 @@ Next slice: `POST /api/collection/scan` (one photo, shrunk in the page on a canv
 
 The physical side of home's shared pool: each built deck and each product kept intact is in one sleeve design and one deck box, every other card sits unsleeved in the storage box, and moving a card between decks means changing its sleeve. Deck Lab records the sleeves, deck boxes and playmats (each Matt's, User1's or shared) on the Sleeves & boxes page, a built deck's Sleeves and Deck box lines and an intact product's kit, warns when a holder has too few sleeves or a box that is full or too small, and lets one sleeve design sleeve several holders. Choosing a deck's kit needs the right to edit that deck; an owner may make their kit public (read-only), and members never see private kit. Accessory prices are not wanted.
 
-Open: E8-S03, E8-S15, E8-S19.
+Open: E8-S03, E8-S19.
 
 **E8-S01** · Matt · must · M · built
 
@@ -2672,7 +2672,7 @@ Now: built 2026-10-27 ([HISTORY.md](../HISTORY.md#whole-deck-take-apart-checklis
 
 Related scope: E11-S30's [slice 13](visual-design.md#7-rollout) owns intact-product take-apart and transfer. Reuse presentation where useful, while keeping this whole-deck checklist's acceptance separate.
 
-**E8-S15** · Matt · could · S · partial
+**E8-S15** · Matt · could · S · built
 
 As Matt, I want a built deck's sleeves to follow when the deck changes hands between me and User1 (or becomes 'either'), so that the deck isn't left using sleeves its new player can't see or change.
 
@@ -2691,7 +2691,7 @@ Recognized-choice intent is optional, bounded and never authorization: both APIs
 
 Further evidence: `api/editor.py`, `saving._KitThenSave`/`reviewed_kit_rows`, `editor-details.js`, normal `editor-save.js` payload and minimal `editor.js` persistence/cache hooks. Root's protected nine-module/class integration passed 208 tests without skips, including 29 new backend and 30 new UI cases, contracts, old/Quick editing and Considering promotions. The necessary isolated contract loader was updated; editor.js remains 1,198 lines. Independent/root review, syntax, Ruff, diff and length checks pass.
 
-Gap: add helpful owner hand-off guidance after the actual hidden-kit refusal, without a new kit-existence preflight or naming private accessories. Hidden null fields cannot prove that a kit exists. An owner transferring their accessories remains separately owner-authorized; Matt does not gain User1's private kit choices. Genuine PostgreSQL and browser/device qualification remain unrun. See [HISTORY.md](../HISTORY.md#review-player-and-permitted-kit-together-2026-10-28-e8-s15-slice).
+Now: source criteria complete 2026-10-28. The two actual kit-owner refusals carry a fixed generic tag. Check and Save preserve the draft and offer generic owner hand-off guidance, Keep editing and explicit Refresh and reapply draft, without a kit-existence preflight or private names. Refresh is bound to the current page/profile/route/sheet/frame and original footer control; failure preserves the draft and deliberate retry, while stale answers cannot apply. Ordinary 403/404/409 paths remain unchanged. Hidden nulls never prove a kit exists, and a real accessory transfer remains separately owner-authorized. Root's final protected integration passed 114 tests without skips, including 32 backend and 40 UI cases; independent/root review and source checks pass. Genuine PostgreSQL and browser/device qualification remain unrun. See [HISTORY.md](../HISTORY.md#guidance-after-a-private-kit-refusal-2026-10-28-e8-s15).
 
 **E8-S16** · Space members · should · S · built
 

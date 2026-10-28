@@ -9,10 +9,11 @@ import json
 from unittest import mock
 
 from decklab.lib import access, accessories, api, decks, inventory
-from decklab.lib.api import saving
+from decklab.lib.api import guard, saving
 from decklab.lib.inventory import files
 from decklab.tests.test_api import _write
 from decklab.tests.test_api_permissions import PermissionTestCase
+from decklab.tests.test_collection_edit import ROLES
 from decklab.tests.test_editor import sandbox_accessories
 
 
@@ -159,14 +160,19 @@ class PlayerKitSaveTests(PermissionTestCase):
         self.write_deck("wife", "private-sleeves", "private-deck-box")
         before = files.render(self.backend.load())
         error = self.assertApiError(403, lambda: self.save_player({"player": "user"}))
+        self.assertEqual(error.extra, {"reason": "kit_ownership"})
+        self.assertEqual(error.message, "This deck's sleeves and deck box aren't yours to hand on: only their owner can "
+                                       "change who plays it while it holds them.")
         for hidden in ("User1", "private-sleeves", "private-deck-box", "Fixture"):
             self.assertNotIn(hidden, error.message)
         self.assertEqual(files.render(self.backend.load()), before)
 
     def test_matt_cannot_choose_the_private_destination_kit(self):
         before = files.render(self.backend.load())
-        self.assertApiError(403, lambda: self.save_player({"player": "wife", "sleeves": "private-sleeves",
-                                                         "deck_box": "private-deck-box"}))
+        error = self.assertApiError(403, lambda: self.save_player({"player": "wife", "sleeves": "private-sleeves",
+                                                                  "deck_box": "private-deck-box"}))
+        self.assertEqual(error.extra, {"reason": "kit_ownership"})
+        self.assertEqual(error.message, "This deck's sleeves and deck box are User1's to choose.")
         self.assertEqual(files.render(self.backend.load()), before)
 
     def test_stale_deck_sha_refuses_before_any_assignment(self):
@@ -174,7 +180,8 @@ class PlayerKitSaveTests(PermissionTestCase):
         _write(self.deck_path, self.deck_path.read_text(encoding="utf-8") + "\nAnother fixture edit.\n")
         before = files.render(self.backend.load())
         with mock.patch.object(self.backend, "apply", wraps=self.backend.apply) as applied:
-            self.assertApiError(409, lambda: self.save_player({"player": "either", "sleeves": None, "deck_box": None}, sha=sha))
+            error = self.assertApiError(409, lambda: self.save_player({"player": "either", "sleeves": None, "deck_box": None}, sha=sha))
+        self.assertNotEqual(error.extra.get("reason"), "kit_ownership")
         applied.assert_not_called()
         self.assertEqual(files.render(self.backend.load()), before)
 
@@ -369,6 +376,7 @@ class PlayerKitSaveTests(PermissionTestCase):
         for endpoint in (self.check_player, self.save_player):
             with self.subTest(endpoint=endpoint.__name__):
                 error = self.assertApiError(403, lambda: endpoint(fields, kit_rows=[]))
+                self.assertEqual(error.extra, {"reason": "kit_ownership"})
                 for hidden in ("User1", "private-sleeves", "private-deck-box", "Fixture"):
                     self.assertNotIn(hidden, error.message)
                 self.assertEqual(files.render(self.backend.load()), before)
@@ -379,6 +387,7 @@ class PlayerKitSaveTests(PermissionTestCase):
         for endpoint in (self.check_player, self.save_player):
             with self.subTest(endpoint=endpoint.__name__):
                 error = self.assertApiError(404, lambda: endpoint(fields, profile="user2", kit_rows=None))
+                self.assertNotEqual(error.extra.get("reason"), "kit_ownership")
                 for hidden in ("matt-sleeves", "private-sleeves", "shared-sleeves", "Fixture"):
                     self.assertNotIn(hidden, error.message)
                 self.assertEqual(files.render(self.backend.load()), before)
@@ -393,11 +402,39 @@ class PlayerKitSaveTests(PermissionTestCase):
             for endpoint in (self.check_player, self.save_player):
                 with self.subTest(endpoint=endpoint.__name__):
                     error = self.assertApiError(403, lambda: endpoint(fields, kit_rows=selected))
+                    self.assertEqual(error.extra, {"reason": "kit_ownership"})
                     for hidden in ("User1", "private-sleeves", "private-deck-box", "Fixture"):
                         self.assertNotIn(hidden, error.message)
                     read.assert_not_called()
                     rows.assert_not_called()
         self.assertEqual(files.render(self.backend.load()), before)
+
+    def test_ordinary_deck_permission_refusal_does_not_claim_a_kit_ownership_problem(self):
+        before = files.render(self.backend.load())
+        with mock.patch.object(accessories, "read", side_effect=AssertionError("Accessory reader ran")) as read:
+            error = self.assertApiError(403, lambda: self.save_player({"player": "wife"}, profile="user1"))
+        self.assertNotEqual(error.extra.get("reason"), "kit_ownership")
+        read.assert_not_called()
+        self.assertEqual(files.render(self.backend.load()), before)
+
+    def test_ordinary_accessory_permission_refusal_is_not_the_private_owner_classification(self):
+        profile = next(profile for profile in ROLES["profiles"] if profile["id"] == "user2")
+        with access.using({"profile": "user2", "email": "", "remote": True}), \
+                mock.patch.object(accessories, "read", side_effect=AssertionError("Accessory reader ran")) as read:
+            error = self.assertApiError(403, guard.require_kit_choice, profile,
+                                       {"space": "home", "player": "user"}, {"sleeves": None, "deck_box": None})
+        self.assertNotEqual(error.extra.get("reason"), "kit_ownership")
+        read.assert_not_called()
+
+    def test_a_person_space_without_kit_is_not_a_private_owner_refusal(self):
+        profile = next(profile for profile in ROLES["profiles"] if profile["id"] == "matt")
+        with access.using({"profile": "matt", "email": "", "remote": True}), \
+                mock.patch.object(accessories, "read", side_effect=AssertionError("Accessory reader ran")) as read:
+            error = self.assertApiError(403, guard.require_kit_choice, profile,
+                                       {"space": "user2", "player": None}, {"sleeves": None, "deck_box": None})
+        self.assertEqual(error.message, "A deck in a person's own collection has no sleeves or deck box.")
+        self.assertNotEqual(error.extra.get("reason"), "kit_ownership")
+        read.assert_not_called()
 
     def test_try_a_change_without_recognized_metadata_keeps_its_existing_read_only_check(self):
         self.write_deck("wife", "private-sleeves", "private-deck-box")

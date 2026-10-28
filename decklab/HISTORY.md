@@ -2,6 +2,31 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Guidance after a private-kit refusal (2026-10-28; E8-S15)
+
+Check and Save now explain the hand-off path after an actual private-kit
+ownership refusal. The two existing ownership 403s carry one fixed generic
+reason tag; their status, wording, authorization order and readers are unchanged.
+Hidden decks, ordinary permission failures, stale revisions and person-space
+kit refusals retain their existing classifications.
+
+The review preserves the open draft and offers Keep editing or an explicit
+Refresh and reapply draft. It names no private accessory or owner, sends no
+message and performs no automatic refresh/write. Refresh uses the existing
+reapply flow, with its optional ownership predicate binding the response to the
+original connected footer control. Closing/replacing the sheet, switching
+profile/route/frame or replacing that footer prevents late application. Failed
+refreshes preserve the draft and allow deliberate retry; successful guidance
+refreshes retain no raw original error in their notice.
+
+Root's final protected six-target integration passed 114 tests without skips,
+including 32 backend and 40 UI cases in the focused modules (3 new backend and
+10 new UI regressions). Independent/root review, Node syntax, Ruff, diff and
+source-length checks pass. Together with the permitted combined player/kit
+review, this completes E8-S15's source criteria. Actual accessory transfers
+remain owner-authorized; genuine PostgreSQL, browser/device and live-runtime
+qualification remain separate. No live kit, server or service action was used.
+
 ## Integrated fixture checkpoint (2026-10-28)
 
 The protected four-shard suite qualifies the accumulated source through

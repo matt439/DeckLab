@@ -474,6 +474,7 @@ async function reviewSave(answer = undefined) {
   }
   if (!answer) {
     if (ed.checkError && renamedEditorConflict(sheet, ed.checkError)) return;
+    if (showEditorKitOwnership(sheet, ed.checkError)) return;
     clear(sheet.body).append(el("div", { class: "box box-crit" }, el("p", {
       text: `The deck couldn't be checked, so it can't be saved yet: ${ed.checkError ? ed.checkError.message : "try again."}` })));
     sheetActions(sheet, [{ text: "Try again", kind: "primary", onclick: () => { sheet.close(); reviewSave(); } },
@@ -481,6 +482,31 @@ async function reviewSave(answer = undefined) {
     return;
   }
   drawReview(sheet, answer);
+}
+
+/** A real ownership refusal offers a hand-off path, without inferring private kit from hidden fields. */
+function showEditorKitOwnership(sheet, error) {
+  const ed = editor;
+  if (ed?.mode !== "edit" || !(error instanceof ApiError) || error.status !== 403 || error.data?.reason !== "kit_ownership") return false;
+  const current = editorWriteOwner(ed, sheet);
+  if (!current()) return true;
+  clear(sheet.body).append(el("div", {class: "box box-info"},
+    el("h3", {text: "The kit's owner needs to prepare this hand-off"}),
+    el("p", {text: "Nothing was saved. Your changes are still in this open editor."}),
+    el("p", {text: "Kit choices belong to their owner. Ask the owner to prepare the hand-off before trying this player change again."}),
+    el("p", {text: "Once that is done, refresh the deck and reapply your draft. You can review it before saving."})));
+  let refreshing = false;
+  const owns = button => current() && !button.disabled && button.isConnected && sheet.foot.contains(button);
+  sheetActions(sheet, [{text: "Keep editing", kind: "primary", onclick: event => {
+    if (owns(event.currentTarget)) sheet.close();
+  }}, {text: "Refresh and reapply draft", onclick: async event => {
+    const button = event.currentTarget;
+    if (refreshing || !owns(button)) return;
+    refreshing = true;
+    try { await reapplyLatest(sheet, null, button, () => button.isConnected && sheet.foot.contains(button)); }
+    finally { refreshing = false; }
+  }}]);
+  return true;
 }
 
 /** A new deck's header fields as the review lists them ([label, words]): what creating it writes. */
@@ -653,6 +679,7 @@ async function doSave(sheet, button, { viewAfter = false } = {}) {
       sheet = openSheet(ed.mode === "new" ? "Create this deck?" : `Save ${ed.title}?`, { wide: true });
     }
     if (e.status === 409 && ed.mode === "edit") return showConflict(sheet, e);
+    if (showEditorKitOwnership(sheet, e)) return;
     const blocks = e.data && e.data.blocks;
     clear(sheet.body).append(el("div", { class: "box box-crit" },
       el("h3", { text: ed.mode === "new" && e.status === 409 ? "That title is taken" : "It wasn't saved" }),
@@ -747,9 +774,10 @@ function showConflict(sheet, error) {
     { text: "Discard my changes", kind: "discard", onclick: () => askDiscardChanges(sheet) }]);
 }
 
-async function reapplyLatest(sheet, error, button) {
+async function reapplyLatest(sheet, error, button, requestCurrent = null) {
   const ed = editor;
-  const current = editorWriteOwner(ed, sheet);
+  const owned = editorWriteOwner(ed, sheet);
+  const current = () => owned() && (!requestCurrent || requestCurrent());
   if (!current()) return;
   if (button) busy(button, "Loading the latest...");
   let view;

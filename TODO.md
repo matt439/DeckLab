@@ -44,7 +44,6 @@ An index of open work, one row per item; each row points to the doc that owns th
 | `E2-S22` | DECISION | must | M | Physical hardware/touch-usability follow-up on the household's iPhones and M2 11-inch iPad; the six-configuration Safari Simulator suite passes ([evidence](decklab/safari/EVIDENCE.md)). |
 | `E4-S18` | OPEN | could | M | Record 3–4-player games with external opponent seats; keep pod results apart from 1v1. Also covers `E9-S16`. |
 | `E4-S26` | BLOCKED | could | M | Extend the built two-player life counter to pods after `E4-S18` supplies multiplayer game records. |
-| `E8-S15` | OPEN | could | S | Permitted combined player/kit review is built; add helpful hand-off guidance after an actual hidden-kit refusal. |
 | `E8-S19` | OPEN | could | M | Show a labelled storage-box forecast for pending deliveries, with intact products and unknown quantities handled explicitly. |
 
 ## Deck Lab: collection, orders and buying

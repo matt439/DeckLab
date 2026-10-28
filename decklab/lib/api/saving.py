@@ -390,7 +390,7 @@ def _require_kit_moves(profile, deck, fields):
     owners = guard.accessory_owners(profile)
     if not guard.sees_kit({"space": deck.space, "player": deck.player}, owners):
         raise ApiError(403, "This deck's sleeves and deck box aren't yours to hand on: only their owner can "
-                            "change who plays it while it holds them.")
+                            "change who plays it while it holds them.", reason=guard.KIT_OWNERSHIP)
     guard.require_kit_choice(profile, guard.deck_after(deck, fields),
                              {key: value or "" for key, value in kit.items()})
 
