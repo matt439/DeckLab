@@ -1,6 +1,6 @@
 /* Compare two decks (E1-S13, its first slice): #/compare?a=<deck id>&b=<deck id>[&av=target|owned&bv=...], the
  * two lists' stats side by side: their counts in brief, their mana curves on one scale, their colours and colour
- * sources, and their card types. It reads each deck as its own page does (GET /api/deck, the viewer's rights),
+ * sources, and their card types and roles. It reads each deck as its own page does (GET /api/deck, the viewer's rights),
  * so a deck the viewer may not see answers as missing and the page shows that instead. Read-only: nothing here
  * changes either deck. The way in is a deck page's More, "Compare with…" (openCompareChooser), which lists the
  * decks the viewer sees (GET /api/decks) and, for a deck with both lists, its own other list.
@@ -131,8 +131,11 @@ function compareBrief(sides, labels) {
   const lands = (st) => {
     const l = st.lands;
     if (!l) return null;
+    // Off the formula: the Stats tab's verdict (Low, Slightly high…) beside the count.
+    const off = l.verdict && l.verdict !== "ok";
     return el("span", {}, num(l.effective), l.recommended != null
-      ? el("small", { class: "compare-hint", text: ` formula ${num(l.recommended, 1)}` }) : null);
+      ? el("small", { class: "compare-hint", text: ` formula ${num(l.recommended, 1)}` }) : null,
+    off ? [" ", status(VERDICT_KIND[l.verdict] || "warn", capitalise(l.verdict))] : null);
   };
   const sources = (st) => {
     const c = st.colours;
@@ -196,13 +199,15 @@ function compareCurve(curve, label, top, group) {
   return figure;
 }
 
-/** Each side's colour identity, then every colour (or group) either side's spells need: the sources it has
- * against the number its hardest card needs, Short where it falls short. */
+/** Each side's colour identity, then every colour (or group) either side's spells need, in WUBRG order: the
+ * sources it has against the number its hardest card needs, Short by how many where it falls short. */
 function compareColours(sides, labels) {
   const keys = [];
   for (const d of sides) {
     for (const c of d.stats?.colours?.colours || []) if (!keys.some((k) => k.colours === c.colours)) keys.push(c);
   }
+  const order = "WUBRG";
+  keys.sort((x, y) => order.indexOf(x.colours[0]) - order.indexOf(y.colours[0]) || x.colours.localeCompare(y.colours));
   const identity = (d) => {
     const pieces = deckColourPieces(Array.isArray(d.summary.colors) ? d.summary.colors : deckPageColours(d));
     return pieces ? pieces.pips(16) : null;
@@ -212,7 +217,8 @@ function compareColours(sides, labels) {
     if (!row) return null;
     const h = row.hardest || {};
     const words = h.needed != null ? `${num(h.have)} of ${h.needed}` : `${num(h.have)}`;
-    return el("span", {}, words, row.ok === false ? [" ", status("warn", "Short")] : null);
+    const by = h.needed != null && h.have != null && h.needed > h.have ? ` by ${num(h.needed - h.have)}` : "";
+    return el("span", {}, words, row.ok === false ? [" ", status("warn", `Short${by}`)] : null);
   };
   return comparePart("h-compare-colours", "Colours", compareTable("Colours and colour sources", labels, [
     ["Colour identity", ...sides.map(identity)],
@@ -221,7 +227,8 @@ function compareColours(sides, labels) {
     "cast on time (Frank Karsten's tables; the Stats tab explains them)." }) : null);
 }
 
-/** Copies of each card type (a card can have two), with a bar on one scale for both sides. */
+/** Copies of each card type (a card can have two), with a bar on one scale for both sides, then copies with each
+ * role (the Stats tab's, from Scryfall's tags) either side has. */
 function compareTypes(sides, labels) {
   const counts = sides.map((d) => new Map((d.stats?.types || []).map((t) => [t.type, t.count])));
   const types = COMPARE_TYPES.filter((t) => counts.some((m) => m.get(t)));
@@ -233,9 +240,17 @@ function compareTypes(sides, labels) {
     bar.style.width = `${Math.round(n / max * 100)}%`;
     return el("span", { class: "compare-count" }, el("span", { class: "compare-track" }, bar), num(n));
   };
-  return comparePart("h-compare-types", "Card types", types.length
+  const roleCounts = sides.map((d) => new Map((d.stats?.roles || []).map((r) => [r.role, r.count])));
+  // In the Stats tab's order (ROLE_WORDS), a role it doesn't name last.
+  const known = Object.keys(ROLE_WORDS), at = (r) => (known.includes(r) ? known.indexOf(r) : known.length);
+  const roles = [...new Set(roleCounts.flatMap((m) => [...m].filter(([, n]) => n > 0).map(([role]) => role)))]
+    .sort((x, y) => at(x) - at(y));
+  return comparePart("h-compare-types", "Card types and roles", types.length
     ? compareTable("Copies of each card type", labels, types.map((t) => [capitalise(t), ...counts.map((m) => cell(m, t))]))
-    : el("p", { class: "sub", text: "No card types to compare." }));
+    : el("p", { class: "sub", text: "No card types to compare." }),
+  roles.length ? [el("h3", { class: "compare-roles-head", text: "Roles" }), compareTable("Copies with each role", labels, roles.map((r) =>
+    [(ROLE_WORDS[r] || [capitalise(r)])[0], ...sides.map((d, i) => (d.stats ? num(roleCounts[i].get(r) || 0) : null))]))]
+    : null);
 }
 
 // Cards both use, head to head ---------------------------------------------

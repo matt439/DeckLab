@@ -5,13 +5,23 @@ Runs in test_api's sandbox: Gruul Test and Elf Commander (neither built) both us
 the collection has 5 Llanowar Elves (the intact Beginner Box holds 2) and a Sol Ring, with another on the way
 in the preordered precon. Nothing is written.
 
+PrivacyTests runs as real profiles (test_deck_privacy_readers' sandbox, with user2's own deck), and
+SharedHttpTests checks the route's query names.
+
 Run from the repo root: python -m unittest decklab.tests.test_compare
 """
 import json
+import unittest
 from unittest import mock
 
 from decklab.lib.api import compare
+from decklab.tests import test_server as server_tests
 from decklab.tests.test_api import ApiTestCase, _write
+from decklab.tests.test_deck_privacy_readers import R_DECK_ID, _as, _Hidden
+
+GRUUL = "casual/gruul-test"
+ELVES = "commander/elf-commander"
+MISSING = "casual/never-was"
 
 BUILT = """# Elf Box
 
@@ -97,6 +107,48 @@ class SharedTests(ApiTestCase):
         self.assertApiError(404, self.shared, "casual/gruul-test", "commander/elf-commander", None, "owned")  # no Play-now list
 
 
+class PrivacyTests(_Hidden):
+
+    def shared(self, a, b):
+        return compare.shared_view(a, None, b, None)
+
+    def test_a_hidden_deck_on_either_side_is_a_missing_one(self):
+        # Another space's deck, an admin included, answers exactly as a deck that doesn't exist, whichever side.
+        cases = (("user2", GRUUL, R_DECK_ID), ("user1", R_DECK_ID, GRUUL), ("matt", R_DECK_ID, ELVES))
+        for who, hidden, seen in cases:
+            for side in (0, 1):
+                pair = (hidden, seen) if side == 0 else (seen, hidden)
+                gone = (MISSING, seen) if side == 0 else (seen, MISSING)
+                with self.subTest(who=who, hidden=hidden, side=side):
+                    got = self.error(who, self.shared, *pair)
+                    self.assertEqual(got, (404, "No deck '<id>'", {}))
+                    if who == "user2":      # the only deck user2 sees is their own, on the other side
+                        continue
+                    self.assertEqual(got, self.error(who, self.shared, *gone))
+        with _as("user2"):
+            answer = self.shared(R_DECK_ID, R_DECK_ID)
+        self.assertEqual((answer["a"]["id"], answer["b"]["id"], answer["together"]), (R_DECK_ID, R_DECK_ID, False))
+
+    def test_a_pairing_typed_into_the_address_bar(self):
+        # A "+" in a pairing's id typed into the address bar arrives as a space.
+        answer = self.shared("pairing/cats elves", GRUUL)
+        self.assertTrue(answer["a"]["id"].startswith("pairing/"))
+        self.assertNotIn(" ", answer["a"]["id"])
+
+
+class SharedHttpTests(server_tests.ServerTestCase):
+
+    def test_get_and_head_with_only_its_query_names(self):
+        with mock.patch.object(compare, "shared_view", return_value={"cards": []}) as view:
+            path = "/api/compare/shared?a=casual%2Fgruul-test&b=casual%2Fgruul-test&av=target&bv=owned"
+            self.assertEqual(self.get_json(path), {"cards": []})
+            view.assert_called_once_with(a=GRUUL, b=GRUUL, av="target", bv="owned")
+            code, _, body = self.request("HEAD", path)
+            self.assertEqual((code, body), (200, b""))
+            self.assertError("/api/compare/shared?a=x&id=y", 400)
+            self.assertError("/api/compare/shared?a=x", 405, method="POST", body=b"{}",
+                             headers=dict(server_tests.WRITE, Origin=f"http://127.0.0.1:{self.port}"))
+
+
 if __name__ == "__main__":
-    import unittest
     unittest.main()

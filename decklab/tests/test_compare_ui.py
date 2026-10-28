@@ -17,17 +17,20 @@ SETUP = PAGE + """
   const curveOf = (totals, average) => ({average_mv: average, creatures: totals.reduce((n, t) => n + t[0], 0),
     noncreatures: totals.reduce((n, t) => n + t[1], 0), outside: [], x_spells: null,
     buckets: ['0', '1', '2', '3', '4', '5', '6', '7+'].map((mv, i) => bucket(mv, ...(totals[i] || [0, 0])))});
-  const statsOf = (totals, average, lands, colours, types) => ({curve: curveOf(totals, average),
+  const statsOf = (totals, average, lands, colours, types, roles = {}) => ({curve: curveOf(totals, average),
     lands: {effective: lands, recommended: 23.5, verdict: 'ok'}, colours: {colours}, unresolved: [],
     types: ['creature', 'instant', 'sorcery', 'artifact', 'enchantment', 'planeswalker', 'battle', 'land']
-      .map((type) => ({type, count: types[type] || 0, cards: []}))});
+      .map((type) => ({type, count: types[type] || 0, cards: []})),
+    roles: Object.entries(roles).map(([role, count]) => ({role, count, cards: []}))});
   const green = {colours: 'G', name: 'green', ok: true, hardest: {have: 14, needed: 13}};
   const red = {colours: 'R', name: 'red', ok: false, hardest: {have: 6, needed: 9}};
   const deckA = () => { const p = makePage(); p.summary.colors = ['G'];
-    p.stats = statsOf([[0, 0], [4, 0], [6, 2]], 1.8, 20, [green], {creature: 10, instant: 2, land: 20}); return p; };
+    p.stats = statsOf([[0, 0], [4, 0], [6, 2]], 1.8, 20, [green], {creature: 10, instant: 2, land: 20},
+      {ramp: 4, removal: 0}); return p; };
   const deckB = () => { const p = makePage(); Object.assign(p.summary, {id: 'casual/burn', title: 'Burn', colors: ['R']});
     p.versions = ['target']; p.summary.versions = ['target'];
-    p.stats = statsOf([[0, 0], [2, 9], [3, 1], [0, 3]], 2.1, 22, [red], {creature: 5, instant: 12, land: 22}); return p; };
+    p.stats = statsOf([[0, 0], [2, 9], [3, 1], [0, 3]], 2.1, 22, [red], {creature: 5, instant: 12, land: 22},
+      {burn: 9, removal: 6}); return p; };
   const asked = [];
   let answers = {};
   api = async (path) => {
@@ -86,17 +89,28 @@ class CompareUiTests(unittest.TestCase):
           same(main.querySelectorAll('.compare-chart').map((c) => c.querySelector('h3').textContent), ['Test Deck', 'Burn']);
           same(rows('Cards at each mana value').slice(0, 4), [['Mana value 0', '0', '0'], ['Mana value 1', '4', '11'],
             ['Mana value 2', '8', '4'], ['Mana value 3', '0', '3']]);
-          // Every colour either side needs, a dash (read as None) where a side has none.
-          same(rows('Colours and colour sources').map((r) => r[0]), ['Colour identity', 'Green sources', 'Red sources']);
-          same(rows('Colours and colour sources')[1], ['Green sources', '14 of 13', '–None']);
-          same(rows('Colours and colour sources')[2], ['Red sources', '–None', '6 of 9 Short']);
-          // Only the types either deck has.
+          // Every colour either side needs, in WUBRG order, a dash (read as None) where a side has none, and by
+          // how many a side falls short.
+          same(rows('Colours and colour sources').map((r) => r[0]), ['Colour identity', 'Red sources', 'Green sources']);
+          same(rows('Colours and colour sources')[1], ['Red sources', '–None', '6 of 9 Short by 3']);
+          same(rows('Colours and colour sources')[2], ['Green sources', '14 of 13', '–None']);
+          // Only the types either deck has; then the roles either has (none of a role on both isn't a row).
           same(rows('Copies of each card type'), [['Creature', '10', '5'], ['Instant', '2', '12'], ['Land', '20', '22']]);
+          same(rows('Copies with each role'), [['Removal', '0', '6'], ['Ramp', '4', '0'], ['Burn', '0', '9']]);
           // More: swap the sides, or choose another deck.
           main.querySelector('.menu-wrap').querySelector('button').click();
           const more = main.querySelector('.menu-wrap').querySelectorAll('[role=menuitem]');
           assert.equal(more[0].getAttribute('href'), '#/compare?a=casual%2Fburn&b=casual%2Ftest');
           assert.equal(more[1].textContent, 'Compare with another deck…');
+        """)
+
+    def test_lands_off_the_formula_say_so(self):
+        self.run_js("""
+          const b = deckB(); b.stats.lands.verdict = 'slightly low';
+          answers = {'/api/deck?id=casual%2Ftest&': deckA(), '/api/deck?id=casual%2Fburn&': b};
+          await show('#/compare?a=casual%2Ftest&b=casual%2Fburn');
+          // The Stats tab's verdict beside a count off the formula; nothing beside one on it.
+          same(rows('The two lists in brief')[2], ['Lands', '20 formula 23.5', '22 formula 23.5 Slightly low']);
         """)
 
     def test_a_deck_the_viewer_cant_see_is_missing(self):
@@ -165,6 +179,7 @@ class CompareUiTests(unittest.TestCase):
           await show('#/compare?a=casual%2Ftest&b=casual%2Fburn');
           assert(main.querySelector('.box-warn').textContent.includes("Burn's stats couldn't be worked out"));
           same(rows('The two lists in brief')[1], ['Average mana value', '1.8', '–None']);
+          same(rows('Copies with each role'), [['Ramp', '4', '–None']]);
           assert(main.querySelectorAll('.compare-chart')[1].textContent.includes('No curve'));
         """)
 
