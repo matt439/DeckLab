@@ -95,6 +95,8 @@
   --font-num: var(--font);      /* counts and quantities: Figtree (tabular) casual, mono in the lab (2.3) */
   --fs-fig-mid: 1.5rem;         /* a progress figure (the Packing plan's 19 / 39) */
   --fs-fig: 2.5rem;             /* a big win rate, mono 600 */
+  --fs-life: clamp(4rem, 17vmin, 10rem);   /* the life counter's life totals (play.css), as big as the phone allows */
+  --fs-life-sign: 2rem;         /* its − and + */
   --fs-fig-unit: 1.5rem;        /* its "%" */
   --fs-fig-sm: 1rem;            /* an inline win rate, mono 600 */
   --fs-fig-range: .875rem;      /* the range after an inline win rate, mono 500 */

@@ -228,6 +228,9 @@ function playQuickRecord(data, deckId) {
     el("h2", { id: "play-quick-title", text: "Record a game" }),
     el("div", { class: "play-quick-decks" }, sides.map((side, i) =>
       el("label", { class: "field", for: `play-quick-deck-${i}` }, side.label, side.select))),
+    // The life counter (life-counter.js, E4-S26) for these two decks and names.
+    typeof lifeCounterLauncher === "function" ? lifeCounterLauncher(data, () => sides.map((side, i) =>
+      ({ list: side.get(), name: side.player.value.trim() || names[i] }))) : null,
     el("details", { class: "play-more" }, el("summary", { text: "More details" }),
       el("div", { class: "play-more-body" },
         el("label", { class: "field", for: "play-quick-date" }, el("span", { text: "Date played" }), date),
@@ -403,7 +406,9 @@ function playFormActive(sheet, token, profile) {
   return !sheet.closed && sheet.dialog.isConnected && routeToken === token && state.profile?.id === profile;
 }
 
-function playGameForm(data, deckId, entry = null) {
+/** preset (a new game only): {sides: [{id, version, player}, ...], result, onSaved}, the life counter's decks,
+ * names and winner (life-counter.js); onSaved runs once the record is saved. */
+function playGameForm(data, deckId, entry = null, preset = null) {
   const old = entry && entry.record;
   const originToken = routeToken, originProfile = state.profile.id;
   const sheet = openSheet(old ? "Correct a played game" : "Record a played game", { wide: true });
@@ -417,10 +422,13 @@ function playGameForm(data, deckId, entry = null) {
   const date = el("input", { type: "date", required: true, max: data.today, value: old ? old.date : data.today,
     disabled: !can.result || null });
   const notes = el("textarea", { maxlength: 2000, rows: 3, disabled: !can.result || null }, old ? old.notes : "");
-  const players = old ? old.sides.map(side => side.player || side.title) : playPlayers();
+  if (old) preset = null;
+  const players = old ? old.sides.map(side => side.player || side.title)
+    : preset ? playPlayers().map((name, i) => preset.sides[i].player || name) : playPlayers();
+  const chosen = old ? old.result : preset ? preset.result : "";
   const result = el("select", { required: true, disabled: !can.result || null }, [["", "Choose the result"], ["a", `${players[0]} won`], ["b", `${players[1]} won`], ["draw", "Draw"]]
-    .map(([value, text]) => el("option", { value, text, selected: old && old.result === value })));
-  if (old) result.value = old.result;
+    .map(([value, text]) => el("option", { value, text, selected: chosen === value })));
+  if (chosen) result.value = chosen;
   const sides = [0, 1].map(i => {
     const prior = old && old.sides[i];
     if (prior && (prior.hidden || prior.removed || !can.sides[i])) {
@@ -436,7 +444,8 @@ function playGameForm(data, deckId, entry = null) {
     }
     const lists = [...data.lists];
     if (prior && !lists.some(list => list.sha256 === prior.sha256)) lists.push({ ...prior, historical: true });
-    const picker = playListSelect(lists, prior || (i === 0 && deckId ? { id: deckId, version: "target" } : lists[i]));
+    const picker = playListSelect(lists, prior || (preset && preset.sides[i])
+      || (i === 0 && deckId ? { id: deckId, version: "target" } : lists[i]));
     const name = el("input", { type: "text", maxlength: 80, required: true, value: prior ? prior.player : players[i] });
     const mulligans = el("input", { type: "number", min: 0, max: 20, step: 1, required: true, value: prior ? prior.mulligans : 0 });
     const plan = el("select", {});
@@ -489,7 +498,7 @@ function playGameForm(data, deckId, entry = null) {
         return value;
       }) };
     try { await playReview("/api/play/game", payload, sheet,
-      () => generation === requestGeneration && playFormActive(sheet, originToken, originProfile)); }
+      () => generation === requestGeneration && playFormActive(sheet, originToken, originProfile), preset && preset.onSaved); }
     catch (failure) { error.textContent = failure.message; }
     finally { if (submit.isConnected) unbusy(submit); }
   });

@@ -119,6 +119,7 @@ async function chooseProfile(profile) {
   closeAssemblySheets();
   closeProductStorageSheets();
   closeTokenPlanSheets();
+  if (typeof closeLifeCounter === "function") closeLifeCounter();     // life-counter.js: its game stays kept
   closeAccessorySheets();
   closeReceiptSheets();
   state.profile = profile;
@@ -211,6 +212,7 @@ function drawWho() {
   closeAssemblySheets();
   closeProductStorageSheets();
   closeTokenPlanSheets();
+  if (typeof closeLifeCounter === "function") closeLifeCounter();     // life-counter.js: its game stays kept
   closeAccessorySheets();
   closeReceiptSheets();
   stopMatchupRefresh();
@@ -254,6 +256,7 @@ function route() {
   closeAssemblySheets();
   closeProductStorageSheets();
   closeTokenPlanSheets();
+  if (typeof closeLifeCounter === "function") closeLifeCounter();     // life-counter.js: its game stays kept
   closeAccessorySheets();
   closeReceiptSheets();
   stopMatchupRefresh();
