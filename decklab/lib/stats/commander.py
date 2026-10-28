@@ -234,6 +234,52 @@ def _combo_check(by_section):
             "matches": matches}
 
 
+NEAR_MAX = 100      # near combos sent at most (E9-S25); "total" says how many there were
+
+
+def _near_combo_check(by_section, identity, counts, minimum, tags):
+    """The two-card combos the main deck is one card away from (E9-S25), as bracket["near_combos"]:
+    {"checked": True, "matches": [...], "total"}, at most NEAR_MAX, most serious first, or None when
+    the list can't be read (the complete check already says so). The missing piece must fit the
+    commander's colour identity (identity: a set of colour letters) and be legal in Commander (the
+    ban list, from the card data); a piece Deck Lab has no card for is left out too. Each match
+    says what the deck's minimum bracket would be with the piece added ("minimum_with"): its
+    combo's floor, plus the card itself as a Game Changer, mass land denial or extra turn (tags:
+    cards.tag_members' sets, or None when they couldn't be read). counts: (Game Changer names,
+    mass land denial, extra turns, infinite combos) as the deck's minimum counted them."""
+    names = {}
+    for section in ("Deck", "Companion", "Commander"):
+        for e in by_section[section]:
+            names[e.card["oracle_id"]] = e.name
+    try:
+        found = combos.find([e.card["oracle_id"] for e in by_section["Commander"]],
+                            [e.card["oracle_id"] for e in by_section["Companion"] + by_section["Deck"]],
+                            COMBO_FILE, near=True)
+    except combos.ComboListError:
+        return None
+    game_changers, n_mld, n_extra, n_infinite = counts
+    matches = []
+    for combo in found["matches"]:
+        piece = combo["cards"][combo["missing"]]
+        name = cards.resolve(piece["name"])
+        card = cards.card(name) if name else None
+        if (card is None or set(card.get("color_identity", [])) - identity
+                or card.get("commander_legality") != "legal"):
+            continue
+        floor = combos.bracket_floor(combo)
+        oracle_id = card["oracle_id"]
+        with_it = min_bracket(len(game_changers | ({name} if card.get("game_changer") else set())),
+                              n_mld + (floor == 4) + bool(tags and oracle_id in tags[MASS_LAND_DENIAL_TAG]),
+                              n_extra + bool(tags and oracle_id in tags[EXTRA_TURN_TAG]),
+                              n_infinite + (floor == 3))
+        matches.append({"names": [name if p is piece else names.get(p["oracle_id"], p["name"])
+                                  for p in combo["cards"]],
+                        "missing": name, "results": list(combo["results"]), "class": combo["class"],
+                        "standalone": combo["standalone"], "floor": floor, "url": combo["url"],
+                        "minimum_with": with_it, "raises_minimum": with_it > minimum})
+    return {"checked": True, "matches": matches[:NEAR_MAX], "total": len(matches)}
+
+
 def _commander_checks(by_section, sections, unresolved, warnings):
     commanders = by_section["Commander"]
     companions = by_section["Companion"]
@@ -351,7 +397,7 @@ def _commander_checks(by_section, sections, unresolved, warnings):
     except (OSError, KeyError, ValueError) as error:
         warnings.append(f"Scryfall's oracle tags couldn't be read ({error}), so mass land denial "
                         f"and extra turns weren't counted for the bracket.")
-        mld = extra_turns = None
+        mld = extra_turns = tags = None
     two_card = _combo_check(by_section)
     found = two_card["matches"] if two_card["checked"] else []
     infinite_combos, land_combos = ([" + ".join(m["names"]) for m in found if m["floor"] == floor]
@@ -391,7 +437,13 @@ def _commander_checks(by_section, sections, unresolved, warnings):
         reasons.append("Two-card combos weren't checked (the combo list can't be read).")
         warnings.append(f"{two_card['reason']}, so two-card combos weren't checked for the bracket.")
 
-    return {
+    near = None
+    if two_card["checked"] and commanders:
+        near = _near_combo_check(by_section, identity,
+                                 ({e.name for e in game_changers}, len(mld or []) + len(land_combos),
+                                  len(extra_turns or []), len(infinite_combos)), bracket, tags)
+
+    answer = {
         "ok": not problems,
         "problems": problems,
         "problem_cards": problem_cards,
@@ -421,3 +473,6 @@ def _commander_checks(by_section, sections, unresolved, warnings):
             "sources": ["wizards-commander", "brackets-2025-02", "brackets-2025-10",
                         "brackets-2026-02", "tagger", "commander-spellbook"]},
     }
+    if near is not None:        # only beside a combo list that could be read, and a commander
+        answer["bracket"]["near_combos"] = near
+    return answer

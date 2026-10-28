@@ -1,6 +1,7 @@
 """Commander disclosures use synthetic fixture decks and the loaded local index only."""
 import copy
 import json
+import shutil
 import tempfile
 import unittest
 from datetime import datetime, timezone
@@ -284,6 +285,82 @@ class TwoCardComboTests(FixtureStats):
                 self.assertTrue(any("two-card combos weren't checked" in w for w in result["warnings"]))
                 self.assertEqual(result["sources"]["commander-spellbook"]["date"],
                                  "not downloaded yet or can't be read, so combos weren't checked")
+
+
+class NearComboTests(FixtureStats):
+    """E9-S25: the combos one card away (bracket["near_combos"]), from the fixture list."""
+
+    deck = TwoCardComboTests.deck
+
+    def near(self, *args, **kwargs):
+        return self.deck(*args, **kwargs)["near_combos"]
+
+    def write_combos(self, pairs):
+        """A combo list of (present, missing, class, standalone) fixture card names, used for the test."""
+        data = json.loads(COMBOS.read_text(encoding="utf-8"))
+        data["combos"] = [{"id": f"x-{i}", "url": f"https://commanderspellbook.com/combo/x-{i}/",
+                           "cards": [{"oracle_id": cards.card(name)["oracle_id"], "name": name, "must_be_commander": False}
+                                     for name in (a, b)],
+                           "results": ["Something"], "class": kind, "standalone": standalone}
+                          for i, (a, b, kind, standalone) in enumerate(pairs)]
+        tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, tmp, True)
+        path = tmp / "near.json"
+        path.write_text(json.dumps(data), encoding="utf-8")
+        patch = mock.patch.object(commander, "COMBO_FILE", path)
+        patch.start()
+        self.addCleanup(patch.stop)
+
+    def test_one_piece_in_the_deck_names_the_other_and_what_it_would_do_to_the_bracket(self):
+        near = self.near(cards=("Serra Angel",))
+        self.assertEqual(near, {"checked": True, "total": 1, "matches": [{
+            "names": ["Serra Angel", "Pelakka Wurm"], "missing": "Pelakka Wurm",
+            "results": ["Infinite damage", "Infinite lifegain"], "class": "infinite", "standalone": True,
+            "floor": 3, "url": "https://commanderspellbook.com/combo/1-2/", "minimum_with": 3,
+            "raises_minimum": True}]})
+        self.assertEqual(self.deck(cards=("Serra Angel",))["minimum"], 1)     # the deck itself is unchanged
+        # A combo that needs a payoff raises nothing.
+        [match] = self.near(cards=("Rampant Growth",))["matches"]
+        self.assertEqual((match["missing"], match["minimum_with"], match["raises_minimum"]), ("Myriad Landscape", 1, False))
+
+    def test_a_piece_outside_the_commanders_colours_is_left_out(self):
+        # Garruk's Companion (G) + Changeling Outcast (B), under Finneas (GW).
+        self.assertEqual(self.near(cards=("Garruk's Companion",)), {"checked": True, "total": 0, "matches": []})
+
+    def test_a_banned_or_not_legal_piece_is_left_out(self):
+        self.write_combos([("Llanowar Elves", "Primeval Titan", "infinite", True),
+                           ("Llanowar Elves", "Mox Lotus", "infinite", True),
+                           ("Llanowar Elves", "Grizzly Bears", "infinite", True)])
+        self.assertEqual([m["missing"] for m in self.near(cards=("Llanowar Elves",))["matches"]], ["Grizzly Bears"])
+
+    def test_a_game_changer_piece_raises_the_bracket_by_itself(self):
+        self.write_combos([("Hare Apparent", "Smothering Tithe", "other", False)])
+        [match] = self.near(cards=("Hare Apparent",))["matches"]
+        self.assertEqual((match["floor"], match["minimum_with"], match["raises_minimum"]), (1, 3, True))
+
+    def test_a_land_destroying_piece_raises_it_to_four(self):
+        [match] = self.near(cards=("Kitchen Finks",))["matches"]
+        self.assertEqual((match["missing"], match["minimum_with"], match["raises_minimum"]), ("Worldspine Wurm", 4, True))
+
+    def test_a_deck_already_at_the_combos_bracket_isnt_raised(self):
+        self.write_combos([("Serra Angel", "Pelakka Wurm", "infinite", True),
+                           ("Hare Apparent", "Grizzly Bears", "infinite", True)])
+        bracket = self.deck(cards=("Serra Angel", "Pelakka Wurm", "Hare Apparent"))
+        [match] = bracket["near_combos"]["matches"]
+        self.assertEqual((bracket["minimum"], match["missing"], match["minimum_with"], match["raises_minimum"]),
+                         (3, "Grizzly Bears", 3, False))
+
+    def test_at_most_near_max_with_the_total(self):
+        with mock.patch.object(commander, "NEAR_MAX", 1):
+            near = self.near(cards=("Serra Angel", "Rampant Growth"))
+        self.assertEqual((len(near["matches"]), near["total"]), (1, 2))
+        self.assertEqual(near["matches"][0]["missing"], "Pelakka Wurm")     # the more serious one
+
+    def test_none_without_a_commander_or_a_readable_list(self):
+        no_commander = stats.deck_stats(decks.parse_decklist("Deck\n1 Serra Angel\n98 Forest\n"), "commander")
+        self.assertNotIn("near_combos", no_commander["commander"]["bracket"])
+        with mock.patch.object(commander, "COMBO_FILE", FIXTURES / "no-such-combos.json"):
+            self.assertNotIn("near_combos", self.deck(cards=("Serra Angel",)))
 
 
 if __name__ == "__main__":

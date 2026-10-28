@@ -171,6 +171,17 @@ independently of inventory access. They do not certify a bracket: combos of thre
 or more cards, chained extra turns, speed and intent still need a conversation
 with the other players.
 
+The Stats tab's **One card away** panel (E9-S25) lists the two-card combos the
+list holds one piece of, from the same downloaded list: the missing piece must
+fit the commander's colour identity and be legal in Commander (ban list from the
+card data), and a piece that must be the commander is never offered. Each names
+the card to add, an AUD estimate (cheapest non-foil printing, the cached daily
+rate), and what it would do to the minimum bracket against the deck's aim; a
+viewer who sees the space's collection also sees whether a copy is free, on the
+way, in another deck or to buy (free first). Whoever may edit the deck can **Add
+to Considering** (E2-S23), never straight into the lists. At most 100 are sent,
+most serious first, with the total.
+
 **Commander night** (E9-S20, built 2026-10-16) is one optional household record,
 edited in Settings by a home admin. Give it a name; venue, household target
 bracket, published range, house rules/table notes and date last checked are

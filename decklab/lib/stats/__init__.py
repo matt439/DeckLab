@@ -252,6 +252,13 @@ Result (every key is always there; None where it doesn't apply)
                           it needs a payoff, "raises_floor": bool, "floor": 1, 3
                           or 4, "url": its Spellbook page}]} or {"checked": False,
                           "reason"} (no combo list),
+                          "near_combos" (only beside a readable list and a
+                          commander; E9-S25): {"checked": True, "total",
+                          "matches": [{as a combo, minus raises_floor, plus
+                          "missing": the card to add, "minimum_with": the
+                          minimum with it added, "raises_minimum": bool}]},
+                          the missing piece in the commander's colours and
+                          legal in Commander,
                           "not_automatic": [str], "brackets": the five brackets'
                           rules (BRACKETS), "sources": [source id]}
                           A standalone infinite or game-ending combo raises the

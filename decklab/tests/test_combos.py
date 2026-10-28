@@ -221,6 +221,41 @@ class MatchTests(ComboTestCase):
         self.assertEqual(self.ids(combos.find([], ["oracle-1", "oracle-2"])), [])
 
 
+class NearTests(ComboTestCase):
+    """E9-S25: find's near mode, the combos one card away."""
+
+    def setUp(self):
+        super().setUp()
+        self.reduced()
+
+    def near(self, commander_ids, deck_ids):
+        return [(c["id"], c["missing"]) for c in combos.find(commander_ids, deck_ids, near=True)["matches"]]
+
+    def test_one_piece_in_the_deck_names_the_other(self):
+        self.assertEqual(self.near([], ["oracle-1"]), [("1-2", 1)])
+        self.assertEqual(self.near([], ["oracle-2"]), [("1-2", 0)])
+        self.assertEqual(self.near(["oracle-1"], []), [("1-2", 1)])
+
+    def test_complete_combos_and_combos_with_nothing_in_the_deck_arent_near(self):
+        self.assertEqual(self.near([], ["oracle-1", "oracle-2"]), [])
+        self.assertEqual(self.near([], ["oracle-99"]), [])
+
+    def test_a_missing_commander_piece_is_never_one_card_away(self):
+        # Helper is in both 7-8 (Leader only as the commander) and 9-8 (Either from the hand too).
+        self.assertEqual(self.near([], ["oracle-8"]), [("9-8", 0)])
+        # Leader in the 99 isn't the piece, and it's already in the deck, so 7-8 isn't near either.
+        self.assertEqual(self.near([], ["oracle-7"]), [])
+        self.assertEqual(self.near(["oracle-7"], []), [("7-8", 1)])
+        # Leader in the 99 with Helper: 9-8 is near (Either missing); 7-8 is neither complete nor near.
+        self.assertEqual(self.near([], ["oracle-7", "oracle-8"]), [("9-8", 0)])
+
+    def test_most_serious_first_and_the_list_is_left_as_it_was(self):
+        self.assertEqual(self.near([], ["oracle-1", "oracle-3", "oracle-10", "oracle-22"]),
+                         [("10-11", 1), ("1-2", 1), ("3-4", 1), ("22-23", 1)])
+        self.assertFalse(any("missing" in c for c in combos.load()["combos"]))
+        self.assertEqual([c["id"] for c in combos.find([], ["oracle-1", "oracle-2"])["matches"]], ["1-2"])
+
+
 class UpdateTests(ComboTestCase):
     ETAG, MODIFIED = '"abc123"', "Wed, 21 Oct 2026 03:14:10 GMT"
 

@@ -21,6 +21,7 @@ From code:
 
     from decklab.lib import combos
     combos.find(commander_ids, deck_ids)   # {"timestamp", "version", "matches": [combo]}
+    combos.find(commander_ids, deck_ids, near=True)  # one card away: each match + "missing" (E9-S25)
     combos.bracket_floor(combo)            # 1, 3 or 4: what the combo means for the bracket
 
 A combo is {"id", "url", "cards": [{"oracle_id", "name", "must_be_commander"}],
@@ -419,12 +420,24 @@ def bracket_floor(combo):
     return 3 if combo["class"] in ("infinite", "win") else 1
 
 
-def find(commander_ids, deck_ids, path=None):
+def _sort_key(combo):
+    return (-bracket_floor(combo), CLASSES.index(combo["class"]), [p["name"] for p in combo["cards"]])
+
+
+def find(commander_ids, deck_ids, path=None, near=False):
     """The two-card combos whose pieces are both among these oracle ids: the
     Commander section's, and the rest of the main deck's (Companion and Deck;
     never the Sideboard). A piece that must be the commander counts only in
     commander_ids. Returns {"timestamp", "version", "matches": [combo]}, most
-    serious first. Raises ComboListError when the list can't be read."""
+    serious first. Raises ComboListError when the list can't be read.
+
+    near=True (E9-S25) finds the combos one card away instead: exactly one
+    piece in the deck (by the same rule) and the other not, each match a copy
+    of the combo plus "missing", the index (0 or 1) of the piece to add. A
+    missing piece that must be the commander is left out (adding a card never
+    makes it the commander), and so is one whose card is already in the deck in
+    the wrong place (a commander-only piece in the 99). Colour identity and the
+    ban list are card data, checked by the caller (stats/commander.py)."""
     data = load(path)
     commander_ids = set(commander_ids)
     present = commander_ids | set(deck_ids)
@@ -435,9 +448,18 @@ def find(commander_ids, deck_ids, path=None):
                 continue
             seen.add(i)
             combo = data["combos"][i]
-            if all(p["oracle_id"] in (commander_ids if p["must_be_commander"] else present)
-                   for p in combo["cards"]):
-                matches.append(combo)
-    matches.sort(key=lambda c: (-bracket_floor(c), CLASSES.index(c["class"]),
-                                [p["name"] for p in c["cards"]]))
+            held = [p["oracle_id"] in (commander_ids if p["must_be_commander"] else present)
+                    for p in combo["cards"]]
+            if not near:
+                if all(held):
+                    matches.append(combo)
+                continue
+            if sum(held) != 1:
+                continue
+            missing = held.index(False)
+            piece = combo["cards"][missing]
+            if piece["must_be_commander"] or piece["oracle_id"] in present:
+                continue
+            matches.append(dict(combo, missing=missing))
+    matches.sort(key=_sort_key)
     return {"timestamp": data["timestamp"], "version": data["version"], "matches": matches}
