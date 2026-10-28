@@ -390,3 +390,30 @@ UTF-8 BOM and missing final newline, tracked/untracked/current contents, ignored
 caches, exact upstream directory, all six source suffixes, deleted tracked files
 and report-only behaviour. The job requires no database, card cache or Forge
 installation. Hosted CI results remain separate from local validation.
+
+## Fixture-only test entry point: E11-S44
+
+Requested 2026-10-28. Ordinary unittest discovery can run PostgreSQL setup before
+per-test disposable fixtures are installed. Guard source-only checks at their
+entry point, before importing test modules; do not rely on a later skip or on
+the configured server being unavailable.
+
+Ranked implementation choices:
+1. A shared pre-import fixture guard plus default CLI/shard integration: protects
+   both normal entry points and saved-script children, with one owner.
+2. A DB-only opt-out flag: useful but insufficient on its own for private config
+   and non-integration consumers that might call the connector.
+3. Documentation alone: cannot enforce ordering or catch an accidental invocation.
+
+The first choice is the bounded task. Keep application behavior and the actual
+shard-selection algorithm unchanged. Install process-local private-file and
+connector protections before discovery, preserve ordinary disposable config and
+fake-connector tests, and skip explicitly separate Windows runtime checks with
+honest reasons. This is an accident-prevention test runner, not a sandbox for
+malicious code. Genuine DB/runtime acceptance requires separate authorization.
+
+Use failure-safe fake connector, socket and configuration sentinels to verify
+ordering. A broken guard must fail without reaching a genuine configured server
+or real credential file. Cover targeted/sharded execution, idempotence, discovery
+and Windows saved-script spawn metadata. No live probe, credential read, service
+change or server cleanup is part of implementing or validating this entry point.

@@ -45,8 +45,8 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 19 | 13 | 2 | 2 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 20 | 14 | 1 | 4 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 35 | 31 | 1 | 1 | 2 |
-| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 38 | 23 | 6 | 6 | 3 |
-| **Total** | **254** | **196** | **20** | **24** | **14** |
+| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 39 | 23 | 6 | 7 | 3 |
+| **Total** | **255** | **196** | **20** | **25** | **14** |
 
 Counted from the story headers on 2026-10-28 after the feature-reserve and maintenance reviews and the completed Compare and maintenance slices below. The reviews added five feature stories and eight hygiene stories, and corrected E1-S12 from missing to partial.
 
@@ -3784,7 +3784,7 @@ Evidence:
 
 Keeping Deck Lab running, safe and believable, by Matt as the household's admin and by Claude Code working for him at the PC. It covers the server and its Cloudflare tunnel and "Deck Lab is off" page, the PostgreSQL database with its nightly backup, export, check and restore check, the audit trail on #/activity, the `python -m decklab.db` commands Claude works through (previews, `--expect` guards, `-m` messages, exit codes), the card data's background refresh, Forge upkeep and the Safari Simulator suite. Every write is one audited change set, Matt's own command-line writes are recorded as his, and backups are checked by restoring them.
 
-Open: E11-S02, E11-S08, E11-S12, E11-S16, E11-S21, E11-S28, E11-S30, E11-S31, E11-S34, E11-S35, E11-S39, E11-S40.
+Open: E11-S02, E11-S08, E11-S12, E11-S16, E11-S21, E11-S28, E11-S30, E11-S31, E11-S34, E11-S35, E11-S39, E11-S40, E11-S44.
 
 **E11-S01** · Matt · must · M · built
 
@@ -4532,3 +4532,15 @@ Evidence:
 - `.github/workflows/lint.yml`: focused inventory tests and `python scripts/audit_source_lengths.py --check` on every push and pull request.
 - `scripts/audit_source_lengths.py`: unchanged threshold, inventory and upstream exclusions.
 - `decklab/tests/test_source_lengths.py`: seven temporary-Git tests cover 1,200/1,201 lines, tracked/untracked files, ignores, upstream copies, source suffixes, deleted files and report-only output without app data or services.
+
+**E11-S44** · Claude Code · must · S · missing
+
+As the operator running source checks, I want a fixture-only default entry point whose guards run before discovery, so that ordinary code verification cannot authenticate against the configured database or read private configuration.
+
+- Given the fixture runner or normal shard entry point, when tests are imported, then private configuration is treated as absent, genuine PostgreSQL connections are disabled, and database integration classes are skipped before their decorators or setup can probe.
+- Given a saved-script multiprocessing child, then the same protections are installed before worker/test imports.
+- Given fixture files, fake connectors and targeted or sharded discovery, then those checks still work, each discovered case belongs to one shard, and guards affect only the test process.
+- Given a regression that breaks installation order, then fake connector/config sentinels fail safely without contacting a configured server or opening a real credential file.
+- Given actual database or Windows runtime qualification, then the fixture runner makes no acceptance claim; explicit separately authorized integration work remains separate.
+
+First slice (requested 2026-10-28): add a reusable fixture CLI and shared pre-import guards, make existing shard entry points safe by default, and test ordering with disposable sentinels. Update normal developer commands to use the guarded path. The [maintenance owner](../SOURCE_AUDIT.md#fixture-only-test-entry-point-e11-s44) records the boundary and evidence.
