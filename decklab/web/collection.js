@@ -348,7 +348,7 @@ async function colEnsureRows(cv) {
 }
 
 /** After a change: the new rows, and the view drawn again (Find cards loads its page again). */
-function colChanged(cv, answer, words) {
+function colChanged(cv, answer, words, filing = null) {
   if (answer && answer.sha256) cv.sha256 = answer.sha256;
   if (answer && Array.isArray(answer.rows)) cv.rows = answer.rows;
   if (answer && answer.pictures) Object.assign(cv.pictures, answer.pictures);
@@ -360,10 +360,11 @@ function colChanged(cv, answer, words) {
   if (cv.kind === "rows") {
     drawColRowList(cv);
     colSay(cv, words, answer && answer.stale_tables);
+    if (filing) add(cv.message, [colFilingGuide(cv, filing)]);
     setCollectionBusy(cv, false);
     return;
   }
-  colReload(cv, words, answer && answer.stale_tables);
+  colReload(cv, words, answer && answer.stale_tables, filing);
 }
 
 /** Load the view again from the server, then say what happened there: the Find cards counts, or the Card

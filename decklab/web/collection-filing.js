@@ -11,7 +11,7 @@ function colFilingSnapshot(answer, cv, source = "import") {
   const raw = answer.filing;
   if (!raw || raw.space !== cv.space || raw.profile !== cv.profile || cv.space !== ownSpace()) return null;
   const total = Number.isSafeInteger(answer.added?.cards) && answer.added.cards > 0 ? answer.added.cards : null;
-  source = source === "precon" ? "precon" : "import";
+  source = ["precon", "add"].includes(source) ? source : "import";
   const unknown = added => Object.freeze({ space: cv.space, profile: cv.profile, source, status: "unknown", total,
     added: Object.freeze(added), destinations: Object.freeze(added.map((row, index) =>
       Object.freeze({ kind: "unknown", row: index, quantity: row.quantity }))) });
@@ -70,10 +70,11 @@ function colFilingSavedBox(saved, box) {
 /** One set of original controls in either density; Show more never changes the advice or writes. */
 function colFilingGuide(cv, guide) {
   if (!colFilingHere(cv, guide)) return null;
-  const precon = guide.source === "precon", source = precon ? "precon" : "import";
+  const precon = guide.source === "precon", adding = guide.source === "add";
+  const source = precon ? "precon" : adding ? "card addition" : "import";
   const root = el("section", { class: "col-filing-guide", "aria-label": `Where these go, saved ${source}` },
     el("h2", { text: "Where these go" }),
-    el("p", { class: "sub", text: `${guide.total ? `For the ${plural(guide.total, "copy", "copies")} added ${precon ? "with" : "by"} this ${source}. ` : `The ${source} is saved. `}`
+    el("p", { class: "sub", text: `${guide.total ? `For the ${plural(guide.total, "copy", "copies")} added ${adding ? "by this card save" : `${precon ? "with" : "by"} this ${source}`}. ` : `The ${source} is saved. `}`
       + "Filing suggestions based on the deck lists at that point; check them as you file the cards." }));
   const groups = new Map();
   for (const item of guide.destinations) {
@@ -92,7 +93,8 @@ function colFilingGuide(cv, guide) {
     const panel = el("section", { class: "panel col-filing-panel" }, heading,
       group.kind === "storage" ? el("p", { class: "sub", text: "Copies left after the waiting decks: keep them with your unsleeved cards." }) : null);
     const list = el("ul", { class: "col-filing-lines", tabindex: 0,
-      "aria-label": group.kind === "deck" ? `Printing copies suggested for ${group.deck.title}` : "Imported printing copies" });
+      "aria-label": group.kind === "deck" ? `Printing copies suggested for ${group.deck.title}`
+        : adding ? "Added printing copies" : "Imported printing copies" });
     const count = el("p", { class: "result-count", role: "status" });
     let shown = 0;
     const draw = (limit = COL_FILING_PAGE) => {
@@ -105,7 +107,7 @@ function colFilingGuide(cv, guide) {
       count.textContent = `${shown} of ${plural(group.items.length, "printing line")}`;
       more.hidden = shown >= group.items.length;
     };
-    const more = el("button", { type: "button", class: "btn col-filing-more", text: "Show more imported printing lines", onclick: event => {
+    const more = el("button", { type: "button", class: "btn col-filing-more", text: adding ? "Show more printing lines" : "Show more imported printing lines", onclick: event => {
       if (!colFilingHere(cv, guide, root) || !event.currentTarget.isConnected || event.currentTarget.hidden
           || event.currentTarget.disabled || document.querySelector("dialog[open]") || keyboardMenuOpen()) return;
       draw(); if (more.hidden) list.focus({ preventScroll: true });

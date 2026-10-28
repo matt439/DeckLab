@@ -1,4 +1,4 @@
-"""Informational destinations for actually added CSV-import or precon physical copies.
+"""Informational destinations for actually added single-card, CSV-import or precon copies.
 
 The locked additive operation supplies JSON-only printing deltas. The caller supplies its
 exact saved snapshot, never a later load. An import changes no holds, decks or incoming stock,
@@ -20,6 +20,7 @@ MAX_WORK = 200000
 MAX_DESTINATIONS = 20000
 UNKNOWN = "Destination unknown. The import was saved; check where these copies belong."
 PRECON_UNKNOWN = "Destination unknown. The precon was saved; check where these copies belong."
+ADD_UNKNOWN = "Destination unknown. The card was added; check where these copies belong."
 ROW_FIELDS = ("name", "set", "collector_number", "finish")
 
 
@@ -223,6 +224,14 @@ def after_import(after, space, profile, facts, total):
                 "added": added, "destinations": destinations}
     except Exception:           # advice is optional; saved cards and raw imports remain saved
         return unknown(space, profile, facts if authorized else None, total if authorized else 0)
+
+
+def after_add(after, space, profile, facts, total):
+    """A single-card add has the same additive pool invariant, without creating a raw import."""
+    answer = after_import(after, space, profile, facts, total)
+    if answer["status"] == "unknown":
+        answer["message"] = ADD_UNKNOWN
+    return answer
 
 
 def after_precon(after, space, profile, facts, total, proof):

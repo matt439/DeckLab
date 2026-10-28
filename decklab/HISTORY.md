@@ -2,6 +2,32 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Where single-card additions go (2026-10-28; E7-S15 Add slice)
+
+Explicit Collection Add now supplies informational filing advice for its actual
+positive printing delta, including copies merged into an existing row. The
+locked operation can opt into JSON-only before/after facts while its default
+extra remains unchanged. The response's rows, extras, stale tables and guide
+use the exact committed snapshot; no raw import or second write is created.
+Edit, increases through Edit, printing swaps, reductions and removals gain no
+addition advice. Optional advice errors preserve successful saves and use
+Destination unknown rather than inventing storage destinations.
+
+Card list uses its existing message; Find cards uses its frozen one-use reload
+notice. Both retain profile/space ownership, exact printing quantities and
+source-specific captions. Original-route/top-dialog/form ownership, current
+re-add controls and pending/done/stale latches prevent repeat Adds and stale
+success/failure callbacks from redrawing another context. A removed-row edit
+gets advice only after the explicit Add as new action.
+
+Root's protected ten-module/class integration passed 186 tests without skips,
+including 11 new backend and 14 new UI cases, ordinary/precon filing, collection
+edits, ownership/conflict guards and reductions. Additional location and related
+UI fixtures passed. Independent and root source review, Ruff, syntax, diff and
+length guards pass. Genuine PostgreSQL and browser/device qualification remain
+unrun; no live database/server/data action was used. CLI merge advice remains
+on E7-S15.
+
 ## Reviewed Shopping requests from saved tests (2026-10-28; E5-S17)
 
 Home admins can explicitly review one missing addition on a finished saved test,

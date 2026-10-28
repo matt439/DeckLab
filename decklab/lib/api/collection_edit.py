@@ -621,7 +621,9 @@ def save_card(body):
     tracked) unless it's foil or its notes say full art.
 
     Returns {ok, sha256, rows (the whole new list), pictures (_pictures of
-    the row saved, for its thumbnail), prices and storage (_extras, of the whole list), merged, stale_tables (_stale_tables)}; 409 {error,
+    the row saved, for its thumbnail), prices and storage (_extras, of the whole list), merged,
+    stale_tables (_stale_tables)}. Only an add also returns added {rows, cards} and
+    informational filing advice for its actual added copies; 409 {error,
     sha256, rows} when the file has changed since sha256."""
     data = _parse_body(body, MAX_SAVE_BODY)
     profile = _writer(data)
@@ -658,17 +660,33 @@ def save_card(body):
         params["row"] = row
     if original is not None:
         params["original"] = list(original)
+    filing = action == "add"
+    if filing:
+        from . import collection_filing       # load before committing the add
+        params["capture_additions"] = True
     op = inventory.Op(f"collection.{action}", params)
     revision = None
     if action != "add":
         revision, decks_revision = _reduction_guard(op, profile, confirmation)
         op = inventory.Op(op.kind, {**params, "expect_decks_revision": decks_revision})
-    sheet, summary = _apply(space, op, _web_actor(profile), reason, expected_revision=revision)
+    result, summary = _apply(space, op, _web_actor(profile), reason, expected_revision=revision,
+                             **({"return_snapshot": True} if filing else {}))
+    sheet = result.collection(space) if filing else result
     rows, now = _view(sheet)
     shown = _rows_json(rows)
     changed = [r for r in shown if row is not None and _picture_key(r) == _picture_key(row)]
-    return {"ok": True, "sha256": now, "rows": shown, "pictures": _pictures(changed), **_extras(space, shown),
-            "merged": bool(summary.counts.get("merged")), "stale_tables": _stale_tables(space)}
+    with inventory.pinned(result) if filing else contextlib.nullcontext():
+        answer = {"ok": True, "sha256": now, "rows": shown, "pictures": _pictures(changed), **_extras(space, shown),
+                  "merged": bool(summary.counts.get("merged")), "stale_tables": _stale_tables(space)}
+        if filing:
+            counts, facts = summary.counts, summary.extra.get("added_printings")
+            answer["added"] = {"rows": counts["added_rows"], "cards": counts["cards"]}
+            try:
+                answer["filing"] = collection_filing.after_add(result, space, profile, facts, counts["cards"])
+            except Exception:       # an optional guide cannot encourage repeating a successful add
+                answer["filing"] = collection_filing.unknown(space, profile, facts, counts["cards"])
+                answer["filing"]["message"] = collection_filing.ADD_UNKNOWN
+    return answer
 
 
 def _stale_tables(space):

@@ -220,8 +220,8 @@ def _find(rows, original, space):
 # ------------------------------------------------------------------ one card
 
 @register("collection.add")
-def add(inv, space, row, sha256=None, whose=None, where="the page", location=None):
-    """One card added: a listed identity key adds to that row (merge_rows' rules)."""
+def add(inv, space, row, sha256=None, whose=None, where="the page", location=None, capture_additions=False):
+    """One card added; optional JSON-only deltas describe copies actually added under the lock."""
     whose = whose or collection_name(space)
     location = _location(location)
     row = _row(row)
@@ -230,6 +230,8 @@ def add(inv, space, row, sha256=None, whose=None, where="the page", location=Non
     if rules.ordinary_basic(row) and rules.ident(row) not in keys:
         raise Invalid(BASIC_REFUSED)
     merged = rules.ident(row) in keys
+    before_quantity = next((int(r["quantity"]) for r in rows if rules.ident(r) == rules.ident(row)), 0) \
+        if capture_additions else 0
     try:
         rows, counts = rules.merge_rows(rows, [(where, [row])])
     except rules.InvalidCards as e:
@@ -237,8 +239,14 @@ def add(inv, space, row, sha256=None, whose=None, where="the page", location=Non
     after = inv.with_collection(space, rows)
     if location is not None:
         after, _ = _locate(inv, after, space, rules.ident(row), location)
+    extra = {"shown": row}
+    if capture_additions:
+        saved = next(r for r in rows if rules.ident(r) == rules.ident(row))
+        extra["added_printings"] = [{**{key: saved[key] for key in ("name", "set", "collector_number", "finish")},
+                                    "quantity": int(saved["quantity"]) - before_quantity,
+                                    "before_quantity": before_quantity, "after_quantity": int(saved["quantity"])}]
     return after, Summary(
-        f"add card {_label(row)} in {whose}", counts={**counts, "merged": merged}, extra={"shown": row})
+        f"add card {_label(row)} in {whose}", counts={**counts, "merged": merged}, extra=extra)
 
 
 def _expect_decks(inv, expected):

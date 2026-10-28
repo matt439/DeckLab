@@ -2204,12 +2204,16 @@ Built precon handoff (2026-10-28): the locked `precon.add` can opt into exact ad
 
 Precon evidence: `inventory/ops_decks.py`, `api/precons.py`, the shared filing helpers and `editor-deckpage.js`; 14 new backend and nine new UI cases. Root's protected integration passed 172 tests without skips, including ordinary filing, precon/token consumers and saved-box regressions; root review, Ruff, syntax, diff and length guards pass.
 
+Built explicit single-card Add handoff (2026-10-28): the locked add optionally captures its positive printing delta, including copies merged into a listed row. Its response and advice use the exact committed snapshot. Card-list messages and Find-cards notices reuse the frozen own-profile/space guide; stale original controls and late success/failure callbacks cannot replay an Add or redraw a newer context. Edit, quantity increases through Edit, swaps, reductions and removals gain no addition advice. An explicit add-as-new after a removed-row conflict does. No raw import or extra data write is created, and optional advice failures retain successful saves.
+
+Single-card evidence: `inventory/ops_collection.py`, `api/collection_edit.py`, shared filing helpers and `collection-cards.js`; 11 new backend and 14 new UI cases. Root's protected integration passed 186 tests without skips, including ordinary/precon advice, collection saves, UI ownership/conflicts and reductions. Independent/root review, Ruff, syntax, diff and length guards pass.
+
 Evidence:
 - `inventory/ops_collection.py`: opt-in JSON-only added-printing receipts; `api/collection_edit.py`: compatible optional exact-snapshot return and saved-import hook.
 - `api/collection_filing.py`, `web/collection-filing.js` and small Collection/loader hooks: bounded own-space allocation and read-only destination panels. No receipt structural extraction or whole Inventory in Summary.extra.
 - Root's final protected integration passed 113 tests without skips (23 new backend, 15 new UI, existing collection-edit and group consumers). Additional protected UI/source and nine precon compatibility checks passed. Root review and independent source checks are clear; source-length, Ruff, syntax and diff checks pass.
 
-Gap: single-card adds and `collection merge` still need the same filing handoff. Receive delivery retains its existing grouping. No packing, reservation, deck, status or location changes are made by advice. Genuine PostgreSQL and browser/device qualification remain unverified. See [HISTORY.md](../HISTORY.md#where-precon-copies-go-2026-10-28-e7-s15-precon-slice) and the earlier CSV slice.
+Gap: `collection merge` still needs the filing handoff. Receive delivery retains its existing grouping. No packing, reservation, deck, status or location changes are made by advice. Genuine PostgreSQL and browser/device qualification remain unverified. See [HISTORY.md](../HISTORY.md#where-single-card-additions-go-2026-10-28-e7-s15-add-slice) and the earlier precon/CSV slices.
 
 **E7-S16** · Matt · should · M · built
 
