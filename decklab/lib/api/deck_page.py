@@ -632,7 +632,14 @@ def deck_view(deck_id, version="target", omit=()):
         "considering": considering_view(deck_file, deck_id, p, sees, warnings),
     }
     # One card away from a two-card combo (E9-S25): prices for all, availability only with the inventory.
-    near_combos.annotate(stats, deck_id, p, sees, answer["considering"])
+    try:
+        near_combos.annotate(stats, deck_id, p, sees, answer["considering"])
+    except Exception:           # the page still shows the deck and its other stats; the log has the details
+        common._log("Near combos failed:\n" + traceback.format_exc())
+        bracket = ((stats or {}).get("commander") or {}).get("bracket")
+        if isinstance(bracket, dict):
+            bracket.pop("near_combos", None)        # never half annotated
+        warnings.append("The combos one card away couldn't be worked out (the server log says why)")
     if "matchups" not in omit:
         answer["matchups"] = _deck_matchups(summary, version, sections)
     if summary.get("kind") == "commander" and space == spaces.HOME:
