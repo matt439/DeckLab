@@ -12,7 +12,8 @@ psycopg through lib/venv.py; .venv\\Scripts\\python works as well).
   export           write the tables as CSV into the export repo, commit and push
   check            check the data: the rule checks, the decks' invariants and a files round trip
                    (--history: the recent runs)
-  nightly          what the scheduled task runs: backup, prune, visits' prune, export, check, restore check
+  nightly          what the scheduled task runs: backup, prune, visits' prune, export, check, restore check,
+                   MTGMate's purchase-queue prices (lib/shops.py)
   visits           who has visited Deck Lab and what they opened (read-only; visits.py)
   schedule         manage the nightly Task Scheduler task, or preview systemd user units
   wishlist         list or change a profile's wishlist: list, add, set, remove (wishlist_cli.py)
@@ -257,7 +258,7 @@ def parser():
                                   "trip; recorded in ops.backup_run.")
     sp.add_argument("--history", action="store_true", help="print the recent runs instead of checking")
     sp.add_argument("--limit", type=int, default=14, metavar="N", help="with --history: how many runs (default 14)")
-    command("nightly", _nightly, "Backup, prune, the visits' prune, export, check and (monthly) a restore check.")
+    command("nightly", _nightly, "Backup, prune, the visits' prune, export, check, (monthly) a restore check and MTGMate's queue prices.")
     sp = command("visits", _visits, "Show who has visited Deck Lab and what they opened (read-only).", dbname=True)
     sp.add_argument("--days", type=int, default=30, metavar="N",
                     help="the window for days visited and the pages opened most (1-366, default 30)")

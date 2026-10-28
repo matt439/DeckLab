@@ -353,11 +353,11 @@ function shopQueueRow(card, group, showFor = true, view = null, showLongTerm = f
   if (row.matches("button")) row.setAttribute("aria-label", `${card.name}, ${plural(card.quantity, "copy", "copies")}`);
   const move = view && mayDo("orders") && view.data.queue_revision && card.queue_row
     ? shopQueueMove(card, view) : null;
-  const reprints = reprintInfo(card);
-  return view || deck || move || price || reprints ? el("div", { class: "shop-queue-row",
+  const reprints = reprintInfo(card), snapshot = shopSnapshotLine(card);
+  return view || deck || move || price || reprints || snapshot ? el("div", { class: `shop-queue-row${shopSnapshotBack(card) ? " shop-queue-back" : ""}`,
     "data-shop-queue": view ? String(card.queue_row || "") : null, "data-shop-name": view ? shopQueueShop(card) : null,
     "data-shop-match": view && shopMatches(view, card) ? "true" : null }, row,
-    view ? shopQueueResearch(card) : price ? shopReference(card) : null,
+    view ? shopQueueResearch(card) : price ? shopReference(card) : null, snapshot,
     view ? el("span", { class: "sr-only shop-match-words", text: shopMatches(view, card) ? "Matches selected shop." : "" }) : null,
     deck ? el("a", { class: "shop-queue-deck", href: deckHref(deck.id) }, shopDeckSwatch(deck), deck.title) : null, reprints, move) : row;
 }
@@ -556,6 +556,7 @@ async function shopSaveQueue(view, sheet, error, body, card) {
         delete card.is_token;
       Object.assign(card, answer.item);
       if (Object.hasOwn(answer, "reprints")) card.reprints = answer.reprints;
+      if (Object.hasOwn(answer, "shop_snapshot")) card.shop_snapshot = answer.shop_snapshot;
     }
     else {
       const item = { ...answer.item, card: answer.item.card || null, deck: (view.data.queue_decks || []).find((deck) =>
@@ -612,6 +613,7 @@ async function shopMoveQueue(card, next, view, error) {
     if (!shopQueueActive(view)) return;
     card.state = next;
     if (Object.hasOwn(answer, "reprints")) card.reprints = answer.reprints;
+    if (Object.hasOwn(answer, "shop_snapshot")) card.shop_snapshot = answer.shop_snapshot;
     view.data.queue_revision = answer.revision;
     if (next === "long_term") view.expanded.add(card.deck ? card.deck.id : card.for || "");
     view.redraw();

@@ -1332,7 +1332,7 @@ Evidence:
 - `decklab/tests/test_shopping_buying_ui.py`: test_reference_price_and_check_date_are_visible_without_card_data_or_image
 - `decklab/tests/test_purchases.py`: test_queue_has_explicit_state_and_dated_reference_price
 
-**E5-S08** · Matt · could · XL · missing
+**E5-S08** · Matt · could · XL · partial
 
 As a buyer, I want current Australian shop prices and stock for the cards I'm considering, without asking Claude to check by hand, so that I know what a deck will really cost here today.
 
@@ -1340,13 +1340,19 @@ As a buyer, I want current Australian shop prices and stock for the cards I'm co
 - Given a shop can't be reached, then its price is marked unknown rather than replaced by a converted US price.
 - Given no Australian price is known, then any converted figure is labelled an estimate with its rate date.
 
+Now (2026-10-28): the first slice is built ([HISTORY.md](../HISTORY.md#mtgmate-daily-prices-for-the-purchase-queue-2026-10-28-e5-s08-e5-s19)): a daily MTGMate snapshot of the purchase queue's card names, shown on Shopping under each queued row's recorded reference price with its fetch time; a shop that couldn't be read shows "price unknown" (criterion 2). Criterion 3 was already met by the deck price table's labelled estimates.
+
 Evidence:
-- `decklab/lib/cards.py`: cheapest_usd (Scryfall USD only)
-- `decklab/web/deck-prices.js`: ownedSection (the converted-estimate note)
+- `decklab/lib/shops.py`: robots_rules/allowed (robots.txt read first, every `*` group merged, its Crawl-delay kept), Session (one request a name, spaced), parse_name_page (MTGMate's name page's card table), take/refresh (the snapshot in `decklab/data/shops/mtgmate.json`, at most once in 20 hours), pick/match (a row's printing and finish, cheapest nonfoil in stock for an any-printing row), nightly; `python -m decklab.lib.shops snapshot|show|lookup`
+- `decklab/db/nightly.py`: `_shop_prices`, the nightly task's last step (never a failed night; skipped over 60 names)
+- `decklab/lib/api/shop_prices.py`: enrich/for_row (GET /api/shopping's `shop_snapshot` and each queued row's; the queue write's answer again), home records viewers only through `shopping.py`'s guard
+- `decklab/web/shopping-snapshot.js`: shopSnapshotLine (the shop's price, stock, printing link and fetch time, or unknown/not listed)
+- `decklab/lib/cards.py`: cheapest_usd (Scryfall USD only); `decklab/web/deck-prices.js`: ownedSection (the converted-estimate note)
+- `decklab/tests/test_shops.py`, `decklab/tests/test_shopping_snapshot_ui.py`, `decklab/tests/test_db_ops.py` (NightlyTests)
 
-Gap: No retailer price source exists anywhere in `decklab/lib`; Australian prices are only the queue's manually recorded reference prices.
+Gap: one shop (MTGMate) and the queue's rows only; missing cards on Shopping and a deck's price table still show only Scryfall's converted estimate, and other Australian shops have no source.
 
-First slice: a daily snapshot of one shop (MTGMate first) for the purchase queue's rows only, shown beside the recorded reference price with its fetch time; E5-S19's back-in-stock highlight builds on it.
+Next slice: the same snapshot for Shopping's combined missing cards (their names added to the nightly lookup, capped), then a second shop.
 
 Review note: XL and dependent on retailers with no public API; split per shop (MTGMate first) and into fetching vs showing, and a daily snapshot may do.
 
@@ -1490,17 +1496,21 @@ Now: The queue's any/exact printing rules are E5-S05's, and an exact row being f
 Evidence:
 - `decklab/lib/cards.py`: cheapest_usd, UNPLAYABLE_PRICE_SET_TYPES
 
-**E5-S19** · Matt · could · L · missing
+**E5-S19** · Matt · could · L · built
 
 As a buyer, I want to hear when a card waiting for stock is back in stock at an Australian shop, so that I don't miss it while it's available.
 
 - Given a waiting_for_stock row, when a check finds it in stock, then the row shows the shop, price and date, and Shopping highlights it.
 - Given no check has run, then nothing claims the card is in stock.
 
-Evidence:
-- `decklab/lib/purchases.py`: read_queue (in_stock is a recorded field only)
+Now (2026-10-28): built with E5-S08's first slice ([HISTORY.md](../HISTORY.md#mtgmate-daily-prices-for-the-purchase-queue-2026-10-28-e5-s08-e5-s19)): a Waiting for stock row MTGMate's daily snapshot finds in stock is highlighted **Back in stock** with the shop's price, stock and fetch time; a row in stock now but not in the snapshot before is marked **Newly in stock**. Without a snapshot, or for a row it didn't check, nothing claims stock.
 
-Gap: No scheduled stock check or alert; it needs an automated Australian stock source (E5-S08).
+Evidence:
+- `decklab/lib/shops.py`: match (back_in_stock, newly_in_stock against the snapshot's "previous")
+- `decklab/web/shopping-snapshot.js`: shopSnapshotLine, shopSnapshotBack; `decklab/web/shopping.js`, `decklab/web/shopping-queue.js`: the `shop-queue-back` highlight in both densities
+- `decklab/tests/test_shops.py`: test_a_waiting_row_found_in_stock_is_back_and_newly_in_stock; `decklab/tests/test_shopping_snapshot_ui.py`: test_a_waiting_row_back_in_stock_is_marked
+
+Gap: the mark shows when Shopping is opened; nothing is pushed to a phone or e-mailed, and only MTGMate is checked.
 
 **E5-S20** · Matt · wont · S · not_wanted
 

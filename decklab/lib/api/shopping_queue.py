@@ -3,6 +3,8 @@
 POST /api/shopping/queue keeps its original {profile, row, state, expect}
 state-change contract. An explicit action add/edit takes values; remove takes
 a reason. Row numbers always need the exact inventory revision Shopping gave.
+While MTGMate's snapshot exists, a kept row's answer carries its "shop_snapshot" again
+(shop_prices.py), since a changed printing or state changes what the snapshot says about it.
 """
 from decklab.lib import cards, config, inventory, purchases
 from decklab.lib.inventory import orders as order_ops  # registers watchlist.set/remove
@@ -164,6 +166,10 @@ def save_queue_state(body):
         current_item = after.watchlist.rows[row - 1]
         from .reprints import evidence
         result["reprints"] = evidence({key: current_item.text(key) for key in purchases.QUEUE_FIELDS}, queued=True)
+        from .shop_prices import for_row
+        shown = for_row({key: current_item.text(key) for key in purchases.QUEUE_FIELDS})
+        if shown is not None:
+            result["shop_snapshot"] = shown
     if action == "state":
         return {**result, "state": values["state"]}
     result["action"] = action
@@ -173,6 +179,8 @@ def save_queue_state(body):
         result["item"]["quantity"] = int(item.text("quantity"))
         if result["reprints"] is not None:
             result["item"]["reprints"] = result["reprints"]
+        if "shop_snapshot" in result:
+            result["item"]["shop_snapshot"] = result["shop_snapshot"]
         from .shopping_missing import is_token
         if is_token(result["item"]):
             result["item"]["is_token"] = True

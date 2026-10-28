@@ -126,6 +126,13 @@
 .shop-reference { display: grid; gap: var(--s-1); color: var(--ink-2); font-size: var(--fs-sm); overflow-wrap: anywhere; }
 .shop-reference small { font-size: var(--fs-xs); }
 .shop-queue-row > .shop-reference { padding: var(--s-1) var(--s-3); }
+/* MTGMate's daily snapshot under the recorded reference (E5-S08); a waiting row it finds in stock stands out (E5-S19). */
+.shop-snapshot { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-1) var(--s-2); color: var(--ink-2);
+  font-size: var(--fs-sm); overflow-wrap: anywhere; min-width: 0; }
+.shop-snapshot small, .shop-snapshot-when { font-size: var(--fs-xs); }
+.shop-queue-row > .shop-snapshot { padding: 0 var(--s-3) var(--s-1); }
+.shop-q-price .shop-snapshot { justify-content: flex-end; text-align: right; margin-top: var(--s-1); }
+.shop-queue-back { box-shadow: inset 3px 0 0 var(--good); background: var(--good-soft); }
 .reprint-info { display: grid; gap: var(--s-1); min-width: 0; overflow-wrap: anywhere; }
 .shop-queue-row > .reprint-info { padding: var(--s-2) var(--s-3); }
 .reprint-info p, .reprint-provenance p { margin: 0; }

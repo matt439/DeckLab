@@ -1,7 +1,9 @@
 """What the "Deck Lab database backup" task runs each night (schedule.py): a backup, a prune,
 the visits older than about a year deleted (visits.py), an export, the check of the data
-(check.py), and a restore check when the last one that worked is more than restore_check_days
-old (28: about monthly).
+(check.py), a restore check when the last one that worked is more than restore_check_days
+old (28: about monthly), and last MTGMate's daily snapshot of the purchase queue's prices
+(lib/shops.py: one request a card name, a minute apart as its robots.txt asks; never a failed
+night, since a shop that can't be reached is nothing wrong with the database).
 
 Every step runs even when an earlier one failed (an unreachable NAS is no reason to skip the
 export), and each one's outcome goes into decklab/data/logs/db.log. The check comes after the
@@ -40,13 +42,18 @@ def _restore_check_if_due():
     return backup.run_restore_check()
 
 
+def _shop_prices():
+    from decklab.lib import shops
+    return shops.nightly(db.log)
+
+
 def run():
     """The nightly job. Returns 0, or 1 when any step failed."""
     from decklab.db import check, export, visits
     db.log("Nightly: starting.")
     steps = [("backup", backup.run_backup), ("prune", backup.run_prune), ("visits", visits.run_prune),
              ("export", export.run_export),
-             ("check", check.run), ("restore check", _restore_check_if_due)]
+             ("check", check.run), ("restore check", _restore_check_if_due), ("shop prices", _shop_prices)]
     failed = [label for label, func in steps if not _step(label, func)]
     if failed:
         db.log(f"Nightly: finished; failed: {', '.join(failed)}.")

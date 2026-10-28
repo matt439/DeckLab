@@ -92,6 +92,7 @@ function shopQueueTableRecord(card, casual, showFor, view) {
   const deck = casual.querySelector(".shop-queue-deck"), actions = casual.querySelector(".shop-queue-actions");
   if (deck) deck.setAttribute("title", card.deck.title);
   const reprints = casual.querySelector(".reprint-info"), words = casual.querySelector(".shop-match-words");
+  const snapshot = casual.querySelector(".shop-snapshot");
   const nameCell = el("td", {class: "shop-q-name"});
   const price = shopPrice(card), value = price ? Number(card.listed_aud).toLocaleString("en-AU",
     {minimumFractionDigits: 2, maximumFractionDigits: 2}) : null;
@@ -102,7 +103,7 @@ function shopQueueTableRecord(card, casual, showFor, view) {
   else if (!SHOP_QUEUE_STATES.includes(card.state)) printing.append(el("small", {class: "shop-q-reason", text: `State: ${card.state || "not recorded"}`}));
   const forCell = showFor ? el("td", {class: "shop-q-for"}, deck ? null : card.for ? shopQueueClip(card.for) : shopQueueUnknown("Not for a deck")) : null;
   const shop = shopQueueShop(card);
-  const tr = el("tr", {class: "shop-queue-row shop-queue-lab-row", "data-shop-queue": String(card.queue_row || ""),
+  const tr = el("tr", {class: `shop-queue-row shop-queue-lab-row${shopSnapshotBack(card) ? " shop-queue-back" : ""}`, "data-shop-queue": String(card.queue_row || ""),
     "data-shop-name": shop, "data-shop-match": shopMatches(view, card) ? "true" : null}, nameCell, printing, forCell,
     el("td", {class: "num shop-q-qty", text: card.quantity}),
     el("td", {class: "num shop-q-price"}, value == null ? shopQueueUnknown("Reference price not recorded") : value),
@@ -137,6 +138,7 @@ function shopQueueTableRecord(card, casual, showFor, view) {
     if (lab) {
       shopQueuePut(nameCell, trigger, words);
       if (deck) shopQueuePut(forCell, deck);
+      if (snapshot) shopQueuePut(tr.querySelector(".shop-q-price"), snapshot);
       if (actions) shopQueuePut(tr.querySelector(".shop-q-actions"), actions);
       if (reprints) shopQueuePut(extraBody, reprints);
       if (trigger?.matches("button")) trigger.setAttribute("aria-label", `${card.name}, ${plural(card.quantity, "copy", "copies")}`);

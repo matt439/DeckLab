@@ -1,0 +1,586 @@
+"""Australian shop prices for the purchase queue (E5-S08, first slice: MTGMate only).
+
+Once a day at most, `snapshot` looks up each distinct card name on the purchase queue
+(the watchlist: its rows only, never missing cards or wishlists) on MTGMate and keeps
+what the shop listed in decklab/data/shops/mtgmate.json (snapshot_path(), gitignored):
+
+    {"version": 1, "shop": "MTGMate", "site": SITE, "started_at": ISO, "fetched_at": ISO,
+     "crawl_delay": seconds, "cards": {name: {"status": "ok" | "not_listed" | "error",
+       "at": ISO, "listings": [{"set", "number", "finish", "price", "stock", "condition", "url"}],
+       "error": words}},
+     "previous": {name: {"at": ISO, "listings": [...]}}}
+
+"previous" is the snapshot before (its names that were read), so a row can say it is newly
+in stock. Prices are MTGMate's own, in AUD (a listing's price None when it showed none).
+
+How it asks: one request per card name, MTGMate's page of every printing with that name
+(NAME_PATH, the same page its card links lead to), never its search (robots.txt disallows
+/cards/search). robots.txt is read first on every run; a path it disallows is never fetched,
+and its Crawl-delay (60 seconds when this was written) spaces the requests, so a queue of 30
+names takes about half an hour. A failure, a timeout or an unreadable page leaves that name's
+price unknown ("error"), never a converted US price; three failures in a row stop the run
+and leave the rest unknown. Nothing here changes the watchlist, and Shopping only reads the
+file (match() below), so a page load never reaches the shop.
+
+    python -m decklab.lib.shops snapshot [--force] [--dry-run]
+        look the queue's names up (at most once in MIN_AGE unless --force); --dry-run lists
+        the names and the time it would take without asking the shop anything
+    python -m decklab.lib.shops show
+        the queue's rows beside the snapshot (read only, no network)
+    python -m decklab.lib.shops lookup NAME
+        one name's listings, printed (one request after robots.txt; nothing saved)
+"""
+import argparse
+import html.parser
+import json
+import os
+import sys
+import time
+import urllib.error
+import urllib.parse
+import urllib.request
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
+
+from decklab.lib import config
+
+SHOP = "MTGMate"
+SITE = "https://www.mtgmate.com.au"
+ROBOTS_PATH = "/robots.txt"
+NAME_PATH = "/cards/"                       # + the card name, quoted whole ("Sol%20Ring")
+USER_AGENT = config.USER_AGENT + " purchase-queue price check"
+SNAPSHOT = None                             # the tests' path; else snapshot_path() under config.REPO
+MIN_AGE = timedelta(hours=20)               # "daily": a nightly run a little early still counts
+DEFAULT_DELAY = 60                          # seconds between requests when robots.txt names none
+MIN_DELAY = 10                              # never faster than this, whatever robots.txt says
+TIMEOUT = 30
+MAX_PAGE = 5 * 1024 * 1024
+MAX_FAILURES = 3                            # failures in a row before the shop counts as down
+LOCK_STALE = timedelta(hours=6)
+NIGHTLY_MAX_NAMES = 60                      # about an hour: the nightly task stops after two (schedule.py)
+FINISHES = {"nonfoil", "foil", "etched"}
+
+
+class ShopError(Exception):
+    """A request or page that couldn't be read; its words are safe to show."""
+
+
+class Disallowed(ShopError):
+    """robots.txt disallows the path: nothing is fetched."""
+
+
+def _now():
+    return datetime.now(timezone.utc).astimezone().replace(microsecond=0)
+
+
+def _iso(moment):
+    return moment.isoformat()
+
+
+def _parse_iso(value):
+    try:
+        moment = datetime.fromisoformat(value)
+    except (TypeError, ValueError):
+        return None
+    return moment if moment.tzinfo else None
+
+
+# --- robots.txt --------------------------------------------------------------------------
+
+def robots_rules(text, agent="decklab"):
+    """(disallowed path prefixes, allowed prefixes, crawl delay or None) for agent: every group
+    naming "*" or the agent, merged (MTGMate's file has two "*" groups, and Python's
+    urllib.robotparser keeps only the first, which would miss its Disallow and Crawl-delay)."""
+    disallow, allow, delays = [], [], []
+    agents, in_rules, applies = [], False, False
+    for raw in text.splitlines():
+        line = raw.split("#", 1)[0].strip()
+        if not line or ":" not in line:
+            continue
+        key, value = (part.strip() for part in line.split(":", 1))
+        key = key.lower()
+        if key == "user-agent":
+            if in_rules:
+                agents, in_rules = [], False
+            agents.append(value.lower())
+            applies = any(name == "*" or (name and name in agent.lower()) for name in agents)
+            continue
+        in_rules = True
+        if not applies:
+            continue
+        if key == "disallow" and value:
+            disallow.append(value)
+        elif key == "allow" and value:
+            allow.append(value)
+        elif key == "crawl-delay":
+            try:
+                delays.append(float(value))
+            except ValueError:
+                pass
+    return disallow, allow, (max(delays) if delays else None)
+
+
+def allowed(path, rules):
+    """True when robots.txt lets path be fetched: the longest matching rule wins, a Disallow on a tie."""
+    disallow, allow, _ = rules
+    longest_no = max((len(rule) for rule in disallow if path.startswith(rule)), default=-1)
+    longest_yes = max((len(rule) for rule in allow if path.startswith(rule)), default=-1)
+    return longest_no < 0 or longest_yes > longest_no
+
+
+# --- fetching ----------------------------------------------------------------------------
+
+def _fetch(url):
+    """The page's text (the tests replace this). ShopError for anything that isn't a page."""
+    request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT, "Accept": "text/html,text/plain"})
+    try:
+        with urllib.request.urlopen(request, timeout=TIMEOUT) as response:
+            body = response.read(MAX_PAGE + 1)
+    except urllib.error.HTTPError as error:
+        raise ShopError(f"{SHOP} answered {error.code}") from None
+    except (urllib.error.URLError, OSError, TimeoutError) as error:
+        reason = getattr(error, "reason", error)
+        raise ShopError(f"{SHOP} couldn't be reached ({type(reason).__name__})") from None
+    if len(body) > MAX_PAGE:
+        raise ShopError(f"{SHOP}'s page was too big to read")
+    return body.decode("utf-8", errors="replace")
+
+
+def name_url(name):
+    return SITE + NAME_PATH + urllib.parse.quote(name, safe="")
+
+
+class _Table(html.parser.HTMLParser):
+    """The props of MTGMate's FilterableTable: the listings the name page shows."""
+
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.props = None
+
+    def handle_starttag(self, tag, attrs):
+        attrs = dict(attrs)
+        if self.props is None and attrs.get("data-react-class") == "FilterableTable":
+            self.props = attrs.get("data-react-props")
+
+
+def _number(link_path):
+    """The collector number in a link like /cards/Sol_Ring/C16/272 (or .../887:foil)."""
+    if not isinstance(link_path, str):
+        return ""
+    last = link_path.rstrip("/").rsplit("/", 1)[-1]
+    return urllib.parse.unquote(last.split(":", 1)[0])
+
+
+def _price(cents):
+    if isinstance(cents, bool) or not isinstance(cents, int) or cents < 0:
+        return None
+    return f"{cents / 100:.2f}"
+
+
+def _base_name(value):
+    """MTGMate's name without its variant label: "Sol Ring (Borderless 1011)" is Sol Ring."""
+    text = str(value or "").strip()
+    if text.endswith(")") and " (" in text:
+        text = text[:text.rindex(" (")]
+    return text.casefold()
+
+
+def parse_name_page(text, name):
+    """The listings on MTGMate's page of a name: [] when the page has none (no such card there).
+    ShopError when the page isn't the one expected (MTGMate changed its pages)."""
+    if "No matches for" in text and "FilterableTable" not in text:
+        return []
+    parser = _Table()
+    parser.feed(text)
+    if parser.props is None:
+        raise ShopError(f"{SHOP}'s page for {name} didn't have its usual card table")
+    try:
+        props = json.loads(parser.props)
+        entries = props["uuid"].values()
+    except (ValueError, KeyError, TypeError, AttributeError):
+        raise ShopError(f"{SHOP}'s card table for {name} couldn't be read") from None
+    wanted = {name.casefold(), name.split(" // ", 1)[0].casefold()}
+    listings = []
+    for entry in entries:
+        if not isinstance(entry, dict) or (str(entry.get("name", "")).strip().casefold() not in wanted
+                                           and _base_name(entry.get("name")) not in wanted):
+            continue
+        finish = str(entry.get("finish", "")).lower()
+        stock = entry.get("quantity")
+        link = entry.get("link_path")
+        listings.append({
+            "set": str(entry.get("set_code", "")).lower(), "number": _number(link),
+            "finish": finish if finish in FINISHES else finish or "unknown",
+            "price": _price(entry.get("price")),
+            "stock": stock if isinstance(stock, int) and not isinstance(stock, bool) and stock >= 0 else 0,
+            "condition": str(entry.get("condition") or ""),
+            "url": SITE + link if isinstance(link, str) and link.startswith("/cards/") else name_url(name)})
+    listings.sort(key=lambda item: (item["set"], item["number"], item["finish"], item["condition"]))
+    return listings
+
+
+class Session:
+    """robots.txt read once, then requests spaced by its crawl delay."""
+
+    def __init__(self, fetch=None, sleep=None, clock=None):
+        self.fetch, self.sleep, self.clock = fetch or _fetch, sleep or time.sleep, clock or time.monotonic
+        self.rules, self.delay, self.last = None, DEFAULT_DELAY, None
+
+    def _wait(self):
+        if self.last is not None:
+            left = self.delay - (self.clock() - self.last)
+            if left > 0:
+                self.sleep(left)
+        self.last = self.clock()
+
+    def start(self):
+        self._wait()
+        self.rules = robots_rules(self.fetch(SITE + ROBOTS_PATH))
+        delay = self.rules[2]
+        self.delay = max(MIN_DELAY, delay if delay is not None else DEFAULT_DELAY)
+
+    def listings(self, name):
+        if self.rules is None:
+            self.start()
+        url = name_url(name)
+        if not allowed(urllib.parse.urlsplit(url).path, self.rules):
+            raise Disallowed(f"{SHOP}'s robots.txt doesn't allow {urllib.parse.urlsplit(url).path}")
+        self._wait()
+        return parse_name_page(self.fetch(url), name)
+
+
+# --- the snapshot file ---------------------------------------------------------------------
+
+def snapshot_path():
+    """decklab/data/shops/mtgmate.json in this checkout (gitignored), read at call time so a
+    test that points config.REPO elsewhere never sees a real snapshot."""
+    return SNAPSHOT or Path(config.REPO) / "decklab" / "data" / "shops" / "mtgmate.json"
+
+
+def load(path=None):
+    """The snapshot, or None when there's none or it can't be read (Shopping then shows nothing)."""
+    path = path or snapshot_path()
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    if not isinstance(data, dict) or data.get("version") != 1 or not isinstance(data.get("cards"), dict):
+        return None
+    return data
+
+
+def _write(data, path):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temp = path.with_name(path.name + ".tmp")
+    temp.write_text(json.dumps(data, indent=1, sort_keys=True), encoding="utf-8")
+    os.replace(temp, path)
+
+
+def fresh(data, now):
+    """True when the snapshot finished less than MIN_AGE ago."""
+    finished = _parse_iso((data or {}).get("fetched_at"))
+    return finished is not None and timedelta(0) <= now - finished < MIN_AGE
+
+
+def queue_names(rows):
+    """The distinct card names of the queue's rows, in queue order."""
+    seen, names = set(), []
+    for row in rows:
+        name = str(row.get("name") or "").strip()
+        if name and name.casefold() not in seen:
+            seen.add(name.casefold())
+            names.append(name)
+    return names
+
+
+def take(names, *, session=None, previous=None, now=None, progress=None):
+    """A new snapshot of names. previous is the snapshot before (or None)."""
+    session = session or Session()
+    now = now or _now
+    started = now()
+    cards_out, failures, stop = {}, 0, None
+    try:
+        session.start()
+    except ShopError as error:
+        stop = str(error)
+    for count, name in enumerate(names, 1):
+        if stop is not None:
+            cards_out[name] = {"status": "error", "at": _iso(now()), "listings": [],
+                               "error": f"Not checked: {stop}"}
+            continue
+        try:
+            listings = session.listings(name)
+        except Disallowed as error:
+            cards_out[name] = {"status": "error", "at": _iso(now()), "listings": [], "error": str(error)}
+            continue
+        except ShopError as error:
+            failures += 1
+            cards_out[name] = {"status": "error", "at": _iso(now()), "listings": [], "error": str(error)}
+            if failures >= MAX_FAILURES:
+                stop = f"{SHOP} failed {failures} times in a row"
+        else:
+            failures = 0
+            cards_out[name] = {"status": "ok" if listings else "not_listed", "at": _iso(now()), "listings": listings}
+        if progress:
+            progress(count, len(names), name, cards_out[name])
+    kept = {}
+    for name, entry in ((previous or {}).get("cards") or {}).items():
+        if isinstance(entry, dict) and entry.get("status") in ("ok", "not_listed"):
+            kept[name] = {"at": entry.get("at"), "listings": entry.get("listings") or []}
+    return {"version": 1, "shop": SHOP, "site": SITE, "started_at": _iso(started), "fetched_at": _iso(now()),
+            "crawl_delay": session.delay, "cards": cards_out, "previous": kept}
+
+
+# --- matching a queue row --------------------------------------------------------------------
+
+def _by_name(section, name):
+    if not isinstance(section, dict):
+        return None
+    found = section.get(name)
+    if found is None:
+        folded = name.casefold()
+        found = next((entry for key, entry in section.items() if key.casefold() == folded), None)
+    return found if isinstance(found, dict) else None
+
+
+def _cheapest(listings):
+    def key(item):
+        price = item.get("price")
+        return (price is None, float(price) if price is not None else 0.0, item.get("set", ""), item.get("number", ""))
+    return min(listings, key=key) if listings else None
+
+
+def pick(row, listings):
+    """(the listing that answers the row, how many listings in its scope are in stock), or (None, 0).
+
+    An exact row wants its printing and finish (nonfoil when blank). Any other row wants the
+    cheapest in-stock nonfoil, else the cheapest in-stock listing of any finish, else the cheapest
+    nonfoil out of stock (AGENTS.md: the cheapest printing, non-foil, unless asked)."""
+    listings = [item for item in listings or () if isinstance(item, dict)]
+    finish = (row.get("finish") or "nonfoil").lower()
+    if row.get("printing") == "exact" and row.get("set") and row.get("collector_number"):
+        scope = [item for item in listings if item.get("set") == str(row["set"]).lower()
+                 and str(item.get("number", "")).casefold() == str(row["collector_number"]).casefold()
+                 and item.get("finish") == finish]
+        stocked = [item for item in scope if item.get("stock", 0) > 0]
+        return (_cheapest(stocked) or _cheapest(scope)), len(stocked)
+    stocked = [item for item in listings if item.get("stock", 0) > 0]
+    plain = [item for item in stocked if item.get("finish") == "nonfoil"]
+    choice = _cheapest(plain) or _cheapest(stocked) or _cheapest(
+        [item for item in listings if item.get("finish") == "nonfoil"]) or _cheapest(listings)
+    return choice, len(stocked)
+
+
+def match(row, data):
+    """What the snapshot says about one queue row, or None when there is no snapshot:
+    {"shop", "status": "in_stock" | "out_of_stock" | "not_listed" | "unknown" | "not_checked",
+     "fetched_at", "price_aud", "stock", "set", "collector_number", "finish", "url",
+     "in_stock_printings", "error", "back_in_stock", "newly_in_stock"}.
+    back_in_stock: a waiting_for_stock row the snapshot finds in stock (E5-S19's highlight);
+    newly_in_stock: in stock now and not in the snapshot before."""
+    if not data:
+        return None
+    name = str(row.get("name") or "")
+    entry = _by_name(data.get("cards"), name)
+    shown = {"shop": data.get("shop") or SHOP, "status": "not_checked", "fetched_at": None, "price_aud": None,
+             "stock": None, "set": None, "collector_number": None, "finish": None, "url": None,
+             "in_stock_printings": 0, "error": None, "back_in_stock": False, "newly_in_stock": False}
+    if entry is None:
+        return shown
+    shown["fetched_at"] = entry.get("at") or data.get("fetched_at")
+    status = entry.get("status")
+    if status == "error":
+        shown.update(status="unknown", error=str(entry.get("error") or f"{SHOP} couldn't be read"))
+        return shown
+    choice, stocked = pick(row, entry.get("listings"))
+    if choice is None:
+        shown["status"] = "not_listed"
+        return shown
+    in_stock = choice.get("stock", 0) > 0
+    shown.update(status="in_stock" if in_stock else "out_of_stock", price_aud=choice.get("price"),
+                 stock=choice.get("stock", 0), set=choice.get("set"), collector_number=choice.get("number"),
+                 finish=choice.get("finish"), url=choice.get("url"), in_stock_printings=stocked)
+    shown["back_in_stock"] = in_stock and row.get("state") == "waiting_for_stock"
+    before = _by_name(data.get("previous"), name)
+    if in_stock and before is not None:
+        old, _ = pick(row, before.get("listings"))
+        shown["newly_in_stock"] = old is None or old.get("stock", 0) <= 0
+    return shown
+
+
+def summary(data):
+    """The snapshot's own facts for Shopping, or None: {"shop", "site", "fetched_at", "started_at"}."""
+    if not data:
+        return None
+    return {"shop": data.get("shop") or SHOP, "site": data.get("site") or SITE,
+            "fetched_at": data.get("fetched_at"), "started_at": data.get("started_at")}
+
+
+# --- the command line -------------------------------------------------------------------------
+
+def _queue():
+    """The watchlist's rows as dicts, read as saved (purchases.read_queue would also insist
+    every source file exists, which a name lookup doesn't need)."""
+    from decklab.lib import inventory, purchases
+    with inventory.pinned():
+        return [{key: row.text(key) for key in purchases.QUEUE_FIELDS} for row in inventory.current().watchlist.rows]
+
+
+def _lock(now):
+    lock = snapshot_path().with_name("mtgmate.lock")
+    lock.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        handle = os.open(lock, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+    except FileExistsError:
+        try:
+            age = now.timestamp() - lock.stat().st_mtime
+        except OSError:
+            age = 0
+        if age < LOCK_STALE.total_seconds():
+            return False
+        lock.unlink(missing_ok=True)
+        return _lock(now)
+    os.write(handle, str(os.getpid()).encode())
+    os.close(handle)
+    return True
+
+
+def _describe(shown):
+    if shown is None:
+        return "no snapshot"
+    if shown["status"] in ("in_stock", "out_of_stock"):
+        where = f"{shown['set'].upper()} {shown['collector_number']} {shown['finish']}"
+        price = f"A${shown['price_aud']}" if shown["price_aud"] else "price not shown"
+        stock = f"{shown['stock']} in stock" if shown["status"] == "in_stock" else "out of stock"
+        flags = " BACK IN STOCK" if shown["back_in_stock"] else (" new" if shown["newly_in_stock"] else "")
+        return f"{price}, {stock} ({where}){flags}"
+    return {"not_listed": "not listed", "not_checked": "not in the snapshot"}.get(
+        shown["status"], f"price unknown: {shown['error']}")
+
+
+def _minutes(names):
+    return max(1, round(len(names) * DEFAULT_DELAY / 60))
+
+
+def refresh(*, force=False, say=print, progress=True, session=None, max_names=None):
+    """Take and save a new snapshot of the queue's names, unless the last one is less than
+    MIN_AGE old (or force). say(words) reports; 0 done or nothing due, 1 refused, too many
+    names (over max_names) or every name unknown, 2 the purchase queue couldn't be read."""
+    from decklab.lib.inventory import Unavailable
+    now = _now()
+    try:
+        names = queue_names(_queue())
+    except (Unavailable, ValueError) as error:
+        say(f"The purchase queue couldn't be read: {error}")
+        return 2
+    previous = load()
+    if not force and fresh(previous, now):
+        say(f"The {SHOP} snapshot of {previous['fetched_at']} is less than {int(MIN_AGE.total_seconds() // 3600)} "
+            "hours old; nothing fetched (--force to fetch anyway).")
+        return 0
+    if not names:
+        say("The purchase queue is empty; nothing to look up.")
+        return 0
+    if max_names is not None and len(names) > max_names:
+        say(f"{len(names)} names would take about {_minutes(names)} minutes, more than this run allows; "
+            "run python -m decklab.lib.shops snapshot by hand.")
+        return 1
+    if not _lock(now):
+        say(f"Another {SHOP} snapshot is running ({snapshot_path().with_name('mtgmate.lock')}).")
+        return 1
+    try:
+        say(f"Looking up {len(names)} names on {SHOP}, one request each, spaced as its robots.txt asks "
+            f"(about {_minutes(names)} minutes).")
+
+        def step(count, total, name, entry):
+            words = {"ok": f"{len(entry['listings'])} listings", "not_listed": "not listed"}.get(
+                entry["status"], entry.get("error", "error"))
+            say(f"  {count}/{total} {name}: {words}")
+        data = take(names, session=session, previous=previous, progress=step if progress else None)
+        _write(data, snapshot_path())
+    finally:
+        snapshot_path().with_name("mtgmate.lock").unlink(missing_ok=True)
+    failed = sum(entry["status"] == "error" for entry in data["cards"].values())
+    say(f"Saved {snapshot_path()} ({len(names) - failed} read, {failed} unknown).")
+    return 1 if failed == len(names) else 0
+
+
+def nightly(log):
+    """The nightly job's step (decklab/db/nightly.py): refresh() with its words in log. Always 0:
+    a shop that can't be reached is no failure of the database's night, and the log says why."""
+    try:
+        refresh(say=lambda words: log(f"Nightly: {SHOP} prices: {words.strip()}"), progress=False,
+                max_names=NIGHTLY_MAX_NAMES)
+    except Exception as error:  # a broken shop page must not mark the backup night failed
+        log(f"Nightly: {SHOP} prices failed: {type(error).__name__}: {error}")
+    return 0
+
+
+def _snapshot(args):
+    if args.dry_run:
+        from decklab.lib.inventory import Unavailable
+        try:
+            names = queue_names(_queue())
+        except (Unavailable, ValueError) as error:
+            print(f"The purchase queue couldn't be read: {error}", file=sys.stderr)
+            return 2
+        print(f"{len(names)} names on the purchase queue; at {DEFAULT_DELAY} seconds a request that's about "
+              f"{_minutes(names)} minutes.")
+        for name in names:
+            print(f"  {name}")
+        return 0
+    return refresh(force=args.force, say=lambda words: print(words, flush=True))
+
+
+def _show(_args):
+    from decklab.lib.inventory import Unavailable
+    data = load()
+    if data is None:
+        print(f"No {SHOP} snapshot yet: python -m decklab.lib.shops snapshot")
+        return 0
+    try:
+        rows = _queue()
+    except Unavailable as error:
+        print(f"The purchase queue couldn't be read: {error}", file=sys.stderr)
+        return 2
+    print(f"{SHOP} snapshot of {data.get('fetched_at')}")
+    for number, row in enumerate(rows, 1):
+        reference = f"ref A${row['listed_aud']} at {row['listed_at']}" if row.get("listed_aud") else "no reference"
+        print(f"#{number} {row['name']} [{row.get('state')}] {reference}; {SHOP}: {_describe(match(row, data))}")
+    return 0
+
+
+def _lookup(args):
+    try:
+        listings = Session().listings(args.name)
+    except ShopError as error:
+        print(error, file=sys.stderr)
+        return 1
+    if not listings:
+        print(f"{SHOP} lists nothing named {args.name}.")
+    for item in listings:
+        price = f"A${item['price']}" if item["price"] else "no price"
+        print(f"{item['set'].upper()} {item['number']} {item['finish']} {item['condition']}: {price}, {item['stock']} in stock")
+    return 0
+
+
+def main(argv=None):
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(errors="replace")
+    parser = argparse.ArgumentParser(prog="python -m decklab.lib.shops",
+                                     description=f"{SHOP} prices and stock for the purchase queue (a daily snapshot).")
+    sub = parser.add_subparsers(dest="command", required=True)
+    snap = sub.add_parser("snapshot", help="look the queue's names up and save the snapshot")
+    snap.add_argument("--force", action="store_true", help="fetch even when the snapshot is less than a day old")
+    snap.add_argument("--dry-run", action="store_true", help="list the names and the time it would take; fetch nothing")
+    snap.set_defaults(func=_snapshot)
+    sub.add_parser("show", help="the queue beside the snapshot (no network)").set_defaults(func=_show)
+    look = sub.add_parser("lookup", help="one name's listings, printed (nothing saved)")
+    look.add_argument("name")
+    look.set_defaults(func=_lookup)
+    args = parser.parse_args(argv)
+    return args.func(args)
+
+
+if __name__ == "__main__":
+    sys.exit(main())

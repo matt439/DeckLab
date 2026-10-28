@@ -23,6 +23,7 @@ from pathlib import Path
 from unittest import mock
 
 from decklab.db import backup, check, conn as db, export, nightly, schedule, visits
+from decklab.lib import shops
 from decklab.tests import db_support
 
 
@@ -263,7 +264,7 @@ class NightlyTests(_QuietLog, unittest.TestCase):
                 mock.patch.object(visits, "run_prune", step("visits", 0)), \
                 mock.patch.object(export, "run_export", step("export", 0)), \
                 mock.patch.object(check, "run", step("check", 0)), \
-                mock.patch.object(backup, "run_restore_check", step("restore", 0)), \
+                mock.patch.object(backup, "run_restore_check", step("restore", 0)),                 mock.patch.object(shops, "nightly", step("shops", 0)), \
                 mock.patch.object(backup, "last_ok", lambda *a: {"restore_check": last_check}), \
                 mock.patch.object(db, "settings", lambda: dict(db.DEFAULTS)):
             code = nightly.run()
@@ -272,7 +273,7 @@ class NightlyTests(_QuietLog, unittest.TestCase):
     def test_every_step_runs_and_a_failure_fails_the_night(self):
         code, calls = self._run(RuntimeError("NAS gone"), None)
         self.assertEqual(code, 1)
-        self.assertEqual(calls, ["backup", "prune", "visits", "export", "check", "restore"])
+        self.assertEqual(calls, ["backup", "prune", "visits", "export", "check", "restore", "shops"])
         log = db.LOG_FILE.read_text(encoding="utf-8")
         self.assertIn("backup failed: RuntimeError: NAS gone", log)
         self.assertIn("failed: backup.", log)
@@ -280,7 +281,7 @@ class NightlyTests(_QuietLog, unittest.TestCase):
     def test_a_recent_restore_check_is_not_repeated(self):
         code, calls = self._run(0, datetime.now().astimezone() - timedelta(days=3))
         self.assertEqual(code, 0)
-        self.assertEqual(calls, ["backup", "prune", "visits", "export", "check"])
+        self.assertEqual(calls, ["backup", "prune", "visits", "export", "check", "shops"])
         self.assertIn("every step worked", db.LOG_FILE.read_text(encoding="utf-8"))
 
 
