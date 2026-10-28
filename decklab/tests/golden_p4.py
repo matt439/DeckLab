@@ -77,6 +77,13 @@ older code (the committed tests/fixtures/inventory_goldens):
 - "swap-defaults": E2-S07 adds deck_view's "swaps", the swaps a saved Play-now list makes,
   worked out from the two lists and the Substitutes prose the goldens already compare. Only that
   new key is dropped; test_swaps_core and test_swaps_api check its values and privacy.
+- "considering-defaults": E2-S23 adds deck_view's "considering", a deck text's Considering list.
+  No golden deck has one, so only an absent list (None) or an empty one is dropped; a list with
+  cards still compares. test_deck_considering checks its values and privacy.
+- "box-label-defaults": E8-S21 adds deck_view's "box_label" on an intact product's deck pages,
+  for home-records viewers: the product's name, colours, link and decks, worked out from the
+  product list the goldens already compare. Only that new key is dropped; test_product_label
+  checks its values and privacy.
 - "assembly-colors": packing participants carry the Planned/library "colors" already in their
   deck summaries. Only that new key is dropped from assembly answers; test_assembly_colors
   checks its values and privacy.
@@ -460,6 +467,25 @@ def swap_defaults(dump):
                 view.pop("swaps", None)
 
 
+def considering_defaults(dump):
+    """Drop only E2-S23's new "considering" key on deck pages, when it holds no card."""
+    for mine in [dump, *((dump.get("by_viewer") or {}).values())]:
+        views = mine.get("deck_view") if isinstance(mine, dict) else None
+        for view in views.values() if isinstance(views, dict) else []:
+            found = view.get("considering", False) if isinstance(view, dict) else False
+            if found is None or (isinstance(found, dict) and found.get("lines") == []):
+                view.pop("considering")
+
+
+def box_label_defaults(dump):
+    """Drop only E8-S21's new "box_label" key on an intact product's deck pages."""
+    for mine in [dump, *((dump.get("by_viewer") or {}).values())]:
+        views = mine.get("deck_view") if isinstance(mine, dict) else None
+        for view in views.values() if isinstance(views, dict) else []:
+            if isinstance(view, dict):
+                view.pop("box_label", None)
+
+
 def assembly_colors(dump):
     """Drop only the packing participants' new "colors" key (copied from their deck summaries)."""
     for mine in [dump, *((dump.get("by_viewer") or {}).values())]:
@@ -658,7 +684,8 @@ EXPECTED_P5 = (("deck-id-messages", deck_id_messages), ("phase-5-wording", phase
                ("assembly-progress", assembly_progress), ("usual-opponents", usual_opponents),
                ("stand-in-defaults", standin_defaults), ("rename-defaults", rename_defaults),
                ("assembly-section-defaults", assembly_section_defaults), ("swap-defaults", swap_defaults),
-               ("assembly-colors", assembly_colors), ("category-defaults", category_defaults))
+               ("assembly-colors", assembly_colors), ("considering-defaults", considering_defaults),
+               ("box-label-defaults", box_label_defaults), ("category-defaults", category_defaults))
 
 
 def normalise(dump):

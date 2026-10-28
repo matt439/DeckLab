@@ -198,6 +198,11 @@ class EditorPageTests(unittest.TestCase):
           await saveNow();
           assert.equal(did.length, 0);
           assert.ok(toasts[0].startsWith("Nothing to save"));
+          // A change of the lines' own categories alone (E2-S24) is a save, not "Nothing to save".
+          runCheck = async () => ({...ok, changes: {decklist: false, categories: true, fields: [], prose: [], marker: false}});
+          await saveNow();
+          same(did.pop(), ["save", null, false]);
+          assert.equal(toasts.length, 1);
           editor.readOnly = true;
           runCheck = async () => ok;
           await saveNow();

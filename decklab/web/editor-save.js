@@ -421,7 +421,7 @@ async function saveNow({ viewAfter = false } = {}) {
       return;
     }
     const c = answer.changes;
-    if (ed.mode === "edit" && !c.decklist && !c.fields.length && !(c.prose || []).length && !c.marker) {
+    if (ed.mode === "edit" && !c.decklist && !c.categories && !c.fields.length && !(c.prose || []).length && !c.marker) {
       if (viewAfter) { ed.leaving = !isDirty(); location.hash = deckHref(ed.id, ed.version); return; }
       toast(`Nothing to save: the ${listName(ed.version, true)} and the details are as saved.`);
       return;
@@ -493,8 +493,11 @@ function drawReview(sheet, a) {
     .filter(([k]) => mayDo("see_accessories") || !KIT_FIELDS.includes(k)).map(([k, v]) => fieldChangeWords(k, v));
   const proseChanges = isNew ? [] : (a.changes.prose || []);
   const marker = !isNew && !!a.changes.marker;
+  // The lines' own categories (E2-S24): a change of them alone is a save, though not a decklist change.
+  const categoryEdits = isNew || ed.starting ? [] : categoryChanges(reference, ed.lists);
   // A draft with blocks isn't applied, so its changes can read as none: show the blocks then.
-  const nothing = !isNew && !a.blocks.length && !a.changes.decklist && !a.changes.fields.length && !proseChanges.length && !marker;
+  const nothing = !isNew && !a.blocks.length && !a.changes.decklist && !a.changes.categories && !a.changes.fields.length
+    && !proseChanges.length && !marker;
   if (a.file_changed) {
     body.append(el("div", { class: "box box-warn" },
       el("h3", { text: "This deck changed after you opened it" }),
@@ -545,6 +548,11 @@ function drawReview(sheet, a) {
     }
   } else if (isNew) {
     body.append(el("p", { text: `The list is ${ed.view.title}'s, unchanged.` }));
+  }
+  if (categoryEdits.length) {
+    body.append(el("h3", { text: "Changes to your categories:" }),
+      el("ul", { class: "review-list" }, categoryEdits.map((c) => el("li", { class: "review-changed" },
+        el("span", { class: "review-mark", "aria-hidden": "true", text: "~" }), categoryChangeWords(c)))));
   }
   if (proseChanges.length || marker) {
     body.append(el("h3", { text: "Changes to the write-up:" }),

@@ -19,7 +19,7 @@ function productStorageSection(data) {
   const root = el("section", { class: "deck-section product-storage", "aria-labelledby": "h-product-storage" },
     el("h2", { id: "h-product-storage", text: "Product storage" }));
   const content = el("div");
-  root.append(content);
+  add(root, [content, productBoxDecks(data)]);
   const ctx = { root, content, id, stem: id.split("/")[1], token: routeToken,
     profile: state.profile?.id, seq: 0, busy: false, product: null };
   ctx.refresh = async () => {
@@ -40,6 +40,18 @@ function productStorageSection(data) {
   };
   ctx.refresh();
   return root;
+}
+
+/** An intact product's decks in its one box (GET /api/deck's box_label, E8-S21), each a link but this one, so
+ * its box label's code, which opens the first, reaches them all. None for a single deck or no label. */
+function productBoxDecks(data) {
+  const label = data.box_label;
+  if (!label || !Array.isArray(label.decks) || label.decks.length < 2) return null;
+  return el("div", { class: "product-box-decks" },
+    el("h3", { text: "Decks in this box" }),
+    el("ul", {}, label.decks.map((d) => el("li", {}, d.id === data.summary.id
+      ? el("span", { "aria-current": "page", text: `${d.title} (this deck)` })
+      : el("a", { href: `#/deck?id=${encodeURIComponent(d.id)}`, text: d.title })))));
 }
 
 function drawProductStorage(ctx) {

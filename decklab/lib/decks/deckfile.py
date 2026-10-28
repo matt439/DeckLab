@@ -11,6 +11,7 @@ import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from .considering import parse_considering
 from .decklist import DeckFileError, DecklistError, parse_decklist
 
 KINDS = ("casual", "commander")
@@ -180,6 +181,7 @@ class DeckFile:
     prices: PriceStamp | None = None    # the stamp above the table, if it has one
     spans: dict = field(default_factory=dict, repr=False)
     space: str = "home"             # lib/spaces.py: "home", or the person whose deck folder holds it
+    considering: list | None = None  # [DeckLine] of the "## Considering" block (considering.py), if any
 
     @property
     def deck_id(self):
@@ -471,6 +473,20 @@ def parse_deck(data, slug, kind, path=None, space=None):
         pos = lines[end].start if end < len(lines) else len(text)
         spans["owned_insert"] = (pos, pos)
 
+    # The Considering list (considering.py): the first fenced block under "## Considering", card
+    # lines only. Never part of target or owned. A heading with no block yet gets one there; a
+    # text with no heading gets the section where considering_insert() says.
+    considering = None
+    found = heading(lambda h: h == "considering", 2)
+    if found:
+        block = _find_block(lines, found[0] + 1, _section_end(lines, headings, found[0], 6), "Considering list")
+        if block:
+            spans["considering"] = (lines[block[0]].end, lines[block[1]].start)
+            considering = parse_considering(text[slice(*spans["considering"])])
+        else:
+            pos = lines[found[0]].end
+            spans["considering_block"] = (pos, pos)
+
     # Owned-vs-needed table: rows after the header and |---| lines.
     rows, total, prices = None, None, None
     found = heading(lambda h: h.startswith("owned vs"), 2)
@@ -520,7 +536,19 @@ def parse_deck(data, slug, kind, path=None, space=None):
         path=Path(path) if path else None, slug=slug, kind=kind, title=title,
         header=header, target=target, owned=owned, rows=rows, total=total,
         changed_on=changed_on, sha256=hashlib.sha256(data).hexdigest(),
-        text=text, newline=newline, prices=prices, spans=spans, space=space or _space_of(path))
+        text=text, newline=newline, prices=prices, spans=spans, space=space or _space_of(path),
+        considering=considering)
+
+
+def considering_insert(text):
+    """Where a new "## Considering" section goes in a deck's text: straight after its Decklist section
+    (before the next "## " heading), else at the end."""
+    lines = _lines(text)
+    headings = _headings(lines)
+    found = next((i for i, level, words in headings if i > 0 and level == 2 and words.lower().startswith("decklist")),
+                 None)
+    end = _section_end(lines, headings, found, 2) if found is not None else len(lines)
+    return lines[end].start if end < len(lines) else len(text)
 
 
 def _space_of(path):

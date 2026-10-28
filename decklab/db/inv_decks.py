@@ -565,9 +565,16 @@ def after_notes(deck_id, verbose=False):
         try:
             result = pool.compare(found.target, supply, pool.self_ids(deck_id), prices=False)
             unknown = sorted({name for name, _ in result["unresolved"]})
+            # The Considering list (decks/considering.py) never counts, but a card moved from it into
+            # the Planned list keeps its name, so its unknown names are said too.
+            maybe = sorted({name for name, _ in pool.compare({"Deck": found.considering}, supply,
+                                                               pool.self_ids(deck_id), prices=False)["unresolved"]}
+                           - set(unknown)) if found.considering else []
             if unknown:
                 print(f"Not Scryfall card names: {', '.join(unknown)}.")
-            elif verbose:
+            if maybe:
+                print(f"Not Scryfall card names in the Considering list: {', '.join(maybe)}.")
+            if not unknown and not maybe and verbose:
                 print("Card names: all checked names resolve in the card index.")
         except Exception as e:          # noqa: BLE001 - notes only
             print(f"The cards couldn't be checked ({e}).")

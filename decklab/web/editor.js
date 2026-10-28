@@ -236,6 +236,29 @@ function listChanges(base, now) {
   return out.sort((a, b) => order(a) - order(b) || a.name.localeCompare(b.name));
 }
 
+/** The lines whose own category (E2-S24) changed, the same printing in both lists:
+ * [{section, name, from, to}], each category "" for none. Added and removed lines are listChanges'. */
+function categoryChanges(base, now) {
+  const before = new Map();
+  for (const [section, lines] of Object.entries(base || {})) {
+    for (const line of lines) before.set(`${section}\n${lineKey(line)}`, line.category || "");
+  }
+  const out = [];
+  for (const [section, lines] of Object.entries(now || {})) {
+    for (const line of lines) {
+      const key = `${section}\n${lineKey(line)}`;
+      if (before.has(key) && before.get(key) !== (line.category || "")) {
+        out.push({ section, name: line.name, from: before.get(key), to: line.category || "" });
+      }
+    }
+  }
+  return out;
+}
+
+function categoryChangeWords(c) {
+  return !c.to ? `${c.name}: no category (was ${c.from})` : c.from ? `${c.name}: ${c.from} → ${c.to}` : `${c.name}: ${c.to}`;
+}
+
 function changeWords(c) {
   if (!c.before) return `Added ${c.after} ${c.name}` + (c.to !== "Any printing" ? ` (${c.to})` : "");
   if (!c.after) return `Removed ${c.before} ${c.name}`;

@@ -22,6 +22,9 @@ reported, never guessed (cards_of()).
     precons.search("keen")              # ([{"file", "name", "code", "set_name", "type", "released", "source"}], more)
     precons.find("KeenEngineering_FDC") # one of those, or None
     precons.cards_of(precons.deck("KeenEngineering_FDC"))
+
+`python -m decklab.lib.precons coverage` ranks the precons by how much of each
+a space's free pool covers (lib/precon_coverage.py, E1-S24).
 """
 import http.client
 import json
@@ -322,3 +325,11 @@ def cards_of(data):
             tokens[name] = tokens.get(name, 0) + count
     return {"lines": lines, "display": display, "problems": problems, "left_out": left_out,
             "tokens": [{"name": n, "count": c} for n, c in sorted(tokens.items())]}
+
+
+if __name__ == "__main__":
+    import sys
+    if sys.argv[1:2] != ["coverage"]:
+        sys.exit("Usage: python -m decklab.lib.precons coverage [--space S] [--format commander|casual] [--limit N]")
+    from decklab.lib import precon_coverage
+    sys.exit(precon_coverage.main(sys.argv[2:]))

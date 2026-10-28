@@ -54,6 +54,7 @@ The routes and what each checks:
                                                   stored owner's kit must be the profile's to see,
                                                   saving._require_kit_moves)
     POST /api/deck/cover                          deck.edit on the deck as stored (as a save of its text)
+    POST /api/deck/considering                    as /api/deck/save (it is one): deck.edit on the deck as stored
     POST /api/deck/token-cards                    deck.edit on the deck as stored (as a save of its text), and
                                                   its space's inventory (require_sees_inventory)
     POST /api/deck/printings                      the same as /api/deck/token-cards (a home deck only)
@@ -86,6 +87,8 @@ The routes and what each checks:
     POST /api/collection/save|bulk, .../import/*  collection.edit on the body's "space", likewise
     POST /api/precons/add                         collection.edit on the body's "space", likewise, then
                                                   deck.create as POST /api/decks (its fields)
+    POST /api/precons/start                       deck.create on the body's "space" as POST /api/decks
+                                                  (the space's decks seen first); nothing is added
 
 A space's collection and tokens are changed only by its own profiles: an
 admin only his own space's, a home member (User1) home's as Matt can
@@ -161,6 +164,7 @@ COLLECTION_HIDDEN, "That collection isn't public.":
     GET  /api/collection, /api/collection/rows, /api/collection/download    the ?space= (home by default)
     GET  /api/tokens                              the ?space= (home by default)
     GET  /api/precons/preview                     the ?space=, and collection.edit there too
+    GET  /api/precons/coverage, .../coverage/deck  the ?space= (home by default)
 
 The collection and tokens writes ask the read rule first
 (require_space_write), so a write to a space the writer can't see gets that

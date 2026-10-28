@@ -16,6 +16,7 @@ Routes (hash routing, so the server only ever serves index.html):
     #/tokens                              physical token and reminder cards (tokens.js)
     #/collection, #/assembly, #/play      the shared collection, packing plan and played games
     #/history?id=<deck id>                a deck's saved versions
+    #/compare?a=<id>&b=<id>[&av=&bv=]     two decks' stats side by side (compare.js)
     #/activity                            who changed what in Deck Lab's database (activity.js)
     #/receipt?order=<order id>            receiving a delivery (receipts.js)
     #/deck?id=<deck id>&v=target|owned       e.g. id=casual/boros-burn, pairing/cats+vampires
@@ -279,6 +280,7 @@ function route() {
   if (path === "assembly") return seesHomeInventory(state.may) ? showAssembly(params, token) : showNoInventory(routeH1("assembly"));
   if (path === "play") return showPlay(params, token);
   if (path === "history" && params.get("id")) return showHistory(params, token);
+  if (path === "compare" && params.get("a") && params.get("b")) return showCompare(params, token);
   if (path === "activity") return showActivity(params, token);
   if (path === "receipt" && params.get("order")) {
     return seesHomeInventory(state.may) ? showReceipt(params, token) : showNoInventory(routeH1("receipt"));

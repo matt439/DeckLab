@@ -29,16 +29,21 @@ class _Draft:
     {"target": sections or None, "owned": ...} (None: not sent), fields, and
     the blocks and warnings found on the way. known holds the (name, set,
     number, finish) lines already in the file (or the deck a new one starts
-    from): those are kept as written, even with a name the card data lacks."""
+    from): those are kept as written, even with a name the card data lacks.
+    known_considering holds those of the Considering list too, which only
+    that list keeps as written: a card moved from it into the Planned list
+    is checked as a new line, so an unknown name never reaches a list the
+    tables count (E2-S23)."""
 
-    def __init__(self, kind, known=(), space=spaces.HOME):
+    def __init__(self, kind, known=(), space=spaces.HOME, known_considering=()):
         self.kind = kind
         self.space = space
         self.known = set(known)
+        self.known_considering = self.known | set(known_considering)
         self.known_setless = {name for name, set_code, _, _ in self.known if set_code is None}
         self.counts = _lazy(lambda: _visible_counts(space))
-        self.lists = {"target": None, "owned": None}
-        self.sent = {"target": 0, "owned": 0}   # lines the page sent in each list
+        self.lists = {"target": None, "owned": None, "considering": None}   # considering: [DeckLine]
+        self.sent = {"target": 0, "owned": 0, "considering": 0}   # lines the page sent in each list
         self.fields = {}
         self.blocks = []
         self.warnings = []
@@ -119,7 +124,8 @@ def _read_line(draft, raw, where):
     except ValueError as e:
         draft.block(f"{name}: {e}", **where)
         return None
-    if (name, set_code, number, finish) in draft.known:
+    if (name, set_code, number, finish) in (draft.known_considering if where.get("list") == "considering"
+                                            else draft.known):
         if _resolve(name) is None:
             draft.warn(f"{name!r} isn't a card name in the card data; it was already in the file, "
                        f"so it's kept as written", [name])
@@ -310,18 +316,25 @@ def _read_draft(data, kind, deck=None, source=None, space=None):
     whose own space counts) or a new deck (kind, starting from source's
     sections, in space: home by default)."""
     space = deck.space if deck is not None else (space or spaces.HOME)
-    draft = _Draft(kind, _known(deck.target, deck.owned) if deck is not None else _known(source), space)
+    draft = _Draft(kind, _known(deck.target, deck.owned) if deck is not None else _known(source), space,
+                   _known({"Deck": deck.considering or []}) if deck is not None else ())
     raw = data.get("lists")
-    versions = ("target", "owned") if deck is not None else ("target",)
+    versions = ("target", "owned", "considering") if deck is not None else ("target",)
     if raw is not None:
         if not isinstance(raw, dict):
             raise ApiError(400, 'lists must be a JSON object like {"target": {"Deck": [...]}}')
         for version in raw:
             if version not in versions:
-                raise ApiError(400, f"Unknown list {version!r}; send {' and '.join(versions)}")
+                raise ApiError(400, f"Unknown list {version!r}; send {', '.join(versions)}")
         for version in versions:
             sections = raw.get(version)
             if sections is None:
+                continue
+            if version == "considering":
+                # The Considering list (decks/considering.py): card lines only, no sections.
+                if not isinstance(sections, list):
+                    raise ApiError(400, "lists.considering must be a list of card lines")
+                draft.lists[version] = _read_sections(draft, version, {"Deck": sections}).get("Deck", [])
                 continue
             if not isinstance(sections, dict):
                 raise ApiError(400, f"lists.{version} must be a JSON object of sections")

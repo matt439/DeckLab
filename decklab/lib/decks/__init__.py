@@ -79,6 +79,8 @@ Where things are (every name in the submodules is also decks.<name>):
   (parse_token_cards, set_token_cards), which other decks then count as in use;
 - printings.py: a built deck's optional "Printings in box" header line, which physical printing
   of its cards is in the box (parse_printings, set_printings), a record that reserves nothing;
+- considering.py: the "## Considering" block, cards that might go in (DeckFile.considering),
+  outside both lists, so nothing that reads the lists counts them;
 - cover.py: the optional "Cover card" header line (parse_cover, set_cover) and the automatic
   cover (auto_cover_line), the card whose art stands for the deck in the library;
 - this file: everything that uses the folders (DECKS_DIR, and each person
@@ -119,6 +121,7 @@ from .tokencards import (TOKEN_CARDS_FIELD, TokenCardLine, format_token_cards, h
 from .printings import (PRINTINGS_FIELD, PrintingLine, format_printings, has_printings, parse_printings,
                         set_printings)
 from .opponents import USUAL_OPPONENTS_FIELD, parse_usual_opponents, set_usual_opponents
+from .considering import format_considering, parse_considering
 from .deckfile import (
     _ABOUT, _AMOUNT_AFTER_RE, _AMOUNT_BEFORE_RE, _CONTEXT_START_RE, _CUR, _NUM, _ONE, _QUOTE_CUT_RE,
     BUILT_VERSIONS, COUNT_RE, DATE_RE, FIELD_RE, FORMATS, HEADING_RE, KINDS, MARKER, MARKER_RE,
@@ -130,7 +133,7 @@ from .deckfile import (
 from .decklist import (
     _BASIC_KEYS, BASIC_LANDS, CATEGORY_MAX, LINE_RE, MAIN_SECTIONS, SECTIONS, SET_IN_NAME_RE, DeckFileError,
     DeckLine, DecklistError, _section_name, card_count, categories, clean_category, clean_sections,
-    format_decklist, format_line, is_basic_land, parse_decklist, parse_line, section_header)
+    format_decklist, format_line, is_basic_land, parse_decklist, parse_line, section_header, tag_count)
 from .edit import (
     BRACKET_NUMBERS, EDIT_FIELDS, LABEL_RE, _card_key, _check_rows_match_target, _merge_notes,
     _owned_key, _set_leading_word, _split_notes, apply_edit, clean_label, format_aud,

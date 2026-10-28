@@ -102,7 +102,11 @@ class DeckLabelUiTests(unittest.TestCase):
           assert(!menu(idea).includes('Print box label'));
           assert(menu(built()).includes('Print box label'));
           const product = built(); product.summary.id = 'product/fdc-test'; product.summary.read_only = true;
-          assert(!menu(product).includes('Print box label'));             // a product's label is a later slice
+          assert(!menu(product).includes('Print box label'));             // not kept intact: no box_label
+          product.box_label = {name: 'Test Box', colors: ['G'], link: 'product/fdc-test', decks: [{id: 'product/fdc-test', title: 'Test Box'}]};
+          assert(menu(product).includes('Print box label'));
+          const pairing = built(); pairing.summary.id = 'pairing/a+b'; pairing.summary.read_only = true;
+          assert(!menu(pairing).includes('Print box label'));
         """)
 
     def test_the_label_has_colours_title_player_and_the_code(self):
@@ -148,6 +152,61 @@ class DeckLabelUiTests(unittest.TestCase):
           printBoxLabel(page); await settle();
           assert.equal(printed, 0); assert.equal(sheet(), null);
           assert(toasts.at(-1).includes('too long'));
+        """)
+
+    def test_an_intact_products_label_names_its_decks_and_opens_the_first(self):
+        self.run_js("""
+          const page = makePage(); page.summary = {...page.summary, id: 'product/box/control', title: 'Control (Box)',
+            status: undefined, read_only: true, player: null};
+          page.box_label = {name: 'Box', colors: ['W', 'U', 'G'], link: 'product/box/elves',
+            decks: [{id: 'product/box/elves', title: 'Elves'}, {id: 'product/box/control', title: 'Control'}]};
+          assert.equal(boxLabelTarget(page), 'product/box/elves');
+          deckMoreItems(page).find((i) => i && i.label === 'Print box label').onclick(); await settle();
+          assert.equal(printed, 1);
+          const label = sheet().querySelector('.box-label');
+          assert.equal(label.querySelector('.box-label-title').textContent, 'Box');
+          assert.equal(label.querySelector('.box-label-player'), null);
+          same(label.querySelector('.box-label-decks').querySelectorAll('li').map((li) => li.textContent), ['Elves', 'Control']);
+          same(label.querySelector('.box-label-colours').querySelectorAll('img').map((i) => i.getAttribute('src')),
+               ['/sym/W.svg', '/sym/U.svg', '/sym/G.svg']);
+          assert.equal(label.querySelector('.qr-code').getAttribute('aria-label'), 'QR code: the deck page of Elves, in Box');
+          assert(label.querySelector('.box-label-scan').textContent.includes('decks'));
+          // A malformed label is not offered, and the deck page's Product storage part links the other decks.
+          assert(!offersBoxLabel({...page, box_label: {name: 'Box', link: 'casual/x', decks: []}}));
+          const list = productBoxDecks(page);
+          same(list.querySelectorAll('a').map((a) => [a.textContent, a.getAttribute('href')]),
+               [['Elves', '#/deck?id=product%2Fbox%2Felves']]);
+          assert(list.textContent.includes('Control (this deck)'));
+          assert.equal(productBoxDecks({...page, box_label: {...page.box_label, decks: page.box_label.decks.slice(0, 1)}}), null);
+        """)
+
+    def test_a_product_with_many_decks_keeps_its_code_on_the_label(self):
+        self.run_js("""
+          const page = makePage(); page.summary = {...page.summary, id: 'product/box/d1', title: 'D1 (Box)', read_only: true};
+          const label = (n) => { page.box_label = {name: 'Box', colors: ['G'], link: 'product/box/d1',
+            decks: Array.from({length: n}, (_, i) => ({id: `product/box/d${i + 1}`, title: `Deck ${i + 1}`}))};
+            return boxLabelPiece(page).querySelector('.box-label-decks'); };
+          assert.equal(label(4).getAttribute('class'), 'box-label-decks');
+          assert.equal(label(5).getAttribute('class'), 'box-label-decks box-label-decks-many');
+          assert.equal(label(12).querySelectorAll('li').length, 12);
+          const many = label(15).querySelectorAll('li').map((li) => li.textContent);
+          assert.equal(many.length, 12);
+          same(many.slice(-2), ['Deck 11', 'and 4 more']);
+        """)
+        css = (WEB / "deck-tools.css").read_text(encoding="utf-8")
+        self.assertIn(".box-label .qr-code { width: 40mm; height: 40mm; margin-top: auto; flex-shrink: 0; }", css)
+        self.assertRegex(css, r"\.box-label-decks \{[^}]*min-height: 0; overflow: hidden;")
+        self.assertIn(".box-label-decks li { white-space: nowrap;", css)
+
+    def test_a_single_deck_products_label(self):
+        self.run_js("""
+          const page = makePage(); page.summary = {...page.summary, id: 'product/solo', title: 'Solo', read_only: true};
+          page.box_label = {name: 'Solo', colors: [], link: 'product/solo', decks: [{id: 'product/solo', title: 'Solo'}]};
+          printBoxLabel(page); await settle();
+          const label = sheet().querySelector('.box-label');
+          assert.equal(label.querySelector('.box-label-decks'), null);
+          assert.equal(label.querySelector('.qr-code').getAttribute('aria-label'), 'QR code: the deck page of Solo');
+          assert.equal(label.querySelector('.box-label-colours').getAttribute('aria-label'), 'Colourless');
         """)
 
 

@@ -336,6 +336,10 @@ function deckMoreItems(data) {
     home ? { label: routeH1("assembly"), href: `#/assembly?deck=${id}&version=${data.version}` } : null,
     { label: routeH1("play"), href: `#/play?id=${id}` },
     !s.read_only ? { label: "History", href: `#/history?id=${id}&v=${data.version}` } : null,
+    // compare.js: the other deck is chosen from the decks this viewer sees.
+    typeof openCompareChooser === "function" ? { label: "Compare with…", onclick: () => {
+      if (token === routeToken && profile === state.profile?.id) openCompareChooser(data);
+    } } : null,
     "sep",
     { label: "Copy decklist", onclick: () => copyDeck(data) },
     { label: "Download decklist", onclick: () => downloadDeck(data) },
@@ -575,7 +579,7 @@ function deckGroups(data, by = "type") {
   const order = ["Commander", "Companion", "Deck", ...names.filter((n) => !["Commander", "Companion", "Deck", "Sideboard"].includes(n)), "Sideboard"];
   const groups = [];
   for (const section of order) {
-    const lines = mergedLines(data.sections[section] || []);
+    const lines = mergedLines(data.sections[section] || [], section === "Deck" && by === "category");
     if (!lines.length) continue;
     if (section === "Deck" && by === "category") {
       groups.push(...categoryGroups(section, lines));
@@ -590,15 +594,26 @@ function deckGroups(data, by = "type") {
   return groups;
 }
 
-/** Lines of one section with each card once: {qty, name, card, printings: [{set, number, finish, qty}]}. */
-function mergedLines(lines) {
+/** Lines of one section with each card once: {qty, name, card, printings: [{set, number, finish, qty}],
+ * category, categories}. categories are the builder's own (deck-categories.js) on any of its lines, each
+ * once whatever its case; category the first. byCategory keeps a card's lines in different categories
+ * apart (a category's count is only the copies given it), each with its own category. */
+function mergedLines(lines, byCategory = false) {
   const byName = new Map();
   for (const line of lines) {
-    const same = byName.get(line.name);
+    const key = byCategory ? `${line.name}\n${(line.category || "").toLowerCase()}` : line.name;
+    const same = byName.get(key);
     const printing = { set: line.set, number: line.number, finish: line.finish, qty: line.qty };
-    if (same) { same.qty += line.qty; same.printings.push(printing); same.category = same.category || line.category || null; continue; }
-    byName.set(line.name, { qty: line.qty, name: line.name, card: line.card, printings: [printing],
-      category: line.category || null });
+    const category = line.category || null;
+    if (same) {
+      same.qty += line.qty;
+      same.printings.push(printing);
+      same.category = same.category || category;
+      if (category && !same.categories.some((c) => c.toLowerCase() === category.toLowerCase())) same.categories.push(category);
+      continue;
+    }
+    byName.set(key, { qty: line.qty, name: line.name, card: line.card, printings: [printing], category,
+      categories: category ? [category] : [] });
   }
   return [...byName.values()];
 }
@@ -612,14 +627,15 @@ function printingWords(printings) {
 }
 
 /** The Cards tab: the toolbar (filters for a visitor who sees the collection, List or Pictures), the
- * decklist, the Tokens part and the price table. */
+ * decklist, its Considering list (deck-considering.js), the Tokens part and the price table. */
 function cardsParts(data, screen) {
   screen.view.mode = cardsMode();
   const list = el("div", { class: "deck-cards", id: "sec-cards" });
   screen.cardsHost = list;
   screen.cardsBar = el("div", { class: "toolbar deck-cards-bar" });
   redrawCards(screen);
-  return [screen.cardsBar, list, deckSwapsSection(data), tokensSection(data), deckPrintingsSection(data), ownedSection(data)];
+  return [screen.cardsBar, list, deckConsideringSection(data), deckSwapsSection(data), tokensSection(data),
+    deckPrintingsSection(data), ownedSection(data)];
 }
 
 /** The remembered List or Pictures choice; the first time, pictures where the screen is wide. */
@@ -689,7 +705,7 @@ function redrawCards(screen) {
  * half greyed. */
 function deckCardRow(line, section, mark) {
   const card = line.card;
-  const printing = [printingWords(line.printings || [line]), line.category].filter(Boolean).join(" · ");
+  const printing = [printingWords(line.printings || [line]), (line.categories || [line.category]).filter(Boolean).join(", ")].filter(Boolean).join(" · ");
   const row = cardRow(card, {
     qty: line.qty, name: line.name, meta: card ? card.type_line + (printing ? ` · ${printing}` : "") : undefined,
     unknownMeta: "Not a Scryfall card name, so there's no card data" + (printing ? ` · ${printing}` : ""),
@@ -893,9 +909,9 @@ function openDistinct(card, node) {
   return openCardViewer(items, at.get(card.name) || 0, { trigger: node });
 }
 
-function cardNames(entries) {
+function cardNames(entries, group = "names") {
   if (!entries || !entries.length) return null;
-  return el("ul", { class: "card-names" }, entries.map((entry) => el("li", {}, cardLink(entry))));
+  return el("ul", { class: "card-names" }, entries.map((entry) => el("li", {}, cardLink(entry, group))));
 }
 
 

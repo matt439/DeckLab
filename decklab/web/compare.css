@@ -1,0 +1,30 @@
+/* Compare two decks (compare.js, E1-S13): the two sides' heads, then In brief, the curves, colours and card types.
+   Phone first: the heads and the tables keep their two columns at every width (a figure beside its rival), and
+   the two curves stack until 600px, where they sit side by side on one scale. Only the theme's tokens. */
+.compare-heads { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-2); margin: var(--s-3) 0; }
+.compare-head { display: flex; flex-direction: column; align-items: flex-start; gap: var(--s-1); min-width: 0;
+  padding: var(--s-2) var(--s-3); border: 1px solid var(--border); border-radius: var(--r-lg); background: var(--surface); }
+.compare-title { font-size: var(--fs-md); font-weight: var(--fw-semibold); line-height: var(--lh-tight); overflow-wrap: anywhere; }
+.compare-facts { margin: 0; color: var(--ink-2); font-size: var(--fs-sm); overflow-wrap: anywhere; }
+.compare-part { margin: 0 0 var(--s-4); }
+.compare-part > h2 { margin: 0 0 var(--s-2); font-size: var(--fs-lg); }
+.compare-table .c-what { width: 36%; }
+.compare-table thead th { overflow-wrap: anywhere; }
+.compare-table th[scope="row"] { color: var(--ink-2); font-weight: var(--fw-semibold); }
+.compare-table td .status { white-space: normal; }
+.compare-hint { color: var(--ink-2); font-size: var(--fs-sm); }
+.compare-count { display: inline-flex; align-items: center; justify-content: flex-end; gap: var(--s-2); width: 100%; }
+.compare-track { flex: 1 1 auto; max-width: 8em; height: 8px; border-radius: var(--r-sm); background: var(--track); overflow: hidden; }
+.compare-bar { display: block; height: 100%; background: var(--series-1); }
+.compare-charts { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s-3); }
+.compare-chart { min-width: 0; }
+.compare-chart > h3 { margin: 0 0 var(--s-1); font-size: var(--fs-md); overflow-wrap: anywhere; }
+@media (min-width: 600px) { .compare-charts { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+/* The chooser's sheet: a search, then one row a deck, 44px tall to tap. */
+.compare-search { width: 100%; margin: var(--s-2) 0; }
+.compare-choices { list-style: none; margin: 0; padding: 0; }
+.compare-choice { display: flex; align-items: center; gap: var(--s-2); min-height: var(--tap); padding: var(--s-1) var(--s-2);
+  border-radius: var(--r-row); color: var(--ink); text-decoration: none; }
+@media (hover: hover) and (pointer: fine) { .compare-choice:hover { background: var(--surface-2); } }
+.compare-choice-title { min-width: 0; overflow-wrap: anywhere; }
+@media (forced-colors: active) { .compare-bar { background: CanvasText; } }

@@ -7,8 +7,9 @@ import re
 from dataclasses import astuple
 
 from .deckfile import (DATE_RE, FIELD_RE, KINDS, MARKER, OWNED_FIELDS, PRICE_NOTE, PRICE_STAMP,
-                       PRICE_STAMP_RE, TABLE_HEADER, TABLE_RULE, _QUOTE_CUT_RE, PriceStamp, _lines,
+                       PRICE_STAMP_RE, TABLE_HEADER, TABLE_RULE, _QUOTE_CUT_RE, PriceStamp, _lines, considering_insert,
                        _one_line, _parse_row, _rate_in, _without_stamp)
+from . import considering
 from .decklist import DeckFileError, DecklistError, categories, format_decklist, parse_decklist
 from .edit import _merge_notes
 
@@ -124,6 +125,32 @@ def _block_text(deck, key, sections, nl):
     return format_decklist(sections, nl)
 
 
+def _considering_edits(deck, nl):
+    """The Considering block (considering.py): as it was read while it still reads as
+    deck.considering, else rebuilt; a block under a heading that had none, or a whole new section
+    after the Decklist for a deck with none (and nothing for an empty list there)."""
+    spans, lines = deck.spans, deck.considering or []
+    if "considering" in spans:
+        original = deck.text[slice(*spans["considering"])]
+        try:
+            read = considering.parse_considering(original)
+            if read == lines and categories({"": read}) == categories({"": lines}):
+                return [(*spans["considering"], original)]
+        except DecklistError:
+            pass
+        return [(*spans["considering"], considering.format_considering(lines, nl))]
+    if not lines:
+        return []
+    if "considering_block" in spans:
+        pos = spans["considering_block"][0]
+        return [(pos, pos, f"{nl}```{nl}{considering.format_considering(lines, nl)}```{nl}")]
+    pos = considering_insert(deck.text)
+    block = _lead(deck.text[:pos], nl) + considering.section_text(lines, nl)
+    if pos < len(deck.text):
+        block += nl         # blank line before the heading that follows
+    return [(pos, pos, block)]
+
+
 def _read_rows(text):
     """{row values: (line text, line ending)} for the table rows in text, so a
     row that didn't change is written back exactly as it was read."""
@@ -227,6 +254,8 @@ def render_deck_file(deck):
         if pos < len(deck.text):
             block += nl         # blank line before the heading that follows
         edits.append((pos, pos, block))
+
+    edits.extend(_considering_edits(deck, nl))
 
     if "prices_other" in spans and deck.prices is not None and deck.prices != _read_stamp(deck):
         other = other_rate(deck)

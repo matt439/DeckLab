@@ -30,13 +30,23 @@ class LineTests(unittest.TestCase):
             self.assertEqual(decks.parse_line(text).category, category, text)
         self.assertEqual(decks.parse_line("1 Hazmat Suit (Used) #Jokes").name, "Hazmat Suit (Used)")
 
+    def test_moxfields_several_tags_keep_the_first(self):
+        # Moxfield exports a card with several tags as " #Ramp #Mana Rock": one category per line, the first.
+        for text in ("1 Sol Ring (CMM) 410 #Ramp #Mana Rock", "1 Sol Ring (CMM) 410 #!Ramp #!Draw",
+                     "1 Sol Ring (CMM) 410 #Ramp #" + "x" * 40):
+            line = decks.parse_line(text)
+            self.assertEqual((line.name, line.set, line.number, line.category), ("Sol Ring", "cmm", "410", "Ramp"), text)
+            self.assertEqual(decks.tag_count(text), 2, text)
+        self.assertEqual(decks.format_line(decks.parse_line("1 Sol Ring #Ramp #Draw")), "1 Sol Ring #Ramp")
+        self.assertEqual([decks.tag_count(t) for t in ("1 Sol Ring", "1 Sol Ring #Ramp")], [0, 1])
+
     def test_the_category_is_not_part_of_the_cards_identity(self):
         plain, tagged = decks.parse_line("4 Opt (FDN) 512"), decks.parse_line("4 Opt (FDN) 512 #Draw")
         self.assertEqual(plain, tagged)
         self.assertNotEqual(decks.categories({"Deck": [plain]}), decks.categories({"Deck": [tagged]}))
 
     def test_lines_a_category_cant_be_read_from(self):
-        for text in ("1 Sol Ring #ramp #draw", "1 Sol Ring #ramp (CMM) 410", "1 Sol Ring #", "1 Sol#Ring",
+        for text in ("1 Sol Ring #-ramp #draw", "1 Sol Ring #ramp (CMM) 410", "1 Sol Ring #", "1 Sol#Ring",
                      "1 Sol Ring #-ramp", "1 Sol Ring #" + "x" * 31):
             with self.assertRaises(decks.DecklistError, msg=text):
                 decks.parse_line(text)
@@ -135,6 +145,57 @@ class SaveTests(EditorTestCase):
         self.assertEqual(answer["errors"], [])
         self.assertEqual([line.get("category") for line in answer["sections"]["Deck"]], ["Ramp", "Ramp", None])
 
+    def test_a_pasted_card_with_several_moxfield_tags_keeps_its_first(self):
+        answer = api.parse_list(self.body(text="4 Llanowar Elves (FDN) 227 #Ramp #Mana Dork\n12 Forest\n"))
+        self.assertEqual(answer["errors"], [])
+        self.assertEqual([(line["name"], line.get("category")) for line in answer["sections"]["Deck"]],
+                         [("Llanowar Elves", "Ramp"), ("Forest", None)])
+        self.assertTrue(any("kept its first category, Ramp" in w for w in answer["warnings"]), answer["warnings"])
+
+
+class ConsideringTests(EditorTestCase):
+    """A Considering line (E2-S23) holds a category as the lists' lines do, and its saves keep them."""
+
+    def setUp(self):
+        super().setUp()
+        from decklab.tests.test_api import _write
+        from decklab.tests.test_deck_considering import CONSIDERING_DECK
+        deck = CONSIDERING_DECK.replace("1 Black Lotus (LEA) 232\n2 Elvish", "1 Black Lotus (LEA) 232 #Power\n2 Elvish")
+        deck = deck.replace("4 Llanowar Elves (FDN) 227\n", "4 Llanowar Elves (FDN) 227 #Ramp\n", 1)
+        _write(self.box.magic / "decks" / "casual" / "table-test.md", deck)
+
+    def deck(self):
+        return decks.parse_deck(self.text("casual/table-test").encode(), "table-test", "casual")
+
+    def test_a_category_only_change_to_a_considering_line_is_saved(self):
+        deck = self.deck()
+        self.assertEqual([l.category for l in deck.considering], ["Power", None])
+        lines = [decks.DeckLine(l.quantity, l.name, l.set, l.number, l.finish, l.category) for l in deck.considering]
+        lines[1].category = "Draw"
+        self.assertEqual(decks.apply_edit(deck, considering=lines)["considering"], True)
+        self.assertIn("2 Elvish Mystic (CMM) 648 #Draw\n", decks.render_deck_file(deck))
+        # Through the editor's save too.
+        view = api.edit_view("casual/table-test")
+        sent = view["lists"]["considering"]
+        self.assertEqual(sent[0].get("category"), "Power")
+        sent[1]["category"] = "Draw"
+        self.assertTrue(self.save("casual/table-test", {"considering": sent})["changed"])
+        self.assertEqual([l.category for l in self.deck().considering], ["Power", "Draw"])
+
+    def test_the_considering_actions_keep_every_category(self):
+        from decklab.lib.api import considering as considering_api
+        body = lambda **data: self.body(id="casual/table-test", sha256=self.sha("casual/table-test"), **data)  # noqa: E731
+        considering_api.save_considering(body(action="add", line={"name": "Llanowar Elves", "qty": 1}))
+        deck = self.deck()
+        self.assertEqual([l.category for l in deck.considering], ["Power", None, None])
+        self.assertEqual(deck.target["Deck"][0].category, "Ramp")
+        # A move rebuilds the Planned list from its lines: their categories, and the moved line's, stay.
+        considering_api.save_considering(body(action="move", index=0, qty=1, section="Sideboard"))
+        deck = self.deck()
+        self.assertEqual(deck.target["Deck"][0].category, "Ramp")
+        self.assertEqual([(l.name, l.category) for l in deck.target["Sideboard"]], [("Black Lotus", "Power")])
+        self.assertEqual([l.category for l in deck.considering], [None, None])
+
 
 FIXTURE = """
   const land = {type_line: 'Basic Land — Forest', cmc: 0};
@@ -164,7 +225,7 @@ class PageTests(unittest.TestCase):
             ['Commander', 'Commander', ['Lathril, Blade of the Elves']],
             ['Deck', 'Draw', ['Elvish Mystic']],
             ['Deck', 'Ramp', ['Llanowar Elves', 'Sol Ring']],
-            ['Deck', 'Uncategorised', ['Forest']],
+            ['Deck', 'Uncategorised', ['Forest', 'Elvish Mystic']],
             ['Sideboard', 'Sideboard', ['Naturalize']]]);
           // By type it's as before.
           assert(deckGroups(data).some((g) => g.title === 'Creatures'));
@@ -177,7 +238,12 @@ class PageTests(unittest.TestCase):
     def test_stats_count_each_category_and_the_odds_tick_one(self):
         self.run_js("""
           same(categoryCounts(data.sections).map((c) => [c.category, c.count]),
-            [['Draw', 2], ['Ramp', 2], ['Win condition', 1], ['Uncategorised', 95]]);
+            [['Draw', 1], ['Ramp', 2], ['Win condition', 1], ['Uncategorised', 96]]);
+          // A card with copies in two categories counts each copy once, under its own line's category.
+          const split = {sections: {Deck: [{qty: 2, name: 'Llanowar Elves', set: 'fdn', card: elf, category: 'Ramp'},
+            {qty: 2, name: 'Llanowar Elves', set: 'm19', card: elf, category: 'Draw'}, {qty: 1, name: 'Llanowar Elves', card: elf}]}};
+          same(categoryCounts(split.sections).map((c) => [c.category, c.count]),
+            [['Draw', 2], ['Ramp', 2], ['Uncategorised', 1]]);
           const panel = categoriesPanel(data);
           assert(panel.textContent.includes('Your categories'));
           assert.equal(categoriesPanel({sections: {Deck: [{qty: 60, name: 'Forest', card: land}]}}), null);
@@ -187,6 +253,23 @@ class PageTests(unittest.TestCase):
           const ticked = odds.querySelectorAll('input').filter((i) => i.getAttribute('type') === 'checkbox' && i.checked);
           same(ticked.map((i) => i.value).sort(), ['Llanowar Elves', 'Sol Ring']);
           assert(odds.textContent.includes('the 2 cards ticked'));
+          // Elvish Mystic has a copy given Draw, so Draw ticks the card (all its copies count, as a card's tick does).
+          odds.querySelectorAll('button').find((b) => b.textContent === 'Draw').click();
+          same(odds.querySelectorAll('input').filter((i) => i.getAttribute('type') === 'checkbox' && i.checked)
+            .map((i) => i.value), ['Elvish Mystic']);
+        """)
+
+    def test_the_editors_review_names_category_changes(self):
+        self.run_js("""
+          const base = {Deck: [{qty: 1, name: 'Sol Ring', set: 'cmm', number: '410', finish: 'nonfoil', category: 'Ramp'},
+            {qty: 1, name: 'Opt', finish: 'nonfoil'}, {qty: 1, name: 'Shock', finish: 'nonfoil', category: 'Removal'}]};
+          const now = {Deck: [{qty: 1, name: 'Sol Ring', set: 'cmm', number: '410', finish: 'nonfoil', category: 'Mana'},
+            {qty: 1, name: 'Opt', finish: 'nonfoil', category: 'Draw'}, {qty: 1, name: 'Shock', finish: 'nonfoil'},
+            {qty: 1, name: 'Duress', finish: 'nonfoil', category: 'Disruption'}]};
+          same(categoryChanges(base, now).map(categoryChangeWords),
+            ['Sol Ring: Ramp → Mana', 'Opt: Draw', 'Shock: no category (was Removal)']);
+          same(listChanges(base, now).map((c) => c.name), ['Duress']);   // a new line is a card change, not a category one
+          same(categoryChanges(base, base), []);
         """)
 
     def test_category_text_as_a_line_holds_it(self):

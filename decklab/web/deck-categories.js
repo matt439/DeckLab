@@ -76,7 +76,7 @@ function categoryGroups(section, lines) {
 /** The copies in each category of the cards that count towards the deck (the Commander and the Deck):
  * [{category, count, cards: [{name, qty, card}]}], Uncategorised last; [] when no line has a category. */
 function categoryCounts(sections) {
-  const lines = ["Commander", "Deck"].flatMap((s) => mergedLines((sections || {})[s] || []));
+  const lines = ["Commander", "Deck"].flatMap((s) => mergedLines((sections || {})[s] || [], true));
   const names = categoryNames(lines);
   if (!names.length) return [];
   const item = (category, members) => ({ category, count: copies(members),
@@ -99,10 +99,13 @@ function categoriesPanel(data) {
     barList(counts, (c) => c.category));
 }
 
-/** The Chance to draw panel's buttons that tick a category's cards (setAll(test)), one per category. */
+/** The Chance to draw panel's buttons that tick a category's cards (setAll(test)), one per category. Its
+ * lines are merged by name (mergedLines): a card with a copy in the category is ticked, every copy counted. */
 function oddsCategoryButtons(lines, setAll) {
-  return categoryNames(lines).map((name) => el("button", { type: "button", class: "btn btn-quiet",
-    text: name, "aria-label": `Tick every ${name} card`, onclick: () => setAll((line) => sameCategory(line, name)) }));
+  const given = (line) => (line.categories || [line.category]).filter(Boolean).map((category) => ({ category }));
+  return categoryNames(lines.flatMap(given)).map((name) => el("button", { type: "button", class: "btn btn-quiet",
+    text: name, "aria-label": `Tick every ${name} card`,
+    onclick: () => setAll((line) => given(line).some((c) => sameCategory(c, name))) }));
 }
 
 /** The editor's ⋯ > Category…: give a line a category (the deck's others offered), change it or clear it.

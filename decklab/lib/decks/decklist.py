@@ -35,11 +35,13 @@ LINE_RE = re.compile(
 # A category at the end of a line: " #Ramp", " #Win condition" (Moxfield's
 # "#!Ramp" global-tag form is read too, without its "!"). One per line: letters,
 # digits, spaces and a little punctuation, at most CATEGORY_MAX characters.
-# No Scryfall card name has a "#" in it.
+# Moxfield exports a card with several tags as " #Ramp #Mana Rock": the first is
+# kept and the rest dropped (tag_count tells a paste so). No Scryfall card name
+# has a "#" in it.
 CATEGORY_MAX = 30
 CATEGORY_TEXT = rf"[^\W_](?:[\w '&/+.-]{{0,{CATEGORY_MAX - 2}}}[^\W_])?"
 CATEGORY_RE = re.compile(CATEGORY_TEXT)
-CATEGORY_TAIL_RE = re.compile(rf"\s+#!?({CATEGORY_TEXT})\s*$")
+TAG_RE = re.compile(r"\s+#")
 # A "(SET)" with more text after it inside a parsed name means the rest of the
 # line was garbled ("1 Opt (FDN) 512 extra").
 SET_IN_NAME_RE = re.compile(r"\([A-Za-z0-9]{2,8}\) +\S")
@@ -93,16 +95,33 @@ def is_basic_land(name):
     return name in BASIC_LANDS
 
 
+def _split_tags(text):
+    """(the line before its first " #", [each tag after it]): " #Ramp #!Draw"
+    gives ["Ramp", "!Draw"]."""
+    m = TAG_RE.search(text)
+    if not m:
+        return text, []
+    return text[:m.start()], [t.strip() for t in TAG_RE.split(text[m.start():])[1:]]
+
+
+def tag_count(text):
+    """How many " #tag"s a line ends with: more than one means parse_line kept
+    only the first (Moxfield's several tags on one card)."""
+    return len(_split_tags(text.strip())[1])
+
+
 def parse_line(text):
     """Parse one '4 Card Name (SET) 123 *F* #Category' line into a DeckLine."""
-    text = text.strip()
-    category = None
-    tail = CATEGORY_TAIL_RE.search(text)
-    if tail:
-        category = clean_category(tail.group(1))
-        text = text[:tail.start()]
+    text, tags = _split_tags(text.strip())
     if "#" in text:
-        raise DecklistError(f"a card line takes one category at its end (\" #Ramp\"): {text!r}")
+        raise DecklistError(f"a card line takes its category at its end (\" #Ramp\"): {text!r}")
+    category = None
+    if tags:        # the first tag; any after it are dropped (Moxfield's several tags)
+        first = tags[0].removeprefix("!")
+        if not CATEGORY_RE.fullmatch(first):
+            raise DecklistError(f"a category is 1-{CATEGORY_MAX} letters, digits, spaces and - ' & / + . "
+                                f"(starting and ending with a letter or digit): {first!r}")
+        category = clean_category(first)
     m = LINE_RE.match(text)
     if not m:
         raise DecklistError(f"not a decklist line: {text.strip()!r}")

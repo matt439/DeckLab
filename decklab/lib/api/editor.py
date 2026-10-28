@@ -78,7 +78,8 @@ def _file_edit_json(deck, p, warnings):
         "field_text": {key: deck.get_field(key) for key in decks.OWNED_FIELDS},
         "editable_fields": editable_fields if why_not is None else [],
         "sections": _offered_sections(deck.kind, deck.target, deck.owned),
-        "lists": {"target": _lines_json(deck.target, warnings), "owned": _lines_json(deck.owned or None, warnings)},
+        "lists": {"target": _lines_json(deck.target, warnings), "owned": _lines_json(deck.owned or None, warnings),
+                  "considering": _lines_json({"Considering": deck.considering or []}, warnings)["Considering"]},
         # These identify only the playable lists, using Forge's exact main/commander semantics.
         # Work from this parsed snapshot rather than loading the deck again after a concurrent save.
         "forge_lists": _forge_lists(deck),
@@ -376,6 +377,8 @@ def parse_list(body):
             errors.append({"line": number, "text": shown, "error": str(e)})
             continue
         found.category = line.category      # a pasted " #Ramp" (Moxfield's tags) stays the line's category
+        if decks.tag_count(raw) > 1:
+            warnings.append(f"{found.name}: kept its first category, {line.category}; a card line holds one")
         merged = sections.setdefault(current, {})
         key = (found.name, found.set, found.number, found.finish)
         if key in merged:
@@ -485,7 +488,7 @@ def check_draft(body):
         trial = decks.parse_deck(deck.text.encode("utf-8"), deck.slug, deck.kind, deck.path, deck.space)
         try:
             changes = decks.apply_edit(trial, draft.lists["target"], draft.lists["owned"], draft.fields,
-                                       bracket_names=_bracket_names())
+                                       bracket_names=_bracket_names(), considering=draft.lists["considering"])
         except ValueError as e:
             if not blocked:
                 draft.block(f"{str(e)[:1].upper()}{str(e)[1:]}")

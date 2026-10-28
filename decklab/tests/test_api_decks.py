@@ -170,8 +170,9 @@ class DeckViewTests(ApiTestCase):
         view = api.deck_view("casual/gruul-test")
         self.assertEqual(set(view), {"summary", "version", "versions", "sections", "stats", "owned", "practice",
                                      "matchups", "guide", "tokens", "table", "warnings", "info", "usual_opponents", "standins", "swaps",
-                                     "box_checked_on"})
+                                     "box_checked_on", "considering"})
         self.assertIsNone(view["box_checked_on"])
+        self.assertEqual(view["considering"]["lines"], [])        # E2-S23: none written in this deck
         self.assertEqual(view["usual_opponents"], [])
         self.assertEqual((view["version"], view["versions"]), ("target", ["target", "owned"]))
         # Gruul Test has no owned-vs-needed table; products and pairings have no file table at all.
@@ -445,6 +446,12 @@ class DeckKitTests(ApiTestCase):
                             for w in view["warnings"]), view["warnings"])
         self.assertEqual(view["summary"]["holder_sha256"], accessories.status_sha256())
         self.assertIsNone(api.deck_view("pairing/elves+cats")["summary"]["holder_sha256"])
+        # E8-S21: one box label for the whole product, its code opening the first deck's page.
+        label = view["box_label"]
+        self.assertEqual(label["link"], label["decks"][0]["id"])
+        self.assertIn("product/fdn-beginner-box/elves", [d["id"] for d in label["decks"]])
+        self.assertEqual(api.deck_view("product/fdn-beginner-box/cats")["box_label"], label)
+        self.assertNotIn("box_label", api.deck_view("casual/gruul-test"))
 
 
 class TokenTestCase(ApiTestCase):

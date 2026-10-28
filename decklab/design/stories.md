@@ -35,18 +35,18 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 
 | Epic | Stories | Built | Partial | Missing | Not wanted |
 |---|---:|---:|---:|---:|---:|
-| [E1: Find, plan and choose decks](#e1-find-plan-and-choose-decks) | 14 | 11 | 0 | 3 | 0 |
-| [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 19 | 14 | 1 | 3 | 1 |
+| [E1: Find, plan and choose decks](#e1-find-plan-and-choose-decks) | 14 | 12 | 1 | 1 | 0 |
+| [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 19 | 15 | 1 | 2 | 1 |
 | [E3: Test a deck](#e3-test-a-deck) | 15 | 12 | 3 | 0 | 0 |
 | [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 22 | 16 | 1 | 4 | 1 |
 | [E5: Decide what to buy](#e5-decide-what-to-buy) | 22 | 15 | 0 | 5 | 2 |
 | [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 20 | 17 | 0 | 1 | 2 |
-| [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 28 | 20 | 3 | 5 | 0 |
-| [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 18 | 11 | 1 | 4 | 2 |
+| [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 28 | 20 | 4 | 4 | 0 |
+| [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 18 | 12 | 1 | 3 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 20 | 13 | 0 | 6 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 35 | 31 | 1 | 1 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 28 | 17 | 6 | 2 | 3 |
-| **Total** | **241** | **177** | **16** | **34** | **14** |
+| **Total** | **241** | **180** | **18** | **29** | **14** |
 
 Counted from the story headers on 2026-10-27.
 
@@ -56,7 +56,7 @@ Counted from the story headers on 2026-10-27.
 
 How Matt and User1 (and, more lightly, User2, User3, User4 and User5) find a deck in the library (#/library), choose its picture, open its deck page (#/deck) to see whether it can be built and how to play it, rename or retire it, and pick what to play tonight. Each viewer's library holds their own space's decks, plus any another space has made public. A plain "Deck Lab is off" message is enough while the PC is off (E11-S02); collector-value sorting and legality badges on casual decks aren't wanted.
 
-Open: E1-S12, E1-S13, E1-S24.
+Open: E1-S12, E1-S13.
 
 **E1-S01** · User1 · must · M · built
 
@@ -178,7 +178,7 @@ Evidence:
 
 Gap: The Overview shows nothing about strength. The rank and range already exist on the Matchups tab and in #/matchups Rankings (E3-S10); the work is surfacing one line on the Overview.
 
-**E1-S13** · Matt · could · L · missing
+**E1-S13** · Matt · could · L · partial
 
 As a deck builder, I want to compare two decks side by side (curve, colours, lands, card types, cards they both want, and how they've done against each other), so that choosing between two decks, or between two versions of an idea, doesn't mean flicking between pages.
 
@@ -186,12 +186,19 @@ As a deck builder, I want to compare two decks side by side (curve, colours, lan
 - Given cards both lists use, when the comparison opens, then they are listed with how many copies the pool can cover for both.
 - Given saved Forge results or recorded games between them, when the comparison opens, then the latest result and the Head to head count are linked.
 
+Now: first slice built 2026-10-28 ([HISTORY.md](../HISTORY.md#compare-two-decks-side-by-side-2026-10-28-e1-s13)). A deck page's More has **Compare with…**, a sheet listing the decks the viewer sees (GET /api/decks, searchable) and, for a deck with both lists, its own other list; choosing one opens the read-only `#/compare?a=<id>&b=<id>[&av=owned&bv=owned]` (a child page of Decks). It reads each list as its deck page does (GET /api/deck, the viewer's rights, so a deck the viewer may not see answers as missing, E10-S30's 404, and nothing of the other deck shows). Side by side: each deck's colours, title, format and card counts; In brief (cards, average mana value, lands against the formula, creatures, other spells, colour sources, and the bracket for Commander); both mana curves on one scale (stacked on a phone, beside each other from 600px) with each bar's cards (a viewer group per side) and the two as one table; each colour's sources against the hardest card's need; and the copies of each card type. More swaps the sides or chooses another deck. Comparing a deck's Planned and Play-now lists (a pairing's halves in either order) names the sides by list.
+
 Evidence:
-- `decklab/web/core.js`: ROUTES (no compare route)
+- `decklab/web/compare.js`: showCompare, compareDraw, compareBrief, compareCurves, compareColours, compareTypes, compareTwoLists, openCompareChooser
+- `decklab/web/compare.css`
+- `decklab/web/core.js`: ROUTES (compare); `decklab/web/app.js`: route
+- `decklab/web/deck.js`: deckMoreItems (Compare with…), cardNames (a viewer group)
+- `decklab/web/stats.js`: drawCurve (a shared scale's top)
+- `decklab/tests/test_compare_ui.py`
 
-Gap: There's no compare view. The pieces are separate: each deck's Stats, #/matchups, Head to head in #/play, the Packing plan, and History's revision compare.
+Gap: The cards both lists use, with how many copies the pool can cover for both, and the pair's latest Forge result and Head to head count linked from the comparison. Choosing the two lists from the library (not only a deck page) is still to come.
 
-First slice: a read-only compare page for two chosen decks with their curves, colours, land counts and card types side by side (the stats outcome only; shared cards and head to head follow).
+Later slices: shared cards (with the pool's cover for both), then head to head.
 
 Review note: L with three separate outcomes; could split into stats, shared cards and head to head.
 
@@ -242,7 +249,7 @@ Evidence:
 - `decklab/web/card-viewer.js`: openCardViewer, stepViewer, flipViewer, toggleViewerText, viewerPointerUp, pushViewerEntry
 - `decklab/tests/test_card_inspector.py`: test_viewer_faces_reading_errors_dismissal_focus_groups_and_swipes
 
-**E1-S24** · Matt · could · M · missing
+**E1-S24** · Matt · could · M · built
 
 As a deck builder starting from what we own, I want published precons ranked by how much of each one our free pool already covers, so that I can see which deck we could put together next with the fewest purchases.
 
@@ -252,13 +259,15 @@ As a deck builder starting from what we own, I want published precons ranked by 
 
 Decided (Matt, 2026-10-27): added from the comparison with MTGGoldfish's Super Brew.
 
+Now: built 2026-10-28 ([HISTORY.md](../HISTORY.md#rank-precons-by-how-much-of-each-the-free-pool-covers-2026-10-28-e1-s24)). The Collection page's More has **Precons we could build…**: MTGJSON's paper precons ranked by the share of each one's cards (plain basics left out) with a copy free in the space (pool.free_copies: owned or on the way, less built decks and intact products), best first, then the fewest to find, with Commander / 60-card and kind-of-deck filters. Opening one lists its missing cards with AUD estimates and the rate and dates (pool.compare's prices), and **Start a deck from it** makes an idea deck with its list through POST /api/decks's path (deck.create), then opens it. Every list is kept in a compact index (`data/mtgjson/coverage.json`) filled in the background from MTGJSON's AllDeckFiles archive and, for new or recent decks, their own files; the ranking shows what's read meanwhile. Viewers who may not see the space's inventory get the Collection page's 403; nothing names the decks holding copies. On the PC, `python -m decklab.lib.precons coverage` prints the ranking.
+
 Evidence:
-- `decklab/lib/precons.py`: deck_list, search (MTGJSON's precon lists, already cached for Add a precon)
-- `decklab/lib/pool.py`: free copies per space
-
-Gap: No view ranks lists by how much of them the pool covers.
-
-First slice: a read-only command, `python -m decklab.lib.precons coverage [--space S] [--format F]`, printing the top precons by free-pool coverage.
+- `decklab/lib/precon_coverage.py`: refresh, ensure, rank, _read_archive, _read_one, main (`python -m decklab.lib.precons coverage`)
+- `decklab/lib/api/precon_coverage.py`: coverage_view, coverage_deck, start_deck (GET /api/precons/coverage, GET /api/precons/coverage/deck, POST /api/precons/start)
+- `decklab/lib/precons.py`: deck_list, deck, cards_of (MTGJSON's precon lists)
+- `decklab/lib/pool.py`: free_copies, compare
+- `decklab/web/precon-coverage.js`: openCoverageSheet, rankPrecons, drawRanking, openCoveragePrecon, startCoverageDeck; `decklab/web/collection.js`: colHead
+- `decklab/tests/test_precon_coverage.py`, `decklab/tests/test_precon_coverage_ui.py`
 
 **E1-S25** · User1 · could · S · built
 
@@ -282,7 +291,7 @@ Evidence:
 
 Covers making a deck and keeping it right: New deck and Start from, the full editor (from 600px) and the phone's Quick edit, Paste a list, the Planned and Play-now lists, owned vs needed against the space's pool and its other built decks, keeping the write-up current, history and undo, and the command-line route Claude Code uses (`deck pull`/`push`/`new`/`tables`). Drafts stay on the device they were started on, and the Play-now list's substitutes are hand-written (Packing's physical stand-ins, E4-S21, never change a list). Rename and retirement, with restore from History, are on the deck page (E1-S19). Legality badges on casual decks are deliberately not wanted.
 
-Open: E2-S16, E2-S22, E2-S23, E2-S24.
+Open: E2-S16, E2-S22, E2-S24.
 
 **E2-S01** · Matt · must · L · built
 
@@ -543,7 +552,7 @@ Evidence:
 
 Gap: Still to check on the real devices: the receipt panel's navigation and Close before the image and its swipe margins, the Quick edit's Add cards sheet with the keyboard and its ⋯ menu, keyboard-open Save and Home Screen use on the iPad, the Commander bracket sentence's place on the phone (E9-S05), and everything on the iPhone 17 Pro.
 
-**E2-S23** · Matt · could · S · missing
+**E2-S23** · Matt · could · S · built
 
 As a deck builder, I want a Considering list kept with each deck, so that cards I might add stay with the deck without counting in its lists, tables or packing.
 
@@ -553,10 +562,14 @@ As a deck builder, I want a Considering list kept with each deck, so that cards 
 
 Decided (Matt, 2026-10-27): added from the comparison with Moxfield's maybeboard.
 
-Evidence:
-- `decklab/web/editor-swaps.js` and E2-S19 (try a change without saving); the wishlist (E5-S14)
+Now: Built 2026-10-28 ([Considering list](../HISTORY.md#considering-list-2026-10-28-e2-s23)): a `## Considering` block of card lines is read beside the Planned and Play-now lists, so no table, pool, packing, sleeve, stats, tokens, Forge, print, box-check or `deck_line` reader counts it. The Cards tab lists it with each card's free copies (only to viewers who see the collection) and adds, removes or moves a card into the Planned list or sideboard, each one save (`POST /api/deck/considering`): a move is checked as a new Planned line, so a misspelled Considering name (only `deck push` writes one, and push names it) never reaches the Planned list; after a move, or a save with warnings or other decks' tables out of date, the deck page's box about the save shows them; Remove has an Undo toast.
+Not yet: the editor has no Considering view of its own (its save and check take `lists.considering`), and `deck_line` SQL leaves Considering cards out.
 
-Gap: Ideas for a deck live in prose or the wishlist; the deck text has no considering section.
+Evidence:
+- `decklab/lib/decks/considering.py`; `deckfile.py` parse_deck, `render.py` render_deck_file, `edit.py` apply_edit
+- `decklab/lib/api/considering.py` (view, save_considering); `deck_page.py` deck_view; `drafts.py` _read_draft (known_considering); `saving.py` save_deck
+- `decklab/web/deck-considering.js` (saveConsidering, removeConsidering); `decklab/db/inv_decks.py` after_notes
+- `decklab/tests/test_deck_considering.py`, `decklab/tests/test_deck_considering_ui.py`, `decklab/tests/test_cli_write_previews.py`
 
 First slice: a `Considering` section in the deck text format that the parser reads and every table, pool and packing reader skips.
 
@@ -570,16 +583,16 @@ As a deck builder, especially for Commander, I want to tag a deck's cards with m
 
 Decided (Matt, 2026-10-27): added from the comparison with Archidekt's categories and Moxfield's tags.
 
-Now (2026-10-28): [built](../HISTORY.md#own-card-categories-in-a-deck-2026-10-28-e2-s24): a decklist line may end with Moxfield's tag form, `1 Sol Ring (CMM) 410 #Ramp` (one per line). The parser keeps it as the line's category, saves write it back, and it's never part of the card's identity, so tables, pools, packing, the Assembled snapshot and Forge read the line without it. The editor's ⋯ > Category… sets or clears it (the deck's other categories offered), and a category-only save adds no "Decklist changed" line and leaves the table alone; a pasted Moxfield list keeps its tags. The Cards tab's Group by Type | Category groups the 99 or main deck by category (Uncategorised last), the Stats tab's Your categories counts each one's copies in the Commander and Deck, and the Chance to draw panel has a button per category that ticks its cards.
+Now (2026-10-28): [built](../HISTORY.md#own-card-categories-in-a-deck-2026-10-28-e2-s24): a decklist line may end with Moxfield's tag form, `1 Sol Ring (CMM) 410 #Ramp` (one per line; a Moxfield card with several tags keeps its first, and a paste says so). The parser keeps it as the line's category, saves write it back, and it's never part of the card's identity, so tables, pools, packing, the Assembled snapshot and Forge read the line without it. The editor's ⋯ > Category… sets or clears it (the deck's other categories offered), and a category-only save (named in the review sheet's "Changes to your categories") adds no "Decklist changed" line and leaves the table alone; a pasted Moxfield list keeps its tags. Considering lines (E2-S23) hold one too, and the Considering list's add, remove and move saves keep every line's category. The Cards tab's Group by Type | Category groups the 99 or main deck by category (Uncategorised last), the Stats tab's Your categories counts each one's copies in the Commander and Deck (a card's copies split across categories counted under each line's own), and the Chance to draw panel has a button per category that ticks every card with a copy in it.
 
 Evidence:
-- `decklab/lib/decks/decklist.py`: CATEGORY_TAIL_RE, clean_category, DeckLine.category (compare=False), parse_line, format_line(category=False), categories
-- `decklab/lib/decks/edit.py` apply_edit's "categories" change and `render.py` _block_text; `assembled.py` _value and `api/assembly_sections.py` task_key leave categories out
+- `decklab/lib/decks/decklist.py`: TAG_RE, _split_tags, tag_count, clean_category, DeckLine.category (compare=False), parse_line, format_line(category=False), categories
+- `decklab/lib/decks/edit.py` apply_edit's "categories" and "considering" changes and `render.py` _block_text and _considering_edits (categories compared, DeckLine equality leaving them out); `api/considering.py` _page_line; `assembled.py` _value and `api/assembly_sections.py` task_key leave categories out
 - `decklab/lib/api/drafts.py` _read_line (a line's "category", blocked when a line can't hold it), `card_lookup.py` _line_json ("category" only when set), `editor.py` parse_list
-- `decklab/web/deck-categories.js`: categoryGroups, cardsGroupingToggle, categoryCounts, categoriesPanel, oddsCategoryButtons, openCategorySheet; `editor.js` newLine/sendLine/listSignature, `editor-lines.js` the ⋯ menu and categoryTag, `deck.js` deckGroups(data, by)
-- `decklab/tests/test_deck_categories.py`; the goldens' "category-defaults" (`decklab/tests/golden_p4.py`)
+- `decklab/web/deck-categories.js`: categoryGroups, cardsGroupingToggle, categoryCounts, categoriesPanel, oddsCategoryButtons, openCategorySheet; `editor.js` newLine/sendLine/listSignature/categoryChanges, `editor-save.js` saveNow and reviewSave (changes.categories), `editor-lines.js` the ⋯ menu and categoryTag, `deck.js` deckGroups(data, by) and mergedLines(lines, byCategory)
+- `decklab/tests/test_deck_categories.py`, `test_editor_ui.py` (a categories-only check saves); the goldens' "category-defaults" (`decklab/tests/golden_p4.py`)
 
-Gap: One category per card (Archidekt and Moxfield allow several); the `deck_line` table has no category column, so SQL can't ask which cards are tagged Ramp; product and pairing lists have none.
+Gap: One category per card (Archidekt and Moxfield allow several; a pasted card's extra tags are dropped); the `deck_line` table has no category column, so SQL can't ask which cards are tagged Ramp; product and pairing lists have none.
 
 **E2-S25** · Matt · could · M · built
 
@@ -2366,7 +2379,7 @@ First slice: a spike reading the set code and collector number from a photo of a
 
 The physical side of home's shared pool: each built deck and each product kept intact is in one sleeve design and one deck box, every other card sits unsleeved in the storage box, and moving a card between decks means changing its sleeve. Deck Lab records the sleeves, deck boxes and playmats (each Matt's, User1's or shared) on the Sleeves & boxes page, a built deck's Sleeves and Deck box lines and an intact product's kit, warns when a holder has too few sleeves or a box that is full or too small, and lets one sleeve design sleeve several holders. Choosing a deck's kit needs the right to edit that deck; an owner may make their kit public (read-only), and members never see private kit. Accessory prices are not wanted.
 
-Open: E8-S03, E8-S15, E8-S19, E8-S21, E8-S22.
+Open: E8-S03, E8-S15, E8-S19, E8-S22.
 
 **E8-S01** · Matt · must · M · built
 
@@ -2625,7 +2638,7 @@ Evidence:
 - `decklab/lib/api/assembly.py`: _sleeve_notes
 - `decklab/tests/test_accessories.py`: test_shared_design_is_counted_per_holder, test_same_colour_different_design_is_no_warning; `decklab/tests/test_assembly_kit.py`: test_shared_sleeves_can_be_chosen_for_both_decks; `decklab/tests/test_editor_contracts.py`: test_sleeves_another_deck_uses_are_warned_about_before_they_are_chosen
 
-**E8-S21** · Matt · could · S · partial
+**E8-S21** · Matt · could · S · built
 
 As Matt, who keeps every built deck in its own box, I want to print a label for a deck box with the deck's name and a QR code to its deck page, so that scanning the box opens its list, plan and stand-ins.
 
@@ -2635,17 +2648,19 @@ As Matt, who keeps every built deck in its own box, I want to print a label for 
 
 Decided (Matt, 2026-10-27): added from the comparison with TopDecked's QR sharing and Delver's NFC tags.
 
-Now: first slice built 2026-10-27 ([HISTORY.md](../HISTORY.md#print-a-deck-box-label-with-a-qr-code-2026-10-27-e8-s21)). A built deck's More has **Print box label**: one 63 × 88 mm label with the deck's colour symbols, title, who plays it (home decks only) and a QR code to its deck page, drawn on the page by `web/qr.js` (byte mode, level M, versions 1 to 10). The code opens the tunnel's address when Deck Lab has one (GET /api/me's `address`), else the page's own. A scan by someone who may not see the deck gets the missing-deck answer, since the deck page asks /api/deck as always (E10-S30's 404). Intact product labels are the next slice.
+Now: first slice built 2026-10-27 ([HISTORY.md](../HISTORY.md#print-a-deck-box-label-with-a-qr-code-2026-10-27-e8-s21)). A built deck's More has **Print box label**: one 63 × 88 mm label with the deck's colour symbols, title, who plays it (home decks only) and a QR code to its deck page, drawn on the page by `web/qr.js` (byte mode, level M, versions 1 to 10). The code opens the tunnel's address when Deck Lab has one (GET /api/me's `address`), else the page's own. A scan by someone who may not see the deck gets the missing-deck answer, since the deck page asks /api/deck as always (E10-S30's 404). Intact product labels followed on 2026-10-28 ([HISTORY.md](../HISTORY.md#an-intact-products-box-label-2026-10-28-e8-s21)): an owned product kept intact gets **Print box label** in the More of each of its deck pages, one label for its one box with the product's name, the colours across its decks, each deck's name and one QR code to its first deck page (its own page for a single unnamed deck), from GET /api/deck's `box_label`, given only to viewers of home's records. That page's Product storage part lists **Decks in this box**, each a link, so a scan reaches every deck.
 
 Evidence:
 - `decklab/web/qr.js`: qrMatrix, qrSvg, qrReedSolomon
-- `decklab/web/deck-label.js`: offersBoxLabel, boxLabelAddress, boxLabelPiece, printBoxLabel
+- `decklab/web/deck-label.js`: offersBoxLabel, productBoxLabel, boxLabelAddress, boxLabelTarget, boxLabelDecks, boxLabelPiece, printBoxLabel
+- `decklab/lib/api/product_label.py`: box_label (GET /api/deck's `box_label`, `decklab/lib/api/deck_page.py`: deck_view); `decklab/web/product-storage.js`: productBoxDecks
 - `decklab/web/deck.js`: deckMoreItems (Print box label)
 - `decklab/web/deck-print.js`: printCardSheet and cardSizePages (E4-S25's card-size print layout)
 - `decklab/lib/tunnel.py`: public_address; `decklab/lib/server_http.py`: GET /api/me's `address`
 - `decklab/tests/test_deck_label_ui.py`, `decklab/tests/test_tunnel.py`, `decklab/tests/test_server.py` (test_me_gives_the_tunnels_address_for_printed_links)
+- `decklab/tests/test_product_label.py`; `decklab/tests/test_api_decks.py` (test_a_product_kept_intact)
 
-Gap: An intact product's label, linking to its product deck pages.
+Gap: none for the story's criteria; not yet printed on a real printer or scanned from paper.
 
 **E8-S22** · Matt · could · M · missing
 

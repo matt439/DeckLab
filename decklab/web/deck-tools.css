@@ -42,6 +42,14 @@ textarea.export-copy { width: 100%; font-family: var(--font-mono); }
   .box-label-colours img { width: 6mm; height: 6mm; }
   .box-label .box-label-title { font-size: 15pt; line-height: 1.15; overflow-wrap: anywhere; }
   .box-label-player { font-size: 10pt; }
-  .box-label .qr-code { width: 40mm; height: 40mm; margin-top: auto; }
+  .box-label .qr-code { width: 40mm; height: 40mm; margin-top: auto; flex-shrink: 0; }
   .box-label-scan { font-size: 7pt; }
+  /* An intact product's label names each deck in its box, so its code is a little smaller. Each name is one
+     line; past four decks they go in two smaller columns (at most 12 places, deck-label.js), and the list,
+     never the code, gives way if a long title still leaves too little room. */
+  .box-label-decks { list-style: none; margin: 0; padding: 0; font-size: 8pt; line-height: 1.2; align-self: stretch;
+    min-height: 0; overflow: hidden; }
+  .box-label-decks li { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .box-label-decks-many { columns: 2; column-gap: 2mm; font-size: 7pt; }
+  .box-label:has(.box-label-decks) .qr-code { width: 32mm; height: 32mm; }
 }
