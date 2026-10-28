@@ -178,6 +178,8 @@ def _list(args):
     if problem:
         raise ValueError(problem)
     data = files.render_sheet(sheet) if sheet.exists else rules.collection_csv_bytes([])
+    from decklab.db import read_notices
+    read_notices.Reporter(getattr(args, "dbname", None)).space("collection", args.space)
     out = getattr(sys.stdout, "buffer", None)
     if out is not None and not sys.stdout.isatty():
         # Redirected to a file: its bytes as UTF-8, as deck pull writes, not the console's code

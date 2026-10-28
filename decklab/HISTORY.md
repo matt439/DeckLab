@@ -2,6 +2,30 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Privacy guidance on CLI reads (2026-10-28; E11-S21)
+
+Wishlist, collection, token, deck and accessory list commands now emit advisory
+privacy notices on stderr. Human/CSV/JSON stdout, redirected UTF-8 collection
+bytes, hashes, exit paths and access/actor semantics remain unchanged. Original
+list bodies are AST-identical after removing only the new notice imports/calls.
+
+Wishlists are owner-private. Tokens follow collection visibility; decks use
+their separate switch, with explicit exclusions for private inventory-derived
+status/errors and kit. Each accessory row identifies its owner or shared home
+kit, which does not imply Public. A new command-local store/private Breaker
+reads current visibility once, without cached-Public fallback; readiness/orphan
+or lookup failures give conservative fixed guidance. Notices quote no contents
+or raw errors. Absent/closed/erroring stderr cannot redirect notices to stdout
+or fail a successful read. Wishlist help also prohibits quoting notes in audit
+messages and removal reasons.
+
+Root's protected combined notice/actor/merge/preview integration passed 56 tests
+without skips, including 26 new fake/disposable cases. The additional affected
+68-case batch reported two explicitly skipped real-database cases. Independent
+source/fixture review, root review, real-error Ruff, diff and length checks pass.
+Genuine PostgreSQL visibility-reader qualification remains unrun; no real
+member/config/visibility data, permissions, switches or live services changed.
+
 ## Review player and permitted kit together (2026-10-28; E8-S15 slice)
 
 Saved built home decks with visible editable kit can review Played by, sleeves

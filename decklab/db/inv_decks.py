@@ -238,6 +238,9 @@ def _list(args):
         _say(f"There's no space {args.space!r} in decklab/config.json.")
         return 1
     rows = deck_rows(args.space)
+    from decklab.db import read_notices
+    read_notices.Reporter(getattr(args, "dbname", None)).decks(
+        [args.space] if args.space else [row["space"] for row in rows])
     if args.json:
         print(json.dumps(rows, ensure_ascii=False, indent=2))
         return 0

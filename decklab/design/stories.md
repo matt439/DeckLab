@@ -45,8 +45,8 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 19 | 14 | 2 | 1 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 20 | 14 | 1 | 4 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 35 | 31 | 1 | 1 | 2 |
-| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 39 | 26 | 6 | 4 | 3 |
-| **Total** | **255** | **204** | **18** | **19** | **14** |
+| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 39 | 27 | 6 | 3 | 3 |
+| **Total** | **255** | **205** | **18** | **18** | **14** |
 
 Counted from the story headers on 2026-10-28 after the current feature and maintenance work. The reviews added five feature stories and eight hygiene stories, and corrected E1-S12 from missing to partial.
 
@@ -3819,7 +3819,7 @@ Evidence:
 
 Keeping Deck Lab running, safe and believable, by Matt as the household's admin and by Claude Code working for him at the PC. It covers the server and its Cloudflare tunnel and "Deck Lab is off" page, the PostgreSQL database with its nightly backup, export, check and restore check, the audit trail on #/activity, the `python -m decklab.db` commands Claude works through (previews, `--expect` guards, `-m` messages, exit codes), the card data's background refresh, Forge upkeep and the Safari Simulator suite. Every write is one audited change set, Matt's own command-line writes are recorded as his, and backups are checked by restoring them.
 
-Open: E11-S02, E11-S08, E11-S12, E11-S16, E11-S21, E11-S28, E11-S30, E11-S31, E11-S34, E11-S39.
+Open: E11-S02, E11-S08, E11-S12, E11-S16, E11-S28, E11-S30, E11-S31, E11-S34, E11-S39.
 
 **E11-S01** · Matt · must · M · built
 
@@ -4131,7 +4131,7 @@ Evidence:
 - `decklab/db/inv_receive.py`: register (`--expect TOKEN`), run, _preview_token
 - `decklab/tests/test_receipt_cli_preview.py`: test_unchanged_preview_applies_once_and_refreshes_its_deck, test_any_inventory_change_refuses_before_receipt_audit_or_deck_changes, test_invalid_preview_has_no_token_and_legacy_apply_still_revalidates
 
-**E11-S21** · Claude Code · could · S · missing
+**E11-S21** · Claude Code · could · S · built
 
 As Claude Code, the command-line operator, I want command-line reads of private data outside the requester's own space or ownership to be labelled private, so that I don't repeat it to anyone outside that space, Matt included.
 
@@ -4139,13 +4139,14 @@ As Claude Code, the command-line operator, I want command-line reads of private 
 - Given `accessories list` prints rows, when it prints, then each row not shared is marked private to its owner.
 - Given `collection list --space user2`, `tokens list --space user2` or `deck list --space user2`, when it prints, then a header says the data is private to that space unless the owner made it public.
 
+Now (2026-10-28): all five listed read commands emit advisory notices on stderr, preserving every stdout format, SHA and exit contract. Wishlists remain owner-private; token visibility follows collection, decks use their separate switch, and accessory rows distinguish individual/private owners and shared home kit. Public claims use a new command-local PgStore/private Breaker read once, never an older shared/cache fallback, with readiness/current-space checks and conservative fixed wording on failure. A Public deck switch does not publish inventory-derived status/errors or kit. No content/raw errors appear in notices, no access check was added, and actors remain attribution only. Wishlist help prohibits quoting notes in audit messages/removal reasons.
+
 Evidence:
-- `decklab/db/wishlist_cli.py`: _list (no header; the guidance is only in the module docstring)
-- `decklab/db/inv_accessories.py`: _line (shows the owner, no private mark)
+- `db/read_notices.py` and thin list hooks in `wishlist_cli.py`, `inv_collection.py`, `inv_tokens.py`, `inv_decks.py`, `inv_accessories.py`; original list AST bodies are unchanged after removing only notice imports/calls.
+- `test_cli_read_notices.py`: 26 fake/disposable cases assert exact human/JSON/UTF-8 stdout and original hashes, stderr-only behavior even with absent/closed streams, fresh vs cached grants, private/Public/shared/unknown scopes and no unauthorized readers/writes.
+- Root's protected combined notice/actor/merge/preview integration passed 56 tests without skips. An additional affected 68-case batch had two explicitly skipped real-database cases. Independent source/fixture review, root review, Ruff, diff and length checks pass.
 
-Gap: no command labels private data; `accessories list` only shows each row's owner.
-
-First slice (reserve review, 2026-10-28): add notices to the listed CLI reads, on stderr whenever stdout is CSV or JSON, so exports and pipes stay parseable. Describe the applicable space/owner without quoting contents; read current visibility before calling any part public, and use a conservative notice if it cannot be checked. The notice is guidance, not a new CLI access override. Cover private, public, shared and unavailable-visibility fixtures; no live member reads are needed.
+Genuine PostgreSQL visibility-reader qualification remains unrun; no actual member/config/visibility data was inspected for this feature. See [HISTORY.md](../HISTORY.md#privacy-guidance-on-cli-reads-2026-10-28-e11-s21).
 
 **E11-S23** · User5 · should · M · built
 

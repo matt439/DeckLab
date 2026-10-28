@@ -132,6 +132,8 @@ def _line(row):
 def _list(args):
     inv = listed()
     rows = list(inv.rows_by_id.values())
+    from decklab.db import read_notices
+    read_notices.Reporter(getattr(args, "dbname", None)).accessories(rows)
     if args.json:
         print(json.dumps({"sha256": inv.sha256, "rows": rows, "problems": inv.problems}, ensure_ascii=False, indent=2))
         return 0
