@@ -2,6 +2,27 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Copy one shop's list (2026-10-28; E5-S24)
+
+Shopping's permanent By shop groups now have one sibling Copy list control per
+named shop. It uses current queued rows across every state and long-term plan,
+leaving deliveries and calculated missing-card demand outside that scope.
+Quantities coalesce only for identical requested identities; printing and
+explicit finish requests remain separate. Exact choices use `(SET) number
+[finish]`, and any-printing finish requests retain `[finish]` as text.
+
+Read-only home viewers can copy. Pending/old controls and late clipboard
+results are guarded against route, person, revision, queue and redraw changes.
+Unavailable or rejected clipboard access opens selectable text with tracked
+sheet cleanup and focus recovery. No queue, basket or purchase is changed.
+
+All 113 focused Shopping tests pass, including 16 new copy cases. Independent
+review fixed explicit nonfoil coalescing and redraw focus before qualification;
+Node syntax, Ruff, diff and source-length checks pass. Clipboard access is
+mocked; browser/device and actual clipboard acceptance remain unverified.
+The suffixes preserve human-readable requests without promising every shop's
+bulk parser recognizes them automatically.
+
 ## Compare list differences (2026-10-28; E1-S26)
 
 Compare now shows cards only in either list, changed quantities and separately

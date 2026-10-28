@@ -56,7 +56,6 @@ An index of open work, one row per item; each row points to the doc that owns th
 | id | status | pri | size | item |
 |---|---|---|---|---|
 | `E5-S15` | DEFERRED | should | M | User1 asks from the page for a card or a Forge run, Matt approves (`E3-S13`); not urgent. |
-| `E5-S24` | OPEN | could | S | Copy one shop's list from Shopping's By shop, preserving quantities and exact-printing requests. |
 | `E5-S08` | OPEN | could | XL | MTGMate's daily snapshot for queued rows and `E5-S19`'s Back in stock are built; next the deck tables' missing cards, then a second shop. |
 | `E5-S17` | OPEN | could | M | Show dated buying information on a saved swap-test result, then explicitly queue its missing additions without duplicate rows. |
 | `E7-S03` | OPEN | could | M | Group import problems by source set and review which groups to skip, keeping the original upload unchanged. |

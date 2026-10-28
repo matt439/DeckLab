@@ -39,14 +39,14 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 20 | 16 | 1 | 2 | 1 |
 | [E3: Test a deck](#e3-test-a-deck) | 15 | 12 | 3 | 0 | 0 |
 | [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 22 | 16 | 2 | 3 | 1 |
-| [E5: Decide what to buy](#e5-decide-what-to-buy) | 22 | 16 | 1 | 3 | 2 |
+| [E5: Decide what to buy](#e5-decide-what-to-buy) | 22 | 17 | 1 | 2 | 2 |
 | [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 20 | 18 | 0 | 0 | 2 |
 | [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 28 | 21 | 3 | 4 | 0 |
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 19 | 13 | 2 | 2 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 20 | 14 | 1 | 4 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 35 | 31 | 1 | 1 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 38 | 23 | 6 | 6 | 3 |
-| **Total** | **254** | **194** | **21** | **25** | **14** |
+| **Total** | **254** | **195** | **21** | **24** | **14** |
 
 Counted from the story headers on 2026-10-28 after the feature-reserve and maintenance reviews and the completed Compare and maintenance slices below. The reviews added five feature stories and eight hygiene stories, and corrected E1-S12 from missing to partial.
 
@@ -1283,7 +1283,7 @@ Next slice: after E4-S18's pod record model and result form, extend the counter 
 
 How Matt, with User1's wishes and Claude's research, goes from "this deck is short" to a decided purchase. On the page: each deck's sortable Prices table of converted Scryfall estimates, and Shopping's Decks still missing cards, Missing cards across decks, To buy, By shop and Long-term plan, with queue add, edit, move and remove for admins and reprint notices from cached Scryfall data. Live Australian shop checks, dated buylists and `watchlist apply` stay with Claude on the PC; recording an order, which reduces the queue rows it fulfils (Shopping's New order or `order add --fulfils`), belongs to E6. By design there are no spending totals and no collection value.
 
-Open: E5-S08, E5-S15, E5-S17, E5-S24.
+Open: E5-S08, E5-S15, E5-S17.
 
 **E5-S01** · Matt · must · M · built
 
@@ -1622,7 +1622,7 @@ Evidence:
 - `decklab/lib/api/assembly.py`: remaining_intent (packing preview)
 - `decklab/tests/test_assembly_intent.py`: test_main_only_retains_owned_waiting_and_missing_sideboard_separately, test_same_name_in_main_and_sideboard_consumes_availability_only_once, test_building_preview_keeps_chosen_list_intent_and_actual_page_has_no_build, test_only_inventory_viewers_receive_actual_build_and_retained_intent
 
-**E5-S24** · Matt · could · S · missing
+**E5-S24** · Matt · could · S · built
 
 As Matt, ordering singles from several shops, I want to copy one shop's list from Shopping's By shop, so that I can paste it into that shop's search or basket without retyping each card.
 
@@ -1630,9 +1630,14 @@ As Matt, ordering singles from several shops, I want to copy one shop's list fro
 - Given a row whose printing is `exact`, then its line also names the set, collector number and finish, so the requested printing is preserved.
 - Given a viewer who can't see home's records, then there is no By shop and nothing to copy.
 
-Gap: By shop has no copy action; checking shops is still done by hand (a step short of live prices, E5-S08). Raised by the 2026-10-24 usage review (Shopping is Matt's second most-opened page).
+Now (2026-10-28): every named shop in By shop has one Copy list action for its current queued rows, including all states and long-term plans. Quantities and exact printing/finish requests remain in the copied text; clipboard failure opens the same selectable text. Home viewers with read access can copy without order-edit rights.
 
-First slice (reserve review, 2026-10-28): one Copy list action per existing shop group, using that group's reviewed rows and quantities. Keep exact-printing set/number/finish visible and provide selectable text if clipboard access fails. Do not submit a basket, fetch prices or change queue state; fixture groups cover the action independently of E5-S08.
+Evidence:
+- `decklab/web/shopping-buying.js`: shopCopyList, shopCopyShop, shopCloseCopySheets, shopByShop.
+- `decklab/web/shopping.css`: sibling Copy controls, with a stacked phone layout.
+- `decklab/tests/test_shopping_copy_ui.py`: 16 cases cover scope/identity/finishes, read-only access, stale and pending actions, clipboard failures and focus after redraw. All 113 focused Shopping checks pass.
+
+The base format is quantity plus canonical name; explicit requests retain human-readable set/number and `[finish]` suffixes, without claiming every shop parses those suffixes automatically. Browser/device and actual clipboard behavior remain unverified; all clipboard tests use mocks. See [HISTORY.md](../HISTORY.md#copy-one-shops-list-2026-10-28-e5-s24).
 
 ---
 
