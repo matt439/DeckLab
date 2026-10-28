@@ -2,6 +2,37 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Recorded maintenance history in Settings (2026-10-28; E11-S35)
+
+Selected admins can read backup, export, integrity-check and restore-check history
+in Settings. Each shows the latest recorded attempt, an independently queried
+last successful run and up to five recent attempts. Actual start time and ID
+order attempts, rather than completion insertion order. Failed latest attempts
+remain failed beside older successes; missing/incomplete/future/malformed facts
+remain explicit. Records are inserted after completion, so no Running state or
+claim about unrecorded/crashed attempts is inferred.
+
+One app-role read-only repeatable-read transaction uses its database clock and
+selects only operational timestamps/outcomes. Authorization precedes interval
+configuration and connection readers. Paths, details, sizes, credentials and
+private record contents are absent, and failures use fixed sanitized wording.
+No maintenance execution or schedule change is reachable from this GET route.
+
+Backup/export freshness uses successful finish time, checks use start time,
+with the existing stale_backup_hours grace; export explicitly borrows that
+nightly policy. Restore checks use their own restore_check_days from start,
+including the scheduler's exact due boundary. The existing status warnings stay
+unchanged. The responsive panel has manual refresh and validates health facts;
+profile object/ID, route, request sequence, connected panel and focus ownership
+reject old responses and private errors.
+
+Root's protected six-module integration passed 105 tests without skips, including
+17 new backend and 24 new UI cases, Settings members, shell and version consumers.
+Root/independent source review, Ruff, syntax, diff and source-length checks pass.
+Genuine PostgreSQL query/schema-role and browser/device qualification remain
+unrun. No real job, database/server probe, schedule, migration or Forge action
+was performed for this feature.
+
 ## Where single-card additions go (2026-10-28; E7-S15 Add slice)
 
 Explicit Collection Add now supplies informational filing advice for its actual

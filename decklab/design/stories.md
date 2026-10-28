@@ -45,8 +45,8 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 19 | 14 | 2 | 1 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 20 | 14 | 1 | 4 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 35 | 31 | 1 | 1 | 2 |
-| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 39 | 25 | 6 | 5 | 3 |
-| **Total** | **255** | **202** | **19** | **20** | **14** |
+| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 39 | 26 | 6 | 4 | 3 |
+| **Total** | **255** | **203** | **19** | **19** | **14** |
 
 Counted from the story headers on 2026-10-28 after the current feature and maintenance work. The reviews added five feature stories and eight hygiene stories, and corrected E1-S12 from missing to partial.
 
@@ -3811,7 +3811,7 @@ Evidence:
 
 Keeping Deck Lab running, safe and believable, by Matt as the household's admin and by Claude Code working for him at the PC. It covers the server and its Cloudflare tunnel and "Deck Lab is off" page, the PostgreSQL database with its nightly backup, export, check and restore check, the audit trail on #/activity, the `python -m decklab.db` commands Claude works through (previews, `--expect` guards, `-m` messages, exit codes), the card data's background refresh, Forge upkeep and the Safari Simulator suite. Every write is one audited change set, Matt's own command-line writes are recorded as his, and backups are checked by restoring them.
 
-Open: E11-S02, E11-S08, E11-S12, E11-S16, E11-S21, E11-S28, E11-S30, E11-S31, E11-S34, E11-S35, E11-S39.
+Open: E11-S02, E11-S08, E11-S12, E11-S16, E11-S21, E11-S28, E11-S30, E11-S31, E11-S34, E11-S39.
 
 **E11-S01** · Matt · must · M · built
 
@@ -4426,7 +4426,7 @@ Gap: the combined command and report remain to build; existing status and setup 
 
 First slice: a `python -m decklab.doctor` command collecting local readiness checks into stable core/optional results, with short bounded database probes and no network fetches. Use missing-config/cache, unavailable-database and absent-Forge fixtures on both platforms, then link the command from SELF-HOSTING.md. Real host setup and service installation remain separate actions.
 
-**E11-S35** · Matt · could · M · missing
+**E11-S35** · Matt · could · M · built
 
 As the household admin, I want to inspect database-maintenance history in Settings, so that I can tell whether the safety jobs are succeeding without opening a terminal.
 
@@ -4436,11 +4436,14 @@ As the household admin, I want to inspect database-maintenance history in Settin
 - Given a member or unsigned request, then the history cannot be read; even the admin view includes no credentials, backup paths, private record contents or raw database errors.
 - Given the history view, then loading or refreshing it runs no maintenance job and changes no schedules.
 
-Evidence of gap (2026-10-28): `decklab/lib/dbstatus.py` and `decklab/web/version.js` show health warnings; `decklab/db/backup.py` supplies maintenance-run records and command-line status, with no corresponding Settings history view. E11-S03 and E11-S05's completed backup and warning behaviour stays built.
+Now (2026-10-28): Settings shows the latest recorded attempt, independently queried last success and five recent outcomes for each of four fixed jobs. Attempts sort by actual start and ID, not completion insertion order. Backup/export freshness uses successful finish time, check freshness its start, with `stale_backup_hours`; export explicitly borrows that nightly grace. Restore uses its own `restore_check_days` from start, including the scheduler's exact due boundary. Missing, incomplete, malformed/future and unavailable states never invent Running or current health. E11-S03 and E11-S05's existing warnings stay built and unchanged.
 
-Gap: the bounded read API and Settings view remain to build.
+Evidence:
+- `api/maintenance.py` and the GET-only `feature_routes.py` registration: selected-admin gate before configuration/DB readers, one read-only repeatable-read app transaction and transaction clock, safe timestamps/outcome codes only, fixed sanitized failures.
+- `web/settings.js`: responsive existing panel, independent latest/last-success text, manual refresh, validated public projection and profile object/ID, route, panel, request and focus ownership.
+- 17 new backend and 24 new UI fixture cases; root's protected six-module integration passed 105 tests without skips, including Settings members, shell and version consumers.
 
-First slice: return a limited recent history plus last-success summaries from the existing maintenance-run records, using the normal admin guard and sanitised outcome codes. Build the Settings view with success/failure/no-history/database-down fixtures and a still-current restore check older than the newest backup; opening it must never call backup, export, check or restore-check execution. No real job or restore is needed to develop it.
+Genuine PostgreSQL query/schema-role and browser/device qualification remain unrun. No actual job, schedule, migration, server or database probe was performed for this feature. See [HISTORY.md](../HISTORY.md#recorded-maintenance-history-in-settings-2026-10-28-e11-s35).
 
 **E11-S36** · Claude Code · should · M · built
 
