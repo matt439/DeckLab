@@ -3017,7 +3017,7 @@ Evidence:
 - `decklab/web/commander-readiness.js`: commanderDataNote, officialNotes (also in `decklab/web/stats.js`'s commanderPanel)
 - `decklab/tests/test_official_lists.py`; `decklab/tests/test_commander_readiness.py`: OfficialListTests; `decklab/tests/test_commander_readiness_ui.py`: test_wizards_latest_announcement_is_shown_and_never_called_current_unless_checked
 
-**E9-S25** · Matt · could · M · missing
+**E9-S25** · Matt · could · M · built
 
 As a player building a Commander deck, I want to see combos the deck is one card away from, and whether that card is free in our pool, so that I spot cheap upgrades and know what I'd be adding to the bracket.
 
@@ -3026,12 +3026,16 @@ As a player building a Commander deck, I want to see combos the deck is one card
 
 Decided (Matt, 2026-10-27): added from the comparison with Archidekt's Commander Spellbook tab.
 
+Now: built 2026-10-28 ([HISTORY.md](../HISTORY.md#combos-one-card-away-2026-10-28-e9-s25)). `combos.find(..., near=True)` returns the two-card combos with exactly one piece in the main deck (a commander-only piece counts only as the commander, and a missing piece that must be the commander is never offered). The Commander checks keep those whose missing piece fits the commander's colour identity and is legal in Commander (the ban list from the card data), as `bracket.near_combos` (at most 100, most serious first, with the total), each with the deck's minimum bracket if the piece were added (its combo's floor, plus the card itself as a Game Changer, mass land denial or extra turn). The deck page adds an AUD estimate for every reader, whether it's on the Considering list, and, only for a viewer who sees the space's collection, whether a copy is free, on the way, in another deck or to buy. The Stats tab's **One card away** panel lists them free first, says when a piece would put the deck above the bracket it aims for, and offers **Add to Considering** (E2-S23) to whoever may edit the deck.
+
 Evidence:
-- `decklab/lib/combos.py`: find (complete two-card combos, E9-S23)
+- `decklab/lib/combos.py`: find (complete two-card combos, E9-S23; `near=True`, E9-S25)
+- `decklab/lib/stats/commander.py`: _near_combo_check, NEAR_MAX
+- `decklab/lib/api/near_combos.py`: annotate, _availability; `deck_page.py` deck_view
+- `decklab/web/deck-near-combos.js`: nearCombosPanel, nearComboItem; `stats.js` statsSection
+- `decklab/tests/test_combos.py` (NearTests), `test_commander_readiness.py` (NearComboTests), `test_near_combos.py`, `test_near_combos_ui.py`
 
-Gap: Only complete combos are found.
-
-First slice: a `near` mode in combos.find returning combos with exactly one piece in the list.
+Gap: Only two-card combos (Spellbook's three-card combos two pieces away aren't offered); combos beyond the 100 most serious aren't sent, so a free piece among them isn't shown; the in-use state doesn't say which deck holds the copies; the Overview's At the Commander table doesn't mention them.
 
 ---
 

@@ -12,7 +12,7 @@ from collections import Counter
 from decklab.lib import accessories, decks, inventory, pool, spaces, tokens
 from decklab.lib.state import StateError
 
-from . import common, guard
+from . import common, guard, near_combos
 from .opponents import add_usual_opponents, usual_opponent_ids, usual_opponents
 from .common import ApiError
 from .assembly import TOKEN_FAILED, _deck_tokens, held_tokens
@@ -631,6 +631,8 @@ def deck_view(deck_id, version="target", omit=()):
         # The Considering list (E2-S23): its free counts only for a viewer who sees the inventory.
         "considering": considering_view(deck_file, deck_id, p, sees, warnings),
     }
+    # One card away from a two-card combo (E9-S25): prices for all, availability only with the inventory.
+    near_combos.annotate(stats, deck_id, p, sees, answer["considering"])
     if "matchups" not in omit:
         answer["matchups"] = _deck_matchups(summary, version, sections)
     if summary.get("kind") == "commander" and space == spaces.HOME:

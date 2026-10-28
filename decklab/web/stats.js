@@ -58,6 +58,7 @@ function statsSection(data) {
     landPanel(st),
     colourPanel(st),
     st.commander ? commanderPanel(st, data.summary) : null,
+    st.commander ? nearCombosPanel(data) : null,
     drawOddsPanel(data),
     compositionPanel(st),
     categoriesPanel(data),
