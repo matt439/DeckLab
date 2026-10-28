@@ -2,6 +2,30 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Forecast inventory keys and private-kit integration checks (2026-10-28)
+
+The broad protected checkpoint on `46b53eb` discovered 9,971 unique cases with
+all 9,123 starting cases accounted for through explicit class/test renames.
+Its four shards reported 9,393 tests and 420 intentional qualification skips;
+three passed and one found two missed integration checks. Frozen-source proof
+confirmed the checkout stayed unchanged throughout, apart from the already
+prepared 112 AST-equivalent test-header edits, which remain uncommitted after
+a separate staging denial. Original logs and exit-code receipts are preserved.
+
+The storage forecast now gets its product identity key from the inventory's
+existing `paths.payload` helper. The fixed product/pending arguments produce
+exactly the same string for every accepted filename, without I/O, normalization
+or a status-dependent location, while satisfying the inventory boundary guard.
+The private-kit alias-write fixture now expects the intentional fixed
+`kit_ownership` reason tag; its 403, hidden-identity and no-write assertions stay
+intact. No permission, routing or user-data behavior changes.
+
+Root's protected six-module correction group passed 165 tests without skips,
+covering the inventory reader guard, alias reads/writes, forecast backend/UI
+and player/kit backend/UI. Ruff and whitespace pass. A fresh four-shard run will
+qualify the corrected source separately; the earlier failed run is not presented
+as a pass. No live database, server, Forge or native qualification was attempted.
+
 ## Review one deleted token-card record (2026-10-28; E11-S08 slice)
 
 Activity can now **Review deleted token card** for one standalone own-space

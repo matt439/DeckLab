@@ -2967,7 +2967,7 @@ Gap: The editor's Add panel (`decklab/web/editor-cards.js`) still offers search 
 
 First slice (reserve review, 2026-10-28): add an EDHREC scope to the editor's Add panel using the existing suggestions and checked date. Selecting a suggestion changes only the draft's chosen section until the usual save. Invalidate old answers when the commander, deck, list or profile changes; preserve source/failure wording and own-space availability permissions. Fixture responses cover this without live lookups or Forge games; partner and other page types remain later work.
 
-Next slice: an EDHREC ideas scope in the editor's Add panel, adding a free card straight into the draft.
+Blocked in the implementation run (2026-10-28): updating the temporary shared-helper copy, new editor API draft and new editor UI draft each failed its initial read with OS Access denied before modification. No active source was edited, no application imports or tests ran and no live lookup occurred. Initial artifacts remain unqualified, with known projection/lifecycle fixes not applied; do not adopt them or retarget the denied edits through another path without materially new relevant authorization. The intended next slice remains the draft-aware editor scope above, with the existing CLI/deck-page behavior unchanged.
 
 **E9-S08** · Matt · must · M · built
 

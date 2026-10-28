@@ -334,7 +334,8 @@ class _Projection:
                         or state not in ("owned", "ordered", "preordered", "cancelled"):
                     self.add(_source(problem="product_status"))
                     continue
-                path = "magic/products/" + file
+                # Products share one logical inventory key at every status.
+                path = paths.payload("product", "pending", file)
                 if path in statuses:
                     duplicate_statuses.add(path)
                 statuses[path] = state

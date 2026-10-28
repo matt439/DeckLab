@@ -61,7 +61,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 
 | id | status | pri | size | item |
 |---|---|---|---|---|
-| `E9-S07` | OPEN | could | L | EDHREC ideas are built on the command line and the deck page; next an EDHREC scope in the editor's Add panel. |
+| `E9-S07` | BLOCKED | could | L | Editor-scope preparation stopped after temporary helper/API/UI update reads were denied; active source is unchanged. CLI and deck-page ideas remain built. |
 
 ## Deck Lab: testing and Forge
 
