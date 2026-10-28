@@ -45,10 +45,10 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 19 | 13 | 2 | 2 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 20 | 14 | 1 | 4 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 35 | 31 | 1 | 1 | 2 |
-| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 38 | 19 | 6 | 10 | 3 |
-| **Total** | **254** | **189** | **21** | **30** | **14** |
+| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 38 | 20 | 6 | 9 | 3 |
+| **Total** | **254** | **190** | **21** | **29** | **14** |
 
-Counted from the story headers on 2026-10-28 after the feature-reserve and maintenance reviews and completion of E11-S36 and E11-S43. The reviews added five feature stories and eight hygiene stories, and corrected E1-S12 from missing to partial.
+Counted from the story headers on 2026-10-28 after the feature-reserve and maintenance reviews and completion of E11-S36, E11-S37 and E11-S43. The reviews added five feature stories and eight hygiene stories, and corrected E1-S12 from missing to partial.
 
 ---
 
@@ -320,7 +320,7 @@ As a deck builder, I want to start a new deck from a list I already have (a past
 - Given Claude at the PC, when it runs `deck new KIND SLUG --from FILE -m` and then `deck tables ID --reprice --apply`, then the deck exists with a filled, priced owned-vs-needed table.
 
 Evidence:
-- `decklab/web/editor-cards.js`: startFromPart, openPreconStart, openDeckStart
+- `decklab/web/editor-import.js`: startFromPart, openPreconStart, openDeckStart
 - `decklab/web/editor-deckpage.js`: deckActions (Save as a new deck)
 - `decklab/web/editor.js`: newDeckSpace, newDeckPlayer, allowedPlayers
 - `decklab/lib/api/drafts.py`: _new_fields; `decklab/db/inv_decks.py`: _new, _tables
@@ -348,7 +348,7 @@ As a deck builder, I want to bring in a list from somewhere else and see what it
 - Given I apply the paste, when I look at the editor, then the change can be undone like any other edit.
 
 Evidence:
-- `decklab/web/editor-cards.js`: openPaste, mergeLines, replaceLines, afterBulkChange
+- `decklab/web/editor-import.js`: openPaste, mergeLines, replaceLines, afterBulkChange
 - `decklab/lib/api/editor.py`: parse_list (POST /api/decklist/parse)
 - `decklab/tests/test_editor_ui.py`: test_paste_adds_or_replaces_and_shows_the_difference
 
@@ -369,7 +369,7 @@ Now: Built 2026-10-15 ([HISTORY.md, Complete the phone's Quick edit](../HISTORY.
 Evidence:
 - `decklab/web/editor.js`: canBuildDecks, quickEditing
 - `decklab/web/editor-screen.js`: mainTabs, notesPart; `decklab/web/editor-details.js`: detailsPart, drawDetails; `decklab/web/editor-lines.js`: stepper
-- `decklab/web/editor-cards.js`: addPart, openAddSheet, openPaste
+- `decklab/web/editor-cards.js`: addPart, openAddSheet; `editor-import.js`: openPaste
 - `decklab/tests/test_quick_editor_ui.py`: test_details_edit_the_same_fields_and_preserve_member_choices, test_add_sheet_opens_one_paste_sheet_and_add_preview_preserves_other_work
 - `decklab/tests/test_workspace_ui.py`: test_phones_get_the_quick_edit_for_saved_and_new_decks
 
@@ -3771,7 +3771,7 @@ Evidence:
 
 Keeping Deck Lab running, safe and believable, by Matt as the household's admin and by Claude Code working for him at the PC. It covers the server and its Cloudflare tunnel and "Deck Lab is off" page, the PostgreSQL database with its nightly backup, export, check and restore check, the audit trail on #/activity, the `python -m decklab.db` commands Claude works through (previews, `--expect` guards, `-m` messages, exit codes), the card data's background refresh, Forge upkeep and the Safari Simulator suite. Every write is one audited change set, Matt's own command-line writes are recorded as his, and backups are checked by restoring them.
 
-Open: E11-S02, E11-S08, E11-S12, E11-S16, E11-S21, E11-S28, E11-S30, E11-S31, E11-S34, E11-S35, E11-S37, E11-S38, E11-S39, E11-S40, E11-S41, E11-S42.
+Open: E11-S02, E11-S08, E11-S12, E11-S16, E11-S21, E11-S28, E11-S30, E11-S31, E11-S34, E11-S35, E11-S38, E11-S39, E11-S40, E11-S41, E11-S42.
 
 **E11-S01** · Matt · must · M · built
 
@@ -4417,7 +4417,7 @@ Evidence:
 - `decklab/web/index.html`, `decklab/tests/test_web.py`: deferred browser and Node script registration directly after `tokens.js`, with an explicit ordering assertion.
 - `decklab/tests/test_feature_ui_tokens.py`, `test_token_details_js.py`, `test_web_pages.py`: UI/conflict, parser-only parity and combined source contracts.
 
-**E11-S37** · Claude Code · should · M · missing
+**E11-S37** · Claude Code · should · M · built
 
 As the operator extending the editor, I want Paste and Start from separate from card search, so that new search scopes do not make the same module harder to understand.
 
@@ -4425,11 +4425,12 @@ As the operator extending the editor, I want Paste and Start from separate from 
 - Given the editor and Quick edit, then shared state, viewport listeners and script initialisation retain their order and have one owner.
 - Given existing callers and test loaders, then their global functions remain available and every extracted script is loaded explicitly without duplicate listeners.
 
-Evidence of gap (2026-10-28): `decklab/web/editor-cards.js` is 1,137 lines and combines card search with mergedLists/openPaste/mergeLines/replaceLines and the Start from workflows.
+Now (2026-10-28): all ten Paste/replace and Start from functions live in `decklab/web/editor-import.js`, loaded directly after `editor-cards.js` by the browser and shared Node runner. The moved bodies and retained executable source are unchanged; global callers, state and viewport listeners retain their owners. The editor script map and static-asset contracts include the new file.
 
-Gap: these responsibilities still share the search module.
-
-First slice: extract the contiguous Paste/Start from helpers, leaving search and viewport initialisation in their current owner. Run existing paste/replace/start and Quick edit checks before separately extending EDHREC search (E9-S07). The [maintenance owner](../SOURCE_AUDIT.md#maintenance-backlog) records the loader and moved-body checks; this slice changes no editor behaviour.
+Evidence:
+- `editor-cards.js`: 876 lines; `editor-import.js`: 266 lines.
+- 347 editor tests passed, plus focused asset/workspace checks and both JavaScript syntax checks.
+- Independent moved-body, loader and state-ownership review found no issues. See [SOURCE_AUDIT.md](../SOURCE_AUDIT.md#maintenance-backlog).
 
 **E11-S38** · Claude Code · should · M · missing
 

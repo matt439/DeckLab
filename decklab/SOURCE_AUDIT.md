@@ -269,11 +269,23 @@ loading for test_token_details_js.py is unchanged. Token UI/conflicts, physical
 row identities, details parity and asset order remain the verification contract;
 the source-length check now passes.
 
-For the editor, start with mergedLists/openPaste/mergeLines/replaceLines and
-startFromPart/choiceSheet/openPreconStart/openDeckStart. Keep search and viewport
-listeners in their current execution order. Verify existing paste/replace
-previews, Undo, precon/deck starts and Quick edit. This creates room for E9-S07;
-the extraction itself adds no EDHREC behaviour.
+The editor split is built (2026-10-28). All ten contiguous Paste/replace and
+Start from functions moved to `web/editor-import.js` (266 lines), directly after
+`editor-cards.js` (876 lines). Browser, explicit asset/order contracts and the
+shared Node loader register the file once. The editor's script map names the
+current owners. Search state and viewport listeners retain their original
+execution order; the new module has no load-time work beyond strict mode.
+
+Independent review compared all 257 moved lines and 847 retained executable
+lines against `1b2f815`: no function body was changed, lost or duplicated. All
+347 editor checks passed, alongside focused static-asset and workspace checks;
+both JavaScript syntax checks pass. These exercise paste/replace, Undo, Quick
+edit and the shared loader. Precon/deck start bodies are preserved exactly;
+no live precon request or device acceptance is claimed. The integrated attempt
+and six corrected-harness reruns are recorded in HISTORY.md's E11-S37 entry;
+three Windows runtime checks remain unqualified after denials/timeout, and
+database integration was disabled. This creates room for E9-S07; the extraction
+itself adds no EDHREC behaviour.
 
 ### Collection parsing and database snapshots: E11-S38, E11-S39
 

@@ -1,8 +1,7 @@
 /* Deck Lab's editor (Milestone 4; redesigned in UI-REVIEW.md WP11): change a deck's lists, header and
 write-up, start new decks, and save.
 
-The editor is eight scripts, loaded first and in this order, before matchups.js and the page's other
-scripts (core.js, library.js, deck.js, stats.js, practice.js and app.js):
+The editor scripts load in this order, before the matchup and application scripts (index.html):
     editor.js           this file: the shared constants and the edit on screen (`editor`), lines and
                         lists, header fields, the write-up, re-applying changes onto a newer file, drafts,
                         undo history and the editor's keys, entering and leaving the editor, and sheets
@@ -11,8 +10,11 @@ scripts (core.js, library.js, deck.js, stats.js, practice.js and app.js):
                         Checks), changed() and the bar
     editor-details.js   Deck details: the header fields, the Sleeves and Deck box pickers, setField()
     editor-lines.js     the list (dense rows or picture stacks): steppers, Remove and Undo, moving a line
-    editor-cards.js     getting cards in: the Add panel's search and My collection, the Quick edit's search
-                        sheet, a line's printing sheet, "Paste a list", a new deck's "Start from"
+    editor-forge.js     saved Forge evidence and editor action-bar choices
+    editor-cards.js     the Add panel's search and My collection, Quick edit's search and printing picker
+    editor-import.js    Paste/replace previews and a new deck's Start from workflows
+    editor-search-quantity.js  preferred-line quantities in search results
+    editor-search-dock.js      retained search dock and its focus/ownership lifecycle
     editor-swaps.js     stand-ins for a missing card in the Play-now list, and their Substitutes notes
     editor-save.js      checking the draft and saving it
     editor-deckpage.js  the editor's parts on the deck page

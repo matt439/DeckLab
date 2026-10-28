@@ -2,6 +2,30 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Editor import workflow split (2026-10-28; E11-S37)
+
+Paste/replace and Start from now live in `web/editor-import.js`, loaded directly
+after `editor-cards.js` by the browser and shared Node runner. All ten function
+bodies are unchanged; search state, viewport initialization and global callers
+retain their owners. The asset/order contracts and editor script map include
+the new file. Card search is now 876 lines and the extracted workflow 266.
+
+Validation: 347 editor tests passed, plus focused asset/workspace checks and
+both JavaScript syntax checks. Independent review verified all 257 moved lines
+and 847 retained executable lines against the starting commit, with no lost,
+duplicated or altered function bodies.
+
+The integrated attempt ran 8,483 tests in 1,440.949 seconds, with 409 skips.
+Four Windows multiprocessing cases failed because the temporary launcher used
+stdin, and two config checks failed because its isolated empty config changed
+the expected path/presence. All six passed after fixing the disposable launcher
+and treating the private config as absent. Three Windows runtime checks remained
+unqualified: network-facts access and taskkill were denied, and recorded-process
+cleanup timed out. They were not retried. No changed-source failure remains in
+the exercised fixture checks; this does not claim a fully green runtime suite.
+Database integration was disabled, and no live data, server restart, Forge game
+or physical-device acceptance was involved.
+
 ## Tokens workflow split and source-length CI guard (2026-10-28; E11-S36, E11-S43)
 
 Tokens' add/edit/conflict sheets now live in `web/tokens-edit.js` (370 lines),
