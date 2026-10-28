@@ -565,3 +565,44 @@ This qualifies protected disposable fixtures only. PostgreSQL, real Forge,
 named native/process checks, browser/device and live-runtime acceptance remain
 separate; earlier stopped actions were not retried. It makes no claim about
 the earlier unguarded database-test invocation's unresolved live-data effects.
+
+## Third integrated feature checkpoint: 2026-10-28
+
+The accumulated source through `e10c0fa` passed a fresh complete protected run,
+including manual field-exclusion counts, explicit local-worker experiment
+fallbacks and saved MTGMate evidence beside Shopping's combined missing cards.
+Each shard used `scripts/test_shard.py INDEX 4 --hang-after 1200`, at most two
+concurrently, with the permanent pre-import guard installed before discovery.
+
+| Shard index | Discovered | Reported | Skips | Seconds | Host exit |
+|---|---:|---:|---:|---:|---:|
+| 0 | 2,213 | 2,062 | 74 | 387.493 | 0 |
+| 1 | 2,522 | 2,359 | 117 | 301.852 | 0 |
+| 2 | 2,722 | 2,586 | 92 | 379.758 | 0 |
+| 3 | 2,620 | 2,492 | 137 | 391.647 | 0 |
+| Total | 10,077 | 9,499 | 420 | | |
+
+Every final log reports OK. Discovery preserves all 9,123 starting cases under
+the existing three class moves and one explicit token-test rename, with 954 new
+cases and no missing IDs, duplicates or loader errors. Class-level setup skips
+account for discovered cases absent from reported totals. Frozen before/after
+proof confirms the same 1,160 source files and digest:
+`4a2044d013a577d56b768bdd3b2af5f244515c591b46671364277d05cb2495a0`.
+Exactly 112 leading test-header edits remained uncommitted; each is AST-equivalent
+to HEAD except its module docstring. Their stopped staging action was not retried.
+
+The local folder `decklab-fixture-e10c0fa-af3d14b6` retains discovery, manifests,
+four complete logs, explicit host-exit sidecars, final snapshot proof and
+`qualification-result-final.json`. The preceding `5d625a9` run remains in its
+own folder with `qualification-result-initial.json`: it reported the same totals
+but failed one static asset check on a literal HTTPS origin in the link validator.
+The correction compares normalized protocol and exact host, preserving accepted
+links without weakening the asset guard. Root's 37 protected UI/asset checks and
+the entire formerly failing shard then passed before this full result was accepted.
+
+Real-error Ruff, Node syntax, whitespace and source lengths pass: 1,169 owned
+source files, none over 1,200 lines. Qualification used disposable fixtures,
+supplied shop caches, fake connectors and explicit native/process skips. Genuine
+PostgreSQL, real Forge, browser/device and live-runtime acceptance remain separate.
+Earlier access denials were not retried, and this checkpoint does not resolve
+the earlier unguarded database-test invocation's live-data uncertainty.

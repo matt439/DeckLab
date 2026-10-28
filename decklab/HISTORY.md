@@ -18,8 +18,14 @@ It accepts the same default-port and mixed-case URLs and still rejects other
 hosts, non-default ports, credentials, unsafe paths, queries, fragments and
 malformed Unicode. The static asset guard is unchanged. Added link assertions,
 independent review and root's 37 protected UI/asset tests pass without skips;
-Node syntax, Ruff and whitespace pass. Fresh full qualification follows this
-correction separately; the earlier failed run is not presented as a pass.
+Node syntax, Ruff and whitespace pass. A fresh frozen-source run on `e10c0fa`
+then passed all four shards with explicit host exit 0: 9,499 tests reported and
+420 intentional skips, from the same 10,077 unique discovered cases. The source
+digest and 112 AST-equivalent uncommitted headers stayed unchanged. The complete
+evidence is recorded in [SOURCE_AUDIT.md](SOURCE_AUDIT.md#third-integrated-feature-checkpoint-2026-10-28);
+the earlier failed run remains preserved separately. This qualifies protected
+fixtures, with genuine PostgreSQL, native/process runtime, real Forge and
+browser/device or live acceptance still separate.
 
 ## Saved shop checks beside missing cards (2026-10-28; E5-S08 slice)
 
