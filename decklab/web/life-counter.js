@@ -240,13 +240,16 @@ function lifeTick(open) {
   open.timer = setTimeout(() => lifeTick(open), 1000);
 }
 
-/** Keeps the phone's screen on while the counter is open, where the browser allows it. */
+/** Keeps the phone's screen on while the counter is open, where the browser allows it. A lock that arrives after
+ * the counter closed (or another opened) is let go at once, so the screen never stays on behind the Game log. */
 async function lifeWake(open) {
   try {
-    if (lifeOpen === open && document.visibilityState !== "hidden" && navigator.wakeLock) {
-      open.wake = await navigator.wakeLock.request("screen");
-    }
-  } catch (e) { open.wake = null; }
+    if (lifeOpen !== open || document.visibilityState === "hidden" || !navigator.wakeLock) return;
+    const wake = await navigator.wakeLock.request("screen");
+    if (lifeOpen !== open) { wake.release(); return; }
+    if (open.wake && open.wake !== wake) open.wake.release();
+    open.wake = wake;
+  } catch (e) { /* not allowed here, or already released */ }
 }
 
 /** Shows the counter for game, full screen. onClose: called when it closes (the Game log's Resume). */

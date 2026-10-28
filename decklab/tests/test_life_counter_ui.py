@@ -156,6 +156,29 @@ class LifeCounterUiTests(unittest.TestCase):
           closeLifeCounter();
         """)
 
+    def test_a_wake_lock_arriving_after_close_is_released(self):
+        self.run_js("""
+          let resolve=null; const released=[];
+          navigator.wakeLock={request:()=>new Promise(r=>{resolve=r;})};
+          const lock=name=>({release:()=>{released.push(name);}});
+          clear(main); drawPlay(data,''); named(main,'Life counter').click();
+          closeLifeCounter();                        // closed before the lock arrives
+          resolve(lock('late')); await tick();
+          same(released,['late']);
+          named(main,'Resume life counter').click();
+          resolve(lock('kept')); await tick();
+          same(released,['late']);                    // the open counter keeps its lock
+          closeLifeCounter(); same(released,['late','kept']);
+          delete navigator.wakeLock;
+        """)
+
+    def test_the_buttons_take_taps_and_holds_only(self):
+        css = (WEB / "play.css").read_text(encoding="utf-8")
+        rule = css[css.index("dialog.life-counter button, .life-total"):]
+        rule = rule[:rule.index("}")]
+        for declaration in ("touch-action: manipulation", "user-select: none", "-webkit-touch-callout: none"):
+            self.assertIn(declaration, rule)
+
 
 if __name__ == "__main__":
     unittest.main()

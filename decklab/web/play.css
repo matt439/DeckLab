@@ -57,6 +57,9 @@ dialog.life-counter::backdrop { background: var(--page); }
 .life-seat.is-out { background: var(--warn-soft); border-color: var(--warn-line); }
 .life-name { margin: 0; display: grid; justify-items: center; text-align: center; overflow-wrap: anywhere; }
 .life-main { width: 100%; display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: var(--s-3); }
+/* Taps and holds only count: no double-tap zoom, text selection or iOS callout on the buttons and totals. */
+dialog.life-counter button, .life-total, .life-small-value { touch-action: manipulation; -webkit-user-select: none;
+  user-select: none; -webkit-touch-callout: none; }
 .life-adjust { min-height: calc(var(--tap) * 2); width: 100%; }
 .life-sign { font-size: var(--fs-life-sign); line-height: 1; }
 .life-total { min-width: 2ch; text-align: center; font-family: var(--font-num); font-size: var(--fs-life); font-weight: var(--fw-heavy);
