@@ -48,7 +48,7 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 39 | 28 | 6 | 2 | 3 |
 | **Total** | **255** | **208** | **16** | **17** | **14** |
 
-Counted from the story headers on 2026-10-28 after the current feature and maintenance work. The reviews added five feature stories and eight hygiene stories, and corrected E1-S12 from missing to partial.
+Counted from the story headers on 2026-10-28 after the current feature and maintenance work. The reviews added five feature stories and eight hygiene stories, then the fixture-only entry-point story E11-S44, and corrected E1-S12 from missing to partial.
 
 ---
 
