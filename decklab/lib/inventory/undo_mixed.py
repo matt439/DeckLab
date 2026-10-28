@@ -1,22 +1,26 @@
-"""Whole-change Undo for a collection import or a plain order receipt (E11-S08).
+"""Whole-change Undo for a collection import, a plain order receipt (E11-S08) or a trade (E7-S22).
 
 These changes touch several kinds of data at once. An import writes collection rows and keeps
 the raw upload; a receipt marks order parts received, adds cards and token cards, may set a
-product owned, and refreshes the deck tables. Undo is offered only for the complete original
-change, never part of it, and only when:
+product owned, and refreshes the deck tables; a trade (collection.trade) lowers or removes the
+rows whose copies left and adds the copies that came in. Undo is offered only for the complete
+original change, never part of it, and only when:
 
 - the change is exactly one of those shapes (a receipt of whole parts with no corrected rows:
-  no new components, order notes, payload or product-list rows);
+  no new components, order notes, payload or product-list rows; a trade only collection rows of
+  one space, saved with a trade's reason, "Traded" or "Traded with T", whose lowered rows
+  changed only their count);
 - every row it wrote is still exactly as it left it and is still the latest audit row for its
   key, so a later edit, receipt, kit choice or token packing refuses, naming that row;
 - the reversal, built with the ordinary model edits, puts back exactly those rows' former
   values and changes no other inventory row (checked on the tables the database holds);
 - the copies it removes aren't held by built decks or intact products (an intact product the
   receipt itself set owned is put back on order with its cards), and token cards it removes
-  aren't packed, as the narrower Undo actions check.
+  aren't packed, as the narrower Undo actions check. The copies a trade gave come back as they
+  were, so they need no such check.
 
 The deck rows a receipt's table refresh wrote are derived: they aren't restored, and the
-inverse refreshes the tables again. The raw upload of an import stays kept as a record of what
+inverse refreshes the tables again (as it does after a trade, which left them out of date). The raw upload of an import stays kept as a record of what
 was sent. Removing copies needs a reason, as removing an added row does.
 """
 import copy
@@ -32,7 +36,8 @@ from .undo import (COLLECTION, COLLECTION_FIELDS, SHA, TOKEN_FIELDS, TOKENS, Und
 MIXED_MAX = 2000                    # rows of one original change set; the reader returns one more to refuse
 IMPORT = "import_undo"
 RECEIPT = "receipt_undo"
-ACTIONS = (IMPORT, RECEIPT)
+TRADE = "trade_undo"
+ACTIONS = (IMPORT, RECEIPT, TRADE)
 COMPONENT = "order_component"
 STATUS = "product_status"
 RAW_IMPORT = "collection_import"
@@ -53,14 +58,32 @@ CHECKED = "This changed after the selected change. Nothing was undone."
 
 # ------------------------------------------------------------------ the source
 
-def looks_like(rows, past, space):
-    """IMPORT or RECEIPT when Activity's (possibly capped) rows have that shape in space, else None.
+def trade_reason(reason):
+    """Whether a change set's reason is a trade's ("Traded", "Traded with T": collection.trade's)."""
+    return isinstance(reason, str) and (reason == "Traded" or reason.startswith("Traded with "))
+
+
+def _gave(row):
+    """Whether a collection row is one whose copies a trade gave: removed, or its count lowered."""
+    before, after = row.get("before"), row.get("after")
+    if row.get("op") == "DELETE":
+        return isinstance(before, dict)
+    return row.get("op") == "UPDATE" and isinstance(before, dict) and isinstance(after, dict) \
+        and type(before.get("quantity")) is int and type(after.get("quantity")) is int \
+        and after["quantity"] < before["quantity"]
+
+
+def looks_like(rows, past, space, reason=None):
+    """IMPORT, RECEIPT or TRADE when Activity's (possibly capped) rows have that shape in space
+    (reason: the change set's, which only tells a trade), else None.
 
     Only an affordance for Activity's Review undo button: the review reads the whole change."""
     seen = {row.get("table") for row in rows} | set(past or ())
     def own(row):
         image = row.get("after") if isinstance(row.get("after"), dict) else row.get("before")
         return isinstance(image, dict) and image.get("space_id") == space
+    if seen == {COLLECTION} and trade_reason(reason) and all(own(row) for row in rows) and any(_gave(row) for row in rows):
+        return TRADE
     if RAW_IMPORT in seen and seen <= {RAW_IMPORT, COLLECTION} and all(
             own(row) and (row.get("op") == "INSERT" or row.get("table") == COLLECTION and row.get("op") == "UPDATE")
             for row in rows):
@@ -113,6 +136,12 @@ def _check_row(row, kind):
             raise UndoUnsupported("The kept upload cannot be checked.")
         _key(row)
         return
+    if table == COLLECTION and kind == TRADE and op == "DELETE":
+        if after is not None or not isinstance(before, dict) or set(before) != COLLECTION_FIELDS \
+                or type(before["quantity"]) is not int or before["quantity"] < 1:
+            raise UndoUnsupported("The collection row has an unsupported schema.")
+        _key(row)
+        return
     if op not in ("INSERT", "UPDATE") or op == "INSERT" and before is not None \
             or op == "UPDATE" and not isinstance(before, dict) or not isinstance(after, dict):
         raise UndoUnsupported("Only additions and updates can be undone as part of an import or receipt.")
@@ -120,7 +149,10 @@ def _check_row(row, kind):
     if table == COLLECTION:
         if set(after) != COLLECTION_FIELDS or type(after["quantity"]) is not int or after["quantity"] < 1:
             raise UndoUnsupported("The collection row has an unsupported schema.")
-        if op == "UPDATE":
+        if op == "UPDATE" and kind == TRADE and _gave(row):
+            if _changed(row) != {"quantity"} or after["quantity"] < 1:
+                raise UndoUnsupported("Only collection rows the trade gave copies of can be put back.")
+        elif op == "UPDATE":
             changed = _changed(row)
             if not changed or changed - COLLECTION_CHANGES or type(before["quantity"]) is not int \
                     or not 1 <= before["quantity"] < after["quantity"]:
@@ -149,9 +181,10 @@ def _check_row(row, kind):
         raise UndoUnsupported("Only products this receipt set owned can be put back on order.")
 
 
-def _source(raw, space):
+def _source(raw, space, reason=None):
     """The complete original change, classified, or a refusal: UndoMissing when any row is
-    outside space (checked for every row before any shape is diagnosed)."""
+    outside space (checked for every row before any shape is diagnosed). reason is the change
+    set's, which only tells a trade."""
     if not isinstance(raw, list) or not raw:
         raise UndoMissing()
     if len(raw) > MIXED_MAX:
@@ -166,13 +199,15 @@ def _source(raw, space):
             raise UndoMissing()
     tables = {row["table"] for row in raw}
     if tables - set(KEYS):
-        raise UndoUnsupported("This change touches data an import or receipt Undo doesn't restore.")
+        raise UndoUnsupported("This change touches data an import, receipt or trade Undo doesn't restore.")
     if RAW_IMPORT in tables and tables <= {COLLECTION, RAW_IMPORT}:
         kind = IMPORT
     elif COMPONENT in tables and space == HOME and tables <= {COMPONENT, STATUS, COLLECTION, TOKENS, DECK}:
         kind = RECEIPT
+    elif tables == {COLLECTION} and trade_reason(reason):
+        kind = TRADE
     else:
-        raise UndoUnsupported("Only a whole collection import or a whole order receipt can be undone here.")
+        raise UndoUnsupported("Only a whole collection import, a whole order receipt or a whole trade can be undone here.")
     seen = set()
     for row in raw:
         _check_row(row, kind)
@@ -182,6 +217,8 @@ def _source(raw, space):
         seen.add(identity)
     if not any(row["table"] in (COLLECTION, TOKENS) and _restores(row) for row in raw) and kind == IMPORT:
         raise UndoUnsupported("The import added no cards.")
+    if kind == TRADE and not any(_gave(row) for row in raw):
+        raise UndoUnsupported("The trade gave no cards.")
     if kind == RECEIPT:
         products = {row["after"]["file_name"] for row in raw if row["table"] == COMPONENT and row["after"]["kind"] == "product"}
         if {row["key"]["file"] for row in raw if row["table"] == STATUS} != products:
@@ -198,7 +235,7 @@ def _space_of_unknown(row, space):
 
 def _restores(row):
     """Whether an original row's inverse writes anything (a position-only token move doesn't)."""
-    if row["op"] == "INSERT":
+    if row["op"] in ("INSERT", "DELETE"):
         return True
     return row["table"] not in (DECK, RAW_IMPORT) and bool(_changed(row) - {"position"})
 
@@ -233,6 +270,11 @@ def _images(t):
     return out
 
 
+def _image(row):
+    """The row as the change left it, or as it was before the change removed it."""
+    return row["before"] if row["op"] == "DELETE" else row["after"]
+
+
 def _canon(table, image):
     return json.dumps({field: image[field] for field in KEYS[table]}, sort_keys=True)
 
@@ -255,7 +297,7 @@ def _same(recorded, image):
 
 
 def _row_label(row):
-    image = row["after"] if row["op"] != "DELETE" else row["before"]
+    image = _image(row)
     table = row["table"]
     if table == COLLECTION:
         return _label(COLLECTION, {"set" if k == "set_code" else k: v for k, v in image.items()})
@@ -319,11 +361,17 @@ def _inverse(snapshot, raw, space):
     collection = [row for row in raw if row["table"] == COLLECTION]
     if collection:
         sheet = snapshot.collection(space)
-        if not sheet.exists or sheet.error is not None or sheet.strict_error is not None or sheet.csv_error is not None:
+        if sheet.exists and (sheet.error is not None or sheet.strict_error is not None or sheet.csv_error is not None):
             raise ValueError("The collection can't be read")
-        rows = {rules.ident(row.as_dict()): row.as_dict() for row in sheet.rows}
+        rows = {rules.ident(row.as_dict()): row.as_dict() for row in sheet.rows} if sheet.exists else {}
         for row in collection:
-            key = (row["after"]["set_code"], row["after"]["collector_number"], row["after"]["finish"])
+            image = _image(row)
+            key = (image["set_code"], image["collector_number"], image["finish"])
+            if row["op"] == "DELETE":             # a row a trade gave away entirely comes back
+                if key in rows:
+                    raise ValueError("A removed collection row is back")
+                rows[key] = _collection_cells(row["before"])
+                continue
             if key not in rows:
                 raise ValueError("A collection row is missing")
             if row["op"] == "INSERT":
@@ -374,7 +422,7 @@ def _verify(snapshot, settled, raw):
     restored = {table: {} for table in RESTORED_TABLES}
     for row in raw:
         if row["table"] in restored and _restores(row):
-            restored[row["table"]][_canon(row["table"], row["after"])] = row
+            restored[row["table"]][_canon(row["table"], _image(row))] = row
     for table in RESTORED_TABLES:
         keys = set(before_images[table]) | set(after_images[table])
         for key in keys:
@@ -409,7 +457,8 @@ def _collection_proof(snapshot, after, space, raw, label):
     from decklab.lib import decks, inventory, pool
     from decklab.lib.api.collection_guards import _check_holders, _physical_counts
     from decklab.lib.decks import assembled, standins
-    rows = [row for row in raw if row["table"] == COLLECTION]
+    # Copies a trade gave come back as they were: only the rows the inverse takes copies from are checked.
+    rows = [row for row in raw if row["table"] == COLLECTION and not _gave(row)]
     if not rows:
         return
     reverted = _reverted_products(raw)
@@ -420,7 +469,7 @@ def _collection_proof(snapshot, after, space, raw, label):
             raise ValueError("Unresolved card names")
     except Exception:
         raise UndoConflict("The cards' physical identities cannot be checked. Use the Collection editor.", label) from None
-    basics = sorted(name for name in names.values() if decks.is_basic_land(name))
+    basics = sorted({name for name in names.values() if decks.is_basic_land(name)})
     if basics:
         raise UndoUnsupported("Use the Collection editor to remove tracked basic lands (" + ", ".join(basics) + ").")
     try:
@@ -530,7 +579,10 @@ def _current(snapshot, raw, space):
     except Unrepresentable:
         raise UndoConflict("The current inventory cannot be checked. Reload and try again.") from None
     for row in raw:
-        if row["table"] in images and not _same(row["after"], images[row["table"]].get(_canon(row["table"], row["after"]))):
+        if row["table"] in images and row["op"] == "DELETE":
+            if _canon(row["table"], row["before"]) in images[row["table"]]:
+                raise UndoConflict(CHECKED, _row_label(row))
+        elif row["table"] in images and not _same(row["after"], images[row["table"]].get(_canon(row["table"], row["after"]))):
             raise UndoConflict(CHECKED, _row_label(row))
         if row["table"] == RAW_IMPORT:
             kept = [info for info in snapshot.imports.get(space, ()) if info.name == row["after"]["file_name"]]
@@ -540,7 +592,8 @@ def _current(snapshot, raw, space):
 
 
 def _describe(raw, kind, space):
-    """What the preview shows: every row put back, with its current and restored values."""
+    """What the preview shows: every row put back, with its current and restored values (a
+    trade's given rows under "returned": rows coming back, and rows going back to more copies)."""
     def cards(image):
         values = _collection_cells(image)
         values["quantity"] = int(values["quantity"])
@@ -552,10 +605,16 @@ def _describe(raw, kind, space):
         return values
     collection = {"removed": [], "reduced": []}
     tokens = {"removed": [], "reduced": []}
+    returned = {"added": [], "raised": []}
     components, products, uploads = [], [], []
     for row in raw:
         table, after, before = row["table"], row["after"], row["before"]
-        if table == COLLECTION:
+        if table == COLLECTION and kind == TRADE and _gave(row):
+            if row["op"] == "DELETE":
+                returned["added"].append(cards(before))
+            else:
+                returned["raised"].append({"current": cards(after), "restored": cards(before)})
+        elif table == COLLECTION:
             if row["op"] == "INSERT":
                 collection["removed"].append(cards(after))
             else:
@@ -581,6 +640,12 @@ def _describe(raw, kind, space):
         parts = [f"{new} new {'row' if new == 1 else 'rows'}"] if new else []
         parts += [f"{bumped} {'row' if bumped == 1 else 'rows'} added to"] if bumped else []
         label = f"Import of {removed} {'card' if removed == 1 else 'cards'} ({', '.join(parts)})"
+    elif kind == TRADE:
+        back = sum(item["quantity"] for item in returned["added"]) \
+            + sum(item["restored"]["quantity"] - item["current"]["quantity"] for item in returned["raised"])
+        label = f"Trade: gave {back} {'card' if back == 1 else 'cards'}, got {removed} {'card' if removed == 1 else 'cards'}"
+        return {"label": label, "cards": removed, "returned_cards": back, "collection": collection, "returned": returned,
+                "tokens": tokens, "components": components, "products": products, "uploads": uploads}
     else:
         orders = sorted({item["order"] for item in components})
         label = f"Receipt of order {', '.join(orders)} ({', '.join(item['component'] for item in components)})"
@@ -594,7 +659,10 @@ def _plan(change_id, space, snapshot, store):
     if not callable(reader) or not callable(getattr(store, "undo_latest_rows", None)):
         raise UndoUnsupported("Undo is available only with the database audit trail.")
     raw = reader(change_id)
-    kind = _source(raw, space)
+    # A change set's reason tells a trade from other collection edits; read only when it may be one.
+    reason_reader = getattr(store, "undo_change_reason", None)
+    trade = isinstance(raw, list) and raw and all(isinstance(row, dict) and row.get("table") == COLLECTION for row in raw)
+    kind = _source(raw, space, reason_reader(change_id) if trade and callable(reason_reader) else None)
     described = _describe(raw, kind, space)
     label = described["label"]
     _latest(store, raw)
@@ -617,7 +685,7 @@ def _plan(change_id, space, snapshot, store):
 
 
 def review(change_id, space, snapshot=None):
-    """The preview of undoing a whole import or receipt in space, or a guarded refusal."""
+    """The preview of undoing a whole import, receipt or trade in space, or a guarded refusal."""
     import re
     if not isinstance(space, str) or not re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", space):
         raise UndoMissing()
@@ -626,7 +694,8 @@ def review(change_id, space, snapshot=None):
 
 
 def removed_state(snapshot, plan):
-    """After a save: every removed row gone and every reduced row back, read from snapshot."""
+    """After a save: every removed row gone and every reduced (or, for a trade, returned) row
+    back, read from snapshot."""
     space = plan["space"]
     sheet = snapshot.collection(space)
     rows = {rules.ident(row.as_dict()): row.as_dict() for row in sheet.rows} if sheet.exists else {}
@@ -638,6 +707,11 @@ def removed_state(snapshot, plan):
         found = rows.get(rules.ident({**restored, "quantity": str(restored["quantity"])}))
         if found is None or {**found, "quantity": int(found["quantity"])} != restored:
             raise UndoConflict("The restored rows cannot be confirmed. Reload the collection.", plan["label"])
+    returned = plan.get("returned") or {"added": [], "raised": []}
+    for restored in returned["added"] + [item["restored"] for item in returned["raised"]]:
+        found = rows.get(rules.ident({**restored, "quantity": str(restored["quantity"])}))
+        if found is None or {**found, "quantity": int(found["quantity"])} != restored:
+            raise UndoConflict("The returned rows cannot be confirmed. Reload the collection.", plan["label"])
     for item in plan["components"]:
         order = snapshot.order(item["order"])
         parts = [c for c in (order.components if order is not None and order.error is None else ())
@@ -648,8 +722,11 @@ def removed_state(snapshot, plan):
         rows_ = [row for row in snapshot.status.rows if row.text("file") == item["product"] + ".csv"]
         if len(rows_) != 1 or rows_[0].text("status") != item["status"] or rows_[0].text("intact") != "":
             raise UndoConflict("The products cannot be confirmed back on order. Reload Shopping.", plan["label"])
-    return {"removed_rows": len(plan["collection"]["removed"]), "restored_rows": len(plan["collection"]["reduced"]),
-            "components": len(plan["components"]), "products": len(plan["products"])}
+    confirmed = {"removed_rows": len(plan["collection"]["removed"]), "restored_rows": len(plan["collection"]["reduced"]),
+                 "components": len(plan["components"]), "products": len(plan["products"])}
+    if plan["action"] == TRADE:
+        confirmed["returned_rows"] = len(returned["added"]) + len(returned["raised"])
+    return confirmed
 
 
 @register("inventory.undo_mixed", refresh=True)
@@ -668,7 +745,11 @@ def apply_mixed(snapshot, *, change_id, space, expect, reason=None):
     counts = {"undo": 1, "cards": plan["cards"], "removed": len(plan["collection"]["removed"]),
               "edited": len(plan["collection"]["reduced"]), "token_rows": len(tokens["removed"]) + len(tokens["reduced"]),
               "components": len(plan["components"]), "products": len(plan["products"])}
-    changed = {paths.collection(space): ["undo"]} if plan["collection"]["removed"] or plan["collection"]["reduced"] else {}
+    returned = plan.get("returned") or {"added": [], "raised": []}
+    if plan["action"] == TRADE:
+        counts.update(returned=len(returned["added"]) + len(returned["raised"]), returned_cards=plan["returned_cards"])
+    changed = {paths.collection(space): ["undo"]} if plan["collection"]["removed"] or plan["collection"]["reduced"] \
+        or returned["added"] or returned["raised"] else {}
     return settled, Summary(f"Undo change #{change_id}: {plan['label']}", counts, changed,
                             {"undo_of": change_id, "space": space, "kind": "mixed", "action": plan["action"],
                              "row_count": plan["row_count"], "row_change_ids": plan["row_change_ids"],

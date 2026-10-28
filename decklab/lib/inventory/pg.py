@@ -817,6 +817,15 @@ class PgInventory:
         applying = getattr(self._applying, "connection", None)
         return work(applying) if applying is not None else self._call(work)
 
+    def undo_change_reason(self, change_id):
+        """The reason one change set was saved with (None when it has none), which tells a
+        trade's whole-change Undo a trade ("Traded", "Traded with T") from other collection edits."""
+        def work(c):
+            found = c.execute("select reason from audit.change_set where id=%s", (change_id,)).fetchone()
+            return found[0] if found else None
+        applying = getattr(self._applying, "connection", None)
+        return work(applying) if applying is not None else self._call(work)
+
     def undo_latest_rows(self, keys):
         """{(table, key as sorted JSON): latest audit row id} for [(table, key)], in one query
         (undo_latest's rule for many keys at once)."""

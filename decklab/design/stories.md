@@ -2159,7 +2159,7 @@ Evidence:
 
 Gap: none against the criteria. Member-space and product box checks are future scope, and real-device and household acceptance is separate. The date and name-only art certify no current contents, printing or finish.
 
-**E7-S22** · Matt · could · M · partial
+**E7-S22** · Matt · could · M · built
 
 As a player who sometimes trades cards, I want to record a trade as one event, with the cards that left and the cards that came in, so that the history shows what a card was traded for, not an unrelated removal and a separate addition.
 
@@ -2173,12 +2173,12 @@ Evidence:
 - `decklab/web/collection-trade.js`: openTradeSheet, previewTrade, drawTradeReview, saveTrade (the Collection page's Record a trade)
 - `decklab/lib/api/collection_trade.py`: preview_trade, save_trade (POST /api/collection/trade/preview and /api/collection/trade: the same `collection.trade`, held copies needing the preview's review token, the tables it would leave out of date)
 - `decklab/db/collection_trade.py`, `decklab/lib/inventory/ops_collection.py` (`collection.trade`): `collection trade --out FILE --in FILE [--with T] -m "..."` saves both sides as one change set, its message naming them and the who-with note and its reason "Traded", with no prices; `--dry-run` names the built decks that lose cards and the tables it would leave out of date, a save refuses held copies without `--allow-in-use` and names the tables now out of date
-- `decklab/tests/test_collection_trade.py`: the operation on files and PostgreSQL (one change set, no raw import, both Activity Undo reviews refuse it) and the command's preview, in-use refusal and file checks
+- `decklab/lib/inventory/undo_mixed.py` (`trade_undo`), `decklab/lib/api/activity_mixed_undo.py`, `decklab/web/activity-undo.js`: Activity's whole-trade Undo (GET/POST /api/activity/mixed-undo): a change saved with a trade's reason, previewed with both sides and saved as one new change that removes the cards that came in and restores those that left, under the import Undo's rules, with the deck tables worked out again; `PgInventory.undo_change_reason` reads the reason
+- `decklab/tests/test_collection_trade.py`: the operation on files and PostgreSQL (one change set, no raw import, the row Undo never reverses part of it) and the command's preview, in-use refusal and file checks
 - `decklab/tests/test_collection_trade_api.py`, `decklab/tests/test_collection_trade_ui.py`: the page's preview and save, own people only, held copies, stale rows and the sheet
+- `decklab/tests/test_inventory_undo_trade.py`, `test_activity_trade_undo_api.py`, `test_activity_trade_undo_ui.py`, `test_inventory_undo_mixed_pg.py`: the whole-trade Undo's preview, exact inverse, later-change and held-card refusals, the trade's reason, own space's people only and the review sheet, also through the real audit trail
 
-Now (2026-10-27): `collection trade` on the PC ([HISTORY.md](../HISTORY.md#record-a-trade-from-the-pc-2026-10-27-e7-s22)) and the Collection page's Record a trade ([HISTORY.md](../HISTORY.md#record-a-trade-on-the-collection-page-2026-10-27-e7-s22)) are built.
-
-Gap: Activity offers no Undo for a trade.
+Now (2026-10-28): `collection trade` on the PC ([HISTORY.md](../HISTORY.md#record-a-trade-from-the-pc-2026-10-27-e7-s22)), the Collection page's Record a trade ([HISTORY.md](../HISTORY.md#record-a-trade-on-the-collection-page-2026-10-27-e7-s22)) and Activity's [whole-trade Undo](../HISTORY.md#undo-a-whole-trade-2026-10-28-e7-s22) are built.
 
 Next slice: a whole-trade Undo beside the import Undo.
 

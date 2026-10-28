@@ -769,9 +769,19 @@ function activityUndoShow(ctx) {
   startPhoto?.();
 }
 
-/* Whole-change Undo of a collection import or an order receipt: every row together, one reason. */
+/* Whole-change Undo of a collection import, an order receipt or a trade: every row together, one reason. */
 const ACTIVITY_UNDO_MIXED_ENDPOINT = "/api/activity/mixed-undo";
 const ACTIVITY_UNDO_MIXED_KEYS = "action,available,cards,collection,components,expect,id,kind,label,products,reason_required,space,tokens,uploads";
+const ACTIVITY_UNDO_TRADE_KEYS = "action,available,cards,collection,components,expect,id,kind,label,products,reason_required,returned,returned_cards,space,tokens,uploads";
+
+/** A trade's given rows coming back: rows added again, and rows going back to more copies. */
+function activityUndoTradeReturned(part) {
+  if (!part || typeof part !== "object" || Array.isArray(part) || Object.keys(part).sort().join(",") !== "added,raised"
+      || !Array.isArray(part.added) || !Array.isArray(part.raised) || !part.added.length && !part.raised.length) return false;
+  return part.added.every(row => activityUndoRow(row, "collection"))
+    && part.raised.every(item => item && typeof item === "object" && Object.keys(item).sort().join(",") === "current,restored"
+      && activityUndoRow(item.current, "collection") && activityUndoRow(item.restored, "collection") && item.restored.quantity > item.current.quantity);
+}
 
 function activityUndoMixedPart(part, kind) {
   if (!part || typeof part !== "object" || Array.isArray(part) || Object.keys(part).sort().join(",") !== "reduced,removed"
@@ -782,11 +792,14 @@ function activityUndoMixedPart(part, kind) {
 }
 
 function activityUndoMixedEvidence(data, space) {
-  if (Object.keys(data).sort().join(",") !== ACTIVITY_UNDO_MIXED_KEYS || data.space !== space || data.reason_required !== true
-      || !["import_undo", "receipt_undo"].includes(data.action) || !Number.isSafeInteger(data.cards) || data.cards < 0
+  const trading = data.action === "trade_undo";
+  if (Object.keys(data).sort().join(",") !== (trading ? ACTIVITY_UNDO_TRADE_KEYS : ACTIVITY_UNDO_MIXED_KEYS) || data.space !== space || data.reason_required !== true
+      || !["import_undo", "receipt_undo", "trade_undo"].includes(data.action) || !Number.isSafeInteger(data.cards) || data.cards < 0
       || !activityUndoMixedPart(data.collection, "collection") || !activityUndoMixedPart(data.tokens, "tokens")
       || !Array.isArray(data.components) || !Array.isArray(data.products) || !Array.isArray(data.uploads)
       || data.uploads.some(name => typeof name !== "string" || !name)) return false;
+  if (trading) return activityUndoTradeReturned(data.returned) && Number.isSafeInteger(data.returned_cards) && data.returned_cards > 0
+    && !data.uploads.length && !data.components.length && !data.products.length && !data.tokens.removed.length && !data.tokens.reduced.length;
   const importing = data.action === "import_undo";
   if (importing !== Boolean(data.uploads.length) || importing === Boolean(data.components.length)
       || importing && (data.products.length || data.tokens.removed.length || data.tokens.reduced.length)) return false;
@@ -800,6 +813,8 @@ function activityUndoMixedEvidence(data, space) {
 function activityUndoMixedReceipt(answer, preview) {
   const counts = { removed_rows: preview.collection.removed.length, restored_rows: preview.collection.reduced.length,
     components: preview.components.length, products: preview.products.length };
+  if (preview.action === "trade_undo") Object.assign(counts, { returned_rows: preview.returned.added.length + preview.returned.raised.length,
+    returned_cards: preview.returned_cards });
   return Boolean(answer && answer.saved === true && answer.source_id === preview.id && answer.expect === preview.expect
     && answer.kind === "mixed" && answer.space === preview.space && answer.action === preview.action && answer.cards === preview.cards
     && Object.entries(counts).every(([key, value]) => answer[key] === value)
@@ -809,6 +824,7 @@ function activityUndoMixedReceipt(answer, preview) {
 
 function activityUndoMixedShow(ctx) {
   const { sheet, preview, endpoint } = ctx, signature = JSON.stringify(preview), importing = preview.action === "import_undo";
+  const trading = preview.action === "trade_undo", what = importing ? "import" : trading ? "trade" : "receipt";
   const text = value => value === "" ? "Not recorded" : String(value);
   const copies = n => n + (n === 1 ? " copy" : " copies");
   const printing = row => row.name + " (" + row.set.toUpperCase() + " " + row.collector_number + ", " + row.finish + ")";
@@ -819,6 +835,8 @@ function activityUndoMixedShow(ctx) {
   clear(sheet.body).append(el("h3", { text: preview.label }),
     el("p", { class: "box box-warn", text: importing
       ? "Save Undo takes every card this import added back out of the collection: " + copies(preview.cards) + " in all. The uploaded file stays kept as a record of what was sent."
+      : trading ? "Save Undo reverses this trade: it takes the " + copies(preview.cards) + " that came in back out of the collection and puts back the "
+        + copies(preview.returned_cards) + " that left, as they were. The deck tables are worked out again."
       : "Save Undo puts these order parts back on order, as if the delivery hadn't been received, and takes out the " + copies(preview.cards) + " and token cards it added. Their arrival checks come back to do again, and the deck tables are worked out again." }),
     el("p", { class: "sub", text: "Every row below is undone together, with no partial selection. If anything here changes before you save, nothing is saved. Saving creates one new audited change; the original change stays in Activity." }));
   add(sheet.body, [
@@ -826,7 +844,11 @@ function activityUndoMixedShow(ctx) {
       el("span", { class: "sub", text: " received " + text(item.received_on) + (item.checks.length ? " · checks to do again: " + item.checks.join("; ") : "") })])),
     list("Products going back on order", preview.products.map(item => [el("strong", { text: item.product }),
       el("span", { class: "sub", text: " back to " + item.status + (item.intact === "yes" ? " (it was kept intact)" : "") })])),
-    list("Collection rows to remove", preview.collection.removed.map(row => [el("strong", { text: printing(row) + " × " + row.quantity }),
+    trading && list("Cards that left, coming back", preview.returned.added.map(row => [el("strong", { text: printing(row) + " × " + row.quantity }),
+      el("span", { class: "sub activity-undo-note", text: " " + facts(row) })])),
+    trading && list("Collection rows going back to more copies", preview.returned.raised.map(item => [el("strong", { text: printing(item.current) + ": " + item.current.quantity + " → " + item.restored.quantity }),
+      el("span", { class: "sub activity-undo-note", text: " " + facts(item.restored) })])),
+    list(trading ? "Cards that came in, to remove" : "Collection rows to remove", preview.collection.removed.map(row => [el("strong", { text: printing(row) + " × " + row.quantity }),
       el("span", { class: "sub activity-undo-note", text: " " + facts(row) })])),
     list("Collection rows going back to fewer copies", preview.collection.reduced.map(item => [el("strong", { text: printing(item.current) + ": " + item.current.quantity + " → " + item.restored.quantity }),
       el("span", { class: "sub activity-undo-note", text: " " + facts(item.restored) })])),
@@ -838,8 +860,9 @@ function activityUndoMixedShow(ctx) {
   const id = "activity-undo-reason-" + sheet.heading.id;
   const reasonInput = el("input", { id, type: "text", maxlength: 400, autocomplete: "off", "aria-describedby": id + "-hint" });
   const normalized = el("p", { class: "sub", role: "status", "aria-live": "polite" });
-  sheet.body.append(el("label", { class: "field", for: id }, el("span", { text: importing ? "Why undo this import? (required)" : "Why undo this receipt? (required)" }), reasonInput),
-    el("p", { class: "field-hint", id: id + "-hint", text: "Up to 200 characters. Enter why these cards should come back out of the collection." }), normalized);
+  sheet.body.append(el("label", { class: "field", for: id }, el("span", { text: "Why undo this " + what + "? (required)" }), reasonInput),
+    el("p", { class: "field-hint", id: id + "-hint", text: trading ? "Up to 200 characters. Enter why this trade should be reversed."
+      : "Up to 200 characters. Enter why these cards should come back out of the collection." }), normalized);
   const error = el("p", { class: "form-error", role: "alert", tabindex: "-1" }); sheet.body.append(error);
   const changed = () => {
     if (!ctx.here() || ctx.pending || ctx.saved || ctx.needsRefresh || !reasonInput.isConnected || !sheet.body.contains(reasonInput)

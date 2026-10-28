@@ -105,17 +105,25 @@ class PgTradeTests(TradeContract, db_support.DbTestCase):
         self.assertEqual([(m, r) for _, m, r in sets], [("trade", "Traded")])
         self.assertEqual(sorted(ops_), [("collection_card", "DELETE"), ("collection_card", "INSERT")])
 
-    def test_activity_undo_offers_no_partial_reversal_of_a_trade(self):
-        # A trade lowers and adds rows in one change: neither the row Undo nor the import/receipt
-        # Undo may reverse part of it (a trade's own Undo is later work in E7-S22).
+    def test_activity_row_undo_never_reverses_part_of_a_trade(self):
+        # A trade lowers and adds rows in one change: the row Undo never reverses part of it. Only
+        # the whole-change Undo reverses a trade, both sides at once (E7-S22: test_inventory_undo_trade
+        # and test_inventory_undo_mixed_pg), and only a change saved with a trade's reason.
         from decklab.lib.inventory import undo
         self.trade([["fdn", "227", "nonfoil", 1], ["lea", "232", "nonfoil", 1]],
                    [elves(set="m19", collector_number="314")])
         with self.connect() as c:
             change = c.execute("select max(id) from audit.change_set").fetchone()[0]
-        for review in (inventory.undo_review, inventory.undo_mixed_review):
-            with self.subTest(review=review.__name__), self.assertRaises((undo.UndoMissing, undo.UndoUnsupported, undo.UndoConflict)):
-                review(change, "home")
+        with self.assertRaises((undo.UndoMissing, undo.UndoUnsupported, undo.UndoConflict)):
+            inventory.undo_review(change, "home")
+        with self.assertRaises(undo.UndoMissing):
+            inventory.undo_mixed_review(change, "user2")
+        inventory.apply(Op("collection.trade", {"space": "home", "gave": [["fdn", "227", "nonfoil", 1]],
+                                                "got": [elves(set="m19", collector_number="315")]}), MATT, "swap", reason="Sold")
+        with self.connect() as c:
+            change = c.execute("select max(id) from audit.change_set").fetchone()[0]
+        with self.assertRaises(undo.UndoUnsupported):
+            inventory.undo_mixed_review(change, "home")
 
 
 class TradeCliTests(tce.CollectionEditTestCase):
