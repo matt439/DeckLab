@@ -35,7 +35,7 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 
 | Epic | Stories | Built | Partial | Missing | Not wanted |
 |---|---:|---:|---:|---:|---:|
-| [E1: Find, plan and choose decks](#e1-find-plan-and-choose-decks) | 15 | 13 | 1 | 1 | 0 |
+| [E1: Find, plan and choose decks](#e1-find-plan-and-choose-decks) | 15 | 14 | 1 | 0 | 0 |
 | [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 20 | 16 | 1 | 2 | 1 |
 | [E3: Test a deck](#e3-test-a-deck) | 15 | 12 | 3 | 0 | 0 |
 | [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 22 | 16 | 2 | 3 | 1 |
@@ -46,9 +46,9 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E9: Commander nights](#e9-commander-nights) | 20 | 14 | 1 | 4 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 35 | 31 | 1 | 1 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 38 | 23 | 6 | 6 | 3 |
-| **Total** | **254** | **193** | **21** | **26** | **14** |
+| **Total** | **254** | **194** | **21** | **25** | **14** |
 
-Counted from the story headers on 2026-10-28 after the feature-reserve and maintenance reviews and completion of E11-S36, E11-S37, E11-S38, E11-S41, E11-S42 and E11-S43. The reviews added five feature stories and eight hygiene stories, and corrected E1-S12 from missing to partial.
+Counted from the story headers on 2026-10-28 after the feature-reserve and maintenance reviews and the completed Compare and maintenance slices below. The reviews added five feature stories and eight hygiene stories, and corrected E1-S12 from missing to partial.
 
 ---
 
@@ -56,7 +56,7 @@ Counted from the story headers on 2026-10-28 after the feature-reserve and maint
 
 How Matt and User1 (and, more lightly, User2, User3, User4 and User5) find a deck in the library (#/library), choose its picture, open its deck page (#/deck) to see whether it can be built and how to play it, rename or retire it, and pick what to play tonight. Each viewer's library holds their own space's decks, plus any another space has made public. A plain "Deck Lab is off" message is enough while the PC is off (E11-S02); collector-value sorting and legality badges on casual decks aren't wanted.
 
-Open: E1-S12, E1-S26.
+Open: E1-S12.
 
 **E1-S01** · User1 · must · M · built
 
@@ -287,7 +287,7 @@ Evidence:
 
 ---
 
-**E1-S26** · Matt · could · M · missing
+**E1-S26** · Matt · could · M · built
 
 As a deck builder comparing two lists, I want to see which cards and quantities differ, so that I can understand the changes without reading both lists line by line.
 
@@ -296,11 +296,14 @@ As a deck builder comparing two lists, I want to see which cards and quantities 
 - Given the sides are swapped, then additions and removals reverse; comparing a list with itself shows no differences.
 - Given a deck the viewer cannot see, then the comparison follows the existing missing-deck answer and reveals none of its cards; no collection counts are needed for this view.
 
-Evidence of gap (2026-10-28): `decklab/web/compare.js` shows stats, curves, shared cards and head to head, but no list differences. E1-S13 is built and stays built.
+Now (2026-10-28): Compare shows unique cards, quantity changes and separately labelled listed-printing changes from the two deck answers it already loaded. Commander, main deck, sideboard and companion remain separate; duplicate printing lines count by canonical card name, with unresolved names retained.
 
-Gap: all criteria remain to build.
+Evidence:
+- `decklab/web/compare.js`: compareSectionCards, compareSectionDifferences, comparePrintingChange, compareDifferences.
+- `decklab/web/compare.css`: bounded difference tables and wrapping names/printing facts.
+- `decklab/tests/test_compare_ui.py`: 14 new cases cover section moves, duplicate/canonical names, basic lands, printing-only and combined redistribution, selected versions, swapped/identical lists and hidden decks; all 32 UI cases pass. 74 focused UI/API/source checks pass in total.
 
-First slice: a read-only differences panel using Compare's already authorised deck answers. Cover duplicate names across sections, quantity changes, printing-only changes and swapped sides with fixture lists. History-revision comparisons can follow separately; no deck or collection writes are needed.
+History-revision comparisons remain separate future work. Browser geometry and touch/Safari/device acceptance are unverified; the local-file browser preview was denied by URL policy. See [HISTORY.md](../HISTORY.md#compare-list-differences-2026-10-28-e1-s26).
 
 ---
 

@@ -1,5 +1,5 @@
-/* Compare two decks (compare.js, E1-S13): the two sides' heads, then In brief, the curves, colours, card types and roles,
-   the cards both use and head to head.
+/* Compare two decks (compare.js, E1-S13, E1-S26): the two sides' heads, then In brief, the curves, colours, card types and roles,
+   list differences, the cards both use and head to head.
    Phone first: the heads and the tables keep their two columns at every width (a figure beside its rival), and
    the two curves stack until 600px, where they sit side by side on one scale. Only the theme's tokens. */
 .compare-heads { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-2); margin: var(--s-3) 0; }
@@ -38,3 +38,13 @@ button.compare-choice { width: 100%; border: 0; background: none; font: inherit;
 @media (hover: hover) and (pointer: fine) { .compare-choice:hover { background: var(--surface-2); } }
 .compare-choice-title { min-width: 0; overflow-wrap: anywhere; }
 @media (forced-colors: active) { .compare-bar { background: CanvasText; } }
+
+/* List differences keep Commander, main deck and sideboard distinct; quantities stay beside their list's label. */
+.compare-difference-group { margin: var(--s-2) 0 var(--s-3); }
+.compare-difference-group h4 { margin: 0 0 var(--s-1); color: var(--ink-2); font-size: var(--fs-sm); }
+.compare-difference-table { table-layout: fixed; width: 100%; }
+.compare-difference-table th:first-child { width: 44%; }
+.compare-difference-table th[scope="row"] { color: var(--ink); font-weight: var(--fw-regular); }
+.compare-difference-table .card-link { max-width: 100%; overflow-wrap: anywhere; }
+.compare-difference-printing { display: block; color: var(--ink-2); font-size: var(--fs-sm);
+  font-weight: var(--fw-regular); white-space: normal; overflow-wrap: anywhere; }

@@ -2,6 +2,25 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Compare list differences (2026-10-28; E1-S26)
+
+Compare now shows cards only in either list, changed quantities and separately
+labelled listed-printing changes, keeping Commander, main deck, sideboard and
+companion apart. It counts duplicate printing lines by canonical card name,
+retains unresolved names and basic lands, reverses sides and gives one empty
+state for identical lists. Printing facts use the list's explicit choices,
+never representative artwork or an inferred physical copy.
+
+The panel uses the two already authorized deck answers and their selected
+Planned/Play-now versions, without another request or collection visibility.
+Existing shared-card availability and head-to-head evidence remain separate.
+All 74 focused UI/API/source checks passed, including 32 Compare UI cases
+(14 new). Independent review fixed a combined quantity/printing-redistribution
+edge case before integration. Node syntax, Ruff, source-length and diff checks
+pass. Browser geometry was not verified: the disposable local-file preview was
+denied by browser URL policy and was not retried. Touch, Safari and household
+devices remain separate acceptance; no live write or Forge game was involved.
+
 ## Developer command documentation audit (2026-10-28; E11-S42)
 
 AGENTS.md and README.md now show valid receipt previews and matching applies
