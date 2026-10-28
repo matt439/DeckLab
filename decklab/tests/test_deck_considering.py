@@ -10,9 +10,10 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from decklab.lib import api, decks, pool
+from decklab.lib import accessories, api, decks, pool
 from decklab.lib.api import considering as considering_api
-from decklab.lib.decks import DeckLine
+from decklab.lib.decks import DeckLine, TableRow, TotalRow
+from decklab.lib.forge import lists as forge_lists
 from decklab.lib.inventory import pg_decks
 from decklab.tests.test_decks import parse, read
 from decklab.tests.test_editor import TABLE_DECK, EditorTestCase
@@ -66,6 +67,33 @@ class ParseAndRenderTests(unittest.TestCase):
         bare.considering = [DeckLine(1, "Opt")]
         self.assertEqual(parse(decks.render_deck_file(bare)).considering, [DeckLine(1, "Opt")])
 
+    def test_an_empty_block_is_an_empty_list(self):
+        deck = parse("# T\n\n## Decklist\n\n```\n4 Forest\n```\n\n## Considering\n\n```\n```\n")
+        self.assertEqual(deck.considering, [])
+
+    def test_saving_the_lists_status_and_table_keeps_it_as_written(self):
+        text = deck_md("A", "building", "Deck\n4 Llanowar Elves\n20 Forest\n",
+                       table="| Llanowar Elves | 4 | 0 | 4 | | | |\n")
+        text = text.replace("## Owned vs needed", BLOCK + "\n## Owned vs needed", 1)
+        deck = decks.parse_deck(text.encode(), "a", "casual")
+        before = list(deck.considering)
+        deck.target["Deck"][0].quantity = 3
+        deck.target["Sideboard"] = [DeckLine(1, "Pick Your Poison")]
+        decks.set_status(deck, "built")
+        decks.set_table(deck, [TableRow("Llanowar Elves", 3, 0, 3), TableRow("Pick Your Poison", 1, 0, 1)],
+                        TotalRow(4, ""))
+        decks.mark_decklist_changed(deck, "2026-10-27")
+        saved = decks.render_deck_file(deck)
+        self.assertIn(BLOCK, saved)
+        again = decks.parse_deck(saved.encode(), "a", "casual")
+        self.assertEqual((again.considering, again.target, again.status), (before, deck.target, "built"))
+        # A Play-now list added afterwards goes in without touching it.
+        again.owned = {"Deck": [DeckLine(4, "Elvish Mystic")]}
+        saved = decks.render_deck_file(again)
+        self.assertIn(BLOCK, saved)
+        third = decks.parse_deck(saved.encode(), "a", "casual")
+        self.assertEqual((third.owned, third.considering), (again.owned, before))
+
     def test_section_headers_and_bad_lines_are_refused(self):
         for block in ("Sideboard\n1 Opt\n", "Deck\n1 Opt\n", "an idea\n"):
             with self.subTest(block=block), self.assertRaises(decks.DecklistError) as caught:
@@ -109,6 +137,13 @@ class NothingCountsItTests(PoolTestCase):
         deck = decks.read_deck_file(self.magic / "decks" / "casual" / "b.md")
         self.assertEqual(len(deck.considering), 2)
         self.assertEqual([row[5] for row in pg_decks.lines("casual/b", deck)], ["Sol Ring"])
+
+    def test_the_forge_list_and_the_sleeve_count_leave_them_out(self):
+        sections = decks.load_deck("casual/b")
+        self.assertEqual(forge_lists._section_cards(sections)["Main"], [[1, "Sol Ring"]])
+        bare = decks.parse_deck(deck_md("Deck B", "built", "Deck\n1 Sol Ring\n").encode(), "b", "casual")
+        self.assertEqual(forge_lists.card_sha(sections, "constructed"), forge_lists.card_sha(bare.target, "constructed"))
+        self.assertEqual(accessories.sleeve_need(sections), 1)
 
 
 class ConsideringApiTests(EditorTestCase):

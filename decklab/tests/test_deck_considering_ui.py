@@ -62,6 +62,12 @@ class DeckConsideringUiTests(unittest.TestCase):
           assert(!part.textContent.includes('free'), part.textContent);
           assert.equal(part.querySelectorAll('.deck-considering-row').length, 0);
           assert(!part.textContent.includes('Add a card'));
+          // A name Scryfall doesn't know (only deck push gets one in) is still listed, without card data.
+          page.considering.lines.push({qty: 1, name: 'Ghost Card', set: null, number: null, finish: 'nonfoil', card: null});
+          const ghost = showCards(page);
+          assert(ghost.textContent.includes('Ghost Card'), ghost.textContent);
+          assert(ghost.textContent.includes('Not a card Deck Lab knows'), ghost.textContent);
+          assert(!main.querySelector('.deck-cards').textContent.includes('Ghost Card'));
           // An empty list nobody here may fill isn't shown at all.
           const empty = makePage(); empty.summary.read_only = true; empty.considering = {sha256: 'a', lines: []};
           assert.equal(showCards(empty), null);
