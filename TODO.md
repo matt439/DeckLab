@@ -12,7 +12,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 
 **Ready reserve (reviewed 2026-10-28):** after the redesign, choose an `OPEN` row below; there is no fixed order within the reserve. Useful independent starts include Compare's card differences (`E1-S26`), Considering in the editor (`E2-S26`), grouped import problems (`E7-S03`), post-import filing help (`E7-S15`) and bulk storage locations (`E8-S23`). Other ready work covers drafts across devices, pod game records, tested swaps to Shopping, field membership, storage forecasts and self-hosting diagnostics. Every `OPEN` story names a concrete first slice and its later dependencies. Fixture-based work needs no new Forge games, household records or physical devices; real-device acceptance, live installations/migrations, purchases and Forge runs retain their separate gates. The multiplayer life counter follows pod game records (`E4-S18`).
 
-**Maintenance lane (updated 2026-10-28):** Tokens' workflow split and the source-length CI guard (`E11-S36`, `E11-S43`) are built. The editor workflow and collection parser splits (`E11-S37`, `E11-S38`) are built, creating room for their upcoming features. Keep structural and feature changes separate. Comment and command-document audits (`E11-S41`, `E11-S42`) can proceed independently. The [source-maintenance owner](decklab/SOURCE_AUDIT.md#maintenance-backlog) records the measured files, boundaries and validation. Length is a review trigger, not a reason to divide every large file mechanically.
+**Maintenance lane (updated 2026-10-28):** Tokens' workflow split and the source-length CI guard (`E11-S36`, `E11-S43`) are built. The editor workflow and collection parser splits (`E11-S37`, `E11-S38`) are built, creating room for their upcoming features. Keep structural and feature changes separate. The comment audit (`E11-S41`) is built; the command-document audit (`E11-S42`) remains independent. The [source-maintenance owner](decklab/SOURCE_AUDIT.md#maintenance-backlog) records the measured files, boundaries and validation. Length is a review trigger, not a reason to divide every large file mechanically.
 
 **Needs Matt or another person — these don't block coding:**
 - **`E11-S31`: global-search scope.** Choose the sources (visible decks, the viewer's collection and/or all Scryfall cards) and result grouping before building. Library title, colour and archetype filters (`E1-S05`) are built independently of that decision.
@@ -108,7 +108,6 @@ An index of open work, one row per item; each row points to the doc that owns th
 |---|---|---|---|---|
 | `E11-S39` | OPEN | could | M | Separate PostgreSQL snapshot conversion from transaction/cache coordination without moving locks or write-diff ownership. |
 | `E11-S40` | OPEN | should | M | Split inventory-contract and permission test groups while preserving fixture imports and exact discovery without duplicates. |
-| `E11-S41` | OPEN | should | M | Audit source comments and module headers for stale storage, privacy and script-order claims; correct the named contradictions. |
 | `E11-S42` | OPEN | should | S | Reconcile developer command instructions with receipt --expect, product-kit commands and the current database-only runtime. |
 
 ## Areas with no open rows

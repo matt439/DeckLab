@@ -1,15 +1,19 @@
 """Who may use each write route (lib/api/guard.py over lib/permissions.py).
 
-Every write route is called as each of: Matt (admin), User1 (a home member
-who plays as "wife"), User2 (a member with his own space) through the
-tunnel, User1's name on the home network (local: her own rights, as through
-the tunnel, since E10-S03) and Matt's there (script: a script on the home
-network sending no X-Deck-Lab-Viewer header and naming an admin, which
-still passes everything an admin may). Both home callers send no header,
-so their reads answer as for nobody (everything but wishlists).
-A route the profile may not use answers 403; one it may use answers
-anything else (its body is often incomplete on purpose, so a 400 or 409
-after the permission check is a pass: nothing past it is tested here).
+The shared route matrix calls endpoints as Matt (admin), User1 (a home
+member who plays as "wife") and User2 (a member with his own space), using
+access.using() to supply a tunnel identity. Its "local" and "script" aliases
+clear that identity and name User1 and Matt respectively in write bodies;
+the named profile's own rights still apply.
+
+These are direct calls outside an HTTP request: without an explicit viewer,
+those aliases retain access.script()'s test default for reads. They do not
+model an anonymous home browser, which has no script access. Explicit
+access.viewing() cases exercise the chooser's profile; HTTP script and
+home-listener identity boundaries are covered by the server tests.
+A forbidden route answers 403, or 404 for a hidden deck. An allowed route
+may answer 400 or 409 because its body is deliberately incomplete; the
+shared matrix checks permission boundaries rather than full valid writes.
 
 Each test runs in test_api's Sandbox with a config.json
 that has roles and a person space (user2, with one deck). The identity is
@@ -50,7 +54,7 @@ Deck
 """
 
 WHO = ("matt", "user1", "user2", "local", "script")
-HOME_WRITERS = {"local": "user1", "script": "matt"}    # the body's profile of a home-network caller
+HOME_WRITERS = {"local": "user1", "script": "matt"}    # body profiles of direct calls without a tunnel identity
 
 
 class PermissionTestCase(ApiTestCase):
@@ -128,7 +132,7 @@ class DeckRouteTests(PermissionTestCase):
         self.assertEqual((home.exception.status, home.exception.message),
                          (403, "You can change the home decks played by you."))
         self.assertEqual(home.exception.message, remote.exception.message)
-        with access.using(None):                    # a home request naming nobody: a script may
+        with access.using(None):                    # no HTTP request or viewer: a script may
             self.assertTrue(api.edit_view("casual/gruul-test")["may_save"])
 
     def test_save_user1s_deck(self):
@@ -281,7 +285,7 @@ class DeckRouteTests(PermissionTestCase):
     def test_the_out_of_date_list_says_which_tables_you_may_update(self):
         listed = [{"id": deck_id, "title": deck_id, "sha256": "0" * 64, "count": 1, "changes": []}
                   for deck_id in ("casual/gruul-test", "commander/elf-commander", "user2/casual/r-elves")]
-        # Matt sees User2's inventory as the admin, but not his decks (E10-S30).
+        # An admin sees neither another space's inventory nor its private decks (E10-S29/E10-S30).
         cases = {"matt": {"casual/gruul-test": True, "commander/elf-commander": True},
                  "user1": {"casual/gruul-test": False, "commander/elf-commander": True},
                  "user2": {"user2/casual/r-elves": True}}
@@ -633,11 +637,11 @@ class MeTests(PermissionTestCase):
 
 
 class AccessoryVisibilityTests(PermissionTestCase):
-    """The sleeves, deck boxes and playmats are the home's, and each has an owner: User1's black sleeves
-    (on her Elf Commander) are seen by her and the home network naming nobody, never by Matt (an admin) or
-    User2 (his own space); the shared grey sleeves (on the "either" Gruul Test) by every home profile."""
+    """Private accessories follow their owners: User1's black sleeves (on her Elf Commander) are
+    seen by her and unnamed-viewer script fixtures, never by Matt (an admin) or User2. The shared
+    grey sleeves (on the "either" Gruul Test) are seen by every home profile."""
 
-    SEE = {"user1", "local", "script"}           # the home callers send no viewer header: they see all
+    SEE = {"user1", "local", "script"}           # direct no-viewer script fixtures see all
     SEE_SHARED = {"matt", "user1", "local", "script"}
 
     def setUp(self):
@@ -1052,9 +1056,9 @@ class InventoryReadTests(PermissionTestCase):
                 self.assertEqual(answer["availability"]["target"] is not None, seen, (data, who))
 
     def test_user2_picked_at_home_is_refused_homes_writes_with_nothing_of_homes(self):
-        # E10-S03: the chooser's User2 has his own rights at home, as through the tunnel. Each save of
-        # home's inventory, or of a home deck, is a 403 whose answer is only the reason: no list, no
-        # conflict, no rows (a stale save too, so a wrong sha256 can't fish for the list).
+        # At this lower-level API boundary, a named User2 cannot write home's data. The HTTP home
+        # listener separately refuses non-home profile selection (E10-S35). A refusal carries only
+        # the reason, never a list, conflict or rows, even when the submitted sha256 is stale.
         with access.using(None):
             sha = api_tokens.tokens_view()["sha256"]
             deck_sha = self.sha("casual/gruul-test")

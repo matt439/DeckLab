@@ -331,29 +331,33 @@ Forge qualification.
 
 ## Comment audit: E11-S41
 
-Start with the module headers and surrounding storage/privacy/lifecycle
-comments in these named files, checking each claim against its runtime owner:
+Built 2026-10-28. The seven named modules and their surrounding storage,
+privacy and lifecycle comments were checked against their implementation owners:
 
-- `lib/api/play_records.py`: the header still says decks are files.
-- `lib/api/accessories.py`: the header still calls the file backend a rollback
-  path; runtime rollback was retired.
-- `lib/api/collection_edit.py`: the header describes runtime collection paths,
-  configurable file storage and rollback rather than database-backed snapshots.
-- `web/editor.js`: the claimed eight-script inventory is behind index.html.
-- `web/tokens.js`: tokSpacePicker says Home and each person, while seenSpaces
-  filters the visible choices.
-- `web/deck.js`: its Overview description omits implemented panels.
-- `tests/test_api_permissions.py`: the header overstates anonymous/local
-  access, despite the current script boundary and space-specific read rules.
+- `lib/api/play_records.py`: database storage and canonical JSON hashes;
+  `_save_lock` serializes this process, while PostgreSQL inventory writes use
+  a separate transaction lock. Checked state.rules.record_bytes/record_sha,
+  state.pg.play_put and saving.inventory_write_lock.
+- `lib/api/accessories.py`: database-backed inventory and the isolated tests'
+  file backend, with no runtime rollback route.
+- `lib/api/collection_edit.py`: database spaces/canonical snapshots, audited
+  changes and raw uploads; fixture files and temporary previews remain accurately
+  described. Its header was corrected with the parser extraction.
+- `web/editor.js`: the current classic-script order and owners in index.html,
+  updated with the editor workflow extraction.
+- `web/tokens.js`: tokSpacePicker offers only core.seenSpaces' visible choices.
+- `web/deck.js`: implemented Overview panels and separate read-only evidence
+  requests; deckWarnings supplements the API's own kit-visibility gates.
+- `tests/test_api_permissions.py`: no-request script fixtures are distinct from
+  anonymous home HTTP, and an admin has no override for another space's inventory.
+  Checked access.script, settings._writer and the server identity boundary.
 
-Record checked modules and corrections with implementation evidence. Preserve
-accurate rationale for locks, permission checks, compatibility and test backends;
-do not delete comments wholesale or restate every line of code. In particular,
-FileInventory.from_git still exists for fixture/history helpers and must not be
-described as a removed API. No substantive TODO/FIXME/HACK markers were found in
-the owned Python/JavaScript scan, so a generic marker-cleanup task is not added.
-Comment-only changes need diff checks and any syntax check made relevant by the
-edit, without prose-only regression tests.
+Three standalone Python executable ASTs and both JavaScript files outside block
+comments are unchanged; the two split modules' comment corrections accompany
+body-preserving structural work documented above. Python/JavaScript syntax and
+diff checks pass. The integrated fixture attempt's explicit runtime limits are
+recorded in HISTORY.md. No prose-only regression tests were added. Accurate
+lock/fixture rationale and historical FileInventory.from_git helpers remain.
 
 ## Developer instruction audit: E11-S42
 

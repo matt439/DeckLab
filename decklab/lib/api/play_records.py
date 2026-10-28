@@ -2,13 +2,15 @@
 
 Every record is a row of the database's play_record table, kept through the
 state store (decklab.lib.state: play_get, play_put, play_list). A preview
-changes nothing. Saving rechecks record and deck hashes under the editor's
-write lock (the decks are still files), and the store refuses the write if the
-record changed meanwhile. Historical game snapshots survive later deck edits;
+changes nothing. Preview and save recheck record and deck hashes under this
+process's saving._save_lock. PostgreSQL inventory writes use a separate lock;
+the state store checks the record hash again in its own transaction and
+refuses a changed record. Historical game snapshots survive later deck edits;
 correcting a result never rewrites them.
 
-A record's sha256 is the hash of its JSON as the files were written
-(state.rules.record_sha): the page sends it back as the version it read.
+A record's sha256 hashes its canonical JSON bytes (state.rules.record_sha):
+sorted keys, two-space indentation, UTF-8 and a trailing newline. The page
+sends it back as the version it read.
 
 Records that name decks of two spaces (decision G of the member template,
 E10-S32 and E10-S28's independently public decks and games):
@@ -506,7 +508,8 @@ def _save(kind, body):
         # wait for the write lock only to fail.
         if not state.reachable():
             raise state.Unavailable("the database isn't reachable")
-        # The lock keeps a deck save from landing between the snapshots and the write.
+        # Serialize play-record preview/save in this process. Fixture deck writes share
+        # this lock; PostgreSQL inventory writes use their own transaction lock.
         with saving._save_lock:
             previous = state.store().play_get(kind, record_id)
             # A record the writer may not see answers as a missing one, before its hash or its

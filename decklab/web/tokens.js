@@ -612,7 +612,7 @@ function showTokens(token, params) {
     { title: "The tokens list couldn't be loaded" });
 }
 
-/** The spaces' tokens to choose from: Home and each person, as links (none with only home). */
+/** Links to token lists in seenSpaces(): only visible spaces, omitted with fewer than two choices. */
 function tokSpacePicker(space) {
   const spaces = seenSpaces();
   if (spaces.length < 2) return null;

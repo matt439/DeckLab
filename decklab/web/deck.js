@@ -6,11 +6,13 @@ status pill, one line of facts, Edit and a More menu), then the availability ban
 way, or what's missing and roughly what it costs, with Show missing; the Planned list / Play-now list picker
 folds into it), then five tabs: Overview, Cards, Stats, Practice and Matchups. The tab is in the address
 (?tab=), changed in place without a new history entry, and each tab's parts are drawn the first time it
-opens: the practice games start when Practice opens, and the matchups (the API's slowest part, asked for
-with omit=matchups until then) when Matchups does.
+opens: the practice games start when Practice opens, and the matchup details (asked for with
+omit=matchups until then) when Matchups does. Overview's field and latest-swap panels make separate,
+read-only requests; they start no simulations.
 
-Overview: the stats' verdict strip (stats.js statsVerdict), the key cards as big pictures, a token problem,
-the sleeves and deck box of a built deck, and the play guide (guide.js). Cards: the decklist as a list or as
+Overview: Commander readiness, the building action, Forge field/curve/latest-swap panels
+(deck-overview.js), the stats' verdict strip, key-card pictures, token and kit information, intact-product
+storage, stand-ins and swaps, opponent and sideboard plans, and the play guide. Cards: the decklist as a list or as
 pictures at every width (remembered), filtered to All, Missing, On the way or In other decks, each card
 marked from /api/deck's owned rows (missing copies greyed; under Missing, deck-swaps.js's owned stand-ins), then
 the Play-now list's swaps (deck-swaps.js), the Tokens part and the price table
@@ -380,8 +382,8 @@ function deckHeadCover(s) {
 }
 
 
-/** The deck page's warnings, without the kit's (too few sleeves and the like) for a profile that doesn't
- * see the home's sleeves: on the home network the server sends them to everyone, and the page hides them. */
+/** Filter kit warnings when the page has no accessory visibility. The API also applies its own
+ * kit-visibility checks before returning the deck's warnings and kit information. */
 function deckWarnings(data) {
   const kit = data.summary.kit;
   if (mayDo("see_accessories") || !kit || !kit.warnings) return data.warnings;
@@ -391,8 +393,8 @@ function deckWarnings(data) {
 
 // ----------------------------------------------------------------- overview
 
-/** The Overview tab: the stats' verdict strip, the key cards big, a token problem, the sleeves and deck
- * box, and how to play it. */
+/** The Overview tab's readiness, build and evidence panels, stats, key cards, tokens, kit, storage,
+ * stand-ins/swaps, opponent and sideboard plans, and play guide; each part applies its own visibility. */
 function overviewParts(data) {
   const verdict = data.stats ? statsVerdict(data.stats, data.summary) : null;
   const total = copies(Object.entries(data.sections).filter(([name]) => name !== "Sideboard").flatMap(([, l]) => l));

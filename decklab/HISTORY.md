@@ -2,6 +2,20 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Source comment audit (2026-10-28; E11-S41)
+
+The named storage, privacy and lifecycle comments now match their runtime
+owners. The audit covers play records, accessories and collection imports;
+the editor script map, Tokens' visible-space picker and Deck's current Overview;
+and permission tests' direct-script versus HTTP boundary. It corrects claims
+about file storage, retired rollback, cross-store lock scope and admin visibility
+while retaining accurate fixture, compatibility and lock explanations.
+
+Python executable ASTs and JavaScript outside comments are unchanged by the
+audit; syntax and diff checks pass. The collection/editor header corrections
+accompanied their structural splits. No prose-only tests were added. Detailed
+findings are in SOURCE_AUDIT.md, with integrated qualification limits below.
+
 ## Collection upload parser split (2026-10-28; E11-S38)
 
 CSV detection, format conversion and upload reading now live in

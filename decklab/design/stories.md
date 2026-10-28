@@ -45,10 +45,10 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 19 | 13 | 2 | 2 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 20 | 14 | 1 | 4 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 35 | 31 | 1 | 1 | 2 |
-| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 38 | 21 | 6 | 8 | 3 |
-| **Total** | **254** | **191** | **21** | **28** | **14** |
+| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 38 | 22 | 6 | 7 | 3 |
+| **Total** | **254** | **192** | **21** | **27** | **14** |
 
-Counted from the story headers on 2026-10-28 after the feature-reserve and maintenance reviews and completion of E11-S36, E11-S37, E11-S38 and E11-S43. The reviews added five feature stories and eight hygiene stories, and corrected E1-S12 from missing to partial.
+Counted from the story headers on 2026-10-28 after the feature-reserve and maintenance reviews and completion of E11-S36, E11-S37, E11-S38, E11-S41 and E11-S43. The reviews added five feature stories and eight hygiene stories, and corrected E1-S12 from missing to partial.
 
 ---
 
@@ -3771,7 +3771,7 @@ Evidence:
 
 Keeping Deck Lab running, safe and believable, by Matt as the household's admin and by Claude Code working for him at the PC. It covers the server and its Cloudflare tunnel and "Deck Lab is off" page, the PostgreSQL database with its nightly backup, export, check and restore check, the audit trail on #/activity, the `python -m decklab.db` commands Claude works through (previews, `--expect` guards, `-m` messages, exit codes), the card data's background refresh, Forge upkeep and the Safari Simulator suite. Every write is one audited change set, Matt's own command-line writes are recorded as his, and backups are checked by restoring them.
 
-Open: E11-S02, E11-S08, E11-S12, E11-S16, E11-S21, E11-S28, E11-S30, E11-S31, E11-S34, E11-S35, E11-S39, E11-S40, E11-S41, E11-S42.
+Open: E11-S02, E11-S08, E11-S12, E11-S16, E11-S21, E11-S28, E11-S30, E11-S31, E11-S34, E11-S35, E11-S39, E11-S40, E11-S42.
 
 **E11-S01** · Matt · must · M · built
 
@@ -4475,7 +4475,7 @@ Gap: the contract and permission groups still need bounded structural splits.
 
 First slice: move concrete PostgreSQL contract cases to their own discoverable module while keeping adapt/scenario/golden support at its established path. Then split permission route groups with PermissionTestCase retained. Compare discovery before/after and run moved groups plus support consumers; the [maintenance owner](../SOURCE_AUDIT.md#maintenance-backlog) owns the validation detail.
 
-**E11-S41** · Claude Code · should · M · missing
+**E11-S41** · Claude Code · should · M · built
 
 As the operator reading Deck Lab's source, I want comments and module headers to describe current storage, privacy and lifecycle behaviour, so that stale explanations do not guide a later change in the wrong direction.
 
@@ -4483,11 +4483,12 @@ As the operator reading Deck Lab's source, I want comments and module headers to
 - Given an intentional test backend, compatibility path or safety invariant, then its accurate explanation is retained; dated history remains dated history.
 - Given each audited module, then findings record what was checked and corrected, without blanket deletion, repetitive prose or behaviour changes.
 
-Evidence of gap (2026-10-28): play_records.py says decks are still files; accessories.py calls the file backend tests/rollback; editor.js says eight scripts; tokSpacePicker describes Home and each person despite seenSpaces filtering; test_api_permissions.py's header overstates anonymous/local access.
+Now (2026-10-28): the named seven-module audit is complete. Storage and rollback comments describe the database runtime and fixture backend, editor load order matches index.html, and privacy/lifecycle comments match their current owners. Accurate compatibility and fixture explanations remain.
 
-Gap: those claims and their surrounding transaction/privacy comments need a current audit.
-
-First slice: review and correct these named headers/comments against actual runtime owners, guard rules and index.html, then check the neighbouring module-level descriptions in collection_edit.py and deck.js. The [maintenance owner](../SOURCE_AUDIT.md#maintenance-backlog) fixes the scope. Comment-only changes need diff/syntax checks as applicable, not new tests that merely assert prose.
+Evidence:
+- `play_records.py`, `accessories.py`, `collection_edit.py`: canonical snapshots, actual lock scope, database writes and fixture-only file storage.
+- `editor.js`, `tokens.js`, `deck.js`, `test_api_permissions.py`: current script map, visible-space choices, Overview/read guards and direct-script versus HTTP permission boundaries.
+- Python executable AST and JavaScript outside comments are unchanged by the audit; syntax and diff checks pass. Findings and implementation owners are recorded in [SOURCE_AUDIT.md](../SOURCE_AUDIT.md#comment-audit-e11-s41).
 
 **E11-S42** · Claude Code · should · S · missing
 
