@@ -247,6 +247,24 @@ class CompareUiTests(unittest.TestCase):
           same([log.textContent, log.getAttribute('href')], ['Open the Game log', '#/play?id=casual%2Ftest']);
         """)
 
+    def test_head_to_heads_game_log_counts_games_saved_before_a_rename(self):
+        self.run_js("""
+          // Play records keep the id they were saved under; both decks were renamed since (their old ids are aliases).
+          const a = deckA(); a.aliases = ['casual/old-test'];
+          const b = deckB(); b.aliases = ['casual/old-burn', 'casual/older-burn'];
+          const full = deckA(); full.aliases = a.aliases; full.matchups = {results: []};
+          const T = {id: 'casual/old-test', version: 'target'}, B = {id: 'casual/older-burn', version: 'target'};
+          answers = {'/api/deck?id=casual%2Ftest&version=target&omit': a, '/api/deck?id=casual%2Ftest&version=target': full,
+            '/api/deck?id=casual%2Fburn&': b,
+            '/api/play?': {games: [{record: {sides: [T, B], result: 'a'}},
+              {record: {sides: [{id: 'casual/old-burn', version: 'target'}, {id: 'casual/test', version: 'target'}], result: 'a'}},
+              {record: {sides: [T, {id: 'casual/old-burn', version: 'owned'}], result: 'b'}},
+              {record: {sides: [T, {id: 'casual/old-zoo', version: 'target'}], result: 'b'}}]}};
+          await show('#/compare?a=casual%2Ftest&b=casual%2Fburn');
+          // The two games between these lists count, whichever id they were saved under; another list or deck doesn't.
+          assert.equal(main.querySelector('.compare-games-count').textContent, '2 games: Test Deck 1 win, Burn 1 win.');
+        """)
+
     def test_head_to_head_with_nothing_yet(self):
         self.run_js("""
           const full = deckA(); full.matchups = {results: []};

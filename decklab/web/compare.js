@@ -295,10 +295,12 @@ function compareSharedParts(answer, labels, sameDeck) {
   return [box, el("p", { class: "sub", text: lead }), verdict ? el("p", { class: "compare-verdict" }, verdict) : null, table];
 }
 
-/** Whether a Forge or Game log side is the compared list: its deck (a pairing's halves in either order) and list. */
+/** Whether a Forge or Game log side is the compared list: its deck (a pairing's halves in either order, or an id
+ * it had before a rename: play records keep the id they were saved under) and list. */
 function compareIsSide(side, data) {
-  return !!side && !!side.id && sameDeckId(side.id) === sameDeckId(data.summary.id)
-    && (side.version || "target") === data.version;
+  if (!side || !side.id || (side.version || "target") !== data.version) return false;
+  const id = sameDeckId(side.id);
+  return [data.summary.id, ...(data.aliases || [])].some((known) => sameDeckId(known) === id);
 }
 
 /** How the two have done against each other: the latest saved Forge result between the lists (from the first
