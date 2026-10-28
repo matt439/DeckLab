@@ -2,6 +2,33 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Inventory contract and permission test groups (2026-10-28; E11-S40)
+
+Three concrete classes (51 cases) moved into focused inventory-contract and
+permission-reader modules. Shared fixtures, base classes, mutable globals and
+patch owners retain their established imports; concrete classes are not
+re-exported. The original/new modules now measure 760/422 and 640/498 lines.
+Complete class bodies match after owner-prefix normalization, and all retained
+executable code matches exactly.
+
+Guarded discovery preserves all 9,123 baseline cases through the explicit
+three-class module-move map. Thirty separately added cases explain the final
+9,153 unique cases across four disjoint shards; no losses, duplicates or loader
+errors. Focused support-consumer checks reported 290 tests with 53 skips.
+
+The integrated fixture shards reported 8,575 tests with 420 skips and no remaining
+failures or errors. One initial pool test made a nondeterministic lifetime-slot
+assumption; the independent correction is recorded below and in commit b33001c.
+Its three focused checks passed, then the affected full shard passed on rerun.
+The other shard source and module membership did not change. Logs and the before/
+after/partition proofs were retained in the run's scratch evidence.
+
+Class-level setup skips explain why discovery and reported counts differ. Guards
+ran before test imports; actual PostgreSQL, named native process/server checks,
+real Forge and browser/device qualification remain separate and unclaimed. No
+previously denied native action was retried. Ruff, source-length and diff checks
+passed; no golden, schema or application behavior changed in this split.
+
 ## Deterministic warm-worker slot preference check (2026-10-28)
 
 The integrated fixture run exposed a timing assumption in one pool test: its
@@ -15,7 +42,7 @@ prefer slot 2 when free, use slot 0 while 2 is held, then prefer 2 after release
 It launches no worker and catches losing the pool's preference forwarding.
 Production pool/allocator behavior is unchanged. Independent source review found
 no production bug. All three affected pool/allocator fixture checks passed in
-0.815 seconds; the affected integrated shard is qualified separately below.
+0.815 seconds; the affected integrated shard is qualified with E11-S40.
 
 ## Fixture-only default test runner (2026-10-28; E11-S44)
 
@@ -37,7 +64,7 @@ sentinels. Forty targeted cases passed with 15 skips. Guarded discovery preserve
 9,152 unique cases across four shards without import errors, duplication or loss.
 Independent review, Ruff, syntax, length and diff checks passed. AGENTS.md and
 README.md now distinguish the protected default from separately authorized raw
-integration. Full integrated fixture results will be recorded with E11-S40.
+integration. Full integrated fixture results are recorded with E11-S40.
 
 ## Import source groups: review UI (2026-10-28; E7-S03)
 

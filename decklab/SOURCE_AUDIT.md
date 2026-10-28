@@ -337,6 +337,36 @@ and the full integrated suite before closing a structural split. Report skips
 separately. Fixture checks do not establish household-device acceptance or real
 Forge qualification.
 
+
+Built 2026-10-28. PgInventoryTests (24 cases) moved to
+`test_inventory_pg_contract.py`; AccessoryVisibilityTests (13) and InventoryReadTests
+(14) moved to `test_api_permissions_inventory.py`. Shared fixture/base imports,
+mutable globals and patch owners remain in the original support modules, read
+through one module alias. Concrete classes are not re-exported. Module lengths
+are now 760/422 (inventory) and 640/498 (permissions).
+
+Complete moved class ASTs match after explicit owner-prefix normalization; all
+retained imports, 58 definitions and other executable module code match exactly.
+The baseline's 9,123 cases survive the three-class module-move map. The final
+9,153 unique cases account for 29 separately added feature/runner cases and one
+pool-contract guard. Zero cases were lost or duplicated and no imports failed.
+The unchanged four-shard partition has 2,405/2,296/2,328/2,124 cases across
+140/140/140/139 modules.
+
+Focused moved/support-consumer checks reported 290 tests, 53 skipped. The four
+integrated protected shards reported 2,235/2,205/2,113/2,022 tests, with
+88/97/131/104 skips: 8,575 reported tests and 420 skips, no remaining failures
+or errors. The initial final shard exposed one unrelated nondeterministic pool
+test assertion; separate commit b33001c replaced it with real disposable-lease
+preference/fallback coverage, three focused checks passed, and that entire shard
+passed on rerun. Other shard source and module membership did not change.
+
+Discovery includes classes whose setup skips the class, so discovered and
+reported test counts differ. E11-S44's guards ran before imports throughout this
+qualification. Real PostgreSQL, named native process/server checks, real Forge,
+browser and physical-device acceptance remain unqualified. The prior denied
+actions were not retried. Ruff, source-length and whitespace checks pass.
+
 ## Comment audit: E11-S41
 
 Built 2026-10-28. The seven named modules and their surrounding storage,
@@ -441,7 +471,7 @@ Forty targeted cases passed with 15 explicit skips. Guarded discovery accounted
 for 9,152 unique cases over 559 modules; four shard counts 2,405/2,296/2,328/2,123
 have an exact Counter union, without loader errors, loss or duplication. Ruff,
 syntax, source-length and diff checks pass, and independent review found no
-remaining concrete issue. Full integrated fixture evidence follows with E11-S40.
+remaining concrete issue. Full integrated fixture evidence is recorded under E11-S40.
 
 Known native facts, cleanup, server and command children, and overnight
 controllers that still sample processes even with --fake are skipped before

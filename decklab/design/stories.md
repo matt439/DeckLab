@@ -45,8 +45,8 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 19 | 13 | 2 | 2 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 20 | 14 | 1 | 4 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 35 | 31 | 1 | 1 | 2 |
-| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 39 | 24 | 6 | 6 | 3 |
-| **Total** | **255** | **198** | **19** | **24** | **14** |
+| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 39 | 25 | 6 | 5 | 3 |
+| **Total** | **255** | **199** | **19** | **23** | **14** |
 
 Counted from the story headers on 2026-10-28 after the current feature and maintenance work. The reviews added five feature stories and eight hygiene stories, and corrected E1-S12 from missing to partial.
 
@@ -3784,7 +3784,7 @@ Evidence:
 
 Keeping Deck Lab running, safe and believable, by Matt as the household's admin and by Claude Code working for him at the PC. It covers the server and its Cloudflare tunnel and "Deck Lab is off" page, the PostgreSQL database with its nightly backup, export, check and restore check, the audit trail on #/activity, the `python -m decklab.db` commands Claude works through (previews, `--expect` guards, `-m` messages, exit codes), the card data's background refresh, Forge upkeep and the Safari Simulator suite. Every write is one audited change set, Matt's own command-line writes are recorded as his, and backups are checked by restoring them.
 
-Open: E11-S02, E11-S08, E11-S12, E11-S16, E11-S21, E11-S28, E11-S30, E11-S31, E11-S34, E11-S35, E11-S39, E11-S40.
+Open: E11-S02, E11-S08, E11-S12, E11-S16, E11-S21, E11-S28, E11-S30, E11-S31, E11-S34, E11-S35, E11-S39.
 
 **E11-S01** · Matt · must · M · built
 
@@ -4476,7 +4476,7 @@ Attempt status (2026-10-28): a temporary overlay preserved moved and retained AS
 
 First slice: extract table-row conversion and its fixed serialization helpers while leaving PgInventory, _diff and _take_lock in place. Compare converted snapshots against existing goldens and use disposable databases for location, persistence and rollback checks. The [maintenance owner](../SOURCE_AUDIT.md#maintenance-backlog) records the boundary; this is no schema or live-data migration.
 
-**E11-S40** · Claude Code · should · M · missing
+**E11-S40** · Claude Code · should · M · built
 
 As the operator changing Deck Lab's tests, I want large test modules split by responsibility without changing discovery, so that focused checks stay easy to find and sharding never loses or repeats cases.
 
@@ -4484,11 +4484,13 @@ As the operator changing Deck Lab's tests, I want large test modules split by re
 - Given other tests importing shared fixtures or base classes, then those established support paths remain usable and concrete test classes are not re-exported.
 - Given the four-shard suite, then all discovered tests belong to exactly one shard and fixture setup/cleanup retains its scope.
 
-Evidence of gap (2026-10-28): `test_inventory_contract.py` is 1,173 lines and `test_api_permissions.py` 1,126; many modules import their shared support. Prior [source audits](../SOURCE_AUDIT.md) record duplicate discovery and patch ownership as split hazards.
+Built 2026-10-28: concrete PostgreSQL contract cases moved to `test_inventory_pg_contract.py`; accessory visibility and inventory-reader permission groups moved to `test_api_permissions_inventory.py`. Shared fixtures, base classes, mutable globals and patch owners stay at their established imports. No concrete test classes are re-exported.
 
-Gap: the contract and permission groups still need bounded structural splits.
-
-First slice: move concrete PostgreSQL contract cases to their own discoverable module while keeping adapt/scenario/golden support at its established path. Then split permission route groups with PermissionTestCase retained. Compare discovery before/after and run moved groups plus support consumers; the [maintenance owner](../SOURCE_AUDIT.md#maintenance-backlog) owns the validation detail.
+Evidence:
+- The four modules are 760/422 and 640/498 lines. All 51 moved cases and complete class bodies match after owner-reference normalization; all retained imports, definitions and executable module code match exactly.
+- A guarded before/after comparison maps the three class moves and preserves all 9,123 original cases. Thirty separately added feature, guard and pool-fixture cases explain the current 9,153. No cases are lost, duplicated or import failures; every module belongs to one of four shards.
+- Focused support-consumer qualification reported 290 tests with 53 skips. Integrated protected shards reported 8,575 tests with 420 skips and no remaining failures/errors, after correcting one unrelated flaky pool-fixture assumption in its own commit and rerunning that shard.
+- [SOURCE_AUDIT.md](../SOURCE_AUDIT.md#test-support-and-discovery-e11-s40) and [HISTORY.md](../HISTORY.md#inventory-contract-and-permission-test-groups-2026-10-28-e11-s40) record scope and evidence. Genuine PostgreSQL, named native runtime, real Forge and browser/device acceptance remain separate; fixture skips do not qualify them.
 
 **E11-S41** · Claude Code · should · M · built
 
