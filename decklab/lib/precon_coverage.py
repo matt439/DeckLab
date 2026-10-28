@@ -32,7 +32,7 @@ refresh isn't tried again for RETRY_AFTER. Nothing here writes to the repo.
 Command line (from the repo root; the first slice of E1-S24, read only):
 
     python -m decklab.lib.precons coverage [--space S] [--format commander|casual] [--limit N]
-        the precons best covered by the space's free pool, best first (it reads the lists
+        the precons best covered by the space's free pool, best first (--limit 0 prints all; it reads the lists
         first when the index needs it, in the foreground)
 """
 import argparse
@@ -367,8 +367,10 @@ def main(argv=None):
                                      description="Precons ranked by how much of each the space's free pool covers.")
     parser.add_argument("--space", default=spaces.HOME, help="whose pool: home (default) or a person's space")
     parser.add_argument("--format", choices=FORMATS, dest="kind", help="only Commander or only 60-card precons")
-    parser.add_argument("--limit", type=int, default=20, help="how many to print (default 20)")
+    parser.add_argument("--limit", type=int, default=20, help="how many to print (default 20; 0 prints all)")
     args = parser.parse_args(argv)
+    if args.limit < 0:
+        parser.error("--limit can't be negative")
     try:
         listed = precons.deck_list()["decks"]
         now = time.time()
@@ -385,7 +387,7 @@ def main(argv=None):
     except (spaces.SpaceNotFound, FileNotFoundError, RuntimeError, ValueError) as e:
         print(e, file=sys.stderr)   # an unknown space, no card index yet, an unreadable pool
         return 1
-    for d in result["decks"][:max(args.limit, 0)]:
+    for d in result["decks"][:args.limit or None]:
         released = f", {d['released'][:4]}" if d["released"] else ""
         print(f"{d['share']:5.0%}  {d['covered']:3}/{d['cards']:<3} {d['name']} "
               f"({d['set_name'] or d['code'].upper()}, {d['type']}{released})")

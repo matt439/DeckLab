@@ -251,3 +251,15 @@ class CommandLineTests(CoverageTestCase):
         self.assertEqual(lines[1].split(), ["40%", "2/5", "Test", "Dinos", "(Test", "Commander,", "Commander", "Deck,", "2026)"])
         self.assertIn("Unfinished", lines[2])
         self.assertEqual(lines[3], "2 of 2 precons' lists read; MTGJSON's lists of 2026-10-08.")
+
+    def test_a_limit_of_0_prints_all_and_a_negative_one_is_refused(self):
+        out = io.StringIO()
+        with mock.patch.object(entry, "command", contextlib.nullcontext), contextlib.redirect_stdout(out):
+            self.assertEqual(coverage.main(["--space", "user2", "--limit", "1"]), 0)
+            self.assertEqual(coverage.main(["--space", "user2", "--limit", "0"]), 0)
+        printed = [line for line in out.getvalue().splitlines() if "%" in line]
+        self.assertEqual(len(printed), 1 + 3)
+        with contextlib.redirect_stderr(io.StringIO()) as err, self.assertRaises(SystemExit) as refused:
+            coverage.main(["--space", "user2", "--limit", "-1"])
+        self.assertEqual(refused.exception.code, 2)
+        self.assertIn("--limit can't be negative", err.getvalue())
