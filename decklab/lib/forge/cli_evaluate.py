@@ -384,7 +384,8 @@ def _cmd_experiment(args):
         spec = experiment.load_spec(args.spec)
         if args.dry_run:
             found = experiment.plan(spec, results_dir=args.results_dir, control_dir=args.control_dir, only=only,
-                                    games=args.games, logs_dir=args.logs_dir, control_logs_dir=args.control_logs_dir)
+                                    games=args.games, logs_dir=args.logs_dir, control_logs_dir=args.control_logs_dir,
+                                    local=args.local)
             if args.json:
                 print(shared.json.dumps(found, ensure_ascii=False))
             else:
@@ -458,12 +459,36 @@ def _experiment_minutes(span, remaining):
     return f"about {low} minute{'s' if low != 1 else ''}" if low == high else f"about {low}-{high} minutes"
 
 
+def _experiment_config_context(found, estimate, timing):
+    """Only attach optional worker context to the matching original configuration-arm row."""
+    rows, details = found.get("arms"), estimate.get("arms")
+    if not isinstance(rows, list) or not isinstance(details, list) or len(rows) != len(details):
+        return []
+    chosen = []
+    for row, detail in zip(rows, details):
+        if not isinstance(row, dict) or not isinstance(detail, dict):
+            continue
+        config = row.get("config")
+        pair = row.get("pair")
+        workers = timing._worker_count(detail.get("requested_workers"))
+        if (detail.get("basis") == "config_fallback" and detail.get("placement") == "local_assumed" and
+                workers is not None and isinstance(config, dict) and set(config) == {"forge_workers"} and
+                timing._worker_count(config["forge_workers"]) == workers and row.get("changes") == ["config"] and
+                not row.get("skipped") and type(row.get("missing")) is int and row["missing"] > 0 and
+                type(detail.get("remaining_games")) is int and detail["remaining_games"] == row["missing"] and
+                detail.get("arm") == row.get("arm") and detail.get("key") == row.get("key") and
+                isinstance(pair, (list, tuple)) and len(pair) == 2 and all(isinstance(ref, str) for ref in pair)):
+            chosen.append((row, workers))
+    return chosen
+
+
 def _print_experiment_estimate(found):
     """Present only the adapter's optional estimate; never read timing or runtime metadata here."""
     from . import experiment_estimate as timing
     labels = {"none": "no remaining games", "measured": "measured control timings",
               "arm_proxy": "arm proxy (prior arm timing)", "control_proxy": "control proxy (control speed)",
-              "fallback": "format fallback rates", "mixed": "mixed timing sources"}
+              "fallback": "format fallback rates", "config_fallback": "format fallback rates at requested local workers",
+              "mixed": "mixed timing sources"}
     estimate = found.get("estimate")
     estimate = estimate if isinstance(estimate, dict) else {}
     remaining = estimate.get("remaining_games")
@@ -486,24 +511,31 @@ def _print_experiment_estimate(found):
                 for row in rows if isinstance(rows, list) else []:
                     if isinstance(row, dict) and row.get("remaining_games") and isinstance(row.get("basis"), str):
                         kinds.add(row["basis"])
-            chosen = [labels[name] for name in ("measured", "arm_proxy", "control_proxy", "fallback") if name in kinds]
+            chosen = [labels[name] for name in ("measured", "arm_proxy", "control_proxy", "fallback", "config_fallback")
+                      if name in kinds]
             if chosen:
                 source += ": " + "; ".join(chosen)
         print(f"  Timing basis: {source}.")
     workers, assumed = timing._worker_count(estimate.get("workers")), timing._worker_count(estimate.get("assumed_workers"))
+    context = _experiment_config_context(found, estimate, timing)
+    worker_label = "Baseline planning workers" if any(isinstance(row, dict) and row.get("config")
+        for row in found.get("arms", [])) else "Planning workers"
     if workers is not None:
-        print(f"  Planning workers: {workers}.")
+        print(f"  {worker_label}: {workers}.")
     elif assumed is not None:
-        print(f"  Planning workers: unknown; legacy and format fallback rates assume {assumed} workers.")
+        print(f"  {worker_label}: unknown; legacy and format fallback rates assume {assumed} workers.")
     else:
-        print("  Planning workers: unknown.")
+        print(f"  {worker_label}: unknown.")
+    for row, requested in context:
+        unit = "worker" if requested == 1 else "workers"
+        print(f"  Arm {row['arm']}, {row['pair'][0]} v {row['pair'][1]}: requests {requested} local {unit} for timing only.")
     # Optional failures must not print exception text or arbitrary messages from metadata.
     for text in timing.BASE_ASSUMPTIONS:
         print(f"  {text}")
     supplied = estimate.get("assumptions")
     supplied = supplied if isinstance(supplied, list) else []
     for text in (timing.POOL_UNKNOWN, timing.POOL_PLANNING_UNKNOWN, timing.POOL_MISMATCH,
-                 timing.POOL_AGGREGATE, timing.ARM_PROXY, timing.CONTROL_PROXY, timing.FORMAT_FALLBACK,
+                 timing.POOL_AGGREGATE, timing.ARM_PROXY, timing.CONTROL_PROXY, timing.FORMAT_FALLBACK, timing.CONFIG_LOCAL,
                  timing.V1_RATE, timing.CONFIG_UNKNOWN, timing.UNAVAILABLE):
         if text in supplied:
             print(f"  {text}")

@@ -2,6 +2,42 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Explicit local-worker experiment estimates (2026-10-28; E11-S16 slice)
+
+`forge experiment <spec.json> --dry-run --local` can now estimate an arm whose
+only actual change is an exact `config: {"forge_workers": N}` map, with a positive
+finite integer request. It uses the existing format fallback at those requested
+workers, with `config_fallback`, `requested_workers` and `local_assumed` provenance.
+Text distinguishes baseline planning workers from each matching arm's request.
+The fixed explanation states that this assumes requested local capacity before
+worker caps, available chunks, contention and shared PC load; actual activity
+is not verified. The serial-budget caveat remains.
+
+Configuration arms never reuse prior-arm or control speed, including enticing
+matching saved v2 samples. Other knobs, mixed changes, invalid requests, unknown
+formats or missing explicit local intent leave the complete time unavailable.
+One unsupported unfinished row still prevents a partial sum being presented as
+the total. Baseline/control estimates, game counts and normal arm proxies stay
+unchanged. Cached/skipped zero work reads no optional timing metadata, and finite
+positive sub-minute machine spans retain their precision.
+
+The existing local flag now reaches only the dry-run timing adapter as well as
+its unchanged normal run path. Planning still uses the read-only identity/layout
+boundary, creates no run folders and starts no process or game. CLI provenance
+uses fixed labels and binds optional per-arm worker context to the original
+key, arm, recipe and remaining count; arbitrary metadata messages are not printed.
+No adoption or replay-impact control is implied by a timing estimate.
+
+Root's protected eight-module integration passed **150 tests without skips**,
+including 18 new pure and 15 new adapter/CLI cases. Disposable read-only sentinels
+retain the original result-read count and reject deployment, write, runtime and
+child-process paths. Two requested worker arms, matching historical samples,
+unsupported combinations, zero work, finite JSON and actual estimator-to-CLI
+rendering are covered. Independent review, real-error Ruff and whitespace pass;
+1,166 owned source files remain at or below 1,200 lines. No real settings, saved
+arm folders, Forge installation, service or game changed. Actual experiment and
+runtime qualification remain separately gated.
+
 ## Manual exclusions beside field ranks (2026-10-28; E3-S23 slice)
 
 The field's rank and Rankings now show how many visible current lists were

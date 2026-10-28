@@ -1,6 +1,6 @@
 """Pure, heuristic time estimates for an experiment plan's remaining work.
 
-``estimate_plan(plan, samples=None, rates=None, workers=None)`` reads only its
+``estimate_plan(plan, samples=None, rates=None, workers=None, local=False)`` reads only its
 arguments. ``samples`` maps each planned result key to that result's already-read
 snapshot; callers choose the correct control/arm folder. No directories, settings,
 engine, deployment or saved records are read here. The existing plan remains the
@@ -9,8 +9,9 @@ authority for missing games, cached controls, skipped arms and extra seed contro
 V2 pool timings are weighted aggregate throughput, never per-worker rates. A
 known worker mismatch rejects that observation. Unknown worker context is explicit.
 An arm hash does not prove its recipe: its old speed is an arm proxy. Arbitrary
-config arms have no supported prediction, so unfinished ones make the whole time
-unknown rather than presenting the other rows' time as the complete experiment.
+config arms have no supported prediction, except an explicit local worker-only
+format fallback. Other unfinished config arms make the whole time unknown rather
+than presenting the other rows' time as the complete experiment.
 """
 import math
 import statistics
@@ -34,6 +35,8 @@ CONTROL_PROXY = "The control's speed is a proxy for the changed arm, whose speed
 FORMAT_FALLBACK = "The format's slow-class rate is a fallback, scaled linearly from its 16-worker reference."
 V1_RATE = "Legacy per-game timings use the warm speed-up and a linear planning-worker assumption."
 CONFIG_UNKNOWN = "Arbitrary configuration arms have no supported timing assumption or verified recipe."
+CONFIG_LOCAL = ("This arm uses format fallback speed assuming its requested local workers before worker caps, "
+                "chunk limits, contention and shared PC load; actual activity is not verified.")
 UNAVAILABLE = "A finite estimate could not be calculated for all remaining work."
 
 
@@ -154,13 +157,40 @@ def _row(row, arm=False):
             "assumptions": [], "_span": (0.0, 0.0) if missing == 0 else None}
 
 
-def _estimate_row(row, detail, controls, samples, workers, table, arm):
+def _config_arm(row):
+    changes = row.get("changes")
+    config = row.get("config")
+    has_config = config is not None and not (type(config) is dict and not config)
+    return has_config or changes == "config" or (
+        isinstance(changes, (list, tuple)) and "config" in changes)
+
+
+def _config_estimate(row, detail, local, table):
+    """Requested local capacity is a fallback assumption, never sampled speed."""
+    config = row.get("config")
+    requested = (_worker_count(config.get("forge_workers"))
+                 if type(config) is dict and len(config) == 1 and "forge_workers" in config else None)
+    if local is not True or row.get("changes") != ["config"] or requested is None:
+        detail["basis"] = "unsupported_config"
+        detail["assumptions"].append(CONFIG_UNKNOWN)
+        return
+    rate = _fallback(row, requested, table)
+    span = _span(detail["remaining_games"], rate) if rate is not None else None
+    if span is None:
+        detail["basis"] = "unavailable"
+        detail["assumptions"].append(UNAVAILABLE)
+        return
+    detail.update(basis="config_fallback", minutes=list(span), _span=span, games_per_min=rate,
+                  requested_workers=requested, placement="local_assumed")
+    detail["assumptions"].extend((CONFIG_LOCAL, FORMAT_FALLBACK))
+
+
+def _estimate_row(row, detail, controls, samples, workers, table, arm, local):
     if not detail["remaining_games"]:
         return
     notes = detail["assumptions"]
-    if arm and row.get("config"):
-        detail["basis"] = "unsupported_config"
-        notes.append(CONFIG_UNKNOWN)
+    if arm and _config_arm(row):
+        _config_estimate(row, detail, local, table)
         return
     chosen = _sample(row, samples, workers, table)
     sample_key = row.get("key") if chosen else None
@@ -213,7 +243,7 @@ def _estimate_row(row, detail, controls, samples, workers, table, arm):
     detail.update(basis=basis, minutes=list(span), _span=span)
 
 
-def estimate_plan(plan, *, samples=None, rates=None, workers=None):
+def estimate_plan(plan, *, samples=None, rates=None, workers=None, local=False):
     """JSON-friendly estimate from explicit snapshots; no input is mutated or resolved.
 
     Return ``minutes=None, complete=False`` if any unfinished row is unsupported;
@@ -221,6 +251,8 @@ def estimate_plan(plan, *, samples=None, rates=None, workers=None):
     unrounded; exact zero is reserved for no remaining work. ``workers=None`` means
     unknown context. Only v1 reconstruction and class fallbacks assume 16 then;
     aggregate v2 timings are never silently assigned or divided by that count.
+    Only explicit ``local=True`` and an exact worker-only config arm may use a
+    format fallback at its requested workers. No saved speed is used for it.
     """
     controls = plan.get("controls") or []
     arms = plan.get("arms") or []
@@ -235,9 +267,9 @@ def estimate_plan(plan, *, samples=None, rates=None, workers=None):
     if remaining != 0:
         table = _table(rates)
         for row, detail in zip(controls, out_controls):
-            _estimate_row(row, detail, controls, samples, planned_workers, table, False)
+            _estimate_row(row, detail, controls, samples, planned_workers, table, False, local)
         for row, detail in zip(arms, out_arms):
-            _estimate_row(row, detail, controls, samples, planned_workers, table, True)
+            _estimate_row(row, detail, controls, samples, planned_workers, table, True, local)
     complete = known_counts and all(row["_span"] is not None for row in all_rows)
     minutes = None
     if complete:

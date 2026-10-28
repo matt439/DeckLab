@@ -124,7 +124,7 @@ class ExperimentPlanEstimateTests(unittest.TestCase):
         found = self.plan(spec, control_dir=self.controls)
         self.assertEqual(found["totals"]["games"], 0)
         experiment._plan_timing_metadata.assert_not_called()
-        self.calculate.assert_called_once_with(found)
+        self.calculate.assert_called_once_with(found, local=False)
         self.assertEqual(found["estimate"]["remaining_games"], 0)
         self.assertEqual(found["estimate"]["minutes"], [0.0, 0.0])
         self.assertEqual(found["estimate"]["basis"], "none")

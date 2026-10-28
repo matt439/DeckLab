@@ -620,11 +620,11 @@ def _plan_timing_metadata():
     return table, experiment_estimate._worker_count(workers)
 
 
-def _plan_estimate(found, sample_rows):
+def _plan_estimate(found, sample_rows, *, local=False):
     """Best-effort timing from the very snapshots that supplied the game plan."""
     try:
         if found["totals"]["games"] == 0:
-            return experiment_estimate.estimate_plan(found)
+            return experiment_estimate.estimate_plan(found, local=local)
         rates, workers = _plan_timing_metadata()
         samples, ambiguous = {}, set()
         for key, result in sample_rows:
@@ -637,7 +637,7 @@ def _plan_estimate(found, sample_rows):
                 ambiguous.add(key)
             else:
                 samples[key] = result
-        return experiment_estimate.estimate_plan(found, samples=samples, rates=rates, workers=workers)
+        return experiment_estimate.estimate_plan(found, samples=samples, rates=rates, workers=workers, local=local)
     except Exception:
         return {"remaining_games": found["totals"]["games"], "minutes": None, "complete": False,
                 "basis": "unavailable", "workers": None, "assumed_workers": None,
@@ -645,14 +645,15 @@ def _plan_estimate(found, sample_rows):
                 "controls": [], "arms": []}
 
 
-def plan(spec, *, results_dir=None, control_dir=None, only=None, games=None, logs_dir=None, control_logs_dir=None):
+def plan(spec, *, results_dir=None, control_dir=None, only=None, games=None, logs_dir=None, control_logs_dir=None,
+         local=False):
     """Per arm and pair, the games to play, and the control games the control folder doesn't
     hold (section 12.5's --dry-run; the combined run's harness counts both):
     {"experiment", "results_dir", "games", "controls": [{"pair", "key", "source": "control_dir"
     or "control", "have", "missing", "card_shas"}], "arms": [{"arm", "pair", "key", "sets",
     "changes", "have", "missing", "skipped", "card_shas"}], "totals": {"control_games",
     "arm_games", "games"}, "estimate": experiment_estimate.estimate_plan's best-effort
-    remaining-work estimate}. Nothing is played or written."""
+    remaining-work estimate}. local is timing intent only. Nothing is played or written."""
     spec = _spec(spec)
     lay = _layout(spec, results_dir=results_dir, logs_dir=logs_dir, control_dir=control_dir,
                   control_logs_dir=control_logs_dir, only=only, games=games, read_only=True)
@@ -677,7 +678,7 @@ def plan(spec, *, results_dir=None, control_dir=None, only=None, games=None, log
     found = {"experiment": spec["name"], "results_dir": str(lay["results"]), "logs_dir": str(lay["logs"]),
              "games": lay["games"], "controls": controls, "arms": arms,
              "totals": {"control_games": control_games, "arm_games": arm_games, "games": control_games + arm_games}}
-    found["estimate"] = _plan_estimate(found, sample_rows)
+    found["estimate"] = _plan_estimate(found, sample_rows, local=local)
     return found
 
 

@@ -80,7 +80,7 @@ class ExperimentEstimateCliTests(unittest.TestCase):
         self.assertEqual(code, 0)
         load.assert_called_once_with("fixture-spec.json")
         planned.assert_called_once_with({"fixture": True}, results_dir="results-fixture", control_dir="control-fixture",
-            only=["arm-a", "arm-b"], games=80, logs_dir="logs-fixture", control_logs_dir="control-logs-fixture")
+            only=["arm-a", "arm-b"], games=80, logs_dir="logs-fixture", control_logs_dir="control-logs-fixture", local=True)
         ran.assert_not_called()
 
     def test_subminute_json_keeps_positive_machine_spans_while_text_formats_them(self):
