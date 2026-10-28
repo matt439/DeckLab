@@ -45,8 +45,8 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 19 | 16 | 0 | 1 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 20 | 14 | 1 | 4 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 35 | 31 | 1 | 1 | 2 |
-| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 39 | 27 | 6 | 3 | 3 |
-| **Total** | **255** | **207** | **16** | **18** | **14** |
+| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 39 | 28 | 6 | 2 | 3 |
+| **Total** | **255** | **208** | **16** | **17** | **14** |
 
 Counted from the story headers on 2026-10-28 after the current feature and maintenance work. The reviews added five feature stories and eight hygiene stories, and corrected E1-S12 from missing to partial.
 
@@ -3825,7 +3825,7 @@ Evidence:
 
 Keeping Deck Lab running, safe and believable, by Matt as the household's admin and by Claude Code working for him at the PC. It covers the server and its Cloudflare tunnel and "Deck Lab is off" page, the PostgreSQL database with its nightly backup, export, check and restore check, the audit trail on #/activity, the `python -m decklab.db` commands Claude works through (previews, `--expect` guards, `-m` messages, exit codes), the card data's background refresh, Forge upkeep and the Safari Simulator suite. Every write is one audited change set, Matt's own command-line writes are recorded as his, and backups are checked by restoring them.
 
-Open: E11-S02, E11-S08, E11-S12, E11-S16, E11-S28, E11-S30, E11-S31, E11-S34, E11-S39.
+Open: E11-S02, E11-S08, E11-S12, E11-S16, E11-S28, E11-S30, E11-S31, E11-S39.
 
 **E11-S01** · Matt · must · M · built
 
@@ -4434,7 +4434,7 @@ Evidence:
 - `decklab/tests/test_linux_services.py`; `scripts/linux_services_check.sh` and `.github/workflows/tests.yml` (linux-services)
 - `SELF-HOSTING.md`: the Linux route, with no caveat and no hand-written service step
 
-**E11-S34** · Matt · could · M · missing
+**E11-S34** · Matt · could · M · built
 
 As a self-hoster setting up Deck Lab, I want one preflight check before starting the server, so that I can see what is ready and which exact setup step is still needed.
 
@@ -4443,11 +4443,15 @@ As a self-hoster setting up Deck Lab, I want one preflight check before starting
 - Given a failed check, then it gives the relevant next setup command and a meaningful exit status; text and JSON outputs contain no credentials, emails or private record contents.
 - Given any result, then the check installs, downloads, migrates, schedules and starts nothing, and plays no games, on either Windows or Linux.
 
-Evidence of gap (2026-10-28): `SELF-HOSTING.md` walks through separate setup checks; `decklab/lib/homenet/profile_config.py`, `decklab/db/migrate.py`, `decklab/lib/cards.py` and `decklab/lib/forge/simjar.py` supply individual checks but no combined preflight before server startup.
+Now (2026-10-28): `python -m decklab.doctor [--json]` reports ordered core checks and separate optional Java/Forge file facts, with fixed next steps and exit codes. It changes no application data and performs no setup, fetch, service or game action. See [HISTORY.md](../HISTORY.md#read-only-self-hosting-doctor-2026-10-28-e11-s34).
 
-Gap: the combined command and report remain to build; existing status and setup commands stay available.
+Evidence:
+- `doctor.py` and `lib/preflight.py`: lazy adapters, fixed public catalog, dependency skips, sanitized failures/cancellation and matching text/JSON results; optional failures do not block the core app.
+- `lib/preflight_local.py`: captured validated configuration, matching-runtime driver discovery without `.pth` execution, bounded structural index validation, and one app-role read-only metadata transaction with migration checksums and initialization markers. Multi-host lists are left unverified without contact; DNS is outside the per-address connection timeout.
+- `lib/preflight_forge.py`: bounded injected file checks, explicit Java selection, declared version and archive prefixes; unsafe, link and reparse paths remain unverified. File presence does not qualify archives, the fork, card logging or game execution.
+- Root's protected seven-module integration passed 231 tests without skips, including 22 report/CLI, 44 local-adapter and 25 optional-file cases. The cache compatibility fixture uses the actual index builder on disposable inputs. SELF-HOSTING.md step 7 and README document the command and limits.
 
-First slice: a `python -m decklab.doctor` command collecting local readiness checks into stable core/optional results, with short bounded database probes and no network fetches. Use missing-config/cache, unavailable-database and absent-Forge fixtures on both platforms, then link the command from SELF-HOSTING.md. Real host setup and service installation remain separate actions.
+Actual host, PostgreSQL app-role/schema behavior, Linux runtime and simulation execution qualification were not performed for this feature. No configured database, private configuration, actual cache, server or Forge installation was inspected by its tests. Existing status/setup commands and separate activation gates remain available.
 
 **E11-S35** · Matt · could · M · built
 

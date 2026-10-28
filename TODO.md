@@ -85,7 +85,6 @@ An index of open work, one row per item; each row points to the doc that owns th
 | `E11-S30` | OPEN | should | L | Visual redesign P1 ([visual-design.md](decklab/design/visual-design.md)): slice 15's dark Matchups with saved results, and Collection's filter decision. Empty/loading/failed states are built. Touch/Safari acceptance stays open. |
 | `E11-S31` | DECISION | could | M | Global search in the top bar ([stories.md](decklab/design/stories.md#e11-s31)): Matt chooses sources and result grouping before building. |
 | `E11-S08` | OPEN | could | L | Whole imports, supported receipts and trades have Undo. Next review safe restoration of one deleted token row; broader recovery remains. |
-| `E11-S34` | OPEN | could | M | Add a read-only self-hosting preflight for runtime, configuration, database, card data and optional Forge readiness. |
 | `E11-S02` | DECISION | should | S | The "Deck Lab is off" Worker is deployed (`decklab/cloudflare/`): Matt checks a signed-in save, a photo upload, and the page with Deck Lab stopped. |
 
 ## Deck Lab: code hygiene

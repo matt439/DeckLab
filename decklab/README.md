@@ -4,6 +4,15 @@ A web page for Magic decks: the deck library, personal card wishlists, shared sh
 
 ## Start it
 
+For a new setup or a setup problem, `python -m decklab.doctor` reports the core
+runtime, configuration, driver, database metadata and card-index checks with next
+steps; `--json` gives the same fixed findings. It contacts the configured database
+read-only, without starting the server or running setup. Exit codes are `0` for
+core checks passed, `1` for known missing setup, and `2` for unverified core checks
+or invalid arguments. Optional Java/Forge file checks never block the core app and
+do not qualify simulation execution. See [SELF-HOSTING.md, step 7](../SELF-HOSTING.md#7-start-it-and-open-it)
+for the bounds, privacy and separate simulation checks.
+
 Deck Lab runs in the background, with no window, once you start it:
 
 ```

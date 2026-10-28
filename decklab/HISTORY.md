@@ -2,6 +2,47 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Read-only self-hosting doctor (2026-10-28; E11-S34)
+
+`python -m decklab.doctor [--json]` now checks the supported runtime, captured
+configuration, PostgreSQL driver, database metadata and local card index before
+server startup. Both outputs use the same fixed public findings and next steps;
+adapter values, paths, credentials, emails, record contents and raw errors never
+enter the report. Missing dependencies skip later checks explicitly. Exit codes
+are 0 for core checks passed, 1 for known setup work and 2 for unverified core
+checks or invalid arguments; optional failures leave the core result intact.
+Help creates no adapter, cancellation stops later probes without partial JSON,
+and optional import/construction failures are cached within the report.
+
+The driver path validates a matching `.venv` without executing `.pth` startup
+files, checks imported package provenance and restores temporary Python settings.
+Configuration is read once and includes home-profile, access and host validation,
+with legacy numeric database ports accepted. The database adapter opens one app
+connection with read-only defaults and a read-only repeatable-read metadata
+transaction. It compares bounded migration checksums and inventory/deck singleton
+markers, without inspecting household records. Two-second per-address connection,
+five-second query and two-second lock timeouts do not bound DNS resolution;
+multi-host lists are left unverified without contact. This is not complete
+schema, grants or data-integrity qualification.
+
+The card check bounds compressed/decompressed input and validates operational
+cards, variants, printings, tokens and metadata without loading the shared card
+index or downloading anything. Optional Java/Forge checks use explicit paths,
+bounded metadata/directory reads and reject symlink/reparse paths. They report
+declared Java version and nonempty archive prefixes only: no Java execution,
+archive integrity, fork identity, card-log readiness or game acceptance is claimed.
+No install, migration, schedule, service activation or repair occurs. The setup
+guide and reference now explain the command, exit codes and limits.
+
+Root's protected seven-module integration passed 231 tests with zero skips,
+including 91 new fake-provider/disposable-file cases and existing config, access,
+profile-validation and card regressions. A compatibility fixture uses the actual
+card-index builder on tiny disposable bulk/tag inputs. Independent and root
+review, Ruff, source lengths and whitespace checks pass. No real configured
+database, private config, actual cache, live server or Forge installation was
+probed for this feature. Real PostgreSQL/host, Linux runtime and simulation
+qualification remain separate; the running server was preserved.
+
 ## Experiment timing budget scope (2026-10-28; E11-S16)
 
 The fixed timing assumptions now explicitly say that per-job times are added as
