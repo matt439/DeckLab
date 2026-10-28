@@ -35,6 +35,10 @@ second apply of it finds the revision moved. The deck tables' outcome is the cha
 (Summary.extra["tables"]: {written, skipped, error}), in "tables". A refresh that
 fails leaves the decks as they were and the receipt saved, the tables on the Decks page's
 "Tables out of date" list (GET /api/tables/stale; its Update all refreshes them).
+
+After the change is saved, arrivals.record keeps an arrival notice for each home player whose
+decks the receipt brought missing cards for (E6-S19, api/arrivals.py shows it); that never
+fails the receipt.
 """
 import hashlib
 import json
@@ -45,7 +49,7 @@ import zlib
 from datetime import datetime, timedelta, timezone
 from pathlib import PurePosixPath
 
-from decklab.lib import cards, config, inventory, spaces
+from decklab.lib import arrivals, cards, config, inventory, spaces
 from decklab.lib.decks.identity import CardIdentityError, deck_colors
 from decklab.lib.inventory import files, receive, rules
 from decklab.lib.tokens import details as token_details
@@ -509,6 +513,7 @@ def apply_receipt(body):
     try:
         # The files backend writes the refreshed deck files with it: after any deck save, as before.
         with inventory_write_lock():
+            before = inventory.current()
             after, summary = inventory.apply(operation, actor, f"receive {record['order']}",
                                          expected_revision=record["revision"])
     except inventory.Unavailable:
@@ -521,6 +526,8 @@ def apply_receipt(body):
     except (inventory.Invalid, ValueError, OSError, RuntimeError) as e:
         raise ApiError(409, f"The receipt couldn't finish: {_public(e)}") from None
     path.unlink(missing_ok=True)
+    # E6-S19: each home player's decks it brought cards for, told on their next visit (never fails the receipt).
+    arrivals.record(before, after, record["order"], record["received_on"], actor, log=common._log)
     return {"received": True, "order": record["order"], "totals": summary.extra["totals"],
             "assignments": summary.extra["assignments"], "remaining": _remaining(after, record["order"]),
             "fingerprint": fingerprint(after.revision),

@@ -115,6 +115,9 @@ inventory writes answer 503 with "reason": "database":
                                          couldn't be refreshed after it); kept 30 minutes, used once
     POST /api/receipt/apply              body {"profile", "preview"}: save it, with the deck tables it
                                          refreshes ("tables"), as one change; an admin's, who sees home
+    GET  /api/arrivals                   the viewer's arrival notices (E6-S19, lib/api/arrivals.py): the
+                                         decks a receipt brought cards for, a home player's own only
+    POST /api/arrivals/dismiss           body {"profile", "ids"}: dismiss the writer's own notices
     GET  /api/assembly[?deck=<id>&version=], POST /api/assembly/preview   the packing plan
                                          (lib/api/assembly.py; home's pool, so home's)
     POST /api/decks                      create a deck, one change (201; 409 + "conflict" if its

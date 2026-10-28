@@ -10,7 +10,7 @@ from decklab.lib.state import rules
 
 from . import activity_aliases
 from .activity_counts import _copies, _n, _record
-from .activity_summaries import (INVENTORY_FIELDS, ITEM_TABLES, _card, _changes, _dict, _faces, _product_name, _stem,
+from .activity_summaries import (INVENTORY_FIELDS, ITEM_TABLES, _arrival_words, _card, _changes, _dict, _faces, _product_name, _stem,
                                  _text, _title, _whose)
 
 
@@ -262,8 +262,13 @@ def describe(rows, actor_name, orders=None, groups=(), profiles=None, *, own=Non
     if len(chosen) == 1:
         record = _record(chosen[0])
         key = _text(record.get("key"))
-        phrases.append((f"reset the {key} setting" if chosen[0].get("op") == "DELETE"
-                        else f"set the {key} to {_text(record.get('value'), 'nothing')}", None))
+        arrival = _arrival_words(chosen[0].get("op"), record)
+        if arrival is not None:
+            phrases.append(("dismissed an arrival notice" if chosen[0].get("op") == "DELETE"
+                            else f"kept an {arrival}", None))
+        else:
+            phrases.append((f"reset the {key} setting" if chosen[0].get("op") == "DELETE"
+                            else f"set the {key} to {_text(record.get('value'), 'nothing')}", None))
     elif chosen:
         phrases.append((f"changed {_n(len(chosen), 'setting')}", None))
     for row in take("simulation_mode"):

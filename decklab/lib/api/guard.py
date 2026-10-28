@@ -95,6 +95,8 @@ upkeep in another space; the command line writes every space.
     POST /api/profiles/<id>/wishlist              wishlist.edit on <id>
     PUT  /api/profiles/<id>/settings              settings.edit on <id>, for the viewer (the body
                                                   names no profile: the login, or the header)
+    POST /api/arrivals/dismiss                    settings.edit on the writer's own profile (its arrival
+                                                  notices are kept with its settings, E6-S19)
     POST /api/matchup|field|variant/stop          run.stop (an admin, by role, for now: E10-S30)
     POST /api/matchup/run, /api/field/run, /api/variant/run|more
                                                   run.start (require_start: the simulations setting,

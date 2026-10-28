@@ -1810,16 +1810,23 @@ Evidence:
 - `decklab/tests/test_shopping_ui.py`: test_done_marks_a_follow_up_after_its_undo_time, test_a_member_sees_delivery_details_not_receive_or_done
 - `decklab/tests/test_shopping_checks.py`: test_a_check_is_resolved_into_verified_checks_as_one_change
 
-**E6-S19** · User1 · could · M · missing
+**E6-S19** · User1 · could · M · built
 
 As User1, the themed-deck player, I want to be told when a delivery holding cards for my deck has been recorded, so that I know the deck is ready without checking the page.
 
 - Given a receipt that frees cards for a deck Played by me, when it is recorded, then my next visit shows a notice naming the deck and how many cards arrived.
 - Given I've seen the notice, when I dismiss it, then it doesn't come back for that receipt.
 
-Gap: Deck Lab has no arrival notice; the receipt's list of changed decks (`decklab/lib/api/receipts.py`) would be its source.
+Now: built 2026-10-28 ([HISTORY.md](../HISTORY.md#arrival-notices-2026-10-28-e6-s19)). Both receipt paths (the Receipts page's apply and `receive --apply`) compare each home Casual and Commander deck's planned list before and after the receipt (copies here and free, up to what it needs, basics left out) and keep a notice in each matching home player's own settings (`profile_setting`, no migration; Played by `either` tells both). The page shows it above every page after the profile is picked, each deck linked with its count; Dismiss has Undo and then removes only that notice. Only the home player it's for reads it (GET /api/arrivals answers none to anyone else, a script included), and a deck they may not see, or deleted since, is left out. Keeping a notice never fails the receipt.
 
-First slice: record, with each receipt, the decks Played by each home profile whose missing cards it supplied, and show that profile a dismissable notice on their next visit.
+Evidence:
+- `decklab/lib/arrivals.py`: supplied, record, notices, dismiss
+- `decklab/lib/api/arrivals.py`: arrivals_view, dismiss_arrivals; `decklab/lib/api/receipts.py`: apply_receipt; `decklab/db/inv_receive.py`: run, _say_arrivals
+- `decklab/web/arrival-notices.js`: loadArrivalNotices, arrivalNotice, dismissArrival
+- `decklab/tests/test_arrivals.py`: test_the_page_receipt_tells_only_the_decks_player_how_many_cards_came, test_the_command_line_receipt_records_and_says_who_is_told, test_nobody_else_sees_it, test_dismissing_removes_it_for_good_and_only_the_one_shown
+- `decklab/tests/test_arrival_notices_ui.py`: test_dismiss_waits_for_undo_then_saves_only_for_the_same_person
+
+Gap: no push or email outside a visit (the notice waits for the next one); a member's own space has no orders, so no notices there (E6-S22).
 
 **E6-S20** · Claude Code · should · S · built
 

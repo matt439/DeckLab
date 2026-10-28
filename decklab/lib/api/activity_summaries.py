@@ -75,9 +75,24 @@ def _wishlist_summary(op, before, after, whose):
     return f"{head}: {', '.join(parts)}" if parts else head
 
 
+def _arrival_words(op, record):
+    """An arrival notice's row in words (E6-S19, lib/arrivals.py): "arrival notice for order X" or
+    "arrival notice dismissed", never its stored JSON; None for any other setting."""
+    from decklab.lib import arrivals
+    if _text(record.get("key")) not in arrivals.SLOTS:
+        return None
+    if op == "DELETE":
+        return "arrival notice dismissed"
+    found = arrivals._parse(record.get("value"))
+    return f"arrival notice for order {found['o']}" if found else "arrival notice"
+
+
 def _setting_summary(op, before, after, whose):
     key = _text((after or before).get("key"))
     whose = "Your" if whose == "your" else whose        # "Your theme", "Matt's theme"
+    arrival = _arrival_words(op, after or before)
+    if arrival is not None:
+        return f"{whose} {arrival}"
     if op == "INSERT":
         return f"{whose} {key}: {_text(after.get('value'), '')}"
     if op == "DELETE":
