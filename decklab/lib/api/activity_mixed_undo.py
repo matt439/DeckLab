@@ -1,10 +1,10 @@
-"""Review and save Undo of a whole collection import or order receipt from Activity (E11-S08).
+"""Review and save Undo of a whole collection import, order receipt (E11-S08) or trade (E7-S22) from Activity.
 
 GET /api/activity/mixed-undo?id=N previews it; POST {profile, id, expect, reason} saves it as
 one new audited change. The inventory backend reads the complete original change and checks it
 again under its write lock (inventory/undo_mixed.py); Activity's capped rows never authorize a
-write. An import is its space's own people's to undo (collection.edit), a receipt home's
-admins' (receipts.apply, as receiving it was).
+write. An import or a trade is its space's own people's to undo (collection.edit, as recording
+it was), a receipt home's admins' (receipts.apply, as receiving it was).
 """
 import re
 
@@ -16,10 +16,10 @@ from .activity_undo import NO_CHANGE, UNCONFIRMED, _changed, _id, _space
 from .common import ApiError, DATABASE_DOWN, _keys, _parse_body
 from .settings import _writer
 
-UNSUPPORTED = ("This change cannot be undone here. Whole-change Undo covers a collection import and a receipt "
-               "of whole order parts, while nothing they touched has changed since.")
+UNSUPPORTED = ("This change cannot be undone here. Whole-change Undo covers a collection import, a receipt "
+               "of whole order parts and a trade, while nothing they touched has changed since.")
 SHA = re.compile(r"[a-f0-9]{64}")
-ACTIONS = ("import_undo", "receipt_undo")
+ACTIONS = ("import_undo", "receipt_undo", "trade_undo")
 COMPONENT_FIELDS = ("order", "component", "kind", "received_on", "checks")
 PRODUCT_FIELDS = ("product", "status", "intact")
 
@@ -37,8 +37,9 @@ def hint(change, shown, profile):
     if any(not isinstance(row, dict) for row in rows):
         return None
     space = _space(profile)
-    shape = undo_mixed.looks_like(rows, change.get("past"), space)
-    if shape == undo_mixed.IMPORT and guard.allowed(profile, "collection.edit", space):
+    # The reason and message only tell a trade; neither reaches the viewer through this hint.
+    shape = undo_mixed.looks_like(rows, change.get("past"), space, change.get("reason"), change.get("message"))
+    if shape in (undo_mixed.IMPORT, undo_mixed.TRADE) and guard.allowed(profile, "collection.edit", space):
         return {"review": True, "kind": "mixed"}
     if shape == undo_mixed.RECEIPT and guard.allowed(profile, "receipts.apply") and guard.sees_home_records(profile):
         return {"review": True, "kind": "mixed"}
@@ -108,6 +109,24 @@ def _rows(part, fields):
     return {"removed": removed, "reduced": reduced}
 
 
+def _returned(part):
+    """A trade's given rows coming back: rows added again and rows going back to more copies."""
+    if not isinstance(part, dict) or set(part) != {"added", "raised"}:
+        raise ApiError(503, UNCONFIRMED)
+    added = [_card(row, rules.FIELDS) for row in part["added"]]
+    raised = []
+    for item in part["raised"]:
+        if not isinstance(item, dict) or set(item) != {"current", "restored"}:
+            raise ApiError(503, UNCONFIRMED)
+        current, restored = _card(item["current"], rules.FIELDS), _card(item["restored"], rules.FIELDS)
+        if restored["quantity"] <= current["quantity"]:
+            raise ApiError(503, UNCONFIRMED)
+        raised.append({"current": current, "restored": restored})
+    if not added and not raised:
+        raise ApiError(503, UNCONFIRMED)
+    return {"added": added, "raised": raised}
+
+
 def _project(plan):
     if not isinstance(plan.get("label"), str) or not plan["label"].strip() or not isinstance(plan.get("expect"), str) \
             or not SHA.fullmatch(plan["expect"]) or plan.get("reason_required") is not True \
@@ -126,7 +145,14 @@ def _project(plan):
     if not all(isinstance(name, str) for name in uploads) or (plan["action"] == "import_undo") != bool(uploads) \
             or (plan["action"] == "receipt_undo") != bool(components):
         raise ApiError(503, UNCONFIRMED)
-    return {"available": True, "id": plan["change_id"], "expect": plan["expect"], "kind": "mixed", "space": plan["space"],
+    trade = {}
+    if plan["action"] == "trade_undo":
+        trade = {"returned": _returned(plan.get("returned")), "returned_cards": plan.get("returned_cards")}
+        tokens = plan.get("tokens")
+        if products or type(trade["returned_cards"]) is not int or trade["returned_cards"] < 1 \
+                or not isinstance(tokens, dict) or tokens.get("removed") or tokens.get("reduced"):
+            raise ApiError(503, UNCONFIRMED)
+    return {**trade, "available": True, "id": plan["change_id"], "expect": plan["expect"], "kind": "mixed", "space": plan["space"],
             "action": plan["action"], "label": plan["label"], "reason_required": True, "cards": plan["cards"],
             "collection": _rows(plan["collection"], rules.FIELDS), "tokens": _rows(plan["tokens"], rules.TOKEN_FIELDS),
             "components": components, "products": products, "uploads": list(uploads)}
@@ -172,8 +198,12 @@ def apply_mixed_undo(body):
         confirmed = undo_mixed.removed_state(after, plan)
     except Exception:
         raise ApiError(503, UNCONFIRMED) from None
+    if plan["action"] == "trade_undo" and (counts.get("returned") != confirmed.get("returned_rows")
+                                            or counts.get("returned_cards") != preview["returned_cards"]):
+        raise ApiError(503, UNCONFIRMED)
     tables = extra.get("tables") or {}
     return {"saved": True, "source_id": change_id, "expect": data["expect"], "kind": "mixed", "space": plan["space"],
             "action": plan["action"], "cards": preview["cards"], **confirmed,
+            **({"returned_cards": preview["returned_cards"]} if plan["action"] == "trade_undo" else {}),
             "tables_refreshed": len(tables.get("written") or ()), "tables_error": bool(tables.get("error")),
             "revision": after.revision, "summary": summary.text}
