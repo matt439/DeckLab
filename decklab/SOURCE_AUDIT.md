@@ -178,3 +178,150 @@ reach the shared runner through the `test_feature_ui` module, never by importing
   over 1,200 lines. The longest is now `tests/test_inventory_contract.py` (1,171).
 - **Full suite:** `python -m unittest discover -s decklab/tests -t .` ran **5,848
   tests in 1,149.1 seconds: OK, 34 skipped**.
+
+<a id="maintenance-backlog"></a>
+
+# Maintenance backlog - 2026-10-28
+
+This is the implementation owner for the hygiene lane requested on 2026-10-28.
+[TODO.md](../TODO.md) owns readiness and order; E11-S36 to E11-S43 in
+[stories.md](design/stories.md) own acceptance criteria. Each task is finite:
+finish its stated scope, record the result here/HISTORY.md and remove its TODO
+row. A later audit may identify another concrete task. The dated audits above
+remain historical evidence, not measurements of today's checkout.
+
+## Current evidence
+
+The inventory check on `c678f10` reads **1,084 owned source files**. **One exceeds
+1,200 lines:** `web/tokens.js`, at **1,460**. `--check` exits **1**; this backlog
+change does not fix or waive that failure. There are 29 owned source files over
+1,000 lines, including tests. Being below the threshold is not proof of a good
+module boundary, and being large is not by itself a reason to split a cohesive
+file. No lower blanket threshold is introduced.
+
+| id | Measured target | First structural boundary |
+|---|---|---|
+| E11-S36 | `web/tokens.js`, 1,460 | Add/edit/conflict sheets, openTokenSheet through showTokenConflict |
+| E11-S37 | `web/editor-cards.js`, 1,137 | Paste/replace and Start from, apart from search/viewport setup |
+| E11-S38 | `lib/api/collection_edit.py`, 1,116 | CSV detection, conversion and upload parsing, apart from HTTP writes/previews |
+| E11-S39 | `lib/inventory/pg.py`, 1,133 | Table-row snapshot conversion, apart from cache/transaction/write coordination |
+| E11-S40 | `tests/test_inventory_contract.py`, 1,173; `tests/test_api_permissions.py`, 1,126 | Concrete test groups, apart from shared fixture/base support |
+
+Other large files include `web/editor.js` (1,188), `web/deck.js` (1,179),
+`lib/api/forge_runs.py` (1,163) and `web/components.css` (1,161). Review their
+responsibilities when the next change needs room; they are not extra split
+tasks solely to make the numbers smaller. CSS ordering includes later
+coarse-pointer/forced-colors overrides. Forge-run visibility reads mutable
+coordination/configuration owners, so an extraction needs an explicit patch
+ownership plan rather than a generic facade.
+
+## Split contracts
+
+- Move coherent responsibilities; retain existing bodies unless an ownership
+  reference must change. Compare every moved function/class and account for
+  every removed/added top-level item. Do not compress code or raise the limit.
+- Keep classic browser scripts and their initialisation order. Register new
+  files in index.html, the explicit static-asset contract and all affected Node
+  runner file lists. Preserve global callers, route/profile guards and listener
+  lifetime; a split introduces no build step.
+- Keep each mutable state value and patched name with one authoritative owner.
+  Existing imports and test patches must reach that owner; copying bindings
+  into another module is not compatibility. Preserve server.py's entry point.
+- Source splits preserve observable behaviour, API responses, permissions,
+  transaction/locking boundaries, canonical bytes and error handling. Feature
+  changes belong in separate commits. Use fixtures and disposable databases;
+  no household write, live migration or Forge game is part of these tasks.
+
+### Tokens and editor workflows: E11-S36, E11-S37
+
+For Tokens, extract the contiguous sheet workflow into a focused classic
+script, keeping current globals and state lookup. Retain parser-only loading
+for test_token_details_js.py or update its file list explicitly if it now needs
+the extraction. Verify token UI/conflicts, physical row identities, details
+parity and asset order; then the source-length check must pass.
+
+For the editor, start with mergedLists/openPaste/mergeLines/replaceLines and
+startFromPart/choiceSheet/openPreconStart/openDeckStart. Keep search and viewport
+listeners in their current execution order. Verify existing paste/replace
+previews, Undo, precon/deck starts and Quick edit. This creates room for E9-S07;
+the extraction itself adds no EDHREC behaviour.
+
+### Collection parsing and database snapshots: E11-S38, E11-S39
+
+For collection imports, extract detect/_source_rows/read_upload and their
+format conversion helpers. Preserve callers of collection_edit.read_upload
+and match, and the behaviour of patched MAX_IMPORT_ROWS/MAX_IMPORT. Keep preview
+storage, _upload_date, IMPORT_TTL/IMPORTS_DIR and locking in their existing
+owner. Validate supported/malformed exports, scanner and merge consumers,
+precon/trade callers and exact refusal outputs. E7-S03's grouping is separate.
+
+For PostgreSQL snapshots, extract snapshot/_render and fixed row conversion
+helpers. Leave PgInventory, _diff, _take_lock, revision/cache ownership and
+transaction coordination in place. Preserve canonical rendering, hidden token
+and watchlist ids, schema capability checks, locations and dual revisions.
+Validate inventory contract goldens and disposable-database location, deck
+persistence and rollback cases; no golden changes should be needed for a
+behaviour-preserving split.
+
+### Test support and discovery: E11-S40
+
+Move concrete PostgreSQL contract cases first, retaining adapt, scenario/golden
+helpers, CLAUDE and FIXTURE_PROFILES at established support imports. Then move
+permission route groups while retaining PermissionTestCase for its consumers.
+Do not re-export concrete test classes. Compare discovered cases before/after
+by their class/method identity with an explicit module-move map, so a renamed
+module is neither mistaken for lost coverage nor counted twice. Check the
+four-shard partition, setup/cleanup lifetime and affected fixture consumers.
+
+Run focused checks for each split, JavaScript syntax checks for changed scripts,
+and the full integrated suite before closing a structural split. Report skips
+separately. Fixture checks do not establish household-device acceptance or real
+Forge qualification.
+
+## Comment audit: E11-S41
+
+Start with the module headers and surrounding storage/privacy/lifecycle
+comments in these named files, checking each claim against its runtime owner:
+
+- `lib/api/play_records.py`: the header still says decks are files.
+- `lib/api/accessories.py`: the header still calls the file backend a rollback
+  path; runtime rollback was retired.
+- `lib/api/collection_edit.py`: the header describes runtime collection paths,
+  configurable file storage and rollback rather than database-backed snapshots.
+- `web/editor.js`: the claimed eight-script inventory is behind index.html.
+- `web/tokens.js`: tokSpacePicker says Home and each person, while seenSpaces
+  filters the visible choices.
+- `web/deck.js`: its Overview description omits implemented panels.
+- `tests/test_api_permissions.py`: the header overstates anonymous/local
+  access, despite the current script boundary and space-specific read rules.
+
+Record checked modules and corrections with implementation evidence. Preserve
+accurate rationale for locks, permission checks, compatibility and test backends;
+do not delete comments wholesale or restate every line of code. In particular,
+FileInventory.from_git still exists for fixture/history helpers and must not be
+described as a removed API. No substantive TODO/FIXME/HACK markers were found in
+the owned Python/JavaScript scan, so a generic marker-cleanup task is not added.
+Comment-only changes need diff checks and any syntax check made relevant by the
+edit, without prose-only regression tests.
+
+## Developer instruction audit: E11-S42
+
+Compare AGENTS.md's Logging new cards and Sleeves, deck boxes and playmats
+instructions, plus matching README command examples, with the current parsers:
+receipt previews support receive --expect; product-kit commands exist. Correct
+those contradictions and the immediate database/file/retired-rollback guidance.
+CLAUDE.md includes AGENTS.md, so do not create a second instructions copy.
+Preserve dated history and private-repo/tag references where they are accurate.
+Check command help without an apply, migration or household read/write. Changes
+to command behaviour are outside this documentation task.
+
+## Continuous source-length guard: E11-S43
+
+No current workflow invokes audit_source_lengths.py. After E11-S36 clears the
+known failure, add its existing --check invocation to the cheap lint workflow,
+alongside the existing real-error Ruff checks. Keep the 1,200-line threshold,
+ignored-cache rules, tracked/untracked inventory and pinned-upstream exclusion
+policy. Do not introduce a temporary exception for tokens.js. Temporary Git
+fixtures must exercise the 1,200/1,201 boundary and inventory/exclusion rules;
+the job must require no database, card cache or Forge installation. Real CI
+results are recorded when the workflow runs, separately from local validation.

@@ -45,10 +45,10 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 19 | 13 | 2 | 2 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 20 | 14 | 1 | 4 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 35 | 31 | 1 | 1 | 2 |
-| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 30 | 17 | 6 | 4 | 3 |
-| **Total** | **246** | **187** | **21** | **24** | **14** |
+| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 38 | 17 | 6 | 12 | 3 |
+| **Total** | **254** | **187** | **21** | **32** | **14** |
 
-Counted from the story headers on 2026-10-28 after the reserve review. That review adds five missing stories and corrects E1-S12 from missing to partial; it does not claim new features shipped.
+Counted from the story headers on 2026-10-28 after the feature-reserve and maintenance reviews. They add five feature stories and eight hygiene stories, and correct E1-S12 from missing to partial; no new implementation is claimed shipped by these backlog edits.
 
 ---
 
@@ -3771,7 +3771,7 @@ Evidence:
 
 Keeping Deck Lab running, safe and believable, by Matt as the household's admin and by Claude Code working for him at the PC. It covers the server and its Cloudflare tunnel and "Deck Lab is off" page, the PostgreSQL database with its nightly backup, export, check and restore check, the audit trail on #/activity, the `python -m decklab.db` commands Claude works through (previews, `--expect` guards, `-m` messages, exit codes), the card data's background refresh, Forge upkeep and the Safari Simulator suite. Every write is one audited change set, Matt's own command-line writes are recorded as his, and backups are checked by restoring them.
 
-Open: E11-S02, E11-S08, E11-S12, E11-S16, E11-S21, E11-S28, E11-S30, E11-S31, E11-S34, E11-S35.
+Open: E11-S02, E11-S08, E11-S12, E11-S16, E11-S21, E11-S28, E11-S30, E11-S31, E11-S34, E11-S35, E11-S36, E11-S37, E11-S38, E11-S39, E11-S40, E11-S41, E11-S42, E11-S43.
 
 **E11-S01** · Matt · must · M · built
 
@@ -4401,3 +4401,115 @@ Evidence of gap (2026-10-28): `decklab/lib/dbstatus.py` and `decklab/web/version
 Gap: the bounded read API and Settings view remain to build.
 
 First slice: return a limited recent history plus last-success summaries from the existing maintenance-run records, using the normal admin guard and sanitised outcome codes. Build the Settings view with success/failure/no-history/database-down fixtures and a still-current restore check older than the newest backup; opening it must never call backup, export, check or restore-check execution. No real job or restore is needed to develop it.
+
+**E11-S36** · Claude Code · should · M · missing
+
+As the operator maintaining Deck Lab, I want the Tokens page split at its editing boundary, so that adding token features does not require working in an oversized script.
+
+- Given the split, then the Tokens page and its add/edit/conflict sheets behave as before, including physical row identities and profile/route guards.
+- Given classic browser loading and the test runners, then every new script is registered in the required order and existing global callers keep working.
+- Given the length audit, then tokens.js and its extracted module are each at or below the existing 1,200-line limit, with no raised threshold or compressed code.
+
+Evidence of gap (2026-10-28): `python scripts/audit_source_lengths.py --check` fails on `decklab/web/tokens.js` at 1,460 lines; it is the only owned file above the limit.
+
+Gap: the workflow extraction and loader/test updates remain to build.
+
+First slice: move the contiguous add/edit workflow from openTokenSheet through showTokenConflict into a focused script, preserving function bodies and shared-state ownership. Check token UI/conflicts, details-parser parity and explicit asset order. [SOURCE_AUDIT.md](../SOURCE_AUDIT.md#maintenance-backlog) owns the measured boundary and verification plan; no token data is changed.
+
+**E11-S37** · Claude Code · should · M · missing
+
+As the operator extending the editor, I want Paste and Start from separate from card search, so that new search scopes do not make the same module harder to understand.
+
+- Given the extraction, then Paste/replace previews, Undo, precon starts and starts from another deck keep their current outputs and permissions.
+- Given the editor and Quick edit, then shared state, viewport listeners and script initialisation retain their order and have one owner.
+- Given existing callers and test loaders, then their global functions remain available and every extracted script is loaded explicitly without duplicate listeners.
+
+Evidence of gap (2026-10-28): `decklab/web/editor-cards.js` is 1,137 lines and combines card search with mergedLists/openPaste/mergeLines/replaceLines and the Start from workflows.
+
+Gap: these responsibilities still share the search module.
+
+First slice: extract the contiguous Paste/Start from helpers, leaving search and viewport initialisation in their current owner. Run existing paste/replace/start and Quick edit checks before separately extending EDHREC search (E9-S07). The [maintenance owner](../SOURCE_AUDIT.md#maintenance-backlog) records the loader and moved-body checks; this slice changes no editor behaviour.
+
+**E11-S38** · Claude Code · should · M · missing
+
+As the operator maintaining collection imports, I want CSV parsing separate from HTTP collection edits, so that changes to import formats and grouped problems can be reviewed without navigating unrelated writes.
+
+- Given supported and malformed uploads, then parsing produces the same rows, source line numbers, skipped basics and refusals as before.
+- Given callers or tests using the existing parser functions and mutable limits, then they still reach the authoritative implementation and limits rather than copied bindings.
+- Given the import preview/apply flow, then permissions, preview lifetime, locking, stale checks and raw-upload retention remain unchanged.
+
+Evidence of gap (2026-10-28): `decklab/lib/api/collection_edit.py` is 1,116 lines; detect, _source_rows and read_upload share a module with row views, single/bulk writes and persisted preview handling.
+
+Gap: import parsing has no focused owner apart from the HTTP edit module.
+
+First slice: move format detection, row conversion and upload reading to a parser module while retaining route/preview ownership and compatibility for read_upload, match and patched limits. Keep grouped import problems (E7-S03) as a separate feature change. [SOURCE_AUDIT.md](../SOURCE_AUDIT.md#maintenance-backlog) specifies the exact preservation and test scope.
+
+**E11-S39** · Claude Code · could · M · missing
+
+As the operator maintaining the inventory backend, I want snapshot conversion separate from transaction coordination, so that row-format changes can be reviewed without disturbing locks and cache behaviour.
+
+- Given the same database rows and schema capabilities, then the converted snapshot preserves canonical bytes, hidden token/watchlist identities, locations and both revisions.
+- Given an inventory operation, then transaction boundaries, revision caches, lock acquisition, write diffs and rollback behaviour retain their current owners and outputs.
+- Given existing imports and patched names, then they resolve to one authoritative owner and inventory-contract goldens remain unchanged.
+
+Evidence of gap (2026-10-28): `decklab/lib/inventory/pg.py` is 1,133 lines and combines snapshot/_render conversion with PgInventory caching, audit readers and apply/write coordination.
+
+Gap: snapshot conversion still shares that transaction module.
+
+First slice: extract table-row conversion and its fixed serialization helpers while leaving PgInventory, _diff and _take_lock in place. Compare converted snapshots against existing goldens and use disposable databases for location, persistence and rollback checks. The [maintenance owner](../SOURCE_AUDIT.md#maintenance-backlog) records the boundary; this is no schema or live-data migration.
+
+**E11-S40** · Claude Code · should · M · missing
+
+As the operator changing Deck Lab's tests, I want large test modules split by responsibility without changing discovery, so that focused checks stay easy to find and sharding never loses or repeats cases.
+
+- Given the split, then every pre-existing concrete test case is discovered exactly once; any deliberate new guards are accounted for separately.
+- Given other tests importing shared fixtures or base classes, then those established support paths remain usable and concrete test classes are not re-exported.
+- Given the four-shard suite, then all discovered tests belong to exactly one shard and fixture setup/cleanup retains its scope.
+
+Evidence of gap (2026-10-28): `test_inventory_contract.py` is 1,173 lines and `test_api_permissions.py` 1,126; many modules import their shared support. Prior [source audits](../SOURCE_AUDIT.md) record duplicate discovery and patch ownership as split hazards.
+
+Gap: the contract and permission groups still need bounded structural splits.
+
+First slice: move concrete PostgreSQL contract cases to their own discoverable module while keeping adapt/scenario/golden support at its established path. Then split permission route groups with PermissionTestCase retained. Compare discovery before/after and run moved groups plus support consumers; the [maintenance owner](../SOURCE_AUDIT.md#maintenance-backlog) owns the validation detail.
+
+**E11-S41** · Claude Code · should · M · missing
+
+As the operator reading Deck Lab's source, I want comments and module headers to describe current storage, privacy and lifecycle behaviour, so that stale explanations do not guide a later change in the wrong direction.
+
+- Given the named comment-audit scope, then claims about database/file backends, rollback, script order and viewer permissions match current implementation and callers.
+- Given an intentional test backend, compatibility path or safety invariant, then its accurate explanation is retained; dated history remains dated history.
+- Given each audited module, then findings record what was checked and corrected, without blanket deletion, repetitive prose or behaviour changes.
+
+Evidence of gap (2026-10-28): play_records.py says decks are still files; accessories.py calls the file backend tests/rollback; editor.js says eight scripts; tokSpacePicker describes Home and each person despite seenSpaces filtering; test_api_permissions.py's header overstates anonymous/local access.
+
+Gap: those claims and their surrounding transaction/privacy comments need a current audit.
+
+First slice: review and correct these named headers/comments against actual runtime owners, guard rules and index.html, then check the neighbouring module-level descriptions in collection_edit.py and deck.js. The [maintenance owner](../SOURCE_AUDIT.md#maintenance-backlog) fixes the scope. Comment-only changes need diff/syntax checks as applicable, not new tests that merely assert prose.
+
+**E11-S42** · Claude Code · should · S · missing
+
+As the operator following repository instructions, I want developer command examples to match the current typed commands, so that upkeep follows the supported database workflow.
+
+- Given receipt instructions, then they describe the supported preview/expect/apply contract without claiming a preview cannot bind a later apply.
+- Given product-kit instructions, then they point to the implemented typed command rather than claiming no CLI exists.
+- Given storage and rollback wording in the audited instructions, then current runtime guidance is database-only while historical tags and test-backend guidance keep their proper context.
+
+Evidence of gap (2026-10-28): AGENTS.md's receipt workflow contradicts inv_receive.py and README.md; its product-kit workflow contradicts its own earlier typed-command description. CLAUDE.md includes AGENTS.md rather than owning a separate copy.
+
+Gap: these instructions and their matching README examples need reconciliation.
+
+First slice: compare the named AGENTS.md instructions and matching README examples with inv_receive.py and the product-kit parser/operation, correct the contradictions, and check safe command help. Do not run an apply or touch household records. The [maintenance owner](../SOURCE_AUDIT.md#maintenance-backlog) records the finite scope and evidence.
+
+**E11-S43** · Claude Code · should · S · missing
+
+As the operator keeping source files maintainable, I want CI to run the existing length guard, so that files cannot silently grow beyond the repository's established review limit.
+
+- Given the owned-source inventory is green, then the cheap CI workflow runs audit_source_lengths.py --check and fails on an owned file over 1,200 lines.
+- Given ignored caches, pinned upstream exclusions or tracked/untracked source, then the check retains the existing inventory semantics and boundary, without needing PostgreSQL, card data or Forge.
+- Given the workflow change, then lint's existing real-error rules remain in place and temporary-repository fixtures cover the check's boundary and exclusions.
+
+Evidence of gap (2026-10-28): .github/workflows/lint.yml runs Ruff only and no workflow invokes audit_source_lengths.py; the local guard currently fails on tokens.js.
+
+Gap: CI invocation and its regression coverage remain to build after E11-S36 clears the known violation.
+
+First slice: after the Tokens split, add the existing guard to the cheap lint workflow and verify its 1,200/1,201-line boundary with temporary Git fixtures. Keep its upstream exclusions and threshold unchanged. This row is BLOCKED on E11-S36, with no baseline exception that would hide the current excess; [SOURCE_AUDIT.md](../SOURCE_AUDIT.md#maintenance-backlog) owns the gate.
