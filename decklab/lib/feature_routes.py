@@ -8,9 +8,15 @@ and accessory saves with a local picture (accessories.MAX_SAVE_BODY).
 """
 
 
+def _field_membership_view(**params):
+    """Load Forge's membership adapter only for an allowed field request."""
+    from decklab.lib.api.field_membership import membership_view
+    return membership_view(**params)
+
+
 def dispatch(handler, route, query):
     from decklab.lib.api import (accessories, accessory_undo, activity, arrivals, activity_mixed_undo, activity_undo, assembly, assembly_completion, assembly_standins, assembly_ticks, box_check, box_repair, collection, compare, considering, collection_edit, collection_locations, collection_trade, cover, deck_printings, edhrec, editor, history,
-                                 field_membership, library_forge, maintenance, opponents, play_pods, play_records, precon_coverage, precons, products, product_tokens, rankings, receipts, rename, retirement, shopping, shopping_order_changes, shopping_orders, shopping_queue, sideboard_preview, swaps, token_cards, token_plan, tokens, variant_queue, visits, wishlist_undo)
+                                 library_forge, maintenance, opponents, play_pods, play_records, precon_coverage, precons, products, product_tokens, rankings, receipts, rename, retirement, shopping, shopping_order_changes, shopping_orders, shopping_queue, sideboard_preview, swaps, token_cards, token_plan, tokens, variant_queue, visits, wishlist_undo)
     from decklab.lib.api.common import MAX_BODY
 
     gets = {
@@ -40,7 +46,7 @@ def dispatch(handler, route, query):
         ("receipt",): (receipts.receipt_view, ("order",)),
         ("arrivals",): (arrivals.arrivals_view, ()),
         ("rankings",): (rankings.rankings_view, ("format",)),
-        ("field", "membership"): (field_membership.membership_view, ("id", "version")),
+        ("field", "membership"): (_field_membership_view, ("id", "version")),
         ("library", "forge"): (library_forge.library_forge_view, ()),
         ("product",): (products.product_state, ("stem",)),
         ("accessories",): (accessories.accessories_view, ()),

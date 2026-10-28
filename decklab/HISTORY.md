@@ -2,6 +2,24 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Isolated field-route imports (2026-10-28)
+
+A standalone Shopping HTTP regression returned 500 instead of its expected 405:
+the shared feature router eagerly imported the field-membership adapter while
+the disposable fixture had replaced Forge with a stand-in that is not a package.
+Earlier test discovery could preload the real adapter and mask this ordering
+problem. This identifies a fixture/import boundary, not a proven live-server fault.
+
+The router now defers just that adapter until an allowed field request reaches
+its callable. Method, query and deck-selector guards still run first, and exact
+validated keywords, omitted defaults and the adapter's patch seams are preserved.
+No field-page behavior or simulation is changed. Root's protected 22-test group
+passes without skips, covering first-request method refusals, a deterministic
+import sentinel even after preloading, original field routes and the pod body cap.
+An initial positional wrapper failed the existing exact-call assertions; the
+final keyword-preserving version passed. Independent review, Ruff and whitespace
+are clear. Logs and host exit 0 are in `decklab-buying-kernel-61918739`.
+
 ## Reviewed Commander pod records (2026-10-28; E4-S18, E9-S16)
 
 Game log now has a separate **Commander pods** section, also when filtered to a
