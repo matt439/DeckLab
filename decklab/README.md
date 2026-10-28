@@ -1100,6 +1100,13 @@ python -m decklab.db collection list|merge|edit ...                         # a 
 python -m decklab.db tokens list|check|add|edit|remove ...                  # a space's token cards
 ```
 
+A recorded receipt (here or on the Receive delivery page) also keeps an
+**arrival notice** for each home player whose decks it brought missing cards
+for (Played by `either`: both), in that profile's own settings; `receive
+--apply` says who will see one. The player sees it above the page on their next
+visit, each deck with its count, until they dismiss it (GET /api/arrivals, POST
+/api/arrivals/dismiss; E6-S19). A notice that can't be kept never fails the receipt.
+
 `order record` changes only supplied `--seller`, `--ordered-on`, `--notes` and
 `--source` fields. Repeat `--source` to replace the whole source list, or use
 `--clear-sources` to clear it; an empty string clears a text field. It keeps the

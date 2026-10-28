@@ -33,6 +33,10 @@ refuses, as the Receipts page does, when the deck tables couldn't be refreshed f
 after it. A refresh that fails at apply leaves the decks as they were
 and the receipt saved, the tables on the Decks page's Tables out of date list.
 
+After an apply, each home player whose decks the receipt brought missing cards for gets an
+arrival notice on their next visit to Deck Lab (E6-S19, lib/arrivals.py); the command says who,
+with the counts. Keeping a notice never fails the receipt.
+
 Exit codes: 0 done (or previewed); 1 refused, or --apply with something still required; 2 the
 database is unavailable; 3 received, but the deck tables couldn't be refreshed (stderr says
 why; the receipt itself is saved).
@@ -46,7 +50,7 @@ import sys
 from datetime import datetime, timedelta, timezone
 
 from decklab.db import cli_actor
-from decklab.lib import inventory
+from decklab.lib import arrivals, inventory
 from decklab.lib.inventory import receive, rules
 
 FOLLOW_UP_FAILED = 3            # received, but the deck tables' refresh didn't finish
@@ -167,9 +171,21 @@ def run(args):
         print("Preview only; nothing changed. Add --date YYYY-MM-DD --apply --expect TOKEN to receive this preview.")
         return 0
     message = f"receive {args.order}: " + ", ".join(c["id"] for c in components)
-    _, summary = inventory.apply(operation, actor, message, expected_revision=before.revision)
+    saved, summary = inventory.apply(operation, actor, message, expected_revision=before.revision)
     print("Received.")
-    return 0 if _say_tables(_tables(summary)) else FOLLOW_UP_FAILED
+    ok = _say_tables(_tables(summary))
+    _say_arrivals(arrivals.record(before, saved, args.order, date, actor,
+                                  log=lambda text: print(f"  {text}", file=sys.stderr)))
+    return 0 if ok else FOLLOW_UP_FAILED
+
+
+def _say_arrivals(told):
+    """Print who will see an arrival notice on their next visit (E6-S19), and for how many decks."""
+    for item in told.values():
+        decks = len(item["decks"])
+        cards = sum(count for _, count in item["decks"])
+        print(f"  {item['name']} will see an arrival notice: {cards} card{'s' if cards != 1 else ''} for "
+              f"{decks} deck{'s' if decks != 1 else ''}.")
 
 
 def _preview_token(revision, operation):

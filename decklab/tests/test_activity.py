@@ -734,6 +734,19 @@ class HeadlineTests(unittest.TestCase):
                        before={"profile_id": "user1", "key": "theme", "value": "light"},
                        after={"profile_id": "user1", "key": "theme", "value": "dark"})
         self.assertEqual(self.show([setting], actor="user1")["headline"], "User1 set the theme to dark")
+        # An arrival notice's parts (E6-S19) read as one notice, never as settings or their JSON.
+        def part(op, key, value):
+            row = {"profile_id": "user1", "key": key, "value": value}
+            return _row("profile_setting", op, {"profile_id": "user1", "key": key},
+                        before=row if op == "DELETE" else None, after=None if op == "DELETE" else row)
+        first = '{"o":"2026-10-07-shop-a","on":"","d":[["casual/gruul",1]],"x":0,"t":1}'
+        kept = [part("INSERT", "arrival_abcdefghij_a", first), part("INSERT", "arrival_abcdefghij_b", '{"d":[]}'),
+                part("DELETE", "arrival_klmnopqrst_a", first)]
+        self.assertEqual(self.show(kept, actor="user1")["headline"],
+                         "User1 kept an arrival notice for order 2026-10-07-shop-a")
+        gone = [part("DELETE", "arrival_abcdefghij_a", first), part("DELETE", "arrival_abcdefghij_b", '{"d":[]}'),
+                part("DELETE", "arrival_klmnopqrst_a", first)]
+        self.assertEqual(self.show(gone, actor="user1")["headline"], "User1 dismissed 2 arrival notices")
         mode = _row("simulation_mode", "UPDATE", {"id": True}, before={"mode": "admins"}, after={"mode": "paused"})
         self.assertEqual(self.show([mode])["headline"], "Matt set simulations to paused")
         kit = [_row("accessory", "INSERT", {"id": f"s{i}"}, after=_accessory("shared")) for i in range(2)]

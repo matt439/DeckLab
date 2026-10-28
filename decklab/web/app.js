@@ -168,6 +168,7 @@ async function chooseProfile(profile) {
   if (!state.forcedTheme) applyTheme(theme);
   drawShell();                        // shell.js: the nav and the avatar menu for this person
   loadSimulations();                  // who may start runs depends on who's chosen
+  loadArrivalNotices(profile);        // arrival-notices.js: deliveries with cards for their decks (E6-S19)
   route();
 }
 
@@ -181,6 +182,7 @@ async function switchProfile(ask = true) {
   if (path === "edit" || path === "new") history.replaceState(history.state, "", "#/library");
   session.remove("profile");
   state.profile = null;
+  clearArrivalNotices();
   hideShell();
   route();
 }

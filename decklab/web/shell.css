@@ -241,6 +241,15 @@ svg.icon-more { stroke-width: 4; }
 .footer:has(p:empty) { display: none; }
 .build-warning { margin-top: var(--s-4); }
 .build-warning p:last-child { margin-bottom: 0; }
+/* Arrival notices (arrival-notices.js, E6-S19): above the page until dismissed; the button wraps under the words
+   on a phone. */
+.arrival-notices { display: grid; gap: var(--s-3); margin-top: var(--s-4); }
+.arrival-notices[hidden] { display: none; }
+.arrival-notice { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2) var(--s-4); }
+.arrival-notice .box-head { flex-basis: 100%; }
+.arrival-notice .box-head h2 { margin: 0; font-size: var(--fs-md); }
+.arrival-notice p { flex: 1 1 16rem; margin: 0; overflow-wrap: anywhere; }
+.arrival-notice[hidden] { display: none; }
 
 /* ------------------------------------------------------------ settings */
 
