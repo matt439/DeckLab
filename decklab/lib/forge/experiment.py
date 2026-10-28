@@ -101,6 +101,8 @@ from .experiment_analysis import (
 )
 
 ENGINE_CHANGED = "The engine changed during this run: play it again."
+PLAN_IDENTITY_UNKNOWN = ("The experiment's current engine identity could not be confirmed read-only, so its "
+                         "remaining game count is unknown. No games were started.")
 SEATS_CHANGED = ("The arm's result for {pair} doesn't put the lists in the seats of its control's games, so it "
                  "can't be compared: delete {path} and play it again.")
 CONTROL_CHANGED = ("The control of {pair} isn't the one the arm's result {path} was played on (other seeds): delete "
@@ -467,12 +469,14 @@ def _games(result):
 
 
 def _layout(spec, *, results_dir=None, logs_dir=None, control_dir=None, control_logs_dir=None, only=None,
-            games=None, entries=None, eng=None):
+            games=None, entries=None, eng=None, read_only=False):
     """Everything plan(), run() and measures() share: the folders, each pair's control (its key,
     where it is, its game numbers) and each (arm, pair) item (its entries, key, override sets,
     seed pair, point of view, or why it's skipped). eng is the engine the controls' keys are
     worked out with: the runs' (_run_engine) or, without one, the card log's engine of today
-    (engine.today(KIND_DECKLAB): no Java, as replay's dry run plans)."""
+    (engine.today(KIND_DECKLAB): no Java, as replay's dry run plans). The plan opts into
+    read_only: no deployment or persistent identity writes, and an unconfirmed engine
+    cannot make claims about cached controls or remaining games."""
     results, logs, control, control_logs = _canonical_dirs(spec, results_dir, logs_dir, control_dir,
                                                            control_logs_dir)
     target = games or spec["games"]
@@ -489,12 +493,16 @@ def _layout(spec, *, results_dir=None, logs_dir=None, control_dir=None, control_
             entries[ref] = _entry(ref)
         return entries[ref]
 
-    try:
-        overrides.ensure_deployed(common._user_dir())       # keys are worked out from what workers load
-    except NotImplementedError:
-        pass
+    if not read_only:
+        try:
+            overrides.ensure_deployed(common._user_dir())       # keys are worked out from what workers load
+        except NotImplementedError:
+            pass
     adopted = _adopted()
-    eng = eng or engine.today(engine.KIND_DECKLAB)
+    eng = eng or (engine.today(engine.KIND_DECKLAB, read_only=True) if read_only
+                  else engine.today(engine.KIND_DECKLAB))
+    if read_only and not eng.get("complete"):
+        raise ForgeError(PLAN_IDENTITY_UNKNOWN)
     controls = {}
     given = _given_controls()
 
@@ -595,7 +603,7 @@ def plan(spec, *, results_dir=None, control_dir=None, only=None, games=None, log
     "arm_games", "games"}}. Nothing is played or written."""
     spec = _spec(spec)
     lay = _layout(spec, results_dir=results_dir, logs_dir=logs_dir, control_dir=control_dir,
-                  control_logs_dir=control_logs_dir, only=only, games=games)
+                  control_logs_dir=control_logs_dir, only=only, games=games, read_only=True)
     controls = [{"pair": c["pair"], "key": c["key"], "source": c["source"], "have": len(c["numbers"]),
                  "missing": c["missing"], "card_shas": [e["card_sha"] for e in c["entries"]],
                  "kind": c["entries"][0]["kind"]}

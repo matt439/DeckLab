@@ -4110,6 +4110,8 @@ Evidence:
 
 Gap: criterion 1 isn't met: the experiment dry run lists games per arm and in total but gives no time estimate (the field dry run does). Adopting still means editing `overrides/sets.json` or `simulation.json` by hand.
 
+Prerequisite built 2026-10-28 ([HISTORY.md](../HISTORY.md#read-only-experiment-planning-2026-10-28-e11-s16-prerequisite)): dry-run planning now opts into explicit-kind read-only engine identity and layout. It preserves fork/control-key semantics without deployment, persistence or creating run folders, and refuses unconfirmed identity before cached-result reads. Normal run/measures defaults and the no-argument rankings reader remain unchanged. Root's protected 133-case integration passed without skips, including 19 new fixtures; source checks and independent review pass. Existing arm-folder/spec compatibility and real-run readiness remain separate. No time estimate is wired in yet.
+
 First slice (reserve review, 2026-10-28): add an estimate for only the remaining experiment games, reusing the field's pair-speed measurements with explicitly labelled fallback assumptions. Keep cached controls, skipped arms, worker assumptions and a zero-work plan accurate in text and JSON. Test with stored timing/result fixtures; --dry-run must launch no games. Changing adoption controls or running real experiments remains later work with the existing gates.
 
 Review note: holds two needs (adopting fixes, running experiments) and overlaps E3-S20; adoption without hand edits could be its own story.

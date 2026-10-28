@@ -2,6 +2,34 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Read-only experiment planning (2026-10-28; E11-S16 prerequisite)
+
+Experiment dry runs previously shared a layout path that could deploy adopted
+overrides, remember engine metadata or create a performance-mode run folder.
+Planning now opts into read-only identity/layout behavior before examining cached
+controls. An unconfirmed engine/deployment identity gives a fixed explanation
+that the remaining count is unknown; it cannot masquerade as a fresh cache miss.
+
+The narrow `engine.today(kind, read_only=True)` mode requires an explicit engine
+kind and preserves normal fork-release, AI/patch and control-key semantics,
+including existing read-only remembered fallback metadata. It bypasses normal
+held memo, remembering, readiness selection and run-folder creation/deployment.
+It inspects only the expected existing mode-specific folder and deployment.
+Run/measures defaults and the no-argument rankings reader remain unchanged.
+Plan output/counts stay unchanged when identity is confirmed. This is engine
+and control-cache identity, not proof that an edited arm recipe remains compatible
+with its saved folder; real runs retain their separate compatibility checks.
+
+Root's protected five-module engine/experiment/rankings integration passed 133
+tests without skips, including 9 new identity/key and 10 new planner/CLI cases.
+Fixtures compare stock, resource-fork, legacy-fork, offline and performance-mode
+keys, reject unknown identity before cached reads, and guard deployment,
+remembering, setup, pool/runner/subprocess and file writes. The existing dry-run
+fixture prepares only its disposable folder before asserting no deployment in
+both previews. Independent/root review, Ruff, diff and source-length checks pass.
+Timing integration remains the next E11-S16 slice. No real Forge, installation,
+configuration, service, server or cached household result qualified this change.
+
 ## Conditional storage scenario for pending deliveries (2026-10-28; E8-S19)
 
 Home-record readers can inspect a separate pending-delivery scenario beside the
