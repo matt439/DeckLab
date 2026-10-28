@@ -39,14 +39,14 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 20 | 17 | 1 | 1 | 1 |
 | [E3: Test a deck](#e3-test-a-deck) | 15 | 12 | 3 | 0 | 0 |
 | [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 22 | 16 | 2 | 3 | 1 |
-| [E5: Decide what to buy](#e5-decide-what-to-buy) | 22 | 17 | 2 | 1 | 2 |
+| [E5: Decide what to buy](#e5-decide-what-to-buy) | 22 | 18 | 1 | 1 | 2 |
 | [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 20 | 18 | 0 | 0 | 2 |
 | [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 28 | 23 | 1 | 4 | 0 |
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 19 | 14 | 2 | 1 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 20 | 14 | 1 | 4 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 35 | 31 | 1 | 1 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 39 | 25 | 6 | 5 | 3 |
-| **Total** | **255** | **201** | **20** | **20** | **14** |
+| **Total** | **255** | **202** | **19** | **20** | **14** |
 
 Counted from the story headers on 2026-10-28 after the current feature and maintenance work. The reviews added five feature stories and eight hygiene stories, and corrected E1-S12 from missing to partial.
 
@@ -1292,7 +1292,7 @@ Next slice: after E4-S18's pod record model and result form, extend the counter 
 
 How Matt, with User1's wishes and Claude's research, goes from "this deck is short" to a decided purchase. On the page: each deck's sortable Prices table of converted Scryfall estimates, and Shopping's Decks still missing cards, Missing cards across decks, To buy, By shop and Long-term plan, with queue add, edit, move and remove for admins and reprint notices from cached Scryfall data. Live Australian shop checks, dated buylists and `watchlist apply` stay with Claude on the PC; recording an order, which reduces the queue rows it fulfils (Shopping's New order or `order add --fulfils`), belongs to E6. By design there are no spending totals and no collection value.
 
-Open: E5-S08, E5-S15, E5-S17.
+Open: E5-S08, E5-S15.
 
 **E5-S01** · Matt · must · M · built
 
@@ -1532,7 +1532,7 @@ Evidence:
 - `decklab/web/shopping.js`: shopQueueRow, shopLongTerm
 - `decklab/tests/test_shopping_ui.py`: test_a_member_sees_delivery_details_not_receive_or_done, test_queue_links_deck_titles_without_interfering_with_the_card_viewer
 
-**E5-S17** · Matt · could · M · partial
+**E5-S17** · Matt · could · M · built
 
 As a deck builder, I want a tested swap that needs a card I don't own to show what that card costs in Australia, and let me put it in the queue, so that I can act on a "Better" verdict right away, judging improvement per dollar.
 
@@ -1549,7 +1549,9 @@ Evidence:
 - `variant.js`/CSS: home-only read-only facts, partial/unknown/unpriced and zero-AUD handling, explicit omission labels and sequenced profile/route-bound refreshes.
 - Root's combined protected API/UI/privacy batch passed 66 tests without skips, including 31 new backend and 11 new UI cases. Independent/root review, whole-repo Ruff, syntax, length and diff checks pass. Final guarded discovery preserved all 9,123 baseline cases under the class-move map; 9,353 current cases are unique with no import errors.
 
-Gap: an explicit reviewed queue save for home admins, binding current source/supply/queue state and showing existing requests rather than silently duplicating them. Preserve any chosen printing/finish, default to any nonfoil otherwise, and use the deck as the supported queue source with the saved test reference as provenance unless durable test-source validation is deliberately extended. This remains source implementation work; browser/device and genuine runtime qualification are separate. See [HISTORY.md](../HISTORY.md#buying-information-for-saved-test-additions-2026-10-28-e5-s17-read-only-slice).
+Built reviewed queue action (2026-10-28): home admins explicitly preview one missing added card, defaulting to any nonfoil or preserving the selected exact printing/finish. The server fixes quantity/deck/source and binds its short-lived actor/listener receipt to the entire saved result, inventory/deck revisions, current deck SHA and proposal. The fresh transaction rechecks all facts and delegates one existing watchlist operation. All states, purposes and printing/finish choices of an existing playable-card request block a duplicate and are shown for Shopping review. Supported deck provenance plus a saved-test note is used; price/stock observations are never invented from estimates. The UI prevents stale/detached/profile/route callbacks from saving or showing another context's response, discards attempted save receipts and directs uncertain outcomes to Shopping.
+
+Queue evidence: `api/variant_queue.py`, the two `feature_routes.py` POST registrations, `variant.js`/CSS, 28 new backend and 12 new UI fixture cases. Root's combined protected queue/buying/API/privacy/UI integration passed 119 tests without skips. Browser/device and genuine PostgreSQL/runtime audit qualification remain separate and unverified. See [HISTORY.md](../HISTORY.md#reviewed-shopping-requests-from-saved-tests-2026-10-28-e5-s17).
 
 **E5-S18** · Matt · must · S · built
 

@@ -2,6 +2,36 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Reviewed Shopping requests from saved tests (2026-10-28; E5-S17)
+
+Home admins can explicitly review one missing addition on a finished saved test,
+keep any nonfoil or choose an exact printing/finish, and add the reviewed request
+to Shopping. Quantity, deck, supported deck source and saved-test note come from
+the server. Existing playable-card intent across all states, purposes and
+printing/finish choices blocks duplication and directs review to Shopping.
+Estimates are never copied into retailer price/stock observations.
+
+The two POST routes keep bounded process-local ten-minute reviews, tied to actor
+and listener, the entire saved result, current inventory/deck revisions, deck
+SHA and proposal. The fresh inventory transaction re-pins its own snapshot,
+rechecks expiry/visibility/result/supply/queue/printing, then delegates one pure
+watchlist operation with the normal web actor. No game, deck or source format
+change is made. Successful receipts are single-use; revision checks prevent a
+second addition after an uncertain saved outcome.
+
+The sheet requires a separate review and save. Mounted controls, profile/route,
+source-data and sheet ownership reject stale picker/preview/apply replies.
+Pending actions block duplicates; attempted save receipts are discarded locally,
+and a lost answer directs the user to check Shopping before reviewing again.
+The read-only buying summary remains available to home members as before.
+
+Root's protected eight-module integration passed 119 tests without skips,
+including 28 new backend and 12 new UI fixtures. Independent and root source
+review, real-error Ruff, syntax, source-length and diff checks pass. Fixtures
+prove one inventory.apply call with the web actor and only the intended queue
+append; genuine PostgreSQL audit, browser/device and runtime acceptance remain
+unverified. No live queue/database/server or Forge operation was performed.
+
 ## Where precon copies go (2026-10-28; E7-S15 precon slice)
 
 Page precon adds now carry the informational Where these go guide into the

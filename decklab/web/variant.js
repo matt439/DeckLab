@@ -12,6 +12,7 @@ everything out (GET /api/variant, /api/variants, /api/variant/estimate); the pag
   words; once it's over, the verdict sentence, each opponent's difference bar, "How this test works",
   and Play more, Back to the editor and Save this change (which asks before replacing another draft).
   It asks again every POLL_MS while the test waits or plays, and stops asking once its page is left.
+  Finished home tests also show buying facts; home admins can separately review missing additions for Shopping.
 - The editor (editor-screen.js drawBar calls vtTestRow and vtSyncTestRow): "Test this change" while the
   deck or its commander differs from the saved list and the size is the same; disabled, with the reason,
   for a size change or a sideboard-only change. Below 700 px it's a second row of the bottom bar, full
@@ -265,7 +266,7 @@ function vtBuyingSection(page, data) {
   if (rows.length) section.append(el("ul", { class: "vt-buying-list" }, rows.map(row => {
     return el("li", { class: "vt-buying-row" }, el("h3", { text: `${row.name}: ${plural(row.added, "added copy", "added copies")}` }),
       el("p", { class: "vt-buying-coverage", text: vtBuyingCounts(row, buying.availability_ready) }),
-      vtBuyingPrice(row), vtBuyingRequests(row, buying.queue_ready));
+      vtBuyingPrice(row), vtBuyingRequests(row, buying.queue_ready), vtQueueButton(page, data, section, row));
   })));
   const basics = (Array.isArray(buying.basic_added) ? buying.basic_added : []).filter(row => row
     && typeof row.name === "string" && Number.isSafeInteger(row.added) && row.added > 0);
@@ -291,6 +292,130 @@ function vtBuyingSection(page, data) {
     section.append(retry);
   }
   return section;
+}
+
+/** Queue intent is an explicit reviewed decision, separate from the saved test and its price evidence. */
+function vtQueueAllowed() { return vtBuyingAllowed() && isAdminProfile() && mayDo("orders"); }
+function vtQueueButton(page, data, section, row) {
+  const facts = data.buying;
+  if (!vtQueueAllowed() || data.status !== "done" || !facts?.ready || !facts.availability_ready || !facts.queue_ready
+      || !Number.isSafeInteger(row.missing_added) || row.missing_added <= 0 || !Array.isArray(row.queued) || row.queued.length) return null;
+  const button = el("button", {type: "button", class: "btn vt-queue-add", text: "Review for Shopping",
+    "aria-label": `Review ${row.name} for Shopping`, onclick: () => vtQueueSheet(page, data, section, row, button)});
+  return button;
+}
+
+function vtQueueSheet(page, data, section, row, trigger) {
+  const sourceCurrent = () => page.token === routeToken && page.profile === state.profile?.id && vtQueueAllowed()
+    && page.host?.isConnected && page.host.contains(section) && section.contains(trigger) && page.data === data;
+  if (!sourceCurrent() || !trigger.isConnected || trigger.disabled || page.queueBusy || (page.queueSheet && !page.queueSheet.closed)) return null;
+  const view = {root: page.host, token: page.token, profile: page.profile};
+  const sheet = shopTrackQueueSheet(openSheet({title: `Queue ${row.name}`, onClose: () => {
+    if (page.queueSheet === sheet) page.queueSheet = null;
+    if (sourceCurrent() && trigger.isConnected && !trigger.disabled) trigger.focus({preventScroll: true});
+  }}), view);
+  page.queueSheet = sheet;
+  const context = () => !sheet.closed && sheet.dialog.isConnected && page.queueSheet === sheet
+    && page.token === routeToken && page.profile === state.profile?.id && page.host?.isConnected && vtQueueAllowed();
+  const current = () => context() && sourceCurrent();
+  let choice = {printing: "any", set: "", collector_number: "", finish: "nonfoil"}, review = null, pending = false, picking = false, saving = false;
+  const owned = button => current() && !pending && !picking && !button.disabled && button.isConnected && sheet.dialog.contains(button);
+  const words = el("p", {class: "sub"}), options = el("div", {class: "actions"});
+  const details = el("div", {class: "vt-queue-review"});
+  const problem = el("p", {class: "vt-error", role: "alert", hidden: true});
+  const printing = el("button", {type: "button", class: "btn", text: "Choose exact printing", onclick: async () => {
+    if (!owned(printing)) return;
+    picking = true; actions();
+    try {
+      const picked = await pickPrinting(row.name, {current: choice.printing === "exact"
+        ? {set: choice.set, number: choice.collector_number, finish: choice.finish} : null,
+      title: `Printing for ${row.name}`, onOpen: picker => shopTrackQueueSheet(picker, view)});
+      if (!current()) return;
+      if (picked?.set && picked.number && ["nonfoil", "foil", "etched"].includes(picked.finish)) {
+        choice = {printing: "exact", set: picked.set, collector_number: String(picked.number), finish: picked.finish};
+        reset();
+      }
+    } catch (error) { if (current()) showProblem(error.message); }
+    finally { picking = false; if (current()) actions(); }
+  }});
+  const any = el("button", {type: "button", class: "btn btn-quiet", text: "Any printing, nonfoil", onclick: () => {
+    if (!owned(any)) return;
+    choice = {printing: "any", set: "", collector_number: "", finish: "nonfoil"}; reset(); actions();
+  }});
+  options.append(printing, any);
+  sheet.body.append(el("p", {text: "Review the copies still needed for this tested change, then choose whether to add them to Shopping."}),
+    words, options, details, problem);
+  function showProblem(text) { problem.textContent = text; problem.hidden = false; }
+  function reset() {
+    review = null; clear(details); problem.hidden = true;
+    words.textContent = vtBuyingPrinting(choice);
+  }
+  function actions() {
+    printing.disabled = any.disabled = pending || picking || !!review;
+    sheet.body.setAttribute("aria-busy", String(pending || picking));
+    const buttons = [{text: pending ? saving ? "Saving..." : "Checking..." : "Review request", kind: "primary", disabled: pending || picking,
+      onclick: event => preview(event.currentTarget)}, {text: "Cancel", onclick: () => sheet.close()}];
+    if (review) buttons.splice(0, 1,
+      {text: pending ? "Saving..." : "Add to Shopping", kind: "primary", disabled: pending,
+        onclick: event => save(event.currentTarget)},
+      {text: "Change request", disabled: pending, onclick: event => {if (owned(event.currentTarget)) {reset(); actions();}}});
+    sheetActions(sheet, buttons);
+  }
+  async function preview(button) {
+    if (!owned(button) || !sheet.foot.contains(button) || review) return;
+    pending = true; problem.hidden = true; actions();
+    try {
+      const answer = await apiWrite("/api/variant/queue/preview", {test: page.test, name: row.name, choice: {...choice}});
+      if (!current()) return;
+      clear(details);
+      if (answer.ready === false) {
+        details.append(el("p", {text: answer.reason || "This card already has a queue request. Review it in Shopping."}),
+          vtBuyingRequests({name: row.name, queued: answer.existing}, true),
+          el("a", {class: "btn", href: "#/shopping", text: "Open Shopping"}));
+        if (answer.omitted > 0) details.append(el("p", {text: `${num(answer.omitted)} additional requests omitted.`}));
+        return;
+      }
+      const p = answer.proposal, quantity = Number(p?.quantity);
+      if (answer.ready !== true || answer.test !== page.test || answer.name !== row.name || p?.name !== row.name
+          || typeof answer.preview !== "string" || !answer.preview || !Number.isSafeInteger(quantity) || quantity <= 0
+          || quantity > row.added || p.state !== "ready" || !answer.deck?.id || !Number.isFinite(answer.expires_in)
+          || answer.expires_in <= 0 || ["printing", "set", "collector_number", "finish"].some(key => p[key] !== choice[key]))
+        throw new Error("The request could not be reviewed. Check again before saving.");
+      review = Object.freeze({token: answer.preview, expires: Date.now() + Math.min(answer.expires_in, 600) * 1000,
+        proposal: Object.freeze({...p})});
+      details.append(el("h3", {text: "Add this request?"}),
+        el("p", {text: `${plural(quantity, "copy", "copies")} of ${p.name}; ${vtBuyingPrinting(p)}; Ready to buy.`}),
+        el("p", {}, "For ", el("a", {href: deckHref(answer.deck.id, answer.deck.version), text: answer.deck.title || p.for})),
+        el("p", {}, "From ", el("a", {href: `#/variant?test=${page.test}`, text: "this saved test"})),
+        el("p", {text: answer.basis || "Current collection, incoming copies and existing queue requests checked."}),
+        el("p", {class: "sub", text: "The request keeps this printing choice. Check a shop's current price and stock before buying."}));
+    } catch (error) { if (current()) {review = null; showProblem(error.message);} }
+    finally { pending = false; if (current()) actions(); }
+  }
+  async function save(button) {
+    if (!owned(button) || !sheet.foot.contains(button) || !review) return;
+    if (Date.now() >= review.expires) {reset(); showProblem("This review expired. Review the request again."); actions(); return;}
+    const accepted = review; review = null; pending = true; saving = true; page.queueBusy = true; problem.hidden = true; actions();
+    try {
+      const answer = await apiWrite("/api/variant/queue", {preview: accepted.token});
+      if (!context()) return;
+      if (answer.saved !== true || answer.test !== page.test || answer.name !== row.name
+          || answer.quantity !== Number(accepted.proposal.quantity)) throw new Error("The save could not be confirmed.");
+      trigger.disabled = true; trigger.textContent = "Added to Shopping";
+      clear(sheet.body).append(el("p", {role: "status", text: `${plural(answer.quantity, "copy", "copies")} of ${row.name} added to Shopping.`}),
+        el("a", {class: "btn", href: "#/shopping", text: "Open Shopping"}));
+      sheetActions(sheet, [{text: "Done", kind: "primary", onclick: () => sheet.close()}]);
+      vtRefresh(page);
+    } catch (error) {
+      if (!current()) return;
+      clear(details);
+      showProblem(error.status === 409 || error.status === 400 || error.status === 403 ? error.message
+        : "The save could not be confirmed. Open Shopping to check before reviewing another request.");
+      details.append(el("a", {class: "btn", href: "#/shopping", text: "Open Shopping"}));
+    } finally { pending = false; saving = false; page.queueBusy = false; if (current() && sheet.body.contains(problem)) actions(); }
+  }
+  reset(); actions();
+  return sheet;
 }
 
 function vtLivePanel(page, data) {
