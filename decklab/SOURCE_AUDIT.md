@@ -481,3 +481,49 @@ child fixture paths were source-reviewed for explicit resource isolation, not
 claimed as a universal child sandbox. Interpreter startup and arbitrary .pth code
 remain outside this guard's promise. No live DB probe, credential read, server
 cleanup, service change or real Forge run qualifies this work.
+
+## Integrated feature checkpoint: 2026-10-28
+
+The accumulated feature source through `37ad455` has complete protected fixture
+evidence. Shards ran with `scripts/test_shard.py INDEX 4 --hang-after 1200`, at
+most two concurrently. The permanent pre-import guard was installed throughout.
+
+| Shard index | Discovered | Reported | Skips | Seconds | Source |
+|---|---:|---:|---:|---:|---|
+| 0 | 2,540 | 2,437 | 103 | 358.701 | `fd0e0fb` |
+| 1 | 2,434 | 2,269 | 136 | 302.343 | `fd0e0fb` |
+| 2 | 2,198 | 2,053 | 102 | 420.766 | `fd0e0fb` |
+| 3 | 2,419 | 2,254 | 79 | 446.009 | `37ad455` |
+| Total | 9,591 | 9,013 | 420 | | |
+
+All final logs report OK. The first three commands also returned exit 0; the
+rerun's complete OK footer was captured, while its initial exec session receipt
+was truncated and its host exit status was not recovered. No duplicate rerun
+was launched. Discovery preserves all 9,123 original IDs under the existing
+three-class move map, with 468 additional cases, no duplicates or loader errors.
+Class-level setup skips account for discovered cases absent from reported totals.
+
+The original shard 3 log is preserved: 26 failures and 8 errors were 34 subtest
+reports across 18 methods, all from obsolete stderr-only-SHA fixture helpers.
+Commit `37ad455` changes only `tests/test_collection_ops.py`, requiring the exact
+Private notice plus a separate fully validated 64-character final SHA line.
+Its fake visibility is scoped to the four existing list paths; the 20 original
+test bodies/assertions remain, apart from the required scoped fake context.
+All 46 affected targeted tests pass without skips, followed by the full shard.
+
+Independent review and a fresh protected discovery/hash proof establish unchanged
+production code, other fixtures and IDs/module membership. Only that test file
+differs among 1,120 hashed source files; it belongs to shard 3. Its sole external
+consumer uses unchanged constants/helpers. The initial source digest is
+`f96aa9adfb829b482ab33cef229f7cb760a4779aa878f6dccd9fb1110b602efd`;
+the final digest is
+`7424988c7a085245b405c24e9d9bd478703568c0a97621fa254b65bbc9ce62f9`.
+The local scratch evidence folder `decklab-fixture-fd0e0fb-yzgdhmmr` retains
+original/final manifests and discovery, all logs, and
+`qualification-result-final.json` with explicit composite provenance.
+
+Real-error Ruff, whitespace and length checks pass: 1,129 owned source files,
+none over 1,200 lines. Genuine PostgreSQL, named native/process checks, actual
+Forge, browser/device and live-runtime acceptance remain separate; earlier
+stopped actions were not retried. This checkpoint does not qualify live data,
+server changes, installations or deployments.

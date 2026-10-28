@@ -2,6 +2,29 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Integrated fixture checkpoint (2026-10-28)
+
+The protected four-shard suite qualifies the accumulated source through
+`37ad455`: 9,591 unique discovered cases, 9,013 reported tests and 420 skips,
+with no remaining failures. All 9,123 baseline cases survive the documented
+three-class module-move map, with 468 additional cases and no duplicate IDs or
+loader errors. Class-level setup skips explain the discovery/report difference.
+
+This is composite evidence: shards 0-2 passed on `fd0e0fb`; shard 3 exposed old
+CLI fixture helpers that assumed stderr contained only a SHA. Test-only commit
+`37ad455` validates the new privacy notice and exact final SHA line separately,
+using scoped fake visibility, while preserving the original 20 test bodies and
+assertions. Its 46 targeted checks and the entire corrected shard pass. The
+original failure log is retained. All production source, other fixtures and
+discovered IDs/module membership are unchanged, independently verified.
+
+Ruff, whitespace and the source-length guard pass (1,129 owned files, none over
+1,200 lines). The [source audit](SOURCE_AUDIT.md#integrated-feature-checkpoint-2026-10-28)
+records shard totals and evidence provenance. This is fixture qualification;
+genuine PostgreSQL, named native/process checks, Forge, browser/device and live
+runtime acceptance remain separate. No stopped action was retried, and no live
+probe, restart, service activation or deployment qualified this checkpoint.
+
 ## Privacy guidance on CLI reads (2026-10-28; E11-S21)
 
 Wishlist, collection, token, deck and accessory list commands now emit advisory
