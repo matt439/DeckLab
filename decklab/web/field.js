@@ -156,6 +156,7 @@ function fvHeadline(a, { panel = true } = {}) {
     tile.append(el("p", { class: "fv-rating" }, "Ranks ", el("strong", { text: `${fvOrdinal(r.rank)} of ${r.of}` }),
       ` ${a.format} decks`, r.rank_low != null && r.rank_high != null && r.rank_low !== r.rank_high
         ? ` (somewhere from ${fvOrdinal(r.rank_low)} to ${fvOrdinal(r.rank_high)})` : "", "."));
+    tile.append(manualFieldExclusionNote(r.manual_excluded, "sub fv-manual-excluded"));
   }
   return tile;
 }

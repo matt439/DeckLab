@@ -69,7 +69,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 
 | id | status | pri | size | item |
 |---|---|---|---|---|
-| `E3-S23` | OPEN | could | M | Read-only membership and reasons are built; next revision-checked audited home-admin edits and manual-exclusion counts in field ranks. |
+| `E3-S23` | OPEN | could | M | Membership, reasons and manual-exclusion counts are built; next revision-checked audited home-admin membership edits. |
 | `E4-S16` | OPEN | could | L | Exact post-board previews are built; next compare saved plans on the base games, with simulation permissions, stale-result warnings and a verdict. |
 | `E11-S16` | OPEN | could | L | Remaining-work estimates are built; next handle explicit supported configuration-arm assumptions and adoption controls. |
 | `E11-S28` | DECISION | should | M | Run the user-testing session with User2 from the prepared [checklist](decklab/design/user-testing-user2.md) (confirm his device first), then the follow-up review and stories. |

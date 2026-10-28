@@ -2,6 +2,41 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Manual exclusions beside field ranks (2026-10-28; E3-S23 slice)
+
+The field's rank and Rankings now show how many visible current lists were
+actually removed by hand. The separate note describes the current field,
+leaving the existing rank sentence, comparison groups, game counts and coverage
+unchanged. Missing, malformed or incomplete evidence shows a fixed unavailable
+message; it never becomes a successful-looking zero. The field note appears
+only with an actual rating. No extra request, write or game is started.
+
+A bounded observer records distinct canonical deck/list-version choices during
+the existing selector pass, before simulation-card deduplication. Repeated,
+wildcard, version-specific, alias and reversed-pairing directives count only
+their actual visible removals. Both raw and current canonical visibility gates
+apply, and no new alias resolution or candidate enumeration is introduced.
+More than 1,000 distinct removals, failed metadata and source reads, malformed
+configuration or an unobserved/incomplete pass yield an unknown count while
+preserving legacy selection, notes and exception behavior. Ordinary observer
+failures cannot change selection; cancellation still propagates.
+
+Rankings reuses the same pass's normalized removal names for its existing
+exclusion prose, eliminating its second configuration read. Malformed neighboring
+values make the count unknown while retaining legacy normalized explanations.
+The field adds metadata to a copy of its rating; its existing hidden-opponent
+filter removes the rating and count together. No denied field-page change was
+retried. Audited home-admin membership editing remains the next story slice.
+
+Root's protected eighteen-module integration passed **253 tests without skips**,
+including 27 new model and 10 new Node DOM cases. They cover no-op/duplicate and
+alias decisions, identical-card lists, exact bounds/overflow, malformed and failed
+reads, observer failures, one configuration read, rating-copy/privacy behavior,
+fixed UI wording and unchanged requests. Independent review, Node syntax,
+real-error Ruff and whitespace pass. The source audit finds 1,164 owned files,
+none over 1,200 lines. PostgreSQL, real Forge, browser/device and live runtime
+qualification remain separate; no live records, settings or services changed.
+
 ## Forecast inventory keys and private-kit integration checks (2026-10-28)
 
 The broad protected checkpoint on `46b53eb` discovered 9,971 unique cases with
