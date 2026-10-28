@@ -2784,7 +2784,7 @@ Evidence:
 - `decklab/tests/test_commander_readiness.py`: test_missing_tags_never_claim_no_tagged_effects, test_known_effects_keep_existing_lists_and_minimum
 - `decklab/tests/test_commander_readiness_ui.py`: test_named_raising_cards_and_effects_open_the_existing_viewer
 
-**E9-S07** · Matt · could · L · missing
+**E9-S07** · Matt · could · L · partial
 
 As a newer player choosing cards for a commander, I want to see what is commonly played with my commander, marked owned, free or to buy, so that I fill the 99 from proven ideas, starting with the pool I already have.
 
@@ -2792,12 +2792,18 @@ As a newer player choosing cards for a commander, I want to see what is commonly
 - Given an idea I own a free copy of, when it's listed, then it says so and adds to the deck in one tap.
 - Given EDHREC can't be reached, when I open the ideas, then the page says so and the rest of the editor works.
 
+Now (2026-10-28): [EDHREC ideas](../HISTORY.md#edhrec-ideas-for-a-commander-2026-10-28-e9-s07). `python -m decklab.lib.edhrec <deck-id>` fetches the commander's page from EDHREC's JSON (`json.edhrec.com/pages/commanders/<slug>.json`, the slug from the commander's name; two commanders tried in both orders), keeps it a week in `decklab/data/edhrec/` with the time it was fetched, and prints it grouped by EDHREC's categories with each card's share of decks, marked in the deck, free, in use (never naming the deck) or to buy with its AUD estimate in the deck's own space. Cards outside the commander's colour identity or not legal in Commander are checked again against Scryfall's data and left out, and basic lands are skipped. A failed fetch keeps the older copy (saying why) and isn't retried for 5 minutes; with nothing cached it's a plain message. On the deck page, a Commander deck's Cards tab has **See EDHREC ideas…** (GET `/api/deck/edhrec`, asked only when the sheet opens): the same list and date, filtered to Not in the deck, Free, To buy or All; the marks and prices only for a viewer who sees the space's inventory; and **Consider**, which adds a card to the deck's Considering list (E2-S23) in one save, for whoever may change the deck.
+Not yet: the ideas are on the deck page, not in the editor's Add panel, and a tap adds to Considering, not straight into the 99.
+
 Evidence:
-- `decklab/web/editor-cards.js`: the Add panel offers search and My collection only
+- `decklab/lib/edhrec.py`: name_slug, commander_slugs, fetch (_one, reduce_page), ideas, main
+- `decklab/lib/api/edhrec.py`: edhrec_view (GET /api/deck/edhrec); `decklab/lib/feature_routes.py`
+- `decklab/web/deck-edhrec.js`: deckEdhrecSection, openEdhrecSheet, edhrecMarkWords, considerEdhrecCard; `deck.js` cardsParts
+- `decklab/tests/test_edhrec.py`, `decklab/tests/test_deck_edhrec_ui.py`
 
-Gap: there's no EDHREC fetch or ideas panel; EDHREC appears in Deck Lab only as a cited source.
+Gap: The editor's Add panel (`decklab/web/editor-cards.js`) still offers search and My collection only; an idea can't go into the Planned list in one tap (Considering, then Move to the Planned list); EDHREC's themes, budget and bracket pages aren't read; the partner-pair slug order is a guess (only single-commander pages were checked live).
 
-First slice: fetch and cache one commander's EDHREC card list on the PC (dated, with a failure that leaves the editor working), and print it marked owned, free or to buy from the command line.
+Next slice: an EDHREC ideas scope in the editor's Add panel, adding a free card straight into the draft.
 
 **E9-S08** · Matt · must · M · built
 
