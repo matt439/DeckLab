@@ -125,6 +125,9 @@ inventory writes answer 503 with "reason": "database":
                                          profile's own
     GET  /api/deck?id=<deck id>&version=target|owned   (without "owned", "table" and "tokens" for a
                                          visitor who may not see the deck's space's inventory)
+    GET  /api/compare/shared?a=<deck id>&av=&b=<deck id>&bv=   the cards both lists use (E1-S13,
+                                         lib/api/compare.py), with the copies the pool can cover for
+                                         both only for a visitor who may see the space's inventory
     GET  /api/deck/history?id=<deck id>  its saved revisions, newest first (lib/api/history.py)
     GET  /api/deck/revision?id=&revision=<n or an imported git commit>&version=   one revision's list
     GET  /api/deck/edit?id=<deck id>     a deck as the editor loads it (lists, fields, sha256)

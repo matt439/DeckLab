@@ -9,7 +9,7 @@ and accessory saves with a local picture (accessories.MAX_SAVE_BODY).
 
 
 def dispatch(handler, route, query):
-    from decklab.lib.api import (accessories, accessory_undo, activity, arrivals, activity_mixed_undo, activity_undo, assembly, assembly_completion, assembly_standins, assembly_ticks, box_check, box_repair, collection, considering, collection_edit, collection_trade, cover, deck_printings, editor, history,
+    from decklab.lib.api import (accessories, accessory_undo, activity, arrivals, activity_mixed_undo, activity_undo, assembly, assembly_completion, assembly_standins, assembly_ticks, box_check, box_repair, collection, compare, considering, collection_edit, collection_trade, cover, deck_printings, editor, history,
                                  library_forge, opponents, play_records, precon_coverage, precons, products, product_tokens, rankings, receipts, rename, retirement, shopping, shopping_order_changes, shopping_orders, shopping_queue, swaps, token_cards, token_plan, tokens, visits, wishlist_undo)
     from decklab.lib.api.common import MAX_BODY
 
@@ -24,6 +24,7 @@ def dispatch(handler, route, query):
         ("precons", "coverage"): (precon_coverage.coverage_view, ("space", "format", "type", "limit")),
         ("precons", "coverage", "deck"): (precon_coverage.coverage_deck, ("file", "space")),
         ("assembly",): (assembly.assembly_view, ("deck", "version")),
+        ("compare", "shared"): (compare.shared_view, ("a", "av", "b", "bv")),
         ("play",): (play_records.play_overview, ("id",)),
         ("deck", "history"): (history.deck_history, ("id",)),
         ("deck", "retire"): (retirement.retirement_view, ("id",)),

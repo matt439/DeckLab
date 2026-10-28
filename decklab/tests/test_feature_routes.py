@@ -8,7 +8,7 @@ import json
 from unittest import mock
 
 from decklab.lib import config, pool
-from decklab.lib.api import (accessories, activity, activity_undo, assembly, assembly_completion, assembly_ticks, collection, cover, editor, history, play_records,
+from decklab.lib.api import (accessories, activity, activity_undo, assembly, assembly_completion, assembly_ticks, collection, compare, cover, editor, history, play_records,
                              precon_coverage, receipts, shopping, shopping_order_changes, shopping_orders, shopping_queue, tokens)
 from decklab.tests.test_server import ServerTestCase, WRITE
 
@@ -17,6 +17,8 @@ GETS = (
     ("/api/collection", collection, "collection_view", "q=elves&color=G&limit=3", {"q": "elves", "color": "G", "limit": "3"}),
     ("/api/assembly", assembly, "assembly_view", "deck=casual%2Fgruul-test&version=owned",
      {"deck": "casual/gruul-test", "version": "owned"}),
+    ("/api/compare/shared", compare, "shared_view", "a=casual%2Fgruul-test&av=target&b=commander%2Felf-commander&bv=owned",
+     {"a": "casual/gruul-test", "av": "target", "b": "commander/elf-commander", "bv": "owned"}),
     ("/api/play", play_records, "play_overview", "id=casual%2Fgruul-test", {"deck_id": "casual/gruul-test"}),
     ("/api/deck/history", history, "deck_history", "id=casual%2Fgruul-test", {"deck_id": "casual/gruul-test"}),
     ("/api/deck/revision", history, "deck_revision", "id=casual%2Fgruul-test&version=owned&revision=" + "a" * 40,

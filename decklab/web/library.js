@@ -281,6 +281,8 @@ function drawLibrary(data, filters) {
     const first = results.querySelector(".lib-pick");
     if (first) first.focus();
   } }] : [];
+  // Compare two decks (compare.js, E1-S13): choose the two from the decks shown here.
+  if (data.decks.filter((d) => !d.error).length > 1) more.push({ label: "Compare two decks…", onclick: () => openCompareFirst(data.decks) });
   // New deck is the page's one primary action for whoever may make a deck (on a phone it opens in the Quick
   // edit); without it, More ("⋯") sits at the end of the filter row instead of on a row of its own under the title.
   const primary = createTargets().length

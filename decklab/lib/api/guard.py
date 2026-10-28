@@ -255,7 +255,7 @@ that's checked before anything of the deck is read and before any 403 or
 - GET /api/decks lists only those decks (its halves, usual opponents,
   aliases and decks_revision worked out over them,
   library.viewer_decks_revision), and GET /api/deck, /api/deck/edit,
-  /api/deck/cards, /api/deck/opponents and the rest that start from
+  /api/deck/cards, /api/deck/opponents, /api/compare/shared (both decks) and the rest that start from
   library._find_summary answer that 404;
 - deck_aliases.canonical_id for the history, a revision and a retired deck
   (by its id, which names its former space), and the opponents, rename and
