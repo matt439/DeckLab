@@ -145,7 +145,8 @@ class ExportTests(_InventoryDb):
         self.assertEqual(written, self.files)
         self.assertFalse((self.out / "magic/orders/tokens/cancelled").exists())   # emptied folders go
         table = (self.out / "tables/public.collection_card.csv").read_text(encoding="utf-8").splitlines()
-        self.assertEqual(table[0], "space_id,set_code,collector_number,finish,name,quantity,condition,language,notes")
+        self.assertEqual(table[0], "space_id,set_code,collector_number,finish,name,quantity,condition,language,notes,"
+                                   "location")                          # migration 0016's storage location
         self.assertTrue(export._is_export_repo(self.out))       # no commits yet, magic/ allowed
 
     def test_inventory_export_command(self):

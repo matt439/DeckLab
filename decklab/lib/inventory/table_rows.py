@@ -256,7 +256,8 @@ def _collect(inv, strict):
             if key in out["collection_card"]:
                 bad(f"{at}: {cells[1]} {cells[2]} {cells[3]} is there twice")
                 continue
-            out["collection_card"][key] = (cells[0], qty, cells[5], cells[6], cells[7])
+            out["collection_card"][key] = (cells[0], qty, cells[5], cells[6], cells[7], "")
+    _location_rows(inv, out, reasons, strict)
     for space, sheet in inv.tokens.items():
         bad = reasons.about(sheet.path)
         try:
@@ -357,6 +358,32 @@ def _collect(inv, strict):
     return out, reasons
 
 
+def _location_rows(inv, out, reasons, strict):
+    """Each space's storage locations (locations.csv, E8-S22) into its collection_card rows'
+    location (the database's column, migration 0016), with every reason the database can't hold
+    one: a file that can't be read, a row the strict read refuses, a location for a printing the
+    collection doesn't have."""
+    for space, sheet in inv.locations.items():
+        bad = reasons.about(sheet.path)
+        if sheet.error is not None:
+            bad(f"{sheet.path} can't be read: {sheet.error}")
+            continue
+        if strict and sheet.exists and not sheet.rows and not sheet.problems:
+            bad(f"{sheet.path} has no locations (a space with none has no file)")
+        for problem in sheet.problems:
+            bad(problem)
+        if sheet.strict_error and sheet.strict_error not in sheet.problems:
+            bad(sheet.strict_error)
+        for row in sheet.rows:
+            key = (space, *row.key)
+            found = out["collection_card"].get(key)
+            if found is None:
+                bad(f"{_where(sheet.path, row)}: {' '.join(row.key)} isn't in the collection")
+                continue
+            if not found[5]:
+                out["collection_card"][key] = (*found[:5], row.text("location"))
+
+
 def _deck_rows(inv, out, reasons, strict):
     """The deck parts' rows into out (deck, deck_text, accessory, accessory_image), with every
     reason the database can't hold them (see the module docstring)."""
@@ -433,7 +460,8 @@ def deck_tables(inv, strict=False):
 def tables(inv, strict=False):
     """The rows migration 0004's tables hold for inv, as {table: rows}:
 
-        collection_card   {(space, set, number, finish): (name, quantity, condition, language, notes)}
+        collection_card   {(space, set, number, finish): (name, quantity, condition, language, notes,
+                          location)}  (location: "" unless locations.csv gives one, E8-S22)
         token_card        [(id, space, *TOKEN_COLUMNS)] in file order   (id 0: a row the database
                           hasn't seen; positions are worked out when written, see pg._positions)
         watchlist_item    [(id, *WATCH_COLUMNS)] in file order

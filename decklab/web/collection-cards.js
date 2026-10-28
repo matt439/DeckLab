@@ -145,7 +145,8 @@ function colFields(ctx, row) {
         el("button", { type: "button", class: "step", "aria-label": "One more", onclick: () => step(1) }, "+"))),
     el("div", { class: "field col-field-condition" }, el("span", { text: "Condition" }), condition),
     field("language", "Language", language),
-    field("notes", "Notes", ctx.inputs.notes));
+    field("notes", "Notes", ctx.inputs.notes),
+    colLocationField(ctx, ctx.row, id));
 }
 
 /** Card names for the name box (the editor's search), a moment after typing stops. */
@@ -362,6 +363,8 @@ async function saveCollectionSheet(ctx) {
   const row = colFormRow(ctx);
   if (!row) return;
   const body = { action: ctx.editing ? "edit" : "add", row };
+  const location = colLocationToSend(ctx);
+  if (location !== undefined) body.location = location;
   if (ctx.editing) body.original = { set: ctx.row.set, collector_number: ctx.row.collector_number, finish: ctx.row.finish };
   colSheetBusy(ctx, true);
   try {
@@ -446,7 +449,7 @@ function showCollectionConflict(ctx, error, body) {
       el("p", { text: `If you still have it, add it as a new card (${body.row.name} ×${body.row.quantity}). Otherwise discard your changes.` }));
     sheetActions(sheet, [{ text: `Add ${body.row.name} ×${body.row.quantity} as a new card`, kind: "primary", onclick: () => {
       ctx.editing = false;
-      resend({ action: "add", row: body.row });
+      resend({ action: "add", row: body.row, ...(Object.hasOwn(body, "location") ? { location: body.location } : {}) });
     } }, discard]);
     return;
   }
@@ -459,7 +462,8 @@ function showCollectionConflict(ctx, error, body) {
     ctx.base = now;
     return { action: "edit", row: { ...row, quantity: Number(row.quantity) },
       original: { set: theirs.set, collector_number: theirs.collector_number, finish: theirs.finish },
-      ...(Object.hasOwn(body, "reason") ? { reason: body.reason } : {}) };
+      ...(Object.hasOwn(body, "reason") ? { reason: body.reason } : {}),
+      ...(Object.hasOwn(body, "location") ? { location: body.location } : {}) };
   };
   if (!clashes.length) {
     sheet.body.append(el("p", { text: "Load the latest and your changes are put back on top of it, field by field." }));

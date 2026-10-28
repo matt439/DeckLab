@@ -87,6 +87,10 @@ older code (the committed tests/fixtures/inventory_goldens):
 - "assembly-colors": packing participants carry the Planned/library "colors" already in their
   deck summaries. Only that new key is dropped from assembly answers; test_assembly_colors
   checks its values and privacy.
+- "storage-location-defaults": E8-S22 adds the packing plan's "storage_locations", where the
+  cards it pulls from storage or puts back are kept. No golden collection records a location, so
+  only an answer with none ({"ready": true, "cards": {}}) is dropped; a recorded location still
+  compares. test_collection_locations checks its values.
 - "category-defaults": E2-S24 adds DeckLine.category, the builder's own category on a decklist
   line, so a line dumped as a whole object ({quantity, name, set, number, finish}) gains
   "category". Only a None category on exactly such an object is dropped: a line with a
@@ -496,6 +500,15 @@ def assembly_colors(dump):
                     deck.pop("colors", None)
 
 
+def storage_location_defaults(dump):
+    """Drop only E8-S22's empty "storage_locations" on packing plans (none recorded)."""
+    for mine in [dump, *((dump.get("by_viewer") or {}).values())]:
+        plans = mine.get("assembly") if isinstance(mine, dict) else None
+        for plan in plans.values() if isinstance(plans, dict) else []:
+            if isinstance(plan, dict) and plan.get("storage_locations") == {"ready": True, "cards": {}}:
+                plan.pop("storage_locations")
+
+
 _LINE_KEYS = {"quantity", "name", "set", "number", "finish", "category"}
 
 
@@ -685,7 +698,8 @@ EXPECTED_P5 = (("deck-id-messages", deck_id_messages), ("phase-5-wording", phase
                ("stand-in-defaults", standin_defaults), ("rename-defaults", rename_defaults),
                ("assembly-section-defaults", assembly_section_defaults), ("swap-defaults", swap_defaults),
                ("assembly-colors", assembly_colors), ("considering-defaults", considering_defaults),
-               ("box-label-defaults", box_label_defaults), ("category-defaults", category_defaults))
+               ("box-label-defaults", box_label_defaults), ("category-defaults", category_defaults),
+               ("storage-location-defaults", storage_location_defaults))
 
 
 def normalise(dump):

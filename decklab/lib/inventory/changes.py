@@ -40,11 +40,12 @@ import copy
 import dataclasses
 
 from . import files, paths, rules, table_rows
-from .model import (PREVIEW, AccessoryRow, CardRow, Deck, ImageMeta, Product, Sheet, StatusRow, TokenRow,
-                    WatchRow, refuse_unreadable_tokens)
+from .model import (PREVIEW, AccessoryRow, CardRow, Deck, ImageMeta, LocationRow, Product, Sheet, StatusRow,
+                    TokenRow, WatchRow, refuse_unreadable_tokens)
 
 SAVE_REFUSED = "The inventory can't be saved like that: {why}"
-STANDARD = {"collection": CardRow.COLUMNS, "tokens": TokenRow.COLUMNS, "status": StatusRow.COLUMNS,
+STANDARD = {"collection": CardRow.COLUMNS, "tokens": TokenRow.COLUMNS, "locations": LocationRow.COLUMNS,
+            "status": StatusRow.COLUMNS,
             "watchlist": WatchRow.COLUMNS, "accessories": AccessoryRow.COLUMNS}
 PAYLOAD_COLUMNS = {"cards": CardRow.COLUMNS, "tokens": TokenRow.COLUMNS}
 
@@ -67,6 +68,8 @@ def source_at(inv, rel):
         sheet = inv.collections.get(detail)
     elif what == "tokens":
         sheet = inv.tokens.get(detail)
+    elif what == "locations":
+        sheet = inv.locations.get(detail)
     elif what == "status":
         sheet = inv.status
     elif what == "watchlist":
@@ -93,8 +96,8 @@ def source_at(inv, rel):
 def with_source(inv, rel, source):
     """inv with source at rel (None: no file there)."""
     what, detail = paths.classify(rel)
-    if what in ("collection", "tokens"):
-        attr = "collections" if what == "collection" else "tokens"
+    if what in ("collection", "tokens", "locations"):
+        attr = {"collection": "collections", "tokens": "tokens", "locations": "locations"}[what]
         mapping = {k: v for k, v in getattr(inv, attr).items() if k != detail}
         if source is not None:
             mapping[detail] = source
@@ -157,7 +160,7 @@ def changed_paths(before, after):
 
 
 # The order changed_labels lists the parts of the inventory in.
-_LABEL_ORDER = ("collection", "tokens", "import", "record", "product", "status", "watchlist", "deck",
+_LABEL_ORDER = ("collection", "locations", "tokens", "import", "record", "product", "status", "watchlist", "deck",
                 "accessories", "image")
 
 
@@ -201,6 +204,8 @@ def changed_labels(before, after, rels=None):
             words = f"{whose(detail)} collection"
         elif what == "tokens":
             words = f"{whose(detail)} token cards"
+        elif what == "locations":
+            words = f"{whose(detail)} storage locations"
         elif what == "import":
             words = f"{whose(detail[0])} raw imports: {detail[1]}"
         elif what == "record":
@@ -241,14 +246,14 @@ def _normal(rel, source):
     what, detail = paths.classify(rel)
     columns = PAYLOAD_COLUMNS[detail[0]] if what == "payload" else STANDARD[what]
     rows = source.rows
-    if what == "collection":
+    if what in ("collection", "locations"):
         try:
-            rows = tuple(sorted(rows, key=rules.sort_key))
+            rows = tuple(sorted(rows, key=lambda row: rules.sort_key(row.as_dict())))
         except (KeyError, TypeError):           # a row without a cell: check() refuses it
             pass
     if what == "accessories":
         rows = tuple(sorted(rows, key=lambda row: rules.accessory_sort_key(row.as_dict())))
-    if what in ("collection", "tokens", "accessories") and not rows and not source.problems:
+    if what in ("collection", "tokens", "locations", "accessories") and not rows and not source.problems:
         return None
     return dataclasses.replace(source, columns=tuple(columns), rows=rows, exists=True)
 
@@ -269,7 +274,9 @@ def _keep_identity(made, fresh):
 
 def reread(before, after, revision=None):
     """after with every source it changes from before normalised and read back (steps 1 and 2
-    of prepare); revision replaces after's when given."""
+    of prepare); revision replaces after's when given. A storage location whose collection row
+    is gone goes with it (E8-S22), whichever operation removed or rekeyed the row."""
+    after = after.without_stray_locations()
     names = changed(before, after)
     out = after
     if names:
@@ -311,7 +318,7 @@ def check(before, after):
             raise Invalid(SAVE_REFUSED.format(why=f"{rel} can't be read back ({new.error})"))
         if what == "tokens" and new.problems:
             raise Invalid(SAVE_REFUSED.format(why=new.problems[0]))
-        if what == "collection" and new.strict_error:
+        if what in ("collection", "locations") and new.strict_error:
             raise Invalid(SAVE_REFUSED.format(why=new.strict_error))
         if what == "accessories" and new.strict_error:
             raise Invalid(SAVE_REFUSED.format(why=new.strict_error))

@@ -49,6 +49,7 @@ function drawCollectionRows(data, space, token = null) {
   cv.storageLabel = el("span");
   cv.storageChoice = el("label", { class: "filter-chip col-storage", for: cv.storageBox.id }, cv.storageBox, cv.storageLabel);
   cv.count = el("p", { class: "result-count col-count", role: "status" });
+  cv.boxNote = el("p", { class: "sub col-storage-box", hidden: true });
   cv.priceNote = el("p", { class: "price-note col-price-note" });
   cv.list = el("div", { class: "col-row-list" });
   cv.preview = el("aside", { class: "col-preview", role: "region", "aria-label": "Selected collection row" });
@@ -60,7 +61,7 @@ function drawCollectionRows(data, space, token = null) {
         fill: "none", stroke: "currentColor", "stroke-width": 1.6, "stroke-linejoin": "round" }))),
     el("div", { class: "filter-chips filter-chips-scroll col-row-filter-options" }, cv.storageChoice));
   const root = el("div", { class: "collection-page col-rows-page" }, colHead(cv),
-    cv.unsupported ? null : [cv.unrecordedChoice, tools,
+    cv.unsupported ? null : [cv.boxNote, cv.unrecordedChoice, tools,
       el("div", { class: "actions col-row-actions" }, colBulkButton(cv), cv.count),
       el("div", { class: "col-row-layout" }, cv.list, cv.preview), cv.priceNote]);
   cv.root = root;
@@ -150,6 +151,7 @@ function drawColRowList(cv) {
   }
   colDrawPreview(cv, selected);
   drawColPriceNote(cv);
+  drawColStorageBox(cv);
   setCollectionBusy(cv, cv.busy);
   registerCollectionKeyboardHelp(cv);
   // A native sort/pager activation removes its own control. Restore only that owned focus.
@@ -294,12 +296,12 @@ function colUnknown(words) {
 
 /** These remain allocated copy counts, separate from saved packing-list hints. */
 function colStorageWords(cv, row) {
-  if (!cv.storage || cv.storage.error) return "Copies in decks not known";
+  if (!cv.storage || cv.storage.error) return colWithLocation(cv, row, "Copies in decks not known");
   const { held, guess } = colHeld(cv, row);
-  if (held == null) return "Basic land: deck allocation not tracked";
-  if (!held) return "In storage";
-  return `${plural(held, "copy", "copies")} in decks${guess ? " (printing uncertain)" : ""}`
-    + ` \u00b7 ${Math.max(0, Number(row.quantity) - held)} free`;
+  if (held == null) return colWithLocation(cv, row, "Basic land: deck allocation not tracked");
+  if (!held) return colWithLocation(cv, row, "In storage");
+  return colWithLocation(cv, row, `${plural(held, "copy", "copies")} in decks${guess ? " (printing uncertain)" : ""}`
+    + ` \u00b7 ${Math.max(0, Number(row.quantity) - held)} free`);
 }
 
 const COL_PACKING_HINT_WORDS = "Saved packing lists may differ from the boxes and current deck lists. "

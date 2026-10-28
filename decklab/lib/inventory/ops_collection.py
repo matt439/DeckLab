@@ -3,8 +3,8 @@ removed in a space's collection, and rows merged in from an import, each a pure 
 the inventory registered with inventory.register, so the Collection page, "Add a precon" and
 `python -m decklab.db collection merge` write through inventory.apply on either backend.
 
-    collection.add      {space, row, sha256?, whose?, where?}
-    collection.edit     {space, original, row, sha256?, whose?, expect_decks_revision?}
+    collection.add      {space, row, sha256?, whose?, where?, location?}
+    collection.edit     {space, original, row, sha256?, whose?, expect_decks_revision?, location?}
     collection.remove   {space, original, sha256?, whose?, expect_decks_revision?}
     collection.apply    {space, edits, removals, sha256?, whose?, expect_decks_revision?}
     collection.import   {space, sources, uploads?, sha256?, whose?, message?, limit?, fmt?,
@@ -15,6 +15,12 @@ collection.trade (E7-S22) is a trade as one change: gave is [[set, collector_num
 quantity]] of listed rows, each lowered by quantity (removed when none are left), and got is rows
 merged in as an import merges them (merge_rows), with no raw import kept: a trade isn't an import.
 A printing may not be both given and got, and no row may be given twice or more copies than it has.
+
+location (E8-S22), when given to an add or an edit, is the row's storage location ("Row 2, B";
+"" clears it; rules.clean_location's rules); left out, an edit keeps the row's location, moving it
+with the row when the edit changes its printing or finish. A location lives beside the row
+(locations.csv; the database's collection_card.location, migration 0016) and goes when the row
+does. Before migration 0016 a location can't be saved (Invalid: rules.LOCATION_REQUIRED).
 
 A row is collection.csv's eight columns as text; original is the [set, collector_number,
 finish] of the row as the page loaded it. sha256, when given, is the sha256 of the space's
@@ -157,6 +163,32 @@ def _label(row):
     return f"{row['name']} ({row['set'].upper()} {row['collector_number']})"
 
 
+def _location(value):
+    """A request's location, cleaned (rules.clean_location), or None when it wasn't given."""
+    if value is None:
+        return None
+    try:
+        return rules.clean_location(value)
+    except ValueError as e:
+        raise Invalid(str(e)) from None
+
+
+def _locate(before, after, space, key, location, was=None):
+    """(after with key's storage location set to location, [a line saying so]); location None
+    keeps the location was (the row's key before an edit) had, at key. Invalid before migration
+    0016 (before.locations_ready False) for a location that isn't blank."""
+    had = before.locations_of(space)
+    wanted = had.get(was, "") if location is None else location
+    found = after.locations_of(space)
+    if found.get(key, "") == wanted:
+        return after, []
+    if wanted and not before.locations_ready:
+        raise Invalid(rules.LOCATION_REQUIRED)
+    after = after.with_locations(space, {**found, key: wanted})
+    return after, [f"Storage location: {wanted}." if wanted else "Storage location cleared."] \
+        if location is not None else []
+
+
 def _find(rows, original, space):
     key = tuple(original)
     old = next((r for r in rows if rules.ident(r) == key), None)
@@ -168,9 +200,10 @@ def _find(rows, original, space):
 # ------------------------------------------------------------------ one card
 
 @register("collection.add")
-def add(inv, space, row, sha256=None, whose=None, where="the page"):
+def add(inv, space, row, sha256=None, whose=None, where="the page", location=None):
     """One card added: a listed identity key adds to that row (merge_rows' rules)."""
     whose = whose or collection_name(space)
+    location = _location(location)
     row = _row(row)
     rows = _rows(inv, space, sha256, whose)
     keys = {rules.ident(r) for r in rows}
@@ -181,7 +214,10 @@ def add(inv, space, row, sha256=None, whose=None, where="the page"):
         rows, counts = rules.merge_rows(rows, [(where, [row])])
     except rules.InvalidCards as e:
         raise Invalid(f"The card can't be added: {e}") from None
-    return inv.with_collection(space, rows), Summary(
+    after = inv.with_collection(space, rows)
+    if location is not None:
+        after, _ = _locate(inv, after, space, rules.ident(row), location)
+    return after, Summary(
         f"add card {_label(row)} in {whose}", counts={**counts, "merged": merged}, extra={"shown": row})
 
 
@@ -193,10 +229,12 @@ def _expect_decks(inv, expected):
 
 
 @register("collection.edit")
-def edit(inv, space, original, row, sha256=None, whose=None, expect_decks_revision=None):
-    """The row with original's key replaced by row (notes as given, not merged)."""
+def edit(inv, space, original, row, sha256=None, whose=None, expect_decks_revision=None, location=None):
+    """The row with original's key replaced by row (notes as given, not merged), its storage
+    location set (location given) or kept with it."""
     whose = whose or collection_name(space)
     _expect_decks(inv, expect_decks_revision)
+    location = _location(location)
     row = _row(row)
     rows = _rows(inv, space, sha256, whose)
     old = _find(rows, original, space)
@@ -208,7 +246,9 @@ def edit(inv, space, original, row, sha256=None, whose=None, expect_decks_revisi
     if rules.ident(old) != rules.ident(row):
         body.append(f"Was {old['name']} ({old['set'].upper()} {old['collector_number']}, {old['finish']}).")
     rows = [row if r is old else r for r in rows]
-    return inv.with_collection(space, rows), Summary(
+    after, said = _locate(inv, inv.with_collection(space, rows), space, rules.ident(row), location, rules.ident(old))
+    body.extend(said)
+    return after, Summary(
         f"edit card {_label(row)} in {whose}", counts={"cards": int(row["quantity"])},
         extra={"shown": row, "body": body})
 
