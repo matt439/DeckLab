@@ -2,6 +2,45 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Conditional storage scenario for pending deliveries (2026-10-28; E8-S19)
+
+Home-record readers can inspect a separate pending-delivery scenario beside the
+Card list's current storage-box count. It says how many known loose copies would
+be box candidates if left unsleeved and filed by the same printing's recorded
+location. Basics, off-box locations, pending products and token cards are shown
+separately; whether a product stays intact is decided at receipt. Reference-list
+card quantities never become a count of sealed products. Current holder-shortfall
+overlap stays separate and is never deducted or assigned automatically. The
+scenario does not predict exact occupancy or promise that an order will fit.
+
+The optional `storage_forecast` sibling uses the exact pinned inventory and
+leaves `storage_box` unchanged. It proves home-record permission before its own
+source reads; missing permission or a failed lookup yields no advice. Pending
+payloads already contain partial-receipt remainders, so arrivals are not deducted
+twice. Strict quantities and card/printing-field checks, repeated paths, conflicting identities,
+terminal product/status mismatches, orphan sources, location provenance and stale
+snapshots stay explicit. Ambiguous routing/source graphs suppress projection.
+Optional failure cannot fail a saved collection change or its conflict response.
+
+Work is bounded before record validation, CSV serialization and optional pool
+loading; capped/unread inputs never become a complete zero. Holder checks filter
+home records before touching recipe text and use a home-only pinned snapshot.
+Source/printing detail samples have explicit omissions while retaining full
+checked totals. The UI validates and freezes only bounded facts, clears missing,
+legacy/private/stale answers, paginates source details locally and retires old
+controls. Find cards retains no raw forecast object. Concurrent row readers share
+one owned request and cannot resume a save/location operation without valid rows
+and a SHA; newer saved rows win, while invalidated reads abort explicitly.
+
+Root's final protected 12-target integration passed 216 tests without skips,
+including 34 new backend and 25 new UI cases, an actual fake-inventory-to-UI
+roundtrip and existing storage/edit/add/guard/keyboard/account/trade/import/batch
+regressions. Independent/root review, Node syntax, Ruff, diff and length checks
+pass. E8-S19's stated source criteria are complete; token accounting and Find
+cards placement remain possible improvements outside this labelled scenario.
+Genuine PostgreSQL and browser/device qualification remain separate. No live
+order, collection, location, database/server, migration or service action occurred.
+
 ## Read-only field membership (2026-10-28; E3-S23 slice)
 
 The deck's field view now offers Who's in the field, including when it has no

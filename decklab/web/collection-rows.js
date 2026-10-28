@@ -51,6 +51,8 @@ function drawCollectionRows(data, space, token = null) {
   cv.storageChoice = el("label", { class: "filter-chip col-storage", for: cv.storageBox.id }, cv.storageBox, cv.storageLabel);
   cv.count = el("p", { class: "result-count col-count", role: "status" });
   cv.boxNote = el("p", { class: "sub col-storage-box", hidden: true });
+  cv.forecastNote = el("section", { class: "panel col-storage-forecast", hidden: true,
+    "aria-label": "Pending delivery storage scenario" });
   cv.priceNote = el("p", { class: "price-note col-price-note" });
   cv.list = el("div", { class: "col-row-list" });
   cv.preview = el("aside", { class: "col-preview", role: "region", "aria-label": "Selected collection row" });
@@ -62,7 +64,7 @@ function drawCollectionRows(data, space, token = null) {
         fill: "none", stroke: "currentColor", "stroke-width": 1.6, "stroke-linejoin": "round" }))),
     el("div", { class: "filter-chips filter-chips-scroll col-row-filter-options" }, cv.storageChoice, colLocationFilter(cv)));
   const root = el("div", { class: "collection-page col-rows-page" }, colHead(cv),
-    cv.unsupported ? null : [cv.boxNote, cv.unrecordedChoice, tools,
+    cv.unsupported ? null : [cv.boxNote, cv.forecastNote, cv.unrecordedChoice, tools,
       el("div", { class: "actions col-row-actions" }, colBulkButton(cv), colBulkSelectionTools(cv), cv.count),
       colLocationBatchTools(cv),
       el("div", { class: "col-row-layout" }, cv.list, cv.preview), cv.priceNote]);

@@ -42,11 +42,11 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E5: Decide what to buy](#e5-decide-what-to-buy) | 22 | 18 | 1 | 1 | 2 |
 | [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 20 | 18 | 0 | 0 | 2 |
 | [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 28 | 24 | 0 | 4 | 0 |
-| [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 19 | 15 | 1 | 1 | 2 |
+| [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 19 | 16 | 0 | 1 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 20 | 14 | 1 | 4 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 35 | 31 | 1 | 1 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 39 | 27 | 6 | 3 | 3 |
-| **Total** | **255** | **206** | **17** | **18** | **14** |
+| **Total** | **255** | **207** | **16** | **18** | **14** |
 
 Counted from the story headers on 2026-10-28 after the current feature and maintenance work. The reviews added five feature stories and eight hygiene stories, and corrected E1-S12 from missing to partial.
 
@@ -2504,7 +2504,7 @@ Next slice: `POST /api/collection/scan` (one photo, shrunk in the page on a canv
 
 The physical side of home's shared pool: each built deck and each product kept intact is in one sleeve design and one deck box, every other card sits unsleeved in the storage box, and moving a card between decks means changing its sleeve. Deck Lab records the sleeves, deck boxes and playmats (each Matt's, User1's or shared) on the Sleeves & boxes page, a built deck's Sleeves and Deck box lines and an intact product's kit, warns when a holder has too few sleeves or a box that is full or too small, and lets one sleeve design sleeve several holders. Choosing a deck's kit needs the right to edit that deck; an owner may make their kit public (read-only), and members never see private kit. Accessory prices are not wanted.
 
-Open: E8-S03, E8-S19.
+Open: E8-S03.
 
 **E8-S01** · Matt · must · M · built
 
@@ -2733,7 +2733,7 @@ Evidence:
 - `decklab/tests/test_product_kit_cli.py`: test_set_both_then_clear_one_preserves_omitted_field_and_other_data, test_short_prefix_and_uppercase_work_but_stale_or_malformed_tokens_do_not
 - `decklab/tests/test_inventory_decks.py`: test_delete_refuses_a_built_deck_with_a_kit
 
-**E8-S19** · Matt · could · M · partial
+**E8-S19** · Matt · could · M · built
 
 As Matt, I want to know roughly how full the storage box is, so that I know before an order whether the unsleeved cards will still fit in the 4-row box (about 2,400 cards).
 
@@ -2748,9 +2748,11 @@ Evidence:
 - `decklab/web/storage-locations.js`: drawColStorageBox; `decklab/web/collection-rows.js`
 - `decklab/tests/test_collection_locations.py` (StorageBoxTests), `test_collection_locations_ui.py`
 
-Gap: shown on the Card list only (not Find cards); tokens and incoming cards aren't counted, so "before an order" means adding the order's cards in your head.
+Now: conditional known-pending scenario built 2026-10-28 ([HISTORY.md](../HISTORY.md#conditional-storage-scenario-for-pending-deliveries-2026-10-28-e8-s19)). Home-record readers inspect known pending loose copies beside the unchanged current count, with explicit assumptions, source/printing details and basic/off-box/product/token exclusions. Current holder-shortfall overlap is separate and never deducted; pending product storage is undecided until receipt. Invalid/ambiguous/capped/stale sources and unavailable locations remain unknown, never a complete zero or promise that an order fits. Root's protected 216-case integration passed without skips, including 34 new backend and 25 new UI fixtures plus existing consumers; source checks and independent review pass.
 
-First slice (reserve review, 2026-10-28): show current occupancy beside a pending-card forecast for home, with the counted order quantities and exclusions inspectable. Keep intact products outside unsleeved storage; distinguish new storage copies from current built-deck shortfalls, and expose uncertain routing rather than assume every new card goes into a deck. Preserve the current basic-land/location exclusions. Token physical-card accounting and Find cards placement can follow; fixtures include partially received and cancelled components, with no actual order or receipt needed.
+Further evidence: `api/collection_forecast.py`, separate `collection_edit._extras.storage_forecast`, validated/frozen facts and bounded local details in `storage-locations.js`, the row-view mount and owned/coalesced `colEnsureRows`, plus `test_collection_forecast.py` and `test_collection_forecast_ui.py`. Work bounds precede record validation, rendering and home-only holder parsing; malformed replies never revive private or old facts. Optional advice does not change a collection write's success or conflict contract.
+
+Scope: the Card list's labelled known-loose-copy scenario meets the stated criteria; physical token accounting and Find cards placement are possible future improvements. Genuine PostgreSQL and browser/device acceptance remain unrun, and no live order, receipt, migration or server action qualified the source.
 
 **E8-S20** · Matt · must · M · built
 

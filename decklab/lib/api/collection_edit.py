@@ -358,13 +358,14 @@ def _storage(space, rows, prices):
 
 
 def _extras(space, shown):
-    """The rows' prices (_prices), storage counts (_storage), storage locations and the storage
-    box's count (collection_locations), for every answer that sends rows."""
-    from . import collection_locations as places
+    """The rows' prices, storage counts/locations, current box count and optional home-only
+    pending-card scenario, for every answer that sends rows."""
+    from . import collection_forecast, collection_locations as places
     prices = _prices(shown)
     storage = _storage(space, shown, prices)
+    box = places.storage_box(space, shown, storage, _picture_key)
     return {"prices": prices, "storage": storage, "locations": places.locations(space, _picture_key),
-            "storage_box": places.storage_box(space, shown, storage, _picture_key)}
+            "storage_box": box, "storage_forecast": collection_forecast.build(space, shown, box)}
 
 
 def _stale(space, sha=None):

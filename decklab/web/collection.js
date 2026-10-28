@@ -192,8 +192,10 @@ function showCollection(params, token) {
 
 /** What a page of the collection holds for its writes: cv ("collection view"). */
 function colView(data, space, token, kind) {
-  return { token: token == null ? routeToken : token, profile: state.profile && state.profile.id, space, kind,
-    data, busy: false, seq: 0,
+  const { storage_forecast: forecast, ...viewData } = data;
+  const cv = { token: token == null ? routeToken : token, profile: state.profile && state.profile.id, space, kind,
+    forecastProfile: state.profile, forecastHash: location.hash,
+    data: viewData, busy: false, seq: 0,
     // A server that doesn't know spaces yet answers with home's cards and no "space": a person's isn't shown.
     unsupported: space !== HOME_SPACE && data.space === undefined,
     editable: data.editable === true && (data.space === undefined || data.space === space),
@@ -202,6 +204,8 @@ function colView(data, space, token, kind) {
     prices: colPrices(data.prices),
     storage: colStorage(data.storage), locations: colLocations(data.locations), storageBoxCount: data.storage_box || null,
     message: el("div", { class: "col-message", role: "status", "aria-live": "polite" }) };
+  cv.storageForecast = colStorageForecast(forecast, cv);
+  return cv;
 }
 
 /** A prices answer (collection_edit._prices) as the page keeps it: its rows always an object. */
@@ -338,13 +342,43 @@ function colSay(cv, words, stale) {
 /** The rows and their sha256 (and pictures), fetched when the page didn't load them (the Find cards view). */
 async function colEnsureRows(cv) {
   if (cv.sha256 && cv.rows) return;
-  const data = await api(colPath("/api/collection/rows", cv.space));
-  cv.sha256 = data.sha256;
-  cv.rows = data.rows || [];
-  if (data.pictures) Object.assign(cv.pictures, data.pictures);
-  if (data.prices) cv.prices = colPrices(data.prices);
-  if (data.storage) cv.storage = colStorage(data.storage);
-  colTakeLocations(cv, data);
+  const profile = state.profile, profileId = cv.profile, token = cv.token;
+  const hash = location.hash, root = cv.root, revision = cv.forecastRevision || 0;
+  const pending = cv.rowsPending;
+  if (pending && pending.profile === profile && pending.hash === hash && pending.root === root
+      && pending.revision === revision && pending.token === token && pending.profileId === profileId) return pending.promise;
+  const request = { profile, profileId, token, hash, root, revision };
+  const here = () => colActive(cv) && state.profile === profile && profile.id === profileId && cv.profile === profileId
+    && cv.token === token && cv.root === root && location.hash === hash;
+  const ready = () => typeof cv.sha256 === "string" && Boolean(cv.sha256) && Array.isArray(cv.rows);
+  const moved = () => new Error("The collection view changed. Reload its rows before continuing.");
+  request.promise = (async () => {
+    let data;
+    try { data = await api(colPath("/api/collection/rows", cv.space)); }
+    catch (error) {
+      if (!colForecastAllowed(cv)) { cv.storageForecast = null; drawColStorageForecast(cv); }
+      if (here() && revision !== (cv.forecastRevision || 0) && ready()) return;
+      if (!here()) throw moved();
+      throw error;
+    }
+    if (!here()) {
+      cv.storageForecast = null; drawColStorageForecast(cv); throw moved();
+    }
+    if (revision !== (cv.forecastRevision || 0)) {
+      if (ready()) return; // a newer saved/checked rows answer is already authoritative
+      throw moved();
+    }
+    if (typeof data?.sha256 !== "string" || !data.sha256 || !Array.isArray(data.rows))
+      throw new Error("The current collection rows could not be verified. Reload before continuing.");
+    cv.sha256 = data.sha256; cv.rows = data.rows;
+    if (data.pictures) Object.assign(cv.pictures, data.pictures);
+    if (data.prices) cv.prices = colPrices(data.prices);
+    if (data.storage) cv.storage = colStorage(data.storage);
+    colTakeLocations(cv, data);
+  })();
+  cv.rowsPending = request;
+  try { await request.promise; }
+  finally { if (cv.rowsPending === request) cv.rowsPending = null; }
 }
 
 /** After a change: the new rows, and the view drawn again (Find cards loads its page again). */
@@ -509,7 +543,9 @@ async function colLoadFind(cv, query, paging) {
       if (data.page > 1) cv.query.set("page", String(data.page)); else cv.query.delete("page");
       history.replaceState(history.state, "", colHash(cv.space, "find", cv.query));
     }
-    cv.data = { ...cv.data, ...data };
+    const { storage_forecast, ...pageData } = data;
+    cv.data = { ...cv.data, ...pageData };
+    colTakeLocations(cv, data);
     drawCollectionResults(cv, data);
     if (paging) cv.results.scrollIntoView({ block: "start", behavior: "smooth" });
   } catch (error) {
