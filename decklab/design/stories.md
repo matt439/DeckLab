@@ -2198,12 +2198,16 @@ Built ordinary-import slice (2026-10-28): a successful Collection CSV import now
 
 The response is informational. Invalid, incomplete or oversized calculations say Destination unknown without failing a saved import or inferring storage. Only the initiating profile/space receives the one-use frozen notice; detached, closed, route/profile and late-answer guards preserve it. First paint is capped at 100 printing lines across groups, with bounded Show more.
 
+Built precon handoff (2026-10-28): the locked `precon.add` can opt into exact added-printing facts and proof of its newly created deck. Advice uses the exact committed snapshot, supplies that deck's proved new physical holdings first, and allocates remaining copies with the shared prior-stock/new-copy ledger. Missing or inconsistent proof/holdings gives unknown advice without failing the saved cards/deck. The existing saved-deck box keeps the frozen profile/space-bound guide, original navigation, warnings and token count; tokens never enter playable-card destinations. CLI precon defaults and output stay unchanged.
+
+Precon evidence: `inventory/ops_decks.py`, `api/precons.py`, the shared filing helpers and `editor-deckpage.js`; 14 new backend and nine new UI cases. Root's protected integration passed 172 tests without skips, including ordinary filing, precon/token consumers and saved-box regressions; root review, Ruff, syntax, diff and length guards pass.
+
 Evidence:
 - `inventory/ops_collection.py`: opt-in JSON-only added-printing receipts; `api/collection_edit.py`: compatible optional exact-snapshot return and saved-import hook.
 - `api/collection_filing.py`, `web/collection-filing.js` and small Collection/loader hooks: bounded own-space allocation and read-only destination panels. No receipt structural extraction or whole Inventory in Summary.extra.
 - Root's final protected integration passed 113 tests without skips (23 new backend, 15 new UI, existing collection-edit and group consumers). Additional protected UI/source and nine precon compatibility checks passed. Root review and independent source checks are clear; source-length, Ruff, syntax and diff checks pass.
 
-Gap: precon adds, single-card adds and `collection merge` still need the same filing handoff. Receive delivery retains its existing grouping. No packing, reservation, deck, status or location changes are made by advice. Genuine PostgreSQL and browser/device qualification remain unverified. See [HISTORY.md](../HISTORY.md#where-imported-copies-go-2026-10-28-e7-s15-ordinary-csv-slice).
+Gap: single-card adds and `collection merge` still need the same filing handoff. Receive delivery retains its existing grouping. No packing, reservation, deck, status or location changes are made by advice. Genuine PostgreSQL and browser/device qualification remain unverified. See [HISTORY.md](../HISTORY.md#where-precon-copies-go-2026-10-28-e7-s15-precon-slice) and the earlier CSV slice.
 
 **E7-S16** · Matt · should · M · built
 

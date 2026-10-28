@@ -1,17 +1,18 @@
-/* Informational destinations for one saved CSV import. Quantities and printing facts come only
+/* Informational destinations for one saved collection addition. Quantities and printing facts come only
  * from that response; current collection rows and mutable preview choices never supply them. */
 "use strict";
 
 const COL_FILING_MAX = 20000;
 const COL_FILING_PAGE = 100;
 
-/** Copy a bounded, conserved response into a profile/space-bound one-use notice. */
-function colFilingSnapshot(answer, cv) {
+/** Copy bounded, conserved facts for the collection notice or existing saved deck box. */
+function colFilingSnapshot(answer, cv, source = "import") {
   if (!answer || !Object.hasOwn(answer, "filing")) return null; // older server
   const raw = answer.filing;
   if (!raw || raw.space !== cv.space || raw.profile !== cv.profile || cv.space !== ownSpace()) return null;
   const total = Number.isSafeInteger(answer.added?.cards) && answer.added.cards > 0 ? answer.added.cards : null;
-  const unknown = added => Object.freeze({ space: cv.space, profile: cv.profile, status: "unknown", total,
+  source = source === "precon" ? "precon" : "import";
+  const unknown = added => Object.freeze({ space: cv.space, profile: cv.profile, source, status: "unknown", total,
     added: Object.freeze(added), destinations: Object.freeze(added.map((row, index) =>
       Object.freeze({ kind: "unknown", row: index, quantity: row.quantity }))) });
   if (!total || !Array.isArray(raw.added) || !raw.added.length || raw.added.length > COL_FILING_MAX) return unknown([]);
@@ -46,21 +47,33 @@ function colFilingSnapshot(answer, cv) {
     destinations.push(Object.freeze(copy));
   }
   if (accounted.some((quantity, index) => quantity !== added[index].quantity)) return unknown(added);
-  return Object.freeze({ space: cv.space, profile: cv.profile, status: "ready", total,
+  return Object.freeze({ space: cv.space, profile: cv.profile, source, status: "ready", total,
     added: Object.freeze(added), destinations: Object.freeze(destinations) });
 }
 
 function colFilingHere(cv, guide, root = null) {
   return colActive(cv) && cv.profile === guide.profile && cv.space === guide.space && ownSpace() === cv.space
+    && (!cv.filingSaved || cv.filingSaved === state.saved && cv.filingSaved.hash === location.hash)
     && seesInventory(cv.space) && (!root || root.isConnected && cv.message.contains(root));
+}
+
+/** The existing saved-box owner keeps the frozen precon guide through its normal navigation. */
+function colFilingSavedBox(saved, box) {
+  const guide = saved.answer?.precon?.filing;
+  if (!guide || saved !== state.saved || saved.hash !== location.hash || guide.source !== "precon") return null;
+  const cv = { space: guide.space, profile: saved.profile, token: routeToken, message: box, filingSaved: saved };
+  const part = colFilingGuide(cv, guide);
+  cv.root = box; // construction precedes attachment; later controls require this exact connected saved box
+  return part;
 }
 
 /** One set of original controls in either density; Show more never changes the advice or writes. */
 function colFilingGuide(cv, guide) {
   if (!colFilingHere(cv, guide)) return null;
-  const root = el("section", { class: "col-filing-guide", "aria-label": "Where these go, saved import" },
+  const precon = guide.source === "precon", source = precon ? "precon" : "import";
+  const root = el("section", { class: "col-filing-guide", "aria-label": `Where these go, saved ${source}` },
     el("h2", { text: "Where these go" }),
-    el("p", { class: "sub", text: `${guide.total ? `For the ${plural(guide.total, "copy", "copies")} added by this import. ` : "The import is saved. "}`
+    el("p", { class: "sub", text: `${guide.total ? `For the ${plural(guide.total, "copy", "copies")} added ${precon ? "with" : "by"} this ${source}. ` : `The ${source} is saved. `}`
       + "Filing suggestions based on the deck lists at that point; check them as you file the cards." }));
   const groups = new Map();
   for (const item of guide.destinations) {
@@ -69,7 +82,7 @@ function colFilingGuide(cv, guide) {
     groups.get(key).items.push(item);
   }
   if (guide.status === "unknown") root.append(el("p", { class: "box box-info col-filing-unknown", text:
-    "Destination unknown. The import is saved, but its deck destinations couldn't be checked. Check where these copies belong." }));
+    `Destination unknown. The ${source} is saved, but its deck destinations couldn't be checked. Check where these copies belong.` }));
   if (!groups.size && guide.status === "unknown") return root;
   const panels = el("div", { class: "col-filing-panels" });
   let initialLeft = COL_FILING_PAGE; // bound the whole first paint, including many waiting decks

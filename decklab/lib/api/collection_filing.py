@@ -1,9 +1,10 @@
-"""Informational destinations for an ordinary CSV import's actually added physical copies.
+"""Informational destinations for actually added CSV-import or precon physical copies.
 
 The locked additive operation supplies JSON-only printing deltas. The caller supplies its
 exact saved snapshot, never a later load. An import changes no holds, decks or incoming stock,
 so one saved pool also describes prior physical stock after subtracting those deltas. Prior
 free copies are consumed globally before any new copy is suggested for a waiting deck.
+A precon additionally proves its newly created deck, reserving its physical recipe first.
 This never assigns cards, changes a deck or reads/writes a notice or kit.
 """
 from collections import Counter, defaultdict
@@ -18,6 +19,7 @@ MAX_DECKS = 200
 MAX_WORK = 200000
 MAX_DESTINATIONS = 20000
 UNKNOWN = "Destination unknown. The import was saved; check where these copies belong."
+PRECON_UNKNOWN = "Destination unknown. The precon was saved; check where these copies belong."
 ROW_FIELDS = ("name", "set", "collector_number", "finish")
 
 
@@ -83,7 +85,22 @@ def _candidate_decks(after, space, profile, work):
     return sorted(candidates, key=lambda item: (rank.get(item[0]["status"], 2), item[0]["id"]))
 
 
-def _allocate(after, space, profile, added):
+def _created_deck(after, space, profile, proof):
+    """The actual newly created deck; planned identities and other spaces aren't evidence."""
+    if not isinstance(proof, dict) or proof.get("was_absent") is not True or proof.get("space") != space:
+        raise ValueError("Unconfirmed new deck")
+    record = after.deck(proof.get("id"))
+    if record is None or record.space != space or record.kind not in ("casual", "commander") \
+            or record.error is not None or not record.sha256 or record.sha256 != proof.get("sha256") \
+            or not guard.sees_deck(record.id, profile):
+        raise ValueError("The new deck could not be confirmed")
+    parsed = decks.parse_deck(record.data, record.slug, record.kind, space=space)
+    if not parsed.has_decklist:
+        raise ValueError("The new deck has no Planned list")
+    return {"id": record.id, "title": parsed.title, "status": parsed.status or "idea"}
+
+
+def _allocate(after, space, profile, added, created=None):
     """Allocate names globally, then spend each exact printing's quantity only once."""
     work = [len(added) + len(after.collection(space).rows)]
     if work[0] > MAX_WORK:
@@ -92,6 +109,10 @@ def _allocate(after, space, profile, added):
     found = pool.load_pool(space)
     if found.space != space or found.warnings or found.unresolved:
         raise ValueError("Incomplete physical pool")
+    if created is not None and created["status"] == "built":
+        holders = [holder for holder in found.in_use if holder.id == created["id"]]
+        if len(holders) != 1 or holders[0].why != "built":
+            raise ValueError("The new built deck's physical recipe is unavailable")
     added_by_name = Counter()
     indices = defaultdict(list)
     for i, row in enumerate(added):
@@ -108,19 +129,33 @@ def _allocate(after, space, profile, added):
                 raise ValueError("Unconfirmed physical holdings")
             held[name] += quantity
             own[holder.id][name] += quantity
-    prior = {}
-    for name, added_quantity in added_by_name.items():
+    if created is not None and created["status"] != "built" and any(own[created["id"]].values()):
+        raise ValueError("An unbuilt new deck unexpectedly holds cards")
+    def physical_stock(name):
         incoming_rows = found.on_the_way.get(name, ())
         if any(type(quantity) is not int or quantity < 0 for _, quantity in incoming_rows):
             raise ValueError("Unconfirmed incoming copies")
         owned = found.owned.get(name, 0)
         if type(owned) is not int or owned < 0:
             raise ValueError("Unconfirmed owned copies")
-        physical = owned - sum(quantity for _, quantity in incoming_rows)
+        return owned - sum(quantity for _, quantity in incoming_rows)
+
+    if created is not None:
+        for name in own[created["id"]]:
+            if name not in added_by_name and physical_stock(name) < held[name]:
+                raise ValueError("The new deck's other physical cards are not all present")
+    prior, reserved = {}, {}
+    for name, added_quantity in added_by_name.items():
+        physical = physical_stock(name)
         before = physical - added_quantity
-        if type(physical) is not int or before < held[name]:
+        new_hold = own[created["id"]][name] if created is not None and created["status"] == "built" else 0
+        reserved[name] = min(new_hold, added_quantity)
+        # Source additions go with the newly created built precon first. Any part of its
+        # physical recipe they cannot supply consumes prior free stock; older holds stay fixed.
+        prior_required = held[name] - new_hold + (new_hold - reserved[name])
+        if before < prior_required:
             raise ValueError("Physical stock does not cover its recorded holdings")
-        prior[name] = before - held[name]
+        prior[name] = before - prior_required
     remaining = [row["quantity"] for row in added]
     heads = defaultdict(int)
     out = []
@@ -141,6 +176,11 @@ def _allocate(after, space, profile, added):
                 heads[name] += 1
 
     new_left = Counter(added_by_name)
+    if created is not None:
+        for name, quantity in reserved.items():
+            if quantity:
+                spend(name, quantity, {"kind": "deck", "deck": created})
+                new_left[name] -= quantity
     for deck, sections in candidates:
         result = pool.compare(sections, found, pool.self_ids(deck["id"]), prices=False)
         if result["unresolved"] or result["warnings"]:
@@ -183,3 +223,22 @@ def after_import(after, space, profile, facts, total):
                 "added": added, "destinations": destinations}
     except Exception:           # advice is optional; saved cards and raw imports remain saved
         return unknown(space, profile, facts if authorized else None, total if authorized else 0)
+
+
+def after_precon(after, space, profile, facts, total, proof):
+    """A saved precon also created a holder; only its exact locked proof relaxes prior holds."""
+    authorized = False
+    try:
+        with inventory.pinned(after):
+            if not guard.sees_inventory(space, profile):
+                return unknown(space, profile, None, 0)
+            authorized = True
+            added = _validated_added(after, space, facts, total)
+            created = _created_deck(after, space, profile, proof)
+            destinations = _allocate(after, space, profile, added, created)
+        return {"space": space, "profile": profile["id"], "status": "ready", "cards": total,
+                "added": added, "destinations": destinations}
+    except Exception:
+        answer = unknown(space, profile, facts if authorized else None, total if authorized else 0)
+        answer["message"] = PRECON_UNKNOWN
+        return answer

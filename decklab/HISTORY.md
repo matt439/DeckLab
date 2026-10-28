@@ -2,6 +2,30 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Where precon copies go (2026-10-28; E7-S15 precon slice)
+
+Page precon adds now carry the informational Where these go guide into the
+existing saved-deck box. The locked operation optionally captures exact printing
+deltas and JSON-only proof of the newly created deck. Its proved new physical
+holdings receive additions once; residual holdings consume prior stock, and
+remaining additions share the ordinary global allocation. Missing/duplicate
+holders, insufficient non-added stand-ins or inconsistent proof yield unknown
+advice without failing the saved cards and deck. The exact committed snapshot
+supplies the response; no later reload or old request pin is substituted.
+
+The frozen guide belongs to its initiating profile, space, saved-box identity and
+route. It preserves the existing navigation, deck warnings and optional token
+flow. Tokens stay outside playable-card destinations, all-basic precons retain
+their collection-null result, and CLI precon defaults/output are unchanged.
+Advice performs no packing, reservation, deck/status or location write.
+
+Root's protected ten-module integration passed 172 tests with no skips,
+including 14 new backend and nine new UI cases, ordinary filing, precon/token
+consumers and saved-box regressions. Root source review, real-error Ruff, Node
+syntax, diff and source-length checks pass. Genuine PostgreSQL and browser/device
+qualification remain unrun; no live database/server/data action was used.
+Single-card adds and CLI merges remain on E7-S15.
+
 ## Buying information for saved test additions (2026-10-28; E5-S17 read-only slice)
 
 Finished visible home variant results now include bounded buying facts for home
