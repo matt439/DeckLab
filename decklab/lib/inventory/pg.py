@@ -817,12 +817,13 @@ class PgInventory:
         applying = getattr(self._applying, "connection", None)
         return work(applying) if applying is not None else self._call(work)
 
-    def undo_change_reason(self, change_id):
-        """The reason one change set was saved with (None when it has none), which tells a
-        trade's whole-change Undo a trade ("Traded", "Traded with T") from other collection edits."""
+    def undo_change_words(self, change_id):
+        """(reason, message) one change set was saved with ((None, None) when there's no such
+        change), which tell a trade's whole-change Undo a trade from other collection edits
+        (undo_mixed.trade_change)."""
         def work(c):
-            found = c.execute("select reason from audit.change_set where id=%s", (change_id,)).fetchone()
-            return found[0] if found else None
+            found = c.execute("select reason, message from audit.change_set where id=%s", (change_id,)).fetchone()
+            return (found[0], found[1]) if found else (None, None)
         applying = getattr(self._applying, "connection", None)
         return work(applying) if applying is not None else self._call(work)
 

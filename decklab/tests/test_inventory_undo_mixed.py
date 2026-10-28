@@ -47,7 +47,7 @@ class RecordingInventory(fixture.AuditInventory):
         self.next_token = 900
         self.next_import = 50
         self.read_rows = 0
-        self.reasons = {}
+        self.said = {}
 
     def saves_decks(self):
         return True
@@ -56,8 +56,8 @@ class RecordingInventory(fixture.AuditInventory):
         self.read_rows += 1
         return copy.deepcopy(self.audit.get(change_id, [])[:undo_mixed.MIXED_MAX + 1])
 
-    def undo_change_reason(self, change_id):
-        return self.reasons.get(change_id)
+    def undo_change_words(self, change_id):
+        return self.said.get(change_id, (None, None))
 
     def undo_latest_rows(self, keys):
         wanted = {(table, json.dumps(key, sort_keys=True)) for table, key in keys}
@@ -121,7 +121,7 @@ class RecordingInventory(fixture.AuditInventory):
             after = after.replace(imports=kept)
         self.next_change += 1
         self.audit[self.next_change] = self._record(before, after, imports)
-        self.reasons[self.next_change] = reason
+        self.said[self.next_change] = (reason, message)
         self.snapshot = after
         self.writes.append((op, actor, message, summary, reason))
         return after, summary

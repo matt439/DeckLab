@@ -8,8 +8,9 @@ original change, never part of it, and only when:
 
 - the change is exactly one of those shapes (a receipt of whole parts with no corrected rows:
   no new components, order notes, payload or product-list rows; a trade only collection rows of
-  one space, saved with a trade's reason, "Traded" or "Traded with T", whose lowered rows
-  changed only their count);
+  one space, saved by collection.trade: its reason "Traded" or "Traded with T" and its message
+  ending in that trade's words, "Trade[ with T]: gave ...; got ...", whose lowered rows changed
+  only their count);
 - every row it wrote is still exactly as it left it and is still the latest audit row for its
   key, so a later edit, receipt, kit choice or token packing refuses, naming that row;
 - the reversal, built with the ordinary model edits, puts back exactly those rows' former
@@ -58,9 +59,21 @@ CHECKED = "This changed after the selected change. Nothing was undone."
 
 # ------------------------------------------------------------------ the source
 
-def trade_reason(reason):
-    """Whether a change set's reason is a trade's ("Traded", "Traded with T": collection.trade's)."""
-    return isinstance(reason, str) and (reason == "Traded" or reason.startswith("Traded with "))
+def trade_change(reason, message):
+    """Whether a change set was saved by collection.trade: its reason is a trade's ("Traded",
+    "Traded with T") and its message ends in the trade's words for that same T ("Trade with T:
+    gave ...; got ...", after the caller's words and a ". "), as trade_message writes them. The
+    reason alone isn't enough: a `collection apply` or an Undo may be saved with it."""
+    if not isinstance(reason, str) or not isinstance(message, str):
+        return False
+    if reason == "Traded":
+        words = "Trade: gave "
+    elif reason.startswith("Traded with "):
+        words = f"Trade with {reason[len('Traded with '):]}: gave "
+    else:
+        return False
+    starts = [0] if message.startswith(words) else         [found + 2 for found in (message.find(end + words) for end in (". ", "! ", "? ")) if found >= 0]
+    return bool(starts) and "; got " in message[min(starts) + len(words):]
 
 
 def _gave(row):
@@ -73,16 +86,16 @@ def _gave(row):
         and after["quantity"] < before["quantity"]
 
 
-def looks_like(rows, past, space, reason=None):
+def looks_like(rows, past, space, reason=None, message=None):
     """IMPORT, RECEIPT or TRADE when Activity's (possibly capped) rows have that shape in space
-    (reason: the change set's, which only tells a trade), else None.
+    (reason and message: the change set's, which only tell a trade, trade_change), else None.
 
     Only an affordance for Activity's Review undo button: the review reads the whole change."""
     seen = {row.get("table") for row in rows} | set(past or ())
     def own(row):
         image = row.get("after") if isinstance(row.get("after"), dict) else row.get("before")
         return isinstance(image, dict) and image.get("space_id") == space
-    if seen == {COLLECTION} and trade_reason(reason) and all(own(row) for row in rows) and any(_gave(row) for row in rows):
+    if seen == {COLLECTION} and trade_change(reason, message) and all(own(row) for row in rows) and any(_gave(row) for row in rows):
         return TRADE
     if RAW_IMPORT in seen and seen <= {RAW_IMPORT, COLLECTION} and all(
             own(row) and (row.get("op") == "INSERT" or row.get("table") == COLLECTION and row.get("op") == "UPDATE")
@@ -181,10 +194,10 @@ def _check_row(row, kind):
         raise UndoUnsupported("Only products this receipt set owned can be put back on order.")
 
 
-def _source(raw, space, reason=None):
+def _source(raw, space, said=None):
     """The complete original change, classified, or a refusal: UndoMissing when any row is
-    outside space (checked for every row before any shape is diagnosed). reason is the change
-    set's, which only tells a trade."""
+    outside space (checked for every row before any shape is diagnosed). said is the change
+    set's (reason, message), which only tell a trade (trade_change)."""
     if not isinstance(raw, list) or not raw:
         raise UndoMissing()
     if len(raw) > MIXED_MAX:
@@ -204,7 +217,7 @@ def _source(raw, space, reason=None):
         kind = IMPORT
     elif COMPONENT in tables and space == HOME and tables <= {COMPONENT, STATUS, COLLECTION, TOKENS, DECK}:
         kind = RECEIPT
-    elif tables == {COLLECTION} and trade_reason(reason):
+    elif tables == {COLLECTION} and trade_change(*(said or (None, None))):
         kind = TRADE
     else:
         raise UndoUnsupported("Only a whole collection import, a whole order receipt or a whole trade can be undone here.")
@@ -659,10 +672,10 @@ def _plan(change_id, space, snapshot, store):
     if not callable(reader) or not callable(getattr(store, "undo_latest_rows", None)):
         raise UndoUnsupported("Undo is available only with the database audit trail.")
     raw = reader(change_id)
-    # A change set's reason tells a trade from other collection edits; read only when it may be one.
-    reason_reader = getattr(store, "undo_change_reason", None)
+    # A change set's reason and message tell a trade from other collection edits; read only when it may be one.
+    said_reader = getattr(store, "undo_change_words", None)
     trade = isinstance(raw, list) and raw and all(isinstance(row, dict) and row.get("table") == COLLECTION for row in raw)
-    kind = _source(raw, space, reason_reader(change_id) if trade and callable(reason_reader) else None)
+    kind = _source(raw, space, said_reader(change_id) if trade and callable(said_reader) else None)
     described = _describe(raw, kind, space)
     label = described["label"]
     _latest(store, raw)

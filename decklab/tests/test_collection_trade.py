@@ -167,6 +167,9 @@ class TradeCliTests(tce.CollectionEditTestCase):
             "Swap at the shop. Trade with User3: gave 1 Llanowar Elves (FDN 227), 1 Black Lotus (LEA 232); "
             "got 1 Sol Ring (ECC 57)", "Claude"))
         self.assertEqual(self.reason(), "Traded with User3")
+        # the words Activity's whole-trade Undo tells a trade by (E7-S22)
+        from decklab.lib.inventory import undo_mixed
+        self.assertTrue(undo_mixed.trade_change(self.reason(), self.last_write()[0]))
         rows = self.by_key()
         self.assertEqual((rows["fdn", "227"]["quantity"], ("lea", "232") in rows, rows["ecc", "57"]["condition"]),
                          ("1", False, "LP"))

@@ -31,7 +31,7 @@ class TradeUndoApiTests(trades.TradeUndoCase):
                          ("trade_undo", "Trade: gave 2 cards, got 3 cards", 3, 2))
         self.assertEqual([row["name"] for row in answer["returned"]["added"]], ["Elvish Mystic"])
         self.assertEqual(len(answer["returned"]["raised"]), 1)
-        self.assertEqual(self.store.writes[-1][2], "fixture trade")
+        self.assertEqual(self.store.writes[-1][2], trades.words("Traded with User3"))
 
     def test_trade_apply_saves_one_change_and_confirms_both_sides(self):
         self.seed()
@@ -64,14 +64,17 @@ class TradeUndoApiTests(trades.TradeUndoCase):
             self.refused(404, self.view, self.trade(gave=[["fdn", "227", "nonfoil", 1]], got=[trades.SOL]))
             self.assertTrue(self.post(member, profile="user2")["saved"])
 
-    def test_hint_offers_a_trade_review_only_with_its_reason(self):
+    def test_hint_offers_a_trade_review_only_with_its_reason_and_words(self):
         profile = {"id": "matt", "name": "Matt", "role": "admin", "space": "home"}
         self.seed()
         change = self.trade()
         rows = copy.deepcopy(self.store.audit[change])
-        listed = {"id": change, "rows": rows, "total": len(rows), "reason": "Traded with User3"}
+        listed = {"id": change, "rows": rows, "total": len(rows), "reason": "Traded with User3",
+                  "message": trades.words("Traded with User3")}
         self.assertEqual(activity_undo.review_hint(listed, {"id": change}, profile), {"review": True, "kind": "mixed"})
         self.assertIsNone(activity_mixed_undo.hint({**listed, "reason": "Sold"}, {"id": change}, profile))
+        # a collection apply saved with a trade's reason isn't offered as a trade
+        self.assertIsNone(activity_mixed_undo.hint({**listed, "message": "Remove traded cards"}, {"id": change}, profile))
         user2 = {"id": "user2", "name": "User2", "role": "member", "space": "user2"}
         with access.using({"profile": "user2", "email": "user2@example.com", "remote": True}):
             self.assertIsNone(activity_mixed_undo.hint(listed, {"id": change}, user2))

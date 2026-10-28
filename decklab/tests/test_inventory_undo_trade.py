@@ -1,7 +1,8 @@
 """Whole-change Undo of a trade (E7-S22) over test_inventory_undo_mixed's isolated recording fixture.
 
 A trade lowers or removes the rows whose copies left and adds the copies that came in, as one
-change saved with the reason "Traded" (or "Traded with T"). Undo puts every row back as one new
+change saved with the reason "Traded" (or "Traded with T") and a message ending in the trade's
+words ("Trade with T: gave ...; got ..."). Undo puts every row back as one new
 change, refused when anything the trade touched has changed since or the cards that came in may
 be held. No PostgreSQL, household data or network is used; test_collection_trade.py runs it
 through the real audit trail.
@@ -28,10 +29,16 @@ class TradeUndoCase(mixed.MixedUndoCase):
         super().setUp()
         self.store.snapshot = self.store.snapshot.with_collection("home", [CARD, MYSTIC, M19])
 
-    def trade(self, gave=GAVE, got=GOT, space="home", reason="Traded with User3"):
+    def trade(self, gave=GAVE, got=GOT, space="home", reason="Traded with User3", message=None):
         inventory.apply(inventory.Op("collection.trade", {"space": space, "gave": gave, "got": got}),
-                        mixed.ACTOR, "fixture trade", reason=reason)
+                        mixed.ACTOR, words(reason) if message is None else message, reason=reason)
         return self.store.next_change
+
+
+def words(reason):
+    """A message as collection.trade's callers save it for reason (trade_message's shape)."""
+    who = reason[len("Traded with "):] if isinstance(reason, str) and reason.startswith("Traded with ") else ""
+    return f"Fixture trade. Trade{' with ' + who if who else ''}: gave the fixture's cards; got the fixture's cards"
 
 
 class TradeUndoTests(TradeUndoCase):
@@ -79,6 +86,32 @@ class TradeUndoTests(TradeUndoCase):
                 change = self.trade(reason=reason)
                 with self.assertRaises(undo.UndoUnsupported):
                     self.review(change)
+
+    def test_a_trades_reason_on_a_change_without_the_trades_words_is_not_a_trade(self):
+        # `collection apply --reason "Traded with Bob"` (or an Undo saved with such a reason) has
+        # the reason but not the message collection.trade writes: never offered as a trade.
+        for reason, message in (("Traded with User3", "Remove the cards traded at the shop"),
+                                ("Traded with User3", "Fixture trade. Trade with Bob: gave 1 card; got 1 card"),
+                                ("Traded with User3", "Fixture trade. Trade with User3: gave 1 card"),
+                                ("Traded with User3", "Undo activity change 7"),
+                                ("Traded", "Fixture trade. Trade with User3: gave 1 card; got 1 card"),
+                                ("Traded", "Fixture Trade: gave 1 card; got 1 card")):
+            with self.subTest(reason=reason, message=message):
+                self.store.snapshot = self.store.snapshot.with_collection("home", [CARD, MYSTIC, M19])
+                change = self.trade(reason=reason, message=message)
+                with self.assertRaises(undo.UndoUnsupported):
+                    self.review(change)
+                rows = copy.deepcopy(self.store.audit[change])
+                self.assertIsNone(undo_mixed.looks_like(rows, None, "home", reason, message))
+
+    def test_the_trades_words_alone_or_after_the_callers_count(self):
+        for message in ("Trade with User3: gave 1 card; got 1 card", "Swap at the shop! Trade with User3: gave 1; got 2",
+                        "Swap. Trade with User3: gave 1 Sol Ring (C21 263); got nothing tracked"):
+            with self.subTest(message=message):
+                self.assertTrue(undo_mixed.trade_change("Traded with User3", message))
+        self.assertTrue(undo_mixed.trade_change("Traded", "Trade: gave 1 card; got 1 card"))
+        self.assertFalse(undo_mixed.trade_change(None, "Trade: gave 1 card; got 1 card"))
+        self.assertFalse(undo_mixed.trade_change("Traded", None))
 
     def test_a_later_edit_of_a_given_row_refuses_naming_it(self):
         change = self.trade()
@@ -160,12 +193,14 @@ class TradeUndoTests(TradeUndoCase):
     def test_looks_like_needs_the_trade_reason_and_own_rows(self):
         change = self.trade()
         rows = copy.deepcopy(self.store.audit[change])
-        self.assertEqual(undo_mixed.looks_like(rows, None, "home", "Traded"), undo_mixed.TRADE)
-        self.assertEqual(undo_mixed.looks_like(rows, None, "home", "Traded with User3"), undo_mixed.TRADE)
-        self.assertIsNone(undo_mixed.looks_like(rows, None, "home", None))
-        self.assertIsNone(undo_mixed.looks_like(rows, None, "user2", "Traded"))
+        said = ("Traded with User3", words("Traded with User3"))
+        self.assertEqual(undo_mixed.looks_like(rows, None, "home", "Traded", words("Traded")), undo_mixed.TRADE)
+        self.assertEqual(undo_mixed.looks_like(rows, None, "home", *said), undo_mixed.TRADE)
+        self.assertIsNone(undo_mixed.looks_like(rows, None, "home", None, said[1]))
+        self.assertIsNone(undo_mixed.looks_like(rows, None, "home", said[0], None))
+        self.assertIsNone(undo_mixed.looks_like(rows, None, "user2", *said))
         added = [row for row in rows if not undo_mixed._gave(row)]
-        self.assertIsNone(undo_mixed.looks_like(added, None, "home", "Traded"))
+        self.assertIsNone(undo_mixed.looks_like(added, None, "home", *said))
 
 
 if __name__ == "__main__":

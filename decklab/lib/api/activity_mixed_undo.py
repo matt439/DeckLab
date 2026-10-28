@@ -37,8 +37,8 @@ def hint(change, shown, profile):
     if any(not isinstance(row, dict) for row in rows):
         return None
     space = _space(profile)
-    # The reason only tells a trade; it never reaches the viewer through this hint.
-    shape = undo_mixed.looks_like(rows, change.get("past"), space, change.get("reason"))
+    # The reason and message only tell a trade; neither reaches the viewer through this hint.
+    shape = undo_mixed.looks_like(rows, change.get("past"), space, change.get("reason"), change.get("message"))
     if shape in (undo_mixed.IMPORT, undo_mixed.TRADE) and guard.allowed(profile, "collection.edit", space):
         return {"review": True, "kind": "mixed"}
     if shape == undo_mixed.RECEIPT and guard.allowed(profile, "receipts.apply") and guard.sees_home_records(profile):

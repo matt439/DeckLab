@@ -163,9 +163,9 @@ class MixedUndoPgTests(db_support.DbTestCase):
         self.api(change, "user2")
         self.assertEqual([row.as_dict()["quantity"] for row in self.fresh().collection("user2").rows], ["2"])
 
-    def trade(self, gave, reason="Traded with User3"):
+    def trade(self, gave, reason="Traded with User3", message="Fixture trade. Trade with User3: gave cards; got cards"):
         inventory.apply(Op("collection.trade", {"space": "home", "gave": gave, "got": [mixed.NEW]}), ACTOR,
-                        "Fixture trade", reason=reason)
+                        message, reason=reason)
         return self.latest()
 
     def test_real_trade_undo_puts_both_sides_back_as_one_change(self):
@@ -175,7 +175,8 @@ class MixedUndoPgTests(db_support.DbTestCase):
                            ([["fdn", "227", "nonfoil", 2]], {"DELETE", "INSERT"})):      # given away entirely
             with self.subTest(gave=gave):
                 change = self.trade(gave)
-                self.assertEqual(self.backend.undo_change_reason(change), "Traded with User3")
+                self.assertEqual(self.backend.undo_change_words(change),
+                                 ("Traded with User3", "Fixture trade. Trade with User3: gave cards; got cards"))
                 preview, answer = self.api(change)
                 self.assertEqual((preview["action"], answer["action"], answer["removed_rows"], answer["returned_rows"]),
                                  ("trade_undo", "trade_undo", 1, 1))
@@ -188,11 +189,14 @@ class MixedUndoPgTests(db_support.DbTestCase):
                 with self.assertRaises(undo.UndoConflict):
                     inventory.undo_mixed_review(change, "home")
 
-    def test_a_collection_change_without_a_trades_reason_has_no_whole_change_undo(self):
-        change = self.trade([["fdn", "227", "nonfoil", 1]], reason="Sold")
-        with self.assertRaises(undo.UndoUnsupported):
-            inventory.undo_mixed_review(change, "home")
-        self.assertIsNone(self.backend.undo_change_reason(10 ** 12))
+    def test_a_collection_change_without_a_trades_reason_and_words_has_no_whole_change_undo(self):
+        for reason, message in (("Sold", "Fixture trade. Trade with User3: gave cards; got cards"),
+                                ("Traded with User3", "Remove the cards traded at the shop")):
+            with self.subTest(reason=reason):
+                change = self.trade([["fdn", "227", "nonfoil", 1]], reason=reason, message=message)
+                with self.assertRaises(undo.UndoUnsupported):
+                    inventory.undo_mixed_review(change, "home")
+        self.assertEqual(self.backend.undo_change_words(10 ** 12), (None, None))
 
     def test_the_store_reads_every_row_and_latest_ids_in_one_query(self):
         change = self.merge()
