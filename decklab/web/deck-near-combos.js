@@ -48,9 +48,11 @@ function nearComboItem(m, data, editable) {
   if (m.considering) item.append(el("p", { class: "sub", text: "On the Considering list." }));
   else if (editable) {
     item.append(el("button", { type: "button", class: "btn btn-quiet", text: "Add to Considering",
-      onclick: (event) => {
-        event.currentTarget.disabled = true;
-        saveConsidering(data, { action: "add", line: { name: m.missing, qty: 1 } });
+      onclick: async (event) => {
+        // Off while it saves; a refused save (its toast says why) turns it back on to try again.
+        const button = event.currentTarget;
+        button.disabled = true;
+        if (!await saveConsidering(data, { action: "add", line: { name: m.missing, qty: 1 } })) button.disabled = false;
       } }));
   }
   return item;

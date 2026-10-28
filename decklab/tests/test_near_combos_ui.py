@@ -86,6 +86,25 @@ class NearCombosUiTests(unittest.TestCase):
               {action: 'add', line: {name: 'Card 0', qty: 1}, sha256: 'a'.repeat(64)});
         """)
 
+    def test_a_refused_add_turns_the_button_back_on(self):
+        self.run_js("""
+            const toasts = [];
+            toast = (text) => toasts.push(text);
+            api = async () => { throw new ApiError(409, "The deck was saved since."); };
+            const part = nearCombosPanel(withNear([near('Spare')]));
+            const button = buttonText(part, 'Add to Considering');
+            button.click();
+            assert.equal(button.disabled, true);
+            await settle();
+            assert.equal(button.disabled, false);
+            assert.deepEqual(toasts, ['The deck was saved since.']);
+            // A save that went through leaves it off (the deck is drawn again from the saved deck).
+            api = async () => ({saved: true});
+            button.click();
+            await settle();
+            assert.equal(button.disabled, true);
+        """)
+
 
 if __name__ == "__main__":
     unittest.main()
