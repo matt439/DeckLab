@@ -2,6 +2,19 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Developer command documentation audit (2026-10-28; E11-S42)
+
+AGENTS.md and README.md now show valid receipt previews and matching applies
+bound with `--expect TOKEN`, including the difference from an unbound apply.
+Later product-kit guidance points to the existing inspect/change commands.
+The database banner describes the current runtime, and historical Git fixture
+readers are distinguished from the retired automatic Git write mode.
+
+The audit preserves the single AGENTS.md instruction source, dated history and
+private-repository references. Four safe CLI help checks, independent review
+and diff checks passed. No command behavior, household record, credential,
+migration or service was changed.
+
 ## Source comment audit (2026-10-28; E11-S41)
 
 The named storage, privacy and lifecycle comments now match their runtime

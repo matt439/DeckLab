@@ -755,8 +755,8 @@ used by the other person's deck says "one of User1's decks", without a link or a
   and `image put|remove` make the page's changes with its rules (AGENTS.md, "Accessories", has the
   columns, rules and commands), and a deck's Sleeves and Deck box lines change through `deck push`.
   `accessories check` (or `python -m decklab.lib.accessories --check`) reports broken rules and
-  exits 2 when the database can't be reached. A product's sleeves and deck box can only be chosen
-  on the page.
+  exits 2 when the database can't be reached. A product's kit can also be read with `product kit`
+  and changed with `product set-kit`, as described above.
 
 ## Tokens
 
@@ -1120,7 +1120,7 @@ python -m decklab.db order record ID --seller "Shop" -m "Correct seller"   # met
 python -m decklab.db order extra-copies ID C [--undo] -m "..."              # C is more copies of owned printings
 python -m decklab.db product add|edit|set-intact|kit|set-kit ...            # record, storage and kit
 python -m decklab.db watchlist list|set|remove|apply ...                    # the purchase queue
-python -m decklab.db receive --order <id> [--component C]... [--verified C]... [--intact yes|no] [--date D --apply]
+python -m decklab.db receive --order <id> [--component C]... [--verified C]... [--intact yes|no] [--date D] [--apply [--expect TOKEN]]
 python -m decklab.db collection list|merge|edit ...                         # a space's collection; cards from no recorded order; one row
 python -m decklab.db tokens list|check|add|edit|remove ...                  # a space's token cards
 ```
@@ -1240,11 +1240,13 @@ touches: every deck needs an owned-vs-needed table and only Scryfall card names.
 fields, and exits 2 when the database can't be used or holds no imported inventory.
 
 **Receiving a delivery from the command line** uses the same inventory operation as the Receive delivery page; partial CLI arrivals still use the explicit split below. Preview first (it
-writes nothing); applying needs the actual arrival date and an explicit `--apply`:
+writes nothing), including the same selected components, checks, received rows and actual arrival
+date that will be applied. Applying requires `--date` and `--apply`. A valid preview prints
+`Preview token: TOKEN`; repeat its options with `--apply --expect TOKEN` to bind the apply to that preview:
 
 ```
-python -m decklab.db receive --order <order-id>
-python -m decklab.db receive --order <order-id> --component cards --verified cards --date YYYY-MM-DD --apply
+python -m decklab.db receive --order <order-id> --component cards --verified cards --date YYYY-MM-DD
+python -m decklab.db receive --order <order-id> --component cards --verified cards --date YYYY-MM-DD --apply --expect TOKEN
 ```
 
 Use repeated `--component <component-id>` to receive just the components that arrived. Omit the
@@ -1429,10 +1431,11 @@ last commit with the files `pre-db-inventory`; `inventory backend db` and commit
 test's own tree, the decks, `accessories.csv` and its pictures included. A write is plain atomic
 files under the backend's in-process lock; before writing anything it checks that every file is
 still what the load read, and refuses the whole change (a 409 conflict, nothing written) when one
-changed meanwhile. Nothing is committed to git. Phase 4 deleted the files backend's git mode (its
-commits, the "commit them first" refusal and `decklab/data/inventory-pending.json`), and phase 5
+changed meanwhile. Nothing is committed to git. Phase 4 deleted the files backend's Git write mode
+(its automatic commits, the "commit them first" refusal and `decklab/data/inventory-pending.json`);
+`FileInventory.from_git` and `git_files` still read historical fixtures without changing Git. Phase 5 deleted
 its cross-process lock and recovery journal (`decklab/data/receipts/active.json`, the 409s while
-one was unfinished, and `receive --recover`), and phase 5b `config.json`'s `"inventory":
+one was unfinished, and `receive --recover`), and phase 5b deleted `config.json`'s `"inventory":
 {"backend": ...}` switch: Deck Lab reads only the database.
 
 ### Decks and accessories in the database
@@ -1627,7 +1630,7 @@ Both target paths are required, absolute POSIX paths; quote shell arguments cont
 
 ### The database warning banner
 
-The version banner (`#build-warning`) gets a "Deck Lab's database" part when something's wrong. Everyone sees "Deck Lab's database isn't reachable, so wishlists, settings and play records can't be read or saved right now" when the stores can't be used. Only admins see the rest: migrations waiting (with "Run python -m decklab.db migrate on the PC", and whether the stores wait on it), "couldn't check its database just now", why the server's Python can't use psycopg, a backup older than `stale_backup_hours` (36 by default) or none yet, and, with the inventory backend on `db`, that the pages show the inventory as it was when the database was last reached (changes can't be saved meanwhile), or that it holds no inventory ("Deck Lab's database holds no inventory. Restore the newest backup into it on the PC, then check it with python -m decklab.db status.", also shown while migration 0004 is pending; before phase 5 it said to run `import-files --apply` or switch back to the files). `GET /api/status`'s admin block has `"inventory"` for this: the backend, whether the database holds an inventory, its revision and import time, and `stale`. Since phase 5 admins also see the nightly checks' warning (the block's `checks_warning`): "No check of the database's data has run yet", "The database check of <date> found a problem (<sub-check>). On the PC, python -m decklab.db check --history says more.", a last check older than `stale_backup_hours`, or "The restore check of a database backup on <date> failed".
+The version banner (`#build-warning`) gets a "Deck Lab's database" part when something's wrong. Everyone sees "Deck Lab's database isn't reachable, so wishlists, settings and play records can't be read or saved right now" when the stores can't be used. Only admins see the rest: migrations waiting (with "Run python -m decklab.db migrate on the PC", and whether the stores wait on it), "couldn't check its database just now", why the server's Python can't use psycopg, a backup older than `stale_backup_hours` (36 by default) or none yet, and, for the database-backed inventory, that the pages show the inventory as it was when the database was last reached (changes can't be saved meanwhile), or that it holds no inventory ("Deck Lab's database holds no inventory. Restore the newest backup into it on the PC, then check it with python -m decklab.db status.", also shown while migration 0004 is pending; before phase 5 it said to run `import-files --apply` or switch back to the files). `GET /api/status`'s admin block has `"inventory"` for this: the backend, whether the database holds an inventory, its revision and import time, and `stale`. Since phase 5 admins also see the nightly checks' warning (the block's `checks_warning`): "No check of the database's data has run yet", "The database check of <date> found a problem (<sub-check>). On the PC, python -m decklab.db check --history says more.", a last check older than `stale_backup_hours`, or "The restore check of a database backup on <date> failed".
 
 ### Visits
 

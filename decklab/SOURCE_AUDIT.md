@@ -361,14 +361,23 @@ lock/fixture rationale and historical FileInventory.from_git helpers remain.
 
 ## Developer instruction audit: E11-S42
 
-Compare AGENTS.md's Logging new cards and Sleeves, deck boxes and playmats
-instructions, plus matching README command examples, with the current parsers:
-receipt previews support receive --expect; product-kit commands exist. Correct
-those contradictions and the immediate database/file/retired-rollback guidance.
-CLAUDE.md includes AGENTS.md, so do not create a second instructions copy.
-Preserve dated history and private-repo/tag references where they are accurate.
-Check command help without an apply, migration or household read/write. Changes
-to command behaviour are outside this documentation task.
+Built 2026-10-28. AGENTS.md's Logging new cards and Sleeves, deck boxes and
+playmats instructions and their matching README examples were checked against
+inv_receive.py, inv_product.py and the typed product-kit operation.
+
+Receipt examples now use the same selected components, checks, corrected rows
+and actual date for preview and apply. They explain the valid preview token's
+inventory/intent binding through --apply --expect TOKEN and the still-supported
+unbound apply. Product kit/set-kit replace later contradictory page-only claims.
+The README's database banner is no longer conditional on the retired backend
+switch. FileInventory.from_git and git_files remain described as historical
+fixture readers, distinct from the retired automatic Git write mode.
+
+Four safe CLI help checks passed: receive, product kit, product set-kit and
+inventory. Independent review and diff checks pass. No apply, migration,
+household record or credential access was involved. CLAUDE.md still includes
+AGENTS.md instead of maintaining a second instructions copy. Dated history and
+private-repository/tag references were preserved; command behaviour is unchanged.
 
 ## Continuous source-length guard: E11-S43
 

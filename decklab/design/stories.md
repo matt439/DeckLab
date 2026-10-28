@@ -45,10 +45,10 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 19 | 13 | 2 | 2 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 20 | 14 | 1 | 4 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 35 | 31 | 1 | 1 | 2 |
-| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 38 | 22 | 6 | 7 | 3 |
-| **Total** | **254** | **192** | **21** | **27** | **14** |
+| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 38 | 23 | 6 | 6 | 3 |
+| **Total** | **254** | **193** | **21** | **26** | **14** |
 
-Counted from the story headers on 2026-10-28 after the feature-reserve and maintenance reviews and completion of E11-S36, E11-S37, E11-S38, E11-S41 and E11-S43. The reviews added five feature stories and eight hygiene stories, and corrected E1-S12 from missing to partial.
+Counted from the story headers on 2026-10-28 after the feature-reserve and maintenance reviews and completion of E11-S36, E11-S37, E11-S38, E11-S41, E11-S42 and E11-S43. The reviews added five feature stories and eight hygiene stories, and corrected E1-S12 from missing to partial.
 
 ---
 
@@ -3771,7 +3771,7 @@ Evidence:
 
 Keeping Deck Lab running, safe and believable, by Matt as the household's admin and by Claude Code working for him at the PC. It covers the server and its Cloudflare tunnel and "Deck Lab is off" page, the PostgreSQL database with its nightly backup, export, check and restore check, the audit trail on #/activity, the `python -m decklab.db` commands Claude works through (previews, `--expect` guards, `-m` messages, exit codes), the card data's background refresh, Forge upkeep and the Safari Simulator suite. Every write is one audited change set, Matt's own command-line writes are recorded as his, and backups are checked by restoring them.
 
-Open: E11-S02, E11-S08, E11-S12, E11-S16, E11-S21, E11-S28, E11-S30, E11-S31, E11-S34, E11-S35, E11-S39, E11-S40, E11-S42.
+Open: E11-S02, E11-S08, E11-S12, E11-S16, E11-S21, E11-S28, E11-S30, E11-S31, E11-S34, E11-S35, E11-S39, E11-S40.
 
 **E11-S01** · Matt · must · M · built
 
@@ -4490,7 +4490,7 @@ Evidence:
 - `editor.js`, `tokens.js`, `deck.js`, `test_api_permissions.py`: current script map, visible-space choices, Overview/read guards and direct-script versus HTTP permission boundaries.
 - Python executable AST and JavaScript outside comments are unchanged by the audit; syntax and diff checks pass. Findings and implementation owners are recorded in [SOURCE_AUDIT.md](../SOURCE_AUDIT.md#comment-audit-e11-s41).
 
-**E11-S42** · Claude Code · should · S · missing
+**E11-S42** · Claude Code · should · S · built
 
 As the operator following repository instructions, I want developer command examples to match the current typed commands, so that upkeep follows the supported database workflow.
 
@@ -4498,11 +4498,12 @@ As the operator following repository instructions, I want developer command exam
 - Given product-kit instructions, then they point to the implemented typed command rather than claiming no CLI exists.
 - Given storage and rollback wording in the audited instructions, then current runtime guidance is database-only while historical tags and test-backend guidance keep their proper context.
 
-Evidence of gap (2026-10-28): AGENTS.md's receipt workflow contradicts inv_receive.py and README.md; its product-kit workflow contradicts its own earlier typed-command description. CLAUDE.md includes AGENTS.md rather than owning a separate copy.
+Now (2026-10-28): AGENTS.md and README.md describe valid receipt previews bound by `--apply --expect TOKEN`, the implemented product-kit inspect/change commands and database-only runtime. Historical Git readers retain their accurate purpose; CLAUDE.md still includes the single AGENTS.md source.
 
-Gap: these instructions and their matching README examples need reconciliation.
-
-First slice: compare the named AGENTS.md instructions and matching README examples with inv_receive.py and the product-kit parser/operation, correct the contradictions, and check safe command help. Do not run an apply or touch household records. The [maintenance owner](../SOURCE_AUDIT.md#maintenance-backlog) records the finite scope and evidence.
+Evidence:
+- `AGENTS.md`: Logging new cards and Sleeves, deck boxes and playmats.
+- `decklab/README.md`: matching receipt examples, product-kit guidance, file-backend history and current database banner.
+- Safe help for receive, product kit, product set-kit and inventory passed; independent parser/operation review and diff checks passed, without a household read or write. See [SOURCE_AUDIT.md](../SOURCE_AUDIT.md#developer-instruction-audit-e11-s42).
 
 **E11-S43** · Claude Code · should · S · built
 
