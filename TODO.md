@@ -39,7 +39,6 @@ An index of open work, one row per item; each row points to the doc that owns th
 |---|---|---|---|---|
 | `E2-S22` | DECISION | must | M | Physical hardware/touch-usability follow-up on the household's iPhones and M2 11-inch iPad; the six-configuration Safari Simulator suite passes ([evidence](decklab/safari/EVIDENCE.md)). |
 | `E4-S26` | OPEN | could | M | The two-player life counter is built (Game log, ends in Record result); multiplayer comes with `E4-S18`. |
-| `E8-S22` | OPEN | could | M | A location (row, section) for storage copies, shown in the packing plan; with `E8-S19`'s storage count. |
 
 ## Deck Lab: collection, orders and buying
 
@@ -49,8 +48,8 @@ An index of open work, one row per item; each row points to the doc that owns th
 |---|---|---|---|---|
 | `E5-S15` | DEFERRED | should | M | User1 asks from the page for a card or a Forge run, Matt approves (`E3-S13`); not urgent. |
 | `E5-S24` | DEFERRED | could | S | Copy one shop's list from Shopping's By shop, for pasting into the shop's search. |
-| `E5-S08` | OPEN | could | XL | Australian shop prices and stock, starting with a daily MTGMate snapshot for queued rows; then `E5-S19`'s back-in-stock alerts. |
-| `E7-S32` | OPEN | could | L | Camera scanning into the collection; first slice is a recognition spike. ManaBox import stays the route meanwhile. |
+| `E5-S08` | OPEN | could | XL | MTGMate's daily snapshot for queued rows and `E5-S19`'s Back in stock are built; next the deck tables' missing cards, then a second shop. |
+| `E7-S32` | OPEN | could | L | Spike done ([scanning-spike.md](decklab/design/scanning-spike.md)): Windows OCR reads the bottom line; next try real phone photos, then a Scan cards sheet on the Collection page. |
 
 ## Deck Lab: Commander nights
 
@@ -58,8 +57,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 
 | id | status | pri | size | item |
 |---|---|---|---|---|
-| `E9-S07` | OPEN | could | L | EDHREC ideas for a commander, marked owned, free or to buy. |
-| `E9-S25` | OPEN | could | M | Two-card combos a Commander deck is one card away from, with the missing piece's availability. |
+| `E9-S07` | OPEN | could | L | EDHREC ideas are built on the command line and the deck page; next an EDHREC scope in the editor's Add panel. |
 
 ## Deck Lab: testing and Forge
 

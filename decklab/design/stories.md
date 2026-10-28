@@ -39,14 +39,14 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 19 | 16 | 1 | 1 | 1 |
 | [E3: Test a deck](#e3-test-a-deck) | 15 | 12 | 3 | 0 | 0 |
 | [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 22 | 16 | 2 | 3 | 1 |
-| [E5: Decide what to buy](#e5-decide-what-to-buy) | 22 | 15 | 0 | 5 | 2 |
+| [E5: Decide what to buy](#e5-decide-what-to-buy) | 22 | 16 | 1 | 3 | 2 |
 | [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 20 | 18 | 0 | 0 | 2 |
 | [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 28 | 21 | 3 | 4 | 0 |
-| [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 18 | 12 | 1 | 3 | 2 |
-| [E9: Commander nights](#e9-commander-nights) | 20 | 13 | 0 | 6 | 1 |
+| [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 18 | 13 | 2 | 1 | 2 |
+| [E9: Commander nights](#e9-commander-nights) | 20 | 14 | 1 | 4 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 35 | 31 | 1 | 1 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 28 | 17 | 6 | 2 | 3 |
-| **Total** | **241** | **184** | **17** | **26** | **14** |
+| **Total** | **241** | **187** | **20** | **20** | **14** |
 
 Counted from the story headers on 2026-10-27.
 
@@ -1231,7 +1231,7 @@ Gap: Two players only; no multiplayer counter (E4-S18).
 
 How Matt, with User1's wishes and Claude's research, goes from "this deck is short" to a decided purchase. On the page: each deck's sortable Prices table of converted Scryfall estimates, and Shopping's Decks still missing cards, Missing cards across decks, To buy, By shop and Long-term plan, with queue add, edit, move and remove for admins and reprint notices from cached Scryfall data. Live Australian shop checks, dated buylists and `watchlist apply` stay with Claude on the PC; recording an order, which reduces the queue rows it fulfils (Shopping's New order or `order add --fulfils`), belongs to E6. By design there are no spending totals and no collection value.
 
-Open: E5-S08, E5-S15, E5-S17, E5-S19, E5-S24.
+Open: E5-S08, E5-S15, E5-S17, E5-S24.
 
 **E5-S01** · Matt · must · M · built
 
@@ -2401,7 +2401,7 @@ Next slice: `POST /api/collection/scan` (one photo, shrunk in the page on a canv
 
 The physical side of home's shared pool: each built deck and each product kept intact is in one sleeve design and one deck box, every other card sits unsleeved in the storage box, and moving a card between decks means changing its sleeve. Deck Lab records the sleeves, deck boxes and playmats (each Matt's, User1's or shared) on the Sleeves & boxes page, a built deck's Sleeves and Deck box lines and an intact product's kit, warns when a holder has too few sleeves or a box that is full or too small, and lets one sleeve design sleeve several holders. Choosing a deck's kit needs the right to edit that deck; an owner may make their kit public (read-only), and members never see private kit. Accessory prices are not wanted.
 
-Open: E8-S03, E8-S15, E8-S19, E8-S22.
+Open: E8-S03, E8-S15, E8-S19.
 
 **E8-S01** · Matt · must · M · built
 
@@ -2717,7 +2717,7 @@ Gap: migration 0016 not applied to the live database; not tried with real cards 
 
 Getting the household's Commander decks ready for social Commander nights at a local shop, where staff make 4-player pods and the shop publishes a bracket range. The editor checks the Commander deck rules and a minimum bracket from Game Changers, mass land denial and extra turns; a Commander deck's Overview opens with a plain bracket sentence, what opponents will face and the dates of the card data behind them, and home admins can record the usual night's aim and house rules. Practice games use the free multiplayer mulligan, and Forge plays Commander decks 1v1 only, marked indicative. Two-card combos (from Commander Spellbook) and Wizards' latest Commander announcement are checked too (2026-10-21). Still open: 4-player pods on the page, EDHREC ideas, and pod games in the Game log.
 
-Open: E9-S07, E9-S11, E9-S16, E9-S21, E9-S22, E9-S25.
+Open: E9-S07, E9-S11, E9-S16, E9-S21, E9-S22.
 
 **E9-S02** · Matt · must · M · built
 
