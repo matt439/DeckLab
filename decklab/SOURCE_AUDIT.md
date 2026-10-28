@@ -527,3 +527,41 @@ none over 1,200 lines. Genuine PostgreSQL, named native/process checks, actual
 Forge, browser/device and live-runtime acceptance remain separate; earlier
 stopped actions were not retried. This checkpoint does not qualify live data,
 server changes, installations or deployments.
+
+## Second integrated feature checkpoint: 2026-10-28
+
+The accumulated source through `f5147f8` passed a fresh complete protected run
+after the forecast-key and private-kit fixture corrections. All shards used
+`scripts/test_shard.py INDEX 4 --hang-after 1200`, at most two concurrently,
+with the permanent pre-import guard installed before discovery.
+
+| Shard index | Discovered | Reported | Skips | Seconds | Host exit |
+|---|---:|---:|---:|---:|---:|
+| 0 | 2,254 | 2,120 | 84 | 383.880 | 0 |
+| 1 | 2,416 | 2,292 | 157 | 287.733 | 0 |
+| 2 | 2,684 | 2,530 | 83 | 380.514 | 0 |
+| 3 | 2,617 | 2,451 | 96 | 397.266 | 0 |
+| Total | 9,971 | 9,393 | 420 | | |
+
+Every final log reports OK. Discovery accounts for all 9,123 starting cases
+under the three class moves and one explicit token-test rename, plus 848 new
+cases, without missing IDs, duplicates or loader errors. Class-level setup
+skips account for discovered cases absent from the reported totals. Frozen
+before/after manifests prove the same 1,152 source files and digest throughout:
+`bca3527f0618a6d31a4ea7b786c3fb480bb29097ffca218b806d9eef876bdcd7`.
+The checkout also retained exactly 112 leading test-header edits, each proved
+AST-equivalent to HEAD except its module docstring. Their earlier staging action
+was denied; they remain uncommitted and are not claimed as a shipped cleanup.
+
+The local scratch folder `decklab-fixture-f5147f8-7pxzl5wu` retains discovery,
+source manifests, four full logs, explicit exit-code sidecars,
+`final-snapshot-proof.json` and `qualification-result-final.json`. The earlier
+`46b53eb` run, including its two failures, remains in its separate evidence
+folder; it was not rewritten as a pass. The final correction group passed 165
+targeted tests with no skips. Real-error Ruff, whitespace and source lengths
+pass: 1,161 owned source files, none over 1,200 lines.
+
+This qualifies protected disposable fixtures only. PostgreSQL, real Forge,
+named native/process checks, browser/device and live-runtime acceptance remain
+separate; earlier stopped actions were not retried. It makes no claim about
+the earlier unguarded database-test invocation's unresolved live-data effects.

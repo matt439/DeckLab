@@ -22,9 +22,16 @@ intact. No permission, routing or user-data behavior changes.
 
 Root's protected six-module correction group passed 165 tests without skips,
 covering the inventory reader guard, alias reads/writes, forecast backend/UI
-and player/kit backend/UI. Ruff and whitespace pass. A fresh four-shard run will
-qualify the corrected source separately; the earlier failed run is not presented
-as a pass. No live database, server, Forge or native qualification was attempted.
+and player/kit backend/UI. Ruff and whitespace pass. A fresh frozen-source run
+on `f5147f8` passed all four shards with explicit host exit 0: 9,393 tests
+reported, 420 intentional skips, from 9,971 unique discovered cases. Discovery
+preserved all 9,123 starting cases through the documented move/rename maps,
+with 848 additional cases and no missing, duplicate or import-error cases.
+The 1,152-file source digest was unchanged throughout; the only uncommitted
+source was the same 112 AST-equivalent headers. The detailed checkpoint and
+local evidence reference are in [SOURCE_AUDIT.md](SOURCE_AUDIT.md#second-integrated-feature-checkpoint-2026-10-28).
+The earlier failed run remains preserved separately. These protected fixtures
+do not qualify PostgreSQL, live data/server, real Forge, native runtime or devices.
 
 ## Review one deleted token-card record (2026-10-28; E11-S08 slice)
 
