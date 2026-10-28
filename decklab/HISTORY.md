@@ -2,6 +2,36 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Considering in saved-deck editors (2026-10-28; E2-S26 first slice)
+
+Full and Quick edit now add, remove and change quantities in a saved deck's
+Considering area. Alternatives have their own current/base state and join dirty
+detection, local drafts/resume, history/Undo, discard, check/review and normal
+Save. They stay outside playable lists, counts, availability, packing and Forge
+identities. Considering-only saves leave unstarted Play-now lists untouched.
+
+Legacy missing fields preserve data; explicit empty lists clear it. Unknown
+baseline provenance survives repeated persistence and rebase instead of becoming
+an invented empty baseline. Whole-list rebase preserves categories, order and
+duplicate occurrences, with concurrent changes called out for review. Review
+rows use the normalized check result, including canonical names/merged copies.
+
+Connected row/modal ownership, composition completion, semantic Undo focus and
+page/frame/profile/sheet guards cover stale controls and late checks, reloads
+and saves. Retained empty-deck confirmation accepts a Considering-only payload.
+Backend check answers include normalized flat alternatives and report their
+blocks separately from playable-list changes. Explicit loader registries are
+updated; editor.js is 1,196 lines.
+
+Protected checks passed 33 new UI cases and an 80-case editor/Quick/contracts/
+backend batch (nine new backend cases), plus affected regressions. Root's final
+combined feature/API/shared-script/privacy run passed 161 tests with no skips.
+Independent review, root review, Ruff, syntax, source-length and diff checks are
+clear. Atomic draft moves into Planned or its sideboard are the next slice, and
+new-deck controls wait until the first save. Browser/device and live-runtime
+acceptance remain unverified; no real-data save, database connection or new
+Forge game was used.
+
 ## Reviewed bulk storage locations (2026-10-28; E8-S23)
 
 Card list now filters by a recorded location or No location recorded alongside

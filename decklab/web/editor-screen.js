@@ -417,6 +417,7 @@ function drawMain() {
   drawLines();
   showRowAvailability(currentAvailability());
   projectEditorSearchDock();
+  drawEditorConsidering();
 }
 
 // The write-up ----------------------------------------------------------------------
@@ -965,7 +966,7 @@ function editorBarChangeSummary(ed) {
   }
   const structure = groups.size === 0 && listSignature(ed.lists) !== listSignature(ed.base.lists);
   const count = groups.size + Number(structure) + Object.keys(changedFields()).length
-    + Object.keys(changedProse()).length + Number(!!ed.markCurrent);
+    + Object.keys(changedProse()).length + Number(!!ed.markCurrent) + Number(editorConsideringChanged(ed));
   return { count, added, removed };
 }
 
@@ -1086,9 +1087,10 @@ function drawBar() {
   updateEditorBarChanges(ed, p);
   // One primary per view: Save is the main action only while there's something to save (an unstarted
   // play-now list has its own "Start it" button).
-  const mainSave = ed.mode === "new" || (ed.dirty && !none);
+  const consideringSave = editorConsideringChanged(ed) && editorConsideringSupported(ed);
+  const mainSave = ed.mode === "new" || (ed.dirty && (!none || consideringSave));
   for (const b of [p.save, p.saveMore]) if (b) b.classList.toggle("btn-primary", mainSave);
-  if (p.save && !p.save.dataset.busy) p.save.disabled = none;
+  if (p.save && !p.save.dataset.busy) p.save.disabled = (none && !consideringSave) || !!ed.consideringUnavailable;
   if (p.test) {
     vtSyncTestRow(p.test);
     if (ed.dom.forge) ed.dom.forge.hidden = p.test.hidden;

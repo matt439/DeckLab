@@ -578,7 +578,7 @@ class SleevesPageTests(unittest.TestCase):
         setup = (f"editor = {{ mode: 'edit', kind: 'casual', version: 'target', view: {{ lists: {{ owned: null }}, "
                  f"other_sleeves: [{{ id: 'casual/x', title: 'Gruul Ramp', sleeves: 'Red' }}] }}, "
                  f"base: {{ fields: {json.dumps(base)} }} }}; editor.fields = {{ ...editor.base.fields }}; ''")
-        return _run_page([setup, *calls], ("core.js", "accessories.js", "editor.js", "editor-screen.js", "editor-details.js"))[1:]
+        return _run_page([setup, *calls], ("core.js", "accessories.js", "editor.js", "editor-considering.js", "editor-screen.js", "editor-details.js"))[1:]
 
     def test_offered_changed_and_described(self):
         built = {"status": "built", "player": "user", "archetype": None, "built_version": None,
@@ -742,7 +742,7 @@ class SleevesPageTests(unittest.TestCase):
                  "archetype: '', player: 'user', status: 'idea', target_bracket: 2, sleeves: ' Pink ' } }; ''",
                  "String(fieldOffered('sleeves'))", "JSON.stringify(newDeckFields())",
                  "editor.fields.status = 'built'; String(fieldOffered('sleeves'))", "JSON.stringify(newDeckFields())"]
-        self.assertEqual(_run_page(calls, ("core.js", "editor.js", "editor-screen.js"))[1:],
+        self.assertEqual(_run_page(calls, ("core.js", "editor.js", "editor-considering.js", "editor-screen.js"))[1:],
                          ["false", '{"player":"user","status":"idea"}', "true",
                           '{"player":"user","status":"built","sleeves":"Pink"}'])
 
@@ -753,7 +753,7 @@ class SleevesPageTests(unittest.TestCase):
                  "JSON.stringify(newDeckFacts().map(([k]) => k))",
                  "editor.fields.status = 'built'; JSON.stringify(newDeckFacts().filter(([k]) => k === 'Sleeves'))",
                  "editor.fields.sleeves = ''; JSON.stringify(newDeckFacts().filter(([k]) => k === 'Sleeves'))"]
-        self.assertEqual(_run_page(calls, ("core.js", "editor.js", "editor-screen.js", "editor-save.js"))[1:],
+        self.assertEqual(_run_page(calls, ("core.js", "editor.js", "editor-considering.js", "editor-screen.js", "editor-save.js"))[1:],
                          ['["Title","Format","Played by","Status","Archetype"]', '[["Sleeves","Pink"]]',
                           '[["Sleeves","not set"]]'])
 

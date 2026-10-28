@@ -41,7 +41,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 |---|---|---|---|---|
 | `E1-S12` | BLOCKED | could | S | Temporary field-page edit was denied before execution; the existing summary is built, with the poor-AI caveat still open. |
 | `E2-S16` | OPEN | could | L | Save an unsaved editor draft privately for the same profile to resume on another device, with revision conflicts reviewed. |
-| `E2-S26` | OPEN | could | M | Edit Considering alongside Planned and Play-now, preserving it in drafts and moving cards in one reviewed deck save. |
+| `E2-S26` | OPEN | could | M | Move Considering cards into Planned or its sideboard in one draft change with Undo; saved-deck CRUD, drafts and normal Save are built. |
 | `E2-S22` | DECISION | must | M | Physical hardware/touch-usability follow-up on the household's iPhones and M2 11-inch iPad; the six-configuration Safari Simulator suite passes ([evidence](decklab/safari/EVIDENCE.md)). |
 | `E4-S18` | OPEN | could | M | Record 3–4-player games with external opponent seats; keep pod results apart from 1v1. Also covers `E9-S16`. |
 | `E4-S26` | BLOCKED | could | M | Extend the built two-player life counter to pods after `E4-S18` supplies multiplayer game records. |

@@ -49,7 +49,7 @@ PLAY_SCRIPTS = ("deck-tools.js", "deck-print.js", "qr.js", "deck-label.js", "col
 SHELL_SCRIPTS = ("keyboard-help.js", "shell.js", "settings.js", "settings-members.js", "visibility.js", "arrival-notices.js")  # account pages, just before app.js
 CARD_SCRIPTS = ("ui.js", "symbols.js", "cards-ui.js", "card-viewer.js")     # the shared card pieces (UI-KIT.md)
 SCRIPTS = ("core.js", *CARD_SCRIPTS, "library.js", "library-boxchecks.js", "library-glance.js", "library-tables.js", "cover.js", "deck-availability.js", "deck.js", "deck-header.js", "deck-overview.js", "deck-retirement.js", "deck-rename.js", "deck-prices.js", "guide.js", "stats.js", "commander-readiness.js", "deck-near-combos.js", "commander-night.js", "practice.js", "version.js", "wishlist.js", "shopping.js", "shopping-buying.js", "shopping-queue.js", "shopping-reprints.js", "shopping-snapshot.js", "shopping-orders.js", "shopping-order-edit.js", "shopping-order-rows.js", "shopping-order-split.js", "app.js",
-           "editor.js", "editor-screen.js", "editor-details.js", "editor-lines.js", "editor-forge.js", "editor-cards.js", "editor-import.js", "editor-search-quantity.js", "editor-search-dock.js", "editor-swaps.js", "editor-save.js", "editor-deckpage.js",
+           "editor.js", "editor-considering.js", "editor-screen.js", "editor-details.js", "editor-lines.js", "editor-forge.js", "editor-cards.js", "editor-import.js", "editor-search-quantity.js", "editor-search-dock.js", "editor-swaps.js", "editor-save.js", "editor-deckpage.js",
            *MATCHUP_SCRIPTS, "field.js", "variant.js", "runs-pill.js", *PLAY_SCRIPTS, *SHELL_SCRIPTS)    # every script the page loads
 # The design tokens, the base and the shared components first (decklab/UI-REVIEW.md 2.1-2.3), then the shell
 # and the page files, which only lay the components out.
@@ -384,7 +384,7 @@ class WebFileTests(unittest.TestCase):
         # The matchup detail screen uses editor.js's ask(). core.js comes first of the
         # rest (practice.js reads its NAV_SPACE as it loads), and app.js last (its start() needs every other file).
         scripts = [url for tag, url in self.page.refs if tag == "script"]
-        self.assertEqual(scripts, ["/editor.js", "/editor-screen.js", "/editor-details.js", "/editor-lines.js",
+        self.assertEqual(scripts, ["/editor.js", "/editor-considering.js", "/editor-screen.js", "/editor-details.js", "/editor-lines.js",
                          "/editor-forge.js", "/editor-cards.js", "/editor-import.js", "/editor-search-quantity.js", "/editor-search-dock.js", "/editor-swaps.js", "/editor-save.js", "/editor-deckpage.js", *["/" + name for name in MATCHUP_SCRIPTS], "/field.js",
                                    "/variant.js", "/runs-pill.js", "/core.js", *["/" + name for name in CARD_SCRIPTS],
                                "/library.js", "/library-boxchecks.js", "/library-glance.js", "/library-tables.js", "/cover.js", "/deck-availability.js", "/deck.js", "/deck-header.js", "/deck-overview.js", "/deck-retirement.js", "/deck-rename.js", "/deck-prices.js", "/guide.js", "/stats.js", "/commander-readiness.js", "/deck-near-combos.js", "/commander-night.js", "/practice.js", "/version.js", "/wishlist.js", "/shopping.js", "/shopping-buying.js", "/shopping-queue.js", "/shopping-reprints.js", "/shopping-snapshot.js", "/shopping-orders.js", "/shopping-order-edit.js", "/shopping-order-rows.js", "/shopping-order-split.js",

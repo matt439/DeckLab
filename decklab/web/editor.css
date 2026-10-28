@@ -690,3 +690,20 @@ dialog.sheet-search .ac-option { grid-template-columns: 44px minmax(0, 1fr) auto
 body.has-editor-search-dock .edit-side { overflow: visible; }
 /* Searching must leave the one real count/Save bar available above the keyboard. */
 body.has-editor-search-dock.is-searching.keyboard-up .edit-bar { display: flex; }
+
+/* Alternatives are a distinct editor draft; their copies never join the playable list's count. */
+.edit-considering { margin-top: var(--s-5); padding-top: var(--s-4); border-top: 1px solid var(--border); }
+.edit-considering h2 { margin: 0 0 var(--s-2); font-size: var(--fs-lg); }
+.editor-considering-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--s-2);
+  align-items: center; border-bottom: 1px solid var(--border); padding: var(--s-2) 0; }
+.editor-considering-row .card-row { min-width: 0; }
+.editor-considering-actions { display: flex; align-items: center; gap: var(--s-1); }
+.editor-considering-actions .btn { min-height: var(--tap); }
+.editor-considering-qty { width: 3.5em; min-height: var(--tap); text-align: center; }
+.editor-considering-category, .editor-considering-row .edit-block { grid-column: 1 / -1; margin: 0; }
+.editor-considering-row.is-blocked { border-left: 3px solid var(--crit); padding-left: var(--s-2); }
+.editor-considering-add { margin-top: var(--s-2); }
+@media (max-width: 599px) {
+  .editor-considering-row { grid-template-columns: minmax(0, 1fr); }
+  .editor-considering-actions { justify-content: flex-end; flex-wrap: wrap; }
+}

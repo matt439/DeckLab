@@ -6,6 +6,7 @@ The editor scripts load in this order, before the matchup and application script
                         lists, header fields, the write-up, re-applying changes onto a newer file, drafts,
                         undo history and the editor's keys, entering and leaving the editor, and sheets
                         (dialogs) and busy buttons
+    editor-considering.js  saved alternatives, their separate draft lifecycle, controls and review
     editor-screen.js    drawing the editor: banners, the Cards and Notes tabs, the side panel (Add, Stats,
                         Checks), changed() and the bar
     editor-details.js   Deck details: the header fields, the Sleeves and Deck box pickers, setField()
@@ -408,7 +409,7 @@ function isDirty() {
       || NEW_FIELDS.some((k) => norm(k, ed.fields[k]) !== norm(k, ed.base.fields[k]));
   }
   return listChanged() || Object.keys(changedFields()).length > 0 || Object.keys(changedProse()).length > 0
-    || !!ed.markCurrent;
+    || !!ed.markCurrent || (typeof editorConsideringChanged === "function" && editorConsideringChanged(ed));
 }
 
 /** The write-up's sections that differ from the saved deck ({key: text}), as a save sends them. */
@@ -646,6 +647,7 @@ function rebase(ed, view, mine, base) {
     base: { lists: copyList(latest || {}), fields: latestFields, prose: latestProse },
     lists, fields: f.fields, removed: [], accRows: null, prose, markCurrent: !!(mine.markCurrent && view.changed_on),
   });
+  if (typeof rebaseEditorConsidering === "function") rebaseEditorConsidering(ed, view, mine, base, notes);
   return [...notes, ...f.notes];
 }
 
@@ -678,8 +680,8 @@ function saveDraft(ed) {
   }
   const saved = local.set(draftKey(ed), JSON.stringify({
     v: 1, saved: Date.now(), sha256: ed.sha256 || null, starting: !!ed.starting,
-    base: { lists: sendList(ed.base.lists), fields: ed.base.fields, prose: ed.base.prose || null },
-    lists: keepList(ed.lists), fields: ed.fields, addSection: ed.addSection,
+    base: { lists: sendList(ed.base.lists), fields: ed.base.fields, prose: ed.base.prose || null, ...editorConsideringBase(ed) },
+    lists: keepList(ed.lists), fields: ed.fields, addSection: ed.addSection, ...editorConsideringSnapshot(ed),
     prose: ed.prose || null, markCurrent: !!ed.markCurrent }));
   draftStored(ed, saved);
   return saved;
@@ -827,15 +829,17 @@ function startEditor(opts) {
   ed.fields = { ...ed.base.fields };
   if (ed.base.prose) ed.prose = { ...ed.base.prose };
   editor = ed;
+  initEditorConsidering(ed);
   const draft = opts.restoreDraft === false ? null : readDraft(ed);
   if (draft) {
     const mine = { lists: draft.lists, fields: draft.fields, starting: draft.starting, prose: draft.prose,
-      markCurrent: draft.markCurrent };
+      markCurrent: draft.markCurrent, ...(Array.isArray(draft.considering) ? { considering: draft.considering } : {}) };
     if (ed.mode === "edit" && draft.sha256 !== ed.sha256) {
       const notes = rebase(ed, ed.view, mine, draft.base);
       ed.notice = { kind: "draft-changed", saved: draft.saved, notes };
     } else {
       ed.lists = copyList(draft.lists);
+      restoreEditorConsidering(ed, draft);
       ed.fields = { ...ed.fields, ...draft.fields };
       if (ed.prose && draft.prose) ed.prose = { ...ed.prose, ...draft.prose };
       ed.markCurrent = !!(draft.markCurrent && ed.view && ed.view.changed_on);
@@ -1018,7 +1022,7 @@ document.addEventListener("visibilitychange", () => {
 /** What Ctrl+Z goes back to: the lists, the header fields, the Add-to section and the write-up, as text. */
 function snapshot(ed) {
   return JSON.stringify({ lists: keepList(ed.lists), fields: ed.fields, addSection: ed.addSection,
-    prose: ed.prose, markCurrent: !!ed.markCurrent, starting: !!ed.starting });
+    prose: ed.prose, markCurrent: !!ed.markCurrent, starting: !!ed.starting, ...editorConsideringSnapshot(ed) });
 }
 
 /** After a change (editor-screen.js changed()): the state before it goes on the history. */
@@ -1036,9 +1040,10 @@ function undoLast() {
   const ed = editor;
   if (!editorKeyboardCurrent(ed) || ed.saving || ed.asking || ed.leaving || !ed.history?.length
     || document.querySelector("dialog[open]") || keyboardMenuOpen()) return false;
-  const focus = editorUndoFocus(ed);
+  const focus = editorUndoFocus(ed), consideringFocus = editorConsideringUndoFocus(ed);
   const was = JSON.parse(ed.history.pop());
   ed.lists = copyList(was.lists);
+  restoreEditorConsidering(ed, was);
   ed.fields = was.fields;
   ed.addSection = was.addSection || "Deck";
   if (was.prose) ed.prose = was.prose;
@@ -1051,6 +1056,7 @@ function undoLast() {
   drawEditor();
   changed({ list: false, history: false });
   restoreEditorUndoFocus(ed, focus);
+  restoreEditorConsideringUndoFocus(ed, consideringFocus);
   return true;
 }
 
