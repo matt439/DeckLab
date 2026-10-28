@@ -189,6 +189,33 @@ class MixedUndoPgTests(db_support.DbTestCase):
                 with self.assertRaises(undo.UndoConflict):
                     inventory.undo_mixed_review(change, "home")
 
+    def locate(self, key, location):
+        row = next(r.as_dict() for r in self.fresh().collection("home").rows if rules.ident(r.as_dict()) == key)
+        inventory.apply(Op("collection.edit", {"space": "home", "original": list(key), "row": row, "location": location}),
+                        ACTOR, "Fixture location")
+
+    def test_storage_locations_neither_block_nor_change_whole_change_undo(self):
+        # E8-S22: Undo leaves locations alone. A row given away with its location comes back
+        # without one; a location set after an import doesn't block undoing the import.
+        elves = ("fdn", "227", "nonfoil")
+        self.locate(elves, "Row 2, B")
+        before = self.persisted()
+        change = self.trade([["fdn", "227", "nonfoil", 2]])
+        self.assertEqual(self.fresh().locations_of("home"), {})
+        self.api(change)
+        restored = self.persisted()
+        self.assertEqual(restored["collection_card"],
+                         sorted(row.replace('"Row 2, B"', '""') for row in before["collection_card"]))
+        self.assertEqual(self.fresh().locations_of("home"), {})
+        for key, place in ((elves, "Binder"), (("m19", "314", "nonfoil"), "Row 1")):
+            with self.subTest(key=key):
+                change = self.merge()
+                self.locate(key, place)
+                preview, answer = self.api(change)
+                self.assertEqual(answer["action"], "import_undo")
+                # the import's updated row keeps its location; its added row goes, and its location with it
+                self.assertEqual(self.fresh().locations_of("home"), {elves: "Binder"})
+
     def test_a_collection_change_without_a_trades_reason_and_words_has_no_whole_change_undo(self):
         for reason, message in (("Sold", "Fixture trade. Trade with User3: gave cards; got cards"),
                                 ("Traded with User3", "Remove the cards traded at the shop")):

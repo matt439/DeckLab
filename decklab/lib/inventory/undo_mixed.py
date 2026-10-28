@@ -295,11 +295,12 @@ def _canon(table, image):
 
 def _same(recorded, image):
     """Whether image holds every recorded column's value (positions aside, which the
-    latest-audit check covers); a recorded column the model doesn't hold is never the same."""
+    latest-audit check covers, and a collection row's storage location, which Undo neither
+    restores nor is blocked by: E8-S22); a recorded column the model doesn't hold is never the same."""
     if image is None:
         return False
     for field, value in recorded.items():
-        if field == "position":
+        if field in ("position", "location"):
             continue
         if field == "check_links" and field not in image:
             if value is not None:

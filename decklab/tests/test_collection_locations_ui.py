@@ -42,6 +42,8 @@ class CollectionLocationsUiTests(unittest.TestCase):
           const over = main.querySelector('.col-storage-box');
           assert(over.className.includes('box-warn'));
           assert(over.textContent.includes('over capacity')); assert(over.textContent.includes('Basic lands (2 cards)'));
+          draw({storage_box: {cards: 2, capacity: 2400, over: false, not_counted: 0, elsewhere: 1}});
+          assert(main.querySelector('.col-storage-box').textContent.includes("box's rows (1 card, such as in a binder)"));
           draw({storage_box: null}); assert(main.querySelector('.col-storage-box').hidden);
         """)
 

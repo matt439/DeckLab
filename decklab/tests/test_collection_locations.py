@@ -114,7 +114,7 @@ class StorageBoxTests(CollectionEditTestCase):
 
     def test_home_gets_the_box_count_and_a_person_doesnt(self):
         box = self.rows()["storage_box"]
-        self.assertEqual(set(box), {"cards", "capacity", "over", "not_counted"})
+        self.assertEqual(set(box), {"cards", "capacity", "over", "not_counted", "elsewhere"})
         self.assertEqual(box["capacity"], 2400)
         with self.as_("user2"):
             self.assertIsNone(self.rows("user2")["storage_box"])
@@ -125,12 +125,27 @@ class StorageBoxTests(CollectionEditTestCase):
         storage = {"error": None, "rows": {"fdn|227|nonfoil": {"held": 1, "guess": False},
                                            "fdn|280|foil": {"held": None, "guess": False}}}
         box = places.storage_box("home", rows, storage, ce._picture_key)
-        self.assertEqual(box, {"cards": 3, "capacity": 2400, "over": False, "not_counted": 3})
+        self.assertEqual(box, {"cards": 3, "capacity": 2400, "over": False, "not_counted": 3, "elsewhere": 0})
         with mock.patch.object(config, "load", return_value={"storage_box_capacity": 2}):
             self.assertTrue(places.storage_box("home", rows, storage, ce._picture_key)["over"])
         with mock.patch.object(config, "load", return_value={"storage_box_capacity": "lots"}):
             self.assertEqual(places.capacity(), 2400)
         self.assertIsNone(places.storage_box("home", rows, {"error": "no pool", "rows": {}}, ce._picture_key))
+
+
+    def test_copies_kept_outside_the_box_rows_arent_in_its_count(self):
+        self.assertTrue(places.in_box("") and places.in_box("Row 2, B") and places.in_box("row3"))
+        self.assertFalse(places.in_box("Binder") or places.in_box("Trade box, row 1"))
+        held = self.rows()["storage"]["rows"][ce._picture_key(ELVES)]["held"] or 0
+        row = next(r for r in self.rows()["rows"] if r["set"] == "fdn" and r["collector_number"] == "227")
+        free = int(row["quantity"]) - held
+        self.assertGreater(free, 0)
+        before = self.rows()["storage_box"]
+        for place, moved in (("Row 2, B", 0), ("Binder", free)):
+            with self.subTest(place=place):
+                self.save(action="edit", original=ELVES, location=place, row=row)
+                box = self.rows()["storage_box"]
+                self.assertEqual((box["cards"], box["elsewhere"]), (before["cards"] - moved, moved))
 
 
 class PackingPlanTests(CollectionEditTestCase):

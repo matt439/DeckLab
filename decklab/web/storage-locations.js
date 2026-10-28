@@ -84,7 +84,8 @@ function drawColStorageBox(cv) {
   const box = cv.storageBoxCount;
   cv.boxNote.hidden = !box;
   if (!box) return;
-  const counted = box.not_counted ? ` Basic lands (${plural(box.not_counted, "card")}) aren't counted.` : "";
+  const elsewhere = box.elsewhere ? ` Cards kept outside the box's rows (${plural(box.elsewhere, "card")}, such as in a binder) aren't counted.` : "";
+  const counted = (box.not_counted ? ` Basic lands (${plural(box.not_counted, "card")}) aren't counted.` : "") + elsewhere;
   cv.boxNote.className = box.over ? "box box-warn col-storage-box" : "sub col-storage-box";
   cv.boxNote.textContent = box.over
     ? `The storage box is over capacity: about ${num(box.cards)} cards for about ${num(box.capacity)} places.${counted}`

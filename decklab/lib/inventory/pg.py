@@ -481,6 +481,13 @@ def _take_lock(cur):
 
 # ------------------------------------------------------------------ the backend
 
+# An audit row Undo's "changed since" checks skip: a collection row update that changed only its
+# storage location (E8-S22), which Undo neither reverses nor is blocked by. A row recorded before
+# migration 0016 has no location key, and removing a missing key changes nothing.
+_NOT_LOCATION_ONLY = ("not (r.table_name = 'collection_card' and r.op = 'UPDATE' "
+                      "and (r.before - 'location') = (r.after - 'location'))")
+
+
 class PgInventory:
     """The inventory in the database (see the module docstring). dbname: the database to use
     (default: conn.settings()'s, read at each call, so the tests' DECKLAB_DB_NAME reaches it);
@@ -746,12 +753,13 @@ class PgInventory:
 
     def undo_latest(self, table, key):
         """Latest *audit row* touching this key. Change-set IDs are allocated before
-        the inventory lock and therefore cannot establish write order."""
+        the inventory lock and therefore cannot establish write order. A collection row's
+        location-only update (E8-S22) doesn't count: Undo leaves locations alone."""
         if table not in ("collection_card", "token_card", "accessory"):
             raise Invalid("That row does not support Undo.")
         def work(c):
-            found = c.execute("select id from audit.row_change where table_name=%s and row_key=%s::jsonb "
-                              "order by id desc limit 1", (table, json.dumps(key))).fetchone()
+            found = c.execute("select id from audit.row_change r where table_name=%s and row_key=%s::jsonb "
+                              f"and {_NOT_LOCATION_ONLY} order by id desc limit 1", (table, json.dumps(key))).fetchone()
             return found[0] if found is not None else None
         applying = getattr(self._applying, "connection", None)
         return work(applying) if applying is not None else self._call(work)
@@ -855,7 +863,8 @@ class PgInventory:
             found = c.execute(
                 "select r.table_name, r.row_key, max(r.id) from audit.row_change r "
                 "join unnest(%s::text[], %s::jsonb[]) as k(t, key) on r.table_name = k.t and r.row_key = k.key "
-                "group by 1, 2", ([table for table, _ in keys], [json.dumps(key) for _, key in keys])).fetchall()
+                f"where {_NOT_LOCATION_ONLY} group by 1, 2",
+                ([table for table, _ in keys], [json.dumps(key) for _, key in keys])).fetchall()
             return {(table, json.dumps(key, sort_keys=True)): rid for table, key, rid in found}
         applying = getattr(self._applying, "connection", None)
         return work(applying) if applying is not None else self._call(work)
