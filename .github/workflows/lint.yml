@@ -17,6 +17,6 @@ jobs:
         with:
           python-version: "3.14"
       - name: Test source-length inventory
-        run: python -m unittest decklab.tests.test_source_lengths
+        run: python scripts/test_fixtures.py decklab.tests.test_source_lengths
       - name: Check source lengths
         run: python scripts/audit_source_lengths.py --check

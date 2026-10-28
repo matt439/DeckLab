@@ -24,7 +24,7 @@ Accessory visibility and inventory-reader groups live in test_api_permissions_in
 PermissionTestCase and the shared fixture/patch owners stay here.
 
 Run both groups from the repo root:
-    python -m unittest decklab.tests.test_api_permissions decklab.tests.test_api_permissions_inventory
+    python scripts/test_fixtures.py decklab.tests.test_api_permissions decklab.tests.test_api_permissions_inventory
 """
 import contextlib
 import hashlib

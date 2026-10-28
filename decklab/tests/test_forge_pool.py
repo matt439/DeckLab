@@ -10,7 +10,7 @@ server's pool and its stop order, and config.json's pool settings.
 No Java: the fake Forge's serve mode (fixtures/fake_forge.py) stands in for DeckLabSim's,
 with the card log said to be ready (test_forge.CARD_LOG), as test_forge's setUpModule sets up.
 
-Run from the repo root: python -m unittest decklab.tests.test_forge_pool
+Run from the repo root: python scripts/test_fixtures.py decklab.tests.test_forge_pool
 Service integration tests live in test_forge_pool_service.py; game-number, seed,
 logging, pilot and override hooks live in test_forge_pool_hooks.py.
 """

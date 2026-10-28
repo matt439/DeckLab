@@ -2,6 +2,15 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Use fixture protections for source-length CI (2026-10-28; E11-S44 follow-up)
+
+The source-length inventory step in lint.yml now uses the protected fixture
+entry point too. The three test-module command headers touched by the preceding
+work use the same default; the inventory contract header explicitly identifies
+the PostgreSQL skip. Their executable ASTs are unchanged after the docstrings.
+The exact replacement CI command passed all seven disposable-Git inventory
+checks in 1.309 seconds. This is local command validation; hosted CI was not run.
+
 ## Inventory contract and permission test groups (2026-10-28; E11-S40)
 
 Three concrete classes (51 cases) moved into focused inventory-contract and

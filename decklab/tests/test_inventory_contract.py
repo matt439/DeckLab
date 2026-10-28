@@ -34,8 +34,8 @@ without one: db_support.py).
   (one change set, no position churn, ids kept), expected_revision, unchanged ops, kept imports,
   the stale snapshot while the database is down, and two writers at once.
 
-Run both groups from the repo root:
-    python -m unittest decklab.tests.test_inventory_contract decklab.tests.test_inventory_pg_contract
+Run both groups in fixture mode from the repo root (PostgreSQL integration skips):
+    python scripts/test_fixtures.py decklab.tests.test_inventory_contract decklab.tests.test_inventory_pg_contract
 """
 import contextlib
 import dataclasses
