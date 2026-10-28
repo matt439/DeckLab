@@ -5,7 +5,10 @@
  * changes either deck. The way in is a deck page's More, "Compare with…" (openCompareChooser), which lists the
  * decks the viewer sees (GET /api/decks) and, for a deck with both lists, its own other list.
  *
- * The cards both lists want and how the two have done against each other are the story's later slices.
+ * Below the stats, the cards both lists use (compareShared: GET /api/compare/shared, whose copies the pool can
+ * cover for both come only to a viewer who may see the space's collection) and how the two have done against
+ * each other (compareHeadToHead: the latest saved Forge result between them, from the first deck's matchups,
+ * and the Game log's games between them), each fetched after the stats show, with its own Try again.
  */
 "use strict";
 
@@ -54,7 +57,7 @@ function compareDraw(sides) {
   const swap = compareHref(b.summary.id, a.summary.id, b.version, a.version);
   add($("#main"), [
     pageHead({ crumb: [deckHref(a.summary.id, a.version), a.summary.title], title: routeH1("compare"),
-      description: "Their stats side by side. Nothing here changes either deck.",
+      description: "Their stats, the cards both use and how they've done against each other. Nothing here changes either deck.",
       more: [{ label: "Swap sides", href: swap },
         { label: "Compare with another deck…", onclick: () => openCompareChooser(a) }] }),
     el("div", { class: "compare-heads" }, sides.map((d, i) => compareHead(d, labels[i], sameDeck))),
@@ -62,7 +65,9 @@ function compareDraw(sides) {
     compareBrief(sides, labels),
     compareCurves(sides, labels),
     compareColours(sides, labels),
-    compareTypes(sides, labels)]);
+    compareTypes(sides, labels),
+    compareShared(sides, labels, sameDeck),
+    compareHeadToHead(sides, labels)]);
   drawCharts();
 }
 
@@ -233,11 +238,127 @@ function compareTypes(sides, labels) {
     : el("p", { class: "sub", text: "No card types to compare." }));
 }
 
+// Cards both use, head to head ---------------------------------------------
+
+/** Fetch path into host (a part of the page) and draw the answer there with draw(answer); a failure says so
+ * with Try again. Nothing is drawn once the page has been left. */
+function compareFetch(host, path, what, draw) {
+  const token = routeToken;
+  const fetchIt = () => {
+    clear(host).append(loadingBox(`Getting ${what.toLowerCase()}…`, { small: true }));
+    api(path).then((answer) => { if (token === routeToken && host.isConnected) add(clear(host), [draw(answer || {})]); })
+      .catch((e) => { if (token === routeToken && host.isConnected) clear(host).append(loadFailed(what, e, fetchIt)); });
+  };
+  fetchIt();
+  return host;
+}
+
+/** The cards both lists use (basic lands left out), each list's copies, and, for a viewer the server gives
+ * counts (one who may see the space's collection), the copies free for both against what both need. */
+function compareShared(sides, labels, sameDeck) {
+  const [a, b] = sides;
+  const q = new URLSearchParams({ a: a.summary.id, av: a.version, b: b.summary.id, bv: b.version });
+  const host = el("div", { class: "compare-shared" });
+  compareFetch(host, `/api/compare/shared?${q}`, "The cards both lists use",
+    (answer) => compareSharedParts(answer, labels, sameDeck));
+  return comparePart("h-compare-shared", "Cards both use", host);
+}
+
+function compareSharedParts(answer, labels, sameDeck) {
+  const cards = answer.cards || [];
+  const counts = answer.counts === true;
+  const notes = [answer.why_no_counts, ...(answer.warnings || [])].filter(Boolean);
+  const box = notes.length ? warningsBox(notes, "About these counts") : null;
+  if (!cards.length) return [box, emptyBox("No card is in both lists (basic lands aren't counted).")];
+  const short = cards.filter((c) => c.short > 0).length;
+  const free = "Free copies are the collection's (on the way included) that no other built deck or intact product holds";
+  const lead = !counts ? `${plural(cards.length, "card")} in both lists (basic lands aren't counted).`
+    : answer.together === false
+      ? `${plural(cards.length, "card")} in both lists. ${free}; one deck's two lists are never put together at once, ` +
+        "so each card needs the larger count."
+      : `${plural(cards.length, "card")} in both lists. ${free}, against what both lists need at once.`;
+  const whom = answer.together === false ? "either list" : "both at once";
+  const verdict = !counts ? null : short ? status("warn", `${plural(short, "card")} short for ${whom}`)
+    : status("ok", `Enough of every card for ${whom}`);
+  const cover = (c) => el("span", {}, `${num(c.free)} of ${num(c.need)}`,
+    c.short > 0 ? [" ", status("warn", `${num(c.short)} short`)] : null,
+    c.on_the_way ? el("small", { class: "compare-hint", text: ` ${num(c.on_the_way)} on the way` }) : null);
+  const table = el("table", { class: "data compare-table compare-shared-table" },
+    el("caption", { class: "sr-only", text: "Cards both lists use" }),
+    el("thead", {}, el("tr", {}, el("th", { scope: "col", text: "Card" }),
+      labels.map((label) => el("th", { scope: "col", class: "num", text: label })),
+      counts ? el("th", { scope: "col", class: "num", text: "Free" }) : null)),
+    el("tbody", {}, cards.map((c) => el("tr", {},
+      el("th", { scope: "row" }, cardLink({ name: c.name }, "compare-shared")),
+      el("td", { class: "num", text: num(c.a) }), el("td", { class: "num", text: num(c.b) }),
+      counts ? el("td", { class: "num" }, cover(c)) : null))));
+  return [box, el("p", { class: "sub", text: lead }), verdict ? el("p", { class: "compare-verdict" }, verdict) : null, table];
+}
+
+/** Whether a Forge or Game log side is the compared list: its deck (a pairing's halves in either order) and list. */
+function compareIsSide(side, data) {
+  return !!side && !!side.id && sameDeckId(side.id) === sameDeckId(data.summary.id)
+    && (side.version || "target") === data.version;
+}
+
+/** How the two have done against each other: the latest saved Forge result between the lists (from the first
+ * deck's matchups, fetched as its Matchups tab fetches them), and the Game log's games between them. */
+function compareHeadToHead(sides, labels) {
+  const [a, b] = sides;
+  const forge = el("div", { class: "compare-forge" });
+  const games = el("div", { class: "compare-games" });
+  compareFetch(forge, `/api/deck?id=${encodeURIComponent(a.summary.id)}&version=${a.version}`, "Forge's results",
+    (answer) => compareForgeParts(answer, a, b));
+  compareFetch(games, `/api/play?id=${encodeURIComponent(a.summary.id)}`, "The Game log",
+    (answer) => compareGameParts(answer, a, b, labels));
+  return comparePart("h-compare-h2h", "Head to head",
+    el("h3", { text: "Forge" }), forge, el("h3", { text: "Game log" }), games);
+}
+
+/** The newest saved Forge result of a's list against b's (with an earlier list of either too, faded as on the
+ * deck page), or null. */
+function compareLatestResult(results, b) {
+  return (results || []).filter((item) => item && item.sides && compareIsSide(item.sides[1], b))
+    .reduce((best, item) => (!best || String(item.updated || "") > String(best.updated || "") ? item : best), null);
+}
+
+function compareForgeParts(answer, a, b) {
+  if (answer.matchups === null) return el("p", { class: "sub", text: "Forge's results couldn't be worked out for this list." });
+  const latest = compareLatestResult((answer.matchups || {}).results, b);
+  const play = !latest && runsAllowed() ? el("a", { class: "btn",
+    href: matchupHref({ id: a.summary.id, version: a.version }, { id: b.summary.id, version: b.version }), text: "Play a matchup" }) : null;
+  if (!latest) return emptyBox("Forge hasn't played these two lists against each other yet.", play);
+  return [el("ul", { class: "mu-list" }, resultRow(latest, { against: true, deckId: a.summary.id })),
+    el("p", { class: "sub", text: "The latest saved result: open it for its games." })];
+}
+
+/** The Game log's games between the two lists: how many, each side's wins and the draws, linked to the log. */
+function compareGameParts(answer, a, b, labels) {
+  const mirror = compareIsSide({ id: b.summary.id, version: b.version }, a);
+  let played = 0, draws = 0;
+  const wins = [0, 0];
+  for (const entry of answer.games || []) {
+    const record = (entry && entry.record) || {};
+    const [x, y] = record.sides || [];
+    const straight = compareIsSide(x, a) && compareIsSide(y, b), turned = compareIsSide(x, b) && compareIsSide(y, a);
+    if (!straight && !turned) continue;
+    played += 1;
+    if (record.result === "draw") draws += 1;
+    else if (record.result === "a" || record.result === "b") wins[(record.result === "a") === straight ? 0 : 1] += 1;
+  }
+  const log = el("a", { href: `#/play?id=${encodeURIComponent(a.summary.id)}`, text: played ? "Open the Game log" : "Record a game" });
+  if (!played) return emptyBox("No games between these two lists have been recorded.", log);
+  const words = mirror ? `${plural(played, "game")}, both with this list`
+    : `${plural(played, "game")}: ${labels[0]} ${plural(wins[0], "win")}, ${labels[1]} ${plural(wins[1], "win")}`;
+  return [el("p", { class: "compare-games-count", text: words + (draws ? `, ${plural(draws, "draw")}` : "") + "." }),
+    el("p", {}, log)];
+}
+
 // The chooser ---------------------------------------------------------------
 
-/** "Compare with…": the decks the viewer sees (GET /api/decks), and the deck's own other list when it has two;
- * choosing one opens the compare page. */
-function openCompareChooser(data) {
+/** "Compare with…": the decks the viewer sees (GET /api/decks, or decks: the library's, already fetched), and
+ * the deck's own other list when it has two; choosing one opens the compare page. */
+function openCompareChooser(data, decks = null) {
   const sheet = openSheet("Compare with…");
   const token = routeToken, profile = state.profile?.id;
   const here = () => !sheet.closed && token === routeToken && profile === state.profile?.id;
@@ -247,24 +368,46 @@ function openCompareChooser(data) {
     api("/api/decks").then((answer) => { if (here()) drawCompareChoices(sheet, data, answer); })
       .catch((e) => { if (here()) clear(sheet.body).append(loadFailed("The decks", e, fetchDecks)); });
   };
-  fetchDecks();
+  if (decks) drawCompareChoices(sheet, data, { decks });
+  else fetchDecks();
   return sheet;
 }
 
-function drawCompareChoices(sheet, data, answer) {
-  const s = data.summary;
-  const other = data.version === "owned" ? "target" : "owned";
-  const own = (data.versions || []).includes(other)
-    ? [{ id: s.id, title: `${s.title}: its ${listName(other, true)}`, colors: s.colors, version: other }] : [];
-  const decks = (answer.decks || []).filter((d) => !d.error && d.id !== s.id)
-    .sort((x, y) => String(x.title).localeCompare(String(y.title)));
-  const choices = [...own, ...decks];
+/** The library's More, "Compare two decks…": choose the first of its decks (decks: the library's, the ones the
+ * viewer sees), then the second in "Compare with…". */
+function openCompareFirst(decks) {
+  const sheet = openSheet("Compare two decks");
+  sheetActions(sheet, [{ text: "Cancel", onclick: () => sheet.close() }]);
+  const readable = compareSorted(decks);
+  if (readable.length < 2) {
+    sheet.body.append(emptyBox("There aren't two decks to compare yet."));
+    return sheet;
+  }
+  const pick = (d) => {
+    sheet.close();
+    openCompareChooser({ summary: { id: d.id, title: d.title, colors: d.colors }, version: "target",
+      versions: d.versions || ["target"] }, decks);
+  };
+  sheet.body.append(el("p", { class: "sub", text: "Choose the first deck, then the one to show beside it." }),
+    ...compareChoiceList(readable, (d) => ({ onclick: () => pick(d) })));
+  return sheet;
+}
+
+/** The readable decks by title. */
+function compareSorted(decks) {
+  return (decks || []).filter((d) => !d.error).sort((x, y) => String(x.title).localeCompare(String(y.title)));
+}
+
+/** A search and one row a choice ({id, title, colors}): a link (target(d).href) or a button (target(d).onclick). */
+function compareChoiceList(choices, target) {
   const list = el("ul", { class: "compare-choices" });
   const empty = el("div", {});
   const items = choices.map((d) => {
     const pieces = deckColourPieces(d.colors);
-    const li = el("li", {}, el("a", { class: "compare-choice", href: compareHref(s.id, d.id, data.version, d.version || "target") },
-      pieces ? pieces.swatch() : null, el("span", { class: "compare-choice-title", text: d.title })));
+    const to = target(d);
+    const inner = [pieces ? pieces.swatch() : null, el("span", { class: "compare-choice-title", text: d.title })];
+    const li = el("li", {}, to.href ? el("a", { class: "compare-choice", href: to.href }, inner)
+      : el("button", { type: "button", class: "compare-choice", onclick: to.onclick }, inner));
     li.dataset.title = String(d.title).toLowerCase();
     list.append(li);
     return li;
@@ -281,10 +424,19 @@ function drawCompareChoices(sheet, data, answer) {
     clear(empty);
     if (!shown) empty.append(emptyBox("No deck matches that.", null, { live: true }));
   });
+  return [search, list, empty];
+}
+
+function drawCompareChoices(sheet, data, answer) {
+  const s = data.summary;
+  const other = data.version === "owned" ? "target" : "owned";
+  const own = (data.versions || []).includes(other)
+    ? [{ id: s.id, title: `${s.title}: its ${listName(other, true)}`, colors: s.colors, version: other }] : [];
+  const choices = [...own, ...compareSorted(answer.decks).filter((d) => d.id !== s.id)];
   if (!choices.length) {
     clear(sheet.body).append(emptyBox("There's no other deck to compare it with yet."));
     return;
   }
   clear(sheet.body).append(el("p", { class: "sub", text: `Show ${s.title}'s stats beside another list's.` }),
-    search, list, empty);
+    ...compareChoiceList(choices, (d) => ({ href: compareHref(s.id, d.id, data.version, d.version || "target") })));
 }

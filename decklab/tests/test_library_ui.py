@@ -495,6 +495,11 @@ class LibraryShelfTests(_Shelf):
           as("user2", MAY.user2);
           drawLibrary(DATA, libraryFilters(new URLSearchParams("all=1")));
           assert(!main.querySelectorAll("button").some((b) => b.textContent === "Choose deck pictures"));
+          // Comparing two decks (E1-S13) is for anyone shown two: it opens the first deck's chooser.
+          let compared = null;
+          openCompareFirst = (decks) => { compared = decks; };
+          main.querySelectorAll("button").find((b) => b.textContent === "Compare two decks…").click();
+          assert.equal(compared, DATA.decks);
         """)
 
 

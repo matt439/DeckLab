@@ -178,7 +178,7 @@ Evidence:
 
 Gap: The Overview shows nothing about strength. The rank and range already exist on the Matchups tab and in #/matchups Rankings (E3-S10); the work is surfacing one line on the Overview.
 
-**E1-S13** · Matt · could · L · partial
+**E1-S13** · Matt · could · L · built
 
 As a deck builder, I want to compare two decks side by side (curve, colours, lands, card types, cards they both want, and how they've done against each other), so that choosing between two decks, or between two versions of an idea, doesn't mean flicking between pages.
 
@@ -186,21 +186,18 @@ As a deck builder, I want to compare two decks side by side (curve, colours, lan
 - Given cards both lists use, when the comparison opens, then they are listed with how many copies the pool can cover for both.
 - Given saved Forge results or recorded games between them, when the comparison opens, then the latest result and the Head to head count are linked.
 
-Now: first slice built 2026-10-28 ([HISTORY.md](../HISTORY.md#compare-two-decks-side-by-side-2026-10-28-e1-s13)). A deck page's More has **Compare with…**, a sheet listing the decks the viewer sees (GET /api/decks, searchable) and, for a deck with both lists, its own other list; choosing one opens the read-only `#/compare?a=<id>&b=<id>[&av=owned&bv=owned]` (a child page of Decks). It reads each list as its deck page does (GET /api/deck, the viewer's rights, so a deck the viewer may not see answers as missing, E10-S30's 404, and nothing of the other deck shows). Side by side: each deck's colours, title, format and card counts; In brief (cards, average mana value, lands against the formula, creatures, other spells, colour sources, and the bracket for Commander); both mana curves on one scale (stacked on a phone, beside each other from 600px) with each bar's cards (a viewer group per side) and the two as one table; each colour's sources against the hardest card's need; and the copies of each card type. More swaps the sides or chooses another deck. Comparing a deck's Planned and Play-now lists (a pairing's halves in either order) names the sides by list.
+Now: built 2026-10-28 ([first slice](../HISTORY.md#compare-two-decks-side-by-side-2026-10-28-e1-s13), [shared cards and head to head](../HISTORY.md#compare-two-decks-the-cards-both-use-and-head-to-head-2026-10-28-e1-s13)). A deck page's More has **Compare with…**, and the library's More **Compare two decks…** (choose the first of the decks shown, then the second), each a sheet of the decks the viewer sees and, for a deck with both lists, its own other list; choosing opens the read-only `#/compare?a=<id>&b=<id>[&av=owned&bv=owned]` (a child page of Decks). It reads each list as its deck page does (GET /api/deck, the viewer's rights, so a deck the viewer may not see answers as missing, E10-S30's 404, and nothing of the other deck shows). Side by side: each deck's colours, title, format and card counts; In brief; both mana curves on one scale with each bar's cards; colour sources; card types. **Cards both use** (GET /api/compare/shared, `lib/api/compare.py`; both decks seen first) lists each card in both lists, basic lands left out, with each list's copies and, only for a viewer who sees the space's collection, the copies free for both at once (owned or on the way, less other built decks' and intact products' holds, the two compared decks' own counted free: `pool.free_copies`) against what both need, the short ones first; one deck's two lists need the larger count, and decks in separate spaces get no counts. **Head to head** shows the latest saved Forge result of the first list against the second (from its matchups, earlier lists faded as on the deck page), linked to the matchup page, or Play a matchup; and the Game log's games between the two lists with each side's wins and draws, linked to `#/play?id=`. Each part loads after the stats with its own Try again.
 
 Evidence:
-- `decklab/web/compare.js`: showCompare, compareDraw, compareBrief, compareCurves, compareColours, compareTypes, compareTwoLists, openCompareChooser
+- `decklab/web/compare.js`: showCompare, compareDraw, compareBrief, compareCurves, compareColours, compareTypes, compareShared, compareHeadToHead, compareLatestResult, compareGameParts, openCompareChooser, openCompareFirst
 - `decklab/web/compare.css`
+- `decklab/lib/api/compare.py`: shared_view; `decklab/lib/feature_routes.py` (compare, shared)
 - `decklab/web/core.js`: ROUTES (compare); `decklab/web/app.js`: route
-- `decklab/web/deck.js`: deckMoreItems (Compare with…), cardNames (a viewer group)
+- `decklab/web/deck.js`: deckMoreItems (Compare with…), cardNames (a viewer group); `decklab/web/library.js`: drawLibrary's More (Compare two decks…)
 - `decklab/web/stats.js`: drawCurve (a shared scale's top)
-- `decklab/tests/test_compare_ui.py`
+- `decklab/tests/test_compare_ui.py`, `decklab/tests/test_compare.py`
 
-Gap: The cards both lists use, with how many copies the pool can cover for both, and the pair's latest Forge result and Head to head count linked from the comparison. Choosing the two lists from the library (not only a deck page) is still to come.
-
-Later slices: shared cards (with the pool's cover for both), then head to head.
-
-Review note: L with three separate outcomes; could split into stats, shared cards and head to head.
+Gap: None for the story. Head to head counts only games and results of these two lists (any revision); a Forge result between other lists of the two decks isn't shown.
 
 **E1-S18** · User1 · could · S · built
 

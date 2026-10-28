@@ -69,9 +69,10 @@ class CompareUiTests(unittest.TestCase):
           Node.prototype.clientWidth = 320;
           await show('#/compare?a=casual%2Ftest&b=casual%2Fburn');
           delete Node.prototype.clientWidth;
-          // Each deck read as its page reads it, matchups left out.
+          // Each deck read as its page reads it, matchups left out; then the first deck's matchups, as its
+          // Matchups tab gets them, for Head to head.
           same(asked.filter((p) => p.startsWith('/api/deck?')), ['/api/deck?id=casual%2Ftest&version=target&omit=matchups',
-            '/api/deck?id=casual%2Fburn&version=target&omit=matchups']);
+            '/api/deck?id=casual%2Fburn&version=target&omit=matchups', '/api/deck?id=casual%2Ftest&version=target']);
           assert.equal(main.querySelector('h1').textContent, 'Compare decks');
           assert.equal(document.title, 'Test Deck and Burn – Deck Lab');
           same(main.querySelectorAll('.compare-title').map((a) => [a.textContent, a.getAttribute('href')]),
@@ -167,6 +168,117 @@ class CompareUiTests(unittest.TestCase):
           assert(main.querySelectorAll('.compare-chart')[1].textContent.includes('No curve'));
         """)
 
+    def test_the_cards_both_use_with_the_pools_cover(self):
+        self.run_js("""
+          answers = {'/api/compare/shared?': {together: true, counts: true, why_no_counts: null, warnings: [], cards: [
+              {name: 'Elf', a: 4, b: 2, need: 6, owned: 5, on_the_way: 1, free: 3, short: 3},
+              {name: 'Sol Ring', a: 1, b: 1, need: 2, owned: 2, on_the_way: 0, free: 2, short: 0}]},
+            '/api/deck?id=casual%2Ftest&': deckA(), '/api/deck?id=casual%2Fburn&': deckB()};
+          await show('#/compare?a=casual%2Ftest&b=casual%2Fburn');
+          assert(asked.includes('/api/compare/shared?a=casual%2Ftest&av=target&b=casual%2Fburn&bv=target'));
+          const part = main.querySelector('.compare-shared');
+          same(part.querySelector('thead').querySelectorAll('th').map((th) => th.textContent), ['Card', 'Test Deck', 'Burn', 'Free']);
+          same(rows('Cards both lists use'), [['Elf', '4', '2', '3 of 6 3 short 1 on the way'], ['Sol Ring', '1', '1', '2 of 2']]);
+          assert(part.querySelector('.compare-verdict').textContent.includes('1 card short for both at once'));
+          assert(part.textContent.includes('against what both lists need at once'));
+          // Each name opens the card viewer, in its own group.
+          assert.equal(part.querySelector('tbody').querySelector('[data-viewer]').getAttribute('data-viewer'), 'compare-shared');
+        """)
+
+    def test_the_cards_both_use_without_counts(self):
+        self.run_js("""
+          // A viewer who may not see the space's collection: names and each list's copies only.
+          answers = {'/api/compare/shared?': {together: true, counts: false, why_no_counts: null, warnings: [],
+              cards: [{name: 'Sol Ring', a: 1, b: 1, need: 2}]},
+            '/api/deck?id=casual%2Ftest&': deckA(), '/api/deck?id=casual%2Fburn&': deckB()};
+          await show('#/compare?a=casual%2Ftest&b=casual%2Fburn');
+          const part = main.querySelector('.compare-shared');
+          same(part.querySelector('thead').querySelectorAll('th').map((th) => th.textContent), ['Card', 'Test Deck', 'Burn']);
+          same(rows('Cards both lists use'), [['Sol Ring', '1', '1']]);
+          assert.equal(part.querySelector('.compare-verdict'), null);
+          assert(!part.textContent.includes('Free'));
+          // None at all, and one deck's two lists: the larger count, said so.
+          answers['/api/compare/shared?'] = {together: false, counts: true, cards: []};
+          clear(main); await show('#/compare?a=casual%2Ftest&b=casual%2Fburn');
+          assert(main.querySelector('.compare-shared').textContent.includes('No card is in both lists'));
+        """)
+
+    def test_the_cards_both_use_can_be_fetched_again(self):
+        self.run_js("""
+          answers = {'/api/compare/shared?': new ApiError(503, 'The database is not reachable.'),
+            '/api/deck?id=casual%2Ftest&': deckA(), '/api/deck?id=casual%2Fburn&': deckB()};
+          await show('#/compare?a=casual%2Ftest&b=casual%2Fburn');
+          const part = main.querySelector('.compare-shared');
+          assert(part.textContent.includes("The cards both lists use couldn't be loaded. The database is not reachable."));
+          // The stats still show.
+          assert(rows('The two lists in brief').length);
+          answers['/api/compare/shared?'] = {together: true, counts: true, cards: [{name: 'Opt', a: 1, b: 1, need: 2, free: 2, short: 0}]};
+          part.querySelectorAll('button').find((b) => b.textContent === 'Try again').click(); await settle();
+          same(rows('Cards both lists use'), [['Opt', '1', '1', '2 of 2']]);
+          assert(main.querySelector('.compare-verdict').textContent.includes('Enough of every card for both at once'));
+        """)
+
+    def test_head_to_head_from_forge_and_the_game_log(self):
+        self.run_js("""
+          const side = (id, version, title, current = true) => ({id, version, title, current});
+          const result = (b, updated, value) => ({key: updated, games: 20, updated, winrate: {value, low: value - 0.1, high: value + 0.1},
+            sides: [side('casual/test', 'target', 'Test Deck'), b]});
+          const full = deckA();
+          full.matchups = {results: [result(side('casual/zoo', 'target', 'Zoo'), '2026-10-27T00:00:00Z', 0.5),
+            result(side('casual/burn', 'target', 'Burn', false), '2026-10-01T00:00:00Z', 0.4),
+            result(side('casual/burn', 'target', 'Burn'), '2026-10-20T00:00:00Z', 0.7),
+            result(side('casual/burn', 'owned', 'Burn'), '2026-10-26T00:00:00Z', 0.2)]};
+          const game = (x, y, result) => ({record: {sides: [x, y], result, date: '2026-10-2' + result.length}});
+          const T = {id: 'casual/test', version: 'target', title: 'Test Deck'}, B = {id: 'casual/burn', version: 'target', title: 'Burn'};
+          answers = {'/api/deck?id=casual%2Ftest&version=target&omit': deckA(), '/api/deck?id=casual%2Ftest&version=target': full,
+            '/api/deck?id=casual%2Fburn&': deckB(),
+            '/api/play?id=casual%2Ftest': {games: [game(T, B, 'a'), game(B, T, 'a'), game(B, T, 'b'), game(T, B, 'draw'),
+              game(T, {id: 'casual/zoo', version: 'target', title: 'Zoo'}, 'a'), game(T, {hidden: true, title: 'one of the home decks'}, 'b')]}};
+          await show('#/compare?a=casual%2Ftest&b=casual%2Fburn');
+          assert(asked.includes('/api/play?id=casual%2Ftest'));
+          // The newest result against Burn's Planned list: not Zoo's, not its Play-now list's.
+          const rowsShown = main.querySelector('.compare-forge').querySelectorAll('.mu-row');
+          assert.equal(rowsShown.length, 1);
+          assert.equal(rowsShown[0].getAttribute('href'), '#/matchup?a=casual%2Ftest&av=target&b=casual%2Fburn&bv=target');
+          assert(rowsShown[0].textContent.includes('70%'));
+          // The Game log: Test Deck won 2 (once as the second side), Burn 1, 1 draw; the others aren't counted.
+          assert.equal(main.querySelector('.compare-games-count').textContent, '4 games: Test Deck 2 wins, Burn 1 win, 1 draw.');
+          const log = main.querySelector('.compare-games').querySelector('a');
+          same([log.textContent, log.getAttribute('href')], ['Open the Game log', '#/play?id=casual%2Ftest']);
+        """)
+
+    def test_head_to_head_with_nothing_yet(self):
+        self.run_js("""
+          const full = deckA(); full.matchups = {results: []};
+          answers = {'/api/deck?id=casual%2Ftest&version=target&omit': deckA(), '/api/deck?id=casual%2Ftest&version=target': full,
+            '/api/deck?id=casual%2Fburn&': deckB(), '/api/play?': {games: []}};
+          await show('#/compare?a=casual%2Ftest&b=casual%2Fburn');
+          const forge = main.querySelector('.compare-forge');
+          assert(forge.textContent.includes("Forge hasn't played these two lists against each other yet."));
+          const play = forge.querySelector('a');
+          same([play.textContent, play.getAttribute('href')], ['Play a matchup', '#/matchup?a=casual%2Ftest&av=target&b=casual%2Fburn&bv=target']);
+          const games = main.querySelector('.compare-games');
+          assert(games.textContent.includes('No games between these two lists have been recorded.'));
+          same([games.querySelector('a').textContent, games.querySelector('a').getAttribute('href')], ['Record a game', '#/play?id=casual%2Ftest']);
+          // Matchups that couldn't be worked out (null) say so; a Game log that can't be had offers Try again.
+          full.matchups = null;
+          answers['/api/play?'] = new ApiError(503, 'The database is not reachable.');
+          clear(main); await show('#/compare?a=casual%2Ftest&b=casual%2Fburn');
+          assert(main.querySelector('.compare-forge').textContent.includes("Forge's results couldn't be worked out"));
+          assert(main.querySelector('.compare-games').textContent.includes("The Game log couldn't be loaded."));
+        """)
+
+    def test_a_decks_two_lists_head_to_head(self):
+        self.run_js("""
+          const owned = deckA(); owned.version = 'owned';
+          const T = {id: 'casual/test', version: 'target', title: 'Test Deck'}, O = {id: 'casual/test', version: 'owned', title: 'Test Deck'};
+          answers = {'/api/deck?id=casual%2Ftest&version=target': deckA(), '/api/deck?id=casual%2Ftest&version=owned': owned,
+            '/api/play?': {games: [{record: {sides: [O, T], result: 'a'}}, {record: {sides: [T, T], result: 'a'}}]}};
+          await show('#/compare?a=casual%2Ftest&b=casual%2Ftest&bv=owned');
+          // Named by list; a game of the Planned list against itself isn't one of theirs.
+          assert.equal(main.querySelector('.compare-games-count').textContent, '1 game: Planned list 0 wins, Play-now list 1 win.');
+        """)
+
     def test_compare_with_chooses_from_the_visible_decks(self):
         self.run_js("""
           const page = deckA();
@@ -192,6 +304,28 @@ class CompareUiTests(unittest.TestCase):
           search.value = 'nothing'; search.fire('input');
           assert.equal(links().length, 0);
           assert(sheet.textContent.includes('No deck matches that.'));
+        """)
+
+    def test_two_decks_chosen_from_the_library(self):
+        self.run_js("""
+          const decks = [{id: 'casual/zoo', title: 'Zoo', colors: ['R', 'G'], versions: ['target']},
+            {id: 'casual/test', title: 'Test Deck', colors: ['G'], versions: ['target', 'owned']},
+            {id: 'casual/broken', title: 'Broken', error: 'unreadable'}];
+          openCompareFirst(decks); await settle();
+          let sheet = document.querySelector('.sheet');
+          assert.equal(sheet.querySelector('h2').textContent, 'Compare two decks');
+          const firsts = sheet.querySelectorAll('.compare-choice');
+          same(firsts.map((b) => b.textContent), ['Test Deck', 'Zoo']);
+          firsts[0].click(); await settle();
+          // The second from the same decks (nothing fetched again), with the first's own other list.
+          assert(!asked.includes('/api/decks'));
+          sheet = document.querySelectorAll('.sheet').find((s) => s.querySelector('h2').textContent === 'Compare with…');
+          same(sheet.querySelectorAll('.compare-choice').map((a) => [a.textContent, a.getAttribute('href')]), [
+            ['Test Deck: its play-now list', '#/compare?a=casual%2Ftest&b=casual%2Ftest&bv=owned'],
+            ['Zoo', '#/compare?a=casual%2Ftest&b=casual%2Fzoo']]);
+          // One deck isn't two.
+          openCompareFirst(decks.slice(0, 1)); await settle();
+          assert(document.querySelectorAll('.sheet').at(-1).textContent.includes("There aren't two decks to compare yet."));
         """)
 
     def test_the_chooser_says_when_the_decks_cant_be_read(self):
