@@ -31,7 +31,7 @@ import json
 from . import Summary, backend, current, paths, register, rules
 from .model import Order
 from decklab.lib.state import Invalid
-from .undo import (COLLECTION, COLLECTION_FIELDS, SHA, TOKEN_FIELDS, TOKENS, UndoConflict, UndoMissing,
+from .undo import (COLLECTION, COLLECTION_SCHEMAS, SHA, TOKEN_FIELDS, TOKENS, UndoConflict, UndoMissing,
                    UndoUnsupported, _identifier, _known_decks, _label, removal_reason)
 
 MIXED_MAX = 2000                    # rows of one original change set; the reader returns one more to refuse
@@ -150,7 +150,7 @@ def _check_row(row, kind):
         _key(row)
         return
     if table == COLLECTION and kind == TRADE and op == "DELETE":
-        if after is not None or not isinstance(before, dict) or set(before) != COLLECTION_FIELDS \
+        if after is not None or not isinstance(before, dict) or set(before) not in COLLECTION_SCHEMAS \
                 or type(before["quantity"]) is not int or before["quantity"] < 1:
             raise UndoUnsupported("The collection row has an unsupported schema.")
         _key(row)
@@ -160,7 +160,7 @@ def _check_row(row, kind):
         raise UndoUnsupported("Only additions and updates can be undone as part of an import or receipt.")
     _key(row)
     if table == COLLECTION:
-        if set(after) != COLLECTION_FIELDS or type(after["quantity"]) is not int or after["quantity"] < 1:
+        if set(after) not in COLLECTION_SCHEMAS or type(after["quantity"]) is not int or after["quantity"] < 1:
             raise UndoUnsupported("The collection row has an unsupported schema.")
         if op == "UPDATE" and kind == TRADE and _gave(row):
             if _changed(row) != {"quantity"} or after["quantity"] < 1:
@@ -267,9 +267,10 @@ def _images(t):
     the audit trail records rows (without token positions, which the model doesn't hold)."""
     from .table_rows import COMPONENT_COLUMNS, STATUS_COLUMNS, TOKEN_COLUMNS
     out = {COLLECTION: {}, TOKENS: {}, COMPONENT: {}, STATUS: {}}
-    for (space, set_code, number, finish), (name, quantity, condition, language, notes) in t[COLLECTION].items():
+    for (space, set_code, number, finish), (name, quantity, condition, language, notes, location) in t[COLLECTION].items():
         image = {"space_id": space, "set_code": set_code, "collector_number": number, "finish": finish, "name": name,
-                 "quantity": quantity, "condition": condition, "language": language, "notes": notes}
+                 "quantity": quantity, "condition": condition, "language": language, "notes": notes,
+                 "location": location}
         out[COLLECTION][_canon(COLLECTION, image)] = image
     for rid, space, *cells in t[TOKENS]:
         image = {"id": rid, "space_id": space, **dict(zip(TOKEN_COLUMNS, cells))}

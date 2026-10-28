@@ -268,7 +268,8 @@ def _collection_summary(op, before, after, whose):
     if op == "DELETE":
         return f"Removed {_qty(before)} × {_collection_card(before)} from {where}"
     parts = _changes(before, after, {"quantity": "quantity", "name": "name", "condition": "condition",
-                                     "language": "language", "notes": "notes"})
+                                     "language": "language", "notes": "notes",
+                                     "location": "storage location"})
     return _changed(f"{_collection_card(after)} in {where}", parts)
 
 

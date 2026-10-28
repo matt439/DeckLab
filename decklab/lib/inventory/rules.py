@@ -17,6 +17,7 @@ Token rows (tokens.csv, token order payloads):
     token_known, validate_token_row, merge_tokens, and the Tokens page's limits: NAME_MAX,
     NUMBER_MAX, DETAILS_MAX, NOTES_MAX, QTY_MAX, token_extra, token_rules, token_page_row,
     tokens_csv_bytes, token_label
+Storage locations (locations.csv, E8-S22): LOCATION_FIELDS, LOCATION_MAX, LOCATION_REQUIRED, clean_location
 products/status.csv: STATUS_FIELDS, LEGACY_STATUS_FIELDS, parse_status, set_intact
 accessories.csv (phase 4): ACCESSORY_FIELDS, ACCESSORY_KINDS, accessory_sort_key
 Any CSV or JSON: csv_bytes, json_bytes, parse_csv, record_lines
@@ -172,6 +173,35 @@ def collection_csv_bytes(rows):
 
 
 # ------------------------------------------------------------------ any CSV or JSON
+
+# ------------------------------------------------------------------ storage locations (E8-S22)
+
+# Where a collection row's storage copies are (locations.csv beside collection.csv; the database's
+# collection_card.location, migration 0016): one short line such as "Row 2, B" or "Binder".
+LOCATION_FIELDS = ["set", "collector_number", "finish", "location"]
+LOCATION_MAX = 40
+LOCATION_REQUIRED = ("Storage locations need the database's migration 0016 (python -m decklab.db migrate on "
+                     "the PC); until then they can't be saved.")
+_LOCATION_CONTROL = re.compile(r"[\x00-\x1f\x7f-\x9f  ]")
+
+
+def clean_location(value):
+    """value as a storage location: whitespace collapsed, at most LOCATION_MAX characters, no
+    control characters and no spreadsheet formula start; "" for none. ValueError with the words
+    to show otherwise."""
+    if value is None:
+        return ""
+    if not isinstance(value, str):
+        raise ValueError("A storage location must be text")
+    if _LOCATION_CONTROL.search(value):
+        raise ValueError("A storage location is one line, with no control characters")
+    text = " ".join(value.split())
+    if len(text) > LOCATION_MAX:
+        raise ValueError(f"A storage location is at most {LOCATION_MAX} characters (such as Row 2, B)")
+    if text.startswith(("=", "+", "-", "@")):
+        raise ValueError("A storage location can't start with = + - or @ (a spreadsheet would run it as a formula)")
+    return text
+
 
 def json_bytes(value):
     return (json.dumps(value, ensure_ascii=False, indent=2) + "\n").encode("utf-8")

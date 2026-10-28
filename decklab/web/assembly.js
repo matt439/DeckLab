@@ -451,7 +451,7 @@ function packDeck(view, deck) {
   const steps = deck.steps || [];
   const participant = { id: deck.id, version: deck.version };
   const tiles = (rows) => packCardGroups(view, rows);
-  const pulls = steps.filter(s => s.storage).map(s => ({ name: s.name, qty: s.storage, meta: null, finishes: deck.finishes?.[s.name],
+  const pulls = steps.filter(s => s.storage).map(s => ({ name: s.name, qty: s.storage, meta: packLocationMeta(view, s.name), finishes: deck.finishes?.[s.name],
     caption: `Pull ${s.storage} from storage for ${deck.title}`, id: `pull|${s.name}`, overlap: participant,
     printing: deck.completion?.already_built ? null : packPrintingControl(view, deck, s.name, s.storage) }));
   const moves = steps.flatMap(s => s.transfers.map(t => ({ name: s.name, qty: t.quantity, meta: `From ${t.from_title}`, finishes: deck.finishes?.[s.name],
@@ -461,7 +461,7 @@ function packDeck(view, deck) {
   const markers = (deck.standins?.rows || []).filter(row => !row.using).map((row, index) => ({
     name: row.for, qty: row.qty, meta: "Use any spare card",
     caption: `Use or keep ${row.qty} spare cards to stand for ${row.for}`, id: `standin|${row.for}|${index}` }));
-  const returns = (deck.returns || []).map(r => ({ name: r.name, qty: r.quantity, meta: null,
+  const returns = (deck.returns || []).map(r => ({ name: r.name, qty: r.quantity, meta: r.untracked ? null : packLocationMeta(view, r.name),
     caption: `Take ${r.quantity} out of ${deck.title}`, id: `return|${r.name}` }));
   const kept = steps.filter(s => s.keep);
   const waiting = steps.filter(s => s.waiting || s.missing);
@@ -491,7 +491,7 @@ function packDeck(view, deck) {
     packStandinsPart(view, deck),
     step("sleeves", "Sleeves", kitNode, sleeves && need ? el("ul", { class: "pack-list" },
       assemblyTick(`Get out ${need} ${assemblyKitName(sleeves)} sleeves`, 1, [sleeves.id || sleeves.value, need], "sleeves")) : null),
-    cardStep("pull", "Pull from storage", view.order === "storage" ? [...pulls, ...basics] : pulls),
+    cardStep("pull", "Pull from storage", view.order === "storage" ? [...pulls, ...basics] : pulls, pulls.length ? packLocationNote(view) : null),
     cardStep("move", "Move from other decks", moves, el("p", { class: "sub", text: "Change their sleeves as you move them." })),
     view.order !== "storage" ? cardStep("basic", "Basic lands", basics) : null,
     cardStep("standin", "Spare-card stand-ins", markers),

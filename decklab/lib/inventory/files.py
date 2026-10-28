@@ -79,8 +79,8 @@ import threading
 from pathlib import Path, PurePosixPath
 
 from . import paths, rules
-from .model import (AccessoryRow, CardRow, Deck, ImageMeta, ImportInfo, Inventory, Order, Product, ProductItem,
-                    Sheet, StatusRow, TokenRow, WatchRow, name_order)
+from .model import (AccessoryRow, CardRow, Deck, ImageMeta, ImportInfo, Inventory, LocationRow, Order, Product,
+                    ProductItem, Sheet, StatusRow, TokenRow, WatchRow, name_order)
 
 _SPAWN = {"creationflags": subprocess.CREATE_NO_WINDOW} if sys.platform == "win32" else {}
 PRODUCT_STATUSES = ("owned", "preordered", "ordered", "cancelled")     # pool.PRODUCT_STATUSES
@@ -128,9 +128,9 @@ def tree_files(root, import_bytes=False):
     bytes (build() makes that source unreadable); one removed while we look is left out."""
     root = Path(root)
     magic = root / "magic"
-    candidates = [magic / "collection.csv", magic / "tokens.csv", magic / "watchlist.csv"]
-    for pattern in ("imports/*", "people/*/collection.csv", "people/*/tokens.csv", "people/*/imports/*",
-                    "orders/records/*.json"):
+    candidates = [magic / "collection.csv", magic / "tokens.csv", magic / "locations.csv", magic / "watchlist.csv"]
+    for pattern in ("imports/*", "people/*/collection.csv", "people/*/tokens.csv", "people/*/locations.csv",
+                    "people/*/imports/*", "orders/records/*.json"):
         candidates += sorted(magic.glob(pattern))
     # *.csv in any case, as Windows' glob finds them, so an X.CSV is named below on every system.
     for folder in [magic / "products", *(root / folder for folder in paths.PAYLOAD_FOLDERS)]:
@@ -626,6 +626,31 @@ def watchlist_sheet(data):
     return Sheet(rel, header, rows, True, None, (), strict, csv_error=strict)
 
 
+def locations_sheet(rel, data):
+    """A space's locations.csv Sheet from its bytes (E8-S22): rows as read; problems name a row
+    whose location breaks rules.clean_location or whose key is there twice; strict_error a header
+    that isn't rules.LOCATION_FIELDS, else the first problem."""
+    text, header, rows, error = _lenient(rel, data, LocationRow)
+    if error is not None:
+        return Sheet(rel, exists=True, error=error)
+    problems, seen = [], set()
+    for row in rows:
+        if row.overflow or any(row.get(column) is None for column in rules.LOCATION_FIELDS):
+            problems.append(f"{rel} line {row.line}: the row doesn't have a cell for every column")
+            continue
+        try:
+            if rules.clean_location(row.location) != row.location or not row.location:
+                raise ValueError("a storage location is written with single spaces, and isn't blank")
+        except ValueError as e:
+            problems.append(f"{rel} line {row.line}: {e}")
+        if row.key in seen:
+            problems.append(f"{rel} line {row.line}: {' '.join(row.key)} has two locations")
+        seen.add(row.key)
+    strict = None if header == tuple(rules.LOCATION_FIELDS) else f"{rel}: its header isn't {','.join(rules.LOCATION_FIELDS)}"
+    return Sheet(rel, header, rows, True, None, tuple(problems), strict or (problems[0] if problems else None),
+                 csv_error=_strict_csv(text))
+
+
 def deck_of(rel, data):
     """The Deck the deck file at rel holds (its exact text, or error when it isn't UTF-8 or the
     OS refused to read it)."""
@@ -672,6 +697,7 @@ def build(files, revision=None, backend="files", decks_revision=None):
     tree_files, deck_tree_files or git_files give) holds. Never raises for what's in a file (see
     the module docstring)."""
     collections, tokens, imports, products, orders, payloads = {}, {}, {}, [], [], {}
+    locations = {}
     status = watchlist = accessories = None
     deck_parts, images = {}, {}
     for rel in sorted(files):
@@ -684,6 +710,8 @@ def build(files, revision=None, backend="files", decks_revision=None):
             collections[detail] = _cards_sheet(rel, data, existing=True)
         elif what == "tokens":
             tokens[detail] = _tokens_sheet(rel, data)
+        elif what == "locations":
+            locations[detail] = locations_sheet(rel, data)
         elif what == "import":
             space, name = detail
             size = len(data) if isinstance(data, bytes) else 0 if isinstance(data, OSError) else int(data)
@@ -715,6 +743,7 @@ def build(files, revision=None, backend="files", decks_revision=None):
     return Inventory(
         revision=revision if revision is not None else revision_of(files),
         collections=dict(sorted(collections.items())), tokens=dict(sorted(tokens.items())),
+        locations=dict(sorted(locations.items())),
         imports={space: tuple(sorted(found, key=lambda i: i.name)) for space, found in sorted(imports.items())},
         status=status_sheet(status), products=tuple(products), orders=tuple(orders),
         payloads=dict(sorted(payloads.items())), watchlist=watchlist_sheet(watchlist), backend=backend,
@@ -761,8 +790,8 @@ def sources(inv):
     """{path: source} of every source of inv that has a file (exists, or a product, record,
     deck or picture), whether or not it can be rendered: the deck parts included."""
     out = {}
-    for sheet in (*inv.collections.values(), *inv.tokens.values(), inv.status, inv.watchlist,
-                  *inv.payloads.values(), inv.accessories):
+    for sheet in (*inv.collections.values(), *inv.tokens.values(), *inv.locations.values(), inv.status,
+                  inv.watchlist, *inv.payloads.values(), inv.accessories):
         if sheet.exists:
             out[sheet.path] = sheet
     for product in inv.products:

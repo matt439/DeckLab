@@ -2610,16 +2610,21 @@ Evidence:
 - `decklab/tests/test_product_kit_cli.py`: test_set_both_then_clear_one_preserves_omitted_field_and_other_data, test_short_prefix_and_uppercase_work_but_stale_or_malformed_tokens_do_not
 - `decklab/tests/test_inventory_decks.py`: test_delete_refuses_a_built_deck_with_a_kit
 
-**E8-S19** · Matt · could · S · missing
+**E8-S19** · Matt · could · S · partial
 
 As Matt, I want to know roughly how full the storage box is, so that I know before an order whether the unsleeved cards will still fit in the 4-row box (about 2,400 cards).
 
 - Given home's collection and the cards in built decks and intact products, when I open the Collection page, then it shows how many cards are in storage against the box's capacity.
 - Given storage is over capacity, then it says so in plain words.
 
-Gap: nothing counts the cards in storage or records the box's capacity. Which cards count (plain basics, tokens) isn't defined yet.
+Now: first slice built 2026-10-28 with E8-S22 ([HISTORY.md](../HISTORY.md#storage-locations-and-the-storage-boxs-count-2026-10-28-e8-s22-e8-s19)). Home's Card list says "Storage box: about N of 2,400 cards": the copies not held by built decks or intact products (the In storage only counts), basic-land rows left out and named, against `config.json`'s `storage_box_capacity` (2,400 when unset). Over capacity it says so in a warning box. Rows answers carry `storage_box` (null outside home or when the copies in decks can't be worked out).
 
-First slice: count home's storage copies (collection less built decks and intact products, plain basics excluded) on the Collection page against a configured capacity of 2,400.
+Evidence:
+- `decklab/lib/api/collection_locations.py`: storage_box, capacity; `decklab/lib/api/collection_edit.py`: _extras
+- `decklab/web/storage-locations.js`: drawColStorageBox; `decklab/web/collection-rows.js`
+- `decklab/tests/test_collection_locations.py` (StorageBoxTests), `test_collection_locations_ui.py`
+
+Gap: shown on the Card list only (not Find cards); tokens and incoming cards aren't counted, so "before an order" means adding the order's cards in your head.
 
 **E8-S20** · Matt · must · M · built
 
@@ -2670,7 +2675,7 @@ Evidence:
 
 Gap: none for the story's criteria; not yet printed on a real printer or scanned from paper.
 
-**E8-S22** · Matt · could · M · missing
+**E8-S22** · Matt · could · M · built
 
 As a player pulling cards from the 4-row storage box, I want each storage copy to have a place (row and section), so that the packing plan tells me where to find it.
 
@@ -2680,12 +2685,17 @@ As a player pulling cards from the 4-row storage box, I want each storage copy t
 
 Decided (Matt, 2026-10-27): added from the comparison with ManaBox's card locations. It pairs with E8-S19 (how full the box is).
 
+Now: first slice built 2026-10-28 ([HISTORY.md](../HISTORY.md#storage-locations-and-the-storage-boxs-count-2026-10-28-e8-s22-e8-s19)). A collection row may record one storage location (one line, at most 40 characters, such as `Row 2, B` or `Binder`; whitespace tidied, no control characters or formula start). The card sheet's **Storage location** field (suggesting Row 1 to Row 4 and the space's locations in use) saves it in that row's one audited change; an edit without it keeps it, a printing or finish change takes it along, and removing the row removes it. The Card list shows it after each row's storage words; Build decks names it on each tile pulled from storage and each put back (`storage_locations`, every recorded location of the card's home rows, since the plan allocates by name). It's kept apart from the rows (`locations.csv` in the snapshot and export, `collection_card.location` in the database: migration `0016_collection_locations.sql`), so the rows' sha256 and `collection list`'s CSV stay eight columns. On the PC: `collection edit --location` and `collection locations`. Before migration 0016 every location reads blank, the page and Build decks say locations aren't available yet, and saving one is refused with nothing written; other edits work. Undo never changes a location.
+
 Evidence:
-- `decklab/lib/pool.py`: storage vs held copies; `decklab/web/assembly-steps.js`: pull and put-back steps
+- `decklab/db/migrations/0016_collection_locations.sql`; `decklab/lib/inventory/pg_locations.py` (schema probe, refusal before 0016), `pg.py` (snapshot, diff), `table_rows.py` (`_location_rows`), `model.py` (LocationRow, `locations_of`, `with_locations`, `without_stray_locations`), `files.py` (`locations_sheet`), `changes.py` (settling), `rules.py` (`clean_location`)
+- `decklab/lib/inventory/ops_collection.py`: add/edit `location`; `undo.py`, `undo_mixed.py`: rows recorded with a location
+- `decklab/lib/api/collection_locations.py`, `collection_edit.py` (`_extras`, `save_card`); `decklab/lib/api/assembly_locations.py`
+- `decklab/db/inv_collection.py`: `collection edit --location`, `collection locations`
+- `decklab/web/storage-locations.js`; `collection-cards.js`, `collection-rows.js`, `assembly.js` (packDeck)
+- `decklab/tests/test_collection_locations.py`, `test_collection_locations_pg.py`, `test_collection_locations_ui.py`
 
-Gap: The collection knows a copy is in storage but not where.
-
-First slice: an optional location column on collection rows, editable on the card sheet, shown in the packing plan.
+Gap: migration 0016 not applied to the live database; not tried with real cards on a phone. Locations are per printing row, so a card with copies in several places lists every place. Member spaces can record locations, but Build decks is home's only.
 
 ---
 

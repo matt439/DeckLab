@@ -165,6 +165,9 @@ def assembly_view(deck=None, version="target"):
     legacy built list), all sections and installed markers, packed token cards and visible kit.
     It supplies the deck SHA for an ordinary explicit status save; no checklist read changes it.
 
+    "storage_locations" (assembly_locations, E8-S22) says where the cards pulled from storage or
+    put back are kept, from home's collection rows' recorded locations.
+
     The plan is the home pool's: 403 for anyone outside the home
     (guard.require_sees_home_records), here and in assembly_preview."""
     from . import guard
@@ -341,6 +344,8 @@ def _preview(selected, profile=False):
                         for row, line in zip(token_inv.rows, token_inv.lines)]
     answer["token_note"] = TOKEN_NOTE
     answer["token_problems"] = _scrub(token_inv.problems)
+    from .assembly_locations import annotate as locate
+    locate(answer, inventory.current())
     from .assembly_completion import decorate
     return decorate(answer, selections, profile)
 

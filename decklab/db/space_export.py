@@ -100,11 +100,17 @@ def snapshot(c, space, *, details=False):
     cards = [{("set" if key == "set_code" else key): value for key, value in row.items()
               if key != "space_id"} for row in data["collection"]]
     cards.sort(key=rules.sort_key)
+    # Storage locations (E8-S22, migration 0016) stay in the JSON rows; the CSV keeps its eight
+    # columns, and the rows with one are also written as locations.csv, as the inventory export does.
+    places = [{key: card[key] for key in rules.LOCATION_FIELDS} for card in cards if card.get("location")]
+    cards = [{key: card[key] for key in rules.FIELDS} for card in cards]
     tokens = [{("set" if key == "set_code" else key): value for key, value in row.items()
                if key not in ("id", "space_id", "position")}
               for row in sorted(data["tokens"], key=lambda r: (r["position"], r["id"]))]
     files = {"collection.csv": rules.csv_bytes(cards, rules.FIELDS),
              "tokens.csv": rules.csv_bytes(tokens, rules.TOKEN_FIELDS)}
+    if places:
+        files["locations.csv"] = rules.csv_bytes(places, rules.LOCATION_FIELDS)
     imports = []
     for name, content in c.execute(
             "select i.file_name, c.content from collection_import i "

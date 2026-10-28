@@ -18,6 +18,9 @@ COLLECTION = "collection_card"
 TOKENS = "token_card"
 COLLECTION_KEYS = {"space_id", "set_code", "collector_number", "finish"}
 COLLECTION_FIELDS = {"name", "set_code", "collector_number", "finish", "quantity", "condition", "language", "notes", "space_id"}
+# A row recorded after migration 0016 also has its storage location (E8-S22). Undo never changes a
+# location: an update that changed one isn't undoable here, and a row it restores keeps its own.
+COLLECTION_SCHEMAS = (COLLECTION_FIELDS, COLLECTION_FIELDS | {"location"})
 TOKEN_FIELDS = set(rules.TOKEN_FIELDS) - {"set"} | {"set_code", "space_id", "id", "position"}
 SUPPORTED = {COLLECTION: ("collection", {"quantity", "condition", "language", "notes"}),
              TOKENS: ("tokens", {"quantity", "notes"})}
@@ -91,7 +94,7 @@ def _source(rows, space):
     if row.get("table") == COLLECTION and row.get("op") == "INSERT" and old is None:
         if not isinstance(new, dict) or new.get("space_id") != space:
             raise UndoMissing()
-        if set(new) != COLLECTION_FIELDS:
+        if set(new) not in COLLECTION_SCHEMAS:
             raise UndoUnsupported("The inserted collection row has an unsupported schema.")
         _identifier(row.get("id"))
         if not isinstance(row.get("key"), dict) or set(row["key"]) != COLLECTION_KEYS \
@@ -101,7 +104,7 @@ def _source(rows, space):
     if row.get("table") == COLLECTION and row.get("op") == "DELETE" and new is None:
         if not isinstance(old, dict) or old.get("space_id") != space:
             raise UndoMissing()
-        if set(old) != COLLECTION_FIELDS:
+        if set(old) not in COLLECTION_SCHEMAS:
             raise UndoUnsupported("The deleted collection row has an unsupported schema.")
         _identifier(row.get("id"))
         if not isinstance(row.get("key"), dict) or set(row["key"]) != COLLECTION_KEYS \
@@ -112,7 +115,7 @@ def _source(rows, space):
             or old.get("space_id") != space or new.get("space_id") != space:
         raise UndoMissing()
     table = row["table"]
-    fields = COLLECTION_FIELDS if table == COLLECTION else TOKEN_FIELDS
+    fields = (set(old) if set(old) in COLLECTION_SCHEMAS else COLLECTION_FIELDS) if table == COLLECTION else TOKEN_FIELDS
     if row.get("op") != "UPDATE" or set(old) != fields or set(new) != fields:
         raise UndoUnsupported("Only one supported row update can be undone here.")
     _identifier(row.get("id"))

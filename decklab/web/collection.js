@@ -200,7 +200,7 @@ function colView(data, space, token, kind) {
     sha256: data.sha256 || null, rows: Array.isArray(data.rows) ? data.rows : null,
     pictures: data.pictures && typeof data.pictures === "object" ? { ...data.pictures } : {},
     prices: colPrices(data.prices),
-    storage: colStorage(data.storage),
+    storage: colStorage(data.storage), locations: colLocations(data.locations), storageBoxCount: data.storage_box || null,
     message: el("div", { class: "col-message", role: "status", "aria-live": "polite" }) };
 }
 
@@ -249,6 +249,7 @@ function colTakeRows(cv, data) {
   cv.rows = data.rows;
   if (data.prices) cv.prices = colPrices(data.prices);
   cv.storage = data.storage ? colStorage(data.storage) : colWithoutHints(cv.storage);
+  colTakeLocations(cv, data);
 }
 
 function colActive(cv) {
@@ -339,6 +340,7 @@ async function colEnsureRows(cv) {
   if (data.pictures) Object.assign(cv.pictures, data.pictures);
   if (data.prices) cv.prices = colPrices(data.prices);
   if (data.storage) cv.storage = colStorage(data.storage);
+  colTakeLocations(cv, data);
 }
 
 /** After a change: the new rows, and the view drawn again (Find cards loads its page again). */
@@ -348,6 +350,7 @@ function colChanged(cv, answer, words) {
   if (answer && answer.pictures) Object.assign(cv.pictures, answer.pictures);
   if (answer && answer.prices) cv.prices = colPrices(answer.prices);
   cv.storage = answer && answer.storage ? colStorage(answer.storage) : colWithoutHints(cv.storage);
+  colTakeLocations(cv, answer);
   state.library = null;               // the library's missing-card counts come from the collection
   if (!colActive(cv)) { if (words && state.profile?.id === cv.profile) toast(words); return; }
   if (cv.kind === "rows") {

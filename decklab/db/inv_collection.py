@@ -1,9 +1,10 @@
 """The collections' commands (phase 3, area C), registered with `python -m decklab.db`:
 
     collection list [--space S]                       a space's collection, as collection.csv
+    collection locations [--space S]                  its rows' storage locations (E8-S22), as CSV
     collection merge FILE [FILE ...] [--space S] -m MESSAGE [--dry-run]
     collection edit SET NUMBER FINISH [--space S] [--quantity N] [--condition C] [--language L] [--notes T]
-                    --expect SHA -m MESSAGE [--reason R] [--allow-in-use] [--dry-run]
+                    [--location L] --expect SHA -m MESSAGE [--reason R] [--allow-in-use] [--dry-run]
                                                        one row changed, or removed with --quantity 0
     collection apply FILE [--space S] --expect SHA -m MESSAGE [--reason R] [--allow-in-use]
                      [--remove-missing] [--dry-run]    many rows changed or removed, as one change
@@ -36,6 +37,12 @@ checks it and each row at quantity 0 removed. A row left out of FILE is refused 
 removes rows only; a key the collection doesn't have, a changed name or a key listed twice is
 refused.
 
+Storage locations (E8-S22) aren't a column of collection list's CSV, so the CSV merge, apply and
+the page's import read stays collection.csv's eight columns: collection locations prints them
+(set, collector_number, finish, name, location; the rows with one), edit --location sets or ("")
+clears one row's, as the Collection page's card sheet does, and apply keeps each row's. Until the
+database has migration 0016 a location can't be saved and collection locations says so.
+
 add-precon (E10-S36) is the Collection page's Add a precon from the command line, for upkeep in a
 space whose owner asked (since E10-S29 the page lets nobody write in another's space): the
 same code (lib/api/precons.py's plan_add), so the same cards (plain basics left out), the same built deck
@@ -65,6 +72,7 @@ FINISHES = ("nonfoil", "foil", "etched")
 CONDITIONS = ("NM", "LP", "MP", "HP", "DMG")       # the Collection page's (api/collection_edit.py)
 MAX_QUANTITY = 9999
 EDITED = ("quantity", "condition", "language", "notes")
+LOCATION_COLUMNS = ("set", "collector_number", "finish", "name", "location")
 
 
 def register(sub):
@@ -74,6 +82,11 @@ def register(sub):
     sp = verbs.add_parser("list", help="Print a space's collection as CSV, in the collection's columns.")
     sp.add_argument("--space", default=paths.HOME, help="the space (home by default)")
     sp.set_defaults(func=_list)
+    sp = verbs.add_parser("locations", help="Print a space's storage locations as CSV (the rows that have one).",
+                          description="Print where a space's collection rows are kept (E8-S22): set, collector "
+                                      "number, finish, name and location of each row with a location.")
+    sp.add_argument("--space", default=paths.HOME, help="the space (home by default)")
+    sp.set_defaults(func=_locations)
     sp = verbs.add_parser("merge", help="Merge card files into a space's collection, keeping each as a raw import.")
     sp.add_argument("files", nargs="+", metavar="FILE", help="a CSV in the collection's columns, or a product list's")
     sp.add_argument("--space", default=paths.HOME, help="the space (home by default)")
@@ -81,7 +94,7 @@ def register(sub):
     sp.add_argument("--dry-run", action="store_true", help="show added quantities and retained imports; save nothing")
     cli_actor.add_argument(sp)
     sp.set_defaults(func=_merge)
-    sp = verbs.add_parser("edit", help="Change one row's condition, language, notes or quantity (0 removes it).",
+    sp = verbs.add_parser("edit", help="Change one row's condition, language, notes, location or quantity (0 removes it).",
                           description="Change one collection row, named by its printing, as the Collection page's "
                                       "card sheet does: only the fields given change, and --quantity 0 removes the row.")
     sp.add_argument("set", metavar="SET", help="the row's set code (fdn)")
@@ -92,6 +105,7 @@ def register(sub):
     sp.add_argument("--language", help="Scryfall's language code (en, ja, ...), or \"\" for unknown")
     sp.add_argument("--notes", help="the row's notes (replacing them; \"\" clears them)")
     sp.add_argument("--quantity", type=int, help="the copies now; 0 removes the row (needs --reason)")
+    sp.add_argument("--location", help="where its storage copies are, such as \"Row 2, B\" (\"\" clears it)")
     sp.add_argument("--expect", required=True, metavar="SHA",
                     help=f"the sha collection list printed (at least its first {MIN_EXPECT} characters)")
     sp.add_argument("-m", "--message", required=True, help="what the change does, for the history")
@@ -174,6 +188,31 @@ def _list(args):
         sys.stdout.write(data.decode("utf-8"))
     # On stderr, so the CSV on stdout stays the collection's columns alone.
     print(f"sha {ops.sha256_of(sheet)} (give it to collection edit or apply as --expect)", file=sys.stderr)
+    return 0
+
+
+def _locations(args):
+    """collection locations: the space's located rows as CSV (LOCATION_COLUMNS), in the
+    collection's order; a line on stderr says how many, or that migration 0016 is missing."""
+    _space(args.space)
+    snapshot = inventory.current()
+    sheet = snapshot.collection(args.space)
+    problem = ops.unreadable(sheet)
+    if problem:
+        raise ValueError(problem)
+    found = snapshot.locations_of(args.space)
+    out = io.StringIO()
+    writer = csv.writer(out, lineterminator="\n")
+    writer.writerow(LOCATION_COLUMNS)
+    for row in ops.rows_of(sheet):
+        if rules.ident(row) in found:
+            writer.writerow([row["set"], row["collector_number"], row["finish"], row["name"], found[rules.ident(row)]])
+    sys.stdout.write(out.getvalue())
+    if not snapshot.locations_ready:
+        print("Storage locations need the database's migration 0016 (python -m decklab.db migrate); none can be "
+              "saved until then.", file=sys.stderr)
+    else:
+        print(f"{len(found)} of {len(sheet.rows)} rows have a storage location.", file=sys.stderr)
     return 0
 
 
@@ -459,9 +498,17 @@ def _edit(args):
     if not args.message.strip():
         raise ValueError("-m needs a message saying what this change does")
     changes = _edit_fields(args)
-    if not changes:
-        raise ValueError("Give at least one of --quantity, --condition, --language and --notes")
+    location = None
+    if getattr(args, "location", None) is not None:
+        try:
+            location = rules.clean_location(args.location)
+        except ValueError as e:
+            raise ValueError(f"--location: {e}") from None
+    if not changes and location is None:
+        raise ValueError("Give at least one of --quantity, --condition, --language, --notes and --location")
     removing = changes.get("quantity") == "0"
+    if removing and location is not None:
+        raise ValueError("--quantity 0 removes the row, and its location with it: leave out --location")
     reason = (args.reason or "").strip()
     if removing and not reason:
         raise ValueError("--quantity 0 removes the row: give --reason saying why (sold, traded, lost ...)")
@@ -480,12 +527,19 @@ def _edit(args):
         did = [f"Removed {_row_label(old)} ({_copies(old)}) from {whose}."]
     else:
         new = _matched({**old, **changes})
-        if new == old:
+        had = snapshot.locations_of(args.space).get(key, "")
+        moved = location is not None and location != had
+        if new == old and not moved:
             print(f"Nothing to change: {_row_label(old)} in {whose} already has those values.")
             return 0
-        op = inventory.Op("collection.edit", {**params, "row": new})
-        would = [f"Would change {_row_label(old)} in {whose}: {_differences(old, new)}."]
-        did = [f"Changed {_row_label(old)} in {whose}: {_differences(old, new)}."]
+        if moved and location and not snapshot.locations_ready:
+            raise ValueError(rules.LOCATION_REQUIRED)
+        op = inventory.Op("collection.edit", {**params, "row": new, **({"location": location} if moved else {})})
+        words = ", ".join(part for part in (_differences(old, new),
+                                            f"location {had or '(blank)'} -> {location or '(blank)'}" if moved else "")
+                          if part)
+        would = [f"Would change {_row_label(old)} in {whose}: {words}."]
+        did = [f"Changed {_row_label(old)} in {whose}: {words}."]
     return _save(args, op, snapshot, title, actor, reason, would, did)
 
 

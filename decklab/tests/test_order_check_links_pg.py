@@ -155,6 +155,7 @@ class OrderCheckLinksPgTests(CheckLinksPgBase):
         self.addCleanup(migrate.apply, dbname=self.dbname)
         with self.connect("owner") as c:
             c.execute("alter table order_component drop column check_links")
+            c.execute("alter table collection_card drop column location")      # 0016 comes after too
             if version == 13:
                 c.execute("alter table product_status drop column token_cards")
             c.execute("delete from schema_migration where version>%s", (version,))

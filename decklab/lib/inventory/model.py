@@ -12,6 +12,10 @@ accessors that return None when the text isn't valid (CardRow.qty, TokenRow.qty,
       revision      str: changes whenever any inventory file or row changes
       collections   {space: Sheet of CardRow}      a space's collection.csv
       tokens        {space: Sheet of TokenRow}     a space's tokens.csv
+      locations     {space: Sheet of LocationRow}  a space's locations.csv (E8-S22): where its
+                                                   collection rows' storage copies are, one row per
+                                                   located (set, collector_number, finish); none
+                                                   for a row with no location
       imports       {space: (ImportInfo, ...)}     names and sizes of its raw imports, no content
       status        Sheet of StatusRow             products/status.csv (its own rows: a status
                                                    row needs no product file, nor a file a row)
@@ -25,6 +29,7 @@ accessors that return None when the text isn't valid (CardRow.qty, TokenRow.qty,
       decks         {deck id: Deck}                every deck file (phase 4), in every space
       accessories   Sheet of AccessoryRow          magic/accessories.csv
       accessory_images  {file name: ImageMeta}     its pictures' sizes and sha256s (no bytes)
+      locations_ready  whether the backend can save locations (the database: migration 0016)
       backend       "files" or "db";  stale: None, or the warning to show while the database
                     backend serves its last good snapshot because the database isn't reachable
 
@@ -245,6 +250,20 @@ class StatusRow(Row):
     deck_box = property(lambda self: self.get("deck_box"))
     token_cards = property(lambda self: self.get("token_cards"))
     notes = property(lambda self: self.get("notes"))
+
+
+class LocationRow(Row):
+    """A locations.csv row: a collection row's identity key and its storage location (E8-S22)."""
+    COLUMNS = tuple(rules.LOCATION_FIELDS)
+
+    set = property(lambda self: self.get("set"))
+    collector_number = property(lambda self: self.get("collector_number"))
+    finish = property(lambda self: self.get("finish"))
+    location = property(lambda self: self.get("location"))
+
+    @property
+    def key(self):
+        return (self.text("set"), self.text("collector_number"), self.text("finish"))
 
 
 class AccessoryRow(Row):
@@ -578,6 +597,7 @@ class Inventory:
     revision: str
     collections: Mapping = field(default_factory=dict)
     tokens: Mapping = field(default_factory=dict)
+    locations: Mapping = field(default_factory=dict)
     imports: Mapping = field(default_factory=dict)
     status: Sheet = field(default_factory=lambda: Sheet(paths.STATUS))
     products: tuple = ()
@@ -594,8 +614,9 @@ class Inventory:
     deck_history_ids: tuple = field(default=(), compare=False)
     accessories: Sheet = field(default_factory=lambda: Sheet(paths.ACCESSORIES))
     accessory_images: Mapping = field(default_factory=dict)
+    locations_ready: bool = field(default=True, compare=False)
 
-    MAPPINGS = ("collections", "tokens", "imports", "payloads", "decks", "deck_aliases", "accessory_images")
+    MAPPINGS = ("collections", "tokens", "locations", "imports", "payloads", "decks", "deck_aliases", "accessory_images")
 
     def __post_init__(self):
         for name in self.MAPPINGS:
@@ -640,6 +661,21 @@ class Inventory:
 
     def token_set(self, space=paths.HOME):
         return self.tokens.get(space) or Sheet(paths.tokens(space))
+
+    def location_sheet(self, space=paths.HOME):
+        """A space's locations Sheet; an empty one (exists False) when no row has a location."""
+        return self.locations.get(space) or Sheet(paths.locations(space))
+
+    def locations_of(self, space=paths.HOME):
+        """{(set, collector_number, finish): location} of a space's located collection rows (E8-S22),
+        only rows the collection has and only a location that is text."""
+        listed = {rules.ident(row) for row in self.collection(space).rows
+                  if all(isinstance(row.get(k), str) for k in ("set", "collector_number", "finish"))}
+        sheet = self.location_sheet(space)
+        if sheet.error is not None:
+            return {}
+        return {row.key: row.text("location") for row in sheet.rows
+                if row.key in listed and row.text("location")}
 
     # -------------------------------------------------------- products and orders
 
@@ -710,7 +746,39 @@ class Inventory:
         collections = {k: v for k, v in self.collections.items() if k != space}
         if made:
             collections[space] = Sheet(paths.collection(space), CardRow.COLUMNS, made, True)
-        return self.replace(collections=dict(sorted(collections.items())))
+        out = self.replace(collections=dict(sorted(collections.items())))
+        return out.without_stray_locations(space)
+
+    def with_locations(self, space, found):
+        """space's storage locations as found ({(set, collector_number, finish): location}): blank
+        ones dropped, in collection order, locations.csv's columns; none left: no file. A key the
+        collection doesn't have is dropped too (changes.prepare drops such keys anyway)."""
+        listed = [rules.ident(row.as_dict()) for row in self.collection(space).rows]
+        made = tuple(LocationRow.make(dict(zip(rules.LOCATION_FIELDS, (*key, found[key]))))
+                     for key in listed if found.get(key))
+        locations = {k: v for k, v in self.locations.items() if k != space}
+        if made:
+            locations[space] = Sheet(paths.locations(space), LocationRow.COLUMNS, made, True)
+        return self.replace(locations=dict(sorted(locations.items())))
+
+    def without_stray_locations(self, space=None):
+        """This snapshot with each location whose collection row is gone dropped (space: only that
+        one's; None: every space's). The same snapshot when there's none to drop."""
+        out = self
+        for each in ([space] if space is not None else list(self.locations)):
+            sheet = self.locations.get(each)
+            if sheet is None or sheet.error is not None or self.collection(each).error is not None:
+                continue
+            listed = {rules.ident(row.as_dict()) for row in self.collection(each).rows
+                      if all(isinstance(row.get(k), str) for k in ("set", "collector_number", "finish"))}
+            if all(row.key in listed for row in sheet.rows):
+                continue
+            kept = tuple(row for row in sheet.rows if row.key in listed)
+            locations = {k: v for k, v in out.locations.items() if k != each}
+            if kept:
+                locations[each] = dataclasses.replace(sheet, rows=kept)
+            out = out.replace(locations=dict(sorted(locations.items())))
+        return out
 
     def with_tokens(self, space, rows):
         """space's token cards holding rows (TokenRow's, which keep their hidden id, or

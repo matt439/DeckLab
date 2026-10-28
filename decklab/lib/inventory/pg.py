@@ -84,7 +84,8 @@ from decklab.db import conn as db, space_members
 from decklab.lib.state import Actor, Conflict, Invalid, Unavailable
 from decklab.lib.state import pg as state_pg
 
-from . import DECK_SAVES_PAUSED, Summary, changes, files, paths, pg_decks, pg_aliases, pg_check_links, rules
+from . import (DECK_SAVES_PAUSED, Summary, changes, files, paths, pg_decks, pg_aliases, pg_check_links,
+               pg_locations, rules)
 from .model import QUEUE_FIELDS, Component, ImageMeta, ImportInfo, Order
 # The snapshot-as-rows code is shared with the files backend (table_rows.py); these names stay
 # here for the callers and tests that use them as pg's.
@@ -172,8 +173,11 @@ def _select(c):
     status = "select file, " + ", ".join(column if column in columns else "''::text as token_cards"
                                          for column in STATUS_COLUMNS) + " from product_status"
     component = pg_check_links.select(c)
-    return {table: c.execute(status if table == "product_status" else component if table == "order_component" else query).fetchall()
-            for table, query in SELECTS.items()}
+    queries = {**SELECTS, "product_status": status, "order_component": component,
+               "collection_card": pg_locations.select(c)}
+    data = {table: c.execute(query).fetchall() for table, query in queries.items()}
+    data["locations_ready"] = pg_locations.ready(c)
+    return data
 
 
 def _status_columns(c):
@@ -197,15 +201,20 @@ def _status_tables(t, columns):
 
 
 def snapshot(data, revision):
-    """The Inventory the rows of every table hold (data: {table: rows} as _select reads them)."""
+    """The Inventory the rows of every table hold (data: {table: rows} as _select reads them). A
+    collection row's storage location (E8-S22) becomes its space's locations.csv."""
     out = {}
     cards = defaultdict(list)
-    for space, set_code, number, finish, name, qty, condition, language, notes in data["collection_card"]:
+    for space, set_code, number, finish, name, qty, condition, language, notes, *location in data["collection_card"]:
         cards[space].append({"name": name, "set": set_code, "collector_number": number, "finish": finish,
-                             "quantity": str(qty), "condition": condition, "language": language, "notes": notes})
+                             "quantity": str(qty), "condition": condition, "language": language, "notes": notes,
+                             "location": location[0] if location else ""})
     for space, rows in cards.items():
         rows.sort(key=rules.sort_key)
         out[paths.collection(space)] = _render(rules.FIELDS, [[r[k] for k in rules.FIELDS] for r in rows])[0]
+        located = [[r[k] for k in rules.LOCATION_FIELDS] for r in rows if r["location"]]
+        if located:
+            out[paths.locations(space)] = _render(rules.LOCATION_FIELDS, located)[0]
     token_ids = {}
     tokens = defaultdict(list)
     for row in data["token_card"]:
@@ -244,7 +253,8 @@ def snapshot(data, revision):
                 out[paths.payload(kind, status_, file_name)] = _render(PAYLOAD_FIELDS[kind], rows)[0]
         order = Order.build(oid, seller, ordered_on, sources, notes, built, audit_notes)
         out[paths.record(oid)] = rules.json_bytes(order.data)
-    inv = files.build(out, revision=str(revision), backend="db")
+    inv = files.build(out, revision=str(revision), backend="db").replace(
+        locations_ready=data.get("locations_ready", True))
     imports = defaultdict(list)
     for space, file_name, size, digest, at, actor in data["collection_import"]:
         imports[space].append(ImportInfo(file_name, size, digest, at.isoformat() if at else None, actor))
@@ -318,11 +328,11 @@ def _db(value):
     return list(value) if isinstance(value, tuple) else value
 
 
-def _keyed_rows(table, t, status_columns=STATUS_COLUMNS, component_columns=COMPONENT_COLUMNS):
+def _keyed_rows(table, t, status_columns=STATUS_COLUMNS, component_columns=COMPONENT_COLUMNS,
+                card_columns=pg_locations.VALUES):
     """(key columns, value columns, {key: values}) of one of t's keyed tables (tables()' shape)."""
     return {
-        "collection_card": (("space_id", "set_code", "collector_number", "finish"),
-                            ("name", "quantity", "condition", "language", "notes")),
+        "collection_card": (("space_id", "set_code", "collector_number", "finish"), card_columns),
         "product": (("stem",), ("name", "format", "columns")),
         "product_status": (("file",), status_columns),
         "purchase_order": (("id",), ORDER_COLUMNS),
@@ -344,8 +354,10 @@ def _write_all(cur, t):
     t = _status_tables(t, status_columns)  # Refuse unsupported data before any inventory DML.
     component_columns = pg_check_links.columns(cur)
     t = pg_check_links.compatible(t, component_columns)
+    located = pg_locations.ready(cur)
+    t, card_columns = pg_locations.compatible(t, located), pg_locations.values(located)
     for table in PARENTS_FIRST:
-        keys, values, rows = _keyed_rows(table, t, status_columns, component_columns)
+        keys, values, rows = _keyed_rows(table, t, status_columns, component_columns, card_columns)
         _insert(cur, table, keys + values, [(*_plain_key(k), *map(_db, v)) for k, v in rows.items()])
     _insert(cur, "product_item", ("product_stem", "position", "cells"),
             [(stem, n, list(cells)) for stem, found in t["product_item"].items() for n, cells in enumerate(found)])
@@ -371,6 +383,9 @@ def _diff(cur, old, new):
     old = _status_tables(old, status_columns)
     component_columns = pg_check_links.columns(cur)
     new, old = (pg_check_links.compatible(t, component_columns) for t in (new, old))
+    located = pg_locations.ready(cur)
+    new, old = (pg_locations.compatible(t, located) for t in (new, old))
+    card_columns = pg_locations.values(located)
     count = 0
     pending = []
 
@@ -398,14 +413,14 @@ def _diff(cur, old, new):
     add("delete from product_item where product_stem = %s",
         [(stem,) for stem, found in old["product_item"].items() if found != new["product_item"].get(stem)])
     for table in reversed(PARENTS_FIRST):
-        keys, _, rows = _keyed_rows(table, old, status_columns, component_columns)
+        keys, _, rows = _keyed_rows(table, old, status_columns, component_columns, card_columns)
         add(f"delete from {table} where {where(keys)}", [_plain_key(key) for key in rows.keys() - new[table].keys()])
     for table in ("token_card", "watchlist_item"):
         kept = {r[0] for r in new[table] if r[0]}
         add(f"delete from {table} where id = %s", [(row[0],) for row in old[table] if row[0] not in kept])
     # Inserts and updates, parents first.
     for table in PARENTS_FIRST:
-        keys, values, rows = _keyed_rows(table, new, status_columns, component_columns)
+        keys, values, rows = _keyed_rows(table, new, status_columns, component_columns, card_columns)
         before = old[table]
         add(insert(table, keys + values),
             [(*_plain_key(key), *map(_db, value)) for key, value in rows.items() if key not in before])
@@ -640,7 +655,8 @@ class PgInventory:
         row = c.execute("select revision, imported_at from inventory_revision").fetchone()
         if row is None:
             raise NotImported(NOT_IMPORTED)
-        return (self.dbname or db.settings()["name"], row[1], row[0])
+        # Whether migration 0016 is there counts too: once it's applied the locations can be read.
+        return (self.dbname or db.settings()["name"], row[1], row[0], pg_locations.ready(c))
 
     def _read(self, c, remember=True):
         """The snapshot the connection sees (the cached one while the revision hasn't moved)."""

@@ -348,9 +348,13 @@ def _storage(space, rows, prices):
 
 
 def _extras(space, shown):
-    """The rows' prices (_prices) and storage counts (_storage), for every answer that sends rows."""
+    """The rows' prices (_prices), storage counts (_storage), storage locations and the storage
+    box's count (collection_locations), for every answer that sends rows."""
+    from . import collection_locations as places
     prices = _prices(shown)
-    return {"prices": prices, "storage": _storage(space, shown, prices)}
+    storage = _storage(space, shown, prices)
+    return {"prices": prices, "storage": storage, "locations": places.locations(space, _picture_key),
+            "storage_box": places.storage_box(space, shown, storage, _picture_key)}
 
 
 def _stale(space, sha=None):
@@ -416,7 +420,7 @@ def rows_view(space=None):
     """GET /api/collection/rows?space=<id>: {space, sha256 (of the collection
     rendered as collection.csv; of nothing while it has no cards), rows (its
     eight columns, as text, sorted), pictures (_pictures), prices (_prices),
-    storage (_storage) and editable (may this visitor change it)}. 403 for a space whose inventory the visitor may not see
+    storage (_storage), locations and storage_box (collection_locations) and editable (may this visitor change it)}. 403 for a space whose inventory the visitor may not see
     (guard.require_sees_inventory)."""
     space = space_param(space)
     guard.require_sees_inventory(space)
@@ -592,7 +596,9 @@ def save_card(body):
     "add" | "edit" | "remove", "row"? (add, edit: the eight columns; a remove may send it, unread),
     "original"? (edit, remove: {"set", "collector_number", "finish"} of the
     row as the page loaded it), "reason"? (up to 200 characters, for the
-    audit trail), "confirm_in_use"? (the token returned with an in-use warning)}.
+    audit trail), "confirm_in_use"? (the token returned with an in-use warning),
+    "location"? (add, edit: the row's storage location, "" clears it; left out,
+    an edit keeps it: collection_locations.location_input, E8-S22)}.
 
     With the card index ready, the name must be a card's exact Scryfall name
     (fixed to its spelling) and set and number one of its paper printings in
@@ -615,7 +621,7 @@ def save_card(body):
         raise ApiError(400, "action must be add, edit or remove")
     required = {"add": ("row",), "edit": ("row", "original"), "remove": ("original",)}[action]
     # A remove may send the row too (the page does); only original names it.
-    _keys(data, ("profile", "action", "sha256", *required), ("space", "reason", "row", "confirm_in_use"))
+    _keys(data, ("profile", "action", "sha256", *required), ("space", "reason", "row", "confirm_in_use", "location"))
     sha = _request_sha(data["sha256"])
     row = _row_input(data["row"]) if "row" in data and action != "remove" else None
     original = _key_input(data["original"]) if "original" in data else None
@@ -631,6 +637,12 @@ def save_card(body):
         if problem:
             raise ApiError(400, f"The card can't be saved: {problem}")
     params = {"space": space, "sha256": sha, "whose": _whose(space)}
+    if action != "remove" and "location" in data:
+        from .collection_locations import location_input
+        with common.state_errors():
+            location = location_input(data["location"])
+        if location is not None:
+            params["location"] = location
     if row is not None:
         params["row"] = row
     if original is not None:
