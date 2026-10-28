@@ -38,8 +38,16 @@ function drawArrivalNotices(notices) {
   const box = arrivalBox();
   if (!box) return;
   clear(box);
-  notices.forEach((notice) => box.append(arrivalNotice(notice)));
-  box.hidden = !notices.length;
+  // A dismissal still waiting (the same person picked again within its Undo time) keeps its notice hidden, and
+  // its save, Undo or refusal acts on the notice drawn now, not the one taken away.
+  const batch = arrivalPending && arrivalPending.profile === state.profile ? arrivalPending : null;
+  notices.forEach((notice) => {
+    const node = arrivalNotice(notice);
+    const work = batch && batch.works.find((item) => item.notice.id === notice.id);
+    if (work) { work.node = node; node.hidden = true; }
+    box.append(node);
+  });
+  box.hidden = ![...box.children].some((child) => !child.hidden);
 }
 
 /** "3 cards for Deck A, 1 card for Deck B and 2 other decks". */

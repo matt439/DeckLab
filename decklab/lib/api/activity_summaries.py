@@ -76,13 +76,14 @@ def _wishlist_summary(op, before, after, whose):
 
 
 def _arrival_words(op, record):
-    """An arrival notice's row in words (E6-S19, lib/arrivals.py): "arrival notice for order X" or
-    "arrival notice dismissed", never its stored JSON; None for any other setting."""
+    """An arrival notice's row in words (E6-S19, lib/arrivals.py): "arrival notice for order X" (a
+    further part's "arrival notice") or "arrival notice removed" (dismissed, or the oldest dropped
+    for a new one), never its stored JSON; None for any other setting."""
     from decklab.lib import arrivals
-    if _text(record.get("key")) not in arrivals.SLOTS:
+    if not arrivals.is_key(_text(record.get("key"))):
         return None
     if op == "DELETE":
-        return "arrival notice dismissed"
+        return "arrival notice removed"
     found = arrivals._parse(record.get("value"))
     return f"arrival notice for order {found['o']}" if found else "arrival notice"
 

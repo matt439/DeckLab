@@ -4,6 +4,8 @@ shown to their home player on the next visit until dismissed.
     GET  /api/arrivals              {"notices": [{id, order, received_on, cards, more,
                                     decks: [{id, title, cards}]}]}: the viewer's own, newest first
     POST /api/arrivals/dismiss      {profile, ids: [notice id]} -> {"notices": [...]}: the ones left
+                                    ([] and "unshown": true when the decks can't be read just then:
+                                    the dismissal is saved all the same)
 
 Only the viewer's own notices, and only for a home profile (the notices are kept with a home
 player's settings; anyone else, a request naming nobody and a script get none). A deck the
@@ -17,7 +19,7 @@ from . import guard
 from .common import ApiError, _keys, _parse_body, state_errors
 from .settings import _web_actor, _writer
 
-MAX_IDS = len(arrivals.SLOTS)
+MAX_IDS = arrivals.MAX_NOTICES
 
 
 def _home_viewer():
@@ -85,4 +87,8 @@ def dismiss_arrivals(body):
         return {"notices": []}
     with state_errors():
         left = arrivals.dismiss(profile["id"], ids, _web_actor(profile), profile["name"])
-    return {"notices": _shown(left, profile) if left else []}
+    try:
+        return {"notices": _shown(left, profile) if left else []}
+    except inventory.Unavailable:
+        # The dismissal is saved: say so, with the rest left for the next visit's GET.
+        return {"notices": [], "unshown": True}

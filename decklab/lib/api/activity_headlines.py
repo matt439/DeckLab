@@ -259,16 +259,18 @@ def describe(rows, actor_name, orders=None, groups=(), profiles=None, *, own=Non
     elif games:
         phrases.append((f"changed {_n(len(games), 'game record')}", None))
     chosen = take("profile_setting")
-    if len(chosen) == 1:
+    notices = [row for row in chosen if _arrival_words(row.get("op"), _record(row)) is not None]
+    if chosen and len(notices) == len(chosen):      # an arrival notice's parts (E6-S19)
+        kept = [_arrival_words(row.get("op"), _record(row)) for row in chosen if row.get("op") != "DELETE"]
+        named = [words for words in kept if words != "arrival notice"]
+        gone = len({_text(_record(row).get("key")).rsplit("_", 1)[0] for row in chosen})
+        phrases.append((f"kept an {(named or kept)[0]}" if kept
+                        else f"dismissed {_n(gone, 'arrival notice') if gone > 1 else 'an arrival notice'}", None))
+    elif len(chosen) == 1:
         record = _record(chosen[0])
         key = _text(record.get("key"))
-        arrival = _arrival_words(chosen[0].get("op"), record)
-        if arrival is not None:
-            phrases.append(("dismissed an arrival notice" if chosen[0].get("op") == "DELETE"
-                            else f"kept an {arrival}", None))
-        else:
-            phrases.append((f"reset the {key} setting" if chosen[0].get("op") == "DELETE"
-                            else f"set the {key} to {_text(record.get('value'), 'nothing')}", None))
+        phrases.append((f"reset the {key} setting" if chosen[0].get("op") == "DELETE"
+                        else f"set the {key} to {_text(record.get('value'), 'nothing')}", None))
     elif chosen:
         phrases.append((f"changed {_n(len(chosen), 'setting')}", None))
     for row in take("simulation_mode"):

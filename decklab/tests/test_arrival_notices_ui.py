@@ -11,7 +11,7 @@ SETUP = r"""
   const home = { id: "user1", name: "User1", plays_as: "wife", space: "home" };
   const other = { id: "matt", name: "Matt", plays_as: "user", space: "home" };
   const member = { id: "user2", name: "User2", space: "user2" };
-  const NOTICE = { id: "arrival_a:0123456789abcdef", order: "2026-10-07-shop-a", received_on: "2026-10-08", cards: 3,
+  const NOTICE = { id: "qwertyuiop:0123456789abcdef", order: "2026-10-07-shop-a", received_on: "2026-10-08", cards: 3,
     more: 0, decks: [{ id: "casual/deck-a", title: "Deck A", cards: 2 }, { id: "casual/deck-b", title: "Deck B", cards: 1 }] };
   const asked = [], writes = [];
   api = async (path) => { asked.push(path); return { notices: [NOTICE] }; };
@@ -77,7 +77,7 @@ class ArrivalNoticeUiTests(unittest.TestCase):
           // Without Undo the dismissal is saved once the toast's time is up.
           notice.querySelector("button").click();
           flushTimers(); await null; await null;
-          same(writes, [["/api/arrivals/dismiss", { ids: ["arrival_a:0123456789abcdef"] }]]);
+          same(writes, [["/api/arrivals/dismiss", { ids: ["qwertyuiop:0123456789abcdef"] }]]);
           assert.equal(notice.isConnected, false);
           // Another person chosen before the time is up: nothing is dismissed as them.
           await loadArrivalNotices(home);
@@ -99,4 +99,27 @@ class ArrivalNoticeUiTests(unittest.TestCase):
           assert.equal(notice.hidden, false);
           assert.equal(box.hidden, false);
           assert(said.includes("The database can't be reached."));
+        """)
+
+    def test_the_same_person_picked_again_within_undo_time_keeps_the_notice_dismissed(self):
+        self.run_js("""
+          state.profile = home;
+          await loadArrivalNotices(home);
+          box.querySelector(".arrival-notice").querySelector("button").click();
+          // Switch person, then User1 again: the stored notice is drawn afresh, but stays hidden.
+          clearArrivalNotices();
+          await loadArrivalNotices(home);
+          const again = box.querySelector(".arrival-notice");
+          assert.equal(again.hidden, true);
+          assert.equal(box.hidden, true);
+          flushTimers(); await null; await null;
+          same(writes, [["/api/arrivals/dismiss", { ids: ["qwertyuiop:0123456789abcdef"] }]]);
+          assert.equal(again.isConnected, false);
+          // Undo after a redraw puts back the notice now shown.
+          await loadArrivalNotices(home);
+          box.querySelector(".arrival-notice").querySelector("button").click();
+          await loadArrivalNotices(home);
+          document.body.querySelector("#toast-undo").querySelector("button").click();
+          assert.equal(box.querySelector(".arrival-notice").hidden, false);
+          assert.equal(box.hidden, false);
         """)

@@ -98,25 +98,78 @@ class ReceiptRecordsNoticesTests(ArrivalCase):
             self.assertEqual(arrivals.record(None, None, "test", "2026-10-08", base.support.TESTER), {})
         work.assert_not_called()
 
-    def test_a_full_set_of_slots_drops_the_oldest(self):
-        actor = base.support.TESTER
-        for i, slot in enumerate(arrivals.SLOTS):
-            self.store.settings_put("user1", {slot: json.dumps({"o": f"old-{i}", "on": "", "d": [["casual/test", 1]],
-                                                                "x": 0, "t": 100 + i})}, actor, "seed")
+    def test_one_copy_wanted_by_several_unbuilt_decks_is_counted_once(self):
+        # One Llanowar Elves comes; three of User1's decks, none built, each want it.
+        self.cards_csv("orders/test.csv", ("Llanowar Elves", "fdn", "227", "nonfoil", 1))
+        text = (self.magic / "decks/casual/test.md").read_text(encoding="utf-8")
+        for slug in ("test-b", "test-c"):
+            (self.magic / f"decks/casual/{slug}.md").write_text(text.replace("# Test", f"# {slug}"),
+                                                                 encoding="utf-8", newline="\n")
+        for slug in ("test", "test-b", "test-c"):
+            self.played_by("wife", slug)
+        self.receive_web()
+        [notice] = self.stored("user1")
+        self.assertEqual(notice["decks"], [["casual/test", 1]])
+        self.assertEqual(sum(cards for _, cards in notice["decks"]), 1)
+
+    def test_a_built_deck_is_dealt_the_copies_first(self):
+        gains = {"casual/a": ("wife", False, {"Bolt": 1}), "casual/b": ("wife", True, {"Bolt": 1}),
+                 "casual/c": ("user", False, {"Bolt": 1})}
+        self.assertEqual(arrivals._deal(gains, {"Bolt": 1}, ("wife", "either")), {"casual/b": 1})
+        self.assertEqual(arrivals._deal(gains, {"Bolt": 2}, ("wife", "either")), {"casual/a": 1, "casual/b": 1})
+        self.assertEqual(arrivals._deal(gains, {"Bolt": 1}, ("user", "either")), {"casual/c": 1})
+
+    def seed(self, group, order, at):
+        self.store.settings_put("user1", {f"arrival_{group}_a": json.dumps(
+            {"o": order, "on": "", "d": [["casual/test", 1]], "x": 0, "t": at})}, base.support.TESTER, "seed")
+
+    def test_a_full_set_drops_the_oldest(self):
+        for i in range(arrivals.MAX_NOTICES):
+            self.seed("old" + "abcdefgh"[i] * 7, f"old-{i}", 100 + i)
         self.played_by("wife")
         self.receive_web()
         orders = [n["order"] for n in self.stored("user1")]
-        self.assertEqual(len(orders), len(arrivals.SLOTS))
+        self.assertEqual(len(orders), arrivals.MAX_NOTICES)
         self.assertEqual(orders[0], "test")
         self.assertNotIn("old-0", orders)
+        self.assertFalse(any(key.startswith("arrival_oldaaaaaaa") for key in self.store.settings("user1")))
 
-    def test_a_long_list_keeps_within_a_settings_length(self):
-        value = arrivals._value("2026-10-07-order", "2026-10-09",
-                                [[f"commander/a-rather-long-deck-name-{i}", i + 1] for i in range(9)], 1)
-        self.assertLessEqual(len(value), arrivals.MAX_VALUE)
-        found = arrivals._parse(value)
-        self.assertEqual(found["d"][0], ["commander/a-rather-long-deck-name-8", 9])     # most cards first
-        self.assertEqual(len(found["d"]) + found["x"], 9)
+    def test_two_receipts_kept_at_once_never_write_over_each_other(self):
+        # Both read the settings before either writes (the page and the command line together).
+        self.played_by("wife")
+        before = self.store.settings("user1")
+        snapshot = self.inventory.load()
+        self.receive_web()
+        after = self.inventory.load()
+        with mock.patch.object(self.store, "settings", return_value=before):
+            arrivals.record(snapshot, after, "other-order", "2026-10-08", base.support.TESTER)
+        self.assertEqual(sorted(n["order"] for n in self.stored("user1")), ["other-order", "test"])
+
+    def test_a_long_list_is_split_over_parts_within_a_settings_length(self):
+        decks = [[f"commander/a-rather-long-deck-name-{i}", i + 1] for i in range(12)]
+        values = arrivals._values("2026-10-07-order", "2026-10-09", decks, 1)
+        self.assertGreater(len(values), 1)
+        self.assertTrue(all(len(value) <= arrivals.MAX_VALUE for value in values))
+        saved = {f"arrival_abcdefghij_{part}": value for part, value in zip("abcdef", values)}
+        [notice] = arrivals.notices("user1", saved)
+        self.assertEqual(notice["decks"][0], ["commander/a-rather-long-deck-name-11", 12])     # most cards first
+        self.assertEqual(sorted(map(tuple, notice["decks"])), sorted(map(tuple, decks)))
+        self.assertEqual(notice["more"], 0)
+        # Past MAX_PARTS parts the rest are counted, never dropped silently.
+        many = [[f"commander/a-rather-long-deck-name-{i}", 1] for i in range(60)]
+        values = arrivals._values("o", "", many, 1)
+        self.assertEqual(len(values), arrivals.MAX_PARTS)
+        found = arrivals.notices("user1", {f"arrival_abcdefghij_{p}": v for p, v in zip("abcdef", values)})[0]
+        self.assertEqual(len(found["decks"]) + found["more"], 60)
+        self.assertGreater(found["more"], 0)
+
+    def test_a_very_long_order_id_is_cut_short_not_dropped(self):
+        values = arrivals._values("x" * 300, "2026-10-09", [["casual/test", 2]], 1)
+        self.assertTrue(all(len(value) <= arrivals.MAX_VALUE for value in values))
+        found = arrivals._parse(values[0])
+        self.assertEqual(len(found["o"]), arrivals.MAX_ORDER)
+        self.assertTrue(found["o"].endswith("…"))
+        self.assertEqual(found["d"], [["casual/test", 2]])
 
 
 class NoticeApiTests(ArrivalCase):
@@ -139,6 +192,26 @@ class NoticeApiTests(ArrivalCase):
                 self.assertEqual(arrivals_api.arrivals_view(), {"notices": []})
         # A script naming nobody isn't anyone's visit either.
         self.assertEqual(arrivals_api.arrivals_view(), {"notices": []})
+
+    def test_a_renamed_deck_is_found_under_its_new_name(self):
+        path = self.magic / "decks/casual/test.md"
+        path.rename(path.with_name("renamed.md"))
+        load = self.inventory.load
+        with as_login("user1"), mock.patch.object(
+                self.inventory, "load", lambda *a, **k: load(*a, **k).replace(deck_aliases={"casual/test": "casual/renamed"})):
+            [notice] = arrivals_api.arrivals_view()["notices"]
+        self.assertEqual([deck["id"] for deck in notice["decks"]], ["casual/renamed"])
+        self.assertEqual(notice["cards"], 2)
+
+    def test_a_dismissal_saved_while_the_decks_cant_be_read_still_answers(self):
+        with as_login("user1"):
+            [notice] = arrivals_api.arrivals_view()["notices"]
+            self.store.settings_put("user1", {"arrival_otherorder_a": json.dumps(
+                {"o": "other", "on": "", "d": [["casual/test", 1]], "x": 0, "t": 1})}, base.support.TESTER, "seed")
+            with mock.patch.object(arrivals_api, "_shown", side_effect=arrivals_api.inventory.Unavailable("down")):
+                answer = arrivals_api.dismiss_arrivals(json.dumps({"profile": "user1", "ids": [notice["id"]]}))
+        self.assertEqual(answer, {"notices": [], "unshown": True})
+        self.assertEqual([n["order"] for n in self.stored("user1")], ["other"])
 
     def test_a_deck_the_viewer_may_not_see_or_that_is_gone_is_left_out(self):
         with as_login("user1"), mock.patch.object(arrivals_api.guard, "deck_reader", return_value=lambda deck: False):
@@ -173,8 +246,9 @@ class NoticeApiTests(ArrivalCase):
                 self.assertEqual(caught.exception.status, 400)
 
     def test_activity_words_name_no_stored_json(self):
-        value = self.store.settings("user1")["arrival_a"]
-        words = _setting_summary("INSERT", None, {"key": "arrival_a", "value": value}, "your")
+        [(key, value)] = self.store.settings("user1").items()
+        words = _setting_summary("INSERT", None, {"key": key, "value": value}, "your")
         self.assertEqual(words, "Your arrival notice for order test")
-        self.assertEqual(_setting_summary("DELETE", {"key": "arrival_a", "value": value}, None, "User1's"),
-                         "User1's arrival notice dismissed")
+        self.assertEqual(_setting_summary("DELETE", {"key": key, "value": value}, None, "User1's"),
+                         "User1's arrival notice removed")
+        self.assertIsNone(arrivals_api.arrivals.is_key("theme") or None)
