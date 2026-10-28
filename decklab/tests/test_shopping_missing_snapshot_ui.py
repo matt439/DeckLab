@@ -180,9 +180,15 @@ class MissingSnapshotUiTests(unittest.TestCase):
 
     def test_only_safe_mtgmate_card_links_are_exposed_and_unsafe_links_do_not_echo(self):
         self.run_missing_js("""
+          for(const url of ['https://www.mtgmate.com.au:443/cards/Alpha/FDN/100',
+              'HTTPS://WWW.MTGMATE.COM.AU/cards/Alpha/FDN/100']){
+            draw(data([missing({shop_snapshot:snap({url})})]));
+            assert.equal(line().querySelector('a').getAttribute('href'),new URL(url).href);
+          }
           for(const url of ['javascript:alert(1)','http://www.mtgmate.com.au/cards/Alpha',
               'https://example.com/cards/Alpha','https://www.mtgmate.com.au.evil.example/cards/Alpha',
               'https://user:SECRET@www.mtgmate.com.au/cards/Alpha','https://www.mtgmate.com.au:8443/cards/Alpha',
+              'https://www.mtgmate.com.au:444/cards/Alpha',
               'https://www.mtgmate.com.au/cards/Alpha?SECRET=1','https://www.mtgmate.com.au/cards/Alpha#SECRET',
               'https://www.mtgmate.com.au/not-cards/Alpha','https://www.mtgmate.com.au/cards/',
               'https://www.mtgmate.com.au/cards/Alpha\\nSECRET','https://www.mtgmate.com.au/cards/Alpha\\\\SECRET',

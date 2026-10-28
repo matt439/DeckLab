@@ -2,6 +2,25 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Saved-shop URL validation and asset contract (2026-10-28)
+
+The frozen checkpoint on `5d625a9` discovered 10,077 unique cases, preserving all
+9,123 starting cases through the documented move/rename maps. Its four shards
+reported 9,499 tests with 420 intentional skips: three passed, and one found the
+static asset guard rejecting a literal HTTPS origin in the new link validator.
+The validator makes no request. All logs, explicit host exits and the failed
+result remain in the separate local folder `decklab-fixture-5d625a9-9389f1c7`.
+Before/after proof confirms the same 1,160-file source digest and the same 112
+AST-equivalent uncommitted test headers throughout that run.
+
+The validator now compares the URL's normalized HTTPS protocol and exact host.
+It accepts the same default-port and mixed-case URLs and still rejects other
+hosts, non-default ports, credentials, unsafe paths, queries, fragments and
+malformed Unicode. The static asset guard is unchanged. Added link assertions,
+independent review and root's 37 protected UI/asset tests pass without skips;
+Node syntax, Ruff and whitespace pass. Fresh full qualification follows this
+correction separately; the earlier failed run is not presented as a pass.
+
 ## Saved shop checks beside missing cards (2026-10-28; E5-S08 slice)
 
 Shopping's **Missing cards across decks** now shows saved MTGMate evidence for

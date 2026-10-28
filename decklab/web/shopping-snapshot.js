@@ -105,7 +105,8 @@ function shopMissingSnapshotUrl(value) {
   try {
     const url = new URL(value);
     const path = decodeURIComponent(url.pathname);     // reject malformed UTF-8 before offering its link
-    return url.origin === "https://www.mtgmate.com.au" && !url.username && !url.password && !/[?#]/.test(value) &&
+    return url.protocol === "https:" && url.host === "www.mtgmate.com.au" &&
+      !url.username && !url.password && !/[?#]/.test(value) &&
       path.startsWith("/cards/") && path.length > 7 && !/[\u0000-\u001f\u007f\\]/.test(path) ? url.href : null;
   } catch (_) { return null; }
 }
