@@ -2,6 +2,50 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Nightly shop checks for saved-home shortfalls (2026-10-28; E5-S08 slice)
+
+The nightly MTGMate step now includes proven missing names from saved home
+Planned lists within its existing 45-minute request budget. Manual snapshot and
+dry-run remain queue-only. One captured inventory revision supplies the queue
+and optional calculation; a home-only read projection removes member decks
+before parsing but preserves home collection, incoming cards and built/intact
+physical reservations. Member decks, Public ones included, wishlists, editor
+drafts and product/pairing candidates supply no lookup intent.
+
+Existing queue spellings/order are kept exactly so their quote matches and
+carried dates still work. Captured canonical identities suppress only additional
+missing aliases; no duplicate alias entries or cache schema were added. New
+missing rows require positive integer quantities and proven local identities.
+The inventory must be fresh and persisted, and the prepared index generation
+must remain consistent through counting. Ambiguous metadata, active aliases,
+unreadable holders and whole-pool uncertainty fail closed. Independently proven
+targets may form a labelled partial scan. Optional failures preserve the exact
+queue with fixed notices, never raw errors or private deck labels.
+
+Names freeze before retailer work. The queue reader now respects an existing
+pin, and a pin opened by refresh is released before requests. An early age check
+avoids unnecessary counting; a second check under the existing lock closes the
+other-writer race and uses the latest cache for oldest-first ordering and carried
+results. There is still one fetch loop, unchanged crawl delay, age policy and
+budget. The optional union shares the strict projection's 5,000-name cap; overflow
+falls back without truncation. A larger legacy queue keeps its existing behavior,
+while strict missing-price facts remain unknown for an oversized cache.
+
+Root's protected eleven-target integration passed **181 tests without skips**,
+including **46 new helper/refresh tests**. Six real disposable-fixture cases prove
+home shortfalls with built/intact/incoming reservations and a fatal member-parser
+sentinel; additional cases cover one snapshot, raw queue aliases, carried dates,
+empty/partial/unavailable scopes, caps, pin cleanup, lock races and nightly fakes.
+Independent review found and resolved metadata/alias proof gaps; no material
+findings remain. Scoped Ruff, whitespace and every changed source's 1,200-line
+bound pass. Final staged review removed one extra test EOF blank line, with AST
+and all non-trailing content verified identical. Logs and host exit 0 are in
+`decklab-nightly-missing-6d7df9b2`.
+Repository-wide source scans and a fresh complete-suite claim are deferred under
+the active stopped-source-inspection boundary; targeted behavioral fixtures do
+not dump those sources. No configured inventory/database/cache, retailer, live
+server, job installation or service activation was used for qualification.
+
 ## Saved shop checks in deck Prices (2026-10-28; E5-S08 slice)
 
 Missing cards in a home deck's Prices table now show the existing saved MTGMate

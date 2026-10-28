@@ -3,7 +3,8 @@
 
 Use the server's normal query, method and same-origin write guards. Each
 part of the API is imported when first asked for. A POST takes at most
-api.MAX_EDIT_BODY bytes, except import previews (collection_edit.MAX_IMPORT_BODY)
+api.MAX_EDIT_BODY bytes, except routes with their explicit bound, including
+pod records (play_pods.MAX_BODY), import previews (collection_edit.MAX_IMPORT_BODY)
 and accessory saves with a local picture (accessories.MAX_SAVE_BODY).
 """
 

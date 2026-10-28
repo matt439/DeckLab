@@ -11,7 +11,7 @@ from urllib.parse import unquote, urlsplit
 
 from decklab.lib import shops
 
-MAX_NAMES = 5000
+MAX_NAMES = shops.MAX_SNAPSHOT_NAMES
 MAX_ROWS = 2000
 MAX_LISTINGS = 1000
 MAX_STOCK = 1_000_000_000
