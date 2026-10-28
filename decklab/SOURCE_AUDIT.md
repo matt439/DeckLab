@@ -314,6 +314,14 @@ Validate inventory contract goldens and disposable-database location, deck
 persistence and rollback cases; no golden changes should be needed for a
 behaviour-preserving split.
 
+Snapshot attempt status (2026-10-28): a temporary overlay moved only snapshot
+and _render, with retained/moved AST proofs and 10 of 11 focused fixture cases
+passing. Correcting the new test's multiline-note expectation was denied with
+Access denied before execution. The correction is stopped, its overlay is not
+applied, and active pg.py remains unchanged. No qualified split or live database
+acceptance is claimed; keep the preserved evidence rather than retrying through
+another route without materially new authorization.
+
 ### Test support and discovery: E11-S40
 
 Move concrete PostgreSQL contract cases first, retaining adapt, scenario/golden
@@ -417,3 +425,29 @@ ordering. A broken guard must fail without reaching a genuine configured server
 or real credential file. Cover targeted/sharded execution, idempotence, discovery
 and Windows saved-script spawn metadata. No live probe, credential read, service
 change or server cleanup is part of implementing or validating this entry point.
+
+Built 2026-10-28. `scripts/fixture_runtime.py` installs before target imports and
+before saved-script multiprocessing worker imports, through both test entry
+points. Private config and PostgreSQL credential IO fail closed (including raw
+FileIO); configured psycopg module and sync/async class connectors are blocked.
+The db_support loader disables integration before importing decorators resume.
+Inherited config/export overlays, PostgreSQL credential overrides and real-Forge
+opt-in are cleared. Ordinary disposable files and explicit connector fakes work.
+
+Eight regressions use only fake projects/connectors/files and fake socket
+sentinels, including deliberately broken ordering and guard registration. A broken
+guard cannot reach the real configured server through these regression fakes.
+Forty targeted cases passed with 15 explicit skips. Guarded discovery accounted
+for 9,152 unique cases over 559 modules; four shard counts 2,405/2,296/2,328/2,123
+have an exact Counter union, without loader errors, loss or duplication. Ruff,
+syntax, source-length and diff checks pass, and independent review found no
+remaining concrete issue. Full integrated fixture evidence follows with E11-S40.
+
+Known native facts, cleanup, server and command children, and overnight
+controllers that still sample processes even with --fake are skipped before
+setup with honest reasons. Prior denied native actions are not retried. Ordinary
+python -c children do not inherit Python monkeypatches or audit hooks; retained
+child fixture paths were source-reviewed for explicit resource isolation, not
+claimed as a universal child sandbox. Interpreter startup and arbitrary .pth code
+remain outside this guard's promise. No live DB probe, credential read, server
+cleanup, service change or real Forge run qualifies this work.

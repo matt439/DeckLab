@@ -12,7 +12,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 
 **Ready reserve (reviewed 2026-10-28):** after the redesign, choose an `OPEN` row below; there is no fixed order within the reserve. Useful independent starts include Considering in the editor (`E2-S26`), post-import filing help (`E7-S15`) and bulk storage locations (`E8-S23`). Other ready work covers drafts across devices, pod game records, tested swaps to Shopping, field membership, storage forecasts and self-hosting diagnostics. Every `OPEN` story names a concrete first slice and its later dependencies. Fixture-based work needs no new Forge games, household records or physical devices; real-device acceptance, live installations/migrations, purchases and Forge runs retain their separate gates. The multiplayer life counter follows pod game records (`E4-S18`).
 
-**Maintenance lane (updated 2026-10-28):** Tokens' workflow split and the source-length CI guard (`E11-S36`, `E11-S43`) are built. The editor workflow and collection parser splits (`E11-S37`, `E11-S38`) are built, creating room for their upcoming features. Keep structural and feature changes separate. The comment and command-document audits (`E11-S41`, `E11-S42`) are built. The fixture-only test entry point (`E11-S44`) now comes first for verification; PostgreSQL snapshot and test-group splits (`E11-S39`, `E11-S40`) remain ready maintenance work. The [source-maintenance owner](decklab/SOURCE_AUDIT.md#maintenance-backlog) records the measured files, boundaries and validation. Length is a review trigger, not a reason to divide every large file mechanically.
+**Maintenance lane (updated 2026-10-28):** Tokens' workflow split and the source-length CI guard (`E11-S36`, `E11-S43`) are built. The editor workflow and collection parser splits (`E11-S37`, `E11-S38`) are built, creating room for their upcoming features. Keep structural and feature changes separate. The comment and command-document audits (`E11-S41`, `E11-S42`) are built. The fixture-only test entry point (`E11-S44`) is built. The test-group split (`E11-S40`) awaits integrated fixture qualification; the PostgreSQL snapshot split (`E11-S39`) is stopped after a denied temporary-fixture correction, with its active source unchanged. The [source-maintenance owner](decklab/SOURCE_AUDIT.md#maintenance-backlog) records the measured files, boundaries and validation. Length is a review trigger, not a reason to divide every large file mechanically.
 
 **Needs Matt or another person — these don't block coding:**
 - **`E11-S31`: global-search scope.** Choose the sources (visible decks, the viewer's collection and/or all Scryfall cards) and result grouping before building. Library title, colour and archetype filters (`E1-S05`) are built independently of that decision.
@@ -39,7 +39,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 
 | id | status | pri | size | item |
 |---|---|---|---|---|
-| `E1-S12` | OPEN | could | S | Add the known poor-AI caveat beside the Overview's existing field summary; the rank and empty state are already built. |
+| `E1-S12` | BLOCKED | could | S | Temporary field-page edit was denied before execution; the existing summary is built, with the poor-AI caveat still open. |
 | `E2-S16` | OPEN | could | L | Save an unsaved editor draft privately for the same profile to resume on another device, with revision conflicts reviewed. |
 | `E2-S26` | OPEN | could | M | Edit Considering alongside Planned and Play-now, preserving it in drafts and moving cards in one reviewed deck save. |
 | `E2-S22` | DECISION | must | M | Physical hardware/touch-usability follow-up on the household's iPhones and M2 11-inch iPad; the six-configuration Safari Simulator suite passes ([evidence](decklab/safari/EVIDENCE.md)). |
@@ -102,8 +102,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 
 | id | status | pri | size | item |
 |---|---|---|---|---|
-| `E11-S44` | OPEN | must | S | Guard fixture test imports and default shard discovery before private config or configured PostgreSQL can be used. |
-| `E11-S39` | OPEN | could | M | Separate PostgreSQL snapshot conversion from transaction/cache coordination without moving locks or write-diff ownership. |
+| `E11-S39` | BLOCKED | could | M | Temporary-overlay qualification stopped: correcting its new snapshot test was denied before execution; no active source change shipped. |
 | `E11-S40` | OPEN | should | M | Split inventory-contract and permission test groups while preserving fixture imports and exact discovery without duplicates. |
 
 ## Areas with no open rows

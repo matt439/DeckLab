@@ -45,8 +45,8 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 19 | 13 | 2 | 2 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 20 | 14 | 1 | 4 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 35 | 31 | 1 | 1 | 2 |
-| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 39 | 23 | 6 | 7 | 3 |
-| **Total** | **255** | **197** | **19** | **25** | **14** |
+| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 39 | 24 | 6 | 6 | 3 |
+| **Total** | **255** | **198** | **19** | **24** | **14** |
 
 Counted from the story headers on 2026-10-28 after the current feature and maintenance work. The reviews added five feature stories and eight hygiene stories, and corrected E1-S12 from missing to partial.
 
@@ -180,6 +180,8 @@ Evidence:
 Gap (rechecked 2026-10-28): the Overview already shows the field summary; only the deck-specific poor-AI caveat is missing there.
 
 First slice: reuse the displayed list's existing AI evidence beside the Overview summary. Check poor, normal and unavailable AI data, list switching and late answers with fixtures; no new Forge games are needed.
+
+Attempt status (2026-10-28): the temporary overlay's field_page.py edit was denied with Access denied before execution. It was not retried through another route; active source is unchanged and implementation remains unqualified.
 
 **E1-S13** · Matt · could · L · built
 
@@ -3782,7 +3784,7 @@ Evidence:
 
 Keeping Deck Lab running, safe and believable, by Matt as the household's admin and by Claude Code working for him at the PC. It covers the server and its Cloudflare tunnel and "Deck Lab is off" page, the PostgreSQL database with its nightly backup, export, check and restore check, the audit trail on #/activity, the `python -m decklab.db` commands Claude works through (previews, `--expect` guards, `-m` messages, exit codes), the card data's background refresh, Forge upkeep and the Safari Simulator suite. Every write is one audited change set, Matt's own command-line writes are recorded as his, and backups are checked by restoring them.
 
-Open: E11-S02, E11-S08, E11-S12, E11-S16, E11-S21, E11-S28, E11-S30, E11-S31, E11-S34, E11-S35, E11-S39, E11-S40, E11-S44.
+Open: E11-S02, E11-S08, E11-S12, E11-S16, E11-S21, E11-S28, E11-S30, E11-S31, E11-S34, E11-S35, E11-S39, E11-S40.
 
 **E11-S01** · Matt · must · M · built
 
@@ -4470,6 +4472,8 @@ Evidence of gap (2026-10-28): `decklab/lib/inventory/pg.py` is 1,133 lines and c
 
 Gap: snapshot conversion still shares that transaction module.
 
+Attempt status (2026-10-28): a temporary overlay preserved moved and retained AST bodies and passed 10 of 11 focused fixture cases. Correcting the new fixture's incompatible multiline-note expectation was denied with Access denied before execution. That action is stopped; the active pg.py is unchanged, the overlay is not applied, and no completed split or PostgreSQL acceptance is claimed.
+
 First slice: extract table-row conversion and its fixed serialization helpers while leaving PgInventory, _diff and _take_lock in place. Compare converted snapshots against existing goldens and use disposable databases for location, persistence and rollback checks. The [maintenance owner](../SOURCE_AUDIT.md#maintenance-backlog) records the boundary; this is no schema or live-data migration.
 
 **E11-S40** · Claude Code · should · M · missing
@@ -4531,7 +4535,7 @@ Evidence:
 - `scripts/audit_source_lengths.py`: unchanged threshold, inventory and upstream exclusions.
 - `decklab/tests/test_source_lengths.py`: seven temporary-Git tests cover 1,200/1,201 lines, tracked/untracked files, ignores, upstream copies, source suffixes, deleted files and report-only output without app data or services.
 
-**E11-S44** · Claude Code · must · S · missing
+**E11-S44** · Claude Code · must · S · built
 
 As the operator running source checks, I want a fixture-only default entry point whose guards run before discovery, so that ordinary code verification cannot authenticate against the configured database or read private configuration.
 
@@ -4541,4 +4545,9 @@ As the operator running source checks, I want a fixture-only default entry point
 - Given a regression that breaks installation order, then fake connector/config sentinels fail safely without contacting a configured server or opening a real credential file.
 - Given actual database or Windows runtime qualification, then the fixture runner makes no acceptance claim; explicit separately authorized integration work remains separate.
 
-First slice (requested 2026-10-28): add a reusable fixture CLI and shared pre-import guards, make existing shard entry points safe by default, and test ordering with disposable sentinels. Update normal developer commands to use the guarded path. The [maintenance owner](../SOURCE_AUDIT.md#fixture-only-test-entry-point-e11-s44) records the boundary and evidence.
+Built 2026-10-28: `scripts/test_fixtures.py` and the existing shard entry point share `scripts/fixture_runtime.py`. Guards install before imports and saved-script multiprocessing workers. Private-file IO and PostgreSQL connectors fail closed, inherited overlays/real-Forge opt-in are cleared, and known native/configured-resource child cases skip before setup. Disposable fixture IO and explicit connector fakes remain usable.
+
+Evidence:
+- `test_fixture_runner.py`: eight failure-safe fake-project regressions for import ordering, direct/raw IO, path aliases, connectors, native skips, sharding, startup failures and multiprocessing.
+- Forty targeted cases passed with 15 explicit skips; guarded discovery preserved 9,152 unique cases across four shards, without import errors, duplicates or loss. Independent source review, Ruff, syntax, length and whitespace checks passed.
+- AGENTS.md and README.md use the protected default commands. [SOURCE_AUDIT.md](../SOURCE_AUDIT.md#fixture-only-test-entry-point-e11-s44) records the accident-prevention boundary: arbitrary ordinary child interpreters do not inherit in-memory guards. Full integrated fixture qualification is recorded separately; genuine database, native runtime and real Forge acceptance are not claimed.

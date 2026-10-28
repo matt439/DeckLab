@@ -2,6 +2,28 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Fixture-only default test runner (2026-10-28; E11-S44)
+
+`python scripts/test_fixtures.py` is now the default source-check command, and
+`scripts/test_shard.py` shares its pre-import protections. Private configuration
+and PostgreSQL credential IO are excluded, actual psycopg connectors fail
+closed, and integration decorators see database-disabled before any probe.
+Configuration overlays and inherited real-Forge opt-in are removed. Saved-script
+multiprocessing workers install the protections before their imports.
+
+Known native checks and ordinary children that escape fixture isolation remain
+in discovery but skip before setup with separate-qualification reasons. Other
+ordinary child fixture paths were source-reviewed; in-memory guards do not cross
+arbitrary python -c launches or protect interpreter startup. This is accident
+prevention, not a malicious-code sandbox or database/runtime acceptance.
+
+Eight regressions use failure-safe fake projects, connectors, files and socket
+sentinels. Forty targeted cases passed with 15 skips. Guarded discovery preserved
+9,152 unique cases across four shards without import errors, duplication or loss.
+Independent review, Ruff, syntax, length and diff checks passed. AGENTS.md and
+README.md now distinguish the protected default from separately authorized raw
+integration. Full integrated fixture results will be recorded with E11-S40.
+
 ## Import source groups: review UI (2026-10-28; E7-S03)
 
 Collection import previews now show source-set problem counts and unchecked
