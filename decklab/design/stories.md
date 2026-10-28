@@ -1420,9 +1420,13 @@ Evidence:
 - `decklab/lib/cards.py`: cheapest_usd (Scryfall USD only); `decklab/web/deck-prices.js`: ownedSection (the converted-estimate note)
 - `decklab/tests/test_shops.py`, `decklab/tests/test_shopping_snapshot_ui.py`, `decklab/tests/test_db_ops.py` (NightlyTests)
 
-Gap: one shop (MTGMate) and the queue's rows only; missing cards on Shopping and a deck's price table still show only Scryfall's converted estimate, and other Australian shops have no source.
+Further slice (2026-10-28): Shopping's combined missing rows now show saved MTGMate nonfoil evidence from the same capture as the queue. Generic needs choose the cheapest stocked nonfoil independently of exact queue requests, with no foil fallback or Back/New-in-stock chips. Unit price, selected-printing stock and original per-entry fetch time stay separate from shortfall/queue counts; carried records retain their date. Canonical/front-name aliases use captured prepared card-index maps without loading a file; ambiguous aliases, malformed facts and bounds produce fixed unknowns. No nonfoil listing and no saved check remain distinct. The display starts no request, write or refresh and creates no basket total. Existing queue matching and nested copied queue facts are unchanged.
 
-Next slice: the same snapshot for Shopping's combined missing cards (their names added to the nightly lookup, capped), then a second shop.
+Qualification: root's protected ten-target integration passed 147 tests without skips, including 22 new backend/API and 14 new Node UI cases. Disposable HTTP/queue fixtures, one-capture/absent-cache checks, privacy-before-reader sentinels, malformed Unicode/URL/date facts and unchanged queue quantities are covered. Independent review, Node syntax, Ruff, source lengths and whitespace pass. No real shop cache, retailer request, inventory or running server was accessed for qualification; browser/device acceptance remains unrun.
+
+Gap: one shop only; nightly lookup still follows queue names, so missing names not already cached can have no check. The deck price table still has converted estimates, and other Australian shops have no source. Cached-name provenance is not a new Scryfall per-printing identity check or a comparison with unfetched shops.
+
+Next slice: add Shopping's missing names to the capped nightly lookup without letting unavailable deck data stop queue snapshots, then extend deck Prices and consider a second shop.
 
 Review note: XL and dependent on retailers with no public API; split per shop (MTGMate first) and into fetching vs showing, and a daily snapshot may do.
 

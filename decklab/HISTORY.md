@@ -2,6 +2,46 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Saved shop checks beside missing cards (2026-10-28; E5-S08 slice)
+
+Shopping's **Missing cards across decks** now shows saved MTGMate evidence for
+each canonical need. It chooses the cheapest stocked nonfoil printing, separate
+from an exact-printing queue request, with no foil fallback. The line gives an
+AUD unit price, physical stock of that selected printing, a safe printing link
+and the entry's original fetch time including year. A carried record keeps its
+old date. No nonfoil listing, no saved check and unknown evidence have distinct
+words. Missing-card rows receive no queue stock-highlight chips, basket total or
+promise that the shop can supply the whole shortfall.
+
+One optional snapshot capture supplies both queue enrichment before gathering
+and generic missing rows afterward. Explicit captured absence never reloads it;
+the nested queue copies remain identical to their enriched original rows. Home's
+existing read guard still runs before inventory, missing-card or cache readers.
+No route, migration, queue change, shop request or refresh action was added.
+
+A separate bounded projection preserves the existing queue picker's behavior.
+It proves cached canonical/front-name relationships through captured prepared
+card-index maps, never loading an index if the global reference changes. Conflicts,
+unconfirmed aliases, wrong provider/schema, unsafe or malformed relevant listings,
+non-positive/non-finite prices, invalid stock/dates/Unicode and caps produce fixed
+unknowns. Entry dates never fall back to overall snapshot completion. This uses
+the saved name check's provenance; it does not newly verify each set/number
+against Scryfall or compare with shops that were never fetched.
+
+Root's protected ten-target integration passed **147 tests without skips**,
+including 22 new backend/API and 14 new Node DOM cases. Existing queue writes,
+copy equality, disposable HTTP responses, exact-printing preferences, privacy,
+one capture, absent/ambiguous/malformed evidence, strict nonfoil selection and
+fixed literal rendering are covered. Independent review, Node syntax, real-error
+Ruff and whitespace pass; 1,169 owned source files remain below the 1,200-line
+limit. Tests use supplied caches, fake network/read/write sentinels and disposable
+fixtures. No real cache, shop, database or running server was accessed for this
+qualification; browser/device and runtime acceptance remain separate.
+
+Coverage still follows names already saved by the queue-only nightly lookup.
+Adding missing names within its existing request budget, deck Prices and another
+shop remain open work. Opening Shopping alone never asks a retailer for prices.
+
 ## Explicit local-worker experiment estimates (2026-10-28; E11-S16 slice)
 
 `forge experiment <spec.json> --dry-run --local` can now estimate an arm whose

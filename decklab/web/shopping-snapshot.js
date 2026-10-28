@@ -48,3 +48,82 @@ function shopSnapshotLine(card) {
 
 /** True when the row should stand out: waiting for stock, and the snapshot finds it in stock. */
 function shopSnapshotBack(card) { return Boolean(card && card.shop_snapshot && card.shop_snapshot.back_in_stock); }
+
+/** Missing-card evidence requires its own dated nonfoil facts, independent of exact queue requests. */
+function shopMissingSnapshotFacts(item) {
+  const snap = item?.shop_snapshot;
+  const empty = {status: "not_checked", fetched_at: null};
+  const unknown = {status: "unknown", fetched_at: null};
+  if (snap == null) return empty;
+  if (typeof snap !== "object" || Array.isArray(snap) || snap.shop !== "MTGMate" || snap.scope !== "nonfoil" ||
+      !["in_stock", "out_of_stock", "not_listed", "unknown", "not_checked"].includes(snap.status)) return unknown;
+  if (snap.status === "not_checked") return empty;
+  const fetched = shopMissingSnapshotDate(snap.fetched_at);
+  if (!fetched) return unknown;
+  if (["not_listed", "unknown"].includes(snap.status)) return {status: snap.status, fetched_at: fetched};
+  const price = typeof snap.price_aud === "string" && /^(?:0|[1-9]\d{0,8})\.\d{2}$/.test(snap.price_aud)
+    ? Number(snap.price_aud) : NaN;
+  if (!Number.isFinite(price) || price <= 0 ||
+      !Number.isSafeInteger(snap.stock) || snap.stock < 0 || snap.stock > 1000000000 ||
+      (snap.status === "in_stock") !== (snap.stock > 0) || snap.finish !== "nonfoil" ||
+      typeof snap.set !== "string" || !/^[a-z0-9]{1,12}$/.test(snap.set) ||
+      typeof snap.collector_number !== "string" || !snap.collector_number || snap.collector_number.length > 64 ||
+      snap.collector_number !== snap.collector_number.trim() || !shopMissingSnapshotText(snap.collector_number) ||
+      /[\u0000-\u001f\u007f/\\?#]/.test(snap.collector_number)) return unknown;
+  return {status: snap.status, fetched_at: fetched, price, stock: snap.stock,
+    set: snap.set, collector_number: snap.collector_number, url: shopMissingSnapshotUrl(snap.url)};
+}
+
+/** No normalized impossible dates or timezone-free machine times become dated price claims. */
+function shopMissingSnapshotDate(value) {
+  if (typeof value !== "string" || value.length > 64) return null;
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d{1,9})?(Z|[+-]\d{2}:\d{2})$/.exec(value);
+  if (!match) return null;
+  const [year, month, day, hour, minute, second] = match.slice(1, 7).map(Number);
+  const leap = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+  const days = [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  if (!year || month < 1 || month > 12 || day < 1 || day > days[month - 1] ||
+      hour > 23 || minute > 59 || second > 59) return null;
+  const offset = match[7];
+  if (offset !== "Z" && (Number(offset.slice(1, 3)) > 23 || Number(offset.slice(4, 6)) > 59)) return null;
+  return Number.isFinite(Date.parse(value)) ? value : null;
+}
+
+/** for-of keeps paired astral characters intact and exposes lone UTF-16 surrogates. */
+function shopMissingSnapshotText(value) {
+  for (const symbol of value) {
+    const point = symbol.codePointAt(0);
+    if (point >= 0xd800 && point <= 0xdfff) return false;
+  }
+  return true;
+}
+
+/** A malformed link loses its link, while validated dated price facts remain readable. */
+function shopMissingSnapshotUrl(value) {
+  if (typeof value !== "string" || value.length > 2048 || !shopMissingSnapshotText(value) ||
+      /[\u0000-\u0020\u007f\\]/.test(value)) return null;
+  try {
+    const url = new URL(value);
+    const path = decodeURIComponent(url.pathname);     // reject malformed UTF-8 before offering its link
+    return url.origin === "https://www.mtgmate.com.au" && !url.username && !url.password && !/[?#]/.test(value) &&
+      path.startsWith("/cards/") && path.length > 7 && !/[\u0000-\u001f\u007f\\]/.test(path) ? url.href : null;
+  } catch (_) { return null; }
+}
+
+/** Saved unit evidence only: no queue intent, stock-printing count, freshness inference or raw errors. */
+function shopMissingSnapshotLine(item) {
+  const snap = shopMissingSnapshotFacts(item);
+  const stocked = snap.status === "in_stock", listed = stocked || snap.status === "out_of_stock";
+  const words = stocked ? `MTGMate: ${aud(snap.price)} each; ${plural(snap.stock, "copy", "copies")} of this printing in stock when fetched.`
+    : snap.status === "out_of_stock" ? `MTGMate: nonfoil out of stock in the saved check (listed at ${aud(snap.price)} each).`
+    : snap.status === "not_listed" ? "MTGMate: no nonfoil printing listed in the saved check."
+    : snap.status === "unknown" ? "MTGMate: nonfoil price unknown in the saved snapshot."
+    : "MTGMate: no saved nonfoil check for this card.";
+  const when = snap.fetched_at ? shopSnapshotWhen(snap.fetched_at) : null;
+  if (when) when.textContent = `fetched ${new Date(snap.fetched_at).toLocaleString("en-AU",
+    {day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit"})}`;
+  return el("div", {class: "shop-snapshot shop-missing-snapshot", "data-shop-missing-snapshot": snap.status},
+    stocked ? el("strong", {text: "Cheapest nonfoil in saved snapshot"}) : null,
+    el("span", {text: words}), listed ? el("small", {}, shopSnapshotLink(snap, `${snap.set.toUpperCase()} ${snap.collector_number} nonfoil`)) : null,
+    when);
+}

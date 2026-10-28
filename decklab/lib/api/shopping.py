@@ -75,7 +75,8 @@ def _overview():
     reprint_cache = {}
     reprints.enrich(answer.get("to_buy", []), queued=True, cache=reprint_cache)
     from . import shop_prices
-    shop_prices.enrich(answer)
+    shop_data = shop_prices.capture()
+    shop_prices.enrich(answer, data=shop_data)
     if cards_ready:
         _add_pictures(answer)
         answer["missing_cards"], answer["decks_missing"] = shopping_missing.gather(
@@ -86,6 +87,7 @@ def _overview():
             "The card data is not ready yet, so missing cards cannot be counted. Try again after it finishes loading.",
             errors=deck_errors)
     reprints.enrich(answer["missing_cards"].get("rows", []), cache=reprint_cache)
+    shop_prices.enrich_missing(answer, data=shop_data)
     return answer
 
 

@@ -34,7 +34,7 @@ function shopMissingCard(item, queue) {
     entry.in_stock === "no" ? el("p", {class: "sub", text: "Out of stock when checked"}) : null)))
     : el("p", {class: "sub", text: "Not in the purchase queue."});
   return el("article", {class: "shop-missing-card", "data-missing-card": item.name}, row, wants,
-    reprintInfo(item), intent);
+    reprintInfo(item), shopMissingSnapshotLine(item), intent);
 }
 
 /** A failed count remains visible alongside any successfully counted decks. */
@@ -56,7 +56,8 @@ function shopMissingCards(view) {
   if (rows.length) content.append(el("div", {class: "shop-missing-rows"},
     rows.map(item => shopMissingCard(item, view.data.to_buy || []))));
   return shopSection("shop-missing-cards", "Missing cards across decks", rows.length,
-    "These totals add each Planned home deck's separate shortfall. Shared collection copies may count for more than one deck. Queue rows record purchase decisions separately.", content);
+    "These totals add each Planned home deck's separate shortfall. Shared collection copies may count for more than one deck. Queue rows record purchase decisions separately. " +
+    "Saved shop checks cover only names already in the snapshot; check the shop before ordering.", content);
 }
 
 /** Group copies of the current queue without changing saved state, order or row identifiers. */
