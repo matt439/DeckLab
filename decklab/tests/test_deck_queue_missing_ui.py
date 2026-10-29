@@ -14,8 +14,8 @@ from decklab.tests.test_workspace_ui import NODE, RUNNER, WEB
 SETUP = PAGE + """
   const review = {ready: true, deck: {id: 'casual/test', title: 'Test Deck'}, revision: 'rev-1',
     states: ['ready', 'long_term'], totals: {cards: 1, copies: 2},
-    rows: [{name: 'Bolt', missing: 3, queued: 1, copies: 2, card: bolt},
-           {name: 'Elf', missing: 1, queued: 1, copies: 0, card: elf}]};
+    rows: [{name: 'Bolt', missing: 3, queued: 1, copies: 2, joins: null, card: bolt},
+           {name: 'Elf', missing: 1, queued: 1, copies: 0, joins: null, card: elf}]};
   const calls = [], toasts = [];
   toast = (message) => toasts.push(message);
   let saveAnswer = {saved: true, action: 'add_many', revision: 'rev-2', cards: 1, copies: 2};
@@ -83,9 +83,36 @@ class DeckQueueMissingUiTests(unittest.TestCase):
           assert(save, 'Save names the copies and the state');
           save.click(); await settle();
           same(calls[1], ['/api/shopping/queue', {profile: 'matt', action: 'add_many', expect: 'rev-1', deck: 'casual/test',
-            state: 'long_term', cards: [{name: 'Bolt', copies: 2}]}]);
+            state: 'long_term', cards: [{name: 'Bolt', copies: 2, joins: null}]}]);
           same(calls.length, 2);
           same(toasts, ['Queued 2 copies of 1 card for Test Deck.']);
+        """)
+
+    def test_copies_joining_a_row_in_another_state_are_named_and_sent_back(self):
+        self.run_js("""
+          state.may = admin; state.profile.role = 'admin';
+          review.rows[0].joins = 'waiting_for_stock';
+          showMissing(makePage());
+          queueButton().click(); await settle();
+          const text = sheet().textContent;
+          assert(text.includes('added to the existing Waiting for stock row'), text);
+          const warn = () => sheet().querySelector('.queue-missing-joins');
+          assert(warn() && warn().textContent.includes('Bolt (Waiting for stock)'), text);
+          assert(warn().textContent.includes('not To buy'));
+          buttonText(sheet(), 'Queue 2 copies (To buy)').click(); await settle();
+          same(calls[1][1].cards, [{name: 'Bolt', copies: 2, joins: 'waiting_for_stock'}]);
+        """)
+
+    def test_no_warning_when_the_joined_row_is_in_the_chosen_state(self):
+        self.run_js("""
+          state.may = admin; state.profile.role = 'admin';
+          review.rows[0].joins = 'long_term';
+          showMissing(makePage());
+          queueButton().click(); await settle();
+          assert(sheet().querySelector('.queue-missing-joins'), 'To buy is chosen first');
+          buttonText(sheet(), 'Long-term').click();
+          assert.equal(sheet().querySelector('.queue-missing-joins'), null);
+          assert(sheet().textContent.includes('added to the existing Long-term row'));
         """)
 
     def test_a_stale_review_asks_for_a_new_one(self):

@@ -7,6 +7,9 @@ deck, under any of its ids, or whose "for" is its title), with the inventory rev
 POST /api/shopping/queue with action "add_many" (shopping_queue.save_queue_state, which checks
 the revision first) saves the reviewed cards as one audited watchlist.add_many change: any
 nonfoil printing, the chosen state (To buy or Long-term), the deck as source and title as "for".
+A card whose identical request is already queued (any nonfoil printing, "for" the deck's title)
+raises that row instead, which keeps its own state: the review names that state as the card's
+"joins", the viewer sends it back, and it is part of what must still agree.
 The cards are worked out again inside the change; when anything differs from the review (the
 deck, the pool or the queue moved on) nothing is saved and a new review is asked for.
 
@@ -80,9 +83,21 @@ def _queued_for(inv, deck_id, title):
     return queued
 
 
+def _joins(inv, title):
+    """{card name: state} of the rows add_many would raise rather than add (orders.queue_key's
+    identity of the row _values makes)."""
+    joins = {}
+    for row in inv.watchlist.rows:
+        if (row.text("printing"), row.text("set"), row.text("collector_number"), row.text("finish"),
+                row.text("for")) == ("any", "", "", "nonfoil", title):
+            joins[row.text("name")] = row.text("state")
+    return joins
+
+
 def _proposal(deck_id):
     """The review from the pinned snapshot: {ready, deck, rows, totals} or {ready: False, reason}.
-    rows holds every missing card with what's queued and the copies to add (0: none)."""
+    rows holds every missing card with what's queued, the copies to add (0: none) and the state of
+    the existing row those copies would raise (joins; None: a new row in the chosen state)."""
     inv = inventory.current()
     if inv.stale:
         raise ApiError(409, "Current inventory is unavailable. Reload and review when it is available.")
@@ -97,13 +112,16 @@ def _proposal(deck_id):
                            *(error["message"] for error in counted.errors)]).strip()
         return {"ready": False, "deck": deck, "reason": reason or "The missing cards could not be counted."}
     queued = _queued_for(inv, deck_id, title)
+    joins = _joins(inv, title)
     rows = []
     for card in counted.rows:
         if is_token({"name": card["name"]}):
             continue
         already = queued.get(card["name"].casefold(), 0)
         rows.append({"name": card["name"], "missing": card["missing"], "queued": already,
-                     "copies": max(card["missing"] - already, 0)})
+                     "copies": max(card["missing"] - already, 0), "joins": None})
+        if rows[-1]["copies"]:
+            rows[-1]["joins"] = joins.get(card["name"]) or None
     rows.sort(key=lambda row: (row["copies"] == 0, row["name"].casefold()))
     adding = [row for row in rows if row["copies"]]
     return {"ready": True, "deck": deck, "rows": rows, "revision": inv.revision,
@@ -142,22 +160,24 @@ def review_missing(body):
 
 
 def _reviewed(value):
-    """The [(name, copies)] the viewer reviewed, each card once."""
+    """The [(name, copies, joins)] the viewer reviewed, each card once."""
     if not isinstance(value, list) or not value or len(value) > MAX_CARDS:
         raise ApiError(400, f"cards must list 1 to {MAX_CARDS} reviewed cards")
     seen, result = set(), []
     for item in value:
-        if not isinstance(item, dict) or set(item) != {"name", "copies"}:
-            raise ApiError(400, "Each reviewed card needs exactly its name and copies")
-        name, copies = item["name"], item["copies"]
+        if not isinstance(item, dict) or set(item) != {"name", "copies", "joins"}:
+            raise ApiError(400, "Each reviewed card needs exactly its name, copies and joins")
+        name, copies, joins = item["name"], item["copies"], item["joins"]
         if not isinstance(name, str) or not name or len(name) > MAX_NAME:
             raise ApiError(400, f"Give each card's name, of at most {MAX_NAME} characters")
         if isinstance(copies, bool) or not isinstance(copies, int) or not 1 <= copies <= 999:
             raise ApiError(400, "Each card's copies must be a whole number from 1 to 999")
+        if joins is not None and (not isinstance(joins, str) or not joins or len(joins) > 40):
+            raise ApiError(400, "Each card's joins must be the review's state of the row it raises, or null")
         if name.casefold() in seen:
             raise ApiError(400, f"{name} is listed twice")
         seen.add(name.casefold())
-        result.append((name, copies))
+        result.append((name, copies, joins))
     return sorted(result, key=lambda pair: pair[0].casefold())
 
 
@@ -167,7 +187,7 @@ class _MissingQueue:
 
     def __init__(self, deck_id, state, reviewed):
         self.deck_id, self.state, self.reviewed = deck_id, state, reviewed
-        self.params = {"deck": deck_id, "state": state, "cards": [list(pair) for pair in reviewed]}
+        self.params = {"deck": deck_id, "state": state, "cards": [list(card) for card in reviewed]}
         self.rows = None
 
     def run(self, inv):
@@ -178,7 +198,8 @@ class _MissingQueue:
         if not review["ready"]:
             raise inventory.Conflict(CHANGED)
         adding = [row for row in review["rows"] if row["copies"]]
-        if sorted(((row["name"], row["copies"]) for row in adding), key=lambda pair: pair[0].casefold()) != self.reviewed:
+        found = sorted(((row["name"], row["copies"], row["joins"]) for row in adding), key=lambda card: card[0].casefold())
+        if found != self.reviewed:
             raise inventory.Conflict(CHANGED)
         self.rows = adding
         values = [_values(row, review["deck"], self.state) for row in adding]

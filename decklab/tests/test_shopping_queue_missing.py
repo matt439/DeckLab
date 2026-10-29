@@ -80,7 +80,8 @@ class QueueMissingTests(ApiTestCase):
         return sqm.review_missing(json.dumps({"profile": profile, "deck": deck}))
 
     def save(self, review, profile="matt", state="ready", **changes):
-        cards = [{"name": row["name"], "copies": row["copies"]} for row in review["rows"] if row["copies"]]
+        cards = [{"name": row["name"], "copies": row["copies"], "joins": row["joins"]}
+                 for row in review["rows"] if row["copies"]]
         data = {"profile": profile, "action": "add_many", "expect": review["revision"], "deck": DECK_ID,
                 "state": state, "cards": cards, **changes}
         return shopping_queue.save_queue_state(json.dumps(data))
@@ -109,6 +110,7 @@ class QueueMissingTests(ApiTestCase):
         counts = self.counts(review)
         self.assertEqual(counts["Wrath of God"], (2, 0, 2))
         self.assertEqual(counts["Rhystic Study"], (1, 0, 1))
+        self.assertTrue(all(row["joins"] is None for row in review["rows"]))     # every one a new row
         self.assertEqual(counts["Pick Your Poison"], (2, 0, 2))
         self.assertNotIn("Forest", counts)                   # plain basics are never missing
         self.assertEqual(review["totals"]["copies"], sum(c for _, _, c in counts.values()))
@@ -137,7 +139,7 @@ class QueueMissingTests(ApiTestCase):
         again = self.review()
         self.assertEqual(again["totals"], {"cards": 0, "copies": 0})
 
-    def test_copies_already_queued_for_the_deck_are_deducted_and_identical_rows_raised(self):
+    def test_copies_already_queued_for_the_deck_are_deducted_and_identical_rows_raised_in_their_state(self):
         self.queue([{"name": "Wrath of God", "quantity": "1", "for": "Elf Plan", "state": "waiting_for_stock",
                      "source": "magic/decks/casual/elf-plan.md", "notes": "Kept note"},
                     {"name": "Rhystic Study", "quantity": "1", "for": "Elf Plan"},       # by title alone
@@ -152,6 +154,16 @@ class QueueMissingTests(ApiTestCase):
         self.assertEqual(counts["Pick Your Poison"], (2, 0, 2))       # queued for another deck only
         self.assertEqual(counts["Llanowar Elves"][1:], (0, counts["Llanowar Elves"][0]))
         self.assertGreater(counts["Llanowar Elves"][0], 0)
+        joins = {row["name"]: row["joins"] for row in review["rows"]}
+        # The review says the Wrath copies join the waiting row, keeping its state, not the one chosen.
+        self.assertEqual(joins["Wrath of God"], "waiting_for_stock")
+        self.assertIsNone(joins["Rhystic Study"])                     # nothing to add
+        self.assertIsNone(joins["Pick Your Poison"])                  # another deck's row is never raised
+        self.assertIsNone(joins["Llanowar Elves"])
+        # A save that doesn't send back the state it joins saves nothing.
+        cards = [{"name": row["name"], "copies": row["copies"], "joins": None}
+                 for row in review["rows"] if row["copies"]]
+        self.refused(409, lambda: self.save(review, cards=cards))
         self.save(review)
         rows = self.rows()
         wrath = [row for row in rows if row["name"] == "Wrath of God"]
@@ -167,7 +179,7 @@ class QueueMissingTests(ApiTestCase):
     def test_a_stale_revision_or_a_changed_review_saves_nothing(self):
         review = self.review()
         self.refused(409, lambda: self.save(review, expect="stale"))
-        changed = [{"name": "Wrath of God", "copies": 5}]
+        changed = [{"name": "Wrath of God", "copies": 5, "joins": None}]
         self.refused(409, lambda: self.save(review, cards=changed))
         # The queue moves on between the review and the save: the review is asked for again.
         inventory.apply(inventory.Op("watchlist.set", {"add": True, "repo": str(self.box.root), "values": {
@@ -214,6 +226,8 @@ class QueueMissingTests(ApiTestCase):
         for changes in ({"state": "waiting_for_stock"}, {"state": None}, {"cards": []}, {"cards": "x"},
                         {"cards": [{"name": "Wrath of God"}]}, {"cards": [{"name": "Wrath of God", "copies": 0}]},
                         {"cards": [{"name": "Wrath of God", "copies": True}]},
+                        {"cards": [{"name": "Wrath of God", "copies": 1, "joins": 7}]},
+                        {"cards": [{"name": "Wrath of God", "copies": 1, "joins": ""}]},
                         {"cards": [{"name": "Wrath of God", "copies": 1}, {"name": "wrath of god", "copies": 1}]},
                         {"deck": 7}, {"extra": 1}):
             with self.subTest(changes=changes):

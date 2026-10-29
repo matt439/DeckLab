@@ -262,11 +262,12 @@ has changed. Quantity, printing, purpose, reference prices and notes stay as the
 A home deck's **Queue missing cards…** (E5-S25, `lib/api/shopping_queue_missing.py`) first asks
 `POST /api/shopping/queue/missing` (`{"profile", "deck"}`, nothing written) for each missing
 Planned card with the copies already queued for that deck (source or `for`, any state; token rows
-never count) and the copies to add, plus the `revision` it read. `POST /api/shopping/queue` with
+never count), the copies to add and `joins` (the state of the identical request those copies
+would raise, else null), plus the `revision` it read. `POST /api/shopping/queue` with
 `{"profile", "action": "add_many", "expect", "deck", "state": "ready"|"long_term", "cards": [{"name",
-"copies"}]}` saves them as one audited `watchlist.add_many` change (any nonfoil printing, the deck
-as source and its title as `for`; an identical request's quantity is raised instead of a second
-row). The cards are worked out again in the change: a stale revision or any difference answers
+"copies", "joins"}]}` saves them as one audited `watchlist.add_many` change (any nonfoil printing, the
+deck as source and its title as `for`; an identical request's quantity is raised instead of a second
+row, keeping that row's state, which the sheet names and warns about). The cards are worked out again in the change: a stale revision or any difference answers
 409 and asks for a new review. Both need a home admin who sees home's records.
 
 `POST /api/shopping/order/change/preview` takes `profile`, Shopping's exact
