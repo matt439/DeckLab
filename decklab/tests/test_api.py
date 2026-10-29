@@ -452,7 +452,7 @@ class FakeForge(types.ModuleType):
         return {"cannot_play": dead, "commander_unplayable": False, "team_pump": None, "unknown": [],
                 "problem": None, "games": games}
 
-    def list_ai(self, sections, kind, results_dir=None, *, keep=None):
+    def list_ai(self, sections, kind, results_dir=None, pilot=None, *, keep=None):
         # As in forge.list_ai: "games" adds up every saved result's games with this list (a mirror's twice).
         return self.ai_limits(sections, kind, [r for r in self._stored() if keep is None or keep(r)])
 

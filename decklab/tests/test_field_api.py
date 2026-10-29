@@ -150,6 +150,46 @@ class FieldViewTests(FieldApiTestCase):
         self.assertEqual(self.field.runs, [])
 
 
+class FieldPilotTests(FieldApiTestCase):
+    """?pilot=1 (the deck page's Overview, E1-S12): the list's poor-AI evidence, as Matchups judges it."""
+
+    def test_pilot_only_when_asked_for(self):
+        self.assertNotIn("pilot", api.field_view(ELVES, "target", "user1"))
+        self.assertNotIn("pilot", api.field_view(ELVES, "target", "user1", pilot=False))
+
+    def test_poor_and_normal_pilots_for_the_list_shown(self):
+        asked = []
+        poor = {"poor": True, "why": "commander", "cards": [{"name": "Elf", "qty": 1, "commander": True}]}
+
+        fixed = {"profile": "Default", "switches": ["team-pump-1"]}
+        entry = self.forge.entry
+
+        def list_ai(sections, kind, results_dir=None, pilot=None, *, keep=None):
+            asked.append((kind, sorted(sections), pilot, keep is not None))
+            return {"pilot": poor if kind == "commander" else {"poor": False, "why": None, "cards": []}}
+
+        def piloted(deck_id, *rest):
+            return dict(entry(deck_id, *rest), pilot=fixed if deck_id == ELVES else None)
+        with mock.patch.object(self.forge, "list_ai", list_ai), mock.patch.object(self.forge, "entry", piloted):
+            self.assertEqual(api.field_view(ELVES, "target", "user1", pilot=True)["pilot"], poor)
+            self.assertEqual(api.field_view(GRUUL, "target", "user1", pilot=True)["pilot"]["poor"], False)
+        # Each list's own sections and the pilot its field games play with (the team-pump fix's side
+        # ids count), with saved results kept to what the viewer may see.
+        self.assertEqual([(kind, pilot, keep) for kind, _, pilot, keep in asked],
+                         [("commander", fixed, True), ("constructed", None, True)])
+        self.assertEqual(self.field.runs, [])
+
+    def test_unknown_pilot_is_none(self):
+        # FakeForge's AiLimits have no "pilot" (Forge's scripts unread); a failure is logged, not raised.
+        self.assertIsNone(api.field_view(ELVES, "target", "user1", pilot=True)["pilot"])
+        with mock.patch.object(self.forge, "list_ai", side_effect=RuntimeError("scripts")), \
+                mock.patch.object(api.common, "_log") as log:
+            answer = api.field_view(ELVES, "target", "user1", pilot=True)
+        self.assertIsNone(answer["pilot"])
+        self.assertEqual(answer["status"], "none")
+        self.assertIn("can't be worked out", log.call_args[0][0])
+
+
 class FieldRunTests(FieldApiTestCase):
 
     def test_a_run_waits_plays_and_is_joined(self):

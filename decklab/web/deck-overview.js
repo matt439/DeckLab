@@ -25,7 +25,9 @@ function deckOverviewForge(data) {
   const profile = context.profile ? `&profile=${encodeURIComponent(context.profile)}` : "";
   const load = async () => {
     try {
-      const answer = await api(`/api/field?id=${encodeURIComponent(data.summary.id)}&version=${data.version}${profile}`);
+      // pilot=1: the same answer says whether Forge pilots this list poorly (no second read, no games).
+      const answer = await api(`/api/field?id=${encodeURIComponent(data.summary.id)}&version=${data.version}` +
+        `${profile}&pilot=1`);
       if (!deckOverviewHere(section, context)) return;
       clear(body);
       const opponents = answer.opponents || [];
@@ -33,7 +35,7 @@ function deckOverviewForge(data) {
         body.append(el("p", { class: "empty", text: "No other decks in this field yet." }));
         return;
       }
-      add(body, [fvHeadline(answer, { panel: false }), fvChips(answer),
+      add(body, [fvHeadline(answer, { panel: false }), deckOverviewPilot(answer.pilot), fvChips(answer),
         answer.rating?.h_points != null ? el("p", { class: "sub", text:
           `Going first is worth about ${Math.round(answer.rating.h_points)} points of win rate in these games.` }) : null,
         fvPlaying(answer) ? el("p", { class: "sub", text: "A field run is in progress. Open Field view for its latest progress." }) : null,
@@ -49,6 +51,14 @@ function deckOverviewForge(data) {
   };
   load();
   return section;
+}
+
+/** Matchups' poor-AI caveat (matchups-results.js pilotReason) for the list the field line is about; null
+   for a list Forge pilots normally, or when how it pilots it isn't known (no claim either way). */
+function deckOverviewPilot(pilot) {
+  const reason = pilotReason(pilot);
+  return reason ? el("p", { class: "sub deck-overview-pilot" },
+    status("warn", "Forge pilots this deck poorly"), " ", reason) : null;
 }
 
 /** The newest test the server returns, preserving running and inconclusive states through vtTestItem. */

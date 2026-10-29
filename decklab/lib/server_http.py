@@ -556,8 +556,9 @@ class Handler(BaseHTTPRequestHandler):
             # paired variant tests, coordinator jobs in api.forge_runs.COORD_JOBS.
             if route == ["field"]:
                 self._allow(*GET)
-                params = self._query(query, ("id", "version", "profile"))
-                answer = api.field_view(self._deck_id(params), params.get("version", "target"), params.get("profile"))
+                params = self._query(query, ("id", "version", "profile", "pilot"))
+                answer = api.field_view(self._deck_id(params), params.get("version", "target"), params.get("profile"),
+                                        pilot=params.get("pilot") == "1")
                 return self._send_json(202 if answer.get("status") in COORD_WAITING else 200, answer)
             if route == ["variant"]:
                 self._allow(*GET)

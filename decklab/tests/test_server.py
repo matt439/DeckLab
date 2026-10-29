@@ -303,6 +303,13 @@ class ApiEndpointTests(ServerTestCase):
     def test_the_field_routes(self):
         # Package F built them (section 10.5): the deck must exist, and a write names its deck.
         self.assertIn("No deck", self.assertError("/api/field?id=casual/gruul-ramp&version=target", 404))
+        # The Overview's pilot=1 (E1-S12) is a known parameter, passed on only as "1".
+        self.assertIn("No deck", self.assertError("/api/field?id=casual/gruul-ramp&version=target&pilot=1", 404))
+        with mock.patch.object(api, "field_view", return_value={"status": "none"}) as view:
+            self.get_json("/api/field?id=casual/gruul-ramp&version=owned&pilot=1")
+            self.get_json("/api/field?id=casual/gruul-ramp&version=owned")
+        self.assertEqual([c.kwargs for c in view.call_args_list], [{"pilot": True}, {"pilot": False}])
+        self.assertEqual(view.call_args_list[0].args[:2], ("casual/gruul-ramp", "owned"))
         for path in ("/api/field/run", "/api/field/stop"):
             self.assertIn("needs id", self.assertError(path, 400, "POST", b'{"profile": "user1"}', WRITE))
         self.assertError("/api/field/run", 405)

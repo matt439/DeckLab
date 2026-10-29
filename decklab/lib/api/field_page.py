@@ -77,6 +77,11 @@ def _field_options(forge, entry, seen):
 def _field_entry(forge, deck_id, version):
     """(summary, entry) of a deck's list as it is today; ApiError as deck_view for the id or
     version, and 400 for a Beginner Box half (it only plays in a pairing)."""
+    return _field_list(forge, deck_id, version)[::2]
+
+
+def _field_list(forge, deck_id, version):
+    """(summary, sections, entry): _field_entry's, with the decklist it was made from."""
     version = "target" if version is None else version
     summary, sections = _deck_sections(deck_id, version)
     if is_half(summary):
@@ -86,7 +91,7 @@ def _field_entry(forge, deck_id, version):
         entry = forge.entry(summary["id"], version, summary["title"], decks.engine_kind(summary), sections)
     except forge.ForgeError as e:
         raise ApiError(400, _public(e)) from None
-    return summary, entry
+    return summary, sections, entry
 
 
 def _field_budget(profile_id):
@@ -198,7 +203,21 @@ def _answer(forge, summary, entry, profile=None, seen=None):
             "forge": forge.status()}
 
 
-def field_view(deck_id, version="target", profile=None):
+def _list_pilot(forge, summary, sections, entry, seen):
+    """How well Forge pilots the list (forge.list_ai's "pilot", in the Matchups tab's words, from
+    the saved results seen may see), or None when that can't be worked out (logged): the
+    Overview then claims nothing. It's judged with the entry's own AI pilot (pilots.pilot_for's,
+    the one its field games are played with), so its side ids count and a team-pump fix shows."""
+    try:
+        pilot = forge.list_ai(sections, decks.engine_kind(summary), pilot=entry.get("pilot"),
+                              keep=lambda result: seen.result(forge, result)).get("pilot")
+    except Exception:
+        common._log(f"How Forge pilots {summary['id']} can't be worked out:\n{traceback.format_exc()}")
+        return None
+    return pilot if isinstance(pilot, dict) else None
+
+
+def field_view(deck_id, version="target", profile=None, pilot=False):
     """GET /api/field?id=&version=[&profile=] (section 10.5): the deck's list against the field
     of its format (forge.field.view: the opponents, the field average, the rating, coverage, the
     last run's note), with status ("queued" or "running" while its field run waits or plays,
@@ -209,10 +228,15 @@ def field_view(deck_id, version="target", profile=None):
     ApiError as deck_view for the id or version, 400 for a Beginner Box half, 404 for an
     unknown profile (to a script only), 500 when the matchup code or the view can't be worked
     out. default_budget is read only from the viewer's own settings (settings.own_settings_id,
-    E10-S34): a ?profile= naming anyone else answers as without one."""
+    E10-S34): a ?profile= naming anyone else answers as without one. With pilot (?pilot=1, the
+    deck page's Overview, E1-S12) the answer also has "pilot": _list_pilot's for this list."""
     forge = forge_runs._forge_module()
-    summary, entry = _field_entry(forge, deck_id, version)
-    return _answer(forge, summary, entry, own_settings_id(profile) if profile is not None else None)
+    summary, sections, entry = _field_list(forge, deck_id, version)
+    seen = forge_runs._Seen()
+    answer = _answer(forge, summary, entry, own_settings_id(profile) if profile is not None else None, seen)
+    if pilot:
+        answer["pilot"] = _list_pilot(forge, summary, sections, entry, seen)
+    return answer
 
 
 def run_field(body):
