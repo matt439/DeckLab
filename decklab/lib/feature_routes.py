@@ -15,9 +15,15 @@ def _field_membership_view(**params):
     return membership_view(**params)
 
 
+def _sideboard_preview(**params):
+    """Load the sideboard preview, which reads Forge's paired-game budgets, only when asked for."""
+    from decklab.lib.api.sideboard_preview import preview_sideboard
+    return preview_sideboard(**params)
+
+
 def dispatch(handler, route, query):
     from decklab.lib.api import (accessories, accessory_undo, activity, arrivals, activity_mixed_undo, activity_undo, assembly, assembly_completion, assembly_standins, assembly_ticks, box_check, box_repair, collection, compare, considering, collection_edit, collection_locations, collection_trade, cover, deck_printings, edhrec, editor, history,
-                                 library_forge, maintenance, opponents, play_pods, play_records, precon_coverage, precons, products, product_tokens, rankings, receipts, rename, retirement, shopping, shopping_order_changes, shopping_orders, shopping_queue, sideboard_preview, swaps, token_cards, token_plan, tokens, variant_queue, visits, wishlist_undo)
+                                 library_forge, maintenance, opponents, play_pods, play_records, precon_coverage, precons, products, product_tokens, rankings, receipts, rename, retirement, shopping, shopping_order_changes, shopping_orders, shopping_queue, swaps, token_cards, token_plan, tokens, variant_queue, visits, wishlist_undo)
     from decklab.lib.api.common import MAX_BODY
 
     gets = {
@@ -34,7 +40,7 @@ def dispatch(handler, route, query):
         ("assembly",): (assembly.assembly_view, ("deck", "version")),
         ("compare", "shared"): (compare.shared_view, ("a", "av", "b", "bv")),
         ("play",): (play_records.play_overview, ("id",)),
-        ("play", "sideboard-preview"): (sideboard_preview.preview_sideboard, ("id", "sha256")),
+        ("play", "sideboard-preview"): (_sideboard_preview, ("id", "sha256")),
         ("deck", "history"): (history.deck_history, ("id",)),
         ("deck", "retire"): (retirement.retirement_view, ("id",)),
         ("deck", "rename"): (rename.rename_view, ("id",)),
