@@ -361,7 +361,9 @@ class AssemblyTokenTests(PreparationCase):
         first, second = result["decks"]
         undecorated = {**first["tokens"], "needs": [
             {key: value for key, value in need.items() if key != "packing_key"} for need in first["tokens"]["needs"]]}
-        self.assertEqual(undecorated, tokens.deck_tokens(decks.load_deck("casual/a", "target"), inv, inc))
+        expected = tokens.deck_tokens(decks.load_deck("casual/a", "target"), inv, inc)
+        expected.pop("counters", None)          # the plan leaves the counters and dice out (E7-S24)
+        self.assertEqual(undecorated, expected)
         self.assertTrue(all(len(need["packing_key"]) == 64 for need in first["tokens"]["needs"]))
         self.assertEqual([n["name"] for n in second["tokens"]["needs"]], ["Rabbit"])     # the owned-only list
         insect = next(n for n in first["tokens"]["needs"] if n["key"] == INSECT)
