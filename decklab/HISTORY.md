@@ -2,6 +2,45 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Inventory contracts with optional shop facts (2026-10-29)
+
+Historical inventory comparisons now explicitly capture absent optional shop
+checks. The shared reader wrapper covers scenario and sandbox dumps and restores
+the capture function afterward; dedicated supplied-cache fixtures keep exercising
+the actual projection. The direct owned-payload test expects the exact fixed
+not_checked metadata only on positive integer missing rows and still compares
+all legacy fields and covered rows unchanged. Production behavior is unchanged.
+
+The additive golden normalizer ignores only that exact fifteen-key default,
+including every value's type, in synthetic authorized home deck views. It keeps
+prices, stock, errors, dates, carried facts, malformed/extra fields, covered rows,
+member/outside contexts, contradictory identity/space/version and unrelated paths
+as comparison evidence. Only the exact existing (local) script sentinel and
+supplied matching home profiles are eligible beside the raw script dump. Public
+normalization still copies input. The existing earlier hidden-inventory projection
+can remove a parent owned field, so this helper's isolated scope tests do not
+claim to prove the whole old golden privacy gate; direct shop API permission
+fixtures remain that proof. No historical golden JSON was regenerated or changed.
+
+The first full checkpoint at functional HEAD 222a859 found one owned-payload
+mismatch and nine golden-subtest mismatches from Price49's added shop_snapshot
+field. Shard 0 reported 2,384 tests with ten failures and 81 skips; shard 1 passed
+2,292 tests with 94 skips. Shards 2 and 3 were not started. Source verification
+after both completed confirmed the frozen manifest and 112 preserved headers
+unchanged. This was a failed partial checkpoint, preserved in
+`decklab-fixture-222a859-inpnwjlx`; no complete-suite pass is claimed for it.
+Static inspection confirmed the test package already redirects the shop snapshot
+to an absent temporary file; investigation did not probe any configured cache.
+
+The focused corrected run passed **105 reported tests with one skip** in
+139.441 seconds, including every inventory golden, direct owned output and the
+dedicated supplied-cache checks. **Fifteen new regressions** cover strict default
+normalization and explicit capture isolation. Independent review, scoped Ruff,
+whitespace and the full length guard pass: **1,196 owned source files, none over
+1,200 lines**. Evidence is in `decklab-shop-contract-d81fb90e`. A fresh complete
+four-shard qualification follows this fixture-only commit. No configured data,
+retailer request, migration, live browser/server or service action was used.
+
 ## Source-aware two-player life counter (2026-10-29; E4-S26)
 
 New two-player counters now keep every actual commander source independently,

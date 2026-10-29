@@ -389,8 +389,14 @@ def scenario(builder, adapted=False):
 
 def run_readers(backend, root):
     """Every gate item's output over root, with backend as the inventory backend (the contract
-    hook: gate.dump, whose GATE_READERS the areas keep calling their ported readers)."""
-    return gate.dump(root, backend=backend)
+    hook: gate.dump, whose GATE_READERS the areas keep calling their ported readers).
+
+    Shop evidence is explicitly absent in these historical inventory comparisons;
+    dedicated shop fixtures supply and check their own snapshots separately.
+    """
+    from decklab.lib.api import shop_prices
+    with mock.patch.object(shop_prices, "capture", return_value=None):
+        return gate.dump(root, backend=backend)
 
 
 def scenario_dump(builder, adapted=False):
@@ -605,6 +611,22 @@ def subprocess_rev(rev):
 
 
 class GoldenNormalisationTests(unittest.TestCase):
+    def test_reader_dump_keeps_shop_capture_explicitly_absent_and_restores_it(self):
+        from decklab.lib.api import shop_prices
+
+        original, backend, answer = shop_prices.capture, object(), {"fixture": "unchanged"}
+
+        def dump(root, *, backend):
+            self.assertIsNone(shop_prices.capture())
+            return answer
+
+        with mock.patch.object(gate, "dump", side_effect=dump) as rendered, \
+                mock.patch.object(shop_prices, "_snapshot", side_effect=AssertionError("No cache read")) as snapshot:
+            self.assertIs(run_readers(backend, "fixture-root"), answer)
+            rendered.assert_called_once_with("fixture-root", backend=backend)
+            snapshot.assert_not_called()
+        self.assertIs(shop_prices.capture, original)
+
     def test_standin_defaults_preserve_legacy_counts_and_unrelated_fields(self):
         from decklab.tests import golden_p4
 

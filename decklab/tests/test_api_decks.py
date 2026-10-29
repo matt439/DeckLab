@@ -263,7 +263,12 @@ class DeckViewTests(ApiTestCase):
         self.assertIn("ModuleNotFoundError", self.box.logs[-1])
 
     def test_owned_vs_needed_as_json(self):
-        view = api.deck_view("casual/gruul-test")
+        from decklab.lib.api import shop_prices
+        from decklab.tests.golden_shop_prices import ABSENT_MISSING_SNAPSHOT
+
+        with mock.patch.object(shop_prices, "capture", return_value=None) as capture:
+            view = api.deck_view("casual/gruul-test")
+        capture.assert_called_once_with()
         owned = view["owned"]
         expected = pool.owned_vs_needed("casual/gruul-test")
         for row in expected["rows"]:
@@ -273,6 +278,8 @@ class DeckViewTests(ApiTestCase):
                 "source": "Fdc Test Precon", "quantity": 1, "order_id": None,
                 "component_id": None, "product_id": "fdc-test-precon", "status": "preordered",
             }] if row["name"] == "Sol Ring" else [])
+            if type(row.get("missing")) is int and row["missing"] > 0:
+                row["shop_snapshot"] = dict(ABSENT_MISSING_SNAPSHOT)
         expected["warnings"] = [api._strip_paths(w) for w in expected["warnings"]]    # no paths
         self.assertEqual(owned, json.loads(json.dumps(expected)))
         self.assertEqual((owned["rate"], owned["rate_date"], owned["price_date"]), (2.0, "2026-09-28", "2026-09-28"))
