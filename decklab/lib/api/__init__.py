@@ -170,6 +170,8 @@ called as before (from decklab.lib import api; api.<name>). Each part:
     collection_edit.py   the Collection page's edits and imports: rows_view(), save_card(),
                      import_preview(), import_apply(), printings_view(),
                      each write one inventory.apply. Imported when first asked, as tokens.py
+    collection_scan.py   the Collection page's Scan cards (E7-S32): scan_photo(), one card's photo read
+                     on the PC (lib/scan.py) into proposed printings; nothing is written. Imported when first asked
     collection_trade.py  the Collection page's Record a trade (E7-S22): preview_trade(), save_trade(),
                      one collection.trade. Imported when first asked, as tokens.py
     precons.py       the Collection page's "Add a precon": precons_view(), precon_preview(),

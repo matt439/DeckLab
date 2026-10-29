@@ -137,7 +137,8 @@ def propose(lines):
     Each proposal has name, set, collector_number, set_name, finish (foil only
     when a star was read), language ("" when unread) and how: "name and number"
     (the number read, and the set code when one was, name a printing of the
-    card whose name was read),
+    card whose name was read; several of them when reprints share the number
+    and no set code agreed, so none is certain),
     "number" (they name a printing, but the name wasn't read or differs) or
     "name" (only the name was read: every paper printing, newest first).
     Raises FileNotFoundError or RuntimeError without a usable card index."""
@@ -181,6 +182,9 @@ def _message(read, name, proposals):
             return "The bottom line was read but names no printing Deck Lab knows: type the card's name instead."
         return "No card name or set code could be read: try a sharper photo, or type the card's name."
     if proposals[0]["how"] == "name and number":
+        if len(proposals) > 1 and proposals[1]["how"] == "name and number":
+            # Reprints often share a number: without the set code read, which one isn't known.
+            return f"Read {name}, but more than one printing has that number: choose the printing."
         return f"Read {name}, {proposals[0]['set'].upper()} {proposals[0]['collector_number']}."
     if proposals[0]["how"] == "number":
         return "The set code and number name a printing, but the name didn't match: check it's this card."

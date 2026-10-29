@@ -157,7 +157,7 @@ function drawImportGroupOutcome(ctx, review) {
     el("button", {type: "button", class: "btn", text: "Choose another file", onclick: () => {
       if (!ctx.busy && colImportGroupsHere(ctx, review)) ctx.input.click();
     }})));
-  sheetActions(ctx.sheet, [{text: "Cancel", value: "cancel", onclick: () => ctx.sheet.close()},
+  sheetActions(ctx.sheet, [{text: "Cancel", value: "cancel", onclick: () => ctx.sheet.close()}, colScanBack(ctx),
     {text: `Import ${plural(plan.adds.cards, "card")}`, kind: "primary", value: "import",
       disabled: ctx.busy || !!plan.problems.length || !plan.adds.cards, onclick: event => {
         if (event.currentTarget?.isConnected && ctx.sheet.foot.contains(event.currentTarget)

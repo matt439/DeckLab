@@ -4,7 +4,8 @@
 Use the server's normal query, method and same-origin write guards. Each
 part of the API is imported when first asked for. A POST takes at most
 api.MAX_EDIT_BODY bytes, except routes with their explicit bound, including
-pod records (play_pods.MAX_BODY), import previews (collection_edit.MAX_IMPORT_BODY)
+pod records (play_pods.MAX_BODY), import previews (collection_edit.MAX_IMPORT_BODY), scanned photos
+(collection_scan.MAX_SCAN_BODY)
 and accessory saves with a local picture (accessories.MAX_SAVE_BODY).
 """
 
@@ -33,7 +34,7 @@ def _start_sideboard_test(body):
 
 
 def dispatch(handler, route, query):
-    from decklab.lib.api import (accessories, accessory_undo, activity, arrivals, activity_mixed_undo, activity_undo, assembly, assembly_completion, assembly_standins, assembly_ticks, box_check, box_repair, collection, compare, considering, collection_edit, collection_locations, collection_trade, cover, deck_printings, edhrec, editor, history,
+    from decklab.lib.api import (accessories, accessory_undo, activity, arrivals, activity_mixed_undo, activity_undo, assembly, assembly_completion, assembly_standins, assembly_ticks, box_check, box_repair, collection, compare, considering, collection_edit, collection_locations, collection_scan, collection_trade, cover, deck_printings, edhrec, editor, history,
                                  library_forge, maintenance, opponents, play_pods, play_records, play_tonight, precon_coverage, precons, products, product_tokens, rankings, receipts, rename, retirement, role_cards, shopping, shopping_order_changes, shopping_orders, shopping_queue, shopping_queue_missing, swaps, token_cards, token_plan, tokens, variant_queue, visits, wishlist_undo)
     from decklab.lib.api.common import MAX_BODY
 
@@ -119,6 +120,7 @@ def dispatch(handler, route, query):
         ("collection", "locations", "bulk"): (collection_locations.bulk_set, collection_edit.MAX_BULK_BODY),
         ("collection", "import", "preview"): (collection_edit.import_preview, collection_edit.MAX_IMPORT_BODY),
         ("collection", "import", "apply"): collection_edit.import_apply,
+        ("collection", "scan"): (collection_scan.scan_photo, collection_scan.MAX_SCAN_BODY),     # nothing is written
         ("collection", "trade", "preview"): (collection_trade.preview_trade, collection_trade.MAX_TRADE_BODY),
         ("collection", "trade"): (collection_trade.save_trade, collection_trade.MAX_TRADE_BODY),
         ("precons", "add"): precons.add_precon,

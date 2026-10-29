@@ -22,6 +22,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 - **`E11-S39`: database qualification of the snapshot split.** Authorize a disposable-database run of the location, deck persistence and rollback cases; the split itself passes its fixture checks.
 - **`E7-S24`: owned dice and counters.** Choose what a recorded die or counter says (kind, colour or design, quantity; whether one die stands for any kind) before its migration; the read-only counter needs are built.
 - **`E9-S26`: Commander role targets.** Choose the cited, dated template the Stats roles' targets come from; free pool cards for each role are built.
+- **`E7-S32`: real photos for Scan cards.** Take 10 to 20 photos of cards (a few foils, a few sleeved, one old card) with Collection's **Scan cards…** on each phone, or copy them to the PC for `python -m decklab.lib.scan`; the sheet and its API are fixture-tested only.
 - **`E11-S28`: User2's user-testing session.** Confirm his device, then use the prepared [checklist](decklab/design/user-testing-user2.md).
 
 **Activation:** migrations `0012` and `0013` were applied and the server restarted on committed code on 2026-10-19, so the privacy code and guarded member removal are live. No visibility choice or real member removal has been made.
@@ -54,7 +55,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 |---|---|---|---|---|
 | `E5-S15` | DEFERRED | should | M | User1 asks from the page for a card or a Forge run, Matt approves (`E3-S13`); not urgent. |
 | `E5-S08` | OPEN | could | XL | MTGMate checks cover queued and saved-home missing names on Shopping and deck Prices; next research a second Australian shop (robots, page format) and split `lib/shops.py` into per-shop adapters with fixture pages. |
-| `E7-S32` | OPEN | could | L | Recognition spike and scan CLI built; next `POST /api/collection/scan` (injectable OCR, own-space guard) with fixture tests, then Collection's Scan cards sheet into the import preview; real phone photos separately. |
+| `E7-S32` | OPEN | could | L | Scan cards sheet and `POST /api/collection/scan` built (fixture-tested); next real phone photos on the household's phones, then a per-row printing picker and language on the pending list, then token cards for the Tokens page. |
 | `E7-S08` | OPEN | could | M | The card log now tallies each token's per-game peak into the batch record; next pool it over a deck's saved runs (`saved.py`), match Forge's token names to the deck's needs and show the suggested count on the Tokens part. Real counts need fresh runs. |
 | `E7-S23` | OPEN | could | M | Each token need now says whose side it lands on (approximate, from the cards' text) and the deck page says so; next the Tokens part's own heading for the opponent's tokens, then counting them apart in the library line and Build decks' Grab ticks. |
 | `E7-S24` | DECISION | could | L | The deck page lists the counter kinds and dice its cards use (read-only, approximate); Matt chooses the record shape for owned dice and counters, then its migration, the Tokens page's rows and whether each need is covered. |

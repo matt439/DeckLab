@@ -207,6 +207,8 @@ inventory writes answer 503 with "reason": "database":
                                          a ManaBox, Moxfield, Deckbox or collection-columns export
     POST /api/collection/import/apply    body {"profile", "space", "token", "sha256", "skip_problems"?}:
                                          merge it and keep the upload as a raw import, in one change
+    POST /api/collection/scan            body {"profile", "space", "photo"} (a JPEG or PNG's base64, at most 4 MiB): read
+                                         one card's photo on the PC and propose its printings (E7-S32); nothing is written
     POST /api/collection/trade/preview   body {"profile", "space", "sha256", "gave": [{"set", "collector_number",
                                          "finish", "quantity"}], "got": [rows], "with"?, "message"?}: what a
                                          trade would do (E7-S22: held copies, tables left out of date)
