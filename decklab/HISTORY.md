@@ -2,6 +2,36 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Incarnation-specific field policy (2026-10-29, E3-S23 foundation)
+
+The pure field-policy model now stores Include Planned/Play-now, Exclude and
+Use field rules intents by the full checked historical incarnation key, separately
+for Constructed and Commander. An absent entry preserves legacy selection;
+Use field rules retains an explicit tombstone that a later selector will use to
+mask matching old directives. It cannot silently revive a file-based exclusion.
+Old incarnation entries remain inert when a deck is recreated, without eviction.
+
+Strict complete-object validation rejects unknown fields, duplicate epochs,
+wrong formats/kinds, unsafe identities and numeric coercion. Normalization,
+lookup and transitions return detached canonical copies. Revision checks precede
+identical no-ops; the first Use field rules saves an entry, while repeating it
+at the matching revision changes nothing. Capacity permits replacing an existing
+entry but refuses a 5,001st entry. Actual bigint revision overflow refuses a
+change, while a matching no-op at that limit remains valid.
+
+Root's **125 guarded checks passed with one skip**, including **28 new policy
+cases** without skips, the 54 epoch fixtures and existing state contracts.
+Independent review, Ruff, EOF/whitespace checks and the source-length guard pass;
+all 1,202 owned source files fit the limit. Frozen source hashes and the 112
+preserved test headers are unchanged. Evidence is in
+`decklab-field-policy-855412d7`.
+
+This helper is not yet wired to selection, persistence or API controls. It
+validates syntax, not current deck provenance. E3-S23 remains partial; the
+[editing design](design/field-membership-editing.md) retains the same-transaction
+proof, audit and permission requirements for the next slices. No live data,
+database, server or service operation was performed.
+
 ## Checked deck identity for field edits (2026-10-29, E3-S23 foundation)
 
 A pure resolver and explicit PostgreSQL reader now prove a current home house

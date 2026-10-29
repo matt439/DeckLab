@@ -61,6 +61,23 @@ legacy directives retain their existing behavior and order.
   directives and recomputes the normal automatic choice. Removing the entry
   would incorrectly revive an old manual exclusion.
 
+The pure policy format is `{v: 1, format, revision, rules}`. Each rule has an
+exact structured `epoch: {kind, deck_id, revision}` and `mode`; only Include has
+an additional `version`. Normalize by the full epoch key, rejecting duplicates
+rather than choosing a winner. The historical origin ID must belong to the
+format's house-deck kind. Baselines have revision 1; creation revisions use the
+identity proof's positive bounded range. These are syntax checks, not evidence
+that the epoch still belongs to a current deck.
+
+Policy revisions fit PostgreSQL's nonnegative bigint range. Revision 0 is an
+empty initial policy; positive revisions remain after clearing. Check the
+expected revision before detecting an identical no-op. A changed rule increments
+once; an identical rule at the current revision does not, even at the maximum
+revision. Overflow refuses an actual change. Retain obsolete epoch entries as
+inert history, with a 5,000-rule cap and no automatic eviction. Updating an
+existing entry at capacity remains possible. Public helper results are detached
+copies, so neither transition nor lookup can mutate stored input through aliases.
+
 Apply this overlay only to home's field, before membership traces, exclusion
 counts and diagnostic notes observe the effective directives. Member fields,
 products, pairings and chosen-opponent runs stay outside this first editing
@@ -75,7 +92,12 @@ Activity boundary before generic admin handling. A failed policy read must not
 masquerade as empty policy and revive an excluded deck.
 
 Use the existing inventory claim before a format-specific lock; never upgrade a
-shared inventory lock to exclusive. After a successful save, invalidate pending
-field reads before refreshing the page. Refreshing membership starts no games.
+shared inventory lock to exclusive. An already-held claim alone does not prove
+that a repeatable-read snapshot began after a competing writer finished. The
+first write slice must own an independent transaction, establish READ COMMITTED
+before its audit insert, and read fresh evidence after obtaining the inventory
+claim and format lock. Reject existing batches/transactions for this slice.
+After a successful save, invalidate pending field reads before refreshing the
+page. Refreshing membership starts no games.
 Genuine PostgreSQL, unapplied migration activation and browser/device acceptance
 remain separate qualification steps.
