@@ -2,6 +2,44 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Complete protected fixture checkpoint (2026-10-29)
+
+All four guarded Windows fixture shards passed on functional commit
+`a5a9dc98c6fc82ace8f77530fab41b4256c3288a`. Discovery found **10,452 unique
+cases**, retaining all **9,123 starting cases** after the recorded three class
+moves and one method rename, with **1,329 additional cases**, no duplicate IDs
+and no loader errors. The runner reported **9,874 tests and 420 skips** across
+the four successful jobs:
+
+| Shard | Discovered | Reported | Skips | Seconds |
+|---|---:|---:|---:|---:|
+| 0 | 2,509 | 2,327 | 139 | 309.832 |
+| 1 | 2,460 | 2,356 | 95 | 444.022 |
+| 2 | 2,621 | 2,468 | 93 | 318.285 |
+| 3 | 2,862 | 2,723 | 93 | 349.931 |
+
+The host disconnected during the original last two jobs. Their incomplete logs
+had no exit markers and their execution sessions could not be resumed. Those
+attempts were retained as uncertain, without a passing claim. After reconnect,
+the branch, HEAD, empty index, source manifest and 112 preserved headers matched.
+Only the two unfinished shards were rerun, sequentially into separate logs.
+The first two completed passes remain valid for the same frozen source.
+
+Final verification after all four accepted jobs confirmed all **1,187 tracked
+source hashes** unchanged, with digest
+`9a5828bb296e1b810a332acb2a50c20d66856f36e37870e68b28804f2badbcc9`.
+The 112 unstaged header-only edits are byte-identical and AST-equivalent to HEAD.
+The separate length audit covers **1,196 owned source files**, none over 1,200
+lines. The failed earlier 222a859 checkpoint and all original interrupted logs
+remain preserved; the complete result follows the fixture-contract correction.
+
+Evidence is in `decklab-fixture-a5a9dc9-y4kkbzqi`: per-job logs and host exit
+markers, discovery and source manifests, `reconnection-recovery.json`,
+`final-snapshot-proof.json` and `qualification-result-final.json`. This qualifies
+the Windows fixture suite only. Configured PostgreSQL, real Forge, named native
+runtime checks, physical devices and Linux services retain separate qualification;
+no live server restart, migration or service activation was performed.
+
 ## Inventory contracts with optional shop facts (2026-10-29)
 
 Historical inventory comparisons now explicitly capture absent optional shop
