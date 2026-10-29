@@ -61,6 +61,8 @@ function printDeck(data) {
       el("li", {text: `${row.qty} x ${deckStandinWords(row)}`}))));
     for (const text of standins.warnings || []) sheet.append(el("p", {class: "print-warning", text}));
   }
+  // commander-readiness.js: a Commander deck's At the table, from the facts the page loaded (E9-S27).
+  if (typeof commanderPrintPart === "function") sheet.append(...commanderPrintPart(data));
   const guide = data.guide;
   if (guide?.changed_on) sheet.append(el("p", {class: "print-warning", text:
     `Guide needs review: the list changed on ${guide.changed_on}. Check its advice against this list.`}));

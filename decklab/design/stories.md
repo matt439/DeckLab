@@ -43,12 +43,12 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 23 | 21 | 0 | 0 | 2 |
 | [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 28 | 24 | 1 | 3 | 0 |
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 19 | 16 | 0 | 1 | 2 |
-| [E9: Commander nights](#e9-commander-nights) | 22 | 15 | 1 | 5 | 1 |
+| [E9: Commander nights](#e9-commander-nights) | 22 | 16 | 1 | 4 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 35 | 31 | 1 | 1 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 41 | 31 | 5 | 2 | 3 |
-| **Total** | **270** | **224** | **15** | **17** | **14** |
+| **Total** | **270** | **225** | **15** | **16** | **14** |
 
-Counted from the story headers on 2026-10-29 after the source-aware two-player and pod counters, alongside the current feature and maintenance work. The reviews added five feature stories and eight hygiene stories, then the fixture-only entry-point story E11-S44, and corrected E1-S12 from missing to partial. Rechecked 2026-10-29: E1-S12 is built and E11-S39 partial (its database qualification pending). The TODO audit of 2026-10-29 added fifteen missing stories (twelve from the audit: E1-S27, E1-S28, E2-S27, E3-S25, E3-S26, E5-S25, E6-S25, E6-S26, E9-S26, E9-S27, E11-S45, E11-S46), then Matt's three UI requests (E3-S27, E5-S26, E6-S27), and corrected E7-S32 from missing to partial (its recognition spike and CLI are built). Matt closed E11-S16 as built the same day, and E3-S27, E5-S26, E6-S25, E6-S27 and E11-S46 were built the same day (E11-S12 stays partial after a further slice). Later the same day E5-S25 and E6-S26 were built, E1-S27's first slice (the library) made it partial, and E11-S12 and E3-S26 were built. E1-S27's Overview slices then finished it, and E2-S27 was built.
+Counted from the story headers on 2026-10-29 after the source-aware two-player and pod counters, alongside the current feature and maintenance work. The reviews added five feature stories and eight hygiene stories, then the fixture-only entry-point story E11-S44, and corrected E1-S12 from missing to partial. Rechecked 2026-10-29: E1-S12 is built and E11-S39 partial (its database qualification pending). The TODO audit of 2026-10-29 added fifteen missing stories (twelve from the audit: E1-S27, E1-S28, E2-S27, E3-S25, E3-S26, E5-S25, E6-S25, E6-S26, E9-S26, E9-S27, E11-S45, E11-S46), then Matt's three UI requests (E3-S27, E5-S26, E6-S27), and corrected E7-S32 from missing to partial (its recognition spike and CLI are built). Matt closed E11-S16 as built the same day, and E3-S27, E5-S26, E6-S25, E6-S27 and E11-S46 were built the same day (E11-S12 stays partial after a further slice). Later the same day E5-S25 and E6-S26 were built, E1-S27's first slice (the library) made it partial, and E11-S12 and E3-S26 were built. E1-S27's Overview slices then finished it, and E2-S27 and E9-S27 were built.
 
 ---
 
@@ -3023,7 +3023,7 @@ Evidence:
 
 Getting the household's Commander decks ready for social Commander nights at a local shop, where staff make 4-player pods and the shop publishes a bracket range. The editor checks the Commander deck rules and a minimum bracket from Game Changers, mass land denial and extra turns; a Commander deck's Overview opens with a plain bracket sentence, what opponents will face and the dates of the card data behind them, and home admins can record the usual night's aim and house rules. Practice games use the free multiplayer mulligan, and Forge plays Commander decks 1v1 only, marked indicative. Two-card combos (from Commander Spellbook) and Wizards' latest Commander announcement are checked too (2026-10-21). The Game log records three/four-player pods separately from 1v1 (E4-S18/E9-S16, 2026-10-28). Multiplayer counters/simulations and editor EDHREC ideas remain separate work.
 
-Open: E9-S07, E9-S11, E9-S21, E9-S22, E9-S26, E9-S27.
+Open: E9-S07, E9-S11, E9-S21, E9-S22, E9-S26.
 
 **E9-S02** · Matt · must · M · built
 
@@ -3357,7 +3357,7 @@ Gap: none of the criteria is met yet.
 
 First slice (TODO audit, 2026-10-29): A pure function in lib/stats taking the deck, the space's free pool and cards.tag_members for ROLE_TAGS, returning up to 10 candidates per role filtered by colour identity (reuse find_cards' owned scope and _fits). Fixture tag jsonl tests; a 'Free cards for this role' link under each role bar in web/stats.js as slice 2. Reference ranges from a cited, dated template need Matt to pick the source.
 
-**E9-S27** · User1 · could · S · missing
+**E9-S27** · User1 · could · S · built
 
 As a newer player taking a Commander deck to a social night without a phone, I want the printed play sheet to carry the bracket sentence, what opponents will face and the detected two-card combos, so that I can answer the table's questions from paper.
 
@@ -3367,9 +3367,12 @@ As a newer player taking a Commander deck to a social night without a phone, I w
 
 Evidence of the gap (TODO audit, 2026-10-29): printDeck prints title, list, stand-ins and guide only (no bracket/combo text); E11-S27 offline lists is not_wanted, so paper is the offline route.
 
-Gap: none of the criteria is met yet.
+Now: built 2026-10-29 ([HISTORY.md](../HISTORY.md#at-the-table-on-the-printed-play-sheet-2026-10-29-e9-s27)). Print play sheet adds an **At the table** part after the stand-ins for a Commander deck, from the shown list's Commander checks the deck page already loaded (no fetch): the Overview's own sentence (the target bracket, the bracket the cards and floor-raising combos imply, and the cards named, as plain text), Game Changers, mass land denial and extra turns (each named, none found, or not checked), the two-card combos the list holds with what each does and whether it needs a payoff or counts for the bracket (or none found, or not checked) with the combo list's date, cards without data, a deck-rules warning, what the checks don't cover, and the card data's dates and freshness notes. When the checks weren't loaded it prints that, never a sentence; a casual deck prints no such part. It reads only the list's own facts, never the one-card-away combos' availability or prices or the household's Commander night. Sideboard plans per opponent for casual decks, the TODO audit's suggested later slice, aren't part of this story's criteria and aren't built.
 
-First slice (TODO audit, 2026-10-29): In web/deck-tools.js printDeck, append 'At the table' from the already-loaded commander-readiness data; UI fixture test on the print DOM. Sideboard plans per opponent for casual decks as slice 2.
+Evidence:
+- `decklab/web/commander-readiness.js`: commanderTableFacts, commanderTableSentence, comboWords, commanderPrintPart (commanderReadiness reads the same facts)
+- `decklab/web/deck-tools.js`: printDeck
+- `decklab/tests/test_commander_print_ui.py`; `decklab/tests/test_commander_readiness_ui.py` (unchanged, the page's sentence)
 
 ---
 

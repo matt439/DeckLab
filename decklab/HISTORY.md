@@ -2,6 +2,30 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## At the table on the printed play sheet (2026-10-29; E9-S27)
+
+Print play sheet (`printDeck` in `decklab/web/deck-tools.js`) now adds an **At the table** part after the
+stand-ins for a Commander deck, from `commanderPrintPart` in `decklab/web/commander-readiness.js`. It prints
+only what the deck page already loaded for the shown list (`stats.commander.bracket`), with no fetch: the
+Overview's pregame sentence word for word (the target bracket, what the cards found and floor-raising two-card
+combos imply, and the cards named), Game Changers, mass land denial and extra turns (named, "none found in the
+checked cards" or "not checked"), the two-card combos the list holds with what each does and its payoff or
+bracket note, or none found, or "not checked (combo list unavailable)", with Commander Spellbook's list date,
+cards without data, a deck-rules warning, what the checks don't cover, and `commanderDataNote`'s card-data,
+tags and combo dates with its freshness and Wizards' announcement notes. Names are plain text: paper has no
+viewer or Spellbook link. When the checks weren't loaded (no stats, no commander part or no bracket answer) it
+prints "The Commander checks weren't loaded, so this sheet can't say what opponents will face." rather than a
+sentence; a casual deck prints no such part. The Overview's At the Commander table and the sheet share
+`commanderTableFacts` and `commanderTableSentence`, and the Overview and Stats tab's combo lists and the sheet
+share `comboFindings` (now with an item drawer) and `comboWords`, so the words can't drift apart. The part reads
+only the list's own facts, never the one-card-away combos' availability or prices or the household's recorded
+Commander night. Fixture tests (`decklab/tests/test_commander_print_ui.py`): the sentence matching the Overview's,
+the named effects and combos, the dates, no links or viewer buttons, no fetch and the page data unchanged; a
+clean deck, an unchecked combo list, missing effect data, unknown cards, broken deck rules and stale dates;
+four ways the facts can be missing; casual decks; and a home and a member viewer never printing near-combo
+availability, prices or the household night. README's deck-page list says what the sheet prints. E9-S27 is built. Known low issues: sideboard plans per opponent
+for casual decks (the audit's suggested later slice) aren't printed; no paper print or device check.
+
 ## Departed cards in How to play (2026-10-29; E2-S27)
 
 GET /api/deck's `guide` now has `departed`, from `decklab/lib/api/guide.py` `departed_cards`: the cards the play
