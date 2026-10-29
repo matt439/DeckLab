@@ -22,9 +22,9 @@ import contextlib
 from decklab.lib import buying_needs, cards, config, decks, inventory, spaces
 from decklab.lib.inventory import paths
 
-from . import guard
+from . import common, guard
 from .carddata import _require_cards
-from .common import DATABASE_DOWN, MAX_NAME, ApiError, _keys, _log, _parse_body, _public
+from .common import DATABASE_DOWN, MAX_NAME, ApiError, _keys, _parse_body, _public
 from .library import _find_summary, check_deck_id
 from .saving import inventory_write_lock
 from .settings import _web_actor, _writer
@@ -104,7 +104,7 @@ def _proposal(deck_id):
     summary = _summary(deck_id)
     deck_id, title = summary["id"], summary["title"]
     deck = {"id": deck_id, "title": title}
-    counted = buying_needs.count([summary], canonical=_canonical, public=_public, log=_log)
+    counted = buying_needs.count([summary], canonical=_canonical, public=_public, log=common._log)
     if counted.phase == "no_targets":
         return {"ready": False, "deck": deck, "reason": "This deck has no Planned list to count."}
     if counted.phase == "unavailable" or counted.errors:
