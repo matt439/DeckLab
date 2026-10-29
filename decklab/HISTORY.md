@@ -2,6 +2,30 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Publication CI: canonical disposable roots (2026-10-29)
+
+Hosted CI at 7fd0510 passed lint, all four Linux shards, three Windows shards
+and Linux services. Windows shard 2 failed two fixture-runner cases: its Temp
+ancestor used the short `RUNNER~1` spelling, while the copied runner resolved
+the same owned directory to its long path. The generated fake config retained
+the unresolved spelling, so its fake-file sentry caught a path mismatch.
+Production config and runner roots already resolve their source paths.
+
+The disposable project now resolves its root before creating fake files or
+launch environment values. A portable `launch/..` regression checks canonical
+bootstrap and environment roots, then runs the ordinary guarded fake suite;
+it failed before the correction. Runtime file guards, canaries, broken-order
+tests and native/database skips are unchanged. No real protected file is
+resolved or opened by this test change.
+
+All **16 guarded runner/source-inventory checks passed without skips**, with
+Ruff, whitespace, EOF and the source-length guard also passing. The 112 earlier
+unstaged header edits remain preserved. The original failing run is
+[40816698480](https://github.com/matt439/DeckLab/actions/runs/40816698480);
+exact-head hosted validation must run again after publication of this fix.
+This is a scoped publication correction; the autonomous implementation loop
+remains stopped.
+
 ## Audited field-policy persistence (2026-10-29, E3-S23 storage slice)
 
 Both stores now read and apply one format's incarnation-specific field policy.

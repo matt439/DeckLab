@@ -7,6 +7,8 @@ import sys
 import tempfile
 import textwrap
 import unittest
+from types import SimpleNamespace
+from unittest import mock
 
 ROOT = Path(__file__).absolute().parents[2]
 
@@ -15,7 +17,9 @@ class FixtureRunnerTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory(prefix="decklab-fixture-runner-")
         self.addCleanup(self.temp.cleanup)
-        self.root = Path(self.temp.name)
+        # TEMP may use an 8.3 spelling on Windows. Match the copied runner's
+        # resolved project root before deriving any fake config or environment.
+        self.root = Path(self.temp.name).resolve()
         for name in ("fixture_runtime.py", "test_fixtures.py", "test_shard.py"):
             self.write("scripts/" + name, (ROOT / "scripts" / name).read_text(encoding="utf-8"))
         for name in ("decklab/__init__.py", "decklab/lib/__init__.py"):
@@ -203,6 +207,16 @@ class FixtureRunnerTests(unittest.TestCase):
             def no_socket(*args, **kwargs): raise AssertionError('No genuine socket can be attempted by regression')
             socket.create_connection = no_socket
             mode, *args = sys.argv[1:]
+            if mode == 'canonical_paths':
+                canonical = root.resolve()
+                assert root == canonical, 'fake bootstrap root is not canonical'
+                for key, suffix in [('HOME', 'home'), ('USERPROFILE', 'home'), ('APPDATA', 'roaming'),
+                                    ('FAKE_HOME', 'home'), ('FAKE_ROAMING', 'roaming'),
+                                    ('FAKE_PACKAGES', 'packages'), ('FAKE_PASSFILE', 'secrets/pgpass-extra.conf'),
+                                    ('FAKE_SERVICEFILE', 'secrets/pg-service.conf')]:
+                    assert Path(os.environ[key]) == canonical / suffix, 'fake launch root is not canonical: ' + key
+                print('canonical launch paths')
+                mode = 'fixtures'
             if mode == 'broken_order':
                 from scripts import fixture_runtime
                 fixture_runtime.install = lambda *args: None
@@ -269,6 +283,23 @@ class FixtureRunnerTests(unittest.TestCase):
         result = self.run_fake("fixtures", "decklab.tests.test_probe.UnitTests.test_ordering_and_fakes")
         self.assert_safe_success(result)
         self.assertIn("Ran 1 test", result.stderr)
+
+    def test_aliased_temp_root_uses_one_canonical_launch_and_guard_root(self):
+        # A lexical alias exercises the launch contract on every platform; the
+        # hosted Windows failure used the TEMP ancestor's RUNNER~1 spelling.
+        with tempfile.TemporaryDirectory(prefix="decklab-fixture-alias-") as directory:
+            owned = Path(directory)
+            (owned / "launch").mkdir()
+            aliased = SimpleNamespace(name=str(owned / "launch" / ".."), cleanup=lambda: None)
+            case = type(self)("test_targeted_names_install_before_package_decorators_and_connector_calls")
+            try:
+                with mock.patch.object(tempfile, "TemporaryDirectory", return_value=aliased):
+                    case.setUp()
+                result = case.run_fake("canonical_paths")
+                case.assert_safe_success(result)
+                self.assertIn("canonical launch paths", result.stdout)
+            finally:
+                case.doCleanups()
 
     def test_default_discovery_preserves_fixture_io_and_skips_only_explicit_runtime_and_database_cases(self):
         result = self.run_fake("fixtures")
