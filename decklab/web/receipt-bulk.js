@@ -90,6 +90,16 @@ async function rcptEverythingArrived(view) {
   }
   rcptDrawBoard(view);
   rcptChanged(view);
+  rcptFocusAfterBulk(view, null);
+}
+
+/** A shortcut hides itself once it's done, so the closing dialog would hand focus back to a hidden button: move
+ * it to the next shortcut still showing (this part's first), else to Record arrival. */
+function rcptFocusAfterBulk(view, comp) {
+  const parts = comp ? [comp, ...view.comps.filter((c) => c !== comp)] : view.comps;
+  const next = [...parts.flatMap((c) => [c.checksDone, c.backsBlank]), view.everything]
+    .find((button) => button && !button.hidden && !button.parentNode?.hidden);
+  if (next || view.primary) (next || view.primary).focus({ preventScroll: false });
 }
 
 /** Ticks every check of a part still open, after one confirmation naming them. */
@@ -104,6 +114,7 @@ async function rcptAllChecksDone(view, comp) {
   for (const i of open) comp.checks[i] = true;
   rcptDrawGrid(view, comp);
   rcptChanged(view);
+  rcptFocusAfterBulk(view, comp);
 }
 
 /** Answers a token part's open blank backs in one confirmation: each listed row has its own box, so
@@ -119,6 +130,7 @@ async function rcptBacksBlank(view, comp) {
   for (const row of chosen) if (comp.rows.includes(row) && row.ticked && rcptBlankBackOpen(row)) rcptMarkSingleSided(row.values);
   rcptDrawGrid(view, comp);
   rcptChanged(view);
+  rcptFocusAfterBulk(view, comp);
 }
 
 /** The blank-backs confirmation: resolves with the rows left ticked, or null. */
@@ -126,11 +138,15 @@ function rcptAskBacks(view, comp, rows, flagged) {
   return new Promise((resolve) => {
     const picked = new Set(rows);
     const sheet = openReceiptSheet(view, { title: "Are these backs blank?", onClose: (result) => resolve(result === "yes" ? [...picked] : null) });
+    // A primary that can't act yet keeps its reason beside it, and its click goes to the first box (UI-KIT).
+    const reason = el("p", { id: `${sheet.heading.id}-reason`, class: "sub rcpt-backs-reason", "aria-live": "polite" });
     const confirm = () => {
       const button = sheet.foot.querySelector("[data-action=yes]");
       if (!button) return;
       button.textContent = picked.size ? `Mark ${plural(picked.size, "back")} blank` : "Mark backs blank";
       button.setAttribute("aria-disabled", String(!picked.size));
+      button.setAttribute("aria-describedby", reason.id);
+      reason.textContent = picked.size ? "" : "Tick at least one card.";
     };
     add(sheet.body, [el("p", { text: "These token cards have no back recorded. Untick any that isn't a single-sided card, then say what its back is in its sheet." }),
       el("ul", { class: "rcpt-backs-list" }, rows.map((row) => el("li", {}, el("label", { class: "choice rcpt-backs-list-label" },
@@ -139,9 +155,12 @@ function rcptAskBacks(view, comp, rows, flagged) {
           confirm();
         } }), el("span", { text: `${rcptRowName(comp, row)} × ${rcptQty(row)}` }))))),
       el("p", { class: "sub", text: "Backs already recorded need no answer here." }),
-      flagged.length ? el("p", { class: "note note-warn", text: `Still to say one by one, as their pairing isn't confirmed: ${flagged.map((row) => rcptRowName(comp, row)).join(", ")}.` }) : null]);
+      flagged.length ? el("p", { class: "note note-warn", text: `Still to say one by one, as their pairing isn't confirmed: ${flagged.map((row) => rcptRowName(comp, row)).join(", ")}.` }) : null, reason]);
     sheetActions(sheet, [{ text: "Cancel", onclick: () => sheet.close() },
-      { text: "", kind: "primary", value: "yes", onclick: () => { if (picked.size && receiptEditable(view)) sheet.close("yes"); } }]);
+      { text: "", kind: "primary", value: "yes", onclick: () => {
+        if (!picked.size) { sheet.body.querySelector(".rcpt-backs-list-box")?.focus(); return; }
+        if (receiptEditable(view)) sheet.close("yes");
+      } }]);
     confirm();
   });
 }

@@ -361,6 +361,17 @@ confirmation dialogs for route/person/away cleanup. Preserve busy, changed-previ
 and original-viewer guards. The partial split, receipt, checks/provenance and table
 refresh are one save.
 
+`receipt-bulk.js` (E6-S27) holds the shortcuts for a delivery that came as ordered:
+**Everything arrived as ordered** above the parts, and each part's **All N checks
+done** and (tokens) **Backs as recorded or blank (N)…**. Each is a secondary behind
+one confirmation that sets exactly the state the by-hand ticks set, so preview and
+apply bodies don't change. A shortcut shows only while it has work, and hides itself
+once done, so afterwards focus moves to the next shortcut still showing (that part's
+first), else Record arrival. The backs sheet's primary follows the can't-act-yet
+rule: `aria-disabled` with a described reason ("Tick at least one card.") and a click
+that focuses the first row box. Rows whose pairing isn't confirmed are named, never
+answered in bulk.
+
 ## Rules
 
 - **Page files lay components out; they never restyle them.** A page stylesheet sets grid, gap, order and width. It doesn't change a `.btn`, an input, a chip or a tile. If a component lacks something, add it to `components.css` or `cards-ui.css`.

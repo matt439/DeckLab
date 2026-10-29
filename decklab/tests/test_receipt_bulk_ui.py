@@ -76,18 +76,20 @@ class ReceiptBulkTests(unittest.TestCase):
           assert(v.comps.every(c => c.selected && c.rows.every(r => r.ticked)));assert(v.everythingBar.hidden);
           assert.equal(rcptClientBlockers(v).length, 2);
           const done = v.comps[0].checksDone, backs = v.comps[1].backsBlank;
+          // Each shortcut hides itself, so focus goes on to the next one still showing, then to Record arrival.
+          assert.equal(document.activeElement, done);
           assert(!done.hidden);assert.equal(done.textContent, 'All 2 checks done');
           assert(v.comps[0].section.contains(done));assert(!v.comps[1].checksDone);
           assert(!backs.hidden);assert.equal(backs.textContent, 'Backs as recorded or blank (2)…');
           done.click();await confirm();
-          assert(done.hidden);same(v.comps[0].checks, [true, true]);
+          assert(done.hidden);same(v.comps[0].checks, [true, true]);assert.equal(document.activeElement, backs);
           v.comps[0].checkBoxes.forEach(box => assert.equal(box.checked, true));
           backs.click();
           const listed = [...document.body.querySelectorAll('.rcpt-backs-list-label')].map(l => l.textContent);
           same(listed, ['Treasure (TFDN 12) × 2', 'Ooze (TM11 5) × 1']);
           assert(document.body.textContent.includes('Backs already recorded need no answer here.'));
           await confirm();
-          assert(backs.hidden);assert.equal(rcptClientBlockers(v).length, 0);
+          assert(backs.hidden);assert.equal(rcptClientBlockers(v).length, 0);assert.equal(document.activeElement, v.primary);
           assert.equal(confirmations, 3);
           assert.equal(v.primary.getAttribute('aria-disabled'), 'false');
           same(await previewBody(v), byHand);
@@ -112,8 +114,14 @@ class ReceiptBulkTests(unittest.TestCase):
           boxes[1].checked = false;boxes[1].fire('change');
           const yes = document.body.querySelector('[data-action=yes]');assert.equal(yes.textContent, 'Mark 1 back blank');
           boxes[0].checked = false;boxes[0].fire('change');
-          assert.equal(yes.getAttribute('aria-disabled'), 'true');yes.click();assert(document.body.querySelector('dialog'));
-          boxes[0].checked = true;boxes[0].fire('change');await confirm();
+          assert.equal(yes.getAttribute('aria-disabled'), 'true');
+          const reason = document.body.querySelector('.rcpt-backs-reason');
+          assert.equal(reason.textContent, 'Tick at least one card.');assert.equal(yes.getAttribute('aria-describedby'), reason.id);
+          // Clicking the inert primary keeps the sheet open and takes focus to the first box in the way.
+          yes.click();assert(document.body.querySelector('dialog'));assert.equal(document.activeElement, boxes[0]);
+          boxes[0].checked = true;boxes[0].fire('change');assert.equal(reason.textContent, '');await confirm();
+          // The Ooze still has an open back, so focus stays on the part's backs answer.
+          assert(!tokens.backsBlank.hidden);assert.equal(document.activeElement, tokens.backsBlank);
           same(tokens.rows.map(r => r.values.notes), ['single-sided verified', 'listed as Ooze Token (A)', '',
             'reverse face unconfirmed', 'pairing unknown']);
           const left = rcptClientBlockers(v).filter(b => b.comp === tokens);
