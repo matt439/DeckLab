@@ -145,14 +145,23 @@
 .reprint-copy input { max-width: 36em; width: 100%; }
 .shop-buying-slot { display: grid; gap: var(--s-6); min-width: 0; }
 .shop-buying-slot:empty { display: none; }
-.shop-missing-rows { display: grid; gap: var(--s-4); grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); }
-.shop-missing-card { min-width: 0; display: grid; align-content: start; gap: var(--s-2); }
-.shop-missing-card > .card-row { width: 100%; }
-.shop-missing-decks, .shop-missing-queue { margin: 0; padding-left: var(--s-5); }
-.shop-missing-decks a { display: inline-flex; align-items: center; min-height: var(--tap); }
-.shop-missing-queue p { margin: 0; }
-.shop-missing-queue li + li { margin-top: var(--s-2); }
+.shop-missing-rows { display: grid; gap: var(--s-3) var(--s-5); grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); }
+.shop-missing-card { min-width: 0; display: grid; align-content: start; gap: var(--s-1); padding-bottom: var(--s-3);
+  border-bottom: 1px solid var(--border); }
+.shop-missing-card > .card-row { width: 100%; border-bottom: 0; }
+/* The decks and facts sit under the name, past the thumbnail and count. */
+.shop-missing-card > :not(.card-row) { margin-left: calc(40px + var(--s-3)); }
+.shop-missing-decks { display: flex; flex-wrap: wrap; gap: 0 var(--s-1); margin: 0; padding: 0; list-style: none; font-size: var(--fs-sm); }
+.shop-missing-decks li:not(:last-child)::after { content: ","; color: var(--ink-2); }
+.shop-missing-count { color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.shop-missing-facts { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-1) var(--s-2); font-size: var(--fs-sm); }
+.shop-missing-facts:empty { display: none; }
+.shop-missing-facts .shop-snapshot { display: contents; }     /* its words, link and date flow beside the pill */
+.shop-missing-queue { margin: 0; padding: 0; list-style: none; display: grid; gap: var(--s-1); font-size: var(--fs-sm); color: var(--ink-2); }
+.shop-missing-queue li { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-1) var(--s-2); }
 .shop-missing-queue .shop-reference { text-align: left; }
+@media (pointer: coarse) { .shop-missing-decks a { display: inline-flex; align-items: center; min-height: var(--tap); } }
+@media (max-width: 599px) { .shop-missing-card > :not(.card-row) { margin-left: 0; } }
 .shop-match-slot:empty { display: none; }
 .shop-match-slot > .shop-clear-match { max-width: 100%; text-align: left; overflow-wrap: anywhere; }
 .shop-store-choices { display: grid; min-width: 0; margin: 0; padding: 0; border: 1px solid var(--border); border-radius: var(--r-panel);

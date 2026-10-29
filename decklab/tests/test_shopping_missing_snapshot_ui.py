@@ -40,8 +40,8 @@ class MissingSnapshotUiTests(unittest.TestCase):
         self.run_missing_js("""
           const packet=data(),before=JSON.stringify(packet);draw(packet);
           assert(article().textContent.includes('5 copies missing across 2 decks'));
-          assert(line().textContent.includes('Cheapest nonfoil in saved snapshot'));
-          assert(line().textContent.includes('MTGMate: A$0.25 each; 7 copies of this printing in stock when fetched.'));
+          assert(!line().textContent.includes('Cheapest nonfoil in saved snapshot'));
+          assert(line().textContent.includes('MTGMate A$0.25 each, 7 in stock'));
           assert(!line().textContent.includes('99'));assert(!line().textContent.includes('A$1.25'));
           assert(line().textContent.includes('FDN 100 nonfoil'));
           assert.equal(line().querySelector('a').getAttribute('href'),'https://www.mtgmate.com.au/cards/Alpha/FDN/100');
@@ -70,7 +70,9 @@ class MissingSnapshotUiTests(unittest.TestCase):
           const packet=data([missing({queue:[{...queued}]})],[queued]),before=JSON.stringify(packet);
           draw(packet);
           const intent=article().querySelector('.shop-missing-queue');
-          assert(intent.textContent.includes('9 queued'));assert(intent.textContent.includes('Exact: OLD 9 foil'));
+          assert(article().querySelector('.shop-missing-facts').textContent.includes('9 queued'));
+          assert(!article().textContent.includes('Not queued'));
+          assert(intent.textContent.includes('Waiting for stock'));assert(intent.textContent.includes('Exact: OLD 9 foil'));
           assert(intent.textContent.includes('Reference price A$40.00 at Recorded shop'));
           assert(intent.textContent.includes('Checked 2026-10-01'));assert(intent.textContent.includes('Out of stock when checked'));
           assert(line().textContent.includes('A$0.25 each'));assert(!line().textContent.includes('A$12.00'));
@@ -84,21 +86,24 @@ class MissingSnapshotUiTests(unittest.TestCase):
           const queued=row('Beta',{queue_row:1,quantity:8,shop_snapshot:snap({price_aud:'9.00'})});
           const item=missing({shop_snapshot:null,queue:[row('Alpha',{shop_snapshot:snap({price_aud:'4.00'})})]});
           draw(data([item],[queued]));
-          assert(article().textContent.includes('Not in the purchase queue.'));
+          assert(article().querySelector('.shop-missing-facts').textContent.includes('Not queued'));
+          assert.equal(article().querySelector('.shop-missing-queue'),null);
+          assert(!article().textContent.includes('8 queued'));
           assert.equal(line().getAttribute('data-shop-missing-snapshot'),'not_checked');
-          assert(line().textContent.includes('no saved nonfoil check for this card'));
+          assert(line().textContent.includes('MTGMate: not checked'));
           assert(!line().textContent.includes('A$'));assert.equal(line().querySelector('time'),null);noEffects();
         """)
 
     def test_out_of_stock_zero_and_one_physical_copy_have_distinct_fixed_words(self):
         self.run_missing_js("""
           draw(data([missing({shop_snapshot:snap({status:'out_of_stock',stock:0})})]));
-          assert(line().textContent.includes('nonfoil out of stock in the saved check (listed at A$0.25 each)'));
+          assert(line().textContent.includes('MTGMate A$0.25 each, out of stock'));
+          assert(!line().textContent.includes('0 in stock'));
           assert(!line().textContent.includes('Cheapest'));assert(!line().textContent.includes('99'));
           assert.equal(line().querySelectorAll('time').length,1);
           draw(data([missing({missing:0,shop_snapshot:snap({stock:1})})]));
           assert(article().textContent.includes('0 copies missing'));
-          assert(line().textContent.includes('1 copy of this printing in stock when fetched'));
+          assert(line().textContent.includes('MTGMate A$0.25 each, 1 in stock'));
           assert(!line().textContent.includes('1 copies'));noEffects();
         """)
 
@@ -106,12 +111,12 @@ class MissingSnapshotUiTests(unittest.TestCase):
         self.run_missing_js("""
           draw(data([missing({shop_snapshot:snap({status:'not_listed',price_aud:null,stock:null,
             set:null,collector_number:null,finish:null,url:null})})]));
-          assert(line().textContent.includes('no nonfoil printing listed in the saved check'));
+          assert(line().textContent.includes('MTGMate: no nonfoil listed'));
           assert(!line().textContent.includes('A$'));assert.equal(line().querySelector('a'),null);
           assert.equal(line().querySelector('time').getAttribute('datetime'),'2025-10-12T03:05:00+11:00');
           draw(data([missing({shop_snapshot:snap({status:'unknown',error:'SECRET private cache path',
             price_aud:'999.00',stock:888,back_in_stock:true,newly_in_stock:true})})]));
-          assert(line().textContent.includes('nonfoil price unknown in the saved snapshot'));
+          assert(line().textContent.includes('MTGMate: price unknown'));
           assert(!line().textContent.includes('A$'));assert(!line().textContent.includes('SECRET'));
           assert.equal(line().getAttribute('title'),null);
           assert(!line().querySelector('a'));assert(!line().textContent.includes('Back in stock'));
@@ -124,10 +129,10 @@ class MissingSnapshotUiTests(unittest.TestCase):
             draw(data([missing({shop_snapshot:value})]));
             assert.equal(line().getAttribute('data-shop-missing-snapshot'),'not_checked');
             assert.equal(line().querySelector('time'),null);assert(!line().textContent.includes('A$'));
-            assert(line().textContent.includes('no saved nonfoil check'));
+            assert(line().textContent.includes('MTGMate: not checked'));
           }
           assert(main.querySelector('#shop-missing-cards').closest('section').textContent
-            .includes('Saved shop checks cover only names already in the snapshot'));noEffects();
+            .includes('Shop checks are saved snapshots; check before ordering.'));noEffects();
         """)
 
     def test_malformed_price_or_stock_never_becomes_a_free_price_or_a_physical_quantity(self):
@@ -138,7 +143,8 @@ class MissingSnapshotUiTests(unittest.TestCase):
               {status:'in_stock',stock:0},{status:'out_of_stock',stock:7}]){
             draw(data([missing({shop_snapshot:snap(extra)})]));
             assert.equal(line().getAttribute('data-shop-missing-snapshot'),'unknown');
-            assert(!line().textContent.includes('A$'));assert(!line().textContent.includes('in stock when fetched'));
+            assert(!line().textContent.includes('A$'));assert(!line().textContent.includes('in stock'));
+            assert(line().textContent.includes('MTGMate: price unknown'));
             assert.equal(line().querySelector('time'),null);assert.equal(line().querySelector('a'),null);
           }
           noEffects();
@@ -237,7 +243,7 @@ class MissingSnapshotUiTests(unittest.TestCase):
         self.run_missing_js("""
           api=async path=>{reads.push(path);return data();};
           await route();same(reads,['/api/shopping']);same(writes,[['/api/visit',{route:'shopping'}]]);
-          assert(line().textContent.includes('Cheapest nonfoil in saved snapshot'));
+          assert(line().textContent.includes('MTGMate A$0.25 each, 7 in stock'));
           assert.equal(line().querySelectorAll('button').length,0);
           assert.equal(line().querySelectorAll('input').length,0);
         """)

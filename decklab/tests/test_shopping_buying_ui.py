@@ -39,6 +39,9 @@ class ShoppingBuyingInteractionTests(unittest.TestCase):
           const matchedQueue = () => canonicalQueue().filter(node => node.getAttribute('data-shop-match') === 'true');
           const missingArticle = name => main.querySelectorAll(".shop-missing-card")
             .find(article => article.getAttribute("data-missing-card") === name);
+          // The facts line leads with the queue state: a "Not queued" pill, or "N queued" copies in total.
+          const missingFacts = name => missingArticle(name).querySelector(".shop-missing-facts").textContent;
+          const notQueued = name => missingFacts(name).includes("Not queued");
           const editControl = n => main.querySelectorAll(".shop-queue-edit")
             .find(button => Number(button.dataset.queueRow) === n);
           const field = (sheet, name) => sheet.dialog.querySelector(`[data-queue-field=${name}]`);
@@ -55,7 +58,8 @@ class ShoppingBuyingInteractionTests(unittest.TestCase):
           assert.equal(rows.length, 1);
           assert(rows[0].textContent.includes("5 copies missing across 2 decks"));
           same(rows[0].querySelector(".shop-missing-decks").querySelectorAll("li").map(li => li.textContent),
-            ["Otters: 2", "Elves: 3"]);
+            ["Otters ×2", "Elves ×3"]);
+          same(rows[0].querySelectorAll(".shop-missing-count").map(node => node.textContent), [" ×2", " ×3"]);
           const links = rows[0].querySelectorAll("a");
           same(links.map(link => link.getAttribute("href")), [
             "#/deck?id=casual%2Fotters&v=target&tab=cards&filter=missing",
@@ -64,7 +68,7 @@ class ShoppingBuyingInteractionTests(unittest.TestCase):
           assert.equal(rows[0].querySelector(".card-row").querySelector("a"), null);
           rows[0].querySelector(".card-row").click();
           assert.equal(inspections.at(-1).card.name, "Alpha");
-          assert(section.textContent.includes("Shared collection copies may count for more than one deck"));
+          assert(section.textContent.includes("a shared copy can count for two decks"));
         """)
 
     def test_all_queue_categories_annotate_shortfalls_without_suggesting_duplicates(self):
@@ -77,12 +81,13 @@ class ShoppingBuyingInteractionTests(unittest.TestCase):
           assert.equal(intent.querySelectorAll("li").length, 5);
           for (const label of ["Ready to buy", "Waiting for stock", "Waiting for reprint", "Deferred", "Long-term plan"])
             assert(intent.textContent.includes(label));
-          assert(intent.textContent.includes("5 queued"));
+          for (let n = 1; n <= 5; n++) assert(intent.textContent.includes(`${n} queued`));
+          assert(missingFacts("Alpha").includes("15 queued"));
           assert(intent.textContent.includes("Exact: FDN 7 foil"));
           assert(intent.textContent.includes("Reference price A$0.50 at Card shop"));
           assert(intent.textContent.includes("Checked 2026-10-14"));
           assert(intent.textContent.includes("Out of stock when checked"));
-          assert(!article.textContent.includes("Not in the purchase queue"));
+          assert(!notQueued("Alpha"));
           assert.equal(article.querySelectorAll("button").length, 0);
           assert.equal(article.querySelector("img"), null);
         """)
@@ -92,14 +97,15 @@ class ShoppingBuyingInteractionTests(unittest.TestCase):
           const token = row("Goblin", {queue_row: 1, is_token: true, quantity: 8, listed_at: "Store"});
           const historical = row("GOBLIN", {quantity: 2});
           const view = drawShopping(shoppingData([token], [missingRow("Goblin", {queue: [historical]})]));
-          assert(missingArticle("Goblin").textContent.includes("Not in the purchase queue"));
+          assert(notQueued("Goblin"));
           assert.equal(missingArticle("Goblin").querySelector(".shop-missing-queue"), null);
           view.data.to_buy.push(row("goblin", {queue_row: 2, quantity: 3, listed_at: "Store"}));
           view.redraw();
           const intent = missingArticle("Goblin").querySelector(".shop-missing-queue");
           assert.equal(intent.querySelectorAll("li").length, 1);
-          assert(intent.textContent.includes("3 queued"));
-          assert(!intent.textContent.includes("8 queued"));
+          assert(missingFacts("Goblin").includes("3 queued"));
+          assert(!missingArticle("Goblin").textContent.includes("8 queued"));
+          assert(!notQueued("Goblin"));
           assert.equal(canonicalQueue().length, 2);
         """)
 
@@ -244,12 +250,12 @@ class ShoppingBuyingInteractionTests(unittest.TestCase):
           apiWrite = async (path, body) => {writes.push([path, body]); return {revision: "q2",
             item: row("Alpha", {...body.values})};};
           const view = drawShopping(shoppingData([], [missingRow("Alpha")]));
-          assert(missingArticle("Alpha").textContent.includes("Not in the purchase queue"));
+          assert(notQueued("Alpha"));
           const sheet = shopQueueSheet(view);
           field(sheet, "name").value = "Alpha"; field(sheet, "quantity").value = "3";
           sheetButton(sheet, "Add card").click(); await null; await null;
           assert(missingArticle("Alpha").textContent.includes("3 queued"));
-          assert(!missingArticle("Alpha").textContent.includes("Not in the purchase queue"));
+          assert(!notQueued("Alpha"));
           assert.equal(view.data.missing_cards.rows[0].queue.length, 0);
           assert.equal(view.data.to_buy[0].queue_row, 1);
           assert.equal(view.data.queue_revision, "q2");
@@ -296,7 +302,7 @@ class ShoppingBuyingInteractionTests(unittest.TestCase):
           assert.equal(queued.is_token, true);
           assert.equal(queued.notes, "Keep this paired token printing");
           assert.equal(view.data.queue_revision, "q2");
-          assert(missingArticle("Goblin").textContent.includes("Not in the purchase queue"));
+          assert(notQueued("Goblin"));
           assert.equal(missingArticle("Goblin").querySelector(".shop-missing-queue"), null);
           assert.equal(canonicalQueue().length, 1);
         """)
@@ -313,7 +319,7 @@ class ShoppingBuyingInteractionTests(unittest.TestCase):
             return {revision: "q2", item};
           };
           const view = drawShopping(shoppingData([queued], [missingRow("Goblin")]));
-          assert(missingArticle("Goblin").textContent.includes("Not in the purchase queue"));
+          assert(notQueued("Goblin"));
           const sheet = shopQueueSheet(view, queued);
           const saved = await shopSaveQueue(view, sheet, sheet.queueError, {action: "edit", row: 1,
             values: {set: "fdn", collector_number: "124", finish: "nonfoil", quantity: 3}}, queued);
@@ -322,7 +328,7 @@ class ShoppingBuyingInteractionTests(unittest.TestCase):
           assert.equal(queued.set, "fdn");
           assert.equal(queued.collector_number, "124");
           assert(missingArticle("Goblin").textContent.includes("3 queued"));
-          assert(!missingArticle("Goblin").textContent.includes("Not in the purchase queue"));
+          assert(!notQueued("Goblin"));
           assert.equal(view.data.queue_revision, "q2");
           assert.equal(writes[0].expect, "q1");
           canonicalRow("Goblin").querySelector(".card-row").click();
@@ -373,7 +379,7 @@ class ShoppingBuyingInteractionTests(unittest.TestCase):
           const parent = shopQueueSheet(view, first), sheet = shopRemoveQueueSheet(view, first, parent);
           field(sheet, "reason").value = "Changed plan";
           sheetButton(sheet, "Remove card").click(); await null; await null; await null;
-          assert(missingArticle("Alpha").textContent.includes("Not in the purchase queue"));
+          assert(notQueued("Alpha"));
           assert(!missingArticle("Alpha").textContent.includes("3 queued"));
           assert.equal(selectedShop(), "all");
           assert(!shopSectionNode().textContent.includes("Only alpha"));

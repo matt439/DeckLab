@@ -112,19 +112,29 @@ function shopMissingSnapshotUrl(value) {
 }
 
 /** Saved unit evidence only: no queue intent, stock-printing count, freshness inference or raw errors. */
-function shopMissingSnapshotLine(item) {
+function shopMissingSnapshotLine(item, {short = false} = {}) {
   const snap = shopMissingSnapshotFacts(item);
   const stocked = snap.status === "in_stock", listed = stocked || snap.status === "out_of_stock";
-  const words = stocked ? `MTGMate: ${aud(snap.price)} each; ${plural(snap.stock, "copy", "copies")} of this printing in stock when fetched.`
+  // short: Shopping's missing-card rows, where the line repeats down the page; the link and date keep the detail.
+  const words = short ? (stocked ? `MTGMate ${aud(snap.price)} each, ${snap.stock} in stock`
+    : snap.status === "out_of_stock" ? `MTGMate ${aud(snap.price)} each, out of stock`
+    : snap.status === "not_listed" ? "MTGMate: no nonfoil listed"
+    : snap.status === "unknown" ? "MTGMate: price unknown"
+    : "MTGMate: not checked")
+    : stocked ? `MTGMate: ${aud(snap.price)} each; ${plural(snap.stock, "copy", "copies")} of this printing in stock when fetched.`
     : snap.status === "out_of_stock" ? `MTGMate: nonfoil out of stock in the saved check (listed at ${aud(snap.price)} each).`
     : snap.status === "not_listed" ? "MTGMate: no nonfoil printing listed in the saved check."
     : snap.status === "unknown" ? "MTGMate: nonfoil price unknown in the saved snapshot."
     : "MTGMate: no saved nonfoil check for this card.";
   const when = snap.fetched_at ? shopSnapshotWhen(snap.fetched_at) : null;
-  if (when) when.textContent = `fetched ${new Date(snap.fetched_at).toLocaleString("en-AU",
-    {day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit"})}`;
+  // Short lines keep the year whenever it isn't this one, so an old check never reads as current.
+  const fetched = snap.fetched_at ? new Date(snap.fetched_at) : null;
+  if (when) when.textContent = `fetched ${fetched.toLocaleString("en-AU", !short
+    ? {day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit"}
+    : fetched.getFullYear() === new Date().getFullYear() ? {day: "numeric", month: "short"}
+      : {day: "numeric", month: "short", year: "numeric"})}`;
   return el("div", {class: "shop-snapshot shop-missing-snapshot", "data-shop-missing-snapshot": snap.status},
-    stocked ? el("strong", {text: "Cheapest nonfoil in saved snapshot"}) : null,
+    stocked && !short ? el("strong", {text: "Cheapest nonfoil in saved snapshot"}) : null,
     el("span", {text: words}), listed ? el("small", {}, shopSnapshotLink(snap, `${snap.set.toUpperCase()} ${snap.collector_number} nonfoil`)) : null,
     when);
 }

@@ -24,17 +24,23 @@ function shopMissingCard(item, queue) {
   const row = cardRow(item.card || null, {name: item.name, qty: item.missing, aside: null,
     meta: `${plural(item.missing, "copy", "copies")} missing across ${plural((item.decks || []).length, "deck")}`,
     unknownMeta: "Missing from Planned lists", viewerGroup: "shopping-missing"});
+  // One wrapping line of decks, not a bulleted list: a count only where a deck needs more than one.
   const wants = el("ul", {class: "shop-missing-decks"}, (item.decks || []).map(deck => el("li", {},
     el("a", {href: `${deckHref(deck.id)}&tab=cards&filter=missing`, text: deck.title}),
-    `: ${deck.missing}`)));
+    deck.missing > 1 ? el("span", {class: "shop-missing-count", text: ` ×${deck.missing}`}) : null)));
+  // The queue's state leads the facts line; each queued row's details follow, one small line each.
+  const queuedCopies = queued.reduce((sum, entry) => sum + (Number(entry.quantity) || 0), 0);
+  const facts = el("div", {class: "shop-missing-facts"},
+    queued.length ? status("info", `${queuedCopies} queued`) : status("outline", "Not queued"),
+    shopMissingSnapshotLine(item, {short: true}));
   const intent = queued.length ? el("ul", {class: "shop-missing-queue"}, queued.map(entry => el("li", {},
-    el("p", {text: `${entry.quantity} queued · ${SHOPPING_STATES[entry.state] || entry.state || "State not recorded"}`}),
-    el("p", {class: "sub", text: [entry.deck?.title || entry.for, shopPrinting(entry)].filter(Boolean).join(" · ")}),
+    el("span", {text: [queued.length > 1 ? `${entry.quantity} queued` : null, SHOPPING_STATES[entry.state] || entry.state || "State not recorded",
+      entry.deck?.title || entry.for, shopPrinting(entry)].filter(Boolean).join(" · ")}),
     shopReference(entry),
-    entry.in_stock === "no" ? el("p", {class: "sub", text: "Out of stock when checked"}) : null)))
-    : el("p", {class: "sub", text: "Not in the purchase queue."});
+    entry.in_stock === "no" ? status("warn", "Out of stock when checked") : null)))
+    : null;
   return el("article", {class: "shop-missing-card", "data-missing-card": item.name}, row, wants,
-    reprintInfo(item), shopMissingSnapshotLine(item), intent);
+    facts, intent, reprintInfo(item));
 }
 
 /** A failed count remains visible alongside any successfully counted decks. */
@@ -56,8 +62,7 @@ function shopMissingCards(view) {
   if (rows.length) content.append(el("div", {class: "shop-missing-rows"},
     rows.map(item => shopMissingCard(item, view.data.to_buy || []))));
   return shopSection("shop-missing-cards", "Missing cards across decks", rows.length,
-    "These totals add each Planned home deck's separate shortfall. Shared collection copies may count for more than one deck. Queue rows record purchase decisions separately. " +
-    "Saved shop checks cover only names already in the snapshot; check the shop before ordering.", content);
+    "Each Planned home deck's shortfall, added up: a shared copy can count for two decks. Shop checks are saved snapshots; check before ordering.", content);
 }
 
 /** Group copies of the current queue without changing saved state, order or row identifiers. */
