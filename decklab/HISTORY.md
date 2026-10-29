@@ -2,6 +2,16 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Experiment checks closed (2026-10-29; E11-S16)
+
+Matt closed E11-S16 as built after the TODO audit found every criterion already met: `forge experiment
+spec.json --dry-run` prints the games and the time they would take (with the remaining-time and explicit
+local-worker estimates of 2026-10-28), each finished arm's report says adopt, don't adopt or more games
+(`experiment_analysis.recommend`), and `replay --dry-run` lists what a re-keyed override set needs replayed.
+No code changed. Not taken further: timing for other configuration combinations, a read-only `overrides
+impact` preview and adopting a set without hand-editing `overrides/sets.json` or `simulation.json`; any of
+them returns as a new story if wanted.
+
 ## Dark Matchups with saved results (2026-10-29; E11-S30 slice 15)
 
 The last of slice 15's dark checks. A throwaway Deck Lab ran on the test Sandbox (a temp folder and

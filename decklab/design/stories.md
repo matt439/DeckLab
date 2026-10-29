@@ -45,10 +45,10 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 19 | 16 | 0 | 1 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 22 | 15 | 1 | 5 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 35 | 31 | 1 | 1 | 2 |
-| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 41 | 28 | 7 | 3 | 3 |
-| **Total** | **270** | **212** | **17** | **27** | **14** |
+| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 41 | 29 | 6 | 3 | 3 |
+| **Total** | **270** | **213** | **16** | **27** | **14** |
 
-Counted from the story headers on 2026-10-29 after the source-aware two-player and pod counters, alongside the current feature and maintenance work. The reviews added five feature stories and eight hygiene stories, then the fixture-only entry-point story E11-S44, and corrected E1-S12 from missing to partial. Rechecked 2026-10-29: E1-S12 is built and E11-S39 partial (its database qualification pending). The TODO audit of 2026-10-29 added fifteen missing stories (twelve from the audit: E1-S27, E1-S28, E2-S27, E3-S25, E3-S26, E5-S25, E6-S25, E6-S26, E9-S26, E9-S27, E11-S45, E11-S46), then Matt's three UI requests (E3-S27, E5-S26, E6-S27), and corrected E7-S32 from missing to partial (its recognition spike and CLI are built).
+Counted from the story headers on 2026-10-29 after the source-aware two-player and pod counters, alongside the current feature and maintenance work. The reviews added five feature stories and eight hygiene stories, then the fixture-only entry-point story E11-S44, and corrected E1-S12 from missing to partial. Rechecked 2026-10-29: E1-S12 is built and E11-S39 partial (its database qualification pending). The TODO audit of 2026-10-29 added fifteen missing stories (twelve from the audit: E1-S27, E1-S28, E2-S27, E3-S25, E3-S26, E5-S25, E6-S25, E6-S26, E9-S26, E9-S27, E11-S45, E11-S46), then Matt's three UI requests (E3-S27, E5-S26, E6-S27), and corrected E7-S32 from missing to partial (its recognition spike and CLI are built). Matt closed E11-S16 as built the same day.
 
 ---
 
@@ -4033,7 +4033,7 @@ Evidence:
 
 Keeping Deck Lab running, safe and believable, by Matt as the household's admin and by Claude Code working for him at the PC. It covers the server and its Cloudflare tunnel and "Deck Lab is off" page, the PostgreSQL database with its nightly backup, export, check and restore check, the audit trail on #/activity, the `python -m decklab.db` commands Claude works through (previews, `--expect` guards, `-m` messages, exit codes), the card data's background refresh, Forge upkeep and the Safari Simulator suite. Every write is one audited change set, Matt's own command-line writes are recorded as his, and backups are checked by restoring them.
 
-Open: E11-S02, E11-S08, E11-S12, E11-S16, E11-S28, E11-S30, E11-S31, E11-S39, E11-S45, E11-S46.
+Open: E11-S02, E11-S08, E11-S12, E11-S28, E11-S30, E11-S31, E11-S39, E11-S45, E11-S46.
 
 **E11-S01** · Matt · must · M · built
 
@@ -4307,7 +4307,7 @@ Evidence:
 - `decklab/tests/test_forge_upgrade_check.py`; `decklab/tests/test_forge_cardlog_check.py`: test_cardlog_check_notes_when_the_engine_plays_other_games_than_plain_forge; `decklab/tests/test_forge_simjar.py`: test_a_failed_check_turns_a_checked_version_off; `decklab/tests/test_web_matchup_files.py`: test_card_log_on_or_off_is_said
 - `decklab/README.md`, "Deck Lab's own Forge" (Moving to a new Forge release)
 
-**E11-S16** · Matt · could · L · partial
+**E11-S16** · Matt · could · L · built
 
 As Matt, the household admin, I want to adopt AI fixes (card-script overrides, pilots) and run experiments with clear checks, so that Forge's verdicts get more trustworthy over time without breaking results.
 
@@ -4328,15 +4328,11 @@ Further slice (2026-10-28): explicit `--dry-run --local` intent reaches the esti
 
 Qualification: root's protected eight-module group passed 150 tests without skips, including 33 new pure/adapter/CLI cases. Existing read-only sentinels retain original result-read counts and reject runtime/write/child paths. Independent review, Ruff, source lengths and whitespace pass. Actual Forge and runtime acceptance remain unrun. See [HISTORY.md](../HISTORY.md#explicit-local-worker-experiment-estimates-2026-10-28-e11-s16-slice).
 
-Gap: other configuration combinations still lack supported timing assumptions; adopting still means editing `overrides/sets.json` or `simulation.json` by hand. Real experiment/Forge qualification remains separately gated.
+Closed (Matt, 2026-10-29): every criterion holds in the code (experiment `--dry-run` with games and time, each arm's adopt / don't adopt / more games, `replay --dry-run` after a re-key). Left out on closing: timing for other configuration combinations, an `overrides impact` preview and adoption without hand-editing `overrides/sets.json` or `simulation.json`; any of them comes back as a new story. Real experiment/Forge qualification stays separately gated. See [HISTORY.md](../HISTORY.md#experiment-checks-closed-2026-10-29-e11-s16).
 
 Prerequisite built 2026-10-28 ([HISTORY.md](../HISTORY.md#read-only-experiment-planning-2026-10-28-e11-s16-prerequisite)): dry-run planning opts into explicit-kind read-only engine identity and layout. It preserves fork/control-key semantics without deployment, persistence or creating run folders, and refuses unconfirmed identity before cached-result reads. Normal run/measures defaults and the no-argument rankings reader remain unchanged. Root's protected 133-case integration passed without skips, including 19 new fixtures; source checks and independent review pass. Existing arm-folder/spec compatibility and real-run readiness remain separate. The estimate slice above uses this boundary.
 
-Next slice: adoption/replay-impact controls, or another explicit configuration knob only when its performance assumptions can be justified; leave other combinations unknown and preserve the read-only boundary and complete-total rule. Actual adoption and experiments retain the existing activation/run gates. No real settings, saved arm folders or games need changing to test these source paths.
-
 Source feasibility note (2026-10-28): a `forge_workers=N` arm sets a per-ticket cap; server pool budgets, global slots, available chunks and concurrent pair jobs determine actual activity. Explicit local planning intent now permits a format fallback assuming requested local workers before caps/contention, with that limitation stated; it never proves effective capacity or rescales historical aggregate v2 throughput. Per-job estimates remain a serial budget; overlapping pair jobs can reduce elapsed time. See `experiment._play_knob_arm`/`_play_group`, `pool_service._service_job`, `pool_models.Ticket` and `slots._limited`. This source review performed no probes or games.
-
-Review note: holds two needs (adopting fixes, running experiments) and overlaps E3-S20; adoption without hand edits could be its own story.
 
 **E11-S17** · Matt · wont · M · not_wanted
 

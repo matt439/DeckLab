@@ -6,7 +6,7 @@ Story ids (such as E7-S09) are those in [stories.md](stories.md). Each story the
 
 ## Headline
 
-Deck Lab already does most of what Matt and User1 need. Of the must and should stories, Matt has 96 built, 3 partial and 7 missing; User1 has 32 built, 1 partial and 2 missing; Claude Code has 23 built and 2 missing; User5 has 4 built, the space members 4 and the Commander table 1, with no gaps for those last three. Across all 270 stories there are 212 built, 17 partial, 27 missing and 14 not wanted (recounted from current story headers on 2026-10-29 after the TODO audit added fifteen stories, ten of them should-priority, including Matt's three UI requests). The five new feature stories are could-priority work; seven of the eight maintenance stories are should and one is could.
+Deck Lab already does most of what Matt and User1 need. Of the must and should stories, Matt has 96 built, 3 partial and 7 missing; User1 has 32 built, 1 partial and 2 missing; Claude Code has 23 built and 2 missing; User5 has 4 built, the space members 4 and the Commander table 1, with no gaps for those last three. Across all 270 stories there are 213 built, 16 partial, 27 missing and 14 not wanted (recounted from current story headers on 2026-10-29 after the TODO audit added fifteen stories and E11-S16 closed, ten of them should-priority, including Matt's three UI requests). The five new feature stories are could-priority work; seven of the eight maintenance stories are should and one is could.
 
 Matt's answers moved the work towards three things:
 
