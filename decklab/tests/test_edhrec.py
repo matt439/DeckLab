@@ -229,9 +229,9 @@ def edhrec_real_get(slug):
         return _REAL_GET(slug)
 
 
-class IdeasTests(EditorTestCase):
-    """ideas() and GET /api/deck/edhrec in the editor's sandbox: commander/elf-commander (Ghalta, with
-    Llanowar Elves and Sol Ring), whose collection has Llanowar Elves, Elvish Mystic and Black Lotus."""
+class IdeasCase(EditorTestCase):
+    """The editor's sandbox with EDHREC faked: commander/elf-commander (Ghalta, with Llanowar Elves and
+    Sol Ring), whose collection has Llanowar Elves, Elvish Mystic and Black Lotus."""
 
     def setUp(self):
         super().setUp()
@@ -244,6 +244,10 @@ class IdeasTests(EditorTestCase):
 
     def cards(self, answer):
         return {c["name"]: c for g in answer["groups"] for c in g["cards"]}
+
+
+class IdeasTests(IdeasCase):
+    """ideas() and GET /api/deck/edhrec for the saved deck's commander."""
 
     def test_cards_are_marked_for_the_decks_space(self):
         p = pool.load_pool()
@@ -340,8 +344,71 @@ class IdeasTests(EditorTestCase):
 
     def test_the_route_is_registered(self):
         from decklab.lib import feature_routes
-        self.assertIn('("deck", "edhrec"): (edhrec.edhrec_view, ("id",))',
+        self.assertIn('("deck", "edhrec"): (edhrec.edhrec_view, ("id", "commander", "commander2"))',
                       Path(feature_routes.__file__).read_text(encoding="utf-8"))
+
+
+class DraftCommanderTests(IdeasCase):
+    """GET /api/deck/edhrec with the editor's draft commander(s): the ideas are theirs (EDHREC's page and
+    the colour identity) while the deck, its marks and who sees them stay the saved deck's."""
+
+    PAIR = ("Ghalta, Primal Hunger", "Bushi Tenderfoot // Kenzo the Hardhearted")
+
+    def matt(self):
+        from decklab.lib.api.settings import _config_profiles
+        return next(p for p in _config_profiles() if p["id"] == "matt")
+
+    def test_a_draft_pair_gets_its_own_page_and_identity(self):
+        with mock.patch("decklab.lib.api.guard.viewer", return_value=self.matt()):
+            answer = edhrec_api.edhrec_view("commander/elf-commander", *self.PAIR)
+        self.assertEqual((answer["commanders"], answer["identity"]), (list(self.PAIR), "WG"))
+        self.assertEqual(self.get.call_args.args, ("bushi-tenderfoot-ghalta-primal-hunger",))
+        got = self.cards(answer)
+        self.assertIn("Wrath of God", got)                  # white is in the pair's identity
+        self.assertNotIn("Ghalta, Primal Hunger", got)      # a commander is never its own idea
+        self.assertEqual(got["Llanowar Elves"]["status"], "in_deck")    # marks: the saved deck's
+        self.assertEqual(answer["sha256"], self.sha("commander/elf-commander"))
+        self.assertTrue(answer["marks"] and answer["may_add"])
+        self.assertNotIn("Wrath of God", {c["name"] for c in answer["left_out"]})
+
+    def test_a_changed_commander_leaves_out_what_its_colours_cant_play(self):
+        answer = edhrec_api.edhrec_view("commander/elf-commander", "abaddon the despoiler")
+        self.assertEqual((answer["commanders"], answer["identity"]), (["Abaddon the Despoiler"], "UBR"))
+        self.assertEqual(self.get.call_args.args, ("abaddon-the-despoiler",))
+        got = self.cards(answer)
+        self.assertEqual(set(got), {"Sol Ring"})
+        why = {c["name"]: c["why"] for c in answer["left_out"]}
+        self.assertEqual(why["Ghalta, Primal Hunger"], "outside the commander's colour identity")
+        self.assertEqual(why["Llanowar Elves"], "outside the commander's colour identity")
+        # The same commander twice is asked once; the saved commander given outright is the saved answer.
+        twice = edhrec_api.edhrec_view("commander/elf-commander", "Abaddon the Despoiler", "Abaddon the Despoiler")
+        self.assertEqual(twice["commanders"], ["Abaddon the Despoiler"])
+        saved = edhrec_api.edhrec_view("commander/elf-commander", "Ghalta, Primal Hunger")
+        self.assertEqual(saved["groups"], edhrec_api.edhrec_view("commander/elf-commander")["groups"])
+
+    def test_a_draft_commander_shows_no_marks_without_the_inventory(self):
+        with mock.patch("decklab.lib.api.guard.sees_inventory", return_value=False):
+            hidden = edhrec_api.edhrec_view("commander/elf-commander", *self.PAIR)
+        self.assertFalse(hidden["marks"] or hidden["may_add"])
+        self.assertIsNone(hidden["rate"])
+        for c in self.cards(hidden).values():
+            self.assertFalse({"status", "free", "on_the_way", "aud_each", "priced_printing"} & set(c), c)
+
+    def test_draft_commander_refusals(self):
+        # A hidden deck is the missing deck's 404 before its commander is even read.
+        with mock.patch("decklab.lib.api.guard.sees_deck", return_value=False):
+            self.assertApiError(404, edhrec_api.edhrec_view, "commander/elf-commander", "Not A Real Card")
+        self.assertApiError(400, edhrec_api.edhrec_view, "casual/gruul-test", "Ghalta, Primal Hunger",
+                            contains="Commander decks")
+        self.assertApiError(400, edhrec_api.edhrec_view, "commander/elf-commander", "Not A Real Card",
+                            contains="isn't a card Deck Lab knows")
+        self.assertApiError(400, edhrec_api.edhrec_view, "commander/elf-commander", None, "Ghalta, Primal Hunger",
+                            contains="commander2 needs commander")
+        for bad in ("Ghalta\nPrimal", "x" * 201, "   "):
+            with self.subTest(bad=bad[:12]):
+                self.assertApiError(400, edhrec_api.edhrec_view, "commander/elf-commander", bad,
+                                    contains="1-200 characters")
+        self.get.assert_not_called()
 
 
 if __name__ == "__main__":

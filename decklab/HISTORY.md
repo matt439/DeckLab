@@ -472,6 +472,27 @@ Sandbox's fake Forge in place, `variant_buying`, `rankings` and `field` import f
 doesn't have, so a Sandbox server answers those routes with a 500 unless the API modules are imported
 first.
 
+## EDHREC ideas for the editor's draft commander (2026-10-29; E9-S07)
+
+GET `/api/deck/edhrec` takes `commander` and `commander2`, the editor's draft commander(s)
+(`api/edhrec.py` `_draft_commanders`, `lib/edhrec.ideas(commanders=)`). Each is checked against the card
+index (resolved to its exact name; blank, over 200 characters, control characters or an unknown card is a
+400, and `commander2` without `commander` too); a name given twice is asked once. The ideas are then those
+commanders': their EDHREC page (both orders for a pair, as before) and colour identity, with the commanders
+themselves left out. Everything else is still the saved deck's: the hidden deck's 404 and the non-Commander
+400 come first, the marks (in the deck, free, in use, to buy) count its saved Planned list and show only to a
+viewer who sees its space's inventory, and `sha256` and `may_add` are as before. The deck page's sheet sends
+neither and is unchanged. The editor (`web/editor-edhrec.js`) now sends its Commander section's one or two
+cards, keyed with the deck revision, profile, route and list, so a changed or not yet saved commander shows
+its own ideas with no save, and changing it asks again (after a refusal too, and while the old commander's
+answer is still on its way, which is then ignored). A draft with no commander, or
+more than two, asks nothing and says why. Tests: `test_edhrec.py` DraftCommanderTests (4), and
+`test_editor_edhrec_ui.py`'s draft-commander scenario replacing the save-first one, and its late-answer
+scenario's changed commander. Known low issues: a
+never-saved deck still has no ideas; with a draft commander, "in the deck" and free copies count the saved
+list, not the draft (the editor leaves out the draft's own cards itself); checked with fixtures, not in a
+browser or against live EDHREC.
+
 ## EDHREC ideas in the editor's Add panel (2026-10-29; E9-S07)
 
 A saved Commander deck's editor has an **EDHREC ideas** tick beside the Add panel's search scopes

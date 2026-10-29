@@ -1,8 +1,8 @@
 """A Commander deck's EDHREC ideas in the editor's Add panel (E9-S07, editor-edhrec.js) under Node: the scope is
 offered only to a saved Commander deck and asks nothing until it's ticked; the ideas come in EDHREC's order
 without the draft's cards, with the fetched date, and marked only when the server sent marks; a result adds
-to the draft's chosen section with no write; the draft's commander must be the saved one; a late answer for
-an old scope or revision is ignored; and a failure is said in EDHREC's words while the search goes on working.
+to the draft's chosen section with no write; they're asked for the draft's commander(s), so a changed one
+needs no save; a late answer for an old scope, revision or commander is ignored; and a failure is said in EDHREC's words while the search goes on working.
 
 Runs the real page scripts in tests/fixtures/workspace_ui_runner.js with invented cards; nothing is sent to a
 server and EDHREC is never asked.
@@ -89,7 +89,7 @@ class EditorEdhrecUiTests(unittest.TestCase):
           const ac = commanderEditor();
           tick(ac); await settle();
           assert.equal(edhrecAsks(), 1);
-          assert(asked[0].endsWith('id=commander%2Ftest'));
+          assert(asked[0].endsWith('id=commander%2Ftest&commander=Ghalta%2C%20Primal%20Hunger'), asked[0]);
           same(names(ac), ['Elvish Mystic', 'Pick Your Poison', 'Bojuka Bog'],
             'EDHREC order, a card in two categories once, the draft\'s Llanowar Elves left out');
           const note = ac.note.textContent;
@@ -163,28 +163,50 @@ class EditorEdhrecUiTests(unittest.TestCase):
           assert(!ac.note.textContent.includes('1 USD'));
         """)
 
-    def test_the_draft_commander_must_be_the_saved_one(self):
+    def test_ideas_follow_the_draft_commander_without_a_save(self):
         self.run_js(r"""
-          let ac = commanderEditor({}, {Commander: [{uid: 'c2', name: 'Omnath, Locus of Mana', qty: 1}], Deck: []});
+          const edhrecPaths = () => asked.filter((path) => path.startsWith('/api/deck/edhrec'));
+          const omnath = {uid: 'c2', name: 'Omnath, Locus of Mana', qty: 1};
+          let ac = commanderEditor({}, {Commander: [{...omnath}], Deck: []});
           tick(ac); await settle();
-          assert.equal(ac.items.length, 0);
-          const text = ac.list.textContent;
-          assert(text.includes("These ideas follow the saved deck's commander, Ghalta, Primal Hunger."), text);
-          assert(text.includes('Save the deck to see ideas for Omnath, Locus of Mana.'), text);
-          // The commander changing in the draft while ideas show looks again.
+          assert(edhrecPaths()[0].endsWith('&commander=Omnath%2C%20Locus%20of%20Mana'), edhrecPaths()[0]);
+          assert.equal(ac.items.length, 4, 'the changed commander ideas show with no save (its empty Deck has no Llanowar Elves)');
+          assert(!ac.list.textContent.includes('Save the deck'), ac.list.textContent);
+          // The commander changing in the draft while ideas show asks again, for the new one.
           ac = commanderEditor();
           tick(ac); await settle();
           assert.equal(ac.items.length, 3);
+          const before = edhrecAsks();
           editor.lists.Commander = [];
           syncEditorSearchQuantities(ac); await settle();
           assert.equal(ac.items.length, 0);
-          assert(ac.list.textContent.includes('this draft has none'), ac.list.textContent);
+          assert(ac.list.textContent.includes('Put a commander in the Commander section'), ac.list.textContent);
+          assert.equal(edhrecAsks(), before, 'no commander: nothing asked');
+          editor.lists.Commander = [{...ghalta}, {uid: 'c3', name: 'Tymna the Weaver', qty: 1}];
+          syncEditorSearchQuantities(ac); await settle();
+          const pair = edhrecPaths().at(-1);
+          assert(pair.includes('&commander=Ghalta%2C%20Primal%20Hunger&commander2=Tymna%20the%20Weaver'), pair);
+          assert.equal(ac.items.length, 3);
+          editor.lists.Commander.push({uid: 'c4', name: 'Thrasios, Triton Hero', qty: 1});
+          syncEditorSearchQuantities(ac); await settle();
+          assert(ac.list.textContent.includes('one commander or a pair'), ac.list.textContent);
+          assert.equal(edhrecPaths().at(-1), pair, 'three commanders: nothing asked');
+          // A commander the server refuses says so; putting another in asks again.
+          answer = new ApiError(400, "Not A Card isn't a card Deck Lab knows, so EDHREC has no ideas for it.");
+          editor.lists.Commander = [{uid: 'c5', name: 'Not A Card', qty: 1}];
+          syncEditorSearchQuantities(ac); await settle();
+          assert(ac.list.textContent.includes("Not A Card isn't a card Deck Lab knows"), ac.list.textContent);
+          assert(!ac.list.querySelectorAll('button').some((b) => b.textContent === 'Try again'));
+          answer = ANSWER();
+          const asks = edhrecAsks();
           editor.lists.Commander = [{...ghalta}];
           syncEditorSearchQuantities(ac); await settle();
-          assert.equal(ac.items.length, 3);
+          assert.equal(ac.items.length, 3, 'Ghalta is asked again and its ideas show');
+          assert.equal(edhrecAsks(), asks + 1, 'only the last request is kept, so Ghalta is asked once more');
+          assert.equal(writes.length, 0);
         """)
 
-    def test_a_late_answer_for_an_old_scope_or_revision_is_ignored(self):
+    def test_a_late_answer_for_an_old_scope_revision_or_commander_is_ignored(self):
         self.run_js(r"""
           let ac = commanderEditor();
           hold = deferred();
@@ -212,6 +234,21 @@ class EditorEdhrecUiTests(unittest.TestCase):
           late.resolve(ANSWER()); await settle();
           assert.equal(old.items.length, 0);
           assert.equal(fresh.items.length, 0);
+          // The draft's commander changing before the answer: the old commander's ideas never show,
+          // and the new commander is asked for.
+          ac = commanderEditor();
+          hold = deferred();
+          tick(ac); await settle();
+          const ghaltas = hold; hold = null;
+          const asks = edhrecAsks();
+          answer = ANSWER(true, ['Omnath, Locus of Mana']);
+          answer.groups = [{header: 'Top Cards', cards: [idea('Omnath Idea', 50)]}];
+          editor.lists.Commander = [{uid: 'c2', name: 'Omnath, Locus of Mana', qty: 1}];
+          syncEditorSearchQuantities(ac); await settle();
+          assert.equal(edhrecAsks(), asks + 1, 'the new commander is asked for');
+          assert(asked.at(-1).endsWith('&commander=Omnath%2C%20Locus%20of%20Mana'), asked.at(-1));
+          ghaltas.resolve(ANSWER()); await settle();
+          same(names(ac), ['Omnath Idea'], 'the late answer for Ghalta is not shown');
         """)
 
     def test_a_failure_is_said_in_edhrecs_words_and_the_search_still_works(self):

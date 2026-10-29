@@ -63,7 +63,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 
 | id | status | pri | size | item |
 |---|---|---|---|---|
-| `E9-S07` | OPEN | could | L | Ideas built on the deck page and the editor (saved commander); next `GET /api/deck/edhrec` takes the draft's commander(s) so the editor stops saying save first; later theme/budget/bracket pages. |
+| `E9-S07` | OPEN | could | L | Ideas built on the deck page and the editor (following the draft's commander); left: ideas for a never-saved deck, and EDHREC's theme/budget/bracket pages. |
 | `E9-S26` | OPEN | could | M | Stats roles (built) gain free pool cards in the commander's colours for each role, inventory-gated, from oracle tags. Cited role targets wait on Matt choosing a template source. |
 | `E9-S11` | DEFERRED | could | L+pc | Four-player pod runs from the page (with `E9-S21` win shares and `E9-S22` why-not by Start); after `FG#2`. First `lib/forge/pods.py` from the prototype, fixtures only. |
 

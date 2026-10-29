@@ -300,12 +300,15 @@ def fetch(commanders, refresh=False):
 
 # --- Marking the ideas ---------------------------------------------------------
 
-def _deck(deck_id):
-    """(the deck file, its commanders' exact names) of a Commander deck. NotCommander otherwise."""
+def _deck(deck_id, commanders=None):
+    """(the deck file, its commanders' exact names) of a Commander deck: the saved Commander section's, or
+    commanders (an editor's draft, exact names) when given. NotCommander otherwise."""
     space, kind, slug = spaces.split_deck_id(deck_id)
     if kind != "commander":
         raise NotCommander("EDHREC ideas are for Commander decks.")
     deck = decks.read_deck_file(decks.find_deck_file(kind, slug, space), space=space)
+    if commanders:
+        return deck, list(commanders)
     names = [cards.resolve(line.name) or line.name for line in deck.target.get("Commander", [])]
     if not names:
         raise NotCommander(f"{deck.title} has no commander yet: add one to its Commander section first.")
@@ -319,7 +322,7 @@ def _counts(lines):
     return out
 
 
-def ideas(deck_id, p=None, prices=True, refresh=False):
+def ideas(deck_id, p=None, prices=True, refresh=False, commanders=None):
     """EDHREC's cards for a Commander deck: {"deck_id", "commanders", "identity", "source" (fetch()'s
     commander, decks, url, fetched and stale), "groups": [{"header", "cards": [{"name", "inclusion"
     (0-100, None when EDHREC gives no count), "decks", "of", "synergy", "in_deck", "considering",
@@ -327,8 +330,10 @@ def ideas(deck_id, p=None, prices=True, refresh=False):
     "priced_printing"}]}], "left_out" (cards outside the identity, not legal or not known: [{"name",
     "why"}]), "rate", "rate_date", "price_date", "price_error", "deck" (the parsed deck file)}. p is
     the deck's space's pool, or None for a viewer who mayn't see it: then nothing says what's owned.
+    commanders (exact names, one or two) stands in for the saved Commander section, as the editor's draft
+    does: the colour identity and EDHREC's page are theirs, everything else is still the saved deck's.
     Raises NotCommander, NoPage or EdhrecError."""
-    deck, commanders = _deck(deck_id)
+    deck, commanders = _deck(deck_id, commanders)
     source = fetch(commanders, refresh)
     identity = set()
     for name in commanders:

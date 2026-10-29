@@ -2,14 +2,15 @@
 
 Loaded directly after editor-cards.js, whose search shows them: a saved Commander deck's Add panel has an
 "EDHREC ideas" tick beside My collection, and while it's on the results are the commander's commonly played
-cards from EDHREC (GET /api/deck/edhrec, the deck page's answer, asked once per editor, deck revision and
-profile), in EDHREC's order, each with its share of decks. The typed name and the colour, type and mana value
+cards from EDHREC (GET /api/deck/edhrec, the deck page's answer, asked once per editor, deck revision,
+profile and draft commander), in EDHREC's order, each with its share of decks. The typed name and the colour, type and mana value
 filters narrow them here, on the page; cards already in the draft (any section but the sideboard) are left
 out. A result adds to the draft's chosen section as a search result does (editor-cards.js pick and addCard:
 one change, one Undo step), and nothing is saved until the usual Save.
 
-The server works the ideas out for the saved deck's commander, so they're shown only while the draft's
-Commander section names the same card(s); otherwise the panel says to save first. Marks (free, in use, to buy
+The ideas are the draft's commander's: its Commander section's one or two cards are sent as commander and
+commander2, so a changed or not yet saved commander needs no save first (the marks are still the saved
+deck's, worked out on the server). A draft with no commander, or more than two, asks nothing and says why. Marks (free, in use, to buy
 with its AUD estimate, on the way) come only when the server sent them (a viewer who may see the deck's
 space's inventory) and never name a deck. An answer for another deck, revision, profile, route or list, or
 one that comes after the search moved on, is ignored. EDHREC's own words for a failure are shown in the
@@ -35,10 +36,10 @@ function editorEdhrecDraftKey(ed) {
   return JSON.stringify([editorEdhrecOffered(ed), editorEdhrecCommanders(ed)]);
 }
 
-/** The answer belongs to one deck revision, profile, route and list. */
+/** The answer belongs to one deck revision, profile, route, list and draft commander. */
 function editorEdhrecKey(ac) {
   const ed = ac.owner;
-  return JSON.stringify([ed.id, ed.profile, ac.token, ed.sha256 || null, editorSearchScope(ac)]);
+  return JSON.stringify([ed.id, ed.profile, ac.token, ed.sha256 || null, editorSearchScope(ac), editorEdhrecCommanders(ed)]);
 }
 
 /** The Add panel's "EDHREC ideas" tick (null when the deck has none to offer). */
@@ -67,7 +68,9 @@ function editorEdhrecDraftChanged(ac) {
 function editorEdhrecAnswer(ac) {
   const key = editorEdhrecKey(ac);
   if (!ac.edhrec || ac.edhrec.key !== key) {
-    const promise = api(`/api/deck/edhrec?id=${encodeURIComponent(ac.owner.id)}`);
+    const [first, second] = editorEdhrecCommanders(ac.owner);
+    const promise = api(`/api/deck/edhrec?id=${encodeURIComponent(ac.owner.id)}&commander=${encodeURIComponent(first)}`
+      + (second ? `&commander2=${encodeURIComponent(second)}` : ""));
     promise.catch(() => {});        // whoever waits for it says what went wrong
     ac.edhrec = { key, promise };
   }
@@ -149,9 +152,20 @@ async function editorEdhrecLookUp(ac, q, more = false) {
   const ed = ac.owner;
   if (!editorEdhrecOffered(ed)) { ac.mode = "search"; refilter(ac); return; }
   const seq = ++ac.seq;
+  const draft = editorEdhrecCommanders(ed);
+  if (draft.length < 1 || draft.length > 2) {
+    // Nothing to ask EDHREC about: the draft names no commander, or more than a pair.
+    ac.items = [];
+    ac.edhrecDraft = editorEdhrecDraftKey(ed);
+    drawEditorEdhrecNote(ac);
+    listMessage(ac, draft.length ? `EDHREC ideas are for one commander or a pair, and this draft's Commander section has ${draft.length}.`
+      : "Put a commander in the Commander section to see EDHREC's ideas for it.");
+    return;
+  }
   const scope = editorSearchScope(ac);
   const typed = () => parseQuery(ac.input.value).q;
   const asked = editorEdhrecAnswer(ac);
+  ac.edhrecDraft = editorEdhrecDraftKey(ed);       // the commander changing while EDHREC is asked asks again
   const current = () => editorSearchCurrent(ac) && seq === ac.seq && typed() === q && scope === editorSearchScope(ac)
     && ac.mode === "edhrec" && ac.edhrec === asked && asked.key === editorEdhrecKey(ac);
   if (more) { ac.morePending = true; ac.more.setAttribute("aria-disabled", "true"); }
@@ -162,7 +176,7 @@ async function editorEdhrecLookUp(ac, q, more = false) {
   } catch (e) {
     if (!current()) return;
     ac.items = [];
-    ac.edhrecDraft = null;
+    ac.edhrecDraft = editorEdhrecDraftKey(ed);     // another commander asks again
     drawEditorEdhrecNote(ac);
     const again = !(e && (e.status === 400 || e.status === 404));
     listMessage(ac, `EDHREC ideas couldn't be loaded. ${(e && e.message) || ""}`.trim(), { kind: "problem",
@@ -176,16 +190,6 @@ async function editorEdhrecLookUp(ac, q, more = false) {
   }
   if (!current()) return;
   ac.edhrecDraft = editorEdhrecDraftKey(ed);
-  const draft = editorEdhrecCommanders(ed);
-  const saved = [...(answer.commanders || [])].sort();
-  if (draft.join("\n") !== saved.join("\n")) {
-    ac.items = [];
-    drawEditorEdhrecNote(ac);
-    listMessage(ac, draft.length
-      ? `These ideas follow the saved deck's commander, ${saved.join(" & ")}. Save the deck to see ideas for ${draft.join(" & ")}.`
-      : `These ideas follow the saved deck's commander, ${saved.join(" & ")}, and this draft has none: put it back to see them.`);
-    return;
-  }
   const marks = Boolean(answer.marks);
   const inDraft = editorEdhrecInDraft(ed);
   // A card EDHREC lists in two categories (its Top Cards and its type) is listed once, where it comes first.

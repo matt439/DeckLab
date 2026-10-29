@@ -51,7 +51,7 @@ def dispatch(handler, route, query):
         ("deck", "replacements"): (swaps.suggest_replacements, ("id", "version", "card")),
         ("deck", "cards"): (cover.cover_cards, ("id",)),
         ("deck", "opponents"): (opponents.opponents_view, ("id",)),
-        ("deck", "edhrec"): (edhrec.edhrec_view, ("id",)),
+        ("deck", "edhrec"): (edhrec.edhrec_view, ("id", "commander", "commander2")),
         ("receipt",): (receipts.receipt_view, ("order",)),
         ("arrivals",): (arrivals.arrivals_view, ()),
         ("rankings",): (rankings.rankings_view, ("format",)),
