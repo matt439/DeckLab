@@ -2,6 +2,39 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Checked deck identity for field edits (2026-10-29, E3-S23 foundation)
+
+A pure resolver and explicit PostgreSQL reader now prove a current home house
+deck's incarnation before future audited membership choices can follow it.
+Ordinary edits and renames keep the immutable historical creation anchor;
+deletion and recreation select the later creation revision. Imported M-start
+history can establish a labelled database baseline, without inventing its earlier
+birth. The full contiguous bounded A/M/D history and latest exact text must agree
+with the fresh current row. Missing, malformed, capped or ambiguous evidence has
+one unavailable result. Unrelated retired aliases cannot poison a valid proof.
+
+The reader owns one read-only repeatable-read transaction on an explicit backend,
+loads its fresh snapshot and minimal history on that same connection, and never
+uses convenience/default history readers or stale fallback. An internal capture
+verifies an existing coherent transaction or inventory advisory claim without
+opening one or acquiring locks. Results contain only an immutable epoch and
+current canonical ID/revision/text-hash receipt, with no actor, message, text or
+kit. Proof caps do not bound the backend's existing full snapshot reads.
+
+Root's **154 guarded checks passed with 26 skips**, including **54 new checks**
+without skips (26 pure and 28 explicit fake-database cases). Independent review,
+Ruff, whitespace and the source-length guard pass; all 1,200 owned source files
+fit the limit. The 112 existing unstaged test-header edits retain their original
+hashes and AST bodies. An initial combined invocation used short module names
+and produced only loader errors; the qualified invocation is the passing result.
+Evidence is in `decklab-field-epoch-8f687bc3`.
+
+This is unwired identity infrastructure. Field selection and membership writes
+are unchanged, and E3-S23 remains partial. The [editing design](design/field-membership-editing.md)
+records the next incarnation-specific policy overlay and audited write boundary.
+Actual PostgreSQL, live migration activation, Forge and device qualification
+remain separate; no live database, server or service operation was performed.
+
 ## Complete protected fixture checkpoint (2026-10-29)
 
 All four guarded Windows fixture shards passed on functional commit
