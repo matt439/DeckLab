@@ -429,10 +429,10 @@ def _load_pool():
     files = sorted(p.file for p in inv.products)
     for name in files:
         if name not in statuses:
-            warnings.append(f"{name} isn't in products/{STATUS_NAME}, so it counts as owned and not intact")
+            warnings.append(f"Product {Path(name).stem} has no status, so it counts as owned and not intact")
     for name, status in statuses.items():
         if name not in files:
-            warnings.append(f"products/{STATUS_NAME} lists {name}, which isn't in magic/products/")
+            warnings.append(f"Product {Path(name).stem} has a status but no card list, so it isn't counted")
             continue
         if status.status in INCOMING:
             incoming(_product_file(inv, name), f"{_product_name(name)}, {status.status}", status.status)

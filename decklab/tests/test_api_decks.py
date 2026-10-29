@@ -88,7 +88,7 @@ class DecksIndexTests(ApiTestCase):
 
     def test_pool_warnings_are_passed_on(self):
         _write(self.box.magic / "products" / "extra.csv", "name,quantity\nOpt,1\n")
-        self.assertIn("extra.csv isn't in products/status.csv, so it counts as owned and not intact",
+        self.assertIn("Product extra has no status, so it counts as owned and not intact",
                       api.decks_index()["warnings"])
 
     def test_an_unreadable_pool_leaves_the_counts_out(self):

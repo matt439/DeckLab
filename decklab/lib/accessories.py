@@ -105,8 +105,9 @@ MAX_NOTES = 300
 # The words for each kind in messages: "a deck box in the accessories list".
 _KIND_WORDS = {"sleeves": "sleeves", "deck_box": "a deck box", "playmat": "a playmat"}
 _FIELD_WORDS = {"sleeves": "Sleeves", "deck_box": "Deck box"}
-# How a stray on a product's status row is named ("products/status.csv (x.csv)"); a deck's is its id.
-_STATUS_STRAY = f"products/{pool.STATUS_NAME}"
+# How a stray on a product's status row is named ("Product x", by the stem product kit takes);
+# a deck's is its id (lowercase, so never starting with this).
+_STATUS_STRAY = "Product "
 NO_PROBLEMS = "Accessories: no problems"      # what accessories check prints when all is well
 
 
@@ -558,8 +559,8 @@ def _scan(warnings):
     "product", owner (player_owner; SHARED for a product), sleeves,
     deck_box, sections}, and the accessory values written
     where nothing holds them, as (where, field, value): a deck that isn't
-    built (where: its id), or a status.csv row that isn't owned and intact
-    (where: "products/status.csv (<file>)"). Problems reading
+    built (where: its id), or a product status that isn't owned and intact
+    (where: "Product <stem>"). Problems reading
     them go in warnings. Reads one inventory snapshot (the request's or
     command's, else one pinned for this call)."""
     from decklab.lib import inventory
@@ -600,7 +601,7 @@ def _scan(warnings):
         values = {"sleeves": getattr(status, "sleeves", "") or "", "deck_box": getattr(status, "deck_box", "") or ""}
         stem = Path(name).stem
         if not (status.status == "owned" and status.intact):
-            strays.extend((f"{_STATUS_STRAY} ({name})", f, v) for f, v in values.items() if v)
+            strays.extend((f"{_STATUS_STRAY}{stem}", f, v) for f, v in values.items() if v)
             continue
         if not _has_product(inv, name):
             continue
@@ -857,7 +858,6 @@ def check(root=None):
             if row is not None and row["kind"] == f and not usable(row["owner"], h["owner"]):
                 problems.append(f"{h['title']}: {_not_theirs(f, resolve(row['id'], f, inv), row['owner'], h['owner'], h['kind'])}")
 
-    from decklab.lib.inventory import paths as inventory_paths
     pictures = inventory.current().accessory_images
     named = set()
     for row in inv.rows_by_id.values():
@@ -865,10 +865,10 @@ def check(root=None):
         if name is not None:
             named.add(name)
             if name not in pictures:
-                problems.append(f"{row['id']}: its picture {inventory_paths.image(name)} is missing")
+                problems.append(f"{row['id']}: its picture {name} is missing (image put {name} to store it)")
     for name in sorted(pictures):
         if name not in named:
-            problems.append(f"{inventory_paths.image(name)} isn't the picture of any row in {PATH.name}")
+            problems.append(f"The picture {name} belongs to no accessory (image remove {name} takes it away)")
 
     for where, f, value in strays:
         problems.append(f"{where} has {_FIELD_WORDS[f]} {value!r} but isn't "
@@ -878,7 +878,8 @@ def check(root=None):
             if h["state"] == "kind_mismatch":
                 problems.append(f"{h['title']}: {_mismatch(h['field'], resolve(value, h['field'], inv))}")
             elif h["state"] == "text" and _id_shaped(value):
-                problems.append(f"{h['title']}: {_FIELD_WORDS[h['field']]} {value!r} isn't an id in {PATH.name}")
+                problems.append(f"{h['title']}: {_FIELD_WORDS[h['field']]} {value!r} isn't an accessory id "
+                                "(accessories list shows them)")
     for row in inv.rows_by_id.values():
         users = used_by(usage, row)
         if row["kind"] == "sleeves":

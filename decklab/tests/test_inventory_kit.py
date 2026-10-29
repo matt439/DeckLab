@@ -47,13 +47,13 @@ class RefusalTests(unittest.TestCase):
         sha = kit.status_sha256(good)
         move = [{"stem": "beta", "field": "sleeves", "value": "red"}]
         cases = (
-            ("missing", snapshot(None), {"sha256": sha, "changes": move}, 404, None, "status.csv is missing"),
+            ("missing", snapshot(None), {"sha256": sha, "changes": move}, 404, None, "status list is missing"),
             ("unreadable", snapshot(OSError("locked")), {"sha256": sha, "changes": move}, 500, None, "locked"),
             ("changed", good, {"sha256": "0" * 64, "changes": move}, 409, "changed", "changed after"),
             ("strict", snapshot(STATUS_HEADER + "alpha.csv,owned,yes,,,,extra\n"), {"changes": move}, 409, None,
              "wrong number of columns"),
             ("no row", good, {"sha256": sha, "changes": [{"stem": "delta", "field": "sleeves", "value": "red"}]},
-             404, None, "delta.csv isn't in products/status.csv"),
+             404, None, "Product delta has no status"),
             ("not intact", good, {"sha256": sha, "changes": [{"stem": "gamma", "field": "sleeves", "value": "red"}],
                                   "hold": "gamma"}, 400, None, kit.CANT_HOLD),
         )

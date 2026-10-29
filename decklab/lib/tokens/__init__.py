@@ -114,9 +114,16 @@ class Inventory:
 # ------------------------------------------------------------------ reading
 
 def label_for(space=spaces.HOME):
-    """How messages name a space's tokens.csv (magic/tokens.csv at home,
-    magic/people/<id>/tokens.csv for a person)."""
-    return inventory_paths.tokens(space)
+    """How messages name a space's token cards, as the database holds them: "the home token
+    cards", or "<id>'s token cards" for a person (never an old file such as magic/tokens.csv).
+    A sentence starting with it capitalises it (title_for)."""
+    return "the home token cards" if space == spaces.HOME else f"{space}'s token cards"
+
+
+def title_for(space=spaces.HOME):
+    """label_for(space) at the start of a sentence: "The home token cards"."""
+    label = label_for(space)
+    return label[:1].upper() + label[1:]
 
 
 def no_problems(space=spaces.HOME):
@@ -598,7 +605,7 @@ def check(notes=None, space=spaces.HOME, warnings=None):
     notes = [] if notes is None else notes
     wants_warnings = warnings is not None
     warnings = [] if warnings is None else warnings
-    file_label = label_for(space)
+    file_label, title = label_for(space), title_for(space)
     problems = []
     try:
         read(strict=True, space=space)
@@ -608,13 +615,13 @@ def check(notes=None, space=spaces.HOME, warnings=None):
     seen = {p.removesuffix(inventory_rules.UNTIL_PUT_RIGHT) for p in problems}
     problems.extend(p for p in inv.problems if p not in seen)
     if not inv.sorted:
-        problems.append(f"{file_label}: not in the standard order; the next Tokens page save sorts it")
+        problems.append(f"{title} aren't in the standard order; the next Tokens page save sorts them")
     ready = _ready()
     if not ready and inv.rows:
         notes.append("Names weren't checked: the card data isn't loaded "
                      "(python -m decklab.lib.cards update)")
-    for n, row in zip(inv.lines, inv.rows):
-        where = f"{file_label} line {n}"
+    for n, row in enumerate(inv.rows, 1):
+        where = f"Row {n} of {file_label}"
         if ready:
             for side in ("front", "back"):
                 name = row[side]
@@ -653,11 +660,11 @@ def _shared_warnings(inv, space, file_label):
         uses = row_uses(inv, found, [], space)
         shared = shared_rows(inv, uses, built_ids(space), all_holds)
     except Exception as e:      # a deck that can't be read: the check itself still stands
-        return [f"{file_label}: which built decks share token cards couldn't be worked out ({e})"]
+        return [f"{title_for(space)}: which built decks share token cards couldn't be worked out ({e})"]
     return holds_warnings + [
         f"{deck['title']}'s Token cards line names no token card of {file_label}: {text}"
         for deck in all_holds.values() for text in deck["unmatched"]] + [
-        f"{file_label} line {inv.lines[i]}: {shared_words(inv.rows[i], holders)}"
+        f"Row {i + 1} of {file_label}: {shared_words(inv.rows[i], holders)}"
         for i, holders in sorted(shared.items())]
 
 

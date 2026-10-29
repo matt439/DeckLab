@@ -178,7 +178,7 @@ def _field(fmt, *, space="home", public=None, visible=None, product_notes=True, 
         status_unavailable = True
         field_exclusions.notify(exclusions, "unavailable")
         if product_notes:
-            notes.append(f"products/status.csv can't be read, so no product deck is in the field ({e}).")
+            notes.append(f"The products' status list can't be read, so no product deck is in the field ({e}).")
     summaries = decks.list_decks()
     for summary in summaries:
         deck_id = summary["id"]

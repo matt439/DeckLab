@@ -595,12 +595,12 @@ class CheckTests(AccessoriesTestCase):
         problems = self.check()
         expected = [
             "accessories.csv line 4: 2 values, not 13",
-            "dragon-shield-matte-black: its picture magic/accessories/images/dragon-shield-matte-black.png "
-            "is missing",
-            "magic/accessories/images/orphan.jpg isn't the picture of any row in accessories.csv",
+            "dragon-shield-matte-black: its picture dragon-shield-matte-black.png is missing "
+            "(image put dragon-shield-matte-black.png to store it)",
+            "The picture orphan.jpg belongs to no accessory (image remove orphan.jpg takes it away)",
             "casual/idea has Sleeves 'red' but isn't built; remove it",
-            "products/status.csv (test-product.csv) has Sleeves 'red' but isn't owned and kept intact; remove it",
-            "Typo: Sleeves 'dragon-shield-matte-blak' isn't an id in accessories.csv",
+            "Product test-product has Sleeves 'red' but isn't owned and kept intact; remove it",
+            "Typo: Sleeves 'dragon-shield-matte-blak' isn't an accessory id (accessories list shows them)",
             "Mixed: Sleeves “ultimate-guard-boulder-100-black” is a deck box in the accessories list, not sleeves.",
             "Gruul Ramp needs 60 sleeves and Dragon Shield Matte (black) has 50",
             "Izzet Otters needs 60 sleeves and Dragon Shield Matte (black) has 50",

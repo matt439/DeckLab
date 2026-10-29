@@ -377,7 +377,7 @@ class IncomingTests(PoolTestCase):
                     ("typo.csv", "preorder", "maybe"))
         loaded = pool.load_pool()
         text = "\n".join(loaded.warnings)
-        for expected in ("unlisted.csv isn't in products/status.csv", "lists gone.csv",
+        for expected in ("Product unlisted has no status", "Product gone has a status but no card list",
                          "typo.csv has status 'preorder'", "typo.csv has intact 'maybe'",
                          "early.csv is ordered: intact only counts once it's owned"):
             self.assertIn(expected, text)

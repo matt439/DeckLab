@@ -51,14 +51,10 @@ PATTERNS = (
 )
 # (file, a fragment of the line): words only, never a read.
 MESSAGES = {
-    ("decklab/lib/accessories.py", '_STATUS_STRAY = f"products/{pool.STATUS_NAME}"'): "a stray's label",
     ("decklab/db/inv_collection.py", 'for folder in ("magic/orders", "magic/products")'):
         "refuses a recorded order's or product's file as merge input; reads nothing",
-    ("decklab/lib/forge/field.py", "f\"products/status.csv can't be read"): "a message",
     ("decklab/lib/pool.py", 'STATUS_NAME = "status.csv"'): "how messages name status.csv",
     ("decklab/lib/pool.py", 'f"{STATUS_NAME} line {n}: {file} has'): "messages",
-    ("decklab/lib/pool.py", "isn't in products/{STATUS_NAME}"): "a message",
-    ("decklab/lib/pool.py", 'f"products/{STATUS_NAME} lists {name}'): "a message",
     ("decklab/lib/purchases.py", 'prefix = "magic/products" if kind == "product" else "magic/orders"'):
         "a component's path as Shopping names it",
     ("decklab/lib/purchases.py", 'value = "magic/products/" + row["file"]'): "a product's path as messages name it",

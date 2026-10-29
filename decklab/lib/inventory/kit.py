@@ -28,6 +28,13 @@ from . import Summary, files, paths, register
 KIND = "product.set-kit"
 FIELDS = ("sleeves", "deck_box")
 CANT_HOLD = "Only a built deck or a product kept intact has sleeves or a deck box"
+# How refusals name the products' statuses (the database's product_status rows, not the old
+# products/status.csv) and a product without one (by the stem product kit takes).
+STATUS_WORDS = "The products' status list"
+
+
+def no_status(stem):
+    return f"Product {stem} has no status"
 
 
 class KitRefused(Conflict):
@@ -65,7 +72,7 @@ def set_kit(inv, *, sha256=None, changes=(), hold=None):
     "changed"), one a strict read refuses (409), a product it doesn't list (404), and sleeves or
     a deck box for a product that isn't owned and kept intact (400)."""
     sheet = inv.status
-    name = f"products/{paths.STATUS_NAME}"
+    name = STATUS_WORDS
     if not sheet.exists:
         raise KitRefused(f"{name} is missing", 404)
     if sheet.error is not None:
@@ -82,7 +89,7 @@ def set_kit(inv, *, sha256=None, changes=(), hold=None):
             raise ValueError(f"a product's kit has no field {field!r}")
         i = row_index(sheet, stem)
         if i is None:
-            raise KitRefused(f"{stem}.csv isn't in products/{paths.STATUS_NAME}", 404)
+            raise KitRefused(no_status(stem), 404)
         if "expect" in change and rows[i].text(field).strip() != (change["expect"] or ""):
             continue
         if stem == hold and value is not None and not can_hold(rows[i]):

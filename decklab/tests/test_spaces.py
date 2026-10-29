@@ -275,7 +275,7 @@ class PersonTokenTests(SpaceTestCase):
         self.assertEqual([r["front"] for r in tokens.read(space="user2").rows], ["Elf Warrior"])
         inv, inc, problems = tokens.for_space("user2")
         self.assertEqual(([r["front"] for r in inv.rows], inc, problems), (["Elf Warrior"], [], []))
-        self.assertEqual(tokens.label_for("user2"), "magic/people/user2/tokens.csv")
+        self.assertEqual(tokens.label_for("user2"), "user2's token cards")
         with self.assertRaises(spaces.SpaceNotFound):
             tokens.read(space="user3")
 

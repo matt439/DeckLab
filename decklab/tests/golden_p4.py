@@ -244,6 +244,11 @@ def _words(text):
     return lambda _: text
 
 
+def _token_cards(space):
+    """How E11-S12 names a space's token cards (tokens.label_for's words; space None: home's)."""
+    return "the home token cards" if space is None else f"{space}'s token cards"
+
+
 def phase5_wording():
     """[(the old words as a compiled pattern, the new words as re.sub's replacement)]: what
     "phase-5-wording" rewrites, with the new words from this checkout's code (imported here, not at the top: record() runs this module over older
@@ -269,6 +274,18 @@ def phase5_wording():
          r"Token cards line \1 couldn't be read; see the Tokens page"),
         (re.compile(r"^Also sorted magic/tokens\.csv into the standard order \(no other row changed\)$"),
          _words(token_ops.RESORTED)),
+        # E11-S12: the database's words for token rows and products, not the old files'.
+        (re.compile(r"^magic/(?:people/([a-z0-9-]+)/)?tokens\.csv: not in the standard order; the next Tokens "
+                    r"page save sorts it$"),
+         lambda m: f"{_token_cards(m.group(1)).capitalize()} aren't in the standard order; the next Tokens "
+                   f"page save sorts them"),
+        (re.compile(r"^magic/(?:people/([a-z0-9-]+)/)?tokens\.csv line (\d+): "),
+         lambda m: f"Row {int(m.group(2)) - 1} of {_token_cards(m.group(1))}: "),
+        (re.compile(r"products/status\.csv lists ([a-z0-9][a-z0-9-]*)\.csv, which isn't in magic/products/"),
+         r"Product \1 has a status but no card list, so it isn't counted"),
+        (re.compile(r"\b([a-z0-9][a-z0-9-]*)\.csv isn't in products/status\.csv, so it counts as owned and not "
+                    r"intact"),
+         r"Product \1 has no status, so it counts as owned and not intact"),
     ]
 
 

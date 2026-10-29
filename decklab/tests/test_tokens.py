@@ -939,9 +939,9 @@ class CheckTests(IndexTestCase):
         with self.any_name():
             self.assertEqual(tokens.check(warnings=warnings), [])
         self.assertEqual(warnings, [
-            "magic/tokens.csv line 2: front details '4/4 white flying' aren't read: "
+            "Row 1 of the home token cards: front details '4/4 white flying' aren't read: "
             "separate them with ';' (4/4; white; flying)",
-            "magic/tokens.csv line 2: back details 'whte' aren't read: did you mean white?"])
+            "Row 1 of the home token cards: back details 'whte' aren't read: did you mean white?"])
         out = io.StringIO()
         with contextlib.redirect_stdout(out), self.any_name():
             self.assertEqual(tokens.main(["--check"]), 0)
@@ -952,7 +952,7 @@ class CheckTests(IndexTestCase):
             self.assertEqual(tokens.main(["--check"]), 1)
         lines = out.getvalue().splitlines()
         self.assertIn("'Sprit' isn't a Scryfall token", lines[0])
-        self.assertEqual(lines[-1], "magic/tokens.csv line 2: back details 'whte' aren't read: did you mean white?")
+        self.assertEqual(lines[-1], "Row 1 of the home token cards: back details 'whte' aren't read: did you mean white?")
 
     def test_each_message(self):
         self.tokens_csv(HEADER
@@ -966,16 +966,16 @@ class CheckTests(IndexTestCase):
         self.assertEqual(tokens.check(), [
             "magic/tokens.csv line 6: tokens need a front name and positive physical quantity; it can't be "
             "changed until that's put right",
-            "magic/tokens.csv: not in the standard order; the next Tokens page save sorts it",
-            "magic/tokens.csv line 3: 'Sprit' isn't a Scryfall token, emblem or reminder name (did you mean Spirit?)",
-            "magic/tokens.csv line 3: a blank back needs 'single-sided verified' in notes",
-            "magic/tokens.csv line 4: 'Ring' isn't a Scryfall token, emblem or reminder name (did you mean The Ring?)",
-            "magic/tokens.csv line 5: notes say single-sided verified but a back is recorded",
+            "The home token cards aren't in the standard order; the next Tokens page save sorts them",
+            "Row 2 of the home token cards: 'Sprit' isn't a Scryfall token, emblem or reminder name (did you mean Spirit?)",
+            "Row 2 of the home token cards: a blank back needs 'single-sided verified' in notes",
+            "Row 3 of the home token cards: 'Ring' isn't a Scryfall token, emblem or reminder name (did you mean The Ring?)",
+            "Row 4 of the home token cards: notes say single-sided verified but a back is recorded",
             "magic/orders/tokens/2026-10-07-shop-a.csv line 2: invalid token finish"])
 
     def test_a_wrong_printing(self):
         self.tokens_csv(HEADER + "Spirit,,tltr,H13,,,1,,,single-sided verified\n")
-        self.assertEqual(tokens.check(), ["magic/tokens.csv line 2: tltr H13 is The Ring, not Spirit"])
+        self.assertEqual(tokens.check(), ["Row 1 of the home token cards: tltr H13 is The Ring, not Spirit"])
 
     def test_main_exit_codes(self):
         self.tokens_csv(REAL_TOKENS)

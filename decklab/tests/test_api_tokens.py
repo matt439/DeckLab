@@ -316,7 +316,7 @@ class SaveTests(TokensApiTestCase):
         self.write("tokens.csv", "".join([lines[0], lines[3], lines[1], lines[2]]))
         self.assertFalse(self.view()["sorted"])
         answer = self.save(action="edit", base=base(self.row("Insect")), row={"quantity": 2})
-        self.assertTrue(any("sorted it" in w for w in answer["warnings"]))
+        self.assertTrue(any("sorted them" in w for w in answer["warnings"]))
         self.assertEqual(self.csv_text().splitlines()[1:],
                          [f"Angel,The Monarch,,,,,1,,,{NOTE}", f"Insect,Goblin,,,,,2,1/1; flying; no deathtouch,,{NOTE}",
                           f"Zombie,Zombie Knight,,,,,8,,,{NOTE}"])
