@@ -53,7 +53,7 @@ class DecksIndexTests(ApiTestCase):
             # ... and the shelf's extras (library.shelf_extras: tested in test_cover.py).
             self.assertEqual({k: v for k, v in by_id[summary["id"]].items()
                               if k not in ("missing", "on_the_way", "availability_confirmed", "kit", "tokens",
-                                           "cover", "colors", "revision", "edited", "usual_opponents")},
+                                           "cover", "colors", "revision", "edited", "usual_opponents", "played")},
                              summary)
             self.assertEqual(by_id[summary["id"]]["usual_opponents"], [])
             # No accessories are recorded in the sandbox.

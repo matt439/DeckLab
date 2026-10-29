@@ -91,6 +91,10 @@ older code (the committed tests/fixtures/inventory_goldens):
   cards it pulls from storage or puts back are kept. No golden collection records a location, so
   only an answer with none ({"ready": true, "cards": {}}) is dropped; a recorded location still
   compares. test_collection_locations checks its values.
+- "played-defaults": E1-S27 adds each library summary's "played" (when it was last played at
+  home and its games). No golden scenario records a game, so only the no-games answer
+  ({"last": None, "games": 0}) or the unread one (None) is dropped from decks_index summaries;
+  a recorded game still compares. test_library_played checks its values.
 - "category-defaults": E2-S24 adds DeckLine.category, the builder's own category on a decklist
   line, so a line dumped as a whole object ({quantity, name, set, number, finish}) gains
   "category". Only a None category on exactly such an object is dropped: a line with a
@@ -533,6 +537,15 @@ def storage_location_defaults(dump):
                 plan.pop("storage_locations")
 
 
+def played_defaults(dump):
+    """Drop only E1-S27's no-games (or unread) "played" on library summaries."""
+    for mine in [dump, *((dump.get("by_viewer") or {}).values())]:
+        index = mine.get("decks_index") if isinstance(mine, dict) else None
+        for summary in (index.get("decks") or []) if isinstance(index, dict) else []:
+            if isinstance(summary, dict) and summary.get("played", 0) in (None, {"last": None, "games": 0}):
+                summary.pop("played")
+
+
 _LINE_KEYS = {"quantity", "name", "set", "number", "finish", "category"}
 
 
@@ -727,7 +740,8 @@ EXPECTED_P5 = (("deck-id-messages", deck_id_messages), ("phase-5-wording", phase
                ("assembly-section-defaults", assembly_section_defaults), ("swap-defaults", swap_defaults),
                ("assembly-colors", assembly_colors), ("considering-defaults", considering_defaults),
                ("box-label-defaults", box_label_defaults), ("category-defaults", category_defaults),
-               ("storage-location-defaults", storage_location_defaults), ("absent-shop-prices", absent_shop_prices))
+               ("storage-location-defaults", storage_location_defaults), ("played-defaults", played_defaults),
+               ("absent-shop-prices", absent_shop_prices))
 
 
 def normalise(dump):

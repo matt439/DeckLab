@@ -24,6 +24,7 @@ from .deck_aliases import metadata
 from .common import _jsonable, _public, _scrub, _unique
 from .forge_runs import _deck_matchups
 from .guide import playing_guide
+from .library_played import played_extras
 from .library import (_deck_sections, _half_title, _load_pool, _named_by_id, _scrub_summary, edited_at, shelf_extras,
                       viewer_decks_revision)
 from .practice import _deck_practice
@@ -60,7 +61,9 @@ def decks_index():
     for an idea deck, a pairing, or when the tokens can't be worked out.
 
     "cover", "colors", "revision" and "edited" are library.shelf_extras' (the
-    cover card, colour identity, the text's revision and when it was last edited).
+    cover card, colour identity, the text's revision and when it was last edited),
+    "played" library_played.played_extras' (when it was last played at home and its
+    games, from the Game log's games the viewer may see; None when they can't be read).
 
     A built ordinary deck also has "assembled": its saved physical main/sideboard
     counts and the real Planned cards still outside that build (assembly_intent.project).
@@ -98,6 +101,7 @@ def decks_index():
         _named_by_id(_scrub_summary(summary))
         metadata(summary, summary["id"])
     shelf_extras(summaries)
+    played_extras(summaries)
     halves = [{"id": s["id"], "title": _half_title(s)} for s in summaries
               if s["id"].startswith(f"product/{decks.BEGINNER_BOX}/") and not s.get("error")]
     return {"decks": summaries, "halves": halves, "warnings": _unique(_scrub(warnings)),

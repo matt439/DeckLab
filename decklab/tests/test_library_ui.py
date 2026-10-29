@@ -371,7 +371,7 @@ class LibraryShelfTests(_Shelf):
           assert(sheet.textContent.includes("Format") && sheet.textContent.includes("Sort"));
           // The sheet's sort field has its label shown, so its options don't repeat "Sort:" (the row's do).
           same(sheet.querySelector("#sheet-filter-sort").querySelectorAll("option").map((o) => o.textContent),
-               ["Ready first", "Recently changed", "Name"]);
+               ["Ready first", "Recently changed", "Not played lately", "Name"]);
           assert.equal(main.querySelector("#filter-sort").querySelector("option").textContent, "Sort: Ready first");
           const format = sheet.querySelector("#sheet-filter-format");
           format.focus();

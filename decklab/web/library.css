@@ -155,6 +155,8 @@ button.deck-card { cursor: pointer; }
   overflow-wrap: break-word; hyphens: auto; min-width: 0;
 }
 .deck-meta { color: var(--ink-2); font-size: var(--fs-meta); }
+/* When it was last played at home and its games (library.js deckPlayed, E1-S27). */
+.deck-played { color: var(--ink-2); font-size: var(--fs-meta); }
 /* A title of at most two lines (a long Commander title took three on a phone); the whole title is the tile's
    link text and its picture's alt, so nothing is lost. */
 .deck-title { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
