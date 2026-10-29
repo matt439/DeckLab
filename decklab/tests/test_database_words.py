@@ -11,7 +11,7 @@ import json
 import unittest
 from unittest import mock
 
-from decklab.lib import inventory, pool, purchases
+from decklab.lib import cards, inventory, pool, purchases
 from decklab.lib.api import guard, library, saving
 from decklab.lib.inventory import files, paths
 from decklab.lib.inventory.model import Order
@@ -172,7 +172,9 @@ class PoolAndShoppingWordsTests(PoolTestCase):
         # visible_place keeps home's orders and products from a member by their paths, so the pool
         # keeps an unknown card's place as the path it classifies by; only what's shown is reworded.
         self.cards_csv("orders/2026-09-29-x.csv", ("Grizly Bears", "dom", "60", "nonfoil", 1))
-        p = pool.load_pool()
+        # The misspelling is unknown whether or not this PC has the card data (CI has none).
+        with mock.patch.object(cards, "resolve", lambda name: None if name == "Grizly Bears" else name):
+            p = pool.load_pool()
         self.assertEqual(p.unresolved, {"Grizly Bears": {"magic/orders/2026-09-29-x.csv"}})
         with mock.patch.object(guard, "sees_home_records", lambda profile=False: False):
             self.assertEqual(library.visible_unresolved(p.unresolved, sees=lambda d: True), {})
