@@ -2,6 +2,22 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Dark Matchups with saved results (2026-10-29; E11-S30 slice 15)
+
+The last of slice 15's dark checks. A throwaway Deck Lab ran on the test Sandbox (a temp folder and
+in-memory state, no database and no household data) with the real forge package and test_forge's
+made-up Forge, which played six 200-game matchups between four 60-card fixture decks, one with a
+100-character title. Headless Chrome drew the Matchups home (field summary, swap panel, opponent table),
+Rankings (as the fixture saved it, every list unsettled, and with rated rows put into its answer, since the
+made-up engine's games don't link lists to the field), a matchup's page and a deck's Matchups tab and
+Overview, at 375 (touch, 3x), 820 (touch, 2x), 1280 and 1920px in dark and light: 48 renders plus two
+timing reruns. A script measured every visible text run against its solid background: none was under 4.5:1
+(3:1 for large text), no page overflowed and the page raised no errors. Nothing needed fixing. Touch
+hardware, Safari and the household's devices are still to check. Known low issue, test-only: with the
+Sandbox's fake Forge in place, `variant_buying`, `rankings` and `field` import forge submodules the fake
+doesn't have, so a Sandbox server answers those routes with a 500 unless the API modules are imported
+first.
+
 ## EDHREC ideas in the editor's Add panel (2026-10-29; E9-S07)
 
 A saved Commander deck's editor has an **EDHREC ideas** tick beside the Add panel's search scopes
