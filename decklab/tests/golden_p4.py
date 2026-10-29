@@ -97,6 +97,10 @@ older code (the committed tests/fixtures/inventory_goldens):
   ({"last": None, "games": 0}) or the unread one (None) is dropped from decks_index summaries;
   a recorded game still compares. test_library_played checks its values. Its second slice adds
   deck_view's "played" too, dropped only as {"last": None, "games": 0, "since": None} or None.
+- "departed-defaults": E2-S27 adds deck_view's guide "departed", the cards its How to play guide
+  names that have left the deck. No golden deck's guide names a former card, so only the empty
+  answer ({"names": [], "count": 0}) or the unread one (None) is dropped; a departed card still
+  compares. test_guide_departed checks its values and privacy.
 - "category-defaults": E2-S24 adds DeckLine.category, the builder's own category on a decklist
   line, so a line dumped as a whole object ({quantity, name, set, number, finish}) gains
   "category". Only a None category on exactly such an object is dropped: a line with a
@@ -580,6 +584,16 @@ def played_defaults(dump):
                 view.pop("played")
 
 
+def departed_defaults(dump):
+    """Drop only E2-S27's empty (or unread) "departed" on deck pages' guides."""
+    for mine in [dump, *((dump.get("by_viewer") or {}).values())]:
+        views = mine.get("deck_view") if isinstance(mine, dict) else None
+        for view in views.values() if isinstance(views, dict) else []:
+            guide = view.get("guide") if isinstance(view, dict) else None
+            if isinstance(guide, dict) and guide.get("departed", 0) in (None, {"names": [], "count": 0}):
+                guide.pop("departed")
+
+
 _LINE_KEYS = {"quantity", "name", "set", "number", "finish", "category"}
 
 
@@ -775,6 +789,7 @@ EXPECTED_P5 = (("deck-id-messages", deck_id_messages), ("phase-5-wording", phase
                ("assembly-colors", assembly_colors), ("considering-defaults", considering_defaults),
                ("box-label-defaults", box_label_defaults), ("category-defaults", category_defaults),
                ("storage-location-defaults", storage_location_defaults), ("played-defaults", played_defaults),
+               ("departed-defaults", departed_defaults),
                ("absent-shop-prices", absent_shop_prices))
 
 
