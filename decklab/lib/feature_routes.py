@@ -21,6 +21,17 @@ def _sideboard_preview(**params):
     return preview_sideboard(**params)
 
 
+def _sideboard_tests(**params):
+    """Load a sideboard plan's tests (api/sideboard_test.py, over Forge's variant tests) only when asked for."""
+    from decklab.lib.api.sideboard_test import sideboard_tests
+    return sideboard_tests(**params)
+
+
+def _start_sideboard_test(body):
+    from decklab.lib.api.sideboard_test import start_sideboard_test
+    return start_sideboard_test(body)
+
+
 def dispatch(handler, route, query):
     from decklab.lib.api import (accessories, accessory_undo, activity, arrivals, activity_mixed_undo, activity_undo, assembly, assembly_completion, assembly_standins, assembly_ticks, box_check, box_repair, collection, compare, considering, collection_edit, collection_locations, collection_trade, cover, deck_printings, edhrec, editor, history,
                                  library_forge, maintenance, opponents, play_pods, play_records, play_tonight, precon_coverage, precons, products, product_tokens, rankings, receipts, rename, retirement, role_cards, shopping, shopping_order_changes, shopping_orders, shopping_queue, shopping_queue_missing, swaps, token_cards, token_plan, tokens, variant_queue, visits, wishlist_undo)
@@ -41,6 +52,7 @@ def dispatch(handler, route, query):
         ("compare", "shared"): (compare.shared_view, ("a", "av", "b", "bv")),
         ("play",): (play_records.play_overview, ("id",)),
         ("play", "sideboard-preview"): (_sideboard_preview, ("id", "sha256")),
+        ("play", "sideboard-tests"): (_sideboard_tests, ("id", "sha256")),
         ("play", "pairs"): (play_tonight.pairs_view, ()),
         ("deck", "history"): (history.deck_history, ("id",)),
         ("deck", "retire"): (retirement.retirement_view, ("id",)),
@@ -81,6 +93,7 @@ def dispatch(handler, route, query):
         ("play", "game"): play_records.save_game,
         ("play", "pod"): (play_pods.save_pod, play_pods.MAX_BODY),
         ("play", "sideboard"): play_records.save_sideboard,
+        ("play", "sideboard-test"): _start_sideboard_test,     # run.start (require_start), after the preview's checks
         ("receipt", "preview"): receipts.preview_receipt,
         ("receipt", "apply"): receipts.apply_receipt,
         ("arrivals", "dismiss"): arrivals.dismiss_arrivals,
@@ -130,7 +143,8 @@ def dispatch(handler, route, query):
         function, names = gets[key]
         params = handler._query(query, names)
         if "id" in names and key not in {("activity", "undo"), ("activity", "wishlist-undo"), ("activity", "accessory-undo"),
-                                         ("activity", "mixed-undo"), ("play", "sideboard-preview")}:
+                                         ("activity", "mixed-undo"), ("play", "sideboard-preview"),
+                                         ("play", "sideboard-tests")}:
             params["deck_id"] = handler._deck_id(params) if "id" in params else None
             params.pop("id", None)
         handler._send_json(200, function(**params))

@@ -38,7 +38,7 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E1: Find, plan and choose decks](#e1-find-plan-and-choose-decks) | 17 | 17 | 0 | 0 | 0 |
 | [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 21 | 18 | 1 | 1 | 1 |
 | [E3: Test a deck](#e3-test-a-deck) | 18 | 14 | 4 | 0 | 0 |
-| [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 22 | 18 | 2 | 1 | 1 |
+| [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 22 | 19 | 1 | 1 | 1 |
 | [E5: Decide what to buy](#e5-decide-what-to-buy) | 24 | 20 | 1 | 1 | 2 |
 | [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 23 | 21 | 0 | 0 | 2 |
 | [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 28 | 24 | 3 | 1 | 0 |
@@ -46,9 +46,9 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E9: Commander nights](#e9-commander-nights) | 22 | 16 | 2 | 3 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 35 | 31 | 1 | 1 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 41 | 32 | 5 | 1 | 3 |
-| **Total** | **270** | **227** | **19** | **10** | **14** |
+| **Total** | **270** | **228** | **18** | **10** | **14** |
 
-Counted from the story headers on 2026-10-29 after the source-aware two-player and pod counters, alongside the current feature and maintenance work. The reviews added five feature stories and eight hygiene stories, then the fixture-only entry-point story E11-S44, and corrected E1-S12 from missing to partial. Rechecked 2026-10-29: E1-S12 is built and E11-S39 partial (its database qualification pending). The TODO audit of 2026-10-29 added fifteen missing stories (twelve from the audit: E1-S27, E1-S28, E2-S27, E3-S25, E3-S26, E5-S25, E6-S25, E6-S26, E9-S26, E9-S27, E11-S45, E11-S46), then Matt's three UI requests (E3-S27, E5-S26, E6-S27), and corrected E7-S32 from missing to partial (its recognition spike and CLI are built). Matt closed E11-S16 as built the same day, and E3-S27, E5-S26, E6-S25, E6-S27 and E11-S46 were built the same day (E11-S12 stays partial after a further slice). Later the same day E5-S25 and E6-S26 were built, E1-S27's first slice (the library) made it partial, and E11-S12 and E3-S26 were built. E1-S27's Overview slices then finished it, and E2-S27 and E9-S27 were built. E1-S28 was built the same day. E3-S25's first slice (its replacements API, 2026-10-29) made it partial. E11-S45 was built the same day. Recounted 2026-10-30: E7-S23's first slice (the token side on deck pages and the printout) made it partial. E7-S24's read-only slice (the counters and dice a deck's cards use) made it partial too. E9-S26's free cards by role on the Stats tab made it partial, leaving its cited role targets to Matt's choice of template.
+Counted from the story headers on 2026-10-29 after the source-aware two-player and pod counters, alongside the current feature and maintenance work. The reviews added five feature stories and eight hygiene stories, then the fixture-only entry-point story E11-S44, and corrected E1-S12 from missing to partial. Rechecked 2026-10-29: E1-S12 is built and E11-S39 partial (its database qualification pending). The TODO audit of 2026-10-29 added fifteen missing stories (twelve from the audit: E1-S27, E1-S28, E2-S27, E3-S25, E3-S26, E5-S25, E6-S25, E6-S26, E9-S26, E9-S27, E11-S45, E11-S46), then Matt's three UI requests (E3-S27, E5-S26, E6-S27), and corrected E7-S32 from missing to partial (its recognition spike and CLI are built). Matt closed E11-S16 as built the same day, and E3-S27, E5-S26, E6-S25, E6-S27 and E11-S46 were built the same day (E11-S12 stays partial after a further slice). Later the same day E5-S25 and E6-S26 were built, E1-S27's first slice (the library) made it partial, and E11-S12 and E3-S26 were built. E1-S27's Overview slices then finished it, and E2-S27 and E9-S27 were built. E1-S28 was built the same day. E3-S25's first slice (its replacements API, 2026-10-29) made it partial. E11-S45 was built the same day. Recounted 2026-10-30: E7-S23's first slice (the token side on deck pages and the printout) made it partial. E7-S24's read-only slice (the counters and dice a deck's cards use) made it partial too. E9-S26's free cards by role on the Stats tab made it partial, leaving its cited role targets to Matt's choice of template. E4-S16 was built (sideboard-plan tests).
 
 ---
 
@@ -1027,7 +1027,7 @@ Built (2026-10-29): `web/deck-picker.js` `deckListbox` replaces the select with 
 
 This epic covers getting physical decks onto the table and learning from the games played: choosing the decks, pulling and sleeving the cards from home's shared pool on Build decks (#/assembly, the packing plan), reading a deck's How to play and practising opening hands, playing with sideboard plans, and recording the result on the Game log (#/play). Each game is seen only by the spaces whose decks it names, a side whose deck the viewer may not see shows only as words such as "one of the home decks", and each space changes only its own side (E10-S32). Teaching the rules is left to products like the Beginner Box, so Deck Lab keeps teaching minimal. User1 uses Deck Lab on her phone, so Build decks and the Game log on a phone matter most.
 
-Open: E4-S09, E4-S16, E4-S19.
+Open: E4-S09, E4-S19.
 
 **E4-S01** · Matt · must · L · built
 
@@ -1222,7 +1222,7 @@ Evidence:
 - `decklab/lib/api/play_records.py`: play_overview, _plan_cards
 - `decklab/tests/test_deck_sideboard_ui.py`: DeckSideboardUiTests
 
-**E4-S16** · Matt · could · L · partial
+**E4-S16** · Matt · could · L · built
 
 As a player planning sideboards, I want to test a sideboard plan against its opponent in simulated games, so that I know the swap helps before relying on it in a real best of three.
 
@@ -1231,14 +1231,15 @@ As a player planning sideboards, I want to test a sideboard plan against its opp
 - Given the simulations setting doesn't let me start runs, then the reason shows beside Start.
 - Given the plan's lists change, then the old test is marked as for an older list.
 
-Now (2026-10-28): Game log and the deck's saved Sideboard plan offer an explicit read-only post-board preview. It checks exact record/list hashes and preserves listed printings; mixed or unknown formats keep the list preview without numeric game budgets. See [HISTORY.md](../HISTORY.md#saved-sideboard-plan-preview-2026-10-28-e4-s16-slice).
+Now: Built 2026-10-29 ([HISTORY.md, Sideboard-plan tests](../HISTORY.md#sideboard-plan-tests-2026-10-29-e4-s16)). The read-only preview (2026-10-28) now starts a paired test of the post-board main list on the base list's games (`POST /api/play/sideboard-test`), behind the preview's checks and the simulations setting; **Tests of this plan** lists its verdicts and marks tests of an older list.
 
 Evidence:
 - `lib/api/sideboard_preview.py` and the GET-only `feature_routes.py` registration: own-space record visibility before validation, fixed hidden/removed-opponent refusals, one pinned current inventory, bounded complete rows, authoritative plan transfers and derived snapshot digest.
-- `web/sideboard-preview.js`, `play.js` and `deck-sideboard.js`: explicit fetch, literal section/printing comparisons and full post-board list, bounded local pagination, fixed errors and original profile/page/sheet/control guards. No save or run action is offered.
-- Root's protected eight-module integration passed 150 tests with no skips, including 24 new backend and 22 new UI cases plus existing play, removed-record, deck-sideboard and script-loader regressions.
+- `lib/api/sideboard_test.py`: start_sideboard_test (the preview first, so a hidden plan is a 404 before any 403; then require_start; Forge's entries bound to the record's verified snapshots; variant_page's _VariantRun, _ready and _submit), sideboard_tests (_for_plan, _today, older_list).
+- `web/sideboard-preview.js`: explicit fetch, literal section/printing comparisons and full post-board list, spvStart (the simulations setting's reason under a disabled Start), spvTestsOpen and spvTestsAnswer (whole-answer validation, older-list marks), with the original profile/page/sheet/control guards.
+- `decklab/tests/test_sideboard_test.py` (21 cases over the real forge package with test_variant_api's stand-in run_test) and `test_sideboard_test_ui.py` (10 Node DOM cases, a not-settled verdict included), with the preview's 24 backend and 22 UI cases.
 
-Gap: the preview does not simulate plans. Explicit permission-checked paired runs on the base games, a verdict and stale-test results remain to build; Forge games are still best of one. The guide uses fresh paired-game upper bounds only, without cached work, engine compatibility, timing or execution qualification. Real Forge games retain the separate authorization and idle-PC gates. Browser/device and actual PostgreSQL qualification were not run for this slice.
+Gap: Forge games are still best of one, so a test measures only the post-board main list against the opponent's game-one list; the sideboard itself and the opponent's own plan aren't played. Real Forge games keep the separate authorization and idle-PC gates; browser/device and actual PostgreSQL qualification were not run.
 
 **E4-S17** · User1 · should · S · built
 

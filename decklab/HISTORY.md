@@ -2,6 +2,43 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Sideboard-plan tests (2026-10-29; E4-S16)
+
+A saved plan's post-board preview now offers **Start quick check** and **Start
+play until ahead** when both lists share one verified format. `POST
+/api/play/sideboard-test` (`lib/api/sideboard_test.py`) runs the preview's checks
+again first, so a hidden plan or opponent answers 404 or 409 before any 403, then
+the simulations setting (`require_start`), the base's own space and the variant
+tests' own checks: deck-order-1 in today's engine and a free place in the
+coordinator's queue. Forge's entries read today must have the played cards of the
+record's verified snapshots, so a list saved after the preview's pin refuses. The
+post-board main list is then played on the base list's games as a paired variant
+test (`variants.run_test` through variant_page's job, titled "Test of a sideboard
+plan for ..."); its test page gives the Better / Worse / Makes little difference
+words. Starting the same plan twice joins one test. While the setting refuses the
+viewer, Start is disabled with the setting's reason under it, naming nobody.
+
+**Tests of this plan**, beside Preview on Game log and the deck's Sideboard plan,
+reads `GET /api/play/sideboard-tests`: the deck's tests against the same
+opponent list whose changes are the plan's moves (an editor test of the same swap
+counts), running ones first, each with its verdict words and link. A test is
+marked **For an older list** when either list's played cards changed since it was
+played or the saved plan no longer matches today's lists, a printing-only change
+included; the sheet then says to revise the plan. Only the plan's own space reads
+them, public decks never publish a plan's tests, and each test also follows the
+variant tests' visibility; its items carry no starter or stopper names, and the
+answer passes through the viewer's name masking. A test that ended not settled is
+listed like the others.
+
+Games stay best of one: a test measures only the post-board main list against
+the opponent's game-one list, never the sideboard or the opponent's own plan.
+Fixtures only: 21 backend cases over the real forge package with
+test_variant_api's stand-in `run_test`, a MemoryStore and disposable decks, and 10
+Node DOM cases; with the preview, variant, play-record, permission, route and web
+modules, 179 tests passed (1 skipped), and the inventory contract, deck API and
+feature UI modules 68. No Forge game, live database, server, browser or device was
+run or probed. E4-S16 is built.
+
 ## Saved field choices in home's field selection (2026-10-29; E3-S23 selector slice)
 
 Home's field now follows the saved per-format field policy. A new

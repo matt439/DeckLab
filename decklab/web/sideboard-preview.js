@@ -1,4 +1,6 @@
-/* A saved sideboard plan's exact post-board list and proposed game counts. Read-only: no run or save. */
+/* A saved sideboard plan's exact post-board list and proposed game counts, read-only, and its Forge tests
+ * (E4-S16): Start in the preview (POST /api/play/sideboard-test, the simulations setting's reason beside it) and
+ * the plan's tests with their verdicts and older-list marks (GET /api/play/sideboard-tests). Nothing is saved. */
 "use strict";
 
 const SPV_SECTIONS = ["Commander", "Companion", "Deck", "Sideboard"];
@@ -142,13 +144,16 @@ function sideboardPreviewAction(entry) {
     screen: deckScreen, data: deckScreen?.data, view: deckScreen?.view,
     base: { id: plan.deck.id, version: plan.deck.version, sha256: plan.deck.sha256 },
     opponent: { id: plan.opponent.id, version: plan.opponent.version, sha256: plan.opponent.sha256 } };
-  host.append(button);
-  button.addEventListener("click", () => {
-    if (!spvOwner(ctx) || button.disabled || keyboardDialog() || keyboardMenuOpen()) return;
+  const tests = el("button", { type: "button", class: "btn", text: "Tests of this plan" });
+  host.append(button, tests);
+  const opener = (control, open) => () => {
+    if (!spvOwner(ctx) || control.disabled || !host.contains(control) || keyboardDialog() || keyboardMenuOpen()) return;
     if (ctx.sheet && !ctx.sheet.closed) return;
     if (!ctx.frame) { ctx.frame = host.parentNode; ctx.frameParent = ctx.frame.parentNode; }
-    spvOpen(ctx);
-  });
+    open(ctx);
+  };
+  button.addEventListener("click", opener(button, spvOpen));
+  tests.addEventListener("click", opener(tests, spvTestsOpen));
   return host;
 }
 
@@ -246,5 +251,116 @@ function spvDraw(ctx, answer) {
     el("p", { text: "Quick check: up to 200 base games and 200 post-board games (400 total)." }),
     el("p", { text: "Play until ahead: paired targets of 400, 800, 1,600 and 3,200 games per list; up to 6,400 games total." }),
     el("p", { class: "sub", text: "These are fresh-game upper bounds. Saved games and simulation setup have not been checked, so remaining games are unknown." }));
-  ctx.body.append(full, games, el("p", { class: "sub", text: "No test was started and no verdict is available." }));
+  const note = el("p", { class: "sub", text: "No test was started and no verdict is available." });
+  ctx.body.append(full, games, note);
+  if (!answer.gameReason) ctx.body.append(spvStart(ctx, render, note));
+}
+
+// ------------------------------------------------------------- testing the plan in Forge (E4-S16)
+
+const SPV_VERDICTS = ["better", "slightly_better", "little_difference", "not_settled", "slightly_worse", "worse", "stopped", "error"];
+
+/** Start (or join) the plan's paired test from the preview: Forge plays the post-board main list on the base
+ * list's games. While the simulations setting refuses this viewer, Start is disabled with its reason under it
+ * (simulationsGate, as syncRunControls words it); the server checks every start anyway. */
+function spvStart(ctx, render, note) {
+  const result = el("div", { role: "status" }), gate = simulationsGate();
+  const buttons = ["Start quick check", "Start play until ahead"].map(text =>
+    el("button", { type: "button", class: "btn", text, disabled: !gate.may }));
+  const row = el("div", { class: "actions sideboard-test-start" }, buttons);
+  const box = el("section", { class: "sideboard-test" }, el("h3", { text: "Test this plan" }),
+    el("p", { class: "sub", text: "Forge plays the post-board main list on the base list's games against the opponent " +
+      "and says whether the swap is better, worse or makes little difference. Games are best of one, so the " +
+      "sideboard itself isn't played." }), row, gate.may ? null : el("p", { class: "run-blocked", text: gate.why }), result);
+  buttons.forEach((button, i) => button.addEventListener("click", async () => {
+    if (!spvSheetHere(ctx) || !spvTop(ctx) || ctx.render !== render || ctx.pending || button.disabled ||
+        !box.isConnected || !ctx.body.contains(box)) return;
+    const mode = i ? "ahead" : "quick", sequence = ctx.sequence;
+    ctx.pending = true; buttons.forEach(node => { node.disabled = true; });
+    clear(result).append(loadingBox("Starting the test…", { small: true }));
+    const here = () => sequence === ctx.sequence && ctx.render === render && spvSheetHere(ctx) && ctx.body.contains(box);
+    try {
+      const answer = await apiWrite("/api/play/sideboard-test", { id: ctx.id, sha256: ctx.sha256, mode });
+      if (!here()) return;
+      if (!answer || answer.version !== 1 || answer.plan?.id !== ctx.id || answer.plan?.sha256 !== ctx.sha256 ||
+          !spvSha(answer.test) || answer.link !== `#/variant?test=${answer.test}`) throw new Error("Unexpected answer");
+      const words = spvText(answer.words, 500) ? answer.words : null;
+      clear(result).append(el("p", { text: words || (["queued", "running"].includes(answer.status)
+        ? "The test is playing on the PC. Its verdict shows on the test's page and under Tests of this plan."
+        : "The test was started.") }), el("p", {}, el("a", { href: answer.link, text: "Open the test" })));
+      note.textContent = "A test of this plan was started. The deck lists and the saved plan are unchanged.";
+    } catch (error) {
+      if (!here()) return;
+      const text = error instanceof ApiError && error.status === 403 && spvText(error.message, 500) ? error.message
+        : "The test couldn't be started. The plan or its lists may have changed, or Forge may be busy. Try again.";
+      clear(result).append(el("p", { class: "box box-warn", text }));
+    } finally {
+      if (here()) { ctx.pending = false; buttons.forEach(node => { node.disabled = !simulationsGate().may; }); }
+    }
+  }));
+  return box;
+}
+
+function spvTestsAnswer(ctx, answer) {
+  if (!answer || answer.version !== 1 || answer.plan?.id !== ctx.id || answer.plan?.sha256 !== ctx.sha256 ||
+      typeof answer.current !== "boolean" || !Array.isArray(answer.tests) || answer.tests.length > 200) return null;
+  const tests = [];
+  for (const item of answer.tests) {
+    if (!item || !spvSha(item.test) || item.link !== `#/variant?test=${item.test}` ||
+        typeof item.older_list !== "boolean" || typeof item.running !== "boolean" ||
+        item.verdict != null && !SPV_VERDICTS.includes(item.verdict) ||
+        item.words != null && !spvText(item.words, 500) || !spvCount(item.games_per_opponent) ||
+        [item.done, item.total].some(n => n != null && !spvCount(n))) return null;
+    tests.push({ test: item.test, link: item.link, older: item.older_list, running: item.running,
+      words: item.words || null, games: item.games_per_opponent, done: item.done, total: item.total });
+  }
+  return { current: answer.current, tests };
+}
+
+function spvTestsOpen(owner) {
+  const ctx = { ...owner };
+  const sheet = owner.sheet = ctx.sheet = openSheet("Tests of this plan", { wide: true });
+  ctx.dialog = sheet.dialog; ctx.body = sheet.body; ctx.foot = sheet.foot;
+  ctx.dialogParent = sheet.dialog.parentNode; ctx.sequence = 0; ctx.pending = false;
+  ctx.done = el("button", { type: "button", class: "btn", text: "Done", onclick: () => {
+    if (spvSheetHere(ctx) && spvTop(ctx)) sheet.close();
+  } });
+  ctx.retry = el("button", { type: "button", class: "btn", text: "Refresh", onclick: () => {
+    if (spvSheetHere(ctx) && spvTop(ctx) && !ctx.pending && !ctx.retry.disabled) spvTestsFetch(ctx);
+  } });
+  sheet.foot.append(ctx.done, ctx.retry);
+  spvTestsFetch(ctx);
+  if (spvSheetHere(ctx) && spvTop(ctx)) ctx.done.focus();
+}
+
+async function spvTestsFetch(ctx) {
+  if (!spvSheetHere(ctx) || ctx.pending) return;
+  const sequence = ++ctx.sequence;
+  ctx.pending = true; ctx.retry.disabled = true;
+  clear(ctx.body).append(loadingBox("Loading this plan's tests."));
+  const current = () => sequence === ctx.sequence && spvSheetHere(ctx);
+  try {
+    const answer = spvTestsAnswer(ctx, await api(`/api/play/sideboard-tests?id=${encodeURIComponent(ctx.id)}&sha256=${ctx.sha256}`));
+    if (!current()) return;
+    if (!answer) throw new Error("Tests unavailable");
+    clear(ctx.body);
+    if (!answer.current) ctx.body.append(el("p", { class: "box box-warn", text:
+      "A list in this plan has changed since it was saved. Its tests are for an older list: revise the plan to test it again." }));
+    if (!answer.tests.length) ctx.body.append(el("p", { class: "sub", text:
+      "No test of this plan yet. Preview the post-board list to start one." }));
+    else ctx.body.append(el("ul", { class: "sideboard-tests" }, answer.tests.map(item => el("li", {},
+      el("p", { text: item.words || (item.running ? "Playing on the PC." : "No verdict yet.") }),
+      el("p", { class: "sub", text: [item.older ? "For an older list" : null,
+        item.running && item.total ? `${item.done || 0} of ${item.total} games played` : null,
+        !item.running && item.games ? `${item.games.toLocaleString("en-AU")} games a deck` : null].filter(Boolean).join(" · ") }),
+      el("a", { href: item.link, text: "Open the test" })))));
+    ctx.retry.textContent = "Refresh";
+  } catch (_) {
+    if (!current()) return;
+    clear(ctx.body).append(el("p", { class: "box box-warn", role: "status", text:
+      "This plan's tests couldn't be loaded. Its record or lists may no longer be available. Try again." }));
+    ctx.retry.textContent = "Try again";
+  } finally {
+    if (current()) { ctx.pending = false; ctx.retry.disabled = false; }
+  }
 }
