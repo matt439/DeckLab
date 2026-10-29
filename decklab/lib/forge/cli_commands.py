@@ -353,7 +353,8 @@ def _cmd_overrides(args):
         if args.action == "list":
             return _overrides_list(args)
         if args.action == "check":
-            problems = shared.overrides.check()
+            staged = getattr(args, "forge_dir", None)      # upgrade-check --dir's staged build (E11-S45)
+            problems = shared.overrides.check() if staged is None else shared.overrides.check(staged)
             if args.json:
                 print(shared.json.dumps({"problems": problems}, indent=1, ensure_ascii=False))
             else:

@@ -2,6 +2,38 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## A staged Forge build checked before it's installed (2026-10-29; E11-S45)
+
+`python -m decklab.lib.forge upgrade-check --dir DIR` runs `cardlog-check`, `serve-check` and the overrides'
+upstream check against a staged build in a scratch folder (the one `install.py --out` built) before it replaces
+the installed one. Forge is set up from DIR with its version not noted (`install._setup(forge_dir=DIR,
+remember=False)`, through `cli_checks._staged_setup`), each step's args carry `forge_dir`, and
+`overrides.check(forge_dir)` (with `_forge_now` and `_forge_scripts`) reads DIR's `cardsfolder.zip` and writes
+nothing. A staged `cardlog-check` notes nothing either way: neither `simjar.record_checked` nor `record_failed`
+runs, so a failing staged build never turns the card log off for the installed one, and a passing one doesn't
+count until the check after the install. The summary names the folder ("Upgrade check of the staged build at
+DIR (Forge ...)"), says nothing was noted for the installed build, and leaves `replay --dry-run`'s part to the
+check after the install. A blank `--dir`, a folder that isn't there, or `config.json`'s `forge_dir` itself is
+refused before anything runs. Only `cardlog-check` and `serve-check` decide the staged verdict
+(`STAGED_BLOCKING`): either failing says "don't install this build" and exits 1, while an override that no
+longer fits the new scripts (expected after a release) exits 0 with "install it", saying `overrides make`
+makes it again after the install, since `overrides make` reads only the installed build's scripts and couldn't
+fix it beforehand. `--plan` now lists the staged check as step 5, before the merge and install (step 6), and
+with `--dir` puts its folder in place of `<scratch folder>`; the README's "Moving to a new Forge release" puts
+it between `engine-check` and the install too.
+
+Fixture tests: `decklab/tests/test_forge_upgrade_check.py` (`StagedUpgradeCheckTests`: every step gets the
+folder, the setup isn't remembered, no replay plan or installed version is read; a failure and a setup that
+can't start, both noting nothing; overrides that no longer fit don't stop the install, a failed game check
+does; the three refusals; the plan's order and folder. `StagedCardlogCheckTests`: the real `_cardlog_check` with
+stand-in games records nothing staged, passed or failed, while the installed check still records its failure; `serve-check` and the overrides check take the folder) and
+`test_forge_overrides.py` (`check(forge_dir)` reads the staged zip, a changed upstream script shows only there,
+the upstream cache is unchanged, and a folder without Forge is named). No Forge process starts.
+
+- **Known low issues:** the card-log jar for a staged build is still built into `decklab/data/cardlog/` (keyed by
+  its version and stamp, so it never stands in for the installed build's) and the first-use marker is touched in
+  the run user folder; neither is the checked record.
+
 ## Free replacements and Test this swap on the Matchups tab (2026-10-29; E3-S25)
 
 The second slice of E3-S25 puts the replacements API on the page. On the deck page's Matchups tab, "How its
@@ -3545,7 +3577,7 @@ The Collection page's Card list has a **~A$ each** column, built after Matt aske
 - **`--plan TAG`** prints the README's manual steps for a release tag (rebase the fork's `decklab` branch, `BASE_TAG`, the scratch build, `engine-check`, the fast-forward merge and install, `upgrade-check`, `simjar.CHECKED`, `replay`) and runs nothing. Its `engine-check` step, like the README's, says a new release's expected result is exit 1 with "Different engine key" and no "Don't install this build as it is" line.
 - **Acceptance 3 was already built:** a failed `cardlog-check` is noted (`simjar.record_failed`), so runs get no card log and play plain Forge, and the Matchups page's status note says "Per-card stats are off" with the reason.
 - **Tests:** `test_forge_upgrade_check` (each step's pass, fail, error and skip, the summary, the exit code, the replay part against fakes and against `replay --dry-run`'s own output from saved results, `--plan`, registration); `test_forge_contract`'s command list. No Forge process starts in them.
-- **Known low issues:** it checks the installed build (`config.json`'s `forge_dir`) only, with no `--dir`. The step's reason is its first printed line, so a `cardlog-check` with several problems names only the first (the rest are above it).
+- **Known low issues:** it checks the installed build (`config.json`'s `forge_dir`) only, with no `--dir` (`--dir` added 2026-10-29, E11-S45). The step's reason is its first printed line, so a `cardlog-check` with several problems names only the first (the rest are above it).
 
 ## Two-card combos and Wizards' latest Commander announcement (2026-10-21, E9-S23, E9-S24)
 

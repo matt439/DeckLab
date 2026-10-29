@@ -10,7 +10,11 @@ replay --dry-run's own output.
 
 Run from the repo root: python scripts/test_fixtures.py decklab.tests.test_forge_upgrade_check
 """
+import argparse
+import contextlib
+import io
 import pathlib
+import tempfile
 import unittest
 from unittest import mock
 
@@ -238,6 +242,186 @@ class UpgradeCheckTests(unittest.TestCase):
         self.assertIn("--plan needs a release tag", err)
 
 
+class StagedUpgradeCheckTests(unittest.TestCase):
+    """upgrade-check --dir (E11-S45): the steps run against a staged build in a scratch folder, set
+    up without noting its version, the summary names the folder, and nothing is noted for the
+    installed build."""
+
+    setUp = UpgradeCheckTests.setUp
+    run_main = UpgradeCheckTests.run_main
+    summary = UpgradeCheckTests.summary
+
+    def staged(self):
+        """A made-up staged folder (its jar found as a stand-in: no Forge is read)."""
+        folder = pathlib.Path(self.enterContext(tempfile.TemporaryDirectory()))
+        found = self.enterContext(mock.patch.object(
+            forge.install, "_find_jar", return_value=("forge.jar", "2.0.16-decklab-new5678")))
+        return folder, found
+
+    def test_every_step_runs_against_the_staged_build(self):
+        folder, found = self.staged()
+        code, out, err = self.run_main("--dir", str(folder))
+        self.assertEqual(code, 0, err)
+        self.assertEqual(self.summary(out), [f"Upgrade check of the staged build at {folder} "
+                                             "(Forge 2.0.16-decklab-new5678):",
+                                             "  cardlog-check: passed", "  serve-check: passed",
+                                             "  overrides check: passed"])
+        self.assertTrue(out.endswith("Nothing was noted for the installed build.\nEvery check passed on the staged "
+                                     "build: install it, then run upgrade-check without --dir.\n"))
+        self.setup.assert_called_once_with(forge_dir=folder, remember=False)
+        found.assert_called_once_with(folder)
+        for command in (self.cardlog, self.serve, self.overrides):
+            self.assertEqual(command.call_args.args[0].forge_dir, folder)
+        # What needs replaying is the installed check's: neither it nor the installed version is read.
+        self.plan.assert_not_called()
+        forge.install.forge_version.assert_not_called()
+        self.assertNotIn("replay", out)
+
+    def test_a_failure_in_the_staged_build(self):
+        folder, _ = self.staged()
+        self.cardlog.side_effect = step(1, ["The card log changed the Constructed games it was kept in.",
+                                            f"Nothing was noted: the staged build at {folder} isn't the installed one."]
+                                        ).side_effect
+        code, out, _ = self.run_main("--dir", str(folder))
+        self.assertEqual(code, 1)
+        self.assertEqual(self.summary(out)[1], "  cardlog-check: failed: The card log changed the Constructed games it "
+                                               "was kept in.")
+        self.assertTrue(out.endswith("Nothing was noted for the installed build.\n1 of 2 game checks didn't pass: "
+                                     "don't install this build; fix what's above and run upgrade-check --dir again.\n"))
+        # Forge can't be set up from the folder: the games are skipped, the overrides check still runs on it.
+        self.setup.side_effect = forge.ForgeError(f"Forge isn't installed at {folder}.")
+        code, out, _ = self.run_main("--dir", str(folder))
+        self.assertEqual(code, 1)
+        self.assertEqual(self.summary(out)[1:3], [f"  cardlog-check: skipped: Forge can't be started: Forge isn't "
+                                                  f"installed at {folder}.",
+                                                  f"  serve-check: skipped: Forge can't be started: Forge isn't "
+                                                  f"installed at {folder}."])
+        self.assertEqual(self.overrides.call_args.args[0].forge_dir, folder)
+
+    def test_overrides_that_no_longer_fit_dont_stop_the_install(self):
+        # A release that changes an overridden card's script: overrides make can only make it again from
+        # the installed scripts, so it's step 7's work after the install, not a reason not to install.
+        folder, _ = self.staged()
+        self.overrides.side_effect = step(1, ["! Card 1 (fixes): Forge's script isn't the one the override was made "
+                                              "from"]).side_effect
+        code, out, err = self.run_main("--dir", str(folder))
+        self.assertEqual(code, 0, err)
+        self.assertEqual(self.summary(out)[3], "  overrides check: failed: Card 1 (fixes): Forge's script isn't the "
+                                               "one the override was made from")
+        self.assertTrue(out.endswith("Nothing was noted for the installed build.\ncardlog-check and serve-check passed "
+                                     "on the staged build: install it. The overrides check didn't pass: after the "
+                                     "install, overrides make makes them again from the new scripts (review its "
+                                     "diff), then run upgrade-check without --dir.\n"))
+        self.assertNotIn("don't install", out)
+        # A failed game check still stops it, and only the game checks are counted.
+        self.serve.side_effect = step(1, ["A warm worker played different games."]).side_effect
+        code, out, _ = self.run_main("--dir", str(folder))
+        self.assertEqual(code, 1)
+        self.assertTrue(out.endswith("1 of 2 game checks didn't pass: don't install this build; fix what's above and "
+                                     "run upgrade-check --dir again.\n"))
+
+    def test_folders_that_arent_a_staged_build(self):
+        folder, _ = self.staged()
+        for given, words in ((" ", "--dir needs the folder"), (str(folder / "missing"), "There's no folder"),):
+            code, _, err = self.run_main("--dir", given)
+            self.assertEqual(code, 1)
+            self.assertIn(words, err)
+        with mock.patch.object(forge.common, "_settings", return_value={"forge_dir": str(folder)}):
+            code, _, err = self.run_main("--dir", str(folder))
+        self.assertEqual(code, 1)
+        self.assertIn("is the installed build: leave out --dir to check it.", err)
+        for command in (self.cardlog, self.serve, self.overrides, self.setup):
+            command.assert_not_called()
+
+    def test_the_plan_checks_the_staged_build_before_installing_it(self):
+        code, out, err = self.run_main("--plan", "forge-2.0.16")
+        self.assertEqual(code, 0, err)
+        self.assertLess(out.index("upgrade-check --dir <scratch folder>"), out.index("git merge --ff-only"))
+        self.assertLess(out.index("git merge --ff-only"), out.index("  7. Here: python -m decklab.lib.forge "
+                                                                    "upgrade-check (cardlog-check"))
+        self.assertIn("A failed cardlog-check or serve-check stops the upgrade here; an override that no longer fits "
+                      "doesn't, since step 7 makes it again after the install.", out)
+        code, out, err = self.run_main("--plan", "forge-2.0.16", "--dir", "D:/scratch/forge-2.0.16")
+        self.assertEqual(code, 0, err)
+        self.assertIn("python decklab/install.py --out D:/scratch/forge-2.0.16 ", out)
+        self.assertIn("upgrade-check --dir D:/scratch/forge-2.0.16 (", out)
+        self.assertNotIn("<scratch folder>", out)
+        self.setup.assert_not_called()
+
+
+class StagedCardlogCheckTests(unittest.TestCase):
+    """cardlog-check and serve-check with a staged build: set up from its folder, and cardlog-check
+    notes nothing, passed or failed (the games are stand-ins: no Forge process starts)."""
+
+    def setUp(self):
+        self.folder = pathlib.Path("staged-forge")
+        self.setup = mock.Mock(return_value={"version": "2.0.16-decklab-new5678", "java": "java",
+                                             "forge_dir": self.folder, "jar": "forge.jar", "user_dir": self.folder})
+        self.warm = mock.Mock(return_value=None)
+        self.checked = mock.Mock()
+        self.failed = mock.Mock()
+        simjar = cli_shared.simjar
+        for p in (mock.patch.object(cli_shared, "_setup", self.setup),
+                  mock.patch.object(simjar, "forge_build", return_value="b"),
+                  mock.patch.object(simjar, "source_sha256", return_value="s"),
+                  mock.patch.object(simjar, "card_log", return_value={"ready": True}),
+                  mock.patch.object(simjar, "record_checked", self.checked),
+                  mock.patch.object(simjar, "record_failed", self.failed),
+                  mock.patch.object(cli_checks, "_check_legs", return_value=[]),
+                  mock.patch.object(cli_checks, "_check_runs", return_value={}),
+                  mock.patch.object(cli_checks, "_play_check_runs", return_value={}),
+                  mock.patch.object(cli_shared, "_prepare_user_dir", return_value={}),
+                  mock.patch.object(cli_shared.runner, "_first_use_marker",
+                                    return_value=mock.Mock(**{"exists.return_value": True})),
+                  mock.patch.object(cli_shared.runner, "_tidy_user_dir"),
+                  mock.patch.object(cli_shared.servecheck, "warm_leg", self.warm),
+                  mock.patch.object(cli_shared.sys, "stderr", io.StringIO())):
+            p.start()
+            self.addCleanup(p.stop)
+
+    def check(self, forge_dir):
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            code = cli_checks._cardlog_check(1, 1, forge_dir)
+        return code, out.getvalue()
+
+    def test_a_staged_build_notes_nothing(self):
+        code, out = self.check(self.folder)
+        self.assertEqual(code, 0)
+        self.setup.assert_called_once_with(forge_dir=self.folder, remember=False)
+        self.assertIn(f"Forge 2.0.16-decklab-new5678 at {self.folder}. Nothing was noted", out)
+        self.warm.return_value = ("failed", ["A warm game differed."])
+        code, out = self.check(self.folder)
+        self.assertEqual(code, 1)
+        self.assertIn(f"Nothing was noted: the staged build at {self.folder} isn't the installed one.", out)
+        self.checked.assert_not_called()
+        self.failed.assert_not_called()
+        # The installed build's check notes its failure, as before.
+        self.setup.reset_mock()
+        self.assertEqual(self.check(None)[0], 1)
+        self.setup.assert_called_once_with()
+        self.failed.assert_called_once()
+
+    def test_serve_check_uses_the_staged_build(self):
+        with mock.patch.object(cli_shared.simjar, "card_log", return_value={"ready": False, "problem": "No javac."}):
+            with self.assertRaises(cli_shared._CliError):
+                cli_checks._cmd_serve_check(argparse.Namespace(games=1, commander_games=1, v1=False,
+                                                               forge_dir=self.folder))
+            self.setup.assert_called_once_with(forge_dir=self.folder, remember=False)
+            with self.assertRaises(cli_shared._CliError):
+                cli_checks._cmd_serve_check(argparse.Namespace(games=1, commander_games=1, v1=False))
+            self.assertEqual(self.setup.call_args, mock.call())
+
+    def test_the_overrides_check_reads_the_staged_build(self):
+        with mock.patch.object(cli_shared.overrides, "check", return_value=[]) as check, \
+                contextlib.redirect_stdout(io.StringIO()):
+            args = argparse.Namespace(action="check", set_name=None, user_dir=None, sets=None, json=False)
+            self.assertEqual(cli_commands._cmd_overrides(args), 0)
+            self.assertEqual(check.call_args, mock.call())
+            self.assertEqual(cli_commands._cmd_overrides(argparse.Namespace(**vars(args), forge_dir=self.folder)), 0)
+            self.assertEqual(check.call_args, mock.call(self.folder))
+
+
 class UpgradeReplayTests(test_forge_replay.ReplayTests):
     """The replay part is replay --dry-run's own lines, from the same saved results."""
 
@@ -259,9 +443,11 @@ class UpgradeReplayTests(test_forge_replay.ReplayTests):
 
 
 def load_tests(loader, tests, pattern):
-    """UpgradeCheckTests, and UpgradeReplayTests's own test only (not the replay tests it inherits,
+    """UpgradeCheckTests, the staged build's tests, and UpgradeReplayTests's own test only (not the replay tests it inherits,
     which test_forge_replay runs)."""
     suite = loader.loadTestsFromTestCase(UpgradeCheckTests)
+    suite.addTests(loader.loadTestsFromTestCase(StagedUpgradeCheckTests))
+    suite.addTests(loader.loadTestsFromTestCase(StagedCardlogCheckTests))
     suite.addTest(UpgradeReplayTests("test_the_replay_part_is_the_dry_runs"))
     return suite
 

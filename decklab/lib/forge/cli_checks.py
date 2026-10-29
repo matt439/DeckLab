@@ -511,7 +511,16 @@ class _CardLogUnavailable(shared._CliError):
     serve-check needs the same card log; any other _CliError of the check came after it was built."""
 
 
-def _cardlog_check(games, commander_games=CHECK_COMMANDER_GAMES):
+def _staged_setup(forge_dir):
+    """Forge's setup for a check: the installed build's (install._setup), or, given forge_dir
+    (upgrade-check --dir, E11-S45), the staged build's there, with its version not noted
+    (remember False), so the scratch folder never becomes the installed one."""
+    if forge_dir is None:
+        return shared._setup()
+    return shared._setup(forge_dir=forge_dir, remember=False)
+
+
+def _cardlog_check(games, commander_games=CHECK_COMMANDER_GAMES, forge_dir=None):
     """cardlog-check, for wave 2's engine (contract section 18). For each format (Constructed,
     Commander) the check decks play games 0 to n - 1 of their seed stream (base CHECK_SEED):
       1. Parity with plain Forge: one DeckLabSim process plays them (-dlgame) with its game
@@ -533,8 +542,11 @@ def _cardlog_check(games, commander_games=CHECK_COMMANDER_GAMES):
     problem is games that differ in a way that says nothing about the engine (a game that hit
     one of Forge's time limits, or one after it in the same DeckLabSim process; a Commander
     game that ended differently; a warm game whose difference didn't come back: _leg_problem,
-    warm_leg), the check can't tell, and nothing is noted."""
-    setup = shared._setup()
+    warm_leg), the check can't tell, and nothing is noted. Given forge_dir (a staged build,
+    upgrade-check --dir), it plays with that build and notes nothing either way, so neither the
+    installed build's record nor one for the staged build's version changes: the check that
+    counts is the one run once the build is installed."""
+    setup = _staged_setup(forge_dir)
     version = setup["version"]
     build = shared.simjar.forge_build(setup["forge_dir"] / setup["jar"])
     try:
@@ -587,6 +599,13 @@ def _cardlog_check(games, commander_games=CHECK_COMMANDER_GAMES):
         shared.runner._tidy_user_dir(setup["user_dir"])
     for _, lines in problems:
         print("\n".join(lines))
+    if forge_dir is not None:
+        if problems:
+            print(f"Nothing was noted: the staged build at {forge_dir} isn't the installed one.")
+            return 1
+        print(f"The card log played the same {games} Constructed and {commander_games} Commander games as plain "
+              f"Forge {version} at {forge_dir}. Nothing was noted: run cardlog-check again once it's installed.")
+        return 0
     if any(kind == "failed" for kind, _ in problems):
         shared.simjar.record_failed(version, games + commander_games, build, source)    # a ForgeError: main() says it wasn't noted
         print(f"Runs with Forge {version} go without the card log until a check passes.")
@@ -618,7 +637,7 @@ def _cardlog_check_args(sub):
 
 
 def _cmd_cardlog_check(args):
-    return _cardlog_check(args.games, args.commander_games)
+    return _cardlog_check(args.games, args.commander_games, getattr(args, "forge_dir", None))
 
 
 def _serve_check_args(sub):
@@ -639,9 +658,10 @@ def _cmd_serve_check(args):
     """serve-check: servecheck.warm_leg on cardlog-check's lists and servecheck.warm_decks()
     (WARM_DECKS, when their games repeat), with the card-log jar of this source whatever the
     checks say (as cardlog-check builds it). It notes nothing: cardlog-check, of which it is a
-    leg, is what lets runs use the card log."""
+    leg, is what lets runs use the card log. args.forge_dir, when there is one, is upgrade-check
+    --dir's staged build (_staged_setup)."""
     from . import servecheck
-    setup = shared._setup()
+    setup = _staged_setup(getattr(args, "forge_dir", None))
     version = setup["version"]
     log = shared.simjar.card_log(setup["java"], setup["forge_dir"], setup["jar"], version, checking=True)
     if not log["ready"]:

@@ -202,6 +202,31 @@ class DeployTests(OverridesCase):
         self.assertEqual(found["unknown"], ["Fiery Annihilation"])
         self.assertTrue((self.cards / "stray.txt").exists())
 
+    def test_the_check_of_a_staged_build_reads_its_scripts(self):
+        """upgrade-check --dir (E11-S45): check(forge_dir) reads that build's cardsfolder.zip, not
+        the installed one's, and writes nothing."""
+        fiery = overrides.load_sets()["sets"]["fiery"]
+        folder = self.repo_sets({"fiery": fiery})       # only the set whose script the fixture Forge has
+        shutil.copytree(test_forge.OVERRIDE_SETS / "fiery", folder / "fiery")
+        self.assertEqual(overrides.check(), [])
+        staged = self.tmp / "staged"
+        test_forge.make_forge(staged)
+        self.assertEqual(overrides.check(staged), [])
+        # The staged build's Fiery Annihilation changed upstream: only its check says so.
+        with zipfile.ZipFile(staged / forge.SCRIPTS_ZIP, "w") as z:
+            z.writestr("f/fiery_annihilation.txt", self.fixture_script("f/fiery_annihilation.txt") + b"# 2.0.16\n")
+        upstream = forge.common.DATA_DIR / overrides.UPSTREAM_FILE
+        before = upstream.read_bytes() if upstream.exists() else None
+        problems = overrides.check(staged)
+        self.assertEqual(len(problems), 1)
+        self.assertIn("Fiery Annihilation (fiery): Forge's script isn't the one the override was made from", problems[0])
+        self.assertEqual(overrides.check(), [])
+        self.assertEqual(upstream.read_bytes() if upstream.exists() else None, before)
+        # No Forge in the staged folder: said with that folder, not config's.
+        nowhere = self.tmp / "nowhere"
+        nowhere.mkdir()
+        self.assertIn(f"Forge isn't installed at {nowhere}.", overrides.check(nowhere))
+
     def test_the_lock_is_one_process_at_a_time(self):
         forge.common.DATA_DIR.mkdir(parents=True, exist_ok=True)
         fd = os.open(forge.common.DATA_DIR / overrides.LOCK_FILE, os.O_RDWR | os.O_CREAT | getattr(os, "O_BINARY", 0))

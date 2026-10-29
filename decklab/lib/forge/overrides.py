@@ -256,12 +256,12 @@ _upstream_lock = threading.Lock()
 _upstream_memory = {}           # {str(DATA_DIR): UPSTREAM_FILE's data}
 
 
-def _forge_now():
-    """(version, build, cardsfolder.zip's path) of the installed Forge, any of them None when
-    it can't be told."""
+def _forge_now(forge_dir=None):
+    """(version, build, cardsfolder.zip's path) of the installed Forge (or of the build in
+    forge_dir, upgrade-check --dir's staged one), any of them None when it can't be told."""
     from . import install, simjar          # install comes after this part
     try:
-        forge_dir = Path(common._settings()["forge_dir"])
+        forge_dir = Path(common._settings()["forge_dir"] if forge_dir is None else forge_dir)
         name, version = install._find_jar(forge_dir)
     except Exception:           # a bad forge_dir setting: as if Forge couldn't be reached
         return None, None, None
@@ -656,14 +656,16 @@ def _apply(card, text, edits):
     return text
 
 
-def _forge_scripts(sets):
-    """{file name: (card, raw bytes)} of Forge's scripts for every file of these sets.
-    ValueError when Forge's cardsfolder.zip can't be read or a script is missing."""
+def _forge_scripts(sets, forge_dir=None):
+    """{file name: (card, raw bytes)} of Forge's scripts for every file of these sets (the
+    installed Forge's, or forge_dir's). ValueError when Forge's cardsfolder.zip can't be read or
+    a script is missing."""
     known = load_sets()["sets"]
     files = {f: info["card"] for name in sets for f, info in known[name]["files"].items()}
-    _, _, zip_path = _forge_now()
+    _, _, zip_path = _forge_now(forge_dir)
     if zip_path is None:
-        raise ValueError("Forge isn't installed at the folder config.json names.")
+        raise ValueError("Forge isn't installed at the folder config.json names." if forge_dir is None
+                         else f"Forge isn't installed at {forge_dir}.")
     try:
         found = _zip_scripts(zip_path, set(files))
     except (OSError, zipfile.BadZipFile, zlib.error) as e:
@@ -706,17 +708,18 @@ def make(sets=None):
     return out
 
 
-def check():
+def check(forge_dir=None):
     """What's wrong with the sets, each a sentence ([] when nothing is): sets.json that doesn't
     fit; a file missing from the repo; a file that isn't Forge's script with its edits applied;
-    an upstream_sha256 that isn't the installed Forge's script's."""
+    an upstream_sha256 that isn't the installed Forge's script's (or, given forge_dir, that
+    build's: upgrade-check --dir, E11-S45). It only reads."""
     try:
         data = load_sets()
     except ValueError as e:
         return [str(e)]
     problems = []
     try:
-        scripts = _forge_scripts(list(data["sets"]))
+        scripts = _forge_scripts(list(data["sets"]), forge_dir)
     except ValueError as e:
         scripts = None
         problems.append(str(e))

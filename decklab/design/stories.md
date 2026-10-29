@@ -45,10 +45,10 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 19 | 16 | 0 | 1 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 22 | 16 | 1 | 4 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 35 | 31 | 1 | 1 | 2 |
-| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 41 | 31 | 5 | 2 | 3 |
-| **Total** | **270** | **226** | **16** | **14** | **14** |
+| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 41 | 32 | 5 | 1 | 3 |
+| **Total** | **270** | **227** | **16** | **13** | **14** |
 
-Counted from the story headers on 2026-10-29 after the source-aware two-player and pod counters, alongside the current feature and maintenance work. The reviews added five feature stories and eight hygiene stories, then the fixture-only entry-point story E11-S44, and corrected E1-S12 from missing to partial. Rechecked 2026-10-29: E1-S12 is built and E11-S39 partial (its database qualification pending). The TODO audit of 2026-10-29 added fifteen missing stories (twelve from the audit: E1-S27, E1-S28, E2-S27, E3-S25, E3-S26, E5-S25, E6-S25, E6-S26, E9-S26, E9-S27, E11-S45, E11-S46), then Matt's three UI requests (E3-S27, E5-S26, E6-S27), and corrected E7-S32 from missing to partial (its recognition spike and CLI are built). Matt closed E11-S16 as built the same day, and E3-S27, E5-S26, E6-S25, E6-S27 and E11-S46 were built the same day (E11-S12 stays partial after a further slice). Later the same day E5-S25 and E6-S26 were built, E1-S27's first slice (the library) made it partial, and E11-S12 and E3-S26 were built. E1-S27's Overview slices then finished it, and E2-S27 and E9-S27 were built. E1-S28 was built the same day. E3-S25's first slice (its replacements API, 2026-10-29) made it partial.
+Counted from the story headers on 2026-10-29 after the source-aware two-player and pod counters, alongside the current feature and maintenance work. The reviews added five feature stories and eight hygiene stories, then the fixture-only entry-point story E11-S44, and corrected E1-S12 from missing to partial. Rechecked 2026-10-29: E1-S12 is built and E11-S39 partial (its database qualification pending). The TODO audit of 2026-10-29 added fifteen missing stories (twelve from the audit: E1-S27, E1-S28, E2-S27, E3-S25, E3-S26, E5-S25, E6-S25, E6-S26, E9-S26, E9-S27, E11-S45, E11-S46), then Matt's three UI requests (E3-S27, E5-S26, E6-S27), and corrected E7-S32 from missing to partial (its recognition spike and CLI are built). Matt closed E11-S16 as built the same day, and E3-S27, E5-S26, E6-S25, E6-S27 and E11-S46 were built the same day (E11-S12 stays partial after a further slice). Later the same day E5-S25 and E6-S26 were built, E1-S27's first slice (the library) made it partial, and E11-S12 and E3-S26 were built. E1-S27's Overview slices then finished it, and E2-S27 and E9-S27 were built. E1-S28 was built the same day. E3-S25's first slice (its replacements API, 2026-10-29) made it partial. E11-S45 was built the same day.
 
 ---
 
@@ -4036,7 +4036,7 @@ Evidence:
 
 Keeping Deck Lab running, safe and believable, by Matt as the household's admin and by Claude Code working for him at the PC. It covers the server and its Cloudflare tunnel and "Deck Lab is off" page, the PostgreSQL database with its nightly backup, export, check and restore check, the audit trail on #/activity, the `python -m decklab.db` commands Claude works through (previews, `--expect` guards, `-m` messages, exit codes), the card data's background refresh, Forge upkeep and the Safari Simulator suite. Every write is one audited change set, Matt's own command-line writes are recorded as his, and backups are checked by restoring them.
 
-Open: E11-S02, E11-S08, E11-S28, E11-S30, E11-S31, E11-S39, E11-S45.
+Open: E11-S02, E11-S08, E11-S28, E11-S30, E11-S31, E11-S39.
 
 **E11-S01** · Matt · must · M · built
 
@@ -4828,7 +4828,7 @@ Evidence:
 - Forty targeted cases passed with 15 explicit skips; guarded discovery preserved 9,152 unique cases across four shards, without import errors, duplicates or loss. Independent source review, Ruff, syntax, length and whitespace checks passed.
 - AGENTS.md and README.md use the protected default commands. [SOURCE_AUDIT.md](../SOURCE_AUDIT.md#fixture-only-test-entry-point-e11-s44) records the accident-prevention boundary: arbitrary ordinary child interpreters do not inherit in-memory guards. Full integrated fixture qualification is recorded separately; genuine database, native runtime and real Forge acceptance are not claimed.
 
-**E11-S45** · Matt · should · M · missing
+**E11-S45** · Matt · should · M · built
 
 As Matt moving Deck Lab's Forge to a new release, I want upgrade-check to run its checks against a scratch build folder before it replaces the installed one, so that a build that fails the card log or warm-equivalence checks never becomes the PC's Forge.
 
@@ -4838,9 +4838,7 @@ As Matt moving Deck Lab's Forge to a new release, I want upgrade-check to run it
 
 Evidence of the gap (TODO audit, 2026-10-29): cli_upgrade.py upgrade-check has only --plan; HISTORY records 'checks the installed build only, with no --dir' as a known low issue; install._setup already takes a folder.
 
-Gap: none of the criteria is met yet.
-
-First slice (TODO audit, 2026-10-29): Add --dir to lib/forge/cli_upgrade.py's upgrade-check (only --plan exists today) and pass it to install._setup(forge_dir=DIR, remember=False); never call simjar.record_failed for the installed build. Fake-Forge fixture tests for plumbing, skip/fail summaries and no installed record. Useful for FG#2 (Forge 2.0.16, mid-November).
+Built (2026-10-29): `upgrade-check --dir DIR` sets Forge up from DIR without noting its version (`cli_checks._staged_setup`, `install._setup(forge_dir=DIR, remember=False)`) and passes DIR to `cardlog-check`, `serve-check` and `overrides.check(forge_dir)`; a staged `cardlog-check` calls neither `simjar.record_checked` nor `record_failed`, the summary names DIR and says nothing was noted for the installed build, only a failed `cardlog-check` or `serve-check` says not to install (an override that no longer fits is left to `overrides make` after the install), and `--plan` lists the staged check (step 5) before the install (step 6). A blank, missing or installed folder is refused. Fake-Forge fixtures: `test_forge_upgrade_check.py` (`StagedUpgradeCheckTests`, `StagedCardlogCheckTests`) and `test_forge_overrides.py`. See [HISTORY.md](../HISTORY.md#a-staged-forge-build-checked-before-its-installed-2026-10-29-e11-s45).
 
 **E11-S46** · Claude Code · should · S · built
 
