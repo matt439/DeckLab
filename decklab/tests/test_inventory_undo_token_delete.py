@@ -69,15 +69,15 @@ class TokenDeleteFixture(unittest.TestCase):
 
 
 class TokenDeleteTests(TokenDeleteFixture):
-    def test_paired_record_is_reviewed_as_physical_cards_without_any_inverse(self):
+    def test_paired_record_is_reviewed_as_physical_cards_without_writing(self):
         before, audit, layout = self.store.snapshot, copy.deepcopy(self.store.audit), copy.deepcopy(self.layout)
         plan = self.review()
         self.assertEqual(plan["action"], deleted.ACTION)
-        self.assertIs(plan["read_only"], True)
+        self.assertNotIn("read_only", plan)
         self.assertIsNone(plan["current"])
         self.assertEqual(plan["restore"], self.old)
         self.assertEqual(plan["restore"]["quantity"], 2)
-        self.assertEqual(plan["identity_policy"], "fresh_id_on_future_add")
+        self.assertEqual(plan["identity_policy"], "fresh_id")
         self.assertIs(plan["physical_confirmation_required"], True)
         self.assertIs(plan["packing_restored"], False)
         self.assertRegex(plan["expect"], "^[a-f0-9]{64}$")
@@ -256,16 +256,6 @@ class TokenDeleteTests(TokenDeleteFixture):
         self.built("1 Zombie // Zombie Knight")
         with mock.patch.object(deleted, "MAX_MATCHES", 0), self.assertRaises(undo.UndoConflict):
             self.review()
-
-    def test_backend_apply_refuses_even_a_valid_review_and_ownership_confirmation(self):
-        plan = self.review()
-        for extra in ({}, {"confirm_owned": True}, {"reason": "No inverse"}):
-            with self.assertRaises(undo.UndoUnsupported) as caught:
-                inventory.Op("inventory.undo", {"change_id": fixture.CHANGE_ID, "space": "home",
-                    "expect": plan["expect"], **extra}).run(self.store.snapshot)
-            self.assertEqual(str(caught.exception), deleted.NO_APPLY)
-        self.assertEqual(self.store.writes, [])
-
 
 def _cells(row):
     return {**row, "quantity": str(row["quantity"])}

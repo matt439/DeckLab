@@ -840,6 +840,11 @@ class PgInventory:
                                           {**summary.extra, "accessory_undo": receipt})
                     else:
                         saved = self._join(inv_part, deck_key, part)
+                        from . import undo_token_delete
+                        if undo_token_delete.restoring(summary):
+                            # A deleted token card restored under a fresh id: prove the one
+                            # INSERT, unmoved survivors and packing before commit (or roll back).
+                            summary = undo_token_delete.confirm_in_transaction(cur, change_set, before, saved, summary)
                     return saved, summary
             except _Unchanged as u:
                 return u.result

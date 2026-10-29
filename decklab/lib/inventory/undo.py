@@ -2,7 +2,8 @@
 
 Audit row shape is authoritative; messages cannot prove which command made a change.
 Same-identity edits, unheld nonbasic collection insertions and confirmed, verified
-collection deletions, metadata batches and unheld verified token insertions are supported. Every check runs again in the ordinary
+collection deletions, metadata batches, unheld verified token insertions and confirmed token deletions
+(restored under a fresh id, undo_token_delete) are supported. Every check runs again in the ordinary
 PostgreSQL inventory transaction before its pure edit helper is called.
 """
 import hashlib
@@ -736,11 +737,13 @@ def apply_undo(snapshot, *, change_id, space, expect, reason=None, confirm_owned
     if not isinstance(expect, str) or not SHA.fullmatch(expect):
         raise Invalid("Review this Undo before applying it.")
     plan = review(change_id, space, snapshot)
-    if plan.get("read_only") is True or plan.get("action") == "token_restore_review":
-        from .undo_token_delete import NO_APPLY
-        raise UndoUnsupported(NO_APPLY)
     if plan["expect"] != expect:
         raise UndoConflict("The inventory or decks changed after the Undo preview. Review it again.", plan["label"])
+    from . import undo_token_delete
+    if plan.get("action") == undo_token_delete.ACTION:
+        if confirm_owned is not True or reason is not None:
+            raise Invalid("Confirm that you still physically have every recorded token card before restoring this row.")
+        return undo_token_delete.apply(snapshot, plan, change_id, space)
     if plan.get("action") in BATCH_ACTIONS:
         adding = plan["action"] == "batch_add"
         removing = plan["action"] == "batch_remove"

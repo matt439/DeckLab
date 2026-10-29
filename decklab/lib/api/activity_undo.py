@@ -1,4 +1,4 @@
-"""Review eligible collection/token updates or collection insertions/deletions from original audit rows.
+"""Review eligible collection/token updates, insertions and deletions from original audit rows.
 
 The request supplies only a source change id and its opaque review receipt. The
 inventory backend reads the complete original change and rechecks it under its
@@ -14,7 +14,7 @@ from .common import ApiError, DATABASE_DOWN, _keys, _parse_body
 from .settings import _writer
 
 NO_CHANGE = "No undoable change at that ID."
-UNSUPPORTED = "This change cannot be undone here. Supported Undo covers single-row edits, unheld nonbasic collection additions, unheld verified token additions, verified collection deletions and batches of 2-50 unheld nonbasic collection additions, collection deletions or positive quantity/condition/language/notes updates."
+UNSUPPORTED = "This change cannot be undone here. Supported Undo covers single-row edits, unheld nonbasic collection additions, unheld verified token additions, verified collection and token-card deletions and batches of 2-50 unheld nonbasic collection additions, collection deletions or positive quantity/condition/language/notes updates."
 CHANGED = "The change can no longer be undone safely. Reload Activity and review it again."
 UNCONFIRMED = "The undo result could not be confirmed. Reload Activity before trying again."
 SHA = re.compile(r"[a-f0-9]{64}")
@@ -101,8 +101,7 @@ def review_hint(change, shown, profile):
     if not insertion and before.get("space_id") != space or not deletion and after.get("space_id") != space \
             or not guard.allowed(profile, kind + ".edit", space) or shown.get("id") != change.get("id"):
         return None
-    return ({"review": True, "kind": "tokens", "action": "token_restore_review", "read_only": True}
-            if token_deletion and deletion else {"review": True})
+    return {"review": True}
 
 
 def _refused(error):
@@ -141,9 +140,11 @@ def _review(change_id, profile):
 
 
 def _project(plan):
-    if plan.get("action") == "token_restore_review":
-        from decklab.lib.inventory import undo_token_delete
-        if plan.get("kind") != "tokens" or plan.get("read_only") is not True or plan.get("current") is not None \
+    from decklab.lib.inventory import undo_token_delete
+    if plan.get("action") == undo_token_delete.ACTION:
+        rid = plan.get("row_change_id")
+        if plan.get("kind") != "tokens" or "read_only" in plan or plan.get("current") is not None \
+                or type(rid) is not int or not 1 <= rid < 10 ** 18 \
                 or plan.get("identity_policy") != undo_token_delete.IDENTITY_POLICY \
                 or plan.get("physical_confirmation_required") is not True or plan.get("packing_restored") is not False \
                 or not isinstance(plan.get("restore"), dict) or set(plan["restore"]) != set(rules.TOKEN_FIELDS) \
@@ -166,7 +167,7 @@ def _project(plan):
         except (ValueError, KeyError, TypeError, UnicodeError):
             raise ApiError(503, UNCONFIRMED) from None
         return {"available": True, "id": plan["change_id"], "expect": plan["expect"], "kind": "tokens",
-                "space": plan["space"], "label": plan["label"], "action": undo_token_delete.ACTION, "read_only": True,
+                "space": plan["space"], "label": plan["label"], "action": undo_token_delete.ACTION,
                 "current": None, "restored": dict(raw), "identity_policy": undo_token_delete.IDENTITY_POLICY,
                 "physical_confirmation_required": True, "packing_restored": False}
     if plan.get("action") in BATCH_ACTIONS:
@@ -287,16 +288,15 @@ def apply_undo(body):
     profile, change_id = _writer(data), _id(data["id"])
     plan = _review(change_id, profile)  # hidden/missing is resolved before malformed or stale receipt errors
     _project(plan)
-    if plan.get("read_only") is True or plan.get("action") == "token_restore_review":
-        from decklab.lib.inventory.undo_token_delete import NO_APPLY
-        raise ApiError(400, NO_APPLY)
+    from decklab.lib.inventory import undo_token_delete
+    token_adding = plan.get("action") == undo_token_delete.ACTION
     removing = plan.get("action") in ("remove", "batch_remove")
-    adding = plan.get("action") in ("add", "batch_add")
+    adding = token_adding or plan.get("action") in ("add", "batch_add")
     if adding:
         if data.get("confirm_owned") is not True:
             raise ApiError(400, "Confirm that you still physically own every recorded copy before restoring these copies.")
     elif "confirm_owned" in data:
-        raise ApiError(400, "Physical ownership confirmation is accepted only when restoring a deleted collection row.")
+        raise ApiError(400, "Physical ownership confirmation is accepted only when restoring a deleted collection or token-card row.")
     reason = None
     if removing:
         from decklab.lib.inventory import undo
@@ -345,6 +345,8 @@ def apply_undo(body):
                 "action": plan["action"], "row_count": plan["row_count"],
                 **({"removed_keys": actual, "restored": None} if removing else {"restored_rows": actual}),
                 "sha256": files.rendered_sha256(after.collection(plan["space"])), "revision": after.revision, "summary": summary.text}
+    if token_adding:
+        return _token_added(after, plan, data["expect"], summary)
     if not summary.changed or type(counts.get("undo")) is not int or counts["undo"] != 1 \
             or extra.get("undo_of") != change_id or extra.get("kind") != plan["kind"] or extra.get("space") != plan["space"] \
             or extra.get("row_change_id") != plan["row_change_id"]:
@@ -373,3 +375,26 @@ def apply_undo(body):
     elif adding:
         result.update(action="add", added_key={key: plan["restore"][key] for key in ("set", "collector_number", "finish")})
     return result
+
+
+def _token_added(after, plan, expect, summary):
+    """The saved receipt of a deleted token card restored under a fresh id: the backend's
+    transaction-local proof named the new id, and the actual row there is the reviewed one."""
+    extra, counts, space = summary.extra or {}, summary.counts or {}, plan["space"]
+    rid = extra.get("added_token_row_id")
+    if not summary.changed or type(counts.get("undo")) is not int or counts["undo"] != 1 \
+            or type(counts.get("added_rows")) is not int or counts["added_rows"] != 1 \
+            or extra.get("undo_of") != plan["change_id"] or extra.get("kind") != "tokens" or extra.get("space") != space \
+            or extra.get("row_change_id") != plan["row_change_id"] or extra.get("action") != plan["action"] \
+            or extra.get("confirmed_owned") is not True or "token_restore" in extra \
+            or type(rid) is not int or not 1 <= rid < 10 ** 18 or rid == plan["proof"]["deleted_id"] \
+            or any(item["id"] == rid for item in plan["proof"]["stock"]):
+        raise ApiError(503, UNCONFIRMED)
+    sheet = after.token_set(space)
+    found = [row.as_dict() for row in sheet.rows if row.id == rid]
+    if len(found) != 1 or {**found[0], "quantity": int(found[0]["quantity"])} != plan["restore"] \
+            or type(counts.get("cards")) is not int or counts["cards"] != sum(row.qty for row in sheet.rows):
+        raise ApiError(503, UNCONFIRMED)
+    return {"saved": True, "source_id": plan["change_id"], "expect": expect, "kind": "tokens", "space": space,
+            "action": plan["action"], "added_token_row_id": rid, "restored": dict(plan["restore"]),
+            "sha256": files.rendered_sha256(sheet), "revision": after.revision, "summary": summary.text}
