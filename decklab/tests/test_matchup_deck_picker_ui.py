@@ -110,6 +110,10 @@ class MatchupDeckPickerUiTests(unittest.TestCase):
           assert(list().hidden);assert.equal(document.activeElement,button(),'focus returns to the new picker');
           assert.notEqual(main.querySelectorAll('.mu-opponent-row').map(r=>r.textContent).join('|'),before);
           assert.equal(main.querySelector('#mu-deck-pick-value').textContent,'Delta Control');
+          // Enter still held: its repeats on the new button are cancelled, so the browser's click doesn't reopen it.
+          for(const k of ['Enter',' '])assert(key(button(),k,{repeat:true}).defaultPrevented,k+' repeat is cancelled');
+          assert(list().hidden);assert.equal(button().getAttribute('aria-expanded'),'false');
+          assert(!key(button(),'Enter').defaultPrevented,'a fresh Enter still opens it as a click');
           // Escape closes without choosing.
           button().click();assert(!list().hidden);key(list(),'Home');key(list(),'Escape');
           assert(list().hidden);assert.equal(document.activeElement,button());assert.equal(stored.get(HOME_DECK_KEY),'casual/delta');

@@ -96,6 +96,8 @@ function deckListbox({ id, label, decks, names, library, selected, onChoose, cls
   const printable = (event) => typeof event.key === "string" && event.key.length === 1 && event.key !== " "
     && !event.ctrlKey && !event.metaKey && !event.altKey;
 
+  // After a keyboard choice the redrawn button has the focus: a held Enter or Space mustn't open the list again.
+  if (typeof keyboardMenuButton === "function") keyboardMenuButton(button);
   button.addEventListener("click", () => { if (list.hidden) open(); else close(true); });
   button.addEventListener("keydown", (event) => {
     if (event.isComposing || event.altKey || event.ctrlKey || event.metaKey) return;
