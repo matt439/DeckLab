@@ -591,9 +591,9 @@ class DeckIndexTokensTests(TokenTestCase):
                                                    tokens.read(), _REAL_INCOMING()[0]))
         self.assertEqual(hornets, expected)
         self.assertEqual(hornets["differs"], ["Insect"])
-        self.assertEqual(set(hornets), {"kinds", "none", "differs", "incoming", "reminders"})
+        self.assertEqual(set(hornets), {"kinds", "none", "differs", "incoming", "opponent", "reminders"})
         # Built with its owned-only list: only Hare Apparent's Rabbit counts.
-        self.assertEqual(by_id["casual/rabbits"]["tokens"], {"kinds": 1, "none": [], "differs": [], "incoming": [], "reminders": []})
+        self.assertEqual(by_id["casual/rabbits"]["tokens"], {"kinds": 1, "none": [], "differs": [], "incoming": [], "opponent": [], "reminders": []})
         self.assertIsNone(by_id["casual/someday"]["tokens"])   # an idea deck
         self.assertIsNone(by_id["commander/elf-commander"]["tokens"])
         self.assertIsNone(by_id["casual/broken"]["tokens"])    # can't be read

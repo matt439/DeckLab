@@ -1006,20 +1006,23 @@ function deckSleeve(kit, cls = "deck-sleeve") {
     part(kit.deck_box, "Deck box", "Not a deck box"));
 }
 
-/** A deck card's token line from /api/decks' brief ({kinds, none, differs, incoming, reminders}: token names, one
- * per token the deck makes, so a name can come more than once; reminders names the emblems and reminders among
- * them), only when something is wrong: "No Raccoon token", "No Dragon or Treasure tokens, The Monarch", "Insect
- * token differs", "Fish token on the way". A deck with every token, or none, gets nothing (null), and so does one
- * whose tokens couldn't be worked out. */
+/** A deck card's token line from /api/decks' brief ({kinds, none, differs, incoming, opponent, reminders}: token
+ * names, one per token the deck makes, so a name can come more than once; reminders names the emblems and reminders
+ * among them), only when something is wrong: "No Raccoon token", "No Dragon or Treasure tokens, The Monarch", "Insect
+ * token differs", "Fish token on the way". A token the cards' text gives only to the opponent (E7-S23, approximate)
+ * is counted apart, in its own chip: "For your opponent: Spirit token". A deck with every token, or none, gets
+ * nothing (null), and so does one whose tokens couldn't be worked out. */
 function deckTokens(brief) {
   if (!brief) return null;
   const reminders = new Set(brief.reminders || []);
   const words = (list, joiner) => tokenNamesWords((list || []).filter((n) => !reminders.has(n)),
     (list || []).filter((n) => reminders.has(n)), joiner);
   const none = words(brief.none, "or"), differs = words(brief.differs, "and"), incoming = words(brief.incoming, "and");
+  const opponent = words(brief.opponent, "and");
   const chips = [none.count ? status("warn", `No ${none.text}`) : null,
     differs.count ? status("warn", `${differs.text} ${differs.count > 1 ? "differ" : "differs"}`) : null,
-    incoming.count ? status("info", `${incoming.text} on the way`) : null].filter(Boolean);
+    incoming.count ? status("info", `${incoming.text} on the way`) : null,
+    opponent.count ? status("info", `For your opponent: ${opponent.text}`) : null].filter(Boolean);
   return chips.length ? el("span", { class: "deck-tokens" }, chips) : null;
 }
 

@@ -785,7 +785,7 @@ class DeckTokensTests(IndexTestCase):
         self.assertEqual(result["counts"], {"kinds": 5, "ready": 0, "check": 2, "differs": 1, "incoming": 1,
                                             "none": 1})
         self.assertEqual(tokens.brief(result), {"kinds": 5, "none": ["Zombie Rogue"], "differs": ["Insect"],
-                                                "incoming": ["Fish"], "reminders": []})
+                                                "incoming": ["Fish"], "opponent": [], "reminders": []})
 
 
 # ------------------------------------------------------------------ incoming

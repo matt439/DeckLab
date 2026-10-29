@@ -127,6 +127,21 @@ class SentenceTests(unittest.TestCase):
         self.assertEqual(sides.side(need, texts), (sides.OWN, [], None))
 
 
+class BriefTests(unittest.TestCase):
+    """The library's brief counts a token only the opponent gets apart from the deck's own (slice 2)."""
+
+    def test_the_opponents_tokens_are_counted_apart(self):
+        def need(name, state, side):
+            return {"name": name, "state": state, "side": side, "kind": "token"}
+        result = {"needs": [need("Spirit", "none", "opponent"), need("Treasure", "differs", "opponent"),
+                            need("Fish", "incoming", "opponent"), need("Clue", "ready", "opponent"),
+                            need("Insect", "none", "either"), need("Elf", "differs", "own"),
+                            {"name": "Rabbit", "state": "incoming", "kind": "token"}]}   # an older need: own
+        self.assertEqual(tokens.brief(result), {"kinds": 7, "none": ["Insect"], "differs": ["Elf"],
+                                                "incoming": ["Rabbit"], "opponent": ["Spirit", "Treasure", "Fish"],
+                                                "reminders": []})
+
+
 class DeckTokensSideTests(fixture.IndexTestCase):
     @classmethod
     def setUpClass(cls):
@@ -145,6 +160,10 @@ class DeckTokensSideTests(fixture.IndexTestCase):
         spirit = self.by_name(result, "Spirit")
         self.assertEqual((spirit["side"], spirit["side_from"]), ("opponent", ["Orchard Gift"]))
         self.assertIn("approximate", spirit["side_words"])
+        brief = tokens.brief(result)
+        self.assertNotIn("Spirit", brief["none"] + brief["differs"] + brief["incoming"])
+        self.assertEqual(brief["opponent"], [n["name"] for n in result["needs"] if n["side"] == "opponent"
+                                             and n["state"] in ("none", "differs", "incoming")])
         treasure = self.need(result, fixture.TREASURE)
         self.assertEqual((treasure["side"], treasure["side_from"]), ("opponent", ["Tribute Hoard"]))
         # The side changes nothing else: the state, words and counts are the same as without it.
@@ -194,6 +213,24 @@ class DeckPageSideTests(token_fixture.TokensApiTestCase):
                 mock.patch.object(deck_page, "_deck_practice", return_value=None), \
                 mock.patch.object(deck_page, "usual_opponents", return_value=[]):
             return deck_page.deck_view("casual/gifts", omit=("matchups",))
+
+    def library(self, profile):
+        with access.using({"profile": profile, "email": "", "remote": True}), access.answering(False), \
+                mock.patch.object(guard, "public_deck_spaces", return_value=frozenset({"home"})), \
+                mock.patch.object(guard, "public_spaces", return_value=frozenset()), \
+                mock.patch.object(guard, "public_owners", return_value=frozenset()), \
+                mock.patch.object(deck_page, "played_extras", lambda summaries: None):
+            return {d["id"]: d for d in deck_page.decks_index()["decks"]}
+
+    def test_the_library_counts_the_opponents_tokens_apart_only_for_the_space(self):
+        brief = self.library("matt")["casual/gifts"]["tokens"]
+        self.assertEqual(brief["kinds"], 2)
+        self.assertNotIn("Spirit", brief["none"] + brief["differs"] + brief["incoming"])
+        self.assertEqual(brief["opponent"], ["Spirit"])
+        # A member of another space sees the public deck but no token brief at all, so nothing of its side.
+        summary = self.library("user2")["casual/gifts"]
+        self.assertIsNone(summary.get("tokens"))
+        self.assertNotIn('"opponent"', json.dumps(summary))
 
     def test_home_sees_the_side_and_a_member_of_another_space_gets_no_token_part(self):
         sides_seen = {n["name"]: n["side"] for n in self.view("matt")["tokens"]["needs"]}

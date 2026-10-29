@@ -56,9 +56,10 @@ def decks_index():
     every home profile) gets sleeves, deck_box and kit None.
 
     "tokens" is tokens.brief() of the list that counts ({kinds, none,
-    differs, incoming, reminders}: the names of the tokens with nothing
-    owned, only a different card, or only cards on the way, and of the
-    emblems and reminders among them; see _index_tokens), or None
+    differs, incoming, opponent, reminders}: the names of the tokens with
+    nothing owned, only a different card, or only cards on the way, those
+    landing only on the opponent's side apart, and of the emblems and
+    reminders among them; see _index_tokens), or None
     for an idea deck, a pairing, or when the tokens can't be worked out.
 
     "cover", "colors", "revision" and "edited" are library.shelf_extras' (the

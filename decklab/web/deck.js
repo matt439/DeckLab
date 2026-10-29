@@ -1032,20 +1032,22 @@ function pairingLinks(halfId, label = "Shuffle it with another half:", marks = n
 
 /** A line on the Overview when the deck's tokens need a look, in the library chip's words ("No Raccoon token ·
  * Insect token differs"), a button to the Tokens part on the Cards tab. null when every token is covered (or on
- * the way), or when the deck makes no tokens Scryfall links. */
+ * the way), or when the deck makes no tokens Scryfall links. A token only for the opponent (E7-S23) isn't one. */
 function deckTokensChip(data) {
   const t = data.tokens, counts = t && t.counts;
   if (!counts || !(counts.kinds > 0) || !(counts.none || counts.differs)) return null;
-  const needs = t.needs || [];
+  const all = t.needs || [], needs = all.filter((n) => n.side !== "opponent");
   const named = (state) => needs.filter((n) => n.state === state);
   const words = (list, joiner) => tokenNamesWords(list.filter((n) => n.kind === "token").map((n) => n.name),
     list.filter((n) => n.kind !== "token").map((n) => n.name), joiner);
   const none = named("none"), differs = named("differs");
+  const nNone = all.length ? none.length : counts.none, nDiffers = all.length ? differs.length : counts.differs;
+  if (!nNone && !nDiffers) return null;
   const parts = [];
-  if (counts.none) parts.push(none.length ? `No ${words(none, "or").text}` : `${plural(counts.none, "token")} you don't have`);
+  if (nNone) parts.push(none.length ? `No ${words(none, "or").text}` : `${plural(nNone, "token")} you don't have`);
   const differ = words(differs, "and");
-  if (counts.differs) parts.push(differs.length ? `${differ.text} ${differ.count > 1 ? "differ" : "differs"}`
-    : `${plural(counts.differs, "token")} different`);
+  if (nDiffers) parts.push(differs.length ? `${differ.text} ${differ.count > 1 ? "differ" : "differs"}`
+    : `${plural(nDiffers, "token")} different`);
   return el("p", { class: "deck-tokens-chip" }, el("button", { type: "button", class: "btn btn-quiet",
     onclick: () => openDeckTab("cards", { to: "sec-tokens" }) }, status("warn", parts.join(" · "))));
 }
@@ -1072,13 +1074,20 @@ function tokensSection(data) {
   } else {
     const faces = tokFacesUsed(needs);
     const merged = needs.map(mergedTokenCards);
-    const main = merged.filter((n) => !n.sideboard_only), side = merged.filter((n) => n.sideboard_only);
+    // E7-S23: a token the cards' text gives only to the opponent has its own heading; "either" stays here.
+    const theirs = merged.filter((n) => n.side === "opponent"), ours = merged.filter((n) => n.side !== "opponent");
+    const main = ours.filter((n) => !n.sideboard_only), side = ours.filter((n) => n.sideboard_only);
     const words = tokCountWords(t.counts);
     if (words) section.append(el("p", { class: "deck-tokens-summary", text: words }));
     if (t.packed) add(section, [deckPackedTokens(data, faces)]);
     if (main.length) section.append(tokenNeedList(main, faces));
     if (side.length) {
       section.append(el("h3", { class: "deck-tokens-group", text: "Only for sideboard cards" }), tokenNeedList(side, faces));
+    }
+    if (theirs.length) {
+      section.append(el("h3", { class: "deck-tokens-group deck-tokens-opponent", text: "For your opponent (approximate)" }),
+        el("p", { class: "sub", text: "The cards' text gives these to the other player: hand them across the table." }),
+        tokenNeedList(theirs, faces));
     }
   }
   add(section, [tokenCountersPart(t.counters)]);   // E7-S24: read-only counter kinds and dice

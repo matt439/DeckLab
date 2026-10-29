@@ -133,13 +133,19 @@ def _need_words(need, missing):
 
 
 def brief(result):
-    """{kinds, none, differs, incoming, reminders} for the library: the number
-    of needs, the names of those with nothing owned, a different token, or
-    only cards on the way, and the names of the emblems and reminders among
-    the needs (so the page says "tokens" only of tokens)."""
+    """{kinds, none, differs, incoming, opponent, reminders} for the library:
+    the number of needs, the names of the deck's own (or maybe the
+    opponent's) with nothing owned, a different token, or only cards on the
+    way, the names of those that land only on the opponent's side (E7-S23,
+    sides.py) in one of those states, counted apart, and the names of the
+    emblems and reminders among the needs (so the page says "tokens" only of
+    tokens)."""
     needs = result.get("needs", [])
+    own = [n for n in needs if n.get("side") != "opponent"]
     return {"kinds": len(needs),
-            "none": [n["name"] for n in needs if n["state"] == "none"],
-            "differs": [n["name"] for n in needs if n["state"] == "differs"],
-            "incoming": [n["name"] for n in needs if n["state"] == "incoming"],
+            "none": [n["name"] for n in own if n["state"] == "none"],
+            "differs": [n["name"] for n in own if n["state"] == "differs"],
+            "incoming": [n["name"] for n in own if n["state"] == "incoming"],
+            "opponent": [n["name"] for n in needs if n.get("side") == "opponent"
+                         and n["state"] in ("none", "differs", "incoming")],
             "reminders": list(dict.fromkeys(n["name"] for n in needs if n.get("kind", "token") != "token"))}

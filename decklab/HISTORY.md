@@ -2,6 +2,38 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## The opponent's tokens counted apart (2026-10-29; E7-S23 slice 2)
+
+The first slice marked each token need with whose side it lands on; this one keeps a token the cards' text
+gives only to the opponent apart from the deck's own wherever a deck's tokens are counted. A token that may
+be either player's stays with the deck's own, marked as before. The story is built.
+
+- **The deck page's Tokens part** lists the opponent's tokens last, under their own heading, "For your
+  opponent (approximate)", with a line saying to hand them across the table; the deck's own and its
+  sideboard-only group keep their places. The Overview's token chip ("No Raccoon token · …") leaves them
+  out, so a deck whose only uncovered token is the opponent's gets no chip.
+- **The library's token line:** `tokens.brief` gains `opponent`, the names of the opponent's tokens with
+  nothing owned, a different card or only cards on the way, and leaves them out of `none`, `differs` and
+  `incoming`. The deck card shows them in their own info chip, "For your opponent: Spirit token".
+- **Build decks and the Packing plan:** the tokens step lists the opponent's lines after the deck's own,
+  each starting "For your opponent: " (Grab, stand-in and no-card lines alike). A tick keeps its id, so
+  saved packing progress still matches.
+
+Only viewers who may see the space's inventory get a deck's tokens or its brief, as before: a member
+viewing a public home deck gets neither. Nothing else changes (states, words, counts, packed Token cards,
+the Shared tokens panel and Finish building).
+
+Fixture tests: `decklab/tests/test_token_sides.py` (the brief's `opponent` from needs of every state and
+side, an older need without a side counting as the deck's own, and the library brief for a home viewer but
+not for a member of another space) and `test_feature_ui_tokens.py` (the heading after the deck's own, an
+either token staying with them, the Overview chip leaving the opponent's out, the library chip, and the
+packing lines' order, words and tick id). `golden_p4.py`'s "opponent-token-defaults" drops only the empty
+`opponent` from library summaries.
+
+- **Known low issues:** the side is read from words, so it stays approximate. The Shared tokens panel and
+  Finish building's packed Token cards line still treat the opponent's token like the deck's own (one card
+  in its box, to hand across).
+
 ## Free dual lands for a short colour (2026-10-29; E3-S25)
 
 The third and last slice of E3-S25 offers free lands for a colour the deck is short of. The new

@@ -548,6 +548,36 @@ class TokensUiTests(unittest.TestCase):
           assert.equal(lines.length, 1);
           assert.equal(lines[0].textContent, words);
           assert(lines[0].getAttribute('class').includes('token-need-side-opponent'));
+          // Slice 2: the opponent's token under its own heading, after the deck's own; "either" stays with them.
+          const heads = section.querySelectorAll('h3').map(h => h.textContent);
+          assert(heads.includes('For your opponent (approximate)'), heads);
+          const lists = section.querySelectorAll('.token-needs');
+          assert.equal(lists.length, 2);
+          same(lists[0].querySelectorAll('.token-need-name').map(n => n.querySelector('b').textContent), ['Elf', 'Treasure']);
+          same(lists[1].querySelectorAll('.token-need-name').map(n => n.querySelector('b').textContent), ['Spirit']);
+          const maybe = tokensSection({tokens: {...deckTokensResult, needs: [need('Insect', 'none', 'None owned',
+            {side: 'either', side_words: "Maybe your opponent's: X's text can give it to another player (approximate)"})]}});
+          assert(!maybe.textContent.includes('For your opponent (approximate)'));
+          // The Overview's chip leaves the opponent's token out: only Elf and Treasure are the deck's problems.
+          const spirit = need('Spirit', 'none', 'None owned', {side: 'opponent'});
+          assert.equal(deckTokensChip({tokens: {needs: [spirit, need('Elf', 'none', 'None owned', {side: 'own'})],
+            counts: {kinds: 2, none: 2}}}).textContent, 'No Elf token');
+          assert.equal(deckTokensChip({tokens: {needs: [spirit], counts: {kinds: 1, none: 1}}}), null);
+        """)
+
+    def test_packing_ticks_count_the_opponents_tokens_apart(self):
+        self.run_js(self.TOKENS + """
+          // E7-S23 slice 2: an opponent-only token's lines come after the deck's own and say whose they are;
+          // its tick keeps its id, and "either" stays with the deck's own.
+          const theirs = need('Spirit', 'ready', 'Have it: 1 card', {side: 'opponent', cards: [card('Spirit', '', 1, 'front', 'exact')]});
+          const maybe = need('Insect', 'ready', 'Have it: 1 card', {side: 'either', cards: [card('Insect', '', 1, 'front', 'exact')]});
+          const gone = need('Clue', 'none', 'None owned', {side: 'opponent'});
+          const lines = assemblyTokenTasks({needs: [theirs, gone, maybe, needs[4]]});
+          const text = lines.map(li => li.textContent);
+          same(text, ['Grab Insect ×1 for Insect', 'Grab Zombie / Zombie Knight ×8 (Zombie side only, can be sleeved) for Zombie',
+                      'For your opponent: Grab Spirit ×1 for Spirit',
+                      'For your opponent: No Clue token: use a stand-in (a spare token card or a die)']);
+          assert.equal(lines[2].querySelector('input').getAttribute('data-pack-tick'), 'token|k-Spirit');
         """)
 
     def test_deck_page_lists_the_counters_and_dice_the_cards_use(self):
@@ -704,6 +734,10 @@ class TokensUiTests(unittest.TestCase):
           same(deckTokens({kinds: 5, none: ['Raccoon', 'Ape', 'Bird'], differs: ['Insect'], incoming: ['Fish']})
             .querySelectorAll('.status').map(s => s.textContent),
             ['No Raccoon, Ape or Bird tokens', 'Insect token differs', 'Fish token on the way']);
+          // E7-S23: the tokens only the opponent gets, counted apart in their own chip.
+          same(deckTokens({kinds: 3, none: [], differs: [], incoming: [], opponent: ['Spirit', 'Treasure']})
+            .querySelectorAll('.status').map(s => s.textContent), ['For your opponent: Spirit and Treasure tokens']);
+          assert.equal(deckTokens({kinds: 1, none: [], differs: [], incoming: [], opponent: []}), null);
           clear(main);
           const base = {format:'Casual 60',kind:'casual',player:'user',status:'building',versions:['target'],
             missing:{target:0},on_the_way:{target:0},card_count:60,sideboard_count:0,kit:null};

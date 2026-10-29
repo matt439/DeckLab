@@ -36,19 +36,19 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | Epic | Stories | Built | Partial | Missing | Not wanted |
 |---|---:|---:|---:|---:|---:|
 | [E1: Find, plan and choose decks](#e1-find-plan-and-choose-decks) | 17 | 17 | 0 | 0 | 0 |
-| [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 21 | 18 | 1 | 1 | 1 |
+| [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 21 | 18 | 2 | 0 | 1 |
 | [E3: Test a deck](#e3-test-a-deck) | 18 | 15 | 3 | 0 | 0 |
 | [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 22 | 19 | 1 | 1 | 1 |
 | [E5: Decide what to buy](#e5-decide-what-to-buy) | 24 | 20 | 1 | 1 | 2 |
 | [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 23 | 21 | 0 | 0 | 2 |
-| [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 28 | 24 | 3 | 1 | 0 |
+| [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 28 | 25 | 3 | 0 | 0 |
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 19 | 16 | 0 | 1 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 22 | 16 | 2 | 3 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 35 | 31 | 1 | 1 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 41 | 32 | 5 | 1 | 3 |
-| **Total** | **270** | **229** | **17** | **10** | **14** |
+| **Total** | **270** | **230** | **18** | **8** | **14** |
 
-Counted from the story headers on 2026-10-29 after the source-aware two-player and pod counters, alongside the current feature and maintenance work. The reviews added five feature stories and eight hygiene stories, then the fixture-only entry-point story E11-S44, and corrected E1-S12 from missing to partial. Rechecked 2026-10-29: E1-S12 is built and E11-S39 partial (its database qualification pending). The TODO audit of 2026-10-29 added fifteen missing stories (twelve from the audit: E1-S27, E1-S28, E2-S27, E3-S25, E3-S26, E5-S25, E6-S25, E6-S26, E9-S26, E9-S27, E11-S45, E11-S46), then Matt's three UI requests (E3-S27, E5-S26, E6-S27), and corrected E7-S32 from missing to partial (its recognition spike and CLI are built). Matt closed E11-S16 as built the same day, and E3-S27, E5-S26, E6-S25, E6-S27 and E11-S46 were built the same day (E11-S12 stays partial after a further slice). Later the same day E5-S25 and E6-S26 were built, E1-S27's first slice (the library) made it partial, and E11-S12 and E3-S26 were built. E1-S27's Overview slices then finished it, and E2-S27 and E9-S27 were built. E1-S28 was built the same day. E3-S25's first slice (its replacements API, 2026-10-29) made it partial. Its dual-lands slice (2026-10-29) finished it. E11-S45 was built the same day. Recounted 2026-10-30: E7-S23's first slice (the token side on deck pages and the printout) made it partial. E7-S24's read-only slice (the counters and dice a deck's cards use) made it partial too. E9-S26's free cards by role on the Stats tab made it partial, leaving its cited role targets to Matt's choice of template. E4-S16 was built (sideboard-plan tests).
+Counted from the story headers on 2026-10-29 after the source-aware two-player and pod counters, alongside the current feature and maintenance work. The reviews added five feature stories and eight hygiene stories, then the fixture-only entry-point story E11-S44, and corrected E1-S12 from missing to partial. Rechecked 2026-10-29: E1-S12 is built and E11-S39 partial (its database qualification pending). The TODO audit of 2026-10-29 added fifteen missing stories (twelve from the audit: E1-S27, E1-S28, E2-S27, E3-S25, E3-S26, E5-S25, E6-S25, E6-S26, E9-S26, E9-S27, E11-S45, E11-S46), then Matt's three UI requests (E3-S27, E5-S26, E6-S27), and corrected E7-S32 from missing to partial (its recognition spike and CLI are built). Matt closed E11-S16 as built the same day, and E3-S27, E5-S26, E6-S25, E6-S27 and E11-S46 were built the same day (E11-S12 stays partial after a further slice). Later the same day E5-S25 and E6-S26 were built, E1-S27's first slice (the library) made it partial, and E11-S12 and E3-S26 were built. E1-S27's Overview slices then finished it, and E2-S27 and E9-S27 were built. E1-S28 was built the same day. E3-S25's first slice (its replacements API, 2026-10-29) made it partial. Its dual-lands slice (2026-10-29) finished it. E11-S45 was built the same day. Recounted 2026-10-30: E7-S23's first slice (the token side on deck pages and the printout) made it partial. E7-S24's read-only slice (the counters and dice a deck's cards use) made it partial too. E9-S26's free cards by role on the Stats tab made it partial, leaving its cited role targets to Matt's choice of template. E4-S16 was built (sideboard-plan tests). E7-S23's second slice (the opponent's tokens under their own heading and counted apart in the library line and the packing ticks) finished it.
 
 ---
 
@@ -2195,7 +2195,7 @@ Built (2026-10-29): `web/receipt-bulk.js` adds **Everything arrived as ordered**
 
 How the inventory stays true to the physical cards. Each space's own people add, fix and remove cards on the Collection page (single cards, an app export, Add a precon) and token cards on the Tokens page; Matt and User1 both edit home's, each member only their own, and Claude does bulk and member upkeep from the PC (`collection merge`, `collection edit` and `collection apply`, `collection add-precon --space`). Repeat imports, sales and trades, and cards held by built decks are all flagged, other decks' out-of-date tables are listed with Update all rather than refreshed automatically, and the nightly `db check` looks for drift.
 
-Open: E7-S08 (partial), E7-S23 (partial), E7-S24 (partial), E7-S32.
+Open: E7-S08 (partial), E7-S24 (partial), E7-S32.
 
 **E7-S01** · Matt · must · M · built
 
@@ -2523,7 +2523,7 @@ Now (2026-10-28): `collection trade` on the PC ([HISTORY.md](../HISTORY.md#recor
 
 Next slice: a whole-trade Undo beside the import Undo.
 
-**E7-S23** · Matt · could · M · partial
+**E7-S23** · Matt · could · M · built
 
 As a player, I want the tokens a deck's cards make for the opponent listed apart from its own, so that I know which markers to hand across the table.
 
@@ -2536,13 +2536,14 @@ Evidence:
 - `decklab/lib/tokens/sides.py` (`card_side`, `side`): reads each making card's rules text sentence by sentence (the sentences naming the token first, else every sentence that creates a token) and says whether the token lands on the deck's own side, the opponent's ("target opponent creates", "under an opponent's control") or either ("its controller creates", "each player creates"), reading only the subject after a clause's last "and" unless it's a joint "you and target opponent each"; a token several cards make is the deck's own only when every card makes it for the deck
 - `decklab/lib/tokens/__init__.py` (`deck_tokens`): each need's `side` (`own`, `opponent` or `either`), `side_from` (the cards that may give it away) and `side_words` ("For your opponent: …" or "Maybe your opponent's: …", always "(approximate)"; None for the deck's own), and the deck printout's line
 - `decklab/web/tokens.js` (`tokenNeed`): the words under a need's "Made by" on the deck page's Tokens part, only when it may be the opponent's
-- `decklab/tests/test_token_sides.py`: the classifier's sentences, the needs' sides from test cards added to the fixture index, the printout, and no token part (so no side) for a viewer outside the space; `test_feature_ui_tokens.py`: the deck page's line
+- `decklab/web/deck.js` (`tokensSection`, `deckTokensChip`): the opponent's tokens under their own "For your opponent (approximate)" heading after the deck's own (an "either" token stays with the deck's own, marked), and left out of the Overview's chip
+- `decklab/lib/tokens/needs.py` (`brief`): the library brief's "opponent", the uncovered tokens only the opponent gets, left out of "none", "differs" and "incoming"; `decklab/web/library.js` (`deckTokens`): their own "For your opponent: …" chip
+- `decklab/web/assembly.js` (`assemblyTokenTasks`): Build decks' and the Packing plan's lines for the opponent's tokens after the deck's own, each starting "For your opponent: ", with the same tick ids
+- `decklab/tests/test_token_sides.py`: the classifier's sentences, the needs' sides from test cards added to the fixture index, the printout, the brief counting them apart, and no token part or brief (so no side) for a viewer outside the space; `test_feature_ui_tokens.py`: the deck page's line and heading, the Overview chip, the library chip and the packing lines; `golden_p4.py`'s "opponent-token-defaults"
 
-Now (2026-10-29): the classifier and the per-need side, words and deck-page line are built ([HISTORY.md](../HISTORY.md#whose-side-a-token-lands-on-2026-10-29-e7-s23-slice-1)).
+Now (2026-10-29): built. The classifier, the per-need side, words and deck-page line ([HISTORY.md](../HISTORY.md#whose-side-a-token-lands-on-2026-10-29-e7-s23-slice-1)), then the opponent's heading and the separate counts in the library line and the packing ticks ([HISTORY.md](../HISTORY.md#the-opponents-tokens-counted-apart-2026-10-29-e7-s23-slice-2)).
 
-Next slice: the Tokens part's own heading for the opponent's tokens (criterion 1), then counting them apart in the library's token line and Build decks' Grab ticks (criterion 3).
-
-Gap: the opponent's tokens are marked on each need but not yet under their own heading, and the library's token line and Build decks' Grab ticks still count them with the deck's own.
+Known low issues: the side is read from words, so it stays approximate. The Packing plan's Shared tokens panel and Finish building's packed Token cards line still treat an opponent's token like the deck's own (one card packed in its box, to hand across).
 
 **E7-S24** · Matt · could · L · partial
 

@@ -708,8 +708,10 @@ function assemblyTokenCard(card, faces = null) {
 
 /** A deck's token lines: a tick to grab the cards for each kind it makes (or a stand-in, said to the
  * opponent), and a line, never ticked, for a kind with no card or still on the way. Nothing is reserved: two
- * decks may want the same card (assemblySharedTokens). tokens: the deck's deck_tokens result, or null when it
- * couldn't be worked out. */
+ * decks may want the same card (assemblySharedTokens). A kind the cards' text gives only to the opponent
+ * (E7-S23, approximate) comes after the deck's own, each line starting "For your opponent: " (its tick's id
+ * unchanged); one that may be either player's stays with the deck's own. tokens: the deck's deck_tokens
+ * result, or null when it couldn't be worked out. */
 function assemblyTokenTasks(tokens, rows = []) {
   if (!tokens) return null;
   if (tokens.unavailable || tokens.error) return [el("li", { class: "assembly-pending", text: tokens.unavailable || tokens.error })];
@@ -720,21 +722,23 @@ function assemblyTokenTasks(tokens, rows = []) {
       "finish", "quantity", "front_details", "back_details"].map(key => row[key] ?? "")];
   };
   const faces = tokFacesUsed(tokens.needs);
-  for (const need of tokens.needs || []) {
+  const all = tokens.needs || [];
+  for (const need of [...all.filter(n => n.side !== "opponent"), ...all.filter(n => n.side === "opponent")]) {
     const cards = need.cards || [], standIns = need.stand_ins || [];
+    const theirs = need.side === "opponent" ? "For your opponent: " : "";
     if ((need.state === "ready" || need.state === "check") && cards.length) {
-      lines.push(assemblyTick(`Grab ${cards.map((card) => assemblyTokenCard(card, faces)).join(" or ")} for ${need.name}`
+      lines.push(assemblyTick(`${theirs}Grab ${cards.map((card) => assemblyTokenCard(card, faces)).join(" or ")} for ${need.name}`
         + (need.state === "check" ? " (details not recorded)" : ""), 1,
         need.packing_key || cards.map(identity), `token|${need.key || need.name}`));
     } else if (need.state === "differs" && standIns.length) {
       const card = standIns[0];
-      lines.push(assemblyTick(`Stand-in for ${need.name}: ${card.back ? `${card.front} / ${card.back}` : card.front} ×${card.quantity}`
+      lines.push(assemblyTick(`${theirs}Stand-in for ${need.name}: ${card.back ? `${card.front} / ${card.back}` : card.front} ×${card.quantity}`
         + ` (${card.why && card.why.length ? `${card.why[0]}; ` : ""}${tokSides(card, faces) ? `${tokSides(card, faces)}; ` : ""}tell your opponent)`, 1,
         need.packing_key || identity(card), `token|${need.key || need.name}`));
     } else if (need.state === "incoming") {
-      lines.push(el("li", { class: "assembly-pending", text: `No ${need.name} token yet: ${need.on_the_way || 0} on the way` }));
+      lines.push(el("li", { class: "assembly-pending", text: `${theirs}No ${need.name} token yet: ${need.on_the_way || 0} on the way` }));
     } else {
-      lines.push(el("li", { class: "assembly-pending", text: `No ${need.name} token: use a stand-in (a spare token card or a die)` }));
+      lines.push(el("li", { class: "assembly-pending", text: `${theirs}No ${need.name} token: use a stand-in (a spare token card or a die)` }));
     }
   }
   const others = [...(tokens.copies || []), ...(tokens.unlisted || [])];

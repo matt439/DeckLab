@@ -105,6 +105,10 @@ older code (the committed tests/fixtures/inventory_goldens):
   list's cards call for (read from their text, never from the inventory). No golden deck's
   cards use any, so only the empty answer ({"needs": [], "note": counters.NOTE}) is dropped; a
   deck with a counter still compares. test_token_counters checks its values and privacy.
+- "opponent-token-defaults": E7-S23 adds the library summaries' tokens "opponent", the tokens
+  only the opponent gets (read from the cards' text) that no card covers, counted apart from
+  "none", "differs" and "incoming". No golden deck's cards give a token away, so only the empty
+  answer ([]) is dropped; a deck with one still compares. test_token_sides checks its values.
 - "category-defaults": E2-S24 adds DeckLine.category, the builder's own category on a decklist
   line, so a line dumped as a whole object ({quantity, name, set, number, finish}) gains
   "category". Only a None category on exactly such an object is dropped: a line with a
@@ -609,6 +613,16 @@ def counter_defaults(dump):
                 found.pop("counters")
 
 
+def opponent_token_defaults(dump):
+    """Drop only E7-S23's empty "opponent" on library summaries' tokens."""
+    for mine in [dump, *((dump.get("by_viewer") or {}).values())]:
+        index = mine.get("decks_index") if isinstance(mine, dict) else None
+        for summary in (index.get("decks") or []) if isinstance(index, dict) else []:
+            found = summary.get("tokens") if isinstance(summary, dict) else None
+            if isinstance(found, dict) and found.get("opponent", 0) == []:
+                found.pop("opponent")
+
+
 _LINE_KEYS = {"quantity", "name", "set", "number", "finish", "category"}
 
 
@@ -805,6 +819,7 @@ EXPECTED_P5 = (("deck-id-messages", deck_id_messages), ("phase-5-wording", phase
                ("box-label-defaults", box_label_defaults), ("category-defaults", category_defaults),
                ("storage-location-defaults", storage_location_defaults), ("played-defaults", played_defaults),
                ("departed-defaults", departed_defaults), ("counter-defaults", counter_defaults),
+               ("opponent-token-defaults", opponent_token_defaults),
                ("absent-shop-prices", absent_shop_prices))
 
 
