@@ -2,6 +2,60 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Source-aware two-player life counter (2026-10-29; E4-S26)
+
+New two-player counters now keep every actual commander source independently,
+including partners, matching names across players and a player's own commander
+after control changes. Casual games start at 20 life and Commander at 40. Life
+taps/holds, ±5, optional poison, concede, Undo and elapsed time remain local.
+A terminal tap/concession opens the ordinary result form; a held terminal count
+waits for the matching foreground pointer release. Timers never open forms or
+send requests. Cancelled or stale gestures discard that handoff and leave an
+explicit Record result recovery action.
+
+The strict local v2 packet holds profile/collection/session identity, date,
+selectors, labels and bounded counts, without an aggregate commander field or
+trusted historical deck snapshots. Separate scoped session keys preserve all
+v1 saved bytes when drawing, starting v2, resuming legacy or closing. Existing
+aggregate games remain explicitly labelled legacy; their positive totals are
+never guessed into sources, split or reset. Actual legacy changes retain their
+format. Both runtimes now bind holds, callbacks and wake epochs to original
+profile objects, frames, controls, generations and storage observations. The
+legacy reset fixture now proves a background New game click is inert, then
+closes the foreground result sheet before checking the unchanged reset behavior.
+All seven original test IDs remain.
+
+The new result path is scoped to v2 presets. Ordinary corrections, hidden/removed
+sides, legacy presets and quick-record timing keep their existing path. Current
+visible public opponents from other spaces remain valid. Missing, renamed or
+changed list selectors require explicit replacements, and changed selected
+sideboard plans require a current-plan/None acknowledgement. Cloned semantic
+bindings prevent in-place catalog or plan changes from being adopted silently;
+drift refreshes only on a foreground action and retains draft fields and counts.
+The preview and saved response must match the reviewed list/plan transformations,
+record identity and content before session cleanup. Uncertain saves keep the
+counter. Failed local removal states that the game saved, blocks this session
+on the current page and warns against recording it again after reload; it does
+not claim persistence when storage is unavailable.
+
+Root's protected fifteen-target integration reported **299 tests**, passing
+with **one intentional pre-setup database-integration class skip**, in 77.434
+seconds. The **76 new cases** cover model/storage/gesture/form behavior; all ten
+owned source/test hashes stayed stable during the run, with a maximum of 894
+lines. Scoped Ruff, three JavaScript syntax checks, isolated source-inventory
+fixtures and the complete source-length guard pass: **1,194 owned files, none
+over 1,200 lines**. New files had direct EOF/whitespace checks before qualification.
+Independent model and integration reviews are clear. Evidence is in
+`decklab-duel-source-nmzk_45k`; the 112 preserved test-header edits remain
+byte-identical and AST-equivalent to HEAD, outside this commit.
+
+E4-S26 is built in source; the story summaries were recounted as 255 total,
+211 built, 16 partial, 14 missing and 14 not wanted. Physical browser/device and
+Commander-night acceptance remain separate. Normal source-read authorization
+has resumed, so a complete frozen fixture checkpoint follows this functional
+slice. No database migration, configured-data read/write, live browser/storage,
+server restart, service activation or Forge run was used for qualification.
+
 ## Local Commander pod life counter (2026-10-29; E4-S26 slice)
 
 The new pod form can start a three/four-seat counter with 40 life, life ±1/±5,

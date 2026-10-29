@@ -38,7 +38,7 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E1: Find, plan and choose decks](#e1-find-plan-and-choose-decks) | 15 | 14 | 1 | 0 | 0 |
 | [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 20 | 17 | 1 | 1 | 1 |
 | [E3: Test a deck](#e3-test-a-deck) | 15 | 12 | 3 | 0 | 0 |
-| [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 22 | 17 | 3 | 1 | 1 |
+| [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 22 | 18 | 2 | 1 | 1 |
 | [E5: Decide what to buy](#e5-decide-what-to-buy) | 22 | 18 | 1 | 1 | 2 |
 | [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 20 | 18 | 0 | 0 | 2 |
 | [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 28 | 24 | 0 | 4 | 0 |
@@ -46,9 +46,9 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E9: Commander nights](#e9-commander-nights) | 20 | 15 | 1 | 3 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 35 | 31 | 1 | 1 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 39 | 28 | 6 | 2 | 3 |
-| **Total** | **255** | **210** | **17** | **14** | **14** |
+| **Total** | **255** | **211** | **16** | **14** | **14** |
 
-Counted from the story headers on 2026-10-28 after the current feature and maintenance work. The reviews added five feature stories and eight hygiene stories, then the fixture-only entry-point story E11-S44, and corrected E1-S12 from missing to partial.
+Counted from the story headers on 2026-10-29 after the source-aware two-player and pod counters, alongside the current feature and maintenance work. The reviews added five feature stories and eight hygiene stories, then the fixture-only entry-point story E11-S44, and corrected E1-S12 from missing to partial.
 
 ---
 
@@ -928,7 +928,7 @@ Evidence:
 
 This epic covers getting physical decks onto the table and learning from the games played: choosing the decks, pulling and sleeving the cards from home's shared pool on Build decks (#/assembly, the packing plan), reading a deck's How to play and practising opening hands, playing with sideboard plans, and recording the result on the Game log (#/play). Each game is seen only by the spaces whose decks it names, a side whose deck the viewer may not see shows only as words such as "one of the home decks", and each space changes only its own side (E10-S32). Teaching the rules is left to products like the Beginner Box, so Deck Lab keeps teaching minimal. User1 uses Deck Lab on her phone, so Build decks and the Game log on a phone matter most.
 
-Open: E4-S09, E4-S16, E4-S19, E4-S26.
+Open: E4-S09, E4-S16, E4-S19.
 
 **E4-S01** · Matt · must · L · built
 
@@ -1274,7 +1274,7 @@ Evidence:
 - `decklab/web/deck-tools.css`: the `cards` page (6 mm margin) and `.card-page`, `.proxy-card`
 - `decklab/tests/test_deck_proxies_ui.py`
 
-**E4-S26** · Matt · could · M · partial
+**E4-S26** · Matt · could · M · built
 
 As a player at the table, I want a life counter on my phone (life, poison, commander damage, a timer) that ends by recording the game, so that keeping score and logging the result are one step.
 
@@ -1286,22 +1286,18 @@ As a player at the table, I want a life counter on my phone (life, poison, comma
 
 Decided (Matt, 2026-10-27): added from the comparison with TopDecked. Multiplayer results remain E4-S18.
 
-Now: first slice built 2026-10-28 ([HISTORY.md](../HISTORY.md#phone-life-counter-2026-10-28-e4-s26)). The Game log's quick record has **Life counter** for the two decks and names chosen there: full screen, life 20 (40 with a Commander), − and + (held, 5 at a time), −5 and +5, optional poison, commander damage, a game timer, kept in localStorage per profile (Resume after a refresh). A player out (0 life, 10 poison, 21 commander damage) or End game opens Record a played game filled in with the decks, names and winner, for its usual review and save; a viewer who may not record those decks only counts.
+Now: built 2026-10-29 ([HISTORY.md](../HISTORY.md#source-aware-two-player-life-counter-2026-10-29-e4-s26)). New two-player counters keep actual commander sources separately; the pod counter does the same for three or four seats. Counts resume locally, while results enter explicit reviewed game forms and retain the normal 1v1/pod separation.
 
 Evidence:
-- `decklab/web/life-counter.js`: lifeNewGame, lifeChange, lifeSaved, lifeCounterLauncher, openLifeCounter, lifeRecord, closeLifeCounter
-- `decklab/web/play.js`: playQuickRecord (Life counter), playGameForm's preset (decks, names, result, onSaved)
-- `decklab/web/play.css` (`.life-*`), `decklab/web/tokens.css` (`--fs-life`, `--fs-life-sign`)
-- `decklab/tests/test_life_counter_ui.py`
-- `decklab/lib/api/play_records.py`: one-tap game records (E4-S11), the only write
+- `web/life-source-model.js`: strict v2 packets, 20/40 life, independent sources including own commanders, poison, concede, Undo and source-preserving new-session transitions.
+- `web/life-counter.js`: v2 and labelled legacy launchers, scoped local storage, owned taps/holds, terminal-release handoff, wake/visibility guards and session-safe cleanup.
+- `web/play.js`: `lifeSourceReview` and the v2-only ordinary result form, explicit current list/plan replacements and verified preview/save responses; normal corrections and quick-record timing are unchanged.
+- `web/pod-life-model.js`, `web/pod-life-counter.js`, `web/play-pods.js`: three/four-seat counts, separate partner sources, first-out continuation and explicit pod result review.
+- `tests/test_life_source_model_ui.py`, `test_life_source_counter_ui.py`, `test_life_source_bridge_ui.py`, the three `test_pod_life_*_ui.py` suites and `test_life_counter_ui.py`: guarded pure-model, fake storage/DOM, gesture, ownership, stale-choice and legacy regression checks.
 
-Pod slice (2026-10-29): the new pod form can start a separate local 3/4-seat counter with 40 life, poison, explicit concede, per-source commander damage, one-change Undo and a display-only elapsed clock. Each source has a stable seat/commander identity, including own commanders after control changes; partners are never combined. Current saved Commander choices supply literal Commander-section names, while unknown external sources are numbered and a second is added explicitly. A first elimination leaves the other seats playing; a user-caused last elimination or explicit end fills the ordinary pod form for explicit Review and Save. Closing or an uncertain save retains the counter. Strict local packets are scoped to the original profile, collection and session, expire after two days, and hold selectors/labels/counts rather than trusted historical snapshots. Stale selectors still resume counting but require an explicit current replacement before recording. Storage failures retain usable in-memory counts and explain when Resume is unavailable. Collapsed damage controls and compact seat layout keep life adjustments within reach; physical phone acceptance remains separate.
+Compatibility: existing v1 aggregate counters remain explicitly labelled legacy. Their bytes are retained until an actual user change; no positive historical total is assigned to a current commander, split between partners or silently reset. New games use v2. Changed/deleted selectors can still resume counting but need explicit current replacements before recording; changed selected sideboard plans require a current-plan or None acknowledgement. Held terminal counts open the form only on a matching foreground release, while interrupted gestures leave an explicit Record action. All result saves remain explicit.
 
-Evidence: `web/pod-life-model.js`, `web/pod-life-counter.js`, the `podCounter*` bridge in `web/play-pods.js`, guarded route cleanup in `web/app.js`, and `tests/test_pod_life_model_ui.py`, `test_pod_life_counter_ui.py`, `test_pod_life_bridge_ui.py`.
-
-Rules checked against [Wizards' current Comprehensive Rules](https://media.wizards.com/2026/downloads/MagicCompRules%2020260925.txt), linked from [the official rules page](https://magic.wizards.com/en/rules), on 2026-10-29: 903.10a counts damage from the same commander without an ownership exception; 702.124d keeps partners independent. The own-source matrix follows that rule through control changes, also explained on [Wizards' Commander page](https://magic.wizards.com/en/formats/commander). This counter records ordinary thresholds and explicit concessions; it is not a card-rules engine.
-
-Remaining source gap: the existing two-player counter still keeps one aggregate commander-damage total per recipient. A later source-aware version must preserve legacy saved counters without assigning their ambiguous positive total to a current commander, splitting it between partners or silently resetting it. The pod slice does not mark this story built. Real browser/device and Commander-night acceptance remain separate.
+Rules: [Wizards' current Comprehensive Rules](https://media.wizards.com/2026/downloads/MagicCompRules%2020260925.txt), checked via [the official rules page](https://magic.wizards.com/en/rules) on 2026-10-29, keep damage from each commander separate (903.10a and 702.124d); stable own-source identities also cover control changes. The counter is bookkeeping, not a card-rules engine. Actual browser/device and Commander-night acceptance remain separate; E2-S22 owns the household hardware check.
 
 ---
 

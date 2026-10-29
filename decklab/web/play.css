@@ -82,6 +82,18 @@ dialog.life-counter button, .life-total, .life-small-value { touch-action: manip
   .life-seat-0 { transform: none; }
 }
 
+/* Source-aware two-player counters retain the two halves; damage details are explicit disclosures. */
+.life-source-counter .life-seat { align-content: start; }
+.life-source-counter .life-total { overflow-wrap: anywhere; }
+.life-source-counter button { min-width: 44px; min-height: max(44px, var(--tap)); }
+.life-source-counter .life-source-damage { flex: 1 1 100%; width: 100%; min-width: 0; text-align: start; }
+.life-source-damage > summary { min-height: max(44px, var(--tap)); display: flex; align-items: center;
+  cursor: pointer; font-weight: var(--fw-semibold); }
+.life-source-damage:not([open]) > :not(summary) { display: none; }
+.life-source-damage .life-small { flex-wrap: wrap; justify-content: center; margin-top: var(--s-2); }
+.life-source-damage .life-small-label { flex: 1 1 100%; overflow-wrap: anywhere; }
+.life-source-counter .life-source-error { flex: 1 1 100%; margin: 0; text-align: center; overflow-wrap: anywhere; }
+
 /* Pod counters keep every seat upright; commander sources stay with their target seat. */
 dialog.pod-life-counter { position: fixed; inset: 0; width: 100%; height: 100%; max-width: none; max-height: none;
   box-sizing: border-box; margin: 0; padding: 0; border: 0; border-radius: 0; background: var(--page); color: var(--ink); }

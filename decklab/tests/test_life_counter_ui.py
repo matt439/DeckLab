@@ -139,6 +139,8 @@ class LifeCounterUiTests(unittest.TestCase):
           named(end,'Back to the game').click(); assert.equal(kept().ended,null); assert.equal(end.hidden,true);
           press('Matt: 1 life less (hold for 5)').click(); same(totals(),['19','20']);
           named(counter(),'End game').click(); named(end,'User1 won').click();
+          named(end,'New game').click(); same(totals(),['19','20']);  // the result sheet owns the foreground
+          document.body.querySelector('.play-form').closest('.sheet').remove();
           named(end,'New game').click(); same(totals(),['20','20']); assert.equal(kept().ended,null);
           closeLifeCounter();
         """)
