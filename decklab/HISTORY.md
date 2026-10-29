@@ -2,6 +2,39 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Free replacements and Test this swap on the Matchups tab (2026-10-29; E3-S25)
+
+The second slice of E3-S25 puts the replacements API on the page. On the deck page's Matchups tab, "How its
+cards played" now gives each spell in its lead's Drawn, never cast list its **Free replacements**
+(`deck-swaps.js` `neverCastReplacements`, passed to `matchups-cards.js` `standOutParts` through
+`deckCardStats`' new `data` option from `deck-tools.js` `drawDeckMatchups`). It asks
+GET /api/deck/replacements once per card, list and viewer on screen (kept with the page's answer), only for an
+ordinary casual or Commander deck whose space's collection the viewer may see (`deckSwapsOffered`, as the
+stand-ins for missing cards): never for a land, a product or pairing, or the matchup screens. Each candidate
+shows as the stand-ins' sheet shows them (its picture, mana value, free copies, On the way and its swap note),
+with "N more cards fit" for the rest; with none, the slot it looked for. A 400, 403 or 404 shows nothing at all
+(no reason, no error box), any other failure says so with Try again, and an answer that comes after the
+profile changed isn't shown.
+
+**Test this swap** (`testReplacementSwap`) reads the deck's editor view, takes up to the candidate's `max_qty`
+copies off the list's Deck lines and adds as many of the candidate on its line of the same printing or a new
+line in its default printing (`replacementSwapList`), and saves that as the editor's draft for the list, asking
+first before replacing another unsaved draft, as the test page's Save this change does. It then opens
+`#/edit?…&test=change`: once the editor has started on that address, `variant.js` `vtOpenTestFromRoute` drops
+`test=` from it and opens the Test this change sheet, or says why the draft can't be tested. A card the list no
+longer plays is said, and nothing is saved. A draft the device can't store is said, and the editor isn't
+opened on an older one; once the person has left the page or switched profile while the list loads or the ask
+is open, nothing more is done, and the button waits while it works. Nothing is written to the server and no
+game is played.
+
+Fixture tests: `decklab/tests/test_deck_replacements_ui.py` (only the spell never cast is asked about, once per
+list; the Play-now list; on the way and none fitting; no inventory, a product or pairing, refusals and a failure
+with Try again; a profile switch; the draft, the ask before replacing a draft, a card no longer listed, a draft
+that can't be stored, leaving the page or switching profile mid-load, a double click; the swap list's printing
+and copies; the route opening the sheet or saying why, and the real editor route restoring the swap's draft and
+opening the sheet). Free dual lands for a colour shortfall
+are the story's slice 3 ([stories.md](design/stories.md)).
+
 ## Free pool replacements for a listed card (2026-10-29; E3-S25)
 
 The first slice of E3-S25 (cards Forge marks drawn and never cast offering free pool replacements) is the

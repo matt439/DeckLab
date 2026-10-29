@@ -985,9 +985,16 @@ Evidence:
 - `decklab/lib/api/swaps.py`: suggest_replacements (and _free_for, _colours, shared with suggest_swaps)
 - `decklab/tests/test_replacements_api.py`: test_a_never_cast_creature_gets_free_castable_creatures, test_copies_held_by_built_decks_or_the_list_itself_are_not_offered, test_only_cards_castable_in_the_deck, test_a_public_deck_without_its_inventory_shows_no_replacements, test_a_members_space_uses_its_own_pool
 
-Gap: the Matchups tab doesn't ask for or show the replacements yet, and there's no Test this swap.
+Built 2026-10-29 too ([HISTORY.md, Free replacements and Test this swap on the Matchups tab](../HISTORY.md#free-replacements-and-test-this-swap-on-the-matchups-tab-2026-10-29-e3-s25)): criteria 1 to 4 on the page. On the deck page's "How its cards played", each spell in the lead's Drawn, never cast list asks GET /api/deck/replacements once per list on screen, only for an ordinary deck whose space's collection the viewer may see (`deckSwapsOffered`), and shows its Free replacements with their notes, free copies and On the way; a 400, 403 or 404 shows nothing, any other failure says so with Try again. Each candidate's Test this swap swaps up to its `max_qty` copies off the Deck lines (the candidate in its default printing), saves that as the editor's draft (asking first before replacing another, as the test page's Save this change does) and opens `#/edit?…&test=change`, whose editor opens its Test this change sheet (or toasts why the draft can't be tested) and drops `test=` from the address.
 
-Next slice: on the deck page's "How its cards played", each card marked Drawn, never cast gets Free replacements (asked of GET /api/deck/replacements only when the viewer sees the space's inventory; nothing shown otherwise, or on a 403), and each candidate a Test this swap that opens the editor with the swap as its draft (as the test page's Save this change does) and its Test this change sheet open. Free dual lands for a colour shortfall stay slice 3.
+Evidence (slice 2):
+- `decklab/web/deck-swaps.js`: neverCastReplacements, drawReplacements, testReplacementSwap, replacementSwapList
+- `decklab/web/matchups-cards.js`: standOutParts' `replace`, deckCardStats' `data`; `decklab/web/variant.js`: vtOpenTestFromRoute (called from editor.js showEditor)
+- `decklab/tests/test_deck_replacements_ui.py`: test_a_spell_never_cast_gets_its_free_replacements, test_nothing_without_the_collection_or_on_a_refusal, test_test_this_swap_opens_the_editor_with_the_swap, test_the_swap_list, test_the_editor_opens_the_test_sheet_from_the_address
+
+Gap: no free dual lands for a colour shortfall (a land short of a colour rather than a card never cast).
+
+Next slice: slice 3, free dual lands for a colour shortfall, offered the same way (only with the space's inventory) with Test this swap.
 
 **E3-S26** · Matt · could · S · built
 

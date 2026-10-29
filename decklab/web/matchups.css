@@ -356,9 +356,12 @@
 .stand-out .card-link { font-size: var(--fs-sm); }
 /* A card and its number on one line: the name wraps inside its button, the number keeps to the right. */
 .stand-out-cards { list-style: none; display: grid; gap: var(--s-1); max-width: 30rem; margin: var(--s-2) 0 0; padding: 0; }
-.stand-out-cards li { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 2px var(--s-3); }
+.stand-out-cards > li { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 2px var(--s-3); }
 .stand-out-cards .card-link { justify-self: start; max-width: 100%; }
 .stand-out-n { text-align: right; }
+/* A card never cast's free replacements (deck-swaps.js neverCastReplacements): the whole row's width, below it. */
+.stand-out-cards .mu-replace { grid-column: 1 / -1; margin: var(--s-1) 0 var(--s-2); min-width: 0; }
+.stand-out-cards .mu-replace .swap-list { display: grid; gap: var(--s-2); margin-top: var(--s-1); }
 .drawn-names li { display: flex; flex-wrap: wrap; align-items: center; gap: 2px var(--s-2); }
 .stand-out-n, .drawn-n { font-size: var(--fs-sm); color: var(--ink); font-variant-numeric: tabular-nums; }
 .stand-out .sub { margin-top: var(--s-1); font-size: var(--fs-sm); }
