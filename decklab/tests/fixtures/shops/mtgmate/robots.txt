@@ -1,0 +1,11 @@
+# Synthetic robots.txt shaped like MTGMate's (two "*" groups), for Deck Lab's adapter tests.
+User-agent: *
+Content-Signal: search=yes,ai-train=no,use=reference
+Allow: /
+
+User-agent: ClaudeBot
+Disallow: /
+
+User-agent: *
+Disallow: /cards/search
+Crawl-delay: 60

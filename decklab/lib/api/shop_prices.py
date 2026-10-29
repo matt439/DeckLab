@@ -1,4 +1,4 @@
-"""MTGMate's daily snapshot (lib/shops.py) beside the purchase queue's rows (E5-S08, E5-S19).
+"""MTGMate's daily snapshot (lib/shops/) beside the purchase queue's rows (E5-S08, E5-S19).
 
 Shopping's answer is home's records, so only Matt and User1 get here (shopping.py's guard).
 Only the cached file is read: a page load never reaches the shop. A missing or

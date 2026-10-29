@@ -2,6 +2,13 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Shop adapters (2026-10-29; E5-S08 slice)
+
+- `decklab/lib/shops.py` is now the package `decklab/lib/shops/`, with no change in behaviour: `python -m decklab.lib.shops snapshot|show|lookup` (now `__main__.py`), the nightly step, the cache `decklab/data/shops/mtgmate.json` and its `mtgmate.lock`, and Shopping's and deck Prices' answers are as before.
+- `base.py` is the interface every shop's adapter gives: `Adapter` (a key naming its snapshot file and lock, the shop's name and site, `robots_url`, `name_url` and `parse_name_page`, which never fetch), the listing fields, `robots_rules`/`allowed` and one `fetch_page`. `mtgmate.py` is MTGMate's adapter, moved unchanged. The package (`__init__.py`) keeps `ADAPTERS`, the `Session` (now for any adapter, its errors naming that shop), the snapshot, matching, refresh and the command line, and its old names (`shops.parse_name_page`, `shops.SITE`, ...) still answer.
+- Tests: `decklab/tests/test_shop_adapters.py` (13: every adapter's interface and cache path, a default session still going through the tests' fetch guard, an invented second shop asked only through the interface, and MTGMate's parsing on saved synthetic pages in `decklab/tests/fixtures/shops/mtgmate/`: robots.txt, a name page with variants, tokens and other names, a double-faced name, no matches, a changed page and an unreadable table, with no personal data). The existing shop tests pass unchanged.
+- Left: researching a second Australian shop (robots.txt and page format, which needs a live check) and its adapter; the snapshot still reads one shop. No live shop page was fetched for this.
+
 ## Restore a deleted token card as a new row (2026-10-29; E11-S08 slice)
 
 - Activity's **Review undo** now restores one deleted token-card row that the deleted-token review (2026-10-28) finds eligible. The review became the restoration's preview (`token_add`, `lib/inventory/undo_token_delete.py`): the same strict checks (one standalone own-space DELETE, still the latest audit row for its id and for its space's token list; exact printing and pairing; settled stock order and persisted positions; no survivor that may be the same physical card; complete deck and product packing with no line that could claim it), and a receipt binding the source and latest audit row ids, the facts, the token list's sha, the stock, layout, packing and both revisions.

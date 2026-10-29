@@ -54,7 +54,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 | id | status | pri | size | item |
 |---|---|---|---|---|
 | `E5-S15` | DEFERRED | should | M | User1 asks from the page for a card or a Forge run, Matt approves (`E3-S13`); not urgent. |
-| `E5-S08` | OPEN | could | XL | MTGMate checks cover queued and saved-home missing names on Shopping and deck Prices; next research a second Australian shop (robots, page format) and split `lib/shops.py` into per-shop adapters with fixture pages. |
+| `E5-S08` | OPEN | could | XL | MTGMate checks cover queued and saved-home missing names on Shopping and deck Prices, read through per-shop adapters (`lib/shops/`, fixture pages); next research a second Australian shop (robots, page format, a live check) and add its adapter. |
 | `E7-S32` | OPEN | could | L | Scan cards sheet and `POST /api/collection/scan` built (fixture-tested); next real phone photos on the household's phones, then a per-row printing picker and language on the pending list, then token cards for the Tokens page. |
 | `E7-S08` | OPEN | could | M | The card log now tallies each token's per-game peak into the batch record; next pool it over a deck's saved runs (`saved.py`), match Forge's token names to the deck's needs and show the suggested count on the Tokens part. Real counts need fresh runs. |
 | `E7-S23` | OPEN | could | M | Each token need now says whose side it lands on (approximate, from the cards' text) and the deck page says so; next the Tokens part's own heading for the opponent's tokens, then counting them apart in the library line and Build decks' Grab ticks. |

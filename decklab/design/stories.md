@@ -1520,14 +1520,16 @@ As a buyer, I want current Australian shop prices and stock for the cards I'm co
 
 Now (2026-10-28): the first slice is built ([HISTORY.md](../HISTORY.md#mtgmate-daily-prices-for-the-purchase-queue-2026-10-28-e5-s08-e5-s19)): a daily MTGMate snapshot of the purchase queue's card names, shown on Shopping under each queued row's recorded reference price with its fetch time; a shop that couldn't be read shows "price unknown" (criterion 2). Criterion 3 was already met by the deck price table's labelled estimates.
 
+Now (2026-10-29): `lib/shops.py` is a package of per-shop adapters ([HISTORY.md](../HISTORY.md#shop-adapters-2026-10-29-e5-s08-slice)): `lib/shops/base.py` is the common interface (who a shop is, its name page's address and how to read it, never a fetch), `lib/shops/mtgmate.py` MTGMate's adapter, and the package keeps the session, snapshot file, matching and command unchanged. MTGMate's parsing is tested on saved synthetic pages. Remaining: research a second Australian shop (its robots.txt and page format, which needs a live check) and add its adapter; the snapshot still reads one shop.
+
 Evidence:
-- `decklab/lib/shops.py`: robots_rules/allowed (robots.txt read first, every `*` group merged, its Crawl-delay kept), Session (one request a name, spaced), parse_name_page (MTGMate's name page's card table), take/refresh (the snapshot in `decklab/data/shops/mtgmate.json`, at most once in 20 hours), pick/match (a row's printing and finish, cheapest nonfoil in stock for an any-printing row), nightly; `python -m decklab.lib.shops snapshot|show|lookup`
+- `decklab/lib/shops/base.py`: Adapter (the per-shop interface: key, name, site, robots_url, name_url, parse_name_page), robots_rules/allowed (robots.txt read first, every `*` group merged, its Crawl-delay kept), fetch_page; `decklab/lib/shops/mtgmate.py`: parse_name_page (MTGMate's name page's card table); `decklab/lib/shops/__init__.py`: ADAPTERS, Session (one adapter's requests, one a name, spaced), take/refresh (the snapshot in `decklab/data/shops/mtgmate.json`, at most once in 20 hours), pick/match (a row's printing and finish, cheapest nonfoil in stock for an any-printing row), nightly; `python -m decklab.lib.shops snapshot|show|lookup`
 - `decklab/db/nightly.py`: `_shop_prices`, the nightly task's last step (never a failed night; at most 45 minutes of requests a night, the names least recently read first, the rest keeping their last result)
 - `decklab/lib/api/shop_prices.py`: enrich/for_row (GET /api/shopping's `shop_snapshot` and each queued row's; the queue write's answer again), home records viewers only through `shopping.py`'s guard
 - `decklab/lib/buying_needs.py`: shared saved-target counting, explicit no-target/unavailable/counted phases and partial proof status; Shopping retains queue annotation, pictures, ordering and early returns in its adapter. Root's 113 protected foundation tests pass without skips (2026-10-28); nightly input behavior is unchanged in this structural slice.
 - `decklab/web/shopping-snapshot.js`: shopSnapshotLine (the shop's price, stock, printing link and fetch time, or unknown/not listed)
 - `decklab/lib/cards.py`: cheapest_usd (Scryfall USD only); `decklab/web/deck-prices.js`: ownedSection (the converted-estimate note)
-- `decklab/tests/test_shops.py`, `decklab/tests/test_shopping_snapshot_ui.py`, `decklab/tests/test_db_ops.py` (NightlyTests)
+- `decklab/tests/test_shops.py`, `decklab/tests/test_shop_adapters.py` (the interface, and MTGMate over `decklab/tests/fixtures/shops/mtgmate/`), `decklab/tests/test_shopping_snapshot_ui.py`, `decklab/tests/test_db_ops.py` (NightlyTests)
 
 Further slice (2026-10-28): Shopping's combined missing rows now show saved MTGMate nonfoil evidence from the same capture as the queue. Generic needs choose the cheapest stocked nonfoil independently of exact queue requests, with no foil fallback or Back/New-in-stock chips. Unit price, selected-printing stock and original per-entry fetch time stay separate from shortfall/queue counts; carried records retain their date. Canonical/front-name aliases use captured prepared card-index maps without loading a file; ambiguous aliases, malformed facts and bounds produce fixed unknowns. No nonfoil listing and no saved check remain distinct. The display starts no request, write or refresh and creates no basket total. Existing queue matching and nested copied queue facts are unchanged.
 
@@ -1702,7 +1704,7 @@ As a buyer, I want to hear when a card waiting for stock is back in stock at an 
 Now (2026-10-28): built with E5-S08's first slice ([HISTORY.md](../HISTORY.md#mtgmate-daily-prices-for-the-purchase-queue-2026-10-28-e5-s08-e5-s19)): a Waiting for stock row MTGMate's daily snapshot finds in stock is highlighted **Back in stock** with the shop's price, stock and fetch time; a row in stock now but not in the snapshot before is marked **Newly in stock**. Without a snapshot, or for a row it didn't check, nothing claims stock.
 
 Evidence:
-- `decklab/lib/shops.py`: match (back_in_stock, newly_in_stock against the snapshot's "previous")
+- `decklab/lib/shops/__init__.py`: match (back_in_stock, newly_in_stock against the snapshot's "previous")
 - `decklab/web/shopping-snapshot.js`: shopSnapshotLine, shopSnapshotBack; `decklab/web/shopping.js`, `decklab/web/shopping-queue.js`: the `shop-queue-back` highlight in both densities
 - `decklab/tests/test_shops.py`: test_a_waiting_row_found_in_stock_is_back_and_newly_in_stock; `decklab/tests/test_shopping_snapshot_ui.py`: test_a_waiting_row_back_in_stock_is_marked
 
