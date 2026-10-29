@@ -2,6 +2,119 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Fewer steps for a delivery that came as ordered (2026-10-29; E6-S27)
+
+Receive delivery gains three shortcuts in a new `decklab/web/receipt-bulk.js`, each behind one confirmation.
+**Everything arrived as ordered** selects every pending part and ticks every card and token card; a product's
+keep-or-break-up choice is still made separately. A token part's **Backs as recorded or blank** lists the
+ticked rows with no back recorded, each with its own checkbox. Only the rows left ticked are marked
+"single-sided verified", using the same helper as the sheet's "Back is blank" box. With every row unticked,
+its button says why ("Tick at least one card.") and takes focus to the first checkbox. Recorded backs aren't
+open, so they need no answer. Rows whose notes leave the pairing unconfirmed are named but never answered in
+bulk. A part with two or more checks gets **All checks done**. Each shortcut hides itself once done, and focus
+moves on to the next shortcut still showing, else to Record arrival. Open token backs and open checks are now
+listed as one blocker per part (single items keep their old wording). Each shortcut sets the same state as
+ticking by hand, so the preview and apply requests are identical, and the server is unchanged. In the mixed
+fixture delivery (a cards part with 2 checks and a tokens part with 2 blank backs and 1 recorded back),
+reaching Preview took 13 actions by hand and now takes 3, and the blockers listed after ticking dropped from 4
+to 2. UI-KIT describes `receipt-bulk.js` next to `receipt-workflow.js`. Tests: `test_receipt_bulk_ui.py` (four
+Node fixtures: 3 actions to Preview with the same request body as by hand and focus after each shortcut,
+unconfirmed pairings still ask, only confirmed rows written, the inert backs button's reason and focus, Cancel
+and an uneditable view change nothing). Two exact-text check-blocker assertions were updated for the grouped
+wording. 226 related fixture tests pass. Known low issues: the shortcuts have no Undo toast; the confirmation
+is the safeguard. "All checks done" doesn't show for a part with a single check.
+
+## Compact To buy table (2026-10-29; E5-S26)
+
+Shopping's lab-density To buy table now keeps Ref AUD on one line. The cell holds the recorded price and one
+short MTGMate snapshot marker: a dot coloured by stock state, or a "Back" pill for a waiting row back in
+stock. The marker's spoken label and hover title give the snapshot's gist and never show a price for an
+unknown or unlisted snapshot or the raw error. The full snapshot (fetch time, stock, MTGMate link, Back in
+stock) moves into the row's extra row. Its "..." control is now offered for every row with a snapshot and
+names what it opens. Unknown Ref AUD, Shop, Stock, For and Checked values are a single dash whose role=img
+label and title carry the full words. The price column widened from 65px to 88px. The casual card and phone
+layout is unchanged, and the snapshot returns to the card on a density change. Tests: new
+decklab.tests.test_shopping_queue_compact_ui Node fixtures (snapshot row, notes plus snapshot, unknown row,
+unknown snapshot, Back in stock, casual layout round trip); test_shopping_queue_table_ui's unknown assertions
+updated; all shopping and web fixture modules pass (611 run). Known low issues: the marker is a
+non-interactive role=img span, so touch users get its gist only through the extra row, and a lone dot relies
+on colour plus its label to tell in-stock from out-of-stock.
+
+## Matchups deck picker with pictures and pips (2026-10-29; E3-S27)
+
+The Matchups home's "Show matchups for" control is no longer a native select. It is now a small accessible
+listbox picker in the new `web/deck-picker.js` (`deckListbox`). A field-sized button shows the chosen deck's
+small picture, short name and colour pips. It opens a popover listbox (`role=listbox`/`option`,
+`aria-activedescendant`) of the same decks, each drawn the same way and named by its full title. The keyboard
+works as for a select-only list: the arrow keys, Home/End, PageUp/PageDown, Enter/Space to choose, Escape and
+Tab to close, and type-ahead (a repeated letter cycles through the decks starting with it). The picker also
+closes with the other popovers on an outside click. Pictures and pips come from the library data the tab
+already loads, through `libColours` and a new `library.js` `deckArtThumb`, which the lab's deck rows now
+share. A failed or missing picture falls back to the deck's tint, keeping the name and pips. A Beginner Box
+pairing that the library doesn't list shows its name alone. `HOME_DECK_KEY`, `choose()` and the decks offered
+are unchanged. After a choice, focus returns to the redrawn picker, whose button uses core.js's
+`keyboardMenuButton` so a held Enter or Space doesn't reopen the list. Styles are in `matchups.css` and use
+only UI-kit tokens (dark mode through `tokens.css`, plus a forced-colours outline). Tests: the new
+`test_matchup_deck_picker_ui.py` (pictures, pips and names; picture fallback; keyboard, including held Enter
+after a choice; click and outside click; hidden decks not offered). `test_matchup_rename_ui.py` now reads the
+chosen option from the listbox. The matchup, library and web suites pass, and UI-KIT.md describes the picker. Known low issue:
+the list doesn't flip above the button when there's no room below.
+
+## Database words in token, product and accessory messages (2026-10-29; E11-S12 slice)
+
+A further slice of E11-S12, which stays partial. Messages from commands and pages backed by the database no
+longer name old files. Token cards are "the home token cards" or "<id>'s token cards" (`tokens.label_for`, new
+`title_for`). `tokens check` names a row by its number in `tokens list` ("Row 2 of the home token cards:
+..."). A stale `tokens edit|remove --expect` says "The home token cards have changed since that listing: run
+tokens list again and retry with its sha", adding `--space S` for a person's list. Changes elsewhere:
+- The pool's status cross-checks say "Product X has no status, so it counts as owned and not intact" and
+  "Product X has a status but no card list, so it isn't counted".
+- The product kit refusals say "The products' status list is missing" and "Product X has no status".
+- Forge field's note says "The products' status list can't be read".
+- `accessories check` names a product holder "Product X", missing and orphan pictures by file name with the
+  `image put` or `image remove` to run, and an id it doesn't know as "isn't an accessory id (accessories list
+  shows them)".
+
+The committed inventory goldens keep their old words. `golden_p4.phase5_wording` maps them to the new ones.
+Fixture tests cover the stale `--expect` in a person's space and the no-such-row wording.
+
+Known low issues: these still name the old files (`magic/tokens.csv line N`, `status.csv line N`,
+`magic/products/<stem>.csv`, `magic/collection.csv line N`):
+- the file-format reader's row-parse problems for token and collection rows
+- the status-row line warnings
+- product and payload paths in pool, purchases and Shopping messages
+
+They are shared with the file backend and export, or are what identifies a product or payload.
+
+## A split keeps the extra-copies mark (2026-10-29; E6-S25)
+
+`order split` (decklab/lib/inventory/orders.py `split_order`) now copies a source component's "Extra copies of
+owned printings" mark to the new component in the same change, using `rules.with_extra_copies` the way `order
+merge` carries the mark. Its summary says "<new> is marked as extra copies of owned printings too", so the CLI
+preview and `--dry-run` and Shopping's split preview show it. Shopping's preview warning and the split sheet's
+note now say both parts keep the confirmation and that either part can be unmarked on its own. Before this,
+splitting an acknowledged order brought back the pool's "already in the collection" blocker on the new part.
+AGENTS.md, the README and the `order` CLI help describe the new behaviour. Fixture tests, on both backends
+where the test runs on both: a marked cards split marks both parts and the pool doesn't warn; `--undo` on
+either part takes off only that part's mark; an unmarked split stays unmarked and doesn't pick up another
+part's mark; a marked product is never split and keeps its mark; a CLI dry run and a real split; the Shopping
+preview and save. Known low issues: product parts still can't be split at all, so the product case is only
+that refusal. A partial receipt (which splits with `_arrived_first`) now also marks the received part, which
+is harmless because nothing reads marks on received parts.
+
+## Editor drafts in their own file (2026-10-29; E11-S46)
+
+The editor's rebase and draft-storage functions (reapplyList, reapplyFields, rebase, draftKey, queueDraft,
+saveDraft, draftStored, readDraft, removeDraft, timeWords) moved unchanged from web/editor.js into a new
+web/editor-drafts.js, which loads right after editor.js on the page and in the Node test loaders. Every
+function keeps its global name and its text byte for byte, checked by comparing the two commits' blobs.
+editor.js went from 1,198 to 1,017 lines, so it is no longer at the length guard. A new
+test_editor_drafts_split checks that only the moved functions are in the new file, the load order, both files'
+lengths, that the functions are globals under Node, and that the draft keys are unchanged. The 56 editor, web
+and related modules (900 tests) and the other 165 UI modules (2,033 tests) pass, and audit_source_lengths
+--check passes. The one existing test changed: test_web_variant's check of the draft key text now reads
+editor-drafts.js.
+
 ## Experiment checks closed (2026-10-29; E11-S16)
 
 Matt closed E11-S16 as built after the TODO audit found every criterion already met: `forge experiment

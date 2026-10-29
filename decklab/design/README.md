@@ -71,8 +71,8 @@ Each epic has a journey in [journeys.md](journeys.md) and its stories in [storie
 ## Headline counts
 
 - **9 personas:** two primary, two secondary (User5 and the space members), one supplementary, one non-human actor and three anti-personas.
-- **11 epics, 270 stories:** 213 built, 16 partial, 27 missing and 14 not wanted (recounted from current story headers on 2026-10-29 after the TODO audit added fifteen stories).
-- **Must and should stories:** Matt has 96 built and 3 partial; User1 has 32 built, 1 partial and 1 missing; Claude Code has 23 built and no remaining must or should gap; User5 has 4 built; the space members have 4 built; the Commander table has 1 built. The last three have no must or should gap. (Recounted from the story headers on 2026-10-28.)
+- **11 epics, 270 stories:** 218 built, 16 partial, 22 missing and 14 not wanted (recounted from current story headers on 2026-10-29 after the TODO audit added fifteen stories and five of them were built the same day).
+- **Must and should stories:** Matt has 99 built, 3 partial and 4 missing; User1 has 32 built, 1 partial and 2 missing; Claude Code has 25 built and no remaining must or should gap; User5 has 4 built; the space members have 4 built; the Commander table has 1 built. The last three have no must or should gap. (Recounted from the story headers on 2026-10-29.)
 
 Deck Lab already does most of what Matt and User1 need. Private by default and guarded member departure are built and live since 2026-10-19. The visual redesign (E11-S30) stays first, followed by the expanded reserve of deck-building, collection, buying, play and self-hosting work reviewed on 2026-10-28. [TODO.md](../../TODO.md) owns their order and readiness; each story owns its first slice and later gates. The other must and should gaps are the physical-device follow-up (E2-S22), the signed-in off-page check (E11-S02) and User2's testing session (E11-S28), which need the people involved; and User1's purchase requests (E5-S15), which are deferred. Stand-in suggestions, combo detection, official-list change detection, the Forge upgrade check, the prebuilt Forge release and Linux support are already built.
 

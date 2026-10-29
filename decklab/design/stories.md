@@ -37,18 +37,18 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 |---|---:|---:|---:|---:|---:|
 | [E1: Find, plan and choose decks](#e1-find-plan-and-choose-decks) | 17 | 15 | 0 | 2 | 0 |
 | [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 21 | 17 | 1 | 2 | 1 |
-| [E3: Test a deck](#e3-test-a-deck) | 18 | 12 | 3 | 3 | 0 |
+| [E3: Test a deck](#e3-test-a-deck) | 18 | 13 | 3 | 2 | 0 |
 | [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 22 | 18 | 2 | 1 | 1 |
-| [E5: Decide what to buy](#e5-decide-what-to-buy) | 24 | 18 | 1 | 3 | 2 |
-| [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 23 | 18 | 0 | 3 | 2 |
+| [E5: Decide what to buy](#e5-decide-what-to-buy) | 24 | 19 | 1 | 2 | 2 |
+| [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 23 | 20 | 0 | 1 | 2 |
 | [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 28 | 24 | 1 | 3 | 0 |
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 19 | 16 | 0 | 1 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 22 | 15 | 1 | 5 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 35 | 31 | 1 | 1 | 2 |
-| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 41 | 29 | 6 | 3 | 3 |
-| **Total** | **270** | **213** | **16** | **27** | **14** |
+| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 41 | 30 | 6 | 2 | 3 |
+| **Total** | **270** | **218** | **16** | **22** | **14** |
 
-Counted from the story headers on 2026-10-29 after the source-aware two-player and pod counters, alongside the current feature and maintenance work. The reviews added five feature stories and eight hygiene stories, then the fixture-only entry-point story E11-S44, and corrected E1-S12 from missing to partial. Rechecked 2026-10-29: E1-S12 is built and E11-S39 partial (its database qualification pending). The TODO audit of 2026-10-29 added fifteen missing stories (twelve from the audit: E1-S27, E1-S28, E2-S27, E3-S25, E3-S26, E5-S25, E6-S25, E6-S26, E9-S26, E9-S27, E11-S45, E11-S46), then Matt's three UI requests (E3-S27, E5-S26, E6-S27), and corrected E7-S32 from missing to partial (its recognition spike and CLI are built). Matt closed E11-S16 as built the same day.
+Counted from the story headers on 2026-10-29 after the source-aware two-player and pod counters, alongside the current feature and maintenance work. The reviews added five feature stories and eight hygiene stories, then the fixture-only entry-point story E11-S44, and corrected E1-S12 from missing to partial. Rechecked 2026-10-29: E1-S12 is built and E11-S39 partial (its database qualification pending). The TODO audit of 2026-10-29 added fifteen missing stories (twelve from the audit: E1-S27, E1-S28, E2-S27, E3-S25, E3-S26, E5-S25, E6-S25, E6-S26, E9-S26, E9-S27, E11-S45, E11-S46), then Matt's three UI requests (E3-S27, E5-S26, E6-S27), and corrected E7-S32 from missing to partial (its recognition spike and CLI are built). Matt closed E11-S16 as built the same day, and E3-S27, E5-S26, E6-S25, E6-S27 and E11-S46 were built the same day (E11-S12 stays partial after a further slice).
 
 ---
 
@@ -516,7 +516,7 @@ As one of two people (plus Claude) editing the household's decks, I want my unsa
 - Given Claude, when `deck push --expect N` names an old revision, then nothing is written.
 
 Evidence:
-- `decklab/web/editor.js`: draftKey, saveDraft, confirmLeave
+- `decklab/web/editor-drafts.js`: draftKey, saveDraft; `decklab/web/editor.js`: confirmLeave
 - `decklab/web/editor-save.js`: showConflict, reapplyLatest
 - `decklab/lib/api/commits.py`: _conflict
 - `decklab/db/inv_decks.py`: expected
@@ -531,7 +531,7 @@ As a multi-device deck builder, I want to pick up an unsaved edit on another dev
 - Given a draft is saved or discarded, when I look on the other device, then it is gone there too.
 
 Evidence:
-- `decklab/web/editor.js`: draftKey, saveDraft, readDraft (drafts only in the browser's storage)
+- `decklab/web/editor-drafts.js`: draftKey, saveDraft, readDraft (drafts only in the browser's storage)
 
 Gap: There's no server-side draft store and no drafts API; nothing is shared between devices.
 
@@ -707,7 +707,7 @@ First slice (TODO audit, 2026-10-29): A server helper over the latest 100 deck r
 
 How a player finds out whether a deck works before playing or buying cards: instant stats on the deck page's Stats tab, practice games on the Practice tab, Forge matchups and Rankings (#/matchups, #/matchup), the field rank on the Matchups tab, paired tests of a change from the editor (#/variant), and the simulations setting on #/settings. Matchups, fields, rankings and tests follow deck privacy: each viewer sees only results whose every side they may see, a member's field is their own space plus Public spaces, and a run may be stopped by whoever started it, anyone whose space's deck it uses, or an admin. Not yet covered: 4-player Commander pods, sideboard testing, comparing real games with Forge's predictions, and members asking for a run while only admins may start one. Forge results are files outside the database's backups by decision, since they can be replayed.
 
-Open: E3-S13, E3-S19, E3-S23, E3-S25, E3-S26, E3-S27.
+Open: E3-S13, E3-S19, E3-S23, E3-S25, E3-S26.
 
 **E3-S01** · Matt · must · M · built
 
@@ -999,7 +999,7 @@ Gap: none of the criteria is met yet.
 
 First slice (TODO audit, 2026-10-29): Read job.fallback in web/matchups-detail.js and matchups-overview.js progress lines; Node UI fixtures for set, null and member views.
 
-**E3-S27** · Matt · should · S · missing
+**E3-S27** · Matt · should · S · built
 
 As a deck builder reading the Matchups tab, I want the "Show matchups for" picker to show each deck's colours and a small picture, so that I can pick the deck I mean by eye instead of by a shortened name.
 
@@ -1010,9 +1010,7 @@ As a deck builder reading the Matchups tab, I want the "Show matchups for" picke
 
 Evidence of the gap (Matt, 2026-10-29): `decklab/web/matchups-overview.js` drawHome builds a native `<select id="mu-deck-pick">` whose options hold only `shortNames(decks)` text, with the title as a tooltip; a native option can't show art or pips. The library already has each deck's colours and picture.
 
-Gap: none of the criteria is met yet.
-
-First slice: a small listbox picker (button plus popover listbox, `aria-activedescendant`, type-ahead) in a new `web/deck-picker.js`, fed by the library answer the tab already loads (colours, picture), replacing only this select; keep the stored choice (`HOME_DECK_KEY`) and `choose()`. Node UI fixtures for options, fallback, keyboard and hidden decks. The two-deck Play pickers can adopt it later.
+Built (2026-10-29): `web/deck-picker.js` `deckListbox` replaces the select with a button and popover listbox (`aria-activedescendant`, arrows, Home/End, type-ahead, Escape), drawing each deck's picture (`library.js` `deckArtThumb`, falling back to its tint) and pips; held Enter after a choice doesn't reopen it (`keyboardMenuButton`). `HOME_DECK_KEY`, `choose()` and the decks offered are unchanged. Tests: `decklab/tests/test_matchup_deck_picker_ui.py`. The two-deck Play pickers can adopt it later. See [HISTORY.md](../HISTORY.md#matchups-deck-picker-with-pictures-and-pips-2026-10-29-e3-s27).
 
 ## E4: Get ready, play and learn
 
@@ -1395,7 +1393,7 @@ Rules: [Wizards' current Comprehensive Rules](https://media.wizards.com/2026/dow
 
 How Matt, with User1's wishes and Claude's research, goes from "this deck is short" to a decided purchase. On the page: each deck's sortable Prices table of converted Scryfall estimates, and Shopping's Decks still missing cards, Missing cards across decks, To buy, By shop and Long-term plan, with queue add, edit, move and remove for admins and reprint notices from cached Scryfall data. Live Australian shop checks, dated buylists and `watchlist apply` stay with Claude on the PC; recording an order, which reduces the queue rows it fulfils (Shopping's New order or `order add --fulfils`), belongs to E6. By design there are no spending totals and no collection value.
 
-Open: E5-S08, E5-S15, E5-S25, E5-S26.
+Open: E5-S08, E5-S15, E5-S25.
 
 **E5-S01** · Matt · must · M · built
 
@@ -1782,7 +1780,7 @@ Gap: none of the criteria is met yet.
 
 First slice (TODO audit, 2026-10-29): Add action 'add_many' to lib/api/shopping_queue.py save_queue_state with the existing expected-revision check, deduping against rows already queued for the deck; a review sheet on the deck's Cards tab Missing filter. Fixture tests: dedupe, conflict refusal, read-only member/User1, tokens excluded.
 
-**E5-S26** · Matt · should · S · missing
+**E5-S26** · Matt · should · S · built
 
 As Matt reading Shopping's To buy table, I want each row to stay one or two lines deep, so that I can scan the queue without the Ref AUD column making every row tall.
 
@@ -1792,9 +1790,7 @@ As Matt reading Shopping's To buy table, I want each row to stay one or two line
 
 Evidence of the gap (Matt, 2026-10-29): `decklab/web/shopping-queue.js` puts the whole `.shop-snapshot` block into the `.shop-q-price` cell in the lab layout (`shopQueuePut(tr.querySelector(".shop-q-price"), snapshot)`), and unknown cells hold full sentences (`shopQueueUnknown("Reference price not recorded")`), so the narrow numeric column wraps over several lines.
 
-Gap: none of the criteria is met yet.
-
-First slice: in the lab layout, render a compact snapshot marker in the price cell and move the full snapshot into the existing extra row (`shop-q-extra`, opened by …, offered for any row with a snapshot), use short accessible unknown markers in the short cells, and keep the price column on one line in `shopping.css`. Node UI fixtures for a snapshot row, an unknown row and the casual layout.
+Built (2026-10-29): in the lab layout Ref AUD holds the price and one marker (a stock dot, or a Back pill), labelled with the snapshot's gist; the full snapshot moves into the row's … extra row, offered for every row with a snapshot; unknown Ref AUD, Shop, Stock, For and Checked cells are one labelled dash; the column stays on one line. The casual layout is unchanged. Tests: `decklab/tests/test_shopping_queue_compact_ui.py`, `test_shopping_queue_table_ui.py`. See [HISTORY.md](../HISTORY.md#compact-to-buy-table-2026-10-29-e5-s26).
 
 ---
 
@@ -1802,7 +1798,7 @@ First slice: in the lab layout, render a compact snapshot marker in the price ce
 
 Home's buying, from placing an order to its cards sitting in the right deck or in storage: singles, token singles, sealed products, pending orders shown as on the way, correcting, splitting, cancelling and removing pending orders, the Receive delivery check-off board, arrival checks and follow-ups. Each change has a page control on Shopping or Receive delivery and a command (`order …`, `product add|edit`, `receive [--expect]`), saved as one audited change with the deck tables it refreshes. Order changes, receipts and follow-ups need a home admin; User1 sees the same pages read-only, and nobody outside home sees them at all, since person spaces have no orders, products or deliveries. Orders never store prices or spending totals, and physical-device acceptance is tracked in E2-S22.
 
-Open: E6-S25, E6-S26, E6-S27.
+Open: E6-S26.
 
 **E6-S01** · Claude Code · must · L · built
 
@@ -2127,7 +2123,7 @@ Evidence:
 - `decklab/tests/test_shopping_order_changes.py`: test_stale_preview_and_transaction_race_cannot_overwrite_newer_corrections, test_members_are_refused_on_both_listeners_before_inventory_or_token_lookup
 - `decklab/tests/test_order_lifecycle.py`: test_removal_refuses_any_received_part_owned_intact_or_shared_product
 
-**E6-S25** · Claude Code · should · S · missing
+**E6-S25** · Claude Code · should · S · built
 
 As Claude Code splitting a pending order for a partial shipment, I want a part split off a component marked as extra copies of owned printings to keep that mark, so that the split doesn't bring back the pool warning that blocks every deck-table refresh and receipt.
 
@@ -2137,9 +2133,7 @@ As Claude Code splitting a pending order for a partial shipment, I want a part s
 
 Evidence of the gap (TODO audit, 2026-10-29): split_order never reads rules.extra_copies (grep finds the mark only in add_order and order.extra_copies); order_merge.py carries it; HISTORY lists it as a known low issue; AGENTS.md tells the operator to re-mark by hand.
 
-Gap: none of the criteria is met yet.
-
-First slice (TODO audit, 2026-10-29): In lib/inventory/orders.py split_order (line 722), when rules.extra_copies(audit_notes) contains the source component, write rules.with_extra_copies(audit_notes, marked + [new_id]) in the same operation and name it in the preview. Fixture tests: split a marked cards component and a marked product, pool not warning, undo on each part. Update AGENTS.md's 'mark it too' workaround sentence.
+Built (2026-10-29): `split_order` copies the source part's mark to the new part with `rules.with_extra_copies`, as `order merge` does, and its summary (CLI preview, `--dry-run`, Shopping's split preview) says so; `--undo` on either part removes only that part's mark. Products can't be split, so the product case is that refusal with the mark kept. AGENTS.md, the README and the CLI help were updated. Tests: `decklab/tests/test_inventory_orders.py`, `test_shopping_order_split.py`, `test_shopping_order_split_ui.py`. See [HISTORY.md](../HISTORY.md#a-split-keeps-the-extra-copies-mark-2026-10-29-e6-s25).
 
 **E6-S26** · Matt · should · S · missing
 
@@ -2155,7 +2149,7 @@ Gap: none of the criteria is met yet.
 
 First slice (TODO audit, 2026-10-29): Have the receipt apply answer include each 'Where these go' deck's post-receipt Planned missing count from the refreshed tables, and draw the readiness word and Packing plan link in web/receipt-workflow.js rcptWhereTheyGo. Fixture tests: completed deck, short deck, no-inventory viewer. Arrival-notice wording and multi-deck preselect later.
 
-**E6-S27** · Matt · should · M · missing
+**E6-S27** · Matt · should · M · built
 
 As Matt recording a delivery that has both playable cards and token cards, I want to confirm it with far fewer steps, so that recording an ordinary arrival isn't a long list of blockers.
 
@@ -2166,9 +2160,7 @@ As Matt recording a delivery that has both playable cards and token cards, I wan
 
 Evidence of the gap (Matt, 2026-10-29): `decklab/web/receipt-workflow.js` rcptClientBlockers lists a blocker for each unselected part, each part with no ticked card, each ticked token row whose back is open, and each unticked check. `decklab/web/receipts.js` rcptBackOpen treats every blank back without a `single-sided verified` note as open, so every ordinary single-sided token blocks; Tick all works one part at a time, each with its own confirmation (rcptTickAll).
 
-Gap: none of the criteria is met yet.
-
-First slice: count the blockers for a mixed fixture delivery (cards with checks, tokens with blank backs), then add the delivery-level "Everything arrived as ordered" action and the per-part "Backs are as recorded / blank" answer, which writes `single-sided verified` only on the rows the user confirms. Node UI fixtures: a mixed delivery reaches Preview in at most three actions, and its request bodies match ticking each row by hand.
+Built (2026-10-29): `web/receipt-bulk.js` adds **Everything arrived as ordered**, a token part's **Backs as recorded or blank** (writing `single-sided verified` only on the rows left ticked; unconfirmed pairings still ask one by one) and **All checks done** for a part with two or more checks, each behind one confirmation; blockers are grouped per part. The mixed fixture delivery reaches Preview in 3 actions instead of 13, with the same request body as by hand; the server is unchanged. Tests: `decklab/tests/test_receipt_bulk_ui.py`. See [HISTORY.md](../HISTORY.md#fewer-steps-for-a-delivery-that-came-as-ordered-2026-10-29-e6-s27).
 
 ---
 
@@ -4033,7 +4025,7 @@ Evidence:
 
 Keeping Deck Lab running, safe and believable, by Matt as the household's admin and by Claude Code working for him at the PC. It covers the server and its Cloudflare tunnel and "Deck Lab is off" page, the PostgreSQL database with its nightly backup, export, check and restore check, the audit trail on #/activity, the `python -m decklab.db` commands Claude works through (previews, `--expect` guards, `-m` messages, exit codes), the card data's background refresh, Forge upkeep and the Safari Simulator suite. Every write is one audited change set, Matt's own command-line writes are recorded as his, and backups are checked by restoring them.
 
-Open: E11-S02, E11-S08, E11-S12, E11-S28, E11-S30, E11-S31, E11-S39, E11-S45, E11-S46.
+Open: E11-S02, E11-S08, E11-S12, E11-S28, E11-S30, E11-S31, E11-S39, E11-S45.
 
 **E11-S01** · Matt · must · M · built
 
@@ -4269,7 +4261,9 @@ Evidence:
 - `decklab/db/__main__.py`: main (exit 2)
 - `decklab/lib/pool.py` (the `products/status.csv lists ...` warning)
 
-Gap: criterion 1 isn't met. A database-facing message still names an old file: `tokens edit|remove` with a stale `--expect` says `<tokens file> has changed since that listing` (`decklab/db/inv_tokens.py` through `tokens.label_for`, which returns `magic/tokens.csv`), found by the TODO audit of 2026-10-29. The pool's `products/status.csv lists ..., which isn't in magic/products/` warning and `accessories check`'s product wording are the others to check.
+Slice built (2026-10-29): token, pool status, product kit, Forge field and `accessories check` messages name the database record; `tokens check` numbers rows as `tokens list` does; a stale `tokens edit|remove --expect` says the token cards changed and to run `tokens list` again (with `--space S` for a person's). See [HISTORY.md](../HISTORY.md#database-words-in-token-product-and-accessory-messages-2026-10-29-e11-s12-slice).
+
+Gap: criterion 1 is partly met. The file-format reader's row-parse problems (`magic/tokens.csv line N`, `magic/collection.csv line N`) and the products' status-row warnings (`status.csv line N`) still name old files and line numbers, as do product and payload paths in pool, purchases and Shopping messages (`magic/products/<stem>.csv`, `magic/orders/...`); they are shared with the file backend and export. Criterion 3's database-down exit-2 line wasn't re-checked in this slice.
 
 **E11-S13** · Matt · must · M · built
 
@@ -4838,7 +4832,7 @@ Gap: none of the criteria is met yet.
 
 First slice (TODO audit, 2026-10-29): Add --dir to lib/forge/cli_upgrade.py's upgrade-check (only --plan exists today) and pass it to install._setup(forge_dir=DIR, remember=False); never call simjar.record_failed for the installed build. Fake-Forge fixture tests for plumbing, skip/fail summaries and no installed record. Useful for FG#2 (Forge 2.0.16, mid-November).
 
-**E11-S46** · Claude Code · should · S · missing
+**E11-S46** · Claude Code · should · S · built
 
 As the operator maintaining Deck Lab, I want editor.js's draft storage and rebase functions moved into their own script, so that building E2-S16 doesn't break the 1,200-line CI guard.
 
@@ -4848,6 +4842,4 @@ As the operator maintaining Deck Lab, I want editor.js's draft storage and rebas
 
 Evidence of the gap (TODO audit, 2026-10-29): web/editor.js is 1,198 lines (wc), 2 under lint.yml's guard; E2-S16's slice adds draft code there.
 
-Gap: none of the criteria is met yet.
-
-First slice (TODO audit, 2026-10-29): Move reapplyList, reapplyFields, rebase, draftKey, queueDraft, saveDraft, draftStored, readDraft, removeDraft and timeWords unchanged into web/editor-drafts.js, register it in index and the Node loader, prove bodies identical.
+Built (2026-10-29): the ten draft and rebase functions moved byte for byte into `web/editor-drafts.js`, loaded right after editor.js on the page and in every Node loader; editor.js is 1,017 lines and editor-drafts.js 187. `decklab/tests/test_editor_drafts_split.py` checks the moved set, load order, lengths and globals, and the existing editor draft, resume and rebase tests pass unchanged. See [HISTORY.md](../HISTORY.md#editor-drafts-in-their-own-file-2026-10-29-e11-s46).
