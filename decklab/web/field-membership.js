@@ -1,5 +1,7 @@
-/* Read-only current field membership. Kept outside field.js's game-result redraws: this list describes
- * today's selector, not the lists behind saved games. Loaded only when its native disclosure is opened. */
+/* Current field membership. Kept outside field.js's game-result redraws: this list describes
+ * today's selector, not the lists behind saved games. Loaded only when its native disclosure is opened.
+ * A home admin (the answer's can_edit) also gets Change the field (E3-S23): preview one home list's saved
+ * choice (POST /api/field/policy/preview, which writes nothing), then save exactly that preview. */
 "use strict";
 
 const FM_MAX_ROWS = 1000;
@@ -80,8 +82,8 @@ function fmAnswer(ctx, answer) {
   if (rows.filter((row) => row.in_field).length !== counts.included ||
       rows.filter((row) => row.opponent).length !== counts.opponents ||
       rows.filter((row) => row.reason === "configured_remove").length !== counts.manual_excluded) return null;
-  return { format: answer.format, rows, counts: { included: counts.included, opponents: counts.opponents,
-    manual_excluded: counts.manual_excluded } };
+  return { format: answer.format, rows, can_edit: answer.can_edit === true,
+    counts: { included: counts.included, opponents: counts.opponents, manual_excluded: counts.manual_excluded } };
 }
 
 /** Python's title bound counts Unicode characters; reject huge strings before allocating that copy. */
@@ -160,6 +162,10 @@ function fmDraw(ctx, answer) {
     });
     fmAppendRows(ctx, part);
   }
+  if (answer.can_edit) {
+    const choices = fmChoices(ctx, answer);
+    if (choices) ctx.rows.append(choices);
+  }
 }
 
 /** Local expansion retains old links and the original button, including focus on the final batch. */
@@ -184,4 +190,144 @@ function fmRow(ctx, row) {
     self ? el("p", { class: "sub", text: row.in_field
       ? "This deck is included, but never plays itself."
       : row.version === ctx.version ? "This is the list you're viewing." : "Another list of this deck." }) : null);
+}
+
+const FM_CHOICE_MODES = [["include", "Include this list"], ["exclude", "Leave the deck out"],
+  ["rules", "Follow the field rules"]];
+const FM_CHOICE_NOW = { legacy: "follows the field rules and any older hand edits", include: "is included by hand",
+  exclude: "is left out by hand", rules: "follows the field rules" };
+const FM_HOUSE = { Constructed: "casual", Commander: "commander" };
+const FM_REVISION = /^(0|[1-9][0-9]{0,18})$/;
+
+/** Change the field: a home house deck's list of this format, a choice, and a reason for leaving one out. */
+function fmChoices(ctx, answer) {
+  const lists = answer.rows.filter((row) => row.id.split("/").length === 2 && row.id.split("/")[0] === FM_HOUSE[answer.format]);
+  if (!lists.length) return null;
+  const choice = { ctx, render: ctx.render, format: answer.format, lists, preview: null, busy: false, saving: false, sequence: 0 };
+  const field = (label, input) => el("label", { class: "field" }, el("span", { text: label }), input);
+  choice.list = el("select", { "data-field-choice-list": true },
+    lists.map((row, i) => el("option", { value: String(i), text: `${row.title}: ${listName(row.version)}` })));
+  const own = lists.findIndex((row) => row.id === ctx.id && row.version === ctx.version);
+  choice.list.value = String(Math.max(own, 0));
+  choice.mode = el("select", { "data-field-choice-mode": true },
+    FM_CHOICE_MODES.map(([value, text]) => el("option", { value, text })));
+  choice.mode.value = "include";
+  choice.reason = el("textarea", { "data-field-choice-reason": true, rows: 2, maxlength: 2000 });
+  choice.status = el("p", { class: "sub", role: "status" });
+  choice.check = el("button", { type: "button", class: "btn", "data-field-choice-preview": true, text: "Preview change" });
+  choice.save = el("button", { type: "button", class: "btn btn-primary", "data-field-choice-save": true,
+    text: "Save change", disabled: true });
+  for (const input of [choice.list, choice.mode]) input.addEventListener("change", () => fmChoiceStale(choice));
+  choice.check.addEventListener("click", () => fmChoicePreview(choice));
+  choice.save.addEventListener("click", () => fmChoiceSave(choice));
+  if (ctx.choiceNote) { choice.status.textContent = ctx.choiceNote; ctx.choiceNote = null; }
+  return el("div", { class: "fv-membership-group fv-choices", "data-field-choices": true },
+    el("h3", { text: "Change the field" }),
+    el("p", { class: "sub", text: "A saved choice applies to the home field and stays with a deck when it's " +
+      "renamed. Saving starts no games." }),
+    field("List", choice.list), field("Choice", choice.mode),
+    field("Why (needed to leave a deck out; kept in the change history only)", choice.reason),
+    choice.status, el("div", { class: "actions" }, choice.check, choice.save));
+}
+
+/** The panel still belongs to the membership drawn for this page, list and profile, and no reload is pending. */
+function fmChoiceHere(choice) {
+  return fmHere(choice.ctx) && choice.ctx.render === choice.render && !choice.ctx.pending &&
+    choice.ctx.rows.contains(choice.save);
+}
+
+function fmChoiceStale(choice) {
+  if (choice.saving) return;
+  choice.sequence++;
+  choice.preview = null;
+  choice.busy = false;
+  choice.check.disabled = false;
+  choice.save.disabled = true;
+  choice.status.textContent = "";
+}
+
+/** Copy a preview only when it answers exactly the list and choice asked about. */
+function fmChoiceAnswer(answer, row, mode, format) {
+  if (!answer || answer.format !== format || answer.deck?.id !== row.id || answer.deck?.version !== row.version ||
+      !Object.hasOwn(FM_CHOICE_NOW, answer.current?.mode) || answer.proposed?.mode !== mode ||
+      typeof answer.changed !== "boolean" || typeof answer.ready !== "boolean" ||
+      !(answer.message === null || fmBoundedText(answer.message, 300)) ||
+      typeof answer.expect?.revision !== "string" || !FM_REVISION.test(answer.expect.revision) ||
+      !answer.expect.proof || typeof answer.expect.proof !== "object" || Array.isArray(answer.expect.proof)) return null;
+  return { format, row, mode, current: answer.current.mode, currentVersion: answer.current.version,
+    changed: answer.changed, ready: answer.ready, message: answer.message,
+    expect: { revision: answer.expect.revision, proof: answer.expect.proof } };
+}
+
+function fmChoiceNow(mode, version) {
+  return FM_CHOICE_NOW[mode] + (mode === "include" && ["target", "owned"].includes(version) ? ` (${listName(version)})` : "");
+}
+
+/** The server's own words for a refusal (who may change it, a stale preview, the migrate command); never raw errors. */
+function fmChoiceError(error, fallback) {
+  return error instanceof ApiError && error.status >= 400 && fmBoundedText(error.message, 300) ? error.message : fallback;
+}
+
+async function fmChoicePreview(choice) {
+  if (!fmChoiceHere(choice) || choice.busy) return;
+  const row = choice.lists[Number(choice.list.value)], mode = choice.mode.value;
+  if (!row || !FM_CHOICE_MODES.some(([value]) => value === mode)) return;
+  const sequence = ++choice.sequence;
+  const current = () => sequence === choice.sequence && fmChoiceHere(choice);
+  Object.assign(choice, { busy: true, preview: null });
+  choice.check.disabled = choice.save.disabled = true;
+  choice.status.textContent = "Checking the change.";
+  try {
+    const answer = await apiWrite("/api/field/policy/preview", { id: row.id, version: row.version, mode });
+    if (!current()) return;
+    const preview = fmChoiceAnswer(answer, row, mode, choice.format);
+    if (!preview) throw new Error("Preview unavailable");
+    choice.preview = preview;
+    choice.status.textContent = !preview.ready ? `${preview.message || "This choice can't be saved yet."} Nothing can be saved until then.`
+      : !preview.changed ? `${row.title} ${fmChoiceNow(preview.current, preview.currentVersion)} already; nothing would change.`
+      : `${row.title} ${fmChoiceNow(preview.current, preview.currentVersion)} now; after saving it ` +
+        `${fmChoiceNow(mode, row.version)}.` + (mode === "exclude" ? " Say why before saving." : "");
+    choice.save.disabled = !preview.ready || !preview.changed;
+  } catch (error) {
+    if (current()) choice.status.textContent = fmChoiceError(error, "The change couldn't be checked. Try again.");
+  } finally {
+    if (current()) { choice.busy = false; choice.check.disabled = false; }
+  }
+}
+
+function fmChoiceLock(choice, locked) {
+  for (const input of [choice.list, choice.mode, choice.reason, choice.check, choice.save]) input.disabled = locked;
+}
+
+/** Save exactly the shown preview; on success the membership is read again, which redraws this panel. */
+async function fmChoiceSave(choice) {
+  const preview = choice.preview, ctx = choice.ctx;
+  if (!fmChoiceHere(choice) || choice.busy || !preview || !preview.ready || !preview.changed) return;
+  const reason = choice.reason.value.trim();
+  if (preview.mode === "exclude" && !reason) { choice.status.textContent = "Say why the deck is left out before saving."; return; }
+  if ([...reason].length > 1000) { choice.status.textContent = "Keep the reason within 1,000 characters."; return; }
+  const sequence = ++choice.sequence;
+  const current = () => sequence === choice.sequence && fmChoiceHere(choice);
+  // While saving, the list, choice and reason stay fixed so a change can't drop the save's answer.
+  Object.assign(choice, { busy: true, saving: true });
+  fmChoiceLock(choice, true);
+  choice.status.textContent = "Saving the change.";
+  try {
+    await apiWrite("/api/field/policy", { format: preview.format, revision: preview.expect.revision,
+      proof: preview.expect.proof, mode: preview.mode, ...(reason ? { reason } : {}) });
+    choice.saving = false;
+    if (!current()) return;
+    ctx.choiceNote = `Saved: ${preview.row.title} ${fmChoiceNow(preview.mode, preview.row.version)}. ` +
+      "The membership above was read again.";
+    choice.busy = false;
+    fmRefresh(ctx);
+  } catch (error) {
+    choice.saving = false;
+    if (!current()) return;
+    choice.preview = null;
+    choice.busy = false;
+    fmChoiceLock(choice, false);
+    choice.save.disabled = true;
+    choice.status.textContent = fmChoiceError(error, "The change couldn't be saved. Preview it again.");
+  }
 }

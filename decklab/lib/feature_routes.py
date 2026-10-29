@@ -5,7 +5,8 @@ Use the server's normal query, method and same-origin write guards. Each
 part of the API is imported when first asked for. A POST takes at most
 api.MAX_EDIT_BODY bytes, except routes with their explicit bound, including
 pod records (play_pods.MAX_BODY), import previews (collection_edit.MAX_IMPORT_BODY), scanned photos
-(collection_scan.MAX_SCAN_BODY), editor drafts kept for later (deck_drafts.MAX_BODY)
+(collection_scan.MAX_SCAN_BODY), editor drafts kept for later (deck_drafts.MAX_BODY), field choices
+(field_choices.MAX_BODY)
 and accessory saves with a local picture (accessories.MAX_SAVE_BODY).
 """
 
@@ -14,6 +15,17 @@ def _field_membership_view(**params):
     """Load Forge's membership adapter only for an allowed field request."""
     from decklab.lib.api.field_membership import membership_view
     return membership_view(**params)
+
+
+def _field_choice_preview(body):
+    """Home's saved field choices (api/field_choices.py): a reviewed preview, writing nothing."""
+    from decklab.lib.api.field_choices import preview
+    return preview(body)
+
+
+def _field_choice_save(body):
+    from decklab.lib.api.field_choices import save
+    return save(body)
 
 
 def _sideboard_preview(**params):
@@ -126,6 +138,8 @@ def dispatch(handler, route, query):
         ("collection", "trade"): (collection_trade.save_trade, collection_trade.MAX_TRADE_BODY),
         ("precons", "add"): precons.add_precon,
         ("precons", "start"): precon_coverage.start_deck,
+        ("field", "policy", "preview"): (_field_choice_preview, 8192),     # a review: nothing is written
+        ("field", "policy"): (_field_choice_save, 8192),                  # field.edit: a home admin's
         ("deck", "cover"): cover.save_cover,
         ("deck", "token-cards"): token_cards.save_token_cards,
         ("deck", "printings"): deck_printings.save_printings,

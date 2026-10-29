@@ -2,6 +2,47 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Change the field: home admins' preview and save (2026-10-29; E3-S23 edit slice)
+
+A home admin can now change home's field on the page. Who's in the field (a home
+deck's Matchups tab) has a **Change the field** panel when its membership answer
+says `can_edit` (a named home admin on a home field): pick one of the format's
+current home lists, then **Include this list**, **Leave the deck out** (with a
+reason, kept only in the change history) or **Follow the field rules**.
+**Preview change** (`POST /api/field/policy/preview`, new `api/field_choices.py`)
+writes nothing: it shows what the deck does now and after saving, with the policy
+revision (a decimal string) and the list's proof. **Save change**
+(`POST /api/field/policy`) sends exactly that preview back as one audited change;
+the store's existing CAS rechecks the revision and recomputes the proof in its
+write transaction, so a stale preview or a list changed since answers 409. The
+membership is read again afterwards; saving starts no games. While a save is in
+flight the List, Choice and Why fields and both buttons stay disabled, so the
+save's confirmation or refusal is always shown (a 409 or 503 re-enables them).
+
+The preview's proof comes from the stores' new `field_policy_review`: memory's
+explicit fixture source, or PostgreSQL's one read-only repeatable-read
+transaction (`pg_field_policy.review`), which needs no policy table. Before
+migration 0017 the preview works as today and says so, and a save answers 503
+naming `python -m decklab.db migrate`. A new permission, `field.edit`, is
+checked first on both routes: members (User1 included), admins outside home and
+requests naming nobody are refused before any deck, policy or list is read, in
+words naming nobody, and a hidden deck answers as a missing one.
+
+**23 new fixture checks** pass: `test_field_choices_api` (12: preview and save
+over a memory store, Play-now and Use rules, the private Exclude reason, stale
+revision and changed list, permissions before any store read, an outside admin,
+hidden, product and malformed inputs, missing table, unproved list and down
+store, `can_edit`, and the routes), `test_pg_field_policy_review` (4, fake SQL:
+one read-only snapshot without the policy table, unproved lists, non-home ids and
+batches, a busy connection), `test_field_choices_ui` (6 Node DOM cases, one changing the selects mid-save) and one
+membership API case. With every field, field-policy, membership and permission
+module and `test_web`, `test_server`, `test_api`, `test_inventory_contract` and
+`test_api_decks`, 587 checks pass, and the source-length guard passes.
+Migration 0017 remains unapplied; no live database, server, Forge game, browser
+or device check was run. E3-S23 remains partial: failing closed when saved
+choices can't be read, and 0017's activation with PostgreSQL and browser
+qualification, are left.
+
 ## Shop adapters (2026-10-29; E5-S08 slice)
 
 - `decklab/lib/shops.py` is now the package `decklab/lib/shops/`, with no change in behaviour: `python -m decklab.lib.shops snapshot|show|lookup` (now `__main__.py`), the nightly step, the cache `decklab/data/shops/mtgmate.json` and its `mtgmate.lock`, and Shopping's and deck Prices' answers are as before.

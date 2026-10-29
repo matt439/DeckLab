@@ -113,6 +113,8 @@ upkeep in another space; the command line writes every space.
                                                   lists visible), then run.start as /api/variant/run
     PUT  /api/simulations                         simulations.edit (an admin, by role)
     PUT  /api/commander-night                     commander_night.edit (a home admin)
+    POST /api/field/policy/preview, /api/field/policy
+                                                  field.edit (a home admin; the preview writes nothing)
     POST /api/assembly/preview                    run (it writes nothing)
     POST /api/assembly/ticks                      home's inventory; a changes patch requires a real
                                                   home writer, a read-only poll no profile

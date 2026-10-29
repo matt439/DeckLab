@@ -786,6 +786,11 @@ class PgStore:
         from . import pg_field_policy
         return pg_field_policy.apply(self, fmt, expected_revision, expected_proof, rule, actor, message, reason)
 
+    def field_policy_review(self, fmt, deck_id, version):
+        """One current list's reviewed proof, from a read-only transaction; writes nothing."""
+        from . import pg_field_policy
+        return pg_field_policy.review(self, fmt, deck_id, version)
+
     # ------------------------------------------------------------------ editor drafts kept for later
 
     def deck_draft(self, profile_id, deck_id, version):

@@ -178,6 +178,12 @@ inventory writes answer 503 with "reason": "database":
                                          of it waits or plays
     POST /api/field/run, /api/field/stop body {"profile", "id", "version", "budget"}: play the field
                                          (or join the run going), or Stop it
+    GET  /api/field/membership?id=&version=   who's in the field now, with "can_edit" for a home admin
+    POST /api/field/policy/preview       body {"profile", "id", "version", "mode"}: a home admin's preview of
+                                         one home list's saved field choice (E3-S23); writes nothing
+    POST /api/field/policy               body {"profile", "format", "revision", "proof", "mode", "reason"?}:
+                                         save that preview as one audited change (409 when it changed,
+                                         503 naming the migrate command before migration 0017)
     GET  /api/variant?test=<id>          a test of a change (wave 3); 202 while it waits or plays
     GET  /api/variant/estimate?id=&version=&against=<deck id>|field[&av=]   its rough time
     GET  /api/variants?id=&version=      the tests of a deck's list

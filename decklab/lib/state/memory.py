@@ -473,6 +473,32 @@ class MemoryStore:
         except Exception:
             raise Unavailable(source.UNAVAILABLE) from None
 
+    def field_policy_review(self, fmt, deck_id, version):
+        """The reviewed proof of one current list from the fixture provider; writes nothing.
+
+        Like a write it reads only the explicit provider, never configured inventory,
+        and relays none of its diagnostics.
+        """
+        from . import field_policy as policy, field_policy_source as source
+        policy.empty(fmt)
+        with self._lock:
+            self._check()
+            if self._batch is not None:
+                raise Invalid("Field-policy reviews require an independent transaction.")
+        try:
+            try:
+                locked = getattr(self._field_source, "locked", None)
+            except Exception:
+                raise Unavailable(source.UNAVAILABLE) from None
+            if not callable(locked):
+                raise Unavailable(source.UNAVAILABLE)
+            with _field_capture(locked, deck_id) as capture:
+                return source.qualify(capture, version, fmt)
+        except (Invalid, Unavailable):
+            raise
+        except Exception:
+            raise Unavailable(source.UNAVAILABLE) from None
+
     # ------------------------------------------------------------------ the simulations mode
 
     @staticmethod

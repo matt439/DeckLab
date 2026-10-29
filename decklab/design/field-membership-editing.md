@@ -1,11 +1,12 @@
 # Audited home-field membership: E3-S23
 
 This extends the existing read-only membership view. Checked identity, pure
-policy, fixture-qualified persistence and selector integration (2026-10-29,
-`forge/field_policy_overlay.py`) are implemented. Request permissions/preview/save,
-database activation and UI editing remain open.
+policy, fixture-qualified persistence, selector integration (2026-10-29,
+`forge/field_policy_overlay.py`) and the home-admin preview/save with its
+Change the field control (2026-10-29, `api/field_choices.py`) are implemented.
+Failing closed on an unreadable policy and database activation remain open.
 Development uses supplied fixtures, without changing the household's field or
-starting Forge games. The next slice is the audited home-admin preview/save.
+starting Forge games.
 
 ## Checked deck identity
 
@@ -93,12 +94,43 @@ those decks, adds a note naming no deck, and makes the membership trace and the
 exclusion count unavailable. Exclusions re-notify the observer's parsed removals
 with the policy-excluded IDs, so Rankings explains them as manual exclusions.
 
+### Preview and save (built 2026-10-29)
+
+`permissions` has a `field.edit` action: a named home admin, or a script naming
+nobody; anyone else gets "Only an admin can change who's in the field." (or
+"Choose who you are first."), naming nobody. Both routes check it first, before
+any deck, policy or list read, then treat a hidden deck as missing.
+
+`POST /api/field/policy/preview` {profile, id, version, mode} writes nothing. It
+reads the format's policy (a missing 0017 table reads as empty, with
+`ready: false` and the migrate command) and the stores' `field_policy_review`
+proof: memory's explicit fixture source, or PostgreSQL's one read-only
+repeatable-read transaction (`pg_field_policy.review`, `capture_on_connection`
+in reader mode, no policy table needed). The answer gives the current choice
+(`legacy` without an entry), the proposed rule, whether it would change, and
+`expect: {revision, proof}`, the revision as a decimal string.
+
+`POST /api/field/policy` {profile, format, revision, proof, mode, reason?}
+builds the rule from the proof's epoch (Include takes its version) and calls
+`field_policy_apply`, whose audited CAS rechecks revision and proof (409) in
+its own write transaction. Its audit message names the deck id and format;
+Exclude's required reason stays in the change's reason. A missing 0017 table
+answers 503 naming `python -m decklab.db migrate`; the stores' own fixed
+unavailable words pass through, any other database error gets the usual words.
+
+The membership answer adds `can_edit` (a named home admin on a home field).
+Its Change the field panel lists the format's home house lists, previews one
+choice, keeps Save disabled until a changed, ready preview, needs a reason to
+leave a deck out, drops late answers after a page, profile or route change,
+keeps its List, Choice and reason fixed while a save is in flight (so the
+save's answer is never dropped), and reads the membership again after a save.
+
 ### Remaining selection and editing work
 
 The selector now implements the rules below, except the failed-read one: on a
 failed policy read it keeps legacy selection (so a deck the saved policy
 excludes can come back), adds a note naming no deck and makes the trace and
-exclusion count unavailable. Failing closed is still open, as is the write path.
+exclusion count unavailable. Failing closed is still open.
 
 Use a per-format, revisioned overlay for current home house-deck incarnations.
 Do not copy an entire legacy field into static saved rules: an unqualified

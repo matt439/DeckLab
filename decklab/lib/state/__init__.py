@@ -60,8 +60,11 @@ tests/test_state_contract.py checks):
   rejecting batches. The same write transaction checks the current incarnation, text receipt,
   selected version and card fingerprint before either a no-op or mutation. Exclude requires
   a bounded private audit reason, never part of policy content. Memory writes require an
-  explicit locked fixture source; no provider falls back to configured inventory. These
-  storage methods grant no request access and do not change field selection.
+  explicit locked fixture source; no provider falls back to configured inventory.
+  field_policy_review(format, deck_id, version) -> that proof for one current list, from one
+  read-only read that needs no policy table and writes nothing (a preview's; the write
+  recomputes it). These storage methods grant no request access (api/field_choices.py checks
+  field.edit).
 - deck_draft(profile_id, deck_id, version) -> {revision, draft: {saved_at, device, content} or
   None}; deck_draft_put(profile_id, deck_id, version, content, expected_revision, *, device="")
   -> that view, content None discarding it (a tombstone keeps the revision, which only grows).
