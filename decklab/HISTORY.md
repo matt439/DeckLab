@@ -2,6 +2,59 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Local Commander pod life counter (2026-10-29; E4-S26 slice)
+
+The new pod form can start a three/four-seat counter with 40 life, life ±1/±5,
+optional poison, separate commander-damage sources, concede, one-change Undo
+and an elapsed clock. A first elimination leaves the others playing. The last
+remaining seat, or an explicit End game choice, fills the ordinary pod form;
+Review and Save remain explicit. The existing pod API and 1v1 totals are unchanged.
+
+Stable seat/source identities keep partners independent and include own commanders
+through control changes. Commander-section names stay literal, including commas
+and double-face separators. An external opponent gets one literal or numbered
+source, with a second added explicitly. Commander eligibility comes from the
+existing positive current catalog, independently of a deck ID's folder kind.
+The rules source and remaining two-player aggregate-damage gap are recorded in
+the story; E4-S26 remains partial and its TODO row stays open.
+
+Strict local packets belong to the original profile, collection and random
+session, expire after two days, and contain selectors/labels/counts rather than
+trusted historical snapshots. Resume keeps stale or deleted deck choices for
+counting; recording requires an explicit current replacement. Type and player-count
+rerenders retain that unresolved intent instead of choosing list zero. Partial
+storage failures keep memory counting usable with a fixed Resume warning, and
+later persistence clears the warning. Clock and visibility callbacks never save,
+mutate counts or open a result form; a resumed ended packet needs an explicit
+review action.
+
+Controls bind their original profile object, page/data, frame, session, generation
+and connected control. Hidden, detached, replaced or reparented launchers and
+closed damage controls cannot act. Confirmed Save clears only its original local
+session key. Failed removal reports that the game saved, disables that session on
+the current page and retains a warning; it makes no persistent guarantee across
+a reload when storage cannot be changed. Newer sessions remain intact. Collapsed
+native damage disclosures and compact two-column seats from 360px retain 44px tap
+targets; actual browser, phone and Commander-night acceptance remain separate.
+
+Root's protected thirteen-target integration reported **281 tests**, passing
+with **one intentional database-integration class skip**, in 79.736 seconds.
+All ten owned source/test hashes stayed stable during the run; the longest
+owned source has 702 lines. Scoped Ruff, four JavaScript syntax checks and
+whitespace checks pass. Final staged review removed one extra test EOF blank
+line, with equivalent AST and identical non-trailing content proved. The skip
+was separately confirmed as the fixture
+runner's pre-setup database-integration gate, without enabling or probing it.
+The 60 new checks cover pure rules/packet validation, fake storage/DOM controls
+and the actual-script-order form bridge. Independent review found and resolved
+source normalization, Undo binding, storage recovery, foreground handoff and
+stale replacement/launcher ownership issues; no material finding remains.
+Evidence is in `decklab-pod-counter-82f31447`. The 112 preserved test-header-only
+changes remain unstaged and byte-for-byte unchanged, with equivalent AST bodies.
+Repository-wide source inspection and a fresh complete-suite claim remain deferred
+under the stopped-source boundary. Qualification used disposable fixtures only;
+no configured database, live browser/storage, server restart or service action.
+
 ## Nightly shop checks for saved-home shortfalls (2026-10-28; E5-S08 slice)
 
 The nightly MTGMate step now includes proven missing names from saved home

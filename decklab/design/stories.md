@@ -1295,9 +1295,13 @@ Evidence:
 - `decklab/tests/test_life_counter_ui.py`
 - `decklab/lib/api/play_records.py`: one-tap game records (E4-S11), the only write
 
-Gap: Two players only; no multiplayer counter (E4-S18).
+Pod slice (2026-10-29): the new pod form can start a separate local 3/4-seat counter with 40 life, poison, explicit concede, per-source commander damage, one-change Undo and a display-only elapsed clock. Each source has a stable seat/commander identity, including own commanders after control changes; partners are never combined. Current saved Commander choices supply literal Commander-section names, while unknown external sources are numbered and a second is added explicitly. A first elimination leaves the other seats playing; a user-caused last elimination or explicit end fills the ordinary pod form for explicit Review and Save. Closing or an uncertain save retains the counter. Strict local packets are scoped to the original profile, collection and session, expire after two days, and hold selectors/labels/counts rather than trusted historical snapshots. Stale selectors still resume counting but require an explicit current replacement before recording. Storage failures retain usable in-memory counts and explain when Resume is unavailable. Collapsed damage controls and compact seat layout keep life adjustments within reach; physical phone acceptance remains separate.
 
-Next slice: extend the counter to E4-S18's built pod model, preserve per-commander damage and resume state, and hand the result to that same explicit review form. The record-model prerequisite is built; counter fixtures can proceed without a real Commander night.
+Evidence: `web/pod-life-model.js`, `web/pod-life-counter.js`, the `podCounter*` bridge in `web/play-pods.js`, guarded route cleanup in `web/app.js`, and `tests/test_pod_life_model_ui.py`, `test_pod_life_counter_ui.py`, `test_pod_life_bridge_ui.py`.
+
+Rules checked against [Wizards' current Comprehensive Rules](https://media.wizards.com/2026/downloads/MagicCompRules%2020260925.txt), linked from [the official rules page](https://magic.wizards.com/en/rules), on 2026-10-29: 903.10a counts damage from the same commander without an ownership exception; 702.124d keeps partners independent. The own-source matrix follows that rule through control changes, also explained on [Wizards' Commander page](https://magic.wizards.com/en/formats/commander). This counter records ordinary thresholds and explicit concessions; it is not a card-rules engine.
+
+Remaining source gap: the existing two-player counter still keeps one aggregate commander-damage total per recipient. A later source-aware version must preserve legacy saved counters without assigning their ambiguous positive total to a current commander, splitting it between partners or silently resetting it. The pod slice does not mark this story built. Real browser/device and Commander-night acceptance remain separate.
 
 ---
 

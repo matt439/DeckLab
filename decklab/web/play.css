@@ -81,3 +81,40 @@ dialog.life-counter button, .life-total, .life-small-value { touch-action: manip
   .life-inner { grid-template: "a b" minmax(0, 1fr) "bar bar" auto / minmax(0, 1fr) minmax(0, 1fr); }
   .life-seat-0 { transform: none; }
 }
+
+/* Pod counters keep every seat upright; commander sources stay with their target seat. */
+dialog.pod-life-counter { position: fixed; inset: 0; width: 100%; height: 100%; max-width: none; max-height: none;
+  box-sizing: border-box; margin: 0; padding: 0; border: 0; border-radius: 0; background: var(--page); color: var(--ink); }
+dialog.pod-life-counter::backdrop { background: var(--page); }
+.pod-life-inner { min-height: 100%; box-sizing: border-box; display: grid; align-content: start; gap: var(--s-3);
+  padding: max(var(--s-2), env(safe-area-inset-top)) var(--s-2) max(var(--s-2), env(safe-area-inset-bottom)); }
+.pod-life-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-2); }
+.pod-life-seat { min-width: 0; display: grid; align-content: start; gap: var(--s-2); padding: var(--s-2);
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-panel); overflow-wrap: anywhere; }
+.pod-life-seat.pod-life-out { background: var(--warn-soft); border-color: var(--warn-line); }
+.pod-life-main { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; align-items: center; gap: var(--s-1); }
+.pod-life-main .life-total { min-width: 0; font-size: var(--fs-xl); overflow-wrap: anywhere; }
+.pod-life-main .life-adjust { min-height: var(--tap); }
+.pod-life-counter button { min-width: 44px; min-height: max(44px, var(--tap)); touch-action: manipulation; -webkit-user-select: none;
+  user-select: none; -webkit-touch-callout: none; }
+.pod-life-bar { display: flex; flex-wrap: wrap; gap: var(--s-2); align-items: center; justify-content: center; }
+.pod-life-sources { display: grid; gap: var(--s-2); min-width: 0; }
+.pod-life-sources > summary { min-height: max(44px, var(--tap)); cursor: pointer; font-weight: var(--fw-semibold); }
+.pod-life-sources:not([open]) > :not(summary) { display: none; }
+.pod-life-seat h3, .pod-life-seat p { margin: 0; }
+.pod-life-extras, .pod-life-source-add { display: flex; flex-wrap: wrap; gap: var(--s-2); }
+.pod-life-source-add input { min-width: 0; max-width: 100%; }
+.pod-life-status { color: var(--warn-text); }
+.pod-life-end { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2); }
+.pod-life-end > h3 { flex: 1 0 100%; margin: 0; }
+.pod-life-sources .life-small { flex-wrap: wrap; }
+.pod-life-sources .life-small-label { flex: 1 1 100%; overflow-wrap: anywhere; }
+@media (max-width: 359px) {
+  .pod-life-grid { grid-template-columns: minmax(0, 1fr); }
+}
+@media (min-width: 360px) and (max-width: 399px) {
+  .pod-life-main .life-total { font-size: var(--fs-lg); }
+}
+@media (min-width: 600px) {
+  .pod-life-main .life-total { font-size: var(--fs-2xl); }
+}
