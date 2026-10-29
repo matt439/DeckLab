@@ -2,6 +2,32 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Free pool replacements for a listed card (2026-10-29; E3-S25)
+
+The first slice of E3-S25 (cards Forge marks drawn and never cast offering free pool replacements) is the
+server half. `decklab/lib/decks/swaps.py` `ranked(slot, spares, colours, kind, copies, in_list, here)` is now the
+one ranking both uses share: each free card that fits the slot (the same primary type, a shared colour,
+castable in the deck, mana value within 1, the stand-ins' rules of E2-S07) with the copies it could fill (the
+slot's, its free copies and the list's room: four in a casual list, one in a Commander deck), ordered by
+`rank_key`. `api/swaps.py` `_suggest` (the stand-ins for missing cards) now calls it, with its pool, colour and
+free-copy steps split out as `_space_pool`, `_colours` and `_free_for`; its answers are unchanged.
+
+GET /api/deck/replacements?id=&version=target|owned&card= (`suggest_replacements`) answers for a card the saved
+list plays in its Deck section (not a commander, companion, sideboard card or basic land: 400): up to
+`MAX_REPLACEMENTS` (5) free pool cards, each with its swap note, free and here counts, default printing and
+price, and `more` for the rest, with the AUD estimates' `rate`, `rate_date` and `price_date` as
+GET /api/deck/swaps gives them. Free is owned and on the way, less the copies other built decks and intact
+products hold and the list's own, and never names who holds them. It reads as GET /api/deck/swaps does: a deck
+the viewer may not see is missing (404), a product or pairing is a 400, and a viewer who may not see the deck's
+space's inventory (a Public deck's reader from another space) gets 403 "That collection isn't public." before
+the card is looked at. A member's deck counts only that member's pool. Nothing is written and no game is played.
+
+Fixture tests: `decklab/tests/test_replacements_api.py` (a never-cast creature's free creatures, held and
+listed copies, castability in the deck's colours, the cap, Commander's singleton and its commander, the Play-now
+list, bad requests, the route, the shared ranking, and privacy: a hidden deck's 404, a Public deck without its
+inventory, a member's own pool, no other deck named). The Matchups tab's Free replacements and Test this swap are
+the next slice ([stories.md](design/stories.md)).
+
 ## Tonight's pairs on the Game log (2026-10-29; E1-S28)
 
 The Game log now suggests up to three ready pairs for tonight. `decklab/lib/play_pairs.py` `suggest(decks,

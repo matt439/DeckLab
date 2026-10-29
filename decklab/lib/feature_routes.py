@@ -48,6 +48,7 @@ def dispatch(handler, route, query):
         ("deck", "find"): (editor.find_cards, ("q", "scope", "colors", "type", "mv", "id", "space", "limit", "page")),
         ("deck", "revision"): (history.deck_revision, ("id", "revision", "version")),
         ("deck", "swaps"): (swaps.suggest_swaps, ("id", "version", "card")),
+        ("deck", "replacements"): (swaps.suggest_replacements, ("id", "version", "card")),
         ("deck", "cards"): (cover.cover_cards, ("id",)),
         ("deck", "opponents"): (opponents.opponents_view, ("id",)),
         ("deck", "edhrec"): (edhrec.edhrec_view, ("id",)),

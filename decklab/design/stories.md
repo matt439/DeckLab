@@ -37,7 +37,7 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 |---|---:|---:|---:|---:|---:|
 | [E1: Find, plan and choose decks](#e1-find-plan-and-choose-decks) | 17 | 17 | 0 | 0 | 0 |
 | [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 21 | 18 | 1 | 1 | 1 |
-| [E3: Test a deck](#e3-test-a-deck) | 18 | 14 | 3 | 1 | 0 |
+| [E3: Test a deck](#e3-test-a-deck) | 18 | 14 | 4 | 0 | 0 |
 | [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 22 | 18 | 2 | 1 | 1 |
 | [E5: Decide what to buy](#e5-decide-what-to-buy) | 24 | 20 | 1 | 1 | 2 |
 | [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 23 | 21 | 0 | 0 | 2 |
@@ -46,9 +46,9 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E9: Commander nights](#e9-commander-nights) | 22 | 16 | 1 | 4 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 35 | 31 | 1 | 1 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 41 | 31 | 5 | 2 | 3 |
-| **Total** | **270** | **226** | **15** | **15** | **14** |
+| **Total** | **270** | **226** | **16** | **14** | **14** |
 
-Counted from the story headers on 2026-10-29 after the source-aware two-player and pod counters, alongside the current feature and maintenance work. The reviews added five feature stories and eight hygiene stories, then the fixture-only entry-point story E11-S44, and corrected E1-S12 from missing to partial. Rechecked 2026-10-29: E1-S12 is built and E11-S39 partial (its database qualification pending). The TODO audit of 2026-10-29 added fifteen missing stories (twelve from the audit: E1-S27, E1-S28, E2-S27, E3-S25, E3-S26, E5-S25, E6-S25, E6-S26, E9-S26, E9-S27, E11-S45, E11-S46), then Matt's three UI requests (E3-S27, E5-S26, E6-S27), and corrected E7-S32 from missing to partial (its recognition spike and CLI are built). Matt closed E11-S16 as built the same day, and E3-S27, E5-S26, E6-S25, E6-S27 and E11-S46 were built the same day (E11-S12 stays partial after a further slice). Later the same day E5-S25 and E6-S26 were built, E1-S27's first slice (the library) made it partial, and E11-S12 and E3-S26 were built. E1-S27's Overview slices then finished it, and E2-S27 and E9-S27 were built. E1-S28 was built the same day.
+Counted from the story headers on 2026-10-29 after the source-aware two-player and pod counters, alongside the current feature and maintenance work. The reviews added five feature stories and eight hygiene stories, then the fixture-only entry-point story E11-S44, and corrected E1-S12 from missing to partial. Rechecked 2026-10-29: E1-S12 is built and E11-S39 partial (its database qualification pending). The TODO audit of 2026-10-29 added fifteen missing stories (twelve from the audit: E1-S27, E1-S28, E2-S27, E3-S25, E3-S26, E5-S25, E6-S25, E6-S26, E9-S26, E9-S27, E11-S45, E11-S46), then Matt's three UI requests (E3-S27, E5-S26, E6-S27), and corrected E7-S32 from missing to partial (its recognition spike and CLI are built). Matt closed E11-S16 as built the same day, and E3-S27, E5-S26, E6-S25, E6-S27 and E11-S46 were built the same day (E11-S12 stays partial after a further slice). Later the same day E5-S25 and E6-S26 were built, E1-S27's first slice (the library) made it partial, and E11-S12 and E3-S26 were built. E1-S27's Overview slices then finished it, and E2-S27 and E9-S27 were built. E1-S28 was built the same day. E3-S25's first slice (its replacements API, 2026-10-29) made it partial.
 
 ---
 
@@ -967,7 +967,7 @@ Evidence:
 - `decklab/web/stats.js`: drawOddsPanel, chanceOfAtLeastOne, cardsSeenBy
 - `decklab/tests/test_stats_draw_odds.py`: test_a_card_and_a_group_by_a_chosen_turn_on_the_play_or_draw, test_commander_draws_from_the_99_and_defaults_to_the_draw
 
-**E3-S25** · Matt · should · M · missing
+**E3-S25** · Matt · should · M · partial
 
 As a deck builder improving a deck with cards we already own, I want each card Forge marks as stuck or never cast to offer free pool cards that could fill its slot, and to test that swap, so that I fix weak slots for free before buying anything.
 
@@ -978,9 +978,16 @@ As a deck builder improving a deck with cards we already own, I want each card F
 
 Evidence of the gap (TODO audit, 2026-10-29): matchups-cards.js marks never-cast and stuck spells (E3-S15) with no next step; swaps.py ranks stand-ins only for missing cards; variants need a hand-made draft.
 
-Gap: none of the criteria is met yet.
+Now: partial. Built 2026-10-29 ([HISTORY.md, Free pool replacements for a listed card](../HISTORY.md#free-pool-replacements-for-a-listed-card-2026-10-29-e3-s25)): the server half of criteria 1 to 3. `swaps.ranked` is the one ranking both the stand-ins for missing cards and the new replacements use; GET /api/deck/replacements?id=&version=&card= offers up to 5 free, castable pool cards of the same type, a shared colour and mana value within 1 for a card of the list's Deck section, each with its swap note and AUD estimate (the answer carrying the rate and price dates, as GET /api/deck/swaps does), never counting copies other built decks or intact products hold or the list's own; a viewer without the space's inventory gets 403 after the deck's 404.
 
-First slice (TODO audit, 2026-10-29): Generalise lib/decks/swaps.py ranking (fits, castable, rank_key) so api/swaps.py can rank free candidates for any listed card; add GET /api/deck/replacements?id=&card= requiring guard.sees_inventory. Fixture tests: never-cast creature gets castable free same-type cards, held copies excluded, member space private. Variant prefill is slice 2; free dual lands for a colour shortfall slice 3.
+Evidence:
+- `decklab/lib/decks/swaps.py`: ranked, MAX_REPLACEMENTS
+- `decklab/lib/api/swaps.py`: suggest_replacements (and _free_for, _colours, shared with suggest_swaps)
+- `decklab/tests/test_replacements_api.py`: test_a_never_cast_creature_gets_free_castable_creatures, test_copies_held_by_built_decks_or_the_list_itself_are_not_offered, test_only_cards_castable_in_the_deck, test_a_public_deck_without_its_inventory_shows_no_replacements, test_a_members_space_uses_its_own_pool
+
+Gap: the Matchups tab doesn't ask for or show the replacements yet, and there's no Test this swap.
+
+Next slice: on the deck page's "How its cards played", each card marked Drawn, never cast gets Free replacements (asked of GET /api/deck/replacements only when the viewer sees the space's inventory; nothing shown otherwise, or on a 403), and each candidate a Test this swap that opens the editor with the swap as its draft (as the test page's Save this change does) and its Test this change sheet open. Free dual lands for a colour shortfall stay slice 3.
 
 **E3-S26** · Matt · could · S · built
 

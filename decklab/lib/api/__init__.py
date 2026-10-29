@@ -30,6 +30,7 @@ Usage:
     api.find_cards("bolt", "all")         # GET /api/deck/find?q=bolt: the editor's Add panel (owned first, filters)
     api.swaps.suggest_swaps("casual/gruul-ramp")  # GET /api/deck/swaps?id=...: owned stand-ins per missing card
     api.swaps.suggest_draft_swaps(body)   # POST /api/deck/swaps: the same for the editor's Play-now list
+    api.swaps.suggest_replacements("casual/gruul-ramp", card="Shock")  # GET /api/deck/replacements: free pool cards for a listed card
     api.save_deck(body)                   # POST /api/deck/save: the new text and table, one change
     api.create_deck(body)                 # POST /api/decks: a new deck, one change (201)
     api.stale_view()                      # GET /api/tables/stale
@@ -146,7 +147,8 @@ called as before (from decklab.lib import api; api.<name>). Each part:
     commits.py       the decks that can be saved, 409 conflicts, owned-vs-needed tables
     editor.py        edit_view(), parse_list(), check_draft()
     swaps.py         stand-ins for missing cards (E2-S07): suggest_swaps(), suggest_draft_swaps(),
-                     view_swaps() (deck_view's "swaps"); the rules in lib/decks/swaps.py
+                     view_swaps() (deck_view's "swaps"); free pool replacements for a listed card
+                     (E3-S25): suggest_replacements(); the rules in lib/decks/swaps.py
     saving.py        save_deck(), create_deck(), stale_view(), update_tables(); _save_lock and
                      inventory_write_lock() (the lock order for inventory writes)
     history.py       a deck's saved revisions (read-only): deck_history(), deck_revision(), from

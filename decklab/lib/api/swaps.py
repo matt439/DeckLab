@@ -1,6 +1,8 @@
 """Stand-ins for missing cards (E2-S07): GET /api/deck/swaps (suggest_swaps, the deck page's) and
-POST /api/deck/swaps (suggest_draft_swaps, the editor's, for the Play-now list being edited).
-Neither writes anything: a pick changes the editor's draft, which POST /api/deck/save saves.
+POST /api/deck/swaps (suggest_draft_swaps, the editor's, for the Play-now list being edited); and
+free pool replacements for a card the list holds (E3-S25): GET /api/deck/replacements
+(suggest_replacements, for a card Forge marks drawn and never cast). None writes anything: a
+pick changes the editor's draft, which POST /api/deck/save saves.
 
 What fits, how candidates are ranked and what a swap's note says are lib/decks/swaps.py's.
 The answers count the deck's space's inventory, so only a viewer who may see it gets them
@@ -135,29 +137,15 @@ def _suggest(deck_id, deck, version, source, destination, wanted=None):
     the copies missing. Cards come with no candidate first, then by their best candidate's
     severity (worst first), then by A$ missing (dearest first): the order to buy them in. wanted
     (a name) keeps only that card's entry: 400 when it isn't missing."""
-    space = deck.space
     warnings = []
-    p = _load_pool(warnings, space)
-    if p is None:
-        raise ApiError(500, warnings[0] if warnings else "The collection couldn't be read.")
+    p = _space_pool(deck.space, warnings)
     mine = pool.self_ids(deck_id)
     result = pool.compare(source, p, mine)
     card_of = cards.card
     kind = deck.kind
-    # A Commander deck's colours are its commander's (the Planned list's, else the list sent).
-    planned = deck.target or {}
-    colours = swaps.deck_colours(source if kind == "commander" and not planned.get("Commander") else planned,
-                                 kind, card_of)
-    in_list = pool._count_sections(destination, "list", {})
-    for line in (l for lines in destination.values() for l in lines if decks.is_basic_land(l.name)):
-        in_list[line.name] += line.quantity
-    free = pool.free_copies(p, mine)
-    here = _here(p, free)
-    for name, qty in in_list.items():
-        if name in free:
-            here[name] = max(here.get(name, 0) - qty, 0)
-            free[name] = max(free[name] - qty, 0)
-    counts = drafts._visible_counts(space)
+    colours = _colours(deck, source)
+    in_list, free, here = _free_for(p, mine, destination)
+    counts = drafts._visible_counts(deck.space)
     sections = _swappable(source)
     rows = [r for r in result["rows"] if r["missing"] > 0 and r["name"] in sections and card_of(r["name"])]
     if destination is source:
@@ -174,16 +162,7 @@ def _suggest(deck_id, deck, version, source, destination, wanted=None):
     out = []
     for row in rows:
         missing_card = card_of(row["name"])
-        found = []
-        for name, spare, other in spares:
-            if not swaps.fits(missing_card, other, colours, kind):
-                continue
-            room = (0 if in_list.get(name) else 1) if kind == "commander" \
-                else swaps.CASUAL_COPIES - in_list.get(name, 0)
-            take = min(row["missing"], spare, room)
-            if take > 0:
-                found.append((swaps.rank_key(missing_card, other, here.get(name, 0)), name, spare, take))
-        found.sort()
+        found = swaps.ranked(missing_card, spares, colours, kind, row["missing"], in_list, here)
         listed = [_candidate(missing_card, name, spare, here.get(name, 0), take, counts, colours)
                   for _, name, spare, take in found[:swaps.MAX_CANDIDATES]]
         listed += [_basic(missing_card, name, row["missing"], colours)
@@ -201,6 +180,91 @@ def _suggest(deck_id, deck, version, source, destination, wanted=None):
     return {"deck_id": deck_id, "version": version, "kind": kind,
             "colours": [c for c in swaps.COLOURS if c in colours], "cards": out,
             "rate": result["rate"], "rate_date": result["rate_date"], "price_date": result["price_date"],
+            "warnings": _unique(_scrub(warnings))}
+
+
+def _space_pool(space, warnings):
+    """The deck's space's Pool (500 when its inventory can't be read)."""
+    p = _load_pool(warnings, space)
+    if p is None:
+        raise ApiError(500, warnings[0] if warnings else "The collection couldn't be read.")
+    return p
+
+
+def _colours(deck, source):
+    """swaps.deck_colours for the deck: a Commander deck's are its commander's (the Planned list's, else
+    source's), a casual deck's its Planned list's non-land cards'."""
+    planned = deck.target or {}
+    wanted = source if deck.kind == "commander" and not planned.get("Commander") else planned
+    return swaps.deck_colours(wanted, deck.kind, cards.card)
+
+
+def _free_for(p, mine, destination):
+    """(in_list, free, here) for a list candidates would go into: in_list its copies of each card (basic
+    lands too), free pool.free_copies less those copies (the list's own use the pool too), here of those
+    the copies not on the way."""
+    in_list = pool._count_sections(destination, "list", {})
+    for line in (l for lines in destination.values() for l in lines if decks.is_basic_land(l.name)):
+        in_list[line.name] += line.quantity
+    free = pool.free_copies(p, mine)
+    here = _here(p, free)
+    for name, qty in in_list.items():
+        if name in free:
+            here[name] = max(here.get(name, 0) - qty, 0)
+            free[name] = max(free[name] - qty, 0)
+    return in_list, free, here
+
+
+def suggest_replacements(deck_id=None, version=None, card=None):
+    """GET /api/deck/replacements?id=<deck id>&version=target|owned&card=<name>: free pool cards that
+    could replace a card the saved list plays in its Deck section (E3-S25: one Forge marks drawn and
+    never cast), ranked as stand-ins are (swaps.ranked: the same type, a shared colour, castable in the
+    deck, mana value within 1), at most swaps.MAX_REPLACEMENTS: {"deck_id", "version", "kind", "colours",
+    "card": {"name", "qty" (copies in the list), "card", "type", "colours", "mv"}, "candidates":
+    [{"name", "card", "default", "free", "here", "max_qty" (copies it could replace), "note", "basic"
+    (always False: plain basics aren't pool cards), "aud"}], "more", "rate", "rate_date", "price_date"
+    (as GET /api/deck/swaps: the AUD estimates' USD->AUD rate, its ECB date and the date Scryfall's prices
+    were pulled, None when they can't be read), "warnings"}.
+
+    Free is owned and on the way, less what other built decks and intact products hold and the list's
+    own copies, never naming who holds the rest. As GET /api/deck/swaps it reads the deck's space's
+    inventory, so a hidden deck is missing (404), then a product or pairing is a 400, then a viewer who
+    may not see that inventory gets 403 "That collection isn't public." A card the Deck section doesn't
+    play (a commander, a sideboard card, a basic land, one not in the list) is a 400."""
+    summary, deck = _deck(deck_id)          # a hidden deck's 404 comes before any 400
+    version = version or "target"
+    if version not in VERSIONS:
+        raise ApiError(400, f"version must be one of: {', '.join(VERSIONS)}")
+    source = deck.target if version == "target" else deck.owned
+    if not source:
+        raise ApiError(404, f"{deck.title} has no {version} list")
+    exact = _resolve(card) if isinstance(card, str) and card.strip() and len(card) <= 200 else None
+    if exact is None:
+        raise ApiError(400, "card is required: the name of a card in the list's Deck section")
+    qty = sum(line.quantity for line in source.get("Deck", ())
+              if not decks.is_basic_land(line.name) and (cards.resolve(line.name) or line.name) == exact)
+    slot = cards.card(exact)
+    if not qty or slot is None:
+        raise ApiError(400, f"{exact} isn't in the Deck section of the {version} list")
+    warnings = []
+    p = _space_pool(deck.space, warnings)
+    mine = pool.self_ids(summary["id"])
+    colours = _colours(deck, source)
+    in_list, free, here = _free_for(p, mine, source)
+    spares = [(name, spare, cards.card(name)) for name, spare in free.items() if spare > 0]
+    found = swaps.ranked(slot, spares, colours, deck.kind, qty, in_list, here)
+    counts = drafts._visible_counts(deck.space)
+    listed = [_candidate(slot, name, spare, here.get(name, 0), take, counts, colours)
+              for _, name, spare, take in found[:swaps.MAX_REPLACEMENTS]]
+    stamp = pool.compare({}, p, mine)       # only its price stamp: the rate and dates, checked as the tables'
+    return {"deck_id": summary["id"], "version": version, "kind": deck.kind,
+            "colours": [c for c in swaps.COLOURS if c in colours],
+            "card": {"name": exact, "qty": qty, "card": _card_json(slot, _shown_printing(slot)),
+                     "type": swaps.primary_type(slot), "colours": sorted(swaps.colours_of(slot),
+                                                                         key=swaps.COLOURS.index),
+                     "mv": slot.get("cmc") or 0},
+            "candidates": listed, "more": max(len(found) - swaps.MAX_REPLACEMENTS, 0),
+            "rate": stamp["rate"], "rate_date": stamp["rate_date"], "price_date": stamp["price_date"],
             "warnings": _unique(_scrub(warnings))}
 
 

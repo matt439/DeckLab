@@ -1,5 +1,7 @@
 """Swaps: owned cards that could stand in for a card missing from a deck's list, and the swaps
-its Play-now list already makes (E2-S07).
+its Play-now list already makes (E2-S07). The same rules rank free pool cards that could replace a
+card the list does hold (E3-S25: a card Forge says was drawn and never cast), so "missing" below
+is the card whose slot a candidate would fill, whether it's short or in the list.
 
 These are strategic substitutes, picked into the Play-now list in place of the missing card.
 The Packing plan's physical stand-ins (E4-S21, standins.py) are a different thing: any spare
@@ -33,7 +35,7 @@ What may be swapped: a Deck or Sideboard line that's short (never Commander or C
 make the deck what it is, and never a basic land). A stand-in goes into the missing card's
 section.
 
-Candidates are ranked by rank_key, and swap_note says in plain words what a swap costs the deck
+Candidates are ranked by rank_key (ranked picks and orders them for one slot), and swap_note says in plain words what a swap costs the deck
 (severity 0 "Close to even", 1-2 "A little weaker", 3 or more "Clearly weaker"). The note is a
 starting point: the editor writes it into the Substitutes prose once, when a stand-in is picked,
 and Deck Lab never writes that prose again.
@@ -57,6 +59,7 @@ COLOURS = "WUBRG"
 BASICS = {"W": "Plains", "U": "Island", "B": "Swamp", "R": "Mountain", "G": "Forest"}
 COLOUR_WORDS = {"W": "white", "U": "blue", "B": "black", "R": "red", "G": "green"}
 MAX_CANDIDATES = 12                      # stand-ins listed for one missing card (the rest are counted)
+MAX_REPLACEMENTS = 5                     # free pool cards offered for a card the list holds (E3-S25)
 CASUAL_COPIES = 4                        # copies of a name a casual list may hold
 # Keywords that say how a card works rather than what it's good at: never a loss or a gain in a note.
 MECHANICS = frozenset(("transform", "daybound", "nightbound", "meld", "treasure", "food", "clue", "blood",
@@ -171,6 +174,25 @@ def rank_key(missing, candidate, here):
             0 if here else 1,
             -len(candidate.get("printings") or ()),
             candidate["name"].casefold())
+
+
+def ranked(slot, spares, colours, kind, copies, in_list, here):
+    """The candidates for slot (a card: one missing from a list, or one in it to be replaced), best
+    first: [(rank_key, name, spare, take)]. spares is [(name, spare copies, card)], the free copies
+    of the deck's space; each that fits slot (fits, castable in colours) is kept with take, the
+    copies it could fill: at most copies (the slot's), its spare copies, and the room the list has
+    for it (in_list: name -> copies already there; a Commander deck one copy of a card, a casual
+    deck CASUAL_COPIES). here is name -> of its spare copies, those not on the way (rank_key)."""
+    found = []
+    for name, spare, other in spares:
+        if not fits(slot, other, colours, kind):
+            continue
+        room = (0 if in_list.get(name) else 1) if kind == "commander" else CASUAL_COPIES - in_list.get(name, 0)
+        take = min(copies, spare, room)
+        if take > 0:
+            found.append((rank_key(slot, other, here.get(name, 0)), name, spare, take))
+    found.sort()
+    return found
 
 
 def _words(items):

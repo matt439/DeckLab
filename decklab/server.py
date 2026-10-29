@@ -143,6 +143,8 @@ inventory writes answer 503 with "reason": "database":
     POST /api/deck/swaps                 the same for the Play-now list being edited (a dry run;
                                          lib/api/swaps.py; 403 for a space whose inventory the
                                          visitor may not see)
+    GET  /api/deck/replacements?id=&version=target|owned&card=   free pool cards that could replace
+                                         a card of the list's Deck section (E3-S25; the same reading rule)
     POST /api/deck/cover                 body {"profile", "id", "expect", "cover"}: set or clear the
                                          deck's Cover card line, one change (lib/api/cover.py)
     POST /api/deck/token-cards           body {"profile", "id", "expect", "tokens_sha256", "cards"}: set a
