@@ -249,10 +249,24 @@ class WebReceiptTests(FilesReceiptCase):
         result = self.record_web(self.prepare())
         self.assertEqual({d["id"] for d in result["tables"]["written"]}, {"casual/test", "casual/short"})
         readiness = result["readiness"]
+        # Neither deck is built, so neither holds copies: both count the two Elves just received.
         self.assertEqual(readiness["casual/test"], {"missing": 0, "coming": 0})
-        # Short holds its two Llanowar Elves only if Test doesn't; either way the Mystics are short.
-        self.assertGreaterEqual(readiness["casual/short"]["missing"], 2)
-        self.assertEqual(readiness["casual/short"]["coming"], 0)
+        self.assertEqual(readiness["casual/short"], {"missing": 2, "coming": 0})
+
+    def test_readiness_counts_the_copies_still_on_the_way_in_a_part_not_received(self):
+        # Only the cards arrive: the ordered product, with its Pick Your Poison, is still on the way.
+        self.deck("short", "Short", "building",
+                  "Deck\n2 Llanowar Elves (FDN) 227\n1 Pick Your Poison (MKM) 170\n3 Elvish Mystic (CMM) 648\n"
+                  "54 Forest\n",
+                  table="| Elvish Mystic | 3 | 1 | **2** | | | |\n| Llanowar Elves | 2 | 0 | **2** | | | |\n"
+                        "| Pick Your Poison | 1 | 0 | **1** | | | |\n| **Total** | | | **5** | | | |\n")
+        result = self.record_web(self.prepare())
+        self.assertIn("casual/short", {d["id"] for d in result["tables"]["written"]})
+        found = pool.owned_vs_needed("casual/short", "target", prices=False)
+        labelled = sum(qty for r in found["rows"] for _, qty in pool.row_labels(r)["on_the_way"])
+        self.assertEqual(labelled, 1)
+        # Missing leaves out the copy on the way: the two Mystics still to get, and the one coming.
+        self.assertEqual(result["readiness"]["casual/short"], {"missing": 2, "coming": labelled})
 
     def test_readiness_is_only_for_viewers_who_see_homes_inventory_and_the_deck(self):
         from decklab.lib.api import guard
