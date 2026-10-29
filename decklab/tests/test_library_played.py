@@ -1,14 +1,17 @@
 """The library's last played and game counts (E1-S27, library_played.played_extras): from the Game
 log's two-player games the viewer may see, a hidden other side counted but never named, pods
-left out, and nothing claimed when the games can't be read.
+left out, and nothing claimed when the games can't be read. The deck page's (deck_played, slices
+2 and 3): the same counts and what the deck's list changed since its last game, from its revisions.
 
 Run from the repo root: python scripts/test_fixtures.py decklab.tests.test_library_played
 """
 import json
 import unittest
+from datetime import datetime, timezone
 from unittest import mock
 
 from decklab.lib import access, inventory
+from decklab.lib.inventory.model import DeckRevision
 from decklab.lib.api import deck_page, library_played
 from decklab.lib.api import play_pods as pods
 from decklab.lib.api import play_records as play
@@ -110,6 +113,89 @@ class LibraryPlayedTests(MixedFixture, ApiTestCase):
         # A login that isn't set up sees no games (nor any deck).
         with access.using({"profile": None, "email": "someone@example.com", "remote": True}):
             self.assertEqual(self.played(["casual/gruul-test"]), {"casual/gruul-test": None})
+
+
+CHANGED = DECK.replace("4 Elvish Mystic\n", "3 Elvish Mystic\n1 Sol Ring\n").replace(
+    "2 Pick Your Poison (MKM) 170", "2 Pick Your Poison (MKM) 999")
+
+
+def revision(number, text, op="M"):
+    return DeckRevision(deck_id="casual/gruul-test", revision=number, at=datetime(2026, 10, number, tzinfo=timezone.utc),
+                        actor="matt", message="Save", op=op, text=text)
+
+
+class DeckPlayedTests(MixedFixture, ApiTestCase):
+    """The deck page's "played" (deck_view, library_played.deck_played): the Overview's Last played
+    line and what the list changed after the last game."""
+
+    game_on = LibraryPlayedTests.game_on
+
+    def revisions(self, *found):
+        return self.box.stack.enter_context(
+            mock.patch.object(inventory, "deck_revisions_with_text", return_value=list(found)))
+
+    def test_an_unchanged_list_says_so(self):
+        with access.viewing("user1"):
+            self.assertEqual(library_played.deck_played("casual/gruul-test"), {
+                "last": "2026-10-08", "games": 2, "since": {"version": "target", "changes": [], "more": 0}})
+            self.assertEqual(deck_page.deck_view("casual/gruul-test")["played"]["games"], 2)
+            self.assertEqual(library_played.deck_played("casual/unplayed"), {"last": None, "games": 0, "since": None})
+
+    def test_the_changes_since_the_last_game_come_from_the_revision_it_was_played_with(self):
+        self.deckfile.write_text(CHANGED, encoding="utf-8")
+        older = DECK.replace("52 Forest", "51 Forest\n1 Mountain")
+        reads = self.revisions(revision(4, CHANGED), revision(3, None, "D"), revision(2, DECK), revision(1, older))
+        with access.viewing("matt"):
+            played = library_played.deck_played("casual/gruul-test")
+        reads.assert_called_once_with("casual/gruul-test", library_played.MAX_REVISIONS)
+        self.assertEqual(played, {"last": "2026-10-08", "games": 2, "since": {"version": "target", "more": 0, "changes": [
+            {"section": "Deck", "name": "Sol Ring", "delta": 1, "printing": False},
+            {"section": "Deck", "name": "Elvish Mystic", "delta": -1, "printing": False},
+            {"section": "Sideboard", "name": "Pick Your Poison", "delta": 0, "printing": True}]}})
+        with access.viewing("matt"), mock.patch.object(library_played, "MAX_CHANGES", 1):
+            since = library_played.deck_played("casual/gruul-test")["since"]
+        self.assertEqual((len(since["changes"]), since["more"]), (1, 2))
+
+    def test_a_list_no_revision_matches_claims_nothing(self):
+        self.deckfile.write_text(CHANGED, encoding="utf-8")
+        self.revisions(revision(2, CHANGED))
+        with access.viewing("matt"):
+            self.assertEqual(library_played.deck_played("casual/gruul-test"),
+                             {"last": "2026-10-08", "games": 2, "since": None})
+
+    def test_the_last_day_s_games_only_and_a_later_list_played_wins(self):
+        self.deckfile.write_text(CHANGED, encoding="utf-8")
+        self.game_on("2026-10-20", "casual/gruul-test", "casual/other")      # played with CHANGED
+        reads = self.revisions()
+        with access.viewing("matt"):
+            self.assertEqual(library_played.deck_played("casual/gruul-test"), {
+                "last": "2026-10-20", "games": 3, "since": {"version": "target", "changes": [], "more": 0}})
+        reads.assert_not_called()       # today's list matched: no revisions read
+
+    def test_a_sideboard_plan_s_game_is_matched_by_the_list_before_its_swaps(self):
+        side = {"id": "casual/gruul-test", "version": "target", "sha256": "0" * 64, "base_sha256": "1" * 64}
+        self.assertEqual(library_played._played_with(side), ("casual/gruul-test", "target", "1" * 64))
+        self.assertIsNone(library_played._played_with({"id": "casual/x", "version": "both", "sha256": "1" * 64}))
+
+    def test_a_member_s_deck_page_names_no_hidden_side(self):
+        with access.viewing("user2"):
+            answer = deck_page.deck_view("user2/casual/r-elves")
+        self.assertEqual(answer["played"], {"last": "2026-10-08", "games": 2,
+                                            "since": {"version": "target", "changes": [], "more": 0}})
+        text = json.dumps(answer["played"])
+        self.assertNotIn("gruul", text)
+        self.assertNotIn("m-elves", text)
+        with access.viewing("user3"):
+            self.assertEqual(library_played.deck_played("user3/casual/m-elves")["games"], 1)
+
+    def test_games_that_can_t_be_read_or_a_failing_comparison(self):
+        self.box.state.down = True
+        with access.viewing("user1"):
+            self.assertIsNone(library_played.deck_played("casual/gruul-test"))
+        self.box.state.down = False
+        self.deckfile.write_text(CHANGED, encoding="utf-8")
+        with access.viewing("user1"), mock.patch.object(inventory, "deck_revisions_with_text", side_effect=RuntimeError):
+            self.assertEqual(library_played.deck_played("casual/gruul-test")["since"], None)
 
 
 class LegacyGameTests(unittest.TestCase):

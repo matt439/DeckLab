@@ -1,5 +1,5 @@
 /* Overview summaries share the same panels and Forge components at both densities. */
-.deck-overview-forge, .deck-overview-swap, .deck-overview-curve {
+.deck-overview-forge, .deck-overview-swap, .deck-overview-curve, .deck-overview-played {
   margin-top: var(--s-4); padding: var(--s-4); min-width: 0;
   background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-panel);
 }
@@ -8,6 +8,10 @@
 .deck-overview-forge-body > .sub { margin-top: var(--s-2); }
 .deck-overview-swap .vt-test-list { margin: 0; }
 .deck-overview-swap .vt-test-item { min-width: 0; }
+.deck-overview-played p { margin: 0; }
+.deck-overview-played .sub { margin-top: var(--s-2); }
+.deck-played-since ul { margin: var(--s-1) 0 0; padding-left: 1.25em; }
+.deck-played-since li { overflow-wrap: anywhere; }
 .deck-overview-bars { display: flex; align-items: stretch; gap: var(--s-2); height: 160px; max-width: 900px; }
 .deck-overview-column { flex: 1; min-width: 0; display: grid; grid-template-rows: auto minmax(0, 1fr) auto;
   justify-items: center; gap: var(--s-1); }

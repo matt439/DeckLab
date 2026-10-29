@@ -35,7 +35,7 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 
 | Epic | Stories | Built | Partial | Missing | Not wanted |
 |---|---:|---:|---:|---:|---:|
-| [E1: Find, plan and choose decks](#e1-find-plan-and-choose-decks) | 17 | 15 | 1 | 1 | 0 |
+| [E1: Find, plan and choose decks](#e1-find-plan-and-choose-decks) | 17 | 16 | 0 | 1 | 0 |
 | [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 21 | 17 | 1 | 2 | 1 |
 | [E3: Test a deck](#e3-test-a-deck) | 18 | 14 | 3 | 1 | 0 |
 | [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 22 | 18 | 2 | 1 | 1 |
@@ -46,9 +46,9 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E9: Commander nights](#e9-commander-nights) | 22 | 15 | 1 | 5 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 35 | 31 | 1 | 1 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 41 | 31 | 5 | 2 | 3 |
-| **Total** | **270** | **222** | **16** | **18** | **14** |
+| **Total** | **270** | **223** | **15** | **18** | **14** |
 
-Counted from the story headers on 2026-10-29 after the source-aware two-player and pod counters, alongside the current feature and maintenance work. The reviews added five feature stories and eight hygiene stories, then the fixture-only entry-point story E11-S44, and corrected E1-S12 from missing to partial. Rechecked 2026-10-29: E1-S12 is built and E11-S39 partial (its database qualification pending). The TODO audit of 2026-10-29 added fifteen missing stories (twelve from the audit: E1-S27, E1-S28, E2-S27, E3-S25, E3-S26, E5-S25, E6-S25, E6-S26, E9-S26, E9-S27, E11-S45, E11-S46), then Matt's three UI requests (E3-S27, E5-S26, E6-S27), and corrected E7-S32 from missing to partial (its recognition spike and CLI are built). Matt closed E11-S16 as built the same day, and E3-S27, E5-S26, E6-S25, E6-S27 and E11-S46 were built the same day (E11-S12 stays partial after a further slice). Later the same day E5-S25 and E6-S26 were built, E1-S27's first slice (the library) made it partial, and E11-S12 and E3-S26 were built.
+Counted from the story headers on 2026-10-29 after the source-aware two-player and pod counters, alongside the current feature and maintenance work. The reviews added five feature stories and eight hygiene stories, then the fixture-only entry-point story E11-S44, and corrected E1-S12 from missing to partial. Rechecked 2026-10-29: E1-S12 is built and E11-S39 partial (its database qualification pending). The TODO audit of 2026-10-29 added fifteen missing stories (twelve from the audit: E1-S27, E1-S28, E2-S27, E3-S25, E3-S26, E5-S25, E6-S25, E6-S26, E9-S26, E9-S27, E11-S45, E11-S46), then Matt's three UI requests (E3-S27, E5-S26, E6-S27), and corrected E7-S32 from missing to partial (its recognition spike and CLI are built). Matt closed E11-S16 as built the same day, and E3-S27, E5-S26, E6-S25, E6-S27 and E11-S46 were built the same day (E11-S12 stays partial after a further slice). Later the same day E5-S25 and E6-S26 were built, E1-S27's first slice (the library) made it partial, and E11-S12 and E3-S26 were built. E1-S27's Overview slices then finished it.
 
 ---
 
@@ -56,7 +56,7 @@ Counted from the story headers on 2026-10-29 after the source-aware two-player a
 
 How Matt and User1 (and, more lightly, User2, User3, User4 and User5) find a deck in the library (#/library), choose its picture, open its deck page (#/deck) to see whether it can be built and how to play it, rename or retire it, and pick what to play tonight. Each viewer's library holds their own space's decks, plus any another space has made public. A plain "Deck Lab is off" message is enough while the PC is off (E11-S02); collector-value sorting and legality badges on casual decks aren't wanted.
 
-Open: E1-S27, E1-S28.
+Open: E1-S28.
 
 **E1-S01** · User1 · must · M · built
 
@@ -306,7 +306,7 @@ Evidence:
 
 History-revision comparisons remain separate future work. Browser geometry and touch/Safari/device acceptance are unverified; the local-file browser preview was denied by URL policy. See [HISTORY.md](../HISTORY.md#compare-list-differences-2026-10-28-e1-s26).
 
-**E1-S27** · User1 · should · S · partial
+**E1-S27** · User1 · should · S · built
 
 As a player choosing tonight's 1v1 game, I want each deck to say when it was last played at home and how many games it has, and the library to sort by decks not played lately, so that we rotate through our built decks instead of reaching for the same two.
 
@@ -319,7 +319,9 @@ Evidence of the gap (TODO audit, 2026-10-29): web/library.js LIB_SORTS has only 
 
 Slice 1 built (2026-10-29): GET /api/decks gives each summary `played` ({last, games}, or null when the games can't be read) from `lib/api/library_played.py` `played_extras`: the Game log's own visibility and damage checks (`play_records._sees_record`, `_checked`), 1v1 records only (pods left out as `playLegacyGame` does), renamed decks' old ids resolved, a mirror counted once, and a hidden other side counted for the viewer's deck without naming it. The library's tiles and lab detail pane say "Last played <date> · N games" or "Not played at home yet", and `LIB_SORTS.played` ("Not played lately") puts never-played decks first, then the oldest last game. Tests: `decklab/tests/test_library_played.py`, `test_library_played_ui.py`. See [HISTORY.md](../HISTORY.md#last-played-in-the-library-2026-10-29-e1-s27-slice-1).
 
-Gap: the Overview's line (criterion 1's deck-page half) and 'changed since the last game' are slices 2 and 3. Browser and device checks not done.
+Slices 2 and 3 built (2026-10-29): GET /api/deck gives `played` from `library_played.deck_played`, the same games and counts for the one deck plus `since`, what its list changed after its last game. The list a game was played with is found by the sha256 its side recorded (a sideboard plan's game by its `base_sha256`): today's list when it still matches, else the newest of the deck's own saved revisions (`inventory.deck_revisions_with_text`, the History's, up to 100) that does; the difference is the History's own comparison (`history._list_changes`) of that list and today's, sent as section, name, count change and printing change, at most 30 with the rest counted. `since` is null when no list it was played with can be found (a product or pairing that changed, a list older than the revisions read, the comparison failing), and the page then says nothing about changes. The Overview's **Played at home** part (`web/deck-overview.js` `deckOverviewPlayed`) says "Last played <date> · N games" or "Not played at home yet", then "Its list hasn't changed since that game." or each card added, taken out or reprinted (the sideboard named, the Play-now list named when that was played), with a History link for the rest on a deck that isn't a product or pairing (read-only). Only this deck's own list is described, never the other side. Tests: `test_library_played.py` (`DeckPlayedTests`), `test_deck_overview_ui.py`. See [HISTORY.md](../HISTORY.md#last-played-on-the-deck-overview-2026-10-29-e1-s27-slices-2-and-3).
+
+Known low issues: idea, building and product decks say "Not played at home yet" too; dates are raw ISO dates; on a day with several games and different lists, a game played with today's list wins, else the newest matching revision; no browser or device check.
 
 First slice (TODO audit, 2026-10-29): Server: add last_played and games per deck to the library answer (lib/api/library.py shelf extras), computed from play records through the Game log's existing visibility filter, pods excluded from 1v1 counts as playLegacyGame does. Client: one tile facts fragment and a new LIB_SORTS entry in web/library.js. Fixture tests for counts, hidden-space exclusion and sort order. Overview line and 'changed since the last game' (diff of the last snapshot via compare.py) are slices 2 and 3.
 

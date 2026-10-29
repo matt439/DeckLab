@@ -25,7 +25,7 @@ from .deck_aliases import metadata
 from .common import _jsonable, _public, _scrub, _unique
 from .forge_runs import _deck_matchups
 from .guide import playing_guide
-from .library_played import played_extras
+from .library_played import deck_played, played_extras
 from .library import (_deck_sections, _half_title, _load_pool, _named_by_id, _scrub_summary, edited_at, shelf_extras,
                       viewer_decks_revision)
 from .practice import _deck_practice
@@ -556,6 +556,11 @@ def deck_view(deck_id, version="target", omit=()):
     intent, independent of the displayed list version (assembly_intent.project). Cards
     outside the build can already be owned, on the way or missing; neither list is edited.
 
+    played is library_played.deck_played's: when the deck was last played at home and how many
+    games it has, from the Game log's games this viewer may see (a hidden other side counted,
+    never named), with "since", what its list changed after its last game, from the deck's own
+    revisions; None when the games can't be read.
+
     box_label is an owned intact product's box label (product_label.box_label: its name,
     colours, decks and the deck page its QR code opens), only for a viewer who sees home's
     records; absent otherwise.
@@ -634,6 +639,8 @@ def deck_view(deck_id, version="target", omit=()):
         "sections": lines, "stats": stats, "practice": _deck_practice(summary, sections),
         "guide": playing_guide(deck_file),
         "usual_opponents": usual_opponents(deck_id),
+        # When it was last played at home and what its list changed since (E1-S27): the Game log's games.
+        "played": deck_played(deck_id),
         "swaps": view_swaps(deck_file),
         # The Considering list (E2-S23): its free counts only for a viewer who sees the inventory.
         "considering": considering_view(deck_file, deck_id, p, sees, warnings),

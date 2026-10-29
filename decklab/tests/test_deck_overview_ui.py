@@ -225,3 +225,38 @@ class DeckOverviewUiTests(unittest.TestCase):
           assert(scrolls.includes(240), 'late opponent names keep the tests heading at its prior screen line');
           assert.equal(document.activeElement, target);
         """)
+
+    def test_last_played_and_what_changed_since(self):
+        self.run_js("""
+          api = async (url) => url.startsWith('/api/field') ? {format: 'casual', opponents: []} : {tests: []};
+          const draw = (played, summary = {}) => {
+            clear(main); location.hash = '#/deck?id=casual%2Ftest&v=target';
+            const page = makePage();
+            drawDeck({...page, summary: {...page.summary, ...summary}, played}, deckViewOf(parseHash().params));
+            return panel('overview').querySelector('.deck-overview-played');
+          };
+          // Games that couldn't be read: no line at all, never "not played".
+          assert.equal(draw(null), null);
+          assert.equal(draw(undefined), null);
+          assert.equal(draw({last: null, games: 0, since: null}).querySelector('.deck-played').textContent,
+            'Not played at home yet');
+          let part = draw({last: '2026-10-20', games: 3, since: {version: 'target', changes: [], more: 0}});
+          assert.equal(part.querySelector('.deck-played').textContent, 'Last played 2026-10-20 · 3 games');
+          assert(part.textContent.includes("Its list hasn't changed since that game."));
+          part = draw({last: '2026-10-20', games: 1, since: null});
+          assert(part.textContent.includes('1 game'));
+          assert(!part.textContent.includes('changed'));
+          part = draw({last: '2026-10-20', games: 2, since: {version: 'owned', more: 2, changes: [
+            {section: 'Deck', name: 'Sol Ring', delta: 1, printing: false},
+            {section: 'Deck', name: 'Elvish Mystic', delta: -2, printing: true},
+            {section: 'Sideboard', name: 'Pick Your Poison', delta: 0, printing: true}]}});
+          same(part.querySelectorAll('li').map((li) => li.textContent), ['Added 1 Sol Ring',
+            'Took out 2 Elvish Mystic, another printing', 'Changed the printing of Pick Your Poison (sideboard)']);
+          assert(part.textContent.includes('Its Play-now list has changed since that game:'));
+          assert(part.textContent.includes('And 2 more changes; its History has them all.'));
+          assert.equal(part.querySelector('a').getAttribute('href'), '#/history?id=casual%2Ftest&v=owned');
+          // A read-only (product or pairing) page has no History link.
+          part = draw({last: '2026-10-20', games: 2, since: {version: 'target', more: 1, changes: []}}, {read_only: true});
+          assert.equal(part.querySelector('a'), null);
+          assert(part.textContent.includes('And 1 more change.'));
+        """)

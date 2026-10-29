@@ -1,7 +1,7 @@
 "use strict";
 
 /* P1's deck Overview panels. Field and swap-test summaries use the same result components as Matchups,
-   with their own ids and one read per panel. Nothing here starts a simulation or polls in the background.
+   with their own ids and one read per panel; the Played at home part comes with /api/deck itself. Nothing here starts a simulation or polls in the background.
    Late reads belong to the original screen, route and person, and never redraw a replacement page. */
 
 function deckOverviewHere(section, context) {
@@ -109,4 +109,41 @@ function deckOverviewCurve(data) {
         el("span", { class: "deck-overview-count", text: bucket.total ? String(bucket.total) : "" }),
         el("span", { class: "deck-overview-bar", style: `--curve-height: ${(100 * bucket.total / top).toFixed(1)}%` }),
         el("span", { class: "deck-overview-mv", text: String(bucket.mv) })))));
+}
+
+/** When the deck was last played at home (E1-S27), from the Game log's games this viewer may see (/api/deck's
+ * played): "Last played 2026-10-20 · 3 games" or "Not played at home yet", then what its list changed since that
+ * game (played.since, from the deck's own revisions). Nothing when the games couldn't be read (never "not
+ * played"), and no change line when the list it was played with can't be found. */
+function deckOverviewPlayed(data) {
+  const p = data.played;
+  if (!p) return null;
+  const parts = [el("div", { class: "deck-section-head" }, el("h2", { id: "h-overview-played", text: "Played at home" }))];
+  if (!p.games || !p.last) {
+    parts.push(el("p", { class: "deck-played", text: "Not played at home yet" }));
+  } else {
+    parts.push(el("p", {}, factLine("deck-played", [`Last played ${p.last}`, plural(p.games, "game")])));
+    parts.push(deckPlayedSince(p.since, data.summary));
+  }
+  return el("section", { class: "deck-section deck-overview-played", "aria-labelledby": "h-overview-played" }, parts);
+}
+
+/** played.since in words: its list unchanged, or each card it gained or lost (a sideboard's named), the History
+ * holding the rest. */
+function deckPlayedSince(since, summary) {
+  if (!since) return null;
+  const list = since.version === "owned" ? "Play-now list" : "list";
+  if (!since.changes.length && !since.more) {
+    return el("p", { class: "sub", text: `Its ${list} hasn't changed since that game.` });
+  }
+  const where = (c) => c.section === "Deck" ? "" : ` (${c.section === "Sideboard" ? "sideboard" : c.section})`;
+  const words = (c) => c.delta > 0 ? `Added ${c.delta} ${c.name}${where(c)}`
+    : c.delta < 0 ? `Took out ${-c.delta} ${c.name}${where(c)}` : `Changed the printing of ${c.name}${where(c)}`;
+  const history = summary.read_only ? null
+    : el("a", { href: `#/history?id=${encodeURIComponent(summary.id)}&v=${since.version}`, text: "History" });
+  return el("div", { class: "deck-played-since" },
+    el("p", { class: "sub", text: `Its ${list} has changed since that game:` }),
+    el("ul", {}, since.changes.map((c) => el("li", { text: words(c) + (c.delta && c.printing ? ", another printing" : "") }))),
+    since.more ? el("p", { class: "sub" }, `And ${plural(since.more, "more change")}`,
+      history ? ["; its ", history, " has them all"] : null, ".") : null);
 }

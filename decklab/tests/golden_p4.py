@@ -95,7 +95,8 @@ older code (the committed tests/fixtures/inventory_goldens):
 - "played-defaults": E1-S27 adds each library summary's "played" (when it was last played at
   home and its games). No golden scenario records a game, so only the no-games answer
   ({"last": None, "games": 0}) or the unread one (None) is dropped from decks_index summaries;
-  a recorded game still compares. test_library_played checks its values.
+  a recorded game still compares. test_library_played checks its values. Its second slice adds
+  deck_view's "played" too, dropped only as {"last": None, "games": 0, "since": None} or None.
 - "category-defaults": E2-S24 adds DeckLine.category, the builder's own category on a decklist
   line, so a line dumped as a whole object ({quantity, name, set, number, finish}) gains
   "category". Only a None category on exactly such an object is dropped: a line with a
@@ -567,12 +568,16 @@ def storage_location_defaults(dump):
 
 
 def played_defaults(dump):
-    """Drop only E1-S27's no-games (or unread) "played" on library summaries."""
+    """Drop only E1-S27's no-games (or unread) "played" on library summaries and deck pages."""
     for mine in [dump, *((dump.get("by_viewer") or {}).values())]:
         index = mine.get("decks_index") if isinstance(mine, dict) else None
         for summary in (index.get("decks") or []) if isinstance(index, dict) else []:
             if isinstance(summary, dict) and summary.get("played", 0) in (None, {"last": None, "games": 0}):
                 summary.pop("played")
+        views = mine.get("deck_view") if isinstance(mine, dict) else None
+        for view in views.values() if isinstance(views, dict) else []:
+            if isinstance(view, dict) and view.get("played", 0) in (None, {"last": None, "games": 0, "since": None}):
+                view.pop("played")
 
 
 _LINE_KEYS = {"quantity", "name", "set", "number", "finish", "category"}

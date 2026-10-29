@@ -2,6 +2,32 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Last played on the deck Overview (2026-10-29; E1-S27 slices 2 and 3)
+
+GET /api/deck now gives `played`, from `decklab/lib/api/library_played.py` `deck_played`: the library's
+`{last, games}` for the one deck (the same Game log games the viewer may see, pods left out, a hidden other side
+counted and never named), plus `since`, what the deck's list changed after its last game. The list a game was
+played with is found by the sha256 its side recorded (a sideboard plan's game by its `base_sha256`, the list
+before the plan's swaps; `play_records.snapshot_sha`, split out of `_snapshot`): today's list when it still
+matches, without reading any revision, else the newest of the deck's own saved revisions
+(`inventory.deck_revisions_with_text`, the History's, up to 100) that does. The difference is the History's own
+`_list_changes` of that list and today's, as `{section, name, delta, printing}`, at most 30 with the rest in
+`more`. `since` is null when no list it was played with can be found (a changed product or pairing, which has no
+revisions, an older list, or a failing comparison, which the server log records); `played` is null when the
+games can't be read. The deck Overview's new **Played at home** part (`deckOverviewPlayed` in
+`decklab/web/deck-overview.js`) says "Last played <date> · N games" or "Not played at home yet", then "Its list
+hasn't changed since that game." or each card added, taken out or given another printing (a sideboard card named
+as such, "Play-now list" when that was played), with "And N more changes; its History has them all." linking the
+History on a deck that isn't read-only. Nothing in it describes the other side of a game. The golden
+comparisons drop deck_view's no-games `played` as they drop the library's. Fixture tests: an unchanged list, the
+changes against the revision a game was played with (past a deletion, a printing-only change, the cap), no
+matching revision, the last day's games with today's list winning before any revision read,
+the plan's base sha, a member's deck page naming no hidden side, the games or revisions unreadable; the
+Overview's wording, the Play-now and sideboard words, the History link and its absence on a read-only deck.
+E1-S27 is built. Known low issues: idea, building and product decks say "Not played at home yet"; dates are raw
+ISO dates; on a day of several games with different lists, a game with today's list wins, else the newest
+matching revision; no browser or device check.
+
 ## The warm-worker fallback sentence on the pages (2026-10-29; E3-S26)
 
 When a run's warm workers couldn't start, its games play one Forge process at a time, and the command line

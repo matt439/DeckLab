@@ -10,7 +10,7 @@ opens: the practice games start when Practice opens, and the matchup details (as
 omit=matchups until then) when Matchups does. Overview's field and latest-swap panels make separate,
 read-only requests; they start no simulations.
 
-Overview: Commander readiness, the building action, Forge field/curve/latest-swap panels
+Overview: Commander readiness, the building action, last played at home and Forge field/curve/latest-swap panels
 (deck-overview.js), the stats' verdict strip, key-card pictures, token and kit information, intact-product
 storage, stand-ins and swaps, opponent and sideboard plans, and the play guide. Cards: the decklist as a list or as
 pictures at every width (remembered), filtered to All, Missing, On the way or In other decks, each card
@@ -393,7 +393,7 @@ function deckWarnings(data) {
 
 // ----------------------------------------------------------------- overview
 
-/** The Overview tab's readiness, build and evidence panels, stats, key cards, tokens, kit, storage,
+/** The Overview tab's readiness, build, last played (E1-S27) and evidence panels, stats, key cards, tokens, kit, storage,
  * stand-ins/swaps, opponent and sideboard plans, and play guide; each part applies its own visibility. */
 function overviewParts(data) {
   const verdict = data.stats ? statsVerdict(data.stats, data.summary) : null;
@@ -401,6 +401,7 @@ function overviewParts(data) {
   return [
     commanderReadiness(data),
     deckAssemblySection(data),
+    deckOverviewPlayed(data),
     el("div", { class: "deck-overview-panels" }, deckOverviewForge(data), deckOverviewCurve(data), deckOverviewSwap(data)),
     verdict ? el("section", { class: "deck-section deck-overview-stats", "aria-label": "At a glance" }, verdict,
       el("button", { type: "button", class: "btn btn-quiet deck-more-link", text: "All the stats",
