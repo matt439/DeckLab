@@ -2176,7 +2176,7 @@ Built (2026-10-29): `web/receipt-bulk.js` adds **Everything arrived as ordered**
 
 How the inventory stays true to the physical cards. Each space's own people add, fix and remove cards on the Collection page (single cards, an app export, Add a precon) and token cards on the Tokens page; Matt and User1 both edit home's, each member only their own, and Claude does bulk and member upkeep from the PC (`collection merge`, `collection edit` and `collection apply`, `collection add-precon --space`). Repeat imports, sales and trades, and cards held by built decks are all flagged, other decks' out-of-date tables are listed with Update all rather than refreshed automatically, and the nightly `db check` looks for drift.
 
-Open: E7-S08, E7-S23 (partial), E7-S24 (partial), E7-S32.
+Open: E7-S08 (partial), E7-S23 (partial), E7-S24 (partial), E7-S32.
 
 **E7-S01** · Matt · must · M · built
 
@@ -2292,7 +2292,7 @@ Evidence:
 - `decklab/db/inv_tokens.py`: tokens add|edit|remove
 - `decklab/tests/test_api_tokens.py`: test_the_same_card_asks_first, test_known_cards_cant_be_kept_apart
 
-**E7-S08** · Matt · could · M · missing
+**E7-S08** · Matt · could · M · partial
 
 As a player packing for a game, I want each token's Tokens line to suggest how many of that token a game usually needs, so that I pack enough markers.
 
@@ -2302,9 +2302,12 @@ As a player packing for a game, I want each token's Tokens line to suggest how m
 
 Evidence:
 - `decklab/lib/tokens/__init__.py`: gaps (needs from Scryfall's all_parts links, with no count)
-- `decklab/lib/forge/cardlog.py`: tokens are left out of the per-card log
+- `decklab/lib/forge/cardlog.py` (`Game._token`, `add`, `merge_record`, `tokens_less`): each game's peak per side and token name (the most on the battlefield at once, from `DL|zone` moves of ids created from "-"), tallied into the batch record's `"tokens"` as games by peak, capped at `PEAK_CAP`; `decklab/lib/forge/pool_models.py` (`_cards_delta`): the warm pool's per-game parts
+- `decklab/tests/test_forge_cardlog_tokens.py`: peaks, sides, what isn't a token, end lines, bad games, the cap, merging and per-game parts, and one real game (`fixtures/forge/cardlog-tokens-s1001.log`)
 
-Gap: token needs come only from Scryfall's all_parts links, which give no count. Forge's `DL|zone` lines do log token moves (TODO audit, 2026-10-29), but `lib/forge/cardlog.py` leaves token ids out of its tally, so no count is kept yet; real numbers need fresh runs once it's tallied.
+Now (2026-10-29): the tally is built ([HISTORY.md](../HISTORY.md#token-peaks-in-the-card-log-2026-10-29-e7-s08-slice-1)): every batch played with the card log from now on records, per side, how many games each token peaked at 1, 2, 3... on the battlefield. Nothing reads it yet: records saved before have no `"tokens"` (not tallied, not "none"), so real counts need fresh runs.
+
+Gap: still missing are pooling the counts over a deck's saved runs (`saved.py`, checking the key's shape as `_card_record` checks the rows, and only over batches that have it), matching Forge's logged names ("Rabbit Token", or a copied card's name) to the deck's token needs, and the Tokens part's suggested count, its "no Forge games" line and "N more than you own" words (only to viewers who may see the space's inventory and the deck).
 
 **E7-S09** · Matt · must · M · built
 

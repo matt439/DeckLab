@@ -2,6 +2,34 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Token peaks in the card log (2026-10-29; E7-S08 slice 1)
+
+The first slice of suggesting how many of a token a game needs: the card log now keeps a count. DeckLabSim's
+`DL|zone` lines already logged every token's moves (created from "-"), but `decklab/lib/forge/cardlog.py` left
+every id outside the seats' lists out. `Game._token` now follows an id in neither list whose move is from "-"
+(an effect created in the Command zone never reaches the battlefield, and an id first seen moving from a real
+zone, such as a wish's card from the sideboard, isn't a token), on its owner seat's side and by its logged
+name as Forge prints it ("Rabbit Token"; a token copy of a card has the card's name). Per game, side and name
+the peak is the most of that token on the battlefield at once, replaying its moves up to the end lines as the
+checks replay the cards', and `add()` tallies it into the batch record's new `"tokens"`
+(`[{name: [n1, n2, ...]}, {...}]`, nk the games whose peak was k, capped at `PEAK_CAP` 30), only for games
+whose card data counts. The record stays version 3: the rows didn't change, and a record without the key
+(every one saved before today) didn't tally tokens, which isn't "none". `merge_record` sums the counts number
+by number and drops the key when either record lacks it; the warm pool's per-game parts carry it
+(`pool_models._cards_delta`, through `cardlog.tokens_less`), so a run's merged chunks add up as the rows do.
+Nothing reads it yet: pooling over a deck's saved runs, matching Forge's names to the deck's token needs and the
+Tokens part's suggested count are the next slices, and real counts need fresh runs (none was played for this).
+
+Fixture tests: `decklab/tests/test_forge_cardlog_tokens.py` (peaks and sides, every way off the battlefield, names
+apart, copied spells, effects and outside cards, a reused id, an unknown owner, moves after the end lines, a bad
+game, games by peak, the cap, merging, the per-game parts adding up, and one real game:
+`fixtures/forge/cardlog-tokens-s1001.log`, whose Rabbits peak at 7). The existing card-log, pool and Forge
+modules pass unchanged.
+
+- **Known low issues:** a token's side is its owner's, so a token that changes control still counts for the side
+  that made it; and a token that leaves the battlefield in a way Forge doesn't post as a zone change would stay
+  counted until the game ends (none seen in the logs read).
+
 ## The counters and dice a deck uses (2026-10-29; E7-S24 slice 1)
 
 The read-only first slice of recording dice and counters: what a deck's cards call for, before anything owned
