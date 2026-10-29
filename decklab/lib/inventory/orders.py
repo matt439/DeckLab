@@ -33,6 +33,8 @@ inventory.register(), run by inventory.apply() or preview() on either backend.
   product.set_intact an owned product kept intact or broken up (no: its sleeves and deck box go)
   watchlist.set      one watchlist row changed, or added
   watchlist.remove   one watchlist row removed
+  watchlist.add_many several rows added in one change, an identical request's quantity raised
+                     instead of a second row (a deck's missing cards); registered in queue_many.py
   watchlist.replace  the whole watchlist as given (a shop check's prices in one change)
 
 Every refusal is state.Invalid with the words today's readers and pages use for the same
@@ -968,3 +970,4 @@ from . import order_records  # noqa: E402,F401 (registers order.record using the
 from . import product_ops  # noqa: E402,F401 (registers pending product corrections)
 from . import order_lifecycle  # noqa: E402,F401 (registers order removal)
 from . import order_merge  # noqa: E402,F401 (registers combining orders that shipped together)
+from . import queue_many  # noqa: E402,F401 (registers several queue rows added in one change)

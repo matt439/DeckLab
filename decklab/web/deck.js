@@ -699,7 +699,7 @@ function redrawCards(screen) {
   add(clear(screen.cardsHost), [view.filter === "all" ? null : el("p", { class: "result-count", role: "status" },
     `${shown.size} of ${names} different cards. `,
     el("button", { type: "button", class: "btn btn-quiet", text: "Show all", onclick: () => choose({ filter: "all" }) })),
-  deckSwapFinder(screen), parts]);
+  deckQueueMissing(screen), deckSwapFinder(screen), parts]);
 }
 
 /** One decklist line as cards-ui.js's cardRow, in the "deck" viewer group (a tap opens the viewer, which

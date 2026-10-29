@@ -190,6 +190,8 @@ called as before (from decklab.lib import api; api.<name>). Each part:
                      resolve_check() (POST /api/shopping/check: a received delivery's check marked done)
     shopping_queue.py POST /api/shopping/queue: save_queue_state(), moving one queued card
                      between the existing purchase categories, with an expected inventory revision
+    shopping_queue_missing.py POST /api/shopping/queue/missing: review_missing(), a home deck's
+                     missing Planned cards to queue; save_queue_state's add_many saves them (E5-S25)
     receipts.py      the Receipts page: receipt_view(), preview_receipt(), apply_receipt(), on
                      lib/inventory/receive.py (shared with python -m decklab.db receive)
     assembly.py      the packing plan (Plan decks): assembly_view(), assembly_preview(), over
