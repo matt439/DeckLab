@@ -158,3 +158,37 @@ class ReceiptDestinationTests(unittest.TestCase):
           await saving;assert.equal(main.textContent,'Another profile');assert.equal(state.library,null);
           assert(!main.querySelector('.rcpt-where'));assert(!body().includes('Arrival recorded'));assert(!document.body.querySelector('dialog'));
         """)
+
+    def test_each_deck_says_ready_to_build_or_still_to_get_from_apply_readiness(self):
+        # E6-S26: apply's readiness, the refreshed tables' Planned counts after the receipt.
+        self.run_js("""
+          const d=delivery(),c=d.components[0];c.checks=[];c.rows=c.rows.slice(0,1);c.rows[0].quantity='4';
+          const decks=[{id:'casual/a',title:'Alpha Deck',status:'building',waiting:1},{id:'casual/b',title:'Beta Deck',status:'idea',waiting:1},
+            {id:'casual/c',title:'Gamma Deck',status:'built',waiting:1},{id:'casual/d',title:'Delta Deck',status:'idea',waiting:1}];
+          c.decks=[decks];const v=drawReceipt(d,routeToken),comp=v.comps[0];rcptTick(v,comp,comp.rows[0],true);
+          const received=rcptReceived(v);
+          const readiness={'casual/a':{missing:0,coming:0},'casual/b':{missing:3,coming:2},'casual/c':{missing:0,coming:0},
+            'casual/d':{missing:-1,coming:0}};
+          const post=add(el('div',{}),rcptWhereTheyGo(v,received,readiness));
+          const panel=(t)=>post.querySelectorAll('.rcpt-where').find(p=>p.querySelector('a')?.textContent===t);
+          const a=panel('Alpha Deck').querySelector('.rcpt-where-ready')?.querySelector('a');assert.equal(a.textContent,'Ready to build');
+          assert.equal(a.getAttribute('href'),'#/assembly?deck=casual%2Fa');
+          assert(panel('Beta Deck').textContent.includes('Still 3 to get · 2 cards on the way'));
+          assert(!panel('Beta Deck').querySelector('.rcpt-where-ready')?.querySelector('a'));
+          assert(panel('Gamma Deck').querySelector('.rcpt-where-ready')?.querySelector('a').textContent.includes('Every card is here'));
+          assert(!panel('Delta Deck').querySelector('.rcpt-where-ready'));     // a bad count says nothing
+          const plain=add(el('div',{}),rcptWhereTheyGo(v,received,{'casual/a':{missing:0,coming:1}}));
+          assert(plain.textContent.includes('Ready once 1 card arrives'));
+          // No readiness (a viewer without home's inventory, or an older answer): no counts at all.
+          for(const none of [undefined,{},null]){const bare=add(el('div',{}),rcptWhereTheyGo(v,received,none));
+            assert(!bare.querySelector('.rcpt-where-ready'));assert(!/Ready|to get/.test(bare.textContent));}
+        """, draw=False)
+
+    def test_the_recorded_page_draws_readiness_from_the_apply_answer(self):
+        self.run_js("""
+          tickAll(view);apiWrite=async()=>ready;await previewDelivery(view);
+          apiWrite=async()=>({received:true,totals:ready.totals,tables:{written:[{id:'casual/a',title:'Alpha Deck'}],skipped:[],error:null},
+            readiness:{'casual/a':{missing:2,coming:0}}});
+          await applyDelivery(view);
+          assert(main.textContent.includes('Still 2 to get'),main.textContent);
+        """)

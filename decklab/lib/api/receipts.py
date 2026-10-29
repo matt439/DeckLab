@@ -36,6 +36,12 @@ second apply of it finds the revision moved. The deck tables' outcome is the cha
 fails leaves the decks as they were and the receipt saved, the tables on the Decks page's
 "Tables out of date" list (GET /api/tables/stale; its Update all refreshes them).
 
+Apply's "readiness" ({deck id: {"missing", "coming"}}, E6-S26) is each refreshed home deck's
+Planned list in the saved snapshot (its availability banner's counts: copies missing, copies
+still on the way), for "Where these go"'s Ready to build or Still N to get. Only for a viewer who
+sees home's inventory and that deck; a deck whose counts can't be confirmed is left out, and
+working them out never fails the receipt.
+
 After the change is saved, arrivals.record keeps an arrival notice for each home player whose
 decks the receipt brought missing cards for (E6-S19, api/arrivals.py shows it); that never
 fails the receipt.
@@ -526,9 +532,47 @@ def apply_receipt(body):
     except (inventory.Invalid, ValueError, OSError, RuntimeError) as e:
         raise ApiError(409, f"The receipt couldn't finish: {_public(e)}") from None
     path.unlink(missing_ok=True)
+    tables = _tables(summary)
     # E6-S19: each home player's decks it brought cards for, told on their next visit (never fails the receipt).
     arrivals.record(before, after, record["order"], record["received_on"], actor, log=common._log)
     return {"received": True, "order": record["order"], "totals": summary.extra["totals"],
             "assignments": summary.extra["assignments"], "remaining": _remaining(after, record["order"]),
             "fingerprint": fingerprint(after.revision),
-            "tables": _tables(summary)}
+            "tables": tables, "readiness": _readiness(after, tables, profile)}
+
+
+def _readiness(after, tables, profile):
+    """{deck id: {"missing", "coming"}} of the refreshed home decks' Planned lists in the saved
+    snapshot (see the module docstring); {} for a viewer outside home's inventory or on any failure."""
+    if not guard.sees_inventory(spaces.HOME, profile):
+        return {}
+    try:
+        from decklab.lib import decks, pool
+        sees = guard.deck_reader(profile)
+        ids = []
+        for item in tables.get("written") or []:
+            deck_id = item.get("id") if isinstance(item, dict) else None
+            try:
+                space, _, _ = decks.split_id(deck_id)
+            except (ValueError, TypeError, AttributeError):
+                continue
+            if space == spaces.HOME and sees(deck_id):
+                ids.append(deck_id)
+        out = {}
+        if not ids:
+            return out
+        with inventory.pinned(after):
+            found = pool.load_pool()
+            for deck_id in ids:
+                try:
+                    result = pool.owned_vs_needed(deck_id, "target", pool=found, prices=False)
+                except (decks.DeckNotFound, decks.DeckFileError, OSError, ValueError):
+                    continue
+                if result["unresolved"] or result["warnings"]:
+                    continue        # not confirmed: the page says nothing rather than guess
+                out[deck_id] = {"missing": result["totals"]["missing"], "coming": sum(
+                    qty for r in result["rows"] for _, qty in pool.row_labels(r)["on_the_way"])}
+        return out
+    except Exception:           # the receipt stands; the page just leaves the line out
+        common._log("A receipt's deck readiness couldn't be worked out:\n" + traceback.format_exc())
+        return {}

@@ -304,6 +304,8 @@
 .rcpt-where-grid .rcpt-where { margin-top: 0; }
 .rcpt-where h3 { margin: 0 0 var(--s-1); }
 .rcpt-where-cards { margin: var(--s-2) 0 0; padding-left: var(--s-5); }
+.rcpt-where-ready { margin: var(--s-1) 0 0; font-weight: 600; }
+.rcpt-where-ready.is-short { color: var(--warn-ink-sm); }
 .rcpt-after { margin-top: var(--s-5); }
 
 @media (forced-colors: active) {
