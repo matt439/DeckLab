@@ -115,7 +115,7 @@ const context = {Node, document, window, location, console, assert, URL, URLSear
   timerCount: () => timers.size,
 };
 vm.createContext(context);
-for (const name of ["core.js", "editor.js", "version.js"]) {
+for (const name of ["core.js", "editor.js", "editor-drafts.js", "version.js"]) {
   vm.runInContext(fs.readFileSync(web + "/" + name, "utf8"), context, {filename: name});
 }
 vm.runInContext(`

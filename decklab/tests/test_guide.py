@@ -108,7 +108,7 @@ class GuideApiTests(ApiTestCase):
 @unittest.skipUnless(shutil.which("node"), "Node.js isn't installed")
 class GuideRenderingTests(unittest.TestCase):
     def run_js(self, expression):
-        inputs = [[str(WEB / "core.js"), str(WEB / "editor.js"), str(WEB / "deck-tools.js"), str(WEB / "guide.js")], [expression]]
+        inputs = [[str(WEB / "core.js"), str(WEB / "editor.js"), str(WEB / "editor-drafts.js"), str(WEB / "deck-tools.js"), str(WEB / "guide.js")], [expression]]
         done = subprocess.run([shutil.which("node"), "-e", NODE_RUNNER], input=json.dumps(inputs),
                               capture_output=True, text=True, encoding="utf-8", check=True)
         return json.loads(done.stdout)[0]
