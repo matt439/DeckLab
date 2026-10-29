@@ -35,20 +35,20 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 
 | Epic | Stories | Built | Partial | Missing | Not wanted |
 |---|---:|---:|---:|---:|---:|
-| [E1: Find, plan and choose decks](#e1-find-plan-and-choose-decks) | 15 | 15 | 0 | 0 | 0 |
-| [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 20 | 17 | 1 | 1 | 1 |
-| [E3: Test a deck](#e3-test-a-deck) | 15 | 12 | 3 | 0 | 0 |
+| [E1: Find, plan and choose decks](#e1-find-plan-and-choose-decks) | 17 | 15 | 0 | 2 | 0 |
+| [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 21 | 17 | 1 | 2 | 1 |
+| [E3: Test a deck](#e3-test-a-deck) | 18 | 12 | 3 | 3 | 0 |
 | [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 22 | 18 | 2 | 1 | 1 |
-| [E5: Decide what to buy](#e5-decide-what-to-buy) | 22 | 18 | 1 | 1 | 2 |
-| [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 20 | 18 | 0 | 0 | 2 |
-| [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 28 | 24 | 0 | 4 | 0 |
+| [E5: Decide what to buy](#e5-decide-what-to-buy) | 24 | 18 | 1 | 3 | 2 |
+| [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 23 | 18 | 0 | 3 | 2 |
+| [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 28 | 24 | 1 | 3 | 0 |
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 19 | 16 | 0 | 1 | 2 |
-| [E9: Commander nights](#e9-commander-nights) | 20 | 15 | 1 | 3 | 1 |
+| [E9: Commander nights](#e9-commander-nights) | 22 | 15 | 1 | 5 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 35 | 31 | 1 | 1 | 2 |
-| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 39 | 28 | 7 | 1 | 3 |
-| **Total** | **255** | **212** | **16** | **13** | **14** |
+| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 41 | 28 | 7 | 3 | 3 |
+| **Total** | **270** | **212** | **17** | **27** | **14** |
 
-Counted from the story headers on 2026-10-29 after the source-aware two-player and pod counters, alongside the current feature and maintenance work. The reviews added five feature stories and eight hygiene stories, then the fixture-only entry-point story E11-S44, and corrected E1-S12 from missing to partial. Rechecked 2026-10-29: E1-S12 is built and E11-S39 partial (its database qualification pending).
+Counted from the story headers on 2026-10-29 after the source-aware two-player and pod counters, alongside the current feature and maintenance work. The reviews added five feature stories and eight hygiene stories, then the fixture-only entry-point story E11-S44, and corrected E1-S12 from missing to partial. Rechecked 2026-10-29: E1-S12 is built and E11-S39 partial (its database qualification pending). The TODO audit of 2026-10-29 added fifteen missing stories (twelve from the audit: E1-S27, E1-S28, E2-S27, E3-S25, E3-S26, E5-S25, E6-S25, E6-S26, E9-S26, E9-S27, E11-S45, E11-S46), then Matt's three UI requests (E3-S27, E5-S26, E6-S27), and corrected E7-S32 from missing to partial (its recognition spike and CLI are built).
 
 ---
 
@@ -56,7 +56,7 @@ Counted from the story headers on 2026-10-29 after the source-aware two-player a
 
 How Matt and User1 (and, more lightly, User2, User3, User4 and User5) find a deck in the library (#/library), choose its picture, open its deck page (#/deck) to see whether it can be built and how to play it, rename or retire it, and pick what to play tonight. Each viewer's library holds their own space's decks, plus any another space has made public. A plain "Deck Lab is off" message is enough while the PC is off (E11-S02); collector-value sorting and legality badges on casual decks aren't wanted.
 
-Open: none.
+Open: E1-S27, E1-S28.
 
 **E1-S01** · User1 · must · M · built
 
@@ -306,13 +306,42 @@ Evidence:
 
 History-revision comparisons remain separate future work. Browser geometry and touch/Safari/device acceptance are unverified; the local-file browser preview was denied by URL policy. See [HISTORY.md](../HISTORY.md#compare-list-differences-2026-10-28-e1-s26).
 
+**E1-S27** · User1 · should · S · missing
+
+As a player choosing tonight's 1v1 game, I want each deck to say when it was last played at home and how many games it has, and the library to sort by decks not played lately, so that we rotate through our built decks instead of reaching for the same two.
+
+- Given a deck with recorded games the viewer may see, when the library or Overview loads, then it shows 'Last played <date> · N games' from those games only.
+- Given a game whose other side is in a space the viewer can't see, when counts are made, then the game counts for the viewer's own deck but names no hidden deck.
+- Given the 'Not played lately' sort, when chosen, then never-played decks come first, then oldest last-played.
+- Given a deck with no games, then it says 'Not played at home yet'.
+
+Evidence of the gap (TODO audit, 2026-10-29): web/library.js LIB_SORTS has only ready/recent/name; no last_played anywhere in web or lib/api; journeys.md E1 stage 3 lists 'last played' as an unbuilt opportunity; play records already carry dates and per-side snapshots.
+
+Gap: none of the criteria is met yet.
+
+First slice (TODO audit, 2026-10-29): Server: add last_played and games per deck to the library answer (lib/api/library.py shelf extras), computed from play records through the Game log's existing visibility filter, pods excluded from 1v1 counts as playLegacyGame does. Client: one tile facts fragment and a new LIB_SORTS entry in web/library.js. Fixture tests for counts, hidden-space exclusion and sort order. Overview line and 'changed since the last game' (diff of the last snapshot via compare.py) are slices 2 and 3.
+
+**E1-S28** · Matt · could · M · missing
+
+As a player choosing what to play at home tonight, I want Deck Lab to suggest a few ready pairs of decks (one for each of us) that are evenly matched and not played lately, so that we pick a fair, fresh game in seconds.
+
+- Given home's built casual decks the viewer may see, when suggestions are asked for, then up to 3 pairs are returned, one deck playable by each home player, each with plain reasons.
+- Given a pair with at least 10 real games, then the real record decides evenness, else the Forge estimate, else 'unknown'.
+- Given a deck not ready, then it isn't suggested.
+
+Evidence of the gap (TODO audit, 2026-10-29): No pairing view exists; readiness, usual opponents, Forge pairs and head-to-head records exist separately (E1-S03, E4-S22, E4-S12/S13).
+
+Gap: none of the criteria is met yet.
+
+First slice (TODO audit, 2026-10-29): Pure function lib/play_pairs.py suggest(decks, games, forge_pairs, today) ranking pairs by closeness to 50% and days since last played, with privacy via the visible decks only. Fixture tests for ordering, unknowns and readiness. A card on #/play later.
+
 ---
 
 ## E2: Build and edit a deck
 
 Covers making a deck and keeping it right: New deck and Start from, the full editor (from 600px) and the phone's Quick edit, Paste a list, the Planned and Play-now lists, owned vs needed against the space's pool and its other built decks, keeping the write-up current, history and undo, and the command-line route Claude Code uses (`deck pull`/`push`/`new`/`tables`). Drafts stay on the device they were started on, and the Play-now list's substitutes are hand-written (Packing's physical stand-ins, E4-S21, never change a list). Rename and retirement, with restore from History, are on the deck page (E1-S19). Legality badges on casual decks are deliberately not wanted.
 
-Open: E2-S16, E2-S22.
+Open: E2-S16, E2-S22, E2-S27.
 
 **E2-S01** · Matt · must · L · built
 
@@ -658,13 +687,27 @@ Evidence:
 
 New-deck controls wait until its first save. Browser/device and live-runtime acceptance remain unverified; no real-data save, database connection or Forge game qualified this work. See [HISTORY.md](../HISTORY.md#atomic-considering-draft-moves-2026-10-28-e2-s26).
 
+**E2-S27** · User1 · could · S · missing
+
+As a beginner who learns a deck from its How to play guide, I want the guide to point out cards it mentions that have since left the deck, so that I don't plan around a card that isn't in my box.
+
+- Given a deck whose saved revisions held a card now absent from both lists, when the guide text names it as a whole word, then How to play shows 'The guide mentions N cards no longer in the deck: A, B'.
+- Given only current cards are named, then no note shows.
+- Given a card name that is a common word but was never in the deck, then it is never flagged.
+
+Evidence of the gap (TODO audit, 2026-10-29): E2-S13 adds only a generic 'Decklist changed' warning; guide.py selects topics without checking names; deck-tools.js links only current names.
+
+Gap: none of the criteria is met yet.
+
+First slice (TODO audit, 2026-10-29): A server helper over the latest 100 deck revisions collecting former card names, matching them as whole words in the guide sections, returned beside the playing guide (lib/api/guide.py). Fixture tests with a two-revision deck.
+
 ---
 
 ## E3: Test a deck
 
 How a player finds out whether a deck works before playing or buying cards: instant stats on the deck page's Stats tab, practice games on the Practice tab, Forge matchups and Rankings (#/matchups, #/matchup), the field rank on the Matchups tab, paired tests of a change from the editor (#/variant), and the simulations setting on #/settings. Matchups, fields, rankings and tests follow deck privacy: each viewer sees only results whose every side they may see, a member's field is their own space plus Public spaces, and a run may be stopped by whoever started it, anyone whose space's deck it uses, or an admin. Not yet covered: 4-player Commander pods, sideboard testing, comparing real games with Forge's predictions, and members asking for a run while only admins may start one. Forge results are files outside the database's backups by decision, since they can be replayed.
 
-Open: E3-S13, E3-S19, E3-S23.
+Open: E3-S13, E3-S19, E3-S23, E3-S25, E3-S26, E3-S27.
 
 **E3-S01** · Matt · must · M · built
 
@@ -926,6 +969,50 @@ Now: Built 2026-10-27 ([HISTORY.md, Chance to draw on the Stats tab](../HISTORY.
 Evidence:
 - `decklab/web/stats.js`: drawOddsPanel, chanceOfAtLeastOne, cardsSeenBy
 - `decklab/tests/test_stats_draw_odds.py`: test_a_card_and_a_group_by_a_chosen_turn_on_the_play_or_draw, test_commander_draws_from_the_99_and_defaults_to_the_draw
+
+**E3-S25** · Matt · should · M · missing
+
+As a deck builder improving a deck with cards we already own, I want each card Forge marks as stuck or never cast to offer free pool cards that could fill its slot, and to test that swap, so that I fix weak slots for free before buying anything.
+
+- Given a card marked 'Drawn, never cast' on the Matchups tab, when the viewer may see the deck's space's inventory, then up to 5 free, castable pool cards of a similar role are offered with a note.
+- Given a copy held by a built deck or intact product, then it isn't offered.
+- Given a viewer without inventory rights, then no replacements are shown.
+- Given 'Test this swap', then the variant sheet opens prefilled with the swap.
+
+Evidence of the gap (TODO audit, 2026-10-29): matchups-cards.js marks never-cast and stuck spells (E3-S15) with no next step; swaps.py ranks stand-ins only for missing cards; variants need a hand-made draft.
+
+Gap: none of the criteria is met yet.
+
+First slice (TODO audit, 2026-10-29): Generalise lib/decks/swaps.py ranking (fits, castable, rank_key) so api/swaps.py can rank free candidates for any listed card; add GET /api/deck/replacements?id=&card= requiring guard.sees_inventory. Fixture tests: never-cast creature gets castable free same-type cards, held copies excluded, member space private. Variant prefill is slice 2; free dual lands for a colour shortfall slice 3.
+
+**E3-S26** · Matt · could · S · missing
+
+As someone waiting on a Forge run, I want the page to say when the warm workers couldn't start and games play one process at a time, so that I know why the run is slower than its estimate.
+
+- Given a running job with fallback set, when the matchup page or Playing now row shows progress, then the fallback sentence shows after the waiting sentence.
+- Given fallback is null, then nothing extra shows.
+- Given a member viewer, then only the sentence shows, with no worker counts or names.
+
+Evidence of the gap (TODO audit, 2026-10-29): forge_runs._job_json returns 'fallback'; grep finds no use of fallback in web/matchups*.js; HISTORY lists it as a known low issue.
+
+Gap: none of the criteria is met yet.
+
+First slice (TODO audit, 2026-10-29): Read job.fallback in web/matchups-detail.js and matchups-overview.js progress lines; Node UI fixtures for set, null and member views.
+
+**E3-S27** · Matt · should · S · missing
+
+As a deck builder reading the Matchups tab, I want the "Show matchups for" picker to show each deck's colours and a small picture, so that I can pick the deck I mean by eye instead of by a shortened name.
+
+- Given the Matchups tab's home view, when I open "Show matchups for", then each deck shows its colour pips and a small crop of its library picture (cover card or automatic) beside its name, and the chosen deck shows the same in the closed control.
+- Given a deck whose picture can't load, then its name and pips still show, as a library tile falls back.
+- Given a keyboard or screen reader, then the picker keeps the select's behaviour: arrow keys, type-ahead, its label and the deck's full title.
+- Given only decks the viewer may see, then the picker lists nothing else (unchanged).
+
+Evidence of the gap (Matt, 2026-10-29): `decklab/web/matchups-overview.js` drawHome builds a native `<select id="mu-deck-pick">` whose options hold only `shortNames(decks)` text, with the title as a tooltip; a native option can't show art or pips. The library already has each deck's colours and picture.
+
+Gap: none of the criteria is met yet.
+
+First slice: a small listbox picker (button plus popover listbox, `aria-activedescendant`, type-ahead) in a new `web/deck-picker.js`, fed by the library answer the tab already loads (colours, picture), replacing only this select; keep the stored choice (`HOME_DECK_KEY`) and `choose()`. Node UI fixtures for options, fallback, keyboard and hidden decks. The two-deck Play pickers can adopt it later.
 
 ## E4: Get ready, play and learn
 
@@ -1308,7 +1395,7 @@ Rules: [Wizards' current Comprehensive Rules](https://media.wizards.com/2026/dow
 
 How Matt, with User1's wishes and Claude's research, goes from "this deck is short" to a decided purchase. On the page: each deck's sortable Prices table of converted Scryfall estimates, and Shopping's Decks still missing cards, Missing cards across decks, To buy, By shop and Long-term plan, with queue add, edit, move and remove for admins and reprint notices from cached Scryfall data. Live Australian shop checks, dated buylists and `watchlist apply` stay with Claude on the PC; recording an order, which reduces the queue rows it fulfils (Shopping's New order or `order add --fulfils`), belongs to E6. By design there are no spending totals and no collection value.
 
-Open: E5-S08, E5-S15.
+Open: E5-S08, E5-S15, E5-S25, E5-S26.
 
 **E5-S01** · Matt · must · M · built
 
@@ -1680,13 +1767,42 @@ Evidence:
 
 The base format is quantity plus canonical name; explicit requests retain human-readable set/number and `[finish]` suffixes, without claiming every shop parses those suffixes automatically. Browser/device and actual clipboard behavior remain unverified; all clipboard tests use mocks. See [HISTORY.md](../HISTORY.md#copy-one-shops-list-2026-10-28-e5-s24).
 
+**E5-S25** · Matt · should · M · missing
+
+As a buyer who has decided to build a deck, I want to put its missing cards on the purchase queue (To buy or Long-term) in one reviewed action, so that planning a deck's buys doesn't mean adding rows one at a time or asking Claude at the PC.
+
+- Given a home deck with missing Planned cards and an admin viewer, when 'Queue missing cards…' is opened, then it lists each card with copies = missing minus copies already queued for that deck, any nonfoil printing, and a state choice.
+- Given Save, when the queue revision is current, then one audited watchlist change adds the rows with the deck as source.
+- Given the queue changed since the review, then nothing is saved and a new review is asked for.
+- Given User1, then the action is not offered.
+
+Evidence of the gap (TODO audit, 2026-10-29): shopping_queue.py accepts only state/add/edit/remove for one row; E9-S12's long-term plan relies on Claude running watchlist set --add per row.
+
+Gap: none of the criteria is met yet.
+
+First slice (TODO audit, 2026-10-29): Add action 'add_many' to lib/api/shopping_queue.py save_queue_state with the existing expected-revision check, deduping against rows already queued for the deck; a review sheet on the deck's Cards tab Missing filter. Fixture tests: dedupe, conflict refusal, read-only member/User1, tokens excluded.
+
+**E5-S26** · Matt · should · S · missing
+
+As Matt reading Shopping's To buy table, I want each row to stay one or two lines deep, so that I can scan the queue without the Ref AUD column making every row tall.
+
+- Given a queue row with a reference price and an MTGMate snapshot, when the table shows, then the Ref AUD cell holds the price and one short snapshot marker, and the snapshot's full words (fetch time, stock, Back in stock) are in the row's notes and research (…) part.
+- Given a row with no reference price, then the cell shows a short marker with an accessible "Reference price not recorded" label instead of wrapped words; Shop and Stock do the same.
+- Given a phone width, then the casual (card) layout is unchanged.
+
+Evidence of the gap (Matt, 2026-10-29): `decklab/web/shopping-queue.js` puts the whole `.shop-snapshot` block into the `.shop-q-price` cell in the lab layout (`shopQueuePut(tr.querySelector(".shop-q-price"), snapshot)`), and unknown cells hold full sentences (`shopQueueUnknown("Reference price not recorded")`), so the narrow numeric column wraps over several lines.
+
+Gap: none of the criteria is met yet.
+
+First slice: in the lab layout, render a compact snapshot marker in the price cell and move the full snapshot into the existing extra row (`shop-q-extra`, opened by …, offered for any row with a snapshot), use short accessible unknown markers in the short cells, and keep the price column on one line in `shopping.css`. Node UI fixtures for a snapshot row, an unknown row and the casual layout.
+
 ---
 
 ## E6: Record orders and receive cards
 
 Home's buying, from placing an order to its cards sitting in the right deck or in storage: singles, token singles, sealed products, pending orders shown as on the way, correcting, splitting, cancelling and removing pending orders, the Receive delivery check-off board, arrival checks and follow-ups. Each change has a page control on Shopping or Receive delivery and a command (`order …`, `product add|edit`, `receive [--expect]`), saved as one audited change with the deck tables it refreshes. Order changes, receipts and follow-ups need a home admin; User1 sees the same pages read-only, and nobody outside home sees them at all, since person spaces have no orders, products or deliveries. Orders never store prices or spending totals, and physical-device acceptance is tracked in E2-S22.
 
-Open: none.
+Open: E6-S25, E6-S26, E6-S27.
 
 **E6-S01** · Claude Code · must · L · built
 
@@ -2011,6 +2127,49 @@ Evidence:
 - `decklab/tests/test_shopping_order_changes.py`: test_stale_preview_and_transaction_race_cannot_overwrite_newer_corrections, test_members_are_refused_on_both_listeners_before_inventory_or_token_lookup
 - `decklab/tests/test_order_lifecycle.py`: test_removal_refuses_any_received_part_owned_intact_or_shared_product
 
+**E6-S25** · Claude Code · should · S · missing
+
+As Claude Code splitting a pending order for a partial shipment, I want a part split off a component marked as extra copies of owned printings to keep that mark, so that the split doesn't bring back the pool warning that blocks every deck-table refresh and receipt.
+
+- Given a pending cards component marked as extra copies, when order split moves rows into a new component, then the new component id is added to the mark in the same change and the preview says so.
+- Given a marked product component is split, when the pool is read, then it doesn't warn that every card is already in the collection.
+- Given both parts are marked, when order extra-copies --undo runs on either part, then only that part loses the mark.
+
+Evidence of the gap (TODO audit, 2026-10-29): split_order never reads rules.extra_copies (grep finds the mark only in add_order and order.extra_copies); order_merge.py carries it; HISTORY lists it as a known low issue; AGENTS.md tells the operator to re-mark by hand.
+
+Gap: none of the criteria is met yet.
+
+First slice (TODO audit, 2026-10-29): In lib/inventory/orders.py split_order (line 722), when rules.extra_copies(audit_notes) contains the source component, write rules.with_extra_copies(audit_notes, marked + [new_id]) in the same operation and name it in the preview. Fixture tests: split a marked cards component and a marked product, pool not warning, undo on each part. Update AGENTS.md's 'mark it too' workaround sentence.
+
+**E6-S26** · Matt · should · S · missing
+
+As Matt, having just recorded a delivery, I want 'Where these go' to say which decks now have every Planned card here and which still wait, with a Packing plan link, so that I go straight from unpacking to building.
+
+- Given a receipt that supplies a deck's last missing Planned cards, when it is applied, then that deck's panel says 'Ready to build' with a link to #/assembly?deck=<id>.
+- Given a deck still short after the receipt, then its panel says 'Still N to get'.
+- Given a viewer without home inventory rights, then no counts are shown.
+
+Evidence of the gap (TODO audit, 2026-10-29): receipt-workflow.js 'Where these go' groups cards by deck and kit only, with no readiness or #/assembly link; arrival-notices.js says only 'N cards for Deck'.
+
+Gap: none of the criteria is met yet.
+
+First slice (TODO audit, 2026-10-29): Have the receipt apply answer include each 'Where these go' deck's post-receipt Planned missing count from the refreshed tables, and draw the readiness word and Packing plan link in web/receipt-workflow.js rcptWhereTheyGo. Fixture tests: completed deck, short deck, no-inventory viewer. Arrival-notice wording and multi-deck preselect later.
+
+**E6-S27** · Matt · should · M · missing
+
+As Matt recording a delivery that has both playable cards and token cards, I want to confirm it with far fewer steps, so that recording an ordinary arrival isn't a long list of blockers.
+
+- Given a delivery whose parts all arrived as recorded, when I choose "Everything arrived as ordered", then every part is selected and every card ticked in one step, with one confirmation, not one per part.
+- Given token rows whose back the order recorded, or that were ordered as single-sided, when they're ticked, then they need no separate back confirmation; only rows the order flagged as unverified, or whose back is genuinely unknown, ask, and one "Backs are as recorded / blank" action answers all of them.
+- Given a part's arrival checks, when I tick them, then one "All checks done" per part ticks them all, and the remaining blockers are listed once per part, not once per row.
+- Given any of these shortcuts, then the receipt still sends the same `verified` components and rows, and the server's rules (tokens need verification, exact pairing, no guessed condition or language) are unchanged.
+
+Evidence of the gap (Matt, 2026-10-29): `decklab/web/receipt-workflow.js` rcptClientBlockers lists a blocker for each unselected part, each part with no ticked card, each ticked token row whose back is open, and each unticked check. `decklab/web/receipts.js` rcptBackOpen treats every blank back without a `single-sided verified` note as open, so every ordinary single-sided token blocks; Tick all works one part at a time, each with its own confirmation (rcptTickAll).
+
+Gap: none of the criteria is met yet.
+
+First slice: count the blockers for a mixed fixture delivery (cards with checks, tokens with blank backs), then add the delivery-level "Everything arrived as ordered" action and the per-part "Backs are as recorded / blank" answer, which writes `single-sided verified` only on the rows the user confirms. Node UI fixtures: a mixed delivery reaches Preview in at most three actions, and its request bodies match ticking each row by hand.
+
 ---
 
 ## E7: Keep the collection accurate
@@ -2145,7 +2304,7 @@ Evidence:
 - `decklab/lib/tokens/__init__.py`: gaps (needs from Scryfall's all_parts links, with no count)
 - `decklab/lib/forge/cardlog.py`: tokens are left out of the per-card log
 
-Gap: token needs come only from Scryfall's all_parts links, which give no count, and the Forge card log doesn't record tokens, so there's no source for a count yet.
+Gap: token needs come only from Scryfall's all_parts links, which give no count. Forge's `DL|zone` lines do log token moves (TODO audit, 2026-10-29), but `lib/forge/cardlog.py` leaves token ids out of its tally, so no count is kept yet; real numbers need fresh runs once it's tallied.
 
 **E7-S09** · Matt · must · M · built
 
@@ -2500,7 +2659,7 @@ Now (2026-10-27): manual records and automatic mixed planning are implemented. E
 
 Validation includes 296 affected checks and twelve synthetic Chromium width/theme cases with one guarded fixture mixed save. Household data, actual devices and Forge were not used.
 
-**E7-S32** · Matt · could · L · missing
+**E7-S32** · Matt · could · L · partial
 
 As a person adding a stack of new cards, I want to scan them with my phone's camera into the collection, so that I don't need another app's export to add cards.
 
@@ -2875,7 +3034,7 @@ Evidence:
 
 Getting the household's Commander decks ready for social Commander nights at a local shop, where staff make 4-player pods and the shop publishes a bracket range. The editor checks the Commander deck rules and a minimum bracket from Game Changers, mass land denial and extra turns; a Commander deck's Overview opens with a plain bracket sentence, what opponents will face and the dates of the card data behind them, and home admins can record the usual night's aim and house rules. Practice games use the free multiplayer mulligan, and Forge plays Commander decks 1v1 only, marked indicative. Two-card combos (from Commander Spellbook) and Wizards' latest Commander announcement are checked too (2026-10-21). The Game log records three/four-player pods separately from 1v1 (E4-S18/E9-S16, 2026-10-28). Multiplayer counters/simulations and editor EDHREC ideas remain separate work.
 
-Open: E9-S07, E9-S11, E9-S21, E9-S22.
+Open: E9-S07, E9-S11, E9-S21, E9-S22, E9-S26, E9-S27.
 
 **E9-S02** · Matt · must · M · built
 
@@ -3194,6 +3353,34 @@ Evidence:
 - `decklab/tests/test_combos.py` (NearTests), `test_commander_readiness.py` (NearComboTests), `test_near_combos.py`, `test_near_combos_ui.py`
 
 Gap: Only two-card combos (Spellbook's three-card combos two pieces away aren't offered); combos beyond the 100 most serious aren't sent, so a free piece among them isn't shown; the in-use state doesn't say which deck holds the copies; the Overview's At the Commander table doesn't mention them.
+
+**E9-S26** · Matt · could · M · missing
+
+As a deck builder filling a Commander 99 from the shared pool, I want each role on the Stats tab (ramp, draw, removal, sweepers) to list the free pool cards in the commander's colours that fill it, so that I can top up a thin role with cards we already own.
+
+- Given a Commander deck's Stats roles, when the viewer may see its space's inventory and opens a role, then free owned cards with that role tag inside the commander's colour identity are listed, not already in the deck.
+- Given copies held by built decks or intact products, then they are excluded.
+- Given the tag file is unavailable, then the panel says tags are unavailable rather than showing nothing.
+
+Evidence of the gap (TODO audit, 2026-10-29): lib/stats/__init__.py already returns roles from cards.ROLES and web/stats.js draws 'Card types and roles', so counts are built; no feature finds free cards by role (find_cards filters colour only).
+
+Gap: none of the criteria is met yet.
+
+First slice (TODO audit, 2026-10-29): A pure function in lib/stats taking the deck, the space's free pool and cards.tag_members for ROLE_TAGS, returning up to 10 candidates per role filtered by colour identity (reuse find_cards' owned scope and _fits). Fixture tag jsonl tests; a 'Free cards for this role' link under each role bar in web/stats.js as slice 2. Reference ranges from a cited, dated template need Matt to pick the source.
+
+**E9-S27** · User1 · could · S · missing
+
+As a newer player taking a Commander deck to a social night without a phone, I want the printed play sheet to carry the bracket sentence, what opponents will face and the detected two-card combos, so that I can answer the table's questions from paper.
+
+- Given a Commander deck whose bracket answer is loaded, when Print play sheet is used, then an 'At the table' section prints the E9-S05 sentence, the Game Changers, mass land denial, extra turns and combos with the card-data date.
+- Given those facts haven't loaded, then the sheet prints that they weren't loaded rather than guessing.
+- Given a casual deck, then no Commander section prints.
+
+Evidence of the gap (TODO audit, 2026-10-29): printDeck prints title, list, stand-ins and guide only (no bracket/combo text); E11-S27 offline lists is not_wanted, so paper is the offline route.
+
+Gap: none of the criteria is met yet.
+
+First slice (TODO audit, 2026-10-29): In web/deck-tools.js printDeck, append 'At the table' from the already-loaded commander-readiness data; UI fixture test on the print DOM. Sideboard plans per opponent for casual decks as slice 2.
 
 ---
 
@@ -3846,7 +4033,7 @@ Evidence:
 
 Keeping Deck Lab running, safe and believable, by Matt as the household's admin and by Claude Code working for him at the PC. It covers the server and its Cloudflare tunnel and "Deck Lab is off" page, the PostgreSQL database with its nightly backup, export, check and restore check, the audit trail on #/activity, the `python -m decklab.db` commands Claude works through (previews, `--expect` guards, `-m` messages, exit codes), the card data's background refresh, Forge upkeep and the Safari Simulator suite. Every write is one audited change set, Matt's own command-line writes are recorded as his, and backups are checked by restoring them.
 
-Open: E11-S02, E11-S08, E11-S12, E11-S16, E11-S28, E11-S30, E11-S31, E11-S39.
+Open: E11-S02, E11-S08, E11-S12, E11-S16, E11-S28, E11-S30, E11-S31, E11-S39, E11-S45, E11-S46.
 
 **E11-S01** · Matt · must · M · built
 
@@ -4082,7 +4269,7 @@ Evidence:
 - `decklab/db/__main__.py`: main (exit 2)
 - `decklab/lib/pool.py` (the `products/status.csv lists ...` warning)
 
-Gap: criterion 1 is unverified. The token rules' old-file wording now occurs only in the files test backend, and no database-facing refusal naming an old file has been reproduced; the pool's `products/status.csv lists ..., which isn't in magic/products/` warning is the one left to check.
+Gap: criterion 1 isn't met. A database-facing message still names an old file: `tokens edit|remove` with a stale `--expect` says `<tokens file> has changed since that listing` (`decklab/db/inv_tokens.py` through `tokens.label_for`, which returns `magic/tokens.csv`), found by the TODO audit of 2026-10-29. The pool's `products/status.csv lists ..., which isn't in magic/products/` warning and `accessories check`'s product wording are the others to check.
 
 **E11-S13** · Matt · must · M · built
 
@@ -4640,3 +4827,31 @@ Evidence:
 - `test_fixture_runner.py`: eight failure-safe fake-project regressions for import ordering, direct/raw IO, path aliases, connectors, native skips, sharding, startup failures and multiprocessing.
 - Forty targeted cases passed with 15 explicit skips; guarded discovery preserved 9,152 unique cases across four shards, without import errors, duplicates or loss. Independent source review, Ruff, syntax, length and whitespace checks passed.
 - AGENTS.md and README.md use the protected default commands. [SOURCE_AUDIT.md](../SOURCE_AUDIT.md#fixture-only-test-entry-point-e11-s44) records the accident-prevention boundary: arbitrary ordinary child interpreters do not inherit in-memory guards. Full integrated fixture qualification is recorded separately; genuine database, native runtime and real Forge acceptance are not claimed.
+
+**E11-S45** · Matt · should · M · missing
+
+As Matt moving Deck Lab's Forge to a new release, I want upgrade-check to run its checks against a scratch build folder before it replaces the installed one, so that a build that fails the card log or warm-equivalence checks never becomes the PC's Forge.
+
+- Given upgrade-check --dir DIR, when it runs, then cardlog-check, serve-check and the overrides check use DIR and the summary names DIR.
+- Given a failure in DIR, then the installed build's checked record is unchanged.
+- Given --plan, then the staged check is listed before the install step.
+
+Evidence of the gap (TODO audit, 2026-10-29): cli_upgrade.py upgrade-check has only --plan; HISTORY records 'checks the installed build only, with no --dir' as a known low issue; install._setup already takes a folder.
+
+Gap: none of the criteria is met yet.
+
+First slice (TODO audit, 2026-10-29): Add --dir to lib/forge/cli_upgrade.py's upgrade-check (only --plan exists today) and pass it to install._setup(forge_dir=DIR, remember=False); never call simjar.record_failed for the installed build. Fake-Forge fixture tests for plumbing, skip/fail summaries and no installed record. Useful for FG#2 (Forge 2.0.16, mid-November).
+
+**E11-S46** · Claude Code · should · S · missing
+
+As the operator maintaining Deck Lab, I want editor.js's draft storage and rebase functions moved into their own script, so that building E2-S16 doesn't break the 1,200-line CI guard.
+
+- Given the move, when the browser and Node loaders run, then editor-drafts.js loads right after editor.js and every moved function keeps its global name and body.
+- Given the existing editor draft, resume and rebase UI tests, then they pass unchanged.
+- Given audit_source_lengths.py --check, then both files are under 1,200 lines with the threshold and exclusions unchanged.
+
+Evidence of the gap (TODO audit, 2026-10-29): web/editor.js is 1,198 lines (wc), 2 under lint.yml's guard; E2-S16's slice adds draft code there.
+
+Gap: none of the criteria is met yet.
+
+First slice (TODO audit, 2026-10-29): Move reapplyList, reapplyFields, rebase, draftKey, queueDraft, saveDraft, draftStored, readDraft, removeDraft and timeWords unchanged into web/editor-drafts.js, register it in index and the Node loader, prove bodies identical.

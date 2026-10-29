@@ -10,9 +10,9 @@ An index of open work, one row per item; each row points to the doc that owns th
 
 **Ready queue:** `E11-S30`, the visual redesign Matt chose on 2026-10-24 ("P1"). Slice 14 of [visual-design.md](decklab/design/visual-design.md#7-rollout) is implemented, as are slice 13's scoped recorded packing activity, verified intact-product storage review and per-card movable-copy priorities. Exact physical printing is recorded as a built deck's Printings in box line (2026-10-27). Slice 15's empty, loading and failed states are drawn and built, dark mode was checked on full data (2026-10-27) and Matchups with saved results in dark (2026-10-29); device acceptance remains open. The approved desktop keyboard plan is built; global search has its separate decision below. Explicit original-row associations for newly added arrival checks are implemented, with component-wide verification retained; targeted backend/UI and isolated native checks passed. Casual inline verification placement is implemented for proven targets, with single canonical controls, component-wide semantics and verified fallback; final UI/native checks and caption review passed. Collection question 6 and touch/Safari acceptance remain separate gates, with Card colour matching the compatibility default.
 
-**Ready reserve (reviewed 2026-10-28):** after the redesign, choose an `OPEN` row below; there is no fixed order within the reserve. Useful independent starts include drafts across devices (`E2-S16`) and audited field-membership editing (`E3-S23`); source-aware two-player and pod counters (`E4-S26`) are built, with physical-device acceptance separate. Other ready work covers audited field membership, sideboard tests, missing-card nightly shop checks and experiment configuration/adoption controls; the self-hosting doctor is built. Every `OPEN` story names a concrete first slice and its later dependencies. Fixture-based work needs no new Forge games, household records or physical devices; real-device acceptance, live installations/migrations, purchases and Forge runs retain their separate gates.
+**Ready reserve (audited 2026-10-29):** after the redesign, choose an `OPEN` row below; there is no fixed order within the reserve. The 2026-10-29 audit checked every row against the code and added fifteen stories. Matt's own requests come first (2026-10-29): the Matchups deck picker (`E3-S27`), fewer receipt steps (`E6-S27`) and a compact To buy table (`E5-S26`). Other quick starts: the split keeping the extra-copies mark (`E6-S25`), last played and a Not played lately sort (`E1-S27`), decks a delivery made ready (`E6-S26`) and queueing a deck's missing cards (`E5-S25`). Larger: drafts across devices (`E2-S16`, after `E11-S46`), field-policy selection (`E3-S23`), sideboard-plan tests (`E4-S16`) and free pool replacements (`E3-S25`). Every `OPEN` story names a concrete first slice in its owner. Fixture-based work needs no new Forge games, household records or physical devices; real-device acceptance, live installations/migrations, purchases and Forge runs keep their separate gates.
 
-**Maintenance lane (updated 2026-10-28):** Tokens' workflow split and the source-length CI guard (`E11-S36`, `E11-S43`) are built. The editor workflow and collection parser splits (`E11-S37`, `E11-S38`) are built, creating room for their upcoming features. Keep structural and feature changes separate. The comment and command-document audits (`E11-S41`, `E11-S42`) are built. The fixture-only test entry point (`E11-S44`) is built. The test-group split (`E11-S40`) is built; the PostgreSQL snapshot split (`E11-S39`) is built and waits only on its separate disposable-database qualification. The [source-maintenance owner](decklab/SOURCE_AUDIT.md#maintenance-backlog) records the measured files, boundaries and validation. Length is a review trigger, not a reason to divide every large file mechanically.
+**Maintenance lane (updated 2026-10-28):** Tokens' workflow split and the source-length CI guard (`E11-S36`, `E11-S43`) are built. The editor workflow and collection parser splits (`E11-S37`, `E11-S38`) are built, creating room for their upcoming features. Keep structural and feature changes separate. The comment and command-document audits (`E11-S41`, `E11-S42`) are built. The fixture-only test entry point (`E11-S44`) is built. The test-group split (`E11-S40`) is built; the PostgreSQL snapshot split (`E11-S39`) is built and waits only on its separate disposable-database qualification. Two small tasks are ready: make room in `web/editor.js` (`E11-S46`, 1,198 of 1,200 lines) before `E2-S16`, and reword the database commands that still name old files (`E11-S12`). The [source-maintenance owner](decklab/SOURCE_AUDIT.md#maintenance-backlog) records the measured files, boundaries and validation. Length is a review trigger, not a reason to divide every large file mechanically.
 
 **Needs Matt or another person — these don't block coding:**
 - **`E11-S31`: global-search scope.** Choose the sources (visible decks, the viewer's collection and/or all Scryfall cards) and result grouping before building. Library title, colour and archetype filters (`E1-S05`) are built independently of that decision.
@@ -41,7 +41,10 @@ An index of open work, one row per item; each row points to the doc that owns th
 
 | id | status | pri | size | item |
 |---|---|---|---|---|
-| `E2-S16` | OPEN | could | L | Save an unsaved editor draft privately for the same profile to resume on another device, with revision conflicts reviewed. |
+| `E2-S16` | OPEN | could | L | Browser-only drafts today. First slice, after `E11-S46`: a private per-profile server draft store with revision checks (unapplied migration), a guarded `/api/deck/draft` and a Save-for-later/Resume banner; two simulated clients. |
+| `E1-S27` | OPEN | should | S | Library tiles show last played and game count from visible Game-log records, plus a Not played lately sort. Later an Overview line and what changed since the last game. |
+| `E1-S28` | OPEN | could | M | After `E1-S27`: suggest up to 3 ready home pairs for tonight, ranked by evenness (real record, else Forge) and time since played, with plain reasons. Pure function and fixtures first. |
+| `E2-S27` | OPEN | could | S | How to play names the cards its guide mentions that have left the deck (from the deck's own former revisions only). Server helper and fixture tests. |
 | `E2-S22` | DECISION | must | M | Physical hardware/touch-usability follow-up on the household's iPhones and M2 11-inch iPad; the six-configuration Safari Simulator suite passes ([evidence](decklab/safari/EVIDENCE.md)). |
 
 ## Deck Lab: collection, orders and buying
@@ -51,8 +54,16 @@ An index of open work, one row per item; each row points to the doc that owns th
 | id | status | pri | size | item |
 |---|---|---|---|---|
 | `E5-S15` | DEFERRED | should | M | User1 asks from the page for a card or a Forge run, Matt approves (`E3-S13`); not urgent. |
-| `E5-S08` | OPEN | could | XL | MTGMate checks cover queued and proven saved-home missing names on Shopping and deck Prices; next investigate another shop. |
-| `E7-S32` | OPEN | could | L | Build Scan cards' photo and pending-list flow from the [recognition spike](decklab/design/scanning-spike.md); fixtures first, real phone-photo acceptance separately. |
+| `E5-S08` | OPEN | could | XL | MTGMate checks cover queued and saved-home missing names on Shopping and deck Prices; next research a second Australian shop (robots, page format) and split `lib/shops.py` into per-shop adapters with fixture pages. |
+| `E5-S25` | OPEN | should | M | Queue missing cards… on a home deck's Cards tab adds its uncovered missing cards to the purchase queue as one audited, revision-checked change. Fixtures for dedupe and conflicts. |
+| `E5-S26` | OPEN | should | S | To buy rows are tall because Ref AUD holds the whole MTGMate snapshot and unknowns are sentences; show a compact marker and move the details into the row's … part. |
+| `E6-S25` | OPEN | should | S | `order split` drops the extra-copies mark, bringing back the pool warning that blocks receipts and table refreshes; carry it to the new part in the same change and drop AGENTS.md's workaround. |
+| `E6-S26` | OPEN | should | S | After a receipt, Where these go says which decks are now ready to build (or still N short) with a Packing plan link. Fixtures for ready, short and no-inventory viewers. |
+| `E6-S27` | OPEN | should | M | Recording a mixed cards-and-tokens delivery has too many blockers; add Everything arrived as ordered, one Backs are as recorded/blank answer and All checks done, with unchanged requests. |
+| `E7-S32` | OPEN | could | L | Recognition spike and scan CLI built; next `POST /api/collection/scan` (injectable OCR, own-space guard) with fixture tests, then Collection's Scan cards sheet into the import preview; real phone photos separately. |
+| `E7-S08` | OPEN | could | M | Forge's `DL\|zone` lines log token moves but `cardlog.py` drops them; first tally each token's per-game peak into the batch record (fixture lines). Real counts need fresh runs. |
+| `E7-S23` | OPEN | could | M | No own/opponent split of a deck's tokens yet; first an oracle-text classifier attached to the token needs, labelled approximate, with fixtures. Headings and counts later. |
+| `E7-S24` | OPEN | could | L | First the read-only slice: dice and counter needs from oracle text (`lib/tokens/counters.py`) with fixtures. Recording owned dice needs Matt's record shape and a migration. |
 
 ## Deck Lab: Commander nights
 
@@ -60,7 +71,10 @@ An index of open work, one row per item; each row points to the doc that owns th
 
 | id | status | pri | size | item |
 |---|---|---|---|---|
-| `E9-S07` | OPEN | could | L | The editor's EDHREC ideas scope is built (saved commander); next: ideas for a changed draft commander, partner pairs and EDHREC's theme/budget/bracket pages. |
+| `E9-S07` | OPEN | could | L | Ideas built on the deck page and the editor (saved commander); next `GET /api/deck/edhrec` takes the draft's commander(s) so the editor stops saying save first; later theme/budget/bracket pages. |
+| `E9-S26` | OPEN | could | M | Stats roles (built) gain free pool cards in the commander's colours for each role, inventory-gated, from oracle tags. Cited role targets wait on Matt choosing a template source. |
+| `E9-S27` | OPEN | could | S | Print play sheet adds an At the table section for Commander decks (bracket sentence, Game Changers, combos, data date) from loaded facts. UI fixture test. |
+| `E9-S11` | DEFERRED | could | L+pc | Four-player pod runs from the page (with `E9-S21` win shares and `E9-S22` why-not by Start); after `FG#2`. First `lib/forge/pods.py` from the prototype, fixtures only. |
 
 ## Deck Lab: testing and Forge
 
@@ -68,9 +82,14 @@ An index of open work, one row per item; each row points to the doc that owns th
 
 | id | status | pri | size | item |
 |---|---|---|---|---|
-| `E3-S23` | OPEN | could | M | Membership, counts and identity/policy/persistence foundations are built; selector integration and audited home-admin preview/save remain. |
-| `E4-S16` | OPEN | could | L | Exact post-board previews are built; next compare saved plans on the base games, with simulation permissions, stale-result warnings and a verdict. |
-| `E11-S16` | OPEN | could | L | Local worker-only fallback estimates are built; other configuration assumptions and adoption/replay-impact controls remain. |
+| `E3-S23` | OPEN | could | M | Membership view, exclusion counts and policy persistence built (0017 unapplied). Next: apply the policy in home's field selection (new `forge/field_policy_overlay.py`; field.py is near its limit), then audited admin preview/save. |
+| `E4-S16` | OPEN | could | L | Post-board previews built. Next `POST /api/play/sideboard-test` reusing the preview's checks and the paired variant tests (`variants.run_test`, `require_start`), with a verdict and older-list marks; fake-Forge fixtures. |
+| `E3-S25` | OPEN | should | M | Cards Forge marks never cast offer free pool replacements (`swaps.py` ranking generalised, inventory-gated), then Test this swap into the variant sheet. Fixtures; no Forge runs. |
+| `E3-S26` | OPEN | could | S | Matchup progress and Playing now show the warm-worker fallback sentence the API already returns (no page reads `job.fallback`). UI fixtures; members' view names nobody. |
+| `E3-S27` | OPEN | should | S | Matchups' Show matchups for picker shows only short names; give each deck its colour pips and a small picture (new accessible `deck-picker.js` listbox), keeping keyboard use. |
+| `E3-S19` | DEFERRED | could | M | Group run against chosen opponents: the page/API lacks an opponents subset for field runs (`field.opponents` has it). Useful only once a member deck is Public. |
+| `E11-S45` | OPEN | should | M | Before `FG#2`: `upgrade-check --dir` runs the cardlog, serve and overrides checks against a staged build, recording nothing for the installed one. Fake-Forge fixtures. |
+| `E11-S16` | OPEN | could | L | Dry-run estimates, recommendations and replay `--dry-run` built; next a read-only `overrides impact` preview of which saved matchups an adoption would re-key, then adoption without hand-editing sets.json. |
 | `E11-S28` | DECISION | should | M | Run the user-testing session with User2 from the prepared [checklist](decklab/design/user-testing-user2.md) (confirm his device first), then the follow-up review and stories. |
 | `FG#2` | WAITING | should | L+pc | Forge 2.0.16 (about mid-November 2026): rebase the fork, build, check the overrides, replay every matchup. The post-build checks are one command, built 2026-10-21: `python -m decklab.lib.forge upgrade-check` (`--plan forge-2.0.16` prints the rebase and build steps; `E11-S15`). |
 | `FG#3` | DEFERRED | could | M+pc | More experiment games (AI profiles, team-pump fix, override sets), decided with `FG#2`'s replay; the clean `fiery` test ran 2026-10-21 (C4 does what `fiery` does). |
@@ -93,6 +112,8 @@ An index of open work, one row per item; each row points to the doc that owns th
 | id | status | pri | size | item |
 |---|---|---|---|---|
 | `E11-S39` | DECISION | could | M | Snapshot split built (`pg_snapshot.py`, fixture checks pass); Matt authorizes the disposable-database location, persistence and rollback qualification. |
+| `E11-S46` | OPEN | should | S | Before `E2-S16`: move `web/editor.js`'s draft and rebase functions unchanged into `editor-drafts.js` (editor.js is 1,198 of 1,200 lines). Structural only. |
+| `E11-S12` | OPEN | could | S | Database commands still name old files (a stale `tokens --expect` says `magic/tokens.csv` has changed; the pool's and `accessories check`'s product wording); reword them. |
 
 ## Areas with no open rows
 
