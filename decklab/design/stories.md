@@ -43,12 +43,12 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 23 | 21 | 0 | 0 | 2 |
 | [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 28 | 24 | 3 | 1 | 0 |
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 19 | 16 | 0 | 1 | 2 |
-| [E9: Commander nights](#e9-commander-nights) | 22 | 16 | 1 | 4 | 1 |
+| [E9: Commander nights](#e9-commander-nights) | 22 | 16 | 2 | 3 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 35 | 31 | 1 | 1 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 41 | 32 | 5 | 1 | 3 |
-| **Total** | **270** | **227** | **18** | **11** | **14** |
+| **Total** | **270** | **227** | **19** | **10** | **14** |
 
-Counted from the story headers on 2026-10-29 after the source-aware two-player and pod counters, alongside the current feature and maintenance work. The reviews added five feature stories and eight hygiene stories, then the fixture-only entry-point story E11-S44, and corrected E1-S12 from missing to partial. Rechecked 2026-10-29: E1-S12 is built and E11-S39 partial (its database qualification pending). The TODO audit of 2026-10-29 added fifteen missing stories (twelve from the audit: E1-S27, E1-S28, E2-S27, E3-S25, E3-S26, E5-S25, E6-S25, E6-S26, E9-S26, E9-S27, E11-S45, E11-S46), then Matt's three UI requests (E3-S27, E5-S26, E6-S27), and corrected E7-S32 from missing to partial (its recognition spike and CLI are built). Matt closed E11-S16 as built the same day, and E3-S27, E5-S26, E6-S25, E6-S27 and E11-S46 were built the same day (E11-S12 stays partial after a further slice). Later the same day E5-S25 and E6-S26 were built, E1-S27's first slice (the library) made it partial, and E11-S12 and E3-S26 were built. E1-S27's Overview slices then finished it, and E2-S27 and E9-S27 were built. E1-S28 was built the same day. E3-S25's first slice (its replacements API, 2026-10-29) made it partial. E11-S45 was built the same day. Recounted 2026-10-30: E7-S23's first slice (the token side on deck pages and the printout) made it partial. E7-S24's read-only slice (the counters and dice a deck's cards use) made it partial too.
+Counted from the story headers on 2026-10-29 after the source-aware two-player and pod counters, alongside the current feature and maintenance work. The reviews added five feature stories and eight hygiene stories, then the fixture-only entry-point story E11-S44, and corrected E1-S12 from missing to partial. Rechecked 2026-10-29: E1-S12 is built and E11-S39 partial (its database qualification pending). The TODO audit of 2026-10-29 added fifteen missing stories (twelve from the audit: E1-S27, E1-S28, E2-S27, E3-S25, E3-S26, E5-S25, E6-S25, E6-S26, E9-S26, E9-S27, E11-S45, E11-S46), then Matt's three UI requests (E3-S27, E5-S26, E6-S27), and corrected E7-S32 from missing to partial (its recognition spike and CLI are built). Matt closed E11-S16 as built the same day, and E3-S27, E5-S26, E6-S25, E6-S27 and E11-S46 were built the same day (E11-S12 stays partial after a further slice). Later the same day E5-S25 and E6-S26 were built, E1-S27's first slice (the library) made it partial, and E11-S12 and E3-S26 were built. E1-S27's Overview slices then finished it, and E2-S27 and E9-S27 were built. E1-S28 was built the same day. E3-S25's first slice (its replacements API, 2026-10-29) made it partial. E11-S45 was built the same day. Recounted 2026-10-30: E7-S23's first slice (the token side on deck pages and the printout) made it partial. E7-S24's read-only slice (the counters and dice a deck's cards use) made it partial too. E9-S26's free cards by role on the Stats tab made it partial, leaving its cited role targets to Matt's choice of template.
 
 ---
 
@@ -3052,7 +3052,7 @@ Evidence:
 
 Getting the household's Commander decks ready for social Commander nights at a local shop, where staff make 4-player pods and the shop publishes a bracket range. The editor checks the Commander deck rules and a minimum bracket from Game Changers, mass land denial and extra turns; a Commander deck's Overview opens with a plain bracket sentence, what opponents will face and the dates of the card data behind them, and home admins can record the usual night's aim and house rules. Practice games use the free multiplayer mulligan, and Forge plays Commander decks 1v1 only, marked indicative. Two-card combos (from Commander Spellbook) and Wizards' latest Commander announcement are checked too (2026-10-21). The Game log records three/four-player pods separately from 1v1 (E4-S18/E9-S16, 2026-10-28). Multiplayer counters/simulations and editor EDHREC ideas remain separate work.
 
-Open: E9-S07, E9-S11, E9-S21, E9-S22, E9-S26.
+Open: E9-S07, E9-S11, E9-S21, E9-S22, E9-S26 (partial).
 
 **E9-S02** · Matt · must · M · built
 
@@ -3374,7 +3374,7 @@ Evidence:
 
 Gap: Only two-card combos (Spellbook's three-card combos two pieces away aren't offered); combos beyond the 100 most serious aren't sent, so a free piece among them isn't shown; the in-use state doesn't say which deck holds the copies; the Overview's At the Commander table doesn't mention them.
 
-**E9-S26** · Matt · could · M · missing
+**E9-S26** · Matt · could · M · partial
 
 As a deck builder filling a Commander 99 from the shared pool, I want each role on the Stats tab (ramp, draw, removal, sweepers) to list the free pool cards in the commander's colours that fill it, so that I can top up a thin role with cards we already own.
 
@@ -3382,11 +3382,17 @@ As a deck builder filling a Commander 99 from the shared pool, I want each role 
 - Given copies held by built decks or intact products, then they are excluded.
 - Given the tag file is unavailable, then the panel says tags are unavailable rather than showing nothing.
 
-Evidence of the gap (TODO audit, 2026-10-29): lib/stats/__init__.py already returns roles from cards.ROLES and web/stats.js draws 'Card types and roles', so counts are built; no feature finds free cards by role (find_cards filters colour only).
+Evidence:
+- `decklab/lib/decks/role_pool.py` (`free_by_role`, `fits`, `MAX_PER_ROLE`): the pure rules. A candidate has a copy free for the deck (`pool.free_copies`: owned and on the way, less other built decks' and intact products' copies; never a basic land), isn't in the list (any section, the commander too, and for a Play-now list with no Commander section the Planned list's commander, whose identity it takes), has a colour identity within the commanders' and is legal in Commander; each role lists at most 10, most-printed first, then by name, and counts the rest. The roles are the Stats tab's (`cards.ROLES`, each card's `roles` in the card index, built from Scryfall's oracle tags with their child tags), so a listed card is one the role's bar would count. It sits beside `lib/decks/swaps.py` rather than in `lib/stats`, which the API tests replace with a stand-in module
+- `decklab/lib/api/role_cards.py` (`role_cards`): `GET /api/deck/role-cards?id=&version=target|owned` (`feature_routes.py`), with GET /api/deck/replacements' reading rule (a hidden deck is the missing deck's 404, a product or pairing a 400, then 403 "That collection isn't public." for a viewer who may not see the space's inventory), then 400 for a casual deck or a Commander deck with no commander. Each role says its tag and whether the card data holds it (`cards.info()`'s role tag counts); `tags_available` is false when it holds none. It names no other deck
+- `decklab/web/stats.js` (`rolePoolPart`, `rolePoolBody`): **Free cards by role** under the role bars of a Commander deck whose collection the visitor may see (the deck answer's `owned`), asked for once when opened; each role's cards with their free copies and how many are on the way, "None free in the commander's colours.", an untagged role or "Role tags are unavailable" when the card data has no role tags, a refusal's reason, and Try again after any other failure
+- `decklab/tests/test_role_cards.py` (the rules on test cards, and the API in the fixture sandbox: colour identity, held and on-the-way copies, the Play-now list (one without its commander too), untagged roles and no tags, bad requests, the route, a member's own pool, a public deck without its inventory, no holder named) and `test_role_cards_ui.py` (the panel under Node)
 
-Gap: none of the criteria is met yet.
+Now (2026-10-29): the three criteria are built ([HISTORY.md](../HISTORY.md#free-cards-by-role-on-the-stats-tab-2026-10-29-e9-s26)).
 
-First slice (TODO audit, 2026-10-29): A pure function in lib/stats taking the deck, the space's free pool and cards.tag_members for ROLE_TAGS, returning up to 10 candidates per role filtered by colour identity (reuse find_cards' owned scope and _fits). Fixture tag jsonl tests; a 'Free cards for this role' link under each role bar in web/stats.js as slice 2. Reference ranges from a cited, dated template need Matt to pick the source.
+Next slice: cited role targets (a reference range for each role from a cited, dated deck-building template), once Matt chooses the template source. That's a decision, not fixture-only work.
+
+Gap: the roles list free cards to fill them, but not how many each role should have.
 
 **E9-S27** · User1 · could · S · built
 

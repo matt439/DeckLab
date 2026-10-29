@@ -21,6 +21,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 - **`E11-S30`: the redesign's last gates.** Choose Collection's colour filter (card colour or colour identity, [question 6](decklab/design/visual-design.md#6-open-questions-and-risks)), then check touch and Safari on the household's iPhones and iPad.
 - **`E11-S39`: database qualification of the snapshot split.** Authorize a disposable-database run of the location, deck persistence and rollback cases; the split itself passes its fixture checks.
 - **`E7-S24`: owned dice and counters.** Choose what a recorded die or counter says (kind, colour or design, quantity; whether one die stands for any kind) before its migration; the read-only counter needs are built.
+- **`E9-S26`: Commander role targets.** Choose the cited, dated template the Stats roles' targets come from; free pool cards for each role are built.
 - **`E11-S28`: User2's user-testing session.** Confirm his device, then use the prepared [checklist](decklab/design/user-testing-user2.md).
 
 **Activation:** migrations `0012` and `0013` were applied and the server restarted on committed code on 2026-10-19, so the privacy code and guarded member removal are live. No visibility choice or real member removal has been made.
@@ -65,7 +66,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 | id | status | pri | size | item |
 |---|---|---|---|---|
 | `E9-S07` | OPEN | could | L | Ideas built on the deck page and the editor (following the draft's commander); left: ideas for a never-saved deck, and EDHREC's theme/budget/bracket pages. |
-| `E9-S26` | OPEN | could | M | Stats roles (built) gain free pool cards in the commander's colours for each role, inventory-gated, from oracle tags. Cited role targets wait on Matt choosing a template source. |
+| `E9-S26` | DECISION | could | M | Free pool cards for each Stats role are built; cited role targets (how many each role should have) wait on Matt choosing a template source. |
 | `E9-S11` | DEFERRED | could | L+pc | Four-player pod runs from the page (with `E9-S21` win shares and `E9-S22` why-not by Start); after `FG#2`. First `lib/forge/pods.py` from the prototype, fixtures only. |
 
 ## Deck Lab: testing and Forge

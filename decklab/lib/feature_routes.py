@@ -23,7 +23,7 @@ def _sideboard_preview(**params):
 
 def dispatch(handler, route, query):
     from decklab.lib.api import (accessories, accessory_undo, activity, arrivals, activity_mixed_undo, activity_undo, assembly, assembly_completion, assembly_standins, assembly_ticks, box_check, box_repair, collection, compare, considering, collection_edit, collection_locations, collection_trade, cover, deck_printings, edhrec, editor, history,
-                                 library_forge, maintenance, opponents, play_pods, play_records, play_tonight, precon_coverage, precons, products, product_tokens, rankings, receipts, rename, retirement, shopping, shopping_order_changes, shopping_orders, shopping_queue, shopping_queue_missing, swaps, token_cards, token_plan, tokens, variant_queue, visits, wishlist_undo)
+                                 library_forge, maintenance, opponents, play_pods, play_records, play_tonight, precon_coverage, precons, products, product_tokens, rankings, receipts, rename, retirement, role_cards, shopping, shopping_order_changes, shopping_orders, shopping_queue, shopping_queue_missing, swaps, token_cards, token_plan, tokens, variant_queue, visits, wishlist_undo)
     from decklab.lib.api.common import MAX_BODY
 
     gets = {
@@ -49,6 +49,7 @@ def dispatch(handler, route, query):
         ("deck", "revision"): (history.deck_revision, ("id", "revision", "version")),
         ("deck", "swaps"): (swaps.suggest_swaps, ("id", "version", "card")),
         ("deck", "replacements"): (swaps.suggest_replacements, ("id", "version", "card")),
+        ("deck", "role-cards"): (role_cards.role_cards, ("id", "version")),
         ("deck", "cards"): (cover.cover_cards, ("id",)),
         ("deck", "opponents"): (opponents.opponents_view, ("id",)),
         ("deck", "edhrec"): (edhrec.edhrec_view, ("id", "commander", "commander2")),

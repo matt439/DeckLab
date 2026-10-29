@@ -2,6 +2,34 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Free cards by role on the Stats tab (2026-10-29; E9-S26)
+
+A Commander deck's Stats roles (ramp, card draw, removal, board wipes and the rest, counted from Scryfall's
+oracle tags) can now be topped up from the pool. **Free cards by role**, under the role bars, lists for each
+role the cards the deck's space owns with a copy free for it: owned or on the way, less what other built decks
+and intact products hold (never a basic land), not in the list already, with a colour identity inside the
+commander's and legal in Commander (a Play-now list with no Commander section takes the Planned list's
+commander, which then counts as in the list too). Each role shows at most 10, most-printed first, with the free copies and
+how many are on the way, and counts the rest. The rules are `decklab/lib/decks/role_pool.py`'s
+(`free_by_role`), reading each card's `roles` from the card index, so a listed card is one the role's bar would
+count. `GET /api/deck/role-cards?id=&version=target|owned` (`lib/api/role_cards.py`) answers with GET
+/api/deck/replacements' reading rule: a hidden deck is missing (404), a product or pairing a 400, a viewer who
+may not see the space's inventory 403 "That collection isn't public.", then a casual deck or one with no
+commander a 400. It names no other deck. Each role says its tag and whether the card data holds it; when the
+card data holds no role tag the panel says role tags are unavailable rather than showing nothing.
+`web/stats.js` (`rolePoolPart`) shows the part only for a Commander deck whose collection the visitor may see
+(the deck answer's `owned`), and asks once when it's opened. The deck answer itself is unchanged.
+
+Fixture tests: `decklab/tests/test_role_cards.py` (the rules on test cards; the API in the fixture sandbox:
+colour identity, held and on-the-way copies, the Play-now list (one without its commander too), untagged roles and no tags, bad requests, the
+route, a member's own pool, a public deck without its inventory, no holder named) and `test_role_cards_ui.py`
+(the panel under Node). No live data, migration, server or Forge run was touched.
+
+- **Left:** cited role targets (how many cards each role should have, from a cited, dated template) wait on Matt
+  choosing the template source.
+- **Known low issues:** the most-printed order stands in for how much a card is played; a card the deck's
+  sideboard plays is left out as if it were in the deck.
+
 ## Token peaks in the card log (2026-10-29; E7-S08 slice 1)
 
 The first slice of suggesting how many of a token a game needs: the card log now keeps a count. DeckLabSim's

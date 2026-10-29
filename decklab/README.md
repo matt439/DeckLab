@@ -197,6 +197,17 @@ most serious first, with the total. On the PC, `python -m decklab.lib.combos nea
 <deck-id> [--owned]` prints the same list, free first, with each card's place in
 the deck's own space (the command line reads every space).
 
+Under its role bars, a Commander deck's Stats tab has **Free cards by role**
+(E9-S26) for a viewer who sees the space's collection: for each role (ramp,
+card draw, removal, board wipes and the rest, from the same Scryfall oracle
+tags as the bars) up to 10 cards the space owns with a copy free for the deck
+(owned or on the way, less what other built decks and intact products hold),
+not in the list yet, inside the commander's colour identity and legal in
+Commander, most-printed first. It comes from `GET /api/deck/role-cards?id=&version=`
+(403 "That collection isn't public." to anyone else, after the deck's own 404),
+names no other deck, and says role tags are unavailable when the card data has
+none. It suggests only: a card goes in through the editor.
+
 **Commander night** (E9-S20, built 2026-10-16) is one optional household record,
 edited in Settings by a home admin. Give it a name; venue, household target
 bracket, published range, house rules/table notes and date last checked are

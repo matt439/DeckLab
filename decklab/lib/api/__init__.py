@@ -31,6 +31,7 @@ Usage:
     api.swaps.suggest_swaps("casual/gruul-ramp")  # GET /api/deck/swaps?id=...: owned stand-ins per missing card
     api.swaps.suggest_draft_swaps(body)   # POST /api/deck/swaps: the same for the editor's Play-now list
     api.swaps.suggest_replacements("casual/gruul-ramp", card="Shock")  # GET /api/deck/replacements: free pool cards for a listed card
+    api.role_cards.role_cards("commander/giada-angels")  # GET /api/deck/role-cards: free pool cards for each Stats role
     api.save_deck(body)                   # POST /api/deck/save: the new text and table, one change
     api.create_deck(body)                 # POST /api/decks: a new deck, one change (201)
     api.stale_view()                      # GET /api/tables/stale
@@ -149,6 +150,8 @@ called as before (from decklab.lib import api; api.<name>). Each part:
     swaps.py         stand-ins for missing cards (E2-S07): suggest_swaps(), suggest_draft_swaps(),
                      view_swaps() (deck_view's "swaps"); free pool replacements for a listed card
                      (E3-S25): suggest_replacements(); the rules in lib/decks/swaps.py
+    role_cards.py    free pool cards in a Commander deck's colours for each Stats role (E9-S26):
+                     role_cards(); the rules in lib/decks/role_pool.py
     saving.py        save_deck(), create_deck(), stale_view(), update_tables(); _save_lock and
                      inventory_write_lock() (the lock order for inventory writes)
     history.py       a deck's saved revisions (read-only): deck_history(), deck_revision(), from

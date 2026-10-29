@@ -145,6 +145,8 @@ inventory writes answer 503 with "reason": "database":
                                          visitor may not see)
     GET  /api/deck/replacements?id=&version=target|owned&card=   free pool cards that could replace
                                          a card of the list's Deck section (E3-S25; the same reading rule)
+    GET  /api/deck/role-cards?id=&version=target|owned   free pool cards in a Commander deck's colours
+                                         for each Stats role (E9-S26; lib/api/role_cards.py; the same rule)
     POST /api/deck/cover                 body {"profile", "id", "expect", "cover"}: set or clear the
                                          deck's Cover card line, one change (lib/api/cover.py)
     POST /api/deck/token-cards           body {"profile", "id", "expect", "tokens_sha256", "cards"}: set a
