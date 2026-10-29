@@ -146,6 +146,8 @@ function tokenNeed(need, faces = null) {
     el("div", { class: "token-need-body" },
       el("p", { class: "token-need-name" }, el("b", { text: need.name }), desc ? ` ${desc}` : null),
       tokMadeBy(need.made_by),
+      // Whose side it lands on, read from the cards' text (E7-S23): said only when it may be the opponent's.
+      need.side_words ? el("p", { class: `token-need-side token-need-side-${need.side}`, text: need.side_words }) : null,
       el("p", { class: "token-need-state" }, tokenStateChip(need.state, need.words)),
       cards.length ? el("ul", { class: "token-grab", "aria-label": "Grab" }, cards.map((card) => el("li", {},
         `Grab ${tokCardWords(card, faces)}`,

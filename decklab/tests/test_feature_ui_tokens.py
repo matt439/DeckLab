@@ -534,6 +534,22 @@ class TokensUiTests(unittest.TestCase):
           assert.equal(tokenStateChip('none').textContent, 'None owned');
         """)
 
+    def test_deck_page_says_when_a_token_may_be_the_opponents(self):
+        self.run_js(self.TOKENS + """
+          // E7-S23: the server's side words under "Made by", only for a token that may land on the other side.
+          clear(main);
+          const words = "For your opponent: Orchard Gift's text gives it to another player (approximate)";
+          const section = tokensSection({tokens: {...deckTokensResult, needs: [
+            need('Spirit', 'none', 'None owned', {side: 'opponent', side_from: ['Orchard Gift'], side_words: words}),
+            need('Elf', 'none', 'None owned', {side: 'own', side_from: [], side_words: null}),
+            need('Treasure', 'none', 'None owned')]}});
+          main.append(section);
+          const lines = section.querySelectorAll('.token-need-side');
+          assert.equal(lines.length, 1);
+          assert.equal(lines[0].textContent, words);
+          assert(lines[0].getAttribute('class').includes('token-need-side-opponent'));
+        """)
+
     def test_deck_page_packed_token_cards_and_their_sheet(self):
         self.run_js(self.TOKENS + """
           clear(main);

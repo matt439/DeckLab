@@ -54,7 +54,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 | `E5-S08` | OPEN | could | XL | MTGMate checks cover queued and saved-home missing names on Shopping and deck Prices; next research a second Australian shop (robots, page format) and split `lib/shops.py` into per-shop adapters with fixture pages. |
 | `E7-S32` | OPEN | could | L | Recognition spike and scan CLI built; next `POST /api/collection/scan` (injectable OCR, own-space guard) with fixture tests, then Collection's Scan cards sheet into the import preview; real phone photos separately. |
 | `E7-S08` | OPEN | could | M | Forge's `DL\|zone` lines log token moves but `cardlog.py` drops them; first tally each token's per-game peak into the batch record (fixture lines). Real counts need fresh runs. |
-| `E7-S23` | OPEN | could | M | No own/opponent split of a deck's tokens yet; first an oracle-text classifier attached to the token needs, labelled approximate, with fixtures. Headings and counts later. |
+| `E7-S23` | OPEN | could | M | Each token need now says whose side it lands on (approximate, from the cards' text) and the deck page says so; next the Tokens part's own heading for the opponent's tokens, then counting them apart in the library line and Build decks' Grab ticks. |
 | `E7-S24` | OPEN | could | L | First the read-only slice: dice and counter needs from oracle text (`lib/tokens/counters.py`) with fixtures. Recording owned dice needs Matt's record shape and a migration. |
 
 ## Deck Lab: Commander nights

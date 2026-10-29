@@ -2,6 +2,34 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Whose side a token lands on (2026-10-29; E7-S23 slice 1)
+
+Scryfall's links between cards and tokens don't say which player gets a token, so each need of `deck_tokens`
+now reads its making cards' rules text (`decklab/lib/tokens/sides.py`). A card's sentences that create
+something and name the token count (every creating sentence when none names it), and the clause before
+"create(s)" says who: nobody named or "you" is the deck's own; "target opponent", "each opponent", "an
+opponent", "defending player", "each other player", or "under an opponent's control" after the token is the
+opponent's; "its controller", "that creature's controller", "target player", "each player", "that player" or
+"you and target opponent" may be either. Only the subject after the clause's last "and" counts ("target
+opponent loses 2 life and you create" is the deck's own), unless it's a joint "... and you each". A token several cards make is the deck's own only when every one makes
+it for the deck, the opponent's only when every one gives it away, and either otherwise. Each need gains
+`side` (`own`, `opponent` or `either`), `side_from` (the cards that may give it away) and `side_words`
+("For your opponent: Forbidden Orchard's text gives it to another player (approximate)", or "Maybe your
+opponent's: …"; None for the deck's own). The deck page's Tokens part shows the words under "Made by" only for a
+token that may be the opponent's, and `python -m decklab.lib.tokens <deck-id>` prints them too. The side is
+part of the deck's tokens, so only viewers who may see the space's inventory get it; nothing else changes
+(states, words, counts, packing, the library's line).
+
+Fixture tests: `decklab/tests/test_token_sides.py` (the classifier's own, opponent and either sentences, the
+naming sentences first, a need's side and words across several cards, needs from test cards added to
+`fixtures/tokens_cards.jsonl`'s index, the printout's line, and a member viewing a public home deck getting no
+token part at all) and `test_feature_ui_tokens.py` (the line only for a need that may be the opponent's).
+
+- **Known low issues:** the classifier reads English sentences, not rules: a "that player" or "its controller"
+  that is in practice the opponent is marked only as maybe theirs, and tokens made through a quoted ability
+  given to another permanent follow that sentence's words. The opponent's tokens aren't yet under their own
+  heading or counted apart.
+
 ## A staged Forge build checked before it's installed (2026-10-29; E11-S45)
 
 `python -m decklab.lib.forge upgrade-check --dir DIR` runs `cardlog-check`, `serve-check` and the overrides'

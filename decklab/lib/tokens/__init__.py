@@ -31,7 +31,8 @@ claims how many tokens a game needs (see NOTE).
 Parts: rows.py (a CSV row's rules and the file's bytes), names.py (the card
 index and Scryfall face names), details.py (parse_details), matching.py (an
 owned row against one need, and the describing words), needs.py (building
-and wording a need) and ops.py (the writes). This file keeps reading the
+and wording a need), sides.py (whose side of the table a need lands on,
+from the making cards' text) and ops.py (the writes). This file keeps reading the
 inventory and pending orders, deck_tokens, holders and the cache, check and
 the CLI: everything a test patches (read, incoming, deck_tokens,
 cached_deck_tokens, row_uses) has its one binding here, beside its readers,
@@ -77,6 +78,7 @@ from .rows import (DETAILS_MAX, FIELDS, NAME_MAX, NOTES_MAX, NUMBER_MAX, QTY_MAX
                    validate_row)
 from . import ops  # noqa: F401,E402  (registers the tokens.* inventory operations)
 from . import reserve
+from . import sides
 from . import optimise  # noqa: E402
 
 LABEL = inventory_paths.tokens(spaces.HOME)   # how messages name home's tokens.csv
@@ -218,7 +220,7 @@ def deck_tokens(sections, inv=None, incoming_rows=None, held=None):
 
         {needs: [{key, name, kind, type_line, pt, colors, keywords, text, image,
                   faces, face_names, made_by: [{name, quantity, section}],
-                  sideboard_only, state, words, usable, on_the_way,
+                  sideboard_only, side, side_from, side_words, state, words, usable, on_the_way,
                   cards: [{row, front, back, side, quantity, verdict, why, also_for}],
                   stand_ins: [{row, front, back, side, quantity, why, close}],
                   incoming: [{order, front, back, quantity}]}],
@@ -229,7 +231,10 @@ def deck_tokens(sections, inv=None, incoming_rows=None, held=None):
     (read by default). key is a token's oracle id, or "name:<Name>" when
     Scryfall's link doesn't say which of several tokens it is. state is
     ready, check, differs, incoming or none (see STATES); no count of how many
-    a game needs is ever claimed. held (reserve.held_elsewhere: {row index:
+    a game needs is ever claimed. side (sides.side: "own", "opponent" or
+    "either", read from the making cards' rules text, so approximate),
+    side_from (the making cards that may give it to the opponent) and
+    side_words (None for the deck's own) say whose side it lands on. held (reserve.held_elsewhere: {row index:
     [{deck, title, quantity}]}) is what other built decks pack: those cards
     aren't free, so a card's quantity is what's left of its row, and a row with
     none left goes in the need's "in_use" ([{row, front, back, side, quantity,
@@ -257,9 +262,9 @@ def deck_tokens(sections, inv=None, incoming_rows=None, held=None):
                 need = needs.setdefault(f"name:{part}", _unresolved_need(part))
                 _made_by(need, name, line.quantity, section)
 
-    copies, unlisted = [], []
+    copies, unlisted, texts = [], [], {}
     for name, made, unresolved in makers:
-        text = _card_text(cards.card(name))
+        text = texts[name] = _card_text(cards.card(name))
         makes_copy = any(cards.fold(t["name"]) == "copy" for t in made)
         if _COPY_RE.search(text) and not makes_copy and name not in copies:
             copies.append(name)
@@ -274,6 +279,7 @@ def deck_tokens(sections, inv=None, incoming_rows=None, held=None):
     out = []
     for need in needs.values():
         need["sideboard_only"] = all(m["section"] == "Sideboard" for m in need["made_by"])
+        need["side"], need["side_from"], need["side_words"] = sides.side(need, texts)
         need["cards"], need["stand_ins"], need["incoming"] = [], [], []
         missing, packed = [], []
         for i, row in enumerate(inv.rows):
@@ -692,6 +698,8 @@ def _print_deck(deck_id, owned):
         print(f"  {need['words']}")
         print("  Made by " + ", ".join(f"{m['name']}" + (" (sideboard)" if m["section"] == "Sideboard" else "")
                                       for m in need["made_by"]))
+        if need.get("side_words"):
+            print(f"  {need['side_words']}")
         for card in need["cards"]:
             face = card["back"] if card["side"] == "back" else card["front"]
             also = f" (same card as for {_and(card['also_for'])})" if card["also_for"] else ""

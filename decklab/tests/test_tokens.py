@@ -12,6 +12,7 @@ Run from the repo root: python scripts/test_fixtures.py decklab.tests.test_token
 """
 import ast
 import contextlib
+import importlib
 import io
 import json
 import pkgutil
@@ -1055,7 +1056,7 @@ class PatchedNamesTests(unittest.TestCase):
             for sub in submodules:
                 if sub == "__main__":
                     continue
-                module = getattr(tokens, sub)
+                module = importlib.import_module(f"{tokens.__name__}.{sub}")   # plan_products is imported lazily
                 self.assertNotIn(name, vars(module), f"tokens.{sub} has its own {name}")
                 tree = ast.parse(Path(module.__file__).read_text(encoding="utf-8"))
                 used = {n.id if isinstance(n, ast.Name) else n.attr for n in ast.walk(tree)
@@ -1067,7 +1068,8 @@ class PatchedNamesTests(unittest.TestCase):
         for sub in (info.name for info in pkgutil.iter_modules(tokens.__path__)):
             if sub in ("__main__", "names"):
                 continue
-            self.assertNotIn("_faces_at", vars(getattr(tokens, sub)), f"tokens.{sub} has its own _faces_at")
+            self.assertNotIn("_faces_at", vars(importlib.import_module(f"{tokens.__name__}.{sub}")),
+                             f"tokens.{sub} has its own _faces_at")
         self.assertEqual(token_names._faces_at.__module__, token_names.__name__)
 
 
