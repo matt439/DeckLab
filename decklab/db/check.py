@@ -27,6 +27,8 @@ as {name, ok, warning, detail, seconds}:
 - audit trail: every audit.row_change belongs to an audit.change_set;
 - Commander-night notes: the optional household record has a valid revision and complete,
   dated notes (or a retained empty tombstone), using the same value rules as a save;
+- field policy: each format's revision and complete policy are valid and canonical,
+  retaining obsolete deck-incarnation rules without looking up current decks;
 - visibility: Public switches belong to a configured space or one of the home's kit owners;
 - files round trip: the export's files (the inventory's, the raw imports and the deck parts:
   export.inventory_files, read on the same connection), built with inventory.files.build, give
@@ -335,6 +337,39 @@ def _commander_night(c):
     return work
 
 
+def _field_policy(c):
+    """Validate stored policy only; old incarnation rules are intentional tombstones."""
+    def work():
+        from decklab.lib.state import Invalid, field_policy
+        try:
+            if c.execute("select to_regclass('public.field_policy') is null").fetchone()[0]:
+                return True, False, "field policy unavailable until migration 0017"
+            rows = c.execute("select format, revision, content from field_policy order by format").fetchall()
+        except Exception:                          # noqa: BLE001 (never quote database or policy contents)
+            return False, False, "the field policy could not be checked"
+        if not rows:
+            return True, False, "not configured"
+        invalid = (False, False, "the field policy has an invalid saved record")
+        seen = set()
+        for row in rows:
+            if type(row) not in (tuple, list) or len(row) != 3:
+                return invalid
+            fmt, revision, content = row
+            if (type(fmt) is not str or fmt in seen or type(revision) is not int or revision < 1
+                    or type(content) is not dict or content.keys() != {"v", "rules"}):
+                return invalid
+            seen.add(fmt)
+            snapshot = {"format": fmt, "revision": revision, **content}
+            try:
+                normalized = field_policy.normalize(snapshot)
+            except Invalid:
+                return invalid
+            if normalized != snapshot:
+                return False, False, "the field policy is not in its complete saved form"
+        return True, False, f"valid policy for {_plural(len(rows), 'format')}"
+    return work
+
+
 def _space_departures(c):
     """Operational tombstones must have their audit and no resurrected current rows.
 
@@ -472,6 +507,7 @@ def run(dbname=None, say=backup.say):
         result.sub("revision rows", _revision_rows(c), c)
         result.sub("audit trail", _audit_trail(c), c)
         result.sub("Commander-night notes", _commander_night(c), c)
+        result.sub("field policy", _field_policy(c), c)
         result.sub("visibility", _visibility(c), c)
         result.sub("member departures", _space_departures(c), c)
         if inv is not None:

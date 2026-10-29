@@ -20,6 +20,7 @@ what) and only through its table's allow-list of fields, never the raw row:
                       id that can't be read: a script's only)          message only when it sees all
     packing_tick      home viewers only (including admin/script)       the summary only, no task hashes
     commander_night   home viewers only, no outsider admin override     the summary only, no note content
+    field_policy      home viewers only, no outsider admin override     fixed format summary, no policy content
     space, profile    admins                                           the summary only
     profile_email     admins                                           "An email address changed" only
     collection_card,  the space's people only (home: Matt and User1;  INVENTORY_FIELDS' (never notes,
@@ -340,6 +341,8 @@ def _row(row, scope, profiles, space_of, me=None, spaces=None, *, own=None, orde
         return _shown(table, op, summary, before, after) if summary else None
     if table == "commander_night":
         return activity_home.commander_night_row(row, scope, profiles, me)
+    if table == "field_policy":
+        return activity_home.field_policy_row(row, scope, profiles, me)
     if table == "packing_tick":
         return ({"table": table, "op": op, "summary": "Packing progress updated"}
                 if _home_viewer(scope, profiles, me) else None)

@@ -15,7 +15,7 @@ import copy
 import json
 import threading
 import time
-from contextlib import contextmanager
+from contextlib import ExitStack, contextmanager
 from datetime import datetime, timezone
 
 from . import Conflict, Invalid, Unavailable, rules, visibility
@@ -30,6 +30,24 @@ def _copy(value):
 def _jsonb(value):
     """value as jsonb would give it back (tuples as lists and so on)."""
     return json.loads(json.dumps(value, ensure_ascii=False))
+
+
+@contextmanager
+def _field_capture(locked, deck_id):
+    """Keep body failures intact; never relay a provider's private diagnostics."""
+    body_error = None
+    try:
+        with locked(deck_id) as capture:
+            try:
+                yield capture
+            except BaseException as error:
+                body_error = error
+                raise
+    except BaseException as error:
+        if error is body_error or not isinstance(error, Exception):
+            raise
+        from .field_policy_source import UNAVAILABLE
+        raise Unavailable(UNAVAILABLE) from None
 
 
 def _entry_row(profile_id, position, entry):
@@ -49,9 +67,12 @@ class MemoryStore:
 
     mode: the simulations mode it starts with ("everyone" by default, which the tests want so
     any profile may start runs), set without a change set and by nobody (by and since None);
-    None starts with none set, so the real default applies."""
+    None starts with none set, so the real default applies. field_source is an
+    explicit fixture provider: locked(deck_id) yields a fresh raw deck capture
+    while retaining its identity lock through a field-policy write. No provider
+    ever falls back to configured inventory."""
 
-    def __init__(self, mode="everyone"):
+    def __init__(self, mode="everyone", *, field_source=None):
         self._lock = threading.RLock()
         self.down = False
         self._wishlists = {}        # profile id -> [wishlist_entry rows] in position order
@@ -61,6 +82,8 @@ class MemoryStore:
         self._play = {}             # (kind, id) -> play_record row
         self._packing = set()       # checked physical-task hashes, shared by the home
         self._commander_night = None  # singleton row, kept with a revision when notes are cleared
+        self._field_policies = {}   # format -> audited {format, revision, content: {v, rules}} row
+        self._field_source = field_source
         self._visibility = {}       # (owner, thing) -> Public row; no row means Private
         self._visibility_last = {}
         self._visibility_when = None
@@ -109,14 +132,14 @@ class MemoryStore:
             if self._batch is not None:
                 raise ValueError("a batch is already open in this thread (batches don't nest)")
             saved = _copy((self._wishlists, self._settings, self._mode, self._seeded_mode, self._play,
-                           self._packing, self._commander_night, self._visibility,
+                           self._packing, self._commander_night, self._field_policies, self._visibility,
                            self._visibility_last, self._visibility_when))
             self._batch = rows = []
             try:
                 yield self
             except BaseException:
                 (self._wishlists, self._settings, self._mode, self._seeded_mode, self._play,
-                 self._packing, self._commander_night, self._visibility,
+                 self._packing, self._commander_night, self._field_policies, self._visibility,
                  self._visibility_last, self._visibility_when) = saved
                 raise
             finally:
@@ -317,6 +340,101 @@ class MemoryStore:
             self._log(actor, message, reason, [("commander_night", "UPDATE" if before else "INSERT",
                                                ("id",), before, after)])
             return self.commander_night()
+
+    # ------------------------------------------------------------------ HOME field policy
+
+    def field_policy(self, fmt):
+        """A detached canonical format policy; this explicit memory backend starts empty.
+
+        Stored corruption is unavailable, never a successful-looking empty
+        policy or a silent repair. Reads need no identity provider.
+        """
+        from . import field_policy as policy, field_policy_source as source
+        initial = policy.empty(fmt)
+        with self._lock:
+            self._check()
+            if fmt not in self._field_policies:
+                return initial
+            row = self._field_policies[fmt]
+            try:
+                if (type(row) is not dict or row.keys() != {"format", "revision", "content"}
+                        or type(row["format"]) is not str or row["format"] != fmt
+                        or type(row["revision"]) is not int or row["revision"] < 1
+                        or type(row["content"]) is not dict or row["content"].keys() != {"v", "rules"}):
+                    raise Invalid(policy.INVALID)
+                raw = {"format": fmt, "revision": row["revision"], **row["content"]}
+                checked = policy.normalize(raw)
+                if checked != raw:
+                    raise Invalid(policy.INVALID)
+            except Invalid:
+                raise Unavailable(source.UNAVAILABLE) from None
+            return checked
+
+    def field_policy_apply(self, fmt, expected_revision, expected_proof, rule, actor, message, reason=None):
+        """One fixture-backed independent write with CAS and a fresh locked identity proof.
+
+        Preflight releases the state lock before acquiring the source lock.
+        Same-thread batches are refused before source acquisition, preventing
+        a state/source lock inversion. A source is retained through validation,
+        no-op confirmation and mutation; its exit also completes under the
+        state lock, so a failing release rolls back both policy and audit.
+        """
+        from . import field_policy as policy, field_policy_source as source
+        proof, desired = source.intent(expected_proof, rule, fmt)
+        expected = policy.normalize({**policy.empty(fmt), "revision": expected_revision})["revision"]
+        reason = source.exclusion_reason(reason, desired["mode"])
+        rules.check_write(actor, message, reason)
+        with self._lock:
+            self._check()
+            if self._batch is not None:
+                raise Invalid("Field-policy writes require an independent transaction.")
+        provider = self._field_source
+        try:
+            try:
+                locked = getattr(provider, "locked", None)
+            except Exception:
+                raise Unavailable(source.UNAVAILABLE) from None
+            if not callable(locked):
+                raise Unavailable(source.UNAVAILABLE)
+            with ExitStack() as acquiring:
+                capture = acquiring.enter_context(_field_capture(locked, proof["receipt"]["deck_id"]))
+                with self._lock:
+                    self._check()
+                    if self._batch is not None:
+                        raise Invalid("Field-policy writes require an independent transaction.")
+                    existed = fmt in self._field_policies
+                    before = self._field_policies.get(fmt)
+                    audit_count = len(self._changes)
+                    result = None
+                    try:
+                        # Transfer cleanup inside the state lock without ever
+                        # waiting for the source while holding that state lock.
+                        with acquiring.pop_all():
+                            current = self.field_policy(fmt)
+                            plan = policy.transition(current, expected, desired)
+                            source.recheck(capture, proof, desired, fmt)
+                            if plan["changed"]:
+                                saved = plan["snapshot"]
+                                after = {"format": fmt, "revision": saved["revision"],
+                                         "content": {"v": saved["v"], "rules": _copy(saved["rules"])}}
+                                self._field_policies[fmt] = after
+                                self._log(actor, message, reason, [("field_policy", "UPDATE" if before else "INSERT",
+                                                                   ("format",), before, after)])
+                            result = plan
+                        if result is None:  # a fixture context must never swallow a failed check
+                            raise Unavailable(source.UNAVAILABLE)
+                        return _copy(result)
+                    except BaseException:
+                        if not existed:
+                            self._field_policies.pop(fmt, None)
+                        else:
+                            self._field_policies[fmt] = before
+                        del self._changes[audit_count:]
+                        raise
+        except (Invalid, Conflict, Unavailable):
+            raise
+        except Exception:
+            raise Unavailable(source.UNAVAILABLE) from None
 
     # ------------------------------------------------------------------ the simulations mode
 

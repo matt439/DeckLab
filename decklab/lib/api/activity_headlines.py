@@ -25,7 +25,7 @@ _KIND_OF = {
     **{table: "shopping" for table in ("product", "product_status", "purchase_order", "order_component",
                                         "watchlist_item", *ITEM_TABLES)},
     rules.DECK_TABLE: "decks", "deck_alias": "decks", "packing_tick": "decks", rules.ACCESSORY_TABLE: "sleeves", "wishlist_entry": "wishlist",
-    "play_record": "games", **{table: "settings" for table in ("profile_setting", "simulation_mode", "visibility", "commander_night", "space",
+    "play_record": "games", **{table: "settings" for table in ("profile_setting", "simulation_mode", "visibility", "commander_night", "field_policy", "space",
                                                                 "profile", "profile_email")},
 }
 _MODE_WORDS = {"admins": "admins only", "everyone": "everyone", "paused": "paused"}

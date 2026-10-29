@@ -1,9 +1,10 @@
 # Audited home-field membership: E3-S23
 
-This extends the existing read-only membership view. The implementation is being
-built in bounded slices; membership writes, database activation and UI editing
-remain open. Development uses supplied fixtures, without changing the household's
-field or starting Forge games.
+This extends the existing read-only membership view. Checked identity, pure
+policy and fixture-qualified persistence are implemented. Selector integration,
+request permissions/preview/save, database activation and UI editing remain open.
+Development uses supplied fixtures, without changing the household's field or
+starting Forge games. The loop stops after the persistence commit as requested.
 
 ## Checked deck identity
 
@@ -47,6 +48,36 @@ identity inside its actual write transaction; parsing a saved epoch is not
 proof that it still belongs to the current deck.
 
 ## Next implementation slices
+
+### Persistence in source
+
+Both stores expose `field_policy(format)` and `field_policy_apply(format,
+expected_revision, expected_proof, rule, actor, message, reason=None)`. The write
+returns `{changed, snapshot}`. Its exact proof contains the checked epoch,
+current receipt, an explicit target/owned version and the played-list card hash.
+The captured text is parsed directly and hashed without card-index, pilot,
+configuration, pool, Git or engine lookups. Even a repeated policy intent must
+recheck that full proof before confirming a no-op.
+
+PostgreSQL owns a standalone READ COMMITTED audited transaction, obtaining the
+shared inventory claim before the per-format lock and fresh source reads. It
+uses one revision-checked policy UPSERT; a confirmed no-op rolls back its empty
+audit. Missing schema and corrupt/unavailable state refuse rather than appearing
+empty. Memory requires a supplied locked fixture source and holds its identity
+through checking and mutation, with policy/audit rollback on failure.
+
+Migration `0017_field_policy.sql` is present but unapplied. The row stores format,
+positive revision and `{v, rules}` content. Exclusion reasons remain only in the
+private home audit context. Export preserves the state outside inventory exports;
+the invariant check validates syntax without discarding obsolete incarnations.
+Activity projects fixed home-only summaries before generic admin handling, so
+an outside admin cannot see the policy or its human reasons.
+
+Storage does not authorize a request, change current field selection, start
+games or provide an edit API. Browser policy revisions must use canonical decimal
+strings, since the database range exceeds JavaScript's exact integer range.
+
+### Remaining selection and editing work
 
 Use a per-format, revisioned overlay for current home house-deck incarnations.
 Do not copy an entire legacy field into static saved rules: an unqualified

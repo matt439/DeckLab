@@ -10,6 +10,8 @@ requires read-only repeatable-read/serializable, and ``inventory-locked`` requir
 an already granted inventory advisory claim. The caller must retain that claim,
 use the connection exclusively, and perform no intervening writes while consuming
 the capture. This helper never begins/ends a transaction or acquires a lock.
+The claim does not prove that a repeatable-read snapshot started after a lock
+wait; writers must independently establish fresh reads after obtaining it.
 
 Captures contain current text and minimal lineage rows, so they stay inside the
 trusted caller. Public results contain only a checked epoch and current receipt;

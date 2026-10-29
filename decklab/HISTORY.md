@@ -2,6 +2,50 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Audited field-policy persistence (2026-10-29, E3-S23 storage slice)
+
+Both stores now read and apply one format's incarnation-specific field policy.
+A save checks the policy revision and independently confirms the current epoch,
+exact text receipt, reviewed target/owned version and played-list fingerprint.
+The captured text supplies that fingerprint without card-index, inventory-pool,
+pilot, configuration, Git or engine lookups. Even a matching no-op must prove
+the current source. Exclude requires a bounded private audit reason, kept out
+of policy content and public membership explanations.
+
+PostgreSQL uses an independent READ COMMITTED transaction before its audit
+insert, then the shared inventory claim, per-format lock and fresh same-connection
+proof. It never upgrades the claim or uses a separately connected/stale source.
+A changed policy makes one audited CAS UPSERT; a confirmed no-op rolls back
+the empty audit. Existing default transaction calls keep their behavior. Missing
+schema or corrupt/unavailable policy refuses instead of looking empty.
+
+Memory writes require an explicit locked fixture source and retain its identity
+through validation and mutation. Failures roll back policy and audit together.
+Provider entry/exit errors, including newly raised StateErrors, are sanitized;
+only the exact exception from a store check is preserved. This final review fix
+has entry/exit, replacement-error and rollback regressions.
+
+Migration `0017_field_policy.sql` is present and **unapplied**, with normal audit
+and truncate-refusal triggers. Export registers state outside the inventory
+boundary; maintenance checks exact canonical content while retaining obsolete
+epoch entries. Activity projects only fixed format summaries to home viewers,
+before the generic admin fallback. Outside admins cannot receive those rows or
+mixed-change messages/reasons. Selector and API/UI integration remain open.
+
+Root's **402 guarded checks passed with 18 skips**, including **114 new cases**
+without skips. Review covered storage, transaction ordering, privacy and failure
+boundaries; root reviewed the final provider-error correction. Ruff, whitespace,
+EOF and source-length checks pass; all 1,210 owned source files fit the limit.
+All twenty frozen source hashes match after qualification. The 112 prior header
+edits are preserved: 111 files are byte-identical, and the database-check test
+has only its required expected-subcheck body change. Only that body hunk is
+included here. Evidence is in `decklab-field-storage-957bad26`.
+
+Configured PostgreSQL, migration activation, live server/services, Forge and
+device qualification were not run. E3-S23 remains partial. This is the final
+local commit for the loop, following Matt's request to stop after the next commit;
+no selector, edit API, UI task, push or PR follows it.
+
 ## Incarnation-specific field policy (2026-10-29, E3-S23 foundation)
 
 The pure field-policy model now stores Include Planned/Play-now, Exclude and

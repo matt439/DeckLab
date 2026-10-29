@@ -54,6 +54,14 @@ tests/test_state_contract.py checks):
   actor, message, *, reason=None) -> that view; complete optimistic replacement of the home's
   dated Commander-night notes, with a required reason to clear and a retained revision after
   clearing. Unknown bracket facts are None, unknown date/venue/house rules blank; no seed data.
+- field_policy(format) -> {v, format, revision, rules}; only a confirmed existing schema's
+  absent row is an empty policy. field_policy_apply(format, expected_revision, expected_proof,
+  rule, actor, message, reason=None) -> {changed, snapshot}; one independent audited CAS write,
+  rejecting batches. The same write transaction checks the current incarnation, text receipt,
+  selected version and card fingerprint before either a no-op or mutation. Exclude requires
+  a bounded private audit reason, never part of policy content. Memory writes require an
+  explicit locked fixture source; no provider falls back to configured inventory. These
+  storage methods grant no request access and do not change field selection.
 - activity(before=None, limit=50, *, visible=None, inventory=None) -> {"changes": [...], "next": id
   or None}; inventory (rules.inventory_scope's dict: tables, items, spaces, cap) filters,
   counts and caps the inventory's rows per change set (rules.inventory_rows; the database in
