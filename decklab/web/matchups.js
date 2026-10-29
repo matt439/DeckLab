@@ -287,6 +287,14 @@ function runProgress(job) {
   return { done: before + done, total: planned, checks: planned > 400 ? [400] : [], approx: true, next: null };
 }
 
+/** The sentence saying a playing run's warm workers couldn't start, so its games play one process at a time
+ * (job.fallback or a Running item's, forge's pool.FALLBACK: no worker counts or names), or null: also while
+ * it's still queued, and for anything that isn't a non-blank string. */
+function runFallback(job) {
+  if (!job || job.status === "queued" || typeof job.fallback !== "string") return null;
+  return job.fallback.trim() || null;
+}
+
 
 // ------------------------------------------------------------- run choice
 

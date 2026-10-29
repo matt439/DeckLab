@@ -37,7 +37,7 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 |---|---:|---:|---:|---:|---:|
 | [E1: Find, plan and choose decks](#e1-find-plan-and-choose-decks) | 17 | 15 | 1 | 1 | 0 |
 | [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 21 | 17 | 1 | 2 | 1 |
-| [E3: Test a deck](#e3-test-a-deck) | 18 | 13 | 3 | 2 | 0 |
+| [E3: Test a deck](#e3-test-a-deck) | 18 | 14 | 3 | 1 | 0 |
 | [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 22 | 18 | 2 | 1 | 1 |
 | [E5: Decide what to buy](#e5-decide-what-to-buy) | 24 | 20 | 1 | 1 | 2 |
 | [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 23 | 21 | 0 | 0 | 2 |
@@ -46,9 +46,9 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E9: Commander nights](#e9-commander-nights) | 22 | 15 | 1 | 5 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 35 | 31 | 1 | 1 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 41 | 31 | 5 | 2 | 3 |
-| **Total** | **270** | **221** | **16** | **19** | **14** |
+| **Total** | **270** | **222** | **16** | **18** | **14** |
 
-Counted from the story headers on 2026-10-29 after the source-aware two-player and pod counters, alongside the current feature and maintenance work. The reviews added five feature stories and eight hygiene stories, then the fixture-only entry-point story E11-S44, and corrected E1-S12 from missing to partial. Rechecked 2026-10-29: E1-S12 is built and E11-S39 partial (its database qualification pending). The TODO audit of 2026-10-29 added fifteen missing stories (twelve from the audit: E1-S27, E1-S28, E2-S27, E3-S25, E3-S26, E5-S25, E6-S25, E6-S26, E9-S26, E9-S27, E11-S45, E11-S46), then Matt's three UI requests (E3-S27, E5-S26, E6-S27), and corrected E7-S32 from missing to partial (its recognition spike and CLI are built). Matt closed E11-S16 as built the same day, and E3-S27, E5-S26, E6-S25, E6-S27 and E11-S46 were built the same day (E11-S12 stays partial after a further slice). Later the same day E5-S25 and E6-S26 were built, E1-S27's first slice (the library) made it partial, and E11-S12 was built.
+Counted from the story headers on 2026-10-29 after the source-aware two-player and pod counters, alongside the current feature and maintenance work. The reviews added five feature stories and eight hygiene stories, then the fixture-only entry-point story E11-S44, and corrected E1-S12 from missing to partial. Rechecked 2026-10-29: E1-S12 is built and E11-S39 partial (its database qualification pending). The TODO audit of 2026-10-29 added fifteen missing stories (twelve from the audit: E1-S27, E1-S28, E2-S27, E3-S25, E3-S26, E5-S25, E6-S25, E6-S26, E9-S26, E9-S27, E11-S45, E11-S46), then Matt's three UI requests (E3-S27, E5-S26, E6-S27), and corrected E7-S32 from missing to partial (its recognition spike and CLI are built). Matt closed E11-S16 as built the same day, and E3-S27, E5-S26, E6-S25, E6-S27 and E11-S46 were built the same day (E11-S12 stays partial after a further slice). Later the same day E5-S25 and E6-S26 were built, E1-S27's first slice (the library) made it partial, and E11-S12 and E3-S26 were built.
 
 ---
 
@@ -709,7 +709,7 @@ First slice (TODO audit, 2026-10-29): A server helper over the latest 100 deck r
 
 How a player finds out whether a deck works before playing or buying cards: instant stats on the deck page's Stats tab, practice games on the Practice tab, Forge matchups and Rankings (#/matchups, #/matchup), the field rank on the Matchups tab, paired tests of a change from the editor (#/variant), and the simulations setting on #/settings. Matchups, fields, rankings and tests follow deck privacy: each viewer sees only results whose every side they may see, a member's field is their own space plus Public spaces, and a run may be stopped by whoever started it, anyone whose space's deck it uses, or an admin. Not yet covered: 4-player Commander pods, sideboard testing, comparing real games with Forge's predictions, and members asking for a run while only admins may start one. Forge results are files outside the database's backups by decision, since they can be replayed.
 
-Open: E3-S13, E3-S19, E3-S23, E3-S25, E3-S26.
+Open: E3-S13, E3-S19, E3-S23, E3-S25.
 
 **E3-S01** · Matt · must · M · built
 
@@ -987,7 +987,7 @@ Gap: none of the criteria is met yet.
 
 First slice (TODO audit, 2026-10-29): Generalise lib/decks/swaps.py ranking (fits, castable, rank_key) so api/swaps.py can rank free candidates for any listed card; add GET /api/deck/replacements?id=&card= requiring guard.sees_inventory. Fixture tests: never-cast creature gets castable free same-type cards, held copies excluded, member space private. Variant prefill is slice 2; free dual lands for a colour shortfall slice 3.
 
-**E3-S26** · Matt · could · S · missing
+**E3-S26** · Matt · could · S · built
 
 As someone waiting on a Forge run, I want the page to say when the warm workers couldn't start and games play one process at a time, so that I know why the run is slower than its estimate.
 
@@ -995,9 +995,7 @@ As someone waiting on a Forge run, I want the page to say when the warm workers 
 - Given fallback is null, then nothing extra shows.
 - Given a member viewer, then only the sentence shows, with no worker counts or names.
 
-Evidence of the gap (TODO audit, 2026-10-29): forge_runs._job_json returns 'fallback'; grep finds no use of fallback in web/matchups*.js; HISTORY lists it as a known low issue.
-
-Gap: none of the criteria is met yet.
+Built 2026-10-29: the matchup page's live box shows `job.fallback` on its own line straight after the played or waiting words (`liveBox`), and each Playing now row (Matchups and the deck page's Matchups tab, `runningRow`) after its waiting or progress words; the Running item now carries `fallback` too (`forge_runs._running_json`). `runFallback` (web/matchups.js) shows it only for a playing run with a non-blank string, so null, blank, malformed or still-queued runs add nothing. The sentence is forge's fixed `pool.FALLBACK`, with no worker counts or names; a coordinator row and an admin's anonymous run row carry none. Fixtures: `test_matchup_fallback_ui.py`, `test_matchups_api.py`.
 
 First slice (TODO audit, 2026-10-29): Read job.fallback in web/matchups-detail.js and matchups-overview.js progress lines; Node UI fixtures for set, null and member views.
 

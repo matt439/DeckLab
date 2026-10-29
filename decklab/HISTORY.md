@@ -2,6 +2,23 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## The warm-worker fallback sentence on the pages (2026-10-29; E3-S26)
+
+When a run's warm workers couldn't start, its games play one Forge process at a time, and the command line
+already said so. The pages now say it too, so a run slower than its estimate explains itself:
+- The matchup page's live box shows `job.fallback` on its own line straight after the played or waiting words
+  (`liveBox`, `.mu-fallback`), for fixed and adaptive runs.
+- Each Playing now row, on Matchups and on the deck page's Matchups tab (`runningRow`), adds it after its
+  waiting or progress words. The Running item (`forge_runs._running_json`) now carries `fallback` beside
+  `waiting`; a field run's or variant test's row and an admin's anonymous row carry none.
+- `runFallback` (`web/matchups.js`) shows it only for a playing run whose fallback is a non-blank string: null,
+  blank, malformed or still-queued runs add nothing. The sentence is forge's fixed `pool.FALLBACK`, with no
+  worker counts or names, so a member's view gains only that sentence.
+
+Tests: `test_matchup_fallback_ui.py` (live box and both Playing now rows, order after the waiting words, the
+null, blank, malformed and queued cases, and a member's and an admin's view adding only the sentence, with no
+names or numbers) and `test_matchups_api.py` (the Running item's `fallback`, None and set).
+
 ## Database words in row problems and product and order messages (2026-10-29; E11-S12)
 
 The rest of E11-S12, which is now built. Messages no longer name an old file and line: one place,

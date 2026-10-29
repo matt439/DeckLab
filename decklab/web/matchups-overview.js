@@ -301,11 +301,13 @@ function runningRow(run, { against = false } = {}) {
     ? metaWords(run.ahead > 0 ? `${plural(run.ahead, "run")} ahead of it` : "Starting...", personName(run.by))
     : metaWords(run.waiting || `${thousands(p.done)} of ${p.approx ? "~" : ""}${thousands(p.total)} games`,
       run.waiting ? null : `${wins[0]}-${wins[1]} so far`, how, personName(run.by) && `started by ${run.by}`);
+  // After the waiting sentence: why it's slower than its estimate (E3-S26).
+  const fallback = runFallback(run);
   return el("li", {}, el("a", { class: "mu-row", href: itemHref(run) },
     rowNames(a, b, against),
     bar.node,
     el("span", { class: "mu-meta" }, status("info", waiting ? "Waiting" : "Playing"),
-      el("span", { text: words }))));
+      el("span", { text: words }), fallback ? el("span", { class: "mu-fallback", text: fallback }) : null)));
 }
 
 /** A field run or a variant test playing (api.forge_runs._running_json's coordinator item), as a row. */

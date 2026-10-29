@@ -308,17 +308,19 @@ class RunTests(MatchupTestCase):
 
     def test_a_run_whose_warm_workers_cant_start_says_so(self):
         # forge's progress has "fallback" when the warm pool's workers couldn't start (pool.FALLBACK);
-        # the job passes it to the page (None otherwise).
+        # the job and the Running item (Playing now, E3-S26) pass it to the page (None otherwise).
         self.playing()
         self.play(games=400)
         self.assertTrue(self.forge.started.wait(WAIT))
         self.assertIsNone(api.matchup(GRUUL_ID, "target", GRUUL_ID, "owned")["job"]["fallback"])
+        self.assertEqual([r["fallback"] for r in api.matchups()["running"]], [None])
         self.finish()
         self.forge.fallback = real_forge.pool.FALLBACK.format(why=real_forge.pool.FALLBACK_DIED)
         self.playing()
         self.play(games=400)
         self.assertTrue(self.forge.started.wait(WAIT))
         self.assertEqual(api.matchup(GRUUL_ID, "target", GRUUL_ID, "owned")["job"]["fallback"], self.forge.fallback)
+        self.assertEqual([r["fallback"] for r in api.matchups()["running"]], [self.forge.fallback])
         self.finish()
 
     def test_matchups_play_four_at_once(self):
@@ -786,7 +788,7 @@ class ListTests(MatchupTestCase):
         running = listed["running"]
         self.assertEqual([r["status"] for r in running], ["running", "queued"])
         self.assertEqual(set(running[0]), {"key", "sides", "status", "ahead", "done", "total", "wins", "by",
-                                       "waiting", "kind", "title", "link", "mode", "plan", "eta_s", "may_stop"})
+                                       "waiting", "fallback", "kind", "title", "link", "mode", "plan", "eta_s", "may_stop"})
         self.assertEqual((running[0]["by"], running[0]["done"], running[0]["total"]), ("User1", 200, 800))
         self.assertEqual([s["id"] for s in running[0]["sides"]], ["pairing/elves+cats", "pairing/cats+goblins"])
         self.assertEqual([s["kind"] for s in running[1]["sides"]], ["commander", "product"])
