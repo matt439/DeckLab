@@ -123,6 +123,7 @@ function rcptSync(view) {
   view.primary.disabled = !receiptEditable(view);
   const changed = view.preview && view.preview.key !== rcptRequestKey(view);
   view.stale.textContent = changed ? " · Changed since preview, preview again" : "";
+  rcptSyncBulk(view);
   rcptSyncLayout(view, p);
 }
 
@@ -181,14 +182,15 @@ function rcptClientBlockers(view) {
     }
     const selected = comp.rows.filter(row => row.ticked);
     if (!selected.length) out.push({ text: `${rcptTitle(comp.c, view.data)}: tick at least one card that arrived.`, comp, selection: true });
-    if (comp.kind === "tokens") {
-      for (const row of selected) {
-        if (rcptBackOpen(row)) out.push({ text: `${rcptRowName(comp, row)}: say what its back is, or that it's blank.`, comp, row });
-      }
-    }
-    comp.c.checks.forEach((text, i) => {
-      if (!comp.checks[i]) out.push({ text: `Check not ticked: ${text}`, target: comp.checkBoxes ? comp.checkBoxes[i] : null });
-    });
+    // Once per part, not once per row or check (E6-S27): each links to its first open row or check.
+    const backs = comp.kind === "tokens" ? selected.filter(row => rcptBackOpen(row)) : [];
+    if (backs.length === 1) out.push({ text: `${rcptRowName(comp, backs[0])}: say what its back is, or that it's blank.`, comp, row: backs[0] });
+    else if (backs.length) out.push({ text: `${rcptTitle(comp.c, view.data)}: say what ${backs.length} backs are, or that they're blank `
+      + `(${backs.map(row => rcptRowName(comp, row)).join(", ")}).`, comp, row: backs[0] });
+    const open = comp.c.checks.flatMap((text, i) => comp.checks[i] ? [] : [i]);
+    if (open.length) out.push({ text: open.length === 1 ? `Check not ticked: ${comp.c.checks[open[0]]}`
+      : `${rcptTitle(comp.c, view.data)}: ${open.length} checks not ticked: ${open.map(i => comp.c.checks[i]).join("; ")}`,
+    target: comp.checkBoxes ? comp.checkBoxes[open[0]] : null });
   }
   const today = view.data.today || rcptToday();
   if (!rcptValidDay(view.date.value)) out.push({ text: "Choose a valid arrival date.", date: true });

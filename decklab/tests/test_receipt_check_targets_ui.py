@@ -82,7 +82,7 @@ class ReceiptCheckTargetUiTests(unittest.TestCase):
           assert.equal([r,part].filter(row=>row.tile.querySelector('.rcpt-row-checks').querySelector('input')).length,1);
           assert.equal(canonicalChecks(c).length,2);
           c.rows[0].ticked=true;assert.equal(rcptRequest(v).components[0].verified,false);
-          assert(rcptClientBlockers(v).some(x=>x.text==='Check not ticked: Check exact art'));
+          assert(rcptClientBlockers(v).some(x=>x.text.includes('2 checks not ticked: Check exact art')));
           c.checks=[true,true];assert.equal(rcptRequest(v).components[0].verified,true);
           assert.deepEqual(rcptRequest(v).components[0].take,[{row:1}]);
           assert(!JSON.stringify(rcptRequest(v)).includes('row_sha256'));

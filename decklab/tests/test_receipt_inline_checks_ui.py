@@ -69,7 +69,7 @@ class ReceiptInlineChecksUiTests(unittest.TestCase):
         self.run_js(r'''
           const v=draw(),c=v.comps[0];rcptTick(v,c,c.rows[0],true);
           assert(!c.rows[1].ticked);assert.equal(rcptRequest(v).components[0].verified,false);
-          assert(rcptClientBlockers(v).some(item=>item.text==='Check not ticked: Check exact art'));
+          assert(rcptClientBlockers(v).some(item=>item.text.includes('2 checks not ticked: Check exact art')));
           changeCheck(c,0,true);assert.equal(rcptRequest(v).components[0].verified,false);changeCheck(c,1,true);
           const sent=rcptRequest(v).components[0];assert.equal(sent.verified,true);same(sent.take,[{row:1}]);
           assert(!JSON.stringify(sent).includes('check_targets'));assert(!JSON.stringify(sent).includes('row_sha256'));

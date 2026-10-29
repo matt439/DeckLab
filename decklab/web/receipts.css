@@ -62,6 +62,11 @@
 .rcpt-resume:empty { display: none; }
 .rcpt-resume-box { margin: var(--s-4) 0; }
 .rcpt-done { margin-top: var(--s-5); }
+/* E6-S27's shortcuts: the delivery's "Everything arrived as ordered", a part's checks and blank backs. */
+.rcpt-everything-bar { margin: var(--s-4) 0 0; }
+.rcpt-part-actions { margin: var(--s-2) 0; }
+.rcpt-everything-bar[hidden], .rcpt-part-actions[hidden] { display: none; }
+.rcpt-backs-list { list-style: none; padding: 0; margin: var(--s-2) 0; }
 
 /* A section per part of the order. */
 .rcpt-section { margin: var(--s-6) 0 0; }
