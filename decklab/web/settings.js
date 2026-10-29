@@ -1,6 +1,7 @@
 /* Deck Lab's page: Settings (#/settings, decklab/UI-REVIEW.md 2.2), an admin's page. Who may start Forge
 simulations and how many Forge workers the PC uses (GET/PUT /api/simulations, lib/api/simulations.py), Visits
-(GET /api/visits, lib/api/visits.py: who has used Deck Lab, when, and the pages they opened), and About Deck Lab:
+(GET /api/visits, lib/api/visits.py: who has used Deck Lab, when, and the pages they opened), database-maintenance
+history (GET /api/settings/maintenance, lib/api/maintenance.py; reading runs no jobs), and About Deck Lab:
 the running server's version, Check for updates and the card data. These used to sit in every page's footer;
 the footer is now one quiet line (version.js).
 
@@ -47,6 +48,7 @@ function showSettings(params, token) {
         el("div", { id: "sim-loading" }, loadingBox("Loading the simulations setting…", { small: true }))),
       commanderNightSettings(),
       settingsMembersPanel(),
+      settingsMaintenancePanel(token),
       el("section", { class: "panel settings-part", id: "settings-visits", "aria-labelledby": "settings-visits-title" },
         el("h2", { id: "settings-visits-title", text: "Visits" }),
         el("p", { class: "sub", text: `Who has opened Deck Lab, and which pages. The last ${VISIT_DAYS} days unless it says otherwise.` }),
@@ -70,8 +72,130 @@ function showSettings(params, token) {
   settingsSimulations(token);
   loadCommanderNightSettings(token);
   loadSettingsMembers(token);
+  loadSettingsMaintenance(token);
   loadVisits(token);
   showFooter();
+}
+
+// ------------------------------------------------------- maintenance history
+
+const MAINTENANCE_JOBS = [["dump", "Backup"], ["export", "Export"], ["check", "Integrity check"], ["restore_check", "Restore check"]];
+const MAINTENANCE_HEALTH = { success: "Succeeded", failure: "Failed", stale: "Overdue", never: "No recorded attempts", unknown: "Outcome unavailable" };
+const MAINTENANCE_OUTCOMES = { success: "Succeeded", failure: "Failed", unknown: "Outcome unavailable" };
+
+function settingsMaintenanceAdmin() {
+  return typeof state.profile?.id === "string" && Boolean(state.profile.id) && state.profile.role === "admin" && isAdminProfile();
+}
+
+function settingsMaintenancePanel(token) {
+  if (!settingsMaintenanceAdmin()) return null;
+  const profile = state.profile, profileId = profile.id;
+  const button = el("button", { type: "button", class: "btn btn-secondary", id: "settings-maintenance-refresh", text: "Refresh history",
+    onclick: () => {
+      if (button.isConnected && byId("settings-maintenance-refresh") === button && state.profile === profile && profile.id === profileId && token === routeToken)
+        loadSettingsMaintenance(token);
+    } });
+  return el("section", { class: "panel settings-part", id: "settings-maintenance", "aria-labelledby": "settings-maintenance-title" },
+    el("h2", { id: "settings-maintenance-title", text: "Database maintenance" }),
+    el("p", { class: "sub", text: "Recorded backup, export, integrity check and restore check results. Refreshing only reads history." }),
+    el("div", { class: "settings-fields", id: "settings-maintenance-content" }, loadingBox("Loading maintenance history.", { small: true })),
+    el("div", { class: "actions" }, button));
+}
+
+/** The response and its health claims belong only to this connected Settings panel and selected admin. */
+async function loadSettingsMaintenance(token) {
+  const host = byId("settings-maintenance-content"), profile = state.profile;
+  if (!host || !settingsMaintenanceAdmin() || token !== routeToken || parseHash().path !== "settings" || host.maintenanceBusy) return;
+  const profileId = profile.id;
+  const sequence = host.maintenanceRequest = (host.maintenanceRequest || 0) + 1;
+  const button = byId("settings-maintenance-refresh");
+  const hadFocus = document.activeElement === button;
+  const here = () => host.isConnected && byId("settings-maintenance-content") === host && token === routeToken
+    && sequence === host.maintenanceRequest && state.profile === profile && profile.id === profileId && settingsMaintenanceAdmin() && parseHash().path === "settings";
+  host.maintenanceBusy = true;
+  if (button) button.disabled = true;
+  clear(host).append(loadingBox("Loading maintenance history.", { small: true }));
+  try {
+    const data = await api("/api/settings/maintenance");
+    if (!here()) return;
+    if (!settingsMaintenanceAnswer(data)) throw new Error("Unverified maintenance history");
+    renderSettingsMaintenance(host, data);
+  } catch (error) {
+    if (!here()) return;
+    // An unexpected API/connector error may contain private paths or database details.
+    clear(host).append(el("p", { class: "form-error", role: "alert",
+      text: "Maintenance history is unavailable. Refresh history to try again." }));
+  } finally {
+    if (here()) {
+      host.maintenanceBusy = false;
+      if (button && button.isConnected && byId("settings-maintenance-refresh") === button) {
+        button.disabled = false;
+        if (hadFocus && (!document.activeElement || document.activeElement === document.body || document.activeElement === button)) button.focus();
+      }
+    }
+  }
+}
+
+function settingsMaintenanceDate(value) {
+  const match = typeof value === "string" && /^(\d{4})-(\d\d)-(\d\d)T(\d\d):(\d\d):(\d\d)(?:\.\d{1,6})?(?:Z|\+00:00)$/.exec(value);
+  if (!match) return false;
+  const [year, month, day, hour, minute, second] = match.slice(1, 7).map(Number);
+  const leap = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+  const days = [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  return year > 0 && month >= 1 && month <= 12 && day >= 1 && day <= days[month - 1]
+    && hour < 24 && minute < 60 && second < 60 && Number.isFinite(new Date(value).getTime());
+}
+
+/** Verify the small public projection before displaying any current-health wording. */
+function settingsMaintenanceAnswer(data) {
+  const checked = new Date(data?.checked_at).getTime();
+  const run = row => row === null || Boolean(row && typeof row === "object"
+    && Object.hasOwn(MAINTENANCE_OUTCOMES, row.outcome)
+    && [row.started_at, row.finished_at].every(value => value === null || settingsMaintenanceDate(value))
+    && (row.outcome === "unknown" || (settingsMaintenanceDate(row.started_at) && settingsMaintenanceDate(row.finished_at)
+      && new Date(row.started_at) <= new Date(row.finished_at) && new Date(row.finished_at).getTime() <= checked)));
+  return Boolean(data?.available === true && settingsMaintenanceDate(data.checked_at) && data.recent_limit === 5
+    && Array.isArray(data.jobs) && data.jobs.length === MAINTENANCE_JOBS.length
+    && data.jobs.every((job, index) => job && job.kind === MAINTENANCE_JOBS[index][0]
+      && Object.hasOwn(MAINTENANCE_HEALTH, job.health) && ["current", "stale", "never", "unknown"].includes(job.freshness)
+      && run(job.latest) && run(job.last_success) && (job.last_success === null || job.last_success.outcome === "success")
+      && (job.health !== "success" || (job.latest?.outcome === "success" && job.last_success && job.freshness === "current"))
+      && (job.health !== "stale" || (job.latest?.outcome === "success" && job.last_success && job.freshness === "stale"))
+      && (job.health !== "failure" || job.latest?.outcome === "failure")
+      && (job.latest?.outcome !== "unknown" || job.health === "unknown")
+      && (job.health !== "never" || (job.latest === null && job.last_success === null && job.freshness === "never" && !job.recent?.length))
+      && Array.isArray(job.recent) && job.recent.length <= data.recent_limit && job.recent.every(row => row !== null && run(row))
+      && job.interval && job.interval.unit === (job.kind === "restore_check" ? "days" : "hours")
+      && job.interval.source === (job.kind === "restore_check" ? "restore_check_days" : "stale_backup_hours")
+      && job.interval.basis === (["dump", "export"].includes(job.kind) ? "finished_at" : "started_at")
+      && (!["current", "stale"].includes(job.freshness) || (job.last_success && job.interval.value !== null))
+      && (job.interval.value === null || (typeof job.interval.value === "number" && Number.isFinite(job.interval.value) && job.interval.value >= 0))));
+}
+
+function settingsMaintenanceWhen(value) {
+  return settingsMaintenanceDate(value) ? new Date(value).toLocaleString("en-AU") : "Date unavailable";
+}
+
+function settingsMaintenanceRun(row) {
+  return `${MAINTENANCE_OUTCOMES[row.outcome]}. Started: ${settingsMaintenanceWhen(row.started_at)}. Finished: ${settingsMaintenanceWhen(row.finished_at)}.`;
+}
+
+function renderSettingsMaintenance(host, data) {
+  clear(host).append(el("p", { class: "sub", text: `History checked: ${settingsMaintenanceWhen(data.checked_at)}.` }));
+  for (const [index, job] of data.jobs.entries()) {
+    const interval = job.interval, period = interval.value === null ? null : `${interval.value} ${interval.unit}`;
+    const policy = job.kind === "export" ? "Export uses the nightly grace period" : "Freshness interval";
+    const freshness = { current: "Last success is within its freshness interval.", stale: "Last success is overdue.",
+      never: "No successful run is recorded.", unknown: "Freshness is unknown." }[job.freshness];
+    host.append(el("section", { "data-maintenance-job": job.kind },
+      el("h3", { text: MAINTENANCE_JOBS[index][1] }),
+      el("p", { text: `Latest status: ${MAINTENANCE_HEALTH[job.health]}.` }),
+      el("p", { text: job.latest ? `Latest attempt: ${settingsMaintenanceRun(job.latest)}` : "Latest attempt: No recorded attempts." }),
+      el("p", { text: job.last_success ? `Last successful run: ${settingsMaintenanceRun(job.last_success)}` : "Last successful run: None recorded." }),
+      el("p", { class: "sub", text: `${freshness} ${period ? `${policy}: ${period}, from ${interval.basis === "started_at" ? "start" : "finish"}.` : "Freshness interval unavailable."}` }),
+      job.recent.length ? el("details", {}, el("summary", { text: `Recent attempts (${job.recent.length})` }),
+        el("ol", {}, job.recent.map(row => el("li", { text: settingsMaintenanceRun(row) })))) : null));
+  }
 }
 
 /** Load the simulations setting into its part; a failure is said there, with Try again (loadSimulations

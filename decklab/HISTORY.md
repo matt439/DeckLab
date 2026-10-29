@@ -2,6 +2,1612 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Publication CI: canonical disposable roots (2026-10-29)
+
+Hosted CI at 7fd0510 passed lint, all four Linux shards, three Windows shards
+and Linux services. Windows shard 2 failed two fixture-runner cases: its Temp
+ancestor used the short `RUNNER~1` spelling, while the copied runner resolved
+the same owned directory to its long path. The generated fake config retained
+the unresolved spelling, so its fake-file sentry caught a path mismatch.
+Production config and runner roots already resolve their source paths.
+
+The disposable project now resolves its root before creating fake files or
+launch environment values. A portable `launch/..` regression checks canonical
+bootstrap and environment roots, then runs the ordinary guarded fake suite;
+it failed before the correction. Runtime file guards, canaries, broken-order
+tests and native/database skips are unchanged. No real protected file is
+resolved or opened by this test change.
+
+All **16 guarded runner/source-inventory checks passed without skips**, with
+Ruff, whitespace, EOF and the source-length guard also passing. The 112 earlier
+unstaged header edits remain preserved. The original failing run is
+[40816698480](https://github.com/matt439/DeckLab/actions/runs/40816698480);
+exact-head hosted validation must run again after publication of this fix.
+This is a scoped publication correction; the autonomous implementation loop
+remains stopped.
+
+## Audited field-policy persistence (2026-10-29, E3-S23 storage slice)
+
+Both stores now read and apply one format's incarnation-specific field policy.
+A save checks the policy revision and independently confirms the current epoch,
+exact text receipt, reviewed target/owned version and played-list fingerprint.
+The captured text supplies that fingerprint without card-index, inventory-pool,
+pilot, configuration, Git or engine lookups. Even a matching no-op must prove
+the current source. Exclude requires a bounded private audit reason, kept out
+of policy content and public membership explanations.
+
+PostgreSQL uses an independent READ COMMITTED transaction before its audit
+insert, then the shared inventory claim, per-format lock and fresh same-connection
+proof. It never upgrades the claim or uses a separately connected/stale source.
+A changed policy makes one audited CAS UPSERT; a confirmed no-op rolls back
+the empty audit. Existing default transaction calls keep their behavior. Missing
+schema or corrupt/unavailable policy refuses instead of looking empty.
+
+Memory writes require an explicit locked fixture source and retain its identity
+through validation and mutation. Failures roll back policy and audit together.
+Provider entry/exit errors, including newly raised StateErrors, are sanitized;
+only the exact exception from a store check is preserved. This final review fix
+has entry/exit, replacement-error and rollback regressions.
+
+Migration `0017_field_policy.sql` is present and **unapplied**, with normal audit
+and truncate-refusal triggers. Export registers state outside the inventory
+boundary; maintenance checks exact canonical content while retaining obsolete
+epoch entries. Activity projects only fixed format summaries to home viewers,
+before the generic admin fallback. Outside admins cannot receive those rows or
+mixed-change messages/reasons. Selector and API/UI integration remain open.
+
+Root's **402 guarded checks passed with 18 skips**, including **114 new cases**
+without skips. Review covered storage, transaction ordering, privacy and failure
+boundaries; root reviewed the final provider-error correction. Ruff, whitespace,
+EOF and source-length checks pass; all 1,210 owned source files fit the limit.
+All twenty frozen source hashes match after qualification. The 112 prior header
+edits are preserved: 111 files are byte-identical, and the database-check test
+has only its required expected-subcheck body change. Only that body hunk is
+included here. Evidence is in `decklab-field-storage-957bad26`.
+
+Configured PostgreSQL, migration activation, live server/services, Forge and
+device qualification were not run. E3-S23 remains partial. This is the final
+local commit for the loop, following Matt's request to stop after the next commit;
+no selector, edit API, UI task, push or PR follows it.
+
+## Incarnation-specific field policy (2026-10-29, E3-S23 foundation)
+
+The pure field-policy model now stores Include Planned/Play-now, Exclude and
+Use field rules intents by the full checked historical incarnation key, separately
+for Constructed and Commander. An absent entry preserves legacy selection;
+Use field rules retains an explicit tombstone that a later selector will use to
+mask matching old directives. It cannot silently revive a file-based exclusion.
+Old incarnation entries remain inert when a deck is recreated, without eviction.
+
+Strict complete-object validation rejects unknown fields, duplicate epochs,
+wrong formats/kinds, unsafe identities and numeric coercion. Normalization,
+lookup and transitions return detached canonical copies. Revision checks precede
+identical no-ops; the first Use field rules saves an entry, while repeating it
+at the matching revision changes nothing. Capacity permits replacing an existing
+entry but refuses a 5,001st entry. Actual bigint revision overflow refuses a
+change, while a matching no-op at that limit remains valid.
+
+Root's **125 guarded checks passed with one skip**, including **28 new policy
+cases** without skips, the 54 epoch fixtures and existing state contracts.
+Independent review, Ruff, EOF/whitespace checks and the source-length guard pass;
+all 1,202 owned source files fit the limit. Frozen source hashes and the 112
+preserved test headers are unchanged. Evidence is in
+`decklab-field-policy-855412d7`.
+
+This helper is not yet wired to selection, persistence or API controls. It
+validates syntax, not current deck provenance. E3-S23 remains partial; the
+[editing design](design/field-membership-editing.md) retains the same-transaction
+proof, audit and permission requirements for the next slices. No live data,
+database, server or service operation was performed.
+
+## Checked deck identity for field edits (2026-10-29, E3-S23 foundation)
+
+A pure resolver and explicit PostgreSQL reader now prove a current home house
+deck's incarnation before future audited membership choices can follow it.
+Ordinary edits and renames keep the immutable historical creation anchor;
+deletion and recreation select the later creation revision. Imported M-start
+history can establish a labelled database baseline, without inventing its earlier
+birth. The full contiguous bounded A/M/D history and latest exact text must agree
+with the fresh current row. Missing, malformed, capped or ambiguous evidence has
+one unavailable result. Unrelated retired aliases cannot poison a valid proof.
+
+The reader owns one read-only repeatable-read transaction on an explicit backend,
+loads its fresh snapshot and minimal history on that same connection, and never
+uses convenience/default history readers or stale fallback. An internal capture
+verifies an existing coherent transaction or inventory advisory claim without
+opening one or acquiring locks. Results contain only an immutable epoch and
+current canonical ID/revision/text-hash receipt, with no actor, message, text or
+kit. Proof caps do not bound the backend's existing full snapshot reads.
+
+Root's **154 guarded checks passed with 26 skips**, including **54 new checks**
+without skips (26 pure and 28 explicit fake-database cases). Independent review,
+Ruff, whitespace and the source-length guard pass; all 1,200 owned source files
+fit the limit. The 112 existing unstaged test-header edits retain their original
+hashes and AST bodies. An initial combined invocation used short module names
+and produced only loader errors; the qualified invocation is the passing result.
+Evidence is in `decklab-field-epoch-8f687bc3`.
+
+This is unwired identity infrastructure. Field selection and membership writes
+are unchanged, and E3-S23 remains partial. The [editing design](design/field-membership-editing.md)
+records the next incarnation-specific policy overlay and audited write boundary.
+Actual PostgreSQL, live migration activation, Forge and device qualification
+remain separate; no live database, server or service operation was performed.
+
+## Complete protected fixture checkpoint (2026-10-29)
+
+All four guarded Windows fixture shards passed on functional commit
+`a5a9dc98c6fc82ace8f77530fab41b4256c3288a`. Discovery found **10,452 unique
+cases**, retaining all **9,123 starting cases** after the recorded three class
+moves and one method rename, with **1,329 additional cases**, no duplicate IDs
+and no loader errors. The runner reported **9,874 tests and 420 skips** across
+the four successful jobs:
+
+| Shard | Discovered | Reported | Skips | Seconds |
+|---|---:|---:|---:|---:|
+| 0 | 2,509 | 2,327 | 139 | 309.832 |
+| 1 | 2,460 | 2,356 | 95 | 444.022 |
+| 2 | 2,621 | 2,468 | 93 | 318.285 |
+| 3 | 2,862 | 2,723 | 93 | 349.931 |
+
+The host disconnected during the original last two jobs. Their incomplete logs
+had no exit markers and their execution sessions could not be resumed. Those
+attempts were retained as uncertain, without a passing claim. After reconnect,
+the branch, HEAD, empty index, source manifest and 112 preserved headers matched.
+Only the two unfinished shards were rerun, sequentially into separate logs.
+The first two completed passes remain valid for the same frozen source.
+
+Final verification after all four accepted jobs confirmed all **1,187 tracked
+source hashes** unchanged, with digest
+`9a5828bb296e1b810a332acb2a50c20d66856f36e37870e68b28804f2badbcc9`.
+The 112 unstaged header-only edits are byte-identical and AST-equivalent to HEAD.
+The separate length audit covers **1,196 owned source files**, none over 1,200
+lines. The failed earlier 222a859 checkpoint and all original interrupted logs
+remain preserved; the complete result follows the fixture-contract correction.
+
+Evidence is in `decklab-fixture-a5a9dc9-y4kkbzqi`: per-job logs and host exit
+markers, discovery and source manifests, `reconnection-recovery.json`,
+`final-snapshot-proof.json` and `qualification-result-final.json`. This qualifies
+the Windows fixture suite only. Configured PostgreSQL, real Forge, named native
+runtime checks, physical devices and Linux services retain separate qualification;
+no live server restart, migration or service activation was performed.
+
+## Inventory contracts with optional shop facts (2026-10-29)
+
+Historical inventory comparisons now explicitly capture absent optional shop
+checks. The shared reader wrapper covers scenario and sandbox dumps and restores
+the capture function afterward; dedicated supplied-cache fixtures keep exercising
+the actual projection. The direct owned-payload test expects the exact fixed
+not_checked metadata only on positive integer missing rows and still compares
+all legacy fields and covered rows unchanged. Production behavior is unchanged.
+
+The additive golden normalizer ignores only that exact fifteen-key default,
+including every value's type, in synthetic authorized home deck views. It keeps
+prices, stock, errors, dates, carried facts, malformed/extra fields, covered rows,
+member/outside contexts, contradictory identity/space/version and unrelated paths
+as comparison evidence. Only the exact existing (local) script sentinel and
+supplied matching home profiles are eligible beside the raw script dump. Public
+normalization still copies input. The existing earlier hidden-inventory projection
+can remove a parent owned field, so this helper's isolated scope tests do not
+claim to prove the whole old golden privacy gate; direct shop API permission
+fixtures remain that proof. No historical golden JSON was regenerated or changed.
+
+The first full checkpoint at functional HEAD 222a859 found one owned-payload
+mismatch and nine golden-subtest mismatches from Price49's added shop_snapshot
+field. Shard 0 reported 2,384 tests with ten failures and 81 skips; shard 1 passed
+2,292 tests with 94 skips. Shards 2 and 3 were not started. Source verification
+after both completed confirmed the frozen manifest and 112 preserved headers
+unchanged. This was a failed partial checkpoint, preserved in
+`decklab-fixture-222a859-inpnwjlx`; no complete-suite pass is claimed for it.
+Static inspection confirmed the test package already redirects the shop snapshot
+to an absent temporary file; investigation did not probe any configured cache.
+
+The focused corrected run passed **105 reported tests with one skip** in
+139.441 seconds, including every inventory golden, direct owned output and the
+dedicated supplied-cache checks. **Fifteen new regressions** cover strict default
+normalization and explicit capture isolation. Independent review, scoped Ruff,
+whitespace and the full length guard pass: **1,196 owned source files, none over
+1,200 lines**. Evidence is in `decklab-shop-contract-d81fb90e`. A fresh complete
+four-shard qualification follows this fixture-only commit. No configured data,
+retailer request, migration, live browser/server or service action was used.
+
+## Source-aware two-player life counter (2026-10-29; E4-S26)
+
+New two-player counters now keep every actual commander source independently,
+including partners, matching names across players and a player's own commander
+after control changes. Casual games start at 20 life and Commander at 40. Life
+taps/holds, ±5, optional poison, concede, Undo and elapsed time remain local.
+A terminal tap/concession opens the ordinary result form; a held terminal count
+waits for the matching foreground pointer release. Timers never open forms or
+send requests. Cancelled or stale gestures discard that handoff and leave an
+explicit Record result recovery action.
+
+The strict local v2 packet holds profile/collection/session identity, date,
+selectors, labels and bounded counts, without an aggregate commander field or
+trusted historical deck snapshots. Separate scoped session keys preserve all
+v1 saved bytes when drawing, starting v2, resuming legacy or closing. Existing
+aggregate games remain explicitly labelled legacy; their positive totals are
+never guessed into sources, split or reset. Actual legacy changes retain their
+format. Both runtimes now bind holds, callbacks and wake epochs to original
+profile objects, frames, controls, generations and storage observations. The
+legacy reset fixture now proves a background New game click is inert, then
+closes the foreground result sheet before checking the unchanged reset behavior.
+All seven original test IDs remain.
+
+The new result path is scoped to v2 presets. Ordinary corrections, hidden/removed
+sides, legacy presets and quick-record timing keep their existing path. Current
+visible public opponents from other spaces remain valid. Missing, renamed or
+changed list selectors require explicit replacements, and changed selected
+sideboard plans require a current-plan/None acknowledgement. Cloned semantic
+bindings prevent in-place catalog or plan changes from being adopted silently;
+drift refreshes only on a foreground action and retains draft fields and counts.
+The preview and saved response must match the reviewed list/plan transformations,
+record identity and content before session cleanup. Uncertain saves keep the
+counter. Failed local removal states that the game saved, blocks this session
+on the current page and warns against recording it again after reload; it does
+not claim persistence when storage is unavailable.
+
+Root's protected fifteen-target integration reported **299 tests**, passing
+with **one intentional pre-setup database-integration class skip**, in 77.434
+seconds. The **76 new cases** cover model/storage/gesture/form behavior; all ten
+owned source/test hashes stayed stable during the run, with a maximum of 894
+lines. Scoped Ruff, three JavaScript syntax checks, isolated source-inventory
+fixtures and the complete source-length guard pass: **1,194 owned files, none
+over 1,200 lines**. New files had direct EOF/whitespace checks before qualification.
+Independent model and integration reviews are clear. Evidence is in
+`decklab-duel-source-nmzk_45k`; the 112 preserved test-header edits remain
+byte-identical and AST-equivalent to HEAD, outside this commit.
+
+E4-S26 is built in source; the story summaries were recounted as 255 total,
+211 built, 16 partial, 14 missing and 14 not wanted. Physical browser/device and
+Commander-night acceptance remain separate. Normal source-read authorization
+has resumed, so a complete frozen fixture checkpoint follows this functional
+slice. No database migration, configured-data read/write, live browser/storage,
+server restart, service activation or Forge run was used for qualification.
+
+## Local Commander pod life counter (2026-10-29; E4-S26 slice)
+
+The new pod form can start a three/four-seat counter with 40 life, life ±1/±5,
+optional poison, separate commander-damage sources, concede, one-change Undo
+and an elapsed clock. A first elimination leaves the others playing. The last
+remaining seat, or an explicit End game choice, fills the ordinary pod form;
+Review and Save remain explicit. The existing pod API and 1v1 totals are unchanged.
+
+Stable seat/source identities keep partners independent and include own commanders
+through control changes. Commander-section names stay literal, including commas
+and double-face separators. An external opponent gets one literal or numbered
+source, with a second added explicitly. Commander eligibility comes from the
+existing positive current catalog, independently of a deck ID's folder kind.
+The rules source and remaining two-player aggregate-damage gap are recorded in
+the story; E4-S26 remains partial and its TODO row stays open.
+
+Strict local packets belong to the original profile, collection and random
+session, expire after two days, and contain selectors/labels/counts rather than
+trusted historical snapshots. Resume keeps stale or deleted deck choices for
+counting; recording requires an explicit current replacement. Type and player-count
+rerenders retain that unresolved intent instead of choosing list zero. Partial
+storage failures keep memory counting usable with a fixed Resume warning, and
+later persistence clears the warning. Clock and visibility callbacks never save,
+mutate counts or open a result form; a resumed ended packet needs an explicit
+review action.
+
+Controls bind their original profile object, page/data, frame, session, generation
+and connected control. Hidden, detached, replaced or reparented launchers and
+closed damage controls cannot act. Confirmed Save clears only its original local
+session key. Failed removal reports that the game saved, disables that session on
+the current page and retains a warning; it makes no persistent guarantee across
+a reload when storage cannot be changed. Newer sessions remain intact. Collapsed
+native damage disclosures and compact two-column seats from 360px retain 44px tap
+targets; actual browser, phone and Commander-night acceptance remain separate.
+
+Root's protected thirteen-target integration reported **281 tests**, passing
+with **one intentional database-integration class skip**, in 79.736 seconds.
+All ten owned source/test hashes stayed stable during the run; the longest
+owned source has 702 lines. Scoped Ruff, four JavaScript syntax checks and
+whitespace checks pass. Final staged review removed one extra test EOF blank
+line, with equivalent AST and identical non-trailing content proved. The skip
+was separately confirmed as the fixture
+runner's pre-setup database-integration gate, without enabling or probing it.
+The 60 new checks cover pure rules/packet validation, fake storage/DOM controls
+and the actual-script-order form bridge. Independent review found and resolved
+source normalization, Undo binding, storage recovery, foreground handoff and
+stale replacement/launcher ownership issues; no material finding remains.
+Evidence is in `decklab-pod-counter-82f31447`. The 112 preserved test-header-only
+changes remain unstaged and byte-for-byte unchanged, with equivalent AST bodies.
+Repository-wide source inspection and a fresh complete-suite claim remain deferred
+under the stopped-source boundary. Qualification used disposable fixtures only;
+no configured database, live browser/storage, server restart or service action.
+
+## Nightly shop checks for saved-home shortfalls (2026-10-28; E5-S08 slice)
+
+The nightly MTGMate step now includes proven missing names from saved home
+Planned lists within its existing 45-minute request budget. Manual snapshot and
+dry-run remain queue-only. One captured inventory revision supplies the queue
+and optional calculation; a home-only read projection removes member decks
+before parsing but preserves home collection, incoming cards and built/intact
+physical reservations. Member decks, Public ones included, wishlists, editor
+drafts and product/pairing candidates supply no lookup intent.
+
+Existing queue spellings/order are kept exactly so their quote matches and
+carried dates still work. Captured canonical identities suppress only additional
+missing aliases; no duplicate alias entries or cache schema were added. New
+missing rows require positive integer quantities and proven local identities.
+The inventory must be fresh and persisted, and the prepared index generation
+must remain consistent through counting. Ambiguous metadata, active aliases,
+unreadable holders and whole-pool uncertainty fail closed. Independently proven
+targets may form a labelled partial scan. Optional failures preserve the exact
+queue with fixed notices, never raw errors or private deck labels.
+
+Names freeze before retailer work. The queue reader now respects an existing
+pin, and a pin opened by refresh is released before requests. An early age check
+avoids unnecessary counting; a second check under the existing lock closes the
+other-writer race and uses the latest cache for oldest-first ordering and carried
+results. There is still one fetch loop, unchanged crawl delay, age policy and
+budget. The optional union shares the strict projection's 5,000-name cap; overflow
+falls back without truncation. A larger legacy queue keeps its existing behavior,
+while strict missing-price facts remain unknown for an oversized cache.
+
+Root's protected eleven-target integration passed **181 tests without skips**,
+including **46 new helper/refresh tests**. Six real disposable-fixture cases prove
+home shortfalls with built/intact/incoming reservations and a fatal member-parser
+sentinel; additional cases cover one snapshot, raw queue aliases, carried dates,
+empty/partial/unavailable scopes, caps, pin cleanup, lock races and nightly fakes.
+Independent review found and resolved metadata/alias proof gaps; no material
+findings remain. Scoped Ruff, whitespace and every changed source's 1,200-line
+bound pass. Final staged review removed one extra test EOF blank line, with AST
+and all non-trailing content verified identical. Logs and host exit 0 are in
+`decklab-nightly-missing-6d7df9b2`.
+Repository-wide source scans and a fresh complete-suite claim are deferred under
+the active stopped-source-inspection boundary; targeted behavioral fixtures do
+not dump those sources. No configured inventory/database/cache, retailer, live
+server, job installation or service activation was used for qualification.
+
+## Saved shop checks in deck Prices (2026-10-28; E5-S08 slice)
+
+Missing cards in a home deck's Prices table now show the existing saved MTGMate
+nonfoil check: per-card AUD price, stock for the selected printing, safe link
+and that entry's original fetch date including year. A caption distinguishes
+any-nonfoil evidence from the printing or finish in the deck's list. Estimates,
+rate dates, counts, sections, totals and reprint notices remain unchanged; no
+retailer price is multiplied into a basket total or presented as enough stock.
+
+The optional capture requires visibility of the original selector and both
+home inventory and home-record access after the ordinary reader authorizes
+the resolved deck. A Public collection/deck alone grants no household cache
+coverage, and member-space decks never use it. Trusted script reads retain their
+existing rights; ordinary anonymous requests get no capture. Failed comparisons,
+malformed row containers and lists with no actual missing cards do no cache work.
+One explicit capture, including absence, feeds the existing bounded projection
+and already-loaded resolver. The page starts no retailer request or write.
+
+The existing renderer lives inside each card's full-width `tbody`, so sorting
+retains the card, its facts, labels and reprints together. Sorting also binds
+the original profile object, screen/data/rows, canonical deck/list route, main,
+table/wrapper/frame and original header/button. Cards filters and returning to
+the same Cards tab remain usable; detached/replaced controls and same-ID profile
+replacement cannot act on stale tables. No script, CSS or asynchronous reader
+was added.
+
+Root's protected ten-target integration passed **169 tests without skips**,
+including **33 new API and DOM cases** plus existing aliases, private readers,
+deck/table behavior, strict Shopping facts and asset checks. The fixtures cover
+Public collections separately from home records, hidden raw aliases, script vs
+anonymous access, failed/absent captures, exact foil intent, malformed facts,
+safe literal rendering, paired sorting and stale controls. The owner's initial
+UI run found fixture setup/assertion issues; corrected fixtures and two focused
+65-test runs passed before root's broader check. Node syntax, Ruff, whitespace
+and source lengths pass (1,182 owned files, none over 1,200 lines). Local logs
+and host exit 0 are in `decklab-deck-shop-b3ca884b`. No real inventory/cache,
+configured database, running server or retailer was accessed for qualification;
+browser/device acceptance and live activation remain separate.
+
+## Shared missing-card counting (2026-10-28; E5-S08 foundation)
+
+`lib/buying_needs.py` now owns the existing saved-target counting phase: one
+home pool, individual Planned shortfalls without prices, canonical-name sums,
+physical reservations, per-deck errors and whole-pool uncertainty. Explicit
+no-target, unavailable and counted phases preserve the old early returns and
+distinguish a complete empty result from unknown data. Callers supply name,
+message and logging functions; the helper has no HTTP, pictures, queue matching,
+shop-cache behavior or inventory pin of its own.
+
+Shopping's adapter keeps its public/helper seams, queue annotations, card
+pictures, sort order, totals and legacy per-deck results. This structural slice
+changes no request list, nightly behavior or visible result; it prepares the
+nightly caller to reuse the same physical-card calculation rather than duplicate
+it or import a web endpoint.
+
+Root's protected seven-target group passed **113 tests without skips**, including
+22 new kernel/adapter cases, disposable HTTP, queued snapshot/matching and
+existing partial/unavailable behavior. The broader initial check found the
+separate field-route fixture import problem fixed in `ce788cb`; the final group
+includes the formerly failing Shopping HTTP checks. Independent review, Ruff,
+whitespace and the source-length guard pass (1,180 owned files, none above 1,200
+lines). Logs and host exit 0 are in `decklab-buying-kernel-61918739`. No real
+inventory, configured database, saved shop cache, retailer or live server was
+used for qualification. The 112 preserved dirty headers remain unchanged.
+
+## Isolated field-route imports (2026-10-28)
+
+A standalone Shopping HTTP regression returned 500 instead of its expected 405:
+the shared feature router eagerly imported the field-membership adapter while
+the disposable fixture had replaced Forge with a stand-in that is not a package.
+Earlier test discovery could preload the real adapter and mask this ordering
+problem. This identifies a fixture/import boundary, not a proven live-server fault.
+
+The router now defers just that adapter until an allowed field request reaches
+its callable. Method, query and deck-selector guards still run first, and exact
+validated keywords, omitted defaults and the adapter's patch seams are preserved.
+No field-page behavior or simulation is changed. Root's protected 22-test group
+passes without skips, covering first-request method refusals, a deterministic
+import sentinel even after preloading, original field routes and the pod body cap.
+An initial positional wrapper failed the existing exact-call assertions; the
+final keyword-preserving version passed. Independent review, Ruff and whitespace
+are clear. Logs and host exit 0 are in `decklab-buying-kernel-61918739`.
+
+## Reviewed Commander pod records (2026-10-28; E4-S18, E9-S16)
+
+Game log now has a separate **Commander pods** section, also when filtered to a
+deck. Record three or four stable seats using saved Commander lists from the
+recording collection or private external player/commander labels, then choose
+a winner or draw, date and notes. At least one captured deck is required.
+**Review pod game** shows the exact record before **Save pod game**; there is no
+timer or save on hide. Corrections preserve unchanged historical snapshots,
+and changed records/lists refuse stale saves. Failed or rejected reviews keep
+the open draft, including inactive choices. Drafts are not stored on the device.
+
+The existing version-1 store envelope and legacy record bytes remain unchanged.
+An exact content discriminator selects the new stable-seat schema. Both save
+routes refuse conversion between pods and two-player games. Raw deck visibility
+is checked before loading inventory; one pinned snapshot then resolves and
+checks every canonical identity before conflicts or captured-list reads.
+New/replacement lists must be Commander decks in the recording space. Existing
+aggregate recording permissions, record CAS and membership admission remain.
+
+Public games stay read-only outside their space. Every player/external commander
+label, notes and saver remain private; outsiders receive numbered seats and only
+deck snapshots they may read. Public decks alone never publish games. Activity
+records one own-space change with a generic player-count summary. Damaged pod
+audit metadata fails closed before ownership/iteration; guarded member removal
+deletes the recording space's whole pod. No migration is needed. Separate API
+buckets and explicit consumer guards keep pods out of 1v1 Head to head, Forge
+comparison summaries, quick-record defaults and the unchanged two-player counter.
+
+The form uses literal labels and positive eligibility/edit flags. Review and Save
+validate response shape and captured-list metadata, and bind async work to its
+original profile object, route, frame, data, record hash, draft and connected
+controls. Review caught and corrected malformed-preview and hidden-metadata
+paths; no material source findings remain.
+
+Root's protected 22-target integration passed **432 tests with five intentional
+PostgreSQL skips**, including **120 new model, store, lifecycle, API and DOM
+cases**. Explicit fake PostgreSQL adapters cover CAS, admission and rollback;
+they do not qualify a real database. Node syntax, real-error Ruff, whitespace
+and the source-length guard pass (1,177 owned files, none above 1,200 lines).
+The local evidence folder is `decklab-pods-8fd6617d`: integration log and host
+exit 0, unchanged hashes for all 22 owned source/test files during the run, and
+proof that the 112 preserved dirty test headers stayed AST-equivalent and
+byte-unchanged. Final staged whitespace review removed one extra test-file EOF
+blank line; AST and all non-trailing content were verified identical afterward.
+No live server, database, household records or real Forge runtime was accessed
+for this qualification. Browser/device and actual Commander-night acceptance
+remain separate; the multiplayer counter is now an independent ready slice.
+
+## Saved-shop URL validation and asset contract (2026-10-28)
+
+The frozen checkpoint on `5d625a9` discovered 10,077 unique cases, preserving all
+9,123 starting cases through the documented move/rename maps. Its four shards
+reported 9,499 tests with 420 intentional skips: three passed, and one found the
+static asset guard rejecting a literal HTTPS origin in the new link validator.
+The validator makes no request. All logs, explicit host exits and the failed
+result remain in the separate local folder `decklab-fixture-5d625a9-9389f1c7`.
+Before/after proof confirms the same 1,160-file source digest and the same 112
+AST-equivalent uncommitted test headers throughout that run.
+
+The validator now compares the URL's normalized HTTPS protocol and exact host.
+It accepts the same default-port and mixed-case URLs and still rejects other
+hosts, non-default ports, credentials, unsafe paths, queries, fragments and
+malformed Unicode. The static asset guard is unchanged. Added link assertions,
+independent review and root's 37 protected UI/asset tests pass without skips;
+Node syntax, Ruff and whitespace pass. A fresh frozen-source run on `e10c0fa`
+then passed all four shards with explicit host exit 0: 9,499 tests reported and
+420 intentional skips, from the same 10,077 unique discovered cases. The source
+digest and 112 AST-equivalent uncommitted headers stayed unchanged. The complete
+evidence is recorded in [SOURCE_AUDIT.md](SOURCE_AUDIT.md#third-integrated-feature-checkpoint-2026-10-28);
+the earlier failed run remains preserved separately. This qualifies protected
+fixtures, with genuine PostgreSQL, native/process runtime, real Forge and
+browser/device or live acceptance still separate.
+
+## Saved shop checks beside missing cards (2026-10-28; E5-S08 slice)
+
+Shopping's **Missing cards across decks** now shows saved MTGMate evidence for
+each canonical need. It chooses the cheapest stocked nonfoil printing, separate
+from an exact-printing queue request, with no foil fallback. The line gives an
+AUD unit price, physical stock of that selected printing, a safe printing link
+and the entry's original fetch time including year. A carried record keeps its
+old date. No nonfoil listing, no saved check and unknown evidence have distinct
+words. Missing-card rows receive no queue stock-highlight chips, basket total or
+promise that the shop can supply the whole shortfall.
+
+One optional snapshot capture supplies both queue enrichment before gathering
+and generic missing rows afterward. Explicit captured absence never reloads it;
+the nested queue copies remain identical to their enriched original rows. Home's
+existing read guard still runs before inventory, missing-card or cache readers.
+No route, migration, queue change, shop request or refresh action was added.
+
+A separate bounded projection preserves the existing queue picker's behavior.
+It proves cached canonical/front-name relationships through captured prepared
+card-index maps, never loading an index if the global reference changes. Conflicts,
+unconfirmed aliases, wrong provider/schema, unsafe or malformed relevant listings,
+non-positive/non-finite prices, invalid stock/dates/Unicode and caps produce fixed
+unknowns. Entry dates never fall back to overall snapshot completion. This uses
+the saved name check's provenance; it does not newly verify each set/number
+against Scryfall or compare with shops that were never fetched.
+
+Root's protected ten-target integration passed **147 tests without skips**,
+including 22 new backend/API and 14 new Node DOM cases. Existing queue writes,
+copy equality, disposable HTTP responses, exact-printing preferences, privacy,
+one capture, absent/ambiguous/malformed evidence, strict nonfoil selection and
+fixed literal rendering are covered. Independent review, Node syntax, real-error
+Ruff and whitespace pass; 1,169 owned source files remain below the 1,200-line
+limit. Tests use supplied caches, fake network/read/write sentinels and disposable
+fixtures. No real cache, shop, database or running server was accessed for this
+qualification; browser/device and runtime acceptance remain separate.
+
+Coverage still follows names already saved by the queue-only nightly lookup.
+Adding missing names within its existing request budget, deck Prices and another
+shop remain open work. Opening Shopping alone never asks a retailer for prices.
+
+## Explicit local-worker experiment estimates (2026-10-28; E11-S16 slice)
+
+`forge experiment <spec.json> --dry-run --local` can now estimate an arm whose
+only actual change is an exact `config: {"forge_workers": N}` map, with a positive
+finite integer request. It uses the existing format fallback at those requested
+workers, with `config_fallback`, `requested_workers` and `local_assumed` provenance.
+Text distinguishes baseline planning workers from each matching arm's request.
+The fixed explanation states that this assumes requested local capacity before
+worker caps, available chunks, contention and shared PC load; actual activity
+is not verified. The serial-budget caveat remains.
+
+Configuration arms never reuse prior-arm or control speed, including enticing
+matching saved v2 samples. Other knobs, mixed changes, invalid requests, unknown
+formats or missing explicit local intent leave the complete time unavailable.
+One unsupported unfinished row still prevents a partial sum being presented as
+the total. Baseline/control estimates, game counts and normal arm proxies stay
+unchanged. Cached/skipped zero work reads no optional timing metadata, and finite
+positive sub-minute machine spans retain their precision.
+
+The existing local flag now reaches only the dry-run timing adapter as well as
+its unchanged normal run path. Planning still uses the read-only identity/layout
+boundary, creates no run folders and starts no process or game. CLI provenance
+uses fixed labels and binds optional per-arm worker context to the original
+key, arm, recipe and remaining count; arbitrary metadata messages are not printed.
+No adoption or replay-impact control is implied by a timing estimate.
+
+Root's protected eight-module integration passed **150 tests without skips**,
+including 18 new pure and 15 new adapter/CLI cases. Disposable read-only sentinels
+retain the original result-read count and reject deployment, write, runtime and
+child-process paths. Two requested worker arms, matching historical samples,
+unsupported combinations, zero work, finite JSON and actual estimator-to-CLI
+rendering are covered. Independent review, real-error Ruff and whitespace pass;
+1,166 owned source files remain at or below 1,200 lines. No real settings, saved
+arm folders, Forge installation, service or game changed. Actual experiment and
+runtime qualification remain separately gated.
+
+## Manual exclusions beside field ranks (2026-10-28; E3-S23 slice)
+
+The field's rank and Rankings now show how many visible current lists were
+actually removed by hand. The separate note describes the current field,
+leaving the existing rank sentence, comparison groups, game counts and coverage
+unchanged. Missing, malformed or incomplete evidence shows a fixed unavailable
+message; it never becomes a successful-looking zero. The field note appears
+only with an actual rating. No extra request, write or game is started.
+
+A bounded observer records distinct canonical deck/list-version choices during
+the existing selector pass, before simulation-card deduplication. Repeated,
+wildcard, version-specific, alias and reversed-pairing directives count only
+their actual visible removals. Both raw and current canonical visibility gates
+apply, and no new alias resolution or candidate enumeration is introduced.
+More than 1,000 distinct removals, failed metadata and source reads, malformed
+configuration or an unobserved/incomplete pass yield an unknown count while
+preserving legacy selection, notes and exception behavior. Ordinary observer
+failures cannot change selection; cancellation still propagates.
+
+Rankings reuses the same pass's normalized removal names for its existing
+exclusion prose, eliminating its second configuration read. Malformed neighboring
+values make the count unknown while retaining legacy normalized explanations.
+The field adds metadata to a copy of its rating; its existing hidden-opponent
+filter removes the rating and count together. No denied field-page change was
+retried. Audited home-admin membership editing remains the next story slice.
+
+Root's protected eighteen-module integration passed **253 tests without skips**,
+including 27 new model and 10 new Node DOM cases. They cover no-op/duplicate and
+alias decisions, identical-card lists, exact bounds/overflow, malformed and failed
+reads, observer failures, one configuration read, rating-copy/privacy behavior,
+fixed UI wording and unchanged requests. Independent review, Node syntax,
+real-error Ruff and whitespace pass. The source audit finds 1,164 owned files,
+none over 1,200 lines. PostgreSQL, real Forge, browser/device and live runtime
+qualification remain separate; no live records, settings or services changed.
+
+## Forecast inventory keys and private-kit integration checks (2026-10-28)
+
+The broad protected checkpoint on `46b53eb` discovered 9,971 unique cases with
+all 9,123 starting cases accounted for through explicit class/test renames.
+Its four shards reported 9,393 tests and 420 intentional qualification skips;
+three passed and one found two missed integration checks. Frozen-source proof
+confirmed the checkout stayed unchanged throughout, apart from the already
+prepared 112 AST-equivalent test-header edits, which remain uncommitted after
+a separate staging denial. Original logs and exit-code receipts are preserved.
+
+The storage forecast now gets its product identity key from the inventory's
+existing `paths.payload` helper. The fixed product/pending arguments produce
+exactly the same string for every accepted filename, without I/O, normalization
+or a status-dependent location, while satisfying the inventory boundary guard.
+The private-kit alias-write fixture now expects the intentional fixed
+`kit_ownership` reason tag; its 403, hidden-identity and no-write assertions stay
+intact. No permission, routing or user-data behavior changes.
+
+Root's protected six-module correction group passed 165 tests without skips,
+covering the inventory reader guard, alias reads/writes, forecast backend/UI
+and player/kit backend/UI. Ruff and whitespace pass. A fresh frozen-source run
+on `f5147f8` passed all four shards with explicit host exit 0: 9,393 tests
+reported, 420 intentional skips, from 9,971 unique discovered cases. Discovery
+preserved all 9,123 starting cases through the documented move/rename maps,
+with 848 additional cases and no missing, duplicate or import-error cases.
+The 1,152-file source digest was unchanged throughout; the only uncommitted
+source was the same 112 AST-equivalent headers. The detailed checkpoint and
+local evidence reference are in [SOURCE_AUDIT.md](SOURCE_AUDIT.md#second-integrated-feature-checkpoint-2026-10-28).
+The earlier failed run remains preserved separately. These protected fixtures
+do not qualify PostgreSQL, live data/server, real Forge, native runtime or devices.
+
+## Review one deleted token-card record (2026-10-28; E11-S08 slice)
+
+Activity can now **Review deleted token card** for one standalone own-space
+deletion. The distinct read-only result shows all ten exact historical token
+fields and the physical quantity, counting a front/back pair as one card. It
+offers Close and manual Refresh eligibility, with no input, confirmation box,
+Save Undo or write request. Notes remain literal owned row facts; original audit
+messages/reasons and database identity/position fields are not projected.
+
+The backend reads the complete original source, verifies its exact row shape,
+old identity/position and supported ordinary text forms, then checks current
+paper printings, finish and physical pairing. Both the original key and the
+whole own-space token list must still have that deletion as their latest audit
+row. Missing fences and later changes, including a fresh-ID restore/remove
+cycle, refuse. Current stock must have settled IDs, order and persisted layout.
+Duplicate or reversed printing identities and incomplete survivors sharing a
+possible face refuse; an unknown reverse cannot count as a different card.
+
+Recorded deck/product packing must be complete and readable. Any line that
+could claim the restored card refuses, even if another printing currently meets
+it. The review preserves every survivor and allocation and never creates a
+hypothetical replacement ID. Stock, holder, text, line and allocation-work caps
+refuse the whole review. Its opaque evidence binds source, exact facts, layout,
+stock hash and both revisions without publishing those internal details.
+
+The PostgreSQL adapter uses one explicit read-only READ COMMITTED transaction,
+the existing inventory advisory claim, plain membership/departure checks and
+fresh same-connection snapshot, source, latest-row and position readers. It
+creates no audit change and issues no DML. API POST refuses this action before
+`saving.apply_op`; direct operation execution also refuses before an inverse.
+A direct generic `PgInventory.apply` attempt would first enter its existing
+audit transaction and must roll back on refusal; that path was not run against
+PostgreSQL and is not described as issuing no DML.
+
+The specified future identity policy uses ordinary Add with a fresh ID,
+explicit whole-quantity physical ownership confirmation and transaction-local
+proof of one exact actual INSERT with unchanged survivors/positions/packing.
+The old ID is never reused or guessed, and earlier packing is not reconnected.
+That inverse remains a later slice; this eligibility review promises no save.
+
+Root's final protected eighteen-module integration passed 272 tests with zero
+skips, including 37 backend/API/fake-cursor and 18 UI cases plus prior Undo,
+token INSERT, collection INSERT/DELETE and loader regressions. One old blanket
+DELETE-404 assertion now expects an unavailable review for unverified facts,
+retaining its no-write checks and adding explicit POST refusal. Independent and
+root review, Node syntax, Ruff, source lengths and whitespace pass. Qualification
+used fake transactions/backends, disposable fixtures and Node DOM only; actual
+PostgreSQL, browser and device behavior remain unrun. No live records, server,
+configuration, service, packing or game was changed or probed.
+
+## Saved sideboard-plan preview (2026-10-28; E4-S16 slice)
+
+Saved plans in Game log and the deck's Sideboard plan now offer **Preview
+post-board list**. The explicit read checks the saved record hash and both exact
+current list snapshots, including sections, printing and finish. It reuses the
+ordinary plan transfer rules, preserving split-printing order and every other
+section in a separate derived snapshot. The sheet shows counts, printing-aware
+differences and the full post-board list, with bounded local pagination. Original
+decks, plans, audit history, packed cards and simulation data stay unchanged.
+
+The GET-only API checks the raw plan's own-space visibility before validation or
+hashing, then both deck identities before current readers. Public decks do not
+publish private plans. Hidden or removed opponents give fixed generic guidance
+without their identifiers, lists or raw errors. One lazy inventory pin covers
+both current lists; current visibility is checked again on canonical summaries.
+Complete row/text/response caps precede costly work. Stale records and even
+printing-only list changes refuse rather than silently rebasing the plan.
+
+For known compatible formats, the guide uses the existing quick and paired-ahead
+targets: up to 400 or 6,400 fresh games across base and post-board lists. Known
+mixed or unconfirmed formats retain the list preview with the game guide
+unavailable and no numeric budget. These are proposed fresh upper bounds only:
+saved games, remaining work, timing, engine compatibility and actual execution
+readiness are not established. No simulation permission is needed to read a
+preview; no Start, Save or verdict is offered.
+
+The UI validates and copies the bounded public contract, enforces whole-card and
+section conservation and rejects contradictory moves or totals. Requests and
+pagination retain their original profile object/ID, route, page, plan/list hashes,
+deck screen, sheet and connected footer controls. Closing/reopening sheets,
+replacing profiles or moving controls invalidates late replies and actions;
+errors keep fixed guidance and manual retry.
+
+Root's final protected eight-module integration passed 150 tests without skips,
+including 24 backend and 22 UI feature cases plus existing play, removed-record,
+deck-sideboard and script-loader checks. Independent/root review, Node syntax,
+Ruff, source lengths and whitespace checks pass. Only disposable fixtures,
+MemoryStore and a fake Node DOM qualified this slice; actual PostgreSQL, browser,
+device and Forge qualification remain unrun. E4-S16 is partial for permission-
+checked paired runs, verdicts and stale saved-test results. No live server,
+configuration, collection, service or game was changed or probed.
+
+## Read-only self-hosting doctor (2026-10-28; E11-S34)
+
+`python -m decklab.doctor [--json]` now checks the supported runtime, captured
+configuration, PostgreSQL driver, database metadata and local card index before
+server startup. Both outputs use the same fixed public findings and next steps;
+adapter values, paths, credentials, emails, record contents and raw errors never
+enter the report. Missing dependencies skip later checks explicitly. Exit codes
+are 0 for core checks passed, 1 for known setup work and 2 for unverified core
+checks or invalid arguments; optional failures leave the core result intact.
+Help creates no adapter, cancellation stops later probes without partial JSON,
+and optional import/construction failures are cached within the report.
+
+The driver path validates a matching `.venv` without executing `.pth` startup
+files, checks imported package provenance and restores temporary Python settings.
+Configuration is read once and includes home-profile, access and host validation,
+with legacy numeric database ports accepted. The database adapter opens one app
+connection with read-only defaults and a read-only repeatable-read metadata
+transaction. It compares bounded migration checksums and inventory/deck singleton
+markers, without inspecting household records. Two-second per-address connection,
+five-second query and two-second lock timeouts do not bound DNS resolution;
+multi-host lists are left unverified without contact. This is not complete
+schema, grants or data-integrity qualification.
+
+The card check bounds compressed/decompressed input and validates operational
+cards, variants, printings, tokens and metadata without loading the shared card
+index or downloading anything. Optional Java/Forge checks use explicit paths,
+bounded metadata/directory reads and reject symlink/reparse paths. They report
+declared Java version and nonempty archive prefixes only: no Java execution,
+archive integrity, fork identity, card-log readiness or game acceptance is claimed.
+No install, migration, schedule, service activation or repair occurs. The setup
+guide and reference now explain the command, exit codes and limits.
+
+Root's protected seven-module integration passed 231 tests with zero skips,
+including 91 new fake-provider/disposable-file cases and existing config, access,
+profile-validation and card regressions. A compatibility fixture uses the actual
+card-index builder on tiny disposable bulk/tag inputs. Independent and root
+review, Ruff, source lengths and whitespace checks pass. No real configured
+database, private config, actual cache, live server or Forge installation was
+probed for this feature. Real PostgreSQL/host, Linux runtime and simulation
+qualification remain separate; the running server was preserved.
+
+## Experiment timing budget scope (2026-10-28; E11-S16)
+
+The fixed timing assumptions now explicitly say that per-job times are added as
+a serial budget and overlapping pair jobs can reduce elapsed time. This follows
+the existing inflight scheduler in `experiment._play_group`; timing math, schema
+and scheduling are unchanged. The 17 protected CLI fixtures pass without skips.
+Worker-only configuration feasibility was also checked from source: a requested
+ticket cap is not the shared server budget or effective activity. A future
+conditional local-worker model needs explicit placement intent and assumptions;
+current configuration-arm totals remain unknown. No runtime probe or game ran.
+
+## Remaining experiment game-time estimates (2026-10-28; E11-S16 slice)
+
+Experiment dry runs now add a labelled remaining-game time guide in text and an
+additive `estimate` object in JSON. Existing controls, arms, totals, cached work,
+skips, extra seed controls and exit paths remain unchanged. The adapter reuses
+the exact saved snapshots already selected by the layout, including external
+control folders; it performs no second result reads or directory scan. Conflicting
+same-key snapshots cannot establish a rate. Zero work skips timing metadata;
+optional reader/estimator failures keep the game plan and give fixed unavailable
+timing without raw errors. Optional rates and configured workers are read quietly,
+without host, pool or readiness probes, through an isolated fixture seam.
+
+The pure estimator labels measured control speed, prior-arm proxy, control proxy,
+format fallback or mixed provenance. Arm keys do not prove recipe compatibility.
+Valid v2 pool observations use weighted aggregate games/wall time, never another
+worker division; a known worker mismatch rejects that observation, while unknown
+context stays explicit. V1 requires 20 valid observations. V1/fallback scaling
+uses configured workers or a labelled 16-worker assumption. The range has a 20%
+heuristic tail allowance, not confidence coverage, and excludes queue wait, cold
+startup, deployment and changing shared load. Existing arm-folder/spec compatibility
+and actual run readiness remain separate checks.
+
+Positive raw JSON spans stay positive, including a single fast remaining game;
+text says under 1 minute instead of zero. Exact zero is reserved for no remaining
+games. Arbitrary pending configuration arms have no supported model, so the whole
+time stays unavailable while any row details remain separate, never a partial
+total presented as the whole experiment.
+
+Root's final protected nine-module integration passed 195 tests without skips,
+including 26 new estimator, 11 new adapter and 17 new CLI cases plus the read-only
+prerequisite and existing engine/experiment/rankings/rate regressions. Independent
+and root review, Ruff, whitespace and source-length checks pass. E11-S16 remains
+partial for supported configuration-arm assumptions and adoption controls. No real
+timing/result/config data, process probe, Forge game, server or service action was
+used for qualification; fixture previews neither deploy nor write reports.
+
+## Read-only experiment planning (2026-10-28; E11-S16 prerequisite)
+
+Experiment dry runs previously shared a layout path that could deploy adopted
+overrides, remember engine metadata or create a performance-mode run folder.
+Planning now opts into read-only identity/layout behavior before examining cached
+controls. An unconfirmed engine/deployment identity gives a fixed explanation
+that the remaining count is unknown; it cannot masquerade as a fresh cache miss.
+
+The narrow `engine.today(kind, read_only=True)` mode requires an explicit engine
+kind and preserves normal fork-release, AI/patch and control-key semantics,
+including existing read-only remembered fallback metadata. It bypasses normal
+held memo, remembering, readiness selection and run-folder creation/deployment.
+It inspects only the expected existing mode-specific folder and deployment.
+Run/measures defaults and the no-argument rankings reader remain unchanged.
+Plan output/counts stay unchanged when identity is confirmed. This is engine
+and control-cache identity, not proof that an edited arm recipe remains compatible
+with its saved folder; real runs retain their separate compatibility checks.
+
+Root's protected five-module engine/experiment/rankings integration passed 133
+tests without skips, including 9 new identity/key and 10 new planner/CLI cases.
+Fixtures compare stock, resource-fork, legacy-fork, offline and performance-mode
+keys, reject unknown identity before cached reads, and guard deployment,
+remembering, setup, pool/runner/subprocess and file writes. The existing dry-run
+fixture prepares only its disposable folder before asserting no deployment in
+both previews. Independent/root review, Ruff, diff and source-length checks pass.
+Timing integration remains the next E11-S16 slice. No real Forge, installation,
+configuration, service, server or cached household result qualified this change.
+
+## Conditional storage scenario for pending deliveries (2026-10-28; E8-S19)
+
+Home-record readers can inspect a separate pending-delivery scenario beside the
+Card list's current storage-box count. It says how many known loose copies would
+be box candidates if left unsleeved and filed by the same printing's recorded
+location. Basics, off-box locations, pending products and token cards are shown
+separately; whether a product stays intact is decided at receipt. Reference-list
+card quantities never become a count of sealed products. Current holder-shortfall
+overlap stays separate and is never deducted or assigned automatically. The
+scenario does not predict exact occupancy or promise that an order will fit.
+
+The optional `storage_forecast` sibling uses the exact pinned inventory and
+leaves `storage_box` unchanged. It proves home-record permission before its own
+source reads; missing permission or a failed lookup yields no advice. Pending
+payloads already contain partial-receipt remainders, so arrivals are not deducted
+twice. Strict quantities and card/printing-field checks, repeated paths, conflicting identities,
+terminal product/status mismatches, orphan sources, location provenance and stale
+snapshots stay explicit. Ambiguous routing/source graphs suppress projection.
+Optional failure cannot fail a saved collection change or its conflict response.
+
+Work is bounded before record validation, CSV serialization and optional pool
+loading; capped/unread inputs never become a complete zero. Holder checks filter
+home records before touching recipe text and use a home-only pinned snapshot.
+Source/printing detail samples have explicit omissions while retaining full
+checked totals. The UI validates and freezes only bounded facts, clears missing,
+legacy/private/stale answers, paginates source details locally and retires old
+controls. Find cards retains no raw forecast object. Concurrent row readers share
+one owned request and cannot resume a save/location operation without valid rows
+and a SHA; newer saved rows win, while invalidated reads abort explicitly.
+
+Root's final protected 12-target integration passed 216 tests without skips,
+including 34 new backend and 25 new UI cases, an actual fake-inventory-to-UI
+roundtrip and existing storage/edit/add/guard/keyboard/account/trade/import/batch
+regressions. Independent/root review, Node syntax, Ruff, diff and length checks
+pass. E8-S19's stated source criteria are complete; token accounting and Find
+cards placement remain possible improvements outside this labelled scenario.
+Genuine PostgreSQL and browser/device qualification remain separate. No live
+order, collection, location, database/server, migration or service action occurred.
+
+## Read-only field membership (2026-10-28; E3-S23 slice)
+
+The deck's field view now offers Who's in the field, including when it has no
+opponents or saved games. Its lazily loaded disclosure explains current canonical
+lists and versions, inclusion/exclusion reasons, visible manual exclusions and
+which members are opponents of the assessed deck. Another version of that same
+deck never counts as a self-opponent. Membership remains separate from saved
+game evidence; this panel neither reads results nor starts games.
+
+`GET /api/field/membership` uses the existing selector with an optional structured
+trace. Legacy entries, notes, add/remove precedence and alias behavior are
+preserved. One pinned snapshot covers the initial raw visibility guard, canonical
+entry and membership. Names/counts follow visibility before emission; hidden
+configuration references and raw notes never become placeholders or counts.
+Product reasons remain generic outside home-record rights, and a member whose
+field cannot see home never enumerates home's pairing recipes. Failures or the
+1,000-row cap give an explicit unavailable answer without partial totals.
+
+The UI validates bounded identities/titles/reasons and counts, initially renders
+at most 40 rows, then expands locally in batches of 20 with exact shown/total
+counts and retained focus. Refresh retires old controls immediately. Profile,
+route, deck/list/view/data identity, disclosure/host attachment and modal/menu
+ownership prevent stale reads or expansion. Fixed errors expose no raw details.
+Explicit script-order and isolated source contracts include the new helper.
+
+Root's final protected 14-target integration passed 205 tests without skips,
+including 14 new model, 11 new API/route and 18 new UI fixtures plus existing
+membership/privacy/ranking/field and UI contracts. Independent/root review,
+Node syntax, Ruff, diff and source-length checks pass. E3-S23 remains partial:
+revision-checked audited home-admin membership edits and manual-exclusion counts
+in field ranks are still open. Human rationale is not invented for existing
+configuration removals. The denied E1-S12 correction/poor-AI caveat is untouched;
+`api/field_page.py` is unchanged. Genuine PostgreSQL, Forge and browser/device
+acceptance remain separate; no live field, game, server or service action occurred.
+
+## Guidance after a private-kit refusal (2026-10-28; E8-S15)
+
+Check and Save now explain the hand-off path after an actual private-kit
+ownership refusal. The two existing ownership 403s carry one fixed generic
+reason tag; their status, wording, authorization order and readers are unchanged.
+Hidden decks, ordinary permission failures, stale revisions and person-space
+kit refusals retain their existing classifications.
+
+The review preserves the open draft and offers Keep editing or an explicit
+Refresh and reapply draft. It names no private accessory or owner, sends no
+message and performs no automatic refresh/write. Refresh uses the existing
+reapply flow, with its optional ownership predicate binding the response to the
+original connected footer control. Closing/replacing the sheet, switching
+profile/route/frame or replacing that footer prevents late application. Failed
+refreshes preserve the draft and allow deliberate retry; successful guidance
+refreshes retain no raw original error in their notice.
+
+Root's final protected six-target integration passed 114 tests without skips,
+including 32 backend and 40 UI cases in the focused modules (3 new backend and
+10 new UI regressions). Independent/root review, Node syntax, Ruff, diff and
+source-length checks pass. Together with the permitted combined player/kit
+review, this completes E8-S15's source criteria. Actual accessory transfers
+remain owner-authorized; genuine PostgreSQL, browser/device and live-runtime
+qualification remain separate. No live kit, server or service action was used.
+
+## Integrated fixture checkpoint (2026-10-28)
+
+The protected four-shard suite qualifies the accumulated source through
+`37ad455`: 9,591 unique discovered cases, 9,013 reported tests and 420 skips,
+with no remaining failures. All 9,123 baseline cases survive the documented
+three-class module-move map, with 468 additional cases and no duplicate IDs or
+loader errors. Class-level setup skips explain the discovery/report difference.
+
+This is composite evidence: shards 0-2 passed on `fd0e0fb`; shard 3 exposed old
+CLI fixture helpers that assumed stderr contained only a SHA. Test-only commit
+`37ad455` validates the new privacy notice and exact final SHA line separately,
+using scoped fake visibility, while preserving the original 20 test bodies and
+assertions. Its 46 targeted checks and the entire corrected shard pass. The
+original failure log is retained. All production source, other fixtures and
+discovered IDs/module membership are unchanged, independently verified.
+
+Ruff, whitespace and the source-length guard pass (1,129 owned files, none over
+1,200 lines). The [source audit](SOURCE_AUDIT.md#integrated-feature-checkpoint-2026-10-28)
+records shard totals and evidence provenance. This is fixture qualification;
+genuine PostgreSQL, named native/process checks, Forge, browser/device and live
+runtime acceptance remain separate. No stopped action was retried, and no live
+probe, restart, service activation or deployment qualified this checkpoint.
+
+## Privacy guidance on CLI reads (2026-10-28; E11-S21)
+
+Wishlist, collection, token, deck and accessory list commands now emit advisory
+privacy notices on stderr. Human/CSV/JSON stdout, redirected UTF-8 collection
+bytes, hashes, exit paths and access/actor semantics remain unchanged. Original
+list bodies are AST-identical after removing only the new notice imports/calls.
+
+Wishlists are owner-private. Tokens follow collection visibility; decks use
+their separate switch, with explicit exclusions for private inventory-derived
+status/errors and kit. Each accessory row identifies its owner or shared home
+kit, which does not imply Public. A new command-local store/private Breaker
+reads current visibility once, without cached-Public fallback; readiness/orphan
+or lookup failures give conservative fixed guidance. Notices quote no contents
+or raw errors. Absent/closed/erroring stderr cannot redirect notices to stdout
+or fail a successful read. Wishlist help also prohibits quoting notes in audit
+messages and removal reasons.
+
+Root's protected combined notice/actor/merge/preview integration passed 56 tests
+without skips, including 26 new fake/disposable cases. The additional affected
+68-case batch reported two explicitly skipped real-database cases. Independent
+source/fixture review, root review, real-error Ruff, diff and length checks pass.
+Genuine PostgreSQL visibility-reader qualification remains unrun; no real
+member/config/visibility data, permissions, switches or live services changed.
+
+## Review player and permitted kit together (2026-10-28; E8-S15 slice)
+
+Saved built home decks with visible editable kit can review Played by, sleeves
+and deck box together, choosing permitted replacements or explicit clearing in
+one local history/Undo step. Normal check/Save sends the complete final triple.
+The compound inventory operation clears old kit, saves the player without kit
+and assigns final kit against that player. Unchanged shared-kit handoffs also
+receive fresh validation; existing private-owner refusals remain unchanged.
+
+Optional bounded recognized-choice intent is checked against complete fields and
+deck/kit authority before accessory readers, then against fresh IDs/kinds/owners
+inside the operation. It survives drafts, resume, Undo and rebase. Deleted IDs
+cannot become unchecked legacy text, while genuine older text stays compatible.
+Malformed/mismatched intent remains blocking until explicit review; it grants
+no access. Resumed changed-player pickers fetch bounded own/shared catalogs,
+preserve drafts during loading/failure, and reject old view/profile/route/control
+responses and known-ID legacy fallbacks. Full catalog data is not persisted.
+
+Root's protected nine-module/class integration passed 208 tests without skips,
+including 29 new backend and 30 new UI fixtures, normal/Quick editing, contracts
+and Considering promotions. Independent/root source review, isolated loader
+audit, Node syntax, Ruff, diff and length guards pass. The one necessary isolated
+loader tuple was updated; editor.js remains 1,198 lines.
+
+E8-S15 remains partial: helpful guidance after an actual hidden-kit refusal is
+still open. Hidden nulls never trigger a kit-existence assumption, and no private
+owner permission was expanded. Genuine PostgreSQL and browser/device acceptance
+remain unrun; no real kit, database/server, service or Forge action was performed.
+
+## Where CLI-merged copies go (2026-10-28; E7-S15)
+
+Real `collection merge` now captures locked positive printing deltas and prints
+Where these go after the existing counts, raw-import paths and stale-table
+notes. Both notes and guide use the exact returned snapshot. The explicit
+internal CLI allocator reads only the selected space, with no manufactured
+profile or actor access rule; web guards/defaults remain unchanged. When
+relaying member upkeep outside that space, counts/completion remain the limit.
+
+The console guide groups each added printing copy once by waiting deck and
+storage, using the shared prior-stock/new-copy ledger. At most 100 printing
+lines are printed, with exact omitted counts. Zero tracked copies says nothing
+to file; invalid/incomplete/capped calculations say Destination unknown. Dry-run,
+raw source bytes, repeat/refusal behavior, attribution and exit contracts stay
+unchanged. Advice/format failures, including closed stdout and failed stderr
+fallbacks, cannot fail an already-saved merge or suggest repeating it.
+
+Root's protected nine-module/class integration passed 107 tests without skips.
+Independent review then found closed text streams' ValueError case; root fixed
+both optional report catches and passed the final 14-case CLI module, including
+the new regression. Coverage includes 10 new allocator cases, 14 new CLI cases,
+page/precon advice and legacy merge/preview/actor behavior. Root review, Ruff,
+diff and length checks pass. E7-S15 is implemented across CSV imports, precons,
+single-card Add and CLI merge; Receive delivery retains its existing grouping.
+Genuine PostgreSQL and browser/device qualification remain unrun. No live
+collection, database/server or other runtime action was used for this slice.
+
+## Recorded maintenance history in Settings (2026-10-28; E11-S35)
+
+Selected admins can read backup, export, integrity-check and restore-check history
+in Settings. Each shows the latest recorded attempt, an independently queried
+last successful run and up to five recent attempts. Actual start time and ID
+order attempts, rather than completion insertion order. Failed latest attempts
+remain failed beside older successes; missing/incomplete/future/malformed facts
+remain explicit. Records are inserted after completion, so no Running state or
+claim about unrecorded/crashed attempts is inferred.
+
+One app-role read-only repeatable-read transaction uses its database clock and
+selects only operational timestamps/outcomes. Authorization precedes interval
+configuration and connection readers. Paths, details, sizes, credentials and
+private record contents are absent, and failures use fixed sanitized wording.
+No maintenance execution or schedule change is reachable from this GET route.
+
+Backup/export freshness uses successful finish time, checks use start time,
+with the existing stale_backup_hours grace; export explicitly borrows that
+nightly policy. Restore checks use their own restore_check_days from start,
+including the scheduler's exact due boundary. The existing status warnings stay
+unchanged. The responsive panel has manual refresh and validates health facts;
+profile object/ID, route, request sequence, connected panel and focus ownership
+reject old responses and private errors.
+
+Root's protected six-module integration passed 105 tests without skips, including
+17 new backend and 24 new UI cases, Settings members, shell and version consumers.
+Root/independent source review, Ruff, syntax, diff and source-length checks pass.
+Genuine PostgreSQL query/schema-role and browser/device qualification remain
+unrun. No real job, database/server probe, schedule, migration or Forge action
+was performed for this feature.
+
+## Where single-card additions go (2026-10-28; E7-S15 Add slice)
+
+Explicit Collection Add now supplies informational filing advice for its actual
+positive printing delta, including copies merged into an existing row. The
+locked operation can opt into JSON-only before/after facts while its default
+extra remains unchanged. The response's rows, extras, stale tables and guide
+use the exact committed snapshot; no raw import or second write is created.
+Edit, increases through Edit, printing swaps, reductions and removals gain no
+addition advice. Optional advice errors preserve successful saves and use
+Destination unknown rather than inventing storage destinations.
+
+Card list uses its existing message; Find cards uses its frozen one-use reload
+notice. Both retain profile/space ownership, exact printing quantities and
+source-specific captions. Original-route/top-dialog/form ownership, current
+re-add controls and pending/done/stale latches prevent repeat Adds and stale
+success/failure callbacks from redrawing another context. A removed-row edit
+gets advice only after the explicit Add as new action.
+
+Root's protected ten-module/class integration passed 186 tests without skips,
+including 11 new backend and 14 new UI cases, ordinary/precon filing, collection
+edits, ownership/conflict guards and reductions. Additional location and related
+UI fixtures passed. Independent and root source review, Ruff, syntax, diff and
+length guards pass. Genuine PostgreSQL and browser/device qualification remain
+unrun; no live database/server/data action was used. CLI merge advice remains
+on E7-S15.
+
+## Reviewed Shopping requests from saved tests (2026-10-28; E5-S17)
+
+Home admins can explicitly review one missing addition on a finished saved test,
+keep any nonfoil or choose an exact printing/finish, and add the reviewed request
+to Shopping. Quantity, deck, supported deck source and saved-test note come from
+the server. Existing playable-card intent across all states, purposes and
+printing/finish choices blocks duplication and directs review to Shopping.
+Estimates are never copied into retailer price/stock observations.
+
+The two POST routes keep bounded process-local ten-minute reviews, tied to actor
+and listener, the entire saved result, current inventory/deck revisions, deck
+SHA and proposal. The fresh inventory transaction re-pins its own snapshot,
+rechecks expiry/visibility/result/supply/queue/printing, then delegates one pure
+watchlist operation with the normal web actor. No game, deck or source format
+change is made. Successful receipts are single-use; revision checks prevent a
+second addition after an uncertain saved outcome.
+
+The sheet requires a separate review and save. Mounted controls, profile/route,
+source-data and sheet ownership reject stale picker/preview/apply replies.
+Pending actions block duplicates; attempted save receipts are discarded locally,
+and a lost answer directs the user to check Shopping before reviewing again.
+The read-only buying summary remains available to home members as before.
+
+Root's protected eight-module integration passed 119 tests without skips,
+including 28 new backend and 12 new UI fixtures. Independent and root source
+review, real-error Ruff, syntax, source-length and diff checks pass. Fixtures
+prove one inventory.apply call with the web actor and only the intended queue
+append; genuine PostgreSQL audit, browser/device and runtime acceptance remain
+unverified. No live queue/database/server or Forge operation was performed.
+
+## Where precon copies go (2026-10-28; E7-S15 precon slice)
+
+Page precon adds now carry the informational Where these go guide into the
+existing saved-deck box. The locked operation optionally captures exact printing
+deltas and JSON-only proof of the newly created deck. Its proved new physical
+holdings receive additions once; residual holdings consume prior stock, and
+remaining additions share the ordinary global allocation. Missing/duplicate
+holders, insufficient non-added stand-ins or inconsistent proof yield unknown
+advice without failing the saved cards and deck. The exact committed snapshot
+supplies the response; no later reload or old request pin is substituted.
+
+The frozen guide belongs to its initiating profile, space, saved-box identity and
+route. It preserves the existing navigation, deck warnings and optional token
+flow. Tokens stay outside playable-card destinations, all-basic precons retain
+their collection-null result, and CLI precon defaults/output are unchanged.
+Advice performs no packing, reservation, deck/status or location write.
+
+Root's protected ten-module integration passed 172 tests with no skips,
+including 14 new backend and nine new UI cases, ordinary filing, precon/token
+consumers and saved-box regressions. Root source review, real-error Ruff, Node
+syntax, diff and source-length checks pass. Genuine PostgreSQL and browser/device
+qualification remain unrun; no live database/server/data action was used.
+Single-card adds and CLI merges remain on E7-S15.
+
+## Buying information for saved test additions (2026-10-28; E5-S17 read-only slice)
+
+Finished visible home variant results now include bounded buying facts for home
+record readers. Saved Commander/Main cards provide the recipe; preserved current
+Sideboard/Companion demand is included only when today's playable fingerprint
+matches the saved base or variant. Divergent or incomplete recipes say
+availability unknown. Other holders/self identity and full recipe demand prevent
+reusing copies already needed by unchanged cards. Ready, incoming and missing
+addition counts are distinct; queue intent is never deducted as stock.
+
+Existing requests retain all states/purposes and printing/finish context.
+Applicable recorded AUD references show shop and check date, zero prices included.
+Fallback estimates read cached Scryfall prices and validated cached FX only,
+showing printing/finish, numeric exchange rate/date and price date. No network,
+FX-cache write, engine/status check or game runs are used. The optional builder
+pins one buying snapshot and cannot turn missing evidence into a lost verdict or
+an empty success. Home-record authorization precedes all evidence readers,
+including when home's collection/decks are public.
+
+The UI displays partial/unknown/unpriced facts and explicit independent omission
+counts. Initial loads, refreshes and retries belong to their profile/route and
+sequence; older successes/errors or pending timers cannot replace newer evidence.
+There is no queue write/control in this slice, only Open Shopping.
+
+Root's combined protected API/UI/privacy run passed 66 tests without skips,
+including 31 new backend and 11 new UI cases. Independent and root review, Node
+syntax, whole-repo real-error Ruff, diff and source-length guards pass. Guarded
+final discovery has 9,353 unique cases, preserving all 9,123 baseline cases under
+the three-class move map with no losses, duplicates or import errors. This is
+discovery evidence; the earlier full integrated fixture run and subsequent
+feature qualification remain separately recorded.
+
+Explicit reviewed queue saves remain on E5-S17. Browser/device and genuine
+PostgreSQL/native/runtime acceptance are unverified; no live action or real data
+was used in implementing this slice.
+
+## Atomic Considering draft moves (2026-10-28; E2-S26)
+
+Full and Quick edit move an alternative's complete copies to Planned or its
+sideboard in one draft/history step. The authoritative check runs first; invalid,
+overflowing or lossy proposals keep the alternative. Fidelity compares copy
+capacities, printing, finish and category, then pins checked default dimensions
+and canonical names so a later inventory-default change cannot choose another
+finish during Save. Existing valid duplicate-row/per-line quantity semantics
+are preserved.
+
+Play-now keeps its own list unchanged and carries a separate Planned working
+copy/baseline with dirty state, payload, full review and target-specific error/
+hydration mapping. Check/Save sends both changed lists through one existing deck
+save; Undo reverses both without starting an owned list.
+
+Linked intent survives drafts and rebases as a complete Planned/Considering pair.
+Latest outcomes already equal to the accepted move become clean; divergent pairs
+need SHA/full-pair-bound acknowledgment of both replacement lists, enforced in
+doSave itself. Missing capabilities preserve the private draft until fetched.
+Acknowledgments belong to the current mounted review control, so a detached old
+checkbox cannot enable a newly drawn Save, including on the same pair and SHA.
+
+Protected checks passed 31 new UI and 11 backend cases, affected 139- and 68-case
+regression batches, and the final 64-case UI rerun after the stale-control fix.
+Root's combined promotion/first-slice/contracts integration passed 129 tests with
+no skips. Independent review, root review, Ruff, syntax, diff and length checks
+are clear; editor.js is 1,198 lines. E2-S26's implementation is complete. Browser/
+device and live-runtime acceptance remain unverified, with no real data, live
+database, service or Forge actions used for qualification.
+
+## Where imported copies go (2026-10-28; E7-S15 ordinary CSV slice)
+
+Successful Collection CSV imports now carry a read-only Where these go guide.
+The locked merge captures JSON-only exact printing deltas after exclusions;
+`_apply` optionally returns its exact committed snapshot while retaining the old
+Sheet default. One pinned pool supplies own-space deck demand, physical holds
+and incoming stock. Existing free copies are consumed globally first, then each
+new printing copy is allocated once by built/building/other priority and deck ID.
+Proven leftovers go to storage; incomplete, invalid or capped advice is unknown.
+
+Advice cannot turn a saved import into a failed save. It exposes no global
+revision or private kit, and performs no packing, reservation, deck, status or
+location writes. Precon/import-parameter default shapes remain unchanged.
+The profile/space-bound one-use notice validates and freezes printing facts and
+conservation, guards closed/late/profile/route replies, and renders at most 100
+printing lines initially across all groups with bounded, focus-preserving Show
+more. A coherent Collection helper uses existing UI primitives; no receipt
+structural extraction was introduced.
+
+Root's combined protected qualification passed 113 tests with no skips: 23 new
+backend, 15 new UI, 59 existing collection-edit and 16 group checks. Other
+import/account UI, source/layout and nine actual precon fixture cases passed.
+Cases cover competing decks, prior stock, Assembled/installed stand-ins, hidden
+spaces, unknown authorization, exact saved snapshots, group convergence and
+exclusions, caps and successful-save calculation failures. Root review, Ruff,
+syntax, diff and source-length checks pass.
+
+Precon adds, single-card adds and CLI merges remain on E7-S15. Genuine PostgreSQL
+and browser/device qualification are unverified. No live operation, server
+restart, migration or real-data change was used for this implementation.
+
+## Considering in saved-deck editors (2026-10-28; E2-S26 first slice)
+
+Full and Quick edit now add, remove and change quantities in a saved deck's
+Considering area. Alternatives have their own current/base state and join dirty
+detection, local drafts/resume, history/Undo, discard, check/review and normal
+Save. They stay outside playable lists, counts, availability, packing and Forge
+identities. Considering-only saves leave unstarted Play-now lists untouched.
+
+Legacy missing fields preserve data; explicit empty lists clear it. Unknown
+baseline provenance survives repeated persistence and rebase instead of becoming
+an invented empty baseline. Whole-list rebase preserves categories, order and
+duplicate occurrences, with concurrent changes called out for review. Review
+rows use the normalized check result, including canonical names/merged copies.
+
+Connected row/modal ownership, composition completion, semantic Undo focus and
+page/frame/profile/sheet guards cover stale controls and late checks, reloads
+and saves. Retained empty-deck confirmation accepts a Considering-only payload.
+Backend check answers include normalized flat alternatives and report their
+blocks separately from playable-list changes. Explicit loader registries are
+updated; editor.js is 1,196 lines.
+
+Protected checks passed 33 new UI cases and an 80-case editor/Quick/contracts/
+backend batch (nine new backend cases), plus affected regressions. Root's final
+combined feature/API/shared-script/privacy run passed 161 tests with no skips.
+Independent review, root review, Ruff, syntax, source-length and diff checks are
+clear. Atomic draft moves into Planned or its sideboard are the next slice, and
+new-deck controls wait until the first save. Browser/device and live-runtime
+acceptance remain unverified; no real-data save, database connection or new
+Forge game was used.
+
+## Reviewed bulk storage locations (2026-10-28; E8-S23)
+
+Card list now filters by a recorded location or No location recorded alongside
+its other filters. Zero-match location choices remain selected. Separate shown
+and selected actions reuse one selection and freeze exact printing keys; the
+review shows each row's copies and old/new location, with explicit clearing.
+
+`collection.locations` changes locations only, with no deck-table refresh. Both
+collection and location receipts, capability, exact keys and source validity are
+checked under the backend lock, even for no-ops. Location-only races return a
+fresh, pinned conflict snapshot; renewed reviews can only lose keys, never admit
+new ones. Invalid/orphan location rows block rebuilding. Generic audit wording
+avoids computing a changed-row count from an older request pin; actual operation
+summaries retain their row details. Quantities and all other data stay unchanged.
+
+Reviews preserve focus, pending/context guards and read-only/capability gates.
+The 50,000-key/4 MiB bounds include apiWrite's injected profile bytes. Protected
+runs passed 41 focused backend, 59 existing collection-edit and 106 UI/source
+checks, without skips. Independent and root review are clear. The earlier 129
+run had two failures: an old layout fixture's first-select assumption was fixed
+to use the Sort label; a parallel editor script-list mismatch was left to its
+owner and has since been reconciled. All source files remain below 1,200 lines.
+
+Genuine PostgreSQL audit/rollback and browser/device qualification remain
+unverified. No household migration, real-data operation, server restart or other
+live-runtime action was used for this implementation.
+
+## Use fixture protections for source-length CI (2026-10-28; E11-S44 follow-up)
+
+The source-length inventory step in lint.yml now uses the protected fixture
+entry point too. The three test-module command headers touched by the preceding
+work use the same default; the inventory contract header explicitly identifies
+the PostgreSQL skip. Their executable ASTs are unchanged after the docstrings.
+The exact replacement CI command passed all seven disposable-Git inventory
+checks in 1.309 seconds. This is local command validation; hosted CI was not run.
+
+## Inventory contract and permission test groups (2026-10-28; E11-S40)
+
+Three concrete classes (51 cases) moved into focused inventory-contract and
+permission-reader modules. Shared fixtures, base classes, mutable globals and
+patch owners retain their established imports; concrete classes are not
+re-exported. The original/new modules now measure 760/422 and 640/498 lines.
+Complete class bodies match after owner-prefix normalization, and all retained
+executable code matches exactly.
+
+Guarded discovery preserves all 9,123 baseline cases through the explicit
+three-class module-move map. Thirty separately added cases explain the final
+9,153 unique cases across four disjoint shards; no losses, duplicates or loader
+errors. Focused support-consumer checks reported 290 tests with 53 skips.
+
+The integrated fixture shards reported 8,575 tests with 420 skips and no remaining
+failures or errors. One initial pool test made a nondeterministic lifetime-slot
+assumption; the independent correction is recorded below and in commit b33001c.
+Its three focused checks passed, then the affected full shard passed on rerun.
+The other shard source and module membership did not change. Logs and the before/
+after/partition proofs were retained in the run's scratch evidence.
+
+Class-level setup skips explain why discovery and reported counts differ. Guards
+ran before test imports; actual PostgreSQL, named native process/server checks,
+real Forge and browser/device qualification remain separate and unclaimed. No
+previously denied native action was retried. Ruff, source-length and diff checks
+passed; no golden, schema or application behavior changed in this split.
+
+## Deterministic warm-worker slot preference check (2026-10-28)
+
+The integrated fixture run exposed a timing assumption in one pool test: its
+status observer briefly locks free slots, so a worker may legitimately take a
+different slot when its preferred one is temporarily occupied. The allocator
+promises preference when free, rather than a lifetime slot assignment.
+
+The lifecycle test retains held/released, idle, PID and pin-budget assertions.
+A separate deterministic pool-boundary check holds actual disposable leases:
+prefer slot 2 when free, use slot 0 while 2 is held, then prefer 2 after release.
+It launches no worker and catches losing the pool's preference forwarding.
+Production pool/allocator behavior is unchanged. Independent source review found
+no production bug. All three affected pool/allocator fixture checks passed in
+0.815 seconds; the affected integrated shard is qualified with E11-S40.
+
+## Fixture-only default test runner (2026-10-28; E11-S44)
+
+`python scripts/test_fixtures.py` is now the default source-check command, and
+`scripts/test_shard.py` shares its pre-import protections. Private configuration
+and PostgreSQL credential IO are excluded, actual psycopg connectors fail
+closed, and integration decorators see database-disabled before any probe.
+Configuration overlays and inherited real-Forge opt-in are removed. Saved-script
+multiprocessing workers install the protections before their imports.
+
+Known native checks and ordinary children that escape fixture isolation remain
+in discovery but skip before setup with separate-qualification reasons. Other
+ordinary child fixture paths were source-reviewed; in-memory guards do not cross
+arbitrary python -c launches or protect interpreter startup. This is accident
+prevention, not a malicious-code sandbox or database/runtime acceptance.
+
+Eight regressions use failure-safe fake projects, connectors, files and socket
+sentinels. Forty targeted cases passed with 15 skips. Guarded discovery preserved
+9,152 unique cases across four shards without import errors, duplication or loss.
+Independent review, Ruff, syntax, length and diff checks passed. AGENTS.md and
+README.md now distinguish the protected default from separately authorized raw
+integration. Full integrated fixture results are recorded with E11-S40.
+
+## Import source groups: review UI (2026-10-28; E7-S03)
+
+Collection import previews now show source-set problem counts and unchecked
+whole-group exclusions. Each choice explicitly warns how many valid source
+rows/cards it also excludes; disclosures list every excluded source row with
+its original line and facts. Retained source rows are labelled before combining
+printings, with exact distinct-printing counts and no invented merged details.
+
+One frozen preview owns the choices. Checkbox focus survives projections;
+pending imports freeze IDs, and context/permission checks run again after the
+rows read. Unresolved retained problems and empty outcomes block Import. Old
+flat responses retain the existing explicit skip-problems flow; malformed
+partial group metadata blocks safely instead of widening that fallback.
+
+The focused helper loads explicitly after collection.js, with only small
+lifecycle/apply hooks in the existing module. All 86 broader protected UI/source
+checks passed; 12 final group cases and affected follow-ups include a 5,000-row
+render with no writes. Independent review, syntax, diff and source-length checks
+pass. Browser/device performance and native acceptance remain unverified.
+Backend fixture evidence is recorded below; real PostgreSQL acceptance is not
+claimed by these source-only checks.
+
+## Select collection rows for details (2026-10-28; E7-S18)
+
+Card list now has native checks for selecting exact printing rows, mirrored by
+one Set across the existing lab and casual layouts. Selection is independent
+of the row inspector, and a separate action reviews every selected printing,
+quantity and detail before the existing bulk condition/language save. The
+whole-filter action remains available.
+
+Selected reviews freeze keys and only narrow after filters, refreshes or
+conflicts; removed selections are disclosed and fresh facts require review.
+Only fill in blanks, notes and one-operation writes are retained. Pending
+requests lock the original view even after its sheet closes; late outcomes,
+revoked permissions and hidden openers have guarded focus recovery.
+
+All 163 focused UI/source checks pass, including 25 new selection cases;
+root's combined 41 group/selection checks passed with connections prohibited.
+Independent review, syntax, Ruff and diff checks are clear. Browser geometry,
+touch/Safari and actual household devices remain unverified. No backend bulk
+operation or permission rule was changed.
+
+## Import source groups: backend (2026-10-28; E7-S03 partial)
+
+Collection import previews now retain each checked source contribution and its
+original source set before equal printing identities merge. Preview version 4
+includes server-generated group IDs, original lines, problem and valid-row/card
+counts, while older flat previews and the parser's four-value contract remain
+supported. Explicit `skip_groups` is bound to that saved preview and excludes
+all selected source rows, including clearly counted valid copies.
+
+Apply validates IDs and remerges retained facts without rematching. Unselected
+problems still block; collection SHA, repeat-import, owner, expiry and replacement
+fences remain. The upload stays byte-for-byte original. Durable audit messages
+separate deliberate valid exclusions from malformed rows and retain exact source
+line ranges. The bounded apply payload accommodates the source-row limit.
+
+Protected qualification ran 204 consumer tests with four database-class skips,
+including 16 group cases and a 5,000-row preview; final membership/payload checks
+passed with connections prohibited. Root's combined 41 group/row-selection checks
+also passed with `conn.connect` prohibited. Independent review, syntax, Ruff,
+diff and source-length checks pass. PostgreSQL runtime qualification is not
+claimed. The story remains partial: import group controls and excluded-row
+review are the next UI slice; the existing flat UI remains compatible.
+
+## Copy one shop's list (2026-10-28; E5-S24)
+
+Shopping's permanent By shop groups now have one sibling Copy list control per
+named shop. It uses current queued rows across every state and long-term plan,
+leaving deliveries and calculated missing-card demand outside that scope.
+Quantities coalesce only for identical requested identities; printing and
+explicit finish requests remain separate. Exact choices use `(SET) number
+[finish]`, and any-printing finish requests retain `[finish]` as text.
+
+Read-only home viewers can copy. Pending/old controls and late clipboard
+results are guarded against route, person, revision, queue and redraw changes.
+Unavailable or rejected clipboard access opens selectable text with tracked
+sheet cleanup and focus recovery. No queue, basket or purchase is changed.
+
+All 113 focused Shopping tests pass, including 16 new copy cases. Independent
+review fixed explicit nonfoil coalescing and redraw focus before qualification;
+Node syntax, Ruff, diff and source-length checks pass. Clipboard access is
+mocked; browser/device and actual clipboard acceptance remain unverified.
+The suffixes preserve human-readable requests without promising every shop's
+bulk parser recognizes them automatically.
+
+## Compare list differences (2026-10-28; E1-S26)
+
+Compare now shows cards only in either list, changed quantities and separately
+labelled listed-printing changes, keeping Commander, main deck, sideboard and
+companion apart. It counts duplicate printing lines by canonical card name,
+retains unresolved names and basic lands, reverses sides and gives one empty
+state for identical lists. Printing facts use the list's explicit choices,
+never representative artwork or an inferred physical copy.
+
+The panel uses the two already authorized deck answers and their selected
+Planned/Play-now versions, without another request or collection visibility.
+Existing shared-card availability and head-to-head evidence remain separate.
+All 74 focused UI/API/source checks passed, including 32 Compare UI cases
+(14 new). Independent review fixed a combined quantity/printing-redistribution
+edge case before integration. Node syntax, Ruff, source-length and diff checks
+pass. Browser geometry was not verified: the disposable local-file preview was
+denied by browser URL policy and was not retried. Touch, Safari and household
+devices remain separate acceptance; no live write or Forge game was involved.
+
+## Developer command documentation audit (2026-10-28; E11-S42)
+
+AGENTS.md and README.md now show valid receipt previews and matching applies
+bound with `--expect TOKEN`, including the difference from an unbound apply.
+Later product-kit guidance points to the existing inspect/change commands.
+The database banner describes the current runtime, and historical Git fixture
+readers are distinguished from the retired automatic Git write mode.
+
+The audit preserves the single AGENTS.md instruction source, dated history and
+private-repository references. Four safe CLI help checks, independent review
+and diff checks passed. No command behavior, household record, credential,
+migration or service was changed.
+
+## Source comment audit (2026-10-28; E11-S41)
+
+The named storage, privacy and lifecycle comments now match their runtime
+owners. The audit covers play records, accessories and collection imports;
+the editor script map, Tokens' visible-space picker and Deck's current Overview;
+and permission tests' direct-script versus HTTP boundary. It corrects claims
+about file storage, retired rollback, cross-store lock scope and admin visibility
+while retaining accurate fixture, compatibility and lock explanations.
+
+Python executable ASTs and JavaScript outside comments are unchanged by the
+audit; syntax and diff checks pass. The collection/editor header corrections
+accompanied their structural splits. No prose-only tests were added. Detailed
+findings are in SOURCE_AUDIT.md, with integrated qualification limits below.
+
+## Collection upload parser split (2026-10-28; E11-S38)
+
+CSV detection, format conversion and upload reading now live in
+`lib/api/collection_import.py` (169 lines), apart from the Collection HTTP
+module (972 lines). All eight original parser entry points remain available as
+the same function objects. Mutable limits, matching, preview storage and locks,
+raw-upload retention and writes keep their existing owner. Both import orders
+work; call-time owner lookups preserve existing patches.
+
+Validation: all 166 focused parser, collection, precon, trade, scanner and merge
+checks passed, including five ownership/import-order guards. AST comparison
+preserves eight moved and 40 retained bodies after owner-reference normalization.
+Syntax, Ruff and diff checks pass. The integrated attempt and corrected-harness
+reruns are recorded below under E11-S37, with Windows runtime and database gates
+explicitly unqualified. No household data or live migration was changed.
+
+## Editor import workflow split (2026-10-28; E11-S37)
+
+Paste/replace and Start from now live in `web/editor-import.js`, loaded directly
+after `editor-cards.js` by the browser and shared Node runner. All ten function
+bodies are unchanged; search state, viewport initialization and global callers
+retain their owners. The asset/order contracts and editor script map include
+the new file. Card search is now 876 lines and the extracted workflow 266.
+
+Validation: 347 editor tests passed, plus focused asset/workspace checks and
+both JavaScript syntax checks. Independent review verified all 257 moved lines
+and 847 retained executable lines against the starting commit, with no lost,
+duplicated or altered function bodies.
+
+The integrated attempt ran 8,483 tests in 1,440.949 seconds, with 409 skips.
+Four Windows multiprocessing cases failed because the temporary launcher used
+stdin, and two config checks failed because its isolated empty config changed
+the expected path/presence. All six passed after fixing the disposable launcher
+and treating the private config as absent. Three Windows runtime checks remained
+unqualified: network-facts access and taskkill were denied, and recorded-process
+cleanup timed out. They were not retried. No changed-source failure remains in
+the exercised fixture checks; this does not claim a fully green runtime suite.
+Database integration was disabled, and no live data, server restart, Forge game
+or physical-device acceptance was involved.
+
+## Tokens workflow split and source-length CI guard (2026-10-28; E11-S36, E11-S43)
+
+Tokens' add/edit/conflict sheets now live in `web/tokens-edit.js` (370 lines),
+loaded directly after `tokens.js` (1,093 lines) by both the browser and the shared
+Node runners. All 16 moved functions retain their bodies and global names;
+shared constants, parser and page state stay in their existing owner. The
+parser-only loader is unchanged. This is a structural split with no token-data
+or permission changes.
+
+The cheap lint workflow now runs the existing source-length guard and seven
+isolated temporary-Git tests alongside its unchanged real-error Ruff command.
+The guard retains its 1,200-line threshold, tracked/untracked inventory,
+gitignore handling and pinned-upstream exclusions. It passes on all 1,086 owned
+source files. Fixtures cover the 1,200/1,201 boundary, UTF-8 BOM and missing final
+newline, current tracked/untracked contents, ignored caches, exact upstream
+directory, source types, deleted tracked files and report-only output.
+
+Validation: 58 focused Tokens/UI/parser/asset tests and seven guard tests passed
+without skips; both JavaScript syntax checks passed. Independent source-body,
+loader and guard review is clear. The full integrated suite ran **9,050 tests
+in 2,234.874 seconds: OK, 74 skipped**, including all seven guard cases. Skips
+were 31 opt-in real Forge/JDK checks, 22 POSIX/Linux checks, 20 unavailable
+private-history fixtures and one Windows symbolic-link privilege check.
+Discovery retains all 9,049 existing cases plus seven new ones, with no
+duplicate identities or import errors; class-setup skips reduce the run count.
+Ruff's real-error checks and `git diff --check` passed.
+Hosted CI has not run for this local change. No household data, live migration
+or Forge games were involved; physical-device acceptance remains separate.
+
 ## MTGMate daily prices for the purchase queue (2026-10-28; E5-S08, E5-S19)
 
 Shopping's queued rows now show MTGMate's own AUD price and stock from a daily snapshot, under each row's recorded reference price, with the time it was fetched and a link to that printing on MTGMate. `python -m decklab.lib.shops snapshot` (also the nightly task's last step) reads MTGMate's robots.txt first (its search is disallowed and never used; its 60-second Crawl-delay spaces the requests), then makes one request per distinct queue card name: MTGMate's page of every printing with that name, whose card table gives price, stock, set, number and finish. It saves the result in the gitignored `decklab/data/shops/mtgmate.json`, at most once in 20 hours unless `--force`. The nightly run gets at most 45 minutes of requests at robots.txt's delay: the names read longest ago go first, and those it doesn't reach keep the last result with its own fetch time, so a long queue is read over a few nights and the task's two-hour limit never cuts a run off. An OS lock on `mtgmate.lock` keeps two runs from overlapping and goes with the process however it ends. Shopping only reads the file, so a page load never reaches the shop, and without a snapshot its answer is unchanged. An exact row matches its printing and finish; any other row shows the cheapest nonfoil in stock. A shop that couldn't be read shows "price unknown", never a converted US price, and three failures in a row stop the run. A Waiting for stock row the snapshot finds in stock is highlighted **Back in stock** (E5-S19); a row in stock now but not in the snapshot before is marked **Newly in stock**. The snapshot never changes the watchlist. `shops show` prints the queue beside it and `shops lookup NAME` checks one name. The tests use a snapshot path of their own (`DECKLAB_SHOP_SNAPSHOT`), never the PC's file. Code: `decklab/lib/shops.py`, `decklab/lib/api/shop_prices.py`, `decklab/web/shopping-snapshot.js`, `decklab/db/nightly.py`; tests `test_shops.py`, `test_shopping_snapshot_ui.py`, `test_db_ops.py` NightlyTests.

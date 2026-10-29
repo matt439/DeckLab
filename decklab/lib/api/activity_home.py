@@ -32,6 +32,22 @@ def commander_night_row(row, scope, profiles, me):
             "summary": "Commander-night notes cleared" if cleared else "Commander-night notes updated"}
 
 
+def field_policy_row(row, scope, profiles, me):
+    """HOME only, before generic admin handling; never relay rules or proof data."""
+    if scope == "all":
+        allowed = me is None or (me in profiles and permissions.sees_home_records(profiles[me]))
+    else:
+        allowed = scope.get("space") == permissions.HOME
+    if not allowed:
+        return None
+    record = row.get("after") or row.get("before")
+    fmt = record.get("format") if isinstance(record, dict) else None
+    label = fmt if type(fmt) is str and fmt in ("Constructed", "Commander") else "Home"
+    verb = "removed" if row.get("op") == "DELETE" else "updated"
+    return {"table": "field_policy", "op": row.get("op"),
+            "summary": f"{label} field membership {verb}"}
+
+
 def visibility_row(row, scope, profiles, me):
     """A switch's audit words belong only to its space; accessory flips belong to home.
     Public switches never make their own Activity rows public."""

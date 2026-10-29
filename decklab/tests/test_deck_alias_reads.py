@@ -419,7 +419,7 @@ class DeckAliasStaleWriteTests(AliasReadFixture):
         with inventory.pinned(private), access.using({"profile": "matt", "email": "", "remote": True}), \
                 mock.patch.object(inventory, "apply") as apply:
             error = self.assertApiError(403, accessory_api.assign_accessory, encoded(payload))
-        self.assertEqual(error.extra, {})
+        self.assertEqual(error.extra, {"reason": "kit_ownership"})
         self.assertNotIn(NEW, error.message)
         apply.assert_not_called()
 

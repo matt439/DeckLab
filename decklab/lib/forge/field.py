@@ -53,7 +53,7 @@ import traceback
 from decklab.lib import decks, spaces
 from decklab.lib import pool as card_pool          # products/status.csv (read_status)
 
-from . import common, deck_identity, engine, lifecycle, lists, runner, saved, seqstats, views
+from . import common, deck_identity, engine, field_exclusions, lifecycle, lists, runner, saved, seqstats, views
 from .common import ForgeError
 
 BUDGETS = ("quick", "standard", "thorough")
@@ -71,7 +71,7 @@ _notes_lock = threading.Lock()
 
 # ============================================================ the field
 
-def _simulation_edits(fmt):
+def _simulation_edits(fmt, *, trace=None, exclusions=None):
     """(add, remove) of decklab/simulation.json's field section for fmt: lists of "<deck
     id>[@version]" names; ([], []) when the file or the section is missing, and when it can't be
     read (logged)."""
@@ -80,16 +80,49 @@ def _simulation_edits(fmt):
         with open(pilots.SIMULATION_FILE, encoding="utf-8") as f:
             found = json.load(f)
     except FileNotFoundError:
+        field_exclusions.notify(exclusions, "configuration", [])
         return [], []
     except (OSError, ValueError) as e:
         common._log(f"decklab/simulation.json can't be read, so the field has no edits: {e}")
+        if trace is not None:
+            trace.unavailable()
+        field_exclusions.notify(exclusions, "unavailable")
+        return [], []
+    configuration_ok = True
+    if exclusions is not None and (not isinstance(found, dict) or
+                                   (found.get("field") is not None and not isinstance(found["field"], dict))):
+        configuration_ok = False
+        field_exclusions.notify(exclusions, "unavailable")
+    if exclusions is not None and isinstance(found, dict) and isinstance(found.get("field"), dict):
+        raw_section = found["field"].get(fmt)
+        if raw_section is not None and not isinstance(raw_section, dict):
+            configuration_ok = False
+            field_exclusions.notify(exclusions, "unavailable")
+    if trace is not None and (not isinstance(found, dict) or
+                             (found.get("field") is not None and not isinstance(found["field"], dict))):
+        trace.unavailable()
         return [], []
     section = ((found.get("field") if isinstance(found, dict) else None) or {}).get(fmt) or {}
     if not isinstance(section, dict):
+        if trace is not None:
+            trace.unavailable()
+        field_exclusions.notify(exclusions, "unavailable")
+        return [], []
+    if exclusions is not None and any(not isinstance(section.get(part, []), list) or
+                                      any(not isinstance(name, str) for name in section.get(part, []))
+                                      for part in ("add", "remove")):
+        configuration_ok = False
+        field_exclusions.notify(exclusions, "unavailable")
+    if trace is not None and any(not isinstance(section.get(part, []), list) or
+                                 any(not isinstance(name, str) for name in section.get(part, []))
+                                 for part in ("add", "remove")):
+        trace.unavailable()
         return [], []
     names = [[name for name in (section.get(part) or []) if isinstance(name, str) and name.strip()]
              for part in ("add", "remove")]
-    return [name.strip() for name in names[0]], [name.strip() for name in names[1]]
+    add, remove = [name.strip() for name in names[0]], [name.strip() for name in names[1]]
+    field_exclusions.notify(exclusions, "configuration", remove, configuration_ok)
+    return add, remove
 
 
 def _split_name(name):
@@ -125,18 +158,25 @@ def _product_file(deck_id):
     return deck_id.split("/")[1] + ".csv"
 
 
-def _field(fmt, *, space="home", public=None, visible=None, product_notes=True):
+def _field(fmt, *, space="home", public=None, visible=None, product_notes=True, trace=None, exclusions=None):
     """([entry], [note]) of the field of fmt (section 10.1), sorted by title, from one inventory
-    snapshot (the request's or command's, else one pinned for this call: decklab/lib/inventory)."""
+    snapshot (the request's or command's, else one pinned for this call: decklab/lib/inventory).
+    An optional membership trace records decisions after visibility checks; legacy callers
+    retain the same entries, notes and defaults."""
     from decklab.lib import inventory
     if not inventory.is_pinned():
         with inventory.pinned():
-            return _field(fmt, space=space, public=public, visible=visible, product_notes=product_notes)
+            return _field(fmt, space=space, public=public, visible=visible, product_notes=product_notes,
+                          trace=trace, exclusions=exclusions)
+    field_exclusions.notify(exclusions, "begin")
     chosen, notes = [], []
+    status_unavailable = False
     try:
         statuses = card_pool.read_status()
     except (OSError, UnicodeDecodeError, ValueError) as e:
         statuses = {}
+        status_unavailable = True
+        field_exclusions.notify(exclusions, "unavailable")
         if product_notes:
             notes.append(f"products/status.csv can't be read, so no product deck is in the field ({e}).")
     summaries = decks.list_decks()
@@ -154,17 +194,39 @@ def _field(fmt, *, space="home", public=None, visible=None, product_notes=True):
                         (spaces.split_deck_id(deck_id)[1] == "casual" and fmt == "Constructed"):
                     notes.append(f"{summary.get('title') or deck_id} isn't in the field: its file can't be read "
                                  f"({summary['error']}).")
+                    if trace is not None:
+                        trace.candidate(summary, None, "unreadable")
+                    field_exclusions.notify(exclusions, "unavailable")
                 continue
             if _fmt_of(summary) == fmt:
                 chosen.append((summary, _house_version(summary)))
+                if trace is not None:
+                    trace.candidate(summary, _house_version(summary), "default")
             continue
         if not deck_id.startswith("product/") or summary.get("error") or deck_id.startswith(
                 f"product/{decks.BEGINNER_BOX}/"):
+            if summary.get("error"):
+                field_exclusions.notify(exclusions, "unavailable")
+            if trace is not None and _fmt_of(summary) == fmt:
+                trace.candidate(summary, None, "unreadable" if summary.get("error") else "beginner_half")
             continue
         status = statuses.get(_product_file(deck_id))
         if status is not None and status.status in FIELD_STATUSES and status.intact and _fmt_of(summary) == fmt:
             chosen.append((summary, "target"))
-    add, remove = _simulation_edits(fmt)
+            if trace is not None:
+                trace.candidate(summary, "target", "default")
+        elif trace is not None and _fmt_of(summary) == fmt:
+            if status_unavailable:
+                trace.unavailable()
+            trace.product(summary, status)
+    if trace is not None:
+        trace.pairings(fmt, space, public, visible)
+    edit_options = {}
+    if trace is not None:
+        edit_options["trace"] = trace
+    if exclusions is not None:
+        edit_options["exclusions"] = exclusions
+    add, remove = _simulation_edits(fmt, **edit_options)
     for name in add:
         deck_id, version = _split_name(name)
         owner = spaces.space_of(deck_id)
@@ -181,6 +243,8 @@ def _field(fmt, *, space="home", public=None, visible=None, product_notes=True):
         else:
             add_note = notes.append
         if summary is None or summary.get("error"):
+            if summary is not None:
+                field_exclusions.notify(exclusions, "unavailable")
             add_note(f"simulation.json adds {name} to the {fmt} field, but there's no such deck that can be read.")
             continue
         if _fmt_of(summary) != fmt:
@@ -191,17 +255,38 @@ def _field(fmt, *, space="home", public=None, visible=None, product_notes=True):
             add_note(f"simulation.json adds {name} to the {fmt} field, but that deck has no {version} list.")
             continue
         chosen = [(s, v) for s, v in chosen if not _same_id(s["id"], summary["id"])] + [(summary, version)]
+        if trace is not None:
+            trace.candidate(summary, version, "configured_add")
     for name in remove:
         deck_id, version = _split_name(name)
-        chosen = [(s, v) for s, v in chosen if not (_same_id(s["id"], deck_id) and version in (None, v))]
+        if trace is not None:
+            # Gate trace-only alias resolution/emission. The authoritative removal
+            # below still runs unchanged, including legacy aliases hidden to this viewer.
+            if visible is None or visible(deck_id):
+                canonical = deck_identity.canonical(deck_id)
+                if visible is None or visible(canonical):
+                    for summary, selected in chosen:
+                        if _same_id(summary["id"], deck_id) and version in (None, selected):
+                            trace.removed(summary, selected)
+        remaining = []
+        for summary, selected in chosen:
+            if _same_id(summary["id"], deck_id) and version in (None, selected):
+                field_exclusions.notify(exclusions, "removed", summary, selected, deck_id, visible)
+            else:
+                remaining.append((summary, selected))
+        chosen = remaining
     entries = []
     for summary, version in chosen:
         try:
             entries.append(_entry(summary, version))
         except (decks.DeckNotFound, decks.DeckFileError, OSError, ValueError, ForgeError) as e:
+            if trace is not None:
+                trace.failed(summary, version)
+            field_exclusions.notify(exclusions, "unavailable")
             if product_notes or not summary["id"].startswith(("product/", "pairing/")):
                 notes.append(f"{summary['title']} isn't in the field: its {version} list can't be read ({e}).")
     entries.sort(key=lambda e: (e["title"].casefold(), e["id"], e["version"]))
+    field_exclusions.notify(exclusions, "finish")
     return entries, notes
 
 
@@ -949,14 +1034,18 @@ def view(entry, results_dir=None, *, space="home", public=None, visible=None, ke
     "not_meaningful", "problem"}] sorted by win rate (those without games last), "average"
     {value, low, high, counted, of, partial} or None (the equal-weight field average over the
     meaningful opponents with games on the play and on the draw), "rating" {value, low, high,
-    rank, rank_low, rank_high, of, h_points, connected, dispersion} or None, "coverage"
+    rank, rank_low, rank_high, of, h_points, connected, dispersion, manual_excluded} or None, "coverage"
     {"with_floor", "of"}, "last_run" (last_note), "notes" (sentences: lists left out of the
     field, opponents the rating can't reach, ...)}. It never plays a game."""
     fmt = lists.fmt_for(entry["kind"])
-    field, notes = _field(fmt, space=space, public=public, visible=visible, product_notes=product_notes)
+    exclusions = field_exclusions.observation(visible)
+    field, notes = _field(fmt, space=space, public=public, visible=visible,
+                          product_notes=product_notes, exclusions=exclusions)
     rows = _rows(entry, _opponents(entry, None, field), results_dir, keep)
     average = _average(rows)
     rating, per = _rating(entry, field, rows, results_dir, notes, keep=keep) if rows else (None, {})
+    if isinstance(rating, dict):
+        rating = {**rating, "manual_excluded": field_exclusions.count(exclusions)}
     opponents_out = []
     for row in rows:
         o, numbers = row["opponent"], row["numbers"]

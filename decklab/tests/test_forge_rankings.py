@@ -42,7 +42,7 @@ class RankingsGraphTests(unittest.TestCase):
                 mock.patch.object(field, "_bt_data", return_value=data) as read:
             answer = rankings.view(**kwargs)
         read.assert_called_once()
-        self.assertEqual(set(answer), {"format", "rows", "groups", "notes", "error"})
+        self.assertEqual(set(answer), {"format", "rows", "groups", "notes", "error", "manual_excluded"})
         self.assertIsNone(answer["error"])
         self.assertNotIn("_entry", json.dumps(answer, allow_nan=False))
         return answer, {item["id"].split("/")[-1]: item for item in answer["rows"]}

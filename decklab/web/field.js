@@ -36,7 +36,7 @@ function fieldSection(data) {
   if (s.id.startsWith(BOX_PREFIX)) return null;
   const content = el("div", { class: "fv-content" }, loadingBox("Loading how this list does against the field…"));
   const section = el("section", { class: "deck-section fv-section", id: "sec-field", "aria-labelledby": "h-field" },
-    el("h2", { id: "h-field", text: "Against the field" }), content);
+    el("h2", { id: "h-field", text: "Against the field" }), content, fieldMembership(data));
   const profile = state.profile ? `&profile=${encodeURIComponent(state.profile.id)}` : "";
   const ctx = { section, content, token: routeToken, id: s.id, version: data.version, title: s.title,
     url: `/api/field?id=${encodeURIComponent(s.id)}&version=${data.version}${profile}`,
@@ -156,6 +156,7 @@ function fvHeadline(a, { panel = true } = {}) {
     tile.append(el("p", { class: "fv-rating" }, "Ranks ", el("strong", { text: `${fvOrdinal(r.rank)} of ${r.of}` }),
       ` ${a.format} decks`, r.rank_low != null && r.rank_high != null && r.rank_low !== r.rank_high
         ? ` (somewhere from ${fvOrdinal(r.rank_low)} to ${fvOrdinal(r.rank_high)})` : "", "."));
+    tile.append(manualFieldExclusionNote(r.manual_excluded, "sub fv-manual-excluded"));
   }
   return tile;
 }

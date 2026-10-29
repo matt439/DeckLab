@@ -1,4 +1,4 @@
-"""Compare two decks (E1-S13, first slice): the compare page and the deck page's "Compare with…" chooser.
+"""Compare two decks (E1-S13, E1-S26): the compare page and the deck page's "Compare with…" chooser.
 
 Loads every page script into the event/DOM double (fixtures/workspace_ui_runner.js) with api() answered by the
 scenario: no browser or server, and nothing is written.
@@ -123,6 +123,7 @@ class CompareUiTests(unittest.TestCase):
           assert(box.textContent.includes("No deck 'user2/casual/elves' (error 404)"));
           // Nothing of the deck that could be read is shown beside it, and loading it again can't help.
           assert.equal(main.querySelector('table'), null);
+          assert.equal(main.querySelector('.compare-difference-section'), null);
           assert(!box.textContent.includes('Test Deck'));
           assert(!box.querySelectorAll('button').some((b) => b.textContent === 'Try again'));
         """)
@@ -310,6 +311,194 @@ class CompareUiTests(unittest.TestCase):
           await show('#/compare?a=casual%2Ftest&b=casual%2Ftest&bv=owned');
           // Named by list; a game of the Planned list against itself isn't one of theirs.
           assert.equal(main.querySelector('.compare-games-count').textContent, '1 game: Planned list 0 wins, Play-now list 1 win.');
+        """)
+
+    def test_differences_show_unique_cards_and_quantity_changes(self):
+        self.run_js("""
+          const a = deckA(), b = deckB();
+          a.sections = {Deck: [{name: 'Elf', qty: 4}, {name: 'Forest', qty: 8}, {name: 'Only A', qty: 2}]};
+          b.sections = {Deck: [{name: 'Elf', qty: 2}, {name: 'Forest', qty: 10}, {name: 'Only B', qty: 3}]};
+          answers = {'/api/deck?id=casual%2Ftest&': a, '/api/deck?id=casual%2Fburn&': b};
+          await show('#/compare?a=casual%2Ftest&b=casual%2Fburn');
+          same(rows('Main deck: Only in Test Deck'), [['Only A', '2', '0']]);
+          same(rows('Main deck: Only in Burn'), [['Only B', '0', '3']]);
+          same(rows('Main deck: Quantity changed'), [['Elf', '4', '2'], ['Forest', '8', '10']]);
+          assert.equal(main.querySelectorAll('.compare-difference-printing').length, 0);
+          assert(main.textContent.includes('Copies are counted by card name within each section.'));
+          assert.equal(asked.length, 5); // The panel uses the existing two deck answers; no extra API.
+        """)
+
+    def test_differences_keep_commander_main_and_sideboard_apart(self):
+        self.run_js("""
+          const a = deckA(), b = deckB();
+          a.sections = {Commander: [{name: 'Leader', qty: 1}], Deck: [{name: 'Elf', qty: 4}],
+            Sideboard: [{name: 'Elf', qty: 1}]};
+          b.sections = {Commander: [{name: 'Other Leader', qty: 1}], Deck: [{name: 'Elf', qty: 2}],
+            Sideboard: [{name: 'Elf', qty: 3}]};
+          answers = {'/api/deck?id=casual%2Ftest&': a, '/api/deck?id=casual%2Fburn&': b};
+          await show('#/compare?a=casual%2Ftest&b=casual%2Fburn');
+          same(main.querySelectorAll('.compare-difference-section').map((p) => p.querySelector('h3').textContent),
+            ['Commander', 'Main deck', 'Sideboard']);
+          same(rows('Commander: Only in Test Deck'), [['Leader', '1', '0']]);
+          same(rows('Commander: Only in Burn'), [['Other Leader', '0', '1']]);
+          same(rows('Main deck: Quantity changed'), [['Elf', '4', '2']]);
+          same(rows('Sideboard: Quantity changed'), [['Elf', '1', '3']]);
+        """)
+
+    def test_a_card_moved_between_sections_is_not_cancelled_out(self):
+        self.run_js("""
+          const a = deckA(), b = deckB();
+          a.sections = {Deck: [{name: 'Opt', qty: 2}]};
+          b.sections = {Sideboard: [{name: 'Opt', qty: 2}]};
+          answers = {'/api/deck?id=casual%2Ftest&': a, '/api/deck?id=casual%2Fburn&': b};
+          await show('#/compare?a=casual%2Ftest&b=casual%2Fburn');
+          same(rows('Main deck: Only in Test Deck'), [['Opt', '2', '0']]);
+          same(rows('Sideboard: Only in Burn'), [['Opt', '0', '2']]);
+        """)
+
+    def test_differences_sum_duplicate_printings_by_canonical_card_name(self):
+        self.run_js("""
+          const a = deckA(), b = deckB(), canonical = {name: 'Canonical Elf'};
+          a.sections = {Deck: [{name: 'Elf', qty: 2, set: 'fdn', number: '227', card: canonical},
+            {name: 'Canonical Elf', qty: 1, set: 'cmm', number: '1', card: canonical}]};
+          b.sections = {Deck: [{name: 'Canonical Elf', qty: 5, set: 'fdn', number: '227', card: canonical}]};
+          answers = {'/api/deck?id=casual%2Ftest&': a, '/api/deck?id=casual%2Fburn&': b};
+          await show('#/compare?a=casual%2Ftest&b=casual%2Fburn');
+          const changed = rows('Main deck: Quantity changed');
+          assert.equal(changed.length, 1); assert.equal(changed[0][0], 'Canonical Elf');
+          same(changed[0].slice(1), ['3 Listed printings: 1 CMM 1; 2 FDN 227', '5 Listed printings: 5 FDN 227']);
+          assert.equal(main.querySelectorAll('.compare-difference-group').length, 1);
+          const trigger = main.querySelector('.compare-difference-table').querySelector('[data-viewer]');
+          assert(trigger); assert.equal(trigger.getAttribute('data-viewer'), 'compare-difference-Deck-quantity');
+        """)
+
+    def test_printing_only_changes_do_not_become_different_card_choices(self):
+        self.run_js("""
+          const a = deckA(), b = deckB();
+          a.sections = {Deck: [{name: 'Elf', qty: 2, set: 'fdn', number: '227'}]};
+          b.sections = {Deck: [{name: 'Elf', qty: 2, set: 'fdn', number: '227', finish: 'foil'}]};
+          answers = {'/api/deck?id=casual%2Ftest&': a, '/api/deck?id=casual%2Fburn&': b};
+          await show('#/compare?a=casual%2Ftest&b=casual%2Fburn');
+          same(rows('Main deck: Printing only'), [['Elf', '2 Listed printings: 2 FDN 227', '2 Listed printings: 2 FDN 227 · foil']]);
+          same(main.querySelectorAll('.compare-difference-group').map((p) => p.dataset.kind), ['printing']);
+        """)
+
+    def test_printing_distribution_is_compared_after_coalescing_duplicate_rows(self):
+        self.run_js("""
+          const a = deckA(), b = deckB();
+          a.sections = {Deck: [{name: 'Elf', qty: 1, set: 'fdn', number: '227'},
+            {name: 'Elf', qty: 1, set: 'FDN', number: '227'}, {name: 'Elf', qty: 1, set: 'cmm', number: '1'}]};
+          b.sections = {Deck: [{name: 'Elf', qty: 1, set: 'fdn', number: '227'},
+            {name: 'Elf', qty: 2, set: 'cmm', number: '1'}]};
+          answers = {'/api/deck?id=casual%2Ftest&': a, '/api/deck?id=casual%2Fburn&': b};
+          await show('#/compare?a=casual%2Ftest&b=casual%2Fburn');
+          same(rows('Main deck: Printing only'), [['Elf', '3 Listed printings: 1 CMM 1; 2 FDN 227',
+            '3 Listed printings: 2 CMM 1; 1 FDN 227']]);
+          b.sections.Deck = [{name: 'Elf', qty: 1, set: 'cmm', number: '1'}, {name: 'Elf', qty: 2, set: 'FDN', number: '227'}];
+          answers['/api/deck?id=casual%2Fburn&'] = b;
+          await show('#/compare?a=casual%2Ftest&b=casual%2Fburn');
+          assert(main.textContent.includes('The lists have the same cards, quantities and listed printings.'));
+        """)
+
+    def test_quantity_and_printing_redistribution_are_both_shown(self):
+        self.run_js("""
+          const a = deckA(), b = deckB();
+          a.sections = {Deck: [{name: 'Elf', qty: 2, set: 'fdn', number: '227'},
+            {name: 'Elf', qty: 1, set: 'cmm', number: '1'}]};
+          b.sections = {Deck: [{name: 'Elf', qty: 1, set: 'fdn', number: '227'},
+            {name: 'Elf', qty: 3, set: 'cmm', number: '1'}]};
+          answers = {'/api/deck?id=casual%2Ftest&': a, '/api/deck?id=casual%2Fburn&': b};
+          await show('#/compare?a=casual%2Ftest&b=casual%2Fburn');
+          same(rows('Main deck: Quantity changed'), [['Elf', '3 Listed printings: 1 CMM 1; 2 FDN 227',
+            '4 Listed printings: 3 CMM 1; 1 FDN 227']]);
+          same(main.querySelectorAll('.compare-difference-group').map((p) => p.dataset.kind), ['quantity']);
+        """)
+
+    def test_unspecified_printings_never_use_the_representative_image(self):
+        self.run_js("""
+          const a = deckA(), b = deckB();
+          a.sections = {Deck: [{name: 'Forest', qty: 8, card: {name: 'Forest', set: 'fdn', number: '280'}}]};
+          b.sections = {Deck: [{name: 'Forest', qty: 8, card: {name: 'Forest', set: 'cmm', number: '420'}}]};
+          answers = {'/api/deck?id=casual%2Ftest&': a, '/api/deck?id=casual%2Fburn&': b};
+          await show('#/compare?a=casual%2Ftest&b=casual%2Fburn');
+          assert(main.textContent.includes('The lists have the same cards, quantities and listed printings.'));
+          b.sections.Deck[0].set = 'fdn'; b.sections.Deck[0].number = '280';
+          answers['/api/deck?id=casual%2Fburn&'] = b;
+          await show('#/compare?a=casual%2Ftest&b=casual%2Fburn');
+          same(rows('Main deck: Printing only'), [['Forest', '8 Listed printings: 8 Any printing', '8 Listed printings: 8 FDN 280']]);
+        """)
+
+    def test_differences_reverse_when_sides_are_swapped(self):
+        self.run_js("""
+          const a = deckA(), b = deckB();
+          a.sections = {Deck: [{name: 'Alpha', qty: 1}, {name: 'Elf', qty: 4}]};
+          b.sections = {Deck: [{name: 'Beta', qty: 3}, {name: 'Elf', qty: 2}]};
+          answers = {'/api/deck?id=casual%2Ftest&': a, '/api/deck?id=casual%2Fburn&': b};
+          await show('#/compare?a=casual%2Ftest&b=casual%2Fburn');
+          await show(compareHref(b.summary.id, a.summary.id, b.version, a.version));
+          same(rows('Main deck: Only in Burn'), [['Beta', '3', '0']]);
+          same(rows('Main deck: Only in Test Deck'), [['Alpha', '0', '1']]);
+          same(rows('Main deck: Quantity changed'), [['Elf', '2', '4']]);
+        """)
+
+    def test_identical_lists_and_empty_lists_have_one_difference_empty_state(self):
+        self.run_js("""
+          const a = deckA();
+          a.sections = {Deck: [{name: 'Elf', qty: 2}]};
+          answers = {'/api/deck?id=casual%2Ftest&': a};
+          await show('#/compare?a=casual%2Ftest&b=casual%2Ftest');
+          assert.equal(main.querySelectorAll('.compare-difference-section').length, 0);
+          assert(main.textContent.includes('The lists have the same cards, quantities and listed printings.'));
+          a.sections = {}; answers['/api/deck?id=casual%2Ftest&'] = a;
+          await show('#/compare?a=casual%2Ftest&b=casual%2Ftest');
+          assert(main.textContent.includes('The lists have the same cards, quantities and listed printings.'));
+        """)
+
+    def test_differences_work_without_stats_or_collection_visibility(self):
+        self.run_js("""
+          const a = deckA(), b = deckB();
+          for (const d of [a, b]) { d.stats = null; d.owned = null; d.availability = null; }
+          a.sections = {Deck: [{name: 'Unknown card name', qty: 1, card: null}]};
+          b.sections = {Deck: [{name: 'Unknown card name', qty: 3, card: null}]};
+          answers = {'/api/deck?id=casual%2Ftest&': a, '/api/deck?id=casual%2Fburn&': b};
+          await show('#/compare?a=casual%2Ftest&b=casual%2Fburn');
+          same(rows('Main deck: Quantity changed'), [['Unknown card name', '1', '3']]);
+          const differencePanel = main.querySelectorAll('.compare-part').find((p) => p.querySelector('h2').textContent === 'List differences');
+          assert(!differencePanel.textContent.includes('Free')); assert(!differencePanel.querySelector('[data-viewer]'));
+        """)
+
+    def test_differences_use_the_selected_planned_and_play_now_lists(self):
+        self.run_js("""
+          const target = deckA(), owned = deckA(); owned.version = 'owned';
+          target.sections = {Deck: [{name: 'Elf', qty: 4}]};
+          owned.sections = {Deck: [{name: 'Elf', qty: 2}, {name: 'Opt', qty: 2}]};
+          answers = {'/api/deck?id=casual%2Ftest&version=target': target,
+            '/api/deck?id=casual%2Ftest&version=owned': owned};
+          await show('#/compare?a=casual%2Ftest&b=casual%2Ftest&bv=owned');
+          same(rows('Main deck: Quantity changed'), [['Elf', '4', '2']]);
+          same(rows('Main deck: Only in Play-now list'), [['Opt', '0', '2']]);
+          const table = main.querySelector('.compare-difference-table');
+          same(table.querySelector('thead').querySelectorAll('th').map((th) => th.textContent),
+            ['Card', 'Planned list', 'Play-now list']);
+        """)
+
+    def test_a_hidden_first_deck_reveals_no_difference_cards_from_either_list(self):
+        self.run_js("""
+          answers = {'/api/deck?id=user2%2Fcasual%2Felves&': new ApiError(404, "No deck 'user2/casual/elves'"),
+            '/api/deck?id=casual%2Ftest&': deckA()};
+          await show('#/compare?a=user2%2Fcasual%2Felves&b=casual%2Ftest');
+          assert.equal(main.querySelector('.compare-difference-section'), null);
+          assert.equal(main.querySelector('table'), null);
+          assert(!main.textContent.includes('Test Deck')); assert(!main.textContent.includes('Elf'));
+        """)
+
+    def test_a_companion_is_kept_in_its_own_difference_section(self):
+        self.run_js("""
+          const a = deckA(), b = deckB();
+          a.sections = {Companion: [{name: 'Companion card', qty: 1}]}; b.sections = {};
+          answers = {'/api/deck?id=casual%2Ftest&': a, '/api/deck?id=casual%2Fburn&': b};
+          await show('#/compare?a=casual%2Ftest&b=casual%2Fburn');
+          same(rows('Companion: Only in Test Deck'), [['Companion card', '1', '0']]);
         """)
 
     def test_compare_with_chooses_from_the_visible_decks(self):

@@ -15,6 +15,11 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+from scripts import fixture_runtime  # noqa: E402
+
+# Install before discovery and on saved-script multiprocessing child imports.
+fixture_runtime.install(ROOT)
 
 
 def tests_of(suite):
@@ -27,12 +32,13 @@ def tests_of(suite):
 
 def shard(index, count):
     """The tests of shard index (0-based) of count, by module."""
+    fixture_runtime.install(ROOT)
     loader = unittest.TestLoader()
     by_module = defaultdict(list)
     for test in tests_of(loader.discover(str(ROOT / "decklab" / "tests"), top_level_dir=str(ROOT))):
         by_module[type(test).__module__].append(test)      # modules that can't import: unittest.loader's
     modules = sorted(by_module)[index::count]
-    return modules, unittest.TestSuite(t for m in modules for t in by_module[m])
+    return modules, fixture_runtime.protect_suite(unittest.TestSuite(t for m in modules for t in by_module[m]))
 
 
 def main():

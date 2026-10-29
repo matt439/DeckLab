@@ -3,17 +3,25 @@
 
 Use the server's normal query, method and same-origin write guards. Each
 part of the API is imported when first asked for. A POST takes at most
-api.MAX_EDIT_BODY bytes, except import previews (collection_edit.MAX_IMPORT_BODY)
+api.MAX_EDIT_BODY bytes, except routes with their explicit bound, including
+pod records (play_pods.MAX_BODY), import previews (collection_edit.MAX_IMPORT_BODY)
 and accessory saves with a local picture (accessories.MAX_SAVE_BODY).
 """
 
 
+def _field_membership_view(**params):
+    """Load Forge's membership adapter only for an allowed field request."""
+    from decklab.lib.api.field_membership import membership_view
+    return membership_view(**params)
+
+
 def dispatch(handler, route, query):
-    from decklab.lib.api import (accessories, accessory_undo, activity, arrivals, activity_mixed_undo, activity_undo, assembly, assembly_completion, assembly_standins, assembly_ticks, box_check, box_repair, collection, compare, considering, collection_edit, collection_trade, cover, deck_printings, edhrec, editor, history,
-                                 library_forge, opponents, play_records, precon_coverage, precons, products, product_tokens, rankings, receipts, rename, retirement, shopping, shopping_order_changes, shopping_orders, shopping_queue, swaps, token_cards, token_plan, tokens, visits, wishlist_undo)
+    from decklab.lib.api import (accessories, accessory_undo, activity, arrivals, activity_mixed_undo, activity_undo, assembly, assembly_completion, assembly_standins, assembly_ticks, box_check, box_repair, collection, compare, considering, collection_edit, collection_locations, collection_trade, cover, deck_printings, edhrec, editor, history,
+                                 library_forge, maintenance, opponents, play_pods, play_records, precon_coverage, precons, products, product_tokens, rankings, receipts, rename, retirement, shopping, shopping_order_changes, shopping_orders, shopping_queue, sideboard_preview, swaps, token_cards, token_plan, tokens, variant_queue, visits, wishlist_undo)
     from decklab.lib.api.common import MAX_BODY
 
     gets = {
+        ("settings", "maintenance"): (maintenance.maintenance_view, ()),
         ("collection",): (collection.collection_view,
                          ("q", "color", "type", "role", "mv", "availability", "page", "limit", "space")),
         ("collection", "rows"): (collection_edit.rows_view, ("space",)),
@@ -26,6 +34,7 @@ def dispatch(handler, route, query):
         ("assembly",): (assembly.assembly_view, ("deck", "version")),
         ("compare", "shared"): (compare.shared_view, ("a", "av", "b", "bv")),
         ("play",): (play_records.play_overview, ("id",)),
+        ("play", "sideboard-preview"): (sideboard_preview.preview_sideboard, ("id", "sha256")),
         ("deck", "history"): (history.deck_history, ("id",)),
         ("deck", "retire"): (retirement.retirement_view, ("id",)),
         ("deck", "rename"): (rename.rename_view, ("id",)),
@@ -38,6 +47,7 @@ def dispatch(handler, route, query):
         ("receipt",): (receipts.receipt_view, ("order",)),
         ("arrivals",): (arrivals.arrivals_view, ()),
         ("rankings",): (rankings.rankings_view, ("format",)),
+        ("field", "membership"): (_field_membership_view, ("id", "version")),
         ("library", "forge"): (library_forge.library_forge_view, ()),
         ("product",): (products.product_state, ("stem",)),
         ("accessories",): (accessories.accessories_view, ()),
@@ -60,6 +70,7 @@ def dispatch(handler, route, query):
         ("assembly", "ticks"): (assembly_ticks.packing_ticks, assembly_ticks.MAX_BODY),
         ("assembly", "standins"): assembly_standins.save_standins,
         ("play", "game"): play_records.save_game,
+        ("play", "pod"): (play_pods.save_pod, play_pods.MAX_BODY),
         ("play", "sideboard"): play_records.save_sideboard,
         ("receipt", "preview"): receipts.preview_receipt,
         ("receipt", "apply"): receipts.apply_receipt,
@@ -69,6 +80,8 @@ def dispatch(handler, route, query):
         ("product", "token-cards"): product_tokens.save_product_tokens,
         ("shopping", "check"): shopping.resolve_check,
         ("shopping", "queue"): shopping_queue.save_queue_state,
+        ("variant", "queue", "preview"): variant_queue.preview_queue,
+        ("variant", "queue"): variant_queue.apply_queue,
         ("shopping", "order", "preview"): shopping_orders.preview_order,
         ("shopping", "order", "apply"): shopping_orders.apply_order,
         ("shopping", "order", "change", "preview"): shopping_order_changes.preview_order_change,
@@ -80,6 +93,7 @@ def dispatch(handler, route, query):
         ("tokens", "plan"): token_plan.apply_plan,
         ("collection", "save"): collection_edit.save_card,
         ("collection", "bulk"): (collection_edit.bulk_set, collection_edit.MAX_BULK_BODY),
+        ("collection", "locations", "bulk"): (collection_locations.bulk_set, collection_edit.MAX_BULK_BODY),
         ("collection", "import", "preview"): (collection_edit.import_preview, collection_edit.MAX_IMPORT_BODY),
         ("collection", "import", "apply"): collection_edit.import_apply,
         ("collection", "trade", "preview"): (collection_trade.preview_trade, collection_trade.MAX_TRADE_BODY),
@@ -106,7 +120,7 @@ def dispatch(handler, route, query):
         function, names = gets[key]
         params = handler._query(query, names)
         if "id" in names and key not in {("activity", "undo"), ("activity", "wishlist-undo"), ("activity", "accessory-undo"),
-                                         ("activity", "mixed-undo")}:
+                                         ("activity", "mixed-undo"), ("play", "sideboard-preview")}:
             params["deck_id"] = handler._deck_id(params) if "id" in params else None
             params.pop("id", None)
         handler._send_json(200, function(**params))

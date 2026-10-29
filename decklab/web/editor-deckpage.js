@@ -75,6 +75,7 @@ function savedBox(id) {
     others.length ? el("details", { class: "more" }, el("summary", { text: `Worth a look (${others.length})` }),
       el("ul", { class: "sources-list" }, others.map((w) => el("li", { text: w })))) : null,
     a.stale_tables && a.stale_tables.length ? staleTablesPart(a.stale_tables) : null]);
+  if (a.precon?.filing) add(box, [colFilingSavedBox(saved, box)]);
   return box;
 }
 

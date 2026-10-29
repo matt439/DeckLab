@@ -71,6 +71,7 @@ MIN_EXPECT = 12                     # characters of the collection's sha --expec
 FINISHES = ("nonfoil", "foil", "etched")
 CONDITIONS = ("NM", "LP", "MP", "HP", "DMG")       # the Collection page's (api/collection_edit.py)
 MAX_QUANTITY = 9999
+MAX_FILING_LINES = 100
 EDITED = ("quantity", "condition", "language", "notes")
 LOCATION_COLUMNS = ("set", "collector_number", "finish", "name", "location")
 
@@ -177,6 +178,8 @@ def _list(args):
     if problem:
         raise ValueError(problem)
     data = files.render_sheet(sheet) if sheet.exists else rules.collection_csv_bytes([])
+    from decklab.db import read_notices
+    read_notices.Reporter(getattr(args, "dbname", None)).space("collection", args.space)
     out = getattr(sys.stdout, "buffer", None)
     if out is not None and not sys.stdout.isatty():
         # Redirected to a file: its bytes as UTF-8, as deck pull writes, not the console's code
@@ -280,19 +283,23 @@ def _merge(args):
     if ops.batch_repeats(uploads):
         print("Warning: identical content appears more than once in the supplied files. "
               "This explicit merge adds each file's quantities again.", file=sys.stderr)
+    dry_run = getattr(args, "dry_run", False)
+    if not dry_run:
+        from decklab.lib.api import collection_filing  # load optional advice before committing
     op = inventory.Op("collection.import", {
         "space": args.space, "sha256": ops.sha256_of(before), "whose": whose, "sources": sources,
         "uploads": uploads, "message": args.message, "limit": ops.MAX_IMPORTS,
-        "expected_repeats": [r["name"] for r in repeats]})
+        "expected_repeats": [r["name"] for r in repeats],
+        **({"capture_additions": True} if not dry_run else {})})
     try:
-        if getattr(args, "dry_run", False):
+        if dry_run:
             after, summary = inventory.preview(op)
         else:
             after, summary = inventory.apply(op, actor, ops.message(snapshot, op.kind, op.params))
     except ops.Stale:
         raise inventory.Conflict(f"{whose[:1].upper() + whose[1:]} changed while the files were read; "
                                  "run the merge again") from None
-    if getattr(args, "dry_run", False):
+    if dry_run:
         _merge_preview(snapshot, after, summary, args.space, whose)
         return 0
     counts = summary.counts
@@ -306,8 +313,65 @@ def _merge(args):
     for rel in summary.extra.get("raw", ()):
         print(f"Kept {rel}.")
     from decklab.db import inv_decks
-    inv_decks.stale_notes(args.space)
+    with inventory.pinned(after):
+        inv_decks.stale_notes(args.space)
+        try:
+            guide = collection_filing.after_cli_merge(after, args.space, summary.extra.get("added_printings"), counts["cards"])
+            advice = _merge_filing_lines(guide)
+        except Exception:          # optional advice cannot turn a committed merge into a failed command
+            advice = _merge_filing_unknown()
+        try:
+            print("\n".join(advice))
+        except (OSError, UnicodeError, ValueError):
+            try:
+                print("Filing advice could not be printed. The merge is saved.", file=sys.stderr)
+            except (OSError, UnicodeError, ValueError):
+                pass                # even a failed optional report cannot change the saved merge's result
     return 0
+
+
+def _merge_filing_unknown():
+    return ["Where these go (saved merge; filing suggestions):",
+            "  Destination unknown. The merge is saved; check where the added copies belong."]
+
+
+def _merge_filing_lines(guide):
+    """Bound the presentation, not the allocation; omitted printing lines are counted explicitly."""
+    lines = ["Where these go (saved merge; filing suggestions):"]
+    if guide["status"] == "ready" and guide["cards"] == 0:
+        return lines + ["  No tracked copies were added, so there is nothing to file."]
+    if guide["status"] == "unknown":
+        lines = _merge_filing_unknown()
+    elif guide["status"] != "ready":
+        raise ValueError("Unconfirmed filing advice")
+    groups = {}
+    for item in guide["destinations"]:
+        kind = item["kind"]
+        if kind not in ("deck", "storage", "unknown") or guide["status"] == "unknown" and kind != "unknown":
+            raise ValueError("Unconfirmed filing destination")
+        key = (kind, item["deck"]["id"]) if kind == "deck" else (kind,)
+        groups.setdefault(key, []).append(item)
+    shown = 0
+    for (kind, *_), items in groups.items():
+        if shown >= MAX_FILING_LINES:
+            break
+        if kind == "deck":
+            deck = items[0]["deck"]
+            lines.append(f"  Deck {deck['id']} ({deck['title']}):")
+        else:
+            lines.append("  Storage:" if kind == "storage" else "  Destination unknown:")
+        for item in items[:MAX_FILING_LINES - shown]:
+            row = guide["added"][item["row"]]
+            lines.append(f"    {item['quantity']} x {row['name']} "
+                         f"({row['set'].upper()} {row['collector_number']}, {row['finish']})")
+            shown += 1
+    total = len(guide["destinations"])
+    if shown < total:
+        lines.append(f"  Showing {shown} of {total} printing lines; {total - shown} not shown in this output.")
+    if guide["status"] == "ready" and not total:
+        raise ValueError("Missing filing destinations")
+    lines.append("  Based on deck lists at this saved merge. Check as you file; no cards were packed or reserved.")
+    return lines
 
 
 def _merge_preview(before, after, summary, space, whose):

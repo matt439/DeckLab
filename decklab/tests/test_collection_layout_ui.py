@@ -211,7 +211,7 @@ class CollectionLayoutUiTests(unittest.TestCase):
           stored.checked = true; stored.fire('change');
           assert.equal(cv.storageOnly, true); assert.equal(main.querySelector('#col-storage').checked, true);
           assert.equal(casualRows().length, 3);
-          const sort = sheet.querySelector('select'); sort.value = 'quantity:-1'; sort.fire('change');
+          const sort = sheet.querySelector('select[aria-label="Sort card list"]'); sort.value = 'quantity:-1'; sort.fire('change');
           assert.equal(cv.sort.key, 'quantity'); assert.equal(cv.sort.dir, -1);
           assert(casualRows()[0].textContent.includes('Forest'));
           colCloseSheets(); assert.equal(colSheets.size, 0);

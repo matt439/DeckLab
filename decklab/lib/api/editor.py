@@ -425,11 +425,12 @@ def check_draft(body):
     "sha256" to learn whether it changed since it was loaded), or for a new
     deck "kind" or "from", and "space" (see create_deck). Returns ok (no blocks), blocks,
     warnings (the deck-building rules and anything kept as written), lists
-    and counts as they'd be saved (exact names, printings filled in, repeated
-    printings merged), bracket (Commander), owned (pool.compare of the target
+    as they'd be saved (exact names, printings filled in, repeated printings
+    merged; a saved deck's considering is a flat list), counts of the playable
+    lists, bracket (Commander), owned (pool.compare of the target
     list, as deck_view's "owned"; None when the pool can't be read or is a
     space whose inventory the visitor may not see, guard.sees_inventory), changes
-    {"decklist", "fields", "prose" (the write-up sections a save would
+    {"decklist", "considering" (when sent), "fields", "prose" (the write-up sections a save would
     change), "marker" (whether it takes the "Decklist changed" line off)},
     file_changed, and brackets (as edit_view's, for a
     Commander deck; [] otherwise). warning_cards has, for each warning, the
@@ -449,7 +450,7 @@ def check_draft(body):
     data = _parse_body(body)
     profile = _writer(data)
     _keys(data, ("profile",), ("lists", "fields", "id", "sha256", "kind", "from", "space", "confirm_empty",
-                               "prose", "mark_current"))
+                               "prose", "mark_current", "kit_rows"))
     _flag(data, "confirm_empty")
     _flag(data, "mark_current")
     prose_problems = []
@@ -472,6 +473,9 @@ def check_draft(body):
         _require_cards()
         kind, source, _ = _new_source(data)
     draft = drafts._read_draft(data, kind, deck, source, space)
+    if "kit_rows" in data:
+        from .saving import reviewed_kit_rows
+        reviewed_kit_rows(data, deck, draft.fields, profile)
     if deck is None:
         if draft.lists["target"] is None:
             draft.lists["target"] = decks.clean_sections(source)      # as create_deck would start it
@@ -508,8 +512,10 @@ def check_draft(body):
             draft.block(problem, field="prose")
     # A blocked line or field is left out of the lists and fields read, but
     # it's still a change the page has made (once fixed, the save makes it).
-    if any(b["list"] for b in draft.blocks):
+    if any(b["list"] in ("target", "owned") for b in draft.blocks):
         changes["decklist"] = True
+    if any(b["list"] == "considering" for b in draft.blocks):
+        changes["considering"] = True
     changes["fields"] = sorted(set(changes["fields"]) | {b["field"] for b in draft.blocks if b["field"] and b["field"] != "prose"})
     # The write-up: what a save would change in it (prose sections that read differently, or the
     # "Decklist changed" line taken off).
@@ -518,6 +524,11 @@ def check_draft(body):
     changes["marker"] = bool(deck is not None and data.get("mark_current") and deck.changed_on)
     warnings = []
     lines = {"target": _lines_json(target, warnings), "owned": _lines_json(owned, warnings)}
+    if deck is not None:
+        considering = draft.lists["considering"]
+        if considering is None:
+            considering = deck.considering or []
+        lines["considering"] = _lines_json({"Considering": considering}, warnings)["Considering"]
     # Only a pool this request may see (guard.sees_inventory): the draft's list is the page's,
     # so comparing it with another space's pool would count any cards there (owned, missing,
     # on the way, in use) for whoever pastes them. Otherwise owned and availability are None.

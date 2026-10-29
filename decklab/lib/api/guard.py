@@ -41,7 +41,8 @@ X-Deck-Lab-Script: 1; permissions.is_admin) passes every check; any other
 request naming nobody (a phone on the Wi-Fi, the PC's browser before a
 profile is picked) has no rights and sees only what's open to all. A
 refusal is ApiError 403 {"error": <the reason in plain words>}, refused
-before anything of the change is worked out, so it carries nothing else.
+before anything of the change is worked out. The two kit-owner refusals also
+carry a fixed reason for guidance after the refusal, without any record or identity.
 
 The routes and what each checks:
 
@@ -276,6 +277,8 @@ from decklab.lib import access, permissions
 
 from .common import ApiError
 
+KIT_OWNERSHIP = "kit_ownership"
+
 
 def local():
     """True for a request on the home network (or outside any request): "not
@@ -396,7 +399,8 @@ def require_kit_choice(profile, deck, fields):
     owner = holder_owner(deck)
     if owner is None or not accessories.visible(owner, owners):
         raise ApiError(403, f"This deck's sleeves and deck box are {accessories.owner_name(owner)}'s to choose."
-                       if owner else "A deck in a person's own collection has no sleeves or deck box.")
+                       if owner else "A deck in a person's own collection has no sleeves or deck box.",
+                       **({"reason": KIT_OWNERSHIP} if owner else {}))
     inv = None
     for key in accessories.HOLDER_FIELDS:
         value = fields.get(key)

@@ -28,6 +28,15 @@ quantity differences by section and printing, and the header fields changed), or
 
 const CHECK_DELAY = 450;        // ms after the last change before the draft is checked
 
+/** Async writes/reloads stay with their original page, frame, profile and optional review sheet. */
+function editorWriteOwner(ed, sheet = null) {
+  const token = routeToken, page = ed?.dom?.page, frame = JSON.stringify([ed?.id, ed?.version, ed?.space, ed?.mode]);
+  return () => !!(ed && editor === ed && !ed.leaving && !ed.readOnly && ed.profile === state.profile?.id
+    && token === routeToken && page === ed.dom?.page && (!page || page.isConnected)
+    && frame === JSON.stringify([ed.id, ed.version, ed.space, ed.mode])
+    && (!sheet || !sheet.closed && (!sheet.dialog || sheet.dialog.isConnected && keyboardDialog() === sheet.dialog)));
+}
+
 
 // Checking ---------------------------------------------------------------------------
 
@@ -43,13 +52,17 @@ function draftBody() {
   }
   const body = { id: ed.id, sha256: ed.sha256 };
   if (listChanged()) body.lists = { [ed.version]: sendList(ed.lists) };
-  const fields = changedFields();
+  if (editorConsideringSupported(ed) && editorConsideringChanged(ed)) {
+    (body.lists || (body.lists = {})).considering = ed.considering.map(sendLine);
+  }
+  addEditorPromotionBody(body, ed);
+  const fields = editorPlayerKitFields(ed, changedFields(), body);
   if (Object.keys(fields).length) body.fields = fields;
   const prose = changedProse();
   if (Object.keys(prose).length) body.prose = prose;
   if (ed.markCurrent) body.mark_current = true;
   // Taking every card out of a deck is a block until the person says it's meant ("Empty the deck anyway").
-  if (ed.confirmEmpty && body.lists && ed.version === "target" && !Object.keys(body.lists.target).length) {
+  if (ed.confirmEmpty && body.lists?.target && ed.version === "target" && !Object.keys(body.lists.target).length) {
     body.confirm_empty = true;
   }
   return body;
@@ -59,6 +72,10 @@ function draftBody() {
 function sentUids(body) {
   const list = body.lists && (body.lists[editor.mode === "new" ? "target" : editor.version]);
   const out = {};
+  if (body.lists?.considering) out.considering = editor.considering.map(l => l.uid);
+  if (editor.version === "owned" && body.lists?.target && editor.planned) {
+    out.planned = Object.fromEntries(Object.entries(editor.planned).map(([s, lines]) => [s, lines.map(l => l.uid)]));
+  }
   if (!list) return out;
   for (const section of Object.keys(list)) out[section] = editor.lists[section].map((l) => l.uid);
   return out;
@@ -78,6 +95,7 @@ function scheduleCheck(delay = CHECK_DELAY) {
  * is set). */
 async function runCheck(ed = editor, info = {}) {
   if (!ed || editor !== ed) return null;
+  const token = routeToken;
   clearTimeout(ed.checkTimer);
   const seq = ++ed.checkSeq;
   const body = draftBody();
@@ -87,7 +105,7 @@ async function runCheck(ed = editor, info = {}) {
   try {
     const answer = await apiWrite("/api/deck/check", body);
     if (editor === ed && seq !== ed.checkSeq) info.superseded = true;
-    if (editor !== ed || seq !== ed.checkSeq) return null;
+    if (editor !== ed || seq !== ed.checkSeq || token !== routeToken || ed.profile !== state.profile?.id || ed.leaving) return null;
     const wasChanged = ed.check && ed.check.file_changed;
     const wasGone = !!ed.gone;
     Object.assign(ed, { check: answer, sent, checkError: null, checking: false, gone: null });
@@ -108,7 +126,7 @@ async function runCheck(ed = editor, info = {}) {
   } catch (e) {
     if (!(e instanceof ApiError)) throw e;
     if (editor === ed && seq !== ed.checkSeq) info.superseded = true;
-    if (editor !== ed || seq !== ed.checkSeq) return null;
+    if (editor !== ed || seq !== ed.checkSeq || token !== routeToken || ed.profile !== state.profile?.id || ed.leaving) return null;
     const wasGone = !!ed.gone;
     // A deck deleted since it was loaded: the banner says so, with what can be done.
     Object.assign(ed, { checkError: e, checking: false, gone: goneFrom(e) });
@@ -123,10 +141,12 @@ async function runCheck(ed = editor, info = {}) {
  * lists as they'd be saved, line for line as sent. */
 function fillCards(answer, sent) {
   const ed = editor;
+  fillEditorConsideringCards(answer, sent);
   const lists = answer.lists && answer.lists[ed.mode === "new" ? "target" : ed.version];
   if (!lists) return;
   let filled = false;
   for (const [section, uids] of Object.entries(sent || {})) {
+    if (!Array.isArray(uids)) continue;
     (uids || []).forEach((uid, i) => {
       const found = findLine(uid);
       const line = found && found.line;
@@ -322,7 +342,7 @@ function blocksBox(blocks, confirmEmpty) {
   return el("div", { class: "box box-crit" },
     el("h3", { text: "This can't be saved yet" }),
     el("ul", {}, blocks.map((b) => el("li", {},
-      b.field ? `${FIELD_WORDS[b.field] || b.field}: ` : b.section ? `${b.section}: ` : "", b.problem))),
+      b.field ? `${FIELD_WORDS[b.field] || b.field}: ` : b.list === "considering" ? "Considering: " : b.section ? `${b.section}: ` : "", b.problem))),
     asks ? el("div", { class: "actions" }, el("button", { type: "button", class: "btn btn-danger",
       text: "Empty the deck anyway", onclick: confirmEmpty })) : null);
 }
@@ -331,6 +351,7 @@ function blocksBox(blocks, confirmEmpty) {
  * rows a warning about this list names ("warning_cards"), each with what it says. */
 function markRows() {
   const ed = editor;
+  markEditorConsideringRows();
   if (!ed.dom.lines) return;
   for (const row of ed.dom.lines.querySelectorAll(".edit-row.is-blocked, .edit-row.is-warned")) {
     row.classList.remove("is-blocked", "is-warned");
@@ -398,7 +419,8 @@ function ownedPreview(o, version = "target") {
  * the deck once it's saved ("Save & view deck"). */
 async function saveNow({ viewAfter = false } = {}) {
   const ed = editor;
-  if (!ed || ed.readOnly || ed.saving) return;
+  if (!ed || ed.readOnly || ed.saving || ed.promoting || ed.leaving || ed.profile !== state.profile?.id || ed.consideringUnavailable || ed.promotionUnavailable) return;
+  const current = editorWriteOwner(ed);
   ed.viewAfter = viewAfter;
   const button = ed.dom.barParts && ed.dom.barParts.save;
   // Saving until the save itself has answered: a second Ctrl+S meanwhile would send the old sha again.
@@ -413,15 +435,15 @@ async function saveNow({ viewAfter = false } = {}) {
       answer = await runCheck(ed, info);
       if (answer || !info.superseded) break;
     }
-    if (editor !== ed) return;
+    if (!current()) return;
     if (button) unbusy(button);
     const title = ed.mode === "new" ? titleProblem() : null;
-    if (!answer || answer.file_changed || answer.blocks.length || title) {
+    if (!answer || answer.file_changed || answer.blocks.length || title || editorPromotionReviewNeeded(ed)) {
       reviewSave(answer);
       return;
     }
     const c = answer.changes;
-    if (ed.mode === "edit" && !c.decklist && !c.categories && !c.fields.length && !(c.prose || []).length && !c.marker) {
+    if (ed.mode === "edit" && !c.decklist && !c.categories && !c.considering && !c.fields.length && !(c.prose || []).length && !c.marker) {
       if (viewAfter) { ed.leaving = !isDirty(); location.hash = deckHref(ed.id, ed.version); return; }
       toast(`Nothing to save: the ${listName(ed.version, true)} and the details are as saved.`);
       return;
@@ -440,10 +462,11 @@ async function reviewSave(answer = undefined) {
   const ed = editor;
   if (ed.readOnly) return;            // someone else's deck: tried and tested, never saved here
   const sheet = openSheet(ed.mode === "new" ? "Create this deck?" : `Save ${ed.title}?`, { wide: true });
+  const current = editorWriteOwner(ed, sheet);
   sheet.body.append(loadingBox("Checking the deck…"));
   sheetActions(sheet, [{ text: "Keep editing", onclick: () => sheet.close() }]);
   if (answer === undefined) answer = await runCheck(ed);
-  if (sheet.closed || editor !== ed) return;
+  if (!current()) return;
   if (!answer && ed.gone) {
     // The deck was deleted since it was loaded: nothing to save into.
     showConflict(sheet, { message: ed.gone.message, data: { conflict: ed.gone.conflict } });
@@ -451,6 +474,7 @@ async function reviewSave(answer = undefined) {
   }
   if (!answer) {
     if (ed.checkError && renamedEditorConflict(sheet, ed.checkError)) return;
+    if (showEditorKitOwnership(sheet, ed.checkError)) return;
     clear(sheet.body).append(el("div", { class: "box box-crit" }, el("p", {
       text: `The deck couldn't be checked, so it can't be saved yet: ${ed.checkError ? ed.checkError.message : "try again."}` })));
     sheetActions(sheet, [{ text: "Try again", kind: "primary", onclick: () => { sheet.close(); reviewSave(); } },
@@ -458,6 +482,31 @@ async function reviewSave(answer = undefined) {
     return;
   }
   drawReview(sheet, answer);
+}
+
+/** A real ownership refusal offers a hand-off path, without inferring private kit from hidden fields. */
+function showEditorKitOwnership(sheet, error) {
+  const ed = editor;
+  if (ed?.mode !== "edit" || !(error instanceof ApiError) || error.status !== 403 || error.data?.reason !== "kit_ownership") return false;
+  const current = editorWriteOwner(ed, sheet);
+  if (!current()) return true;
+  clear(sheet.body).append(el("div", {class: "box box-info"},
+    el("h3", {text: "The kit's owner needs to prepare this hand-off"}),
+    el("p", {text: "Nothing was saved. Your changes are still in this open editor."}),
+    el("p", {text: "Kit choices belong to their owner. Ask the owner to prepare the hand-off before trying this player change again."}),
+    el("p", {text: "Once that is done, refresh the deck and reapply your draft. You can review it before saving."})));
+  let refreshing = false;
+  const owns = button => current() && !button.disabled && button.isConnected && sheet.foot.contains(button);
+  sheetActions(sheet, [{text: "Keep editing", kind: "primary", onclick: event => {
+    if (owns(event.currentTarget)) sheet.close();
+  }}, {text: "Refresh and reapply draft", onclick: async event => {
+    const button = event.currentTarget;
+    if (refreshing || !owns(button)) return;
+    refreshing = true;
+    try { await reapplyLatest(sheet, null, button, () => button.isConnected && sheet.foot.contains(button)); }
+    finally { refreshing = false; }
+  }}]);
+  return true;
 }
 
 /** A new deck's header fields as the review lists them ([label, words]): what creating it writes. */
@@ -497,7 +546,7 @@ function drawReview(sheet, a) {
   const categoryEdits = isNew || ed.starting ? [] : categoryChanges(reference, ed.lists);
   // A draft with blocks isn't applied, so its changes can read as none: show the blocks then.
   const nothing = !isNew && !a.blocks.length && !a.changes.decklist && !a.changes.categories && !a.changes.fields.length
-    && !proseChanges.length && !marker;
+    && !proseChanges.length && !marker && !a.changes.considering;
   if (a.file_changed) {
     body.append(el("div", { class: "box box-warn" },
       el("h3", { text: "This deck changed after you opened it" }),
@@ -554,6 +603,8 @@ function drawReview(sheet, a) {
       el("ul", { class: "review-list" }, categoryEdits.map((c) => el("li", { class: "review-changed" },
         el("span", { class: "review-mark", "aria-hidden": "true", text: "~" }), categoryChangeWords(c)))));
   }
+  editorConsideringReview(body, a);
+  const promotionAck = editorPromotionReview(body, a, sheet);
   if (proseChanges.length || marker) {
     body.append(el("h3", { text: "Changes to the write-up:" }),
       el("ul", { class: "review-list" },
@@ -597,11 +648,11 @@ function drawReview(sheet, a) {
         : newId ? `Creates the deck ${newId} in Deck Lab, with the list, the details and empty Substitutes and Notes sections.`
           : "Creates the deck in Deck Lab, named after the title, with the list, the details and empty Substitutes and Notes sections." }),
       !isNew && a.changes.decklist && !marker ? el("li", { text: "Adds a line saying the list changed in Deck Lab today, so the write-up (the Notes tab) can be brought up to date later." }) : null,
-      el("li", { text: isNew ? "Works out the deck's owned-vs-needed table from the list, with today's prices."
-        : `Works out the deck's owned-vs-needed table again, from the ${listName("target", true)}, with today's prices.` }),
+      isNew || a.changes.decklist || a.changes.fields.length ? el("li", { text: isNew ? "Works out the deck's owned-vs-needed table from the list, with today's prices."
+        : `Works out the deck's owned-vs-needed table again, from the ${listName("target", true)}, with today's prices.` }) : null,
       el("li", { text: `The change is kept in the deck's history, under your name (${who}).` }))));
   sheetActions(sheet, [
-    { text: isNew ? "Create" : "Save", kind: "primary", disabled: blocks.length > 0, value: "save",
+    { text: isNew ? "Create" : "Save", kind: "primary", disabled: blocks.length > 0 || promotionAck, value: "save",
       onclick: (e) => doSave(sheet, e.currentTarget, { viewAfter: !!ed.viewAfter }) },
     { text: "Keep editing", onclick: () => sheet.close() }]);
 }
@@ -610,6 +661,8 @@ function drawReview(sheet, a) {
  * save the editor reloads the saved deck in place with a toast, or with viewAfter opens the deck page. */
 async function doSave(sheet, button, { viewAfter = false } = {}) {
   const ed = editor;
+  const current = editorWriteOwner(ed, sheet);
+  if (!current() || ed.consideringUnavailable || ed.promotionUnavailable || ed.promoting || editorPromotionReviewNeeded(ed)) return;
   const retest = typeof editorRetestIntent === "function" ? editorRetestIntent(ed) : null;
   if (button) busy(button, "Saving...");
   let answer;
@@ -620,12 +673,13 @@ async function doSave(sheet, button, { viewAfter = false } = {}) {
   } catch (e) {
     if (!(e instanceof ApiError)) throw e;
     if (button) unbusy(button);
-    if (editor !== ed || (sheet && sheet.closed)) return;
+    if (!current()) return;
     if (!sheet) {
       // Saved from the bar: the review sheet says what went wrong.
       sheet = openSheet(ed.mode === "new" ? "Create this deck?" : `Save ${ed.title}?`, { wide: true });
     }
     if (e.status === 409 && ed.mode === "edit") return showConflict(sheet, e);
+    if (showEditorKitOwnership(sheet, e)) return;
     const blocks = e.data && e.data.blocks;
     clear(sheet.body).append(el("div", { class: "box box-crit" },
       el("h3", { text: ed.mode === "new" && e.status === 409 ? "That title is taken" : "It wasn't saved" }),
@@ -641,7 +695,7 @@ async function doSave(sheet, button, { viewAfter = false } = {}) {
     return;
   }
   // A stale save response must not start a run or replace another page/person's editor.
-  if (retest && !editorForgeSummaryCurrent(retest.context)) {
+  if (!current() || (retest && !editorForgeSummaryCurrent(retest.context))) {
     ed.confirmedSave = answer;
     if (button) unbusy(button);
     return;
@@ -720,8 +774,11 @@ function showConflict(sheet, error) {
     { text: "Discard my changes", kind: "discard", onclick: () => askDiscardChanges(sheet) }]);
 }
 
-async function reapplyLatest(sheet, error, button) {
+async function reapplyLatest(sheet, error, button, requestCurrent = null) {
   const ed = editor;
+  const owned = editorWriteOwner(ed, sheet);
+  const current = () => owned() && (!requestCurrent || requestCurrent());
+  if (!current()) return;
   if (button) busy(button, "Loading the latest...");
   let view;
   try {
@@ -729,10 +786,11 @@ async function reapplyLatest(sheet, error, button) {
   } catch (e) {
     if (!(e instanceof ApiError)) throw e;
     if (button) unbusy(button);
+    if (!current()) return;
     toast(`The latest version couldn't be loaded: ${e.message}`);
     return;
   }
-  if (editor !== ed) return;
+  if (!current()) return;
   if (view.id !== ed.id) {
     if (!sheet) sheet = openDeckRetirementSheet({ title: "This deck has been renamed" });
     renamedEditorConflict(sheet, new ApiError(409, "This deck was renamed while the latest version was loading.",
@@ -744,8 +802,8 @@ async function reapplyLatest(sheet, error, button) {
     toast(view.why_not || "This deck can't be edited any more.");
     return;
   }
-  const mine = { lists: ed.lists, fields: ed.fields, starting: ed.starting,
-    prose: ed.prose, markCurrent: ed.markCurrent };
+  const mine = { lists: ed.lists, fields: ed.fields, starting: ed.starting, ...editorPlayerKitSnapshot(ed),
+    prose: ed.prose, markCurrent: ed.markCurrent, ...editorConsideringSnapshot(ed) };
   const notes = rebase(ed, view, mine, ed.base);
   ed.notice = { kind: "reapplied", why: error ? error.message : null, notes };
   ed.check = null;

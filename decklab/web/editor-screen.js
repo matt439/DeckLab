@@ -417,6 +417,7 @@ function drawMain() {
   drawLines();
   showRowAvailability(currentAvailability());
   projectEditorSearchDock();
+  drawEditorConsidering();
 }
 
 // The write-up ----------------------------------------------------------------------
@@ -965,7 +966,7 @@ function editorBarChangeSummary(ed) {
   }
   const structure = groups.size === 0 && listSignature(ed.lists) !== listSignature(ed.base.lists);
   const count = groups.size + Number(structure) + Object.keys(changedFields()).length
-    + Object.keys(changedProse()).length + Number(!!ed.markCurrent);
+    + Object.keys(changedProse()).length + Number(!!ed.markCurrent) + Number(editorConsideringChanged(ed)) + Number(editorPromotionChanged(ed));
   return { count, added, removed };
 }
 
@@ -984,7 +985,7 @@ function updateEditorBarChanges(ed, p) {
   p.changes.hidden = !dirty;
   p.changeCount.textContent = ed.readOnly ? "Trial changes" : ed.mode === "new" ? "Unsaved deck"
     : summary ? plural(summary.count || 1, "unsaved change")
-      : ed.starting ? `Unsaved ${listName(ed.version, true)}` : "Unsaved changes";
+      : editorPromotionChanged(ed) ? "Unsaved Planned changes" : ed.starting ? `Unsaved ${listName(ed.version, true)}` : "Unsaved changes";
   const copies = summary && !ed.readOnly && (summary.added || summary.removed);
   p.changeCopies.hidden = !copies;
   p.changeSpoken.hidden = !copies;
@@ -995,9 +996,9 @@ function updateEditorBarChanges(ed, p) {
     ? `${plural(summary.added, "copy", "copies")} added, ${plural(summary.removed, "copy", "copies")} removed.` : "";
   p.historyActions.hidden = !dirty && !ed.history?.length;
   p.bar.classList.toggle("has-history-actions", !p.historyActions.hidden);
-  p.undo.disabled = !ed.history?.length || !!ed.saving || !!ed.asking || !!ed.leaving;
+  p.undo.disabled = !ed.history?.length || !!ed.saving || !!ed.promoting || !!ed.asking || !!ed.leaving;
   p.discard.hidden = ed.mode !== "edit" || !!ed.readOnly || !dirty;
-  p.discard.disabled = !!ed.saving || !!ed.asking || !!ed.leaving;
+  p.discard.disabled = !!ed.saving || !!ed.promoting || !!ed.asking || !!ed.leaving;
 }
 
 /** The bar's count, its checks button, Add (the Quick edit's) and the split Save. Its elements are made
@@ -1086,9 +1087,10 @@ function drawBar() {
   updateEditorBarChanges(ed, p);
   // One primary per view: Save is the main action only while there's something to save (an unstarted
   // play-now list has its own "Start it" button).
-  const mainSave = ed.mode === "new" || (ed.dirty && !none);
+  const consideringSave = (editorConsideringChanged(ed) || editorPromotionChanged(ed)) && editorConsideringSupported(ed);
+  const mainSave = ed.mode === "new" || (ed.dirty && (!none || consideringSave));
   for (const b of [p.save, p.saveMore]) if (b) b.classList.toggle("btn-primary", mainSave);
-  if (p.save && !p.save.dataset.busy) p.save.disabled = none;
+  if (p.save && !p.save.dataset.busy) p.save.disabled = (none && !consideringSave) || !!ed.consideringUnavailable || !!ed.promotionUnavailable || !!ed.promoting;
   if (p.test) {
     vtSyncTestRow(p.test);
     if (ed.dom.forge) ed.dom.forge.hidden = p.test.hidden;

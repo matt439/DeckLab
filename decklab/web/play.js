@@ -21,13 +21,21 @@ function playChoice(list) { return list.removed ? { removed: true, title: "a rem
   : { id: list.id, version: list.version, sha256: list.sha256 }; }
 function playNames(moves) { return moves.map(line => `${line.qty} ${line.name}`).join(", ") || "None"; }
 function playResult(record) {
+  if (!playLegacyGame(record)) return "Result unavailable";
   const winner = record.sides[record.result === "a" ? 0 : 1];
   return record.result === "draw" ? "Draw" : `${winner.player || winner.title} won`;
+}
+
+/** Only the original two-seat schema contributes to 1v1 totals and quick-record defaults. */
+function playLegacyGame(record) {
+  return !!record && !Object.hasOwn(record, "mode") && !Object.hasOwn(record, "game_version") &&
+    Array.isArray(record.sides) && record.sides.length === 2;
 }
 
 function playMatchupSummaries(games) {
   const groups = new Map();
   for (const { record } of games) {
+    if (!playLegacyGame(record)) continue;
     const sides = [...record.sides].sort((a, b) => playSideKey(a).localeCompare(playSideKey(b)));
     const key = sides.map(playSideKey).join(":");
     if (!groups.has(key)) groups.set(key, { sides, games: 0, wins: [0, 0], draws: 0,
@@ -41,6 +49,7 @@ function playMatchupSummaries(games) {
 }
 
 function playSummarySection(games) {
+  games = games.filter(entry => playLegacyGame(entry?.record));
   if (!games.length) return null;
   return el("section", { class: "play-section", "aria-labelledby": "play-summary-title" },
     el("h2", { id: "play-summary-title", text: "Head to head" }),
@@ -63,6 +72,7 @@ function playNoGamesWords() {
 }
 
 function drawPlay(data, deckId) {
+  const games = data.games.filter(entry => playLegacyGame(entry?.record));
   const main = $("#main");
   const filter = el("select", { id: "play-filter", onchange: event => {
     location.hash = `#/play${event.target.value ? `?id=${encodeURIComponent(event.target.value)}` : ""}`;
@@ -79,25 +89,35 @@ function drawPlay(data, deckId) {
     onclick: () => { const first = document.getElementById("play-quick-deck-0"); if (first) first.focus(); } }) : null;
   add(main, [
     pageHead({ crumb: fromDeck ? [deckHref(fromDeck.id, fromDeck.version), fromDeck.title] : null, title: routeH1("play"),
-      description: "Games you've played at home, and sideboard plans. Separate from Forge's simulations." }),
+      description: "Played games, Commander pods and sideboard plans. Separate from Forge's simulations." }),
     warningsBox(data.warnings, "Some play records or deck lists could not be loaded"),
-    data.lists.length ? playQuickRecord(data, deckId)
-      : emptyBox("There are no decks to record a game with yet.", createTargets().length && typeof newDeckHref === "function"
-        ? el("a", { class: "btn", href: newDeckHref(), text: "New deck" })
-        : el("a", { class: "btn", href: "#/library", text: routeFor("library").label })),
+    data.lists.length ? playQuickRecord(data, deckId) : playWithoutDecks(data),
     el("section", { class: "play-section", "aria-labelledby": "play-games-title" },
-      el("div", { class: "play-section-head" }, el("h2", { id: "play-games-title", text: "Played games" }),
+      el("div", { class: "play-section-head" }, el("h2", { id: "play-games-title", text: data.pods?.length ? "Played 1v1 games" : "Played games" }),
         data.lists.length && (data.games.length || deckId) ? el("label", { class: "field play-filter", for: "play-filter" },
           el("span", { class: "sr-only", text: "Show games with" }), filter) : null),
-      data.games.length ? el("div", { class: "play-records" }, data.games.map(entry => playGameCard(entry, data)))
-        : emptyBox(deckId ? "No games with this deck yet." : playNoGamesWords(), recordButton)),
-    playSummarySection(data.games),
+      games.length ? el("div", { class: "play-records" }, games.map(entry => playGameCard(entry, data)))
+        : emptyBox(data.pods?.length ? "No 1v1 games have been recorded here yet."
+          : deckId ? "No games with this deck yet." : playNoGamesWords(), recordButton)),
+    playSummarySection(games),
+    typeof playPodSection === "function" ? playPodSection(data, deckId) : null,
     el("section", { class: "play-section", "aria-labelledby": "play-plans-title" },
       el("div", { class: "play-section-head" }, el("h2", { id: "play-plans-title", text: "Sideboard plans" }), planButton),
       el("p", { class: "sub", text: "A plan says which cards to swap in against one opponent. It never changes your deck." }),
       data.sideboards.length ? el("div", { class: "play-records" }, data.sideboards.map(entry => playPlanCard(entry, data)))
         : emptyBox("No sideboard plans yet.", data.lists.length ? el("button", { class: "btn", type: "button",
           text: "New sideboard plan", onclick: () => playPlanForm(data, deckId) }) : null))]);
+}
+
+function playWithoutDecks(data) {
+  const empty = emptyBox("There are no decks to record a game with yet.", createTargets().length && typeof newDeckHref === "function"
+    ? el("a", { class: "btn", href: newDeckHref(), text: "New deck" })
+    : el("a", { class: "btn", href: "#/library", text: routeFor("library").label }));
+  const resume = typeof lifeV2EmptyLauncher === "function" ? lifeV2EmptyLauncher(data) : null;
+  if (!resume) return empty;
+  const panel = el("div", {}, empty, resume);
+  if (typeof lifeV2BindLauncher === "function") lifeV2BindLauncher(panel);
+  return panel;
 }
 
 /** The two players a quick record is for: the visitor, and the other person of their space (the two home
@@ -113,6 +133,7 @@ function playPlayers() {
  * -1 when they haven't played one that still exists. skip: a deck id not to choose (the other side's). */
 function playLastList(lists, games, player, skip = null) {
   for (const { record } of games) {
+    if (!playLegacyGame(record)) continue;
     const side = (record.sides || []).find((s) => s.player === player);
     if (!side || side.id === skip) continue;
     const at = lists.findIndex((l) => l.id === side.id && l.version === side.version);
@@ -246,6 +267,7 @@ function playQuickRecord(data, deckId) {
     button.addEventListener("click", () => playQuickSave({ data, sides, date, notes, outcomes, error, button,
       result: button.getAttribute("data-result") }));
   }
+  if (typeof lifeV2BindLauncher === "function") lifeV2BindLauncher(panel);
   return panel;
 }
 
@@ -385,6 +407,7 @@ function playPlanCard(entry, data) {
     plan.notes ? el("p", { class: "play-note", text: plan.notes }) : null,
     el("p", { class: "sub", text: `Revision ${plan.revision}; last saved by ${plan.updated_by}.` }),
     playSnapshotDetails([{ ...plan.deck, sections: plan.after }]),
+    typeof sideboardPreviewAction === "function" ? sideboardPreviewAction(entry) : null,
     el("button", { class: "btn", type: "button", text: "Revise this plan", disabled: !data.lists.length || null,
       onclick: () => playPlanForm(data, "", entry) }));
 }
@@ -409,6 +432,7 @@ function playFormActive(sheet, token, profile) {
 /** preset (a new game only): {sides: [{id, version, player}, ...], result, onSaved}, the life counter's decks,
  * names and winner (life-counter.js); onSaved runs once the record is saved. */
 function playGameForm(data, deckId, entry = null, preset = null) {
+  if (!entry && preset?.source_counter) return lifeSourceGameForm(data, preset);
   const old = entry && entry.record;
   const originToken = routeToken, originProfile = state.profile.id;
   const sheet = openSheet(old ? "Correct a played game" : "Record a played game", { wide: true });
@@ -503,6 +527,275 @@ function playGameForm(data, deckId, entry = null, preset = null) {
     finally { if (submit.isConnected) unbusy(submit); }
   });
   sheet.body.append(form);
+}
+
+/** The scoped source-aware counter uses the ordinary two-side record API, with exact current-list proof. */
+function lifeSourceReview(data, packet, bridge) {
+  const profile = state.profile, space = profile?.space || HOME_SPACE;
+  if (!profile || typeof lifeSourceValid !== "function" || !packet?.ended ||
+      !lifeSourceValid(packet, { profile: profile.id, space }) || !bridge?.isCurrent?.() ||
+      typeof bridge.onSaved !== "function" || !podCounterControlVisible(bridge.source)) return false;
+  const source = bridge.source, main = $("#main");
+  if (!main?.contains(source)) return false;
+  const ctx = { data, lists: data.lists, decks: data.decks, plans: data.sideboards, games: data.games,
+    profile, profileId: profile.id, space, token: routeToken, hash: location.hash, main, source,
+    sourceParent: source.parentNode, sourceFrame: source.parentNode.parentNode,
+    bridge, check: bridge.isCurrent, cleanup: bridge.onSaved, packet,
+    packetStamp: lifeSourceStable(packet), session: packet.session_id, previewId: null };
+  if (!lifeSourceOwner(ctx)) return false;
+  playGameForm(data, "", null, { source_counter: ctx, date: packet.date, result: packet.ended.result,
+    sides: packet.players.map(player => ({ id: player.list.id, version: player.list.version,
+      sha256: player.list.sha256, player: player.name })) });
+  return true;
+}
+
+function lifeSourceStable(value) {
+  const sorted = item => Array.isArray(item) ? item.map(sorted) : item && typeof item === "object"
+    ? Object.fromEntries(Object.keys(item).sort().map(key => [key, sorted(item[key])])) : item;
+  return JSON.stringify(sorted(value));
+}
+function lifeSourceOwner(ctx) {
+  return ctx.profile === state.profile && ctx.profileId === state.profile?.id && ctx.space === (state.profile?.space || HOME_SPACE) &&
+    ctx.token === routeToken && ctx.hash === location.hash && document.hidden !== true && document.visibilityState !== "hidden" &&
+    ctx.main === $("#main") && ctx.main.isConnected && ctx.main.contains(ctx.source) && podCounterControlVisible(ctx.source) &&
+    ctx.source.parentNode === ctx.sourceParent && ctx.sourceParent.parentNode === ctx.sourceFrame &&
+    ctx.data.lists === ctx.lists && ctx.data.decks === ctx.decks && ctx.data.sideboards === ctx.plans && ctx.data.games === ctx.games &&
+    ctx.bridge.source === ctx.source && ctx.bridge.isCurrent === ctx.check && ctx.bridge.onSaved === ctx.cleanup && ctx.check() === true &&
+    ctx.packet.session_id === ctx.session && lifeSourceStable(ctx.packet) === ctx.packetStamp;
+}
+function lifeSourceFormHere(ctx) {
+  return lifeSourceOwner(ctx) && podFrameHere(ctx.frame) && ctx.form.parentNode === ctx.frame.body &&
+    lifeSourceShown(ctx.form) &&
+    ctx.submit.parentNode === ctx.form && ctx.cancel.parentNode === ctx.frame.foot &&
+    ctx.form.contains(ctx.grid) && ctx.fields.every(node => node.isConnected && ctx.form.contains(node) &&
+      node.parentNode === ctx.parents.get(node)) && ctx.sides.every(side => side.row.parentNode === ctx.grid &&
+        [side.select, side.name, side.mulligans, side.plan].every(node => side.row.contains(node)));
+}
+function lifeSourceShown(control) {
+  if (!control?.isConnected) return false;
+  for (let node = control; node; node = node.parentNode) {
+    if (node.hidden || node.getAttribute?.("aria-hidden") === "true") return false;
+    if (node.matches?.("details") && !node.open && node.getAttribute("open") === null && !node.querySelector("summary")?.contains(control)) return false;
+  }
+  return true;
+}
+function lifeSourcePicker(catalog, preferred) {
+  const select = el("select", { required: true });
+  let choices = [];
+  const render = selected => {
+    choices = catalog().map(list => structuredClone(list));
+    clear(select).append(...[selected < 0 ? el("option", { value: "", text: "Choose a current replacement list" }) : null,
+      ...choices.map((list, n) => el("option", { value: String(n), text: playListWords(list) }))].filter(Boolean));
+    select.value = selected < 0 ? "" : String(selected);
+  };
+  const initial = catalog().findIndex(list => list.id === preferred.id && list.version === preferred.version && list.sha256 === preferred.sha256);
+  render(initial);
+  const drifted = () => /^\d+$/.test(select.value) &&
+    lifeSourceStable(catalog()[Number(select.value)]) !== lifeSourceStable(choices[Number(select.value)]);
+  return { select, get: () => /^\d+$/.test(select.value) && !drifted() ? choices[Number(select.value)] || null : null,
+    stale: initial < 0, drifted, refresh: () => render(-1) };
+}
+function lifeSourceGameForm(data, preset) {
+  const ctx = preset.source_counter;
+  if (!lifeSourceOwner(ctx)) return;
+  ctx.sheet = openSheet("Record a played game", { wide: true }); ctx.frame = podFrame(ctx.sheet);
+  ctx.form = el("form", { class: "play-form life-source-form" }); ctx.generation = 0; ctx.pending = false; ctx.uncertain = false;
+  ctx.date = el("input", { type: "date", value: preset.date, required: true, max: data.today, "data-life-source-date": "" });
+  ctx.notes = el("textarea", { maxlength: 4000, rows: 3, "data-life-source-notes": "" });
+  ctx.result = el("select", { required: true, "data-life-source-result": "" },
+    el("option", { value: "", text: "Choose the result" }), ...preset.sides.map((side, i) =>
+      el("option", { value: i ? "b" : "a", text: `${side.player} won` })), el("option", { value: "draw", text: "Draw" }));
+  ctx.result.value = preset.result;
+  const catalog = () => data.lists.filter(list => podSnapshot(list));
+  ctx.sides = preset.sides.map((preferred, i) => {
+    const picker = lifeSourcePicker(catalog, preferred), id = i ? "b" : "a";
+    const name = el("input", { type: "text", required: true, maxlength: 160, value: preferred.player, "data-life-source-name": id });
+    const mulligans = el("input", { type: "number", required: true, min: 0, max: 20, step: 1, value: 0, "data-life-source-mulligans": id });
+    picker.select.setAttribute("data-life-source-list", id);
+    const plan = el("select", { "data-life-source-plan": id }), legend = el("legend", { text: preferred.player });
+    const row = el("fieldset", { class: "play-side" }, legend, playField("Name", name), playField("Deck and list", picker.select),
+      picker.stale ? el("p", { class: "box box-warn", text: "The counter's chosen list has changed or is unavailable. Choose a current replacement explicitly before review. The record will capture that current list; you can keep counting without recording." }) : null,
+      playField("Mulligans taken", mulligans), playField("Sideboard plan used", plan));
+    return { ...picker, row, name, mulligans, plan, legend, plans: [] };
+  });
+  const refreshPlans = (pending = new Set()) => ctx.sides.forEach((side, i) => {
+    const list = side.get(), opponent = ctx.sides[1 - i].get(), selected = side.plan.value;
+    const needsChoice = pending.has(side) || selected === "pending";
+    side.plans = (data.sideboards || []).filter(item => list && opponent && /^[a-f0-9]{32}$/.test(item?.record?.id || "") && podSha(item.sha256) &&
+      item.record.deck?.id === list.id && item.record.deck?.version === list.version && item.record.deck?.sha256 === list.sha256 &&
+      item.record.opponent?.id === opponent.id && item.record.opponent?.version === opponent.version && item.record.opponent?.sha256 === opponent.sha256)
+      .map(item => ({ sha256: item.sha256, record: structuredClone(item.record) }));
+    clear(side.plan).append(...[needsChoice ? el("option", { value: "pending", text: "Choose a current plan or None" }) : null,
+      el("option", { value: "", text: "None - base list" }), ...side.plans.map(item =>
+      el("option", { value: item.record.id, text: `Plan: in ${playNames(item.record.in)}; out ${playNames(item.record.out)}` }))].filter(Boolean));
+    side.plan.value = needsChoice ? "pending" : side.plans.some(item => item.record.id === selected) ? selected : "";
+    side.plan.disabled = !side.plans.length && !needsChoice;
+  });
+  ctx.refreshPlans = refreshPlans;
+  ctx.grid = el("div", { class: "play-sides" }, ctx.sides.map(side => side.row));
+  ctx.error = el("p", { class: "form-error", role: "alert" });
+  ctx.submit = el("button", { class: "btn btn-primary", type: "submit", text: "Review game" });
+  ctx.cancel = el("button", { class: "btn", type: "button", text: "Back to counter", onclick: () => {
+    if (lifeSourceFormHere(ctx) && podTop(ctx.sheet) && !ctx.pending) ctx.sheet.close();
+  } });
+  ctx.form.append(el("p", { class: "sub", text: "Review the lists and result before recording this game. Counter totals stay on this device." }),
+    playField("Date played", ctx.date), ctx.grid, playField("Result", ctx.result), playField("Notes (optional)", ctx.notes), ctx.error, ctx.submit);
+  ctx.frame.body.append(ctx.form); ctx.frame.foot.append(ctx.cancel);
+  ctx.fields = [ctx.date, ctx.notes, ctx.result, ...ctx.sides.flatMap(side => [side.select, side.name, side.mulligans, side.plan])];
+  ctx.parents = new Map(ctx.fields.map(node => [node, node.parentNode]));
+  const changed = () => { if (lifeSourceFormHere(ctx)) { ctx.generation++; ctx.error.textContent = ""; } };
+  for (const node of ctx.fields) for (const event of ["input", "change"]) node.addEventListener(event, changed);
+  ctx.sides.forEach((side, i) => {
+    side.select.addEventListener("change", () => {
+      if (!lifeSourceFormHere(ctx) || !podTop(ctx.sheet) || !podCounterControlVisible(side.select)) return;
+      if (!lifeSourceRefreshChoices(ctx)) refreshPlans();
+    });
+    side.plan.addEventListener("change", () => {
+      if (!lifeSourceFormHere(ctx) || !podTop(ctx.sheet) || !podCounterControlVisible(side.plan)) return;
+      if (!lifeSourceRefreshChoices(ctx)) refreshPlans();
+    });
+    side.name.addEventListener("input", () => {
+      const name = podTrim(side.name.value) || `Player ${i + 1}`;
+      side.legend.textContent = name; ctx.result.querySelectorAll("option")[i + 1].textContent = `${name} won`;
+    });
+  });
+  refreshPlans();
+  ctx.form.addEventListener("submit", event => { event.preventDefault(); lifeSourcePreview(ctx); });
+  if (lifeSourceFormHere(ctx) && podTop(ctx.sheet)) ctx.submit.focus();
+}
+function lifeSourcePayload(ctx) {
+  return { profile: ctx.profileId, id: ctx.previewId, sha256: null, date: ctx.date.value, result: ctx.result.value, notes: ctx.notes.value,
+    sides: ctx.sides.map(side => {
+      const list = side.get();
+      if (!list) throw Error("replacement");
+      const plan = lifeSourceSelectedPlan(ctx, side);
+      if (side.plan.value && !plan) throw Error("plan");
+      return { ...playChoice(list), player: side.name.value, mulligans: Number(side.mulligans.value),
+        ...(plan ? { plan_id: plan.record.id, plan_sha256: plan.sha256 } : {}) };
+    }) };
+}
+const lifeSourceChoiceChanged = "A list or sideboard plan changed while this form was open. Choose current replacements explicitly before review. Your draft is still here.";
+function lifeSourceSelectedPlan(ctx, side) {
+  if (!side.plan.value || side.plan.value === "pending") return null;
+  const captured = side.plans.find(item => item.record.id === side.plan.value);
+  const current = (ctx.data.sideboards || []).find(item => item?.record?.id === side.plan.value);
+  return captured && current && captured.sha256 === current.sha256 &&
+    lifeSourceStable(captured.record) === lifeSourceStable(current.record) ? captured : null;
+}
+function lifeSourceRefreshChoices(ctx) {
+  const changedLists = ctx.sides.filter(side => side.drifted());
+  const changedPlans = new Set(ctx.sides.filter(side => side.plan.value && side.plan.value !== "pending" &&
+    !lifeSourceSelectedPlan(ctx, side)));
+  if (!changedLists.length && !changedPlans.size) return false;
+  if (changedLists.length) for (const side of ctx.sides) if (side.plan.value) changedPlans.add(side);
+  for (const side of changedLists) {
+    side.refresh();
+  }
+  ctx.generation++; ctx.refreshPlans(changedPlans); ctx.error.textContent = lifeSourceChoiceChanged;
+  return true;
+}
+function lifeSourceDraftStamp(ctx) { try { return lifeSourceStable(lifeSourcePayload(ctx)); } catch (_) { return null; } }
+function lifeSourceDraftError(ctx, payload) {
+  if (!podDate(payload.date) || payload.date > ctx.data.today) return "Choose a valid date on or before today.";
+  if (!["a", "b", "draw"].includes(payload.result)) return "Choose a winner or draw.";
+  if (!podNotes(payload.notes)) return "Keep notes to at most 2,000 characters without unsupported control characters.";
+  if (payload.sides.some(side => !podText(side.player, 80))) return "Give each player a name of at most 80 characters on one line.";
+  if (ctx.sides.some(side => !/^\d+$/.test(side.mulligans.value) || !Number.isSafeInteger(Number(side.mulligans.value)) ||
+      Number(side.mulligans.value) < 0 || Number(side.mulligans.value) > 20)) return "Mulligans must be whole numbers from 0 to 20.";
+  if (!payload.sides.some(side => ctx.data.decks?.[side.id]?.can_record === true))
+    return "Choose a current deck you may record before review. You can keep counting without recording.";
+  return null;
+}
+
+function lifeSourceSections(value) {
+  return value && typeof value === "object" && !Array.isArray(value) && Object.keys(value).length <= 12 &&
+    Array.isArray(value.Deck) && value.Deck.length > 0 && Object.entries(value).every(([name, lines]) => podText(name, 80) &&
+      Array.isArray(lines) && lines.length <= 500 && lines.every(line => line && typeof line === "object" &&
+        Object.keys(line).length === 5 && ["qty", "name", "set", "number", "finish"].every(key => Object.hasOwn(line, key)) &&
+        Number.isSafeInteger(line.qty) && line.qty > 0 && line.qty <= 10000 && podText(line.name, 300) &&
+        ["nonfoil", "foil", "etched"].includes(line.finish) && [line.set, line.number].every(text => text === null || podText(text, 80, true))));
+}
+function lifeSourceAnswer(ctx, answer, payload, expected, saved = false) {
+  const record = answer?.record;
+  if (answer?.error || !record || Object.hasOwn(record, "mode") || Object.hasOwn(record, "game_version") ||
+      (saved ? answer.saved !== true || !podSha(answer.sha256) : answer.preview !== true || !podSha(answer.review_sha256)) ||
+      !/^[a-f0-9]{32}$/.test(saved ? record.id || "" : answer.id || "") || payload.id && (saved ? record.id : answer.id) !== payload.id ||
+      record.space !== ctx.space || record.date !== payload.date || record.result !== payload.result || record.notes !== podTrim(payload.notes) ||
+      !Array.isArray(record.sides) || record.sides.length !== 2) return null;
+  if (saved && (record.version !== 1 || record.kind !== "games" || record.revision !== 1 ||
+      !podText(record.updated_by, 80) || [record.created_on, record.updated_on].some(value =>
+        !podText(value, 80) || !/(?:Z|[+-]\d{2}:\d{2})$/.test(value) || !Number.isFinite(Date.parse(value))))) return null;
+  for (let i = 0; i < 2; i++) {
+    const side = record.sides[i], wanted = payload.sides[i], source = expected[i];
+    const keys = ["id", "version", "sha256", "title", "sections", "player", "mulligans",
+      ...(wanted.plan_id ? ["plan_id", "plan_sha256", "base_sha256"] : [])];
+    if (!side || typeof side !== "object" || Object.keys(side).length !== keys.length || Object.keys(side).some(key => !keys.includes(key)) ||
+        side.id !== wanted.id || side.version !== wanted.version || !podSha(side.sha256) || !podText(side.title, 500) ||
+        side.player !== podTrim(wanted.player) || side.mulligans !== wanted.mulligans || !lifeSourceSections(side.sections) ||
+        lifeSourceStable(side.sections) !== lifeSourceStable(source.sections)) return null;
+    if (wanted.plan_id ? side.base_sha256 !== wanted.sha256 || side.plan_id !== wanted.plan_id || side.plan_sha256 !== wanted.plan_sha256
+      : side.sha256 !== wanted.sha256) return null;
+  }
+  const content = { date: record.date, result: record.result, notes: record.notes, space: record.space, sides: record.sides };
+  return { content: structuredClone(content), id: saved ? record.id : answer.id, token: answer.review_sha256 };
+}
+async function lifeSourcePreview(ctx) {
+  if (!lifeSourceFormHere(ctx) || !podTop(ctx.sheet) || !podCounterControlVisible(ctx.submit) || ctx.pending || ctx.uncertain) return;
+  if (lifeSourceRefreshChoices(ctx)) return;
+  let payload;
+  try { payload = lifeSourcePayload(ctx); }
+  catch (failure) { ctx.error.textContent = failure.message === "plan" ? "Choose a current sideboard plan or None before review. Your draft is still here."
+    : "Choose current replacement lists before review. You can keep counting without recording."; return; }
+  const problem = lifeSourceDraftError(ctx, payload);
+  if (problem) { ctx.error.textContent = problem; return; }
+  const expected = ctx.sides.map(side => {
+    const plan = lifeSourceSelectedPlan(ctx, side);
+    return { sections: structuredClone(plan ? plan.record.after : side.get().sections) };
+  });
+  const generation = ctx.generation, stamp = lifeSourceStable(payload);
+  const current = () => lifeSourceFormHere(ctx) && ctx.generation === generation && lifeSourceDraftStamp(ctx) === stamp;
+  ctx.pending = true; ctx.error.textContent = ""; busy(ctx.submit, "Checking.");
+  try {
+    const answer = await apiWrite("/api/play/game", { ...payload, preview: true });
+    if (!current() || !podTop(ctx.sheet)) return;
+    const checked = lifeSourceAnswer(ctx, answer, payload, expected);
+    if (!checked) { ctx.error.textContent = "The game preview couldn't be checked. Your counter and draft are still here."; return; }
+    ctx.previewId = checked.id; payload = { ...payload, id: checked.id };
+    lifeSourceReviewSheet(ctx, payload, expected, checked, generation);
+  } catch (_) { if (current() && podTop(ctx.sheet)) ctx.error.textContent = "The game couldn't be reviewed. Your counter and draft are still here."; }
+  finally { ctx.pending = false; if (lifeSourceFormHere(ctx)) unbusy(ctx.submit); }
+}
+function lifeSourceReviewSheet(ctx, payload, expected, checked, generation) {
+  const review = openSheet("Review played game", { wide: true }), frame = podFrame(review), stamp = lifeSourceStable(payload);
+  const summary = playGameCard({ record: checked.content, can: { sides: [false, false], result: false } }, ctx.data);
+  const error = el("p", { class: "form-error", role: "alert" }); frame.body.append(summary, error);
+  let pending = false, saved = false;
+  const back = el("button", { type: "button", class: "btn", text: "Back to editing" });
+  const save = el("button", { type: "button", class: "btn btn-primary", text: "Save this record" }); frame.foot.append(back, save);
+  const current = () => lifeSourceFormHere(ctx) && podFrameHere(frame) && podTop(review) && summary.parentNode === frame.body &&
+    error.parentNode === frame.body && back.parentNode === frame.foot && save.parentNode === frame.foot &&
+    lifeSourceShown(summary) && lifeSourceShown(back) && lifeSourceShown(save) &&
+    ctx.generation === generation && lifeSourceDraftStamp(ctx) === stamp;
+  back.addEventListener("click", () => { if (current() && !pending) { review.close(); if (lifeSourceFormHere(ctx) && podTop(ctx.sheet)) ctx.submit.focus(); } });
+  save.addEventListener("click", async () => {
+    if (!current() || !podCounterControlVisible(save) || pending || saved || ctx.uncertain) return;
+    pending = true; busy(save, "Saving."); error.textContent = "";
+    try {
+      const answer = await apiWrite("/api/play/game", { ...payload, preview: false, review_sha256: checked.token });
+      if (!current()) return;
+      const confirmed = lifeSourceAnswer(ctx, answer, payload, expected, true);
+      if (!confirmed || lifeSourceStable(confirmed.content) !== lifeSourceStable(checked.content)) {
+        ctx.uncertain = true;
+        error.textContent = ctx.error.textContent = "The save response couldn't be checked. Keep the counter and check the Game log before recording again.";
+        ctx.submit.disabled = true;
+        return;
+      }
+      saved = true; review.close(); ctx.sheet.close();
+      if (lifeSourceOwner(ctx)) { const cleaned = ctx.cleanup(); toast("Record saved."); if (cleaned !== false) route(); }
+    } catch (_) { if (current()) error.textContent = "The game couldn't be saved. Your counter and draft are still here; a changed record may need a fresh Game log."; }
+    finally { pending = false; if (current() && !ctx.uncertain) unbusy(save); }
+  });
+  if (current()) back.focus();
 }
 
 function playPlanForm(data, deckId, entry = null, preferred = {}) {

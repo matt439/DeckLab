@@ -1,4 +1,6 @@
 """Forge CLI field runs, paired deck variants and controlled experiments."""
+import math
+
 from . import cli_output as output
 from . import cli_results as results
 from . import cli_shared as shared
@@ -355,7 +357,7 @@ def _experiment_args(sub):
     exp.add_argument("--control-logs-dir", help="the tee'd logs of --control-dir's results")
     exp.add_argument("--only", help="the arms to play, comma-separated")
     exp.add_argument("--games", type=shared._positive, help="games a pair (default: the spec's)")
-    exp.add_argument("--dry-run", action="store_true", help="list the games each arm and control would play")
+    exp.add_argument("--dry-run", action="store_true", help="list remaining games and a rough time estimate; play nothing")
     exp.add_argument("--json", action="store_true")
     exp.add_argument("--local", action="store_true",
                      help="play in pools of this command's own, not the running server's")
@@ -374,7 +376,7 @@ def _experiment_args(sub):
 def _cmd_experiment(args):
     """experiment (contract section 12.5): play an experiment's missing games (its controls,
     then its arms), then print its measures and recommendations (experiment.py). --dry-run
-    lists the games each arm and control would play and plays nothing. Exit code 1 when a
+    lists remaining games and their rough time estimate, and plays nothing. Exit code 1 when a
     run failed (the others went on) or the spec can't be used."""
     from . import experiment
     only = [a.strip() for a in args.only.split(",") if a.strip()] if args.only else None
@@ -382,7 +384,8 @@ def _cmd_experiment(args):
         spec = experiment.load_spec(args.spec)
         if args.dry_run:
             found = experiment.plan(spec, results_dir=args.results_dir, control_dir=args.control_dir, only=only,
-                                    games=args.games, logs_dir=args.logs_dir, control_logs_dir=args.control_logs_dir)
+                                    games=args.games, logs_dir=args.logs_dir, control_logs_dir=args.control_logs_dir,
+                                    local=args.local)
             if args.json:
                 print(shared.json.dumps(found, ensure_ascii=False))
             else:
@@ -433,3 +436,106 @@ def _print_experiment_plan(found):
             print(f"  {a['arm']}, {a['pair'][0]} v {a['pair'][1]}: {a['have']:,} played, {a['missing']:,} to play")
     t = found["totals"]
     print(f"In all: {t['games']:,} games ({t['control_games']:,} for controls, {t['arm_games']:,} for arms).")
+    _print_experiment_estimate(found)
+
+
+def _experiment_minutes(span, remaining):
+    """Outward-rounded guide; positive work must never be printed as zero minutes."""
+    if not isinstance(span, (list, tuple)) or len(span) != 2:
+        return None
+    try:
+        if not all(isinstance(value, (int, float)) and not isinstance(value, bool) and
+                   math.isfinite(value) and value >= 0 for value in span) or span[0] > span[1]:
+            return None
+    except OverflowError:
+        return None
+    if remaining == 0:
+        return "0 minutes; no games remain" if span == [0, 0] or span == (0, 0) else None
+    if span[0] <= 0 or span[1] <= 0:
+        return None
+    if span[1] < 1:
+        return "under 1 minute"
+    low, high = max(1, math.floor(span[0])), max(1, math.ceil(span[1]))
+    return f"about {low} minute{'s' if low != 1 else ''}" if low == high else f"about {low}-{high} minutes"
+
+
+def _experiment_config_context(found, estimate, timing):
+    """Only attach optional worker context to the matching original configuration-arm row."""
+    rows, details = found.get("arms"), estimate.get("arms")
+    if not isinstance(rows, list) or not isinstance(details, list) or len(rows) != len(details):
+        return []
+    chosen = []
+    for row, detail in zip(rows, details):
+        if not isinstance(row, dict) or not isinstance(detail, dict):
+            continue
+        config = row.get("config")
+        pair = row.get("pair")
+        workers = timing._worker_count(detail.get("requested_workers"))
+        if (detail.get("basis") == "config_fallback" and detail.get("placement") == "local_assumed" and
+                workers is not None and isinstance(config, dict) and set(config) == {"forge_workers"} and
+                timing._worker_count(config["forge_workers"]) == workers and row.get("changes") == ["config"] and
+                not row.get("skipped") and type(row.get("missing")) is int and row["missing"] > 0 and
+                type(detail.get("remaining_games")) is int and detail["remaining_games"] == row["missing"] and
+                detail.get("arm") == row.get("arm") and detail.get("key") == row.get("key") and
+                isinstance(pair, (list, tuple)) and len(pair) == 2 and all(isinstance(ref, str) for ref in pair)):
+            chosen.append((row, workers))
+    return chosen
+
+
+def _print_experiment_estimate(found):
+    """Present only the adapter's optional estimate; never read timing or runtime metadata here."""
+    from . import experiment_estimate as timing
+    labels = {"none": "no remaining games", "measured": "measured control timings",
+              "arm_proxy": "arm proxy (prior arm timing)", "control_proxy": "control proxy (control speed)",
+              "fallback": "format fallback rates", "config_fallback": "format fallback rates at requested local workers",
+              "mixed": "mixed timing sources"}
+    estimate = found.get("estimate")
+    estimate = estimate if isinstance(estimate, dict) else {}
+    remaining = estimate.get("remaining_games")
+    count = found["totals"]["games"]
+    basis = estimate.get("basis")
+    valid = (estimate.get("complete") is True and type(remaining) is int and remaining >= 0 and
+             remaining == count and isinstance(basis, str) and basis in labels and
+             (remaining == 0) == (basis == "none"))
+    words = _experiment_minutes(estimate.get("minutes"), remaining) if valid else None
+    if words is None:
+        print("Remaining game time: estimate unavailable for the complete remaining work.")
+        print("  Timing basis: unavailable.")
+    else:
+        print(f"Remaining game time: {words}.")
+        source = labels[basis]
+        if basis == "mixed":
+            kinds = set()
+            for name in ("controls", "arms"):
+                rows = estimate.get(name)
+                for row in rows if isinstance(rows, list) else []:
+                    if isinstance(row, dict) and row.get("remaining_games") and isinstance(row.get("basis"), str):
+                        kinds.add(row["basis"])
+            chosen = [labels[name] for name in ("measured", "arm_proxy", "control_proxy", "fallback", "config_fallback")
+                      if name in kinds]
+            if chosen:
+                source += ": " + "; ".join(chosen)
+        print(f"  Timing basis: {source}.")
+    workers, assumed = timing._worker_count(estimate.get("workers")), timing._worker_count(estimate.get("assumed_workers"))
+    context = _experiment_config_context(found, estimate, timing)
+    worker_label = "Baseline planning workers" if any(isinstance(row, dict) and row.get("config")
+        for row in found.get("arms", [])) else "Planning workers"
+    if workers is not None:
+        print(f"  {worker_label}: {workers}.")
+    elif assumed is not None:
+        print(f"  {worker_label}: unknown; legacy and format fallback rates assume {assumed} workers.")
+    else:
+        print(f"  {worker_label}: unknown.")
+    for row, requested in context:
+        unit = "worker" if requested == 1 else "workers"
+        print(f"  Arm {row['arm']}, {row['pair'][0]} v {row['pair'][1]}: requests {requested} local {unit} for timing only.")
+    # Optional failures must not print exception text or arbitrary messages from metadata.
+    for text in timing.BASE_ASSUMPTIONS:
+        print(f"  {text}")
+    supplied = estimate.get("assumptions")
+    supplied = supplied if isinstance(supplied, list) else []
+    for text in (timing.POOL_UNKNOWN, timing.POOL_PLANNING_UNKNOWN, timing.POOL_MISMATCH,
+                 timing.POOL_AGGREGATE, timing.ARM_PROXY, timing.CONTROL_PROXY, timing.FORMAT_FALLBACK, timing.CONFIG_LOCAL,
+                 timing.V1_RATE, timing.CONFIG_UNKNOWN, timing.UNAVAILABLE):
+        if text in supplied:
+            print(f"  {text}")

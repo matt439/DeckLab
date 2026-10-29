@@ -6,7 +6,7 @@ no network, no server. The shared helpers stay in test_web.
 import re
 import unittest
 
-from decklab.tests.test_web import STYLES, _function, _text
+from decklab.tests.test_web import STYLES, _function, _scripts, _text
 
 
 class PageSourceTests(unittest.TestCase):
@@ -21,7 +21,7 @@ class PageSourceTests(unittest.TestCase):
         self.assertEqual({name for name in own if not name.startswith("fv-")}, set())
         others = "\n".join(_text(name) for name in STYLES if name != "field.css")
         shared = set(re.findall(r"\.([A-Za-z][\w-]*)", re.sub(r"/\*.*?\*/", "", others, flags=re.S)))
-        script = _text("field.js")
+        script = _scripts(["field.js", "field-membership.js"])
         used = {name for value in re.findall(r'class: "([^"]+)"', script) for name in value.split()}
         used |= set(re.findall(r"`(fv-[\w-]+)", script))
         self.assertEqual({name for name in used if not name.startswith("fv-") and name not in shared}, set())
@@ -114,9 +114,9 @@ class PageSourceTests(unittest.TestCase):
         self.assertIn("rebaseFields(mine, base, theirs, ACC_ROW_KEYS)", _function(script, "rebaseAccessory"))
 
     def test_the_tokens_page(self):
-        # The Tokens page (tokens.js, tokens-page.css): its route, the globals the deck page, library and packing plan
+        # The Tokens page (tokens.js, tokens-edit.js, tokens-page.css): its route, the globals the deck page, library and packing plan
         # use, the endpoints it calls, the active-page guard on writes, and the phone-first layout.
-        script = _text("tokens.js")
+        script = _scripts(("tokens.js", "tokens-edit.js"))
         for name in ("showTokens", "drawTokens", "updateTokens", "tokensActive", "tokenStateChip", "tokenNeedList",
                      "tokenThumb", "openTokenSheet"):
             with self.subTest(name=name):
@@ -208,7 +208,7 @@ class PageSourceTests(unittest.TestCase):
     def test_the_collection_page_edits_a_space(self):
         # The Collection page (collection.js): spaces, the endpoints of the accounts milestone, writes tied to
         # the page that started them, conflicts put back on top field by field, and a phone-first layout.
-        script = "\n".join(_text(name) for name in ("collection.js", "collection-rows.js", "collection-cards.js", "collection-bulk.js",
+        script = "\n".join(_text(name) for name in ("collection.js", "collection-import-groups.js", "collection-rows.js", "collection-cards.js", "collection-bulk.js",
                                                      "collection-guards.js", "collection-trade.js", "precon-coverage.js"))
         self.assertIn('if (path === "collection") return showCollection(params, token);', _function(_text("app.js"), "route"))
         for path in ('"/api/collection"', '"/api/collection/rows"', '"/api/collection/save"', '"/api/collection/bulk"',

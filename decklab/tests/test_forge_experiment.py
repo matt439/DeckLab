@@ -14,7 +14,7 @@ measures can be checked; once S is built, its functions are used.
 The tests that play the fake Forge through the real runner.run need R's hooks and skip until
 runner.RUN_FEATURES has them (section 21). They share test_forge.py's setUpModule and tearDownModule.
 
-Run from the repo root: python -m unittest discover -s decklab/tests -t .
+Run from the repo root: python scripts/test_fixtures.py decklab.tests.test_forge_experiment
 """
 import gzip
 import io
@@ -521,6 +521,7 @@ class ArmBase(test_forge.ForgeCase):
                   mock.patch.object(decks, "load_deck",
                                     side_effect=lambda deck_id, version: sections(self.lists[deck_id])),
                   mock.patch.object(decks, "engine_kind", return_value="constructed"),
+                  mock.patch.object(experiment, "_plan_timing_metadata", side_effect=lambda: ({}, self.settings["forge_workers"])),
                   mock.patch.object(forge.pool, "session", self.stand_in_session),
                   mock.patch.object(forge.runner, "run", self.stand_in_run),
                   mock.patch.object(forge.engine, "side_list", side_list, create=True),
@@ -925,16 +926,19 @@ class CommandLineTests(ArmBase):
         return path
 
     def test_the_dry_run_lists_controls_and_arms_and_plays_nothing(self):
-        code, out, err = self.run_main(*["experiment", str(self.write_spec()), "--dry-run", "--json",
-                                        "--results-dir", str(self.out)])
-        self.assertEqual(code, 0, err)
-        found = json.loads(out)
-        self.assertEqual(found["totals"], {"control_games": 100, "arm_games": 100, "games": 200})
-        self.assertEqual([a["arm"] for a in found["arms"]], ["reck", "reck"])
-        self.assertEqual(self.calls, [])
-        code, out, err = self.run_main(*["experiment", str(self.write_spec()), "--dry-run",
-                                        "--results-dir", str(self.out)])
-        self.assertIn("In all: 200 games", out)
+        # Arrange an already-deployed disposable fixture; planning must not create it.
+        forge.overrides.ensure_deployed(forge.common._user_dir())
+        with mock.patch.object(forge.overrides, "ensure_deployed", side_effect=AssertionError("Dry-run deploy")):
+            code, out, err = self.run_main(*["experiment", str(self.write_spec()), "--dry-run", "--json",
+                                            "--results-dir", str(self.out)])
+            self.assertEqual(code, 0, err)
+            found = json.loads(out)
+            self.assertEqual(found["totals"], {"control_games": 100, "arm_games": 100, "games": 200})
+            self.assertEqual([a["arm"] for a in found["arms"]], ["reck", "reck"])
+            self.assertEqual(self.calls, [])
+            code, out, err = self.run_main(*["experiment", str(self.write_spec()), "--dry-run",
+                                            "--results-dir", str(self.out)])
+            self.assertIn("In all: 200 games", out)
 
     def test_a_run_prints_the_report_and_writes_it(self):
         report = self.tmp / "out.md"

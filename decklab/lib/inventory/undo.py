@@ -683,8 +683,16 @@ def review(change_id, space, snapshot=None):
     store = backend()
     if not callable(getattr(store, "undo_audit", None)) or not callable(getattr(store, "undo_latest", None)):
         raise UndoUnsupported("Undo is available only with the database audit trail.")
+    supplied_snapshot = snapshot is not None
     snapshot = current() if snapshot is None else snapshot
     raw = store.undo_audit(change_id)
+    from . import undo_token_delete
+    if undo_token_delete.is_delete(raw):
+        undo_token_delete.source_record(raw, space)
+        reader = getattr(store, "undo_token_delete_review", None)
+        if not supplied_snapshot and callable(reader):
+            return reader(change_id, space)
+        return undo_token_delete.review(change_id, space, snapshot, store, raw)
     if isinstance(raw, list) and len(raw) > 1:
         return _batch_review(change_id, space, snapshot, store)
     source, wanted, restore = _source(raw, space)
@@ -728,6 +736,9 @@ def apply_undo(snapshot, *, change_id, space, expect, reason=None, confirm_owned
     if not isinstance(expect, str) or not SHA.fullmatch(expect):
         raise Invalid("Review this Undo before applying it.")
     plan = review(change_id, space, snapshot)
+    if plan.get("read_only") is True or plan.get("action") == "token_restore_review":
+        from .undo_token_delete import NO_APPLY
+        raise UndoUnsupported(NO_APPLY)
     if plan["expect"] != expect:
         raise UndoConflict("The inventory or decks changed after the Undo preview. Review it again.", plan["label"])
     if plan.get("action") in BATCH_ACTIONS:

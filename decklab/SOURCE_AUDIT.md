@@ -178,3 +178,431 @@ reach the shared runner through the `test_feature_ui` module, never by importing
   over 1,200 lines. The longest is now `tests/test_inventory_contract.py` (1,171).
 - **Full suite:** `python -m unittest discover -s decklab/tests -t .` ran **5,848
   tests in 1,149.1 seconds: OK, 34 skipped**.
+
+<a id="maintenance-backlog"></a>
+
+# Maintenance backlog - 2026-10-28
+
+This is the implementation owner for the hygiene lane requested on 2026-10-28.
+[TODO.md](../TODO.md) owns readiness and order; E11-S36 to E11-S43 in
+[stories.md](design/stories.md) own acceptance criteria. Each task is finite:
+finish its stated scope, record the result here/HISTORY.md and remove its TODO
+row. A later audit may identify another concrete task. The dated audits above
+remain historical evidence, not measurements of today's checkout.
+
+## Starting evidence
+
+The inventory check on `c678f10` reads **1,084 owned source files**. **One exceeds
+1,200 lines:** `web/tokens.js`, at **1,460**. `--check` exits **1**; this backlog
+change does not fix or waive that failure. There are 29 owned source files over
+1,000 lines, including tests. Being below the threshold is not proof of a good
+module boundary, and being large is not by itself a reason to split a cohesive
+file. No lower blanket threshold is introduced.
+
+## Tokens and CI guard completed: E11-S36, E11-S43
+
+Built 2026-10-28. `web/tokens.js` is now **1,093 lines**; the extracted
+`web/tokens-edit.js` is **370 lines**. All 16 workflow functions, from
+openTokenSheet through showTokenConflict, retain their original bodies and
+global names. The original file retains its shared constants, parser and page
+state; only two trailing blank lines were trimmed. Browser and shared Node
+loaders register the new deferred script directly after tokens.js. The
+parser-only test loader is unchanged.
+
+The inventory now contains **1,086 owned source files**, with **none above
+1,200 lines**. The existing audit implementation, threshold and exclusions are
+unchanged. lint.yml runs its seven new temporary-Git regression tests and
+`--check` alongside the existing Ruff command. Hosted CI has not run for this
+local change.
+
+Verification: 58 focused Tokens/UI/parser/asset checks and seven guard checks
+passed without skips, both JavaScript syntax checks pass, and independent
+source-body/loader/guard review is clear. The full integrated suite ran
+**9,050 tests in 2,234.874 seconds: OK, 74 skipped**, including all seven guard
+cases. Skips: 31 opt-in real Forge/JDK checks, 22 POSIX/Linux checks, 20 absent
+private-history fixtures and one Windows symbolic-link privilege check.
+Discovery preserves all 9,049 existing cases plus seven new ones, with no
+duplicates or import errors; class-setup skips reduce the run count. Ruff's
+real-error checks and `git diff --check` pass.
+No household data or migration was changed, and no Forge games were run.
+
+## Starting measured targets
+
+| id | Measured target | First structural boundary |
+|---|---|---|
+| E11-S36 | `web/tokens.js`, 1,460 | Add/edit/conflict sheets, openTokenSheet through showTokenConflict |
+| E11-S37 | `web/editor-cards.js`, 1,137 | Paste/replace and Start from, apart from search/viewport setup |
+| E11-S38 | `lib/api/collection_edit.py`, 1,116 | CSV detection, conversion and upload parsing, apart from HTTP writes/previews |
+| E11-S39 | `lib/inventory/pg.py`, 1,133 | Table-row snapshot conversion, apart from cache/transaction/write coordination |
+| E11-S40 | `tests/test_inventory_contract.py`, 1,173; `tests/test_api_permissions.py`, 1,126 | Concrete test groups, apart from shared fixture/base support |
+
+Other large files include `web/editor.js` (1,188), `web/deck.js` (1,179),
+`lib/api/forge_runs.py` (1,163) and `web/components.css` (1,161). Review their
+responsibilities when the next change needs room; they are not extra split
+tasks solely to make the numbers smaller. CSS ordering includes later
+coarse-pointer/forced-colors overrides. Forge-run visibility reads mutable
+coordination/configuration owners, so an extraction needs an explicit patch
+ownership plan rather than a generic facade.
+
+## Split contracts
+
+- Move coherent responsibilities; retain existing bodies unless an ownership
+  reference must change. Compare every moved function/class and account for
+  every removed/added top-level item. Do not compress code or raise the limit.
+- Keep classic browser scripts and their initialisation order. Register new
+  files in index.html, the explicit static-asset contract and all affected Node
+  runner file lists. Preserve global callers, route/profile guards and listener
+  lifetime; a split introduces no build step.
+- Keep each mutable state value and patched name with one authoritative owner.
+  Existing imports and test patches must reach that owner; copying bindings
+  into another module is not compatibility. Preserve server.py's entry point.
+- Source splits preserve observable behaviour, API responses, permissions,
+  transaction/locking boundaries, canonical bytes and error handling. Feature
+  changes belong in separate commits. Use fixtures and disposable databases;
+  no household write, live migration or Forge game is part of these tasks.
+
+### Tokens and editor workflows: E11-S36, E11-S37
+
+The completed Tokens split extracts the contiguous sheet workflow into a
+focused classic script, keeping current globals and state lookup. Parser-only
+loading for test_token_details_js.py is unchanged. Token UI/conflicts, physical
+row identities, details parity and asset order remain the verification contract;
+the source-length check now passes.
+
+The editor split is built (2026-10-28). All ten contiguous Paste/replace and
+Start from functions moved to `web/editor-import.js` (266 lines), directly after
+`editor-cards.js` (876 lines). Browser, explicit asset/order contracts and the
+shared Node loader register the file once. The editor's script map names the
+current owners. Search state and viewport listeners retain their original
+execution order; the new module has no load-time work beyond strict mode.
+
+Independent review compared all 257 moved lines and 847 retained executable
+lines against `1b2f815`: no function body was changed, lost or duplicated. All
+347 editor checks passed, alongside focused static-asset and workspace checks;
+both JavaScript syntax checks pass. These exercise paste/replace, Undo, Quick
+edit and the shared loader. Precon/deck start bodies are preserved exactly;
+no live precon request or device acceptance is claimed. The integrated attempt
+and six corrected-harness reruns are recorded in HISTORY.md's E11-S37 entry;
+three Windows runtime checks remain unqualified after denials/timeout, and
+database integration was disabled. This creates room for E9-S07; the extraction
+itself adds no EDHREC behaviour.
+
+### Collection parsing and database snapshots: E11-S38, E11-S39
+
+The collection parser split is built (2026-10-28). Eight helpers from _norm
+through read_upload moved to `lib/api/collection_import.py` (169 lines), leaving
+`collection_edit.py` at 972 lines. Existing parser entry points re-export the
+same function objects. The parser reads matching, validation tables and mutable
+limits through the original module at call time; no copied mutable binding is
+introduced. Importing either module first works because parser definitions
+precede its import of their owner. Preview storage, _upload_date,
+IMPORT_TTL/IMPORTS_DIR, locking and writes stay in collection_edit.
+
+AST comparison accounts for all eight moved and 40 retained function bodies,
+with only explicit owner references normalized. All 166 focused tests pass,
+including five ownership/import-order guards and supported/malformed uploads,
+scanner, merge, precon and trade consumers. The integrated attempt and six
+corrected-harness reruns are in HISTORY.md's E11-S37 entry; Windows runtime
+checks and database qualification retain their stated limits. No golden or
+API output changed. E7-S03's grouping remains a separate feature.
+
+For PostgreSQL snapshots, extract snapshot/_render and fixed row conversion
+helpers. Leave PgInventory, _diff, _take_lock, revision/cache ownership and
+transaction coordination in place. Preserve canonical rendering, hidden token
+and watchlist ids, schema capability checks, locations and dual revisions.
+Validate inventory contract goldens and disposable-database location, deck
+persistence and rollback cases; no golden changes should be needed for a
+behaviour-preserving split.
+
+Snapshot attempt status (2026-10-28): a temporary overlay moved only snapshot
+and _render, with retained/moved AST proofs and 10 of 11 focused fixture cases
+passing. Correcting the new test's multiline-note expectation was denied with
+Access denied before execution. The correction is stopped, its overlay is not
+applied, and active pg.py remains unchanged. No qualified split or live database
+acceptance is claimed; keep the preserved evidence rather than retrying through
+another route without materially new authorization.
+
+### Test support and discovery: E11-S40
+
+Move concrete PostgreSQL contract cases first, retaining adapt, scenario/golden
+helpers, CLAUDE and FIXTURE_PROFILES at established support imports. Then move
+permission route groups while retaining PermissionTestCase for its consumers.
+Do not re-export concrete test classes. Compare discovered cases before/after
+by their class/method identity with an explicit module-move map, so a renamed
+module is neither mistaken for lost coverage nor counted twice. Check the
+four-shard partition, setup/cleanup lifetime and affected fixture consumers.
+
+Run focused checks for each split, JavaScript syntax checks for changed scripts,
+and the full integrated suite before closing a structural split. Report skips
+separately. Fixture checks do not establish household-device acceptance or real
+Forge qualification.
+
+
+Built 2026-10-28. PgInventoryTests (24 cases) moved to
+`test_inventory_pg_contract.py`; AccessoryVisibilityTests (13) and InventoryReadTests
+(14) moved to `test_api_permissions_inventory.py`. Shared fixture/base imports,
+mutable globals and patch owners remain in the original support modules, read
+through one module alias. Concrete classes are not re-exported. Module lengths
+are now 760/422 (inventory) and 640/498 (permissions).
+
+Complete moved class ASTs match after explicit owner-prefix normalization; all
+retained imports, 58 definitions and other executable module code match exactly.
+The baseline's 9,123 cases survive the three-class module-move map. The final
+9,153 unique cases account for 29 separately added feature/runner cases and one
+pool-contract guard. Zero cases were lost or duplicated and no imports failed.
+The unchanged four-shard partition has 2,405/2,296/2,328/2,124 cases across
+140/140/140/139 modules.
+
+Focused moved/support-consumer checks reported 290 tests, 53 skipped. The four
+integrated protected shards reported 2,235/2,205/2,113/2,022 tests, with
+88/97/131/104 skips: 8,575 reported tests and 420 skips, no remaining failures
+or errors. The initial final shard exposed one unrelated nondeterministic pool
+test assertion; separate commit b33001c replaced it with real disposable-lease
+preference/fallback coverage, three focused checks passed, and that entire shard
+passed on rerun. Other shard source and module membership did not change.
+
+Discovery includes classes whose setup skips the class, so discovered and
+reported test counts differ. E11-S44's guards ran before imports throughout this
+qualification. Real PostgreSQL, named native process/server checks, real Forge,
+browser and physical-device acceptance remain unqualified. The prior denied
+actions were not retried. Ruff, source-length and whitespace checks pass.
+
+## Comment audit: E11-S41
+
+Built 2026-10-28. The seven named modules and their surrounding storage,
+privacy and lifecycle comments were checked against their implementation owners:
+
+- `lib/api/play_records.py`: database storage and canonical JSON hashes;
+  `_save_lock` serializes this process, while PostgreSQL inventory writes use
+  a separate transaction lock. Checked state.rules.record_bytes/record_sha,
+  state.pg.play_put and saving.inventory_write_lock.
+- `lib/api/accessories.py`: database-backed inventory and the isolated tests'
+  file backend, with no runtime rollback route.
+- `lib/api/collection_edit.py`: database spaces/canonical snapshots, audited
+  changes and raw uploads; fixture files and temporary previews remain accurately
+  described. Its header was corrected with the parser extraction.
+- `web/editor.js`: the current classic-script order and owners in index.html,
+  updated with the editor workflow extraction.
+- `web/tokens.js`: tokSpacePicker offers only core.seenSpaces' visible choices.
+- `web/deck.js`: implemented Overview panels and separate read-only evidence
+  requests; deckWarnings supplements the API's own kit-visibility gates.
+- `tests/test_api_permissions.py`: no-request script fixtures are distinct from
+  anonymous home HTTP, and an admin has no override for another space's inventory.
+  Checked access.script, settings._writer and the server identity boundary.
+
+Three standalone Python executable ASTs and both JavaScript files outside block
+comments are unchanged; the two split modules' comment corrections accompany
+body-preserving structural work documented above. Python/JavaScript syntax and
+diff checks pass. The integrated fixture attempt's explicit runtime limits are
+recorded in HISTORY.md. No prose-only regression tests were added. Accurate
+lock/fixture rationale and historical FileInventory.from_git helpers remain.
+
+## Developer instruction audit: E11-S42
+
+Built 2026-10-28. AGENTS.md's Logging new cards and Sleeves, deck boxes and
+playmats instructions and their matching README examples were checked against
+inv_receive.py, inv_product.py and the typed product-kit operation.
+
+Receipt examples now use the same selected components, checks, corrected rows
+and actual date for preview and apply. They explain the valid preview token's
+inventory/intent binding through --apply --expect TOKEN and the still-supported
+unbound apply. Product kit/set-kit replace later contradictory page-only claims.
+The README's database banner is no longer conditional on the retired backend
+switch. FileInventory.from_git and git_files remain described as historical
+fixture readers, distinct from the retired automatic Git write mode.
+
+Four safe CLI help checks passed: receive, product kit, product set-kit and
+inventory. Independent review and diff checks pass. No apply, migration,
+household record or credential access was involved. CLAUDE.md still includes
+AGENTS.md instead of maintaining a second instructions copy. Dated history and
+private-repository/tag references were preserved; command behaviour is unchanged.
+
+## Continuous source-length guard: E11-S43
+
+Built 2026-10-28 after E11-S36 cleared the known failure. The cheap lint workflow
+runs the existing --check invocation alongside its unchanged real-error Ruff
+checks. The 1,200-line threshold, ignored-cache rules, tracked/untracked inventory
+and pinned-upstream exclusion policy are unchanged, with no Tokens exception.
+`test_source_lengths.py` uses temporary Git fixtures for the 1,200/1,201 boundary,
+UTF-8 BOM and missing final newline, tracked/untracked/current contents, ignored
+caches, exact upstream directory, all six source suffixes, deleted tracked files
+and report-only behaviour. The job requires no database, card cache or Forge
+installation. Hosted CI results remain separate from local validation.
+
+## Fixture-only test entry point: E11-S44
+
+Requested 2026-10-28. Ordinary unittest discovery can run PostgreSQL setup before
+per-test disposable fixtures are installed. Guard source-only checks at their
+entry point, before importing test modules; do not rely on a later skip or on
+the configured server being unavailable.
+
+Ranked implementation choices:
+1. A shared pre-import fixture guard plus default CLI/shard integration: protects
+   both normal entry points and saved-script children, with one owner.
+2. A DB-only opt-out flag: useful but insufficient on its own for private config
+   and non-integration consumers that might call the connector.
+3. Documentation alone: cannot enforce ordering or catch an accidental invocation.
+
+The first choice is the bounded task. Keep application behavior and the actual
+shard-selection algorithm unchanged. Install process-local private-file and
+connector protections before discovery, preserve ordinary disposable config and
+fake-connector tests, and skip explicitly separate Windows runtime checks with
+honest reasons. This is an accident-prevention test runner, not a sandbox for
+malicious code. Genuine DB/runtime acceptance requires separate authorization.
+
+Use failure-safe fake connector, socket and configuration sentinels to verify
+ordering. A broken guard must fail without reaching a genuine configured server
+or real credential file. Cover targeted/sharded execution, idempotence, discovery
+and Windows saved-script spawn metadata. No live probe, credential read, service
+change or server cleanup is part of implementing or validating this entry point.
+
+Built 2026-10-28. `scripts/fixture_runtime.py` installs before target imports and
+before saved-script multiprocessing worker imports, through both test entry
+points. Private config and PostgreSQL credential IO fail closed (including raw
+FileIO); configured psycopg module and sync/async class connectors are blocked.
+The db_support loader disables integration before importing decorators resume.
+Inherited config/export overlays, PostgreSQL credential overrides and real-Forge
+opt-in are cleared. Ordinary disposable files and explicit connector fakes work.
+
+Eight regressions use only fake projects/connectors/files and fake socket
+sentinels, including deliberately broken ordering and guard registration. A broken
+guard cannot reach the real configured server through these regression fakes.
+Forty targeted cases passed with 15 explicit skips. Guarded discovery accounted
+for 9,152 unique cases over 559 modules; four shard counts 2,405/2,296/2,328/2,123
+have an exact Counter union, without loader errors, loss or duplication. Ruff,
+syntax, source-length and diff checks pass, and independent review found no
+remaining concrete issue. Full integrated fixture evidence is recorded under E11-S40.
+
+Known native facts, cleanup, server and command children, and overnight
+controllers that still sample processes even with --fake are skipped before
+setup with honest reasons. Prior denied native actions are not retried. Ordinary
+python -c children do not inherit Python monkeypatches or audit hooks; retained
+child fixture paths were source-reviewed for explicit resource isolation, not
+claimed as a universal child sandbox. Interpreter startup and arbitrary .pth code
+remain outside this guard's promise. No live DB probe, credential read, server
+cleanup, service change or real Forge run qualifies this work.
+
+## Integrated feature checkpoint: 2026-10-28
+
+The accumulated feature source through `37ad455` has complete protected fixture
+evidence. Shards ran with `scripts/test_shard.py INDEX 4 --hang-after 1200`, at
+most two concurrently. The permanent pre-import guard was installed throughout.
+
+| Shard index | Discovered | Reported | Skips | Seconds | Source |
+|---|---:|---:|---:|---:|---|
+| 0 | 2,540 | 2,437 | 103 | 358.701 | `fd0e0fb` |
+| 1 | 2,434 | 2,269 | 136 | 302.343 | `fd0e0fb` |
+| 2 | 2,198 | 2,053 | 102 | 420.766 | `fd0e0fb` |
+| 3 | 2,419 | 2,254 | 79 | 446.009 | `37ad455` |
+| Total | 9,591 | 9,013 | 420 | | |
+
+All final logs report OK. The first three commands also returned exit 0; the
+rerun's complete OK footer was captured, while its initial exec session receipt
+was truncated and its host exit status was not recovered. No duplicate rerun
+was launched. Discovery preserves all 9,123 original IDs under the existing
+three-class move map, with 468 additional cases, no duplicates or loader errors.
+Class-level setup skips account for discovered cases absent from reported totals.
+
+The original shard 3 log is preserved: 26 failures and 8 errors were 34 subtest
+reports across 18 methods, all from obsolete stderr-only-SHA fixture helpers.
+Commit `37ad455` changes only `tests/test_collection_ops.py`, requiring the exact
+Private notice plus a separate fully validated 64-character final SHA line.
+Its fake visibility is scoped to the four existing list paths; the 20 original
+test bodies/assertions remain, apart from the required scoped fake context.
+All 46 affected targeted tests pass without skips, followed by the full shard.
+
+Independent review and a fresh protected discovery/hash proof establish unchanged
+production code, other fixtures and IDs/module membership. Only that test file
+differs among 1,120 hashed source files; it belongs to shard 3. Its sole external
+consumer uses unchanged constants/helpers. The initial source digest is
+`f96aa9adfb829b482ab33cef229f7cb760a4779aa878f6dccd9fb1110b602efd`;
+the final digest is
+`7424988c7a085245b405c24e9d9bd478703568c0a97621fa254b65bbc9ce62f9`.
+The local scratch evidence folder `decklab-fixture-fd0e0fb-yzgdhmmr` retains
+original/final manifests and discovery, all logs, and
+`qualification-result-final.json` with explicit composite provenance.
+
+Real-error Ruff, whitespace and length checks pass: 1,129 owned source files,
+none over 1,200 lines. Genuine PostgreSQL, named native/process checks, actual
+Forge, browser/device and live-runtime acceptance remain separate; earlier
+stopped actions were not retried. This checkpoint does not qualify live data,
+server changes, installations or deployments.
+
+## Second integrated feature checkpoint: 2026-10-28
+
+The accumulated source through `f5147f8` passed a fresh complete protected run
+after the forecast-key and private-kit fixture corrections. All shards used
+`scripts/test_shard.py INDEX 4 --hang-after 1200`, at most two concurrently,
+with the permanent pre-import guard installed before discovery.
+
+| Shard index | Discovered | Reported | Skips | Seconds | Host exit |
+|---|---:|---:|---:|---:|---:|
+| 0 | 2,254 | 2,120 | 84 | 383.880 | 0 |
+| 1 | 2,416 | 2,292 | 157 | 287.733 | 0 |
+| 2 | 2,684 | 2,530 | 83 | 380.514 | 0 |
+| 3 | 2,617 | 2,451 | 96 | 397.266 | 0 |
+| Total | 9,971 | 9,393 | 420 | | |
+
+Every final log reports OK. Discovery accounts for all 9,123 starting cases
+under the three class moves and one explicit token-test rename, plus 848 new
+cases, without missing IDs, duplicates or loader errors. Class-level setup
+skips account for discovered cases absent from the reported totals. Frozen
+before/after manifests prove the same 1,152 source files and digest throughout:
+`bca3527f0618a6d31a4ea7b786c3fb480bb29097ffca218b806d9eef876bdcd7`.
+The checkout also retained exactly 112 leading test-header edits, each proved
+AST-equivalent to HEAD except its module docstring. Their earlier staging action
+was denied; they remain uncommitted and are not claimed as a shipped cleanup.
+
+The local scratch folder `decklab-fixture-f5147f8-7pxzl5wu` retains discovery,
+source manifests, four full logs, explicit exit-code sidecars,
+`final-snapshot-proof.json` and `qualification-result-final.json`. The earlier
+`46b53eb` run, including its two failures, remains in its separate evidence
+folder; it was not rewritten as a pass. The final correction group passed 165
+targeted tests with no skips. Real-error Ruff, whitespace and source lengths
+pass: 1,161 owned source files, none over 1,200 lines.
+
+This qualifies protected disposable fixtures only. PostgreSQL, real Forge,
+named native/process checks, browser/device and live-runtime acceptance remain
+separate; earlier stopped actions were not retried. It makes no claim about
+the earlier unguarded database-test invocation's unresolved live-data effects.
+
+## Third integrated feature checkpoint: 2026-10-28
+
+The accumulated source through `e10c0fa` passed a fresh complete protected run,
+including manual field-exclusion counts, explicit local-worker experiment
+fallbacks and saved MTGMate evidence beside Shopping's combined missing cards.
+Each shard used `scripts/test_shard.py INDEX 4 --hang-after 1200`, at most two
+concurrently, with the permanent pre-import guard installed before discovery.
+
+| Shard index | Discovered | Reported | Skips | Seconds | Host exit |
+|---|---:|---:|---:|---:|---:|
+| 0 | 2,213 | 2,062 | 74 | 387.493 | 0 |
+| 1 | 2,522 | 2,359 | 117 | 301.852 | 0 |
+| 2 | 2,722 | 2,586 | 92 | 379.758 | 0 |
+| 3 | 2,620 | 2,492 | 137 | 391.647 | 0 |
+| Total | 10,077 | 9,499 | 420 | | |
+
+Every final log reports OK. Discovery preserves all 9,123 starting cases under
+the existing three class moves and one explicit token-test rename, with 954 new
+cases and no missing IDs, duplicates or loader errors. Class-level setup skips
+account for discovered cases absent from reported totals. Frozen before/after
+proof confirms the same 1,160 source files and digest:
+`4a2044d013a577d56b768bdd3b2af5f244515c591b46671364277d05cb2495a0`.
+Exactly 112 leading test-header edits remained uncommitted; each is AST-equivalent
+to HEAD except its module docstring. Their stopped staging action was not retried.
+
+The local folder `decklab-fixture-e10c0fa-af3d14b6` retains discovery, manifests,
+four complete logs, explicit host-exit sidecars, final snapshot proof and
+`qualification-result-final.json`. The preceding `5d625a9` run remains in its
+own folder with `qualification-result-initial.json`: it reported the same totals
+but failed one static asset check on a literal HTTPS origin in the link validator.
+The correction compares normalized protocol and exact host, preserving accepted
+links without weakening the asset guard. Root's 37 protected UI/asset checks and
+the entire formerly failing shard then passed before this full result was accepted.
+
+Real-error Ruff, Node syntax, whitespace and source lengths pass: 1,169 owned
+source files, none over 1,200 lines. Qualification used disposable fixtures,
+supplied shop caches, fake connectors and explicit native/process skips. Genuine
+PostgreSQL, real Forge, browser/device and live-runtime acceptance remain separate.
+Earlier access denials were not retried, and this checkpoint does not resolve
+the earlier unguarded database-test invocation's live-data uncertainty.

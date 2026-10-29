@@ -77,7 +77,7 @@ class TokenInsertUndoApiTests(unittest.TestCase):
         self.assertEqual([error.message for error in errors], [activity_undo.NO_CHANGE] * 3)
         self.assertEqual(self.store.writes, [])
 
-    def test_unknown_pairing_is_unavailable_and_token_deletion_stays_unsupported(self):
+    def test_unknown_pairing_and_unidentified_deleted_token_remain_unavailable(self):
         for row in (fixture.token(notes="reverse face unconfirmed"), fixture.token("Treasure", "", notes="printing unconfirmed")):
             self.case.seed(row)
             self.assertEqual(self.view(), {"available": False, "id": original.CHANGE_ID, "reason": activity_undo.UNSUPPORTED})
@@ -85,7 +85,8 @@ class TokenInsertUndoApiTests(unittest.TestCase):
         self.case.seed()
         source = self.case.source()
         source["op"], source["before"], source["after"] = "DELETE", source["after"], None
-        self.refused(404, self.view)
+        self.assertEqual(self.view(), {"available": False, "id": original.CHANGE_ID, "reason": activity_undo.UNSUPPORTED})
+        self.refused(400, self.apply, expect="0" * 64)
         self.assertEqual(self.store.writes, [])
 
     def test_reason_required_and_no_browser_row_key_id_or_confirmation_is_accepted(self):

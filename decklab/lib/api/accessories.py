@@ -1,5 +1,5 @@
-"""The Accessories page's API: the sleeves, deck boxes and playmats (the inventory's
-accessories.csv), their pictures, and which built deck or intact product holds which
+"""The Accessories page's API: the sleeves, deck boxes and playmats (the database-backed
+inventory's accessories sheet), their pictures, and which built deck or intact product holds which
 (lib/accessories.py reads all of it from the inventory's snapshot). Imported when first needed,
 by feature_routes.dispatch and the server's /accessory-img/ route.
 
@@ -14,8 +14,9 @@ inventory (lib/inventory/ops_accessories.py): accessory.add, accessory.edit and 
 (a new picture's bytes go in the same operation, so a row and its picture are saved together or
 not at all), and kit.set, which makes every sleeve and deck-box move between decks and products
 in one change. With the database each write is one change set in the audit trail ("<what> (by
-<Name>)"'s words without the name, by the profile); with the files backend (tests, rollback) the
-files are written under the inventory's lock. Nothing is committed to git.
+<Name>)"'s words without the name, by the profile). The files backend, used by isolated tests,
+writes fixture files under the inventory's lock; it is not a runtime rollback path. Nothing is
+committed to git.
 
 The list must still have the token the page loaded: GET's sha256 is per writer
 (accessories.view_sha256: only the rows that viewer may change, never public read-only rows), and the operation

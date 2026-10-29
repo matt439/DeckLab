@@ -124,7 +124,7 @@ def connect(role="app", dbname=None, autocommit=False, timeout=None, options=Non
 
 
 @contextmanager
-def change(actor, source, message, reason=None, conn=None, via=None):
+def change(actor, source, message, reason=None, conn=None, via=None, *, isolation=None):
     """One audited write: a transaction whose audit.change_set row says who (actor: a profile
     id, or "system" or "claude"), from where (source: one of SOURCES, and for a web change via:
     the listener, one of VIAS), what (message) and, for removals, why (reason). The audit
@@ -135,7 +135,12 @@ def change(actor, source, message, reason=None, conn=None, via=None):
     Yields (cursor, change_set_id). Commits when the block finishes, rolls back when it
     raises. conn, when given, must have no transaction open (otherwise this would become a
     savepoint inside the caller's transaction and never commit on its own); without it, an
-    app-role connection is opened and closed here."""
+    app-role connection is opened and closed here. isolation may explicitly be
+    "read committed": its literal transaction setting precedes the first audit
+    INSERT. None preserves existing SQL and connection behavior. No session or
+    database default is changed."""
+    if isolation is not None and (type(isolation) is not str or isolation != "read committed"):
+        raise ValueError("a change's isolation must be None or 'read committed'")
     if not isinstance(actor, str) or not actor.strip():
         raise ValueError("a change needs an actor (a profile id, system or claude)")
     if source not in SOURCES:
@@ -156,6 +161,8 @@ def change(actor, source, message, reason=None, conn=None, via=None):
     try:
         with conn.transaction():
             with conn.cursor() as cur:
+                if isolation is not None:
+                    cur.execute("set transaction isolation level read committed")
                 if via is None:
                     cur.execute("insert into audit.change_set (actor, source, message, reason) "
                                 "values (%s, %s, %s, %s) returning id",

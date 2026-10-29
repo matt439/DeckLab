@@ -34,7 +34,8 @@ def add_parser(sub):
     """Add the wishlist command and its own subcommands to python -m decklab.db's parser."""
     p = sub.add_parser("wishlist", help="List or change a profile's wishlist (list, add, set, remove).",
                        description="List or change a profile's wishlist. Writes need -m saying what "
-                                   "they do; a removal also --reason.")
+                                   "they do; a removal also --reason. Never quote wishlist notes in audit "
+                                   "messages or removal reasons.")
     p.set_defaults(func=run)
     actions = p.add_subparsers(dest="action", required=True, metavar="action")
 
@@ -44,7 +45,8 @@ def add_parser(sub):
         if name != "list":
             sp.add_argument("name", help="the card's name")
         if write:
-            sp.add_argument("-m", "--message", required=True, help="what this change does, for the audit trail")
+            sp.add_argument("-m", "--message", required=True,
+                            help="what this change does, for the audit trail; never quote wishlist notes")
             cli_actor.add_argument(sp)
         sp.add_argument("--allow-orphan", action="store_true",
                         help="allow a profile that isn't in decklab/config.json")
@@ -65,7 +67,8 @@ def add_parser(sub):
     sp.add_argument("--source", help="new source (\"\" clears it)")
     sp.add_argument("--no-check", action="store_true", help="don't check a new printing against the card index")
     sp = action("remove", "Remove a card from a profile's wishlist.")
-    sp.add_argument("--reason", required=True, help="why it's removed, for the audit trail")
+    sp.add_argument("--reason", required=True,
+                    help="why it's removed, for the audit trail; never quote wishlist notes")
 
 
 def _printing_args(sp):
@@ -104,6 +107,8 @@ def _shown(entry):
 
 def _list(store, pid, name, args):
     entries = store.wishlist(pid)
+    from decklab.db import read_notices
+    read_notices.wishlist(pid)
     if args.json:
         print(json.dumps({"version": 1, "entries": entries}, ensure_ascii=False, indent=2))
         return 0

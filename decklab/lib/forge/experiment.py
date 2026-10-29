@@ -80,7 +80,7 @@ from pathlib import Path
 
 from decklab.lib import decks
 
-from . import common, engine, install, lifecycle, lists, overrides, pilots, pool, runner, saved, seeds, seqstats, simjar, views
+from . import common, engine, experiment_estimate, install, lifecycle, lists, overrides, pilots, pool, runner, saved, seeds, seqstats, simjar, views
 from .common import ForgeError, forge_name, norm
 
 # Keep the experiment entry points and helpers available at their original import path.
@@ -101,6 +101,8 @@ from .experiment_analysis import (
 )
 
 ENGINE_CHANGED = "The engine changed during this run: play it again."
+PLAN_IDENTITY_UNKNOWN = ("The experiment's current engine identity could not be confirmed read-only, so its "
+                         "remaining game count is unknown. No games were started.")
 SEATS_CHANGED = ("The arm's result for {pair} doesn't put the lists in the seats of its control's games, so it "
                  "can't be compared: delete {path} and play it again.")
 CONTROL_CHANGED = ("The control of {pair} isn't the one the arm's result {path} was played on (other seeds): delete "
@@ -467,12 +469,14 @@ def _games(result):
 
 
 def _layout(spec, *, results_dir=None, logs_dir=None, control_dir=None, control_logs_dir=None, only=None,
-            games=None, entries=None, eng=None):
+            games=None, entries=None, eng=None, read_only=False):
     """Everything plan(), run() and measures() share: the folders, each pair's control (its key,
     where it is, its game numbers) and each (arm, pair) item (its entries, key, override sets,
     seed pair, point of view, or why it's skipped). eng is the engine the controls' keys are
     worked out with: the runs' (_run_engine) or, without one, the card log's engine of today
-    (engine.today(KIND_DECKLAB): no Java, as replay's dry run plans)."""
+    (engine.today(KIND_DECKLAB): no Java, as replay's dry run plans). The plan opts into
+    read_only: no deployment or persistent identity writes, and an unconfirmed engine
+    cannot make claims about cached controls or remaining games."""
     results, logs, control, control_logs = _canonical_dirs(spec, results_dir, logs_dir, control_dir,
                                                            control_logs_dir)
     target = games or spec["games"]
@@ -489,12 +493,16 @@ def _layout(spec, *, results_dir=None, logs_dir=None, control_dir=None, control_
             entries[ref] = _entry(ref)
         return entries[ref]
 
-    try:
-        overrides.ensure_deployed(common._user_dir())       # keys are worked out from what workers load
-    except NotImplementedError:
-        pass
+    if not read_only:
+        try:
+            overrides.ensure_deployed(common._user_dir())       # keys are worked out from what workers load
+        except NotImplementedError:
+            pass
     adopted = _adopted()
-    eng = eng or engine.today(engine.KIND_DECKLAB)
+    eng = eng or (engine.today(engine.KIND_DECKLAB, read_only=True) if read_only
+                  else engine.today(engine.KIND_DECKLAB))
+    if read_only and not eng.get("complete"):
+        raise ForgeError(PLAN_IDENTITY_UNKNOWN)
     controls = {}
     given = _given_controls()
 
@@ -586,21 +594,75 @@ def _item_state(item, lay):
 
 # ============================================================ plan (the dry run)
 
-def plan(spec, *, results_dir=None, control_dir=None, only=None, games=None, logs_dir=None, control_logs_dir=None):
+def _plan_timing_metadata():
+    """Read optional timing metadata quietly; no pool, host or readiness inspection.
+
+    Use the field estimator's class mapping and value rules. Unlike its page-facing
+    rates() reader, a damaged optional file must not log paths or raw parse errors in
+    this command. A missing file uses the same defaults; unknown workers stay unknown.
+    """
+    from . import estimate
+    table = dict(estimate.DEFAULT_RATES)
+    try:
+        data = json.loads((common.DATA_DIR / estimate.RATES_FILE).read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        data = {}
+    if not isinstance(data, dict):
+        raise ValueError("Invalid optional timing metadata")
+    table.update(estimate._workload_rates(data.get("warm_games_per_min")))
+    named = data["rates"] if isinstance(data.get("rates"), dict) else data
+    for name in table:
+        value = experiment_estimate._positive(named.get(name))
+        if value is not None:
+            table[name] = value
+    settings = common._settings()
+    workers = settings.get("forge_workers") if isinstance(settings, dict) else None
+    return table, experiment_estimate._worker_count(workers)
+
+
+def _plan_estimate(found, sample_rows, *, local=False):
+    """Best-effort timing from the very snapshots that supplied the game plan."""
+    try:
+        if found["totals"]["games"] == 0:
+            return experiment_estimate.estimate_plan(found, local=local)
+        rates, workers = _plan_timing_metadata()
+        samples, ambiguous = {}, set()
+        for key, result in sample_rows:
+            if not isinstance(result, dict) or key in ambiguous:
+                continue
+            if key in samples and samples[key] is not result and samples[key] != result:
+                # Two aliases may name one result key. Conflicting snapshots cannot
+                # establish one observed rate, so leave that key to the fallback.
+                samples.pop(key)
+                ambiguous.add(key)
+            else:
+                samples[key] = result
+        return experiment_estimate.estimate_plan(found, samples=samples, rates=rates, workers=workers, local=local)
+    except Exception:
+        return {"remaining_games": found["totals"]["games"], "minutes": None, "complete": False,
+                "basis": "unavailable", "workers": None, "assumed_workers": None,
+                "assumptions": [*experiment_estimate.BASE_ASSUMPTIONS, experiment_estimate.UNAVAILABLE],
+                "controls": [], "arms": []}
+
+
+def plan(spec, *, results_dir=None, control_dir=None, only=None, games=None, logs_dir=None, control_logs_dir=None,
+         local=False):
     """Per arm and pair, the games to play, and the control games the control folder doesn't
     hold (section 12.5's --dry-run; the combined run's harness counts both):
     {"experiment", "results_dir", "games", "controls": [{"pair", "key", "source": "control_dir"
     or "control", "have", "missing", "card_shas"}], "arms": [{"arm", "pair", "key", "sets",
     "changes", "have", "missing", "skipped", "card_shas"}], "totals": {"control_games",
-    "arm_games", "games"}}. Nothing is played or written."""
+    "arm_games", "games"}, "estimate": experiment_estimate.estimate_plan's best-effort
+    remaining-work estimate}. local is timing intent only. Nothing is played or written."""
     spec = _spec(spec)
     lay = _layout(spec, results_dir=results_dir, logs_dir=logs_dir, control_dir=control_dir,
-                  control_logs_dir=control_logs_dir, only=only, games=games)
+                  control_logs_dir=control_logs_dir, only=only, games=games, read_only=True)
     controls = [{"pair": c["pair"], "key": c["key"], "source": c["source"], "have": len(c["numbers"]),
                  "missing": c["missing"], "card_shas": [e["card_sha"] for e in c["entries"]],
                  "kind": c["entries"][0]["kind"]}
                 for c in lay["controls"].values()]
     arms = []
+    sample_rows = [(control["key"], control["result"]) for control in lay["controls"].values()]
     for item in lay["items"]:
         row = {"arm": item["arm"], "pair": item["pair"], "key": item["key"], "sets": item["sets"],
                "changes": item.get("changes", []), "skipped": item["skipped"], "have": 0, "missing": 0,
@@ -609,12 +671,15 @@ def plan(spec, *, results_dir=None, control_dir=None, only=None, games=None, log
         if not item["skipped"]:
             found, _, missing = _item_state(item, lay)
             row["have"], row["missing"] = len(_games(found)), missing
+            sample_rows.append((item["key"], found))
         arms.append(row)
     control_games = sum(c["missing"] for c in controls)
     arm_games = sum(a["missing"] for a in arms)
-    return {"experiment": spec["name"], "results_dir": str(lay["results"]), "logs_dir": str(lay["logs"]),
-            "games": lay["games"], "controls": controls, "arms": arms,
-            "totals": {"control_games": control_games, "arm_games": arm_games, "games": control_games + arm_games}}
+    found = {"experiment": spec["name"], "results_dir": str(lay["results"]), "logs_dir": str(lay["logs"]),
+             "games": lay["games"], "controls": controls, "arms": arms,
+             "totals": {"control_games": control_games, "arm_games": arm_games, "games": control_games + arm_games}}
+    found["estimate"] = _plan_estimate(found, sample_rows, local=local)
+    return found
 
 
 # ============================================================ run

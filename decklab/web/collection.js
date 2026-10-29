@@ -192,8 +192,10 @@ function showCollection(params, token) {
 
 /** What a page of the collection holds for its writes: cv ("collection view"). */
 function colView(data, space, token, kind) {
-  return { token: token == null ? routeToken : token, profile: state.profile && state.profile.id, space, kind,
-    data, busy: false, seq: 0,
+  const { storage_forecast: forecast, ...viewData } = data;
+  const cv = { token: token == null ? routeToken : token, profile: state.profile && state.profile.id, space, kind,
+    forecastProfile: state.profile, forecastHash: location.hash,
+    data: viewData, busy: false, seq: 0,
     // A server that doesn't know spaces yet answers with home's cards and no "space": a person's isn't shown.
     unsupported: space !== HOME_SPACE && data.space === undefined,
     editable: data.editable === true && (data.space === undefined || data.space === space),
@@ -202,6 +204,8 @@ function colView(data, space, token, kind) {
     prices: colPrices(data.prices),
     storage: colStorage(data.storage), locations: colLocations(data.locations), storageBoxCount: data.storage_box || null,
     message: el("div", { class: "col-message", role: "status", "aria-live": "polite" }) };
+  cv.storageForecast = colStorageForecast(forecast, cv);
+  return cv;
 }
 
 /** A prices answer (collection_edit._prices) as the page keeps it: its rows always an object. */
@@ -319,6 +323,10 @@ function setCollectionBusy(cv, busy) {
   if (!cv.root) return;
   cv.root.setAttribute("aria-busy", String(busy));
   for (const control of cv.root.querySelectorAll(".col-mutate")) control.disabled = busy;
+  if (cv.kind === "rows") {
+    colLocationFiltersSync(cv);
+    colLocationBatchSync(cv, colShownRows(cv));
+  }
   refreshKeyboardHints();
 }
 
@@ -334,17 +342,47 @@ function colSay(cv, words, stale) {
 /** The rows and their sha256 (and pictures), fetched when the page didn't load them (the Find cards view). */
 async function colEnsureRows(cv) {
   if (cv.sha256 && cv.rows) return;
-  const data = await api(colPath("/api/collection/rows", cv.space));
-  cv.sha256 = data.sha256;
-  cv.rows = data.rows || [];
-  if (data.pictures) Object.assign(cv.pictures, data.pictures);
-  if (data.prices) cv.prices = colPrices(data.prices);
-  if (data.storage) cv.storage = colStorage(data.storage);
-  colTakeLocations(cv, data);
+  const profile = state.profile, profileId = cv.profile, token = cv.token;
+  const hash = location.hash, root = cv.root, revision = cv.forecastRevision || 0;
+  const pending = cv.rowsPending;
+  if (pending && pending.profile === profile && pending.hash === hash && pending.root === root
+      && pending.revision === revision && pending.token === token && pending.profileId === profileId) return pending.promise;
+  const request = { profile, profileId, token, hash, root, revision };
+  const here = () => colActive(cv) && state.profile === profile && profile.id === profileId && cv.profile === profileId
+    && cv.token === token && cv.root === root && location.hash === hash;
+  const ready = () => typeof cv.sha256 === "string" && Boolean(cv.sha256) && Array.isArray(cv.rows);
+  const moved = () => new Error("The collection view changed. Reload its rows before continuing.");
+  request.promise = (async () => {
+    let data;
+    try { data = await api(colPath("/api/collection/rows", cv.space)); }
+    catch (error) {
+      if (!colForecastAllowed(cv)) { cv.storageForecast = null; drawColStorageForecast(cv); }
+      if (here() && revision !== (cv.forecastRevision || 0) && ready()) return;
+      if (!here()) throw moved();
+      throw error;
+    }
+    if (!here()) {
+      cv.storageForecast = null; drawColStorageForecast(cv); throw moved();
+    }
+    if (revision !== (cv.forecastRevision || 0)) {
+      if (ready()) return; // a newer saved/checked rows answer is already authoritative
+      throw moved();
+    }
+    if (typeof data?.sha256 !== "string" || !data.sha256 || !Array.isArray(data.rows))
+      throw new Error("The current collection rows could not be verified. Reload before continuing.");
+    cv.sha256 = data.sha256; cv.rows = data.rows;
+    if (data.pictures) Object.assign(cv.pictures, data.pictures);
+    if (data.prices) cv.prices = colPrices(data.prices);
+    if (data.storage) cv.storage = colStorage(data.storage);
+    colTakeLocations(cv, data);
+  })();
+  cv.rowsPending = request;
+  try { await request.promise; }
+  finally { if (cv.rowsPending === request) cv.rowsPending = null; }
 }
 
 /** After a change: the new rows, and the view drawn again (Find cards loads its page again). */
-function colChanged(cv, answer, words) {
+function colChanged(cv, answer, words, filing = null) {
   if (answer && answer.sha256) cv.sha256 = answer.sha256;
   if (answer && Array.isArray(answer.rows)) cv.rows = answer.rows;
   if (answer && answer.pictures) Object.assign(cv.pictures, answer.pictures);
@@ -356,16 +394,17 @@ function colChanged(cv, answer, words) {
   if (cv.kind === "rows") {
     drawColRowList(cv);
     colSay(cv, words, answer && answer.stale_tables);
+    if (filing) add(cv.message, [colFilingGuide(cv, filing)]);
     setCollectionBusy(cv, false);
     return;
   }
-  colReload(cv, words, answer && answer.stale_tables);
+  colReload(cv, words, answer && answer.stale_tables, filing);
 }
 
 /** Load the view again from the server, then say what happened there: the Find cards counts, or the Card
  * list after an import, come from the server. */
-function colReload(cv, words, stale) {
-  state.colNotice = { space: cv.space, words, stale };
+function colReload(cv, words, stale, filing = null) {
+  state.colNotice = { space: cv.space, profile: cv.profile, words, stale, filing };
   route();
 }
 
@@ -373,7 +412,10 @@ function colReload(cv, words, stale) {
 function colTakeNotice(cv) {
   const notice = state.colNotice;
   state.colNotice = null;
-  if (notice && notice.space === cv.space && notice.words) colSay(cv, notice.words, notice.stale);
+  if (notice && notice.space === cv.space && (!notice.profile || notice.profile === cv.profile) && notice.words) {
+    colSay(cv, notice.words, notice.stale);
+    if (notice.filing) add(cv.message, [colFilingGuide(cv, notice.filing)]);
+  }
 }
 
 
@@ -501,7 +543,9 @@ async function colLoadFind(cv, query, paging) {
       if (data.page > 1) cv.query.set("page", String(data.page)); else cv.query.delete("page");
       history.replaceState(history.state, "", colHash(cv.space, "find", cv.query));
     }
-    cv.data = { ...cv.data, ...data };
+    const { storage_forecast, ...pageData } = data;
+    cv.data = { ...cv.data, ...pageData };
+    colTakeLocations(cv, data);
     drawCollectionResults(cv, data);
     if (paging) cv.results.scrollIntoView({ block: "start", behavior: "smooth" });
   } catch (error) {
@@ -705,6 +749,7 @@ function openImportSheet(cv) {
     if (ctx.busy) return;
     const selection = ++ctx.seq;
     ctx.preview = null;
+    ctx.groupReview = null;
     clear(ctx.area);
     sheetActions(sheet, [{ text: "Cancel", onclick: () => sheet.close() }]);
     const file = input.files && input.files[0];
@@ -739,6 +784,7 @@ async function previewImport(ctx, filename, text) {
   const seq = ++ctx.seq;
   ctx.source = { filename, text };
   ctx.preview = null;
+  ctx.groupReview = null;
   clear(ctx.area);
   clear(ctx.message).append(loadingBox(`Reading ${filename}…`));
   sheetActions(ctx.sheet, [{ text: "Cancel", value: "cancel", onclick: () => ctx.sheet.close() }]);
@@ -756,6 +802,8 @@ async function previewImport(ctx, filename, text) {
 
 function drawImportPreview(ctx) {
   const p = ctx.preview;
+  if (colImportHasGroups(p)) return drawImportGroups(ctx);
+  ctx.groupReview = null;
   const problems = p.problems || [];
   const bad = new Set(problems.map((x) => x.line));
   const rows = p.rows || [];
@@ -794,34 +842,43 @@ function drawImportPreview(ctx) {
 async function applyImport(ctx, skipProblems) {
   const cv = ctx.cv;
   if (ctx.busy || ctx.sheet.closed || !ctx.preview || !colActive(cv)) return;
+  const groups = colImportGroupRequest(ctx);
+  if (groups?.blocked) return;
   const reviewed = ctx.preview, selection = ctx.seq;
   ctx.busy = true;
   ctx.input.disabled = true;
+  colImportGroupBusy(ctx, true, reviewed);
   for (const button of ctx.sheet.foot.querySelectorAll("button")) button.disabled = true;
   clear(ctx.message).append(loadingBox("Importing…"));
   try {
     await colEnsureRows(cv);
-    if (ctx.sheet.closed || !colActive(cv) || selection !== ctx.seq || ctx.preview !== reviewed) {
-      ctx.busy = false; ctx.input.disabled = false; return;
+    if (ctx.sheet.closed || !colActive(cv) || selection !== ctx.seq || ctx.preview !== reviewed
+      || (groups && (!ctx.groupReview || !colImportGroupsHere(ctx, ctx.groupReview)))) {
+      ctx.busy = false; ctx.input.disabled = false; colImportGroupBusy(ctx, false, reviewed); return;
     }
     const body = { space: cv.space, token: reviewed.token, sha256: cv.sha256 };
-    if (skipProblems) body.skip_problems = true;
+    if (groups) body.skip_groups = groups.ids;
+    else if (skipProblems) body.skip_problems = true;
     const answer = await apiWrite("/api/collection/import/apply", body);
     const added = answer.added || { rows: 0, cards: 0 };
+    const here = !ctx.sheet.closed && colActive(cv) && selection === ctx.seq && ctx.preview === reviewed;
+    ctx.busy = false;
     ctx.sheet.close();
-    cv.rows = null;                     // the answer has no rows: the next write fetches them again
+    cv.rows = null;                     // the next write fetches rows for its own current view
     if (answer.sha256) cv.sha256 = answer.sha256;
     state.library = null;
     const words = `Imported ${plural(added.cards || 0, "card")} (${plural(added.rows || 0, "row")}).`
-      + (answer.skipped ? ` ${plural(answer.skipped, "row")} with problems skipped.` : "");
-    if (colActive(cv)) colReload(cv, words, answer.stale_tables);
+      + (answer.skipped ? ` ${plural(answer.skipped, "row")} with problems skipped.` : "") + colImportExcludedWords(answer);
+    if (here && !document.querySelector("dialog[open]")) colReload(cv, words, answer.stale_tables, colFilingSnapshot(answer, cv));
     else if (state.profile?.id === cv.profile) toast(words);
   } catch (error) {
-    if (ctx.sheet.closed || !colActive(cv)) return;
+    if (ctx.sheet.closed || !colActive(cv) || selection !== ctx.seq || ctx.preview !== reviewed) return;
     ctx.busy = false;
     ctx.input.disabled = false;
+    colImportGroupBusy(ctx, false, reviewed);
     if (error.status === 409 && error.data?.repreview_required) {
       ctx.preview = null;
+      ctx.groupReview = null;
       clear(ctx.area);
       clear(ctx.message).append(el("p", { class: "box box-warn", text: error.message }));
       sheetActions(ctx.sheet, [{ text: "Cancel", onclick: () => ctx.sheet.close() },
@@ -1038,8 +1095,10 @@ async function addPrecon(ctx) {
     const hash = deckHref(answer.deck.id, "target");
     const tokenCount = tokensChosen && answer.tokens?.cards === tokenSelection.cards && answer.tokens?.rows === tokenSelection.rows
       ? tokenSelection.cards : null;
+    const filing = colFilingSnapshot(answer.collection, cv, "precon");
     state.saved = { hash, profile: state.profile?.id, version: "target", mode: "new", answer: { ...answer.deck,
       precon: { name: p.deck.name, whose: ctx.whose, cards: added ? added.cards : 0,
+        ...(filing ? { filing } : {}),
         ...(tokensChosen ? { tokens: tokenCount, tokens_uncertain: tokenCount === null } : {}) } } };
     state.scroll.delete(hash);        // open the deck at the top, where the box is
     toast("");                        // an older note would cover the box

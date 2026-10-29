@@ -10,7 +10,7 @@ server's pool and its stop order, and config.json's pool settings.
 No Java: the fake Forge's serve mode (fixtures/fake_forge.py) stands in for DeckLabSim's,
 with the card log said to be ready (test_forge.CARD_LOG), as test_forge's setUpModule sets up.
 
-Run from the repo root: python -m unittest decklab.tests.test_forge_pool
+Run from the repo root: python scripts/test_fixtures.py decklab.tests.test_forge_pool
 Service integration tests live in test_forge_pool_service.py; game-number, seed,
 logging, pilot and override hooks live in test_forge_pool_hooks.py.
 """
@@ -25,6 +25,7 @@ import threading
 import time
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 from unittest import mock
 
 from decklab.lib import api, config, decks, forge, jobs
@@ -560,11 +561,19 @@ class StartTests(PoolCase):
         pids = {proc.pid for proc in self.procs}
         self.assertEqual({pid for pid, _ in pinned}, pids)
         self.assertTrue({slot for _, slot in pinned} <= {0, 1, 2, 3})
-        # A worker takes back the slot it had (so the same core) when it's free.
-        by_pid = {}
-        for pid, slot in pinned:
-            by_pid.setdefault(pid, []).append(slot)
-        self.assertTrue(all(len(set(slots_)) == 1 for slots_ in by_pid.values()), by_pid)
+        # status() briefly locks free slots; this observer can make a worker take another.
+        # The deterministic claim test below checks reuse when the preferred slot is free.
+
+    def test_a_worker_prefers_its_last_slot_but_can_use_another_when_busy(self):
+        # Exercise the pool's allocator boundary without workers or a polling observer.
+        own = SimpleNamespace(budget=4, _what="fixture claim", _holding=lambda: False)
+        worker = SimpleNamespace(lease=None, last_slot=2)
+        with pool.Pool._claim(own, worker) as preferred:
+            self.assertEqual(preferred.ids, [2])
+            with pool.Pool._claim(own, worker) as fallback:
+                self.assertEqual(fallback.ids, [0])
+        with pool.Pool._claim(own, worker) as preferred_again:
+            self.assertEqual(preferred_again.ids, [2])
 
     def test_pinning_is_off_with_forge_pin_false(self):
         if len(forge.cores.core_masks()) < 4:

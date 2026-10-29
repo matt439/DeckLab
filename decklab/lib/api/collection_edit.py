@@ -1,9 +1,9 @@
 """The Collection page's edits: single cards added, changed or removed in a
-space's collection.csv, and CSV imports from scanner and collection apps
+space's collection, and CSV imports from scanner and collection apps
 (HISTORY.md, "Accounts and member collections"). Imported when first needed, by
 feature_routes.dispatch, like the Tokens page's API.
 
-    GET  /api/collection/rows?space=<id>    rows_view(): the file's rows as they are, its sha256
+    GET  /api/collection/rows?space=<id>    rows_view(): the snapshot's rows and sha256
     GET  /api/collection/download?space=<id>    download_view(): the collection as a CSV to save (E7-S30)
     POST /api/collection/save               save_card(body): add, edit or remove one row
     POST /api/collection/bulk               bulk_set(body): set many rows' condition and language at once
@@ -14,8 +14,8 @@ feature_routes.dispatch, like the Tokens page's API.
     GET  /api/printings?name=<exact name>   printings_view(): a card's paper printings, newest first
 
 A space (lib/spaces.py; "space" in the query or body, home by default) is
-whose collection: home's (magic/collection.csv), or a person's
-(magic/people/<id>/collection.csv, made by the first write). Every write needs
+whose collection: the shared home space or a member's own space in the
+inventory database. Runtime writes create no collection files. Every write needs
 collection.edit on the space (guard.py, after the read rule): only its own
 profiles, home's Matt and User1 (E10-S29, E10-S43). Receipts stay the route for recorded orders and
 products (python -m decklab.db receive, the Receipts page): this is for cards
@@ -23,23 +23,27 @@ that come from nowhere Deck Lab records.
 
 The collection is the inventory's (decklab/lib/inventory): the page reads
 inventory.current() and every write is one inventory.apply of the
-collection's operations (inventory/ops_collection.py), on whichever backend
-config.json names. It keeps collection.csv's rules (AGENTS.md): its eight
+collection's operations (inventory/ops_collection.py). Runtime uses the database;
+tests may use the file inventory backend. It keeps the CSV rules (AGENTS.md): eight
 columns, one row per identity key (set, collector_number, finish), sorted by
 set and then collector number (rules.sort_key). The page sends the sha256 it
-loaded: that of the collection rendered as collection.csv (the file's own
-bytes, for a file Deck Lab wrote; the sha256 of nothing while the space has
-no cards), checked by the operation under the backend's lock; 409 {"error",
+loaded: that of the collection's canonical CSV bytes (the sha256 of nothing
+while the space has no cards), checked by the operation under the backend's
+lock; 409 {"error",
 "sha256", "rows"} with the collection as it is now otherwise. Each change has
 a message and the actor who made it:
 
     add card Llanowar Elves (FDN 227) in User2's collection           (by User2)
     import 42 cards into the home collection from manabox.csv           (by Matt)
 
-Each is one audited change set in the database (the files backend, the tests'
-and the rollback's, writes plain files); nothing is committed to git.
+Each is one audited change set in the database. The file backend writes plain
+files only in test fixtures; it is not a runtime rollback route. Inventory
+changes are not committed to git.
 
-Imports: the upload (at most MAX_IMPORT bytes of text and MAX_IMPORT_ROWS
+Imports: collection_import owns CSV detection, format conversion and upload
+reading; the original parser names remain available here. This module keeps
+the matching rules, mutable limits and persisted preview lifecycle.
+The upload (at most MAX_IMPORT bytes of text and MAX_IMPORT_ROWS
 rows) is read as one of FORMATS, told apart by its header row (column names
 compared without case):
 
@@ -74,30 +78,32 @@ language only ever hold their known values or nothing, and names must be
 Scryfall's (so "+2 Mace" is fine).
 
 The preview is kept in IMPORTS_DIR as <profile>.json for IMPORT_TTL seconds,
-holding only what the apply needs (the upload's text, its file name and
-format, the rows without problems, the problems and the count of basics left
-out) and the token that names it: one pending preview per profile, so a new
+holding the upload's text, its file name and format, checked source rows and
+source-set groups before merging, the problems and basics left out, and the
+token that names it: one pending preview per profile, so a new
 preview replaces the last (whose token then gets 410). Previews are read one
 at a time (_preview_lock): a second preview while one is being checked is
 refused at once with 429 ("another import is being checked"), rather than
 holding another upload in memory while it waits. Applying a preview keeps
 the upload unchanged (as UTF-8 text) as one of the space's raw imports,
-<date>-<file name>.csv (the imports/ folder's file, or the database's
-collection_import), unless they would then hold more than
+named <date>-<file name>.csv in the inventory (stored in the database;
+file-backend tests use an imports/ folder), unless they would then hold more than
 MAX_IMPORTS_FOLDER bytes (413), and merges it additively
 (rules.merge_rows: quantities add on the identity key), in one change with
 the raw file. Rows with problems block the apply unless "skip_problems"
-leaves them out.
+leaves them out, or explicit "skip_groups" names every unresolved source set.
+Group selection leaves out all that set's source rows, valid ones included,
+then merges the retained contributions; the upload itself stays unchanged.
 
 The limits: 20,000 rows is a large collection. A ManaBox export's row is
 about 120-180 bytes (its Scryfall ID alone is 36), so 20,000 rows are about
 3 MB, and MAX_IMPORT is 4 MB (200 bytes a row). The raw files are kept for
 good, so a space's raw imports are capped at 50 MB in all.
 """
+import contextlib
 import csv
 import hashlib
 import hmac
-import io
 import json
 import re
 import secrets
@@ -117,6 +123,9 @@ from .carddata import _index_info, _require_cards
 from .collection import space_param
 from .common import MAX_NAME, NUMBER_RE, SET_RE, _CONTROL_RE, ApiError, _keys, _parse_body, _public, _unique
 from .settings import _web_actor, _writer
+# Parser helpers have one implementation; their limits and matching stay here.
+from .collection_import import (_condition, _finish, _language, _norm, _source_rows, _too_many_rows,
+                                detect, read_review, read_upload, review_rows)
 
 # Import previews waiting to be applied. Tests patch it.
 IMPORTS_DIR = config.DATA / "collection-imports"
@@ -129,6 +138,7 @@ MAX_BULK_BODY = 4 * 1024 * 1024     # bytes of its request (about 70 a key)
 MAX_IMPORT = 4 * 1024 * 1024        # bytes of an upload's text (20,000 ManaBox rows are about 3 MB)
 MAX_IMPORT_BODY = 2 * MAX_IMPORT + 64 * 1024    # bytes of its request (JSON escapes quotes and line ends)
 MAX_IMPORT_ROWS = 20000             # rows of an upload read at most
+MAX_IMPORT_APPLY_BODY = 256 * 1024  # the 20,000 short group ids fit; within the HTTP edit-body limit
 MAX_IMPORTS_FOLDER = ops.MAX_IMPORTS     # bytes a space's raw imports may hold in all
 MAX_FILENAME = 200
 MAX_QUANTITY = 9999
@@ -348,13 +358,14 @@ def _storage(space, rows, prices):
 
 
 def _extras(space, shown):
-    """The rows' prices (_prices), storage counts (_storage), storage locations and the storage
-    box's count (collection_locations), for every answer that sends rows."""
-    from . import collection_locations as places
+    """The rows' prices, storage counts/locations, current box count and optional home-only
+    pending-card scenario, for every answer that sends rows."""
+    from . import collection_forecast, collection_locations as places
     prices = _prices(shown)
     storage = _storage(space, shown, prices)
+    box = places.storage_box(space, shown, storage, _picture_key)
     return {"prices": prices, "storage": storage, "locations": places.locations(space, _picture_key),
-            "storage_box": places.storage_box(space, shown, storage, _picture_key)}
+            "storage_box": box, "storage_forecast": collection_forecast.build(space, shown, box)}
 
 
 def _stale(space, sha=None):
@@ -371,14 +382,15 @@ def _request_sha(value):
     raise ApiError(400, "sha256 must be the 64-character hash /api/collection/rows gave")
 
 
-def _apply(space, op, actor, reason=None, expected_revision=None, message=None):
+def _apply(space, op, actor, reason=None, expected_revision=None, message=None, return_snapshot=False):
     """Run op through inventory.apply, with message, or else the message the Summary's text will have
     (ops.message words it from the request's collection, without running op twice): (the
     space's collection Sheet after, the Summary). Held under saving.inventory_write_lock()
     (_save_lock with the files backend; the lock order: it first, then the backend's own lock),
     so a collection save waits for another save in the server. The operations' refusals become
     the page's answers: Stale 409 with the collection as it is now, Missing 409 likewise, Invalid 400,
-    Conflict 409, Unavailable 503, each with no absolute path in its words."""
+    Conflict 409, Unavailable 503, each with no absolute path in its words. return_snapshot
+    opts into the exact committed Inventory instead of its collection Sheet (filing advice)."""
     from . import saving
     if message is None:
         with common.state_errors():
@@ -407,7 +419,7 @@ def _apply(space, op, actor, reason=None, expected_revision=None, message=None):
         raise ApiError(409, _public(e)) from None
     except ValueError as e:      # an upload's name already taken on disk
         raise ApiError(409, _public(e)) from None
-    return after.collection(space), summary
+    return (after if return_snapshot else after.collection(space)), summary
 
 
 # ---- reading rows
@@ -610,7 +622,9 @@ def save_card(body):
     tracked) unless it's foil or its notes say full art.
 
     Returns {ok, sha256, rows (the whole new list), pictures (_pictures of
-    the row saved, for its thumbnail), prices and storage (_extras, of the whole list), merged, stale_tables (_stale_tables)}; 409 {error,
+    the row saved, for its thumbnail), prices and storage (_extras, of the whole list), merged,
+    stale_tables (_stale_tables)}. Only an add also returns added {rows, cards} and
+    informational filing advice for its actual added copies; 409 {error,
     sha256, rows} when the file has changed since sha256."""
     data = _parse_body(body, MAX_SAVE_BODY)
     profile = _writer(data)
@@ -647,17 +661,33 @@ def save_card(body):
         params["row"] = row
     if original is not None:
         params["original"] = list(original)
+    filing = action == "add"
+    if filing:
+        from . import collection_filing       # load before committing the add
+        params["capture_additions"] = True
     op = inventory.Op(f"collection.{action}", params)
     revision = None
     if action != "add":
         revision, decks_revision = _reduction_guard(op, profile, confirmation)
         op = inventory.Op(op.kind, {**params, "expect_decks_revision": decks_revision})
-    sheet, summary = _apply(space, op, _web_actor(profile), reason, expected_revision=revision)
+    result, summary = _apply(space, op, _web_actor(profile), reason, expected_revision=revision,
+                             **({"return_snapshot": True} if filing else {}))
+    sheet = result.collection(space) if filing else result
     rows, now = _view(sheet)
     shown = _rows_json(rows)
     changed = [r for r in shown if row is not None and _picture_key(r) == _picture_key(row)]
-    return {"ok": True, "sha256": now, "rows": shown, "pictures": _pictures(changed), **_extras(space, shown),
-            "merged": bool(summary.counts.get("merged")), "stale_tables": _stale_tables(space)}
+    with inventory.pinned(result) if filing else contextlib.nullcontext():
+        answer = {"ok": True, "sha256": now, "rows": shown, "pictures": _pictures(changed), **_extras(space, shown),
+                  "merged": bool(summary.counts.get("merged")), "stale_tables": _stale_tables(space)}
+        if filing:
+            counts, facts = summary.counts, summary.extra.get("added_printings")
+            answer["added"] = {"rows": counts["added_rows"], "cards": counts["cards"]}
+            try:
+                answer["filing"] = collection_filing.after_add(result, space, profile, facts, counts["cards"])
+            except Exception:       # an optional guide cannot encourage repeating a successful add
+                answer["filing"] = collection_filing.unknown(space, profile, facts, counts["cards"])
+                answer["filing"]["message"] = collection_filing.ADD_UNKNOWN
+    return answer
 
 
 def _stale_tables(space):
@@ -756,156 +786,6 @@ def bulk_set(body):
 
 # ---- imports
 
-def _norm(header):
-    return " ".join(str(header or "").replace("﻿", "").strip().lower().replace("_", " ").split())
-
-
-def detect(headers):
-    """The FORMATS name of an upload's header row, or None."""
-    names = {_norm(h) for h in headers}
-    if {"name", "set", "collector number", "finish", "quantity"} <= names:
-        return "collection"
-    if {"name", "set code", "collector number", "quantity"} <= names:
-        return "manabox"
-    if {"count", "name", "edition", "card number"} <= names:
-        return "deckbox"
-    if {"count", "name", "edition", "collector number"} <= names:
-        return "moxfield"
-    return None
-
-
-def _condition(value, fmt):
-    word = " ".join(str(value or "").strip().lower().replace("_", " ").replace("-", " ").split())
-    if not word:
-        return ""
-    if fmt == "collection" and value.strip().upper() in CONDITIONS:
-        return value.strip().upper()
-    return _CONDITION_FORMAT.get(fmt, {}).get(word) or _CONDITION_WORDS.get(word, "")
-
-
-def _language(value):
-    word = str(value or "").strip().lower()
-    return _LANGUAGE_WORDS.get(word, "") if word else ""
-
-
-def _finish(value, fmt):
-    word = str(value or "").strip().lower()
-    if fmt == "collection":
-        return word
-    if word in ("", "normal", "nonfoil", "non-foil", "false", "no", "0"):
-        return "nonfoil"
-    if word in ("etched", "etched foil", "foil etched"):
-        return "etched"
-    if word in ("foil", "true", "yes", "1", "pre-release foil", "prerelease foil", "promo foil"):
-        return "foil"
-    return word
-
-
-def _too_many_rows():
-    return ApiError(400, f"That file has more than {MAX_IMPORT_ROWS:,} rows of cards, and an import is limited to "
-                         f"{MAX_IMPORT_ROWS:,}: split it into smaller files and import each one.")
-
-
-def _source_rows(text, fmt, reader):
-    """[(line, row, set_name, problem)] of an upload in fmt: collection.csv's
-    columns as text, before Scryfall matching. ApiError 400 for more than
-    MAX_IMPORT_ROWS rows (reading stops at the first one over)."""
-    out = []
-    for raw in reader:
-        line = reader.line_num
-        values = {_norm(k): (v or "").strip() for k, v in raw.items() if k is not None}
-        if not any(values.values()):
-            continue
-        if len(out) >= MAX_IMPORT_ROWS:
-            raise _too_many_rows()
-        get = values.get
-        if fmt == "collection":
-            row = {"name": get("name", ""), "set": get("set", "").lower(),
-                   "collector_number": get("collector number", ""), "finish": _finish(get("finish"), fmt),
-                   "quantity": get("quantity", ""), "condition": _condition(get("condition"), fmt),
-                   "language": _language(get("language")), "notes": get("notes", "")}
-            set_name = None
-        elif fmt == "manabox":
-            row = {"name": get("name", ""), "set": get("set code", "").lower(),
-                   "collector_number": get("collector number", ""), "finish": _finish(get("foil"), fmt),
-                   "quantity": get("quantity", ""), "condition": _condition(get("condition"), fmt),
-                   "language": _language(get("language")), "notes": ""}
-            set_name = get("set name")
-        else:
-            code = get("edition code", "") if fmt == "deckbox" else get("edition", "")
-            row = {"name": get("name", ""), "set": code.lower(),
-                   "collector_number": get("card number" if fmt == "deckbox" else "collector number", ""),
-                   "finish": _finish(get("foil"), fmt), "quantity": get("count", ""),
-                   "condition": _condition(get("condition"), fmt), "language": _language(get("language")),
-                   "notes": ""}
-            set_name = get("edition") if fmt == "deckbox" else None
-        problem = None
-        if not re.fullmatch(r"\d{1,4}", row["quantity"]) or not 1 <= int(row["quantity"]) <= MAX_QUANTITY:
-            problem = f"quantity {row['quantity']!r} isn't a whole number from 1 to {MAX_QUANTITY}"
-        elif row["finish"] not in FINISHES:
-            problem = f"unknown finish {row['finish']!r}"
-        elif row["set"] and not SET_RE.fullmatch(row["set"]):
-            problem = f"unknown set code {row['set']!r}"
-        elif row["collector_number"] and not NUMBER_RE.fullmatch(row["collector_number"]):
-            problem = f"unknown collector number {row['collector_number']!r}"
-        elif len(row["name"]) > MAX_NAME or any(_CONTROL_RE.search(v) for v in (*row.values(), set_name or "")):
-            problem = ("a field has a control character (a tab or line break inside a cell, say), "
-                       "or the name is too long")
-        elif row["notes"].startswith(FORMULA_STARTS):
-            problem = "the notes start with = + - or @, which a spreadsheet would run as a formula"
-        else:
-            row["quantity"] = str(int(row["quantity"]))
-        for key in ("condition", "language", "notes"):
-            row[key] = row[key][:MAX_TEXT[key]]
-        out.append((line, row, set_name, problem))
-    return out
-
-
-def read_upload(text, existing=()):
-    """(format, rows, problems, dropped_basics) of an upload's text: rows
-    [{the eight columns, "line", "problem"}] matched to Scryfall, ordinary
-    basics dropped (dropped_basics: their cards) unless existing (identity
-    keys already in the collection) has them, rows naming one identity key
-    merged (at the first one's line). problems [{"line", "message"}].
-    ApiError 400 for an upload that isn't one of FORMATS."""
-    text = text.lstrip("﻿")
-    try:
-        reader = csv.DictReader(io.StringIO(text, newline=""), strict=True)
-        headers = reader.fieldnames or []
-        fmt = detect(headers)
-        if fmt is None:
-            raise ApiError(400, "That file isn't a ManaBox, Moxfield, Deckbox or collection-columns export: its first "
-                                "line should name the columns (Name, Set code, Collector number, Quantity, ...)")
-        source = _source_rows(text, fmt, reader)
-    except csv.Error as e:
-        raise ApiError(400, f"That file can't be read as CSV: {_public(e)}") from None
-    existing = set(existing)
-    rows, by_key, dropped = [], {}, 0
-    for line, row, set_name, problem in source:
-        # Basics first: they're dropped whatever their printing (rules.merge_rows' rule).
-        if problem is None and rules.ordinary_basic(row) and rules.ident(row) not in existing:
-            dropped += int(row["quantity"])
-            continue
-        if problem is None:
-            row, problem = match(row, set_name)
-        if problem is None and rules.ident(row) in by_key:
-            first = by_key[rules.ident(row)]
-            first["quantity"] = str(int(first["quantity"]) + int(row["quantity"]))
-            first["notes"] = rules.merge_notes(first["notes"], row["notes"])
-            for key in ("condition", "language"):
-                if first[key] != row[key]:
-                    first[key] = ""
-                    first["notes"] = rules.merge_notes(
-                        first["notes"], f"Merged copies have differing or unreported {key}")
-            continue
-        entry = {**{k: row.get(k, "") for k in FIELDS}, "line": line, "problem": problem}
-        rows.append(entry)
-        if problem is None:
-            by_key[rules.ident(entry)] = entry
-    problems = [{"line": r["line"], "message": r["problem"]} for r in rows if r["problem"]]
-    return fmt, rows, problems, dropped
-
-
 def _imports_dir():
     return Path(IMPORTS_DIR)
 
@@ -948,7 +828,8 @@ def import_preview(body):
     cards without problems that the apply would merge), dropped_basics
     (ordinary basic lands left out, in cards), sha256 (the collection's now), repeat_imports
     [{name, imported_at, imported_by}] (identical earlier uploads in this space; unknown
-    provenance is null, and no raw contents are returned)}."""
+    provenance is null, and no raw contents are returned), groups (source-set counts and
+    original lines), source_rows (unmerged checked rows with source group, set and problem)}."""
     data = _parse_body(body, MAX_IMPORT_BODY)
     profile = _writer(data)
     space = space_param(data.get("space"))
@@ -968,15 +849,18 @@ def import_preview(body):
         raise ApiError(429, "Another import is being checked right now; try again in a moment.")
     try:
         existing, sha = _read(space)
-        fmt, rows, problems, dropped = read_upload(text, {rules.ident(r) for r in existing})
+        review = read_review(text, {rules.ident(r) for r in existing})
+        fmt, rows, problems, dropped = (review[k] for k in ("format", "rows", "problems", "dropped_basics"))
         good = [r for r in rows if not r["problem"]]
         repeats = ops.repeat_imports(inventory.current(), space, [(filename, text)])
         token = secrets.token_hex(16)
         _prune_previews()
-        # Only what the apply needs: the page has the rest from this answer.
-        record = {"version": 3, "token": token, "space": space, "profile": profile["id"], "filename": filename,
+        # Retain unmerged contributions so leaving out a source set never removes another
+        # group's copies merely because matching gave them the same final printing identity.
+        record = {"version": 4, "token": token, "space": space, "profile": profile["id"], "filename": filename,
                   "text": text, "format": fmt, "good": [{k: r[k] for k in FIELDS} for r in good],
-                  "problems": problems, "dropped_basics": dropped, "repeat_imports": repeats}
+                  "problems": problems, "dropped_basics": dropped, "repeat_imports": repeats,
+                  "source_rows": review["source_rows"], "groups": review["groups"]}
         try:
             inventory_files.atomic_write(_preview_path(profile),
                                          json.dumps(record, ensure_ascii=False).encode("utf-8"))
@@ -986,7 +870,8 @@ def import_preview(body):
         _preview_lock.release()
     return {"token": token, "format": fmt, "rows": rows, "problems": problems,
             "adds": {"rows": len(good), "cards": sum(int(r["quantity"]) for r in good)},
-            "dropped_basics": dropped, "sha256": sha, "repeat_imports": repeats}
+            "dropped_basics": dropped, "sha256": sha, "repeat_imports": repeats,
+            "source_rows": review["source_rows"], "groups": review["groups"]}
 
 
 def _load_preview(token, space, profile):
@@ -1002,7 +887,7 @@ def _load_preview(token, space, profile):
         record = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, ValueError):
         raise gone from None
-    if not isinstance(record, dict) or record.get("version") != 3 \
+    if not isinstance(record, dict) or record.get("version") not in (3, 4) \
             or not hmac.compare_digest(str(record.get("token") or ""), token):
         raise gone
     if record.get("space") != space or record.get("profile") != profile["id"]:
@@ -1010,39 +895,74 @@ def _load_preview(token, space, profile):
     return path, record
 
 
+def _selected_import(record, value):
+    """The reviewed retained import and its unresolved problems, from server-owned groups.
+
+    Group ids name this token's original source rows. No client row facts are accepted,
+    and selecting groups never rematches cards against a possibly changed card index.
+    """
+    if not isinstance(value, list) or len(value) > MAX_IMPORT_ROWS \
+            or any(not isinstance(ident, str) or not re.fullmatch(r"g[1-9]\d{0,4}", ident) for ident in value):
+        raise ApiError(400, f"skip_groups must list at most {MAX_IMPORT_ROWS:,} source group ids from this preview")
+    if len(set(value)) != len(value):
+        raise ApiError(400, "skip_groups names a source group more than once")
+    if record.get("version") != 4:
+        raise ApiError(409, "Upload the file again to review its source sets.", repreview_required=True)
+    groups = {group["id"]: group for group in record["groups"]}
+    if any(ident not in groups for ident in value):
+        raise ApiError(400, "skip_groups must name source groups from this preview")
+    selected = set(value)
+    rows, problems, dropped = review_rows(record["source_rows"], selected)
+    skipped = [{"line": source["line"], "message": source["problem"]} for source in record["source_rows"]
+               if source["group"] in selected and source["problem"] is not None]
+    reviewed = {**record, "good": [{k: row[k] for k in FIELDS} for row in rows if row["problem"] is None],
+                "problems": skipped, "dropped_basics": dropped,
+                "excluded_groups": [group for group in record["groups"] if group["id"] in selected]}
+    return reviewed, problems
+
+
 def import_apply(body):
     """POST /api/collection/import/apply {"profile", "space"?, "token",
-    "sha256", "skip_problems"?}: merge a preview into the space's
+    "sha256", "skip_problems"? | "skip_groups"?}: merge a preview into the space's
     collection, additively (rules.merge_rows), and keep the upload
     unchanged as imports/<date>-<file name>.csv, in one change "import <n>
     cards into <User2's collection | the home collection> from <file
     name>" (merge_upload). Rows with problems refuse the apply (400 with
-    "problems") unless skip_problems leaves them out. Returns {ok, sha256,
+    "problems") unless skip_problems leaves them out, or every unresolved source set is
+    explicitly selected in skip_groups. A selected group leaves out all its source rows,
+    valid ones included; excluded_groups reports those separately. The choices are mutually
+    exclusive. Returns {ok, sha256,
     rows (the whole new list), prices and storage (_extras), added {"rows" (new rows), "cards"}, skipped
-    (rows left out), raw (the saved upload's repo path), stale_tables (_stale_tables)}; 409
+    (problem rows left out), raw (the saved upload's repo path), stale_tables (_stale_tables)}; 409
     {error, sha256, rows} when the collection changed since sha256, 410 for
     an expired preview. If the matching earlier uploads changed, 409 with
     repreview_required:true asks for a fresh preview before anything is written."""
-    data = _parse_body(body, MAX_SAVE_BODY)
+    data = _parse_body(body, MAX_IMPORT_APPLY_BODY)
     profile = _writer(data)
     space = space_param(data.get("space"))
     guard.require_space_write(profile, "collection.edit", space)
-    _keys(data, ("profile", "token", "sha256"), ("space", "skip_problems"))
+    _keys(data, ("profile", "token", "sha256"), ("space", "skip_problems", "skip_groups"))
     sha = _request_sha(data["sha256"])
     skip = common._flag(data, "skip_problems")
     preview_path, record = _load_preview(data["token"], space, profile)
     problems = record["problems"]
+    if "skip_groups" in data:
+        if "skip_problems" in data:
+            raise ApiError(400, "Choose skip_groups or skip_problems, not both")
+        record, problems = _selected_import(record, data["skip_groups"])
     if problems and not skip:
         raise ApiError(400, f"{len(problems)} {'row has a problem' if len(problems) == 1 else 'rows have problems'}"
                             f": fix the file, or import the rest without them.", problems=problems)
     if not record["good"]:
+        if record.get("excluded_groups"):
+            raise ApiError(400, "There's nothing to import after leaving out those source sets.")
         raise ApiError(400, "There's nothing to import: every row has a problem or is an ordinary basic land.")
-    answer = merge_upload(space, profile, sha, record)
+    answer = merge_upload(space, profile, sha, record, filing=True)
     preview_path.unlink(missing_ok=True)
     return answer
 
 
-def merge_upload(space, profile, sha, record, message=None):
+def merge_upload(space, profile, sha, record, message=None, filing=False):
     """Merge record's good rows (a preview's record: filename, text, format,
     good, problems, dropped_basics) into the space's collection, and keep
     its text as the upload, in one change (import_apply's: the operation
@@ -1052,22 +972,35 @@ def merge_upload(space, profile, sha, record, message=None):
     The caller has checked collection.edit. Returns import_apply's answer."""
     problems = record["problems"]
     whose = _whose(space)
-    op = inventory.Op("collection.import", import_params(space, sha, record, message))
+    if filing:
+        from . import collection_filing
+    op = inventory.Op("collection.import", import_params(space, sha, record, message, capture_additions=filing))
     try:
-        sheet, summary = _apply(space, op, _web_actor(profile))
+        result, summary = _apply(space, op, _web_actor(profile), **({"return_snapshot": True} if filing else {}))
     except ops.TooLarge as e:
         raise ApiError(413, f"The imports folder of {whose} holds {_mb(e.held)}, and this file ({_mb(e.size)}) "
                             f"would take it over its limit of {e.limit // (1024 * 1024)} MB (the raw files are "
                             f"kept for good): ask an admin to tidy {ops.paths.imports_dir(space)} first.") from None
+    sheet = result.collection(space) if filing else result
     rows, now = _view(sheet)
     counts = summary.counts
     shown = _rows_json(rows)
-    return {"ok": True, "sha256": now, "rows": shown, **_extras(space, shown),
-            "added": {"rows": counts["added_rows"], "cards": counts["cards"]}, "skipped": len(problems),
-            "raw": summary.extra["raw"][0], "stale_tables": _stale_tables(space)}
+    with inventory.pinned(result) if filing else contextlib.nullcontext():
+        answer = {"ok": True, "sha256": now, "rows": shown, **_extras(space, shown),
+                  "added": {"rows": counts["added_rows"], "cards": counts["cards"]}, "skipped": len(problems),
+                  "raw": summary.extra["raw"][0], "stale_tables": _stale_tables(space),
+                  **({"excluded_groups": record["excluded_groups"]} if "excluded_groups" in record else {})}
+        if filing:
+            facts = summary.extra.get("added_printings")
+            try:
+                answer["filing"] = collection_filing.after_import(result, space, profile, facts, counts["cards"])
+            except Exception:       # optional advice must never turn a committed import into a failed save
+                common._log("Post-import filing advice could not be calculated; the import was saved.")
+                answer["filing"] = collection_filing.unknown(space, profile, facts, counts["cards"])
+    return answer
 
 
-def import_params(space, sha, record, message=None):
+def import_params(space, sha, record, message=None, capture_additions=False):
     """The collection.import operation's parameters for merge_upload's record (also the
     precon add's, api/precons.py, inside its precon.add): no upload kept when record has no
     good rows."""
@@ -1078,8 +1011,10 @@ def import_params(space, sha, record, message=None):
             "message": message or f"import {{cards}} cards into {whose} from {record['filename']}",
             "limit": MAX_IMPORTS_FOLDER, "fmt": record["format"], "problems": record["problems"],
             "dropped_basics": record.get("dropped_basics") or 0,
+            **({"excluded_groups": record["excluded_groups"]} if "excluded_groups" in record else {}),
             "expected_repeats": [r["name"] for r in record["repeat_imports"]]
-            if "repeat_imports" in record else None}
+            if "repeat_imports" in record else None,
+            **({"capture_additions": True} if capture_additions else {})}
 
 
 def _upload_date():

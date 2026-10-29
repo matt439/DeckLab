@@ -99,6 +99,8 @@ def _label(row):
 def _list(space, args):
     from decklab.lib import tokens
     inv = tokens.read(space=space)
+    from decklab.db import read_notices
+    read_notices.Reporter(getattr(args, "dbname", None)).space("collection", space, label="tokens")
     if args.json:
         print(json.dumps({"sha256": inv.sha256, "rows": inv.rows}, ensure_ascii=False, indent=2))
         return 0

@@ -24,7 +24,7 @@ SETUP = SHELL + r'''
     config_sha256:body.old_email===body.new_email?hashA:hashC,membership_sha256:body.old_email===body.new_email?hashB:hashD,
     change_set_id:body.old_email===body.new_email?null:42,access_policy_required:true});
   apiWrite=async(path,body,method)=>{writes.push({path,body,method});return confirmed(body);};
-  showFooter=()=>{};loadSimulations=()=>{};loadCommanderNightSettings=()=>{};loadVisits=()=>{};
+  showFooter=()=>{};loadSimulations=()=>{};loadCommanderNightSettings=()=>{};loadVisits=()=>{};loadSettingsMaintenance=()=>{};
   const openMembers=async()=>{as('matt',false);location.hash='#/settings';showSettings(new URLSearchParams(),routeToken);await flush();return byId('settings-members-content');};
   const memberButton=text=>main.querySelectorAll('button').find(node=>node.textContent===text);
   const enterEmail=value=>{const input=byId('settings-member-new-email');input.value=value;input.fire('input');return input;};

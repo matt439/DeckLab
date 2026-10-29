@@ -8,7 +8,7 @@ from collections import Counter
 
 from decklab.lib import decks
 
-from . import common, engine, field, lists, saved, seqstats
+from . import common, engine, field, field_exclusions, lists, saved, seqstats
 
 FORMATS = ("Constructed", "Commander")
 LABELS = {"target": "Planned", "owned": "Play now"}
@@ -29,12 +29,13 @@ def _excluded(summary, version, selected, removed):
     return "This list is not selected for the current field."
 
 
-def _catalog(fmt, visible=None, eng=None, field_options=None):
+def _catalog(fmt, visible=None, eng=None, field_options=None, *, exclusions=None):
     """All visible current lists, plus exact existing-field membership and reasons."""
     visible = visible or (lambda deck_id: True)
-    selected, field_notes = field._field(fmt, **(field_options or {}))
+    exclusions = exclusions if exclusions is not None else field_exclusions.observation(visible)
+    selected, field_notes = field._field(fmt, **{**(field_options or {}), "exclusions": exclusions})
     selected = [item for item in selected if visible(item["id"])]
-    _, removed = field._simulation_edits(fmt)
+    removed = field_exclusions.removals(exclusions)
     eng = engine.read_only_today() if eng is None else eng
     rows, notes = [], []
     if field_notes:
@@ -110,7 +111,8 @@ def _historical(rows, fmt, results_dir, eng, keep=None):
 
 def _view(fmt, results_dir, visible, field_options=None, keep=None):
     eng = engine.read_only_today()
-    rows, notes = _catalog(fmt, visible, eng, field_options)
+    exclusions = field_exclusions.observation(visible)
+    rows, notes = _catalog(fmt, visible, eng, field_options, exclusions=exclusions)
     keep = _seen_result(visible) if keep is None else keep
     data = field._bt_data(fmt, results_dir, current_engine=eng, keep=keep)
     stale = _historical(rows, fmt, results_dir, eng, keep)
@@ -183,7 +185,8 @@ def _view(fmt, results_dir, visible, field_options=None, keep=None):
     rows.sort(key=lambda row: (row["group"] is None, row["group"] or "", row["rating"] is None,
                                -(row["rating"] or {}).get("value", 0), row["title"].casefold(), row["version"]))
     return {"format": fmt, "rows": [{key: value for key, value in row.items() if not key.startswith("_")}
-                                   for row in rows], "groups": groups, "notes": notes, "error": None}
+                                   for row in rows], "groups": groups, "notes": notes, "error": None,
+            "manual_excluded": field_exclusions.count(exclusions)}
 
 
 def view(fmt="Constructed", results_dir=None, visible=None, *, field_options=None, keep=None):

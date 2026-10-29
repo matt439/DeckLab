@@ -1,11 +1,12 @@
-/* Compare two decks (E1-S13, its first slice): #/compare?a=<deck id>&b=<deck id>[&av=target|owned&bv=...], the
+/* Compare two decks (E1-S13, E1-S26): #/compare?a=<deck id>&b=<deck id>[&av=target|owned&bv=...], the
  * two lists' stats side by side: their counts in brief, their mana curves on one scale, their colours and colour
  * sources, and their card types and roles. It reads each deck as its own page does (GET /api/deck, the viewer's rights),
  * so a deck the viewer may not see answers as missing and the page shows that instead. Read-only: nothing here
  * changes either deck. The way in is a deck page's More, "Compare with…" (openCompareChooser), which lists the
  * decks the viewer sees (GET /api/decks) and, for a deck with both lists, its own other list.
  *
- * Below the stats, the cards both lists use (compareShared: GET /api/compare/shared, whose copies the pool can
+ * Below the stats, list differences count cards by name within each section and label listed printings separately.
+ * Then the cards both lists use (compareShared: GET /api/compare/shared, whose copies the pool can
  * cover for both come only to a viewer who may see the space's collection) and how the two have done against
  * each other (compareHeadToHead: the latest saved Forge result between them, from the first deck's matchups,
  * and the Game log's games between them), each fetched after the stats show, with its own Try again.
@@ -57,7 +58,7 @@ function compareDraw(sides) {
   const swap = compareHref(b.summary.id, a.summary.id, b.version, a.version);
   add($("#main"), [
     pageHead({ crumb: [deckHref(a.summary.id, a.version), a.summary.title], title: routeH1("compare"),
-      description: "Their stats, the cards both use and how they've done against each other. Nothing here changes either deck.",
+      description: "Their stats, list differences, the cards both use and how they've done against each other. Nothing here changes either deck.",
       more: [{ label: "Swap sides", href: swap },
         { label: "Compare with another deck…", onclick: () => openCompareChooser(a) }] }),
     el("div", { class: "compare-heads" }, sides.map((d, i) => compareHead(d, labels[i], sameDeck))),
@@ -66,6 +67,7 @@ function compareDraw(sides) {
     compareCurves(sides, labels),
     compareColours(sides, labels),
     compareTypes(sides, labels),
+    compareDifferences(sides, labels),
     compareShared(sides, labels, sameDeck),
     compareHeadToHead(sides, labels)]);
   drawCharts();
@@ -253,6 +255,93 @@ function compareTypes(sides, labels) {
     : null);
 }
 
+// List differences ---------------------------------------------------------
+
+/** Logical card counts within one section; listed printings come from the line, never its illustration. */
+function compareSectionCards(lines) {
+  const cards = new Map();
+  for (const line of lines || []) {
+    const name = line.card?.name || line.name;
+    const quantity = line.qty || 0;
+    if (!name || quantity <= 0) continue;
+    if (!cards.has(name)) cards.set(name, { name, quantity: 0, printings: new Map() });
+    const card = cards.get(name);
+    card.quantity += quantity;
+    const printing = { set: (line.set || "").toLowerCase(), number: String(line.number || ""), finish: line.finish || "nonfoil" };
+    const key = JSON.stringify([printing.set, printing.number, printing.finish]);
+    const entry = card.printings.get(key);
+    if (entry) entry.quantity += quantity;
+    else card.printings.set(key, { ...printing, quantity });
+  }
+  return cards;
+}
+
+/** A different declared printing or copies redistributed between printings, apart from a quantity-only change. */
+function comparePrintingChange(left, right) {
+  if (!left || !right) return false;
+  const keys = [...new Set([...left.printings.keys(), ...right.printings.keys()])];
+  const deltas = keys.map((key) => (right.printings.get(key)?.quantity || 0) - (left.printings.get(key)?.quantity || 0));
+  return keys.some((key) => !left.printings.has(key) || !right.printings.has(key))
+    || deltas.some((n) => n < 0) && deltas.some((n) => n > 0);
+}
+
+/** One row per changed logical card, keeping a card moved between sections as a change in each section. */
+function compareSectionDifferences(sides, section) {
+  const [a, b] = sides.map((d) => compareSectionCards(d.sections?.[section]));
+  return [...new Set([...a.keys(), ...b.keys()])].sort((x, y) => x.localeCompare(y)).flatMap((name) => {
+    const left = a.get(name), right = b.get(name);
+    const counts = [left?.quantity || 0, right?.quantity || 0];
+    const printings = comparePrintingChange(left, right);
+    if (counts[0] === counts[1] && !printings) return [];
+    return [{ name, counts, cards: [left, right], printings,
+      kind: !left ? "right" : !right ? "left" : counts[0] !== counts[1] ? "quantity" : "printing" }];
+  });
+}
+
+/** The list's declared choices, including an explicitly unspecified printing; no physical ownership is inferred. */
+function comparePrintingWords(card) {
+  return [...card.printings.values()].sort((a, b) => a.set.localeCompare(b.set)
+    || a.number.localeCompare(b.number) || a.finish.localeCompare(b.finish)).map((p) => {
+    const printing = p.set ? `${p.set.toUpperCase()}${p.number ? ` ${p.number}` : ""}` : "Any printing";
+    return `${num(p.quantity)} ${printing}${p.finish !== "nonfoil" ? ` · ${p.finish}` : ""}`;
+  }).join("; ");
+}
+
+function compareDifferenceTable(rows, labels, caption, group) {
+  return el("table", { class: "data compare-table compare-difference-table" },
+    el("caption", { class: "sr-only", text: caption }),
+    el("thead", {}, el("tr", {}, el("th", { scope: "col", text: "Card" }),
+      labels.map((label) => el("th", { scope: "col", class: "num", text: label })))),
+    el("tbody", {}, rows.map((row) => el("tr", {},
+      el("th", { scope: "row" }, cardLink({ name: row.name }, group)),
+      row.counts.map((quantity, side) => el("td", { class: "num" }, num(quantity),
+        row.printings ? el("small", { class: "compare-difference-printing", text:
+          ` Listed printings: ${comparePrintingWords(row.cards[side])}` }) : null))))));
+}
+
+/** Read-only differences of the two already-authorized answers, independent of stats and collection visibility. */
+function compareDifferences(sides, labels) {
+  const groups = [["left", `Only in ${labels[0]}`], ["right", `Only in ${labels[1]}`],
+    ["quantity", "Quantity changed"], ["printing", "Printing only"]];
+  const parts = [];
+  for (const section of ["Commander", "Companion", "Deck", "Sideboard"]) {
+    const rows = compareSectionDifferences(sides, section);
+    if (!rows.length) continue;
+    const title = SECTION_CAPTIONS[section] || section;
+    parts.push(el("div", { class: "compare-difference-section", "data-section": section },
+      el("h3", { text: title }), groups.map(([kind, heading]) => {
+        const changed = rows.filter((row) => row.kind === kind);
+        return changed.length ? el("div", { class: "compare-difference-group", "data-kind": kind },
+          el("h4", { text: heading }), compareDifferenceTable(changed, labels, `${title}: ${heading}`,
+            `compare-difference-${section}-${kind}`)) : null;
+      })));
+  }
+  return comparePart("h-compare-differences", "List differences",
+    parts.length ? el("p", { class: "sub", text:
+      "Copies are counted by card name within each section. Listed printings are shown separately." }) : null,
+    parts.length ? parts : emptyBox("The lists have the same cards, quantities and listed printings."));
+}
+
 // Cards both use, head to head ---------------------------------------------
 
 /** Fetch path into host (a part of the page) and draw the answer there with draw(answer); a failure says so
@@ -356,6 +445,8 @@ function compareGameParts(answer, a, b, labels) {
   const wins = [0, 0];
   for (const entry of answer.games || []) {
     const record = (entry && entry.record) || {};
+    if (Object.hasOwn(record, "mode") || Object.hasOwn(record, "game_version") ||
+        !Array.isArray(record.sides) || record.sides.length !== 2) continue;
     const [x, y] = record.sides || [];
     const straight = compareIsSide(x, a) && compareIsSide(y, b), turned = compareIsSide(x, b) && compareIsSide(y, a);
     if (!straight && !turned) continue;

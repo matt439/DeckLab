@@ -341,7 +341,9 @@ def add_precon(body):
     made = plan_add(space, data["file"], data["title"], fields, profile, profile["name"], sha=sha,
                     add_tokens=add_tokens, tokens_sha256=data.get("tokens_sha256"),
                     tokens_source_sha256=data.get("tokens_source_sha256"),
-                    tokens_choices=data.get("tokens_choices", _NO_TOKEN_CHOICES))
+                    tokens_choices=data.get("tokens_choices", _NO_TOKEN_CHOICES), capture_filing=True)
+    if made["built"]["good"]:
+        from . import collection_filing
     try:
         after, summary = saving.apply_op(made["op"], profile, made["message"], made["refused"])
     except ValueError as e:     # the files backend: an upload's name already taken on disk (nothing saved)
@@ -352,13 +354,22 @@ def add_precon(body):
         counts = summary.counts
         added = {"ok": True, "sha256": now, "added": {"rows": counts["added_rows"], "cards": counts["cards"]},
                  "skipped": 0, "raw": summary.extra["raw"][0]}
-    return {"collection": added,
-            "deck": saving.created_answer(made["plan"], made["deck_id"], made["table"], made["text"]),
-            **({"tokens": {"cards": summary.counts["token_cards"], "rows": summary.counts["token_rows"]}} if add_tokens else {})}
+    with inventory.pinned(after):
+        if added is not None:
+            facts, proof = summary.extra.get("added_printings"), summary.extra.get("created_deck")
+            try:
+                added["filing"] = collection_filing.after_precon(after, space, profile, facts, counts["cards"], proof)
+            except Exception:      # optional advice cannot fail a saved precon or encourage adding it twice
+                added["filing"] = collection_filing.unknown(space, profile, facts, counts["cards"])
+                added["filing"]["message"] = collection_filing.PRECON_UNKNOWN
+        return {"collection": added,
+                "deck": saving.created_answer(made["plan"], made["deck_id"], made["table"], made["text"]),
+                **({"tokens": {"cards": summary.counts["token_cards"], "rows": summary.counts["token_rows"]}} if add_tokens else {})}
 
 
 def plan_add(space, file, title, fields, profile, author, sha=None, *, add_tokens=False,
-             tokens_sha256=_CURRENT_TOKENS, tokens_source_sha256=_CURRENT_TOKENS, tokens_choices=_NO_TOKEN_CHOICES):
+             tokens_sha256=_CURRENT_TOKENS, tokens_source_sha256=_CURRENT_TOKENS, tokens_choices=_NO_TOKEN_CHOICES,
+             capture_filing=False):
     """Everything adding a precon checks and works out before anything is saved, for the page's
     add_precon and the command line's collection add-precon (decklab/db/inv_collection.py):
     {"built" (_build's), "plan" (saving.plan_new_deck's), "whose", "deck_id", "table", "text"
@@ -373,7 +384,8 @@ def plan_add(space, file, title, fields, profile, author, sha=None, *, add_token
     the deck that has it), a changed collection (409). Explicit tokens_choices confirm every
     source row once, with zero skipping it; omission keeps the legacy declared-count opt-in.
     Source receipts are compared before resolving choices and token inventory receipts are
-    checked again by precon.add under its write lock. Nothing is written here."""
+    checked again by precon.add under its write lock. capture_filing opts the page into
+    JSON-only addition/new-deck proofs; the command line's default is unchanged. Nothing is written here."""
     if not isinstance(add_tokens, bool):
         raise ApiError(400, "add_tokens must be true or false")
     confirmed = tokens_choices is not _NO_TOKEN_CHOICES
@@ -435,7 +447,8 @@ def plan_add(space, file, title, fields, profile, author, sha=None, *, add_token
     else:
         deck_id, table, text = saving.new_deck_text(plan)
     op = inventory.Op("precon.add", {"space": space, "kind": plan["kind"], "slug": plan["slug"], "text": text,
-                                     "collection": collection, "owners": guard.accessory_owners(profile), **token_params})
+                                     "collection": collection, "owners": guard.accessory_owners(profile), **token_params,
+                                     **({"capture_filing": True} if capture_filing else {})})
     message = (f"{cards_words}; new deck {plan['title']}" if built["good"]
                else f"add the {name} precon's deck {plan['title']} to {whose}")
     if add_tokens:

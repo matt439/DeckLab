@@ -1,7 +1,8 @@
 """Australian shop prices for the purchase queue (E5-S08, first slice: MTGMate only).
 
 Once a day at most, `snapshot` looks up each distinct card name on the purchase queue
-(the watchlist: its rows only, never missing cards or wishlists) on MTGMate and keeps
+(the watchlist: its rows only). The nightly step also includes confirmed missing names
+from saved home decks, in the same request budget, never member decks or wishlists. It keeps
 what the shop listed in decklab/data/shops/mtgmate.json (snapshot_path(), gitignored):
 
     {"version": 1, "shop": "MTGMate", "site": SITE, "started_at": ISO, "fetched_at": ISO,
@@ -35,6 +36,7 @@ Shopping only reads the file (match() below), so a page load never reaches the s
         one name's listings, printed (one request after robots.txt; nothing saved)
 """
 import argparse
+import contextlib
 import html.parser
 import json
 import os
@@ -68,6 +70,8 @@ MAX_PAGE = 5 * 1024 * 1024
 MAX_FAILURES = 3                            # failures in a row before the shop counts as down
 LOCK_AT = 1 << 20                           # the lock file's byte locked (as lib/forge/slots.py)
 NIGHTLY_BUDGET = 45 * 60                    # seconds of requests a night: the task stops after two (schedule.py)
+MAX_SNAPSHOT_NAMES = 5000                   # optional queue + home-missing union; never truncates queued intent
+MISSING_UNAVAILABLE = "Saved home missing names could not be confirmed; the purchase queue is unchanged."
 FINISHES = {"nonfoil", "foil", "etched"}
 
 
@@ -477,7 +481,7 @@ def _queue():
     """The watchlist's rows as dicts, read as saved (purchases.read_queue would also insist
     every source file exists, which a name lookup doesn't need)."""
     from decklab.lib import inventory, purchases
-    with inventory.pinned():
+    with contextlib.nullcontext() if inventory.is_pinned() else inventory.pinned():
         return [{key: row.text(key) for key in purchases.QUEUE_FIELDS} for row in inventory.current().watchlist.rows]
 
 
@@ -530,50 +534,80 @@ def _minutes(names, delay=DEFAULT_DELAY):
     return max(1, round(len(names) * delay / 60))
 
 
-def refresh(*, force=False, say=print, progress=True, session=None, budget=None):
+def refresh(*, force=False, say=print, progress=True, session=None, budget=None, include_missing=False):
     """Take and save a new snapshot of the queue's names, unless the last one is less than
     MIN_AGE old (or force). budget: take()'s, the most seconds of requests (the names least
     recently read go first, so the rest come next time). say(words) reports; 0 done or nothing
-    due, 1 refused (another run going) or every name unknown, 2 the purchase queue couldn't be read."""
-    from decklab.lib.inventory import Unavailable
+    due, 1 refused (another run going) or every name unknown, 2 the purchase queue couldn't be read.
+    include_missing is the nightly opt-in: one frozen union of queued names and proven saved-home
+    shortfalls. A failed optional scan keeps every original queue name and reports fixed wording.
+    Caller pins survive; a pin opened here is released before any retailer request."""
+    from decklab.lib import inventory
     now = _now()
-    try:
-        names = queue_names(_queue())
-    except (Unavailable, ValueError) as error:
-        say(f"The purchase queue couldn't be read: {error}")
-        return 2
-    previous = load()
-    if not force and fresh(previous, now):
-        say(f"The {SHOP} snapshot of {previous['fetched_at']} is less than {int(MIN_AGE.total_seconds() // 3600)} "
-            "hours old; nothing fetched (--force to fetch anyway).")
-        return 0
-    if not names:
-        say("The purchase queue is empty; nothing to look up.")
-        return 0
-    lock = _lock()
-    if lock is None:
-        say(f"Another {SHOP} snapshot is running ({snapshot_path().with_name('mtgmate.lock')}).")
-        return 1
-    try:
-        names = oldest_first(names, previous)
+    with contextlib.ExitStack() as capture:
+        if include_missing and not inventory.is_pinned():
+            capture.enter_context(inventory.pinned())
+        try:
+            queued = _queue()
+            names = tuple(queue_names(queued))
+        except (inventory.Unavailable, ValueError) as error:
+            say(f"The purchase queue couldn't be read: {error}")
+            return 2
+        previous = load()
+        if not force and fresh(previous, now):
+            _not_due(previous, say)
+            return 0
+        if not names and not include_missing:
+            say("The purchase queue is empty; nothing to look up.")
+            return 0
+        lock = _lock()
+        if lock is None:
+            say(f"Another {SHOP} snapshot is running ({snapshot_path().with_name('mtgmate.lock')}).")
+            return 1
+        try:
+            if include_missing:
+                # A different run may have finished between the early age check and this
+                # lock. Use its latest data for both the age gate and carried timestamps.
+                previous = load()
+                if not force and fresh(previous, _now()):
+                    _not_due(previous, say)
+                    return 0
+                try:
+                    from decklab.lib import shop_needs
+                    plan = shop_needs.names(queued, inventory.current())
+                    notice = shop_needs.NOTICES[plan.status]
+                    selected = tuple(plan.names)
+                except Exception:           # optional proof never blocks a queued lookup
+                    say(MISSING_UNAVAILABLE)
+                else:
+                    names = selected
+                    if notice:
+                        say(notice)
+            # Only names and cached shop facts survive this point. No counting,
+            # inventory read or card lookup is deferred into Session/robots work.
+            capture.close()
+            if not names:
+                say("The purchase queue is empty; nothing to look up.")
+                return 0
+            names = tuple(oldest_first(names, previous))
 
-        def started(delay):
-            fits = "" if budget is None or len(names) * delay <= budget else (
-                f"; this run stops after about {round(budget / 60)} minutes and the rest keep their last results")
-            say(f"Looking up {len(names)} names on {SHOP}, one request each, {delay:g} seconds apart as its "
-                f"robots.txt asks (about {_minutes(names, delay)} minutes{fits}).")
+            def started(delay):
+                fits = "" if budget is None or len(names) * delay <= budget else (
+                    f"; this run stops after about {round(budget / 60)} minutes and the rest keep their last results")
+                say(f"Looking up {len(names)} names on {SHOP}, one request each, {delay:g} seconds apart as its "
+                    f"robots.txt asks (about {_minutes(names, delay)} minutes{fits}).")
 
-        def step(count, total, name, entry):
-            words = {"ok": f"{len(entry['listings'])} listings", "not_listed": "not listed"}.get(
-                entry["status"], entry.get("error", "error"))
-            if entry.get("carried"):
-                words = f"not reached; kept the result read {entry.get('at')}"
-            say(f"  {count}/{total} {name}: {words}")
-        data = take(names, session=session, previous=previous, progress=step if progress else None,
-                    budget=budget, started=started)
-        _write(data, snapshot_path())
-    finally:
-        _unlock(lock)
+            def step(count, total, name, entry):
+                words = {"ok": f"{len(entry['listings'])} listings", "not_listed": "not listed"}.get(
+                    entry["status"], entry.get("error", "error"))
+                if entry.get("carried"):
+                    words = f"not reached; kept the result read {entry.get('at')}"
+                say(f"  {count}/{total} {name}: {words}")
+            data = take(names, session=session, previous=previous, progress=step if progress else None,
+                        budget=budget, started=started)
+            _write(data, snapshot_path())
+        finally:
+            _unlock(lock)
     entries = list(data["cards"].values())
     failed = sum(entry["status"] == "error" for entry in entries)
     carried = sum(bool(entry.get("carried")) for entry in entries)
@@ -582,12 +616,17 @@ def refresh(*, force=False, say=print, progress=True, session=None, budget=None)
     return 1 if failed == len(names) else 0
 
 
+def _not_due(previous, say):
+    say(f"The {SHOP} snapshot of {previous['fetched_at']} is less than {int(MIN_AGE.total_seconds() // 3600)} "
+        "hours old; nothing fetched (--force to fetch anyway).")
+
+
 def nightly(log):
     """The nightly job's step (decklab/db/nightly.py): refresh() with its words in log. Always 0:
     a shop that can't be reached is no failure of the database's night, and the log says why."""
     try:
         refresh(say=lambda words: log(f"Nightly: {SHOP} prices: {words.strip()}"), progress=False,
-                budget=NIGHTLY_BUDGET)
+                budget=NIGHTLY_BUDGET, include_missing=True)
     except Exception as error:  # a broken shop page must not mark the backup night failed
         log(f"Nightly: {SHOP} prices failed: {type(error).__name__}: {error}")
     return 0

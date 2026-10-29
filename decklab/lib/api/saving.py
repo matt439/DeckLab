@@ -78,18 +78,21 @@ class _KitThenSave:
     The order follows the deck's status, since kit.set gives sleeves or a deck box only to a
     built deck: a save that makes a deck built saves the text first (with the kit lines as they
     were) and then chooses its kit; any other (a deck taken apart, or one that stays built) has
-    its kit changed first, then the text saved on what that leaves."""
+    its kit changed first, then the text saved on what that leaves. A built deck changing
+    player clears its old kit, saves the new player without kit, then assigns the final
+    kit against that player, with every step inside the same inventory operation."""
     kind = "deck.save"
 
-    def __init__(self, deck_id, text, base_sha256, changes, owners, building=False):
+    def __init__(self, deck_id, text, base_sha256, changes, owners, building=False, *, handoff=False, known_rows=()):
         self.params = {"deck_id": deck_id, "text": text, "base_sha256": base_sha256, "changes": changes,
                        "owners": owners}
         self.building = building
+        self.handoff, self.known_rows = handoff, frozenset(known_rows)
 
-    def _kit(self, inv, expected):
+    def _kit(self, inv, expected, changes=None):
         p = self.params
         return inventory.Op("kit.set", {"holders": [{"id": p["deck_id"], "expected": expected}],
-                                        "changes": p["changes"], "owners": p["owners"]}).run(inv)
+                                        "changes": p["changes"] if changes is None else changes, "owners": p["owners"]}).run(inv)
 
     def _save(self, inv, text, base):
         return inventory.Op("deck.save", {"deck_id": self.params["deck_id"], "text": text,
@@ -97,11 +100,34 @@ class _KitThenSave:
 
     def run(self, inv):
         p = self.params
+        if self.known_rows:
+            held = ops_decks._current(inv, p["deck_id"], p["base_sha256"])
+            _check_kit_rows(inv, self.known_rows, held.id)
+            final = decks.parse_deck(p["text"].encode("utf-8"), held.slug, held.kind, None, held.space)
+            ops_decks.check_kit(inv, held.id, final, p["owners"])
+        if self.handoff:
+            return self._handoff(inv)
         if self.building:
             inv, _ = self._save(inv, _with_kit(p["text"], inv.deck(p["deck_id"])), p["base_sha256"])
             return self._kit(inv, _held_sha(inv, p["deck_id"], p["base_sha256"]))
         inv, _ = self._kit(inv, p["base_sha256"])
         return self._save(inv, p["text"], _held_sha(inv, p["deck_id"], p["base_sha256"]))
+
+    def _handoff(self, inv):
+        """Changing owners never validates a new choice against the previous player."""
+        p = self.params
+        held = ops_decks._current(inv, p["deck_id"], p["base_sha256"])
+        before = ops_decks.parsed_deck(held)
+        final = decks.parse_deck(p["text"].encode("utf-8"), held.slug, held.kind, None, held.space)
+        # The first real kit.set rechecks the original holder's owner and SHA.
+        # Even an unchanged shared field is restored only after the player is saved.
+        clear = [{"holder": held.id, "field": field, "value": None, "loose": True}
+                 for field, value in zip(ops_decks.KIT_FIELDS, ops_decks.kit_of(before)) if value]
+        if clear:
+            inv, _ = self._kit(inv, p["base_sha256"], clear)
+        inv, saved = self._save(inv, _with_kit(p["text"], inv.deck(held.id)), _held_sha(inv, held.id, p["base_sha256"]))
+        restored = _kit_changes(held.id, ops_decks.parsed_deck(inv.deck(held.id)), final)
+        return self._kit(inv, _held_sha(inv, held.id, p["base_sha256"]), restored) if restored else (inv, saved)
 
 
 def _held_sha(inv, deck_id, fallback):
@@ -184,6 +210,47 @@ def _kit_changes(deck_id, before, after):
             if (was or None) != (now or None)]
 
 
+def _check_kit_rows(inv, pairs, deck_id):
+    """A recognized choice cannot become unchecked legacy text after a deletion."""
+    from decklab.lib import accessories
+    try:
+        rows = accessories.from_sheet(inv.accessories, strict=True).rows_by_id
+    except (ValueError, OSError):
+        raise ops_decks.DeckRefused("The accessories could not be checked. Review the player and kit again.",
+                                   409, "kit", [deck_id]) from None
+    if any(row_id not in rows or rows[row_id]["kind"] != field for field, row_id in pairs):
+        raise ops_decks.DeckRefused("The accessories changed after this player and kit were chosen. "
+                                   "Review them again.", 409, "kit", [deck_id])
+
+
+def reviewed_kit_rows(data, deck, fields, profile):
+    """Optional recognized-choice intent, bound to the request's complete final fields; never authority."""
+    from decklab.lib import accessories
+    if "kit_rows" not in data:
+        return frozenset()
+    raw = data["kit_rows"]
+    if deck is None or not isinstance(raw, list) or len(raw) > 2 \
+            or not {"player", *ops_decks.KIT_FIELDS}.issubset(fields):
+        raise ApiError(400, "The player, sleeves and deck box could not be verified. Review them together again.")
+    _sha(data.get("sha256"))
+    pairs = set()
+    for row in raw:
+        if not isinstance(row, dict) or set(row) != {"field", "id"} or row["field"] not in ops_decks.KIT_FIELDS \
+                or not isinstance(row["id"], str) or not accessories.valid_id(row["id"]) \
+                or row["id"] != fields.get(row["field"]) or any(field == row["field"] for field, _ in pairs):
+            raise ApiError(400, "The player, sleeves and deck box could not be verified. Review them together again.")
+        pairs.add((row["field"], row["id"]))
+    guard.require(profile, "deck.edit", deck)
+    guard.require(profile, "deck.edit", guard.deck_after(deck, fields))
+    _require_kit_moves(profile, deck, fields)
+    guard.require_kit_choice(profile, guard.deck_after(deck, fields), fields)
+    try:
+        _check_kit_rows(inventory.current(), pairs, deck.deck_id)
+    except ops_decks.DeckRefused as error:
+        raise ApiError(error.code, _public(error)) from None
+    return frozenset(pairs)
+
+
 # ---- the endpoints
 
 def save_deck(body):
@@ -215,7 +282,7 @@ def save_deck(body):
     building or idea) removes its Built version, Sleeves and Deck box."""
     data = _parse_body(body)
     profile = _writer(data)
-    _keys(data, ("profile", "id", "sha256"), ("lists", "fields", "confirm_empty", "prose", "mark_current"))
+    _keys(data, ("profile", "id", "sha256"), ("lists", "fields", "confirm_empty", "prose", "mark_current", "kit_rows"))
     _flag(data, "confirm_empty")
     mark_current = _flag(data, "mark_current")
     prose = drafts._read_prose(data)
@@ -233,6 +300,7 @@ def save_deck(body):
         raise ApiError(500, f"{deck_id} can't be saved: it has {decks.NO_DECKLIST}")
     draft = drafts._read_draft(data, kind, deck)
     guard.require(profile, "deck.edit", guard.deck_after(deck, draft.fields))
+    reviewed_rows = reviewed_kit_rows(data, deck, draft.fields, profile)
     choosing = guard.accessories_changed(deck, draft.fields)
     if choosing:
         guard.require_kit_choice(profile, guard.deck_after(deck, draft.fields), draft.fields)
@@ -266,8 +334,14 @@ def save_deck(body):
         kit = _kit_changes(deck_id, before, decks.parse_deck(out.encode("utf-8"), slug, kind, path, deck.space))
         # A kit only freed (a deck taken apart) is no choice to check: anyone who may edit the deck may.
         building = before.status != "built" and deck.status == "built"
-        op = (_KitThenSave(deck_id, out, sha, kit, guard.accessory_owners(profile) if choosing else None, building)
-              if kit else inventory.Op("deck.save", {"deck_id": deck_id, "text": out, "base_sha256": sha}))
+        handoff = before.status == deck.status == "built" and before.player != deck.player \
+            and bool(any(ops_decks.kit_of(before)) or any(ops_decks.kit_of(deck)))
+        known = ({(field, " ".join(value.split())) for field, value in zip(ops_decks.KIT_FIELDS, ops_decks.kit_of(deck))
+                  if value and " ".join(value.split()) in {row.text("id") for row in inventory.current().accessories.rows}}
+                 if handoff else set()) | reviewed_rows
+        op = (_KitThenSave(deck_id, out, sha, kit, guard.accessory_owners(profile) if choosing or handoff or reviewed_rows else None,
+                           building, handoff=handoff, known_rows=known)
+              if kit or handoff or reviewed_rows else inventory.Op("deck.save", {"deck_id": deck_id, "text": out, "base_sha256": sha}))
         after, _ = apply_op(op, profile, f"save {deck.title}", _deck_refused(deck_id, deck.title, profile))
         # As stored: kit.set may place a kit line elsewhere than the page's text did.
         new_sha = _held_sha(after, deck_id, decks.text_sha(out))
@@ -316,7 +390,7 @@ def _require_kit_moves(profile, deck, fields):
     owners = guard.accessory_owners(profile)
     if not guard.sees_kit({"space": deck.space, "player": deck.player}, owners):
         raise ApiError(403, "This deck's sleeves and deck box aren't yours to hand on: only their owner can "
-                            "change who plays it while it holds them.")
+                            "change who plays it while it holds them.", reason=guard.KIT_OWNERSHIP)
     guard.require_kit_choice(profile, guard.deck_after(deck, fields),
                              {key: value or "" for key, value in kit.items()})
 

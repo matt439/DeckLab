@@ -5,8 +5,8 @@ was imported into. Also the Collection page's API on the database backend (its s
 409s and the raw import kept in collection_import), "Add a precon" on the database, and
 `python -m decklab.db collection`'s name check and list, and its merge on the files backend.
 
-Run from the repo root: python -m unittest decklab.tests.test_collection_ops
-(the database half skips without PostgreSQL; see db_support).
+Run from the repo root: python scripts/test_fixtures.py decklab.tests.test_collection_ops.
+The protected default skips PostgreSQL integration; that needs separate explicit qualification.
 """
 import argparse
 import contextlib
@@ -21,7 +21,7 @@ from datetime import date
 from pathlib import Path
 from unittest import mock
 
-from decklab.db import inv_collection
+from decklab.db import inv_collection, read_notices
 from decklab.lib import cards, inventory
 from decklab.lib.inventory import Op, ops_collection as ops, rules
 from decklab.lib.inventory.files import FileInventory
@@ -39,6 +39,22 @@ USER2 = HEADER + "Elvish Mystic,cmm,648,nonfoil,1,,,Reign of Dragons precon\n"
 OLD_IMPORT = "x" * 900
 MATT = Actor("matt", "Matt", "home")
 EMPTY = hashlib.sha256(b"").hexdigest()          # a space with no cards
+
+
+def _private_visibility():
+    """Legacy CLI fixtures read a fresh fake switch snapshot, never a configured PgStore."""
+    store = mock.Mock(visibility=mock.Mock(return_value={}))
+    return mock.patch.object(read_notices.pg, "PgStore", return_value=store)
+
+
+def _listing_sha(case, stderr):
+    """Require the separate privacy notice and the exact, authoritative final SHA line."""
+    lines = stderr.splitlines(keepends=True)
+    case.assertEqual(len(lines), 2, stderr)
+    case.assertEqual(lines[0], "Privacy: collection in space user2 is Private to that space. "
+                              "Do not relay it outside that space.\n")
+    case.assertRegex(lines[-1], r"\Asha [0-9a-f]{64} \(give it to collection edit or apply as --expect\)\n\Z")
+    return lines[-1].split()[1]
 
 
 def elves(**changes):
@@ -424,7 +440,8 @@ class CollectionCliTests(unittest.TestCase):
 
     def run_cli(self, func, **args):
         out = io.StringIO()
-        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()), inventory.pinned():
+        with _private_visibility(), contextlib.redirect_stdout(out), \
+                contextlib.redirect_stderr(io.StringIO()), inventory.pinned():
             self.assertEqual(func(argparse.Namespace(space="home", **args)), 0)
         return out.getvalue()
 
@@ -552,10 +569,10 @@ class CollectionEditCliTests(tce.CollectionEditTestCase):
 
     def sha(self):
         err = io.StringIO()
-        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(err), inventory.pinned():
+        with _private_visibility(), contextlib.redirect_stdout(io.StringIO()), \
+                contextlib.redirect_stderr(err), inventory.pinned():
             inv_collection._list(argparse.Namespace(space="user2"))
-        self.assertRegex(err.getvalue(), r"^sha [0-9a-f]{64} \(give it to collection edit or apply as --expect\)\n$")
-        return err.getvalue().split()[1]
+        return _listing_sha(self, err.getvalue())
 
     def edit(self, *, code=0, expect=None, message="Fix the elves", **options):
         args = dict(space="user2", set="fdn", number="227", finish="nonfoil", quantity=None, condition=None,
@@ -655,9 +672,9 @@ class CollectionApplyCliTests(tce.CollectionEditTestCase):
     def listing(self):
         """(collection list's CSV, its sha) for User2's space."""
         out, err = io.StringIO(), io.StringIO()
-        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err), inventory.pinned():
+        with _private_visibility(), contextlib.redirect_stdout(out), contextlib.redirect_stderr(err), inventory.pinned():
             inv_collection._list(argparse.Namespace(space="user2"))
-        return out.getvalue(), err.getvalue().split()[1]
+        return out.getvalue(), _listing_sha(self, err.getvalue())
 
     def file(self, text, name="cards.csv", data=None):
         path = self.box.root / name
@@ -784,7 +801,8 @@ class CollectionApplyCliTests(tce.CollectionEditTestCase):
             self.ROWS.replace("Reign of Dragons precon", "Ōkami trade 日本"), encoding="utf-8", newline="")
         raw = io.BytesIO()
         stdout = io.TextIOWrapper(raw, encoding="cp1252", errors="replace")    # a Windows pipe's code page
-        with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(io.StringIO()), inventory.pinned():
+        with _private_visibility(), contextlib.redirect_stdout(stdout), \
+                contextlib.redirect_stderr(io.StringIO()), inventory.pinned():
             inv_collection._list(argparse.Namespace(space="user2"))
         self.assertIn("Ōkami trade 日本".encode("utf-8"), raw.getvalue())
         self.assertIn("Nothing to change", self.run_apply(self.file("", data=raw.getvalue())))

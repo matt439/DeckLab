@@ -313,8 +313,15 @@ Its five columns keep the unit estimate under the card name and the extended
 missing cost in the last column. Native `.th-sort` buttons for Card, Missing and
 ~AUD missing maintain `aria-sort` and focus, reorder each whole per-card `tbody`
 with its labels, and leave the total footer last. Sorting copies the row list,
-keeps unknown costs last in either direction, and makes no fetch or write. Late
-controls check the original person, route and connected table.
+keeps unknown costs last in either direction, and makes no fetch or write. Missing
+home rows may add the existing strict saved-shop line inside that same `tbody`,
+with a full-width caption distinguishing generic nonfoil unit prices from the
+list's named printing/finish. Retailer facts never change estimates or totals.
+Their API capture requires original-selector visibility plus both home inventory
+and home-record access; Public collections alone grant no cache coverage. Late
+sort controls check the original profile object/id/space, screen/data/owned rows,
+canonical deck/list route, main, table/wrapper/frame and header/button identity.
+Legitimate Cards filters and returning to the same Cards tab retain sorting.
 
 `shopping-buying.js` follows `shopping.js`. It draws dated reference-price footers,
 Missing cards across decks and the folded By shop view from the current Shopping
@@ -682,6 +689,17 @@ Per-viewer conveniences only, through core.js's `local` (every key gets the pref
 - The editor's card finder is `GET /api/deck/find` (not `/api/deck/cards`, which is the picker's).
 
 The deck Overview's opponent-specific sideboard section (`deck-sideboard.js`) uses `cardTile` in the shared `card-tiles` grid for historical in/out printings, in two columns that stack on phones. It loads viewer-filtered play records only when Overview is drawn, checks route/profile/node before applying replies, and uses the Game log's preview/save sheet with both chosen list versions. Stored records and their hashes contain no presentation fields.
+
+`play-pods.js` follows `play.js` and owns the separate Commander-pod section,
+three/four-seat form and explicit review/Save sheets. It uses ordinary fields,
+literal player/commander labels and recorded-list details. Eligibility and edit
+controls require positive server flags. Historic selections survive corrections;
+inactive seat choices and failed drafts stay in the open form only. Async replies
+and Save belong to the original profile object, space, route, main/frame, source
+control, data, record/hash, draft generation and connected sheet controls. A late
+reply cannot take over a replacement page or sheet. There is no timer, hide-save,
+local-storage draft or automatic refresh/rebase. Pod counts and cards remain
+separate from two-player summaries, defaults, Compare and the life counter.
 
 The Overview's `deck-opponents.js` section uses ordinary links and a checkbox
 sheet for usual opponents. The API resolves reciprocal links and filters both

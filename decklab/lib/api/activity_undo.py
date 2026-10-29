@@ -90,14 +90,19 @@ def review_hint(change, shown, profile):
         and type(after.get("id")) is int and 1 <= after["id"] < 10 ** 18 \
         and type(after.get("position")) is int and after["position"] >= 0 and row.get("key") == {"id": after["id"]}
     insertion = (row.get("table") == "collection_card" or token_insert) and row.get("op") == "INSERT" and before is None
-    deletion = row.get("table") == "collection_card" and row.get("op") == "DELETE" and after is None and isinstance(before, dict)
+    token_deletion = row.get("table") == "token_card" and isinstance(before, dict) \
+        and type(before.get("id")) is int and 1 <= before["id"] < 10 ** 18 \
+        and type(before.get("position")) is int and before["position"] >= 0 and row.get("key") == {"id": before["id"]}
+    deletion = (row.get("table") == "collection_card" or token_deletion) and row.get("op") == "DELETE" \
+        and after is None and isinstance(before, dict)
     if not kind or not deletion and (not isinstance(after, dict) or not insertion and (row.get("op") != "UPDATE" or not isinstance(before, dict))):
         return None
     space = _space(profile)
     if not insertion and before.get("space_id") != space or not deletion and after.get("space_id") != space \
             or not guard.allowed(profile, kind + ".edit", space) or shown.get("id") != change.get("id"):
         return None
-    return {"review": True}
+    return ({"review": True, "kind": "tokens", "action": "token_restore_review", "read_only": True}
+            if token_deletion and deletion else {"review": True})
 
 
 def _refused(error):
@@ -136,6 +141,34 @@ def _review(change_id, profile):
 
 
 def _project(plan):
+    if plan.get("action") == "token_restore_review":
+        from decklab.lib.inventory import undo_token_delete
+        if plan.get("kind") != "tokens" or plan.get("read_only") is not True or plan.get("current") is not None \
+                or plan.get("identity_policy") != undo_token_delete.IDENTITY_POLICY \
+                or plan.get("physical_confirmation_required") is not True or plan.get("packing_restored") is not False \
+                or not isinstance(plan.get("restore"), dict) or set(plan["restore"]) != set(rules.TOKEN_FIELDS) \
+                or not isinstance(plan.get("expect"), str) or not SHA.fullmatch(plan["expect"]) \
+                or not isinstance(plan.get("label"), str) or plan["label"] != rules.token_label(plan["restore"]):
+            raise ApiError(503, UNCONFIRMED)
+        try:
+            raw = plan["restore"]
+            checked = rules.token_page_row(raw)
+            if type(raw["quantity"]) is not int or {**checked, "quantity": int(checked["quantity"])} != raw:
+                raise ValueError("Unconfirmed historical row")
+            rules.validate_token_row(checked, "Token review", incoming=True)
+            if not rules.token_known(raw):
+                raise ValueError("Unconfirmed physical printing")
+            for key, value in raw.items():
+                if key != "quantity":
+                    value.encode("utf-8", errors="strict")
+                    if any(ord(char) < 32 or ord(char) == 127 for char in value):
+                        raise ValueError("Unconfirmed historical text")
+        except (ValueError, KeyError, TypeError, UnicodeError):
+            raise ApiError(503, UNCONFIRMED) from None
+        return {"available": True, "id": plan["change_id"], "expect": plan["expect"], "kind": "tokens",
+                "space": plan["space"], "label": plan["label"], "action": undo_token_delete.ACTION, "read_only": True,
+                "current": None, "restored": dict(raw), "identity_policy": undo_token_delete.IDENTITY_POLICY,
+                "physical_confirmation_required": True, "packing_restored": False}
     if plan.get("action") in BATCH_ACTIONS:
         return _batch_project(plan)
     kind = plan["kind"]
@@ -254,6 +287,9 @@ def apply_undo(body):
     profile, change_id = _writer(data), _id(data["id"])
     plan = _review(change_id, profile)  # hidden/missing is resolved before malformed or stale receipt errors
     _project(plan)
+    if plan.get("read_only") is True or plan.get("action") == "token_restore_review":
+        from decklab.lib.inventory.undo_token_delete import NO_APPLY
+        raise ApiError(400, NO_APPLY)
     removing = plan.get("action") in ("remove", "batch_remove")
     adding = plan.get("action") in ("add", "batch_add")
     if adding:

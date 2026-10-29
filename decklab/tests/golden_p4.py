@@ -95,12 +95,19 @@ older code (the committed tests/fixtures/inventory_goldens):
   line, so a line dumped as a whole object ({quantity, name, set, number, finish}) gains
   "category". Only a None category on exactly such an object is dropped: a line with a
   category, and every other field, still compares. test_deck_categories checks the categories.
+- "absent-shop-prices": E5-S08 adds an explicit missing-card shop check to deck Prices. Only
+  the exact typed 15-field not-checked default is dropped from positive integer shortfalls
+  in synthetic home deck_view answers: the raw script, the exact local-script sentinel and
+  configured home profiles. Covered rows, members/outside viewers, other paths and all saved,
+  malformed or additional facts still compare. test_golden_shop_prices checks this boundary;
+  deck shop-price tests separately check production prices and permissions.
 """
 import copy
 import re
 
 from decklab.lib import config
 from decklab.tests import golden_dump as gate
+from decklab.tests import golden_shop_prices
 
 LOCAL = "(local)"                    # the viewer key of a request on the home network naming nobody
 RECEIVED_ON = "2026-12-31"           # the date a receipt preview receives every pending component on
@@ -689,6 +696,10 @@ def assembly_section_defaults(dump):
                 summary.pop("assembled")
 
 
+def absent_shop_prices(dump):
+    golden_shop_prices.normalise(dump, _profiles())
+
+
 EXPECTED_P4 = (("no-git", no_git), ("deck-ids", deck_ids), ("hidden-inventory", hidden_inventory),
                ("per-viewer-accessory-token", per_viewer_accessory_token))
 EXPECTED_P5 = (("deck-id-messages", deck_id_messages), ("phase-5-wording", phase5_reworded),
@@ -699,7 +710,7 @@ EXPECTED_P5 = (("deck-id-messages", deck_id_messages), ("phase-5-wording", phase
                ("assembly-section-defaults", assembly_section_defaults), ("swap-defaults", swap_defaults),
                ("assembly-colors", assembly_colors), ("considering-defaults", considering_defaults),
                ("box-label-defaults", box_label_defaults), ("category-defaults", category_defaults),
-               ("storage-location-defaults", storage_location_defaults))
+               ("storage-location-defaults", storage_location_defaults), ("absent-shop-prices", absent_shop_prices))
 
 
 def normalise(dump):

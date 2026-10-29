@@ -71,7 +71,7 @@ function openCollectionSheet(cv, row = null, opts = {}) {
   const editing = Boolean(row);
   const sheet = colOpenSheet(editing ? row.name : `Add a card to ${colWhose(cv.space)}`, { wide: true });
   const ctx = { cv, sheet, row, editing, base: row ? colBase(row) : null, busy: false, printings: [], chosen: -1, nameSeq: 0,
-    printSeq: 0, suggestTimer: 0, stripFilter: "", boxRepair: opts.repair || null };
+    printSeq: 0, suggestTimer: 0, stripFilter: "", boxRepair: opts.repair || null, addHash: location.hash };
   ctx.form = el("form", { class: "col-form", novalidate: true,
     onsubmit: (event) => { event.preventDefault(); saveCollectionSheet(ctx); } });
   ctx.message = el("div", { class: "col-sheet-message", role: "status", "aria-live": "polite" });
@@ -360,6 +360,7 @@ function colFormRow(ctx) {
 
 async function saveCollectionSheet(ctx) {
   if (ctx.busy || ctx.sheet.closed || !boxCollectionEditorHere(ctx)) return;
+  if (!ctx.editing && (!ctx.form.isConnected || !colAddReady(ctx))) return;
   const row = colFormRow(ctx);
   if (!row) return;
   const body = { action: ctx.editing ? "edit" : "add", row };
@@ -372,10 +373,22 @@ async function saveCollectionSheet(ctx) {
     if (ctx.sheet.closed || !boxCollectionEditorHere(ctx)) return;
     await colSend(ctx, body);
   } catch (error) {
-    if (!ctx.sheet.closed) clear(ctx.message).append(el("div", { class: "box box-crit", role: "alert" }, el("p", { text: error.message })));
+    if (!ctx.sheet.closed && (body.action !== "add" || colAddHere(ctx)))
+      clear(ctx.message).append(el("div", { class: "box box-crit", role: "alert" }, el("p", { text: error.message })));
   } finally {
-    if (!ctx.sheet.closed) colSheetBusy(ctx, false);
+    if (!ctx.sheet.closed && !ctx.addSave?.done && !ctx.addSave?.stale) colSheetBusy(ctx, false);
   }
+}
+
+/** Add belongs to its original route and top sheet; stale native controls never start another add. */
+function colAddHere(ctx, trigger = null) {
+  return ctx.addHash === location.hash && !ctx.sheet.closed && colActive(ctx.cv) && boxCollectionEditorHere(ctx)
+    && [...document.querySelectorAll("dialog[open]")].at(-1) === ctx.sheet.dialog
+    && (!trigger || trigger.isConnected && !trigger.disabled && ctx.sheet.foot.contains(trigger));
+}
+
+function colAddReady(ctx, trigger = null) {
+  return !ctx.addSave?.pending && !ctx.addSave?.done && !ctx.addSave?.stale && colAddHere(ctx, trigger);
 }
 
 /** Send a save; on success close the sheet and show the new list. A list changed meanwhile offers to
@@ -383,18 +396,34 @@ async function saveCollectionSheet(ctx) {
 async function colSend(ctx, body) {
   const cv = ctx.cv;
   if (ctx.sheet.closed || !colActive(cv) || !boxCollectionEditorHere(ctx)) return;
+  if (body.action === "add" && !colAddReady(ctx)) return;
   body = await colReductionReason(ctx, body);
   if (!body || ctx.sheet.closed || !colActive(cv) || !boxCollectionEditorHere(ctx)) return;
+  if (body.action === "add" && !colAddReady(ctx)) return;
+  const requestHash = location.hash;
+  const addSave = body.action === "add" ? { pending: true, done: false, stale: false } : null;
+  if (addSave) ctx.addSave = addSave;
   clear(ctx.message).append(loadingBox("Saving…"));
   try {
     const answer = await apiWrite("/api/collection/save", { space: cv.space, sha256: cv.sha256, ...body });
-    if (!boxCollectionEditorHere(ctx)) return;
+    if (addSave) addSave.done = true;
     const what = `${body.row.name} (${colPrinting(body.row)})`;
     const words = answer.merged ? `${what}: added to the row already listed.`
       : `${what} ${body.action === "add" ? "added" : "saved"}.`;
+    if (addSave && (location.hash !== requestHash || !colAddHere(ctx))) {
+      cv.rows = null; state.library = null;
+      if (state.profile?.id === cv.profile) toast(words);
+      return;
+    }
+    if (!boxCollectionEditorHere(ctx)) return;
+    const filing = body.action === "add" ? colFilingSnapshot(answer, cv, "add") : null;
     ctx.sheet.close();
-    colChanged(cv, answer, words);
+    colChanged(cv, answer, words, filing);
   } catch (error) {
+    if (addSave && (location.hash !== requestHash || !colAddHere(ctx))) {
+      addSave.stale = true; cv.rows = null; state.library = null;
+      return;
+    }
     if (ctx.sheet.closed || !colActive(cv) || !boxCollectionEditorHere(ctx)) return;
     if (error.status === 409 && error.data?.in_use && error.data.confirm_in_use) {
       const proceed = await askCollectionInUse(error.data.in_use, body.action);
@@ -406,6 +435,8 @@ async function colSend(ctx, body) {
     }
     if (error.status === 409 && error.data && Array.isArray(error.data.rows)) { showCollectionConflict(ctx, error, body); return; }
     clear(ctx.message).append(el("div", { class: "box box-crit", role: "alert" }, el("p", { text: error.message })));
+  } finally {
+    if (addSave) addSave.pending = false;
   }
 }
 
@@ -427,11 +458,12 @@ function showCollectionConflict(ctx, error, body) {
     } }, discard]);
     return;
   }
-  const resend = (next) => {
+  const resend = (next, trigger = null) => {
+    if (next.action === "add" && !colAddReady(ctx, trigger)) return Promise.resolve();
     clear(sheet.body).append(ctx.message);
     sheetActions(sheet, [{ text: "Saving…", kind: "primary", value: "saving", disabled: true }]);
     return colSend(ctx, next).then(() => {
-      if (!sheet.closed && sheet.foot.querySelector('[data-action="saving"]')) {
+      if (!sheet.closed && !ctx.addSave?.pending && !ctx.addSave?.done && !ctx.addSave?.stale && sheet.foot.querySelector('[data-action="saving"]')) {
         sheetActions(sheet, [{ text: "Close", onclick: () => sheet.close() }, discard]);
       }
     });
@@ -440,16 +472,17 @@ function showCollectionConflict(ctx, error, body) {
     el("p", { text: "Nothing was saved. Your changes are still here." }));
   if (body.action === "add") {
     sheet.body.append(el("p", { text: "Load the latest list and your card is added to it." }));
-    sheetActions(sheet, [{ text: "Load the latest and add my card", kind: "primary", onclick: () => resend(body) }, discard]);
+    sheetActions(sheet, [{ text: "Load the latest and add my card", kind: "primary", onclick: event => resend(body, event.currentTarget) }, discard]);
     return;
   }
   const theirs = cv.rows.find((r) => colKey(r) === colKey(body.original));
   if (!theirs) {
     sheet.body.append(el("p", { text: "It has been removed from the list since you opened it, so there's nothing left to edit." }),
       el("p", { text: `If you still have it, add it as a new card (${body.row.name} ×${body.row.quantity}). Otherwise discard your changes.` }));
-    sheetActions(sheet, [{ text: `Add ${body.row.name} ×${body.row.quantity} as a new card`, kind: "primary", onclick: () => {
+    sheetActions(sheet, [{ text: `Add ${body.row.name} ×${body.row.quantity} as a new card`, kind: "primary", onclick: event => {
+      if (!colAddReady(ctx, event.currentTarget)) return;
       ctx.editing = false;
-      resend({ action: "add", row: body.row, ...(Object.hasOwn(body, "location") ? { location: body.location } : {}) });
+      resend({ action: "add", row: body.row, ...(Object.hasOwn(body, "location") ? { location: body.location } : {}) }, event.currentTarget);
     } }, discard]);
     return;
   }

@@ -747,6 +747,14 @@ function muDrawRankings(host, entry, format) {
   replaceMatchupContent(host, () => muRankingContent(host, entry, format));
 }
 
+/** Current selector context, separate from the saved games and each rating group's denominator. */
+function manualFieldExclusionNote(count, className) {
+  const known = Number.isSafeInteger(count) && count >= 0 && count <= 1000;
+  return el("p", { class: className, text: known
+    ? `${count} ${count === 1 ? "list" : "lists"} manually excluded from the current field.`
+    : "The number of lists manually excluded from the current field is unavailable." });
+}
+
 function muRankingContent(host, entry, format) {
   clear(host);
   host.setAttribute("aria-busy", String(!!entry.loading));
@@ -762,6 +770,7 @@ function muRankingContent(host, entry, format) {
     "The current field chooses its planned or play-now list for each deck, with its saved additions and exclusions. " +
     "Other current lists stay visible below. A rating is the model's estimated win rate against an average current field list in the same group, balanced for who starts. " +
     "Rank ranges show how uncertain the order is; Forge's AI is not a promise about a real game." }));
+  host.append(manualFieldExclusionNote(answer.manual_excluded, "sub mu-manual-excluded"));
   if (groups.length > 1) host.append(markedBox("warn", "h3", "Separate rating groups",
     el("p", { text: "These groups have no games connecting them. Ranks compare lists only within the same group; there is no ranking between groups." })));
   const shown = new Set();

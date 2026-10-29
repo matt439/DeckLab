@@ -116,6 +116,37 @@ This downloads Scryfall's card data, about 100 MB and a few minutes. The server 
 
 ## 7. Start it and open it
 
+Before starting the server, check the setup:
+
+```
+python -m decklab.doctor
+python -m decklab.doctor --json
+```
+
+Both forms give the same ordered findings and next setup steps. Exit status `0`
+means the core checks passed, `1` means known setup work remains, and `2` means a
+core check could not be verified (or the command arguments were invalid). Optional
+Java/Forge findings do not block the core app.
+
+The command reads the local configuration and card index and attempts one app-role
+database connection. It checks PostgreSQL's version, the bundled migration
+checksums and inventory/deck initialization markers in a read-only transaction;
+it does not inspect collection contents or establish complete schema, grant or
+data integrity. Connection attempts use a two-second per-address timeout, queries
+a five-second timeout and locks a two-second timeout. Name resolution is outside
+that connection timeout; multi-host lists are left unverified without contact.
+Oversized inputs and inaccessible files also remain explicit findings.
+
+The report contains fixed descriptions, with no paths from your configuration,
+emails, credentials, records or raw errors. No install, download, migration,
+schedule, service or game runs. Java is checked only when `forge_java` selects an
+explicit path; this command does not search for or execute Java. The optional
+checks establish declared Java version and Forge archive-file presence only, not
+archive integrity, the expected fork build, card-log readiness or successful games.
+Use step 8's separate qualification when setting up simulations.
+
+When the core checks pass, start the server:
+
 ```
 python decklab/server.py
 ```

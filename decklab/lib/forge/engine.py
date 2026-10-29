@@ -482,7 +482,7 @@ def _todays_kind():
     return KIND_DECKLAB if install.status()["card_log"]["ready"] else KIND_PLAIN
 
 
-def today(kind=None):
+def today(kind=None, *, read_only=False):
     """The engine a run would play now (as current() gives it), worked out without Java or a
     build: of kind, or (None) the kind the card log's readiness says (_todays_kind). Forge's
     version is install.forge_version(), and "forge" the engine release (install.engine_forge);
@@ -493,8 +493,16 @@ def today(kind=None):
     remembered for the jar's build (or the version's last build), and isn't remembered itself.
     Wave 3: config's knobs give performance_mode and game_patches as install._setup() does, and
     "deployed" is the run user folder's (install._run_user_dir) override files as they are now:
-    this never deploys (install.status(), which the kind asks, does)."""
-    memo = getattr(_held, "memo", None)
+    this never deploys (install.status(), which the kind asks, does).
+
+    read_only=True requires an explicit kind and retains the same engine-release/key
+    semantics without remembering metadata or creating/deploying a run folder. An
+    unconfirmed existing deployment yields complete=False and identity_problem; it
+    never borrows the normal held memo or silently uses the real performance folder.
+    """
+    if read_only and kind not in (KIND_DECKLAB, KIND_PLAIN):
+        raise ValueError("A read-only engine identity needs an explicit engine kind.")
+    memo = None if read_only else getattr(_held, "memo", None)
     if memo is not None and kind in memo:
         return memo[kind]
     asked = kind
@@ -504,7 +512,7 @@ def today(kind=None):
             memo[None] = memo[kind]
             return memo[kind]
     settings = common._settings()
-    version = install.forge_version()
+    version = install.forge_version(remember=False) if read_only else install.forge_version()
     try:
         forge_dir = Path(settings["forge_dir"])
         name, found = install._find_jar(forge_dir)
@@ -517,7 +525,8 @@ def today(kind=None):
         read, ai = _read_ai(forge_dir, known)
         read_patches = _jar_patches(jar)
         release = install.engine_forge(forge_dir, name)
-        _remember(version, build, read, read_patches, release)
+        if not read_only:
+            _remember(version, build, read, read_patches, release)
         patches = read_patches if read_patches is not None else _noted_patches(known)
         release = release if release is not None else _noted_release(known)
         complete = release is not None and (kind != KIND_DECKLAB or patches is not None)
@@ -529,6 +538,22 @@ def today(kind=None):
         complete = (version is not None and "ai" in known and release is not None
                     and (kind != KIND_DECKLAB or patches is not None))
     performance_mode, patches_on = _knobs(settings)
+    if read_only:
+        user_dir = _read_only_user_dir(performance_mode)
+        deployed = (_deployed(user_dir) if user_dir is not None else
+                    {"user_dir": "", "index": {}, "hash": UNREADABLE_OVERRIDES})
+        problem = None if complete else "The current Forge engine identity could not be confirmed."
+        if user_dir is None:
+            problem = "The expected Forge run folder is not available; planning does not create it."
+        elif deployed["hash"] == UNREADABLE_OVERRIDES:
+            problem = "The deployed card-script overrides could not be read; current engine identity is unknown."
+        else:
+            problem = overrides.read_only_deployment_problem(user_dir) or problem
+        eng = _engine(kind, release, settings["forge_clock_s"], (patches or []) if patches_on else [],
+                      deployed, ai, complete and problem is None, performance_mode)
+        if problem:
+            eng["identity_problem"] = problem
+        return eng
     try:
         user_dir = install._run_user_dir(performance_mode)
     except common.ForgeError:

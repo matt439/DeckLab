@@ -2,13 +2,21 @@
 
 Every record is a row of the database's play_record table, kept through the
 state store (decklab.lib.state: play_get, play_put, play_list). A preview
-changes nothing. Saving rechecks record and deck hashes under the editor's
-write lock (the decks are still files), and the store refuses the write if the
-record changed meanwhile. Historical game snapshots survive later deck edits;
+changes nothing. Preview and save recheck record and deck hashes under this
+process's saving._save_lock. PostgreSQL inventory writes use a separate lock;
+the state store checks the record hash again in its own transaction and
+refuses a changed record. Historical game snapshots survive later deck edits;
 correcting a result never rewrites them.
 
-A record's sha256 is the hash of its JSON as the files were written
-(state.rules.record_sha): the page sends it back as the version it read.
+Commander pods use mode='pod', game_version=2 and three or four stable seats,
+inside the same version-1 game envelope. play_pods owns their request and private
+opponent-label projection. The overview returns them in pods, with independent
+pod_lists choices; games remains the two-player list consumed by Head to head.
+Only the absence of both game-format markers identifies an old two-player game.
+
+A record's sha256 hashes its canonical JSON bytes (state.rules.record_sha):
+sorted keys, two-space indentation, UTF-8 and a trailing newline. The page
+sends it back as the version it read.
 
 Records that name decks of two spaces (decision G of the member template,
 E10-S32 and E10-S28's independently public decks and games):
@@ -43,11 +51,11 @@ from collections import Counter
 from datetime import date, datetime, timedelta, timezone
 
 from decklab.lib import cards, decks, inventory, permissions, spaces, state
-from decklab.lib.state import rules
+from decklab.lib.state import pods, rules
 from .card_lookup import _line_json
 from .common import ApiError, _keys, _parse_body, _public, state_errors
 from .library import _deck_sections, check_deck_id, is_half
-from . import guard, saving
+from . import guard, play_pods, saving
 from .settings import _writer
 
 
@@ -137,7 +145,11 @@ def _checked(kind, record_id, record):
         if "space" in record and not isinstance(record["space"], str):
             raise ValueError("invalid recording space")
         rules.record_deck_ids(kind, record)
-        if kind == "games":
+        if kind == "games" and pods.mode(record) == "pod":
+            if type(record["version"]) is not int:
+                raise ValueError("invalid pod record version")
+            play_pods.checked(record)
+        elif kind == "games":
             date.fromisoformat(record["date"])
             if record["result"] not in ("a", "b", "draw") or len(record["sides"]) != 2:
                 raise ValueError("invalid recorded result")
@@ -234,6 +246,8 @@ def _view(kind, record, profile, script=False):
     only. The record itself for a script naming nobody."""
     if not profile and script:
         return record
+    if kind == "games" and pods.mode(record) == "pod":
+        return play_pods.view(record, profile, script)
     own = permissions._space_of(profile) if profile else None
     sees = guard.deck_reader(profile)
     out = copy.deepcopy(record)
@@ -271,7 +285,10 @@ def _writable_decks(kind, record, profile):
 def _rights(kind, record, profile):
     """What profile may change of a record it sees: a game's {"sides": [bool, bool],
     "result": bool} (its own space's sides; the date, result and notes when its space recorded
-    it), a plan's bool. Either needs play.record over the decks it may change."""
+    it), a pod's {"edit": bool} for its recording space, a plan's bool. Each needs
+    play.record over the decks it may change."""
+    if kind == "games" and pods.mode(record) == "pod":
+        return play_pods.rights(record, profile)
     may = guard.allowed(profile, "play.record", _writable_decks(kind, record, profile))
     if kind == "sideboards":
         return may
@@ -469,8 +486,10 @@ def _sideboard(data, previous, profile):
 
 
 def _message(kind, content):
-    """What the audit trail says a save did, by the decks' titles."""
+    """Audit wording: legacy deck titles, or a pod's seat count without private labels."""
     if kind == "games":
+        if pods.mode(content) == "pod":
+            return f"Save {len(content['seats'])}-player pod game"
         a, b = content["sides"]
         return f"Save game {a['title']} vs {b['title']}"
     return f"Save sideboard plan {content['deck']['title']} vs {content['opponent']['title']}"
@@ -483,7 +502,7 @@ def _actor(profile):
 
 
 def _related(kind, record):
-    """The deck ids a stored game (its sides) or sideboard plan (its deck and opponent) names."""
+    """Real deck ids in legacy sides, pod deck seats, or a plan's deck and opponent."""
     return rules.record_deck_ids(kind, record)
 
 
@@ -491,7 +510,8 @@ def _record_decks(record):
     """The decks a game or sideboard plan involves, as permissions takes them:
     each one's library summary ({"space", "player", ...}), or for a deck
     that's gone since, its space with no player."""
-    ids = _related("games" if "sides" in record else "sideboards", record)
+    game = "sides" in record or "mode" in record or "game_version" in record
+    ids = _related("games" if game else "sideboards", record)
     return [decks.find_summary(deck_id) or {"space": spaces.space_of(deck_id), "player": None} for deck_id in ids]
 
 
@@ -506,7 +526,8 @@ def _save(kind, body):
         # wait for the write lock only to fail.
         if not state.reachable():
             raise state.Unavailable("the database isn't reachable")
-        # The lock keeps a deck save from landing between the snapshots and the write.
+        # Serialize play-record preview/save in this process. Fixture deck writes share
+        # this lock; PostgreSQL inventory writes use their own transaction lock.
         with saving._save_lock:
             previous = state.store().play_get(kind, record_id)
             # A record the writer may not see answers as a missing one, before its hash or its
@@ -518,6 +539,8 @@ def _save(kind, body):
                 # Public records are read-only to other spaces, before any conflict or
                 # stored-content validation can return details of the unchanged game.
                 guard.require(profile, "play.record", _writable_decks(kind, previous, profile))
+                if kind == "games" and pods.mode(previous) != "legacy":
+                    raise ApiError(400, play_pods.MODE_MESSAGE)
             sha = _checked(kind, record_id, previous) if previous is not None else None
             if sha != data["sha256"]:
                 raise ApiError(409, rules.CHANGED_MESSAGE)
@@ -601,6 +624,12 @@ def play_overview(deck_id=None):
     record keeps). A game entry also has "can" ({"sides": [bool, bool], "result": bool}: what
     the viewer may change, _rights), a plan entry "cards" ({"out", "in"}: presentation lines
     from its historical sections) and "editable"; none is part of its stored record or sha256.
+    Separately, pods contains three- or four-seat records with can.edit, while
+    pod_lists contains only the viewer's own-space Commander choices, each with
+    a positive boolean can_record. Their external player/commander labels stay
+    private to the recording space even when its game results are Public.
+    games and its can.sides/result remain exclusively the existing 1v1 format.
+
     The lists and decks are only the decks the viewer may see (guard.sees_deck: its own space's,
     filtered before any snapshot is taken, so no warning names a hidden deck), and deck_id
     matches only a record's decks the viewer sees. A record that can't be shown
@@ -616,7 +645,7 @@ def play_overview(deck_id=None):
     # before paying for every deck's snapshots.
     with state_errors():
         stored = {kind: state.store().play_list(kind) for kind in ("games", "sideboards")}
-    snapshots, warnings, about = [], [], {}
+    snapshots, pod_lists, warnings, about = [], [], [], {}
     for summary in guard.visible_decks(decks.list_decks(), viewer):     # before any snapshot (E10-S30)
         if summary.get("error") or is_half(summary):
             continue
@@ -624,11 +653,15 @@ def play_overview(deck_id=None):
                                  "can_record": guard.allowed(viewer, "play.record", [summary])}
         for version in summary["versions"]:
             try:
-                snapshots.append(_snapshot(summary["id"], version))
+                captured = _snapshot(summary["id"], version)
+                snapshots.append(captured)
+                pod_choice = play_pods.choice(summary, captured, viewer)
+                if pod_choice is not None:
+                    pod_lists.append(pod_choice)
             except ApiError as exc:
                 warnings.append(str(exc))
     answer = {"lists": snapshots, "games": [], "sideboards": [], "warnings": warnings, "today": _play_today(),
-              "decks": about}
+              "decks": about, "pods": [], "pod_lists": pod_lists}
     for kind, records in stored.items():
         for record in records:
             # The deck filter matches only decks the viewer sees, so it can't tell a hidden side's deck.
@@ -644,7 +677,8 @@ def play_overview(deck_id=None):
                     entry.update(cards=_plan_cards(record, warnings), editable=_rights(kind, record, viewer))
                 else:
                     entry["can"] = _rights(kind, record, viewer)
-                answer[kind].append(entry)
+                bucket = "pods" if kind == "games" and pods.mode(record) == "pod" else kind
+                answer[bucket].append(entry)
             except (ApiError, AttributeError, KeyError, TypeError) as exc:
                 warnings.append(f"A {kind} record could not be shown: {_public(exc)}")
         # Newest first; games of the same day by when they were recorded, so "each player's last deck"
@@ -652,4 +686,6 @@ def play_overview(deck_id=None):
         answer[kind].sort(key=lambda entry: (entry["record"].get("date", entry["record"]["updated_on"]),
                                              entry["record"].get("created_on") or "",
                                              entry["record"].get("updated_on") or ""), reverse=True)
+    answer["pods"].sort(key=lambda entry: (entry["record"]["date"], entry["record"].get("created_on") or "",
+                                         entry["record"].get("updated_on") or ""), reverse=True)
     return answer

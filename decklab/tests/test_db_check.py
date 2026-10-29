@@ -70,7 +70,7 @@ class CheckTests(_Db):
         self.assertEqual((data["revision"], data["decks_revision"]), ("1", "1"))
         expected = (["accessories"] + [f"tokens ({s})" for s in spaces.space_ids()]
                     + ["orders and queue", "deck tables", "printings in box", "deck aliases", "deck revisions", "deck texts", "deck lines",
-                       "deck headers", "revision rows", "audit trail", "Commander-night notes", "visibility",
+                       "deck headers", "revision rows", "audit trail", "Commander-night notes", "field policy", "visibility",
                        "member departures", "files round trip"])
         self.assertEqual(list(checks), expected)
         failed = {name: c["detail"] for name, c in checks.items() if not c["ok"]}

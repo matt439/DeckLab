@@ -427,14 +427,19 @@ class PgStore:
         return mapped_error(psycopg, error, self._down)
 
     @contextmanager
-    def _change(self, c, actor, message, reason=None, *, profile_ids=(), space_ids=(), orphan_profile_ids=()):
+    def _change(self, c, actor, message, reason=None, *, profile_ids=(), space_ids=(), orphan_profile_ids=(),
+                isolation=None):
         """conn.change() for one write, yielding (cursor, change set id); inside a batch, a
         savepoint in the batch's change set instead (actor, message and reason are the
-        batch's then). Admission remains held until that transaction commits."""
+        batch's then). Admission remains held until that transaction commits.
+        An explicit isolation is only valid for an independent change."""
         batch = self._batch()
+        if batch is not None and isolation is not None:
+            raise ValueError("an explicit transaction isolation cannot be used inside a batch")
         from decklab.db import space_members
         if batch is None:
-            with db.change(actor.id, actor.source, message, reason, conn=c, via=actor.via) as out:
+            options = {"isolation": isolation} if isolation is not None else {}
+            with db.change(actor.id, actor.source, message, reason, conn=c, via=actor.via, **options) as out:
                 space_members.admit(out[0], profile_ids=profile_ids, space_ids=space_ids, actor=actor,
                                     orphan_profile_ids=orphan_profile_ids)
                 yield out
@@ -768,6 +773,18 @@ class PgStore:
             except _Unchanged as unchanged:
                 return unchanged.result
         return self._call(work)
+
+    # ------------------------------------------------------------------ the household's per-format field choices
+
+    def field_policy(self, fmt):
+        """Fresh normalized policy; only a proven schema-ready absence is empty."""
+        from . import pg_field_policy
+        return pg_field_policy.get(self, fmt)
+
+    def field_policy_apply(self, fmt, expected_revision, expected_proof, rule, actor, message, reason=None):
+        """One independently admitted CAS change, after fresh list/epoch proof."""
+        from . import pg_field_policy
+        return pg_field_policy.apply(self, fmt, expected_revision, expected_proof, rule, actor, message, reason)
 
     # ------------------------------------------------------------------ the household's Commander night
 

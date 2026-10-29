@@ -414,12 +414,16 @@ def delete(inv, *, deck_id, base_sha256):
 
 
 @register("precon.add")
-def add_precon(inv, *, space, kind, slug, text, collection, owners=frozenset(), token_rows=(), tokens_sha256=None):
+def add_precon(inv, *, space, kind, slug, text, collection, owners=frozenset(), token_rows=(), tokens_sha256=None,
+               capture_filing=False):
     """A precon's cards merged into the space's collection (collection.import, with collection
     as its parameters) and its deck created (deck.create, owners as its), on the same snapshot:
     one change."""
     from . import ops_collection
-    merged, imported = ops_collection.merge(inv, **dict(collection))
+    params = dict(collection)
+    if capture_filing:
+        params["capture_additions"] = True
+    merged, imported = ops_collection.merge(inv, **params)
     token_cards = 0
     if token_rows:
         from decklab.lib import precon_tokens
@@ -437,6 +441,12 @@ def add_precon(inv, *, space, kind, slug, text, collection, owners=frozenset(), 
             expected = files.rendered_sha256(sheet) if sheet.exists else None
     made, created = create(merged, space=space, kind=kind, slug=slug, text=text, owners=owners)
     extra = {**(imported.extra or {}), **(created.extra or {})}
+    if capture_filing:
+        # A precon creates a holder as well as adding cards. This JSON-only proof lets
+        # optional advice distinguish its new reservations from already held stock.
+        current = made.deck(created.extra["deck"])
+        extra["created_deck"] = {"id": current.id, "space": current.space, "sha256": current.sha256,
+                                 "was_absent": inv.deck(current.id) is None}
     counts = {**imported.counts, **created.counts}
     words = f"{imported.text}; {created.text}"
     if token_rows:
