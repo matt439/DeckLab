@@ -12,12 +12,13 @@ An index of open work, one row per item; each row points to the doc that owns th
 
 **Ready reserve (reviewed 2026-10-28):** after the redesign, choose an `OPEN` row below; there is no fixed order within the reserve. Useful independent starts include drafts across devices (`E2-S16`) and audited field-membership editing (`E3-S23`); source-aware two-player and pod counters (`E4-S26`) are built, with physical-device acceptance separate. Other ready work covers audited field membership, sideboard tests, missing-card nightly shop checks and experiment configuration/adoption controls; the self-hosting doctor is built. Every `OPEN` story names a concrete first slice and its later dependencies. Fixture-based work needs no new Forge games, household records or physical devices; real-device acceptance, live installations/migrations, purchases and Forge runs retain their separate gates.
 
-**Maintenance lane (updated 2026-10-28):** Tokens' workflow split and the source-length CI guard (`E11-S36`, `E11-S43`) are built. The editor workflow and collection parser splits (`E11-S37`, `E11-S38`) are built, creating room for their upcoming features. Keep structural and feature changes separate. The comment and command-document audits (`E11-S41`, `E11-S42`) are built. The fixture-only test entry point (`E11-S44`) is built. The test-group split (`E11-S40`) is built; the PostgreSQL snapshot split (`E11-S39`) is stopped after a denied temporary-fixture correction, with its active source unchanged. The [source-maintenance owner](decklab/SOURCE_AUDIT.md#maintenance-backlog) records the measured files, boundaries and validation. Length is a review trigger, not a reason to divide every large file mechanically.
+**Maintenance lane (updated 2026-10-28):** Tokens' workflow split and the source-length CI guard (`E11-S36`, `E11-S43`) are built. The editor workflow and collection parser splits (`E11-S37`, `E11-S38`) are built, creating room for their upcoming features. Keep structural and feature changes separate. The comment and command-document audits (`E11-S41`, `E11-S42`) are built. The fixture-only test entry point (`E11-S44`) is built. The test-group split (`E11-S40`) is built; the PostgreSQL snapshot split (`E11-S39`) is built and waits only on its separate disposable-database qualification. The [source-maintenance owner](decklab/SOURCE_AUDIT.md#maintenance-backlog) records the measured files, boundaries and validation. Length is a review trigger, not a reason to divide every large file mechanically.
 
 **Needs Matt or another person — these don't block coding:**
 - **`E11-S31`: global-search scope.** Choose the sources (visible decks, the viewer's collection and/or all Scryfall cards) and result grouping before building. Library title, colour and archetype filters (`E1-S05`) are built independently of that decision.
 - **`E2-S22`: physical-device follow-up.** Confirm hardware and touch usability on the household's actual iPhones and M2 11-inch iPad after the fixes. Keep prior results in the story; the [Safari Simulator suite](decklab/safari/EVIDENCE.md) covers repeat functional regressions.
 - **`E11-S02`: signed-in off-page check.** On a phone through decklab.example.com, save a deck edit, upload an accessory photo, and check the off page while Deck Lab is stopped.
+- **`E11-S39`: database qualification of the snapshot split.** Authorize a disposable-database run of the location, deck persistence and rollback cases; the split itself passes its fixture checks.
 - **`E11-S28`: User2's user-testing session.** Confirm his device, then use the prepared [checklist](decklab/design/user-testing-user2.md).
 
 **Activation:** migrations `0012` and `0013` were applied and the server restarted on committed code on 2026-10-19, so the privacy code and guarded member removal are live. No visibility choice or real member removal has been made.
@@ -39,7 +40,6 @@ An index of open work, one row per item; each row points to the doc that owns th
 
 | id | status | pri | size | item |
 |---|---|---|---|---|
-| `E1-S12` | BLOCKED | could | S | Temporary field-page edit was denied before execution; the existing summary is built, with the poor-AI caveat still open. |
 | `E2-S16` | OPEN | could | L | Save an unsaved editor draft privately for the same profile to resume on another device, with revision conflicts reviewed. |
 | `E2-S22` | DECISION | must | M | Physical hardware/touch-usability follow-up on the household's iPhones and M2 11-inch iPad; the six-configuration Safari Simulator suite passes ([evidence](decklab/safari/EVIDENCE.md)). |
 
@@ -59,7 +59,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 
 | id | status | pri | size | item |
 |---|---|---|---|---|
-| `E9-S07` | BLOCKED | could | L | Editor-scope preparation stopped after temporary helper/API/UI update reads were denied; active source is unchanged. CLI and deck-page ideas remain built. |
+| `E9-S07` | OPEN | could | L | The editor's EDHREC ideas scope is built (saved commander); next: ideas for a changed draft commander, partner pairs and EDHREC's theme/budget/bracket pages. |
 
 ## Deck Lab: testing and Forge
 
@@ -91,7 +91,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 
 | id | status | pri | size | item |
 |---|---|---|---|---|
-| `E11-S39` | BLOCKED | could | M | Temporary-overlay qualification stopped: correcting its new snapshot test was denied before execution; no active source change shipped. |
+| `E11-S39` | DECISION | could | M | Snapshot split built (`pg_snapshot.py`, fixture checks pass); Matt authorizes the disposable-database location, persistence and rollback qualification. |
 
 ## Areas with no open rows
 

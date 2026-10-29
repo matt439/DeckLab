@@ -2,6 +2,46 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## EDHREC ideas in the editor's Add panel (2026-10-29; E9-S07)
+
+A saved Commander deck's editor has an **EDHREC ideas** tick beside the Add panel's search scopes
+(`web/editor-edhrec.js`, loaded after `editor-cards.js`; hooks in `editor-cards.js` and
+`editor-search-quantity.js`). It reuses GET `/api/deck/edhrec` unchanged, asked when the tick is first set
+and again only after a save or a change of deck, profile, route or list; an answer that arrives after any of
+those, or the text or filters, moved on is ignored. Ideas come in EDHREC's order, once each, leaving out
+cards already in the draft (outside the sideboard) with a count, narrowed by the typed name and the colour,
+type and mana-value filters, 24 at a time; More takes the next ideas not yet shown, by name, so draft
+changes between pages never skip or repeat one. Marks (free, in other decks, to buy with an AUD estimate,
+on the way) show only when the server sent them, never naming a deck. Picking one is the normal search add
+into the chosen section: one draft change and Undo step, nothing saved until Save. A failure shows EDHREC's
+own wording with Try again (not for a commander EDHREC has no page for), and the plain search keeps working.
+Tests: `test_editor_edhrec_ui.py` (7 Node UI tests). Known low issues: ideas follow the saved commander, so a
+changed draft commander says to save first; the tick was checked with fixtures, not in a browser.
+
+## Poor-AI caveat on the Overview (2026-10-29; E1-S12)
+
+GET `/api/field` takes `pilot=1` (`field_page.field_view`, `_list_pilot`): the deck Overview's one field
+read then carries `forge.list_ai`'s judgement of the displayed list, made with the list's own AI pilot and
+counting only saved results the viewer may see. When Forge pilots the list poorly, "Forge pilots this deck
+poorly" and Matchups' `pilotReason` show beside the field line (`deck-overview.js` deckOverviewPilot); a
+normal pilot or missing data shows nothing. The answer without `pilot` is unchanged. Tests:
+`test_deck_overview_ui.py`, `test_field_api.py` FieldPilotTests, `test_deck_privacy_readers.py`. Known low
+issue: the Matchups tab still judges with the default pilot, so for a list with its own pilot the tabs can
+disagree.
+
+## PostgreSQL snapshot split (2026-10-29; E11-S39)
+
+`_render`, `SELECTS`, `_select`, `_status_columns`, `_status_tables` and `snapshot` moved unchanged from
+`lib/inventory/pg.py` (now 1,002 lines) to `lib/inventory/pg_snapshot.py` (167 lines); details and evidence
+in [SOURCE_AUDIT.md](SOURCE_AUDIT.md#collection-parsing-and-database-snapshots-e11-s38-e11-s39). The
+disposable-database qualification is still to run.
+
+## Sideboard preview loaded on demand (2026-10-29)
+
+`feature_routes` imports `api/sideboard_preview.py` (which imports Forge's seqstats and variants) only
+when its route is asked for, as the field membership adapter does. Before, any feature route dispatched
+under the test Sandbox's fake Forge failed with a 500, so `test_visits` failed when run on its own.
+
 ## Publication CI: canonical disposable roots (2026-10-29)
 
 Hosted CI at 7fd0510 passed lint, all four Linux shards, three Windows shards

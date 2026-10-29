@@ -35,7 +35,7 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 
 | Epic | Stories | Built | Partial | Missing | Not wanted |
 |---|---:|---:|---:|---:|---:|
-| [E1: Find, plan and choose decks](#e1-find-plan-and-choose-decks) | 15 | 14 | 1 | 0 | 0 |
+| [E1: Find, plan and choose decks](#e1-find-plan-and-choose-decks) | 15 | 15 | 0 | 0 | 0 |
 | [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 20 | 17 | 1 | 1 | 1 |
 | [E3: Test a deck](#e3-test-a-deck) | 15 | 12 | 3 | 0 | 0 |
 | [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 22 | 18 | 2 | 1 | 1 |
@@ -45,10 +45,10 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 19 | 16 | 0 | 1 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 20 | 15 | 1 | 3 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 35 | 31 | 1 | 1 | 2 |
-| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 39 | 28 | 6 | 2 | 3 |
-| **Total** | **255** | **211** | **16** | **14** | **14** |
+| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 39 | 28 | 7 | 1 | 3 |
+| **Total** | **255** | **212** | **16** | **13** | **14** |
 
-Counted from the story headers on 2026-10-29 after the source-aware two-player and pod counters, alongside the current feature and maintenance work. The reviews added five feature stories and eight hygiene stories, then the fixture-only entry-point story E11-S44, and corrected E1-S12 from missing to partial.
+Counted from the story headers on 2026-10-29 after the source-aware two-player and pod counters, alongside the current feature and maintenance work. The reviews added five feature stories and eight hygiene stories, then the fixture-only entry-point story E11-S44, and corrected E1-S12 from missing to partial. Rechecked 2026-10-29: E1-S12 is built and E11-S39 partial (its database qualification pending).
 
 ---
 
@@ -56,7 +56,7 @@ Counted from the story headers on 2026-10-29 after the source-aware two-player a
 
 How Matt and User1 (and, more lightly, User2, User3, User4 and User5) find a deck in the library (#/library), choose its picture, open its deck page (#/deck) to see whether it can be built and how to play it, rename or retire it, and pick what to play tonight. Each viewer's library holds their own space's decks, plus any another space has made public. A plain "Deck Lab is off" message is enough while the PC is off (E11-S02); collector-value sorting and legality badges on casual decks aren't wanted.
 
-Open: E1-S12.
+Open: none.
 
 **E1-S01** · User1 · must · M · built
 
@@ -164,7 +164,7 @@ Evidence:
 - `decklab/lib/api/guide.py`: playing_guide
 - `decklab/tests/test_guide.py`: test_stale_warning_and_product_empty_state
 
-**E1-S12** · Matt · could · S · partial
+**E1-S12** · Matt · could · S · built
 
 As a deck builder, I want a short summary of how strong a deck is against our other decks, where I first look at the deck, so that I can choose a deck for a tougher opponent without opening the Matchups tab.
 
@@ -173,15 +173,14 @@ As a deck builder, I want a short summary of how strong a deck is against our ot
 - Given no field results, when the Overview opens, then it says none have been played, without starting a run.
 
 Evidence:
-- `decklab/web/deck.js`: overviewParts; `decklab/web/deck-overview.js`: deckOverviewForge (field headline, games, link and no-results state)
-- `decklab/web/field.js`: fvHeadline; `decklab/web/matchups-results.js`: pilotReason, pilotFlag (the poor-AI caveat already used on Matchups)
-- `decklab/tests/test_deck_overview_ui.py`
+- `decklab/web/deck-overview.js`: deckOverviewForge (field headline, games, link and no-results state, asking GET /api/field with `pilot=1`), deckOverviewPilot (the caveat)
+- `decklab/lib/api/field_page.py`: field_view (`pilot`), _list_pilot (`forge.list_ai` with the entry's own pilot, counting only saved results the viewer may see)
+- `decklab/web/field.js`: fvHeadline; `decklab/web/matchups-results.js`: pilotReason (the wording Matchups uses)
+- `decklab/tests/test_deck_overview_ui.py`; `decklab/tests/test_field_api.py` FieldPilotTests; `decklab/tests/test_deck_privacy_readers.py` test_the_overview_s_pilot_counts_only_results_the_viewer_sees
 
-Gap (rechecked 2026-10-28): the Overview already shows the field summary; only the deck-specific poor-AI caveat is missing there.
+Now (built 2026-10-29): the Overview's single field read carries the displayed list's pilot judgement, so when Forge pilots it poorly "Forge pilots this deck poorly" and Matchups' reason show beside the field line. A normal pilot shows nothing extra, and missing or failed AI data claims nothing. It follows the Planned/Play-now switch, a late answer for a list no longer on screen draws nothing, and no Forge games start.
 
-First slice: reuse the displayed list's existing AI evidence beside the Overview summary. Check poor, normal and unavailable AI data, list switching and late answers with fixtures; no new Forge games are needed.
-
-Attempt status (2026-10-28): the temporary overlay's field_page.py edit was denied with Access denied before execution. It was not retried through another route; active source is unchanged and implementation remains unqualified.
+Known low issue: the Overview judges with the list's own AI pilot (`pilots.pilot_for`), while the Matchups tab (`forge_runs._deck_matchups`) still uses the default pilot, so for a list with its own pilot in `simulation.json` the two can disagree. Aligning Matchups needs the test Sandbox's fake Forge to gain `pilots`.
 
 **E1-S13** · Matt · could · L · built
 
@@ -2976,19 +2975,16 @@ As a newer player choosing cards for a commander, I want to see what is commonly
 - Given EDHREC can't be reached, when I open the ideas, then the page says so and the rest of the editor works.
 
 Now (2026-10-28): [EDHREC ideas](../HISTORY.md#edhrec-ideas-for-a-commander-2026-10-28-e9-s07). `python -m decklab.lib.edhrec <deck-id>` fetches the commander's page from EDHREC's JSON (`json.edhrec.com/pages/commanders/<slug>.json`, the slug from the commander's name; two commanders tried in both orders, following the redirect EDHREC sends for the order it doesn't use), keeps it a week in `decklab/data/edhrec/` with the time it was fetched, and prints it grouped by EDHREC's categories with each card's share of decks, marked in the deck, free, in use (never naming the deck) or to buy with its AUD estimate in the deck's own space. Cards outside the commander's colour identity or not legal in Commander are checked again against Scryfall's data and left out, and basic lands are skipped. A failed fetch keeps the older copy (saying why) and isn't retried for 5 minutes; with nothing cached it's a plain message. On the deck page, a Commander deck's Cards tab has **See EDHREC ideas…** (GET `/api/deck/edhrec`, asked only when the sheet opens): the same list and date, filtered to Not in the deck, Free, To buy or All; the marks and prices only for a viewer who sees the space's inventory; and **Consider**, which adds a card to the deck's Considering list (E2-S23) in one save, for whoever may change the deck.
-Not yet: the ideas are on the deck page, not in the editor's Add panel, and a tap adds to Considering, not straight into the 99.
+Now (2026-10-29, editor slice): a saved Commander deck's editor has an **EDHREC ideas** tick in the Add panel (`web/editor-edhrec.js`, reusing GET `/api/deck/edhrec`, asked when the tick is first set and again only after a save or a change of deck, profile, route or list). It lists the commander's ideas in EDHREC's order with the fetched date, leaves out cards already in the draft (with a count), and narrows them by the typed name and the colour, type and mana-value filters, 24 at a time; More shows the next ideas not yet listed, so draft changes between pages never skip or repeat one. Each shows its share of decks, and free, in other decks, to buy (with an AUD estimate) or on the way only when the server sent marks, never naming a deck. Picking one adds it to the chosen section as one draft change and Undo step, with nothing saved until Save. Late answers are ignored; EDHREC's own failure wording shows and the plain search keeps working.
 
 Evidence:
 - `decklab/lib/edhrec.py`: name_slug, commander_slugs, fetch (_one, reduce_page), ideas, main
 - `decklab/lib/api/edhrec.py`: edhrec_view (GET /api/deck/edhrec); `decklab/lib/feature_routes.py`
 - `decklab/web/deck-edhrec.js`: deckEdhrecSection, openEdhrecSheet, edhrecMarkWords, considerEdhrecCard; `deck.js` cardsParts
-- `decklab/tests/test_edhrec.py`, `decklab/tests/test_deck_edhrec_ui.py`
+- `decklab/web/editor-edhrec.js`: editorEdhrecLookUp, editorEdhrecToggle, editorEdhrecDraftChanged, editorEdhrecSide, drawEditorEdhrecNote; hooks in `editor-cards.js` (lookUp, drawSearchControls, searchResultSide, cardData)
+- `decklab/tests/test_edhrec.py`, `decklab/tests/test_deck_edhrec_ui.py`, `decklab/tests/test_editor_edhrec_ui.py`
 
-Gap: The editor's Add panel (`decklab/web/editor-cards.js`) still offers search and My collection only; an idea can't go into the Planned list in one tap (Considering, then Move to the Planned list); EDHREC's themes, budget and bracket pages aren't read; the partner-pair slug order is a guess (only single-commander pages were checked live).
-
-First slice (reserve review, 2026-10-28): add an EDHREC scope to the editor's Add panel using the existing suggestions and checked date. Selecting a suggestion changes only the draft's chosen section until the usual save. Invalidate old answers when the commander, deck, list or profile changes; preserve source/failure wording and own-space availability permissions. Fixture responses cover this without live lookups or Forge games; partner and other page types remain later work.
-
-Blocked in the implementation run (2026-10-28): updating the temporary shared-helper copy, new editor API draft and new editor UI draft each failed its initial read with OS Access denied before modification. No active source was edited, no application imports or tests ran and no live lookup occurred. Initial artifacts remain unqualified, with known projection/lifecycle fixes not applied; do not adopt them or retarget the denied edits through another path without materially new relevant authorization. The intended next slice remains the draft-aware editor scope above, with the existing CLI/deck-page behavior unchanged.
+Gap: the editor's ideas follow the saved commander, so a draft whose commander changed says to save first (ideas for the draft's commander need a server change); EDHREC's themes, budget and bracket pages aren't read; the partner-pair slug order is a guess (only single-commander pages were checked live). The editor slice was checked with fixtures only, not in a browser or against live EDHREC.
 
 **E9-S08** · Matt · must · M · built
 
@@ -4550,7 +4546,7 @@ Evidence:
 - `test_collection_import_module.py`: five patch-ownership and import-order guards; all 166 focused parser/collection/precon/trade/scan/merge checks passed.
 - AST review preserved all eight moved and 40 retained function bodies after owner-reference normalization. The integrated attempt and runtime limits are recorded in [HISTORY.md](../HISTORY.md#editor-import-workflow-split-2026-10-28-e11-s37).
 
-**E11-S39** · Claude Code · could · M · missing
+**E11-S39** · Claude Code · could · M · partial
 
 As the operator maintaining the inventory backend, I want snapshot conversion separate from transaction coordination, so that row-format changes can be reviewed without disturbing locks and cache behaviour.
 
@@ -4558,13 +4554,14 @@ As the operator maintaining the inventory backend, I want snapshot conversion se
 - Given an inventory operation, then transaction boundaries, revision caches, lock acquisition, write diffs and rollback behaviour retain their current owners and outputs.
 - Given existing imports and patched names, then they resolve to one authoritative owner and inventory-contract goldens remain unchanged.
 
-Evidence of gap (2026-10-28): `decklab/lib/inventory/pg.py` is 1,133 lines and combines snapshot/_render conversion with PgInventory caching, audit readers and apply/write coordination.
+Now (2026-10-29): `_render`, `SELECTS`, `_select`, `_status_columns`, `_status_tables` and `snapshot` moved unchanged to `decklab/lib/inventory/pg_snapshot.py` (167 lines), leaving `pg.py` at 1,002 lines with PgInventory, _diff, _take_lock, the row writers, revision/cache ownership and transaction coordination. pg re-exports the same objects and its loads and writes still look them up through pg, so existing patches of `pg._select` take effect; pg_snapshot imports nothing from pg, so either module can be imported first.
 
-Gap: snapshot conversion still shares that transaction module.
+Evidence:
+- AST comparison against the previous `pg.py`: all 6 moved definitions and 27 retained top-level definitions (40 methods) unchanged.
+- `decklab/tests/test_inventory_pg_snapshot_module.py`: both import orders, identical re-exports, multiline cell line numbers, canonical ordering with hidden token/watchlist ids, locations and revision, and old-schema packed-token handling.
+- 177 focused fixture tests pass with no golden changes; 97 database-integration cases skipped under the fixture runner.
 
-Attempt status (2026-10-28): a temporary overlay preserved moved and retained AST bodies and passed 10 of 11 focused fixture cases. Correcting the new fixture's incompatible multiline-note expectation was denied with Access denied before execution. That action is stopped; the active pg.py is unchanged, the overlay is not applied, and no completed split or PostgreSQL acceptance is claimed.
-
-First slice: extract table-row conversion and its fixed serialization helpers while leaving PgInventory, _diff and _take_lock in place. Compare converted snapshots against existing goldens and use disposable databases for location, persistence and rollback checks. The [maintenance owner](../SOURCE_AUDIT.md#maintenance-backlog) records the boundary; this is no schema or live-data migration.
+Gap: the disposable-database location, deck persistence and rollback checks (and `test_inventory_pg_decks`' `_select` patch) need their separate database qualification run; until then no PostgreSQL acceptance is claimed.
 
 **E11-S40** · Claude Code · should · M · built
 
