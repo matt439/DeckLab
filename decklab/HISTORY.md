@@ -2,6 +2,59 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Last played in the library (2026-10-29; E1-S27 slice 1)
+
+GET /api/decks now gives each deck summary `played`, `{last, games}`, from `decklab/lib/api/library_played.py`
+`played_extras` (called by `deck_page.decks_index` after `shelf_extras`). It counts the games the Game log would
+show the viewer: the same visibility check (`play_records._sees_record`) and damaged-record check (`_checked`),
+1v1 records only (pods left out as the page's `playLegacyGame` does), sides recorded under a renamed deck's old
+id resolved to the deck (`inventory.resolve_deck_id`), and a game with the same deck on both sides counted once.
+A game whose other side is in a space the viewer can't see counts for the viewer's deck, and the answer never
+names the hidden deck. When the games can't be read (database down, login not set up) every deck's `played` is
+null and the page shows nothing rather than "not played". The library's tiles and lab detail pane say "Last
+played <date> · N games" or "Not played at home yet", and a new sort, "Not played lately", puts never-played
+decks first, then the oldest last game, then decks whose games couldn't be read. Fixture tests: counts and dates
+per home profile, a hidden other side, damaged records and mirrors, a saved Commander pod counting for no deck,
+the `_legacy` filter, a renamed deck's old id, the database down; tile wording and sort order. The golden
+comparisons drop the default `played` values, since no golden scenario records a game. Known low issues: idea,
+building and product decks say "Not played at home yet" too; the date is the raw ISO date, as the Game log shows
+it; lab rows don't show the line; no browser or device check. Slices 2 (the Overview line) and 3 (what changed
+since the last game) remain.
+
+## Queue a deck's missing cards (2026-10-29; E5-S25)
+
+A home deck's Cards tab, under the Missing filter, offers home admins **Queue missing cards…**
+(`decklab/web/deck-queue-missing.js`). Its review, `POST /api/shopping/queue/missing`
+(`decklab/lib/api/shopping_queue_missing.py`, writing nothing), lists each missing Planned card (from
+`pool.owned_vs_needed`, which already counts on-the-way copies) less the copies already queued for the deck in
+any state (a row whose source is the deck under any alias, or whose `for` is its title), as any nonfoil printing,
+with To buy or Long-term to choose, an "Already queued" fold, and, for a card whose copies would raise an existing
+identical request, that row's state ("added to the existing Waiting for stock row", with a warning when it isn't
+the state picked). Save is `save_queue_state`'s new `add_many` action, with the existing permission checks and
+`expect` revision: the cards are worked out again inside the change (`watchlist.add_many`,
+`decklab/lib/inventory/queue_many.py`, loaded from `orders.py` as `order_merge` is) and compared with the review,
+joined states included, so a stale or changed review saves nothing and asks for a new one. One audited watchlist
+change adds the rows with the deck as source and `for` its title, or raises the identical requests in their own
+state. User1, members, products and pairings are neither offered it nor allowed; token cards are excluded. The
+README documents the API. Fixture tests: dedupe across states and aliases, joined states, conflicts and changed
+reviews, permissions, tokens, the sheet's states and Review again. Known low issues: checked only on fixtures,
+not against the live database's audit rows, and not at phone width.
+
+## Ready to build after a receipt (2026-10-29; E6-S26)
+
+`POST /api/receipt/apply` now returns `readiness`, `{deck id: {missing, coming}}`, from
+`decklab/lib/api/receipts.py` `_readiness`: for each home deck whose table the receipt refreshed, its Planned
+list's missing and on-the-way counts in the saved snapshot (`pool.owned_vs_needed`'s totals and row labels, as
+the deck banner counts them). It's filled only for a viewer who sees home's inventory and that deck, checked
+before any deck or pool is read; products and pairings are left out, as is a deck whose counts have unknown
+cards or pool warnings; and any failure is logged and leaves it empty without failing the saved receipt. Where
+these go (`rcptWhereTheyGo`, `rcptReadyLine` in `decklab/web/receipt-workflow.js`) then says under each deck
+**Ready to build** (a link to the Packing plan, `#/assembly?deck=<id>`; "Every card is here: Packing plan" for a
+built deck), "Ready once N cards arrive", or "Still N to get · M cards on the way". Fixture tests: a deck made
+ready, a deck still short with exact counts, copies still on the way in a part not received, viewers without
+home's inventory or the deck, a failure; the drawn lines. Known low issues: a deck left out for an unknown card
+or a pool warning simply shows no line; arrival notices still say only "N cards for Deck".
+
 ## Fewer steps for a delivery that came as ordered (2026-10-29; E6-S27)
 
 Receive delivery gains three shortcuts in a new `decklab/web/receipt-bulk.js`, each behind one confirmation.

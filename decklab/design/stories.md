@@ -35,20 +35,20 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 
 | Epic | Stories | Built | Partial | Missing | Not wanted |
 |---|---:|---:|---:|---:|---:|
-| [E1: Find, plan and choose decks](#e1-find-plan-and-choose-decks) | 17 | 15 | 0 | 2 | 0 |
+| [E1: Find, plan and choose decks](#e1-find-plan-and-choose-decks) | 17 | 15 | 1 | 1 | 0 |
 | [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 21 | 17 | 1 | 2 | 1 |
 | [E3: Test a deck](#e3-test-a-deck) | 18 | 13 | 3 | 2 | 0 |
 | [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 22 | 18 | 2 | 1 | 1 |
-| [E5: Decide what to buy](#e5-decide-what-to-buy) | 24 | 19 | 1 | 2 | 2 |
-| [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 23 | 20 | 0 | 1 | 2 |
+| [E5: Decide what to buy](#e5-decide-what-to-buy) | 24 | 20 | 1 | 1 | 2 |
+| [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 23 | 21 | 0 | 0 | 2 |
 | [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 28 | 24 | 1 | 3 | 0 |
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 19 | 16 | 0 | 1 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 22 | 15 | 1 | 5 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 35 | 31 | 1 | 1 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 41 | 30 | 6 | 2 | 3 |
-| **Total** | **270** | **218** | **16** | **22** | **14** |
+| **Total** | **270** | **220** | **17** | **19** | **14** |
 
-Counted from the story headers on 2026-10-29 after the source-aware two-player and pod counters, alongside the current feature and maintenance work. The reviews added five feature stories and eight hygiene stories, then the fixture-only entry-point story E11-S44, and corrected E1-S12 from missing to partial. Rechecked 2026-10-29: E1-S12 is built and E11-S39 partial (its database qualification pending). The TODO audit of 2026-10-29 added fifteen missing stories (twelve from the audit: E1-S27, E1-S28, E2-S27, E3-S25, E3-S26, E5-S25, E6-S25, E6-S26, E9-S26, E9-S27, E11-S45, E11-S46), then Matt's three UI requests (E3-S27, E5-S26, E6-S27), and corrected E7-S32 from missing to partial (its recognition spike and CLI are built). Matt closed E11-S16 as built the same day, and E3-S27, E5-S26, E6-S25, E6-S27 and E11-S46 were built the same day (E11-S12 stays partial after a further slice).
+Counted from the story headers on 2026-10-29 after the source-aware two-player and pod counters, alongside the current feature and maintenance work. The reviews added five feature stories and eight hygiene stories, then the fixture-only entry-point story E11-S44, and corrected E1-S12 from missing to partial. Rechecked 2026-10-29: E1-S12 is built and E11-S39 partial (its database qualification pending). The TODO audit of 2026-10-29 added fifteen missing stories (twelve from the audit: E1-S27, E1-S28, E2-S27, E3-S25, E3-S26, E5-S25, E6-S25, E6-S26, E9-S26, E9-S27, E11-S45, E11-S46), then Matt's three UI requests (E3-S27, E5-S26, E6-S27), and corrected E7-S32 from missing to partial (its recognition spike and CLI are built). Matt closed E11-S16 as built the same day, and E3-S27, E5-S26, E6-S25, E6-S27 and E11-S46 were built the same day (E11-S12 stays partial after a further slice). Later the same day E5-S25 and E6-S26 were built and E1-S27's first slice (the library) made it partial.
 
 ---
 
@@ -306,7 +306,7 @@ Evidence:
 
 History-revision comparisons remain separate future work. Browser geometry and touch/Safari/device acceptance are unverified; the local-file browser preview was denied by URL policy. See [HISTORY.md](../HISTORY.md#compare-list-differences-2026-10-28-e1-s26).
 
-**E1-S27** · User1 · should · S · missing
+**E1-S27** · User1 · should · S · partial
 
 As a player choosing tonight's 1v1 game, I want each deck to say when it was last played at home and how many games it has, and the library to sort by decks not played lately, so that we rotate through our built decks instead of reaching for the same two.
 
@@ -317,7 +317,9 @@ As a player choosing tonight's 1v1 game, I want each deck to say when it was las
 
 Evidence of the gap (TODO audit, 2026-10-29): web/library.js LIB_SORTS has only ready/recent/name; no last_played anywhere in web or lib/api; journeys.md E1 stage 3 lists 'last played' as an unbuilt opportunity; play records already carry dates and per-side snapshots.
 
-Gap: none of the criteria is met yet.
+Slice 1 built (2026-10-29): GET /api/decks gives each summary `played` ({last, games}, or null when the games can't be read) from `lib/api/library_played.py` `played_extras`: the Game log's own visibility and damage checks (`play_records._sees_record`, `_checked`), 1v1 records only (pods left out as `playLegacyGame` does), renamed decks' old ids resolved, a mirror counted once, and a hidden other side counted for the viewer's deck without naming it. The library's tiles and lab detail pane say "Last played <date> · N games" or "Not played at home yet", and `LIB_SORTS.played` ("Not played lately") puts never-played decks first, then the oldest last game. Tests: `decklab/tests/test_library_played.py`, `test_library_played_ui.py`. See [HISTORY.md](../HISTORY.md#last-played-in-the-library-2026-10-29-e1-s27-slice-1).
+
+Gap: the Overview's line (criterion 1's deck-page half) and 'changed since the last game' are slices 2 and 3. Browser and device checks not done.
 
 First slice (TODO audit, 2026-10-29): Server: add last_played and games per deck to the library answer (lib/api/library.py shelf extras), computed from play records through the Game log's existing visibility filter, pods excluded from 1v1 counts as playLegacyGame does. Client: one tile facts fragment and a new LIB_SORTS entry in web/library.js. Fixture tests for counts, hidden-space exclusion and sort order. Overview line and 'changed since the last game' (diff of the last snapshot via compare.py) are slices 2 and 3.
 
@@ -1393,7 +1395,7 @@ Rules: [Wizards' current Comprehensive Rules](https://media.wizards.com/2026/dow
 
 How Matt, with User1's wishes and Claude's research, goes from "this deck is short" to a decided purchase. On the page: each deck's sortable Prices table of converted Scryfall estimates, and Shopping's Decks still missing cards, Missing cards across decks, To buy, By shop and Long-term plan, with queue add, edit, move and remove for admins and reprint notices from cached Scryfall data. Live Australian shop checks, dated buylists and `watchlist apply` stay with Claude on the PC; recording an order, which reduces the queue rows it fulfils (Shopping's New order or `order add --fulfils`), belongs to E6. By design there are no spending totals and no collection value.
 
-Open: E5-S08, E5-S15, E5-S25.
+Open: E5-S08, E5-S15.
 
 **E5-S01** · Matt · must · M · built
 
@@ -1765,7 +1767,7 @@ Evidence:
 
 The base format is quantity plus canonical name; explicit requests retain human-readable set/number and `[finish]` suffixes, without claiming every shop parses those suffixes automatically. Browser/device and actual clipboard behavior remain unverified; all clipboard tests use mocks. See [HISTORY.md](../HISTORY.md#copy-one-shops-list-2026-10-28-e5-s24).
 
-**E5-S25** · Matt · should · M · missing
+**E5-S25** · Matt · should · M · built
 
 As a buyer who has decided to build a deck, I want to put its missing cards on the purchase queue (To buy or Long-term) in one reviewed action, so that planning a deck's buys doesn't mean adding rows one at a time or asking Claude at the PC.
 
@@ -1776,7 +1778,7 @@ As a buyer who has decided to build a deck, I want to put its missing cards on t
 
 Evidence of the gap (TODO audit, 2026-10-29): shopping_queue.py accepts only state/add/edit/remove for one row; E9-S12's long-term plan relies on Claude running watchlist set --add per row.
 
-Gap: none of the criteria is met yet.
+Built (2026-10-29): a home admin's **Queue missing cards…** under the Cards tab's Missing filter (`web/deck-queue-missing.js`) reviews (`POST /api/shopping/queue/missing`, writing nothing) each missing Planned card's copies less those already queued for the deck in any state (by source, alias or `for`), any nonfoil printing, To buy or Long-term, and names any existing identical request whose state the copies would join. Save (`save_queue_state` action `add_many`, `lib/api/shopping_queue_missing.py`, inventory operation `watchlist.add_many` in `lib/inventory/queue_many.py`) works the cards out again inside the change and saves one audited watchlist change with the deck as source; a stale revision or a changed review saves nothing and asks for a new review. User1, members, products and pairings are neither offered it nor allowed; token cards are excluded. Tests: `decklab/tests/test_shopping_queue_missing.py`, `test_deck_queue_missing_ui.py`. Live audit row and phone-width checks not done. See [HISTORY.md](../HISTORY.md#queue-a-decks-missing-cards-2026-10-29-e5-s25).
 
 First slice (TODO audit, 2026-10-29): Add action 'add_many' to lib/api/shopping_queue.py save_queue_state with the existing expected-revision check, deduping against rows already queued for the deck; a review sheet on the deck's Cards tab Missing filter. Fixture tests: dedupe, conflict refusal, read-only member/User1, tokens excluded.
 
@@ -1798,7 +1800,6 @@ Built (2026-10-29): in the lab layout Ref AUD holds the price and one marker (a 
 
 Home's buying, from placing an order to its cards sitting in the right deck or in storage: singles, token singles, sealed products, pending orders shown as on the way, correcting, splitting, cancelling and removing pending orders, the Receive delivery check-off board, arrival checks and follow-ups. Each change has a page control on Shopping or Receive delivery and a command (`order …`, `product add|edit`, `receive [--expect]`), saved as one audited change with the deck tables it refreshes. Order changes, receipts and follow-ups need a home admin; User1 sees the same pages read-only, and nobody outside home sees them at all, since person spaces have no orders, products or deliveries. Orders never store prices or spending totals, and physical-device acceptance is tracked in E2-S22.
 
-Open: E6-S26.
 
 **E6-S01** · Claude Code · must · L · built
 
@@ -2135,7 +2136,7 @@ Evidence of the gap (TODO audit, 2026-10-29): split_order never reads rules.extr
 
 Built (2026-10-29): `split_order` copies the source part's mark to the new part with `rules.with_extra_copies`, as `order merge` does, and its summary (CLI preview, `--dry-run`, Shopping's split preview) says so; `--undo` on either part removes only that part's mark. Products can't be split, so the product case is that refusal with the mark kept. AGENTS.md, the README and the CLI help were updated. Tests: `decklab/tests/test_inventory_orders.py`, `test_shopping_order_split.py`, `test_shopping_order_split_ui.py`. See [HISTORY.md](../HISTORY.md#a-split-keeps-the-extra-copies-mark-2026-10-29-e6-s25).
 
-**E6-S26** · Matt · should · S · missing
+**E6-S26** · Matt · should · S · built
 
 As Matt, having just recorded a delivery, I want 'Where these go' to say which decks now have every Planned card here and which still wait, with a Packing plan link, so that I go straight from unpacking to building.
 
@@ -2145,7 +2146,7 @@ As Matt, having just recorded a delivery, I want 'Where these go' to say which d
 
 Evidence of the gap (TODO audit, 2026-10-29): receipt-workflow.js 'Where these go' groups cards by deck and kit only, with no readiness or #/assembly link; arrival-notices.js says only 'N cards for Deck'.
 
-Gap: none of the criteria is met yet.
+Built (2026-10-29): `POST /api/receipt/apply` returns `readiness` ({deck id: {missing, coming}}, `lib/api/receipts.py` `_readiness`) for the home decks whose tables it refreshed, worked out in the saved snapshot as the deck banner counts them, only for viewers who see home's inventory and that deck, and empty on any failure without failing the receipt. `rcptReadyLine` in `web/receipt-workflow.js` draws Ready to build (a link to `#/assembly?deck=<id>`), Ready once N arrive, or Still N to get under each deck in Where these go. Tests: `decklab/tests/test_receipts_api.py`, `test_receipt_destinations_ui.py`. Arrival-notice wording and preselecting several decks remain ideas, not criteria. See [HISTORY.md](../HISTORY.md#ready-to-build-after-a-receipt-2026-10-29-e6-s26).
 
 First slice (TODO audit, 2026-10-29): Have the receipt apply answer include each 'Where these go' deck's post-receipt Planned missing count from the refreshed tables, and draw the readiness word and Packing plan link in web/receipt-workflow.js rcptWhereTheyGo. Fixture tests: completed deck, short deck, no-inventory viewer. Arrival-notice wording and multi-deck preselect later.
 
