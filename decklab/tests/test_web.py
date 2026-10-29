@@ -42,7 +42,7 @@ from html.parser import HTMLParser
 from decklab import server
 
 WEB = server.WEB_DIR
-MATCHUP_SCRIPTS = ("sim-ui.js", "matchups.js", "matchups-overview.js", "matchups-summary.js", "matchups-detail.js", "matchups-results.js", "matchups-play.js",
+MATCHUP_SCRIPTS = ("sim-ui.js", "matchups.js", "matchups-overview.js", "deck-picker.js", "matchups-summary.js", "matchups-detail.js", "matchups-results.js", "matchups-play.js",
                    "matchups-cards.js")
 PLAY_SCRIPTS = ("deck-tools.js", "deck-print.js", "qr.js", "deck-label.js", "collection.js", "collection-import-groups.js", "collection-filing.js", "precon-token-choices.js", "precon-coverage.js", "collection-rows.js", "collection-cards.js", "collection-bulk.js", "collection-guards.js", "collection-trade.js", "storage-locations.js", "assembly.js", "assembly-chooser.js", "assembly-switcher.js", "assembly-finish.js", "assembly-steps.js", "assembly-overlap.js", "assembly-sections.js", "assembly-progress.js", "assembly-sheets.js", "assembly-boxcheck.js", "box-collection.js", "box-editor.js", "box-repair.js", "hands.js", "play.js", "play-pods.js", "pod-life-model.js", "pod-life-counter.js", "sideboard-preview.js", "life-source-model.js", "life-counter.js", "deck-sideboard.js", "deck-opponents.js", "deck-standins.js", "printings-in-box.js", "deck-swaps.js", "deck-considering.js", "deck-edhrec.js", "deck-categories.js", "product-storage.js", "history.js", "compare.js", "activity.js", "activity-undo.js", "activity-token-review.js",
                 "order-check-targets.js", "receipts.js", "receipt-tiles.js", "receipt-layout.js", "receipt-workflow.js", "accessories.js", "accessory-pictures.js", "tokens.js", "tokens-edit.js", "token-plan.js", "product-tokens.js")

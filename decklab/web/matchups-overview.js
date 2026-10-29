@@ -616,11 +616,11 @@ function drawHome(host, data, library, view) {
   }
   const body = el("div", { class: "mu-home-body" });
   const names = shortNames(decks);
-  const select = el("select", { id: "mu-deck-pick", onchange: () => choose(select.value) },
-    decks.map((d) => el("option", { value: d.id, text: names.get(d.id), title: d.title, selected: d.id === view.deck })));
   const deck = decks.find((d) => d.id === view.deck);
   const { entries, others } = matchupEntries(deck, decks, pairs, view.format, anyTodaysEngine(shown));
-  add(body, [el("label", { class: "field mu-deck-field", for: select.id }, el("span", { text: "Show matchups for" }), select),
+  // deck-picker.js: each deck with its picture and colour pips (E3-S27).
+  add(body, [deckListbox({ id: "mu-deck-pick", label: "Show matchups for", decks, names, library, selected: view.deck,
+    onChoose: choose, cls: "mu-deck-field" }),
     muSelectedSummary(view, library, data, deck),
     el("p", { class: "sub", text: "Saved matchup rows below may use different lists or earlier engines. Open a row for its exact lists." }),
     el("div", { class: "mu-opponents" }, entries.length

@@ -788,19 +788,26 @@ function libPickButton(d, title, body, cls, ctx) {
     }) }, body);
 }
 
-/** A deck's row in the lab (4.2): a 56 x 38 art thumbnail with a 3 px stripe under it, the title with 16 px
- * pips and the meta line, and the owned bar with mono words. It's a link to the deck page: a click selects it
- * (the detail pane shows it), Enter (a click with no pointer) or a click with a modifier opens it. */
-function deckRow(d, ctx) {
-  const colours = libColours(d);
+/** A deck's small art thumbnail (the lab's rows, Matchups' deck picker): the cover art on the deck's art colour
+ * while it loads, or (no art, or it fails) the deck's tint, with a thin colour stripe under it. cls sizes it. */
+function deckArtThumb(d, colours = libColours(d), cls = "deck-row-art") {
   const art = d.cover && d.cover.art;
-  const thumb = el("span", { class: "deck-row-art" + (art || !colours ? "" : " deck-tint"), style: colours ? colours.vars(135) : null },
+  const thumb = el("span", { class: cls + (art || !colours ? "" : " deck-tint"), style: colours ? colours.vars(135) : null },
     art ? el("img", { src: art, alt: "", loading: "lazy", decoding: "async", width: 626, height: 457, draggable: "false",
       onerror: (e) => {
         e.currentTarget.remove();
         if (colours) thumb.classList.add("deck-tint");
       } }) : null,
     colours ? colours.stripe(true) : null);
+  return thumb;
+}
+
+/** A deck's row in the lab (4.2): a 56 x 38 art thumbnail with a 3 px stripe under it, the title with 16 px
+ * pips and the meta line, and the owned bar with mono words. It's a link to the deck page: a click selects it
+ * (the detail pane shows it), Enter (a click with no pointer) or a click with a modifier opens it. */
+function deckRow(d, ctx) {
+  const colours = libColours(d);
+  const thumb = deckArtThumb(d, colours);
   const ready = d.error ? { chip: null, missing: 0 } : deckReadiness(d);
   const owned = d.error ? null : deckOwned(d, true);
   const chip = d.error ? el("span", { class: "deck-error", text: "Can't be read" }) : owned ? null : ready.chip;
