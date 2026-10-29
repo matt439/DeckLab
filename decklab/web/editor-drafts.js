@@ -1,6 +1,6 @@
 /* The editor's drafts (split from editor.js, E11-S46): re-applying an edit's changes onto a newer
 version of the deck (reapplyList, reapplyFields, rebase), and keeping the edit on this device as a
-draft (draftKey, queueDraft, saveDraft, draftStored, readDraft, removeDraft), with timeWords for the
+draft (draftKey, queueDraft, saveDraft, draftRecord, draftStored, readDraft, removeDraft), with timeWords for the
 banner that brings one back. Loaded right after editor.js, in the same global scope: these functions
 use its constants and helpers (copyList, tally, lineKey, norm, `editor`, ...) when they're called. */
 "use strict";
@@ -138,13 +138,20 @@ function saveDraft(ed) {
     if (removed) draftStored(ed, true);
     return removed;
   }
-  const saved = local.set(draftKey(ed), JSON.stringify({
+  // keptDraftMark (editor-kept-drafts.js): which draft kept for later this is, on this device only.
+  const mark = typeof keptDraftMark === "function" ? keptDraftMark(ed) : {};
+  const saved = local.set(draftKey(ed), JSON.stringify({ ...draftRecord(ed), ...mark }));
+  draftStored(ed, saved);
+  return saved;
+}
+
+/** The draft saveDraft keeps on this device, and Save draft for later keeps on the PC (editor-kept-drafts.js). */
+function draftRecord(ed) {
+  return {
     v: 1, saved: Date.now(), sha256: ed.sha256 || null, starting: !!ed.starting,
     base: { lists: sendList(ed.base.lists), fields: ed.base.fields, prose: ed.base.prose || null, ...editorConsideringBase(ed) },
     lists: keepList(ed.lists), fields: ed.fields, addSection: ed.addSection, ...editorConsideringSnapshot(ed), ...editorPlayerKitSnapshot(ed),
-    prose: ed.prose || null, markCurrent: !!ed.markCurrent }));
-  draftStored(ed, saved);
-  return saved;
+    prose: ed.prose || null, markCurrent: !!ed.markCurrent };
 }
 
 function draftStored(ed, saved) {

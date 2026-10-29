@@ -5,7 +5,7 @@ Use the server's normal query, method and same-origin write guards. Each
 part of the API is imported when first asked for. A POST takes at most
 api.MAX_EDIT_BODY bytes, except routes with their explicit bound, including
 pod records (play_pods.MAX_BODY), import previews (collection_edit.MAX_IMPORT_BODY), scanned photos
-(collection_scan.MAX_SCAN_BODY)
+(collection_scan.MAX_SCAN_BODY), editor drafts kept for later (deck_drafts.MAX_BODY)
 and accessory saves with a local picture (accessories.MAX_SAVE_BODY).
 """
 
@@ -34,7 +34,7 @@ def _start_sideboard_test(body):
 
 
 def dispatch(handler, route, query):
-    from decklab.lib.api import (accessories, accessory_undo, activity, arrivals, activity_mixed_undo, activity_undo, assembly, assembly_completion, assembly_standins, assembly_ticks, box_check, box_repair, collection, compare, considering, collection_edit, collection_locations, collection_scan, collection_trade, cover, deck_printings, edhrec, editor, history,
+    from decklab.lib.api import (accessories, accessory_undo, activity, arrivals, activity_mixed_undo, activity_undo, assembly, assembly_completion, assembly_standins, assembly_ticks, box_check, box_repair, collection, compare, considering, collection_edit, collection_locations, collection_scan, collection_trade, cover, deck_drafts, deck_printings, edhrec, editor, history,
                                  library_forge, maintenance, opponents, play_pods, play_records, play_tonight, precon_coverage, precons, products, product_tokens, rankings, receipts, rename, retirement, role_cards, shopping, shopping_order_changes, shopping_orders, shopping_queue, shopping_queue_missing, swaps, token_cards, token_plan, tokens, variant_queue, visits, wishlist_undo)
     from decklab.lib.api.common import MAX_BODY
 
@@ -65,6 +65,7 @@ def dispatch(handler, route, query):
         ("deck", "role-cards"): (role_cards.role_cards, ("id", "version")),
         ("deck", "cards"): (cover.cover_cards, ("id",)),
         ("deck", "opponents"): (opponents.opponents_view, ("id",)),
+        ("deck", "draft"): (deck_drafts.draft_view, ("id", "version")),
         ("deck", "edhrec"): (edhrec.edhrec_view, ("id", "commander", "commander2")),
         ("receipt",): (receipts.receipt_view, ("order",)),
         ("arrivals",): (arrivals.arrivals_view, ()),
@@ -131,6 +132,7 @@ def dispatch(handler, route, query):
         ("deck", "box-check"): box_check.save_box_check,
         ("deck", "box-repair"): box_repair.repair_box,
         ("deck", "opponents"): opponents.save_opponents,
+        ("deck", "draft"): (deck_drafts.save_draft, deck_drafts.MAX_BODY),     # the viewer's own; not audited
         ("deck", "considering"): considering.save_considering,
         ("deck", "swaps"): swaps.suggest_draft_swaps,      # a dry run: nothing is written
         ("deck", "retire"): retirement.retire_deck,

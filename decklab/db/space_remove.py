@@ -29,6 +29,7 @@ _TABLE_KEYS = {
     "wishlist": ("wishlist_entry", ("profile_id", "position")),
     "settings": ("profile_setting", ("profile_id", "key")),
     "visibility": ("visibility", ("owner", "thing")),
+    "drafts": ("deck_draft", ("profile_id", "deck_id", "version")),
     "visit_days": ("ops.visit_day", ("profile_id", "day", "channel")),
     "visit_pages": ("ops.visit_page", ("profile_id", "day", "channel", "route", "deck_id")),
 }

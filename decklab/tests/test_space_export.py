@@ -48,6 +48,10 @@ class MemberExportTests(db_support.DbTestCase):
         with db.connect("owner", dbname=cls.dbname, autocommit=True) as c:
             with db.change("test", "test", "Member export fixture spaces", conn=c) as (cur, _):
                 cur.execute("insert into space (id) values ('home'), ('sample'), ('other') on conflict do nothing")
+                # Profiles only for the drafts kept for later, whose rows need one.
+                cur.execute("insert into profile (id, name, role, space_id, position) values "
+                            "('sample', 'Sample', 'member', 'sample', 1), ('other', 'Other', 'member', 'other', 2) "
+                            "on conflict do nothing")
 
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory(prefix="decklab-member-export-")
@@ -94,6 +98,11 @@ class MemberExportTests(db_support.DbTestCase):
                             "deck_ids, content) values ('games', %s, 1, '2026-10-18T00:00:00Z', "
                             "'2026-10-18T00:00:00Z', 'test', %s, %s)",
                             ("a" * 32, ["sample/casual/current", "other/casual/current"], Jsonb({"notes": SECRET})))
+            # Drafts kept for later (E2-S16, not audited): fingerprinted, never written into the artifact.
+            for space, text in ((SPACE, "member draft"), ("other", SECRET)):
+                c.execute("insert into deck_draft (profile_id, deck_id, version, revision, saved_at, device, content) "
+                          "values (%s, %s, 'target', 1, now(), 'iPad', %s)",
+                          (space, f"{space}/casual/current", Jsonb({"v": 1, "notes": text})))
 
     def change(self, sql, params=()):
         with self.connect() as c:
@@ -138,6 +147,7 @@ class MemberExportTests(db_support.DbTestCase):
         self.change("update collection_card set quantity = 9 where space_id = 'other'")
         self.change("update deck_text set text = text || 'changed' where deck_id = 'other/casual/current'")
         self.change("update profile_setting set value = 'light' where profile_id = 'other'")
+        self.change("update deck_draft set revision = revision + 1 where profile_id = 'other'")
         self.assertEqual(self.match(manifest), manifest)
 
     def test_current_other_space_list_protects_a_result_without_seen_as_provenance(self):
@@ -166,6 +176,7 @@ class MemberExportTests(db_support.DbTestCase):
     def test_member_non_file_state_changes_require_a_fresh_export(self):
         for sql in ("update profile_setting set value = value || 'x' where profile_id = 'sample'",
                     "update wishlist_entry set notes = notes || 'x' where profile_id = 'sample'",
+                    "update deck_draft set revision = revision + 1 where profile_id = 'sample'",
                     "update play_record set revision = revision + 1"):
             with self.subTest(sql=sql):
                 self.dest = Path(self.tmp.name) / str(len(list(Path(self.tmp.name).iterdir())))

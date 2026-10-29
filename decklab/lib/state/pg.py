@@ -786,6 +786,20 @@ class PgStore:
         from . import pg_field_policy
         return pg_field_policy.apply(self, fmt, expected_revision, expected_proof, rule, actor, message, reason)
 
+    # ------------------------------------------------------------------ editor drafts kept for later
+
+    def deck_draft(self, profile_id, deck_id, version):
+        """One profile's draft of one deck list (pg_deck_drafts.get; deck_drafts.view's shape).
+        Not cached; deck_drafts.MissingSchema before migration 0018."""
+        from . import pg_deck_drafts
+        return pg_deck_drafts.get(self, profile_id, deck_id, version)
+
+    def deck_draft_put(self, profile_id, deck_id, version, content, expected_revision, *, device=""):
+        """Save (content) or discard (None) that draft after checking its revision: not audited,
+        never in a batch (pg_deck_drafts.put)."""
+        from . import pg_deck_drafts
+        return pg_deck_drafts.put(self, profile_id, deck_id, version, content, expected_revision, device=device)
+
     # ------------------------------------------------------------------ the household's Commander night
 
     @staticmethod

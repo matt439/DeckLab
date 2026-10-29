@@ -6,6 +6,7 @@ The editor scripts load in this order, before the matchup and application script
                         lists, header fields, the write-up, undo history and the editor's keys, entering
                         and leaving the editor, and sheets (dialogs) and busy buttons
     editor-drafts.js    re-applying changes onto a newer file (rebase()) and drafts kept on this device
+    editor-kept-drafts.js  drafts kept for later on the PC, for the same profile on another device (E2-S16)
     editor-considering.js  saved alternatives, their separate draft lifecycle, controls and review
     editor-screen.js    drawing the editor: banners, the Cards and Notes tabs, the side panel (Add, Stats,
                         Checks), changed() and the bar
@@ -652,7 +653,8 @@ function startEditor(opts) {
   if (ed.base.prose) ed.prose = { ...ed.base.prose };
   editor = ed;
   initEditorConsidering(ed);
-  const draft = opts.restoreDraft === false ? null : readDraft(ed);
+  // A draft kept for later and resumed here (editor-kept-drafts.js) comes back as this device's own would.
+  const draft = opts.keptDraft || (opts.restoreDraft === false ? null : readDraft(ed));
   if (draft) {
     const mine = { lists: draft.lists, fields: draft.fields, starting: draft.starting, prose: draft.prose,
       markCurrent: draft.markCurrent, ...editorConsideringDraft(draft), ...editorPlayerKitSnapshot(draft) };
@@ -674,6 +676,9 @@ function startEditor(opts) {
   syncSections();
   ed.dirty = isDirty();
   ed.snap = snapshot(ed);
+  if (typeof loadKeptDraft === "function") {
+    loadKeptDraft(ed, opts.kept, { mark: !opts.keptDraft && draft ? draft.kept : null, after: opts.keptAfter });
+  }
   drawEditor();
   scheduleCheck(0);
 }

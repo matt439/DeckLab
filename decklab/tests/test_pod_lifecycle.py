@@ -265,7 +265,7 @@ class PodExportFingerprintTests(unittest.TestCase):
             def execute(self, query, params=()):
                 if query == "select 1 from space where id = %s":
                     return SimpleNamespace(fetchone=lambda: (1,))
-                if query == "select to_regclass('public.visibility') is not null":
+                if query.startswith("select to_regclass("):      # visibility, deck_draft: migrated
                     return SimpleNamespace(fetchone=lambda: (True,))
                 if query == space_export._QUERIES["space"]:
                     return [({"id": "user2"},)]

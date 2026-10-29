@@ -340,7 +340,7 @@ Known low issues: the real record counts every game between the two decks, whate
 
 ## E2: Build and edit a deck
 
-Covers making a deck and keeping it right: New deck and Start from, the full editor (from 600px) and the phone's Quick edit, Paste a list, the Planned and Play-now lists, owned vs needed against the space's pool and its other built decks, keeping the write-up current, history and undo, and the command-line route Claude Code uses (`deck pull`/`push`/`new`/`tables`). Drafts stay on the device they were started on, and the Play-now list's substitutes are hand-written (Packing's physical stand-ins, E4-S21, never change a list). Rename and retirement, with restore from History, are on the deck page (E1-S19). Legality badges on casual decks are deliberately not wanted.
+Covers making a deck and keeping it right: New deck and Start from, the full editor (from 600px) and the phone's Quick edit, Paste a list, the Planned and Play-now lists, owned vs needed against the space's pool and its other built decks, keeping the write-up current, history and undo, and the command-line route Claude Code uses (`deck pull`/`push`/`new`/`tables`). Drafts stay on the device they were started on unless the full editor keeps one for later on the PC for the same profile (E2-S16, first slice), and the Play-now list's substitutes are hand-written (Packing's physical stand-ins, E4-S21, never change a list). Rename and retirement, with restore from History, are on the deck page (E1-S19). Legality badges on casual decks are deliberately not wanted.
 
 Open: E2-S16, E2-S22.
 
@@ -523,7 +523,7 @@ Evidence:
 - `decklab/db/inv_decks.py`: expected
 - `decklab/tests/test_deck_saving_db.py`: test_the_409_names_who_saved_it_from_the_revisions
 
-**E2-S16** · Matt · could · L · missing
+**E2-S16** · Matt · could · L · partial
 
 As a multi-device deck builder, I want to pick up an unsaved edit on another device, so that I can start on the iPad and finish at the PC.
 
@@ -534,9 +534,13 @@ As a multi-device deck builder, I want to pick up an unsaved edit on another dev
 Evidence:
 - `decklab/web/editor-drafts.js`: draftKey, saveDraft, readDraft (drafts only in the browser's storage)
 
-Gap: There's no server-side draft store and no drafts API; nothing is shared between devices.
+Gap (before 2026-10-29): there was no server-side draft store and no drafts API; nothing was shared between devices.
 
 First slice (reserve review, 2026-10-28): an explicit Save draft for later action and same-profile restore/discard, with a revision token so two clients cannot silently overwrite each other's draft. Store drafts privately per profile and deck; recheck deck access on every read and write. Preserve local drafts, show the saved deck revision they started from, and keep publishing a deck as its existing separate reviewed save. Two simulated clients cover the first slice; real-device acceptance and any live migration follow separately.
+
+Now (2026-10-29, first slice): [drafts kept for later](../HISTORY.md#drafts-kept-for-later-2026-10-29-e2-s16-first-slice). Migration `0018_deck_drafts.sql` (written, not applied) adds `deck_draft`, one row per profile, deck and list with a revision that only grows; a discard leaves a tombstone, deleting the profile or deck removes its drafts, a rename carries them, and drafts are neither audited nor in the general export (a member's removal fingerprints, locks and deletes them). `GET`/`POST /api/deck/draft` (`lib/api/deck_drafts.py`) answer only the named viewer's own draft (nobody else's, an admin's or a script's), check the deck's visibility first (a hidden deck's 404), need deck.edit to keep one, and refuse a stale revision with 409. The server records which saved revision the draft started from. The full editor's ▾ menu has **Save draft for later**; opening the same deck and list on another device offers **Resume it** or **Discard it**, with the device, time, starting revision and which of it and this device's unsaved changes is newer; resuming rebases as a local draft does, and saving the deck clears the kept draft it resumed or kept (remembered in that device's own draft across reopening). Without the migration the read answers `available: false` and the editor behaves as before. Evidence: `state/deck_drafts.py`, `state/pg_deck_drafts.py`, MemoryStore, `web/editor-kept-drafts.js`, `tests/test_state_contract.py`, `tests/test_deck_drafts.py`, `tests/test_editor_kept_drafts_ui.py`, `tests/test_space_remove_preview.py`.
+
+Remaining: the phone's Quick edit has no Save draft for later yet (it resumes and discards); a new deck's draft stays on its device; applying migration 0018 live; and acceptance on the household's real devices.
 
 **E2-S19** · User1 · could · S · built
 

@@ -11,6 +11,7 @@ from decklab.tests.test_web import NODE, WEB, _run_page, _text
 
 MOVED = ("reapplyList", "reapplyFields", "rebase", "draftKey", "queueDraft", "saveDraft", "draftStored",
          "readDraft", "removeDraft", "timeWords")
+ADDED = ("draftRecord",)        # E2-S16: saveDraft's draft object, shared with the drafts kept for later
 
 
 def _defined(script):
@@ -20,7 +21,8 @@ def _defined(script):
 class DraftsFileTests(unittest.TestCase):
 
     def test_the_drafts_file_holds_only_the_moved_functions(self):
-        self.assertEqual(_defined(_text("editor-drafts.js")), list(MOVED))
+        defined = _defined(_text("editor-drafts.js"))
+        self.assertEqual(sorted(defined), sorted(MOVED + ADDED))
         editor = _defined(_text("editor.js"))
         for name in MOVED:
             with self.subTest(name=name):

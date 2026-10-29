@@ -2,6 +2,7 @@
 import copy
 import io
 import json
+import re
 import tempfile
 import unittest
 from contextlib import redirect_stderr, redirect_stdout
@@ -105,6 +106,36 @@ class RecordTransformTests(unittest.TestCase):
                          {"collection_import", "collection_import_content", "deck", "deck_text", "deck_revision", "play_record"})
         self.assertEqual(next(r for r in rows if r["table"] == "play_record")["action"], "redact")
         self.assertEqual(len(retained), 1)
+
+    def test_drafts_kept_for_later_are_listed_by_key_without_their_contents(self):
+        draft = {"profile_id": SPACE, "deck_id": "sample/casual/own", "version": "target", "revision": 2,
+                 "device": "iPad", "content": {"notes": SECRET}}
+        rows, _ = space_remove.row_plan(SPACE, {"drafts": [draft]})
+        self.assertEqual(rows, [{"table": "deck_draft", "action": "delete",
+                                 "key": {"profile_id": SPACE, "deck_id": "sample/casual/own", "version": "target"}}])
+
+    def test_every_table_hanging_off_a_profile_or_deck_is_locked_and_deleted_explicitly(self):
+        # A cascade alone would delete a member's rows outside the export, the preview and the locks.
+        from decklab.db import migrate, space_apply
+        found = set()
+        for path in sorted(migrate.MIGRATIONS.glob("*.sql")):
+            sql = re.sub(r"--[^\n]*", "", path.read_text(encoding="utf-8"))
+            for name, body in re.findall(r"(?is)create table\s+([\w.]+)\s*\((.*?)\n\);", sql):
+                if re.search(r"(?i)references\s+(profile|deck)\b(?!_)", body):
+                    found.add(name if "." in name else f"public.{name}")
+            for name in re.findall(r"(?i)alter table\s+([\w.]+)\s+add foreign key[^;]*references\s+(?:profile|deck)\b(?!_)", sql):
+                found.add(name if "." in name else f"public.{name}")
+        self.assertIn("public.deck_draft", found)
+        self.assertLessEqual(found, set(space_apply.LOCK_TABLES))
+        tables = {table for table, _ in space_remove._TABLE_KEYS.values()}
+        for table in found:
+            with self.subTest(table=table):
+                bare = table.removeprefix("public.")
+                self.assertIn(bare, tables)
+                self.assertIn(bare, space_apply.DELETE_ORDER)
+        order = space_apply.DELETE_ORDER
+        self.assertLess(order.index("deck_draft"), order.index("deck"))
+        self.assertLess(order.index("deck_draft"), order.index("profile"))
 
 
 class ForgeSelectionTests(unittest.TestCase):

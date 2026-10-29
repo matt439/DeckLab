@@ -3,8 +3,8 @@ and on the PostgreSQL store, in a throwaway database (they skip without one: db_
 
 StoreContract holds the tests; each backend's class says how to make its store. Between them
 they check that both keep the same rules (wishlist order, casefold names, the list's limit,
-settings' upsert and no-op, the simulations mode, play records' hashes and conflicts) and
-write the same audit trail, so tests elsewhere can rely on the MemoryStore meaning PostgreSQL.
+settings' upsert and no-op, the simulations mode, play records' hashes and conflicts, editor
+drafts kept for later and their revisions) and write the same audit trail, so tests elsewhere can rely on the MemoryStore meaning PostgreSQL.
 
 Run from the repo root: python scripts/test_fixtures.py decklab.tests.test_state_contract
 The fixture runner disables configured PostgreSQL and real Forge; named native
@@ -52,6 +52,17 @@ def plan(record_id):
             "created_on": "2026-10-11T01:02:03.456789+00:00", "updated_on": "2026-10-11T01:02:03.456789+00:00",
             "updated_by": "User1", "deck": selection("casual/free-peoples"), "opponent": selection("casual/otters"),
             "out": [], "in": [], "after": {"Deck": []}, "notes": ""}
+
+
+DRAFT_DECK = "casual/gruul-test"
+OTHER_DRAFT_DECK = "commander/elf-commander"
+
+
+def draft(n=1, **more):
+    """An editor draft object (editor-drafts.js saveDraft's shape) with n Forests."""
+    return {"v": 1, "saved": 1, "sha256": None, "starting": False,
+            "base": {"lists": {"Deck": []}, "fields": {}, "prose": None},
+            "lists": {"Deck": [{"name": "Forest", "qty": n}]}, "fields": {"archetype": f"draft {n}"}, **more}
 
 
 def operations(store):
@@ -533,6 +544,74 @@ class StoreContract:
             self.store.settings_put("matt", {"theme": "dark"}, MATT, "  ")
         self.assertEqual(self.trail(), [])
 
+    # ------------------------------------------------------------------ editor drafts kept for later (E2-S16)
+
+    def draft_decks(self):
+        """The decks the drafts below are of (a draft's row needs its deck and profile)."""
+
+    def test_draft_revisions_grow_and_a_discard_keeps_a_tombstone(self):
+        self.draft_decks()
+        store = self.store
+        self.assertEqual(store.deck_draft("matt", DRAFT_DECK, "target"), {"revision": 0, "draft": None})
+        saved = store.deck_draft_put("matt", DRAFT_DECK, "target", draft(1), 0, device=" iPad ")
+        self.assertEqual((saved["revision"], saved["draft"]["device"], saved["draft"]["content"]), (1, "iPad", draft(1)))
+        self.assertRegex(saved["draft"]["saved_at"], r"^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\+00:00$")
+        self.assertEqual(store.deck_draft("matt", DRAFT_DECK, "target"), saved)
+        self.assertEqual(store.deck_draft_put("matt", DRAFT_DECK, "target", None, 1), {"revision": 2, "draft": None})
+        # Discarding what's gone changes nothing; the revision stays, so an old reader can't revive it.
+        self.assertEqual(store.deck_draft_put("matt", DRAFT_DECK, "target", None, 2), {"revision": 2, "draft": None})
+        for stale in (0, 1):
+            with self.subTest(stale=stale), self.assertRaises(Conflict):
+                store.deck_draft_put("matt", DRAFT_DECK, "target", draft(2), stale)
+        self.assertEqual(store.deck_draft_put("matt", DRAFT_DECK, "target", draft(3), 2)["revision"], 3)
+        self.assertEqual(store.deck_draft("matt", DRAFT_DECK, "target")["draft"]["content"], draft(3))
+
+    def test_drafts_of_other_profiles_decks_and_versions_are_separate(self):
+        self.draft_decks()
+        self.store.deck_draft_put("matt", DRAFT_DECK, "target", draft(1), 0)
+        for key in (("user1", DRAFT_DECK, "target"), ("matt", DRAFT_DECK, "owned"), ("matt", OTHER_DRAFT_DECK, "target")):
+            with self.subTest(key=key):
+                self.assertEqual(self.store.deck_draft(*key), {"revision": 0, "draft": None})
+
+    def test_a_saved_draft_is_a_copy(self):
+        self.draft_decks()
+        mine = draft(1)
+        self.store.deck_draft_put("matt", DRAFT_DECK, "target", mine, 0)
+        mine["lists"]["Deck"][0]["qty"] = 4
+        shown = self.store.deck_draft("matt", DRAFT_DECK, "target")
+        shown["draft"]["content"]["fields"]["archetype"] = "changed"
+        self.assertEqual(self.store.deck_draft("matt", DRAFT_DECK, "target")["draft"]["content"], draft(1))
+
+    def test_bad_drafts_are_refused_and_write_nothing(self):
+        from decklab.lib.state import deck_drafts
+        self.draft_decks()
+        bad = ({"v": 2, "lists": {}, "fields": {}, "base": {}}, {"v": 1, "lists": {}, "fields": {}}, [draft()],
+               {**draft(), "fields": []}, {**draft(), "x": float("nan")},
+               {**draft(), "notes": "x" * (deck_drafts.MAX_CONTENT + 1)})
+        for content in bad:
+            with self.subTest(content=str(content)[:60]), self.assertRaises(Invalid):
+                self.store.deck_draft_put("matt", DRAFT_DECK, "target", content, 0)
+        for key, expected in ((("bad id!", DRAFT_DECK, "target"), 0), (("matt", "x", "target"), 0),
+                              (("matt", DRAFT_DECK, "both"), 0), (("matt", DRAFT_DECK, "target"), -1),
+                              (("matt", DRAFT_DECK, "target"), True)):
+            with self.subTest(key=key, expected=expected), self.assertRaises(Invalid):
+                self.store.deck_draft_put(*key, draft(), expected)
+        with self.assertRaises(Invalid):
+            self.store.deck_draft_put("matt", DRAFT_DECK, "target", draft(), 0, device="x" * 61)
+        self.assertEqual(self.store.deck_draft("matt", DRAFT_DECK, "target"), {"revision": 0, "draft": None})
+
+    def test_drafts_leave_no_change_set_and_are_never_batched(self):
+        self.draft_decks()
+        before = self.trail()
+        self.store.deck_draft_put("matt", DRAFT_DECK, "target", draft(1), 0)
+        self.store.deck_draft_put("matt", DRAFT_DECK, "target", None, 1)
+        self.assertEqual(self.trail(), before)
+        with self.assertRaises(Invalid):
+            with self.store.batch(MATT, "A batch"):
+                self.store.deck_draft_put("matt", DRAFT_DECK, "target", draft(1), 2)
+        self.assertEqual(self.store.deck_draft("matt", DRAFT_DECK, "target"), {"revision": 2, "draft": None})
+        self.assertEqual(self.trail(), before)
+
 
 class MemoryStoreTests(StoreContract, unittest.TestCase):
 
@@ -571,6 +650,16 @@ class PgStoreTests(StoreContract, db_support.DbTestCase):
         db_support.seed_membership(self.dbname)
         self.breaker = pg.Breaker()
         self.store = pg.PgStore(dbname=self.dbname, breaker=self.breaker)
+
+    def draft_decks(self):
+        from decklab.db import conn as db
+        with self.connect("owner") as c:
+            c.execute("delete from deck_draft")         # not audited; reset() leaves the decks
+            with db.change("test", "test", "Decks for drafts kept for later", conn=c) as (cur, _):
+                for deck_id in (DRAFT_DECK, OTHER_DRAFT_DECK):
+                    kind, slug = deck_id.split("/")
+                    cur.execute("insert into deck (id, space_id, kind, slug, revision) values (%s, 'home', %s, %s, 1) "
+                                "on conflict do nothing", (deck_id, kind, slug))
 
     def test_an_unreachable_database_trips_the_breaker(self):
         from decklab.lib.state import pg

@@ -219,6 +219,7 @@ function drawBanners() {
   clear(host);
   if (typeof boxEditorContextBanner === "function") add(host, [boxEditorContextBanner(ed)]);
   if (typeof editorRetestNotice === "function") add(host, [editorRetestNotice(ed)]);
+  if (typeof keptDraftBanner === "function") add(host, [keptDraftBanner(ed)]);
   if (ed.draftRemoveFailed) {
     host.append(el("div", { class: "box box-warn banner", role: "alert" },
       el("h2", { text: ed.pendingDraftKey ? "The deck was saved, but its old draft couldn't be removed"
@@ -1045,7 +1046,7 @@ function drawBar() {
       p.saveMore = ed.quick ? null : el("button", { type: "button", class: "btn btn-primary bar-save-more",
         "aria-label": "More ways to save", "aria-haspopup": "menu", "data-focus": "bar:save-more", text: "▾",
         onclick: () => openMenu(p.saveMore, [{ text: ed.mode === "new" ? "Create & view deck" : "Save & view deck",
-          onclick: () => saveNow({ viewAfter: true }) }]) });
+          onclick: () => saveNow({ viewAfter: true }) }, ...(typeof keptDraftMenu === "function" ? keptDraftMenu(ed) : [])]) });
       p.saveGroup = el("div", { class: "bar-save-group" }, p.save, p.saveMore);
     }
     // The full editor's stable Forge panel owns the one original secondary Test row.
