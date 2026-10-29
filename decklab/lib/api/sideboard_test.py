@@ -129,7 +129,7 @@ def _plan_changes(forge, record):
     return {"remove": merged(record["out"]), "add": merged(record["in"])}
 
 
-def _today(forge, record, reads):
+def _lists_today(forge, record, reads):
     """(whether the saved plan matches today's lists, today's base entry, today's opponent entry);
     an entry None when it can't be read today."""
     current = False
@@ -190,7 +190,7 @@ def sideboard_tests(id=None, sha256=None):
         raise ApiError(409, preview.PLAN_CHANGED)
     forge = variant_page._forge()
     changes = _plan_changes(forge, record)
-    current, base, against = _today(forge, record, reads)
+    current, base, against = _lists_today(forge, record, reads)
     seen = forge_runs._Seen(profile)
     deck_id, version = record["deck"]["id"], record["deck"]["version"]
     running = {}
