@@ -2,6 +2,54 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Suggested token counts on the deck page (2026-10-29; E7-S08 slice 2)
+
+The second slice reads the card log's token peaks (slice 1, below), so each token on a deck's Tokens part
+can say how many a game put on the battlefield at once. The story is built; real counts need matchups played
+again, since records saved before slice 1 have no tally (no Forge game was run for this).
+
+- **Pooling** (`decklab/lib/forge/saved.py`, `_token_tally` and `_pooled_tokens`): over a result's batches
+  whose "cards" record counts today (`_card_record`) and has a well-formed `"tokens"` (two dicts of names to
+  1 to `PEAK_CAP` counts ending non-zero, no more games than the record's); a counted record without it, or
+  with a malformed one, or a version 1 record (`_older_record`), is "untallied", never "no tokens".
+  `decklab/lib/forge/tokenpeaks.py`'s
+  `list_token_peaks` pools that over every saved result of the list, as `list_cards` pools the card rows:
+  sides with the list's card_sha and today's card-log engine id (worked out only once a result has the
+  card_sha), both sides of a mirror, and a `keep` that drops a result before anything of it counts. The
+  sides another engine played are left out but counted as `other_engine_games`, as `list_cards` counts
+  them, so a list played only before an engine change has games 0 rather than none.
+- **Matching** (`decklab/lib/tokens/peaks.py`, `annotate`): a logged name ("Insect Token", or a copied
+  card's name) matches a need by its name or a face name, with or without " Token", ignoring case and
+  accents. Each of the deck's own tokens gets the peak, "most games at most M" (the fewest that 9 in 10 of
+  the games that made one stayed at or under), the games that made one out of the games counted, and how
+  many more M is than the cards that fit (`usable`). Two needs with one name share it, saying so; the
+  opponent's tokens (they land among the other deck's), emblems, reminders and Copy get none. A peak at
+  the cap reads "30 or more".
+- **The deck page** (`decklab/lib/api/token_peaks.py`, `with_peaks`, from `deck_view`): the tokens answer
+  gains `"forge"` (the games, matchups and untallied games, with a note, or `{"games": 0, "why"}`: no saved
+  games, only games before the tally, only another engine's, or both of those) and each counted need its
+  `"forge"`. Only results whose every side
+  the viewer sees count (`forge_runs._Seen`, as the matchups and card stats), and the Tokens part is only
+  for the space's inventory readers, so a member viewing a public home deck gets none of it. A failure
+  logs and says so, leaving the rest of the part. `decklab/web/token-peaks.js` shows "Estimate from
+  simulated games: Forge games peaked at 7; most games at most 4 (10 games of 100 made one) · 2 more than
+  the cards that fit" under each need's state, and "Suggested counts from N simulated Forge games in M
+  matchups: approximate" (with how they're worked out folded away), or why there are none, above the
+  counters. `deck.js` changes only in place (still 1,192 lines).
+- **Goldens:** `golden_p4.py`'s new "token-peak-defaults" drops only the tokens' and needs' `"forge"`,
+  Forge evidence the dump already leaves out as practice and matchups. The API tests' fake Forge has a
+  `tokenpeaks` with no saved games.
+
+Fixture tests: `decklab/tests/test_token_peaks.py` (pooling, untallied and malformed tallies, a list's
+results, a mirror, keep, today's engine and only another engine's games, matching by face and accents, shared names, the opponent's,
+emblems and Copy, the cap, why there are none, the page's pieces in Node, and the deck page: a matchup
+against a hidden deck adds nothing, a member gets no Tokens part, a failure leaves the part). The deck,
+token, card-log, card-stats, web and inventory-contract tests still pass.
+
+- **Known low issues:** the matching is by name only, so Forge's names for tokens it creates under another
+  name than Scryfall's aren't counted (none seen yet: the fixture game logs "Rabbit Token" and "Cat
+  Token"); `python -m decklab.lib.tokens <deck-id>` doesn't print the counts.
+
 ## The opponent's tokens counted apart (2026-10-29; E7-S23 slice 2)
 
 The first slice marked each token need with whose side it lands on; this one keeps a token the cards' text

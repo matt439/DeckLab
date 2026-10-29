@@ -598,6 +598,8 @@ Where things are (decklab/lib/forge/, each part importing only those above it)
     saved.py        the saved results: load(), and what a result's batches add up to
                     (casts, land plays, and the card log's tallies: _pooled_cards(), which
                     keeps each result's part as a stratum: _add_stratum(), _stratum_key())
+    tokenpeaks.py   a list's token peaks pooled over its saved results: list_token_peaks()
+                    (E7-S08; the deck page's Tokens part reads them as forge.tokenpeaks)
     cardstats.py    per-card stats: card_rows(), side_cards(), list_cards(), and how a
                     difference is judged (_difference(), _spread(), _shrunk(),
                     _discoveries(), _judge()); and the helpers ai and views share
@@ -643,7 +645,7 @@ import types
 
 from . import (common, seeds, cores, simjar, install, lists, overrides, pilots, engine, processes, cardlog, logreader,
                saved, cardstats, runner, pool, servecheck, ai, views, seqstats, estimate, adaptive, field, variants,
-               experiment, cli)
+               experiment, cli, tokenpeaks)
 # Wave 3's parts (forge-trial/sim-wave3-contract.md) are reached through their modules
 # (forge.seqstats.look, forge.field.view, ...); none is re-exported here.
 # Every name the module had before Milestone 7 split it up, except those in _OWNED below.

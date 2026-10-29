@@ -109,6 +109,10 @@ older code (the committed tests/fixtures/inventory_goldens):
   only the opponent gets (read from the cards' text) that no card covers, counted apart from
   "none", "differs" and "incoming". No golden deck's cards give a token away, so only the empty
   answer ([]) is dropped; a deck with one still compares. test_token_sides checks its values.
+- "token-peak-defaults": E7-S08 adds deck_view's tokens "forge" and each counted need's "forge",
+  suggested token counts read from the list's saved Forge results (as "practice" and "matchups",
+  which the dump already leaves out, never the inventory). Only those two keys are dropped; every
+  other token field still compares. test_token_peaks checks their values and privacy.
 - "category-defaults": E2-S24 adds DeckLine.category, the builder's own category on a decklist
   line, so a line dumped as a whole object ({quantity, name, set, number, finish}) gains
   "category". Only a None category on exactly such an object is dropped: a line with a
@@ -623,6 +627,20 @@ def opponent_token_defaults(dump):
                 found.pop("opponent")
 
 
+def token_peak_defaults(dump):
+    """Drop only E7-S08's Forge-derived "forge" on deck pages' tokens and their needs."""
+    for mine in [dump, *((dump.get("by_viewer") or {}).values())]:
+        views = mine.get("deck_view") if isinstance(mine, dict) else None
+        for view in views.values() if isinstance(views, dict) else []:
+            found = view.get("tokens") if isinstance(view, dict) else None
+            if not isinstance(found, dict):
+                continue
+            found.pop("forge", None)
+            for need in found.get("needs") or []:
+                if isinstance(need, dict):
+                    need.pop("forge", None)
+
+
 _LINE_KEYS = {"quantity", "name", "set", "number", "finish", "category"}
 
 
@@ -819,7 +837,7 @@ EXPECTED_P5 = (("deck-id-messages", deck_id_messages), ("phase-5-wording", phase
                ("box-label-defaults", box_label_defaults), ("category-defaults", category_defaults),
                ("storage-location-defaults", storage_location_defaults), ("played-defaults", played_defaults),
                ("departed-defaults", departed_defaults), ("counter-defaults", counter_defaults),
-               ("opponent-token-defaults", opponent_token_defaults),
+               ("opponent-token-defaults", opponent_token_defaults), ("token-peak-defaults", token_peak_defaults),
                ("absent-shop-prices", absent_shop_prices))
 
 

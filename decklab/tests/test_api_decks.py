@@ -7,6 +7,7 @@ from pathlib import Path, PureWindowsPath
 from unittest import mock
 from decklab.lib import accessories, api, cards, config, decks, inventory, pool, tokens
 from decklab.lib.inventory import rules
+from decklab.lib.tokens import peaks
 from decklab.tests import pre_db
 from decklab.tests.test_api import (
     ApiTestCase, COLLECTION, FIXTURES, GRUUL, _write,
@@ -519,7 +520,9 @@ class DeckTokensTests(TokenTestCase):
         view = api.deck_view("casual/hornets")
         expected = tokens.deck_tokens(decks.load_deck("casual/hornets", "target"), tokens.read(),
                                       _REAL_INCOMING()[0])
-        self.assertEqual(view["tokens"], expected)
+        # E7-S08: with no saved Forge games, the part says so and no need has a suggested count.
+        self.assertEqual(view["tokens"], peaks.annotate(expected, None))
+        self.assertEqual(view["tokens"]["forge"], {"games": 0, "why": peaks.NO_GAMES})
         insect = self.need(view["tokens"], INSECT)
         self.assertEqual(insect["state"], "differs")
         self.assertEqual(insect["words"], "Different token: your card says no deathtouch; Hornet Queen's Insect "

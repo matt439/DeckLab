@@ -545,7 +545,9 @@ def deck_view(deck_id, version="target", omit=()):
     matched against the token cards owned, copies, unlisted, note, counts),
     {"unavailable"} while the card index is being rebuilt, {"error"} when it
     can't be worked out, or None for a pairing. It never adds warnings; rows
-    of tokens.csv that can't be read go in info.
+    of tokens.csv that can't be read go in info. With needs it also has "forge" (E7-S08,
+    token_peaks.with_peaks: the saved Forge games its suggested counts come from, or why
+    there are none) and each counted need its "forge" (tokens.peaks.annotate).
 
     standins is this ordinary deck's saved physical-marker mappings, with desired-card pictures,
     separate from sections and their hashes; None for products and pairings. Its own warnings
@@ -667,7 +669,10 @@ def deck_view(deck_id, version="target", omit=()):
         if night is not None:
             answer["commander_night"] = night
     if sees:
-        answer.update(owned=owned, tokens=_view_tokens(summary, version, sections, info), table=table)
+        # E7-S08: each token's suggested count from the list's saved Forge games (token_peaks.py).
+        from .token_peaks import with_peaks
+        answer.update(owned=owned, tokens=with_peaks(_view_tokens(summary, version, sections, info), summary, sections),
+                      table=table)
         if deck_file is not None and space == spaces.HOME and guard.sees_home_records():
             from decklab.lib.decks import boxcheck
             answer["box_checked_on"] = boxcheck.checked_on(deck_file)

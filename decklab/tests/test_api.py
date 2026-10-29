@@ -261,6 +261,8 @@ class FakeForge(types.ModuleType):
         self.clock = 0
         self.held = 0                   # blocks in self.engine.held() entered
         self.engine = types.SimpleNamespace(held=self._held, auto_profile_flag=self._auto_profile_flag)
+        # The deck page's suggested token counts (E7-S08): no saved game counted any (test_token_peaks has them).
+        self.tokenpeaks = types.SimpleNamespace(list_token_peaks=lambda sections, kind, keep=None: None)
 
     @contextlib.contextmanager
     def _held(self):

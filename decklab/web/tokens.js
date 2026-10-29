@@ -149,6 +149,7 @@ function tokenNeed(need, faces = null) {
       // Whose side it lands on, read from the cards' text (E7-S23): said only when it may be the opponent's.
       need.side_words ? el("p", { class: `token-need-side token-need-side-${need.side}`, text: need.side_words }) : null,
       el("p", { class: "token-need-state" }, tokenStateChip(need.state, need.words)),
+      need.forge && typeof tokenPeakLine === "function" ? tokenPeakLine(need.forge) : null,   // E7-S08, token-peaks.js
       cards.length ? el("ul", { class: "token-grab", "aria-label": "Grab" }, cards.map((card) => el("li", {},
         `Grab ${tokCardWords(card, faces)}`,
         card.also_for && card.also_for.length ? ` (same card as for ${card.also_for.join(" and ")})` : null,

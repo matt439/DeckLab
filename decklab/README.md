@@ -853,7 +853,8 @@ Receive delivery, never here.
 - **Where the needs come from:** Scryfall links each card to the tokens, emblems and reminders (The
   Monarch, The Ring Tempts You, dungeons) it makes. So the list is approximate: tokens a card makes
   only through its rules text, and most token copies of other cards, aren't listed, and some listed
-  ones appear only in certain modes or for the opponent. Deck Lab never says how many a game needs.
+  ones appear only in certain modes or for the opponent. Deck Lab never says how many a game needs
+  from the cards alone (the deck page's suggested counts, below, are estimates from simulated games).
   Every place that shows tokens says so.
 - **How a card is matched:** by face name, then by the details recorded for that face: P/T, colour
   and abilities. **Ready** means they agree; **check** means some aren't recorded ("P/T and colour
@@ -874,6 +875,13 @@ Receive delivery, never here.
   use, each with its cards ("Poison counters (on players)", "d20"), read from their rules text, types and
   keywords (`lib/tokens/counters.py`, E7-S24), so approximate; owned dice and counters aren't recorded yet.
   `python -m decklab.lib.tokens <deck-id>` prints them too.
+  **Suggested counts** (E7-S08): when the list's saved Forge matchups were played with the card log's
+  token tally (since 2026-10-29), each token gets "Estimate from simulated games: Forge games peaked at
+  N; most games at most M (G games of T made one)", the most of it on the battlefield at once in a game,
+  and how many more that is than the cards that fit. Forge's names are matched to the tokens by name, so
+  tokens sharing a name count together; tokens only the opponent gets, emblems and reminders get none.
+  Only matchups whose every side you can see count, and only the deck's Tokens-part viewers see them.
+  Without such games the part says why ("Play its matchups again to get them"); older games don't count.
 - **Adding and editing:** **Add a token card**, then the front and back face names (suggested from
   Scryfall's names, with "Did you mean …?" for a near miss), each face's details, the quantity of
   physical cards, and optionally the printing (set, collector numbers, finish). **Swap front and

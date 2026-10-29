@@ -26,7 +26,7 @@ Loaded after core.js, library.js and deck-availability.js (the banner and incomi
 core.js's helpers, cards-ui.js's cardRow and cardTile, and once the page runs stats.js's statsSection,
 statsVerdict, tile and drawCharts, guide.js, practice.js, hands.js,
 deck-tools.js's deckTools pieces and deckMatchupsPart, accessories.js's accessoryThumb, kitChip and kitPicker,
-tokens.js's tokenNeedList, editor-deckpage.js's deckActions, savedBox and staleTableBox, and app.js's
+tokens.js's tokenNeedList (token-peaks.js's tokenPeaksPart), editor-deckpage.js's deckActions, savedBox and staleTableBox, and app.js's
 playerWords and jumpTo. app.js's route() calls showDeck(), and start() calls setUpPeek(). Its card helpers
 (typeGroup, manaCost, cardLink, cardNames, cardThumb, peekLayout, peekable, ...) and pairingLinks() are used
 by stats.js, practice.js, the editor's scripts and the matchup scripts. Nothing here runs at load but its
@@ -1090,7 +1090,7 @@ function tokensSection(data) {
         tokenNeedList(theirs, faces));
     }
   }
-  add(section, [tokenCountersPart(t.counters)]);   // E7-S24: read-only counter kinds and dice
+  add(section, [tokenPeaksPart(t.forge), tokenCountersPart(t.counters)]);   // E7-S08's Forge estimates, E7-S24's counters
   if (copies.length) {
     section.append(el("details", { class: "more deck-tokens-more" }, el("summary", { text: `Makes copies: ${plural(copies.length, "card")}` }),
       el("p", { text: `${copies.join(", ")}. Use a Copy token card, or any spare token, and say what it copies.` })));

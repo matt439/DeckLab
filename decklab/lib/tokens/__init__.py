@@ -33,7 +33,8 @@ index and Scryfall face names), details.py (parse_details), matching.py (an
 owned row against one need, and the describing words), needs.py (building
 and wording a need), sides.py (whose side of the table a need lands on,
 from the making cards' text), counters.py (the counters and dice a list's
-cards call for) and ops.py (the writes). This file keeps reading the
+cards call for), peaks.py (suggested counts from saved Forge games, E7-S08)
+and ops.py (the writes). This file keeps reading the
 inventory and pending orders, deck_tokens, holders and the cache, check and
 the CLI: everything a test patches (read, incoming, deck_tokens,
 cached_deck_tokens, row_uses) has its one binding here, beside its readers,
