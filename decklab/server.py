@@ -221,6 +221,8 @@ inventory writes answer 503 with "reason": "database":
                                          viewer may see (permissions.sees_play_record: those with a deck
                                          of their own space; an admin or a script every one)
                                          (each {"record", "sha256"}), with "warnings" and "today"
+    GET  /api/play/pairs                 tonight's pairs: up to 3 ready home pairs, evenest and least lately
+                                         played first, with reasons (home profiles only; lib/api/play_tonight.py)
     POST /api/play/game, /api/play/sideboard   body {"profile", "id", "sha256", <the record's fields>,
                                          "preview", "review_sha256"?}: preview, then save a game or a
                                          sideboard plan (409 when it changed since it was read)

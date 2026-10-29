@@ -35,7 +35,7 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 
 | Epic | Stories | Built | Partial | Missing | Not wanted |
 |---|---:|---:|---:|---:|---:|
-| [E1: Find, plan and choose decks](#e1-find-plan-and-choose-decks) | 17 | 16 | 0 | 1 | 0 |
+| [E1: Find, plan and choose decks](#e1-find-plan-and-choose-decks) | 17 | 17 | 0 | 0 | 0 |
 | [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 21 | 18 | 1 | 1 | 1 |
 | [E3: Test a deck](#e3-test-a-deck) | 18 | 14 | 3 | 1 | 0 |
 | [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 22 | 18 | 2 | 1 | 1 |
@@ -46,9 +46,9 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E9: Commander nights](#e9-commander-nights) | 22 | 16 | 1 | 4 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 35 | 31 | 1 | 1 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 41 | 31 | 5 | 2 | 3 |
-| **Total** | **270** | **225** | **15** | **16** | **14** |
+| **Total** | **270** | **226** | **15** | **15** | **14** |
 
-Counted from the story headers on 2026-10-29 after the source-aware two-player and pod counters, alongside the current feature and maintenance work. The reviews added five feature stories and eight hygiene stories, then the fixture-only entry-point story E11-S44, and corrected E1-S12 from missing to partial. Rechecked 2026-10-29: E1-S12 is built and E11-S39 partial (its database qualification pending). The TODO audit of 2026-10-29 added fifteen missing stories (twelve from the audit: E1-S27, E1-S28, E2-S27, E3-S25, E3-S26, E5-S25, E6-S25, E6-S26, E9-S26, E9-S27, E11-S45, E11-S46), then Matt's three UI requests (E3-S27, E5-S26, E6-S27), and corrected E7-S32 from missing to partial (its recognition spike and CLI are built). Matt closed E11-S16 as built the same day, and E3-S27, E5-S26, E6-S25, E6-S27 and E11-S46 were built the same day (E11-S12 stays partial after a further slice). Later the same day E5-S25 and E6-S26 were built, E1-S27's first slice (the library) made it partial, and E11-S12 and E3-S26 were built. E1-S27's Overview slices then finished it, and E2-S27 and E9-S27 were built.
+Counted from the story headers on 2026-10-29 after the source-aware two-player and pod counters, alongside the current feature and maintenance work. The reviews added five feature stories and eight hygiene stories, then the fixture-only entry-point story E11-S44, and corrected E1-S12 from missing to partial. Rechecked 2026-10-29: E1-S12 is built and E11-S39 partial (its database qualification pending). The TODO audit of 2026-10-29 added fifteen missing stories (twelve from the audit: E1-S27, E1-S28, E2-S27, E3-S25, E3-S26, E5-S25, E6-S25, E6-S26, E9-S26, E9-S27, E11-S45, E11-S46), then Matt's three UI requests (E3-S27, E5-S26, E6-S27), and corrected E7-S32 from missing to partial (its recognition spike and CLI are built). Matt closed E11-S16 as built the same day, and E3-S27, E5-S26, E6-S25, E6-S27 and E11-S46 were built the same day (E11-S12 stays partial after a further slice). Later the same day E5-S25 and E6-S26 were built, E1-S27's first slice (the library) made it partial, and E11-S12 and E3-S26 were built. E1-S27's Overview slices then finished it, and E2-S27 and E9-S27 were built. E1-S28 was built the same day.
 
 ---
 
@@ -56,7 +56,6 @@ Counted from the story headers on 2026-10-29 after the source-aware two-player a
 
 How Matt and User1 (and, more lightly, User2, User3, User4 and User5) find a deck in the library (#/library), choose its picture, open its deck page (#/deck) to see whether it can be built and how to play it, rename or retire it, and pick what to play tonight. Each viewer's library holds their own space's decks, plus any another space has made public. A plain "Deck Lab is off" message is enough while the PC is off (E11-S02); collector-value sorting and legality badges on casual decks aren't wanted.
 
-Open: E1-S28.
 
 **E1-S01** · User1 · must · M · built
 
@@ -325,7 +324,7 @@ Known low issues: idea, building and product decks say "Not played at home yet" 
 
 First slice (TODO audit, 2026-10-29): Server: add last_played and games per deck to the library answer (lib/api/library.py shelf extras), computed from play records through the Game log's existing visibility filter, pods excluded from 1v1 counts as playLegacyGame does. Client: one tile facts fragment and a new LIB_SORTS entry in web/library.js. Fixture tests for counts, hidden-space exclusion and sort order. Overview line and 'changed since the last game' (diff of the last snapshot via compare.py) are slices 2 and 3.
 
-**E1-S28** · Matt · could · M · missing
+**E1-S28** · Matt · could · M · built
 
 As a player choosing what to play at home tonight, I want Deck Lab to suggest a few ready pairs of decks (one for each of us) that are evenly matched and not played lately, so that we pick a fair, fresh game in seconds.
 
@@ -333,11 +332,9 @@ As a player choosing what to play at home tonight, I want Deck Lab to suggest a 
 - Given a pair with at least 10 real games, then the real record decides evenness, else the Forge estimate, else 'unknown'.
 - Given a deck not ready, then it isn't suggested.
 
-Evidence of the gap (TODO audit, 2026-10-29): No pairing view exists; readiness, usual opponents, Forge pairs and head-to-head records exist separately (E1-S03, E4-S22, E4-S12/S13).
+Built (2026-10-29): `decklab/lib/play_pairs.py` `suggest(decks, games, forge_pairs, today)` is pure: only built casual decks marked ready take part, each pair seated one deck for each home player (an `either` deck takes the seat its partner leaves; two `either` decks make one pair), evenness from the two decks' real record once they have met 10 times (play_comparison's minimum, draws counting half), else the Forge share of their built lists, else unknown, in bands (even within 10 points of 50%, fairly even within 20, then unknown, then one-sided), then the pair never met or met longest ago, then the decks played longest ago; a deck is used once while another pair without it is left. Each pair has plain reasons (the record or Forge's share and games, too few real games, when they last met). GET /api/play/pairs (`decklab/lib/api/play_tonight.py` `pairs_view`) answers home profiles (and a script naming nobody) only: home's built casual decks they see, ready when the built list (`pool._built_version`) has nothing missing in home's pool and its availability is confirmed (the library's E1-S03 rule; `unconfirmed` counts the rest), the Game log's own visible two-player games (`library_played._games`, now with each game's result), and the Constructed field's saved pair rates (`forge.field.pair_rates` through `library_forge.pair_rates`, sharing the library's per-viewer cache; never a game played), each kept only when both its lists' versions are the two decks' built lists (a field addition can put a deck's other list in the field). A member or a request naming nobody gets `{"available": false, "pairs": []}` with no count; unreadable games suggest nothing, unreadable Forge numbers leave the real record. The Game log (`decklab/web/play-tonight.js`) shows **Tonight's pairs** above Record a game for home profiles only (not on one deck's Game log): each pair's two decks, who takes which, its reasons and **Use this pair**, which puts both lists in the quick record's pickers by seat (`playQuickChoose`); nothing is saved. Tests: `decklab/tests/test_play_pairs.py`, `test_play_tonight_ui.py`, `test_library_forge.py` (pair rates). See [HISTORY.md](../HISTORY.md#tonights-pairs-on-the-game-log-2026-10-29-e1-s28).
 
-Gap: none of the criteria is met yet.
-
-First slice (TODO audit, 2026-10-29): Pure function lib/play_pairs.py suggest(decks, games, forge_pairs, today) ranking pairs by closeness to 50% and days since last played, with privacy via the visible decks only. Fixture tests for ordering, unknowns and readiness. A card on #/play later.
+Known low issues: the real record counts every game between the two decks, whatever lists they were played with, while Forge's share is of today's built lists; Forge's point share is used without its interval; one pool warning (any unreadable deck) leaves every deck unconfirmed, as the library's chips do; no browser or device check.
 
 ---
 

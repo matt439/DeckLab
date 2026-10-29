@@ -44,8 +44,8 @@ def _legacy(record):
 
 
 def _games():
-    """The visible two-player games as (date, deck ids, [(deck id, side)]), or None when they
-    can't be read."""
+    """The visible two-player games as (date, deck ids, [(deck id, side)], result "a", "b" or "draw"),
+    or None when they can't be read (play_tonight's real records use the result)."""
     try:
         viewer, script = guard.viewer(), guard.script()
         records = state.store().play_list("games")
@@ -72,7 +72,7 @@ def _games():
                 continue
             sides.append((inventory.resolve_deck_id(side["id"], snapshot) if snapshot is not None else side["id"],
                           side))
-        found.append((record["date"], {deck_id for deck_id, _ in sides}, sides))
+        found.append((record["date"], {deck_id for deck_id, _ in sides}, sides, record.get("result")))
     return found
 
 
@@ -83,7 +83,7 @@ def played_extras(summaries):
         if games is None:
             summary["played"] = None
             continue
-        dates = [day for day, ids, _ in games if summary["id"] in ids]
+        dates = [day for day, ids, *_ in games if summary["id"] in ids]
         summary["played"] = {"last": max(dates) if dates else None, "games": len(dates)}
     return summaries
 
@@ -94,11 +94,11 @@ def deck_played(deck_id):
     games = _games()
     if games is None:
         return None
-    dates = [day for day, ids, _ in games if deck_id in ids]
+    dates = [day for day, ids, *_ in games if deck_id in ids]
     if not dates:
         return {"last": None, "games": 0, "since": None}
     last = max(dates)
-    sides = [side for day, _, found in games if day == last for side_id, side in found if side_id == deck_id]
+    sides = [side for day, _, found, _result in games if day == last for side_id, side in found if side_id == deck_id]
     try:
         since = _since(deck_id, sides)
     except Exception:           # optional: the Last played line stands without it

@@ -1067,6 +1067,24 @@ def view(entry, results_dir=None, *, space="home", public=None, visible=None, ke
             "last_run": last_note(entry, results_dir, space=space, visible=visible, keep=keep), "notes": notes}
 
 
+def pair_rates(fmt, results_dir=None, *, space="home", public=None, visible=None, keep=None, product_notes=True):
+    """Each pair of fmt's field lists with saved games that mean something, for tonight's pairs (E1-S28):
+    {(deck id, opponent's deck id): {"value" (the first's win rate, or None while it can't be told), "games",
+    "versions" (the two lists' versions, in the key's order)}}, in both orders, worked out as view()'s rows are.
+    A field addition may put a deck's other list in the field, so a caller checks "versions" against the lists
+    it means. The options are view()'s. It never plays a game."""
+    field, _notes = _field(fmt, space=space, public=public, visible=visible, product_notes=product_notes)
+    out = {}
+    for entry in field:
+        for row in _rows(entry, _opponents(entry, None, field), results_dir, keep):
+            if row["n"] and not row["not_meaningful"]:
+                opponent = row["opponent"]
+                out[(entry["id"], opponent["id"])] = {"value": _r((row["numbers"] or {}).get("value")),
+                                                      "games": row["n"],
+                                                      "versions": (entry["version"], opponent["version"])}
+    return out
+
+
 def averages(fmt, results_dir=None, *, space="home", public=None, visible=None, keep=None, product_notes=True):
     """Every list of fmt's field against the rest of it, for the library's Forge line (E11-S30 slice 8):
     {deck id: {"version", "card_sha", "average" (as view's) or None, "games", "tested" (the newest saved game's

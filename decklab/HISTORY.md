@@ -2,6 +2,52 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Tonight's pairs on the Game log (2026-10-29; E1-S28)
+
+The Game log now suggests up to three ready pairs for tonight. `decklab/lib/play_pairs.py` `suggest(decks,
+games, forge_pairs, today)` is a pure function over what the caller may show: only built casual decks marked
+ready take part, seated one deck for each home player (Played by `user` on Matt's side, `wife` on User1's, an
+`either` deck on whichever side its partner leaves; two `either` decks make one pair). Evenness comes from the
+two decks' real record once they have met 10 times (play_comparison's minimum, draws counting half), else the
+Forge share of their current lists, else it's unknown; the bands are even (within 10 points of 50%), fairly even
+(within 20), unknown, then one-sided. Within a band, the pair never met, or met longest ago, comes first, then
+the pair whose decks were played longest ago, then the closer share. A deck appears in one suggestion while
+another pair without it is left. Each pair carries plain reasons: "Evenly matched in 12 real games: A 6 wins,
+B 5 wins, 1 draw.", "Fairly even by Forge: A wins 62% of 200 simulated games.", "Only 3 real games so far, too
+few to go by.", "How even it is isn't known yet: ...", and "Not played against each other yet." or "Last played
+against each other 12 days ago."
+
+GET /api/play/pairs (`decklab/lib/api/play_tonight.py` `pairs_view`) answers only a home profile who sees
+home's inventory, or a script naming nobody; a member or a request naming nobody gets `{"available": false,
+"pairs": []}`, with no count, and no deck, game or Forge read is made for them. The decks are home's built
+casual decks the viewer sees; a deck is ready when its built list (`pool._built_version`) has nothing missing
+in home's pool and its availability is confirmed (E1-S03's rule; `unconfirmed` counts those that aren't, which
+are never suggested). The games are the Game log's own (`library_played._games`, which now carries each game's
+result: its visibility and damage checks, renamed decks' old ids resolved, pods left out, a game with a removed
+side counting for nothing). The Forge numbers are the Constructed field's saved pairs the viewer sees
+(`forge.field.pair_rates`, new beside `averages`, through `library_forge.pair_rates`, which shares the library
+Forge line's per-viewer cache, now keyed by answer); each rate carries its two lists' versions and is kept only
+when they're the two decks' built lists, so a field addition's other list never stands for the built one; nothing
+plays. Unreadable games suggest nothing (`error`);
+unreadable Forge numbers leave the real record (`forge_error`).
+
+The page (`decklab/web/play-tonight.js`, loaded after `play-pods.js`) shows **Tonight's pairs** above Record a
+game for home profiles only, and not on one deck's Game log: each pair's decks, who takes which, its reasons
+and **Use this pair**, which puts both lists in the quick record's pickers by seat (`playQuickChoose`, set by
+`playQuickRecord`; the visitor's deck on their own side) and saves nothing. With no pair it says why (too few
+ready decks, all for one player, or availability needing a check) with a link to the library. Fixture tests:
+`decklab/tests/test_play_pairs.py` (readiness and the deck filter, seats, real record over Forge and too few
+real games, unknowns, the bands' order and freshness, spreading the decks, mirrors and games with other decks,
+then the API over the sandbox: ready pairs and their reasons, a deck missing cards, a member and a request
+naming nobody, a script, no games, unconfirmed availability, Forge failing and a Forge
+result of another list left out, and the HTTP route),
+`test_play_tonight_ui.py` (the cards, Use this pair from either player, the empty, failed, error and Forge notes,
+and no section for a member or one deck's log) and `test_library_forge.py` (pair rates and their versions from both sides, hidden
+decks left out, the shared cache and failure). E1-S28 is built. Known low issues: the real record counts every
+game between the two decks whatever lists were played, while Forge's share is of today's built lists; Forge's point
+share is used without its interval; one pool warning leaves every deck unconfirmed, as the library's chips do;
+no browser or device check.
+
 ## At the table on the printed play sheet (2026-10-29; E9-S27)
 
 Print play sheet (`printDeck` in `decklab/web/deck-tools.js`) now adds an **At the table** part after the
