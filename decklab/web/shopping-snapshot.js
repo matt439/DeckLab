@@ -46,6 +46,19 @@ function shopSnapshotLine(card) {
     shopSnapshotWhen(snap.fetched_at));
 }
 
+/** The lab table's one-line marker beside the reference price: a dot (or "Back" when a waiting row
+ * is back in stock) whose spoken and hover words give the snapshot's gist (E5-S26). */
+function shopSnapshotMarker(card) {
+  const snap = card && card.shop_snapshot;
+  if (!snap || typeof snap !== "object") return null;
+  const [words, printing] = shopSnapshotWords(snap);
+  const lead = snap.back_in_stock ? "Back in stock. " : snap.newly_in_stock ? "Newly in stock. " : "";
+  const gist = `${lead}${words}${printing ? ` (${printing})` : ""}`;
+  return el("span", {class: `shop-q-snap shop-q-snap-${snap.status}${snap.back_in_stock ? " shop-q-snap-back" : ""}`,
+    "data-shop-snapshot-marker": snap.status, role: "img", "aria-label": gist, title: gist,
+    text: snap.back_in_stock ? "Back" : "\u2022"});
+}
+
 /** True when the row should stand out: waiting for stock, and the snapshot finds it in stock. */
 function shopSnapshotBack(card) { return Boolean(card && card.shop_snapshot && card.shop_snapshot.back_in_stock); }
 
