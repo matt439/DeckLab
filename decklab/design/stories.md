@@ -36,7 +36,7 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | Epic | Stories | Built | Partial | Missing | Not wanted |
 |---|---:|---:|---:|---:|---:|
 | [E1: Find, plan and choose decks](#e1-find-plan-and-choose-decks) | 17 | 16 | 0 | 1 | 0 |
-| [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 21 | 17 | 1 | 2 | 1 |
+| [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 21 | 18 | 1 | 1 | 1 |
 | [E3: Test a deck](#e3-test-a-deck) | 18 | 14 | 3 | 1 | 0 |
 | [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 22 | 18 | 2 | 1 | 1 |
 | [E5: Decide what to buy](#e5-decide-what-to-buy) | 24 | 20 | 1 | 1 | 2 |
@@ -46,9 +46,9 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E9: Commander nights](#e9-commander-nights) | 22 | 15 | 1 | 5 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 35 | 31 | 1 | 1 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 41 | 31 | 5 | 2 | 3 |
-| **Total** | **270** | **223** | **15** | **18** | **14** |
+| **Total** | **270** | **224** | **15** | **17** | **14** |
 
-Counted from the story headers on 2026-10-29 after the source-aware two-player and pod counters, alongside the current feature and maintenance work. The reviews added five feature stories and eight hygiene stories, then the fixture-only entry-point story E11-S44, and corrected E1-S12 from missing to partial. Rechecked 2026-10-29: E1-S12 is built and E11-S39 partial (its database qualification pending). The TODO audit of 2026-10-29 added fifteen missing stories (twelve from the audit: E1-S27, E1-S28, E2-S27, E3-S25, E3-S26, E5-S25, E6-S25, E6-S26, E9-S26, E9-S27, E11-S45, E11-S46), then Matt's three UI requests (E3-S27, E5-S26, E6-S27), and corrected E7-S32 from missing to partial (its recognition spike and CLI are built). Matt closed E11-S16 as built the same day, and E3-S27, E5-S26, E6-S25, E6-S27 and E11-S46 were built the same day (E11-S12 stays partial after a further slice). Later the same day E5-S25 and E6-S26 were built, E1-S27's first slice (the library) made it partial, and E11-S12 and E3-S26 were built. E1-S27's Overview slices then finished it.
+Counted from the story headers on 2026-10-29 after the source-aware two-player and pod counters, alongside the current feature and maintenance work. The reviews added five feature stories and eight hygiene stories, then the fixture-only entry-point story E11-S44, and corrected E1-S12 from missing to partial. Rechecked 2026-10-29: E1-S12 is built and E11-S39 partial (its database qualification pending). The TODO audit of 2026-10-29 added fifteen missing stories (twelve from the audit: E1-S27, E1-S28, E2-S27, E3-S25, E3-S26, E5-S25, E6-S25, E6-S26, E9-S26, E9-S27, E11-S45, E11-S46), then Matt's three UI requests (E3-S27, E5-S26, E6-S27), and corrected E7-S32 from missing to partial (its recognition spike and CLI are built). Matt closed E11-S16 as built the same day, and E3-S27, E5-S26, E6-S25, E6-S27 and E11-S46 were built the same day (E11-S12 stays partial after a further slice). Later the same day E5-S25 and E6-S26 were built, E1-S27's first slice (the library) made it partial, and E11-S12 and E3-S26 were built. E1-S27's Overview slices then finished it, and E2-S27 was built.
 
 ---
 
@@ -345,7 +345,7 @@ First slice (TODO audit, 2026-10-29): Pure function lib/play_pairs.py suggest(de
 
 Covers making a deck and keeping it right: New deck and Start from, the full editor (from 600px) and the phone's Quick edit, Paste a list, the Planned and Play-now lists, owned vs needed against the space's pool and its other built decks, keeping the write-up current, history and undo, and the command-line route Claude Code uses (`deck pull`/`push`/`new`/`tables`). Drafts stay on the device they were started on, and the Play-now list's substitutes are hand-written (Packing's physical stand-ins, E4-S21, never change a list). Rename and retirement, with restore from History, are on the deck page (E1-S19). Legality badges on casual decks are deliberately not wanted.
 
-Open: E2-S16, E2-S22, E2-S27.
+Open: E2-S16, E2-S22.
 
 **E2-S01** · Matt · must · L · built
 
@@ -691,7 +691,7 @@ Evidence:
 
 New-deck controls wait until its first save. Browser/device and live-runtime acceptance remain unverified; no real-data save, database connection or Forge game qualified this work. See [HISTORY.md](../HISTORY.md#atomic-considering-draft-moves-2026-10-28-e2-s26).
 
-**E2-S27** · User1 · could · S · missing
+**E2-S27** · User1 · could · S · built
 
 As a beginner who learns a deck from its How to play guide, I want the guide to point out cards it mentions that have since left the deck, so that I don't plan around a card that isn't in my box.
 
@@ -699,11 +699,7 @@ As a beginner who learns a deck from its How to play guide, I want the guide to 
 - Given only current cards are named, then no note shows.
 - Given a card name that is a common word but was never in the deck, then it is never flagged.
 
-Evidence of the gap (TODO audit, 2026-10-29): E2-S13 adds only a generic 'Decklist changed' warning; guide.py selects topics without checking names; deck-tools.js links only current names.
-
-Gap: none of the criteria is met yet.
-
-First slice (TODO audit, 2026-10-29): A server helper over the latest 100 deck revisions collecting former card names, matching them as whole words in the guide sections, returned beside the playing guide (lib/api/guide.py). Fixture tests with a two-revision deck.
+Now: built 2026-10-29 ([HISTORY.md](../HISTORY.md#departed-cards-in-how-to-play-2026-10-29-e2-s27)). GET /api/deck's `guide.departed` (`lib/api/guide.py` `departed_cards`) names the cards the guide's topics mention as whole words, case and all (a double-faced card by its front face too; longest name first, as the page's card links, so a departed "Forest" inside a current "Snow-Covered Forest" isn't flagged), that any of the deck's own latest 100 saved revisions held in its Planned or Play-now list and neither of today's lists holds: `{names, count}` in the order the guide first names them, at most 30 names. It is None outside the deck's own space (a public deck's readers included) and when the revisions can't be read. How to play shows "The guide mentions N cards no longer in the deck: A, B". Known limits: no browser or device check; a card renamed by Scryfall or written in another case in the guide isn't matched.
 
 ---
 

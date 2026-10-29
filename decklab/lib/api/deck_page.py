@@ -24,7 +24,7 @@ from .considering import view as considering_view
 from .deck_aliases import metadata
 from .common import _jsonable, _public, _scrub, _unique
 from .forge_runs import _deck_matchups
-from .guide import playing_guide
+from .guide import departed_cards, playing_guide
 from .library_played import deck_played, played_extras
 from .library import (_deck_sections, _half_title, _load_pool, _named_by_id, _scrub_summary, edited_at, shelf_extras,
                       viewer_decks_revision)
@@ -503,8 +503,10 @@ def deck_view(deck_id, version="target", omit=()):
     sources). owned is None if the pool can't be read. Also practice and warnings.
 
     guide is the existing gameplay prose from the deck file's Notes, grouped
-    by topic, with changed_on when a list edit marked that prose stale. It is
-    None for products/pairings, and has empty sections when no guide is written.
+    by topic, with changed_on when a list edit marked that prose stale, and departed
+    (guide.departed_cards: the cards it names that former revisions held and today's lists
+    don't, for the deck's own space only, else None). It is None for products/pairings,
+    and has empty sections when no guide is written.
 
     swaps is what the saved Play-now list swaps for the Planned list (api/swaps.py view_swaps:
     {"swaps": [{"for", "out_qty", "using", "note", "note_line", "card"}], "unpaired"}), each
@@ -645,6 +647,8 @@ def deck_view(deck_id, version="target", omit=()):
         # The Considering list (E2-S23): its free counts only for a viewer who sees the inventory.
         "considering": considering_view(deck_file, deck_id, p, sees, warnings),
     }
+    if answer["guide"] is not None:     # the cards it names that have left the deck (E2-S27): own space only
+        answer["guide"]["departed"] = departed_cards(answer["guide"], deck_file, deck_id)
     # One card away from a two-card combo (E9-S25): prices for all, availability only with the inventory.
     try:
         near_combos.annotate(stats, deck_id, p, sees, answer["considering"])

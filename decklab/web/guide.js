@@ -1,7 +1,8 @@
 /* The deck's play guide on its Overview tab: the existing playing notes from the deck's Notes, one folding
  * topic each (the first open). Markdown is rendered with DOM text nodes: no HTML injection, external images,
  * scripts, or invented strategy. The deck's card names are text links that open the viewer (deck-tools.js
- * guideCardText), and mana symbols ({T}, {G}) are drawn. */
+ * guideCardText), and mana symbols ({T}, {G}) are drawn. Cards it names that have left the deck (E2-S27:
+ * guide.departed, from the deck's own former revisions, sent only to the deck's own space) are listed in a note. */
 "use strict";
 
 function guideSection(data) {
@@ -11,6 +12,8 @@ function guideSection(data) {
     el("h2", { id: "h-guide", text: "How to play" }));
   if (guide && guide.changed_on) section.append(el("div", { class: "note note-warn guide-stale", role: "note" },
     el("p", { text: `The list changed on ${guide.changed_on}, so this guide may be out of date. Check its cards against the list.` })));
+  const gone = parts.length ? guideDeparted(guide.departed) : null;
+  if (gone) section.append(gone);
   if (!parts.length) {
     // Whoever may edit the deck gets the editor's Notes, where the game plan is written.
     const s = data.summary;
@@ -22,6 +25,16 @@ function guideSection(data) {
   section.append(el("div", { class: "guide-topics" }, parts.map((part, i) => el("details", { class: "guide-topic", open: i === 0 },
       el("summary", {}, el("h3", { text: part.title })), guideMarkdown(part.markdown)))));
   return section;
+}
+
+/** "The guide mentions 2 cards no longer in the deck: A, B", or null when it names none (or that can't be told). */
+function guideDeparted(departed) {
+  const names = departed && Array.isArray(departed.names) ? departed.names : [];
+  const count = departed && Number.isInteger(departed.count) ? Math.max(departed.count, names.length) : names.length;
+  if (!names.length) return null;
+  const more = count > names.length ? `, and ${num(count - names.length)} more` : "";
+  return el("div", { class: "note note-warn guide-departed", role: "note" },
+    el("p", { text: `The guide mentions ${plural(count, "card")} no longer in the deck: ${names.join(", ")}${more}.` }));
 }
 
 /** The notes use emphasis, code and links. Links with other schemes (or local

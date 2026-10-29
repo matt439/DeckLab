@@ -2,6 +2,30 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Departed cards in How to play (2026-10-29; E2-S27)
+
+GET /api/deck's `guide` now has `departed`, from `decklab/lib/api/guide.py` `departed_cards`: the cards the play
+guide's topics (titles and text) name that have left the deck. A card counts only when one of the deck's own
+saved revisions (`inventory.deck_revisions_with_text`, the History's latest 100, parsed as the History parses
+them) held it in its Planned or Play-now list, any section, and neither of today's lists holds it; a name that
+is a common word but was never in the deck ("Shock") is never flagged. Names match as whole words, case and all,
+a double-faced card by its front face too, in one scan that tries the longest name first as the page's card
+links do (`cardNamesPattern`): a current card's longer name ("Snow-Covered Forest", "Shock Troops") is read
+whole, so a departed "Forest" or "Shock" inside it isn't flagged. The answer is `{names, count}`, the
+names in the order the guide first names them, at most 30 with `count` saying how many. No revision is read
+when the guide has no topics. `departed` is null outside the deck's own space (`permissions.sees_deck` without
+the Public switches: a public deck's outside readers see its guide but not what its history held, as the
+History gives them only plain summaries), for a product or pairing, and when the revisions can't be read (the
+server log says why). How to play (`guideDeparted` in `decklab/web/guide.js`) shows "The guide mentions N cards
+no longer in the deck: A, B" (", and N more" past the cap) under the stale-guide warning. Fixture tests: the
+names and their order across a deletion revision, whole words and the front face, a departed name inside a
+current card's longer name, a common word never in the deck, only current cards named, a card still in the Play-now list, the cap, no guide and unreadable revisions,
+a member's own deck, a public home deck's outside reader and Matt refused a member's deck; the note's wording,
+singular and "more", and no note without departed cards. `test_api_decks`' deck_view shape test now lists
+E1-S27's `played`. E2-S27 is built. Known low issues: a guide that writes a card in another case or by an older
+Scryfall name isn't matched; the print sheet and the library's glance don't show the note; no browser or device
+check.
+
 ## Last played on the deck Overview (2026-10-29; E1-S27 slices 2 and 3)
 
 GET /api/deck now gives `played`, from `decklab/lib/api/library_played.py` `deck_played`: the library's
