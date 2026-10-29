@@ -3,7 +3,7 @@ another space on the page, home's records home-only, refusals that name no space
 (User1 changes home's collection and tokens as Matt can). HISTORY.md, "Collections and tokens
 are seen only in their own space".
 
-Run from the repo root: python -m unittest decklab.tests.test_inventory_privacy
+Run from the repo root: python scripts/test_fixtures.py decklab.tests.test_inventory_privacy
 """
 import json
 from collections import Counter

@@ -12,7 +12,7 @@ a verdict leans with game length; test_forge_cardlog3 has version 3's), so no Fo
 The expected numbers were worked out apart from the code, in the comments beside them;
 Newcombe's range itself is checked against his paper there.
 
-Run from the repo root: python -m unittest decklab.tests.test_forge_cardpool
+Run from the repo root: python scripts/test_fixtures.py decklab.tests.test_forge_cardpool
 """
 import json
 import math

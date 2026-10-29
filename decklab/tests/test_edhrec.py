@@ -6,7 +6,7 @@ only for a viewer who may see that space's inventory.
 EDHREC is never reached: lib/edhrec._get is replaced by a fake page (PAGE, in EDHREC's layout as
 checked on 2026-10-28), and the cache is a temporary folder.
 
-Run from the repo root: python -m unittest decklab.tests.test_edhrec
+Run from the repo root: python scripts/test_fixtures.py decklab.tests.test_edhrec
 """
 import contextlib
 import io

@@ -26,7 +26,9 @@ DECKLAB_FORGE_TESTS=1 also runs a short real Forge matchup, with and without the
 wants the card log on patches forge.simjar.card_log to say it's ready (CARD_LOG), and
 fake_command then passes --card-log, which makes the fake print DL| lines.
 
-Run from the repo root: python -m unittest discover -s decklab/tests -t .
+Run from the repo root: python scripts/test_fixtures.py
+The fixture runner disables configured PostgreSQL and real Forge; named native
+runtime cases also need separate qualification (see AGENTS.md, Tests).
 Deck/model tests live in test_forge_models.py; execution and process-safety tests
 live in test_forge_execution.py, and the cardlog-check tests in
 test_forge_cardlog_check.py. Shared fixtures and the other CLI tests remain here.

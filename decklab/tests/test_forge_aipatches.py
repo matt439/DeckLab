@@ -18,6 +18,7 @@ game goes on (a copy of the fork's class that does both, from the fork's source:
 seed plays the same game, forced attackers in the same order, in two JVMs; and with
 -Ddecklab.gamePatches=off the class plays Forge's thread pool.
 
+Real-Forge qualification requires separate explicit authorization; the default fixture runner disables it.
 Run from the repo root: python -m unittest decklab.tests.test_forge_aipatches
 """
 import os

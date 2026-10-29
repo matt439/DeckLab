@@ -8,7 +8,7 @@ Names the tests patch (simulate, CHUNK_GAMES, CACHE_DIR, ...) are patched on
 the goldfish module whose code reads them (goldfish.runs, goldfish.cli): the
 package refuses them, and TestPatchTargets checks there's no other copy.
 
-Run from the repo root: python -m unittest discover -s decklab/tests -t .
+Run from the repo root: python scripts/test_fixtures.py
 """
 import importlib
 import io

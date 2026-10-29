@@ -4,7 +4,7 @@ saved v2 runs, else its v1 games' median Forge time over the warm speed-up, else
 class; minutes() over pairs with the slower list's rate and the tail allowance at the high end; and
 the matchup page's estimates.
 
-Run from the repo root: python -m unittest decklab.tests.test_forge_estimate
+Run from the repo root: python scripts/test_fixtures.py decklab.tests.test_forge_estimate
 """
 import json
 import shutil

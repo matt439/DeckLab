@@ -1,7 +1,7 @@
 """The library's Forge line (E11-S30 slice 8): forge.field.averages over test_forge_field's small tree, and
 GET /api/library/forge's visibility, cache and failure over a stubbed field (no Forge process starts).
 
-Run from the repo root: python -m unittest discover -s decklab/tests -t .
+Run from the repo root: python scripts/test_fixtures.py
 """
 import json
 import shutil

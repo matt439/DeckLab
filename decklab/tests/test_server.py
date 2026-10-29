@@ -13,7 +13,9 @@ file (control.STATE_FILE, or DECKLAB_STATE_FILE for the real processes) and
 temp log files, so the real decklab/data/server.json and logs are never
 touched and the real server is never signalled.
 
-Run from the repo root: python -m unittest discover -s decklab/tests -t .
+Run from the repo root: python scripts/test_fixtures.py
+The fixture runner disables configured PostgreSQL and real Forge; named native
+runtime cases also need separate qualification (see AGENTS.md, Tests).
 Process startup, shutdown and direct-script checks live in test_server_lifecycle.py;
 HTTP endpoint and protocol checks remain here.
 """

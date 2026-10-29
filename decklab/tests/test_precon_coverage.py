@@ -6,7 +6,7 @@ MTGJSON is never reached: test_precons' fixture lists are in the sandbox's cache
 archive is a small tar.xz made here (_open_archive), and a refresh runs straight away instead of
 in a thread (_start). Runs in test_collection_edit's sandbox (roles and the user2 and user3 spaces).
 
-Run from the repo root: python -m unittest decklab.tests.test_precon_coverage
+Run from the repo root: python scripts/test_fixtures.py decklab.tests.test_precon_coverage
 """
 import contextlib
 import io

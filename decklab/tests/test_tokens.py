@@ -8,7 +8,7 @@ it. Tests that need card data build a small index from
 fixtures/tokens_cards.jsonl (real Scryfall objects); the rest run with no
 card index at all, as on a fresh clone.
 
-Run from the repo root: python -m unittest decklab.tests.test_tokens
+Run from the repo root: python scripts/test_fixtures.py decklab.tests.test_tokens
 """
 import ast
 import contextlib

@@ -1,6 +1,8 @@
 """Pending-product corrections on disposable file and PostgreSQL inventories.
 
-Run: python -m unittest decklab.tests.test_pending_products
+Run: python scripts/test_fixtures.py decklab.tests.test_pending_products
+The fixture runner disables configured PostgreSQL and real Forge; named native
+runtime cases also need separate qualification (see AGENTS.md, Tests).
 """
 import dataclasses
 import unittest

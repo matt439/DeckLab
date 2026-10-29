@@ -1,6 +1,6 @@
 """Tests for decklab.lib.config: the defaults PLAN.md promises.
 
-Run from the repo root: python -m unittest discover -s decklab/tests -t .
+Run from the repo root: python scripts/test_fixtures.py
 """
 import io
 import json

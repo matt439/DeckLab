@@ -6,7 +6,7 @@ fresh copies, and precons._fetch raises if anything asks for it (tests that
 are about fetching patch it themselves). Runs in test_collection_edit's
 sandbox (roles and the user2 and user3 spaces).
 
-Run from the repo root: python -m unittest decklab.tests.test_precons
+Run from the repo root: python scripts/test_fixtures.py decklab.tests.test_precons
 """
 import http.client
 import json

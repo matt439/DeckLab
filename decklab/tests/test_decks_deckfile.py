@@ -4,7 +4,7 @@ files, the price stamp, broken files and new deck text. The fixtures and
 helpers are in test_decks.py (see its docstring).
 
 Run from the repo root:
-    python -m unittest discover -s decklab/tests -t .
+    python scripts/test_fixtures.py
 """
 import copy
 import hashlib

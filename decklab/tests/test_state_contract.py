@@ -6,7 +6,9 @@ they check that both keep the same rules (wishlist order, casefold names, the li
 settings' upsert and no-op, the simulations mode, play records' hashes and conflicts) and
 write the same audit trail, so tests elsewhere can rely on the MemoryStore meaning PostgreSQL.
 
-Run from the repo root: python -m unittest decklab.tests.test_state_contract
+Run from the repo root: python scripts/test_fixtures.py decklab.tests.test_state_contract
+The fixture runner disables configured PostgreSQL and real Forge; named native
+runtime cases also need separate qualification (see AGENTS.md, Tests).
 """
 import copy
 import os

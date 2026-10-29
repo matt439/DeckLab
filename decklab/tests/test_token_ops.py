@@ -7,7 +7,9 @@ backend (a throwaway database from db_support, the fixture profiles synced once,
 imported per test); the database ones are skipped when PostgreSQL isn't reachable. The git-mode
 files backend (production until the cutover) is test_api_tokens.py's.
 
-Run from the repo root: python -m unittest decklab.tests.test_token_ops
+Run from the repo root: python scripts/test_fixtures.py decklab.tests.test_token_ops
+The fixture runner disables configured PostgreSQL and real Forge; named native
+runtime cases also need separate qualification (see AGENTS.md, Tests).
 """
 import contextlib
 import hashlib

@@ -12,7 +12,9 @@ and simjar._build is replaced by one that writes a jar holding the right class n
 DECKLAB_FORGE_TESTS=1, the real JDK (config.json's forge_java, or the newest one found)
 builds the real jar against the installed Forge.
 
-Run from the repo root: python -m unittest decklab.tests.test_forge_simjar
+Run from the repo root: python scripts/test_fixtures.py decklab.tests.test_forge_simjar
+The fixture runner disables configured PostgreSQL and real Forge; named native
+runtime cases also need separate qualification (see AGENTS.md, Tests).
 """
 import hashlib
 import json

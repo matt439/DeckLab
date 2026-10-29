@@ -2,7 +2,7 @@
 and member collections"). Pure functions, so plain dicts stand in for
 profiles and library summaries.
 
-Run from the repo root: python -m unittest discover -s decklab/tests -t .
+Run from the repo root: python scripts/test_fixtures.py
 """
 import unittest
 from unittest import mock

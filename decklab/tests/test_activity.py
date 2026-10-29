@@ -6,7 +6,9 @@ exactly like to_jsonb's (the tables a MemoryStore never writes: space, profile, 
 tables of later phases). ActivityDbTests writes real audit rows through PgStore and profiles_sync;
 it needs the local PostgreSQL server and skips without it (db_support.py).
 
-Run from the repo root: python -m unittest decklab.tests.test_activity
+Run from the repo root: python scripts/test_fixtures.py decklab.tests.test_activity
+The fixture runner disables configured PostgreSQL and real Forge; named native
+runtime cases also need separate qualification (see AGENTS.md, Tests).
 """
 import json
 import shutil

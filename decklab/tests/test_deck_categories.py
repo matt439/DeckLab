@@ -4,7 +4,7 @@ The line format (parse_line, format_line, a whole block), what ignores it (equal
 snapshot), the editor's saves through api.save_deck in test_api's Sandbox (the files backend), and the
 deck page's grouping, Stats counts, Chance to draw ticks and the editor's Category… sheet under Node.
 
-Run from the repo root: python -m unittest decklab.tests.test_deck_categories
+Run from the repo root: python scripts/test_fixtures.py decklab.tests.test_deck_categories
 """
 import json
 import subprocess

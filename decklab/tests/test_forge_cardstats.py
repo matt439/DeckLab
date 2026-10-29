@@ -16,7 +16,7 @@ the same way, from the standard error with half a win and a game added to each r
 verdicts' false discovery rate have their own tests, in test_forge_cardpool. test_forge's
 module set-up (the made-up Forge folder and the forge fixtures' card index) is reused.
 
-Run from the repo root: python -m unittest decklab.tests.test_forge_cardstats
+Run from the repo root: python scripts/test_fixtures.py decklab.tests.test_forge_cardstats
 """
 import copy
 import json

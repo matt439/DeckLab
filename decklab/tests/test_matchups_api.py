@@ -11,7 +11,7 @@ test clears the gate to look at a run while it plays; the Sandbox opens it
 and waits for every job at the end. The Sandbox gives each test a fresh
 FORGE_JOBS runner, so no Forge process ever starts.
 
-Run from the repo root: python -m unittest discover -s decklab/tests -t .
+Run from the repo root: python scripts/test_fixtures.py
 Execution integration, adaptive runs and runner scheduling live in test_matchups_runs.py;
 shared fixtures and request/view checks remain here.
 """

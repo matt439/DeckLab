@@ -2,7 +2,7 @@
 forge-trial/m7, prepare-inputs copying them, the m7 leg's counting, and the report's comparison
 (Spearman, Bradley-Terry, favourite agreement), which is P3 and never a gate.
 
-Run from the repo root: python -m unittest discover -s decklab/tests -t .
+Run from the repo root: python scripts/test_fixtures.py
 """
 import json
 import re

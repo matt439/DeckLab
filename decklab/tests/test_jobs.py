@@ -3,7 +3,7 @@
 The jobs are small functions that wait on threading.Events the tests set,
 so each test decides exactly when a job finishes; nothing sleeps for long.
 
-Run from the repo root: python -m unittest discover -s decklab/tests -t .
+Run from the repo root: python scripts/test_fixtures.py
 """
 import threading
 import time

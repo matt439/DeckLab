@@ -11,7 +11,7 @@ stay valid.
 
 The page's copy runs under Node.js (test_web's _run_page) when it's installed.
 
-Run from the repo root: python -m unittest discover -s decklab/tests -t .
+Run from the repo root: python scripts/test_fixtures.py
 """
 import json
 import unittest

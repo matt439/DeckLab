@@ -7,7 +7,7 @@ Names resolve against the fixture card index test_cards.py uses
 needs the network or the real data cache. The last tests check the real
 magic/products/status.csv.
 
-Run from the repo root: python -m unittest discover -s decklab/tests -t .
+Run from the repo root: python scripts/test_fixtures.py
 """
 import contextlib
 import csv

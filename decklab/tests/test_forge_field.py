@@ -9,7 +9,7 @@ memory, so no Forge process starts. Until package S's seqstats is built, the few
 field run needs (decided_share, apt_pick, field_row, field_average) are stand-ins written from
 section 7.5; once it is, the real ones run and the same expectations hold.
 
-Run from the repo root: python -m unittest discover -s decklab/tests -t .
+Run from the repo root: python scripts/test_fixtures.py
 """
 import copy
 import hashlib

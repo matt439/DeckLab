@@ -2,7 +2,7 @@
 runner, so the usual discover run covers them too. Nothing is deployed and nothing reaches the network:
 the tests use a stand-in for the PC. Skipped when Node isn't on PATH.
 
-Run from the repo root: python -m unittest discover -s decklab/tests -t .
+Run from the repo root: python scripts/test_fixtures.py
 (or the Worker's tests alone: node --test "decklab/cloudflare/**/*.test.mjs")
 """
 from pathlib import Path

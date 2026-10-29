@@ -8,7 +8,7 @@ asks (or raises), and Forge's setup and replay's plan are stand-ins too, except 
 UpgradeReplayTests, which uses test_forge_replay's saved results to show the replay part is
 replay --dry-run's own output.
 
-Run from the repo root: python -m unittest decklab.tests.test_forge_upgrade_check -q
+Run from the repo root: python scripts/test_fixtures.py decklab.tests.test_forge_upgrade_check
 """
 import pathlib
 import unittest

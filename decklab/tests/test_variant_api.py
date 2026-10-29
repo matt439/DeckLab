@@ -9,7 +9,7 @@ They use the real forge package over test_api's Sandbox, as test_matchups_api's 
 do, with forge.variants.run_test replaced by a stand-in that writes a summary (the coordinator
 itself is test_forge_variants.py's), and a fresh COORD_JOBS runner per test.
 
-Run from the repo root: python -m unittest decklab.tests.test_variant_api
+Run from the repo root: python scripts/test_fixtures.py decklab.tests.test_variant_api
 """
 import json
 import os

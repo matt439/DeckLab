@@ -19,7 +19,7 @@ per sandbox (Sandbox.state), with simulations open to everyone, and the
 inventory backend (decklab.lib.inventory) is a FileInventory over the
 sandbox's own tree (Sandbox.inventory).
 
-Run from the repo root: python -m unittest discover -s decklab/tests -t .
+Run from the repo root: python scripts/test_fixtures.py
 Deck pages are tested in test_api_decks.py; practice hands, search and images in
 test_api_practice.py. Sandbox fixtures and status/profile tests remain here.
 """

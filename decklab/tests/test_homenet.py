@@ -12,7 +12,7 @@ schtasks, the PowerShell call, control (the state file and stop requests)
 and the server's answer are replaced, and the few real sockets use free
 ports on 127.0.0.1.
 
-Run from the repo root: python -m unittest discover -s decklab/tests -t .
+Run from the repo root: python scripts/test_fixtures.py
 """
 import json
 import os

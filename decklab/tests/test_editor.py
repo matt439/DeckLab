@@ -10,7 +10,7 @@ copies of them) in the sandbox and save each one unchanged and with one card
 changed. The same saves on the database backend (revisions, who changed a
 deck) are in test_deck_saving_db.py.
 
-Run from the repo root: python -m unittest discover -s decklab/tests -t .
+Run from the repo root: python scripts/test_fixtures.py
 Regression and contract coverage lives in test_editor_contracts.py; shared fixtures,
 core editing operations and frozen-file round trips remain here.
 """

@@ -11,7 +11,7 @@ Ctrl+C stops it through its progress callback). The saved results of earlier eng
 made by hand (test_forge.stored), with real card_shas. They share test_forge.py's setUpModule
 and tearDownModule (its made-up Forge folder).
 
-Run from the repo root: python -m unittest discover -s decklab/tests -t .
+Run from the repo root: python scripts/test_fixtures.py
 """
 import _thread
 import json

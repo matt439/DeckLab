@@ -4,7 +4,7 @@ preview writes nothing and names the built decks that would lose cards and the t
 out of date; its save is one write naming both sides and the who-with note, with the reason
 "Traded", refused while held copies aren't confirmed, and only by the space's own people.
 
-Run from the repo root: python -m unittest decklab.tests.test_collection_trade_api
+Run from the repo root: python scripts/test_fixtures.py decklab.tests.test_collection_trade_api
 """
 from decklab.lib.api import collection_trade as ct
 from decklab.tests import test_collection_edit as tce

@@ -5,7 +5,9 @@ rows, accessories and pictures, the decks' import (with a git history, and again
 and the database before migration 0006 and before the decks' import. Every test runs in a
 throwaway database (they skip without one: db_support.py).
 
-Run from the repo root: python -m unittest decklab.tests.test_inventory_pg_decks
+Run from the repo root: python scripts/test_fixtures.py decklab.tests.test_inventory_pg_decks
+The fixture runner disables configured PostgreSQL and real Forge; named native
+runtime cases also need separate qualification (see AGENTS.md, Tests).
 """
 import shutil
 import tempfile

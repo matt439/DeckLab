@@ -24,7 +24,7 @@ EntryCommandTests: the command lines that read the inventory run in inventory.en
 (the venv activated, one pinned snapshot, the stale note on stderr, exit 2 when the database
 can't be used).
 
-Run from the repo root: python -m unittest decklab.tests.test_inventory_reads
+Run from the repo root: python scripts/test_fixtures.py decklab.tests.test_inventory_reads
 """
 import contextlib
 import io

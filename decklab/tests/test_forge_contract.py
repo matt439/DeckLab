@@ -9,7 +9,7 @@ tests rely on: the serve protocol as fixtures/fake_forge.py speaks it.
 The wave 2 packages own their own test files; this one is the contract's and changes only with
 it. No Java is needed (the Seeds.java test runs only when a JDK is found).
 
-Run from the repo root: python -m unittest decklab.tests.test_forge_contract
+Run from the repo root: python scripts/test_fixtures.py decklab.tests.test_forge_contract
 """
 import importlib.util
 import json

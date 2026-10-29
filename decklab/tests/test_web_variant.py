@@ -9,7 +9,7 @@ a few of the page's functions under Node.js when it's installed.
 - "Save this change" asks before replacing another unsaved draft of that list.
 - Every class variant.js and variant.css make starts with "vt-".
 
-Run from the repo root: python -m unittest decklab.tests.test_web_variant
+Run from the repo root: python scripts/test_fixtures.py decklab.tests.test_web_variant
 """
 import json
 import re

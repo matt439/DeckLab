@@ -5,7 +5,7 @@ Each test builds a small magic/ tree in a temp folder (accessories.csv, its
 images, deck files, products with status.csv) and points accessories, decks
 and pool at it. Nothing needs the card data or the network.
 
-Run from the repo root: python -m unittest decklab.tests.test_accessories
+Run from the repo root: python scripts/test_fixtures.py decklab.tests.test_accessories
 """
 import contextlib
 import io

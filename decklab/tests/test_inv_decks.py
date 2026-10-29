@@ -4,7 +4,9 @@ accessories list, show, check and their writes, through python -m decklab.db's m
 backend (test_pool's tree), and the revision numbers, history and kit lines on the database
 backend (a throwaway database: those skip without one, db_support.py).
 
-Run from the repo root: python -m unittest decklab.tests.test_inv_decks
+Run from the repo root: python scripts/test_fixtures.py decklab.tests.test_inv_decks
+The fixture runner disables configured PostgreSQL and real Forge; named native
+runtime cases also need separate qualification (see AGENTS.md, Tests).
 """
 import contextlib
 import io

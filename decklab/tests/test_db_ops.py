@@ -5,7 +5,9 @@ rest need psycopg and the local PostgreSQL server, and skip without them (db_sup
 They work in throwaway databases and temporary folders only: never the NAS, the real export
 repo, the real decklab database or Task Scheduler. db.log is redirected to a temporary file.
 
-Run from the repo root: .venv\\Scripts\\python -m unittest decklab.tests.test_db_ops
+Run from the repo root: python scripts/test_fixtures.py decklab.tests.test_db_ops
+The fixture runner disables configured PostgreSQL and real Forge; named native
+runtime cases also need separate qualification (see AGENTS.md, Tests).
 """
 import importlib.util
 import io

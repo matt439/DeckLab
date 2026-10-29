@@ -9,7 +9,7 @@ stands in for its field part (forge.field) and a one-line estimate part for forg
 run reports one pair record per opponent and keeps reporting until its gate opens, so a test can
 look at it while it plays. Each test gets a fresh COORD_JOBS runner.
 
-Run from the repo root: python -m unittest discover -s decklab/tests -t .
+Run from the repo root: python scripts/test_fixtures.py
 """
 import json
 import threading

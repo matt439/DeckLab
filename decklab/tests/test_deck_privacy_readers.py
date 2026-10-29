@@ -16,7 +16,7 @@ missing one (404 "No deck <id>"), checked before any 403 or 409.
   items, only an admin stopping a run, and a field run or test of another space's deck with the
   same list (its job, last run and budgets, and the via of a matchup it plays) never shown.
 
-Run from the repo root: python -m unittest decklab.tests.test_deck_privacy_readers
+Run from the repo root: python scripts/test_fixtures.py decklab.tests.test_deck_privacy_readers
 """
 import json
 import types

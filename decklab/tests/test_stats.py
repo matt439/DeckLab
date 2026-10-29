@@ -19,7 +19,7 @@ fixtures/stats_tags.jsonl is a made-up tag tree that uses the real slugs
 The expected numbers are worked out by hand in the comments, from Karsten's
 formulas and tables as lib/stats/constants.py quotes them.
 
-Run from the repo root: python -m unittest discover -s decklab/tests -t .
+Run from the repo root: python scripts/test_fixtures.py
 """
 import importlib
 import io

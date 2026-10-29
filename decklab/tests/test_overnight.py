@@ -5,7 +5,9 @@ resume with identity checks, the monitor's questions, cleanup touching only run-
 the report's PASS / FAIL / INCOMPLETE logic, and a --fake end-to-end run (the supervisor, the drill's
 self-kill and resume, and an item that ignores STOP ended by its job).
 
-Run from the repo root: python -m unittest discover -s decklab/tests -t .
+Run from the repo root: python scripts/test_fixtures.py
+The fixture runner disables configured PostgreSQL and real Forge; named native
+runtime cases also need separate qualification (see AGENTS.md, Tests).
 """
 import gzip
 import json

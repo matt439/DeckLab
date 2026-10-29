@@ -9,7 +9,9 @@ refresh (inventory/refresh.py, another area's) replaced by a fake, and once more
 (production's backend until the cutover): the commits, a reason in the commit's body, and
 outside edits refused.
 
-Run from the repo root: python -m unittest decklab.tests.test_inventory_orders
+Run from the repo root: python scripts/test_fixtures.py decklab.tests.test_inventory_orders
+The fixture runner disables configured PostgreSQL and real Forge; named native
+runtime cases also need separate qualification (see AGENTS.md, Tests).
 """
 import contextlib
 import dataclasses

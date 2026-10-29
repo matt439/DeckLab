@@ -7,7 +7,7 @@ Both servers run in threads on 127.0.0.1 with free ports (never 8642 or
 8644) over test_api's Sandbox, with test_access's fixed test key standing in
 for Cloudflare's keys. Nothing reaches the internet.
 
-Run from the repo root: python -m unittest discover -s decklab/tests -t .
+Run from the repo root: python scripts/test_fixtures.py
 """
 import http.client
 import json

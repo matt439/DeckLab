@@ -1,6 +1,6 @@
 """Order record corrections on both disposable backends and through the CLI.
 
-Run: python -m unittest decklab.tests.test_order_records
+Run: python scripts/test_fixtures.py decklab.tests.test_order_records
 """
 import contextlib
 import io

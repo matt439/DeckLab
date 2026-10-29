@@ -4,7 +4,7 @@ largest L3 first), the topologies that leave workers unpinned (SMT off, more tha
 processor group, a core in no L3), config.json's forge_pin, and pinning a process to its
 slot's core (a real child process on Windows), never Deck Lab's own.
 
-Run from the repo root: python -m unittest decklab.tests.test_forge_cores
+Run from the repo root: python scripts/test_fixtures.py decklab.tests.test_forge_cores
 """
 import os
 import subprocess

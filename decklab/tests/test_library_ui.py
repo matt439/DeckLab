@@ -3,7 +3,7 @@
 Loads every page script in its real order into the event/DOM double (fixtures/workspace_ui_runner.js), with
 the API stubbed: no browser, server, inventory write or Forge run.
 
-Run from the repo root: python -m unittest decklab.tests.test_library_ui
+Run from the repo root: python scripts/test_fixtures.py decklab.tests.test_library_ui
 """
 import json
 import subprocess

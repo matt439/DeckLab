@@ -7,6 +7,7 @@ slots (cli._check_slot), below normal priority (processes.start_process), with a
 into a scratch data folder and a scratch Forge user folder, so nothing of a real run is touched.
 Check 1 (cardlog-check) is the CLI's own: python -m decklab.lib.forge cardlog-check.
 
+Real-Forge qualification requires separate explicit authorization; the default fixture runner disables it.
 Run from the repo root: set DECKLAB_FORGE_TESTS=1 and
 python -m unittest decklab.tests.test_forge_deckorder
 """

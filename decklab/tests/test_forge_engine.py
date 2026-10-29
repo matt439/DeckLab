@@ -11,7 +11,7 @@ They use test_forge.py's made-up Forge folder and fixtures/fake_forge.py, whose 
 and tearDownModule they share. The tests' Java is this Python, so the card log isn't ready
 unless a test says so (simjar.readiness for pages, simjar.card_log for runs).
 
-Run from the repo root: python -m unittest discover -s decklab/tests -t .
+Run from the repo root: python scripts/test_fixtures.py
 """
 import hashlib
 import json

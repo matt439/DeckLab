@@ -4,7 +4,9 @@ with -DryRun (against stand-ins for the cmdlets it uses, too), and run
 without administrator (refused); the runs are skipped if the tests run as
 administrator. Nothing here changes the firewall or the network.
 
-Run from the repo root: python -m unittest discover -s decklab/tests -t .
+Run from the repo root: python scripts/test_fixtures.py
+The fixture runner disables configured PostgreSQL and real Forge; named native
+runtime cases also need separate qualification (see AGENTS.md, Tests).
 """
 import json
 import re

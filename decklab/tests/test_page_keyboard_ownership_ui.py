@@ -6,7 +6,7 @@ disables fetch, and these scenarios reject unexpected data writes. This file was
 prepared by source review only: no Node/Python test process was run.
 
 After integration, from the repo root:
-    python -m unittest decklab.tests.test_page_keyboard_ownership_ui
+    python scripts/test_fixtures.py decklab.tests.test_page_keyboard_ownership_ui
 """
 import unittest
 

@@ -7,7 +7,9 @@ pg.write_model, in one change set as the import made it.
 The database tests need the local PostgreSQL server and skip without it (db_support.py); each
 class works in its own throwaway database and temporary folders.
 
-Run from the repo root: .venv\\Scripts\\python -m unittest decklab.tests.test_inventory_ops
+Run from the repo root: python scripts/test_fixtures.py decklab.tests.test_inventory_ops
+The fixture runner disables configured PostgreSQL and real Forge; named native
+runtime cases also need separate qualification (see AGENTS.md, Tests).
 """
 import json
 import os

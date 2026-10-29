@@ -3,7 +3,7 @@ fixed 2048-bit test key pair (made once, offline, from two primes found with
 Python's random module: never a real key), the email-to-profile lookup, the
 request's identity and GET /api/me's answer. Nothing here reaches the internet.
 
-Run from the repo root: python -m unittest discover -s decklab/tests -t .
+Run from the repo root: python scripts/test_fixtures.py
 """
 import base64
 import hashlib

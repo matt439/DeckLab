@@ -7,7 +7,9 @@ writes never commit), or, in the database tests, imports the tree into a throwaw
 deletes the deck and accessory files, so every read and write is the database's. Nothing touches
 the real repo, its decklab/data/ or the network.
 
-Run from the repo root: python -m unittest decklab.tests.test_api_accessories
+Run from the repo root: python scripts/test_fixtures.py decklab.tests.test_api_accessories
+The fixture runner disables configured PostgreSQL and real Forge; named native
+runtime cases also need separate qualification (see AGENTS.md, Tests).
 """
 import hashlib
 import json

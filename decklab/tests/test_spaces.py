@@ -6,7 +6,7 @@ Each test builds a small magic/ tree in a temp folder with a config.json that
 lists one person space (user2) and points decks, pool and tokens at it.
 Names resolve against the fixture card index (fixtures/default_cards.jsonl).
 
-Run from the repo root: python -m unittest discover -s decklab/tests -t .
+Run from the repo root: python scripts/test_fixtures.py
 """
 import json
 import unittest

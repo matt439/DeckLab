@@ -10,7 +10,7 @@ seconds at most; they simulate counts rather than game dicts, through the module
 counting helpers (_decided, _assess, _half_width, _anytime, _agresti_min), which the public
 functions call once they've counted the games.
 
-No Forge or fake Forge runs. Run from the repo root: python -m unittest decklab.tests.test_forge_seqstats
+No Forge or fake Forge runs. Run from the repo root: python scripts/test_fixtures.py decklab.tests.test_forge_seqstats
 """
 import math
 import random

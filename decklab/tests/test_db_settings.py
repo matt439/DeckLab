@@ -8,7 +8,9 @@ over the Sandbox's in-memory store, and its own circuit breaker, so tripping it 
 stopped PostgreSQL without touching the process-wide one. They skip without a database
 (db_support).
 
-Run from the repo root: python -m unittest decklab.tests.test_db_settings
+Run from the repo root: python scripts/test_fixtures.py decklab.tests.test_db_settings
+The fixture runner disables configured PostgreSQL and real Forge; named native
+runtime cases also need separate qualification (see AGENTS.md, Tests).
 """
 import json
 from unittest import mock

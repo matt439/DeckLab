@@ -23,7 +23,7 @@ engine.py). simulate(), the saved results, the command line and the worker
 processes are tested in test_goldfish_runs.py, with this file's card index
 (setUpModule) and helpers.
 
-Run from the repo root: python -m unittest discover -s decklab/tests -t .
+Run from the repo root: python scripts/test_fixtures.py
 """
 import math
 import random

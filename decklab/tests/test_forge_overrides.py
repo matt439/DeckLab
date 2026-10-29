@@ -9,7 +9,7 @@ They use test_forge.py's made-up Forge folder, whose cardsfolder.zip holds the f
 "fiery" set fits it), and ForgeCase's pinned override sets (test_forge.OVERRIDE_SETS, in which
 only "fiery" is adopted); SetsTests.test_the_repos_sets checks the repo's own sets.
 
-Run from the repo root: python -m unittest discover -s decklab/tests -t .
+Run from the repo root: python scripts/test_fixtures.py
 """
 import hashlib
 import json

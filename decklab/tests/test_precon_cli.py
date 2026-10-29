@@ -4,7 +4,7 @@ plan_add) from the command line, which writes every space. Run through decklab.d
 the exit codes are the command's, in test_precons' sandbox (MTGJSON never reached, the
 sandbox's files as the inventory; never the real database).
 
-Run from the repo root: python -m unittest decklab.tests.test_precon_cli
+Run from the repo root: python scripts/test_fixtures.py decklab.tests.test_precon_cli
 """
 import contextlib
 import io

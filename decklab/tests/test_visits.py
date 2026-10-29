@@ -4,7 +4,9 @@ profile only, never a data write), the admins' view (GET /api/visits), the serve
 requests, and the tables (written as decklab_app, summarised, pruned by the owner, outside the
 dumps' content digests). The database classes skip without PostgreSQL (db_support).
 
-Run from the repo root: python -m unittest decklab.tests.test_visits
+Run from the repo root: python scripts/test_fixtures.py decklab.tests.test_visits
+The fixture runner disables configured PostgreSQL and real Forge; named native
+runtime cases also need separate qualification (see AGENTS.md, Tests).
 """
 import http.client
 import json

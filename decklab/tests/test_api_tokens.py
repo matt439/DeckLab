@@ -10,7 +10,7 @@ from fixtures/tokens_cards.jsonl. Nothing touches the real repo, its
 decklab/data/ or the network. The same writes on the database backend are
 in test_token_ops.py.
 
-Run from the repo root: python -m unittest decklab.tests.test_api_tokens
+Run from the repo root: python scripts/test_fixtures.py decklab.tests.test_api_tokens
 """
 import contextlib
 import hashlib

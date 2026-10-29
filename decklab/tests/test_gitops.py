@@ -4,7 +4,7 @@ Every test runs git in a repository of its own, made with git init in a temp
 folder (gitops is always given that folder, so the real repo is never
 touched). A few tests stand in for git itself to make it missing or slow.
 
-Run from the repo root: python -m unittest discover -s decklab/tests -t .
+Run from the repo root: python scripts/test_fixtures.py
 """
 import shutil
 import subprocess
