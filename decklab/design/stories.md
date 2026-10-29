@@ -45,10 +45,10 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 19 | 16 | 0 | 1 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 22 | 15 | 1 | 5 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 35 | 31 | 1 | 1 | 2 |
-| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 41 | 30 | 6 | 2 | 3 |
-| **Total** | **270** | **220** | **17** | **19** | **14** |
+| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 41 | 31 | 5 | 2 | 3 |
+| **Total** | **270** | **221** | **16** | **19** | **14** |
 
-Counted from the story headers on 2026-10-29 after the source-aware two-player and pod counters, alongside the current feature and maintenance work. The reviews added five feature stories and eight hygiene stories, then the fixture-only entry-point story E11-S44, and corrected E1-S12 from missing to partial. Rechecked 2026-10-29: E1-S12 is built and E11-S39 partial (its database qualification pending). The TODO audit of 2026-10-29 added fifteen missing stories (twelve from the audit: E1-S27, E1-S28, E2-S27, E3-S25, E3-S26, E5-S25, E6-S25, E6-S26, E9-S26, E9-S27, E11-S45, E11-S46), then Matt's three UI requests (E3-S27, E5-S26, E6-S27), and corrected E7-S32 from missing to partial (its recognition spike and CLI are built). Matt closed E11-S16 as built the same day, and E3-S27, E5-S26, E6-S25, E6-S27 and E11-S46 were built the same day (E11-S12 stays partial after a further slice). Later the same day E5-S25 and E6-S26 were built and E1-S27's first slice (the library) made it partial.
+Counted from the story headers on 2026-10-29 after the source-aware two-player and pod counters, alongside the current feature and maintenance work. The reviews added five feature stories and eight hygiene stories, then the fixture-only entry-point story E11-S44, and corrected E1-S12 from missing to partial. Rechecked 2026-10-29: E1-S12 is built and E11-S39 partial (its database qualification pending). The TODO audit of 2026-10-29 added fifteen missing stories (twelve from the audit: E1-S27, E1-S28, E2-S27, E3-S25, E3-S26, E5-S25, E6-S25, E6-S26, E9-S26, E9-S27, E11-S45, E11-S46), then Matt's three UI requests (E3-S27, E5-S26, E6-S27), and corrected E7-S32 from missing to partial (its recognition spike and CLI are built). Matt closed E11-S16 as built the same day, and E3-S27, E5-S26, E6-S25, E6-S27 and E11-S46 were built the same day (E11-S12 stays partial after a further slice). Later the same day E5-S25 and E6-S26 were built, E1-S27's first slice (the library) made it partial, and E11-S12 was built.
 
 ---
 
@@ -4026,7 +4026,7 @@ Evidence:
 
 Keeping Deck Lab running, safe and believable, by Matt as the household's admin and by Claude Code working for him at the PC. It covers the server and its Cloudflare tunnel and "Deck Lab is off" page, the PostgreSQL database with its nightly backup, export, check and restore check, the audit trail on #/activity, the `python -m decklab.db` commands Claude works through (previews, `--expect` guards, `-m` messages, exit codes), the card data's background refresh, Forge upkeep and the Safari Simulator suite. Every write is one audited change set, Matt's own command-line writes are recorded as his, and backups are checked by restoring them.
 
-Open: E11-S02, E11-S08, E11-S12, E11-S28, E11-S30, E11-S31, E11-S39, E11-S45.
+Open: E11-S02, E11-S08, E11-S28, E11-S30, E11-S31, E11-S39, E11-S45.
 
 **E11-S01** · Matt · must · M · built
 
@@ -4249,7 +4249,7 @@ Evidence:
 - `decklab/tests/test_collection_ops.py`: test_merge_names_the_space_s_decks_whose_tables_are_now_out_of_date
 - `decklab/tests/test_inv_decks.py`: test_push_names_the_other_decks_whose_tables_are_out_of_date, test_push_names_what_would_stop_deck_tables
 
-**E11-S12** · Claude Code · could · S · partial
+**E11-S12** · Claude Code · could · S · built
 
 As Claude Code, the command-line operator, I want refusals and errors in plain words that describe the database world and say what to do next, so that I don't send Matt after files that no longer exist.
 
@@ -4257,14 +4257,13 @@ As Claude Code, the command-line operator, I want refusals and errors in plain w
 - Given a stale `--expect` on a token, accessory or deck write, when it is refused, then it says what changed and which listing or pull to run again.
 - Given the database is down, when any inventory command runs, then it exits 2 with one line saying so.
 
+Now (2026-10-29): every inventory source is named in the database's words ("Row 2 of the home collection", "Product x's status", "Order x's cards", a split or merged payload by the order and component holding it, "order x's additions"), order and product refusals name the product or order rather than its file, a token row the read leaves out by the listed row before it, and a database-down command exits 2 with one line. See [HISTORY.md](../HISTORY.md#database-words-in-row-problems-and-product-and-order-messages-2026-10-29-e11-s12).
+
 Evidence:
-- `decklab/db/inv_tokens.py`: _write; `decklab/db/inv_accessories.py`: expected; `decklab/db/inv_decks.py`: expected
-- `decklab/db/__main__.py`: main (exit 2)
-- `decklab/lib/pool.py` (the `products/status.csv lists ...` warning)
-
-Slice built (2026-10-29): token, pool status, product kit, Forge field and `accessories check` messages name the database record; `tokens check` numbers rows as `tokens list` does; a stale `tokens edit|remove --expect` says the token cards changed and to run `tokens list` again (with `--space S` for a person's). See [HISTORY.md](../HISTORY.md#database-words-in-token-product-and-accessory-messages-2026-10-29-e11-s12-slice).
-
-Gap: criterion 1 is partly met. The file-format reader's row-parse problems (`magic/tokens.csv line N`, `magic/collection.csv line N`) and the products' status-row warnings (`status.csv line N`) still name old files and line numbers, as do product and payload paths in pool, purchases and Shopping messages (`magic/products/<stem>.csv`, `magic/orders/...`); they are shared with the file backend and export. Criterion 3's database-down exit-2 line wasn't re-checked in this slice.
+- `decklab/lib/inventory/paths.py`: describe, row_of, place, title, payload_owners, component_words; `decklab/lib/inventory/model.py`: Inventory.describe; `decklab/lib/inventory/files.py`: build, _card_problems, _token_read, _left_out, status_owner, _status_problems; `decklab/lib/inventory/rules.py`: parse_cards (numbered)
+- `decklab/lib/accessories.py`: parse; `decklab/lib/pool.py`: read_card_csv, read_status, _load_pool; `decklab/lib/purchases.py`: _csv, _read_records, _coverage; `decklab/lib/inventory/orders.py`, `receive.py`, `product_ops.py`, `order_lifecycle.py`, `order_records.py`; `decklab/lib/api/library.py`: place_words
+- `decklab/db/inv_tokens.py`: _write; `decklab/db/inv_accessories.py`: expected; `decklab/db/inv_decks.py`: expected; `decklab/db/__main__.py`: main (exit 2)
+- `decklab/tests/test_database_words.py`; `decklab/tests/golden_p4.py`: phase5_wording
 
 **E11-S13** · Matt · must · M · built
 

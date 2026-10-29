@@ -246,7 +246,7 @@ class PgInventoryTests(contract.db_support.DbTestCase):
 
     def test_a_snapshot_the_database_cant_hold_is_invalid(self):
         self.import_tree(contract.seed_tree)
-        with self.assertRaisesRegex(contract.Invalid, "can't be saved like that: magic/collection.csv line 2: .*'x'"):
+        with self.assertRaisesRegex(contract.Invalid, "can't be saved like that: Row 1 of the home collection: .*'x'"):
             self.backend.apply(contract.inventory.Op("test.set_quantity", {"quantity": "x"}), contract.MATT, "Set")
         self.assertEqual(len(self.trail()), 1)
 

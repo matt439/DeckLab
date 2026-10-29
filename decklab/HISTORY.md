@@ -2,6 +2,56 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Database words in row problems and product and order messages (2026-10-29; E11-S12)
+
+The rest of E11-S12, which is now built. Messages no longer name an old file and line: one place,
+`decklab/lib/inventory/paths.py` (`describe`, `row_of`, `place`, `title`, `payload_owners`, `component_words`),
+names each inventory source as the database holds it: "the home collection" or "user2's collection", "the home
+token cards", "the products' status list", "product x's card list", "order x's cards" and "the purchase queue".
+A payload is named by the order and component whose record holds it ("order x's additions" for a part `order
+split` stored as `x-additions.csv`, the surviving order for one `order merge` moved; "received cards", "token
+cards" by its status and kind), from `payload_owners(inv.orders)` (`Inventory.describe`, and `files.build`
+reads the records before the payloads); only a payload no record names (the "missing order record" warning) is
+named by its file's stem. A file the user handed in (`collection merge FILE`,
+`order add --cards FILE`) keeps its name and line. Changes:
+- Row problems (`files.py`, `pool.read_card_csv`, `rules.parse_cards`'s new `numbered`): "Row 2 of the home
+  collection: bad quantity 'x'", "Row 1 of order x's token cards: invalid token finish", "Row 1 of product x's
+  card list: unknown section 'Main'", numbered from 1 as the listings number them. A token row the read leaves
+  out is named by the listed row before it ("A row after row 3 of the home token cards: ..."), since `tokens
+  list` numbers only the rows it reads; the deck page's info says "A token cards row after row 3 couldn't be
+  read; see the Tokens page". The accessories list's rows are named the same way (`accessories.parse`: "A row
+  after row 2 of the accessories list: ...", "The accessories list's columns must be ...").
+- Status rows name their product ("Product x's status is 'preorder', ...", "Product x's status has intact
+  'maybe', ..."), and a missing list is "The products' status list is missing" (`files.MISSING_STATUS`).
+- Pool: "Order x's cards can't be read, so its cards aren't counted as on the way", "every card in order x's
+  cards is already in the collection", "Product x is marked intact but has no deck lists", and a product deck
+  "Product x's card list can't be read: ..." (`paths.place`, also in the editor, library, accessories, tokens
+  and deck page messages; a deck's id stays as it is).
+- Purchases and Shopping: "Order x's cards: missing order record", "Product x: missing order record", "Order
+  x: cards: its contents are filed under another kind or status than its own", and the order and product
+  writes ("Order x already exists", "Product x already exists", "Order x's cards are already in another
+  order", "There's no row 5 of order x's token cards to take", "Product x has no status").
+- Order and product refusals name the product and order, never `x.csv` or `x.json`: `order cancel`, `order
+  remove` and `product edit` say "Product x is kept intact; its order cannot be removed.", "Product x is owned;
+  only a pending product can be corrected" and so on (`order_lifecycle._product`, `product_ops._pending`);
+  `order record` says "Order x's cards: receipt date conflicts ..."; a receipt's record checks start "Order x:
+  cards: ..." ("another order names its contents too", "its contents are missing"), and a received copy already
+  kept under the same name is "Order x's cards can't be received: order x's received cards are already kept
+  under the same name" (`receive.record`, `receive.receive`).
+- An unknown card's place is still kept as its path in the pool (`visible_place` decides who may be told it by
+  the path), and is shown in the new words only after that check (`library.visible_unresolved`,
+  `inventory_views`).
+
+Criterion 3 was re-checked: with the database down, `collection list`, `tokens list|check`, `order list`,
+`watchlist list`, `deck list` and `accessories list|check` each exit 2 with the one line "The database isn't
+available: ...". The committed inventory goldens keep their old words; `golden_p4.phase5_wording` maps them.
+Fixture tests: the new `test_database_words.py` (every source's words, a person's collection and token rows,
+status rows, payload rows, the pool's and Shopping's warnings with no old file name, home's record warnings
+still hidden from a member by `visible_warnings` and the Tables out of date list's first-word rule, unknown
+card places checked by path and shown in words, a split-off payload named by its order and component, the
+product and record refusals with no old file name, and the database-down exit), plus the updated pool,
+purchases, tokens, inventory files, orders, receipt, API and privacy tests.
+
 ## Last played in the library (2026-10-29; E1-S27 slice 1)
 
 GET /api/decks now gives each deck summary `played`, `{last, games}`, from `decklab/lib/api/library_played.py`

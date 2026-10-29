@@ -29,7 +29,8 @@ older code (the committed tests/fixtures/inventory_goldens):
   "move the order file" and "set its status to owned" advice, "fix it by hand", "no deck file",
   a product order's "Change it by hand", the collection import's and the home-only accessories'
   file names, the editor's "The file has", the deck page's token line and the Tokens page's
-  re-sort note) become the new words.
+  re-sort note; E11-S12's row-parse problems, status rows, product and payload paths) become
+  the new words.
 - "ui-additions": the fields the UI redesign added to the page answers (ui_additions()): a deck's
   "cover", "colors", "revision", "cover_card" and "edited" in the library and the deck page, the
   packing plan's "cards" and a wishlist entry's "source_deck" are dropped.
@@ -290,7 +291,35 @@ def phase5_wording():
         (re.compile(r"\b([a-z0-9][a-z0-9-]*)\.csv isn't in products/status\.csv, so it counts as owned and not "
                     r"intact"),
          r"Product \1 has no status, so it counts as owned and not intact"),
+        # E11-S12, the row-parse problems and the product and payload paths: a row by its number
+        # (the old line less the header's), a status row by its product, a payload by its order.
+        (re.compile(r"\bstatus\.csv line \d+: ([a-z0-9][a-z0-9-]*)\.csv has status "), r"Product \1's status is "),
+        (re.compile(r"\bstatus\.csv line \d+: ([a-z0-9][a-z0-9-]*)\.csv has sleeves or a deck box but isn't "),
+         r"Product \1's status has sleeves or a deck box but the product isn't "),
+        (re.compile(r"\bstatus\.csv line \d+: ([a-z0-9][a-z0-9-]*)\.csv has "), r"Product \1's status has "),
+        (re.compile(r"(?:magic/)?products/status\.csv is missing"), _words("The products' status list is missing")),
+        (re.compile(r"\b(?:magic/(?:people/([a-z0-9-]+)/)?)?collection\.csv line (\d+): "),
+         lambda m: f"Row {int(m.group(2)) - 1} of {_owner(m.group(1))} collection: "),
+        (re.compile(r"\bmagic/products/([a-z0-9][a-z0-9-]*)\.csv(?= can't be read)"), r"Product \1's card list"),
+        (re.compile(r"\bmagic/products/([a-z0-9][a-z0-9-]*)\.csv: "), r"Product \1: "),
+        (re.compile(r"\b([a-z0-9][a-z0-9-]*)\.csv line (\d+): "),
+         lambda m: f"Row {int(m.group(2)) - 1} of product {m.group(1)}'s card list: "),
+        (re.compile(r"\bmagic/orders/(tokens/)?(?:(received|cancelled)/)?([a-z0-9][a-z0-9-]*)\.csv"
+                    r"(?=: missing order record| can't be read)"), _payload_words),
     ]
+
+
+def _owner(space):
+    """E11-S12's owner words for a space's collection (space None: home's)."""
+    return "the home" if space is None else f"{space}'s"
+
+
+def _payload_words(m):
+    """E11-S12's words for an old payload path (paths.describe's): "Order x's received cards",
+    capitalised where it starts a message or a "; "- or ": "-separated part of one."""
+    starts = m.start() == 0 or m.string[m.start() - 2:m.start()] in ("; ", ": ")
+    state = f"{m.group(2)} " if m.group(2) else ""
+    return f"{'O' if starts else 'o'}rder {m.group(3)}'s {state}{'token cards' if m.group(1) else 'cards'}"
 
 
 def phase5_reworded(dump):

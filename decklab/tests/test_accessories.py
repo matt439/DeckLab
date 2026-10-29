@@ -231,11 +231,14 @@ class ReadTests(AccessoriesTestCase):
         self.assertEqual(list(inv.rows_by_id), ["ultimate-guard-boulder-100-black"])
         self.assertEqual(inv.rows_by_id["ultimate-guard-boulder-100-black"]["quantity"], 1)
         self.assertEqual(len(inv.problems), 3)
-        self.assertTrue(inv.problems[0].startswith("accessories.csv line 2: quantity"))
-        self.assertIn("line 4: the id ultimate-guard-boulder-100-black is listed twice", inv.problems[1])
-        self.assertIn("line 5: 2 values", inv.problems[2])
+        # E11-S12: a row left out is named by the listed row before it, never the file's line.
+        self.assertTrue(inv.problems[0].startswith("A row before row 1 of the accessories list: quantity"))
+        self.assertEqual("A row after row 1 of the accessories list: the id ultimate-guard-boulder-100-black is "
+                         "listed twice", inv.problems[1])
+        self.assertIn("A row after row 1 of the accessories list: 2 values", inv.problems[2])
         with self.assertRaisesRegex(accessories.AccessoriesError,
-                                    r"^accessories\.csv line 2: .*; it can't be changed until that's put right$"):
+                                    r"^A row before row 1 of the accessories list: .*; it can't be changed until "
+                                    r"that's put right$"):
             accessories.read(strict=True)
 
     def test_strict_needs_the_exact_header(self):
@@ -244,7 +247,7 @@ class ReadTests(AccessoriesTestCase):
                                       "sleeves,a-b,matt,,Matte,,1,,,,,,\n")
         self.assertIn("a-b", accessories.read().rows_by_id)
         self.assertEqual(len(accessories.read().problems), 1)
-        with self.assertRaisesRegex(accessories.AccessoriesError, "line 1: the header"):
+        with self.assertRaisesRegex(accessories.AccessoriesError, "^The accessories list's columns must be "):
             accessories.read(strict=True)
         self.write("accessories.csv", "id,name\n")
         self.assertEqual(accessories.read().rows_by_id, {})
@@ -594,7 +597,7 @@ class CheckTests(AccessoriesTestCase):
         self.status("test-product.csv,owned,no,red,,\n")
         problems = self.check()
         expected = [
-            "accessories.csv line 4: 2 values, not 13",
+            "A row after row 2 of the accessories list: 2 values, not 13",
             "dragon-shield-matte-black: its picture dragon-shield-matte-black.png is missing "
             "(image put dragon-shield-matte-black.png to store it)",
             "The picture orphan.jpg belongs to no accessory (image remove orphan.jpg takes it away)",

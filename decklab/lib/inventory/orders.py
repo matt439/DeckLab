@@ -130,7 +130,7 @@ def _record_fields(record, repo, inv=None):
     if not isinstance(record, dict):
         raise Invalid("An order needs its record's fields")
     oid = record.get("id")
-    name = f"{oid}.json"
+    name = f"Order {oid}"                   # the database's words (E11-S12), not its record's .json
     if not isinstance(oid, str) or not purchases.ID_RE.fullmatch(oid):
         raise Invalid(f"{name}: invalid order id")
     try:
@@ -180,22 +180,26 @@ def _exact_rows(rows, fields, message):
     return out
 
 
-def card_rows(rows, where):
+def card_rows(rows, where, owners=None):
     """Card payload rows checked as merge_cards.read checks an incoming file (its texts, naming
-    where and each row's line as written); the rows normalised to collection.csv's columns."""
+    where and each row's line as written; an inventory source in its database words, owners as
+    for paths.describe); the rows normalised to collection.csv's columns."""
     text = rules.csv_bytes(rows, rules.FIELDS).decode("utf-8")
     try:
+        if paths.classify(where) is not None:       # an inventory source: its rows by number (E11-S12)
+            return rules.parse_cards(io.StringIO(text, newline=""), paths.describe(where, owners), numbered=True)
         return rules.parse_cards(io.StringIO(text, newline=""), where)
     except (rules.InvalidCards, csv.Error) as e:
         raise _invalid(e) from None
 
 
-def token_rows(rows, where):
+def token_rows(rows, where, owners=None):
     """Token payload rows checked as tokens.csv rows (validate_token_row, not yet the receipt's
-    stricter incoming rule); each named by where and its line."""
-    for line, row in enumerate(rows, 2):
+    stricter incoming rule); each named by its number in where's database words ("Row 2 of
+    order x's token cards", E11-S12)."""
+    for number, row in enumerate(rows, 1):
         try:
-            rules.validate_token_row(row, f"{where}:{line}")
+            rules.validate_token_row(row, paths.row_of(where, number, owners))
         except ValueError as e:
             raise _invalid(e) from None
     return rows
@@ -309,7 +313,7 @@ def _pending_payload(inv, order_id, component_id, verb):
         raise Invalid(f"{component_id} is already {c.status}.")
     sheet = inv.payloads.get(c.path)
     if sheet is None or not sheet.readable:
-        raise Invalid(f"{c.path} isn't there to be {verb}.")
+        raise Invalid(f"{paths.title(paths.component_words(order.id, c.id, c.kind))}: nothing is there to be {verb}.")
     return order, c, [{k: row.text(k) for k in PAYLOAD_FIELDS[c.kind]} for row in sheet.rows]
 
 
@@ -335,30 +339,30 @@ def _product_parts(inv, product, taken, check_cards):
         raise Invalid(f"{stem!r} isn't a product file name (lower-case letters, digits and hyphens)")
     file = f"{stem}.csv"
     if inv.product(stem) is not None or any(row.text("file") == file for row in inv.status.rows):
-        raise Invalid(f"{paths.product(stem)} is already a product")
+        raise Invalid(f"Product {stem} already exists")
     columns = product.get("columns")
     if not isinstance(columns, (list, tuple)) or not all(isinstance(c, str) for c in columns):
-        raise Invalid(f"{paths.product(stem)}: missing or duplicate columns")
+        raise Invalid(f"Product {stem}: missing or duplicate columns")
     columns = tuple(columns)
-    rows = _exact_rows(product.get("rows"), columns, f"{paths.product(stem)}: each row needs exactly its columns")
+    rows = _exact_rows(product.get("rows"), columns, f"Product {stem}: each row needs exactly its columns")
     text = rules.csv_bytes(rows, list(columns)).decode("utf-8")
     try:
-        parsed = rules.parse_cards(io.StringIO(text, newline=""), paths.product(stem))
+        parsed = rules.parse_cards(io.StringIO(text, newline=""), paths.describe(paths.product(stem)), numbered=True)
     except (rules.InvalidCards, csv.Error) as e:
         raise _invalid(e) from None
     warnings = check_card_rows(parsed, check_cards, names_only=True)
     status = product.get("status", "ordered")
     if status not in INCOMING:
-        raise Invalid(f"{paths.product(stem)}: a new product is ordered or preordered, not {status!r}")
+        raise Invalid(f"Product {stem}: a new product is ordered or preordered, not {status!r}")
     notes = product.get("notes", "")
     try:
-        purchases._text(notes, f"{paths.STATUS}: {file}")
+        purchases._text(notes, f"Product {stem}: notes")
         for key in ("name", "format"):
             if product.get(key) is not None:
-                purchases._text(product[key], f"{paths.product(stem)}: {key}", blank=False)
+                purchases._text(product[key], f"Product {stem}: {key}", blank=False)
     except ValueError as e:
         raise _invalid(e) from None
-    cid = _component_id(product.get("id") or stem, taken, f"{product.get('order')}.json")
+    cid = _component_id(product.get("id") or stem, taken, f"Order {product.get('order')}")
     made = Product(stem, columns, tuple(ProductItem.make(row, columns, line=n) for n, row in enumerate(rows, 2)),
                    product.get("name"), product.get("format"))
     _deck_lines(made)
@@ -375,7 +379,7 @@ def _deck_lines(product):
     try:
         return decks._product_lines(product)
     except decks.DeckFileError as e:
-        raise Invalid(f"{paths.product(product.stem)}: {str(e).removeprefix(product.file).lstrip(': ')}") from None
+        raise Invalid(str(e)) from None         # it names the product and row (E11-S12)
 
 
 def _with_status_row(inv, row):
@@ -542,9 +546,9 @@ def add_order(inv, *, record, cards=None, tokens=None, product=None, fulfils=(),
     fields = _record_fields(record, repo, inv)
     oid = fields["id"]
     if inv.order(oid) is not None or any(o.file == f"{oid}.json" for o in inv.orders):
-        raise Invalid(f"{paths.record(oid)} already exists")
+        raise Invalid(f"Order {oid} already exists")
     if not (cards or tokens or product):
-        raise Invalid(f"{oid}.json: order needs components")
+        raise Invalid(f"Order {oid}: order needs components")
     taken, components, payloads, warnings = set(), [], [], []
     ordered, exact = Counter(), Counter()
     counts = {}
@@ -553,21 +557,23 @@ def add_order(inv, *, record, cards=None, tokens=None, product=None, fulfils=(),
             continue
         if not isinstance(given, dict):
             raise Invalid(f"The {kind} component needs its rows")
-        cid = _component_id(given.get("id") or kind, taken, f"{oid}.json")
+        cid = _component_id(given.get("id") or kind, taken, f"Order {oid}")
         file_name = f"{oid}.csv"
-        if _file_taken(inv, kind, file_name):
-            raise Invalid(f"{paths.payload(kind, 'pending', file_name)}: component file occurs in more than one order")
         where = paths.payload(kind, "pending", file_name)
+        owners = {where: (oid, cid)}
+        if _file_taken(inv, kind, file_name):
+            raise Invalid(f"{paths.title(paths.component_words(oid, cid, kind))} are already in another order")
         rows = _exact_rows(given.get("rows"), PAYLOAD_FIELDS[kind],
-                           f"{where}: each row needs exactly the columns {','.join(PAYLOAD_FIELDS[kind])}")
+                           f"{paths.title(paths.describe(where, owners))}: each row needs exactly the columns "
+                           f"{','.join(PAYLOAD_FIELDS[kind])}")
         if kind == "cards":
-            rows = card_rows(rows, where)
+            rows = card_rows(rows, where, owners)
             warnings += [w for w in check_card_rows(rows, check_cards) if w not in warnings]
             for row in rows:
                 ordered[row["name"]] += int(row["quantity"])
                 exact[(row["set"], row["collector_number"], row["finish"])] += int(row["quantity"])
         else:
-            rows, said = check_token_names(token_rows(rows, where))
+            rows, said = check_token_names(token_rows(rows, where, owners))
             warnings += [w for w in said if w not in warnings]
             for row in rows:
                 ordered[row["front"]] += int(row["quantity"])
@@ -628,10 +634,11 @@ def edit_order(inv, *, order, component, rows, check_cards=True):
     o, c, previous = _pending_payload(inv, order, component, "edited")
     fields = PAYLOAD_FIELDS[c.kind]
     rows = _exact_rows(rows, fields, EDIT_FIELDS)
+    owners = {c.path: (o.id, c.id)}
     if c.kind == "cards":
-        rows = card_rows(rows, c.path)
+        rows = card_rows(rows, c.path, owners)
     else:
-        rows = token_rows(rows, c.path)
+        rows = token_rows(rows, c.path, owners)
     if sum(int(r["quantity"]) for r in rows) != sum(int(r["quantity"]) for r in previous):
         raise Invalid(WHOLE)
     warnings = []
@@ -734,12 +741,13 @@ def split_order(inv, *, order, component, new_id, take, move_checks=(), copy_che
     the mark to new_id in the same change, since its cards are part of the same acknowledged order."""
     before = inv
     o, c, rows = _pending_payload(inv, order, component, "split")
+    owners = {c.path: (o.id, c.id)}
     record = o.record()
     ids = {item.get("id") for item in record["components"] if isinstance(item, dict)}
-    _component_id(new_id, set(ids), f"{order}.json")
+    _component_id(new_id, set(ids), f"Order {order}")
     file_name = f"{PurePosixPath(c.file_name).stem}-{new_id}.csv"
     if _file_taken(inv, c.kind, file_name):
-        raise Invalid(f"{paths.payload(c.kind, 'pending', file_name)}: component file occurs in more than one order")
+        raise Invalid(f"{paths.title(paths.component_words(o.id, new_id, c.kind))} are already in another order")
     if not isinstance(take, (list, tuple)) or not take:
         raise Invalid("Say which rows (and how many of each) go to the new component")
     moved = []
@@ -747,14 +755,14 @@ def split_order(inv, *, order, component, new_id, take, move_checks=(), copy_che
     for item in take:
         n = item.get("row") if isinstance(item, dict) else None
         if isinstance(n, bool) or not isinstance(n, int) or not 1 <= n <= len(rows) or n in seen:
-            raise Invalid(f"{c.path} has no row {n!r} to take (it has {_plural(len(rows), 'row')}), "
-                          "or it's named twice")
+            raise Invalid(f"There's no row {n!r} of {paths.component_words(o.id, c.id, c.kind)} to take (it has "
+                          f"{_plural(len(rows), 'row')}), or it's named twice")
         seen.add(n)
         row = rows[n - 1]
         have = int(row["quantity"])
-        qty = have if item.get("quantity") is None else _quantity(item["quantity"], f"{c.path} row {n}")
+        qty = have if item.get("quantity") is None else _quantity(item["quantity"], paths.row_of(c.path, n, owners))
         if qty > have:
-            raise Invalid(f"{c.path} row {n} has {have}, not {qty}")
+            raise Invalid(f"{paths.row_of(c.path, n, owners)} has {have}, not {qty}")
         moved.append({**row, "quantity": str(qty)})
         row["quantity"] = str(have - qty)
     kept = [row for row in rows if row["quantity"] != "0"]
@@ -788,7 +796,7 @@ def split_order(inv, *, order, component, new_id, take, move_checks=(), copy_che
     inv = inv.with_order(order_fulfilment.split(inv.order(order), component, new_id, kept, moved,
                                               moved_first=_arrived_first))
     qty = sum(int(r["quantity"]) for r in moved)
-    text = f"Split {_plural(qty, 'card')} of order {order} {component} into {new_id} ({file_name})"
+    text = f"Split {_plural(qty, 'card')} of order {order} {component} into {new_id}"
     if extra:
         text += f"; {new_id} is marked as extra copies of owned printings too"
     return _done(before, inv, Summary(text, {"moved": qty, "rows": len(moved)},
@@ -872,26 +880,27 @@ def set_intact(inv, *, stem, intact):
     rows = [{k: r.text(k) for k in rules.STATUS_FIELDS} for r in inv.status.rows]
     found = [row for row in rows if row["file"] == file]
     if len(found) != 1:
-        raise Invalid(f"{paths.STATUS} has {'no' if not found else 'more than one'} row for {file}")
+        raise Invalid(f"Product {stem} has {'no status' if not found else 'more than one status'}")
     row = found[0]
     if row["status"] != "owned":
-        raise Invalid(f"{file} is {row['status'] or 'not owned'}; only an owned product is kept intact or broken up")
+        raise Invalid(f"Product {stem} is {row['status'] or 'not owned'}; only an owned product is kept intact or "
+                      f"broken up")
     if row["intact"] == intact:
-        return inv, Summary(f"{file} is already {'kept intact' if intact == 'yes' else 'broken up'}")
+        return inv, Summary(f"Product {stem} is already {'kept intact' if intact == 'yes' else 'broken up'}")
     if intact == "yes":
         # The pool's own refusal (pool.load_pool): an intact product with no deck lists holds
         # nothing, and its warning stops every deck table refresh and receipt.
         product = inv.product(stem)
         if product is None:
-            raise Invalid(f"{paths.product(stem)} isn't there, so {file} can't be kept intact")
+            raise Invalid(f"Product {stem} has no card list, so it can't be kept intact")
         if product.error is not None:
-            raise Invalid(f"{paths.product(stem)} can't be read: {product.error}")
+            raise Invalid(f"Product {stem}'s card list can't be read: {product.error}")
         if _deck_lines(product) is None:
-            raise Invalid(f"{file} has no deck lists, so keeping it intact would hold nothing; "
+            raise Invalid(f"Product {stem} has no deck lists, so keeping it intact would hold nothing; "
                           "only a product with deck lists is kept intact")
     rules.set_intact(row, intact)
     inv = inv.with_status_rows(rows)
-    return _done(before, inv, Summary(f"{file}: {'kept intact' if intact == 'yes' else 'broken up'}"))
+    return _done(before, inv, Summary(f"Product {stem}: {'kept intact' if intact == 'yes' else 'broken up'}"))
 
 
 # ------------------------------------------------------------------ the watchlist

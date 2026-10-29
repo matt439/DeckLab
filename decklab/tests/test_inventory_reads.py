@@ -54,10 +54,8 @@ MESSAGES = {
     ("decklab/db/inv_collection.py", 'for folder in ("magic/orders", "magic/products")'):
         "refuses a recorded order's or product's file as merge input; reads nothing",
     ("decklab/lib/pool.py", 'STATUS_NAME = "status.csv"'): "how messages name status.csv",
-    ("decklab/lib/pool.py", 'f"{STATUS_NAME} line {n}: {file} has'): "messages",
     ("decklab/lib/purchases.py", 'prefix = "magic/products" if kind == "product" else "magic/orders"'):
         "a component's path as Shopping names it",
-    ("decklab/lib/purchases.py", 'value = "magic/products/" + row["file"]'): "a product's path as messages name it",
 }
 # (file, a fragment of the line): still read as files, until their area ports them. Empty since
 # every area of phase 3 merged; kept so a reader ported later has its place.

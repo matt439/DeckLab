@@ -152,7 +152,9 @@ def read(strict=False, space=spaces.HOME):
     inventory snapshot; an empty one when the space has none.
 
     strict (for writes) raises TokensError for a header other than FIELDS,
-    malformed CSV or a bad row, worded "magic/tokens.csv line N: ..." and
+    malformed CSV or a bad row, in the database's words (E11-S12, inventory/files.py's
+    _left_out): "A row after row N of the home token cards: ..." (or "A row before row 1
+    of ...", "The home token cards' columns must be ...") and
     inventory_rules.UNTIL_PUT_RIGHT. Otherwise the columns may come in any order, the older
     6-column header (no printing columns) is read with those blank, and bad
     rows are left out and listed in problems. (Only the files backend can
@@ -372,7 +374,7 @@ def _holders(warnings, space=spaces.HOME, *, include_products=True):
         if status not in ("built", "building"):
             continue
         if summary.get("error"):
-            warnings.append(f"{summary['source']} can't be read: {summary['error']}")
+            warnings.append(f"{inventory_paths.place(summary['source'])} can't be read: {summary['error']}")
             continue
         version, sections = "target", None
         try:
@@ -387,7 +389,7 @@ def _holders(warnings, space=spaces.HOME, *, include_products=True):
                 version = pool._built_version(summary, warnings) if status == "built" else "target"
                 sections = decks.load_deck(summary["id"], version)
         except (decks.DeckNotFound, decks.DeckFileError, OSError) as e:
-            warnings.append(f"{summary['source']} can't be read: {e}")
+            warnings.append(f"{inventory_paths.place(summary['source'])} can't be read: {e}")
             continue
         found.append((summary["id"], summary["title"], version, sections, summary["id"]))
     if space != spaces.HOME or not include_products:

@@ -87,7 +87,7 @@ class PurchasesTests(unittest.TestCase):
 
     def test_unrecorded_delivery_fails_visibly(self):
         self.write_csv("magic/orders/missing.csv", ["name", "quantity"], [{"name": "Forest", "quantity": "1"}])
-        with self.assertRaisesRegex(ValueError, "missing order record"):
+        with self.assertRaisesRegex(ValueError, "Order missing's cards: missing order record$"):
             self.overview()
 
     def test_manifest_rejects_duplicate_component_path_and_status_location_mismatch(self):
@@ -97,7 +97,8 @@ class PurchasesTests(unittest.TestCase):
             self.overview()
         self.record["components"] = [self.component(status="received")]
         self.save()
-        with self.assertRaisesRegex(ValueError, "location conflicts"):
+        with self.assertRaisesRegex(ValueError, "^Order test-order: cards: its contents are filed under another kind "
+                                                "or status than its own$"):
             self.overview()
 
     def test_path_escape_and_impossible_dates_rejected(self):

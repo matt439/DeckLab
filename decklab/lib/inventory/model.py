@@ -693,6 +693,11 @@ class Inventory:
         """[(order, component)] of every readable record, in record and component order."""
         return [(order, component) for order in self.orders for component in order.components]
 
+    def describe(self, rel):
+        """paths.describe(rel), a payload named by the order and component whose record holds it
+        ("order x's additions"), not by its file (E11-S12)."""
+        return paths.describe(rel, paths.payload_owners(self.orders))
+
     def pending_payloads(self, kind="cards"):
         """Paths of the payload files in the pending folder for kind (magic/orders for cards,
         magic/orders/tokens for tokens), in name_order: what pool counts as on the way, whether

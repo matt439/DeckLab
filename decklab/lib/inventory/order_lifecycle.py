@@ -8,7 +8,7 @@ fulfilment ledger; historical orders never acquire inferred purchase requests.
 from decklab.lib import purchases
 from decklab.lib.state import Invalid
 
-from . import Summary, register
+from . import Summary, paths, register
 from .model import Order
 from .orders import INCOMING, _component, _done, _invalid, _order
 
@@ -28,23 +28,25 @@ def _product(inv, order, component, removing=False):
     """Refuse receipt loss or deleting a product another component also names."""
     product = inv.product(component.product_stem)
     if product is None:
-        raise Invalid(f"{component.path} is missing; correct the product before changing its order.")
+        raise Invalid(f"{paths.title(paths.describe(component.path))} is missing; correct the product before changing "
+                      f"its order.")
     if inv.status.error is not None or inv.status.strict_error is not None:
         raise Invalid("The products list cannot be read; correct it before changing this order.")
     statuses = [row for row in inv.status.rows if row.text("file") == product.file]
+    name = f"Product {product.stem}"          # never its old file (E11-S12)
     if len(statuses) != 1:
-        raise Invalid(f"{product.file} needs exactly one product status before changing its order.")
+        raise Invalid(f"{name} needs exactly one product status before changing its order.")
     status = statuses[0]
     if status.text("status") not in (*INCOMING, "cancelled"):
-        raise Invalid(f"{product.file} is owned or not pending; its order cannot be removed or cancelled.")
+        raise Invalid(f"{name} is owned or not pending; its order cannot be removed or cancelled.")
     if not removing and status.text("status") not in INCOMING:
-        raise Invalid(f"{product.file} is already {status.text('status')}.")
+        raise Invalid(f"{name} is already {status.text('status')}.")
     if removing and status.text("intact").strip().lower() == "yes":
-        raise Invalid(f"{product.file} is kept intact; its order cannot be removed.")
+        raise Invalid(f"{name} is kept intact; its order cannot be removed.")
     references = [(record.id, part.id) for record, part in inv.components()
                   if part.kind == "product" and part.product_stem == product.stem]
     if references != [(order.id, component.id)]:
-        raise Invalid(f"{product.file} is referenced by another order component; correct its records first.")
+        raise Invalid(f"{name} is referenced by another order component; correct its records first.")
     return product, status
 
 
@@ -94,7 +96,8 @@ def remove(inv, *, order, reason=None, restore_queue=True):
             if part.kind not in ("cards", "tokens"):
                 raise Invalid(f"{part.id} is not a recognized order component.")
             if any(other.id != order and c.path == part.path for other, c in inv.components()):
-                raise Invalid(f"{part.path} is referenced by another order; correct its records first.")
+                raise Invalid(f"{paths.title(paths.component_words(order, part.id, part.kind, part.status))}: another order names them too; correct "
+                              f"its records first.")
             payloads.append(part.path)
     inv, _, queue = order_fulfilment.restore(inv, original, [part.id for part in original.components], True)
     inv = inv.without_order(order)

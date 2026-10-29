@@ -547,15 +547,15 @@ class DeckTokensTests(TokenTestCase):
     def test_unreadable_rows_go_in_info(self):
         _write(self.box.magic / "tokens.csv", REAL_TOKENS + "Spirit,,,,,,none,,,\n")
         view = api.deck_view("casual/hornets")
-        self.assertIn("Token cards line 26 couldn't be read; see the Tokens page", view["info"])
-        self.assertFalse([w for w in view["warnings"] if "tokens.csv" in w])
+        self.assertIn("A token cards row after row 24 couldn't be read; see the Tokens page", view["info"])
+        self.assertFalse([w for w in view["warnings"] if "token cards" in w or "tokens.csv" in w])
         self.assertEqual(self.need(view["tokens"], MONARCH)["state"], "check")    # the other rows still count
 
     def test_a_header_problem_goes_in_info_as_written(self):
         _write(self.box.magic / "tokens.csv", "front,back,quantity,front_details,back_details,notes\n"
                                                 "Insect,Goblin,1,1/1; flying,,\n")
         info = api.deck_view("casual/hornets")["info"]
-        self.assertIn("magic/tokens.csv lacks the printing columns; fix the header by hand before the Tokens "
+        self.assertIn("The home token cards lack the printing columns; fix the header by hand before the Tokens "
                       "page can save", info)
 
     def test_while_the_card_data_is_rebuilt(self):

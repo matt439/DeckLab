@@ -23,7 +23,7 @@ def owned(result, p):
     """
     if p is None:
         return result
-    from .library import visible_place, visible_warnings
+    from .library import place_words, visible_place, visible_warnings
     sees, records = guard.deck_reader(), guard.sees_home_records()
     holders = defaultdict(list)
     for holder in p.in_use:
@@ -54,7 +54,8 @@ def owned(result, p):
         conflict["decks"] = names(conflict.get("decks", []))
     allowed = set(visible_warnings(p))
     result["warnings"] = [text for text in result.get("warnings", []) if text in allowed]
-    result["unresolved"] = [(name, where) for name, where in result.get("unresolved", [])
+    # A place is checked by its path (visible_place), then shown in the database's words (E11-S12).
+    result["unresolved"] = [(name, place_words(where)) for name, where in result.get("unresolved", [])
                             if visible_place(where, sees, records)]
     return result
 

@@ -68,7 +68,7 @@ Owned
     All of it comes from one inventory snapshot (decklab/lib/inventory:
     inventory.current(), the request's or command's pinned one), whichever
     backend holds it; the paths above are the names messages and labels use
-    ("magic/orders/x.csv line 3: ...", "1 on the way (order <file stem>)"),
+    ("Row 2 of order x's cards: ...", "1 on the way (order <file stem>)"),
     worked out from what each piece is, so both backends say the same.
 
 In use (a physical card can only be in one deck at a time)
@@ -129,9 +129,10 @@ from decklab.lib import cards, decks, inventory, spaces
 from decklab.lib.config import REPO  # noqa: F401  (nothing here reads it; tests not yet ported patch it)
 from decklab.lib.decks.identity import CardIdentityError, deck_colors
 from decklab.lib.inventory import entry, rules, unreadable
+from decklab.lib.inventory import files as inventory_files, paths as inventory_paths
 from decklab.lib.inventory.model import Product
 
-STATUS_NAME = "status.csv"              # the products' status list, as messages name it
+STATUS_NAME = "status.csv"              # the products' status list's old file name (the tests' fixtures)
 # What to do when an incoming order or product's cards are all in the collection already.
 RECEIVE_IT = ("receive it (on the Receipts page, or python -m decklab.db receive --order <id>) and take out "
               "the copies added for it on the Collection page")
@@ -244,25 +245,28 @@ def _count_sections(sections, where, unresolved):
     return counts
 
 
-def read_card_csv(source, unresolved, problems=None):
+def read_card_csv(source, unresolved, problems=None, owners=None):
     """Copies of each non-basic card in an inventory source with name and
     quantity columns: a collection, an order payload or a product list.
 
     A row with a bad quantity or no name raises ValueError, or, when a
-    problems list is given, is described there and left out. A source that
-    isn't there or can't be read raises as its file did (see _rows)."""
+    problems list is given, is described there and left out, named by its
+    number in the database's words ("Row 2 of the home collection: ...",
+    E11-S12). A source that isn't there or can't be read raises as its file
+    did (see _rows). owners: as for inventory_paths.describe, so a payload's row names
+    its order and component."""
     where = source.path
     counts = Counter()
-    for n, row in enumerate(_rows(source), 2):
+    for n, row in enumerate(_rows(source), 1):
         name = (row.get("name") or "").strip()
         try:
             qty = int(row["quantity"])
             if qty <= 0:
                 raise ValueError("quantity must be positive")
         except (KeyError, TypeError, ValueError):
-            problem = f"{where} line {n}: bad quantity {row.get('quantity')!r}"
+            problem = f"{inventory_paths.row_of(where, n, owners)}: bad quantity {row.get('quantity')!r}"
         else:
-            problem = None if name else f"{where} line {n}: no card name"
+            problem = None if name else f"{inventory_paths.row_of(where, n, owners)}: no card name"
         if problem:
             if problems is None:
                 raise ValueError(problem)
@@ -305,28 +309,35 @@ def read_status(warnings=None):
     warnings = [] if warnings is None else warnings
     sheet = inventory.current().status
     if not sheet.exists:
-        warnings.append(f"{sheet.path} is missing, so every product counts as owned and not intact")
+        warnings.append(inventory_files.MISSING_STATUS)
         return {}
     out = {}
-    for n, row in enumerate(_rows(sheet), 2):
+    for row in _rows(sheet):
         file = (row.get("file") or "").strip()
+        owner = inventory_files.status_owner(file)
         status = (row.get("status") or "").strip().lower()
         intact = (row.get("intact") or "").strip().lower()
         if intact not in ("yes", "no", ""):
-            warnings.append(f"{STATUS_NAME} line {n}: {file} has intact {intact!r}, not yes or no; "
-                            f"treated as no")
+            warnings.append(f"{owner} has intact {intact!r}, not yes or no; treated as no")
         if status not in PRODUCT_STATUSES:
-            warnings.append(f"{STATUS_NAME} line {n}: {file} has status {status!r}, not one of "
+            warnings.append(f"{owner} is {status!r}, not one of "
                             f"{', '.join(PRODUCT_STATUSES)}; it is left out of every count")
             status, intact = "owned", "no"
         sleeves = (row.get("sleeves") or "").strip()
         deck_box = (row.get("deck_box") or "").strip()
         if (sleeves or deck_box) and not (status == "owned" and intact == "yes"):
-            warnings.append(f"{STATUS_NAME} line {n}: {file} has sleeves or a deck box but isn't "
+            warnings.append(f"{owner} has sleeves or a deck box but the product isn't "
                             f"owned and kept intact; clear them, since its cards are stored unsleeved")
         out[file] = ProductStatus(file, status, intact == "yes", (row.get("notes") or "").strip(),
                                   sleeves, deck_box)
     return out
+
+
+def _source_title(source, owners=None):
+    """How a warning starts when it names an incoming source (E11-S12): "Order x's cards" (by the
+    order and component owners says hold it, inventory_paths.payload_owners), "Product x's card
+    list", never its old file."""
+    return inventory_paths.title(inventory_paths.describe(source.path, owners))
 
 
 def _product_file(inv, file_name):
@@ -390,6 +401,7 @@ def _load_pool():
     # (`order extra-copies`, rules.extra_copies): the guard below doesn't warn about them.
     extra = {c.path for order, c in inv.components()
              if c.status == "pending" and c.id in rules.extra_copies(order.audit_notes)}
+    owners = inventory_paths.payload_owners(inv.orders)
 
     def incoming(source, label, status="ordered"):
         # A bad row or file here only leaves those cards out, with a warning,
@@ -397,10 +409,10 @@ def _load_pool():
         # stop every owned-vs-needed check.
         problems = []
         try:
-            counts = read_card_csv(source, unresolved, problems)
+            counts = read_card_csv(source, unresolved, problems, owners)
             listed = read_printings(source)
         except (OSError, UnicodeDecodeError, csv.Error) as e:
-            warnings.append(f"{source.path} can't be read, so its cards aren't counted as on the way: {e}")
+            warnings.append(f"{_source_title(source, owners)} can't be read, so its cards aren't counted as on the way: {e}")
             return
         warnings.extend(f"{text}; that row isn't counted as on the way" for text in problems)
         order, component = pending.get(source.path, (None, None))
@@ -418,7 +430,9 @@ def _load_pool():
         # can also be an order for more copies of printings already owned: acknowledged as such,
         # in extra, it isn't warned about.)
         if listed and source.path not in extra                 and all(collection_printings[key] >= qty for key, qty in listed.items()):
-            warnings.append(f"every card in {source.path} ({label}) is already in the collection; "
+            what = inventory_paths.describe(source.path, owners)      # "order x's cards" names its order
+            what = what if label in what else f"{what} ({label})"
+            warnings.append(f"every card in {what} is already in the collection; "
                             f"if it has arrived and been merged, {RECEIVE_IT}, or its cards count twice")
 
     # The pending card payloads (magic/orders/*.csv) by file name, whether or not a record names them.
@@ -437,7 +451,7 @@ def _load_pool():
         if status.status in INCOMING:
             incoming(_product_file(inv, name), f"{_product_name(name)}, {status.status}", status.status)
             if status.intact:
-                warnings.append(f"{name} is {status.status}: intact only counts once it's owned")
+                warnings.append(f"Product {Path(name).stem} is {status.status}: intact only counts once it's owned")
 
     # Decks holding cards: built deck files, and the decks of intact products.
     intact = {Path(name).stem for name, s in statuses.items()
@@ -446,7 +460,7 @@ def _load_pool():
     about = {}
     in_use = _built_in_use(spaces.HOME, intact, found, unresolved, warnings, about)
     for stem in sorted(intact - found):
-        warnings.append(f"{stem}.csv is marked intact but has no deck lists, so nothing is held")
+        warnings.append(f"Product {stem} is marked intact but has no deck lists, so nothing is held")
 
     return Pool(owned, on_the_way, in_use, unresolved, warnings, incoming_sources=incoming_sources,
                 warning_decks=about)
@@ -478,7 +492,7 @@ def _built_in_use(space, intact, found, unresolved, warnings, decks_of=None):
             if product:
                 found.add(product)
             if summary.get("error"):
-                warnings.append(f"{source} can't be read: {summary['error']}")
+                warnings.append(f"{inventory_paths.place(source)} can't be read: {summary['error']}")
                 continue
             if summary["status"] == "built":
                 why, version = "built", None
@@ -497,7 +511,7 @@ def _built_in_use(space, intact, found, unresolved, warnings, decks_of=None):
                     version = _built_version(summary, warnings) if why == "built" else version
                     sections = decks.load_deck(deck_id, version)
             except (decks.DeckNotFound, decks.DeckFileError, OSError) as e:
-                warnings.append(f"{source} can't be read: {e}")
+                warnings.append(f"{inventory_paths.place(source)} can't be read: {e}")
                 continue
             held = _count_sections(sections, source, unresolved)
             standin_warnings, standin_names = [], set()

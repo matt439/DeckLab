@@ -283,8 +283,9 @@ class PersonTokenTests(SpaceTestCase):
         self.assertEqual(tokens.read(space="user2").rows, [])
         self.people.mkdir(parents=True)
         (self.people / "tokens.csv").write_text("front,back\n", encoding="utf-8")
-        self.assertIn("magic/people/user2/tokens.csv line 1", tokens.read(space="user2").problems[0])
-        self.assertTrue(any("magic/people/user2/tokens.csv" in p for p in tokens.check(space="user2")))
+        self.assertIn("User2's token cards' columns must be", tokens.read(space="user2").problems[0])
+        self.assertTrue(any("User2's token cards" in p for p in tokens.check(space="user2")))
+        self.assertFalse(any("magic/" in p for p in tokens.check(space="user2")))
 
     def test_holders_stay_in_their_space(self):
         self.deck("home-built", "Home Built", "built", "Deck\n4 Llanowar Elves\n")

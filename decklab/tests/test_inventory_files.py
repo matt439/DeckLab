@@ -204,7 +204,7 @@ class FixtureRoundTripTests(TempRoot):
         # receive_order.token_rows' complaint, as tokens.incoming() shows it (paths relative).
         self.assertIsNone(inv.payloads["magic/orders/tokens/t.csv"].strict_error)
         self.assertEqual(inv.payloads["magic/orders/tokens/u.csv"].strict_error,
-                         "magic/orders/tokens/u.csv line 2: tokens need a front name and positive physical quantity")
+                         "Row 1 of order u's token cards: tokens need a front name and positive physical quantity")
 
 
 class ProblemTextTests(TempRoot):
@@ -217,18 +217,19 @@ class ProblemTextTests(TempRoot):
         sheet = self.load().collection()
         pool.read_card_csv(sheet, {}, problems)         # the ported pool reads the sheet's rows
         self.assertEqual(list(sheet.problems), problems)
-        self.assertEqual(sheet.problems[0], "magic/collection.csv line 2: bad quantity 'x'")
+        self.assertEqual(sheet.problems[0], "Row 1 of the home collection: bad quantity 'x'")
         self.assertEqual([r.qty for r in sheet.rows], [None, 1, None])
         with self.assertRaises(rules.InvalidCards) as caught, path.open(newline="", encoding="utf-8-sig") as f:
-            rules.parse_cards(f, path, existing=True)
-        self.assertEqual(sheet.strict_error, str(caught.exception).replace(str(path), "magic/collection.csv"))
+            rules.parse_cards(f, "the home collection", existing=True, numbered=True)
+        self.assertEqual(sheet.strict_error, str(caught.exception))
+        self.assertTrue(sheet.strict_error.startswith("Row 1 of the home collection: "), sheet.strict_error)
 
     def test_a_short_row_and_a_missing_column(self):
         self.write("magic/collection.csv", "name,set\nOpt\n")
         sheet = self.load().collection()
         self.assertEqual(sheet.rows[0].get("set"), None)
         self.assertEqual(sheet.rows[0].get("quantity"), None)
-        self.assertEqual(sheet.problems, ("magic/collection.csv line 2: bad quantity None",))
+        self.assertEqual(sheet.problems, ("Row 1 of the home collection: bad quantity None",))
 
     def test_undecodable_files_are_unreadable_not_fatal(self):
         self.write("magic/orders/2026-09-30-broken.csv", b"\xff\xfe not utf-8")
@@ -248,7 +249,10 @@ class ProblemTextTests(TempRoot):
         self.assertEqual(list(self.load().status.problems), warnings)
         missing = FileInventory(self.root / "nothing").load().status
         self.assertEqual(missing.problems,
-                         ("magic/products/status.csv is missing, so every product counts as owned and not intact",))
+                         ("The products' status list is missing, so every product counts as owned and not intact",))
+        self.assertEqual(warnings, ["Product x's status is 'preorder', not one of owned, preordered, ordered, cancelled; "
+                                    "it is left out of every count",
+                                    "Product y's status has intact 'maybe', not yes or no; treated as no"])
 
     def test_token_problems_are_tokens_reads(self):
         cases = {
@@ -262,7 +266,7 @@ class ProblemTextTests(TempRoot):
         }
         # What tokens.read() said of each file when it still read the file itself (lib/tokens at
         # 3b51965), written out: (problems, lines, rows, sorted, the strict read's error).
-        must = "magic/tokens.csv line 1: the header must be " + ",".join(rules.TOKEN_FIELDS)
+        must = "The home token cards' columns must be " + ",".join(rules.TOKEN_FIELDS)
         by_hand = "; it can't be changed until that's put right"
         printing = "; fix the header by hand before the Tokens page can save"
 
@@ -270,20 +274,21 @@ class ProblemTextTests(TempRoot):
             return {**{k: "" for k in rules.TOKEN_FIELDS}, **values}
         expected = {
             "good": ([], [2, 3], [row(front="Zombie", quantity="2"), row(front="Dog", quantity="1")], False, None),
-            "bad rows": (["magic/tokens.csv line 2: tokens need a front name and positive physical quantity",
-                          "magic/tokens.csv line 3: 5 values, not 10",
-                          "magic/tokens.csv line 6: invalid lowercase token set"], [], [], True,
-                         "magic/tokens.csv line 2: tokens need a front name and positive physical quantity"
-                         + by_hand),
-            "legacy": (["magic/tokens.csv lacks the printing columns" + printing], [2],
+            "bad rows": (["A row before row 1 of the home token cards: tokens need a front name and positive "
+                          "physical quantity",
+                          "A row before row 1 of the home token cards: 5 values, not 10",
+                          "A row before row 1 of the home token cards: invalid lowercase token set"], [], [], True,
+                         "A row before row 1 of the home token cards: tokens need a front name and positive "
+                         "physical quantity" + by_hand),
+            "legacy": (["The home token cards lack the printing columns" + printing], [2],
                        [row(front="Dog", back="Beast", quantity="1", back_details="3/3")], True, must + by_hand),
-            "reordered": (["magic/tokens.csv's columns aren't in the standard order" + printing], [2],
+            "reordered": (["The home token cards' columns aren't in the standard order" + printing], [2],
                           [row(front="Dog", quantity="1")], True, must + by_hand),
             "bad header": ([must], [], [], True, must + by_hand),
             "bad csv": ([], [2], [row(front="Dog", back="ab", quantity="1")], True,
-                        "magic/tokens.csv line 2: ',' expected after '\"'" + by_hand),
-            "not utf-8": (["magic/tokens.csv isn't UTF-8 text"], [], [], True,
-                          "magic/tokens.csv isn't UTF-8 text" + by_hand),
+                        "A row before row 1 of the home token cards can't be read: ',' expected after '\"'" + by_hand),
+            "not utf-8": (["The home token cards aren't UTF-8 text"], [], [], True,
+                          "The home token cards aren't UTF-8 text" + by_hand),
         }
         for name, text in cases.items():
             problems, lines, rows, in_order, strict = expected[name]
@@ -326,11 +331,11 @@ class PoolFixtureTests(test_pool.PoolTestCase):
         inv = inventory.current()
         self.assertEqual(inv.loose_payloads, ["magic/orders/2026-09-29-x.csv"])
         self.assertEqual(inv.payloads["magic/orders/2026-09-29-x.csv"].problems,
-                         ("magic/orders/2026-09-29-x.csv line 2: bad quantity 'lots'",))
+                         ("Row 1 of order 2026-09-29-x's cards: bad quantity 'lots'",))
         self.assertEqual([r.file for r in inv.status_rows], ["gone.csv"])
         self.assertIsNone(inv.product("gone"))
         self.assertEqual(inv.product("unlisted").problems,
-                         ("magic/products/unlisted.csv line 2: bad quantity 'one'",))
+                         ("Row 1 of product unlisted's card list: bad quantity 'one'",))
         self.assertEqual(len(inv.status.problems), 2)
 
 
@@ -631,7 +636,7 @@ class ReviewFixTests(TempRoot):
         self.assertEqual(files.rendered_sha256(after.collection()), hashlib.sha256(b"").hexdigest())
 
     def test_the_same_refusals_as_the_database(self):
-        with self.assertRaisesRegex(state.Invalid, r"can't be saved like that: magic/collection.csv line 2: .*'x'"):
+        with self.assertRaisesRegex(state.Invalid, r"can't be saved like that: Row 1 of the home collection: .*'x'"):
             inventory.apply(inventory.Op("review.rows", {"rows": [("Opt", "dom", "60", "nonfoil", "x", "", "", "")]}),
                             ACTOR, "x")
         with self.assertRaisesRegex(state.Invalid, "2026-10-12-loose.csv: no order record names it"):

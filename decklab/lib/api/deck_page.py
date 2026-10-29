@@ -10,6 +10,7 @@ import traceback
 from collections import Counter
 
 from decklab.lib import accessories, decks, inventory, pool, spaces, tokens
+from decklab.lib.inventory import paths as inventory_paths
 from decklab.lib.state import StateError
 
 from . import common, guard, near_combos
@@ -118,7 +119,7 @@ def _index_counts(summary, p, warnings):
         try:
             result = pool.owned_vs_needed(summary["id"], version, pool=p, prices=False) if p else None
         except (decks.DeckNotFound, decks.DeckFileError, OSError) as e:
-            warnings.append(f"{summary['source']}: {_public(e)}")
+            warnings.append(f"{inventory_paths.place(summary['source'])}: {_public(e)}")
             result = None
         missing[version] = result["totals"]["missing"] if result else None
         confirmed[version] = bool(result is not None and not result["unresolved"] and not result["warnings"])
@@ -273,7 +274,8 @@ def _index_tokens():
     return brief
 
 
-_TOKEN_LINE = re.compile(r"^magic/tokens\.csv line (\d+):")
+# A token cards row the read leaves out, as files._left_out names it (E11-S12: by the listed row before it).
+_TOKEN_LINE = re.compile(r"^A row (after row \d+|before row 1) of (?:the home|[a-z0-9-]+'s) token cards:")
 
 
 def _view_tokens(summary, version, sections, info):
@@ -290,7 +292,7 @@ def _view_tokens(summary, version, sections, info):
         return {"error": TOKEN_FAILED}
     for problem in inv.problems:
         found = _TOKEN_LINE.match(problem)
-        info.append(f"Token cards line {found[1]} couldn't be read; see the Tokens page" if found
+        info.append(f"A token cards row {found[1]} couldn't be read; see the Tokens page" if found
                     else _scrub([problem])[0])
     holds = held_tokens(inv, summary.get("space", spaces.HOME))
     result = _deck_tokens(summary["id"], version, sections, inv, inc,

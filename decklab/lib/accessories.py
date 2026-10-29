@@ -72,6 +72,7 @@ from pathlib import Path
 from decklab.lib import config, decks, inventory, pool
 from decklab.lib.decks.decklist import SECTIONS, card_count
 from decklab.lib.inventory import kit as product_kit
+from decklab.lib.inventory import paths as inventory_paths
 from decklab.lib.inventory import rules as inventory_rules
 
 FIELDS = list(inventory_rules.ACCESSORY_FIELDS)      # the inventory keeps the rows raw, in these columns
@@ -322,19 +323,26 @@ def view_sha256(inv, owners):
 
 def parse(data, strict=False):
     """The Inventory accessories.csv's bytes hold, as read() reads the file (the inventory's
-    snapshot reads its problems and strict error through this too)."""
+    snapshot reads its problems and strict error through this too). A problem names the list in
+    the database's words and a row it leaves out by the listed row before it ("A row after row 2
+    of the accessories list: ...", E11-S12), never the old file and line."""
     inv = Inventory(sha256=hashlib.sha256(data).hexdigest())
-    name = "accessories.csv"
+    name = "The accessories list"
 
     def problem(text):
         if strict:
-            raise AccessoriesError(f"{name} {text}{inventory_rules.UNTIL_PUT_RIGHT}")
-        inv.problems.append(f"{name} {text}")
+            raise AccessoriesError(f"{text}{inventory_rules.UNTIL_PUT_RIGHT}")
+        inv.problems.append(text)
+
+    def row(text):
+        listed = len(inv.rows_by_id)
+        where = f"A row after row {listed}" if listed else "A row before row 1"
+        problem(f"{where} of the accessories list: {text}")
 
     try:
         text = data.decode("utf-8-sig")
     except UnicodeDecodeError:
-        problem("isn't UTF-8 text")
+        problem(f"{name} isn't UTF-8 text")
         return inv
     reader = csv.reader(io.StringIO(text, newline=""), strict=strict)
     try:
@@ -344,31 +352,30 @@ def parse(data, strict=False):
         elif header != FIELDS:
             missing = [k for k in FIELDS if k not in (header or [])]
             if strict or missing:
-                problem(f"line 1: the header must be {','.join(FIELDS)}")
+                problem(f"{name}'s columns must be {','.join(FIELDS)}")
                 return inv
-            inv.problems.append(f"{name} line 1: the header isn't {','.join(FIELDS)} "
+            inv.problems.append(f"{name}'s columns aren't {','.join(FIELDS)} "
                                 f"(the columns were read by name)")
         for values in reader:
-            n = reader.line_num
             if not any(v.strip() for v in values):
                 continue
             if len(values) != len(header):
-                problem(f"line {n}: {len(values)} values, not {len(header)}")
+                row(f"{len(values)} values, not {len(header)}")
                 continue
             values = dict(zip(header, values))
             if "owner" not in header:
                 values["owner"] = SHARED        # written before owners: everyone's until someone claims it
             try:
-                row = validate_row(values)
+                found = validate_row(values)
             except ValueError as e:
-                problem(f"line {n}: {e}")
+                row(str(e))
                 continue
-            if row["id"] in inv.rows_by_id:
-                problem(f"line {n}: the id {row['id']} is listed twice")
+            if found["id"] in inv.rows_by_id:
+                row(f"the id {found['id']} is listed twice")
                 continue
-            inv.rows_by_id[row["id"]] = row
+            inv.rows_by_id[found["id"]] = found
     except csv.Error as e:
-        problem(f"line {reader.line_num}: {e}")
+        row(str(e))
     return inv
 
 
@@ -578,7 +585,7 @@ def _scan(warnings):
             strays.extend((summary["id"], f, v) for f, v in values.items() if v)
             continue
         if summary.get("error"):
-            warnings.append(f"{summary['source']} can't be read: {summary['error']}")
+            warnings.append(f"{inventory_paths.place(summary['source'])} can't be read: {summary['error']}")
             continue
         try:
             from decklab.lib.decks import assembled
@@ -590,7 +597,7 @@ def _scan(warnings):
                 version = pool._built_version(summary, warnings)
                 sections = decks.load_deck(summary["id"], version)
         except (decks.DeckNotFound, decks.DeckFileError, OSError) as e:
-            warnings.append(f"{summary['source']} can't be read: {e}")
+            warnings.append(f"{inventory_paths.place(summary['source'])} can't be read: {e}")
             continue
         found.append({"holder": summary["id"], "title": summary["title"], "kind": "deck",
                       "owner": player_owner(summary.get("player"), listed), **values, "sections": sections})

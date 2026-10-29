@@ -188,7 +188,7 @@ class FileOpsTests(Tree, Cases, unittest.TestCase):
     def test_rows_a_strict_read_refuses_stop_every_write(self):
         (self.magic / "tokens.csv").write_text(ROWS + "Bad,,,,,,0,,,\n", encoding="utf-8", newline="\n")
         with self.assertRaisesRegex(inventory.Conflict,
-                                    r"^magic/tokens.csv line 5: .*; it can't be changed until that's put right$"):
+                                    r"^A row after row 3 of the home token cards: .*; it can't be changed until that's put right$"):
             self.apply("tokens.add", space="home", sha256=self.sha(), row=FISH)
 
     def test_an_unsorted_file_is_sorted_and_said_so(self):
@@ -326,7 +326,8 @@ class CommandLineTests(Tree, Cli, unittest.TestCase):
         (self.magic / "tokens.csv").write_text(ROWS + "Bad,,,,,,0,,,\n", encoding="utf-8")
         code, out, _ = self.run_cli("check")
         self.assertEqual(code, 1)
-        self.assertIn("magic/tokens.csv line 5", out)
+        self.assertIn("A row after row 3 of the home token cards: ", out)
+        self.assertNotIn("tokens.csv", out)
 
     def test_check_warns_about_mistyped_details_without_failing(self):
         (self.magic / "tokens.csv").write_text(ROWS.replace("1/1; flying; no deathtouch", "1/1 flying"),
@@ -342,7 +343,7 @@ class CommandLineTests(Tree, Cli, unittest.TestCase):
         code, out, _ = self.run_cli("check")
         self.assertEqual(code, 1)
         lines = out.splitlines()
-        self.assertIn("magic/tokens.csv line 5", lines[0])
+        self.assertIn("A row after row 3 of the home token cards: ", lines[0])
         self.assertIn("Row 2 of the home token cards: front details 'flyng' aren't read: did you mean flying?", lines)
 
 

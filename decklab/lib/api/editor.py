@@ -7,6 +7,7 @@ import re
 import traceback
 
 from decklab.lib import accessories, cards, decks, permissions, pool, spaces
+from decklab.lib.inventory import paths as inventory_paths
 
 from . import common, deck_aliases, drafts, guard
 from .card_lookup import (_card_printings, _default_printing, _lines_json, _not_paper, _owned_json, _pickable,
@@ -171,13 +172,13 @@ def edit_view(deck_id):
         answer["may_save"], answer["why_not_save"] = why is None, why
     else:
         if summary.get("error"):
-            raise ApiError(500, f"{summary['source']} can't be read: {summary['error']}")
+            raise ApiError(500, f"{inventory_paths.place(summary['source'])} can't be read: {summary['error']}")
         try:
             sections = decks.load_deck(summary["id"])
         except decks.DeckNotFound as e:
             raise ApiError(404, _public(e)) from None
         except (decks.DeckFileError, OSError) as e:
-            raise ApiError(500, f"{summary['source']} can't be read: {_public(e)}") from None
+            raise ApiError(500, f"{inventory_paths.place(summary['source'])} can't be read: {_public(e)}") from None
         new_kind = "commander" if summary["kind"] == "commander" else "casual"
         title = _new_title(summary)
         slug = decks.title_slug(title)
@@ -405,13 +406,13 @@ def _new_source(data):
     check_deck_id(from_id)
     summary = _scrub_summary(dict(_find_summary(from_id)))
     if summary.get("error"):
-        raise ApiError(500, f"{summary['source']} can't be read: {summary['error']}")
+        raise ApiError(500, f"{inventory_paths.place(summary['source'])} can't be read: {summary['error']}")
     try:
         sections = decks.load_deck(summary["id"])
     except decks.DeckNotFound as e:
         raise ApiError(404, _public(e)) from None
     except (decks.DeckFileError, OSError) as e:
-        raise ApiError(500, f"{summary['source']} can't be read: {_public(e)}") from None
+        raise ApiError(500, f"{inventory_paths.place(summary['source'])} can't be read: {_public(e)}") from None
     kind = "commander" if summary["kind"] == "commander" else "casual"
     if data.get("kind") not in (None, kind):
         raise ApiError(400, f"{summary['title']} becomes a {kind} deck, not {data['kind']}")

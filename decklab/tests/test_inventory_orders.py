@@ -200,7 +200,7 @@ class OrderOps:
                      **self.add_params(fulfils=[{"select": "Elvish Mystic", "quantity": 3}]))
         self.refused("No watchlist row matches", "order.add",
                      **self.add_params(fulfils=[{"select": "Elvish Mystic@Goblins", "quantity": 1}]))
-        self.refused("is already a product", "order.add", **self.add_params(
+        self.refused("Product precon already exists", "order.add", **self.add_params(
             product={"stem": "precon", "columns": PRODUCT_COLUMNS,
                      "rows": product_rows(("Main", "Sol Ring", "ecc", "57", 1))}))
         self.refused("a new product is ordered or preordered", "order.add", **self.add_params(
@@ -309,7 +309,7 @@ class OrderOps:
                      new_id="all", take=[{"row": 1}])
         self.refused("invalid or repeated component id", "order.split", order="2026-10-07-shop-a",
                      component="cards", new_id="late", take=[{"row": 1, "quantity": 1}])
-        self.refused("has no row 5", "order.split", order="2026-10-07-shop-a", component="tokens",
+        self.refused("There's no row 5 of order 2026-10-07-shop-a's token cards to take", "order.split", order="2026-10-07-shop-a", component="tokens",
                      new_id="more", take=[{"row": 5, "quantity": 1}])
         self.refused("has 2, not 3", "order.split", order="2026-10-07-shop-a", component="tokens",
                      new_id="more", take=[{"row": 1, "quantity": 3}])
@@ -449,12 +449,13 @@ class OrderOps:
         # decks._product_lines' rules: the pool would list it with an error, and an incomplete pool
         # refuses every deck table refresh and receipt (and nothing could change it on the database).
         columns = ["section", *PRODUCT_COLUMNS[1:]]
-        for section, said in (("maindeck", "line 2: unknown section 'maindeck'"), ("Deck", None)):
+        for section, said in (("maindeck", "Row 1 of product theta-kit's card list: unknown section 'maindeck'"),
+                              ("Deck", None)):
             row = dict(zip(columns, (section, "Sol Ring", "ecc", "57", "nonfoil", "1", "uncommon", "")))
             params = {"order": "2026-10-07-shop-a", "product": {"stem": "theta-kit", "columns": columns,
                                                                  "rows": [row]}}
             if said:
-                self.refused(f"magic/products/theta-kit.csv: {said}", "product.add", **params)
+                self.refused(said, "product.add", **params)
                 self.refused(said, "order.add", **self.add_params(product=params["product"]))
             else:
                 after, _ = self.op("product.add", **params)
@@ -482,7 +483,7 @@ class OrderOps:
         after, _ = self.op("product.set_intact", stem="fdn-beginner-box", intact="yes")
         self.assertEqual(after.status.rows[0].text("intact"), "yes")
         self.refused("only an owned product", "product.set_intact", stem="precon", intact="yes")
-        self.refused("has no row for", "product.set_intact", stem="nothing", intact="yes")
+        self.refused("Product nothing has no status", "product.set_intact", stem="nothing", intact="yes")
 
     # -------------------------------------------------------- the watchlist
 
@@ -551,7 +552,7 @@ class FileOrderOpsTests(OrderOps, unittest.TestCase):
     def test_a_file_name_another_payload_has_is_refused(self):
         (self.root / "magic/orders/cancelled/2026-10-12-goodgames.csv").write_text(
             CARD_HEADER + "Sol Ring,ecc,57,nonfoil,1,,,\n", encoding="utf-8", newline="\n")
-        with self.assertRaisesRegex(Invalid, "component file occurs in more than one order"):
+        with self.assertRaisesRegex(Invalid, "^Order 2026-10-12-goodgames's cards are already in another order$"):
             self.op("order.add", **self.add_params())
 
     def test_a_malformed_watchlist_quantity_is_refused_in_read_queues_words(self):
@@ -572,7 +573,7 @@ class FileOrderOpsTests(OrderOps, unittest.TestCase):
         (self.root / "magic/orders/records/product-loose.json").write_text(record_json(
             "product-loose", "", "", [component("product-loose", "product", "magic/products/loose.csv", "received")]),
             encoding="utf-8", newline="\n")
-        self.refused("loose.csv has no deck lists, so keeping it intact would hold nothing", "product.set_intact",
+        self.refused("Product loose has no deck lists, so keeping it intact would hold nothing", "product.set_intact",
                      stem="loose", intact="yes")
         _, summary = self.op("product.set_intact", stem="loose", intact="no")
         self.assertIn("already broken up", summary.text)
@@ -706,7 +707,7 @@ class CommandLineTests(unittest.TestCase):
         before = files.tree_files(self.root)
         cards = self.file("cards.csv", CARD_HEADER + "Elvish Mystic,cmm,648,nonfoil,2,,,\n")
         code, _, err = self.run_cli("order", "add", "--id", "2026-10-07-shop-a", "--cards", cards, "-m", "Again")
-        self.assertEqual((code, err.strip()), (1, "magic/orders/records/2026-10-07-shop-a.json already exists"))
+        self.assertEqual((code, err.strip()), (1, "Order 2026-10-07-shop-a already exists"))
         bad = self.file("bad.csv", "name,quantity\nOpt,1\n")
         code, _, err = self.run_cli("order", "add", "--id", "2026-10-12-x", "--cards", bad, "-m", "Bad")
         self.assertEqual(code, 1)
@@ -798,7 +799,8 @@ class CommandLineTests(unittest.TestCase):
         code, out, err = self.run_cli("order", "split", "2026-10-07-shop-a", "cards", "--new-id", "late",
                                       "--take", "2", "--move-check", "2", "-m", "Part of it is late")
         self.assertEqual(code, 0, err)
-        self.assertIn("into late (2026-10-07-shop-a-late.csv)", out)
+        self.assertIn("2026-10-07-shop-a cards into late", out)
+        self.assertNotIn(".csv", out)
         self.file("magic/buylists/2026-10-07-order.md", "[late](../orders/2026-10-07-shop-a-late.csv)\n")
         code, _, err = self.run_cli("order", "cancel", "2026-10-07-shop-a", "late", "-m", "Refunded",
                                     "--reason", "out of stock")

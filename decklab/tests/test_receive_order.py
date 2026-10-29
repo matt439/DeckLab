@@ -202,7 +202,7 @@ class ReceiptTests(support.PoolTestCase):
                                         back_details="4/4; white; flying")]})
         self.assertEqual([(r.front, r.back) for r in inventory.current().token_set().rows], [("Rabbit", "Angel")])
 
-    def test_a_bad_token_row_is_named_by_the_line_it_starts_on_in_the_payload(self):
+    def test_a_bad_token_row_is_named_by_its_row_in_the_order(self):
         self.token_component()
         header = ",".join(rules.TOKEN_FIELDS)
         good = rules.csv_bytes([dict(TOKEN_ROW, quantity="1", notes="two\nlines")], rules.TOKEN_FIELDS)
@@ -211,10 +211,11 @@ class ReceiptTests(support.PoolTestCase):
         text = good.decode("utf-8") + "\n\n" + bad.decode("utf-8").split("\n", 1)[1]
         self.assertTrue(text.startswith(header))
         (self.magic / "orders/tokens/test.csv").write_bytes(text.encode("utf-8"))
-        with self.assertRaisesRegex(Invalid, r"^magic/orders/tokens/test.csv line 6: invalid lowercase token set"):
+        # E11-S12: by its number among the order's token cards (as order show numbers them), never a
+        # file and line, whether the rows are the order's own or given at receipt.
+        with self.assertRaisesRegex(Invalid, r"^Row 2 of order test's token cards: invalid lowercase token set"):
             self.receive({"id": "tokens", "verified": True})
-        # Rows given at receipt have no file lines: the rendered rows' are named.
-        with self.assertRaisesRegex(Invalid, r"^magic/orders/tokens/test.csv line 4: invalid lowercase token set"):
+        with self.assertRaisesRegex(Invalid, r"^Row 2 of order test's token cards: invalid lowercase token set"):
             self.receive({"id": "tokens", "verified": True,
                           "rows": [dict(TOKEN_ROW, quantity="1", notes="two\nlines"),
                                    dict(TOKEN_ROW, quantity="1", set="BAD")]})
@@ -284,9 +285,10 @@ class ReceiptTests(support.PoolTestCase):
         self.assertEqual((row["condition"], row["language"]), ("", ""))     # never assumed NM or English
 
     def test_bad_paths_cancelled_components_and_existing_archives_are_refused(self):
-        for path, words in (("../outside.csv", "file location"), ("magic/collection.csv", "file location"),
-                            ("magic/orders/received/test.csv", "file location"),
-                            ("magic/orders/gone.csv", "does not exist")):
+        conflicts = "where its contents are kept conflicts"
+        for path, words in (("../outside.csv", conflicts), ("magic/collection.csv", conflicts),
+                            ("magic/orders/received/test.csv", conflicts),
+                            ("magic/orders/gone.csv", "its contents are missing")):
             with self.subTest(path=path):
                 self.components[0]["path"] = path
                 self.record()
@@ -302,12 +304,12 @@ class ReceiptTests(support.PoolTestCase):
         self.components[0].update(path="magic/orders/test.csv", status="pending")
         self.record()
         self.cards_csv("orders/received/test.csv", ("Opt", "dom", "60", "nonfoil", 1))
-        with self.assertRaisesRegex(Invalid, "Archive already exists: magic/orders/received/test.csv"):
+        with self.assertRaisesRegex(Invalid, "^Order test's cards can't be received: order test's received cards are already kept under the same name$"):
             self.receive()
 
     def test_a_payload_another_record_names_is_refused(self):
         write_record(self, [dict(self.components[0], id="other")], order_id="other")
-        with self.assertRaisesRegex(Invalid, "test.json: cards: component file occurs in more than one order"):
+        with self.assertRaisesRegex(Invalid, "^Order test: cards: another order names its contents too$"):
             self.receive()
         # A product's reference list too, although a product's file never moves.
         (self.magic / "orders/records/other.json").unlink()
@@ -318,7 +320,7 @@ class ReceiptTests(support.PoolTestCase):
         self.components.append(product)
         self.record()
         write_record(self, [dict(product, id="other")], order_id="other")
-        with self.assertRaisesRegex(Invalid, "test.json: kit: component file occurs in more than one order"):
+        with self.assertRaisesRegex(Invalid, "^Order test: kit: another order names its contents too$"):
             self.receive({"id": "kit", "verified": False, "intact": "no"})
 
     def test_sources_and_audit_notes_follow_the_records_rules(self):

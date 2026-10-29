@@ -114,7 +114,7 @@ def record(inv, order_id):
     order = next((o for o in inv.orders if o.file == f"{order_id}.json"), None)
     if order is None:
         raise Invalid(f"No order record for {order_id}")
-    name = order.file
+    name = f"Order {order_id}"           # the database's words (E11-S12), as purchases names it
     if order.error is not None:
         raise Invalid(f"{name}: {order.error}")
     data = order.data
@@ -132,7 +132,7 @@ def record(inv, order_id):
         raise Invalid(f"{name}: sources: expected a list")
     for source in sources:
         _source(source, f"{name}: sources")
-    elsewhere = {c.path for other in inv.orders if other.file != name for c in other.components
+    elsewhere = {c.path for other in inv.orders if other.file != order.file for c in other.components
                  if isinstance(c.path, str)}
     items = data.get("components")
     if not isinstance(items, list) or not items:
@@ -160,12 +160,12 @@ def record(inv, order_id):
         path = item.get("path")
         if not isinstance(path, str) or PurePosixPath(path).suffix != ".csv" \
                 or path != paths.payload(kind, status, PurePosixPath(path).name):
-            raise Invalid(f"{where}: file location conflicts with kind/status")
+            raise Invalid(f"{where}: where its contents are kept conflicts with its kind/status")
         there = inv.product(PurePosixPath(path).stem) is not None if kind == "product" else path in inv.payloads
         if path in elsewhere:
-            raise Invalid(f"{where}: component file occurs in more than one order")
+            raise Invalid(f"{where}: another order names its contents too")
         if not there:
-            raise Invalid(f"{where}: component file does not exist")
+            raise Invalid(f"{where}: its contents are missing")
     return order
 
 
@@ -210,12 +210,13 @@ def payload_rows(inv, component):
     exactly the payload's standard columns); state.Invalid when the payload breaks that rule."""
     sheet = inv.payloads.get(component.path)
     if sheet is None or not sheet.exists:
-        raise Invalid(f"{component.path}: component file does not exist")
+        raise Invalid(f"{paths.title(inv.describe(component.path))}: not in the inventory")
     if sheet.error is not None:
-        raise Invalid(f"{component.path}: {sheet.error}")
+        raise Invalid(f"{paths.title(inv.describe(component.path))}: {sheet.error}")
     text = files.render_sheet(sheet).decode("utf-8")
     try:
-        return rules.parse_csv(io.StringIO(text, newline=""), FIELDS[component.kind], component.path)
+        return rules.parse_csv(io.StringIO(text, newline=""), FIELDS[component.kind],
+                               paths.title(inv.describe(component.path)))
     except (ValueError, csv.Error) as e:
         raise Invalid(str(e)) from None
 
@@ -309,26 +310,24 @@ def _check_printings(rows):
 
 # ------------------------------------------------------------------ the operation
 
-def _card_rows(where, data, existing=False):
+def _card_rows(where, data, existing=False, owners=None):
+    """where's rows (an inventory source's path, named in its database words with each row by
+    number, E11-S12; owners as for paths.describe) checked as merge_cards.read checks them."""
     try:
-        return rules.parse_cards(io.StringIO(data.decode("utf-8-sig"), newline=""), where, existing=existing)
+        return rules.parse_cards(io.StringIO(data.decode("utf-8-sig"), newline=""), paths.describe(where, owners),
+                                 existing=existing, numbered=True)
     except (rules.InvalidCards, csv.Error, UnicodeDecodeError) as e:
         raise Invalid(str(e)) from None
 
 
 def _token_rows(inv, component):
-    """The tokens component's rows, each passing the incoming rules; a refusal names the file
-    line the row starts on (the line the payload file had, blank lines counted, where the
-    snapshot kept it; the rendered file's otherwise, as for rows given at receipt)."""
+    """The tokens component's rows, each passing the incoming rules; a refusal names the row by
+    its number in the order's token cards ("Row 2 of order x's token cards", E11-S12)."""
     rows = payload_rows(inv, component)
-    sheet = inv.payloads[component.path]
-    lines = sheet.lines
-    if len(lines) != len(rows) or not all(lines):
-        text = files.render_sheet(sheet).decode("utf-8")
-        lines = rules.record_lines(io.StringIO(text, newline=""))
-    for line, row in zip(lines, rows):
+    owners = paths.payload_owners(inv.orders)
+    for number, row in enumerate(rows, 1):
         try:
-            rules.validate_token_row(row, f"{component.path} line {line}", incoming=True)
+            rules.validate_token_row(row, paths.row_of(component.path, number, owners), incoming=True)
         except ValueError as e:
             raise Invalid(str(e)) from None
     return rows
@@ -387,7 +386,8 @@ def receive(inv, *, order, components, received_on, wording="web"):
     card_inputs, token_inputs, moved, statuses = [], [], {}, None
     for component in chosen:
         if component.kind == "cards":
-            rows = _card_rows(component.path, files.render_sheet(inv.payloads[component.path]))
+            rows = _card_rows(component.path, files.render_sheet(inv.payloads[component.path]),
+                              owners=paths.payload_owners(inv.orders))
             if "take" in by_id[component.id]:
                 _check_printings(rows)
             card_inputs.append((component.path, rows))
@@ -396,15 +396,16 @@ def receive(inv, *, order, components, received_on, wording="web"):
         else:
             product = inv.product(component.product_stem)
             if product.error is not None:
-                raise Invalid(f"{component.path}: {product.error}")
+                raise Invalid(f"{paths.title(inv.describe(component.path))}: {product.error}")
             card_inputs.append((component.path, _card_rows(component.path, files.render_product(product))))
             if statuses is None:
                 if not inv.status.exists:
-                    raise Invalid(f"{paths.STATUS} is missing")
+                    raise Invalid("The products' status list is missing")
                 if inv.status.error is not None:
-                    raise Invalid(f"{paths.STATUS}: {inv.status.error}")
+                    raise Invalid(f"The products' status list can't be read: {inv.status.error}")
                 try:
-                    statuses = rules.parse_status(files.render_sheet(inv.status).decode("utf-8"), paths.STATUS)
+                    statuses = rules.parse_status(files.render_sheet(inv.status).decode("utf-8"),
+                                                  "The products' status list")
                 except (ValueError, csv.Error) as e:
                     raise Invalid(str(e)) from None
             matches = [row for row in statuses if row["file"] == component.file_name]
@@ -415,8 +416,9 @@ def receive(inv, *, order, components, received_on, wording="web"):
             matches[0]["notes"] = "; ".join(filter(None, (matches[0]["notes"], f"Received {received_on}")))
         if component.kind != "product":
             archive = paths.payload(component.kind, "received", component.file_name)
-            if archive in inv.payloads:
-                raise Invalid(f"Archive already exists: {archive}")
+            if archive in inv.payloads:     # named by what holds it, never its old file (E11-S12)
+                raise Invalid(f"{paths.title(paths.component_words(order, component.id, component.kind))} can't be "
+                              f"received: {inv.describe(archive)} are already kept under the same name")
             moved[component.path] = archive
         inv = inv.move_component(order, component.id, "received", received_on)
         if component.checks and component.kind != "product":
@@ -426,7 +428,7 @@ def receive(inv, *, order, components, received_on, wording="web"):
     for other in inv.orders:
         if other.file != the_order.file and any(c.path in moved for c in other.components):
             # Sharing component files would make the next receipt ambiguous.
-            raise Invalid(f"Component file is also referenced by {other.path}")
+            raise Invalid(f"Another order names these contents too ({paths.describe(other.path)})")
 
     totals = []
     if card_inputs:

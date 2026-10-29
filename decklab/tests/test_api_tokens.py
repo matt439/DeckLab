@@ -150,8 +150,8 @@ class ViewTests(TokensApiTestCase):
         self.write("tokens.csv", ROWS + "Bad,,,,,,0,,,\n")
         view = self.view()
         self.assertEqual(len(view["rows"]), 3)
-        self.assertEqual(view["problems"], ["magic/tokens.csv line 5: tokens need a front name and positive "
-                                            "physical quantity"])
+        self.assertEqual(view["problems"], ["A row after row 3 of the home token cards: tokens need a front name "
+                                            "and positive physical quantity"])
 
     def test_incoming_orders_are_listed(self):
         rel = "magic/orders/tokens/2026-10-07-shop-a.csv"
@@ -394,7 +394,7 @@ class ConflictTests(TokensApiTestCase):
         self.write("tokens.csv", ROWS + "Bad,,,,,,0,,,\n")
         e = self.error(action="add", row=FISH)
         self.assertEqual(e.status, 409)
-        self.assertTrue(e.message.startswith("magic/tokens.csv line 5: "), e.message)
+        self.assertTrue(e.message.startswith("A row after row 3 of the home token cards: "), e.message)
         self.assertTrue(e.message.endswith("; it can't be changed until that's put right"))
 
     def test_requests_are_checked(self):
