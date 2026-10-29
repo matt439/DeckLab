@@ -11,6 +11,9 @@
  * "swaps", worked out from the two lists and the Substitutes write-up, which every viewer of the deck
  * sees), with its note or "No note yet", and "Edit notes" (the editor's Notes tab) for whoever may change
  * the deck. Not the Packing plan's physical stand-ins (deck-standins.js), which never change a list.
+ *
+ * neverCastReplacements (the Matchups tab) and shortColourLands (the Stats tab's colour sources, E3-S25): free
+ * pool cards for a card never cast, and free dual lands for a colour short of sources, each with Test this swap.
  */
 "use strict";
 
@@ -254,4 +257,65 @@ function replacementSwapList(sections, name, candidate) {
   if (existing) existing.qty += taken;
   else out.Deck.push(line);
   return out;
+}
+
+
+// ------------------------------------------------- free dual lands for a short colour (E3-S25)
+
+/** The single colours (W, U, B, R, G) the Stats tab's colour check finds short, in its order. */
+function shortColours(st) {
+  const rows = (st && st.colours && st.colours.colours) || [];
+  return rows.filter((r) => r && r.ok === false && /^[WUBRG]$/.test(r.colours)).map((r) => r.colours);
+}
+
+/** "Free dual lands" under the Stats tab's colour sources (stats.js colourPanel), or null: only when a colour
+ * is short, on an ordinary deck whose collection the visitor may see (as the free replacements). Opening it asks
+ * GET /api/deck/dual-lands once; a refusal (400, 403, 404) takes the part away, any other failure says so with
+ * Try again. Each land's Test this swap swaps it for the basic it would replace (testReplacementSwap). */
+function shortColourLands(data) {
+  const short = shortColours(data && data.stats);
+  if (!short.length || !data.summary || !deckSwapsOffered(data)
+      || !/^(?:[^/]+\/)?(?:casual|commander)\//.test(data.summary.id)) return null;
+  const version = data.version === "owned" ? "owned" : "target";
+  const words = short.map((c) => COLOUR_WORDS[c] || c).join(" and ");
+  const body = el("div", { class: "dual-lands" });
+  const part = el("details", { class: "more dual-lands-part" }, el("summary", { text: `Free dual lands for ${words}` }), body);
+  const viewer = state.profile && state.profile.id;
+  let asked = false;
+  const ask = () => {
+    asked = true;
+    body.replaceChildren(loadingBox("Looking through the collection…", { small: true }));
+    api(`/api/deck/dual-lands?id=${encodeURIComponent(data.summary.id)}&version=${version}`).then((answer) => {
+      if ((state.profile && state.profile.id) !== viewer || !answer || !Array.isArray(answer.lands)) { part.remove(); return; }
+      body.replaceChildren(...dualLandsBody(data, answer));
+    }, (e) => {
+      if ((state.profile && state.profile.id) !== viewer || [400, 403, 404].includes(e && e.status)) { part.remove(); return; }
+      body.replaceChildren(loadFailed("Free dual lands", e, ask));
+    });
+  };
+  part.addEventListener("toggle", () => { if (part.open && !asked) ask(); });
+  return part;
+}
+
+function dualLandsBody(data, answer) {
+  const colourWords = (list) => (list || []).map((c) => COLOUR_WORDS[c] || c).join(" and ");
+  const short = colourWords((answer.short || []).map((s) => s.colour));
+  if (!answer.lands.length) {
+    const text = !answer.short || !answer.short.length ? "No colour is short of sources in this list."
+      : !answer.basics ? "The list has no basic lands to swap out."
+      : `No free land in the collection makes ${short} and another of the deck's colours.`;
+    return [el("p", { class: "sub", text })];
+  }
+  return [
+    el("p", { class: "sub" }, el("b", { text: "Free dual lands: " }),
+      `lands no other built deck holds that make ${short} and another of the deck's colours, each for the basic it would replace.`),
+    el("ul", { class: "swap-list" }, answer.lands.map((c) => el("li", { class: "swap-row" },
+      cardRow(c.card, { name: c.name, meta: `${swapCandidateMeta(c)} · for ${plural(c.max_qty, c.replaces.name, /s$/.test(c.replaces.name) ? c.replaces.name : undefined)}`,
+        viewerGroup: "deck-dual-lands", chips: !c.here ? [status("info", "On the way")] : [],
+        caption: `${c.name} for ${c.replaces.name}` }),
+      el("p", { class: "sub swap-note", text: c.note && c.note.text }),
+      el("button", { type: "button", class: "btn swap-use", text: "Test this swap",
+        "aria-label": `Test ${c.name} for ${c.replaces.name}`,
+        onclick: (e) => testReplacementSwap(data, { name: c.replaces.name }, c, e.currentTarget) })))),
+    answer.more ? el("p", { class: "sub", text: `${plural(answer.more, "more land fits", "more lands fit")}; these fix the most.` }) : null];
 }

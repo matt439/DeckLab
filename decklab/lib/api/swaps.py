@@ -1,7 +1,8 @@
 """Stand-ins for missing cards (E2-S07): GET /api/deck/swaps (suggest_swaps, the deck page's) and
 POST /api/deck/swaps (suggest_draft_swaps, the editor's, for the Play-now list being edited); and
 free pool replacements for a card the list holds (E3-S25): GET /api/deck/replacements
-(suggest_replacements, for a card Forge marks drawn and never cast). None writes anything: a
+(suggest_replacements, for a card Forge marks drawn and never cast) and GET /api/deck/dual-lands
+(suggest_dual_lands, free dual lands for a colour the Stats tab finds short). None writes anything: a
 pick changes the editor's draft, which POST /api/deck/save saves.
 
 What fits, how candidates are ranked and what a swap's note says are lib/decks/swaps.py's.
@@ -11,7 +12,7 @@ The answers count the deck's space's inventory, so only a viewer who may see it 
 candidate's copies are counted free, never by who holds the rest.
 """
 from decklab.lib import cards, decks, pool, spaces
-from decklab.lib.decks import swaps
+from decklab.lib.decks import dual_lands, swaps
 
 from . import drafts, guard
 from .card_lookup import _card_json, _default_printing, _resolve, _shown_printing
@@ -264,6 +265,58 @@ def suggest_replacements(deck_id=None, version=None, card=None):
                                                                          key=swaps.COLOURS.index),
                      "mv": slot.get("cmc") or 0},
             "candidates": listed, "more": max(len(found) - swaps.MAX_REPLACEMENTS, 0),
+            "rate": stamp["rate"], "rate_date": stamp["rate_date"], "price_date": stamp["price_date"],
+            "warnings": _unique(_scrub(warnings))}
+
+
+def suggest_dual_lands(deck_id=None, version=None):
+    """GET /api/deck/dual-lands?id=<deck id>&version=target|owned: free lands of the deck's space that make a
+    colour the saved list's colour check finds short and another of the deck's colours, each with the basic
+    of its Deck section it would replace (lib/decks/dual_lands.py), at most swaps.MAX_REPLACEMENTS:
+    {"deck_id", "version", "kind", "colours" (the deck's), "checked" (whether the stats' colour check gave a
+    verdict: False without stats or Karsten's table, when nothing can be short), "short": [{"colour", "name",
+    "have", "needed"}], "basics" (copies of basic lands in the Deck section), "lands": [{"name", "card",
+    "default", "free", "here", "max_qty" (copies it could replace), "makes", "fixes", "replaces" {"name",
+    "qty"}, "tapped" ("always", "maybe" or None), "note", "basic" (False), "aud"}], "more", "rate",
+    "rate_date", "price_date", "warnings"}.
+
+    It reads as GET /api/deck/replacements does (a hidden deck's 404, then a product or pairing's 400, then a
+    viewer who may not see the space's inventory 403), and counts free copies the same way, naming no holder."""
+    summary, deck = _deck(deck_id)          # a hidden deck's 404 comes before any 400
+    version = version or "target"
+    if version not in VERSIONS:
+        raise ApiError(400, f"version must be one of: {', '.join(VERSIONS)}")
+    source = deck.target if version == "target" else deck.owned
+    if not source:
+        raise ApiError(404, f"{deck.title} has no {version} list")
+    from .deck_page import _deck_stats      # deck_page imports this module
+    warnings = []
+    stats = _deck_stats(source, decks.engine_kind(summary), warnings)
+    short, margins = dual_lands.short_colours(stats)
+    checked = any(isinstance(s, dict) and s.get("ok") is not None
+                  for s in ((stats or {}).get("colours") or {}).get("colours") or ())
+    p = _space_pool(deck.space, warnings)
+    mine = pool.self_ids(summary["id"])
+    colours = _colours(deck, source)
+    in_list, free, here = _free_for(p, mine, source)
+    basics = dual_lands.deck_basics(source)
+    found = []
+    if short:
+        spares = [(name, spare, cards.card(name)) for name, spare in free.items() if spare > 0]
+        found = dual_lands.dual_lands(spares, colours, deck.kind, {s["colour"] for s in short}, basics, margins,
+                                      in_list, here)
+    counts = drafts._visible_counts(deck.space)
+    listed = []
+    for _, entry in found[:swaps.MAX_REPLACEMENTS]:
+        chosen = _default_printing(entry["name"], counts)
+        printing = cards.printing(chosen["set"], chosen["number"]) if chosen else None
+        card, price = cards.card(entry["name"]), cards.price_aud(entry["name"])
+        listed.append({**entry, "card": _card_json(card, printing or _shown_printing(card)), "default": chosen,
+                       "here": here.get(entry["name"], 0), "basic": False, "aud": price.aud if price else None})
+    stamp = pool.compare({}, p, mine)       # only its price stamp, as suggest_replacements
+    return {"deck_id": summary["id"], "version": version, "kind": deck.kind,
+            "colours": [c for c in swaps.COLOURS if c in colours], "checked": checked, "short": short,
+            "basics": sum(basics.values()), "lands": listed, "more": max(len(found) - swaps.MAX_REPLACEMENTS, 0),
             "rate": stamp["rate"], "rate_date": stamp["rate_date"], "price_date": stamp["price_date"],
             "warnings": _unique(_scrub(warnings))}
 

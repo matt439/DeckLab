@@ -56,7 +56,7 @@ function statsSection(data) {
   section.append(el("div", { class: "panels" },
     curvePanel(st),
     landPanel(st),
-    colourPanel(st),
+    colourPanel(st, data),
     st.commander ? commanderPanel(st, data.summary) : null,
     st.commander ? nearCombosPanel(data) : null,
     drawOddsPanel(data),
@@ -397,7 +397,7 @@ function checkWords(check) {
   return { cost: manaCost(costToSymbols(check.cost_in_colours), true), who };
 }
 
-function colourPanel(st) {
+function colourPanel(st, data) {
   const c = st.colours;
   const panel = el("section", { class: "panel", "aria-labelledby": "h-colours" },
     el("h3", { id: "h-colours", text: "Colour sources" }));
@@ -445,6 +445,8 @@ function colourPanel(st) {
       el("ul", { class: "sources-list" }, c.rules.map((r) => el("li", { text: r }))),
       c.definition ? el("p", { class: "sub", text: c.definition }) : null));
   }
+  const lands = data ? shortColourLands(data) : null;        // deck-swaps.js: free dual lands for a short colour
+  if (lands) panel.append(lands);
   const link = statsSourceCitation(st.sources, c.source);
   if (link) how.append(el("p", { class: "sub" }, "Source: ", link));
   panel.append(how);

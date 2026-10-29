@@ -2,6 +2,49 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Free dual lands for a short colour (2026-10-29; E3-S25)
+
+The third and last slice of E3-S25 offers free lands for a colour the deck is short of. The new
+`decklab/lib/decks/dual_lands.py` reads the Stats tab's own colour check (Karsten's sources, lib/stats): a single
+colour whose summary isn't ok is short (`short_colours`; a gold or hybrid group's check isn't read on its own, and
+without Karsten's table nothing is). A free land of the deck's space qualifies when it isn't a basic, is castable
+in the deck (`swaps.castable`; a casual deck never gets a land whose mana needs a commander, such as Command
+Tower), makes a short colour and makes two or more of the deck's colours. What a land makes is its produced mana
+alone (`makes_colours`), not `swaps.colours_of`'s identity as well, so a utility land such as Kessig Wolf Run
+(red-green identity, colourless mana) is never offered. `replaced_basic` picks the basic of the
+Deck section it would replace: one of a colour the land makes that isn't short first (the swap only gains), then
+a short colour's when the land makes another short colour, then a colour the land doesn't make with the most
+sources to spare (that colour loses one); a basic of a short colour the land doesn't make is never replaced, and a
+land with nothing to replace isn't offered. Lands are ranked by short colours fixed, nothing lost, entering
+untapped (a "maybe" before "always", read from the front face's text), a copy here, then printings and name; each
+note says what it makes, what the basic's colour does and whether it may enter tapped.
+
+GET /api/deck/dual-lands?id=&version=target|owned (`api/swaps.py` `suggest_dual_lands`) works the saved list's
+stats out (`deck_page._deck_stats`, so a failure is the stats' own warning) and answers `checked`, `short`,
+`basics`, up to `MAX_REPLACEMENTS` (5) lands with `makes`, `fixes`, `replaces`, `max_qty`, `tapped`, the
+candidate fields of GET /api/deck/replacements and `more`, plus the AUD estimates' rate and dates. Free copies
+are counted as the replacements count them (owned and on the way, less other built decks', intact products' and
+the list's own, naming no holder), within the list's room (one copy in a Commander deck, four in a casual one)
+and the basic's copies. Its reading rule is the replacements': a hidden deck's 404, a product or pairing's 400,
+then 403 "That collection isn't public." before the stats are worked out; a member's deck counts only that
+member's pool.
+
+On the page, `stats.js` `colourPanel` now carries `deck-swaps.js` `shortColourLands`: **Free dual lands for
+<colour>**, only when a single colour is short and only on an ordinary deck whose space's collection the viewer
+may see (`deckSwapsOffered`). Opening it asks once; each land shows its free copies, On the way, "for N Forests"
+and its note, with **Test this swap** (`testReplacementSwap`, the swap of its basic for the land in its default
+printing as the editor's draft, then the Test this change sheet). A 400, 403 or 404 takes the part away, any other
+failure offers Try again, and an answer after a profile switch isn't shown. Nothing is written to the server and
+no game is played.
+
+Fixture tests: `decklab/tests/test_dual_lands_api.py` (its card index is the fixture cards plus a few lands, built
+in the test; the colour check is the sandbox's stand-in stats: the duals offered and refused, no shortfall or
+verdict, failed stats, held and listed copies, which basic each replaces, a Commander deck's one copy and its
+Command Tower, the Play-now list, bad requests, the route, and privacy: a hidden deck, a Public deck without its
+inventory, a member's own pool, no other deck named; a land making only colourless) and `decklab/tests/test_dual_lands_ui.py` (shown and asked
+once, the Play-now list, the panel, On the way and Plains, none fitting or no basics, only with a short colour and
+the collection, refusals, Try again, a profile switch, and Test this swap's draft). E3-S25 is built.
+
 ## Change the field: home admins' preview and save (2026-10-29; E3-S23 edit slice)
 
 A home admin can now change home's field on the page. Who's in the field (a home

@@ -74,6 +74,7 @@ def dispatch(handler, route, query):
         ("deck", "revision"): (history.deck_revision, ("id", "revision", "version")),
         ("deck", "swaps"): (swaps.suggest_swaps, ("id", "version", "card")),
         ("deck", "replacements"): (swaps.suggest_replacements, ("id", "version", "card")),
+        ("deck", "dual-lands"): (swaps.suggest_dual_lands, ("id", "version")),
         ("deck", "role-cards"): (role_cards.role_cards, ("id", "version")),
         ("deck", "cards"): (cover.cover_cards, ("id",)),
         ("deck", "opponents"): (opponents.opponents_view, ("id",)),
