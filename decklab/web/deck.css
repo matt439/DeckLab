@@ -266,6 +266,8 @@
 .token-need-made { color: var(--ink-2); font-size: var(--fs-sm); }
 .token-need-made details { display: inline; }
 .token-need-made summary { display: inline; color: var(--link); }
+.token-counters { list-style: none; padding: 0; margin: 0; display: grid; gap: var(--s-1); }
+.token-counter small { display: block; overflow-wrap: break-word; }
 .token-need-side { color: var(--ink-2); font-size: var(--fs-sm); font-style: italic; }
 .token-need-state .status { white-space: normal; }
 .token-grab { list-style: none; padding: 0; margin: 0; font-size: var(--fs-sm); display: grid; gap: 2px; }

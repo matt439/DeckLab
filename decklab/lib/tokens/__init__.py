@@ -32,7 +32,8 @@ Parts: rows.py (a CSV row's rules and the file's bytes), names.py (the card
 index and Scryfall face names), details.py (parse_details), matching.py (an
 owned row against one need, and the describing words), needs.py (building
 and wording a need), sides.py (whose side of the table a need lands on,
-from the making cards' text) and ops.py (the writes). This file keeps reading the
+from the making cards' text), counters.py (the counters and dice a list's
+cards call for) and ops.py (the writes). This file keeps reading the
 inventory and pending orders, deck_tokens, holders and the cache, check and
 the CLI: everything a test patches (read, incoming, deck_tokens,
 cached_deck_tokens, row_uses) has its one binding here, beside its readers,
@@ -79,6 +80,7 @@ from .rows import (DETAILS_MAX, FIELDS, NAME_MAX, NOTES_MAX, NUMBER_MAX, QTY_MAX
 from . import ops  # noqa: F401,E402  (registers the tokens.* inventory operations)
 from . import reserve
 from . import sides
+from . import counters
 from . import optimise  # noqa: E402
 
 LABEL = inventory_paths.tokens(spaces.HOME)   # how messages name home's tokens.csv
@@ -224,7 +226,8 @@ def deck_tokens(sections, inv=None, incoming_rows=None, held=None):
                   cards: [{row, front, back, side, quantity, verdict, why, also_for}],
                   stand_ins: [{row, front, back, side, quantity, why, close}],
                   incoming: [{order, front, back, quantity}]}],
-         copies, unlisted, note, counts: {kinds, ready, check, differs, incoming, none}}
+         copies, unlisted, note, counts: {kinds, ready, check, differs, incoming, none},
+         counters: counters.deck_counters (the counters and dice the cards call for, approximate)}
 
     sections is {section: [DeckLine]}; inv (read() by default) the owned
     rows, row being an index into inv.rows; incoming_rows incoming()'s list
@@ -247,12 +250,13 @@ def deck_tokens(sections, inv=None, incoming_rows=None, held=None):
         incoming_rows, _ = incoming()
     pending = _incoming_groups(incoming_rows)
 
-    needs, makers, unresolved_cards = {}, [], {}
+    needs, makers, played, unresolved_cards = {}, [], [], {}
     for section in SECTIONS:
         for line in sections.get(section, []):
             name = pool._canonical(line.name, "deck", unresolved_cards)
             if decks.is_basic_land(name) or cards.card(name) is None:
                 continue
+            played.append((name, line.quantity, section))
             made, unresolved = cards.tokens_for(name)
             makers.append((name, made, unresolved))
             for entry in made:
@@ -358,7 +362,8 @@ def deck_tokens(sections, inv=None, incoming_rows=None, held=None):
                             _KIND_ORDER.index(n["kind"]) if n["kind"] in _KIND_ORDER else len(_KIND_ORDER),
                             cards.fold(n["name"]), n["key"]))
     counts = {"kinds": len(out), **{s: sum(1 for n in out if n["state"] == s) for s in reversed(STATES)}}
-    return {"needs": out, "copies": copies, "unlisted": unlisted, "note": NOTE, "counts": counts}
+    return {"needs": out, "copies": copies, "unlisted": unlisted, "note": NOTE, "counts": counts,
+            "counters": counters.deck_counters(played)}
 
 
 
@@ -713,6 +718,12 @@ def _print_deck(deck_id, owned):
         print(f"\nMakes copies: {', '.join(result['copies'])}")
     if result["unlisted"]:
         print(f"May also make things Scryfall doesn't link: {', '.join(result['unlisted'])}")
+    if result["counters"]["needs"]:
+        print("\nCounters and dice (approximate):")
+        for need in result["counters"]["needs"]:
+            print(f"  {need['name']}{' [sideboard only]' if need['sideboard_only'] else ''}: "
+                  + ", ".join(m["name"] + (" (sideboard)" if m["section"] == "Sideboard" else "")
+                              for m in need["made_by"]))
     print(f"\n{NOTE}")
     return 0
 

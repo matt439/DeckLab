@@ -41,14 +41,14 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 22 | 18 | 2 | 1 | 1 |
 | [E5: Decide what to buy](#e5-decide-what-to-buy) | 24 | 20 | 1 | 1 | 2 |
 | [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 23 | 21 | 0 | 0 | 2 |
-| [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 28 | 24 | 2 | 2 | 0 |
+| [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 28 | 24 | 3 | 1 | 0 |
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 19 | 16 | 0 | 1 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 22 | 16 | 1 | 4 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 35 | 31 | 1 | 1 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 41 | 32 | 5 | 1 | 3 |
-| **Total** | **270** | **227** | **17** | **12** | **14** |
+| **Total** | **270** | **227** | **18** | **11** | **14** |
 
-Counted from the story headers on 2026-10-29 after the source-aware two-player and pod counters, alongside the current feature and maintenance work. The reviews added five feature stories and eight hygiene stories, then the fixture-only entry-point story E11-S44, and corrected E1-S12 from missing to partial. Rechecked 2026-10-29: E1-S12 is built and E11-S39 partial (its database qualification pending). The TODO audit of 2026-10-29 added fifteen missing stories (twelve from the audit: E1-S27, E1-S28, E2-S27, E3-S25, E3-S26, E5-S25, E6-S25, E6-S26, E9-S26, E9-S27, E11-S45, E11-S46), then Matt's three UI requests (E3-S27, E5-S26, E6-S27), and corrected E7-S32 from missing to partial (its recognition spike and CLI are built). Matt closed E11-S16 as built the same day, and E3-S27, E5-S26, E6-S25, E6-S27 and E11-S46 were built the same day (E11-S12 stays partial after a further slice). Later the same day E5-S25 and E6-S26 were built, E1-S27's first slice (the library) made it partial, and E11-S12 and E3-S26 were built. E1-S27's Overview slices then finished it, and E2-S27 and E9-S27 were built. E1-S28 was built the same day. E3-S25's first slice (its replacements API, 2026-10-29) made it partial. E11-S45 was built the same day. Recounted 2026-10-30: E7-S23's first slice (the token side on deck pages and the printout) made it partial.
+Counted from the story headers on 2026-10-29 after the source-aware two-player and pod counters, alongside the current feature and maintenance work. The reviews added five feature stories and eight hygiene stories, then the fixture-only entry-point story E11-S44, and corrected E1-S12 from missing to partial. Rechecked 2026-10-29: E1-S12 is built and E11-S39 partial (its database qualification pending). The TODO audit of 2026-10-29 added fifteen missing stories (twelve from the audit: E1-S27, E1-S28, E2-S27, E3-S25, E3-S26, E5-S25, E6-S25, E6-S26, E9-S26, E9-S27, E11-S45, E11-S46), then Matt's three UI requests (E3-S27, E5-S26, E6-S27), and corrected E7-S32 from missing to partial (its recognition spike and CLI are built). Matt closed E11-S16 as built the same day, and E3-S27, E5-S26, E6-S25, E6-S27 and E11-S46 were built the same day (E11-S12 stays partial after a further slice). Later the same day E5-S25 and E6-S26 were built, E1-S27's first slice (the library) made it partial, and E11-S12 and E3-S26 were built. E1-S27's Overview slices then finished it, and E2-S27 and E9-S27 were built. E1-S28 was built the same day. E3-S25's first slice (its replacements API, 2026-10-29) made it partial. E11-S45 was built the same day. Recounted 2026-10-30: E7-S23's first slice (the token side on deck pages and the printout) made it partial. E7-S24's read-only slice (the counters and dice a deck's cards use) made it partial too.
 
 ---
 
@@ -2176,7 +2176,7 @@ Built (2026-10-29): `web/receipt-bulk.js` adds **Everything arrived as ordered**
 
 How the inventory stays true to the physical cards. Each space's own people add, fix and remove cards on the Collection page (single cards, an app export, Add a precon) and token cards on the Tokens page; Matt and User1 both edit home's, each member only their own, and Claude does bulk and member upkeep from the PC (`collection merge`, `collection edit` and `collection apply`, `collection add-precon --space`). Repeat imports, sales and trades, and cards held by built decks are all flagged, other decks' out-of-date tables are listed with Update all rather than refreshed automatically, and the nightly `db check` looks for drift.
 
-Open: E7-S08, E7-S23 (partial), E7-S24, E7-S32.
+Open: E7-S08, E7-S23 (partial), E7-S24 (partial), E7-S32.
 
 **E7-S01** · Matt · must · M · built
 
@@ -2522,7 +2522,7 @@ Next slice: the Tokens part's own heading for the opponent's tokens (criterion 1
 
 Gap: the opponent's tokens are marked on each need but not yet under their own heading, and the library's token line and Build decks' Grab ticks still count them with the deck's own.
 
-**E7-S24** · Matt · could · L · missing
+**E7-S24** · Matt · could · L · partial
 
 As a player, I want our dice and counters recorded and checked against what decks need, so that I know whether we have enough for a game.
 
@@ -2531,9 +2531,16 @@ As a player, I want our dice and counters recorded and checked against what deck
 - Given dice or counters are changed, then no decklist, playable pool or owned-vs-needed table changes.
 
 Evidence:
-- `decklab/lib/tokens/__init__.py`: token cards only; no dice or counters
+- `decklab/lib/tokens/counters.py` (`text_kinds`, `card_kinds`, `deck_counters`): the counter kinds and dice a list's cards call for, read from each card's (and face's) rules text, reminder text included: the word or P/T right before "counter(s)" ("a shield counter", "a -1/-1 counter", Scryfall's minus sign too), unless it only counts, points or counters a spell ("another counter", "may counter target spell", "Zack Fair's counters"); {E} as energy; "roll a d20" or "two six-sided dice" as a die; planeswalkers' loyalty, battles' defense and Sagas' lore from the type line; and Scryfall keywords printed without their reminder text (undying +1/+1, persist -1/-1, infect -1/-1 and poison, toxic poison, suspend time, ...). Each kind is grouped as on permanents, on players (poison, energy, experience, rad, ticket) or a die, with the cards that use it and whether only sideboard cards do; approximate, and never a count
+- `decklab/lib/tokens/__init__.py` (`deck_tokens`): the result's `counters`, so only viewers who may see the space's inventory get them, as with the deck's tokens; the deck printout's "Counters and dice (approximate)" lines. `lib/api/assembly_ticks.py` leaves them out of the packing plan
+- `decklab/web/tokens.js` (`tokenCountersPart`) and `deck.js`: the deck page's Tokens part lists them under "Counters and dice", read-only, also when the list makes no tokens
+- `decklab/tests/test_token_counters.py`: the kinds and non-kinds from sentences, types, faces and keywords, a deck's needs from test cards added to the fixture index (order, grouping, sideboard-only, nothing else in the tokens answer changing), the printout, and no token part (so no counters) for a viewer outside the space; `test_feature_ui_tokens.py`: the deck page's list; `golden_p4.py`'s "counter-defaults"
 
-Gap: dice and counters aren't recorded anywhere, and decks' counter needs aren't worked out.
+Now (2026-10-29): the read-only slice is built: the counters and dice a deck's cards call for, on the deck page's Tokens part and in the printout ([HISTORY.md](../HISTORY.md#the-counters-and-dice-a-deck-uses-2026-10-29-e7-s24-slice-1)).
+
+Next slice: Matt's record shape for owned dice and counters (kind, colour or design, quantity; whether one die stands for any counter kind), then its migration and the Tokens page's rows (criterion 1), then each counter need's covered or not (criterion 2's rest). Those need Matt's decision and a live migration, so they aren't fixture-only work.
+
+Gap: owned dice and counters aren't recorded, so the deck page lists the kinds its cards use but not whether they're covered.
 
 **E7-S25** · Claude Code · should · S · built
 

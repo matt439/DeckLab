@@ -101,6 +101,10 @@ older code (the committed tests/fixtures/inventory_goldens):
   names that have left the deck. No golden deck's guide names a former card, so only the empty
   answer ({"names": [], "count": 0}) or the unread one (None) is dropped; a departed card still
   compares. test_guide_departed checks its values and privacy.
+- "counter-defaults": E7-S24 adds deck_view's tokens "counters", the counters and dice the
+  list's cards call for (read from their text, never from the inventory). No golden deck's
+  cards use any, so only the empty answer ({"needs": [], "note": counters.NOTE}) is dropped; a
+  deck with a counter still compares. test_token_counters checks its values and privacy.
 - "category-defaults": E2-S24 adds DeckLine.category, the builder's own category on a decklist
   line, so a line dumped as a whole object ({quantity, name, set, number, finish}) gains
   "category". Only a None category on exactly such an object is dropped: a line with a
@@ -594,6 +598,17 @@ def departed_defaults(dump):
                 guide.pop("departed")
 
 
+def counter_defaults(dump):
+    """Drop only E7-S24's empty "counters" on deck pages' tokens."""
+    from decklab.lib.tokens import counters
+    for mine in [dump, *((dump.get("by_viewer") or {}).values())]:
+        views = mine.get("deck_view") if isinstance(mine, dict) else None
+        for view in views.values() if isinstance(views, dict) else []:
+            found = view.get("tokens") if isinstance(view, dict) else None
+            if isinstance(found, dict) and found.get("counters", 0) == {"needs": [], "note": counters.NOTE}:
+                found.pop("counters")
+
+
 _LINE_KEYS = {"quantity", "name", "set", "number", "finish", "category"}
 
 
@@ -789,7 +804,7 @@ EXPECTED_P5 = (("deck-id-messages", deck_id_messages), ("phase-5-wording", phase
                ("assembly-colors", assembly_colors), ("considering-defaults", considering_defaults),
                ("box-label-defaults", box_label_defaults), ("category-defaults", category_defaults),
                ("storage-location-defaults", storage_location_defaults), ("played-defaults", played_defaults),
-               ("departed-defaults", departed_defaults),
+               ("departed-defaults", departed_defaults), ("counter-defaults", counter_defaults),
                ("absent-shop-prices", absent_shop_prices))
 
 

@@ -846,6 +846,10 @@ Receive delivery, never here.
   may make things Scryfall doesn't link. A token without a recorded printing shows the Tokens page's labelled example art. The Overview
   says when something's wrong ("No Insect tokens") and jumps there. The library shows a token line under a deck only when something's missing, different or on
   the way (not for idea decks). Unreadable token rows show as an info line, never a warning.
+  Under **Counters and dice** the part also lists, read-only, the counter kinds and dice the list's cards
+  use, each with its cards ("Poison counters (on players)", "d20"), read from their rules text, types and
+  keywords (`lib/tokens/counters.py`, E7-S24), so approximate; owned dice and counters aren't recorded yet.
+  `python -m decklab.lib.tokens <deck-id>` prints them too.
 - **Adding and editing:** **Add a token card**, then the front and back face names (suggested from
   Scryfall's names, with "Did you mean …?" for a near miss), each face's details, the quantity of
   physical cards, and optionally the printing (set, collector numbers, finish). **Swap front and

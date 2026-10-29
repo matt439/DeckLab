@@ -550,6 +550,35 @@ class TokensUiTests(unittest.TestCase):
           assert(lines[0].getAttribute('class').includes('token-need-side-opponent'));
         """)
 
+    def test_deck_page_lists_the_counters_and_dice_the_cards_use(self):
+        self.run_js(self.TOKENS + """
+          // E7-S24: the server's counter kinds and dice, read-only, even when the list makes no tokens.
+          clear(main);
+          const used = (...names) => names.map((name) => ({name, quantity: 1, section: 'Deck'}));
+          const counters = {note: 'Read from the cards.', needs: [
+            {key: '+1/+1', name: '+1/+1 counters', group: 'permanent', made_by: used('A', 'B', 'C', 'D'), sideboard_only: false},
+            {key: 'poison', name: 'Poison counters', group: 'player', sideboard_only: true,
+             made_by: [{name: 'Toxic Thing', quantity: 2, section: 'Sideboard'}]},
+            {key: 'd20', name: 'd20', group: 'die', made_by: used('Roller'), sideboard_only: false}]};
+          let section = tokensSection({tokens: {...deckTokensResult, needs: [], counters}});
+          main.append(section);
+          const items = [...section.querySelectorAll('.token-counter')];
+          assert.equal(items.length, 3);
+          assert.equal(items[0].querySelector('b').textContent, '+1/+1 counters');
+          assert.equal(items[0].querySelector('small').textContent, 'Used by A, B and 2 more cards');
+          assert.equal(items[1].querySelector('b').textContent, 'Poison counters (on players)');
+          assert(items[1].textContent.includes('(sideboard only)'));
+          assert.equal(items[1].querySelector('small').textContent, 'Used by Toxic Thing (sideboard)');
+          assert.equal(items[2].querySelector('small').textContent, 'Used by Roller');
+          assert(section.textContent.includes('Read from the cards.'));
+          assert(section.textContent.includes('No tokens or reminders are linked'));
+          // None (or an older answer without the key): no part at all.
+          for (const c of [{needs: [], note: 'x'}, undefined]) {
+            section = tokensSection({tokens: {...deckTokensResult, counters: c}});
+            assert.equal(section.querySelectorAll('.deck-counters').length, 0);
+          }
+        """)
+
     def test_deck_page_packed_token_cards_and_their_sheet(self):
         self.run_js(self.TOKENS + """
           clear(main);

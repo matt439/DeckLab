@@ -2,6 +2,39 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## The counters and dice a deck uses (2026-10-29; E7-S24 slice 1)
+
+The read-only first slice of recording dice and counters: what a deck's cards call for, before anything owned
+is recorded. `decklab/lib/tokens/counters.py` reads each card's rules text (reminder text and every face
+included): the word or P/T right before "counter(s)" is a kind ("a shield counter", "three time counters", "a
+-1/-1 counter", with Scryfall's minus sign read as "-"), unless it only counts, points or counters a spell ("a
+counter", "another counter of each kind", "may counter target spell", "instead counter", "Zack Fair's
+counters"). `{E}` is energy and "roll a d20" or "roll two six-sided dice" a die of that many sides. The type line
+adds a planeswalker's loyalty, a battle's defense and a Saga's lore, and Scryfall's keywords add the counters of
+a keyword printed without its reminder text (undying and the other +1/+1 keywords, persist and wither -1/-1,
+infect -1/-1 and poison, toxic and poisonous poison, suspend and vanishing time, fading fade, level up level).
+Run over every card in the index, it found 279 kinds, all real ones after dropping a few verbs and
+possessives. `deck_tokens` gains `counters`: `{needs: [{key, name, group, made_by, sideboard_only}], note}`,
+grouped as on permanents, on players (poison, energy, experience, rad, ticket) or dice, in that order, with
+the cards that use each kind. It's part of the deck's tokens, so only viewers who may see the space's inventory
+get it; the packing plan leaves it out (`assembly_ticks.token_packing_keys`), and nothing else in the answer
+changes. The deck page's Tokens part lists the kinds under "Counters and dice" ("Poison counters (on
+players)", "Used by Venom Drake and 2 more cards"), with a "How are counters worked out?" note saying it's
+approximate and that owned dice and counters aren't recorded yet; `python -m decklab.lib.tokens <deck-id>`
+prints them as "Counters and dice (approximate)". No decklist, pool, table or inventory changes.
+
+Fixture tests: `decklab/tests/test_token_counters.py` (kinds and non-kinds from sentences, types, faces and
+keywords; a deck's needs from test cards added to `fixtures/tokens_cards.jsonl`'s index, their order, groups,
+sideboard-only and quantities; the rest of the tokens answer unchanged; the printout; a member viewing a
+public home deck getting no token part at all), `test_feature_ui_tokens.py` (the deck page's list, also with no
+tokens, and none without counters), `test_assembly_token_keys.py` (kept off the packing plan) and
+`golden_p4.py`'s "counter-defaults" (only the empty answer dropped).
+
+- **Known low issues:** it reads words, not rules: a card that only checks for a counter, or puts one on an
+  opponent's permanent, still lists the kind, and a counter named only by a keyword Scryfall's keywords don't
+  carry (or a die named another way) is missed. Owned dice and counters, and whether they cover a deck, wait on
+  Matt's record shape and a migration.
+
 ## Whose side a token lands on (2026-10-29; E7-S23 slice 1)
 
 Scryfall's links between cards and tokens don't say which player gets a token, so each need of `deck_tokens`

@@ -164,6 +164,28 @@ function tokenNeed(need, faces = null) {
           card.why && card.why.length ? el("small", { text: card.why.join("; ") }) : null)))) : null));
 }
 
+/** The counters and dice a deck's cards call for (deck_tokens's "counters", lib/tokens/counters.py, E7-S24),
+ * read-only and approximate: each kind with the cards that use it, the rest folded away after two. null when
+ * there are none. Owned dice and counters aren't recorded yet, so nothing says whether they're covered. */
+function tokenCountersPart(counters) {
+  const needs = (counters && counters.needs) || [];
+  if (!needs.length) return null;
+  const where = { player: " (on players)", die: "" };
+  const usedBy = (madeBy) => {
+    const names = (madeBy || []).map((m) => m.section === "Sideboard" ? `${m.name} (sideboard)` : m.name);
+    return names.length <= 2 ? `Used by ${names.join(" and ")}`
+      : `Used by ${names.slice(0, 2).join(", ")} and ${plural(names.length - 2, "more card")}`;
+  };
+  return el("div", { class: "deck-counters" },
+    el("h3", { class: "deck-tokens-group", text: "Counters and dice" }),
+    el("ul", { class: "token-counters" }, needs.map((need) => el("li", { class: `token-counter token-counter-${need.group}` },
+      el("b", { text: `${need.name}${where[need.group] || ""}` }),
+      need.sideboard_only ? " (sideboard only)" : null,
+      el("small", { class: "token-need-made", text: usedBy(need.made_by) })))),
+    counters.note ? el("details", { class: "more token-note" }, el("summary", { text: "How are counters worked out?" }),
+      el("p", { class: "sub", text: counters.note })) : null);
+}
+
 /** A deck's token needs (deck_tokens's "needs") as a list, in the server's order. faces: tokFacesUsed of
  * all the deck's needs (tokenNeed). */
 function tokenNeedList(needs, faces = null) {

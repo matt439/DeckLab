@@ -1081,6 +1081,7 @@ function tokensSection(data) {
       section.append(el("h3", { class: "deck-tokens-group", text: "Only for sideboard cards" }), tokenNeedList(side, faces));
     }
   }
+  add(section, [tokenCountersPart(t.counters)]);   // E7-S24: read-only counter kinds and dice
   if (copies.length) {
     section.append(el("details", { class: "more deck-tokens-more" }, el("summary", { text: `Makes copies: ${plural(copies.length, "card")}` }),
       el("p", { text: `${copies.join(", ")}. Use a Copy token card, or any spare token, and say what it copies.` })));

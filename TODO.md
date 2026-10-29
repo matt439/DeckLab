@@ -20,6 +20,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 - **`E11-S02`: signed-in off-page check.** On a phone through decklab.example.com, save a deck edit, upload an accessory photo, and check the off page while Deck Lab is stopped.
 - **`E11-S30`: the redesign's last gates.** Choose Collection's colour filter (card colour or colour identity, [question 6](decklab/design/visual-design.md#6-open-questions-and-risks)), then check touch and Safari on the household's iPhones and iPad.
 - **`E11-S39`: database qualification of the snapshot split.** Authorize a disposable-database run of the location, deck persistence and rollback cases; the split itself passes its fixture checks.
+- **`E7-S24`: owned dice and counters.** Choose what a recorded die or counter says (kind, colour or design, quantity; whether one die stands for any kind) before its migration; the read-only counter needs are built.
 - **`E11-S28`: User2's user-testing session.** Confirm his device, then use the prepared [checklist](decklab/design/user-testing-user2.md).
 
 **Activation:** migrations `0012` and `0013` were applied and the server restarted on committed code on 2026-10-19, so the privacy code and guarded member removal are live. No visibility choice or real member removal has been made.
@@ -55,7 +56,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 | `E7-S32` | OPEN | could | L | Recognition spike and scan CLI built; next `POST /api/collection/scan` (injectable OCR, own-space guard) with fixture tests, then Collection's Scan cards sheet into the import preview; real phone photos separately. |
 | `E7-S08` | OPEN | could | M | Forge's `DL\|zone` lines log token moves but `cardlog.py` drops them; first tally each token's per-game peak into the batch record (fixture lines). Real counts need fresh runs. |
 | `E7-S23` | OPEN | could | M | Each token need now says whose side it lands on (approximate, from the cards' text) and the deck page says so; next the Tokens part's own heading for the opponent's tokens, then counting them apart in the library line and Build decks' Grab ticks. |
-| `E7-S24` | OPEN | could | L | First the read-only slice: dice and counter needs from oracle text (`lib/tokens/counters.py`) with fixtures. Recording owned dice needs Matt's record shape and a migration. |
+| `E7-S24` | DECISION | could | L | The deck page lists the counter kinds and dice its cards use (read-only, approximate); Matt chooses the record shape for owned dice and counters, then its migration, the Tokens page's rows and whether each need is covered. |
 
 ## Deck Lab: Commander nights
 
