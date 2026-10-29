@@ -1250,7 +1250,8 @@ marked component whatever the collection holds: the collection keeps no per-copy
 which it could tell copies merged early from copies owned before, so the mark is the person's
 word, kept in the audit trail. It's refused for a received, cancelled or tokens component, and a
 receipt or cancellation leaves it in the record, where nothing reads it any more (the guard reads
-only pending components). A part split off a marked component isn't marked.
+only pending components). A part split off a marked component is marked too, in the same change,
+and the split's preview says so; unmarking either part leaves the other's mark as it is.
 
 `collection merge`, `collection add-precon` and the Collection page don't refresh the tables, and token cards never change
 one. `collection merge` and `collection add-precon` then print the space's decks whose tables are now out of date, and `deck

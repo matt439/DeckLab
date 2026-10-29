@@ -316,6 +316,53 @@ class OrderOps:
         self.refused("is a product", "order.split", order="2026-10-02-precon", component="precon",
                      new_id="half", take=[{"row": 1, "quantity": 1}])
 
+    def test_a_split_off_part_keeps_the_extra_copies_mark(self):
+        from decklab.lib import pool
+        oid = "2026-10-12-goodgames"
+        self.op("order.add", **self.add_params(
+            record={"id": oid, "seller": "Good Games", "ordered_on": "2026-10-12", "sources": [], "notes": "",
+                    "audit_notes": "From the shop."},
+            cards={"rows": [card("Llanowar Elves", "fdn", 227, 2)], "checks": []}, extra_copies=["cards"]))
+        after, summary = self.op("order.split", order=oid, component="cards", new_id="late",
+                                 take=[{"row": 1, "quantity": 1}])
+        self.assertIn("late is marked as extra copies of owned printings too", summary.text)
+        self.assertTrue(summary.extra["extra_copies"])
+        notes = after.order(oid).audit_notes
+        self.assertEqual(rules.extra_copies(notes), ("cards", "late"))
+        self.assertIn("From the shop. Extra copies of owned printings: cards, late.", notes)
+
+        def warned():
+            return [w for w in pool.load_pool().warnings if oid in w and "already in the collection" in w]
+        self.assertEqual(warned(), [])
+        # Unmarking either part takes off only that part's mark.
+        after, _ = self.op("order.extra_copies", order=oid, component="late", undo=True)
+        self.assertEqual(rules.extra_copies(after.order(oid).audit_notes), ("cards",))
+        self.assertEqual(len(warned()), 1)
+        self.op("order.extra_copies", order=oid, component="late")
+        after, _ = self.op("order.extra_copies", order=oid, component="cards", undo=True)
+        self.assertEqual(rules.extra_copies(after.order(oid).audit_notes), ("late",))
+        self.assertIn("From the shop.", after.order(oid).audit_notes)
+        self.assertEqual(len(warned()), 1)
+
+    def test_an_unmarked_split_stays_unmarked(self):
+        oid = "2026-10-07-shop-a"
+        after, summary = self.op("order.split", order=oid, component="cards", new_id="late",
+                                 take=[{"row": 1, "quantity": 1}])
+        self.assertNotIn("extra copies", summary.text)
+        self.assertFalse(summary.extra["extra_copies"])
+        self.assertEqual(rules.extra_copies(after.order(oid).audit_notes), ())
+        # Another component's mark doesn't pass to a part split off an unmarked one.
+        self.op("order.extra_copies", order=oid, component="late")
+        after, _ = self.op("order.split", order=oid, component="cards", new_id="last",
+                           take=[{"row": 1, "quantity": 1}])
+        self.assertEqual(rules.extra_copies(after.order(oid).audit_notes), ("late",))
+
+    def test_a_marked_product_is_never_split_and_keeps_its_mark(self):
+        self.op("order.extra_copies", order="2026-10-02-precon", component="precon")
+        self.refused("is a product", "order.split", order="2026-10-02-precon", component="precon",
+                     new_id="half", take=[{"row": 1, "quantity": 1}])
+        self.assertEqual(rules.extra_copies(self.load().order("2026-10-02-precon").audit_notes), ("precon",))
+
     # -------------------------------------------------------- order.cancel
 
     def test_cancelling_a_component(self):
@@ -732,6 +779,20 @@ class CommandLineTests(unittest.TestCase):
         self.assertEqual(rules.extra_copies(order.audit_notes), ("cards",))
         from decklab.lib.inventory import order_fulfilment
         self.assertIsNotNone(order_fulfilment.read(order))
+        # order split's preview says the new part keeps the mark, and the split saves it.
+        cards = self.file("two.csv", CARD_HEADER + "Elvish Mystic,cmm,648,nonfoil,2,,,\n")
+        code, _, err = self.run_cli("order", "add", "--id", "2026-10-14-ebay", "--cards", cards,
+                                    "--extra-copies", "cards", "-m", "Two more Elvish Mystics")
+        self.assertEqual(code, 0, err)
+        argv = ("order", "split", "2026-10-14-ebay", "cards", "--new-id", "late", "--take", "1:1", "-m", "Late")
+        code, out, err = self.run_cli(*argv, "--dry-run")
+        self.assertEqual(code, 0, err)
+        self.assertIn("late is marked as extra copies of owned printings too", out)
+        self.assertIn("Dry run: nothing saved.", out)
+        code, out, err = self.run_cli(*argv)
+        self.assertEqual(code, 0, err)
+        self.assertEqual(rules.extra_copies(self.backend.load().order("2026-10-14-ebay").audit_notes),
+                         ("cards", "late"))
 
     def test_split_cancel_and_product_commands(self):
         code, out, err = self.run_cli("order", "split", "2026-10-07-shop-a", "cards", "--new-id", "late",

@@ -208,10 +208,10 @@ def _result(before, after, summary, operation):
     elif operation.kind == "order.split":
         result["components"] = [_payload_component(after, order, operation.params[key])
                                 for key in ("component", "new_id")]
-        if result["components"][0]["extra_copies"]:
+        if result["components"][1]["extra_copies"]:
             result["warnings"].append(
-                f"{operation.params['component']} stays marked as extra copies. "
-                f"{operation.params['new_id']} is not marked; mark the new part separately if it is also extra copies.")
+                f"{operation.params['component']} stays marked as extra copies, and {operation.params['new_id']} "
+                "is marked too. Unmark either part separately if it isn't extra copies.")
     elif operation.kind == "product.edit":
         component = next(component for component in order.components
                          if component.kind == "product" and component.product_stem == operation.params["stem"])

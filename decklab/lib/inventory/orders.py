@@ -18,7 +18,8 @@ inventory.register(), run by inventory.apply() or preview() on either backend.
                      arrived (verified_checks keeps them), or withdraw one added by mistake
   order.split        part of a pending cards or tokens component moved to a new pending
                      component of the same order (file <stem>-<new id>.csv), totals unchanged,
-                     each check copied to both parts unless it's kept or moved as asked
+                     each check copied to both parts unless it's kept or moved as asked, and
+                     an extra-copies mark passed to the new part
   order.cancel       a pending component cancelled, optionally restoring recorded queue intent
   order.remove       an order with no received parts removed, restoring recorded queue intent
   order.merge        other orders' components moved into one order (one shipment, received
@@ -727,7 +728,8 @@ def split_order(inv, *, order, component, new_id, take, move_checks=(), copy_che
     1-based numbers of the checks that go only to the new component (moved) or stay only on the
     original (kept). Every other check is copied to both (copy_checks may name some), so neither
     part can be received without verifying what was asked of the whole. The total quantity is
-    unchanged."""
+    unchanged. A component marked as extra copies of owned printings (order.extra_copies) passes
+    the mark to new_id in the same change, since its cards are part of the same acknowledged order."""
     before = inv
     o, c, rows = _pending_payload(inv, order, component, "split")
     record = o.record()
@@ -774,15 +776,21 @@ def split_order(inv, *, order, component, new_id, take, move_checks=(), copy_che
             item.pop("check_links", None)  # A split never transfers a row binding by position.
             items.append(made.record())
     record["components"] = items
+    marked = list(rules.extra_copies(o.audit_notes))
+    extra = component in marked
+    if extra:
+        record["audit_notes"] = rules.with_extra_copies(record.get("audit_notes"), marked + [new_id])
     inv = inv.with_order(Order(o.file, record))
     inv = inv.set_component_rows(order, component, kept).set_component_rows(order, new_id, moved)
     from . import order_fulfilment
     inv = inv.with_order(order_fulfilment.split(inv.order(order), component, new_id, kept, moved,
                                               moved_first=_arrived_first))
     qty = sum(int(r["quantity"]) for r in moved)
-    return _done(before, inv, Summary(f"Split {_plural(qty, 'card')} of order {order} {component} into {new_id} "
-                                      f"({file_name})", {"moved": qty, "rows": len(moved)},
-                                      extra={"file_name": file_name}))
+    text = f"Split {_plural(qty, 'card')} of order {order} {component} into {new_id} ({file_name})"
+    if extra:
+        text += f"; {new_id} is marked as extra copies of owned printings too"
+    return _done(before, inv, Summary(text, {"moved": qty, "rows": len(moved)},
+                                      extra={"file_name": file_name, "extra_copies": extra}))
 
 
 # ------------------------------------------------------------------ order.cancel
