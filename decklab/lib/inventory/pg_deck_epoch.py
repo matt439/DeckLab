@@ -4,6 +4,10 @@
 explicit PgInventory backend. It never uses the current/default inventory, a
 history convenience reader, or the stale fallback of ``backend.load()``.
 
+``read_many(backend, deck_ids)`` reads several decks the same way: one such
+transaction and one snapshot load, then each deck's bounded proof on that
+connection (the field selector's overlay, forge/field_policy_overlay.py).
+
 ``capture_on_connection`` is internal infrastructure for a caller that already
 owns a coherent transaction. Its mandatory coherence mode is checked: ``reader``
 requires read-only repeatable-read/serializable, and ``inventory-locked`` requires
@@ -101,6 +105,11 @@ def capture_on_connection(backend, conn, deck_id, *, coherence):
     metadata = _metadata(snapshot)
     if metadata is None:
         return None
+    return _capture(snapshot, metadata, conn, deck_id)
+
+
+def _capture(snapshot, metadata, conn, deck_id):
+    """One deck's capture from an already checked snapshot and its HOME metadata."""
     current_ids, aliases = metadata
     canonical = deck_epoch.identity(deck_id, current_ids, aliases)
     if canonical is None:
@@ -164,3 +173,39 @@ def read(backend, deck_id):
         # The transaction/context has already unwound; never relay raw DB or deck
         # error text, and never retry through load()'s stale/default path.
         return _unavailable()
+
+
+def read_many(backend, deck_ids):
+    """{deck id: Resolution} for distinct HOME ids, from one read-only repeatable-read
+    transaction and one snapshot load on the supplied backend's connection.
+
+    Each deck gets the proof read() would give it. Too many ids, the wrong backend
+    or any failure leaves every id unavailable. Ids that aren't safe HOME syntax
+    are left out, so a caller treats a missing key as unavailable.
+    """
+    if not isinstance(deck_ids, (list, tuple)) or not all(type(each) is str for each in deck_ids):
+        return {}
+    ids = tuple(dict.fromkeys(each for each in deck_ids if deck_epoch.home_id(each)))
+    if not ids:
+        return {}
+    if not isinstance(backend, PgInventory) or len(ids) > deck_epoch.MAX_CURRENT_IDS:
+        return {deck_id: _unavailable() for deck_id in ids}
+
+    def work(conn):
+        with conn.transaction():
+            conn.execute("set transaction isolation level repeatable read, read only")
+            if not _coherent(conn, "reader"):
+                return {deck_id: _unavailable() for deck_id in ids}
+            snapshot = backend.load(conn=conn)
+            metadata = _metadata(snapshot)
+            found = {}
+            for deck_id in ids:
+                capture = None if metadata is None else _capture(snapshot, metadata, conn, deck_id)
+                found[deck_id] = deck_epoch.resolve(capture) if capture is not None else _unavailable()
+            return found
+
+    try:
+        return backend._call(work)
+    except Exception:
+        # As read(): no raw database or deck error text, and no stale/default retry.
+        return {deck_id: _unavailable() for deck_id in ids}

@@ -26,6 +26,11 @@ class _MissingSchema(Unavailable):
     pass
 
 
+def missing_schema(error):
+    """True for get()'s refusal before migration 0017: the field selector keeps today's field."""
+    return isinstance(error, _MissingSchema)
+
+
 def _read(cur, fmt):
     cur.execute("select to_regclass('public.field_policy') is not null")
     if cur.fetchone() != (True,):

@@ -2,6 +2,47 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Saved field choices in home's field selection (2026-10-29; E3-S23 selector slice)
+
+Home's field now follows the saved per-format field policy. A new
+`forge/field_policy_overlay.py` runs inside `field._field` after simulation.json's
+directives are read and before the add/remove passes, so the membership trace,
+the manual-exclusion count, Rankings' explanations and the notes all see the
+effective directives. For each current home house deck of the format whose checked
+incarnation has an entry, every legacy directive naming that deck (any version,
+through its aliases) is masked; **Include** then pins its Planned or Play-now list
+(shown as added by hand), **Exclude** takes it out (counted and explained as a
+manual exclusion) and **Use field rules** keeps the automatic choice, its Built
+version included. A deck with no entry keeps exactly its legacy selection, and a
+recreated deck never inherits its predecessor's entry; a renamed one keeps it.
+Field runs, opponents, plans, averages and ratings use the same selection.
+
+Without a policy nothing changes: no store installed (fixtures), a store without
+field policies, an empty policy, or migration 0017 not applied (its missing-schema
+refusal) give today's field exactly, with no identity reads. A failed or corrupt
+policy read, or a deck whose incarnation can't be proved while rules exist, never
+reads as empty: those decks keep legacy selection (so a saved exclusion doesn't
+hold until the read works again; failing closed is still open), a note naming no deck says so,
+and the membership view and exclusion count become unavailable instead of looking
+complete. Member fields don't read home's policy in this slice.
+
+Incarnations are proved by the new `pg_deck_epoch.read_many`: one read-only
+repeatable-read transaction and one snapshot load for all the format's house
+decks, each with read()'s bounded proof. A proof counts only when its receipt
+matches the pinned snapshot's deck revision and text hash, and only ready proofs
+are cached, by inventory and decks revision. Files, stale and preview snapshots
+prove nothing.
+
+**25 new fixture checks** in `test_field_policy_overlay` (selection, masking,
+rename/recreation, failures, membership, Rankings and opponents, the snapshot tie,
+caching and the batch reader on fake PostgreSQL objects) pass, with the
+neighbouring field, membership, exclusion-count, Rankings, field-policy, epoch,
+state-contract and Forge-contract modules (483 checks, one existing skip),
+`test_inventory_contract` and `test_api_decks` (61) and the source-length guard. No API answer gained a key. Migration 0017 remains
+unapplied; no live database, server, Forge game or device check was run. E3-S23
+remains partial: the revision-checked, audited home-admin preview and save (API
+and Who's in the field controls) are next.
+
 ## Free cards by role on the Stats tab (2026-10-29; E9-S26)
 
 A Commander deck's Stats roles (ramp, card draw, removal, board wipes and the rest, counted from Scryfall's

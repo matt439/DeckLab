@@ -43,7 +43,8 @@ cheap, and a deck file edited a moment ago counts at once. decklab/simulation.js
 section ({"Constructed": {"add": [...], "remove": [...]}, "Commander": {...}}, each name
 "<deck id>[@version]") adds lists the rules leave out (a Beginner Box pairing, a product whose
 "intact" is still blank) and takes lists out (a house deck built from a precon that's also kept
-whole).
+whole). HOME's saved field choices (E3-S23, field_policy_overlay.py) are laid over those
+edits for current house decks; without any (or before migration 0017) the field is as above.
 """
 import json
 import threading
@@ -53,7 +54,8 @@ import traceback
 from decklab.lib import decks, spaces
 from decklab.lib import pool as card_pool          # products/status.csv (read_status)
 
-from . import common, deck_identity, engine, field_exclusions, lifecycle, lists, runner, saved, seqstats, views
+from . import (common, deck_identity, engine, field_exclusions, field_policy_overlay, lifecycle, lists, runner,
+               saved, seqstats, views)
 from .common import ForgeError
 
 BUDGETS = ("quick", "standard", "thorough")
@@ -227,6 +229,9 @@ def _field(fmt, *, space="home", public=None, visible=None, product_notes=True, 
     if exclusions is not None:
         edit_options["exclusions"] = exclusions
     add, remove = _simulation_edits(fmt, **edit_options)
+    # HOME's saved choices mask their decks' legacy directives first (E3-S23).
+    policy = field_policy_overlay.prepare(fmt, space, chosen, notes, trace=trace, exclusions=exclusions)
+    add, remove = policy.directives(add, remove, exclusions)
     for name in add:
         deck_id, version = _split_name(name)
         owner = spaces.space_of(deck_id)
@@ -275,6 +280,7 @@ def _field(fmt, *, space="home", public=None, visible=None, product_notes=True, 
             else:
                 remaining.append((summary, selected))
         chosen = remaining
+    chosen = policy.apply(chosen, notes, trace=trace, exclusions=exclusions, visible=visible)
     entries = []
     for summary, version in chosen:
         try:

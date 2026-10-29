@@ -1,10 +1,11 @@
 # Audited home-field membership: E3-S23
 
 This extends the existing read-only membership view. Checked identity, pure
-policy and fixture-qualified persistence are implemented. Selector integration,
-request permissions/preview/save, database activation and UI editing remain open.
+policy, fixture-qualified persistence and selector integration (2026-10-29,
+`forge/field_policy_overlay.py`) are implemented. Request permissions/preview/save,
+database activation and UI editing remain open.
 Development uses supplied fixtures, without changing the household's field or
-starting Forge games. The loop stops after the persistence commit as requested.
+starting Forge games. The next slice is the audited home-admin preview/save.
 
 ## Checked deck identity
 
@@ -77,7 +78,27 @@ Storage does not authorize a request, change current field selection, start
 games or provide an edit API. Browser policy revisions must use canonical decimal
 strings, since the database range exceeds JavaScript's exact integer range.
 
+### Selector integration (built 2026-10-29)
+
+`field._field` asks `field_policy_overlay.prepare` for a plan after reading the
+legacy directives and before its add/remove passes, then applies it after them.
+Only HOME's field reads the policy. The format's current house decks are proved
+together by `pg_deck_epoch.read_many` (one read-only repeatable-read transaction,
+one snapshot load, read()'s bounded proof per deck); a proof counts only when its
+receipt matches the pinned snapshot's revision and text hash, and only ready
+proofs are cached, by inventory and decks revision. No store, a store without
+policies, an empty policy and the missing 0017 table are today's field exactly.
+A failed read or an unproved deck while rules exist keeps legacy selection for
+those decks, adds a note naming no deck, and makes the membership trace and the
+exclusion count unavailable. Exclusions re-notify the observer's parsed removals
+with the policy-excluded IDs, so Rankings explains them as manual exclusions.
+
 ### Remaining selection and editing work
+
+The selector now implements the rules below, except the failed-read one: on a
+failed policy read it keeps legacy selection (so a deck the saved policy
+excludes can come back), adds a note naming no deck and makes the trace and
+exclusion count unavailable. Failing closed is still open, as is the write path.
 
 Use a per-format, revisioned overlay for current home house-deck incarnations.
 Do not copy an entire legacy field into static saved rules: an unqualified
@@ -120,7 +141,9 @@ list/version/hash/epoch receipt, a format-policy revision and one audited
 transaction. Recheck revision before deciding a request is a no-op. Keep human
 reasons out of public membership explanations, and add an explicit home-only
 Activity boundary before generic admin handling. A failed policy read must not
-masquerade as empty policy and revive an excluded deck.
+masquerade as empty policy and revive an excluded deck (not yet built: today
+the fallback is legacy selection, made visible by the note and unavailable
+counts, but an excluded deck can still return).
 
 Use the existing inventory claim before a format-specific lock; never upgrade a
 shared inventory lock to exclusive. An already-held claim alone does not prove
