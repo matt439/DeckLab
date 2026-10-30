@@ -79,7 +79,7 @@ def dispatch(handler, route, query):
         ("deck", "cards"): (cover.cover_cards, ("id",)),
         ("deck", "opponents"): (opponents.opponents_view, ("id",)),
         ("deck", "draft"): (deck_drafts.draft_view, ("id", "version")),
-        ("deck", "edhrec"): (edhrec.edhrec_view, ("id", "commander", "commander2")),
+        ("deck", "edhrec"): (edhrec.edhrec_view, ("id", "commander", "commander2", "space", "page")),
         ("receipt",): (receipts.receipt_view, ("order",)),
         ("arrivals",): (arrivals.arrivals_view, ()),
         ("rankings",): (rankings.rankings_view, ("format",)),

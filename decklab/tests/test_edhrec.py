@@ -18,8 +18,9 @@ from datetime import timedelta
 from pathlib import Path
 from unittest import mock
 
-from decklab.lib import edhrec, pool
+from decklab.lib import access, edhrec, pool
 from decklab.lib.api import edhrec as edhrec_api
+from decklab.tests.test_api import _write
 from decklab.tests.test_editor import EditorTestCase
 
 
@@ -344,7 +345,7 @@ class IdeasTests(IdeasCase):
 
     def test_the_route_is_registered(self):
         from decklab.lib import feature_routes
-        self.assertIn('("deck", "edhrec"): (edhrec.edhrec_view, ("id", "commander", "commander2"))',
+        self.assertIn('("deck", "edhrec"): (edhrec.edhrec_view, ("id", "commander", "commander2", "space", "page"))',
                       Path(feature_routes.__file__).read_text(encoding="utf-8"))
 
 
@@ -410,6 +411,173 @@ class DraftCommanderTests(IdeasCase):
                                     contains="1-200 characters")
         self.get.assert_not_called()
 
+
+
+class NewDeckTests(IdeasCase):
+    """GET /api/deck/edhrec with no id: a deck not saved yet (the new-deck editor's), its commander named and
+    its space checked as a new deck's, the marks that space's pool's, for its inventory's readers only."""
+
+    def as_(self, profile):
+        return access.using({"profile": profile, "email": "", "remote": True})
+
+    def person_space(self):
+        _write(self.box.root / "config.json", json.dumps({"profiles": [
+            {"id": "matt", "name": "Matt", "plays_as": "user", "role": "admin"},
+            {"id": "user1", "name": "User1", "plays_as": "wife", "role": "member"},
+            {"id": "user2", "name": "User2", "role": "member", "space": "user2",
+             "emails": ["user2@example.com"]}]}))
+        _write(self.box.magic / "people" / "user2" / "collection.csv",
+               "name,set,collector_number,finish,quantity,condition,language,notes\n"
+               "Elvish Mystic,fdn,219,nonfoil,2,NM,en,\n")
+
+    def test_a_new_deck_counts_the_whole_pool_of_its_space(self):
+        answer = edhrec_api.edhrec_view(None, "ghalta, primal hunger")
+        self.assertEqual((answer["deck_id"], answer["space"], answer["commanders"], answer["identity"]),
+                         (None, "home", ["Ghalta, Primal Hunger"], "G"))
+        self.assertIsNone(answer["sha256"])
+        self.assertTrue(answer["marks"])
+        self.assertFalse(answer["may_add"])                 # no Considering list to add to yet
+        self.assertNotIn("deck", answer)
+        got = self.cards(answer)
+        self.assertFalse(any(c["in_deck"] or c["considering"] for c in got.values()))
+        # Nothing is in the deck, so no copies are its own: every copy no built deck holds is free.
+        free = pool.free_copies(pool.load_pool(), ()).get("Llanowar Elves", 0)
+        self.assertEqual(got["Llanowar Elves"]["free"], free)
+        self.assertEqual(got["Llanowar Elves"]["status"], "free" if free else "in_use")
+        self.assertEqual(got["Pick Your Poison"]["status"], "to_buy")
+        json.dumps(answer, allow_nan=False)
+
+    def test_a_members_new_deck_is_marked_in_their_own_space_only(self):
+        self.person_space()
+        with self.as_("user2"):
+            answer = edhrec_api.edhrec_view(None, "Ghalta, Primal Hunger")
+            self.assertEqual((answer["space"], answer["marks"]), ("user2", True))
+            got = self.cards(answer)
+            self.assertEqual((got["Elvish Mystic"]["status"], got["Elvish Mystic"]["free"]), ("free", 2))
+            self.assertEqual(got["Llanowar Elves"]["status"], "to_buy")     # home's copies never count
+            self.assertEqual(edhrec_api.edhrec_view(None, "Ghalta, Primal Hunger", None, "user2")["space"], "user2")
+            # Home's space, and one that doesn't exist, answer alike (E10-S38).
+            for space in ("home", "user3"):
+                with self.subTest(space=space):
+                    self.assertApiError(403, edhrec_api.edhrec_view, None, "Ghalta, Primal Hunger", None, space)
+        with self.as_("matt"):
+            self.assertEqual(edhrec_api.edhrec_view(None, "Ghalta, Primal Hunger")["space"], "home")
+            self.assertApiError(403, edhrec_api.edhrec_view, None, "Ghalta, Primal Hunger", None, "user2")
+
+    def test_a_new_deck_shows_no_marks_without_the_inventory(self):
+        with mock.patch("decklab.lib.api.guard.sees_inventory", return_value=False):
+            hidden = edhrec_api.edhrec_view(None, "Ghalta, Primal Hunger")
+        self.assertFalse(hidden["marks"] or hidden["may_add"])
+        self.assertIsNone(hidden["rate"])
+        for c in self.cards(hidden).values():
+            self.assertFalse({"status", "free", "on_the_way", "aud_each", "priced_printing"} & set(c), c)
+
+    def test_new_deck_refusals(self):
+        self.assertApiError(400, edhrec_api.edhrec_view, None, contains="or commander")
+        self.assertApiError(400, edhrec_api.edhrec_view, None, None, "Ghalta, Primal Hunger", contains="commander")
+        self.assertApiError(400, edhrec_api.edhrec_view, None, "Not A Real Card", contains="isn't a card")
+        self.assertApiError(400, edhrec_api.edhrec_view, "commander/elf-commander", None, None, "home",
+                            contains="not both")
+        self.assertApiError(400, edhrec_api.edhrec_view, None, "Ghalta, Primal Hunger", None, "x" * 41)
+        self.get.assert_not_called()
+
+
+THEMED = dict(PAGE, panels={"taglinks": [
+    {"value": "Elves", "slug": "elves", "count": 120}, {"value": "Big Creatures", "slug": "big-creatures"},
+    {"value": "Budget again", "slug": "budget"}, {"value": "Elves twice", "slug": "elves"},
+    {"value": "Odd", "slug": "../x"}, {"value": " ", "slug": "blank"}, "not a link"]})
+BUDGET = {"header": "Ghalta, Primal Hunger (Commander)", "container": {"json_dict": {
+    "card": {"name": "Ghalta, Primal Hunger", "num_decks": 200},
+    "cardlists": [{"header": "Budget Cards", "tag": "budget", "cardviews": [view("Elvish Mystic", 150, of=200)]}]}}}
+
+
+class NarrowedPageTests(IdeasCase):
+    """EDHREC's budget, bracket and theme pages for a commander (page=): offered with the commander page's
+    own themes, fetched and kept apart, and refused when the commander doesn't offer them."""
+
+    def setUp(self):
+        super().setUp()
+        self.get.side_effect = lambda slug: THEMED if slug == "ghalta-primal-hunger" else BUDGET
+
+    def test_themes_come_from_the_commander_page(self):
+        got = edhrec.fetch(["Ghalta, Primal Hunger"])
+        self.assertEqual(got["themes"], [{"slug": "elves", "name": "Elves", "decks": 120},
+                                         {"slug": "big-creatures", "name": "Big Creatures", "decks": None}])
+        self.assertEqual(got["page"], "")
+        choices = edhrec.page_choices(got["themes"])
+        self.assertEqual([c["page"] for c in choices],
+                         ["budget", "expensive", "exhibition", "core", "upgraded", "optimized", "cedh",
+                          "elves", "big-creatures"])
+        self.assertEqual(choices[-2], {"page": "elves", "label": "Elves", "group": "theme", "decks": 120})
+
+    def test_a_narrowed_page_is_fetched_and_kept_apart(self):
+        got = edhrec.fetch(["Ghalta, Primal Hunger"], page="budget")
+        self.assertEqual([c.args[0] for c in self.get.call_args_list],
+                         ["ghalta-primal-hunger", "ghalta-primal-hunger/budget"])
+        self.assertEqual((got["page"], got["decks"], got["url"]),
+                         ("budget", 200, "https://edhrec.com/commanders/ghalta-primal-hunger/budget"))
+        self.assertEqual([t["slug"] for t in got["themes"]], ["elves", "big-creatures"])
+        self.assertEqual(sorted(p.name for p in self.cache.glob("*.json")),
+                         ["ghalta-primal-hunger--budget.json", "ghalta-primal-hunger.json"])
+        edhrec.fetch(["Ghalta, Primal Hunger"], page="budget")
+        self.assertEqual(self.get.call_count, 2)            # both copies kept
+        self.assertEqual(edhrec.fetch(["Ghalta, Primal Hunger"], page="elves")["page"], "elves")
+        self.assertEqual(self.get.call_args.args, ("ghalta-primal-hunger/elves",))
+
+    def test_pages_the_commander_doesnt_offer_or_edhrec_hasnt_got(self):
+        with self.assertRaises(edhrec.UnknownPage):
+            edhrec.fetch(["Ghalta, Primal Hunger"], page="dragons")
+        self.assertEqual(self.get.call_count, 1)            # only the commander page, for its themes
+        self.get.side_effect = lambda slug: (THEMED if slug == "ghalta-primal-hunger"
+                                             else {"redirect": "/commanders/ghalta-primal-hunger"})
+        with self.assertRaises(edhrec.NoPage):
+            edhrec.fetch(["Ghalta, Primal Hunger"], page="cedh")
+
+        def missing(slug):
+            if slug == "ghalta-primal-hunger":
+                return THEMED
+            raise edhrec.NoPage("none")
+        self.get.side_effect = missing
+        with self.assertRaises(edhrec.NoPage):
+            edhrec.fetch(["Ghalta, Primal Hunger"], page="core")
+
+    def test_the_api_offers_the_pages_and_narrows_the_ideas(self):
+        whole = edhrec_api.edhrec_view("commander/elf-commander")
+        self.assertEqual(whole["page"], "")
+        self.assertIn({"page": "elves", "label": "Elves", "group": "theme", "decks": 120}, whole["pages"])
+        budget = edhrec_api.edhrec_view("commander/elf-commander", None, None, None, "budget")
+        self.assertEqual((budget["page"], [g["header"] for g in budget["groups"]]), ("budget", ["Budget Cards"]))
+        self.assertEqual(budget["pages"], whole["pages"])
+        self.assertEqual(budget["sha256"], self.sha("commander/elf-commander"))
+        # A new deck's ideas narrow the same way.
+        self.assertEqual(edhrec_api.edhrec_view(None, "Ghalta, Primal Hunger", None, None, "budget")["page"], "budget")
+
+    def test_api_page_refusals(self):
+        for bad in ("Budget!", "../x", "a/b", "x" * 81, 7):
+            with self.subTest(bad=bad):
+                self.assertApiError(400, edhrec_api.edhrec_view, "commander/elf-commander", None, None, None, bad,
+                                    contains="page must be")
+        self.assertApiError(400, edhrec_api.edhrec_view, "commander/elf-commander", None, None, None, "dragons",
+                            contains="commander's own page still works")
+        self.get.side_effect = lambda slug: THEMED if slug == "ghalta-primal-hunger" else {"redirect": "/x"}
+        self.assertApiError(404, edhrec_api.edhrec_view, "commander/elf-commander", None, None, None, "cedh",
+                            contains="no cedh page")
+        # A hidden deck is still the missing deck's 404 before the page is looked at.
+        with mock.patch("decklab.lib.api.guard.sees_deck", return_value=False):
+            self.assertApiError(404, edhrec_api.edhrec_view, "commander/elf-commander", None, None, None, "Budget!")
+
+    def test_the_command_line_takes_a_page(self):
+        out = io.StringIO()
+        with mock.patch("decklab.lib.inventory.entry.command", contextlib.nullcontext), \
+                contextlib.redirect_stdout(out):
+            self.assertEqual(edhrec.main(["commander/elf-commander", "--page", "budget", "--no-prices"]), 0)
+        self.assertIn("Page: Budget", out.getvalue())
+        self.assertIn("Budget Cards", out.getvalue())
+        err = io.StringIO()
+        with mock.patch("decklab.lib.inventory.entry.command", contextlib.nullcontext), \
+                contextlib.redirect_stderr(err):
+            self.assertEqual(edhrec.main(["commander/elf-commander", "--page", "dragons"]), 1)
+        self.assertIn("dragons", err.getvalue())
 
 if __name__ == "__main__":
     unittest.main()

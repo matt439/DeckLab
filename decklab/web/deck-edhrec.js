@@ -6,10 +6,16 @@
  * list from here (POST /api/deck/considering, deck-considering.js), one save each.
  *
  * EDHREC is asked only when the sheet is opened (and then only when the PC's copy is a week old): the Cards
- * tab shows just a button, so a failure or a slow answer never touches the rest of the page. */
+ * tab shows just a button, so a failure or a slow answer never touches the rest of the page.
+ *
+ * The sheet's Page choice narrows the ideas to one of EDHREC's pages for the commander: Budget or
+ * Expensive, a Commander Brackets page, or one of the themes EDHREC lists for it (the answer's "pages").
+ * Each choice asks the server again (page=); a page EDHREC hasn't got says so and the choice stays, so
+ * another page (or the commander's whole page) can still be picked. */
 "use strict";
 
 const EDHREC_FILTERS = [["new", "Not in the deck"], ["free", "Free"], ["to_buy", "To buy"], ["all", "All"]];
+const EDHREC_PAGE_GROUPS = [["budget", "Budget"], ["bracket", "Commander Brackets"], ["theme", "Themes"]];
 
 /** The Cards tab's EDHREC part: a Commander deck only (never a product or pairing). */
 function deckEdhrecSection(data) {
@@ -41,7 +47,7 @@ function edhrecPasses(c, filter) {
 }
 
 function openEdhrecSheet(data) {
-  const ctx = { data, id: data.summary.id, filter: "new", answer: null, changed: false, seq: 0 };
+  const ctx = { data, id: data.summary.id, filter: "new", answer: null, changed: false, seq: 0, page: "", pages: null };
   const sheet = openSheet("EDHREC ideas", { wide: true, onClose: () => {
     const here = parseHash();
     if (ctx.changed && here.path === "deck" && addressDeckId(here.params.get("id") || "") === ctx.id) {
@@ -50,9 +56,10 @@ function openEdhrecSheet(data) {
     }
   } });
   ctx.sheet = sheet;
+  ctx.picker = el("div", { class: "edhrec-page" });
   ctx.message = el("div", { role: "status", "aria-live": "polite" });
   ctx.area = el("div", { class: "edhrec-area" });
-  add(sheet.body, [ctx.message, ctx.area]);
+  add(sheet.body, [ctx.picker, ctx.message, ctx.area]);
   sheetActions(sheet, [{ text: "Close", value: "close", onclick: () => sheet.close() }]);
   loadEdhrec(ctx);
   return ctx;
@@ -63,24 +70,52 @@ async function loadEdhrec(ctx) {
   clear(ctx.area);
   clear(ctx.message).append(loadingBox("Asking EDHREC…"));
   try {
-    const answer = await api(`/api/deck/edhrec?id=${encodeURIComponent(ctx.id)}`);
+    const answer = await api(`/api/deck/edhrec?id=${encodeURIComponent(ctx.id)}`
+      + (ctx.page ? `&page=${encodeURIComponent(ctx.page)}` : ""));
     if (seq !== ctx.seq || ctx.sheet.closed) return;
     ctx.answer = answer;
     ctx.sha = answer.sha256;
+    ctx.pages = Array.isArray(answer.pages) ? answer.pages : null;
     clear(ctx.message);
+    drawEdhrecPicker(ctx);
     drawEdhrec(ctx);
   } catch (error) {
     if (seq !== ctx.seq || ctx.sheet.closed) return;
-    clear(ctx.message).append(loadFailed("EDHREC ideas", error, error && error.status === 404 ? null : () => loadEdhrec(ctx)));
+    drawEdhrecPicker(ctx);                    // still there, so another page can be chosen
+    const again = error && (error.status === 404 || error.status === 400) ? null : () => loadEdhrec(ctx);
+    clear(ctx.message).append(loadFailed("EDHREC ideas", error, again));
   }
+}
+
+/** The Page choice: the commander's whole page, then the narrowed pages the last answer offered, grouped. */
+function drawEdhrecPicker(ctx) {
+  const pages = ctx.pages || [];
+  if (!pages.length) { clear(ctx.picker); return; }
+  // Drawn again after every answer: the choice just changed keeps its focus on the new control.
+  const focused = document.activeElement && ctx.picker.contains(document.activeElement);
+  const select = el("select", { id: "edhrec-page", onchange: (e) => {
+    if (e.target.value === ctx.page) return;
+    ctx.page = e.target.value;
+    loadEdhrec(ctx);
+  } },
+  el("option", { value: "", selected: !ctx.page || null, text: "All decks with this commander" }),
+  EDHREC_PAGE_GROUPS.map(([group, label]) => {
+    const members = pages.filter((p) => p.group === group);
+    return members.length ? el("optgroup", { label }, members.map((p) => el("option", { value: p.page,
+      selected: ctx.page === p.page || null,
+      text: p.decks ? `${p.label} (${plural(p.decks, "deck")})` : p.label }))) : null;
+  }));
+  add(clear(ctx.picker), [el("label", { class: "field", for: "edhrec-page" }, el("span", { text: "Page" }), select)]);
+  if (focused) select.focus();
 }
 
 /** The answer's facts: where from, when fetched, and (with marks) the rate the estimates use. */
 function edhrecSourceLine(a) {
   const src = a.source || {};
   const fetched = src.fetched ? String(src.fetched).slice(0, 10) : null;
+  const page = a.page ? (a.pages || []).find((p) => p.page === a.page) : null;
   return el("p", { class: "sub edhrec-source" },
-    `${a.commanders.join(" & ")} on EDHREC`, src.decks ? `, from ${plural(src.decks, "deck")}` : "",
+    `${a.commanders.join(" & ")} on EDHREC`, a.page ? ` (${page ? page.label : a.page} page)` : "", src.decks ? `, from ${plural(src.decks, "deck")}` : "",
     fetched ? `, fetched ${fetched}` : "", ". ",
     src.url ? el("a", { href: src.url, target: "_blank", rel: "noopener noreferrer", text: "Open on EDHREC" }) : null);
 }

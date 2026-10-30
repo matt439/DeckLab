@@ -1,7 +1,7 @@
 /* Deck Lab's editor: EDHREC ideas as a scope of the Add panel (E9-S07; lib/api/edhrec.py).
 
-Loaded directly after editor-cards.js, whose search shows them: a saved Commander deck's Add panel has an
-"EDHREC ideas" tick beside My collection, and while it's on the results are the commander's commonly played
+Loaded directly after editor-cards.js, whose search shows them: a Commander deck's Add panel (a saved deck's,
+or a new one's before its first save) has an "EDHREC ideas" tick beside My collection, and while it's on the results are the commander's commonly played
 cards from EDHREC (GET /api/deck/edhrec, the deck page's answer, asked once per editor, deck revision,
 profile and draft commander), in EDHREC's order, each with its share of decks. The typed name and the colour, type and mana value
 filters narrow them here, on the page; cards already in the draft (any section but the sideboard) are left
@@ -10,7 +10,8 @@ one change, one Undo step), and nothing is saved until the usual Save.
 
 The ideas are the draft's commander's: its Commander section's one or two cards are sent as commander and
 commander2, so a changed or not yet saved commander needs no save first (the marks are still the saved
-deck's, worked out on the server). A draft with no commander, or more than two, asks nothing and says why. Marks (free, in use, to buy
+deck's, worked out on the server). A new deck has no id to send: its commander(s) and the space it's being
+made in are sent instead, and the marks count that space's pool with nothing in the deck. A draft with no commander, or more than two, asks nothing and says why. Marks (free, in use, to buy
 with its AUD estimate, on the way) come only when the server sent them (a viewer who may see the deck's
 space's inventory) and never name a deck. An answer for another deck, revision, profile, route or list, or
 one that comes after the search moved on, is ignored. EDHREC's own words for a failure are shown in the
@@ -20,8 +21,9 @@ from and when they were fetched. */
 
 const EDHREC_PAGE = 24;         // ideas shown at once (More shows the next)
 
-/** Only a saved Commander deck (never a product or pairing): the server reads its saved commander. */
+/** A saved Commander deck (never a product or pairing), or a new deck being made as one. */
 function editorEdhrecOffered(ed) {
+  if (ed && ed.mode === "new") return Boolean(ed.fields && ed.fields.kind === "commander");
   return Boolean(ed && ed.mode === "edit" && ed.id && !/^(product|pairing)\//.test(ed.id)
     && ed.kind === "commander" && ((ed.fields && ed.fields.kind) || ed.kind) === "commander");
 }
@@ -36,10 +38,19 @@ function editorEdhrecDraftKey(ed) {
   return JSON.stringify([editorEdhrecOffered(ed), editorEdhrecCommanders(ed)]);
 }
 
-/** The answer belongs to one deck revision, profile, route, list and draft commander. */
+/** The answer belongs to one deck revision (or a new deck's space), profile, route, list and draft commander. */
 function editorEdhrecKey(ac) {
   const ed = ac.owner;
-  return JSON.stringify([ed.id, ed.profile, ac.token, ed.sha256 || null, editorSearchScope(ac), editorEdhrecCommanders(ed)]);
+  return JSON.stringify([ed.mode, ed.mode === "new" ? null : ed.id, ed.mode === "new" ? ed.space || null : null,
+    ed.profile, ac.token, ed.sha256 || null, editorSearchScope(ac), editorEdhrecCommanders(ed)]);
+}
+
+/** The ideas' address: a saved deck by its id, a new one by the space it's being made in. */
+function editorEdhrecPath(ed) {
+  const [first, second] = editorEdhrecCommanders(ed);
+  const named = `commander=${encodeURIComponent(first)}` + (second ? `&commander2=${encodeURIComponent(second)}` : "");
+  if (ed.mode === "new") return `/api/deck/edhrec?${named}` + (ed.space ? `&space=${encodeURIComponent(ed.space)}` : "");
+  return `/api/deck/edhrec?id=${encodeURIComponent(ed.id)}&${named}`;
 }
 
 /** The Add panel's "EDHREC ideas" tick (null when the deck has none to offer). */
@@ -68,9 +79,7 @@ function editorEdhrecDraftChanged(ac) {
 function editorEdhrecAnswer(ac) {
   const key = editorEdhrecKey(ac);
   if (!ac.edhrec || ac.edhrec.key !== key) {
-    const [first, second] = editorEdhrecCommanders(ac.owner);
-    const promise = api(`/api/deck/edhrec?id=${encodeURIComponent(ac.owner.id)}&commander=${encodeURIComponent(first)}`
-      + (second ? `&commander2=${encodeURIComponent(second)}` : ""));
+    const promise = api(editorEdhrecPath(ac.owner));
     promise.catch(() => {});        // whoever waits for it says what went wrong
     ac.edhrec = { key, promise };
   }

@@ -2,6 +2,39 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## EDHREC ideas for a new deck, and EDHREC's narrowed pages (2026-10-29; E9-S07)
+
+The story's last two parts, so E9-S07 is built.
+
+- **A deck not saved yet** (`api/edhrec.py` `edhrec_view`): GET `/api/deck/edhrec` with no `id` takes
+  `commander` (required, with an optional `commander2`, checked as the editor's draft commanders are) and
+  `space`, checked as a new deck's space is (`drafts._new_space`: the viewer's own by default; one whose decks
+  the viewer can't see, or that doesn't exist, is the same 403). The ideas are then marked in that space's
+  pool with nothing in the deck (`lib/edhrec.ideas(None, ...)`: every copy no built deck or intact product
+  holds is free), again only for a viewer who sees that space's inventory; the answer adds `space`, its
+  `sha256` is None and `may_add` false (there's no Considering list yet). `id` and `space` together are a 400.
+  The new-deck editor's Add panel offers the **EDHREC ideas** tick for a Commander deck
+  (`web/editor-edhrec.js` `editorEdhrecOffered`, `editorEdhrecPath`), asking by its commander(s) and space;
+  the first save makes it ask again by the deck's id.
+- **Narrowed pages** (`lib/edhrec.py` `fetch(page=)`, `page_choices`, `_themes`): `page` asks EDHREC's Budget
+  or Expensive page, a Commander Brackets page (Exhibition, Core, Upgraded, Optimized, cEDH) or one of the
+  themes the commander's own page lists (its `panels` > `taglinks`, at most 60), at
+  `json.edhrec.com/pages/commanders/<slug>/<page>.json`, kept in the cache as `<slug>--<page>.json` (the
+  cache format is now 2, so older copies are fetched again). Only a page the commander offers is ever asked
+  for: anything else is a 400 (`UnknownPage`, or a value that can't be a page's name), and a page EDHREC
+  hasn't got, or that redirects back, is a 404 naming it. Every answer carries `page` and `pages` (the
+  choices). The deck page's sheet has a **Page** choice (`web/deck-edhrec.js` `drawEdhrecPicker`): the
+  commander's whole page, then the budget, bracket and theme pages grouped; the source line names the page,
+  and a failed page keeps the choice so another can be picked. `python -m decklab.lib.edhrec <deck-id> --page
+  PAGE` prints one.
+
+Tests: `test_edhrec.py` NewDeckTests (4) and NarrowedPageTests (6), with synthetic EDHREC pages and the
+fetcher replaced; `test_editor_edhrec_ui.py` (8, the new-deck scenario added and the offered-to test
+changed); `test_deck_edhrec_ui.py` (7, the Page choice and its absence without pages added). Known low issues: the narrowed pages' JSON
+layout is assumed to be the commander page's and their addresses EDHREC's site's, neither checked against
+live EDHREC; the editor's Add panel has no Page choice (only the deck page's sheet); checked with fixtures,
+not in a browser.
+
 ## Suggested token counts on the deck page (2026-10-29; E7-S08 slice 2)
 
 The second slice reads the card log's token peaks (slice 1, below), so each token on a deck's Tokens part

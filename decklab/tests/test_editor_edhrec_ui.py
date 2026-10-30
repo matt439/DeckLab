@@ -1,8 +1,9 @@
 """A Commander deck's EDHREC ideas in the editor's Add panel (E9-S07, editor-edhrec.js) under Node: the scope is
-offered only to a saved Commander deck and asks nothing until it's ticked; the ideas come in EDHREC's order
+offered only to a Commander deck (a saved one, or a new one before its first save) and asks nothing until
+it's ticked; the ideas come in EDHREC's order
 without the draft's cards, with the fetched date, and marked only when the server sent marks; a result adds
 to the draft's chosen section with no write; they're asked for the draft's commander(s), so a changed one
-needs no save; a late answer for an old scope, revision or commander is ignored; and a failure is said in EDHREC's words while the search goes on working.
+needs no save; a new deck asks by its commander and space instead of an id; a late answer for an old scope, revision or commander is ignored; and a failure is said in EDHREC's words while the search goes on working.
 
 Runs the real page scripts in tests/fixtures/workspace_ui_runner.js with invented cards; nothing is sent to a
 server and EDHREC is never asked.
@@ -67,11 +68,13 @@ class EditorEdhrecUiTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(result.stdout.strip(), "ok")
 
-    def test_only_a_saved_commander_deck_offers_the_scope_and_nothing_is_asked_until_ticked(self):
+    def test_only_a_commander_deck_offers_the_scope_and_nothing_is_asked_until_ticked(self):
         self.run_js(r"""
           assert.equal(ac.filters.querySelector('.ac-edhrec'), null, 'a new 60-card deck has no EDHREC scope');
-          let other = commanderEditor({mode: 'new', id: null});
-          assert.equal(other.filters.querySelector('.ac-edhrec'), null, 'an unsaved Commander deck has none');
+          let other = commanderEditor({mode: 'new', id: null, kind: undefined, fields: {kind: 'casual'}});
+          assert.equal(other.filters.querySelector('.ac-edhrec'), null, 'nor a new deck made as a 60-card one');
+          other = commanderEditor({mode: 'new', id: null, kind: undefined, sha256: undefined});
+          assert(other.filters.querySelector('.ac-edhrec'), 'a new Commander deck has it before its first save');
           other = commanderEditor({kind: 'casual', fields: {kind: 'casual'}});
           assert.equal(other.filters.querySelector('.ac-edhrec'), null);
           other = commanderEditor({id: 'product/fdc-test'});
@@ -204,6 +207,39 @@ class EditorEdhrecUiTests(unittest.TestCase):
           assert.equal(ac.items.length, 3, 'Ghalta is asked again and its ideas show');
           assert.equal(edhrecAsks(), asks + 1, 'only the last request is kept, so Ghalta is asked once more');
           assert.equal(writes.length, 0);
+        """)
+
+    def test_a_new_deck_asks_by_its_commander_and_space(self):
+        self.run_js(r"""
+          const fresh = (extra) => commanderEditor(Object.assign({mode: 'new', id: null, kind: undefined, sha256: undefined}, extra),
+            {Commander: [{...ghalta}], Deck: []});
+          answer = Object.assign(ANSWER(), {deck_id: null, sha256: null, may_add: false, space: 'user2'});
+          let ac = fresh({space: 'user2'});
+          tick(ac); await settle();
+          const path = asked.filter((p) => p.startsWith('/api/deck/edhrec')).at(-1);
+          assert.equal(path, '/api/deck/edhrec?commander=Ghalta%2C%20Primal%20Hunger&space=user2');
+          assert(!path.includes('id='), 'a deck not saved yet has no id to send');
+          same(names(ac), ['Elvish Mystic', 'Pick Your Poison', 'Llanowar Elves', 'Bojuka Bog'],
+            'nothing in the new deck yet, so every idea is listed');
+          const sides = ac.list.querySelectorAll('.ac-side').map((n) => n.textContent);
+          assert(sides[0].includes('2 free'), sides[0]);
+          // Picking one adds it to the draft only.
+          ac.list.querySelectorAll('.ac-add')[0].click();
+          same(editor.lists.Deck.map((l) => l.name), ['Elvish Mystic']);
+          assert.equal(writes.length, 0);
+          // Another space is another answer; no space sent leaves it to the server (the viewer's own).
+          const asks = edhrecAsks();
+          ac = fresh({space: 'home'});
+          tick(ac); await settle();
+          assert.equal(edhrecAsks(), asks + 1);
+          assert(asked.at(-1).endsWith('&space=home'), asked.at(-1));
+          ac = fresh({space: null});
+          tick(ac); await settle();
+          assert.equal(asked.at(-1), '/api/deck/edhrec?commander=Ghalta%2C%20Primal%20Hunger');
+          // The first save makes it a saved deck: asked again by its id.
+          Object.assign(editor, {mode: 'edit', id: 'commander/ghalta', kind: 'commander', sha256: 'd'.repeat(64)});
+          refilter(ac); await settle();
+          assert(asked.at(-1).startsWith('/api/deck/edhrec?id=commander%2Fghalta&commander='), asked.at(-1));
         """)
 
     def test_a_late_answer_for_an_old_scope_revision_or_commander_is_ignored(self):
