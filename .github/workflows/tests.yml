@@ -1,4 +1,6 @@
 # The whole unittest suite on code changes, weekly and by hand (Actions, tests, Run workflow),
+# once per change: a pull request's merge into main doesn't run it again when the pull request's own
+# run passed on exactly the merged files (scripts/ci_changes.py),
 # split across 4 parallel jobs (scripts/test_shard.py) so it takes about 5 minutes instead of 15, on
 # Windows (where the household runs Deck Lab) and on Linux (where self-hosters may: E11-S33). The
 # linux-services job installs the nightly timer and the server's service under a real systemd user
@@ -16,6 +18,11 @@ on:
     - cron: "0 17 * * 6"      # Sunday 03:00 at home (UTC+10)
   workflow_dispatch:
 
+permissions:                  # ci_changes.py reads the merged pull request and its runs
+  contents: read
+  pull-requests: read
+  actions: read
+
 concurrency:                  # a new push to a pull request stops its older run
   group: tests-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -32,6 +39,8 @@ jobs:
           fetch-depth: 0
       - name: Decide whether the full suite is needed
         id: changed
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: python3 scripts/ci_changes.py
 
   shard:
