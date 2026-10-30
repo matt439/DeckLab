@@ -14,7 +14,7 @@ from .common import ApiError, DATABASE_DOWN, _keys, _parse_body
 from .settings import _writer
 
 NO_CHANGE = "No undoable change at that ID."
-UNSUPPORTED = "This change cannot be undone here. Supported Undo covers single-row edits, unheld nonbasic collection additions, unheld verified token additions, verified collection and token-card deletions and batches of 2-50 unheld nonbasic collection or token-card additions, collection or token-card deletions or positive quantity/condition/language/notes updates, or purchase-queue updates, additions or removals of 1-50 rows."
+UNSUPPORTED = "This change cannot be undone here. Supported Undo covers single-row edits, unheld nonbasic collection additions, unheld verified token additions, verified collection and token-card deletions and batches of 2-50 unheld nonbasic collection or token-card additions, collection or token-card deletions or positive quantity/condition/language/notes updates, or token-card value updates, purchase-queue updates, additions or removals of 1-50 rows."
 CHANGED = "The change can no longer be undone safely. Reload Activity and review it again."
 UNCONFIRMED = "The undo result could not be confirmed. Reload Activity before trying again."
 SHA = re.compile(r"[a-f0-9]{64}")
@@ -53,6 +53,10 @@ def review_hint(change, shown, profile):
     from . import activity_watchlist_undo
     if (queue := activity_watchlist_undo.hint(change, shown, profile)) is not None:
         return queue
+    if profile:
+        from . import activity_token_edit_undo
+        if (edits := activity_token_edit_undo.hint(change, shown, profile, _space(profile))) is not None:
+            return edits
     if total == 1 and len(rows) == 1 and not change.get("more") and not change.get("groups") and profile \
             and shown.get("id") == change.get("id"):
         row = rows[0]
@@ -261,6 +265,9 @@ def _project(plan):
     if plan.get("kind") == "watchlist" or plan.get("action") == "watchlist_update":
         from . import activity_watchlist_undo
         return activity_watchlist_undo.project(plan)
+    from . import activity_token_edit_undo
+    if plan.get("action") == activity_token_edit_undo.ACTION:
+        return activity_token_edit_undo.project(plan)
     if plan.get("action") == undo_token_batch.ACTION:
         return _token_batch_project(plan)
     if plan.get("action") == undo_token_batch_remove.ACTION:
@@ -445,6 +452,9 @@ def apply_undo(body):
                                          **({"confirm_owned": True} if adding else {})})
     after, summary = saving.apply_op(op, profile, f"Undo activity change {change_id}", _refused,
                                      **({"reason": reason} if removing else {}))
+    from . import activity_token_edit_undo
+    if plan.get("action") == activity_token_edit_undo.ACTION:
+        return activity_token_edit_undo.saved(after, plan, data["expect"], summary)
     extra, counts = summary.extra or {}, summary.counts or {}
     if plan.get("action") in BATCH_ACTIONS:
         if not summary.changed or type(counts.get("undo")) is not int or counts["undo"] != 1 \

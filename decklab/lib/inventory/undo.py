@@ -5,7 +5,8 @@ Same-identity edits, unheld nonbasic collection insertions and confirmed, verifi
 collection deletions, metadata batches, unheld verified token insertions and confirmed token deletions
 (restored under a fresh id: one row, undo_token_delete, or 2-50, undo_token_batch) and 2-50 unheld
 added token rows removed together (undo_token_batch_remove), 1-50 purchase-queue rows' values restored in
-place (undo_watchlist) and 1-50 added queue rows removed or removed ones restored (undo_watchlist_rows) are supported. Every check runs again in the ordinary PostgreSQL inventory transaction
+place (undo_watchlist), 1-50 added queue rows removed or removed ones restored (undo_watchlist_rows) and 1-50
+token-card rows' edited values restored in place (undo_token_edit) are supported. Every check runs again in the ordinary PostgreSQL inventory transaction
 before its pure edit helper is called.
 """
 import hashlib
@@ -708,6 +709,12 @@ def review(change_id, space, snapshot=None):
         if not supplied_snapshot and callable(reader):
             return reader(change_id, space)
         return undo_token_batch_remove.review(change_id, space, snapshot, store)
+    from . import undo_token_edit
+    if undo_token_edit.looks_like(raw):
+        reader = getattr(store, "undo_token_edit_review", None)
+        if not supplied_snapshot and callable(reader):
+            return reader(change_id, space)
+        return undo_token_edit.review(change_id, space, snapshot, store)
     from . import undo_watchlist
     if undo_watchlist.looks_like(raw):
         if space != undo_watchlist.HOME:
@@ -784,6 +791,11 @@ def apply_undo(snapshot, *, change_id, space, expect, reason=None, confirm_owned
         if confirm_owned is not False:
             raise Invalid("Physical ownership confirmation is accepted only when restoring deleted rows.")
         return undo_token_batch_remove.apply(snapshot, plan, change_id, space, removal_reason(reason))
+    from . import undo_token_edit
+    if plan.get("action") == undo_token_edit.ACTION:
+        if confirm_owned is not False or reason is not None:
+            raise Invalid("Restoring edited token-card rows takes no reason or physical confirmation.")
+        return undo_token_edit.apply(snapshot, plan, change_id, space)
     from . import undo_watchlist
     if plan.get("action") == undo_watchlist.ACTION:
         if confirm_owned is not False or reason is not None:

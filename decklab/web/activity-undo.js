@@ -209,6 +209,7 @@ function activityUndoEvidence(data, id, space, profile = state.profile?.id) {
   if (data.kind === "mixed") return activityUndoMixedEvidence(data, space) ? data : null;
   if (data.kind === "watchlist") return activityUndoWatchlistEvidence(data) ? data : null;
   if (data.space !== space || !["collection", "tokens"].includes(data.kind)) return null;
+  if (data.action === "token_batch_update") return activityUndoTokenEditEvidence(data) ? data : null;
   if (data.action === "token_batch_add") return activityUndoTokenBatchEvidence(data) ? data : null;
   if (data.action === "token_batch_remove") return activityUndoTokenBatchRemoveEvidence(data) ? data : null;
   if (["batch_metadata", "batch_update"].includes(data.action)) return activityUndoBatchEvidence(data) ? data : null;
@@ -264,6 +265,7 @@ function activityUndoTokenBatchRemoveEvidence(data) {
 }
 
 function activityUndoReceipt(answer, preview) {
+  if (preview.action === "token_batch_update") return activityUndoTokenEditReceipt(answer, preview);
   if (preview.kind === "watchlist") return activityUndoWatchlistReceipt(answer, preview);
   if (preview.kind === "accessory") {
     const removing = preview.action === "accessory_remove", adding = preview.action === "accessory_add";
@@ -583,6 +585,7 @@ function activityUndoShow(ctx) {
       ownershipInput.checked = confirmedOwned; actions();
     }); };
   } else if (preview.kind === "watchlist" && !queueRemoving) activityUndoWatchlistBody(sheet.body, preview, text);
+  else if (preview.action === "token_batch_update") activityUndoTokenEditBody(sheet.body, preview, text);
   else if (batch) {
     const rows = preview.rows.map(item => {
       const changes = item.fields.map(field => el("p", {}, el("b", { text: words[field.field] + ": " }),

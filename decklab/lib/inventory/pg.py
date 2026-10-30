@@ -756,6 +756,11 @@ class PgInventory:
         from .undo_token_delete import read_review
         return read_review(self, change_id, space, _take_lock, reviewer=review)
 
+    def undo_token_edit_review(self, change_id, space):
+        from .undo_token_edit import review
+        from .undo_token_delete import read_review
+        return read_review(self, change_id, space, _take_lock, reviewer=review)
+
     def undo_watchlist_review(self, change_id, space):
         from .undo_watchlist import review
         from .undo_token_delete import read_review
@@ -884,6 +889,11 @@ class PgInventory:
                             # together): prove the exact audit rows, unmoved survivors and packing
                             # before commit (or roll back).
                             summary = undo_token_delete.confirm_in_transaction(cur, change_set, before, saved, summary)
+                        from . import undo_token_edit
+                        if undo_token_edit.restoring(summary):
+                            # Token-card values restored in place: prove the exact UPDATEs, every
+                            # position and the packing unchanged before commit (or roll back).
+                            summary = undo_token_edit.confirm_in_transaction(cur, change_set, before, saved, summary)
                         from . import undo_watchlist
                         if undo_watchlist.restoring(summary):
                             # Purchase-queue values restored in place: prove the exact UPDATEs and
