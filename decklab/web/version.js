@@ -96,8 +96,9 @@ function reloadDeckLab() {
   window.location.assign(url.href);
 }
 
-function showVersionWarning(messages, reload = false, database = []) {
-  const signature = JSON.stringify([messages, reload, database]);
+/** restart: a home admin may restart Deck Lab from Settings (settings-restart.js), so the box links there. */
+function showVersionWarning(messages, reload = false, database = [], restart = false) {
+  const signature = JSON.stringify([messages, reload, database, restart]);
   if (signature === versionWarning) return;
   versionWarning = signature;
   const host = clear($("#build-warning"));
@@ -110,6 +111,7 @@ function showVersionWarning(messages, reload = false, database = []) {
   if (reload) host.append(el("button", { type: "button", class: "btn", text: "Reload page",
     // The editor's existing beforeunload guard protects unsaved work.
     onclick: reloadDeckLab }));
+  if (restart) host.append(el("a", { class: "btn btn-secondary", href: "#/settings?part=about", text: "Restart Deck Lab…" }));
 }
 
 /** Whether the footer shows the build line (version, Check for updates, Last checked): not to a member. */
@@ -131,7 +133,8 @@ function renderVersionStatus(s) {
     checked.textContent = `Last checked ${new Date().toLocaleTimeString("en-AU")}.`;
   }
   if (version) version.textContent = view.label;
-  showVersionWarning(buildLine ? view.messages : view.forEveryone, view.reload, databaseMessages(s.database));
+  showVersionWarning(buildLine ? view.messages : view.forEveryone, view.reload, databaseMessages(s.database),
+    s.build?.restart_required === true && typeof mayRestartServer === "function" && mayRestartServer());
   const cards = $("#settings-cards");
   const cardWords = s.cards?.ready
     ? `Card data from Scryfall, index built ${(s.cards.built_at || "").slice(0, 10)}` +

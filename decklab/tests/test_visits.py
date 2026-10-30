@@ -654,7 +654,7 @@ class VisitsUiTests(unittest.TestCase):
 
     def test_the_settings_page_lists_each_profile(self):
         self.run_js("""
-          showFooter = () => {};
+          showFooter = () => {}; loadServerRestart = () => {};
           const plain = api;
           api = async (path) => {
             if (path === "/api/visits?days=30") return { days: 30, people: [

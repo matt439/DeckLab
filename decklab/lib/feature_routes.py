@@ -6,7 +6,7 @@ part of the API is imported when first asked for. A POST takes at most
 api.MAX_EDIT_BODY bytes, except routes with their explicit bound, including
 pod records (play_pods.MAX_BODY), import previews (collection_edit.MAX_IMPORT_BODY), scanned photos
 (collection_scan.MAX_SCAN_BODY), editor drafts kept for later (deck_drafts.MAX_BODY), field choices
-(field_choices.MAX_BODY)
+(field_choices.MAX_BODY), a restart (server_restart.MAX_BODY)
 and accessory saves with a local picture (accessories.MAX_SAVE_BODY).
 """
 
@@ -47,11 +47,12 @@ def _start_sideboard_test(body):
 
 def dispatch(handler, route, query):
     from decklab.lib.api import (accessories, accessory_undo, activity, arrivals, activity_mixed_undo, activity_undo, assembly, assembly_completion, assembly_standins, assembly_ticks, box_check, box_repair, collection, compare, considering, collection_edit, collection_locations, collection_scan, collection_trade, cover, deck_drafts, deck_printings, edhrec, editor, history,
-                                 library_forge, maintenance, opponents, play_pods, play_records, play_tonight, precon_coverage, precons, products, product_tokens, rankings, receipts, rename, retirement, role_cards, shopping, shopping_order_changes, shopping_orders, shopping_queue, shopping_queue_missing, swaps, token_cards, token_plan, tokens, variant_queue, visits, wishlist_undo)
+                                 library_forge, maintenance, opponents, play_pods, play_records, play_tonight, precon_coverage, precons, products, product_tokens, rankings, receipts, rename, retirement, role_cards, server_restart, shopping, shopping_order_changes, shopping_orders, shopping_queue, shopping_queue_missing, swaps, token_cards, token_plan, tokens, variant_queue, visits, wishlist_undo)
     from decklab.lib.api.common import MAX_BODY
 
     gets = {
         ("settings", "maintenance"): (maintenance.maintenance_view, ()),
+        ("server", "restart"): (server_restart.view, ()),
         ("collection",): (collection.collection_view,
                          ("q", "color", "type", "role", "mv", "availability", "page", "limit", "space")),
         ("collection", "rows"): (collection_edit.rows_view, ("space",)),
@@ -156,6 +157,7 @@ def dispatch(handler, route, query):
         ("deck", "rename", "preview"): rename.preview_rename,
         ("deck", "rename"): rename.rename_deck,
         ("deck", "restore"): retirement.restore_deck,
+        ("server", "restart"): (server_restart.restart, server_restart.MAX_BODY),     # a named home admin's
         ("visit",): (visits.beacon, MAX_BODY),      # not a data write: no guard rule, the requester's own visit
     }
     key = tuple(route)

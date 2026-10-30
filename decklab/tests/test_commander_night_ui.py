@@ -20,7 +20,7 @@ SETUP = SHELL + r"""
   let nightReply = savedNight(), sent = [];
   api = async (path) => path === '/api/commander-night' ? nightReply : plainApi(path);
   apiWrite = async (path, body, method) => {sent.push({path,body,method}); return savedNight(body.night,body.expect+1);};
-  showFooter = () => {};
+  showFooter = () => {}; loadServerRestart = () => {};
   const openNightSettings = async (night = recorded(), revision = 3) => {
     as('matt',false); location.hash = '#/settings'; nightReply = savedNight(night,revision);
     showSettings(new URLSearchParams(),routeToken); await flush();

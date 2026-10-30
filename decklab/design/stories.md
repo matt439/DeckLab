@@ -4918,3 +4918,16 @@ As the operator maintaining Deck Lab, I want editor.js's draft storage and rebas
 Evidence of the gap (TODO audit, 2026-10-29): web/editor.js is 1,198 lines (wc), 2 under lint.yml's guard; E2-S16's slice adds draft code there.
 
 Built (2026-10-29): the ten draft and rebase functions moved byte for byte into `web/editor-drafts.js`, loaded right after editor.js on the page and in every Node loader; editor.js is 1,017 lines and editor-drafts.js 187. `decklab/tests/test_editor_drafts_split.py` checks the moved set, load order, lengths and globals, and the existing editor draft, resume and rebase tests pass unchanged. See [HISTORY.md](../HISTORY.md#editor-drafts-in-their-own-file-2026-10-29-e11-s46).
+
+**E11-S47** · Matt · should · S · built
+
+As Matt, the household admin, I want to restart Deck Lab from its Settings page, on my phone through decklab.example.com too, so that a "Restart needed" banner doesn't wait until I'm at the PC.
+
+- Given I'm a named home admin and the checkout's code is committed, when I press **Restart Deck Lab…** on Settings' About part and confirm, then the PC runs `homenet restart` and the page reloads once the new server answers.
+- Given Forge matchups, field runs, variant tests or practice hands are running, when I confirm, then I'm told what would stop and must press **Restart anyway**.
+- Given uncommitted application code, an unverifiable version, a server not started in the background on its usual port, or no task or service to start it again, then the restart is refused with why, and nothing stops.
+- Given a member, an admin of another space, a request naming nobody or a script, then there's no control and the API refuses (no script bypass).
+- Given the banner says a restart is needed, then a home admin's banner links to the restart.
+- Migrations are never applied from the page (Matt, 2026-10-30): `python -m decklab.db migrate` stays on the PC.
+
+Built (2026-10-30): `GET`/`POST /api/server/restart` (`lib/api/server_restart.py`, permission `server.restart`) starts `python -m decklab.lib.homenet restart --port P` as a separate process (Windows: no window, its own process group, out of the server's job when it may break away; Linux: its own transient unit through `systemd-run --user`), writing to `decklab/data/logs/restart.log`; `web/settings-restart.js` draws the control and waits for a server with another `started_at`. Fixtures: `test_server_restart.py`, `test_settings_restart_ui.py`. See [HISTORY.md](../HISTORY.md#restart-deck-lab-from-settings-2026-10-30-e11-s47).

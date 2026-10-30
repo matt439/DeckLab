@@ -1010,7 +1010,11 @@ def main(argv=None):
                                                     "decklab/data/logs/server.log)")
     parser.add_argument("--host", default=None, help="install: the address the server listens on (default: "
                                                      "all interfaces; 127.0.0.1 for a test task)")
+    parser.add_argument("--after", type=float, default=0, help="restart: wait this many seconds first (the "
+                        "Settings page's restart, so the server's answer reaches the page before it stops)")
     args = parser.parse_args(argv)
+    if args.after > 0 and args.command == "restart":
+        time.sleep(min(args.after, 60))
     if args.command == "ensure":
         # The port comes from the task (or config.json, read there), and a
         # config.json that can't be read is logged there, once.
