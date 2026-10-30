@@ -11,6 +11,8 @@ from . import field, lists
 MAX_ROWS = 1000
 UNAVAILABLE = "Current field membership could not be read completely. Try again later."
 TOO_LARGE = "There are too many visible lists to show complete field membership here."
+CHOICES_UNREADABLE = ("Home's saved field choices can't be read now, so who's in the field can't be shown "
+                      "and field runs wait until they can be read. Try again later.")
 VERSIONS = ("target", "owned")
 
 
@@ -18,11 +20,12 @@ class _TooManyLists(Exception):
     pass
 
 
-def unavailable(entry, message=UNAVAILABLE):
-    """A safe unknown answer, never a successful-looking empty field."""
+def unavailable(entry, message=UNAVAILABLE, *, choices_unreadable=False):
+    """A safe unknown answer, never a successful-looking empty field. choices_unreadable: home's
+    saved field choices couldn't be read, so field runs are refused too (E3-S23)."""
     return {"deck": {key: entry[key] for key in ("id", "version", "card_sha")},
             "format": lists.fmt_for(entry["kind"]), "rows": [], "counts": None,
-            "complete": False, "error": message}
+            "complete": False, "error": message, "choices_unreadable": choices_unreadable}
 
 
 class _Trace:
@@ -112,18 +115,21 @@ class _Trace:
                 "counts": {"included": sum(row["in_field"] for row in rows),
                            "opponents": sum(row["opponent"] for row in rows),
                            "manual_excluded": sum(row["reason"] == "configured_remove" for row in rows)},
-                "complete": True, "error": None}
+                "complete": True, "error": None, "choices_unreadable": False}
 
 
 def view(entry, *, space="home", public=None, visible=None, product_notes=True):
     """Exact membership and reasons in one snapshot; never read games or engine status."""
-    trace = _Trace(visible, product_notes)
+    trace, refused = _Trace(visible, product_notes), []
     with lists.one_snapshot():
         try:
             selected, _notes = field._field(lists.fmt_for(entry["kind"]), space=space, public=public,
-                                           visible=visible, product_notes=product_notes, trace=trace)
+                                           visible=visible, product_notes=product_notes, trace=trace,
+                                           refused=refused)
         except _TooManyLists:
             return unavailable(entry, TOO_LARGE)
+        if refused:
+            return unavailable(entry, CHOICES_UNREADABLE, choices_unreadable=True)
         if not trace.complete:
             return unavailable(entry)
         return trace.answer(entry, selected)

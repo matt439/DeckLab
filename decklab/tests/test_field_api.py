@@ -17,6 +17,7 @@ import types
 from unittest import mock
 
 from decklab.lib import api, decks, jobs
+from decklab.lib.forge import field_policy_overlay as overlay
 from decklab.tests.test_api import ApiTestCase
 
 ELVES, PRECON, GRUUL = "commander/elf-commander", "product/fdc-test-precon", "casual/gruul-test"
@@ -148,6 +149,47 @@ class FieldViewTests(FieldApiTestCase):
         self.forge.ready = False
         self.assertApiError(503, api.run_field, body(profile="matt", id=ELVES))
         self.assertEqual(self.field.runs, [])
+
+
+class FieldChoicesUnreadableTests(FieldApiTestCase):
+    """Home's saved field choices that can't be read (E3-S23): the start asks the field to fail
+    closed, answers 503 in words naming nobody and submits no job; the view says why beforehand."""
+
+    def test_the_start_is_refused_and_the_view_says_why(self):
+        asked, real_opponents, real_view = [], self.field.opponents, self.field.view
+
+        def opponents(entry, opponents=None, fail_closed=False, **options):
+            asked.append(fail_closed)
+            if fail_closed:
+                raise self.forge.ForgeError(overlay.REFUSED)
+            return real_opponents(entry, opponents, **options)
+
+        def view(entry, results_dir=None, **options):
+            return {**real_view(entry, results_dir, **options), "run_refused": overlay.REFUSED}
+
+        with mock.patch.object(self.field, "opponents", opponents), mock.patch.object(self.field, "view", view):
+            self.assertApiError(503, self.play, contains="saved field choices")
+            answer = api.field_view(ELVES, "target", "user1")
+        self.assertEqual(asked[0], True)
+        self.assertEqual(self.field.runs, [])
+        self.assertEqual(list(api.forge_runs.COORD_JOBS._jobs), [])
+        self.assertEqual(answer["run_refused"], overlay.REFUSED)
+        self.assertEqual(answer["status"], "none")
+        for name in ("Matt", "User1", "Elf", "elf-commander"):
+            self.assertNotIn(name, overlay.REFUSED)
+
+    def test_a_readable_field_still_starts(self):
+        asked, real_opponents = [], self.field.opponents
+
+        def opponents(entry, opponents=None, fail_closed=False, **options):
+            asked.append(fail_closed)
+            return real_opponents(entry, opponents, **options)
+
+        with mock.patch.object(self.field, "opponents", opponents):
+            self.play()
+        self.assertEqual(asked[0], True)
+        self.finish()
+        self.assertEqual([run[0] for run in self.field.runs], [ELVES])
 
 
 class FieldPilotTests(FieldApiTestCase):

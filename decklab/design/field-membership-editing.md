@@ -4,7 +4,7 @@ This extends the existing read-only membership view. Checked identity, pure
 policy, fixture-qualified persistence, selector integration (2026-10-29,
 `forge/field_policy_overlay.py`) and the home-admin preview/save with its
 Change the field control (2026-10-29, `api/field_choices.py`) are implemented.
-Failing closed on an unreadable policy and database activation remain open.
+Failing closed on an unreadable policy is built (2026-10-29); database activation remains open.
 Development uses supplied fixtures, without changing the household's field or
 starting Forge games.
 
@@ -91,7 +91,7 @@ proofs are cached, by inventory and decks revision. No store, a store without
 policies, an empty policy and the missing 0017 table are today's field exactly.
 A failed read or an unproved deck while rules exist keeps legacy selection for
 those decks, adds a note naming no deck, and makes the membership trace and the
-exclusion count unavailable. Exclusions re-notify the observer's parsed removals
+exclusion count unavailable; a failed read also refuses field runs (below). Exclusions re-notify the observer's parsed removals
 with the policy-excluded IDs, so Rankings explains them as manual exclusions.
 
 ### Preview and save (built 2026-10-29)
@@ -125,12 +125,24 @@ leave a deck out, drops late answers after a page, profile or route change,
 keeps its List, Choice and reason fixed while a save is in flight (so the
 save's answer is never dropped), and reads the membership again after a save.
 
+### Failing closed (built 2026-10-29)
+
+Only a proved missing 0017 table (before this store has read the format's
+policy), no store, a store without policies or an empty policy are "no saved
+choices". Any other failed read, and a missing table after a read (kept per store
+object, weakly, cleared with `clear_cache`), give the plan `refused`
+(`field_policy_overlay.REFUSED`, naming nobody). Views keep legacy selection with
+the note and unavailable counts; `field.opponents(fail_closed=True)`,
+`run_field` and a variant's field test raise a ForgeError with it before any game,
+`POST /api/field/run` answers 503 without a job, `GET /api/field` carries it as
+`run_refused` (Play the field disabled, the sentence beside it), and Who's in the
+field answers `choices_unreadable: true` with no rows or counts (fixed page
+words). A later good read opens the field again. An unproved deck while rules
+exist is noted, not refused.
+
 ### Remaining selection and editing work
 
-The selector now implements the rules below, except the failed-read one: on a
-failed policy read it keeps legacy selection (so a deck the saved policy
-excludes can come back), adds a note naming no deck and makes the trace and
-exclusion count unavailable. Failing closed is still open.
+The selector implements the rules below.
 
 Use a per-format, revisioned overlay for current home house-deck incarnations.
 Do not copy an entire legacy field into static saved rules: an unqualified
@@ -173,9 +185,8 @@ list/version/hash/epoch receipt, a format-policy revision and one audited
 transaction. Recheck revision before deciding a request is a no-op. Keep human
 reasons out of public membership explanations, and add an explicit home-only
 Activity boundary before generic admin handling. A failed policy read must not
-masquerade as empty policy and revive an excluded deck (not yet built: today
-the fallback is legacy selection, made visible by the note and unavailable
-counts, but an excluded deck can still return).
+masquerade as empty policy and revive an excluded deck (built 2026-10-29: views
+keep legacy selection with a note, but no field run or field test starts).
 
 Use the existing inventory claim before a format-specific lock; never upgrade a
 shared inventory lock to exclusive. An already-held claim alone does not prove

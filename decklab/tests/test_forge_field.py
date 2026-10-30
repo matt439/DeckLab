@@ -530,7 +530,8 @@ class ViewTests(FieldTestCase):
         self.fake.add_games(a, self.entry("casual/gamma"), 100, rate=0.4)
         found = field.view(a, self.results)
         self.assertEqual(set(found), {"deck", "format", "opponents", "average", "rating", "coverage", "last_run",
-                                      "notes"})
+                                      "notes", "run_refused"})
+        self.assertIsNone(found["run_refused"])
         self.assertEqual(found["format"], "Constructed")
         self.assertEqual(found["coverage"], {"with_floor": 1, "of": 3})
         rows = {o["id"]: o for o in found["opponents"]}

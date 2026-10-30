@@ -245,8 +245,9 @@ def run_field(body):
     when it's left out). A field run of the same list that's already waiting or playing is
     joined. Returns field_view's answer. ApiError as field_view, 400 for a budget that isn't
     one or a list the field has no opponent for (forge.field.NO_OPPONENTS), 403 without a
-    profile or while the simulations setting refuses (api/simulations.py), and 503 when Forge isn't ready, COORD_JOBS has 4 waiting, or the server is
-    stopping. An optional expected_card_sha (64 lowercase hex characters) guards the exact
+    profile or while the simulations setting refuses (api/simulations.py), and 503 when Forge isn't ready, COORD_JOBS has 4 waiting, the server is
+    stopping, or home's saved field choices can't be read (field_policy_overlay.REFUSED: the
+    answer's run_refused says so beforehand, and the job's run_field refuses again). An optional expected_card_sha (64 lowercase hex characters) guards the exact
     playable saved list: 409 if it changed, before checking Forge or submitting a job. Normal
     deck visibility and version refusals still apply before that comparison."""
     data = _parse_body(body, MAX_EDIT_BODY)
@@ -271,10 +272,13 @@ def run_field(body):
     if not state.get("ready"):
         raise ApiError(503, state.get("problem") or "Forge isn't ready to play games on the PC.")
     try:
-        opponents = forge.field.opponents(entry, **{k: v for k, v in options.items()
-                                                   if k in ("space", "public", "visible")})
+        # fail_closed: home's saved field choices that can't be read refuse the run (E3-S23)
+        opponents = forge.field.opponents(entry, fail_closed=True, **{k: v for k, v in options.items()
+                                                                     if k in ("space", "public", "visible")})
     except ValueError as e:
         raise ApiError(400, _public(e)) from None
+    except forge.ForgeError as e:
+        raise ApiError(503, _public(e)) from None
     if not opponents:
         raise ApiError(400, forge.field.NO_OPPONENTS.format(fmt=forge.fmt_for(entry["kind"])))
     run = _FieldJob(forge, entry, budget, profile["name"], options, by_id=profile["id"])

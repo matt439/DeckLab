@@ -8,6 +8,8 @@ const FM_MAX_ROWS = 1000;
 const FM_PAGE_ROWS = 20;             // two groups: at most forty list rows on first paint
 const FM_MAX_ID = 512;
 const FM_MAX_REASON = 64;
+const FM_CHOICES_UNREADABLE = "Home's saved field choices can't be read now, so who's in the field can't be " +
+  "shown and field runs wait until they can be read. Try again later.";
 const FM_REASONS = {
   default: "Included by the field rules.",
   configured_add: "Added to the field by hand.",
@@ -118,6 +120,13 @@ async function fmRefresh(ctx) {
     const answer = await api(`/api/field/membership?id=${encodeURIComponent(ctx.id)}&version=${ctx.version}`);
     if (!current()) return;
     const copied = fmAnswer(ctx, answer);
+    if (!copied && answer && answer.complete === false && answer.choices_unreadable === true) {
+      // Home's saved field choices can't be read (E3-S23): fixed words, never the server's error text.
+      ctx.statusLine.textContent = FM_CHOICES_UNREADABLE;
+      ctx.refresh.textContent = "Try again";
+      ctx.loaded = true;
+      return;
+    }
     if (!copied) throw new Error("Membership unavailable");
     fvKeepPlace(() => fmDraw(ctx, copied));
   } catch (_) {

@@ -2,6 +2,48 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Field runs fail closed on unreadable field choices (2026-10-29; E3-S23 fail-closed slice)
+
+Home's saved field choices can no longer lapse silently. `forge/field_policy_overlay.py`
+now tells two states apart. A missing 0017 table, no store, a store without
+policies and an empty policy are today's field, exactly as before. Any other failed
+read (a database error, a corrupt row, an unexpected exception), and a missing
+table after the same store has already read that format's policy (the table was
+there, so its exclusions may still hold), fail closed: the plan's `refused`
+carries `REFUSED`, a sentence naming nobody, and no field run or field test may
+start. Views still show the legacy selection with the `UNREADABLE` note and an
+unavailable membership trace and manual-exclusion count, as before. Which formats a
+store has read is kept per store object (weakly, cleared with `clear_cache`), so
+another store or format goes by its own reads, and a later good read opens the
+field again. An unproved deck while rules exist keeps its noted legacy selection
+and isn't refused.
+
+`field._field` takes an optional `refused` list; `field.opponents(...,
+fail_closed=True)` and `field.run_field` raise a `ForgeError` with that sentence
+before planning or playing, and `variants._opponent_entries` asks the same for a
+change tested against the field. `POST /api/field/run` asks the field to fail closed
+and answers 503 with the sentence, submitting no job (the editor's after-save
+re-test shows it too). `GET /api/field` (`field.view`) adds `run_refused` (the
+sentence, or null), and the deck page's **Play the field** is then disabled with
+the sentence beside it. Who's in the field's answer adds `choices_unreadable`
+(true only in this state, with `forge/field_membership.CHOICES_UNREADABLE` as its
+error and no rows or counts); the page shows fixed words and **Try again**, never
+the server's text. Member fields never read home's choices, so they never refuse.
+
+**12 new fixture checks** pass: `test_field_policy_closed` (8 backend: no store,
+missing table and empty policy stay open, member fields, an unproved deck, four
+kinds of failed read refusing opponents, `run_field`, a field test and the view
+with no game played, the missing table after a read, the memory cleared, a good
+read reopening, and membership; 2 Node DOM: Play the field disabled with the
+reason, membership's fixed words) and `test_field_api` (2: the 503 start with no
+job and the view's `run_refused`, and a readable field still starting). With the
+field, field-policy, membership, choices, privacy, variant and pilot modules,
+`test_api`, `test_inventory_contract`, `test_api_decks` and the deck-page and
+matchup UI modules, 448 checks pass, and the source-length guard passes.
+Migration 0017 remains unapplied; no live database, server, Forge game, browser or
+device check was run. E3-S23 remains partial: 0017's activation with PostgreSQL
+and browser qualification are left.
+
 ## Drafts kept for later in the Quick edit and for new decks (2026-10-29; E2-S16 second slice)
 
 - The phone's Quick edit now has the full editor's **Save draft for later**. Its bar gains the ▾ beside Save only while there is a draft to keep (something changed, the drafts are available and their read has finished); the Quick edit's ▾ holds just that item, as it had no menu before. The bar is drawn again when the kept draft's read finishes, so the ▾ appears without another change. With drafts unavailable, unreadable or a read-only deck the bar is as it was. (`editor.css`'s squared Save corner now follows only a ▾ that is shown.)

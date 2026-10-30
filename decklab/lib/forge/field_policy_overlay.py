@@ -13,10 +13,14 @@ the notes see only the effective directives; plan.apply() runs after those passe
   "rules" keeps the automatic choice. A recreated deck never inherits an entry.
 - No store installed (a fixture without field policies), a store without the
   method, or migration 0017 not applied: no policy, so today's field exactly.
-- A failed policy read, or a deck whose incarnation can't be proved while rules
-  exist, never reads as an empty policy: those decks keep legacy selection, a note
-  naming no deck says so, and the membership trace and exclusion count become
-  unavailable rather than looking complete.
+- A failed policy read fails closed: the saved choices may hold an exclusion, so it
+  never reads as an empty policy. The plan's refused (REFUSED) stops field runs
+  from starting (field.opponents(fail_closed=True), field.run_field), and views
+  keep legacy selection with the UNREADABLE note and an unavailable membership
+  trace and exclusion count. That's any failed read except the proved missing 0017
+  table, and the missing table too once this store has read the format's policy.
+- A deck whose incarnation can't be proved while rules exist keeps legacy
+  selection, with a note naming no deck and the counts unavailable (not refused).
 
 Incarnations come from one read-only database transaction per call
 (inventory/pg_deck_epoch.read_many), cached by inventory revision for ready
@@ -25,6 +29,7 @@ and text. Nothing here writes, starts games or checks request permissions.
 """
 import hashlib
 import threading
+import weakref
 
 from decklab.lib import inventory, state
 from decklab.lib.inventory import deck_epoch
@@ -32,7 +37,10 @@ from decklab.lib.state import field_policy
 
 from . import deck_identity, field_exclusions
 
-UNREADABLE = "The field's saved choices can't be read now, so the field follows its rules without them."
+UNREADABLE = ("Home's saved field choices can't be read now, so this field follows its rules without them "
+              "and field runs wait until they can be read.")
+REFUSED = ("Home's saved field choices can't be read now, so the field can't be played: a list they leave out "
+           "could come back. Try again later.")
 UNPROVED = "Some decks' saved field choices can't be checked now, so those decks follow the field's rules."
 MISSING_VERSION = ("{title} has a saved choice of its {label} list, which it no longer has, "
                    "so the field uses the list its rules choose.")
@@ -41,6 +49,7 @@ _KINDS = {"Constructed": "casual", "Commander": "commander"}
 _CACHE_SIZE = 8
 _cache = {}                     # (inventory revision, decks revision) -> {deck id: Resolution}
 _cache_lock = threading.Lock()
+_read_ok = weakref.WeakKeyDictionary()     # store -> formats whose policy it has read: the table exists
 
 
 class _Unknown(Exception):
@@ -48,10 +57,12 @@ class _Unknown(Exception):
 
 
 class Plan:
-    """rules: {current canonical deck id: saved rule} for the incarnations prepare() proved."""
+    """rules: {current canonical deck id: saved rule} for the incarnations prepare() proved;
+    refused: REFUSED when the saved choices couldn't be read (no field run may start), else None."""
 
-    def __init__(self, rules=None):
+    def __init__(self, rules=None, refused=None):
         self.rules = dict(rules or {})
+        self.refused = refused
 
     def directives(self, add, remove, exclusions=None):
         """(add, remove) without the legacy names of decks that have an entry.
@@ -95,17 +106,19 @@ class Plan:
 
 
 LEGACY = Plan()
+CLOSED = Plan(refused=REFUSED)  # legacy selection for views; field runs refused
 
 
 def prepare(fmt, space, chosen, notes, *, trace=None, exclusions=None):
-    """The plan for this selection pass; LEGACY whenever the policy can't apply."""
+    """The plan for this selection pass: LEGACY where no saved choice applies, CLOSED when the
+    saved choices can't be read."""
     if space != "home" or fmt not in _KINDS:
         return LEGACY
     try:
         policy = _policy(fmt)
     except _Unknown:
         _unknown(UNREADABLE, notes, trace, exclusions)
-        return LEGACY
+        return CLOSED
     if policy is None or not policy["rules"]:
         return LEGACY
     by_epoch = {_key(rule["epoch"]): rule for rule in policy["rules"]}
@@ -136,7 +149,9 @@ def _unknown(note, notes, trace, exclusions):
 
 
 def _policy(fmt):
-    """The checked policy, None for "no policy here", or _Unknown for a failed read."""
+    """The checked policy, None for "no policy here", or _Unknown for a failed read. Only the
+    proved missing 0017 table is "no policy", and only until this store has read fmt's policy:
+    after that a missing table is a failed read too, never a lapsed saved exclusion."""
     try:
         store = state.store()
     except RuntimeError:
@@ -145,13 +160,27 @@ def _policy(fmt):
     if not callable(read):
         return None
     try:
-        return field_policy.normalize(read(fmt))
+        policy = field_policy.normalize(read(fmt))
     except state.Unavailable as error:
-        if _missing_schema(error):
+        if _missing_schema(error) and fmt not in _formats_read(store):
             return None
         raise _Unknown from None
     except Exception:
         raise _Unknown from None
+    try:
+        with _cache_lock:
+            _read_ok.setdefault(store, set()).add(fmt)
+    except TypeError:
+        pass            # a store that can't be weakly referenced isn't remembered
+    return policy
+
+
+def _formats_read(store):
+    try:
+        with _cache_lock:
+            return set(_read_ok.get(store, ()))
+    except TypeError:
+        return set()
 
 
 def _missing_schema(error):
@@ -211,6 +240,7 @@ def _epochs(deck_ids):
 
 
 def clear_cache():
-    """Forget cached incarnations (tests)."""
+    """Forget cached incarnations and which stores have read a policy (tests)."""
     with _cache_lock:
         _cache.clear()
+        _read_ok.clear()
