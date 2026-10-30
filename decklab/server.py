@@ -277,6 +277,10 @@ inventory writes answer 503 with "reason": "database":
                                          "base"?, "row"?, "separate"?, "reason"?}: change one row, one
                                          change set (409 + "conflict" and "latest", or + "same_row"
                                          for a card that's already listed)
+    POST /api/tokens/scan                body {"profile", "space"?, "photo"} (as /api/collection/scan): read one token
+                                         card's photo on the PC and propose its faces (E7-S32); nothing is written
+    POST /api/tokens/scan/add            body {"profile", "space"?, "sha256", "rows"} (1 to 50): the scanned token
+                                         cards added as one change, never merged into a listed row (409 as save)
     GET  /, /app.js, /style.css, ...     the page: only files that exist in decklab/web/
                                          (/?profile=<id>&theme=light|dark preselects, for screenshots)
 HEAD works wherever GET does.

@@ -5,6 +5,7 @@ Tokens page (lib/api/tokens.py) and python -m decklab.db tokens. Part of decklab
     inventory.apply(Op("tokens.add", {"space": "home", "sha256": sha, "row": row}), actor, message)
     inventory.apply(Op("tokens.edit", {"space": ..., "sha256": ..., "base": base, "row": row}), ...)
     inventory.apply(Op("tokens.remove", {"space": ..., "sha256": ..., "base": base}), ..., reason=...)
+    inventory.apply(Op("tokens.add_many", {"space": ..., "sha256": ..., "rows": [row, ...]}), ...)
 
 Parameters (plain values):
 - space: whose token cards (home, or a person's space id).
@@ -48,6 +49,7 @@ RESORTED = "Also sorted the token cards into the standard order (no other row ch
 STALE = "The token cards changed since they were read; look at them again and retry."
 SAME = "Those are the same card; change its quantity instead."
 KINDS = ("add", "edit", "remove")
+MAX_BATCH = 50          # rows tokens.add_many adds at once (Activity's undo removes 2 to 50 added rows together)
 
 
 class Stale(Conflict):
@@ -180,6 +182,37 @@ def _save(inv, action, space, sha256, base=None, row=None, separate=False):
 @register("tokens.add")
 def add(inv, space, sha256, row, separate=False):
     return _save(inv, "add", space, sha256, row=row, separate=separate)
+
+
+@register("tokens.add_many")
+def add_many(inv, space, sha256, rows):
+    """Each of rows (1 to MAX_BATCH) added as tokens.add adds one, kept apart from any row naming
+    the same card (separate: never merged), on one snapshot: one change. sha256 is the space's
+    token list as the caller saw it; each later row is added against the list the one before it
+    left. A row two fully known rows would share is refused (Conflict, naming its place in rows),
+    as a single add's is; so is any other refusal, and nothing is saved."""
+    if not isinstance(rows, (list, tuple)) or not 1 <= len(rows) <= MAX_BATCH:
+        raise Invalid(f"tokens.add_many needs 1 to {MAX_BATCH} rows")
+    sheet = inv.token_set(space)
+    before = sum(r.qty or 0 for r in sheet.rows) if sheet.exists else 0
+    after, expected = inv, sha256
+    for at, row in enumerate(rows, 1):
+        try:
+            after, _ = _save(after, "add", space, expected, row=row, separate=True)
+        except Stale:
+            raise
+        except Conflict as e:
+            raise Conflict(f"Token card {at}: {e}") from None
+        except Invalid as e:
+            raise Invalid(f"Token card {at}: {e}") from None
+        now = after.token_set(space)
+        expected = files.rendered_sha256(now)
+    cards = sum(r.qty or 0 for r in after.token_set(space).rows)
+    added = cards - before
+    text = f"Added {added} token card{'' if added == 1 else 's'} in {len(rows)} rows to {_whose(space)}"
+    return after, Summary(text=text, counts={"cards": cards, "added_cards": added, "added_rows": len(rows)},
+                          extra={"resorted": sheet.exists and not sheet.sorted,
+                                 "body": [RESORTED] if sheet.exists and not sheet.sorted else []})
 
 
 @register("tokens.edit")

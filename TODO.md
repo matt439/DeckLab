@@ -22,7 +22,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 - **`E11-S39`: database qualification of the snapshot split.** Authorize a disposable-database run of the location, deck persistence and rollback cases; the split itself passes its fixture checks.
 - **`E7-S24`: owned dice and counters.** Choose what a recorded die or counter says (kind, colour or design, quantity; whether one die stands for any kind) before its migration; the read-only counter needs are built.
 - **`E9-S26`: Commander role targets.** Choose the cited, dated template the Stats roles' targets come from; free pool cards for each role are built.
-- **`E7-S32`: real photos for Scan cards.** Take 10 to 20 photos of cards (a few foils, a few sleeved, one old card) with Collection's **Scan cards…** on each phone, or copy them to the PC for `python -m decklab.lib.scan`; the sheet and its API are fixture-tested only.
+- **`E7-S32`: real photos for Scan cards.** Take 10 to 20 photos of cards (a few foils, a few sleeved, one old card) with Collection's **Scan cards…** on each phone, plus a few token cards with Tokens' **Scan token cards…**, or copy them to the PC for `python -m decklab.lib.scan` (`--tokens` for token cards); the sheets and their APIs are fixture-tested only.
 - **`E11-S28`: User2's user-testing session.** Confirm his device, then use the prepared [checklist](decklab/design/user-testing-user2.md).
 
 **Activation:** migrations `0012` and `0013` were applied and the server restarted on committed code on 2026-10-19, so the privacy code and guarded member removal are live. No visibility choice or real member removal has been made.
@@ -55,7 +55,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 |---|---|---|---|---|
 | `E5-S15` | DEFERRED | should | M | User1 asks from the page for a card or a Forge run, Matt approves (`E3-S13`); not urgent. |
 | `E5-S08` | OPEN | could | XL | MTGMate checks cover queued and saved-home missing names on Shopping and deck Prices, read through per-shop adapters (`lib/shops/`, fixture pages); Games Portal's adapter is built (search page, by hand only: `shops lookup NAME --shop gamesportal`); next Matt decides whether the nightly snapshot reads both shops, then multi-shop display. |
-| `E7-S32` | OPEN | could | L | Scan cards sheet and `POST /api/collection/scan` built, with each pending card's printing picker and language (fixture-tested); next real phone photos on the household's phones, then token cards for the Tokens page. |
+| `E7-S32` | OPEN | could | L | Scan cards sheet and `POST /api/collection/scan` built, with each pending card's printing picker and language, and Tokens' Scan token cards (`POST /api/tokens/scan`, one-change add) (fixture-tested); next real phone photos of cards and token cards on the household's phones. |
 | `E7-S24` | DECISION | could | L | The deck page lists the counter kinds and dice its cards use (read-only, approximate); Matt chooses the record shape for owned dice and counters, then its migration, the Tokens page's rows and whether each need is covered. |
 
 ## Deck Lab: Commander nights

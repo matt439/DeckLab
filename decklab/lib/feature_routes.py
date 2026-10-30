@@ -5,7 +5,7 @@ Use the server's normal query, method and same-origin write guards. Each
 part of the API is imported when first asked for. A POST takes at most
 api.MAX_EDIT_BODY bytes, except routes with their explicit bound, including
 pod records (play_pods.MAX_BODY), import previews (collection_edit.MAX_IMPORT_BODY), scanned photos
-(collection_scan.MAX_SCAN_BODY), editor drafts kept for later (deck_drafts.MAX_BODY), field choices
+(collection_scan.MAX_SCAN_BODY, for cards and token cards), scanned token lists (tokens_scan.MAX_ADD_BODY), editor drafts kept for later (deck_drafts.MAX_BODY), field choices
 (field_choices.MAX_BODY), a restart (server_restart.MAX_BODY)
 and accessory saves with a local picture (accessories.MAX_SAVE_BODY).
 """
@@ -47,7 +47,7 @@ def _start_sideboard_test(body):
 
 def dispatch(handler, route, query):
     from decklab.lib.api import (accessories, accessory_undo, activity, arrivals, activity_mixed_undo, activity_undo, assembly, assembly_completion, assembly_standins, assembly_ticks, box_check, box_repair, collection, compare, considering, collection_edit, collection_locations, collection_scan, collection_trade, cover, deck_drafts, deck_printings, edhrec, editor, history,
-                                 library_forge, maintenance, opponents, play_pods, play_records, play_tonight, precon_coverage, precons, products, product_tokens, rankings, receipts, rename, retirement, role_cards, server_restart, shopping, shopping_order_changes, shopping_orders, shopping_queue, shopping_queue_missing, swaps, token_cards, token_plan, tokens, variant_queue, visits, wishlist_undo)
+                                 library_forge, maintenance, opponents, play_pods, play_records, play_tonight, precon_coverage, precons, products, product_tokens, rankings, receipts, rename, retirement, role_cards, server_restart, shopping, shopping_order_changes, shopping_orders, shopping_queue, shopping_queue_missing, swaps, token_cards, token_plan, tokens, tokens_scan, variant_queue, visits, wishlist_undo)
     from decklab.lib.api.common import MAX_BODY
 
     gets = {
@@ -131,6 +131,8 @@ def dispatch(handler, route, query):
         ("accessories", "assign"): accessories.assign_accessory,
         ("tokens", "save"): tokens.save_token,
         ("tokens", "plan"): token_plan.apply_plan,
+        ("tokens", "scan"): (tokens_scan.scan_token, collection_scan.MAX_SCAN_BODY),     # nothing is written
+        ("tokens", "scan", "add"): (tokens_scan.add_scanned, tokens_scan.MAX_ADD_BODY),
         ("collection", "save"): collection_edit.save_card,
         ("collection", "bulk"): (collection_edit.bulk_set, collection_edit.MAX_BULK_BODY),
         ("collection", "locations", "bulk"): (collection_locations.bulk_set, collection_edit.MAX_BULK_BODY),
