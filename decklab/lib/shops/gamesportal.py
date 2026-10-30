@@ -10,9 +10,10 @@ Each product on it is a card (<div class="product-card-list2 product-card-list2_
 first /products/ link is its page) followed by a hidden <div id="productCardList2-js-ID">
 whose data-product-variants is JSON: one variant a condition and finish, each with "name"
 ("Sol Ring (0212) [Marvel Super Heroes Commander] - Near Mint"), "public_title" ("Near Mint",
-"Near Mint Foil"), "sku" (SET-NUMBER-LANGUAGE-FINISH-CONDITION, "MSC-212-EN-NF-1"),
+"Near Mint Foil"), "sku" (SET-NUMBER-LANGUAGE-FINISH-CONDITION, "MSC-212-EN-NF-1", NF or FO),
 "available" and "price" in cents, in AUD. The page says only whether a variant is available,
-not how many, so a listing's stock is 1 (at least one) or 0. Saved pages:
+not how many, so a listing's stock is 1 (at least one) or 0. A variant whose SKU names no set
+and number (a sealed product's, "D0000001") is never a listing, whatever its product type. Saved pages:
 decklab/tests/fixtures/shops/gamesportal/.
 """
 import html.parser
@@ -75,24 +76,39 @@ def _title(variant):
 
 
 def _sku(value):
-    """(set, collector number, language) from a SKU like "NEO-141//141-EN-NF-1", else ("", "", "")."""
+    """(set, collector number, language, finish code) from a SKU like "NEO-141//141-EN-NF-1" or
+    "PLST-CMR-1-EN-NF-1" (its number CMR-1), else ("", "", "", "") when it isn't one (a sealed product's)."""
     parts = str(value or "").split("-")
     if len(parts) < 5 or not parts[0]:
-        return "", "", ""
-    head = parts[:-3]
-    numbers = [part for part in head[1:] if part[:1].isdigit()]
-    number = (numbers[-1] if numbers else head[1] if len(head) > 1 else "").split("//", 1)[0]
-    return head[0].lower(), number, parts[-3].upper()
+        return "", "", "", ""
+    number = "-".join(parts[1:-3]).split("//", 1)[0]
+    return parts[0].lower(), number, parts[-3].upper(), parts[-2].upper()
 
 
-def _finish(words):
-    """(finish, condition) from a public title like "Near Mint Foil" or "Near Mint Foil Etched"."""
-    text = str(words or "").strip()
+_SKU_FINISHES = {"NF": "nonfoil", "FO": "foil"}     # the etched code isn't confirmed: its public title says
+
+
+def _finish(words, code):
+    """(finish, condition) from a public title like "Near Mint Foil" or "Near Mint Foil Etched" and
+    the SKU's finish code, "unknown" when neither says or they disagree. A single-variant product's
+    public title is null (or "Default Title"): then the SKU alone says, and the condition is blank."""
+    text = "" if words is None else str(words).strip()
+    if text == "Default Title":
+        text = ""
+    titled = None
     for ending, finish in ((" Foil Etched", "etched"), (" Etched Foil", "etched"), (" Etched", "etched"),
                            (" Foil", "foil")):
         if text.endswith(ending):
-            return finish, text[:-len(ending)].strip()
-    return "nonfoil", text
+            titled, text = finish, text[:-len(ending)].strip()
+            break
+    else:
+        titled = "nonfoil" if text else None
+    coded = _SKU_FINISHES.get(code)
+    if titled == "etched" and coded != "nonfoil":
+        return "etched", text
+    if titled and coded and titled != coded:
+        return "unknown", text
+    return titled or coded or "unknown", text
 
 
 def _price(cents):
@@ -128,8 +144,10 @@ def parse_name_page(text, name):
             title = _title(variant)
             if title.split(" [", 1)[0].strip().casefold() not in wanted and _card_name(title) not in wanted:
                 continue
-            set_code, number, language = _sku(variant.get("sku"))
-            finish, condition = _finish(variant.get("public_title"))
+            set_code, number, language, code = _sku(variant.get("sku"))
+            if not set_code or not number:
+                continue                    # a real single's SKU always names its printing; a sealed product's doesn't
+            finish, condition = _finish(variant.get("public_title"), code)
             if language and language != "EN":
                 condition = f"{condition}, {language}" if condition else language
             ident = variant.get("id")

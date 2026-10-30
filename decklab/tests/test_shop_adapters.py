@@ -4,8 +4,10 @@ The pages are synthetic (decklab/tests/fixtures/shops/<key>/): invented prices a
 the shape of the shop's own page, so the parsing is checked without the network or card data.
 """
 import contextlib
+import html
 import importlib.util
 import io
+import json
 import os
 import re
 import unittest
@@ -223,6 +225,37 @@ class GamesPortalPageTests(unittest.TestCase):
         listings = self.adapter.parse_name_page(saved("gamesportal", "fable.html"), name)
         self.assertEqual([(item["set"], item["number"], item["finish"], item["stock"]) for item in listings],
                          [("neo", "141", "nonfoil", 1), ("neo", "465", "foil", 0), ("sch", "44", "nonfoil", 0)])
+
+    @staticmethod
+    def page(*products):
+        """A synthetic search page of products, each (its data-product-type or None, its variants)."""
+        cards = []
+        for ident, (kind, variants) in enumerate(products, 4001):
+            typed = "" if kind is None else f" data-product-type='{html.escape(kind)}'"
+            cards.append(f'<div class="product-card-list2 product-card-list2__{ident}"><a href="/products/p-{ident}">'
+                         f'</a></div><div hidden id="productCardList2-js-{ident}"'
+                         f" data-product-variants='{html.escape(json.dumps(variants))}'{typed}></div>")
+        return "<html><head><title>Search: 1 results</title></head><body>" + "".join(cards) + "</body></html>"
+
+    def test_the_skus_finish_says_when_the_public_title_doesnt_and_unknown_when_neither_does(self):
+        def one(public_title, sku):
+            variant = {"id": 1, "name": "Sol Ring (Foil) [C16]", "public_title": public_title, "sku": sku,
+                       "available": True, "price": 900}
+            found = self.adapter.parse_name_page(self.page(("MTG Single", [variant])), "Sol Ring")
+            return [(item["set"], item["number"], item["finish"], item["condition"]) for item in found]
+        self.assertEqual(one(None, "C16-272-EN-FO-1"), [("c16", "272", "foil", "")])
+        self.assertEqual(one("Default Title", "C16-272-EN-NF-1"), [("c16", "272", "nonfoil", "")])
+        self.assertEqual(one(None, "C16-272-EN-XX-1"), [("c16", "272", "unknown", "")])
+        self.assertEqual(one("Near Mint", "C16-272-EN-FO-1"), [("c16", "272", "unknown", "Near Mint")])
+        self.assertEqual(one("Near Mint Foil Etched", "CMM-410-EN-FO-1"), [("cmm", "410", "etched", "Near Mint")])
+        self.assertEqual(one("Near Mint", "PLST-CMR-1-EN-NF-1"), [("plst", "CMR-1", "nonfoil", "Near Mint")])
+        self.assertEqual(one("Near Mint", "PLST-CMR-1//CMR-1-EN-NF-1"), [("plst", "CMR-1", "nonfoil", "Near Mint")])
+
+    def test_a_variant_whose_sku_names_no_printing_is_never_a_listing(self):
+        sealed = {"id": 2, "name": "Sol Ring", "public_title": None, "sku": "D0000001", "available": True, "price": 9900}
+        for kind in (None, "MTG Single", "Sealed"):
+            with self.subTest(kind):
+                self.assertEqual(self.adapter.parse_name_page(self.page((kind, [sealed])), "Sol Ring"), [])
 
     def test_no_such_card_is_empty_and_a_changed_or_broken_page_an_error(self):
         self.assertEqual(self.adapter.parse_name_page(saved("gamesportal", "no-match.html"), "Nothing Such"), [])
