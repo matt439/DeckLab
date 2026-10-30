@@ -5,7 +5,8 @@ Same-identity edits, unheld nonbasic collection insertions and confirmed, verifi
 collection deletions, metadata batches, unheld verified token insertions and confirmed token deletions
 (restored under a fresh id: one row, undo_token_delete, or 2-50, undo_token_batch) and 2-50 unheld
 added token rows removed together (undo_token_batch_remove), 1-50 purchase-queue rows' values restored in
-place (undo_watchlist), 1-50 added queue rows removed or removed ones restored (undo_watchlist_rows) and 1-50
+place (undo_watchlist), 1-50 added queue rows removed or removed ones restored (undo_watchlist_rows), a
+queue change mixing those undone whole (undo_watchlist_mixed) and 1-50
 token-card rows' edited values restored in place (undo_token_edit) are supported. Every check runs again in the ordinary PostgreSQL inventory transaction
 before its pure edit helper is called.
 """
@@ -715,7 +716,15 @@ def review(change_id, space, snapshot=None):
         if not supplied_snapshot and callable(reader):
             return reader(change_id, space)
         return undo_token_edit.review(change_id, space, snapshot, store)
-    from . import undo_watchlist
+    from . import undo_watchlist, undo_watchlist_mixed
+    if undo_watchlist_mixed.queue_rows(raw):
+        if space != undo_watchlist.HOME:
+            raise UndoMissing()
+        if undo_watchlist_mixed.looks_like(store, change_id, raw):
+            reader = getattr(store, "undo_watchlist_mixed_review", None)
+            if not supplied_snapshot and callable(reader):
+                return reader(change_id, space)
+            return undo_watchlist_mixed.review(change_id, space, snapshot, store)
     if undo_watchlist.looks_like(raw):
         if space != undo_watchlist.HOME:
             raise UndoMissing()
@@ -801,6 +810,15 @@ def apply_undo(snapshot, *, change_id, space, expect, reason=None, confirm_owned
         if confirm_owned is not False or reason is not None:
             raise Invalid("Restoring purchase-queue rows takes no reason or physical confirmation.")
         return undo_watchlist.apply(snapshot, plan, change_id)
+    from . import undo_watchlist_mixed
+    if plan.get("action") == undo_watchlist_mixed.ACTION:
+        if confirm_owned is not False:
+            raise Invalid("Undoing purchase-queue changes takes no physical confirmation.")
+        if plan.get("reason_required"):
+            return undo_watchlist_mixed.apply(snapshot, plan, change_id, removal_reason(reason))
+        if reason is not None:
+            raise Invalid("Undoing these purchase-queue changes removes no row, so it takes no reason.")
+        return undo_watchlist_mixed.apply(snapshot, plan, change_id)
     from . import undo_watchlist_rows
     if plan.get("action") == undo_watchlist_rows.REMOVE:
         if confirm_owned is not False:

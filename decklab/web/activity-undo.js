@@ -527,7 +527,7 @@ function activityUndoShow(ctx) {
   const accessoryCorrecting = preview.kind === "accessory" && preview.action === "accessory_record_update";
   const accessoryCropping = preview.kind === "accessory" && preview.action === "accessory_crop_update";
   const tokenBatchRemoving = preview.kind === "tokens" && preview.action === "token_batch_remove";
-  const queueRemoving = preview.kind === "watchlist" && preview.action === "watchlist_remove";
+  const queueRemoving = preview.kind === "watchlist" && (preview.action === "watchlist_remove" || preview.action === "watchlist_mixed" && preview.reason_required === true);
   const batchRemoving = preview.action === "batch_remove", removing = batchRemoving || tokenBatchRemoving || accessoryRemoving || queueRemoving || preview.action === "remove";
   const tokenBatch = preview.kind === "tokens" && preview.action === "token_batch_add";
   const tokenAdding = tokenBatch || preview.kind === "tokens" && preview.action === "token_add";
@@ -630,12 +630,11 @@ function activityUndoShow(ctx) {
     const id = "activity-undo-reason-" + sheet.heading.id;
     reasonInput = el("input", { id, type: "text", maxlength: 400, autocomplete: "off", "aria-describedby": id + "-hint" });
     const normalized = el("p", { class: "sub", role: "status", "aria-live": "polite" });
-    sheet.body.append(el("label", { class: "field", for: id }, el("span", { text: queueRemoving ? preview.row_count === 1 ? "Reason for removing this added purchase-queue row (required)"
-      : "Reason for removing all these added purchase-queue rows (required)" : accessoryRemoving
+    sheet.body.append(el("label", { class: "field", for: id }, el("span", { text: queueRemoving ? activityUndoWatchlistReason(preview).label : accessoryRemoving
       ? "Reason for removing this added accessory record (required)" : tokenCards
       ? (tokenBatchRemoving ? "Reason for removing all these added token-card rows (required)" : "Reason for removing this added token-card row (required)")
       : batchRemoving ? "Reason for removing all these added rows (required)" : "Reason for removing this added row (required)" }), reasonInput),
-      el("p", { class: "field-hint", id: id + "-hint", text: queueRemoving ? "Up to 200 characters. Enter why " + (preview.row_count === 1 ? "this row" : "these rows") + " should come off the purchase queue."
+      el("p", { class: "field-hint", id: id + "-hint", text: queueRemoving ? activityUndoWatchlistReason(preview).hint
         : accessoryRemoving
         ? "Up to 200 characters. Enter why this entire record should be removed from Sleeves & boxes."
         : tokenCards

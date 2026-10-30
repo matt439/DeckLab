@@ -16,6 +16,7 @@ from .common import ApiError
 ACTION = "watchlist_update"
 REMOVE = "watchlist_remove"     # rows the change added, removed again with one reason
 ADD = "watchlist_add"           # rows the change removed, restored as new rows
+MIXED = "watchlist_mixed"       # a change that did more than one of those (activity_watchlist_mixed_undo)
 MAX_ROWS = 50
 UNCONFIRMED = "The undo result could not be confirmed. Reload Activity before trying again."
 
@@ -38,16 +39,16 @@ def _added_or_removed(row, op):
 
 
 def hint(change, shown, profile):
-    """{"review": True} for what looks like 1-50 purchase-queue value updates, or rows added or
-    removed, shown whole to someone who may change the orders; None otherwise. The review reads
+    """{"review": True} for what looks like 1-50 purchase-queue value updates, rows added or
+    removed, or a mix of those, shown whole to someone who may change the orders; None otherwise. The review reads
     the complete change."""
     rows = change.get("rows") or ()
     total = change.get("total", len(rows))
     if type(total) is not int or not 1 <= total <= MAX_ROWS or len(rows) != total or change.get("more") \
             or change.get("groups") or not profile or shown.get("id") != change.get("id"):
         return None
-    if not all(_row_shape(row) for row in rows) \
-            and not any(all(_added_or_removed(row, op) for row in rows) for op in ("INSERT", "DELETE")):
+    # Updates, additions and removals alone, or a change mixing them (activity_watchlist_mixed_undo).
+    if not all(_row_shape(row) or _added_or_removed(row, "INSERT") or _added_or_removed(row, "DELETE") for row in rows):
         return None
     if guard.allowed(profile, "orders.edit") and guard.sees_home_records(profile):
         return {"review": True}
@@ -104,6 +105,9 @@ def project(plan):
     """The public packet of a queue plan, or 503: the rows' current and restored fields, their stable
     ids and exactly the fields that differ (for rows added or removed, their whole values)."""
     count, rows = plan.get("row_count"), plan.get("rows")
+    if plan.get("action") == MIXED:
+        from . import activity_watchlist_mixed_undo
+        return activity_watchlist_mixed_undo.project(plan)
     if plan.get("kind") == "watchlist" and plan.get("space") == spaces.HOME and plan.get("action") in (REMOVE, ADD) \
             and type(count) is int and 1 <= count <= MAX_ROWS and isinstance(rows, list) and len(rows) == count \
             and isinstance(plan.get("expect"), str) and len(plan["expect"]) == 64:
@@ -134,6 +138,9 @@ def apply(data, plan, profile, change_id, refused, changed):
     """POST's part for a queue plan, after its review and projection: a reason only when removing
     added rows, never a confirmation, the full receipt, one audited inventory Undo, then the saved
     receipt checked."""
+    if plan["action"] == MIXED:
+        from . import activity_watchlist_mixed_undo
+        return activity_watchlist_mixed_undo.apply(data, plan, profile, change_id, refused, changed)
     removing = plan["action"] == REMOVE
     reason = None
     if removing:

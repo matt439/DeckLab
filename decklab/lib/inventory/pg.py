@@ -771,6 +771,11 @@ class PgInventory:
         from .undo_token_delete import read_review
         return read_review(self, change_id, space, _take_lock, reviewer=review)
 
+    def undo_watchlist_mixed_review(self, change_id, space):
+        from .undo_watchlist_mixed import review
+        from .undo_token_delete import read_review
+        return read_review(self, change_id, space, _take_lock, reviewer=review)
+
     def undo_watchlist_positions(self):
         """The purchase queue's persisted id/position layout, on Undo's applying connection when set."""
         def work(c):
@@ -904,6 +909,11 @@ class PgInventory:
                             # Added queue rows removed, or removed ones restored as new rows: prove
                             # the exact DELETEs or INSERTs and every other row's position before commit.
                             summary = undo_watchlist_rows.confirm_in_transaction(cur, change_set, before, saved, summary)
+                        from . import undo_watchlist_mixed
+                        if undo_watchlist_mixed.restoring(summary):
+                            # A mixed queue change undone whole: prove the exact UPDATEs, DELETEs and
+                            # INSERTs and every other row's position before commit (or roll back).
+                            summary = undo_watchlist_mixed.confirm_in_transaction(cur, change_set, before, saved, summary)
                     return saved, summary
             except _Unchanged as u:
                 return u.result

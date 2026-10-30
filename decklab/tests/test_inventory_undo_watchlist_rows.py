@@ -29,6 +29,8 @@ def queued(count, prefix="Fixture card"):
 
 
 class WatchlistRowsFixture(WatchlistUndoFixture):
+    proof = rows_undo   # the module whose transaction-local proof database_apply runs
+
     def setUp(self):
         super().setUp()
         self.store.undo_watchlist_positions = mock.Mock(side_effect=self.layout)
@@ -95,10 +97,10 @@ class WatchlistRowsFixture(WatchlistUndoFixture):
             item["id"] = self.store.latest + 1 + index
         after = after.with_watchlist(made)
         layout = [{"id": rid, "position": positions[rid]} for rid in sorted(positions, key=lambda rid: (positions[rid], rid))]
-        if rows_undo.restoring(summary):
+        if self.proof.restoring(summary):
             if self.mutate is not None:
                 after, actual, layout = self.mutate(after, copy.deepcopy(actual), copy.deepcopy(layout))
-            summary = rows_undo.confirm(before, after, summary, actual, layout)
+            summary = self.proof.confirm(before, after, summary, actual, layout)
         self.store.snapshot = after
         self.positions = positions
         self.store.writes.append((op, actor, message, summary, reason))
@@ -149,13 +151,21 @@ class RemoveAddedRowsTests(WatchlistRowsFixture):
         order = {"id": 904, "table": "order_component", "op": "UPDATE", "key": {"order_id": "x", "component_id": "cards"},
                  "before": {"status": "pending"}, "after": {"status": "received"}}
         half = {**copy.deepcopy(base[0]), "before": copy.deepcopy(base[0]["after"])}
-        for audit in ([*base, removed], [*base, updated], [*base, order], [order, *base], [updated, *base], [half, base[1]]):
+        for audit in ([*base, order], [order, *base], [half, base[1]], [*base, removed, order]):
             with self.subTest(audit=[item["op"] + " " + item["table"] for item in audit]):
                 self.store.audit[fixture.CHANGE_ID] = copy.deepcopy(audit)
                 self.store.undo_latest.reset_mock()
                 with self.assertRaises(undo.UndoMissing):
                     self.review()
                 self.store.undo_latest.assert_not_called()
+        # Queue rows of several kinds are a mixed queue change, the mixed slice's to review.
+        from decklab.lib.inventory import undo_watchlist_mixed
+        for audit in ([*base, removed], [*base, updated], [updated, *base]):
+            with self.subTest(audit=[item["op"] + " " + item["table"] for item in audit]):
+                self.store.audit[fixture.CHANGE_ID] = copy.deepcopy(audit)
+                with mock.patch.object(undo_watchlist_mixed, "review", return_value="mixed") as mixed_review:
+                    self.assertEqual(self.review(), "mixed")
+                mixed_review.assert_called_once()
         self.seed()
         self.store.undo_audit_rows.reset_mock()
         with self.assertRaises(undo.UndoMissing):

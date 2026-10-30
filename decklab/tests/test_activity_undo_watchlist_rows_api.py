@@ -121,6 +121,8 @@ class RemoveAddedRowsApiTests(WatchlistRowsApiFixture):
             self.assertIsNone(api.review_hint(self.listed(**extra), shown, profile), extra)
         mixed = self.listed()
         mixed["rows"][1] = {**mixed["rows"][1], "op": "DELETE", "before": mixed["rows"][1]["after"], "after": None}
+        self.assertEqual(api.review_hint(mixed, shown, profile), {"review": True})   # A mixed queue change's review.
+        mixed["rows"][1] = {**mixed["rows"][1], "table": "order_component"}
         self.assertIsNone(api.review_hint(mixed, shown, profile))
         with access.using(USER2):
             self.assertIsNone(api.review_hint(self.listed(), shown, {"id": "user2", "name": "User2", "role": "member", "space": "user2"}))
