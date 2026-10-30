@@ -278,9 +278,13 @@ def _other_tokens(before, after, space):
 
 
 def restoring(summary):
-    """Whether summary is a fresh-id token restore (one row, or a batch: undo_token_batch)."""
+    """Whether summary needs a transaction-local token proof: a fresh-id token restore (one row,
+    or a batch: undo_token_batch) or added rows removed together (undo_token_batch_remove)."""
     from .undo_token_batch import ACTION as BATCH
+    from .undo_token_batch_remove import ACTION as REMOVE
     extra = summary.extra or {}
+    if extra.get("action") == REMOVE:
+        return extra.get("kind") == "tokens" and isinstance(extra.get("token_remove"), dict)
     return extra.get("action") in (ACTION, BATCH) and extra.get("kind") == "tokens" and isinstance(extra.get("token_restore"), dict)
 
 
@@ -331,6 +335,9 @@ def confirm_in_transaction(cur, change_set, before, saved, summary):
     from . import undo_token_batch
     if summary.extra.get("action") == undo_token_batch.ACTION:
         return undo_token_batch.confirm_in_transaction(cur, change_set, before, saved, summary)
+    from . import undo_token_batch_remove
+    if summary.extra.get("action") == undo_token_batch_remove.ACTION:
+        return undo_token_batch_remove.confirm_in_transaction(cur, change_set, before, saved, summary)
     actual = [{"id": rid, "table": table, "op": op, "key": key, "before": old, "after": new}
               for rid, table, op, key, old, new in cur.execute(
                   "select id,table_name,op,row_key,before,after from audit.row_change "

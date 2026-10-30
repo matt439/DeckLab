@@ -14,7 +14,7 @@ from .common import ApiError, DATABASE_DOWN, _keys, _parse_body
 from .settings import _writer
 
 NO_CHANGE = "No undoable change at that ID."
-UNSUPPORTED = "This change cannot be undone here. Supported Undo covers single-row edits, unheld nonbasic collection additions, unheld verified token additions, verified collection and token-card deletions and batches of 2-50 unheld nonbasic collection additions, collection or token-card deletions or positive quantity/condition/language/notes updates."
+UNSUPPORTED = "This change cannot be undone here. Supported Undo covers single-row edits, unheld nonbasic collection additions, unheld verified token additions, verified collection and token-card deletions and batches of 2-50 unheld nonbasic collection or token-card additions, collection or token-card deletions or positive quantity/condition/language/notes updates."
 CHANGED = "The change can no longer be undone safely. Reload Activity and review it again."
 UNCONFIRMED = "The undo result could not be confirmed. Reload Activity before trying again."
 SHA = re.compile(r"[a-f0-9]{64}")
@@ -70,11 +70,13 @@ def review_hint(change, shown, profile):
             if permissions.sees_wishlist(profile, profile["id"]) and guard.allowed(profile, "wishlist.edit", profile["id"]):
                 return {"review": True, "kind": "wishlist"}
     if type(total) is int and total >= 2 and rows and not change.get("groups") \
-            and len(rows) + (change.get("more") or 0) == total and all(_token_deletion(row) for row in rows):
-        # 2-50 deleted token cards restore together; a larger change's review says why it can't.
+            and len(rows) + (change.get("more") or 0) == total \
+            and (all(_token_deletion(row) for row in rows) or all(_token_insertion(row) for row in rows)):
+        # 2-50 deleted token cards restore together, and 2-50 added ones are removed together;
+        # a larger change's review says why it can't.
         space = _space(profile)
         if shown.get("id") == change.get("id") and guard.allowed(profile, "tokens.edit", space) \
-                and all(row["before"].get("space_id") == space for row in rows):
+                and all((row["before"] or row["after"]).get("space_id") == space for row in rows):
             return {"review": True}
         return None
     if type(total) is int and 2 <= total <= 50 and len(rows) == total and not change.get("more") and not change.get("groups"):
@@ -117,6 +119,13 @@ def _token_deletion(row):
     return isinstance(before, dict) and row.get("table") == "token_card" and row.get("op") == "DELETE" \
         and row.get("after") is None and type(before.get("id")) is int and 1 <= before["id"] < 10 ** 18 \
         and type(before.get("position")) is int and before["position"] >= 0 and row.get("key") == {"id": before["id"]}
+
+
+def _token_insertion(row):
+    after = row.get("after") if isinstance(row, dict) else None
+    return isinstance(after, dict) and row.get("table") == "token_card" and row.get("op") == "INSERT" \
+        and row.get("before") is None and type(after.get("id")) is int and 1 <= after["id"] < 10 ** 18 \
+        and type(after.get("position")) is int and after["position"] >= 0 and row.get("key") == {"id": after["id"]}
 
 
 def _refused(error):
@@ -204,10 +213,49 @@ def _token_batch_project(plan):
             "identity_policy": batch.IDENTITY_POLICY, "physical_confirmation_required": True, "packing_restored": False}
 
 
+def _token_current(raw):
+    """A current token row as the single added-row removal projects it, or 503."""
+    if not isinstance(raw, dict) or set(raw) != set(rules.TOKEN_FIELDS) or type(raw.get("quantity")) is not int \
+            or not 1 <= raw["quantity"] <= 9999 or any(not isinstance(raw[key], str) for key in raw if key != "quantity") \
+            or not raw["front"].strip():
+        raise ApiError(503, UNCONFIRMED)
+    return dict(raw)
+
+
+def _token_batch_remove_project(plan):
+    from decklab.lib.inventory import undo_token_batch_remove as batch
+    count, rows = plan.get("row_count"), plan.get("rows")
+    if plan.get("kind") != "tokens" or type(count) is not int or not 2 <= count <= 50 \
+            or not isinstance(rows, list) or len(rows) != count or plan.get("reason_required") is not True \
+            or not isinstance(plan.get("expect"), str) or not SHA.fullmatch(plan["expect"]) \
+            or plan.get("label") != f"{count} added token-card rows":
+        raise ApiError(503, UNCONFIRMED)
+    shown, sources, ids = [], set(), set()
+    for item in rows:
+        source = item.get("row_change_id") if isinstance(item, dict) else None
+        rid = item.get("token_row_id") if isinstance(item, dict) else None
+        if any(type(value) is not int or not 1 <= value < 10 ** 18 for value in (source, rid)) or source in sources or rid in ids:
+            raise ApiError(503, UNCONFIRMED)
+        sources.add(source)
+        ids.add(rid)
+        current = _token_current(item.get("current"))
+        if item.get("label") != rules.token_label(current):
+            raise ApiError(503, UNCONFIRMED)
+        shown.append({"label": item["label"], "token_row_id": rid, "current": current})
+    cards = sum(item["current"]["quantity"] for item in shown)
+    if type(plan.get("cards")) is not int or plan["cards"] != cards:
+        raise ApiError(503, UNCONFIRMED)
+    return {"available": True, "id": plan["change_id"], "expect": plan["expect"], "kind": "tokens", "space": plan["space"],
+            "label": plan["label"], "action": batch.ACTION, "row_count": count, "rows": shown, "cards": cards,
+            "reason_required": True}
+
+
 def _project(plan):
-    from decklab.lib.inventory import undo_token_batch, undo_token_delete
+    from decklab.lib.inventory import undo_token_batch, undo_token_batch_remove, undo_token_delete
     if plan.get("action") == undo_token_batch.ACTION:
         return _token_batch_project(plan)
+    if plan.get("action") == undo_token_batch_remove.ACTION:
+        return _token_batch_remove_project(plan)
     if plan.get("action") == undo_token_delete.ACTION:
         rid = plan.get("row_change_id")
         if plan.get("kind") != "tokens" or "read_only" in plan or plan.get("current") is not None \
@@ -356,10 +404,11 @@ def apply_undo(body):
     profile, change_id = _writer(data), _id(data["id"])
     plan = _review(change_id, profile)  # hidden/missing is resolved before malformed or stale receipt errors
     _project(plan)
-    from decklab.lib.inventory import undo_token_batch, undo_token_delete
+    from decklab.lib.inventory import undo_token_batch, undo_token_batch_remove, undo_token_delete
     token_batch = plan.get("action") == undo_token_batch.ACTION
     token_adding = token_batch or plan.get("action") == undo_token_delete.ACTION
-    removing = plan.get("action") in ("remove", "batch_remove")
+    token_removing = plan.get("action") == undo_token_batch_remove.ACTION
+    removing = token_removing or plan.get("action") in ("remove", "batch_remove")
     adding = token_adding or plan.get("action") in ("add", "batch_add")
     if adding:
         if data.get("confirm_owned") is not True:
@@ -416,6 +465,8 @@ def apply_undo(body):
                 "sha256": files.rendered_sha256(after.collection(plan["space"])), "revision": after.revision, "summary": summary.text}
     if token_batch:
         return _token_batch_added(after, plan, data["expect"], summary)
+    if token_removing:
+        return _token_batch_removed(after, plan, data["expect"], summary, reason)
     if token_adding:
         return _token_added(after, plan, data["expect"], summary)
     if not summary.changed or type(counts.get("undo")) is not int or counts["undo"] != 1 \
@@ -496,4 +547,31 @@ def _token_batch_added(after, plan, expect, summary):
     return {"saved": True, "source_id": plan["change_id"], "expect": expect, "kind": "tokens", "space": space,
             "action": plan["action"], "row_count": count, "added_token_row_ids": list(ids),
             "restored_rows": [dict(item["restore"]) for item in plan["rows"]],
+            "sha256": files.rendered_sha256(sheet), "revision": after.revision, "summary": summary.text}
+
+
+def _token_batch_removed(after, plan, expect, summary, reason):
+    """The saved receipt of added token cards removed together: the backend's transaction-local
+    proof named every removed id, none is left and every survivor is as reviewed."""
+    from decklab.lib.inventory.undo_tokens import ordered_rows
+    extra, counts, space, count = summary.extra or {}, summary.counts or {}, plan["space"], plan["row_count"]
+    ids, proof = extra.get("removed_token_row_ids"), plan["proof"]
+    if not summary.changed or type(counts.get("undo")) is not int or counts["undo"] != 1 \
+            or type(counts.get("removed_rows")) is not int or counts["removed_rows"] != count \
+            or extra.get("undo_of") != plan["change_id"] or extra.get("kind") != "tokens" or extra.get("space") != space \
+            or extra.get("action") != plan["action"] or extra.get("row_count") != count \
+            or extra.get("row_change_ids") != [item["row_change_id"] for item in plan["rows"]] \
+            or extra.get("undo_reason") != reason or "token_remove" in extra \
+            or ids != [item["token_row_id"] for item in plan["rows"]]:
+        raise ApiError(503, UNCONFIRMED)
+    sheet = after.token_set(space)
+    try:
+        remaining = ordered_rows(sheet)
+    except ValueError:
+        raise ApiError(503, UNCONFIRMED) from None
+    if remaining != [row for row in proof["stock"] if row["id"] not in set(ids)] \
+            or type(counts.get("cards")) is not int or counts["cards"] != sum(row.qty for row in sheet.rows):
+        raise ApiError(503, UNCONFIRMED)
+    return {"saved": True, "source_id": plan["change_id"], "expect": expect, "kind": "tokens", "space": space,
+            "action": plan["action"], "row_count": count, "removed_token_row_ids": list(ids), "restored": None,
             "sha256": files.rendered_sha256(sheet), "revision": after.revision, "summary": summary.text}

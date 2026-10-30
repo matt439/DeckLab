@@ -209,6 +209,7 @@ function activityUndoEvidence(data, id, space, profile = state.profile?.id) {
   if (data.kind === "mixed") return activityUndoMixedEvidence(data, space) ? data : null;
   if (data.space !== space || !["collection", "tokens"].includes(data.kind)) return null;
   if (data.action === "token_batch_add") return activityUndoTokenBatchEvidence(data) ? data : null;
+  if (data.action === "token_batch_remove") return activityUndoTokenBatchRemoveEvidence(data) ? data : null;
   if (["batch_metadata", "batch_update"].includes(data.action)) return activityUndoBatchEvidence(data) ? data : null;
   if (["batch_add", "batch_remove"].includes(data.action)) return activityUndoPhysicalBatchEvidence(data) ? data : null;
   if (data.action === "token_add") return data.kind === "tokens" && data.physical_confirmation_required === true && data.current === null
@@ -246,6 +247,19 @@ function activityUndoTokenBatchEvidence(data) {
     && data.rows.every(item => item && typeof item === "object" && Object.keys(item).sort().join(",") === "label,restored"
       && activityUndoRow(item.restored, "tokens") && item.label === label(item.restored))
     && data.cards === data.rows.reduce((sum, item) => sum + item.restored.quantity, 0);
+}
+
+/* Every added token-card row of one change (2-50), removed together by stable id with one reason. */
+function activityUndoTokenBatchRemoveEvidence(data) {
+  const label = row => row.back ? row.front + " / " + row.back : row.front, ids = new Set();
+  return data.kind === "tokens" && data.reason_required === true
+    && Object.keys(data).sort().join(",") === "action,available,cards,expect,id,kind,label,reason_required,row_count,rows,space"
+    && Number.isSafeInteger(data.row_count) && data.row_count >= 2 && data.row_count <= 50 && data.label === data.row_count + " added token-card rows"
+    && Array.isArray(data.rows) && data.rows.length === data.row_count
+    && data.rows.every(item => item && typeof item === "object" && Object.keys(item).sort().join(",") === "current,label,token_row_id"
+      && Number.isSafeInteger(item.token_row_id) && item.token_row_id > 0 && !ids.has(item.token_row_id) && ids.add(item.token_row_id)
+      && activityUndoRow(item.current, "tokens") && item.label === label(item.current))
+    && data.cards === data.rows.reduce((sum, item) => sum + item.current.quantity, 0);
 }
 
 function activityUndoReceipt(answer, preview) {
@@ -290,6 +304,13 @@ function activityUndoReceipt(answer, preview) {
     && typeof answer.summary === "string" && answer.summary.trim();
   if (!confirmed) return false;
   if (!(preview.action === "remove" && preview.kind === "tokens") && Object.hasOwn(answer, "removed_token_row_id")) return false;
+  if (preview.action === "token_batch_remove") {
+    const ids = answer.removed_token_row_ids;
+    return preview.kind === "tokens" && answer.action === "token_batch_remove" && answer.row_count === preview.row_count && answer.restored === null
+      && Object.keys(answer).sort().join(",") === "action,expect,kind,removed_token_row_ids,restored,revision,row_count,saved,sha256,source_id,space,summary"
+      && Array.isArray(ids) && ids.length === preview.row_count && ids.every((rid, index) => rid === preview.rows[index].token_row_id);
+  }
+  if (Object.hasOwn(answer, "removed_token_row_ids")) return false;
   if (preview.action === "batch_remove") {
     if (answer.action !== "batch_remove" || answer.row_count !== preview.row_count || answer.restored !== null
         || !Array.isArray(answer.removed_keys) || answer.removed_keys.length !== preview.row_count
@@ -501,7 +522,8 @@ function activityUndoShow(ctx) {
   const accessoryRetyping = preview.kind === "accessory" && preview.action === "accessory_kind_update";
   const accessoryCorrecting = preview.kind === "accessory" && preview.action === "accessory_record_update";
   const accessoryCropping = preview.kind === "accessory" && preview.action === "accessory_crop_update";
-  const batchRemoving = preview.action === "batch_remove", removing = batchRemoving || accessoryRemoving || preview.action === "remove";
+  const tokenBatchRemoving = preview.kind === "tokens" && preview.action === "token_batch_remove";
+  const batchRemoving = preview.action === "batch_remove", removing = batchRemoving || tokenBatchRemoving || accessoryRemoving || preview.action === "remove";
   const tokenBatch = preview.kind === "tokens" && preview.action === "token_batch_add";
   const tokenAdding = tokenBatch || preview.kind === "tokens" && preview.action === "token_add";
   const batchAdding = preview.action === "batch_add", adding = batchAdding || accessoryAdding || tokenAdding || preview.action === "add";
@@ -572,10 +594,13 @@ function activityUndoShow(ctx) {
       el("div", { class: "panels" }, rows));
   } else if (removing) {
     const tokenCards = preview.kind === "tokens";
-    const copies = batchRemoving ? preview.rows.reduce((sum, item) => sum + item.current.quantity, 0) : preview.current.quantity;
+    const listed = batchRemoving || tokenBatchRemoving;
+    const copies = listed ? preview.rows.reduce((sum, item) => sum + item.current.quantity, 0) : preview.current.quantity;
     const warning = accessoryRemoving ? "Undo removes this entire accessory record, including its recorded quantity of " + preview.current.quantity
       + (preview.current.kind === "sleeves" ? " individual sleeves." : Number(preview.current.quantity) === 1 ? " item." : " items.")
       : batchRemoving ? "Undo removes all " + plural(copies, "recorded copy", "recorded copies") + " across all " + plural(preview.row_count, "printing") + ". Every added row will be removed together."
+      : tokenBatchRemoving ? "Undo removes all " + plural(copies, "physical token card") + " recorded in these " + preview.row_count + " added rows. Every added row will be removed together."
+      + (preview.rows.some(item => item.current.back.trim()) ? " Each front/back pair is one physical card." : "")
       : tokenCards ? "Undo removes all " + plural(preview.current.quantity, "physical token card") + " recorded in this row."
       + (preview.current.back.trim() ? " Each front/back pair is one physical card." : "")
       : "Undo removes all " + plural(preview.current.quantity, "recorded copy", "recorded copies")
@@ -583,12 +608,12 @@ function activityUndoShow(ctx) {
     sheet.body.append(el("p", { class: "box box-warn", text: warning }),
     el("p", { class: "sub", text: "Saving creates one new audited change; the original change stays in Activity. "
       + (accessoryRemoving ? "Only an unused added record without a photo can be removed here. Deck and product references are checked again when you save; kit and photos stay as they are."
-        : batchRemoving ? "The rows and their physical uses are checked again when you save." : "The row and its physical uses are checked again when you save.") }));
+        : listed ? "The rows and their physical uses are checked again when you save." : "The row and its physical uses are checked again when you save.") }));
     const currentRow = row => el("dl", {}, (accessoryRemoving ? ACTIVITY_UNDO_ACCESSORY_STOCK_FIELDS : ACTIVITY_UNDO_FIELDS[preview.kind]).flatMap(field => [el("dt", { text: accessoryRemoving && words[field] ? words[field] : field.replaceAll("_", " ") }),
       el("dd", { class: ["notes", "link", "image_source"].includes(field) ? "activity-undo-note" : null,
         text: accessoryRemoving && field === "owner" ? row.owner === "shared" ? "Shared" : state.profile?.name || row.owner
           : accessoryRemoving && field === "kind" ? { sleeves: "Sleeves", deck_box: "Deck box", playmat: "Playmat" }[row.kind] : text(row[field]) })]));
-    if (batchRemoving) sheet.body.append(el("p", { class: "sub", text: "Review every current row below. There is no partial selection." }),
+    if (listed) sheet.body.append(el("p", { class: "sub", text: "Review every current row below. There is no partial selection." }),
       el("div", { class: "panels" }, preview.rows.map(item => el("section", { class: "panel activity-undo-batch-row" },
         el("h4", { text: item.label }), currentRow(item.current)))));
     else sheet.body.append(el("section", { class: "panel" }, el("h3", { text: accessoryRemoving ? "Current accessory record to remove" : tokenCards ? "Current token-card row to remove" : "Current row to remove" }), currentRow(preview.current)));
@@ -597,7 +622,8 @@ function activityUndoShow(ctx) {
     const normalized = el("p", { class: "sub", role: "status", "aria-live": "polite" });
     sheet.body.append(el("label", { class: "field", for: id }, el("span", { text: accessoryRemoving
       ? "Reason for removing this added accessory record (required)" : tokenCards
-      ? "Reason for removing this added token-card row (required)" : batchRemoving ? "Reason for removing all these added rows (required)" : "Reason for removing this added row (required)" }), reasonInput),
+      ? (tokenBatchRemoving ? "Reason for removing all these added token-card rows (required)" : "Reason for removing this added token-card row (required)")
+      : batchRemoving ? "Reason for removing all these added rows (required)" : "Reason for removing this added row (required)" }), reasonInput),
       el("p", { class: "field-hint", id: id + "-hint", text: accessoryRemoving
         ? "Up to 200 characters. Enter why this entire record should be removed from Sleeves & boxes."
         : tokenCards

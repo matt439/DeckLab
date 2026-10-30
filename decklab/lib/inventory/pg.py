@@ -751,6 +751,11 @@ class PgInventory:
         from .undo_token_delete import read_review
         return read_review(self, change_id, space, _take_lock, reviewer=review)
 
+    def undo_token_batch_remove_review(self, change_id, space):
+        from .undo_token_batch_remove import review
+        from .undo_token_delete import read_review
+        return read_review(self, change_id, space, _take_lock, reviewer=review)
+
     def supports_check_links(self):
         def work(c):
             return "check_links" in pg_check_links.columns(c)
@@ -847,8 +852,9 @@ class PgInventory:
                         saved = self._join(inv_part, deck_key, part)
                         from . import undo_token_delete
                         if undo_token_delete.restoring(summary):
-                            # A deleted token card restored under a fresh id: prove the one
-                            # INSERT, unmoved survivors and packing before commit (or roll back).
+                            # A deleted token card restored under a fresh id (or added rows removed
+                            # together): prove the exact audit rows, unmoved survivors and packing
+                            # before commit (or roll back).
                             summary = undo_token_delete.confirm_in_transaction(cur, change_set, before, saved, summary)
                     return saved, summary
             except _Unchanged as u:

@@ -87,7 +87,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 |---|---|---|---|---|
 | `E11-S30` | DECISION | should | L | Visual redesign P1 ([visual-design.md](decklab/design/visual-design.md)): every slice is built and checked in dark; Matt decides Collection's filter (question 6) and checks touch/Safari on the household's devices. |
 | `E11-S31` | DECISION | could | M | Global search in the top bar ([stories.md](decklab/design/stories.md#e11-s31)): Matt chooses sources and result grouping before building. |
-| `E11-S08` | OPEN | could | L | Deleted token cards restore under fresh ids, one row or a whole change of 2-50 (2026-10-29); next a batch of 2-50 added token-card rows removed together. Broader recovery remains. |
+| `E11-S08` | OPEN | could | L | Deleted token cards restore under fresh ids, one row or a whole change of 2-50, and a whole change that added 2-50 token-card rows is removed together (2026-10-29). Broader recovery remains: token-card edit batches, other multi-row and mixed changes, and the remaining accessory and wishlist inverses. |
 | `E11-S02` | DECISION | should | S | The "Deck Lab is off" Worker is deployed (`decklab/cloudflare/`): Matt checks a signed-in save, a photo upload, and the page with Deck Lab stopped. |
 
 ## Deck Lab: code hygiene
