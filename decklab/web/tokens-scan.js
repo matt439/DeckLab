@@ -158,10 +158,18 @@ function tokScanAddChoices(card, printings) {
   }
 }
 
-/** Another pending card of the same front, back, printing and single-sided tick, if any. */
+/** Another pending card of the same front, back and printing, if any: the server's same card (its single-sided tick
+ * only goes in the row's notes, so it doesn't make another). */
 function tokScanSame(ctx, card) {
   return ctx.pending.find((c) => c !== card && c.front === card.front && c.back === card.back && c.set === card.set
-    && c.collector_number === card.collector_number && Boolean(c.single) === Boolean(card.single)) || null;
+    && c.collector_number === card.collector_number) || null;
+}
+
+/** Join a card's copies to the same one listed: single-sided stays ticked only when both were (every copy checked). */
+function tokScanMerge(same, card) {
+  same.quantity = Math.min(9999, same.quantity + card.quantity);
+  same.single = Boolean(same.single) && Boolean(card.single);
+  tokScanAddChoices(same, card.choices);
 }
 
 /** Put a token card on the pending list (one more copy when it's there), its back blank and not single-sided. */
@@ -171,8 +179,7 @@ function addScanToken(ctx, p, choices = [p]) {
   tokScanAddChoices(card, [p, ...choices]);
   const same = tokScanSame(ctx, card);
   if (same) {
-    same.quantity = Math.min(9999, same.quantity + 1);
-    tokScanAddChoices(same, card.choices);
+    tokScanMerge(same, card);
     drawTokenScanPending(ctx);
     return same;
   }
@@ -185,8 +192,7 @@ function addScanToken(ctx, p, choices = [p]) {
 function tokScanJoin(ctx, card) {
   const same = tokScanSame(ctx, card);
   if (same) {
-    same.quantity = Math.min(9999, same.quantity + card.quantity);
-    tokScanAddChoices(same, card.choices);
+    tokScanMerge(same, card);
     ctx.pending.splice(ctx.pending.indexOf(card), 1);
     if (ctx.last === card) ctx.last = same;
   }
@@ -264,6 +270,10 @@ function drawTokenScanPending(ctx) {
       problem ? el("p", { class: "box box-warn", role: "alert", text: problem }) : null));
   });
   if (!ctx.pending.length) ctx.list.append(el("li", { class: "sub", text: "Nothing yet." }));
+  if (ctx.pending.length > TOK_SCAN_MAX) {
+    ctx.list.append(el("li", { class: "box box-warn", role: "alert",
+      text: `At most ${TOK_SCAN_MAX} lines can be added at once: take some out, and add them afterwards.` }));
+  }
   drawTokenScanFoot(ctx);
 }
 

@@ -105,6 +105,50 @@ class TokenScanUiTests(unittest.TestCase):
           same(tokScanRows(ctx)[0].set, '');
         """)
 
+    def test_copies_of_one_card_join_whatever_their_single_sided_tick(self):
+        self.run_js("""
+          const ctx = openTokenScan(draw());
+          apiWrite = async () => TREASURE;
+          await shoot(ctx);
+          const single = pick(ctx, 'Treasure is single-sided (checked)');
+          single.checked = true; single.fire('change');
+          ctx.name.value = 'Treasure';
+          button(ctx.sheet.body, 'Add it').click();                   // an unticked copy: the server's same card
+          same(ctx.pending.map((c) => [c.front, c.quantity, c.single]), [['Treasure', 2, false]]);
+          same(tokScanRows(ctx).length, 1);
+          const tick = pick(ctx, 'Treasure is single-sided (checked)');
+          tick.checked = true; tick.fire('change');
+          ctx.name.value = 'Treasure';
+          button(ctx.sheet.body, 'Add it').click();
+          const back = pick(ctx, 'Back of Treasure');               // a line with a back, then cleared, joins too
+          back.value = 'Fish'; back.fire('change');
+          ctx.name.value = 'Treasure';
+          button(ctx.sheet.body, 'Add it').click();
+          const ticked = [...ctx.list.querySelectorAll('[aria-label="Treasure is single-sided (checked)"]')];
+          assert.equal(ticked.length, 1);
+          ticked[0].checked = true; ticked[0].fire('change');
+          same(ctx.pending.map((c) => [c.back, c.quantity, c.single]), [['Fish', 3, false], ['', 1, true]]);
+          const backs = [...ctx.list.querySelectorAll('[aria-label="Back of Treasure"]')];
+          backs[0].value = ''; backs[0].fire('change');
+          same(ctx.pending.map((c) => [c.back, c.quantity, c.single]), [['', 4, false]]);
+          same(tokScanRows(ctx).map((r) => [r.quantity, r.single_sided]), [[4, false]]);
+          assert.equal(foot(ctx, 'review').disabled, false);
+        """)
+
+    def test_more_lines_than_one_change_takes_says_why(self):
+        self.run_js("""
+          const ctx = openTokenScan(draw());
+          ctx.pending = Array.from({length: 51}, (_, i) => ({front: 'Treasure', back: '', single: false, set: 'tset',
+            collector_number: String(i + 1), faces: ['Treasure'], quantity: 1, choices: []}));
+          drawTokenScanPending(ctx);
+          assert.equal(foot(ctx, 'review').disabled, true);
+          assert(ctx.list.textContent.includes('At most 50 lines can be added at once'), ctx.list.textContent);
+          ctx.pending.pop();
+          drawTokenScanPending(ctx);
+          assert.equal(foot(ctx, 'review').disabled, false);
+          assert(!ctx.list.textContent.includes('At most 50'), ctx.list.textContent);
+        """)
+
     def test_a_printing_without_the_face_read_is_chosen_not_guessed(self):
         self.run_js("""
           const ctx = openTokenScan(draw());
