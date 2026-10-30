@@ -5,7 +5,9 @@ The pure parts run under any Python. The rest need psycopg and the local Postgre
 and skip without them (db_support.py); each class works in its own throwaway database, never
 the real decklab one.
 
-Run from the repo root: .venv\\Scripts\\python -m unittest decklab.tests.test_db_core
+Run from the repo root: python scripts/test_fixtures.py decklab.tests.test_db_core
+The fixture runner disables configured PostgreSQL and real Forge; named native
+runtime cases also need separate qualification (see AGENTS.md, Tests).
 """
 import hashlib
 import io

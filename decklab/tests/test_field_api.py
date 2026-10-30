@@ -9,7 +9,7 @@ stands in for its field part (forge.field) and a one-line estimate part for forg
 run reports one pair record per opponent and keeps reporting until its gate opens, so a test can
 look at it while it plays. Each test gets a fresh COORD_JOBS runner.
 
-Run from the repo root: python -m unittest discover -s decklab/tests -t .
+Run from the repo root: python scripts/test_fixtures.py
 """
 import json
 import threading
@@ -17,6 +17,7 @@ import types
 from unittest import mock
 
 from decklab.lib import api, decks, jobs
+from decklab.lib.forge import field_policy_overlay as overlay
 from decklab.tests.test_api import ApiTestCase
 
 ELVES, PRECON, GRUUL = "commander/elf-commander", "product/fdc-test-precon", "casual/gruul-test"
@@ -148,6 +149,87 @@ class FieldViewTests(FieldApiTestCase):
         self.forge.ready = False
         self.assertApiError(503, api.run_field, body(profile="matt", id=ELVES))
         self.assertEqual(self.field.runs, [])
+
+
+class FieldChoicesUnreadableTests(FieldApiTestCase):
+    """Home's saved field choices that can't be read (E3-S23): the start asks the field to fail
+    closed, answers 503 in words naming nobody and submits no job; the view says why beforehand."""
+
+    def test_the_start_is_refused_and_the_view_says_why(self):
+        asked, real_opponents, real_view = [], self.field.opponents, self.field.view
+
+        def opponents(entry, opponents=None, fail_closed=False, **options):
+            asked.append(fail_closed)
+            if fail_closed:
+                raise self.forge.ForgeError(overlay.REFUSED)
+            return real_opponents(entry, opponents, **options)
+
+        def view(entry, results_dir=None, **options):
+            return {**real_view(entry, results_dir, **options), "run_refused": overlay.REFUSED}
+
+        with mock.patch.object(self.field, "opponents", opponents), mock.patch.object(self.field, "view", view):
+            self.assertApiError(503, self.play, contains="saved field choices")
+            answer = api.field_view(ELVES, "target", "user1")
+        self.assertEqual(asked[0], True)
+        self.assertEqual(self.field.runs, [])
+        self.assertEqual(list(api.forge_runs.COORD_JOBS._jobs), [])
+        self.assertEqual(answer["run_refused"], overlay.REFUSED)
+        self.assertEqual(answer["status"], "none")
+        for name in ("Matt", "User1", "Elf", "elf-commander"):
+            self.assertNotIn(name, overlay.REFUSED)
+
+    def test_a_readable_field_still_starts(self):
+        asked, real_opponents = [], self.field.opponents
+
+        def opponents(entry, opponents=None, fail_closed=False, **options):
+            asked.append(fail_closed)
+            return real_opponents(entry, opponents, **options)
+
+        with mock.patch.object(self.field, "opponents", opponents):
+            self.play()
+        self.assertEqual(asked[0], True)
+        self.finish()
+        self.assertEqual([run[0] for run in self.field.runs], [ELVES])
+
+
+class FieldPilotTests(FieldApiTestCase):
+    """?pilot=1 (the deck page's Overview, E1-S12): the list's poor-AI evidence, as Matchups judges it."""
+
+    def test_pilot_only_when_asked_for(self):
+        self.assertNotIn("pilot", api.field_view(ELVES, "target", "user1"))
+        self.assertNotIn("pilot", api.field_view(ELVES, "target", "user1", pilot=False))
+
+    def test_poor_and_normal_pilots_for_the_list_shown(self):
+        asked = []
+        poor = {"poor": True, "why": "commander", "cards": [{"name": "Elf", "qty": 1, "commander": True}]}
+
+        fixed = {"profile": "Default", "switches": ["team-pump-1"]}
+        entry = self.forge.entry
+
+        def list_ai(sections, kind, results_dir=None, pilot=None, *, keep=None):
+            asked.append((kind, sorted(sections), pilot, keep is not None))
+            return {"pilot": poor if kind == "commander" else {"poor": False, "why": None, "cards": []}}
+
+        def piloted(deck_id, *rest):
+            return dict(entry(deck_id, *rest), pilot=fixed if deck_id == ELVES else None)
+        with mock.patch.object(self.forge, "list_ai", list_ai), mock.patch.object(self.forge, "entry", piloted):
+            self.assertEqual(api.field_view(ELVES, "target", "user1", pilot=True)["pilot"], poor)
+            self.assertEqual(api.field_view(GRUUL, "target", "user1", pilot=True)["pilot"]["poor"], False)
+        # Each list's own sections and the pilot its field games play with (the team-pump fix's side
+        # ids count), with saved results kept to what the viewer may see.
+        self.assertEqual([(kind, pilot, keep) for kind, _, pilot, keep in asked],
+                         [("commander", fixed, True), ("constructed", None, True)])
+        self.assertEqual(self.field.runs, [])
+
+    def test_unknown_pilot_is_none(self):
+        # FakeForge's AiLimits have no "pilot" (Forge's scripts unread); a failure is logged, not raised.
+        self.assertIsNone(api.field_view(ELVES, "target", "user1", pilot=True)["pilot"])
+        with mock.patch.object(self.forge, "list_ai", side_effect=RuntimeError("scripts")), \
+                mock.patch.object(api.common, "_log") as log:
+            answer = api.field_view(ELVES, "target", "user1", pilot=True)
+        self.assertIsNone(answer["pilot"])
+        self.assertEqual(answer["status"], "none")
+        self.assertIn("can't be worked out", log.call_args[0][0])
 
 
 class FieldRunTests(FieldApiTestCase):

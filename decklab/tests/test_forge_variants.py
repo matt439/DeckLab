@@ -11,7 +11,7 @@ Tests that play the fake Forge through runner.run's wave 3 keywords skip until p
 built them (runner.RUN_FEATURES); those that need seqstats' paired functions skip until package
 S has built them.
 
-Run from the repo root: python -m unittest decklab.tests.test_forge_variants
+Run from the repo root: python scripts/test_fixtures.py decklab.tests.test_forge_variants
 """
 import hashlib
 import io

@@ -11,7 +11,7 @@ class EditorRetestTests(unittest.TestCase):
         panes.EditorPanesUiTests.run_js(self, r'''
           const oldSha='a'.repeat(64),newSha='b'.repeat(64),writes=[];
           let saveAnswer=null,runResolve=null,runReject=null,removed=0;
-          api=async path=>{assert.equal(path,'/api/library/forge');return {decks:{},error:null};};
+          api=async path=>{if(path.startsWith('/api/deck/draft?'))return {available:false};assert.equal(path,'/api/library/forge');return {decks:{},error:null};};
           apiWrite=async(path,body)=>{
             writes.push({path,body});
             if(path==='/api/deck/save')return saveAnswer;

@@ -5,9 +5,11 @@ Personal wishlists and dated buying research are deliberately not purchase order
 Run ``python -m decklab.lib.purchases --check`` to validate the records and queue.
 
 Everything comes from one inventory snapshot (decklab/lib/inventory: inventory.current()),
-whichever backend holds it. The paths in records and messages (a component's "path",
-"watchlist.csv:3: wrong number of columns") are where each piece is as a file, worked out from
-what it is, so both backends say the same. The buylist files a record or the watchlist names as
+whichever backend holds it. The paths in records (a component's "path") are where each piece
+is as a file, worked out from what it is, so both backends say the same; messages name each piece
+in the database's words instead (E11-S12: "Row 3 of the purchase queue: wrong number of columns",
+"Order x's cards: missing order record", "Product x: missing product status", never an old file:
+paths.describe). The buylist files a record or the watchlist names as
 its source are still checked on disk; a deck file's path there is checked against the
 snapshot's decks, or a retired deck's durable saved history (source_exists: the phase 4
 design's R9). Retirement never discards recorded purchasing intent.
@@ -140,21 +142,16 @@ def _source(inv, path):
     return None
 
 
-def _end_line(row):
-    """The line a row ends on, as csv's line_num says after reading it (a quoted value can hold
-    line breaks)."""
-    breaks = sum(len(re.findall(r"\r\n|\r|\n", value)) for _, value in row.values if value)
-    return row.line + breaks
-
-
 def _csv(path, required, inv=None):
     """The rows of the inventory source at path (repo-relative) as dicts, read strictly as
     csv.DictReader(strict=True) reads its file: every required column, no repeated one, and
     every row exactly as long as the header. Raises what reading the file raised (FileNotFoundError
     when it isn't there, csv.Error for one that can't be parsed) and ValueError for the rest.
     inv: the snapshot to read (inventory.current() by default)."""
-    source = _source(inventory.current() if inv is None else inv, path)
-    name = PurePosixPath(path).name
+    inv = inventory.current() if inv is None else inv
+    source = _source(inv, path)
+    owners = paths.payload_owners(inv.orders)        # a payload by its order and component (E11-S12)
+    name = paths.title(paths.describe(path, owners))
     if source is None:
         raise unreadable.missing(path)
     unreadable.check(source)
@@ -164,10 +161,10 @@ def _csv(path, required, inv=None):
     if len(fields) != len(set(fields)) or not set(required) <= set(fields):
         raise ValueError(f"{name}: missing or duplicate columns")
     rows = []
-    for row in (source.items if isinstance(source, Product) else source.rows):
+    for number, row in enumerate(source.items if isinstance(source, Product) else source.rows, 1):
         found = row.as_dict()
         if None in found or None in found.values():
-            raise ValueError(f"{name}:{_end_line(row)}: wrong number of columns")
+            raise ValueError(f"{paths.row_of(path, number, owners)}: wrong number of columns")
         rows.append(found)
     return rows
 
@@ -253,14 +250,14 @@ def _read_records(root):
     inv = inventory.current()
     records, seen, retired = [], set(), {}
     for order in inv.orders:
-        name = order.file
+        name = f"Order {PurePosixPath(order.file).stem}"      # the database's words (E11-S12), not its .json
         if order.error is not None:     # an OSError or UnicodeDecodeError again, else json's ValueError
             error = unreadable.again(order.error)
             raise ValueError(order.error) if isinstance(error, csv.Error) else error
         record = order.record()
         if not isinstance(record, dict) or type(record.get("version")) is not int or record["version"] != 1:
             raise ValueError(f"{name}: expected order record version 1")
-        stem = PurePosixPath(name).stem
+        stem = PurePosixPath(order.file).stem
         if record.get("id") != stem or not ID_RE.fullmatch(stem):
             raise ValueError(f"{name}: invalid order id")
         for key in ("seller", "notes"):
@@ -298,24 +295,28 @@ def _read_records(root):
             if kind != "product" and status != "pending":
                 prefix += "/" + status
             if PurePosixPath(value).parent.as_posix() != prefix or PurePosixPath(value).suffix != ".csv":
-                raise ValueError(f"{where}: file location conflicts with kind/status")
+                raise ValueError(f"{where}: its contents are filed under another kind or status than its own")
             if value in seen:
-                raise ValueError(f"{where}: component file occurs in more than one order")
+                raise ValueError(f"{where}: its contents are in more than one order")
             seen.add(value)
             if not _exists(inv, value):
-                raise ValueError(f"{where}: component file does not exist")
+                raise ValueError(f"{where}: its contents aren't in the inventory")
         records.append(record)
     return records
 
 
-def _contents(component):
+def _contents(component, order_id=None):
+    """A record's component with its rows read (each row named by its number in order_id's
+    component, E11-S12: "Row 2 of order x's additions")."""
     required = ("front", "back", "quantity") if component["kind"] == "tokens" else ("name", "quantity")
     rows = _csv(component["path"], required)
+    owners = {component["path"]: (order_id, component["id"])} if order_id else None
     items = []
-    for row in rows:
+    for number, row in enumerate(rows, 1):
+        where = paths.row_of(component["path"], number, owners)
         name = " // ".join(filter(None, (row["front"], row["back"]))) if component["kind"] == "tokens" else row["name"]
-        _text(name, component["path"], blank=False)
-        items.append({"name": name, "quantity": _quantity(row["quantity"], component["path"])})
+        _text(name, where, blank=False)
+        items.append({"name": name, "quantity": _quantity(row["quantity"], where)})
     label = "Playable cards" if component["kind"] == "cards" else "Tokens and reminders"
     if component["kind"] == "product":
         stem = PurePosixPath(component["path"]).stem
@@ -333,23 +334,24 @@ def _coverage(records):
         listed = [p for p in inv.payloads if PurePosixPath(p).parent.as_posix() == folder]
         for path in sorted(listed, key=lambda p: name_order(PurePosixPath(p).name)):
             if path not in covered:
-                warnings.append(f"{path}: missing order record")
+                warnings.append(f"{paths.title(paths.describe(path))}: missing order record")
     statuses = _csv(paths.STATUS, ("file", "status", "intact", "notes"))
     seen = set()
     for row in statuses:
-        value = "magic/products/" + row["file"]
+        value = paths.PRODUCTS + "/" + row["file"]
+        product = f"Product {PurePosixPath(row['file']).stem}"
         if value in seen or row["status"] not in ("owned", "ordered", "preordered", "cancelled"):
-            raise ValueError(f"{value}: duplicate product or invalid status")
+            raise ValueError(f"{product}: duplicate product or invalid status")
         seen.add(value)
         component = covered.get(value)
         if component is None:
-            warnings.append(f"{value}: missing order record")
+            warnings.append(f"{product}: missing order record")
         elif component["status"] != ("received" if row["status"] == "owned" else
                                      "cancelled" if row["status"] == "cancelled" else "pending"):
-            warnings.append(f"{value}: product and order receipt statuses disagree")
+            warnings.append(f"{product}: product and order receipt statuses disagree")
     for value, component in covered.items():
         if component["kind"] == "product" and value not in seen:
-            warnings.append(f"{value}: missing product status")
+            warnings.append(f"Product {PurePosixPath(value).stem}: missing product status")
     return warnings
 
 
@@ -366,7 +368,7 @@ def overview():
             raise ValueError("Shopping records need attention: " + "; ".join(warnings))
         orders, checks = [], []
         for record in records:
-            components = [_contents(c) for c in record["components"]]
+            components = [_contents(c, record["id"]) for c in record["components"]]
             orders.append({**record, "status": order_status(components), "components": components})
             for component in components:
                 if component["status"] != "cancelled":

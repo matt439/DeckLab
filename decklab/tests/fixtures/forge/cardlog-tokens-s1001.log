@@ -1,0 +1,412 @@
+Error handling registered!
+23:38:54 [INFO ] GuiBase: ##########################################
+23:38:54 [INFO ] GuiBase: APP: Forge v.2.0.15-SNAPSHOT-09.28
+23:38:54 [INFO ] GuiBase: Java: 26.0.1 (Oracle Corporation)
+23:38:54 [INFO ] GuiBase: OS: Windows 11 10.0 amd64
+23:38:54 [INFO ] GuiBase: RAM: 1024 MB max, 2 CPUs
+23:38:54 [INFO ] GuiBase: ##########################################
+Language 'en-US' loaded successfully.
+(ThreadUtil first call): Running with priority 5
+Lazy card database: indexed 35240 card names from 33980 files in 777 ms
+Lazy card database: indexed 0 card names from 0 files in 0 ms
+Upcoming set Star Trek (TRK) dated in the future. All `upcoming` cards will be added to this set with unknown rarity.
+Upcoming set Star Trek (TRK) dated in the future. All `upcoming` cards will be added to this set with unknown rarity.
+Read cards: 854 files in 0 ms (8 parts) using thread pool
+Simulation mode
+Ai(1)-2eb0867ad84f [Default] vs Ai(2)-d09616864f11 [Default] - ten games of Constructed seed 1001
+Information: DL|log|1
+Information: DL|deck|1|1=Overrun;2=Helpful Hunter;3=Wilt-Leaf Liege;4=Carrot Cake;5=Carrot Cake;6=Sunpetal Grove;7=Sunpetal Grove;8=Treeguard Duo;9=Treeguard Duo;10=Regal Caracal;11=Felling Blow;12=Finneas, Ace Archer;13=Broken Wings;14=Release the Dogs;15=Blossoming Sands;16=Blossoming Sands;17=Blossoming Sands;18=Blossoming Sands;19=Hop to It;20=Hop to It;21=Hop to It;22=Mentor of the Meek;23=Prideful Parent;24=Prideful Parent;25=Burrowguard Mentor;26=Burrowguard Mentor;27=Burrowguard Mentor;28=Forest;29=Forest;30=Forest;31=Forest;32=Forest;33=Forest;34=Forest;35=Harvestrite Host;36=Harvestrite Host;37=Plains;38=Plains;39=Plains;40=Plains;41=Plains;42=Plains;43=Plains;44=Plains;45=Plains;46=Warren Elder;47=Warren Elder;48=Warren Elder;49=Druid of the Spade;50=Druid of the Spade;51=Druid of the Spade;52=Byrke, Long Ear of the Law;53=Bite Down;54=Rabbit Response;55=Rabbit Response;56=Valley Questcaller;57=Valley Questcaller;58=Valley Questcaller;59=Rabid Bite;60=Rabid Bite
+Information: DL|deck|2|61=Go for the Throat;62=Go for the Throat;63=Fiendish Panda;64=Night's Whisper;65=Night's Whisper;66=Crossway Troublemakers;67=Vengeful Bloodwitch;68=Vengeful Bloodwitch;69=Vengeful Bloodwitch;70=Dazzling Angel;71=Swamp;72=Swamp;73=Swamp;74=Swamp;75=Swamp;76=Swamp;77=Swamp;78=Swamp;79=Swamp;80=Mortify;81=Inspiring Overseer;82=Inspiring Overseer;83=Twinblade Paladin;84=Ajani's Pridemate;85=Ajani's Pridemate;86=Ajani's Pridemate;87=Ajani's Pridemate;88=Vampire Nighthawk;89=Vampire Nighthawk;90=Gifted Aetherborn;91=Gifted Aetherborn;92=Exsanguinate;93=Moment of Craving;94=Moment of Craving;95=Marauding Blight-Priest;96=Marauding Blight-Priest;97=Ayli, Eternal Pilgrim;98=Evolving Wilds;99=Evolving Wilds;100=Scoured Barrens;101=Scoured Barrens;102=Hinterland Sanctifier;103=Hinterland Sanctifier;104=Hinterland Sanctifier;105=Hinterland Sanctifier;106=Isolated Chapel;107=Isolated Chapel;108=Hero's Downfall;109=Hero's Downfall;110=Vampire of the Dire Moon;111=Vampire of the Dire Moon;112=Bloodtithe Collector;113=Plains;114=Plains;115=Plains;116=Plains;117=Plains;118=Plains;119=Plains;120=Plains
+Information: DL|zone|0|-|-|Library|Hand|1|53|Bite Down
+Information: DL|zone|0|-|-|Library|Hand|1|24|Prideful Parent
+Information: DL|zone|0|-|-|Library|Hand|1|10|Regal Caracal
+Information: DL|zone|0|-|-|Library|Hand|1|54|Rabbit Response
+Information: DL|zone|0|-|-|Library|Hand|1|58|Valley Questcaller
+Information: DL|zone|0|-|-|Library|Hand|1|42|Plains
+Information: DL|zone|0|-|-|Library|Hand|1|9|Treeguard Duo
+Information: DL|zone|0|-|-|Library|Hand|2|101|Scoured Barrens
+Information: DL|zone|0|-|-|Library|Hand|2|79|Swamp
+Information: DL|zone|0|-|-|Library|Hand|2|74|Swamp
+Information: DL|zone|0|-|-|Library|Hand|2|120|Plains
+Information: DL|zone|0|-|-|Library|Hand|2|103|Hinterland Sanctifier
+Information: DL|zone|0|-|-|Library|Hand|2|96|Marauding Blight-Priest
+Information: DL|zone|0|-|-|Library|Hand|2|115|Plains
+Information: DL|zone|0|-|-|Hand|Library|1|53|Bite Down
+Information: DL|zone|0|-|-|Hand|Library|1|24|Prideful Parent
+Information: DL|zone|0|-|-|Hand|Library|1|10|Regal Caracal
+Information: DL|zone|0|-|-|Hand|Library|1|54|Rabbit Response
+Information: DL|zone|0|-|-|Hand|Library|1|58|Valley Questcaller
+Information: DL|zone|0|-|-|Hand|Library|1|42|Plains
+Information: DL|zone|0|-|-|Hand|Library|1|9|Treeguard Duo
+Information: DL|zone|0|-|-|Library|Hand|1|34|Forest
+Information: DL|zone|0|-|-|Library|Hand|1|6|Sunpetal Grove
+Information: DL|zone|0|-|-|Library|Hand|1|4|Carrot Cake
+Information: DL|zone|0|-|-|Library|Hand|1|16|Blossoming Sands
+Information: DL|zone|0|-|-|Library|Hand|1|7|Sunpetal Grove
+Information: DL|zone|0|-|-|Library|Hand|1|29|Forest
+Information: DL|zone|0|-|-|Library|Hand|1|30|Forest
+Information: DL|zone|0|-|-|Hand|Library|1|34|Forest
+Mulligan: Ai(1)-2eb0867ad84f has mulliganed down to 6 cards.
+Mulligan: Ai(1)-2eb0867ad84f has kept a hand of 6 cards
+Mulligan: Ai(2)-d09616864f11 has kept a hand of 7 cards
+Information: DL|hand|1|start|1|6=Sunpetal Grove;4=Carrot Cake;16=Blossoming Sands;7=Sunpetal Grove;29=Forest;30=Forest
+Information: DL|hand|1|start|2|101=Scoured Barrens;79=Swamp;74=Swamp;120=Plains;103=Hinterland Sanctifier;96=Marauding Blight-Priest;115=Plains
+Turn: Turn 1 (Ai(1)-2eb0867ad84f)
+Replacement Effect: Sunpetal Grove enters tapped unless you control a Forest or a Plains.
+Information: DL|zone|1|1|MAIN1|Hand|Battlefield|1|6|Sunpetal Grove
+Land: Ai(1)-2eb0867ad84f played Sunpetal Grove (6)
+Turn: Turn 2 (Ai(2)-d09616864f11)
+Information: DL|zone|2|2|DRAW|Library|Hand|2|91|Gifted Aetherborn
+Information: DL|zone|2|2|MAIN1|Hand|Battlefield|2|120|Plains
+Land: Ai(2)-d09616864f11 played Plains (120)
+Information: DL|zone|2|2|MAIN2|Hand|Stack|2|103|Hinterland Sanctifier
+Mana: Plains (120) - {T}: Add {W}.
+Add To Stack: Ai(2)-d09616864f11 cast Hinterland Sanctifier
+Information: DL|zone|2|2|MAIN2|Stack|Battlefield|2|103|Hinterland Sanctifier
+Resolve Stack: Hinterland Sanctifier - Creature 1 / 2
+Turn: Turn 3 (Ai(1)-2eb0867ad84f)
+Information: DL|zone|3|1|DRAW|Library|Hand|1|27|Burrowguard Mentor
+Replacement Effect: Blossoming Sands enters tapped.
+Information: DL|zone|3|1|MAIN1|Hand|Battlefield|1|16|Blossoming Sands
+Land: Ai(1)-2eb0867ad84f played Blossoming Sands (16)
+Add To Stack: Ai(1)-2eb0867ad84f triggered Blossoming Sands
+Life: Life: Ai(1)-2eb0867ad84f 20 > 21
+Resolve Stack: When Blossoming Sands enters, you gain 1 life. [Zone Changer: Blossoming Sands (16)]
+Turn: Turn 4 (Ai(2)-d09616864f11)
+Information: DL|zone|4|2|DRAW|Library|Hand|2|109|Hero's Downfall
+Information: DL|zone|4|2|MAIN1|Hand|Battlefield|2|79|Swamp
+Land: Ai(2)-d09616864f11 played Swamp (79)
+Combat: Ai(2)-d09616864f11 assigned Hinterland Sanctifier (103) to attack Ai(1)-2eb0867ad84f.
+Combat: Ai(1)-2eb0867ad84f didn't block Hinterland Sanctifier (103).
+Damage: Hinterland Sanctifier (103) deals 1 combat damage to Ai(1)-2eb0867ad84f.
+Life: Life: Ai(1)-2eb0867ad84f 21 > 20
+Turn: Turn 5 (Ai(1)-2eb0867ad84f)
+Information: DL|zone|5|1|DRAW|Library|Hand|1|21|Hop to It
+Information: DL|zone|5|1|MAIN1|Hand|Battlefield|1|29|Forest
+Land: Ai(1)-2eb0867ad84f played Forest (29)
+Information: DL|zone|5|1|MAIN2|Hand|Stack|1|27|Burrowguard Mentor
+Mana: Sunpetal Grove (6) - {T}: Add {G} or {W}.
+Mana: Forest (29) - {T}: Add {G}.
+Add To Stack: Ai(1)-2eb0867ad84f cast Burrowguard Mentor
+Information: DL|zone|5|1|MAIN2|Stack|Battlefield|1|27|Burrowguard Mentor
+Resolve Stack: Burrowguard Mentor - Creature * / *
+Turn: Turn 6 (Ai(2)-d09616864f11)
+Information: DL|zone|6|2|DRAW|Library|Hand|2|104|Hinterland Sanctifier
+Information: DL|zone|6|2|MAIN1|Hand|Battlefield|2|74|Swamp
+Land: Ai(2)-d09616864f11 played Swamp (74)
+Information: DL|zone|6|2|MAIN1|Hand|Stack|2|91|Gifted Aetherborn
+Mana: Swamp (79) - {T}: Add {B}.
+Mana: Swamp (74) - {T}: Add {B}.
+Add To Stack: Ai(2)-d09616864f11 cast Gifted Aetherborn
+Information: DL|zone|6|2|MAIN1|Stack|Battlefield|2|91|Gifted Aetherborn
+Resolve Stack: Gifted Aetherborn - Creature 2 / 3
+Add To Stack: Ai(2)-d09616864f11 triggered Hinterland Sanctifier
+Life: Life: Ai(2)-d09616864f11 20 > 21
+Resolve Stack: Whenever another creature you control enters, you gain 1 life. [Zone Changer: Gifted Aetherborn (91)]
+Information: DL|zone|6|2|MAIN1|Hand|Stack|2|104|Hinterland Sanctifier
+Mana: Plains (120) - {T}: Add {W}.
+Add To Stack: Ai(2)-d09616864f11 cast Hinterland Sanctifier
+Information: DL|zone|6|2|MAIN1|Stack|Battlefield|2|104|Hinterland Sanctifier
+Resolve Stack: Hinterland Sanctifier - Creature 1 / 2
+Add To Stack: Ai(2)-d09616864f11 triggered Hinterland Sanctifier
+Life: Life: Ai(2)-d09616864f11 21 > 22
+Resolve Stack: Whenever another creature you control enters, you gain 1 life. [Zone Changer: Hinterland Sanctifier (104)]
+Combat: Ai(2)-d09616864f11 assigned Hinterland Sanctifier (103) to attack Ai(1)-2eb0867ad84f.
+Combat: Ai(1)-2eb0867ad84f didn't block Hinterland Sanctifier (103).
+Damage: Hinterland Sanctifier (103) deals 1 combat damage to Ai(1)-2eb0867ad84f.
+Life: Life: Ai(1)-2eb0867ad84f 20 > 19
+Turn: Turn 7 (Ai(1)-2eb0867ad84f)
+Information: DL|zone|7|1|DRAW|Library|Hand|1|2|Helpful Hunter
+Replacement Effect: Sunpetal Grove enters tapped unless you control a Forest or a Plains.
+Information: DL|zone|7|1|MAIN1|Hand|Battlefield|1|7|Sunpetal Grove
+Land: Ai(1)-2eb0867ad84f played Sunpetal Grove (7)
+Information: DL|zone|7|1|MAIN1|Hand|Stack|1|2|Helpful Hunter
+Mana: Sunpetal Grove (6) - {T}: Add {G} or {W}.
+Mana: Forest (29) - {T}: Add {G}.
+Add To Stack: Ai(1)-2eb0867ad84f cast Helpful Hunter
+Information: DL|zone|7|1|MAIN1|Stack|Battlefield|1|2|Helpful Hunter
+Resolve Stack: Helpful Hunter - Creature 1 / 1
+Add To Stack: Ai(1)-2eb0867ad84f triggered Helpful Hunter
+Information: DL|zone|7|1|MAIN1|Library|Hand|1|20|Hop to It
+Resolve Stack: When this creature enters, draw a card. [Zone Changer: Helpful Hunter (2)]
+Information: DL|zone|7|1|MAIN2|Hand|Stack|1|4|Carrot Cake
+Mana: Blossoming Sands (16) - {T}: Add {G} or {W}.
+Mana: Sunpetal Grove (7) - {T}: Add {G} or {W}.
+Add To Stack: Ai(1)-2eb0867ad84f cast Carrot Cake
+Information: DL|zone|7|1|MAIN2|Stack|Battlefield|1|4|Carrot Cake
+Resolve Stack: Carrot Cake
+Add To Stack: Ai(1)-2eb0867ad84f triggered Carrot Cake
+Information: DL|zone|7|1|MAIN2|-|Battlefield|1|136|Rabbit Token
+Resolve Stack: Ai(1)-2eb0867ad84f scried 1 card(s) to the top of the library
+Information: DL|zone|7|1|MAIN2|Library|Library|1|53|Bite Down
+Resolve Stack: When Carrot Cake enters and when you sacrifice it, create a 1/1 white Rabbit creature token and scry 1. (Look at the top card of your library. You may put that card on the bottom.) [Zone Changer: Carrot Cake (4)]
+Turn: Turn 8 (Ai(2)-d09616864f11)
+Information: DL|zone|8|2|UPKEEP|Hand|Stack|2|109|Hero's Downfall
+Mana: Swamp (79) - {T}: Add {B}.
+Mana: Swamp (74) - {T}: Add {B}.
+Mana: Plains (120) - {T}: Add {W}.
+Add To Stack: Ai(2)-d09616864f11 cast Hero's Downfall targeting [Burrowguard Mentor (27)]
+Information: DL|zone|8|2|UPKEEP|Battlefield|Graveyard|1|27|Burrowguard Mentor
+Zone Change: Burrowguard Mentor (27) was put into Graveyard from Battlefield.
+Resolve Stack: Hero's Downfall (109) - Destroy Burrowguard Mentor (27).
+Information: DL|zone|8|2|UPKEEP|Stack|Graveyard|2|109|Hero's Downfall
+Information: DL|zone|8|2|DRAW|Library|Hand|2|71|Swamp
+Combat: Ai(2)-d09616864f11 assigned Gifted Aetherborn (91), Hinterland Sanctifier (103) and Hinterland Sanctifier (104) to attack Ai(1)-2eb0867ad84f.
+Combat: Ai(1)-2eb0867ad84f didn't block Gifted Aetherborn (91).
+Ai(1)-2eb0867ad84f didn't block Hinterland Sanctifier (103).
+Ai(1)-2eb0867ad84f didn't block Hinterland Sanctifier (104).
+Damage: Gifted Aetherborn (91) deals 2 combat damage to Ai(1)-2eb0867ad84f.
+Life: Life: Ai(2)-d09616864f11 22 > 24
+Damage: Hinterland Sanctifier (103) deals 1 combat damage to Ai(1)-2eb0867ad84f.
+Damage: Hinterland Sanctifier (104) deals 1 combat damage to Ai(1)-2eb0867ad84f.
+Life: Life: Ai(1)-2eb0867ad84f 19 > 15
+Replacement Effect: Scoured Barrens enters tapped.
+Information: DL|zone|8|2|MAIN2|Hand|Battlefield|2|101|Scoured Barrens
+Land: Ai(2)-d09616864f11 played Scoured Barrens (101)
+Add To Stack: Ai(2)-d09616864f11 triggered Scoured Barrens
+Life: Life: Ai(2)-d09616864f11 24 > 25
+Resolve Stack: When Scoured Barrens enters, you gain 1 life. [Zone Changer: Scoured Barrens (101)]
+Turn: Turn 9 (Ai(1)-2eb0867ad84f)
+Information: DL|zone|9|1|DRAW|Library|Hand|1|53|Bite Down
+Information: DL|zone|9|1|MAIN1|Hand|Battlefield|1|30|Forest
+Land: Ai(1)-2eb0867ad84f played Forest (30)
+Combat: Ai(1)-2eb0867ad84f assigned Helpful Hunter (2) and Rabbit Token (136) to attack Ai(2)-d09616864f11.
+Combat: Ai(2)-d09616864f11 didn't block Helpful Hunter (2).
+Ai(2)-d09616864f11 didn't block Rabbit Token (136).
+Damage: Helpful Hunter (2) deals 1 combat damage to Ai(2)-d09616864f11.
+Damage: Rabbit Token (136) deals 1 combat damage to Ai(2)-d09616864f11.
+Life: Life: Ai(2)-d09616864f11 25 > 23
+Information: DL|zone|9|1|MAIN2|Hand|Stack|1|21|Hop to It
+Mana: Sunpetal Grove (6) - {T}: Add {G} or {W}.
+Mana: Forest (29) - {T}: Add {G}.
+Mana: Forest (30) - {T}: Add {G}.
+Add To Stack: Ai(1)-2eb0867ad84f cast Hop to It
+Information: DL|zone|9|1|MAIN2|-|Battlefield|1|143|Rabbit Token
+Information: DL|zone|9|1|MAIN2|-|Battlefield|1|144|Rabbit Token
+Information: DL|zone|9|1|MAIN2|-|Battlefield|1|145|Rabbit Token
+Resolve Stack: Hop to It (21) - Ai(1)-2eb0867ad84f creates three 1/1 white Rabbit creature tokens.
+Information: DL|zone|9|1|MAIN2|Stack|Graveyard|1|21|Hop to It
+Turn: Turn 10 (Ai(2)-d09616864f11)
+Information: DL|zone|10|2|DRAW|Library|Hand|2|89|Vampire Nighthawk
+Information: DL|zone|10|2|MAIN1|Hand|Battlefield|2|115|Plains
+Land: Ai(2)-d09616864f11 played Plains (115)
+Information: DL|zone|10|2|MAIN1|Hand|Stack|2|89|Vampire Nighthawk
+Mana: Swamp (79) - {T}: Add {B}.
+Mana: Swamp (74) - {T}: Add {B}.
+Mana: Plains (120) - {T}: Add {W}.
+Add To Stack: Ai(2)-d09616864f11 cast Vampire Nighthawk
+Information: DL|zone|10|2|MAIN1|Stack|Battlefield|2|89|Vampire Nighthawk
+Resolve Stack: Vampire Nighthawk - Creature 2 / 3
+Add To Stack: Ai(2)-d09616864f11 triggered Hinterland Sanctifier
+Add To Stack: Ai(2)-d09616864f11 triggered Hinterland Sanctifier
+Life: Life: Ai(2)-d09616864f11 23 > 24
+Resolve Stack: Whenever another creature you control enters, you gain 1 life. [Zone Changer: Vampire Nighthawk (89)]
+Life: Life: Ai(2)-d09616864f11 24 > 25
+Resolve Stack: Whenever another creature you control enters, you gain 1 life. [Zone Changer: Vampire Nighthawk (89)]
+Combat: Ai(2)-d09616864f11 assigned Gifted Aetherborn (91), Hinterland Sanctifier (103) and Hinterland Sanctifier (104) to attack Ai(1)-2eb0867ad84f.
+Combat: Ai(1)-2eb0867ad84f didn't block Gifted Aetherborn (91).
+Ai(1)-2eb0867ad84f assigned Rabbit Token (144) and Rabbit Token (143) to block Hinterland Sanctifier (103).
+Ai(1)-2eb0867ad84f didn't block Hinterland Sanctifier (104).
+Damage: Gifted Aetherborn (91) deals 2 combat damage to Ai(1)-2eb0867ad84f.
+Life: Life: Ai(2)-d09616864f11 25 > 27
+Damage: Hinterland Sanctifier (103) deals 1 damage to Rabbit Token (144).
+Damage: Hinterland Sanctifier (104) deals 1 combat damage to Ai(1)-2eb0867ad84f.
+Damage: Rabbit Token (144) deals 1 damage to Hinterland Sanctifier (103).
+Damage: Rabbit Token (143) deals 1 damage to Hinterland Sanctifier (103).
+Life: Life: Ai(1)-2eb0867ad84f 15 > 12
+Information: DL|zone|10|2|COMBAT_DAMAGE|Battlefield|Graveyard|2|103|Hinterland Sanctifier
+Zone Change: Hinterland Sanctifier (103) was put into Graveyard from Battlefield.
+Information: DL|zone|10|2|COMBAT_DAMAGE|Battlefield|Graveyard|1|144|Rabbit Token
+Zone Change: Rabbit Token (144) was put into Graveyard from Battlefield.
+Turn: Turn 11 (Ai(1)-2eb0867ad84f)
+Information: DL|zone|11|1|DRAW|Library|Hand|1|55|Rabbit Response
+Information: DL|zone|11|1|MAIN2|Hand|Stack|1|20|Hop to It
+Mana: Sunpetal Grove (6) - {T}: Add {G} or {W}.
+Mana: Forest (29) - {T}: Add {G}.
+Mana: Forest (30) - {T}: Add {G}.
+Add To Stack: Ai(1)-2eb0867ad84f cast Hop to It
+Information: DL|zone|11|1|MAIN2|-|Battlefield|1|152|Rabbit Token
+Information: DL|zone|11|1|MAIN2|-|Battlefield|1|153|Rabbit Token
+Information: DL|zone|11|1|MAIN2|-|Battlefield|1|154|Rabbit Token
+Resolve Stack: Hop to It (20) - Ai(1)-2eb0867ad84f creates three 1/1 white Rabbit creature tokens.
+Information: DL|zone|11|1|MAIN2|Stack|Graveyard|1|20|Hop to It
+Turn: Turn 12 (Ai(2)-d09616864f11)
+Information: DL|zone|12|2|DRAW|Library|Hand|2|77|Swamp
+Information: DL|zone|12|2|MAIN1|Hand|Stack|2|96|Marauding Blight-Priest
+Mana: Swamp (79) - {T}: Add {B}.
+Mana: Swamp (74) - {T}: Add {B}.
+Mana: Plains (120) - {T}: Add {W}.
+Add To Stack: Ai(2)-d09616864f11 cast Marauding Blight-Priest
+Information: DL|zone|12|2|MAIN1|Stack|Battlefield|2|96|Marauding Blight-Priest
+Resolve Stack: Marauding Blight-Priest - Creature 3 / 2
+Add To Stack: Ai(2)-d09616864f11 triggered Hinterland Sanctifier
+Life: Life: Ai(2)-d09616864f11 27 > 28
+Resolve Stack: Whenever another creature you control enters, you gain 1 life. [Zone Changer: Marauding Blight-Priest (96)]
+Add To Stack: Ai(2)-d09616864f11 triggered Marauding Blight-Priest
+Life: Life: Ai(1)-2eb0867ad84f 12 > 11
+Resolve Stack: Whenever you gain life, each opponent loses 1 life. [Player: Ai(2)-d09616864f11, Gained Amount: 1]
+Combat: Ai(2)-d09616864f11 assigned Gifted Aetherborn (91), Vampire Nighthawk (89) and Hinterland Sanctifier (104) to attack Ai(1)-2eb0867ad84f.
+Combat: Ai(1)-2eb0867ad84f didn't block Gifted Aetherborn (91).
+Ai(1)-2eb0867ad84f didn't block Vampire Nighthawk (89).
+Ai(1)-2eb0867ad84f didn't block Hinterland Sanctifier (104).
+Damage: Gifted Aetherborn (91) deals 2 combat damage to Ai(1)-2eb0867ad84f.
+Life: Life: Ai(2)-d09616864f11 28 > 30
+Damage: Vampire Nighthawk (89) deals 2 combat damage to Ai(1)-2eb0867ad84f.
+Life: Life: Ai(2)-d09616864f11 30 > 32
+Damage: Hinterland Sanctifier (104) deals 1 combat damage to Ai(1)-2eb0867ad84f.
+Life: Life: Ai(1)-2eb0867ad84f 11 > 6
+Add To Stack: Ai(2)-d09616864f11 triggered Marauding Blight-Priest
+Add To Stack: Ai(2)-d09616864f11 triggered Marauding Blight-Priest
+Life: Life: Ai(1)-2eb0867ad84f 6 > 5
+Resolve Stack: Whenever you gain life, each opponent loses 1 life. [Player: Ai(2)-d09616864f11, Gained Amount: 2]
+Mana: Blossoming Sands (16) - {T}: Add {G} or {W}.
+Mana: Sunpetal Grove (7) - {T}: Add {G} or {W}.
+Information: DL|zone|12|2|COMBAT_DAMAGE|Battlefield|Graveyard|1|4|Carrot Cake
+Zone Change: Carrot Cake (4) was put into Graveyard from Battlefield.
+Add To Stack: Ai(1)-2eb0867ad84f activated Carrot Cake
+Add To Stack: Ai(1)-2eb0867ad84f triggered Carrot Cake
+Information: DL|zone|12|2|COMBAT_DAMAGE|-|Battlefield|1|157|Rabbit Token
+Resolve Stack: Ai(1)-2eb0867ad84f scried 1 card(s) to the top of the library
+Information: DL|zone|12|2|COMBAT_DAMAGE|Library|Library|1|23|Prideful Parent
+Resolve Stack: When Carrot Cake enters and when you sacrifice it, create a 1/1 white Rabbit creature token and scry 1. (Look at the top card of your library. You may put that card on the bottom.) [Sacrificed: Carrot Cake (4)]
+Life: Life: Ai(1)-2eb0867ad84f 5 > 8
+Resolve Stack: Carrot Cake (4) - Ai(1)-2eb0867ad84f gains 3 life.
+Life: Life: Ai(1)-2eb0867ad84f 8 > 7
+Resolve Stack: Whenever you gain life, each opponent loses 1 life. [Player: Ai(2)-d09616864f11, Gained Amount: 2]
+Information: DL|zone|12|2|MAIN2|Hand|Battlefield|2|71|Swamp
+Land: Ai(2)-d09616864f11 played Swamp (71)
+Turn: Turn 13 (Ai(1)-2eb0867ad84f)
+Information: DL|zone|13|1|DRAW|Library|Hand|1|23|Prideful Parent
+Information: DL|zone|13|1|MAIN2|Hand|Stack|1|23|Prideful Parent
+Mana: Sunpetal Grove (6) - {T}: Add {G} or {W}.
+Mana: Forest (29) - {T}: Add {G}.
+Mana: Forest (30) - {T}: Add {G}.
+Add To Stack: Ai(1)-2eb0867ad84f cast Prideful Parent
+Information: DL|zone|13|1|MAIN2|Stack|Battlefield|1|23|Prideful Parent
+Resolve Stack: Prideful Parent - Creature 2 / 2
+Add To Stack: Ai(1)-2eb0867ad84f triggered Prideful Parent
+Information: DL|zone|13|1|MAIN2|-|Battlefield|1|161|Cat Token
+Resolve Stack: When this creature enters, create a 1/1 white Cat creature token. [Zone Changer: Prideful Parent (23)]
+Information: DL|zone|13|1|MAIN2|Hand|Stack|1|53|Bite Down
+Mana: Blossoming Sands (16) - {T}: Add {G} or {W}.
+Mana: Sunpetal Grove (7) - {T}: Add {G} or {W}.
+Add To Stack: Ai(1)-2eb0867ad84f cast Bite Down targeting [Prideful Parent (23)] [Marauding Blight-Priest (96)]
+Damage: Prideful Parent (23) deals 2 damage to Marauding Blight-Priest (96).
+Resolve Stack: Bite Down (53) -  Prideful Parent (23) deals 2 damage to Marauding Blight-Priest (96).
+Information: DL|zone|13|1|MAIN2|Stack|Graveyard|1|53|Bite Down
+Information: DL|zone|13|1|MAIN2|Battlefield|Graveyard|2|96|Marauding Blight-Priest
+Zone Change: Marauding Blight-Priest (96) was put into Graveyard from Battlefield.
+Turn: Turn 14 (Ai(2)-d09616864f11)
+Information: DL|zone|14|2|DRAW|Library|Hand|2|72|Swamp
+Combat: Ai(2)-d09616864f11 assigned Gifted Aetherborn (91) and Vampire Nighthawk (89) to attack Ai(1)-2eb0867ad84f.
+Combat: Ai(1)-2eb0867ad84f assigned Rabbit Token (136) and Prideful Parent (23) to block Gifted Aetherborn (91).
+Ai(1)-2eb0867ad84f didn't block Vampire Nighthawk (89).
+Damage: Gifted Aetherborn (91) deals 1 damage (Deathtouch) to Prideful Parent (23).
+Damage: Gifted Aetherborn (91) deals 1 damage (Deathtouch) to Rabbit Token (136).
+Life: Life: Ai(2)-d09616864f11 32 > 34
+Damage: Vampire Nighthawk (89) deals 2 combat damage to Ai(1)-2eb0867ad84f.
+Life: Life: Ai(2)-d09616864f11 34 > 36
+Damage: Rabbit Token (136) deals 1 damage to Gifted Aetherborn (91).
+Damage: Prideful Parent (23) deals 2 damage to Gifted Aetherborn (91).
+Life: Life: Ai(1)-2eb0867ad84f 7 > 5
+Information: DL|zone|14|2|COMBAT_DAMAGE|Battlefield|Graveyard|2|91|Gifted Aetherborn
+Zone Change: Gifted Aetherborn (91) was put into Graveyard from Battlefield.
+Information: DL|zone|14|2|COMBAT_DAMAGE|Battlefield|Graveyard|1|136|Rabbit Token
+Zone Change: Rabbit Token (136) was put into Graveyard from Battlefield.
+Information: DL|zone|14|2|COMBAT_DAMAGE|Battlefield|Graveyard|1|23|Prideful Parent
+Zone Change: Prideful Parent (23) was put into Graveyard from Battlefield.
+Information: DL|zone|14|2|MAIN2|Hand|Battlefield|2|77|Swamp
+Land: Ai(2)-d09616864f11 played Swamp (77)
+Turn: Turn 15 (Ai(1)-2eb0867ad84f)
+Information: DL|zone|15|1|UPKEEP|Hand|Stack|1|55|Rabbit Response
+Mana: Sunpetal Grove (6) - {T}: Add {G} or {W}.
+Mana: Blossoming Sands (16) - {T}: Add {G} or {W}.
+Mana: Forest (29) - {T}: Add {G}.
+Mana: Forest (30) - {T}: Add {G}.
+Add To Stack: Ai(1)-2eb0867ad84f cast Rabbit Response
+Resolve Stack: Ai(1)-2eb0867ad84f scried 1 card(s) to the top of the library and 1 card(s) to the bottom of the library
+Information: DL|zone|15|1|UPKEEP|Library|Library|1|8|Treeguard Duo
+Information: DL|zone|15|1|UPKEEP|Library|Library|1|48|Warren Elder
+Resolve Stack: Rabbit Response (55) - Creatures you control get +2/+1 until end of turn. If you control a Rabbit, scry 2. (Look at the top two cards of your library, then put any number of them on the bottom and rest on top in any order.) Ai(1)-2eb0867ad84f scries 2.
+Information: DL|zone|15|1|UPKEEP|Stack|Graveyard|1|55|Rabbit Response
+Information: DL|zone|15|1|DRAW|Library|Hand|1|8|Treeguard Duo
+Combat: Ai(1)-2eb0867ad84f assigned Helpful Hunter (2), Rabbit Token (143), Rabbit Token (145), Rabbit Token (152), Rabbit Token (153), Rabbit Token (154), Rabbit Token (157) and Cat Token (161) to attack Ai(2)-d09616864f11.
+Combat: Ai(2)-d09616864f11 didn't block Helpful Hunter (2).
+Ai(2)-d09616864f11 didn't block Rabbit Token (143).
+Ai(2)-d09616864f11 didn't block Rabbit Token (145).
+Ai(2)-d09616864f11 didn't block Rabbit Token (152).
+Ai(2)-d09616864f11 didn't block Rabbit Token (153).
+Ai(2)-d09616864f11 didn't block Rabbit Token (154).
+Ai(2)-d09616864f11 didn't block Rabbit Token (157).
+Ai(2)-d09616864f11 didn't block Cat Token (161).
+Damage: Helpful Hunter (2) deals 3 combat damage to Ai(2)-d09616864f11.
+Damage: Rabbit Token (143) deals 3 combat damage to Ai(2)-d09616864f11.
+Damage: Rabbit Token (145) deals 3 combat damage to Ai(2)-d09616864f11.
+Damage: Rabbit Token (152) deals 3 combat damage to Ai(2)-d09616864f11.
+Damage: Rabbit Token (153) deals 3 combat damage to Ai(2)-d09616864f11.
+Damage: Rabbit Token (154) deals 3 combat damage to Ai(2)-d09616864f11.
+Damage: Rabbit Token (157) deals 3 combat damage to Ai(2)-d09616864f11.
+Damage: Cat Token (161) deals 3 combat damage to Ai(2)-d09616864f11.
+Life: Life: Ai(2)-d09616864f11 36 > 12
+Turn: Turn 16 (Ai(2)-d09616864f11)
+Information: DL|zone|16|2|DRAW|Library|Hand|2|94|Moment of Craving
+Combat: Ai(2)-d09616864f11 assigned Vampire Nighthawk (89) and Hinterland Sanctifier (104) to attack Ai(1)-2eb0867ad84f.
+Combat: Ai(1)-2eb0867ad84f didn't block Vampire Nighthawk (89).
+Ai(1)-2eb0867ad84f didn't block Hinterland Sanctifier (104).
+Damage: Vampire Nighthawk (89) deals 2 combat damage to Ai(1)-2eb0867ad84f.
+Life: Life: Ai(2)-d09616864f11 12 > 14
+Damage: Hinterland Sanctifier (104) deals 1 combat damage to Ai(1)-2eb0867ad84f.
+Life: Life: Ai(1)-2eb0867ad84f 5 > 2
+Information: DL|zone|16|2|COMBAT_DAMAGE|Hand|Stack|2|94|Moment of Craving
+Mana: Swamp (79) - {T}: Add {B}.
+Mana: Swamp (74) - {T}: Add {B}.
+Add To Stack: Ai(2)-d09616864f11 cast Moment of Craving targeting [Helpful Hunter (2)]
+Life: Life: Ai(2)-d09616864f11 14 > 16
+Resolve Stack: Moment of Craving (94) - Helpful Hunter (2) gets -2/-2  until end of turn. Ai(2)-d09616864f11 gains 2 life.
+Information: DL|zone|16|2|COMBAT_DAMAGE|Stack|Graveyard|2|94|Moment of Craving
+Information: DL|zone|16|2|COMBAT_DAMAGE|Battlefield|Graveyard|1|2|Helpful Hunter
+Zone Change: Helpful Hunter (2) was put into Graveyard from Battlefield.
+Information: DL|zone|16|2|MAIN2|Hand|Battlefield|2|72|Swamp
+Land: Ai(2)-d09616864f11 played Swamp (72)
+Turn: Turn 17 (Ai(1)-2eb0867ad84f)
+Information: DL|zone|17|1|DRAW|Library|Hand|1|31|Forest
+Information: DL|zone|17|1|MAIN1|Hand|Stack|1|8|Treeguard Duo
+Mana: Forest (29) - {T}: Add {G}.
+Mana: Forest (30) - {T}: Add {G}.
+Mana: Sunpetal Grove (6) - {T}: Add {G} or {W}.
+Mana: Blossoming Sands (16) - {T}: Add {G} or {W}.
+Add To Stack: Ai(1)-2eb0867ad84f cast Treeguard Duo
+Information: DL|zone|17|1|MAIN1|Stack|Battlefield|1|8|Treeguard Duo
+Resolve Stack: Treeguard Duo - Creature 3 / 4
+Add To Stack: Ai(1)-2eb0867ad84f triggered Treeguard Duo targeting [Rabbit Token (143)]
+Resolve Stack: When Treeguard Duo enters, until end of turn, target creature you control gains vigilance and gets +X/+X, where X is the number of creatures you control. (Targeting: [[Rabbit Token (143)]]) [Zone Changer: Treeguard Duo (8)]
+Combat: Ai(1)-2eb0867ad84f assigned Rabbit Token (143) to attack Ai(2)-d09616864f11.
+Combat: Ai(2)-d09616864f11 didn't block Rabbit Token (143).
+Damage: Rabbit Token (143) deals 9 combat damage to Ai(2)-d09616864f11.
+Life: Life: Ai(2)-d09616864f11 16 > 7
+Information: DL|zone|17|1|MAIN2|Hand|Battlefield|1|31|Forest
+Land: Ai(1)-2eb0867ad84f played Forest (31)
+Turn: Turn 18 (Ai(2)-d09616864f11)
+Information: DL|zone|18|2|DRAW|Library|Hand|2|64|Night's Whisper
+Combat: Ai(2)-d09616864f11 assigned Vampire Nighthawk (89) and Hinterland Sanctifier (104) to attack Ai(1)-2eb0867ad84f.
+Combat: Ai(1)-2eb0867ad84f didn't block Vampire Nighthawk (89).
+Ai(1)-2eb0867ad84f assigned Rabbit Token (143) and Treeguard Duo (8) to block Hinterland Sanctifier (104).
+Damage: Vampire Nighthawk (89) deals 2 combat damage to Ai(1)-2eb0867ad84f.
+Life: Life: Ai(2)-d09616864f11 7 > 9
+Damage: Hinterland Sanctifier (104) deals 1 damage to Rabbit Token (143).
+Damage: Rabbit Token (143) deals 1 damage to Hinterland Sanctifier (104).
+Damage: Treeguard Duo (8) deals 3 damage to Hinterland Sanctifier (104).
+Life: Life: Ai(1)-2eb0867ad84f 2 > 0
+Player Control: Ai(1)-2eb0867ad84f has restored control over themself
+Player Control: Ai(2)-d09616864f11 has restored control over themself
+Game Outcome: Match Duration 0m : 03s
+Game Outcome: Turn 9
+Game Outcome: Ai(1)-2eb0867ad84f has lost because life total reached 0
+Game Outcome: Ai(2)-d09616864f11 has won because all opponents have lost
+Match Result: Ai(1)-2eb0867ad84f: 0 Ai(2)-d09616864f11: 2 
+Information: DL|hand|18|end|1|
+Information: DL|hand|18|end|2|64=Night's Whisper
+Information: DL|library|18|end|1|45
+Information: DL|library|18|end|2|44
+
+Game Result: Game 2 ended in 3175 ms. Ai(2)-d09616864f11 has won!

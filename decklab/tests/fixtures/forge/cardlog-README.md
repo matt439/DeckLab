@@ -51,3 +51,18 @@ the other nineteen games are left out (the header line still says twenty); and t
 are left out. Everything else is as Forge printed it.
 `test_forge_cardlog.ReaderTests.test_a_real_game_with_a_failed_cast` checks Felling Blow and a few
 other cards' tallies, worked out by hand from this log.
+
+# cardlog-tokens-s1001.log
+
+Real Forge 2.0.15 output of one game with tokens, played with the card log on 2026-10-03 (the simulation
+investigation's profile runs): game 2 of ten, Constructed, seed 1001, between a Selesnya Rabbits list (deck 1)
+and an Orzhov Vampires list (deck 2), whose names Forge printed as hashes. Deck 2 won on turn 18.
+
+Selesnya made Rabbit Tokens: 136 on turn 7, 143, 144 and 145 on turn 9 (4 at once), 144 died on
+turn 10 (3), 152, 153 and 154 came on turn 11 (6) and 157 on turn 12 (7), and 136 died to a
+deathtouch blocker on turn 14 (6). One Cat Token (161) came on turn 13. Orzhov made none. So the
+card log's token peaks are 7 Rabbits and 1 Cat for deck 1.
+
+Edits: the start-up lines are kept, except the `WARNING:` lines; the other nine games are left out
+(the header line still says ten); and the `Phase:` lines are left out. Everything else is as Forge
+printed it. `test_forge_cardlog_tokens.PeakTests.test_a_real_game` checks the peaks.

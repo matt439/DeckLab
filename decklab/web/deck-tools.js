@@ -61,6 +61,8 @@ function printDeck(data) {
       el("li", {text: `${row.qty} x ${deckStandinWords(row)}`}))));
     for (const text of standins.warnings || []) sheet.append(el("p", {class: "print-warning", text}));
   }
+  // commander-readiness.js: a Commander deck's At the table, from the facts the page loaded (E9-S27).
+  if (typeof commanderPrintPart === "function") sheet.append(...commanderPrintPart(data));
   const guide = data.guide;
   if (guide?.changed_on) sheet.append(el("p", {class: "print-warning", text:
     `Guide needs review: the list changed on ${guide.changed_on}. Check its advice against this list.`}));
@@ -210,7 +212,7 @@ function drawDeckMatchups(host, data, m, retry = null) {
     m.ai ? el("details", {class: "more deck-mu-ai", open: earlier ? true : null},
       el("summary", {text: "What Forge's AI can't play"}),
       aiLimitsParts(m.ai, s.title, {deckPage: true, otherSaid: !!otherLine, earlier})) : null,
-    deckCardStats(m, version, {otherSaid: !!otherLine})]);
+    deckCardStats(m, version, {otherSaid: !!otherLine, data})]);
 }
 
 /** This deck's latest head-to-head result against an opponent (any list), from the deck on screen's

@@ -11,7 +11,7 @@ switches yet), with no admin override, and a hidden deck answers exactly as a mi
 
 test_api_permissions' sandbox: Matt (admin) and User1 at home, User2 and User3 with their own
 spaces, User2 with one deck. Run from the repo root:
-python -m unittest decklab.tests.test_deck_visibility
+python scripts/test_fixtures.py decklab.tests.test_deck_visibility
 """
 import json
 from unittest import mock

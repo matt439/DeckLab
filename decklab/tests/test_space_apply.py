@@ -87,6 +87,13 @@ class RemovalApplyTests(db_support.DbTestCase):
                     cur.execute("insert into play_record (kind,id,revision,created_on,updated_on,updated_by,deck_ids,content) "
                                 "values ('games',%s,1,'2026-10-18T00:00:00Z','2026-10-18T00:00:00Z',"
                                 "'Member',%s,%s)", (identifier, [s["id"] for s in sides], Jsonb(content)))
+        with self.connect("owner") as c:      # a draft kept for later (E2-S16): not audited, so no change set
+            c.execute("insert into deck_draft (profile_id, deck_id, version, revision, saved_at, content) "
+                      "values ('sample', 'sample/casual/own', 'target', 1, now(), '{\"v\": 1}')")
+            c.execute("delete from new_deck_draft")       # migration 0019's: no deck to cascade from
+            for space in ("sample", "other"):
+                c.execute("insert into new_deck_draft (profile_id, space_id, source, revision, saved_at, content) "
+                          "values (%s, %s, '', 1, now(), '{\"v\": 1}')", (space, space))
         own = forge_result("a" * 64, "sample/casual/own", "sample/casual/second")
         for side, land in zip(own["sides"], ("Forest", "Mountain")):
             side["card_sha"] = lists._list_text({"Main": [[60, land]]}, "constructed")[1]
@@ -126,6 +133,7 @@ class RemovalApplyTests(db_support.DbTestCase):
     def assert_restored(self):
         with self.connect() as c:
             self.assertEqual(c.execute("select count(*) from space where id='sample'").fetchone()[0], 1)
+            self.assertEqual(c.execute("select count(*) from new_deck_draft where space_id='sample'").fetchone()[0], 1)
             self.assertEqual(c.execute("select count(*) from audit.change_set").fetchone()[0], self.changes_before)
         self.assertEqual(self.pending(), [])
         for relative, raw in self.originals.items():
@@ -145,6 +153,8 @@ class RemovalApplyTests(db_support.DbTestCase):
             self.assertEqual(c.execute("select count(*) from space where id='sample'").fetchone()[0], 0)
             self.assertEqual(c.execute("select count(*) from deck_revision where split_part(deck_id,'/',1)='sample'")
                              .fetchone()[0], 0)
+            self.assertEqual(c.execute("select count(*) from deck_draft").fetchone()[0], 0)
+            self.assertEqual(c.execute("select space_id from new_deck_draft").fetchall(), [("other",)])
             revision, updated, by, ids, content = c.execute("select revision,updated_on,updated_by,deck_ids,content "
                                                            "from play_record where id=%s", ("a" * 32,)).fetchone()
             self.assertEqual(revision, 2)

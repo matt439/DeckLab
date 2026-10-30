@@ -266,7 +266,11 @@
 .token-need-made { color: var(--ink-2); font-size: var(--fs-sm); }
 .token-need-made details { display: inline; }
 .token-need-made summary { display: inline; color: var(--link); }
+.token-counters { list-style: none; padding: 0; margin: 0; display: grid; gap: var(--s-1); }
+.token-counter small { display: block; overflow-wrap: break-word; }
+.token-need-side { color: var(--ink-2); font-size: var(--fs-sm); font-style: italic; }
 .token-need-state .status { white-space: normal; }
+.token-need-forge { color: var(--ink-2); }
 .token-grab { list-style: none; padding: 0; margin: 0; font-size: var(--fs-sm); display: grid; gap: 2px; }
 .token-grab li { overflow-wrap: break-word; }
 .token-grab small { display: block; color: var(--ink-2); font-size: var(--fs-sm); }
@@ -469,7 +473,8 @@ table.data tfoot .total-cost { font-weight: var(--fw-semibold); text-align: left
 .deck-considering-row .menu-button { min-width: var(--tap); justify-content: center; }
 .deck-considering-row .menu-caret { display: none; }
 .deck-considering-row .menu { top: calc(100% + var(--s-1)); right: 0; }
-/* EDHREC ideas (deck-edhrec.js): the filters wrap on a phone, and each category's rows sit under its heading. */
+/* EDHREC ideas (deck-edhrec.js): the filters wrap on a phone, the Page choice stays narrow, and each category's rows sit under its heading. */
 .edhrec-filters { flex-wrap: wrap; margin: var(--s-2) 0; }
+.edhrec-page .field { max-width: 24rem; margin-bottom: var(--s-2); }
 .edhrec-group h3 { margin-top: var(--s-4); }
 .edhrec-row > .btn { min-width: var(--tap); }

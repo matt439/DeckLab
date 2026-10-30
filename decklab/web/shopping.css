@@ -131,7 +131,12 @@
   font-size: var(--fs-sm); overflow-wrap: anywhere; min-width: 0; }
 .shop-snapshot small, .shop-snapshot-when { font-size: var(--fs-xs); }
 .shop-queue-row > .shop-snapshot { padding: 0 var(--s-3) var(--s-1); }
-.shop-q-price .shop-snapshot { justify-content: flex-end; text-align: right; margin-top: var(--s-1); }
+/* The lab table keeps Ref AUD on one line, the price and one snapshot marker; the full snapshot is in the extra row (E5-S26). */
+.shop-queue-table .shop-q-price { white-space: nowrap; }
+.shop-q-snap { display: inline-block; margin-left: var(--s-1); color: var(--ink-3); font-size: var(--fs-meta); cursor: help; }
+.shop-q-snap-in_stock { color: var(--good); }
+.shop-q-snap-out_of_stock { color: var(--warn-text); }
+.shop-q-snap-back { padding: 0 var(--s-1); border-radius: var(--r-sm); color: var(--good); background: var(--good-soft); box-shadow: inset 0 0 0 1px var(--good); }
 .shop-queue-back { box-shadow: inset 3px 0 0 var(--good); background: var(--good-soft); }
 .reprint-info { display: grid; gap: var(--s-1); min-width: 0; overflow-wrap: anywhere; }
 .shop-queue-row > .reprint-info { padding: var(--s-2) var(--s-3); }
@@ -145,14 +150,23 @@
 .reprint-copy input { max-width: 36em; width: 100%; }
 .shop-buying-slot { display: grid; gap: var(--s-6); min-width: 0; }
 .shop-buying-slot:empty { display: none; }
-.shop-missing-rows { display: grid; gap: var(--s-4); grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); }
-.shop-missing-card { min-width: 0; display: grid; align-content: start; gap: var(--s-2); }
-.shop-missing-card > .card-row { width: 100%; }
-.shop-missing-decks, .shop-missing-queue { margin: 0; padding-left: var(--s-5); }
-.shop-missing-decks a { display: inline-flex; align-items: center; min-height: var(--tap); }
-.shop-missing-queue p { margin: 0; }
-.shop-missing-queue li + li { margin-top: var(--s-2); }
+.shop-missing-rows { display: grid; gap: var(--s-3) var(--s-5); grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); }
+.shop-missing-card { min-width: 0; display: grid; align-content: start; gap: var(--s-1); padding-bottom: var(--s-3);
+  border-bottom: 1px solid var(--border); }
+.shop-missing-card > .card-row { width: 100%; border-bottom: 0; }
+/* The decks and facts sit under the name, past the thumbnail and count. */
+.shop-missing-card > :not(.card-row) { margin-left: calc(40px + var(--s-3)); }
+.shop-missing-decks { display: flex; flex-wrap: wrap; gap: 0 var(--s-1); margin: 0; padding: 0; list-style: none; font-size: var(--fs-sm); }
+.shop-missing-decks li:not(:last-child)::after { content: ","; color: var(--ink-2); }
+.shop-missing-count { color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.shop-missing-facts { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-1) var(--s-2); font-size: var(--fs-sm); }
+.shop-missing-facts:empty { display: none; }
+.shop-missing-facts .shop-snapshot { display: contents; }     /* its words, link and date flow beside the pill */
+.shop-missing-queue { margin: 0; padding: 0; list-style: none; display: grid; gap: var(--s-1); font-size: var(--fs-sm); color: var(--ink-2); }
+.shop-missing-queue li { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-1) var(--s-2); }
 .shop-missing-queue .shop-reference { text-align: left; }
+@media (pointer: coarse) { .shop-missing-decks a { display: inline-flex; align-items: center; min-height: var(--tap); } }
+@media (max-width: 599px) { .shop-missing-card > :not(.card-row) { margin-left: 0; } }
 .shop-match-slot:empty { display: none; }
 .shop-match-slot > .shop-clear-match { max-width: 100%; text-align: left; overflow-wrap: anywhere; }
 .shop-store-choices { display: grid; min-width: 0; margin: 0; padding: 0; border: 1px solid var(--border); border-radius: var(--r-panel);
@@ -268,7 +282,7 @@ table.shop-queue-table .shop-queue-lab-row > td { border-bottom: 0; box-shadow: 
 .shop-queue-table .shop-q-head-printing { width: 156px; }
 .shop-queue-table .shop-q-head-for { width: 90px; }
 .shop-queue-table .shop-q-head-qty { width: 40px; }
-.shop-queue-table .shop-q-head-price { width: 65px; }
+.shop-queue-table .shop-q-head-price { width: 88px; }
 .shop-queue-table .shop-q-head-shop { width: 80px; }
 .shop-queue-table .shop-q-head-stock { width: 90px; }
 .shop-queue-table .shop-q-head-checked { width: 86px; }

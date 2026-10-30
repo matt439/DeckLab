@@ -216,9 +216,9 @@ class AssemblyTests(PreparationCase):
         result = self.preview(("a", "target"))
         self.assertEqual([(t["front"], t["quantity"], t["key"]) for t in result["tokens"]], [("Dog", 2, "2")])
         self.assertEqual(len(result["token_problems"]), 2)
-        self.assertIn("magic/tokens.csv lacks the printing columns; fix the header by hand before the Tokens "
+        self.assertIn("The home token cards lack the printing columns; fix the header by hand before the Tokens "
                       "page can save", result["token_problems"])
-        self.assertTrue(result["token_problems"][1].startswith("magic/tokens.csv line 3: "))
+        self.assertTrue(result["token_problems"][1].startswith("A row after row 1 of the home token cards: "))
         self.assertEqual(assembly.assembly_view()["tokens"][0]["front"], "Dog")
 
     def test_empty_plan_is_not_ready(self):
@@ -361,7 +361,9 @@ class AssemblyTokenTests(PreparationCase):
         first, second = result["decks"]
         undecorated = {**first["tokens"], "needs": [
             {key: value for key, value in need.items() if key != "packing_key"} for need in first["tokens"]["needs"]]}
-        self.assertEqual(undecorated, tokens.deck_tokens(decks.load_deck("casual/a", "target"), inv, inc))
+        expected = tokens.deck_tokens(decks.load_deck("casual/a", "target"), inv, inc)
+        expected.pop("counters", None)          # the plan leaves the counters and dice out (E7-S24)
+        self.assertEqual(undecorated, expected)
         self.assertTrue(all(len(need["packing_key"]) == 64 for need in first["tokens"]["needs"]))
         self.assertEqual([n["name"] for n in second["tokens"]["needs"]], ["Rabbit"])     # the owned-only list
         insect = next(n for n in first["tokens"]["needs"] if n["key"] == INSECT)

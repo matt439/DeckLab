@@ -3,7 +3,7 @@ patched to a made-up address book and the opener's HTTP and HTTPS handlers are
 replaced by ones that answer from a dict, so redirects, error statuses and
 Content-Length still go through urllib's real handlers.
 
-Run from the repo root: python -m unittest decklab.tests.test_accessory_fetch
+Run from the repo root: python scripts/test_fixtures.py decklab.tests.test_accessory_fetch
 """
 import email.message
 import io

@@ -28,6 +28,7 @@
  * its quantity ("merged"). An import is previewed first (problems listed, plain basics left out), then
  * added in one change. "Add a precon" (lib/api/precons.py)
  * finds a published precon, previews its cards, then adds them and makes its built deck in one go.
+ * "Scan cards" (collection-scan.js) reads photos of cards on the PC into a pending list for the import preview.
  * "Record a trade" (collection-trade.js) saves the copies that left and the cards that came in as one change.
  * "Precons we could build" (precon-coverage.js) ranks precons by how much of each the free pool covers. */
 "use strict";
@@ -286,7 +287,7 @@ async function downloadCollection(cv) {
 }
 
 /** The head of both views: the title with Add card (where the visitor may change this collection) and
- * More (Import cards, Add a precon, Precons we could build, Record a trade, Download, Packing plan), then the space picker and Find cards / Card list. */
+ * More (Import cards, Scan cards, Add a precon, Precons we could build, Record a trade, Download, Packing plan), then the space picker and Find cards / Card list. */
 function colHead(cv, query) {
   const spaces = sortSpaces(Array.isArray(cv.data.spaces) && cv.data.spaces.length ? cv.data.spaces : spaceList())
     .filter((s) => seesInventory(s.id));
@@ -299,6 +300,7 @@ function colHead(cv, query) {
   const owner = cv.space === HOME_SPACE ? "the people of the home collection" : spaceName(cv.space);
   const more = [
     cv.editable ? { label: "Import cards…", onclick: () => openImportSheet(cv) } : null,
+    cv.editable && !cv.unsupported ? { label: "Scan cards…", onclick: () => openScanSheet(cv) } : null,
     cv.editable ? { label: "Add a precon…", onclick: () => openPreconSheet(cv) } : null,
     cv.unsupported ? null : { label: "Precons we could build…", onclick: () => openCoverageSheet(cv) },
     cv.editable && !cv.unsupported ? { label: "Record a trade…", onclick: () => openTradeSheet(cv) } : null,
@@ -787,7 +789,7 @@ async function previewImport(ctx, filename, text) {
   ctx.groupReview = null;
   clear(ctx.area);
   clear(ctx.message).append(loadingBox(`Reading ${filename}…`));
-  sheetActions(ctx.sheet, [{ text: "Cancel", value: "cancel", onclick: () => ctx.sheet.close() }]);
+  sheetActions(ctx.sheet, [{ text: "Cancel", value: "cancel", onclick: () => ctx.sheet.close() }, colScanBack(ctx)]);
   try {
     const preview = await apiWrite("/api/collection/import/preview", { space: cv.space, filename, text });
     if (seq !== ctx.seq || ctx.sheet.closed || !colActive(cv)) return;
@@ -797,6 +799,7 @@ async function previewImport(ctx, filename, text) {
   } catch (error) {
     if (seq !== ctx.seq || ctx.sheet.closed || !colActive(cv)) return;
     clear(ctx.message).append(el("div", { class: "box box-crit", role: "alert" }, el("p", { text: error.message })));
+    sheetActions(ctx.sheet, [{ text: "Cancel", value: "cancel", onclick: () => ctx.sheet.close() }, colScanBack(ctx)]);
   }
 }
 
@@ -825,13 +828,14 @@ function drawImportPreview(ctx) {
         el("td", { text: r.name || "" }), el("td", { text: colPrinting(r) }),
         el("td", { text: r.condition || "–" }), el("td", { text: r.language || "–" })))))) : null]);
   const cards = adds.cards || 0;
-  const actions = [{ text: "Cancel", value: "cancel", onclick: () => ctx.sheet.close() }];
+  const actions = [{ text: "Cancel", value: "cancel", onclick: () => ctx.sheet.close() }, colScanBack(ctx)];
   if (cards > 0 && !problems.length) {
     actions.push({ text: `Import ${plural(cards, "card")}`, kind: "primary", value: "import", onclick: () => applyImport(ctx, false) });
   } else if (cards > 0) {
     actions.push({ text: `Skip ${plural(skip, "row")} with problems and import ${plural(cards, "card")}`, kind: "primary",
       value: "import", onclick: () => applyImport(ctx, true) });
-    ctx.area.append(el("p", { class: "sub", text: "Or fix the file and choose it again to import every row." }));
+    ctx.area.append(el("p", { class: "sub", text: ctx.scanned ? "Or go back to the scanned list to fix them and import every card."
+      : "Or fix the file and choose it again to import every row." }));
   } else {
     ctx.area.append(emptyBox("There's nothing in this file to add.", el("button", { type: "button", class: "btn",
       text: "Choose another file", onclick: () => { if (!ctx.busy && !ctx.sheet.closed) ctx.input.click(); } })));

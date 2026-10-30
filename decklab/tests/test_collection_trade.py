@@ -4,7 +4,9 @@ Elvish Mystic, 2 Llanowar Elves and Black Lotus). Both sides save as one change 
 naming them and the who-with note, and a "Traded" reason; copies built decks hold are named and
 refused without --allow-in-use; stale tables are named afterwards, as collection merge names them.
 
-Run from the repo root: python -m unittest decklab.tests.test_collection_trade
+Run from the repo root: python scripts/test_fixtures.py decklab.tests.test_collection_trade
+The fixture runner disables configured PostgreSQL and real Forge; named native
+runtime cases also need separate qualification (see AGENTS.md, Tests).
 (the database half skips without PostgreSQL; see db_support).
 """
 import argparse

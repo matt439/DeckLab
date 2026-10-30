@@ -4,7 +4,7 @@ install folders. The new install's games are changed where a test needs a differ
 command runs through a small filter (FILTER) that edits a line of its output, or sets FAKE_FORGE.
 No real Forge runs. The shared fixtures, setUpModule and tearDownModule stay in test_forge.
 
-Run from the repo root: python -m unittest decklab.tests.test_forge_engine_check
+Run from the repo root: python scripts/test_fixtures.py decklab.tests.test_forge_engine_check
 """
 import json
 import sys

@@ -3,7 +3,7 @@
 saved._is_result's wave 3 kinds (paired, experiment) and adaptive summaries. The run keywords
 themselves are tested with the fake Forge in test_forge_pool.py.
 
-Run from the repo root: python -m unittest decklab.tests.test_forge_runhooks
+Run from the repo root: python scripts/test_fixtures.py decklab.tests.test_forge_runhooks
 """
 import json
 import sys

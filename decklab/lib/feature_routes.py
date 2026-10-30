@@ -4,7 +4,9 @@
 Use the server's normal query, method and same-origin write guards. Each
 part of the API is imported when first asked for. A POST takes at most
 api.MAX_EDIT_BODY bytes, except routes with their explicit bound, including
-pod records (play_pods.MAX_BODY), import previews (collection_edit.MAX_IMPORT_BODY)
+pod records (play_pods.MAX_BODY), import previews (collection_edit.MAX_IMPORT_BODY), scanned photos
+(collection_scan.MAX_SCAN_BODY), editor drafts kept for later (deck_drafts.MAX_BODY), field choices
+(field_choices.MAX_BODY)
 and accessory saves with a local picture (accessories.MAX_SAVE_BODY).
 """
 
@@ -15,9 +17,37 @@ def _field_membership_view(**params):
     return membership_view(**params)
 
 
+def _field_choice_preview(body):
+    """Home's saved field choices (api/field_choices.py): a reviewed preview, writing nothing."""
+    from decklab.lib.api.field_choices import preview
+    return preview(body)
+
+
+def _field_choice_save(body):
+    from decklab.lib.api.field_choices import save
+    return save(body)
+
+
+def _sideboard_preview(**params):
+    """Load the sideboard preview, which reads Forge's paired-game budgets, only when asked for."""
+    from decklab.lib.api.sideboard_preview import preview_sideboard
+    return preview_sideboard(**params)
+
+
+def _sideboard_tests(**params):
+    """Load a sideboard plan's tests (api/sideboard_test.py, over Forge's variant tests) only when asked for."""
+    from decklab.lib.api.sideboard_test import sideboard_tests
+    return sideboard_tests(**params)
+
+
+def _start_sideboard_test(body):
+    from decklab.lib.api.sideboard_test import start_sideboard_test
+    return start_sideboard_test(body)
+
+
 def dispatch(handler, route, query):
-    from decklab.lib.api import (accessories, accessory_undo, activity, arrivals, activity_mixed_undo, activity_undo, assembly, assembly_completion, assembly_standins, assembly_ticks, box_check, box_repair, collection, compare, considering, collection_edit, collection_locations, collection_trade, cover, deck_printings, edhrec, editor, history,
-                                 library_forge, maintenance, opponents, play_pods, play_records, precon_coverage, precons, products, product_tokens, rankings, receipts, rename, retirement, shopping, shopping_order_changes, shopping_orders, shopping_queue, sideboard_preview, swaps, token_cards, token_plan, tokens, variant_queue, visits, wishlist_undo)
+    from decklab.lib.api import (accessories, accessory_undo, activity, arrivals, activity_mixed_undo, activity_undo, assembly, assembly_completion, assembly_standins, assembly_ticks, box_check, box_repair, collection, compare, considering, collection_edit, collection_locations, collection_scan, collection_trade, cover, deck_drafts, deck_printings, edhrec, editor, history,
+                                 library_forge, maintenance, opponents, play_pods, play_records, play_tonight, precon_coverage, precons, products, product_tokens, rankings, receipts, rename, retirement, role_cards, shopping, shopping_order_changes, shopping_orders, shopping_queue, shopping_queue_missing, swaps, token_cards, token_plan, tokens, variant_queue, visits, wishlist_undo)
     from decklab.lib.api.common import MAX_BODY
 
     gets = {
@@ -34,16 +64,23 @@ def dispatch(handler, route, query):
         ("assembly",): (assembly.assembly_view, ("deck", "version")),
         ("compare", "shared"): (compare.shared_view, ("a", "av", "b", "bv")),
         ("play",): (play_records.play_overview, ("id",)),
-        ("play", "sideboard-preview"): (sideboard_preview.preview_sideboard, ("id", "sha256")),
+        ("play", "sideboard-preview"): (_sideboard_preview, ("id", "sha256")),
+        ("play", "sideboard-tests"): (_sideboard_tests, ("id", "sha256")),
+        ("play", "pairs"): (play_tonight.pairs_view, ()),
         ("deck", "history"): (history.deck_history, ("id",)),
         ("deck", "retire"): (retirement.retirement_view, ("id",)),
         ("deck", "rename"): (rename.rename_view, ("id",)),
         ("deck", "find"): (editor.find_cards, ("q", "scope", "colors", "type", "mv", "id", "space", "limit", "page")),
         ("deck", "revision"): (history.deck_revision, ("id", "revision", "version")),
         ("deck", "swaps"): (swaps.suggest_swaps, ("id", "version", "card")),
+        ("deck", "replacements"): (swaps.suggest_replacements, ("id", "version", "card")),
+        ("deck", "dual-lands"): (swaps.suggest_dual_lands, ("id", "version")),
+        ("deck", "role-cards"): (role_cards.role_cards, ("id", "version")),
         ("deck", "cards"): (cover.cover_cards, ("id",)),
         ("deck", "opponents"): (opponents.opponents_view, ("id",)),
-        ("deck", "edhrec"): (edhrec.edhrec_view, ("id",)),
+        ("deck", "draft"): (deck_drafts.draft_view, ("id", "version")),
+        ("deck", "new-draft"): (deck_drafts.new_draft_view, ("space", "source")),
+        ("deck", "edhrec"): (edhrec.edhrec_view, ("id", "commander", "commander2", "space", "page")),
         ("receipt",): (receipts.receipt_view, ("order",)),
         ("arrivals",): (arrivals.arrivals_view, ()),
         ("rankings",): (rankings.rankings_view, ("format",)),
@@ -72,6 +109,7 @@ def dispatch(handler, route, query):
         ("play", "game"): play_records.save_game,
         ("play", "pod"): (play_pods.save_pod, play_pods.MAX_BODY),
         ("play", "sideboard"): play_records.save_sideboard,
+        ("play", "sideboard-test"): _start_sideboard_test,     # run.start (require_start), after the preview's checks
         ("receipt", "preview"): receipts.preview_receipt,
         ("receipt", "apply"): receipts.apply_receipt,
         ("arrivals", "dismiss"): arrivals.dismiss_arrivals,
@@ -80,6 +118,7 @@ def dispatch(handler, route, query):
         ("product", "token-cards"): product_tokens.save_product_tokens,
         ("shopping", "check"): shopping.resolve_check,
         ("shopping", "queue"): shopping_queue.save_queue_state,
+        ("shopping", "queue", "missing"): shopping_queue_missing.review_missing,     # a review: nothing is written
         ("variant", "queue", "preview"): variant_queue.preview_queue,
         ("variant", "queue"): variant_queue.apply_queue,
         ("shopping", "order", "preview"): shopping_orders.preview_order,
@@ -96,16 +135,21 @@ def dispatch(handler, route, query):
         ("collection", "locations", "bulk"): (collection_locations.bulk_set, collection_edit.MAX_BULK_BODY),
         ("collection", "import", "preview"): (collection_edit.import_preview, collection_edit.MAX_IMPORT_BODY),
         ("collection", "import", "apply"): collection_edit.import_apply,
+        ("collection", "scan"): (collection_scan.scan_photo, collection_scan.MAX_SCAN_BODY),     # nothing is written
         ("collection", "trade", "preview"): (collection_trade.preview_trade, collection_trade.MAX_TRADE_BODY),
         ("collection", "trade"): (collection_trade.save_trade, collection_trade.MAX_TRADE_BODY),
         ("precons", "add"): precons.add_precon,
         ("precons", "start"): precon_coverage.start_deck,
+        ("field", "policy", "preview"): (_field_choice_preview, 8192),     # a review: nothing is written
+        ("field", "policy"): (_field_choice_save, 8192),                  # field.edit: a home admin's
         ("deck", "cover"): cover.save_cover,
         ("deck", "token-cards"): token_cards.save_token_cards,
         ("deck", "printings"): deck_printings.save_printings,
         ("deck", "box-check"): box_check.save_box_check,
         ("deck", "box-repair"): box_repair.repair_box,
         ("deck", "opponents"): opponents.save_opponents,
+        ("deck", "draft"): (deck_drafts.save_draft, deck_drafts.MAX_BODY),     # the viewer's own; not audited
+        ("deck", "new-draft"): (deck_drafts.save_new_draft, deck_drafts.MAX_BODY),     # the same, for a new deck
         ("deck", "considering"): considering.save_considering,
         ("deck", "swaps"): swaps.suggest_draft_swaps,      # a dry run: nothing is written
         ("deck", "retire"): retirement.retire_deck,
@@ -120,7 +164,8 @@ def dispatch(handler, route, query):
         function, names = gets[key]
         params = handler._query(query, names)
         if "id" in names and key not in {("activity", "undo"), ("activity", "wishlist-undo"), ("activity", "accessory-undo"),
-                                         ("activity", "mixed-undo"), ("play", "sideboard-preview")}:
+                                         ("activity", "mixed-undo"), ("play", "sideboard-preview"),
+                                         ("play", "sideboard-tests")}:
             params["deck_id"] = handler._deck_id(params) if "id" in params else None
             params.pop("id", None)
         handler._send_json(200, function(**params))

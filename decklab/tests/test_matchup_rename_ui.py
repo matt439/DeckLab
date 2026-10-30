@@ -29,7 +29,7 @@ SETUP = r"""
     requests.push({url,signal:options.signal});return read(url,options);};
   apiWrite=async()=>{writes++;throw new Error('Read-only fixture');};
   runGate=()=>({may:false,why:'Fixture only'});runsAllowed=()=>false;noteRuns=()=>{};
-  const selected=()=>main.querySelector('#mu-deck-pick').querySelectorAll('option').find(option=>option.getAttribute('selected')!==null)?.getAttribute('value');
+  const selected=()=>main.querySelector('#mu-deck-pick')&&main.querySelectorAll('.deck-pick-option').find(option=>option.getAttribute('aria-selected')==='true')?.getAttribute('data-id');
   const played=()=>main.querySelectorAll('.mu-opponent-row').length;
   const open=(lib=library(),data=answer())=>{location.hash='#/matchups';drawMatchups(lib,data,new URLSearchParams(),routeToken);};
 """

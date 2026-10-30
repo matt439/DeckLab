@@ -10,7 +10,7 @@ real stop marker, record or logs, or starts a server: schtasks, control,
 the server's answer and _start_task are replaced (homenet_support.Guarded),
 and the record and the log go to the test's own folder.
 
-Run from the repo root: python -m unittest discover -s decklab/tests -t .
+Run from the repo root: python scripts/test_fixtures.py
 """
 import json
 import sys

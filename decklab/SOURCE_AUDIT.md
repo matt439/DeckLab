@@ -233,7 +233,7 @@ No household data or migration was changed, and no Forge games were run.
 | E11-S36 | `web/tokens.js`, 1,460 | Add/edit/conflict sheets, openTokenSheet through showTokenConflict |
 | E11-S37 | `web/editor-cards.js`, 1,137 | Paste/replace and Start from, apart from search/viewport setup |
 | E11-S38 | `lib/api/collection_edit.py`, 1,116 | CSV detection, conversion and upload parsing, apart from HTTP writes/previews |
-| E11-S39 | `lib/inventory/pg.py`, 1,133 | Table-row snapshot conversion, apart from cache/transaction/write coordination |
+| E11-S39 | `lib/inventory/pg.py`, 1,133 (1,002 after the split) | Table-row snapshot conversion, apart from cache/transaction/write coordination |
 | E11-S40 | `tests/test_inventory_contract.py`, 1,173; `tests/test_api_permissions.py`, 1,126 | Concrete test groups, apart from shared fixture/base support |
 
 Other large files include `web/editor.js` (1,188), `web/deck.js` (1,179),
@@ -314,13 +314,17 @@ Validate inventory contract goldens and disposable-database location, deck
 persistence and rollback cases; no golden changes should be needed for a
 behaviour-preserving split.
 
-Snapshot attempt status (2026-10-28): a temporary overlay moved only snapshot
-and _render, with retained/moved AST proofs and 10 of 11 focused fixture cases
-passing. Correcting the new test's multiline-note expectation was denied with
-Access denied before execution. The correction is stopped, its overlay is not
-applied, and active pg.py remains unchanged. No qualified split or live database
-acceptance is claimed; keep the preserved evidence rather than retrying through
-another route without materially new authorization.
+The snapshot split is built (2026-10-29, on Matt's go-ahead to finish it).
+_render, SELECTS, _select, _status_columns, _status_tables and snapshot moved
+unchanged to `lib/inventory/pg_snapshot.py` (167 lines); pg.py is 1,002 lines.
+pg re-exports the same objects and still calls them through its own globals,
+so patches of `pg._select` keep working; pg_snapshot imports nothing from pg.
+AST comparison accounts for all 6 moved and 27 retained top-level definitions
+(40 methods) with no differences. `test_inventory_pg_snapshot_module.py` holds
+six ownership, import-order, rendering, hidden-id and old-schema guards; 177
+focused fixture tests pass with no golden change. The 97 database-integration
+cases were skipped by the fixture runner: the disposable-database location,
+persistence and rollback qualification remains separate and unclaimed.
 
 ### Test support and discovery: E11-S40
 

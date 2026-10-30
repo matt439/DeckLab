@@ -6,7 +6,7 @@ conflicts, held keys, v1 copies, paired/ and experiment results stay.
 Results are made by hand as test_forge_replay's are (its save helper, real card_shas), in
 test_forge.py's made-up Forge folder.
 
-Run from the repo root: python -m unittest discover -s decklab/tests -t .
+Run from the repo root: python scripts/test_fixtures.py
 """
 import json
 from pathlib import Path

@@ -7,7 +7,7 @@ Names resolve against the fixture card index test_cards.py uses
 needs the network or the real data cache. The last tests check the real
 magic/products/status.csv.
 
-Run from the repo root: python -m unittest discover -s decklab/tests -t .
+Run from the repo root: python scripts/test_fixtures.py
 """
 import contextlib
 import csv
@@ -206,14 +206,14 @@ class CountingTests(PoolTestCase):
 
     def test_bad_quantity_raises(self):
         self.write("collection.csv", ",".join(CARD_COLUMNS) + "\nSol Ring,ecc,57,nonfoil,lots,NM,en,\n")
-        with self.assertRaisesRegex(ValueError, "line 2: bad quantity"):
+        with self.assertRaisesRegex(ValueError, "^Row 1 of the home collection: bad quantity 'lots'$"):
             pool.load_pool()
 
     def test_nonpositive_inventory_quantity_raises(self):
         for quantity in (0, -3):
             with self.subTest(quantity=quantity):
                 self.cards_csv("collection.csv", ("Sol Ring", "ecc", "57", "nonfoil", quantity))
-                with self.assertRaisesRegex(ValueError, "line 2: bad quantity"):
+                with self.assertRaisesRegex(ValueError, "Row 1 of the home collection: bad quantity"):
                     pool.load_pool()
                 self.assertEqual(pool.read_printings(inventory.current().collection()), {})
                 self.assertEqual(pool.printing_counts(), {})
@@ -221,7 +221,7 @@ class CountingTests(PoolTestCase):
     def test_blank_name_raises(self):
         self.write("collection.csv", ",".join(CARD_COLUMNS) + "\nSol Ring,ecc,57,nonfoil,1,NM,en,\n"
                    " ,ecc,58,nonfoil,1,NM,en,\n")
-        with self.assertRaisesRegex(ValueError, "line 3: no card name"):
+        with self.assertRaisesRegex(ValueError, "^Row 2 of the home collection: no card name$"):
             pool.load_pool()
 
 
@@ -275,9 +275,11 @@ class IncomingTests(PoolTestCase):
                    "deck,Wrath of God,8ed,58,nonfoil,1\ndeck,Swamp,tst,,nonfoil,30\n")
         self.status(("precon.csv", "preordered", ""))
         warnings = "\n".join(pool.load_pool().warnings)
-        self.assertIn("2026-09-29-merged.csv (order 2026-09-29-merged) is already in the collection", warnings)
-        self.assertIn("precon.csv (precon, preordered) is already in the collection", warnings)
+        self.assertIn("every card in order 2026-09-29-merged's cards is already in the collection", warnings)
+        self.assertIn("every card in product precon's card list (precon, preordered) is already in the collection",
+                      warnings)
         self.assertEqual(warnings.count(pool.RECEIVE_IT), 2)
+        self.assertNotIn("magic/", warnings)            # E11-S12: no old file names
         self.assertNotIn("orders/received/", warnings)
         self.assertNotIn("coming", warnings)
 
@@ -305,8 +307,9 @@ class IncomingTests(PoolTestCase):
         record("2026-10-05-extra", "Bought from eBay.", cards_part)
         record("2026-10-06-precon", None, precon_part)
         warnings = "\n".join(pool.load_pool().warnings)
-        self.assertIn("2026-10-05-extra.csv (order 2026-10-05-extra) is already in the collection", warnings)
-        self.assertIn("precon.csv (precon, preordered) is already in the collection", warnings)
+        self.assertIn("every card in order 2026-10-05-extra's cards is already in the collection", warnings)
+        self.assertIn("every card in product precon's card list (precon, preordered) is already in the collection",
+                      warnings)
 
         record("2026-10-05-extra", "Bought from eBay. Extra copies of owned printings: cards.", cards_part)
         record("2026-10-06-precon", "Extra copies of owned printings: precon.", precon_part)
@@ -332,10 +335,12 @@ class IncomingTests(PoolTestCase):
         loaded = pool.load_pool()
         self.assertEqual(dict(loaded.owned), {"Sol Ring": 1, "Wrath of God": 1})
         warnings = "\n".join(loaded.warnings)
-        for expected in ("2026-09-29-test.csv line 3: bad quantity 'x'; that row isn't counted",
-                         "precon.csv line 3: no card name", "precon.csv line 4: bad quantity 'one'",
-                         "2026-09-30-broken.csv can't be read, so its cards aren't counted"):
+        for expected in ("Row 2 of order 2026-09-29-test's cards: bad quantity 'x'; that row isn't counted",
+                         "Row 2 of product precon's card list: no card name",
+                         "Row 3 of product precon's card list: bad quantity 'one'",
+                         "Order 2026-09-30-broken's cards can't be read, so its cards aren't counted"):
             self.assertIn(expected, warnings)
+        self.assertNotIn(".csv", warnings)              # E11-S12: rows by number, never a file and line
         self.deck("a", "A", "idea", "Deck\n1 Sol Ring\n")
         self.assertEqual(self.check("casual/a")[1]["Sol Ring"]["missing"], 0)
 
@@ -377,9 +382,9 @@ class IncomingTests(PoolTestCase):
                     ("typo.csv", "preorder", "maybe"))
         loaded = pool.load_pool()
         text = "\n".join(loaded.warnings)
-        for expected in ("unlisted.csv isn't in products/status.csv", "lists gone.csv",
-                         "typo.csv has status 'preorder'", "typo.csv has intact 'maybe'",
-                         "early.csv is ordered: intact only counts once it's owned"):
+        for expected in ("Product unlisted has no status", "Product gone has a status but no card list",
+                         "Product typo's status is 'preorder'", "Product typo's status has intact 'maybe'",
+                         "Product early is ordered: intact only counts once it's owned"):
             self.assertIn(expected, text)
         self.assertEqual(loaded.owned["Sol Ring"], 1)     # only early.csv counts
         self.assertEqual(loaded.in_use, [])
@@ -395,7 +400,8 @@ class IncomingTests(PoolTestCase):
                          (True, "whole", "dragon-shield-matte-black", "red box"))
         self.assertEqual(statuses["loose.csv"].sleeves, "blue")
         self.assertEqual(len(warnings), 1)
-        self.assertIn("loose.csv has sleeves or a deck box but isn't owned and kept intact", warnings[0])
+        self.assertIn("Product loose's status has sleeves or a deck box but the product isn't owned and kept intact",
+                      warnings[0])
 
     def test_legacy_status_file_has_blank_kit_columns(self):
         self.status(("box.csv", "owned", "yes"))
@@ -408,7 +414,8 @@ class IncomingTests(PoolTestCase):
         (self.magic / "products" / "status.csv").unlink()
         self.product("box.csv", ("Elves", "Sol Ring", 1))
         loaded = pool.load_pool()
-        self.assertIn("status.csv is missing", loaded.warnings[0])
+        self.assertEqual("The products' status list is missing, so every product counts as owned and not intact",
+                         loaded.warnings[0])
         self.assertEqual((dict(loaded.owned), loaded.in_use), ({}, []))
 
 
@@ -501,7 +508,8 @@ class InUseTests(PoolTestCase):
         loaded = pool.load_pool()
         self.assertEqual(loaded.in_use, [])
         self.assertEqual(len(loaded.warnings), 1)
-        self.assertIn("box.csv can't be read: box.csv line 2: bad finish ''", loaded.warnings[0])
+        self.assertEqual("Product box's card list can't be read: Row 1 of product box's card list: bad finish ''",
+                         loaded.warnings[0])
 
     def test_idea_and_building_decks_hold_nothing(self):
         self.deck("b", "Deck B", "building", "Deck\n2 Sol Ring\n")
@@ -950,7 +958,7 @@ class CommandLineTests(PoolTestCase):
         self.write("collection.csv", ",".join(CARD_COLUMNS) + "\nSol Ring,ecc,57,nonfoil,lots,NM,en,\n")
         code, _, err = self.run_main()
         self.assertEqual(code, 1)
-        self.assertIn("line 2: bad quantity 'lots'", err)
+        self.assertIn("Row 1 of the home collection: bad quantity 'lots'", err)
 
 
 class ListNameMessageTests(unittest.TestCase):

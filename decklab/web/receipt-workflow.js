@@ -123,6 +123,7 @@ function rcptSync(view) {
   view.primary.disabled = !receiptEditable(view);
   const changed = view.preview && view.preview.key !== rcptRequestKey(view);
   view.stale.textContent = changed ? " · Changed since preview, preview again" : "";
+  rcptSyncBulk(view);
   rcptSyncLayout(view, p);
 }
 
@@ -181,14 +182,15 @@ function rcptClientBlockers(view) {
     }
     const selected = comp.rows.filter(row => row.ticked);
     if (!selected.length) out.push({ text: `${rcptTitle(comp.c, view.data)}: tick at least one card that arrived.`, comp, selection: true });
-    if (comp.kind === "tokens") {
-      for (const row of selected) {
-        if (rcptBackOpen(row)) out.push({ text: `${rcptRowName(comp, row)}: say what its back is, or that it's blank.`, comp, row });
-      }
-    }
-    comp.c.checks.forEach((text, i) => {
-      if (!comp.checks[i]) out.push({ text: `Check not ticked: ${text}`, target: comp.checkBoxes ? comp.checkBoxes[i] : null });
-    });
+    // Once per part, not once per row or check (E6-S27): each links to its first open row or check.
+    const backs = comp.kind === "tokens" ? selected.filter(row => rcptBackOpen(row)) : [];
+    if (backs.length === 1) out.push({ text: `${rcptRowName(comp, backs[0])}: say what its back is, or that it's blank.`, comp, row: backs[0] });
+    else if (backs.length) out.push({ text: `${rcptTitle(comp.c, view.data)}: say what ${backs.length} backs are, or that they're blank `
+      + `(${backs.map(row => rcptRowName(comp, row)).join(", ")}).`, comp, row: backs[0] });
+    const open = comp.c.checks.flatMap((text, i) => comp.checks[i] ? [] : [i]);
+    if (open.length) out.push({ text: open.length === 1 ? `Check not ticked: ${comp.c.checks[open[0]]}`
+      : `${rcptTitle(comp.c, view.data)}: ${open.length} checks not ticked: ${open.map(i => comp.c.checks[i]).join("; ")}`,
+    target: comp.checkBoxes ? comp.checkBoxes[open[0]] : null });
   }
   const today = view.data.today || rcptToday();
   if (!rcptValidDay(view.date.value)) out.push({ text: "Choose a valid arrival date.", date: true });
@@ -436,7 +438,7 @@ function rcptSuccess(view, answer) {
     description: `${view.data.seller || view.data.order} · arrived ${rcptDate(view.date.value)}` }),
   el("div", { class: "box box-good rcpt-recorded", role: "status" },
     el("h2", { text: rcptAddedWords(answer.totals) }), rcptOutcome(answer.totals)),
-  rcptWhereTheyGo(view, received), rcptAssignments(answer, true),
+  rcptWhereTheyGo(view, received, answer.readiness), rcptAssignments(answer, true),
   answer.remaining?.length ? el("p", { text: `Still on the way: ${answer.remaining.map(part => `${part.id} (${part.quantity})`).join(", ")}. Unticked cards are still pending.` }) : null,
   tables,
   el("div", { class: "actions rcpt-after" },
@@ -457,8 +459,9 @@ function rcptAddedWords(totals) {
 }
 
 /** "Where these go": the decks that count on these cards (by deck, with its sleeves when you see them), then the
- * rest to storage; token cards to the token box; a product as its own deck(s) or into storage. */
-function rcptWhereTheyGo(view, received) {
+ * rest to storage; token cards to the token box; a product as its own deck(s) or into storage. readiness is
+ * apply's {deck id: {missing, coming}} after the receipt (E6-S26): each deck's Ready to build or Still N to get. */
+function rcptWhereTheyGo(view, received, readiness) {
   const decks = new Map(), storage = [], unknown = [], basics = [], parts = [];
   const kits = view.data.kits || {};
   for (const item of rcptDestinationAdvice(view, received)) {
@@ -494,7 +497,7 @@ function rcptWhereTheyGo(view, received) {
       el("h3", {}, rcptDeckLink(deck)),
       kits[deck.id] && kits[deck.id].sleeves ? el("p", { class: "sub", text: `Sleeve them in ${kits[deck.id].sleeves}.` })
         : deck.status === "built" ? null : el("p", { class: "sub", text: `${STATUS_WORDS[deck.status] || "Idea"}: keep them with its cards.` }),
-      lines(cards)))));
+      rcptReadyLine(deck, readiness), lines(cards)))));
   }
   if (storage.length) {
     out.push(el("div", { class: "panel rcpt-where" }, el("h3", { text: "To storage" }),
@@ -507,6 +510,19 @@ function rcptWhereTheyGo(view, received) {
     el("h3", { text: "Basic lands" }),
     el("p", { class: "sub", text: "Basic-land deck destinations are not tracked." }), lines(basics)));
   return [...out, ...parts];
+}
+
+/** One deck's Planned list after the receipt: "Ready to build" (to the Packing plan), "Ready once N cards
+ * arrive" or "Still N to get". Nothing when the answer has no counts for it (not refreshed, unconfirmed, or a
+ * viewer without home's inventory). */
+function rcptReadyLine(deck, readiness) {
+  const r = readiness && Object.prototype.hasOwnProperty.call(readiness, deck.id) ? readiness[deck.id] : null;
+  if (!r || !Number.isSafeInteger(r.missing) || !Number.isSafeInteger(r.coming) || r.missing < 0 || r.coming < 0) return null;
+  if (r.missing > 0) return el("p", { class: "rcpt-where-ready is-short", text: `Still ${num(r.missing)} to get` +
+    (r.coming ? ` · ${plural(r.coming, "card")} on the way` : "") });
+  if (r.coming > 0) return el("p", { class: "rcpt-where-ready", text: `Ready once ${plural(r.coming, "card")} ${r.coming === 1 ? "arrives" : "arrive"}` });
+  return el("p", { class: "rcpt-where-ready is-ready" }, el("a", { href: `#/assembly?deck=${encodeURIComponent(deck.id)}`,
+    text: deck.status === "built" ? "Every card is here: Packing plan" : "Ready to build" }));
 }
 
 const TABLE_SKIPS = { changed: "the receipt changes it itself", kit: "its Sleeves or Deck box would change" };

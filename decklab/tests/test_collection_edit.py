@@ -7,7 +7,7 @@ stay in the sandbox. Each write's message, actor, reason and extra lines are
 recorded (last_write(), reason(), extra()). config.REPO points there too, so the inventory lock
 and revision are the sandbox's. Cards resolve against the fixture card index.
 
-Run from the repo root: python -m unittest decklab.tests.test_collection_edit
+Run from the repo root: python scripts/test_fixtures.py decklab.tests.test_collection_edit
 """
 import hashlib
 import json

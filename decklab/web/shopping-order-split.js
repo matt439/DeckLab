@@ -36,7 +36,7 @@ function shopOrderSplitSheet(order, component, view) {
   form.append(el("label", {class: "field", for: name.id}, el("span", {text: "New part name"}), name),
     el("p", {class: "field-hint", text: "Use lowercase letters, numbers and single hyphens, for example second-parcel. The name must be unused in this order."}));
   if (component.extra_copies) form.append(el("p", {class: "note note-warn",
-    text: "The original part is confirmed as additional physical copies. The new part will not have that confirmation and may need its own. Review any preview warnings before saving. After splitting, use Edit order… > Confirm additional copies… for the new part."}));
+    text: "The original part is confirmed as additional physical copies. The new part will keep that confirmation too. If either part isn't additional copies after splitting, use Edit order… > Unmark additional copies… for that part."}));
   component.edit_rows.forEach((row, index) => {
     const section = el("section", {class: "shop-order-section", "data-order-split-row": index}),
       title = row.name || [row.front, row.back].filter(Boolean).join(" // "),

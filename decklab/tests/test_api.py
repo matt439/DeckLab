@@ -19,7 +19,7 @@ per sandbox (Sandbox.state), with simulations open to everyone, and the
 inventory backend (decklab.lib.inventory) is a FileInventory over the
 sandbox's own tree (Sandbox.inventory).
 
-Run from the repo root: python -m unittest discover -s decklab/tests -t .
+Run from the repo root: python scripts/test_fixtures.py
 Deck pages are tested in test_api_decks.py; practice hands, search and images in
 test_api_practice.py. Sandbox fixtures and status/profile tests remain here.
 """
@@ -261,6 +261,8 @@ class FakeForge(types.ModuleType):
         self.clock = 0
         self.held = 0                   # blocks in self.engine.held() entered
         self.engine = types.SimpleNamespace(held=self._held, auto_profile_flag=self._auto_profile_flag)
+        # The deck page's suggested token counts (E7-S08): no saved game counted any (test_token_peaks has them).
+        self.tokenpeaks = types.SimpleNamespace(list_token_peaks=lambda sections, kind, keep=None: None)
 
     @contextlib.contextmanager
     def _held(self):
@@ -452,7 +454,7 @@ class FakeForge(types.ModuleType):
         return {"cannot_play": dead, "commander_unplayable": False, "team_pump": None, "unknown": [],
                 "problem": None, "games": games}
 
-    def list_ai(self, sections, kind, results_dir=None, *, keep=None):
+    def list_ai(self, sections, kind, results_dir=None, pilot=None, *, keep=None):
         # As in forge.list_ai: "games" adds up every saved result's games with this list (a mirror's twice).
         return self.ai_limits(sections, kind, [r for r in self._stored() if keep is None or keep(r)])
 

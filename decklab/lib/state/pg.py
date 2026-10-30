@@ -786,6 +786,36 @@ class PgStore:
         from . import pg_field_policy
         return pg_field_policy.apply(self, fmt, expected_revision, expected_proof, rule, actor, message, reason)
 
+    def field_policy_review(self, fmt, deck_id, version):
+        """One current list's reviewed proof, from a read-only transaction; writes nothing."""
+        from . import pg_field_policy
+        return pg_field_policy.review(self, fmt, deck_id, version)
+
+    # ------------------------------------------------------------------ editor drafts kept for later
+
+    def deck_draft(self, profile_id, deck_id, version):
+        """One profile's draft of one deck list (pg_deck_drafts.get; deck_drafts.view's shape).
+        Not cached; deck_drafts.MissingSchema before migration 0018."""
+        from . import pg_deck_drafts
+        return pg_deck_drafts.get(self, profile_id, deck_id, version)
+
+    def deck_draft_put(self, profile_id, deck_id, version, content, expected_revision, *, device=""):
+        """Save (content) or discard (None) that draft after checking its revision: not audited,
+        never in a batch (pg_deck_drafts.put)."""
+        from . import pg_deck_drafts
+        return pg_deck_drafts.put(self, profile_id, deck_id, version, content, expected_revision, device=device)
+
+    def new_deck_draft(self, profile_id, space_id, source):
+        """One profile's draft of a new deck in a space (pg_deck_drafts.new_get): as deck_draft,
+        before migration 0019 deck_drafts.MissingSchema."""
+        from . import pg_deck_drafts
+        return pg_deck_drafts.new_get(self, profile_id, space_id, source)
+
+    def new_deck_draft_put(self, profile_id, space_id, source, content, expected_revision, *, device=""):
+        """Save or discard that draft after checking its revision, as deck_draft_put."""
+        from . import pg_deck_drafts
+        return pg_deck_drafts.new_put(self, profile_id, space_id, source, content, expected_revision, device=device)
+
     # ------------------------------------------------------------------ the household's Commander night
 
     @staticmethod

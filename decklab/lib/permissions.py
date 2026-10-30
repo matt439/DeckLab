@@ -146,6 +146,8 @@ Actions and their targets:
     "simulations.edit" no target
     "commander_night.edit" no target: a home admin, or an unnamed script
     "members.edit"     no target: an explicitly named home admin (private Settings panel)
+    "field.edit"       no target: home's saved field choices (E3-S23), a home admin's, or an
+                       unnamed script's; the refusal names nobody
 
     from decklab.lib import permissions
     permissions.can(profile, "deck.edit", summary, script=False)
@@ -171,7 +173,7 @@ OWN_ACTIONS = ("wishlist.edit", "settings.edit")
 ADMIN_ACTIONS = ("receipts.apply", "products.edit", "orders.edit")
 ACTIONS = (DECK_ACTIONS + SPACE_ACTIONS + OWN_ACTIONS + ADMIN_ACTIONS
            + ("accessories.edit", "deck.create", "play.record", "run", "run.start", "run.stop",
-              "simulations.edit", "commander_night.edit", "members.edit"))
+              "simulations.edit", "commander_night.edit", "members.edit", "field.edit"))
 RUN_MODES = ("everyone", "admins", "paused")    # the simulations setting (lib/api/simulations.py)
 RUNS_PAUSED = "Simulations are paused for now, while the PC is busy. Saved results still show; try again later."
 RUNS_ADMINS = "Only an admin can start simulations right now. Saved results still show."
@@ -180,6 +182,7 @@ RUNS_STOP_ADMINS = "You can stop a run you started or one using a deck from your
 # simulations ones above no admin (E10-S34, decision F).
 ACCESSORIES_PRIVATE = "The sleeves, deck boxes and playmats are private."
 COMMANDER_NIGHT_PRIVATE = "Commander-night notes are private."
+FIELD_EDIT_ADMINS = "Only an admin can change who's in the field."
 SHARED = "shared"               # lib/accessories.py's SHARED: the owner of what every home profile uses
 
 _ADMIN_WORDS = {"receipts.apply": "receipts", "products.edit": "products", "orders.edit": "orders"}
@@ -399,6 +402,10 @@ def reason(profile, action, target=None, *, script=False):
         if not sees_commander_night(profile, script=script):
             return COMMANDER_NIGHT_PRIVATE
         return None if is_admin(profile, script=script) else "Only a home admin can change Commander-night notes."
+    if action == "field.edit":
+        if not profile:
+            return None if script else "Choose who you are first."
+        return None if profile.get("role") == "admin" and _space_of(profile) == HOME else FIELD_EDIT_ADMINS
     if action == "accessories.edit":
         owners = accessory_owners(profile, script=script)
         if owners is None or owners:

@@ -15,7 +15,7 @@ lib/api/cover.py) and the card images the library and card viewer use (large, ar
 
 Each API test runs in test_api's Sandbox (its files backend, the fixture card index).
 
-Run from the repo root: python -m unittest decklab.tests.test_cover
+Run from the repo root: python scripts/test_fixtures.py decklab.tests.test_cover
 """
 import unittest
 import urllib.error

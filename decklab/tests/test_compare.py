@@ -8,7 +8,7 @@ in the preordered precon. Nothing is written.
 PrivacyTests runs as real profiles (test_deck_privacy_readers' sandbox, with user2's own deck), and
 SharedHttpTests checks the route's query names.
 
-Run from the repo root: python -m unittest decklab.tests.test_compare
+Run from the repo root: python scripts/test_fixtures.py decklab.tests.test_compare
 """
 import json
 import unittest

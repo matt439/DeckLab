@@ -7,7 +7,7 @@ operation (register(kind, refresh=True), refresh.in_op).
 The round trip reads the deck parts of the phase 4 golden commit (gate.GOLDEN_REV_P4) from git's
 blobs; it skips in a clone without that commit.
 
-Run from the repo root: python -m unittest decklab.tests.test_inventory_decks
+Run from the repo root: python scripts/test_fixtures.py decklab.tests.test_inventory_decks
 """
 import hashlib
 import shutil

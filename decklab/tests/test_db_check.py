@@ -4,7 +4,9 @@ and decks, a broken invariant failing its sub-check (and the run), the deck tabl
 the run recorded in ops.backup_run (kind 'check', migration 0007) and --history. They skip
 without a database (db_support.py); db.log goes to a temporary file (decklab/tests/__init__.py).
 
-Run from the repo root: python -m unittest decklab.tests.test_db_check
+Run from the repo root: python scripts/test_fixtures.py decklab.tests.test_db_check
+The fixture runner disables configured PostgreSQL and real Forge; named native
+runtime cases also need separate qualification (see AGENTS.md, Tests).
 """
 import io
 import json

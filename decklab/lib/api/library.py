@@ -17,6 +17,7 @@ import traceback
 from datetime import timezone
 
 from decklab.lib import cards, decks, inventory, pool, spaces
+from decklab.lib.inventory import paths as inventory_paths
 from decklab.lib.decks.identity import COLOR_ORDER, deck_colors
 
 from . import common, guard
@@ -145,15 +146,26 @@ def visible_place(where, sees=None, records=None):
     return (guard.deck_reader() if sees is None else sees)(where)
 
 
+def place_words(where):
+    """A pool place (an inventory source's path) in the database's words (paths.describe,
+    E11-S12), a payload by the order and component whose record holds it ("order x's additions"),
+    which its file name doesn't always say."""
+    where = str(where)
+    found = inventory_paths.classify(where)
+    owners = inventory_paths.payload_owners(inventory.current().orders) if found and found[0] == "payload" else None
+    return inventory_paths.describe(where, owners)
+
+
 def visible_unresolved(unresolved, sees=None, records=None):
     """{name: [places]} of a pool's unknown card names (pool.Pool.unresolved), keeping only
     the places this request may be told (visible_place) and the names left with any, so no
-    card of a deck it can't see is named (E10-S29)."""
+    card of a deck it can't see is named (E10-S29). A place is checked by its path, then given
+    in the database's words ("the home collection", "order x's cards": paths.describe, E11-S12)."""
     sees = guard.deck_reader() if sees is None else sees
     records = guard.sees_home_records() if records is None else records
     out = {}
     for name, places in unresolved.items():
-        shown = sorted(str(w) for w in places if visible_place(w, sees, records))
+        shown = sorted(place_words(w) for w in places if visible_place(w, sees, records))
         if shown:
             out[name] = shown
     return out
@@ -202,7 +214,7 @@ def _deck_sections(deck_id, version):
     _require_cards()
     summary = _scrub_summary(dict(_find_summary(deck_id)))
     if summary.get("error"):
-        raise ApiError(500, f"{summary['source']} can't be read: {summary['error']}")
+        raise ApiError(500, f"{inventory_paths.place(summary['source'])} can't be read: {summary['error']}")
     if version not in summary["versions"]:
         raise ApiError(404, f"{summary['title']} has no {version} list")
     try:
@@ -210,7 +222,7 @@ def _deck_sections(deck_id, version):
     except decks.DeckNotFound as e:
         raise ApiError(404, _public(e)) from None
     except (decks.DeckFileError, OSError) as e:
-        raise ApiError(500, f"{summary['source']} can't be read: {_public(e)}") from None
+        raise ApiError(500, f"{inventory_paths.place(summary['source'])} can't be read: {_public(e)}") from None
     try:
         target = sections if version == "target" else decks.load_deck(summary["id"], "target")
     except (decks.DeckNotFound, decks.DeckFileError, OSError):

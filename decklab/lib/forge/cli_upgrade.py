@@ -8,7 +8,16 @@ would (each matchup's games and a rough time). It writes nothing its steps don't
 notes its result (simjar.record_checked or record_failed) as it does on its own, and the
 overrides check only reads (overrides make, which writes the files again, stays a step of its
 own). It never replays anything. --plan TAG prints the manual steps that come before it (rebase,
-build, install) and runs nothing."""
+build, install) and runs nothing.
+
+--dir DIR (E11-S45) runs the same three steps against a staged build in a scratch folder before it
+is installed: Forge is set up from DIR without noting its version (install._setup, remember False),
+cardlog-check notes nothing either way (no record_checked or record_failed, so the installed
+build's record never changes), the overrides check reads DIR's card scripts, and the summary names
+DIR. Only cardlog-check and serve-check decide whether to install it (STAGED_BLOCKING): an override
+that no longer fits the new scripts is expected after a release and is made again with overrides
+make after the install (it reads the installed build's scripts only), so the staged summary says
+so instead of stopping the install. What needs replaying is left to the check after the install."""
 import argparse
 import contextlib
 
@@ -20,6 +29,7 @@ from . import cli_shared as shared
 
 UPGRADE_STEPS = ("cardlog-check", "serve-check", "overrides check")
 PASSED, FAILED, SKIPPED = "passed", "failed", "skipped"
+STAGED_BLOCKING = ("cardlog-check", "serve-check")     # --dir: the steps whose failure means don't install
 
 
 class _Tee:
@@ -83,34 +93,38 @@ def _run_step(name, command, args, reason):
     return FAILED, reason(tee.lines(), code), False
 
 
-def _steps():
+def _steps(forge_dir=None):
     """The steps as (name, the command's function, its args, the reason for a failure), read
-    from their modules when called, so a test's patch of a command reaches them."""
+    from their modules when called, so a test's patch of a command reaches them. forge_dir (a
+    staged build, --dir) goes to each step as its args' forge_dir; None is the installed build."""
     from . import servecheck
     return [
         ("cardlog-check", checks._cmd_cardlog_check,
-         argparse.Namespace(games=checks.CHECK_GAMES, commander_games=checks.CHECK_COMMANDER_GAMES), _first_line),
+         argparse.Namespace(games=checks.CHECK_GAMES, commander_games=checks.CHECK_COMMANDER_GAMES,
+                            forge_dir=forge_dir), _first_line),
         ("serve-check", checks._cmd_serve_check,
-         argparse.Namespace(games=servecheck.GAMES, commander_games=servecheck.COMMANDER_GAMES, v1=False),
-         _first_line),
+         argparse.Namespace(games=servecheck.GAMES, commander_games=servecheck.COMMANDER_GAMES, v1=False,
+                            forge_dir=forge_dir), _first_line),
         ("overrides check", commands._cmd_overrides,
-         argparse.Namespace(action="check", set_name=None, user_dir=None, sets=None, json=False), _overrides_reason),
+         argparse.Namespace(action="check", set_name=None, user_dir=None, sets=None, json=False,
+                            forge_dir=forge_dir), _overrides_reason),
     ]
 
 
-def upgrade_check():
+def upgrade_check(forge_dir=None):
     """Run the steps (UPGRADE_STEPS) and return [(name, state, why)]. cardlog-check and
     serve-check are skipped when Forge can't be set up (install._setup), and serve-check when
     cardlog-check couldn't build the card log (which serve-check needs too), but not when it
-    failed after building it; the overrides check always runs."""
+    failed after building it; the overrides check always runs. forge_dir is --dir's staged
+    build, set up without noting its version."""
     try:
-        shared._setup()
+        checks._staged_setup(forge_dir)
         setup_problem = None
     except shared.ForgeError as e:
         setup_problem = f"Forge can't be started: {e}"
     found = []
     card_log_problem = None
-    for name, command, args, reason in _steps():
+    for name, command, args, reason in _steps(forge_dir):
         if name in ("cardlog-check", "serve-check") and setup_problem:
             found.append((name, SKIPPED, setup_problem))
             continue
@@ -152,9 +166,11 @@ def _print_replay():
               f"(until then it refuses: {log['problem']})")
 
 
-def _plan(tag):
-    """--plan: the manual steps of README.md's "Deck Lab's own Forge" for a new release, as text."""
-    return "\n".join([
+def _plan(tag, staged=None):
+    """--plan: the manual steps of README.md's "Deck Lab's own Forge" for a new release, as text,
+    with --dir's folder (staged) in place of <scratch folder> when given. The staged build's check
+    (step 5) comes before its install (step 6)."""
+    return "\n".join(line.replace("<scratch folder>", staged) if staged else line for line in [
         f"Moving Deck Lab's Forge onto {tag} (decklab/README.md, \"Deck Lab's own Forge\"). Nothing here is run "
         "for you:",
         f"  1. In C:\\VSProjects\\forge, rebase the decklab branch onto the tag {tag} (or merge it in) and fix any "
@@ -166,15 +182,19 @@ def _plan(tag):
         "--new <scratch folder> --pair <deck> <deck> ... A new release is always a different engine key, so exit "
         "1 with \"Different engine key\" and no \"Don't install this build as it is\" line is what to expect (0 or 3 "
         "if no game changed); only exit 2 (it couldn't run) or a \"Don't install\" line stops the upgrade.",
-        "  5. Merge it into decklab with git merge --ff-only on a clean working tree, run python decklab/install.py "
+        "  5. Check the scratch build before installing it: python -m decklab.lib.forge upgrade-check --dir <scratch "
+        "folder> (cardlog-check, serve-check and the overrides check against it; it notes nothing, so the installed "
+        "build's record stays as it was). A failed cardlog-check or serve-check stops the upgrade here; an "
+        "override that no longer fits doesn't, since step 7 makes it again after the install.",
+        "  6. Merge it into decklab with git merge --ff-only on a clean working tree, run python decklab/install.py "
         "there (it installs C:\\Tools\\forge-decklab), and confirm the installed decklab-build.txt's build= is the "
         "scratch build's.",
-        "  6. Here: python -m decklab.lib.forge upgrade-check (cardlog-check, serve-check and the overrides check, "
+        "  7. Here: python -m decklab.lib.forge upgrade-check (cardlog-check, serve-check and the overrides check, "
         "with what needs replaying). If an override no longer fits, overrides make makes it again from the new "
         "scripts: review its diff, then run upgrade-check again.",
-        "  7. Put the new version, build and simjar.source_sha256() in simjar.CHECKED, CHECKED_BUILDS and "
+        "  8. Put the new version, build and simjar.source_sha256() in simjar.CHECKED, CHECKED_BUILDS and "
         "CHECKED_SOURCE, so a fresh clone with that build installed has the card log on.",
-        "  8. On an idle PC: python -m decklab.lib.forge replay.",
+        "  9. On an idle PC: python -m decklab.lib.forge replay.",
     ])
 
 
@@ -184,23 +204,66 @@ def _upgrade_check_args(sub):
     check.add_argument("--plan", metavar="TAG",
                        help="print the manual steps before the check for this release tag (forge-2.0.16, say) "
                             "and run nothing")
+    check.add_argument("--dir", metavar="DIR",
+                       help="check the staged build in this scratch folder before installing it, noting nothing "
+                            "for the installed one")
+
+
+def _staged_dir(text):
+    """--dir's folder as a Path: _CliError when it's blank, isn't a folder, or is config's
+    forge_dir (the installed build, which upgrade-check without --dir checks and notes)."""
+    if not text.strip():
+        raise shared._CliError("--dir needs the folder the new build was put in (install.py --out).")
+    folder = shared.Path(text.strip())
+    if not folder.is_dir():
+        raise shared._CliError(f"There's no folder {folder}.")
+    try:
+        installed = shared.common._settings()["forge_dir"]
+    except Exception:           # a bad config.json: the setup's own check says so
+        installed = None
+    if installed and shared._same_folder(folder, installed):
+        raise shared._CliError(f"{folder} is the installed build: leave out --dir to check it.")
+    return folder
 
 
 def _cmd_upgrade_check(args):
     """upgrade-check: exit 0 only when every step passed (upgrade_check), 1 otherwise. --plan
-    prints _plan's text and exits 0."""
+    prints _plan's text (with --dir's folder) and exits 0. --dir checks a staged build
+    (_staged_dir), names it in the summary, leaves what needs replaying to the check after the
+    install, and exits 0 when the STAGED_BLOCKING steps passed: a failed overrides check is
+    then work for overrides make after the install, not a reason not to install."""
+    staged = getattr(args, "dir", None)
     if args.plan is not None:
         if not args.plan.strip():
             raise shared._CliError("--plan needs a release tag, such as forge-2.0.16.")
-        print(_plan(args.plan.strip()))
+        print(_plan(args.plan.strip(), staged.strip() if staged and staged.strip() else None))
         return 0
-    found = upgrade_check()
-    version = shared.install.forge_version()      # None when Forge was never found; never raises
-    print(f"\nUpgrade check{f' of Forge {version}' if version else ''}:")
+    folder = _staged_dir(staged) if staged is not None else None
+    found = upgrade_check(folder)
+    if folder is None:
+        version = shared.install.forge_version()      # None when Forge was never found; never raises
+        print(f"\nUpgrade check{f' of Forge {version}' if version else ''}:")
+    else:
+        version = shared.install._find_jar(folder)[1]     # never raises; notes nothing
+        print(f"\nUpgrade check of the staged build at {folder}{f' (Forge {version})' if version else ''}:")
     for name, state, why in found:
         print(f"  {name}: {state}" + (f": {why}" if why else ""))
-    _print_replay()
     missed = sum(state != PASSED for _, state, _ in found)
-    print("Every check passed." if not missed else
-          f"{missed} of {len(found)} checks didn't pass: fix what's above and run upgrade-check again.")
-    return 0 if not missed else 1
+    if folder is None:
+        _print_replay()
+        print("Every check passed." if not missed else
+              f"{missed} of {len(found)} checks didn't pass: fix what's above and run upgrade-check again.")
+        return 0 if not missed else 1
+    print("Nothing was noted for the installed build.")
+    blocking = [name for name, state, _ in found if name in STAGED_BLOCKING and state != PASSED]
+    if blocking:
+        print(f"{len(blocking)} of {len(STAGED_BLOCKING)} game checks didn't pass: don't install this build; fix "
+              "what's above and run upgrade-check --dir again.")
+        return 1
+    if missed:
+        print("cardlog-check and serve-check passed on the staged build: install it. The overrides check didn't "
+              "pass: after the install, overrides make makes them again from the new scripts (review its diff), "
+              "then run upgrade-check without --dir.")
+    else:
+        print("Every check passed on the staged build: install it, then run upgrade-check without --dir.")
+    return 0

@@ -310,20 +310,22 @@ def _product_lines(product):
         return None
     for column in ("name", "quantity", "finish"):
         if column not in columns:
-            raise DeckFileError(f"{product.file}: no {column!r} column")
+            raise DeckFileError(f"Product {product.stem}'s card list has no {column!r} column")
     out = []
-    for n, row in enumerate(product.items, 2):
+    from decklab.lib.inventory import paths as inventory_paths
+    for n, row in enumerate(product.items, 1):
+        where = inventory_paths.row_of(product.path, n)       # "Row 2 of product x's card list" (E11-S12)
         section = _section_name(row.get("section") or "deck")
         if section is None:
-            raise DeckFileError(f"{product.file} line {n}: unknown section {row['section']!r}")
+            raise DeckFileError(f"{where}: unknown section {row['section']!r}")
         if not (row.get("name") or "").strip():
-            raise DeckFileError(f"{product.file} line {n}: no card name")
+            raise DeckFileError(f"{where}: no card name")
         if row.get("finish") not in ("nonfoil", "foil", "etched"):
-            raise DeckFileError(f"{product.file} line {n}: bad finish {row.get('finish')!r}")
+            raise DeckFileError(f"{where}: bad finish {row.get('finish')!r}")
         try:
             qty = int(row["quantity"])
         except (TypeError, ValueError):
-            raise DeckFileError(f"{product.file} line {n}: bad quantity {row.get('quantity')!r}") from None
+            raise DeckFileError(f"{where}: bad quantity {row.get('quantity')!r}") from None
         line = DeckLine(qty, row["name"], (row.get("set") or "").lower() or None,
                         row.get("collector_number") or None, row["finish"])
         out.append((row.get("deck") or None, section, line))

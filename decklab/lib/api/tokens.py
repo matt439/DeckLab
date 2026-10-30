@@ -531,7 +531,7 @@ def save_token(body):
     now = after.token_set(space)
     written = (inventory_files.rendered_sha256(now) if now.exists else None) != sha
     if extra.get("resorted") and written:
-        warnings.append(f"{tokens.label_for(space)} wasn't in the standard order; this save sorted it "
+        warnings.append(f"{tokens.title_for(space)} weren't in the standard order; this save sorted them "
                         "(no other row changed)")
     view = _view_after_save(warnings, space)
     return {"saved": True, "index": extra.get("index"), "data": view,

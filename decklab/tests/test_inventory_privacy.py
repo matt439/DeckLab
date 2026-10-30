@@ -3,7 +3,7 @@ another space on the page, home's records home-only, refusals that name no space
 (User1 changes home's collection and tokens as Matt can). HISTORY.md, "Collections and tokens
 are seen only in their own space".
 
-Run from the repo root: python -m unittest decklab.tests.test_inventory_privacy
+Run from the repo root: python scripts/test_fixtures.py decklab.tests.test_inventory_privacy
 """
 import json
 from collections import Counter
@@ -205,7 +205,7 @@ class DeckNamesTests(CollectionEditTestCase):
         with mock.patch.object(guard, "deck_reader", lambda profile=False: (lambda d: d == "casual/b")), \
                 mock.patch.object(guard, "sees_home_records", lambda profile=False: False):
             self.assertEqual(library.visible_warnings(p), ["casual/b: installed stand-ins can't be read"])
-            self.assertEqual(library.visible_unresolved(p.unresolved), {"Opt?": ["magic/collection.csv"]})
+            self.assertEqual(library.visible_unresolved(p.unresolved), {"Opt?": ["the home collection"]})
         self.assertEqual(library.visible_warnings(p), p.warnings)        # a script: every one
 
     def test_the_pool_says_which_deck_a_warning_is_about(self):
@@ -228,7 +228,7 @@ class DeckNamesTests(CollectionEditTestCase):
                 mock.patch.object(guard, "sees_home_records", lambda profile=False: False):
             view = saving.stale_view()
         entry = view["held"][0]
-        self.assertEqual(entry["unknown"], [{"name": "Opt?", "where": ["magic/collection.csv"]}])
+        self.assertEqual(entry["unknown"], [{"name": "Opt?", "where": ["the home collection"]}])
         self.assertEqual(entry["warnings"], [])         # neither the deck's nor home's records' words
         self.assertNotIn("secret", json.dumps(view))
 

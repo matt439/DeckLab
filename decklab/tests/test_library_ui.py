@@ -3,7 +3,7 @@
 Loads every page script in its real order into the event/DOM double (fixtures/workspace_ui_runner.js), with
 the API stubbed: no browser, server, inventory write or Forge run.
 
-Run from the repo root: python -m unittest decklab.tests.test_library_ui
+Run from the repo root: python scripts/test_fixtures.py decklab.tests.test_library_ui
 """
 import json
 import subprocess
@@ -371,7 +371,7 @@ class LibraryShelfTests(_Shelf):
           assert(sheet.textContent.includes("Format") && sheet.textContent.includes("Sort"));
           // The sheet's sort field has its label shown, so its options don't repeat "Sort:" (the row's do).
           same(sheet.querySelector("#sheet-filter-sort").querySelectorAll("option").map((o) => o.textContent),
-               ["Ready first", "Recently changed", "Name"]);
+               ["Ready first", "Recently changed", "Not played lately", "Name"]);
           assert.equal(main.querySelector("#filter-sort").querySelector("option").textContent, "Sort: Ready first");
           const format = sheet.querySelector("#sheet-filter-format");
           format.focus();

@@ -201,7 +201,8 @@ function tokenTile(token, opts = {}) {
 /** Lets the person choose one of a card's printings in a sheet: a grid of its pictures with the set's
  * code, number and name, finishes and copies owned (GET /api/cards/printings). opts.current: the
  * {set, number, finish} chosen now (marked); opts.title: the sheet's heading. Resolves with the chosen
- * {set, number, finish, set_name, img_small, img, aud, owned, on_the_way} (a basic land's "Any printing" is
+ * {set, number, finish, set_name, img_small, img, aud, owned, on_the_way, finish_choices} (aud, owned and
+ * on_the_way the finish picked's; finish_choices the printing's finishes) (a basic land's "Any printing" is
  * {set: null, number: null, finish: "nonfoil"}), or null when the sheet is closed. opts.actions adds buttons to
  * the sheet's foot (an editor line's Move and Remove): [{text, value, kind}], resolving with {action: value}. */
 function pickPrinting(name, opts = {}) {
@@ -215,7 +216,12 @@ function pickPrinting(name, opts = {}) {
     sheetActions(sheet, [{ text: "Cancel", onclick: () => sheet.close() },
       ...(opts.actions || []).map((a) => ({ text: a.text, kind: a.kind || "", value: a.value,
         onclick: () => { chosen = { action: a.value }; sheet.close(); } }))]);
-    const pick = (p, finish) => { chosen = { ...p, finish }; delete chosen.finishes; sheet.close(); };
+    // The finish picked's own row (its copies, on the way and price), with the printing's finishes as finish_choices.
+    const pick = (p, finish) => {
+      const row = (p.finishes || []).find((f) => f.finish === finish);
+      chosen = { ...p, ...(row || {}), finish, finish_choices: (p.finishes || []).map((f) => f.finish) };
+      delete chosen.finishes; sheet.close();
+    };
     // Fetch and draw the printings; Try again after a failure runs it once more.
     const load = () => api(`/api/cards/printings?name=${encodeURIComponent(name)}`).then((a) => {
       if (sheet.closed) return;

@@ -25,6 +25,7 @@ at the PC's while it runs.
   Forge doesn't know (each request ends "error", and the worker plays on), and a good request
   (with -f in lower case, which Forge reads as its game type).
 
+Real-Forge qualification requires separate explicit authorization; the default fixture runner disables it.
 Run from the repo root (PowerShell): $env:DECKLAB_FORGE_TESTS=1; python -m unittest decklab.tests.test_forge_v2loop
 """
 import hashlib

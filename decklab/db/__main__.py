@@ -13,7 +13,7 @@ psycopg through lib/venv.py; .venv\\Scripts\\python works as well).
   check            check the data: the rule checks, the decks' invariants and a files round trip
                    (--history: the recent runs)
   nightly          what the scheduled task runs: backup, prune, visits' prune, export, check, restore check,
-                   MTGMate's purchase-queue prices (lib/shops.py)
+                   MTGMate's purchase-queue prices (lib/shops/)
   visits           who has visited Deck Lab and what they opened (read-only; visits.py)
   schedule         manage the nightly Task Scheduler task, or preview systemd user units
   wishlist         list or change a profile's wishlist: list, add, set, remove (wishlist_cli.py)

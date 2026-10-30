@@ -115,6 +115,44 @@
    a list of whole-row links in the touch lab. Both representations share one sorted data model. */
 .mu-home-body { max-width: 100rem; }
 .mu-deck-field { max-width: 30rem; margin-bottom: var(--s-3); }
+
+/* The deck picker (deck-picker.js): a field-sized button showing the chosen deck's picture, name and pips, and a
+   popover listbox of decks drawn the same way. The option under the arrow keys or the pointer is --hover with an
+   accent edge; the chosen one is in --accent-strong. Pictures fall back to the deck's tint (library.css). */
+.deck-pick-wrap { position: relative; }
+.deck-pick-button {
+  display: flex; align-items: center; gap: var(--s-2); width: 100%;
+  min-height: var(--input-h); padding: var(--s-1) var(--s-3);
+  border: 1px solid var(--border-strong); border-radius: var(--r-field);
+  background: var(--surface); color: var(--ink);
+  font: inherit; font-size: var(--fs-input); text-align: left; cursor: pointer;
+}
+.deck-pick-button:focus-visible { outline: 2px solid transparent; border-color: var(--accent); box-shadow: 0 0 0 3px var(--focus-halo); }
+.deck-pick-button[aria-expanded="true"] { border-color: var(--accent); }
+.deck-pick-name { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.deck-pick-caret {
+  margin-left: auto; width: 8px; height: 8px; flex: none;
+  border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: translateY(-2px) rotate(45deg);
+}
+.deck-pick .deck-pick-art { flex: none; width: 36px; height: 25px; }
+.deck-pick-pips { flex: none; }
+.deck-pick-list {
+  position: absolute; z-index: 30; left: 0; right: 0; top: calc(100% + 4px);
+  max-height: min(60vh, 26rem); overflow-y: auto;
+  margin: 0; padding: var(--s-1); list-style: none;
+  background: var(--surface); color: var(--ink);
+  border: 1px solid var(--border); border-radius: var(--r-row); box-shadow: var(--shadow-2);
+}
+.deck-pick-list:focus-visible { outline: none; }
+.deck-pick-option {
+  display: flex; align-items: center; gap: var(--s-2); min-height: var(--btn-h);
+  padding: 2px var(--s-3); border-radius: var(--r-sm); cursor: pointer;
+}
+.deck-pick-option.is-active { background: var(--hover); box-shadow: inset 0 0 0 1px var(--accent-line); }
+.deck-pick-option[aria-selected="true"] { color: var(--accent-strong); font-weight: var(--fw-bold); }
+@media (forced-colors: active) {
+  .deck-pick-option.is-active { outline: 2px solid Highlight; outline-offset: -2px; }
+}
 .mu-opponent-table { display: none; }
 .mu-opponent-links {
   list-style: none; padding: 0; margin: 0;
@@ -318,9 +356,12 @@
 .stand-out .card-link { font-size: var(--fs-sm); }
 /* A card and its number on one line: the name wraps inside its button, the number keeps to the right. */
 .stand-out-cards { list-style: none; display: grid; gap: var(--s-1); max-width: 30rem; margin: var(--s-2) 0 0; padding: 0; }
-.stand-out-cards li { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 2px var(--s-3); }
+.stand-out-cards > li { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 2px var(--s-3); }
 .stand-out-cards .card-link { justify-self: start; max-width: 100%; }
 .stand-out-n { text-align: right; }
+/* A card never cast's free replacements (deck-swaps.js neverCastReplacements): the whole row's width, below it. */
+.stand-out-cards .mu-replace { grid-column: 1 / -1; margin: var(--s-1) 0 var(--s-2); min-width: 0; }
+.stand-out-cards .mu-replace .swap-list { display: grid; gap: var(--s-2); margin-top: var(--s-1); }
 .drawn-names li { display: flex; flex-wrap: wrap; align-items: center; gap: 2px var(--s-2); }
 .stand-out-n, .drawn-n { font-size: var(--fs-sm); color: var(--ink); font-variant-numeric: tabular-nums; }
 .stand-out .sub { margin-top: var(--s-1); font-size: var(--fs-sm); }

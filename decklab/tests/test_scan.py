@@ -95,6 +95,15 @@ class ProposeTests(unittest.TestCase):
     def test_without_a_set_code_the_name_and_number_still_pick_a_printing(self):
         self.assertEqual(top(["Llanowar Elves", "314/280 C"])[1], ("m19", "314", "name and number"))
 
+    def test_reprints_sharing_the_number_read_are_not_taken_as_certain(self):
+        printings = [{"name": "Llanowar Elves", "set": set_code, "collector_number": "314", "finishes": ["nonfoil"]}
+                     for set_code in ("aaa", "bbb")]
+        with mock.patch.object(cards, "printings", return_value=printings):
+            answer, first = top(["Llanowar Elves", "314/280 C"])
+        self.assertEqual(first, ("aaa", "314", "name and number"))
+        self.assertEqual([p["how"] for p in answer["proposals"]], ["name and number", "name and number"])
+        self.assertIn("more than one printing has that number", answer["message"])
+
     def test_an_old_card_gives_its_name_and_every_paper_printing(self):
         answer, first = top(["Llanowar Elves", "Creature — Elf Druid", "Illus. Someone"])
         self.assertEqual(first[2], "name")

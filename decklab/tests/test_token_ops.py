@@ -7,7 +7,9 @@ backend (a throwaway database from db_support, the fixture profiles synced once,
 imported per test); the database ones are skipped when PostgreSQL isn't reachable. The git-mode
 files backend (production until the cutover) is test_api_tokens.py's.
 
-Run from the repo root: python -m unittest decklab.tests.test_token_ops
+Run from the repo root: python scripts/test_fixtures.py decklab.tests.test_token_ops
+The fixture runner disables configured PostgreSQL and real Forge; named native
+runtime cases also need separate qualification (see AGENTS.md, Tests).
 """
 import contextlib
 import hashlib
@@ -186,7 +188,7 @@ class FileOpsTests(Tree, Cases, unittest.TestCase):
     def test_rows_a_strict_read_refuses_stop_every_write(self):
         (self.magic / "tokens.csv").write_text(ROWS + "Bad,,,,,,0,,,\n", encoding="utf-8", newline="\n")
         with self.assertRaisesRegex(inventory.Conflict,
-                                    r"^magic/tokens.csv line 5: .*; it can't be changed until that's put right$"):
+                                    r"^A row after row 3 of the home token cards: .*; it can't be changed until that's put right$"):
             self.apply("tokens.add", space="home", sha256=self.sha(), row=FISH)
 
     def test_an_unsorted_file_is_sorted_and_said_so(self):
@@ -228,7 +230,7 @@ class CommandLineTests(Tree, Cli, unittest.TestCase):
     def test_list_and_json(self):
         code, out, _ = self.run_cli("list")
         self.assertEqual(code, 0)
-        self.assertIn("magic/tokens.csv: 3 rows, 10 cards.", out)
+        self.assertIn("The home token cards: 3 rows, 10 cards.", out)
         self.assertIn(f"sha {tokens.read().sha256} (give it to edit or remove as --expect)", out)
         self.assertIn("   3. Zombie / Zombie Knight ×8", out)
         code, out, _ = self.run_cli("list", "--json")
@@ -236,7 +238,7 @@ class CommandLineTests(Tree, Cli, unittest.TestCase):
         self.assertEqual([r["front"] for r in listed["rows"]], ["Angel", "Insect", "Zombie"])
         self.assertEqual(listed["sha256"], tokens.read().sha256)
         code, out, _ = self.run_cli("list", "--space", "user2")
-        self.assertIn("magic/people/user2/tokens.csv: 0 rows, 0 cards.", out)
+        self.assertIn("User2's token cards: 0 rows, 0 cards.", out)
         self.assertIn("sha none ", out)
         code, _, err = self.run_cli("list", "--space", "nobody")
         self.assertEqual(code, 1)
@@ -261,6 +263,17 @@ class CommandLineTests(Tree, Cli, unittest.TestCase):
                                       "--notes", "single-sided verified", "--space", "user2", "-m", "x")
         self.assertEqual(code, 0, err)
 
+    def test_a_stale_expect_in_a_persons_space_names_the_listing_to_run_again(self):
+        # E11-S12: the database's words and the command to run, never magic/people/<id>/tokens.csv.
+        sha = self.listed_sha("user2") or "none"    # user2 has no token cards yet
+        self.run_cli("add", "--front", "Ally", "--quantity", "1", "--notes", "single-sided verified",
+                     "--space", "user2", "-m", "x")
+        code, _, err = self.run_cli("edit", "1", "--expect", sha, "--quantity", "2", "--space", "user2", "-m", "x")
+        self.assertEqual(code, 1)
+        self.assertIn("User2's token cards have changed since that listing: run tokens list --space user2 "
+                      "again and retry with its sha.", err)
+        self.assertNotIn("tokens.csv", err)
+
     def test_a_row_number_is_refused_once_the_list_has_moved_on(self):
         # Rows listed, then a page save adds a row before them: row 1 is no longer the Angel.
         sha = self.listed_sha()
@@ -268,8 +281,13 @@ class CommandLineTests(Tree, Cli, unittest.TestCase):
         before = (self.magic / "tokens.csv").read_bytes()
         code, _, err = self.run_cli("remove", "1", "--expect", sha, "-m", "Traded the Angel", "--reason", "traded")
         self.assertEqual(code, 1)
-        self.assertIn("magic/tokens.csv has changed since that listing; list it again and retry.", err)
+        self.assertIn("The home token cards have changed since that listing: run tokens list again and retry "
+                      "with its sha.", err)
+        self.assertNotIn("tokens.csv", err)
         self.assertEqual((self.magic / "tokens.csv").read_bytes(), before)
+        code, _, err = self.run_cli("remove", "9", "--expect", self.listed_sha(), "-m", "x", "--reason", "y")
+        self.assertEqual(code, 1)
+        self.assertIn("There's no row 9: the home token cards have 4 (tokens list numbers them).", err)
         for expect in ("abc", "none", "x" * 64):
             code, _, err = self.run_cli("edit", "1", "--expect", expect, "--quantity", "2", "-m", "x")
             self.assertEqual(code, 1, expect)
@@ -308,7 +326,8 @@ class CommandLineTests(Tree, Cli, unittest.TestCase):
         (self.magic / "tokens.csv").write_text(ROWS + "Bad,,,,,,0,,,\n", encoding="utf-8")
         code, out, _ = self.run_cli("check")
         self.assertEqual(code, 1)
-        self.assertIn("magic/tokens.csv line 5", out)
+        self.assertIn("A row after row 3 of the home token cards: ", out)
+        self.assertNotIn("tokens.csv", out)
 
     def test_check_warns_about_mistyped_details_without_failing(self):
         (self.magic / "tokens.csv").write_text(ROWS.replace("1/1; flying; no deathtouch", "1/1 flying"),
@@ -316,7 +335,7 @@ class CommandLineTests(Tree, Cli, unittest.TestCase):
         code, out, _ = self.run_cli("check")
         self.assertEqual(code, 0)
         lines = out.splitlines()
-        self.assertEqual(lines[0], "magic/tokens.csv line 3: front details '1/1 flying' aren't read: "
+        self.assertEqual(lines[0], "Row 2 of the home token cards: front details '1/1 flying' aren't read: "
                                    "separate them with ';' (1/1; flying)")
         self.assertEqual(lines[-1], "Token cards (home): no problems")
         (self.magic / "tokens.csv").write_text(ROWS.replace("1/1; flying; no deathtouch", "1/1; flyng")
@@ -324,8 +343,8 @@ class CommandLineTests(Tree, Cli, unittest.TestCase):
         code, out, _ = self.run_cli("check")
         self.assertEqual(code, 1)
         lines = out.splitlines()
-        self.assertIn("magic/tokens.csv line 5", lines[0])
-        self.assertIn("magic/tokens.csv line 3: front details 'flyng' aren't read: did you mean flying?", lines)
+        self.assertIn("A row after row 3 of the home token cards: ", lines[0])
+        self.assertIn("Row 2 of the home token cards: front details 'flyng' aren't read: did you mean flying?", lines)
 
 
 class PgOpsTests(Tree, Cases, Cli, db_support.DbTestCase):

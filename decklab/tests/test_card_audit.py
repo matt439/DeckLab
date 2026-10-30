@@ -1,7 +1,7 @@
 """forge-trial/card_audit.py's collect(): the decks come from the inventory (the database since
 phase 4's cutover deleted the deck files), with both names of the substitute list's heading.
 
-Run from the repo root: python -m unittest decklab.tests.test_card_audit
+Run from the repo root: python scripts/test_fixtures.py decklab.tests.test_card_audit
 """
 import contextlib
 import importlib.util

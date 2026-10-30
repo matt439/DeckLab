@@ -60,8 +60,21 @@ tests/test_state_contract.py checks):
   rejecting batches. The same write transaction checks the current incarnation, text receipt,
   selected version and card fingerprint before either a no-op or mutation. Exclude requires
   a bounded private audit reason, never part of policy content. Memory writes require an
-  explicit locked fixture source; no provider falls back to configured inventory. These
-  storage methods grant no request access and do not change field selection.
+  explicit locked fixture source; no provider falls back to configured inventory.
+  field_policy_review(format, deck_id, version) -> that proof for one current list, from one
+  read-only read that needs no policy table and writes nothing (a preview's; the write
+  recomputes it). These storage methods grant no request access (api/field_choices.py checks
+  field.edit).
+- deck_draft(profile_id, deck_id, version) -> {revision, draft: {saved_at, device, content} or
+  None}; deck_draft_put(profile_id, deck_id, version, content, expected_revision, *, device="")
+  -> that view, content None discarding it (a tombstone keeps the revision, which only grows).
+  An editor draft kept for later (E2-S16, deck_drafts.py): private scratch work, so no change
+  set or audit rows, never in a batch, and no request access granted; Conflict on another
+  revision, deck_drafts.MissingSchema (an Unavailable) before migration 0018.
+- new_deck_draft(profile_id, space_id, source) and new_deck_draft_put(profile_id, space_id,
+  source, content, expected_revision, *, device=""): the same for a new deck's draft, which has
+  no deck id yet (source "" for a deck started from nothing, else the deck it copies); before
+  migration 0019 deck_drafts.MissingSchema.
 - activity(before=None, limit=50, *, visible=None, inventory=None) -> {"changes": [...], "next": id
   or None}; inventory (rules.inventory_scope's dict: tables, items, spaces, cap) filters,
   counts and caps the inventory's rows per change set (rules.inventory_rows; the database in

@@ -241,6 +241,57 @@ class WebReceiptTests(FilesReceiptCase):
         self.assertIn("keep hand note", deck)
         self.assertNotIn("on the way (order test)", deck)
 
+    def test_apply_says_how_ready_each_refreshed_deck_is_after_the_receipt(self):
+        # E6-S26: the refreshed tables' Planned counts in the saved snapshot.
+        self.deck("short", "Short", "building", "Deck\n2 Llanowar Elves (FDN) 227\n3 Elvish Mystic (CMM) 648\n55 Forest\n",
+                  table="| Elvish Mystic | 3 | 1 | **2** | | | |\n| Llanowar Elves | 2 | 0 | **2** | | | |\n"
+                        "| **Total** | | | **4** | | | |\n")
+        result = self.record_web(self.prepare())
+        self.assertEqual({d["id"] for d in result["tables"]["written"]}, {"casual/test", "casual/short"})
+        readiness = result["readiness"]
+        # Neither deck is built, so neither holds copies: both count the two Elves just received.
+        self.assertEqual(readiness["casual/test"], {"missing": 0, "coming": 0})
+        self.assertEqual(readiness["casual/short"], {"missing": 2, "coming": 0})
+
+    def test_readiness_counts_the_copies_still_on_the_way_in_a_part_not_received(self):
+        # Only the cards arrive: the ordered product, with its Pick Your Poison, is still on the way.
+        self.deck("short", "Short", "building",
+                  "Deck\n2 Llanowar Elves (FDN) 227\n1 Pick Your Poison (MKM) 170\n3 Elvish Mystic (CMM) 648\n"
+                  "54 Forest\n",
+                  table="| Elvish Mystic | 3 | 1 | **2** | | | |\n| Llanowar Elves | 2 | 0 | **2** | | | |\n"
+                        "| Pick Your Poison | 1 | 0 | **1** | | | |\n| **Total** | | | **5** | | | |\n")
+        result = self.record_web(self.prepare())
+        self.assertIn("casual/short", {d["id"] for d in result["tables"]["written"]})
+        found = pool.owned_vs_needed("casual/short", "target", prices=False)
+        labelled = sum(qty for r in found["rows"] for _, qty in pool.row_labels(r)["on_the_way"])
+        self.assertEqual(labelled, 1)
+        # Missing leaves out the copy on the way: the two Mystics still to get, and the one coming.
+        self.assertEqual(result["readiness"]["casual/short"], {"missing": 2, "coming": labelled})
+
+    def test_readiness_is_only_for_viewers_who_see_homes_inventory_and_the_deck(self):
+        from decklab.lib.api import guard
+        preview = self.prepare()
+        with mock.patch.object(guard, "sees_inventory", return_value=False) as sees, \
+                mock.patch.object(receipts.guard, "deck_reader") as reader:
+            result = self.record_web(preview)
+        self.assertTrue(result["received"])
+        self.assertEqual(result["readiness"], {})
+        self.assertEqual(sees.call_args.args[0], "home")
+        reader.assert_not_called()          # refused before any deck or pool is read
+
+    def test_a_hidden_deck_or_a_failure_leaves_readiness_out_and_the_receipt_saved(self):
+        from decklab.lib.api import guard
+        with mock.patch.object(guard, "deck_reader", return_value=lambda target: False):
+            self.assertEqual(self.record_web(self.prepare())["readiness"], {})
+        self.assertEqual(self.owned("Llanowar Elves"), 2)
+        tables = {"written": [{"id": "casual/test", "title": "Test"}, {"id": "product/kit"}, "bad"],
+                  "skipped": [], "error": None}
+        profile = {"id": "matt", "name": "Tester", "role": "admin"}
+        with mock.patch.object(pool, "load_pool", side_effect=RuntimeError("fixture")), \
+                mock.patch.object(receipts.common, "_log"):
+            self.assertEqual(receipts._readiness(inventory.current(), tables, profile), {})
+        self.assertEqual(list(receipts._readiness(inventory.current(), tables, profile)), ["casual/test"])
+
     def test_the_preview_names_the_deck_files_its_receipt_changes(self):
         preview = self.prepare()
         self.assertIn("Deck Test (casual/test)", preview["changes"])

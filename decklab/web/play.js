@@ -91,6 +91,7 @@ function drawPlay(data, deckId) {
     pageHead({ crumb: fromDeck ? [deckHref(fromDeck.id, fromDeck.version), fromDeck.title] : null, title: routeH1("play"),
       description: "Played games, Commander pods and sideboard plans. Separate from Forge's simulations." }),
     warningsBox(data.warnings, "Some play records or deck lists could not be loaded"),
+    data.lists.length && !deckId && typeof playTonightSection === "function" ? playTonightSection(data) : null,
     data.lists.length ? playQuickRecord(data, deckId) : playWithoutDecks(data),
     el("section", { class: "play-section", "aria-labelledby": "play-games-title" },
       el("div", { class: "play-section-head" }, el("h2", { id: "play-games-title", text: data.pods?.length ? "Played 1v1 games" : "Played games" }),
@@ -198,6 +199,9 @@ function playStarts(data, deckId, people, names) {
   return starts.map((n) => (n < 0 ? 0 : n));
 }
 
+/** Set by the quick record drawn last: puts lists in its pickers (Tonight's pairs). */
+let playQuickChoose = null;
+
 /** The quick record: each player's deck, More details, and one button per result. */
 function playQuickRecord(data, deckId) {
   const lists = data.lists;
@@ -245,6 +249,12 @@ function playQuickRecord(data, deckId) {
     side.player.addEventListener("input", relabel);
   });
   relabel(); refreshPlans();
+  // Tonight's pairs (play-tonight.js) put a suggested pair's lists in the pickers: [index in lists, or -1].
+  playQuickChoose = (choices) => {
+    choices.forEach((n, i) => { if (n >= 0) sides[i].select.value = String(n); });
+    refreshPlans();
+    sides[0].select.focus();
+  };
   const panel = el("section", { class: "panel play-quick", "aria-labelledby": "play-quick-title" },
     el("h2", { id: "play-quick-title", text: "Record a game" }),
     el("div", { class: "play-quick-decks" }, sides.map((side, i) =>

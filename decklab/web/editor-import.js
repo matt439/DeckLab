@@ -1,5 +1,5 @@
 /* Deck Lab's editor: Paste/replace and Start from workflows (E11-S37).
- * Loaded directly after editor-cards.js. These functions use the editor state,
+ * Loaded directly after editor-cards.js and editor-edhrec.js. These functions use the editor state,
  * list/draft helpers and sheets from editor.js, changed() from editor-screen.js,
  * Deck details from editor-details.js, and Add controls from editor-cards.js.
  * Shared state and viewport listeners stay in their existing owners.

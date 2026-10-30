@@ -252,6 +252,8 @@ function fvPlayBox(ctx, a, { inEmpty = false } = {}) {
     return box;
   }
   const ready = !a.forge || a.forge.ready;
+  // Home's saved field choices can't be read (E3-S23): the server refuses a run, so Play waits and says why.
+  const refused = typeof a.run_refused === "string" && a.run_refused ? a.run_refused.slice(0, 300) : "";
   const options = FV_BUDGETS.map(([budget, title]) => ({ id: budget, title, sub: FV_BUDGET_SUB[budget],
     time: fvBudgetWords((a.budgets || {})[budget]) || null }));
   const choice = runChoiceControl(options, ctx.budget, (budget) => fvSaveBudget(ctx, budget));
@@ -260,8 +262,9 @@ function fvPlayBox(ctx, a, { inEmpty = false } = {}) {
   choice.node.hidden = !runsAllowed();
   add(box, [inEmpty ? null : el("h3", { text: "Play the field" }), choice.node,
     ready ? null : el("p", { class: "fv-small", text: (a.forge && a.forge.problem) || "Forge isn't ready on the PC." }),
+    refused ? el("p", { class: "fv-small", text: refused }) : null,
     el("div", { class: "actions" }, el("button", { type: "button", class: "btn", text: "Play the field",
-      disabled: !ready || !state.profile, "data-run": true, onclick: () => fvPlay(ctx) }))]);
+      disabled: !ready || !state.profile || !!refused, "data-run": true, onclick: () => fvPlay(ctx) }))]);
   return box;
 }
 

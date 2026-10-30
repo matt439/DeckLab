@@ -6,12 +6,14 @@ inventory claim alone cannot prove freshness if an earlier repeatable-read
 snapshot was established before waiting for an inventory writer. Admission takes
 the shared claim before the per-format lock; no claim is upgraded.
 
+review() gives a preview its proof from one read-only repeatable-read transaction;
+it authorizes nothing, since apply() recomputes the proof under its own claim.
 Only a schema-ready absent row is empty. No cached policy, default inventory,
 convenience history reader or separately connected proof may authorize a save.
 """
 import copy
 
-from decklab.lib.inventory import pg_deck_epoch
+from decklab.lib.inventory import deck_epoch, pg_deck_epoch
 from decklab.lib.inventory.pg import PgInventory
 
 from . import Conflict, Invalid, Unavailable, field_policy, rules
@@ -24,6 +26,11 @@ INDEPENDENT = "Field policy changes need an independent transaction."
 
 class _MissingSchema(Unavailable):
     pass
+
+
+def missing_schema(error):
+    """True for get()'s refusal before migration 0017: the field selector keeps today's field."""
+    return isinstance(error, _MissingSchema)
 
 
 def _read(cur, fmt):
@@ -112,5 +119,37 @@ def apply(store, fmt, expected_revision, expected_proof, rule, actor, message, r
                 return copy.deepcopy(plan)
         except _Unchanged as unchanged:
             return unchanged.result
+
+    return _call(store, work)
+
+
+def review(store, fmt, deck_id, version):
+    """The proof a reviewed list has now ({epoch, receipt, version, card_sha}), for a preview.
+
+    It needs no policy table (migration 0017), so a preview works before activation.
+    Missing, unproved or uncertain lists are UNAVAILABLE, never a guessed identity.
+    """
+    fmt = field_policy.empty(fmt)["format"]
+    if not deck_epoch.home_id(deck_id):
+        raise Invalid(source.INVALID)
+    if store._batch() is not None:
+        raise Invalid(INDEPENDENT)
+
+    def work(conn):
+        if getattr(getattr(conn, "info", None), "transaction_status", None) != 0:
+            raise Invalid(INDEPENDENT)
+        name = getattr(conn.info, "dbname", None)
+        if type(name) is not str or not name:
+            raise Unavailable(UNAVAILABLE)
+        backend = PgInventory(dbname=name, timeout=store.timeout, breaker=store.breaker)
+        with conn.transaction():
+            conn.execute("set transaction isolation level repeatable read, read only")
+            capture = pg_deck_epoch.capture_on_connection(backend, conn, deck_id, coherence="reader")
+            if capture is None:
+                raise Unavailable(UNAVAILABLE)
+            try:
+                return source.qualify(capture, version, fmt)
+            except Unavailable:
+                raise Unavailable(UNAVAILABLE) from None
 
     return _call(store, work)

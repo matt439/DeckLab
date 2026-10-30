@@ -5,7 +5,7 @@ DeckLabSim's, as test_forge_pool's PoolCase sets it up (4 slots, the card log sa
 The field is three lists of test_forge's (field._field is replaced); the games are ordinary
 matchup results under each pair's key, and the view reads them back.
 
-Run from the repo root: python -m unittest decklab.tests.test_forge_field_run
+Run from the repo root: python scripts/test_fixtures.py decklab.tests.test_forge_field_run
 """
 import unittest
 from unittest import mock

@@ -5,7 +5,7 @@ in test_decks_decklist.py (decklist lines and blocks), test_decks_deckfile.py
 which share the fixtures and helpers here.
 
 Run from the repo root:
-    python -m unittest discover -s decklab/tests -t .
+    python scripts/test_fixtures.py
 
 fixtures/decks/ holds frozen copies of the 11 deck files as they were on
 2026-09-29; the tests that check what a file contains, or the exact text an

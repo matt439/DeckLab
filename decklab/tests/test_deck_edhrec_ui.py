@@ -1,7 +1,7 @@
 """A Commander deck's EDHREC ideas (E9-S07, deck-edhrec.js) under Node: a button on the Cards tab of a
 Commander deck only, nothing asked of the server until it's pressed, the sheet's cards grouped by EDHREC's
 categories with their share and marks (none for a viewer the server sent none), a failure said plainly,
-and Consider adding a card to the deck's Considering list (POST /api/deck/considering).
+the Page choice narrowing them to one of EDHREC's budget, bracket or theme pages, and Consider adding a card to the deck's Considering list (POST /api/deck/considering).
 
 Runs the real page scripts in tests/fixtures/workspace_ui_runner.js; nothing is sent to a server.
 """
@@ -26,10 +26,17 @@ SETUP = PAGE + """
       idea('Pick Your Poison', 26, marks ? {status: 'to_buy', free: 0, on_the_way: 0, aud_each: 0.39} : {})]},
       {header: 'Lands', cards: [idea('Bojuka Bog', 30, marks ? {status: 'in_use', free: 0, on_the_way: 0} : {})]}]});
   const asked = [];
-  let answer = ANSWER();
+  let answer = ANSWER(), pageAnswer = null;
+  const PAGES = [{page: 'budget', label: 'Budget', group: 'budget', decks: null},
+    {page: 'core', label: 'Core (bracket 2)', group: 'bracket', decks: null},
+    {page: 'elves', label: 'Elves', group: 'theme', decks: 120}];
   api = async (path, opts) => {
     asked.push([path, opts && opts.body ? JSON.parse(opts.body) : null]);
-    if (path.startsWith('/api/deck/edhrec')) { if (answer instanceof Error) throw answer; return answer; }
+    if (path.startsWith('/api/deck/edhrec')) {
+      const got = path.includes('&page=') && pageAnswer ? pageAnswer : answer;
+      if (got instanceof Error) throw got;
+      return got;
+    }
     return {saved: true, sha256: 'b'.repeat(64)};
   };
   let routed = 0; route = () => { routed += 1; };
@@ -103,6 +110,44 @@ class DeckEdhrecUiTests(unittest.TestCase):
           buttonText(sheet, 'Try again').click();
           await settle();
           assert(sheet.textContent.includes('High Synergy Cards'));
+        """)
+
+    def test_the_page_choice_narrows_the_ideas(self):
+        self.run_js("""
+          answer = Object.assign(ANSWER(), {page: '', pages: PAGES});
+          const sheet = await openIdeas(commanderPage());
+          const select = sheet.querySelector('#edhrec-page');
+          assert(select, 'a Page choice');
+          same(select.querySelectorAll('optgroup').map((g) => g.getAttribute('label')), ['Budget', 'Commander Brackets', 'Themes']);
+          same(select.querySelectorAll('option').map((o) => o.textContent),
+            ['All decks with this commander', 'Budget', 'Core (bracket 2)', 'Elves (120 decks)']);
+          pageAnswer = Object.assign(ANSWER(), {page: 'budget', pages: PAGES,
+            groups: [{header: 'Budget Cards', cards: [idea('Cheap Elf', 50, {status: 'to_buy', free: 0, on_the_way: 0, aud_each: 0.1})]}]});
+          select.value = 'budget'; select.fire('change'); await settle();
+          same(asked.map(([path]) => path).filter((path) => path.startsWith('/api/deck/edhrec')),
+            ['/api/deck/edhrec?id=commander%2Ftest', '/api/deck/edhrec?id=commander%2Ftest&page=budget']);
+          let text = sheet.textContent;
+          assert(text.includes('Ghalta, Primal Hunger on EDHREC (Budget page)'), text);
+          assert(text.includes('Budget Cards') && text.includes('Cheap Elf') && !text.includes('High Synergy Cards'), text);
+          // A page EDHREC hasn't got says so, and the choice stays to pick another.
+          pageAnswer = new ApiError(404, 'EDHREC has no core page for this commander, so there are no ideas to show there. Choose another page.');
+          let again = sheet.querySelector('#edhrec-page');
+          again.value = 'core'; again.fire('change'); await settle();
+          text = sheet.textContent;
+          assert(text.includes('EDHREC has no core page'), text);
+          assert(!buttonText(sheet, 'Try again'));
+          again = sheet.querySelector('#edhrec-page');
+          assert(again, 'the choice is still there');
+          again.value = ''; again.fire('change'); await settle();
+          assert.equal(asked.map(([path]) => path).filter((path) => path.startsWith('/api/deck/edhrec')).at(-1), '/api/deck/edhrec?id=commander%2Ftest');
+          assert(sheet.textContent.includes('High Synergy Cards'));
+          assert(!sheet.textContent.includes('page)'));
+        """)
+
+    def test_no_page_choice_without_pages(self):
+        self.run_js("""
+          const sheet = await openIdeas(commanderPage());
+          assert.equal(sheet.querySelector('#edhrec-page'), null);
         """)
 
     def test_consider_adds_to_the_considering_list(self):

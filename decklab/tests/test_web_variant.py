@@ -9,7 +9,7 @@ a few of the page's functions under Node.js when it's installed.
 - "Save this change" asks before replacing another unsaved draft of that list.
 - Every class variant.js and variant.css make starts with "vt-".
 
-Run from the repo root: python -m unittest decklab.tests.test_web_variant
+Run from the repo root: python scripts/test_fixtures.py decklab.tests.test_web_variant
 """
 import json
 import re
@@ -79,15 +79,15 @@ class VariantPageTests(unittest.TestCase):
         self.assertIn("Replace your unsaved changes to ${base.title} with this tested change?", save)
         self.assertLess(save.index("if (local.get(key))"), save.index("ask("))
         self.assertLess(save.index("ask("), save.index("local.set(key"))
-        # The key is the editor's own draft key for that list (editor.js draftKey).
+        # The key is the editor's own draft key for that list (editor-drafts.js draftKey).
         self.assertIn("`draft.${state.profile.id}.${base.id}.${version}`", save)
-        self.assertIn("draft.${ed.profile}.${ed.id}.${ed.version}", _text("editor.js"))
+        self.assertIn("draft.${ed.profile}.${ed.id}.${ed.version}", _text("editor-drafts.js"))
 
 
 @unittest.skipUnless(NODE, "needs Node.js")
 class VariantScriptTests(unittest.TestCase):
 
-    NAMES = ("core.js", "deck.js", "editor.js", "variant.js")
+    NAMES = ("core.js", "deck.js", "editor.js", "editor-drafts.js", "variant.js")
 
     def state(self, base, now, kind="casual"):
         return (f"(editor = {{mode: 'edit', hasFileList: true, kind: {json.dumps(kind)}, "

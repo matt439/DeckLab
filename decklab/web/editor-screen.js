@@ -91,6 +91,7 @@ function spaceField() {
         const previousFrame = keyboardEditorFrame(ed);
         ed.space = space;
         ed.fields.player = newDeckPlayer(space);
+        if (typeof loadKeptDraft === "function") loadKeptDraft(ed);   // the new space's draft kept for later
         drawDetails();
         drawTitleHint();
         if (rebindEditorKeyboardSpace(ed, previousSpace) && ed.dom.barParts?.owner.frame === previousFrame)
@@ -219,6 +220,7 @@ function drawBanners() {
   clear(host);
   if (typeof boxEditorContextBanner === "function") add(host, [boxEditorContextBanner(ed)]);
   if (typeof editorRetestNotice === "function") add(host, [editorRetestNotice(ed)]);
+  if (typeof keptDraftBanner === "function") add(host, [keptDraftBanner(ed)]);
   if (ed.draftRemoveFailed) {
     host.append(el("div", { class: "box box-warn banner", role: "alert" },
       el("h2", { text: ed.pendingDraftKey ? "The deck was saved, but its old draft couldn't be removed"
@@ -1042,10 +1044,13 @@ function drawBar() {
     if (!ed.readOnly) {
       p.save = el("button", { type: "button", class: "btn btn-primary bar-save", onclick: () => saveNow(),
         "data-focus": "save" }, ed.mode === "new" ? "Create" : "Save", p.dot);
-      p.saveMore = ed.quick ? null : el("button", { type: "button", class: "btn btn-primary bar-save-more",
-        "aria-label": "More ways to save", "aria-haspopup": "menu", "data-focus": "bar:save-more", text: "▾",
-        onclick: () => openMenu(p.saveMore, [{ text: ed.mode === "new" ? "Create & view deck" : "Save & view deck",
-          onclick: () => saveNow({ viewAfter: true }) }]) });
+      // The Quick edit's ▾ holds only Save draft for later (editor-kept-drafts.js), shown while it's offered.
+      const kept = () => (typeof keptDraftMenu === "function" ? keptDraftMenu(ed) : []);
+      p.saveMore = ed.quick && typeof keptDraftMenu !== "function" ? null : el("button", { type: "button",
+        class: "btn btn-primary bar-save-more", "aria-label": "More ways to save", "aria-haspopup": "menu",
+        "data-focus": "bar:save-more", text: "▾", hidden: ed.quick || null,
+        onclick: () => openMenu(p.saveMore, ed.quick ? kept() : [{ text: ed.mode === "new" ? "Create & view deck"
+          : "Save & view deck", onclick: () => saveNow({ viewAfter: true }) }, ...kept()]) });
       p.saveGroup = el("div", { class: "bar-save-group" }, p.save, p.saveMore);
     }
     // The full editor's stable Forge panel owns the one original secondary Test row.
@@ -1090,6 +1095,7 @@ function drawBar() {
   const consideringSave = (editorConsideringChanged(ed) || editorPromotionChanged(ed)) && editorConsideringSupported(ed);
   const mainSave = ed.mode === "new" || (ed.dirty && (!none || consideringSave));
   for (const b of [p.save, p.saveMore]) if (b) b.classList.toggle("btn-primary", mainSave);
+  if (p.saveMore && ed.quick) p.saveMore.hidden = !keptDraftMenu(ed).length;
   if (p.save && !p.save.dataset.busy) p.save.disabled = (none && !consideringSave) || !!ed.consideringUnavailable || !!ed.promotionUnavailable || !!ed.promoting;
   if (p.test) {
     vtSyncTestRow(p.test);

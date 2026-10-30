@@ -23,7 +23,7 @@ Games are hand-written (test_forge_cardlog's Script), results made by hand
 EARLY_ROWS0 below is exactly the drawn split of test_forge_cardstats' ROWS0, whose numbers
 were worked out by hand there (EXPECTED0), so the judged rows here must come out the same.
 
-Run from the repo root: python -m unittest decklab.tests.test_forge_cardlog3
+Run from the repo root: python scripts/test_fixtures.py decklab.tests.test_forge_cardlog3
 """
 import json
 import unittest

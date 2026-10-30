@@ -20,7 +20,7 @@ Spirits do), Role, checklist, dungeon, minigame and memorabilia objects. One
 link is made up: Scryfall no longer links Llanowar Elves to its own token
 printing (ttsr 12), so the fixture's fdn 227 does, for the self-name rule.
 
-Run from the repo root: python -m unittest discover -s decklab/tests -t .
+Run from the repo root: python scripts/test_fixtures.py
 """
 import gzip
 import http.client

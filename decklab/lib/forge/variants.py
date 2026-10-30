@@ -329,12 +329,13 @@ def _ahead_looks(field_test):
 
 def _opponent_entries(base_entry, against, opponents, field_options=None):
     """The opponents' entries: [against], or the field minus the base's deck id (field.opponents),
-    limited to opponents' names when given."""
+    limited to opponents' names when given; a ForgeError while home's saved field choices
+    can't be read (a field test fails closed, as a field run does)."""
     if against != "field":
         return [against]
     try:
         options = {k: v for k, v in (field_options or {}).items() if k in ("space", "public", "visible")}
-        found = field.opponents(base_entry, opponents, **options)
+        found = field.opponents(base_entry, opponents, fail_closed=True, **options)   # E3-S23
     except NotImplementedError:
         raise ForgeError(FIELD_NOT_BUILT) from None
     found = [e for e in found if not deck_identity.same(e.get("id"), base_entry.get("id"))]

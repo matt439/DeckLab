@@ -80,7 +80,7 @@ class ShoppingOrderSplitInteractionTests(unittest.TestCase):
           for (const text of ["fdn", "227", "nonfoil", "Condition", "Language", "Not recorded", originalCard.notes])
             assert(details[0].textContent.includes(text), text);
           for (const text of ["429", "foil", "LP", "ja"]) assert(details[1].textContent.includes(text), text);
-          assert(sheet.body.textContent.includes("new part will not have that confirmation"));
+          assert(sheet.body.textContent.includes("new part will keep that confirmation"));
           assert.equal(sheet.body.querySelector("[data-order-split-check=0]").value, "both");
           splitName(sheet); take(sheet, "2"); take(sheet, "1", 1); check(sheet, 1, "original"); check(sheet, 2, "new");
           action(sheet, "Preview change").click(); await settle();

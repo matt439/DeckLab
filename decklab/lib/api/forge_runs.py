@@ -552,8 +552,8 @@ def _pair_json(job, snap, key, sides=None):
 def _running_json(job, first_sha=None):
     """A Running item for a run waiting or playing (None once it's over):
     its sides and wins with the deck listed first when it was asked for
-    first, or with first_sha's list first (the deck page), and waiting as
-    _job_json gives it. Wave 3 (section 10.5): every item has "kind"
+    first, or with first_sha's list first (the deck page), and waiting and
+    fallback as _job_json gives them. Wave 3 (section 10.5): every item has "kind"
     ("matchup", "field" or "variant"), "title" and "link"; a matchup run's
     also its "mode", "plan" and "eta_s" (forge's estimate of the seconds
     left, for the run activity's details, or None); a coordinator job (COORD_JOBS) is
@@ -579,7 +579,8 @@ def _running_json(job, first_sha=None):
     titles = " v ".join(side.get("title") or "?" for side in sides)
     return {"key": job.key, "sides": sides, "status": snap["status"], "ahead": snap["ahead"],
             "done": progress["done"], "total": progress["total"], "wins": progress["wins"], "by": job.fn.by,
-            "waiting": progress["waiting"], "kind": "matchup", "title": titles, "link": f"#/matchup?key={job.key}",
+            "waiting": progress["waiting"], "fallback": progress["fallback"], "kind": "matchup", "title": titles,
+            "link": f"#/matchup?key={job.key}",
             "mode": progress["mode"], "plan": progress["plan"], "eta_s": progress["eta_s"]}
 
 

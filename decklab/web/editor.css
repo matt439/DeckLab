@@ -354,7 +354,7 @@ button.edit-card:hover { background: var(--hover); }
 .ac-tip { display: flex; align-items: center; gap: var(--s-2); margin: 0; }
 .ac-tip p { flex: 1 1 auto; margin: 0; text-align: start; }
 .ac-tip .btn { flex: none; white-space: nowrap; }
-.ac-owned { min-height: var(--ctl-h); }
+.ac-owned, .ac-edhrec { min-height: var(--ctl-h); }
 .ac-colours { display: inline-flex; gap: 2px; }
 .ac-colour {
   display: inline-grid; place-items: center; width: var(--ctl-h); height: var(--ctl-h);
@@ -541,7 +541,7 @@ button.edit-card:hover { background: var(--hover); }
 
 /* The split Save: Save, then ▾ (Save & view deck) joined to it. */
 .bar-save { min-width: 88px; position: relative; }
-.bar-save:has(+ .bar-save-more) { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+.bar-save:has(+ .bar-save-more:not([hidden])) { border-top-right-radius: 0; border-bottom-right-radius: 0; }
 .bar-save + .bar-save-more { min-width: 0; margin-left: calc(-1 * var(--s-2)); padding: 0 var(--s-3); border-top-left-radius: 0; border-bottom-left-radius: 0; border-left: 1px solid var(--accent-ink); }
 .bar-save .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--warn); box-shadow: 0 0 0 2px var(--accent); position: absolute; top: 6px; right: 6px; }
 
@@ -683,7 +683,7 @@ dialog.sheet-search .ac-option { grid-template-columns: 44px minmax(0, 1fr) auto
 }
 .edit-search-dock .ac-option { min-height: 76px; }
 .edit-search-dock .ac-add { min-height: 68px; }
-.edit-search-dock :is(.ac-filters button, .ac-select, .ac-mine, .ac-owned, .add-paste .btn, .add-to button) { min-height: var(--tap); }
+.edit-search-dock :is(.ac-filters button, .ac-select, .ac-mine, .ac-owned, .ac-edhrec, .add-paste .btn, .add-to button) { min-height: var(--tap); }
 .edit-search-dock .ac-colour { width: var(--tap); height: var(--tap); }
 .edit-search-dock .ac-stepper .step { min-width: var(--tap); min-height: var(--tap); }
 .edit-search-dock .ac-stepper .qty-input { min-height: var(--tap); }

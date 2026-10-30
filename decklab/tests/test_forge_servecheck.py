@@ -9,7 +9,7 @@ makes fails, and what can't be played raises ForgeError with no process left run
 
 The real-Java checks are test_forge_serve (DECKLAB_FORGE_TESTS=1).
 
-Run from the repo root: python -m unittest decklab.tests.test_forge_servecheck
+Run from the repo root: python scripts/test_fixtures.py decklab.tests.test_forge_servecheck
 """
 import io
 import os

@@ -2,6 +2,1037 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Field runs fail closed on unreadable field choices (2026-10-29; E3-S23 fail-closed slice)
+
+Home's saved field choices can no longer lapse silently. `forge/field_policy_overlay.py`
+now tells two states apart. A missing 0017 table, no store, a store without
+policies and an empty policy are today's field, exactly as before. Any other failed
+read (a database error, a corrupt row, an unexpected exception), and a missing
+table after the same store has already read that format's policy (the table was
+there, so its exclusions may still hold), fail closed: the plan's `refused`
+carries `REFUSED`, a sentence naming nobody, and no field run or field test may
+start. Views still show the legacy selection with the `UNREADABLE` note and an
+unavailable membership trace and manual-exclusion count, as before. Which formats a
+store has read is kept per store object (weakly, cleared with `clear_cache`), so
+another store or format goes by its own reads, and a later good read opens the
+field again. An unproved deck while rules exist keeps its noted legacy selection
+and isn't refused.
+
+`field._field` takes an optional `refused` list; `field.opponents(...,
+fail_closed=True)` and `field.run_field` raise a `ForgeError` with that sentence
+before planning or playing, and `variants._opponent_entries` asks the same for a
+change tested against the field. `POST /api/field/run` asks the field to fail closed
+and answers 503 with the sentence, submitting no job (the editor's after-save
+re-test shows it too). `GET /api/field` (`field.view`) adds `run_refused` (the
+sentence, or null), and the deck page's **Play the field** is then disabled with
+the sentence beside it. Who's in the field's answer adds `choices_unreadable`
+(true only in this state, with `forge/field_membership.CHOICES_UNREADABLE` as its
+error and no rows or counts); the page shows fixed words and **Try again**, never
+the server's text. Member fields never read home's choices, so they never refuse.
+
+**12 new fixture checks** pass: `test_field_policy_closed` (8 backend: no store,
+missing table and empty policy stay open, member fields, an unproved deck, four
+kinds of failed read refusing opponents, `run_field`, a field test and the view
+with no game played, the missing table after a read, the memory cleared, a good
+read reopening, and membership; 2 Node DOM: Play the field disabled with the
+reason, membership's fixed words) and `test_field_api` (2: the 503 start with no
+job and the view's `run_refused`, and a readable field still starting). With the
+field, field-policy, membership, choices, privacy, variant and pilot modules,
+`test_api`, `test_inventory_contract`, `test_api_decks` and the deck-page and
+matchup UI modules, 448 checks pass, and the source-length guard passes.
+Migration 0017 remains unapplied; no live database, server, Forge game, browser or
+device check was run. E3-S23 remains partial: 0017's activation with PostgreSQL
+and browser qualification are left.
+
+## Drafts kept for later in the Quick edit and for new decks (2026-10-29; E2-S16 second slice)
+
+- The phone's Quick edit now has the full editor's **Save draft for later**. Its bar gains the ▾ beside Save only while there is a draft to keep (something changed, the drafts are available and their read has finished); the Quick edit's ▾ holds just that item, as it had no menu before. The bar is drawn again when the kept draft's read finishes, so the ▾ appears without another change. With drafts unavailable, unreadable or a read-only deck the bar is as it was. (`editor.css`'s squared Save corner now follows only a ▾ that is shown.)
+- A new deck that has never been saved can be kept for later too. Migration `0019_new_deck_drafts.sql` (written, not applied live) adds `new_deck_draft`: one row per profile, space and source (`''` for a deck started from nothing, else the id of the deck it copies, with no reference since that deck may be renamed or deleted), with 0018's revision, tombstone, device and content rules; deleting the profile or the space deletes its rows. The stores have `new_deck_draft` and `new_deck_draft_put` (`state/deck_drafts.new_key`; `pg_deck_drafts.py` now drives both tables from one table spec, with its own advisory-lock prefix for a new deck's). Not audited, not in the general export; a member's removal lists, locks and deletes them (`space_remove`, `space_apply`), and `space export` fingerprints them only when there are some, so exports made before the migration still match.
+- `GET /api/deck/new-draft?space=&source=` and `POST /api/deck/new-draft` (`{"profile", "space", "source"?, "expect", "draft" (null to discard), "device"?}`): only the named viewer's own, as `/api/deck/draft`. Every read and write first asks what `POST /api/decks` asks: a space the viewer can't see or that doesn't exist answers 403 "Decks can be made only in a space whose decks you can see." (Matt included for a member's space; no admin override), then deck.create there, then that the deck it copies can be seen (else as a missing deck), all before the store is asked. Without the migration the read answers `{"available": false}` and a write 503.
+- The editor (`web/editor-kept-drafts.js`): a new deck's editor reads its kept draft for its space and source, and offers **A new deck kept for later** ("It hasn't been created yet.") with Resume it and Discard it; Resume restarts the new-deck editor with it, and **Create** clears it from every device as Save does for a saved deck's. Choosing another space in Whose deck reads that space's kept draft. Every write goes to the draft the editor read (`ed.kept.at`), so a later change of space never discards or replaces another space's.
+- Tests: `test_deck_drafts.py` (now 24: a new deck's drafts as two devices of one profile, a copy kept apart from a scratch deck and from the copied deck's own drafts, only the profile's own, every space the viewer can't add decks to refused before the store is read for Matt, User1 and a member (and a space that doesn't exist alike), a hidden source deck's 404, bad bodies, the missing migration, the routes, and the PostgreSQL statements and lock over a fake connection); `test_state_contract.py` (a new deck's revisions, tombstones, separate keys and validation, never batched or audited); `test_space_remove_preview.py` (a new deck's drafts listed by key without their contents, and deleted before the profile and space); the database tests in `test_space_export.py` (a member's new-deck draft makes the export stale, another space's doesn't, and none fingerprints as before migration 0019) and `test_space_apply.py` (removal deletes the member's new-deck drafts and keeps another space's; a rollback keeps them); `test_editor_kept_drafts_ui.py` (now 11: the Quick edit's ▾ shown only while there is one to keep, kept and resumed on another phone, hidden without the migration and absent when read-only; a new deck kept, resumed elsewhere and cleared by Create; a copy's own read; and the read following Whose deck).
+- Left: applying migrations 0018 and 0019 live and the household's device checks.
+
+## EDHREC ideas for a new deck, and EDHREC's narrowed pages (2026-10-29; E9-S07)
+
+The story's last two parts, so E9-S07 is built.
+
+- **A deck not saved yet** (`api/edhrec.py` `edhrec_view`): GET `/api/deck/edhrec` with no `id` takes
+  `commander` (required, with an optional `commander2`, checked as the editor's draft commanders are) and
+  `space`, checked as a new deck's space is (`drafts._new_space`: the viewer's own by default; one whose decks
+  the viewer can't see, or that doesn't exist, is the same 403). The ideas are then marked in that space's
+  pool with nothing in the deck (`lib/edhrec.ideas(None, ...)`: every copy no built deck or intact product
+  holds is free), again only for a viewer who sees that space's inventory; the answer adds `space`, its
+  `sha256` is None and `may_add` false (there's no Considering list yet). `id` and `space` together are a 400.
+  The new-deck editor's Add panel offers the **EDHREC ideas** tick for a Commander deck
+  (`web/editor-edhrec.js` `editorEdhrecOffered`, `editorEdhrecPath`), asking by its commander(s) and space;
+  the first save makes it ask again by the deck's id.
+- **Narrowed pages** (`lib/edhrec.py` `fetch(page=)`, `page_choices`, `_themes`): `page` asks EDHREC's Budget
+  or Expensive page, a Commander Brackets page (Exhibition, Core, Upgraded, Optimized, cEDH) or one of the
+  themes the commander's own page lists (its `panels` > `taglinks`, at most 60), at
+  `json.edhrec.com/pages/commanders/<slug>/<page>.json`, kept in the cache as `<slug>--<page>.json` (the
+  cache format is now 2, so older copies are fetched again). Only a page the commander offers is ever asked
+  for: anything else is a 400 (`UnknownPage`, or a value that can't be a page's name), and a page EDHREC
+  hasn't got, or that redirects back, is a 404 naming it. Every answer carries `page` and `pages` (the
+  choices). The deck page's sheet has a **Page** choice (`web/deck-edhrec.js` `drawEdhrecPicker`): the
+  commander's whole page, then the budget, bracket and theme pages grouped; the source line names the page,
+  and a failed page keeps the choice so another can be picked. `python -m decklab.lib.edhrec <deck-id> --page
+  PAGE` prints one.
+
+Tests: `test_edhrec.py` NewDeckTests (4) and NarrowedPageTests (6), with synthetic EDHREC pages and the
+fetcher replaced; `test_editor_edhrec_ui.py` (8, the new-deck scenario added and the offered-to test
+changed); `test_deck_edhrec_ui.py` (7, the Page choice and its absence without pages added). Known low issues: the narrowed pages' JSON
+layout is assumed to be the commander page's and their addresses EDHREC's site's, neither checked against
+live EDHREC; the editor's Add panel has no Page choice (only the deck page's sheet); checked with fixtures,
+not in a browser.
+
+## Suggested token counts on the deck page (2026-10-29; E7-S08 slice 2)
+
+The second slice reads the card log's token peaks (slice 1, below), so each token on a deck's Tokens part
+can say how many a game put on the battlefield at once. The story is built; real counts need matchups played
+again, since records saved before slice 1 have no tally (no Forge game was run for this).
+
+- **Pooling** (`decklab/lib/forge/saved.py`, `_token_tally` and `_pooled_tokens`): over a result's batches
+  whose "cards" record counts today (`_card_record`) and has a well-formed `"tokens"` (two dicts of names to
+  1 to `PEAK_CAP` counts ending non-zero, no more games than the record's); a counted record without it, or
+  with a malformed one, or a version 1 record (`_older_record`), is "untallied", never "no tokens".
+  `decklab/lib/forge/tokenpeaks.py`'s
+  `list_token_peaks` pools that over every saved result of the list, as `list_cards` pools the card rows:
+  sides with the list's card_sha and today's card-log engine id (worked out only once a result has the
+  card_sha), both sides of a mirror, and a `keep` that drops a result before anything of it counts. The
+  sides another engine played are left out but counted as `other_engine_games`, as `list_cards` counts
+  them, so a list played only before an engine change has games 0 rather than none.
+- **Matching** (`decklab/lib/tokens/peaks.py`, `annotate`): a logged name ("Insect Token", or a copied
+  card's name) matches a need by its name or a face name, with or without " Token", ignoring case and
+  accents. Each of the deck's own tokens gets the peak, "most games at most M" (the fewest that 9 in 10 of
+  the games that made one stayed at or under), the games that made one out of the games counted, and how
+  many more M is than the cards that fit (`usable`). Two needs with one name share it, saying so; the
+  opponent's tokens (they land among the other deck's), emblems, reminders and Copy get none. A peak at
+  the cap reads "30 or more".
+- **The deck page** (`decklab/lib/api/token_peaks.py`, `with_peaks`, from `deck_view`): the tokens answer
+  gains `"forge"` (the games, matchups and untallied games, with a note, or `{"games": 0, "why"}`: no saved
+  games, only games before the tally, only another engine's, or both of those) and each counted need its
+  `"forge"`. Only results whose every side
+  the viewer sees count (`forge_runs._Seen`, as the matchups and card stats), and the Tokens part is only
+  for the space's inventory readers, so a member viewing a public home deck gets none of it. A failure
+  logs and says so, leaving the rest of the part. `decklab/web/token-peaks.js` shows "Estimate from
+  simulated games: Forge games peaked at 7; most games at most 4 (10 games of 100 made one) · 2 more than
+  the cards that fit" under each need's state, and "Suggested counts from N simulated Forge games in M
+  matchups: approximate" (with how they're worked out folded away), or why there are none, above the
+  counters. `deck.js` changes only in place (still 1,192 lines).
+- **Goldens:** `golden_p4.py`'s new "token-peak-defaults" drops only the tokens' and needs' `"forge"`,
+  Forge evidence the dump already leaves out as practice and matchups. The API tests' fake Forge has a
+  `tokenpeaks` with no saved games.
+
+Fixture tests: `decklab/tests/test_token_peaks.py` (pooling, untallied and malformed tallies, a list's
+results, a mirror, keep, today's engine and only another engine's games, matching by face and accents, shared names, the opponent's,
+emblems and Copy, the cap, why there are none, the page's pieces in Node, and the deck page: a matchup
+against a hidden deck adds nothing, a member gets no Tokens part, a failure leaves the part). The deck,
+token, card-log, card-stats, web and inventory-contract tests still pass.
+
+- **Known low issues:** the matching is by name only, so Forge's names for tokens it creates under another
+  name than Scryfall's aren't counted (none seen yet: the fixture game logs "Rabbit Token" and "Cat
+  Token"); `python -m decklab.lib.tokens <deck-id>` doesn't print the counts.
+
+## The opponent's tokens counted apart (2026-10-29; E7-S23 slice 2)
+
+The first slice marked each token need with whose side it lands on; this one keeps a token the cards' text
+gives only to the opponent apart from the deck's own wherever a deck's tokens are counted. A token that may
+be either player's stays with the deck's own, marked as before. The story is built.
+
+- **The deck page's Tokens part** lists the opponent's tokens last, under their own heading, "For your
+  opponent (approximate)", with a line saying to hand them across the table; the deck's own and its
+  sideboard-only group keep their places. The Overview's token chip ("No Raccoon token · …") leaves them
+  out, so a deck whose only uncovered token is the opponent's gets no chip.
+- **The library's token line:** `tokens.brief` gains `opponent`, the names of the opponent's tokens with
+  nothing owned, a different card or only cards on the way, and leaves them out of `none`, `differs` and
+  `incoming`. The deck card shows them in their own info chip, "For your opponent: Spirit token".
+- **Build decks and the Packing plan:** the tokens step lists the opponent's lines after the deck's own,
+  each starting "For your opponent: " (Grab, stand-in and no-card lines alike). A tick keeps its id, so
+  saved packing progress still matches.
+
+Only viewers who may see the space's inventory get a deck's tokens or its brief, as before: a member
+viewing a public home deck gets neither. Nothing else changes (states, words, counts, packed Token cards,
+the Shared tokens panel and Finish building).
+
+Fixture tests: `decklab/tests/test_token_sides.py` (the brief's `opponent` from needs of every state and
+side, an older need without a side counting as the deck's own, and the library brief for a home viewer but
+not for a member of another space) and `test_feature_ui_tokens.py` (the heading after the deck's own, an
+either token staying with them, the Overview chip leaving the opponent's out, the library chip, and the
+packing lines' order, words and tick id). `golden_p4.py`'s "opponent-token-defaults" drops only the empty
+`opponent` from library summaries.
+
+- **Known low issues:** the side is read from words, so it stays approximate. The Shared tokens panel and
+  Finish building's packed Token cards line still treat the opponent's token like the deck's own (one card
+  in its box, to hand across).
+
+## Free dual lands for a short colour (2026-10-29; E3-S25)
+
+The third and last slice of E3-S25 offers free lands for a colour the deck is short of. The new
+`decklab/lib/decks/dual_lands.py` reads the Stats tab's own colour check (Karsten's sources, lib/stats): a single
+colour whose summary isn't ok is short (`short_colours`; a gold or hybrid group's check isn't read on its own, and
+without Karsten's table nothing is). A free land of the deck's space qualifies when it isn't a basic, is castable
+in the deck (`swaps.castable`; a casual deck never gets a land whose mana needs a commander, such as Command
+Tower), makes a short colour and makes two or more of the deck's colours. What a land makes is its produced mana
+alone (`makes_colours`), not `swaps.colours_of`'s identity as well, so a utility land such as Kessig Wolf Run
+(red-green identity, colourless mana) is never offered. `replaced_basic` picks the basic of the
+Deck section it would replace: one of a colour the land makes that isn't short first (the swap only gains), then
+a short colour's when the land makes another short colour, then a colour the land doesn't make with the most
+sources to spare (that colour loses one); a basic of a short colour the land doesn't make is never replaced, and a
+land with nothing to replace isn't offered. Lands are ranked by short colours fixed, nothing lost, entering
+untapped (a "maybe" before "always", read from the front face's text), a copy here, then printings and name; each
+note says what it makes, what the basic's colour does and whether it may enter tapped.
+
+GET /api/deck/dual-lands?id=&version=target|owned (`api/swaps.py` `suggest_dual_lands`) works the saved list's
+stats out (`deck_page._deck_stats`, so a failure is the stats' own warning) and answers `checked`, `short`,
+`basics`, up to `MAX_REPLACEMENTS` (5) lands with `makes`, `fixes`, `replaces`, `max_qty`, `tapped`, the
+candidate fields of GET /api/deck/replacements and `more`, plus the AUD estimates' rate and dates. Free copies
+are counted as the replacements count them (owned and on the way, less other built decks', intact products' and
+the list's own, naming no holder), within the list's room (one copy in a Commander deck, four in a casual one)
+and the basic's copies. Its reading rule is the replacements': a hidden deck's 404, a product or pairing's 400,
+then 403 "That collection isn't public." before the stats are worked out; a member's deck counts only that
+member's pool.
+
+On the page, `stats.js` `colourPanel` now carries `deck-swaps.js` `shortColourLands`: **Free dual lands for
+<colour>**, only when a single colour is short and only on an ordinary deck whose space's collection the viewer
+may see (`deckSwapsOffered`). Opening it asks once; each land shows its free copies, On the way, "for N Forests"
+and its note, with **Test this swap** (`testReplacementSwap`, the swap of its basic for the land in its default
+printing as the editor's draft, then the Test this change sheet). A 400, 403 or 404 takes the part away, any other
+failure offers Try again, and an answer after a profile switch isn't shown. Nothing is written to the server and
+no game is played.
+
+Fixture tests: `decklab/tests/test_dual_lands_api.py` (its card index is the fixture cards plus a few lands, built
+in the test; the colour check is the sandbox's stand-in stats: the duals offered and refused, no shortfall or
+verdict, failed stats, held and listed copies, which basic each replaces, a Commander deck's one copy and its
+Command Tower, the Play-now list, bad requests, the route, and privacy: a hidden deck, a Public deck without its
+inventory, a member's own pool, no other deck named; a land making only colourless) and `decklab/tests/test_dual_lands_ui.py` (shown and asked
+once, the Play-now list, the panel, On the way and Plains, none fitting or no basics, only with a short colour and
+the collection, refusals, Try again, a profile switch, and Test this swap's draft). E3-S25 is built.
+
+## Change the field: home admins' preview and save (2026-10-29; E3-S23 edit slice)
+
+A home admin can now change home's field on the page. Who's in the field (a home
+deck's Matchups tab) has a **Change the field** panel when its membership answer
+says `can_edit` (a named home admin on a home field): pick one of the format's
+current home lists, then **Include this list**, **Leave the deck out** (with a
+reason, kept only in the change history) or **Follow the field rules**.
+**Preview change** (`POST /api/field/policy/preview`, new `api/field_choices.py`)
+writes nothing: it shows what the deck does now and after saving, with the policy
+revision (a decimal string) and the list's proof. **Save change**
+(`POST /api/field/policy`) sends exactly that preview back as one audited change;
+the store's existing CAS rechecks the revision and recomputes the proof in its
+write transaction, so a stale preview or a list changed since answers 409. The
+membership is read again afterwards; saving starts no games. While a save is in
+flight the List, Choice and Why fields and both buttons stay disabled, so the
+save's confirmation or refusal is always shown (a 409 or 503 re-enables them).
+
+The preview's proof comes from the stores' new `field_policy_review`: memory's
+explicit fixture source, or PostgreSQL's one read-only repeatable-read
+transaction (`pg_field_policy.review`), which needs no policy table. Before
+migration 0017 the preview works as today and says so, and a save answers 503
+naming `python -m decklab.db migrate`. A new permission, `field.edit`, is
+checked first on both routes: members (User1 included), admins outside home and
+requests naming nobody are refused before any deck, policy or list is read, in
+words naming nobody, and a hidden deck answers as a missing one.
+
+**23 new fixture checks** pass: `test_field_choices_api` (12: preview and save
+over a memory store, Play-now and Use rules, the private Exclude reason, stale
+revision and changed list, permissions before any store read, an outside admin,
+hidden, product and malformed inputs, missing table, unproved list and down
+store, `can_edit`, and the routes), `test_pg_field_policy_review` (4, fake SQL:
+one read-only snapshot without the policy table, unproved lists, non-home ids and
+batches, a busy connection), `test_field_choices_ui` (6 Node DOM cases, one changing the selects mid-save) and one
+membership API case. With every field, field-policy, membership and permission
+module and `test_web`, `test_server`, `test_api`, `test_inventory_contract` and
+`test_api_decks`, 587 checks pass, and the source-length guard passes.
+Migration 0017 remains unapplied; no live database, server, Forge game, browser
+or device check was run. E3-S23 remains partial: failing closed when saved
+choices can't be read, and 0017's activation with PostgreSQL and browser
+qualification, are left.
+
+## Shop adapters (2026-10-29; E5-S08 slice)
+
+- `decklab/lib/shops.py` is now the package `decklab/lib/shops/`, with no change in behaviour: `python -m decklab.lib.shops snapshot|show|lookup` (now `__main__.py`), the nightly step, the cache `decklab/data/shops/mtgmate.json` and its `mtgmate.lock`, and Shopping's and deck Prices' answers are as before.
+- `base.py` is the interface every shop's adapter gives: `Adapter` (a key naming its snapshot file and lock, the shop's name and site, `robots_url`, `name_url` and `parse_name_page`, which never fetch), the listing fields, `robots_rules`/`allowed` and one `fetch_page`. `mtgmate.py` is MTGMate's adapter, moved unchanged. The package (`__init__.py`) keeps `ADAPTERS`, the `Session` (now for any adapter, its errors naming that shop), the snapshot, matching, refresh and the command line, and its old names (`shops.parse_name_page`, `shops.SITE`, ...) still answer.
+- Tests: `decklab/tests/test_shop_adapters.py` (13: every adapter's interface and cache path, a default session still going through the tests' fetch guard, an invented second shop asked only through the interface, and MTGMate's parsing on saved synthetic pages in `decklab/tests/fixtures/shops/mtgmate/`: robots.txt, a name page with variants, tokens and other names, a double-faced name, no matches, a changed page and an unreadable table, with no personal data). The existing shop tests pass unchanged.
+- Left: researching a second Australian shop (robots.txt and page format, which needs a live check) and its adapter; the snapshot still reads one shop. No live shop page was fetched for this.
+
+## Remove added token cards together (2026-10-29; E11-S08 slice)
+
+- Activity's **Review undo** now removes every added token-card row of one change (2-50) the way one unused added row is removed (2026-10-26): `token_batch_remove`, `lib/inventory/undo_token_batch_remove.py`. The review reads the change set's complete audit rows (`undo_audit_rows`; without that reader, the first rows' ownership is still checked before it says it's unsupported) and proves first that every one is an own-space token-card INSERT (any hidden or other row makes the change missing, an admin included, before any fact is looked at). Then each row must have verified pairing (`undo._source`'s single-row checks), still be the latest audit row for its id, still hold its added facts at its added position, be the only stock row of its physical identity and be held by no built deck's or intact product's packed line (`undo_tokens._packing`). The ordinary removals are run on the snapshot and must leave every survivor's id, facts, order, packing allocation and free capacity unchanged and no other space touched. The receipt binds every source row, the token list's sha, stock, layout, packing and both revisions; the PC reads it in one fresh read-only transaction under the inventory claim (`PgInventory.undo_token_batch_remove_review`).
+- All or nothing: more than 50 rows refuse naming how many ("That change added 51 token-card rows; Undo removes at most 50 at once."), and any row that can't be removed refuses the whole change naming how many and why in fixed words only ("1 of the 3 added token-card rows can't be removed (packed in a deck or product line: 1)…"; also edited or removed since, physical pairing not verified, may be the same physical card as another recorded row), never a card's facts. The review answers `available: false` with that reason, and a save 400 with it.
+- Save needs one reviewed reason (the single removal's rules, at most 200 characters; an ownership confirmation is refused). Inside the write the whole review runs again and the receipt must match. Before commit, `PgInventory.apply`'s existing hook (`undo_token_delete.restoring` and `confirm_in_transaction`, which now also hand a batch removal on) reads the change set's audit rows, one more than the batch, and the space's positions, and `undo_token_batch_remove.confirm` proves exactly N own-space DELETEs of the reviewed ids with their reviewed facts and positions, every survivor's id, facts and position unchanged, the same packing with the same free capacity and no other space changed; anything else rolls every DELETE back. One audited change set with the reason, "Undo change #N: remove 3 added token-card rows (6 physical cards)".
+- The API (`api/activity_undo.py`) projects each row's current facts, label and stable `token_row_id`, the count and `reason_required`, offers Review undo when Activity's rows (with "and N more") cover a whole own-space token-addition change, and answers a save only with the proved `removed_token_row_ids` in the preview's order, the remaining stock as reviewed and `restored: null` (`_token_batch_removed`). The page (`web/activity-undo.js`) lists every current row in the shared Undo sheet with the whole physical count and the reason field, and checks the stable-id receipt exactly.
+- Tests: `test_inventory_undo_token_batch_insert.py` (19: review without writing, the 50/51 bound, every refusal reason counted with no card names, hidden or mixed sources missing before any lookup, a member's 51 rows missing to home, a row named twice, reasoned removal beside a packed survivor, the last rows, reason rules and replay, changes after the preview, a member's space, every refused proof, the hook's reads and `PgInventory.apply`'s call site with no database), `test_activity_undo_token_batch_insert_api.py` (9), `test_activity_undo_token_batch_remove_ui.py` (5 Node DOM cases) and `test_inventory_undo_token_batch_insert_pg.py` (3 guarded disposable PostgreSQL cases, skipped without one). The Undo, Activity and token modules (1,135 tests, 25 skips), `test_api`, `test_web`, `test_inventory_contract`, `test_api_decks` and `test_web_no_personal_data` pass.
+- Not run: the PostgreSQL apply against a disposable or real database, a browser or device. No migration is needed.
+
+## Restore deleted token cards together (2026-10-29; E11-S08 slice)
+
+- Activity's **Review undo** now restores every deleted token-card row of one change (2-50) the way one row is restored (below): `token_batch_add`, `lib/inventory/undo_token_batch.py`. The review reads the change set's complete audit rows (`undo_audit_rows`), proves first that every one is an own-space token-card DELETE (any hidden or other row makes the change missing, an admin included, before any fact is looked at), then runs each row through the one-row checks (`undo_token_delete`'s helpers, now `settled_stock`, `collides`, `same_card` and `packed_lines`), plus a check that no two of them may be the same physical card. The fence is the space's latest token audit row being the change's last, and each row's id still last touched by it. Its receipt binds every source row, the latest audit row, the token list's sha, stock, layout, packing and both revisions; the PC reads it in one fresh read-only transaction under the inventory claim (`PgInventory.undo_token_batch_review`).
+- All or nothing: more than 50 rows refuse naming how many ("That change deleted 51 token-card rows; Undo restores at most 50 at once."), and any row that can't be restored refuses the whole change, naming how many and why in fixed words only ("1 of the 3 deleted token-card rows can't be restored (may be claimed by a packed deck or product line: 1)…"), never a card's facts (`undo_token_batch.Refused`). The review answers `available: false` with that reason, and a save 400 with it.
+- Save needs `confirm_owned: true` after one checkbox stating the whole physical count across every row. Inside the write the whole review runs again and the receipt must match; ordinary Add saves each historical row without an id. Before commit, `PgInventory.apply`'s existing hook (`undo_token_delete.confirm_in_transaction`, which hands a batch on) reads the change set's audit rows, one more than the batch, and the space's positions, and `undo_token_batch.confirm` proves exactly N own-space INSERTs with distinct fresh ids (never a deleted or a survivor's id) carrying the reviewed facts, every survivor's id, facts and position unchanged, the same packing with the new cards unheld and no other space changed; anything else rolls every INSERT back. One audited change set, "Undo change #N: restore 3 deleted token-card rows (6 physical cards) as new rows".
+- The API (`api/activity_undo.py`) projects only the rows' historical facts and labels, the count and the fixed policy, offers Review undo when Activity's rows (with "and N more") cover a whole own-space token-deletion change, and answers a save only with the proved `added_token_row_ids` and the actual row at each (`_token_batch_added`). The page (`web/activity-undo.js`) lists every historical row in the shared Undo sheet, with the whole-count checkbox and an exact receipt check.
+- Tests: `test_inventory_undo_token_batch.py` (20: review without writing, the 50/51 bound, every refusal reason counted with no card names, hidden or mixed sources missing before any lookup, a member's 51 rows missing to home, later touches and reused ids, confirmed restore beside a packed survivor, confirmation and reason rules, changes after the preview and replay, a member's space, every refused proof, the hook's reads and `PgInventory.apply`'s call site with no database), `test_activity_undo_token_batch_api.py` (9), `test_activity_undo_token_batch_ui.py` (5 Node DOM cases) and `test_inventory_undo_token_batch_pg.py` (3 guarded disposable PostgreSQL cases, skipped without one). The Undo and Activity modules, `test_api`, `test_web`, `test_inventory_contract`, `test_api_decks` and the token modules pass.
+- Not run: the PostgreSQL apply against a disposable or real database, a browser or device. No migration is needed.
+
+## Restore a deleted token card as a new row (2026-10-29; E11-S08 slice)
+
+- Activity's **Review undo** now restores one deleted token-card row that the deleted-token review (2026-10-28) finds eligible. The review became the restoration's preview (`token_add`, `lib/inventory/undo_token_delete.py`): the same strict checks (one standalone own-space DELETE, still the latest audit row for its id and for its space's token list; exact printing and pairing; settled stock order and persisted positions; no survivor that may be the same physical card; complete deck and product packing with no line that could claim it), and a receipt binding the source and latest audit row ids, the facts, the token list's sha, the stock, layout, packing and both revisions.
+- Save sends only the change id, that receipt and `confirm_owned: true`, after a checkbox stating the whole physical count ("all 2 physical token cards"; a front/back pair is one card); a reason is refused. Inside the write transaction the whole review runs again, the receipt must match, and ordinary Add saves the historical row with no id, so the database gives it a fresh one. Before commit, `PgInventory.apply` reads that change set's audit rows and the space's token positions on its own cursor (`undo_token_delete.confirm_in_transaction`) and proves exactly one own-space INSERT with a new id (never the deleted id or a survivor's) carrying the reviewed facts, every survivor's id, facts and position unchanged, the same packing allocations with the new card unheld, and no other space's token cards changed; anything else raises and rolls the change back. One audited change set, "Undo change #N: restore deleted token card … as a new row". Earlier packing is never reconnected, and a replayed receipt refuses because the source is no longer the latest touch.
+- The API (`api/activity_undo.py`) projects the historical row with `identity_policy: "fresh_id"` and `packing_restored: false`, and answers a save only with the backend's proved `added_token_row_id` and the actual row found under it (`_token_added`); a backend without the proof answers 503. The page uses the shared Undo sheet (`web/activity-undo.js`) with the full historical row, the whole-count checkbox and an exact receipt check; the read-only review sheet `web/activity-token-review.js` is gone.
+- Privacy: the source's space is checked before any historical fact, so an admin can't review or restore a member's deleted card, and a member can't reach home's; a member restores in their own space only, leaving home's token cards untouched.
+- Tests: `test_inventory_undo_token_restore.py` (16, with a database-like fake apply that assigns the serial id and position and runs the same proof: restore beside packed survivors, an empty space, confirmation and reason rules, stale receipts and changes after the preview, replay, a newly claiming packed line, a member's space, a hidden source, and every refused proof: reused or survivor ids, extra or missing audit rows, other operations, changed facts or space, moved positions, changed survivors, another space's tokens and moved packing; the transaction hook's two reads; and, with no database, `PgInventory.apply` itself proving a restore on its write cursor, rolling back a refused proof and leaving ordinary token writes unproved), `test_inventory_undo_token_restore_pg.py` (3 guarded disposable PostgreSQL cases, skipped without one: a real restore is one fresh INSERT with survivors' positions, packing and the source's audit kept and cannot be replayed, a tampered proof rolls the INSERT back, and a newly claiming packed line refuses), `test_activity_undo_token_delete_api.py` (13), `test_activity_undo_token_add_ui.py` (9 Node DOM cases), `test_inventory_undo_token_delete.py` (20) and `test_token_delete_reader.py` (6). All pass; the Undo and Activity modules with `test_api`, `test_web`, `test_inventory_contract` and `test_api_decks` passed 1,027 tests (19 database skips), the token modules 420 (7 skips) and the modules touching `PgInventory` 1,136 (290 database skips).
+- Not run: the PostgreSQL apply against a real or disposable database, a browser or device. No migration is needed.
+
+## Drafts kept for later (2026-10-29; E2-S16 first slice)
+
+- An editor draft can now be kept on the PC for the same profile on another device. Migration `0018_deck_drafts.sql` (written, not applied live) adds `deck_draft`: one row per profile, deck and list (`target` or `owned`), holding the editor's own draft object, the device it was kept on and when, with a revision that only grows. Discarding leaves a tombstone with the next revision, so a device holding an older revision can never bring a discarded or replaced draft back. Deleting the profile or the deck deletes its drafts (`on delete cascade`), and a rename carries them (`on update cascade`). Drafts are scratch work like the browser's: no change set or audit rows (so their lists never reach Activity), and not in the general export. A member's removal still covers them: `space export` fingerprints the member's drafts and those of the member's decks (never writing them into the artifact), and the removal's preview lists, locks and deletes them explicitly (`space_remove`, `space_apply`; the lock is skipped while the migration isn't applied).
+- The state store has `deck_draft` and `deck_draft_put` (`state/deck_drafts.py` for the rules, `state/pg_deck_drafts.py` for PostgreSQL, MemoryStore the same): a put checks the expected revision under the draft's advisory lock in its own short transaction, never inside a batch. The table is looked for (`to_regclass`) before every read and write, so a database without the migration raises `deck_drafts.MissingSchema` without tripping the shared breaker.
+- `GET /api/deck/draft?id=&version=` and `POST /api/deck/draft` (`lib/api/deck_drafts.py`): only the named viewer's own draft, through the tunnel or the home chooser. Nobody else, an admin or a script naming nobody included, reads, replaces or discards it, and no answer says whether another profile has one. The deck's visibility is checked first (another space's deck answers as a missing one, before the store is asked), keeping a draft needs deck.edit as saving would (a discard only that the deck is seen), product decks and pairings have none, and a stale revision answers 409 with nothing written. When the draft's text hash is the deck's text now, the server records that deck revision in it (a value the page sent is dropped), and a read says which saved revision it started from and whether it still starts from the deck as saved now. Without the migration the read answers `{"available": false}` and a write 503 with the migration command.
+- The editor (`web/editor-kept-drafts.js`, loaded after `editor-drafts.js`; `draftRecord` now builds the one draft object both use): the full editor's ▾ menu has **Save draft for later** once something changed, keeping the local copy too. Opening the same deck and list on another device shows **A draft kept for later** (device, time, starting revision, and whether it or this device's unsaved changes are newer) with **Resume it**, which brings it back as a local draft would, rebased when the deck changed since, or **Discard it**. A refused save says another draft was kept and asks before replacing it; a deck renamed meanwhile gets the editor's own renamed-deck sheet instead. Saving the deck clears the kept draft that editor resumed or kept, without waiting for it: the editor it reopens reads its kept draft only once that discard has settled, so a published draft is never offered again, and a failed discard never fails the save. This device's own draft remembers which kept draft it is (`keptDraftMark`, never sent to the PC), so closing and reopening the editor still treats it as its own and a later save still clears it. With drafts unavailable, unreadable or not applicable (new, read-only or product decks) nothing new shows and no new redraw happens.
+- Tests: `decklab/tests/test_state_contract.py`'s StoreContract (5 draft cases: revision, tombstone, separate rows, copy, validation and no-audit/no-batch rules, on MemoryStore and, given a throwaway database, PostgreSQL); `decklab/tests/test_deck_drafts.py` (16: the missing-migration rule; the PostgreSQL statements over a fake connection; and the API as two devices of one profile, its own-profile, nobody, hidden-deck, deck.edit, impersonation, bad-body, missing-migration and route edges) `decklab/tests/test_editor_kept_drafts_ui.py` (8 Node DOM cases sharing a fake API between two devices: keep, resume, rebase, conflict, newer-than, discard, the save's discard through `doSave` without waiting, a reopened editor's mark, a rename and the unavailable cases); and member removal's (`test_space_remove_preview`: every table hanging off a profile or deck is locked and deleted explicitly; the database tests in `test_space_export` and `test_space_apply` now hold a draft). Three existing editor UI fixtures that list every read the editor makes now answer the kept-draft read as a server without the migration. `test_field_policy_db_registration`'s migration-order check now allows migrations after 0017.
+- Left: Quick edit's Save draft for later, a new deck's draft, applying migration 0018 live and the household's device checks.
+
+## Scan cards: printing and language on the pending list (2026-10-29; E7-S32)
+
+- Each card on Scan cards' pending list now has its own **Printing** choice: the printings the scan proposed for it (or those the typed name's lookup offered), only those of the card's own name (a scan may also propose other cards' printings, which never become this card's choices), each with the copies of that printing and finish the space already has (shown only while the card has that finish), and **Other printings…**, which opens the shared printing picker (cards-ui.js `pickPrinting`, GET /api/cards/printings, whose copies are the visitor's own space's, the one scanned into, never another's) for the card's other printings. A basic land's "Any printing" isn't taken, and a card taken out while the picker is open stays out. Choosing another printing keeps the card's finish when that printing has it (`POST /api/collection/scan`'s proposals now carry each printing's paper `finishes`), else takes the printing's own; the picker's printing and finish are both taken as picked, its copies those of the finish picked, and its finishes kept (`pickPrinting` now resolves with the picked finish's own `owned`, `on_the_way` and `aud`, and the printing's `finish_choices`), so choosing it again later keeps the card's finish when the printing has it.
+- Each pending card also has a **Language** choice of Scryfall's codes (`COL_LANGUAGES`): the language read off the card's bottom line when it was read, else **Not recorded** (blank, never assumed English). A change of printing, finish, condition or language that makes two pending cards the same joins them, adding the copies. Both reach the import preview in the collection-columns CSV, and **Back to the scanned list** brings each card back with its printing choices.
+- Tests: `decklab/tests/test_collection_scan_ui.py` (7 more: choosing a proposal and two rows joining, a finish kept, the shared picker with a closed sheet, "Any printing", a picked printing's finishes and per-finish copies, a card taken out meanwhile not joined to another row with the picked printing nor dropping one, only the card's own name's proposals as its choices, language as read or not recorded through to the preview CSV and back, a language change joining rows; the existing cases now find each row's controls by name) and `decklab/tests/test_collection_scan_api.py` (the proposals' finishes; a member's and home's picker copies are their own space's, matching the scan's). No OCR engine or card index outside the fixture's is used.
+- Not yet tried on real phone photos; scanned token cards aren't offered for the Tokens page.
+
+## Scan cards on the Collection page (2026-10-29; E7-S32)
+
+- The Collection page's More has **Scan cards…** where the visitor may change that collection (home's Matt and User1; a member only their own). It takes one photo at a time with the phone's camera (`<input type="file" accept="image/*" capture="environment">`, on http and https alike), draws it on a canvas with its long side at most 2000 px (upright, as the browser applies the photo's rotation) and sends it as a JPEG at quality 0.85 to the PC. A card read with both its name and the bottom line's set code and number goes straight onto a pending list, with the other proposals offered instead; when only the name, or only the bottom line, was read, or reprints in different sets share the number read and no set code settles it (`scan.propose` marks each "name and number", and its message then says to choose), the visitor chooses the printing; when nothing could be read (or the PC has no OCR engine) the sheet says so and offers the card's name typed in, then its paper printings (`/api/printings`). Each pending card's copies, finish and condition can be changed (condition is never guessed; the printed language is kept). **Review** turns the list into a collection-columns CSV (`scan-<date>.csv`) and opens the Import cards sheet's preview with it, so the scan is added as an import is: previewed, then one change with its raw import kept. Until it's imported, the import sheet offers **Back to the scanned list**, which reopens the scan sheet with the same pending cards, so a problem the preview finds (a finish the printing hasn't, say) or a failed preview can be fixed without scanning again.
+- `POST /api/collection/scan` (`lib/api/collection_scan.py`) takes `{"profile", "space"?, "photo"}`, the photo a complete JPEG or PNG of at most 4 MiB and 16 to 10,000 pixels a side, and needs collection.edit on the space (`guard.require_space_write`, as the Collection page's edits and imports): anyone else gets "That collection isn't public." before the photo is looked at, Matt included for a member's space. The photo is written to a temporary folder only while it's read (the spike's `scan.ocr`: Windows' own engine, else Tesseract), then deleted; nothing in the inventory, the audit trail or the raw imports changes. It answers what was read (at most 60 lines), the proposals best first with each printing's small picture and the copies of that printing and finish the space already has, and one plain sentence; `unread` says the engine couldn't read the photo at all. One photo is read at a time (429 while another is). The OCR engine is the module's `OCR`, which the tests replace, so no test runs Windows' engine.
+- Tests: `decklab/tests/test_collection_scan_api.py` (a stand-in OCR over the fixture card index: nothing written, the temporary photo gone, owned copies from the scanning space only, the own-space refusals for a member, another member's space and an admin in a member's space, unreadable photos, bad uploads, the one-at-a-time lock, and a proposal previewed as a collection-columns import) and `decklab/tests/test_collection_scan_ui.py` (collection-scan.js over the real scripts: the pending list, choosing another printing, the typed name, reprints sharing the number read offered rather than guessed, a failed scan, Review's CSV handed to the import preview, and the way back to the scanned list from a preview with problems or a failed one).
+- Not yet tried on real phone photos; a pending card's printing changes only by taking it out and choosing again.
+
+## Sideboard-plan tests (2026-10-29; E4-S16)
+
+A saved plan's post-board preview now offers **Start quick check** and **Start
+play until ahead** when both lists share one verified format. `POST
+/api/play/sideboard-test` (`lib/api/sideboard_test.py`) runs the preview's checks
+again first, so a hidden plan or opponent answers 404 or 409 before any 403, then
+the simulations setting (`require_start`), the base's own space and the variant
+tests' own checks: deck-order-1 in today's engine and a free place in the
+coordinator's queue. Forge's entries read today must have the played cards of the
+record's verified snapshots, so a list saved after the preview's pin refuses. The
+post-board main list is then played on the base list's games as a paired variant
+test (`variants.run_test` through variant_page's job, titled "Test of a sideboard
+plan for ..."); its test page gives the Better / Worse / Makes little difference
+words. Starting the same plan twice joins one test. While the setting refuses the
+viewer, Start is disabled with the setting's reason under it, naming nobody.
+
+**Tests of this plan**, beside Preview on Game log and the deck's Sideboard plan,
+reads `GET /api/play/sideboard-tests`: the deck's tests against the same
+opponent list whose changes are the plan's moves (an editor test of the same swap
+counts), running ones first, each with its verdict words and link. A test is
+marked **For an older list** when either list's played cards changed since it was
+played or the saved plan no longer matches today's lists, a printing-only change
+included; the sheet then says to revise the plan. Only the plan's own space reads
+them, public decks never publish a plan's tests, and each test also follows the
+variant tests' visibility; its items carry no starter or stopper names, and the
+answer passes through the viewer's name masking. A test that ended not settled is
+listed like the others.
+
+Games stay best of one: a test measures only the post-board main list against
+the opponent's game-one list, never the sideboard or the opponent's own plan.
+Fixtures only: 21 backend cases over the real forge package with
+test_variant_api's stand-in `run_test`, a MemoryStore and disposable decks, and 10
+Node DOM cases; with the preview, variant, play-record, permission, route and web
+modules, 179 tests passed (1 skipped), and the inventory contract, deck API and
+feature UI modules 68. No Forge game, live database, server, browser or device was
+run or probed. E4-S16 is built.
+
+## Saved field choices in home's field selection (2026-10-29; E3-S23 selector slice)
+
+Home's field now follows the saved per-format field policy. A new
+`forge/field_policy_overlay.py` runs inside `field._field` after simulation.json's
+directives are read and before the add/remove passes, so the membership trace,
+the manual-exclusion count, Rankings' explanations and the notes all see the
+effective directives. For each current home house deck of the format whose checked
+incarnation has an entry, every legacy directive naming that deck (any version,
+through its aliases) is masked; **Include** then pins its Planned or Play-now list
+(shown as added by hand), **Exclude** takes it out (counted and explained as a
+manual exclusion) and **Use field rules** keeps the automatic choice, its Built
+version included. A deck with no entry keeps exactly its legacy selection, and a
+recreated deck never inherits its predecessor's entry; a renamed one keeps it.
+Field runs, opponents, plans, averages and ratings use the same selection.
+
+Without a policy nothing changes: no store installed (fixtures), a store without
+field policies, an empty policy, or migration 0017 not applied (its missing-schema
+refusal) give today's field exactly, with no identity reads. A failed or corrupt
+policy read, or a deck whose incarnation can't be proved while rules exist, never
+reads as empty: those decks keep legacy selection (so a saved exclusion doesn't
+hold until the read works again; failing closed is still open), a note naming no deck says so,
+and the membership view and exclusion count become unavailable instead of looking
+complete. Member fields don't read home's policy in this slice.
+
+Incarnations are proved by the new `pg_deck_epoch.read_many`: one read-only
+repeatable-read transaction and one snapshot load for all the format's house
+decks, each with read()'s bounded proof. A proof counts only when its receipt
+matches the pinned snapshot's deck revision and text hash, and only ready proofs
+are cached, by inventory and decks revision. Files, stale and preview snapshots
+prove nothing.
+
+**25 new fixture checks** in `test_field_policy_overlay` (selection, masking,
+rename/recreation, failures, membership, Rankings and opponents, the snapshot tie,
+caching and the batch reader on fake PostgreSQL objects) pass, with the
+neighbouring field, membership, exclusion-count, Rankings, field-policy, epoch,
+state-contract and Forge-contract modules (483 checks, one existing skip),
+`test_inventory_contract` and `test_api_decks` (61) and the source-length guard. No API answer gained a key. Migration 0017 remains
+unapplied; no live database, server, Forge game or device check was run. E3-S23
+remains partial: the revision-checked, audited home-admin preview and save (API
+and Who's in the field controls) are next.
+
+## Free cards by role on the Stats tab (2026-10-29; E9-S26)
+
+A Commander deck's Stats roles (ramp, card draw, removal, board wipes and the rest, counted from Scryfall's
+oracle tags) can now be topped up from the pool. **Free cards by role**, under the role bars, lists for each
+role the cards the deck's space owns with a copy free for it: owned or on the way, less what other built decks
+and intact products hold (never a basic land), not in the list already, with a colour identity inside the
+commander's and legal in Commander (a Play-now list with no Commander section takes the Planned list's
+commander, which then counts as in the list too). Each role shows at most 10, most-printed first, with the free copies and
+how many are on the way, and counts the rest. The rules are `decklab/lib/decks/role_pool.py`'s
+(`free_by_role`), reading each card's `roles` from the card index, so a listed card is one the role's bar would
+count. `GET /api/deck/role-cards?id=&version=target|owned` (`lib/api/role_cards.py`) answers with GET
+/api/deck/replacements' reading rule: a hidden deck is missing (404), a product or pairing a 400, a viewer who
+may not see the space's inventory 403 "That collection isn't public.", then a casual deck or one with no
+commander a 400. It names no other deck. Each role says its tag and whether the card data holds it; when the
+card data holds no role tag the panel says role tags are unavailable rather than showing nothing.
+`web/stats.js` (`rolePoolPart`) shows the part only for a Commander deck whose collection the visitor may see
+(the deck answer's `owned`), and asks once when it's opened. The deck answer itself is unchanged.
+
+Fixture tests: `decklab/tests/test_role_cards.py` (the rules on test cards; the API in the fixture sandbox:
+colour identity, held and on-the-way copies, the Play-now list (one without its commander too), untagged roles and no tags, bad requests, the
+route, a member's own pool, a public deck without its inventory, no holder named) and `test_role_cards_ui.py`
+(the panel under Node). No live data, migration, server or Forge run was touched.
+
+- **Left:** cited role targets (how many cards each role should have, from a cited, dated template) wait on Matt
+  choosing the template source.
+- **Known low issues:** the most-printed order stands in for how much a card is played; a card the deck's
+  sideboard plays is left out as if it were in the deck.
+
+## Token peaks in the card log (2026-10-29; E7-S08 slice 1)
+
+The first slice of suggesting how many of a token a game needs: the card log now keeps a count. DeckLabSim's
+`DL|zone` lines already logged every token's moves (created from "-"), but `decklab/lib/forge/cardlog.py` left
+every id outside the seats' lists out. `Game._token` now follows an id in neither list whose move is from "-"
+(an effect created in the Command zone never reaches the battlefield, and an id first seen moving from a real
+zone, such as a wish's card from the sideboard, isn't a token), on its owner seat's side and by its logged
+name as Forge prints it ("Rabbit Token"; a token copy of a card has the card's name). Per game, side and name
+the peak is the most of that token on the battlefield at once, replaying its moves up to the end lines as the
+checks replay the cards', and `add()` tallies it into the batch record's new `"tokens"`
+(`[{name: [n1, n2, ...]}, {...}]`, nk the games whose peak was k, capped at `PEAK_CAP` 30), only for games
+whose card data counts. The record stays version 3: the rows didn't change, and a record without the key
+(every one saved before today) didn't tally tokens, which isn't "none". `merge_record` sums the counts number
+by number and drops the key when either record lacks it; the warm pool's per-game parts carry it
+(`pool_models._cards_delta`, through `cardlog.tokens_less`), so a run's merged chunks add up as the rows do.
+Nothing reads it yet: pooling over a deck's saved runs, matching Forge's names to the deck's token needs and the
+Tokens part's suggested count are the next slices, and real counts need fresh runs (none was played for this).
+
+Fixture tests: `decklab/tests/test_forge_cardlog_tokens.py` (peaks and sides, every way off the battlefield, names
+apart, copied spells, effects and outside cards, a reused id, an unknown owner, moves after the end lines, a bad
+game, games by peak, the cap, merging, the per-game parts adding up, and one real game:
+`fixtures/forge/cardlog-tokens-s1001.log`, whose Rabbits peak at 7). The existing card-log, pool and Forge
+modules pass unchanged.
+
+- **Known low issues:** a token's side is its owner's, so a token that changes control still counts for the side
+  that made it; and a token that leaves the battlefield in a way Forge doesn't post as a zone change would stay
+  counted until the game ends (none seen in the logs read).
+
+## The counters and dice a deck uses (2026-10-29; E7-S24 slice 1)
+
+The read-only first slice of recording dice and counters: what a deck's cards call for, before anything owned
+is recorded. `decklab/lib/tokens/counters.py` reads each card's rules text (reminder text and every face
+included): the word or P/T right before "counter(s)" is a kind ("a shield counter", "three time counters", "a
+-1/-1 counter", with Scryfall's minus sign read as "-"), unless it only counts, points or counters a spell ("a
+counter", "another counter of each kind", "may counter target spell", "instead counter", "Zack Fair's
+counters"). `{E}` is energy and "roll a d20" or "roll two six-sided dice" a die of that many sides. The type line
+adds a planeswalker's loyalty, a battle's defense and a Saga's lore, and Scryfall's keywords add the counters of
+a keyword printed without its reminder text (undying and the other +1/+1 keywords, persist and wither -1/-1,
+infect -1/-1 and poison, toxic and poisonous poison, suspend and vanishing time, fading fade, level up level).
+Run over every card in the index, it found 279 kinds, all real ones after dropping a few verbs and
+possessives. `deck_tokens` gains `counters`: `{needs: [{key, name, group, made_by, sideboard_only}], note}`,
+grouped as on permanents, on players (poison, energy, experience, rad, ticket) or dice, in that order, with
+the cards that use each kind. It's part of the deck's tokens, so only viewers who may see the space's inventory
+get it; the packing plan leaves it out (`assembly_ticks.token_packing_keys`), and nothing else in the answer
+changes. The deck page's Tokens part lists the kinds under "Counters and dice" ("Poison counters (on
+players)", "Used by Venom Drake and 2 more cards"), with a "How are counters worked out?" note saying it's
+approximate and that owned dice and counters aren't recorded yet; `python -m decklab.lib.tokens <deck-id>`
+prints them as "Counters and dice (approximate)". No decklist, pool, table or inventory changes.
+
+Fixture tests: `decklab/tests/test_token_counters.py` (kinds and non-kinds from sentences, types, faces and
+keywords; a deck's needs from test cards added to `fixtures/tokens_cards.jsonl`'s index, their order, groups,
+sideboard-only and quantities; the rest of the tokens answer unchanged; the printout; a member viewing a
+public home deck getting no token part at all), `test_feature_ui_tokens.py` (the deck page's list, also with no
+tokens, and none without counters), `test_assembly_token_keys.py` (kept off the packing plan) and
+`golden_p4.py`'s "counter-defaults" (only the empty answer dropped).
+
+- **Known low issues:** it reads words, not rules: a card that only checks for a counter, or puts one on an
+  opponent's permanent, still lists the kind, and a counter named only by a keyword Scryfall's keywords don't
+  carry (or a die named another way) is missed. Owned dice and counters, and whether they cover a deck, wait on
+  Matt's record shape and a migration.
+
+## Whose side a token lands on (2026-10-29; E7-S23 slice 1)
+
+Scryfall's links between cards and tokens don't say which player gets a token, so each need of `deck_tokens`
+now reads its making cards' rules text (`decklab/lib/tokens/sides.py`). A card's sentences that create
+something and name the token count (every creating sentence when none names it), and the clause before
+"create(s)" says who: nobody named or "you" is the deck's own; "target opponent", "each opponent", "an
+opponent", "defending player", "each other player", or "under an opponent's control" after the token is the
+opponent's; "its controller", "that creature's controller", "target player", "each player", "that player" or
+"you and target opponent" may be either. Only the subject after the clause's last "and" counts ("target
+opponent loses 2 life and you create" is the deck's own), unless it's a joint "... and you each". A token several cards make is the deck's own only when every one makes
+it for the deck, the opponent's only when every one gives it away, and either otherwise. Each need gains
+`side` (`own`, `opponent` or `either`), `side_from` (the cards that may give it away) and `side_words`
+("For your opponent: Forbidden Orchard's text gives it to another player (approximate)", or "Maybe your
+opponent's: …"; None for the deck's own). The deck page's Tokens part shows the words under "Made by" only for a
+token that may be the opponent's, and `python -m decklab.lib.tokens <deck-id>` prints them too. The side is
+part of the deck's tokens, so only viewers who may see the space's inventory get it; nothing else changes
+(states, words, counts, packing, the library's line).
+
+Fixture tests: `decklab/tests/test_token_sides.py` (the classifier's own, opponent and either sentences, the
+naming sentences first, a need's side and words across several cards, needs from test cards added to
+`fixtures/tokens_cards.jsonl`'s index, the printout's line, and a member viewing a public home deck getting no
+token part at all) and `test_feature_ui_tokens.py` (the line only for a need that may be the opponent's).
+
+- **Known low issues:** the classifier reads English sentences, not rules: a "that player" or "its controller"
+  that is in practice the opponent is marked only as maybe theirs, and tokens made through a quoted ability
+  given to another permanent follow that sentence's words. The opponent's tokens aren't yet under their own
+  heading or counted apart.
+
+## A staged Forge build checked before it's installed (2026-10-29; E11-S45)
+
+`python -m decklab.lib.forge upgrade-check --dir DIR` runs `cardlog-check`, `serve-check` and the overrides'
+upstream check against a staged build in a scratch folder (the one `install.py --out` built) before it replaces
+the installed one. Forge is set up from DIR with its version not noted (`install._setup(forge_dir=DIR,
+remember=False)`, through `cli_checks._staged_setup`), each step's args carry `forge_dir`, and
+`overrides.check(forge_dir)` (with `_forge_now` and `_forge_scripts`) reads DIR's `cardsfolder.zip` and writes
+nothing. A staged `cardlog-check` notes nothing either way: neither `simjar.record_checked` nor `record_failed`
+runs, so a failing staged build never turns the card log off for the installed one, and a passing one doesn't
+count until the check after the install. The summary names the folder ("Upgrade check of the staged build at
+DIR (Forge ...)"), says nothing was noted for the installed build, and leaves `replay --dry-run`'s part to the
+check after the install. A blank `--dir`, a folder that isn't there, or `config.json`'s `forge_dir` itself is
+refused before anything runs. Only `cardlog-check` and `serve-check` decide the staged verdict
+(`STAGED_BLOCKING`): either failing says "don't install this build" and exits 1, while an override that no
+longer fits the new scripts (expected after a release) exits 0 with "install it", saying `overrides make`
+makes it again after the install, since `overrides make` reads only the installed build's scripts and couldn't
+fix it beforehand. `--plan` now lists the staged check as step 5, before the merge and install (step 6), and
+with `--dir` puts its folder in place of `<scratch folder>`; the README's "Moving to a new Forge release" puts
+it between `engine-check` and the install too.
+
+Fixture tests: `decklab/tests/test_forge_upgrade_check.py` (`StagedUpgradeCheckTests`: every step gets the
+folder, the setup isn't remembered, no replay plan or installed version is read; a failure and a setup that
+can't start, both noting nothing; overrides that no longer fit don't stop the install, a failed game check
+does; the three refusals; the plan's order and folder. `StagedCardlogCheckTests`: the real `_cardlog_check` with
+stand-in games records nothing staged, passed or failed, while the installed check still records its failure; `serve-check` and the overrides check take the folder) and
+`test_forge_overrides.py` (`check(forge_dir)` reads the staged zip, a changed upstream script shows only there,
+the upstream cache is unchanged, and a folder without Forge is named). No Forge process starts.
+
+- **Known low issues:** the card-log jar for a staged build is still built into `decklab/data/cardlog/` (keyed by
+  its version and stamp, so it never stands in for the installed build's) and the first-use marker is touched in
+  the run user folder; neither is the checked record.
+
+## Free replacements and Test this swap on the Matchups tab (2026-10-29; E3-S25)
+
+The second slice of E3-S25 puts the replacements API on the page. On the deck page's Matchups tab, "How its
+cards played" now gives each spell in its lead's Drawn, never cast list its **Free replacements**
+(`deck-swaps.js` `neverCastReplacements`, passed to `matchups-cards.js` `standOutParts` through
+`deckCardStats`' new `data` option from `deck-tools.js` `drawDeckMatchups`). It asks
+GET /api/deck/replacements once per card, list and viewer on screen (kept with the page's answer), only for an
+ordinary casual or Commander deck whose space's collection the viewer may see (`deckSwapsOffered`, as the
+stand-ins for missing cards): never for a land, a product or pairing, or the matchup screens. Each candidate
+shows as the stand-ins' sheet shows them (its picture, mana value, free copies, On the way and its swap note),
+with "N more cards fit" for the rest; with none, the slot it looked for. A 400, 403 or 404 shows nothing at all
+(no reason, no error box), any other failure says so with Try again, and an answer that comes after the
+profile changed isn't shown.
+
+**Test this swap** (`testReplacementSwap`) reads the deck's editor view, takes up to the candidate's `max_qty`
+copies off the list's Deck lines and adds as many of the candidate on its line of the same printing or a new
+line in its default printing (`replacementSwapList`), and saves that as the editor's draft for the list, asking
+first before replacing another unsaved draft, as the test page's Save this change does. It then opens
+`#/edit?…&test=change`: once the editor has started on that address, `variant.js` `vtOpenTestFromRoute` drops
+`test=` from it and opens the Test this change sheet, or says why the draft can't be tested. A card the list no
+longer plays is said, and nothing is saved. A draft the device can't store is said, and the editor isn't
+opened on an older one; once the person has left the page or switched profile while the list loads or the ask
+is open, nothing more is done, and the button waits while it works. Nothing is written to the server and no
+game is played.
+
+Fixture tests: `decklab/tests/test_deck_replacements_ui.py` (only the spell never cast is asked about, once per
+list; the Play-now list; on the way and none fitting; no inventory, a product or pairing, refusals and a failure
+with Try again; a profile switch; the draft, the ask before replacing a draft, a card no longer listed, a draft
+that can't be stored, leaving the page or switching profile mid-load, a double click; the swap list's printing
+and copies; the route opening the sheet or saying why, and the real editor route restoring the swap's draft and
+opening the sheet). Free dual lands for a colour shortfall
+are the story's slice 3 ([stories.md](design/stories.md)).
+
+## Free pool replacements for a listed card (2026-10-29; E3-S25)
+
+The first slice of E3-S25 (cards Forge marks drawn and never cast offering free pool replacements) is the
+server half. `decklab/lib/decks/swaps.py` `ranked(slot, spares, colours, kind, copies, in_list, here)` is now the
+one ranking both uses share: each free card that fits the slot (the same primary type, a shared colour,
+castable in the deck, mana value within 1, the stand-ins' rules of E2-S07) with the copies it could fill (the
+slot's, its free copies and the list's room: four in a casual list, one in a Commander deck), ordered by
+`rank_key`. `api/swaps.py` `_suggest` (the stand-ins for missing cards) now calls it, with its pool, colour and
+free-copy steps split out as `_space_pool`, `_colours` and `_free_for`; its answers are unchanged.
+
+GET /api/deck/replacements?id=&version=target|owned&card= (`suggest_replacements`) answers for a card the saved
+list plays in its Deck section (not a commander, companion, sideboard card or basic land: 400): up to
+`MAX_REPLACEMENTS` (5) free pool cards, each with its swap note, free and here counts, default printing and
+price, and `more` for the rest, with the AUD estimates' `rate`, `rate_date` and `price_date` as
+GET /api/deck/swaps gives them. Free is owned and on the way, less the copies other built decks and intact
+products hold and the list's own, and never names who holds them. It reads as GET /api/deck/swaps does: a deck
+the viewer may not see is missing (404), a product or pairing is a 400, and a viewer who may not see the deck's
+space's inventory (a Public deck's reader from another space) gets 403 "That collection isn't public." before
+the card is looked at. A member's deck counts only that member's pool. Nothing is written and no game is played.
+
+Fixture tests: `decklab/tests/test_replacements_api.py` (a never-cast creature's free creatures, held and
+listed copies, castability in the deck's colours, the cap, Commander's singleton and its commander, the Play-now
+list, bad requests, the route, the shared ranking, and privacy: a hidden deck's 404, a Public deck without its
+inventory, a member's own pool, no other deck named). The Matchups tab's Free replacements and Test this swap are
+the next slice ([stories.md](design/stories.md)).
+
+## Tonight's pairs on the Game log (2026-10-29; E1-S28)
+
+The Game log now suggests up to three ready pairs for tonight. `decklab/lib/play_pairs.py` `suggest(decks,
+games, forge_pairs, today)` is a pure function over what the caller may show: only built casual decks marked
+ready take part, seated one deck for each home player (Played by `user` on Matt's side, `wife` on User1's, an
+`either` deck on whichever side its partner leaves; two `either` decks make one pair). Evenness comes from the
+two decks' real record once they have met 10 times (play_comparison's minimum, draws counting half), else the
+Forge share of their current lists, else it's unknown; the bands are even (within 10 points of 50%), fairly even
+(within 20), unknown, then one-sided. Within a band, the pair never met, or met longest ago, comes first, then
+the pair whose decks were played longest ago, then the closer share. A deck appears in one suggestion while
+another pair without it is left. Each pair carries plain reasons: "Evenly matched in 12 real games: A 6 wins,
+B 5 wins, 1 draw.", "Fairly even by Forge: A wins 62% of 200 simulated games.", "Only 3 real games so far, too
+few to go by.", "How even it is isn't known yet: ...", and "Not played against each other yet." or "Last played
+against each other 12 days ago."
+
+GET /api/play/pairs (`decklab/lib/api/play_tonight.py` `pairs_view`) answers only a home profile who sees
+home's inventory, or a script naming nobody; a member or a request naming nobody gets `{"available": false,
+"pairs": []}`, with no count, and no deck, game or Forge read is made for them. The decks are home's built
+casual decks the viewer sees; a deck is ready when its built list (`pool._built_version`) has nothing missing
+in home's pool and its availability is confirmed (E1-S03's rule; `unconfirmed` counts those that aren't, which
+are never suggested). The games are the Game log's own (`library_played._games`, which now carries each game's
+result: its visibility and damage checks, renamed decks' old ids resolved, pods left out, a game with a removed
+side counting for nothing). The Forge numbers are the Constructed field's saved pairs the viewer sees
+(`forge.field.pair_rates`, new beside `averages`, through `library_forge.pair_rates`, which shares the library
+Forge line's per-viewer cache, now keyed by answer); each rate carries its two lists' versions and is kept only
+when they're the two decks' built lists, so a field addition's other list never stands for the built one; nothing
+plays. Unreadable games suggest nothing (`error`);
+unreadable Forge numbers leave the real record (`forge_error`).
+
+The page (`decklab/web/play-tonight.js`, loaded after `play-pods.js`) shows **Tonight's pairs** above Record a
+game for home profiles only, and not on one deck's Game log: each pair's decks, who takes which, its reasons
+and **Use this pair**, which puts both lists in the quick record's pickers by seat (`playQuickChoose`, set by
+`playQuickRecord`; the visitor's deck on their own side) and saves nothing. With no pair it says why (too few
+ready decks, all for one player, or availability needing a check) with a link to the library. Fixture tests:
+`decklab/tests/test_play_pairs.py` (readiness and the deck filter, seats, real record over Forge and too few
+real games, unknowns, the bands' order and freshness, spreading the decks, mirrors and games with other decks,
+then the API over the sandbox: ready pairs and their reasons, a deck missing cards, a member and a request
+naming nobody, a script, no games, unconfirmed availability, Forge failing and a Forge
+result of another list left out, and the HTTP route),
+`test_play_tonight_ui.py` (the cards, Use this pair from either player, the empty, failed, error and Forge notes,
+and no section for a member or one deck's log) and `test_library_forge.py` (pair rates and their versions from both sides, hidden
+decks left out, the shared cache and failure). E1-S28 is built. Known low issues: the real record counts every
+game between the two decks whatever lists were played, while Forge's share is of today's built lists; Forge's point
+share is used without its interval; one pool warning leaves every deck unconfirmed, as the library's chips do;
+no browser or device check.
+
+## At the table on the printed play sheet (2026-10-29; E9-S27)
+
+Print play sheet (`printDeck` in `decklab/web/deck-tools.js`) now adds an **At the table** part after the
+stand-ins for a Commander deck, from `commanderPrintPart` in `decklab/web/commander-readiness.js`. It prints
+only what the deck page already loaded for the shown list (`stats.commander.bracket`), with no fetch: the
+Overview's pregame sentence word for word (the target bracket, what the cards found and floor-raising two-card
+combos imply, and the cards named), Game Changers, mass land denial and extra turns (named, "none found in the
+checked cards" or "not checked"), the two-card combos the list holds with what each does and its payoff or
+bracket note, or none found, or "not checked (combo list unavailable)", with Commander Spellbook's list date,
+cards without data, a deck-rules warning, what the checks don't cover, and `commanderDataNote`'s card-data,
+tags and combo dates with its freshness and Wizards' announcement notes. Names are plain text: paper has no
+viewer or Spellbook link. When the checks weren't loaded (no stats, no commander part or no bracket answer) it
+prints "The Commander checks weren't loaded, so this sheet can't say what opponents will face." rather than a
+sentence; a casual deck prints no such part. The Overview's At the Commander table and the sheet share
+`commanderTableFacts` and `commanderTableSentence`, and the Overview and Stats tab's combo lists and the sheet
+share `comboFindings` (now with an item drawer) and `comboWords`, so the words can't drift apart. The part reads
+only the list's own facts, never the one-card-away combos' availability or prices or the household's recorded
+Commander night. Fixture tests (`decklab/tests/test_commander_print_ui.py`): the sentence matching the Overview's,
+the named effects and combos, the dates, no links or viewer buttons, no fetch and the page data unchanged; a
+clean deck, an unchecked combo list, missing effect data, unknown cards, broken deck rules and stale dates;
+four ways the facts can be missing; casual decks; and a home and a member viewer never printing near-combo
+availability, prices or the household night. README's deck-page list says what the sheet prints. E9-S27 is built. Known low issues: sideboard plans per opponent
+for casual decks (the audit's suggested later slice) aren't printed; no paper print or device check.
+
+## Departed cards in How to play (2026-10-29; E2-S27)
+
+GET /api/deck's `guide` now has `departed`, from `decklab/lib/api/guide.py` `departed_cards`: the cards the play
+guide's topics (titles and text) name that have left the deck. A card counts only when one of the deck's own
+saved revisions (`inventory.deck_revisions_with_text`, the History's latest 100, parsed as the History parses
+them) held it in its Planned or Play-now list, any section, and neither of today's lists holds it; a name that
+is a common word but was never in the deck ("Shock") is never flagged. Names match as whole words, case and all,
+a double-faced card by its front face too, in one scan that tries the longest name first as the page's card
+links do (`cardNamesPattern`): a current card's longer name ("Snow-Covered Forest", "Shock Troops") is read
+whole, so a departed "Forest" or "Shock" inside it isn't flagged. The answer is `{names, count}`, the
+names in the order the guide first names them, at most 30 with `count` saying how many. No revision is read
+when the guide has no topics. `departed` is null outside the deck's own space (`permissions.sees_deck` without
+the Public switches: a public deck's outside readers see its guide but not what its history held, as the
+History gives them only plain summaries), for a product or pairing, and when the revisions can't be read (the
+server log says why). How to play (`guideDeparted` in `decklab/web/guide.js`) shows "The guide mentions N cards
+no longer in the deck: A, B" (", and N more" past the cap) under the stale-guide warning. Fixture tests: the
+names and their order across a deletion revision, whole words and the front face, a departed name inside a
+current card's longer name, a common word never in the deck, only current cards named, a card still in the Play-now list, the cap, no guide and unreadable revisions,
+a member's own deck, a public home deck's outside reader and Matt refused a member's deck; the note's wording,
+singular and "more", and no note without departed cards. `test_api_decks`' deck_view shape test now lists
+E1-S27's `played`. E2-S27 is built. Known low issues: a guide that writes a card in another case or by an older
+Scryfall name isn't matched; the print sheet and the library's glance don't show the note; no browser or device
+check.
+
+## Last played on the deck Overview (2026-10-29; E1-S27 slices 2 and 3)
+
+GET /api/deck now gives `played`, from `decklab/lib/api/library_played.py` `deck_played`: the library's
+`{last, games}` for the one deck (the same Game log games the viewer may see, pods left out, a hidden other side
+counted and never named), plus `since`, what the deck's list changed after its last game. The list a game was
+played with is found by the sha256 its side recorded (a sideboard plan's game by its `base_sha256`, the list
+before the plan's swaps; `play_records.snapshot_sha`, split out of `_snapshot`): today's list when it still
+matches, without reading any revision, else the newest of the deck's own saved revisions
+(`inventory.deck_revisions_with_text`, the History's, up to 100) that does. The difference is the History's own
+`_list_changes` of that list and today's, as `{section, name, delta, printing}`, at most 30 with the rest in
+`more`. `since` is null when no list it was played with can be found (a changed product or pairing, which has no
+revisions, an older list, or a failing comparison, which the server log records); `played` is null when the
+games can't be read. The deck Overview's new **Played at home** part (`deckOverviewPlayed` in
+`decklab/web/deck-overview.js`) says "Last played <date> · N games" or "Not played at home yet", then "Its list
+hasn't changed since that game." or each card added, taken out or given another printing (a sideboard card named
+as such, "Play-now list" when that was played), with "And N more changes; its History has them all." linking the
+History on a deck that isn't read-only. Nothing in it describes the other side of a game. The golden
+comparisons drop deck_view's no-games `played` as they drop the library's. Fixture tests: an unchanged list, the
+changes against the revision a game was played with (past a deletion, a printing-only change, the cap), no
+matching revision, the last day's games with today's list winning before any revision read,
+the plan's base sha, a member's deck page naming no hidden side, the games or revisions unreadable; the
+Overview's wording, the Play-now and sideboard words, the History link and its absence on a read-only deck.
+E1-S27 is built. Known low issues: idea, building and product decks say "Not played at home yet"; dates are raw
+ISO dates; on a day of several games with different lists, a game with today's list wins, else the newest
+matching revision; no browser or device check.
+
+## The warm-worker fallback sentence on the pages (2026-10-29; E3-S26)
+
+When a run's warm workers couldn't start, its games play one Forge process at a time, and the command line
+already said so. The pages now say it too, so a run slower than its estimate explains itself:
+- The matchup page's live box shows `job.fallback` on its own line straight after the played or waiting words
+  (`liveBox`, `.mu-fallback`), for fixed and adaptive runs.
+- Each Playing now row, on Matchups and on the deck page's Matchups tab (`runningRow`), adds it after its
+  waiting or progress words. The Running item (`forge_runs._running_json`) now carries `fallback` beside
+  `waiting`; a field run's or variant test's row and an admin's anonymous row carry none.
+- `runFallback` (`web/matchups.js`) shows it only for a playing run whose fallback is a non-blank string: null,
+  blank, malformed or still-queued runs add nothing. The sentence is forge's fixed `pool.FALLBACK`, with no
+  worker counts or names, so a member's view gains only that sentence.
+
+Tests: `test_matchup_fallback_ui.py` (live box and both Playing now rows, order after the waiting words, the
+null, blank, malformed and queued cases, and a member's and an admin's view adding only the sentence, with no
+names or numbers) and `test_matchups_api.py` (the Running item's `fallback`, None and set).
+
+## Database words in row problems and product and order messages (2026-10-29; E11-S12)
+
+The rest of E11-S12, which is now built. Messages no longer name an old file and line: one place,
+`decklab/lib/inventory/paths.py` (`describe`, `row_of`, `place`, `title`, `payload_owners`, `component_words`),
+names each inventory source as the database holds it: "the home collection" or "user2's collection", "the home
+token cards", "the products' status list", "product x's card list", "order x's cards" and "the purchase queue".
+A payload is named by the order and component whose record holds it ("order x's additions" for a part `order
+split` stored as `x-additions.csv`, the surviving order for one `order merge` moved; "received cards", "token
+cards" by its status and kind), from `payload_owners(inv.orders)` (`Inventory.describe`, and `files.build`
+reads the records before the payloads); only a payload no record names (the "missing order record" warning) is
+named by its file's stem. A file the user handed in (`collection merge FILE`,
+`order add --cards FILE`) keeps its name and line. Changes:
+- Row problems (`files.py`, `pool.read_card_csv`, `rules.parse_cards`'s new `numbered`): "Row 2 of the home
+  collection: bad quantity 'x'", "Row 1 of order x's token cards: invalid token finish", "Row 1 of product x's
+  card list: unknown section 'Main'", numbered from 1 as the listings number them. A token row the read leaves
+  out is named by the listed row before it ("A row after row 3 of the home token cards: ..."), since `tokens
+  list` numbers only the rows it reads; the deck page's info says "A token cards row after row 3 couldn't be
+  read; see the Tokens page". The accessories list's rows are named the same way (`accessories.parse`: "A row
+  after row 2 of the accessories list: ...", "The accessories list's columns must be ...").
+- Status rows name their product ("Product x's status is 'preorder', ...", "Product x's status has intact
+  'maybe', ..."), and a missing list is "The products' status list is missing" (`files.MISSING_STATUS`).
+- Pool: "Order x's cards can't be read, so its cards aren't counted as on the way", "every card in order x's
+  cards is already in the collection", "Product x is marked intact but has no deck lists", and a product deck
+  "Product x's card list can't be read: ..." (`paths.place`, also in the editor, library, accessories, tokens
+  and deck page messages; a deck's id stays as it is).
+- Purchases and Shopping: "Order x's cards: missing order record", "Product x: missing order record", "Order
+  x: cards: its contents are filed under another kind or status than its own", and the order and product
+  writes ("Order x already exists", "Product x already exists", "Order x's cards are already in another
+  order", "There's no row 5 of order x's token cards to take", "Product x has no status").
+- Order and product refusals name the product and order, never `x.csv` or `x.json`: `order cancel`, `order
+  remove` and `product edit` say "Product x is kept intact; its order cannot be removed.", "Product x is owned;
+  only a pending product can be corrected" and so on (`order_lifecycle._product`, `product_ops._pending`);
+  `order record` says "Order x's cards: receipt date conflicts ..."; a receipt's record checks start "Order x:
+  cards: ..." ("another order names its contents too", "its contents are missing"), and a received copy already
+  kept under the same name is "Order x's cards can't be received: order x's received cards are already kept
+  under the same name" (`receive.record`, `receive.receive`).
+- An unknown card's place is still kept as its path in the pool (`visible_place` decides who may be told it by
+  the path), and is shown in the new words only after that check (`library.visible_unresolved`,
+  `inventory_views`).
+
+Criterion 3 was re-checked: with the database down, `collection list`, `tokens list|check`, `order list`,
+`watchlist list`, `deck list` and `accessories list|check` each exit 2 with the one line "The database isn't
+available: ...". The committed inventory goldens keep their old words; `golden_p4.phase5_wording` maps them.
+Fixture tests: the new `test_database_words.py` (every source's words, a person's collection and token rows,
+status rows, payload rows, the pool's and Shopping's warnings with no old file name, home's record warnings
+still hidden from a member by `visible_warnings` and the Tables out of date list's first-word rule, unknown
+card places checked by path and shown in words, a split-off payload named by its order and component, the
+product and record refusals with no old file name, and the database-down exit), plus the updated pool,
+purchases, tokens, inventory files, orders, receipt, API and privacy tests.
+
+## Last played in the library (2026-10-29; E1-S27 slice 1)
+
+GET /api/decks now gives each deck summary `played`, `{last, games}`, from `decklab/lib/api/library_played.py`
+`played_extras` (called by `deck_page.decks_index` after `shelf_extras`). It counts the games the Game log would
+show the viewer: the same visibility check (`play_records._sees_record`) and damaged-record check (`_checked`),
+1v1 records only (pods left out as the page's `playLegacyGame` does), sides recorded under a renamed deck's old
+id resolved to the deck (`inventory.resolve_deck_id`), and a game with the same deck on both sides counted once.
+A game whose other side is in a space the viewer can't see counts for the viewer's deck, and the answer never
+names the hidden deck. When the games can't be read (database down, login not set up) every deck's `played` is
+null and the page shows nothing rather than "not played". The library's tiles and lab detail pane say "Last
+played <date> · N games" or "Not played at home yet", and a new sort, "Not played lately", puts never-played
+decks first, then the oldest last game, then decks whose games couldn't be read. Fixture tests: counts and dates
+per home profile, a hidden other side, damaged records and mirrors, a saved Commander pod counting for no deck,
+the `_legacy` filter, a renamed deck's old id, the database down; tile wording and sort order. The golden
+comparisons drop the default `played` values, since no golden scenario records a game. Known low issues: idea,
+building and product decks say "Not played at home yet" too; the date is the raw ISO date, as the Game log shows
+it; lab rows don't show the line; no browser or device check. Slices 2 (the Overview line) and 3 (what changed
+since the last game) remain.
+
+## Queue a deck's missing cards (2026-10-29; E5-S25)
+
+A home deck's Cards tab, under the Missing filter, offers home admins **Queue missing cards…**
+(`decklab/web/deck-queue-missing.js`). Its review, `POST /api/shopping/queue/missing`
+(`decklab/lib/api/shopping_queue_missing.py`, writing nothing), lists each missing Planned card (from
+`pool.owned_vs_needed`, which already counts on-the-way copies) less the copies already queued for the deck in
+any state (a row whose source is the deck under any alias, or whose `for` is its title), as any nonfoil printing,
+with To buy or Long-term to choose, an "Already queued" fold, and, for a card whose copies would raise an existing
+identical request, that row's state ("added to the existing Waiting for stock row", with a warning when it isn't
+the state picked). Save is `save_queue_state`'s new `add_many` action, with the existing permission checks and
+`expect` revision: the cards are worked out again inside the change (`watchlist.add_many`,
+`decklab/lib/inventory/queue_many.py`, loaded from `orders.py` as `order_merge` is) and compared with the review,
+joined states included, so a stale or changed review saves nothing and asks for a new one. One audited watchlist
+change adds the rows with the deck as source and `for` its title, or raises the identical requests in their own
+state. User1, members, products and pairings are neither offered it nor allowed; token cards are excluded. The
+README documents the API. Fixture tests: dedupe across states and aliases, joined states, conflicts and changed
+reviews, permissions, tokens, the sheet's states and Review again. Known low issues: checked only on fixtures,
+not against the live database's audit rows, and not at phone width.
+
+## Ready to build after a receipt (2026-10-29; E6-S26)
+
+`POST /api/receipt/apply` now returns `readiness`, `{deck id: {missing, coming}}`, from
+`decklab/lib/api/receipts.py` `_readiness`: for each home deck whose table the receipt refreshed, its Planned
+list's missing and on-the-way counts in the saved snapshot (`pool.owned_vs_needed`'s totals and row labels, as
+the deck banner counts them). It's filled only for a viewer who sees home's inventory and that deck, checked
+before any deck or pool is read; products and pairings are left out, as is a deck whose counts have unknown
+cards or pool warnings; and any failure is logged and leaves it empty without failing the saved receipt. Where
+these go (`rcptWhereTheyGo`, `rcptReadyLine` in `decklab/web/receipt-workflow.js`) then says under each deck
+**Ready to build** (a link to the Packing plan, `#/assembly?deck=<id>`; "Every card is here: Packing plan" for a
+built deck), "Ready once N cards arrive", or "Still N to get · M cards on the way". Fixture tests: a deck made
+ready, a deck still short with exact counts, copies still on the way in a part not received, viewers without
+home's inventory or the deck, a failure; the drawn lines. Known low issues: a deck left out for an unknown card
+or a pool warning simply shows no line; arrival notices still say only "N cards for Deck".
+
+## Fewer steps for a delivery that came as ordered (2026-10-29; E6-S27)
+
+Receive delivery gains three shortcuts in a new `decklab/web/receipt-bulk.js`, each behind one confirmation.
+**Everything arrived as ordered** selects every pending part and ticks every card and token card; a product's
+keep-or-break-up choice is still made separately. A token part's **Backs as recorded or blank** lists the
+ticked rows with no back recorded, each with its own checkbox. Only the rows left ticked are marked
+"single-sided verified", using the same helper as the sheet's "Back is blank" box. With every row unticked,
+its button says why ("Tick at least one card.") and takes focus to the first checkbox. Recorded backs aren't
+open, so they need no answer. Rows whose notes leave the pairing unconfirmed are named but never answered in
+bulk. A part with two or more checks gets **All checks done**. Each shortcut hides itself once done, and focus
+moves on to the next shortcut still showing, else to Record arrival. Open token backs and open checks are now
+listed as one blocker per part (single items keep their old wording). Each shortcut sets the same state as
+ticking by hand, so the preview and apply requests are identical, and the server is unchanged. In the mixed
+fixture delivery (a cards part with 2 checks and a tokens part with 2 blank backs and 1 recorded back),
+reaching Preview took 13 actions by hand and now takes 3, and the blockers listed after ticking dropped from 4
+to 2. UI-KIT describes `receipt-bulk.js` next to `receipt-workflow.js`. Tests: `test_receipt_bulk_ui.py` (four
+Node fixtures: 3 actions to Preview with the same request body as by hand and focus after each shortcut,
+unconfirmed pairings still ask, only confirmed rows written, the inert backs button's reason and focus, Cancel
+and an uneditable view change nothing). Two exact-text check-blocker assertions were updated for the grouped
+wording. 226 related fixture tests pass. Known low issues: the shortcuts have no Undo toast; the confirmation
+is the safeguard. "All checks done" doesn't show for a part with a single check.
+
+## Compact To buy table (2026-10-29; E5-S26)
+
+Shopping's lab-density To buy table now keeps Ref AUD on one line. The cell holds the recorded price and one
+short MTGMate snapshot marker: a dot coloured by stock state, or a "Back" pill for a waiting row back in
+stock. The marker's spoken label and hover title give the snapshot's gist and never show a price for an
+unknown or unlisted snapshot or the raw error. The full snapshot (fetch time, stock, MTGMate link, Back in
+stock) moves into the row's extra row. Its "..." control is now offered for every row with a snapshot and
+names what it opens. Unknown Ref AUD, Shop, Stock, For and Checked values are a single dash whose role=img
+label and title carry the full words. The price column widened from 65px to 88px. The casual card and phone
+layout is unchanged, and the snapshot returns to the card on a density change. Tests: new
+decklab.tests.test_shopping_queue_compact_ui Node fixtures (snapshot row, notes plus snapshot, unknown row,
+unknown snapshot, Back in stock, casual layout round trip); test_shopping_queue_table_ui's unknown assertions
+updated; all shopping and web fixture modules pass (611 run). Known low issues: the marker is a
+non-interactive role=img span, so touch users get its gist only through the extra row, and a lone dot relies
+on colour plus its label to tell in-stock from out-of-stock.
+
+## Matchups deck picker with pictures and pips (2026-10-29; E3-S27)
+
+The Matchups home's "Show matchups for" control is no longer a native select. It is now a small accessible
+listbox picker in the new `web/deck-picker.js` (`deckListbox`). A field-sized button shows the chosen deck's
+small picture, short name and colour pips. It opens a popover listbox (`role=listbox`/`option`,
+`aria-activedescendant`) of the same decks, each drawn the same way and named by its full title. The keyboard
+works as for a select-only list: the arrow keys, Home/End, PageUp/PageDown, Enter/Space to choose, Escape and
+Tab to close, and type-ahead (a repeated letter cycles through the decks starting with it). The picker also
+closes with the other popovers on an outside click. Pictures and pips come from the library data the tab
+already loads, through `libColours` and a new `library.js` `deckArtThumb`, which the lab's deck rows now
+share. A failed or missing picture falls back to the deck's tint, keeping the name and pips. A Beginner Box
+pairing that the library doesn't list shows its name alone. `HOME_DECK_KEY`, `choose()` and the decks offered
+are unchanged. After a choice, focus returns to the redrawn picker, whose button uses core.js's
+`keyboardMenuButton` so a held Enter or Space doesn't reopen the list. Styles are in `matchups.css` and use
+only UI-kit tokens (dark mode through `tokens.css`, plus a forced-colours outline). Tests: the new
+`test_matchup_deck_picker_ui.py` (pictures, pips and names; picture fallback; keyboard, including held Enter
+after a choice; click and outside click; hidden decks not offered). `test_matchup_rename_ui.py` now reads the
+chosen option from the listbox. The matchup, library and web suites pass, and UI-KIT.md describes the picker. Known low issue:
+the list doesn't flip above the button when there's no room below.
+
+## Database words in token, product and accessory messages (2026-10-29; E11-S12 slice)
+
+A further slice of E11-S12, which stays partial. Messages from commands and pages backed by the database no
+longer name old files. Token cards are "the home token cards" or "<id>'s token cards" (`tokens.label_for`, new
+`title_for`). `tokens check` names a row by its number in `tokens list` ("Row 2 of the home token cards:
+..."). A stale `tokens edit|remove --expect` says "The home token cards have changed since that listing: run
+tokens list again and retry with its sha", adding `--space S` for a person's list. Changes elsewhere:
+- The pool's status cross-checks say "Product X has no status, so it counts as owned and not intact" and
+  "Product X has a status but no card list, so it isn't counted".
+- The product kit refusals say "The products' status list is missing" and "Product X has no status".
+- Forge field's note says "The products' status list can't be read".
+- `accessories check` names a product holder "Product X", missing and orphan pictures by file name with the
+  `image put` or `image remove` to run, and an id it doesn't know as "isn't an accessory id (accessories list
+  shows them)".
+
+The committed inventory goldens keep their old words. `golden_p4.phase5_wording` maps them to the new ones.
+Fixture tests cover the stale `--expect` in a person's space and the no-such-row wording.
+
+Known low issues: these still name the old files (`magic/tokens.csv line N`, `status.csv line N`,
+`magic/products/<stem>.csv`, `magic/collection.csv line N`):
+- the file-format reader's row-parse problems for token and collection rows
+- the status-row line warnings
+- product and payload paths in pool, purchases and Shopping messages
+
+They are shared with the file backend and export, or are what identifies a product or payload.
+
+## A split keeps the extra-copies mark (2026-10-29; E6-S25)
+
+`order split` (decklab/lib/inventory/orders.py `split_order`) now copies a source component's "Extra copies of
+owned printings" mark to the new component in the same change, using `rules.with_extra_copies` the way `order
+merge` carries the mark. Its summary says "<new> is marked as extra copies of owned printings too", so the CLI
+preview and `--dry-run` and Shopping's split preview show it. Shopping's preview warning and the split sheet's
+note now say both parts keep the confirmation and that either part can be unmarked on its own. Before this,
+splitting an acknowledged order brought back the pool's "already in the collection" blocker on the new part.
+AGENTS.md, the README and the `order` CLI help describe the new behaviour. Fixture tests, on both backends
+where the test runs on both: a marked cards split marks both parts and the pool doesn't warn; `--undo` on
+either part takes off only that part's mark; an unmarked split stays unmarked and doesn't pick up another
+part's mark; a marked product is never split and keeps its mark; a CLI dry run and a real split; the Shopping
+preview and save. Known low issues: product parts still can't be split at all, so the product case is only
+that refusal. A partial receipt (which splits with `_arrived_first`) now also marks the received part, which
+is harmless because nothing reads marks on received parts.
+
+## Editor drafts in their own file (2026-10-29; E11-S46)
+
+The editor's rebase and draft-storage functions (reapplyList, reapplyFields, rebase, draftKey, queueDraft,
+saveDraft, draftStored, readDraft, removeDraft, timeWords) moved unchanged from web/editor.js into a new
+web/editor-drafts.js, which loads right after editor.js on the page and in the Node test loaders. Every
+function keeps its global name and its text byte for byte, checked by comparing the two commits' blobs.
+editor.js went from 1,198 to 1,017 lines, so it is no longer at the length guard. A new
+test_editor_drafts_split checks that only the moved functions are in the new file, the load order, both files'
+lengths, that the functions are globals under Node, and that the draft keys are unchanged. The 56 editor, web
+and related modules (900 tests) and the other 165 UI modules (2,033 tests) pass, and audit_source_lengths
+--check passes. The one existing test changed: test_web_variant's check of the draft key text now reads
+editor-drafts.js.
+
+## Experiment checks closed (2026-10-29; E11-S16)
+
+Matt closed E11-S16 as built after the TODO audit found every criterion already met: `forge experiment
+spec.json --dry-run` prints the games and the time they would take (with the remaining-time and explicit
+local-worker estimates of 2026-10-28), each finished arm's report says adopt, don't adopt or more games
+(`experiment_analysis.recommend`), and `replay --dry-run` lists what a re-keyed override set needs replayed.
+No code changed. Not taken further: timing for other configuration combinations, a read-only `overrides
+impact` preview and adopting a set without hand-editing `overrides/sets.json` or `simulation.json`; any of
+them returns as a new story if wanted.
+
+## Dark Matchups with saved results (2026-10-29; E11-S30 slice 15)
+
+The last of slice 15's dark checks. A throwaway Deck Lab ran on the test Sandbox (a temp folder and
+in-memory state, no database and no household data) with the real forge package and test_forge's
+made-up Forge, which played six 200-game matchups between four 60-card fixture decks, one with a
+100-character title. Headless Chrome drew the Matchups home (field summary, swap panel, opponent table),
+Rankings (as the fixture saved it, every list unsettled, and with rated rows put into its answer, since the
+made-up engine's games don't link lists to the field), a matchup's page and a deck's Matchups tab and
+Overview, at 375 (touch, 3x), 820 (touch, 2x), 1280 and 1920px in dark and light: 48 renders plus two
+timing reruns. A script measured every visible text run against its solid background: none was under 4.5:1
+(3:1 for large text), no page overflowed and the page raised no errors. Nothing needed fixing. Touch
+hardware, Safari and the household's devices are still to check. Known low issue, test-only: with the
+Sandbox's fake Forge in place, `variant_buying`, `rankings` and `field` import forge submodules the fake
+doesn't have, so a Sandbox server answers those routes with a 500 unless the API modules are imported
+first.
+
+## EDHREC ideas for the editor's draft commander (2026-10-29; E9-S07)
+
+GET `/api/deck/edhrec` takes `commander` and `commander2`, the editor's draft commander(s)
+(`api/edhrec.py` `_draft_commanders`, `lib/edhrec.ideas(commanders=)`). Each is checked against the card
+index (resolved to its exact name; blank, over 200 characters, control characters or an unknown card is a
+400, and `commander2` without `commander` too); a name given twice is asked once. The ideas are then those
+commanders': their EDHREC page (both orders for a pair, as before) and colour identity, with the commanders
+themselves left out. Everything else is still the saved deck's: the hidden deck's 404 and the non-Commander
+400 come first, the marks (in the deck, free, in use, to buy) count its saved Planned list and show only to a
+viewer who sees its space's inventory, and `sha256` and `may_add` are as before. The deck page's sheet sends
+neither and is unchanged. The editor (`web/editor-edhrec.js`) now sends its Commander section's one or two
+cards, keyed with the deck revision, profile, route and list, so a changed or not yet saved commander shows
+its own ideas with no save, and changing it asks again (after a refusal too, and while the old commander's
+answer is still on its way, which is then ignored). A draft with no commander, or
+more than two, asks nothing and says why. Tests: `test_edhrec.py` DraftCommanderTests (4), and
+`test_editor_edhrec_ui.py`'s draft-commander scenario replacing the save-first one, and its late-answer
+scenario's changed commander. Known low issues: a
+never-saved deck still has no ideas; with a draft commander, "in the deck" and free copies count the saved
+list, not the draft (the editor leaves out the draft's own cards itself); checked with fixtures, not in a
+browser or against live EDHREC.
+
+## EDHREC ideas in the editor's Add panel (2026-10-29; E9-S07)
+
+A saved Commander deck's editor has an **EDHREC ideas** tick beside the Add panel's search scopes
+(`web/editor-edhrec.js`, loaded after `editor-cards.js`; hooks in `editor-cards.js` and
+`editor-search-quantity.js`). It reuses GET `/api/deck/edhrec` unchanged, asked when the tick is first set
+and again only after a save or a change of deck, profile, route or list; an answer that arrives after any of
+those, or the text or filters, moved on is ignored. Ideas come in EDHREC's order, once each, leaving out
+cards already in the draft (outside the sideboard) with a count, narrowed by the typed name and the colour,
+type and mana-value filters, 24 at a time; More takes the next ideas not yet shown, by name, so draft
+changes between pages never skip or repeat one. Marks (free, in other decks, to buy with an AUD estimate,
+on the way) show only when the server sent them, never naming a deck. Picking one is the normal search add
+into the chosen section: one draft change and Undo step, nothing saved until Save. A failure shows EDHREC's
+own wording with Try again (not for a commander EDHREC has no page for), and the plain search keeps working.
+Tests: `test_editor_edhrec_ui.py` (7 Node UI tests). Known low issues: ideas follow the saved commander, so a
+changed draft commander says to save first; the tick was checked with fixtures, not in a browser.
+
+## Poor-AI caveat on the Overview (2026-10-29; E1-S12)
+
+GET `/api/field` takes `pilot=1` (`field_page.field_view`, `_list_pilot`): the deck Overview's one field
+read then carries `forge.list_ai`'s judgement of the displayed list, made with the list's own AI pilot and
+counting only saved results the viewer may see. When Forge pilots the list poorly, "Forge pilots this deck
+poorly" and Matchups' `pilotReason` show beside the field line (`deck-overview.js` deckOverviewPilot); a
+normal pilot or missing data shows nothing. The answer without `pilot` is unchanged. Tests:
+`test_deck_overview_ui.py`, `test_field_api.py` FieldPilotTests, `test_deck_privacy_readers.py`. Known low
+issue: the Matchups tab still judges with the default pilot, so for a list with its own pilot the tabs can
+disagree.
+
+## PostgreSQL snapshot split (2026-10-29; E11-S39)
+
+`_render`, `SELECTS`, `_select`, `_status_columns`, `_status_tables` and `snapshot` moved unchanged from
+`lib/inventory/pg.py` (now 1,002 lines) to `lib/inventory/pg_snapshot.py` (167 lines); details and evidence
+in [SOURCE_AUDIT.md](SOURCE_AUDIT.md#collection-parsing-and-database-snapshots-e11-s38-e11-s39). The
+disposable-database qualification is still to run.
+
+## Sideboard preview loaded on demand (2026-10-29)
+
+`feature_routes` imports `api/sideboard_preview.py` (which imports Forge's seqstats and variants) only
+when its route is asked for, as the field membership adapter does. Before, any feature route dispatched
+under the test Sandbox's fake Forge failed with a 500, so `test_visits` failed when run on its own.
+
 ## Publication CI: canonical disposable roots (2026-10-29)
 
 Hosted CI at 7fd0510 passed lint, all four Linux shards, three Windows shards
@@ -3067,7 +4098,7 @@ The Collection page's Card list has a **~A$ each** column, built after Matt aske
 - **`--plan TAG`** prints the README's manual steps for a release tag (rebase the fork's `decklab` branch, `BASE_TAG`, the scratch build, `engine-check`, the fast-forward merge and install, `upgrade-check`, `simjar.CHECKED`, `replay`) and runs nothing. Its `engine-check` step, like the README's, says a new release's expected result is exit 1 with "Different engine key" and no "Don't install this build as it is" line.
 - **Acceptance 3 was already built:** a failed `cardlog-check` is noted (`simjar.record_failed`), so runs get no card log and play plain Forge, and the Matchups page's status note says "Per-card stats are off" with the reason.
 - **Tests:** `test_forge_upgrade_check` (each step's pass, fail, error and skip, the summary, the exit code, the replay part against fakes and against `replay --dry-run`'s own output from saved results, `--plan`, registration); `test_forge_contract`'s command list. No Forge process starts in them.
-- **Known low issues:** it checks the installed build (`config.json`'s `forge_dir`) only, with no `--dir`. The step's reason is its first printed line, so a `cardlog-check` with several problems names only the first (the rest are above it).
+- **Known low issues:** it checks the installed build (`config.json`'s `forge_dir`) only, with no `--dir` (`--dir` added 2026-10-29, E11-S45). The step's reason is its first printed line, so a `cardlog-check` with several problems names only the first (the rest are above it).
 
 ## Two-card combos and Wizards' latest Commander announcement (2026-10-21, E9-S23, E9-S24)
 

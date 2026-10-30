@@ -61,13 +61,14 @@ class OrderSplitApiTests:
             {"id": "cards", "kind": "cards", "rows": [dict(original_rows[0], quantity="1")],
              "extra_copies": True},
             {"id": "later", "kind": "cards", "rows": [dict(original_rows[0], quantity="1"), original_rows[1]],
-             "extra_copies": False}])
+             "extra_copies": True}])
         self.assertEqual(preview["checks"][:2], [
             {"component": "cards", "checks": ["Record conditions", "Inspect packaging"]},
             {"component": "later", "checks": ["Record conditions", "Check languages"]}])
         self.assertEqual(preview["summary"], summary.text)
         self.assertEqual(preview["tables"], summary.extra["tables"])
-        self.assertTrue(any("later is not marked" in message for message in preview["warnings"]))
+        self.assertTrue(any("later is marked too" in message for message in preview["warnings"]))
+        self.assertIn("later is marked as extra copies of owned printings too", preview["summary"])
         self.assertEqual(files.render(self.backend.load()), files.render(before))
         real_apply = inventory.apply
         with mock.patch.object(inventory, "apply", wraps=real_apply) as apply:
@@ -84,7 +85,8 @@ class OrderSplitApiTests:
         self.assertEqual(after.collection(), before.collection())
         self.assertEqual(after.tokens, before.tokens)
         self.assertEqual(after.watchlist, before.watchlist)
-        self.assertEqual(after.order(ORDER).audit_notes, before.order(ORDER).audit_notes)
+        self.assertEqual(after.order(ORDER).audit_notes, rules.with_extra_copies(
+            before.order(ORDER).audit_notes, ["cards", "later"]))
 
     def test_token_split_preserves_physical_pairings_unknowns_and_all_unspecified_checks(self):
         before = self.backend.load()
@@ -160,15 +162,21 @@ class OrderSplitApiTests:
             self.assertEqual(preview["tables"]["error"], "New pool problem")
             self.assertEqual(self.save(preview["preview"])["tables"]["error"], "New pool problem")
 
-    def test_split_of_marked_component_refuses_a_new_actual_owned_printing_blocker(self):
+    def test_split_of_marked_component_passes_the_mark_so_owned_printings_add_no_blocker(self):
         from decklab.lib.inventory import ops_collection  # noqa: F401 (register collection.import)
         inventory.apply(inventory.Op("order.extra_copies", {"order": "2026-10-02-precon",
                         "component": "precon"}), CLAUDE, "Mark fixture precon as extra copies")
         inventory.apply(inventory.Op("collection.import", {
             "space": "home", "sources": [("Fixture owned copies", self.rows(self.backend.load(), "cards"))]}),
             CLAUDE, "Add fixture copies")
-        self.refused(400, self.request())
-        self.assertTrue(self.backend.load().order(ORDER).audit_notes.endswith("cards."))
+        preview = self.preview()
+        self.assertEqual([part["extra_copies"] for part in preview["components"]], [True, True])
+        self.save(preview["preview"])
+        self.assertEqual(rules.extra_copies(self.backend.load().order(ORDER).audit_notes), ("cards", "later"))
+        # Unmarking the new part alone would bring its blocker back, so it's refused, marks unchanged.
+        self.refused(400, {"profile": "matt", "expect": self.backend.load().revision, "order": ORDER,
+                           "action": "extra_copies", "component": "later", "undo": True})
+        self.assertEqual(rules.extra_copies(self.backend.load().order(ORDER).audit_notes), ("cards", "later"))
 
     def test_exact_revision_and_preview_identity_protect_row_and_check_numbers(self):
         preview = self.preview(move_checks=[1])

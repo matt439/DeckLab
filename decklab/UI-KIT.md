@@ -361,6 +361,17 @@ confirmation dialogs for route/person/away cleanup. Preserve busy, changed-previ
 and original-viewer guards. The partial split, receipt, checks/provenance and table
 refresh are one save.
 
+`receipt-bulk.js` (E6-S27) holds the shortcuts for a delivery that came as ordered:
+**Everything arrived as ordered** above the parts, and each part's **All N checks
+done** and (tokens) **Backs as recorded or blank (N)…**. Each is a secondary behind
+one confirmation that sets exactly the state the by-hand ticks set, so preview and
+apply bodies don't change. A shortcut shows only while it has work, and hides itself
+once done, so afterwards focus moves to the next shortcut still showing (that part's
+first), else Record arrival. The backs sheet's primary follows the can't-act-yet
+rule: `aria-disabled` with a described reason ("Tick at least one card.") and a click
+that focuses the first row box. Rows whose pairing isn't confirmed are named, never
+answered in bulk.
+
 ## Rules
 
 - **Page files lay components out; they never restyle them.** A page stylesheet sets grid, gap, order and width. It doesn't change a `.btn`, an input, a chip or a tile. If a component lacks something, add it to `components.css` or `cards-ui.css`.
@@ -687,6 +698,8 @@ Per-viewer conveniences only, through core.js's `local` (every key gets the pref
 - The wishlist's Remove has an Undo toast that puts the card back at its old place (the add's `at`, the index it had; `rules.insert_slot` in the state store).
 - `openCoverPicker(deckId, onDone)` (cover.js) opens the deck picture picker (`GET /api/deck/cards`, saved with `POST /api/deck/cover`); `onDone(cover, revision)` runs after a save. The library's "Choose deck pictures" and the deck page's More menu use it, only for a deck text the viewer may change (never a product or pairing).
 - The editor's card finder is `GET /api/deck/find` (not `/api/deck/cards`, which is the picker's).
+- `deckListbox({id, label, decks, names, library, selected, onChoose, cls})` (deck-picker.js, E3-S27) is a deck picker that shows pictures: a field-sized button and a popover `role=listbox` (`.deck-pick-*` classes in `matchups.css`) whose options draw each deck's small picture, short name and colour pips and are named by its full title. It keeps a select's keyboard (arrows, Home/End, PageUp/PageDown, type-ahead, Enter/Space, Escape and Tab), uses `aria-activedescendant`, guards held keys with core.js `keyboardMenuButton`, and closes with the other popovers. `onChoose(id)` runs only for another deck. Matchups' "Show matchups for" uses it; the Play pickers can adopt it later.
+- `deckArtThumb(d, colours, cls)` (library.js) is a deck's small art thumbnail, shared by the lab's deck rows and `deckListbox`: the cover art on the deck's art colour while it loads, or, with no art or a failed one, the deck's tint, with a thin colour stripe under it.
 
 The deck Overview's opponent-specific sideboard section (`deck-sideboard.js`) uses `cardTile` in the shared `card-tiles` grid for historical in/out printings, in two columns that stack on phones. It loads viewer-filtered play records only when Overview is drawn, checks route/profile/node before applying replies, and uses the Game log's preview/save sheet with both chosen list versions. Stored records and their hashes contain no presentation fields.
 

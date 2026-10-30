@@ -50,7 +50,7 @@ _conn.LOG_FILE = Path(os.environ[_conn.LOG_ENV])    # in case conn was imported 
 os.environ[_conn.NAME_ENV] = "decklab_tests_must_not_reach_this"
 os.environ["DECKLAB_STATE_EXPLICIT"] = "1"
 
-# MTGMate's snapshot (lib/shops.py) is a file of the run's own that doesn't exist, so no test reads
+# MTGMate's snapshot (lib/shops/) is a file of the run's own that doesn't exist, so no test reads
 # the PC's real decklab/data/shops/mtgmate.json and Shopping's answers stay as they'd be without one.
 os.environ["DECKLAB_SHOP_SNAPSHOT"] = str(Path(_LOGS) / "shops" / "mtgmate.json")
 

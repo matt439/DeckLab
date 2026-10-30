@@ -3,7 +3,7 @@ lines and blocks, and basic lands. The fixtures are in test_decks.py (see its
 docstring).
 
 Run from the repo root:
-    python -m unittest discover -s decklab/tests -t .
+    python scripts/test_fixtures.py
 """
 import re
 import unittest

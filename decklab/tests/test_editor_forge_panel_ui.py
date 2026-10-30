@@ -7,7 +7,8 @@ from decklab.tests.test_workspace_ui import NODE
 
 SETUP = r'''
   const presentationRequests=[];
-  api=async path=>{presentationRequests.push(path);throw Error('Unexpected presentation read: '+path);};
+  // The kept-draft read (E2-S16) answers as before its migration: test_editor_kept_drafts_ui covers it.
+  api=async path=>{if(path.startsWith('/api/deck/draft?')||path.startsWith('/api/deck/new-draft?'))return {available:false};presentationRequests.push(path);throw Error('Unexpected presentation read: '+path);};
   apiWrite=async path=>{presentationRequests.push(path);throw Error('Unexpected presentation write: '+path);};
   function swapDraft(ed) {
     ed.lists.Deck[0].qty-=1;ed.lists.Deck[1].qty+=1;

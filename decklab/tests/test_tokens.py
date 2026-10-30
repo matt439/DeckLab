@@ -8,10 +8,11 @@ it. Tests that need card data build a small index from
 fixtures/tokens_cards.jsonl (real Scryfall objects); the rest run with no
 card index at all, as on a fresh clone.
 
-Run from the repo root: python -m unittest decklab.tests.test_tokens
+Run from the repo root: python scripts/test_fixtures.py decklab.tests.test_tokens
 """
 import ast
 import contextlib
+import importlib
 import io
 import json
 import pkgutil
@@ -270,17 +271,17 @@ class ReadTests(TokensTestCase):
         inv = tokens.read()
         self.assertEqual(inv.rows, [{**{k: "" for k in tokens.FIELDS}, "front": "Dog", "back": "Beast",
                                      "quantity": "2", "back_details": "3/3"}])
-        self.assertEqual(inv.problems, ["magic/tokens.csv lacks the printing columns; fix the header by hand "
+        self.assertEqual(inv.problems, ["The home token cards lack the printing columns; fix the header by hand "
                                         "before the Tokens page can save"])
-        with self.assertRaisesRegex(tokens.TokensError, r"line 1: the header must be .*; it can't be changed "
-                                                         r"until that's put right$"):
+        with self.assertRaisesRegex(tokens.TokensError, r"^The home token cards' columns must be .*; it can't be "
+                                                         r"changed until that's put right$"):
             tokens.read(strict=True)
 
     def test_an_unknown_header_reads_no_rows(self):
         self.tokens_csv("name,quantity\nDog,1\n")
         inv = tokens.read()
         self.assertEqual(inv.rows, [])
-        self.assertIn("line 1: the header must be", inv.problems[0])
+        self.assertIn("The home token cards' columns must be", inv.problems[0])
 
     def test_bad_rows_are_skipped_with_their_line_or_refused_strictly(self):
         self.tokens_csv(HEADER + "Dog,Beast,,,,,1,,,\n"
@@ -295,19 +296,24 @@ class ReadTests(TokensTestCase):
         inv = tokens.read()
         self.assertEqual([r["front"] for r in inv.rows], ["Dog", "Zombie"])
         self.assertEqual(inv.lines, [2, 11])
+        # E11-S12: a row it leaves out is named by the listed row before it (tokens list numbers only
+        # the rows it reads), never by the old file's line.
         self.assertEqual(inv.problems, [
-            "magic/tokens.csv line 3: notes must be one line",
-            "magic/tokens.csv line 6: tokens need a front name and positive physical quantity",
-            "magic/tokens.csv line 7: tokens need a front name and positive physical quantity",
-            "magic/tokens.csv line 8: invalid lowercase token set",
-            "magic/tokens.csv line 9: invalid token finish",
-            "magic/tokens.csv line 10: 2 values, not 10"])
+            "A row after row 1 of the home token cards: notes must be one line",
+            "A row after row 1 of the home token cards: tokens need a front name and positive physical quantity",
+            "A row after row 1 of the home token cards: tokens need a front name and positive physical quantity",
+            "A row after row 1 of the home token cards: invalid lowercase token set",
+            "A row after row 1 of the home token cards: invalid token finish",
+            "A row after row 1 of the home token cards: 2 values, not 10"])
         with self.assertRaises(tokens.TokensError) as caught:
             tokens.read(strict=True)
         self.assertEqual(str(caught.exception),
-                         "magic/tokens.csv line 3: notes must be one line; it can't be changed until that's put right")
+                         "A row after row 1 of the home token cards: notes must be one line; it can't be changed until "
+                         "that's put right")
 
-    def test_strict_and_receipts_agree_on_the_line(self):
+    def test_a_handed_in_file_keeps_its_line_and_the_inventory_its_listed_row(self):
+        # E11-S12: a file the user hands in is named with its line, as written; the token cards
+        # name the row they leave out by the listed row before it.
         path = self.tokens_csv(HEADER + "Dog,Beast,,,,,1,,,\n,Beast,,,,,1,,,\n")
         with self.assertRaises(ValueError) as theirs:          # how a receipt reads a token payload
             with path.open(encoding="utf-8-sig", newline="") as stream:
@@ -317,8 +323,9 @@ class ReadTests(TokensTestCase):
                     rules.validate_token_row(row, f"{path} line {line}")
         with self.assertRaises(tokens.TokensError) as ours:
             tokens.read(strict=True)
-        self.assertIn("line 3: tokens need a front name", str(theirs.exception))
-        self.assertIn("line 3: tokens need a front name", str(ours.exception))
+        self.assertIn("tokens.csv line 3: tokens need a front name", str(theirs.exception))
+        self.assertTrue(str(ours.exception).startswith("A row after row 1 of the home token cards: tokens need a "
+                                                       "front name"), str(ours.exception))
 
 
 class RowTests(unittest.TestCase):
@@ -778,7 +785,7 @@ class DeckTokensTests(IndexTestCase):
         self.assertEqual(result["counts"], {"kinds": 5, "ready": 0, "check": 2, "differs": 1, "incoming": 1,
                                             "none": 1})
         self.assertEqual(tokens.brief(result), {"kinds": 5, "none": ["Zombie Rogue"], "differs": ["Insect"],
-                                                "incoming": ["Fish"], "reminders": []})
+                                                "incoming": ["Fish"], "opponent": [], "reminders": []})
 
 
 # ------------------------------------------------------------------ incoming
@@ -798,7 +805,7 @@ class IncomingTests(TokensTestCase):
         found, problems = tokens.incoming()
         self.assertEqual(found, [])
         self.assertEqual(len(problems), 1)
-        self.assertIn("magic/orders/tokens/2026-10-07-shop-a.csv line 2: tokens need a front name", problems[0])
+        self.assertIn("Row 1 of order 2026-10-07-shop-a's token cards: tokens need a front name", problems[0])
         self.assertNotIn(str(self.root), problems[0])
 
     def test_unreadable_records_are_a_problem(self):
@@ -939,9 +946,9 @@ class CheckTests(IndexTestCase):
         with self.any_name():
             self.assertEqual(tokens.check(warnings=warnings), [])
         self.assertEqual(warnings, [
-            "magic/tokens.csv line 2: front details '4/4 white flying' aren't read: "
+            "Row 1 of the home token cards: front details '4/4 white flying' aren't read: "
             "separate them with ';' (4/4; white; flying)",
-            "magic/tokens.csv line 2: back details 'whte' aren't read: did you mean white?"])
+            "Row 1 of the home token cards: back details 'whte' aren't read: did you mean white?"])
         out = io.StringIO()
         with contextlib.redirect_stdout(out), self.any_name():
             self.assertEqual(tokens.main(["--check"]), 0)
@@ -952,7 +959,7 @@ class CheckTests(IndexTestCase):
             self.assertEqual(tokens.main(["--check"]), 1)
         lines = out.getvalue().splitlines()
         self.assertIn("'Sprit' isn't a Scryfall token", lines[0])
-        self.assertEqual(lines[-1], "magic/tokens.csv line 2: back details 'whte' aren't read: did you mean white?")
+        self.assertEqual(lines[-1], "Row 1 of the home token cards: back details 'whte' aren't read: did you mean white?")
 
     def test_each_message(self):
         self.tokens_csv(HEADER
@@ -964,18 +971,18 @@ class CheckTests(IndexTestCase):
                         + "Angel,Angel,,,,,1,,,\n")
         self.record(payload=HEADER + "Fish,,tblb,7,,shiny,1,,,\n")
         self.assertEqual(tokens.check(), [
-            "magic/tokens.csv line 6: tokens need a front name and positive physical quantity; it can't be "
-            "changed until that's put right",
-            "magic/tokens.csv: not in the standard order; the next Tokens page save sorts it",
-            "magic/tokens.csv line 3: 'Sprit' isn't a Scryfall token, emblem or reminder name (did you mean Spirit?)",
-            "magic/tokens.csv line 3: a blank back needs 'single-sided verified' in notes",
-            "magic/tokens.csv line 4: 'Ring' isn't a Scryfall token, emblem or reminder name (did you mean The Ring?)",
-            "magic/tokens.csv line 5: notes say single-sided verified but a back is recorded",
-            "magic/orders/tokens/2026-10-07-shop-a.csv line 2: invalid token finish"])
+            "A row after row 4 of the home token cards: tokens need a front name and positive physical quantity; "
+            "it can't be changed until that's put right",
+            "The home token cards aren't in the standard order; the next Tokens page save sorts them",
+            "Row 2 of the home token cards: 'Sprit' isn't a Scryfall token, emblem or reminder name (did you mean Spirit?)",
+            "Row 2 of the home token cards: a blank back needs 'single-sided verified' in notes",
+            "Row 3 of the home token cards: 'Ring' isn't a Scryfall token, emblem or reminder name (did you mean The Ring?)",
+            "Row 4 of the home token cards: notes say single-sided verified but a back is recorded",
+            "Row 1 of order 2026-10-07-shop-a's token cards: invalid token finish"])
 
     def test_a_wrong_printing(self):
         self.tokens_csv(HEADER + "Spirit,,tltr,H13,,,1,,,single-sided verified\n")
-        self.assertEqual(tokens.check(), ["magic/tokens.csv line 2: tltr H13 is The Ring, not Spirit"])
+        self.assertEqual(tokens.check(), ["Row 1 of the home token cards: tltr H13 is The Ring, not Spirit"])
 
     def test_main_exit_codes(self):
         self.tokens_csv(REAL_TOKENS)
@@ -1049,7 +1056,7 @@ class PatchedNamesTests(unittest.TestCase):
             for sub in submodules:
                 if sub == "__main__":
                     continue
-                module = getattr(tokens, sub)
+                module = importlib.import_module(f"{tokens.__name__}.{sub}")   # plan_products is imported lazily
                 self.assertNotIn(name, vars(module), f"tokens.{sub} has its own {name}")
                 tree = ast.parse(Path(module.__file__).read_text(encoding="utf-8"))
                 used = {n.id if isinstance(n, ast.Name) else n.attr for n in ast.walk(tree)
@@ -1061,7 +1068,8 @@ class PatchedNamesTests(unittest.TestCase):
         for sub in (info.name for info in pkgutil.iter_modules(tokens.__path__)):
             if sub in ("__main__", "names"):
                 continue
-            self.assertNotIn("_faces_at", vars(getattr(tokens, sub)), f"tokens.{sub} has its own _faces_at")
+            self.assertNotIn("_faces_at", vars(importlib.import_module(f"{tokens.__name__}.{sub}")),
+                             f"tokens.{sub} has its own _faces_at")
         self.assertEqual(token_names._faces_at.__module__, token_names.__name__)
 
 

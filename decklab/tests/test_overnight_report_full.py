@@ -5,7 +5,9 @@ section 8 parts (replay, field, M4, experiments with adoption candidates, E3's n
 steps), the fail-fast diagnostics, the supervisor's end after its last restart, D8's refusal,
 A1's pool-service check, E3's card-data check, and the plan for a 12:30 deadline.
 
-Run from the repo root: python -m unittest discover -s decklab/tests -t .
+Run from the repo root: python scripts/test_fixtures.py
+The fixture runner disables configured PostgreSQL and real Forge; named native
+runtime cases also need separate qualification (see AGENTS.md, Tests).
 """
 import json
 import os

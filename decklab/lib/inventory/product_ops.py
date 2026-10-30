@@ -26,13 +26,13 @@ def _pending(inv, stem):
         raise Invalid(f"There's no product {stem!r}.")
     statuses = [row for row in inv.status.rows if row.text("file") == product.file]
     if len(statuses) != 1:
-        raise Invalid(f"{paths.STATUS} has {'no' if not statuses else 'more than one'} row for {product.file}")
+        raise Invalid(f"Product {product.stem} has {'no status' if not statuses else 'more than one status'}")
     status = statuses[0]
     if status.text("status") not in INCOMING:
-        raise Invalid(f"{product.file} is {status.text('status') or 'not pending'}; only a pending product can be corrected")
+        raise Invalid(f"Product {product.stem} is {status.text('status') or 'not pending'}; only a pending product can be corrected")
     found = [(order, c) for order, c in inv.components() if c.kind == "product" and c.product_stem == stem]
     if len(found) != 1:
-        raise Invalid(f"{product.file} needs exactly one order component before it can be corrected")
+        raise Invalid(f"Product {product.stem} needs exactly one order component before it can be corrected")
     order, component = found[0]
     _order(inv, order.id)
     if component.status != "pending" or component.received_on:
@@ -42,12 +42,12 @@ def _pending(inv, stem):
 
 def _list(product, columns, rows, check_cards):
     if not isinstance(columns, (list, tuple)) or not all(isinstance(c, str) for c in columns):
-        raise Invalid(f"{product.path}: missing or duplicate columns")
+        raise Invalid(f"Product {product.stem}: missing or duplicate columns")
     columns = tuple(columns)
-    rows = _exact_rows(rows, columns, f"{product.path}: each row needs exactly its columns")
+    rows = _exact_rows(rows, columns, f"Product {product.stem}: each row needs exactly its columns")
     text = rules.csv_bytes(rows, columns).decode("utf-8")
     try:
-        parsed = rules.parse_cards(io.StringIO(text, newline=""), product.path)
+        parsed = rules.parse_cards(io.StringIO(text, newline=""), paths.describe(product.path), numbered=True)
     except (rules.InvalidCards, csv.Error) as e:
         raise _invalid(e) from None
     warnings = check_card_rows(parsed, check_cards, names_only=True)
@@ -82,13 +82,13 @@ def edit_product(inv, *, stem, values=None, columns=None, rows=None, check_cards
                 raise Invalid("A pending product's status is ordered or preordered")
         else:
             try:
-                purchases._text(value, f"{product.path}: {key}", blank=key == "notes" or value == "")
+                purchases._text(value, f"Product {product.stem}: {key}", blank=key == "notes" or value == "")
             except ValueError as e:
                 raise _invalid(e) from None
         checked[key] = value
     made, warnings = _list(product, columns, rows, check_cards) if rows is not None else (product, [])
     if made.error is not None:
-        raise Invalid(f"{made.path} can't be read: {made.error}")
+        raise Invalid(f"Product {made.stem}'s card list can't be read: {made.error}")
     metadata = {key: checked[key] or None for key in ("name", "format") if key in checked}
     made = dataclasses.replace(made, **metadata)
     status_values = {key: status.text(key) for key in rules.STATUS_FIELDS}

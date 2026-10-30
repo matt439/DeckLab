@@ -1,7 +1,7 @@
 """The library's Forge line (E11-S30 slice 8): forge.field.averages over test_forge_field's small tree, and
 GET /api/library/forge's visibility, cache and failure over a stubbed field (no Forge process starts).
 
-Run from the repo root: python -m unittest discover -s decklab/tests -t .
+Run from the repo root: python scripts/test_fixtures.py
 """
 import json
 import shutil
@@ -43,6 +43,24 @@ class AveragesTests(FieldTestCase):
         self.assertNotIn("casual/gamma", found)
         self.assertIsNone(found["casual/alpha"]["average"])
         self.assertEqual(found["casual/alpha"]["games"], 0)
+
+    def test_pair_rates_are_each_saved_pair_s_rate_from_both_sides(self):
+        alpha, beta, gamma = self.entry("casual/alpha"), self.entry("casual/beta", "owned"), self.entry("casual/gamma")
+        self.fake.add_games(alpha, beta, 200, rate=0.7)
+        found = field.pair_rates("Constructed", self.results)
+        self.assertEqual(set(found), {("casual/alpha", "casual/beta"), ("casual/beta", "casual/alpha")})
+        rows = {o["id"]: o for o in field.view(alpha, self.results)["opponents"]}
+        self.assertEqual(found[("casual/alpha", "casual/beta")],
+                         {"value": rows["casual/beta"]["rate"]["value"], "games": 200,
+                          "versions": ("target", "owned")})
+        self.assertEqual(found[("casual/beta", "casual/alpha")]["versions"], ("owned", "target"))
+        self.assertGreater(found[("casual/alpha", "casual/beta")]["value"], 0.5)
+        self.assertLess(found[("casual/beta", "casual/alpha")]["value"], 0.5)
+        # A hidden deck's pairs are left out with it.
+        self.fake.add_games(alpha, gamma, 100, rate=0.4)
+        hidden = field.pair_rates("Constructed", self.results, visible=lambda deck_id: deck_id != "casual/gamma")
+        self.assertFalse(any("casual/gamma" in pair for pair in hidden))
+        json.dumps({" ".join(k): v for k, v in found.items()}, allow_nan=False)
 
 
 AVERAGE = {"value": 0.61, "low": 0.59, "high": 0.63, "counted": 3, "of": 4, "partial": True}
@@ -114,6 +132,21 @@ class LibraryForgeApiTests(unittest.TestCase):
         found = api.library_forge_view()["decks"]["casual/otters"]
         self.assertEqual((found["version"], found["card_sha"]), ("owned", "a"))
         self.assertEqual(self.forge.field.averages.call_count, 2)
+
+    def test_pair_rates_share_the_cache_and_keep_only_visible_pairs(self):
+        self.forge.field.pair_rates.return_value = {("casual/otters", "casual/hidden"): {"value": 0.4, "games": 50},
+                                                    ("casual/otters", "casual/elves"): {"value": 0.6, "games": 80}}
+        self.assertEqual(api.pair_rates(), ({("casual/otters", "casual/elves"): {"value": 0.6, "games": 80}}, None))
+        api.pair_rates()
+        api.library_forge_view()
+        self.assertEqual((self.forge.field.pair_rates.call_count, self.forge.field.averages.call_count), (1, 1))
+        args, options = self.forge.field.pair_rates.call_args
+        self.assertEqual((args, options["space"]), (("Constructed",), "home"))
+        self.forge.field.pair_rates.side_effect = RuntimeError("boom")
+        (self.results / "abc.json").write_text("{}", encoding="utf-8")
+        with mock.patch.object(api.common, "_log") as log:
+            self.assertEqual(api.pair_rates(), ({}, api.NO_NUMBERS))
+        log.assert_called_once()
 
 
 class LibraryForgeHttpTests(support.ServerTestCase):

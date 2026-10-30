@@ -199,8 +199,8 @@ function activityUndoAuditVersion(value) {
 }
 
 function activityUndoEvidence(data, id, space, profile = state.profile?.id) {
-  if (data && (data.action === "token_restore_review" || Object.hasOwn(data, "read_only") ||
-      Object.hasOwn(data, "identity_policy") || Object.hasOwn(data, "packing_restored"))) return null;
+  if (data && (Object.hasOwn(data, "read_only") || !["token_add", "token_batch_add"].includes(data.action) &&
+      (Object.hasOwn(data, "identity_policy") || Object.hasOwn(data, "packing_restored")))) return null;
   if (!data || data.available !== true || data.id !== id
       || typeof data.expect !== "string" || !/^[a-f0-9]{64}$/.test(data.expect)
       || typeof data.label !== "string" || !data.label.trim()) return null;
@@ -208,8 +208,14 @@ function activityUndoEvidence(data, id, space, profile = state.profile?.id) {
   if (data.kind === "accessory") return activityUndoAccessoryEvidence(data, space, profile) ? data : null;
   if (data.kind === "mixed") return activityUndoMixedEvidence(data, space) ? data : null;
   if (data.space !== space || !["collection", "tokens"].includes(data.kind)) return null;
+  if (data.action === "token_batch_add") return activityUndoTokenBatchEvidence(data) ? data : null;
+  if (data.action === "token_batch_remove") return activityUndoTokenBatchRemoveEvidence(data) ? data : null;
   if (["batch_metadata", "batch_update"].includes(data.action)) return activityUndoBatchEvidence(data) ? data : null;
   if (["batch_add", "batch_remove"].includes(data.action)) return activityUndoPhysicalBatchEvidence(data) ? data : null;
+  if (data.action === "token_add") return data.kind === "tokens" && data.physical_confirmation_required === true && data.current === null
+    && data.identity_policy === "fresh_id" && data.packing_restored === false && activityUndoRow(data.restored, "tokens")
+    && data.label === (data.restored.back ? data.restored.front + " / " + data.restored.back : data.restored.front)
+    && Object.keys(data).sort().join(",") === "action,available,current,expect,id,identity_policy,kind,label,packing_restored,physical_confirmation_required,restored,space" ? data : null;
   if (data.action === "add") return data.kind === "collection" && data.physical_confirmation_required === true && data.current === null
     && activityUndoRow(data.restored, "collection") && Object.keys(data).sort().join(",") === "action,available,current,expect,id,kind,label,physical_confirmation_required,restored,space" ? data : null;
   if (!activityUndoRow(data.current, data.kind)) return null;
@@ -229,6 +235,31 @@ function activityUndoEvidence(data, id, space, profile = state.profile?.id) {
       || data.fields.some(item => !item || !changed.includes(item.field) || item.before !== data.current[item.field]
         || item.after !== data.restored[item.field])) return null;
   return data;
+}
+
+/* Every deleted token-card row of one change (2-50), restored together under fresh ids. */
+function activityUndoTokenBatchEvidence(data) {
+  const label = row => row.back ? row.front + " / " + row.back : row.front;
+  return data.kind === "tokens" && data.physical_confirmation_required === true && data.identity_policy === "fresh_id" && data.packing_restored === false
+    && Object.keys(data).sort().join(",") === "action,available,cards,expect,id,identity_policy,kind,label,packing_restored,physical_confirmation_required,row_count,rows,space"
+    && Number.isSafeInteger(data.row_count) && data.row_count >= 2 && data.row_count <= 50 && data.label === data.row_count + " deleted token-card rows"
+    && Array.isArray(data.rows) && data.rows.length === data.row_count
+    && data.rows.every(item => item && typeof item === "object" && Object.keys(item).sort().join(",") === "label,restored"
+      && activityUndoRow(item.restored, "tokens") && item.label === label(item.restored))
+    && data.cards === data.rows.reduce((sum, item) => sum + item.restored.quantity, 0);
+}
+
+/* Every added token-card row of one change (2-50), removed together by stable id with one reason. */
+function activityUndoTokenBatchRemoveEvidence(data) {
+  const label = row => row.back ? row.front + " / " + row.back : row.front, ids = new Set();
+  return data.kind === "tokens" && data.reason_required === true
+    && Object.keys(data).sort().join(",") === "action,available,cards,expect,id,kind,label,reason_required,row_count,rows,space"
+    && Number.isSafeInteger(data.row_count) && data.row_count >= 2 && data.row_count <= 50 && data.label === data.row_count + " added token-card rows"
+    && Array.isArray(data.rows) && data.rows.length === data.row_count
+    && data.rows.every(item => item && typeof item === "object" && Object.keys(item).sort().join(",") === "current,label,token_row_id"
+      && Number.isSafeInteger(item.token_row_id) && item.token_row_id > 0 && !ids.has(item.token_row_id) && ids.add(item.token_row_id)
+      && activityUndoRow(item.current, "tokens") && item.label === label(item.current))
+    && data.cards === data.rows.reduce((sum, item) => sum + item.current.quantity, 0);
 }
 
 function activityUndoReceipt(answer, preview) {
@@ -273,6 +304,13 @@ function activityUndoReceipt(answer, preview) {
     && typeof answer.summary === "string" && answer.summary.trim();
   if (!confirmed) return false;
   if (!(preview.action === "remove" && preview.kind === "tokens") && Object.hasOwn(answer, "removed_token_row_id")) return false;
+  if (preview.action === "token_batch_remove") {
+    const ids = answer.removed_token_row_ids;
+    return preview.kind === "tokens" && answer.action === "token_batch_remove" && answer.row_count === preview.row_count && answer.restored === null
+      && Object.keys(answer).sort().join(",") === "action,expect,kind,removed_token_row_ids,restored,revision,row_count,saved,sha256,source_id,space,summary"
+      && Array.isArray(ids) && ids.length === preview.row_count && ids.every((rid, index) => rid === preview.rows[index].token_row_id);
+  }
+  if (Object.hasOwn(answer, "removed_token_row_ids")) return false;
   if (preview.action === "batch_remove") {
     if (answer.action !== "batch_remove" || answer.row_count !== preview.row_count || answer.restored !== null
         || !Array.isArray(answer.removed_keys) || answer.removed_keys.length !== preview.row_count
@@ -298,7 +336,22 @@ function activityUndoReceipt(answer, preview) {
     }
     return seen.size === expected.size;
   }
+  if (preview.action === "token_batch_add") {
+    const ids = answer.added_token_row_ids;
+    return preview.kind === "tokens" && answer.action === "token_batch_add" && answer.row_count === preview.row_count
+      && Object.keys(answer).sort().join(",") === "action,added_token_row_ids,expect,kind,restored_rows,revision,row_count,saved,sha256,source_id,space,summary"
+      && Array.isArray(ids) && ids.length === preview.row_count && ids.every(rid => Number.isSafeInteger(rid) && rid > 0) && new Set(ids).size === ids.length
+      && Array.isArray(answer.restored_rows) && answer.restored_rows.length === preview.row_count
+      && answer.restored_rows.every((row, index) => activityUndoRow(row, "tokens")
+        && ACTIVITY_UNDO_FIELDS.tokens.every(field => row[field] === preview.rows[index].restored[field]));
+  }
+  if (Object.hasOwn(answer, "added_token_row_ids")) return false;
   if (Object.hasOwn(answer, "row_count") || Object.hasOwn(answer, "restored_rows")) return false;
+  if (preview.action === "token_add") return preview.kind === "tokens" && answer.action === "token_add"
+    && Object.keys(answer).sort().join(",") === "action,added_token_row_id,expect,kind,restored,revision,saved,sha256,source_id,space,summary"
+    && Number.isSafeInteger(answer.added_token_row_id) && answer.added_token_row_id > 0
+    && activityUndoRow(answer.restored, "tokens") && ACTIVITY_UNDO_FIELDS.tokens.every(field => answer.restored[field] === preview.restored[field]);
+  if (Object.hasOwn(answer, "added_token_row_id")) return false;
   if (preview.action === "add") {
     const key = answer.added_key;
     return preview.kind === "collection" && answer.action === "add" && !Object.hasOwn(answer, "removed_key")
@@ -334,8 +387,7 @@ function activityUndoOwner(ctx) {
 }
 
 function activityUndoButton(view, change) {
-  if (change.undo && (Object.hasOwn(change.undo, "read_only") || change.undo.action === "token_restore_review"))
-    return typeof activityTokenReviewButton === "function" ? activityTokenReviewButton(view, change) : null;
+  if (change.undo && Object.hasOwn(change.undo, "read_only")) return null;
   if (change.undo?.review !== true || !Number.isSafeInteger(change.id) || change.id < 1) return null;
   const id = change.id, root = view.days, endpoint = change.undo.kind === "wishlist" ? "/api/activity/wishlist-undo"
     : change.undo.kind === "accessory" ? "/api/activity/accessory-undo" : change.undo.kind === "mixed" ? ACTIVITY_UNDO_MIXED_ENDPOINT : "/api/activity/undo";
@@ -470,8 +522,11 @@ function activityUndoShow(ctx) {
   const accessoryRetyping = preview.kind === "accessory" && preview.action === "accessory_kind_update";
   const accessoryCorrecting = preview.kind === "accessory" && preview.action === "accessory_record_update";
   const accessoryCropping = preview.kind === "accessory" && preview.action === "accessory_crop_update";
-  const batchRemoving = preview.action === "batch_remove", removing = batchRemoving || accessoryRemoving || preview.action === "remove";
-  const batchAdding = preview.action === "batch_add", adding = batchAdding || accessoryAdding || preview.action === "add";
+  const tokenBatchRemoving = preview.kind === "tokens" && preview.action === "token_batch_remove";
+  const batchRemoving = preview.action === "batch_remove", removing = batchRemoving || tokenBatchRemoving || accessoryRemoving || preview.action === "remove";
+  const tokenBatch = preview.kind === "tokens" && preview.action === "token_batch_add";
+  const tokenAdding = tokenBatch || preview.kind === "tokens" && preview.action === "token_add";
+  const batchAdding = preview.action === "batch_add", adding = batchAdding || accessoryAdding || tokenAdding || preview.action === "add";
   const wishlistPresence = preview.kind === "wishlist" && ["wishlist_add", "wishlist_remove"].includes(preview.action);
   const stock = preview.action === "batch_update", batch = stock || preview.action === "batch_metadata";
   const words = { quantity: "Quantity", condition: "Condition", language: "Language", notes: "Notes", source: "Source", set: "Set", number: "Collector number", brand: "Brand", name: "Name", colour: "Colour", link: "Product link", image_source: "Recorded image source", capacity: "Box capacity (sleeved cards)", image: "Photo", crop: "Photo crop" };
@@ -539,10 +594,13 @@ function activityUndoShow(ctx) {
       el("div", { class: "panels" }, rows));
   } else if (removing) {
     const tokenCards = preview.kind === "tokens";
-    const copies = batchRemoving ? preview.rows.reduce((sum, item) => sum + item.current.quantity, 0) : preview.current.quantity;
+    const listed = batchRemoving || tokenBatchRemoving;
+    const copies = listed ? preview.rows.reduce((sum, item) => sum + item.current.quantity, 0) : preview.current.quantity;
     const warning = accessoryRemoving ? "Undo removes this entire accessory record, including its recorded quantity of " + preview.current.quantity
       + (preview.current.kind === "sleeves" ? " individual sleeves." : Number(preview.current.quantity) === 1 ? " item." : " items.")
       : batchRemoving ? "Undo removes all " + plural(copies, "recorded copy", "recorded copies") + " across all " + plural(preview.row_count, "printing") + ". Every added row will be removed together."
+      : tokenBatchRemoving ? "Undo removes all " + plural(copies, "physical token card") + " recorded in these " + preview.row_count + " added rows. Every added row will be removed together."
+      + (preview.rows.some(item => item.current.back.trim()) ? " Each front/back pair is one physical card." : "")
       : tokenCards ? "Undo removes all " + plural(preview.current.quantity, "physical token card") + " recorded in this row."
       + (preview.current.back.trim() ? " Each front/back pair is one physical card." : "")
       : "Undo removes all " + plural(preview.current.quantity, "recorded copy", "recorded copies")
@@ -550,12 +608,12 @@ function activityUndoShow(ctx) {
     sheet.body.append(el("p", { class: "box box-warn", text: warning }),
     el("p", { class: "sub", text: "Saving creates one new audited change; the original change stays in Activity. "
       + (accessoryRemoving ? "Only an unused added record without a photo can be removed here. Deck and product references are checked again when you save; kit and photos stay as they are."
-        : batchRemoving ? "The rows and their physical uses are checked again when you save." : "The row and its physical uses are checked again when you save.") }));
+        : listed ? "The rows and their physical uses are checked again when you save." : "The row and its physical uses are checked again when you save.") }));
     const currentRow = row => el("dl", {}, (accessoryRemoving ? ACTIVITY_UNDO_ACCESSORY_STOCK_FIELDS : ACTIVITY_UNDO_FIELDS[preview.kind]).flatMap(field => [el("dt", { text: accessoryRemoving && words[field] ? words[field] : field.replaceAll("_", " ") }),
       el("dd", { class: ["notes", "link", "image_source"].includes(field) ? "activity-undo-note" : null,
         text: accessoryRemoving && field === "owner" ? row.owner === "shared" ? "Shared" : state.profile?.name || row.owner
           : accessoryRemoving && field === "kind" ? { sleeves: "Sleeves", deck_box: "Deck box", playmat: "Playmat" }[row.kind] : text(row[field]) })]));
-    if (batchRemoving) sheet.body.append(el("p", { class: "sub", text: "Review every current row below. There is no partial selection." }),
+    if (listed) sheet.body.append(el("p", { class: "sub", text: "Review every current row below. There is no partial selection." }),
       el("div", { class: "panels" }, preview.rows.map(item => el("section", { class: "panel activity-undo-batch-row" },
         el("h4", { text: item.label }), currentRow(item.current)))));
     else sheet.body.append(el("section", { class: "panel" }, el("h3", { text: accessoryRemoving ? "Current accessory record to remove" : tokenCards ? "Current token-card row to remove" : "Current row to remove" }), currentRow(preview.current)));
@@ -564,7 +622,8 @@ function activityUndoShow(ctx) {
     const normalized = el("p", { class: "sub", role: "status", "aria-live": "polite" });
     sheet.body.append(el("label", { class: "field", for: id }, el("span", { text: accessoryRemoving
       ? "Reason for removing this added accessory record (required)" : tokenCards
-      ? "Reason for removing this added token-card row (required)" : batchRemoving ? "Reason for removing all these added rows (required)" : "Reason for removing this added row (required)" }), reasonInput),
+      ? (tokenBatchRemoving ? "Reason for removing all these added token-card rows (required)" : "Reason for removing this added token-card row (required)")
+      : batchRemoving ? "Reason for removing all these added rows (required)" : "Reason for removing this added row (required)" }), reasonInput),
       el("p", { class: "field-hint", id: id + "-hint", text: accessoryRemoving
         ? "Up to 200 characters. Enter why this entire record should be removed from Sleeves & boxes."
         : tokenCards
@@ -598,6 +657,31 @@ function activityUndoShow(ctx) {
     sheet.body.append(el("label", { class: "choice", for: id }, ownershipInput, el("span", { text: zero
       ? "I confirm this zero-quantity accessory record should be restored."
       : "I confirm all " + row.quantity + " " + units + " are still physically owned in addition to the quantities already recorded." })));
+    ownershipInput.addEventListener("change", () => {
+      if (!ctx.here() || ctx.pending || ctx.saved || ctx.needsRefresh || !ownershipInput.isConnected || !sheet.body.contains(ownershipInput)
+          || ctx.preview !== preview || JSON.stringify(preview) !== signature) { ownershipInput.checked = confirmedOwned; return; }
+      confirmedOwned = ownershipInput.checked === true; ownershipInput.checked = confirmedOwned; error.textContent = ""; actions();
+    });
+  } else if (tokenAdding) {
+    // One deleted row, or every row of a token batch (2-50): all of them together, never a selection.
+    const rows = tokenBatch ? preview.rows.map(item => item.restored) : [preview.restored];
+    const cards = plural(rows.reduce((sum, row) => sum + row.quantity, 0), "physical token card");
+    const where = tokenBatch ? " recorded in these " + preview.row_count + " deleted rows" : " recorded in this deleted row";
+    const historical = row => el("dl", {}, ACTIVITY_UNDO_FIELDS.tokens.flatMap(field => [el("dt", { text: field.replaceAll("_", " ") }),
+      el("dd", { class: ["front_details", "back_details", "notes"].includes(field) ? "activity-undo-note" : null, text: text(row[field]) })]));
+    sheet.body.append(el("p", { class: "box box-warn", text: "Undo restores all " + cards + where
+      + (tokenBatch ? ", each as a new token-card row." : ", as a new token-card row.") + (rows.some(row => row.back) ? " Each front/back pair is one physical card." : "") }),
+      el("p", { class: "sub", text: "Confirm only if you still physically have the whole recorded quantity. If you have fewer, cancel and add the cards you have on the Tokens page." }),
+      el("p", { class: "sub", text: (tokenBatch ? "Each restored row gets a new record; the deleted ones aren't brought back." : "The restored row gets a new record; the deleted one isn't brought back.")
+        + " Earlier packing isn't reconnected: deck boxes and products keep their packed token cards as they are now. Saving creates one new audited change; the original change stays in Activity." }));
+    if (tokenBatch) sheet.body.append(el("p", { class: "sub", text: "Review every historical row below. All of them restore together; there is no partial selection." }),
+      el("div", { class: "panels" }, preview.rows.map(item => el("section", { class: "panel activity-undo-batch-row" },
+        el("h4", { text: item.label }), historical(item.restored)))));
+    else sheet.body.append(el("section", { class: "panel" }, el("h3", { text: "Historical token-card row to restore" }), historical(preview.restored)));
+    const id = "activity-undo-owned-" + sheet.heading.id;
+    ownershipInput = el("input", { id, type: "checkbox" }); ownershipInput.checked = false;
+    sheet.body.append(el("label", { class: "choice", for: id }, ownershipInput, el("span", { text: "I confirm I still physically have all " + cards
+      + (tokenBatch ? " recorded in these " + preview.row_count + " rows." : " recorded in this row.") })));
     ownershipInput.addEventListener("change", () => {
       if (!ctx.here() || ctx.pending || ctx.saved || ctx.needsRefresh || !ownershipInput.isConnected || !sheet.body.contains(ownershipInput)
           || ctx.preview !== preview || JSON.stringify(preview) !== signature) { ownershipInput.checked = confirmedOwned; return; }

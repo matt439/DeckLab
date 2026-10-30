@@ -19,6 +19,7 @@
 .play-record h3 { margin: 0; font-size: var(--fs-lg); overflow-wrap: break-word; }
 .play-record > .btn { justify-self: start; }
 .play-note { white-space: pre-wrap; overflow-wrap: break-word; }
+.play-tonight-reasons { margin: 0; padding-left: var(--s-5); display: grid; gap: var(--s-1); overflow-wrap: break-word; }
 .play-pod-seats { padding-left: var(--s-5); overflow-wrap: anywhere; }
 .play-pod-form-seats { display: grid; gap: var(--s-4); grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); }
 .play-snapshots summary { cursor: pointer; min-height: var(--tap); display: flex; align-items: center; }

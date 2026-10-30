@@ -23,15 +23,18 @@ another program has locked: error is the OSError's text, and only that source is
 each source keeps its raw rows plus what today's readers would say about it, and a file is
 fatal only to the readers it's fatal to today (see model.py). For each source:
 - a collection (and a cards payload, and a product read as cards): problems are pool's
-  read_card_csv texts ("magic/collection.csv line 3: bad quantity 'x'", "... line 4: no card
-  name", lines counted as records from 2, as pool counts them); strict_error is
-  merge_cards.read's first complaint (existing=True for a collection), naming the path;
-- tokens.csv: rows, lines, problems and sorted exactly as tokens.read() gives them (bad rows are
+  read_card_csv texts ("Row 2 of the home collection: bad quantity 'x'", "Row 3 of ...: no card
+  name", rows numbered from 1, as pool numbers them: E11-S12's database words, never a file
+  and line); strict_error is merge_cards.read's first complaint (existing=True for a
+  collection), naming the source the same way;
+- tokens.csv: rows, lines, problems ("Row 2 of the home token cards: ...") and sorted exactly
+  as tokens.read() gives them (bad rows are
   left out of rows; each row has every tokens.csv column, "" where an older header lacks one, as
   tokens.read() fills them); strict_error is tokens.read(strict=True)'s TokensError text;
 - a tokens payload: every row as read; strict_error is the receipts' strict token read's first
   complaint (rules.parse_csv, then rules.validate_token_row per line);
-- status.csv: problems are pool.read_status's warnings (the missing-file one included);
+- status.csv: problems are pool.read_status's warnings (the missing-list one included), each
+  naming its product ("Product x's status is 'preorder', ...");
   strict_error is rules.parse_status's;
 - a record: data is its JSON as purchases.read_records decodes it (UTF-8, duplicate keys
   refused), or error says why it couldn't be;
@@ -87,6 +90,8 @@ PRODUCT_STATUSES = ("owned", "preordered", "ordered", "cancelled")     # pool.PR
 TOKEN_LEGACY_FIELDS = ("front", "back", "quantity", "front_details", "back_details", "notes")
 # apply's refusal when the inventory moved on since the preview a caller names (both backends).
 MOVED_MESSAGE = "The inventory has changed since this was previewed; look at it again and retry."
+# pool.read_status's warning when the products' status list isn't there (E11-S12: no file name).
+MISSING_STATUS = "The products' status list is missing, so every product counts as owned and not intact"
 
 
 def atomic_write(path, data):
@@ -387,21 +392,22 @@ def _strict_csv(text):
     return None
 
 
-def _card_problems(rel, rows):
-    """pool.read_card_csv's texts for the rows it leaves out (bad quantity, no name), lines
-    counted from 2 by record as it counts them."""
+def _card_problems(rel, rows, owners=None):
+    """pool.read_card_csv's texts for the rows it leaves out (bad quantity, no name), each row
+    named by its number from 1 as it numbers them ("Row 2 of the home collection: ..."; owners
+    as for paths.describe)."""
     out = []
-    for n, row in enumerate(rows, 2):
+    for n, row in enumerate(rows, 1):
         name = (row.get("name") or "").strip()
         try:
             qty = int(row["quantity"])
             if qty <= 0:
                 raise ValueError("quantity must be positive")
         except (KeyError, TypeError, ValueError):
-            out.append(f"{rel} line {n}: bad quantity {row.get('quantity')!r}")
+            out.append(f"{paths.row_of(rel, n, owners)}: bad quantity {row.get('quantity')!r}")
         else:
             if not name:
-                out.append(f"{rel} line {n}: no card name")
+                out.append(f"{paths.row_of(rel, n, owners)}: no card name")
     return tuple(out)
 
 
@@ -420,25 +426,39 @@ def _lenient(rel, data, row_class):
     return text, header, rows, None
 
 
-def _cards_sheet(rel, data, existing):
+def _cards_sheet(rel, data, existing, owners=None):
     text, header, rows, error = _lenient(rel, data, CardRow)
     if error is not None:
         return Sheet(rel, exists=True, error=error)
     try:
-        rules.parse_cards(io.StringIO(text, newline=""), rel, existing=existing)
+        rules.parse_cards(io.StringIO(text, newline=""), paths.describe(rel, owners), existing=existing,
+                          numbered=True)
         strict = None
     except (rules.InvalidCards, csv.Error) as e:
         strict = str(e)
-    return Sheet(rel, header, rows, True, None, _card_problems(rel, rows), strict, csv_error=_strict_csv(text))
+    return Sheet(rel, header, rows, True, None, _card_problems(rel, rows, owners), strict,
+                 csv_error=_strict_csv(text))
 
 
 class _Strict(Exception):
     pass
 
 
-def _token_read(label, text, strict):
+def _left_out(rel, listed):
+    """How a problem names a row a read leaves out, by the rows listed before it (E11-S12): "A row
+    after row 2 of the home token cards", "A row before row 1 of the home token cards"."""
+    label = paths.describe(rel)
+    return f"A row after row {listed} of {label}" if listed else f"A row before row 1 of {label}"
+
+
+def _token_read(rel, text, strict):
     """tokens.read()'s reading of text (decoded), as (header, rows, lines, problems); in strict
-    mode the first problem raises _Strict with the TokensError text."""
+    mode the first problem raises _Strict with the TokensError text. A problem names the token
+    cards in the database's words (E11-S12), and a row it leaves out by the listed row before it
+    ("A row after row 2 of the home token cards: ...", "A row before row 1 of ..."), since tokens
+    list numbers only the rows it reads, and never names a file and line."""
+    label = paths.describe(rel)
+    title = paths.title(label)
     rows, lines, problems = [], [], []
 
     def problem(message):
@@ -451,25 +471,25 @@ def _token_read(label, text, strict):
     try:
         header = next(reader, None) or []
         if header != rules.TOKEN_FIELDS:
-            fixable = "line 1: the header must be " + ",".join(rules.TOKEN_FIELDS)
+            fixable = "' columns must be " + ",".join(rules.TOKEN_FIELDS)
             if strict or len(set(header)) != len(header):
-                problem(f"{label} {fixable}")
+                problem(f"{title}{fixable}")
                 return header, rows, lines, problems
             if set(header) == set(TOKEN_LEGACY_FIELDS):
-                problems.append(f"{label} lacks the printing columns; fix the header by hand "
+                problems.append(f"{title} lack the printing columns; fix the header by hand "
                                 f"before the Tokens page can save")
             elif set(header) == set(rules.TOKEN_FIELDS):
-                problems.append(f"{label}'s columns aren't in the standard order; fix the header "
+                problems.append(f"{title}' columns aren't in the standard order; fix the header "
                                 f"by hand before the Tokens page can save")
             else:
-                problem(f"{label} {fixable}")
+                problem(f"{title}{fixable}")
                 return header, rows, lines, problems
         start = reader.line_num + 1
         for values in reader:
             n, start = start, reader.line_num + 1
             if not any(v.strip() for v in values):
                 continue
-            where = f"{label} line {n}"
+            where = _left_out(rel, len(rows))
             if len(values) != len(header):
                 problem(f"{where}: {len(values)} values, not {len(header)}")
                 continue
@@ -483,18 +503,20 @@ def _token_read(label, text, strict):
             rows.append(row)
             lines.append(n)
     except csv.Error as e:
-        problem(f"{label} line {reader.line_num}: {e}")
+        problem(f"{_left_out(rel, len(rows))} can't be read: {e}")
     return header, rows, lines, problems
 
 
 def _tokens_sheet(rel, data):
     if isinstance(data, OSError):
-        return Sheet(rel, exists=True, error=str(data), problems=(f"{rel} can't be read ({data})",),
-                     strict_error=f"{rel} can't be read ({data}){rules.UNTIL_PUT_RIGHT}")
+        title = paths.title(paths.describe(rel))
+        return Sheet(rel, exists=True, error=str(data), problems=(f"{title} can't be read ({data})",),
+                     strict_error=f"{title} can't be read ({data}){rules.UNTIL_PUT_RIGHT}")
     text, error = _decode(data)
     if error is not None:
-        return Sheet(rel, exists=True, error=error, problems=(f"{rel} isn't UTF-8 text",),
-                     strict_error=f"{rel} isn't UTF-8 text{rules.UNTIL_PUT_RIGHT}")
+        title = paths.title(paths.describe(rel))
+        return Sheet(rel, exists=True, error=error, problems=(f"{title} aren't UTF-8 text",),
+                     strict_error=f"{title} aren't UTF-8 text{rules.UNTIL_PUT_RIGHT}")
     header, rows, lines, problems = _token_read(rel, text, strict=False)
     try:
         _token_read(rel, text, strict=True)
@@ -510,48 +532,57 @@ def _tokens_sheet(rel, data):
     return Sheet(rel, columns, made, True, None, tuple(problems), strict, in_order, _strict_csv(text))
 
 
-def _token_payload_sheet(rel, data):
+def _token_payload_sheet(rel, data, owners=None):
     text, header, rows, error = _lenient(rel, data, TokenRow)
     if error is not None:
         return Sheet(rel, exists=True, error=error)
     strict = None
     try:
-        found = rules.parse_csv(io.StringIO(text, newline=""), rules.TOKEN_FIELDS, rel)
-        for line, row in zip(rules.record_lines(io.StringIO(text, newline="")), found):
-            rules.validate_token_row(row, f"{rel} line {line}")
+        found = rules.parse_csv(io.StringIO(text, newline=""), rules.TOKEN_FIELDS,
+                                paths.title(paths.describe(rel, owners)))
+        for number, row in enumerate(found, 1):
+            rules.validate_token_row(row, paths.row_of(rel, number, owners))
     except (ValueError, csv.Error) as e:
         strict = str(e)
     return Sheet(rel, header, rows, True, None, (), strict, csv_error=_strict_csv(text))
 
 
+def status_owner(file):
+    """How a status row's warning names its product (E11-S12): "Product x's status", by the
+    stem of its file ("A status row with no product" for a blank one)."""
+    stem = PurePosixPath(file).stem if file else ""
+    return f"Product {stem}'s status" if stem else "A status row with no product"
+
+
 def _status_problems(rows):
-    """pool.read_status's warnings for status.csv's rows."""
-    name = paths.STATUS_NAME
+    """pool.read_status's warnings for the products' status rows, each naming its product
+    (status_owner), never a file and line."""
     out = []
-    for n, row in enumerate(rows, 2):
+    for row in rows:
         file = (row.get("file") or "").strip()
+        name = status_owner(file)
         status = (row.get("status") or "").strip().lower()
         intact = (row.get("intact") or "").strip().lower()
         if intact not in ("yes", "no", ""):
-            out.append(f"{name} line {n}: {file} has intact {intact!r}, not yes or no; treated as no")
+            out.append(f"{name} has intact {intact!r}, not yes or no; treated as no")
         if status not in PRODUCT_STATUSES:
-            out.append(f"{name} line {n}: {file} has status {status!r}, not one of "
+            out.append(f"{name} is {status!r}, not one of "
                        f"{', '.join(PRODUCT_STATUSES)}; it is left out of every count")
             status, intact = "owned", "no"
         sleeves = (row.get("sleeves") or "").strip()
         deck_box = (row.get("deck_box") or "").strip()
         if (sleeves or deck_box) and not (status == "owned" and intact == "yes"):
-            out.append(f"{name} line {n}: {file} has sleeves or a deck box but isn't "
+            out.append(f"{name} has sleeves or a deck box but the product isn't "
                        f"owned and kept intact; clear them, since its cards are stored unsleeved")
         packed = (row.get("token_cards") or "").strip()
         if packed:
             if not (status == "owned" and intact == "yes"):
-                out.append(f"{name} line {n}: {file} has packed token cards but isn't owned and kept intact; clear them")
+                out.append(f"{name} has packed token cards but the product isn't owned and kept intact; clear them")
             try:
                 from decklab.lib.decks.tokencards import parse_token_cards
                 parse_token_cards(packed)
             except ValueError as error:
-                out.append(f"{name} line {n}: {file}'s packed token cards can't be read: {error}")
+                out.append(f"{name}'s packed token cards can't be read: {error}")
     return tuple(out)
 
 
@@ -559,12 +590,12 @@ def status_sheet(data):
     """products/status.csv's Sheet from its bytes (None: the file is missing)."""
     rel = paths.STATUS
     if data is None:
-        return Sheet(rel, problems=(f"{rel} is missing, so every product counts as owned and not intact",))
+        return Sheet(rel, problems=(MISSING_STATUS,))
     text, header, rows, error = _lenient(rel, data, StatusRow)
     if error is not None:
         return Sheet(rel, exists=True, error=error)
     try:
-        rules.parse_status(text, rel)
+        rules.parse_status(text, paths.title(paths.describe(rel)))
         strict = None
     except (ValueError, csv.Error) as e:
         strict = str(e)
@@ -585,7 +616,7 @@ def _product(stem, data):
     if error is not None:
         return Product(stem, name=name, format=fmt, error=error)
     try:
-        rules.parse_cards(io.StringIO(text, newline=""), rel)
+        rules.parse_cards(io.StringIO(text, newline=""), paths.describe(rel), numbered=True)
         strict = None
     except (rules.InvalidCards, csv.Error) as e:
         strict = str(e)
@@ -634,19 +665,21 @@ def locations_sheet(rel, data):
     if error is not None:
         return Sheet(rel, exists=True, error=error)
     problems, seen = [], set()
-    for row in rows:
+    for number, row in enumerate(rows, 1):
+        where = paths.row_of(rel, number)
         if row.overflow or any(row.get(column) is None for column in rules.LOCATION_FIELDS):
-            problems.append(f"{rel} line {row.line}: the row doesn't have a cell for every column")
+            problems.append(f"{where}: the row doesn't have a cell for every column")
             continue
         try:
             if rules.clean_location(row.location) != row.location or not row.location:
                 raise ValueError("a storage location is written with single spaces, and isn't blank")
         except ValueError as e:
-            problems.append(f"{rel} line {row.line}: {e}")
+            problems.append(f"{where}: {e}")
         if row.key in seen:
-            problems.append(f"{rel} line {row.line}: {' '.join(row.key)} has two locations")
+            problems.append(f"{where}: {' '.join(row.key)} has two locations")
         seen.add(row.key)
-    strict = None if header == tuple(rules.LOCATION_FIELDS) else f"{rel}: its header isn't {','.join(rules.LOCATION_FIELDS)}"
+    strict = (None if header == tuple(rules.LOCATION_FIELDS) else
+              f"{paths.title(paths.describe(rel))}' columns aren't {','.join(rules.LOCATION_FIELDS)}")
     return Sheet(rel, header, rows, True, None, tuple(problems), strict or (problems[0] if problems else None),
                  csv_error=_strict_csv(text))
 
@@ -666,7 +699,7 @@ def deck_of(rel, data):
 def accessories_sheet(data):
     """magic/accessories.csv's Sheet from its bytes (None: the file is missing): every row as
     csv.DictReader reads it, problems the texts lib/accessories' lenient read gives for the rows
-    it leaves out ("accessories.csv line 4: ..."), strict_error its strict read's (the writers')."""
+    it leaves out ("A row after row 2 of the accessories list: ..."), strict_error its strict read's (the writers')."""
     rel = paths.ACCESSORIES
     if data is None:
         return Sheet(rel)
@@ -726,9 +759,7 @@ def build(files, revision=None, backend="files", decks_revision=None):
         elif what == "record":
             orders.append(_order(PurePosixPath(rel).name, data))
         elif what == "payload":
-            kind = detail[0]
-            payloads[rel] = _cards_sheet(rel, data, existing=False) if kind == "cards" \
-                else _token_payload_sheet(rel, data)
+            payloads[rel] = (detail[0], data)       # read once every record is: see below
         elif what == "deck":
             deck = deck_of(rel, data)
             deck_parts[deck.id] = deck
@@ -740,6 +771,11 @@ def build(files, revision=None, backend="files", decks_revision=None):
                 images[detail] = meta
     products.sort(key=lambda p: name_order(p.file))
     orders.sort(key=lambda o: name_order(o.file))
+    # A payload's problems name the order and component whose record holds it (E11-S12), which
+    # its file name doesn't always say (a split's x-additions.csv, a merged order's file).
+    owners = paths.payload_owners(orders)
+    payloads = {rel: _cards_sheet(rel, data, existing=False, owners=owners) if kind == "cards"
+                else _token_payload_sheet(rel, data, owners) for rel, (kind, data) in payloads.items()}
     return Inventory(
         revision=revision if revision is not None else revision_of(files),
         collections=dict(sorted(collections.items())), tokens=dict(sorted(tokens.items())),

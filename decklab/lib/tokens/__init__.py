@@ -31,7 +31,10 @@ claims how many tokens a game needs (see NOTE).
 Parts: rows.py (a CSV row's rules and the file's bytes), names.py (the card
 index and Scryfall face names), details.py (parse_details), matching.py (an
 owned row against one need, and the describing words), needs.py (building
-and wording a need) and ops.py (the writes). This file keeps reading the
+and wording a need), sides.py (whose side of the table a need lands on,
+from the making cards' text), counters.py (the counters and dice a list's
+cards call for), peaks.py (suggested counts from saved Forge games, E7-S08)
+and ops.py (the writes). This file keeps reading the
 inventory and pending orders, deck_tokens, holders and the cache, check and
 the CLI: everything a test patches (read, incoming, deck_tokens,
 cached_deck_tokens, row_uses) has its one binding here, beside its readers,
@@ -77,6 +80,8 @@ from .rows import (DETAILS_MAX, FIELDS, NAME_MAX, NOTES_MAX, NUMBER_MAX, QTY_MAX
                    validate_row)
 from . import ops  # noqa: F401,E402  (registers the tokens.* inventory operations)
 from . import reserve
+from . import sides
+from . import counters
 from . import optimise  # noqa: E402
 
 LABEL = inventory_paths.tokens(spaces.HOME)   # how messages name home's tokens.csv
@@ -114,9 +119,16 @@ class Inventory:
 # ------------------------------------------------------------------ reading
 
 def label_for(space=spaces.HOME):
-    """How messages name a space's tokens.csv (magic/tokens.csv at home,
-    magic/people/<id>/tokens.csv for a person)."""
-    return inventory_paths.tokens(space)
+    """How messages name a space's token cards, as the database holds them: "the home token
+    cards", or "<id>'s token cards" for a person (never an old file such as magic/tokens.csv).
+    A sentence starting with it capitalises it (title_for)."""
+    return "the home token cards" if space == spaces.HOME else f"{space}'s token cards"
+
+
+def title_for(space=spaces.HOME):
+    """label_for(space) at the start of a sentence: "The home token cards"."""
+    label = label_for(space)
+    return label[:1].upper() + label[1:]
 
 
 def no_problems(space=spaces.HOME):
@@ -145,7 +157,9 @@ def read(strict=False, space=spaces.HOME):
     inventory snapshot; an empty one when the space has none.
 
     strict (for writes) raises TokensError for a header other than FIELDS,
-    malformed CSV or a bad row, worded "magic/tokens.csv line N: ..." and
+    malformed CSV or a bad row, in the database's words (E11-S12, inventory/files.py's
+    _left_out): "A row after row N of the home token cards: ..." (or "A row before row 1
+    of ...", "The home token cards' columns must be ...") and
     inventory_rules.UNTIL_PUT_RIGHT. Otherwise the columns may come in any order, the older
     6-column header (no printing columns) is read with those blank, and bad
     rows are left out and listed in problems. (Only the files backend can
@@ -209,18 +223,22 @@ def deck_tokens(sections, inv=None, incoming_rows=None, held=None):
 
         {needs: [{key, name, kind, type_line, pt, colors, keywords, text, image,
                   faces, face_names, made_by: [{name, quantity, section}],
-                  sideboard_only, state, words, usable, on_the_way,
+                  sideboard_only, side, side_from, side_words, state, words, usable, on_the_way,
                   cards: [{row, front, back, side, quantity, verdict, why, also_for}],
                   stand_ins: [{row, front, back, side, quantity, why, close}],
                   incoming: [{order, front, back, quantity}]}],
-         copies, unlisted, note, counts: {kinds, ready, check, differs, incoming, none}}
+         copies, unlisted, note, counts: {kinds, ready, check, differs, incoming, none},
+         counters: counters.deck_counters (the counters and dice the cards call for, approximate)}
 
     sections is {section: [DeckLine]}; inv (read() by default) the owned
     rows, row being an index into inv.rows; incoming_rows incoming()'s list
     (read by default). key is a token's oracle id, or "name:<Name>" when
     Scryfall's link doesn't say which of several tokens it is. state is
     ready, check, differs, incoming or none (see STATES); no count of how many
-    a game needs is ever claimed. held (reserve.held_elsewhere: {row index:
+    a game needs is ever claimed. side (sides.side: "own", "opponent" or
+    "either", read from the making cards' rules text, so approximate),
+    side_from (the making cards that may give it to the opponent) and
+    side_words (None for the deck's own) say whose side it lands on. held (reserve.held_elsewhere: {row index:
     [{deck, title, quantity}]}) is what other built decks pack: those cards
     aren't free, so a card's quantity is what's left of its row, and a row with
     none left goes in the need's "in_use" ([{row, front, back, side, quantity,
@@ -233,12 +251,13 @@ def deck_tokens(sections, inv=None, incoming_rows=None, held=None):
         incoming_rows, _ = incoming()
     pending = _incoming_groups(incoming_rows)
 
-    needs, makers, unresolved_cards = {}, [], {}
+    needs, makers, played, unresolved_cards = {}, [], [], {}
     for section in SECTIONS:
         for line in sections.get(section, []):
             name = pool._canonical(line.name, "deck", unresolved_cards)
             if decks.is_basic_land(name) or cards.card(name) is None:
                 continue
+            played.append((name, line.quantity, section))
             made, unresolved = cards.tokens_for(name)
             makers.append((name, made, unresolved))
             for entry in made:
@@ -248,9 +267,9 @@ def deck_tokens(sections, inv=None, incoming_rows=None, held=None):
                 need = needs.setdefault(f"name:{part}", _unresolved_need(part))
                 _made_by(need, name, line.quantity, section)
 
-    copies, unlisted = [], []
+    copies, unlisted, texts = [], [], {}
     for name, made, unresolved in makers:
-        text = _card_text(cards.card(name))
+        text = texts[name] = _card_text(cards.card(name))
         makes_copy = any(cards.fold(t["name"]) == "copy" for t in made)
         if _COPY_RE.search(text) and not makes_copy and name not in copies:
             copies.append(name)
@@ -265,6 +284,7 @@ def deck_tokens(sections, inv=None, incoming_rows=None, held=None):
     out = []
     for need in needs.values():
         need["sideboard_only"] = all(m["section"] == "Sideboard" for m in need["made_by"])
+        need["side"], need["side_from"], need["side_words"] = sides.side(need, texts)
         need["cards"], need["stand_ins"], need["incoming"] = [], [], []
         missing, packed = [], []
         for i, row in enumerate(inv.rows):
@@ -343,7 +363,8 @@ def deck_tokens(sections, inv=None, incoming_rows=None, held=None):
                             _KIND_ORDER.index(n["kind"]) if n["kind"] in _KIND_ORDER else len(_KIND_ORDER),
                             cards.fold(n["name"]), n["key"]))
     counts = {"kinds": len(out), **{s: sum(1 for n in out if n["state"] == s) for s in reversed(STATES)}}
-    return {"needs": out, "copies": copies, "unlisted": unlisted, "note": NOTE, "counts": counts}
+    return {"needs": out, "copies": copies, "unlisted": unlisted, "note": NOTE, "counts": counts,
+            "counters": counters.deck_counters(played)}
 
 
 
@@ -365,7 +386,7 @@ def _holders(warnings, space=spaces.HOME, *, include_products=True):
         if status not in ("built", "building"):
             continue
         if summary.get("error"):
-            warnings.append(f"{summary['source']} can't be read: {summary['error']}")
+            warnings.append(f"{inventory_paths.place(summary['source'])} can't be read: {summary['error']}")
             continue
         version, sections = "target", None
         try:
@@ -380,7 +401,7 @@ def _holders(warnings, space=spaces.HOME, *, include_products=True):
                 version = pool._built_version(summary, warnings) if status == "built" else "target"
                 sections = decks.load_deck(summary["id"], version)
         except (decks.DeckNotFound, decks.DeckFileError, OSError) as e:
-            warnings.append(f"{summary['source']} can't be read: {e}")
+            warnings.append(f"{inventory_paths.place(summary['source'])} can't be read: {e}")
             continue
         found.append((summary["id"], summary["title"], version, sections, summary["id"]))
     if space != spaces.HOME or not include_products:
@@ -598,7 +619,7 @@ def check(notes=None, space=spaces.HOME, warnings=None):
     notes = [] if notes is None else notes
     wants_warnings = warnings is not None
     warnings = [] if warnings is None else warnings
-    file_label = label_for(space)
+    file_label, title = label_for(space), title_for(space)
     problems = []
     try:
         read(strict=True, space=space)
@@ -608,13 +629,13 @@ def check(notes=None, space=spaces.HOME, warnings=None):
     seen = {p.removesuffix(inventory_rules.UNTIL_PUT_RIGHT) for p in problems}
     problems.extend(p for p in inv.problems if p not in seen)
     if not inv.sorted:
-        problems.append(f"{file_label}: not in the standard order; the next Tokens page save sorts it")
+        problems.append(f"{title} aren't in the standard order; the next Tokens page save sorts them")
     ready = _ready()
     if not ready and inv.rows:
         notes.append("Names weren't checked: the card data isn't loaded "
                      "(python -m decklab.lib.cards update)")
-    for n, row in zip(inv.lines, inv.rows):
-        where = f"{file_label} line {n}"
+    for n, row in enumerate(inv.rows, 1):
+        where = f"Row {n} of {file_label}"
         if ready:
             for side in ("front", "back"):
                 name = row[side]
@@ -653,11 +674,11 @@ def _shared_warnings(inv, space, file_label):
         uses = row_uses(inv, found, [], space)
         shared = shared_rows(inv, uses, built_ids(space), all_holds)
     except Exception as e:      # a deck that can't be read: the check itself still stands
-        return [f"{file_label}: which built decks share token cards couldn't be worked out ({e})"]
+        return [f"{title_for(space)}: which built decks share token cards couldn't be worked out ({e})"]
     return holds_warnings + [
         f"{deck['title']}'s Token cards line names no token card of {file_label}: {text}"
         for deck in all_holds.values() for text in deck["unmatched"]] + [
-        f"{file_label} line {inv.lines[i]}: {shared_words(inv.rows[i], holders)}"
+        f"Row {i + 1} of {file_label}: {shared_words(inv.rows[i], holders)}"
         for i, holders in sorted(shared.items())]
 
 
@@ -683,6 +704,8 @@ def _print_deck(deck_id, owned):
         print(f"  {need['words']}")
         print("  Made by " + ", ".join(f"{m['name']}" + (" (sideboard)" if m["section"] == "Sideboard" else "")
                                       for m in need["made_by"]))
+        if need.get("side_words"):
+            print(f"  {need['side_words']}")
         for card in need["cards"]:
             face = card["back"] if card["side"] == "back" else card["front"]
             also = f" (same card as for {_and(card['also_for'])})" if card["also_for"] else ""
@@ -696,6 +719,12 @@ def _print_deck(deck_id, owned):
         print(f"\nMakes copies: {', '.join(result['copies'])}")
     if result["unlisted"]:
         print(f"May also make things Scryfall doesn't link: {', '.join(result['unlisted'])}")
+    if result["counters"]["needs"]:
+        print("\nCounters and dice (approximate):")
+        for need in result["counters"]["needs"]:
+            print(f"  {need['name']}{' [sideboard only]' if need['sideboard_only'] else ''}: "
+                  + ", ".join(m["name"] + (" (sideboard)" if m["section"] == "Sideboard" else "")
+                              for m in need["made_by"]))
     print(f"\n{NOTE}")
     return 0
 

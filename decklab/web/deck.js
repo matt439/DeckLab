@@ -10,7 +10,7 @@ opens: the practice games start when Practice opens, and the matchup details (as
 omit=matchups until then) when Matchups does. Overview's field and latest-swap panels make separate,
 read-only requests; they start no simulations.
 
-Overview: Commander readiness, the building action, Forge field/curve/latest-swap panels
+Overview: Commander readiness, the building action, last played at home and Forge field/curve/latest-swap panels
 (deck-overview.js), the stats' verdict strip, key-card pictures, token and kit information, intact-product
 storage, stand-ins and swaps, opponent and sideboard plans, and the play guide. Cards: the decklist as a list or as
 pictures at every width (remembered), filtered to All, Missing, On the way or In other decks, each card
@@ -26,7 +26,7 @@ Loaded after core.js, library.js and deck-availability.js (the banner and incomi
 core.js's helpers, cards-ui.js's cardRow and cardTile, and once the page runs stats.js's statsSection,
 statsVerdict, tile and drawCharts, guide.js, practice.js, hands.js,
 deck-tools.js's deckTools pieces and deckMatchupsPart, accessories.js's accessoryThumb, kitChip and kitPicker,
-tokens.js's tokenNeedList, editor-deckpage.js's deckActions, savedBox and staleTableBox, and app.js's
+tokens.js's tokenNeedList (token-peaks.js's tokenPeaksPart), editor-deckpage.js's deckActions, savedBox and staleTableBox, and app.js's
 playerWords and jumpTo. app.js's route() calls showDeck(), and start() calls setUpPeek(). Its card helpers
 (typeGroup, manaCost, cardLink, cardNames, cardThumb, peekLayout, peekable, ...) and pairingLinks() are used
 by stats.js, practice.js, the editor's scripts and the matchup scripts. Nothing here runs at load but its
@@ -393,7 +393,7 @@ function deckWarnings(data) {
 
 // ----------------------------------------------------------------- overview
 
-/** The Overview tab's readiness, build and evidence panels, stats, key cards, tokens, kit, storage,
+/** The Overview tab's readiness, build, last played (E1-S27) and evidence panels, stats, key cards, tokens, kit, storage,
  * stand-ins/swaps, opponent and sideboard plans, and play guide; each part applies its own visibility. */
 function overviewParts(data) {
   const verdict = data.stats ? statsVerdict(data.stats, data.summary) : null;
@@ -401,6 +401,7 @@ function overviewParts(data) {
   return [
     commanderReadiness(data),
     deckAssemblySection(data),
+    deckOverviewPlayed(data),
     el("div", { class: "deck-overview-panels" }, deckOverviewForge(data), deckOverviewCurve(data), deckOverviewSwap(data)),
     verdict ? el("section", { class: "deck-section deck-overview-stats", "aria-label": "At a glance" }, verdict,
       el("button", { type: "button", class: "btn btn-quiet deck-more-link", text: "All the stats",
@@ -699,7 +700,7 @@ function redrawCards(screen) {
   add(clear(screen.cardsHost), [view.filter === "all" ? null : el("p", { class: "result-count", role: "status" },
     `${shown.size} of ${names} different cards. `,
     el("button", { type: "button", class: "btn btn-quiet", text: "Show all", onclick: () => choose({ filter: "all" }) })),
-  deckSwapFinder(screen), parts]);
+  deckQueueMissing(screen), deckSwapFinder(screen), parts]);
 }
 
 /** One decklist line as cards-ui.js's cardRow, in the "deck" viewer group (a tap opens the viewer, which
@@ -1031,20 +1032,22 @@ function pairingLinks(halfId, label = "Shuffle it with another half:", marks = n
 
 /** A line on the Overview when the deck's tokens need a look, in the library chip's words ("No Raccoon token ·
  * Insect token differs"), a button to the Tokens part on the Cards tab. null when every token is covered (or on
- * the way), or when the deck makes no tokens Scryfall links. */
+ * the way), or when the deck makes no tokens Scryfall links. A token only for the opponent (E7-S23) isn't one. */
 function deckTokensChip(data) {
   const t = data.tokens, counts = t && t.counts;
   if (!counts || !(counts.kinds > 0) || !(counts.none || counts.differs)) return null;
-  const needs = t.needs || [];
+  const all = t.needs || [], needs = all.filter((n) => n.side !== "opponent");
   const named = (state) => needs.filter((n) => n.state === state);
   const words = (list, joiner) => tokenNamesWords(list.filter((n) => n.kind === "token").map((n) => n.name),
     list.filter((n) => n.kind !== "token").map((n) => n.name), joiner);
   const none = named("none"), differs = named("differs");
+  const nNone = all.length ? none.length : counts.none, nDiffers = all.length ? differs.length : counts.differs;
+  if (!nNone && !nDiffers) return null;
   const parts = [];
-  if (counts.none) parts.push(none.length ? `No ${words(none, "or").text}` : `${plural(counts.none, "token")} you don't have`);
+  if (nNone) parts.push(none.length ? `No ${words(none, "or").text}` : `${plural(nNone, "token")} you don't have`);
   const differ = words(differs, "and");
-  if (counts.differs) parts.push(differs.length ? `${differ.text} ${differ.count > 1 ? "differ" : "differs"}`
-    : `${plural(counts.differs, "token")} different`);
+  if (nDiffers) parts.push(differs.length ? `${differ.text} ${differ.count > 1 ? "differ" : "differs"}`
+    : `${plural(nDiffers, "token")} different`);
   return el("p", { class: "deck-tokens-chip" }, el("button", { type: "button", class: "btn btn-quiet",
     onclick: () => openDeckTab("cards", { to: "sec-tokens" }) }, status("warn", parts.join(" · "))));
 }
@@ -1071,7 +1074,9 @@ function tokensSection(data) {
   } else {
     const faces = tokFacesUsed(needs);
     const merged = needs.map(mergedTokenCards);
-    const main = merged.filter((n) => !n.sideboard_only), side = merged.filter((n) => n.sideboard_only);
+    // E7-S23: a token the cards' text gives only to the opponent has its own heading; "either" stays here.
+    const theirs = merged.filter((n) => n.side === "opponent"), ours = merged.filter((n) => n.side !== "opponent");
+    const main = ours.filter((n) => !n.sideboard_only), side = ours.filter((n) => n.sideboard_only);
     const words = tokCountWords(t.counts);
     if (words) section.append(el("p", { class: "deck-tokens-summary", text: words }));
     if (t.packed) add(section, [deckPackedTokens(data, faces)]);
@@ -1079,7 +1084,13 @@ function tokensSection(data) {
     if (side.length) {
       section.append(el("h3", { class: "deck-tokens-group", text: "Only for sideboard cards" }), tokenNeedList(side, faces));
     }
+    if (theirs.length) {
+      section.append(el("h3", { class: "deck-tokens-group deck-tokens-opponent", text: "For your opponent (approximate)" }),
+        el("p", { class: "sub", text: "The cards' text gives these to the other player: hand them across the table." }),
+        tokenNeedList(theirs, faces));
+    }
   }
+  add(section, [tokenPeaksPart(t.forge), tokenCountersPart(t.counters)]);   // E7-S08's Forge estimates, E7-S24's counters
   if (copies.length) {
     section.append(el("details", { class: "more deck-tokens-more" }, el("summary", { text: `Makes copies: ${plural(copies.length, "card")}` }),
       el("p", { text: `${copies.join(", ")}. Use a Copy token card, or any spare token, and say what it copies.` })));

@@ -5,7 +5,7 @@ the lines (LogReader, cli_checks._games_text).
 
 No Forge runs: the lines are written here as the fork's forge.ai.AiDecisionLog prints them.
 
-Run from the repo root: python -m unittest discover -s decklab/tests -t .
+Run from the repo root: python scripts/test_fixtures.py
 """
 import gzip
 import io

@@ -3,7 +3,7 @@ Addresses and Sleep lines and the report, fed canned facts (among them the
 PC as it was on 2026-10-01). Nothing here runs PowerShell or touches the
 network.
 
-Run from the repo root: python -m unittest discover -s decklab/tests -t .
+Run from the repo root: python scripts/test_fixtures.py
 """
 import os
 import unittest

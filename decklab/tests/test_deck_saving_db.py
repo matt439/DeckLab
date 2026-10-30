@@ -6,7 +6,9 @@ by its last title, a deck that never existed is 404, update_tables is one change
 cards and deck are one change. The sandbox's deck files are deleted after the import, so every
 deck read or written here is the database's.
 
-Run from the repo root: python -m unittest decklab.tests.test_deck_saving_db
+Run from the repo root: python scripts/test_fixtures.py decklab.tests.test_deck_saving_db
+The fixture runner disables configured PostgreSQL and real Forge; named native
+runtime cases also need separate qualification (see AGENTS.md, Tests).
 """
 import shutil
 import unittest

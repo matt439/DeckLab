@@ -4,7 +4,9 @@ same way on both backends: a files backend over a small magic/ tree, and the dat
 that tree imported into a throwaway database (decks and accessories included, the files then
 deleted). The pages' answers are test_api_accessories.py's.
 
-Run from the repo root: python -m unittest decklab.tests.test_inventory_accessories
+Run from the repo root: python scripts/test_fixtures.py decklab.tests.test_inventory_accessories
+The fixture runner disables configured PostgreSQL and real Forge; named native
+runtime cases also need separate qualification (see AGENTS.md, Tests).
 """
 import json
 import shutil

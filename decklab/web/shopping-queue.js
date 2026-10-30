@@ -8,9 +8,9 @@ let shopQueueDensityStop = null;
 
 function shopQueueLab() { return Boolean(window.matchMedia?.(SHOP_QUEUE_LAB).matches); }
 
+/** A short unknown marker: one dash on screen, its words spoken and on hover (E5-S26). */
 function shopQueueUnknown(words) {
-  return el("span", {}, el("span", {class: "cell-unknown", "aria-hidden": "true", text: "\u2014"}),
-    el("span", {class: "sr-only", text: words}));
+  return el("span", {class: "cell-unknown", role: "img", "aria-label": words, title: words, text: "\u2014"});
 }
 
 /** Clip only the visual line: the full saved words remain text and are available on hover too. */
@@ -106,19 +106,21 @@ function shopQueueTableRecord(card, casual, showFor, view) {
   const tr = el("tr", {class: `shop-queue-row shop-queue-lab-row${shopSnapshotBack(card) ? " shop-queue-back" : ""}`, "data-shop-queue": String(card.queue_row || ""),
     "data-shop-name": shop, "data-shop-match": shopMatches(view, card) ? "true" : null}, nameCell, printing, forCell,
     el("td", {class: "num shop-q-qty", text: card.quantity}),
-    el("td", {class: "num shop-q-price"}, value == null ? shopQueueUnknown("Reference price not recorded") : value),
+    el("td", {class: "num shop-q-price"}, value == null ? shopQueueUnknown("Reference price not recorded") : value,
+      shopSnapshotMarker(card)),
     el("td", {class: "shop-q-shop"}, shop ? shopQueueClip(shop) : shopQueueUnknown("Shop not recorded")),
     el("td", {class: "shop-q-stock"}, card.in_stock === "no" ? status("warn", "Out of stock")
       : card.in_stock === "yes" ? "In stock" : shopQueueUnknown("Stock not recorded")),
     el("td", {class: "shop-q-checked"}, shopChecked(card.checked, {compact: true})),
     el("td", {class: "shop-q-actions"}));
   let extra = null, extraBody = null, more = null;
-  if (card.notes || reprints) {
+  if (card.notes || reprints || snapshot) {
     const id = `shop-queue-extra-${++shopQueueExtraId}`;
+    const shown = [snapshot ? "shop snapshot" : null, card.notes ? "notes" : null, reprints ? "reprint research" : null].filter(Boolean);
     extraBody = el("div", {class: "shop-q-extra-body"}, card.notes ? el("p", {text: card.notes}) : null);
     extra = el("tr", {class: "shop-q-extra", hidden: true, id}, el("td", {colspan: showFor ? 9 : 8}, extraBody));
     more = el("button", {type: "button", class: "btn btn-quiet shop-q-more", text: "\u2026",
-      "aria-label": `Show notes and reprint research for ${card.name}`, "aria-expanded": "false", "aria-controls": id,
+      "aria-label": `Show ${shown.length > 1 ? `${shown.slice(0, -1).join(", ")} and ${shown.at(-1)}` : shown[0]} for ${card.name}`, "aria-expanded": "false", "aria-controls": id,
       onclick: event => {
         if (!event.currentTarget.isConnected || !shopQueueActive(view)) return;
         extra.hidden = !extra.hidden;
@@ -138,7 +140,8 @@ function shopQueueTableRecord(card, casual, showFor, view) {
     if (lab) {
       shopQueuePut(nameCell, trigger, words);
       if (deck) shopQueuePut(forCell, deck);
-      if (snapshot) shopQueuePut(tr.querySelector(".shop-q-price"), snapshot);
+      // The price cell keeps one marker; the full snapshot (fetch time, stock, link) is in the extra row.
+      if (snapshot) shopQueuePut(extraBody, snapshot);
       if (actions) shopQueuePut(tr.querySelector(".shop-q-actions"), actions);
       if (reprints) shopQueuePut(extraBody, reprints);
       if (trigger?.matches("button")) trigger.setAttribute("aria-label", `${card.name}, ${plural(card.quantity, "copy", "copies")}`);

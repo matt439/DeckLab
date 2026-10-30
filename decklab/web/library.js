@@ -25,7 +25,7 @@ plays each deck. Nothing here runs at load.
 */
 "use strict";
 
-const LIB_SORTS = { ready: "Ready first", recent: "Recently changed", name: "Name" };
+const LIB_SORTS = { ready: "Ready first", recent: "Recently changed", played: "Not played lately", name: "Name" };
 // The deck kinds' groups, in the order they show (decided 2026-10-27: Commander first).
 const LIB_KIND_ORDER = ["commander", "casual"];
 // The availability filter's words are the tiles' chips' words: "3 on the way", "8 to get", "Availability
@@ -470,8 +470,16 @@ function libTime(at) {
   return Number.isFinite(t) ? t : -Infinity;
 }
 
+/** How long ago a deck was last played, to sort by (E1-S27): never played smallest, then the oldest game first;
+ * a deck whose games couldn't be read last. */
+function libPlayedRank(d) {
+  if (!d.played) return [2, ""];
+  return d.played.last ? [1, d.played.last] : [0, ""];
+}
+
 /** decks sorted by the library's sort: Ready first (built, then ready, waiting, fewest missing, unknown),
- * Recently changed (newest edit first, never-edited last) or Name; by title within a tie. */
+ * Recently changed (newest edit first, never-edited last), Not played lately (never played first, then the oldest
+ * last game, libPlayedRank) or Name; by title within a tie. */
 function sortDecks(decks, sort) {
   const title = (a, b) => (a.title || a.id).localeCompare(b.title || b.id);
   const keyed = decks.map((d) => ({ d, r: deckReadiness(d) }));
@@ -482,6 +490,10 @@ function sortDecks(decks, sort) {
     if (sort === "recent") {
       const ea = libTime(a.d.edited), eb = libTime(b.d.edited);
       return (ea === eb ? 0 : ea < eb ? 1 : -1) || title(a.d, b.d);
+    }
+    if (sort === "played") {
+      const [ra, la] = libPlayedRank(a.d), [rb, lb] = libPlayedRank(b.d);
+      return ra - rb || la.localeCompare(lb) || title(a.d, b.d);
     }
     return title(a.d, b.d);
   });
@@ -738,6 +750,15 @@ function deckMeta(d, person) {
   return parts.length ? factLine("deck-meta", parts) : null;
 }
 
+/** A deck's home games (E1-S27), from the Game log's games the visitor may see: "Last played 2026-10-08 · 3 games",
+ * or "Not played at home yet"; null when they couldn't be read (never shown as not played). */
+function deckPlayed(d) {
+  const p = d.played;
+  if (!p || d.error) return null;
+  return p.games && p.last ? factLine("deck-played", [`Last played ${p.last}`, plural(p.games, "game")])
+    : el("span", { class: "deck-played", text: "Not played at home yet" });
+}
+
 /** A deck's tile in the library: the whole tile is one link (or, while choosing pictures, a button for a deck
  * the visitor may change). product: its product's name (left out of the title); compact: the Beginner Box's
  * smaller tiles; kitShown: its product's kit is already on the group's heading. */
@@ -754,6 +775,7 @@ function deckCard(d, product, compact, kitShown = false, ctx = {}) {
     el("span", { class: "deck-body" + (colours ? " deck-tint" : ""), style: colours ? colours.vars(135) : null },
       el("span", { class: "deck-title-row" }, el("span", { class: "deck-title", text: title })),
       compact ? null : deckMeta(d, ctx.person),
+      compact ? null : deckPlayed(d),
       deckStatusPill(d),
       d.assembled && "missing" in d && (d.assembled.sideboard_intended || d.assembled.sideboard_count || d.assembled.changed)
         ? el("span", { class: "deck-assembled", text: assembledStateWords(d.assembled) }) : null,
@@ -788,19 +810,26 @@ function libPickButton(d, title, body, cls, ctx) {
     }) }, body);
 }
 
-/** A deck's row in the lab (4.2): a 56 x 38 art thumbnail with a 3 px stripe under it, the title with 16 px
- * pips and the meta line, and the owned bar with mono words. It's a link to the deck page: a click selects it
- * (the detail pane shows it), Enter (a click with no pointer) or a click with a modifier opens it. */
-function deckRow(d, ctx) {
-  const colours = libColours(d);
+/** A deck's small art thumbnail (the lab's rows, Matchups' deck picker): the cover art on the deck's art colour
+ * while it loads, or (no art, or it fails) the deck's tint, with a thin colour stripe under it. cls sizes it. */
+function deckArtThumb(d, colours = libColours(d), cls = "deck-row-art") {
   const art = d.cover && d.cover.art;
-  const thumb = el("span", { class: "deck-row-art" + (art || !colours ? "" : " deck-tint"), style: colours ? colours.vars(135) : null },
+  const thumb = el("span", { class: cls + (art || !colours ? "" : " deck-tint"), style: colours ? colours.vars(135) : null },
     art ? el("img", { src: art, alt: "", loading: "lazy", decoding: "async", width: 626, height: 457, draggable: "false",
       onerror: (e) => {
         e.currentTarget.remove();
         if (colours) thumb.classList.add("deck-tint");
       } }) : null,
     colours ? colours.stripe(true) : null);
+  return thumb;
+}
+
+/** A deck's row in the lab (4.2): a 56 x 38 art thumbnail with a 3 px stripe under it, the title with 16 px
+ * pips and the meta line, and the owned bar with mono words. It's a link to the deck page: a click selects it
+ * (the detail pane shows it), Enter (a click with no pointer) or a click with a modifier opens it. */
+function deckRow(d, ctx) {
+  const colours = libColours(d);
+  const thumb = deckArtThumb(d, colours);
   const ready = d.error ? { chip: null, missing: 0 } : deckReadiness(d);
   const owned = d.error ? null : deckOwned(d, true);
   const chip = d.error ? el("span", { class: "deck-error", text: "Can't be read" }) : owned ? null : ready.chip;
@@ -841,6 +870,7 @@ function libDetail(d, ctx) {
        el("div", { class: "lib-detail-main" },
         el("h2", { class: "lib-detail-title", text: d.title }),
         el("div", { class: "lib-detail-chips" }, deckStatusPill(d, true), deckMeta(d, ctx.person)),
+        deckPlayed(d),
         owned,
         d.error ? el("p", { class: "deck-error", text: `Can't be read: ${d.error}` })
           : chip ? el("div", { class: "deck-missing" }, chip) : null,
@@ -976,20 +1006,23 @@ function deckSleeve(kit, cls = "deck-sleeve") {
     part(kit.deck_box, "Deck box", "Not a deck box"));
 }
 
-/** A deck card's token line from /api/decks' brief ({kinds, none, differs, incoming, reminders}: token names, one
- * per token the deck makes, so a name can come more than once; reminders names the emblems and reminders among
- * them), only when something is wrong: "No Raccoon token", "No Dragon or Treasure tokens, The Monarch", "Insect
- * token differs", "Fish token on the way". A deck with every token, or none, gets nothing (null), and so does one
- * whose tokens couldn't be worked out. */
+/** A deck card's token line from /api/decks' brief ({kinds, none, differs, incoming, opponent, reminders}: token
+ * names, one per token the deck makes, so a name can come more than once; reminders names the emblems and reminders
+ * among them), only when something is wrong: "No Raccoon token", "No Dragon or Treasure tokens, The Monarch", "Insect
+ * token differs", "Fish token on the way". A token the cards' text gives only to the opponent (E7-S23, approximate)
+ * is counted apart, in its own chip: "For your opponent: Spirit token". A deck with every token, or none, gets
+ * nothing (null), and so does one whose tokens couldn't be worked out. */
 function deckTokens(brief) {
   if (!brief) return null;
   const reminders = new Set(brief.reminders || []);
   const words = (list, joiner) => tokenNamesWords((list || []).filter((n) => !reminders.has(n)),
     (list || []).filter((n) => reminders.has(n)), joiner);
   const none = words(brief.none, "or"), differs = words(brief.differs, "and"), incoming = words(brief.incoming, "and");
+  const opponent = words(brief.opponent, "and");
   const chips = [none.count ? status("warn", `No ${none.text}`) : null,
     differs.count ? status("warn", `${differs.text} ${differs.count > 1 ? "differ" : "differs"}`) : null,
-    incoming.count ? status("info", `${incoming.text} on the way`) : null].filter(Boolean);
+    incoming.count ? status("info", `${incoming.text} on the way`) : null,
+    opponent.count ? status("info", `For your opponent: ${opponent.text}`) : null].filter(Boolean);
   return chips.length ? el("span", { class: "deck-tokens" }, chips) : null;
 }
 

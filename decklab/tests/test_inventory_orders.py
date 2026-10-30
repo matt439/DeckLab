@@ -9,7 +9,9 @@ refresh (inventory/refresh.py, another area's) replaced by a fake, and once more
 (production's backend until the cutover): the commits, a reason in the commit's body, and
 outside edits refused.
 
-Run from the repo root: python -m unittest decklab.tests.test_inventory_orders
+Run from the repo root: python scripts/test_fixtures.py decklab.tests.test_inventory_orders
+The fixture runner disables configured PostgreSQL and real Forge; named native
+runtime cases also need separate qualification (see AGENTS.md, Tests).
 """
 import contextlib
 import dataclasses
@@ -198,7 +200,7 @@ class OrderOps:
                      **self.add_params(fulfils=[{"select": "Elvish Mystic", "quantity": 3}]))
         self.refused("No watchlist row matches", "order.add",
                      **self.add_params(fulfils=[{"select": "Elvish Mystic@Goblins", "quantity": 1}]))
-        self.refused("is already a product", "order.add", **self.add_params(
+        self.refused("Product precon already exists", "order.add", **self.add_params(
             product={"stem": "precon", "columns": PRODUCT_COLUMNS,
                      "rows": product_rows(("Main", "Sol Ring", "ecc", "57", 1))}))
         self.refused("a new product is ordered or preordered", "order.add", **self.add_params(
@@ -307,12 +309,59 @@ class OrderOps:
                      new_id="all", take=[{"row": 1}])
         self.refused("invalid or repeated component id", "order.split", order="2026-10-07-shop-a",
                      component="cards", new_id="late", take=[{"row": 1, "quantity": 1}])
-        self.refused("has no row 5", "order.split", order="2026-10-07-shop-a", component="tokens",
+        self.refused("There's no row 5 of order 2026-10-07-shop-a's token cards to take", "order.split", order="2026-10-07-shop-a", component="tokens",
                      new_id="more", take=[{"row": 5, "quantity": 1}])
         self.refused("has 2, not 3", "order.split", order="2026-10-07-shop-a", component="tokens",
                      new_id="more", take=[{"row": 1, "quantity": 3}])
         self.refused("is a product", "order.split", order="2026-10-02-precon", component="precon",
                      new_id="half", take=[{"row": 1, "quantity": 1}])
+
+    def test_a_split_off_part_keeps_the_extra_copies_mark(self):
+        from decklab.lib import pool
+        oid = "2026-10-12-goodgames"
+        self.op("order.add", **self.add_params(
+            record={"id": oid, "seller": "Good Games", "ordered_on": "2026-10-12", "sources": [], "notes": "",
+                    "audit_notes": "From the shop."},
+            cards={"rows": [card("Llanowar Elves", "fdn", 227, 2)], "checks": []}, extra_copies=["cards"]))
+        after, summary = self.op("order.split", order=oid, component="cards", new_id="late",
+                                 take=[{"row": 1, "quantity": 1}])
+        self.assertIn("late is marked as extra copies of owned printings too", summary.text)
+        self.assertTrue(summary.extra["extra_copies"])
+        notes = after.order(oid).audit_notes
+        self.assertEqual(rules.extra_copies(notes), ("cards", "late"))
+        self.assertIn("From the shop. Extra copies of owned printings: cards, late.", notes)
+
+        def warned():
+            return [w for w in pool.load_pool().warnings if oid in w and "already in the collection" in w]
+        self.assertEqual(warned(), [])
+        # Unmarking either part takes off only that part's mark.
+        after, _ = self.op("order.extra_copies", order=oid, component="late", undo=True)
+        self.assertEqual(rules.extra_copies(after.order(oid).audit_notes), ("cards",))
+        self.assertEqual(len(warned()), 1)
+        self.op("order.extra_copies", order=oid, component="late")
+        after, _ = self.op("order.extra_copies", order=oid, component="cards", undo=True)
+        self.assertEqual(rules.extra_copies(after.order(oid).audit_notes), ("late",))
+        self.assertIn("From the shop.", after.order(oid).audit_notes)
+        self.assertEqual(len(warned()), 1)
+
+    def test_an_unmarked_split_stays_unmarked(self):
+        oid = "2026-10-07-shop-a"
+        after, summary = self.op("order.split", order=oid, component="cards", new_id="late",
+                                 take=[{"row": 1, "quantity": 1}])
+        self.assertNotIn("extra copies", summary.text)
+        self.assertFalse(summary.extra["extra_copies"])
+        self.assertEqual(rules.extra_copies(after.order(oid).audit_notes), ())
+        # Another component's mark doesn't pass to a part split off an unmarked one.
+        self.op("order.extra_copies", order=oid, component="late")
+        after, _ = self.op("order.split", order=oid, component="cards", new_id="last",
+                           take=[{"row": 1, "quantity": 1}])
+        self.assertEqual(rules.extra_copies(after.order(oid).audit_notes), ("late",))
+
+    def test_a_marked_product_is_never_split_and_keeps_its_mark(self):
+        self.op("order.extra_copies", order="2026-10-02-precon", component="precon")
+        self.refused("is a product", "order.split", order="2026-10-02-precon", component="precon",
+                     new_id="half", take=[{"row": 1, "quantity": 1}])
+        self.assertEqual(rules.extra_copies(self.load().order("2026-10-02-precon").audit_notes), ("precon",))
 
     # -------------------------------------------------------- order.cancel
 
@@ -400,12 +449,13 @@ class OrderOps:
         # decks._product_lines' rules: the pool would list it with an error, and an incomplete pool
         # refuses every deck table refresh and receipt (and nothing could change it on the database).
         columns = ["section", *PRODUCT_COLUMNS[1:]]
-        for section, said in (("maindeck", "line 2: unknown section 'maindeck'"), ("Deck", None)):
+        for section, said in (("maindeck", "Row 1 of product theta-kit's card list: unknown section 'maindeck'"),
+                              ("Deck", None)):
             row = dict(zip(columns, (section, "Sol Ring", "ecc", "57", "nonfoil", "1", "uncommon", "")))
             params = {"order": "2026-10-07-shop-a", "product": {"stem": "theta-kit", "columns": columns,
                                                                  "rows": [row]}}
             if said:
-                self.refused(f"magic/products/theta-kit.csv: {said}", "product.add", **params)
+                self.refused(said, "product.add", **params)
                 self.refused(said, "order.add", **self.add_params(product=params["product"]))
             else:
                 after, _ = self.op("product.add", **params)
@@ -433,7 +483,7 @@ class OrderOps:
         after, _ = self.op("product.set_intact", stem="fdn-beginner-box", intact="yes")
         self.assertEqual(after.status.rows[0].text("intact"), "yes")
         self.refused("only an owned product", "product.set_intact", stem="precon", intact="yes")
-        self.refused("has no row for", "product.set_intact", stem="nothing", intact="yes")
+        self.refused("Product nothing has no status", "product.set_intact", stem="nothing", intact="yes")
 
     # -------------------------------------------------------- the watchlist
 
@@ -502,7 +552,7 @@ class FileOrderOpsTests(OrderOps, unittest.TestCase):
     def test_a_file_name_another_payload_has_is_refused(self):
         (self.root / "magic/orders/cancelled/2026-10-12-goodgames.csv").write_text(
             CARD_HEADER + "Sol Ring,ecc,57,nonfoil,1,,,\n", encoding="utf-8", newline="\n")
-        with self.assertRaisesRegex(Invalid, "component file occurs in more than one order"):
+        with self.assertRaisesRegex(Invalid, "^Order 2026-10-12-goodgames's cards are already in another order$"):
             self.op("order.add", **self.add_params())
 
     def test_a_malformed_watchlist_quantity_is_refused_in_read_queues_words(self):
@@ -523,7 +573,7 @@ class FileOrderOpsTests(OrderOps, unittest.TestCase):
         (self.root / "magic/orders/records/product-loose.json").write_text(record_json(
             "product-loose", "", "", [component("product-loose", "product", "magic/products/loose.csv", "received")]),
             encoding="utf-8", newline="\n")
-        self.refused("loose.csv has no deck lists, so keeping it intact would hold nothing", "product.set_intact",
+        self.refused("Product loose has no deck lists, so keeping it intact would hold nothing", "product.set_intact",
                      stem="loose", intact="yes")
         _, summary = self.op("product.set_intact", stem="loose", intact="no")
         self.assertIn("already broken up", summary.text)
@@ -657,7 +707,7 @@ class CommandLineTests(unittest.TestCase):
         before = files.tree_files(self.root)
         cards = self.file("cards.csv", CARD_HEADER + "Elvish Mystic,cmm,648,nonfoil,2,,,\n")
         code, _, err = self.run_cli("order", "add", "--id", "2026-10-07-shop-a", "--cards", cards, "-m", "Again")
-        self.assertEqual((code, err.strip()), (1, "magic/orders/records/2026-10-07-shop-a.json already exists"))
+        self.assertEqual((code, err.strip()), (1, "Order 2026-10-07-shop-a already exists"))
         bad = self.file("bad.csv", "name,quantity\nOpt,1\n")
         code, _, err = self.run_cli("order", "add", "--id", "2026-10-12-x", "--cards", bad, "-m", "Bad")
         self.assertEqual(code, 1)
@@ -730,12 +780,27 @@ class CommandLineTests(unittest.TestCase):
         self.assertEqual(rules.extra_copies(order.audit_notes), ("cards",))
         from decklab.lib.inventory import order_fulfilment
         self.assertIsNotNone(order_fulfilment.read(order))
+        # order split's preview says the new part keeps the mark, and the split saves it.
+        cards = self.file("two.csv", CARD_HEADER + "Elvish Mystic,cmm,648,nonfoil,2,,,\n")
+        code, _, err = self.run_cli("order", "add", "--id", "2026-10-14-ebay", "--cards", cards,
+                                    "--extra-copies", "cards", "-m", "Two more Elvish Mystics")
+        self.assertEqual(code, 0, err)
+        argv = ("order", "split", "2026-10-14-ebay", "cards", "--new-id", "late", "--take", "1:1", "-m", "Late")
+        code, out, err = self.run_cli(*argv, "--dry-run")
+        self.assertEqual(code, 0, err)
+        self.assertIn("late is marked as extra copies of owned printings too", out)
+        self.assertIn("Dry run: nothing saved.", out)
+        code, out, err = self.run_cli(*argv)
+        self.assertEqual(code, 0, err)
+        self.assertEqual(rules.extra_copies(self.backend.load().order("2026-10-14-ebay").audit_notes),
+                         ("cards", "late"))
 
     def test_split_cancel_and_product_commands(self):
         code, out, err = self.run_cli("order", "split", "2026-10-07-shop-a", "cards", "--new-id", "late",
                                       "--take", "2", "--move-check", "2", "-m", "Part of it is late")
         self.assertEqual(code, 0, err)
-        self.assertIn("into late (2026-10-07-shop-a-late.csv)", out)
+        self.assertIn("2026-10-07-shop-a cards into late", out)
+        self.assertNotIn(".csv", out)
         self.file("magic/buylists/2026-10-07-order.md", "[late](../orders/2026-10-07-shop-a-late.csv)\n")
         code, _, err = self.run_cli("order", "cancel", "2026-10-07-shop-a", "late", "-m", "Refunded",
                                     "--reason", "out of stock")

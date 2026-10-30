@@ -9,7 +9,7 @@ v2 result), so no Forge process starts. Tests that judge real looks need package
 skip until it's built (SEQSTATS). One test plays through the fake Forge's warm pool with its
 cardwins mode (test_forge_pool's PoolCase).
 
-Run from the repo root: python -m unittest decklab.tests.test_forge_adaptive
+Run from the repo root: python scripts/test_fixtures.py decklab.tests.test_forge_adaptive
 """
 import io
 import json

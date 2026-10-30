@@ -3,7 +3,7 @@ when the server starts the tunnel, where cloudflared's config sends it, and
 how the public address's and the tunnel listener's answers are judged.
 Nothing here starts cloudflared or reaches the internet.
 
-Run from the repo root: python -m unittest discover -s decklab/tests -t .
+Run from the repo root: python scripts/test_fixtures.py
 """
 import os
 import tempfile

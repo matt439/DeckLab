@@ -10,6 +10,7 @@ import traceback
 from collections import Counter
 
 from decklab.lib import accessories, decks, inventory, pool, spaces, tokens
+from decklab.lib.inventory import paths as inventory_paths
 from decklab.lib.state import StateError
 
 from . import common, guard, near_combos
@@ -23,7 +24,8 @@ from .considering import view as considering_view
 from .deck_aliases import metadata
 from .common import _jsonable, _public, _scrub, _unique
 from .forge_runs import _deck_matchups
-from .guide import playing_guide
+from .guide import departed_cards, playing_guide
+from .library_played import deck_played, played_extras
 from .library import (_deck_sections, _half_title, _load_pool, _named_by_id, _scrub_summary, edited_at, shelf_extras,
                       viewer_decks_revision)
 from .practice import _deck_practice
@@ -54,13 +56,16 @@ def decks_index():
     every home profile) gets sleeves, deck_box and kit None.
 
     "tokens" is tokens.brief() of the list that counts ({kinds, none,
-    differs, incoming, reminders}: the names of the tokens with nothing
-    owned, only a different card, or only cards on the way, and of the
-    emblems and reminders among them; see _index_tokens), or None
+    differs, incoming, opponent, reminders}: the names of the tokens with
+    nothing owned, only a different card, or only cards on the way, those
+    landing only on the opponent's side apart, and of the emblems and
+    reminders among them; see _index_tokens), or None
     for an idea deck, a pairing, or when the tokens can't be worked out.
 
     "cover", "colors", "revision" and "edited" are library.shelf_extras' (the
-    cover card, colour identity, the text's revision and when it was last edited).
+    cover card, colour identity, the text's revision and when it was last edited),
+    "played" library_played.played_extras' (when it was last played at home and its
+    games, from the Game log's games the viewer may see; None when they can't be read).
 
     A built ordinary deck also has "assembled": its saved physical main/sideboard
     counts and the real Planned cards still outside that build (assembly_intent.project).
@@ -98,6 +103,7 @@ def decks_index():
         _named_by_id(_scrub_summary(summary))
         metadata(summary, summary["id"])
     shelf_extras(summaries)
+    played_extras(summaries)
     halves = [{"id": s["id"], "title": _half_title(s)} for s in summaries
               if s["id"].startswith(f"product/{decks.BEGINNER_BOX}/") and not s.get("error")]
     return {"decks": summaries, "halves": halves, "warnings": _unique(_scrub(warnings)),
@@ -114,7 +120,7 @@ def _index_counts(summary, p, warnings):
         try:
             result = pool.owned_vs_needed(summary["id"], version, pool=p, prices=False) if p else None
         except (decks.DeckNotFound, decks.DeckFileError, OSError) as e:
-            warnings.append(f"{summary['source']}: {_public(e)}")
+            warnings.append(f"{inventory_paths.place(summary['source'])}: {_public(e)}")
             result = None
         missing[version] = result["totals"]["missing"] if result else None
         confirmed[version] = bool(result is not None and not result["unresolved"] and not result["warnings"])
@@ -269,7 +275,8 @@ def _index_tokens():
     return brief
 
 
-_TOKEN_LINE = re.compile(r"^magic/tokens\.csv line (\d+):")
+# A token cards row the read leaves out, as files._left_out names it (E11-S12: by the listed row before it).
+_TOKEN_LINE = re.compile(r"^A row (after row \d+|before row 1) of (?:the home|[a-z0-9-]+'s) token cards:")
 
 
 def _view_tokens(summary, version, sections, info):
@@ -286,7 +293,7 @@ def _view_tokens(summary, version, sections, info):
         return {"error": TOKEN_FAILED}
     for problem in inv.problems:
         found = _TOKEN_LINE.match(problem)
-        info.append(f"Token cards line {found[1]} couldn't be read; see the Tokens page" if found
+        info.append(f"A token cards row {found[1]} couldn't be read; see the Tokens page" if found
                     else _scrub([problem])[0])
     holds = held_tokens(inv, summary.get("space", spaces.HOME))
     result = _deck_tokens(summary["id"], version, sections, inv, inc,
@@ -497,8 +504,10 @@ def deck_view(deck_id, version="target", omit=()):
     sources). owned is None if the pool can't be read. Also practice and warnings.
 
     guide is the existing gameplay prose from the deck file's Notes, grouped
-    by topic, with changed_on when a list edit marked that prose stale. It is
-    None for products/pairings, and has empty sections when no guide is written.
+    by topic, with changed_on when a list edit marked that prose stale, and departed
+    (guide.departed_cards: the cards it names that former revisions held and today's lists
+    don't, for the deck's own space only, else None). It is None for products/pairings,
+    and has empty sections when no guide is written.
 
     swaps is what the saved Play-now list swaps for the Planned list (api/swaps.py view_swaps:
     {"swaps": [{"for", "out_qty", "using", "note", "note_line", "card"}], "unpaired"}), each
@@ -536,7 +545,9 @@ def deck_view(deck_id, version="target", omit=()):
     matched against the token cards owned, copies, unlisted, note, counts),
     {"unavailable"} while the card index is being rebuilt, {"error"} when it
     can't be worked out, or None for a pairing. It never adds warnings; rows
-    of tokens.csv that can't be read go in info.
+    of tokens.csv that can't be read go in info. With needs it also has "forge" (E7-S08,
+    token_peaks.with_peaks: the saved Forge games its suggested counts come from, or why
+    there are none) and each counted need its "forge" (tokens.peaks.annotate).
 
     standins is this ordinary deck's saved physical-marker mappings, with desired-card pictures,
     separate from sections and their hashes; None for products and pairings. Its own warnings
@@ -549,6 +560,11 @@ def deck_view(deck_id, version="target", omit=()):
     assembled describes a built ordinary deck's physical snapshot and remaining Planned
     intent, independent of the displayed list version (assembly_intent.project). Cards
     outside the build can already be owned, on the way or missing; neither list is edited.
+
+    played is library_played.deck_played's: when the deck was last played at home and how many
+    games it has, from the Game log's games this viewer may see (a hidden other side counted,
+    never named), with "since", what its list changed after its last game, from the deck's own
+    revisions; None when the games can't be read.
 
     box_label is an owned intact product's box label (product_label.box_label: its name,
     colours, decks and the deck page its QR code opens), only for a viewer who sees home's
@@ -628,10 +644,14 @@ def deck_view(deck_id, version="target", omit=()):
         "sections": lines, "stats": stats, "practice": _deck_practice(summary, sections),
         "guide": playing_guide(deck_file),
         "usual_opponents": usual_opponents(deck_id),
+        # When it was last played at home and what its list changed since (E1-S27): the Game log's games.
+        "played": deck_played(deck_id),
         "swaps": view_swaps(deck_file),
         # The Considering list (E2-S23): its free counts only for a viewer who sees the inventory.
         "considering": considering_view(deck_file, deck_id, p, sees, warnings),
     }
+    if answer["guide"] is not None:     # the cards it names that have left the deck (E2-S27): own space only
+        answer["guide"]["departed"] = departed_cards(answer["guide"], deck_file, deck_id)
     # One card away from a two-card combo (E9-S25): prices for all, availability only with the inventory.
     try:
         near_combos.annotate(stats, deck_id, p, sees, answer["considering"])
@@ -649,7 +669,10 @@ def deck_view(deck_id, version="target", omit=()):
         if night is not None:
             answer["commander_night"] = night
     if sees:
-        answer.update(owned=owned, tokens=_view_tokens(summary, version, sections, info), table=table)
+        # E7-S08: each token's suggested count from the list's saved Forge games (token_peaks.py).
+        from .token_peaks import with_peaks
+        answer.update(owned=owned, tokens=with_peaks(_view_tokens(summary, version, sections, info), summary, sections),
+                      table=table)
         if deck_file is not None and space == spaces.HOME and guard.sees_home_records():
             from decklab.lib.decks import boxcheck
             answer["box_checked_on"] = boxcheck.checked_on(deck_file)

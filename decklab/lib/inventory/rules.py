@@ -32,8 +32,8 @@ import re
 from datetime import date
 
 # How a refusal ends when a row or a deck can't be read strictly, so nothing can rewrite it
-# without losing what it holds ("magic/tokens.csv line 3: ...; it can't be changed until that's put
-# right"). tokens.check strips it to match a lenient read's problem with the strict one's.
+# without losing what it holds ("A row after row 3 of the home token cards: ...; it can't be changed
+# until that's put right"). tokens.check strips it to match a lenient read's problem with the strict one's.
 UNTIL_PUT_RIGHT = "; it can't be changed until that's put right"
 
 # ------------------------------------------------------------------ collection rows
@@ -79,10 +79,12 @@ def merge_notes(existing, incoming):
     return "; ".join(filter(None, (existing, *additions)))
 
 
-def parse_cards(stream, where, *, existing=False):
+def parse_cards(stream, where, *, existing=False, numbered=False):
     """Validate the rows of a text stream (opened with newline="") and normalize product
     columns to collection columns; where names the file in messages (merge_cards.read passes
-    the path, as it always has).
+    the path of a file the user handed in, and a problem names its line). numbered: where is an
+    inventory source's database words (paths.describe), and a problem names its row by number
+    ("Row 2 of the home collection: ..."), as the listings number them (E11-S12).
 
     Unnumbered ordinary basics are allowed only in incoming data, where the
     caller excludes them before matching printing identities.
@@ -91,16 +93,17 @@ def parse_cards(stream, where, *, existing=False):
     fields = reader.fieldnames or []
     required = set(FIELDS) if existing else REQUIRED
     allowed = set(FIELDS) if existing else set(FIELDS) | PRODUCT_FIELDS
+    head = where[:1].upper() + where[1:] if numbered else where
     if len(fields) != len(set(fields)):
-        raise InvalidCards(f"{where}: duplicate column names")
+        raise InvalidCards(f"{head}: duplicate column names")
     if missing := required - set(fields):
-        raise InvalidCards(f"{where}: missing columns: {', '.join(sorted(missing))}")
+        raise InvalidCards(f"{head}: missing columns: {', '.join(sorted(missing))}")
     if unknown := set(fields) - allowed:
-        raise InvalidCards(f"{where}: unknown columns: {', '.join(sorted(unknown))}")
+        raise InvalidCards(f"{head}: unknown columns: {', '.join(sorted(unknown))}")
     rows = []
     seen = set()
-    for raw in reader:
-        line = f"{where} line {reader.line_num}"
+    for number, raw in enumerate(reader, 1):
+        line = f"Row {number} of {where}" if numbered else f"{where} line {reader.line_num}"
         if None in raw or any(value is None for value in raw.values()):
             raise InvalidCards(f"{line}: row has the wrong number of columns")
         row = {key: raw.get(key, "") for key in FIELDS}

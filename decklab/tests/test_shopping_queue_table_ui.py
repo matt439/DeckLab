@@ -25,6 +25,10 @@ class ShoppingQueueTableInteractionTests(unittest.TestCase):
           const goMove = (n, label) => {move(n).click(); entry(n).querySelectorAll('[role=menuitem]').find(node=>node.textContent===label).click();};
           const settle = async () => {for(let i=0;i<8;i++) await Promise.resolve();};
           const deferred = () => {let resolve,reject; const promise=new Promise((a,b)=>{resolve=a;reject=b}); return {promise,resolve,reject};};
+          // A short unknown marker (E5-S26): one dash on screen, its full words spoken and on hover.
+          const unknownMark = (cell, words) => {const mark=cell.querySelector('.cell-unknown'); assert(mark, words);
+            assert.equal(cell.textContent,'—'); assert.equal(mark.getAttribute('aria-label'),words);
+            assert.equal(mark.getAttribute('title'),words); assert.equal(mark.getAttribute('role'),'img');};
           toast=()=>{};
         """ + scenario)
 
@@ -57,10 +61,10 @@ class ShoppingQueueTableInteractionTests(unittest.TestCase):
           assert.equal(entry(2).querySelector('.shop-q-printing').querySelector('.chip-foil').textContent,'Foil');
           assert.equal(entry(2).querySelector('.shop-q-reason').textContent,'for a reprint');
           assert(entry(4).querySelector('.shop-q-stock').textContent.includes('Out of stock'));
-          assert(entry(5).querySelector('.shop-q-price').textContent.includes('Reference price not recorded'));
-          assert(entry(5).querySelector('.shop-q-shop').textContent.includes('Shop not recorded'));
-          assert(entry(5).querySelector('.shop-q-checked').textContent.includes('Check date not recorded'));
-          assert(entry(5).querySelector('.shop-q-stock').textContent.includes('Stock not recorded'));
+          unknownMark(entry(5).querySelector('.shop-q-price'),'Reference price not recorded');
+          unknownMark(entry(5).querySelector('.shop-q-shop'),'Shop not recorded');
+          unknownMark(entry(5).querySelector('.shop-q-checked'),'Check date not recorded');
+          unknownMark(entry(5).querySelector('.shop-q-stock'),'Stock not recorded');
           assert.equal(main.querySelectorAll('[data-viewer]').length,4);
           assert.equal(main.querySelectorAll('.shop-queue-edit').length,5);
           assert.equal(JSON.stringify(queue),before);
@@ -184,7 +188,7 @@ class ShoppingQueueTableInteractionTests(unittest.TestCase):
           assert.equal(main.querySelector('.shop-q-extra').hidden,true);
           sheet.close(); assert(button.isConnected);
           entry(1).querySelector('.shop-q-more').click(); assert(!main.querySelector('.shop-q-extra').hidden);
-          assert(entry(1).querySelector('.shop-q-checked').textContent.includes('Check date not recorded'));
+          unknownMark(entry(1).querySelector('.shop-q-checked'),'Check date not recorded');
         """)
 
     def test_actual_viewer_close_returns_to_the_same_live_trigger_after_both_density_changes(self):

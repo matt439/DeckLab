@@ -97,7 +97,7 @@ class ReadNoticeTests(unittest.TestCase):
 
     def test_tokens_human_output_and_sha_are_unchanged(self):
         code, out, err = self.capture(lambda: inv_tokens._list("user2", self.args()))
-        self.assertEqual((code, out), (0, "magic/people/user2/tokens.csv: 1 row, 2 cards.\n"
+        self.assertEqual((code, out), (0, "User2's token cards: 1 row, 2 cards.\n"
             f"sha {SHA} (give it to edit or remove as --expect)\n   1. Goblin \u00d72  [tfdn 3 foil]\n        notes: PRIVATE_TOKEN_NOTE\n"))
         self.check_private(err)
         self.assertIn("tokens in space user2", err)

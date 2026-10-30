@@ -55,7 +55,8 @@ arrived, `--resolve N` / `--clear` resolve checks left open (a product's token i
 kept in its verified_checks.
 
 `order split` copies each check to both parts unless --move-check N (only the new part) or
---keep-check N (only the original) says otherwise. `order cancel` keeps --reason in the record's
+--keep-check N (only the original) says otherwise, and the new part keeps the original's
+extra-copies mark (`order extra-copies`) when it has one. `order cancel` keeps --reason in the record's
 audit_notes (and the change's reason); --restore-queue returns its recorded fulfilled copies.
 `order remove` removes an order entered by mistake, including its products and payloads, and
 returns recorded fulfilled copies in the same change. Received orders can't be removed.

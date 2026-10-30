@@ -3,7 +3,7 @@ apply_edit, Notes labels and the owned-vs-needed table. The fixtures and
 helpers are in test_decks.py (see its docstring).
 
 Run from the repo root:
-    python -m unittest discover -s decklab/tests -t .
+    python scripts/test_fixtures.py
 """
 import copy
 import unittest

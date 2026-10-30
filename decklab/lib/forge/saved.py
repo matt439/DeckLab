@@ -1,7 +1,7 @@
 """The saved results (data/forge/results/<key>.json): whether a file is a result
 (_is_result), reading one through a cache, load(), every saved result with games in it
 (_stored), what a result's batches add up to (_counted, _pooled, and the card log's
-_pooled_cards) and a stored side's cards (_side_cards)."""
+_pooled_cards, and its token peaks: _pooled_tokens) and a stored side's cards (_side_cards)."""
 import json
 import re
 import threading
@@ -360,3 +360,57 @@ def _add_stratum(strata, key, record, side):
             if part == "rows" and early:
                 total[2] += numbers[SHARED_TALLIES]
                 total[3] += numbers[SHARED_TALLIES + 1]
+
+
+# ============================================================ the card log's token peaks (E7-S08)
+
+PEAK_CAP = 30                   # cardlog.PEAK_CAP: a token's peaks list has at most this many numbers
+TOKEN_NAME_MAX = 200            # a logged token name longer than this is malformed
+
+
+def _token_tally(record):
+    """Is a well-formed "cards" record's "tokens" (cardlog's docstring: [{logged name: [n1, n2,
+    ...]}, {...}], nk the games whose peak was k) itself well formed: two dicts of names (1 to
+    TOKEN_NAME_MAX characters) to 1 to PEAK_CAP counts ending with a non-zero one, each token's
+    games no more than the record's games? A record without the key didn't tally tokens: False."""
+    tallies = record.get("tokens")
+    if not _pair(tallies, lambda t: isinstance(t, dict)):
+        return False
+    for side in tallies:
+        for name, peaks in side.items():
+            if not (isinstance(name, str) and 0 < len(name) <= TOKEN_NAME_MAX and isinstance(peaks, list)
+                    and 0 < len(peaks) <= PEAK_CAP and all(_count(n) for n in peaks) and peaks[-1]
+                    and sum(peaks) <= record["games"]):
+                return False
+    return True
+
+
+def _pooled_tokens(result, side, acc=None):
+    """The card log's token peaks of one side over every batch whose "cards" record is counted
+    today (_card_record) and has a well-formed "tokens" (_token_tally), added to acc when it's
+    given: {"games" (those batches' counted games), "batches", "untallied" (the counted games of
+    card-log batches without the tally: played before 2026-10-29, with a malformed one, or with
+    a record an earlier card log kept, _older_record), "tokens": {logged name: [n1, n2, ...]}
+    (summed number by number; games without the token, games less their sum, peaked at 0)}.
+    Batches without a card record, or with a malformed one, add nothing."""
+    if acc is None:
+        acc = {"games": 0, "batches": 0, "untallied": 0, "tokens": {}}
+    for b in result.get("batches", []):
+        record = b.get("cards")
+        if record is None:
+            continue
+        if not _card_record(record, len(b["games"])):
+            if _older_record(record, len(b["games"])):
+                acc["untallied"] += record["games"]
+            continue
+        if not _token_tally(record):
+            acc["untallied"] += record["games"]
+            continue
+        acc["batches"] += 1
+        acc["games"] += record["games"]
+        for name, peaks in record["tokens"][side].items():
+            total = acc["tokens"].setdefault(name, [])
+            total.extend([0] * (len(peaks) - len(total)))
+            for i, n in enumerate(peaks):
+                total[i] += n
+    return acc

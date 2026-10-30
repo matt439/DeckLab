@@ -162,7 +162,7 @@ function drawReceipt(data, token) {
     return view;
   }
   view.resume = el("div", { class: "rcpt-resume" });
-  view.root.append(view.resume);
+  view.root.append(view.resume, rcptEverythingBar(view));
   for (const c of data.components) {
     if (c.status !== "pending") continue;
     const comp = rcptMakeComp(view, c, view.comps.length);
@@ -238,6 +238,7 @@ function rcptSection(view, comp) {
     return comp.section;
   }
   comp.body.append(el("p", { class: "sub", text: "Tick only the cards that arrived. Unticked cards stay on the way. Split copies into separate tiles if only some arrived." }));
+  comp.body.append(rcptPartActions(view, comp));
   if (comp.checks.length) comp.body.append(rcptChecksCard(view, comp));
   comp.body.append(rcptToolbar(view, comp));
   comp.grid = el("div", { class: rcptGridClass(view) });
@@ -910,11 +911,8 @@ function rcptTokenFields(view, comp, row) {
   const blank = el("label", { class: "choice rcpt-blank" }, el("input", { type: "checkbox", checked: single || null,
     onchange: (e) => {
       if (!receiptEditable(view)) return;
-      if (e.currentTarget.checked) {
-        const notes = rcptNotesWithout(v.notes, (p) => RCPT_UNVERIFIED.test(p) || RCPT_ARRIVAL_NOTE.test(p) || RCPT_LISTING_NOTE.test(p));
-        Object.assign(v, { back: "", back_collector_number: "", back_details: "",
-          notes: [notes, RCPT_SINGLE].filter(Boolean).join("; ") });
-      } else {
+      if (e.currentTarget.checked) rcptMarkSingleSided(v);     // the same answer as receipt-bulk.js's
+      else {
         v.notes = rcptNotesWithout(v.notes, (p) => p.toLowerCase() === RCPT_SINGLE);
       }
       rcptRowChanged(view, comp, row); rcptFillSheet(view);

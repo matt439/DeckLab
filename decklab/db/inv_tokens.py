@@ -91,6 +91,12 @@ def _say(text):
     print(text, file=sys.stderr)
 
 
+def _relist(space):
+    """The listing to run again after a stale --expect: tokens list, with --space for a person's."""
+    from decklab.lib import spaces
+    return "tokens list" if space == spaces.HOME else f"tokens list --space {space}"
+
+
 def _label(row):
     from decklab.lib import tokens
     return tokens.label(row)
@@ -105,7 +111,7 @@ def _list(space, args):
         print(json.dumps({"sha256": inv.sha256, "rows": inv.rows}, ensure_ascii=False, indent=2))
         return 0
     cards = sum(int(row["quantity"]) for row in inv.rows)
-    print(f"{tokens.label_for(space)}: {len(inv.rows)} row{'' if len(inv.rows) == 1 else 's'}, "
+    print(f"{tokens.title_for(space)}: {len(inv.rows)} row{'' if len(inv.rows) == 1 else 's'}, "
           f"{cards} card{'' if cards == 1 else 's'}.")
     print(f"sha {inv.sha256 or 'none'} (give it to edit or remove as --expect)")
     for n, row in enumerate(inv.rows, 1):
@@ -155,14 +161,15 @@ def _write(space, args, actor):
                  "or none.")
             return 1
         if (inv.sha256 is None) != (expect == "none") or inv.sha256 and not inv.sha256.startswith(expect):
-            _say(f"{tokens.label_for(space)} has changed since that listing; list it again and retry.")
+            _say(f"{tokens.title_for(space)} have changed since that listing: run {_relist(space)} again "
+                 "and retry with its sha.")
             return 1
     params = {"space": space, "sha256": inv.sha256}
     base = None
     if args.action != "add":
         if not 1 <= args.row <= len(inv.rows):
-            _say(f"There's no row {args.row}: {tokens.label_for(space)} has {len(inv.rows)} "
-                 "(tokens list numbers them).")
+            _say(f"There's no row {args.row}: {tokens.label_for(space)} have {len(inv.rows)} "
+                 f"({_relist(space)} numbers them).")
             return 1
         base = inv.rows[args.row - 1]
         params["base"] = base
@@ -194,7 +201,7 @@ def _write(space, args, actor):
         _say(str(e).replace(" Add to its quantity instead?", "") + hint)
         return 1
     except ops.Stale:
-        _say(f"{tokens.label_for(space)} changed while this ran; list it again and retry.")
+        _say(f"{tokens.title_for(space)} changed while this ran: run {_relist(space)} again and retry.")
         return 1
     except ops.Broken as e:
         _say(f"{e} (a bug in Deck Lab: say what you ran).")
@@ -209,7 +216,7 @@ def _write(space, args, actor):
         print(summary.text + ".")
     if (summary.extra or {}).get("resorted"):
         verb = "would sort" if getattr(args, "dry_run", False) else "sorted"
-        print(f"{tokens.label_for(space)} wasn't in the standard order; this change {verb} it.")
+        print(f"{tokens.title_for(space)} weren't in the standard order; this change {verb} them.")
     if getattr(args, "dry_run", False):
         print("Nothing saved (--dry-run).")
     return 0

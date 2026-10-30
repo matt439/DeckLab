@@ -27,8 +27,11 @@ def token_packing_keys(result, rows):
     not change a physical task; printing, pairing, details, quantity and used face do.
     Sorting all ready/check candidates preserves the identity when inventory is reordered.
     A stand-in tick pulls only the first suggested card, as assemblyTokenTasks does.
+    The deck's counters and dice (E7-S24) are left out: the plan doesn't show them yet.
     """
     answer = copy.deepcopy(result)
+    if isinstance(answer, dict):
+        answer.pop("counters", None)
     for need in answer.get("needs", []):
         state = need.get("state")
         candidates = (need.get("cards") or []) if state in ("ready", "check") else (

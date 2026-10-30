@@ -3,8 +3,10 @@ from what the piece is (a space, an order component's kind, status and file name
 stem), never read from disk.
 
 FileInventory (files.py) reads and writes these paths. With the database backend nothing lives
-there, but the paths stay the names messages, pool labels and the gate use ("magic/collection.csv
-line 3: ...", a component's "path" in Shopping), so both backends say the same thing.
+there, but the paths stay the keys the snapshot, pool labels and the gate use (a component's
+"path" in Shopping, an unknown card's place), so both backends say the same thing. Messages name a
+source in the database's words instead (describe, row_of, place: "Row 3 of the home collection:
+...", "Product x's card list", "Order x's cards"; E11-S12), never its old file and line.
 
     paths.collection("home")                      # "magic/collection.csv"
     paths.collection("user2")                   # "magic/people/user2/collection.csv"
@@ -219,3 +221,78 @@ def space_of(rel):
     if what in ("import", "deck"):
         return detail[0]
     return HOME
+
+
+def payload_owners(orders):
+    """{payload path: (order id, component id)} of the cards and tokens components orders' records
+    name (model.Order's), for describe(): a payload's file name is its order's id only until a
+    split (x-additions.csv) or a merge (the other order's file, kept) says otherwise."""
+    out = {}
+    for order in orders:
+        for component in order.components:
+            named = isinstance(component.path, str) and isinstance(order.id, str) and isinstance(component.id, str)
+            if named and component.kind in ("cards", "tokens"):
+                out.setdefault(component.path, (order.id, component.id))
+    return out
+
+
+def component_words(order_id, component_id, kind, status="pending"):
+    """How messages name an order's cards or tokens component (E11-S12): "order x's cards",
+    "order x's token cards", "order x's received cards", "order x's additions" (a component
+    whose id isn't its kind's)."""
+    state = "" if status == "pending" else f"{status} "
+    part = {("cards", "cards"): "cards", ("tokens", "tokens"): "token cards"}.get((kind, component_id), component_id)
+    return f"order {order_id}'s {state}{part}"
+
+
+def describe(rel, owners=None):
+    """How messages name the inventory source at rel, as the database holds it (E11-S12): "the
+    home collection", "user2's token cards", "the products' status list", "product x's card
+    list", "order x's cards" or "order x's additions" (a payload, by the order and component
+    owners, payload_owners(), says hold it; by its file's stem only when no record names it),
+    "the purchase queue". Never an old file such as magic/tokens.csv. A path classify() doesn't
+    know (a scratch file the user handed in) is named as it is. A sentence starting with it
+    capitalises it (title)."""
+    found = classify(rel)
+    if found is None:
+        return rel
+    what, detail = found
+    if what in ("collection", "tokens", "locations"):
+        owner = "the home" if detail == HOME else f"{detail}'s"
+        return f"{owner} {dict(collection='collection', tokens='token cards', locations='storage locations')[what]}"
+    if what == "import":
+        return f"the import {detail[1]}" + ("" if detail[0] == HOME else f" in {detail[0]}'s space")
+    if what == "watchlist":
+        return "the purchase queue"
+    if what == "status":
+        return "the products' status list"
+    if what == "product":
+        return f"product {detail}'s card list"
+    if what == "record":
+        return f"order {detail}'s record"
+    if what == "payload":
+        kind, status, name = detail
+        order_id, component_id = (owners or {}).get(rel) or (PurePosixPath(name).stem, kind)
+        return component_words(order_id, component_id, kind, status)
+    if what == "deck":
+        space, kind, slug = detail
+        return f"{kind}/{slug}" if space == HOME else f"{space}/{kind}/{slug}"
+    return rel
+
+
+def place(source, owners=None):
+    """A deck summary's "source" at the start of a message (E11-S12): a deck's id as it is, a
+    product's card list in the database's words ("Product x's card list"), never its file."""
+    words = describe(source, owners)
+    return source if words == source else title(words)
+
+
+def title(text):
+    """text at the start of a sentence: its first letter capitalised ("The home collection")."""
+    return text[:1].upper() + text[1:]
+
+
+def row_of(rel, n, owners=None):
+    """How messages name the nth data row (from 1, as the listings number them) of the source at
+    rel: "Row 2 of the home collection" (owners as for describe)."""
+    return f"Row {n} of {describe(rel, owners)}"

@@ -12,7 +12,7 @@ import traceback
 from collections import deque
 from copy import deepcopy
 from pathlib import Path
-from . import common, pilots, runner, seeds
+from . import cardlog, common, pilots, runner, seeds
 
 from . import pool as runtime
 
@@ -49,6 +49,8 @@ def _cards_delta(now, before):
         out[part] = [{card: [a - b for a, b in zip(numbers, was[side].get(card, [0] * len(numbers)))]
                       for card, numbers in sides[side].items() if list(numbers) != list(was[side].get(card, []))}
                      for side in (0, 1)]
+    if "tokens" in now:     # the tokens' peak counts (cardlog.tokens_less)
+        out["tokens"] = cardlog.tokens_less(now["tokens"], before.get("tokens"))
     return out
 
 

@@ -209,17 +209,19 @@ class PageSourceTests(unittest.TestCase):
         # The Collection page (collection.js): spaces, the endpoints of the accounts milestone, writes tied to
         # the page that started them, conflicts put back on top field by field, and a phone-first layout.
         script = "\n".join(_text(name) for name in ("collection.js", "collection-import-groups.js", "collection-rows.js", "collection-cards.js", "collection-bulk.js",
-                                                     "collection-guards.js", "collection-trade.js", "precon-coverage.js"))
+                                                     "collection-guards.js", "collection-trade.js", "collection-scan.js",
+                                                     "precon-coverage.js"))
         self.assertIn('if (path === "collection") return showCollection(params, token);', _function(_text("app.js"), "route"))
         for path in ('"/api/collection"', '"/api/collection/rows"', '"/api/collection/save"', '"/api/collection/bulk"',
                      '"/api/collection/import/preview"', '"/api/collection/import/apply"', "/api/printings?name=",
-                     '"/api/collection/trade/preview"', '"/api/collection/trade"',
+                     '"/api/collection/trade/preview"', '"/api/collection/trade"', '"/api/collection/scan"',
                      "/api/cards/search?q=", "/api/precons?", "/api/precons/preview?", '"/api/precons/add"',
                      "/api/precons/coverage?", "/api/precons/coverage/deck?", '"/api/precons/start"'):
             with self.subTest(path=path):
                 self.assertIn(path, script)
         self.assertIn("openPreconSheet(cv)", _function(script, "colHead"))
         self.assertIn("openTradeSheet(cv)", _function(script, "colHead"))
+        self.assertIn("openScanSheet(cv)", _function(script, "colHead"))
         self.assertIn("openCoverageSheet(cv)", _function(script, "colHead"))
         self.assertIn("seq !== ctx.seq", _function(script, "searchPrecons"))
         self.assertIn("seq !== ctx.seq", _function(script, "previewPrecon"))

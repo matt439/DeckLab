@@ -338,7 +338,7 @@ class _Holder:
         if self.product:
             self.stem = holder_id.split("/", 1)[1]
             sheet = inv.status
-            name = f"products/{paths.STATUS_NAME}"
+            name = kit.STATUS_WORDS
             if not sheet.exists:
                 raise AccessoryRefused(f"{name} is missing", 404, ids=[holder_id])
             if sheet.error is not None:
@@ -351,7 +351,7 @@ class _Holder:
                 raise AccessoryRefused(f"{name} can't be read: {sheet.strict_error}", 409, ids=[holder_id])
             index = kit.row_index(sheet, self.stem)
             if index is None:
-                raise AccessoryRefused(f"{self.stem}.csv isn't in {name}", 404, ids=[holder_id])
+                raise AccessoryRefused(kit.no_status(self.stem), 404, ids=[holder_id])
             self.index = index
             self.row = sheet.rows[index]
             self.title = accessories._product_title(inv, f"{self.stem}.csv")

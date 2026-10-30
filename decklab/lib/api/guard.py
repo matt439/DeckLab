@@ -56,6 +56,13 @@ The routes and what each checks:
                                                   saving._require_kit_moves)
     POST /api/deck/cover                          deck.edit on the deck as stored (as a save of its text)
     POST /api/deck/considering                    as /api/deck/save (it is one): deck.edit on the deck as stored
+    POST /api/deck/draft                          the viewer's own draft only (the body's profile must be the
+                                                  named viewer; nobody else's, an admin's or a script's), the
+                                                  deck seen first, then deck.edit to keep one (a discard needs
+                                                  only the deck seen); not audited (api/deck_drafts.py)
+    POST /api/deck/new-draft                      a new deck's draft: the viewer's own only, as /api/deck/draft,
+                                                  its space seen and deck.create there (keeping or discarding),
+                                                  and the deck it copies seen; not audited
     POST /api/deck/token-cards                    deck.edit on the deck as stored (as a save of its text), and
                                                   its space's inventory (require_sees_inventory)
     POST /api/deck/printings                      the same as /api/deck/token-cards (a home deck only)
@@ -105,8 +112,12 @@ upkeep in another space; the command line writes every space.
     POST /api/matchup/run, /api/field/run, /api/variant/run|more
                                                   run.start (require_start: the simulations setting,
                                                   api/simulations.py)
+    POST /api/play/sideboard-test                 the plan preview's reading rule (its own space, both
+                                                  lists visible), then run.start as /api/variant/run
     PUT  /api/simulations                         simulations.edit (an admin, by role)
     PUT  /api/commander-night                     commander_night.edit (a home admin)
+    POST /api/field/policy/preview, /api/field/policy
+                                                  field.edit (a home admin; the preview writes nothing)
     POST /api/assembly/preview                    run (it writes nothing)
     POST /api/assembly/ticks                      home's inventory; a changes patch requires a real
                                                   home writer, a read-only poll no profile

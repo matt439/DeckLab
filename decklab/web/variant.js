@@ -18,7 +18,8 @@ everything out (GET /api/variant, /api/variants, /api/variant/estimate); the pag
   for a size change or a sideboard-only change. Below 700 px it's a second row of the bottom bar, full
   width; from 700 px it sits before Save. It opens a sheet: the change as chips, what to test against
   (the field by default), how long (Until it's clear, or a quick look; Quick first for a Commander deck
-  or when the worst case passes 30 minutes), each with its time, and Start.
+  or when the worst case passes 30 minutes), each with its time, and Start. #/edit?…&test=change (the deck
+  page's Test this swap, E3-S25) opens the sheet as the editor opens (vtOpenTestFromRoute).
 - The deck page (deck.js calls variantTestsSection): the tests of the list, newest first; running ones
   with their progress; finished ones as a swap-test result (sim-ui.js swapResult: the change, the difference,
   a verdict pill and its range) with how long ago they played; "saved" when the list today is the tested
@@ -734,6 +735,20 @@ function vtDraftChanges(ed) {
   for (const [name, n] of before) if (n > (after.get(name) || 0)) remove.push([n - (after.get(name) || 0), name]);
   for (const [name, n] of after) if (n > (before.get(name) || 0)) added.push([n - (before.get(name) || 0), name]);
   return { remove, add: added };
+}
+
+/** #/edit?…&test=change: what the deck page's "Test this swap" opens (deck-swaps.js testReplacementSwap),
+ * the editor with the swap as its draft and this sheet open, or the reason it can't be tested. The address
+ * loses test=, so going back or reloading doesn't open it again. */
+function vtOpenTestFromRoute(params, id) {
+  const ed = editor;
+  if (params.get("test") !== "change" || !ed || ed.mode !== "edit" || ed.id !== id || ed.entryHash !== location.hash) return;
+  const previousHash = location.hash, canonicalHash = editHref(ed.id, ed.version);
+  history.replaceState(history.state, "", canonicalHash);
+  canonicalEditorPaneHash(ed, previousHash, canonicalHash);
+  const found = vtTestState(ed);
+  if (found.ok) vtOpenTestSheet();
+  else toast(found.why || "This draft makes no change to test.");
 }
 
 async function vtOpenTestSheet() {

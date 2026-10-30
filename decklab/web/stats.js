@@ -56,11 +56,11 @@ function statsSection(data) {
   section.append(el("div", { class: "panels" },
     curvePanel(st),
     landPanel(st),
-    colourPanel(st),
+    colourPanel(st, data),
     st.commander ? commanderPanel(st, data.summary) : null,
     st.commander ? nearCombosPanel(data) : null,
     drawOddsPanel(data),
-    compositionPanel(st),
+    compositionPanel(st, data),
     categoriesPanel(data),
     tribesPanel(st),
     st.sideboard && st.sideboard.count ? sideboardPanel(st) : null,
@@ -397,7 +397,7 @@ function checkWords(check) {
   return { cost: manaCost(costToSymbols(check.cost_in_colours), true), who };
 }
 
-function colourPanel(st) {
+function colourPanel(st, data) {
   const c = st.colours;
   const panel = el("section", { class: "panel", "aria-labelledby": "h-colours" },
     el("h3", { id: "h-colours", text: "Colour sources" }));
@@ -445,6 +445,8 @@ function colourPanel(st) {
       el("ul", { class: "sources-list" }, c.rules.map((r) => el("li", { text: r }))),
       c.definition ? el("p", { class: "sub", text: c.definition }) : null));
   }
+  const lands = data ? shortColourLands(data) : null;        // deck-swaps.js: free dual lands for a short colour
+  if (lands) panel.append(lands);
   const link = statsSourceCitation(st.sources, c.source);
   if (link) how.append(el("p", { class: "sub" }, "Source: ", link));
   panel.append(how);
@@ -543,7 +545,7 @@ function barList(items, labelOf, hintOf) {
   }));
 }
 
-function compositionPanel(st) {
+function compositionPanel(st, data) {
   const types = (st.types || []).filter((t) => t.count > 0);
   // Roles the deck has none of aren't listed ("Counterspells 0" says nothing).
   const roles = (st.roles || []).filter((r) => r.count > 0);
@@ -554,8 +556,62 @@ function compositionPanel(st) {
     el("h4", { text: "Roles", style: "margin-top: 16px" }),
     roles.length ? barList(roles, (r) => (ROLE_WORDS[r.role] || [capitalise(r.role)])[0],
       (r) => (ROLE_WORDS[r.role] || ["", ""])[1]) : el("p", { class: "sub", text: "No cards with a listed role." }),
+    data ? rolePoolPart(data) : null,
     explain("Where do roles come from?", "Roles come from Scryfall's community tags, so a card can have several roles or none. " +
       "Removal deals with the other player's cards; ramp gives you extra mana sooner; card draw gets you more cards."));
+}
+
+/** "Free cards by role" under a Commander deck's role bars (E9-S26), or null: only for a deck (not a product or
+ * pairing) with a commander whose collection the visitor may see (the server sends "owned" to no one else). Opening
+ * it asks GET /api/deck/role-cards once for the list on screen; a refusal (400, 403, 404) says so without retrying,
+ * any other failure offers Try again. */
+function rolePoolPart(data) {
+  const s = data.summary;
+  if (!data.stats || !data.stats.commander || !data.owned || /^(?:[^/]+\/)?(?:product|pairing)\//.test(s.id)) return null;
+  const version = data.version === "owned" ? "owned" : "target";
+  const body = el("div", { class: "role-pool" });
+  const part = el("details", { class: "more role-pool-part" },
+    el("summary", { text: "Free cards by role" }), body);
+  let asked = false;
+  const ask = () => {
+    asked = true;
+    body.replaceChildren(loadingBox("Looking through the collection…", { small: true }));
+    api(`/api/deck/role-cards?id=${encodeURIComponent(s.id)}&version=${version}`).then(
+      (answer) => body.replaceChildren(...rolePoolBody(answer)),
+      (e) => {
+        if ([400, 403, 404].includes(e && e.status)) {
+          body.replaceChildren(el("p", { class: "sub", text: (e && e.message) || "Not available for this deck." }));
+          return;
+        }
+        body.replaceChildren(loadFailed("Free cards by role", e, ask));
+      });
+  };
+  part.addEventListener("toggle", () => { if (part.open && !asked) ask(); });
+  return part;
+}
+
+/** The answer of GET /api/deck/role-cards drawn: a line on where the cards come from, then each role's free cards. */
+function rolePoolBody(answer) {
+  const out = [el("p", { class: "sub", text: "Cards in the collection with a copy free for this deck, inside the " +
+    "commander's colours and not in the list yet. Cards other built decks or intact products hold aren't counted." })];
+  if (!answer || !answer.tags_available) {
+    out.push(el("p", { class: "note note-warn", text: "Role tags are unavailable: Deck Lab's card data has no " +
+      "Scryfall role tags, so free cards can't be found by role." }));
+    return out;
+  }
+  for (const r of answer.roles || []) {
+    const name = (ROLE_WORDS[r.role] || [capitalise(r.role)])[0];
+    let content;
+    if (!r.tagged) content = el("p", { class: "sub", text: `Unavailable: the card data has no cards with Scryfall's "${r.tag}" tag.` });
+    else if (!r.cards.length) content = el("p", { class: "sub", text: "None free in the commander's colours." });
+    else {
+      content = el("ul", { class: "card-names" }, r.cards.map((c) => el("li", {}, cardLink(c, "role-pool"),
+        el("span", { class: "sub", text: ` ${c.free} free${c.here < c.free ? `, ${c.free - c.here} on the way` : ""}` }))));
+    }
+    out.push(el("h5", { text: name }), content,
+      r.more ? el("p", { class: "sub", text: `And ${plural(r.more, "more card")}.` }) : null);
+  }
+  return out;
 }
 
 function tribesPanel(st) {

@@ -7,6 +7,7 @@ from pathlib import Path, PureWindowsPath
 from unittest import mock
 from decklab.lib import accessories, api, cards, config, decks, inventory, pool, tokens
 from decklab.lib.inventory import rules
+from decklab.lib.tokens import peaks
 from decklab.tests import pre_db
 from decklab.tests.test_api import (
     ApiTestCase, COLLECTION, FIXTURES, GRUUL, _write,
@@ -53,7 +54,7 @@ class DecksIndexTests(ApiTestCase):
             # ... and the shelf's extras (library.shelf_extras: tested in test_cover.py).
             self.assertEqual({k: v for k, v in by_id[summary["id"]].items()
                               if k not in ("missing", "on_the_way", "availability_confirmed", "kit", "tokens",
-                                           "cover", "colors", "revision", "edited", "usual_opponents")},
+                                           "cover", "colors", "revision", "edited", "usual_opponents", "played")},
                              summary)
             self.assertEqual(by_id[summary["id"]]["usual_opponents"], [])
             # No accessories are recorded in the sandbox.
@@ -88,7 +89,7 @@ class DecksIndexTests(ApiTestCase):
 
     def test_pool_warnings_are_passed_on(self):
         _write(self.box.magic / "products" / "extra.csv", "name,quantity\nOpt,1\n")
-        self.assertIn("extra.csv isn't in products/status.csv, so it counts as owned and not intact",
+        self.assertIn("Product extra has no status, so it counts as owned and not intact",
                       api.decks_index()["warnings"])
 
     def test_an_unreadable_pool_leaves_the_counts_out(self):
@@ -170,7 +171,7 @@ class DeckViewTests(ApiTestCase):
         view = api.deck_view("casual/gruul-test")
         self.assertEqual(set(view), {"summary", "version", "versions", "sections", "stats", "owned", "practice",
                                      "matchups", "guide", "tokens", "table", "warnings", "info", "usual_opponents", "standins", "swaps",
-                                     "box_checked_on", "considering"})
+                                     "box_checked_on", "considering", "played"})
         self.assertIsNone(view["box_checked_on"])
         self.assertEqual(view["considering"]["lines"], [])        # E2-S23: none written in this deck
         self.assertEqual(view["usual_opponents"], [])
@@ -519,7 +520,9 @@ class DeckTokensTests(TokenTestCase):
         view = api.deck_view("casual/hornets")
         expected = tokens.deck_tokens(decks.load_deck("casual/hornets", "target"), tokens.read(),
                                       _REAL_INCOMING()[0])
-        self.assertEqual(view["tokens"], expected)
+        # E7-S08: with no saved Forge games, the part says so and no need has a suggested count.
+        self.assertEqual(view["tokens"], peaks.annotate(expected, None))
+        self.assertEqual(view["tokens"]["forge"], {"games": 0, "why": peaks.NO_GAMES})
         insect = self.need(view["tokens"], INSECT)
         self.assertEqual(insect["state"], "differs")
         self.assertEqual(insect["words"], "Different token: your card says no deathtouch; Hornet Queen's Insect "
@@ -547,15 +550,15 @@ class DeckTokensTests(TokenTestCase):
     def test_unreadable_rows_go_in_info(self):
         _write(self.box.magic / "tokens.csv", REAL_TOKENS + "Spirit,,,,,,none,,,\n")
         view = api.deck_view("casual/hornets")
-        self.assertIn("Token cards line 26 couldn't be read; see the Tokens page", view["info"])
-        self.assertFalse([w for w in view["warnings"] if "tokens.csv" in w])
+        self.assertIn("A token cards row after row 24 couldn't be read; see the Tokens page", view["info"])
+        self.assertFalse([w for w in view["warnings"] if "token cards" in w or "tokens.csv" in w])
         self.assertEqual(self.need(view["tokens"], MONARCH)["state"], "check")    # the other rows still count
 
     def test_a_header_problem_goes_in_info_as_written(self):
         _write(self.box.magic / "tokens.csv", "front,back,quantity,front_details,back_details,notes\n"
                                                 "Insect,Goblin,1,1/1; flying,,\n")
         info = api.deck_view("casual/hornets")["info"]
-        self.assertIn("magic/tokens.csv lacks the printing columns; fix the header by hand before the Tokens "
+        self.assertIn("The home token cards lack the printing columns; fix the header by hand before the Tokens "
                       "page can save", info)
 
     def test_while_the_card_data_is_rebuilt(self):
@@ -591,9 +594,9 @@ class DeckIndexTokensTests(TokenTestCase):
                                                    tokens.read(), _REAL_INCOMING()[0]))
         self.assertEqual(hornets, expected)
         self.assertEqual(hornets["differs"], ["Insect"])
-        self.assertEqual(set(hornets), {"kinds", "none", "differs", "incoming", "reminders"})
+        self.assertEqual(set(hornets), {"kinds", "none", "differs", "incoming", "opponent", "reminders"})
         # Built with its owned-only list: only Hare Apparent's Rabbit counts.
-        self.assertEqual(by_id["casual/rabbits"]["tokens"], {"kinds": 1, "none": [], "differs": [], "incoming": [], "reminders": []})
+        self.assertEqual(by_id["casual/rabbits"]["tokens"], {"kinds": 1, "none": [], "differs": [], "incoming": [], "opponent": [], "reminders": []})
         self.assertIsNone(by_id["casual/someday"]["tokens"])   # an idea deck
         self.assertIsNone(by_id["commander/elf-commander"]["tokens"])
         self.assertIsNone(by_id["casual/broken"]["tokens"])    # can't be read

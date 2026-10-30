@@ -14,7 +14,7 @@ Mono-Black Midrange alone.
 No Java, Forge, server, network or saved-result writes. The page checks run under Node.js, when
 it's installed, with test_web's stand-in for the document.
 
-Run from the repo root: python -m unittest discover -s decklab/tests -t .
+Run from the repo root: python scripts/test_fixtures.py
 """
 import contextlib
 import io

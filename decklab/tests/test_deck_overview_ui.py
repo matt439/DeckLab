@@ -83,6 +83,68 @@ class DeckOverviewUiTests(unittest.TestCase):
           }
         """)
 
+    def test_poor_ai_caveat_follows_the_displayed_list(self):
+        self.run_js("""
+          const field = (pilot) => ({format: 'casual', deck: {id: 'casual/test', version: 'target'},
+            opponents: [{id: 'casual/other', title: 'Other', games: 400, rate: {value: .64, low: .60, high: .68}}],
+            average: {value: .64, low: .60, high: .68, counted: 1, of: 1}, pilot});
+          const poor = {poor: true, why: 'share', cards: [{name: 'Elf', qty: 6, why: ['flash']}]};
+          // As the app's route does on a list switch: a new route token, and the page drawn for that list.
+          const openList = (version) => { clear(main); location.hash = `#/deck?id=casual%2Ftest&v=${version}`;
+            routeToken += 1; drawDeck({...makePage(), version}, deckViewOf(parseHash().params)); };
+          const settle = async () => { for (let i = 0; i < 4; i++) await Promise.resolve(); };
+          const caveat = () => panel('overview').querySelector('.deck-overview-forge').querySelector('.deck-overview-pilot');
+          let answers = {}; const calls = [];
+          api = async (url) => { calls.push(url);
+            if (!url.startsWith('/api/field?')) return {tests: []};
+            return answers[new URLSearchParams(url.split('?')[1]).get('version')]; };
+          // Poor: Matchups' own words, beside the field line.
+          answers = {target: field(poor)};
+          open('#/deck?id=casual%2Ftest&v=target'); await settle();
+          assert(caveat().textContent.includes('Forge pilots this deck poorly'));
+          assert(caveat().textContent.includes(pilotReason(poor)));
+          assert(calls.some((url) => url.startsWith('/api/field?') && url.includes('version=target')
+            && url.includes('pilot=1')));
+          // Normal, and unknown (null or left out): nothing extra, and no all-clear either.
+          for (const pilot of [{poor: false, why: null, cards: []}, null, undefined]) {
+            answers = {target: field(pilot)};
+            open('#/deck?id=casual%2Ftest&v=target'); await settle();
+            assert.equal(caveat(), null, JSON.stringify(pilot));
+            assert(!panel('overview').textContent.includes('pilots'), JSON.stringify(pilot));
+            assert(panel('overview').querySelector('.deck-overview-forge').textContent.includes('64'));
+          }
+          // Switching lists: the Play-now list's own answer decides.
+          answers = {target: field(poor), owned: field({poor: false, cards: []})};
+          openList('target'); await settle();
+          assert(caveat());
+          openList('owned'); await settle();
+          assert.equal(caveat(), null);
+          assert(calls.some((url) => url.startsWith('/api/field?') && url.includes('version=owned')));
+        """)
+
+    def test_a_late_poor_answer_for_the_other_list_draws_nothing(self):
+        self.run_js("""
+          const pending = [];
+          api = (url) => url.startsWith('/api/field?')
+            ? new Promise((resolve) => pending.push({url, resolve})) : Promise.resolve({tests: []});
+          const answer = (pilot) => ({format: 'casual', deck: {id: 'casual/test'},
+            opponents: [{id: 'casual/other', title: 'Other', games: 400, rate: {value: .5, low: .4, high: .6}}],
+            average: {value: .5, low: .4, high: .6, counted: 1, of: 1}, pilot});
+          // As the app's route does on a list switch: a new route token, and the page drawn for that list.
+          const openList = (version) => { clear(main); location.hash = `#/deck?id=casual%2Ftest&v=${version}`;
+            routeToken += 1; drawDeck({...makePage(), version}, deckViewOf(parseHash().params)); };
+          openList('target');
+          openList('owned');
+          const owned = pending.find((p) => p.url.includes('version=owned'));
+          const target = pending.find((p) => p.url.includes('version=target'));
+          owned.resolve(answer({poor: false, cards: []}));
+          for (let i = 0; i < 4; i++) await Promise.resolve();
+          target.resolve(answer({poor: true, why: 'commander', cards: []}));
+          for (let i = 0; i < 4; i++) await Promise.resolve();
+          assert(!main.textContent.includes('pilots this deck poorly'));
+          assert(main.querySelector('.deck-overview-forge').textContent.includes('50'));
+        """)
+
     def test_curve_has_words_and_no_inventory_dependency(self):
         self.run_js("""
           const page = makePage(); delete page.owned;
@@ -162,4 +224,39 @@ class DeckOverviewUiTests(unittest.TestCase):
           assert(main.querySelector('#sec-matchups').textContent.includes('Not played yet against: Other.'));
           assert(scrolls.includes(240), 'late opponent names keep the tests heading at its prior screen line');
           assert.equal(document.activeElement, target);
+        """)
+
+    def test_last_played_and_what_changed_since(self):
+        self.run_js("""
+          api = async (url) => url.startsWith('/api/field') ? {format: 'casual', opponents: []} : {tests: []};
+          const draw = (played, summary = {}) => {
+            clear(main); location.hash = '#/deck?id=casual%2Ftest&v=target';
+            const page = makePage();
+            drawDeck({...page, summary: {...page.summary, ...summary}, played}, deckViewOf(parseHash().params));
+            return panel('overview').querySelector('.deck-overview-played');
+          };
+          // Games that couldn't be read: no line at all, never "not played".
+          assert.equal(draw(null), null);
+          assert.equal(draw(undefined), null);
+          assert.equal(draw({last: null, games: 0, since: null}).querySelector('.deck-played').textContent,
+            'Not played at home yet');
+          let part = draw({last: '2026-10-20', games: 3, since: {version: 'target', changes: [], more: 0}});
+          assert.equal(part.querySelector('.deck-played').textContent, 'Last played 2026-10-20 · 3 games');
+          assert(part.textContent.includes("Its list hasn't changed since that game."));
+          part = draw({last: '2026-10-20', games: 1, since: null});
+          assert(part.textContent.includes('1 game'));
+          assert(!part.textContent.includes('changed'));
+          part = draw({last: '2026-10-20', games: 2, since: {version: 'owned', more: 2, changes: [
+            {section: 'Deck', name: 'Sol Ring', delta: 1, printing: false},
+            {section: 'Deck', name: 'Elvish Mystic', delta: -2, printing: true},
+            {section: 'Sideboard', name: 'Pick Your Poison', delta: 0, printing: true}]}});
+          same(part.querySelectorAll('li').map((li) => li.textContent), ['Added 1 Sol Ring',
+            'Took out 2 Elvish Mystic, another printing', 'Changed the printing of Pick Your Poison (sideboard)']);
+          assert(part.textContent.includes('Its Play-now list has changed since that game:'));
+          assert(part.textContent.includes('And 2 more changes; its History has them all.'));
+          assert.equal(part.querySelector('a').getAttribute('href'), '#/history?id=casual%2Ftest&v=owned');
+          // A read-only (product or pairing) page has no History link.
+          part = draw({last: '2026-10-20', games: 2, since: {version: 'target', more: 1, changes: []}}, {read_only: true});
+          assert.equal(part.querySelector('a'), null);
+          assert(part.textContent.includes('And 1 more change.'));
         """)

@@ -4,7 +4,9 @@ real facts script on Windows (it only reads, for a task that doesn't exist);
 the mDNS lookups go to a stand-in responder on 127.0.0.1, so nothing goes on
 the network.
 
-Run from the repo root: python -m unittest discover -s decklab/tests -t .
+Run from the repo root: python scripts/test_fixtures.py
+The fixture runner disables configured PostgreSQL and real Forge; named native
+runtime cases also need separate qualification (see AGENTS.md, Tests).
 """
 import os
 import socket

@@ -3,7 +3,7 @@ block is read and written apart from the Planned and Play-now lists, nothing tha
 counts its cards, and the deck page shows it with each card's free copies and saves a card moved into the
 Planned list in one save.
 
-Run from the repo root: python -m unittest discover -s decklab/tests -t .
+Run from the repo root: python scripts/test_fixtures.py
 """
 import json
 import unittest

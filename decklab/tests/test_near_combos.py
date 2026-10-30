@@ -4,7 +4,7 @@ free, on the way, in another deck or to buy only for a viewer who sees the space
 lib/stats/commander.py's finding of them is in test_commander_readiness (NearComboTests). A failure is a
 warning, never a broken deck page; python -m decklab.lib.combos near lists them on the PC.
 
-Run from the repo root: python -m unittest discover -s decklab/tests -t .
+Run from the repo root: python scripts/test_fixtures.py
 """
 import copy
 import io

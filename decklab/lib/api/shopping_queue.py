@@ -3,6 +3,7 @@
 POST /api/shopping/queue keeps its original {profile, row, state, expect}
 state-change contract. An explicit action add/edit takes values; remove takes
 a reason. Row numbers always need the exact inventory revision Shopping gave.
+add_many queues a home deck's reviewed missing cards (shopping_queue_missing.py, E5-S25).
 While MTGMate's snapshot exists, a kept row's answer carries its "shop_snapshot" again
 (shop_prices.py), since a changed printing or state changes what the snapshot says about it.
 """
@@ -101,19 +102,22 @@ def save_queue_state(body):
     """
     data = _parse_body(body)
     action = data.get("action", "state")
-    if not isinstance(action, str) or action not in ("state", "add", "edit", "remove"):
-        raise ApiError(400, "action must be add, edit, remove or state")
-    required = {"state": ("row", "state"), "add": ("values",),
+    if not isinstance(action, str) or action not in ("state", "add", "add_many", "edit", "remove"):
+        raise ApiError(400, "action must be add, add_many, edit, remove or state")
+    required = {"state": ("row", "state"), "add": ("values",), "add_many": ("deck", "state", "cards"),
                 "edit": ("row", "values"), "remove": ("row", "reason")}[action]
     _keys(data, ("profile", "expect", *required), ("action",))
     profile = _writer(data)
     guard.require(profile, "orders.edit")
     guard.require_sees_home_records(profile)
     row, expect = data.get("row"), data["expect"]
-    if action != "add" and (not isinstance(row, int) or isinstance(row, bool) or row < 1):
+    if action not in ("add", "add_many") and (not isinstance(row, int) or isinstance(row, bool) or row < 1):
         raise ApiError(400, "row must be a positive whole number")
     if not isinstance(expect, str) or not expect.strip() or len(expect) > 256 or "\0" in expect:
         raise ApiError(400, "expect must be the inventory revision Shopping gave")
+    if action == "add_many":
+        from .shopping_queue_missing import add_many
+        return add_many(profile, data, expect)
     if action == "state":
         values = _values({"state": data["state"]})
     elif action != "remove":

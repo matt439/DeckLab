@@ -6,7 +6,9 @@ api.common.state_errors().
 The database classes need the local PostgreSQL server and skip without it (db_support.py);
 each works in its own throwaway database, never the real decklab one.
 
-Run from the repo root: python -m unittest decklab.tests.test_db_phase2
+Run from the repo root: python scripts/test_fixtures.py decklab.tests.test_db_phase2
+The fixture runner disables configured PostgreSQL and real Forge; named native
+runtime cases also need separate qualification (see AGENTS.md, Tests).
 """
 import os
 import shutil

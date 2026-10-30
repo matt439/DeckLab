@@ -10,7 +10,7 @@ from fixtures/tokens_cards.jsonl. Nothing touches the real repo, its
 decklab/data/ or the network. The same writes on the database backend are
 in test_token_ops.py.
 
-Run from the repo root: python -m unittest decklab.tests.test_api_tokens
+Run from the repo root: python scripts/test_fixtures.py decklab.tests.test_api_tokens
 """
 import contextlib
 import hashlib
@@ -150,8 +150,8 @@ class ViewTests(TokensApiTestCase):
         self.write("tokens.csv", ROWS + "Bad,,,,,,0,,,\n")
         view = self.view()
         self.assertEqual(len(view["rows"]), 3)
-        self.assertEqual(view["problems"], ["magic/tokens.csv line 5: tokens need a front name and positive "
-                                            "physical quantity"])
+        self.assertEqual(view["problems"], ["A row after row 3 of the home token cards: tokens need a front name "
+                                            "and positive physical quantity"])
 
     def test_incoming_orders_are_listed(self):
         rel = "magic/orders/tokens/2026-10-07-shop-a.csv"
@@ -316,7 +316,7 @@ class SaveTests(TokensApiTestCase):
         self.write("tokens.csv", "".join([lines[0], lines[3], lines[1], lines[2]]))
         self.assertFalse(self.view()["sorted"])
         answer = self.save(action="edit", base=base(self.row("Insect")), row={"quantity": 2})
-        self.assertTrue(any("sorted it" in w for w in answer["warnings"]))
+        self.assertTrue(any("sorted them" in w for w in answer["warnings"]))
         self.assertEqual(self.csv_text().splitlines()[1:],
                          [f"Angel,The Monarch,,,,,1,,,{NOTE}", f"Insect,Goblin,,,,,2,1/1; flying; no deathtouch,,{NOTE}",
                           f"Zombie,Zombie Knight,,,,,8,,,{NOTE}"])
@@ -394,7 +394,7 @@ class ConflictTests(TokensApiTestCase):
         self.write("tokens.csv", ROWS + "Bad,,,,,,0,,,\n")
         e = self.error(action="add", row=FISH)
         self.assertEqual(e.status, 409)
-        self.assertTrue(e.message.startswith("magic/tokens.csv line 5: "), e.message)
+        self.assertTrue(e.message.startswith("A row after row 3 of the home token cards: "), e.message)
         self.assertTrue(e.message.endswith("; it can't be changed until that's put right"))
 
     def test_requests_are_checked(self):

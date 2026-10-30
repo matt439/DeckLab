@@ -707,6 +707,9 @@ async function doSave(sheet, button, { viewAfter = false } = {}) {
   }
   if (button) unbusy(button);
   state.library = null;               // the library's counts changed
+  // The draft kept for later that this editor resumed or kept is published now: gone from every device.
+  // Never waited for: the editor started below reads its kept draft once the discard has settled.
+  const published = typeof discardKeptAfterSave === "function" ? discardKeptAfterSave(ed) : null;
   const removed = removeDraft(ed);
   if (removed && viewAfter) {
     ed.leaving = true;
@@ -731,7 +734,8 @@ async function doSave(sheet, button, { viewAfter = false } = {}) {
   clearTimeout(ed.checkTimer);
   clearTimeout(ed.draftTimer);
   ed.leaving = true;
-  startEditor({ mode: "edit", view: answer.deck, version, restoreDraft: false, pendingDraftKey: oldKey });
+  startEditor({ mode: "edit", view: answer.deck, version, restoreDraft: false, pendingDraftKey: oldKey,
+    keptAfter: published });
   const now = editor;
   Object.assign(now, keep);
   now.afterSaveTest = answer.after_save_test || null;

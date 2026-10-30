@@ -138,6 +138,7 @@ function syncSearchQuantity(record) {
 }
 
 function syncEditorSearchQuantities(ac) {
+  editorEdhrecDraftChanged(ac);
   if (!editorSearchResultsCurrent(ac)) return;
   for (const slot of ac.list.querySelectorAll(".ac-actions")) syncSearchQuantity(slot.searchQuantity);
 }

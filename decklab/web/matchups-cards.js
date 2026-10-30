@@ -414,7 +414,7 @@ function commanderStatsTable(rows, stats, links) {
  * differences, CLEAR_SHOWN each way (never a land's: lands get no verdict), each as its row shows it
  * (matchup by matchup over several matchups): on in hand by turn 3 or not when the rows are judged on it
  * (stats.basis "early"), else on drawn or not. With none, how many ranges were clear of 0 by chance. */
-function standOutParts(stats) {
+function standOutParts(stats, { replace = null } = {}) {
   const rows = stats.rows || [];
   const items = [];
   for (const c of stats.commander || []) {
@@ -454,7 +454,7 @@ function standOutParts(stats) {
   if (never.length) {
     items.push(el("li", {}, el("p", {}, status("warn", "Drawn, never cast"), " Drawn, and never cast or played " +
       "in any of the games:"),
-    standOutCards(never, (r) => `drawn in ${gamesWords(r.drawn_games)}`)));
+    standOutCards(never, (r) => `drawn in ${gamesWords(r.drawn_games)}`, replace)));
   }
   // Lands are never judged (cardstats.py): a land's games without a copy were mostly short of lands.
   const early = stats.basis === "early";
@@ -497,10 +497,11 @@ function standOutParts(stats) {
   return el("ul", { class: "stand-out" }, items);
 }
 
-/** A few cards that stand out, each with its number (words(row)) beside it. */
-function standOutCards(rows, words) {
+/** A few cards that stand out, each with its number (words(row)) beside it, and below it what more(row)
+ * gives (the Matchups tab's free replacements for a card never cast), when given. */
+function standOutCards(rows, words, more = null) {
   return el("ul", { class: "stand-out-cards" }, rows.map((r) => el("li", {}, cardLink({ name: r.name, qty: r.qty }),
-    el("span", { class: "stand-out-n", text: words(r) }))));
+    el("span", { class: "stand-out-n", text: words(r) }), more ? more(r) : null)));
 }
 
 /** The deck page's "How its cards played": the per-card numbers pooled over every saved matchup of this
@@ -509,8 +510,9 @@ function standOutCards(rows, words) {
  * deck's earlier lists, sides[0].current false, don't count: list_cards pools only this list's). Games
  * an earlier card log kept, or games of this list played only with another engine than today's, give
  * stats with no counted games (cards.old, cards.other_engine_games), which cardStatsCoverage explains;
- * no stats at all (null) means no saved game of this list kept a card log. */
-function deckCardStats(m, version, { otherSaid = false } = {}) {
+ * no stats at all (null) means no saved game of this list kept a card log. data (the deck page's answer),
+ * when given, adds each spell drawn and never cast its free replacements (deck-swaps.js neverCastReplacements). */
+function deckCardStats(m, version, { otherSaid = false, data = null } = {}) {
   if (!("cards" in m)) return null;
   const stats = m.cards;
   // Only an earlier engine's games, which the page has said once (earlierEngineLine): nothing more to add here.
@@ -522,7 +524,8 @@ function deckCardStats(m, version, { otherSaid = false } = {}) {
       "log, which follows every card through Forge's games, so there are no per-card numbers yet." })];
   }
   return [head, cardStatsCoverage(stats, true, { otherSaid }),
-    stats.games ? [cardStatsBasis(stats), standOutParts(stats),
+    stats.games ? [cardStatsBasis(stats), standOutParts(stats, { replace: data && typeof neverCastReplacements === "function"
+      ? (r) => neverCastReplacements(data, r) : null }),
       el("details", { class: "more mu-cards" }, el("summary", { text: "Every card's numbers" }),
         cardStatsKey((stats.commander || []).length > 0), cardStatsGroups(stats, { links: true }))] : null];
 }

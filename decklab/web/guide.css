@@ -15,7 +15,7 @@
 .guide-prose :is(ul, ol) + p, .guide-prose p + :is(ul, ol) { margin-top: var(--s-3); }
 .guide-prose a { overflow-wrap: anywhere; }
 .guide-prose .sym { width: 1em; height: 1em; }
-.guide-stale { margin-bottom: var(--s-3); }
+.guide-stale, .guide-departed { margin-bottom: var(--s-3); }
 /* One readable column at every width: the open Game plan, then the folded topics under it (two columns left an
    open topic's text in a narrow box beside a column of one-line folds). */
 .guide-topics { max-width: 800px; }

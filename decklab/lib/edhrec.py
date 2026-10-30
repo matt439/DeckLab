@@ -1,7 +1,7 @@
 """EDHREC's commonly played cards for a commander (E9-S07), marked in the deck's own space.
 
 Usage (from the repo root):
-    python -m decklab.lib.edhrec <deck-id> [--refresh] [--no-prices] [--all]
+    python -m decklab.lib.edhrec <deck-id> [--page PAGE] [--refresh] [--no-prices] [--all]
 
 EDHREC publishes each commander's page as JSON at
 https://json.edhrec.com/pages/commanders/<slug>.json (checked 2026-10-28; a
@@ -14,6 +14,16 @@ EDHREC has no page for that, the other order. For a pair, the order EDHREC
 doesn't use answers 200 with only {"redirect": "/commanders/<its slug>"}
 (checked 2026-10-28 with Thrasios and Tymna, and Wilson and Raised by
 Giants): that's kept like a page (redirect_slug) and its slug followed.
+
+A commander's page can also be narrowed (page=): EDHREC's budget and expensive
+pages, its Commander Brackets pages (exhibition, core, upgraded, optimized,
+cedh) and its theme pages, each at .../commanders/<slug>/<page>.json, the
+address its site uses (edhrec.com/commanders/<slug>/<page>; the JSON layout is
+assumed to be the commander page's, not checked live). The themes offered are
+the commander page's own "panels" -> "taglinks" (reduce_page's "themes"), so
+only a theme EDHREC lists for that commander is ever asked for; any other page
+is UnknownPage. A narrowed page EDHREC hasn't got is NoPage, remembered as the
+commander page's is.
 
 fetch() keeps each page, reduced to its card lists, in decklab/data/edhrec/
 <slug>.json with the time it was fetched, and fetches again only when that
@@ -58,7 +68,7 @@ CACHE = None                        # the cache folder; None: config.DATA / "edh
 PAGE_URL = "https://json.edhrec.com/pages/commanders/{slug}.json"
 SITE_URL = "https://edhrec.com/commanders/{slug}"
 USER_AGENT = config.USER_AGENT + " EDHREC ideas"
-FORMAT = 1                          # the cached file's layout; another one is fetched again
+FORMAT = 2                          # the cached file's layout; another one is fetched again (2: "themes")
 MAX_AGE = timedelta(days=7)         # a copy older than this is fetched again
 NO_PAGE_AGE = timedelta(days=1)     # how long "EDHREC has no page" is believed
 MIN_REFRESH = timedelta(hours=1)    # refresh=True doesn't fetch a copy younger than this
@@ -67,6 +77,12 @@ MIN_GAP = 1.0                       # seconds between two requests to EDHREC
 TIMEOUT = 20                        # seconds
 MAX_BYTES = 8 << 20                 # a page bigger than this is refused
 MAX_CARDS = 600                     # cards kept from one page
+MAX_THEMES = 60                     # themes kept from one page
+# The narrowed pages every commander may have (page=), in the order offered: (page, label, group).
+FIXED_PAGES = (("budget", "Budget", "budget"), ("expensive", "Expensive", "budget"),
+               ("exhibition", "Exhibition (bracket 1)", "bracket"), ("core", "Core (bracket 2)", "bracket"),
+               ("upgraded", "Upgraded (bracket 3)", "bracket"), ("optimized", "Optimized (bracket 4)", "bracket"),
+               ("cedh", "cEDH (bracket 5)", "bracket"))
 
 _lock = threading.Lock()            # one fetch at a time: a second asker waits and reads the copy it made
 _failed = {}                        # slug -> time.monotonic() of its last failed fetch
@@ -83,6 +99,10 @@ class NoPage(EdhrecError):
 
 class NotCommander(ValueError):
     """The deck isn't a Commander deck with a commander."""
+
+
+class UnknownPage(ValueError):
+    """A narrowed page (page=) that isn't budget, expensive, a bracket or one of the commander's themes."""
 
 
 def _cache_dir():
@@ -196,11 +216,36 @@ def reduce_page(page, slug, fetched):
     return {"format": FORMAT, "slug": slug, "url": SITE_URL.format(slug=slug),
             "commander": re.sub(r"\s*\(Commander\)\s*$", "", header)[:200] or None,
             "decks": _number(card.get("num_decks")), "fetched": fetched.isoformat(timespec="seconds"),
-            "lists": out}
+            "lists": out, "themes": _themes(page)}
+
+
+def _themes(page):
+    """The commander's themes from its page's "panels" -> "taglinks": [{"slug", "name", "decks"}], at most
+    MAX_THEMES, each a plain slug that isn't one of FIXED_PAGES; [] when the page has none."""
+    panels = page.get("panels") if isinstance(page.get("panels"), dict) else {}
+    links = panels.get("taglinks") if isinstance(panels.get("taglinks"), list) else []
+    fixed = {key for key, _, _ in FIXED_PAGES}
+    out, seen = [], set()
+    for link in links:
+        if not isinstance(link, dict) or len(out) >= MAX_THEMES:
+            continue
+        slug, name = link.get("slug"), link.get("value")
+        if not (isinstance(slug, str) and _SLUG.fullmatch(slug) and len(slug) <= 80 and slug not in fixed
+                and slug not in seen and isinstance(name, str) and name.strip()):
+            continue
+        seen.add(slug)
+        out.append({"slug": slug, "name": name.strip()[:80], "decks": _number(link.get("count"))})
+    return out
+
+
+def _file_stem(slug):
+    """A slug's cache file name: a narrowed page's "<commander>/<page>" as "<commander>--<page>" (a plain
+    slug never has two hyphens together, so the two never meet)."""
+    return slug.replace("/", "--")
 
 
 def _path(slug):
-    return _cache_dir() / f"{slug}.json"
+    return _cache_dir() / f"{_file_stem(slug)}.json"
 
 
 def _read(slug):
@@ -218,7 +263,7 @@ def _read(slug):
 def _write(slug, kept):
     folder = _cache_dir()
     folder.mkdir(parents=True, exist_ok=True)
-    fd, tmp = tempfile.mkstemp(dir=folder, prefix=slug + ".", suffix=".part")
+    fd, tmp = tempfile.mkstemp(dir=folder, prefix=_file_stem(slug) + ".", suffix=".part")
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as f:
             json.dump(kept, f, ensure_ascii=False)
@@ -275,15 +320,26 @@ def _one(slug, refresh):
     return made, None
 
 
-def fetch(commanders, refresh=False):
+def page_choices(themes):
+    """The narrowed pages offered with a commander page's themes: [{"page", "label", "group" (budget,
+    bracket or theme), "decks" (a theme's, else None)}], FIXED_PAGES first."""
+    return ([{"page": key, "label": label, "group": group, "decks": None} for key, label, group in FIXED_PAGES]
+            + [{"page": t["slug"], "label": t["name"], "group": "theme", "decks": t.get("decks")}
+               for t in themes or []])
+
+
+def fetch(commanders, refresh=False, page=None):
     """EDHREC's lists for the commander names (one, or two together): reduce_page's dict plus
-    "stale" (None, or why it's an older copy). NoPage when EDHREC has no page for them;
+    "stale" (None, or why it's an older copy), "page" (page, or "") and "themes" (the commander page's,
+    whichever page this is). page narrows it (see the module's docstring): UnknownPage for one the
+    commander page doesn't offer. NoPage when EDHREC has no page for them (or not that narrowed one);
     EdhrecError when it can't be reached and nothing is cached."""
     slugs = commander_slugs(commanders)
     if not slugs:
         raise NoPage("The commander has no name EDHREC could know it by")
     tried = set()
     with _lock:
+        base = None
         for slug in slugs:
             hops = 0
             while slug not in tried and hops < 3:     # a redirect is followed, but never round in circles
@@ -293,19 +349,39 @@ def fetch(commanders, refresh=False):
                     slug, hops = kept["redirect"], hops + 1
                     continue
                 if not kept.get("missing"):
-                    return dict(kept, stale=note)
+                    base = dict(kept, stale=note, page="", themes=kept.get("themes") or [])
                 break
-    raise NoPage(f"EDHREC has no page for {' and '.join(commanders)}")
+            if base is not None:
+                break
+        if base is None:
+            raise NoPage(f"EDHREC has no page for {' and '.join(commanders)}")
+        if not page:
+            return base
+        if page not in {choice["page"] for choice in page_choices(base["themes"])}:
+            raise UnknownPage(f"EDHREC offers no {page!r} page for {' and '.join(commanders)}.")
+        # The narrowed page: a redirect from it (EDHREC sending it back to the commander page) is no page.
+        kept, note = _one(f"{base['slug']}/{page}", refresh)
+        if kept.get("missing") or kept.get("redirect"):
+            raise NoPage(f"EDHREC has no {page} page for {' and '.join(commanders)}")
+        return dict(kept, stale=note, page=page, themes=base["themes"])
 
 
 # --- Marking the ideas ---------------------------------------------------------
 
-def _deck(deck_id):
-    """(the deck file, its commanders' exact names) of a Commander deck. NotCommander otherwise."""
+def _deck(deck_id, commanders=None):
+    """(the deck file, its commanders' exact names) of a Commander deck: the saved Commander section's, or
+    commanders (an editor's draft, exact names) when given. With no deck_id (a deck not saved yet), (None,
+    commanders). NotCommander otherwise."""
+    if deck_id is None:
+        if not commanders:
+            raise NotCommander("A deck not saved yet needs its commander named to have EDHREC ideas.")
+        return None, list(commanders)
     space, kind, slug = spaces.split_deck_id(deck_id)
     if kind != "commander":
         raise NotCommander("EDHREC ideas are for Commander decks.")
     deck = decks.read_deck_file(decks.find_deck_file(kind, slug, space), space=space)
+    if commanders:
+        return deck, list(commanders)
     names = [cards.resolve(line.name) or line.name for line in deck.target.get("Commander", [])]
     if not names:
         raise NotCommander(f"{deck.title} has no commander yet: add one to its Commander section first.")
@@ -319,25 +395,32 @@ def _counts(lines):
     return out
 
 
-def ideas(deck_id, p=None, prices=True, refresh=False):
+def ideas(deck_id, p=None, prices=True, refresh=False, commanders=None, page=None):
     """EDHREC's cards for a Commander deck: {"deck_id", "commanders", "identity", "source" (fetch()'s
-    commander, decks, url, fetched and stale), "groups": [{"header", "cards": [{"name", "inclusion"
+    commander, decks, url, fetched and stale), "page" (the narrowed page, or ""), "pages" (page_choices:
+    the narrowed pages this commander offers), "groups": [{"header", "cards": [{"name", "inclusion"
     (0-100, None when EDHREC gives no count), "decks", "of", "synergy", "in_deck", "considering",
     and with a pool p: "status" (in_deck, free, in_use or to_buy), "free", "on_the_way", "aud_each",
     "priced_printing"}]}], "left_out" (cards outside the identity, not legal or not known: [{"name",
     "why"}]), "rate", "rate_date", "price_date", "price_error", "deck" (the parsed deck file)}. p is
     the deck's space's pool, or None for a viewer who mayn't see it: then nothing says what's owned.
-    Raises NotCommander, NoPage or EdhrecError."""
-    deck, commanders = _deck(deck_id)
-    source = fetch(commanders, refresh)
+    commanders (exact names, one or two) stands in for the saved Commander section, as the editor's draft
+    does: the colour identity and EDHREC's page are theirs, everything else is still the saved deck's.
+    deck_id None is a deck not saved yet (the new-deck editor's), commanders then required: nothing is in
+    the deck or considered, p is the pool of the space it's being made in, every copy no built deck or
+    intact product holds counts as free, and "deck" is None. page is fetch()'s. Raises NotCommander,
+    UnknownPage, NoPage or EdhrecError."""
+    deck, commanders = _deck(deck_id, commanders)
+    source = fetch(commanders, refresh, page)
     identity = set()
     for name in commanders:
         identity.update((cards.card(name) or {}).get("color_identity", []))
-    planned = _counts(line for section in deck.target.values() for line in section)
-    considered = _counts(deck.considering or [])
-    free = pool.free_copies(p, pool.self_ids(deck_id)) if p is not None else None
+    planned = _counts(line for section in deck.target.values() for line in section) if deck else Counter()
+    considered = _counts(deck.considering or []) if deck else Counter()
+    free = pool.free_copies(p, pool.self_ids(deck_id) if deck_id else ()) if p is not None else None
     result = {"deck_id": deck_id, "deck": deck, "commanders": commanders, "identity": "".join(c for c in "WUBRG" if c in identity),
               "source": {key: source.get(key) for key in ("commander", "decks", "url", "fetched", "stale")},
+              "page": source.get("page") or "", "pages": page_choices(source.get("themes")),
               "groups": [], "left_out": [], "rate": None, "rate_date": None, "price_date": None, "price_error": None}
     if p is not None and prices:
         try:
@@ -398,6 +481,9 @@ def _print(result, show_all):
     print(f"EDHREC ideas for {' & '.join(result['commanders'])} ({result['identity'] or 'colourless'}): "
           f"{source['url']}, fetched {fetched}"
           + (f", from {source['decks']:,} decks" if isinstance(source.get("decks"), int) else ""))
+    if result["page"]:
+        label = next((c["label"] for c in result["pages"] if c["page"] == result["page"]), result["page"])
+        print(f"Page: {label}")
     if source.get("stale"):
         print(f"Note: {source['stale']}")
     if result["price_error"]:
@@ -441,6 +527,9 @@ def main(argv=None):
                                      description="EDHREC's commonly played cards for a Commander deck's "
                                                  "commander, marked owned, free or to buy in the deck's space.")
     parser.add_argument("deck", help="a Commander deck's id, e.g. commander/giada-angels or user2/commander/<slug>")
+    parser.add_argument("--page", default="",
+                        help="a narrowed EDHREC page: budget, expensive, exhibition, core, upgraded, optimized, "
+                             "cedh, or one of the commander's themes (its slug)")
     parser.add_argument("--refresh", action="store_true",
                         help=f"fetch again when the copy is over {int(MIN_REFRESH.total_seconds() // 3600)} hour old")
     parser.add_argument("--no-prices", action="store_true", help="skip the AUD estimates")
@@ -449,7 +538,7 @@ def main(argv=None):
     with entry.command():
         try:
             p = pool.load_pool(spaces.space_of(args.deck))
-            result = ideas(args.deck, p, prices=not args.no_prices, refresh=args.refresh)
+            result = ideas(args.deck, p, prices=not args.no_prices, refresh=args.refresh, page=args.page or None)
         except (decks.DeckNotFound, spaces.SpaceNotFound, NotCommander, ValueError) as e:
             print(e, file=sys.stderr)
             return 1

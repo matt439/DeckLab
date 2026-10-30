@@ -41,24 +41,30 @@ function comboCheck(br) {
 /** One two-card combo: its pieces as card links joined with " + ", what it does in short, whether it needs
  * a payoff or counts for the bracket, and a link to it on Commander Spellbook. */
 function comboItem(m, group) {
-  const results = m.results || [];
-  const what = results.slice(0, 2).join(", ") + (results.length > 2 ? ", …" : "");
-  // Spellbook calls a lock's "Lock" a helper result, but a lock needs nothing more.
-  const note = m.floor === 4 ? " Counts as mass land denial." : m.raises_floor ? " None in Brackets 1-2."
-    : m.standalone === false && m.class !== "lock" && m.class !== "mass_land_denial" ? " Needs a payoff." : "";
   const item = el("li", {});
   (m.names || []).forEach((name, i) => {
     if (i) item.append(" + ");
     item.append(cardLink({ name }, group, { inline: true }));
   });
-  item.append(`${what ? `: ${what}.` : "."}${note} `,
+  item.append(`${comboWords(m)} `,
     el("a", { href: m.url, target: "_blank", rel: "noopener", text: "Commander Spellbook" }));
   return item;
 }
 
-/** What the two-card combo check found, for What opponents will face and (unlabelled, under its own
- * check line) the Stats tab's Commander rules. */
-function comboFindings(br, group, labelled = true) {
+/** What a two-card combo does in short and whether it needs a payoff or counts for the bracket, after its
+ * pieces (": Infinite damage, Infinite lifegain, …. None in Brackets 1-2."). */
+function comboWords(m) {
+  const results = m.results || [];
+  const what = results.slice(0, 2).join(", ") + (results.length > 2 ? ", …" : "");
+  // Spellbook calls a lock's "Lock" a helper result, but a lock needs nothing more.
+  const note = m.floor === 4 ? " Counts as mass land denial." : m.raises_floor ? " None in Brackets 1-2."
+    : m.standalone === false && m.class !== "lock" && m.class !== "mass_land_denial" ? " Needs a payoff." : "";
+  return `${what ? `: ${what}.` : "."}${note}`;
+}
+
+/** What the two-card combo check found, for What opponents will face, (unlabelled, under its own check
+ * line) the Stats tab's Commander rules and (item drawing each combo as text) the printed play sheet. */
+function comboFindings(br, group, labelled = true, item = (m) => comboItem(m, group)) {
   const check = comboCheck(br);
   const line = (text) => el("p", {}, labelled ? el("b", { text: "Two-card combos: " }) : null,
     labelled ? text : text[0].toUpperCase() + text.slice(1));
@@ -67,19 +73,16 @@ function comboFindings(br, group, labelled = true) {
   return el("div", {},
     line(`the list holds both pieces of ${check.matches.length === 1 ? "this combo" : `these ${check.matches.length} combos`} ` +
       `(Commander Spellbook's two-card combos, list of ${check.date}).`),
-    el("ul", { class: "commander-combos" }, check.matches.map((m) => comboItem(m, group))));
+    el("ul", { class: "commander-combos" }, check.matches.map(item)));
 }
 
-function commanderReadiness(data) {
-  if (data.summary.kind !== "commander") return null;
-  const heading = el("h2", { id: "h-commander-table", text: "At the Commander table" });
-  const section = el("section", { class: "deck-section commander-readiness", "aria-labelledby": "h-commander-table" }, heading);
-  add(section, [commanderNightPart(data)]);
+/** The shown list's pregame facts (E9-S05), or null when its Commander checks weren't loaded: the stats'
+ * commander part (k) and bracket answer (br), the effect groups, those found, cards without data, the combo
+ * check, the combos raising the floor and the lead sentence's words. The page and the printed play sheet
+ * (commanderPrintPart) both read it. */
+function commanderTableFacts(data) {
   const k = data.stats && data.stats.commander, br = k && k.bracket;
-  if (!br) {
-    section.append(note("Commander checks are unavailable, so check this list before naming a bracket."));
-    return section;
-  }
+  if (!br) return null;
   const groups = [["Game Changers", br.game_changers], ["Mass land denial", br.mass_land_denial], ["Extra turns", br.extra_turns]];
   const found = groups.filter(([, list]) => list && list.length);
   const unknown = br.unknown_cards || [...new Set((data.stats.unresolved || [])
@@ -102,28 +105,52 @@ function commanderReadiness(data) {
     : combos.matches.length ? ": no Game Changers, extra turns or mass land denial found; the two-card combos it holds don't raise the bracket."
       : ": no Game Changers, extra turns, mass land denial or two-card combos found.";
   else lead += ".";
-  const sentence = el("p", { class: "commander-table-summary", text: lead });
-  for (const [label, list] of found) {
+  return { k, br, groups, found, unknown, combos, raising, target, lead };
+}
+
+/** The lead sentence with the cards found and the floor-raising combos named, each name drawn by name(). */
+function commanderTableSentence(facts, name) {
+  const sentence = el("p", { class: "commander-table-summary", text: facts.lead });
+  for (const [label, list] of facts.found) {
     sentence.append(" ", label, ": ");
     const unique = [...new Map(list.map((entry) => [entry.name, entry])).values()];
     unique.forEach((entry, i) => {
       if (i) sentence.append(", ");
-      sentence.append(cardLink({ name: entry.name }, "commander-readiness", { inline: true }));
+      sentence.append(name(entry.name));
     });
     sentence.append(".");
   }
-  if (raising.length) {
-    sentence.append(" Holds both pieces of ", raising.length === 1 ? "a two-card combo" : "two-card combos", ": ");
-    raising.forEach((m, i) => {
+  if (facts.raising.length) {
+    sentence.append(" Holds both pieces of ", facts.raising.length === 1 ? "a two-card combo" : "two-card combos", ": ");
+    facts.raising.forEach((m, i) => {
       if (i) sentence.append(", ");
-      (m.names || []).forEach((name, j) => {
+      (m.names || []).forEach((piece, j) => {
         if (j) sentence.append(" + ");
-        sentence.append(cardLink({ name }, "commander-readiness", { inline: true }));
+        sentence.append(name(piece));
       });
     });
     sentence.append(".");
   }
-  section.append(sentence);
+  return sentence;
+}
+
+const COMMANDER_CHECK_LIMITS = "Only two-card combos from Commander Spellbook's list are checked, and the list can miss some. " +
+  "Combos of three or more cards, combos needing a card that isn't named, chained or repeated extra turns, " +
+  "how quickly the deck wins and your intent aren't checked. " +
+  "Agree on the game with the table; these card checks alone don't establish a bracket.";
+
+function commanderReadiness(data) {
+  if (data.summary.kind !== "commander") return null;
+  const heading = el("h2", { id: "h-commander-table", text: "At the Commander table" });
+  const section = el("section", { class: "deck-section commander-readiness", "aria-labelledby": "h-commander-table" }, heading);
+  add(section, [commanderNightPart(data)]);
+  const facts = commanderTableFacts(data);
+  if (!facts) {
+    section.append(note("Commander checks are unavailable, so check this list before naming a bracket."));
+    return section;
+  }
+  const { k, br, groups, found, unknown, combos, target } = facts;
+  section.append(commanderTableSentence(facts, (name) => cardLink({ name }, "commander-readiness", { inline: true })));
   if (!k.ok) section.append(el("p", { class: "sub", text: "Deck rules need attention before this list can be played; see Stats." }));
   if (unknown.length) section.append(el("p", { class: "sub", text: `Cards without data: ${unknown.join(", ")}. The checks are incomplete.` }));
   const effects = el("details", { class: "more" }, el("summary", { text: "What opponents will face" }));
@@ -137,14 +164,34 @@ function commanderReadiness(data) {
   effects.append(el("p", { class: "sub", text: "Mass land denial means removing or locking down many lands. " +
     "Community tags can miss cards or flag effects you don't intend to use." }));
   section.append(effects,
-    el("p", { class: "sub", text: "Only two-card combos from Commander Spellbook's list are checked, and the list can miss some. " +
-      "Combos of three or more cards, combos needing a card that isn't named, chained or repeated extra turns, " +
-      "how quickly the deck wins and your intent aren't checked. " +
-      "Agree on the game with the table; these card checks alone don't establish a bracket." }),
+    el("p", { class: "sub", text: COMMANDER_CHECK_LIMITS }),
     commanderDataNote(br));
   if (target === 2) section.append(el("p", { class: "sub", text: "Bracket 2 aims for a straightforward, social game with time to develop; " +
     "expect at least eight turns before a win or loss. A few extra-turn cards can fit, but chaining them cannot." }));
   const source = data.stats.sources && data.stats.sources["wizards-commander"];
   if (source) section.append(el("a", { href: source.url, target: "_blank", rel: "noopener", text: "Commander brackets and Game Changers" }));
   return section;
+}
+
+/** The printed play sheet's At the table (E9-S27), for a Commander deck only: the pregame sentence, what
+ * opponents will face and the two-card combos the shown list holds, as plain text from the facts the page
+ * already loaded, with the card data's dates. Never fetches; facts that weren't loaded are said to be so.
+ * Nothing here reads the inventory (the one-card-away combos are left out). */
+function commanderPrintPart(data) {
+  if (data.summary.kind !== "commander") return [];
+  const heading = el("h2", { text: "At the table" });
+  const facts = commanderTableFacts(data);
+  if (!facts) return [heading, el("p", { class: "print-warning", text: "The Commander checks weren't loaded, so this sheet " +
+    "can't say what opponents will face. Check the list before naming a bracket." })];
+  const { k, groups, unknown } = facts;
+  const parts = [heading, commanderTableSentence(facts, (name) => name)];
+  if (!k.ok) parts.push(el("p", { class: "print-warning", text: "Deck rules need attention before this list can be played." }));
+  if (unknown.length) parts.push(el("p", { text: `Cards without data: ${unknown.join(", ")}. The checks are incomplete.` }));
+  for (const [label, list] of groups) parts.push(el("p", {}, el("b", { text: `${label}: ` }),
+    list == null ? "not checked (effect data unavailable)."
+      : list.length ? `${[...new Set(list.map((entry) => entry.name))].join(", ")}.` : "none found in the checked cards."));
+  // Each combo as text: on paper there's no viewer or link to follow.
+  parts.push(comboFindings(facts.br, null, true, (m) => el("li", { text: `${(m.names || []).join(" + ")}${comboWords(m)}` })));
+  parts.push(el("p", { text: COMMANDER_CHECK_LIMITS }), commanderDataNote(facts.br));
+  return parts;
 }

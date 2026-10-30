@@ -5,7 +5,9 @@ pg.write_decks / write_model and read back (they skip without one: db_support.py
 retired the import of the decks' git history and its gate (db/deck_history.py), which these tests
 also covered.
 
-Run from the repo root: python -m unittest decklab.tests.test_deck_history
+Run from the repo root: python scripts/test_fixtures.py decklab.tests.test_deck_history
+The fixture runner disables configured PostgreSQL and real Forge; named native
+runtime cases also need separate qualification (see AGENTS.md, Tests).
 """
 import dataclasses
 import json

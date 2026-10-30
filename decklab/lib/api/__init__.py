@@ -30,6 +30,9 @@ Usage:
     api.find_cards("bolt", "all")         # GET /api/deck/find?q=bolt: the editor's Add panel (owned first, filters)
     api.swaps.suggest_swaps("casual/gruul-ramp")  # GET /api/deck/swaps?id=...: owned stand-ins per missing card
     api.swaps.suggest_draft_swaps(body)   # POST /api/deck/swaps: the same for the editor's Play-now list
+    api.swaps.suggest_replacements("casual/gruul-ramp", card="Shock")  # GET /api/deck/replacements: free pool cards for a listed card
+    api.swaps.suggest_dual_lands("casual/gruul-ramp")  # GET /api/deck/dual-lands: free dual lands for a short colour
+    api.role_cards.role_cards("commander/giada-angels")  # GET /api/deck/role-cards: free pool cards for each Stats role
     api.save_deck(body)                   # POST /api/deck/save: the new text and table, one change
     api.create_deck(body)                 # POST /api/decks: a new deck, one change (201)
     api.stale_view()                      # GET /api/tables/stale
@@ -146,7 +149,11 @@ called as before (from decklab.lib import api; api.<name>). Each part:
     commits.py       the decks that can be saved, 409 conflicts, owned-vs-needed tables
     editor.py        edit_view(), parse_list(), check_draft()
     swaps.py         stand-ins for missing cards (E2-S07): suggest_swaps(), suggest_draft_swaps(),
-                     view_swaps() (deck_view's "swaps"); the rules in lib/decks/swaps.py
+                     view_swaps() (deck_view's "swaps"); free pool replacements for a listed card
+                     (E3-S25): suggest_replacements(), and free dual lands for a short colour:
+                     suggest_dual_lands(); the rules in lib/decks/swaps.py and dual_lands.py
+    role_cards.py    free pool cards in a Commander deck's colours for each Stats role (E9-S26):
+                     role_cards(); the rules in lib/decks/role_pool.py
     saving.py        save_deck(), create_deck(), stale_view(), update_tables(); _save_lock and
                      inventory_write_lock() (the lock order for inventory writes)
     history.py       a deck's saved revisions (read-only): deck_history(), deck_revision(), from
@@ -165,6 +172,8 @@ called as before (from decklab.lib import api; api.<name>). Each part:
     collection_edit.py   the Collection page's edits and imports: rows_view(), save_card(),
                      import_preview(), import_apply(), printings_view(),
                      each write one inventory.apply. Imported when first asked, as tokens.py
+    collection_scan.py   the Collection page's Scan cards (E7-S32): scan_photo(), one card's photo read
+                     on the PC (lib/scan.py) into proposed printings; nothing is written. Imported when first asked
     collection_trade.py  the Collection page's Record a trade (E7-S22): preview_trade(), save_trade(),
                      one collection.trade. Imported when first asked, as tokens.py
     precons.py       the Collection page's "Add a precon": precons_view(), precon_preview(),
@@ -190,6 +199,8 @@ called as before (from decklab.lib import api; api.<name>). Each part:
                      resolve_check() (POST /api/shopping/check: a received delivery's check marked done)
     shopping_queue.py POST /api/shopping/queue: save_queue_state(), moving one queued card
                      between the existing purchase categories, with an expected inventory revision
+    shopping_queue_missing.py POST /api/shopping/queue/missing: review_missing(), a home deck's
+                     missing Planned cards to queue; save_queue_state's add_many saves them (E5-S25)
     receipts.py      the Receipts page: receipt_view(), preview_receipt(), apply_receipt(), on
                      lib/inventory/receive.py (shared with python -m decklab.db receive)
     assembly.py      the packing plan (Plan decks): assembly_view(), assembly_preview(), over
@@ -200,6 +211,8 @@ called as before (from decklab.lib import api; api.<name>). Each part:
     simulations.py   who may start Forge runs (the mode, in the state store) and the worker limit
     play_records.py  played games and sideboard plans (the state store): play_overview(),
                      save_game(), save_sideboard(). Imported when first asked, as tokens.py
+    play_tonight.py  tonight's pairs (E1-S28): pairs_view(), GET /api/play/pairs, over
+                     lib/play_pairs.py's suggest(). Imported when first asked, as tokens.py
     activity.py      the Activity page: activity_view(), the audit trail filtered for each
                      viewer (visible_change). Imported when first asked, as tokens.py. Its rows'
                      words are activity_summaries.py's, its headlines activity_headlines.py's

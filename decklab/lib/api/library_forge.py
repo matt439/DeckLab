@@ -41,28 +41,50 @@ def _stamp(folder):
     return count, newest, size
 
 
+def _options(seen):
+    public = frozenset(guard.public_deck_spaces())
+    return public, {"space": seen.space or "home", "public": lambda space: space in public, "visible": seen.deck,
+                    "product_notes": seen.everything or seen.space == "home"}
+
+
+def _cached(name, seen, forge, work):
+    """work(forge, options) for this viewer's field, cached as the module docstring says (name: which answer)."""
+    public, options = _options(seen)
+    lists = forge.field.field_lists(FORMAT, **options)
+    fingerprint = (tuple((e["id"], e["version"], e["card_sha"]) for e in lists),
+                   _stamp(forge.common._results_dir(None)))
+    key = (name, seen.space, seen.everything, public)
+    with _lock:
+        hit = _cache.get(key)
+    if hit and hit[0] == fingerprint and time.monotonic() - hit[1] < CACHE_S:
+        return hit[2]
+    found = work(forge, {**options, "keep": lambda result: seen.result(forge, result)})
+    with _lock:
+        _cache[key] = (fingerprint, time.monotonic(), found)
+    return found
+
+
+def pair_rates():
+    """({(deck id, deck id): {"value", "games", "versions"}}, None) of the Constructed field's saved pairs this viewer
+    sees (forge.field.pair_rates, cached), for tonight's pairs (E1-S28); ({}, NO_NUMBERS) when they can't
+    be worked out."""
+    try:
+        forge = forge_runs._forge_module()
+        seen = forge_runs._Seen()
+        found = _cached("pairs", seen, forge, lambda forge, options: forge.field.pair_rates(FORMAT, **options))
+    except Exception:
+        common._log(f"The Forge pair numbers can't be worked out:\n{traceback.format_exc()}")
+        return {}, NO_NUMBERS
+    return {pair: rate for pair, rate in found.items() if seen.deck(pair[0]) and seen.deck(pair[1])}, None
+
+
 def library_forge_view():
     """GET /api/library/forge: see the module's docstring. The deck-read policy applies: only decks the viewer
     sees, over a field of decks they see; error is NO_NUMBERS (and decks {}) when they can't be worked out."""
     forge = forge_runs._forge_module()
     seen = forge_runs._Seen()
-    public = frozenset(guard.public_deck_spaces())
-    options = {"space": seen.space or "home", "public": lambda space: space in public, "visible": seen.deck,
-               "keep": lambda result: seen.result(forge, result),
-               "product_notes": seen.everything or seen.space == "home"}
     try:
-        lists = forge.field.field_lists(FORMAT, **{k: v for k, v in options.items() if k != "keep"})
-        fingerprint = (tuple((e["id"], e["version"], e["card_sha"]) for e in lists),
-                       _stamp(forge.common._results_dir(None)))
-        key = (seen.space, seen.everything, public)
-        with _lock:
-            hit = _cache.get(key)
-        if hit and hit[0] == fingerprint and time.monotonic() - hit[1] < CACHE_S:
-            found = hit[2]
-        else:
-            found = forge.field.averages(FORMAT, **options)
-            with _lock:
-                _cache[key] = (fingerprint, time.monotonic(), found)
+        found = _cached("averages", seen, forge, lambda forge, options: forge.field.averages(FORMAT, **options))
     except Exception:
         common._log(f"The library's Forge numbers can't be worked out:\n{traceback.format_exc()}")
         return {"decks": {}, "error": NO_NUMBERS}

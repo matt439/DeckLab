@@ -14,7 +14,7 @@ Caverns), and cardlog-failed-cast-s5.log for one with a failed cast (see cardlog
 beside them). fixtures/fake_forge.py --card-log is run as a process for whole batches.
 No Java is needed.
 
-Run from the repo root: python -m unittest decklab.tests.test_forge_cardlog
+Run from the repo root: python scripts/test_fixtures.py decklab.tests.test_forge_cardlog
 """
 import os
 import subprocess

@@ -3,7 +3,7 @@ section 5): decklab/simulation.json read and checked (a bad entry left out whole
 pilot on its entry, check_switches, the words, Deck Lab's AI profiles and their folder for Java,
 the request's -a and -dlpilot (runner.request_args), and the pilots command.
 
-Run from the repo root: python -m unittest discover -s decklab/tests -t .
+Run from the repo root: python scripts/test_fixtures.py
 """
 import json
 from unittest import mock

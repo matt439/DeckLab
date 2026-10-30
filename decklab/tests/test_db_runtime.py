@@ -6,7 +6,9 @@ The pure parts (who sees what in dbstatus.view) run anywhere. The rest need the 
 PostgreSQL server and skip without it (db_support.py); each class works in its own throwaway
 database and temporary folders, never the real decklab database, export repo or wishlists.
 
-Run from the repo root: python -m unittest decklab.tests.test_db_runtime
+Run from the repo root: python scripts/test_fixtures.py decklab.tests.test_db_runtime
+The fixture runner disables configured PostgreSQL and real Forge; named native
+runtime cases also need separate qualification (see AGENTS.md, Tests).
 """
 import json
 import os

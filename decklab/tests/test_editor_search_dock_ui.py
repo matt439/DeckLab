@@ -290,7 +290,9 @@ class EditorSearchDockUiTests(unittest.TestCase):
           createTargets=()=>[{space:'home',player:'wife'},{space:'other'}];
           window.matchMedia('(min-width: 600px)').matches=true;window.matchMedia('(min-width: 1000px)').matches=false;
           startEditor({mode:'new',kind:'casual',restoreDraft:false});ed=editor;focusSearch();const ac=ed.ac,dock=ed.dom.searchDock;
-          let resolve;api=()=>new Promise(r=>resolve=r);ac.input.value=elves.name;const pending=lookUp(ac,elves.name);
+          // Whose deck reads that space's draft kept for later (E2-S16): answered as a server without its migration.
+          let resolve;api=path=>path.startsWith('/api/deck/new-draft?')?Promise.resolve({available:false})
+            :new Promise(r=>resolve=r);ac.input.value=elves.name;const pending=lookUp(ac,elves.name);
           const other=ed.space==='home'?'other':'home';main.querySelector(`[data-space="${other}"]`).click();
           resolve({cards:[elves],pages:1});await pending;
           assert.equal(ed.space,other);assert.equal(ed.ac,ac);assert.equal(ed.dom.searchDock,dock);

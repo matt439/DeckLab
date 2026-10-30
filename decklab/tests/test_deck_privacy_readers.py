@@ -16,7 +16,7 @@ missing one (404 "No deck <id>"), checked before any 403 or 409.
   items, only an admin stopping a run, and a field run or test of another space's deck with the
   same list (its job, last run and budgets, and the via of a matchup it plays) never shown.
 
-Run from the repo root: python -m unittest decklab.tests.test_deck_privacy_readers
+Run from the repo root: python scripts/test_fixtures.py decklab.tests.test_deck_privacy_readers
 """
 import json
 import types
@@ -38,6 +38,7 @@ USER1 = {"id": "user1", "name": "User1", "plays_as": "wife", "role": "member", "
 USER2 = {"id": "user2", "name": "User2", "role": "member", "space": "user2"}
 RETIRED = "casual/retired-test"
 MISSING = "casual/never-was"
+HIDDEN = "User2's hidden list"
 R_DECK_ID = "user2/casual/r-elves"
 
 
@@ -299,6 +300,32 @@ class ForgeFilterTests(MatchupTestCase):
         self.assertTrue(whole)
         out, lists, whole = field_page._seen_field(found, fields, forge_runs._Seen(USER2))
         self.assertEqual(([o["id"] for o in out["opponents"]], [e["id"] for e in lists]), ([R_DECK_ID], [R_DECK_ID]))
+
+    def test_the_overview_s_pilot_counts_only_results_the_viewer_sees(self):
+        # GET /api/field?pilot=1 (E1-S12) hands forge.list_ai the request viewer's keep: a home
+        # result counts for User1, one with User2's deck on the other side doesn't, and User2
+        # (whose own list is shown) sees neither.
+        from decklab.tests.test_field_api import FakeFieldPart
+        self.forge.field = FakeFieldPart(self.forge)
+        self.forge.estimate = types.SimpleNamespace(minutes=lambda pairs: None)
+        gruul = {"card_sha": "a" * 64, "seen_as": [{"id": GRUUL_ID, "version": "target", "title": "Gruul Test"}]}
+        home = {"sides": [gruul, {"card_sha": "b" * 64,
+                                  "seen_as": [{"id": GRUUL_ID, "version": "owned", "title": "Gruul Test"}]}]}
+        mixed = {"sides": [gruul, {"card_sha": "c" * 64,
+                                   "seen_as": [{"id": R_DECK_ID, "version": "target", "title": HIDDEN}]}]}
+        kept = []
+
+        def list_ai(sections, kind, results_dir=None, pilot=None, *, keep=None):
+            kept.append([keep(home), keep(mixed)])
+            return {"pilot": {"poor": True, "why": "cards", "cards": []}}
+        with mock.patch.object(self.forge, "list_ai", list_ai):
+            with _as("user1"):
+                answer = api.field_view(GRUUL_ID, "target", pilot=True)
+            with _as("user2"):
+                api.field_view(R_DECK_ID, "target", pilot=True)
+        self.assertEqual(answer["pilot"]["poor"], True)
+        self.assertEqual(kept, [[True, False], [False, False]])
+        self.assertNotIn(HIDDEN, json.dumps(answer))
 
     def test_a_last_run_of_another_space_s_deck_isnt_shown(self):
         # The last run's note is kept by the list's card_sha: a home deck's, for User2's copy of its list.

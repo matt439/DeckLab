@@ -1,4 +1,8 @@
-"""Australian shop prices for the purchase queue (E5-S08, first slice: MTGMate only).
+"""Australian shop prices for the purchase queue (E5-S08; MTGMate is the one shop so far).
+
+The shop-specific part is an adapter (base.py's interface; mtgmate.py, ADAPTERS below): where
+a shop's page of a card name is and how to read it. This package does the rest the same for any
+shop: asks politely (Session), keeps the snapshot file and matches the queue's rows.
 
 Once a day at most, `snapshot` looks up each distinct card name on the purchase queue
 (the watchlist: its rows only). The nightly step also includes confirmed missing names
@@ -14,11 +18,11 @@ what the shop listed in decklab/data/shops/mtgmate.json (snapshot_path(), gitign
 "previous" is the snapshot before (its names that were read), so a row can say it is newly
 in stock. Prices are MTGMate's own, in AUD (a listing's price None when it showed none).
 
-How it asks: one request per card name, MTGMate's page of every printing with that name
-(NAME_PATH, the same page its card links lead to), never its search (robots.txt disallows
-/cards/search). robots.txt is read first on every run; a path it disallows is never fetched,
-and its Crawl-delay (60 seconds when this was written) spaces the requests, so a queue of 30
-names takes about half an hour. A failure, a timeout or an unreadable page leaves that name's
+How it asks: one request per card name, the shop's page of every printing with that name
+(the adapter's name_url; MTGMate's NAME_PATH, the same page its card links lead to), never its
+search (MTGMate's robots.txt disallows /cards/search). robots.txt is read first on every run;
+a path it disallows is never fetched, and its Crawl-delay (60 seconds when this was written)
+spaces the requests, so a queue of 30 names takes about half an hour. A failure, a timeout or an unreadable page leaves that name's
 price unknown ("error"), never a converted US price; three failures in a row stop the run
 and leave the rest unknown. The nightly task gives a run NIGHTLY_BUDGET of requests at
 robots.txt's delay: the names least recently read go first, and those it doesn't reach keep
@@ -37,50 +41,40 @@ Shopping only reads the file (match() below), so a page load never reaches the s
 """
 import argparse
 import contextlib
-import html.parser
 import json
 import os
 import sys
 import time
-import urllib.error
 import urllib.parse
-import urllib.request
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from decklab.lib import config
+from decklab.lib.shops import mtgmate
+from decklab.lib.shops.base import (FINISHES, LISTING_FIELDS, MAX_PAGE, TIMEOUT, USER_AGENT,  # noqa: F401 (the package's names)
+                                    Adapter, Disallowed, ShopError, allowed, fetch_page, robots_rules)
+from decklab.lib.shops.mtgmate import NAME_PATH, name_url, parse_name_page  # noqa: F401 (as before the split)
 
 if sys.platform == "win32":
     import msvcrt
 else:
     import fcntl
 
-SHOP = "MTGMate"
-SITE = "https://www.mtgmate.com.au"
-ROBOTS_PATH = "/robots.txt"
-NAME_PATH = "/cards/"                       # + the card name, quoted whole ("Sol%20Ring")
-USER_AGENT = config.USER_AGENT + " purchase-queue price check"
+ADAPTERS = {adapter.key: adapter for adapter in (mtgmate.ADAPTER,)}
+ADAPTER = ADAPTERS["mtgmate"]               # the shop the snapshot reads (the only one so far)
+SHOP = ADAPTER.name
+SITE = ADAPTER.site
+ROBOTS_PATH = ADAPTER.robots_path
 SNAPSHOT = None                             # a test's own path; else snapshot_path()
 SNAPSHOT_ENV = "DECKLAB_SHOP_SNAPSHOT"      # the test run's (decklab/tests/__init__.py): never the real file
 MIN_AGE = timedelta(hours=20)               # "daily": a nightly run a little early still counts
 DEFAULT_DELAY = 60                          # seconds between requests when robots.txt names none
 MIN_DELAY = 10                              # never faster than this, whatever robots.txt says
-TIMEOUT = 30
-MAX_PAGE = 5 * 1024 * 1024
 MAX_FAILURES = 3                            # failures in a row before the shop counts as down
 LOCK_AT = 1 << 20                           # the lock file's byte locked (as lib/forge/slots.py)
 NIGHTLY_BUDGET = 45 * 60                    # seconds of requests a night: the task stops after two (schedule.py)
 MAX_SNAPSHOT_NAMES = 5000                   # optional queue + home-missing union; never truncates queued intent
 MISSING_UNAVAILABLE = "Saved home missing names could not be confirmed; the purchase queue is unchanged."
-FINISHES = {"nonfoil", "foil", "etched"}
-
-
-class ShopError(Exception):
-    """A request or page that couldn't be read; its words are safe to show."""
-
-
-class Disallowed(ShopError):
-    """robots.txt disallows the path: nothing is fetched."""
 
 
 def _now():
@@ -99,145 +93,20 @@ def _parse_iso(value):
     return moment if moment.tzinfo else None
 
 
-# --- robots.txt --------------------------------------------------------------------------
-
-def robots_rules(text, agent="decklab"):
-    """(disallowed path prefixes, allowed prefixes, crawl delay or None) for agent: every group
-    naming "*" or the agent, merged (MTGMate's file has two "*" groups, and Python's
-    urllib.robotparser keeps only the first, which would miss its Disallow and Crawl-delay)."""
-    disallow, allow, delays = [], [], []
-    agents, in_rules, applies = [], False, False
-    for raw in text.splitlines():
-        line = raw.split("#", 1)[0].strip()
-        if not line or ":" not in line:
-            continue
-        key, value = (part.strip() for part in line.split(":", 1))
-        key = key.lower()
-        if key == "user-agent":
-            if in_rules:
-                agents, in_rules = [], False
-            agents.append(value.lower())
-            applies = any(name == "*" or (name and name in agent.lower()) for name in agents)
-            continue
-        in_rules = True
-        if not applies:
-            continue
-        if key == "disallow" and value:
-            disallow.append(value)
-        elif key == "allow" and value:
-            allow.append(value)
-        elif key == "crawl-delay":
-            try:
-                delays.append(float(value))
-            except ValueError:
-                pass
-    return disallow, allow, (max(delays) if delays else None)
-
-
-def allowed(path, rules):
-    """True when robots.txt lets path be fetched: the longest matching rule wins, a Disallow on a tie."""
-    disallow, allow, _ = rules
-    longest_no = max((len(rule) for rule in disallow if path.startswith(rule)), default=-1)
-    longest_yes = max((len(rule) for rule in allow if path.startswith(rule)), default=-1)
-    return longest_no < 0 or longest_yes > longest_no
-
-
 # --- fetching ----------------------------------------------------------------------------
 
-def _fetch(url):
+def _fetch(url, shop=SHOP):
     """The page's text (the tests replace this). ShopError for anything that isn't a page."""
-    request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT, "Accept": "text/html,text/plain"})
-    try:
-        with urllib.request.urlopen(request, timeout=TIMEOUT) as response:
-            body = response.read(MAX_PAGE + 1)
-    except urllib.error.HTTPError as error:
-        raise ShopError(f"{SHOP} answered {error.code}") from None
-    except (urllib.error.URLError, OSError, TimeoutError) as error:
-        reason = getattr(error, "reason", error)
-        raise ShopError(f"{SHOP} couldn't be reached ({type(reason).__name__})") from None
-    if len(body) > MAX_PAGE:
-        raise ShopError(f"{SHOP}'s page was too big to read")
-    return body.decode("utf-8", errors="replace")
-
-
-def name_url(name):
-    return SITE + NAME_PATH + urllib.parse.quote(name, safe="")
-
-
-class _Table(html.parser.HTMLParser):
-    """The props of MTGMate's FilterableTable: the listings the name page shows."""
-
-    def __init__(self):
-        super().__init__(convert_charrefs=True)
-        self.props = None
-
-    def handle_starttag(self, tag, attrs):
-        attrs = dict(attrs)
-        if self.props is None and attrs.get("data-react-class") == "FilterableTable":
-            self.props = attrs.get("data-react-props")
-
-
-def _number(link_path):
-    """The collector number in a link like /cards/Sol_Ring/C16/272 (or .../887:foil)."""
-    if not isinstance(link_path, str):
-        return ""
-    last = link_path.rstrip("/").rsplit("/", 1)[-1]
-    return urllib.parse.unquote(last.split(":", 1)[0])
-
-
-def _price(cents):
-    if isinstance(cents, bool) or not isinstance(cents, int) or cents < 0:
-        return None
-    return f"{cents / 100:.2f}"
-
-
-def _base_name(value):
-    """MTGMate's name without its variant label: "Sol Ring (Borderless 1011)" is Sol Ring."""
-    text = str(value or "").strip()
-    if text.endswith(")") and " (" in text:
-        text = text[:text.rindex(" (")]
-    return text.casefold()
-
-
-def parse_name_page(text, name):
-    """The listings on MTGMate's page of a name: [] when the page has none (no such card there).
-    ShopError when the page isn't the one expected (MTGMate changed its pages)."""
-    if "No matches for" in text and "FilterableTable" not in text:
-        return []
-    parser = _Table()
-    parser.feed(text)
-    if parser.props is None:
-        raise ShopError(f"{SHOP}'s page for {name} didn't have its usual card table")
-    try:
-        props = json.loads(parser.props)
-        entries = props["uuid"].values()
-    except (ValueError, KeyError, TypeError, AttributeError):
-        raise ShopError(f"{SHOP}'s card table for {name} couldn't be read") from None
-    wanted = {name.casefold(), name.split(" // ", 1)[0].casefold()}
-    listings = []
-    for entry in entries:
-        if not isinstance(entry, dict) or (str(entry.get("name", "")).strip().casefold() not in wanted
-                                           and _base_name(entry.get("name")) not in wanted):
-            continue
-        finish = str(entry.get("finish", "")).lower()
-        stock = entry.get("quantity")
-        link = entry.get("link_path")
-        listings.append({
-            "set": str(entry.get("set_code", "")).lower(), "number": _number(link),
-            "finish": finish if finish in FINISHES else finish or "unknown",
-            "price": _price(entry.get("price")),
-            "stock": stock if isinstance(stock, int) and not isinstance(stock, bool) and stock >= 0 else 0,
-            "condition": str(entry.get("condition") or ""),
-            "url": SITE + link if isinstance(link, str) and link.startswith("/cards/") else name_url(name)})
-    listings.sort(key=lambda item: (item["set"], item["number"], item["finish"], item["condition"]))
-    return listings
+    return fetch_page(url, shop)
 
 
 class Session:
-    """robots.txt read once, then requests spaced by its crawl delay."""
+    """One shop's robots.txt read once, then requests spaced by its crawl delay."""
 
-    def __init__(self, fetch=None, sleep=None, clock=None):
-        self.fetch, self.sleep, self.clock = fetch or _fetch, sleep or time.sleep, clock or time.monotonic
+    def __init__(self, fetch=None, sleep=None, clock=None, adapter=None):
+        self.adapter = adapter or ADAPTER
+        self.fetch = fetch or (lambda url: _fetch(url, self.adapter.name))
+        self.sleep, self.clock = sleep or time.sleep, clock or time.monotonic
         self.rules, self.delay, self.last = None, DEFAULT_DELAY, None
 
     def _wait(self):
@@ -249,31 +118,31 @@ class Session:
 
     def start(self):
         self._wait()
-        self.rules = robots_rules(self.fetch(SITE + ROBOTS_PATH))
+        self.rules = robots_rules(self.fetch(self.adapter.robots_url()))
         delay = self.rules[2]
         self.delay = max(MIN_DELAY, delay if delay is not None else DEFAULT_DELAY)
 
     def listings(self, name):
         if self.rules is None:
             self.start()
-        url = name_url(name)
+        url = self.adapter.name_url(name)
         if not allowed(urllib.parse.urlsplit(url).path, self.rules):
-            raise Disallowed(f"{SHOP}'s robots.txt doesn't allow {urllib.parse.urlsplit(url).path}")
+            raise Disallowed(f"{self.adapter.name}'s robots.txt doesn't allow {urllib.parse.urlsplit(url).path}")
         self._wait()
-        return parse_name_page(self.fetch(url), name)
+        return self.adapter.parse_name_page(self.fetch(url), name)
 
 
 # --- the snapshot file ---------------------------------------------------------------------
 
 def snapshot_path():
-    """decklab/data/shops/mtgmate.json in this checkout (gitignored), worked out at call time;
-    DECKLAB_SHOP_SNAPSHOT names another file (the test run's own, which doesn't exist, so no
-    test reads the PC's real snapshot)."""
+    """decklab/data/shops/mtgmate.json (the adapter's key) in this checkout (gitignored), worked
+    out at call time; DECKLAB_SHOP_SNAPSHOT names another file (the test run's own, which
+    doesn't exist, so no test reads the PC's real snapshot)."""
     if SNAPSHOT:
         return Path(SNAPSHOT)
     if os.environ.get(SNAPSHOT_ENV):
         return Path(os.environ[SNAPSHOT_ENV])
-    return Path(config.REPO) / "decklab" / "data" / "shops" / "mtgmate.json"
+    return Path(config.REPO) / "decklab" / "data" / "shops" / f"{ADAPTER.key}.json"
 
 
 def load(path=None):
@@ -334,6 +203,7 @@ def take(names, *, session=None, previous=None, now=None, progress=None, budget=
     snapshot before read, with its time ("carried"), else is unknown. started(delay) is told
     the delay robots.txt gave, once it's read."""
     session = session or Session()
+    shop = getattr(session, "adapter", ADAPTER)
     now = now or _now
     begun = now()
     cards_out, failures, stop = {}, 0, None
@@ -373,7 +243,7 @@ def take(names, *, session=None, previous=None, now=None, progress=None, budget=
             failures += 1
             cards_out[name] = {"status": "error", "at": _iso(now()), "listings": [], "error": str(error)}
             if failures >= MAX_FAILURES:
-                stop = f"{SHOP} failed {failures} times in a row"
+                stop = f"{shop.name} failed {failures} times in a row"
         else:
             failures = 0
             cards_out[name] = {"status": "ok" if listings else "not_listed", "at": _iso(now()), "listings": listings}
@@ -383,7 +253,7 @@ def take(names, *, session=None, previous=None, now=None, progress=None, budget=
     for name, entry in ((previous or {}).get("cards") or {}).items():
         if isinstance(entry, dict) and entry.get("status") in ("ok", "not_listed"):
             kept[name] = {"at": entry.get("at"), "listings": entry.get("listings") or []}
-    return {"version": 1, "shop": SHOP, "site": SITE, "started_at": _iso(begun), "fetched_at": _iso(now()),
+    return {"version": 1, "shop": shop.name, "site": shop.site, "started_at": _iso(begun), "fetched_at": _iso(now()),
             "crawl_delay": session.delay, "cards": cards_out, "previous": kept}
 
 
@@ -485,11 +355,15 @@ def _queue():
         return [{key: row.text(key) for key in purchases.QUEUE_FIELDS} for row in inventory.current().watchlist.rows]
 
 
+def _lock_path():
+    return snapshot_path().with_name(f"{ADAPTER.key}.lock")
+
+
 def _lock():
     """The open lock file's descriptor once this process holds its OS lock, else None. The OS
     lets go of it however the process ends (a nightly task stopped at its time limit too), so a
     killed run never blocks the next; the file itself stays."""
-    lock = snapshot_path().with_name("mtgmate.lock")
+    lock = _lock_path()
     lock.parent.mkdir(parents=True, exist_ok=True)
     fd = os.open(lock, os.O_RDWR | os.O_CREAT | getattr(os, "O_BINARY", 0), 0o666)
     try:
@@ -562,7 +436,7 @@ def refresh(*, force=False, say=print, progress=True, session=None, budget=None,
             return 0
         lock = _lock()
         if lock is None:
-            say(f"Another {SHOP} snapshot is running ({snapshot_path().with_name('mtgmate.lock')}).")
+            say(f"Another {SHOP} snapshot is running ({_lock_path()}).")
             return 1
         try:
             if include_missing:
@@ -697,6 +571,3 @@ def main(argv=None):
     args = parser.parse_args(argv)
     return args.func(args)
 
-
-if __name__ == "__main__":
-    sys.exit(main())

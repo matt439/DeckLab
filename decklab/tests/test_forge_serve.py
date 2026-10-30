@@ -10,6 +10,7 @@ They need Forge and a Java JDK, so they run only with DECKLAB_FORGE_TESTS=1, and
 source (as cardlog-check builds it), in the data folder. The same checks without Java, against
 the fake Forge's serve mode, are test_forge_contract's FakeServeTests and test_forge_servecheck.
 
+Real-Forge qualification requires separate explicit authorization; the default fixture runner disables it.
 Run from the repo root: python -m unittest decklab.tests.test_forge_serve
 """
 import os

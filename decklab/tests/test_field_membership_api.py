@@ -33,6 +33,7 @@ class FieldMembershipApiTests(unittest.TestCase):
             (api.lists, "one_snapshot", mock.Mock(side_effect=self.snapshot)),
             (api.membership, "view", mock.Mock(side_effect=self.read)),
             (api.common, "_log", mock.Mock()),
+            (api.field_choices, "editable", mock.Mock(return_value=False)),
         ):
             patcher = mock.patch.object(target, name, value)
             patcher.start()
@@ -43,7 +44,8 @@ class FieldMembershipApiTests(unittest.TestCase):
                 "format": "Commander" if self.entry["kind"] == "commander" else "Constructed",
                 "rows": [{"id": "user2/casual/other", "title": "Other", "kind": "casual", "version": "target",
                           "card_sha": "b" * 64, "in_field": True, "opponent": True, "reason": "Included by the rules."}],
-                "counts": {"included": 1, "opponents": 1, "manual_excluded": 0}, "complete": True, "error": None}
+                "counts": {"included": 1, "opponents": 1, "manual_excluded": 0}, "complete": True, "error": None,
+                "can_edit": False}
 
     def require(self, deck_id):
         self.assertEqual(self.depth, 1)
@@ -78,7 +80,9 @@ class FieldMembershipApiTests(unittest.TestCase):
         self.assertEqual(set(options), {"space", "public", "visible", "product_notes"})
         self.assertIs(options["visible"], self.seen.deck)
         self.events.append(("read",))
-        return copy.deepcopy(self.answer)
+        answer = copy.deepcopy(self.answer)
+        answer.pop("can_edit", None)     # added by the API, never by the membership model
+        return answer
 
     def test_raw_alias_is_guarded_before_resolution_and_every_read_uses_one_snapshot(self):
         raw = "user2/casual/former"
@@ -205,6 +209,24 @@ class FieldMembershipApiTests(unittest.TestCase):
         self.assertEqual(answer, self.answer)
         self.assertEqual(answer["format"], "Commander")
         self.assertTrue(answer["complete"])
+
+
+    def test_can_edit_is_asked_for_the_fields_space_and_relayed_on_success_and_failure(self):
+        for base_id, space in (("casual/base", "home"), ("user2/casual/base", "user2")):
+            with self.subTest(base_id=base_id):
+                self.entry["id"] = base_id
+                self.answer = self.success()
+                api.field_choices.editable.reset_mock()
+                api.field_choices.editable.return_value = space == "home"
+                answer = api.membership_view(base_id)
+                api.field_choices.editable.assert_called_once_with(space)
+                self.assertIs(answer["can_edit"], space == "home")
+        api.membership.view.side_effect = RuntimeError("private fixture")
+        api.field_choices.editable.return_value = True
+        self.entry["id"] = "casual/base"
+        answer = api.membership_view("casual/base")
+        self.assertFalse(answer["complete"])
+        self.assertIs(answer["can_edit"], True)
 
 
 class FixtureHandler:

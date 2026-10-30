@@ -6,7 +6,7 @@ Each test builds a small magic/ tree in a temp folder with a config.json that
 lists one person space (user2) and points decks, pool and tokens at it.
 Names resolve against the fixture card index (fixtures/default_cards.jsonl).
 
-Run from the repo root: python -m unittest discover -s decklab/tests -t .
+Run from the repo root: python scripts/test_fixtures.py
 """
 import json
 import unittest
@@ -275,7 +275,7 @@ class PersonTokenTests(SpaceTestCase):
         self.assertEqual([r["front"] for r in tokens.read(space="user2").rows], ["Elf Warrior"])
         inv, inc, problems = tokens.for_space("user2")
         self.assertEqual(([r["front"] for r in inv.rows], inc, problems), (["Elf Warrior"], [], []))
-        self.assertEqual(tokens.label_for("user2"), "magic/people/user2/tokens.csv")
+        self.assertEqual(tokens.label_for("user2"), "user2's token cards")
         with self.assertRaises(spaces.SpaceNotFound):
             tokens.read(space="user3")
 
@@ -283,8 +283,9 @@ class PersonTokenTests(SpaceTestCase):
         self.assertEqual(tokens.read(space="user2").rows, [])
         self.people.mkdir(parents=True)
         (self.people / "tokens.csv").write_text("front,back\n", encoding="utf-8")
-        self.assertIn("magic/people/user2/tokens.csv line 1", tokens.read(space="user2").problems[0])
-        self.assertTrue(any("magic/people/user2/tokens.csv" in p for p in tokens.check(space="user2")))
+        self.assertIn("User2's token cards' columns must be", tokens.read(space="user2").problems[0])
+        self.assertTrue(any("User2's token cards" in p for p in tokens.check(space="user2")))
+        self.assertFalse(any("magic/" in p for p in tokens.check(space="user2")))
 
     def test_holders_stay_in_their_space(self):
         self.deck("home-built", "Home Built", "built", "Deck\n4 Llanowar Elves\n")

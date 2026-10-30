@@ -175,19 +175,27 @@ def _snapshot(deck_id, version):
     summary, source = _deck_sections(deck_id, version)
     if is_half(summary):
         raise ApiError(400, "Choose a complete deck or Beginner Box pairing")
-    sections = {}
-    for section, lines in source.items():
-        sections[section] = []
+    for lines in source.values():
         for line in lines:
             if not decks.is_basic_land(line.name) and cards.resolve(line.name) != line.name:
                 raise ApiError(400, f"{summary['title']} has a non-canonical card name: {line.name}")
-            sections[section].append({"qty": line.quantity, "name": line.name,
-                                      "set": line.set, "number": line.number,
-                                      "finish": line.finish})
+    sections = snapshot_sections(source)
     if not sections.get("Deck"):
         raise ApiError(400, "Choose a deck with a main deck")
     payload = {"id": summary["id"], "version": version, "sections": sections}
     return {**payload, "title": summary["title"], "sha256": _hash(_bytes(payload))}
+
+
+def snapshot_sections(source):
+    """A decklist's ({section: [DeckLine]}) sections as a game's side records them."""
+    return {section: [{"qty": line.quantity, "name": line.name, "set": line.set, "number": line.number,
+                       "finish": line.finish} for line in lines] for section, lines in source.items()}
+
+
+def snapshot_sha(deck_id, version, source):
+    """The sha256 a game's side would record for this decklist under deck_id (library_played's
+    "since" finds the list a game was played with by it)."""
+    return _hash(_bytes({"id": deck_id, "version": version, "sections": snapshot_sections(source)}))
 
 
 NO_RECORD = "No play record {!r}"

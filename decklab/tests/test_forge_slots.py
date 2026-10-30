@@ -9,7 +9,7 @@ Every test points DECKLAB_FORGE_SLOTS at a folder of its own (the test package a
 points it away from the PC's real one: decklab/tests/__init__.py). The runs use the fake
 Forge of test_forge.py, whose setUpModule and tearDownModule these tests share.
 
-Run from the repo root: python -m unittest decklab.tests.test_forge_slots
+Run from the repo root: python scripts/test_fixtures.py decklab.tests.test_forge_slots
 """
 import _thread
 import gc

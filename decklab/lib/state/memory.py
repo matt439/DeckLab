@@ -70,9 +70,10 @@ class MemoryStore:
     None starts with none set, so the real default applies. field_source is an
     explicit fixture provider: locked(deck_id) yields a fresh raw deck capture
     while retaining its identity lock through a field-policy write. No provider
-    ever falls back to configured inventory."""
+    ever falls back to configured inventory. drafts_missing starts it as a database without
+    migrations 0018 and 0019 (deck_drafts_ready False): every draft call raises deck_drafts.MissingSchema."""
 
-    def __init__(self, mode="everyone", *, field_source=None):
+    def __init__(self, mode="everyone", *, field_source=None, drafts_missing=False):
         self._lock = threading.RLock()
         self.down = False
         self._wishlists = {}        # profile id -> [wishlist_entry rows] in position order
@@ -84,6 +85,9 @@ class MemoryStore:
         self._commander_night = None  # singleton row, kept with a revision when notes are cleared
         self._field_policies = {}   # format -> audited {format, revision, content: {v, rules}} row
         self._field_source = field_source
+        self._deck_drafts = {}      # (profile, deck, version) -> deck_draft row (not audited, never batched)
+        self._new_deck_drafts = {}  # (profile, space, source) -> new_deck_draft row, the same
+        self.deck_drafts_ready = not drafts_missing   # False: as before migration 0018
         self._visibility = {}       # (owner, thing) -> Public row; no row means Private
         self._visibility_last = {}
         self._visibility_when = None
@@ -312,6 +316,58 @@ class MemoryStore:
                 self._log(actor, message, None, rows)
             return [key for key in ids if key in self._packing]
 
+    # ------------------------------------------------------------------ editor drafts kept for later
+
+    def _drafts(self):
+        self._check()
+        if not self.deck_drafts_ready:
+            from .deck_drafts import MIGRATE, MissingSchema
+            raise MissingSchema(MIGRATE)
+
+    def deck_draft(self, profile_id, deck_id, version):
+        """PgStore.deck_draft(): the draft as deck_drafts.view gives it."""
+        from . import deck_drafts
+        return self._draft_get(self._deck_drafts, deck_drafts.key(profile_id, deck_id, version))
+
+    def deck_draft_put(self, profile_id, deck_id, version, content, expected_revision, *, device=""):
+        """PgStore.deck_draft_put(): save or discard after the revision check, with no change set."""
+        from . import deck_drafts
+        return self._draft_put(self._deck_drafts, deck_drafts.key(profile_id, deck_id, version), content,
+                               expected_revision, device)
+
+    def new_deck_draft(self, profile_id, space_id, source):
+        """PgStore.new_deck_draft(): a new deck's draft, as deck_draft."""
+        from . import deck_drafts
+        return self._draft_get(self._new_deck_drafts, deck_drafts.new_key(profile_id, space_id, source))
+
+    def new_deck_draft_put(self, profile_id, space_id, source, content, expected_revision, *, device=""):
+        """PgStore.new_deck_draft_put(): as deck_draft_put."""
+        from . import deck_drafts
+        return self._draft_put(self._new_deck_drafts, deck_drafts.new_key(profile_id, space_id, source), content,
+                               expected_revision, device)
+
+    def _draft_get(self, table, key):
+        from . import deck_drafts
+        with self._lock:
+            self._drafts()
+            return deck_drafts.view(table.get(key))
+
+    def _draft_put(self, table, key, content, expected_revision, device):
+        from . import deck_drafts
+        content = deck_drafts.content(content)
+        expected = deck_drafts.expectation(expected_revision)
+        device = deck_drafts.device(device)
+        with self._lock:
+            if self._batch is not None:
+                raise Invalid(deck_drafts.INDEPENDENT)
+            self._drafts()
+            before = table.get(key)
+            after = deck_drafts.transition(before, expected, content, device, deck_drafts.stamp())
+            if after is None:
+                return deck_drafts.view(before)
+            table[key] = _jsonb(after)
+            return deck_drafts.view(table[key])
+
     # ------------------------------------------------------------------ the household's Commander night
 
     def commander_night(self):
@@ -432,6 +488,32 @@ class MemoryStore:
                         del self._changes[audit_count:]
                         raise
         except (Invalid, Conflict, Unavailable):
+            raise
+        except Exception:
+            raise Unavailable(source.UNAVAILABLE) from None
+
+    def field_policy_review(self, fmt, deck_id, version):
+        """The reviewed proof of one current list from the fixture provider; writes nothing.
+
+        Like a write it reads only the explicit provider, never configured inventory,
+        and relays none of its diagnostics.
+        """
+        from . import field_policy as policy, field_policy_source as source
+        policy.empty(fmt)
+        with self._lock:
+            self._check()
+            if self._batch is not None:
+                raise Invalid("Field-policy reviews require an independent transaction.")
+        try:
+            try:
+                locked = getattr(self._field_source, "locked", None)
+            except Exception:
+                raise Unavailable(source.UNAVAILABLE) from None
+            if not callable(locked):
+                raise Unavailable(source.UNAVAILABLE)
+            with _field_capture(locked, deck_id) as capture:
+                return source.qualify(capture, version, fmt)
+        except (Invalid, Unavailable):
             raise
         except Exception:
             raise Unavailable(source.UNAVAILABLE) from None

@@ -98,6 +98,9 @@ a.fv-row:hover { border-color: var(--border-strong); }
 .fv-membership-link { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-1) var(--s-3);
   min-height: 44px; overflow-wrap: anywhere; }
 .fv-membership-more { margin-top: var(--s-2); }
+/* A home admin's Change the field (E3-S23): one column of fields, the status beside its buttons. */
+.fv-choices { display: grid; gap: var(--s-2); max-width: 40rem; }
+.fv-choices > p { margin: 0; overflow-wrap: anywhere; }
 
 @media (min-width: 600px) {
   .fv-minis { display: grid; gap: var(--s-2); }

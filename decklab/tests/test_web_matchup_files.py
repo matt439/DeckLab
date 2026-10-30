@@ -529,11 +529,11 @@ class MatchupFileTests(unittest.TestCase):
         section = _function(_scripts(["deck-tools.js"]), "drawDeckMatchups")
         ai = "aiLimitsParts(m.ai, s.title, {deckPage: true, otherSaid: !!otherLine, earlier})"
         self.assertLess(section.index('text: "Head to head"'), section.index(ai))
-        self.assertLess(section.index(ai), section.index("deckCardStats(m, version, {otherSaid: !!otherLine})"))
+        self.assertLess(section.index(ai), section.index("deckCardStats(m, version, {otherSaid: !!otherLine, data})"))
         deck = _function(script, "deckCardStats")
         self.assertIn('el("h3", { text: "How its cards played" })', deck)
         self.assertIn("cardStatsCoverage(stats, true, { otherSaid })", deck)
-        self.assertLess(deck.index("standOutParts(stats)"), deck.index('el("details", { class: "more mu-cards" }'))
+        self.assertLess(deck.index("standOutParts(stats, "), deck.index('el("details", { class: "more mu-cards" }'))
         lead = _function(script, "standOutParts")
         for text in ("r.stuck_share >= STUCK_NOTED", "r.copies_drawn >= STUCK_MIN_COPIES", "slice(0, STUCK_SHOWN)",
                      '"Most often stuck in hand: "', 'status("warn", "Drawn, never cast")', "slice(0, CLEAR_SHOWN)",

@@ -28,7 +28,8 @@ Other DL lines are left alone (the replay check below still catches a move they'
 
 What counts, per game, side and card. A card is a .dck name (LogReader maps logged names
 to the list's, as it does casts); its copies are told apart by id. Ids that are in neither
-seat's DL|deck or DL|commander (tokens, effects) are left out.
+seat's DL|deck or DL|commander (tokens, effects) are left out of the rows; tokens are
+tallied apart (below).
     drawn copy      in the kept hand (DL|hand|1|start, and any copy an opening-hand action
                     moved out of it: check 4), or moved to Hand from any zone at turn 1 or
                     later (tutors and returns count; cards drawn for a mulligan and put back
@@ -56,6 +57,15 @@ seat's DL|deck or DL|commander (tokens, effects) are left out.
     commander       a DL|commander card (never in rows): casts (moves to Stack, from any
                     zone), cast_games and cast_wins (cast at least once, and won), and
                     first_round_sum (the round of its first cast)
+A token's peak (E7-S08, since 2026-10-29): a token is an id in neither seat's lists whose
+move is from "-" (DeckLabSim's "created"; an id first seen moving from a real zone, such as a
+card a wish brings from outside the game, isn't one). Its side is its owner seat's (the
+DL|zone line's), and its name is its logged one as Forge prints it ("Beast Token"; a token
+copy of a card has the card's name), kept from its creation. Per game, side and name, the
+peak is the most of that token on the battlefield at once, replaying its moves to and from
+the Battlefield up to the end lines (as the checks replay the cards'); a token that never
+reached the battlefield (a copied spell, an effect in the Command zone) has none. A peak
+over PEAK_CAP counts as PEAK_CAP, so a runaway combo can't grow the record without end.
 Used, stuck and discarded only count drawn copies, so none is ever more than copies_drawn;
 a game's early copy is a drawn one, so early_games is never more than drawn_games.
 
@@ -103,7 +113,12 @@ The batch record (a batch played without the card log has none):
     {"v": RECORD_VERSION, "games": G, "bad": B, "wins": [w0, w1], "first": [f0, f1],
      "rows": [{name: [drawn_games, drawn_wins, copies_drawn, used, stuck, used_round_sum,
                       other_casts, discarded, early_games, early_wins]}, {...side 1}],
-     "commander": [{name: [cast_games, cast_wins, casts, first_round_sum]}, {...side 1}]}
+     "commander": [{name: [cast_games, cast_wins, casts, first_round_sum]}, {...side 1}],
+     "tokens": [{logged name: [n1, n2, ...]}, {...side 1}]}
+A token's list counts its peaks over the G games: nk is the games whose peak was k (the
+last, k = PEAK_CAP, also those above it); it ends with a non-zero number, and the games
+without the token (G less their sum) had a peak of 0. A record without "tokens" (one kept
+before 2026-10-29, or merged with one) didn't tally them: that isn't "no tokens".
 G and B are the batch's games whose card log passed and failed the checks (G + B is every
 game it finished); wins and first are each side's wins and games played first in those G
 games (a timeout, draw or error is nobody's win). A card with nothing to count in any of
@@ -111,7 +126,9 @@ them has no row. Sides are the result's, never Forge's seats. The versions:
     1   counted a failed cast as a cast: saved.py leaves its records out ("old")
     2   since 2026-10-01: the first 8 numbers of a row
     3   since 2026-10-03 (wave 2): early_games and early_wins added; saved.py pools the 8
-        numbers both share over versions 2 and 3, and the early ones over version 3 only
+        numbers both share over versions 2 and 3, and the early ones over version 3 only;
+        since 2026-10-29 a version 3 record may also have "tokens" (no new version: the
+        rows didn't change, and readers of the rows leave the key alone)
 """
 
 VERSION = "1"                   # the DL|log version this reads
@@ -125,6 +142,7 @@ ROW_FIELDS = ("drawn_games", "drawn_wins", "copies_drawn", "used", "stuck", "use
 COMMANDER_FIELDS = ("cast_games", "cast_wins", "casts", "first_round_sum")
 USED_TO = frozenset(("Stack", "Battlefield"))  # a move there from Hand uses a card (cast or played)
 NOT_OTHER = frozenset(("Hand", "Command"))     # a cast from neither is an "other" cast
+PEAK_CAP = 30                   # a token's peak above this counts as this (the record's "tokens")
 RESTARTED = "the game was restarted (as Karn Liberated does): seat {seat} {what}"
 
 
@@ -137,14 +155,42 @@ def round_of(turn):
 def new_record():
     """A batch's card record before any game (of version RECORD_VERSION)."""
     return {"v": RECORD_VERSION, "games": 0, "bad": 0, "wins": [0, 0], "first": [0, 0],
-            "rows": [{}, {}], "commander": [{}, {}]}
+            "rows": [{}, {}], "commander": [{}, {}], "tokens": [{}, {}]}
+
+
+def _add_peaks(into, peaks):
+    """Add one token's peak counts ([n1, n2, ...]) into another's, number by number (the
+    shorter padded with 0s). into changes."""
+    into.extend([0] * (len(peaks) - len(into)))
+    for i, n in enumerate(peaks):
+        into[i] += n
+
+
+def tokens_less(now, before):
+    """What a record's "tokens" gained since an earlier copy of it ([{name: [n1, ...]}]
+    per side; before may be None): each token whose counts changed, with the difference,
+    its trailing 0s dropped. The warm pool sends a game's part of a chunk's record this
+    way (pool_models._cards_delta)."""
+    was = before or [{}, {}]
+    out = [{}, {}]
+    for side in (0, 1):
+        for name, peaks in now[side].items():
+            old = was[side].get(name, [])
+            less = [n - (old[i] if i < len(old) else 0) for i, n in enumerate(peaks)]
+            while less and not less[-1]:
+                less.pop()
+            if less:
+                out[side][name] = less
+    return out
 
 
 def merge_record(into, record):
     """Add a batch's record (new_record()'s shape) into another of the same version: its
     games, bad, wins and first summed, and each card's and commander's tallies summed number
     by number (a card only one has is copied). into changes; record doesn't. Returns into.
-    The warm pool merges a run's chunks this way. ValueError for records of different
+    The warm pool merges a run's chunks this way. Tokens' peak counts are summed too
+    (_add_peaks) when both records have "tokens"; when either hasn't, the merged record has
+    none, since its games' tokens weren't all tallied. ValueError for records of different
     versions, or a card's tallies of different lengths."""
     if into.get("v") != record.get("v"):
         raise ValueError(f"card records of versions {into.get('v')} and {record.get('v')} can't be merged")
@@ -163,6 +209,12 @@ def merge_record(into, record):
                     raise ValueError(f"{card}'s tallies have {len(total)} and {len(numbers)} numbers")
                 else:
                     sides[side][card] = [a + b for a, b in zip(total, numbers)]
+    if "tokens" in into and "tokens" in record:
+        for side, tallies in enumerate(record["tokens"]):
+            for name, peaks in tallies.items():
+                _add_peaks(into["tokens"][side].setdefault(name, []), peaks)
+    else:
+        into.pop("tokens", None)
     return into
 
 
@@ -208,6 +260,9 @@ class Game:
                                     # "commander"), till a cast line or its next move: not_cast() takes it back
         self.played = set()         # (id, turn) of every move to the Battlefield, any id, from any zone
         self.lands = []             # (id, turn) of Forge's Land lines
+        self.tokens = {}            # token id -> [(owner seat or None, logged name), its zone now]
+        self.on_field = {}          # (seat, name) -> that token's copies on the battlefield now
+        self.peak = {}              # (seat, name) -> the most of them there at once
 
     def fail(self, why):
         if self.problem is None:
@@ -231,8 +286,10 @@ class Game:
             turn, frm, to, card_id = int(f[2]), f[5], f[6], int(f[8])
             if to == "Battlefield":
                 self.played.add((card_id, turn))    # still noted after the end lines: its Land line may follow
-            if card_id not in self.zone or self.over:
+            if self.over:
                 return
+            if card_id not in self.zone:
+                return self._token(card_id, frm, to, f[7], f[9])
             self.zone[card_id] = to
             self.tried.pop(card_id, None)
             if card_id in self.cmd:
@@ -309,6 +366,24 @@ class Game:
             self.over = True
         elif kind == "error":
             self.fail("the card log's end-of-game snapshot failed: " + "|".join(f[2:]))
+
+    def _token(self, card_id, frm, to, owner, name):
+        """A move of an id in neither seat's lists: a token's peak (the module docstring).
+        An id that isn't a token (an effect, a card from outside the game) costs a lookup."""
+        token = self.tokens.get(card_id)
+        if token is None and frm != "-":
+            return
+        if token is not None and token[1] == "Battlefield":
+            self.on_field[token[0]] -= 1
+        if frm == "-":      # created (again, for an id Forge reused)
+            token = self.tokens[card_id] = [(int(owner) if owner.isdigit() else None, name), to]
+        else:
+            token[1] = to
+        if to == "Battlefield":
+            key = token[0]
+            n = self.on_field[key] = self.on_field.get(key, 0) + 1
+            if n > self.peak.get(key, 0):
+                self.peak[key] = n
 
     def _seat(self, text):
         seat = int(text)
@@ -440,6 +515,10 @@ def add(record, game, winner, first, side, name):
                 c[0] += casts
                 c[1] = min(c[1], rnd)
         commanders[s] = {card: [1, won, n, rnd] for card, (n, rnd) in cast.items()}
+    peaks = [{}, {}]
+    for (seat, logged), n in game.peak.items():
+        if seat in SEATS:       # a token without a known owner seat has no side
+            peaks[side(seat)][logged] = min(n, PEAK_CAP)
     record["games"] += 1
     if winner is not None:
         record["wins"][winner] += 1
@@ -454,4 +533,10 @@ def add(record, game, winner, first, side, name):
                 else:
                     for i, n in enumerate(numbers):
                         total[i] += n
+    if "tokens" in record:
+        for s in (0, 1):
+            for logged, n in peaks[s].items():
+                counts = record["tokens"][s].setdefault(logged, [])
+                counts.extend([0] * (n - len(counts)))
+                counts[n - 1] += 1
     return None

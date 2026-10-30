@@ -349,6 +349,8 @@ function liveBox(page) {
   // The count changes on every answer, so it isn't announced; the phase line is, only when the title changes
   // (waiting, playing, a new stage). The result itself takes the focus when it comes (focusNews).
   const played = el("p", { class: "mu-played" });
+  // Why the run is slower than its estimate (job.fallback: the warm workers couldn't start), after played's words.
+  const fallback = el("p", { class: "sub mu-fallback", hidden: true });
   const phase = el("p", { class: "sr-only", role: "status" });
   const announce = () => { if (phase.textContent !== title.textContent) phase.textContent = title.textContent; };
   const score = el("dl", { class: "mu-score" });
@@ -365,7 +367,7 @@ function liveBox(page) {
   const actions = el("div", { class: "actions", hidden: true }, stop);
   const node = el("section", { class: "box box-info mu-running", "aria-labelledby": "h-live" },
     el("div", { class: "mu-running-head" }, el("span", { class: "spinner", "aria-hidden": "true" }), title),
-    phase, bar.node, played, planLine, rangeHost, score, pace, lost,
+    phase, bar.node, played, fallback, planLine, rangeHost, score, pace, lost,
     actions, via,
     el("p", { class: "sub", text: "You can leave this page: the games go on on the PC, and the result is saved." }));
   return {
@@ -374,6 +376,8 @@ function liveBox(page) {
       lost.textContent = "";
       const job = data.job || {};
       const [ta, tb] = sideTitles(data.sides);
+      fallback.textContent = runFallback(job) || "";
+      fallback.hidden = !fallback.textContent;
       const plan = job.plan || null;
       if (job.via) {
         actions.hidden = true;

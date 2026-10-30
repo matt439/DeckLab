@@ -43,7 +43,8 @@ cheap, and a deck file edited a moment ago counts at once. decklab/simulation.js
 section ({"Constructed": {"add": [...], "remove": [...]}, "Commander": {...}}, each name
 "<deck id>[@version]") adds lists the rules leave out (a Beginner Box pairing, a product whose
 "intact" is still blank) and takes lists out (a house deck built from a precon that's also kept
-whole).
+whole). HOME's saved field choices (E3-S23, field_policy_overlay.py) are laid over those
+edits for current house decks; without any (or before migration 0017) the field is as above.
 """
 import json
 import threading
@@ -53,7 +54,8 @@ import traceback
 from decklab.lib import decks, spaces
 from decklab.lib import pool as card_pool          # products/status.csv (read_status)
 
-from . import common, deck_identity, engine, field_exclusions, lifecycle, lists, runner, saved, seqstats, views
+from . import (common, deck_identity, engine, field_exclusions, field_policy_overlay, lifecycle, lists, runner,
+               saved, seqstats, views)
 from .common import ForgeError
 
 BUDGETS = ("quick", "standard", "thorough")
@@ -158,16 +160,18 @@ def _product_file(deck_id):
     return deck_id.split("/")[1] + ".csv"
 
 
-def _field(fmt, *, space="home", public=None, visible=None, product_notes=True, trace=None, exclusions=None):
+def _field(fmt, *, space="home", public=None, visible=None, product_notes=True, trace=None, exclusions=None,
+           refused=None):
     """([entry], [note]) of the field of fmt (section 10.1), sorted by title, from one inventory
     snapshot (the request's or command's, else one pinned for this call: decklab/lib/inventory).
     An optional membership trace records decisions after visibility checks; legacy callers
-    retain the same entries, notes and defaults."""
+    retain the same entries, notes and defaults. An optional refused list gets the sentence
+    saying why no field run may start on this pass (home's saved choices can't be read, E3-S23)."""
     from decklab.lib import inventory
     if not inventory.is_pinned():
         with inventory.pinned():
             return _field(fmt, space=space, public=public, visible=visible, product_notes=product_notes,
-                          trace=trace, exclusions=exclusions)
+                          trace=trace, exclusions=exclusions, refused=refused)
     field_exclusions.notify(exclusions, "begin")
     chosen, notes = [], []
     status_unavailable = False
@@ -178,7 +182,7 @@ def _field(fmt, *, space="home", public=None, visible=None, product_notes=True, 
         status_unavailable = True
         field_exclusions.notify(exclusions, "unavailable")
         if product_notes:
-            notes.append(f"products/status.csv can't be read, so no product deck is in the field ({e}).")
+            notes.append(f"The products' status list can't be read, so no product deck is in the field ({e}).")
     summaries = decks.list_decks()
     for summary in summaries:
         deck_id = summary["id"]
@@ -227,6 +231,11 @@ def _field(fmt, *, space="home", public=None, visible=None, product_notes=True, 
     if exclusions is not None:
         edit_options["exclusions"] = exclusions
     add, remove = _simulation_edits(fmt, **edit_options)
+    # HOME's saved choices mask their decks' legacy directives first (E3-S23).
+    policy = field_policy_overlay.prepare(fmt, space, chosen, notes, trace=trace, exclusions=exclusions)
+    if policy.refused and refused is not None:
+        refused.append(policy.refused)
+    add, remove = policy.directives(add, remove, exclusions)
     for name in add:
         deck_id, version = _split_name(name)
         owner = spaces.space_of(deck_id)
@@ -275,6 +284,7 @@ def _field(fmt, *, space="home", public=None, visible=None, product_notes=True, 
             else:
                 remaining.append((summary, selected))
         chosen = remaining
+    chosen = policy.apply(chosen, notes, trace=trace, exclusions=exclusions, visible=visible)
     entries = []
     for summary, version in chosen:
         try:
@@ -318,13 +328,24 @@ def _opponents(entry, names, field):
                                   for deck_id, version in wanted)]
 
 
-def opponents(entry, opponents=None, *, space="home", public=None, visible=None, product_notes=True):
+def opponents(entry, opponents=None, *, space="home", public=None, visible=None, product_notes=True,
+              fail_closed=False):
     """entry's opponents in the field of its format (section 10.1): the field minus every list
     with entry's deck id, so entry can be any list (a field list, an owned-only list, a product
     deck). opponents, a list of "<deck id>[@version]" names, limits them to those (ValueError,
-    with a sentence, for a name that isn't one of them)."""
-    return _opponents(entry, opponents, field_lists(lists.fmt_for(entry["kind"]), space=space, public=public,
-                                                   visible=visible, product_notes=product_notes))
+    with a sentence, for a name that isn't one of them). With fail_closed (a run about to start), a
+    ForgeError when home's saved field choices can't be read (field_policy_overlay.REFUSED)."""
+    return _opponents(entry, opponents, _run_field_lists(lists.fmt_for(entry["kind"]), fail_closed, space=space,
+                                                         public=public, visible=visible, product_notes=product_notes))
+
+
+def _run_field_lists(fmt, fail_closed, **options):
+    """field_lists(fmt, **options); with fail_closed, a ForgeError instead while no run may start."""
+    refused = []
+    found = _field(fmt, refused=refused, **options)[0]
+    if fail_closed and refused:
+        raise ForgeError(refused[0])
+    return found
 
 
 # ============================================================ saved numbers
@@ -824,12 +845,12 @@ def run_field(entry, budget="standard", *, by, progress=None, results_dir=None, 
     "budget", "planned", "played", "wall_s", "stopped", "per_opponent": {key: games played},
     "deck": {"id", "version", "title"}, "dropped": {key: sentence}, "error": sentence or None}.
     ValueError for a budget or opponent names that don't suit, ForgeError when the field has no
-    opponent for it."""
+    opponent for it or home's saved field choices can't be read (it fails closed, E3-S23)."""
     from . import pool as pools         # pool.py comes after lists; field comes after both
     _budget(budget)
     fmt = lists.fmt_for(entry["kind"])
-    opps = _opponents(entry, opponents, field_lists(fmt, space=space, public=public, visible=visible,
-                                                   product_notes=product_notes))
+    opps = _opponents(entry, opponents, _run_field_lists(fmt, True, space=space, public=public, visible=visible,
+                                                         product_notes=product_notes))
     if not opps:
         raise ForgeError(NO_OPPONENTS.format(fmt=fmt))
     inflight = int(inflight) if inflight is not None else _inflight_setting()
@@ -1036,11 +1057,12 @@ def view(entry, results_dir=None, *, space="home", public=None, visible=None, ke
     meaningful opponents with games on the play and on the draw), "rating" {value, low, high,
     rank, rank_low, rank_high, of, h_points, connected, dispersion, manual_excluded} or None, "coverage"
     {"with_floor", "of"}, "last_run" (last_note), "notes" (sentences: lists left out of the
-    field, opponents the rating can't reach, ...)}. It never plays a game."""
+    field, opponents the rating can't reach, ...), "run_refused" (why no field run may start now,
+    naming nobody, or None)}. It never plays a game."""
     fmt = lists.fmt_for(entry["kind"])
-    exclusions = field_exclusions.observation(visible)
+    exclusions, refused = field_exclusions.observation(visible), []
     field, notes = _field(fmt, space=space, public=public, visible=visible,
-                          product_notes=product_notes, exclusions=exclusions)
+                          product_notes=product_notes, exclusions=exclusions, refused=refused)
     rows = _rows(entry, _opponents(entry, None, field), results_dir, keep)
     average = _average(rows)
     rating, per = _rating(entry, field, rows, results_dir, notes, keep=keep) if rows else (None, {})
@@ -1064,7 +1086,26 @@ def view(entry, results_dir=None, *, space="home", public=None, visible=None, ke
                      "card_sha": entry["card_sha"]},
             "format": fmt, "opponents": opponents_out, "average": average, "rating": rating,
             "coverage": {"with_floor": sum(1 for r in rows if r["n"] >= seqstats.FIELD_FLOOR), "of": len(rows)},
-            "last_run": last_note(entry, results_dir, space=space, visible=visible, keep=keep), "notes": notes}
+            "last_run": last_note(entry, results_dir, space=space, visible=visible, keep=keep), "notes": notes,
+            "run_refused": refused[0] if refused else None}
+
+
+def pair_rates(fmt, results_dir=None, *, space="home", public=None, visible=None, keep=None, product_notes=True):
+    """Each pair of fmt's field lists with saved games that mean something, for tonight's pairs (E1-S28):
+    {(deck id, opponent's deck id): {"value" (the first's win rate, or None while it can't be told), "games",
+    "versions" (the two lists' versions, in the key's order)}}, in both orders, worked out as view()'s rows are.
+    A field addition may put a deck's other list in the field, so a caller checks "versions" against the lists
+    it means. The options are view()'s. It never plays a game."""
+    field, _notes = _field(fmt, space=space, public=public, visible=visible, product_notes=product_notes)
+    out = {}
+    for entry in field:
+        for row in _rows(entry, _opponents(entry, None, field), results_dir, keep):
+            if row["n"] and not row["not_meaningful"]:
+                opponent = row["opponent"]
+                out[(entry["id"], opponent["id"])] = {"value": _r((row["numbers"] or {}).get("value")),
+                                                      "games": row["n"],
+                                                      "versions": (entry["version"], opponent["version"])}
+    return out
 
 
 def averages(fmt, results_dir=None, *, space="home", public=None, visible=None, keep=None, product_notes=True):

@@ -29,7 +29,7 @@ def record_order(inv, *, order, values, repo="."):
     if "ordered_on" in values and checked["ordered_on"]:
         for component in original.components:
             if component.received_on and component.received_on < checked["ordered_on"]:
-                raise Invalid(f"{original.file}: {component.id}: receipt date conflicts with status or order date")
+                raise Invalid(f"Order {order}'s {component.id}: receipt date conflicts with status or order date")
     changed = [key for key in FIELDS if key in values and original.data.get(key) != checked[key]]
     if not changed:
         return inv, Summary(f"Order {order}: nothing to change")

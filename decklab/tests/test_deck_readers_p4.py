@@ -13,7 +13,9 @@ Forge provenance names a deck's saved revision from one snapshot (D6).
   database backend with no deck files on disk (a throwaway database: db_support.py; they skip
   without one).
 
-Run from the repo root: python -m unittest decklab.tests.test_deck_readers_p4
+Run from the repo root: python scripts/test_fixtures.py decklab.tests.test_deck_readers_p4
+The fixture runner disables configured PostgreSQL and real Forge; named native
+runtime cases also need separate qualification (see AGENTS.md, Tests).
 """
 import dataclasses
 import json

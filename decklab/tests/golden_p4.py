@@ -29,7 +29,8 @@ older code (the committed tests/fixtures/inventory_goldens):
   "move the order file" and "set its status to owned" advice, "fix it by hand", "no deck file",
   a product order's "Change it by hand", the collection import's and the home-only accessories'
   file names, the editor's "The file has", the deck page's token line and the Tokens page's
-  re-sort note) become the new words.
+  re-sort note; E11-S12's row-parse problems, status rows, product and payload paths) become
+  the new words.
 - "ui-additions": the fields the UI redesign added to the page answers (ui_additions()): a deck's
   "cover", "colors", "revision", "cover_card" and "edited" in the library and the deck page, the
   packing plan's "cards" and a wishlist entry's "source_deck" are dropped.
@@ -91,6 +92,27 @@ older code (the committed tests/fixtures/inventory_goldens):
   cards it pulls from storage or puts back are kept. No golden collection records a location, so
   only an answer with none ({"ready": true, "cards": {}}) is dropped; a recorded location still
   compares. test_collection_locations checks its values.
+- "played-defaults": E1-S27 adds each library summary's "played" (when it was last played at
+  home and its games). No golden scenario records a game, so only the no-games answer
+  ({"last": None, "games": 0}) or the unread one (None) is dropped from decks_index summaries;
+  a recorded game still compares. test_library_played checks its values. Its second slice adds
+  deck_view's "played" too, dropped only as {"last": None, "games": 0, "since": None} or None.
+- "departed-defaults": E2-S27 adds deck_view's guide "departed", the cards its How to play guide
+  names that have left the deck. No golden deck's guide names a former card, so only the empty
+  answer ({"names": [], "count": 0}) or the unread one (None) is dropped; a departed card still
+  compares. test_guide_departed checks its values and privacy.
+- "counter-defaults": E7-S24 adds deck_view's tokens "counters", the counters and dice the
+  list's cards call for (read from their text, never from the inventory). No golden deck's
+  cards use any, so only the empty answer ({"needs": [], "note": counters.NOTE}) is dropped; a
+  deck with a counter still compares. test_token_counters checks its values and privacy.
+- "opponent-token-defaults": E7-S23 adds the library summaries' tokens "opponent", the tokens
+  only the opponent gets (read from the cards' text) that no card covers, counted apart from
+  "none", "differs" and "incoming". No golden deck's cards give a token away, so only the empty
+  answer ([]) is dropped; a deck with one still compares. test_token_sides checks its values.
+- "token-peak-defaults": E7-S08 adds deck_view's tokens "forge" and each counted need's "forge",
+  suggested token counts read from the list's saved Forge results (as "practice" and "matchups",
+  which the dump already leaves out, never the inventory). Only those two keys are dropped; every
+  other token field still compares. test_token_peaks checks their values and privacy.
 - "category-defaults": E2-S24 adds DeckLine.category, the builder's own category on a decklist
   line, so a line dumped as a whole object ({quantity, name, set, number, finish}) gains
   "category". Only a None category on exactly such an object is dropped: a line with a
@@ -244,6 +266,11 @@ def _words(text):
     return lambda _: text
 
 
+def _token_cards(space):
+    """How E11-S12 names a space's token cards (tokens.label_for's words; space None: home's)."""
+    return "the home token cards" if space is None else f"{space}'s token cards"
+
+
 def phase5_wording():
     """[(the old words as a compiled pattern, the new words as re.sub's replacement)]: what
     "phase-5-wording" rewrites, with the new words from this checkout's code (imported here, not at the top: record() runs this module over older
@@ -269,7 +296,47 @@ def phase5_wording():
          r"Token cards line \1 couldn't be read; see the Tokens page"),
         (re.compile(r"^Also sorted magic/tokens\.csv into the standard order \(no other row changed\)$"),
          _words(token_ops.RESORTED)),
+        # E11-S12: the database's words for token rows and products, not the old files'.
+        (re.compile(r"^magic/(?:people/([a-z0-9-]+)/)?tokens\.csv: not in the standard order; the next Tokens "
+                    r"page save sorts it$"),
+         lambda m: f"{_token_cards(m.group(1)).capitalize()} aren't in the standard order; the next Tokens "
+                   f"page save sorts them"),
+        (re.compile(r"^magic/(?:people/([a-z0-9-]+)/)?tokens\.csv line (\d+): "),
+         lambda m: f"Row {int(m.group(2)) - 1} of {_token_cards(m.group(1))}: "),
+        (re.compile(r"products/status\.csv lists ([a-z0-9][a-z0-9-]*)\.csv, which isn't in magic/products/"),
+         r"Product \1 has a status but no card list, so it isn't counted"),
+        (re.compile(r"\b([a-z0-9][a-z0-9-]*)\.csv isn't in products/status\.csv, so it counts as owned and not "
+                    r"intact"),
+         r"Product \1 has no status, so it counts as owned and not intact"),
+        # E11-S12, the row-parse problems and the product and payload paths: a row by its number
+        # (the old line less the header's), a status row by its product, a payload by its order.
+        (re.compile(r"\bstatus\.csv line \d+: ([a-z0-9][a-z0-9-]*)\.csv has status "), r"Product \1's status is "),
+        (re.compile(r"\bstatus\.csv line \d+: ([a-z0-9][a-z0-9-]*)\.csv has sleeves or a deck box but isn't "),
+         r"Product \1's status has sleeves or a deck box but the product isn't "),
+        (re.compile(r"\bstatus\.csv line \d+: ([a-z0-9][a-z0-9-]*)\.csv has "), r"Product \1's status has "),
+        (re.compile(r"(?:magic/)?products/status\.csv is missing"), _words("The products' status list is missing")),
+        (re.compile(r"\b(?:magic/(?:people/([a-z0-9-]+)/)?)?collection\.csv line (\d+): "),
+         lambda m: f"Row {int(m.group(2)) - 1} of {_owner(m.group(1))} collection: "),
+        (re.compile(r"\bmagic/products/([a-z0-9][a-z0-9-]*)\.csv(?= can't be read)"), r"Product \1's card list"),
+        (re.compile(r"\bmagic/products/([a-z0-9][a-z0-9-]*)\.csv: "), r"Product \1: "),
+        (re.compile(r"\b([a-z0-9][a-z0-9-]*)\.csv line (\d+): "),
+         lambda m: f"Row {int(m.group(2)) - 1} of product {m.group(1)}'s card list: "),
+        (re.compile(r"\bmagic/orders/(tokens/)?(?:(received|cancelled)/)?([a-z0-9][a-z0-9-]*)\.csv"
+                    r"(?=: missing order record| can't be read)"), _payload_words),
     ]
+
+
+def _owner(space):
+    """E11-S12's owner words for a space's collection (space None: home's)."""
+    return "the home" if space is None else f"{space}'s"
+
+
+def _payload_words(m):
+    """E11-S12's words for an old payload path (paths.describe's): "Order x's received cards",
+    capitalised where it starts a message or a "; "- or ": "-separated part of one."""
+    starts = m.start() == 0 or m.string[m.start() - 2:m.start()] in ("; ", ": ")
+    state = f"{m.group(2)} " if m.group(2) else ""
+    return f"{'O' if starts else 'o'}rder {m.group(3)}'s {state}{'token cards' if m.group(1) else 'cards'}"
 
 
 def phase5_reworded(dump):
@@ -516,6 +583,64 @@ def storage_location_defaults(dump):
                 plan.pop("storage_locations")
 
 
+def played_defaults(dump):
+    """Drop only E1-S27's no-games (or unread) "played" on library summaries and deck pages."""
+    for mine in [dump, *((dump.get("by_viewer") or {}).values())]:
+        index = mine.get("decks_index") if isinstance(mine, dict) else None
+        for summary in (index.get("decks") or []) if isinstance(index, dict) else []:
+            if isinstance(summary, dict) and summary.get("played", 0) in (None, {"last": None, "games": 0}):
+                summary.pop("played")
+        views = mine.get("deck_view") if isinstance(mine, dict) else None
+        for view in views.values() if isinstance(views, dict) else []:
+            if isinstance(view, dict) and view.get("played", 0) in (None, {"last": None, "games": 0, "since": None}):
+                view.pop("played")
+
+
+def departed_defaults(dump):
+    """Drop only E2-S27's empty (or unread) "departed" on deck pages' guides."""
+    for mine in [dump, *((dump.get("by_viewer") or {}).values())]:
+        views = mine.get("deck_view") if isinstance(mine, dict) else None
+        for view in views.values() if isinstance(views, dict) else []:
+            guide = view.get("guide") if isinstance(view, dict) else None
+            if isinstance(guide, dict) and guide.get("departed", 0) in (None, {"names": [], "count": 0}):
+                guide.pop("departed")
+
+
+def counter_defaults(dump):
+    """Drop only E7-S24's empty "counters" on deck pages' tokens."""
+    from decklab.lib.tokens import counters
+    for mine in [dump, *((dump.get("by_viewer") or {}).values())]:
+        views = mine.get("deck_view") if isinstance(mine, dict) else None
+        for view in views.values() if isinstance(views, dict) else []:
+            found = view.get("tokens") if isinstance(view, dict) else None
+            if isinstance(found, dict) and found.get("counters", 0) == {"needs": [], "note": counters.NOTE}:
+                found.pop("counters")
+
+
+def opponent_token_defaults(dump):
+    """Drop only E7-S23's empty "opponent" on library summaries' tokens."""
+    for mine in [dump, *((dump.get("by_viewer") or {}).values())]:
+        index = mine.get("decks_index") if isinstance(mine, dict) else None
+        for summary in (index.get("decks") or []) if isinstance(index, dict) else []:
+            found = summary.get("tokens") if isinstance(summary, dict) else None
+            if isinstance(found, dict) and found.get("opponent", 0) == []:
+                found.pop("opponent")
+
+
+def token_peak_defaults(dump):
+    """Drop only E7-S08's Forge-derived "forge" on deck pages' tokens and their needs."""
+    for mine in [dump, *((dump.get("by_viewer") or {}).values())]:
+        views = mine.get("deck_view") if isinstance(mine, dict) else None
+        for view in views.values() if isinstance(views, dict) else []:
+            found = view.get("tokens") if isinstance(view, dict) else None
+            if not isinstance(found, dict):
+                continue
+            found.pop("forge", None)
+            for need in found.get("needs") or []:
+                if isinstance(need, dict):
+                    need.pop("forge", None)
+
+
 _LINE_KEYS = {"quantity", "name", "set", "number", "finish", "category"}
 
 
@@ -710,7 +835,10 @@ EXPECTED_P5 = (("deck-id-messages", deck_id_messages), ("phase-5-wording", phase
                ("assembly-section-defaults", assembly_section_defaults), ("swap-defaults", swap_defaults),
                ("assembly-colors", assembly_colors), ("considering-defaults", considering_defaults),
                ("box-label-defaults", box_label_defaults), ("category-defaults", category_defaults),
-               ("storage-location-defaults", storage_location_defaults), ("absent-shop-prices", absent_shop_prices))
+               ("storage-location-defaults", storage_location_defaults), ("played-defaults", played_defaults),
+               ("departed-defaults", departed_defaults), ("counter-defaults", counter_defaults),
+               ("opponent-token-defaults", opponent_token_defaults), ("token-peak-defaults", token_peak_defaults),
+               ("absent-shop-prices", absent_shop_prices))
 
 
 def normalise(dump):

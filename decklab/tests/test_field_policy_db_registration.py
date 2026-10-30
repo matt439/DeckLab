@@ -84,8 +84,9 @@ class FakeConn:
 class MigrationRegistrationTests(unittest.TestCase):
     def test_new_migration_follows_collection_locations_without_duplicate_versions(self):
         files = migrate.available()
-        self.assertEqual([f["version"] for f in files], list(range(1, 18)))
-        self.assertEqual([(f["version"], f["name"]) for f in files[-2:]],
+        # Later migrations (0018's editor drafts, E2-S16) follow without gaps or duplicates.
+        self.assertEqual([f["version"] for f in files], list(range(1, len(files) + 1)))
+        self.assertEqual([(f["version"], f["name"]) for f in files[15:17]],
                          [(16, "collection_locations"), (17, "field_policy")])
 
     def sql(self):

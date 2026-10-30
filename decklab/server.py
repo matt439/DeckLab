@@ -143,6 +143,12 @@ inventory writes answer 503 with "reason": "database":
     POST /api/deck/swaps                 the same for the Play-now list being edited (a dry run;
                                          lib/api/swaps.py; 403 for a space whose inventory the
                                          visitor may not see)
+    GET  /api/deck/replacements?id=&version=target|owned&card=   free pool cards that could replace
+                                         a card of the list's Deck section (E3-S25; the same reading rule)
+    GET  /api/deck/dual-lands?id=&version=target|owned   free dual lands for a colour the list's colour
+                                         check finds short, each with the basic it would replace (E3-S25)
+    GET  /api/deck/role-cards?id=&version=target|owned   free pool cards in a Commander deck's colours
+                                         for each Stats role (E9-S26; lib/api/role_cards.py; the same rule)
     POST /api/deck/cover                 body {"profile", "id", "expect", "cover"}: set or clear the
                                          deck's Cover card line, one change (lib/api/cover.py)
     POST /api/deck/token-cards           body {"profile", "id", "expect", "tokens_sha256", "cards"}: set a
@@ -174,6 +180,12 @@ inventory writes answer 503 with "reason": "database":
                                          of it waits or plays
     POST /api/field/run, /api/field/stop body {"profile", "id", "version", "budget"}: play the field
                                          (or join the run going), or Stop it
+    GET  /api/field/membership?id=&version=   who's in the field now, with "can_edit" for a home admin
+    POST /api/field/policy/preview       body {"profile", "id", "version", "mode"}: a home admin's preview of
+                                         one home list's saved field choice (E3-S23); writes nothing
+    POST /api/field/policy               body {"profile", "format", "revision", "proof", "mode", "reason"?}:
+                                         save that preview as one audited change (409 when it changed,
+                                         503 naming the migrate command before migration 0017)
     GET  /api/variant?test=<id>          a test of a change (wave 3); 202 while it waits or plays
     GET  /api/variant/estimate?id=&version=&against=<deck id>|field[&av=]   its rough time
     GET  /api/variants?id=&version=      the tests of a deck's list
@@ -203,6 +215,8 @@ inventory writes answer 503 with "reason": "database":
                                          a ManaBox, Moxfield, Deckbox or collection-columns export
     POST /api/collection/import/apply    body {"profile", "space", "token", "sha256", "skip_problems"?}:
                                          merge it and keep the upload as a raw import, in one change
+    POST /api/collection/scan            body {"profile", "space", "photo"} (a JPEG or PNG's base64, at most 4 MiB): read
+                                         one card's photo on the PC and propose its printings (E7-S32); nothing is written
     POST /api/collection/trade/preview   body {"profile", "space", "sha256", "gave": [{"set", "collector_number",
                                          "finish", "quantity"}], "got": [rows], "with"?, "message"?}: what a
                                          trade would do (E7-S22: held copies, tables left out of date)
@@ -221,6 +235,8 @@ inventory writes answer 503 with "reason": "database":
                                          viewer may see (permissions.sees_play_record: those with a deck
                                          of their own space; an admin or a script every one)
                                          (each {"record", "sha256"}), with "warnings" and "today"
+    GET  /api/play/pairs                 tonight's pairs: up to 3 ready home pairs, evenest and least lately
+                                         played first, with reasons (home profiles only; lib/api/play_tonight.py)
     POST /api/play/game, /api/play/sideboard   body {"profile", "id", "sha256", <the record's fields>,
                                          "preview", "review_sha256"?}: preview, then save a game or a
                                          sideboard plan (409 when it changed since it was read)
