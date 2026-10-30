@@ -761,6 +761,19 @@ class PgInventory:
         from .undo_token_delete import read_review
         return read_review(self, change_id, space, _take_lock, reviewer=review)
 
+    def undo_watchlist_rows_review(self, change_id, space):
+        from .undo_watchlist_rows import review
+        from .undo_token_delete import read_review
+        return read_review(self, change_id, space, _take_lock, reviewer=review)
+
+    def undo_watchlist_positions(self):
+        """The purchase queue's persisted id/position layout, on Undo's applying connection when set."""
+        def work(c):
+            return [{"id": rid, "position": position} for rid, position in c.execute(
+                "select id,position from watchlist_item order by position,id").fetchall()]
+        applying = getattr(self._applying, "connection", None)
+        return work(applying) if applying is not None else self._call(work)
+
     def supports_check_links(self):
         def work(c):
             return "check_links" in pg_check_links.columns(c)
@@ -866,6 +879,11 @@ class PgInventory:
                             # Purchase-queue values restored in place: prove the exact UPDATEs and
                             # the unchanged rest of the queue before commit (or roll back).
                             summary = undo_watchlist.confirm_in_transaction(cur, change_set, before, saved, summary)
+                        from . import undo_watchlist_rows
+                        if undo_watchlist_rows.restoring(summary):
+                            # Added queue rows removed, or removed ones restored as new rows: prove
+                            # the exact DELETEs or INSERTs and every other row's position before commit.
+                            summary = undo_watchlist_rows.confirm_in_transaction(cur, change_set, before, saved, summary)
                     return saved, summary
             except _Unchanged as u:
                 return u.result

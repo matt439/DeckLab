@@ -525,7 +525,8 @@ function activityUndoShow(ctx) {
   const accessoryCorrecting = preview.kind === "accessory" && preview.action === "accessory_record_update";
   const accessoryCropping = preview.kind === "accessory" && preview.action === "accessory_crop_update";
   const tokenBatchRemoving = preview.kind === "tokens" && preview.action === "token_batch_remove";
-  const batchRemoving = preview.action === "batch_remove", removing = batchRemoving || tokenBatchRemoving || accessoryRemoving || preview.action === "remove";
+  const queueRemoving = preview.kind === "watchlist" && preview.action === "watchlist_remove";
+  const batchRemoving = preview.action === "batch_remove", removing = batchRemoving || tokenBatchRemoving || accessoryRemoving || queueRemoving || preview.action === "remove";
   const tokenBatch = preview.kind === "tokens" && preview.action === "token_batch_add";
   const tokenAdding = tokenBatch || preview.kind === "tokens" && preview.action === "token_add";
   const batchAdding = preview.action === "batch_add", adding = batchAdding || accessoryAdding || tokenAdding || preview.action === "add";
@@ -581,7 +582,7 @@ function activityUndoShow(ctx) {
       } else status.textContent = "Both views use the verified current photo. Review the crop you want to restore.";
       ownershipInput.checked = confirmedOwned; actions();
     }); };
-  } else if (preview.kind === "watchlist") activityUndoWatchlistBody(sheet.body, preview, text);
+  } else if (preview.kind === "watchlist" && !queueRemoving) activityUndoWatchlistBody(sheet.body, preview, text);
   else if (batch) {
     const rows = preview.rows.map(item => {
       const changes = item.fields.map(field => el("p", {}, el("b", { text: words[field.field] + ": " }),
@@ -597,37 +598,41 @@ function activityUndoShow(ctx) {
       el("div", { class: "panels" }, rows));
   } else if (removing) {
     const tokenCards = preview.kind === "tokens";
-    const listed = batchRemoving || tokenBatchRemoving;
-    const copies = listed ? preview.rows.reduce((sum, item) => sum + item.current.quantity, 0) : preview.current.quantity;
-    const warning = accessoryRemoving ? "Undo removes this entire accessory record, including its recorded quantity of " + preview.current.quantity
-      + (preview.current.kind === "sleeves" ? " individual sleeves." : Number(preview.current.quantity) === 1 ? " item." : " items.")
-      : batchRemoving ? "Undo removes all " + plural(copies, "recorded copy", "recorded copies") + " across all " + plural(preview.row_count, "printing") + ". Every added row will be removed together."
-      : tokenBatchRemoving ? "Undo removes all " + plural(copies, "physical token card") + " recorded in these " + preview.row_count + " added rows. Every added row will be removed together."
-      + (preview.rows.some(item => item.current.back.trim()) ? " Each front/back pair is one physical card." : "")
-      : tokenCards ? "Undo removes all " + plural(preview.current.quantity, "physical token card") + " recorded in this row."
-      + (preview.current.back.trim() ? " Each front/back pair is one physical card." : "")
-      : "Undo removes all " + plural(preview.current.quantity, "recorded copy", "recorded copies")
-        + " of this printing from the collection. The entire added row will be removed.";
-    sheet.body.append(el("p", { class: "box box-warn", text: warning }),
-    el("p", { class: "sub", text: "Saving creates one new audited change; the original change stays in Activity. "
-      + (accessoryRemoving ? "Only an unused added record without a photo can be removed here. Deck and product references are checked again when you save; kit and photos stay as they are."
-        : listed ? "The rows and their physical uses are checked again when you save." : "The row and its physical uses are checked again when you save.") }));
-    const currentRow = row => el("dl", {}, (accessoryRemoving ? ACTIVITY_UNDO_ACCESSORY_STOCK_FIELDS : ACTIVITY_UNDO_FIELDS[preview.kind]).flatMap(field => [el("dt", { text: accessoryRemoving && words[field] ? words[field] : field.replaceAll("_", " ") }),
-      el("dd", { class: ["notes", "link", "image_source"].includes(field) ? "activity-undo-note" : null,
-        text: accessoryRemoving && field === "owner" ? row.owner === "shared" ? "Shared" : state.profile?.name || row.owner
-          : accessoryRemoving && field === "kind" ? { sleeves: "Sleeves", deck_box: "Deck box", playmat: "Playmat" }[row.kind] : text(row[field]) })]));
-    if (listed) sheet.body.append(el("p", { class: "sub", text: "Review every current row below. There is no partial selection." }),
-      el("div", { class: "panels" }, preview.rows.map(item => el("section", { class: "panel activity-undo-batch-row" },
-        el("h4", { text: item.label }), currentRow(item.current)))));
-    else sheet.body.append(el("section", { class: "panel" }, el("h3", { text: accessoryRemoving ? "Current accessory record to remove" : tokenCards ? "Current token-card row to remove" : "Current row to remove" }), currentRow(preview.current)));
+    if (queueRemoving) activityUndoWatchlistBody(sheet.body, preview, text);
+    else {
+      const listed = batchRemoving || tokenBatchRemoving;
+      const copies = listed ? preview.rows.reduce((sum, item) => sum + item.current.quantity, 0) : preview.current.quantity;
+      const warning = accessoryRemoving ? "Undo removes this entire accessory record, including its recorded quantity of " + preview.current.quantity
+        + (preview.current.kind === "sleeves" ? " individual sleeves." : Number(preview.current.quantity) === 1 ? " item." : " items.")
+        : batchRemoving ? "Undo removes all " + plural(copies, "recorded copy", "recorded copies") + " across all " + plural(preview.row_count, "printing") + ". Every added row will be removed together."
+        : tokenBatchRemoving ? "Undo removes all " + plural(copies, "physical token card") + " recorded in these " + preview.row_count + " added rows. Every added row will be removed together."
+        + (preview.rows.some(item => item.current.back.trim()) ? " Each front/back pair is one physical card." : "")
+        : tokenCards ? "Undo removes all " + plural(preview.current.quantity, "physical token card") + " recorded in this row."
+        + (preview.current.back.trim() ? " Each front/back pair is one physical card." : "")
+        : "Undo removes all " + plural(preview.current.quantity, "recorded copy", "recorded copies")
+          + " of this printing from the collection. The entire added row will be removed.";
+      sheet.body.append(el("p", { class: "box box-warn", text: warning }),
+      el("p", { class: "sub", text: "Saving creates one new audited change; the original change stays in Activity. "
+        + (accessoryRemoving ? "Only an unused added record without a photo can be removed here. Deck and product references are checked again when you save; kit and photos stay as they are."
+          : listed ? "The rows and their physical uses are checked again when you save." : "The row and its physical uses are checked again when you save.") }));
+      const currentRow = row => el("dl", {}, (accessoryRemoving ? ACTIVITY_UNDO_ACCESSORY_STOCK_FIELDS : ACTIVITY_UNDO_FIELDS[preview.kind]).flatMap(field => [el("dt", { text: accessoryRemoving && words[field] ? words[field] : field.replaceAll("_", " ") }),
+        el("dd", { class: ["notes", "link", "image_source"].includes(field) ? "activity-undo-note" : null,
+          text: accessoryRemoving && field === "owner" ? row.owner === "shared" ? "Shared" : state.profile?.name || row.owner
+            : accessoryRemoving && field === "kind" ? { sleeves: "Sleeves", deck_box: "Deck box", playmat: "Playmat" }[row.kind] : text(row[field]) })]));
+      if (listed) sheet.body.append(el("p", { class: "sub", text: "Review every current row below. There is no partial selection." }),
+        el("div", { class: "panels" }, preview.rows.map(item => el("section", { class: "panel activity-undo-batch-row" },
+          el("h4", { text: item.label }), currentRow(item.current)))));
+      else sheet.body.append(el("section", { class: "panel" }, el("h3", { text: accessoryRemoving ? "Current accessory record to remove" : tokenCards ? "Current token-card row to remove" : "Current row to remove" }), currentRow(preview.current)));
+    }
     const id = "activity-undo-reason-" + sheet.heading.id;
     reasonInput = el("input", { id, type: "text", maxlength: 400, autocomplete: "off", "aria-describedby": id + "-hint" });
     const normalized = el("p", { class: "sub", role: "status", "aria-live": "polite" });
-    sheet.body.append(el("label", { class: "field", for: id }, el("span", { text: accessoryRemoving
+    sheet.body.append(el("label", { class: "field", for: id }, el("span", { text: queueRemoving ? "Reason for removing all these added purchase-queue rows (required)" : accessoryRemoving
       ? "Reason for removing this added accessory record (required)" : tokenCards
       ? (tokenBatchRemoving ? "Reason for removing all these added token-card rows (required)" : "Reason for removing this added token-card row (required)")
       : batchRemoving ? "Reason for removing all these added rows (required)" : "Reason for removing this added row (required)" }), reasonInput),
-      el("p", { class: "field-hint", id: id + "-hint", text: accessoryRemoving
+      el("p", { class: "field-hint", id: id + "-hint", text: queueRemoving ? "Up to 200 characters. Enter why these rows should come off the purchase queue."
+        : accessoryRemoving
         ? "Up to 200 characters. Enter why this entire record should be removed from Sleeves & boxes."
         : tokenCards
         ? "Up to 200 characters. Enter why these physical token cards should be removed from the recorded tokens."

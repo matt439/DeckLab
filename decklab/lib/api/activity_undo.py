@@ -14,7 +14,7 @@ from .common import ApiError, DATABASE_DOWN, _keys, _parse_body
 from .settings import _writer
 
 NO_CHANGE = "No undoable change at that ID."
-UNSUPPORTED = "This change cannot be undone here. Supported Undo covers single-row edits, unheld nonbasic collection additions, unheld verified token additions, verified collection and token-card deletions and batches of 2-50 unheld nonbasic collection or token-card additions, collection or token-card deletions or positive quantity/condition/language/notes updates, or purchase-queue updates of 1-50 rows."
+UNSUPPORTED = "This change cannot be undone here. Supported Undo covers single-row edits, unheld nonbasic collection additions, unheld verified token additions, verified collection and token-card deletions and batches of 2-50 unheld nonbasic collection or token-card additions, collection or token-card deletions or positive quantity/condition/language/notes updates, or purchase-queue updates, additions or removals of 1-50 rows."
 CHANGED = "The change can no longer be undone safely. Reload Activity and review it again."
 UNCONFIRMED = "The undo result could not be confirmed. Reload Activity before trying again."
 SHA = re.compile(r"[a-f0-9]{64}")

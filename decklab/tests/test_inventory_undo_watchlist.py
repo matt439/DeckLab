@@ -144,7 +144,7 @@ class WatchlistUndoReviewTests(WatchlistUndoFixture):
         added = {"id": 901, "table": queue.TABLE, "op": "INSERT", "key": {"id": 30}, "before": None, "after": image(current, 30, 0)}
         removed = {"id": 902, "table": queue.TABLE, "op": "DELETE", "key": {"id": 31}, "before": image(recorded, 31, 0), "after": None}
         base = self.store.audit[fixture.CHANGE_ID]
-        for rows in ([*base, order], [order, *base], [base[0], added], [base[0], removed], [added], [removed], [*base, added]):
+        for rows in ([*base, order], [order, *base], [base[0], added], [base[0], removed], [*base, added]):
             with self.subTest(rows=[item["op"] + " " + item["table"] for item in rows]):
                 self.store.audit[fixture.CHANGE_ID] = copy.deepcopy(rows)
                 self.store.undo_latest.reset_mock()
