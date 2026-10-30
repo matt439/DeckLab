@@ -612,6 +612,33 @@ class StoreContract:
         self.assertEqual(self.store.deck_draft("matt", DRAFT_DECK, "target"), {"revision": 2, "draft": None})
         self.assertEqual(self.trail(), before)
 
+    def test_a_new_decks_drafts_are_kept_per_profile_space_and_source_with_the_same_rules(self):
+        self.draft_decks()
+        store, before = self.store, self.trail()
+        self.assertEqual(store.new_deck_draft("matt", "home", ""), {"revision": 0, "draft": None})
+        saved = store.new_deck_draft_put("matt", "home", "", draft(1), 0, device="iPad")
+        self.assertEqual((saved["revision"], saved["draft"]["device"], saved["draft"]["content"]), (1, "iPad", draft(1)))
+        for key in (("user1", "home", ""), ("matt", "home", DRAFT_DECK)):
+            with self.subTest(key=key):
+                self.assertEqual(store.new_deck_draft(*key), {"revision": 0, "draft": None})
+        # Separate from a saved deck's drafts, even of the deck a copy starts from.
+        store.new_deck_draft_put("matt", "home", DRAFT_DECK, draft(2), 0)
+        self.assertEqual(store.deck_draft("matt", DRAFT_DECK, "target"), {"revision": 0, "draft": None})
+        with self.assertRaises(Conflict):
+            store.new_deck_draft_put("matt", "home", "", draft(3), 0)
+        self.assertEqual(store.new_deck_draft_put("matt", "home", "", None, 1), {"revision": 2, "draft": None})
+        self.assertEqual(store.new_deck_draft_put("matt", "home", "", None, 2), {"revision": 2, "draft": None})
+        for key in (("bad id!", "home", ""), ("matt", "bad space!", ""), ("matt", "home", "x"), ("matt", "", "")):
+            with self.subTest(key=key), self.assertRaises(Invalid):
+                store.new_deck_draft_put(*key, draft(), 0)
+        with self.assertRaises(Invalid):
+            store.new_deck_draft_put("matt", "home", "", {"v": 1}, 2)
+        with self.assertRaises(Invalid):
+            with store.batch(MATT, "A batch"):
+                store.new_deck_draft_put("matt", "home", "", draft(1), 2)
+        self.assertEqual(store.new_deck_draft("matt", "home", ""), {"revision": 2, "draft": None})
+        self.assertEqual(self.trail(), before)
+
 
 class MemoryStoreTests(StoreContract, unittest.TestCase):
 
@@ -655,6 +682,7 @@ class PgStoreTests(StoreContract, db_support.DbTestCase):
         from decklab.db import conn as db
         with self.connect("owner") as c:
             c.execute("delete from deck_draft")         # not audited; reset() leaves the decks
+            c.execute("delete from new_deck_draft")
             with db.change("test", "test", "Decks for drafts kept for later", conn=c) as (cur, _):
                 for deck_id in (DRAFT_DECK, OTHER_DRAFT_DECK):
                     kind, slug = deck_id.split("/")

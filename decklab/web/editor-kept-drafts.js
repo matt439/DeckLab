@@ -1,28 +1,45 @@
-/* Drafts kept for later on the PC (E2-S16): the full editor's ▾ menu has Save draft for later, which
-sends this editor's draft (draftRecord, the one this device keeps too) to /api/deck/draft, private to
-the profile. Opening the same deck and list on another device as the same profile offers it
-(keptDraftBanner): who kept it and when, which saved revision of the deck it started from, whether it
-or this device's unsaved changes are newer, and Resume it or Discard it. Every write sends the draft's
-revision, so a device that read an older one is refused and asked again rather than overwriting it.
+/* Drafts kept for later on the PC (E2-S16): the editor's ▾ menu (the full editor's, and the Quick
+edit's, which shows only while there's a draft to keep) has Save draft for later, which sends this
+editor's draft (draftRecord, the one this device keeps too) to /api/deck/draft, private to the profile;
+a new deck's, which has no id yet, goes to /api/deck/new-draft, one per space and deck it copies.
+Opening the same deck and list (or starting a new deck there) on another device as the same profile
+offers it (keptDraftBanner): who kept it and when, which saved revision of the deck it started from,
+whether it or this device's unsaved changes are newer, and Resume it or Discard it. Every write sends
+the draft's revision, so a device that read an older one is refused and asked again rather than
+overwriting it.
 Saving the deck clears a kept draft this editor resumed or kept (discardKeptAfterSave), and this
 device's own draft remembers which kept draft it is (keptDraftMark), so that holds after the editor is
 closed and opened again.
 
-Only a saved deck the profile may save has one (not a new deck, a product deck or a read-only one), and
-a server without the drafts' migration answers that they aren't available: then nothing here shows and
-the editor keeps its drafts on this device only, as before. Loaded right after editor-drafts.js; the
-other editor scripts call these through typeof checks. */
+Only a saved deck the profile may save, or a new deck, has one (not a product deck or a read-only one;
+the server refuses a new deck's in a space the profile can't add decks to), and a server without the
+drafts' migration answers that they aren't available: then nothing here shows and the editor keeps its
+drafts on this device only, as before. Loaded right after editor-drafts.js; the other editor scripts
+call these through typeof checks. */
 "use strict";
 
 /** Whether this editor's list can have a draft kept for later. */
 function keptDraftsApply(ed) {
-  return !!ed && ed.mode === "edit" && !ed.readOnly && !!ed.id && !!ed.sha256;
+  if (!ed || ed.readOnly) return false;
+  return ed.mode === "new" || (ed.mode === "edit" && !!ed.id && !!ed.sha256);
+}
+
+/** Where this editor's kept draft is: {path (to write it), read (its URL), body}. A new deck's is its space's, and the deck it
+ * copies'; ed.kept.at holds the one read, so every write goes where the draft shown came from. */
+function keptDraftAt(ed) {
+  if (ed.mode === "new") {
+    const body = { space: ed.space, ...(ed.from ? { source: ed.from } : {}) };
+    return { path: "/api/deck/new-draft", body,
+      read: `/api/deck/new-draft?space=${encodeURIComponent(ed.space)}${ed.from ? `&source=${encodeURIComponent(ed.from)}` : ""}` };
+  }
+  return { path: "/api/deck/draft", body: { id: ed.id, version: ed.version },
+    read: `/api/deck/draft?id=${encodeURIComponent(ed.id)}&version=${encodeURIComponent(ed.version)}` };
 }
 
 /** ed.kept, the kept draft as this editor knows it: null (none offered here), {loading: true, mark}, or
  * {revision, draft (the API's, or null), deckRevision, ours (the revision this editor kept or resumed,
- * or null), resumed}. carried: the state a resume hands to the editor it starts. mark: this device's
- * draft's keptDraftMark, when the editor brought one back. after: a save's discard still being sent,
+ * or null), resumed, at (keptDraftAt's)}. carried: the state a resume hands to the editor it starts.
+ * mark: this device's draft's keptDraftMark, when the editor brought one back. after: a save's discard still being sent,
  * read only once it has settled, so the draft it publishes is never offered again. */
 function loadKeptDraft(ed, carried, { mark = null, after = null } = {}) {
   const shown = !!(ed.kept && ed.kept.draft);
@@ -33,29 +50,35 @@ function loadKeptDraft(ed, carried, { mark = null, after = null } = {}) {
     return null;
   }
   mark = mark && Number.isInteger(mark.revision) && mark.revision > 0 ? { revision: mark.revision, resumed: !!mark.resumed } : null;
-  ed.kept = { loading: true, mark };
+  const at = keptDraftAt(ed);
+  ed.kept = { loading: true, mark, at };
   // Redraw only when a banner appears or goes: with nothing kept, the editor is drawn as it was.
-  const redraw = () => { if (editor === ed && ed.dom && ed.dom.banners && (shown || (ed.kept && ed.kept.draft))) drawBanners(); };
-  const read = () => api(`/api/deck/draft?id=${encodeURIComponent(ed.id)}&version=${encodeURIComponent(ed.version)}`);
+  // The Quick edit's ▾ shows only while there's a draft to keep, so its bar is drawn again too.
+  const redraw = () => {
+    if (editor !== ed || !ed.dom) return;
+    if (ed.dom.banners && (shown || (ed.kept && ed.kept.draft))) drawBanners();
+    if (ed.quick && ed.dom.barParts && ed.dom.barParts.saveMore) drawBar();
+  };
+  const read = () => api(at.read);
   return (after ? Promise.resolve(after).then(read) : read())
     .then((answer) => {
-      if (editor !== ed) return;
+      if (editor !== ed || !ed.kept || ed.kept.at !== at) return;
       // Still the revision this device kept or resumed: it's this editor's own, as before it was closed.
       const ours = mark && answer.draft && answer.revision === mark.revision ? mark.revision : null;
-      ed.kept = answer.available ? keptFrom(answer, ours, ours !== null && mark.resumed) : null;
+      ed.kept = answer.available ? keptFrom(answer, ours, ours !== null && mark.resumed, at) : null;
       redraw();
     })
     .catch(() => {
       // A draft kept for later is extra: if it can't be read, the editor works as it did without one.
-      if (editor !== ed) return;
+      if (editor !== ed || !ed.kept || ed.kept.at !== at) return;
       ed.kept = null;
       redraw();
     });
 }
 
-function keptFrom(answer, ours, resumed = false) {
+function keptFrom(answer, ours, resumed, at) {
   return { revision: answer.revision, draft: answer.draft || null, deckRevision: answer.deck_revision || null,
-    ours, resumed };
+    ours, resumed: !!resumed, at };
 }
 
 /** What saveDraft adds to this device's draft: {kept: {revision, resumed}} when it is the kept draft this
@@ -112,13 +135,13 @@ function keptDraftBanner(ed) {
     if (!k.resumed) return null;
     return el("div", { class: "box box-info banner", role: "status" },
       el("h2", { text: "You picked up the draft kept for later" }),
-      el("p", { text: `${kept} Saving the deck publishes it and clears it from your other devices.` }),
+      el("p", { text: `${kept} ${ed.mode === "new" ? "Creating the deck" : "Saving the deck"} publishes it and clears it from your other devices.` }),
       el("div", { class: "actions" }, discard));
   }
   const newer = keptNewerWords(ed, savedMs);
   return el("div", { class: "box box-info banner", role: "status" },
-    el("h2", { text: "A draft kept for later" }),
-    el("p", { text: `${kept} ${keptStartedWords(d.started, k.deckRevision)}` }),
+    el("h2", { text: ed.mode === "new" ? "A new deck kept for later" : "A draft kept for later" }),
+    el("p", { text: `${kept} ${ed.mode === "new" ? "It hasn't been created yet." : keptStartedWords(d.started, k.deckRevision)}` }),
     newer ? el("p", { text: newer }) : null,
     el("div", { class: "actions" },
       el("button", { type: "button", class: "btn btn-primary", text: "Resume it", onclick: () => resumeKeptDraft(ed) }),
@@ -137,8 +160,7 @@ async function keepDraftForLater(ed, retried = false) {
   const k = ed.kept;
   let answer;
   try {
-    answer = await apiWrite("/api/deck/draft", { id: ed.id, version: ed.version, expect: k.revision,
-      draft: draftRecord(ed), device: keptDeviceName() });
+    answer = await apiWrite(k.at.path, { ...k.at.body, expect: k.revision, draft: draftRecord(ed), device: keptDeviceName() });
   } catch (e) {
     if (editor !== ed) return;
     // Renamed since this editor opened: the editor's own sheet for that, never "another draft".
@@ -156,11 +178,12 @@ async function keepDraftForLater(ed, retried = false) {
     if (choice === "replace" && editor === ed && ed.kept) return keepDraftForLater(ed, true);
     return;
   }
-  if (editor !== ed) return;
-  ed.kept = keptFrom(answer, answer.revision);
+  if (editor !== ed || ed.kept !== k) return;
+  ed.kept = keptFrom(answer, answer.revision, false, k.at);
   saveDraft(ed);                      // and this device's draft remembers it's the kept one
   drawBanners();
-  toast(`Kept for later. Open this deck on another device as ${state.profile.name} to pick it up.`);
+  toast(ed.mode === "new" ? `Kept for later. Start a new deck on another device as ${state.profile.name} to pick it up.`
+    : `Kept for later. Open this deck on another device as ${state.profile.name} to pick it up.`);
 }
 
 async function resumeKeptDraft(ed) {
@@ -175,8 +198,12 @@ async function resumeKeptDraft(ed) {
   clearTimeout(ed.checkTimer);
   clearTimeout(ed.draftTimer);
   ed.leaving = true;
-  startEditor({ mode: "edit", view: ed.view, version: ed.version, keptDraft: k.draft.content,
-    kept: { ...k, ours: k.revision, resumed: true } });
+  const kept = { ...k, ours: k.revision, resumed: true };
+  if (ed.mode === "new") {
+    startEditor({ mode: "new", kind: ed.kind, view: ed.view, from: ed.from, space: ed.space, keptDraft: k.draft.content, kept });
+  } else {
+    startEditor({ mode: "edit", view: ed.view, version: ed.version, keptDraft: k.draft.content, kept });
+  }
   saveDraft(editor);                  // and kept on this device, as any other unsaved change
 }
 
@@ -188,9 +215,9 @@ async function discardKeptDraft(ed) {
   [{ value: "discard", text: "Discard it", kind: "danger" }, { value: "keep", text: "Keep it", kind: "primary" }]);
   if (choice !== "discard" || editor !== ed || ed.kept !== k) return;
   try {
-    const answer = await apiWrite("/api/deck/draft", { id: ed.id, version: ed.version, expect: k.revision, draft: null });
-    if (editor !== ed) return;
-    ed.kept = keptFrom(answer, null);
+    const answer = await apiWrite(k.at.path, { ...k.at.body, expect: k.revision, draft: null });
+    if (editor !== ed || ed.kept !== k) return;
+    ed.kept = keptFrom(answer, null, false, k.at);
     saveDraft(ed);                    // this device's draft is no longer the kept one
     drawBanners();
     toast("The draft kept for later is discarded.");
@@ -208,6 +235,6 @@ async function discardKeptDraft(ed) {
 function discardKeptAfterSave(ed) {
   const k = ed && ed.kept;
   if (!k || !k.draft || k.ours !== k.revision) return null;      // nothing to wait for
-  return apiWrite("/api/deck/draft", { id: ed.id, version: ed.version, expect: k.revision, draft: null })
+  return apiWrite(k.at.path, { ...k.at.body, expect: k.revision, draft: null })
     .catch(() => null);           // left for the other device to offer or discard
 }

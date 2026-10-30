@@ -16,6 +16,17 @@ DECK = "# A member deck\n\n```\nDeck\n60 Forest\n```\n"
 SECRET = "OTHER-SPACE-PRIVATE-SENTINEL"
 
 
+class PreMigration:
+    """A connection whose database answers as one before migration 0019."""
+    def __init__(self, c):
+        self.c = c
+
+    def execute(self, query, *args):
+        if query == "select to_regclass('public.new_deck_draft') is not null":
+            return self.c.execute("select false")
+        return self.c.execute(query, *args)
+
+
 class ExportInputTests(unittest.TestCase):
     def test_command_is_registered_without_dispatcher_changes(self):
         from decklab.db.__main__ import parser
@@ -103,6 +114,11 @@ class MemberExportTests(db_support.DbTestCase):
                 c.execute("insert into deck_draft (profile_id, deck_id, version, revision, saved_at, device, content) "
                           "values (%s, %s, 'target', 1, now(), 'iPad', %s)",
                           (space, f"{space}/casual/current", Jsonb({"v": 1, "notes": text})))
+            # A new deck's drafts (migration 0019): no deck to cascade from, so cleared here first.
+            c.execute("delete from new_deck_draft")
+            for space, text in ((SPACE, "member new deck"), ("other", SECRET)):
+                c.execute("insert into new_deck_draft (profile_id, space_id, source, revision, saved_at, device, content) "
+                          "values (%s, %s, '', 1, now(), 'iPad', %s)", (space, space, Jsonb({"v": 1, "notes": text})))
 
     def change(self, sql, params=()):
         with self.connect() as c:
@@ -148,6 +164,8 @@ class MemberExportTests(db_support.DbTestCase):
         self.change("update deck_text set text = text || 'changed' where deck_id = 'other/casual/current'")
         self.change("update profile_setting set value = 'light' where profile_id = 'other'")
         self.change("update deck_draft set revision = revision + 1 where profile_id = 'other'")
+        with self.connect() as c:
+            c.execute("update new_deck_draft set revision = revision + 1 where profile_id = 'other'")
         self.assertEqual(self.match(manifest), manifest)
 
     def test_current_other_space_list_protects_a_result_without_seen_as_provenance(self):
@@ -184,6 +202,23 @@ class MemberExportTests(db_support.DbTestCase):
                 self.change(sql)
                 with self.assertRaisesRegex(ValueError, "snapshot has changed"):
                     self.match(manifest)
+
+    def test_member_new_deck_draft_changes_require_a_fresh_export(self):
+        manifest = self.export()
+        with self.connect() as c:      # not audited, so no change set
+            c.execute("update new_deck_draft set revision = revision + 1 where profile_id = 'sample'")
+        with self.assertRaisesRegex(ValueError, "snapshot has changed"):
+            self.match(manifest)
+
+    def test_no_new_deck_drafts_fingerprint_as_before_their_migration(self):
+        with self.connect() as c:
+            c.execute("delete from new_deck_draft where space_id = 'sample'")
+            _, sha, data = space_export.snapshot(c, SPACE, details=True)
+            self.assertNotIn("new_drafts", data)
+            self.assertEqual(space_export.snapshot(PreMigration(c), SPACE)[1], sha)
+        with self.connect() as c:
+            _, _, data = space_export.snapshot(c, "other", details=True)
+            self.assertNotIn("member new deck", json.dumps(data["new_drafts"]))
 
     def test_changed_missing_extra_or_wrong_space_artifacts_are_refused(self):
         manifest = self.export()

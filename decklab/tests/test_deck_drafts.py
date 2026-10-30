@@ -10,7 +10,7 @@ from unittest import mock
 
 from decklab.db import migrate
 from decklab.lib import access, feature_routes, state
-from decklab.lib.api import deck_drafts
+from decklab.lib.api import deck_drafts, guard
 from decklab.lib.state import Conflict, deck_drafts as rules
 from decklab.lib.state.memory import MemoryStore
 from decklab.tests.test_api_permissions import PermissionTestCase
@@ -60,6 +60,17 @@ class MigrationTests(unittest.TestCase):
     def test_drafts_are_not_exported(self):
         from decklab.db import export
         self.assertNotIn("public.deck_draft", {name for name, _ in export.TABLES})
+        self.assertNotIn("public.new_deck_draft", {name for name, _ in export.TABLES})
+
+    def test_a_new_decks_drafts_have_their_own_table_after_0018(self):
+        files = migrate.available()
+        self.assertEqual((files[18]["version"], files[18]["name"]), (19, "new_deck_drafts"))
+        sql = (migrate.MIGRATIONS / "0019_new_deck_drafts.sql").read_text(encoding="utf-8")
+        self.assertIn("primary key (profile_id, space_id, source)", sql)
+        self.assertIn("references profile (id) on delete cascade", sql)
+        self.assertIn("references space (id) on delete cascade", sql)
+        self.assertNotIn("references deck", sql)        # a new deck has no deck row yet
+        self.assertNotIn("audit_row", sql)
 
 
 class DraftApiTests(PermissionTestCase):
@@ -205,6 +216,105 @@ class DraftApiTests(PermissionTestCase):
         handler._write_body.assert_called_once_with(deck_drafts.MAX_BODY)
 
 
+class NewDeckDraftApiTests(PermissionTestCase):
+    """A never-saved new deck's draft (/api/deck/new-draft): per profile, space and source."""
+
+    def post(self, profile, space="home", *, expect=0, content=None, **more):
+        return deck_drafts.save_new_draft(self.body(profile, space=space, expect=expect, draft=content, **more))
+
+    def test_two_devices_of_one_profile_keep_resume_and_discard_a_new_decks_draft(self):
+        with tunnel("matt"):
+            self.assertEqual(deck_drafts.new_draft_view("home"), {"available": True, "space": "home", "source": None,
+                                                                  "revision": 0, "draft": None})
+            saved = self.post("matt", content=draft(1), device="iPad")
+            self.assertEqual((saved["revision"], saved["source"]), (1, None))
+        with access.viewing("matt"):
+            shown = deck_drafts.new_draft_view()            # no space given: the profile's own
+            self.assertEqual((shown["space"], shown["draft"]["device"], shown["draft"]["content"]), ("home", "iPad", draft(1)))
+            self.assertApiError(409, lambda: self.post("matt", expect=0, content=draft(2)))
+            self.assertEqual(self.post("matt", expect=1)["draft"], None)
+        with tunnel("matt"):
+            self.assertEqual(deck_drafts.new_draft_view("home")["revision"], 2)
+            # A copy of a deck is kept apart from one started from nothing, and from that deck's own drafts.
+            copied = self.post("matt", content=draft(3), source=DECK)
+            self.assertEqual((copied["source"], copied["revision"]), (DECK, 1))
+            self.assertEqual(deck_drafts.new_draft_view("home", DECK)["draft"]["content"], draft(3))
+            self.assertEqual(deck_drafts.draft_view(DECK)["draft"], None)
+        self.assertEqual(self.box.state.changes(), [])
+
+    def test_a_new_decks_draft_is_only_its_own_profiles(self):
+        with tunnel("matt"):
+            self.post("matt", content=draft(1))
+        with tunnel("user1"):
+            # User1 may add home decks too, but Matt's draft isn't hers, and she can't write it.
+            self.assertEqual(deck_drafts.new_draft_view("home")["draft"], None)
+            self.assertApiError(403, lambda: self.post("matt", expect=1))
+            self.assertEqual(self.post("user1", content=draft(7))["revision"], 1)
+        with access.viewing("user1"):
+            self.assertApiError(403, lambda: self.post("matt", expect=1, content=draft(2)))
+        with access.using(None):
+            self.assertApiError(403, lambda: deck_drafts.new_draft_view("home"))
+            self.assertApiError(403, lambda: self.post("matt", expect=1))
+        self.assertEqual(self.box.state.new_deck_draft("matt", "home", "")["draft"]["content"], draft(1))
+        self.assertEqual(self.box.state.new_deck_draft("user1", "home", "")["draft"]["content"], draft(7))
+
+    def test_spaces_the_viewer_cant_add_decks_to_are_refused_before_any_draft_is_read(self):
+        with tunnel("user2"):
+            self.assertEqual(self.post("user2", "user2", content=draft(1))["revision"], 1)
+            self.assertEqual(deck_drafts.new_draft_view()["space"], "user2")      # their own by default
+        refused = mock.patch.object(self.box.state, "new_deck_draft", side_effect=AssertionError("private read"))
+        unwritten = mock.patch.object(self.box.state, "new_deck_draft_put", side_effect=AssertionError("private write"))
+        with refused, unwritten:
+            # An admin has no override in a member's space; a member none at home or in another's; a
+            # space that doesn't exist answers as a hidden one.
+            for who, space in (("matt", "user2"), ("user1", "user2"), ("user2", "home"), ("user2", "user3"),
+                               ("user2", "nobody"), ("matt", "nobody")):
+                for remote in (False, True) if who != "user2" else (True,):
+                    with self.subTest(who=who, space=space, remote=remote), \
+                            (tunnel(who) if remote else access.viewing(who)):
+                        for call in (lambda: deck_drafts.new_draft_view(space),
+                                     lambda: self.post(who, space, content=draft()), lambda: self.post(who, space)):
+                            self.assertEqual(self.assertApiError(403, call).message, guard.HIDDEN_SPACE)
+            with tunnel("user2"):
+                # A deck to copy that the viewer can't see answers as a missing one.
+                self.assertApiError(404, lambda: deck_drafts.new_draft_view("user2", DECK))
+                self.assertApiError(404, lambda: self.post("user2", "user2", content=draft(), source=DECK))
+        with tunnel("user2"):
+            self.assertEqual(deck_drafts.new_draft_view("user2", MEMBER_DECK)["revision"], 0)
+
+    def test_bad_requests_write_nothing(self):
+        with tunnel("matt"):
+            for body in (self.body("matt", space="home", expect=0), self.body("matt", expect=0, draft=draft()),
+                         self.body("matt", space="home", expect=-1, draft=draft()),
+                         self.body("matt", space="home", expect=0, draft={"v": 1}),
+                         self.body("matt", space="home", expect=0, draft=draft(), source=7),
+                         self.body("matt", space="home", expect=0, draft=draft(), source="x"),
+                         self.body("matt", space="home", expect=0, draft=draft(), id=DECK)):
+                with self.subTest(body=body[:80]):
+                    self.assertApiError(400, deck_drafts.save_new_draft, body)
+            self.assertApiError(413, deck_drafts.save_new_draft, b" " * (deck_drafts.MAX_BODY + 1))
+        self.assertEqual(self.box.state.new_deck_draft("matt", "home", ""), {"revision": 0, "draft": None})
+
+    def test_without_the_migration_the_new_deck_editor_carries_on_as_before(self):
+        self.box.state.deck_drafts_ready = False
+        with tunnel("matt"):
+            self.assertEqual(deck_drafts.new_draft_view("home"), {"available": False, "space": "home", "source": None})
+            self.assertEqual(self.assertApiError(503, lambda: self.post("matt", content=draft())).message, rules.MIGRATE)
+
+    def test_the_routes_are_registered(self):
+        handler = mock.Mock(command="GET")
+        handler._query.return_value = {"space": "home", "source": DECK}
+        with mock.patch.object(deck_drafts, "new_draft_view", return_value={"fixture": True}) as view:
+            self.assertTrue(feature_routes.dispatch(handler, ["deck", "new-draft"], {}))
+        view.assert_called_once_with(space="home", source=DECK)
+        handler = mock.Mock(command="POST")
+        handler._write_body.return_value = b"{}"
+        with mock.patch.object(deck_drafts, "save_new_draft", return_value={"fixture": True}) as save:
+            self.assertTrue(feature_routes.dispatch(handler, ["deck", "new-draft"], {}))
+        save.assert_called_once_with(b"{}")
+        handler._write_body.assert_called_once_with(deck_drafts.MAX_BODY)
+
+
 class _Cursor:
     """Just enough of a psycopg cursor for pg_deck_drafts' statements, over one dict table."""
 
@@ -220,14 +330,18 @@ class _Cursor:
 
     def execute(self, sql, params=()):
         self.conn.calls.append(sql)
-        if sql.startswith("select to_regclass('public.deck_draft')"):
+        if sql.startswith(("select to_regclass('public.deck_draft')", "select to_regclass('public.new_deck_draft')")):
             self.result = (self.conn.ready,)
         elif sql.startswith("select pg_advisory_xact_lock"):
             self.conn.locks.append(params[0])
-        elif sql.startswith("select revision, saved_at, device, content from deck_draft"):
+        elif sql.startswith(("select revision, saved_at, device, content from deck_draft where profile_id = %s and "
+                             "deck_id = %s and version = %s",
+                             "select revision, saved_at, device, content from new_deck_draft where profile_id = %s "
+                             "and space_id = %s and source = %s")):
             row = self.conn.rows.get(tuple(params))
             self.result = None if row is None else tuple(row)
-        elif sql.startswith("insert into deck_draft"):
+        elif sql.startswith(("insert into deck_draft (profile_id, deck_id, version,",
+                             "insert into new_deck_draft (profile_id, space_id, source,")):
             *key, revision, device, content, expected = params
             row = self.conn.rows.get(tuple(key))
             if row is None or row[0] == expected:
@@ -298,11 +412,27 @@ class PgDraftTests(unittest.TestCase):
         self.assertEqual(pg_deck_drafts.put(store, "matt", DECK, "target", None, 1), {"revision": 2, "draft": None})
         self.assertEqual(pg_deck_drafts.get(store, "matt", DECK, "target"), {"revision": 2, "draft": None})
 
+    def test_a_new_decks_draft_has_its_own_table_key_and_lock(self):
+        from decklab.lib.state import pg_deck_drafts
+        conn = _Conn()
+        store = _Store(conn)
+        saved = pg_deck_drafts.new_put(store, "matt", "home", "", draft(1), 0, device="PC")
+        self.assertEqual((saved["revision"], saved["draft"]["device"]), (1, "PC"))
+        self.assertEqual(conn.locks, ["new-deck-draft:" + "\n".join(("matt", "home", ""))])
+        self.assertTrue(any(sql.startswith("insert into new_deck_draft") for sql in conn.calls))
+        self.assertFalse(any(" deck_draft " in f" {sql} " for sql in conn.calls))
+        with self.assertRaises(Conflict):
+            pg_deck_drafts.new_put(store, "matt", "home", "", draft(2), 0)
+        self.assertEqual(pg_deck_drafts.new_get(store, "matt", "home", "")["draft"]["content"], draft(1))
+        self.assertEqual(pg_deck_drafts.new_get(store, "matt", "home", DECK), {"revision": 0, "draft": None})
+
     def test_a_database_without_the_migration_is_found_before_any_table_is_named(self):
         from decklab.lib.state import pg_deck_drafts
         conn = _Conn(ready=False)
         for call in (lambda: pg_deck_drafts.get(_Store(conn), "matt", DECK, "target"),
-                     lambda: pg_deck_drafts.put(_Store(conn), "matt", DECK, "target", draft(), 0)):
+                     lambda: pg_deck_drafts.put(_Store(conn), "matt", DECK, "target", draft(), 0),
+                     lambda: pg_deck_drafts.new_get(_Store(conn), "matt", "home", ""),
+                     lambda: pg_deck_drafts.new_put(_Store(conn), "matt", "home", "", draft(), 0)):
             with self.assertRaises(rules.MissingSchema):
                 call()
         self.assertTrue(all("to_regclass" in sql for sql in conn.calls))

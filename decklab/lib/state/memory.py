@@ -71,7 +71,7 @@ class MemoryStore:
     explicit fixture provider: locked(deck_id) yields a fresh raw deck capture
     while retaining its identity lock through a field-policy write. No provider
     ever falls back to configured inventory. drafts_missing starts it as a database without
-    migration 0018 (deck_drafts_ready False): every draft call raises deck_drafts.MissingSchema."""
+    migrations 0018 and 0019 (deck_drafts_ready False): every draft call raises deck_drafts.MissingSchema."""
 
     def __init__(self, mode="everyone", *, field_source=None, drafts_missing=False):
         self._lock = threading.RLock()
@@ -86,6 +86,7 @@ class MemoryStore:
         self._field_policies = {}   # format -> audited {format, revision, content: {v, rules}} row
         self._field_source = field_source
         self._deck_drafts = {}      # (profile, deck, version) -> deck_draft row (not audited, never batched)
+        self._new_deck_drafts = {}  # (profile, space, source) -> new_deck_draft row, the same
         self.deck_drafts_ready = not drafts_missing   # False: as before migration 0018
         self._visibility = {}       # (owner, thing) -> Public row; no row means Private
         self._visibility_last = {}
@@ -326,15 +327,33 @@ class MemoryStore:
     def deck_draft(self, profile_id, deck_id, version):
         """PgStore.deck_draft(): the draft as deck_drafts.view gives it."""
         from . import deck_drafts
-        key = deck_drafts.key(profile_id, deck_id, version)
-        with self._lock:
-            self._drafts()
-            return deck_drafts.view(self._deck_drafts.get(key))
+        return self._draft_get(self._deck_drafts, deck_drafts.key(profile_id, deck_id, version))
 
     def deck_draft_put(self, profile_id, deck_id, version, content, expected_revision, *, device=""):
         """PgStore.deck_draft_put(): save or discard after the revision check, with no change set."""
         from . import deck_drafts
-        key = deck_drafts.key(profile_id, deck_id, version)
+        return self._draft_put(self._deck_drafts, deck_drafts.key(profile_id, deck_id, version), content,
+                               expected_revision, device)
+
+    def new_deck_draft(self, profile_id, space_id, source):
+        """PgStore.new_deck_draft(): a new deck's draft, as deck_draft."""
+        from . import deck_drafts
+        return self._draft_get(self._new_deck_drafts, deck_drafts.new_key(profile_id, space_id, source))
+
+    def new_deck_draft_put(self, profile_id, space_id, source, content, expected_revision, *, device=""):
+        """PgStore.new_deck_draft_put(): as deck_draft_put."""
+        from . import deck_drafts
+        return self._draft_put(self._new_deck_drafts, deck_drafts.new_key(profile_id, space_id, source), content,
+                               expected_revision, device)
+
+    def _draft_get(self, table, key):
+        from . import deck_drafts
+        with self._lock:
+            self._drafts()
+            return deck_drafts.view(table.get(key))
+
+    def _draft_put(self, table, key, content, expected_revision, device):
+        from . import deck_drafts
         content = deck_drafts.content(content)
         expected = deck_drafts.expectation(expected_revision)
         device = deck_drafts.device(device)
@@ -342,12 +361,12 @@ class MemoryStore:
             if self._batch is not None:
                 raise Invalid(deck_drafts.INDEPENDENT)
             self._drafts()
-            before = self._deck_drafts.get(key)
+            before = table.get(key)
             after = deck_drafts.transition(before, expected, content, device, deck_drafts.stamp())
             if after is None:
                 return deck_drafts.view(before)
-            self._deck_drafts[key] = _jsonb(after)
-            return deck_drafts.view(self._deck_drafts[key])
+            table[key] = _jsonb(after)
+            return deck_drafts.view(table[key])
 
     # ------------------------------------------------------------------ the household's Commander night
 

@@ -114,6 +114,14 @@ class RecordTransformTests(unittest.TestCase):
         self.assertEqual(rows, [{"table": "deck_draft", "action": "delete",
                                  "key": {"profile_id": SPACE, "deck_id": "sample/casual/own", "version": "target"}}])
 
+    def test_a_new_decks_drafts_are_listed_by_key_without_their_contents(self):
+        new = {"profile_id": SPACE, "space_id": SPACE, "source": "", "revision": 1, "device": "iPad",
+               "content": {"notes": SECRET}}
+        rows, _ = space_remove.row_plan(SPACE, {"new_drafts": [new]})
+        self.assertEqual(rows, [{"table": "new_deck_draft", "action": "delete",
+                                 "key": {"profile_id": SPACE, "space_id": SPACE, "source": ""}}])
+        self.assertNotIn(SECRET, repr(rows))
+
     def test_every_table_hanging_off_a_profile_or_deck_is_locked_and_deleted_explicitly(self):
         # A cascade alone would delete a member's rows outside the export, the preview and the locks.
         from decklab.db import migrate, space_apply
@@ -133,9 +141,12 @@ class RecordTransformTests(unittest.TestCase):
                 bare = table.removeprefix("public.")
                 self.assertIn(bare, tables)
                 self.assertIn(bare, space_apply.DELETE_ORDER)
+        self.assertIn("public.new_deck_draft", found)
         order = space_apply.DELETE_ORDER
         self.assertLess(order.index("deck_draft"), order.index("deck"))
         self.assertLess(order.index("deck_draft"), order.index("profile"))
+        self.assertLess(order.index("new_deck_draft"), order.index("profile"))
+        self.assertLess(order.index("new_deck_draft"), order.index("space"))
 
 
 class ForgeSelectionTests(unittest.TestCase):

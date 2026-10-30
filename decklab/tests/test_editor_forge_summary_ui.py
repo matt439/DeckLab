@@ -10,7 +10,7 @@ class EditorForgeSummaryTests(unittest.TestCase):
     def run_js(self, scenario):
         panes.EditorPanesUiTests.run_js(self, r'''
           const fingerprint='a'.repeat(64),sha='b'.repeat(64),reads=[];
-          let respond;api=path=>{if(path.startsWith('/api/deck/draft?'))return Promise.resolve({available:false});reads.push(path);return new Promise(resolve=>{respond=resolve;});};
+          let respond;api=path=>{if(path.startsWith('/api/deck/draft?')||path.startsWith('/api/deck/new-draft?'))return Promise.resolve({available:false});reads.push(path);return new Promise(resolve=>{respond=resolve;});};
           const numbers={version:'target',card_sha:fingerprint,rate:{value:.61,low:.55,high:.67},
             games:400,tested:'2026-10-20T10:00:00Z',partial:true,counted:2,of:3};
           const evidenceView=()=>({sha256:sha,forge_lists:{target:fingerprint,owned:'c'.repeat(64)}});

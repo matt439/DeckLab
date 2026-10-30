@@ -29,7 +29,9 @@ ROUTES = r'''
   }
   function noRouteIo() {
     const calls=[];
-    api=async path=>{calls.push(['read',path]);throw Error('Character routes must not read the API');};
+    // A new deck's space choice reads that space's draft kept for later (E2-S16), not a character route's read.
+    api=async path=>{if(path.startsWith('/api/deck/new-draft?'))return {available:false};
+      calls.push(['read',path]);throw Error('Character routes must not read the API');};
     apiWrite=async path=>{calls.push(['write',path]);throw Error('Character routes must not write the API');};
     return calls;
   }

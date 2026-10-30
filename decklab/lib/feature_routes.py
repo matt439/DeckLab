@@ -79,6 +79,7 @@ def dispatch(handler, route, query):
         ("deck", "cards"): (cover.cover_cards, ("id",)),
         ("deck", "opponents"): (opponents.opponents_view, ("id",)),
         ("deck", "draft"): (deck_drafts.draft_view, ("id", "version")),
+        ("deck", "new-draft"): (deck_drafts.new_draft_view, ("space", "source")),
         ("deck", "edhrec"): (edhrec.edhrec_view, ("id", "commander", "commander2", "space", "page")),
         ("receipt",): (receipts.receipt_view, ("order",)),
         ("arrivals",): (arrivals.arrivals_view, ()),
@@ -148,6 +149,7 @@ def dispatch(handler, route, query):
         ("deck", "box-repair"): box_repair.repair_box,
         ("deck", "opponents"): opponents.save_opponents,
         ("deck", "draft"): (deck_drafts.save_draft, deck_drafts.MAX_BODY),     # the viewer's own; not audited
+        ("deck", "new-draft"): (deck_drafts.save_new_draft, deck_drafts.MAX_BODY),     # the same, for a new deck
         ("deck", "considering"): considering.save_considering,
         ("deck", "swaps"): swaps.suggest_draft_swaps,      # a dry run: nothing is written
         ("deck", "retire"): retirement.retire_deck,

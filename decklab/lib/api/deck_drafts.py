@@ -1,4 +1,4 @@
-"""GET and POST /api/deck/draft: an editor draft kept for later on the PC (E2-S16), so the same
+"""GET and POST /api/deck/draft (and /api/deck/new-draft): an editor draft kept for later on the PC (E2-S16), so the same
 profile can pick it up on another device (state/deck_drafts.py has the store's rules).
 
 A draft is one profile's: only that profile reads or writes it, a named viewer on the page
@@ -8,11 +8,19 @@ whether another profile has one. The deck's privacy is checked again on every re
 (a deck the viewer may not see answers as a missing one, before anything of the draft is
 read), and keeping a draft needs deck.edit on it, as saving it would; discarding one needs
 only that the deck can be seen, so a draft can always be cleared away. Only a saved deck's
-lists have drafts here: a product deck or pairing is read-only, and a new deck keeps its
-draft on the device as before.
+lists have drafts at /api/deck/draft: a product deck or pairing is read-only.
 
-Without migration 0018 the read answers {"available": false} and the editor behaves as before
-(drafts on that device only); a save or discard then answers 503 with the migration's words.
+A new deck, which has no id yet, has its own at /api/deck/new-draft (new_draft_view,
+save_new_draft): one per profile, space and source (none for a deck started from nothing,
+else the deck it copies). Every read and write asks again that the viewer may add decks to
+that space, as POST /api/decks does (a space they can't see, or that doesn't exist, answers
+403 with the hidden space's words, and one they see but can't add to with deck.create's
+reason), and that they may see the deck it copies (else as a missing deck), before anything
+of a draft is read.
+
+Without migration 0018 (0019 for a new deck's) the read answers {"available": false} and the
+editor behaves as before (drafts on that device only); a save or discard then answers 503 with
+the migration's words.
 Neither keeps an audit row: a draft isn't a change to Deck Lab's data, and publishing it is
 still the editor's ordinary reviewed Save.
 
@@ -26,6 +34,7 @@ from decklab.lib.state import deck_drafts as rules
 
 from . import deck_aliases, guard
 from .common import ApiError, _keys, _parse_body, state_errors
+from .drafts import _new_space
 from .library import _find_summary, check_deck_id
 from .settings import _writer
 
@@ -137,3 +146,60 @@ def save_draft(body):
         except rules.MissingSchema:
             raise ApiError(503, rules.MIGRATE, reason="drafts") from None
     return _answer(summary, version, saved)
+
+
+# ------------------------------------------------------------------ a new deck's draft
+
+def _new_where(profile, space, source):
+    """(space, source) of a new deck's draft the profile may have: a space it may add decks to
+    and a source deck (or none) it may see; refused before anything of a draft is read."""
+    space = _new_space({"space": space}, profile)      # as POST /api/decks: hidden and missing alike
+    if not guard.sees_deck({"space": space}, profile):
+        raise ApiError(403, guard.HIDDEN_SPACE)
+    guard.require(profile, "deck.create", {"space": space, "player": None})
+    if source in (None, rules.SCRATCH):
+        return space, rules.SCRATCH
+    if not isinstance(source, str):
+        raise ApiError(400, "source must be the id of the deck it copies, or left out")
+    check_deck_id(source)
+    guard.require_sees_deck(source, profile)
+    return space, source
+
+
+def _new_answer(space, source, saved):
+    return {"available": True, "space": space, "source": source or None, **saved}
+
+
+def new_draft_view(space=None, source=None):
+    """GET /api/deck/new-draft?space=<space>&source=<deck id>: the viewer's own draft of a new deck
+    in that space (source: the deck it copies, left out for one started from nothing), {available,
+    space, source, revision, draft: {saved_at, device, content} or None}; available False before
+    migration 0019."""
+    profile = _owner()
+    space, source = _new_where(profile, space, source)
+    with state_errors():
+        try:
+            saved = state.store().new_deck_draft(profile["id"], space, source)
+        except rules.MissingSchema:
+            return {"available": False, "space": space, "source": source or None}
+    return _new_answer(space, source, saved)
+
+
+def save_new_draft(body):
+    """POST /api/deck/new-draft {profile, space, source?, expect, draft, device?}: keep a new deck's
+    draft for later, or discard it (draft null), with save_draft's revision check. Answers as
+    new_draft_view does."""
+    data = _parse_body(body, MAX_BODY)
+    _keys(data, ("profile", "space", "expect", "draft"), ("source", "device"))
+    profile = _writer(data)
+    viewer = _owner()
+    if viewer["id"] != profile["id"]:
+        raise ApiError(403, OWN_ONLY)
+    space, source = _new_where(profile, data["space"], data.get("source"))
+    with state_errors():
+        try:
+            saved = state.store().new_deck_draft_put(profile["id"], space, source, data["draft"], data["expect"],
+                                                     device=data.get("device"))
+        except rules.MissingSchema:
+            raise ApiError(503, rules.MIGRATE, reason="drafts") from None
+    return _new_answer(space, source, saved)

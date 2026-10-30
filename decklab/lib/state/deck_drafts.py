@@ -12,8 +12,13 @@ Drafts are scratch work, like the browser's drafts: no change set, no audit rows
 never reach Activity), not exported. The stores grant no request access: lib/api/deck_drafts.py
 answers only the draft's own profile and rechecks the deck's privacy on every read and write.
 
-A database without migration 0018 raises MissingSchema (an Unavailable), which the API turns
-into "not available here" so the editor behaves exactly as before: drafts on this device only.
+A new deck has no deck id yet: its draft (migration 0019's new_deck_draft) is keyed by profile,
+space and source ("" for a deck started from nothing, else the id of the deck it copies), with
+the same revisions, tombstones and envelope (new_key).
+
+A database without migration 0018 (or, for a new deck's, 0019) raises MissingSchema (an
+Unavailable), which the API turns into "not available here" so the editor behaves exactly as
+before: drafts on this device only.
 """
 import copy
 import json
@@ -26,6 +31,8 @@ VERSIONS = ("target", "owned")
 MAX_CONTENT = 480 * 1024            # bytes of a draft's JSON (two full lists, their bases and the write-up)
 MAX_DEVICE = 60                     # characters naming the device it was saved on
 MAX_DECK_ID = 200                   # api/library.check_deck_id's
+MAX_SPACE = 40                      # api/collection.space_param's
+SCRATCH = ""                        # a new deck's source when it copies no deck
 MAX_REVISION = 2 ** 53 - 1          # the page reads it as a JavaScript number
 REQUIRED = ("lists", "fields", "base")      # editor-drafts.js readDraft's test of a draft
 
@@ -37,7 +44,7 @@ BAD_CONTENT = "The draft must be the editor's draft: an object with lists, field
 
 
 class MissingSchema(Unavailable):
-    """Migration 0018 isn't applied: there's no draft table to read or write."""
+    """Migration 0018 (or 0019, for a new deck's) isn't applied: there's no draft table to read or write."""
 
 
 def missing_schema(error):
@@ -47,12 +54,26 @@ def missing_schema(error):
 def key(profile_id, deck_id, version):
     """(profile id, deck id, version) checked; Invalid otherwise."""
     pid = rules.profile_id(profile_id)
-    if not isinstance(deck_id, str) or not 3 <= len(deck_id) <= MAX_DECK_ID or CONTROL.search(deck_id) \
-            or deck_id != deck_id.strip() or " " in deck_id:
-        raise Invalid("Bad deck ID")
+    _deck_id(deck_id)
     if version not in VERSIONS:
         raise Invalid("version must be target or owned")
     return pid, deck_id, version
+
+
+def _deck_id(value):
+    if not isinstance(value, str) or not 3 <= len(value) <= MAX_DECK_ID or CONTROL.search(value) \
+            or value != value.strip() or " " in value:
+        raise Invalid("Bad deck ID")
+    return value
+
+
+def new_key(profile_id, space_id, source):
+    """(profile id, space id, source) of a new deck's draft, checked; Invalid otherwise. source is
+    SCRATCH for a deck started from nothing, else the id of the deck it copies."""
+    pid = rules.profile_id(profile_id)
+    if not isinstance(space_id, str) or not 1 <= len(space_id) <= MAX_SPACE or not rules.PROFILE_ID.fullmatch(space_id):
+        raise Invalid("Bad space ID")
+    return pid, space_id, source if source == SCRATCH else _deck_id(source)
 
 
 def expectation(value):

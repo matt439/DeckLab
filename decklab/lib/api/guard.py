@@ -60,6 +60,9 @@ The routes and what each checks:
                                                   named viewer; nobody else's, an admin's or a script's), the
                                                   deck seen first, then deck.edit to keep one (a discard needs
                                                   only the deck seen); not audited (api/deck_drafts.py)
+    POST /api/deck/new-draft                      a new deck's draft: the viewer's own only, as /api/deck/draft,
+                                                  its space seen and deck.create there (keeping or discarding),
+                                                  and the deck it copies seen; not audited
     POST /api/deck/token-cards                    deck.edit on the deck as stored (as a save of its text), and
                                                   its space's inventory (require_sees_inventory)
     POST /api/deck/printings                      the same as /api/deck/token-cards (a home deck only)

@@ -7,7 +7,7 @@ decks/<kind>/<slug>.md and retired/decks/<kind>/<slug>.md (the last saved text).
 
 manifest.json binds those files to a deterministic, space-scoped database SHA.
 The SHA also covers histories, aliases, wishlist, settings, switches, editor drafts
-kept for later (migration 0018) and related play records, without putting their
+kept for later (migrations 0018 and 0019) and related play records, without putting their
 contents in the artifact. It excludes global
 revision counters and audit rows, so another space's unrelated save doesn't make
 it stale. A v2 manifest also fingerprints own-only Forge artifacts; their raw
@@ -107,6 +107,14 @@ def snapshot(c, space, *, details=False):
             (space, space))), key=_json)
     else:
         data["drafts"] = []
+    # A new deck's drafts (migration 0019): the member's own, and any in the member's space. Only
+    # when there are some, so an export made before the migration still matches without them.
+    if c.execute("select to_regclass('public.new_deck_draft') is not null").fetchone()[0]:
+        new_drafts = sorted((r[0] for r in c.execute(
+            "select to_jsonb(r) from new_deck_draft r where profile_id in "
+            "(select id from profile where space_id = %s) or space_id = %s", (space, space))), key=_json)
+        if new_drafts:
+            data["new_drafts"] = new_drafts
     cards = [{("set" if key == "set_code" else key): value for key, value in row.items()
               if key != "space_id"} for row in data["collection"]]
     cards.sort(key=rules.sort_key)

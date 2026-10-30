@@ -30,6 +30,7 @@ _TABLE_KEYS = {
     "settings": ("profile_setting", ("profile_id", "key")),
     "visibility": ("visibility", ("owner", "thing")),
     "drafts": ("deck_draft", ("profile_id", "deck_id", "version")),
+    "new_drafts": ("new_deck_draft", ("profile_id", "space_id", "source")),
     "visit_days": ("ops.visit_day", ("profile_id", "day", "channel")),
     "visit_pages": ("ops.visit_page", ("profile_id", "day", "channel", "route", "deck_id")),
 }

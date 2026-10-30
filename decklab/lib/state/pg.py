@@ -805,6 +805,17 @@ class PgStore:
         from . import pg_deck_drafts
         return pg_deck_drafts.put(self, profile_id, deck_id, version, content, expected_revision, device=device)
 
+    def new_deck_draft(self, profile_id, space_id, source):
+        """One profile's draft of a new deck in a space (pg_deck_drafts.new_get): as deck_draft,
+        before migration 0019 deck_drafts.MissingSchema."""
+        from . import pg_deck_drafts
+        return pg_deck_drafts.new_get(self, profile_id, space_id, source)
+
+    def new_deck_draft_put(self, profile_id, space_id, source, content, expected_revision, *, device=""):
+        """Save or discard that draft after checking its revision, as deck_draft_put."""
+        from . import pg_deck_drafts
+        return pg_deck_drafts.new_put(self, profile_id, space_id, source, content, expected_revision, device=device)
+
     # ------------------------------------------------------------------ the household's Commander night
 
     @staticmethod
