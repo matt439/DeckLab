@@ -91,7 +91,7 @@ class EnvironmentInspectionTests(unittest.TestCase):
                 mock.patch.object(environment.platform, "system", return_value="Darwin"),
                 mock.patch.object(environment, "run", side_effect=lambda *args: self.responses[args]),
                 mock.patch.object(environment.shutil, "which", return_value="/usr/bin/xcrun"),
-                mock.patch.object(environment.Path, "read_text", return_value='{"version": "10.43.1"}')):
+                mock.patch.object(environment.Path, "read_text", return_value='{"version": "12.22.7"}')):
             self.enterContext(patch)
         self.pgrep = self.enterContext(mock.patch.object(environment.subprocess, "run", return_value=
             subprocess.CompletedProcess(["pgrep", "-x", "Simulator"], 1, stdout="", stderr="")))

@@ -156,8 +156,8 @@ def inspect(ipad_model=None, runtime=None):
     try:
         found["xcuitest"] = json.loads((HERE / "node_modules" / "appium-xcuitest-driver" /
                                        "package.json").read_text(encoding="utf-8"))["version"]
-        if found["xcuitest"] != "10.43.1":
-            raise ValueError("installed XCUITest does not match 10.43.1")
+        if found["xcuitest"] != "12.22.7":
+            raise ValueError("installed XCUITest does not match 12.22.7")
     except (OSError, ValueError, KeyError) as error:
         found["errors"].append(f"XCUITest: {error}. Run bash decklab/safari/setup.sh.")
     if "xcode" in found and _version(found["xcode"].splitlines()[0]) < (26,):
