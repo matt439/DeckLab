@@ -909,6 +909,11 @@ class PgInventory:
                             # Added queue rows removed, or removed ones restored as new rows: prove
                             # the exact DELETEs or INSERTs and every other row's position before commit.
                             summary = undo_watchlist_rows.confirm_in_transaction(cur, change_set, before, saved, summary)
+                        from . import undo_collection_rows
+                        if undo_collection_rows.restoring(summary):
+                            # 2-50 collection rows removed or restored together: prove the exact
+                            # DELETEs or INSERTs, the saved collection and the reason before commit.
+                            summary = undo_collection_rows.confirm_in_transaction(cur, change_set, before, saved, summary)
                         from . import undo_watchlist_mixed
                         if undo_watchlist_mixed.restoring(summary):
                             # A mixed queue change undone whole: prove the exact UPDATEs, DELETEs and

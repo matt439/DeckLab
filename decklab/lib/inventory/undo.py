@@ -837,13 +837,20 @@ def apply_undo(snapshot, *, change_id, space, expect, reason=None, confirm_owned
             reason = removal_reason(reason)
         inverse = _batch_add_inverse if adding else _batch_remove_inverse if removing else _batch_inverse
         after, summary = inverse(snapshot, plan["rows"], space, plan["label"])
+        proved = {}
+        if adding or removing:
+            # PgInventory.apply proves exactly these INSERTs or DELETEs before commit (or rolls back).
+            from . import undo_collection_rows
+            proved = {undo_collection_rows.PROOF: undo_collection_rows.proof(
+                plan, _remaining_collection(snapshot, space, plan["label"]))}
         return after, Summary(f"Undo change #{change_id}: {'remove' if removing else 'restore'} {plan['label']}", {**summary.counts, "undo": 1},
                               {after.collection(space).path: ["add"] if adding else ["remove"] if removing else
                                list(BATCH_UPDATE_FIELDS if plan["action"] == "batch_update" else BATCH_FIELDS)},
                               {**(summary.extra or {}), "undo_of": change_id, "space": space, "kind": "collection",
                                "action": plan["action"], "row_count": plan["row_count"],
                                "row_change_ids": [item["row_change_id"] for item in plan["rows"]],
-                               **({"confirmed_owned": True} if adding else {}), **({"undo_reason": reason} if removing else {})})
+                               **({"confirmed_owned": True} if adding else {}), **({"undo_reason": reason} if removing else {}),
+                               **proved})
     removing = plan.get("action") == "remove"
     adding = plan.get("action") == "add"
     if removing:
