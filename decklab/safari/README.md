@@ -68,16 +68,19 @@ touch-usability checks separately.
 `setup.sh` installs the exact dependency graph in `package-lock.json` locally
 under `decklab/safari/node_modules`, runs XCUITest's doctor and prints available
 runtimes and device types. It refuses to install anything on Windows or Linux.
-The pins are **Appium 3.8.0** and **XCUITest 10.43.1**. Both require the Appium 3
-Node/npm range satisfied by the Node/npm versions above; driver 10 requires
-Appium 3 ([driver requirements](https://appium.github.io/appium-xcuitest-driver/10.43/getting-started/system-requirements/),
+The pins are **Appium 3.8.0** and **XCUITest 12.22.7**. Both require the Appium 3
+Node/npm range satisfied by the Node/npm versions above; driver 10 and later requires
+Appium 3, and iOS 27 is fully supported from driver 11.1.2 ([driver requirements](https://appium.github.io/appium-xcuitest-driver/12.22/getting-started/system-requirements/),
 [Appium requirements](https://appium.io/docs/en/3.4/guides/migrating-2-to-3/)).
 `package.json`'s `overrides` (2026-10-26) lift vulnerable transitive packages to patched
 versions in the same major, clearing GitHub's Dependabot alerts outside the driver. They don't
-reach the copies inside `appium-xcuitest-driver`, which ships its own `npm-shrinkwrap.json`:
-those alerts were dismissed on GitHub as local test tooling (no release, 12.x included, had
-cleared them). When a driver release updates its shrinkwrap, move to it and drop the overrides
-it makes unnecessary; `npm audit --package-lock-only` in `decklab/safari` shows what's left.
+reach the copies inside `appium-xcuitest-driver`: driver 10 shipped its own
+`npm-shrinkwrap.json`, and driver 12 bundles its dependencies instead. The move to 12.22.7
+(2026-10-30) cleared the last alert (`qs` in driver 10's shrinkwrap), and
+`npm audit --package-lock-only` in `decklab/safari` found nothing left. Driver 11's and 12's
+breaking changes (removed capabilities, driver methods and the CommonJS entry) touch nothing
+the suite uses. Keep an override's version no older than a version a package pins exactly
+(`npm view <package>@<version> dependencies`).
 Do not update packages globally to repair a local run. Repeat `setup.sh` after a
 pull changes the lockfile. Changing Xcode or a runtime also needs a new report.
 
@@ -163,9 +166,9 @@ UI steps switch to XCUITest's native context and touch input; they do not dispat
 JavaScript swipe events or replace the Share sheet with a web imitation. Safari
 automation uses `browserName=safari`, `appium:automationName=XCUITest` and the
 explicit Simulator UDID. Keyboard capabilities disable the hardware keyboard and
-force the software keyboard ([capabilities](https://appium.github.io/appium-xcuitest-driver/10.43/reference/capabilities/)).
-See the [gesture guide](https://appium.github.io/appium-xcuitest-driver/10.43/guides/gestures/)
-and [native command reference](https://appium.github.io/appium-xcuitest-driver/10.43/reference/execute-methods/)
+force the software keyboard ([capabilities](https://appium.github.io/appium-xcuitest-driver/12.22/reference/capabilities/)).
+See the [gesture guide](https://appium.github.io/appium-xcuitest-driver/12.22/guides/gestures/)
+and [native command reference](https://appium.github.io/appium-xcuitest-driver/12.22/reference/execute-methods/)
 when a new Xcode release changes controls or coordinates.
 
 Visits refresh the selected visible Safari tab and verify a new document loaded.
@@ -237,5 +240,5 @@ env -u APPIUM_HOME ./node_modules/.bin/appium driver doctor xcuitest
 
 Simulator runs do not need a real iPhone's provisioning profile, Developer Mode
 or a paid developer account. Physical-device automation has separate [device
-preparation](https://appium.github.io/appium-xcuitest-driver/10.43/getting-started/device-setup/)
+preparation](https://appium.github.io/appium-xcuitest-driver/12.22/getting-started/device-setup/)
 requirements and is outside this runner.
