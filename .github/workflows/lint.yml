@@ -1,9 +1,11 @@
-# On every push: real-error Ruff checks and the source-length guard. Cheap, on Linux.
+# On every pull request and push to main: real-error Ruff checks and the source-length guard.
+# Cheap, on Linux. A pull request's own branch pushes aren't linted twice (push and pull_request).
 # The full rule set isn't enforced: the code has thousands of style findings it was never held to.
 name: lint
 
 on:
   push:
+    branches: [main]
   pull_request:
 
 jobs:

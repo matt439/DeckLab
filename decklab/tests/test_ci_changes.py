@@ -42,8 +42,7 @@ class DocumentationPathsTests(unittest.TestCase):
                 self.assertFalse(ci_changes.is_documentation(name))
 
 
-@unittest.skipUnless(shutil.which("git"), "Git is required for isolated history tests")
-class ChangeHistoryTests(unittest.TestCase):
+class GitHistoryCase(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
@@ -70,6 +69,9 @@ class ChangeHistoryTests(unittest.TestCase):
         self.git("commit", "-q", "--allow-empty", "-m", "Test changes")
         return self.git("rev-parse", "HEAD")
 
+
+@unittest.skipUnless(shutil.which("git"), "Git is required for isolated history tests")
+class ChangeHistoryTests(GitHistoryCase):
     def push(self, before, after):
         return {"before": before, "after": after}
 
@@ -84,6 +86,8 @@ class ChangeHistoryTests(unittest.TestCase):
         output_path.write_text("existing=value\n", encoding="utf-8")
         env = dict(os.environ, GITHUB_EVENT_NAME=event_name,
                    GITHUB_EVENT_PATH=str(event_path), GITHUB_OUTPUT=str(output_path))
+        for name in ("GITHUB_TOKEN", "GITHUB_REPOSITORY", "GITHUB_API_URL"):
+            env.pop(name, None)  # no GitHub API from a test, even on a CI runner
         result = subprocess.run([sys.executable, str(SCRIPT)], cwd=self.root, env=env,
                                 text=True, capture_output=True, check=True)
         output = output_path.read_text(encoding="utf-8")
@@ -178,6 +182,112 @@ class ChangeHistoryTests(unittest.TestCase):
         for raw in ("{broken", "null", "[]", '"unexpected"'):
             with self.subTest(raw=raw):
                 self.assertTrue(self.run_selection("push", raw=raw))
+
+
+@unittest.skipUnless(shutil.which("git"), "Git is required for isolated history tests")
+class PullRequestAlreadyTestedTests(GitHistoryCase):
+    """A push merging a pull request whose own run passed on the same files skips the suite."""
+
+    def setUp(self):
+        super().setUp()
+        cwd = os.getcwd()
+        os.chdir(self.root)  # the selection runs Git in the current directory, as on the runner
+        self.addCleanup(os.chdir, cwd)
+
+    def merge_pull_request(self, main=None):
+        self.git("checkout", "-q", "-b", "feature", self.first)
+        self.write("decklab/server.py", "VERSION = 2\n")
+        self.head = self.commit()
+        before = main or self.first
+        self.git("checkout", "-q", "--detach", before)
+        self.git("merge", "-q", "--no-ff", "--no-edit", self.head)
+        return {"before": before, "after": self.git("rev-parse", "HEAD")}
+
+    def fake_api(self, event, runs=None, pulls=None):
+        calls = []
+        if runs is None:
+            runs = [{"path": ci_changes.TESTS_WORKFLOW, "head_sha": self.head, "conclusion": "success"}]
+        if pulls is None:
+            pulls = [{"number": 7, "merged_at": "2026-10-30T00:00:00Z",
+                      "merge_commit_sha": event["after"], "head": {"sha": self.head}}]
+
+        def api(path):
+            calls.append(path)
+            if path.startswith(f"/commits/{event['after']}/pulls"):
+                return pulls
+            if path.startswith("/actions/runs?"):
+                self.assertIn(f"head_sha={self.head}", path)
+                self.assertIn("event=pull_request", path)
+                return {"workflow_runs": runs}
+            raise AssertionError(path)
+        return api, calls
+
+    def test_merge_of_a_passing_up_to_date_pull_request_skips_suite(self):
+        event = self.merge_pull_request()
+        api, _ = self.fake_api(event)
+        run, reason = ci_changes.should_run_tests("push", event, api)
+        self.assertFalse(run)
+        self.assertIn("#7", reason)
+
+    def test_no_passing_tests_run_for_the_head_runs_suite(self):
+        event = self.merge_pull_request()
+        for runs in (
+            [],
+            [{"path": ".github/workflows/lint.yml", "head_sha": self.head, "conclusion": "success"}],
+            [{"path": ci_changes.TESTS_WORKFLOW, "head_sha": self.first, "conclusion": "success"}],
+            [{"path": ci_changes.TESTS_WORKFLOW, "head_sha": self.head, "conclusion": "failure"}],
+        ):
+            with self.subTest(runs=runs):
+                api, _ = self.fake_api(event, runs=runs)
+                self.assertTrue(ci_changes.should_run_tests("push", event, api)[0])
+
+    def test_push_that_is_not_one_merged_pull_request_runs_suite(self):
+        event = self.merge_pull_request()
+        merged = {"number": 7, "merged_at": "2026-10-30T00:00:00Z",
+                  "merge_commit_sha": event["after"], "head": {"sha": self.head}}
+        for pulls in (
+            [], [dict(merged, merged_at=None)], [dict(merged, merge_commit_sha=self.first)],
+            [merged, dict(merged, number=8)], [dict(merged, head={"sha": "not-a-sha"})],
+        ):
+            with self.subTest(pulls=pulls):
+                api, calls = self.fake_api(event, pulls=pulls)
+                self.assertTrue(ci_changes.should_run_tests("push", event, api)[0])
+                self.assertEqual(len(calls), 1)
+
+    def test_main_moved_past_the_branch_runs_suite(self):
+        self.git("checkout", "-q", "--detach", self.first)
+        self.write("decklab/other.py", "OTHER = 1\n")
+        main = self.commit()
+        event = self.merge_pull_request(main)
+        api, calls = self.fake_api(event)
+        self.assertTrue(ci_changes.should_run_tests("push", event, api)[0])
+        self.assertEqual(len(calls), 1)
+
+    def test_merge_result_differing_from_the_branch_runs_suite(self):
+        event = self.merge_pull_request()
+        self.write("decklab/server.py", "VERSION = 3\n")
+        self.git("commit", "-q", "--amend", "-a", "--no-edit")
+        event["after"] = self.git("rev-parse", "HEAD")
+        api, calls = self.fake_api(event)
+        self.assertTrue(ci_changes.should_run_tests("push", event, api)[0])
+        self.assertEqual(len(calls), 1)
+
+    def test_api_failure_and_pull_request_events_never_skip_by_merge(self):
+        event = self.merge_pull_request()
+
+        def broken(path):
+            raise OSError("no network")
+        self.assertTrue(ci_changes.should_run_tests("push", event, broken)[0])
+        pull_event = {"pull_request": {"base": {"sha": self.first}, "head": {"sha": self.head}}}
+        self.assertTrue(ci_changes.should_run_tests("pull_request", pull_event, broken)[0])
+
+    def test_documentation_only_push_needs_no_api(self):
+        self.write("TODO.md")
+        event = {"before": self.first, "after": self.commit()}
+
+        def unused(path):
+            raise AssertionError(path)
+        self.assertFalse(ci_changes.should_run_tests("push", event, unused)[0])
 
 
 if __name__ == "__main__":
