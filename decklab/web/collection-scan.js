@@ -4,8 +4,11 @@
  * the printings it may be (nothing is written). A card whose name and bottom line (set code and number) name one
  * printing goes straight onto the pending list (with the others offered instead); when only the name or only the
  * bottom line was read, or reprints share the number read, the visitor picks the printing, or types the card's
- * name and picks from its printings (/api/printings). Each pending card's copies, finish and condition can be
- * changed (condition is never guessed). "Review" turns the list into a collection-columns CSV and hands it to the
+ * name and picks from its printings (/api/printings). Each pending card's printing can be changed there: a choice of
+ * the printings the scan proposed for its name (or the typed name's), and "Other printings…", the shared printing picker
+ * (cards-ui.js pickPrinting) for the card's others. Its copies, finish, condition and language can be changed too
+ * (condition is never guessed; language is the one read off the card, else not recorded, never assumed English).
+ * A change that makes two pending cards the same printing, finish, condition and language joins them. "Review" turns the list into a collection-columns CSV and hands it to the
  * Import cards sheet's preview (collection.js, previewImport), so the scan is added as an import is: previewed,
  * then one change with its raw import kept. Until it's imported the import sheet offers "Back to the scanned
  * list" (colScanBack), which reopens this sheet with the same pending cards. Photos are never kept. Shared with
@@ -23,7 +26,7 @@ function openScanSheet(cv, pending = []) {
   if (!colActive(cv) || cv.busy || !cv.editable) return null;
   const sheet = colOpenSheet(`Scan cards into ${colWhose(cv.space)}`, { wide: true });
   const id = (key) => `col-scan-${key}-${sheet.heading.id}`;
-  const ctx = { cv, sheet, pending: pending.map((card) => ({ ...card })), busy: false, seq: 0, last: null };
+  const ctx = { cv, sheet, pending: colScanCopy(pending), busy: false, picking: false, seq: 0, last: null };
   ctx.input = el("input", { id: id("photo"), type: "file", accept: "image/*", capture: "environment", class: "col-file" });
   ctx.input.addEventListener("change", () => {
     const file = ctx.input.files && ctx.input.files[0];
@@ -118,21 +121,22 @@ function drawScanResult(ctx, answer) {
     return;
   }
   const sure = proposals[0].how === "name and number" && proposals[1]?.how !== "name and number";
-  ctx.last = sure ? addScanCard(ctx, proposals[0]) : null;
+  ctx.last = sure ? addScanCard(ctx, proposals[0], proposals) : null;
   colScanSay(ctx, sure ? "info" : "warn", sure ? `Added ${colScanLabel(proposals[0])}.` : answer.message);
   const others = sure ? proposals.slice(1) : proposals;
   if (!others.length) return;
   ctx.result.append(el("p", { class: "sub", text: sure ? "Not that one? Choose the printing instead:" : "Choose its printing:" }),
-    colScanChoices(ctx, others, sure));
+    colScanChoices(ctx, others, sure, proposals));
 }
 
-/** Buttons for printings: each adds its card (replacing the one just added, when instead). */
-function colScanChoices(ctx, printings, instead) {
+/** Buttons for printings: each adds its card (replacing the one just added, when instead), with choices (the
+ * printings offered, these by default) as its pending row's printing choices. */
+function colScanChoices(ctx, printings, instead, choices = printings) {
   return el("div", { class: "col-trade-choices", role: "group", "aria-label": "Printings" }, printings.map((p) =>
     el("button", { type: "button", class: "btn btn-quiet col-scan-pick", onclick: () => {
       if (ctx.busy) return;
       if (instead && ctx.last) takeScanCard(ctx, ctx.last);
-      ctx.last = addScanCard(ctx, p);
+      ctx.last = addScanCard(ctx, p, choices);
       clear(ctx.result);
       colScanSay(ctx, "info", `Added ${colScanLabel(p)}.`);
     } }, `${colScanLabel(p)}${p.set_name ? ` · ${p.set_name}` : ""}${p.owned ? ` · ${num(p.owned)} listed` : ""}`)));
@@ -149,7 +153,7 @@ async function findScanName(ctx) {
     const answer = await api(`/api/printings?name=${encodeURIComponent(name)}`);
     if (!colScanHere(ctx, seq)) return;
     const printings = (answer.printings || []).filter((p) => (p.finishes || []).length).map((p) => ({ name: answer.name,
-      set: p.set, set_name: p.set_name, collector_number: p.collector_number, language: "",
+      set: p.set, set_name: p.set_name, collector_number: p.collector_number, language: "", finishes: [...p.finishes],
       finish: p.finishes.includes("nonfoil") ? "nonfoil" : p.finishes[0] }));
     if (!printings.length) { colScanSay(ctx, "warn", `${answer.name} has no paper printing to add.`); return; }
     colScanSay(ctx, "info", "");
@@ -163,16 +167,110 @@ async function findScanName(ctx) {
   }
 }
 
-/** Put a card on the pending list (one more copy when that printing, finish and condition is there). */
-function addScanCard(ctx, p) {
-  const same = ctx.pending.find((c) => c.set === p.set && c.collector_number === p.collector_number
-    && c.finish === p.finish && c.condition === "" && c.language === (p.language || ""));
-  if (same) { same.quantity += 1; drawScanPending(ctx); return same; }
+/** Pending cards copied, each with its own printing choices (the import sheet keeps a copy to come back to). */
+function colScanCopy(pending) {
+  return pending.map((card) => ({ ...card, choices: (card.choices || []).map((c) => ({ ...c })) }));
+}
+
+/** Add printings to a pending card's printing choices, each printing once: only its own card's (a scan may
+ * propose other cards' printings too), each with the copies listed of its own finish. */
+function colScanAddChoices(card, printings) {
+  for (const p of printings || []) {
+    if (!p || !p.set || (p.name || card.name) !== card.name
+      || card.choices.some((c) => c.set === p.set && c.collector_number === p.collector_number)) continue;
+    card.choices.push({ name: card.name, set: p.set, collector_number: p.collector_number, set_name: p.set_name || "",
+      finish: p.finish || "nonfoil", finishes: Array.isArray(p.finishes) && p.finishes.length ? [...p.finishes] : null,
+      owned: p.owned || 0 });
+  }
+}
+
+/** Another pending card of the same printing, finish, condition and language as card, if any. */
+function colScanSame(ctx, card) {
+  return ctx.pending.find((c) => c !== card && c.set === card.set && c.collector_number === card.collector_number
+    && c.finish === card.finish && c.condition === card.condition && c.language === card.language) || null;
+}
+
+/** Put a card on the pending list (one more copy when that printing, finish, condition and language is there),
+ * with choices (the printings offered with it) as its printing choices. */
+function addScanCard(ctx, p, choices = [p]) {
   const card = { name: p.name, set: p.set, collector_number: p.collector_number, finish: p.finish || "nonfoil",
-    quantity: 1, condition: "", language: p.language || "" };
+    quantity: 1, condition: "", language: p.language || "", choices: [] };
+  colScanAddChoices(card, [p, ...choices]);
+  const same = colScanSame(ctx, card);
+  if (same) {
+    same.quantity = Math.min(999, same.quantity + 1);
+    colScanAddChoices(same, card.choices);
+    drawScanPending(ctx);
+    return same;
+  }
   ctx.pending.push(card);
   drawScanPending(ctx);
   return card;
+}
+
+/** After a change to a pending card, join it to the same one already listed (true, and the list redrawn, when it was). */
+function colScanJoin(ctx, card) {
+  const same = colScanSame(ctx, card);
+  if (!same) return false;
+  same.quantity = Math.min(999, same.quantity + card.quantity);
+  colScanAddChoices(same, card.choices);
+  ctx.pending.splice(ctx.pending.indexOf(card), 1);
+  if (ctx.last === card) ctx.last = same;
+  drawScanPending(ctx);
+  return true;
+}
+
+/** Make a pending card printing p, keeping its finish when p has it (a picked printing's finish is the one
+ * picked), then redraw the list. */
+function colScanSetPrinting(ctx, card, p, picked = false) {
+  card.set = p.set;
+  card.collector_number = p.collector_number;
+  if (picked || !p.finishes || !p.finishes.includes(card.finish)) card.finish = p.finish || (p.finishes && p.finishes[0]) || "nonfoil";
+  colScanAddChoices(card, [p]);
+  if (!colScanJoin(ctx, card)) drawScanPending(ctx);
+}
+
+/** "Other printings…": the shared printing picker (GET /api/cards/printings, counting the visitor's own space's
+ * copies, which is the space scanned into); the printing and finish picked become the card's. */
+async function colScanOther(ctx, card) {
+  if (ctx.busy || ctx.picking || !colScanHere(ctx)) return;
+  ctx.picking = true;
+  let picker, picked;
+  try {
+    picked = await pickPrinting(card.name, { title: `${card.name}: printing`,
+      current: { set: card.set, number: card.collector_number, finish: card.finish },
+      onOpen: (sheet) => { picker = sheet; colSheets.add(sheet); } });
+  } finally {
+    ctx.picking = false;
+    if (picker) colSheets.delete(picker);
+  }
+  // A basic land's "Any printing" isn't a printing to add; a card taken out meanwhile stays out.
+  if (!picked || !picked.set || !colScanHere(ctx) || !ctx.pending.includes(card)) return;
+  const finish = picked.finish || "nonfoil";
+  const finishes = Array.isArray(picked.finish_choices) && picked.finish_choices.length ? picked.finish_choices : null;
+  colScanSetPrinting(ctx, card, { name: card.name, set: picked.set, collector_number: picked.number,
+    set_name: picked.set_name || "", finish, finishes, owned: picked.owned || 0 }, true);
+}
+
+/** "FDN 227 · Foundations · 4 listed": a printing choice's words (its copies listed only when they're of the
+ * card's finish now). */
+function colScanChoiceWords(c, card) {
+  const code = String(c.set).toUpperCase();
+  return [`${code} ${c.collector_number}`, c.set_name && c.set_name.toUpperCase() !== code ? c.set_name : null,
+    c.owned && c.finish === card.finish ? `${num(c.owned)} listed` : null].filter(Boolean).join(" · ");
+}
+
+/** A pending card's printing: a choice of the printings offered for it (the one it is now among them). */
+function colScanPrinting(ctx, card) {
+  colScanAddChoices(card, [{ name: card.name, set: card.set, collector_number: card.collector_number, finish: card.finish }]);
+  const at = String(card.choices.findIndex((c) => c.set === card.set && c.collector_number === card.collector_number));
+  const select = el("select", { class: "col-scan-printing", "aria-label": `Printing of ${card.name}`, onchange: () => {
+    const c = card.choices[parseInt(select.value, 10)];
+    if (ctx.busy || !c) { select.value = at; return; }
+    colScanSetPrinting(ctx, card, c);
+  } }, card.choices.map((c, i) => el("option", { value: String(i), text: colScanChoiceWords(c, card) })));
+  select.value = at;
+  return select;
 }
 
 function takeScanCard(ctx, card) {
@@ -181,24 +279,34 @@ function takeScanCard(ctx, card) {
   drawScanPending(ctx);
 }
 
-/** The pending list, each card with its copies, finish and condition, then the sheet's Review. */
+/** The pending list, each card with its printing, copies, finish, condition and language, then the sheet's Review. */
 function drawScanPending(ctx) {
   clear(ctx.list);
   ctx.pending.forEach((card) => {
+    if (!card.choices) card.choices = [];
     const qty = el("input", { type: "number", class: "col-qty-input", inputmode: "numeric", min: 1, max: 999, step: 1,
       value: String(card.quantity), "aria-label": `Copies of ${card.name}`,
       onchange: () => { card.quantity = Math.min(999, Math.max(1, parseInt(qty.value, 10) || 1)); qty.value = String(card.quantity); drawScanFoot(ctx); } });
     const finish = el("select", { "aria-label": `Finish of ${card.name}`,
-      onchange: () => { card.finish = finish.value; } },
+      onchange: () => { card.finish = finish.value; colScanJoin(ctx, card); } },
       Object.entries(COL_FINISH_WORDS).map(([value, text]) => el("option", { value, text })));
     finish.value = card.finish;
     const condition = el("select", { "aria-label": `Condition of ${card.name}`,
-      onchange: () => { card.condition = condition.value; } },
+      onchange: () => { card.condition = condition.value; colScanJoin(ctx, card); } },
       COL_CONDITIONS.map(([value, , text]) => el("option", { value, text })));
     condition.value = card.condition;
+    // Language: as read off the card, else not recorded (blank, never assumed English).
+    const languages = COL_LANGUAGES.some(([v]) => v === card.language) ? COL_LANGUAGES : [...COL_LANGUAGES, [card.language, card.language]];
+    const language = el("select", { "aria-label": `Language of ${card.name}`,
+      onchange: () => { card.language = language.value; colScanJoin(ctx, card); } },
+      languages.map(([value, text]) => el("option", { value, text: value ? `${text} (${value})` : text })));
+    language.value = card.language;
     ctx.list.append(el("li", { class: "col-trade-line" },
       el("span", { class: "col-trade-what", text: `${card.name} (${String(card.set).toUpperCase()} ${card.collector_number})` }),
-      qty, finish, condition,
+      colScanPrinting(ctx, card),
+      el("button", { type: "button", class: "btn btn-quiet", text: "Other printings…", "aria-label": `Other printings of ${card.name}`,
+        onclick: () => colScanOther(ctx, card) }),
+      qty, finish, condition, language,
       el("button", { type: "button", class: "btn btn-quiet", text: "Take out", "aria-label": `Take ${card.name} off the list`,
         onclick: () => { if (ctx.busy) return; ctx.pending.splice(ctx.pending.indexOf(card), 1); if (ctx.last === card) ctx.last = null; drawScanPending(ctx); } })));
   });
@@ -233,7 +341,7 @@ function reviewScan(ctx) {
   ctx.sheet.close();
   const importing = openImportSheet(cv);
   if (importing) {
-    importing.scanned = ctx.pending.map((card) => ({ ...card }));
+    importing.scanned = colScanCopy(ctx.pending);
     previewImport(importing, `scan-${day}.csv`, text);
   }
   return importing;

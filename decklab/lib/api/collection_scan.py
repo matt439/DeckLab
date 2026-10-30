@@ -17,12 +17,14 @@ run Windows' engine (CI is Linux). One photo is read at a time (429 while anothe
 
 The answer is {ok, space, lines (what was read, at most MAX_LINES lines of MAX_LINE characters),
 read ({name, numbers, sets, foil, language}, or null when nothing could be read), proposals
-[{name, set, collector_number, set_name, finish, language, how, img_small, owned}] best first
-(scan.propose's, with the printing's small picture and the copies of that printing and finish the
-space's collection has now), message (one plain sentence) and unread (true when the OCR engine
+[{name, set, collector_number, set_name, finish, finishes, language, how, img_small, owned}] best
+first (scan.propose's, with the printing's paper finishes, its small picture and the copies of that
+printing and finish the space's collection has now), message (one plain sentence) and unread (true when the OCR engine
 couldn't read the photo at all: missing on this host, too slow, or not a picture it can open;
 the page then offers the card's name typed in instead)}. Unknown condition stays blank: it's the
-person holding the card who says. The page adds a chosen proposal to its pending list, and its
+person holding the card who says; language is the one printed on the card when it was read, else
+blank (never assumed English). The pending list offers each card's proposals as its printing
+choices, with the shared printing picker (GET /api/cards/printings) for its other printings. The page adds a chosen proposal to its pending list, and its
 Review sends the list to POST /api/collection/import/preview as a collection-columns import, so
 the scan is saved as an import is: previewed, then one change with its raw import kept.
 """
@@ -86,7 +88,7 @@ def _read_photo(data, ext):
 
 
 def _proposals(found, space):
-    """scan.propose's proposals with each printing's small picture and the copies the space has."""
+    """scan.propose's proposals with each printing's finishes, small picture and the copies the space has."""
     rows, _ = _read(space)
     owned = {}
     for row in rows:
@@ -95,7 +97,8 @@ def _proposals(found, space):
     out = []
     for p in found:
         printing = cards.printing(p["set"], p["collector_number"]) or {}
-        out.append({**p, "img_small": image_url(p["set"], p["collector_number"], "small")
+        finishes = [f for f in printing.get("finishes") or [] if f in rules.FINISHES]
+        out.append({**p, "finishes": finishes or [f for f in (p["finish"],) if f], "img_small": image_url(p["set"], p["collector_number"], "small")
                     if printing.get("image_small") else None,
                     "owned": owned.get((p["set"], p["collector_number"], p["finish"]), 0)})
     return out

@@ -12,6 +12,7 @@ import inspect
 from unittest import mock
 
 from decklab.lib import scan
+from decklab.lib.api import card_lookup
 from decklab.lib.api import collection_edit as ce
 from decklab.lib.api import collection_scan as cs
 from decklab.tests import scan_image
@@ -57,6 +58,7 @@ class ScanApiTests(tce.CollectionEditTestCase):
                          {"name": "Llanowar Elves", "set": "fdn", "collector_number": "227", "finish": "nonfoil",
                           "language": "en", "how": "name and number"})
         self.assertEqual(first["img_small"], "/img/fdn/227/small")
+        self.assertEqual(first["finishes"], ["nonfoil", "foil"])     # the pending row's finish choices
         self.assertEqual(first["owned"], 5)         # the home collection's copies of that printing and finish
         self.assertIn("Llanowar Elves, FDN 227", answer["message"])
         self.assertNotIn("condition", first)        # the person holding the card says
@@ -79,6 +81,20 @@ class ScanApiTests(tce.CollectionEditTestCase):
             answer = self.scan("user2", "user2")
         self.assertEqual(answer["space"], "user2")
         self.assertEqual(answer["proposals"][0]["owned"], 2)
+        self.assertEqual(self.writes, [])
+
+    def test_a_pending_card_s_other_printings_count_the_scanning_space_s_own_copies(self):
+        # The pending list's "Other printings…" is the shared printing picker (GET /api/cards/printings): its copies
+        # are the viewer's own space's, the one they scan into, as the scan's proposals are; never home's for a member.
+        def fdn_owned():
+            answer = card_lookup.printings("Llanowar Elves")
+            return next(p["owned"] for p in answer["printings"] if (p["set"], p["number"], p["finish"]) == ("fdn", "227", "nonfoil"))
+        with mock.patch.object(card_lookup.cards, "usd_to_aud", side_effect=RuntimeError("offline")):
+            with self.as_("user2"):
+                self.assertEqual(fdn_owned(), self.scan("user2", "user2")["proposals"][0]["owned"])
+                self.assertEqual(fdn_owned(), 2)
+            with self.as_("matt"):
+                self.assertEqual(fdn_owned(), 5)
         self.assertEqual(self.writes, [])
 
     def test_only_the_space_s_own_people_may_scan_into_it(self):
