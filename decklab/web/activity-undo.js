@@ -207,6 +207,7 @@ function activityUndoEvidence(data, id, space, profile = state.profile?.id) {
   if (data.kind === "wishlist") return activityUndoWishlistEvidence(data, profile) ? data : null;
   if (data.kind === "accessory") return activityUndoAccessoryEvidence(data, space, profile) ? data : null;
   if (data.kind === "mixed") return activityUndoMixedEvidence(data, space) ? data : null;
+  if (data.kind === "watchlist") return activityUndoWatchlistEvidence(data) ? data : null;
   if (data.space !== space || !["collection", "tokens"].includes(data.kind)) return null;
   if (data.action === "token_batch_add") return activityUndoTokenBatchEvidence(data) ? data : null;
   if (data.action === "token_batch_remove") return activityUndoTokenBatchRemoveEvidence(data) ? data : null;
@@ -263,6 +264,7 @@ function activityUndoTokenBatchRemoveEvidence(data) {
 }
 
 function activityUndoReceipt(answer, preview) {
+  if (preview.kind === "watchlist") return activityUndoWatchlistReceipt(answer, preview);
   if (preview.kind === "accessory") {
     const removing = preview.action === "accessory_remove", adding = preview.action === "accessory_add";
     const counting = preview.action === "accessory_stock_update";
@@ -579,7 +581,8 @@ function activityUndoShow(ctx) {
       } else status.textContent = "Both views use the verified current photo. Review the crop you want to restore.";
       ownershipInput.checked = confirmedOwned; actions();
     }); };
-  } else if (batch) {
+  } else if (preview.kind === "watchlist") activityUndoWatchlistBody(sheet.body, preview, text);
+  else if (batch) {
     const rows = preview.rows.map(item => {
       const changes = item.fields.map(field => el("p", {}, el("b", { text: words[field.field] + ": " }),
         el("span", { class: field.field === "notes" ? "activity-undo-note" : null, text: text(field.before) }), " → ",
