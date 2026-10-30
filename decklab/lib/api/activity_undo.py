@@ -14,7 +14,7 @@ from .common import ApiError, DATABASE_DOWN, _keys, _parse_body
 from .settings import _writer
 
 NO_CHANGE = "No undoable change at that ID."
-UNSUPPORTED = "This change cannot be undone here. Supported Undo covers single-row edits, unheld nonbasic collection additions, unheld verified token additions, verified collection and token-card deletions and batches of 2-50 unheld nonbasic collection or token-card additions, collection or token-card deletions or positive quantity/condition/language/notes updates."
+UNSUPPORTED = "This change cannot be undone here. Supported Undo covers single-row edits, unheld nonbasic collection additions, unheld verified token additions, verified collection and token-card deletions and batches of 2-50 unheld nonbasic collection or token-card additions, collection or token-card deletions or positive quantity/condition/language/notes updates, or purchase-queue updates of 1-50 rows."
 CHANGED = "The change can no longer be undone safely. Reload Activity and review it again."
 UNCONFIRMED = "The undo result could not be confirmed. Reload Activity before trying again."
 SHA = re.compile(r"[a-f0-9]{64}")
@@ -50,6 +50,9 @@ def review_hint(change, shown, profile):
     mixed = activity_mixed_undo.hint(change, shown, profile)
     if mixed is not None:
         return mixed
+    from . import activity_watchlist_undo
+    if (queue := activity_watchlist_undo.hint(change, shown, profile)) is not None:
+        return queue
     if total == 1 and len(rows) == 1 and not change.get("more") and not change.get("groups") and profile \
             and shown.get("id") == change.get("id"):
         row = rows[0]
@@ -159,6 +162,9 @@ def _review(change_id, profile):
         raise _refused(error) from None
     # The complete source's visibility was checked before any eligibility or receipt.
     kind = plan.get("kind")
+    if kind == "watchlist":
+        from . import activity_watchlist_undo
+        return activity_watchlist_undo.check(plan, change_id, space, profile)
     if kind not in MUTABLE or plan.get("space") != space or plan.get("change_id") != change_id:
         raise ApiError(503, UNCONFIRMED)
     guard.require_space_write(profile, kind + ".edit", space)
@@ -252,6 +258,9 @@ def _token_batch_remove_project(plan):
 
 def _project(plan):
     from decklab.lib.inventory import undo_token_batch, undo_token_batch_remove, undo_token_delete
+    if plan.get("kind") == "watchlist" or plan.get("action") == "watchlist_update":
+        from . import activity_watchlist_undo
+        return activity_watchlist_undo.project(plan)
     if plan.get("action") == undo_token_batch.ACTION:
         return _token_batch_project(plan)
     if plan.get("action") == undo_token_batch_remove.ACTION:
@@ -404,6 +413,9 @@ def apply_undo(body):
     profile, change_id = _writer(data), _id(data["id"])
     plan = _review(change_id, profile)  # hidden/missing is resolved before malformed or stale receipt errors
     _project(plan)
+    if plan.get("kind") == "watchlist":
+        from . import activity_watchlist_undo
+        return activity_watchlist_undo.apply(data, plan, profile, change_id, _refused, _changed)
     from decklab.lib.inventory import undo_token_batch, undo_token_batch_remove, undo_token_delete
     token_batch = plan.get("action") == undo_token_batch.ACTION
     token_adding = token_batch or plan.get("action") == undo_token_delete.ACTION

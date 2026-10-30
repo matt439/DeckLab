@@ -249,7 +249,7 @@ class ActivityUndoApiTests(ApiTestCase):
         for extra in ({"total": 2}, {"more": 1}, {"groups": [{"table": "collection_card"}]}):
             self.assertIsNone(activity_undo.review_hint({**change, **extra}, shown, profile))
         for mutate in (lambda value: value.update(op="INSERT"),
-                       lambda value: value.update(table="watchlist_item"),
+                       lambda value: value.update(table="order_component"),
                        lambda value: value["after"].update(space_id="user2")):
             changed = copy.deepcopy(change)
             mutate(changed["rows"][0])
