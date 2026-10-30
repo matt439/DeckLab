@@ -54,7 +54,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 | id | status | pri | size | item |
 |---|---|---|---|---|
 | `E5-S15` | DEFERRED | should | M | User1 asks from the page for a card or a Forge run, Matt approves (`E3-S13`); not urgent. |
-| `E5-S08` | OPEN | could | XL | MTGMate checks cover queued and saved-home missing names on Shopping and deck Prices, read through per-shop adapters (`lib/shops/`, fixture pages); next research a second Australian shop (robots, page format, a live check) and add its adapter. |
+| `E5-S08` | OPEN | could | XL | MTGMate checks cover queued and saved-home missing names on Shopping and deck Prices, read through per-shop adapters (`lib/shops/`, fixture pages); Games Portal's adapter is built (search page, by hand only: `shops lookup NAME --shop gamesportal`); next Matt decides whether the nightly snapshot reads both shops, then multi-shop display. |
 | `E7-S32` | OPEN | could | L | Scan cards sheet and `POST /api/collection/scan` built, with each pending card's printing picker and language (fixture-tested); next real phone photos on the household's phones, then token cards for the Tokens page. |
 | `E7-S24` | DECISION | could | L | The deck page lists the counter kinds and dice its cards use (read-only, approximate); Matt chooses the record shape for owned dice and counters, then its migration, the Tokens page's rows and whether each need is covered. |
 

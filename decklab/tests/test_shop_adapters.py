@@ -1,9 +1,11 @@
-"""The shop adapters' common interface (E5-S08) and MTGMate's, read from saved pages.
+"""The shop adapters' common interface (E5-S08), MTGMate's and Games Portal's, read from saved pages.
 
 The pages are synthetic (decklab/tests/fixtures/shops/<key>/): invented prices and stock in
 the shape of the shop's own page, so the parsing is checked without the network or card data.
 """
+import contextlib
 import importlib.util
+import io
 import os
 import re
 import unittest
@@ -11,7 +13,7 @@ from pathlib import Path
 from unittest import mock
 
 from decklab.lib import config, shops
-from decklab.lib.shops import base, mtgmate
+from decklab.lib.shops import base, gamesportal, mtgmate
 
 FIXTURES = Path(__file__).resolve().parent / "fixtures" / "shops"
 
@@ -65,7 +67,7 @@ class Other(base.Adapter):
 
 class InterfaceTests(unittest.TestCase):
     def test_every_adapter_says_who_it_is_and_where_its_pages_are(self):
-        self.assertEqual(list(shops.ADAPTERS), ["mtgmate"])
+        self.assertEqual(list(shops.ADAPTERS), ["mtgmate", "gamesportal"])
         self.assertIs(shops.ADAPTER, mtgmate.ADAPTER)
         for key, adapter in shops.ADAPTERS.items():
             with self.subTest(key):
@@ -180,6 +182,92 @@ class MTGMatePageTests(unittest.TestCase):
 
     def test_the_saved_pages_hold_no_personal_data(self):
         for path in sorted((FIXTURES / "mtgmate").iterdir()):
+            with self.subTest(path.name):
+                text = path.read_text(encoding="utf-8")
+                self.assertIsNone(re.search(r"[\w.+-]+@[\w-]+\.[\w.]+", text), "no email address")
+                body = text.removeprefix("<!doctype html>\n")
+                self.assertTrue(body.startswith(("<!-- Synthetic", "# Synthetic")), "marked synthetic in its first comment")
+
+
+class GamesPortalPageTests(unittest.TestCase):
+    adapter = gamesportal.ADAPTER
+
+    def test_its_page_is_the_search_robots_txt_allows(self):
+        self.assertEqual(self.adapter.name_url("Sol Ring"), "https://gamesportal.com.au/search?q=Sol%20Ring&type=product")
+        self.assertEqual(self.adapter.name_url("Fable of the Mirror-Breaker // Reflection of Kiki-Jiki"),
+                         "https://gamesportal.com.au/search?q=Fable%20of%20the%20Mirror-Breaker%20%2F%2F%20"
+                         "Reflection%20of%20Kiki-Jiki&type=product")
+        rules = base.robots_rules(saved("gamesportal", "robots.txt"))
+        self.assertIsNone(rules[2], "no Crawl-delay: the session keeps its own")
+        self.assertTrue(base.allowed("/search", rules))
+        self.assertFalse(base.allowed("/checkout", rules))
+        self.assertFalse(base.allowed("/cart/add", rules))
+
+    def test_the_saved_search_page_gives_that_cards_listings_only(self):
+        listings = self.adapter.parse_name_page(saved("gamesportal", "sol-ring.html"), "Sol Ring")
+        self.assertEqual([(item["set"], item["number"], item["finish"], item["price"], item["stock"], item["condition"])
+                          for item in listings],
+                         [("c16", "272", "nonfoil", "4.50", 1, "Lightly Played"),
+                          ("c16", "272", "nonfoil", "5.00", 0, "Near Mint"),
+                          ("cmm", "410", "nonfoil", None, 0, "Lightly Played, JA"),
+                          ("cmm", "410", "nonfoil", "3.00", 1, "Near Mint, JA"),
+                          ("sld", "1011", "foil", "35.00", 1, "Near Mint"),
+                          ("sld", "1011", "nonfoil", "30.00", 0, "Near Mint")])
+        for item in listings:
+            self.assertEqual(tuple(item), base.LISTING_FIELDS, "nothing else from the page is kept")
+            self.assertRegex(item["url"], r"^https://gamesportal\.com\.au/products/sol-ring-[a-z0-9-]+\?variant=\d+$")
+        self.assertEqual(listings[0]["url"], "https://gamesportal.com.au/products/sol-ring-commander-2016?variant=9002")
+
+    def test_a_double_faced_name_matches_its_whole_title_or_front_face(self):
+        name = "Fable of the Mirror-Breaker // Reflection of Kiki-Jiki"
+        listings = self.adapter.parse_name_page(saved("gamesportal", "fable.html"), name)
+        self.assertEqual([(item["set"], item["number"], item["finish"], item["stock"]) for item in listings],
+                         [("neo", "141", "nonfoil", 1), ("neo", "465", "foil", 0), ("sch", "44", "nonfoil", 0)])
+
+    def test_no_such_card_is_empty_and_a_changed_or_broken_page_an_error(self):
+        self.assertEqual(self.adapter.parse_name_page(saved("gamesportal", "no-match.html"), "Nothing Such"), [])
+        empty = "<html><head><title>Search: 0 results found for &quot;Nothing&quot;</title></head></html>"
+        self.assertEqual(self.adapter.parse_name_page(empty, "Nothing"), [])
+        for page, words in (("changed.html", "usual product data"), ("broken-variants.html", "couldn't be read"),
+                            ("../mtgmate/sol-ring.html", "usual product data")):
+            with self.subTest(page), self.assertRaises(base.ShopError) as failed:
+                self.adapter.parse_name_page(saved("gamesportal", page), "Sol Ring")
+            self.assertIn(words, str(failed.exception))
+            self.assertTrue(str(failed.exception).startswith("Games Portal's "))
+
+    def test_a_snapshot_over_the_saved_pages(self):
+        shop, sess = session(self.adapter, {"Sol Ring": "sol-ring.html"})
+        data = shops.take(["Sol Ring", "Nothing Such"], session=sess)
+        self.assertEqual(shop.urls, ["https://gamesportal.com.au/robots.txt",
+                                     "https://gamesportal.com.au/search?q=Sol%20Ring&type=product",
+                                     "https://gamesportal.com.au/search?q=Nothing%20Such&type=product"])
+        self.assertEqual((data["shop"], data["site"], data["crawl_delay"]),
+                         ("Games Portal", "https://gamesportal.com.au", shops.DEFAULT_DELAY))
+        shown = shops.match({"name": "Sol Ring", "printing": "any", "state": "waiting_for_stock"}, data)
+        self.assertEqual((shown["shop"], shown["status"], shown["price_aud"], shown["set"], shown["in_stock_printings"]),
+                         ("Games Portal", "in_stock", "3.00", "cmm", 3))
+        exact = shops.match({"name": "Sol Ring", "printing": "exact", "set": "sld", "collector_number": "1011",
+                             "finish": "foil"}, data)
+        self.assertEqual((exact["status"], exact["price_aud"]), ("in_stock", "35.00"))
+        self.assertEqual(data["cards"]["Nothing Such"]["status"], "not_listed")
+
+    def test_lookup_asks_it_only_when_named(self):
+        pages = SavedShop(self.adapter, {"Sol Ring": "sol-ring.html"})
+        out = io.StringIO()
+        with mock.patch.object(shops, "_fetch", side_effect=lambda url, shop: pages(url)), \
+                mock.patch.object(shops.time, "sleep"), contextlib.redirect_stdout(out):
+            code = shops.main(["lookup", "Sol Ring", "--shop", "gamesportal"])
+        self.assertEqual(code, 0)
+        self.assertEqual(pages.urls[0], "https://gamesportal.com.au/robots.txt")
+        self.assertIn("SLD 1011 foil Near Mint: A$35.00, 1 in stock", out.getvalue())
+        self.assertIs(shops.ADAPTER, mtgmate.ADAPTER, "the snapshot still reads MTGMate")
+        with mock.patch.object(shops, "_fetch", side_effect=AssertionError("no network")) as fetch, \
+                mock.patch("sys.stderr"), self.assertRaises(SystemExit):
+            shops.main(["lookup", "Sol Ring", "--shop", "nowhere"])
+        fetch.assert_not_called()
+
+    def test_the_saved_pages_hold_no_personal_data(self):
+        for path in sorted((FIXTURES / "gamesportal").iterdir()):
             with self.subTest(path.name):
                 text = path.read_text(encoding="utf-8")
                 self.assertIsNone(re.search(r"[\w.+-]+@[\w-]+\.[\w.]+", text), "no email address")
