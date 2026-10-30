@@ -774,6 +774,16 @@ class PgInventory:
         applying = getattr(self._applying, "connection", None)
         return work(applying) if applying is not None else self._call(work)
 
+    def undo_watchlist_latest(self):
+        """The latest audit row id touching any purchase-queue row (no message, reason or row), on
+        Undo's applying connection when set."""
+        def work(c):
+            found = c.execute("select id from audit.row_change where table_name='watchlist_item' "
+                              "order by id desc limit 1").fetchone()
+            return found[0] if found else None
+        applying = getattr(self._applying, "connection", None)
+        return work(applying) if applying is not None else self._call(work)
+
     def supports_check_links(self):
         def work(c):
             return "check_links" in pg_check_links.columns(c)

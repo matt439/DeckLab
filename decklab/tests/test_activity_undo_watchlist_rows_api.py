@@ -154,7 +154,7 @@ class RestoreRemovedRowsApiTests(WatchlistRowsApiFixture):
         op, actor, _, _, reason = self.store.writes[0]
         self.assertEqual(dict(op.params), {"change_id": fixture.CHANGE_ID, "space": "home", "expect": preview["expect"]})
         self.assertEqual((actor.id, reason), ("matt", None))
-        self.refused(400, self.apply, expect=preview["expect"])  # They'd repeat themselves now.
+        self.refused(409, self.apply, expect=preview["expect"])  # The queue changed since the removal.
         self.assertEqual(len(self.store.writes), 1)
 
     def test_user1_is_refused_after_review_and_a_member_sees_no_change(self):

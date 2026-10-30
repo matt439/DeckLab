@@ -106,22 +106,27 @@ function activityUndoWatchlistBody(body, preview, text) {
     el("p", { class: "sub", text: where(item.current) }),
     item.fields.map(field => el("p", {}, el("b", { text: ACTIVITY_UNDO_WATCHLIST_WORDS[field.field] + ": " }),
       el("span", { class: literal(field.field), text: text(field.before) }), " → ", el("span", { class: literal(field.field), text: text(field.after) })))));
-  body.append(el("p", { class: "sub", text: "Review all " + plural(preview.row_count, "purchase-queue row") + " below. Their recorded values will be restored together in one new audited change; the original change stays in Activity." }),
+  body.append(el("p", { class: "sub", text: preview.row_count === 1
+      ? "Review the purchase-queue row below. Its recorded values will be restored in one new audited change; the original change stays in Activity."
+      : "Review all " + plural(preview.row_count, "purchase-queue row") + " below. Their recorded values will be restored together in one new audited change; the original change stays in Activity." }),
     el("p", { class: "sub", text: "Each row is checked again when you save. Nothing is ordered, bought or removed." }),
     el("div", { class: "panels" }, rows));
 }
 
 function activityUndoWatchlistRowsBody(body, preview, text) {
   const removing = preview.action === "watchlist_remove", rows = preview.rows.map(item => removing ? item.current : item.restored);
+  const one = preview.row_count === 1, many = plural(preview.row_count, "purchase-queue row");
   const whole = row => el("dl", {}, ACTIVITY_UNDO_FIELDS.watchlist.flatMap(field => [el("dt", { text: ACTIVITY_UNDO_WATCHLIST_WORDS[field] }),
     el("dd", { class: ["notes", "source"].includes(field) ? "activity-undo-note" : null, text: text(row[field]) })]));
   body.append(el("p", { class: "box box-warn", text: removing
-      ? "Undo removes all " + plural(preview.row_count, "purchase-queue row") + " this change added. Every added row will be removed together."
-      : "Undo adds all " + plural(preview.row_count, "purchase-queue row") + " this change removed back to the queue, each as a new row, near where it was." }),
+      ? (one ? "Undo removes the purchase-queue row this change added." : "Undo removes all " + many + " this change added. Every added row will be removed together.")
+      : one ? "Undo adds the purchase-queue row this change removed back to the queue, as a new row, near where it was."
+      : "Undo adds all " + many + " this change removed back to the queue, each as a new row, near where it was." }),
     el("p", { class: "sub", text: "Saving creates one new audited change; the original change stays in Activity. "
       + (removing ? "Each row is checked again when you save." : "Each row is checked again when you save, against the queue as it is now.")
       + " Nothing is ordered, bought or cancelled." }),
-    el("p", { class: "sub", text: "Review every " + (removing ? "current" : "recorded") + " row below. There is no partial selection." }),
+    el("p", { class: "sub", text: one ? "Review the " + (removing ? "current" : "recorded") + " row below."
+      : "Review every " + (removing ? "current" : "recorded") + " row below. There is no partial selection." }),
     el("div", { class: "panels" }, preview.rows.map((item, index) => el("section", { class: "panel activity-undo-batch-row" },
       el("h4", { text: item.label }), whole(rows[index])))));
 }

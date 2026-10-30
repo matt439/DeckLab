@@ -43,6 +43,18 @@ class ActivityUndoWatchlistRowsUiTests(unittest.TestCase):
           assert.equal(sheet.body.querySelectorAll('input').length,0);assert(save(sheet));assert(!save(sheet).disabled);
         ''')
 
+    def test_one_row_is_described_in_the_singular(self):
+        self.run_js(r'''
+          const one=added({row_count:1,label:'1 added purchase-queue row',rows:added().rows.slice(0,1)});
+          let text=(await open(one)).sheet.body.textContent;
+          for(const words of ['Undo removes the purchase-queue row this change added.','Review the current row below.',
+            'Reason for removing this added purchase-queue row (required)','Enter why this row should come off the purchase queue.'])assert(text.includes(words),words);
+          for(const words of ['all 1','Every added row','no partial selection','all these'])assert(!text.includes(words),words);
+          text=(await open(removedRows({row_count:1,label:'1 removed purchase-queue row',rows:removedRows().rows.slice(0,1)}))).sheet.body.textContent;
+          for(const words of ['Undo adds the purchase-queue row this change removed back to the queue, as a new row','Review the recorded row below.'])assert(text.includes(words),words);
+          assert(!text.includes('all 1'));
+        ''')
+
     def test_one_and_fifty_rows_are_reviewed_while_any_other_packet_fails(self):
         self.run_js(r'''
           const many=Array.from({length:50},(_,i)=>({label:'Card '+i,watch_row_id:i+1,current:queueRow('Card '+i)}));

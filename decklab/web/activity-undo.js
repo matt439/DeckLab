@@ -627,11 +627,12 @@ function activityUndoShow(ctx) {
     const id = "activity-undo-reason-" + sheet.heading.id;
     reasonInput = el("input", { id, type: "text", maxlength: 400, autocomplete: "off", "aria-describedby": id + "-hint" });
     const normalized = el("p", { class: "sub", role: "status", "aria-live": "polite" });
-    sheet.body.append(el("label", { class: "field", for: id }, el("span", { text: queueRemoving ? "Reason for removing all these added purchase-queue rows (required)" : accessoryRemoving
+    sheet.body.append(el("label", { class: "field", for: id }, el("span", { text: queueRemoving ? preview.row_count === 1 ? "Reason for removing this added purchase-queue row (required)"
+      : "Reason for removing all these added purchase-queue rows (required)" : accessoryRemoving
       ? "Reason for removing this added accessory record (required)" : tokenCards
       ? (tokenBatchRemoving ? "Reason for removing all these added token-card rows (required)" : "Reason for removing this added token-card row (required)")
       : batchRemoving ? "Reason for removing all these added rows (required)" : "Reason for removing this added row (required)" }), reasonInput),
-      el("p", { class: "field-hint", id: id + "-hint", text: queueRemoving ? "Up to 200 characters. Enter why these rows should come off the purchase queue."
+      el("p", { class: "field-hint", id: id + "-hint", text: queueRemoving ? "Up to 200 characters. Enter why " + (preview.row_count === 1 ? "this row" : "these rows") + " should come off the purchase queue."
         : accessoryRemoving
         ? "Up to 200 characters. Enter why this entire record should be removed from Sleeves & boxes."
         : tokenCards

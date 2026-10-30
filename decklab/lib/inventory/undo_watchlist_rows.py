@@ -14,7 +14,9 @@ Removed rows come back as new rows under fresh ids, since the database gives eve
 its own id, each placed among the current rows by its recorded position, so the queue's relative
 order is restored where the survivors still hold their positions. The review works out the
 positions pg._positions will give them; a placement that would renumber any current row is
-refused, so the database writes exactly N INSERTs. Before commit, PgInventory.apply proves
+refused, so the database writes exactly N INSERTs. A removal is restored only while it is still the
+queue's latest audited change (undo_watchlist_latest), as token restores are, so restored rows
+that went again are never brought back by a second Undo. Before commit, PgInventory.apply proves
 either effect from the transaction's own audit rows, the persisted positions and the saved
 queue (confirm), or the whole change rolls back.
 """
@@ -34,6 +36,7 @@ ADD = "watchlist_add"           # the source removed rows: Undo adds them back
 OPS = {"INSERT": REMOVE, "DELETE": ADD}
 UNCONFIRMED = "The purchase-queue Undo could not be confirmed. Nothing was saved."
 UNSAFE = "The purchase-queue rows cannot safely be changed here. Nothing was saved."
+CHANGED = "The purchase queue changed after that removal. Nothing was restored."
 
 
 def _plural(count, word):
@@ -195,6 +198,16 @@ def review(change_id, space, snapshot, store, rows=None):
         elif action == ADD and (latest != item["row_change_id"] or item["watch_row_id"] in current):
             why[index].append(AUDIT)
     _refuse(why, total, action)
+    if action == ADD:
+        # Old ids are never reused, so each row's own latest audit row can't change after its
+        # DELETE: the whole queue's latest audit row must still be this change's, as token
+        # restores require, or a removal could be restored again after its rows went once more.
+        latest_reader = getattr(store, "undo_watchlist_latest", None)
+        if not callable(latest_reader):
+            raise UndoUnsupported("Restoring removed purchase-queue rows needs the queue's complete audit fence.")
+        latest = latest_reader()
+        if type(latest) is not int or latest != max(item["row_change_id"] for item in items):
+            raise UndoConflict(CHANGED, label)
     if action == REMOVE:
         return _review_remove(change_id, snapshot, raw, items, stock, label)
     return _review_add(change_id, snapshot, store, raw, items, stock, label, why)
@@ -252,7 +265,7 @@ def _review_add(change_id, snapshot, store, raw, items, stock, label, why):
     except Exception:
         raise UndoConflict(UNSAFE, label) from None
     digest = _receipt(change_id, raw, files.rendered_sha256(snapshot.watchlist), stock, layout, snapshot.revision,
-                      snapshot.decks_revision, ADD)
+                      snapshot.decks_revision, ADD, max(item["row_change_id"] for item in items))
     proof = {"deleted_ids": [item["watch_row_id"] for item in items], "stock": stock, "layout": layout,
              "order": order, "positions": positions}
     plan_rows = [{"row_change_id": item["row_change_id"], "label": item["label"], "restore": item["row"]} for item in items]

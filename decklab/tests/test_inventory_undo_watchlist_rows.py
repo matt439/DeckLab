@@ -32,6 +32,7 @@ class WatchlistRowsFixture(WatchlistUndoFixture):
     def setUp(self):
         super().setUp()
         self.store.undo_watchlist_positions = mock.Mock(side_effect=self.layout)
+        self.store.undo_watchlist_latest = mock.Mock(side_effect=lambda: max(self.touched.values(), default=None))
 
     def seed(self, changed=None, survivors=(row("Sol Ring"), row("Arcane Signet")), *, op="INSERT"):
         """op INSERT: changed rows (ids 7, 8, ...) were added after the survivors (ids 1, 2, ...).
@@ -332,6 +333,28 @@ class RestoreRemovedRowsTests(WatchlistRowsFixture):
         self.positions[7] = 99999
         self.assertIn(rows_undo.AUDIT + ": 1", self.refusal())
 
+    def test_a_later_queue_change_is_a_conflict_and_restored_rows_removed_again_are_not_restored_twice(self):
+        self.touched[1] = max(self.touched.values()) + 1
+        with self.assertRaises(undo.UndoConflict) as caught:
+            self.review()
+        self.assertEqual(str(caught.exception), rows_undo.CHANGED)
+        self.seed(op="DELETE")
+        self.run_undo()
+        restored = [rid for rid, _ in self.queue_rows() if rid >= FRESH]
+        self.store.snapshot = self.store.snapshot.with_watchlist(
+            [item for item in self.store.snapshot.watchlist.rows if item.id not in restored])
+        for rid in restored:
+            self.store.latest += 1
+            self.touched[rid] = self.store.latest
+        with self.assertRaises(undo.UndoConflict) as caught:
+            self.review()
+        self.assertEqual(str(caught.exception), rows_undo.CHANGED)
+
+    def test_without_the_queue_audit_fence_it_is_unsupported(self):
+        del self.store.undo_watchlist_latest
+        with self.assertRaises(undo.UndoUnsupported):
+            self.review()
+
     def test_without_the_persisted_layout_it_is_unsupported(self):
         del self.store.undo_watchlist_positions
         with self.assertRaises(undo.UndoUnsupported):
@@ -432,14 +455,16 @@ class RestoreRemovedRowsApplyTests(WatchlistRowsFixture):
                 self.assertEqual(str(caught.exception), rows_undo.UNCONFIRMED)
                 self.assertEqual(self.store.snapshot, before)
 
-    def test_a_replay_of_the_same_undo_is_refused_as_a_repeat(self):
+    def test_a_replay_of_the_same_undo_is_refused_once_the_queue_changed(self):
         plan = self.review()
         self.run_undo(plan["expect"])
         saved = self.store.snapshot
-        with self.assertRaises(Invalid):
+        with self.assertRaises(undo.UndoConflict):
             self.run_undo(plan["expect"])
         self.assertEqual(self.store.snapshot, saved)
-        self.assertIn(rows_undo.DUPLICATE + ": 2", self.refusal())
+        with self.assertRaises(undo.UndoConflict) as caught:
+            self.review()
+        self.assertEqual(str(caught.exception), rows_undo.CHANGED)
 
 
 class PgApplyWatchlistRowsHookTests(unittest.TestCase):
