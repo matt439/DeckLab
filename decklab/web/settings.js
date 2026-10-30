@@ -2,7 +2,7 @@
 simulations and how many Forge workers the PC uses (GET/PUT /api/simulations, lib/api/simulations.py), Visits
 (GET /api/visits, lib/api/visits.py: who has used Deck Lab, when, and the pages they opened), database-maintenance
 history (GET /api/settings/maintenance, lib/api/maintenance.py; reading runs no jobs), and About Deck Lab:
-the running server's version, Check for updates and the card data. These used to sit in every page's footer;
+the running server's version, Check for updates, the card data and Restart Deck Lab (settings-restart.js). These used to sit in every page's footer;
 the footer is now one quiet line (version.js).
 
 The parts carry the ids version.js fills (renderSimulations, renderVersionStatus): #sim-settings, #sim-mode
@@ -60,7 +60,8 @@ function showSettings(params, token) {
           el("span", { class: "spinner spinner-small", "aria-hidden": "true" }), " Checking the version…")),
         el("p", { class: "sub", id: "build-checked" }),
         el("p", { class: "sub", id: "settings-cards", role: "status" }),
-        el("div", { class: "actions" }, check)))]);
+        el("div", { class: "actions" }, check),
+        settingsRestartPart()))]);
   byId("sim-settings").hidden = true;
   afterRender();
   if (params && params.get("part") === "about") {
@@ -74,6 +75,7 @@ function showSettings(params, token) {
   loadSettingsMembers(token);
   loadSettingsMaintenance(token);
   loadVisits(token);
+  loadServerRestart(token);
   showFooter();
 }
 

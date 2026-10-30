@@ -146,6 +146,8 @@ Actions and their targets:
     "simulations.edit" no target
     "commander_night.edit" no target: a home admin, or an unnamed script
     "members.edit"     no target: an explicitly named home admin (private Settings panel)
+    "server.restart"   no target: an explicitly named home admin (Settings, api/server_restart.py);
+                       never a script, which has the command line
     "field.edit"       no target: home's saved field choices (E3-S23), a home admin's, or an
                        unnamed script's; the refusal names nobody
 
@@ -173,7 +175,7 @@ OWN_ACTIONS = ("wishlist.edit", "settings.edit")
 ADMIN_ACTIONS = ("receipts.apply", "products.edit", "orders.edit")
 ACTIONS = (DECK_ACTIONS + SPACE_ACTIONS + OWN_ACTIONS + ADMIN_ACTIONS
            + ("accessories.edit", "deck.create", "play.record", "run", "run.start", "run.stop",
-              "simulations.edit", "commander_night.edit", "members.edit", "field.edit"))
+              "simulations.edit", "commander_night.edit", "members.edit", "field.edit", "server.restart"))
 RUN_MODES = ("everyone", "admins", "paused")    # the simulations setting (lib/api/simulations.py)
 RUNS_PAUSED = "Simulations are paused for now, while the PC is busy. Saved results still show; try again later."
 RUNS_ADMINS = "Only an admin can start simulations right now. Saved results still show."
@@ -398,6 +400,8 @@ def reason(profile, action, target=None, *, script=False):
     if action == "members.edit":
         return None if profile and profile.get("id") and profile.get("role") == "admin" \
             and _space_of(profile) == HOME else "Member settings are private to a home admin."
+    if action == "server.restart":
+        return None if profile and profile.get("id") and profile.get("role") == "admin"             and _space_of(profile) == HOME else "Only a home admin can restart Deck Lab."
     if action == "commander_night.edit":
         if not sees_commander_night(profile, script=script):
             return COMMANDER_NIGHT_PRIVATE

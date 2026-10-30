@@ -260,7 +260,7 @@ class ShellUiTests(unittest.TestCase):
 
     def test_settings_are_an_admins_and_the_footer_is_one_line(self):
         self.run_js("""
-          showFooter = () => {};          // the version check is version.js's (test_version_ui)
+          showFooter = () => {}; loadServerRestart = () => {};          // the version check is version.js's (test_version_ui)
           as("user1");
           showSettings(new URLSearchParams(), routeToken);
           assert(main.textContent.includes("settings are for admins"));

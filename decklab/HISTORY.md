@@ -2,6 +2,25 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Restart Deck Lab from Settings (2026-10-30; E11-S47)
+
+Matt asked for the "Restart needed" banner seen on his phone to be actionable there. A named home
+admin now has **Restart Deck Lab…** in Settings' About part, and the banner links to it. After a
+confirmation (and **Restart anyway** when Forge or practice runs would stop) the server starts
+`python -m decklab.lib.homenet restart --port P` as a separate process that outlives it, so the
+restart is exactly the command line's: the server stops as `homenet stop` stops it, saving finished
+games, and the task (Windows) or service (Linux) starts it again. On Linux the helper runs in its own
+transient unit, since the service's `KillMode=mixed` would kill it with the server. The page polls
+`/api/status` and reloads once a server with another `started_at` answers, or says after three
+minutes where to look (`homenet status`, `decklab/data/logs/restart.log`).
+
+It's refused, naming nobody, for uncommitted application code or a version that can't be checked
+(AGENTS.md: commit before restarting), a server that isn't the background one on its usual port (a
+test's), no usable task or active service, or a restart already asked for in the last three minutes.
+No script bypass: the command line has `homenet restart`. Migrations stay on the PC by decision:
+`migrate` applies every pending file at once and needs the owner role, and 0014 to 0019 are held for
+their own qualification.
+
 ## Field runs fail closed on unreadable field choices (2026-10-29; E3-S23 fail-closed slice)
 
 Home's saved field choices can no longer lapse silently. `forge/field_policy_overlay.py`

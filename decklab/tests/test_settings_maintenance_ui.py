@@ -8,7 +8,7 @@ from decklab.tests.test_workspace_ui import NODE, RUNNER, WEB
 
 
 SETUP = SHELL + r'''
-  showFooter=()=>{};settingsSimulations=()=>{};loadCommanderNightSettings=()=>{};loadSettingsMembers=()=>{};loadVisits=()=>{};
+  showFooter=()=>{};loadServerRestart=()=>{};settingsSimulations=()=>{};loadCommanderNightSettings=()=>{};loadSettingsMembers=()=>{};loadVisits=()=>{};
   state.status=null;state.simulations=null;
   let reads=[],writes=0,fetches=0;
   apiWrite=()=>{writes++;throw Error('Writes are forbidden');};

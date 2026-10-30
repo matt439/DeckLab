@@ -934,6 +934,12 @@ Changed `decklab/db/*.py` counts as server code; a new migration file doesn't (r
 same banner then shows "Deck Lab's database" warnings (see "The database warning banner" under Database).
 **Reload page**, in the avatar menu for everyone and in the update banner, fetches a fresh page address while keeping the current route and page options. It uses the editor's normal unsaved-changes protection and keeps saved browser drafts, device choices and preferences. JavaScript and CSS addresses include the web revision, so an update gets fresh files without clearing Safari website data. For an older page without the menu action, open the site with a fresh `?v=` value before the `#` (for example `http://homepc.local:8642/?v=20261015`). Restart the server on the PC with
 `python -m decklab.lib.homenet restart` when requested, then reload the page if its banner asks for it.
+A home admin can also restart it from Settings' About part (**Restart Deck Lab…**, linked from the banner;
+from a phone through the tunnel too): it runs that same command on the PC, says first what Forge or practice
+runs it would stop, and reloads the page when the new server answers (`GET`/`POST /api/server/restart`,
+`lib/api/server_restart.py`; what the command said is in `decklab/data/logs/restart.log`). It's refused while the
+checkout has uncommitted application code, for a server not started in the background on its usual port, and
+when no task or service would start it again. It never applies migrations: run `python -m decklab.db migrate` on the PC.
 Neither action happens automatically. Deck saves don't change Checkout: they're saved in the
 database, never committed. Uncommitted application changes are labelled **+ local changes**; a missing Git
 repository or failed check is shown as unverified instead of claiming the server is current.
