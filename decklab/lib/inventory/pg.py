@@ -746,6 +746,11 @@ class PgInventory:
         from .undo_token_delete import read_review
         return read_review(self, change_id, space, _take_lock)
 
+    def undo_token_batch_review(self, change_id, space):
+        from .undo_token_batch import review
+        from .undo_token_delete import read_review
+        return read_review(self, change_id, space, _take_lock, reviewer=review)
+
     def supports_check_links(self):
         def work(c):
             return "check_links" in pg_check_links.columns(c)

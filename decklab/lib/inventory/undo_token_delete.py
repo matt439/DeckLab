@@ -1,4 +1,5 @@
-"""Review and restore one latest deleted physical token-card record under a fresh id.
+"""Review and restore one latest deleted physical token-card record under a fresh id
+(a batch of 2-50 from one change: undo_token_batch, which shares these checks).
 
 The review never allocates or guesses a replacement id. Restoration is ordinary Add,
 after explicit whole-count ownership confirmation; the database assigns the new id and
@@ -92,6 +93,14 @@ def _printing_key(row):
 
 
 def _stock(snapshot, source, restored, store, space):
+    stock, layout = settled_stock(snapshot, store, space)
+    if collides(stock, source["before"]["id"], restored):
+        raise ValueError("A physical card may already be recorded")
+    return stock, layout
+
+
+def settled_stock(snapshot, store, space):
+    """(stock, layout): the space's settled token rows and their persisted positions."""
     sheet = snapshot.token_set(space)
     if len(sheet.rows) > MAX_STOCK:
         raise ValueError("Token stock exceeds the review bound")
@@ -109,18 +118,36 @@ def _stock(snapshot, source, restored, store, space):
                 or type(position["position"]) is not int or not previous < position["position"] <= 2 ** 31 - 1:
             raise ValueError("Ambiguous token positions")
         previous = position["position"]
-    if any(row["id"] == source["before"]["id"] for row in stock):
-        raise ValueError("The removed id is present")
-    for item in stock:
-        row = item["row"]
-        if rules.token_identity(row) == rules.token_identity(restored) \
-                or _printing_key(row) == _printing_key(restored) \
-                or not rules.token_known(row) and set(_face_names(row)) & set(_face_names(restored)):
-            raise ValueError("A physical card may already be recorded")
     return stock, layout
 
 
+def collides(stock, deleted_id, restored):
+    """Whether a remaining row has the deleted id or may be the same physical card."""
+    if any(row["id"] == deleted_id for row in stock):
+        return True
+    return any(same_card(item["row"], restored) for item in stock)
+
+
+def same_card(row, restored):
+    return rules.token_identity(row) == rules.token_identity(restored) \
+        or _printing_key(row) == _printing_key(restored) \
+        or not rules.token_known(row) and bool(set(_face_names(row)) & set(_face_names(restored)))
+
+
 def _packing_evidence(snapshot, space, stock, restored):
+    lines = packed_lines(snapshot, space)
+    with inventory.pinned(snapshot):
+        if len(lines) * len(stock) > MAX_MATCHES or any(tokens.reserve.matches(line, restored) for line in lines):
+            raise ValueError("A packed reference may claim the restored cards")
+        # No matching packed line means adding these facts could neither claim a
+        # card nor divert an existing allocation. No hypothetical replacement id
+        # is constructed to make the candidate pass the stable-id checks.
+        return _packing(snapshot, space, stock)
+
+
+def packed_lines(snapshot, space):
+    """Every own-space built deck's and intact product's packed token line, bounded;
+    any holder whose packing is unknown raises ValueError."""
     from .undo import _home_products, _known_decks
     lines = []
     def extend(found):
@@ -160,13 +187,9 @@ def _packing_evidence(snapshot, space, stock, restored):
                 if not record.get("written") or record.get("error") or not isinstance(record.get("lines"), list):
                     raise ValueError("Unknown product packing")
                 extend(record["lines"])
-        if len(lines) > MAX_STOCK or len(lines) * len(stock) > MAX_MATCHES \
-                or any(tokens.reserve.matches(line, restored) for line in lines):
-            raise ValueError("A packed reference may claim the restored cards")
-        # No matching packed line means adding these facts could neither claim a
-        # card nor divert an existing allocation. No hypothetical replacement id
-        # is constructed to make the candidate pass the stable-id checks.
-        return _packing(snapshot, space, stock)
+    if len(lines) > MAX_STOCK:
+        raise ValueError("Too many packed lines")
+    return lines
 
 
 def review(change_id, space, snapshot, store, rows=None):
@@ -255,8 +278,10 @@ def _other_tokens(before, after, space):
 
 
 def restoring(summary):
+    """Whether summary is a fresh-id token restore (one row, or a batch: undo_token_batch)."""
+    from .undo_token_batch import ACTION as BATCH
     extra = summary.extra or {}
-    return extra.get("action") == ACTION and extra.get("kind") == "tokens" and isinstance(extra.get("token_restore"), dict)
+    return extra.get("action") in (ACTION, BATCH) and extra.get("kind") == "tokens" and isinstance(extra.get("token_restore"), dict)
 
 
 def confirm(before, saved, summary, actual, layout):
@@ -303,6 +328,9 @@ def confirm(before, saved, summary, actual, layout):
 
 def confirm_in_transaction(cur, change_set, before, saved, summary):
     """PgInventory.apply's hook: this change set's rows and layout, on its own cursor."""
+    from . import undo_token_batch
+    if summary.extra.get("action") == undo_token_batch.ACTION:
+        return undo_token_batch.confirm_in_transaction(cur, change_set, before, saved, summary)
     actual = [{"id": rid, "table": table, "op": op, "key": key, "before": old, "after": new}
               for rid, table, op, key, old, new in cur.execute(
                   "select id,table_name,op,row_key,before,after from audit.row_change "
@@ -321,8 +349,9 @@ def latest(cur, space):
     return found[0] if found else None
 
 
-def read_review(store, change_id, space, lock):
-    """Collect one fresh preview under the ordinary inventory claim; no audit/DML."""
+def read_review(store, change_id, space, lock, reviewer=None):
+    """Collect one fresh preview under the ordinary inventory claim; no audit/DML.
+    reviewer: review(change_id, space, snapshot, store) (this module's by default)."""
     from decklab.db import space_members
     _identifier(change_id)
     if not isinstance(space, str) or not re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", space):
@@ -345,7 +374,7 @@ def read_review(store, change_id, space, lock):
             store._applying.connection = connection
             try:
                 snapshot = store.load(conn=connection)
-                return review(change_id, space, snapshot, store)
+                return (reviewer or review)(change_id, space, snapshot, store)
             finally:
                 store._applying.connection = previous
     return store._call(work)
