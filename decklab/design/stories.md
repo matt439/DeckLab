@@ -41,14 +41,14 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 22 | 19 | 1 | 1 | 1 |
 | [E5: Decide what to buy](#e5-decide-what-to-buy) | 24 | 21 | 0 | 1 | 2 |
 | [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 23 | 21 | 0 | 0 | 2 |
-| [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 28 | 26 | 2 | 0 | 0 |
+| [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 28 | 27 | 1 | 0 | 0 |
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 19 | 16 | 0 | 1 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 22 | 18 | 0 | 3 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 35 | 31 | 1 | 1 | 2 |
-| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 42 | 33 | 5 | 1 | 3 |
-| **Total** | **271** | **234** | **15** | **8** | **14** |
+| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 42 | 34 | 5 | 0 | 3 |
+| **Total** | **271** | **237** | **13** | **7** | **14** |
 
-Counted from the story headers on 2026-10-29 after the source-aware two-player and pod counters, alongside the current feature and maintenance work. The reviews added five feature stories and eight hygiene stories, then the fixture-only entry-point story E11-S44, and corrected E1-S12 from missing to partial. Rechecked 2026-10-29: E1-S12 is built and E11-S39 partial (its database qualification pending). The TODO audit of 2026-10-29 added fifteen missing stories (twelve from the audit: E1-S27, E1-S28, E2-S27, E3-S25, E3-S26, E5-S25, E6-S25, E6-S26, E9-S26, E9-S27, E11-S45, E11-S46), then Matt's three UI requests (E3-S27, E5-S26, E6-S27), and corrected E7-S32 from missing to partial (its recognition spike and CLI are built). Matt closed E11-S16 as built the same day, and E3-S27, E5-S26, E6-S25, E6-S27 and E11-S46 were built the same day (E11-S12 stays partial after a further slice). Later the same day E5-S25 and E6-S26 were built, E1-S27's first slice (the library) made it partial, and E11-S12 and E3-S26 were built. E1-S27's Overview slices then finished it, and E2-S27 and E9-S27 were built. E1-S28 was built the same day. E3-S25's first slice (its replacements API, 2026-10-29) made it partial. Its dual-lands slice (2026-10-29) finished it. E11-S45 was built the same day. Recounted 2026-10-30: E7-S23's first slice (the token side on deck pages and the printout) made it partial. E7-S24's read-only slice (the counters and dice a deck's cards use) made it partial too. E9-S26's free cards by role on the Stats tab made it partial, leaving its cited role targets to Matt's choice of template; with the Command Zone template's targets (2026-10-31) it is built. Recounted 2026-10-31: E11-S47 (built 2026-10-30) was missing from the E11 row. E4-S16 was built (sideboard-plan tests). E7-S23's second slice (the opponent's tokens under their own heading and counted apart in the library line and the packing ticks) finished it. E7-S08 was built (token counts suggested from saved Forge games), and E9-S07 too (new decks and narrowed pages).
+Counted from the story headers on 2026-10-29 after the source-aware two-player and pod counters, alongside the current feature and maintenance work. The reviews added five feature stories and eight hygiene stories, then the fixture-only entry-point story E11-S44, and corrected E1-S12 from missing to partial. Rechecked 2026-10-29: E1-S12 is built and E11-S39 partial (its database qualification pending). The TODO audit of 2026-10-29 added fifteen missing stories (twelve from the audit: E1-S27, E1-S28, E2-S27, E3-S25, E3-S26, E5-S25, E6-S25, E6-S26, E9-S26, E9-S27, E11-S45, E11-S46), then Matt's three UI requests (E3-S27, E5-S26, E6-S27), and corrected E7-S32 from missing to partial (its recognition spike and CLI are built). Matt closed E11-S16 as built the same day, and E3-S27, E5-S26, E6-S25, E6-S27 and E11-S46 were built the same day (E11-S12 stays partial after a further slice). Later the same day E5-S25 and E6-S26 were built, E1-S27's first slice (the library) made it partial, and E11-S12 and E3-S26 were built. E1-S27's Overview slices then finished it, and E2-S27 and E9-S27 were built. E1-S28 was built the same day. E3-S25's first slice (its replacements API, 2026-10-29) made it partial. Its dual-lands slice (2026-10-29) finished it. E11-S45 was built the same day. Recounted 2026-10-30: E7-S23's first slice (the token side on deck pages and the printout) made it partial. E7-S24's read-only slice (the counters and dice a deck's cards use) made it partial too. E9-S26's free cards by role on the Stats tab made it partial, leaving its cited role targets to Matt's choice of template; with the Command Zone template's targets (2026-10-31) it is built. Recounted 2026-10-31: E11-S47 (built 2026-10-30) was missing from the E11 row. E4-S16 was built (sideboard-plan tests). E7-S23's second slice (the opponent's tokens under their own heading and counted apart in the library line and the packing ticks) finished it. E7-S08 was built (token counts suggested from saved Forge games), and E9-S07 too (new decks and narrowed pages). Later on 2026-10-31 E11-S39 was built (its database qualification ran), E11-S31 became partial (global search built, its device check left), E11-S30 kept its device gate, and E7-S24 was built once migration 0020 was applied.
 
 ---
 
@@ -2205,7 +2205,7 @@ Built (2026-10-29): `web/receipt-bulk.js` adds **Everything arrived as ordered**
 
 How the inventory stays true to the physical cards. Each space's own people add, fix and remove cards on the Collection page (single cards, an app export, Add a precon) and token cards on the Tokens page; Matt and User1 both edit home's, each member only their own, and Claude does bulk and member upkeep from the PC (`collection merge`, `collection edit` and `collection apply`, `collection add-precon --space`). Repeat imports, sales and trades, and cards held by built decks are all flagged, other decks' out-of-date tables are listed with Update all rather than refreshed automatically, and the nightly `db check` looks for drift.
 
-Open: E7-S24 (partial), E7-S32.
+Open: E7-S32.
 
 **E7-S01** · Matt · must · M · built
 
@@ -2556,7 +2556,7 @@ Now (2026-10-29): built. The classifier, the per-need side, words and deck-page 
 
 Known low issues: the side is read from words, so it stays approximate. The Packing plan's Shared tokens panel and Finish building's packed Token cards line still treat an opponent's token like the deck's own (one card packed in its box, to hand across).
 
-**E7-S24** · Matt · could · L · partial
+**E7-S24** · Matt · could · L · built
 
 As a player, I want our dice and counters recorded and checked against what decks need, so that I know whether we have enough for a game.
 
@@ -2569,7 +2569,7 @@ Evidence:
 - `decklab/lib/tokens/__init__.py` (`deck_tokens`): the result's `counters`, so only viewers who may see the space's inventory get them, as with the deck's tokens; the deck printout's "Counters and dice (approximate)" lines. `lib/api/assembly_ticks.py` leaves them out of the packing plan
 - `decklab/web/tokens.js` (`tokenCountersPart`) and `deck.js`: the deck page's Tokens part lists them under "Counters and dice", read-only, also when the list makes no tokens
 - `decklab/tests/test_token_counters.py`: the kinds and non-kinds from sentences, types, faces and keywords, a deck's needs from test cards added to the fixture index (order, grouping, sideboard-only, nothing else in the tokens answer changing), the printout, and no token part (so no counters) for a viewer outside the space; `test_feature_ui_tokens.py`: the deck page's list; `golden_p4.py`'s "counter-defaults"
-- `decklab/lib/inventory/dice_rules.py`, `ops_dice.py` (`dice.add`, `dice.edit`, `dice.remove`), `pg_dice.py` and migration `0020_dice_counters.sql` (unapplied): owned dice and counters as their own per-space inventory part (`dice.csv`, the audited `dice_counter` table), read as none and refused with the migration's name until 0020 is applied; nothing in a decklist, the pool or a table changes (criterion 3)
+- `decklab/lib/inventory/dice_rules.py`, `ops_dice.py` (`dice.add`, `dice.edit`, `dice.remove`), `pg_dice.py` and migration `0020_dice_counters.sql` (applied 2026-10-31): owned dice and counters as their own per-space inventory part (`dice.csv`, the audited `dice_counter` table), read as none and refused with the migration's name until 0020 is applied; nothing in a decklist, the pool or a table changes (criterion 3)
 - `decklab/lib/api/dice.py` (`GET /api/dice`, `POST /api/dice/save`, the token cards' privacy) and `decklab/web/dice.js`: the Tokens page's Dice and counters panel (criterion 1); `lib/tokens/dice_cover.py` and `deck_page._with_dice`: each counter need marked covered, any-kind stands in or not covered, for the Tokens part's readers only (criterion 2); `python -m decklab.db dice list|add|edit|remove` (`db/inv_dice.py`)
 - `decklab/tests/test_dice_counters.py`, `test_dice_counters_api.py`, `test_dice_counters_ui.py`; `test_dice_counters_pg.py` (skips without a disposable database)
 
@@ -2579,9 +2579,8 @@ Now (2026-10-31): every criterion is built in source ([HISTORY.md](../HISTORY.md
 
 Decided (Matt, 2026-10-31): one row per owned item: type (die or counter), die size for dice (d6, d20, spindown), counter kind (+1/+1, poison, loyalty, ...; blank is generic), colour or design, quantity and notes. A counter of a named kind covers that kind first; generic dice and counters cover any kind left. The migration is applied only with Matt's OK.
 
-Next slice: apply migration 0020 on the live database with Matt's OK, then record the household's dice and counters.
+Now (2026-10-31): migration 0020 was applied on the live database with Matt's OK, so dice and counters can be recorded (the household's list starts empty).
 
-Gap: until 0020 is applied the Tokens page says dice and counters can't be recorded yet, so no need shows as covered.
 
 **E7-S25** · Claude Code · should · S · built
 
@@ -4715,7 +4714,9 @@ Now: built 2026-10-31 ([HISTORY.md](../HISTORY.md#global-search-in-the-top-bar-2
 
 Evidence: `decklab/tests/test_global_search.py` (14: groups and order, the Collection page's counts, owned cards matched as Other cards match them and never listed there, decks matched as the library matches titles, bounds and refusals, the route; a member, User1, Matt with no admin override, another space's Public decks left out, a home page naming nobody, a login that isn't set up, a script, an unreadable collection), `decklab/tests/test_global_search_ui.py` (8 Node DOM cases: groups, See all, the card viewer, keys, stale and other-person answers, the phone's sheet, the "Who are you?" screen) and `decklab/tests/test_device_layout_ui.py` (the field beside the avatar, the icon on a phone on its side).
 
-Gap: the Editor keeps `/` as its existing alias of F (find a card to add), so criterion 1's "a page's own list search moves to F" holds everywhere but the Editor until Matt decides whether that alias gives way; the iPad's field and the phone's sheet still need the touch and Safari check with E11-S30's device gates.
+Decided (Matt, 2026-10-31): the Editor and the new-deck page keep `/` for their own Find a card to add (with F); everywhere else `/` opens global search, which stays in the top bar there.
+
+Gap: the iPad's field and the phone's sheet still need the touch and Safari check with E11-S30's device gates.
 
 **E11-S32** · Matt · could · M · built
 

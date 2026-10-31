@@ -164,7 +164,7 @@ Dog,Beast,,,,,1,,3/3,User-reported owned; unspecified characteristics and printi
 
 #### Dice and counters
 
-A space's owned dice and counters (E7-S24), apart from its token cards: one row per item, `type,size,kind,design,quantity,notes` (a die's size d4-d20 or `spindown`; a counter's kind such as `+1/+1` or `poison`, blank for a generic one; quantity 0-9999). Change them on the Tokens page's Dice and counters panel or with `python -m decklab.db dice list|add|edit|remove [--space S]` (`--expect SHA`, `-m`, a removal's `--reason`, `--actor`, `--dry-run`); never in a decklist, the pool or a table. A named counter covers its kind first; dice and generic counters cover any kind left (approximate). They need migration 0020, not yet applied: until then the page and `dice list` say they can't be recorded, and every write is refused. Privacy as token cards.
+A space's owned dice and counters (E7-S24), apart from its token cards: one row per item, `type,size,kind,design,quantity,notes` (a die's size d4-d20 or `spindown`; a counter's kind such as `+1/+1` or `poison`, blank for a generic one; quantity 0-9999). Change them on the Tokens page's Dice and counters panel or with `python -m decklab.db dice list|add|edit|remove [--space S]` (`--expect SHA`, `-m`, a removal's `--reason`, `--actor`, `--dry-run`); never in a decklist, the pool or a table. A named counter covers its kind first; dice and generic counters cover any kind left (approximate). They need migration 0020 (applied 2026-10-31): a database without it says they can't be recorded and refuses every write. Privacy as token cards.
 
 #### Orders
 

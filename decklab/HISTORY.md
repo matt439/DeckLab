@@ -2,6 +2,12 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Dice and counters live; global search's `/` decided (2026-10-31; E7-S24, E11-S31)
+
+- Migration `0020_dice_counters.sql` was applied on the live database with Matt's OK (20 migrations applied); the running server read the new table at once (`GET /api/dice` answers `ready: true`), with no restart. The household's dice and counters start empty. E7-S24 is built.
+- Matt decided that `/` stays with the Editor and the new-deck page, where it (like F) goes to Find a card to add; everywhere else it opens global search, which stays one click away in the top bar. No code changed. E11-S31 keeps only the iPad and phone check.
+- `design/stories.md`'s summary table was recounted from the story headers (271: 237 built, 13 partial, 7 missing, 14 not wanted), as were `design/README.md` and `design/gap-analysis.md`.
+
 ## Owned dice and counters (2026-10-31; E7-S24 slice 2)
 
 Matt accepted the recommended record shape (Commander now matters most to him): one row per kind of
