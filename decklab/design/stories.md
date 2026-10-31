@@ -45,10 +45,10 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 19 | 16 | 0 | 1 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 22 | 17 | 1 | 3 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 35 | 31 | 1 | 1 | 2 |
-| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 41 | 32 | 5 | 1 | 3 |
-| **Total** | **270** | **232** | **16** | **8** | **14** |
+| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 41 | 33 | 4 | 1 | 3 |
+| **Total** | **270** | **233** | **15** | **8** | **14** |
 
-Counted from the story headers on 2026-10-29 after the source-aware two-player and pod counters, alongside the current feature and maintenance work. The reviews added five feature stories and eight hygiene stories, then the fixture-only entry-point story E11-S44, and corrected E1-S12 from missing to partial. Rechecked 2026-10-29: E1-S12 is built and E11-S39 partial (its database qualification pending). The TODO audit of 2026-10-29 added fifteen missing stories (twelve from the audit: E1-S27, E1-S28, E2-S27, E3-S25, E3-S26, E5-S25, E6-S25, E6-S26, E9-S26, E9-S27, E11-S45, E11-S46), then Matt's three UI requests (E3-S27, E5-S26, E6-S27), and corrected E7-S32 from missing to partial (its recognition spike and CLI are built). Matt closed E11-S16 as built the same day, and E3-S27, E5-S26, E6-S25, E6-S27 and E11-S46 were built the same day (E11-S12 stays partial after a further slice). Later the same day E5-S25 and E6-S26 were built, E1-S27's first slice (the library) made it partial, and E11-S12 and E3-S26 were built. E1-S27's Overview slices then finished it, and E2-S27 and E9-S27 were built. E1-S28 was built the same day. E3-S25's first slice (its replacements API, 2026-10-29) made it partial. Its dual-lands slice (2026-10-29) finished it. E11-S45 was built the same day. Recounted 2026-10-30: E7-S23's first slice (the token side on deck pages and the printout) made it partial. E7-S24's read-only slice (the counters and dice a deck's cards use) made it partial too. E9-S26's free cards by role on the Stats tab made it partial, leaving its cited role targets to Matt's choice of template. E4-S16 was built (sideboard-plan tests). E7-S23's second slice (the opponent's tokens under their own heading and counted apart in the library line and the packing ticks) finished it. E7-S08 was built (token counts suggested from saved Forge games), and E9-S07 too (new decks and narrowed pages).
+Counted from the story headers on 2026-10-29 after the source-aware two-player and pod counters, alongside the current feature and maintenance work. The reviews added five feature stories and eight hygiene stories, then the fixture-only entry-point story E11-S44, and corrected E1-S12 from missing to partial. Rechecked 2026-10-29: E1-S12 is built and E11-S39 partial (its database qualification pending). The TODO audit of 2026-10-29 added fifteen missing stories (twelve from the audit: E1-S27, E1-S28, E2-S27, E3-S25, E3-S26, E5-S25, E6-S25, E6-S26, E9-S26, E9-S27, E11-S45, E11-S46), then Matt's three UI requests (E3-S27, E5-S26, E6-S27), and corrected E7-S32 from missing to partial (its recognition spike and CLI are built). Matt closed E11-S16 as built the same day, and E3-S27, E5-S26, E6-S25, E6-S27 and E11-S46 were built the same day (E11-S12 stays partial after a further slice). Later the same day E5-S25 and E6-S26 were built, E1-S27's first slice (the library) made it partial, and E11-S12 and E3-S26 were built. E1-S27's Overview slices then finished it, and E2-S27 and E9-S27 were built. E1-S28 was built the same day. E3-S25's first slice (its replacements API, 2026-10-29) made it partial. Its dual-lands slice (2026-10-29) finished it. E11-S45 was built the same day. Recounted 2026-10-30: E7-S23's first slice (the token side on deck pages and the printout) made it partial. E7-S24's read-only slice (the counters and dice a deck's cards use) made it partial too. E9-S26's free cards by role on the Stats tab made it partial, leaving its cited role targets to Matt's choice of template. E4-S16 was built (sideboard-plan tests). E7-S23's second slice (the opponent's tokens under their own heading and counted apart in the library line and the packing ticks) finished it. E7-S08 was built (token counts suggested from saved Forge games), and E9-S07 too (new decks and narrowed pages). E11-S39 was built on 2026-10-31 after its disposable-database qualification.
 
 ---
 
@@ -4107,7 +4107,7 @@ Evidence:
 
 Keeping Deck Lab running, safe and believable, by Matt as the household's admin and by Claude Code working for him at the PC. It covers the server and its Cloudflare tunnel and "Deck Lab is off" page, the PostgreSQL database with its nightly backup, export, check and restore check, the audit trail on #/activity, the `python -m decklab.db` commands Claude works through (previews, `--expect` guards, `-m` messages, exit codes), the card data's background refresh, Forge upkeep and the Safari Simulator suite. Every write is one audited change set, Matt's own command-line writes are recorded as his, and backups are checked by restoring them.
 
-Open: E11-S02, E11-S08, E11-S28, E11-S30, E11-S31, E11-S39.
+Open: E11-S02, E11-S08, E11-S28, E11-S30, E11-S31.
 
 **E11-S01** · Matt · must · M · built
 
@@ -4820,7 +4820,7 @@ Evidence:
 - `test_collection_import_module.py`: five patch-ownership and import-order guards; all 166 focused parser/collection/precon/trade/scan/merge checks passed.
 - AST review preserved all eight moved and 40 retained function bodies after owner-reference normalization. The integrated attempt and runtime limits are recorded in [HISTORY.md](../HISTORY.md#editor-import-workflow-split-2026-10-28-e11-s37).
 
-**E11-S39** · Claude Code · could · M · partial
+**E11-S39** · Claude Code · could · M · built
 
 As the operator maintaining the inventory backend, I want snapshot conversion separate from transaction coordination, so that row-format changes can be reviewed without disturbing locks and cache behaviour.
 
@@ -4837,7 +4837,7 @@ Evidence:
 
 Decided (Matt, 2026-10-31): the disposable-database qualification is authorized: a throwaway database on the PC's PostgreSQL server, dropped afterwards, never the live one.
 
-Gap: the disposable-database location, deck persistence and rollback checks (and `test_inventory_pg_decks`' `_select` patch) need their separate database qualification run; until then no PostgreSQL acceptance is claimed.
+Now (2026-10-31): the disposable-database qualification ran: 1,892 database-integration tests across the 104 modules that use `db_support` passed on throwaway `decklab_t_*` databases (4 skipped for their stated non-database reasons), the locations, deck persistence and rollback cases and `test_inventory_pg_decks`' `_select` patch included, after fixing 11 stale tests (none a product bug; HISTORY.md, "Database qualification on throwaway databases"). The live database was not touched.
 
 **E11-S40** · Claude Code · should · M · built
 

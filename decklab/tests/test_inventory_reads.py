@@ -330,7 +330,7 @@ class CommandLineDbTests(db_support.DbTestCase):
                 self.assertIn("casual/elves (target list)", expected["pool deck"][1])
                 # The intact product with no list makes the pool incomplete: refused alike.
                 self.assertEqual(expected["deck tables --check"][0], 1)
-                self.assertIn("lists lost-precon.csv", expected["deck tables --check"][2])
+                self.assertIn("Product lost-precon has a status but no card list", expected["deck tables --check"][2])
                 self.assertEqual(expected["forge field --show"][0], 0)
                 self.assertIn('"id": "casual/idea"', expected["forge field --show"][1])
             else:

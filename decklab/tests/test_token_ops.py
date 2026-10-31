@@ -416,7 +416,7 @@ class PgOpsTests(Tree, Cases, Cli, db_support.DbTestCase):
         self.assertEqual(code, 0, err)
         code, _, err = self.run_cli("remove", "1", "--expect", sha, "-m", "x", "--reason", "y")
         self.assertEqual(code, 1)                   # the list moved on since that sha
-        self.assertIn("has changed since that listing", err)
+        self.assertIn("have changed since that listing", err)
         code, out, err = self.run_cli("remove", "1", "--expect", self.listed_sha(), "-m", "Traded the Angel",
                                       "--reason", "traded")
         self.assertEqual(code, 0, err)

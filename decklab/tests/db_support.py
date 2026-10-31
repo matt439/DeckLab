@@ -233,6 +233,37 @@ def reset(dbname, tables=STATE_TABLES):
         c.execute("delete from audit.change_set")
 
 
+# What undoes each later migration, for tests that roll a throwaway database back to an older
+# schema and migrate it forward again (roll_back_schema). A new migration needs its entry here.
+UNDO_MIGRATION = {
+    14: ("alter table product_status drop column token_cards",),
+    15: ("alter table order_component drop column check_links",),
+    16: ("alter table collection_card drop column location",),
+    17: ("drop table public.field_policy",),
+    18: ("drop table public.deck_draft",),
+    19: ("drop table public.new_deck_draft",),
+}
+
+
+def roll_back_schema(c, version):
+    """Put the throwaway database c (an owner connection) back to schema `version`: undo every
+    later migration, newest first, and forget it in schema_migration, so migrate.apply() brings
+    it forward again. Refuses (AssertionError) when a later migration has no UNDO_MIGRATION entry,
+    so a new migration fails here by name rather than as a DuplicateTable on re-apply."""
+    from decklab.db import migrate
+    dbname = c.execute("select current_database()").fetchone()[0]
+    if not dbname.startswith(PREFIX):
+        raise ValueError(f"{dbname} isn't a test database")
+    later = sorted((m["version"] for m in migrate.available() if m["version"] > version), reverse=True)
+    missing = [v for v in later if v not in UNDO_MIGRATION]
+    if missing:
+        raise AssertionError(f"db_support.UNDO_MIGRATION has no undo for migration(s) {missing}")
+    for v in later:
+        for statement in UNDO_MIGRATION[v]:
+            c.execute(statement)
+    c.execute("delete from schema_migration where version > %s", (version,))
+
+
 def seed_membership(dbname, listed=None):
     """Register state-test targets in a disposable database without seed audit noise.
 

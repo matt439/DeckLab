@@ -12,7 +12,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 
 **Ready reserve (audited 2026-10-29):** after the redesign, choose an `OPEN` row below; there is no fixed order within the reserve. The 2026-10-29 audit checked every row against the code and added fifteen stories. Matt's three requests of 2026-10-29 (`E3-S27`, `E5-S26`, `E6-S27`) and the split keeping the extra-copies mark (`E6-S25`) were built the same day, as were free pool replacements and dual lands (`E3-S25`), queueing a deck's missing cards (`E5-S25`), decks a delivery made ready (`E6-S26`), last played in the library and on the deck Overview (`E1-S27`), the warm-worker fallback sentence (`E3-S26`), How to play's departed cards (`E2-S27`), the play sheet's At the table (`E9-S27`) and tonight's pairs on the Game log (`E1-S28`) and the staged Forge build's `upgrade-check --dir` (`E11-S45`) and sideboard-plan tests (`E4-S16`) (HISTORY.md). The rest are larger: drafts across devices (`E2-S16`, kept-for-later drafts built 2026-10-29, the Quick edit's and new decks' included, with migrations 0018 and 0019 applied) and field-policy editing (`E3-S23`, its selection, preview/save and failing closed built 2026-10-29, migration 0017 applied). Every `OPEN` story names a concrete first slice in its owner. Fixture-based work needs no new Forge games, household records or physical devices; real-device acceptance, live installations/migrations, purchases and Forge runs keep their separate gates.
 
-**Maintenance lane (updated 2026-10-29):** Tokens' workflow split and the source-length CI guard (`E11-S36`, `E11-S43`) are built. The editor workflow and collection parser splits (`E11-S37`, `E11-S38`) are built, creating room for their upcoming features. Keep structural and feature changes separate. The comment and command-document audits (`E11-S41`, `E11-S42`) are built. The fixture-only test entry point (`E11-S44`) is built. The test-group split (`E11-S40`) is built; the PostgreSQL snapshot split (`E11-S39`) is built and waits only on its separate disposable-database qualification. The editor drafts split (`E11-S46`) is built, leaving `web/editor.js` at 1,017 lines for `E2-S16`. The old-file wording in messages (`E11-S12`) is built. The [source-maintenance owner](decklab/SOURCE_AUDIT.md#maintenance-backlog) records the measured files, boundaries and validation. Length is a review trigger, not a reason to divide every large file mechanically.
+**Maintenance lane (updated 2026-10-29):** Tokens' workflow split and the source-length CI guard (`E11-S36`, `E11-S43`) are built. The editor workflow and collection parser splits (`E11-S37`, `E11-S38`) are built, creating room for their upcoming features. Keep structural and feature changes separate. The comment and command-document audits (`E11-S41`, `E11-S42`) are built. The fixture-only test entry point (`E11-S44`) is built. The test-group split (`E11-S40`) is built; the PostgreSQL snapshot split (`E11-S39`) is built and qualified on throwaway databases (2026-10-31). The editor drafts split (`E11-S46`) is built, leaving `web/editor.js` at 1,017 lines for `E2-S16`. The old-file wording in messages (`E11-S12`) is built. The [source-maintenance owner](decklab/SOURCE_AUDIT.md#maintenance-backlog) records the measured files, boundaries and validation. Length is a review trigger, not a reason to divide every large file mechanically.
 
 **Needs Matt or another person — these don't block coding:**
 - **`E2-S22`: physical-device follow-up.** Confirm hardware and touch usability on the household's actual iPhones and M2 11-inch iPad after the fixes. Keep prior results in the story; the [Safari Simulator suite](decklab/safari/EVIDENCE.md) covers repeat functional regressions.
@@ -86,14 +86,6 @@ An index of open work, one row per item; each row points to the doc that owns th
 | `E11-S08` | OPEN | could | L | Token deletions and 2-50 added token rows undo together (2026-10-29); 1-50 purchase-queue value edits restore in place (2026-10-30); 1-50 added queue rows are removed and removed ones restored as new rows (2026-10-31); 1-50 edited token-card rows restore in place (2026-10-31); queue changes mixing 2-50 updated, added and removed rows undo whole (2026-10-31); 2-50 collection-row restores and removals are proved before commit (2026-10-31). Mixed token-card changes have no producer (2026-10-31). Still open: queue changes with orders, token-card changes that moved or renumbered rows, other multi-row and mixed changes, other accessory/wishlist inverses. |
 | `E11-S02` | DECISION | should | S | The "Deck Lab is off" Worker is deployed (`decklab/cloudflare/`): Matt checks a signed-in save, a photo upload, and the page with Deck Lab stopped. |
 
-## Deck Lab: code hygiene
-
-**Owner:** [SOURCE_AUDIT.md, Maintenance backlog](decklab/SOURCE_AUDIT.md#maintenance-backlog), with acceptance criteria in [design/stories.md](decklab/design/stories.md), E11-S36 to E11-S43. These are bounded maintenance tasks; each leaves the row when its stated scope is done.
-
-| id | status | pri | size | item |
-|---|---|---|---|---|
-| `E11-S39` | OPEN | could | M | Snapshot split built (`pg_snapshot.py`, fixture checks pass); disposable-database qualification authorized 2026-10-31: run it. |
-
 ## Areas with no open rows
 
 A new row for one of these gets its section back.
@@ -103,6 +95,7 @@ A new row for one of these gets its section back.
 | Magic decks and buying | Deck Lab's deck list (`python -m decklab.db deck list`) and Shopping (`#/shopping`: deliveries, the purchase queue) | a deck or buying project that spans sessions |
 | Pokémon | `pokemon/collection.csv`, `pokemon/wishlist.csv` | a change Matt asks for |
 | Deck Lab's known low issues | HISTORY.md, each feature's "Known low issues" | one getting in the way |
+| Deck Lab: code hygiene | [SOURCE_AUDIT.md, Maintenance backlog](decklab/SOURCE_AUDIT.md#maintenance-backlog), E11-S36 to E11-S43 in [design/stories.md](decklab/design/stories.md) | a bounded maintenance task |
 
 ---
 
