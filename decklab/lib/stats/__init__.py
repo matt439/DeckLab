@@ -315,7 +315,7 @@ from .deckparts import (
 from .colourcheck import (
     _Source, _requirements, _checks, _needed, _cost_key, _Sources, _colour_groups, _hardest_first,
     _colour_check)
-from .role_targets import role_targets as _role_targets
+from .role_targets import SOURCE_ID as ROLE_TARGETS_SOURCE_ID, role_targets as _role_targets
 from .commander import (
     min_bracket, _copies_allowed, is_basic, _can_be_commander, _is_background, _is_doctor,
     _partner_abilities, _pairing, _partners, _abilities_in_words, _commander_checks)
@@ -352,6 +352,8 @@ def deck_stats(sections, kind):
     colours, sideboard_checks = _colour_check(main, library, by_section["Sideboard"], guidance, lands, kind)
     commander = _commander_checks(by_section, sections, unresolved, warnings) if kind == "commander" else None
     sources = {key: dict(value) for key, value in SOURCES.items()}
+    if kind != "commander":       # the role targets' template is cited only where they show
+        sources.pop(ROLE_TARGETS_SOURCE_ID, None)
     combos = commander["bracket"]["combos"] if commander else {}
     if combos.get("checked"):       # the combo list's date is its own, known only now
         sources["commander-spellbook"]["date"] = (

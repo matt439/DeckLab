@@ -120,6 +120,10 @@ older code (the committed tests/fixtures/inventory_goldens):
   line, so a line dumped as a whole object ({quantity, name, set, number, finish}) gains
   "category". Only a None category on exactly such an object is dropped: a line with a
   category, and every other field, still compares. test_deck_categories checks the categories.
+- "role-target-defaults": E9-S26 adds deck_view's stats "role_targets", the Command Zone
+  template's Commander role targets beside the list's counts. Constructed decks answer None,
+  and no golden deck is a Commander deck, so only None is dropped; a Commander deck's targets
+  still compare. test_role_targets checks its values.
 - "absent-shop-prices": E5-S08 adds an explicit missing-card shop check to deck Prices. Only
   the exact typed 15-field not-checked default is dropped from positive integer shortfalls
   in synthetic home deck_view answers: the raw script, the exact local-script sentinel and
@@ -621,6 +625,16 @@ def counter_defaults(dump):
                 found.pop("counters")
 
 
+def role_target_defaults(dump):
+    """Drop only E9-S26's None "role_targets" on deck pages' stats (constructed decks)."""
+    for mine in [dump, *((dump.get("by_viewer") or {}).values())]:
+        views = mine.get("deck_view") if isinstance(mine, dict) else None
+        for view in views.values() if isinstance(views, dict) else []:
+            stats = view.get("stats") if isinstance(view, dict) else None
+            if isinstance(stats, dict) and "role_targets" in stats and stats["role_targets"] is None:
+                stats.pop("role_targets")
+
+
 def opponent_token_defaults(dump):
     """Drop only E7-S23's empty "opponent" on library summaries' tokens."""
     for mine in [dump, *((dump.get("by_viewer") or {}).values())]:
@@ -842,7 +856,7 @@ EXPECTED_P5 = (("deck-id-messages", deck_id_messages), ("phase-5-wording", phase
                ("storage-location-defaults", storage_location_defaults), ("played-defaults", played_defaults),
                ("departed-defaults", departed_defaults), ("counter-defaults", counter_defaults),
                ("opponent-token-defaults", opponent_token_defaults), ("token-peak-defaults", token_peak_defaults),
-               ("absent-shop-prices", absent_shop_prices))
+               ("absent-shop-prices", absent_shop_prices), ("role-target-defaults", role_target_defaults))
 
 
 def normalise(dump):
