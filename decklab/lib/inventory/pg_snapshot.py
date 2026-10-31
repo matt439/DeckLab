@@ -21,7 +21,7 @@ from collections import defaultdict
 
 from decklab.lib.state import Invalid
 
-from . import files, paths, pg_check_links, pg_locations, rules
+from . import dice_rules, files, paths, pg_check_links, pg_dice, pg_locations, rules
 from .model import QUEUE_FIELDS, Component, ImportInfo, Order
 from .table_rows import (CARD_COLUMNS, COMPONENT_COLUMNS, ITEM_TABLES, ORDER_COLUMNS, PAYLOAD_FIELDS,
                          STATUS_COLUMNS, TOKEN_COLUMNS, WATCH_COLUMNS)
@@ -76,6 +76,8 @@ def _select(c):
                "collection_card": pg_locations.select(c)}
     data = {table: c.execute(query).fetchall() for table, query in queries.items()}
     data["locations_ready"] = pg_locations.ready(c)
+    data["dice_ready"] = pg_dice.ready(c)
+    data[pg_dice.TABLE] = pg_dice.rows(c, data["dice_ready"])
     return data
 
 
@@ -122,6 +124,14 @@ def snapshot(data, revision):
         rows.sort(key=lambda r: (r[2], r[0]))
         out[paths.tokens(space)], lines = _render(rules.TOKEN_FIELDS, [r[3:] for r in rows])
         token_ids[space] = dict(zip(lines, (r[0] for r in rows)))
+    dice_ids = {}
+    dice = defaultdict(list)
+    for row in data.get(pg_dice.TABLE, ()):
+        dice[row[1]].append(row)
+    for space, rows in dice.items():
+        rows.sort(key=lambda r: (r[2], r[0]))
+        out[paths.dice(space)], lines = _render(dice_rules.DICE_FIELDS, [r[3:] for r in rows])
+        dice_ids[space] = dict(zip(lines, (r[0] for r in rows)))
     watch = sorted(data["watchlist_item"], key=lambda r: (r[1], r[0]))
     out[paths.WATCHLIST], lines = _render(QUEUE_FIELDS, [r[2:] for r in watch])
     watch_ids = dict(zip(lines, (r[0] for r in watch)))
@@ -153,7 +163,7 @@ def snapshot(data, revision):
         order = Order.build(oid, seller, ordered_on, sources, notes, built, audit_notes)
         out[paths.record(oid)] = rules.json_bytes(order.data)
     inv = files.build(out, revision=str(revision), backend="db").replace(
-        locations_ready=data.get("locations_ready", True))
+        locations_ready=data.get("locations_ready", True), dice_ready=data.get("dice_ready", True))
     imports = defaultdict(list)
     for space, file_name, size, digest, at, actor in data["collection_import"]:
         imports[space].append(ImportInfo(file_name, size, digest, at.isoformat() if at else None, actor))
@@ -163,5 +173,8 @@ def snapshot(data, revision):
         tokens={space: dataclasses.replace(sheet, rows=tuple(
             dataclasses.replace(row, id=token_ids.get(space, {}).get(row.line, 0)) for row in sheet.rows))
             for space, sheet in inv.tokens.items()},
+        dice={space: dataclasses.replace(sheet, rows=tuple(
+            dataclasses.replace(row, id=dice_ids.get(space, {}).get(row.line, 0)) for row in sheet.rows))
+            for space, sheet in inv.dice.items()},
         watchlist=dataclasses.replace(inv.watchlist, rows=tuple(
             dataclasses.replace(row, id=watch_ids.get(row.line, 0)) for row in inv.watchlist.rows)))

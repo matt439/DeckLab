@@ -60,6 +60,7 @@ TABLES = [
     ("public.collection_card", ("space_id", "set_code", "collector_number", "finish")),
     ("public.collection_import", ("id",)),
     ("public.token_card", ("space_id", "position", "id")),
+    ("public.dice_counter", ("space_id", "position", "id")),
     ("public.product", ("stem",)),
     ("public.product_item", ("product_stem", "position")),
     ("public.product_status", ("position", "file")),
@@ -80,10 +81,14 @@ TABLES = [
 ]
 DECK_TABLES = {"public.decks_revision", "public.deck", "public.deck_revision", "public.deck_alias", "public.accessory"}
 INVENTORY_TABLES = {name for name, _ in TABLES[TABLES.index(("public.inventory_revision", ("id",))):]} - DECK_TABLES
-# Tables a database not yet migrated may lack (0003, 0004, 0006, 0010-0013 and 0017). Until it's
-# migrated they're skipped, a CSV already written for one is kept and the wishlists (or magic)
-# folder is left as it is (without 0006 no deck file is exported), so the nightly export still
-# works between updating the code and running migrate.
+# Inventory tables a later migration adds (0020's dice_counter). Without one the magic folder is
+# still written (the snapshot reads its rows as none); only its CSV is skipped.
+LATER_INVENTORY_TABLES = {"public.dice_counter"}
+# Tables a database not yet migrated may lack (0003, 0004, 0006, 0010-0013, 0017 and 0020).
+# Until it's migrated they're skipped, a CSV already written for one is kept and the wishlists
+# (or magic) folder is left as it is (without 0006 no deck file is exported; a missing table of
+# LATER_INVENTORY_TABLES doesn't hold magic back), so the nightly export still works between
+# updating the code and running migrate.
 UNTIL_MIGRATED = {"public.wishlist_entry", "public.profile_setting", "public.simulation_mode",
                   "public.play_record", "public.packing_tick", "public.commander_night", "public.visibility",
                   "public.space_departure", "public.field_policy"} | INVENTORY_TABLES | DECK_TABLES
@@ -256,7 +261,7 @@ def write_tables(repo, dbname=None):
         wishlists = None
         if "public.wishlist_entry" not in missing:
             wishlists = {f"{pid}.json": data for pid, data in wishlist_files(c).items()}
-        magic = None if missing & INVENTORY_TABLES else inventory_files(c)
+        magic = None if missing & (INVENTORY_TABLES - LATER_INVENTORY_TABLES) else inventory_files(c)
         c.rollback()
     total = sum(len(data) for data in outputs.values())
     _write_folder(folder, outputs, "*.csv")

@@ -521,6 +521,9 @@ class DeckTokensTests(TokenTestCase):
         view = api.deck_view("casual/hornets")
         expected = tokens.deck_tokens(decks.load_deck("casual/hornets", "target"), tokens.read(),
                                       _REAL_INCOMING()[0])
+        # E7-S24: no dice or counters recorded, so the counter needs are marked against none.
+        from decklab.lib.tokens import dice_cover
+        expected = dict(expected, counters=dice_cover.cover(expected["counters"], []))
         # E7-S08: with no saved Forge games, the part says so and no need has a suggested count.
         self.assertEqual(view["tokens"], peaks.annotate(expected, None))
         self.assertEqual(view["tokens"]["forge"], {"games": 0, "why": peaks.NO_GAMES})

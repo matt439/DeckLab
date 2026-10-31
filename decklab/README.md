@@ -1225,6 +1225,7 @@ python -m decklab.db watchlist list|set|remove|apply ...                    # th
 python -m decklab.db receive --order <id> [--component C]... [--verified C]... [--intact yes|no] [--date D] [--apply [--expect TOKEN]]
 python -m decklab.db collection list|merge|edit ...                         # a space's collection; cards from no recorded order; one row
 python -m decklab.db tokens list|check|add|edit|remove ...                  # a space's token cards
+python -m decklab.db dice list|add|edit|remove ...                         # a space's dice and counters (migration 0020)
 ```
 
 A recorded receipt (here or on the Receive delivery page) also keeps an

@@ -134,8 +134,8 @@ class MigrationRegistrationTests(unittest.TestCase):
             "public.wishlist_entry", "public.profile_setting", "public.simulation_mode",
             "public.play_record", "public.packing_tick", "public.commander_night", "public.visibility",
             "public.space_departure", "public.inventory_revision", "public.collection_card",
-            "public.collection_import", "public.token_card", "public.product", "public.product_item",
-            "public.product_status", "public.purchase_order", "public.order_component", "public.order_card_item",
+            "public.collection_import", "public.token_card", "public.dice_counter", "public.product",
+            "public.product_item", "public.product_status", "public.purchase_order", "public.order_component", "public.order_card_item",
             "public.order_token_item", "public.watchlist_item", "public.decks_revision", "public.deck",
             "public.deck_revision", "public.deck_alias", "public.accessory"])
         self.assertIn(TABLE, export.UNTIL_MIGRATED)

@@ -413,6 +413,8 @@ def _space_departures(c):
             ("ops.visit_day", "t.profile_id = d.space_id"),
             ("ops.visit_page", "t.profile_id = d.space_id or starts_with(t.deck_id, d.space_id || '/')"),
         )
+        if c.execute("select to_regclass('public.dice_counter') is not null").fetchone()[0]:     # migration 0020
+            references += (("dice_counter", "t.space_id = d.space_id"),)
         if ids:
             for table, condition in references:
                 count = c.execute(f"select count(*) from {table} t where exists "

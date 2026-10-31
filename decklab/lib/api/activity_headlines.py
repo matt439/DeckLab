@@ -22,6 +22,7 @@ SOMEONE = "someone"                         # an actor a viewer can't be told ab
 KINDS = ("decks", "collection", "tokens", "shopping", "wishlist", "sleeves", "games", "settings")
 _KIND_OF = {
     "collection_card": "collection", "collection_import": "collection", "token_card": "tokens",
+    "dice_counter": "tokens",
     **{table: "shopping" for table in ("product", "product_status", "purchase_order", "order_component",
                                         "watchlist_item", *ITEM_TABLES)},
     rules.DECK_TABLE: "decks", "deck_alias": "decks", "packing_tick": "decks", rules.ACCESSORY_TABLE: "sleeves", "wishlist_entry": "wishlist",
@@ -227,6 +228,12 @@ def describe(rows, actor_name, orders=None, groups=(), profiles=None, *, own=Non
                                                                  f"from {where}" if where else "",
                                                                  f"in {where}" if where else ""),
                                     lambda r: f"the token card {_faces(r)}", past_of("token_card")), None))
+    dice = take("dice_counter")
+    if dice:
+        spaces_ = {_record(r).get("space_id") for r in dice}
+        whose = _whose(next(iter(spaces_)), profiles or {}, own) if len(spaces_) == 1 else "the home"
+        phrases.append(("changed the dice and counters" if whose == "the home"
+                        else f"changed {whose} dice and counters", None))
     watch = take("watchlist_item")
     if watch:
         phrases.append((_copies(watch, more, "card", ("to the watchlist", "from the watchlist", "on the watchlist"),

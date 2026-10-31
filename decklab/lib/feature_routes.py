@@ -53,7 +53,7 @@ def _start_sideboard_test(body):
 
 
 def dispatch(handler, route, query):
-    from decklab.lib.api import (accessories, accessory_undo, activity, arrivals, activity_mixed_undo, activity_undo, assembly, assembly_completion, assembly_standins, assembly_ticks, box_check, box_repair, collection, compare, considering, collection_edit, collection_locations, collection_scan, collection_trade, cover, deck_drafts, deck_printings, edhrec, editor, history,
+    from decklab.lib.api import (accessories, accessory_undo, activity, arrivals, activity_mixed_undo, activity_undo, assembly, assembly_completion, assembly_standins, assembly_ticks, box_check, box_repair, collection, compare, considering, collection_edit, collection_locations, collection_scan, collection_trade, cover, deck_drafts, deck_printings, dice, edhrec, editor, history,
                                  library_forge, maintenance, opponents, play_pods, play_records, play_tonight, precon_coverage, precons, products, product_tokens, rankings, receipts, rename, retirement, role_cards, server_restart, shopping, shopping_order_changes, shopping_orders, shopping_queue, shopping_queue_missing, swaps, token_cards, token_plan, tokens, tokens_scan, variant_queue, visits, wishlist_undo)
     from decklab.lib.api.common import MAX_BODY
 
@@ -97,6 +97,7 @@ def dispatch(handler, route, query):
         ("product",): (products.product_state, ("stem",)),
         ("accessories",): (accessories.accessories_view, ()),
         ("tokens",): (tokens.tokens_view, ("space",)),
+        ("dice",): (dice.dice_view, ("space",)),
         ("tokens", "plan"): (token_plan.plan_view, ("space",)),
         ("activity",): (activity.activity_view, ("before", "limit", "kind", "actor")),
         ("activity", "undo"): (activity_undo.undo_view, ("id",)),
@@ -138,6 +139,7 @@ def dispatch(handler, route, query):
         ("accessories", "save"): (accessories.save_accessory, accessories.MAX_SAVE_BODY),
         ("accessories", "assign"): accessories.assign_accessory,
         ("tokens", "save"): tokens.save_token,
+        ("dice", "save"): (dice.save_dice, dice.MAX_SAVE_BODY),
         ("tokens", "plan"): token_plan.apply_plan,
         ("tokens", "scan"): (tokens_scan.scan_token, collection_scan.MAX_SCAN_BODY),     # nothing is written
         ("tokens", "scan", "add"): (tokens_scan.add_scanned, tokens_scan.MAX_ADD_BODY),

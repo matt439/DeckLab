@@ -107,7 +107,7 @@ def require_unused(cur, member_id, *, created_change_set_id=None):
         raise InvalidProfileEdit(USED)
     if cur.execute(_PRIVATE, (member_id,)).fetchone()[0]:
         raise InvalidProfileEdit(USED)
-    for table, column in (("visibility", "owner"), ("space_departure", "space_id")):
+    for table, column in (("visibility", "owner"), ("space_departure", "space_id"), ("dice_counter", "space_id")):
         if cur.execute("select to_regclass(%s) is not null", ("public." + table,)).fetchone()[0]:
             # Identifiers are fixed pairs above; submitted values are always parameters.
             if cur.execute(f"select exists (select 1 from {table} where {column} = %s)", (member_id,)).fetchone()[0]:

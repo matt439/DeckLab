@@ -71,6 +71,11 @@ def locations(space=HOME):
     return f"{space_root(space)}/locations.csv"
 
 
+def dice(space=HOME):
+    """A space's owned dice and counters (E7-S24): dice.csv beside its tokens.csv."""
+    return f"{space_root(space)}/dice.csv"
+
+
 def imports_dir(space=HOME):
     """A space's raw scanner/app exports: magic/imports or magic/people/<id>/imports."""
     return f"{space_root(space)}/imports"
@@ -138,7 +143,8 @@ def _image_name(name):
 def classify(rel):
     """What an inventory path is, as (what, detail), or None for a path that isn't inventory:
 
-    ("collection", space), ("tokens", space), ("locations", space), ("import", (space, file name)),
+    ("collection", space), ("tokens", space), ("locations", space), ("dice", space),
+    ("import", (space, file name)),
     ("watchlist", None), ("status", None), ("product", stem), ("record", order id),
     ("payload", (kind, status, file name)) where kind is "cards" or "tokens";
     and phase 4's deck parts (DECK_PARTS): ("deck", (space, kind, slug)), ("accessories", None),
@@ -165,6 +171,8 @@ def classify(rel):
         return ("tokens", HOME)
     if rel == locations(HOME):
         return ("locations", HOME)
+    if rel == dice(HOME):
+        return ("dice", HOME)
     if len(parts) == 3 and parts[1] == "imports":
         return ("import", (HOME, name))
     if parts[1] == "people" and len(parts) >= 4 and _SPACE.match(parts[2]) and parts[2] != HOME:
@@ -175,6 +183,8 @@ def classify(rel):
             return ("tokens", space)
         if len(parts) == 4 and name == "locations.csv":
             return ("locations", space)
+        if len(parts) == 4 and name == "dice.csv":
+            return ("dice", space)
         if len(parts) == 5 and parts[3] == "imports":
             return ("import", (space, name))
         if len(parts) == 6 and parts[3] == "decks" and parts[4] in DECK_KINDS and _deck_name(name):
@@ -216,7 +226,7 @@ def space_of(rel):
     if found is None:
         return None
     what, detail = found
-    if what in ("collection", "tokens", "locations"):
+    if what in ("collection", "tokens", "locations", "dice"):
         return detail
     if what in ("import", "deck"):
         return detail[0]
@@ -257,9 +267,10 @@ def describe(rel, owners=None):
     if found is None:
         return rel
     what, detail = found
-    if what in ("collection", "tokens", "locations"):
+    if what in ("collection", "tokens", "locations", "dice"):
         owner = "the home" if detail == HOME else f"{detail}'s"
-        return f"{owner} {dict(collection='collection', tokens='token cards', locations='storage locations')[what]}"
+        return f"{owner} " + dict(collection="collection", tokens="token cards", locations="storage locations",
+                                  dice="dice and counters")[what]
     if what == "import":
         return f"the import {detail[1]}" + ("" if detail[0] == HOME else f" in {detail[0]}'s space")
     if what == "watchlist":

@@ -17,6 +17,7 @@ INVENTORY_FIELDS = {
     "collection_card": ("space_id", "name", "set_code", "collector_number", "finish", "quantity"),
     "collection_import": ("space_id", "file_name"),
     "token_card": ("space_id", "front", "back", "quantity"),
+    "dice_counter": ("space_id", "item_type", "die_size", "counter_kind", "design", "quantity"),
     "product": ("stem", "name"),
     "product_status": ("file", "status", "intact", "sleeves", "deck_box"),
     "purchase_order": ("id", "seller", "ordered_on"),
@@ -26,7 +27,7 @@ INVENTORY_FIELDS = {
 # Rows counted per change set rather than listed (a product's list, an order's payload): their
 # audit rows hold cells without column names, and an import has hundreds of them.
 ITEM_TABLES = ("product_item", "order_card_item", "order_token_item")
-SPACE_TABLES = ("collection_card", "collection_import", "token_card")
+SPACE_TABLES = ("collection_card", "collection_import", "token_card", "dice_counter")
 PROFILE_FIELDS = (("name", "name"), ("role", "role"), ("space_id", "space"), ("plays_as", "plays as"))
 
 
@@ -307,6 +308,28 @@ def _token_summary(op, before, after, whose):
     return _changed(f"Changed {_faces(after)} in {where}", parts)
 
 
+def _dice_item(r):
+    """A dice_counter row as the Tokens page names it: "d20 (red)", "poison counter", "counter"."""
+    if r.get("item_type") == "die":
+        words = _text(r.get("die_size"), "die")
+    else:
+        kind = r.get("counter_kind")
+        words = f"{kind} counter" if isinstance(kind, str) and kind else "counter"
+    design = r.get("design")
+    return f"{words} ({design})" if isinstance(design, str) and design else words
+
+
+def _dice_summary(op, before, after, whose):
+    where = f"{whose} dice and counters"
+    if op == "INSERT":
+        return f"Added {_qty(after)} × {_dice_item(after)} to {where}"
+    if op == "DELETE":
+        return f"Removed {_qty(before)} × {_dice_item(before)} from {where}"
+    parts = _changes(before, after, {"quantity": "quantity", "item_type": "type", "die_size": "size",
+                                     "counter_kind": "kind", "design": "design"})
+    return _changed(f"Changed {_dice_item(after)} in {where}", parts)
+
+
 def _import_summary(op, before, after, whose):
     name = _text((after or before).get("file_name"))
     if op == "DELETE":
@@ -401,6 +424,7 @@ def _watch_summary(op, before, after, whose):
 
 INVENTORY_SUMMARIES = {
     "collection_card": _collection_summary, "collection_import": _import_summary, "token_card": _token_summary,
+    "dice_counter": _dice_summary,
     "product": _product_summary, "product_status": _status_summary, "purchase_order": _order_summary,
     "order_component": _component_summary, "watchlist_item": _watch_summary,
 }

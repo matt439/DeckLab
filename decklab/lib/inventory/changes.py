@@ -39,12 +39,13 @@ and 7).
 import copy
 import dataclasses
 
-from . import files, paths, rules, table_rows
-from .model import (PREVIEW, AccessoryRow, CardRow, Deck, ImageMeta, LocationRow, Product, Sheet, StatusRow,
+from . import dice_rules, files, paths, rules, table_rows
+from .model import (PREVIEW, AccessoryRow, CardRow, Deck, DiceRow, ImageMeta, LocationRow, Product, Sheet, StatusRow,
                     TokenRow, WatchRow, refuse_unreadable_tokens)
 
 SAVE_REFUSED = "The inventory can't be saved like that: {why}"
 STANDARD = {"collection": CardRow.COLUMNS, "tokens": TokenRow.COLUMNS, "locations": LocationRow.COLUMNS,
+            "dice": DiceRow.COLUMNS,
             "status": StatusRow.COLUMNS,
             "watchlist": WatchRow.COLUMNS, "accessories": AccessoryRow.COLUMNS}
 PAYLOAD_COLUMNS = {"cards": CardRow.COLUMNS, "tokens": TokenRow.COLUMNS}
@@ -70,6 +71,8 @@ def source_at(inv, rel):
         sheet = inv.tokens.get(detail)
     elif what == "locations":
         sheet = inv.locations.get(detail)
+    elif what == "dice":
+        sheet = inv.dice.get(detail)
     elif what == "status":
         sheet = inv.status
     elif what == "watchlist":
@@ -96,8 +99,8 @@ def source_at(inv, rel):
 def with_source(inv, rel, source):
     """inv with source at rel (None: no file there)."""
     what, detail = paths.classify(rel)
-    if what in ("collection", "tokens", "locations"):
-        attr = {"collection": "collections", "tokens": "tokens", "locations": "locations"}[what]
+    if what in ("collection", "tokens", "locations", "dice"):
+        attr = {"collection": "collections", "tokens": "tokens", "locations": "locations", "dice": "dice"}[what]
         mapping = {k: v for k, v in getattr(inv, attr).items() if k != detail}
         if source is not None:
             mapping[detail] = source
@@ -160,7 +163,7 @@ def changed_paths(before, after):
 
 
 # The order changed_labels lists the parts of the inventory in.
-_LABEL_ORDER = ("collection", "locations", "tokens", "import", "record", "product", "status", "watchlist", "deck",
+_LABEL_ORDER = ("collection", "locations", "tokens", "dice", "import", "record", "product", "status", "watchlist", "deck",
                 "accessories", "image")
 
 
@@ -206,6 +209,8 @@ def changed_labels(before, after, rels=None):
             words = f"{whose(detail)} token cards"
         elif what == "locations":
             words = f"{whose(detail)} storage locations"
+        elif what == "dice":
+            words = f"{whose(detail)} dice and counters"
         elif what == "import":
             words = f"{whose(detail[0])} raw imports: {detail[1]}"
         elif what == "record":
@@ -253,7 +258,9 @@ def _normal(rel, source):
             pass
     if what == "accessories":
         rows = tuple(sorted(rows, key=lambda row: rules.accessory_sort_key(row.as_dict())))
-    if what in ("collection", "tokens", "locations", "accessories") and not rows and not source.problems:
+    if what == "dice":
+        rows = tuple(sorted(rows, key=lambda row: dice_rules.sort_key(row.as_dict())))
+    if what in ("collection", "tokens", "locations", "accessories", "dice") and not rows and not source.problems:
         return None
     return dataclasses.replace(source, columns=tuple(columns), rows=rows, exists=True)
 
@@ -318,7 +325,7 @@ def check(before, after):
             raise Invalid(SAVE_REFUSED.format(why=f"{rel} can't be read back ({new.error})"))
         if what == "tokens" and new.problems:
             raise Invalid(SAVE_REFUSED.format(why=new.problems[0]))
-        if what in ("collection", "locations") and new.strict_error:
+        if what in ("collection", "locations", "dice") and new.strict_error:
             raise Invalid(SAVE_REFUSED.format(why=new.strict_error))
         if what == "accessories" and new.strict_error:
             raise Invalid(SAVE_REFUSED.format(why=new.strict_error))

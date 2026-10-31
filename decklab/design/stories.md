@@ -2569,14 +2569,19 @@ Evidence:
 - `decklab/lib/tokens/__init__.py` (`deck_tokens`): the result's `counters`, so only viewers who may see the space's inventory get them, as with the deck's tokens; the deck printout's "Counters and dice (approximate)" lines. `lib/api/assembly_ticks.py` leaves them out of the packing plan
 - `decklab/web/tokens.js` (`tokenCountersPart`) and `deck.js`: the deck page's Tokens part lists them under "Counters and dice", read-only, also when the list makes no tokens
 - `decklab/tests/test_token_counters.py`: the kinds and non-kinds from sentences, types, faces and keywords, a deck's needs from test cards added to the fixture index (order, grouping, sideboard-only, nothing else in the tokens answer changing), the printout, and no token part (so no counters) for a viewer outside the space; `test_feature_ui_tokens.py`: the deck page's list; `golden_p4.py`'s "counter-defaults"
+- `decklab/lib/inventory/dice_rules.py`, `ops_dice.py` (`dice.add`, `dice.edit`, `dice.remove`), `pg_dice.py` and migration `0020_dice_counters.sql` (unapplied): owned dice and counters as their own per-space inventory part (`dice.csv`, the audited `dice_counter` table), read as none and refused with the migration's name until 0020 is applied; nothing in a decklist, the pool or a table changes (criterion 3)
+- `decklab/lib/api/dice.py` (`GET /api/dice`, `POST /api/dice/save`, the token cards' privacy) and `decklab/web/dice.js`: the Tokens page's Dice and counters panel (criterion 1); `lib/tokens/dice_cover.py` and `deck_page._with_dice`: each counter need marked covered, any-kind stands in or not covered, for the Tokens part's readers only (criterion 2); `python -m decklab.db dice list|add|edit|remove` (`db/inv_dice.py`)
+- `decklab/tests/test_dice_counters.py`, `test_dice_counters_api.py`, `test_dice_counters_ui.py`; `test_dice_counters_pg.py` (skips without a disposable database)
 
-Now (2026-10-29): the read-only slice is built: the counters and dice a deck's cards call for, on the deck page's Tokens part and in the printout ([HISTORY.md](../HISTORY.md#the-counters-and-dice-a-deck-uses-2026-10-29-e7-s24-slice-1)).
+Decided (Matt, 2026-10-31): the recommended record shape. One row per owned item: die or counter; a die's size (d4, d6, d8, d10, d12, d20 or spindown); a counter's kind (blank: generic); its colour or design (one line); quantity 0-9999; notes. A counter of a named kind covers that kind first; dice and generic counters cover any kind left.
 
-Next slice: Matt's record shape for owned dice and counters (kind, colour or design, quantity; whether one die stands for any counter kind), then its migration and the Tokens page's rows (criterion 1), then each counter need's covered or not (criterion 2's rest). Those need Matt's decision and a live migration, so they aren't fixture-only work.
+Now (2026-10-31): every criterion is built in source ([HISTORY.md](../HISTORY.md#owned-dice-and-counters-2026-10-31-e7-s24-slice-2)); the read-only slice came first ([2026-10-29](../HISTORY.md#the-counters-and-dice-a-deck-uses-2026-10-29-e7-s24-slice-1)).
 
 Decided (Matt, 2026-10-31): one row per owned item: type (die or counter), die size for dice (d6, d20, spindown), counter kind (+1/+1, poison, loyalty, ...; blank is generic), colour or design, quantity and notes. A counter of a named kind covers that kind first; generic dice and counters cover any kind left. The migration is applied only with Matt's OK.
 
-Gap: owned dice and counters aren't recorded, so the deck page lists the kinds its cards use but not whether they're covered.
+Next slice: apply migration 0020 on the live database with Matt's OK, then record the household's dice and counters.
+
+Gap: until 0020 is applied the Tokens page says dice and counters can't be recorded yet, so no need shows as covered.
 
 **E7-S25** · Claude Code · should · S · built
 

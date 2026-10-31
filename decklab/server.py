@@ -285,6 +285,11 @@ inventory writes answer 503 with "reason": "database":
                                          card's photo on the PC and propose its faces (E7-S32); nothing is written
     POST /api/tokens/scan/add            body {"profile", "space"?, "sha256", "rows"} (1 to 50): the scanned token
                                          cards added as one change, never merged into a listed row (409 as save)
+    GET  /api/dice[?space=<id>]          a space's owned dice and counters (E7-S24; ready false before
+                                         migration 0020; 403 for a space the viewer may not see)
+    POST /api/dice/save                  body {"profile", "space"?, "sha256", "action": "add"|"edit"|"remove",
+                                         "base"?, "row"?, "reason"?}: change one row, one change set
+                                         (409 + "latest"; "reason": "migration" before 0020)
     GET  /, /app.js, /style.css, ...     the page: only files that exist in decklab/web/
                                          (/?profile=<id>&theme=light|dark preselects, for screenshots)
 HEAD works wherever GET does.

@@ -104,7 +104,10 @@ older code (the committed tests/fixtures/inventory_goldens):
 - "counter-defaults": E7-S24 adds deck_view's tokens "counters", the counters and dice the
   list's cards call for (read from their text, never from the inventory). No golden deck's
   cards use any, so only the empty answer ({"needs": [], "note": counters.NOTE}) is dropped; a
-  deck with a counter still compares. test_token_counters checks its values and privacy.
+  deck with a counter still compares. test_token_counters checks its values and privacy. Its
+  second slice adds the counters' "owned" (whether owned dice and counters cover them); no golden
+  space records any, so the empty answer with no items owned is dropped the same way
+  (test_dice_counters checks it).
 - "opponent-token-defaults": E7-S23 adds the library summaries' tokens "opponent", the tokens
   only the opponent gets (read from the cards' text) that no card covers, counted apart from
   "none", "differs" and "incoming". No golden deck's cards give a token away, so only the empty
@@ -607,13 +610,14 @@ def departed_defaults(dump):
 
 
 def counter_defaults(dump):
-    """Drop only E7-S24's empty "counters" on deck pages' tokens."""
-    from decklab.lib.tokens import counters
+    """Drop only E7-S24's empty "counters" on deck pages' tokens (with nothing owned)."""
+    from decklab.lib.tokens import counters, dice_cover
+    empty = dice_cover.cover({"needs": [], "note": counters.NOTE}, [])
     for mine in [dump, *((dump.get("by_viewer") or {}).values())]:
         views = mine.get("deck_view") if isinstance(mine, dict) else None
         for view in views.values() if isinstance(views, dict) else []:
             found = view.get("tokens") if isinstance(view, dict) else None
-            if isinstance(found, dict) and found.get("counters", 0) == {"needs": [], "note": counters.NOTE}:
+            if isinstance(found, dict) and found.get("counters", 0) in ({"needs": [], "note": counters.NOTE}, empty):
                 found.pop("counters")
 
 

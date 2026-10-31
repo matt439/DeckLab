@@ -2,6 +2,38 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Owned dice and counters (2026-10-31; E7-S24 slice 2)
+
+Matt accepted the recommended record shape (Commander now matters most to him): one row per kind of
+owned item, kept apart from the token cards. A row is a **die** (d4, d6, d8, d10, d12, d20 or
+spindown, a spindown counting as a d20) or a **counter** with a kind (`+1/+1`, `poison`,
+`loyalty`, ...; blank for a generic counter that stands for any kind), a colour or design, a
+quantity from 0 to 9999 (0 keeps a used-up row) and notes. The rows are a new per-space part of the
+inventory snapshot (`dice.csv` beside `tokens.csv` for the files backend and the export;
+`lib/inventory/dice_rules.py`), written by the `dice.add`, `dice.edit` and `dice.remove`
+operations (`lib/inventory/ops_dice.py`: the list's sha, a row named by its values, never two rows
+for the same item) and stored in migration 0020's audited `dice_counter` table (per space, by id,
+as `token_card`; `pg_dice.py`). Migration 0020 is written but **not applied**: until it is, every
+space reads as having none, writes are refused with the migration's name, and everything else works,
+as 0016's locations did.
+
+The Tokens page has a **Dice and counters** panel (`web/dice.js`, `GET /api/dice`,
+`POST /api/dice/save`) for the space's token editors, with the token cards' privacy (its own people
+only, no admin override); before 0020 it says they can't be recorded yet. The deck page's Counters
+and dice part now marks each need **Covered**, **Any-kind stands in** or **Not covered**
+(`lib/tokens/dice_cover.py`, approximate): a die the cards roll needs that size; a counter kind is
+covered first by counters of that kind, then each kind left takes one die or generic counter while
+any remain. A die size the records don't have (a d100 the cards roll) says Deck Lab doesn't record it,
+rather than "No d100 recorded". On the command line, `python -m decklab.db dice list|add|edit|remove` (`--expect`, `-m`,
+a removal's `--reason`, `--actor`, `--dry-run`). Activity names the rows in their space only; the
+export, the member export and removal, admission and the departed-member check know the table once
+it exists (before 0020 the nightly export skips only its CSV and still writes `magic/`). Nothing here changes a decklist, the playable pool, the watchlist or a deck table.
+
+Tests: `test_dice_counters` (rules, operations, rows both ways, migration file, cover, Activity, CLI),
+`test_dice_counters_api` (privacy, writes, conflicts, before 0020, the deck page's marks),
+`test_dice_counters_ui` and a guarded `test_dice_counters_pg` that skips without a disposable database.
+Left: applying 0020 on the live database, with Matt's OK.
+
 ## Two shops in the nightly snapshot (2026-10-31; E5-S08)
 
 - Matt decided on 2026-10-31 that the nightly snapshot reads Games Portal as well as MTGMate, and that Shopping and deck Prices show both. `lib/shops/` now has `SNAPSHOT_ADAPTERS` (MTGMate, then Games Portal), and every per-shop part takes an adapter: `snapshot_path(adapter)` (`decklab/data/shops/mtgmate.json` and `gamesportal.json`; a test's own MTGMate path has the other shop's file beside it, `shop.gamesportal.json`), `load(adapter=)` (which refuses a file naming another shop), `_lock(adapter)` (`mtgmate.lock`, `gamesportal.lock`) and `refresh(adapter=)`, whose words name its shop. MTGMate stays the default everywhere, so the old single-shop calls are unchanged.

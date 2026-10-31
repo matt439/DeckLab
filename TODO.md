@@ -19,6 +19,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 - **`E2-S22`: physical-device follow-up.** Confirm hardware and touch usability on the household's actual iPhones and M2 11-inch iPad after the fixes. Keep prior results in the story; the [Safari Simulator suite](decklab/safari/EVIDENCE.md) covers repeat functional regressions.
 - **`E11-S02`: signed-in off-page check.** On a phone through decklab.example.com, save a deck edit, upload an accessory photo, and check the off page while Deck Lab is stopped.
 - **`E11-S30`: the redesign's last gate.** Collection's colour filter is decided and built (colour identity, 2026-10-31); Matt checks touch and Safari on the household's iPhones and iPad (MacBook connected, from 2026-10-31).
+- **`E7-S24`: owned dice and counters.** Built in source (2026-10-31): OK applying migration 0020 on the live database, then record the household's dice and counters.
 - **`E7-S32`: real photos for Scan cards.** Take 10 to 20 photos of cards (a few foils, a few sleeved, one old card) with Collection's **Scan cards…** on each phone, plus a few token cards with Tokens' **Scan token cards…**, or copy them to the PC for `python -m decklab.lib.scan` (`--tokens` for token cards); the sheets and their APIs are fixture-tested only.
 - **`E11-S28`: User2's user-testing session.** Confirm his device, then use the prepared [checklist](decklab/design/user-testing-user2.md).
 
@@ -52,7 +53,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 |---|---|---|---|---|
 | `E5-S15` | DEFERRED | should | M | User1 asks from the page for a card or a Forge run, Matt approves (`E3-S13`); not urgent. |
 | `E7-S32` | OPEN | could | L | Scan cards sheet and `POST /api/collection/scan` built, with each pending card's printing picker and language, and Tokens' Scan token cards (`POST /api/tokens/scan`, one-change add) (fixture-tested); next real phone photos of cards and token cards on the household's phones. |
-| `E7-S24` | OPEN | could | L | The deck page lists the counter kinds and dice its cards use; record shape decided 2026-10-31 (die or counter, die size, kind or generic, colour or design, quantity, notes; named kind first, generic covers the rest): build its migration (applied with Matt's OK), the Tokens page's rows and coverage. |
+| `E7-S24` | DECISION | could | L | Owned dice and counters, the Tokens page's panel, `dice` commands and the deck page's covered marks are built in source; left: applying migration 0020 with Matt's OK. |
 
 ## Deck Lab: Commander nights
 
