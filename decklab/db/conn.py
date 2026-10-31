@@ -29,9 +29,9 @@ DEFAULTS = {
     "port": 5432,
     "name": "decklab",
     "pg_bin": None,               # None: PG_BIN_DEFAULT, else the newest other version there, else PATH
-    # Where backup copies each dump. None (the default off Windows): no copy, the dumps stay in
-    # staging_dir only. Windows keeps the original household's NAS share as its default.
-    "backup_dir": r"\\NAS\Backups\DeckLab" if os.name == "nt" else None,
+    # Where backup copies each dump (the household's NAS share, set in its config.json). None
+    # (the default, E11-S48): no copy, the dumps stay in staging_dir only.
+    "backup_dir": None,
     "staging_dir": str(config.DATA / "backups"),
     "export_repo": str(config.REPO.parent / "DeckLabData"),
     "keep_daily": 14,

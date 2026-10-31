@@ -138,6 +138,13 @@ class PlanPruneTests(unittest.TestCase):
         self.assertEqual(sorted(p.name for p in tmp.iterdir()), sorted(set(names) - set(deleted)))
 
 
+class BackupDirDefaultTests(unittest.TestCase):
+
+    def test_no_copy_by_default_on_any_system(self):
+        # E11-S48: a new install keeps its dumps in staging; the household's NAS is its own setting
+        self.assertIsNone(db.DEFAULTS["backup_dir"])
+
+
 class CompareCountsTests(unittest.TestCase):
 
     def test_differences_are_named(self):

@@ -6,7 +6,7 @@ psycopg through lib/venv.py; .venv\\Scripts\\python works as well).
   status           migrations, profiles and backups at a glance
   sync-profiles    copy config.json's profiles into the database
   sql              run a read-only query (argument or stdin), --csv for CSV
-  backup           pg_dump to the staging folder, then to the NAS (--dest DIR instead)
+  backup           pg_dump to the staging folder, then to backup_dir if set (--dest DIR instead)
   prune            delete dumps outside the 14-daily / 8-weekly retention
   restore-check    restore the newest dump into a scratch database and compare row counts and contents
   export           write the tables as CSV into the export repo, commit and push
@@ -245,8 +245,8 @@ def parser():
     sp = command("sql", _sql, "Run a read-only query, given as an argument or on stdin.", dbname=True)
     sp.add_argument("query", nargs="?", help='the query ("-" or none reads stdin)')
     sp.add_argument("--csv", action="store_true", help="print CSV instead of a table")
-    sp = command("backup", _backup, "Dump the database to the staging folder, then copy it to the NAS.")
-    sp.add_argument("--dest", metavar="DIR", help="copy the dump here instead of the NAS folder")
+    sp = command("backup", _backup, "Dump the database to the staging folder, then copy it to backup_dir if one is set.")
+    sp.add_argument("--dest", metavar="DIR", help="copy the dump here instead of backup_dir")
     command("prune", _prune, "Delete dumps outside the daily and weekly retention.")
     command("restore-check", _restore_check, "Restore the newest dump into a scratch database and "
                                              "compare row counts and contents.")

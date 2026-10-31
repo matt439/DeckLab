@@ -2,6 +2,14 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## New installs keep backups local and find more Javas (2026-10-31; E11-S48 slice 1)
+
+- Matt's self-hosting decisions (2026-10-31): Windows first; a stranger installs their own copy, family and friends join his instance as members; versioned release zips; currency and shops become settings defaulting to AUD. They became E11-S48 to E11-S53 in `design/stories.md`.
+- **Backups:** `database.backup_dir` has no default on any system (`db/conn.py`); before, Windows defaulted to the household's NAS share, so a new install's every copy failed. Without it `backup` keeps the dump in `staging_dir` and says so, prune skips it and the restore check reads staging, as off Windows already. This PC's `config.json` sets the NAS, so nothing changed here. `backup --help`, the nightly task's description, prune's log label (`backup_dir`, was `NAS`) and the docstrings no longer say the copy always goes to the NAS; `schedule status` doesn't compare the description, so the installed task isn't flagged.
+- **Java:** `find_java` looks in each vendor installer's default folder under Program Files (`JAVA_FOLDERS`: Oracle's `Java`, `Eclipse Adoptium`, `Microsoft`, `Zulu`, `Amazon Corretto`), skips anything older than Java 21 (`JAVA_MIN`, as the doctor's check; Corretto 8's `jdk1.8.0_x` included) and takes the newest with javac before a JRE, then `JAVA_HOME`. The PATH stays unused on Windows. A review caught an old JDK with javac beating a newer JRE before `JAVA_MIN` was added.
+- Tests: `test_forge.py` (vendor folders, a JDK before a newer JRE, Java 8 and 11 passed over), `test_db_ops.py` (`BackupDirDefaultTests`).
+- Not run: a real Temurin, Microsoft, Zulu or Corretto install; a nightly run without `backup_dir`.
+
 ## Dice and counters live; global search's `/` decided (2026-10-31; E7-S24, E11-S31)
 
 - Migration `0020_dice_counters.sql` was applied on the live database with Matt's OK (20 migrations applied); the running server read the new table at once (`GET /api/dice` answers `ready: true`), with no restart. The household's dice and counters start empty. E7-S24 is built.

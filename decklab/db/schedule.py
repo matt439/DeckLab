@@ -2,8 +2,8 @@
 `pythonw.exe -m decklab.db nightly` (nightly.py) in the repo folder, with no window.
 
 It runs as the current user, only while they're logged on (InteractiveToken), without
-administrator (LeastPrivilege): the NAS's password is in that user's Credential Manager, so
-the copy to \\\\NAS works only as them. StartWhenAvailable catches up a run the PC
+administrator (LeastPrivilege): a backup_dir on a network share (the household's NAS) is
+reached with the password in that user's Credential Manager, so the copy works only as them. StartWhenAvailable catches up a run the PC
 was off for; a second start while one runs is ignored; two hours is the most it may take.
 
 It's registered from its XML with schtasks /Create /XML, through homenet's helpers (the
@@ -62,7 +62,7 @@ def task_xml(command, workdir, user, start=None, at=AT, name=TASK_NAME):
     first day (default today); the trigger repeats daily from there at `at`, local time."""
     e = escape
     start = start or date.today()
-    description = ("Backs up Deck Lab's database every night: pg_dump to the NAS, prune old dumps, CSV export "
+    description = ("Backs up Deck Lab's database every night: pg_dump (copied to backup_dir, if set), prune old dumps, CSV export "
                    "to the export repo, a check of the data, and a monthly restore check (python -m decklab.db "
                    "nightly; its log is "
                    "decklab\\data\\logs\\db.log). Made by: python -m decklab.db schedule install. Run that again "
