@@ -2,6 +2,35 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Global search in the top bar (2026-10-31; E11-S31)
+
+Matt chose the sources and grouping on 2026-10-31: the decks the viewer may see, the viewer's own
+collection, then every other Scryfall card, about five of each with a See all. `GET /api/search?q=`
+(`lib/api/global_search.py`) answers those three groups in that order. Decks come from
+`guard.visible_decks` (a deck's own space plus Public decks, no admin override; every deck for a script
+naming nobody), matched on the title and the id's last part, starts first. **In your collection** is the
+viewer's own space only, and only when `guard.sees_inventory` allows it (home's for a script naming
+nobody); each card has the Collection page's owned, on-the-way, in-use and free counts from the same pool
+read, never a holder's name, and an unreadable collection says only that. **Other cards** is
+`cards.search_names` over the local card index, leaving out the names the collection group has. A request
+naming nobody, or a login that isn't set up, gets only Other cards. Bounds: 100 characters of text, 5
+items a group (1-50 with `limit`), 50 for one group with `group=` (See all), totals counted to 200.
+
+`global-search.js` puts the field before the avatar from 600 px (300 px on the iPad in portrait, 280 in
+the lab, 200 between 1000 and 1199 px; 16 px text below the lab so iOS doesn't zoom) and, under 600 px, a
+search icon that opens the same search as a sheet. Results open a deck's page or the card viewer; See all
+goes to the library filtered by title (`#/library?all=1&q=`), the Collection page's search, or the card
+viewer over up to 50 matches. Typing waits 200 ms, and an answer to older text, from before another
+person was chosen, or for a closed sheet is dropped. `/` focuses it outside text fields, menus and
+dialogs (with single-character shortcuts on), and the keyboard help lists it; the Editor keeps `/` as its
+existing alias of F, which is left for Matt to decide (visual-design.md 3.3 gives `/` to the global
+search). Pages' own searches already use F. The top bar's `.shell-status ~ .topbar-actions` rule keeps
+the activity icon pushing the search and avatar right.
+
+Tests: `test_global_search.py` (11, API and privacy: a member, User1, Matt, a home page naming nobody, a
+login that isn't set up, a script) and `test_global_search_ui.py` (8 Node DOM cases). No server restart,
+migration or live data read was needed.
+
 ## Find cards filters by colour identity (2026-10-31; E11-S30 question 6)
 
 Matt decided visual-design.md's question 6: Collection's colour filter matches colour identity, as the

@@ -28,6 +28,13 @@ def _field_choice_save(body):
     return save(body)
 
 
+def _global_search(**params):
+    """The top bar's global search (api/global_search.py, E11-S31): visible decks, the viewer's own
+    collection and every Scryfall card; writes nothing."""
+    from decklab.lib.api.global_search import search_view
+    return search_view(**params)
+
+
 def _sideboard_preview(**params):
     """Load the sideboard preview, which reads Forge's paired-game budgets, only when asked for."""
     from decklab.lib.api.sideboard_preview import preview_sideboard
@@ -97,6 +104,7 @@ def dispatch(handler, route, query):
         ("activity", "accessory-undo"): (accessory_undo.accessory_undo_view, ("id",)),
         ("activity", "mixed-undo"): (activity_mixed_undo.mixed_undo_view, ("id",)),
         ("visits",): (visits.visits_view, ("days", "who")),
+        ("search",): (_global_search, ("q", "group", "limit")),
     }
     posts = {
         ("activity", "undo"): activity_undo.apply_undo,

@@ -19,10 +19,10 @@ def _block(css, query):
 class DeviceLayoutFileTests(unittest.TestCase):
     def test_avatar_at_the_top_bars_right(self):
         # The avatar's own auto margin keeps it at the bar's right edge (the status pill is hidden most of the
-        # time); a shown pill pushes itself and the avatar right instead.
+        # time); a shown pill pushes itself, the global search (E11-S31) and the avatar right instead.
         shell = _text("shell.css")
         self.assertRegex(shell, r"\.topbar-actions \{[^}]*margin-left: auto")
-        self.assertIn(".shell-status:not([hidden]) + .topbar-actions { margin-left: 0; }", shell)
+        self.assertIn(".shell-status:not([hidden]) ~ .topbar-actions { margin-left: 0; }", shell)
 
     def test_short_landscape_lets_the_top_bar_scroll_away(self):
         # A phone on its side (852 x 330): the top bar isn't sticky, and --shell-top (where the deck's tabs and

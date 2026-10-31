@@ -4691,7 +4691,7 @@ Decided (Matt, 2026-10-31): Collection's colour filter matches **colour identity
 
 <a id="e11-s31"></a>
 
-**E11-S31** · Matt · could · M · missing
+**E11-S31** · Matt · could · M · partial
 
 As Matt, I want one search in the top bar that finds a deck or a card from any page, so that I don't have to open Decks or Collection first to find something.
 
@@ -4701,11 +4701,13 @@ As Matt, I want one search in the top bar that finds a deck or a card from any p
 
 Decided (Matt, 2026-10-25): left out of E11-S30's slice 7 (the shell) as its own story, since Deck Lab had no global search to restyle. Still to settle before building: what it searches (decks, the viewer's collection, every Scryfall card) and how results are grouped.
 
-Next step: Matt chooses the sources and result grouping; this is a DECISION in TODO until then. E1-S05's local Library title, colour and archetype filters are built independently of this decision.
-
 Decided (Matt, 2026-10-31): the search covers the decks the viewer may see, the viewer's own space's collection and every Scryfall card, grouped in that order as Decks, In your collection (with free and in-use counts) and Other cards, about 5 a group with a See all link; nothing outside the viewer's own space.
 
-Gap: everything; nothing built.
+Now: built 2026-10-31 ([HISTORY.md](../HISTORY.md#global-search-in-the-top-bar-2026-10-31-e11-s31)). `GET /api/search?q=` (`lib/api/global_search.py`; text at most 100 characters, 5 items a group by default, 50 for one group's See all, totals counted to 200) answers the three groups from `guard.visible_decks`, the viewer's own space's pool when `guard.sees_inventory` allows it (home's for a script naming nobody; no group for a request naming nobody) and `cards.search_names`, leaving the collection's names out of Other cards. `global-search.js` puts a 300 px field before the avatar from 600 px (280 px in the lab, 200 px from 1000 to 1199 px, 16 px text below the lab) and a search icon opening the same search as a sheet under 600 px; typing waits 200 ms and drops answers to older text or another person. `/` goes to it outside text fields, menus and dialogs, and the keyboard help lists it.
+
+Evidence: `decklab/tests/test_global_search.py` (11: groups and order, the Collection page's counts, bounds and refusals, the route; a member, User1, Matt with no admin override, a home page naming nobody, a login that isn't set up, a script, an unreadable collection) and `decklab/tests/test_global_search_ui.py` (8 Node DOM cases: groups, See all, the card viewer, keys, stale and other-person answers, the phone's sheet, the "Who are you?" screen).
+
+Gap: the Editor keeps `/` as its existing alias of F (find a card to add), so criterion 1's "a page's own list search moves to F" holds everywhere but the Editor until Matt decides whether that alias gives way; the iPad's field and the phone's sheet still need the touch and Safari check with E11-S30's device gates.
 
 **E11-S32** · Matt · could · M · built
 

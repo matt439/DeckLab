@@ -191,6 +191,10 @@ inventory writes answer 503 with "reason": "database":
     GET  /api/variants?id=&version=      the tests of a deck's list
     POST /api/variant/run, /api/variant/stop, /api/variant/more
                                          body {"profile", ...}: start a test, Stop it, play more
+    GET  /api/search?q=<text>[&group=decks|collection|cards][&limit=<n>]
+                                         the top bar's global search (E11-S31, lib/api/global_search.py):
+                                         visible decks, the viewer's own collection with free and in-use
+                                         counts, then other Scryfall cards; about 5 each, 50 for one group
     GET  /api/cards/search?q=<text>&limit=<n>[&detail=1]
                                          names for autocomplete (detail: type, cost, printing)
     GET  /api/cards/printings?name=<name>   the printing picker: owned counts, prices
