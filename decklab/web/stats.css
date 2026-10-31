@@ -106,6 +106,9 @@ details.explain > p, details.explain > .formula { max-width: 72ch; }
 .bar-list .bar.zero { background: transparent; }
 .bar-list .bar-count { text-align: right; font-weight: var(--fw-bold); font-variant-numeric: tabular-nums; }
 .bar-list details > .card-names { padding: 2px 0 var(--s-3); }
+/* Commander role targets (E9-S26): "target 10" and Below/At/Above under a role's name, and the template's table. */
+.bar-list .role-target { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--s-1); font-weight: var(--fw-regular); }
+.role-targets .role-target-measure { font-weight: var(--fw-regular); font-size: var(--fs-sm); }
 
 /* Checks (Commander rules) */
 .checks { list-style: none; display: grid; gap: var(--s-3); }

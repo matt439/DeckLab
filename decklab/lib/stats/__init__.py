@@ -42,6 +42,7 @@ files, except commander.TAG_FILE, COMBO_FILE and OFFICIAL_FILE)
     deckparts.py    resolving the decklist, guidance size, curve, land count,
                     types, roles, tribes and keywords
     colourcheck.py  the coloured-source check
+    role_targets.py the Command Zone template's Commander role targets (E9-S26)
     commander.py    the Commander checks and bracket, TAG_FILE, COMBO_FILE and
                     OFFICIAL_FILE
     __main__.py     python -m decklab.lib.stats
@@ -215,6 +216,12 @@ Result (every key is always there; None where it doesn't apply)
     types           [{"type", "count", "cards"}] for creature, instant, sorcery,
                     artifact, enchantment, planeswalker, battle, land
     roles           [{"role", "count", "cards"}] for cards.ROLES
+    role_targets    None for constructed decks, else the Command Zone template's
+                    categories beside the deck's counts (role_targets.py, E9-S26):
+                    {"source", "episode", "episode_date", "checked", "categories":
+                    [{"category", "label", "target", "about", "count" (None: no
+                    Deck Lab measure), "status" ("below" | "at" | "above" | None),
+                    "roles", "except", "role_bar", "measure"}], "by_role"}
     tribes          {"types": [{"type", "count", "cards"}] most first,
                     "changelings": {"count", "cards", "note"}}
     keywords        [{"keyword", "count", "cards"}] most first
@@ -308,6 +315,7 @@ from .deckparts import (
 from .colourcheck import (
     _Source, _requirements, _checks, _needed, _cost_key, _Sources, _colour_groups, _hardest_first,
     _colour_check)
+from .role_targets import role_targets as _role_targets
 from .commander import (
     min_bracket, _copies_allowed, is_basic, _can_be_commander, _is_background, _is_doctor,
     _partner_abilities, _pairing, _partners, _abilities_in_words, _commander_checks)
@@ -363,6 +371,7 @@ def deck_stats(sections, kind):
         "colours": colours,
         "types": _types(main),
         "roles": _roles(main),
+        "role_targets": _role_targets(main, lands["lands"]) if kind == "commander" else None,
         "tribes": _tribes(main),
         "keywords": _keywords(main),
         "sideboard": {"count": counts["sideboard"], "cards": card_list(by_section["Sideboard"]),

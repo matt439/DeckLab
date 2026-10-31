@@ -2,6 +2,29 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Commander role targets on the Stats tab (2026-10-31; E9-S26 role targets)
+
+Matt chose the Command Zone's deck-building template for the Stats roles' targets (he mostly plays
+Commander now). A Commander deck's Stats tab now shows the target beside the role bars the template
+covers, with **Below**, **At** or **Above**: Ramp (10), Card draw (the template's card advantage, 12)
+and Board wipes (its mass disruption, 6), which stay listed at 0. Under the bars, **Role targets:
+Command Zone template, episode 658 (2025-02-18)** lists every category with its target, this list's
+count and what Deck Lab counts for it: lands (38, the Lands panel's count), targeted disruption (12:
+removal or counterspell cards that aren't board wipes, since Scryfall's removal tag holds its sweeper
+tag) and plan cards (about 30), which no Deck Lab role measures, so "Not counted". Card advantage and
+mass disruption are narrower in Deck Lab than in the template, and the rows say so. A casual deck
+shows none of it. The Sources panel cites the episode.
+
+The figures are in `lib/stats/role_targets.py` with the episode's address and the date checked
+(2026-10-31). The episode's own page (its show notes and chapters) names the categories but not the
+numbers, which are spoken; the numbers come from three written summaries of episode 658, which the
+module lists. All three give 38 lands, 10 ramp, 12 card advantage, 12 targeted disruption and 6 mass
+disruption; note.com gives ramp as 10 to 12 (12 for a commander costing 4 or more), and for plan cards
+note.com and farseek give about 30 (the categories overlapping) while the GitHub copy gives about 22,
+adding to exactly 100. Deck Lab uses 10 and about 30. `deck_stats` returns them as `role_targets` (None for
+constructed decks), so `GET /api/deck` carries them to whoever may see the deck; they read only the
+list. EDHREC averages per role weren't added: the EDHREC cache holds card lists, not role counts.
+
 ## Global search in the top bar (2026-10-31; E11-S31)
 
 Matt chose the sources and grouping on 2026-10-31: the decks the viewer may see, the viewer's own

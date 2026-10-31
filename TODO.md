@@ -61,7 +61,6 @@ An index of open work, one row per item; each row points to the doc that owns th
 
 | id | status | pri | size | item |
 |---|---|---|---|---|
-| `E9-S26` | OPEN | could | M | Free pool cards for each Stats role are built; role targets come from the Command Zone's deck-building template (decided 2026-10-31), cited with its version and date: build them. |
 | `E9-S11` | DEFERRED | could | L+pc | Four-player pod runs from the page (with `E9-S21` win shares and `E9-S22` why-not by Start); after `FG#2`. First `lib/forge/pods.py` from the prototype, fixtures only. |
 
 ## Deck Lab: testing and Forge
