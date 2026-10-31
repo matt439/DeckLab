@@ -202,10 +202,10 @@ Only if you want to change Forge itself, or no release fits your Deck Lab. It ne
    ```json
    "forge_dir": "<that folder>",
    ```
-   Deck Lab looks for Java in `C:\Program Files\Java\jdk-*`, then `JAVA_HOME`, then (off Windows) the PATH. Set `"forge_java"` to the JDK's `java` (`java.exe` on Windows) if it picks the wrong one.
+   Deck Lab looks for Java where the usual JDK installers put it (Oracle's `C:\Program Files\Java`, Temurin's `Eclipse Adoptium`, `Microsoft`, `Zulu` and `Amazon Corretto`; the newest JDK, one with `javac` before a JRE), then `JAVA_HOME`, then (off Windows) the PATH. Set `"forge_java"` to the JDK's `java` (`java.exe` on Windows) if it picks the wrong one.
 2. **Check it:** `python -m decklab.lib.forge status` says whether Forge is ready, and its `build:` line whether it's the build this Deck Lab expects (and what to download if not). Then run `python -m decklab.lib.forge cardlog-check` once: it plays a few games several ways and turns on the card log when they match.
 
-Deck Lab runs up to 16 Forge workers at once, each with up to 1 GB of memory. That suits a 16-core PC with 32 GB or more. On a smaller one, set `"forge_workers"` in `config.json` to your number of cores or fewer (such as `"forge_workers": 4`), or admins can lower it on the Settings page.
+Deck Lab runs up to 16 Forge workers at once, each with up to 1 GB of memory. Unless `config.json` sets `"forge_workers"`, it sizes that to the PC: about one a physical core, and 1.5 GB of memory each after 6 GB left for everything else (an 8-core PC with 16 GB gets 4; a 16-core PC with 32 GB, 8). Set `"forge_workers"` to choose another number, or admins can lower it on the Settings page.
 
 ## 9. Keep it running and backed up
 
@@ -217,7 +217,7 @@ Deck Lab runs up to 16 Forge workers at once, each with up to 1 GB of memory. Th
   ```json
   "database": {"backup_dir": "D:\\Backups\\DeckLab"}
   ```
-  Set it on Windows, where the default is the original household's NAS share and the copy fails without it. Off Windows there's no default, and the dumps stay in `decklab/data/backups/` only.
+  Without it the dumps stay in `decklab/data/backups/` only, on the same disk as the database, and `backup` says so.
 - **The nightly job:** `python -m decklab.db nightly` runs the backup, its pruning, a restore check now and then, and the data's check. It also exports the data as plain files into a git repo of their own, `../DeckLabData` beside this repo, unless `database.export_repo` says where. `python -m decklab.db schedule install` runs it every night at 03:30: on Windows as a Task Scheduler task, on Linux as a systemd user timer (`decklab-nightly.timer` and `decklab-nightly.service` in `~/.config/systemd/user`), which catches up a night the computer was off, as soon as it's on again. `schedule status` shows the next and last run, and `schedule remove` takes it away. Run `schedule install` with the Python you run Deck Lab with, after installing psycopg (step 3), and again after moving the repo or upgrading Python; `status` warns when its units are out of date. Lingering (above) lets it run while you're logged out. On macOS, schedule it with cron.
 - **pg_dump:** Deck Lab finds it in `C:\Program Files\PostgreSQL\<version>\bin` or on the PATH. Set `database.pg_bin` to its folder if it's somewhere else.
 - **Updating:** `git pull`, then `python -m decklab.db migrate`, then restart the server.

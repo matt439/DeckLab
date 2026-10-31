@@ -132,6 +132,7 @@ backups on the NAS) is the source; this repo is a readable copy.
 GITATTRIBUTES = "* -text\n"
 
 GIT_TIMEOUT = 300                 # seconds for one git command (a push over a slow line)
+IDENTITY = ("Deck Lab", "decklab@localhost")    # the export's committer when git has none (_identity)
 _SPAWN = {"creationflags": subprocess.CREATE_NO_WINDOW} if sys.platform == "win32" else {}
 
 
@@ -368,8 +369,19 @@ def commit(repo, when=None):
     _git_ok(repo, "add", "-A")
     if not _git_ok(repo, "status", "--porcelain"):
         return None
-    _git_ok(repo, "commit", "-q", "-m", f"Deck Lab export {(when or datetime.now()):%Y-%m-%d %H:%M}")
+    _git_ok(repo, *_identity(repo), "commit", "-q", "-m", f"Deck Lab export {(when or datetime.now()):%Y-%m-%d %H:%M}")
     return _git_ok(repo, "rev-parse", "--short", "HEAD").splitlines()[-1]
+
+
+def _identity(repo):
+    """git -c options for the commit's user.name and user.email that git has none for (E11-S48:
+    a new install's git may have neither, and commit would fail); the owner's own are kept."""
+    options = []
+    for key, value in (("user.name", IDENTITY[0]), ("user.email", IDENTITY[1])):
+        code, text = git(repo, "config", key)
+        if code != 0 or not text.strip():
+            options += ["-c", f"{key}={value}"]
+    return options
 
 
 def has_origin(repo):

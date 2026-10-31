@@ -308,7 +308,7 @@ class MatchupFileTests(unittest.TestCase):
         script = _scripts(MATCHUP_SCRIPTS)
         forge = _lib_text("forge")
         consts = dict(re.findall(r"^const (FORGE_WORKERS|BIG_BATCH|SMALL_BATCH) = (\d+);", script, re.M))
-        self.assertEqual(int(consts["FORGE_WORKERS"]), config.DEFAULTS["forge_workers"])
+        self.assertEqual(int(consts["FORGE_WORKERS"]), config.FORGE_WORKERS_MAX)
         self.assertNotIn("BIG_BATCH", consts)
         self.assertEqual(consts["SMALL_BATCH"], re.search(r"^SMALL_BATCH = (\d+)", forge, re.M).group(1))
         self.assertIn("Math.max(2, Math.min(workers, Math.floor(games / SMALL_BATCH)))", _function(script, "batchPlan"))

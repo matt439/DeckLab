@@ -20,6 +20,10 @@ DECKLAB_BUILD = "-decklab-"        # in the build name of Deck Lab's fork of For
 VERSION_FILE = "forge-version.txt"  # in DATA_DIR: the last Forge version found (forge_version())
 BUILD_FILE = "decklab-build.txt"    # in a fork build's install folder: build=, commit=, base=, scripts_changed=, res_sha256=
 DECISION_LOG_MAX = 50               # config's forge_decision_log: at most this many card names
+# (folder in Program Files, its Java installs) for find_java: each vendor's installer's default
+JAVA_FOLDERS = (("Java", "jdk-*"), ("Eclipse Adoptium", "j*"), ("Microsoft", "jdk-*"),
+                ("Zulu", "zulu*"), ("Amazon Corretto", "jdk*"))
+JAVA_MIN = 21                       # find_java passes over older installs there (Java 8's jdk1.8.0_x too)
 
 
 # ============================================================ Forge and Java
@@ -30,7 +34,8 @@ def _version_tuple(text):
 
 def find_java(setting=None):
     """The java.exe to run Forge with: setting (config forge_java) when given, else the
-    newest JDK's in C:\\Program Files\\Java, else JAVA_HOME's, else (off Windows) the java on
+    newest JDK's in C:\\Program Files (JAVA_FOLDERS: Oracle's, Temurin's, Microsoft's, Zulu's,
+    Corretto's; Java JAVA_MIN or later, one with javac before a JRE), else JAVA_HOME's, else (off Windows) the java on
     the PATH with its links followed, so javac and jar are beside it. On Windows the PATH's
     java.exe is never used: it's a launcher that starts the real one as a second process.
     None if there's none."""
@@ -38,16 +43,19 @@ def find_java(setting=None):
         path = Path(setting)
         return path if path.is_file() else None
     exe = "java.exe" if os.name == "nt" else "java"
-    root = Path(os.environ.get("ProgramFiles") or r"C:\Program Files") / "Java"
+    root = Path(os.environ.get("ProgramFiles") or r"C:\Program Files")
     found = []
-    try:
-        for folder in root.glob("jdk-*"):
-            if (folder / "bin" / exe).is_file():
-                found.append((_version_tuple(folder.name[4:]), folder / "bin" / exe))
-    except OSError:
-        pass
+    for vendor, pattern in JAVA_FOLDERS:
+        try:
+            for folder in (root / vendor).glob(pattern):
+                java = folder / "bin" / exe
+                version = _version_tuple(re.sub(r"^\D+", "", folder.name))
+                if java.is_file() and version[0] >= JAVA_MIN:
+                    found.append(((folder / "bin" / exe.replace("java", "javac")).is_file(), version, java))
+        except OSError:
+            pass
     if found:
-        return max(found)[1]
+        return max(found)[2]
     home = os.environ.get("JAVA_HOME")
     if home and (Path(home) / "bin" / exe).is_file():
         return Path(home) / "bin" / exe

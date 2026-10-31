@@ -193,7 +193,7 @@ class PageCopyTests(unittest.TestCase):
                              "JSON.stringify(batching({ workers: null, batch_games: null }))"])
         self.assertEqual([json.loads(a) for a in answers],
                          [{"workers": 12}, {"workers": 16}, {"workers": 16}, {"workers": 16}])
-        self.assertEqual(16, config.DEFAULTS["forge_workers"])
+        self.assertEqual(16, config.FORGE_WORKERS_MAX)        # the page's fallback, when the server sends none
 
 
 class JvmFlagTests(unittest.TestCase):

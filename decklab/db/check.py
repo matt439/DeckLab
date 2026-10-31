@@ -299,6 +299,7 @@ def _visibility(c):
         if c.execute("select to_regclass('public.visibility') is null").fetchone()[0]:
             return True, False, "visibility unavailable until migration 0012"
         known = set(spaces.space_ids())
+        kit = set(visibility.kit_owners())
         rows = c.execute("select owner, thing from visibility order by owner, thing").fetchall()
         wrong = []
         for owner, thing in rows:
@@ -309,6 +310,8 @@ def _visibility(c):
                 continue
             if thing != "accessories" and owner not in known:
                 wrong.append(f"{owner}/{thing}: owner is not a configured space")
+            elif thing == "accessories" and owner not in kit:
+                wrong.append(f"{owner}/{thing}: An accessories switch must belong to a kit owner")
         return not wrong, False, (_listed(wrong) if wrong else f"{len(rows)} Public switches; all owners valid")
     return work
 

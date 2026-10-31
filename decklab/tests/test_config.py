@@ -17,10 +17,23 @@ from decklab.lib import config
 class ConfigTests(unittest.TestCase):
 
     def test_forge_defaults_are_the_numbers_milestone_0_measured(self):
-        # PLAN.md part 6: 16 workers. forge_batch_games no longer changes anything (forge/lists.py's
-        # _batch_count); its 200 is kept only so older config.json files still load.
-        self.assertEqual((config.DEFAULTS["forge_workers"], config.DEFAULTS["forge_batch_games"]), (16, 200))
+        # PLAN.md part 6: 16 workers, fewer on a smaller PC (E11-S48). forge_batch_games no longer changes
+        # anything (forge/lists.py's _batch_count); its 200 is kept only so older config.json files still load.
+        self.assertEqual(config.FORGE_WORKERS_MAX, 16)
+        self.assertEqual(config.DEFAULTS["forge_workers"], config._forge_workers())
+        self.assertEqual(config.DEFAULTS["forge_batch_games"], 200)
         self.assertEqual(config.DEFAULTS["port"], 8642)
+
+    def test_forge_workers_default_fits_the_pc(self):
+        # E11-S48: about one a physical core, 1.5 GB each after 6 GB for everything else, 16 at most, 1 at least
+        cases = {(32, 64): 16, (64, 256): 16, (16, 32): 8, (8, 16): 4, (12, 16): 6, (8, 8): 1, (2, 4): 1}
+        for (cpus, ram), workers in cases.items():
+            with self.subTest(cpus=cpus, ram=ram):
+                self.assertEqual(config._forge_workers(cpus, ram), workers)
+        with mock.patch.object(config, "_ram_gb", return_value=None):
+            self.assertEqual(config._forge_workers(32), 16)             # memory unknown: cores only
+        ram = config._ram_gb()
+        self.assertTrue(ram is None or ram > 0)
 
     def test_goldfish_workers_default_is_one_per_core_up_to_16(self):
         # The practice-hand simulation: one worker process per core, at most the 16 physical cores.

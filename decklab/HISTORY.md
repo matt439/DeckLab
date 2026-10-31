@@ -2,6 +2,29 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## The export's git identity and kit owners from the profiles (2026-10-31; E11-S48 slice 3)
+
+- **The nightly export** commits with a fixed identity, `Deck Lab <decklab@localhost>` (`export.IDENTITY`), for whichever of `user.name` and `user.email` git has none of (or an empty one) in the export repo, passed as `git -c` for that commit only (`export._identity`). Before, a new install's git without them failed every night's commit. An owner's own identity is kept, so this PC's export commits are unchanged.
+- **Kit owners:** `state/visibility.py`'s fixed `KIT_OWNERS = ("matt", "user1", "shared")` is gone. `kit_owners()` is each home profile in `config.json` and `shared` (only `shared` when the config can't be read), and the switches' audit wording names the profile's display name ("Make Alex's sleeves, deck boxes and playmats public"); the shared kit's is unchanged. Every write checks it in `switch()` (the stores' `visibility_set`, the page and `visibility set`); `key()`, which readers use, doesn't read the config (the command-line read notices must not), and `db check` flags a stored accessories switch whose owner isn't one. Profile sync now deletes the kit switch of a home profile that was removed or left home, in the same change, so a profile later reusing its id starts Private (before, the fixed owners made that impossible). The `visibility` table has no owner constraint, so no migration.
+- A review found the computed worker default would fail two Settings worker-limit tests on CI's 4-core runners (they now pin a budget of 16) and the stores briefly accepting any kit owner (fixed by the `switch()` check above).
+- Tests: `test_db_ops.py` (a real git with no global or system config commits as Deck Lab, then as the repo's own identity once set; without `_identity` it fails with "Author identity unknown"), `test_visibility_foundation.py` (another household's kit owner and wording, the original ids refused there, an unreadable config; a database test of the sync removing a departed home profile's kit switch). E11-S48 is built.
+- Not run: the database tests (`VisibilityDatabaseTests`, skipped by the fixture runner); a nightly on a PC without a git identity; the page's switch for a profile other than matt and user1.
+
+## Forge workers sized to the PC (2026-10-31; E11-S48 slice 2)
+
+- `forge_workers`' default is `config._forge_workers()`: `FORGE_WORKERS_MAX` (16, the measured number) or fewer, about one a physical core (half the logical ones) and `WORKER_RAM_GB` (1.5: the 1 GB heap and the JVM's own) each after `RESERVED_RAM_GB` (6), at least 1. Memory is read with `GlobalMemoryStatusEx` on Windows and `sysconf` elsewhere; unread, cores alone decide. This PC (32 logical, 64 GB) still gets 16, so nothing changed here. A `forge_workers` in `config.json` wins as before; `forge_xmx` and `forge_pin` are unchanged.
+- The page's `FORGE_WORKERS` (matchups.js, used only when the server sends no count) stays 16; its test and the batch-plan test now compare it with `FORGE_WORKERS_MAX`. The matchups API tests expect the computed default, so they pass on CI's smaller runners.
+- Tests: `test_config.py` (the rule on sample PCs, memory unknown); the Forge, experiment, matchup and variant modules were also run with the default forced to 2, as on a small runner, and only the forced-value check differed.
+- Not run: a real smaller PC.
+
+## New installs keep backups local and find more Javas (2026-10-31; E11-S48 slice 1)
+
+- Matt's self-hosting decisions (2026-10-31): Windows first; a stranger installs their own copy, family and friends join his instance as members; versioned release zips; currency and shops become settings defaulting to AUD. They became E11-S48 to E11-S53 in `design/stories.md`.
+- **Backups:** `database.backup_dir` has no default on any system (`db/conn.py`); before, Windows defaulted to the household's NAS share, so a new install's every copy failed. Without it `backup` keeps the dump in `staging_dir` and says so, prune skips it and the restore check reads staging, as off Windows already. This PC's `config.json` sets the NAS, so nothing changed here. `backup --help`, the nightly task's description, prune's log label (`backup_dir`, was `NAS`) and the docstrings no longer say the copy always goes to the NAS; `schedule status` doesn't compare the description, so the installed task isn't flagged.
+- **Java:** `find_java` looks in each vendor installer's default folder under Program Files (`JAVA_FOLDERS`: Oracle's `Java`, `Eclipse Adoptium`, `Microsoft`, `Zulu`, `Amazon Corretto`), skips anything older than Java 21 (`JAVA_MIN`, as the doctor's check; Corretto 8's `jdk1.8.0_x` included) and takes the newest with javac before a JRE, then `JAVA_HOME`. The PATH stays unused on Windows. A review caught an old JDK with javac beating a newer JRE before `JAVA_MIN` was added.
+- Tests: `test_forge.py` (vendor folders, a JDK before a newer JRE, Java 8 and 11 passed over), `test_db_ops.py` (`BackupDirDefaultTests`).
+- Not run: a real Temurin, Microsoft, Zulu or Corretto install; a nightly run without `backup_dir`.
+
 ## Dice and counters live; global search's `/` decided (2026-10-31; E7-S24, E11-S31)
 
 - Migration `0020_dice_counters.sql` was applied on the live database with Matt's OK (20 migrations applied); the running server read the new table at once (`GET /api/dice` answers `ready: true`), with no restart. The household's dice and counters start empty. E7-S24 is built.

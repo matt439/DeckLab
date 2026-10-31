@@ -432,6 +432,28 @@ class StatusTests(ForgeCase):
         self.assertIsNone(forge.find_java(str(self.tmp / "missing.exe")))
         self.assertEqual(forge.find_java(sys.executable), Path(sys.executable))
 
+    def test_find_java_looks_in_each_vendors_folder_and_prefers_a_jdk(self):
+        root = self.tmp / "Program Files"
+        exe = "java.exe" if os.name == "nt" else "java"
+        javac = "javac.exe" if os.name == "nt" else "javac"
+        installs = {"Eclipse Adoptium/jdk-21.0.5.11-hotspot": True, "Microsoft/jdk-17.0.13.11-hotspot": True,
+                    "Zulu/zulu-25-jre": False, "Amazon Corretto/jdk11.0.25_9": True,
+                    "Eclipse Adoptium/jre-26.0.1.8-hotspot": False,
+                    "Amazon Corretto/jdk1.8.0_432": True, "Zulu/zulu-11": True}    # too old for Forge
+        for folder, has_javac in installs.items():
+            (root / folder / "bin").mkdir(parents=True)
+            (root / folder / "bin" / exe).write_bytes(b"")
+            if has_javac:
+                (root / folder / "bin" / javac).write_bytes(b"")
+        with mock.patch.dict(os.environ, {"ProgramFiles": str(root)}):
+            # the newest with javac, though two JREs are newer
+            self.assertEqual(forge.find_java(), root / "Eclipse Adoptium" / "jdk-21.0.5.11-hotspot" / "bin" / exe)
+            for folder in ("Eclipse Adoptium/jdk-21.0.5.11-hotspot", "Microsoft/jdk-17.0.13.11-hotspot",
+                           "Amazon Corretto/jdk11.0.25_9"):
+                (root / folder / "bin" / javac).unlink()
+            # no JDK of Java 21 or later left: the newest JRE, never Java 8 or 11 with javac
+            self.assertEqual(forge.find_java(), root / "Eclipse Adoptium" / "jre-26.0.1.8-hotspot" / "bin" / exe)
+
     def test_find_java_falls_back_to_java_home_then_the_path(self):
         exe = "java.exe" if os.name == "nt" else "java"
         home = self.tmp / "jdk"

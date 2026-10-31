@@ -28,8 +28,8 @@ USER_AGENT = "DeckLab/0.1 (personal deck tool)"
 # no longer checks it. It's kept so older config.json files still load, and
 # the server still sends it to the page as "batch_games" (which the page
 # ignores), so it keeps its default here. forge_java is the JDK's java.exe; None finds the newest
-# C:\Program Files\Java\jdk-*\bin\java.exe (never the small launcher on the
-# PATH, which starts the real one as a second process).
+# Java 21+ in the JDK installers' Program Files folders (forge/install.py's find_java; never the
+# small launcher on the PATH, which starts the real one as a second process).
 # The practice-hand simulation (lib/goldfish/) uses one process per core, up
 # to 16 (the PC's physical cores).
 # The warm pool (forge/pool.py, simulation wave 2): forge_pool_idle_s is how long its warm Forge
@@ -43,11 +43,49 @@ USER_AGENT = "DeckLab/0.1 (personal deck tool)"
 # forge_game_patches are battery knobs for the combined run (both true for every real run).
 # forge_decision_log (AI round 1) lists the card names whose AI decisions Forge prints as DLAI| lines
 # (forge/decisionlog.py); empty (the default) prints none.
+FORGE_WORKERS_MAX = 16          # the measured default (above); a smaller PC's is less (_forge_workers)
+WORKER_RAM_GB = 1.5             # one Forge worker: its 1 GB heap (forge_xmx) and the JVM's own
+RESERVED_RAM_GB = 6             # left for Windows, the server, PostgreSQL and a browser
+
+
+def _ram_gb():
+    """The PC's physical memory in GB, or None when it can't be read."""
+    try:
+        if os.name == "nt":
+            import ctypes
+
+            class _Status(ctypes.Structure):
+                _fields_ = [("length", ctypes.c_ulong), ("load", ctypes.c_ulong),
+                            ("total", ctypes.c_ulonglong), ("avail", ctypes.c_ulonglong),
+                            ("page_total", ctypes.c_ulonglong), ("page_avail", ctypes.c_ulonglong),
+                            ("virtual_total", ctypes.c_ulonglong), ("virtual_avail", ctypes.c_ulonglong),
+                            ("extended", ctypes.c_ulonglong)]
+            status = _Status(length=ctypes.sizeof(_Status))
+            if not ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(status)):
+                return None
+            return status.total / 2 ** 30
+        return os.sysconf("SC_PHYS_PAGES") * os.sysconf("SC_PAGE_SIZE") / 2 ** 30
+    except (AttributeError, OSError, ValueError):
+        return None
+
+
+def _forge_workers(cpus=None, ram_gb=None):
+    """forge_workers' default (E11-S48): FORGE_WORKERS_MAX, or fewer on a PC without one physical
+    core (about half the logical ones) and WORKER_RAM_GB each after RESERVED_RAM_GB; at least 1.
+    This PC (32 logical, 64 GB) gets 16."""
+    cpus = cpus or os.cpu_count() or 2
+    ram_gb = _ram_gb() if ram_gb is None else ram_gb
+    workers = min(FORGE_WORKERS_MAX, cpus // 2)
+    if ram_gb is not None:
+        workers = min(workers, int((ram_gb - RESERVED_RAM_GB) // WORKER_RAM_GB))
+    return max(1, workers)
+
+
 DEFAULTS = {
     "port": 8642,
     "forge_dir": r"C:\Tools\forge-decklab",     # Deck Lab's build of its fork of Forge (forge/simjar.py)
     "forge_java": None,
-    "forge_workers": 16,
+    "forge_workers": _forge_workers(),
     "forge_batch_games": 200,
     "forge_clock_s": 120,
     "forge_xmx": "1024m",

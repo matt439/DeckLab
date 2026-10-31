@@ -1,12 +1,12 @@
-"""The database's backups: a pg_dump each night, copied to the NAS, thinned out to a fortnight
-of dailies and two months of weeklies, and now and then restored into a scratch database to
-prove a dump can actually be read back.
+"""The database's backups: a pg_dump each night, copied to backup_dir (the household's NAS)
+when one is set, thinned out to a fortnight of dailies and two months of weeklies, and now and
+then restored into a scratch database to prove a dump can actually be read back.
 
   backup          pg_dump -Fc, as decklab_owner, into the staging folder (decklab/data/backups
-                  unless config.json says otherwise), then a copy to backup_dir (the NAS)
+                  unless config.json says otherwise), then a copy to backup_dir, if set
   prune           delete the decklab-*.dump files outside the retention, in both folders
-  restore-check   restore the newest NAS dump into <name>_restorecheck and compare row counts
-                  and contents
+  restore-check   restore the newest dump (backup_dir's, else staging's) into
+                  <name>_restorecheck and compare row counts and contents
   status          when each kind last worked, the last check's result, and a warning when the
                   last dump is old
 
@@ -343,7 +343,7 @@ def copy_to(source, folder):
 
 def run_backup(dest=None, say=say):
     """The backup command: dump into the staging folder, then copy to dest (default the
-    settings' backup_dir, the NAS). The staging file stays either way (prune thins it out).
+    settings' backup_dir; none without one). The staging file stays either way (prune thins it out).
     Returns 0, or 1 when the dump or the copy failed (recorded with ok false)."""
     s = db.settings()
     dest = dest or s["backup_dir"]
@@ -408,11 +408,11 @@ def prune_folder(folder, today=None, s=None):
 
 
 def run_prune(say=say):
-    """The prune command, on the NAS folder and the staging folder. Returns 0, or 1 when a
-    folder couldn't be read or a dump couldn't be deleted."""
+    """The prune command, on the backup_dir folder (if any) and the staging folder. Returns 0,
+    or 1 when a folder couldn't be read or a dump couldn't be deleted."""
     s = db.settings()
     failed = False
-    for label, folder in (("NAS", s["backup_dir"]), ("staging", s["staging_dir"])):
+    for label, folder in (("backup_dir", s["backup_dir"]), ("staging", s["staging_dir"])):
         if not folder:
             continue                        # no backup_dir: the dumps are in staging only
         if not Path(folder).is_dir():
@@ -458,7 +458,7 @@ def _scratch_drop(c, name):
 
 
 def run_restore_check(source=None, say=say):
-    """The restore-check command: pg_restore the newest dump in source (default the NAS
+    """The restore-check command: pg_restore the newest dump in source (default the backup_dir
     folder, or the staging folder without one) into <database>_restorecheck, compare every table's row count with the counts
     recorded when it was dumped, and every public and audit table's content with the digests
     recorded with them (a dump recorded before phase 5 has none: counts only), then drop the

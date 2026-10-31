@@ -82,6 +82,11 @@ An index of open work, one row per item; each row points to the doc that owns th
 | `E11-S30` | DECISION | should | L | Visual redesign P1 ([visual-design.md](decklab/design/visual-design.md)): every slice is built and checked in dark; Collection's colour identity filter is built (decided 2026-10-31); Matt checks touch/Safari on the household's devices. |
 | `E11-S31` | DECISION | could | M | Global search in the top bar ([stories.md](decklab/design/stories.md#e11-s31)) is built and its `/` decided (2026-10-31): Matt checks the iPad field and phone sheet on devices. |
 | `E11-S08` | OPEN | could | L | Token deletions and 2-50 added token rows undo together (2026-10-29); 1-50 purchase-queue value edits restore in place (2026-10-30); 1-50 added queue rows are removed and removed ones restored as new rows (2026-10-31); 1-50 edited token-card rows restore in place (2026-10-31); queue changes mixing 2-50 updated, added and removed rows undo whole (2026-10-31); 2-50 collection-row restores and removals are proved before commit (2026-10-31). Mixed token-card changes have no producer (2026-10-31). Still open: queue changes with orders, token-card changes that moved or renumbered rows, other multi-row and mixed changes, other accessory/wishlist inverses. |
+| `E11-S49` | OPEN | could | M | Versioned release zips with a SHA-256 and version manifest; first slice, the release workflow and `build.py` reading the manifest without git. |
+| `E11-S50` | DEFERRED | could | L | One Windows installer (winget Python and PostgreSQL, release zip, generated postgres password, config questions, services, one firewall prompt, phone address); after `E11-S49`. |
+| `E11-S51` | DEFERRED | could | M | Update command for release installs (backup, replace, migrate, restart); after `E11-S49`. |
+| `E11-S52` | DEFERRED | could | L | First-run setup page on the PC (home profiles, optional Enable simulations); after `E11-S50`. |
+| `E11-S53` | OPEN | could | M | Currency and price-check shops as settings, default AUD; first slice, a shops setting the nightly task honours. |
 | `E11-S02` | DECISION | should | S | The "Deck Lab is off" Worker is deployed (`decklab/cloudflare/`): Matt checks a signed-in save, a photo upload, and the page with Deck Lab stopped. |
 
 ## Areas with no open rows

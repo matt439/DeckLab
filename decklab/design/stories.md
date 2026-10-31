@@ -45,10 +45,10 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 19 | 16 | 0 | 1 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 22 | 18 | 0 | 3 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 35 | 31 | 1 | 1 | 2 |
-| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 42 | 34 | 5 | 0 | 3 |
-| **Total** | **271** | **237** | **13** | **7** | **14** |
+| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 48 | 35 | 5 | 5 | 3 |
+| **Total** | **277** | **238** | **13** | **12** | **14** |
 
-Counted from the story headers on 2026-10-29 after the source-aware two-player and pod counters, alongside the current feature and maintenance work. The reviews added five feature stories and eight hygiene stories, then the fixture-only entry-point story E11-S44, and corrected E1-S12 from missing to partial. Rechecked 2026-10-29: E1-S12 is built and E11-S39 partial (its database qualification pending). The TODO audit of 2026-10-29 added fifteen missing stories (twelve from the audit: E1-S27, E1-S28, E2-S27, E3-S25, E3-S26, E5-S25, E6-S25, E6-S26, E9-S26, E9-S27, E11-S45, E11-S46), then Matt's three UI requests (E3-S27, E5-S26, E6-S27), and corrected E7-S32 from missing to partial (its recognition spike and CLI are built). Matt closed E11-S16 as built the same day, and E3-S27, E5-S26, E6-S25, E6-S27 and E11-S46 were built the same day (E11-S12 stays partial after a further slice). Later the same day E5-S25 and E6-S26 were built, E1-S27's first slice (the library) made it partial, and E11-S12 and E3-S26 were built. E1-S27's Overview slices then finished it, and E2-S27 and E9-S27 were built. E1-S28 was built the same day. E3-S25's first slice (its replacements API, 2026-10-29) made it partial. Its dual-lands slice (2026-10-29) finished it. E11-S45 was built the same day. Recounted 2026-10-30: E7-S23's first slice (the token side on deck pages and the printout) made it partial. E7-S24's read-only slice (the counters and dice a deck's cards use) made it partial too. E9-S26's free cards by role on the Stats tab made it partial, leaving its cited role targets to Matt's choice of template; with the Command Zone template's targets (2026-10-31) it is built. Recounted 2026-10-31: E11-S47 (built 2026-10-30) was missing from the E11 row. E4-S16 was built (sideboard-plan tests). E7-S23's second slice (the opponent's tokens under their own heading and counted apart in the library line and the packing ticks) finished it. E7-S08 was built (token counts suggested from saved Forge games), and E9-S07 too (new decks and narrowed pages). Later on 2026-10-31 E11-S39 was built (its database qualification ran), E11-S31 became partial (global search built, its device check left), E11-S30 kept its device gate, and E7-S24 was built once migration 0020 was applied.
+Counted from the story headers on 2026-10-29 after the source-aware two-player and pod counters, alongside the current feature and maintenance work. The reviews added five feature stories and eight hygiene stories, then the fixture-only entry-point story E11-S44, and corrected E1-S12 from missing to partial. Rechecked 2026-10-29: E1-S12 is built and E11-S39 partial (its database qualification pending). The TODO audit of 2026-10-29 added fifteen missing stories (twelve from the audit: E1-S27, E1-S28, E2-S27, E3-S25, E3-S26, E5-S25, E6-S25, E6-S26, E9-S26, E9-S27, E11-S45, E11-S46), then Matt's three UI requests (E3-S27, E5-S26, E6-S27), and corrected E7-S32 from missing to partial (its recognition spike and CLI are built). Matt closed E11-S16 as built the same day, and E3-S27, E5-S26, E6-S25, E6-S27 and E11-S46 were built the same day (E11-S12 stays partial after a further slice). Later the same day E5-S25 and E6-S26 were built, E1-S27's first slice (the library) made it partial, and E11-S12 and E3-S26 were built. E1-S27's Overview slices then finished it, and E2-S27 and E9-S27 were built. E1-S28 was built the same day. E3-S25's first slice (its replacements API, 2026-10-29) made it partial. Its dual-lands slice (2026-10-29) finished it. E11-S45 was built the same day. Recounted 2026-10-30: E7-S23's first slice (the token side on deck pages and the printout) made it partial. E7-S24's read-only slice (the counters and dice a deck's cards use) made it partial too. E9-S26's free cards by role on the Stats tab made it partial, leaving its cited role targets to Matt's choice of template; with the Command Zone template's targets (2026-10-31) it is built. Recounted 2026-10-31: E11-S47 (built 2026-10-30) was missing from the E11 row. E4-S16 was built (sideboard-plan tests). E7-S23's second slice (the opponent's tokens under their own heading and counted apart in the library line and the packing ticks) finished it. E7-S08 was built (token counts suggested from saved Forge games), and E9-S07 too (new decks and narrowed pages). Later on 2026-10-31 E11-S39 was built (its database qualification ran), E11-S31 became partial (global search built, its device check left), E11-S30 kept its device gate, and E7-S24 was built once migration 0020 was applied. Matt's self-hosting decisions of 2026-10-31 (Windows first; strangers install their own, family and friends join as members; release zips; currency as a setting) added E11-S48 to E11-S53, all missing; E11-S48 was built the same day, in three slices.
 
 ---
 
@@ -3794,7 +3794,7 @@ As Matt, I want one switch for each thing our space owns (collection, decks, gam
 - Given GET `/api/me` on the home network with User1 picked, then its `may` is User1's, including `visibility`; and after she flips a switch the page fetches it again.
 - Given the database can't be read and nothing is cached, when a rule asks for the switches, then everything counts as private.
 - Given User2's profile is removed and synced, then his visibility rows are deleted in the same change set.
-- Given the nightly, then the table is exported and covered by the restore check's digests, and `check` flags a row whose owner is neither a space nor matt, user1 or shared.
+- Given the nightly, then the table is exported and covered by the restore check's digests, and `check` flags a row whose owner is neither a space nor a kit owner (a home profile or shared; E11-S48).
 
 Decided (Matt, 2026-10-18): one switch per list (per-deck public is E10-S41); either home profile flips home's switches and the `shared` kit, and the last flip wins; Claude never flips a member's switch, even on a request Matt relays.
 
@@ -4114,7 +4114,7 @@ Evidence:
 
 Keeping Deck Lab running, safe and believable, by Matt as the household's admin and by Claude Code working for him at the PC. It covers the server and its Cloudflare tunnel and "Deck Lab is off" page, the PostgreSQL database with its nightly backup, export, check and restore check, the audit trail on #/activity, the `python -m decklab.db` commands Claude works through (previews, `--expect` guards, `-m` messages, exit codes), the card data's background refresh, Forge upkeep and the Safari Simulator suite. Every write is one audited change set, Matt's own command-line writes are recorded as his, and backups are checked by restoring them.
 
-Open: E11-S02, E11-S08, E11-S28, E11-S30, E11-S31.
+Open: E11-S02, E11-S08, E11-S28, E11-S30, E11-S31, E11-S49 to E11-S53.
 
 **E11-S01** · Matt · must · M · built
 
@@ -4966,3 +4966,83 @@ As Matt, the household admin, I want to restart Deck Lab from its Settings page,
 - Migrations are never applied from the page (Matt, 2026-10-30): `python -m decklab.db migrate` stays on the PC.
 
 Built (2026-10-30): `GET`/`POST /api/server/restart` (`lib/api/server_restart.py`, permission `server.restart`) starts `python -m decklab.lib.homenet restart --port P` as a separate process (Windows: no window, its own process group, out of the server's job when it may break away; Linux: its own transient unit through `systemd-run --user`), writing to `decklab/data/logs/restart.log`; `web/settings-restart.js` draws the control and waits for a server with another `started_at`. Fixtures: `test_server_restart.py`, `test_settings_restart_ui.py`. See [HISTORY.md](../HISTORY.md#restart-deck-lab-from-settings-2026-10-30-e11-s47).
+
+**E11-S48** · Matt · could · M · built
+
+As Matt, telling a stranger at Commander night to try Deck Lab on their own Windows PC, I want a new install's defaults to fit any household, so that it doesn't quietly fail on settings that only fit the original PC.
+
+- Given a new Windows install with no `database.backup_dir`, when the nightly backup runs, then it keeps the dumps in `staging_dir` and copies them nowhere, as on Linux; the household's NAS share is set in its own `config.json`, never as a default.
+- Given no `forge_workers` or `forge_xmx` in `config.json`, then the defaults come from the PC's logical cores and memory (leaving room for the server and PostgreSQL), not 16 workers of 1 GB with pinning.
+- Given Java 21 or later installed by Oracle, Temurin, Microsoft's OpenJDK, Zulu or Corretto in their default folders, when Forge looks for Java on Windows, then it finds it without `forge_java`, a JDK (with javac) before a JRE and never an older Java. (The PATH stays unused on Windows: its `java.exe` may be a launcher.)
+- Given `export_repo` and a git with no user name or email, when the nightly export commits, then it commits under a fixed local identity instead of failing.
+- Given a config whose home profiles aren't `matt` and `user1`, then their accessories have owners and Public switches like the original household's (the kit owners and the switches' audit wording come from the profiles).
+
+Decided (Matt, 2026-10-31): Windows first. A stranger tries Deck Lab on their own PC; family, friends and coworkers join Matt's instance as members instead (E10's member template).
+
+Built (2026-10-31): [slice 1](../HISTORY.md#new-installs-keep-backups-local-and-find-more-javas-2026-10-31-e11-s48-slice-1), [slice 2](../HISTORY.md#forge-workers-sized-to-the-pc-2026-10-31-e11-s48-slice-2) and [slice 3](../HISTORY.md#the-exports-git-identity-and-kit-owners-from-the-profiles-2026-10-31-e11-s48-slice-3). Not tried on a real second household's PC.
+
+Evidence:
+- `db/conn.py` (`backup_dir` None); `lib/forge/install.py` (`find_java`, `JAVA_FOLDERS`, `JAVA_MIN`); `lib/config.py` (`_forge_workers`, `FORGE_WORKERS_MAX`); `db/export.py` (`_identity`, `IDENTITY`); `lib/state/visibility.py` (`kit_owners`, `message`), `db/visibility_cli.py`, `db/check.py` (`_visibility`)
+- `test_db_ops.py` (`BackupDirDefaultTests`, `GitEnvTests`), `test_forge.py` (find_java), `test_config.py` (`test_forge_workers_default_fits_the_pc`), `test_visibility_foundation.py` (`test_kit_owners_are_the_configured_home_profiles`)
+
+**E11-S49** · Matt · could · M · missing
+
+As Matt, publishing Deck Lab for people who don't use git, I want versioned release zips of Deck Lab, so that an install can be made and updated without a git checkout and still knows its version.
+
+- Given a version tag on main, when the release workflow runs, then it publishes a zip of the application (no private files), its `.sha256` and a version manifest (version, commit, the migrations it holds).
+- Given an install from a release zip with no `.git`, then `/api/status`'s build, Settings' About and the Restart control read the version from the manifest, and Restart isn't refused as unverifiable.
+- Given a newer release than the running one, then a home admin sees on Settings that a new version exists (checked at most once a day, nothing downloaded).
+- Given a git checkout, then everything behaves as now.
+
+Decided (Matt, 2026-10-31): publish versioned release zips; installs and updates stop assuming a git checkout.
+
+Gap: CI has only `tests.yml` and `lint.yml`; `lib/build.py` reads the version from git and `lib/api/server_restart.py` refuses a restart when it can't.
+
+**E11-S50** · Matt · could · L · missing
+
+As a newcomer who isn't comfortable with git or a terminal, I want one Windows installer that sets Deck Lab up from start to finish, so that I can try it on my PC and my phones without following a long guide.
+
+- Given a Windows 11 PC with nothing installed, when I run the installer, then it installs pinned versions of Python and PostgreSQL (winget), downloads and checks the latest release (E11-S49), makes the `.venv`, writes `config.json` from a few plain questions (the household's names, a port), runs `db setup` with a postgres password it makes and keeps in `pgpass.conf` (I never type one), downloads the card data, and runs `homenet install --at-logon`, `schedule install` and the firewall setup with one administrator prompt.
+- Given the end, then it runs `python -m decklab.doctor`, opens the page, and shows the address phones use (with a QR code), saying the phone must be on the same Wi-Fi.
+- Given a step fails or is cancelled, then it says which step in plain words, and running it again carries on safely: nothing done is repeated or broken.
+- Given it finishes, then Forge isn't installed (E11-S52 offers it) and nothing is reachable from outside the home network (no Cloudflare).
+- Given SELF-HOSTING.md, then the installer is the first route and the manual steps the second.
+
+Decided (Matt, 2026-10-31): Windows only for now; this is the strangers' route (family and friends join Matt's instance as members).
+
+Gap: the only route is SELF-HOSTING.md's manual steps (about 14 to the first page, about 23 with phones and backups); the pieces exist (`db setup`, `homenet install`, `schedule install`, `network-setup.ps1 -Yes -Pythonw`, `doctor --json`) but nothing runs them in order.
+
+**E11-S51** · Matt · could · M · missing
+
+As a self-hoster who installed from a release, I want one update command, so that I get Deck Lab's fixes without git, migrations or restarts by hand.
+
+- Given a newer release, when I run the updater on the PC, then it downloads and checks it, takes a backup, replaces the application files (keeping `config.json`, `decklab/data/` and the `.venv`), updates the pinned packages, runs `python -m decklab.db migrate` and restarts the server.
+- Given any step fails before the restart, then the previous version keeps running and the backup is named.
+- Given a git checkout, then the updater refuses and points to `git pull`.
+- Migrations still run only on the PC, never from the page (Matt, 2026-10-30, E11-S47).
+
+Gap: updates are `git pull`, `db migrate` and a restart by hand (SELF-HOSTING.md); depends on E11-S49.
+
+**E11-S52** · Matt · could · L · missing
+
+As a newcomer who has just installed Deck Lab, I want a first-run setup page on the PC, so that I can name the household's players and turn on simulations without editing JSON.
+
+- Given a database with no profiles, when the page is opened on the PC itself (loopback only), then it asks for the home players' names and roles and saves them to `config.json` and the database (as `sync-profiles` does); from any other address it says to finish setup on the PC.
+- Given setup is finished, then the setup page is gone and "Who are you?" lists the new profiles.
+- Given **Enable simulations**, then it downloads the pinned Forge release (E11-S32) and checks its hash, finds a Java or offers to install one, sets `forge_dir`, `forge_java` and a worker count (E11-S48), and runs `forge cardlog-check`, showing progress; the core app works whether or not this is done.
+- Given a config already holding profiles, then the page never appears.
+
+Gap: profiles come only from a hand-edited `config.json`; Settings' Members panel adds only members with their own space; the Forge steps are manual (SELF-HOSTING.md, "Forge simulations").
+
+**E11-S53** · Matt · could · M · missing
+
+As a self-hoster outside Australia, I want my currency and price-check shops to be settings, so that prices are in my money and the nightly check doesn't query shops I can't buy from.
+
+- Given no setting, then prices stay in AUD and the nightly shop check uses MTGMate and Games Portal, as now.
+- Given another currency, then tables, Prices, Shopping and the purchase queue convert from Scryfall's USD with that currency's rate and label it; deck tables' rate statement names it, and repricing still refuses a statement worded otherwise.
+- Given shops turned off, then the nightly task skips the shop check and Shopping says no shop snapshot is configured.
+- Given an existing household, then nothing changes.
+
+Decided (Matt, 2026-10-31): currency and shops become settings, defaulting to AUD.
+
+Gap: AUD is written into the table header and rate statement (`| ~AUD each |`) and appears in about 69 files under `lib/` and `web/`; `db/nightly.py` always runs the MTGMate and Games Portal snapshot.
