@@ -434,7 +434,7 @@ What the round didn't settle, and where P1 didn't hold up as written.
 4. **Decided (Matt, 2026-10-25): only Building and Idea tiles show a status pill.** A pill on every casual tile (Built on most of them) sat uneasily with UI-KIT's "chips only for exceptions", so a Built tile has none. The hero bands keep theirs.
 5. **Decided (Matt, 2026-10-24): portrait is the phone's chrome, landscape the full top bar.** The tab bar goes up to 999 px; the iPad in portrait looks like the phone, and in landscape (1000 px and up) gets the lab top bar.
 
-6. **Collection filter semantics remain open (raised 2026-10-25).** Existing Find cards matches card colour, while 4.3's pips describe colour identity. Keep the current Card colour selector as a compatibility default and keep identity pips distinct; this is not a new preference from Matt. A switch to identity and its pip filter needs the user's choice. Independent coding can continue.
+6. **Decided (Matt, 2026-10-31): Collection's colour filter matches colour identity.** Find cards matched card colour while 4.3's pips describe colour identity (raised 2026-10-25). Matt mostly plays Commander now, so the filter moves to colour identity, agreeing with the pips.
 
 **Didn't hold up as specified**
 

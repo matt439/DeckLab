@@ -17,13 +17,13 @@ Deck Lab is a self-hosted web app for one household's **Magic: The Gathering** c
 
 ## How Magic gets played
 
-- **Now: casual 60-card decks, 1v1 at home.**
+- **Mostly Commander now** (Matt, 2026-10-31), including a local shop's social Commander nights. Weigh Commander first when a choice serves both formats.
+  - Commander decks are 100 cards, one copy of each card, and must fit the commander's color identity. The Commander ban list does apply.
+  - Aim for the power level expected at social nights. Look up the current Commander Brackets and Game Changers list before recommending cards; don't rely on memory.
+- **Also: casual 60-card decks, 1v1 at home.**
   - Use normal deck-building rules: at least 60 cards, and at most 4 copies of any card except basic lands.
   - **Ignore ban lists and format legality.** Any card ever printed is fine. Don't reject or flag a card for being banned or rotated.
   - "Competitive" here means the deck is strong and plays well in 1v1, not that it's tuned for a tournament metagame.
-- **Later: Commander**, at a local shop's social Commander nights.
-  - Commander decks are 100 cards, one copy of each card, and must fit the commander's color identity. The Commander ban list does apply.
-  - Aim for the power level expected at social nights. Look up the current Commander Brackets and Game Changers list before recommending cards; don't rely on memory.
 - **Shared collection:** the two home players (Matt and User1) use the same card pool. There's no owner column, but each deck records who plays it.
 - **Sleeves and storage:** each built deck is sleeved and has its own deck box. All other cards are stored unsleeved in a 4-row storage box that holds about 2,400 unsleeved cards.
   - A product kept intact (its status's `intact` is `yes`; see "Products" below) is stored like a built deck, with its own sleeves and box. One sleeve design and one deck box cover the whole product, even when it holds several decks.

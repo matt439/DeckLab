@@ -1555,6 +1555,8 @@ Further slice (2026-10-28): missing rows in home deck Prices show the same stric
 
 Further slice (2026-10-28): nightly lookup includes proven saved-home missing names from the shared counting kernel, within its existing 45-minute global budget. One fresh persisted inventory revision supplies queue and home-only counting; member decks are excluded before parsing while home's built/intact reservations remain. Queue spellings and carried dates are preserved; canonical identity deduplicates only additional missing names. Pool uncertainty, invalid home holders/aliases, stale/preview data and limits keep the exact queue fallback, with fixed notices; proven partial targets remain explicit. Early and locked age checks use the latest saved cache. Root's 181 protected integration tests pass without skips, including 46 new helper/refresh cases ([HISTORY.md](../HISTORY.md#nightly-shop-checks-for-saved-home-shortfalls-2026-10-28-e5-s08-slice)). No live job or retailer was invoked for qualification.
 
+Decided (Matt, 2026-10-31): the nightly snapshot reads Games Portal as well as MTGMate, at the same polite pace within each shop's robots.txt, and Shopping and deck Prices show both shops.
+
 Gap: one shop only; other Australian shops have no source. Cached-name provenance is not a new Scryfall per-printing identity check or a comparison with unfetched shops. Budgeted coverage can take several nights, with original carried dates kept explicit.
 
 Next slice: investigate a second Australian shop's current official access rules and data source, then build a separate fixture-backed fetcher and labelled comparison without expanding the existing retailer budget silently.
@@ -2570,6 +2572,8 @@ Now (2026-10-29): the read-only slice is built: the counters and dice a deck's c
 
 Next slice: Matt's record shape for owned dice and counters (kind, colour or design, quantity; whether one die stands for any counter kind), then its migration and the Tokens page's rows (criterion 1), then each counter need's covered or not (criterion 2's rest). Those need Matt's decision and a live migration, so they aren't fixture-only work.
 
+Decided (Matt, 2026-10-31): one row per owned item: type (die or counter), die size for dice (d6, d20, spindown), counter kind (+1/+1, poison, loyalty, ...; blank is generic), colour or design, quantity and notes. A counter of a named kind covers that kind first; generic dice and counters cover any kind left. The migration is applied only with Matt's OK.
+
 Gap: owned dice and counters aren't recorded, so the deck page lists the kinds its cards use but not whether they're covered.
 
 **E7-S25** · Claude Code · should · S · built
@@ -3430,6 +3434,8 @@ Evidence:
 Now (2026-10-29): the three criteria are built ([HISTORY.md](../HISTORY.md#free-cards-by-role-on-the-stats-tab-2026-10-29-e9-s26)).
 
 Next slice: cited role targets (a reference range for each role from a cited, dated deck-building template), once Matt chooses the template source. That's a decision, not fixture-only work.
+
+Decided (Matt, 2026-10-31): the role targets come from the Command Zone's deck-building template, cited with its version and date when built; the commander's EDHREC average may show beside it.
 
 Gap: the roles list free cards to fill them, but not how many each role should have.
 
@@ -4681,6 +4687,8 @@ Slice 14 implementation finished 2026-10-26: numeric MV and retained sorting, ch
 
 <a id="e11-s31"></a>
 
+Decided (Matt, 2026-10-31): Collection's colour filter matches **colour identity**, since Matt mostly plays Commander now (question 6 closed). Matt checks touch and Safari on the household's devices with the MacBook connected (2026-10-31).
+
 **E11-S31** · Matt · could · M · missing
 
 As Matt, I want one search in the top bar that finds a deck or a card from any page, so that I don't have to open Decks or Collection first to find something.
@@ -4692,6 +4700,8 @@ As Matt, I want one search in the top bar that finds a deck or a card from any p
 Decided (Matt, 2026-10-25): left out of E11-S30's slice 7 (the shell) as its own story, since Deck Lab had no global search to restyle. Still to settle before building: what it searches (decks, the viewer's collection, every Scryfall card) and how results are grouped.
 
 Next step: Matt chooses the sources and result grouping; this is a DECISION in TODO until then. E1-S05's local Library title, colour and archetype filters are built independently of this decision.
+
+Decided (Matt, 2026-10-31): the search covers the decks the viewer may see, the viewer's own space's collection and every Scryfall card, grouped in that order as Decks, In your collection (with free and in-use counts) and Other cards, about 5 a group with a See all link; nothing outside the viewer's own space.
 
 Gap: everything; nothing built.
 
@@ -4824,6 +4834,8 @@ Evidence:
 - AST comparison against the previous `pg.py`: all 6 moved definitions and 27 retained top-level definitions (40 methods) unchanged.
 - `decklab/tests/test_inventory_pg_snapshot_module.py`: both import orders, identical re-exports, multiline cell line numbers, canonical ordering with hidden token/watchlist ids, locations and revision, and old-schema packed-token handling.
 - 177 focused fixture tests pass with no golden changes; 97 database-integration cases skipped under the fixture runner.
+
+Decided (Matt, 2026-10-31): the disposable-database qualification is authorized: a throwaway database on the PC's PostgreSQL server, dropped afterwards, never the live one.
 
 Gap: the disposable-database location, deck persistence and rollback checks (and `test_inventory_pg_decks`' `_select` patch) need their separate database qualification run; until then no PostgreSQL acceptance is claimed.
 
