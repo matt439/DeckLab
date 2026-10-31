@@ -235,6 +235,25 @@ class ApiTests(TwoShopTestCase):
         self.assertEqual(rows[0]["shop_snapshot"], mtg)
         self.assertEqual(rows[1]["shop_snapshots"][1]["status"], "not_listed")
 
+    def test_a_card_listed_only_sold_out_without_a_price_is_out_of_stock_not_unlisted(self):
+        for adapter in (mtgmate.ADAPTER, GP):
+            data = shops.load(adapter=adapter)
+            for item in data["cards"]["Sol Ring"]["listings"]:
+                item.update(price=None, stock=0)
+            rows = [{"name": "Sol Ring"}]
+            shop_missing_prices.enrich_shops(rows, {adapter.key: data}, None)
+            shown = next(entry for entry in rows[0]["shop_snapshots"] if entry["shop"] == adapter.name)
+            self.assertEqual((shown["status"], shown["price_aud"], shown["stock"], shown["url"]),
+                             ("out_of_stock", None, 0, None))
+            # beside a priced listing, the sold-out unpriced one is only skipped
+            data["cards"]["Sol Ring"]["listings"].append({**data["cards"]["Sol Ring"]["listings"][0]})
+            listings = data["cards"]["Sol Ring"]["listings"]
+            listings[-1].update(price=2.5, stock=0)
+            rows = [{"name": "Sol Ring"}]
+            shop_missing_prices.enrich_shops(rows, {adapter.key: data}, None)
+            shown = next(entry for entry in rows[0]["shop_snapshots"] if entry["shop"] == adapter.name)
+            self.assertEqual((shown["status"], shown["price_aud"]), ("out_of_stock", "2.50"))
+
     def test_a_shop_without_a_snapshot_is_not_checked_and_a_foreign_link_unknown(self):
         data = shops.load(adapter=GP)
         rows = [{"name": "Sol Ring"}]

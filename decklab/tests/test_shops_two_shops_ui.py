@@ -113,6 +113,16 @@ class TwoShopMissingTests(unittest.TestCase):
           assert(two[1].textContent.includes('Games Portal: not checked'));
           const bad=shopMissingSnapshotLine({...item,shop_snapshots:[nonfoil(mtg()),nonfoil(gp({stock:-1}))]},{short:true});
           assert(bad.querySelectorAll('.shop-missing-snapshot')[1].textContent.includes('Games Portal: price unknown'));
+          // listed only sold out without a price: out of stock, no price or link, never "not listed"
+          const soldOut=nonfoil({shop:'Games Portal',status:'out_of_stock',fetched_at:'2026-10-30T01:00:00Z',price_aud:null,
+            stock:0,set:null,collector_number:null,finish:null,url:null});
+          const out={...item,shop_snapshots:[nonfoil(mtg()),soldOut]};
+          const shortOut=shopMissingSnapshotLine(out,{short:true}).querySelectorAll('.shop-missing-snapshot')[1];
+          assert(shortOut.textContent.includes('Games Portal: out of stock'));
+          assert(!shortOut.querySelector('a'));
+          const longOut=shopMissingSnapshotLine(out).querySelectorAll('.shop-missing-snapshot')[1];
+          assert(longOut.textContent.includes('Games Portal: nonfoil out of stock in the saved check, with no price shown.'));
+          assert(!/not listed|no nonfoil/.test(longOut.textContent));
         """)
 
 

@@ -184,20 +184,23 @@ class Projection:
             return shown
         if status == "not_listed" and listings:
             return shown
-        scope = []
+        scope, sold_out = [], False
         for item in listings:
             if not isinstance(item, dict) or item.get("finish") not in shops.FINISHES:
                 return shown
             if item["finish"] != "nonfoil":
                 continue  # Known to be outside this scope; no foil fallback.
             if item.get("price") is None and type(item.get("stock")) is int and item["stock"] == 0:
-                continue  # Sold out and unpriced: neither buyable nor a listed price to claim.
+                sold_out = True  # Sold out and unpriced: neither buyable nor a listed price to claim,
+                continue         # but still proof the shop lists it.
             checked = _listing(item, self.adapter.key)
             if checked is None:
                 return shown  # Cannot claim another listing is cheapest.
             scope.append(checked)
         if not scope:
-            return self._empty("not_listed", at, carried)
+            # Listed only sold out without a price: out of stock, never "not listed".
+            return ({**self._empty("out_of_stock", at, carried), "stock": 0} if sold_out
+                    else self._empty("not_listed", at, carried))
         stocked = [item for item in scope if item["stock"] > 0]
         choice = min(stocked or scope, key=lambda item: (Decimal(item["price_aud"]), item["set"],
                                                        item["collector_number"], item["url"]))
