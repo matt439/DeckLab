@@ -2,6 +2,20 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Find cards filters by colour identity (2026-10-31; E11-S30 question 6)
+
+Matt decided visual-design.md's question 6: Collection's colour filter matches colour identity, as the
+result pips already show it, since he mostly plays Commander now. The Find cards selector, renamed
+**Colour identity**, offers Any, **Within** each of the 31 colour sets (single colours first, then
+pairs and so on, in WUBRG order) and **Colourless only**. A card fits a Within choice when every
+colour of its identity is among the chosen ones, so colourless cards fit every choice, as they would
+in a Commander deck of those colours; a white card with a green-blue activated ability no longer shows
+under Within White. `GET /api/collection`'s `color` takes one to five of W/U/B/R/G in any order (or C)
+and refuses repeats or other letters; the page puts an address's value in WUBRG order and drops one it
+can't read, so an older bookmark (card colour's `color=G`) still loads, now as Within Green. The
+library's own colour filter (E1-S05, Includes) is unchanged. Only the household's touch/Safari check
+remains for E11-S30.
+
 ## Database qualification on throwaway databases (2026-10-31; E11-S39)
 
 - On Matt's authorization, every database-integration module (the 104 `decklab/tests/test_*.py` modules that use `db_support`) ran with `python -m unittest` against throwaway `decklab_t_*` copies of the migrated template, never the live database: 1,892 tests, 0 failures or errors, 4 skipped for their stated non-database reasons, in about 27 minutes. That qualifies the PostgreSQL snapshot split (`E11-S39`, built): its locations, deck persistence and rollback cases and `test_inventory_pg_decks`' `_select` patch passed.

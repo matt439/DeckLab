@@ -59,8 +59,24 @@ class CollectionTests(PreparationCase):
         past = collection.collection_view(q="add", color="G", role="ramp", type="Creature", mv="1", limit="1", page="9")
         self.assertEqual((past["page"], past["pages"]), (2, 2))
         self.assertEqual(past["cards"][0]["name"], "Llanowar Elves")
-        self.assertEqual(collection.collection_view(color="W", mv="5")["total"], 1)
         self.assertEqual(collection.collection_view(color="C")["total"], 0)
+
+    def test_colour_matches_identity_within_the_chosen_colours(self):
+        # Aerie Mystics is a white card ({4}{W}) whose identity is green, blue and white (E11-S30 question 6).
+        def names(**kwargs):
+            return [row["name"] for row in collection.collection_view(**kwargs)["cards"]]
+        self.assertEqual(names(color="W", mv="5"), [])
+        for choice in ("WUG", "GUW", "wug", "WUBRG"):
+            with self.subTest(choice=choice):
+                self.assertEqual(names(color=choice, mv="5"), ["Aerie Mystics"])
+        self.assertNotIn("Aerie Mystics", names(color="WU"))
+        self.assertEqual(names(color="G"), ["Elvish Mystic", "Llanowar Elves", "Pick Your Poison"])
+        # Colourless identity fits every choice, and C alone.
+        self.cards_csv("collection.csv", ("Llanowar Elves", "fdn", "227", "nonfoil", 4),
+                       ("Aerie Mystics", "con", "1", "nonfoil", 1), ("Sol Ring", "ecc", "57", "nonfoil", 1))
+        self.assertEqual(names(color="G"), ["Llanowar Elves", "Pick Your Poison", "Sol Ring"])
+        self.assertEqual(names(color="R"), ["Sol Ring"])
+        self.assertEqual(names(color="C"), ["Sol Ring"])
 
     def test_availability_filters(self):
         self.assertEqual(collection.collection_view(availability="free")["total"], 3)
@@ -77,7 +93,8 @@ class CollectionTests(PreparationCase):
 
     def test_bad_filters_refused(self):
         for kwargs in ({"page": "0"}, {"limit": "101"}, {"mv": "nan"}, {"mv": "-1"},
-                       {"availability": "owned"}, {"color": "X"}, {"q": "bad\nname"}):
+                       {"availability": "owned"}, {"color": "X"}, {"color": "WW"}, {"color": "CW"},
+                       {"color": "WUBRGW"}, {"q":"bad\nname"}):
             with self.subTest(kwargs=kwargs), self.assertRaises(ApiError) as caught:
                 collection.collection_view(**kwargs)
             self.assertEqual(caught.exception.status, 400)

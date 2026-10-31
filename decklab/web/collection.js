@@ -186,6 +186,8 @@ function showCollection(params, token) {
   }
   const query = new URLSearchParams();
   for (const key of COL_FILTER_KEYS) if (params.get(key)) query.set(key, params.get(key));
+  // An older or hand-typed colour (card colour's single letters, another letter order) still loads.
+  if (query.has("color")) { const color = colIdentityValue(query.get("color")); if (color) query.set("color", color); else query.delete("color"); }
   const asked = new URLSearchParams(query);
   asked.set("limit", String(colPageSize()));
   return load(colPath("/api/collection", space, asked), token, (data) => drawCollection(data, query, space, token));
@@ -475,8 +477,8 @@ function colFilters(cv) {
     (v) => colFilter(cv, "availability", v === "all" ? "" : v), "Show");
   availability.classList.add("col-availability");
   cv.filterControls = { q: search, mv };
-  // Casual widths keep the card filters folded; the button's count follows the current query. Identity
-  // pips on results do not change this existing card-colour predicate (colourless lands can have identity).
+  // Casual widths keep the card filters folded; the button's count follows the current query. The colour
+  // filter matches colour identity, as the result pips show it (E11-S30 question 6, Matt 2026-10-31).
   const form = el("form", { class: "filters col-filters", role: "search", "aria-label": "Filter the collection",
     onsubmit: (event) => event.preventDefault() });
   cv.filterCount = el("span", { class: "col-filter-count", "aria-hidden": "true" });
@@ -494,13 +496,34 @@ function colFilters(cv) {
     toggle,
     el("div", { class: "col-filter-row" }, availability),
     el("div", { id: "col-filter-extra", class: "col-filter-extra" },
-      field("color", "Card colour", select("color", [["", "Any"], ["W", "White"], ["U", "Blue"], ["B", "Black"],
-        ["R", "Red"], ["G", "Green"], ["C", "Colourless"]])),
+      field("color", "Colour identity", select("color", colIdentityChoices())),
       field("type", "Type", select("type", [["", "Any"], ...(data.types || []).map((v) => [v, v])])),
       field("role", "Role", select("role", [["", "Any"], ...(data.roles || []).map((v) => [v, capitalise(v)])])),
       field("mv", "Mana value", mv)),
-    el("p", { class: "sub col-find-colour-note", text: "Colour filters use card colour; pips show colour identity." })]);
+    el("p", { class: "sub col-find-colour-note",
+      text: "Colour identity, as the pips show it: cards within the chosen colours, colourless ones included." })]);
   return form;
+}
+
+/** The colour identity choices: any, "within" each of the 31 colour sets (singles first, WUBRG order) and
+ * colourless only. A card fits when its identity is within the choice, as for a Commander deck's colours. */
+function colIdentityChoices() {
+  const choices = [["", "Any"]];
+  for (let size = 1; size <= 5; size++) {
+    for (let mask = 1; mask < 32; mask++) {
+      const colors = [..."WUBRG"].filter((_, index) => mask & (1 << index));
+      if (colors.length === size) choices.push([colors.join(""), `Within ${colors.map((c) => capitalise(COLOUR_WORDS[c])).join(" + ")}`]);
+    }
+  }
+  return [...choices, ["C", "Colourless only"]];
+}
+
+/** A colour query in the choices' WUBRG order, "C", or "" for anything else (never a refused request). */
+function colIdentityValue(value) {
+  const letters = String(value || "").trim().toUpperCase();
+  if (letters === "C") return "C";
+  if (!/^[WUBRG]{1,5}$/.test(letters) || new Set(letters).size !== letters.length) return "";
+  return [..."WUBRG"].filter((c) => letters.includes(c)).join("");
 }
 
 /** Search and availability remain separate from the four extra filters counted on this button. */
@@ -618,7 +641,7 @@ function colFindCaption(cv, row) {
       onclick: () => colAfterViewer(() => openCopiesSheet(cv, row.name)) }) : null);
 }
 
-/** Identity markers are presentation only; Find cards' colour query still matches card.colors. */
+/** Identity markers show the colour identity Find cards' colour query matches. */
 function colFindIdentity(card, size = 16) {
   const colours = deckColourPieces(card?.color_identity);
   return colours ? el("span", { class: "col-find-identity", role: "group", "aria-label": "Colour identity" }, colours.pips(size)) : null;

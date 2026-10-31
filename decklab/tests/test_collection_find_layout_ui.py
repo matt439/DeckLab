@@ -215,7 +215,7 @@ class CollectionFindLayoutUiTests(unittest.TestCase):
           toggle.click(); assert.equal(toggle.getAttribute('aria-expanded'), 'true');
           toggle.click(); assert.equal(toggle.getAttribute('aria-expanded'), 'false');
           const colour = main.querySelector('#collection-color');
-          assert(colour.closest('label').textContent.includes('Card colour'));
+          assert(colour.closest('label').textContent.includes('Colour identity'));
           colour.value = ''; colour.fire('change');
           assert.equal(cv.filterCount.textContent, '3'); assert(toggle.getAttribute('aria-label').includes('3 active'));
           const query = new URLSearchParams(paths.at(-1).split('?')[1]);
@@ -244,17 +244,43 @@ class CollectionFindLayoutUiTests(unittest.TestCase):
           assert.equal(main.querySelector('#collection-q'), search);
         """)
 
-    def test_card_colour_predicate_is_sent_unchanged_while_identity_pips_still_show_green(self):
+    def test_colour_identity_filter_offers_within_choices_and_matches_the_pips(self):
         self.run_js(r"""
-          const colourlessCard = record('Green identity', {card: picture('Green identity', {colors: [], color_identity: ['G']})});
-          const cv = drawFind({cards: [colourlessCard]}, 'color=C'), paths = [];
-          api = async path => { paths.push(path); return answer([colourlessCard]); };
-          await colLoadFind(cv, new URLSearchParams('color=C'), false);
-          const query = new URLSearchParams(paths[0].split('?')[1]);
-          assert.equal(query.get('color'), 'C'); assert.equal(query.get('colors'), null);
-          assert.equal(query.get('color_identity'), null); assert.equal(cv.query.get('color'), 'C');
+          const greenIdentity = record('Green identity', {card: picture('Green identity', {colors: [], color_identity: ['G']})});
+          const cv = drawFind({cards: [greenIdentity]}, 'color=G'), paths = [];
+          api = async path => { paths.push(path); return answer([greenIdentity]); };
+          const colour = main.querySelector('#collection-color');
+          assert(colour.closest('label').textContent.includes('Colour identity'));
+          assert(!colour.closest('label').textContent.includes('Card colour'));
+          const options = colour.querySelectorAll('option').map(node => [node.value, node.textContent]);
+          assert.equal(options.length, 33);
+          same(options.slice(0, 7), [['', 'Any'], ['W', 'Within White'], ['U', 'Within Blue'], ['B', 'Within Black'],
+            ['R', 'Within Red'], ['G', 'Within Green'], ['WU', 'Within White + Blue']]);
+          same(options.at(-2), ['WUBRG', 'Within White + Blue + Black + Red + Green']);
+          same(options.at(-1), ['C', 'Colourless only']);
+          assert.equal(colour.value, 'G');
           same(casualRows()[0].querySelector('.id-pips').querySelectorAll('.id-pip').map(node => node.textContent), ['G']);
-          assert.equal(main.querySelector('#collection-color').value, 'C');
+          assert(main.querySelector('.col-find-colour-note').textContent.includes('Colour identity'));
+          colour.value = 'UG'; colour.fire('change'); await Promise.resolve();
+          const query = new URLSearchParams(paths.at(-1).split('?')[1]);
+          assert.equal(query.get('color'), 'UG'); assert.equal(query.get('colors'), null);
+          assert.equal(query.get('color_identity'), null); assert.equal(cv.query.get('color'), 'UG');
+          assert.equal(cv.filterCount.textContent, '1');
+        """)
+
+    def test_older_and_hand_typed_colour_addresses_still_load(self):
+        self.run_js(r"""
+          same(['W', 'C', 'c', 'gw', 'GUW', 'WUBRG', ' r '].map(colIdentityValue), ['W', 'C', 'C', 'WG', 'WUG', 'WUBRG', 'R']);
+          same(['', 'X', 'WW', 'CW', 'WUBRGW', null, undefined].map(colIdentityValue), ['', '', '', '', '', '', '']);
+          const paths = [];
+          api = async path => { paths.push(path); return answer(); };
+          let token = ++routeToken; await showCollection(new URLSearchParams('color=gw&type=Creature'), token);
+          let query = new URLSearchParams(paths.at(-1).split('?')[1]);
+          assert.equal(query.get('color'), 'WG'); assert.equal(query.get('type'), 'Creature');
+          token = ++routeToken; await showCollection(new URLSearchParams('color=purple'), token);
+          query = new URLSearchParams(paths.at(-1).split('?')[1]);
+          assert.equal(query.get('color'), null);
+          assert.equal(main.querySelector('#collection-color').value, '');
         """)
 
     def test_paging_uses_existing_sizes_and_normalizes_server_page_without_new_history(self):

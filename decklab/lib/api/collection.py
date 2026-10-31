@@ -97,9 +97,11 @@ def collection_view(q=None, color=None, type=None, role=None, mv=None,
                     availability=None, page=None, limit=None, space=None):
     """GET /api/collection. All filters optional; name and Oracle text share q.
 
-    color is W/U/B/R/G/C (contains that colour; C means colourless), mv is
-    exact mana value. availability is all/free/incoming/held. Basic land
-    allocations are not tracked, so their free_now and held values are null.
+    color matches colour identity (E11-S30 question 6, Matt 2026-10-31): one to five of
+    W/U/B/R/G in any order is "within those colours" (the card's identity is a subset, so
+    colourless cards fit every choice, as in a Commander deck's colours), and C is colourless
+    identity only (_identity_choice). mv is exact mana value. availability is
+    all/free/incoming/held. Basic land allocations are not tracked, so their free_now and held values are null.
     space (home by default) is whose pool; the answer also has "space",
     "spaces" ([{"id", "name"}] of those it may see, home first, named "Home") and "editable"
     (whether this visitor may change that collection). 403 for a space whose
@@ -115,8 +117,7 @@ def collection_view(q=None, color=None, type=None, role=None, mv=None,
     guard.require_sees_inventory(space)
     q, color, type, role = (_text(value, name) for value, name in
                            ((q, "q"), (color, "color"), (type, "type"), (role, "role")))
-    if color not in ("", "W", "U", "B", "R", "G", "C"):
-        raise ApiError(400, "color must be W, U, B, R, G or C")
+    color = _identity_choice(color)
     availability = availability or "all"
     if availability not in ("all", "free", "incoming", "held"):
         raise ApiError(400, "availability must be all, free, incoming or held")
@@ -142,6 +143,25 @@ def collection_view(q=None, color=None, type=None, role=None, mv=None,
             raise ApiError(409, "The collection couldn't be read.") from None
         raise ApiError(409, f"The collection couldn't be read: {_public(error)}") from None
     return {**answer, "space": space, "spaces": space_choices(), "editable": editable(space)}
+
+
+def _identity_choice(color):
+    """The colour filter's value in WUBRG order ("" for any, "C" for colourless identity),
+    or 400. Older single-letter addresses (W, U, B, R, G, C) stay valid; they meant card
+    colour before 2026-10-31 and now mean that colour identity."""
+    if color in ("", "C"):
+        return color
+    letters = color.upper()
+    if not 1 <= len(letters) <= 5 or len(set(letters)) != len(letters) or set(letters) - set("WUBRG"):
+        raise ApiError(400, "color must be C or one to five of W, U, B, R and G")
+    return "".join(letter for letter in "WUBRG" if letter in letters)
+
+
+def _within_identity(card, color):
+    """Whether card's colour identity fits color (_identity_choice's value): C only colourless
+    identity, otherwise every identity colour among the chosen ones."""
+    identity = set(card.get("color_identity") or ())
+    return not identity if color == "C" else identity <= set(color)
 
 
 def _holder(deck, quantity, sees):
@@ -190,7 +210,7 @@ def _collection(p, special, special_incoming, q, color, type, role, mv, availabi
             types.update(card.get("type_line", "").split(" — ")[0].split())
         if q.casefold() not in (name + " " + (card or {}).get("oracle_text", "")).casefold():
             continue
-        if color and (not card or (bool(card["colors"]) if color == "C" else color not in card["colors"])):
+        if color and (not card or not _within_identity(card, color)):
             continue
         if type and (not card or type.casefold() not in card["type_line"].casefold()):
             continue
