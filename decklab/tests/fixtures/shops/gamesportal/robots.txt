@@ -1,0 +1,19 @@
+# Synthetic robots.txt shaped like Games Portal's (a Shopify shop's), for Deck Lab's adapter tests.
+User-agent: *
+Allow: /
+Allow: /products/
+Allow: /collections/
+Disallow: /admin
+Disallow: /cart/
+Disallow: /checkout
+Disallow: /checkouts/
+Disallow: /orders
+Disallow: /account
+Disallow: /collections/*sort_by*
+Disallow: /collections/*filter*&*filter*
+Disallow: /*?*preview_theme_id=*
+
+User-agent: adsbot-google
+Disallow: /checkout
+
+Sitemap: https://gamesportal.com.au/sitemap.xml

@@ -107,6 +107,10 @@
   .tok-tools > .tok-search { flex: 0 1 720px; }
   .tok-missing-tiles { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
 }
+/* Scan token cards (tokens-scan.js): each pending card's back and printing wrap on a phone; a problem takes its own line. */
+.tok-scan-pending select, .tok-scan-pending input[type="text"] { flex: 1 1 10rem; min-width: 0; max-width: 100%; }
+.tok-scan-pending .box { flex: 1 1 100%; margin: 0; }
+.tok-scan-single { display: inline-flex; align-items: center; gap: var(--s-1); min-height: 44px; }
 @media (forced-colors: active) {
   .tok-thumb { border: 1px solid CanvasText; }
 }

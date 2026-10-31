@@ -18,7 +18,8 @@
  *
  * Each space (lib/spaces.py) has its own tokens: #/tokens?space=<id> shows one (the visitor's own by
  * default), every GET and write names it (?space= and "space"; home's leaves it out), and the add, edit
- * and remove controls show only where the visitor may change the tokens (canEditSpace). */
+ * and remove controls show only where the visitor may change the tokens (canEditSpace). More's "Scan token cards…"
+ * (tokens-scan.js) reads photos of token cards on the PC into a pending list added as one change. */
 "use strict";
 
 const TOK_FIELDS = ["front", "back", "set", "front_collector_number", "back_collector_number", "finish",
@@ -675,7 +676,8 @@ function drawTokens(data, token, space = HOME_SPACE) {
       description: "Token and reminder cards. A double-sided card counts once.",
       primary: view.canEdit ? el("button", { type: "button", class: "btn btn-primary tok-mutate", text: "Add a token card",
         "data-focus": "add", onclick: () => addToken(view) }) : null,
-      more: [view.canEdit ? { label: "Plan packed token cards…", onclick: () => openTokenPlan(view) } : null,
+      more: [view.canEdit ? { label: "Scan token cards…", onclick: () => openTokenScan(view) } : null,
+        view.canEdit ? { label: "Plan packed token cards…", onclick: () => openTokenPlan(view) } : null,
         { label: "Refresh", onclick: () => refreshTokens(view) }] }),
     tokSpacePicker(space),
     unsupported ? el("p", { class: "box box-info", text: `${spaceName(space)}'s tokens can't be shown until Deck Lab's server is updated.` })

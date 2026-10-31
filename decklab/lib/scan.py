@@ -16,9 +16,11 @@ typed line can feed it too. The findings are in decklab/design/scanning-spike.md
 
     python -m decklab.lib.scan PHOTO [PHOTO ...] [--json] [--engine auto|windows|tesseract]
     python -m decklab.lib.scan --text FILE      # lines already read, one per line
+    python -m decklab.lib.scan PHOTO --tokens   # a token card: propose token, emblem and reminder faces
 """
 import argparse
 import base64
+import difflib
 import json
 import os
 import re
@@ -33,6 +35,7 @@ from decklab.lib import cards
 OCR_TIMEOUT = 60            # seconds; Windows' engine takes about one on a phone photo
 MAX_NAME_ONLY = 12          # printings offered when only the name could be read
 NAME_LINES = 2              # the card's name is one of the first lines read (a type line may come first)
+TOKEN_CUTOFF = 0.8          # how close a misread token name must be to a face name to be proposed
 
 # Rarity letters on the bottom line: common, uncommon, rare, mythic, special,
 # land (basic), token, promo.
@@ -176,6 +179,85 @@ def propose(lines):
     return {"read": dict(read, name=name), "proposals": proposals, "message": _message(read, name, proposals)}
 
 
+def _token_name(read):
+    """The token, emblem or reminder face name read at the top of a token card, or None: one of its
+    first lines exactly (a double-faced token's full name gives its first face), else one close to
+    the first line (OCR may misread a letter)."""
+    name = None
+    for line in read["names"][:NAME_LINES]:
+        name = cards.token_face(line)
+        if name:
+            break
+    if name is None and read["names"]:
+        names = {cards.fold(n): n for n in cards.token_face_names()}
+        close = difflib.get_close_matches(cards.fold(read["names"][0]), list(names), n=1, cutoff=TOKEN_CUTOFF)
+        name = names[close[0]] if close else None
+    return name.split(" // ")[0] if name else None
+
+
+def _token_printing(code, number):
+    """(set code, face names) of the token printing the set code and number read name: a token card
+    prints its main set's code ("BLB"), which Scryfall files under "t" + the code ("tblb")."""
+    for candidate in (f"t{code}", code):
+        found = cards.token_faces_at(candidate, number)
+        if found is not None:
+            return candidate, found[1]
+    return None, None
+
+
+def propose_tokens(lines):
+    """The token cards the text read off one card may be, best first, from the card index's token,
+    emblem and reminder faces (the Tokens page's Scan token cards).
+
+    Each proposal has front (a face name), faces (the printing's face names, or [front] without
+    one), set and collector_number ("" when no printing was read), set_name and how: "name and
+    number" (the set code and number read name a token printing with the face read), "number"
+    (they name a token printing, but the face read isn't on it, or none was read) or "name" (only
+    the face was read: no printing is proposed, never one guessed from the name). Nothing about
+    the back of the card is proposed: a double-faced printing's faces are only offered. Raises
+    FileNotFoundError or RuntimeError without a usable card index."""
+    read = read_lines(lines)
+    name = _token_name(read)
+    confirmed, numbered, seen = [], [], set()
+    for code in read["sets"]:
+        for variant in _set_variants(code):
+            for number in read["numbers"]:
+                set_code, faces = _token_printing(variant, number)
+                if set_code is None or (set_code, number) in seen:
+                    continue
+                seen.add((set_code, number))
+                folded = [cards.fold(face) for face in faces]
+                matches = name is not None and cards.fold(name) in folded
+                front = faces[folded.index(cards.fold(name))] if matches else faces[0]
+                printing = cards.printing(set_code, number) or {}
+                (confirmed if matches else numbered).append(
+                    {"front": front, "faces": list(faces), "set": set_code, "collector_number": number,
+                     "set_name": printing.get("set_name") or set_code.upper(),
+                     "how": "name and number" if matches else "number"})
+            if confirmed:
+                break
+    proposals = confirmed + numbered
+    if name and not confirmed:
+        proposals.insert(0, {"front": name, "faces": [name], "set": "", "collector_number": "", "set_name": "",
+                             "how": "name"})
+    return {"read": dict(read, name=name), "proposals": proposals, "message": _token_message(read, name, proposals)}
+
+
+def _token_message(read, name, proposals):
+    if not proposals:
+        if read["numbers"] or read["sets"]:
+            return "The bottom line was read but names no token printing Deck Lab knows: type the token's name instead."
+        return "No token name or set code could be read: try a sharper photo, or type the token's name."
+    first = proposals[0]
+    if first["how"] == "name and number":
+        return f"Read {first['front']}, {first['set'].upper()} {first['collector_number']}."
+    if first["how"] == "number":
+        return "The set code and number name a token printing, but not the name read: check it's this card."
+    if len(proposals) > 1:
+        return f"Read {name}, but the set code and number name another token: choose which this card is."
+    return f"Read {name}; its printing wasn't read, so none is recorded unless you choose one."
+
+
 def _message(read, name, proposals):
     if not proposals:
         if read["numbers"] or read["sets"]:
@@ -299,6 +381,7 @@ def main(argv=None):
     parser.add_argument("--text", help="a file of lines already read off one card, instead of a photo")
     parser.add_argument("--engine", choices=("auto", *ENGINES), default="auto")
     parser.add_argument("--json", action="store_true", help="print the answers as JSON")
+    parser.add_argument("--tokens", action="store_true", help="the photos are of token cards: propose token faces")
     args = parser.parse_args(argv)
     if not args.photos and not args.text:
         parser.error("give a photo or --text FILE")
@@ -313,7 +396,7 @@ def main(argv=None):
             status = 1
             continue
         try:
-            answers.append(dict(propose(lines), source=source, lines=lines))
+            answers.append(dict((propose_tokens if args.tokens else propose)(lines), source=source, lines=lines))
         except (FileNotFoundError, RuntimeError) as e:      # no card index yet
             print(e, file=sys.stderr)
             return 1
@@ -328,6 +411,10 @@ def main(argv=None):
         print(f"  read: {' | '.join(answer['lines']) or '(nothing)'}")
         print(f"  {answer['message']}")
         for p in answer["proposals"]:
+            if args.tokens:
+                printing = f" ({p['set'].upper()}) {p['collector_number']}" if p["set"] else ""
+                print(f"  - {p['front']}{printing}  [{p['how']}]")
+                continue
             print(f"  - {p['name']} ({p['set'].upper()}) {p['collector_number']} {p['finish']}"
                   f"{' ' + p['language'] if p['language'] else ''}  [{p['how']}]")
     return status

@@ -154,11 +154,7 @@ class OrderCheckLinksPgTests(CheckLinksPgBase):
         self.assertTrue(self.dbname.startswith(db_support.PREFIX))
         self.addCleanup(migrate.apply, dbname=self.dbname)
         with self.connect("owner") as c:
-            c.execute("alter table order_component drop column check_links")
-            c.execute("alter table collection_card drop column location")      # 0016 comes after too
-            if version == 13:
-                c.execute("alter table product_status drop column token_cards")
-            c.execute("delete from schema_migration where version>%s", (version,))
+            db_support.roll_back_schema(c, version)
         self.assertFalse(self.backend.supports_check_links())
         self.save(self.checks(component="cards", add=["General legacy check"])["preview"])
         self.assertIn("General legacy check", self.component().checks)

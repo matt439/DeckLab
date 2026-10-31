@@ -4,8 +4,10 @@ Audit row shape is authoritative; messages cannot prove which command made a cha
 Same-identity edits, unheld nonbasic collection insertions and confirmed, verified
 collection deletions, metadata batches, unheld verified token insertions and confirmed token deletions
 (restored under a fresh id: one row, undo_token_delete, or 2-50, undo_token_batch) and 2-50 unheld
-added token rows removed together (undo_token_batch_remove) and 1-50 purchase-queue rows' values restored in
-place (undo_watchlist) are supported. Every check runs again in the ordinary PostgreSQL inventory transaction
+added token rows removed together (undo_token_batch_remove), 1-50 purchase-queue rows' values restored in
+place (undo_watchlist), 1-50 added queue rows removed or removed ones restored (undo_watchlist_rows), a
+queue change mixing those undone whole (undo_watchlist_mixed) and 1-50
+token-card rows' edited values restored in place (undo_token_edit) are supported. Every check runs again in the ordinary PostgreSQL inventory transaction
 before its pure edit helper is called.
 """
 import hashlib
@@ -708,7 +710,21 @@ def review(change_id, space, snapshot=None):
         if not supplied_snapshot and callable(reader):
             return reader(change_id, space)
         return undo_token_batch_remove.review(change_id, space, snapshot, store)
-    from . import undo_watchlist
+    from . import undo_token_edit
+    if undo_token_edit.looks_like(raw):
+        reader = getattr(store, "undo_token_edit_review", None)
+        if not supplied_snapshot and callable(reader):
+            return reader(change_id, space)
+        return undo_token_edit.review(change_id, space, snapshot, store)
+    from . import undo_watchlist, undo_watchlist_mixed
+    if undo_watchlist_mixed.queue_rows(raw):
+        if space != undo_watchlist.HOME:
+            raise UndoMissing()
+        if undo_watchlist_mixed.looks_like(store, change_id, raw):
+            reader = getattr(store, "undo_watchlist_mixed_review", None)
+            if not supplied_snapshot and callable(reader):
+                return reader(change_id, space)
+            return undo_watchlist_mixed.review(change_id, space, snapshot, store)
     if undo_watchlist.looks_like(raw):
         if space != undo_watchlist.HOME:
             raise UndoMissing()
@@ -716,6 +732,14 @@ def review(change_id, space, snapshot=None):
         if not supplied_snapshot and callable(reader):
             return reader(change_id, space)
         return undo_watchlist.review(change_id, space, snapshot, store)
+    from . import undo_watchlist_rows
+    if undo_watchlist_rows.looks_like(raw):
+        if space != undo_watchlist.HOME:
+            raise UndoMissing()
+        reader = getattr(store, "undo_watchlist_rows_review", None)
+        if not supplied_snapshot and callable(reader):
+            return reader(change_id, space)
+        return undo_watchlist_rows.review(change_id, space, snapshot, store)
     if isinstance(raw, list) and len(raw) > 1:
         return _batch_review(change_id, space, snapshot, store)
     source, wanted, restore = _source(raw, space)
@@ -776,11 +800,34 @@ def apply_undo(snapshot, *, change_id, space, expect, reason=None, confirm_owned
         if confirm_owned is not False:
             raise Invalid("Physical ownership confirmation is accepted only when restoring deleted rows.")
         return undo_token_batch_remove.apply(snapshot, plan, change_id, space, removal_reason(reason))
+    from . import undo_token_edit
+    if plan.get("action") == undo_token_edit.ACTION:
+        if confirm_owned is not False or reason is not None:
+            raise Invalid("Restoring edited token-card rows takes no reason or physical confirmation.")
+        return undo_token_edit.apply(snapshot, plan, change_id, space)
     from . import undo_watchlist
     if plan.get("action") == undo_watchlist.ACTION:
         if confirm_owned is not False or reason is not None:
             raise Invalid("Restoring purchase-queue rows takes no reason or physical confirmation.")
         return undo_watchlist.apply(snapshot, plan, change_id)
+    from . import undo_watchlist_mixed
+    if plan.get("action") == undo_watchlist_mixed.ACTION:
+        if confirm_owned is not False:
+            raise Invalid("Undoing purchase-queue changes takes no physical confirmation.")
+        if plan.get("reason_required"):
+            return undo_watchlist_mixed.apply(snapshot, plan, change_id, removal_reason(reason))
+        if reason is not None:
+            raise Invalid("Undoing these purchase-queue changes removes no row, so it takes no reason.")
+        return undo_watchlist_mixed.apply(snapshot, plan, change_id)
+    from . import undo_watchlist_rows
+    if plan.get("action") == undo_watchlist_rows.REMOVE:
+        if confirm_owned is not False:
+            raise Invalid("Removing added purchase-queue rows takes no physical confirmation.")
+        return undo_watchlist_rows.apply(snapshot, plan, change_id, removal_reason(reason))
+    if plan.get("action") == undo_watchlist_rows.ADD:
+        if confirm_owned is not False or reason is not None:
+            raise Invalid("Restoring removed purchase-queue rows takes no reason or physical confirmation.")
+        return undo_watchlist_rows.apply(snapshot, plan, change_id)
     if plan.get("action") in BATCH_ACTIONS:
         adding = plan["action"] == "batch_add"
         removing = plan["action"] == "batch_remove"
@@ -790,13 +837,20 @@ def apply_undo(snapshot, *, change_id, space, expect, reason=None, confirm_owned
             reason = removal_reason(reason)
         inverse = _batch_add_inverse if adding else _batch_remove_inverse if removing else _batch_inverse
         after, summary = inverse(snapshot, plan["rows"], space, plan["label"])
+        proved = {}
+        if adding or removing:
+            # PgInventory.apply proves exactly these INSERTs or DELETEs before commit (or rolls back).
+            from . import undo_collection_rows
+            proved = {undo_collection_rows.PROOF: undo_collection_rows.proof(
+                plan, _remaining_collection(snapshot, space, plan["label"]))}
         return after, Summary(f"Undo change #{change_id}: {'remove' if removing else 'restore'} {plan['label']}", {**summary.counts, "undo": 1},
                               {after.collection(space).path: ["add"] if adding else ["remove"] if removing else
                                list(BATCH_UPDATE_FIELDS if plan["action"] == "batch_update" else BATCH_FIELDS)},
                               {**(summary.extra or {}), "undo_of": change_id, "space": space, "kind": "collection",
                                "action": plan["action"], "row_count": plan["row_count"],
                                "row_change_ids": [item["row_change_id"] for item in plan["rows"]],
-                               **({"confirmed_owned": True} if adding else {}), **({"undo_reason": reason} if removing else {})})
+                               **({"confirmed_owned": True} if adding else {}), **({"undo_reason": reason} if removing else {}),
+                               **proved})
     removing = plan.get("action") == "remove"
     adding = plan.get("action") == "add"
     if removing:

@@ -79,12 +79,13 @@ def _photo(value):
     return data, ext
 
 
-def _read_photo(data, ext):
-    """The lines OCR reads in the photo, written to a temporary folder only while it's read."""
+def _read_photo(data, ext, ocr=None):
+    """The lines OCR (ocr, else this module's OCR) reads in the photo, written to a temporary folder only
+    while it's read."""
     with tempfile.TemporaryDirectory(prefix="decklab-scan-") as folder:
         path = Path(folder) / f"card.{ext}"
         path.write_bytes(data)
-        return OCR(path)
+        return (ocr or OCR)(path)
 
 
 def _proposals(found, space):

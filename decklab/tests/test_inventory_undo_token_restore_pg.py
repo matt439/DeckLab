@@ -8,20 +8,35 @@ import tempfile
 from pathlib import Path
 from unittest import mock
 
-from decklab.lib import config, inventory
+from decklab.lib import cards, config, inventory
 from decklab.lib.inventory import Op, files, undo, undo_token_delete as deleted
+from decklab.lib.tokens import names
 from decklab.tests import db_support, test_inventory_undo_pg as existing
 from decklab.tests import test_collection_edit as collection_fixture
 from decklab.tests import test_inventory_undo_token_insert_pg as insert_pg
 
 
 class TokenRestoreUndoPgTests(db_support.DbTestCase):
-    setUp = existing.UndoPgTests.setUp
     fresh = existing.UndoPgTests.fresh
     sql = existing.UndoPgTests.sql
     persisted = existing.UndoPgTests.persisted
     source = existing.UndoPgTests.source
-    row = staticmethod(insert_pg.TokenInsertUndoPgTests.row)
+    NUMBERS = {"Beast": "1", "Angel": "3", "Zombie": "7"}
+
+    @classmethod
+    def row(cls, front="Angel", back="The Monarch", quantity="2"):
+        """A fully known printing: restoration needs the removed card's printing and pairing checked."""
+        number = cls.NUMBERS[front]
+        return {**insert_pg.TokenInsertUndoPgTests.row(front, back, quantity), "set": "tst", "finish": "nonfoil",
+                "front_collector_number": number, "back_collector_number": str(int(number) + 1) if back else ""}
+
+    def setUp(self):
+        existing.UndoPgTests.setUp(self)
+        # As test_inventory_undo_token_batch_pg: the fixture printing "tst" isn't in the card data.
+        self.enterContext(mock.patch.object(names, "check_names", side_effect=lambda row: (dict(row), [])))
+        self.enterContext(mock.patch.object(cards, "printing", return_value={"digital": False, "games": ["paper"],
+                                                                           "finishes": ["nonfoil"]}))
+
     add = insert_pg.TokenInsertUndoPgTests.add
     packed = insert_pg.TokenInsertUndoPgTests.packed
 

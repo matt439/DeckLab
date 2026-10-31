@@ -144,13 +144,22 @@ class WatchlistUndoReviewTests(WatchlistUndoFixture):
         added = {"id": 901, "table": queue.TABLE, "op": "INSERT", "key": {"id": 30}, "before": None, "after": image(current, 30, 0)}
         removed = {"id": 902, "table": queue.TABLE, "op": "DELETE", "key": {"id": 31}, "before": image(recorded, 31, 0), "after": None}
         base = self.store.audit[fixture.CHANGE_ID]
-        for rows in ([*base, order], [order, *base], [base[0], added], [base[0], removed], [added], [removed], [*base, added]):
+        for rows in ([*base, order], [order, *base], [base[0], added, order]):
             with self.subTest(rows=[item["op"] + " " + item["table"] for item in rows]):
                 self.store.audit[fixture.CHANGE_ID] = copy.deepcopy(rows)
                 self.store.undo_latest.reset_mock()
                 with self.assertRaises(undo.UndoMissing):
                     self.review()
                 self.store.undo_latest.assert_not_called()
+        # Queue rows of several kinds are a mixed queue change, the mixed slice's to review.
+        from decklab.lib.inventory import undo_watchlist_mixed
+        for rows in ([base[0], added], [base[0], removed], [*base, added]):
+            with self.subTest(rows=[item["op"] + " " + item["table"] for item in rows]):
+                self.store.audit[fixture.CHANGE_ID] = copy.deepcopy(rows)
+                with mock.patch.object(undo_watchlist_mixed, "review", return_value="mixed") as mixed_review:
+                    self.assertEqual(self.review(), "mixed")
+                mixed_review.assert_called_once()
+        self.store.undo_latest.reset_mock()
         self.seed()
         self.store.undo_audit_rows.reset_mock()
         with self.assertRaises(undo.UndoMissing):

@@ -92,6 +92,8 @@ The routes and what each checks:
                                                   (E10-S42), a product home's inventory to see
     POST /api/tokens/save                         tokens.edit on the body's "space" (home by default),
                                                   after the read rule (require_space_write)
+    POST /api/tokens/scan, .../scan/add           tokens.edit on the body's "space", likewise (a scan
+                                                  writes nothing)
     POST /api/collection/save|bulk, .../import/*  collection.edit on the body's "space", likewise
     POST /api/precons/add                         collection.edit on the body's "space", likewise, then
                                                   deck.create as POST /api/decks (its fields)

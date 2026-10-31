@@ -1,6 +1,7 @@
-"""Australian shop prices for the purchase queue (E5-S08; MTGMate is the one shop so far).
+"""Australian shop prices for the purchase queue (E5-S08; the snapshot reads MTGMate).
 
-The shop-specific part is an adapter (base.py's interface; mtgmate.py, ADAPTERS below): where
+The shop-specific part is an adapter (base.py's interface; mtgmate.py and gamesportal.py,
+ADAPTERS below): where
 a shop's page of a card name is and how to read it. This package does the rest the same for any
 shop: asks politely (Session), keeps the snapshot file and matches the queue's rows.
 
@@ -36,8 +37,9 @@ Shopping only reads the file (match() below), so a page load never reaches the s
         the names and the time it would take without asking the shop anything
     python -m decklab.lib.shops show
         the queue's rows beside the snapshot (read only, no network)
-    python -m decklab.lib.shops lookup NAME
-        one name's listings, printed (one request after robots.txt; nothing saved)
+    python -m decklab.lib.shops lookup NAME [--shop KEY]
+        one name's listings, printed (one request after robots.txt; nothing saved); --shop
+        asks another adapter's shop (gamesportal), by hand only: no scheduled run reads it
 """
 import argparse
 import contextlib
@@ -50,7 +52,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from decklab.lib import config
-from decklab.lib.shops import mtgmate
+from decklab.lib.shops import gamesportal, mtgmate
 from decklab.lib.shops.base import (FINISHES, LISTING_FIELDS, MAX_PAGE, TIMEOUT, USER_AGENT,  # noqa: F401 (the package's names)
                                     Adapter, Disallowed, ShopError, allowed, fetch_page, robots_rules)
 from decklab.lib.shops.mtgmate import NAME_PATH, name_url, parse_name_page  # noqa: F401 (as before the split)
@@ -60,8 +62,8 @@ if sys.platform == "win32":
 else:
     import fcntl
 
-ADAPTERS = {adapter.key: adapter for adapter in (mtgmate.ADAPTER,)}
-ADAPTER = ADAPTERS["mtgmate"]               # the shop the snapshot reads (the only one so far)
+ADAPTERS = {adapter.key: adapter for adapter in (mtgmate.ADAPTER, gamesportal.ADAPTER)}
+ADAPTER = ADAPTERS["mtgmate"]               # the shop the snapshot reads (the others only through lookup --shop)
 SHOP = ADAPTER.name
 SITE = ADAPTER.site
 ROBOTS_PATH = ADAPTER.robots_path
@@ -541,13 +543,14 @@ def _show(_args):
 
 
 def _lookup(args):
+    adapter = ADAPTERS[args.shop]
     try:
-        listings = Session().listings(args.name)
+        listings = Session(adapter=adapter).listings(args.name)
     except ShopError as error:
         print(error, file=sys.stderr)
         return 1
     if not listings:
-        print(f"{SHOP} lists nothing named {args.name}.")
+        print(f"{adapter.name} lists nothing named {args.name}.")
     for item in listings:
         price = f"A${item['price']}" if item["price"] else "no price"
         print(f"{item['set'].upper()} {item['number']} {item['finish']} {item['condition']}: {price}, {item['stock']} in stock")
@@ -567,6 +570,8 @@ def main(argv=None):
     sub.add_parser("show", help="the queue beside the snapshot (no network)").set_defaults(func=_show)
     look = sub.add_parser("lookup", help="one name's listings, printed (nothing saved)")
     look.add_argument("name")
+    look.add_argument("--shop", choices=sorted(ADAPTERS), default=ADAPTER.key,
+                      help=f"the shop to ask (default {ADAPTER.key}); the snapshot reads only {ADAPTER.key}")
     look.set_defaults(func=_lookup)
     args = parser.parse_args(argv)
     return args.func(args)

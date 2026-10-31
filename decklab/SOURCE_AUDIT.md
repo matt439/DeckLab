@@ -323,8 +323,9 @@ AST comparison accounts for all 6 moved and 27 retained top-level definitions
 (40 methods) with no differences. `test_inventory_pg_snapshot_module.py` holds
 six ownership, import-order, rendering, hidden-id and old-schema guards; 177
 focused fixture tests pass with no golden change. The 97 database-integration
-cases were skipped by the fixture runner: the disposable-database location,
-persistence and rollback qualification remains separate and unclaimed.
+cases were skipped by the fixture runner. The disposable-database qualification
+ran on 2026-10-31: all 1,892 database-integration tests in 104 modules passed on
+throwaway databases (HISTORY.md, E11-S39).
 
 ### Test support and discovery: E11-S40
 

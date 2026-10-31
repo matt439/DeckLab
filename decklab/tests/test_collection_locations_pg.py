@@ -87,8 +87,7 @@ class CollectionLocationsPgTests(db_support.DbTestCase):
         self.assertTrue(self.dbname.startswith(db_support.PREFIX))
         self.addCleanup(migrate.apply, dbname=self.dbname)
         with self.connect("owner") as c:
-            c.execute("alter table collection_card drop column location")
-            c.execute("delete from schema_migration where version>=16")
+            db_support.roll_back_schema(c, 15)
         old = self.fresh()
         self.assertFalse(old.locations_ready)
         self.assertEqual(old.locations_of("home"), {})
