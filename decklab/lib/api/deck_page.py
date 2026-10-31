@@ -714,4 +714,4 @@ def _saved_shop_prices(owned, space, requested_id):
         return
     from . import shop_missing_prices, shop_prices
     captured = shop_prices.capture()
-    shop_missing_prices.enrich(rows, captured, shop_prices._loaded_resolver())
+    shop_missing_prices.enrich_shops(rows, shop_prices.by_shop(captured), shop_prices._loaded_resolver())

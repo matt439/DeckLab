@@ -557,6 +557,7 @@ async function shopSaveQueue(view, sheet, error, body, card) {
       Object.assign(card, answer.item);
       if (Object.hasOwn(answer, "reprints")) card.reprints = answer.reprints;
       if (Object.hasOwn(answer, "shop_snapshot")) card.shop_snapshot = answer.shop_snapshot;
+      if (Object.hasOwn(answer, "shop_snapshots")) card.shop_snapshots = answer.shop_snapshots;
     }
     else {
       const item = { ...answer.item, card: answer.item.card || null, deck: (view.data.queue_decks || []).find((deck) =>
@@ -614,6 +615,7 @@ async function shopMoveQueue(card, next, view, error) {
     card.state = next;
     if (Object.hasOwn(answer, "reprints")) card.reprints = answer.reprints;
     if (Object.hasOwn(answer, "shop_snapshot")) card.shop_snapshot = answer.shop_snapshot;
+    if (Object.hasOwn(answer, "shop_snapshots")) card.shop_snapshots = answer.shop_snapshots;
     view.data.queue_revision = answer.revision;
     if (next === "long_term") view.expanded.add(card.deck ? card.deck.id : card.for || "");
     view.redraw();

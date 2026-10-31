@@ -154,7 +154,7 @@ function ownedRow(r, usable, priceError = false) {
       el("td", { colspan: 5 }, el("div", { class: "row-labels" }, labels))) : null,
     reprints ? el("tr", {class: "label-row reprint-row"}, el("td", {colspan: 5}, reprints)) : null,
     savedShop ? el("tr", {class: "label-row deck-shop-row"}, el("td", {colspan: 5},
-      el("p", {class: "sub", text: "Saved shop check: any nonfoil printing. It may differ from the printing or finish in your list. Price is per card; stock may cover fewer copies than you need." }),
+      el("p", {class: "sub", text: "Saved shop checks: any nonfoil printing, each shop with its own fetch time. It may differ from the printing or finish in your list. Price is per card; stock may cover fewer copies than you need." }),
       savedShop)) : null);
 }
 

@@ -39,7 +39,7 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 21 | 18 | 2 | 0 | 1 |
 | [E3: Test a deck](#e3-test-a-deck) | 18 | 15 | 3 | 0 | 0 |
 | [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 22 | 19 | 1 | 1 | 1 |
-| [E5: Decide what to buy](#e5-decide-what-to-buy) | 24 | 20 | 1 | 1 | 2 |
+| [E5: Decide what to buy](#e5-decide-what-to-buy) | 24 | 21 | 0 | 1 | 2 |
 | [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 23 | 21 | 0 | 0 | 2 |
 | [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 28 | 26 | 2 | 0 | 0 |
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 19 | 16 | 0 | 1 | 2 |
@@ -1423,7 +1423,7 @@ Rules: [Wizards' current Comprehensive Rules](https://media.wizards.com/2026/dow
 
 How Matt, with User1's wishes and Claude's research, goes from "this deck is short" to a decided purchase. On the page: each deck's sortable Prices table of converted Scryfall estimates, and Shopping's Decks still missing cards, Missing cards across decks, To buy, By shop and Long-term plan, with queue add, edit, move and remove for admins and reprint notices from cached Scryfall data. Live Australian shop checks, dated buylists and `watchlist apply` stay with Claude on the PC; recording an order, which reduces the queue rows it fulfils (Shopping's New order or `order add --fulfils`), belongs to E6. By design there are no spending totals and no collection value.
 
-Open: E5-S08, E5-S15.
+Open: E5-S15.
 
 **E5-S01** · Matt · must · M · built
 
@@ -1524,7 +1524,7 @@ Evidence:
 - `decklab/tests/test_shopping_buying_ui.py`: test_reference_price_and_check_date_are_visible_without_card_data_or_image
 - `decklab/tests/test_purchases.py`: test_queue_has_explicit_state_and_dated_reference_price
 
-**E5-S08** · Matt · could · XL · partial
+**E5-S08** · Matt · could · XL · built
 
 As a buyer, I want current Australian shop prices and stock for the cards I'm considering, without asking Claude to check by hand, so that I know what a deck will really cost here today.
 
@@ -1557,9 +1557,11 @@ Further slice (2026-10-28): nightly lookup includes proven saved-home missing na
 
 Decided (Matt, 2026-10-31): the nightly snapshot reads Games Portal as well as MTGMate, at the same polite pace within each shop's robots.txt, and Shopping and deck Prices show both shops.
 
-Gap: one shop only; other Australian shops have no source. Cached-name provenance is not a new Scryfall per-printing identity check or a comparison with unfetched shops. Budgeted coverage can take several nights, with original carried dates kept explicit.
+Now (2026-10-31, built): both shops are read ([HISTORY.md](../HISTORY.md#two-shops-in-the-nightly-snapshot-2026-10-31-e5-s08)). Criterion 1's "named Australian shops" is MTGMate and Games Portal: each queued row, combined missing card and home deck Prices missing card shows one line a shop with its price, stock (Games Portal's pages say only available or not, so its line never gives a count) and its own fetch time. Each shop is its own run, cache file (`decklab/data/shops/<key>.json`) and lock, so one shop that can't be read is "price unknown" on its own line beside the other's price (criterion 2). The shops are read side by side, one thread a shop on its own host at its own robots.txt pace, each within the existing 45-minute budget, so the night's shop step stays at about 45 minutes rather than doubling. The answers keep MTGMate's `shop_snapshot` and add `shop_snapshots`, every shop's in order. Tested on fixture shops only; no real snapshot of either shop was run for this.
 
-Next slice: investigate a second Australian shop's current official access rules and data source, then build a separate fixture-backed fetcher and labelled comparison without expanding the existing retailer budget silently.
+Evidence (2026-10-31): `decklab/lib/shops/__init__.py`: SNAPSHOT_ADAPTERS, snapshot_path/load/_lock per adapter, refresh(adapter=), refresh_shops (side by side, failures per shop), nightly, `snapshot [--shop KEY]`, `show`; `decklab/lib/api/shop_prices.py`: capture (every shop's file), by_shop, for_row_shops, enrich (`shop_snapshots`); `decklab/lib/api/shop_missing_prices.py`: Projection per adapter, each shop's own link pages, enrich_shops; `decklab/web/shopping-snapshot.js`: SHOP_SNAPSHOT_SHOPS, shopSnapshotList, shopSnapshotMarker (every shop's gist), shopMissingSnapshotLine (a line a shop); `decklab/tests/test_shops_two_shops.py`, `decklab/tests/test_shops_two_shops_ui.py`.
+
+Gap (not a criterion): other Australian shops have no source. Cached-name provenance is not a new Scryfall per-printing identity check. Budgeted coverage can take several nights at each shop, with original carried dates kept explicit. The first real nightly run of Games Portal hasn't been watched yet.
 
 Implementation boundary for the nightly slice: reuse the shared saved-target counting kernel, with the queue and optional needs captured from one fresh persisted inventory revision. Count under a home-only read view so member decks, Public ones included, are not parsed or sent; retain home's products and other physical reservations. Resolve raw and canonical deck identities before counting, and freeze the names before any shop request. Preserve existing queue spellings so their saved matches and carried dates still work; canonical identity prevents adding duplicate missing names. Missing-data failure leaves queue snapshots working; incomplete pools prove no missing names, while individually proven decks may supply a clearly partial scan. Keep the existing 45-minute global request budget, oldest-first ordering, crawl delay, locking, age gate and original carried timestamps. A 5,000-name union limit falls back to the complete queue rather than silently truncating. Manual snapshot/dry-run stay queue-only. No wishlist, editor draft, live job activation or real retailer request is needed for development.
 

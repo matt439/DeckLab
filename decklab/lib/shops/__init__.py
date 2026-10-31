@@ -1,14 +1,16 @@
-"""Australian shop prices for the purchase queue (E5-S08; the snapshot reads MTGMate).
+"""Australian shop prices for the purchase queue (E5-S08; the snapshot reads MTGMate and Games Portal).
 
 The shop-specific part is an adapter (base.py's interface; mtgmate.py and gamesportal.py,
-ADAPTERS below): where
-a shop's page of a card name is and how to read it. This package does the rest the same for any
-shop: asks politely (Session), keeps the snapshot file and matches the queue's rows.
+ADAPTERS below): where a shop's page of a card name is and how to read it. This package does
+the rest the same for any shop: asks politely (Session), keeps the snapshot file and matches
+the queue's rows. SNAPSHOT_ADAPTERS are the shops the snapshot reads (both, Matt 2026-10-31).
 
 Once a day at most, `snapshot` looks up each distinct card name on the purchase queue
-(the watchlist: its rows only). The nightly step also includes confirmed missing names
-from saved home decks, in the same request budget, never member decks or wishlists. It keeps
-what the shop listed in decklab/data/shops/mtgmate.json (snapshot_path(), gitignored):
+(the watchlist: its rows only) at each shop. The nightly step also includes confirmed missing
+names from saved home decks, in the same request budget, never member decks or wishlists. Each
+shop's run is its own: what it listed goes in its own file, decklab/data/shops/<key>.json
+(snapshot_path(adapter), gitignored: mtgmate.json, gamesportal.json), under its own lock, so one
+shop that can't be read leaves only its own prices unknown:
 
     {"version": 1, "shop": "MTGMate", "site": SITE, "started_at": ISO, "fetched_at": ISO,
      "crawl_delay": seconds, "cards": {name: {"status": "ok" | "not_listed" | "error",
@@ -17,35 +19,41 @@ what the shop listed in decklab/data/shops/mtgmate.json (snapshot_path(), gitign
      "previous": {name: {"at": ISO, "listings": [...]}}}
 
 "previous" is the snapshot before (its names that were read), so a row can say it is newly
-in stock. Prices are MTGMate's own, in AUD (a listing's price None when it showed none).
+in stock. Prices are each shop's own, in AUD (a listing's price None when it showed none).
 
 How it asks: one request per card name, the shop's page of every printing with that name
 (the adapter's name_url; MTGMate's NAME_PATH, the same page its card links lead to), never its
 search (MTGMate's robots.txt disallows /cards/search). robots.txt is read first on every run;
 a path it disallows is never fetched, and its Crawl-delay (60 seconds when this was written)
-spaces the requests, so a queue of 30 names takes about half an hour. A failure, a timeout or an unreadable page leaves that name's
+spaces the requests, so a queue of 30 names takes about half an hour (Games Portal's names no
+Crawl-delay, so it gets DEFAULT_DELAY, the same minute). A failure, a timeout or an unreadable page leaves that name's
 price unknown ("error"), never a converted US price; three failures in a row stop the run
 and leave the rest unknown. The nightly task gives a run NIGHTLY_BUDGET of requests at
 robots.txt's delay: the names least recently read go first, and those it doesn't reach keep
 the earlier run's result with that run's time ("carried"), so a long queue is read over a few
-nights rather than the task being stopped partway. Two runs never overlap (an OS lock on
-mtgmate.lock, let go however the process ends). Nothing here changes the watchlist, and
-Shopping only reads the file (match() below), so a page load never reaches the shop.
+nights rather than the task being stopped partway. The shops are read side by side
+(refresh_shops: one thread a shop, each at its own robots.txt pace on its own host), so with
+both the nightly step still takes at most NIGHTLY_BUDGET, not twice it, and one shop's failures
+or slowness never hold up the other's. Two runs of one shop never overlap (an OS lock on its
+<key>.lock, let go however the process ends). Nothing here changes the watchlist, and
+Shopping only reads the files (match() below), so a page load never reaches a shop.
 
-    python -m decklab.lib.shops snapshot [--force] [--dry-run]
-        look the queue's names up (at most once in MIN_AGE unless --force); --dry-run lists
-        the names and the time it would take without asking the shop anything
+    python -m decklab.lib.shops snapshot [--shop KEY] [--force] [--dry-run]
+        look the queue's names up at every shop, side by side (--shop: only that one; at most
+        once in MIN_AGE a shop unless --force); --dry-run lists the names and the time it would
+        take without asking any shop anything
     python -m decklab.lib.shops show
-        the queue's rows beside the snapshot (read only, no network)
+        the queue's rows beside each shop's snapshot (read only, no network)
     python -m decklab.lib.shops lookup NAME [--shop KEY]
-        one name's listings, printed (one request after robots.txt; nothing saved); --shop
-        asks another adapter's shop (gamesportal), by hand only: no scheduled run reads it
+        one name's listings at one shop (MTGMate unless --shop), printed (one request after
+        robots.txt; nothing saved)
 """
 import argparse
 import contextlib
 import json
 import os
 import sys
+import threading
 import time
 import urllib.parse
 from datetime import datetime, timedelta, timezone
@@ -63,12 +71,13 @@ else:
     import fcntl
 
 ADAPTERS = {adapter.key: adapter for adapter in (mtgmate.ADAPTER, gamesportal.ADAPTER)}
-ADAPTER = ADAPTERS["mtgmate"]               # the shop the snapshot reads (the others only through lookup --shop)
+ADAPTER = ADAPTERS["mtgmate"]               # the first shop: the old single-shop names and answers are its
+SNAPSHOT_ADAPTERS = tuple(ADAPTERS.values())  # the shops the snapshot reads, in the order pages show them
 SHOP = ADAPTER.name
 SITE = ADAPTER.site
 ROBOTS_PATH = ADAPTER.robots_path
-SNAPSHOT = None                             # a test's own path; else snapshot_path()
-SNAPSHOT_ENV = "DECKLAB_SHOP_SNAPSHOT"      # the test run's (decklab/tests/__init__.py): never the real file
+SNAPSHOT = None                             # a test's own path for MTGMate (others beside it); else snapshot_path()
+SNAPSHOT_ENV = "DECKLAB_SHOP_SNAPSHOT"      # the test run's (decklab/tests/__init__.py): never the real files
 MIN_AGE = timedelta(hours=20)               # "daily": a nightly run a little early still counts
 DEFAULT_DELAY = 60                          # seconds between requests when robots.txt names none
 MIN_DELAY = 10                              # never faster than this, whatever robots.txt says
@@ -136,25 +145,30 @@ class Session:
 
 # --- the snapshot file ---------------------------------------------------------------------
 
-def snapshot_path():
-    """decklab/data/shops/mtgmate.json (the adapter's key) in this checkout (gitignored), worked
-    out at call time; DECKLAB_SHOP_SNAPSHOT names another file (the test run's own, which
-    doesn't exist, so no test reads the PC's real snapshot)."""
-    if SNAPSHOT:
-        return Path(SNAPSHOT)
-    if os.environ.get(SNAPSHOT_ENV):
-        return Path(os.environ[SNAPSHOT_ENV])
-    return Path(config.REPO) / "decklab" / "data" / "shops" / f"{ADAPTER.key}.json"
+def snapshot_path(adapter=None):
+    """decklab/data/shops/<key>.json (the adapter's key, MTGMate's by default) in this checkout
+    (gitignored), worked out at call time. SNAPSHOT or DECKLAB_SHOP_SNAPSHOT names MTGMate's file
+    instead (the test run's own, which doesn't exist, so no test reads the PC's real snapshots),
+    and another shop's is beside it: shop.json's Games Portal file is shop.gamesportal.json."""
+    adapter = adapter or ADAPTER
+    named = SNAPSHOT or os.environ.get(SNAPSHOT_ENV)
+    if not named:
+        return Path(config.REPO) / "decklab" / "data" / "shops" / f"{adapter.key}.json"
+    path = Path(named)
+    return path if adapter.key == ADAPTER.key else path.with_name(f"{path.stem}.{adapter.key}{path.suffix or '.json'}")
 
 
-def load(path=None):
-    """The snapshot, or None when there's none or it can't be read (Shopping then shows nothing)."""
-    path = path or snapshot_path()
+def load(path=None, adapter=None):
+    """The snapshot, or None when there's none or it can't be read (Shopping then shows nothing).
+    adapter: that shop's file (MTGMate's by default), and None when the file names another shop."""
+    path = path or snapshot_path(adapter)
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return None
     if not isinstance(data, dict) or data.get("version") != 1 or not isinstance(data.get("cards"), dict):
+        return None
+    if adapter is not None and data.get("shop", adapter.name) != adapter.name:
         return None
     return data
 
@@ -321,7 +335,7 @@ def match(row, data):
     shown["carried"] = bool(entry.get("carried"))
     status = entry.get("status")
     if status == "error":
-        shown.update(status="unknown", error=str(entry.get("error") or f"{SHOP} couldn't be read"))
+        shown.update(status="unknown", error=str(entry.get("error") or f"{shown['shop']} couldn't be read"))
         return shown
     choice, stocked = pick(row, entry.get("listings"))
     if choice is None:
@@ -357,15 +371,16 @@ def _queue():
         return [{key: row.text(key) for key in purchases.QUEUE_FIELDS} for row in inventory.current().watchlist.rows]
 
 
-def _lock_path():
-    return snapshot_path().with_name(f"{ADAPTER.key}.lock")
+def _lock_path(adapter=None):
+    adapter = adapter or ADAPTER
+    return snapshot_path(adapter).with_name(f"{adapter.key}.lock")
 
 
-def _lock():
-    """The open lock file's descriptor once this process holds its OS lock, else None. The OS
-    lets go of it however the process ends (a nightly task stopped at its time limit too), so a
+def _lock(adapter=None):
+    """The open lock file's descriptor once this process holds that shop's OS lock, else None. The
+    OS lets go of it however the process ends (a nightly task stopped at its time limit too), so a
     killed run never blocks the next; the file itself stays."""
-    lock = _lock_path()
+    lock = _lock_path(adapter)
     lock.parent.mkdir(parents=True, exist_ok=True)
     fd = os.open(lock, os.O_RDWR | os.O_CREAT | getattr(os, "O_BINARY", 0), 0o666)
     try:
@@ -392,13 +407,19 @@ def _unlock(fd):
     os.close(fd)
 
 
+def _counts_stock(shop):
+    """False for a shop whose pages say only whether a listing is available (Games Portal)."""
+    return next((adapter.counts_stock for adapter in ADAPTERS.values() if adapter.name == shop), True)
+
+
 def _describe(shown):
     if shown is None:
         return "no snapshot"
     if shown["status"] in ("in_stock", "out_of_stock"):
         where = f"{shown['set'].upper()} {shown['collector_number']} {shown['finish']}"
         price = f"A${shown['price_aud']}" if shown["price_aud"] else "price not shown"
-        stock = f"{shown['stock']} in stock" if shown["status"] == "in_stock" else "out of stock"
+        counted = f"{shown['stock']} in stock" if _counts_stock(shown.get("shop")) else "in stock"
+        stock = counted if shown["status"] == "in_stock" else "out of stock"
         flags = " BACK IN STOCK" if shown["back_in_stock"] else (" new" if shown["newly_in_stock"] else "")
         when = f", as read {shown['fetched_at']}" if shown.get("carried") else ""
         return f"{price}, {stock} ({where}){flags}{when}"
@@ -410,15 +431,19 @@ def _minutes(names, delay=DEFAULT_DELAY):
     return max(1, round(len(names) * delay / 60))
 
 
-def refresh(*, force=False, say=print, progress=True, session=None, budget=None, include_missing=False):
-    """Take and save a new snapshot of the queue's names, unless the last one is less than
-    MIN_AGE old (or force). budget: take()'s, the most seconds of requests (the names least
-    recently read go first, so the rest come next time). say(words) reports; 0 done or nothing
-    due, 1 refused (another run going) or every name unknown, 2 the purchase queue couldn't be read.
+def refresh(*, force=False, say=print, progress=True, session=None, budget=None, include_missing=False,
+            adapter=None):
+    """Take and save a new snapshot of the queue's names at one shop (adapter, MTGMate's by
+    default; session's when given), unless its last one is less than MIN_AGE old (or force).
+    budget: take()'s, the most seconds of requests (the names least recently read go first, so
+    the rest come next time). say(words) reports; 0 done or nothing due, 1 refused (another run
+    of this shop going) or every name unknown, 2 the purchase queue couldn't be read.
     include_missing is the nightly opt-in: one frozen union of queued names and proven saved-home
     shortfalls. A failed optional scan keeps every original queue name and reports fixed wording.
     Caller pins survive; a pin opened here is released before any retailer request."""
     from decklab.lib import inventory
+    adapter = getattr(session, "adapter", None) or adapter or ADAPTER
+    shop = adapter.name
     now = _now()
     with contextlib.ExitStack() as capture:
         if include_missing and not inventory.is_pinned():
@@ -429,24 +454,24 @@ def refresh(*, force=False, say=print, progress=True, session=None, budget=None,
         except (inventory.Unavailable, ValueError) as error:
             say(f"The purchase queue couldn't be read: {error}")
             return 2
-        previous = load()
+        previous = load(adapter=adapter)
         if not force and fresh(previous, now):
-            _not_due(previous, say)
+            _not_due(previous, say, shop)
             return 0
         if not names and not include_missing:
             say("The purchase queue is empty; nothing to look up.")
             return 0
-        lock = _lock()
+        lock = _lock(adapter)
         if lock is None:
-            say(f"Another {SHOP} snapshot is running ({_lock_path()}).")
+            say(f"Another {shop} snapshot is running ({_lock_path(adapter)}).")
             return 1
         try:
             if include_missing:
                 # A different run may have finished between the early age check and this
                 # lock. Use its latest data for both the age gate and carried timestamps.
-                previous = load()
+                previous = load(adapter=adapter)
                 if not force and fresh(previous, _now()):
-                    _not_due(previous, say)
+                    _not_due(previous, say, shop)
                     return 0
                 try:
                     from decklab.lib import shop_needs
@@ -470,7 +495,7 @@ def refresh(*, force=False, say=print, progress=True, session=None, budget=None,
             def started(delay):
                 fits = "" if budget is None or len(names) * delay <= budget else (
                     f"; this run stops after about {round(budget / 60)} minutes and the rest keep their last results")
-                say(f"Looking up {len(names)} names on {SHOP}, one request each, {delay:g} seconds apart as its "
+                say(f"Looking up {len(names)} names on {shop}, one request each, {delay:g} seconds apart as its "
                     f"robots.txt asks (about {_minutes(names, delay)} minutes{fits}).")
 
             def step(count, total, name, entry):
@@ -479,36 +504,85 @@ def refresh(*, force=False, say=print, progress=True, session=None, budget=None,
                 if entry.get("carried"):
                     words = f"not reached; kept the result read {entry.get('at')}"
                 say(f"  {count}/{total} {name}: {words}")
-            data = take(names, session=session, previous=previous, progress=step if progress else None,
-                        budget=budget, started=started)
-            _write(data, snapshot_path())
+            data = take(names, session=session or Session(adapter=adapter), previous=previous,
+                        progress=step if progress else None, budget=budget, started=started)
+            _write(data, snapshot_path(adapter))
         finally:
             _unlock(lock)
     entries = list(data["cards"].values())
     failed = sum(entry["status"] == "error" for entry in entries)
     carried = sum(bool(entry.get("carried")) for entry in entries)
     kept = f", {carried} not reached and kept from before" if carried else ""
-    say(f"Saved {snapshot_path()} ({len(names) - failed - carried} read{kept}, {failed} unknown).")
+    say(f"Saved {snapshot_path(adapter)} ({len(names) - failed - carried} read{kept}, {failed} unknown).")
     return 1 if failed == len(names) else 0
 
 
-def _not_due(previous, say):
-    say(f"The {SHOP} snapshot of {previous['fetched_at']} is less than {int(MIN_AGE.total_seconds() // 3600)} "
+def _not_due(previous, say, shop=SHOP):
+    say(f"The {shop} snapshot of {previous['fetched_at']} is less than {int(MIN_AGE.total_seconds() // 3600)} "
         "hours old; nothing fetched (--force to fetch anyway).")
 
 
-def nightly(log):
-    """The nightly job's step (decklab/db/nightly.py): refresh() with its words in log. Always 0:
-    a shop that can't be reached is no failure of the database's night, and the log says why."""
+def refresh_shops(adapters=None, *, say_for, on_error=None, sessions=None, **options):
+    """refresh() at each shop (SNAPSHOT_ADAPTERS by default) side by side: one thread a shop when
+    there are several, so the time they take together is the slowest shop's, not their sum, and
+    each keeps its own robots.txt pace, lock and file. A shop's failure or exception is its own:
+    the others still run and save. say_for(adapter) gives that shop's say; on_error(adapter,
+    error) reports an exception (re-raised without it, when one shop alone was asked). sessions:
+    {key: Session} (the tests' fake shops). The worst of their exit codes."""
+    adapters = tuple(adapters or SNAPSHOT_ADAPTERS)
+    sessions = sessions or {}
+    codes = {}
+
+    def run(adapter):
+        try:
+            codes[adapter.key] = refresh(adapter=adapter, session=sessions.get(adapter.key),
+                                         say=say_for(adapter), **options)
+        except Exception as error:      # one shop's broken page never stops another's run
+            if on_error is None and len(adapters) == 1:
+                raise
+            codes[adapter.key] = 1
+            if on_error is not None:
+                on_error(adapter, error)
+            else:
+                say_for(adapter)(f"failed: {type(error).__name__}: {error}")
+
+    if len(adapters) == 1:
+        run(adapters[0])
+    else:
+        threads = [threading.Thread(target=run, args=(adapter,), name=f"shop-{adapter.key}", daemon=True)
+                   for adapter in adapters]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join()
+    return max(codes.values(), default=1)
+
+
+def nightly(log, *, sessions=None):
+    """The nightly job's step (decklab/db/nightly.py): refresh_shops() of every snapshot shop, side
+    by side, each within NIGHTLY_BUDGET, with its words in log. Always 0: a shop that can't be
+    reached is no failure of the database's night, and the log says why."""
+    def say_for(adapter):
+        return lambda words: log(f"Nightly: {adapter.name} prices: {words.strip()}")
+
+    def failed(adapter, error):     # a broken shop page must not mark the backup night failed
+        log(f"Nightly: {adapter.name} prices failed: {type(error).__name__}: {error}")
     try:
-        refresh(say=lambda words: log(f"Nightly: {SHOP} prices: {words.strip()}"), progress=False,
-                budget=NIGHTLY_BUDGET, include_missing=True)
-    except Exception as error:  # a broken shop page must not mark the backup night failed
-        log(f"Nightly: {SHOP} prices failed: {type(error).__name__}: {error}")
+        refresh_shops(say_for=say_for, on_error=failed, sessions=sessions, progress=False,
+                      budget=NIGHTLY_BUDGET, include_missing=True)
+    except Exception as error:
+        log(f"Nightly: shop prices failed: {type(error).__name__}: {error}")
     return 0
 
 
+def _chosen(args):
+    key = getattr(args, "shop", None)
+    return (ADAPTERS[key],) if key else SNAPSHOT_ADAPTERS
+
+
 def _snapshot(args):
+    adapters = _chosen(args)
+    where = " and ".join(adapter.name for adapter in adapters)
     if args.dry_run:
         from decklab.lib.inventory import Unavailable
         try:
@@ -516,29 +590,38 @@ def _snapshot(args):
         except (Unavailable, ValueError) as error:
             print(f"The purchase queue couldn't be read: {error}", file=sys.stderr)
             return 2
-        print(f"{len(names)} names on the purchase queue; at {DEFAULT_DELAY} seconds a request that's about "
-              f"{_minutes(names)} minutes.")
+        side = ", side by side" if len(adapters) > 1 else ""
+        print(f"{len(names)} names on the purchase queue to look up on {where}{side}; at {DEFAULT_DELAY} seconds "
+              f"a request that's about {_minutes(names)} minutes.")
         for name in names:
             print(f"  {name}")
         return 0
-    return refresh(force=args.force, say=lambda words: print(words, flush=True))
+
+    def say_for(adapter):
+        if len(adapters) == 1:
+            return lambda words: print(words, flush=True)
+        return lambda words: print(f"{adapter.name}: {words}", flush=True)
+    return refresh_shops(adapters, say_for=say_for, force=args.force)
 
 
 def _show(_args):
     from decklab.lib.inventory import Unavailable
-    data = load()
-    if data is None:
-        print(f"No {SHOP} snapshot yet: python -m decklab.lib.shops snapshot")
+    snapshots = [(adapter, load(adapter=adapter)) for adapter in SNAPSHOT_ADAPTERS]
+    snapshots = [(adapter, data) for adapter, data in snapshots if data is not None]
+    if not snapshots:
+        print("No shop snapshot yet: python -m decklab.lib.shops snapshot")
         return 0
     try:
         rows = _queue()
     except Unavailable as error:
         print(f"The purchase queue couldn't be read: {error}", file=sys.stderr)
         return 2
-    print(f"{SHOP} snapshot of {data.get('fetched_at')}")
+    for adapter, data in snapshots:
+        print(f"{adapter.name} snapshot of {data.get('fetched_at')}")
     for number, row in enumerate(rows, 1):
         reference = f"ref A${row['listed_aud']} at {row['listed_at']}" if row.get("listed_aud") else "no reference"
-        print(f"#{number} {row['name']} [{row.get('state')}] {reference}; {SHOP}: {_describe(match(row, data))}")
+        seen = "; ".join(f"{adapter.name}: {_describe(match(row, data))}" for adapter, data in snapshots)
+        print(f"#{number} {row['name']} [{row.get('state')}] {reference}; {seen}")
     return 0
 
 
@@ -553,26 +636,28 @@ def _lookup(args):
         print(f"{adapter.name} lists nothing named {args.name}.")
     for item in listings:
         price = f"A${item['price']}" if item["price"] else "no price"
-        print(f"{item['set'].upper()} {item['number']} {item['finish']} {item['condition']}: {price}, {item['stock']} in stock")
+        stock = f"{item['stock']} in stock" if adapter.counts_stock else ("in stock" if item["stock"] else "out of stock")
+        print(f"{item['set'].upper()} {item['number']} {item['finish']} {item['condition']}: {price}, {stock}")
     return 0
 
 
 def main(argv=None):
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(errors="replace")
+    names = " and ".join(adapter.name for adapter in SNAPSHOT_ADAPTERS)
     parser = argparse.ArgumentParser(prog="python -m decklab.lib.shops",
-                                     description=f"{SHOP} prices and stock for the purchase queue (a daily snapshot).")
+                                     description=f"{names} prices and stock for the purchase queue (a daily snapshot).")
     sub = parser.add_subparsers(dest="command", required=True)
-    snap = sub.add_parser("snapshot", help="look the queue's names up and save the snapshot")
-    snap.add_argument("--force", action="store_true", help="fetch even when the snapshot is less than a day old")
+    snap = sub.add_parser("snapshot", help="look the queue's names up at each shop and save their snapshots")
+    snap.add_argument("--shop", choices=sorted(ADAPTERS), help="only this shop (default: every shop, side by side)")
+    snap.add_argument("--force", action="store_true", help="fetch even when a snapshot is less than a day old")
     snap.add_argument("--dry-run", action="store_true", help="list the names and the time it would take; fetch nothing")
     snap.set_defaults(func=_snapshot)
-    sub.add_parser("show", help="the queue beside the snapshot (no network)").set_defaults(func=_show)
-    look = sub.add_parser("lookup", help="one name's listings, printed (nothing saved)")
+    sub.add_parser("show", help="the queue beside each shop's snapshot (no network)").set_defaults(func=_show)
+    look = sub.add_parser("lookup", help="one name's listings at one shop, printed (nothing saved)")
     look.add_argument("name")
     look.add_argument("--shop", choices=sorted(ADAPTERS), default=ADAPTER.key,
-                      help=f"the shop to ask (default {ADAPTER.key}); the snapshot reads only {ADAPTER.key}")
+                      help=f"the shop to ask (default {ADAPTER.key})")
     look.set_defaults(func=_lookup)
     args = parser.parse_args(argv)
     return args.func(args)
-

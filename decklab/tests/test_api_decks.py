@@ -265,7 +265,7 @@ class DeckViewTests(ApiTestCase):
 
     def test_owned_vs_needed_as_json(self):
         from decklab.lib.api import shop_prices
-        from decklab.tests.golden_shop_prices import ABSENT_MISSING_SNAPSHOT
+        from decklab.tests.golden_shop_prices import ABSENT_MISSING_SNAPSHOT, ABSENT_MISSING_SNAPSHOTS
 
         with mock.patch.object(shop_prices, "capture", return_value=None) as capture:
             view = api.deck_view("casual/gruul-test")
@@ -281,6 +281,7 @@ class DeckViewTests(ApiTestCase):
             }] if row["name"] == "Sol Ring" else [])
             if type(row.get("missing")) is int and row["missing"] > 0:
                 row["shop_snapshot"] = dict(ABSENT_MISSING_SNAPSHOT)
+                row["shop_snapshots"] = [dict(each) for each in ABSENT_MISSING_SNAPSHOTS]
         expected["warnings"] = [api._strip_paths(w) for w in expected["warnings"]]    # no paths
         self.assertEqual(owned, json.loads(json.dumps(expected)))
         self.assertEqual((owned["rate"], owned["rate_date"], owned["price_date"]), (2.0, "2026-09-28", "2026-09-28"))

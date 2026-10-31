@@ -202,7 +202,7 @@ class MissingPriceShoppingTests(fixtures._Fixture, unittest.TestCase):
     def test_one_capture_enriches_queue_before_copying_and_generic_needs_afterward(self):
         with mock.patch.object(shops, "load", return_value=self.saved) as load:
             answer = self.overview()
-        load.assert_called_once()
+        self.assertEqual(load.call_count, len(shops.SNAPSHOT_ADAPTERS))  # one read a shop
         rows = self.expected_baseline(answer)
         elves = rows["Llanowar Elves"]
         self.assertEqual((elves["shop_snapshot"]["price_aud"], elves["shop_snapshot"]["stock"]), ("1.00", 1))
@@ -220,7 +220,7 @@ class MissingPriceShoppingTests(fixtures._Fixture, unittest.TestCase):
         with mock.patch.object(shops, "load", return_value=None) as load, \
                 mock.patch.object(shop_prices, "for_row", side_effect=AssertionError("Implicit snapshot reload")):
             answer = self.overview()
-        load.assert_called_once()
+        self.assertEqual(load.call_count, len(shops.SNAPSHOT_ADAPTERS))  # one read a shop
         self.expected_baseline(answer)
         self.assertNotIn("shop_snapshot", answer)
         self.assertTrue(all("shop_snapshot" not in row for row in answer["to_buy"]))
@@ -230,7 +230,7 @@ class MissingPriceShoppingTests(fixtures._Fixture, unittest.TestCase):
         detail = "C:/private/config.json: household detail"
         with mock.patch.object(shops, "load", side_effect=ValueError(detail)) as load:
             answer = self.overview()
-        load.assert_called_once()
+        self.assertEqual(load.call_count, len(shops.SNAPSHOT_ADAPTERS))  # one read a shop
         self.expected_baseline(answer)
         self.assertNotIn(detail, json.dumps(answer))
 

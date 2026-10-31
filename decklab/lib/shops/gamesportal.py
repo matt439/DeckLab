@@ -161,6 +161,7 @@ def parse_name_page(text, name):
 
 class GamesPortal(Adapter):
     key, name, site = "gamesportal", SHOP, SITE
+    counts_stock = False                    # "available" only: a listing's stock is 1 or 0
 
     def name_url(self, name):
         return name_url(name)
