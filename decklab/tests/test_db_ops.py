@@ -622,6 +622,30 @@ class GitEnvTests(unittest.TestCase):
         self.assertEqual(seen["GCM_INTERACTIVE"], "never")
         self.assertNotIn("GIT_DIR", seen)
 
+    @unittest.skipUnless(shutil.which("git"), "needs git")
+    def test_the_export_commits_without_a_git_identity_and_keeps_the_owners(self):
+        # E11-S48: a new install's git may have no user.name or user.email
+        tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, tmp, ignore_errors=True)
+        nowhere = tmp / "no-config"
+        nowhere.write_text("", encoding="utf-8")
+        isolated = {"GIT_CONFIG_GLOBAL": str(nowhere), "GIT_CONFIG_NOSYSTEM": "1", "HOME": str(tmp),
+                    "XDG_CONFIG_HOME": str(tmp)}
+        drop = ("GIT_AUTHOR_NAME", "GIT_AUTHOR_EMAIL", "GIT_COMMITTER_NAME", "GIT_COMMITTER_EMAIL", "EMAIL")
+        with mock.patch.dict(os.environ, isolated):
+            for name in drop:
+                os.environ.pop(name, None)
+            repo = tmp / "export"
+            export.ensure_repo(repo)
+            (repo / "a.csv").write_text("a\n", encoding="utf-8")
+            self.assertTrue(export.commit(repo))
+            self.assertEqual(export.git(repo, "log", "-1", "--format=%an <%ae>")[1], "Deck Lab <decklab@localhost>")
+            export.git(repo, "config", "user.name", "Owner")
+            export.git(repo, "config", "user.email", "owner@example.com")
+            (repo / "a.csv").write_text("b\n", encoding="utf-8")
+            self.assertTrue(export.commit(repo))
+            self.assertEqual(export.git(repo, "log", "-1", "--format=%an <%ae>")[1], "Owner <owner@example.com>")
+
 
 if __name__ == "__main__":
     unittest.main()

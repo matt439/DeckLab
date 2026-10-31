@@ -24,7 +24,7 @@ import types
 import unittest
 from unittest import mock
 
-from decklab.lib import api, cards, decks, inventory, jobs
+from decklab.lib import api, cards, config, decks, inventory, jobs
 from decklab.lib import forge as real_forge         # RealForgeTests put it in FakeForge's place
 from decklab.tests import test_forge
 from decklab.tests.test_api import GRUUL, ApiTestCase, _write
@@ -100,7 +100,7 @@ class NotPlayedTests(MatchupTestCase):
                          ("Constructed", [200, 400, 800, 1600, 3200], 800))
         # config.json's forge_workers and forge_batch_games (the sandbox's has neither: the defaults); the page
         # uses only workers.
-        self.assertEqual((answer["workers"], answer["batch_games"]), (16, 200))
+        self.assertEqual((answer["workers"], answer["batch_games"]), (config.DEFAULTS["forge_workers"], 200))
         self.assertEqual(answer["forge"], {"ready": True, "version": "2.0.15", "problem": None})
         a, b = answer["sides"]
         self.assertEqual({k: a[k] for k in ("id", "version", "title", "kind", "card_count", "current")},
@@ -766,7 +766,7 @@ class ListTests(MatchupTestCase):
         self.addCleanup(runner.stop)
         empty = api.matchups()
         self.assertEqual(empty, {"results": [], "running": [], "choices": [200, 400, 800, 1600, 3200],
-                                 "default_games": 800, "workers": 16, "batch_games": 200,
+                                 "default_games": 800, "workers": config.DEFAULTS["forge_workers"], "batch_games": 200,
                                  # the viewer's, as GET /api/decks gives it (E10-S30)
                                  "decks_revision": api.decks_index()["decks_revision"],
                                  "forge": {"ready": True, "version": "2.0.15",

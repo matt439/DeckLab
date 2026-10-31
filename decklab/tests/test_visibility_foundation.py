@@ -28,6 +28,9 @@ def folder(test, prefix):
 
 
 class VisibilityCliTests(unittest.TestCase):
+    def setUp(self):
+        self.enterContext(mock.patch.object(values, "_home_profiles", return_value={"matt": "Matt", "user1": "User1"}))
+
     def test_every_missing_switch_is_reported_as_private(self):
         rows = visibility_cli.rows({}, ["home", "guest"])
         self.assertEqual(len(rows), 9)
@@ -74,6 +77,22 @@ class VisibilityCliTests(unittest.TestCase):
         self.assertNotIn(("home", "decks"), store.visibility())
         self.assertEqual(store.visibility_cached(), store.visibility())
 
+    def test_kit_owners_are_the_configured_home_profiles(self):
+        # E11-S48: another household's home profiles own kit; the original household's ids don't
+        store = MemoryStore()
+        with mock.patch.object(values, "_home_profiles", return_value={"alex": "Alex"}), \
+                mock.patch.object(switches, "READY_THINGS", frozenset(values.THINGS)), \
+                mock.patch.object(visibility_cli.pg, "PgStore", return_value=store), \
+                redirect_stdout(io.StringIO()), redirect_stderr(io.StringIO()):
+            self.assertEqual(values.kit_owners(), ("alex", "shared"))
+            self.assertEqual(cli.main(["visibility", "set", "alex", "accessories", "on", "-m", "Owner asked"]), 0)
+            self.assertEqual(store.changes()[-1]["message"], "Make Alex's sleeves, deck boxes and playmats public")
+            self.assertEqual(cli.main(["visibility", "set", "matt", "accessories", "on", "-m", "Owner asked"]), 1)
+            rows = visibility_cli.rows({}, ["home"])
+        self.assertEqual({r["owner"] for r in rows if r["thing"] == "accessories"}, {"alex", "shared"})
+        with mock.patch.object(values, "_home_profiles", return_value={}):
+            self.assertEqual(values.kit_owners(), ("shared",))             # unreadable config: no personal owner
+
     def test_cli_readiness_and_nonblank_reason_are_checked_before_connecting(self):
         with mock.patch.object(switches, "READY_THINGS", frozenset()), \
                 mock.patch.object(visibility_cli.pg, "PgStore") as make, redirect_stderr(io.StringIO()):
@@ -97,6 +116,8 @@ class VisibilityDatabaseTests(db_support.DbTestCase):
         db_support.reset(self.dbname)
         db_support.seed_membership(self.dbname)
         self.store = pg.PgStore(dbname=self.dbname, breaker=pg.Breaker())
+        # The kit owners writes and db check accept (E11-S48: the configured home profiles)
+        self.enterContext(mock.patch.object(values, "_home_profiles", return_value={"matt": "Matt", "user1": "User1"}))
 
     def save(self, owner="home", thing="decks", on=True):
         return self.store.visibility_set(owner, thing, on, ACTOR, f"Make {owner} {thing} {'public' if on else 'private'}")
@@ -147,6 +168,20 @@ class VisibilityDatabaseTests(db_support.DbTestCase):
         profiles_sync.sync(listed=[HOME, MEMBER], dbname=self.dbname)
         self.store.clear_cache()
         self.assertNotIn(("guest", "decks"), self.store.visibility())
+
+    def test_sync_removes_a_departed_home_profiles_kit_switch_and_reuse_starts_private(self):
+        # E11-S48: kit owners are any home profile, so a removed one's Public kit must not pass to a reused id
+        alex = dict(HOME, id="alex", name="Alex", role="member", plays_as="wife")
+        profiles_sync.sync(listed=[HOME, alex], dbname=self.dbname)
+        with mock.patch.object(values, "_home_profiles", return_value={"matt": "Matt", "alex": "Alex"}):
+            self.save("alex", "accessories")
+            self.save("shared", "accessories")
+        profiles_sync.sync(listed=[HOME], dbname=self.dbname)
+        self.store.clear_cache()
+        self.assertEqual(set(self.store.visibility()), {("shared", "accessories")})
+        profiles_sync.sync(listed=[HOME, alex], dbname=self.dbname)
+        self.store.clear_cache()
+        self.assertNotIn(("alex", "accessories"), self.store.visibility())
 
     def test_check_accepts_space_and_kit_owners_and_flags_an_orphan(self):
         self.assertEqual(self.invariant(), (True, False, "0 Public switches; all owners valid"))

@@ -529,6 +529,8 @@ class SimulationsSettingTests(PermissionTestCase):
     def setUp(self):
         super().setUp()
         self.addCleanup(slots.set_limit, None)      # the test package's own slots folder (tests/__init__.py)
+        # The budget these tests count against, whatever the PC's own default (E11-S48: a CI runner's is 2).
+        self.enterContext(mock.patch.dict(config.DEFAULTS, {"forge_workers": 16}))
 
     def as_(self, who):
         return access.using({"profile": who, "email": "", "remote": True})

@@ -45,10 +45,10 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 19 | 16 | 0 | 1 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 22 | 18 | 0 | 3 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 35 | 31 | 1 | 1 | 2 |
-| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 48 | 34 | 6 | 5 | 3 |
-| **Total** | **277** | **237** | **14** | **12** | **14** |
+| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 48 | 35 | 5 | 5 | 3 |
+| **Total** | **277** | **238** | **13** | **12** | **14** |
 
-Counted from the story headers on 2026-10-29 after the source-aware two-player and pod counters, alongside the current feature and maintenance work. The reviews added five feature stories and eight hygiene stories, then the fixture-only entry-point story E11-S44, and corrected E1-S12 from missing to partial. Rechecked 2026-10-29: E1-S12 is built and E11-S39 partial (its database qualification pending). The TODO audit of 2026-10-29 added fifteen missing stories (twelve from the audit: E1-S27, E1-S28, E2-S27, E3-S25, E3-S26, E5-S25, E6-S25, E6-S26, E9-S26, E9-S27, E11-S45, E11-S46), then Matt's three UI requests (E3-S27, E5-S26, E6-S27), and corrected E7-S32 from missing to partial (its recognition spike and CLI are built). Matt closed E11-S16 as built the same day, and E3-S27, E5-S26, E6-S25, E6-S27 and E11-S46 were built the same day (E11-S12 stays partial after a further slice). Later the same day E5-S25 and E6-S26 were built, E1-S27's first slice (the library) made it partial, and E11-S12 and E3-S26 were built. E1-S27's Overview slices then finished it, and E2-S27 and E9-S27 were built. E1-S28 was built the same day. E3-S25's first slice (its replacements API, 2026-10-29) made it partial. Its dual-lands slice (2026-10-29) finished it. E11-S45 was built the same day. Recounted 2026-10-30: E7-S23's first slice (the token side on deck pages and the printout) made it partial. E7-S24's read-only slice (the counters and dice a deck's cards use) made it partial too. E9-S26's free cards by role on the Stats tab made it partial, leaving its cited role targets to Matt's choice of template; with the Command Zone template's targets (2026-10-31) it is built. Recounted 2026-10-31: E11-S47 (built 2026-10-30) was missing from the E11 row. E4-S16 was built (sideboard-plan tests). E7-S23's second slice (the opponent's tokens under their own heading and counted apart in the library line and the packing ticks) finished it. E7-S08 was built (token counts suggested from saved Forge games), and E9-S07 too (new decks and narrowed pages). Later on 2026-10-31 E11-S39 was built (its database qualification ran), E11-S31 became partial (global search built, its device check left), E11-S30 kept its device gate, and E7-S24 was built once migration 0020 was applied. Matt's self-hosting decisions of 2026-10-31 (Windows first; strangers install their own, family and friends join as members; release zips; currency as a setting) added E11-S48 to E11-S53, all missing; E11-S48's first slice the same day made it partial.
+Counted from the story headers on 2026-10-29 after the source-aware two-player and pod counters, alongside the current feature and maintenance work. The reviews added five feature stories and eight hygiene stories, then the fixture-only entry-point story E11-S44, and corrected E1-S12 from missing to partial. Rechecked 2026-10-29: E1-S12 is built and E11-S39 partial (its database qualification pending). The TODO audit of 2026-10-29 added fifteen missing stories (twelve from the audit: E1-S27, E1-S28, E2-S27, E3-S25, E3-S26, E5-S25, E6-S25, E6-S26, E9-S26, E9-S27, E11-S45, E11-S46), then Matt's three UI requests (E3-S27, E5-S26, E6-S27), and corrected E7-S32 from missing to partial (its recognition spike and CLI are built). Matt closed E11-S16 as built the same day, and E3-S27, E5-S26, E6-S25, E6-S27 and E11-S46 were built the same day (E11-S12 stays partial after a further slice). Later the same day E5-S25 and E6-S26 were built, E1-S27's first slice (the library) made it partial, and E11-S12 and E3-S26 were built. E1-S27's Overview slices then finished it, and E2-S27 and E9-S27 were built. E1-S28 was built the same day. E3-S25's first slice (its replacements API, 2026-10-29) made it partial. Its dual-lands slice (2026-10-29) finished it. E11-S45 was built the same day. Recounted 2026-10-30: E7-S23's first slice (the token side on deck pages and the printout) made it partial. E7-S24's read-only slice (the counters and dice a deck's cards use) made it partial too. E9-S26's free cards by role on the Stats tab made it partial, leaving its cited role targets to Matt's choice of template; with the Command Zone template's targets (2026-10-31) it is built. Recounted 2026-10-31: E11-S47 (built 2026-10-30) was missing from the E11 row. E4-S16 was built (sideboard-plan tests). E7-S23's second slice (the opponent's tokens under their own heading and counted apart in the library line and the packing ticks) finished it. E7-S08 was built (token counts suggested from saved Forge games), and E9-S07 too (new decks and narrowed pages). Later on 2026-10-31 E11-S39 was built (its database qualification ran), E11-S31 became partial (global search built, its device check left), E11-S30 kept its device gate, and E7-S24 was built once migration 0020 was applied. Matt's self-hosting decisions of 2026-10-31 (Windows first; strangers install their own, family and friends join as members; release zips; currency as a setting) added E11-S48 to E11-S53, all missing; E11-S48 was built the same day, in three slices.
 
 ---
 
@@ -3794,7 +3794,7 @@ As Matt, I want one switch for each thing our space owns (collection, decks, gam
 - Given GET `/api/me` on the home network with User1 picked, then its `may` is User1's, including `visibility`; and after she flips a switch the page fetches it again.
 - Given the database can't be read and nothing is cached, when a rule asks for the switches, then everything counts as private.
 - Given User2's profile is removed and synced, then his visibility rows are deleted in the same change set.
-- Given the nightly, then the table is exported and covered by the restore check's digests, and `check` flags a row whose owner is neither a space nor matt, user1 or shared.
+- Given the nightly, then the table is exported and covered by the restore check's digests, and `check` flags a row whose owner is neither a space nor a kit owner (a home profile or shared; E11-S48).
 
 Decided (Matt, 2026-10-18): one switch per list (per-deck public is E10-S41); either home profile flips home's switches and the `shared` kit, and the last flip wins; Claude never flips a member's switch, even on a request Matt relays.
 
@@ -4114,7 +4114,7 @@ Evidence:
 
 Keeping Deck Lab running, safe and believable, by Matt as the household's admin and by Claude Code working for him at the PC. It covers the server and its Cloudflare tunnel and "Deck Lab is off" page, the PostgreSQL database with its nightly backup, export, check and restore check, the audit trail on #/activity, the `python -m decklab.db` commands Claude works through (previews, `--expect` guards, `-m` messages, exit codes), the card data's background refresh, Forge upkeep and the Safari Simulator suite. Every write is one audited change set, Matt's own command-line writes are recorded as his, and backups are checked by restoring them.
 
-Open: E11-S02, E11-S08, E11-S28, E11-S30, E11-S31, E11-S48 to E11-S53.
+Open: E11-S02, E11-S08, E11-S28, E11-S30, E11-S31, E11-S49 to E11-S53.
 
 **E11-S01** · Matt · must · M · built
 
@@ -4967,7 +4967,7 @@ As Matt, the household admin, I want to restart Deck Lab from its Settings page,
 
 Built (2026-10-30): `GET`/`POST /api/server/restart` (`lib/api/server_restart.py`, permission `server.restart`) starts `python -m decklab.lib.homenet restart --port P` as a separate process (Windows: no window, its own process group, out of the server's job when it may break away; Linux: its own transient unit through `systemd-run --user`), writing to `decklab/data/logs/restart.log`; `web/settings-restart.js` draws the control and waits for a server with another `started_at`. Fixtures: `test_server_restart.py`, `test_settings_restart_ui.py`. See [HISTORY.md](../HISTORY.md#restart-deck-lab-from-settings-2026-10-30-e11-s47).
 
-**E11-S48** · Matt · could · M · partial
+**E11-S48** · Matt · could · M · built
 
 As Matt, telling a stranger at Commander night to try Deck Lab on their own Windows PC, I want a new install's defaults to fit any household, so that it doesn't quietly fail on settings that only fit the original PC.
 
@@ -4975,13 +4975,15 @@ As Matt, telling a stranger at Commander night to try Deck Lab on their own Wind
 - Given no `forge_workers` or `forge_xmx` in `config.json`, then the defaults come from the PC's logical cores and memory (leaving room for the server and PostgreSQL), not 16 workers of 1 GB with pinning.
 - Given Java 21 or later installed by Oracle, Temurin, Microsoft's OpenJDK, Zulu or Corretto in their default folders, when Forge looks for Java on Windows, then it finds it without `forge_java`, a JDK (with javac) before a JRE and never an older Java. (The PATH stays unused on Windows: its `java.exe` may be a launcher.)
 - Given `export_repo` and a git with no user name or email, when the nightly export commits, then it commits under a fixed local identity instead of failing.
-- Given a config whose home profiles aren't `matt` and `user1`, then their accessories have owners and Public switches like the original household's (`state/visibility.py`'s `KIT_OWNERS` and its owner wording come from the profiles).
+- Given a config whose home profiles aren't `matt` and `user1`, then their accessories have owners and Public switches like the original household's (the kit owners and the switches' audit wording come from the profiles).
 
 Decided (Matt, 2026-10-31): Windows first. A stranger tries Deck Lab on their own PC; family, friends and coworkers join Matt's instance as members instead (E10's member template).
 
-Now (2026-10-31): `backup_dir` has no default on any system, and `find_java` searches each vendor's folder (`JAVA_FOLDERS`, `JAVA_MIN`). See [HISTORY.md](../HISTORY.md#new-installs-keep-backups-local-and-find-more-javas-2026-10-31-e11-s48-slice-1).
+Built (2026-10-31): [slice 1](../HISTORY.md#new-installs-keep-backups-local-and-find-more-javas-2026-10-31-e11-s48-slice-1), [slice 2](../HISTORY.md#forge-workers-sized-to-the-pc-2026-10-31-e11-s48-slice-2) and [slice 3](../HISTORY.md#the-exports-git-identity-and-kit-owners-from-the-profiles-2026-10-31-e11-s48-slice-3). Not tried on a real second household's PC.
 
-Gap: `lib/config.py` sets `forge_workers` 16, `forge_xmx` 1024m and `forge_pin`; `db/export.py` commits with the user's git identity; `lib/state/visibility.py` has `KIT_OWNERS = ("matt", "user1", "shared")`.
+Evidence:
+- `db/conn.py` (`backup_dir` None); `lib/forge/install.py` (`find_java`, `JAVA_FOLDERS`, `JAVA_MIN`); `lib/config.py` (`_forge_workers`, `FORGE_WORKERS_MAX`); `db/export.py` (`_identity`, `IDENTITY`); `lib/state/visibility.py` (`kit_owners`, `message`), `db/visibility_cli.py`, `db/check.py` (`_visibility`)
+- `test_db_ops.py` (`BackupDirDefaultTests`, `GitEnvTests`), `test_forge.py` (find_java), `test_config.py` (`test_forge_workers_default_fits_the_pc`), `test_visibility_foundation.py` (`test_kit_owners_are_the_configured_home_profiles`)
 
 **E11-S49** · Matt · could · M · missing
 

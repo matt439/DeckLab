@@ -5,7 +5,7 @@ from decklab.lib.state import pg, visibility
 def rows(snapshot, spaces):
     """Every configured switch, including Private ones, followed by unknown stored keys."""
     keys = {(owner, thing) for owner in spaces for thing in visibility.SPACE_THINGS}
-    keys.update((owner, "accessories") for owner in visibility.KIT_OWNERS)
+    keys.update((owner, "accessories") for owner in visibility.kit_owners())
     keys.update(snapshot)
     return [{"owner": owner, "thing": thing, "state": "Public" if (owner, thing) in snapshot else "Private",
              **snapshot.get((owner, thing), {"by": None, "by_id": None, "since": None})}
@@ -35,7 +35,7 @@ def change(args):
     owner, thing, on = args.owner, args.thing, args.value == "on"
     visibility.switch(owner, thing, on)
     if not (owner == "home" and thing in visibility.SPACE_THINGS
-            or owner in visibility.KIT_OWNERS and thing == "accessories"):
+            or owner in visibility.kit_owners() and thing == "accessories"):
         raise ValueError("Only the home switches can be changed from the command line. "
                          "A member changes their own switches on the page.")
     if thing not in switches.READY_THINGS:
@@ -58,7 +58,7 @@ def add_parser(sub):
     listed.add_argument("--dbname", help="the database to use instead of the settings' one (tests)")
     listed.set_defaults(func=listing)
     changed = actions.add_parser("set", help="Change a home switch; members change their own on the page.")
-    changed.add_argument("owner", help="home, or matt/user1/shared for accessories")
+    changed.add_argument("owner", help="home, or a home profile's id or shared for accessories")
     changed.add_argument("thing", choices=visibility.THINGS)
     changed.add_argument("value", choices=("on", "off"), help="on: Public; off: Private")
     changed.add_argument("-m", "--message", required=True, help="why (saved beside the fixed Public/Private audit message)")

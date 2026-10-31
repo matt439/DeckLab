@@ -205,7 +205,7 @@ Only if you want to change Forge itself, or no release fits your Deck Lab. It ne
    Deck Lab looks for Java where the usual JDK installers put it (Oracle's `C:\Program Files\Java`, Temurin's `Eclipse Adoptium`, `Microsoft`, `Zulu` and `Amazon Corretto`; the newest JDK, one with `javac` before a JRE), then `JAVA_HOME`, then (off Windows) the PATH. Set `"forge_java"` to the JDK's `java` (`java.exe` on Windows) if it picks the wrong one.
 2. **Check it:** `python -m decklab.lib.forge status` says whether Forge is ready, and its `build:` line whether it's the build this Deck Lab expects (and what to download if not). Then run `python -m decklab.lib.forge cardlog-check` once: it plays a few games several ways and turns on the card log when they match.
 
-Deck Lab runs up to 16 Forge workers at once, each with up to 1 GB of memory. That suits a 16-core PC with 32 GB or more. On a smaller one, set `"forge_workers"` in `config.json` to your number of cores or fewer (such as `"forge_workers": 4`), or admins can lower it on the Settings page.
+Deck Lab runs up to 16 Forge workers at once, each with up to 1 GB of memory. Unless `config.json` sets `"forge_workers"`, it sizes that to the PC: about one a physical core, and 1.5 GB of memory each after 6 GB left for everything else (an 8-core PC with 16 GB gets 4; a 16-core PC with 32 GB, 8). Set `"forge_workers"` to choose another number, or admins can lower it on the Settings page.
 
 ## 9. Keep it running and backed up
 

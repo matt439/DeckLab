@@ -139,6 +139,11 @@ def _write(cur, rows, todo):
         _emails(cur, pid, emails, {r[0] for r in cur.fetchall()})
     for pid in todo["remove"]:
         cur.execute("delete from profile where id = %s", (pid,))
+    # A kit switch belongs to a home profile (E11-S48: any id, not only matt and user1): one whose
+    # profile went, or left home, goes too, so a later profile reusing the id starts Private.
+    if cur.execute("select to_regclass('public.visibility') is not null").fetchone()[0]:
+        cur.execute("delete from visibility where thing = 'accessories' and owner <> 'shared' and owner not in "
+                    "(select id from profile where space_id = 'home')")
     for space in todo["drop_spaces"]:
         # Visibility is opt-in without foreign keys. A reused space id must never
         # inherit its predecessor's Public switches; delete inside this same change.

@@ -417,7 +417,7 @@ As Matt, I want one switch for each thing our space owns (collection, decks, gam
 - Given GET `/api/me` on the home network with User1 picked, then its `may` is User1's, including `visibility`; and after she flips a switch the page fetches it again.
 - Given the database can't be read and nothing is cached, when a rule asks for the switches, then everything counts as private.
 - Given User2's profile is removed and synced, then his visibility rows are deleted in the same change set.
-- Given the nightly, then the table is exported and covered by the restore check's digests, and `check` flags a row whose owner is neither a space nor matt, user1 or shared.
+- Given the nightly, then the table is exported and covered by the restore check's digests, and `check` flags a row whose owner is neither a space nor a kit owner (a home profile or shared; E11-S48).
 
 Decision (Matt, 2026-10-13): default is no visibility. A switch makes a thing visible to everyone with a profile, read-only, and is flipped only by its owner (home: Matt or User1; the last flip wins).
 
