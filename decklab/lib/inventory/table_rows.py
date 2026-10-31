@@ -32,12 +32,14 @@ Nothing here touches a database (or imports psycopg).
 import dataclasses
 import json
 
-from . import paths, rules
+from . import dice_rules, paths, rules
 from .model import QUEUE_FIELDS, Component, Order
 
 CARD_COLUMNS = ("name", "set_code", "collector_number", "finish", "quantity", "condition", "language", "notes")
 TOKEN_COLUMNS = ("front", "back", "set_code", "front_collector_number", "back_collector_number", "finish",
                  "quantity", "front_details", "back_details", "notes")
+# dice_counter's (migration 0020, E7-S24), in dice.csv's column order.
+DICE_COLUMNS = ("item_type", "die_size", "counter_kind", "design", "quantity", "notes")
 WATCH_COLUMNS = ("name", "set_code", "collector_number", "finish", "quantity", "for_deck", "printing",
                  "listed_aud", "listed_at", "in_stock", "checked", "notes", "state", "source")
 STATUS_COLUMNS = ("position", "status", "intact", "sleeves", "deck_box", "notes", "token_cards")
@@ -220,7 +222,7 @@ def _collect(inv, strict):
     reasons = _Reasons()
     out = {"collection_card": {}, "token_card": [], "watchlist_item": [], "product": {}, "product_item": {},
            "product_status": {}, "purchase_order": {}, "order_component": {}, "order_card_item": {},
-           "order_token_item": {}}
+           "order_token_item": {}, "dice_counter": []}
     for space, sheet in inv.collections.items():
         bad = reasons.about(sheet.path)
         try:
@@ -286,6 +288,7 @@ def _collect(inv, strict):
                 continue
             cells[6] = qty
             out["token_card"].append((row.id, space, *cells))
+    _dice_rows(inv, out, reasons, strict)
     status = inv.status
     bad = reasons.about(status.path)
     if status.error is not None:
@@ -356,6 +359,34 @@ def _collect(inv, strict):
             reasons.about(path)(f"{path}: no order record names it")
     _deck_rows(inv, out, reasons, strict)
     return out, reasons
+
+
+def _dice_rows(inv, out, reasons, strict):
+    """Each space's dice and counters (dice.csv, E7-S24) into dice_counter's rows (id, space,
+    *DICE_COLUMNS), quantity an int, with every reason the database can't hold one: a file that
+    can't be read, a row dice_rules refuses (the table's checks would), the wrong header."""
+    for space, sheet in inv.dice.items():
+        bad = reasons.about(sheet.path)
+        try:
+            paths.space_root(space)
+        except ValueError as e:
+            bad(str(e))
+            continue
+        if sheet.error is not None:
+            bad(f"{sheet.path} can't be read: {sheet.error}")
+            continue
+        for problem in sheet.problems:
+            bad(problem)
+        if sheet.strict_error and sheet.strict_error not in sheet.problems:
+            bad(sheet.strict_error)
+        if strict and sheet.exists and not sheet.rows and not sheet.problems:
+            bad(f"{sheet.path} has no rows (a space with none has no file)")
+        if sheet.problems:
+            continue
+        for row in sheet.rows:
+            cells = [row.text(column) for column in dice_rules.DICE_FIELDS]
+            cells[4] = int(cells[4])
+            out["dice_counter"].append((row.id, space, *cells))
 
 
 def _location_rows(inv, out, reasons, strict):
@@ -462,6 +493,7 @@ def tables(inv, strict=False):
 
         collection_card   {(space, set, number, finish): (name, quantity, condition, language, notes,
                           location)}  (location: "" unless locations.csv gives one, E8-S22)
+        dice_counter      [(id, space, *DICE_COLUMNS)] in file order (E7-S24; as token_card)
         token_card        [(id, space, *TOKEN_COLUMNS)] in file order   (id 0: a row the database
                           hasn't seen; positions are worked out when written, see pg._positions)
         watchlist_item    [(id, *WATCH_COLUMNS)] in file order

@@ -16,6 +16,8 @@ accessors that return None when the text isn't valid (CardRow.qty, TokenRow.qty,
                                                    collection rows' storage copies are, one row per
                                                    located (set, collector_number, finish); none
                                                    for a row with no location
+      dice          {space: Sheet of DiceRow}      a space's dice.csv (E7-S24): its owned dice and
+                                                   counters, apart from its token cards
       imports       {space: (ImportInfo, ...)}     names and sizes of its raw imports, no content
       status        Sheet of StatusRow             products/status.csv (its own rows: a status
                                                    row needs no product file, nor a file a row)
@@ -30,6 +32,7 @@ accessors that return None when the text isn't valid (CardRow.qty, TokenRow.qty,
       accessories   Sheet of AccessoryRow          magic/accessories.csv
       accessory_images  {file name: ImageMeta}     its pictures' sizes and sha256s (no bytes)
       locations_ready  whether the backend can save locations (the database: migration 0016)
+      dice_ready    whether the backend can record dice and counters (the database: migration 0020)
       backend       "files" or "db";  stale: None, or the warning to show while the database
                     backend serves its last good snapshot because the database isn't reachable
 
@@ -79,7 +82,7 @@ from pathlib import PurePosixPath
 from types import MappingProxyType
 from typing import Mapping
 
-from . import paths, rules
+from . import dice_rules, paths, rules
 
 INCOMING = ("preordered", "ordered")         # product statuses not in a collection yet
 PREVIEW = "~preview"                         # the end of a preview's revision (never saved)
@@ -249,6 +252,18 @@ class StatusRow(Row):
     sleeves = property(lambda self: self.get("sleeves"))
     deck_box = property(lambda self: self.get("deck_box"))
     token_cards = property(lambda self: self.get("token_cards"))
+    notes = property(lambda self: self.get("notes"))
+
+
+class DiceRow(Row):
+    """A dice.csv row: an owned die or counter (E7-S24), in dice_rules.DICE_FIELDS."""
+    COLUMNS = tuple(dice_rules.DICE_FIELDS)
+
+    type = property(lambda self: self.get("type"))
+    size = property(lambda self: self.get("size"))
+    kind = property(lambda self: self.get("kind"))
+    design = property(lambda self: self.get("design"))
+    quantity = property(lambda self: self.get("quantity"))
     notes = property(lambda self: self.get("notes"))
 
 
@@ -615,8 +630,11 @@ class Inventory:
     accessories: Sheet = field(default_factory=lambda: Sheet(paths.ACCESSORIES))
     accessory_images: Mapping = field(default_factory=dict)
     locations_ready: bool = field(default=True, compare=False)
+    dice: Mapping = field(default_factory=dict)
+    dice_ready: bool = field(default=True, compare=False)
 
-    MAPPINGS = ("collections", "tokens", "locations", "imports", "payloads", "decks", "deck_aliases", "accessory_images")
+    MAPPINGS = ("collections", "tokens", "locations", "imports", "payloads", "decks", "deck_aliases", "accessory_images",
+                "dice")
 
     def __post_init__(self):
         for name in self.MAPPINGS:
@@ -652,7 +670,7 @@ class Inventory:
 
     def spaces(self):
         """Every space with a collection, tokens or imports: home first, then by id."""
-        found = set(self.collections) | set(self.tokens) | set(self.imports) | {paths.HOME}
+        found = set(self.collections) | set(self.tokens) | set(self.imports) | set(self.dice) | {paths.HOME}
         return [paths.HOME] + sorted(found - {paths.HOME})
 
     def collection(self, space=paths.HOME):
@@ -661,6 +679,10 @@ class Inventory:
 
     def token_set(self, space=paths.HOME):
         return self.tokens.get(space) or Sheet(paths.tokens(space))
+
+    def dice_set(self, space=paths.HOME):
+        """A space's dice and counters Sheet (E7-S24); an empty one (exists False) when it has none."""
+        return self.dice.get(space) or Sheet(paths.dice(space))
 
     def location_sheet(self, space=paths.HOME):
         """A space's locations Sheet; an empty one (exists False) when no row has a location."""
@@ -723,7 +745,7 @@ class Inventory:
     def unreadable(self):
         """{path: why} for every source that couldn't be read at all."""
         out = {}
-        for sheet in (*self.collections.values(), *self.tokens.values(), self.status,
+        for sheet in (*self.collections.values(), *self.tokens.values(), *self.dice.values(), self.status,
                       *self.payloads.values(), self.watchlist):
             if sheet.error is not None:
                 out[sheet.path] = sheet.error
@@ -797,6 +819,16 @@ class Inventory:
         if made:
             tokens[space] = Sheet(paths.tokens(space), TokenRow.COLUMNS, made, True)
         return self.replace(tokens=dict(sorted(tokens.items())))
+
+    def with_dice(self, space, rows):
+        """space's dice and counters holding rows (DiceRow's, which keep their hidden id, or
+        mappings), dice.csv's columns, in dice_rules.sort_key order (ties keep the given order);
+        no rows: no file."""
+        made = tuple(sorted((coerce(DiceRow, row) for row in rows), key=lambda r: dice_rules.sort_key(r.as_dict())))
+        dice = {k: v for k, v in self.dice.items() if k != space}
+        if made:
+            dice[space] = Sheet(paths.dice(space), DiceRow.COLUMNS, made, True)
+        return self.replace(dice=dict(sorted(dice.items())))
 
     def with_status_rows(self, rows):
         """products/status.csv holding rows (StatusRow's or mappings), always with the current

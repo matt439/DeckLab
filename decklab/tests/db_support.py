@@ -242,6 +242,7 @@ UNDO_MIGRATION = {
     17: ("drop table public.field_policy",),
     18: ("drop table public.deck_draft",),
     19: ("drop table public.new_deck_draft",),
+    20: ("drop table public.dice_counter",),
 }
 
 

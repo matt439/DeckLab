@@ -11,6 +11,8 @@ ABSENT_MISSING_SNAPSHOT = {
     "url": None, "in_stock_printings": 0, "error": None,
     "back_in_stock": False, "newly_in_stock": False, "carried": False,
 }
+# Every snapshot shop's absent default, in order (E5-S08's second shop, 2026-10-31).
+ABSENT_MISSING_SNAPSHOTS = [ABSENT_MISSING_SNAPSHOT, {**ABSENT_MISSING_SNAPSHOT, "shop": "Games Portal"}]
 
 
 def _home_selector(value):
@@ -32,10 +34,15 @@ def _home_selector(value):
                and not re.search(r"[\\:\x00-\x1f\x7f]", part) for part in parts[1:])
 
 
-def _absent(value):
-    return (type(value) is dict and value.keys() == ABSENT_MISSING_SNAPSHOT.keys()
+def _absent(value, default=ABSENT_MISSING_SNAPSHOT):
+    return (type(value) is dict and value.keys() == default.keys()
             and all(type(value[key]) is type(expected) and value[key] == expected
-                    for key, expected in ABSENT_MISSING_SNAPSHOT.items()))
+                    for key, expected in default.items()))
+
+
+def _all_absent(value):
+    return (type(value) is list and len(value) == len(ABSENT_MISSING_SNAPSHOTS)
+            and all(_absent(item, default) for item, default in zip(value, ABSENT_MISSING_SNAPSHOTS)))
 
 
 def _deck_views(mine):
@@ -56,8 +63,9 @@ def _deck_views(mine):
         rows = owned.get("rows") if isinstance(owned, dict) else None
         for row in rows if isinstance(rows, list) else ():
             if (isinstance(row, dict) and type(row.get("missing")) is int and row["missing"] > 0
-                    and _absent(row.get("shop_snapshot"))):
+                    and _absent(row.get("shop_snapshot")) and _all_absent(row.get("shop_snapshots", ABSENT_MISSING_SNAPSHOTS))):
                 row.pop("shop_snapshot")
+                row.pop("shop_snapshots", None)
 
 
 def normalise(dump, profiles):

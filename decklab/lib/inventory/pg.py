@@ -83,11 +83,11 @@ from decklab.lib.state import Actor, Conflict, Invalid, Unavailable
 from decklab.lib.state import pg as state_pg
 
 from . import (DECK_SAVES_PAUSED, Summary, changes, files, paths, pg_decks, pg_aliases, pg_check_links,
-               pg_locations)
+               pg_dice, pg_locations)
 from .model import ImageMeta
 # The snapshot-as-rows code is shared with the files backend (table_rows.py); these names stay
 # here for the callers and tests that use them as pg's.
-from .table_rows import (CARD_COLUMNS, COMPONENT_COLUMNS, ITEM_COLUMNS, ITEM_TABLES,  # noqa: F401
+from .table_rows import (CARD_COLUMNS, COMPONENT_COLUMNS, DICE_COLUMNS, ITEM_COLUMNS, ITEM_TABLES,  # noqa: F401
                          ORDER_COLUMNS, PAYLOAD_FIELDS, STATUS_COLUMNS, TOKEN_COLUMNS, WATCH_COLUMNS,
                          JsonColumn, Unrepresentable, deck_tables, reasons, representable, tables)
 # The table rows as a snapshot (E11-S39) are pg_snapshot.py's; these are the same objects, kept here
@@ -216,6 +216,7 @@ def _write_all(cur, t):
     t = pg_check_links.compatible(t, component_columns)
     located = pg_locations.ready(cur)
     t, card_columns = pg_locations.compatible(t, located), pg_locations.values(located)
+    t = pg_dice.compatible(t, pg_dice.ready(cur))
     for table in PARENTS_FIRST:
         keys, values, rows = _keyed_rows(table, t, status_columns, component_columns, card_columns)
         _insert(cur, table, keys + values, [(*_plain_key(k), *map(_db, v)) for k, v in rows.items()])
@@ -230,6 +231,12 @@ def _write_all(cur, t):
         numbered[row[1]] += 1
         tokens.append((row[1], numbered[row[1]] * STEP, *row[2:]))
     _insert(cur, "token_card", ("space_id", "position", *TOKEN_COLUMNS), tokens)
+    numbered.clear()
+    dice = []
+    for row in t[pg_dice.TABLE]:
+        numbered[row[1]] += 1
+        dice.append((row[1], numbered[row[1]] * STEP, *row[2:]))
+    _insert(cur, pg_dice.TABLE, ("space_id", "position", *DICE_COLUMNS), dice)
     _insert(cur, "watchlist_item", ("position", *WATCH_COLUMNS),
             [((n + 1) * STEP, *row[1:]) for n, row in enumerate(t["watchlist_item"])])
 
@@ -246,6 +253,11 @@ def _diff(cur, old, new):
     located = pg_locations.ready(cur)
     new, old = (pg_locations.compatible(t, located) for t in (new, old))
     card_columns = pg_locations.values(located)
+    dice_ready = pg_dice.ready(cur)
+    new, old = (pg_dice.compatible(t, dice_ready) for t in (new, old))
+    # Rows kept by id, positions STEP apart within a space where grouped (dice_counter: migration 0020).
+    by_id = (("token_card", TOKEN_COLUMNS, True), ("watchlist_item", WATCH_COLUMNS, False)) + \
+        (((pg_dice.TABLE, DICE_COLUMNS, True),) if dice_ready else ())
     count = 0
     pending = []
 
@@ -275,7 +287,7 @@ def _diff(cur, old, new):
     for table in reversed(PARENTS_FIRST):
         keys, _, rows = _keyed_rows(table, old, status_columns, component_columns, card_columns)
         add(f"delete from {table} where {where(keys)}", [_plain_key(key) for key in rows.keys() - new[table].keys()])
-    for table in ("token_card", "watchlist_item"):
+    for table, _, _ in by_id:
         kept = {r[0] for r in new[table] if r[0]}
         add(f"delete from {table} where id = %s", [(row[0],) for row in old[table] if row[0] not in kept])
     # Inserts and updates, parents first.
@@ -296,7 +308,7 @@ def _diff(cur, old, new):
              for n, row in enumerate(found)])
     flush()
     # Token and watchlist rows by id, keeping the stored positions of rows that didn't move.
-    for table, columns, grouped in (("token_card", TOKEN_COLUMNS, True), ("watchlist_item", WATCH_COLUMNS, False)):
+    for table, columns, grouped in by_id:
         cur.execute(f"select id, position{', space_id' if grouped else ''} from {table}")
         stored = {r[0]: (r[1], r[2] if grouped else None) for r in cur.fetchall()}
         before = {r[0]: r[1:] for r in old[table]}
@@ -523,7 +535,8 @@ class PgInventory:
         if row is None:
             raise NotImported(NOT_IMPORTED)
         # Whether migration 0016 is there counts too: once it's applied the locations can be read.
-        return (self.dbname or db.settings()["name"], row[1], row[0], pg_locations.ready(c))
+        # So does migration 0020's: once it's applied the dice and counters can be read.
+        return (self.dbname or db.settings()["name"], row[1], row[0], pg_locations.ready(c), pg_dice.ready(c))
 
     def _read(self, c, remember=True):
         """The snapshot the connection sees (the cached one while the revision hasn't moved)."""
@@ -1046,7 +1059,7 @@ def write_model(inv, actor, message, *, contents=None, replace=False, dbname=Non
     if reasons:
         raise Unrepresentable(reasons)
     t = tables(pg_decks.without_deck_parts(inv), strict=True)
-    spaces = set(inv.collections) | set(inv.tokens) | set(inv.imports)
+    spaces = set(inv.collections) | set(inv.tokens) | set(inv.imports) | set(inv.dice)
     own = conn is None
     c = db.connect("app", dbname=dbname) if own else conn
     try:
@@ -1065,6 +1078,8 @@ def write_model(inv, actor, message, *, contents=None, replace=False, dbname=Non
                     raise ValueError(ALREADY)
                 for table in INVENTORY_TABLES:
                     cur.execute(f"delete from {table}")
+                if pg_dice.ready(cur):
+                    cur.execute(f"delete from {pg_dice.TABLE}")
             _write_all(cur, t)
             _add_imports(cur, imports)
             cur.execute("update inventory_revision set revision = revision + 1, imported_at = now() "

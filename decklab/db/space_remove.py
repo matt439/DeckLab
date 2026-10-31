@@ -20,6 +20,7 @@ _TABLE_KEYS = {
     "emails": ("profile_email", ("profile_id", "email")),
     "collection": ("collection_card", ("space_id", "set_code", "collector_number", "finish")),
     "tokens": ("token_card", ("id",)),
+    "dice": ("dice_counter", ("id",)),
     "imports": ("collection_import", ("id",)),
     "decks": ("deck", ("id",)),
     "texts": ("deck_text", ("deck_id",)),

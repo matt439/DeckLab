@@ -292,8 +292,10 @@ class GamesPortalPageTests(unittest.TestCase):
             code = shops.main(["lookup", "Sol Ring", "--shop", "gamesportal"])
         self.assertEqual(code, 0)
         self.assertEqual(pages.urls[0], "https://gamesportal.com.au/robots.txt")
-        self.assertIn("SLD 1011 foil Near Mint: A$35.00, 1 in stock", out.getvalue())
-        self.assertIs(shops.ADAPTER, mtgmate.ADAPTER, "the snapshot still reads MTGMate")
+        # its pages say only whether a listing is available, never how many
+        self.assertIn("SLD 1011 foil Near Mint: A$35.00, in stock", out.getvalue())
+        self.assertIn("C16 272 nonfoil Near Mint: A$5.00, out of stock", out.getvalue())
+        self.assertIs(shops.ADAPTER, mtgmate.ADAPTER, "MTGMate stays the first shop")
         with mock.patch.object(shops, "_fetch", side_effect=AssertionError("no network")) as fetch, \
                 mock.patch("sys.stderr"), self.assertRaises(SystemExit):
             shops.main(["lookup", "Sol Ring", "--shop", "nowhere"])

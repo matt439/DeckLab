@@ -191,6 +191,10 @@ inventory writes answer 503 with "reason": "database":
     GET  /api/variants?id=&version=      the tests of a deck's list
     POST /api/variant/run, /api/variant/stop, /api/variant/more
                                          body {"profile", ...}: start a test, Stop it, play more
+    GET  /api/search?q=<text>[&group=decks|collection|cards][&limit=<n>]
+                                         the top bar's global search (E11-S31, lib/api/global_search.py):
+                                         visible decks, the viewer's own collection with free and in-use
+                                         counts, then other Scryfall cards; about 5 each, 50 for one group
     GET  /api/cards/search?q=<text>&limit=<n>[&detail=1]
                                          names for autocomplete (detail: type, cost, printing)
     GET  /api/cards/printings?name=<name>   the printing picker: owned counts, prices
@@ -281,6 +285,11 @@ inventory writes answer 503 with "reason": "database":
                                          card's photo on the PC and propose its faces (E7-S32); nothing is written
     POST /api/tokens/scan/add            body {"profile", "space"?, "sha256", "rows"} (1 to 50): the scanned token
                                          cards added as one change, never merged into a listed row (409 as save)
+    GET  /api/dice[?space=<id>]          a space's owned dice and counters (E7-S24; ready false before
+                                         migration 0020; 403 for a space the viewer may not see)
+    POST /api/dice/save                  body {"profile", "space"?, "sha256", "action": "add"|"edit"|"remove",
+                                         "base"?, "row"?, "reason"?}: change one row, one change set
+                                         (409 + "latest"; "reason": "migration" before 0020)
     GET  /, /app.js, /style.css, ...     the page: only files that exist in decklab/web/
                                          (/?profile=<id>&theme=light|dark preselects, for screenshots)
 HEAD works wherever GET does.

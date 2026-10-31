@@ -131,6 +131,11 @@
   font-size: var(--fs-sm); overflow-wrap: anywhere; min-width: 0; }
 .shop-snapshot small, .shop-snapshot-when { font-size: var(--fs-xs); }
 .shop-queue-row > .shop-snapshot { padding: 0 var(--s-3) var(--s-1); }
+/* Every shop's snapshot, one line a shop, each with its own fetch time (Games Portal beside MTGMate, 2026-10-31). */
+.shop-snapshot-list, .shop-missing-snapshots { display: grid; gap: var(--s-1); min-width: 0; }
+.shop-queue-row > .shop-snapshot-list { padding: 0 var(--s-3) var(--s-1); }
+.shop-missing-facts .shop-missing-snapshots { flex-basis: 100%; }
+.shop-missing-facts .shop-missing-snapshots .shop-snapshot { display: flex; }
 /* The lab table keeps Ref AUD on one line, the price and one snapshot marker; the full snapshot is in the extra row (E5-S26). */
 .shop-queue-table .shop-q-price { white-space: nowrap; }
 .shop-q-snap { display: inline-block; margin-left: var(--s-1); color: var(--ink-3); font-size: var(--fs-meta); cursor: help; }

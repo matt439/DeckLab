@@ -299,6 +299,7 @@ def _view_tokens(summary, version, sections, info):
     result = _deck_tokens(summary["id"], version, sections, inv, inc,
                           tokens.reserve.held_elsewhere(holds, summary["id"]))
     result = _with_shared(_with_examples(result), summary, inv, inc, holds)
+    result = _with_dice(result, summary.get("space", spaces.HOME))
     from decklab.lib.tokens import products as product_tokens
     product = product_tokens.for_route(summary["id"]) if guard.sees_home_records() \
         and summary["id"].startswith("product/") else None
@@ -308,6 +309,19 @@ def _view_tokens(summary, version, sections, info):
         if product is not None or packed["written"] or packed["choices"]:
             result = dict(result, packed=packed)
     return result
+
+
+def _with_dice(result, space):
+    """result with whether the space's owned dice and counters cover its counter needs (E7-S24:
+    tokens.dice_cover, approximate). Only the Tokens part's readers (the space's inventory
+    readers) get here, so the owned counts are told only to them."""
+    if not isinstance(result, dict) or not isinstance(result.get("counters"), dict):
+        return result
+    from decklab.lib import inventory as inventory_store
+    from decklab.lib.tokens import dice_cover
+    snapshot = inventory_store.current()
+    rows = [row.as_dict() for row in snapshot.dice_set(space).rows] if snapshot.dice_set(space).error is None else []
+    return dict(result, counters=dice_cover.cover(result["counters"], rows, snapshot.dice_ready))
 
 
 def _packed(summary, inv, holds, result, product=None):
@@ -714,4 +728,4 @@ def _saved_shop_prices(owned, space, requested_id):
         return
     from . import shop_missing_prices, shop_prices
     captured = shop_prices.capture()
-    shop_missing_prices.enrich(rows, captured, shop_prices._loaded_resolver())
+    shop_missing_prices.enrich_shops(rows, shop_prices.by_shop(captured), shop_prices._loaded_resolver())

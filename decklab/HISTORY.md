@@ -2,6 +2,122 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Owned dice and counters (2026-10-31; E7-S24 slice 2)
+
+Matt accepted the recommended record shape (Commander now matters most to him): one row per kind of
+owned item, kept apart from the token cards. A row is a **die** (d4, d6, d8, d10, d12, d20 or
+spindown, a spindown counting as a d20) or a **counter** with a kind (`+1/+1`, `poison`,
+`loyalty`, ...; blank for a generic counter that stands for any kind), a colour or design, a
+quantity from 0 to 9999 (0 keeps a used-up row) and notes. The rows are a new per-space part of the
+inventory snapshot (`dice.csv` beside `tokens.csv` for the files backend and the export;
+`lib/inventory/dice_rules.py`), written by the `dice.add`, `dice.edit` and `dice.remove`
+operations (`lib/inventory/ops_dice.py`: the list's sha, a row named by its values, never two rows
+for the same item) and stored in migration 0020's audited `dice_counter` table (per space, by id,
+as `token_card`; `pg_dice.py`). Migration 0020 is written but **not applied**: until it is, every
+space reads as having none, writes are refused with the migration's name, and everything else works,
+as 0016's locations did.
+
+The Tokens page has a **Dice and counters** panel (`web/dice.js`, `GET /api/dice`,
+`POST /api/dice/save`) for the space's token editors, with the token cards' privacy (its own people
+only, no admin override); before 0020 it says they can't be recorded yet. The deck page's Counters
+and dice part now marks each need **Covered**, **Any-kind stands in** or **Not covered**
+(`lib/tokens/dice_cover.py`, approximate): a die the cards roll needs that size; a counter kind is
+covered first by counters of that kind, then each kind left takes one die or generic counter while
+any remain. A die size the records don't have (a d100 the cards roll) says Deck Lab doesn't record it,
+rather than "No d100 recorded". On the command line, `python -m decklab.db dice list|add|edit|remove` (`--expect`, `-m`,
+a removal's `--reason`, `--actor`, `--dry-run`). Activity names the rows in their space only; the
+export, the member export and removal, admission and the departed-member check know the table once
+it exists (before 0020 the nightly export skips only its CSV and still writes `magic/`). Nothing here changes a decklist, the playable pool, the watchlist or a deck table.
+
+Tests: `test_dice_counters` (rules, operations, rows both ways, migration file, cover, Activity, CLI),
+`test_dice_counters_api` (privacy, writes, conflicts, before 0020, the deck page's marks),
+`test_dice_counters_ui` and a guarded `test_dice_counters_pg` that skips without a disposable database.
+Left: applying 0020 on the live database, with Matt's OK.
+
+## Two shops in the nightly snapshot (2026-10-31; E5-S08)
+
+- Matt decided on 2026-10-31 that the nightly snapshot reads Games Portal as well as MTGMate, and that Shopping and deck Prices show both. `lib/shops/` now has `SNAPSHOT_ADAPTERS` (MTGMate, then Games Portal), and every per-shop part takes an adapter: `snapshot_path(adapter)` (`decklab/data/shops/mtgmate.json` and `gamesportal.json`; a test's own MTGMate path has the other shop's file beside it, `shop.gamesportal.json`), `load(adapter=)` (which refuses a file naming another shop), `_lock(adapter)` (`mtgmate.lock`, `gamesportal.lock`) and `refresh(adapter=)`, whose words name its shop. MTGMate stays the default everywhere, so the old single-shop calls are unchanged.
+- **Side by side, not one after the other** (decided here): `refresh_shops` runs each shop's refresh in its own thread. Each shop is a different host, read at its own robots.txt pace (a minute between requests at each; Games Portal names no Crawl-delay, so the session's own 60 seconds), each within the existing `NIGHTLY_BUDGET` of 45 minutes, so the night's shop step still takes at most about 45 minutes, not 90, inside the task's two-hour limit. Run sequentially, two full budgets plus the backup and export would come close to that limit. Each shop's run reads the queue and the saved-home missing names itself (as one shop's did), checks its own age gate and lock, and saves its own file.
+- **Failures are per shop:** a shop that can't be reached leaves its own names unknown (as before, never a converted price) while the other shop's run saves normally; an exception in one shop's run is logged under that shop's name ("Nightly: Games Portal prices failed: …") and never stops the other's, and the night is never marked failed for it. A shop whose snapshot is less than 20 hours old is skipped on its own.
+- The command line: `python -m decklab.lib.shops snapshot [--shop KEY] [--force] [--dry-run]` reads every shop side by side (each line prefixed with its shop), or only the one named; `show` puts every shop's line beside each queued row; `lookup` is unchanged except that Games Portal's listings say "in stock" or "out of stock", never a count.
+- **The answers:** Shopping's `GET /api/shopping`, the queue write's answer and deck Prices keep MTGMate's single `shop_snapshot` exactly as before and add `shop_snapshots`, every shop's entry in `SNAPSHOT_ADAPTERS` order. `shop_prices.capture()` reads each shop's file on its own (`{key: snapshot}`, or None when no shop has one), so a missing or unreadable file leaves only that shop out of queue rows; missing cards (Shopping's combined rows and home deck Prices) list every shop, a shop without a snapshot as **not checked**. The missing-card projection checks each shop's file as its own (its name, site and its own listing pages: MTGMate's `/cards/` pages, Games Portal's `/products/` pages with at most `?variant=<digits>`, or its search page), and a listing that is sold out and shows no price is now skipped rather than making the whole card unknown (it is neither buyable nor a price to claim); a card whose only nonfoil listings are like that reads **out of stock** with no price, never "not listed" (review fix: the shop does list it). The home-only visibility checks before any capture are unchanged.
+- **The pages** (`web/shopping-snapshot.js`): a queued card shows one line a shop, each with its own price, stock, printing link (only to that shop's own pages) and fetch time; Games Portal's line says "in stock" with no count. The lab table's one marker speaks for every shop and takes the best shop's colour, and **Back in stock** marks the row when either shop finds a waiting row in stock. Missing cards and deck Prices show a line a shop too, each checked as its shop's, so a malformed entry is unknown on its own line. `shopping.css` stacks the lines.
+- Tests: `decklab/tests/test_shops_two_shops.py` (19: the files and locks one a shop, a file naming another shop refused, a snapshot over two fixture shops, one shop down leaving its own prices unknown, an exception at one shop, a fresh shop skipped while a due one is read, the nightly shops running side by side (a barrier proves both run at once) each within the one budget and logged under their names, `snapshot --shop` and `show`, the queue's and missing cards' answers with both shops, a missing or unreadable file, a card listed only sold out without a price reading out of stock, and Games Portal's allowed links) and `decklab/tests/test_shops_two_shops_ui.py` (6 Node DOM cases: a line a shop with its own price, link and fetch time; one shop unknown beside the other; Back in stock from either shop and a link kept to its own shop; the marker's words for both; missing cards' lines, a sold-out unpriced one out of stock without a link; deck Prices' lines). Existing tests now expect one cache read a shop, the golden normaliser also strips the all-absent `shop_snapshots`, and Games Portal's `lookup` says "in stock" without a count.
+- Not run: a real snapshot of either shop, the nightly task, a browser or device. The first real nightly run of Games Portal is the live check.
+
+## Commander role targets on the Stats tab (2026-10-31; E9-S26 role targets)
+
+Matt chose the Command Zone's deck-building template for the Stats roles' targets (he mostly plays
+Commander now). A Commander deck's Stats tab now shows the target beside the role bars the template
+covers, with **Below**, **At** or **Above**: Ramp (10), Card draw (the template's card advantage, 12)
+and Board wipes (its mass disruption, 6), which stay listed at 0. Under the bars, **Role targets:
+Command Zone template, episode 658 (2025-02-18)** lists every category with its target, this list's
+count and what Deck Lab counts for it: lands (38, the Lands panel's count), targeted disruption (12:
+removal or counterspell cards that aren't board wipes, since Scryfall's removal tag holds its sweeper
+tag) and plan cards (about 30), which no Deck Lab role measures, so "Not counted". Card advantage and
+mass disruption are narrower in Deck Lab than in the template, and the rows say so. A casual deck
+shows none of it. The Sources panel cites the episode.
+
+The figures are in `lib/stats/role_targets.py` with the episode's address and the date checked
+(2026-10-31). The episode's own page (its show notes and chapters) names the categories but not the
+numbers, which are spoken; the numbers come from three written summaries of episode 658, which the
+module lists. All three give 38 lands, 10 ramp, 12 card advantage, 12 targeted disruption and 6 mass
+disruption; note.com gives ramp as 10 to 12 (12 for a commander costing 4 or more), and for plan cards
+note.com and farseek give about 30 (the categories overlapping) while the GitHub copy gives about 22,
+adding to exactly 100. Deck Lab uses 10 and about 30. `deck_stats` returns them as `role_targets` (None for
+constructed decks), so `GET /api/deck` carries them to whoever may see the deck; they read only the
+list. EDHREC averages per role weren't added: the EDHREC cache holds card lists, not role counts.
+
+## Global search in the top bar (2026-10-31; E11-S31)
+
+Matt chose the sources and grouping on 2026-10-31: the decks the viewer may see, the viewer's own
+collection, then every other Scryfall card, about five of each with a See all, and nothing outside the
+viewer's own space. `GET /api/search?q=` (`lib/api/global_search.py`) answers those three groups in that
+order. Decks are those of `guard.visible_decks` in the viewer's own space only (another space's Public
+decks stay out; home's for a script naming nobody; no admin override), matched on the title as the
+library's title filter matches it (NFKC, lower case), starts first, so See all's total is what the library
+shows. **In your collection** is the viewer's own space only, and only when `guard.sees_inventory` allows
+it; its names match as `cards.search_names` matches them (words' starts in order too, "llan elv"), and
+each card has the Collection page's owned, on-the-way, in-use and free counts from the same pool read,
+never a holder's name, and an unreadable collection says only that. **Other cards** is
+`cards.search_names` over the local card index, leaving out every name the collection holds, so an owned
+card never shows as another card. A request
+naming nobody, or a login that isn't set up, gets only Other cards. Bounds: 100 characters of text, 5
+items a group (1-50 with `limit`), 50 for one group with `group=` (See all), totals counted to 200.
+
+`global-search.js` puts the field before the avatar in the lab from 1000 px and the casual header from
+600 px (300 px on the iPad in portrait, 280 in the lab, 200 between 1000 and 1199 px; 16 px text below the
+lab so iOS doesn't zoom) and, under 600 px and on a phone on its side (whose lab top bar has no room beside
+its nav pills), a search icon that opens the same search as a sheet. The field carries the bar's auto
+margin, so it sits beside the avatar, not after the nav pills. Results open a deck's page or the card
+viewer; See all goes to the library filtered by title (`#/library?all=1&q=`), the Collection page's search
+("See all in Collection", with no count, since that search also matches rules text), or the card viewer
+over up to 50 matches. Typing waits 200 ms, and an answer to older text, from before another
+person was chosen, or for a closed sheet is dropped. `/` focuses it outside text fields, menus and
+dialogs (with single-character shortcuts on), and the keyboard help lists it; the Editor keeps `/` as its
+existing alias of F, which is left for Matt to decide (visual-design.md 3.3 gives `/` to the global
+search). Pages' own searches already use F.
+
+Tests: `test_global_search.py` (14, API and privacy: a member, User1, Matt, another space's Public decks,
+a home page naming nobody, a login that isn't set up, a script; owned cards matched as Other cards match
+them; decks matched as the library matches titles), `test_global_search_ui.py` (8 Node DOM cases) and
+`test_device_layout_ui.py` (the field beside the avatar, the icon on a phone on its side). No server restart,
+migration or live data read was needed.
+
+## Find cards filters by colour identity (2026-10-31; E11-S30 question 6)
+
+Matt decided visual-design.md's question 6: Collection's colour filter matches colour identity, as the
+result pips already show it, since he mostly plays Commander now. The Find cards selector, renamed
+**Colour identity**, offers Any, **Within** each of the 31 colour sets (single colours first, then
+pairs and so on, in WUBRG order) and **Colourless only**. A card fits a Within choice when every
+colour of its identity is among the chosen ones, so colourless cards fit every choice, as they would
+in a Commander deck of those colours; a white card with a green-blue activated ability no longer shows
+under Within White. `GET /api/collection`'s `color` takes one to five of W/U/B/R/G in any order (or C)
+and refuses repeats or other letters; the page puts an address's value in WUBRG order and drops one it
+can't read, so an older bookmark (card colour's `color=G`) still loads, now as Within Green. The
+library's own colour filter (E1-S05, Includes) is unchanged. Only the household's touch/Safari check
+remains for E11-S30.
+
 ## Database qualification on throwaway databases (2026-10-31; E11-S39)
 
 - On Matt's authorization, every database-integration module (the 104 `decklab/tests/test_*.py` modules that use `db_support`) ran with `python -m unittest` against throwaway `decklab_t_*` copies of the migrated template, never the live database: 1,892 tests, 0 failures or errors, 4 skipped for their stated non-database reasons, in about 27 minutes. That qualifies the PostgreSQL snapshot split (`E11-S39`, built): its locations, deck persistence and rollback cases and `test_inventory_pg_decks`' `_select` patch passed.

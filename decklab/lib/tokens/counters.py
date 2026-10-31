@@ -16,17 +16,18 @@ counter target spell"). Besides the text:
 - "roll a d20" (or "a six-sided die") is a die of that many sides.
 
 Counters players get (poison, energy, experience, rad, ticket) are grouped as
-"player"; the rest, on permanents, as "permanent"; dice as "die". Recording
-the dice and counters owned is the story's later part: nothing here reads or
-writes the inventory, a decklist or a table.
+"player"; the rest, on permanents, as "permanent"; dice as "die". Whether
+the dice and counters owned cover them is dice_cover.py's: nothing here reads
+or writes the inventory, a decklist or a table.
 """
 import re
 
 from decklab.lib import cards
 
 NOTE = ("Read from the cards' rules text, types and keywords, so it's approximate: a card may only "
-        "check for a counter, or put it on an opponent's permanent. Deck Lab doesn't record your dice "
-        "and counters yet, or say how many a game needs.")
+        "check for a counter, or put it on an opponent's permanent. Whether your dice and counters cover "
+        "them is approximate too (a die or a counter with no kind stands for any kind), and Deck Lab never "
+        "says how many a game needs.")
 GROUPS = ("permanent", "player", "die")         # also the order shown
 PLAYER_KINDS = frozenset({"poison", "energy", "experience", "rad", "ticket"})
 

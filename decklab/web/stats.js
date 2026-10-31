@@ -547,18 +547,64 @@ function barList(items, labelOf, hintOf) {
 
 function compositionPanel(st, data) {
   const types = (st.types || []).filter((t) => t.count > 0);
-  // Roles the deck has none of aren't listed ("Counterspells 0" says nothing).
-  const roles = (st.roles || []).filter((r) => r.count > 0);
+  // Roles the deck has none of aren't listed ("Counterspells 0" says nothing), unless the Commander template
+  // gives the role a target: then "0, target 6" says the deck has none of something it should.
+  const targets = st.role_targets || null;
+  const targetOf = (role) => (targets && targets.by_role && targets.by_role[role]
+    ? (targets.categories || []).find((c) => c.category === targets.by_role[role]) : null);
+  const roles = (st.roles || []).filter((r) => r.count > 0 || targetOf(r.role));
+  const roleLabel = (r) => {
+    const name = (ROLE_WORDS[r.role] || [capitalise(r.role)])[0], target = targetOf(r.role);
+    return target ? [name, " ", roleTargetMark(target, r.count)] : name;
+  };
   return el("section", { class: "panel", "aria-labelledby": "h-types" },
     el("h3", { id: "h-types", text: "Card types and roles" }),
     el("p", { class: "sub", text: "Copies of each card type (a card can have two, like an artifact creature). Tap a row to list its cards." }),
     barList(types, (t) => capitalise(t.type)),
     el("h4", { text: "Roles", style: "margin-top: 16px" }),
-    roles.length ? barList(roles, (r) => (ROLE_WORDS[r.role] || [capitalise(r.role)])[0],
+    roles.length ? barList(roles, roleLabel,
       (r) => (ROLE_WORDS[r.role] || ["", ""])[1]) : el("p", { class: "sub", text: "No cards with a listed role." }),
+    targets ? roleTargetsPart(targets) : null,
     data ? rolePoolPart(data) : null,
     explain("Where do roles come from?", "Roles come from Scryfall's community tags, so a card can have several roles or none. " +
       "Removal deals with the other player's cards; ramp gives you extra mana sooner; card draw gets you more cards."));
+}
+
+// Commander role targets (E9-S26): the Command Zone template's numbers (lib/stats/role_targets.py) -------------
+
+const TARGET_STATUS = { below: ["warn", "Below"], at: ["good", "At"], above: ["info", "Above"] };
+
+/** "target 10" and whether the count is below, at or above it, for a role bar the template gives a target. */
+function roleTargetMark(target, count) {
+  const [kind, word] = TARGET_STATUS[count < target.target ? "below" : count === target.target ? "at" : "above"];
+  return el("span", { class: "role-target" },
+    el("small", { class: "sub", text: `target ${target.about ? "about " : ""}${target.target} ` }), status(kind, word));
+}
+
+function roleTargetSource(targets) {
+  return `Command Zone template, episode ${targets.episode} (${targets.episode_date})`;
+}
+
+/** Every category of the template with its target and this deck's count, saying what Deck Lab counts for each
+ * and when it has nothing to count (plan cards). */
+function roleTargetsPart(targets) {
+  const rows = (targets.categories || []).map((c) => el("tr", {},
+    el("th", { scope: "row" }, c.label, el("div", { class: "sub role-target-measure", text: c.measure })),
+    el("td", { class: "num", text: `${c.about ? "about " : ""}${c.target}` }),
+    el("td", { class: "num", text: c.count == null ? "Not counted" : num(c.count) }),
+    el("td", {}, c.status ? status(...TARGET_STATUS[c.status]) : null)));
+  return el("details", { class: "more role-targets-part" },
+    el("summary", { text: `Role targets: ${roleTargetSource(targets)}` }),
+    el("p", { class: "sub", text: "How many cards of each kind the Command Zone's deck-building template suggests for " +
+      "a Commander deck, beside this list's count. One card can count in more than one category, and the " +
+      "template is a starting point, not a rule. Deck Lab's roles come from Scryfall's tags, so each row says what " +
+      `it counts. Figures checked ${targets.checked}.` }),
+    el("div", { class: "table-wrap" }, el("table", { class: "data role-targets" },
+      el("thead", {}, el("tr", {}, el("th", { scope: "col", text: "Template" }),
+        el("th", { scope: "col", class: "num", text: "Target" }),
+        el("th", { scope: "col", class: "num", text: "This deck" }),
+        el("th", { scope: "col" }, el("span", { class: "sr-only", text: "Against the target" })))),
+      el("tbody", {}, rows))));
 }
 
 /** "Free cards by role" under a Commander deck's role bars (E9-S26), or null: only for a deck (not a product or

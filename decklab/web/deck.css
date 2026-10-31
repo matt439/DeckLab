@@ -478,3 +478,5 @@ table.data tfoot .total-cost { font-weight: var(--fw-semibold); text-align: left
 .edhrec-page .field { max-width: 24rem; margin-bottom: var(--s-2); }
 .edhrec-group h3 { margin-top: var(--s-4); }
 .edhrec-row > .btn { min-width: var(--tap); }
+/* Whether owned dice and counters cover a need (E7-S24). */
+.token-counter .dice-cover { margin-left: var(--s-1); }

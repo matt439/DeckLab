@@ -183,7 +183,10 @@ function tokenCountersPart(counters) {
     el("ul", { class: "token-counters" }, needs.map((need) => el("li", { class: `token-counter token-counter-${need.group}` },
       el("b", { text: `${need.name}${where[need.group] || ""}` }),
       need.sideboard_only ? " (sideboard only)" : null,
-      el("small", { class: "token-need-made", text: usedBy(need.made_by) })))),
+      need.cover ? [" ", diceCoverChip(need.cover)] : null,
+      el("small", { class: "token-need-made", text: usedBy(need.made_by) }),
+      need.cover && need.cover.words ? el("small", { class: "token-need-cover", text: need.cover.words }) : null))),
+    counters.owned && counters.owned.words ? el("p", { class: "sub dice-owned", text: counters.owned.words }) : null,
     counters.note ? el("details", { class: "more token-note" }, el("summary", { text: "How are counters worked out?" }),
       el("p", { class: "sub", text: counters.note })) : null);
 }
@@ -689,6 +692,7 @@ function drawTokens(data, token, space = HOME_SPACE) {
       el("div", { class: "segmented tok-filter", role: "group", "aria-label": "Show" }, view.filterButtons),
       view.count),
     view.lists,
+    unsupported ? null : diceTokensPanel(view),
   ]);
   $("#main").append(root);
   updateTokens(view);

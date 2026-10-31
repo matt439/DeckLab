@@ -5,6 +5,8 @@ used; "sources" in deck_stats' result lists SOURCES again, so the page can
 cite them."""
 import re
 
+from .role_targets import SOURCE as ROLE_TARGETS_SOURCE, SOURCE_ID as ROLE_TARGETS_SOURCE_ID
+
 KINDS = ("constructed", "commander")
 
 # --------------------------------------------------------------- sources
@@ -81,6 +83,8 @@ SOURCES = {
                  "with thanks; fan content under Wizards' Fan Content Policy)",
         "date": "the list downloaded with the card data; its date is shown with the checks",
         "url": "https://commanderspellbook.com/"},
+    # Commander role targets (E9-S26): the data and its own sources are in role_targets.py.
+    ROLE_TARGETS_SOURCE_ID: ROLE_TARGETS_SOURCE,
 }
 # The commander-spellbook source's date while the combo list can't be read (the
 # checks then say combos weren't checked, so there's no date to point to).

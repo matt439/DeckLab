@@ -92,7 +92,7 @@ function shopQueueTableRecord(card, casual, showFor, view) {
   const deck = casual.querySelector(".shop-queue-deck"), actions = casual.querySelector(".shop-queue-actions");
   if (deck) deck.setAttribute("title", card.deck.title);
   const reprints = casual.querySelector(".reprint-info"), words = casual.querySelector(".shop-match-words");
-  const snapshot = casual.querySelector(".shop-snapshot");
+  const snapshot = casual.querySelector(".shop-snapshot-list") || casual.querySelector(".shop-snapshot");
   const nameCell = el("td", {class: "shop-q-name"});
   const price = shopPrice(card), value = price ? Number(card.listed_aud).toLocaleString("en-AU",
     {minimumFractionDigits: 2, maximumFractionDigits: 2}) : null;

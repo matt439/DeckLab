@@ -1,10 +1,12 @@
 """What the "Deck Lab database backup" task runs each night (schedule.py): a backup, a prune,
 the visits older than about a year deleted (visits.py), an export, the check of the data
 (check.py), a restore check when the last one that worked is more than restore_check_days
-old (28: about monthly), and last MTGMate's daily snapshot of the purchase queue's prices
-(lib/shops/: one request a card name, a minute apart as its robots.txt asks, for at most
-NIGHTLY_BUDGET (45 minutes), so the task's two-hour limit never cuts it off; never a failed
-night, since a shop that can't be reached is nothing wrong with the database).
+old (28: about monthly), and last the daily snapshots of the purchase queue's prices at
+MTGMate and Games Portal (lib/shops/: one request a card name at each shop, a minute apart as
+its robots.txt asks, the two shops side by side, each for at most NIGHTLY_BUDGET (45
+minutes), so together they still take at most 45 minutes and the task's two-hour limit never
+cuts them off; never a failed night, since a shop that can't be reached is nothing wrong with
+the database, and one shop's failure never stops the other's).
 
 Every step runs even when an earlier one failed (an unreachable NAS is no reason to skip the
 export), and each one's outcome goes into decklab/data/logs/db.log. The check comes after the

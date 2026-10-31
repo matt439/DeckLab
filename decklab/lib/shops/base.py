@@ -39,6 +39,7 @@ class Adapter:
     name = ""
     site = ""
     robots_path = "/robots.txt"
+    counts_stock = True                     # False: its pages say only available or not (stock 1 or 0)
 
     def robots_url(self):
         return self.site + self.robots_path

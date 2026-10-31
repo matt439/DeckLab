@@ -264,7 +264,9 @@ class RefreshTests(unittest.TestCase):
         logged = []
         with mock.patch.object(shops, "_queue", side_effect=RuntimeError("broken")):
             self.assertEqual(shops.nightly(logged.append), 0)
-        self.assertIn("MTGMate prices failed: RuntimeError: broken", logged[-1])
+        # each shop's run fails on its own (side by side, so in either order)
+        self.assertEqual(sorted(logged), ["Nightly: Games Portal prices failed: RuntimeError: broken",
+                                          "Nightly: MTGMate prices failed: RuntimeError: broken"])
         with mock.patch.object(shops, "refresh", return_value=1):
             self.assertEqual(shops.nightly(logged.append), 0)
 

@@ -115,6 +115,13 @@ def snapshot(c, space, *, details=False):
             "(select id from profile where space_id = %s) or space_id = %s", (space, space))), key=_json)
         if new_drafts:
             data["new_drafts"] = new_drafts
+    # Owned dice and counters (E7-S24, migration 0020): only when there are some, so an export made
+    # before the migration still matches without them; written as dice.csv beside tokens.csv.
+    if c.execute("select to_regclass('public.dice_counter') is not null").fetchone()[0]:
+        dice = sorted((r[0] for r in c.execute("select to_jsonb(r) from dice_counter r where space_id = %s",
+                                                (space,))), key=_json)
+        if dice:
+            data["dice"] = dice
     cards = [{("set" if key == "set_code" else key): value for key, value in row.items()
               if key != "space_id"} for row in data["collection"]]
     cards.sort(key=rules.sort_key)
@@ -129,6 +136,12 @@ def snapshot(c, space, *, details=False):
              "tokens.csv": rules.csv_bytes(tokens, rules.TOKEN_FIELDS)}
     if places:
         files["locations.csv"] = rules.csv_bytes(places, rules.LOCATION_FIELDS)
+    if data.get("dice"):
+        from decklab.lib.inventory import dice_rules
+        from decklab.lib.inventory.table_rows import DICE_COLUMNS
+        made = [dict(zip(dice_rules.DICE_FIELDS, (row[column] for column in DICE_COLUMNS)))
+                for row in sorted(data["dice"], key=lambda r: (r["position"], r["id"]))]
+        files["dice.csv"] = rules.csv_bytes(made, dice_rules.DICE_FIELDS)
     imports = []
     for name, content in c.execute(
             "select i.file_name, c.content from collection_import i "

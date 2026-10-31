@@ -4,8 +4,9 @@ POST /api/shopping/queue keeps its original {profile, row, state, expect}
 state-change contract. An explicit action add/edit takes values; remove takes
 a reason. Row numbers always need the exact inventory revision Shopping gave.
 add_many queues a home deck's reviewed missing cards (shopping_queue_missing.py, E5-S25).
-While MTGMate's snapshot exists, a kept row's answer carries its "shop_snapshot" again
-(shop_prices.py), since a changed printing or state changes what the snapshot says about it.
+While a shop's snapshot exists, a kept row's answer carries its "shop_snapshots" again (and
+MTGMate's "shop_snapshot"; shop_prices.py), since a changed printing or state changes what the
+snapshots say about it.
 """
 from decklab.lib import cards, config, inventory, purchases
 from decklab.lib.inventory import orders as order_ops  # registers watchlist.set/remove
@@ -170,10 +171,14 @@ def save_queue_state(body):
         current_item = after.watchlist.rows[row - 1]
         from .reprints import evidence
         result["reprints"] = evidence({key: current_item.text(key) for key in purchases.QUEUE_FIELDS}, queued=True)
-        from .shop_prices import for_row
-        shown = for_row({key: current_item.text(key) for key in purchases.QUEUE_FIELDS})
+        from .shop_prices import capture, for_row, for_row_shops
+        captured, queued = capture(), {key: current_item.text(key) for key in purchases.QUEUE_FIELDS}
+        shown = for_row(queued, captured) if captured else None
         if shown is not None:
             result["shop_snapshot"] = shown
+        every = for_row_shops(queued, captured) if captured else None
+        if every is not None:
+            result["shop_snapshots"] = every
     if action == "state":
         return {**result, "state": values["state"]}
     result["action"] = action
@@ -183,8 +188,9 @@ def save_queue_state(body):
         result["item"]["quantity"] = int(item.text("quantity"))
         if result["reprints"] is not None:
             result["item"]["reprints"] = result["reprints"]
-        if "shop_snapshot" in result:
-            result["item"]["shop_snapshot"] = result["shop_snapshot"]
+        for key in ("shop_snapshot", "shop_snapshots"):
+            if key in result:
+                result["item"][key] = result[key]
         from .shopping_missing import is_token
         if is_token(result["item"]):
             result["item"]["is_token"] = True

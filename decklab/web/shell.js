@@ -5,7 +5,7 @@ choice. core.js's routes table (ROUTES) says what each page is called, where it 
   From 1000 px (the lab, and a phone on its side): a sticky 56 px top bar: the logo, round nav pills
   Decks · Collection · Shopping (a count of deliveries waiting) · Matchups · More ▾ (the rest), the page's
   section marked with aria-current on --accent-soft; a slot for the run activity (#shell-status: Forge's
-  turning ring while a run plays), then the avatar.
+  turning ring while a run plays), the global search (#global-search, global-search.js: E11-S31), then the avatar.
   Under 1000 px (casual: the phone, and the iPad in portrait; design/visual-design.md section 6 decision 5):
   a 56 px header (the way back, or the logo; the page's title once its heading has scrolled away; the run
   activity; the avatar) and a tab bar fixed to the bottom (Decks, Collection, Shopping, Matchups, More)
@@ -76,6 +76,7 @@ function toggleMyDevice() {
 /** Wire the shell's fixed parts in index.html once, at start. */
 function setUpShell() {
   setUpKeyboardHelp();
+  if (typeof setUpGlobalSearch === "function") setUpGlobalSearch();
   const avatar = byId("avatar-button"), menu = byId("avatar-menu");
   if (avatar && menu) wireMenu(avatar, menu);
   for (const button of document.querySelectorAll("[data-theme-choice]")) {
@@ -145,6 +146,7 @@ function drawShell() {
       el("a", { href: `#/${r.path}`, "data-route": r.path }, shellIcon(r.icon), el("span", { text: r.label })))));
   }
   syncAccountMenu();
+  if (typeof drawGlobalSearch === "function") drawGlobalSearch();
   syncShell();
   loadDeliveries();
 }
@@ -161,7 +163,7 @@ function navLink(route, cls, icon = false) {
 /** The "Who are you?" screen: no navigation, no avatar. */
 function hideShell() {
   document.body.classList.remove("has-shell");
-  for (const id of ["main-nav", "tabbar", "topbar-actions", "topbar-back"]) {
+  for (const id of ["main-nav", "tabbar", "topbar-actions", "topbar-back", "global-search"]) {
     const node = byId(id);
     if (node) node.hidden = true;
   }
@@ -212,6 +214,7 @@ function syncThemeChoice(theme) {
  * title on the phone. Called by route() before the page draws. */
 function syncShell(path = parseHash().path) {
   registerShellKeyboardHelp();
+  if (typeof syncGlobalSearch === "function") syncGlobalSearch();
   refreshKeyboardHints();
   const section = routeSection(path);
   for (const link of document.querySelectorAll("[data-route]")) {
