@@ -35,20 +35,20 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 
 | Epic | Stories | Built | Partial | Missing | Not wanted |
 |---|---:|---:|---:|---:|---:|
-| [E1: Find, plan and choose decks](#e1-find-plan-and-choose-decks) | 17 | 17 | 0 | 0 | 0 |
+| [E1: Find, plan and choose decks](#e1-find-plan-and-choose-decks) | 18 | 17 | 0 | 1 | 0 |
 | [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 21 | 18 | 2 | 0 | 1 |
 | [E3: Test a deck](#e3-test-a-deck) | 18 | 15 | 3 | 0 | 0 |
-| [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 22 | 19 | 1 | 1 | 1 |
-| [E5: Decide what to buy](#e5-decide-what-to-buy) | 24 | 21 | 0 | 1 | 2 |
+| [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 23 | 19 | 1 | 2 | 1 |
+| [E5: Decide what to buy](#e5-decide-what-to-buy) | 28 | 21 | 0 | 5 | 2 |
 | [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 23 | 21 | 0 | 0 | 2 |
 | [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 28 | 27 | 1 | 0 | 0 |
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 19 | 16 | 0 | 1 | 2 |
-| [E9: Commander nights](#e9-commander-nights) | 22 | 18 | 0 | 3 | 1 |
+| [E9: Commander nights](#e9-commander-nights) | 24 | 18 | 0 | 5 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 35 | 31 | 1 | 1 | 2 |
-| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 48 | 35 | 5 | 5 | 3 |
-| **Total** | **277** | **238** | **13** | **12** | **14** |
+| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 52 | 35 | 5 | 9 | 3 |
+| **Total** | **289** | **238** | **13** | **24** | **14** |
 
-Counted from the story headers on 2026-10-29 after the source-aware two-player and pod counters, alongside the current feature and maintenance work. The reviews added five feature stories and eight hygiene stories, then the fixture-only entry-point story E11-S44, and corrected E1-S12 from missing to partial. Rechecked 2026-10-29: E1-S12 is built and E11-S39 partial (its database qualification pending). The TODO audit of 2026-10-29 added fifteen missing stories (twelve from the audit: E1-S27, E1-S28, E2-S27, E3-S25, E3-S26, E5-S25, E6-S25, E6-S26, E9-S26, E9-S27, E11-S45, E11-S46), then Matt's three UI requests (E3-S27, E5-S26, E6-S27), and corrected E7-S32 from missing to partial (its recognition spike and CLI are built). Matt closed E11-S16 as built the same day, and E3-S27, E5-S26, E6-S25, E6-S27 and E11-S46 were built the same day (E11-S12 stays partial after a further slice). Later the same day E5-S25 and E6-S26 were built, E1-S27's first slice (the library) made it partial, and E11-S12 and E3-S26 were built. E1-S27's Overview slices then finished it, and E2-S27 and E9-S27 were built. E1-S28 was built the same day. E3-S25's first slice (its replacements API, 2026-10-29) made it partial. Its dual-lands slice (2026-10-29) finished it. E11-S45 was built the same day. Recounted 2026-10-30: E7-S23's first slice (the token side on deck pages and the printout) made it partial. E7-S24's read-only slice (the counters and dice a deck's cards use) made it partial too. E9-S26's free cards by role on the Stats tab made it partial, leaving its cited role targets to Matt's choice of template; with the Command Zone template's targets (2026-10-31) it is built. Recounted 2026-10-31: E11-S47 (built 2026-10-30) was missing from the E11 row. E4-S16 was built (sideboard-plan tests). E7-S23's second slice (the opponent's tokens under their own heading and counted apart in the library line and the packing ticks) finished it. E7-S08 was built (token counts suggested from saved Forge games), and E9-S07 too (new decks and narrowed pages). Later on 2026-10-31 E11-S39 was built (its database qualification ran), E11-S31 became partial (global search built, its device check left), E11-S30 kept its device gate, and E7-S24 was built once migration 0020 was applied. Matt's self-hosting decisions of 2026-10-31 (Windows first; strangers install their own, family and friends join as members; release zips; currency as a setting) added E11-S48 to E11-S53, all missing; E11-S48 was built the same day, in three slices.
+Counted from the story headers on 2026-10-29 after the source-aware two-player and pod counters, alongside the current feature and maintenance work. The reviews added five feature stories and eight hygiene stories, then the fixture-only entry-point story E11-S44, and corrected E1-S12 from missing to partial. Rechecked 2026-10-29: E1-S12 is built and E11-S39 partial (its database qualification pending). The TODO audit of 2026-10-29 added fifteen missing stories (twelve from the audit: E1-S27, E1-S28, E2-S27, E3-S25, E3-S26, E5-S25, E6-S25, E6-S26, E9-S26, E9-S27, E11-S45, E11-S46), then Matt's three UI requests (E3-S27, E5-S26, E6-S27), and corrected E7-S32 from missing to partial (its recognition spike and CLI are built). Matt closed E11-S16 as built the same day, and E3-S27, E5-S26, E6-S25, E6-S27 and E11-S46 were built the same day (E11-S12 stays partial after a further slice). Later the same day E5-S25 and E6-S26 were built, E1-S27's first slice (the library) made it partial, and E11-S12 and E3-S26 were built. E1-S27's Overview slices then finished it, and E2-S27 and E9-S27 were built. E1-S28 was built the same day. E3-S25's first slice (its replacements API, 2026-10-29) made it partial. Its dual-lands slice (2026-10-29) finished it. E11-S45 was built the same day. Recounted 2026-10-30: E7-S23's first slice (the token side on deck pages and the printout) made it partial. E7-S24's read-only slice (the counters and dice a deck's cards use) made it partial too. E9-S26's free cards by role on the Stats tab made it partial, leaving its cited role targets to Matt's choice of template; with the Command Zone template's targets (2026-10-31) it is built. Recounted 2026-10-31: E11-S47 (built 2026-10-30) was missing from the E11 row. E4-S16 was built (sideboard-plan tests). E7-S23's second slice (the opponent's tokens under their own heading and counted apart in the library line and the packing ticks) finished it. E7-S08 was built (token counts suggested from saved Forge games), and E9-S07 too (new decks and narrowed pages). Later on 2026-10-31 E11-S39 was built (its database qualification ran), E11-S31 became partial (global search built, its device check left), E11-S30 kept its device gate, and E7-S24 was built once migration 0020 was applied. Matt's self-hosting decisions of 2026-10-31 (Windows first; strangers install their own, family and friends join as members; release zips; currency as a setting) added E11-S48 to E11-S53, all missing; E11-S48 was built the same day, in three slices. Matt's expansion review of 2026-10-31 added twelve missing stories for work no story covered: E1-S29, E4-S27, E5-S27 to E5-S30, E9-S28, E9-S29 and E11-S54 to E11-S57.
 
 ---
 
@@ -335,6 +335,17 @@ As a player choosing what to play at home tonight, I want Deck Lab to suggest a 
 Built (2026-10-29): `decklab/lib/play_pairs.py` `suggest(decks, games, forge_pairs, today)` is pure: only built casual decks marked ready take part, each pair seated one deck for each home player (an `either` deck takes the seat its partner leaves; two `either` decks make one pair), evenness from the two decks' real record once they have met 10 times (play_comparison's minimum, draws counting half), else the Forge share of their built lists, else unknown, in bands (even within 10 points of 50%, fairly even within 20, then unknown, then one-sided), then the pair never met or met longest ago, then the decks played longest ago; a deck is used once while another pair without it is left. Each pair has plain reasons (the record or Forge's share and games, too few real games, when they last met). GET /api/play/pairs (`decklab/lib/api/play_tonight.py` `pairs_view`) answers home profiles (and a script naming nobody) only: home's built casual decks they see, ready when the built list (`pool._built_version`) has nothing missing in home's pool and its availability is confirmed (the library's E1-S03 rule; `unconfirmed` counts the rest), the Game log's own visible two-player games (`library_played._games`, now with each game's result), and the Constructed field's saved pair rates (`forge.field.pair_rates` through `library_forge.pair_rates`, sharing the library's per-viewer cache; never a game played), each kept only when both its lists' versions are the two decks' built lists (a field addition can put a deck's other list in the field). A member or a request naming nobody gets `{"available": false, "pairs": []}` with no count; unreadable games suggest nothing, unreadable Forge numbers leave the real record. The Game log (`decklab/web/play-tonight.js`) shows **Tonight's pairs** above Record a game for home profiles only (not on one deck's Game log): each pair's two decks, who takes which, its reasons and **Use this pair**, which puts both lists in the quick record's pickers by seat (`playQuickChoose`); nothing is saved. Tests: `decklab/tests/test_play_pairs.py`, `test_play_tonight_ui.py`, `test_library_forge.py` (pair rates). See [HISTORY.md](../HISTORY.md#tonights-pairs-on-the-game-log-2026-10-29-e1-s28).
 
 Known low issues: the real record counts every game between the two decks, whatever lists they were played with, while Forge's share is of today's built lists; Forge's point share is used without its interval; one pool warning (any unreadable deck) leaves every deck unconfirmed, as the library's chips do; no browser or device check.
+
+**E1-S29** · Matt · could · S · missing
+
+As a deck builder sharing one pool, I want any card I open, from the card viewer or a global search result, to say which of our decks hold or want it and how many copies are free, so that I can judge a swap or a buy from wherever I see the card.
+
+- Given a card opened in the card viewer from any list, when the viewer shows it, then under the opening list's own chip it names the decks of the viewer's space whose Planned or Play-now list has the card (built decks first, each "holds" or "wants" with the copies) and the free copies in that space's collection, under the inventory rule: counts and holders show only to a viewer who may see that space's inventory.
+- Given a global search, when a result under "In your collection" or "Other cards" is shown, then it carries the same in short form ("in 2 decks · 1 free").
+- Given a deck the viewer may not see, then it is never named or counted (E10-S30).
+- Given a basic land, then the line says its copies in decks aren't tracked, as the Card list does.
+
+Gap: `web/card-viewer.js` shows only what the opening list said about the card, and `lib/api/global_search.py` answers names and printings without deck use; the Card list's In decks column (`web/collection-rows.js`) and `deck_line` already hold the answer. First slice: the card viewer's line on the deck page and the Collection page, from the Card list's In decks calculation.
 
 ---
 
@@ -1417,6 +1428,19 @@ Compatibility: existing v1 aggregate counters remain explicitly labelled legacy.
 
 Rules: [Wizards' current Comprehensive Rules](https://media.wizards.com/2026/downloads/MagicCompRules%2020260925.txt), checked via [the official rules page](https://magic.wizards.com/en/rules) on 2026-10-29, keep damage from each commander separate (903.10a and 702.124d); stable own-source identities also cover control changes. The counter is bookkeeping, not a card-rules engine. Actual browser/device and Commander-night acceptance remain separate; E2-S22 owns the household hardware check.
 
+**E4-S27** · User1 · could · S · missing
+
+As a player who packed two decks for a game at home, I want Deck Lab to offer to record the result the next time I open it, so that the Game log gets filled without my remembering to open it.
+
+- Given a Packing plan in which two decks of the viewer's space were pulled within the last day (their shared ticks, or Finish building), when the library or either deck's page opens, then one dismissable notice offers "Record last night's game: A against B", opening the Game log's one-tap record with both decks chosen (E4-S11).
+- Given the result is recorded, or the notice dismissed, then it doesn't come back for that packing session.
+- Given the two decks aren't both the viewer's to see, then no notice is shown.
+- Given nothing was packed, then nothing changes.
+
+Review note: needs Matt first. The Game log held no games on 2026-10-31, though the life counters, pod records, sideboard plans, tonight's pairs and last played all rest on it; Matt is to ask the household whether games at home happen and go unrecorded. If games at home are rare, this story isn't wanted.
+
+Gap: nothing links packing to recording. The Packing plan's ticks are on the server (`lib/api/assembly_ticks.py`), and the arrival notices (E6-S19, `lib/api/arrivals.py`) are the pattern for a dismissable per-player notice. First slice, once decided: the notice from the last packing session, on the library.
+
 ---
 
 ## E5: Decide what to buy
@@ -1829,6 +1853,51 @@ As Matt reading Shopping's To buy table, I want each row to stay one or two line
 Evidence of the gap (Matt, 2026-10-29): `decklab/web/shopping-queue.js` puts the whole `.shop-snapshot` block into the `.shop-q-price` cell in the lab layout (`shopQueuePut(tr.querySelector(".shop-q-price"), snapshot)`), and unknown cells hold full sentences (`shopQueueUnknown("Reference price not recorded")`), so the narrow numeric column wraps over several lines.
 
 Built (2026-10-29): in the lab layout Ref AUD holds the price and one marker (a stock dot, or a Back pill), labelled with the snapshot's gist; the full snapshot moves into the row's … extra row, offered for every row with a snapshot; unknown Ref AUD, Shop, Stock, For and Checked cells are one labelled dash; the column stays on one line. The casual layout is unchanged. Tests: `decklab/tests/test_shopping_queue_compact_ui.py`, `test_shopping_queue_table_ui.py`. See [HISTORY.md](../HISTORY.md#compact-to-buy-table-2026-10-29-e5-s26).
+
+**E5-S27** · Matt · should · M · missing
+
+As a buyer ordering from several Australian shops, I want Shopping to propose the fewest-shops basket from the daily snapshot and each shop's postage rules, so that sharing postage stops being hand work in Claude's buylists.
+
+- Given the purchase queue and the latest shop snapshot (E5-S08), when I open Shopping's Baskets, then for each shop it lists the ready rows the snapshot found in stock there with their price and the basket's total, the ready rows no checked shop has, and the long-term and waiting rows in stock there that would lift the basket over the shop's free-postage threshold, each marked as an add-on.
+- Given postage rules (a flat postage and a free-postage threshold per shop, set in Settings by a home admin; blank means unknown), then each basket says its postage or that it's unknown, and the plan prefers fewer shops when the postage saved outweighs the price difference, showing both ways.
+- Given an exact-printing row, then only a listing of that printing counts; an `any` row takes the cheapest in-stock listing.
+- Given a shop the snapshot couldn't read, or a row it didn't check, then the basket says so and claims no stock.
+- Given a basket, then Copy this shop's list (E5-S24) copies exactly its rows, and nothing here changes the queue, records an order or stores a price paid.
+
+Gap: Shopping's By shop groups rows by the recorded `listed_at` shop, and the snapshot shows one line a shop beside each row; nothing knows a shop's postage or proposes a basket. Postage rules need a settings home, which E11-S53's shops setting would give. The "Share postage" rule in AGENTS.md stays Claude's where research goes beyond the checked shops. First slice: the per-shop baskets from the snapshot alone (ready rows in stock, totals, add-ons), without postage rules.
+
+**E5-S28** · Matt · should · M · missing
+
+As a buyer with several unbuilt decks drawing on one pool, I want to pick decks on Shopping and see what to buy so that all of them can be built at the same time, so that I don't buy for one deck a card another chosen deck will take.
+
+- Given two or more decks of the viewer's space, when I choose them under Missing cards across decks, then the list shows each card's shortfall with the chosen decks built together: each free copy counted once, copies held by other built decks and intact products not counted, and cards on the way counted as E5-S04 counts them.
+- Given the chosen set, then each card names which chosen decks share the shortage, and the total rises above the sum of the single-deck shortfalls where they compete.
+- Given the result, then Queue these (E5-S25's write) puts the combined shortfall on the queue in one reviewed change, each row's `for` naming the decks.
+- Given a viewer who may not see home's inventory, then the control is absent, as the rest of Shopping is.
+
+Gap: `lib/api/shopping_missing.py` sums each deck's own shortfall (the gap analysis: "not a concurrent-build requirement"); the Packing plan's chooser already works out concurrent pulls for the decks it packs (`lib/api/assembly.py` and its intent and sections modules). First slice: the read-only combined list for a chosen set.
+
+**E5-S29** · Matt · could · S · missing
+
+As a buyer reading a shop's price, I want to see what a queued card's price and stock were on earlier days, so that I can tell a usual price from a dear one before ordering.
+
+- Given a queued card the nightly snapshot has checked more than once, when I open its row on Shopping, then it shows the dated prices and stock seen at each shop over the kept period (each day's reading kept 90 days), lowest first.
+- Given the card leaves the queue (bought or removed), then its history goes with the next prune; nothing is ever kept for cards in the collection.
+- Given no history, then the row says only today's reading, as now.
+
+Review note: needs Matt first. E5-S21 rules out tracking owned cards' prices; this is only for cards still to buy, and Matt is to say whether even that is wanted.
+
+Gap: `lib/shops/__init__.py` keeps one `previous` snapshot beside the current one, enough for Back in stock (E5-S19) and nothing older.
+
+**E5-S30** · User1 · could · S · missing
+
+As a themed-deck player with a wishlist, I want my wishlist cards shown while I build and my decks' needs shown on my wishlist, so that the cards I'd like and the decks that want them meet without my asking Matt.
+
+- Given the editor's Add panel, when I tick My wishlist, then it lists my own wishlist's cards that fit the deck (in a Commander deck, its colour identity), each marked free, in use or to buy as the EDHREC ideas tick marks cards; a card I add keeps its wished printing when one is chosen.
+- Given my Wishlist page, when a listed card is in the Planned list of a deck I may see and that deck is short of it, then the entry says so ("The Free Peoples is short of this card"), under the inventory rule for counts.
+- Given anyone else, then nothing of my wishlist shows: both views read only the signed-in profile's own list (E5-S14, E10-S11).
+
+Gap: the Add panel's ticks are Free copies only, My collection and EDHREC ideas (`web/editor-cards.js`); the Wishlist page (`web/wishlist.js`) doesn't read decks. Owner-only reads keep it inside E10-S11. First slice: the Wishlist page's "short of this card" line.
 
 ---
 
@@ -3463,6 +3532,28 @@ Evidence:
 - `decklab/web/deck-tools.js`: printDeck
 - `decklab/tests/test_commander_print_ui.py`; `decklab/tests/test_commander_readiness_ui.py` (unchanged, the page's sentence)
 
+**E9-S28** · Matt · could · M · missing
+
+As a deck builder choosing the next Commander deck to build from what we own, I want our free legendary creatures ranked by how far the free pool could fill a deck for each, so that I start the deck the pool already supports.
+
+- Given the Collection page's More, when I open Commanders we could build, then it lists each free creature that may be a commander (Scryfall's commander legality and E9-S02's eligibility rules, partners and backgrounds included), with the free pool's cards in its colour identity counted by E9-S26's role targets (ramp, draw, removal, sweepers, lands) and a coverage figure, best first.
+- Given a candidate, when I open it, then it shows the free cards by role, says which roles fall short, and offers New deck from it and See EDHREC ideas (E9-S07's cached list, fetched on demand, never for every candidate at once).
+- Given a card held by a built deck or an intact product, then it isn't a free candidate, though its row may say which deck holds it.
+- Given a viewer who may not see the space's inventory, then the control is absent; a member sees it for their own space.
+
+Gap: Precons we could build (E1-S24, `lib/api/precon_coverage.py`) does this for published precons, and the Stats tab's free cards by role (`lib/decks/role_pool.py`) for one deck; nothing ranks commanders. First slice: the ranked list from the pool and the role targets, without EDHREC.
+
+**E9-S29** · Matt · should · S · missing
+
+As a player bringing a deck to a social bracket, I want the bracket check to count the deck's tutors, so that the one part of the official bracket text the page says it doesn't check is checked.
+
+- Given a Commander deck, when its Stats tab shows Minimum bracket and the Overview its bracket sentence and What opponents will face, then they list the tutors found (cards whose oracle tag is a tutor, with the date of the tag data) and say what the current official bracket text says about tutors at the target bracket, read from the official list source E9-S24 keeps, never from a remembered rule.
+- Given the tag data or the official text can't be read, then the check says tutors weren't counted, as it does for mass land denial and extra turns.
+- Given a tutor count, then nothing is blocked: it informs the sentence, and the Checks panel warns only where the official text sets a number.
+- Given a casual deck, then nothing changes.
+
+Gap: `lib/stats/commander.py` reads oracle tags for mass land denial and extra turns and says tutors, longer combos and intent aren't checked; the `oracle_tags` bulk file Deck Lab already downloads has the tutor tags. First slice: the count and list on the Stats tab.
+
 ---
 
 ## E10: Members, access and privacy
@@ -5046,3 +5137,50 @@ As a self-hoster outside Australia, I want my currency and price-check shops to 
 Decided (Matt, 2026-10-31): currency and shops become settings, defaulting to AUD.
 
 Gap: AUD is written into the table header and rate statement (`| ~AUD each |`) and appears in about 69 files under `lib/` and `web/`; `db/nightly.py` always runs the MTGMate and Games Portal snapshot.
+
+**E11-S54** · Matt · could · L · missing
+
+As the household admin, I want to be told on my phone when something I'm waiting for happens, so that a card back in stock, a delivery recorded or a finished Forge run doesn't wait until someone opens a page.
+
+- Given a profile that turned notices on for this device (Settings, per device, off by default), when an event for that profile happens, then the device gets a notice naming only the kind of event and "Open Deck Lab", never a card, deck, price or person; opening it lands on the page that shows the detail, under the usual rules.
+- Given the events: a delivery recorded with cards for a deck Played by me (E6-S19), a waiting row back in stock (E5-S19), a Forge run I started finished or stopped, and for home admins a restart needed or a failed nightly check.
+- Given a member, then only events of their own space can reach them, and nothing about home.
+- Given the device revoked permission, or the push service refuses, then the subscription is dropped quietly and the in-app notices carry on as now.
+
+Review note: needs Matt first. He is to say whether the in-app notices (the arrival notice, Back in stock, the run pill, the restart banner) are enough; if so this story becomes not wanted.
+
+Gap: there is a web manifest but no service worker, so Web Push is new ground (a VAPID key pair in `config.json`, subscriptions in the database, a sender in the server); E5-S19's Gap line says nothing is pushed or e-mailed. First slice, once decided: the service worker and the back-in-stock notice for home admins.
+
+**E11-S55** · Matt · could · M · missing
+
+As the household admin whose members use phones and whose pages serve beginners, I want Deck Lab's pages checked for accessibility as one pass, so that every control can be reached, named and read by anyone, in both densities and themes.
+
+- Given every page in both densities and both themes, when the audit runs, then it records for each: text and chip contrast against WCAG AA, every control's accessible name, focus order and visible focus, and behaviour under reduced motion; the findings go in a dated file under `decklab/design/`, with a story per fix slice.
+- Given a finding, when it's fixed, then a fixture test keeps it fixed, as the existing UI tests do for the card viewer's dialog behaviour.
+- Given UI-KIT.md, then it gains an Accessibility section saying what every component must do, next to Keyboard ownership.
+- Given the pass is done, then no page behaves differently for a sighted mouse user.
+
+Gap: UI-KIT.md covers focus, announcements and reduced motion for the card viewer and the run pill and gives the tiles' screen-reader words, but no page-wide audit exists and no test checks contrast. First slice: the audit of the library, the deck page and the Game log on a phone, written up before any fix.
+
+**E11-S56** · Matt · could · S · missing
+
+As a newcomer who has just installed Deck Lab and sees an empty library, I want the empty state to say how to get my first cards and deck in, so that I see Deck Lab working before I've typed anything.
+
+- Given a space with no decks and no collection cards, when its library opens, then its empty state offers Add a precon (the Collection page's sheet, E7-S05), Import cards (a ManaBox, Moxfield or Deckbox export, E7-S02) and New deck, in that order, with one line each on what they do.
+- Given a precon added that way, then its deck page, Build decks and Stats show real cards at once, as they do today, and the empty state is gone.
+- Given a member's empty space, then the same empty state shows for them (their own Collection page has both sheets).
+- Given a space with decks or cards, then nothing changes.
+
+Gap: `web/library.js`'s empty state says "You don't play any decks yet." and offers Show every deck or New deck; Add a precon and Import cards are reachable only from the Collection page's More menu. Independent of the installer (E11-S50) and the first-run page (E11-S52), which names only the players. One slice.
+
+**E11-S57** · Matt · could · L · missing
+
+As a self-hoster on Linux, I want one install route, so that I don't follow SELF-HOSTING.md's manual steps by hand.
+
+- Given a Linux PC or small server, when I run the install script (or a container recipe), then it installs or finds Python 3.14 and PostgreSQL, gets the release (E11-S49), makes the `.venv`, writes `config.json` from a few questions, runs `db setup`, downloads the card data and installs the systemd user service and timer (E11-S33), saying which step failed and carrying on safely when run again.
+- Given the end, then it runs the doctor (E11-S34) and prints the address phones use.
+- Given the updater (E11-S51), then it works on this install too.
+
+Decided (Matt, 2026-10-31): Windows first; this waits for the Windows installer (E11-S50).
+
+Gap: Linux has the systemd units and the full test suite (E11-S33) but only the manual steps of SELF-HOSTING.md; depends on E11-S49 and follows E11-S50.

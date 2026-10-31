@@ -3,7 +3,7 @@
 A formal, user-centred design model of Deck Lab, first written on 2026-10-13: who it's for, what they're trying to do, what each of them needs, and how much of that is built.
 
 - **Written:** 2026-10-13
-- **Coverage updated:** the full code recheck was 2026-10-19. Targeted reviews on 2026-10-28 added five feature and eight maintenance stories and corrected stale E1-S12 and E7-S18 summaries; the counts below were recounted from all story headers. E11-S44 was added later for the fixture-only test entry point. The maintenance evidence and split boundaries are in [SOURCE_AUDIT.md](../SOURCE_AUDIT.md#maintenance-backlog). Private by default and guarded member departure are built and live since migrations 0012 and 0013 were applied on 2026-10-19. Physical-device acceptance remains E2-S22.
+- **Coverage updated:** the full code recheck was 2026-10-19. Targeted reviews on 2026-10-28 added five feature and eight maintenance stories and corrected stale E1-S12 and E7-S18 summaries; the counts below were recounted from all story headers. E11-S44 was added later for the fixture-only test entry point. An expansion review on 2026-10-31 added twelve missing stories for work no story covered ([gap-analysis.md](gap-analysis.md#ready-reserve)). The maintenance evidence and split boundaries are in [SOURCE_AUDIT.md](../SOURCE_AUDIT.md#maintenance-backlog). Private by default and guarded member departure are built and live since migrations 0012 and 0013 were applied on 2026-10-19. Physical-device acceptance remains E2-S22.
 - **Covers:** Deck Lab, the home-network and decklab.example.com deck page, and the `python -m decklab.db` commands Claude Code works through. Magic only.
 - **Doesn't replace:** [TODO.md](../../TODO.md) (the open-work index and NOW order), [PLAN.md](../PLAN.md) (the details of non-story work), [HISTORY.md](../HISTORY.md) (what shipped), [UI-KIT.md](../UI-KIT.md) and [UI-REVIEW.md](../UI-REVIEW.md) (the page's pieces and the redesign's reasons).
 
@@ -56,23 +56,23 @@ Each epic has a journey in [journeys.md](journeys.md) and its stories in [storie
 
 | Epic | Title | What it covers | Built | Partial | Missing | Not wanted |
 |---|---|---|---|---|---|---|
-| E1 | Find, plan and choose decks | The library (`#/library`), deck ideas, cover pictures, the deck page's banner and Overview, choosing what to play | 17 | 0 | 0 | 0 |
+| E1 | Find, plan and choose decks | The library (`#/library`), deck ideas, cover pictures, the deck page's banner and Overview, choosing what to play | 17 | 0 | 1 | 0 |
 | E2 | Build and edit a deck | New deck, the editor and the phone Quick edit, Planned and Play-now lists, owned vs needed, history; `deck pull/push/new/tables` | 18 | 2 | 0 | 1 |
 | E3 | Test a deck | Stats, Practice, Forge matchups (`#/matchups`, `#/matchup`), field rank, Test this change (`#/variant`), the simulations setting | 15 | 3 | 0 | 0 |
-| E4 | Get ready, play and learn | The Packing plan (`#/assembly`), tokens to grab, How to play, practice hands, the Game log (`#/play`) and sideboard plans | 19 | 1 | 1 | 1 |
-| E5 | Decide what to buy | Missing cards and estimated costs, the purchase queue on `#/shopping`, AU shop checks, buylists, `watchlist` and `order add --fulfils` | 21 | 0 | 1 | 2 |
+| E4 | Get ready, play and learn | The Packing plan (`#/assembly`), tokens to grab, How to play, practice hands, the Game log (`#/play`) and sideboard plans | 19 | 1 | 2 | 1 |
+| E5 | Decide what to buy | Missing cards and estimated costs, the purchase queue on `#/shopping`, AU shop checks, buylists, `watchlist` and `order add --fulfils` | 21 | 0 | 5 | 2 |
 | E6 | Record orders and receive cards | `order add\|edit\|checks\|split\|cancel`, products, on the way, Receive delivery (`#/receipt`), follow-ups, keeping a product intact | 21 | 0 | 0 | 2 |
 | E7 | Keep the collection accurate | The Collection page (`#/collection`), imports and Add a precon, `collection merge`, Tokens (`#/tokens`), removals, stale tables, `db check` | 27 | 1 | 0 | 0 |
 | E8 | Sleeves, boxes and storage | Sleeves & boxes (`#/accessories`), Sleeves and Deck box lines, the Choose… picker, kit warnings, put-back steps, the storage box | 16 | 0 | 1 | 2 |
-| E9 | Commander nights | Commander checks and the minimum bracket, multiplayer practice, Forge's Commander field, getting ready for the social Commander night | 18 | 0 | 3 | 1 |
+| E9 | Commander nights | Commander checks and the minimum bracket, multiplayer practice, Forge's Commander field, getting ready for the social Commander night | 18 | 0 | 5 | 1 |
 | E10 | Members, access and privacy | Roles and spaces, the read and write rules, "Who are you?", decklab.example.com behind Cloudflare Access, Activity (`#/activity`), Visits on Settings, private by default | 31 | 1 | 1 | 2 |
-| E11 | Run and trust the system | The server and tunnel, database maintenance, audit trail, typed commands, Forge upkeep, Settings, Safari regressions, visual design and code hygiene | 35 | 5 | 5 | 3 |
+| E11 | Run and trust the system | The server and tunnel, database maintenance, audit trail, typed commands, Forge upkeep, Settings, Safari regressions, visual design and code hygiene | 35 | 5 | 9 | 3 |
 
 ## Headline counts
 
 - **9 personas:** two primary, two secondary (User5 and the space members), one supplementary, one non-human actor and three anti-personas.
-- **11 epics, 277 stories:** 238 built, 13 partial, 12 missing and 14 not wanted (recounted from current story headers on 2026-10-31, after the self-hosting stories E11-S48 to E11-S53 were added and E11-S48 built; E11-S47 built 2026-10-30 and E9-S26, E11-S39 and E7-S24 on 2026-10-31).
-- **Must and should stories:** Matt has 101 built, 3 partial and 2 missing; User1 has 33 built, 1 partial and 1 missing; Claude Code has 25 built and no remaining must or should gap; User5 has 4 built; the space members have 4 built; the Commander table has 1 built. The last three have no must or should gap. (Recounted from the story headers on 2026-10-29.)
+- **11 epics, 289 stories:** 238 built, 13 partial, 24 missing and 14 not wanted (recounted from current story headers on 2026-10-31, after the self-hosting stories E11-S48 to E11-S53 were added and E11-S48 built, E11-S47 built 2026-10-30, E9-S26, E11-S39 and E7-S24 on 2026-10-31, and the expansion review of 2026-10-31 added twelve missing stories).
+- **Must and should stories:** Matt has 104 built, 3 partial and 3 missing (the review's should stories E5-S27, E5-S28 and E9-S29); User1 has 33 built, 1 partial and 1 missing; Claude Code has 25 built and no remaining must or should gap; User5 has 4 built; the space members have 4 built; the Commander table has 1 built. The last three have no must or should gap. (Recounted from the story headers on 2026-10-31.)
 
 Deck Lab already does most of what Matt and User1 need. Private by default and guarded member departure are built and live since 2026-10-19. The visual redesign (E11-S30) stays first, followed by the expanded reserve of deck-building, collection, buying, play and self-hosting work reviewed on 2026-10-28. [TODO.md](../../TODO.md) owns their order and readiness; each story owns its first slice and later gates. The other must and should gaps are the physical-device follow-up (E2-S22), the signed-in off-page check (E11-S02) and User2's testing session (E11-S28), which need the people involved; and User1's purchase requests (E5-S15), which are deferred. Stand-in suggestions, combo detection, official-list change detection, the Forge upgrade check, the prebuilt Forge release and Linux support are already built.
 
