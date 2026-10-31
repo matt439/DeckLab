@@ -90,6 +90,7 @@ class GlobalSearchUiTests(unittest.TestCase):
           await answer(data);
           const link = box().results.querySelectorAll(".gs-all")[1];
           assert.equal(link.getAttribute("href"), "#/collection?q=sol");
+          assert.equal(link.textContent, "See all in Collection");   // its search matches rules text too: no count
         ''')
 
     def test_nothing_found_and_an_error_say_so(self):

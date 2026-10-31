@@ -6,8 +6,9 @@ about 5 of each with a See all (Decks: the library filtered by title; In your co
 search; Other cards: the card viewer over up to 50 matches). The server leaves out what the viewer may not
 see, so nothing here filters or names anything itself.
 
-  From 600 px a search field in the top bar (300 px on the iPad in portrait, 16 px text so iOS doesn't zoom),
-  its results in a panel under it; under 600 px a search icon that opens the same search as a sheet.
+  A search field before the avatar in the lab from 1000 px and the casual header from 600 px (300 px on the
+  iPad in portrait, 16 px text so iOS doesn't zoom), its results in a panel under it; under 600 px, and on a
+  phone on its side, a search icon that opens the same search as a sheet.
   `/` (outside text fields, menus and dialogs, with single-character shortcuts on) goes to it on every page
   but the Editor, where `/` stays the existing alias of F (find a card to add).
   Typing waits GS_DEBOUNCE ms; an answer to older text, another person or a closed search is dropped.
@@ -21,7 +22,9 @@ syncGlobalSearch() on every route and hides #global-search on the "Who are you?"
 
 const GS_DEBOUNCE = 200;              // ms of typing pause before asking the server
 const GS_SEE_ALL = 50;                // the card viewer's See all
-const GS_FIELD_QUERY = "(min-width: 600px)";      // the field; narrower, the sheet
+// The field: the lab from 1000 px and the casual header from 600 px. Narrower, and on a phone on its side (the
+// lab's top bar under 1000 px, with no room beside its nav pills), the icon and the sheet. shell.css matches it.
+const GS_FIELD_QUERY = "(min-width: 1000px), (min-width: 600px) and (min-height: 501px), (min-width: 600px) and (orientation: portrait)";
 const GS_ICON = "M10.5 4a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13zM20 20l-4.8-4.8";
 let gsWired = false, gsSeq = 0, gsBar = null, gsSheet = null;
 
@@ -244,8 +247,10 @@ function gsCounts(item) {
   return parts.filter(Boolean).join(" · ");
 }
 
+/** A group's See all. The Collection page's search also matches rules text, so its link names no count. */
 function gsSeeAll(box, group, q) {
-  const words = group.capped ? `See all ${group.total}+` : `See all ${group.total}`;
+  const words = group.id === "collection" ? "See all in Collection"
+    : group.capped ? `See all ${group.total}+` : `See all ${group.total}`;
   if (group.id === "decks") {
     return el("a", { class: "gs-all gs-pick", href: `#/library?${new URLSearchParams({ all: "1", q })}`, onclick: () => gsDone(box),
       text: words });

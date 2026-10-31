@@ -2,14 +2,17 @@
 
 Decided (Matt, 2026-10-31): three sources, grouped in this order:
 
-- "decks": the decks this request may see (guard.visible_decks: its own space's, plus a space's Public
-  decks; a script naming nobody every one), matched on the title (and the id's last part);
+- "decks": the decks of the viewer's own space this request may see (guard.visible_decks, then only its own
+  space's: Matt's decision says nothing outside the viewer's own space, so another space's Public decks stay
+  out; home's for a script naming nobody), matched on the title as the library's title filter matches it
+  (NFKC, lower case, anywhere in the title), so the group's See all total is what the library shows;
 - "collection" ("In your collection"): the viewer's own space's collection, only when it may see that
   space's inventory (guard.sees_inventory; home's for a script naming nobody), matched on the card name,
-  each with the Collection page's counts (owned, incoming, in_use and free, as pool.load_pool works them
+  matched as "cards" matches a name (cards.search_names' order: starts, word starts, the words typed in
+  order, anywhere), each with the Collection page's counts (owned, incoming, in_use and free, as pool.load_pool works them
   out; null in_use and free for a tracked basic land) and never a holder's name;
 - "cards" ("Other cards"): every Scryfall card in the local card index (cards.search_names, paper cards),
-  leaving out the names the collection group already has.
+  leaving out every name the viewer's collection holds, so an owned card never shows as another card.
 
 Each group gives at most `limit` items (5 by default), its "total" (counted up to TOTAL_CAP) and "more".
 With `group`, only that group comes back, up to 50 items (its See all). The text is at most MAX_QUERY
@@ -18,6 +21,7 @@ see: a viewer who sees no collection (a request naming nobody, a login that isn'
 collection group, and an unreadable collection says only that it couldn't be read. Nothing is written.
 """
 import csv
+import unicodedata
 
 from decklab.lib import cards, decks, permissions, pool, spaces
 
@@ -50,14 +54,33 @@ def _limit(value, group):
     return int(value)
 
 
-def _rank(key, text):
-    """0 when text starts with key, 1 when a word of it does, 2 when it holds key anywhere, else None."""
-    pos = text.find(key)
+def _title_key(text):
+    """The library's title filter's form of text (library.js libTitleQuery): NFKC, lower case."""
+    return unicodedata.normalize("NFKC", text or "").lower()
+
+
+def _title_rank(key, title):
+    """0 when the title starts with key, 1 when a word of it does, 2 when it holds key anywhere, else None."""
+    pos = title.find(key)
     if pos < 0:
         return None
     if pos == 0:
         return 0
-    return 1 if not text[pos - 1].isalnum() else 2
+    return 1 if not title[pos - 1].isalnum() else 2
+
+
+def _name_rank(key, typed, name):
+    """A card name's place as cards.search_names orders it (0 starts, 1 a word starts, 2 the words typed in
+    order, 3 anywhere), else None: the collection matches exactly the names Other cards would."""
+    folded = cards.fold(name)
+    pos = folded.find(key)
+    if pos == 0:
+        return 0
+    if pos > 0 and folded[pos - 1] in " -":
+        return 1
+    if typed and cards._starts_words(typed, cards._words(folded)):
+        return 2
+    return 3 if pos > 0 else None
 
 
 def _viewer():
@@ -70,14 +93,11 @@ def _viewer():
 
 
 def _own_space(profile, is_script):
-    """The space whose collection this request searches: the viewer's own (home's for a script naming
-    nobody), only when it may see that space's inventory; else None."""
+    """The viewer's own space (home's for a script naming nobody), else None."""
     if profile is None and not is_script:
         return None
     space = spaces.HOME if profile is None else permissions._space_of(profile)
-    if not isinstance(space, str) or not spaces.exists(space) or not guard.sees_inventory(space):
-        return None
-    return space
+    return space if isinstance(space, str) and spaces.exists(space) else None
 
 
 def _group(name, items, total, limit):
@@ -85,14 +105,15 @@ def _group(name, items, total, limit):
             "capped": total > TOTAL_CAP, "more": total > limit}
 
 
-def _decks(key, limit):
-    found = []
+def _decks(space, q, limit):
+    key, found = _title_key(q), []
     for summary in guard.visible_decks(decks.list_decks()):
+        if space is None or spaces.space_of(summary["id"]) != space:
+            continue
         title = summary.get("title") or summary["id"]
-        ranks = [r for r in (_rank(key, cards.fold(title)), _rank(key, cards.fold(summary["id"].split("/")[-1])))
-                 if r is not None]
-        if ranks:
-            found.append((min(ranks), title.casefold(), summary))
+        rank = _title_rank(key, _title_key(summary.get("title")))
+        if rank is not None:
+            found.append((rank, title.casefold(), summary))
     found.sort(key=lambda item: (item[0], item[1]))
     items = [{"id": s["id"], "title": s.get("title") or s["id"], "kind": s.get("kind"), "format": s.get("format"),
               "status": s.get("status")} for _, _, s in found[:limit]]
@@ -100,7 +121,7 @@ def _decks(key, limit):
 
 
 def _collection(space, key, limit):
-    """The collection group and the set of its matching names (left out of Other cards)."""
+    """The collection group and every name the collection holds (left out of Other cards)."""
     from .collection import _holders, _special_basics
     try:
         p = pool.load_pool() if space == spaces.HOME else pool.load_pool(space)
@@ -112,8 +133,9 @@ def _collection(space, key, limit):
     sees = guard.deck_reader()
     names = set(p.owned) | set(special) | set(special_incoming)
     matched = []
+    typed = cards._words(key)
     for name in names:
-        rank = _rank(key, cards.fold(name))
+        rank = _name_rank(key, typed, name)
         if rank is not None:
             matched.append((rank, name.casefold(), name))
     matched.sort()
@@ -129,7 +151,7 @@ def _collection(space, key, limit):
                       "card": _card_json(card, _shown_printing(card)) if card else None})
     group = _group("collection", items, len(matched), limit)
     group["space"] = space
-    return group, {name for _, _, name in matched}
+    return group, names
 
 
 def _cards(q, skip, limit):
@@ -155,9 +177,11 @@ def search_view(q=None, group=None, limit=None):
     profile, is_script = _viewer()
     wanted = (group,) if group else GROUPS
     groups, owned = [], set()
-    if "decks" in wanted and (profile is not None or is_script):
-        groups.append(_decks(key, limit))
     space = _own_space(profile, is_script)
+    if "decks" in wanted and space is not None:
+        groups.append(_decks(space, q, limit))
+    if space is not None and not guard.sees_inventory(space):
+        space = None
     if space is not None and ("collection" in wanted or "cards" in wanted):
         found, owned = _collection(space, key, limit)
         if "collection" in wanted:

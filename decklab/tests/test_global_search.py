@@ -7,7 +7,7 @@ import json
 from unittest import mock
 
 from decklab.lib import access, feature_routes
-from decklab.lib.api import collection, global_search as gs
+from decklab.lib.api import collection, global_search as gs, guard
 from decklab.lib.api import variant_queue  # noqa: F401  (feature_routes.dispatch imports it: load it before a sandbox)
 from decklab.tests.test_api import _write
 from decklab.tests.test_collection_edit import CollectionEditTestCase
@@ -74,6 +74,22 @@ class GroupsTests(GlobalSearchTestCase):
             only = gs.search_view("e", group="cards")
         self.assertEqual([g["id"] for g in only["groups"]], ["cards"])
         self.assertLessEqual(len(only["groups"][0]["items"]), 50)
+
+    def test_owned_cards_match_as_other_cards_do_and_never_show_as_other_cards(self):
+        # "llan elv" finds Llanowar Elves by its words' starts, as cards.search_names does: an owned card is in
+        # the collection group, never listed under Other cards as if it weren't owned.
+        with self.at_home("matt"):
+            groups = self.groups(gs.search_view("llan elv"))
+        self.assertIn("Llanowar Elves", [i["name"] for i in groups["collection"]["items"]])
+        self.assertNotIn("Llanowar Elves", [i["name"] for i in groups["cards"]["items"]])
+
+    def test_decks_match_the_title_as_the_library_does(self):
+        # The library's title filter (NFKC, lower case, the title only), so See all's total is what it shows:
+        # a deck's slug alone doesn't match.
+        with self.at_home("matt"):
+            decks = self.groups(gs.search_view("fdn-beginner-box"))["decks"]
+        self.assertEqual(decks["items"], [])
+        self.assertEqual(gs._title_rank(gs._title_key("ＥＬＶ"), gs._title_key("Elves")), 0)
 
     def test_bad_input_is_refused_and_blank_text_answers_nothing(self):
         self.assertEqual(gs.search_view("   "), {"q": "", "groups": []})
@@ -144,11 +160,19 @@ class PrivacyTests(GlobalSearchTestCase):
             answer = gs.search_view("elv")
         self.assertEqual([g["id"] for g in answer["groups"]], ["cards"])
 
-    def test_a_script_sees_every_deck_and_home_s_collection(self):
-        answer = gs.search_view("elv")          # outside a request: a script naming nobody
+    def test_another_space_s_public_decks_stay_out(self):
+        # Matt's decision of 2026-10-31: nothing outside the viewer's own space, Public decks included.
+        with self.as_("matt"), mock.patch.object(guard, "public_deck_spaces", return_value=frozenset({"user2"})):
+            text = json.dumps(gs.search_view("elv"))
+        self.assertNotIn("r-elves", text)
+        with self.as_("user2"), mock.patch.object(guard, "public_deck_spaces", return_value=frozenset({"home"})):
+            groups = self.groups(gs.search_view("elv"))
+        self.assertEqual([d["id"] for d in groups["decks"]["items"]], ["user2/casual/r-elves"])
+
+    def test_a_script_sees_home_s_decks_and_collection(self):
+        answer = gs.search_view("elv")          # outside a request: a script naming nobody, home's space
         groups = self.groups(answer)
-        self.assertEqual(sorted(d["id"] for d in groups["decks"]["items"]),
-                         ["product/fdn-beginner-box/elves", "user2/casual/r-elves"])
+        self.assertEqual([d["id"] for d in groups["decks"]["items"]], ["product/fdn-beginner-box/elves"])
         self.assertEqual(groups["collection"]["space"], "home")
 
     def test_an_unreadable_collection_names_nothing(self):

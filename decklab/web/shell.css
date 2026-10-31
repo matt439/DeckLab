@@ -73,10 +73,13 @@ svg.icon-more { stroke-width: 4; }
    and the avatar right. Hidden, the avatar's own auto margin keeps it at the bar's right edge. */
 .shell-status { position: relative; margin-left: auto; display: flex; align-items: center; gap: var(--s-2); min-width: 0; }
 
-/* The global search (global-search.js, E11-S31; visual-design.md 3.2-3.3): from 600 px a round field before the
+/* The global search (global-search.js, E11-S31; visual-design.md 3.2-3.3): a round field before the
    avatar (300 px on the iPad in portrait, 280 in the lab), its results in a panel under it; under 600 px a search
-   icon that opens the same search in a sheet. 16 px text below the lab, so iOS doesn't zoom. */
-.global-search { position: relative; flex: none; display: flex; align-items: center; }
+   icon (also on a phone on its side) that opens the same search in a sheet. 16 px text below the lab, so iOS doesn't zoom. */
+/* Its auto margin keeps the search and the avatar together at the bar's right edge (a shown status pill pushes
+   all three right instead). */
+.global-search { position: relative; flex: none; display: flex; align-items: center; margin-left: auto; }
+.shell-status:not([hidden]) ~ .global-search { margin-left: 0; }
 .global-search[hidden] { display: none; }
 .gs-form {
   display: flex; align-items: center; gap: var(--s-2);
@@ -138,14 +141,16 @@ svg.icon-more { stroke-width: 4; }
 @media (min-width: 1000px) and (max-width: 1199px) {
   .global-search .gs-box { width: 200px; }
 }
-@media (min-width: 600px) {
+/* The field: the lab from 1000 px and the casual header from 600 px (GS_FIELD_QUERY in global-search.js); a phone
+   on its side keeps the icon, as its lab top bar has no room beside the nav pills. */
+@media (min-width: 1000px), (min-width: 600px) and (min-height: 501px), (min-width: 600px) and (orientation: portrait) {
   .global-search .gs-box { display: block; }
   .global-search .gs-open { display: none; }
 }
 
 /* The avatar and its menu: theme, switch person, this is my device, and an admin's Settings and About. */
 .topbar-actions { position: relative; flex: none; display: flex; align-items: center; margin-left: auto; }
-.shell-status:not([hidden]) ~ .topbar-actions { margin-left: 0; }
+.shell-status:not([hidden]) ~ .topbar-actions, .global-search:not([hidden]) ~ .topbar-actions { margin-left: 0; }
 .topbar-actions[hidden] { display: none; }
 .avatar-button {
   display: grid; place-items: center;

@@ -22,7 +22,29 @@ class DeviceLayoutFileTests(unittest.TestCase):
         # time); a shown pill pushes itself, the global search (E11-S31) and the avatar right instead.
         shell = _text("shell.css")
         self.assertRegex(shell, r"\.topbar-actions \{[^}]*margin-left: auto")
-        self.assertIn(".shell-status:not([hidden]) ~ .topbar-actions { margin-left: 0; }", shell)
+        self.assertIn(".shell-status:not([hidden]) ~ .topbar-actions, .global-search:not([hidden]) ~ .topbar-actions"
+                      " { margin-left: 0; }", shell)
+        # The search carries the auto margin when shown, so it sits beside the avatar, not after the nav pills.
+        self.assertRegex(shell, r"\.global-search \{[^}]*margin-left: auto")
+        self.assertIn(".shell-status:not([hidden]) ~ .global-search { margin-left: 0; }", shell)
+
+    def test_global_search_field_leaves_a_phone_on_its_side_the_icon(self):
+        # E11-S31: the field shows in the lab from 1000 px and the casual header from 600 px; a phone on its side
+        # (852 x 393, 667 x 375: the lab's top bar with its nav pills under 1000 px) keeps the icon and the sheet,
+        # so the bar doesn't overflow. global-search.js asks the same query before focusing the field.
+        query = "(min-width: 1000px), (min-width: 600px) and (min-height: 501px), (min-width: 600px) and (orientation: portrait)"
+        block = _block(_text("shell.css"), query)
+        self.assertIn(".global-search .gs-box { display: block; }", block)
+        self.assertIn(".global-search .gs-open { display: none; }", block)
+        self.assertIn(f'const GS_FIELD_QUERY = "{query}";', _text("global-search.js"))
+
+        def field(width, height):
+            portrait = height >= width
+            return width >= 1000 or (width >= 600 and (height >= 501 or portrait))
+        for width, height in ((852, 393), (667, 375), (844, 390), (852, 330), (393, 852)):
+            self.assertFalse(field(width, height), (width, height))
+        for width, height in ((820, 1180), (1180, 820), (1470, 956), (600, 900)):
+            self.assertTrue(field(width, height), (width, height))
 
     def test_short_landscape_lets_the_top_bar_scroll_away(self):
         # A phone on its side (852 x 330): the top bar isn't sticky, and --shell-top (where the deck's tabs and
