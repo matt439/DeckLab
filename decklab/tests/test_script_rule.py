@@ -156,6 +156,10 @@ class HomeListenerTests(unittest.TestCase):
                                          client_address=(address, 1234))
         is_script = server_http.Handler._is_script
         header = [(access.SCRIPT_HEADER, "1")]
+        # On Linux the connection must be this user's too (test_linux_server checks that).
+        peer = mock.patch.object(server_http, "script_peer_ok", return_value=True)
+        peer.start()
+        self.addCleanup(peer.stop)
         for address in ("127.0.0.1", "::1", "::ffff:127.0.0.1"):
             self.assertTrue(is_script(handler(address, header), None), address)
         self.assertFalse(is_script(handler("192.0.2.10", header), None))    # the PC's own LAN address

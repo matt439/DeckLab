@@ -60,9 +60,10 @@ def pick_interface(network):
     return None
 
 
-def check_network(network, error=None):
+def check_network(network, error=None, linux=False):
     """The Network lines: the connection with the default route and its
-    category (Public blocks phones)."""
+    category (Public blocks phones). With linux, there's no category to
+    judge (linux_facts.network has none): the connection and its address."""
     area = "Network"
     setup = (f"Run {SETUP_RUN} in an administrator PowerShell, at home: it names the network and asks "
              "before setting it to Private.")
@@ -82,6 +83,8 @@ def check_network(network, error=None):
     category = _category(chosen.get("category"))
     where = (f"{name}" + (f" ({chosen['description']})" if chosen.get("description") else "")
              + f": {address['address']}/{address.get('prefix')} {how}")
+    if linux:
+        return [line(OK, area, f"{where}.")]
     if category == "Private":
         return [line(OK, area, f"{where}, on a Private network.")]
     if category == "Public":
@@ -435,6 +438,54 @@ def check_firewall(firewall, port, server_programs, python_programs, error=None,
             out.append(line(PROBLEM, area, "\"Block all incoming connections\" is on for Private networks, "
                                            "which blocks phones whatever the rules say.",
                             "Turn it off in Windows Security > Firewall & network protection > Private network."))
+    return out
+
+
+def check_firewall_linux(firewall, port, lan=None, home_networks=None, error=None):
+    """The Firewall lines on Linux, from linux_facts.firewall's facts: whether a
+    firewall service runs (firewalld, ufw, nftables) and, for firewalld, whether
+    its zone lets the port (and mDNS) in. ufw's and nftables' rules need root to
+    read, so for those it gives the command that opens the port to the home
+    network only. Deck Lab itself answers only home-network addresses
+    (lib/home_scope.py), firewall or not."""
+    area = "Firewall"
+    if firewall is None:
+        return [line(WARN, area, "Couldn't check the firewall" + (f": {error}" if error else "."))]
+    source = str(lan["subnet"]) if lan and lan.get("subnet") else "<your home network, such as 192.168.1.0/24>"
+    itself = ("Deck Lab itself answers only addresses on a home network (private, link-local"
+              + (', and config.json\'s "home_networks"' if home_networks else "") + ").")
+    active = list(firewall.get("active") or [])
+    if not active:
+        return [line(OK, area, "No firewall service is on (firewalld, ufw or nftables), so none blocks phones. "
+                               + itself)]
+    out = []
+    if "firewalld" in active:
+        zone = firewall.get("zone")
+        add = f"sudo firewall-cmd --permanent --zone={zone or '<zone>'}"
+        if firewall.get("port") is True:
+            out.append(line(OK, area, f"firewalld's {zone} zone lets port {port} in."))
+        elif firewall.get("port") is False:
+            out.append(line(PROBLEM, area, f"firewalld's {zone} zone doesn't let port {port} in, so phones "
+                                           "can't open the page.",
+                            f"{add} --add-rich-rule='rule family=ipv4 source address={source} port port={port} "
+                            f"protocol=tcp accept', then sudo firewall-cmd --reload"))
+        else:
+            out.append(line(WARN, area, f"firewalld is on, but whether {f'its {zone} zone' if zone else 'it'} "
+                                        f"lets port {port} in couldn't be read.",
+                            f"sudo firewall-cmd --zone={zone or '<zone>'} --list-all"))
+        if firewall.get("mdns") is False:
+            out.append(line(WARN, area, f"firewalld's {zone} zone doesn't let mDNS in, so phones may not find the "
+                                        "PC by name.", f"{add} --add-service=mdns, then sudo firewall-cmd --reload"))
+    if "ufw" in active:
+        out.append(line(WARN, area, "ufw is on, and its rules can't be read without root: if phones can't open "
+                                    "the page, it may be blocking them.",
+                        f"sudo ufw allow from {source} to any port {port} proto tcp (and, for the PC's name, "
+                        f"sudo ufw allow from {source} to any port 5353 proto udp); sudo ufw status shows the "
+                        "rules"))
+    if "nftables" in active and "firewalld" not in active:
+        out.append(line(WARN, area, "nftables' service is on, and its rules can't be read without root: if phones "
+                                    f"can't open the page, they may block port {port}.",
+                        "sudo nft list ruleset shows them"))
     return out
 
 

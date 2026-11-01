@@ -3,10 +3,14 @@
 
 The server starts cloudflared itself when "tunnel" in config.json says so,
 and only when it listens on its configured port (so a test server on another
-port never opens the tunnel). cloudflared runs with no window inside the
-server's Job Object (forge/processes.py), so it stops with the server, even
-when the server is killed or crashes; homenet start, stop and restart need
-nothing more. If cloudflared exits on its own, the server starts it again
+port never opens the tunnel). On Windows cloudflared runs with no window
+inside the server's Job Object (forge/processes.py), so it stops with the
+server, even when the server is killed or crashes. On Linux it runs in a
+session of its own: the server ends it when it stops, and when the server is
+killed or crashes, systemd's service (homenet install: KillMode=mixed ends
+whatever is left in the service's cgroup) does; a server run by hand in a
+terminal that's killed outright can leave it running. homenet start, stop
+and restart need nothing more. If cloudflared exits on its own, the server starts it again
 after RESTART_WAIT seconds. When the PC wakes from sleep (wake-on-request,
 lib/keepawake.py) the server restarts it at once (Tunnel.restart_now): its
 connections to Cloudflare are stale after a sleep.
@@ -16,7 +20,12 @@ connections to Cloudflare are stale after a sleep.
 "config" is cloudflared's own config file (outside the repo, beside the
 tunnel's credentials); "hostname" is what homenet status checks. "cloudflared"
 (optional) is the program's path; otherwise it's found on the PATH or where
-its installer puts it. The hostnames are listed in "allowed_hosts" too.
+its installer puts it (install_places: Program Files on Windows; /usr/bin,
+/usr/local/bin and the like elsewhere). The hostnames are listed in
+"allowed_hosts" too. The credentials file the config names
+(credentials-file:) must be there, as a path of this system: a config moved
+from Windows still naming C:\\Users\\... is refused loudly
+(credentials_problem), as is one whose file is missing.
 
 The tunnel needs "access" in config.json as well (lib/access.py): the server
 then opens a second listener on 127.0.0.1:<access port> for the tunnel only,
@@ -40,6 +49,7 @@ import re
 import shutil
 import socket
 import ssl
+import sys
 import threading
 import urllib.parse
 from pathlib import Path
@@ -50,6 +60,24 @@ RESTART_WAIT = 30           # seconds before cloudflared is started again after 
 CHECK_TIMEOUT = 10          # seconds for status's request to the public address
 INSTALL_PLACES = (r"C:\Program Files (x86)\cloudflared\cloudflared.exe",
                   r"C:\Program Files\cloudflared\cloudflared.exe")
+# Where Cloudflare's packages (pkg.cloudflare.com), a release binary or snap put it on Linux.
+POSIX_INSTALL_PLACES = ("/usr/bin/cloudflared", "/usr/local/bin/cloudflared", "~/.local/bin/cloudflared",
+                        "/snap/bin/cloudflared", "/opt/cloudflared/cloudflared")
+WINDOWS_HINT = "winget install Cloudflare.cloudflared"
+POSIX_HINT = ("install Cloudflare's cloudflared package (pkg.cloudflare.com), or set \"cloudflared\" in "
+              "config.json to its path")
+
+
+def install_places():
+    """Where cloudflared's installers put it on this system."""
+    if sys.platform == "win32":
+        return INSTALL_PLACES
+    return tuple(os.path.expanduser(p) for p in POSIX_INSTALL_PLACES)
+
+
+def install_hint():
+    """How to install cloudflared on this system."""
+    return WINDOWS_HINT if sys.platform == "win32" else POSIX_HINT
 
 
 def settings_of(settings):
@@ -236,10 +264,46 @@ def ingress_problems(settings, home_port=None):
 def find_cloudflared(settings=None):
     """cloudflared's path, or None when it isn't installed."""
     given = (settings or {}).get("cloudflared")
-    candidates = [given] if given else [shutil.which("cloudflared"), *INSTALL_PLACES]
+    candidates = [given] if given else [shutil.which("cloudflared"), *install_places()]
     for path in candidates:
         if path and Path(path).is_file():
             return Path(path)
+    return None
+
+
+def top_level(text, key):
+    """A key's value at the left margin of a cloudflared config ("credentials-file:
+    /home/p/.cloudflared/x.json"), unquoted, or None. The same simple YAML as ingress_rules."""
+    for raw in text.splitlines():
+        if raw[:1].isspace() or raw.lstrip().startswith("#"):
+            continue
+        name, colon, value = raw.partition(":")
+        if colon and name.strip() == key:
+            value = value.split(" #", 1)[0].strip().strip("'\"")
+            return value or None
+    return None
+
+
+def credentials_problem(settings, is_file=None):
+    """Why the credentials file cloudflared's config names (credentials-file:) won't do, or
+    None: fine, not named (cloudflared then looks beside its config) or the config can't be
+    read (start and status say so on their own)."""
+    setup = settings_of(settings)
+    if setup is None:
+        return None
+    try:
+        text = setup["config"].read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return None
+    named = top_level(text, "credentials-file")
+    if not named:
+        return None
+    if sys.platform != "win32" and re.match(r"^[A-Za-z]:[\\/]|^\\\\", named):
+        return (f"{setup['config']} names the tunnel's credentials file as {named}, a Windows path "
+                "(the config came from a Windows PC)")
+    path = Path(os.path.expanduser(named))
+    if not (is_file or Path.is_file)(path):
+        return f"the tunnel's credentials file {path} (credentials-file in {setup['config']}) isn't there"
     return None
 
 
@@ -321,7 +385,7 @@ def start(settings, port, configured_port, log, listener_port=None):
         return None
     program = find_cloudflared(settings)
     if program is None:
-        log("Tunnel: not started: cloudflared isn't installed (winget install Cloudflare.cloudflared).")
+        log(f"Tunnel: not started: cloudflared isn't installed ({install_hint()}).")
         return None
     if listener_port is None:
         log('Tunnel: NOT STARTED: Deck Lab has no listener for the tunnel ("access" in config.json is missing '
@@ -332,6 +396,10 @@ def start(settings, port, configured_port, log, listener_port=None):
     if problems:
         log(f"Tunnel: NOT STARTED: {tunnel['config']} doesn't send the tunnel to Deck Lab's tunnel listener "
             f"(127.0.0.1:{listener_port}): {'; '.join(problems)}.")
+        return None
+    credentials = credentials_problem(settings)
+    if credentials:
+        log(f"Tunnel: NOT STARTED: {credentials}.")
         return None
     log(f"Tunnel: starting cloudflared for https://{tunnel['hostname'] or '(no hostname set)'}/")
     return Tunnel(program, tunnel["config"], log).start()

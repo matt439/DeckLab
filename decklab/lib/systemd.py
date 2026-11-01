@@ -5,6 +5,11 @@ Everything runs as the user: no root, no system units. A user manager runs only 
 that user is logged in, unless lingering is on (loginctl enable-linger), which lets the
 units start at boot and keep running after logging out; linger() says which.
 
+systemctl --user reaches the user manager through $XDG_RUNTIME_DIR (/run/user/<uid>),
+which a login sets but sudo -u, su and cron don't. When it's missing and that folder is
+this user's, systemctl is given it (user_environment); when the manager still can't be
+reached, what systemctl said gets BUS_HINT.
+
 Tests replace systemctl (and loginctl's run) here; the code using them looks them up
 in this module.
 """
@@ -14,6 +19,10 @@ import sys
 from pathlib import Path
 
 TIMEOUT = 30                        # seconds for one systemctl call
+BUS_HINT = ("(systemctl --user can't reach your user manager from this shell: log in as this user directly, "
+            "with ssh or sudo machinectl shell <user>@, or run export XDG_RUNTIME_DIR=/run/user/$(id -u) "
+            "first; loginctl enable-linger keeps the manager running without a login)")
+_NO_BUS = ("failed to connect to bus", "xdg_runtime_dir", "dbus_session_bus_address", "no medium found")
 
 
 def supported():
@@ -29,11 +38,28 @@ def unit_dir(env=None):
     return root / "systemd" / "user"
 
 
-def _run(args, timeout=TIMEOUT):
+def user_environment(env=None, uid=None, stat=os.stat):
+    """The environment for systemctl --user: env (os.environ) as it is, or, when it has no
+    XDG_RUNTIME_DIR, with /run/user/<uid> when that folder is there and this user's. None
+    when nothing needs changing (the child then inherits os.environ)."""
+    env = os.environ if env is None else env
+    if env.get("XDG_RUNTIME_DIR") or not hasattr(os, "getuid"):
+        return None
+    uid = os.getuid() if uid is None else uid
+    folder = f"/run/user/{uid}"
+    try:
+        if stat(folder).st_uid != uid:
+            return None
+    except OSError:
+        return None
+    return {**env, "XDG_RUNTIME_DIR": folder}
+
+
+def _run(args, timeout=TIMEOUT, env=None):
     """(exit code, stdout, stderr) of a command; 127 when it isn't installed."""
     try:
         done = subprocess.run(args, capture_output=True, text=True, timeout=timeout,
-                              stdin=subprocess.DEVNULL, errors="replace")
+                              stdin=subprocess.DEVNULL, errors="replace", env=env)
     except FileNotFoundError:
         return 127, "", f"{args[0]} isn't installed"
     except subprocess.TimeoutExpired:
@@ -44,8 +70,14 @@ def _run(args, timeout=TIMEOUT):
 
 
 def systemctl(*args, timeout=TIMEOUT):
-    """systemctl --user args: (exit code, stdout, stderr)."""
-    return _run(["systemctl", "--user", *args], timeout)
+    """systemctl --user args: (exit code, stdout, stderr); when the user manager can't be
+    reached, stderr ends with BUS_HINT."""
+    env = user_environment()
+    code, out, err = (_run(["systemctl", "--user", *args], timeout, env) if env is not None
+                      else _run(["systemctl", "--user", *args], timeout))
+    if code != 0 and any(word in (err or "").lower() for word in _NO_BUS):
+        err = f"{(err or '').rstrip()} {BUS_HINT}"
+    return code, out, err
 
 
 def said(out, err, code):

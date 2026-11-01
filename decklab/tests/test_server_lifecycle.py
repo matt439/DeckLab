@@ -22,7 +22,7 @@ from decklab.lib.forge import overrides as forge_overrides
 from decklab.lib.forge import pool as forge_pool
 from decklab.lib.forge import slots as forge_slots
 from decklab.lib.state import EXPLICIT_ENV
-from decklab.tests.test_control import NO_WINDOW, WINDOWS, free_port, now_iso, sleeper, wait_until
+from decklab.tests.test_control import NO_WINDOW, WINDOWS, free_port, now_iso, own_state, sleeper, wait_until
 from decklab.tests.test_server import REAL_LOG
 
 if WINDOWS:
@@ -409,7 +409,7 @@ class MainTests(unittest.TestCase):
         self.assertEqual(server.main(argv), 1)
         self.assertTrue(self.log[-1].startswith(f"Can't listen on 127.0.0.1:{port}: "), self.log)
         # The state file says a Deck Lab server is there: say which, and how to stop it.
-        control.write_state({"version": 1, "pid": os.getpid(), "port": port, "started": now_iso()},
+        control.write_state(own_state(version=1, pid=os.getpid(), port=port, started=now_iso()),
                             self.state_file)
         self.assertEqual(server.main(argv), 1)
         self.assertRegex(self.log[-1], rf"^Deck Lab is already running \(process {os.getpid()}, started "
@@ -420,7 +420,7 @@ class MainTests(unittest.TestCase):
         self.assertEqual(server.main(argv[:2] + ["--no-update"]), 1)
         self.assertTrue(self.log[-1].endswith("Stop it with: python -m decklab.lib.homenet stop"), self.log[-1])
         # A state file for another port isn't this one.
-        control.write_state({"version": 1, "pid": os.getpid(), "port": port + 1, "started": now_iso()},
+        control.write_state(own_state(version=1, pid=os.getpid(), port=port + 1, started=now_iso()),
                             self.state_file)
         self.assertEqual(server.main(argv), 1)
         self.assertTrue(self.log[-1].startswith("Can't listen on"), self.log[-1])
@@ -430,7 +430,7 @@ class MainTests(unittest.TestCase):
         # A server is recorded on the port, but this bind failed for another
         # reason (an address this PC doesn't have): say so, not "already running".
         port = free_port()
-        control.write_state({"version": 1, "pid": os.getpid(), "port": port, "started": now_iso()},
+        control.write_state(own_state(version=1, pid=os.getpid(), port=port, started=now_iso()),
                             self.state_file)
         self.assertEqual(server.main(["--host", "10.255.255.1", "--port", str(port), "--no-update"]), 1)
         self.assertTrue(self.log[-1].startswith(f"Can't listen on 10.255.255.1:{port}: "), self.log)
