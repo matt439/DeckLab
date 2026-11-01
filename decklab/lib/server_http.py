@@ -441,7 +441,10 @@ class Handler(BaseHTTPRequestHandler):
                     if keepawake.current() is not None:
                         private["keep_awake"] = keepawake.current().status()
                 if not self.server.remote:      # the home network's way back in while the PC sleeps
-                    wake = keepawake.wake_settings(config.load())
+                    try:
+                        wake = keepawake.wake_settings(config.load())
+                    except (OSError, ValueError):   # an unreadable config.json: status still answers
+                        wake = None
                     if wake and wake["gate"]:
                         private["wake_gate"] = wake["gate"]
                 return self._send_json(200, {**api.status(), "build": build.status(),
