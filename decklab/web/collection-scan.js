@@ -50,8 +50,9 @@ function openScanSheet(cv, pending = []) {
     ctx.reads ? el("p", { text: "Photograph one card at a time, filling the frame with it. Each photo is read on the PC and "
       + "never kept. Nothing is added until you review the list." })
       : el("p", { class: "box box-warn col-scan-off", text: COL_SCAN_OFF }),
+    // The photo field only where photos can be read (an empty div keeps append free of null).
     ctx.reads ? el("label", { class: "field col-file-field", for: ctx.input.id },
-      el("span", { text: "Take a photo of a card" }), ctx.input) : null,
+      el("span", { text: "Take a photo of a card" }), ctx.input) : el("div", { hidden: true }),
     ctx.message, ctx.result,
     el("div", { class: "col-scan-typed" },
       el("label", { class: "field", for: ctx.name.id }, el("span", { text: ctx.reads ? "Or type a card's name" : "Type a card's name" }), ctx.name),
