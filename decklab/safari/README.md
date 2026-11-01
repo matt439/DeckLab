@@ -81,6 +81,16 @@ reach the copies inside `appium-xcuitest-driver`: driver 10 shipped its own
 breaking changes (removed capabilities, driver methods and the CommonJS entry) touch nothing
 the suite uses. Keep an override's version no older than a version a package pins exactly
 (`npm view <package>@<version> dependencies`).
+Dependabot alert 121 (2026-11-02, `minimatch` < 11.0.1, a denial of service from a glob
+pattern the caller chooses) is dismissed on GitHub as tolerable risk: the suite
+never hands Appium a glob pattern from outside, and nothing here runs on the server. An
+override can't clear it. The fix is minimatch 11, a new major that `glob` 13 can't use
+(its pattern parts stop being `RegExp`s), so `glob` would have to move to 14 as well. Even then
+the copies the driver bundles stay at 10.2.6: driver 12.22.8 and 13.0.3 still bundle `glob`
+13.0.6 and `readdir-glob` 3.0.0, each with minimatch 10.2.6. Move to the first driver release
+whose bundle has no minimatch older than 11.0.1 (`npm pack appium-xcuitest-driver@<version>`
+and look under `node_modules`), together with an override of `glob@13` to 14 for
+`@appium/support`, which pins `glob` 13.0.6.
 Do not update packages globally to repair a local run. Repeat `setup.sh` after a
 pull changes the lockfile. Changing Xcode or a runtime also needs a new report.
 
