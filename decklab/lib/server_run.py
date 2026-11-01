@@ -16,7 +16,7 @@ import time
 import traceback
 from datetime import datetime
 
-from decklab.lib import access, api, cards, control, dbstatus, keepawake, server_http, tunnel, venv, visits
+from decklab.lib import access, api, cards, control, dbstatus, home_scope, keepawake, server_http, tunnel, venv, visits
 
 UPDATE_EVERY = 24 * 60 * 60         # seconds between background card-data checks
 RETRY_AFTER = 10 * 60               # ... and after one that failed (e.g. no network yet)
@@ -375,6 +375,9 @@ def _record_state(host, port, log_path, background):
     state = {"version": control.STATE_VERSION, "pid": os.getpid(), "host": host, "port": port,
              "started": datetime.now().astimezone().isoformat(timespec="seconds"),
              "python": sys.executable, "log": log_path, "background": background}
+    ticks = control.process_ticks(os.getpid())     # Linux only: read_state's check of a reused process id
+    if ticks is not None:
+        state["start_ticks"] = ticks
     try:
         control.write_state(state)
     except OSError as e:
@@ -400,7 +403,8 @@ def _serve(host, port, no_update, settings, log_path, background):
     hosts = access.home_refused_hosts(settings)
     home_hosts = [h for h in settings.get("allowed_hosts") or [] if str(h).strip().lower().rstrip(".") not in hosts]
     try:
-        server = server_http.make_server(host, port, allowed_hosts=home_hosts, tunnel_hosts=hosts)
+        server = server_http.make_server(host, port, allowed_hosts=home_hosts, tunnel_hosts=hosts,
+                                         home_networks=home_scope.networks(settings, server_http.log))
     except (OSError, OverflowError) as e:       # port in use, bad address, port over 65535
         server_http.log(_cant_listen(host, port, e, default_port))
         return 1

@@ -128,7 +128,9 @@ class Cancelled(Exception):
 
 def folder():
     """The slots' folder: DECKLAB_FORGE_SLOTS when it's set, else DeckLab\\forge-slots in
-    %LOCALAPPDATA% (elsewhere ~/.local/share). Looked up on every call."""
+    %LOCALAPPDATA% (elsewhere always ~/.local/share, never $XDG_DATA_HOME: the server's systemd
+    service, the nightly timer, cron and a login shell needn't share that variable, and every
+    Forge run on the PC must lock slots in the same folder). Looked up on every call."""
     named = os.environ.get(ENV)
     if named:
         return Path(named)

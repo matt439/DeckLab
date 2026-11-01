@@ -1,5 +1,5 @@
 """The database's commands: `python -m decklab.db <command>` (the system python finds .venv's
-psycopg through lib/venv.py; .venv\\Scripts\\python works as well).
+psycopg through lib/venv.py; .venv\\Scripts\\python, or .venv/bin/python off Windows, works as well).
 
   setup            make the roles, their pgpass lines, the database, migrations and profiles
   migrate          apply pending migrations
@@ -30,6 +30,7 @@ Exit codes: 0 done, 1 failed, 2 the database can't be reached (or psycopg is mis
 """
 import argparse
 import importlib
+import os
 import pkgutil
 import sys
 
@@ -203,9 +204,14 @@ def _schedule(args):
         if hasattr(sys.stdout, "reconfigure"):
             sys.stdout.reconfigure(encoding="utf-8", errors="strict", newline="\n")
         return schedule.preview_systemd(getattr(args, "unit", None), getattr(args, "python", None),
-                                        getattr(args, "workdir", None), getattr(args, "at", None))
-    if any(getattr(args, name, None) is not None for name in ("unit", "python", "workdir", "at")):
-        raise ValueError("--unit, --python, --workdir and --at are only for schedule preview-systemd.")
+                                        getattr(args, "workdir", None), getattr(args, "at", None),
+                                        zone=getattr(args, "zone", None))
+    if args.action == "wake-timer":
+        if any(getattr(args, name, None) is not None for name in ("unit", "python", "workdir")):
+            raise ValueError("--unit, --python and --workdir are only for schedule preview-systemd.")
+        return schedule.wake_timer(getattr(args, "at", None), zone=getattr(args, "zone", None))
+    if any(getattr(args, name, None) is not None for name in ("unit", "python", "workdir", "at", "zone")):
+        raise ValueError("--unit, --python, --workdir, --at and --zone are only for schedule preview-systemd.")
     if args.action == "install":
         return schedule.install()
     if args.action == "remove":
@@ -286,12 +292,19 @@ def parser():
                     help="the window for days visited and the pages opened most (1-366, default 30)")
     sp.add_argument("--profile", metavar="P", help="only this profile's visits")
     sp = command("schedule", _schedule, "Manage the nightly Task Scheduler task, or print a systemd user "
-                                      "unit preview without installing anything.")
-    sp.add_argument("action", choices=("install", "remove", "status", "preview-systemd"))
+                                      "unit preview (or, wake-timer, the root timer that wakes a sleeping "
+                                      "Linux PC for it) without installing anything.")
+    sp.add_argument("action", choices=("install", "remove", "status", "preview-systemd", "wake-timer"))
     sp.add_argument("--unit", choices=("service", "timer"), help="which systemd user unit to print")
     sp.add_argument("--python", metavar="PATH", help="preview: absolute POSIX path to the target Python")
     sp.add_argument("--workdir", metavar="DIR", help="preview: absolute POSIX path to the target repo")
-    sp.add_argument("--at", metavar="HH:MM", help="preview: daily local time (default 03:30)")
+    sp.add_argument("--at", metavar="HH:MM", help="preview and wake-timer: the nightly run's daily local time "
+                                               "(default 03:30)")
+    sp.add_argument("--zone", metavar="NAME", help="preview and wake-timer: the time zone the timer counts --at "
+                                                "in, such as Australia/Sydney. install writes config.json's "
+                                                "\"timezone\"; preview-systemd reads no config, so give it "
+                                                "here to see what install writes (default: the host's zone). "
+                                                "wake-timer uses config.json's \"timezone\" unless given")
     from decklab.db import wishlist_cli
     wishlist_cli.add_parser(sub)
     from decklab.db import visibility_cli
@@ -300,8 +313,19 @@ def parser():
     return p
 
 
+def _private_files(args, windows=None, umask=None):
+    """Off Windows, make the files and folders a backup, export, restore check, restore or
+    nightly run writes (dumps, partial copies, CSV exports, pg_dump's own output) private to
+    this user (umask 077), however it was started: the systemd units have UMask=0077, but a
+    shell (or update's pre-migration backup) usually has 022. On Windows nothing changes."""
+    windows = os.name == "nt" if windows is None else windows
+    if not windows and getattr(args, "func", None) in (_backup, _export, _restore_check, _restore, _nightly):
+        (umask or os.umask)(0o077)
+
+
 def main(argv=None):
     args = parser().parse_args(argv)
+    _private_files(args)
     for stream in (sys.stdout, sys.stderr):
         if hasattr(stream, "reconfigure"):
             stream.reconfigure(errors="replace")   # names and messages a cp1252 pipe can't show

@@ -52,10 +52,9 @@ import time
 import traceback
 import uuid
 import zlib
-from datetime import datetime, timedelta, timezone
 from pathlib import PurePosixPath
 
-from decklab.lib import arrivals, cards, config, inventory, spaces
+from decklab.lib import arrivals, cards, config, hometime, inventory, spaces
 from decklab.lib.decks.identity import CardIdentityError, deck_colors
 from decklab.lib.inventory import files, receive, rules
 from decklab.lib.tokens import details as token_details
@@ -76,8 +75,8 @@ def _hex(value, length):
 
 
 def _receipt_today():
-    """The household's date (UTC+10), independent of the server's timezone."""
-    return datetime.now(timezone(timedelta(hours=10))).date().isoformat()
+    """The household's date (config.json's "timezone", else UTC+10), independent of the server's timezone."""
+    return hometime.household_today()
 
 
 def fingerprint(revision):

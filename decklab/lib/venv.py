@@ -108,3 +108,11 @@ def reason():
     """What the last activate() returned: None when the venv's packages are importable (or
     there was nothing to do), else why not."""
     return _state["result"]
+
+
+def pip_hint(windows=None):
+    """The command that installs Deck Lab's packages into the repo's .venv, as this system
+    writes it: .venv\\Scripts\\python on Windows, .venv/bin/python elsewhere."""
+    windows = os.name == "nt" if windows is None else windows
+    python = r".venv\Scripts\python" if windows else ".venv/bin/python"
+    return f"{python} -m pip install -r decklab/requirements.txt"

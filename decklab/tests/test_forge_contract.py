@@ -381,7 +381,7 @@ class FakeCase(unittest.TestCase):
         shutil.rmtree(cls.tmp, ignore_errors=True)
 
     def env(self, modes=""):
-        env = dict(os.environ, FAKE_FORGE=modes, APPDATA=str(self.tmp))
+        env = dict(os.environ, FAKE_FORGE=modes, APPDATA=str(self.tmp), FAKE_FORGE_OS="windows")
         env.pop("FAKE_FORGE_LOG", None)
         return env
 

@@ -1,10 +1,14 @@
 """The server PC's updater (decklab/update.py) and the database move's digest comparison
 (decklab/db/move.py): their pure parts. Pulling, migrating, restoring and downloading need
 the real repo, PostgreSQL and the network, so they aren't run here."""
+import hashlib
 import json
+import os
+import stat
 import tempfile
 import unittest
 import zipfile
+from unittest import mock
 from pathlib import Path
 
 from decklab import update
@@ -62,6 +66,34 @@ class ExtractTests(unittest.TestCase):
             with self.assertRaises(update.Failed):
                 update.safe_extract(self.archive(names), target)
             self.assertFalse((self.dir / "evil.txt").exists())
+
+    def test_each_files_unix_mode_is_kept(self):
+        path = self.dir / "modes.zip"
+        modes = {"forge-1/forge.sh": 0o100755, "forge-1/res/data.txt": 0o100644, "forge-1/jre/bin/java": 0o104755,
+                 "forge-1/plain.txt": None}           # made on Windows: only the DOS archive bit
+        with zipfile.ZipFile(path, "w") as z:
+            for name, mode in modes.items():
+                info = zipfile.ZipInfo(name)
+                info.external_attr = 0x20 if mode is None else mode << 16
+                z.writestr(info, "x")
+        target = self.dir / "modes"
+        with zipfile.ZipFile(path) as z, mock.patch.object(update.os, "chmod") as chmod:
+            update._keep_modes(z.infolist(), target)
+        self.assertEqual(sorted((Path(c.args[0]).relative_to(target).as_posix(), c.args[1])
+                                for c in chmod.call_args_list),
+                         [("forge-1/forge.sh", 0o755), ("forge-1/jre/bin/java", 0o755),     # never setuid
+                          ("forge-1/res/data.txt", 0o644)])
+        if os.name != "nt":             # and for real, where files have Unix modes
+            target.mkdir()
+            top = update.safe_extract(path, target)
+            self.assertEqual(stat.S_IMODE((top / "forge.sh").stat().st_mode), 0o755)
+            self.assertEqual(stat.S_IMODE((top / "jre" / "bin" / "java").stat().st_mode), 0o755)
+
+    def test_the_download_is_hashed_in_blocks(self):
+        path = self.dir / "big.bin"
+        data = bytes(range(256)) * 9000          # over a MiB
+        path.write_bytes(data)
+        self.assertEqual(update.file_sha256(path), hashlib.sha256(data).hexdigest())
 
 
 def _digest(migration, counts, digests):

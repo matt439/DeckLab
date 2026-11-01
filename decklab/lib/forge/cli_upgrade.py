@@ -20,6 +20,7 @@ make after the install (it reads the installed build's scripts only), so the sta
 so instead of stopping the install. What needs replaying is left to the check after the install."""
 import argparse
 import contextlib
+import os
 
 from . import cli_checks as checks
 from . import cli_commands as commands
@@ -166,19 +167,38 @@ def _print_replay():
               f"(until then it refuses: {log['problem']})")
 
 
-def _plan(tag, staged=None):
+def _installed_dir():
+    """config.json's forge_dir as text (its default when config.json can't be read)."""
+    try:
+        return str(shared.common._settings()["forge_dir"])
+    except Exception:           # a bad config.json: the setup's own check says so
+        from decklab.lib import config
+        return str(config.DEFAULTS["forge_dir"])
+
+
+def _plan(tag, staged=None, windows=None):
     """--plan: the manual steps of README.md's "Deck Lab's own Forge" for a new release, as text,
     with --dir's folder (staged) in place of <scratch folder> when given. The staged build's check
-    (step 5) comes before its install (step 6)."""
+    (step 5) comes before its install (step 6). windows (default: this is Windows) names the
+    Windows PC's folders; elsewhere the fork's clone, mvn on the PATH and config.json's forge_dir."""
+    windows = os.name == "nt" if windows is None else windows
+    if windows:
+        clone, old = "C:\\Projects\\forge", "C:/Tools/forge-decklab"
+        maven = "Maven is at C:\\Tools\\maven; set JAVA_HOME first in Git Bash"
+        install = "run python decklab/install.py there (it installs C:\\Tools\\forge-decklab)"
+    else:
+        clone, old = "the fork's clone", _installed_dir()
+        maven = "mvn on the PATH, and JAVA_HOME set to a JDK 21 or later"
+        install = (f"run python decklab/install.py --release <the stock Forge release folder> --out {old} there "
+                   "(its own defaults are the Windows PC's folders)")
     return "\n".join(line.replace("<scratch folder>", staged) if staged else line for line in [
         f"Moving Deck Lab's Forge onto {tag} (decklab/README.md, \"Deck Lab's own Forge\"). Nothing here is run "
         "for you:",
-        f"  1. In C:\\Projects\\forge, rebase the decklab branch onto the tag {tag} (or merge it in) and fix any "
+        f"  1. In {clone}, rebase the decklab branch onto the tag {tag} (or merge it in) and fix any "
         "conflicts.",
         f"  2. Update BASE_TAG in the fork's decklab/install.py to {tag}.",
-        "  3. Build it into a scratch folder: python decklab/install.py --out <scratch folder> (Maven is at "
-        "C:\\Tools\\maven; set JAVA_HOME first in Git Bash).",
-        "  4. Compare it with the installed build: python -m decklab.lib.forge engine-check --old C:/Tools/forge-decklab "
+        f"  3. Build it into a scratch folder: python decklab/install.py --out <scratch folder> ({maven}).",
+        f"  4. Compare it with the installed build: python -m decklab.lib.forge engine-check --old {old} "
         "--new <scratch folder> --pair <deck> <deck> ... A new release is always a different engine key, so exit "
         "1 with \"Different engine key\" and no \"Don't install this build as it is\" line is what to expect (0 or 3 "
         "if no game changed); only exit 2 (it couldn't run) or a \"Don't install\" line stops the upgrade.",
@@ -186,9 +206,8 @@ def _plan(tag, staged=None):
         "folder> (cardlog-check, serve-check and the overrides check against it; it notes nothing, so the installed "
         "build's record stays as it was). A failed cardlog-check or serve-check stops the upgrade here; an "
         "override that no longer fits doesn't, since step 7 makes it again after the install.",
-        "  6. Merge it into decklab with git merge --ff-only on a clean working tree, run python decklab/install.py "
-        "there (it installs C:\\Tools\\forge-decklab), and confirm the installed decklab-build.txt's build= is the "
-        "scratch build's.",
+        f"  6. Merge it into decklab with git merge --ff-only on a clean working tree, {install}, and confirm the "
+        "installed decklab-build.txt's build= is the scratch build's.",
         "  7. Here: python -m decklab.lib.forge upgrade-check (cardlog-check, serve-check and the overrides check, "
         "with what needs replaying). If an override no longer fits, overrides make makes it again from the new "
         "scripts: review its diff, then run upgrade-check again.",

@@ -275,19 +275,21 @@ def mask_for(slot):
 
 def pin(pid, slot):
     """Pin process pid to slot slot's core (mask_for, in the pin mode): True when pinned, False
-    when it's left as it is (forge_pin false, pin mode "none", no core for the slot, or Windows
-    refused: logged once). Deck Lab's own
+    when it's left as it is (forge_pin false, pin mode "none", off Windows: logged once, no core
+    for the slot, or Windows refused: logged once). Deck Lab's own
     process is never pinned (its children would inherit the mask). Never raises."""
     try:
         if int(pid) == os.getpid() or not pin_setting() or pin_mode() == "none":
+            return False
+        if sys.platform != "win32":
+            _say_once("platform", "Forge's workers run unpinned: pinning them to cores works only on Windows, "
+                                  "so config.json's forge_pin changes nothing here.")
             return False
         mask = mask_for(slot)
         if mask is None:
             if core_masks():
                 _say_once(("slot", slot), f"Slot {slot} has no core of its own to pin to, so its Forge workers "
                                           f"run unpinned.")
-            return False
-        if sys.platform != "win32":
             return False
         handle = _k32.OpenProcess(PROCESS_SET_INFORMATION | PROCESS_QUERY_LIMITED_INFORMATION, False, int(pid))
         if not handle:

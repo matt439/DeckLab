@@ -24,6 +24,7 @@ compares the counts alone.
 pg_dump and pg_restore get no password: libpq reads the owner's from the user's pgpass file.
 """
 import json
+import ntpath
 import os
 import re
 import shutil
@@ -33,6 +34,7 @@ from datetime import date, datetime, timedelta
 from pathlib import Path
 
 from decklab.db import conn as db
+from decklab.lib import config, pathsetting
 
 DUMP_NAME = re.compile(r"^decklab-(\d{4})-(\d{2})-(\d{2})-(\d{6})\.dump$")
 PARTIAL = ".partial"              # a dump or copy still being written; never counted
@@ -185,6 +187,13 @@ def parse_dump_detail(detail):
     return counts if isinstance(counts, dict) else None
 
 
+def dump_basename(path):
+    """The file name at the end of a recorded dump path, whichever system wrote it: a row made on
+    Windows holds a path such as \\\\NAS\\Backups\\decklab-....dump, which Linux's Path doesn't
+    split on its backslashes (ntpath splits on both / and \\)."""
+    return ntpath.basename(str(path))
+
+
 def recorded(name, dbname=None):
     """(counts, digests) recorded with the dump called name (its last row that has counts), each
     None when that dump has none (digests: a dump made before phase 5)."""
@@ -193,7 +202,7 @@ def recorded(name, dbname=None):
         rows = c.execute("select path, detail, to_jsonb(b) -> 'digests' from ops.backup_run b where kind = 'dump' "
                          "and detail like %s order by id desc limit 500", (_ROWS + "%",)).fetchall()
     for path, detail, digests in rows:
-        if path and Path(path).name == name:
+        if path and dump_basename(path) == name:
             counts = parse_dump_detail(detail)
             if counts is not None:
                 return counts, (digests if isinstance(digests, dict) else None)
@@ -322,10 +331,55 @@ def dump(target, s=None):
     return True, counts, digests, ""
 
 
-def copy_to(source, folder):
-    """Copy a dump into folder (as .partial, then renamed). Returns the copy's Path."""
+SAME_DEVICE_OK = "backup_same_device_ok"     # the "database" block's opt-out of same_device_problem
+
+
+def same_device_problem(folder, staging, s=None, stat=os.stat, posix=None):
+    """Why backups mustn't go to folder (backup_dir), or None. Off Windows, a NAS share is a
+    mount point, which is an ordinary empty folder on the local disk while the share isn't
+    mounted (the PC started before the network, the NAS asleep, a bad credentials file), so a
+    backup_dir on the same filesystem as staging (or, before staging exists, Deck Lab's data
+    folder) is refused, unless the "database" block's backup_same_device_ok is true, for someone
+    who really means a second folder on the same disk. folder itself is compared when it
+    exists, else its parent. On Windows an unreachable share is an error already: None. stat:
+    os.stat (tests pass their own); a place that can't be read is left to the copy to report."""
+    s = db.settings() if s is None else s
+    posix = pathsetting.on_posix() if posix is None else posix
+    if not posix or s.get(SAME_DEVICE_OK) is True:
+        return None
     folder = Path(folder)
-    folder.mkdir(parents=True, exist_ok=True)
+    try:
+        try:
+            here = stat(folder).st_dev
+        except FileNotFoundError:
+            here = stat(folder.parent).st_dev
+        local = None
+        for place in (staging, config.DATA):
+            try:
+                local = stat(place).st_dev
+                break
+            except FileNotFoundError:
+                continue
+    except OSError:
+        return None
+    if local is None or here != local:
+        return None
+    return (f"backup_dir {folder} is on the same disk as the staging folder {staging}: is the NAS share mounted? "
+            f'Mount it, or, if a second folder on this disk is really meant, set "{SAME_DEVICE_OK}": true in '
+            "config.json's \"database\" block")
+
+
+def copy_to(source, folder, staging=None, s=None, stat=os.stat):
+    """Copy a dump into folder (as .partial, then renamed). Returns the copy's Path. Only folder
+    itself is made when it's missing, never its parents, so a share that isn't there is an error
+    rather than a new local folder. staging: check folder with same_device_problem first (the
+    settings' backup_dir; a --dest given by hand isn't checked), raising OSError for a problem."""
+    folder = Path(folder)
+    if staging is not None:
+        problem = same_device_problem(folder, staging, s, stat=stat)
+        if problem:
+            raise OSError(problem)
+    folder.mkdir(exist_ok=True)
     target = folder / Path(source).name
     partial = target.with_name(target.name + PARTIAL)
     try:
@@ -344,18 +398,29 @@ def copy_to(source, folder):
 def run_backup(dest=None, say=say):
     """The backup command: dump into the staging folder, then copy to dest (default the
     settings' backup_dir; none without one). The staging file stays either way (prune thins it out).
-    Returns 0, or 1 when the dump or the copy failed (recorded with ok false)."""
+    Returns 0, or 1 when the dump or the copy failed (recorded with ok false). The folder
+    settings are read with conn.path_setting: off Windows a relative or Windows-looking
+    staging_dir fails the backup, and such a backup_dir fails the copy (the dump is still made
+    and kept in staging)."""
     s = db.settings()
-    dest = dest or s["backup_dir"]
-    dest = Path(dest) if dest else None
     started = datetime.now()
-    local = Path(s["staging_dir"]) / dump_name(started)
+    refused = None                      # why the settings' backup_dir can't be used
+    if dest:
+        dest, configured = Path(os.path.expanduser(str(dest))), False
+    else:
+        try:
+            dest = db.path_setting("backup_dir", s)
+        except pathsetting.PathSettingError as e:
+            dest, refused = s["backup_dir"], str(e)
+        dest, configured = (Path(dest) if dest else None), True
     try:
         db.pg_bin("pg_dump")
-    except FileNotFoundError as e:
+        staging = db.path_setting("staging_dir", s) or db.DEFAULTS["staging_dir"]
+    except (FileNotFoundError, pathsetting.PathSettingError) as e:
         record("dump", started, False, None, None, str(e))
         say(f"Backup failed: {e}")
         return 1
+    local = Path(staging) / dump_name(started)
     try:
         ok, counts, digests, detail = dump(local, s)
     except OSError as e:
@@ -373,7 +438,9 @@ def run_backup(dest=None, say=say):
             "each dump to another disk too.")
         return 0
     try:
-        copy = copy_to(local, dest)
+        if refused:
+            raise OSError(refused)
+        copy = copy_to(local, dest, staging=local.parent if configured else None, s=s)
     except OSError as e:
         record("dump", started, False, local, size, f"copy to {dest} failed: {e}; {rows}", digests=digests)
         say(f"Backup made ({local}, {size:,} bytes), but it couldn't be copied to {dest}: {e}. "
@@ -409,16 +476,31 @@ def prune_folder(folder, today=None, s=None):
 
 def run_prune(say=say):
     """The prune command, on the backup_dir folder (if any) and the staging folder. Returns 0,
-    or 1 when a folder couldn't be read or a dump couldn't be deleted."""
+    or 1 when a folder couldn't be read or a dump couldn't be deleted, or a folder setting can't
+    be used (conn.path_setting, and for backup_dir same_device_problem: an unmounted share's
+    empty mount point is no backup folder, even with nothing in it to prune)."""
     s = db.settings()
     failed = False
-    for label, folder in (("backup_dir", s["backup_dir"]), ("staging", s["staging_dir"])):
+    folders = []
+    for label, key in (("backup_dir", "backup_dir"), ("staging", "staging_dir")):
+        try:
+            folders.append((label, db.path_setting(key, s)))
+        except pathsetting.PathSettingError as e:
+            say(f"Prune: {e}")
+            failed = True
+    staging = dict(folders).get("staging") or db.DEFAULTS["staging_dir"]
+    for label, folder in folders:
         if not folder:
             continue                        # no backup_dir: the dumps are in staging only
         if not Path(folder).is_dir():
             if label == "staging":
                 continue                    # nothing dumped here yet
             say(f"Prune: the {label} folder {folder} can't be reached.")
+            failed = True
+            continue
+        problem = same_device_problem(folder, staging, s) if label == "backup_dir" else None
+        if problem:
+            say(f"Prune: {problem}.")
             failed = True
             continue
         try:
@@ -462,18 +544,32 @@ def run_restore_check(source=None, say=say):
     folder, or the staging folder without one) into <database>_restorecheck, compare every table's row count with the counts
     recorded when it was dumped, and every public and audit table's content with the digests
     recorded with them (a dump recorded before phase 5 has none: counts only), then drop the
-    scratch database. Returns 0, or 1 on any failure or difference (recorded either way)."""
+    scratch database. Returns 0, or 1 on any failure or difference (recorded either way),
+    including a folder setting this PC can't use (conn.path_setting, and same_device_problem for
+    backup_dir: an unmounted share's mount point holds no dumps worth checking)."""
     s = db.settings()
-    source = Path(source or s["backup_dir"] or s["staging_dir"])
     started = datetime.now()
     scratch = _scratch_name(s["name"])      # refused before psycopg is needed
-    import psycopg
-    from psycopg import sql
 
     def failed(text, path=None, size=None):
         record("restore_check", started, False, path, size, text)
         say(f"Restore check failed: {text}")
         return 1
+
+    if source:
+        source = Path(os.path.expanduser(str(source)))
+    else:
+        try:
+            backup_dir = db.path_setting("backup_dir", s)
+            staging = db.path_setting("staging_dir", s) or db.DEFAULTS["staging_dir"]
+        except pathsetting.PathSettingError as e:
+            return failed(str(e))
+        problem = same_device_problem(backup_dir, staging, s) if backup_dir else None
+        if problem:
+            return failed(problem)
+        source = Path(backup_dir or staging)
+    import psycopg
+    from psycopg import sql
 
     try:
         newest = newest_dump(source)
@@ -509,7 +605,7 @@ def run_restore_check(source=None, say=say):
                 _scratch_drop(c, scratch)
     except (OSError, psycopg.Error) as e:
         # pg_restore.exe missing, the dump unreadable, a count failing: recorded like any failure.
-        return failed(f"{newest.name} couldn't be checked: {e}", newest, size)
+        return failed(f"{newest.name} couldn't be checked: {e}{db.locale_hint(e)}", newest, size)
     differences = compare_counts(expected, actual)
     if differences:
         return failed(f"{newest.name} restored with different row counts{note}: " + "; ".join(differences),

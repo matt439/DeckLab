@@ -25,7 +25,7 @@ from pathlib import Path
 from unittest import mock
 
 from decklab.db import backup, check, conn as db, export, nightly, schedule, visits
-from decklab.lib import shops
+from decklab.lib import keepawake, shops
 from decklab.tests import db_support
 
 
@@ -275,8 +275,13 @@ class NightlyTests(_QuietLog, unittest.TestCase):
                 mock.patch.object(check, "run", step("check", 0)), \
                 mock.patch.object(backup, "run_restore_check", step("restore", 0)),                 mock.patch.object(shops, "nightly", step("shops", 0)), \
                 mock.patch.object(backup, "last_ok", lambda *a: {"restore_check": last_check}), \
-                mock.patch.object(db, "settings", lambda: dict(db.DEFAULTS)):
+                mock.patch.object(db, "settings", lambda: dict(db.DEFAULTS)), \
+                mock.patch.object(nightly, "wait_for_database", step("wait", True)), \
+                mock.patch.object(keepawake, "platform_power", keepawake._NoPower):
             code = nightly.run()
+        if "wait" in calls:                 # only on Linux, before the steps
+            self.assertEqual(calls[0], "wait")
+            calls.remove("wait")
         return code, calls
 
     def test_every_step_runs_and_a_failure_fails_the_night(self):
@@ -301,7 +306,8 @@ class _OpsDb(_QuietLog, db_support.DbTestCase):
         super().setUp()
         real = db.settings()
         self.settings = dict(real, backup_dir=str(self.tmp / "nas"), staging_dir=str(self.tmp / "staging"),
-                             export_repo=str(self.tmp / "not-the-export-repo"))
+                             export_repo=str(self.tmp / "not-the-export-repo"),
+                             backup_same_device_ok=True)     # one temporary disk for both folders
         patcher = mock.patch.object(db, "settings", lambda: dict(self.settings))
         patcher.start()
         self.addCleanup(patcher.stop)

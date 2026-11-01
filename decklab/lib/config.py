@@ -29,7 +29,8 @@ USER_AGENT = "DeckLab/0.1 (personal deck tool)"
 # the server still sends it to the page as "batch_games" (which the page
 # ignores), so it keeps its default here. forge_java is the JDK's java.exe; None finds the newest
 # Java 21+ in the JDK installers' Program Files folders (forge/install.py's find_java; never the
-# small launcher on the PATH, which starts the real one as a second process).
+# small launcher on the PATH, which starts the real one as a second process). Off Windows it finds
+# JAVA_HOME's, /usr/lib/jvm's and the like, or the PATH's java with its links followed.
 # The practice-hand simulation (lib/goldfish/) uses one process per core, up
 # to 16 (the PC's physical cores).
 # The warm pool (forge/pool.py, simulation wave 2): forge_pool_idle_s is how long its warm Forge
@@ -81,9 +82,17 @@ def _forge_workers(cpus=None, ram_gb=None):
     return max(1, workers)
 
 
+def _default_forge_dir(windows=None):
+    """Where Deck Lab's Forge build is unless config.json says: C:\\Tools\\forge-decklab on Windows,
+    ~/tools/forge-decklab elsewhere (SELF-HOSTING.md's suggestion). windows: this is Windows."""
+    if (os.name == "nt") if windows is None else windows:
+        return r"C:\Tools\forge-decklab"
+    return str(Path.home() / "tools" / "forge-decklab")
+
+
 DEFAULTS = {
     "port": 8642,
-    "forge_dir": r"C:\Tools\forge-decklab",     # Deck Lab's build of its fork of Forge (forge/simjar.py)
+    "forge_dir": _default_forge_dir(),          # Deck Lab's build of its fork of Forge (forge/simjar.py)
     "forge_java": None,
     "forge_workers": _forge_workers(),
     "forge_batch_games": 200,
@@ -124,12 +133,20 @@ def load():
 def records_dir(root=None):
     """Where the repo-relative research files that sources name (magic/buylists/..., magic/reports/...)
     are looked for: config.json's records_repo, the household's own private repo, when root is this
-    checkout (or None); otherwise root itself, so a test's temporary repo never reads the real one."""
+    checkout (or None); otherwise root itself, so a test's temporary repo never reads the real one.
+    A leading ~ is expanded. Off Windows a relative or Windows-looking value can't be used
+    (lib/pathsetting.py): it's said once on stderr and kept as written, so the files it names are
+    simply not found there (the smoke test fails on it too)."""
+    from decklab.lib import pathsetting
     root = Path(REPO if root is None else root)
     if root.resolve() == CHECKOUT.resolve():
         setting = load().get("records_repo")
         if isinstance(setting, str) and setting.strip():
-            return Path(setting.strip())
+            try:
+                return Path(pathsetting.normalise("records_repo", setting))
+            except pathsetting.PathSettingError as e:
+                _say_once(("records_repo", setting), str(e))
+                return Path(setting.strip())
     return root
 
 

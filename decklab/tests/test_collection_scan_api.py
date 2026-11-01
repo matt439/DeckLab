@@ -15,7 +15,7 @@ from decklab.lib import scan
 from decklab.lib.api import card_lookup
 from decklab.lib.api import collection_edit as ce
 from decklab.lib.api import collection_scan as cs
-from decklab.tests import scan_image
+from decklab.lib import scan_image
 from decklab.tests import test_collection_edit as tce
 
 PNG = scan_image.png(["FDN EN"], scale=2)
@@ -114,13 +114,36 @@ class ScanApiTests(tce.CollectionEditTestCase):
         self.assertEqual(self.writes, [])
 
     def test_an_engine_that_cant_read_is_a_plain_sentence_and_no_proposals(self):
-        self.lines = scan.OcrUnavailable("Windows' OCR engine is only on Windows. Tesseract isn't installed. "
-                                         "Type the card's name instead.")
+        self.lines = scan.OcrMissing(scan.NOT_SET_UP, detail="Tesseract isn't installed.")
         answer = self.scan()
+        self.assertEqual(answer["message"], scan.NOT_SET_UP)        # never the PC's detail
         self.assertTrue(answer["unread"])
         self.assertEqual((answer["proposals"], answer["read"], answer["lines"]), ([], None, []))
         self.assertTrue(answer["message"].endswith("Type the card's name instead."))
         self.assertFalse(self.read[0][0].exists())
+
+    def test_a_long_read_keeps_the_name_and_the_bottom_line(self):
+        self.lines = ["Llanowar Elves"] + [f"art {i}" for i in range(98)] + ["R 0227", "FDN • EN"]
+        answer = self.scan()
+        self.assertEqual(len(answer["lines"]), cs.MAX_LINES)
+        self.assertEqual((answer["lines"][0], answer["lines"][-1]), ("Llanowar Elves", "FDN • EN"))
+        first = answer["proposals"][0]
+        self.assertEqual((first["set"], first["collector_number"], first["how"]), ("fdn", "227", "name and number"))
+
+    def test_the_views_say_whether_this_server_can_scan(self):
+        from decklab.lib.api import collection
+        for available in (True, False):
+            with self.subTest(available=available), \
+                    mock.patch.object(scan, "engine_status", return_value={"engine": None, "available": available,
+                                                                           "reason": "missing", "detail": "/private"}):
+                for view in (ce.rows_view("home"), collection.collection_view(space="home")):
+                    self.assertTrue(view["editable"])
+                    self.assertEqual(view["scan"], {"available": available})     # no engine, path or detail
+        with mock.patch.object(scan, "engine_status", side_effect=RuntimeError("broken")):
+            self.assertEqual(collection.scan_flag(), {"available": True})       # the photo's answer says unread
+        with mock.patch.object(collection, "editable", return_value=False), \
+                mock.patch.object(scan, "engine_status", side_effect=AssertionError("checked for a reader")):
+            self.assertNotIn("scan", collection.collection_view(space="home"))
 
     def test_nothing_readable_proposes_nothing(self):
         self.lines = []

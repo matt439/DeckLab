@@ -336,7 +336,7 @@ class WarmLegTests(unittest.TestCase):
         self.setup = {"forge_dir": self.tmp, "clock_s": 120, "workers": 4, "version": "2.0.15",
                       "user_dir": self.tmp / "user"}
         self.log = self.tmp / "starts.log"
-        self.env = dict(os.environ, APPDATA=str(self.tmp), FAKE_FORGE="", FAKE_FORGE_LOG=str(self.log))
+        self.env = dict(os.environ, APPDATA=str(self.tmp), FAKE_FORGE_OS="windows", FAKE_FORGE="", FAKE_FORGE_LOG=str(self.log))
         self.plays = []
         real_play = servecheck._Worker.play
 
@@ -468,7 +468,7 @@ class CommandTests(unittest.TestCase):
         for p in (mock.patch.object(forge.cli, "_setup", lambda: dict(self.setup)),
                   mock.patch.object(forge.simjar, "card_log", lambda *a, **k: dict(
                       test_forge.CARD_LOG, game_patches=self.game_patches, checking=k)),
-                  mock.patch.object(forge.cli, "_prepare_user_dir", lambda user_dir: {"APPDATA": str(user_dir)}),
+                  mock.patch.object(forge.cli, "_prepare_user_dir", lambda user_dir: {"APPDATA": str(user_dir), "FAKE_FORGE_OS": "windows"}),
                   mock.patch.object(servecheck, "warm_leg", leg)):
             p.start()
             self.addCleanup(p.stop)

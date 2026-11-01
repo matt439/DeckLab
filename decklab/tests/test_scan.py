@@ -12,10 +12,11 @@ import tempfile
 import unittest
 from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
+from types import SimpleNamespace
 from unittest import mock
 
 from decklab.lib import cards, scan
-from decklab.tests import scan_image
+from decklab.lib import scan_image
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -181,13 +182,18 @@ class EngineTests(unittest.TestCase):
         self.assertNotIn("<", message)
 
     def test_auto_names_every_engine_missing(self):
-        with mock.patch.object(scan, "_powershell", return_value=None), \
-                mock.patch.object(scan.shutil, "which", return_value=None):
-            with self.assertRaises(scan.OcrUnavailable) as caught:
-                scan.ocr(self.photo)
-        self.assertIn("only on Windows", str(caught.exception))
-        self.assertIn("Tesseract isn't installed", str(caught.exception))
-        self.assertIn("Type the card's name", str(caught.exception))
+        # One fixed sentence for the page wherever no engine is here; what's missing is the PC's detail.
+        for platform, detail in (("win32", "Windows' OCR engine is only on Windows. Tesseract isn't installed."),
+                                 ("linux", "Tesseract isn't installed.")):
+            with self.subTest(platform=platform), mock.patch.object(scan, "sys", SimpleNamespace(platform=platform)), \
+                    mock.patch.object(scan, "_powershell", return_value=None), \
+                    mock.patch.object(scan.shutil, "which", return_value=None):
+                with self.assertRaises(scan.OcrMissing) as caught:
+                    scan.ocr(self.photo)
+                self.assertEqual(str(caught.exception), scan.NOT_SET_UP)
+                self.assertEqual(caught.exception.detail, detail)
+        self.assertNotIn("Windows", scan.NOT_SET_UP)
+        self.assertIn("Type the card's name", scan.NOT_SET_UP)
         with self.assertRaisesRegex(scan.OcrUnavailable, "No photo"):
             scan.ocr(Path(self.folder.name) / "missing.jpg")
 

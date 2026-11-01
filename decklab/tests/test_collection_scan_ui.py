@@ -78,6 +78,33 @@ class CollectionScanUiTests(unittest.TestCase):
             + '"Ghalta, Primal Hunger",rix,130,nonfoil,1,LP,en,\\n');
         """)
 
+    def test_a_server_that_cant_read_photos_offers_only_the_typed_name(self):
+        self.run_js("""
+          const off = openScanSheet(draw({scan: {available: false}}));
+          assert(!off.sheet.body.contains(off.input), 'no photo to take');
+          const warn = off.sheet.body.querySelector('.col-scan-off');
+          assert.equal(warn.textContent, "Photos can't be read on this server, so type each card's name instead.");
+          assert(!off.sheet.body.textContent.includes('Take a photo'), off.sheet.body.textContent);
+          assert(off.sheet.body.textContent.includes("Type a card's name"), off.sheet.body.textContent);
+          let sent = 0;
+          apiWrite = async () => { sent++; return ELVES; };
+          await shoot(off);
+          assert.equal(sent, 0);                                       // nothing is sent to be read
+          api = async () => ({name: 'Llanowar Elves', printings: [{set: 'fdn', set_name: 'Foundations',
+            collector_number: '227', finishes: ['nonfoil'], released: '2024-11-15'}]});
+          off.name.value = 'Llanowar Elves';
+          button(off.sheet.body, 'Find its printings').click(); await flush();
+          button(off.result, 'Llanowar Elves (FDN 227) · Foundations').click();
+          assert.equal(off.pending.length, 1);
+          off.sheet.close();
+          for (const data of [{scan: {available: true}}, {}]) {      // an older server says nothing: offer photos
+            const on = openScanSheet(draw(data));
+            assert(on.sheet.body.contains(on.input));
+            assert.equal(on.sheet.body.querySelector('.col-scan-off'), null);
+            on.sheet.close();
+          }
+        """)
+
     def test_choosing_another_printing_replaces_the_one_added(self):
         self.run_js("""
           const ctx = openScanSheet(draw());
@@ -135,7 +162,7 @@ class CollectionScanUiTests(unittest.TestCase):
         self.run_js("""
           const ctx = openScanSheet(draw());
           apiWrite = async () => ({ok: true, space: 'home', unread: true, proposals: [], read: null, lines: [],
-            message: "Windows' OCR engine is only on Windows. Tesseract isn't installed. Type the card's name instead."});
+            message: "Scanning isn't set up on this server. Type the card's name instead."});
           await shoot(ctx);
           assert(ctx.message.textContent.includes("Type the card's name instead."), ctx.message.textContent);
           assert.equal(ctx.pending.length, 0);

@@ -17,12 +17,18 @@ On Linux the same job is a systemd user service and timer instead (E11-S33): ins
 decklab-nightly.service and decklab-nightly.timer (systemd_units.nightly_units, with this
 Python and this repo) into the user's unit folder and enables the timer; remove disables it
 and deletes both; status reads them back through systemctl --user (lib/systemd.py).
-Persistent=true catches up a run the PC was off for, as StartWhenAvailable does.
+Persistent=true catches up a run the PC was off for, as StartWhenAvailable does. The service
+runs at Nice=10 with idle I/O (out of the way, as the task's priority 7 is) and UMask=0077.
 
 With config.json's "wake" block (wake-on-request: the PC sleeps when idle), the task has
 WakeToRun, so Windows wakes the PC for it, and nightly.py holds the PC awake while it runs
 (lib/keepawake.py); without it, WakeToRun is false, as before. status warns when the
 registered task's WakeToRun doesn't match config.json.
+
+A Linux user timer can't wake the PC (WakeSystem= needs a privilege only the system manager
+has), so with "wake" the PC needs a system timer, decklab-wake.timer, that wakes it a minute
+before the run: schedule wake-timer prints it with the sudo commands that install it (Deck Lab
+never installs it itself), and status warns while it isn't loaded.
 """
 import ntpath
 import re
@@ -51,14 +57,35 @@ def _homenet():
     return commands
 
 
-def preview_systemd(unit, python, workdir, at=None, say=print):
+def preview_systemd(unit, python, workdir, at=None, say=print, zone=None):
     """Print one unit preview. This never inspects the host, reads data or installs units."""
     from decklab.db import systemd_units
     if unit not in ("service", "timer"):
         raise ValueError("preview-systemd requires --unit service or --unit timer.")
-    units = systemd_units.nightly_units(python, workdir, AT if at is None else at)
+    units = systemd_units.nightly_units(python, workdir, AT if at is None else at, zone)
     name = systemd_units.SERVICE if unit == "service" else systemd_units.TIMER
     say(units[name].rstrip("\n"))
+    return 0
+
+
+def wake_timer(at=None, say=print, zone=None):
+    """Print the root wake timer's units as the sudo commands that install them, and those that
+    remove them again. Nothing is run or installed; only config.json's "timezone" is read
+    (zone: a zone name to use instead, "" for the host's own zone)."""
+    from decklab.db import systemd_units
+    at = AT if at is None else at
+    zone = _zone() if zone is None else (zone or None)
+    commands = systemd_units.wake_install_commands(at, zone)
+    when = f" {zone} time" if zone else ""
+    say(f"A user timer can't wake a sleeping PC, so with \"wake\" in config.json the nightly run at {at}{when} "
+        f"needs a system timer that wakes the PC at {systemd_units.wake_time(at)}{when}. To install it, run "
+        "these in a terminal (sudo asks for your password):")
+    say("")
+    for text in commands:
+        say(text)
+    say("")
+    say("Check it with: systemctl list-timers " + systemd_units.WAKE_TIMER)
+    say("To take it away again: " + "; ".join(systemd_units.wake_remove_commands()))
     return 0
 
 
@@ -296,7 +323,7 @@ def describe(task, exists=None, wake=None):
 def status(name=TASK_NAME):
     """The schedule status command's lines."""
     if _systemd().supported():
-        return status_systemd()
+        return status_systemd(wake=wake_wanted())
     if sys.platform != "win32":
         return ["Nightly task: only Windows' Task Scheduler and Linux's systemd are supported; run "
                 "python -m decklab.db nightly from cron."]
@@ -310,10 +337,21 @@ def _systemd():
     return systemd
 
 
+def _zone():
+    """config.json's "timezone" (lib/hometime.py), or None when it's unset or not a zone name."""
+    from decklab.lib import hometime
+    return hometime.configured()
+
+
+def _at_text(zone):
+    return f"{AT} {zone} time" if zone else AT
+
+
 def _units():
-    """The service and timer as install writes them now: this Python, this repo, AT."""
+    """The service and timer as install writes them now: this Python, this repo, AT (in
+    config.json's "timezone", when it's set)."""
     from decklab.db import systemd_units
-    return systemd_units.nightly_units(sys.executable, config.REPO.as_posix(), AT)
+    return systemd_units.nightly_units(sys.executable, config.REPO.as_posix(), AT, _zone())
 
 
 def install_systemd(say=print):
@@ -338,7 +376,7 @@ def install_systemd(say=print):
         say(f"The nightly timer was written but couldn't be enabled: {systemd.said(out, err, code)}")
         return 1
     folder = systemd.unit_dir()
-    say(f"Installed the nightly timer: every day at {AT} (or as soon as the PC is on after that), "
+    say(f"Installed the nightly timer: every day at {_at_text(_zone())} (or as soon as the PC is on after that), "
         f"{systemd_units.SERVICE} runs")
     say(f"  {sys.executable} {ARGUMENTS}")
     say(f"  in {config.REPO}. Its units are in {folder}; its log: decklab/data/logs/db.log "
@@ -376,15 +414,49 @@ def _usec_time(value):
     return None if value in ("", "n/a", "0") else value
 
 
-def status_systemd():
-    """status's lines for the systemd timer."""
+def system_unit_state(unit):
+    """{"LoadState", "ActiveState", "UnitFileState"} of a system unit (systemctl show, without
+    --user), or None when systemctl can't be asked."""
+    code, out, _ = _systemd()._run(["systemctl", "show", unit, "--no-pager",
+                                    "-p", "LoadState,ActiveState,UnitFileState"])
+    if code != 0:
+        return None
+    found = {}
+    for text in out.splitlines():
+        key, sep, value = text.partition("=")
+        if sep:
+            found[key] = value
+    return found
+
+
+def wake_timer_lines(state):
+    """status's line about the root wake timer (system_unit_state's answer), when config.json
+    has "wake"."""
+    from decklab.db import systemd_units
+    name = systemd_units.WAKE_TIMER
+    if state is None:
+        return [f"  WARNING: systemctl can't say whether {name} (which wakes the PC for the nightly run) is "
+                "installed."]
+    if state.get("LoadState") != "loaded":
+        return [f"  WARNING: config.json has \"wake\" (the PC sleeps when idle), but {name} isn't installed, so "
+                "nothing wakes the PC for the nightly run (a user timer can't); it runs when the PC next wakes. "
+                "python -m decklab.db schedule wake-timer prints the commands that install it."]
+    if state.get("ActiveState") != "active":
+        return [f"  WARNING: {name} is installed but not active ({state.get('ActiveState') or '?'}), so it won't "
+                f"wake the PC: sudo systemctl enable --now {name}"]
+    return [f"  {name} wakes the PC a minute before the run."]
+
+
+def status_systemd(wake=None):
+    """status's lines for the systemd timer. wake: config.json has "wake" (wake_wanted), so the
+    root wake timer is checked too; None or False doesn't check."""
     from decklab.db import systemd_units
     systemd = _systemd()
     folder = systemd.unit_dir()
     timer_file, service_file = folder / systemd_units.TIMER, folder / systemd_units.SERVICE
     if not timer_file.exists() or not service_file.exists():
         return [f"Nightly timer: {systemd_units.TIMER} isn't installed (python -m decklab.db schedule install)."]
-    lines = [f"Nightly timer: {systemd_units.TIMER} runs {systemd_units.SERVICE} daily at {AT}, catching up "
+    lines = [f"Nightly timer: {systemd_units.TIMER} runs {systemd_units.SERVICE} daily at {_at_text(_zone())}, catching up "
              f"after the PC was off ({folder})."]
     timer = systemd.show(systemd_units.TIMER, "UnitFileState", "ActiveState", "NextElapseUSecRealtime",
                          "LastTriggerUSec")
@@ -412,6 +484,8 @@ def status_systemd():
     if current is not None and current != expected:
         lines.append(f"  WARNING: its units aren't what install writes now (for {sys.executable} in "
                      f"{config.REPO}); run python -m decklab.db schedule install again.")
+    if wake:
+        lines += wake_timer_lines(system_unit_state(systemd_units.WAKE_TIMER))
     note = systemd.linger_note()
     if note:
         lines.append("  " + note)

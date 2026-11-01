@@ -9,13 +9,14 @@ psycopg is imported only inside the functions that need it, so the rest of Deck 
 test suite under the system Python, which has no psycopg) can import this module safely.
 """
 import os
+import re
 import shutil
 import sys
 from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
 
-from decklab.lib import config
+from decklab.lib import config, pathsetting, venv
 
 # The three login roles: the owner runs migrations and backups, the app reads and writes data,
 # and ro only reads (the `sql` command). SUPERUSER is used by setup alone.
@@ -28,10 +29,13 @@ DEFAULTS = {
     "host": "localhost",
     "port": 5432,
     "name": "decklab",
-    "pg_bin": None,               # None: PG_BIN_DEFAULT, else the newest other version there, else PATH
+    "pg_bin": None,               # None: pg_bin() looks in the usual places for this system, then PATH
     # Where backup copies each dump (the household's NAS share, set in its config.json). None
     # (the default, E11-S48): no copy, the dumps stay in staging_dir only.
     "backup_dir": None,
+    # Off Windows a backup_dir on the staging folder's own disk is refused, since an unmounted
+    # NAS share is an empty local folder (backup.same_device_problem); true allows it.
+    "backup_same_device_ok": False,
     "staging_dir": str(config.DATA / "backups"),
     "export_repo": str(config.REPO.parent / "DeckLabData"),
     "keep_daily": 14,
@@ -78,7 +82,7 @@ def _psycopg():
         import psycopg
     except ImportError:
         raise DbUnavailable(f"psycopg isn't installed for this Python ({sys.executable}); install it "
-                            r"with .venv\Scripts\python -m pip install -r decklab/requirements.txt") from None
+                            f"with {venv.pip_hint()}") from None
     return psycopg
 
 
@@ -179,37 +183,97 @@ def change(actor, source, message, reason=None, conn=None, via=None, *, isolatio
             conn.close()
 
 
+def path_setting(key, s=None):
+    """The "database" block's folder setting key (backup_dir, staging_dir, export_repo or
+    pg_bin) from s (default settings()), as a path string with ~ expanded, or None when unset.
+    Off Windows a relative or Windows-looking value raises pathsetting.PathSettingError (a
+    ValueError) naming the setting (lib/pathsetting.py)."""
+    s = settings() if s is None else s
+    return pathsetting.normalise(f"database.{key}", s.get(key))
+
+
+def _on_windows():
+    """True on Windows: where PostgreSQL's programs end in .exe and live under Program Files
+    (tests patch this)."""
+    return os.name == "nt"
+
+
+# Where Linux packages put each PostgreSQL major version's programs: Debian and Ubuntu
+# (/usr/lib/postgresql/18/bin) and the PostgreSQL project's RHEL and Fedora packages
+# (/usr/pgsql-18/bin, which isn't on the PATH). Each is (root, glob of the version's bin folder).
+POSIX_PG_ROOTS = (("/usr/lib/postgresql", "*/bin"), ("/usr", "pgsql-*/bin"))
+
+
+def _version_key(folder):
+    """A version folder's name ("18", "17.2", "pgsql-16") as a sortable list of numbers."""
+    digits = re.sub(r"^\D+", "", folder)
+    return [int(x) if x.isdigit() else 0 for x in digits.split(".")]
+
+
+def _newest(name, roots):
+    """The newest version's program called name under roots ((root, glob) pairs), or None."""
+    found = []
+    for root, pattern in roots:
+        try:
+            found += [p for p in Path(root).glob(f"{pattern}/{name}") if p.is_file()]
+        except OSError:
+            pass
+    return max(found, key=lambda p: _version_key(p.parent.parent.name), default=None)
+
+
 def pg_bin(name):
     """The path of one of PostgreSQL's programs (pg_dump.exe, pg_restore.exe, psql.exe ...).
     ".exe" is added on Windows when name has no suffix. With the settings' pg_bin set, only that
-    folder is looked in. Without it: PG_BIN_DEFAULT, then the newest other version under
-    Program Files\\PostgreSQL, then the PATH (Linux and macOS installs put them there).
-    Raises FileNotFoundError, saying where it looked, when it isn't found."""
-    if os.name == "nt" and not Path(name).suffix:
+    folder is looked in. Without it, on Windows: PG_BIN_DEFAULT, then the newest other version
+    under Program Files\\PostgreSQL, then the PATH. Elsewhere: the newest version under
+    POSIX_PG_ROOTS (Debian's and RHEL's version folders), then the PATH (macOS, and Debian's
+    /usr/bin wrappers). Raises FileNotFoundError, saying where it looked, when it isn't found
+    (and for a pg_bin setting this PC can't use)."""
+    windows = _on_windows()
+    if windows and not Path(name).suffix:
         name += ".exe"
-    folder = settings().get("pg_bin")
+    try:
+        folder = path_setting("pg_bin")
+    except pathsetting.PathSettingError as e:
+        raise FileNotFoundError(str(e)) from None
     if folder:
         path = Path(folder) / name
         if not path.is_file():
             raise FileNotFoundError(f"{name} isn't in {path.parent}: install PostgreSQL there, or set "
                                     f'"pg_bin" in config.json\'s "database" block')
         return path
-    path = Path(PG_BIN_DEFAULT) / name
-    if path.is_file():
-        return path
-    root = Path(os.environ.get("ProgramFiles") or r"C:\Program Files") / "PostgreSQL"
-    try:
-        found = sorted((p for p in root.glob(f"*/bin/{name}") if p.is_file()),
-                       key=lambda p: [int(x) if x.isdigit() else 0 for x in p.parent.parent.name.split(".")])
-    except OSError:
-        found = []
+    if windows:
+        path = Path(PG_BIN_DEFAULT) / name
+        if path.is_file():
+            return path
+        root = Path(os.environ.get("ProgramFiles") or r"C:\Program Files") / "PostgreSQL"
+        found = _newest(name, ((root, "*/bin"),))
+        places = PG_BIN_DEFAULT
+    else:
+        found = _newest(name, POSIX_PG_ROOTS)
+        places = " or ".join(f"{root}/{pattern}" for root, pattern in POSIX_PG_ROOTS)
     if found:
-        return found[-1]
+        return found
     on_path = shutil.which(name)
     if on_path:
         return Path(on_path)
-    raise FileNotFoundError(f"{name} isn't in {PG_BIN_DEFAULT} or on the PATH: install PostgreSQL's "
+    raise FileNotFoundError(f"{name} isn't in {places} or on the PATH: install PostgreSQL's "
                             f'client programs, or set "pg_bin" in config.json\'s "database" block')
+
+
+# What CREATE DATABASE ... ENCODING 'UTF8' says when the cluster's locale can't hold UTF-8.
+_LOCALE_REFUSED = ("does not match locale", "requires encoding")
+
+
+def locale_hint(error):
+    """A sentence to add to a failed CREATE DATABASE's error when the PostgreSQL cluster's
+    locale isn't a UTF-8 one (Deck Lab's databases are UTF8, made from template0), else ""."""
+    text = str(error)
+    if not any(words in text for words in _LOCALE_REFUSED):
+        return ""
+    return (" The PostgreSQL cluster's locale isn't a UTF-8 one, so it can't hold a UTF8 database: "
+            "make the cluster again with a UTF-8 locale (initdb --locale=C.UTF-8, or en_AU.UTF-8), "
+            "or install PostgreSQL with LANG set to one.")
 
 
 def log(text):

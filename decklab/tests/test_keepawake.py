@@ -8,6 +8,9 @@ Run from the repo root: python scripts/test_fixtures.py decklab.tests.test_keepa
 """
 import contextlib
 import http.client
+import os
+import shutil
+import subprocess
 import tempfile
 import threading
 import unittest
@@ -184,8 +187,15 @@ class ControllerTests(unittest.TestCase):
         self.assertEqual(sum("sleep counter failed" in s for s in said), 1)
 
     def test_sleep_counter_by_platform(self):
-        with mock.patch.object(keepawake.sys, "platform", "linux"):
+        with mock.patch.object(keepawake.sys, "platform", "darwin"):
             self.assertIsNone(keepawake.sleep_counter())
+        with mock.patch.object(keepawake.sys, "platform", "linux"), \
+                mock.patch.object(keepawake, "_linux_sleep_counter", side_effect=AttributeError("no BOOTTIME")):
+            self.assertIsNone(keepawake.sleep_counter())
+        linux = object()
+        with mock.patch.object(keepawake.sys, "platform", "linux"), \
+                mock.patch.object(keepawake, "_linux_sleep_counter", return_value=linux):
+            self.assertIs(keepawake.sleep_counter(), linux)
         with mock.patch.object(keepawake.sys, "platform", "win32"),                 mock.patch.object(keepawake, "_windows_sleep_counter", side_effect=OSError("missing")):
             self.assertIsNone(keepawake.sleep_counter())
         fake = object()
@@ -199,6 +209,31 @@ class ControllerTests(unittest.TestCase):
         first = counter()
         self.assertGreaterEqual(first, -1.0)
         self.assertLess(abs(counter() - first), 1.0)     # awake: barely moves
+
+    def test_linux_sleep_counter_without_boottime_raises(self):
+        # Patching sys.platform to linux on Windows (no CLOCK_BOOTTIME) must give None, not a crash.
+        with mock.patch.object(keepawake, "time", mock.Mock(spec=["monotonic", "time"])):
+            with self.assertRaises(AttributeError):
+                keepawake._linux_sleep_counter()
+            with mock.patch.object(keepawake.sys, "platform", "linux"):
+                self.assertIsNone(keepawake.sleep_counter())
+
+    def test_linux_sleep_counter_is_boottime_minus_monotonic(self):
+        clocks = {"boot": 500.0, "mono": 380.0}
+        fake = mock.Mock(CLOCK_BOOTTIME="boot", CLOCK_MONOTONIC="mono", clock_gettime=lambda c: clocks[c])
+        with mock.patch.object(keepawake, "time", fake):
+            counter = keepawake._linux_sleep_counter()
+            self.assertEqual(counter(), 120.0)
+            clocks["boot"] += 3600                  # an hour suspended: BOOTTIME runs on, MONOTONIC doesn't
+            self.assertEqual(counter(), 3720.0)
+
+    @unittest.skipUnless(hasattr(keepawake.time, "CLOCK_BOOTTIME"), "Linux's CLOCK_BOOTTIME only")
+    def test_linux_sleep_counter_reads(self):
+        counter = keepawake._linux_sleep_counter()
+        first = counter()
+        self.assertIsInstance(first, float)
+        self.assertGreaterEqual(first, -1.0)
+        self.assertLess(abs(counter() - first), 1.0)
 
     def test_module_note_activity_reaches_installed(self):
         ka, clock, power = controller(idle_minutes=1)
@@ -248,11 +283,220 @@ class ControllerTests(unittest.TestCase):
         self.assertEqual(keepawake.idle_minutes_of({"wake": {"idle_minutes": 45}}), 45)
 
     def test_platform_power_elsewhere_is_a_no_op(self):
-        with mock.patch.object(keepawake.sys, "platform", "linux"):
+        for platform, found in (("linux", None), ("darwin", "/usr/bin/systemd-inhibit")):
+            with self.subTest(platform=platform), mock.patch.object(keepawake.sys, "platform", platform), \
+                    mock.patch.object(keepawake.shutil, "which", return_value=found):
+                power = keepawake.platform_power()
+            self.assertEqual(power.kind, "none")
+            power.hold()
+            self.assertFalse(power.held)            # nothing is held, so it never says it is
+            power.release()
+            self.assertFalse(power.held)
+
+    def test_platform_power_on_linux_with_systemd_inhibit(self):
+        with mock.patch.object(keepawake.sys, "platform", "linux"), \
+                mock.patch.object(keepawake.shutil, "which", return_value="/usr/bin/systemd-inhibit") as which:
             power = keepawake.platform_power()
+        which.assert_called_once_with("systemd-inhibit")
+        self.assertIsInstance(power, keepawake._LinuxInhibit)
+        self.assertEqual((power.kind, power.program, power.held), ("systemd-inhibit", "/usr/bin/systemd-inhibit", False))
+
+    def test_windows_kind(self):
+        self.assertEqual(keepawake._WindowsPower.kind, "windows-power-request")
+
+    def test_status_says_wanted_kind_and_honest_holding(self):
+        ka = keepawake.KeepAwake(20, power=keepawake._NoPower(), monotonic=FakeClock(), slept=None)
+        self.assertTrue(ka.tick())
+        status = ka.status()
+        self.assertEqual((status["wanted"], status["holding"], status["kind"]), (True, False, "none"))
+        ka, clock, power = controller()
+        self.assertIsNone(ka.status()["kind"])      # FakePower has no kind
+        ka.tick()
+        self.assertEqual((ka.status()["wanted"], ka.status()["holding"]), (True, True))
+
+
+class FakePipe:
+    def __init__(self):
+        self.closed = False
+
+    def close(self):
+        self.closed = True
+
+
+class FakeProc:
+    """A systemd-inhibit child. exit_code: it exited at once (refused). stubborn: 0 ends when its
+    stdin closes, 1 only when terminated, 2 only when killed."""
+
+    def __init__(self, exit_code=None, stderr=b"", stubborn=0):
+        self.returncode, self.err, self.stubborn = exit_code, stderr, stubborn
+        self.stdin, self.stderr = FakePipe(), FakePipe()
+        self.waits, self.signals = [], []
+
+    def poll(self):
+        return self.returncode
+
+    def wait(self, timeout=None):
+        self.waits.append(timeout)
+        if self.returncode is None and self.stdin.closed and self.stubborn == 0:
+            self.returncode = 0
+        if self.returncode is None:
+            raise subprocess.TimeoutExpired("systemd-inhibit", timeout)
+        return self.returncode
+
+    def communicate(self, timeout=None):
+        return None, self.err
+
+    def terminate(self):
+        self.signals.append("terminate")
+        if self.stubborn < 2:
+            self.returncode = -15
+
+    def kill(self):
+        self.signals.append("kill")
+        self.returncode = -9
+
+
+class FakePopen:
+    def __init__(self, *procs):
+        self.procs, self.calls = list(procs), []
+
+    def __call__(self, argv, **kwargs):
+        self.calls.append((argv, kwargs))
+        return self.procs.pop(0)
+
+
+class LinuxInhibitTests(unittest.TestCase):
+    """The systemd-inhibit primitive with a fake Popen: no real process on either OS."""
+
+    def inhibit(self, *procs):
+        popen, clock = FakePopen(*procs), FakeClock(1000.0)
+        return keepawake._LinuxInhibit(program="/usr/bin/systemd-inhibit", popen=popen, monotonic=clock), popen, clock
+
+    def test_hold_starts_a_block_inhibitor_on_a_pipe(self):
+        proc = FakeProc()
+        power, popen, _ = self.inhibit(proc)
+        power.hold()
+        argv, kwargs = popen.calls[0]
+        self.assertEqual(argv, ["/usr/bin/systemd-inhibit", "--what=sleep:idle", "--who=Deck Lab",
+                                "--why=Deck Lab is in use", "--mode=block", "cat"])
+        self.assertEqual(kwargs, {"stdin": subprocess.PIPE, "stdout": subprocess.DEVNULL,
+                                  "stderr": subprocess.PIPE, "close_fds": True})
+        self.assertEqual(proc.waits, [power.START_WAIT])
+        self.assertTrue(power.held)
+        power.hold()                                # already holding: nothing new
+        self.assertEqual(len(popen.calls), 1)
+
+    def test_release_closes_stdin_and_waits(self):
+        proc = FakeProc()
+        power, popen, _ = self.inhibit(proc)
         power.hold()
         power.release()
+        self.assertTrue(proc.stdin.closed and proc.stderr.closed)
+        self.assertEqual(proc.signals, [])
         self.assertFalse(power.held)
+        power.release()                             # nothing held: no error
+
+    def test_release_terminates_then_kills_a_child_that_stays(self):
+        for stubborn, signals in ((1, ["terminate"]), (2, ["terminate", "kill"])):
+            proc = FakeProc(stubborn=stubborn)
+            power, _, _ = self.inhibit(proc)
+            power.hold()
+            power.release()
+            with self.subTest(stubborn=stubborn):
+                self.assertEqual(proc.signals, signals)
+                self.assertFalse(power.held)
+
+    def test_a_refusal_raises_its_first_line_and_waits_before_trying_again(self):
+        refused = FakeProc(exit_code=1, stderr=b"\nFailed to inhibit: Access denied\nmore\n")
+        power, popen, clock = self.inhibit(refused, FakeProc())
+        with self.assertRaisesRegex(OSError, "exit code 1\\): Failed to inhibit: Access denied$"):
+            power.hold()
+        self.assertFalse(power.held)
+        self.assertTrue(refused.stdin.closed)
+        clock.now += power.RETRY_AFTER - 1
+        with self.assertRaisesRegex(OSError, "Access denied"):
+            power.hold()                            # not tried again yet
+        self.assertEqual(len(popen.calls), 1)
+        clock.now += 1
+        power.hold()
+        self.assertEqual(len(popen.calls), 2)
+        self.assertTrue(power.held)
+
+    def test_a_missing_program_is_a_refusal(self):
+        power = keepawake._LinuxInhibit(program="/nowhere/systemd-inhibit",
+                                        popen=mock.Mock(side_effect=FileNotFoundError("no such file")))
+        with self.assertRaisesRegex(OSError, "couldn't be started"):
+            power.hold()
+        self.assertFalse(power.held)
+
+    def test_a_child_that_died_is_started_again(self):
+        first, second = FakeProc(), FakeProc()
+        power, popen, clock = self.inhibit(first, second)
+        power.hold()
+        clock.now += power.SHORT_LIFE
+        first.returncode = 1                        # logind restarted, say
+        self.assertFalse(power.held)                # honest at once, before the next check
+        power.hold()
+        self.assertEqual(len(popen.calls), 2)
+        self.assertTrue(first.stdin.closed)
+        self.assertTrue(power.held)
+
+    def test_a_child_that_stops_soon_after_starting_counts_as_a_refusal(self):
+        late = FakeProc(stderr=b"Failed to inhibit: Access denied\n")
+        power, popen, clock = self.inhibit(late, FakeProc())
+        power.hold()                                # still running after START_WAIT: polkit was slow
+        clock.now += 15
+        late.returncode = 1
+        with self.assertRaisesRegex(OSError, "stopped at once \\(exit code 1\\): Failed to inhibit: Access denied"):
+            power.hold()
+        with self.assertRaises(OSError):
+            power.hold()                            # not retried at every check
+        self.assertEqual(len(popen.calls), 1)
+        clock.now += power.RETRY_AFTER
+        power.hold()
+        self.assertTrue(power.held)
+
+    def test_keep_awake_logs_a_refusal_once_and_reports_wanted_not_holding(self):
+        said = []
+        procs = [FakeProc(exit_code=1, stderr=b"Failed to connect to bus: No such file or directory")]
+        power, popen, _ = self.inhibit(*procs)
+        ka = keepawake.KeepAwake(20, power=power, monotonic=FakeClock(), log=said.append, slept=None)
+        for _ in range(3):
+            ka.tick()
+        self.assertEqual(sum("power request failed" in s for s in said), 1)
+        self.assertIn("Failed to connect to bus", said[0])
+        status = ka.status()
+        self.assertEqual((status["wanted"], status["holding"], status["kind"]), (True, False, "systemd-inhibit"))
+        self.assertEqual(len(popen.calls), 1)       # retried only after RETRY_AFTER
+
+    @unittest.skipUnless(keepawake.sys.platform.startswith("linux") and shutil.which("systemd-inhibit")
+                         and os.path.exists("/run/dbus/system_bus_socket"), "a real systemd-inhibit and system bus")
+    def test_live_inhibitor_is_listed_while_held(self):
+        power = keepawake._LinuxInhibit(reason="Deck Lab test inhibitor", program=shutil.which("systemd-inhibit"))
+        try:
+            power.hold()
+        except OSError as e:
+            self.skipTest(f"this PC refuses inhibitors: {e}")
+        try:
+            listed = subprocess.run([shutil.which("systemd-inhibit"), "--list", "--no-pager"], capture_output=True,
+                                    text=True, timeout=10)
+            if not power.held:
+                self.skipTest("this PC refused the inhibitor after a moment")
+            self.assertIn("Deck Lab test inhibitor", listed.stdout)
+        finally:
+            power.release()
+        self.assertFalse(power.held)
+
+    @unittest.skipUnless(getattr(keepawake._LinuxInhibit.__init__, "_fixture_guarded", False),
+                         "only under the fixture runner (scripts/fixture_runtime.py)")
+    def test_the_fixture_runner_never_starts_a_real_inhibitor(self):
+        power = keepawake._LinuxInhibit(program="/usr/bin/systemd-inhibit")
+        with self.assertRaisesRegex(OSError, "isn't started by the fixture runner"):
+            power.hold()
+        self.assertFalse(power.held)
+        fake, popen, _ = self.inhibit(FakeProc())
+        fake.hold()                    # an explicit fake still runs
+        self.assertEqual(len(popen.calls), 1)
 
 
 class ForgeCommandLineTests(unittest.TestCase):

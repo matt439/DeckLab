@@ -149,7 +149,7 @@ class PoolCase(SlotFolder, test_forge.ForgeCase):
         argv = runner.build_command(setup, "Constructed", dck[deck1], dck[1 - deck1], games, base,
                                     v2={"stream": stream, "first": first})
         out = subprocess.run(argv, capture_output=True, text=True, encoding="utf-8", timeout=60,
-                             env=dict(os.environ, APPDATA=str(setup["user_dir"]))).stdout
+                             env=dict(os.environ, APPDATA=str(setup["user_dir"]), FAKE_FORGE_OS="windows")).stdout
         index = forge.install.script_index()
         names = [forge.install._log_names([n for _, n in forge.lists._list_lines(e)], index) for e in ordered]
         reader = forge.LogReader(deck1, names, card_log=True)

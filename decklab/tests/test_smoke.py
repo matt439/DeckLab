@@ -3,6 +3,7 @@ steps need the real config, database, server and Forge, so they aren't run here.
 import contextlib
 import io
 import json
+import tempfile
 import types
 import unittest
 
@@ -182,6 +183,43 @@ class RunnerTests(unittest.TestCase):
         ctx = {"args": _args(), "doctor": {"config": "ready", "forge": "needs_setup"}}
         with self.assertRaises(smoke.Skip):
             smoke.step_forge(smoke.Result("x", "X"), ctx)
+
+    def scan(self, status, ocr=None):
+        r = smoke.Result("scan", "Photo scanning")
+        with tempfile.TemporaryDirectory() as folder:
+            smoke.step_scan(r, {"args": _args()}, status=lambda: status, ocr=ocr, folder=folder)
+        return r.lines
+
+    def test_scan_without_an_engine_warns(self):
+        lines = self.scan({"engine": None, "available": False, "reason": "missing",
+                           "detail": "tesseract isn't on the PATH"})
+        self.assertEqual(lines[0][0], smoke.WARN)
+        self.assertIn("tesseract isn't on the PATH", lines[0][1])
+        self.assertIn("tesseract-ocr", lines[0][1])
+
+    def test_scan_reads_the_test_picture(self):
+        seen = []
+
+        def ocr(path):
+            with open(path, "rb") as f:
+                seen.append(f.read(8))
+            return ["R 0227", "FDN EN"]
+        lines = self.scan({"engine": "tesseract", "available": True, "reason": "ready"}, ocr)
+        self.assertEqual(seen, [b"\x89PNG\r\n\x1a\n"])
+        self.assertEqual(lines, [(smoke.PASS, "The tesseract engine read a test card's bottom line (227, FDN)")])
+
+    def test_scan_misread_warns_and_a_broken_engine_fails(self):
+        from decklab.lib import scan
+        ready = {"engine": "tesseract", "available": True, "reason": "ready"}
+        lines = self.scan(ready, lambda path: ["R O2Z7"])
+        self.assertEqual(lines[0][0], smoke.WARN)
+        self.assertIn("as R O2Z7, not 227 of FDN", lines[0][1])
+
+        def broken(path):
+            raise scan.OcrUnavailable("Tesseract has no English language data")
+        lines = self.scan(ready, broken)
+        self.assertEqual(lines[0][0], smoke.FAIL)
+        self.assertIn("Tesseract has no English language data", lines[0][1])
 
     def test_bad_usage_exits_2(self):
         with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit) as caught:

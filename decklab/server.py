@@ -40,6 +40,13 @@ status run it too). Without a window:
   that's playing loses the games it hadn't saved.
 Servers in a window listen for --stop, taskkill and the session's end too.
 
+On Linux, homenet runs it as a systemd user service instead
+(lib/homenet/service.py: decklab.service, started at login, or at boot with
+loginctl enable-linger), with --background so it logs to the same file.
+--stop and systemctl stop send SIGTERM, which stops it the way Ctrl+C does;
+a server run by hand in a terminal stops that way on SIGHUP too (the
+terminal closing, an SSH session dropping), unless started with nohup.
+
 While a server runs, decklab/data/server.json (control.STATE_FILE) says so:
 its process id, host, port, start time, Python, log file, and whether it
 started without a window. It's written once the server is listening and can
@@ -382,7 +389,13 @@ never include a traceback or a local path (the log gets them), the log writes
 control characters as escapes, and a Host header that isn't an IP address,
 localhost or this PC's name is refused, so a web page elsewhere can't reach
 the server through DNS rebinding. "allowed_hosts" in config.json adds more
-names.
+names. The home listener answers only visits from a home network
+(lib/home_scope.py: loopback, the private IPv4 ranges, link-local and IPv6
+unique local addresses, plus config.json's "home_networks" CIDR list); any
+other address gets 403 naming nobody, logged once per address. On Linux
+X-Deck-Lab-Script counts only on a connection of the user the server runs
+as (its socket's owner in /proc/net/tcp), since other users reach 127.0.0.1
+too.
 
 Accessory pictures (/accessory-img/) are served only for a file name that
 the accessories list names (an id and .jpg, .png or .webp; never SVG), of a row
@@ -487,6 +500,10 @@ def _stop_message(result, port):
     if result == "not running":
         return f"Deck Lab isn't running on port {port}."
     if result == "timeout":
+        if sys.platform.startswith("linux"):
+            return (f"Deck Lab (port {port}) was asked to stop, but it's still running after {control.STOP_WAIT} "
+                    "seconds. Try again in a minute, or stop it with systemctl --user stop decklab.service "
+                    "(kill <its process id> if it runs in a terminal).")
         return (f"Deck Lab (port {port}) was asked to stop, but it's still running after {control.STOP_WAIT} "
                 f"seconds. Try again in a minute, or end its pythonw.exe (or python.exe) in Task Manager.")
     if sys.platform.startswith("linux"):

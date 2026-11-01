@@ -47,7 +47,6 @@ import hashlib
 import hmac
 import json
 import sys
-from datetime import datetime, timedelta, timezone
 
 from decklab.db import cli_actor
 from decklab.lib import arrivals, inventory
@@ -77,8 +76,9 @@ def register(sub):
 
 
 def _today():
-    """The household's date (UTC+10), as the Receipts page takes it."""
-    return datetime.now(timezone(timedelta(hours=10))).date().isoformat()
+    """The household's date (config.json's "timezone", else UTC+10), as the Receipts page takes it."""
+    from decklab.lib import hometime
+    return hometime.household_today()
 
 
 def _read_rows(value):

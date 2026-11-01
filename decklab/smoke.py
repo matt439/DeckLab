@@ -5,7 +5,9 @@ each update (git pull, migrate, restart). Where `python -m decklab.doctor` only
 reads files, this exercises the install: the database's three roles, the backup
 programs, card lookups, the network sites Deck Lab uses, a throwaway server on a
 spare 127.0.0.1 port answering the page and its read-only API, the background
-server and nightly task, the tunnel, and one real Forge engine check.
+server and nightly task, the tunnel, whether this PC lets Deck Lab hold it awake (a
+trial let go at once), config.json's "timezone" against this PC's clock, photo
+scanning's OCR engine (one drawn test picture) and one real Forge engine check.
 
 It never writes to the database or the inventory and never touches the server on
 the configured port beyond reading its status. It writes only temporary files and
@@ -229,8 +231,7 @@ def step_code(r, ctx):
     want = pinned((ROOT / "decklab" / "requirements.txt").read_text(encoding="utf-8"), "psycopg")
     have = getattr(psycopg, "__version__", "?")
     if want and have != want:
-        r.note(WARN, f"psycopg {have} is installed, requirements.txt pins {want}: "
-                     ".venv's python -m pip install -r decklab/requirements.txt")
+        r.note(WARN, f"psycopg {have} is installed, requirements.txt pins {want}: {venv.pip_hint()}")
     else:
         r.note(PASS, f"psycopg {have} from the .venv")
 
@@ -278,12 +279,28 @@ def step_backups(r, ctx):
         else:
             r.note(PASS, f"{name} {major} at {path}")
     s = db.settings()
+    places = {}
     for key in ("staging_dir", "backup_dir"):
-        folder = s.get(key)
+        try:
+            folder = db.path_setting(key, s)
+        except ValueError as e:         # off Windows, a relative or Windows-looking folder
+            r.note(FAIL, f"Backups can't use {key}: {e}")
+            continue
         if not folder:
             continue
-        place = Path(os.path.expanduser(str(folder)))
+        place = places[key] = Path(folder)
+        problem = (backup.same_device_problem(place, places.get("staging_dir") or db.DEFAULTS["staging_dir"], s)
+                   if key == "backup_dir" else None)
+        if problem:
+            r.note(FAIL, f"Backups can't be copied: {problem}")
+            continue
         existing = next((p for p in (place, *place.parents) if p.is_dir()), None)
+        if key == "backup_dir" and not place.is_dir() and not place.parent.is_dir():
+            # A backup makes only backup_dir's last folder, never its parents (backup.copy_to).
+            r.note(FAIL, f"Backups can't be copied to backup_dir {place}: its parent folder {place.parent} isn't "
+                         "there" + (" (is the NAS share mounted?)" if os.name != "nt" else
+                                    " (is the NAS share reachable?)"))
+            continue
         try:
             if existing is None:
                 raise OSError("no part of it exists")
@@ -297,7 +314,8 @@ def step_backups(r, ctx):
     last = backup.last_ok()
     dump = last.get("dump")
     if dump is None:
-        r.note(WARN, "No backup has worked yet: python -m decklab.db backup (then the nightly task does it).")
+        r.note(WARN, f"No backup has worked yet: python -m decklab.db backup (then the nightly {_task_word()} "
+                     "does it).")
     else:
         from datetime import datetime
         age = (datetime.now().astimezone() - dump).total_seconds() / 3600
@@ -512,10 +530,25 @@ def step_services(r, ctx):
     elif code != 0:
         r.note(WARN, f"homenet status failed (exit {code}):\n{_tail(out)}")
     else:
-        r.note(PASS, "homenet status: the background server, its start at logon and the network look right")
+        r.note(PASS, "homenet status: the background server, " + _start_words() + " and the network look right")
     code, out = _run([sys.executable, "-m", "decklab.db", "schedule", "status"], 60)
     note = schedule_finding(code, out)
-    r.note(PASS if note is None else WARN, note or "The nightly backup task is installed and its last run worked")
+    r.note(PASS if note is None else WARN, note or f"The nightly backup {_task_word()} is installed and its last run "
+                                                   "worked")
+
+
+def _linux(platform=None):
+    return (sys.platform if platform is None else platform).startswith("linux")
+
+
+def _start_words(platform=None):
+    """How the background server starts by itself, as this system does it."""
+    return "its systemd service" if _linux(platform) else "its start at logon"
+
+
+def _task_word(platform=None):
+    """What runs the nightly maintenance here: a systemd timer on Linux, else a scheduled task."""
+    return "timer" if _linux(platform) else "task"
 
 
 def homenet_findings(out):
@@ -528,10 +561,10 @@ def schedule_finding(code, out):
     """What's wrong with the nightly task, from `schedule status`'s exit code and output, or None."""
     text = (out or "").lower()
     if code != 0 or "isn't registered" in text or "isn't installed" in text:
-        return "The nightly backup task isn't installed: python -m decklab.db schedule install"
+        return f"The nightly backup {_task_word()} isn't installed: python -m decklab.db schedule install"
     flagged = [line.strip() for line in (out or "").splitlines()
                if "WARNING" in line or "it failed" in line or line.strip().startswith("Note: systemd runs")]
-    return "The nightly task needs attention:\n" + _tail("\n".join(flagged), 8) if flagged else None
+    return f"The nightly {_task_word()} needs attention:\n" + _tail("\n".join(flagged), 8) if flagged else None
 
 
 def step_tunnel(r, ctx):
@@ -594,14 +627,106 @@ def step_wake(r, ctx):
 def step_records(r, ctx):
     _needs(ctx, "config")
     from decklab.lib import config
+    from decklab.lib import pathsetting
     records = config.load().get("records_repo")
     if not records:
         raise Skip("no records_repo in config.json")
-    place = Path(str(records))
+    try:
+        place = Path(pathsetting.normalise("records_repo", records) or str(records))
+    except pathsetting.PathSettingError as e:
+        r.note(FAIL, str(e))
+        return
     if (place / ".git").exists():
         r.note(PASS, f"records_repo {place} is a git checkout")
     else:
         r.note(WARN, f"records_repo {place} is missing, so buylist and report links won't open: clone it there")
+
+
+def step_awake(r, ctx, check=None, user=None):
+    """Deck Lab may hold this PC awake (while it's in use, a Forge run, the nightly run): one
+    trial, let go at once (keepawake.capability). check and user are for tests."""
+    from decklab.lib import keepawake
+    found = (check or keepawake.capability)()
+    if found.get("ok") is None:
+        raise Skip(found.get("why") or "keeping the PC awake isn't supported here")
+    if found.get("ok"):
+        how = "systemd-inhibit" if found.get("kind") == "systemd-inhibit" else "a Windows power request"
+        r.note(PASS, f"Deck Lab may hold the PC awake while it's in use ({how}; tried and let go)")
+        return
+    why = found.get("why") or "it was refused"
+    if found.get("kind") == "systemd-inhibit":
+        from decklab.lib.homenet import linux_power
+        if user is None:
+            try:
+                import getpass
+                user = getpass.getuser()
+            except (OSError, KeyError, ImportError):
+                user = None
+        r.note(WARN, f"Deck Lab isn't allowed to hold the PC awake ({why}), so it may suspend in the middle of a "
+                     f"visit, a Forge run or the nightly run (polkit refuses a service with no login session).\n"
+                     f"    Fix: {linux_power.polkit_fix(user)}")
+    elif found.get("kind") == "none":
+        r.note(WARN, f"Deck Lab can't hold the PC awake: {why}, so it may suspend in the middle of a visit, a Forge "
+                     "run or the nightly run (systemd-inhibit comes with systemd).")
+    else:
+        r.note(WARN, f"Deck Lab couldn't hold the PC awake: {why}")
+
+
+def step_time(r, ctx, mismatch=None, settings=None):
+    """config.json's "timezone" (lib/hometime.py) is this PC's own zone. mismatch and settings
+    are for tests."""
+    from decklab.lib import hometime
+    if settings is None:
+        _needs(ctx, "config")
+        from decklab.lib import config
+        settings = config.load()
+    name, problem = hometime.setting(settings)
+    if problem:
+        r.note(WARN, problem)
+        return
+    if name is None:
+        raise Skip("no timezone in config.json: dates and the nightly run follow this PC's own clock")
+    try:
+        differs = (mismatch or hometime.host_mismatch)(name)
+    except LookupError:
+        r.note(WARN, f"This PC has no time zone data for {name}, so it can't be compared"
+                     + (" (install the tzdata package)" if sys.platform.startswith("linux") else
+                        "; Deck Lab's own dates use UTC+10 without it"))
+        return
+    if differs:
+        r.note(WARN, differs)
+    else:
+        r.note(PASS, f"This PC's clock keeps {name} time, as config.json's \"timezone\" says")
+
+
+SCAN_LINES = ["R 0227", "FDN EN"]       # a card's bottom line, in scan_image's block letters
+
+
+def step_scan(r, ctx, status=None, ocr=None, folder=None):
+    """Photo scanning (optional): an OCR engine is here, and it reads a drawn bottom line
+    ("R 0227 / FDN EN") as collector number 227 of FDN. status, ocr and folder are for tests."""
+    from decklab.lib import scan, scan_image
+    found = (status or (lambda: scan.engine_status(refresh=True)))()
+    if not found.get("available"):
+        r.note(WARN, "No photo scanning engine, so Scan cards... asks for typed names"
+                     + (f": {found['detail']}" if found.get("detail") else "")
+                     + " (optional: Linux needs the tesseract-ocr package)")
+        return
+    engine = found.get("engine") or "an OCR engine"
+    with tempfile.TemporaryDirectory(dir=folder) as place:
+        path = Path(place) / "bottom-line.png"
+        path.write_bytes(scan_image.png(SCAN_LINES))
+        try:
+            lines = (ocr or scan.ocr)(str(path))
+        except scan.OcrUnavailable as e:
+            r.note(FAIL, f"The {engine} engine is here but couldn't read a test picture: {_first_line(e)}")
+            return
+    read = scan.read_lines(lines)
+    if "227" in read["numbers"] and "FDN" in [str(s).upper() for s in read["sets"]]:
+        r.note(PASS, f"The {engine} engine read a test card's bottom line (227, FDN)")
+    else:
+        r.note(WARN, f"The {engine} engine read a test card's bottom line as {' / '.join(lines) or 'nothing'}, "
+                     "not 227 of FDN, so scans may need their printing chosen by hand")
 
 
 def step_forge(r, ctx):
@@ -644,10 +769,13 @@ STEPS = (
     ("network", "Network", step_network),
     ("server", "A throwaway server", step_server),
     ("live", "The background server", step_live),
-    ("services", "Start at logon and the nightly task", step_services),
+    ("services", "Starting by itself, and the nightly task", step_services),
     ("tunnel", "From outside the home", step_tunnel),
     ("wake", "Waking on request (the NAS's wake gate)", step_wake),
+    ("awake", "Keeping the PC awake", step_awake),
+    ("time", "Time zone", step_time),
     ("records", "The records repo", step_records),
+    ("scan", "Photo scanning", step_scan),
     ("forge", "Forge", step_forge),
 )
 

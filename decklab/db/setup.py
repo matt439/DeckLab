@@ -215,15 +215,51 @@ def ensure_database(c, name, say=print):
     """Make database name, owned by decklab_owner, when it's missing. c: an autocommit
     superuser connection. Returns True when it was made."""
     from psycopg import sql
+    from psycopg import Error
     if c.execute("select 1 from pg_database where datname = %s", (name,)).fetchone():
         return False
-    c.execute(sql.SQL("create database {} owner {} encoding 'UTF8' template template0").format(
-        sql.Identifier(name), sql.Identifier(db.ROLES["owner"])))
+    try:
+        c.execute(sql.SQL("create database {} owner {} encoding 'UTF8' template template0").format(
+            sql.Identifier(name), sql.Identifier(db.ROLES["owner"])))
+    except Error as e:
+        hint = db.locale_hint(e)
+        if not hint:
+            raise
+        raise db.DbUnavailable(f"the database {name} couldn't be made: {str(e).strip()}.{hint}") from None
     say(f"Made the database {name}, owned by {db.ROLES['owner']}.")
     return True
 
 
 _PASSWORD_REFUSED = ("no password supplied", "password authentication failed")
+# What the server says when its pg_hba.conf has another method than a password for the
+# superuser's TCP login on 127.0.0.1: RHEL and Fedora's "ident", or a "peer" or missing line.
+_AUTH_METHOD = ("Ident authentication failed", "Peer authentication failed", "no pg_hba.conf entry")
+
+
+def _method_hint(posix=None):
+    """The next step when PostgreSQL won't take a password for the superuser on 127.0.0.1."""
+    from decklab.lib import pathsetting
+    posix = pathsetting.on_posix() if posix is None else posix
+    if not posix:
+        return ("PostgreSQL's pg_hba.conf doesn't allow a password login on 127.0.0.1: in the file (in PostgreSQL's "
+                "data folder), set the method of the host lines for 127.0.0.1/32 and ::1/128 to scram-sha-256, "
+                "restart the postgresql service, then run python -m decklab.db setup again")
+    return ("PostgreSQL's pg_hba.conf doesn't allow a password login on 127.0.0.1. Find the file with "
+            'sudo -u postgres psql -c "show hba_file", set the method of its host lines for 127.0.0.1/32 and '
+            "::1/128 to scram-sha-256, reload PostgreSQL with sudo systemctl reload postgresql, give postgres a "
+            'password if it has none (sudo -u postgres psql -c "\\password postgres"), then run '
+            "python -m decklab.db setup again (as yourself, not with sudo)")
+
+
+def _password_hint(posix=None):
+    """The next step when the superuser's password was refused."""
+    from decklab.lib import pathsetting
+    posix = pathsetting.on_posix() if posix is None else posix
+    if not posix:
+        return (f"Give the {db.SUPERUSER} password set when PostgreSQL was installed, then run "
+                "python -m decklab.db setup again")
+    return (f"If {db.SUPERUSER} has no password yet, or you don't know it, set one with "
+            f'sudo -u postgres psql -c "\\password {db.SUPERUSER}", then run python -m decklab.db setup again')
 
 
 def _superuser(say=print, ask=getpass.getpass, interactive=None):
@@ -233,6 +269,8 @@ def _superuser(say=print, ask=getpass.getpass, interactive=None):
     try:
         return db.connect("super", dbname="postgres", autocommit=True)
     except db.DbUnavailable as e:
+        if any(words in str(e) for words in _AUTH_METHOD):
+            raise db.DbUnavailable(f"{e}. {_method_hint()}.") from None
         if not any(words in str(e) for words in _PASSWORD_REFUSED):
             raise
         if interactive is None:
@@ -246,6 +284,12 @@ def _superuser(say=print, ask=getpass.getpass, interactive=None):
     password = ask(f"Password for {db.SUPERUSER}: ")
     try:
         return db.connect("super", dbname="postgres", autocommit=True, password=password)
+    except db.DbUnavailable as e:
+        if any(words in str(e) for words in _AUTH_METHOD):
+            raise db.DbUnavailable(f"{e}. {_method_hint()}.") from None
+        if any(words in str(e) for words in _PASSWORD_REFUSED):
+            raise db.DbUnavailable(f"{e}. {_password_hint()}.") from None
+        raise
     finally:
         password = None
 

@@ -49,7 +49,8 @@ step "The server's service"
 systemctl --user is-enabled decklab.service
 answers
 # (status exits 1 here: listening on 127.0.0.1 only is a problem for phones.)
-says "Service: decklab.service is installed (starts at logon); it's active (running)" \
+# CI turns lingering on (tests.yml), so it starts at boot; without lingering it says "starts at logon".
+says "Service: decklab.service is installed (starts at boot (lingering)); it's active (running)" \
   "$PYTHON" -m decklab.lib.homenet status --port "$PORT"
 
 step "Restart: a new process answers"

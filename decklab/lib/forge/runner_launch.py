@@ -4,6 +4,8 @@ runner.py keeps the public entry points and shared settings. Read those through
 runtime so existing callers, overrides and test patches use one binding.
 """
 import os
+import sys
+import threading
 from pathlib import Path
 from urllib.parse import quote
 
@@ -90,7 +92,112 @@ def _java(setup):
         flags.append(f"{runtime.AIPROFILES_FLAG}={setup['aiprofiles']}")
     if setup.get("decision_log") and ready:
         flags.append(f"{DECISION_LOG_FLAG}={decision_log_value(setup['decision_log'])}")
-    return [setup["java"], f"-Xmx{setup['xmx']}", *runtime.JVM_FLAGS, *flags]
+    return [setup["java"], f"-Xmx{setup['xmx']}", *runtime.JVM_FLAGS, *user_home_flags(setup), *flags]
+
+
+def _windows():
+    """Whether Forge finds its user folder through APPDATA and LOCALAPPDATA (Windows), rather
+    than the JVM's user.home (a function, so the tests run each OS's branch on either)."""
+    return os.name == "nt"
+
+
+def user_home_flags(setup):
+    """Off Windows, ["-Duser.home=<setup["user_dir"]>/home"]: Forge (ForgeProfileProperties'
+    default folders) reads APPDATA and LOCALAPPDATA only on Windows, and elsewhere uses
+    <user.home>/.forge and <user.home>/.cache/forge (macOS: Library/Application Support/Forge and
+    Library/Caches/Forge). Java takes user.home from the passwd entry, not $HOME, so only this
+    flag moves it; _prepare_user_dir links those folders back to the run's Forge folder. [] on
+    Windows, or without a user folder. JVM flags aren't part of the engine key."""
+    if _windows() or not setup.get("user_dir"):
+        return []
+    return [f"-Duser.home={Path(setup['user_dir']) / USER_HOME}"]
+
+
+USER_HOME = "home"      # in a run's user folder: the JVM's user.home off Windows (user_home_flags)
+
+
+def _home_layout(user_dir):
+    """[(where Forge looks off Windows under the run's user.home, the run's folder it must be)]:
+    the user folder (user_dir/Forge, as APPDATA gives on Windows) and the cache
+    (user_dir/Forge/Cache, as LOCALAPPDATA gives)."""
+    home = user_dir / USER_HOME
+    forge, cache = user_dir / "Forge", user_dir / "Forge" / "Cache"
+    if sys.platform == "darwin":
+        return [(home / "Library" / "Application Support" / "Forge", forge), (home / "Library" / "Caches" / "Forge", cache)]
+    return [(home / ".forge", forge), (home / ".cache" / "forge", cache)]
+
+
+_home_lock = threading.Lock()
+
+
+def _link_user_home(user_dir):
+    """Off Windows: make the run's user.home (user_home_flags) lead Forge to user_dir/Forge, by
+    relative links (home/.forge -> ../Forge, home/.cache/forge -> ../../Forge/Cache), so the
+    preferences, the overrides and Forge's logs are where Deck Lab keeps them. Where a link
+    can't be made (a file system without them), the place is a real folder instead, and the
+    preferences and the deployed card-script overrides are copied into it (_mirror) at every
+    start. Returns the folders that are copies ([] when every link is in place)."""
+    copies = []
+    with _home_lock:
+        for place, target in _home_layout(user_dir):
+            target.mkdir(parents=True, exist_ok=True)
+            place.parent.mkdir(parents=True, exist_ok=True)
+            want = os.path.relpath(target, place.parent)
+            if place.is_symlink():
+                try:
+                    if os.readlink(place) == want:
+                        continue
+                    place.unlink()
+                except OSError:
+                    pass
+            if not place.is_dir():
+                try:
+                    os.symlink(want, place, target_is_directory=True)
+                    continue
+                except FileExistsError:
+                    if place.is_symlink():
+                        continue
+                except OSError as e:
+                    overrides._log_once(f"Forge's user folder can't be linked at {place} ({type(e).__name__}): "
+                                     "Deck Lab copies its preferences and overrides there instead.")
+            place.mkdir(parents=True, exist_ok=True)
+            if target.name == "Forge":
+                _mirror(target, place)
+                copies.append(place)
+    return copies
+
+
+MIRRORED = (Path("preferences") / "forge.preferences", Path("custom") / "cards")
+
+
+def _mirror(source, copy):
+    """Make copy's MIRRORED files match source's (_link_user_home's copy of the user folder):
+    each file written only when it differs (through a temporary file and os.replace), and the
+    copy's files that source doesn't have deleted, so its overrides hash is source's."""
+    for part in MIRRORED:
+        src, dst = source / part, copy / part
+        files = ([src] if src.is_file() else sorted(p for p in src.rglob("*") if p.is_file())) if src.exists() else []
+        keep = set()
+        for path in files:
+            target = dst / path.relative_to(src) if path != src else dst
+            keep.add(target)
+            data = path.read_bytes()
+            try:
+                if target.read_bytes() == data:
+                    continue
+            except OSError:
+                pass
+            target.parent.mkdir(parents=True, exist_ok=True)
+            tmp = target.with_name(f".{target.name}.{os.getpid()}.{threading.get_ident()}.tmp")
+            tmp.write_bytes(data)
+            os.replace(tmp, target)
+        extra = [dst] if dst.is_file() else (sorted(p for p in dst.rglob("*") if p.is_file()) if dst.exists() else [])
+        for path in extra:
+            if path not in keep:
+                try:
+                    path.unlink()
+                except OSError:
+                    pass
 
 
 DECISION_LOG_FLAG = "-Ddecklab.decisionLog"     # the fork's forge.ai.AiDecisionLog.PROPERTY
@@ -193,11 +300,15 @@ def _prepare_user_dir(user_dir):
     if have != preferences:
         prefs.write_text(preferences, encoding="utf-8", newline="\n")
     overrides.ensure_deployed(user_dir)
-    for old in (user_dir / "Forge").glob("forge.*.log"):
-        try:
-            old.unlink()
-        except OSError:
-            pass
+    folders = [user_dir / "Forge"]
+    if not _windows():
+        folders += _link_user_home(user_dir)
+    for folder in folders:
+        for old in folder.glob("forge.*.log"):
+            try:
+                old.unlink()
+            except OSError:
+                pass
     env = dict(os.environ)
     env["APPDATA"] = str(user_dir)
     env["LOCALAPPDATA"] = str(user_dir)

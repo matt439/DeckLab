@@ -235,6 +235,7 @@ class ServerCheckTests(unittest.TestCase):
         self.assertFalse(homenet.loopback("192.0.2.10"))
         self.assertTrue(homenet.loopback("127.0.0.2"))
 
+    @mock.patch("sys.platform", "win32")            # Linux's wording: test_linux_server
     def test_running_in_a_window(self):
         state = dict(running_state(background=False), log=None)
         lines = self.check(state, {"answered": True, "deck_lab": True, "cards_ready": True})
@@ -313,6 +314,7 @@ class ServerCheckTests(unittest.TestCase):
         lines = self.check(None, {"answered": False}, other_state=running_state(port=18000))
         self.assertIn("port 18000", lines[0]["text"])
 
+    @mock.patch("sys.platform", "win32")
     def test_port_held_but_silent(self):
         answer = {"answered": False, "listening": True,
                   "error": "something took the connection but didn't answer within 2 seconds"}
@@ -690,6 +692,7 @@ class CommandTests(Guarded):
             self.assertEqual(homenet.commands.cmd_stop(18642), 0)
         self.assertIn("Deck Lab isn't running. (Another program answers on port 18642.)", q.text)
 
+    @mock.patch("sys.platform", "win32")
     def test_stop_timeout_names_the_program(self):
         self.find.return_value = (running_state(port=18642, python=PYTHON), {"answered": True, "deck_lab": True})
         self.control.request_stop.return_value = "timeout"
@@ -947,13 +950,15 @@ class PatchTargetTests(unittest.TestCase):
     nothing (and letting the real schtasks, PowerShell, stop requests or
     multicast through)."""
 
-    MODULES = ("common", "task", "commands", "gather", "mdns", "checks", "watchdog", "service")
+    MODULES = ("common", "task", "commands", "gather", "mdns", "checks", "watchdog", "service", "linux_facts")
     REPLACED = {
         "commands": ("control", "_schtasks", "_start_task", "find_server", "probe", "local_ipv4", "file_exists",
                      "pythonw_path", "task_user", "pc_name", "this_pythons", "newest_code_mtime", "cmd_status",
                      "cmd_stop", "cmd_start", "cmd_remove", "time", "uses_systemd"),
         "gather": ("run_powershell", "gather_facts"),
+        "linux_facts": ("read_facts",),
         "mdns": ("MDNS_GROUP", "mdns_lookup"),
+        "service": ("_power_lines",),
     }
 
     def test_each_has_one_home(self):

@@ -15,12 +15,61 @@ window and no console, so the log is where to look; `python -m decklab.db status
 last dump that worked is old or the last check failed (and the footer tells an admin).
 
 The whole run holds the PC awake (lib/keepawake.py's hold_while: a power request on Windows,
-nothing elsewhere), so a PC that sleeps when idle (wake-on-request) doesn't fall asleep midway.
+a systemd-inhibit block on Linux, nothing elsewhere), so a PC that sleeps when idle
+(wake-on-request) doesn't fall asleep midway.
+
+On Linux the timer's Persistent=true may start a missed run as soon as the user manager starts
+at boot, before the system's PostgreSQL accepts connections (a user unit can't be ordered after
+a system one), so the run first waits up to DB_WAIT seconds for the database (wait_for_database),
+then runs every step either way. On Windows the task starts after logon and doesn't wait.
 """
+import sys
+import time
 import traceback
 from datetime import datetime, timedelta
 
 from decklab.db import backup, conn as db
+
+DB_WAIT = 180                     # seconds at most to wait for the database at the start (Linux)
+DB_WAIT_EVERY = 10                # seconds between tries
+DB_WAIT_CONNECT = 5               # seconds each try may take
+
+
+def wait_for_database(limit=DB_WAIT, every=DB_WAIT_EVERY, *, connect=None, sleep=time.sleep,
+                      clock=time.monotonic, log=None):
+    """Try to connect as the owner until it works or limit seconds have passed. True when it
+    worked. The first failure and the outcome are logged; psycopg missing isn't waited for (it
+    won't appear), and anything but DbUnavailable is passed on."""
+    log = log or db.log
+    if connect is None:
+        try:
+            db._psycopg()
+        except db.DbUnavailable:
+            return False                  # the steps say so; waiting won't install it
+        def connect():
+            return db.connect("owner", timeout=DB_WAIT_CONNECT)
+    started, tries = clock(), 0
+    while True:
+        tries += 1
+        try:
+            connection = connect()
+        except db.DbUnavailable as e:
+            waited = clock() - started
+            if tries == 1:
+                log(f"Nightly: the database can't be reached yet ({e}); waiting up to {round(limit)} seconds.")
+            if waited + every > limit:
+                log(f"Nightly: the database still can't be reached after {round(waited)} seconds; "
+                    "running the steps anyway.")
+                return False
+            sleep(every)
+            continue
+        try:
+            connection.close()
+        except Exception:                 # noqa: BLE001 (only a check)
+            pass
+        if tries > 1:
+            log(f"Nightly: the database answered after {round(clock() - started)} seconds.")
+        return True
 
 
 def restore_check_due(last, now, days):
@@ -57,6 +106,11 @@ def run():
     """The nightly job. Returns 0, or 1 when any step failed."""
     from decklab.lib import keepawake
     with keepawake.hold_while():
+        if sys.platform.startswith("linux"):
+            try:
+                wait_for_database()
+            except Exception as e:        # noqa: BLE001 (the steps still run and say what's wrong)
+                db.log(f"Nightly: waiting for the database failed: {type(e).__name__}: {e}")
         return _run()
 
 

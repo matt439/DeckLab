@@ -106,8 +106,10 @@ class SettingsTests(unittest.TestCase):
                     db.pg_bin("pg_dump")
 
     def test_pg_bin_without_a_setting_finds_the_newest_install_then_the_path(self):
-        exe = ".exe" if os.name == "nt" else ""
-        with tempfile.TemporaryDirectory() as tmp:
+        # Windows' search (Program Files\PostgreSQL), pinned so it runs on Linux too; the Linux
+        # search has its own tests in test_db_paths.
+        exe = ".exe"
+        with tempfile.TemporaryDirectory() as tmp, mock.patch.object(db, "_on_windows", return_value=True):
             root = Path(tmp)
             for version in ("9.6", "16", "17"):
                 (root / "PostgreSQL" / version / "bin").mkdir(parents=True)
@@ -201,12 +203,14 @@ class CliTests(unittest.TestCase):
         import decklab.db as pkg
         with mock.patch.dict(sys.modules, mods), \
                 mock.patch.multiple(pkg, create=True, backup=backup, export=export, nightly=nightly,
-                                    schedule=schedule):
+                                    schedule=schedule),                 mock.patch.object(cli.os, "umask") as umask:        # never this test process's own
             codes = [cli.main(a) for a in (["backup", "--dest", "D"], ["prune"], ["restore-check"],
                                             ["export", "--no-push"], ["nightly"], ["schedule", "install"])]
         self.assertEqual(codes, [0, 0, 1, 0, 0, 0])
         self.assertEqual(calls, [("backup", "D"), ("prune",), ("restore",), ("export", None, False),
                                  ("nightly",), ("install",)])
+        # Off Windows, backup, restore-check, export and nightly make their files private (077).
+        self.assertEqual(umask.call_args_list, [] if os.name == "nt" else [mock.call(0o077)] * 4)
 
 
 class TriggerTests(db_support.DbTestCase):

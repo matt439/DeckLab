@@ -12,8 +12,10 @@ from decklab.lib import preflight
 
 
 READY = {"runtime": "runtime_ready", "config": "config_ready", "driver": "driver_ready",
-         "database": "database_ready", "cards": "cards_ready", "java": "java_files_ready", "forge": "forge_files_ready"}
-ORDER = ["runtime", "config", "driver", "database", "cards", "java", "forge"]
+         "database": "database_ready", "cards": "cards_ready", "java": "java_files_ready", "forge": "forge_files_ready",
+         "ocr": "ocr_ready", "timezone": "timezone_matches"}
+ORDER = ["runtime", "config", "driver", "database", "cards", "java", "forge", "ocr", "timezone"]
+LOCAL = ORDER[:5] + ["ocr", "timezone"]     # the checks the local adapter answers (java and forge are preflight_forge's)
 SECRET = "PRIVATE_VALUE user1@example.com C:/private/fixture password=fixture"
 
 
@@ -44,7 +46,7 @@ class PreflightReportTests(unittest.TestCase):
         self.assertEqual(result["exit_code"], 0)
         self.assertEqual(result["optional_files_status"], "present")
         self.assertEqual(result["simulation_execution"], "not_performed")
-        self.assertEqual([row["scope"] for row in result["checks"]], ["core"] * 5 + ["optional"] * 2)
+        self.assertEqual([row["scope"] for row in result["checks"]], ["core"] * 5 + ["optional"] * 4)
         rendered = preflight.text(result)
         self.assertIn("Core preflight: ready.", rendered)
         self.assertIn("Simulation execution qualification: not performed.", rendered)
@@ -69,7 +71,7 @@ class PreflightReportTests(unittest.TestCase):
         result = preflight.report(codes)
         self.assertEqual(result["exit_code"], 1)
         self.assertFalse(result["core_ready"])
-        self.assertEqual(codes.calls, ["runtime", "config", "cards", "java", "forge"])
+        self.assertEqual(codes.calls, ["runtime", "config", "cards", "java", "forge", "ocr", "timezone"])
         self.assertEqual(self.row(result, "driver")["blocked_by"], ["runtime"])
         self.assertEqual(self.row(result, "database")["blocked_by"], ["driver"])
         self.assertEqual(self.row(result, "database")["code"], "dependency_blocked")
@@ -79,7 +81,8 @@ class PreflightReportTests(unittest.TestCase):
     def test_bad_config_blocks_database_and_optional_settings_but_not_driver_or_cards(self):
         codes = Codes({"config": "config_missing"})
         result = preflight.report(codes)
-        self.assertEqual(codes.calls, ["runtime", "config", "driver", "cards"])
+        self.assertEqual(codes.calls, ["runtime", "config", "driver", "cards", "ocr"])
+        self.assertEqual(self.row(result, "timezone")["blocked_by"], ["config"])
         self.assertEqual(result["exit_code"], 1)
         self.assertEqual(self.row(result, "database")["blocked_by"], ["config"])
         self.assertEqual(self.row(result, "java")["blocked_by"], ["config"])
@@ -232,7 +235,7 @@ class DoctorCliTests(unittest.TestCase):
         self.assertEqual(len(optional_created), 2)
         self.assertIsNot(locals_created[0], locals_created[1])
         for local, optional in zip(locals_created, optional_created):
-            self.assertEqual(local.calls, ORDER[:5])
+            self.assertEqual(local.calls, LOCAL)
             self.assertEqual(optional.seen, [local.settings, local.settings])
 
     def test_keyboard_interrupt_returns_cancellation_without_partial_json_or_later_checks(self):
@@ -252,7 +255,7 @@ class DoctorCliTests(unittest.TestCase):
         result = json.loads(out.getvalue())
         self.assertTrue(result["core_ready"])
         self.assertEqual(result["optional_files_status"], "not_verified")
-        self.assertEqual(codes.calls, ORDER[:5])
+        self.assertEqual(codes.calls, LOCAL)
         forge_module.ForgeFiles.assert_called_once()
         self.assertNotIn(SECRET, out.getvalue() + err.getvalue())
 
@@ -279,8 +282,8 @@ class DoctorCliTests(unittest.TestCase):
                     self.assertEqual(doctor.main(["--json"]), 0)
                 result = json.loads(out.getvalue())
                 self.assertEqual(result["optional_files_status"], "not_verified")
-                self.assertEqual([row["code"] for row in result["checks"][-2:]], ["probe_unverified"] * 2)
-                self.assertEqual(codes.calls, ORDER[:5])
+                self.assertEqual([row["code"] for row in result["checks"][5:7]], ["probe_unverified"] * 2)
+                self.assertEqual(codes.calls, LOCAL)
                 forge_module.ForgeFiles.assert_called_once()
                 self.assertNotIn(SECRET, out.getvalue() + err.getvalue())
 

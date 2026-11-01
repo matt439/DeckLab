@@ -1,8 +1,9 @@
 """A synthetic card bottom line as a PNG, drawn with the standard library only.
 
-test_scan's end-to-end test reads it with Windows' OCR engine, so no card scan
-(copyrighted art) is committed: these are 5x7 block letters, white on black like
-a modern card's frame, scaled up as a phone photo would show them.
+The scan tests' end-to-end checks and the smoke test's scan step (decklab/smoke.py)
+read it with the PC's OCR engine, so no card scan (copyrighted art) is committed:
+these are 5x7 block letters, white on black like a modern card's frame, scaled up
+as a phone photo would show them.
 """
 import struct
 import zlib

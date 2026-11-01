@@ -291,14 +291,24 @@ Running Forge (HISTORY.md "Installing and running Forge")
     kills every Forge process with it. Each process also gets a job of its own, nested in
     that one, and a stop or the watchdog kills that whole job: a java.exe that's only a
     launcher (the one on the PATH) starts the real one as its child, which killing the
-    launcher alone would leave running. Elsewhere each process gets its own process
-    group instead.
+    launcher alone would leave running. Elsewhere each process gets its own session and
+    process group instead, which a stop or the watchdog kills whole (killpg); under the Linux
+    service, systemd's KillMode=mixed also kills anything left in the service's cgroup when it
+    stops. A command-line run killed with SIGKILL can leave its JVMs running there.
     On Windows, java.exe also starts below normal priority (BELOW_NORMAL_PRIORITY_CLASS,
     with CREATE_NO_WINDOW and the suspended start: processes._SPAWN_FLAGS, since
     2026-10-03, R18), and the processes it starts inherit it. So the PC's other programs,
     and the practice-hand workers (normal priority), come first when they want the same
     cores. Practice hands take no slots and never wait for Forge (slots.py says why).
-    Elsewhere Forge keeps normal priority.
+    Elsewhere each process starts through "nice -n 10" (processes.FORGE_NICE), which every
+    JVM thread inherits; without a nice program it keeps normal priority (logged once).
+    Pinning to cores (cores.py) is Windows-only.
+    Forge's user folder: on Windows APPDATA and LOCALAPPDATA point it at the run's user
+    folder (runner._prepare_user_dir). Forge reads them only on Windows: elsewhere it uses
+    <user.home>/.forge and <user.home>/.cache/forge, so each launch gets
+    -Duser.home=<user folder>/home (runner_launch.user_home_flags), where relative links lead
+    back to <user folder>/Forge and Forge/Cache (copies of the preferences and overrides where
+    the file system can't hold links).
 
 Reading Forge's output (the trial's run_sim.parse and setup-notes.md sections 4-5)
     Forge names a winner even for a game that hit the clock or crashed, so a game is a
@@ -590,7 +600,8 @@ Where things are (decklab/lib/forge/, each part importing only those above it)
                     (per-list overrides, pilots); today(), side_ids(), is_current() and
                     words() for the consumers
     processes.py    starting and killing Forge's processes (Job Objects and below normal
-                    priority on Windows; start_process(stdin=True) for warm workers)
+                    priority on Windows, process groups and nice 10 elsewhere;
+                    start_process(stdin=True) for warm workers)
     cardlog.py      the card log's lines: one game's moves, its checks, a batch's tallies
                     (record version 3: in hand by turn 3), merge_record() for a run's chunks
     logreader.py    LogReader, which reads Forge's output

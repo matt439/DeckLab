@@ -37,6 +37,17 @@ The redirect is built only from the configured PC address, never from the reques
    powercfg /setactive SCHEME_CURRENT
    ```
 
+### A Linux PC
+
+Steps 2, 4 and 5 are the same. In place of steps 1, 3 and 6:
+
+1. **Wake-on-LAN on, at every boot.** Turn it on in the BIOS/UEFI as above. Then keep the adapter armed, since Linux turns it off again at each boot: with NetworkManager, `sudo nmcli connection modify <connection> 802-3-ethernet.wake-on-lan magic` (`nmcli connection show` lists the connections); with systemd-networkd, a `.link` file for the adapter with `WakeOnLan=magic`. `sudo ethtool <adapter>` should show `Wake-on: g`.
+2. **Deep sleep.** `cat /sys/power/mem_sleep` should show `[deep]`. If it shows `[s2idle]`, add `mem_sleep_default=deep` to the kernel command line (in `/etc/default/grub`, then `sudo update-grub`), or the magic packet may not wake it.
+3. **The PC's MAC address.** `ip link` shows it as `link/ether aa:bb:cc:dd:ee:ff` under the wired adapter.
+4. **Sleeping when idle.** A Linux PC with no desktop never suspends by itself: as root, write `/etc/systemd/logind.conf.d/decklab.conf` with `[Login]`, `IdleAction=suspend` and `IdleActionSec=10min`, then restart the PC. Deck Lab holds it awake while in use with `systemd-inhibit`; if polkit refuses that, SELF-HOSTING.md step 12 has the rule that allows it.
+5. **Wake for the nightly backup.** A user timer can't wake the PC. `python -m decklab.db schedule wake-timer` prints the `sudo` commands that install a system timer waking it a minute before 03:30; Deck Lab never installs it itself.
+6. **Check:** `python -m decklab.lib.homenet status` has Wake lines for `mem_sleep`, the adapter, the wake timer and the gate.
+
 ## 2. Run the gate on the Asustor
 
 1. In ADM's **App Central**, install **Docker Engine**, then **Portainer** or **Dockge**. Either one runs the stack.
