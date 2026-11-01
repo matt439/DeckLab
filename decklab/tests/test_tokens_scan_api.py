@@ -145,11 +145,28 @@ class ScanTests(TokenScanTestCase):
         self.assertEqual(self.writes, [])
 
     def test_an_engine_that_cant_read_says_to_type_the_token_s_name(self):
-        self.lines = scan.OcrUnavailable("Tesseract isn't installed. Type the card's name instead.")
+        self.lines = scan.OcrMissing(scan.NOT_SET_UP, detail="Tesseract isn't installed.")
         answer = self.scan()
+        self.assertEqual(answer["message"], "Scanning isn't set up on this server. Type the token's name instead.")
         self.assertTrue(answer["unread"])
         self.assertEqual((answer["proposals"], answer["read"]), ([], None))
         self.assertTrue(answer["message"].endswith("Type the token's name instead."))
+
+    def test_the_tokens_view_says_whether_this_server_can_scan(self):
+        for available in (True, False):
+            with self.subTest(available=available), \
+                    mock.patch.object(scan, "engine_status", return_value={"engine": "tesseract", "available": available,
+                                                                           "reason": "ready", "detail": None}):
+                self.assertEqual(api_tokens.tokens_view()["scan"], {"available": available})
+        with mock.patch.object(api_tokens.guard, "allowed", return_value=False), \
+                mock.patch.object(scan, "engine_status", side_effect=AssertionError("checked for a reader")):
+            self.assertNotIn("scan", api_tokens.tokens_view())
+
+    def test_a_long_read_keeps_the_bottom_line(self):
+        self.lines = FISH[:1] + [f"art {i}" for i in range(98)] + FISH[3:]
+        answer = self.scan()
+        self.assertEqual(len(answer["lines"]), cs.MAX_LINES)
+        self.assertEqual(answer["proposals"][0]["how"], "name and number")
 
     def test_one_photo_at_a_time_with_the_collection_s_scanner(self):
         self.assertTrue(cs._scan_lock.acquire(blocking=False))

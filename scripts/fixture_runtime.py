@@ -31,6 +31,8 @@ RUNTIME_SKIPS = {
         "Fresh command child needs separate qualification; its temporary inventory does not isolate private config",
     "decklab.tests.test_overnight.FakeRunTests":
         "Overnight controller children sample native processes even with --fake; the prior inventory action was denied",
+    "decklab.tests.test_scan_tesseract.TesseractEngineTests.test_tesseract_reads_a_synthetic_bottom_line":
+        "Native Tesseract OCR requires separate qualification on the Linux server PC",
     "decklab.tests.test_overnight_report_full.ControllerEndTests":
         "Overnight controller monitoring/cleanup needs native process inventory; the prior inventory action was denied",
 }

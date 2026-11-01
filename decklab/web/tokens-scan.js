@@ -11,11 +11,13 @@
  * POST /api/tokens/scan/add as one change, each row kept apart from any row already naming that card (the page never
  * merges rows). A list changed since keeps the pending cards and asks to add them again to the list as it is now.
  * Only where the visitor may change the tokens (view.canEdit), and every answer is checked against the page that
- * asked (tokensActive). */
+ * asked (tokensActive). When the view says this server can't read photos (scan.available false, collection-scan.js
+ * scanAvailable), the sheet says so and offers only the typed name. */
 "use strict";
 
 const TOK_SCAN_CHOICES = 8;             // printings offered at most for one card
 const TOK_SCAN_MAX = 50;                // rows added at once (the server's token_ops.MAX_BATCH)
+const TOK_SCAN_OFF = "Photos can't be read on this server, so type each token's name instead.";
 
 /** Open the sheet over the Tokens page's view (where the visitor may change its tokens). Returns its context, or null. */
 function openTokenScan(view, pending = []) {
@@ -24,7 +26,7 @@ function openTokenScan(view, pending = []) {
     { wide: true });
   const id = (key) => `tok-scan-${key}-${sheet.heading.id}`;
   const ctx = { view, sheet, pending: tokScanCopy(pending), busy: false, seq: 0, last: null, reviewing: false,
-    names: (view.data && view.data.face_names) || [] };
+    names: (view.data && view.data.face_names) || [], reads: scanAvailable(view.data) };
   ctx.input = el("input", { id: id("photo"), type: "file", accept: "image/*", capture: "environment", class: "col-file" });
   ctx.input.addEventListener("change", () => {
     const file = ctx.input.files && ctx.input.files[0];
@@ -39,12 +41,14 @@ function openTokenScan(view, pending = []) {
   ctx.result = el("div", { class: "col-scan-result" });
   ctx.list = el("ul", { class: "col-trade-list tok-scan-pending" });
   ctx.picking = el("div", {},
-    el("p", { text: "Photograph one token card at a time, filling the frame with it. Each photo is read on the PC and "
-      + "never kept. Nothing is added until you review the list." }),
-    el("label", { class: "field col-file-field", for: ctx.input.id }, el("span", { text: "Take a photo of a token card" }), ctx.input),
+    ctx.reads ? el("p", { text: "Photograph one token card at a time, filling the frame with it. Each photo is read on the PC and "
+      + "never kept. Nothing is added until you review the list." })
+      : el("p", { class: "box box-warn tok-scan-off", text: TOK_SCAN_OFF }),
+    ctx.reads ? el("label", { class: "field col-file-field", for: ctx.input.id },
+      el("span", { text: "Take a photo of a token card" }), ctx.input) : null,
     ctx.result,
     el("div", { class: "col-scan-typed" },
-      el("label", { class: "field", for: ctx.name.id }, el("span", { text: "Or type a token's name" }), ctx.name),
+      el("label", { class: "field", for: ctx.name.id }, el("span", { text: ctx.reads ? "Or type a token's name" : "Type a token's name" }), ctx.name),
       el("button", { type: "button", class: "btn", text: "Add it", onclick: () => addTypedToken(ctx) })),
     el("h3", { text: "To add" }), ctx.list);
   ctx.review = el("div", { hidden: true });
@@ -64,7 +68,7 @@ function tokScanHere(ctx, seq) {
 
 /** Send one photo and show what it was read as. */
 async function scanTokenPhoto(ctx, file) {
-  if (ctx.busy || !tokScanHere(ctx)) return;
+  if (ctx.busy || !ctx.reads || !tokScanHere(ctx)) return;
   const seq = ++ctx.seq;
   ctx.busy = true;
   ctx.input.disabled = true;

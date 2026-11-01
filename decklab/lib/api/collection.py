@@ -93,6 +93,18 @@ def editable(space):
     return guard.allowed(guard.viewer(), "collection.edit", space)
 
 
+def scan_flag():
+    """{"available": bool}: whether this server has an OCR engine for Scan cards and Scan token
+    cards (scan.engine_status, cheap and kept a minute), for a view the visitor may change. It
+    names no engine or path, so it tells a member nothing about the PC. A check that fails says
+    available, and the photo's own answer (unread) still says it couldn't be read."""
+    from decklab.lib import scan
+    try:
+        return {"available": bool(scan.engine_status()["available"])}
+    except Exception:       # noqa: BLE001 - never fail a page over the scan check
+        return {"available": True}
+
+
 def collection_view(q=None, color=None, type=None, role=None, mv=None,
                     availability=None, page=None, limit=None, space=None):
     """GET /api/collection. All filters optional; name and Oracle text share q.
@@ -104,7 +116,8 @@ def collection_view(q=None, color=None, type=None, role=None, mv=None,
     all/free/incoming/held. Basic land allocations are not tracked, so their free_now and held values are null.
     space (home by default) is whose pool; the answer also has "space",
     "spaces" ([{"id", "name"}] of those it may see, home first, named "Home") and "editable"
-    (whether this visitor may change that collection). 403 for a space whose
+    (whether this visitor may change that collection), and where it may, "scan"
+    (scan_flag: {available}, whether Scan cards can read photos here). 403 for a space whose
     inventory the visitor may not see (guard.require_sees_inventory: home's
     only the home profiles, a person's only that person, whatever the role;
     E10-S29), and the same 403 for a space that doesn't exist (space_param).
@@ -142,7 +155,9 @@ def collection_view(q=None, color=None, type=None, role=None, mv=None,
         if space == spaces.HOME and not guard.sees_home_records():
             raise ApiError(409, "The collection couldn't be read.") from None
         raise ApiError(409, f"The collection couldn't be read: {_public(error)}") from None
-    return {**answer, "space": space, "spaces": space_choices(), "editable": editable(space)}
+    may = editable(space)
+    return {**answer, "space": space, "spaces": space_choices(), "editable": may,
+            **({"scan": scan_flag()} if may else {})}
 
 
 def _identity_choice(color):

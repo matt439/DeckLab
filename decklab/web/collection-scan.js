@@ -12,13 +12,20 @@
  * Import cards sheet's preview (collection.js, previewImport), so the scan is added as an import is: previewed,
  * then one change with its raw import kept. Until it's imported the import sheet offers "Back to the scanned
  * list" (colScanBack), which reopens this sheet with the same pending cards. Photos are never kept. Shared with
- * collection.js (openScanSheet, colScanBack). */
+ * collection.js (openScanSheet, colScanBack). When the view says this server can't read photos (its scan.available
+ * is false: no OCR engine on the PC, collection.scan_flag), the sheet says so and offers only the typed name. */
 "use strict";
 
 const COL_SCAN_SIDE = 2000;             // pixels on a photo's long side (decklab/design/scanning-spike.md)
 const COL_SCAN_QUALITY = 0.85;          // JPEG quality of the photo sent
 const COL_SCAN_MAX = 4 * 1024 * 1024;   // bytes: the server's limit (collection_scan.MAX_PHOTO)
 const COL_SCAN_CHOICES = 8;             // printings offered at most for one card
+const COL_SCAN_OFF = "Photos can't be read on this server, so type each card's name instead.";
+
+/** Whether the server can read photos: false only when a view says so (an older server's says nothing). */
+function scanAvailable(data) {
+  return !(data && data.scan && data.scan.available === false);
+}
 
 /** Open the sheet (where the visitor may change this collection), with the pending cards brought back from
  * the import sheet, if any. Returns its context, or null. */
@@ -26,7 +33,8 @@ function openScanSheet(cv, pending = []) {
   if (!colActive(cv) || cv.busy || !cv.editable) return null;
   const sheet = colOpenSheet(`Scan cards into ${colWhose(cv.space)}`, { wide: true });
   const id = (key) => `col-scan-${key}-${sheet.heading.id}`;
-  const ctx = { cv, sheet, pending: colScanCopy(pending), busy: false, picking: false, seq: 0, last: null };
+  const ctx = { cv, sheet, pending: colScanCopy(pending), busy: false, picking: false, seq: 0, last: null,
+    reads: scanAvailable(cv.data) };
   ctx.input = el("input", { id: id("photo"), type: "file", accept: "image/*", capture: "environment", class: "col-file" });
   ctx.input.addEventListener("change", () => {
     const file = ctx.input.files && ctx.input.files[0];
@@ -39,12 +47,14 @@ function openScanSheet(cv, pending = []) {
   ctx.result = el("div", { class: "col-scan-result" });
   ctx.list = el("ul", { class: "col-trade-list col-scan-pending" });
   sheet.body.append(
-    el("p", { text: "Photograph one card at a time, filling the frame with it. Each photo is read on the PC and "
-      + "never kept. Nothing is added until you review the list." }),
-    el("label", { class: "field col-file-field", for: ctx.input.id }, el("span", { text: "Take a photo of a card" }), ctx.input),
+    ctx.reads ? el("p", { text: "Photograph one card at a time, filling the frame with it. Each photo is read on the PC and "
+      + "never kept. Nothing is added until you review the list." })
+      : el("p", { class: "box box-warn col-scan-off", text: COL_SCAN_OFF }),
+    ctx.reads ? el("label", { class: "field col-file-field", for: ctx.input.id },
+      el("span", { text: "Take a photo of a card" }), ctx.input) : null,
     ctx.message, ctx.result,
     el("div", { class: "col-scan-typed" },
-      el("label", { class: "field", for: ctx.name.id }, el("span", { text: "Or type a card's name" }), ctx.name),
+      el("label", { class: "field", for: ctx.name.id }, el("span", { text: ctx.reads ? "Or type a card's name" : "Type a card's name" }), ctx.name),
       el("button", { type: "button", class: "btn", text: "Find its printings", onclick: () => findScanName(ctx) })),
     el("h3", { text: "To add" }), ctx.list);
   drawScanPending(ctx);
@@ -85,7 +95,7 @@ async function colScanShrink(file) {
 
 /** Send one photo and show what it was read as. */
 async function scanPhoto(ctx, file) {
-  if (ctx.busy || !colScanHere(ctx)) return;
+  if (ctx.busy || !ctx.reads || !colScanHere(ctx)) return;
   const seq = ++ctx.seq;
   ctx.busy = true;
   ctx.input.disabled = true;

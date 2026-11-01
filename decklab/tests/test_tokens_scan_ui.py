@@ -164,7 +164,7 @@ class TokenScanUiTests(unittest.TestCase):
         self.run_js("""
           const ctx = openTokenScan(draw());
           apiWrite = async () => ({ok: true, space: 'home', unread: true, proposals: [], read: null, lines: [],
-            message: "Tesseract isn't installed. Type the token's name instead."});
+            message: "Scanning isn't set up on this server. Type the token's name instead."});
           await shoot(ctx);
           assert(ctx.message.textContent.includes("Type the token's name instead."), ctx.message.textContent);
           ctx.name.value = 'Tresure';
@@ -178,6 +178,26 @@ class TokenScanUiTests(unittest.TestCase):
           back.value = 'Nonsense'; back.fire('change');
           assert(ctx.list.textContent.includes('"Nonsense" isn\\'t a token'), ctx.list.textContent);
           assert.equal(foot(ctx, 'review').disabled, true);             // fixed before it can be added
+        """)
+
+    def test_a_server_that_cant_read_photos_offers_only_the_typed_name(self):
+        self.run_js("""
+          const off = openTokenScan(draw({scan: {available: false}}));
+          assert(!off.sheet.body.contains(off.input), 'no photo to take');
+          assert.equal(off.sheet.body.querySelector('.tok-scan-off').textContent,
+            "Photos can't be read on this server, so type each token's name instead.");
+          assert(!off.sheet.body.textContent.includes('Take a photo'), off.sheet.body.textContent);
+          let sent = 0;
+          apiWrite = async () => { sent++; return FISH; };
+          await shoot(off);
+          assert.equal(sent, 0);
+          off.name.value = 'Treasure';
+          button(off.sheet.body, 'Add it').click();
+          same(off.pending.map((c) => c.front), ['Treasure']);
+          off.sheet.close();
+          const on = openTokenScan(draw({scan: {available: true}}));
+          assert(on.sheet.body.contains(on.input));
+          assert.equal(on.sheet.body.querySelector('.tok-scan-off'), null);
         """)
 
     def test_a_changed_list_keeps_the_cards_and_asks_again(self):
