@@ -22,7 +22,8 @@ from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-from decklab.lib import access, api, build, config, dbstatus, inventory, permissions, state, visibility, visits
+from decklab.lib import (access, api, build, config, dbstatus, inventory, keepawake, permissions, state, visibility,
+                         visits)
 
 WEB_DIR = config.DECKLAB / "web"
 IMAGE_MAX_AGE = 7 * 24 * 60 * 60    # a printing's image never changes
@@ -319,6 +320,8 @@ class Handler(BaseHTTPRequestHandler):
             with access.using(self.identity), access.viewing(viewer or None), \
                     access.answering(self._is_script(viewer)), inventory.pinned(), visibility.pinned():
                 self._note_visit(viewer)
+                if keepawake.counts_as_activity(self.command, self.path, self.headers):
+                    keepawake.note_activity()       # holds a sleeping PC awake (wake-on-request)
                 self._route()
         except api.ApiError as e:
             self._fail(e)
@@ -435,6 +438,12 @@ class Handler(BaseHTTPRequestHandler):
                 if guard.script():
                     from decklab.db import space_runtime
                     private["forge_lifecycle"] = space_runtime.capability()
+                    if keepawake.current() is not None:
+                        private["keep_awake"] = keepawake.current().status()
+                if not self.server.remote:      # the home network's way back in while the PC sleeps
+                    wake = keepawake.wake_settings(config.load())
+                    if wake and wake["gate"]:
+                        private["wake_gate"] = wake["gate"]
                 return self._send_json(200, {**api.status(), "build": build.status(),
                                              "database": self._database_status(), **private})
             if route == ["profiles"]:

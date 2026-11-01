@@ -7,7 +7,9 @@ port never opens the tunnel). cloudflared runs with no window inside the
 server's Job Object (forge/processes.py), so it stops with the server, even
 when the server is killed or crashes; homenet start, stop and restart need
 nothing more. If cloudflared exits on its own, the server starts it again
-after RESTART_WAIT seconds.
+after RESTART_WAIT seconds. When the PC wakes from sleep (wake-on-request,
+lib/keepawake.py) the server restarts it at once (Tunnel.restart_now): its
+connections to Cloudflare are stale after a sleep.
 
     "tunnel": {"config": "~/.cloudflared/config.yml", "hostname": "decklab.example.com"}
 
@@ -248,6 +250,7 @@ class Tunnel:
         self.program, self.config_file, self.log = program, config_file, log
         self.proc = None
         self._stopping = threading.Event()
+        self._kick = threading.Event()      # set by restart_now (and stop): no RESTART_WAIT
         self._thread = threading.Thread(target=self._run, name="tunnel", daemon=True)
 
     def start(self):
@@ -271,13 +274,29 @@ class Tunnel:
                 processes._end_process(self.proc)
                 if self._stopping.is_set():
                     return
-                self.log(f"Tunnel: cloudflared exited with code {code}.")
-            if self._stopping.wait(RESTART_WAIT):
+                if not self._kick.is_set():
+                    self.log(f"Tunnel: cloudflared exited with code {code}.")
+            self._kick.wait(RESTART_WAIT)
+            self._kick.clear()
+            if self._stopping.is_set():
                 return
             self.log("Tunnel: starting cloudflared again.")
 
+    def restart_now(self):
+        """End the running cloudflared so the loop starts it again at once, without
+        RESTART_WAIT (after the PC wakes from sleep, its connections are stale)."""
+        if self._stopping.is_set():
+            return
+        self.log("Tunnel: restarting cloudflared now (the PC woke from sleep).")
+        self._kick.set()
+        proc = self.proc
+        if proc is not None and proc.poll() is None:
+            from decklab.lib.forge import processes
+            processes.kill_process(proc)
+
     def stop(self):
         self._stopping.set()
+        self._kick.set()
         proc = self.proc
         if proc is not None and proc.poll() is None:
             from decklab.lib.forge import processes

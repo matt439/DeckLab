@@ -18,6 +18,11 @@ decklab-nightly.service and decklab-nightly.timer (systemd_units.nightly_units, 
 Python and this repo) into the user's unit folder and enables the timer; remove disables it
 and deletes both; status reads them back through systemctl --user (lib/systemd.py).
 Persistent=true catches up a run the PC was off for, as StartWhenAvailable does.
+
+With config.json's "wake" block (wake-on-request: the PC sleeps when idle), the task has
+WakeToRun, so Windows wakes the PC for it, and nightly.py holds the PC awake while it runs
+(lib/keepawake.py); without it, WakeToRun is false, as before. status warns when the
+registered task's WakeToRun doesn't match config.json.
 """
 import ntpath
 import re
@@ -57,9 +62,21 @@ def preview_systemd(unit, python, workdir, at=None, say=print):
     return 0
 
 
-def task_xml(command, workdir, user, start=None, at=AT, name=TASK_NAME):
+def wake_wanted(settings=None):
+    """True when config.json has a "wake" block (the PC sleeps when idle and is woken on
+    request), so the task should wake the PC to run. A config.json that can't be read: False."""
+    if settings is None:
+        try:
+            settings = config.load()
+        except (OSError, ValueError):
+            return False
+    return isinstance((settings or {}).get("wake"), dict)
+
+
+def task_xml(command, workdir, user, start=None, at=AT, name=TASK_NAME, wake=False):
     """The task's definition as Task Scheduler's XML (every value escaped). start is the
-    first day (default today); the trigger repeats daily from there at `at`, local time."""
+    first day (default today); the trigger repeats daily from there at `at`, local time.
+    wake: WakeToRun (wake_wanted)."""
     e = escape
     start = start or date.today()
     description = ("Backs up Deck Lab's database every night: pg_dump (copied to backup_dir, if set), prune old dumps, CSV export "
@@ -105,7 +122,7 @@ def task_xml(command, workdir, user, start=None, at=AT, name=TASK_NAME):
     <Enabled>true</Enabled>
     <Hidden>false</Hidden>
     <RunOnlyIfIdle>false</RunOnlyIfIdle>
-    <WakeToRun>false</WakeToRun>
+    <WakeToRun>{'true' if wake else 'false'}</WakeToRun>
     <ExecutionTimeLimit>{TIME_LIMIT}</ExecutionTimeLimit>
     <Priority>{int(PRIORITY)}</Priority>
   </Settings>
@@ -123,7 +140,7 @@ def task_xml(command, workdir, user, start=None, at=AT, name=TASK_NAME):
 def parse_task_xml(text):
     """What status looks at in the task's XML, as a dict: command, arguments, workdir, enabled,
     start (the trigger's StartBoundary), days (its interval), catch_up (StartWhenAvailable),
-    time_limit, multiple, logon_type, run_level, user. Raises ValueError for XML that isn't a task."""
+    time_limit, multiple, logon_type, run_level, user, wake_to_run. Raises ValueError for XML that isn't a task."""
     text = re.sub(r"^\s*<\?xml[^>]*\?>", "", text or "")
     try:
         root = ET.fromstring(text)
@@ -152,6 +169,7 @@ def parse_task_xml(text):
         "logon_type": find("t:Principals/t:Principal/t:LogonType"),
         "run_level": find("t:Principals/t:Principal/t:RunLevel"),
         "user": find("t:Principals/t:Principal/t:UserId"),
+        "wake_to_run": find("t:Settings/t:WakeToRun", "false").lower() == "true",
     }
 
 
@@ -209,7 +227,8 @@ def install(name=TASK_NAME, say=print):
         say(f"pythonw.exe (the windowless Python) isn't beside this Python ({sys.executable}), so the task "
             "can't run without a window.")
         return 1
-    error = homenet.register_task(task_xml(pythonw, config.REPO, homenet.task_user(), name=name), name)
+    error = homenet.register_task(task_xml(pythonw, config.REPO, homenet.task_user(), name=name,
+                                           wake=wake_wanted()), name)
     if error:
         say(f'The "{name}" task couldn\'t be registered: {error}')
         return 1
@@ -243,8 +262,9 @@ def remove(name=TASK_NAME, say=print):
     return 0
 
 
-def describe(task, exists=None):
-    """status's lines for a task (parse_task_xml's dict, or None)."""
+def describe(task, exists=None, wake=None):
+    """status's lines for a task (parse_task_xml's dict, or None). wake: whether it should
+    wake the PC to run (wake_wanted); None doesn't check."""
     exists = exists or (lambda p: Path(p).exists())
     if task is None:
         return [f'Nightly task: "{TASK_NAME}" isn\'t registered (python -m decklab.db schedule install).']
@@ -265,6 +285,11 @@ def describe(task, exists=None):
                      "python -m decklab.db schedule install with the system python.")
     if task["arguments"].split() != ARGUMENTS.split():
         lines.append(f"  WARNING: its arguments aren't {ARGUMENTS}; run schedule install again.")
+    if wake is not None and bool(task.get("wake_to_run")) != bool(wake):
+        lines.append("  WARNING: it doesn't wake the PC to run, but config.json has \"wake\" (the PC sleeps when "
+                     "idle); run schedule install again." if wake else
+                     "  WARNING: it wakes the PC to run, but config.json has no \"wake\" block; run schedule "
+                     "install again.")
     return lines
 
 
@@ -275,7 +300,7 @@ def status(name=TASK_NAME):
     if sys.platform != "win32":
         return ["Nightly task: only Windows' Task Scheduler and Linux's systemd are supported; run "
                 "python -m decklab.db nightly from cron."]
-    return describe(query_task(name))
+    return describe(query_task(name), wake=wake_wanted())
 
 
 # ------------------------------------------------------------------ Linux: a systemd user timer

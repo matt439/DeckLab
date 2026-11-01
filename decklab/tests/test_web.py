@@ -451,7 +451,12 @@ class WebFileTests(unittest.TestCase):
         photo = _function(_text("activity-undo.js"), "activityUndoPhotoPreview")
         self.assertEqual(len(re.findall(r"\bfetch\(", photo)), 1)
         self.assertEqual(re.findall(r"method:\s*[\"'`](\w+)[\"'`]", photo), ["GET"])
-        rest = _scripts().replace(helper, "").replace(photo, "")
+        # The wake gate's /__status probe is one CORS read with no method (a GET), never a write.
+        gate = _function(_text("core.js"), "openWakeGate")
+        self.assertEqual(len(re.findall(r"\bfetch\(", gate)), 1)
+        self.assertIn('"/__status"', gate)
+        self.assertNotRegex(gate, r"method:")
+        rest = _scripts().replace(helper, "").replace(photo, "").replace(gate, "")
         self.assertEqual(len(re.findall(r"\bfetch\(", rest)), 1)
         self.assertIn("fetch(", _function(rest, "api"))
 

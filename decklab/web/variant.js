@@ -172,10 +172,12 @@ function vtDraw(page, data) {
   afterRender();
   vtAnnounce(page, data);
   clearTimeout(page.timer);
-  if (vtLive(data)) page.timer = setTimeout(() => vtRefresh(page), POLL_MS);
+  if (vtLive(data)) page.timer = setTimeout(() => vtRefresh(page, { timer: true }), POLL_MS);
 }
 
-async function vtRefresh(page) {
+/** timer: a refresh the page's timer (or its retry) makes: it still counts as use while the test is
+ * watched, but never leaves the page for the wake gate. */
+async function vtRefresh(page, { timer = false } = {}) {
   if (page.token !== routeToken || !page.host || !page.host.isConnected
       || (Object.hasOwn(page, "profile") && page.profile !== state.profile?.id)) return;
   clearTimeout(page.timer); page.timer = 0;
@@ -183,7 +185,7 @@ async function vtRefresh(page) {
   const current = () => seq === page.refreshSeq && page.token === routeToken && page.host.isConnected
     && (!Object.hasOwn(page, "profile") || page.profile === state.profile?.id);
   try {
-    const data = await api(`/api/variant?test=${page.test}`);
+    const data = await api(`/api/variant?test=${page.test}`, timer ? { wakeHop: false } : {});
     if (!current()) return;
     if (page.problem) page.problem.textContent = "";
     vtDraw(page, data);
@@ -191,7 +193,7 @@ async function vtRefresh(page) {
     if (!current()) return;
     const words = "The PC isn't answering, so this may be out of date. Trying again automatically.";
     if (page.problem && page.problem.textContent !== words) page.problem.textContent = words;
-    page.timer = setTimeout(() => vtRefresh(page), POLL_MS * 3);
+    page.timer = setTimeout(() => vtRefresh(page, { timer: true }), POLL_MS * 3);
   }
 }
 

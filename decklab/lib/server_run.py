@@ -16,7 +16,7 @@ import time
 import traceback
 from datetime import datetime
 
-from decklab.lib import access, api, cards, control, dbstatus, server_http, tunnel, venv, visits
+from decklab.lib import access, api, cards, control, dbstatus, keepawake, server_http, tunnel, venv, visits
 
 UPDATE_EVERY = 24 * 60 * 60         # seconds between background card-data checks
 RETRY_AFTER = 10 * 60               # ... and after one that failed (e.g. no network yet)
@@ -257,6 +257,33 @@ def _stop_pool(wait=POOL_STOP_WAIT):
         server_http.log(f"The warm pool didn't stop cleanly:\n{traceback.format_exc()}")
 
 
+def _forge_slots_busy():
+    """"Forge games are playing" while any of the PC's Forge slots is held (a command
+    line's run, or the server's own), else None. Only when the Forge code is loaded
+    already (the server loads it at start): this never imports it."""
+    forge = sys.modules.get("decklab.lib.forge")
+    slots = getattr(forge, "slots", None) if forge is not None else None
+    if slots is None:
+        return None
+    return "Forge games are playing" if any(row["held"] for row in slots.status()["slots"]) else None
+
+
+def _start_keep_awake(settings):
+    """The KeepAwake controller (lib/keepawake.py), installed for server_http's requests and
+    started: busy while a Forge run, practice hands or the card data's update is going on,
+    and for "wake" "idle_minutes" after the last real request. Returns it; the caller adds
+    the tunnel's restart on waking and stops it."""
+    controller = keepawake.KeepAwake(keepawake.idle_minutes_of(settings),
+                                     log=lambda text: server_http.log(f"{_stamp()} {text}"))
+    controller.add_provider(lambda: "a Forge run is going" if (api.forge_runs.FORGE_JOBS.active()
+                                                               or api.forge_runs.COORD_JOBS.active()) else None)
+    controller.add_provider(lambda: "practice hands are playing" if api.practice.JOBS.active() else None)
+    controller.add_provider(lambda: "the card data is updating" if api.carddata.UPDATE["running"] else None)
+    controller.add_provider(_forge_slots_busy)
+    keepawake.install(controller)
+    return controller.start()
+
+
 # ------------------------------------------------- running without a window
 
 def _stamp():
@@ -383,7 +410,7 @@ def _serve(host, port, no_update, settings, log_path, background):
     server_http.log(f"{_stamp()} Deck Lab: http://{shown}:{port}/  (listening on {host}:{port}; {how})")
     finished = threading.Event()
     on_purpose = []                 # how it was asked to stop, when it was (a stop marker as it exits)
-    stop_listener = session = tunnel_proc = remote = stop_database = None
+    stop_listener = session = tunnel_proc = remote = stop_database = awake = None
     try:
         # Listening for a stop before the state file names this server, so
         # whoever reads it can stop it; and only now the port is this
@@ -405,6 +432,9 @@ def _serve(host, port, no_update, settings, log_path, background):
         tunnel_proc = tunnel.start(settings, port, default_port, server_http.log,
                                    remote.server_address[1] if remote is not None else None)
         threading.Thread(target=_load_index if no_update else _update_loop, name="card-data", daemon=True).start()
+        awake = _start_keep_awake(settings)
+        if tunnel_proc is not None:
+            awake.on_resume(tunnel_proc.restart_now)    # its connections are stale after a sleep
         _stop_jobs_on_ctrl_c(port)
         try:
             server.serve_forever()
@@ -436,6 +466,9 @@ def _serve(host, port, no_update, settings, log_path, background):
                 control.mark_stopped(port, on_purpose[0], keep=True)
             except OSError as e:
                 server_http.log(f"Can't record the stop in {control.stop_marker_path(port)}: {e}")
+        if awake is not None:               # the PC may sleep again once the runs have saved
+            keepawake.install(None)
+            awake.stop()
         control.clear_state(os.getpid())
         if stop_listener is not None:
             stop_listener.close()

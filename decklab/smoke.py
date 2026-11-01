@@ -566,6 +566,31 @@ def step_tunnel(r, ctx):
                      f"(127.0.0.1:{listener['port']})")
 
 
+def step_wake(r, ctx):
+    """Wake-on-request (config.json's "wake"): the NAS's wake gate answers, and says the PC is awake."""
+    _needs(ctx, "config")
+    from decklab.lib import config
+    wake = config.load().get("wake")
+    if not isinstance(wake, dict):
+        raise Skip("no wake block in config.json (the PC never sleeps)")
+    gate = str(wake.get("gate") or "").rstrip("/")
+    if not gate:
+        r.note(WARN, 'config.json\'s "wake" names no "gate": phones at home have no address that wakes the PC')
+        return
+    import urllib.request
+    try:
+        with urllib.request.urlopen(gate + "/__status", timeout=5) as response:
+            status = json.loads(response.read(4096).decode("utf-8"))
+    except (OSError, ValueError, http.client.HTTPException) as e:
+        r.note(FAIL, f"The wake gate at {gate} doesn't answer: {_first_line(e)} (decklab/wakegate/README.md)")
+        return
+    if status.get("awake") is True:
+        r.note(PASS, f"The wake gate at {gate} answers and sees this PC awake")
+    else:
+        r.note(FAIL, f"The wake gate at {gate} answers but can't reach this PC: check DECKLAB_PC_HOST and "
+                     "DECKLAB_PC_PORT in its settings")
+
+
 def step_records(r, ctx):
     _needs(ctx, "config")
     from decklab.lib import config
@@ -621,6 +646,7 @@ STEPS = (
     ("live", "The background server", step_live),
     ("services", "Start at logon and the nightly task", step_services),
     ("tunnel", "From outside the home", step_tunnel),
+    ("wake", "Waking on request (the NAS's wake gate)", step_wake),
     ("records", "The records repo", step_records),
     ("forge", "Forge", step_forge),
 )

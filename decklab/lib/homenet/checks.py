@@ -1,4 +1,4 @@
-"""The status checklist's Network, Firewall, Addresses and Sleep lines, and
+"""The status checklist's Network, Firewall, Addresses, Sleep and Wake lines, and
 the report: pure functions that judge the facts gather_facts found, so
 they're tested with canned facts. (The Server and Start at logon lines are
 in commands.py, beside the control module they read.)"""
@@ -482,19 +482,145 @@ def parse_powercfg(text):
     return int(numbers[-2], 16), int(numbers[-1], 16)
 
 
-def check_sleep(power_text, error=None):
+def check_sleep(power_text, error=None, wake=False):
+    """The Sleep line. wake: config.json has "wake" (wake-on-request), so sleeping when idle is
+    the plan and never sleeping is what's warned about."""
     area = "Sleep"
     values = parse_powercfg(power_text)
     if values is None:
         return [line(WARN, area, f"Couldn't read the sleep setting{': ' + error if error else ''}.")]
     ac = values[0]
     if ac == 0:
+        if wake:
+            return [line(WARN, area, "Wake-on-request is set up but the PC never sleeps, so it saves nothing.",
+                         "Settings > System > Power > Screen and sleep: set \"When plugged in, put my device to "
+                         "sleep after\" to a time (such as 30 minutes), or remove \"wake\" from config.json.")]
         return [line(OK, area, "The PC never sleeps on mains power, so the page stays up.")]
     minutes = ac / 60
     shown = f"{minutes:g} minute{'s' * (minutes != 1)}" if ac % 60 == 0 else f"{ac} seconds"
+    if wake:
+        return [line(OK, area, f"The PC sleeps after {shown} idle; Deck Lab wakes it on request (wake-on-request).")]
     return [line(WARN, area, f"The PC sleeps after {shown} on mains power, and the page stops while it sleeps.",
                  "Settings > System > Power > Screen and sleep: set \"When plugged in, put my device to "
                  "sleep after\" to Never.")]
+
+
+def sleep_states_available(text):
+    """The lines of powercfg /a's first list (the sleep states available), before the line
+    that starts the list of those that aren't ("...not available..."). English labels."""
+    available = []
+    for raw in (text or "").splitlines():
+        if "not available" in raw.lower():
+            break
+        if raw.startswith((" ", "	")) and raw.strip():
+            available.append(raw.strip())
+    return available
+
+
+def wake_armed_devices(text):
+    """The devices powercfg /devicequery wake_armed lists ("NONE" when there are none)."""
+    return [d.strip() for d in (text or "").splitlines() if d.strip() and d.strip().upper() != "NONE"]
+
+
+# What a network adapter's name in Device Manager tends to contain, for when Get-NetAdapter's
+# descriptions couldn't be read or don't match powercfg's names exactly.
+NETWORK_ADAPTER_WORDS = re.compile(r"ethernet|network|\blan\b|gbe|gigabit|\bnic\b|realtek|intel.*connection|killer"
+                                   r"|wi-?fi|wireless|802\.11", re.IGNORECASE)
+WAKE_ADAPTER_FIX = ("Device Manager > the wired network adapter > Properties > Power Management: tick \"Allow this "
+                    "device to wake the computer\" and \"Only allow a magic packet to wake the computer\".")
+
+
+def network_adapter_names(value):
+    """Get-NetAdapter's InterfaceDescriptions as gathered (a list, or one string when there's
+    only one), lowercased; an empty set when they couldn't be read."""
+    if isinstance(value, str):
+        value = [value]
+    if not isinstance(value, list):
+        return set()
+    return {str(v).strip().lower() for v in value if isinstance(v, str) and v.strip()}
+
+
+def wake_network_adapters(devices, adapters=None):
+    """The armed devices that look like network adapters: one named exactly as a network
+    adapter's description (adapters, network_adapter_names'), or by NETWORK_ADAPTER_WORDS."""
+    adapters = adapters or set()
+    return [d for d in devices if d.strip().lower() in adapters or NETWORK_ADAPTER_WORDS.search(d)]
+
+
+def _step_error(facts, step):
+    """gather.step_error (imported when called, as gather is a sibling the checks don't need)."""
+    from .gather import step_error as from_gather
+    return from_gather(facts, step)
+
+
+def _armed_line(facts, area):
+    armed = facts.get("wake_armed")
+    if not isinstance(armed, str):
+        error = _step_error(facts, "wake_armed")
+        return line(WARN, area, "Couldn't read which devices may wake the PC (powercfg /devicequery "
+                                f"wake_armed){': ' + error if error else ''}.")
+    devices = wake_armed_devices(armed)
+    if not devices:
+        return line(WARN, area, "No device is allowed to wake the PC, so a magic packet won't wake it.",
+                    WAKE_ADAPTER_FIX)
+    network = wake_network_adapters(devices, network_adapter_names(facts.get("net_adapters")))
+    if not network:
+        return line(WARN, area, f"No network adapter may wake the PC (armed: {', '.join(devices)}), so a magic "
+                                "packet won't wake it.", WAKE_ADAPTER_FIX)
+    others = [d for d in devices if d not in network]
+    return line(OK, area, f"May wake the PC: {', '.join(network)}"
+                          + (f" (also armed: {', '.join(others)})." if others else "."))
+
+
+WAKE_TIMERS_FIX = ("In a terminal: powercfg /setacvalueindex SCHEME_CURRENT SUB_SLEEP RTCWAKE 1, then powercfg "
+                   "/setactive SCHEME_CURRENT (or Control Panel > Power Options > Change plan settings > Change "
+                   "advanced power settings > Sleep > Allow wake timers > Plugged in: Enable).")
+
+
+def _wake_timers_line(facts, area):
+    values = parse_powercfg(facts.get("wake_timers") if isinstance(facts.get("wake_timers"), str) else None)
+    if values is None:
+        error = _step_error(facts, "wake_timers")
+        return line(WARN, area, "Couldn't read whether wake timers may wake the PC (powercfg /q SCHEME_CURRENT "
+                                f"SUB_SLEEP RTCWAKE){': ' + error if error else ''}, so the nightly backup may not "
+                                "wake it.", WAKE_TIMERS_FIX)
+    if values[0] == 1:
+        return line(OK, area, "Wake timers are allowed on mains power, so the nightly backup can wake the PC.")
+    shown = {0: "disabled", 2: "important wake timers only"}.get(values[0], f"setting {values[0]}")
+    return line(WARN, area, f"Wake timers aren't allowed on mains power ({shown}), so the nightly backup can't "
+                            "wake the PC.", WAKE_TIMERS_FIX)
+
+
+def check_wake(facts, gate=None, gate_answer=None):
+    """The Wake lines, when config.json has "wake" (Windows only): S3 standby available (a
+    magic packet can't wake Modern Standby), a network adapter armed to wake the PC, wake
+    timers allowed on mains power (the nightly task's WakeToRun), and the wake gate answering
+    (gate_answer: gather.probe_gate's, when "gate" is set)."""
+    area = "Wake"
+    out = []
+    states = facts.get("sleep_states")
+    if not isinstance(states, str) or not states.strip():
+        error = _step_error(facts, "sleep_states")
+        out.append(line(WARN, area, f"Couldn't read the PC's sleep states (powercfg /a){': ' + error if error else ''}."))
+    elif any("(S3)" in s for s in sleep_states_available(states)):
+        out.append(line(OK, area, "The PC has Standby (S3), which a magic packet can wake."))
+    else:
+        out.append(line(WARN, area, "powercfg /a doesn't list Standby (S3) as available: a PC with Modern Standby "
+                                    "can't be woken by a magic packet, so wake-on-request won't work.",
+                        "Turn on S3 sleep in the PC's BIOS/UEFI settings if it offers it, then check powercfg /a "
+                        "again."))
+    out.append(_armed_line(facts, area))
+    out.append(_wake_timers_line(facts, area))
+    if gate:
+        answer = gate_answer or {"answered": False, "error": "the check didn't finish"}
+        if answer.get("answered"):
+            out.append(line(OK, area, f"The wake gate at {gate} answers."))
+        else:
+            out.append(line(WARN, area, f"The wake gate at {gate} doesn't answer ({answer.get('error')}), so phones "
+                                        "at home can't wake the PC through it.",
+                            "Check that the wake gate's container is running on the NAS and that \"gate\" in "
+                            "config.json is its address."))
+    return out
 
 
 def exit_code(lines):

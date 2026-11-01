@@ -2,7 +2,7 @@
 // npm packages. From the repo root: node --test decklab/cloudflare/
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import worker, { handle, offResponse, ORIGIN_HEADER, OFF_JSON } from "../worker.mjs";
+import worker, { handle, offResponse, ORIGIN_HEADER, OFF_JSON, WAKING_JSON } from "../worker.mjs";
 
 const SITE = "https://decklab.example.com";
 const LOGIN = { Cookie: "theme=dark; CF_Authorization=abc" };
@@ -212,5 +212,214 @@ test("offResponse is never cached and the default export uses fetch", async () =
     assert.equal(globalThis.fetch.calls[0].redirect, "manual");
   } finally {
     globalThis.fetch = real;
+  }
+});
+
+// Wake-on-request: with the WAKE_URL secret set, an off answer to a signed-in visitor wakes the PC.
+const WAKE_ENV = { WAKE_URL: "https://wake.decklab.example.com/__wake", WAKE_CLIENT_ID: "id.access",
+  WAKE_CLIENT_SECRET: "secret-value" };
+function context() {
+  const ctx = { waits: [], waitUntil: (p) => { ctx.waits.push(p); } };
+  return ctx;
+}
+function gate({ fail = false, throws = false } = {}) {
+  const fake = (input, init) => {
+    fake.calls.push([input, init]);
+    if (throws) throw new TypeError("bad");
+    return fail ? Promise.reject(new TypeError("gate unreachable")) : Promise.resolve(new Response("{}", { status: 202 }));
+  };
+  fake.calls = [];
+  return fake;
+}
+
+function assertWakingHeaders(r) {
+  assert.equal(r.status, 503);
+  assert.equal(r.headers.get("Cache-Control"), "no-store");
+  assert.equal(r.headers.get("Retry-After"), "5");
+  assert.equal(r.headers.get("X-Deck-Lab-Waking"), "1");
+  assert.equal(r.headers.get(ORIGIN_HEADER), null);
+}
+
+test("without WAKE_URL nothing is woken and the off answers are as before", async () => {
+  for (const env of [{}, { WAKE_URL: "", WAKE_CLIENT_ID: "x" }, { WAKE_URL: "   " }]) {
+    const ctx = context(), wake = gate();
+    const page = await handle(req("/", PAGE), origin(530), env, ctx, wake);
+    assertOffHeaders(page);
+    assert.match(await page.text(), /<title>Deck Lab is off<\/title>/);
+    const api = await handle(req("/api/library"), origin(530), env, ctx, wake);
+    assertOffHeaders(api);
+    assert.deepEqual(await api.json(), OFF_JSON);
+    assert.equal(api.headers.get("X-Deck-Lab-Waking"), null);
+    assert.equal(wake.calls.length, 0);
+    assert.equal(ctx.waits.length, 0);
+  }
+});
+
+test("a signed-in off request sends one wake in the background with the service token", async () => {
+  const ctx = context(), wake = gate();
+  const r = await handle(req("/api/library"), origin(530), WAKE_ENV, ctx, wake);
+  assertWakingHeaders(r);
+  assert.deepEqual(await r.json(), WAKING_JSON);
+  assert.equal(WAKING_JSON.reason, "waking");
+  assert.equal(wake.calls.length, 1);
+  assert.equal(ctx.waits.length, 1);
+  const [url, init] = wake.calls[0];
+  assert.equal(url, WAKE_ENV.WAKE_URL);
+  assert.equal(init.method, "POST");
+  assert.equal(init.redirect, "manual");
+  assert.equal(init.headers["CF-Access-Client-Id"], "id.access");
+  assert.equal(init.headers["CF-Access-Client-Secret"], "secret-value");
+  assert.ok(init.signal, "the wake has a timeout");
+  await Promise.all(ctx.waits);
+});
+
+test("a fetch that throws (the tunnel down) wakes too", async () => {
+  const ctx = context(), wake = gate();
+  const failing = async () => { throw new TypeError("network connection lost"); };
+  const r = await handle(req("/api/status"), failing, WAKE_ENV, ctx, wake);
+  assert.equal((await r.json()).reason, "waking");
+  assert.equal(wake.calls.length, 1);
+});
+
+test("no wake without an Access login, for /cdn-cgi/, the previews or a PC that answers", async () => {
+  const ctx = context(), wake = gate();
+  const bare = await handle(new Request(SITE + "/", { headers: PAGE }), origin(530, { body: "raw" }), WAKE_ENV, ctx, wake);
+  assert.equal(bare.status, 530);
+  const cdn = await handle(req("/cdn-cgi/access/logout", PAGE), origin(530, { body: "raw" }), WAKE_ENV, ctx, wake);
+  assert.equal(cdn.status, 530);
+  const preview = await handle(req("/__decklab-waking", PAGE), origin(200, { deckLab: true }), WAKE_ENV, ctx, wake);
+  assertWakingHeaders(preview);
+  assert.match(await preview.text(), /<title>Deck Lab is waking up<\/title>/);
+  const off = await handle(req("/__decklab-off", PAGE), origin(200, { deckLab: true }), WAKE_ENV, ctx, wake);
+  assert.match(await off.text(), /<title>Deck Lab is off<\/title>/);
+  for (const status of [200, 404, 503]) {
+    const r = await handle(req("/api/status"), deckLab(status, '{"ok":true}'), WAKE_ENV, ctx, wake);
+    assert.equal(r.status, status);
+    assert.equal(r.headers.get(ORIGIN_HEADER), "1");
+    assert.equal(r.headers.get("X-Deck-Lab-Waking"), null);
+  }
+  const timeout = await handle(req("/api/forge/run"), origin(524, { body: "raw" }), WAKE_ENV, ctx, wake);
+  assert.equal(timeout.status, 524);
+  assert.equal(wake.calls.length, 0);
+  assert.equal(ctx.waits.length, 0);
+});
+
+test("a page's timer poll gets the waking answer but sends no wake; the waking page's check does", async () => {
+  const ctx = context(), wake = gate();
+  for (const failing of [origin(530), async () => { throw new TypeError("network connection lost"); }]) {
+    const r = await handle(req("/api/status", { "X-Deck-Lab-Poll": "1" }), failing, WAKE_ENV, ctx, wake);
+    assertWakingHeaders(r);
+    assert.equal((await r.json()).reason, "waking");
+  }
+  const other = await handle(req("/api/status", { "X-Deck-Lab-Poll": "0" }), origin(530), WAKE_ENV, ctx, wake);
+  assert.equal(other.status, 503);
+  assert.equal(wake.calls.length, 1, "only a poll header of exactly 1 skips the wake");
+  const check = await handle(req("/api/status", { "X-Deck-Lab-Poll": "1", "X-Deck-Lab-Waking-Check": "1" }),
+    origin(530), WAKE_ENV, ctx, wake);
+  assert.equal((await check.json()).reason, "waking");
+  assert.equal(wake.calls.length, 2);
+  assert.equal(ctx.waits.length, 2);
+  await Promise.all(ctx.waits);
+  const old = await handle(req("/api/status", { "X-Deck-Lab-Poll": "1" }), origin(530), {}, context(), wake);
+  assert.equal((await old.json()).reason, "off");
+  assert.equal(wake.calls.length, 2);
+});
+
+test("a wake that fails, throws or has no ctx never breaks the answer", async () => {
+  for (const [wake, ctx] of [[gate({ fail: true }), context()], [gate({ throws: true }), context()],
+    [gate(), undefined], [gate(), { waitUntil: () => { throw new Error("no"); } }]]) {
+    const r = await handle(req("/", PAGE), origin(530), WAKE_ENV, ctx, wake);
+    assertWakingHeaders(r);
+    assert.match(await r.text(), /Deck Lab is waking up/);
+    if (ctx?.waits) await Promise.all(ctx.waits);     // resolves, never rejects
+  }
+});
+
+test("the waking page: accessible, from nowhere else, and short text for a picture", async () => {
+  const r = await handle(req("/#/library", PAGE), origin(530), WAKE_ENV, context(), gate());
+  assertWakingHeaders(r);
+  assert.equal(r.headers.get("Content-Type"), "text/html; charset=utf-8");
+  assert.match(r.headers.get("Content-Security-Policy"), /default-src 'none'/);
+  const html = await r.text();
+  assert.match(html, /<h1 id="title">Deck Lab is waking up<\/h1>/);
+  assert.match(html, /was asleep/);
+  assert.match(html, /usually takes under a minute/);
+  assert.match(html, /role="status"/);
+  assert.match(html, /aria-live="polite"/);
+  assert.match(html, /name="viewport"/);
+  assert.match(html, /prefers-color-scheme: dark/);
+  assert.doesNotMatch(html, /https?:\/\//, "nothing loaded from elsewhere");
+  assert.doesNotMatch(html, /Matt|User1|User2|User3|User4/);
+  const pic = await handle(req("/img/fdn/227/small", { Accept: "image/*" }), origin(530), WAKE_ENV, context(), gate());
+  assertWakingHeaders(pic);
+  assert.equal(await pic.text(), "Deck Lab is waking up.\n");
+  const head = await handle(req("/", PAGE, { method: "HEAD" }), origin(530, { body: null }), WAKE_ENV, context(), gate());
+  assert.equal(head.body, null);
+});
+
+test("the waking page's script polls every 3 s, reloads when Deck Lab answers and gives up after 180 s", async () => {
+  const html = await (await handle(req("/", PAGE), origin(530), WAKE_ENV, context(), gate())).text();
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  let now = 1_000_000, check = null, reloads = 0;
+  const asked = [], listeners = {}, elements = {};
+  const el = (id) => (elements[id] ??= { id, hidden: false, textContent: "",
+    addEventListener: (type, fn) => { listeners[id + ":" + type] = fn; } });
+  const fakeDocument = { visibilityState: "visible", title: "", getElementById: el,
+    addEventListener: (type, fn) => { listeners[type] = fn; } };
+  let answer = { type: "basic", headers: new Headers() };
+  const run = new Function("document", "location", "fetch", "setTimeout", "clearTimeout", "setInterval",
+    "clearInterval", "Date", script);
+  run(fakeDocument, { reload: () => { reloads += 1; } },
+    async (url, init) => { asked.push([url, init]); return answer; },
+    (fn, ms) => { check = [fn, ms]; return 1; }, () => {}, () => 2, () => {}, { now: () => now });
+  assert.equal(check[1], 3000);
+  assert.match(elements.elapsed.textContent, /0 seconds/);
+  now += 3000;
+  await check[0]();
+  assert.deepEqual([asked[0][0], asked[0][1].cache, asked[0][1].redirect], ["/api/status", "no-store", "manual"]);
+  assert.equal(asked[0][1].headers["X-Deck-Lab-Poll"], "1");
+  assert.equal(asked[0][1].headers["X-Deck-Lab-Waking-Check"], "1");
+  assert.equal(reloads, 0);
+  answer = { type: "basic", headers: new Headers({ [ORIGIN_HEADER]: "1" }) };
+  await check[0]();
+  assert.equal(reloads, 1);
+  answer = { type: "opaqueredirect", headers: new Headers() };
+  await check[0]();
+  assert.equal(reloads, 2);
+  answer = { type: "basic", headers: new Headers() };
+  now += 180_000;
+  const before = asked.length;
+  await check[0]();
+  assert.equal(elements.failed.hidden, false);
+  assert.equal(elements.waking.hidden, true);
+  assert.equal(elements.title.textContent, "Deck Lab didn't wake up");
+  assert.match(elements.wait.textContent, /didn't wake up after 3 minutes/);
+  await check[0]();                                   // given up: asks no more
+  assert.equal(asked.length, before + 1);
+  listeners["again:click"]();
+  assert.equal(reloads, 3);
+  assert.match(html, /turned off or disconnected/);
+});
+
+test("the default export passes env and ctx on", async () => {
+  const realFetch = globalThis.fetch;
+  const calls = [];
+  globalThis.fetch = async (input, init) => {
+    calls.push([typeof input === "string" ? input : input.url, init]);
+    return typeof input === "string" ? new Response("{}", { status: 202 }) : new Response("x", { status: 530 });
+  };
+  try {
+    const ctx = context();
+    const r = await worker.fetch(req("/api/status"), WAKE_ENV, ctx);
+    assert.equal((await r.json()).reason, "waking");
+    assert.equal(ctx.waits.length, 1);
+    await Promise.all(ctx.waits);
+    assert.equal(calls[1][0], WAKE_ENV.WAKE_URL);
+    assert.equal(calls[1][1].headers["CF-Access-Client-Secret"], "secret-value");
+    const old = await worker.fetch(req("/api/status"), {}, context());
+    assert.equal((await old.json()).reason, "off");
+    assert.equal(calls.length, 3);
+  } finally {
+    globalThis.fetch = realFetch;
   }
 });

@@ -94,7 +94,7 @@ async function askRunsPill() {
   const controller = typeof AbortController === "function" ? new AbortController() : {};
   runsPill.request = controller;
   try {
-    const answer = await api("/api/matchups?running=1", { signal: controller.signal });
+    const answer = await api("/api/matchups?running=1", { signal: controller.signal, poll: true });
     if (runsPill.request !== controller || state.profile?.id !== profile) return;
     runsPill.request = null;
     noteRuns(answer.running);

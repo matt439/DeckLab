@@ -1,12 +1,16 @@
 """Status's Windows facts, from one read-only PowerShell call (GATHER_PS)
 that prints them as JSON. run_powershell is here beside gather_facts, its
-only caller, so a test replaces it here (homenet.gather.run_powershell)."""
+only caller, so a test replaces it here (homenet.gather.run_powershell).
+probe_gate asks the wake gate (wake-on-request, config.json's "wake" "gate")
+whether it answers."""
 import base64
 import json
 import os
 import subprocess
 import sys
 import time
+import urllib.error
+import urllib.request
 
 from .common import POWERSHELL, PS_TIMEOUT, _SPAWN, _decode, watchdog_name
 
@@ -114,6 +118,15 @@ Step 'firewall' {
     }
 }
 Step 'power' { (& "$env:SystemRoot\System32\powercfg.exe" /q SCHEME_CURRENT SUB_SLEEP STANDBYIDLE) -join "`n" }
+if ($env:DECKLAB_WAKE -eq '1') {
+    # Wake-on-request only: which sleep states the PC has (a magic packet wakes S3, not Modern
+    # Standby), the devices allowed to wake it, the network adapters' descriptions (to tell
+    # which of those devices is one) and whether wake timers may wake it (the nightly task).
+    Step 'sleep_states' { (& "$env:SystemRoot\System32\powercfg.exe" /a) -join "`n" }
+    Step 'wake_armed' { (& "$env:SystemRoot\System32\powercfg.exe" /devicequery wake_armed) -join "`n" }
+    Step 'net_adapters' { @(Get-NetAdapter -IncludeHidden | ForEach-Object { [string]$_.InterfaceDescription } | Where-Object { $_ } | Select-Object -Unique) }
+    Step 'wake_timers' { (& "$env:SystemRoot\System32\powercfg.exe" /q SCHEME_CURRENT SUB_SLEEP RTCWAKE) -join "`n" }
+}
 $out.ms = $clock.ElapsedMilliseconds
 $out | ConvertTo-Json -Depth 6 -Compress
 """
@@ -141,17 +154,21 @@ def run_powershell(script, env=None, timeout=PS_TIMEOUT):
         raise RuntimeError(f"PowerShell's answer couldn't be read ({reason})") from None
 
 
-def gather_facts(task_name, port):
+def gather_facts(task_name, port, wake=False):
     """The Windows facts for status: {"task", "watchdog", "network",
-    "firewall", "power", "errors", "ms", "seconds"}. A step that couldn't run is None,
-    with the reason in errors."""
+    "firewall", "power", "errors", "ms", "seconds"}, and with wake (config.json has "wake")
+    "sleep_states" (powercfg /a), "wake_armed" (powercfg /devicequery wake_armed),
+    "net_adapters" (Get-NetAdapter's InterfaceDescriptions) and "wake_timers" (powercfg /q
+    SCHEME_CURRENT SUB_SLEEP RTCWAKE). A step that couldn't run is None, with the reason in
+    errors."""
     started = time.monotonic()
     if sys.platform != "win32":
         facts = {"error": "these checks only work on Windows"}
     else:
         try:
             facts = run_powershell(GATHER_PS, {"DECKLAB_TASK": task_name, "DECKLAB_PORT": str(port),
-                                               "DECKLAB_WATCHDOG_TASK": watchdog_name(task_name)})
+                                               "DECKLAB_WATCHDOG_TASK": watchdog_name(task_name),
+                                               "DECKLAB_WAKE": "1" if wake else "0"})
         except RuntimeError as e:
             facts = {"error": str(e)}
     if not isinstance(facts, dict):
@@ -168,3 +185,26 @@ def step_error(facts, step):
         if str(error).startswith(f"{step}: "):
             return str(error)[len(step) + 2:]
     return facts.get("error")
+
+
+GATE_TIMEOUT = 3            # seconds the wake gate has to answer status's check
+
+
+def probe_gate(gate, timeout=GATE_TIMEOUT):
+    """Ask the wake gate (config.json's "wake" "gate", http://<nas address>:8650) for
+    GET /__status: {"answered": True, "awake": ...} when it answers with its JSON within
+    timeout seconds, else {"answered": False, "error": why}."""
+    url = str(gate).rstrip("/") + "/__status"
+    if not url.lower().startswith(("http://", "https://")):
+        return {"answered": False, "error": "its address doesn't start with http:// or https://"}
+    try:
+        with urllib.request.urlopen(urllib.request.Request(url, headers={"Accept": "application/json"}),
+                                    timeout=timeout) as response:
+            data = json.loads(response.read(65536).decode("utf-8"))
+    except urllib.error.HTTPError as e:
+        return {"answered": False, "error": f"it answered {e.code}"}
+    except (OSError, ValueError) as e:
+        return {"answered": False, "error": str(getattr(e, "reason", None) or e) or type(e).__name__}
+    if not isinstance(data, dict) or "awake" not in data:
+        return {"answered": False, "error": "its answer isn't the wake gate's"}
+    return {"answered": True, "awake": bool(data.get("awake")), "waking": bool(data.get("waking"))}

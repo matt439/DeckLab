@@ -123,6 +123,7 @@ function showsBuildLine() {
  * it's on screen), and the footer's one line. Kept in state.status for the Settings page drawn later. */
 function renderVersionStatus(s) {
   state.status = s;
+  rememberWakeGate(s.wake_gate);
   const view = versionInfo(s.build, PAGE_WEB_REVISION);
   const buildLine = showsBuildLine();
   const line = document.querySelector(".build-footer");
@@ -167,7 +168,7 @@ async function showFooter() {
   const timeout = setTimeout(() => controller.abort(), 10000);
   versionRequest = (async () => {
     try {
-      renderVersionStatus(await api("/api/status", { signal: controller.signal }));
+      renderVersionStatus(await api("/api/status", { signal: controller.signal, poll: true }));
       loadSimulations();
     } catch (error) {
       const version = $("#build-version");
@@ -214,7 +215,7 @@ async function loadSimulations() {
   if (!state.profile || simRequest) return simRequest;
   simRequest = (async () => {
     try {
-      renderSimulations(await api("/api/simulations"));
+      renderSimulations(await api("/api/simulations", { poll: true }));   // a side read: never use on its own
       state.simulationsError = null;
     } catch (e) {
       /* the footer's version check says when the server can't be reached; the Settings page says it in its part */

@@ -1,0 +1,38 @@
+# Deck Lab's wake gate on the NAS (README.md beside this file). Deploy this folder as a stack in
+# Portainer or Dockge. Settings come from .env in this folder (copy .env.example; never commit .env),
+# or Portainer's Environment variables section.
+#
+# The gate deploys on its own. The NAS tunnel (cloudflared) starts only once .env also sets
+# COMPOSE_PROFILES=tunnel and TUNNEL_TOKEN (README.md, step 3).
+services:
+  wakegate:
+    image: python:3.13-alpine
+    # The host's network, so the magic packet's broadcast reaches the home network.
+    network_mode: host
+    restart: unless-stopped
+    volumes:
+      # Portainer's web editor: change this to the file's absolute path on the NAS, such as
+      # /volume1/Docker/wakegate/wakegate.py:/app/wakegate.py:ro (README.md, step 2).
+      - ./wakegate.py:/app/wakegate.py:ro
+    command: python /app/wakegate.py
+    environment:
+      DECKLAB_PC_MAC: ${DECKLAB_PC_MAC:?set DECKLAB_PC_MAC to the Deck Lab PC's wired network card (README.md, step 1)}
+      DECKLAB_PC_HOST: ${DECKLAB_PC_HOST:?set DECKLAB_PC_HOST to the Deck Lab PC's reserved IP address (README.md, step 1)}
+      DECKLAB_PC_PORT: ${DECKLAB_PC_PORT:-8642}
+      GATE_PORT: ${GATE_PORT:-8650}
+      WOL_BROADCAST: ${WOL_BROADCAST:-255.255.255.255}
+      WOL_PORT: ${WOL_PORT:-9}
+      WAKE_MIN_INTERVAL: ${WAKE_MIN_INTERVAL:-30}
+      WAKE_TIMEOUT: ${WAKE_TIMEOUT:-180}
+      PYTHONUNBUFFERED: "1"
+
+  cloudflared:
+    # Only with COMPOSE_PROFILES=tunnel. The token isn't :? here because compose reads the whole
+    # file even for the gate alone, so a required token would stop the gate deploying first.
+    profiles: ["tunnel"]
+    image: cloudflare/cloudflared:latest
+    network_mode: host
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${TUNNEL_TOKEN:-}

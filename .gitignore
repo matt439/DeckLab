@@ -29,3 +29,6 @@ decklab/cloudflare/node_modules/
 decklab/config.json
 magic/
 pokemon/
+
+# The NAS wake gate's settings (decklab/wakegate/): its tunnel token stays on the NAS
+decklab/wakegate/.env
