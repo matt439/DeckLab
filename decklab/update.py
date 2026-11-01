@@ -27,6 +27,7 @@ import json
 import os
 import re
 import shutil
+import stat
 import subprocess
 import sys
 import tempfile
@@ -115,7 +116,8 @@ def set_forge_dir(text, folder):
 
 def safe_extract(archive, target):
     """Unzip archive into target, refusing any member that would land outside it. Returns the
-    single top-level folder the release holds."""
+    single top-level folder the release holds. Off Windows each file keeps the permission bits
+    the zip recorded for it (_keep_modes), so the release's launchers stay runnable."""
     target = Path(target).resolve()
     with zipfile.ZipFile(archive) as z:
         names = z.namelist()
@@ -127,7 +129,31 @@ def safe_extract(archive, target):
         if len(tops) != 1:
             raise Failed("The Forge download doesn't hold exactly one folder: not unzipped")
         z.extractall(target)
+        if os.name != "nt":
+            _keep_modes(z.infolist(), target)
     return target / tops.pop()
+
+
+def _keep_modes(members, target):
+    """chmod each regular file member extracted under target to the rwx bits its zip entry
+    records (external_attr's high 16 bits, as the fork's package.py writes them), which zipfile's
+    extractall drops. Never
+    setuid, setgid or sticky; directories, links (unzipped as plain files) and entries with no
+    Unix mode are left as extracted."""
+    for info in members:
+        mode = info.external_attr >> 16
+        if info.is_dir() or stat.S_IFMT(mode) not in (0, stat.S_IFREG) or not mode & 0o777:
+            continue
+        os.chmod(target / info.filename, mode & 0o777)
+
+
+def file_sha256(path):
+    """The SHA-256 of a file, read a MiB at a time (the Forge release is hundreds of MB)."""
+    digest = hashlib.sha256()
+    with open(path, "rb") as f:
+        for block in iter(lambda: f.read(1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
 
 
 def download(url, path):
@@ -185,7 +211,7 @@ def _update_forge(dry_run, release):
                 raise Failed(f"Forge {release} couldn't be downloaded ({e}): is the release published? "
                              f"{simjar.release_url(release)}") from None
             want = (Path(tmp) / "sum").read_text(encoding="utf-8", errors="replace").split()[:1]
-            digest = hashlib.sha256(archive.read_bytes()).hexdigest()
+            digest = file_sha256(archive)
             if not want or want[0].lower() != digest:
                 raise Failed(f"The Forge download's SHA-256 ({digest}) doesn't match its .sha256 file: not installed")
             say(f"SHA-256 checked: {digest}")
