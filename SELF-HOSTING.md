@@ -11,17 +11,29 @@ This guide sets up Deck Lab on your own computer, from nothing, for you and your
 | The server, the database, the pages, the command line | Yes | Yes | Yes |
 | Forge simulations | Yes | Yes (the same download, with a JDK 21 or later) | Yes (the same download) |
 | Starting in the background and at logon (`homenet install`) | Yes (Task Scheduler) | Yes (a systemd user service) | No: run the server in a terminal, or under launchd |
-| The firewall script (`decklab/network-setup.ps1`) and `homenet status`'s network checks | Yes | No: open the port in your own firewall | No |
+| The firewall script (`decklab/network-setup.ps1`) | Yes | No: a firewall rule of your own (step 7), which `homenet status` checks for firewalld and ufw | No |
+| `homenet status`'s network, address, sleep and wake checks | Yes | Yes | No |
 | The nightly backup task (`python -m decklab.db schedule`) | Yes (Task Scheduler) | Yes (a systemd user timer) | No: run `python -m decklab.db nightly` from cron |
+| Photo scanning (Scan cards, Scan token cards) | Yes (Windows' own OCR engine, nothing to install) | Yes, with the `tesseract-ocr` package | With Tesseract |
+| Keeping the PC awake while in use, and waking on request (step 12) | Yes (a power request) | Yes (`systemd-inhibit`) | No |
 
-Deck Lab is built and used every day on Windows. On Linux the whole test suite passes, and CI runs it there on every change, beside Windows, together with a check that installs, restarts, stops and removes the systemd service and timer under a real systemd.
+Deck Lab is built and used every day on Windows. On Linux the whole test suite passes, and CI runs it there on every change, beside Windows, together with a check that installs, restarts, stops and removes the systemd service and timer under a real systemd. Since 2026-11-01 the live server can run on Linux too (story E11-S58): keeping the PC awake, photo scanning with Tesseract, Forge games and waking from sleep are built and fixture-tested, and are still to be tried on a real Linux server PC.
+
+Whatever the system, the home listener (port 8642) answers only addresses on a home network: loopback, the private IPv4 ranges (10/8, 172.16/12, 192.168/16), link-local addresses and IPv6's private ranges (fc00::/7, fe80::/10). Anything else gets 403 "This address only takes visits from the home network." A VPN such as Tailscale uses other addresses (100.64.0.0/10): add them to `config.json` as `"home_networks": ["100.64.0.0/10"]`. The tunnel's listener (step 10) isn't affected.
 
 ## 1. What to install
 
 - **Git**, to get the code.
-- **Python 3.14.** On Windows, the python.org installer. On Linux or macOS, if your system has an older Python, [uv](https://docs.astral.sh/uv/) installs one beside it: `uv python install 3.14`. Use that Python (`uv python find 3.14` prints where it is) wherever this guide says `python`.
-- **PostgreSQL 16 or later.** On Windows, the installer from postgresql.org; it asks you to choose a password for the `postgres` superuser. Remember it for step 4. On Linux, your distribution's `postgresql` package. On macOS, Postgres.app or Homebrew.
-- **For simulations only:** a JDK 21 or later (the full JDK, with `javac` and `jar`) and Maven. See step 8.
+- **Python 3.14.** On Windows, the python.org installer. On Linux or macOS, if your system has an older Python, [uv](https://docs.astral.sh/uv/) installs one beside it: `uv python install 3.14`. Use that Python (`uv python find 3.14` prints where it is) wherever this guide says `python`. On Ubuntu, the deadsnakes PPA's `python3.14` and `python3.14-venv` packages work too.
+- **PostgreSQL 16 or later.** On Windows, the installer from postgresql.org; it asks you to choose a password for the `postgres` superuser. Remember it for step 4. On Linux, your distribution's `postgresql` package, or for a move from another PC (step 11) the same major version as that PC from the PostgreSQL project's own apt repository, [apt.postgresql.org](https://wiki.postgresql.org/wiki/Apt) (such as the `postgresql-18` package): distributions often carry an older one. On macOS, Postgres.app or Homebrew.
+- **For simulations only:** a JDK 21 or later (the full JDK, with `javac` and `jar`, such as Debian's and Ubuntu's `openjdk-21-jdk`) and, to build Forge yourself, Maven. See step 8.
+
+On a Linux server PC, also:
+
+- **`tesseract-ocr`**, for photo scanning (`sudo apt install tesseract-ocr`, which brings English). Without it the scan sheets ask for each card's name instead.
+- **`avahi-daemon`**, so phones find the PC by name (`http://<the PC's name>.local:8642`). Windows answers those names by itself.
+- **`cloudflared`**, only for step 10: from Cloudflare's own apt repository, [pkg.cloudflare.com](https://pkg.cloudflare.com/) (Debian and Ubuntu don't carry it).
+- **The household's time zone.** A fresh Linux install is often on UTC, and Deck Lab dates things by the PC's clock: `timedatectl` shows the zone, and `sudo timedatectl set-timezone Australia/Sydney` (your own; `timedatectl list-timezones` lists them) sets it. Put the same name in `config.json` (step 4) as `"timezone"`.
 
 ## 2. Get the code
 
@@ -31,6 +43,8 @@ cd DeckLab
 ```
 
 Run every command in this guide from that folder, the repo root.
+
+On Linux, clone it there; don't copy a checkout from a Windows PC (a USB disk, a share or `rsync`). A copied folder usually arrives with every file executable, and sometimes with Windows line endings, so git shows every file changed and `python -m decklab.update` refuses to run.
 
 ## 3. Install psycopg into a `.venv`
 
@@ -79,6 +93,13 @@ cp decklab/config.example.json decklab/config.json
 To add a second person who shares your cards, add another profile with `"space": "home"`, `"role": "member"` and `"plays_as": "wife"`. Someone with a collection of their own gets `"space"` set to their own `id` and no `plays_as`. The reference's "People's own collections (spaces)" explains what each can see and change.
 
 `config.json` is gitignored, so your names and addresses never end up in a commit. The other settings all have defaults. [decklab/config.full.example.json](decklab/config.full.example.json) shows the optional blocks for a backup folder, outside access through Cloudflare and a records repo.
+
+Two optional settings matter most on Linux:
+
+- **`"timezone"`:** the household's time zone, such as `"Australia/Sydney"`. The Linux nightly timer runs at 03:30 in that zone, a receipt's arrival date and a game's date are worked out in it, and the smoke test and doctor warn when the PC's own clock keeps another zone. Without it they follow the PC's clock (and those two dates use UTC+10).
+- **Folders:** on Linux and macOS, `records_repo` and the `"database"` block's `backup_dir`, `staging_dir`, `export_repo` and `pg_bin` must be absolute paths such as `/mnt/nas-backups/DeckLab`; `~` works on every system. A Windows path (`\\NAS\...`, `D:\...`, any backslash) is refused with a message naming the setting: the backup and export fail and say so, and so does the smoke test. Give `forge_dir`, `forge_java` and the tunnel's `config` as absolute paths too.
+
+On Linux and macOS, `chmod 600 decklab/config.json`: it holds the household's emails.
 
 ## 5. Set up the database
 
@@ -154,6 +175,10 @@ python decklab/server.py
 Open http://localhost:8642 and pick yourself on **Who are you?**. Ctrl+C stops the server.
 
 - **Only this computer:** `python decklab/server.py --host 127.0.0.1`. Without `--host`, Deck Lab listens on every network interface, so phones and tablets on your Wi-Fi can open `http://<this computer's address>:8642`. On Windows, the first start may ask about Python's network access: allow it on private networks, or run the firewall script (reference, "Network setup (once, as administrator)").
+- **Linux's firewall:** many Linux installs have none turned on, and Deck Lab answers only home-network addresses anyway ("What runs where"). With one on, let in the home network only, never everyone:
+  - ufw: `sudo ufw allow from 192.168.1.0/24 to any port 8642 proto tcp`, and `sudo ufw allow from 192.168.1.0/24 to any port 5353 proto udp` for the PC's `.local` name (your own network in place of `192.168.1.0/24`).
+  - firewalld: `sudo firewall-cmd --permanent --zone=<zone> --add-rich-rule='rule family=ipv4 source address=192.168.1.0/24 port port=8642 protocol=tcp accept'` and `--add-service=mdns`, then `sudo firewall-cmd --reload`.
+  - Never open port 8644 (the tunnel's listener stays on this PC). `python -m decklab.lib.homenet status` reads firewalld's zone and gives the right command for yours.
 - **Another port:** `--port 8650`, or `"port"` in `config.json`.
 
 Some first steps:
@@ -194,7 +219,7 @@ Only if you want to change Forge itself, or no release fits your Deck Lab. It ne
    ```
    python decklab/install.py --release <the release folder> --out <where to install it>
    ```
-   The first build downloads Maven's dependencies and takes several minutes. The `--out` folder is made new; nothing else is changed.
+   The first build downloads Maven's dependencies and takes several minutes. The `--out` folder is made new; nothing else is changed. `install.py`'s defaults are Windows folders, so on Linux always give both `--release` and `--out`.
 
 ### Point Deck Lab at it
 
@@ -202,24 +227,41 @@ Only if you want to change Forge itself, or no release fits your Deck Lab. It ne
    ```json
    "forge_dir": "<that folder>",
    ```
-   Deck Lab looks for Java where the usual JDK installers put it (Oracle's `C:\Program Files\Java`, Temurin's `Eclipse Adoptium`, `Microsoft`, `Zulu` and `Amazon Corretto`; the newest JDK, one with `javac` before a JRE), then `JAVA_HOME`, then (off Windows) the PATH. Set `"forge_java"` to the JDK's `java` (`java.exe` on Windows) if it picks the wrong one.
+   Deck Lab looks for Java where the usual JDK installers put it (Oracle's `C:\Program Files\Java`, Temurin's `Eclipse Adoptium`, `Microsoft`, `Zulu` and `Amazon Corretto`; the newest JDK, one with `javac` before a JRE), then `JAVA_HOME`. Off Windows it looks in `JAVA_HOME`, `/usr/lib/jvm/*`, `/usr/lib64/jvm/*`, `/opt/java/*`, `/opt/jdk*`, `~/.sdkman/candidates/java/*`, `~/.jdks/*` and the PATH's `java`, and takes only Java 21 or later (by the JDK's `release` file), saying "Java 21 or later wasn't found" (and which older one it found) otherwise. Set `"forge_java"` to the JDK's `java` (`java.exe` on Windows) if it picks the wrong one.
+
+   On Linux, set `"forge_java"` for the background service: it doesn't see a `JAVA_HOME` or PATH set in a shell profile. Give the JDK's real path, as `readlink -f $(which java)` prints it (such as `/usr/lib/jvm/java-21-openjdk-amd64/bin/java`), not `/usr/bin/java`, which is a link the doctor won't follow. Without `forge_dir`, Deck Lab looks in `~/tools/forge-decklab` on Linux and macOS (`C:\Tools\forge-decklab` on Windows).
 2. **Check it:** `python -m decklab.lib.forge status` says whether Forge is ready, and its `build:` line whether it's the build this Deck Lab expects (and what to download if not). Then run `python -m decklab.lib.forge cardlog-check` once: it plays a few games several ways and turns on the card log when they match.
 
 Deck Lab runs up to 16 Forge workers at once, each with up to 1 GB of memory. Unless `config.json` sets `"forge_workers"`, it sizes that to the PC: about one a physical core, and 1.5 GB of memory each after 6 GB left for everything else (an 8-core PC with 16 GB gets 4; a 16-core PC with 32 GB, 8). Set `"forge_workers"` to choose another number, or admins can lower it on the Settings page.
+
+On Linux and macOS:
+
+- Forge's games run at nice 10 (below normal on Windows), so the page stays quick while they play. Without a `nice` program they run at normal priority.
+- `"forge_pin"` (pinning workers to cores) works on Windows only; elsewhere it does nothing and the log says so once.
+- Forge keeps its settings in a folder of each run's own under `decklab/data/forge`, through `-Duser.home` (Forge reads `APPDATA` only on Windows). If that disk can't hold symbolic links, the settings are copied there at each start instead, and the log says so once.
+- The worker budget shared by the server and the command line is in `$XDG_DATA_HOME/DeckLab/forge-slots` (else `~/.local/share/DeckLab/forge-slots`), or `DECKLAB_FORGE_SLOTS`. Give the service and your shell the same `XDG_DATA_HOME` (or none), or they won't share it.
+- Under the background service, a Forge game left over from a crashed server ends with the service. A command-line Forge run killed with `kill -9` can leave its Java processes running: `pgrep -af forge-gui-desktop` lists them, and `kill <pid>` ends one.
 
 ## 9. Keep it running and backed up
 
 - **Windows, in the background:** `python -m decklab.lib.homenet install --no-start`, then `python -m decklab.lib.homenet start` (the reference's "Start it" covers starting at logon and the restart watchdog).
 - **Linux, in the background:** `python -m decklab.lib.homenet install --at-logon` writes a systemd user service, `~/.config/systemd/user/decklab.service`, which runs `python decklab/server.py --background` in the repo with the Python you ran install with, enables it and starts it. `start`, `stop`, `restart`, `remove` and `status` work as on Windows; without `--at-logon` it starts only when you run `homenet start`. If the server stops with an error, systemd starts it again after 10 seconds; `homenet stop` leaves it stopped. Its log is `decklab/data/logs/server.log` (and `journalctl --user -u decklab.service` shows what systemd saw). Give `install` the same `--port` and `--host` you'd give the server.
+  - The unit records the PATH (and `JAVA_HOME`, if set) of the shell you run `install` in, since a service doesn't read your shell profile, and keeps the files it writes private to you (`UMask=0077`). Run `install` again after changing the PATH or Java, or after updating from an older Deck Lab: `status` warns "Its unit isn't what install writes now" until you do.
+  - After 3 failed starts within 15 minutes systemd gives up, and `status` says so; `start` and `restart` clear that first. They also refuse, before stopping anything, when the unit's Python or `server.py` has gone (say to run `install` again), and when a start doesn't answer they show the end of the server's log.
+  - `systemctl --user` needs your own login session. After `sudo -u` or `su`, Deck Lab finds `/run/user/<your uid>` by itself when it's yours; otherwise log in as that user over SSH (or `sudo machinectl shell <user>@`), or `export XDG_RUNTIME_DIR=/run/user/$(id -u)`.
+  - `scripts/decklab` runs `homenet` from any folder, on the Python the `.venv` was made from (`DECKLAB_PYTHON` to choose another): `decklab` starts the server, and `decklab stop`, `decklab status` and so on pass through. Link it into your PATH (`ln -s "$PWD/scripts/decklab" ~/.local/bin/decklab`). On Windows it's `scripts\decklab.cmd`.
+  - A server run by hand in a terminal stops cleanly when the terminal closes, unless it was started with `nohup`.
 - **Linux, at boot:** systemd runs your own services only while you're logged in. For Deck Lab to start at boot and keep running after you log out, turn on lingering once: `loginctl enable-linger` (on some systems, `sudo loginctl enable-linger $USER`). `install` and `status` remind you while it's off.
 - **macOS:** run `python decklab/server.py` under launchd, from the repo root.
 - **Backups:** `python -m decklab.db backup` writes a dump to `decklab/data/backups/` and copies it to `database.backup_dir` in `config.json`, a folder on another disk or a NAS:
   ```json
   "database": {"backup_dir": "D:\\Backups\\DeckLab"}
   ```
-  Without it the dumps stay in `decklab/data/backups/` only, on the same disk as the database, and `backup` says so.
-- **The nightly job:** `python -m decklab.db nightly` runs the backup, its pruning, a restore check now and then, and the data's check. It also exports the data as plain files into a git repo of their own, `../DeckLabData` beside this repo, unless `database.export_repo` says where. `python -m decklab.db schedule install` runs it every night at 03:30: on Windows as a Task Scheduler task, on Linux as a systemd user timer (`decklab-nightly.timer` and `decklab-nightly.service` in `~/.config/systemd/user`), which catches up a night the computer was off, as soon as it's on again. `schedule status` shows the next and last run, and `schedule remove` takes it away. Run `schedule install` with the Python you run Deck Lab with, after installing psycopg (step 3), and again after moving the repo or upgrading Python; `status` warns when its units are out of date. Lingering (above) lets it run while you're logged out. On macOS, schedule it with cron.
-- **pg_dump:** Deck Lab finds it in `C:\Program Files\PostgreSQL\<version>\bin` or on the PATH. Set `database.pg_bin` to its folder if it's somewhere else.
+  Without it the dumps stay in `decklab/data/backups/` only, on the same disk as the database, and `backup` says so. `backup` makes only the last folder of `backup_dir`: its parent must already be there, so a missing share fails instead of filling a new folder on the PC's own disk.
+- **Backups to a NAS from Linux:** mount the share at boot with a line in `/etc/fstab`, such as `//nas/Backups /mnt/nas-backups cifs credentials=/etc/decklab-nas.cred,uid=<you>,_netdev,nofail,x-systemd.automount 0 0` (the credentials file holds `username=` and `password=` lines, owned by root, `chmod 600`; `cifs-utils` must be installed; an NFS share works too). Then set `"backup_dir": "/mnt/nas-backups/DeckLab"`. Off Windows, backup, prune, the restore check and the smoke test refuse a `backup_dir` on the same disk as the staging folder ("is the NAS share mounted?"), so an unmounted share never takes the dumps; `"backup_same_device_ok": true` in the `"database"` block allows it when that's what you want. A `backup --dest` folder isn't checked.
+- **The nightly job:** `python -m decklab.db nightly` runs the backup, its pruning, a restore check now and then, and the data's check. It also exports the data as plain files into a git repo of their own, `../DeckLabData` beside this repo, unless `database.export_repo` says where. `python -m decklab.db schedule install` runs it every night at 03:30: on Windows as a Task Scheduler task, on Linux as a systemd user timer (`decklab-nightly.timer` and `decklab-nightly.service` in `~/.config/systemd/user`), which catches up a night the computer was off, as soon as it's on again. `schedule status` shows the next and last run, and `schedule remove` takes it away. Run `schedule install` with the Python you run Deck Lab with, after installing psycopg (step 3), and again after moving the repo or upgrading Python; `status` warns when its units are out of date. Lingering (above) lets it run while you're logged out. On Linux the run is at 03:30 in `config.json`'s `"timezone"` when it's set, runs at nice 10 with idle disk priority, and first waits up to 3 minutes for PostgreSQL to answer, for a night caught up at boot (logging that to `decklab/data/logs/db.log`). On macOS, schedule it with cron.
+- **The export repo's push** runs at night with nobody to sign in. On Linux use an SSH deploy key with write access for the export repo (and `records_repo`, if it pushes): `ssh-keygen -t ed25519 -f ~/.ssh/decklabdata -N ""`, add the `.pub` file as a deploy key on GitHub, add a `Host github-decklabdata` entry with `HostName github.com` and `IdentityFile ~/.ssh/decklabdata` to `~/.ssh/config`, then `git -C <export_repo> remote set-url origin git@github-decklabdata:<you>/DeckLabData.git`. Check it with `git -C <export_repo> push --dry-run`.
+- **pg_dump:** Deck Lab finds it in `C:\Program Files\PostgreSQL\<version>\bin` on Windows; on Linux in the newest `/usr/lib/postgresql/<version>/bin` (Debian and Ubuntu) or `/usr/pgsql-<version>/bin` (Red Hat's and the PostgreSQL project's packages); then on the PATH. Set `database.pg_bin` to its folder if it's somewhere else.
 - **Updating:** `python -m decklab.update` (see "Updating" below), or by hand: `git pull`, `python -m decklab.db migrate`, `python -m decklab.lib.homenet restart`, then the smoke test below.
 
 To see the nightly units without installing anything (for another computer, say), `schedule preview-systemd` prints one, for the paths you give:
@@ -248,6 +290,7 @@ It takes under a minute on a typical PC and needs no test suite. The doctor (ste
 - starts a throwaway server on a spare port on `127.0.0.1`, loads the page with every file it links to, and makes read-only API calls;
 - asks the background server on your configured port whether it's running, and whether it runs older code than the checkout (after a `git pull` without a restart);
 - runs `homenet status` and `schedule status` (their warnings are passed on), checks the tunnel's `cloudflared`, its config and that the server would really start it (an `access` listener, and cloudflared's config sending the hostname there) when `config.json` has a tunnel, and checks that `records_repo` is a git checkout when it's set;
+- checks that Deck Lab may hold the PC awake (one try, let go at once), that the PC's clock keeps `config.json`'s `"timezone"`, and that photo scanning has an engine, by reading a drawn test card's bottom line (a warning without one);
 - plays one real Forge game twice with the card log on (`forge engine-check`), and checks that Forge is the build this Deck Lab expects (skipped when Forge isn't installed, since it's optional).
 
 Each part says PASS, WARN, FAIL or SKIP, with what to do. A warning (no backup yet, the nightly task not installed, the server not running yet) doesn't fail the run. The exit code is `0` with no failures and `1` with any. `--json` prints the results as JSON. `--offline` skips the network, `--no-forge` skips Forge and `--no-server` skips the throwaway server.
@@ -261,12 +304,12 @@ python -m decklab.update --dry-run     # what's coming, changing nothing
 python -m decklab.update
 ```
 
-It's for a PC that serves Deck Lab and only takes updates, with the code written and tested on another computer. It refuses a checkout with changed tracked files, or with commits its upstream doesn't have, so it never merges or loses anything. Then, stopping at the first step that fails:
+It's for a PC that serves Deck Lab and only takes updates, with the code written and tested on another computer. It refuses a checkout with changed tracked files, or with commits its upstream doesn't have, so it never merges or loses anything. It also refuses, before fetching, to run on another Python than the one the `.venv` was made from, and on Linux than the one the background service and nightly timer run (install them again with that Python first). Then, stopping at the first step that fails:
 
 1. fetches, shows the new commits, and fast-forwards (`git merge --ff-only`);
-2. reinstalls psycopg into the `.venv` when `decklab/requirements.txt` changed;
+2. reinstalls psycopg into the `.venv` when `decklab/requirements.txt` changed (on Windows the server is stopped for it, since it holds psycopg's files open; on Linux it keeps running until step 5);
 3. with migrations pending, makes a backup (`python -m decklab.db backup`), then migrates;
-4. when the new Deck Lab expects another Forge build than `forge_dir` holds, downloads that release, checks its SHA-256, unzips it beside the old folder and points `forge_dir` in `config.json` at it (the old `config.json` is kept as `config.json.before-forge-update`, and the old Forge folder is left for you to delete). Nothing happens to Forge when it isn't installed;
+4. when the new Deck Lab expects another Forge build than `forge_dir` holds, downloads that release, checks its SHA-256, unzips it beside the old folder (keeping its files' modes on Linux, so its launch scripts stay executable) and points `forge_dir` in `config.json` at it (the old `config.json` is kept as `config.json.before-forge-update`, and the old Forge folder is left for you to delete). Nothing happens to Forge when it isn't installed;
 5. restarts the background server, if it's running;
 6. runs the smoke test.
 
@@ -275,6 +318,8 @@ Steps 2 to 6 run in the code just pulled. When a step fails, it says how to go b
 ## 10. From outside your home (optional)
 
 Deck Lab can start a Cloudflare Tunnel itself, behind Cloudflare Access's email login. That needs a domain on Cloudflare, `cloudflared`, and `allowed_hosts`, `tunnel` and `access` blocks in `config.json` (see `config.full.example.json`, and the reference's "From outside the home"). Leave those blocks out of `config.json` until you set this up. Without them, Deck Lab serves your home network only.
+
+On Linux, install `cloudflared` from [pkg.cloudflare.com](https://pkg.cloudflare.com/) (Deck Lab also finds it in `/usr/bin`, `/usr/local/bin`, `~/.local/bin`, `/snap/bin` and `/opt/cloudflared`) and update it with `sudo apt upgrade cloudflared`, then `homenet restart`. Its files are in `~/.cloudflared`: `chmod 600 ~/.cloudflared/*.json ~/.cloudflared/cert.pem`. The tunnel won't start, and `homenet status` shows a PROBLEM, while `config.yml`'s `credentials-file:` names a file that isn't there, or a Windows path. Under the background service `cloudflared` ends with the server; a server run in a terminal and killed outright can leave it running.
 
 ## 11. Moving Deck Lab to another PC
 
@@ -285,10 +330,10 @@ For moving a working Deck Lab, with its data, to another computer (a spare PC th
 1. Follow steps 1 to 8 on the new PC, with these differences:
    - **PostgreSQL:** the same major version as the old PC, or newer (`python -m decklab.db sql "select version()"` on the old PC says which). A dump from a newer PostgreSQL can't be restored into an older one.
    - **The code:** on the same commit as the old PC, or newer. `restore` refuses a dump with migrations the checkout doesn't have.
-   - **`config.json` (step 4):** copy it from the old PC, then change what's different there: `forge_dir`, `database.pg_bin`, `database.backup_dir`, `database.staging_dir`, `database.export_repo`, `records_repo` and the tunnel's `cloudflared` path, if set. While both PCs exist, give the new one its own `backup_dir` (a subfolder will do), so their nightly runs never prune each other's dumps.
-   - **Take the `tunnel` block out for now.** Two PCs running the same tunnel share its visitors between two databases. If the old PC runs a tunnel, install `cloudflared` on the new one now (`winget install Cloudflare.cloudflared`, or your distribution's package) and check `cloudflared --version`.
+   - **`config.json` (step 4):** copy it from the old PC, then change what's different there: `forge_dir`, `forge_java`, `database.pg_bin`, `database.backup_dir`, `database.staging_dir`, `database.export_repo`, `records_repo`, the tunnel's `config` and its `cloudflared` path, if set. While both PCs exist, give the new one its own `backup_dir` (a subfolder will do), so their nightly runs never prune each other's dumps.
+   - **Take the `tunnel` block out for now.** Two PCs running the same tunnel share its visitors between two databases. If the old PC runs a tunnel, install `cloudflared` on the new one now (`winget install Cloudflare.cloudflared`, or on Linux from pkg.cloudflare.com, step 10) and check `cloudflared --version`.
 2. `python -m decklab.db setup` makes the database roles and their pgpass lines, and an empty database that step B replaces.
-3. Clone the repos the old PC uses beside the code: the export repo (`database.export_repo`, by default `../DeckLabData`, from its private remote) and `records_repo`, if set. Store the export repo's git credentials for the user the nightly task runs as, so its push never asks for a sign-in.
+3. Clone the repos the old PC uses beside the code: the export repo (`database.export_repo`, by default `../DeckLabData`, from its private remote) and `records_repo`, if set. Store the export repo's git credentials for the user the nightly task runs as, so its push never asks for a sign-in (on Linux, an SSH deploy key: step 9).
 4. Don't install the background server or the nightly task yet. `python -m decklab.smoke --no-server` should pass, apart from warnings about what isn't installed yet.
 
 ### B. Move the data
@@ -304,7 +349,7 @@ python -m decklab.db digest -o <that folder>/digest.json
 
 Take the `tunnel` block out of the old PC's `config.json` too. (`homenet stop` alone isn't enough: a server installed `--at-logon` starts again at the next logon, and with it its tunnel.) To go back to the old PC at any point before the switch-over, undo these: `homenet install --at-logon`, `schedule install`, and the `tunnel` block back.
 
-`backup` prints the dump's name (`decklab-YYYY-MM-DD-HHMMSS.dump`). Take the folder to the new PC (a USB stick, or a share both reach), with these folders of `decklab/data` if you want them: `forge/results` (saved matchups), `forge/experiments` (Lab experiments) and `goldfish` (practice-hand results). The rest of `decklab/data` is caches the new PC fills itself, or settings of the old PC's own.
+`backup` prints the dump's name (`decklab-YYYY-MM-DD-HHMMSS.dump`). Take the folder to the new PC (a USB stick, or a share both reach), with these folders of `decklab/data` if you want them: `forge/results` (saved matchups), `forge/experiments` (Lab experiments) and `goldfish` (practice-hand results). The rest of `decklab/data` is caches the new PC fills itself, or settings of the old PC's own: after the move, set the Forge worker limit again on the Settings page (it's kept outside the repo, in the forge-slots folder), and measure the time estimates again on the new PC (`rates.json`: the reference's "The overnight run") rather than copying the old one. If a member change made on the Settings page didn't finish (`decklab/data/profile-config/pending.json` is there), run `python -m decklab.db sync-profiles` on the old PC before the dump.
 
 On the new PC:
 
@@ -325,7 +370,7 @@ On the new PC:
    python -m decklab.lib.homenet install --at-logon
    python -m decklab.db schedule install
    ```
-   On Windows both run in your signed-in session, so a server PC should sign in by itself after a restart (or stay signed in). On Linux, turn on lingering (`loginctl enable-linger`) so they start at boot.
+   On Windows both run in your signed-in session, so a server PC should sign in by itself after a restart (or stay signed in). On Linux, turn on lingering (`loginctl enable-linger`) so they start at boot, and add the firewall rule from step 7 if a firewall is on.
 4. Copy the folders from `decklab/data` into the same places, if you brought them.
 5. `python -m decklab.smoke`. Every part should pass now; a warning that no backup has worked yet goes after the first nightly run, or a `python -m decklab.db backup`.
 6. Phones and tablets on the Wi-Fi need the new PC's address (`homenet status` lists it). The tunnel's address doesn't change.
@@ -336,6 +381,28 @@ On the old PC, once the new one works:
 2. If the old PC is where the code is written, keep PostgreSQL installed there: the database integration tests make throwaway databases on the server `config.json` names, so never point that config at the new PC's live database.
 
 The command line's inventory, deck and wishlist commands work on the database `config.json` names, so after the move run them on the new PC (in person, or over Remote Desktop or SSH).
+
+### D. From a Windows server to a Linux one
+
+The same route, A to C, in order, with what's different for Linux. Nothing Linux-only is needed for the data itself: the dump, the digest and `restore` are the same on both, and a dump recorded on Windows still matches its counts and digests on Linux.
+
+1. **Install** (step 1): git, Python 3.14 (uv or deadsnakes), PostgreSQL of the old PC's major version from apt.postgresql.org (`python -m decklab.db sql "select version()"` on the old PC says which), an OpenJDK 21 or later JDK, `tesseract-ocr`, `avahi-daemon`, and `cloudflared` from pkg.cloudflare.com. Set the time zone with `timedatectl`.
+2. **The code** (steps 2 and 3): `git clone` it, on the old PC's commit or newer; don't copy the Windows folder. Make the `.venv` with `.venv/bin/python -m pip install -r decklab/requirements.txt`.
+3. **`config.json`** (step 4): copy it over, `chmod 600` it, and change every Windows path to an absolute Linux one (Deck Lab refuses the ones it reads as folders): `forge_dir`, `forge_java` (the JDK's real path), `database.backup_dir` (the NAS mount, step 9), `staging_dir`, `export_repo`, `pg_bin` (or leave it out), `records_repo` and `tunnel.config`. Add `"timezone"`, and `"home_networks"` if anyone visits through a VPN. Take the `tunnel` block out for now.
+4. **The database** (step 5): `python -m decklab.db setup` as yourself, not with `sudo` ("When something goes wrong" below has the pg_hba.conf and locale fixes). Then `python -m decklab.lib.cards update`.
+5. **Forge** (step 8): download and check the release, unzip it to `forge_dir`, then `python -m decklab.lib.forge status` and `python -m decklab.lib.forge cardlog-check`.
+6. **Backups and the export repo** (step 9): mount the NAS share through `/etc/fstab`, clone the export repo and `records_repo` with an SSH deploy key, and check a dry-run push.
+7. **Check:** `python -m decklab.smoke --no-server` passes, apart from warnings about what isn't installed yet.
+8. **Move the data** (B): on the Windows PC, `homenet remove`, `schedule remove`, `backup --dest`, `digest -o`, and take its `tunnel` block out. On the Linux PC, `python -m decklab.db restore <the folder>/decklab-....dump --expect <the folder>/digest.json --replace`.
+9. **Switch over** (C): copy `config.yml` and the credentials JSON into `~/.cloudflared`, fix `config.yml`'s `credentials-file:` to `/home/<you>/.cloudflared/<tunnel id>.json`, `chmod 600` both, and put the `tunnel` block back. `git -C <export_repo> pull --ff-only`. Then:
+   ```
+   loginctl enable-linger
+   python -m decklab.lib.homenet install --at-logon
+   python -m decklab.db schedule install
+   ```
+   Copy `forge/results`, `forge/experiments` and `goldfish` into `decklab/data`, add the firewall rule if a firewall is on, and set the worker limit again on Settings.
+10. **Check again:** `python -m decklab.update --dry-run` (it should find nothing to change), then `python -m decklab.smoke`. Phones need the new address, which `homenet status` lists under Addresses (also `http://<the PC's name>.local:8642`). For sleeping and waking, follow step 12's Linux steps.
+11. **The old PC:** rename its database as in C.
 
 ## 12. Let the server sleep (optional)
 
@@ -348,12 +415,39 @@ A PC that serves Deck Lab all day uses power all day. With an always-on device o
 5. **From outside (if you set up step 10):** the NAS tunnel, the Access service token and the Worker's three secrets, in the wake gate's README.
 6. **Check:** `python -m decklab.lib.homenet status` (its Wake area) and `python -m decklab.smoke`. Then let it sleep, open the gate's address on a phone, and time the wake.
 
-Phones and tablets bookmark the gate's address instead of the PC's. A Deck Lab page already open at home hops through the gate when it can't reach the PC only if it was opened at exactly the address the gate sends people to (the wake gate's `DECKLAB_PC_HOST` and port, such as `http://<the PC's address>:8642`), so open Deck Lab at home by that address or the gate's bookmark, not `localhost` or another name for the PC. A save that fails while the PC sleeps never navigates away: it shows the usual can't-be-reached error, and your change stays on the page to try again. On Windows the server and the nightly task run in your signed-in session, so the PC should sign in by itself after a restart.
+On a Linux PC, do these in place of steps 1, 3, 4 and 6; the wake gate (step 2) and outside access (step 5) are the same:
+
+1. **The PC:** turn on Wake-on-LAN in the BIOS, and keep it on at every boot: `sudo nmcli connection modify <connection> 802-3-ethernet.wake-on-lan magic` (`nmcli connection show` lists them), or with systemd-networkd a `.link` file with `WakeOnLan=magic`. `sudo ethtool <adapter>` should show `Wake-on: g`. Use the wired adapter: Wi-Fi usually can't wake. `cat /sys/power/mem_sleep` should show `[deep]`; if it shows `[s2idle]`, add `mem_sleep_default=deep` to the kernel command line. Give the PC a DHCP reservation and note its MAC address (`ip link`).
+2. **Let it sleep when idle.** A Linux PC with no desktop never suspends by itself. As root, write `/etc/systemd/logind.conf.d/decklab.conf`:
+   ```
+   [Login]
+   IdleAction=suspend
+   IdleActionSec=10min
+   ```
+   and restart the PC. An open SSH or terminal session that isn't idle keeps it awake, so log out of them. Desktop power settings aren't read.
+3. **Let Deck Lab hold it awake.** While in use, Deck Lab holds `systemd-inhibit --what=sleep:idle --who="Deck Lab" --mode=block` (`systemd-inhibit --list` shows it; while it's held, `systemctl suspend` fails unless given `-i`). polkit may refuse that to a service with no login session: the smoke test's "Keeping the PC awake" step says so, and `/api/status`'s `keep_awake` shows `"wanted": true` with `"holding": false`. Deck Lab logs the refusal once and tries again every 5 minutes. To allow it, write `/etc/polkit-1/rules.d/50-decklab-inhibit.rules` as root, with your user name:
+   ```
+   polkit.addRule(function(action, subject) {
+       if ((action.id == "org.freedesktop.login1.inhibit-block-sleep" ||
+            action.id == "org.freedesktop.login1.inhibit-block-idle") && subject.user == "<you>")
+           return polkit.Result.YES;
+   });
+   ```
+   `pkaction --verbose --action-id org.freedesktop.login1.inhibit-block-sleep` shows what's allowed by default.
+4. **`config.json`:** add the `"wake"` block as above and `homenet restart`.
+5. **Wake for the nightly run.** A user timer can't wake the PC, so `python -m decklab.db schedule wake-timer` prints the `sudo` commands that install a system timer, `decklab-wake.timer`, which wakes the PC a minute before 03:30 (`--at HH:MM` for another time), and the commands that take it away again. Deck Lab never installs it itself, and `schedule status` warns while `"wake"` is set and it isn't there. The wake timer keeps the PC's own clock, so set the PC's zone to `config.json`'s `"timezone"` (see "1. What to install").
+6. **Check** as above: Linux `homenet status` has Sleep lines (logind's IdleAction, a masked `suspend.target`, and with `"wake"` whether Deck Lab may hold the PC awake) and, with `"wake"`, Wake lines (`mem_sleep`, the adapter's Wake-on, the wake timer and the gate).
+
+Phones and tablets bookmark the gate's address instead of the PC's. A Deck Lab page already open at home hops through the gate when it can't reach the PC only if it was opened at exactly the address the gate sends people to (the wake gate's `DECKLAB_PC_HOST` and port, such as `http://<the PC's address>:8642`), so open Deck Lab at home by that address or the gate's bookmark, not `localhost` or another name for the PC. A save that fails while the PC sleeps never navigates away: it shows the usual can't-be-reached error, and your change stays on the page to try again. On Windows the server and the nightly task run in your signed-in session, so the PC should sign in by itself after a restart. On Linux, lingering (step 9) starts them at boot.
 
 ## When something goes wrong
 
 - **"no password supplied"** from `setup`: run it in a terminal, so it can ask, or add the pgpass line from step 5.
 - **"can't reach PostgreSQL ... connection refused":** PostgreSQL isn't running, or it isn't on port 5432 (set `database.port` in `config.json`).
+- **"Ident authentication failed", "Peer authentication failed" or "no pg_hba.conf entry"** on Linux: PostgreSQL doesn't take a password on `127.0.0.1`. `sudo -u postgres psql -c "show hba_file"` says where its `pg_hba.conf` is: set the `host` lines for `127.0.0.1/32` and `::1/128` to `scram-sha-256`, then `sudo systemctl reload postgresql`. Give `postgres` a password (step 5) and run `python -m decklab.db setup` again as yourself, not with `sudo`.
+- **A locale or encoding error** from `setup`, `restore` or the restore check: the PostgreSQL cluster needs a UTF-8 (or C) locale. Make it again with `initdb --locale=C.UTF-8` (or your own UTF-8 locale, such as `en_AU.UTF-8`).
+- **"Failed to connect to bus"** from `homenet` or `schedule` on Linux: `systemctl --user` can't find your session (after `sudo -u`, `su` or from cron). Log in as that user over SSH, or `export XDG_RUNTIME_DIR=/run/user/$(id -u)`, with lingering on.
+- **A phone gets "This address only takes visits from the home network."**: it came from an address outside the home ranges, such as a VPN's. Add that network to `"home_networks"` in `config.json` and restart Deck Lab. The server's log names each refused address once.
 - **"the database holds no inventory"** or **"the database holds no decks":** run `python -m decklab.db setup` again. It starts the empty collection and deck library on a new database.
 - **The page says the card data isn't ready:** wait for the download, or run `python -m decklab.lib.cards update` and read what it says.
 - **The server's log** is `decklab/data/logs/server.log` when it runs in the background.
