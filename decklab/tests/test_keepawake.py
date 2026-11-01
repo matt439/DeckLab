@@ -487,6 +487,17 @@ class LinuxInhibitTests(unittest.TestCase):
             power.release()
         self.assertFalse(power.held)
 
+    @unittest.skipUnless(getattr(keepawake._LinuxInhibit.__init__, "_fixture_guarded", False),
+                         "only under the fixture runner (scripts/fixture_runtime.py)")
+    def test_the_fixture_runner_never_starts_a_real_inhibitor(self):
+        power = keepawake._LinuxInhibit(program="/usr/bin/systemd-inhibit")
+        with self.assertRaisesRegex(OSError, "isn't started by the fixture runner"):
+            power.hold()
+        self.assertFalse(power.held)
+        fake, popen, _ = self.inhibit(FakeProc())
+        fake.hold()                    # an explicit fake still runs
+        self.assertEqual(len(popen.calls), 1)
+
 
 class ForgeCommandLineTests(unittest.TestCase):
     """python -m decklab.lib.forge holds the PC awake for a command that may play games."""

@@ -81,8 +81,11 @@ def _supervisor_problem():
         return None
     if sys.platform.startswith("linux"):
         from decklab.lib.homenet import service
-        if not service._active(service.service_name(homenet.TASK_NAME)):
+        unit = service.service_name(homenet.TASK_NAME)
+        if not service._active(unit):
             return "Deck Lab isn't running as its background service, so it can't be restarted from here."
+        if service.unit_problem(service.unit_parts(service._read_unit(unit))):
+            return "Deck Lab's background service needs setting up again on the PC, so it can't be restarted from here."
         return None
     return "Deck Lab can only be restarted from here on Windows or Linux."
 

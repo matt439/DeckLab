@@ -14,7 +14,7 @@ from unittest import mock
 
 from decklab.lib import cards, preflight, preflight_local, scan
 from decklab.lib.api import collection_scan as cs
-from decklab.tests import scan_image
+from decklab.lib import scan_image
 
 FIXTURES = Path(__file__).parent / "fixtures"
 HEADER = "level\tpage_num\tblock_num\tpar_num\tline_num\tword_num\tleft\ttop\twidth\theight\tconf\ttext"

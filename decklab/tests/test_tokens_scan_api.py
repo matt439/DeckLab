@@ -19,7 +19,7 @@ from decklab.lib.api import tokens as api_tokens
 from decklab.lib.api import tokens_scan as ts
 from decklab.lib.state import Conflict, Invalid
 from decklab.lib.tokens import ops as token_ops
-from decklab.tests import scan_image
+from decklab.lib import scan_image
 from decklab.tests import test_collection_edit as tce
 from decklab.tests.test_tokens import FIXTURES
 

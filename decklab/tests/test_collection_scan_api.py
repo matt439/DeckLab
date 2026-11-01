@@ -15,7 +15,7 @@ from decklab.lib import scan
 from decklab.lib.api import card_lookup
 from decklab.lib.api import collection_edit as ce
 from decklab.lib.api import collection_scan as cs
-from decklab.tests import scan_image
+from decklab.lib import scan_image
 from decklab.tests import test_collection_edit as tce
 
 PNG = scan_image.png(["FDN EN"], scale=2)

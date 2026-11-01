@@ -106,8 +106,10 @@ class SettingsTests(unittest.TestCase):
                     db.pg_bin("pg_dump")
 
     def test_pg_bin_without_a_setting_finds_the_newest_install_then_the_path(self):
-        exe = ".exe" if os.name == "nt" else ""
-        with tempfile.TemporaryDirectory() as tmp:
+        # Windows' search (Program Files\PostgreSQL), pinned so it runs on Linux too; the Linux
+        # search has its own tests in test_db_paths.
+        exe = ".exe"
+        with tempfile.TemporaryDirectory() as tmp, mock.patch.object(db, "_on_windows", return_value=True):
             root = Path(tmp)
             for version in ("9.6", "16", "17"):
                 (root / "PostgreSQL" / version / "bin").mkdir(parents=True)

@@ -142,5 +142,35 @@ class HelperCommandTests(unittest.TestCase):
             self.assertEqual(server_restart._busy(), ["2 Forge matchups playing or waiting", "1 practice-hand run"])
 
 
+
+class LinuxSupervisorTests(unittest.TestCase):
+    """_supervisor_problem on Linux: the service must be running and its unit able to start
+    Deck Lab again (service.unit_problem), else the page refuses before anything stops."""
+
+    def setUp(self):
+        from decklab.lib.homenet import service
+        self.service = service
+        mock.patch.object(sys, "platform", "linux").start()
+        self.active = mock.patch.object(service, "_active", return_value=True).start()
+        mock.patch.object(service, "_read_unit", return_value="unit text").start()
+        mock.patch.object(service, "unit_parts", return_value={"program": "/usr/bin/python3"}).start()
+        self.problem = mock.patch.object(service, "unit_problem", return_value=None).start()
+        self.addCleanup(mock.patch.stopall)
+
+    def test_a_running_service_with_a_good_unit(self):
+        self.assertIsNone(server_restart._supervisor_problem())
+        self.problem.assert_called_once_with({"program": "/usr/bin/python3"})
+
+    def test_a_service_that_isnt_running(self):
+        self.active.return_value = False
+        self.assertIn("isn't running as its background service", server_restart._supervisor_problem())
+
+    def test_a_unit_that_cant_start_it_again(self):
+        self.problem.return_value = "the Python it runs isn't there any more"
+        self.assertEqual(server_restart._supervisor_problem(),
+                         "Deck Lab's background service needs setting up again on the PC, so it can't be "
+                         "restarted from here.")
+
+
 if __name__ == "__main__":
     unittest.main()

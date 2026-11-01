@@ -16,7 +16,7 @@ from types import SimpleNamespace
 from unittest import mock
 
 from decklab.lib import cards, scan
-from decklab.tests import scan_image
+from decklab.lib import scan_image
 
 FIXTURES = Path(__file__).parent / "fixtures"
 

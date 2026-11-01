@@ -5,7 +5,8 @@ each update (git pull, migrate, restart). Where `python -m decklab.doctor` only
 reads files, this exercises the install: the database's three roles, the backup
 programs, card lookups, the network sites Deck Lab uses, a throwaway server on a
 spare 127.0.0.1 port answering the page and its read-only API, the background
-server and nightly task, the tunnel, and one real Forge engine check.
+server and nightly task, the tunnel, photo scanning's OCR engine (one drawn test
+picture) and one real Forge engine check.
 
 It never writes to the database or the inventory and never touches the server on
 the configured port beyond reading its status. It writes only temporary files and
@@ -619,6 +620,36 @@ def step_records(r, ctx):
         r.note(WARN, f"records_repo {place} is missing, so buylist and report links won't open: clone it there")
 
 
+SCAN_LINES = ["R 0227", "FDN EN"]       # a card's bottom line, in scan_image's block letters
+
+
+def step_scan(r, ctx, status=None, ocr=None, folder=None):
+    """Photo scanning (optional): an OCR engine is here, and it reads a drawn bottom line
+    ("R 0227 / FDN EN") as collector number 227 of FDN. status, ocr and folder are for tests."""
+    from decklab.lib import scan, scan_image
+    found = (status or (lambda: scan.engine_status(refresh=True)))()
+    if not found.get("available"):
+        r.note(WARN, "No photo scanning engine, so Scan cards... asks for typed names"
+                     + (f": {found['detail']}" if found.get("detail") else "")
+                     + " (optional: Linux needs the tesseract-ocr package)")
+        return
+    engine = found.get("engine") or "an OCR engine"
+    with tempfile.TemporaryDirectory(dir=folder) as place:
+        path = Path(place) / "bottom-line.png"
+        path.write_bytes(scan_image.png(SCAN_LINES))
+        try:
+            lines = (ocr or scan.ocr)(str(path))
+        except scan.OcrUnavailable as e:
+            r.note(FAIL, f"The {engine} engine is here but couldn't read a test picture: {_first_line(e)}")
+            return
+    read = scan.read_lines(lines)
+    if "227" in read["numbers"] and "FDN" in [str(s).upper() for s in read["sets"]]:
+        r.note(PASS, f"The {engine} engine read a test card's bottom line (227, FDN)")
+    else:
+        r.note(WARN, f"The {engine} engine read a test card's bottom line as {' / '.join(lines) or 'nothing'}, "
+                     "not 227 of FDN, so scans may need their printing chosen by hand")
+
+
 def step_forge(r, ctx):
     if ctx["args"].no_forge:
         raise Skip("--no-forge")
@@ -663,6 +694,7 @@ STEPS = (
     ("tunnel", "From outside the home", step_tunnel),
     ("wake", "Waking on request (the NAS's wake gate)", step_wake),
     ("records", "The records repo", step_records),
+    ("scan", "Photo scanning", step_scan),
     ("forge", "Forge", step_forge),
 )
 

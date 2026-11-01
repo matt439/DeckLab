@@ -381,11 +381,16 @@ class PruneAndRestoreCommandTests(_Commands):
     def test_export_records_an_unusable_export_repo(self):
         self.posix_paths()
         self.settings["export_repo"] = "..\\DeckLabData"
+        # From a folder of the test's own, so a real DeckLabData beside the checkout doesn't count.
+        work = self.tmp / "work"
+        work.mkdir()
+        self.addCleanup(os.chdir, os.getcwd())
+        os.chdir(work)
         self.assertEqual(export.run_export(say=self.said.append), 1)
         (kind, ok, path, detail), = self.records
         self.assertEqual((kind, ok), ("export", False))
         self.assertIn("database.export_repo", detail)
-        self.assertFalse(Path(os.getcwd(), "..\\DeckLabData").exists())
+        self.assertFalse(Path(work, "..\\DeckLabData").exists())
 
 
 class RecordsRepoTests(unittest.TestCase):

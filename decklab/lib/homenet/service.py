@@ -19,8 +19,8 @@ anything, when the unit's Python or server.py has gone (unit_problem).
 
 status reports the server, the service, the network, the firewall (firewalld, ufw or
 nftables, as far as they can be read without root), the addresses phones use and the
-tunnel (linux_facts.py gathers what it reads). The sleep and wake checks come from
-linux_power.py when it's there (_power_lines, the hook a later change wires).
+tunnel (linux_facts.py gathers what it reads), and the Sleep (and, with config.json's
+"wake", Wake) lines from linux_power.py (_power_lines).
 
 Like commands.py, everything a test replaces is looked up through its module: systemd
 here (lib/systemd.py), and commands' own (control, time, find_server, probe, ...), which
@@ -37,7 +37,7 @@ from pathlib import Path
 from decklab.db import systemd_units
 from decklab.lib import access, config, systemd, tunnel
 
-from . import commands, linux_facts, profile_config
+from . import commands, linux_facts, linux_power, profile_config
 from . import mdns as multicast
 from .checks import (check_addresses, check_firewall_linux, check_network, exit_code, format_report,
                      lan_of)
@@ -434,18 +434,11 @@ def _unit_now(name, unit):
     return current, expected
 
 
-def _power_lines(settings, port, network):
-    """The Sleep and Wake lines on Linux. HOOK: the keep-awake change's linux_power.py
-    gives them (status_lines(settings, port, network)); until it's there, none."""
+def _power_lines(settings, status_lines=None):
+    """The Sleep and Wake lines on Linux (linux_power.status_lines, or the status_lines given).
+    A check that breaks is one WARN line, never the whole status."""
     try:
-        from . import linux_power
-    except ImportError:
-        return []
-    status_lines = getattr(linux_power, "status_lines", None)
-    if status_lines is None:
-        return []
-    try:
-        return list(status_lines(settings, port, network))
+        return list((status_lines or linux_power.status_lines)(settings))
     except Exception as e:          # noqa: BLE001 (one line, never the whole status)
         return [line(WARN, "Sleep", f"Couldn't check sleep and wake: {type(e).__name__}: {e}")]
 
@@ -473,6 +466,7 @@ def status(name, port):
     found = {}
     jobs = {"answer": lambda: commands.probe(port, commands._probe_host(mine)),
             "mdns": lambda: multicast.mdns_lookup(f"{hostname}.local", commands.local_ipv4())}
+    jobs["power"] = lambda: _power_lines(settings)
     if public:
         jobs["public"] = lambda: tunnel.check_public(public)
     if access_port:
@@ -499,7 +493,7 @@ def status(name, port):
                                   facts.get("errors", {}).get("firewall"))
     addresses = check_addresses(network, hostname, mdns, port)
     lines += addresses
-    lines += _power_lines(settings, port, network)
+    lines += found.get("power") or [line(WARN, "Sleep", "Couldn't check sleep and wake: the check didn't finish.")]
     lines += commands.check_tunnel(settings, found.get("public"), tunnel.ingress_problems(settings, port),
                                    found.get("listener"), tunnel.credentials_problem(settings))
     header = f"Deck Lab status, {datetime.now().strftime('%Y-%m-%d %H:%M')} (port {port})"

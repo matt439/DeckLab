@@ -33,6 +33,8 @@ RUNTIME_SKIPS = {
         "Overnight controller children sample native processes even with --fake; the prior inventory action was denied",
     "decklab.tests.test_scan_tesseract.TesseractEngineTests.test_tesseract_reads_a_synthetic_bottom_line":
         "Native Tesseract OCR requires separate qualification on the Linux server PC",
+    "decklab.tests.test_keepawake.LinuxInhibitTests.test_live_inhibitor_is_listed_while_held":
+        "A real systemd-inhibit block inhibitor requires separate qualification on the Linux server PC",
     "decklab.tests.test_overnight_report_full.ControllerEndTests":
         "Overnight controller monitoring/cleanup needs native process inventory; the prior inventory action was denied",
 }
@@ -192,6 +194,28 @@ def _block_driver():
             connection.connect = classmethod(prohibited)
 
 
+INHIBIT_DISABLED = "real systemd-inhibit isn't started by the fixture runner"
+
+
+def _refuse_inhibitor(*args, **kwargs):
+    raise OSError(INHIBIT_DISABLED)
+
+
+def _guard_keepawake(module):
+    """keepawake's Linux primitive starts a real systemd-inhibit child (a sleep inhibitor held
+    on the PC) unless it's given a popen: under the fixture runner, one given none is refused
+    (the hold fails as a polkit refusal would). Explicit test fakes still run."""
+    inhibit = getattr(module, "_LinuxInhibit", None)
+    if inhibit is None or getattr(inhibit.__init__, "_fixture_guarded", False):
+        return
+    original = inhibit.__init__
+
+    def guarded(self, *args, popen=None, **kwargs):
+        original(self, *args, popen=popen or _refuse_inhibitor, **kwargs)
+    guarded._fixture_guarded = True
+    inhibit.__init__ = guarded
+
+
 def disabled_database():
     return DATABASE_DISABLED
 
@@ -207,6 +231,24 @@ class _SupportLoader:
     def exec_module(self, module):
         self.loader.exec_module(module)
         module.unavailable = disabled_database
+
+
+class _KeepAwakeLoader(_SupportLoader):
+    def exec_module(self, module):
+        self.loader.exec_module(module)
+        _guard_keepawake(module)
+
+
+class _KeepAwakeFinder(importlib.abc.MetaPathFinder):
+    """Guard keepawake's Linux inhibitor as it's imported (_guard_keepawake)."""
+    def find_spec(self, fullname, path=None, target=None):
+        if fullname != "decklab.lib.keepawake":
+            return None
+        spec = importlib.machinery.PathFinder.find_spec(fullname, path)
+        if spec is None or spec.loader is None:
+            return None
+        spec.loader = _KeepAwakeLoader(spec.loader)
+        return spec
 
 
 class _SupportFinder(importlib.abc.MetaPathFinder):
@@ -249,6 +291,10 @@ def install(root=ROOT):
         _safe_activate()
         _block_driver()
         sys.meta_path.insert(0, _SupportFinder())
+        if "decklab.lib.keepawake" in sys.modules:
+            _guard_keepawake(sys.modules["decklab.lib.keepawake"])
+        else:
+            sys.meta_path.insert(0, _KeepAwakeFinder())
         from decklab.tests import db_support
         db_support.unavailable = disabled_database
         _root, _installed = normalized, True

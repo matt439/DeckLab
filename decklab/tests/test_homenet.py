@@ -958,6 +958,7 @@ class PatchTargetTests(unittest.TestCase):
         "gather": ("run_powershell", "gather_facts"),
         "linux_facts": ("read_facts",),
         "mdns": ("MDNS_GROUP", "mdns_lookup"),
+        "service": ("_power_lines",),
     }
 
     def test_each_has_one_home(self):

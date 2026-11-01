@@ -10,15 +10,17 @@ import tempfile
 import textwrap
 import threading
 import time
-import types
 import unittest
 from pathlib import Path
 from unittest import mock
 
 from decklab.db import schedule, systemd_units
 from decklab.lib import config, control, systemd
-from decklab.lib.homenet import commands, service
+from decklab.lib.homenet import commands, linux_power, service
 from decklab.tests.homenet_support import FakeTime, Guarded, Quiet, running_state
+
+# service._power_lines itself, before a test's patch replaces it (the status tests feed it facts).
+REAL_POWER_LINES = service._power_lines
 
 LINUX = sys.platform.startswith("linux")
 # What linux_facts.network reads for a PC on the home Wi-Fi's router by cable.
@@ -358,6 +360,11 @@ class ServiceCommandTests(SystemdCase, Guarded):
         self.patch("decklab.lib.homenet.mdns.mdns_lookup",
                    return_value={"answered": True, "addresses": ["192.168.1.20"]})
         self.patch("decklab.lib.homenet.commands.pc_name", return_value="decklab-pc.home.arpa")
+        # status's sleep and wake reads (linux_power has tests of its own, in test_linux_wake).
+        self.power_facts = {"logind": {"IdleAction": "ignore", "files": []}, "suspend_target": "enabled",
+                            "inhibit_tool": "/usr/bin/systemd-inhibit"}
+        self.power = self.patch("decklab.lib.homenet.service._power_lines", side_effect=lambda settings: REAL_POWER_LINES(
+            settings, lambda s: linux_power.status_lines(s, facts=self.power_facts)))
         self.patch("decklab.lib.profiles.read_checked", return_value=None)
         self.unit = self.units / "deck-lab-test.service"
 
@@ -506,15 +513,20 @@ class ServiceCommandTests(SystemdCase, Guarded):
         listener.assert_called_once_with(18644, "decklab.example.com", commands.PROBE_TIMEOUT)
         self.assertIn("refuses visits without a Cloudflare Access login", " ".join(text.split()))
 
-    def test_the_sleep_hook_is_used_when_its_there(self):
-        fake = types.ModuleType(service.__name__.rpartition(".")[0] + ".linux_power")
-        fake.status_lines = lambda settings, port, network: [{"level": "OK", "area": "Sleep",
-                                                              "text": "It never sleeps.", "fix": None}]
-        with mock.patch.dict(sys.modules, {service.__name__.rpartition(".")[0] + ".linux_power": fake}):
-            self.assertEqual(service._power_lines({}, 18642, None)[0]["text"], "It never sleeps.")
-            fake.status_lines = mock.Mock(side_effect=RuntimeError("busctl broke"))
-            self.assertIn("Couldn't check sleep and wake: RuntimeError: busctl broke",
-                          service._power_lines({}, 18642, None)[0]["text"])
+    def test_status_has_the_sleep_lines(self):
+        self.main("install", "--at-logon")
+        code, text = self.main("status")
+        self.power.assert_called_once()
+        self.assertIn("Nothing here suspends the PC when idle (logind's IdleAction is ignore)", " ".join(text.split()))
+
+    def test_a_broken_sleep_check_is_one_line(self):
+        broken = mock.Mock(side_effect=RuntimeError("busctl broke"))
+        self.assertIn("Couldn't check sleep and wake: RuntimeError: busctl broke",
+                      REAL_POWER_LINES({}, broken)[0]["text"])
+        self.power.side_effect = lambda settings: REAL_POWER_LINES(settings, broken)
+        self.main("install", "--at-logon")
+        code, text = self.main("status")
+        self.assertIn("Couldn't check sleep and wake: RuntimeError: busctl broke", " ".join(text.split()))
 
     def test_start_needs_the_service(self):
         code, text = self.main("start")
