@@ -756,7 +756,8 @@ def release_check(forge_jar):
         advice = f"Forge is build {build}, the one this Deck Lab expects."
     elif forge_jar is None:
         advice = (f"No Forge was found: download Deck Lab's Forge {expected} ({url}), check its SHA-256, "
-                  f"unzip it and set forge_dir in config.json to its folder.")
+                  f"unzip it and set forge_dir in config.json to its folder (or rename the folder to "
+                  f"forge-decklab, the default: SELF-HOSTING.md step 8).")
     elif build is None:
         advice = (f"This Forge's build can't be read from its jar. This Deck Lab expects {expected}: "
                   f"download it from {url} and set forge_dir to its folder.")

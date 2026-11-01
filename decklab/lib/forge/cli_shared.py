@@ -83,7 +83,8 @@ def _positive(text):
 def _games_problem(games, batch):
     """Why --games doesn't suit (--batch), or None."""
     if batch is None and games not in GAME_CHOICES:
-        return f"Games must be one of {', '.join(map(str, GAME_CHOICES[:-1]))} or {GAME_CHOICES[-1]}."
+        return (f"Games must be one of {', '.join(map(str, GAME_CHOICES[:-1]))} or {GAME_CHOICES[-1]}, "
+                "or with --batch N any whole number of batches (such as --games 1 --batch 1).")
     if batch is not None and (games < 1 or games % batch):
         return f"Games must be a whole number of batches of {batch} (--batch)."
     return None

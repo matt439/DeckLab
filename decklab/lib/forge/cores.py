@@ -282,8 +282,8 @@ def pin(pid, slot):
         if int(pid) == os.getpid() or not pin_setting() or pin_mode() == "none":
             return False
         if sys.platform != "win32":
-            _say_once("platform", "Forge's workers run unpinned: pinning them to cores works only on Windows, "
-                                  "so config.json's forge_pin changes nothing here.")
+            _say_once("platform", "Forge's workers run unpinned on this system: pinning them to cores works only "
+                                  "on Windows, so the forge_pin setting does nothing here.")
             return False
         mask = mask_for(slot)
         if mask is None:

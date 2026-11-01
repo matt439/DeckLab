@@ -722,7 +722,8 @@ def step_scan(r, ctx, status=None, ocr=None, folder=None):
             r.note(FAIL, f"The {engine} engine is here but couldn't read a test picture: {_first_line(e)}")
             return
     read = scan.read_lines(lines)
-    if "227" in read["numbers"] and "FDN" in [str(s).upper() for s in read["sets"]]:
+    # A set code one OCR confusion away ("FON") is what propose() looks up too.
+    if "227" in read["numbers"] and any("fdn" in scan._set_variants(str(code)) for code in read["sets"]):
         r.note(PASS, f"The {engine} engine read a test card's bottom line (227, FDN)")
     else:
         r.note(WARN, f"The {engine} engine read a test card's bottom line as {' / '.join(lines) or 'nothing'}, "

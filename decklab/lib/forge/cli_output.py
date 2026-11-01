@@ -324,9 +324,14 @@ def _setup_lines(found=None):
     data = shared.pilots.load()
     if not shared.pilots.is_default(data["default"]):
         lines.append(f"pilot of every list: {shared.pilots.words(data['default'])}")
-    for name, pilot in sorted(data["lists"].items()):
-        if not shared.pilots.is_default(pilot):
+    own = {name: pilot for name, pilot in data["lists"].items() if not shared.pilots.is_default(pilot)}
+    away = shared.pilots.lists_not_here(own)
+    for name, pilot in sorted(own.items()):
+        if name not in away:
             lines.append(f"pilot of {name}: {shared.pilots.words(pilot)}")
+    if away:
+        lines.append(f"{len(away)} pilot{'s' if len(away) != 1 else ''} in decklab/simulation.json for decks "
+                     "not in this install, left out (python -m decklab.lib.forge pilots lists them)")
     if data["problems"]:
         lines.append(f"! decklab/simulation.json has {len(data['problems'])} bad entr"
                      f"{'y' if len(data['problems']) == 1 else 'ies'} (python -m decklab.lib.forge pilots --check)")
@@ -401,6 +406,16 @@ def _nothing_played_words(mode, most, v, looked_only):
                     f"±{100 * width:.1f} points.")
     return (f"Nothing to play: the result already has as many games as this run would play "
             f"({n:,}, at most {most:,}), so the plain numbers stand.")
+
+
+def not_saved_line(result):
+    """play --no-save's last line: what the numbers above count, and that nothing was saved."""
+    played = result["runs"][-1]["played"]
+    earlier = sum(run_.get("played") or 0 for run_ in result["runs"][:-1])
+    counted = (f"this run's {played} game{'s' if played != 1 else ''} with the {earlier} saved before"
+               if earlier else f"only this run's {played} game{'s' if played != 1 else ''}")
+    return (f"  ! not saved (--no-save): the numbers above count {counted}; the saved result is unchanged, "
+            "so another --no-save run plays these same games again")
 
 
 def _print_play(a, b, result, v):

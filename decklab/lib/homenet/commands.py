@@ -330,7 +330,7 @@ def urls(port, address=None, hostname=None):
     hostname = (hostname or pc_name()).lower().split(".", 1)[0]
     out = [("On this PC", f"http://localhost:{port}/")]
     if address:
-        out.append(("From a phone or the iPad", f"http://{address}:{port}/"))
+        out.append(("From a phone or tablet", f"http://{address}:{port}/"))
     out.append(("Or, if the phone finds it by name", f"http://{hostname}.local:{port}/"))
     return out
 

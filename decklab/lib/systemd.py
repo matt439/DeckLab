@@ -86,10 +86,12 @@ def said(out, err, code):
     return text or f"exit code {code}"
 
 
-def show(unit, *properties):
+def show(unit, *properties, unix_times=False):
     """{property: value} of unit from systemctl --user show, or None when the user
-    manager can't be asked (not running, no systemctl)."""
-    code, out, _ = systemctl("show", unit, "--no-pager", "-p", ",".join(properties))
+    manager can't be asked (not running, no systemctl). unix_times: times as "@<seconds>"
+    (--timestamp=unix, systemd 248 and later), so they can be shown in any zone."""
+    extra = ("--timestamp=unix",) if unix_times else ()
+    code, out, _ = systemctl("show", unit, "--no-pager", *extra, "-p", ",".join(properties))
     if code != 0:
         return None
     found = {}

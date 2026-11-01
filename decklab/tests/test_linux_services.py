@@ -482,7 +482,7 @@ class ServiceCommandTests(SystemdCase, Guarded):
         text = " ".join(text.split())
         self.assertIn("Network: eth0: 192.168.1.20/24 from the router (DHCP).", text)
         self.assertIn("No firewall service is on", text)
-        self.assertIn("From a phone or the iPad: http://192.168.1.20:18642/", text)
+        self.assertIn("From a phone or tablet: http://192.168.1.20:18642/", text)
         self.assertIn("http://decklab-pc.local:18642/", text)          # the first label, as avahi says it
         self.assertIn("reserve 192.168.1.20 for this PC in the router (MAC address 00:11:22:33:44:55)", text)
         self.assertIn("the real test is opening the address above", text)

@@ -170,6 +170,12 @@ def latest(kinds, dbname=None, conn=None):
     return {kind: found.get(kind) for kind in kinds}
 
 
+def sentence(text):
+    """text (an error or its message) ending in exactly one full stop."""
+    text = str(text).rstrip()
+    return text if text.endswith((".", "?", "!")) else text + "."
+
+
 def dump_detail(counts):
     """A dump row's detail: "rows: " and the counts as JSON, with nothing after them (the
     pre-phase-5 code reads it with json.loads of everything after "rows: ")."""
@@ -443,8 +449,8 @@ def run_backup(dest=None, say=say):
         copy = copy_to(local, dest, staging=local.parent if configured else None, s=s)
     except OSError as e:
         record("dump", started, False, local, size, f"copy to {dest} failed: {e}; {rows}", digests=digests)
-        say(f"Backup made ({local}, {size:,} bytes), but it couldn't be copied to {dest}: {e}. "
-            "The local copy is kept.")
+        say(f"Backup made ({local}, {size:,} bytes), but it couldn't be copied to {dest}: "
+            f"{sentence(e)} The local copy is kept.")
         return 1
     record("dump", started, True, copy, size, rows, digests=digests)
     say(f"Backup made: {copy} ({size:,} bytes, {sum(counts.values()):,} rows in {len(counts)} tables).")
@@ -658,20 +664,23 @@ def status(dbname=None, now=None):
     """The backups part of `status`, as a list of lines."""
     s = db.settings()
     last = last_ok(dbname)
-    newest = latest(("check", "restore_check"), dbname)
+    newest = latest(("dump", "export", "check", "restore_check"), dbname)
     now = (now or datetime.now()).astimezone()
 
     def when(kind, label):
+        """The last run of a kind that worked, or, when the newest run failed, that failure
+        and the last that worked (so a dump that stopped reaching backup_dir shows at once,
+        not only once stale_backup_hours has passed)."""
         at = last[kind]
-        return f"  {label}: {at.astimezone():%Y-%m-%d %H:%M}" if at else f"  {label}: never"
+        run = newest.get(kind)
+        if run is None or run["ok"]:
+            return f"  {label}: {at.astimezone():%Y-%m-%d %H:%M}" if at else f"  {label}: never"
+        why = str(run["detail"] or "").split("; " + _ROWS, 1)[0]      # a failed dump's counts aren't the news
+        line = f"  {label}: {run['started_at'].astimezone():%Y-%m-%d %H:%M}, FAILED: {why}"
+        return line + (f" (the last that worked: {at.astimezone():%Y-%m-%d %H:%M})" if at else "")
 
     def restore_line():
-        run = newest["restore_check"]
-        if run is None or run["ok"]:
-            return when("restore_check", "last restore check")
-        line = f"  last restore check: {run['started_at'].astimezone():%Y-%m-%d %H:%M}, FAILED: {run['detail']}"
-        at = last["restore_check"]
-        return line + (f" (the last that worked: {at.astimezone():%Y-%m-%d %H:%M})" if at else "")
+        return when("restore_check", "last restore check")
 
     def check_line():
         run = newest["check"]

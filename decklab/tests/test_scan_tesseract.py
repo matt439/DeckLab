@@ -102,6 +102,19 @@ class TsvLinesTests(unittest.TestCase):
         with self.assertRaises(scan.OcrUnavailable):
             scan._tsv_lines("level\tleft\ttext\n5\t1\tElves\n")      # a header without the columns needed
 
+    def test_a_faint_set_line_is_kept_but_faint_art_is_not(self):
+        # Tesseract 5.5 gave a drawn card's "FDN • EN" as one word "FDN-EN" with confidence 0 (WSL, 2026-11-02).
+        lines = scan._tsv_lines(tsv((1, 1, 1, 90, 1930, 28, 34, 91.0, "C"), (1, 1, 1, 130, 1930, 92, 34, 90.0, "0227"),
+                                    (2, 1, 1, 90, 1975, 130, 34, 0.0, "FDN-EN"),
+                                    (3, 1, 1, 400, 900, 60, 40, 12.0, "Wwm"),
+                                    (4, 1, 1, 400, 1000, 60, 40, 5.0, "Llanowar")))
+        self.assertEqual(lines, ["C 0227", "FDN-EN"])
+        read = scan.read_lines(lines)
+        self.assertEqual((read["numbers"], read["sets"], read["language"]), (["227"], ["FDN"], "en"))
+        answer = scan.propose(lines)
+        self.assertEqual((answer["proposals"][0]["name"], answer["proposals"][0]["collector_number"]),
+                         ("Llanowar Elves", "227"))
+
     def test_broken_rows_are_skipped(self):
         text = ELVES_TSV + "5\t1\t9\t1\t1\t1\tx\t10\t10\t10\t90\tBroken\n5\t1\t9\n"
         self.assertNotIn("Broken", " ".join(scan._tsv_lines(text)))
@@ -143,6 +156,31 @@ class TesseractEngineTests(unittest.TestCase):
         self.assertEqual(kwargs["env"]["OMP_THREAD_LIMIT"], "1")
         self.assertEqual(kwargs["timeout"], scan.OCR_TIMEOUT)
         self.assertTrue(kwargs["capture_output"])
+
+    def test_a_second_pass_when_the_first_misses_the_printing(self):
+        sparse = tsv((1, 1, 1, 100, 1240, 120, 44, 93.0, "ture"), (1, 1, 1, 230, 1240, 60, 44, 92.0, "Elf"))
+        blocks = tsv((1, 1, 1, 100, 90, 220, 56, 96.0, "Llanowar"), (1, 1, 1, 340, 90, 150, 56, 96.3, "Elves"),
+                     (2, 1, 1, 90, 1930, 28, 34, 91.0, "C"), (2, 1, 1, 130, 1930, 92, 34, 90.0, "0227"),
+                     (3, 1, 1, 90, 1975, 70, 34, 90.1, "FDN"), (3, 1, 1, 188, 1975, 40, 34, 89.7, "EN"))
+        with mock.patch.object(scan, "_tesseract", return_value="/usr/bin/tesseract"), \
+                mock.patch.object(scan.subprocess, "run",
+                                  side_effect=[completed(stdout=sparse), completed(stdout=blocks)]) as run:
+            lines = scan.tesseract_ocr(self.photo)
+        self.assertEqual(lines, ["Llanowar Elves", "C 0227", "FDN EN"])
+        self.assertEqual([call.args[0][5:7] for call in run.call_args_list], [["--psm", "11"], ["--psm", "6"]])
+        # A second pass that reads no more of the printing leaves the first pass's lines.
+        with mock.patch.object(scan, "_tesseract", return_value="/usr/bin/tesseract"), \
+                mock.patch.object(scan.subprocess, "run",
+                                  side_effect=[completed(stdout=sparse), completed(stdout=HEADER + "\n")]):
+            self.assertEqual(scan.tesseract_ocr(self.photo), ["ture Elf"])
+        # One pass is enough when it reads both the number and the set line.
+        lines, run = self.run_with(completed(stdout=ELVES_TSV))
+        self.assertEqual(run.call_count, 1)
+
+    def test_the_synthetic_card_is_softened(self):
+        hard, soft = scan_image.png(["FDN EN"], soften=0), scan_image.png(["FDN EN"])
+        self.assertNotEqual(hard, soft)
+        self.assertEqual(hard[:8], b"\x89PNG\r\n\x1a\n")
 
     def test_failures_are_told_in_plain_words(self):
         for stderr, expected in (

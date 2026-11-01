@@ -727,7 +727,8 @@ class CommandLineTests(ForgeCase):
 
     def test_play_errors_are_plain_sentences(self):
         self.assertEqual(self.play("--games", "500"),
-                         (1, "", "Games must be one of 200, 400, 800, 1600 or 3200.\n"))
+                         (1, "", "Games must be one of 200, 400, 800, 1600 or 3200, or with --batch N any whole "
+                                 "number of batches (such as --games 1 --batch 1).\n"))
         self.assertEqual(self.play("--games", "25", "--batch", "10"),
                          (1, "", "Games must be a whole number of batches of 10 (--batch).\n"))
         self.assertEqual(self.play("--seed-base", "-1"), (1, "", "The seed base must be 0 or more (--seed-base).\n"))
@@ -755,16 +756,18 @@ class CommandLineTests(ForgeCase):
         self.results.mkdir()
         listed = self.run_main("list", "--results-dir", str(self.results))
         deployed = forge.overrides.deployed_hash(forge.common._user_dir())[:12]
-        # The shipped simulation.json's pilots too: The Free Peoples' optional-target fix (adopted 2026-10-21).
+        # The shipped simulation.json's pilot (The Free Peoples' optional-target fix, adopted 2026-10-21) is for
+        # a deck this test's inventory doesn't have, so it's counted, not named.
         self.assertEqual(listed, (0, f"card-script overrides: Fiery Annihilation (hash {deployed})\n"
-                                     "pilot of casual/the-free-peoples: Forge's AI plays it with the optional-target fix\n"
+                                     "1 pilot in decklab/simulation.json for decks not in this install, left out "
+                                     "(python -m decklab.lib.forge pilots lists them)\n"
                                      "No saved matchups.\n", ""))
         self.play()
         code, out, _ = self.run_main("list", "--results-dir", str(self.results))
         self.assertEqual(code, 0)
         # Played with plain Forge (the tests' Java has no JDK, so no card log): marked so. test_forge_engine has
         # the marks of the other engines.
-        self.assertRegex(out, r"^card-script overrides: [^\n]+\n(?:pilot of [^\n]+\n)*"
+        self.assertRegex(out, r"^card-script overrides: [^\n]+\n(?:pilot of [^\n]+\n)*(?:\d+ pilots? in [^\n]+\n)?"
                               r"\S+ +200 games +\d+\.\d%  casual/green \(target\) vs casual/red \(target\)  by command line"
                               r"  \[plain Forge\]\n$")
 

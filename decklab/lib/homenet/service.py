@@ -98,7 +98,7 @@ def unit_text(python, workdir, args, task=TASK_NAME, env=None):
     directory = systemd_units._path(workdir, "the repo").replace("%", "%%")
     settings = "".join(f"Environment={_quote(f'{name}={value}')}\n" for name, value in (env or {}).items())
     return f"""[Unit]
-Description=Deck Lab ({task}; python -m decklab.lib.homenet install)
+Description={"Deck Lab" if task == TASK_NAME else f"Deck Lab ({task})"} (python -m decklab.lib.homenet install)
 StartLimitIntervalSec={GIVE_UP_WITHIN}
 StartLimitBurst={GIVE_UP}
 
@@ -406,7 +406,7 @@ def check_service(name, found, expected=None, current=None, linger=None):
                                         f"{found.get('ExecMainStatus') or '?'})."),
                         f"See decklab/data/logs/server.log and journalctl --user -u {unit}, then: "
                         "python -m decklab.lib.homenet restart"))
-    if expected is not None and current != expected:
+    if expected is not None and not _same_unit(current, expected):
         out.append(line(WARN, area, "Its unit isn't what install writes now (the repo moved, Python changed, or "
                                     "it was installed by an older Deck Lab).",
                         "python -m decklab.lib.homenet install"))
@@ -417,6 +417,14 @@ def check_service(name, found, expected=None, current=None, linger=None):
         out.append(line(WARN, area, "It starts when you log in, not at boot, and stops when you log out.",
                         "loginctl enable-linger"))
     return out
+
+
+def _same_unit(current, expected):
+    """Whether two unit texts match, but for their Description= lines (its wording changed on
+    2026-11-02; an older install isn't out of date for that)."""
+    def body(text):
+        return [row for row in (text or "").splitlines() if not row.startswith("Description=")]
+    return body(current) == body(expected)
 
 
 def _unit_now(name, unit):

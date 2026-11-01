@@ -275,6 +275,7 @@ class NightlyTests(_QuietLog, unittest.TestCase):
                 mock.patch.object(check, "run", step("check", 0)), \
                 mock.patch.object(backup, "run_restore_check", step("restore", 0)),                 mock.patch.object(shops, "nightly", step("shops", 0)), \
                 mock.patch.object(backup, "last_ok", lambda *a: {"restore_check": last_check}), \
+                mock.patch.object(backup, "latest", lambda *a, **k: {"restore_check": None}), \
                 mock.patch.object(db, "settings", lambda: dict(db.DEFAULTS)), \
                 mock.patch.object(nightly, "wait_for_database", step("wait", True)), \
                 mock.patch.object(keepawake, "platform_power", keepawake._NoPower):

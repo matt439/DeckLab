@@ -291,13 +291,15 @@ def parser():
     sp.add_argument("--days", type=int, default=30, metavar="N",
                     help="the window for days visited and the pages opened most (1-366, default 30)")
     sp.add_argument("--profile", metavar="P", help="only this profile's visits")
-    sp = command("schedule", _schedule, "Manage the nightly Task Scheduler task, or print a systemd user "
-                                      "unit preview (or, wake-timer, the root timer that wakes a sleeping "
+    sp = command("schedule", _schedule, "Manage the nightly job (a Task Scheduler task on Windows, a systemd "
+                                      "user timer on Linux), or print a systemd user unit preview (or, wake-timer, the root timer that wakes a sleeping "
                                       "Linux PC for it) without installing anything.")
     sp.add_argument("action", choices=("install", "remove", "status", "preview-systemd", "wake-timer"))
     sp.add_argument("--unit", choices=("service", "timer"), help="which systemd user unit to print")
-    sp.add_argument("--python", metavar="PATH", help="preview: absolute POSIX path to the target Python")
-    sp.add_argument("--workdir", metavar="DIR", help="preview: absolute POSIX path to the target repo")
+    sp.add_argument("--python", metavar="PATH", help="preview-systemd (needed): absolute POSIX path to the "
+                                                     "target Python")
+    sp.add_argument("--workdir", metavar="DIR", help="preview-systemd (needed): absolute POSIX path to the "
+                                                   "target repo")
     sp.add_argument("--at", metavar="HH:MM", help="preview and wake-timer: the nightly run's daily local time "
                                                "(default 03:30)")
     sp.add_argument("--zone", metavar="NAME", help="preview and wake-timer: the time zone the timer counts --at "

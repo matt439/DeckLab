@@ -62,6 +62,10 @@ def preview_systemd(unit, python, workdir, at=None, say=print, zone=None):
     from decklab.db import systemd_units
     if unit not in ("service", "timer"):
         raise ValueError("preview-systemd requires --unit service or --unit timer.")
+    missing = [flag for flag, given in (("--python", python), ("--workdir", workdir)) if given is None]
+    if missing:
+        raise ValueError(f"preview-systemd needs {' and '.join(missing)}: the target computer's Python and repo, "
+                         "as absolute POSIX paths (such as --python /usr/bin/python3.14 --workdir /srv/DeckLab).")
     units = systemd_units.nightly_units(python, workdir, AT if at is None else at, zone)
     name = systemd_units.SERVICE if unit == "service" else systemd_units.TIMER
     say(units[name].rstrip("\n"))
@@ -414,6 +418,39 @@ def _usec_time(value):
     return None if value in ("", "n/a", "0") else value
 
 
+MANUAL_AFTER_S = 60         # a service start this long after the timer's last trigger was another start
+
+
+def _show(systemd, unit, *properties):
+    """systemd.show with times as "@<seconds>", or, for a systemd too old for that, as it prints them."""
+    found = systemd.show(unit, *properties, unix_times=True)
+    return found if found is not None else systemd.show(unit, *properties)
+
+
+def _seconds(value):
+    """The Unix time in "@<seconds>" (systemctl show --timestamp=unix), or None."""
+    m = re.fullmatch(r"@(\d+)(?:\.\d+)?", (value or "").strip())
+    return int(m.group(1)) if m else None
+
+
+def _when(value, zone=None):
+    """A time from systemctl show for status: "@<seconds>" in config.json's zone when it's set (with
+    this PC's own clock beside it when that differs: "Tue 2026-11-03 03:30 Australia/Sydney (02:30
+    AEST on this PC's clock)"), else the PC's own; any other text as systemd wrote it."""
+    seconds = _seconds(value)
+    if seconds is None:
+        return _usec_time(value)
+    from datetime import datetime
+    from decklab.lib import hometime
+    here = datetime.fromtimestamp(seconds).astimezone()
+    tz = hometime.zone(zone) if zone else None
+    if tz is None:
+        return f"{here:%a %Y-%m-%d %H:%M %Z}"
+    there = datetime.fromtimestamp(seconds, tz)
+    shown = f"{there:%a %Y-%m-%d %H:%M} {zone}"
+    return shown + (f" ({here:%H:%M %Z} on this PC's clock)" if there.utcoffset() != here.utcoffset() else "")
+
+
 def system_unit_state(unit):
     """{"LoadState", "ActiveState", "UnitFileState"} of a system unit (systemctl show, without
     --user), or None when systemctl can't be asked."""
@@ -458,21 +495,25 @@ def status_systemd(wake=None):
         return [f"Nightly timer: {systemd_units.TIMER} isn't installed (python -m decklab.db schedule install)."]
     lines = [f"Nightly timer: {systemd_units.TIMER} runs {systemd_units.SERVICE} daily at {_at_text(_zone())}, catching up "
              f"after the PC was off ({folder})."]
-    timer = systemd.show(systemd_units.TIMER, "UnitFileState", "ActiveState", "NextElapseUSecRealtime",
-                         "LastTriggerUSec")
+    timer = _show(systemd, systemd_units.TIMER, "UnitFileState", "ActiveState", "NextElapseUSecRealtime",
+                  "LastTriggerUSec")
     if timer is None:
         lines.append("  WARNING: systemctl --user can't be asked about it (is the user manager running?).")
         return lines
     if timer.get("UnitFileState") != "enabled" or timer.get("ActiveState") != "active":
         lines.append(f"  WARNING: it isn't enabled and active ({timer.get('UnitFileState') or '?'}, "
                      f"{timer.get('ActiveState') or '?'}), so nothing is backed up: run schedule install again.")
+    zone = _zone()
     if _usec_time(timer.get("NextElapseUSecRealtime")):
-        lines.append(f"  Next run: {_usec_time(timer['NextElapseUSecRealtime'])}.")
-    service = systemd.show(systemd_units.SERVICE, "Result", "ExecMainStatus") or {}
-    last = _usec_time(timer.get("LastTriggerUSec"))
-    if last:
+        lines.append(f"  Next run: {_when(timer['NextElapseUSecRealtime'], zone)}.")
+    service = _show(systemd, systemd_units.SERVICE, "Result", "ExecMainStatus", "ExecMainStartTimestamp") or {}
+    last, how = timer.get("LastTriggerUSec"), ""
+    triggered, started = _seconds(last), _seconds(service.get("ExecMainStartTimestamp"))
+    if started is not None and (triggered is None or started > triggered + MANUAL_AFTER_S):
+        last, how = service["ExecMainStartTimestamp"], " (started by hand, not by the timer)"
+    if _usec_time(last):
         result = service.get("Result") or "?"
-        lines.append(f"  Last run: {last}, " + ("it succeeded." if result == "success" else
+        lines.append(f"  Last run: {_when(last, zone)}{how}, " + ("it succeeded." if result == "success" else
                                                  f"it failed ({result}, exit code "
                                                  f"{service.get('ExecMainStatus') or '?'}): see "
                                                  "decklab/data/logs/db.log."))

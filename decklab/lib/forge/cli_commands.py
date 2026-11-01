@@ -59,23 +59,29 @@ def _play_args(sub):
     play = sub.add_parser("play", help="play a matchup")
     play.add_argument("a", help="deck id or .dck file")
     play.add_argument("b", help="deck id or .dck file")
-    play.add_argument("--owned-a", action="store_true")
-    play.add_argument("--owned-b", action="store_true")
-    play.add_argument("--games", type=int, help=f"a set number of games (default {shared.DEFAULT_GAMES})")
+    play.add_argument("--owned-a", action="store_true", help="deck A plays its Play-now (owned-only) list")
+    play.add_argument("--owned-b", action="store_true", help="deck B plays its Play-now (owned-only) list")
+    play.add_argument("--games", type=int,
+                      help=f"a set number of games: {', '.join(map(str, shared.GAME_CHOICES))} (default "
+                           f"{shared.DEFAULT_GAMES}), or with --batch any whole number of batches")
     play.add_argument("--until", choices=("assess", "ahead"),
                       help="play in stages until the win rate is known to within ±3 points (assess), or until "
                            "one deck is clearly ahead or they're about even (ahead); not with --games")
     play.add_argument("--max", type=shared._positive,
                       help="with --until: the most games the result may reach (400 to 3,200; for ahead, rounded "
                            "down to a check: 400, 800, 1,600 or 3,200)")
-    play.add_argument("--batch", type=shared._positive)
+    play.add_argument("--batch", type=shared._positive,
+                      help="games in each batch a worker plays (config.json's forge_batch_games by default); "
+                           "lets --games be any multiple of it")
     play.add_argument("--workers", type=shared._positive)
     play.add_argument("--seed-base", type=int)
     play.add_argument("--a-first", action="store_true",
                       help="deck A is Forge's deck 1 first (a new result's first seat block; even batches without "
                            "the card log)")
     play.add_argument("--results-dir")
-    play.add_argument("--no-save", action="store_true")
+    play.add_argument("--no-save", action="store_true",
+                      help="don't save this run's games: the numbers shown still count the saved games with "
+                           "them, and the saved result (and its next game) is unchanged")
     play.add_argument("--json", action="store_true")
     play.add_argument("--by", default="command line")
     play.add_argument("--local", action="store_true",
@@ -125,6 +131,8 @@ def _cmd_play(args):
         print(shared.json.dumps({"view": shown_view, "result": result}, ensure_ascii=False))
         return 0
     output._print_play(a, b, result, shown_view)
+    if args.no_save:
+        print(output.not_saved_line(result))
     return 0
 
 
@@ -320,8 +328,10 @@ def _cmd_pilots(args):
                           "problems": data["problems"]}, indent=1, ensure_ascii=False))
     else:
         print(f"default pilot: {shared.pilots.words(data['default']) or 'Forge AI with its Default profile'}")
+        away = shared.pilots.lists_not_here(data["lists"])
         for name, pilot in sorted(data["lists"].items()):
-            print(f"{name}: {shared.pilots.words(pilot) or 'Forge AI with its Default profile'}")
+            print(f"{name}{' (no such deck in this install)' if name in away else ''}: "
+                  f"{shared.pilots.words(pilot) or 'Forge AI with its Default profile'}")
         if not data["lists"]:
             print("No list has a pilot of its own.")
         mine = set(shared.pilots.deck_lab_profiles())

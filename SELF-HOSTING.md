@@ -17,7 +17,7 @@ This guide sets up Deck Lab on your own computer, from nothing, for you and your
 | Photo scanning (Scan cards, Scan token cards) | Yes (Windows' own OCR engine, nothing to install) | Yes, with the `tesseract-ocr` package | With Tesseract |
 | Keeping the PC awake while in use, and waking on request (step 12) | Yes (a power request) | Yes (`systemd-inhibit`) | No |
 
-Deck Lab is built and used every day on Windows. On Linux the whole test suite passes, and CI runs it there on every change, beside Windows, together with a check that installs, restarts, stops and removes the systemd service and timer under a real systemd. Since 2026-11-01 the live server can run on Linux too (story E11-S58): keeping the PC awake, photo scanning with Tesseract, Forge games and waking from sleep are built and fixture-tested, and are still to be tried on a real Linux server PC.
+Deck Lab is built and used every day on Windows. On Linux the whole test suite passes, and CI runs it there on every change, beside Windows, together with a check that installs, restarts, stops and removes the systemd service and timer under a real systemd. Since 2026-11-01 the live server can run on Linux too (story E11-S58): keeping the PC awake, photo scanning with Tesseract, Forge games and waking from sleep are built and fixture-tested. A full install in WSL's Ubuntu (2026-11-02) has run the database, backups, the services, keeping the PC awake and real Forge games; waking from sleep and scanning real card photos are still to be tried on a real Linux server PC.
 
 Whatever the system, the home listener (port 8642) answers only addresses on a home network: loopback, the private IPv4 ranges (10/8, 172.16/12, 192.168/16), link-local addresses and IPv6's private ranges (fc00::/7, fe80::/10). Anything else gets 403 "This address only takes visits from the home network." A VPN such as Tailscale uses other addresses (100.64.0.0/10): add them to `config.json` as `"home_networks": ["100.64.0.0/10"]`. The tunnel's listener (step 10) isn't affected.
 
@@ -92,7 +92,7 @@ cp decklab/config.example.json decklab/config.json
 
 To add a second person who shares your cards, add another profile with `"space": "home"`, `"role": "member"` and `"plays_as": "wife"`. Someone with a collection of their own gets `"space"` set to their own `id` and no `plays_as`. The reference's "People's own collections (spaces)" explains what each can see and change.
 
-`config.json` is gitignored, so your names and addresses never end up in a commit. The other settings all have defaults. [decklab/config.full.example.json](decklab/config.full.example.json) shows the optional blocks for a backup folder, outside access through Cloudflare and a records repo.
+`config.json` is gitignored, so your names and addresses never end up in a commit. The other settings all have defaults. [decklab/config.full.example.json](decklab/config.full.example.json) shows the optional blocks for a backup folder, outside access through Cloudflare and a records repo. Its `backup_dir` and `records_repo` are Windows paths; Linux refuses those, so on Linux give absolute paths such as `/mnt/nas-backups/DeckLab` and `/home/<you>/MyCardRecords`.
 
 Two optional settings matter most on Linux:
 
@@ -147,7 +147,11 @@ python -m decklab.doctor --json
 Both forms give the same ordered findings and next setup steps. Exit status `0`
 means the core checks passed, `1` means known setup work remains, and `2` means a
 core check could not be verified (or the command arguments were invalid). Optional
-Java/Forge findings do not block the core app.
+findings (Java and Forge, photo scanning, the time zone and the backup folders) do not
+block the core app. The backup folders check reads `database.backup_dir`, `staging_dir`,
+`export_repo` and `pg_bin` as the backup does: a Windows or relative path on Linux, a
+`backup_dir` whose folder can't be reached, or one on the staging folder's disk without
+`backup_same_device_ok` is reported, since every backup would fail; nothing is written.
 
 The command reads the local configuration and card index and attempts one app-role
 database connection. It checks PostgreSQL's version, the bundled migration
@@ -203,6 +207,11 @@ You need a **Java JDK 21 or later** (a full JDK, with `javac` and `jar`: the car
 
    If it doesn't match, the download is damaged: delete it and download it again.
 3. **Unzip it** somewhere of its own, such as `C:\Tools` or `~/tools`. It makes one folder, `forge-2.0.15-decklab-52387e83f`.
+   - Windows: Explorer's **Extract All**, or `Expand-Archive forge-2.0.15-decklab-52387e83f.zip C:\Tools`.
+   - Linux: `unzip forge-2.0.15-decklab-52387e83f.zip -d ~/tools` (a stock Ubuntu or Debian server has no `unzip`: `sudo apt install unzip`). Without it, Deck Lab's own unzipper keeps the launchers' permissions, from the repo's folder: `python -c "import os; from decklab.update import safe_extract; print(safe_extract('<the zip>', os.path.expanduser('~/tools')))"`. (Python's own `python -m zipfile -e` drops them; games still play, as Deck Lab starts Java itself.)
+   - macOS: `unzip forge-2.0.15-decklab-52387e83f.zip -d ~/tools`.
+
+   Then either rename that folder to `forge-decklab` (`~/tools/forge-decklab`, or `C:\Tools\forge-decklab` on Windows), where Deck Lab looks when `config.json` has no `forge_dir`, or keep its name and set `forge_dir` to it (below). Later releases are installed beside it as `forge-<release>` by `python -m decklab.update`, which sets `forge_dir` itself.
 4. Go on with "Point Deck Lab at it" below.
 
 ### Or build it from source
@@ -223,14 +232,14 @@ Only if you want to change Forge itself, or no release fits your Deck Lab. It ne
 
 ### Point Deck Lab at it
 
-1. **Set `forge_dir`** in `config.json` to the folder you unzipped or installed:
+1. **Set `forge_dir`** in `config.json` to the folder you unzipped or installed (not needed if you renamed it to the default `forge-decklab` folder above):
    ```json
    "forge_dir": "<that folder>",
    ```
    Deck Lab looks for Java where the usual JDK installers put it (Oracle's `C:\Program Files\Java`, Temurin's `Eclipse Adoptium`, `Microsoft`, `Zulu` and `Amazon Corretto`; the newest JDK, one with `javac` before a JRE), then `JAVA_HOME`. Off Windows it looks in `JAVA_HOME`, `/usr/lib/jvm/*`, `/usr/lib64/jvm/*`, `/opt/java/*`, `/opt/jdk*`, `~/.sdkman/candidates/java/*`, `~/.jdks/*` and the PATH's `java`, and takes only Java 21 or later (by the JDK's `release` file), saying "Java 21 or later wasn't found" (and which older one it found) otherwise. Set `"forge_java"` to the JDK's `java` (`java.exe` on Windows) if it picks the wrong one.
 
-   On Linux, set `"forge_java"` for the background service: it doesn't see a `JAVA_HOME` or PATH set in a shell profile. Give the JDK's real path, as `readlink -f $(which java)` prints it (such as `/usr/lib/jvm/java-21-openjdk-amd64/bin/java`), not `/usr/bin/java`, which is a link the doctor won't follow. Without `forge_dir`, Deck Lab looks in `~/tools/forge-decklab` on Linux and macOS (`C:\Tools\forge-decklab` on Windows).
-2. **Check it:** `python -m decklab.lib.forge status` says whether Forge is ready, and its `build:` line whether it's the build this Deck Lab expects (and what to download if not). Then run `python -m decklab.lib.forge cardlog-check` once: it plays a few games several ways and turns on the card log when they match.
+   On Linux a distribution's JDK under `/usr/lib/jvm` is found without `forge_java`, by the background service too. Set it for a JDK installed elsewhere and found only through `JAVA_HOME` or a PATH set in a shell profile (the service sees neither), or so that `python -m decklab.doctor` can check Java (it never searches for one, so without `forge_java` its Java check says "not verified"). Give the JDK's real path, as `readlink -f $(which java)` prints it (such as `/usr/lib/jvm/java-21-openjdk-amd64/bin/java`), not `/usr/bin/java`, which is a link the doctor won't follow; `forge status`'s `java:` line prints the real path too. Without `forge_dir`, Deck Lab looks in `~/tools/forge-decklab` on Linux and macOS (`C:\Tools\forge-decklab` on Windows).
+2. **Check it:** `python -m decklab.lib.forge status` says whether Forge is ready, and its `build:` line whether it's the build this Deck Lab expects (and what to download if not). Then run `python -m decklab.lib.forge cardlog-check` once: it builds the card-log jar with this PC's JDK and plays a few games several ways, to confirm the card log here. The release Deck Lab expects already has the card log on (`status` says `card log: on`); for another build, cardlog-check is what turns it on when the games match.
 
 Deck Lab runs up to 16 Forge workers at once, each with up to 1 GB of memory. Unless `config.json` sets `"forge_workers"`, it sizes that to the PC: about one a physical core, and 1.5 GB of memory each after 6 GB left for everything else (an 8-core PC with 16 GB gets 4; a 16-core PC with 32 GB, 8). Set `"forge_workers"` to choose another number, or admins can lower it on the Settings page.
 
@@ -310,7 +319,7 @@ It's for a PC that serves Deck Lab and only takes updates, with the code written
 2. reinstalls psycopg into the `.venv` when `decklab/requirements.txt` changed (on Windows the server is stopped for it, since it holds psycopg's files open; on Linux it keeps running until step 5);
 3. with migrations pending, makes a backup (`python -m decklab.db backup`), then migrates;
 4. when the new Deck Lab expects another Forge build than `forge_dir` holds, downloads that release, checks its SHA-256, unzips it beside the old folder (keeping its files' modes on Linux, so its launch scripts stay executable) and points `forge_dir` in `config.json` at it (the old `config.json` is kept as `config.json.before-forge-update`, and the old Forge folder is left for you to delete). Nothing happens to Forge when it isn't installed;
-5. restarts the background server, if it's running;
+5. restarts the background server, if it's running and something changed (new code, psycopg, a migration, the Forge release, or the server itself says it runs older code); otherwise it leaves it running, so Forge games it's playing aren't stopped;
 6. runs the smoke test.
 
 Steps 2 to 6 run in the code just pulled. When a step fails, it says how to go back: `git reset --hard <the old commit>` and a restart for the code. Migrations aren't undone, so the backup from step 3 is the way back for the data (`python -m decklab.db restore`, below). `--no-forge`, `--no-restart` and `--no-smoke` skip those steps.
@@ -357,7 +366,7 @@ On the new PC:
 python -m decklab.db restore <the folder>/decklab-....dump --expect <the folder>/digest.json --replace
 ```
 
-It restores into a database of its own first, checks every table's row count and contents against the digest, checks that this checkout knows every migration the dump has and applies any newer ones, and only then swaps it in: the database it replaces is renamed `decklab_before_restore` (kept until the next restore), and the restored one takes its name. If anything fails, the new PC's database is left as it was. `--replace` is needed because `setup` made one. A database already holding decks or cards needs `--force` as well. `python -m decklab.db digest --compare <the folder>/digest.json` checks it again any time.
+It restores into a database of its own first, checks every table's row count and contents against the digest, checks that this checkout knows every migration the dump has and applies any newer ones, and only then swaps it in: the database it replaces is renamed `decklab_before_restore` (kept until the next restore), and the restored one takes its name. If anything fails, the new PC's database is left as it was. `--replace` is needed because `setup` made one. A database already holding decks or cards needs `--force` as well. `python -m decklab.db digest --compare <the folder>/digest.json` checks it again any time. To try a dump first without touching the database Deck Lab uses, restore it under another name with `DECKLAB_DB_NAME` set for that one command (`DECKLAB_DB_NAME=decklab_trial python -m decklab.db restore ... --expect ...`; decklab/README.md, "Backups", has the PowerShell form and how to drop it afterwards).
 
 ### C. Switch over
 
@@ -390,7 +399,7 @@ The same route, A to C, in order, with what's different for Linux. Nothing Linux
 2. **The code** (steps 2 and 3): `git clone` it, on the old PC's commit or newer; don't copy the Windows folder. Make the `.venv` with `.venv/bin/python -m pip install -r decklab/requirements.txt`.
 3. **`config.json`** (step 4): copy it over, `chmod 600` it, and change every Windows path to an absolute Linux one (Deck Lab refuses the ones it reads as folders): `forge_dir`, `forge_java` (the JDK's real path), `database.backup_dir` (the NAS mount, step 9), `staging_dir`, `export_repo`, `pg_bin` (or leave it out), `records_repo` and `tunnel.config`. Add `"timezone"`, and `"home_networks"` if anyone visits through a VPN. Take the `tunnel` block out for now.
 4. **The database** (step 5): `python -m decklab.db setup` as yourself, not with `sudo` ("When something goes wrong" below has the pg_hba.conf and locale fixes). Then `python -m decklab.lib.cards update`.
-5. **Forge** (step 8): download and check the release, unzip it to `forge_dir`, then `python -m decklab.lib.forge status` and `python -m decklab.lib.forge cardlog-check`.
+5. **Forge** (step 8): download and check the release, unzip it into the folder above `forge_dir` (such as `~/tools`) and rename it to `forge_dir`'s last folder, or point `forge_dir` at the folder it made, then `python -m decklab.lib.forge status` and `python -m decklab.lib.forge cardlog-check`.
 6. **Backups and the export repo** (step 9): mount the NAS share through `/etc/fstab`, clone the export repo and `records_repo` with an SSH deploy key, and check a dry-run push.
 7. **Check:** `python -m decklab.smoke --no-server` passes, apart from warnings about what isn't installed yet.
 8. **Move the data** (B): on the Windows PC, `homenet remove`, `schedule remove`, `backup --dest`, `digest -o`, and take its `tunnel` block out. On the Linux PC, `python -m decklab.db restore <the folder>/decklab-....dump --expect <the folder>/digest.json --replace`.

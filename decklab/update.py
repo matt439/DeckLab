@@ -433,7 +433,9 @@ def _after_pull(args, old, done):
     python = sys.executable
     warnings = []
     running = server_answers()
+    reinstalled = False
     if REQUIREMENTS in files or psycopg_mismatch():
+        reinstalled = True
         pip = venv_python()
         if pip is None:
             raise Failed("There's no .venv to install psycopg into: SELF-HOSTING.md step 3")
@@ -478,9 +480,12 @@ def _after_pull(args, old, done):
             warnings.append(f"Forge wasn't updated: {e}")
         if CONFIG.exists() and CONFIG.read_bytes() != before:
             done.add("forge")
+    changed = reinstalled or bool(pending) or bool(done & {"pulled", "forge", "server-stopped"})
     if args.no_restart:
         say("Restart: skipped (--no-restart).")
-    elif running or server_answers():
+    elif (running or server_answers()) and not changed and not server_restart_required():
+        say("\nNothing changed, so the background server keeps running (any Forge games it's playing go on).")
+    elif running or server_answers() or "server-stopped" in done:
         step([python, "-m", "decklab.lib.homenet", "restart"], "Restart the background server", timeout=300)
         done.discard("server-stopped")
     else:
@@ -506,6 +511,19 @@ def psycopg_mismatch():
     except importlib.metadata.PackageNotFoundError:
         return True
     return bool(want) and have != want
+
+
+def server_restart_required():
+    """Whether the running server says it needs a restart (/api/status's build.restart_required:
+    its code isn't the checkout's). False when it can't be asked or doesn't say."""
+    from decklab import smoke
+    from decklab.lib import config
+    try:
+        code, status = smoke.get_json(int(config.load().get("port", 8642)), "/api/status", timeout=5)
+    except (OSError, ValueError):
+        return False
+    build = status.get("build") if code == 200 and isinstance(status, dict) else None
+    return isinstance(build, dict) and build.get("restart_required") is True
 
 
 def server_answers():
