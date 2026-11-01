@@ -14,8 +14,10 @@ after every backup and check).
 
 restore works as decklab_owner (which `python -m decklab.db setup` makes, with its pgpass line), so
 no superuser is needed. The dump goes into <name>_restoring first; the settings' database is dropped
-and the restored one renamed only once the restore (and the --expect check) succeeded, so a failed
-restore leaves the database as it was. Replacing an existing database needs --replace, and one that
+and the restored copy is checked against --expect, checked for migrations this checkout doesn't know
+and migrated first; only then is the settings' database renamed <name>_before_restore (kept, until
+the next restore) and the restored one renamed in its place, so a failed restore leaves the database
+as it was. Replacing an existing database needs --replace, and one that
 holds decks or cards also --force.
 """
 import json
@@ -25,17 +27,22 @@ from pathlib import Path
 from decklab.db import backup, conn as db
 
 RESTORING_SUFFIX = "_restoring"
+PREVIOUS_SUFFIX = "_before_restore"
 DIGEST_VERSION = 1
 
 
-def _restoring_name(database):
-    """<database>_restoring, refused when PostgreSQL would truncate it (it must never be the live name)."""
+def _suffixed(database, suffix):
+    """database + suffix, refused when PostgreSQL would truncate it (it must never be the live name)."""
     if not isinstance(database, str) or not database or "\x00" in database:
         raise ValueError("A restore needs a valid database name")
-    name = database + RESTORING_SUFFIX
+    name = database + suffix
     if len(name.encode("utf-8")) > backup.MAX_IDENTIFIER_BYTES:
         raise ValueError("The database name is too long for a distinct restore database")
     return name
+
+
+def _restoring_name(database):
+    return _suffixed(database, RESTORING_SUFFIX)
 
 
 def take_digest(dbname=None, role="ro"):
@@ -51,8 +58,9 @@ def take_digest(dbname=None, role="ro"):
         digests = backup.digest_rows(c)
         row = c.execute("select max(version) from public.schema_migration").fetchone() \
             if c.execute("select to_regclass('public.schema_migration') is not null").fetchone()[0] else (None,)
+        server = c.execute("select current_setting('server_version_num')::int").fetchone()[0]
         c.rollback()
-    return {"version": DIGEST_VERSION, "database": name,
+    return {"version": DIGEST_VERSION, "database": name, "server_version": server,
             "taken_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
             "migration": row[0], "counts": counts, "digests": digests}
 
@@ -127,19 +135,43 @@ def _held(c):
     return count("public.deck"), count("public.collection_card"), count("audit.change_set")
 
 
+def _swap_names(c, name, restoring, previous, exists, say):
+    """Put restoring in name's place by renaming, never dropping: name becomes previous first, and
+    goes back to name if the second rename fails. c: an autocommit owner connection to postgres."""
+    from psycopg import Error, sql
+    ident = sql.Identifier
+    if exists:
+        c.execute(sql.SQL("alter database {} rename to {}").format(ident(name), ident(previous)))
+    try:
+        c.execute(sql.SQL("alter database {} rename to {}").format(ident(restoring), ident(name)))
+    except Error:
+        if exists:
+            c.execute(sql.SQL("alter database {} rename to {}").format(ident(previous), ident(name)))
+        raise
+
+
 def run_restore(dump, expect=None, replace=False, force=False, say=print):
     """The restore command (see the module docstring). Returns 0, or 1 when it refused or failed;
-    the settings' database is unchanged unless it returns 0."""
-    from psycopg import sql
+    the settings' database is unchanged unless it returns 0, and the one it replaced is kept as
+    <name>_before_restore."""
+    from psycopg import Error, sql
     from decklab.db import migrate, setup
     s = db.settings()
     name, restoring = s["name"], _restoring_name(s["name"])
+    previous = _suffixed(s["name"], PREVIOUS_SUFFIX)
     dump = Path(dump)
     if not dump.is_file():
         raise FileNotFoundError(f"There's no dump at {dump}")
     expected = read_digest(expect) if expect else None
+    ident = sql.Identifier
     with db.connect("owner", dbname="postgres", autocommit=True) as c:
         exists = c.execute("select 1 from pg_database where datname = %s", (name,)).fetchone() is not None
+        here = c.execute("select current_setting('server_version_num')::int").fetchone()[0]
+    there = (expected or {}).get("server_version")
+    if isinstance(there, int) and there // 10000 > here // 10000:
+        say(f"The digest comes from PostgreSQL {there // 10000}, newer than this PC's {here // 10000}: its dump "
+            "can't be restored here. Install PostgreSQL {} or later, then run restore again.".format(there // 10000))
+        return 1
     if exists:
         with db.connect("owner", dbname=name, autocommit=True) as c:
             decks, cards, changes = _held(c)
@@ -149,39 +181,60 @@ def run_restore(dump, expect=None, replace=False, force=False, say=print):
             return 1
         if (decks or cards) and not force:
             say("It holds decks or cards, so nothing changed. If they really should be replaced by the dump's, "
-                "give --force as well (python -m decklab.db backup first keeps a copy).")
+                "give --force as well (it's kept as " + previous + ").")
             return 1
     with db.connect("owner", dbname="postgres", autocommit=True) as c:
-        c.execute(sql.SQL("drop database if exists {}").format(sql.Identifier(restoring)))
-        c.execute(sql.SQL("create database {} encoding 'UTF8' template template0").format(sql.Identifier(restoring)))
+        c.execute(sql.SQL("drop database if exists {}").format(ident(restoring)))
+        c.execute(sql.SQL("create database {} encoding 'UTF8' template template0").format(ident(restoring)))
+
+    def give_up(detail):
+        with db.connect("owner", dbname="postgres", autocommit=True) as c:
+            c.execute(sql.SQL("drop database if exists {}").format(ident(restoring)))
+        say(f"The restore didn't work, so {name} is unchanged: {detail}")
+        return 1
+
     say(f"Restoring {dump.name} into {restoring}...")
     ok, detail = backup._tool([db.pg_bin("pg_restore"), *backup._connection_args(s, restoring),
                                "--exit-on-error", dump])
-    if ok and expected is not None:
+    if not ok:
+        return give_up(detail)
+    if expected is not None:
         differences = compare(expected, take_digest(restoring, role="owner"))
         if differences:
-            ok, detail = False, "it doesn't match the digest file: " + "; ".join(differences)
-        else:
-            say(f"It matches {expect}: {sum(expected['counts'].values())} rows in {len(expected['counts'])} tables.")
-    if not ok:
-        with db.connect("owner", dbname="postgres", autocommit=True) as c:
-            c.execute(sql.SQL("drop database if exists {}").format(sql.Identifier(restoring)))
-        say(f"The restore didn't work, so {name} is unchanged: {detail}")
-        return 1
+            return give_up("it doesn't match the digest file: " + "; ".join(differences))
+        say(f"It matches {expect}: {sum(expected['counts'].values())} rows in {len(expected['counts'])} tables.")
+    # Everything that can fail happens to the restored copy, before the swap.
+    try:
+        migrate.status(dbname=restoring)
+    except migrate.MigrationError as e:
+        return give_up(f"{e}. The dump has migrations this checkout doesn't know: update this PC's code to at "
+                       "least the old PC's commit (git pull), then run restore again.")
+    try:
+        applied = migrate.apply(dbname=restoring, say=say)
+        setup.secure_database(restoring)
+    except (migrate.MigrationError, Error) as e:
+        return give_up(f"this checkout's migrations couldn't be applied to it: {e}")
     with db.connect("owner", dbname="postgres", autocommit=True) as c:
         if exists:
             busy = c.execute("select count(*) from pg_stat_activity where datname = %s and pid <> pg_backend_pid()",
                              (name,)).fetchone()[0]
             if busy:
-                c.execute(sql.SQL("drop database if exists {}").format(sql.Identifier(restoring)))
+                c.execute(sql.SQL("drop database if exists {}").format(ident(restoring)))
                 say(f"{busy} connection(s) are using {name} (the server, or a command), so it wasn't replaced: "
                     "stop Deck Lab (python -m decklab.lib.homenet stop) and run restore again.")
                 return 1
-            c.execute(sql.SQL("drop database {}").format(sql.Identifier(name)))
-        c.execute(sql.SQL("alter database {} rename to {}").format(sql.Identifier(restoring), sql.Identifier(name)))
-    setup.secure_database(name)
-    applied = migrate.apply(dbname=name, say=say)
-    say(f"Restored {dump.name} as {name}" + (f", then applied {len(applied)} newer migration(s)" if applied else "") +
-        ". Run python -m decklab.db sync-profiles if this PC's config.json has different profiles, "
+            if c.execute("select 1 from pg_database where datname = %s", (previous,)).fetchone():
+                say(f"Dropping {previous}, the database an earlier restore replaced.")
+                c.execute(sql.SQL("drop database {}").format(ident(previous)))
+        try:
+            _swap_names(c, name, restoring, previous, exists, say)
+        except Error as e:
+            c.execute(sql.SQL("drop database if exists {}").format(ident(restoring)))
+            say(f"{name} couldn't be swapped for the restored copy, so it's unchanged: {e}")
+            return 1
+    say(f"Restored {dump.name} as {name}" + (f", with {len(applied)} newer migration(s) applied" if applied else "") +
+        "." + (f" The database it replaced is kept as {previous} (drop it once you're happy, or the next restore "
+               "does)." if exists else "") +
+        " Run python -m decklab.db sync-profiles if this PC's config.json has different profiles, "
         "then start Deck Lab and run python -m decklab.smoke.")
     return 0

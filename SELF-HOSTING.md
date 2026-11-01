@@ -278,26 +278,33 @@ Deck Lab can start a Cloudflare Tunnel itself, behind Cloudflare Access's email 
 
 ## 11. Moving Deck Lab to another PC
 
-For moving a working Deck Lab, with its data, to another computer (a spare PC that will be the server, say). The data moves as one database dump, checked on arrival against a digest of every table taken on the old PC. Deck Lab is off for the few minutes of step B.
+For moving a working Deck Lab, with its data, to another computer (a spare PC that will be the server, say). The data moves as one database dump, checked on arrival against a digest of every table taken on the old PC. Deck Lab is off from the start of step B until step C's smoke test.
 
 ### A. Set up the new PC (the old one keeps running)
 
-1. Follow steps 1 to 8 on the new PC. For step 4, copy `decklab/config.json` from the old PC, then change what's different there: `forge_dir`, `database.pg_bin`, `database.backup_dir`, `database.staging_dir`, `records_repo` and `database.export_repo`, if set. **Take the `tunnel` block out for now:** two PCs running the same tunnel share its visitors between two databases.
+1. Follow steps 1 to 8 on the new PC, with these differences:
+   - **PostgreSQL:** the same major version as the old PC, or newer (`python -m decklab.db sql "select version()"` on the old PC says which). A dump from a newer PostgreSQL can't be restored into an older one.
+   - **The code:** on the same commit as the old PC, or newer. `restore` refuses a dump with migrations the checkout doesn't have.
+   - **`config.json` (step 4):** copy it from the old PC, then change what's different there: `forge_dir`, `database.pg_bin`, `database.backup_dir`, `database.staging_dir`, `database.export_repo`, `records_repo` and the tunnel's `cloudflared` path, if set. While both PCs exist, give the new one its own `backup_dir` (a subfolder will do), so their nightly runs never prune each other's dumps.
+   - **Take the `tunnel` block out for now.** Two PCs running the same tunnel share its visitors between two databases. If the old PC runs a tunnel, install `cloudflared` on the new one now (`winget install Cloudflare.cloudflared`, or your distribution's package) and check `cloudflared --version`.
 2. `python -m decklab.db setup` makes the database roles and their pgpass lines, and an empty database that step B replaces.
-3. Clone the repos the old PC uses beside the code: the export repo (`database.export_repo`, by default `../DeckLabData`, from its private remote, so the nightly export keeps its history) and `records_repo`, if set.
+3. Clone the repos the old PC uses beside the code: the export repo (`database.export_repo`, by default `../DeckLabData`, from its private remote) and `records_repo`, if set. Store the export repo's git credentials for the user the nightly task runs as, so its push never asks for a sign-in.
 4. Don't install the background server or the nightly task yet. `python -m decklab.smoke --no-server` should pass, apart from warnings about what isn't installed yet.
 
 ### B. Move the data
 
-On the old PC:
+On the old PC, turn off everything that could start Deck Lab or write to its data again, then take the dump and the digest:
 
 ```
-python -m decklab.lib.homenet stop
+python -m decklab.lib.homenet remove
+python -m decklab.db schedule remove
 python -m decklab.db backup --dest <a folder to carry>
 python -m decklab.db digest -o <that folder>/digest.json
 ```
 
-`backup` prints the dump's name (`decklab-YYYY-MM-DD-HHMMSS.dump`). Stop the server first, so nothing changes between the dump and the digest. Take the folder to the new PC (a USB stick, or a share both reach), with these folders of `decklab/data` if you want them: `forge/results` (saved matchups), `forge/experiments` (Lab experiments) and `goldfish` (practice-hand results). The rest of `decklab/data` is caches the new PC fills itself, or settings of the old PC's own.
+Take the `tunnel` block out of the old PC's `config.json` too. (`homenet stop` alone isn't enough: a server installed `--at-logon` starts again at the next logon, and with it its tunnel.) To go back to the old PC at any point before the switch-over, undo these: `homenet install --at-logon`, `schedule install`, and the `tunnel` block back.
+
+`backup` prints the dump's name (`decklab-YYYY-MM-DD-HHMMSS.dump`). Take the folder to the new PC (a USB stick, or a share both reach), with these folders of `decklab/data` if you want them: `forge/results` (saved matchups), `forge/experiments` (Lab experiments) and `goldfish` (practice-hand results). The rest of `decklab/data` is caches the new PC fills itself, or settings of the old PC's own.
 
 On the new PC:
 
@@ -305,23 +312,28 @@ On the new PC:
 python -m decklab.db restore <the folder>/decklab-....dump --expect <the folder>/digest.json --replace
 ```
 
-It restores into a database of its own first, checks every table's row count and contents against the digest, and only then replaces the empty database and applies any newer migrations. If anything differs, the new PC's database is left as it was. `--replace` is needed because `setup` made one. A database already holding decks or cards needs `--force` as well. `python -m decklab.db digest --compare <the folder>/digest.json` checks it again any time.
+It restores into a database of its own first, checks every table's row count and contents against the digest, checks that this checkout knows every migration the dump has and applies any newer ones, and only then swaps it in: the database it replaces is renamed `decklab_before_restore` (kept until the next restore), and the restored one takes its name. If anything fails, the new PC's database is left as it was. `--replace` is needed because `setup` made one. A database already holding decks or cards needs `--force` as well. `python -m decklab.db digest --compare <the folder>/digest.json` checks it again any time.
 
 ### C. Switch over
 
 On the new PC:
 
 1. Put the `tunnel` block back in `config.json`, and copy the tunnel's files from the old PC: its config (`tunnel.config`, such as `~/.cloudflared/config.yml`) and the credentials file it names, fixing that path for this PC.
-2. Install the background server, the firewall rule and the nightly task (step 9, and the reference's "Network setup (once, as administrator)"): `python -m decklab.lib.homenet install`, `python -m decklab.lib.homenet start`, `python -m decklab.db schedule install`.
-3. Copy the folders from `decklab/data` into the same places, if you brought them.
-4. `python -m decklab.smoke`. Every part should pass now; a warning that no backup has worked yet goes after the first nightly run, or a `python -m decklab.db backup`.
-5. Phones and tablets on the Wi-Fi need the new PC's address (`homenet status` lists it). The tunnel's address doesn't change.
+2. Bring the export repo up to date with the old PC's last export: `git -C <export_repo> pull --ff-only`.
+3. Install the background server and the nightly task, so they come back by themselves after a restart (step 9, and the reference's "Network setup (once, as administrator)" for the firewall):
+   ```
+   python -m decklab.lib.homenet install --at-logon
+   python -m decklab.db schedule install
+   ```
+   On Windows both run in your signed-in session, so a server PC should sign in by itself after a restart (or stay signed in). On Linux, turn on lingering (`loginctl enable-linger`) so they start at boot.
+4. Copy the folders from `decklab/data` into the same places, if you brought them.
+5. `python -m decklab.smoke`. Every part should pass now; a warning that no backup has worked yet goes after the first nightly run, or a `python -m decklab.db backup`.
+6. Phones and tablets on the Wi-Fi need the new PC's address (`homenet status` lists it). The tunnel's address doesn't change.
 
 On the old PC, once the new one works:
 
-1. `python -m decklab.lib.homenet remove` and `python -m decklab.db schedule remove`, so it never starts the server or a nightly run again, and take the `tunnel` block out of its `config.json`.
-2. Rename its copy of the database, so no command there writes to the old data by mistake: `psql -h localhost -U decklab_owner -d postgres -c "alter database decklab rename to decklab_before_move"`. Every `python -m decklab.db` command there then says the database can't be reached. Drop it when you no longer want it as a fallback.
-3. If the old PC is where the code is written, keep PostgreSQL installed there: the database integration tests make throwaway databases on the server `config.json` names, so never point that config at the new PC's live database.
+1. Rename its copy of the database, so no command there writes to the old data by mistake. On Windows: `& "C:\Program Files\PostgreSQL\18\bin\psql.exe" -h localhost -U decklab_owner -d postgres -c "alter database decklab rename to decklab_before_move"` (the folder of your version, or `database.pg_bin`). On Linux and macOS, `psql` with the same arguments. Every `python -m decklab.db` command there then says the database can't be reached. Drop it when you no longer want it as a fallback.
+2. If the old PC is where the code is written, keep PostgreSQL installed there: the database integration tests make throwaway databases on the server `config.json` names, so never point that config at the new PC's live database.
 
 The command line's inventory, deck and wishlist commands work on the database `config.json` names, so after the move run them on the new PC (in person, or over Remote Desktop or SSH).
 

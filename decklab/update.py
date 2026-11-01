@@ -22,6 +22,7 @@ Exit codes: 0 updated (or nothing to do) and the smoke test passed, 1 a step fai
 """
 import argparse
 import hashlib
+import http.client
 import json
 import os
 import re
@@ -136,8 +137,19 @@ def download(url, path):
         shutil.copyfileobj(response, out, 1024 * 1024)
 
 
-def update_forge(dry_run=False):
-    """Step 5: install the Forge release this Deck Lab expects when forge_dir holds another."""
+def update_forge(dry_run=False, release=None):
+    """Step 5: install the Forge release this Deck Lab expects (release: another one, for a dry run
+    in the code before the pull) when forge_dir holds another build. Any failure is a Failed, and
+    leaves forge_dir as it was."""
+    try:
+        _update_forge(dry_run, release)
+    except Failed:
+        raise
+    except (OSError, ValueError, zipfile.BadZipFile, http.client.HTTPException) as e:
+        raise Failed(f"Forge couldn't be updated ({type(e).__name__}: {e}); forge_dir is unchanged") from None
+
+
+def _update_forge(dry_run, release):
     from decklab.lib import config
     from decklab.lib.forge import install, simjar
     settings = config.load()
@@ -146,18 +158,19 @@ def update_forge(dry_run=False):
     if jar is None:
         say(f"Forge isn't installed at forge_dir ({current}), so it's left alone (SELF-HOSTING.md step 8).")
         return
-    check = simjar.release_check(current / jar)
-    if check["matches"]:
-        say(f"Forge is build {check['build']}, the one this Deck Lab expects.")
+    release = release or simjar.RELEASE
+    build = simjar.forge_build(current / jar)
+    if build == release:
+        say(f"Forge is build {build}, the one this Deck Lab expects.")
         return
-    release = simjar.RELEASE
+    check = {"build": build}
     folder = current.parent / f"forge-{release}"
     if dry_run:
         say(f"Would install Forge {release} into {folder} (installed: {check['build']}) and set forge_dir.")
         return
     if folder.exists():
         found, _ = install._find_jar(folder)
-        if found is None or not simjar.release_check(folder / found)["matches"]:
+        if found is None or simjar.forge_build(folder / found) != release:
             raise Failed(f"{folder} exists but isn't Forge {release}: move it away and update again")
         say(f"Forge {release} is already unzipped at {folder}.")
     else:
@@ -168,9 +181,9 @@ def update_forge(dry_run=False):
             try:
                 download(base, archive)
                 download(base + ".sha256", Path(tmp) / "sum")
-            except OSError as e:
+            except (OSError, http.client.HTTPException) as e:
                 raise Failed(f"Forge {release} couldn't be downloaded ({e}): is the release published? "
-                             f"{simjar.release_url()}") from None
+                             f"{simjar.release_url(release)}") from None
             want = (Path(tmp) / "sum").read_text(encoding="utf-8", errors="replace").split()[:1]
             digest = hashlib.sha256(archive.read_bytes()).hexdigest()
             if not want or want[0].lower() != digest:
@@ -179,7 +192,7 @@ def update_forge(dry_run=False):
             with tempfile.TemporaryDirectory(prefix="decklab-forge-unzip-", dir=current.parent) as unzip:
                 top = safe_extract(archive, unzip)
                 found, _ = install._find_jar(top)
-                if found is None or not simjar.release_check(top / found)["matches"]:
+                if found is None or simjar.forge_build(top / found) != release:
                     raise Failed(f"The download doesn't hold Forge {release}: not installed")
                 os.replace(top, folder)
         say(f"Unzipped Forge {release} into {folder}.")
@@ -201,6 +214,9 @@ def before_pull(args):
                      "only):\n" + "\n".join("  " + line for line in dirty.splitlines()[:20]) +
                      "\nLook with git diff, then git stash or git checkout -- <file>.")
     branch = git("rev-parse", "--abbrev-ref", "HEAD")
+    if branch == "HEAD":
+        raise Failed("This checkout isn't on a branch (a detached HEAD), so there's nothing to pull: "
+                     "git checkout main (or the branch this server follows), then update again.")
     upstream = git("rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}", check=False)
     if not upstream:
         raise Failed(f"The branch {branch} has no upstream to pull from: git branch -u origin/main")
@@ -212,6 +228,7 @@ def before_pull(args):
     if ahead != "0":
         raise Failed(f"{branch} has {ahead} commits that {upstream} hasn't: a server PC shouldn't, so nothing "
                      "was pulled (git log @{upstream}..)")
+    new_release = None
     if incoming:
         lines = incoming.splitlines()
         say(f"{len(lines)} new commits:\n" + "\n".join("  " + line for line in lines[:30]) +
@@ -229,7 +246,8 @@ def before_pull(args):
     else:
         say("Already up to date with " + upstream + ".")
     if args.dry_run:
-        update_forge(dry_run=True)
+        if not args.no_forge:
+            update_forge(dry_run=True, release=new_release)
         say("\nDry run: nothing was changed.")
         return 0
     if incoming:
@@ -244,27 +262,62 @@ def before_pull(args):
 def after_pull(args):
     """Steps 3-7, in the pulled code."""
     old = args.after_pull
+    done = set()        # the steps that changed something, for the way back
     try:
-        _after_pull(args, old)
-    except Failed as e:
-        say(f"\nUpdate stopped: {e}")
-        if old and old != git("rev-parse", "HEAD", check=False):
-            say(f"To go back to the code from before: git reset --hard {old[:12]}, then "
-                f"python -m decklab.lib.homenet restart. Migrations already applied stay; the backup this "
-                f"update made before migrating is the way back for the data (python -m decklab.db restore).")
+        warnings = _after_pull(args, old, done)
+    except Exception as e:      # noqa: BLE001 - every failure gets the way back, a traceback none
+        say(f"\nUpdate stopped: {e if isinstance(e, Failed) else f'{type(e).__name__}: {e}'}")
+        say(way_back(old, done))
+        return 1
+    if warnings:
+        say("\nUpdate done, but:\n" + "\n".join("  " + w for w in warnings))
         return 1
     say("\nUpdate done.")
     return 0
 
 
-def _after_pull(args, old):
+def way_back(old, done):
+    """What to do after a failure, given the steps that already changed something."""
+    lines = []
+    if "backup-failed" in done:
+        lines.append("Nothing was migrated. Fix what stopped the backup (is backup_dir reachable?), then run "
+                     "python -m decklab.update again.")
+    if "server-stopped" in done:
+        lines.append("Deck Lab was stopped to replace psycopg: python -m decklab.lib.homenet start.")
+    if old and "pulled" in done:
+        back = [f"To go back to the code from before: python -m decklab.lib.homenet stop, git reset --hard {old[:12]}"]
+        if "migrated" in done:
+            back.append("python -m decklab.db restore <the dump the backup step named> --replace --force "
+                        "(after the reset, so the old code's migrations are the ones it checks)")
+        if "forge" in done:
+            back.append("copy decklab/config.json.before-forge-update back over decklab/config.json")
+        back.append("python -m decklab.lib.homenet start")
+        lines.append(", then ".join(back) + ".")
+    return "\n".join(lines)
+
+
+def _after_pull(args, old, done):
+    """Steps 3-7. Returns warnings that don't stop the update (Forge not updated); raises Failed."""
     files = changed_files(old, "HEAD") if old else []
+    if old and old != git("rev-parse", "HEAD", check=False):
+        done.add("pulled")
     python = sys.executable
+    warnings = []
+    running = server_answers()
     if REQUIREMENTS in files or psycopg_mismatch():
         pip = venv_python()
         if pip is None:
             raise Failed("There's no .venv to install psycopg into: SELF-HOSTING.md step 3")
-        step([str(pip), "-m", "pip", "install", "-r", str(ROOT / REQUIREMENTS)], "Reinstall psycopg", timeout=900)
+        if running:     # Windows keeps a running server's psycopg DLLs locked
+            step([python, "-m", "decklab.lib.homenet", "stop"], "Stop Deck Lab to replace psycopg", timeout=120)
+            done.add("server-stopped")
+        try:
+            step([str(pip), "-m", "pip", "install", "-r", str(ROOT / REQUIREMENTS)], "Reinstall psycopg", timeout=900)
+        except Failed:
+            if running:
+                step([python, "-m", "decklab.lib.homenet", "start"], "Start Deck Lab again", timeout=120)
+                done.discard("server-stopped")
+            raise
     from decklab.lib import venv
     venv.activate()
     from decklab.db import migrate
@@ -274,7 +327,12 @@ def _after_pull(args, old):
         raise Failed(f"The migrations can't be checked: {e}") from None
     if pending:
         say(f"\n{len(pending)} migrations are pending: " + ", ".join(f["name"] for f in pending))
-        step([python, "-m", "decklab.db", "backup"], "Back up before migrating", timeout=3600)
+        try:
+            step([python, "-m", "decklab.db", "backup"], "Back up before migrating", timeout=3600)
+        except Failed:
+            done.add("backup-failed")
+            raise
+        done.add("migrated")
         step([python, "-m", "decklab.db", "migrate"], "Migrate", timeout=1800)
     else:
         say("\nNo migrations are pending.")
@@ -282,30 +340,42 @@ def _after_pull(args, old):
         say("Forge: skipped (--no-forge).")
     else:
         say("\n== Forge")
-        update_forge()
+        before = CONFIG.read_bytes() if CONFIG.exists() else None
+        try:
+            update_forge()
+        except Failed as e:     # the server must still restart on the pulled code
+            say(str(e))
+            warnings.append(f"Forge wasn't updated: {e}")
+        if CONFIG.exists() and CONFIG.read_bytes() != before:
+            done.add("forge")
     if args.no_restart:
         say("Restart: skipped (--no-restart).")
-    elif server_answers():
+    elif running or server_answers():
         step([python, "-m", "decklab.lib.homenet", "restart"], "Restart the background server", timeout=300)
+        done.discard("server-stopped")
     else:
         say("\nThe background server isn't running, so it wasn't started (python -m decklab.lib.homenet start).")
     if args.no_smoke:
         say("Smoke test: skipped (--no-smoke).")
     else:
         step([python, "-m", "decklab.smoke"], "Smoke test", timeout=1200)
+    return warnings
 
 
 def psycopg_mismatch():
+    """Whether the .venv's psycopg isn't the version requirements.txt pins. Read from its metadata,
+    never imported, so this process doesn't load (and lock) the DLLs pip may have to replace."""
+    import importlib.metadata
     from decklab import smoke
     from decklab.lib import venv
     if venv.activate():
         return False            # no usable .venv: the smoke test says so
-    try:
-        import psycopg
-    except ImportError:
-        return True
     want = smoke.pinned((ROOT / REQUIREMENTS).read_text(encoding="utf-8"), "psycopg")
-    return bool(want) and getattr(psycopg, "__version__", None) != want
+    try:
+        have = importlib.metadata.version("psycopg")
+    except importlib.metadata.PackageNotFoundError:
+        return True
+    return bool(want) and have != want
 
 
 def server_answers():
