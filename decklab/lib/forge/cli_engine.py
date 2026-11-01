@@ -279,7 +279,7 @@ def _write_json(args, report):
 
 def _engine_check_args(sub):
     check = sub.add_parser("engine-check", help="check a new build of Forge plays the same games as the installed one")
-    check.add_argument("--old", required=True, help="the installed Forge's folder (C:/Tools/forge-decklab)")
+    check.add_argument("--old", required=True, help="the installed Forge's folder (config.json's forge_dir)")
     check.add_argument("--new", help="the new build's folder (default: config.json's forge_dir)")
     check.add_argument("--games", type=_games, default=ENGINE_CHECK_GAMES,
                        help=f"Constructed games a pair (0 to {checks.CHECK_MAX_GAMES})")

@@ -3,9 +3,14 @@ in Job Objects (one for this process, and one of its own for each Forge process)
 elsewhere in process groups. The package docstring's "Running Forge" says why. On
 Windows they also run below normal priority (BELOW_NORMAL_PRIORITY_CLASS, which the
 processes they start get too), so the PC, and Deck Lab's practice hands at normal
-priority, stay quick while Forge plays (slots.py)."""
+priority, stay quick while Forge plays (slots.py). Elsewhere they start through
+"nice -n FORGE_NICE" (_nice_prefix): nice runs the program in its own place, so the pid and
+process group are the program's, and every thread the JVM starts inherits the nice value (a
+setpriority after the start wouldn't do: on Linux it's per thread, and the JVM's main thread
+already exists)."""
 import errno
 import os
+import shutil
 import signal
 import subprocess
 import sys
@@ -163,18 +168,53 @@ def in_job(pid):
         _k32.CloseHandle(handle)
 
 
+FORGE_NICE = 10                 # off Windows: about what BELOW_NORMAL_PRIORITY_CLASS is on Windows
+_nice = None                    # [nice, "-n", FORGE_NICE] once looked up ([] when there's no nice)
+_nice_lock = threading.Lock()
+
+
+def _nice_prefix():
+    """Off Windows, the start of a command line that runs it at nice FORGE_NICE: [the nice
+    program, "-n", "10"], looked up once; [] (logged once) when there's no nice, so it runs at
+    normal priority. [] on Windows, where _SPAWN_FLAGS lower the priority."""
+    global _nice
+    if sys.platform == "win32":
+        return []
+    with _nice_lock:
+        if _nice is None:
+            found = shutil.which("nice")
+            _nice = [found, "-n", str(FORGE_NICE)] if found else []
+            if not found:
+                common._log("There's no nice program, so Forge's processes run at normal priority.")
+        return list(_nice)
+
+
+def _niced(argv):
+    """argv started through _nice_prefix() off Windows. FileNotFoundError, as Popen gives, when
+    argv's program isn't there (nice would only exit 127, which callers can't tell from Forge's
+    own failure)."""
+    prefix = _nice_prefix()
+    if not prefix:
+        return list(argv)
+    program = str(argv[0])
+    if (os.path.isabs(program) or os.sep not in program) and shutil.which(program) is None:
+        raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), program)
+    return [*prefix, *argv]
+
+
 def start_process(argv, cwd=None, env=None, stdin=False):
     """Popen argv with its output (stdout and stderr together, as text) on a pipe, and with
     stdin (a warm worker's: pool.py) its input on one too (UTF-8 text, a line at a time),
     else none. On Windows it starts suspended, goes into the Job Object, and only then runs,
     so it can't outlive this process even for an instant; it also gets a job of its own
     (nested in that one), so kill_process() kills everything it starts. It runs with
-    no window, below normal priority (_SPAWN_FLAGS)."""
+    no window, below normal priority (_SPAWN_FLAGS). Elsewhere it starts in a session (and
+    process group) of its own, at nice FORGE_NICE (_niced)."""
     global _job_warned
     kwargs = dict(cwd=cwd, env=env, stdin=subprocess.PIPE if stdin else subprocess.DEVNULL, stdout=subprocess.PIPE,
                   stderr=subprocess.STDOUT, text=True, encoding="utf-8", errors="replace", bufsize=1)
     if sys.platform != "win32":
-        return subprocess.Popen(argv, start_new_session=True, **kwargs)
+        return subprocess.Popen(_niced(argv), start_new_session=True, **kwargs)
     try:
         job = _job_handle()
     except OSError as e:

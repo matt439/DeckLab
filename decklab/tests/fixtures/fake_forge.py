@@ -29,7 +29,8 @@ battlefield, and the copy a land was played from has the id its "Land:" line sho
 beyond the deck's copies is logged as a card in neither list). The end hands and library sizes
 are what the moves leave. Before the header it prints DeckLabSim's DLENGINE line
 (java/decklab/GameLoop.java engineLine): perf= says whether the user folder's
-forge.preferences (APPDATA) turns PERFORMANCE_MODE on, gamepatches=off comes with
+forge.preferences (profile_dir(): APPDATA on Windows, -Duser.home's .forge elsewhere, as
+real Forge) turns PERFORMANCE_MODE on, gamepatches=off comes with
 --game-patches-off (test_forge.fake_command adds it for setup["game_patches"] False),
 gamepatchids= is what --game-patch-ids=<ids> gives (test_forge.fake_command passes the card
 log's "game_patches"), each fake deck's average mana value is 2 unless FAKE_FORGE's avgcmc=a,b
@@ -113,8 +114,8 @@ Wave 3 (forge-trial/sim-wave3-contract.md section 19.1) adds, as DeckLabSim does
   status error, "the request's arguments can't be read").
 - The DLENGINE line adds deckorder=<s1>,<s2> and loadseed= (1,1 and 1 with game patches on, v2 and
   deck-order-1 among --game-patch-ids; else 0,0 and 0), ai=<p1>,<p2>, pilots=<s1>,<s2> ("-" for
-  none), aiprofiles=forge|dl, and overrides=: the hash of the user folder's Forge/custom/cards
-  (APPDATA) as it was when the process started (wave 2's engine._overrides form; "none" when
+  none), aiprofiles=forge|dl, and overrides=: the hash of the user folder's custom/cards
+  (profile_dir()) as it was when the process started (wave 2's engine._overrides form; "none" when
   empty), which serve mode keeps for every request.
 - A seat's library is its [Main] in .dck line order, shuffled with the game's own card-log RNG, as
   Forge with deck-order-1 builds it (with deck-order-1 off the fake's order is the same), so an
@@ -398,10 +399,28 @@ def _seeds():
     return module
 
 
+USER_HOME_FLAG = "-Duser.home="     # the JVM's user.home (runner_launch.user_home_flags, off Windows)
+
+
+def profile_dir():
+    """Forge's user folder as ForgeProfileProperties.getDefaultDirs finds it: on Windows
+    APPDATA's Forge (<user.home>/.forge/Forge without APPDATA), on macOS <user.home>/Library/
+    Application Support/Forge, elsewhere <user.home>/.forge, user.home being the -Duser.home= this
+    process was started with (start_process), else the home folder. FAKE_FORGE_OS (windows, darwin
+    or linux) plays another OS's rule, for a test that points APPDATA at a folder by hand."""
+    system = os.environ.get("FAKE_FORGE_OS") or {"win32": "windows", "darwin": "darwin"}.get(sys.platform, "linux")
+    home = Path(PROCESS.get("user_home") or Path.home())
+    if system == "windows":
+        return Path(os.environ.get("APPDATA") or home / ".forge") / "Forge"
+    if system == "darwin":
+        return home / "Library" / "Application Support" / "Forge"
+    return home / ".forge"
+
+
 def performance_mode():
     """Forge's PERFORMANCE_MODE preference as the user folder's forge.preferences sets it
-    (APPDATA, as runner._prepare_user_dir points it), as DeckLabSim's perf= says."""
-    prefs = Path(os.environ.get("APPDATA") or ".") / "Forge" / "preferences" / "forge.preferences"
+    (profile_dir(), as runner._prepare_user_dir points it), as DeckLabSim's perf= says."""
+    prefs = profile_dir() / "preferences" / "forge.preferences"
     try:
         return "PERFORMANCE_MODE=true" in prefs.read_text(encoding="utf-8").splitlines()
     except OSError:
@@ -414,14 +433,15 @@ PILOT_OPTION = "dlpilot"
 # What this process was started with (main): the AI profile folder (-Ddecklab.aiprofiles), the
 # pilot switches the jar holds (--pilot-switches), and the overrides hash of the user folder's
 # custom/cards at start-up (as Startup.afterInitialize works it out once per JVM).
-PROCESS = {"aiprofiles": None, "profiles": FORGE_PROFILES, "pilot_switches": (), "overrides": "none"}
+PROCESS = {"aiprofiles": None, "profiles": FORGE_PROFILES, "pilot_switches": (), "overrides": "none",
+           "user_home": None}
 
 
 def overrides_hash():
-    """The hash of APPDATA's Forge/custom/cards (wave 2's engine._overrides form: each file's path
+    """The hash of the user folder's custom/cards (profile_dir(); wave 2's engine._overrides form: each file's path
     from that folder with "/", a NUL, the SHA-256 of its bytes with CRLF made LF, and a newline,
     in path order; the SHA-256 of all that), or "none" when it holds no file."""
-    folder = Path(os.environ.get("APPDATA") or ".") / "Forge" / "custom" / "cards"
+    folder = profile_dir() / "custom" / "cards"
     try:
         names = sorted(p.relative_to(folder).as_posix() for p in folder.rglob("*") if p.is_file())
         text = "".join(name + "\0" + hashlib.sha256((folder / name).read_bytes().replace(b"\r\n", b"\n")).hexdigest()
@@ -438,6 +458,7 @@ def start_process(argv):
     folder = next((word.split("=", 1)[1] for word in argv if word.startswith(AI_PROFILES_FLAG)), None)
     switches = next((word[len(PILOT_SWITCHES):] for word in argv if word.startswith(PILOT_SWITCHES)), "")
     PROCESS["pilot_switches"] = tuple(filter(None, switches.split(",")))
+    PROCESS["user_home"] = next((word[len(USER_HOME_FLAG):] for word in argv if word.startswith(USER_HOME_FLAG)), None)
     PROCESS["overrides"] = overrides_hash()
     if folder is None:
         return None
@@ -763,7 +784,7 @@ def main(argv):
     patch_ids = next((word[len(PATCH_IDS):] for word in argv if word.startswith(PATCH_IDS)), "")
     problem = start_process(argv)
     words = [word for word in argv if word not in ("--card-log", "--game-patches-off", GAME_PATCHES_OFF)
-             and not word.startswith((PATCH_IDS, PILOT_SWITCHES, AI_PROFILES_FLAG))]
+             and not word.startswith((PATCH_IDS, PILOT_SWITCHES, AI_PROFILES_FLAG, USER_HOME_FLAG))]
     if words and words[0] == "serve":
         return serve(game_patches, patch_ids, problem)
     start_up()

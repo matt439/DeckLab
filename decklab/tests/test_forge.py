@@ -170,7 +170,8 @@ def fake_command(setup, fmt, deck1, deck2, games, seed, v2=None, pilots=None):
     --game-patches-off for setup["game_patches"] False. pilots as build_command's (passed on only
     when given, as wave 2's request)."""
     more = {} if pilots is None else {"pilots": pilots}
-    argv = [sys.executable, str(FAKE), *forge.runner.request_args(setup, fmt, deck1, deck2, games, seed, v2, **more)]
+    argv = [sys.executable, str(FAKE), *forge.runner.user_home_flags(setup),
+            *forge.runner.request_args(setup, fmt, deck1, deck2, games, seed, v2, **more)]
     log = setup.get("card_log") or {}
     if log.get("ready"):
         argv += ["--card-log", "--game-patch-ids=" + ",".join(log.get("game_patches", [])),
@@ -193,7 +194,7 @@ def _wave3_flags(setup):
 def fake_serve_command(setup):
     """runner.serve_command for the fake Forge: its serve mode (fixtures/fake_forge.py), with
     --game-patch-ids= the card log's "game_patches"."""
-    argv = [sys.executable, str(FAKE), "serve",
+    argv = [sys.executable, str(FAKE), *forge.runner.user_home_flags(setup), "serve",
             "--game-patch-ids=" + ",".join((setup.get("card_log") or {}).get("game_patches", [])),
             *_wave3_flags(setup)]
     if setup.get("game_patches") is False:
@@ -420,11 +421,18 @@ class StatusTests(ForgeCase):
         self.assertFalse(found["ready"])
         self.assertIn("settings", found["problem"])
 
+    def windows_search(self):
+        """find_java's Windows search, on any OS (its Program Files folders and java.exe names)."""
+        p = mock.patch.object(forge.install, "_windows", return_value=True)
+        p.start()
+        self.addCleanup(p.stop)
+        return "java.exe", "javac.exe"
+
     def test_find_java_takes_the_newest_jdk(self):
+        exe, _ = self.windows_search()
         root = self.tmp / "Program Files"
         for name in ("jdk-21.0.2", "jdk-26.0.1", "jdk-9"):
             (root / "Java" / name / "bin").mkdir(parents=True)
-        exe = "java.exe" if os.name == "nt" else "java"
         for name in ("jdk-21.0.2", "jdk-26.0.1"):
             (root / "Java" / name / "bin" / exe).write_bytes(b"")
         with mock.patch.dict(os.environ, {"ProgramFiles": str(root)}):
@@ -433,9 +441,8 @@ class StatusTests(ForgeCase):
         self.assertEqual(forge.find_java(sys.executable), Path(sys.executable))
 
     def test_find_java_looks_in_each_vendors_folder_and_prefers_a_jdk(self):
+        exe, javac = self.windows_search()
         root = self.tmp / "Program Files"
-        exe = "java.exe" if os.name == "nt" else "java"
-        javac = "javac.exe" if os.name == "nt" else "javac"
         installs = {"Eclipse Adoptium/jdk-21.0.5.11-hotspot": True, "Microsoft/jdk-17.0.13.11-hotspot": True,
                     "Zulu/zulu-25-jre": False, "Amazon Corretto/jdk11.0.25_9": True,
                     "Eclipse Adoptium/jre-26.0.1.8-hotspot": False,
@@ -454,8 +461,8 @@ class StatusTests(ForgeCase):
             # no JDK of Java 21 or later left: the newest JRE, never Java 8 or 11 with javac
             self.assertEqual(forge.find_java(), root / "Eclipse Adoptium" / "jre-26.0.1.8-hotspot" / "bin" / exe)
 
-    def test_find_java_falls_back_to_java_home_then_the_path(self):
-        exe = "java.exe" if os.name == "nt" else "java"
+    def test_find_java_falls_back_to_java_home_but_never_the_path_on_windows(self):
+        exe, _ = self.windows_search()
         home = self.tmp / "jdk"
         (home / "bin").mkdir(parents=True)
         (home / "bin" / exe).write_bytes(b"")
@@ -465,8 +472,8 @@ class StatusTests(ForgeCase):
         with mock.patch.dict(os.environ, empty), mock.patch.object(forge.install.shutil, "which",
                                                                     return_value=str(home / "bin" / exe)):
             os.environ.pop("JAVA_HOME", None)
-            expected = None if os.name == "nt" else (home / "bin" / exe).resolve()
-            self.assertEqual(forge.find_java(), expected)
+            self.assertIsNone(forge.find_java())       # the PATH's java.exe is only a launcher
+            self.assertEqual(forge.install.no_java_problem(), "Java wasn't found, so Forge can't run.")
 
 
 # ============================================================ command line

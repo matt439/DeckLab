@@ -177,8 +177,17 @@ _lock = threading.Lock()
 
 
 def _tool(java, name):
-    """The JDK tool beside java.exe (javac.exe, jar.exe), or None when it isn't there (a JRE)."""
-    path = Path(java).parent / (f"{name}.exe" if os.name == "nt" else name)
+    """The JDK tool beside java.exe (javac.exe, jar.exe), or None when it isn't there (a JRE).
+    Off Windows java's links are followed first (config's forge_java is often /usr/bin/java, a
+    link through the alternatives system), so the tool is the same JDK's, never another one's
+    link beside it."""
+    java = Path(java)
+    if os.name != "nt":
+        try:
+            java = java.resolve()
+        except (OSError, RuntimeError):
+            pass
+    path = java.parent / (f"{name}.exe" if os.name == "nt" else name)
     return path if path.is_file() else None
 
 

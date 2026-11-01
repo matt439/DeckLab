@@ -942,7 +942,7 @@ class Wave3EchoTests(EngineCase):
                 args = forge.runner.request_args(launch, "Constructed", f"{self.a['card_sha']}.dck",
                                                  f"{self.b['card_sha']}.dck", 2, 1,
                                                  {"stream": "0123456789abcdef", "first": 0}, pilots=self.seats)
-                argv = [sys.executable, str(test_forge.FAKE), *args, "--card-log",
+                argv = [sys.executable, str(test_forge.FAKE), *forge.runner.user_home_flags(launch), *args, "--card-log",
                         "--game-patch-ids=" + ",".join(patches), *test_forge._wave3_flags(launch)]
                 done = subprocess.run(argv, env=env, capture_output=True, text=True, encoding="utf-8", timeout=60)
                 reader = forge.LogReader(0)

@@ -724,15 +724,20 @@ def _tidy_user_dir(user_dir):
     forge1.log...). Java opens them letting others delete them, so this also deletes
     those of another run still going (checked 2026-10-01), which does no harm: that
     Forge goes on writing to the deleted file. A hard kill leaves them for the next run."""
-    for old in (user_dir / "Forge").glob("forge*.log"):
-        try:
-            old.unlink()
-        except OSError:
-            pass
+    user_dir = Path(user_dir)
+    folders = [user_dir / "Forge"]     # and off Windows a copied user folder (runner_launch._link_user_home)
+    folders += [place for place, target in _home_layout(user_dir)
+                if target.name == "Forge" and place.is_dir() and not place.is_symlink()]
+    for folder in folders:
+        for old in folder.glob("forge*.log"):
+            try:
+                old.unlink()
+            except OSError:
+                pass
 # Implementations read this module for shared settings and patchable entry points.
 from .runner_launch import (
     _preferences, request_args, _seat_pilots, _java, _class_path_launch,
-    serve_command, serve_event, request_line, _prepare_user_dir, _first_use_marker)
+    serve_command, serve_event, request_line, _prepare_user_dir, _first_use_marker, user_home_flags, _home_layout)
 from .runner_cold import (
     _Batch, _read, _save_failure_log, _failure_log, _kill, _slot, _play, _log_card_problems)
 from .runner_v2 import (
