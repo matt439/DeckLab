@@ -31,7 +31,8 @@ from decklab.lib import access, config, control, profiles, tunnel
 
 from . import gather, profile_config, watchdog
 from . import mdns as multicast         # not "mdns": cmd_status has a variable of that name
-from .checks import check_addresses, check_firewall, check_network, check_sleep, exit_code, format_report, lan_of
+from .checks import (check_addresses, check_firewall, check_network, check_sleep, check_wake, exit_code, format_report,
+                     lan_of)
 from .common import (
     LOG_TAIL, OK, PROBE_TIMEOUT, PROBLEM, RERUN_AFTER, SCHTASKS, SCHTASKS_TIMEOUT, SERVER_SCRIPT, START_WAIT,
     STOP_WAIT, TASK_DELAY, TASK_NAME, TASK_NOT_RUN_YET, TASK_RUNNING, TASK_TERMINATED, TCP_MAXRT, WARN, WATCHDOG_EVERY,
@@ -944,9 +945,14 @@ def cmd_status(name, port):
     if access_port:
         helpers.append(threading.Thread(target=lambda: found.update(
             listener=tunnel.check_listener(access_port, public, PROBE_TIMEOUT)), daemon=True))
+    from decklab.lib import keepawake
+    wake = keepawake.wake_settings(settings)        # wake-on-request: the PC sleeps when idle
+    if wake and wake["gate"]:
+        helpers.append(threading.Thread(target=lambda: found.update(gate=gather.probe_gate(wake["gate"])),
+                                        daemon=True))
     for helper in helpers:
         helper.start()
-    facts = gather.gather_facts(name, port)
+    facts = gather.gather_facts(name, port, wake=wake is not None)
     for helper in helpers:
         helper.join(max(PROBE_TIMEOUT + MDNS_WAIT, tunnel.CHECK_TIMEOUT) + 5)
     answer = found.get("answer") or {"answered": False, "error": "the check didn't finish"}
@@ -976,7 +982,9 @@ def cmd_status(name, port):
     lines += check_firewall(facts.get("firewall"), port, server_programs, python_programs,
                             step_error(facts, "firewall"), lan=lan_of(network))
     lines += check_addresses(network, hostname, mdns, port)
-    lines += check_sleep(facts.get("power"), step_error(facts, "power"))
+    lines += check_sleep(facts.get("power"), step_error(facts, "power"), wake=wake is not None)
+    if wake is not None and sys.platform == "win32":
+        lines += check_wake(facts, wake["gate"], found.get("gate"))
     lines += check_tunnel(settings, found.get("public"), tunnel.ingress_problems(settings, port),
                           found.get("listener"))
     seconds = time.monotonic() - started

@@ -58,11 +58,13 @@ function fvKeepPlace(change) {
   return typeof keepPlace === "function" ? keepPlace(change) : change();
 }
 
-async function fvRefresh(ctx) {
+/** timer: the timer's refresh while the field run plays: it counts as use but never leaves the page
+ * for the wake gate. */
+async function fvRefresh(ctx, { timer = false } = {}) {
   clearTimeout(ctx.timer);
   if (!fvHere(ctx) || ctx.busy) return;
   try {
-    const answer = await api(ctx.url);
+    const answer = await api(ctx.url, timer ? { wakeHop: false } : {});
     if (!fvHere(ctx) || ctx.busy) return;
     fvKeepPlace(() => fvDraw(ctx, answer));
   } catch (e) {
@@ -81,7 +83,7 @@ function fvSchedule(ctx) {
   if (!fvHere(ctx) || !ctx.answer) return;
   if (fvPlaying(ctx.answer)) {
     ctx.timer = setTimeout(() => {
-      if (fvHere(ctx) && ctx.section.isConnected) fvRefresh(ctx);
+      if (fvHere(ctx) && ctx.section.isConnected) fvRefresh(ctx, { timer: true });
     }, FV_POLL_MS);
   }
 }

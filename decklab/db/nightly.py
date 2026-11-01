@@ -13,6 +13,9 @@ export), and each one's outcome goes into decklab/data/logs/db.log. The check co
 backup and the export, so a problem it finds never stops either. It runs under pythonw, with no
 window and no console, so the log is where to look; `python -m decklab.db status` warns when the
 last dump that worked is old or the last check failed (and the footer tells an admin).
+
+The whole run holds the PC awake (lib/keepawake.py's hold_while: a power request on Windows,
+nothing elsewhere), so a PC that sleeps when idle (wake-on-request) doesn't fall asleep midway.
 """
 import traceback
 from datetime import datetime, timedelta
@@ -52,6 +55,12 @@ def _shop_prices():
 
 def run():
     """The nightly job. Returns 0, or 1 when any step failed."""
+    from decklab.lib import keepawake
+    with keepawake.hold_while():
+        return _run()
+
+
+def _run():
     from decklab.db import check, export, visits
     db.log("Nightly: starting.")
     steps = [("backup", backup.run_backup), ("prune", backup.run_prune), ("visits", visits.run_prune),

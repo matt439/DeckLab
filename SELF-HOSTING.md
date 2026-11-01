@@ -337,6 +337,19 @@ On the old PC, once the new one works:
 
 The command line's inventory, deck and wishlist commands work on the database `config.json` names, so after the move run them on the new PC (in person, or over Remote Desktop or SSH).
 
+## 12. Let the server sleep (optional)
+
+A PC that serves Deck Lab all day uses power all day. With an always-on device on the same network that can run a small container (a NAS), the PC can sleep when idle and wake whenever anyone opens Deck Lab, at home or through the tunnel; the visitor waits under a minute, with a page saying so. The reference's "Sleeping and waking on request" explains how it works.
+
+1. **The PC:** check `powercfg /a` lists "Standby (S3)". Turn on Wake-on-LAN in the BIOS. On the wired network adapter (Device Manager), set "Wake on Magic Packet" and tick "Allow this device to wake the computer" and "Only allow a magic packet to wake the computer". Give the PC a DHCP reservation in the router, and note its MAC address (`getmac /v`). Allow wake timers on mains power, so the nightly backup can wake the PC: Control Panel, Power Options, Change plan settings, Change advanced power settings, Sleep, "Allow wake timers", Plugged in: Enable (or `powercfg /setacvalueindex SCHEME_CURRENT SUB_SLEEP RTCWAKE 1`, then `powercfg /setactive SCHEME_CURRENT`).
+2. **The wake gate on the NAS:** follow [decklab/wakegate/README.md](decklab/wakegate/README.md). Check `http://<the NAS>:8650/__status` says the PC is awake.
+3. **`config.json`:** add `"wake": {"idle_minutes": 20, "gate": "http://<the NAS>:8650"}`, restart Deck Lab (`python -m decklab.lib.homenet restart`) and run `python -m decklab.db schedule install` again, so the nightly task wakes the PC.
+4. **Windows' sleep timeout:** a few minutes (Settings, Power). Deck Lab keeps the PC awake while it's in use, and a command-line Forge run (`python -m decklab.lib.forge play ...`) keeps it awake by itself until it ends. The page's timer polls never wake the PC, at home or through Cloudflare: only opening a page and things you do there do.
+5. **From outside (if you set up step 10):** the NAS tunnel, the Access service token and the Worker's three secrets, in the wake gate's README.
+6. **Check:** `python -m decklab.lib.homenet status` (its Wake area) and `python -m decklab.smoke`. Then let it sleep, open the gate's address on a phone, and time the wake.
+
+Phones and tablets bookmark the gate's address instead of the PC's. A Deck Lab page already open at home hops through the gate when it can't reach the PC only if it was opened at exactly the address the gate sends people to (the wake gate's `DECKLAB_PC_HOST` and port, such as `http://<the PC's address>:8642`), so open Deck Lab at home by that address or the gate's bookmark, not `localhost` or another name for the PC. A save that fails while the PC sleeps never navigates away: it shows the usual can't-be-reached error, and your change stays on the page to try again. On Windows the server and the nightly task run in your signed-in session, so the PC should sign in by itself after a restart.
+
 ## When something goes wrong
 
 - **"no password supplied"** from `setup`: run it in a terminal, so it can ask, or add the pgpass line from step 5.

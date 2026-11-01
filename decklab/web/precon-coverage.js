@@ -66,7 +66,7 @@ async function rankPrecons(ctx, { poll = false } = {}) {
     const params = coverageParams(ctx);
     if (ctx.format) params.set("format", ctx.format);
     if (ctx.type) params.set("type", ctx.type);
-    const answer = await api(`/api/precons/coverage?${params}`);
+    const answer = await api(`/api/precons/coverage?${params}`, { poll });
     if (!coverageAlive(ctx, seq) || ctx.detail) return;
     ctx.ranking = answer;
     clear(ctx.message);

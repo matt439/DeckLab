@@ -104,7 +104,7 @@ class GatherTests(Guarded):
         script, env = homenet.gather.run_powershell.call_args[0]
         self.assertIs(script, homenet.GATHER_PS)
         self.assertEqual(env, {"DECKLAB_TASK": "Deck Lab test", "DECKLAB_PORT": "18642",
-                               "DECKLAB_WATCHDOG_TASK": "Deck Lab test watchdog"})
+                               "DECKLAB_WATCHDOG_TASK": "Deck Lab test watchdog", "DECKLAB_WAKE": "0"})
         self.assertIn("seconds", facts)
 
     def test_the_watchdog_task_is_read_like_the_server_task(self):

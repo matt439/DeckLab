@@ -859,14 +859,27 @@ class ApiError extends Error {
 
 /** The JSON answer of a Deck Lab API call; ApiError(status, message) otherwise. Every call names the
  * profile chosen (X-Deck-Lab-Viewer), so on the home network the server answers with what that profile
- * sees: its own and the shared sleeves, deck boxes and playmats (through the tunnel the login decides). */
+ * sees: its own and the shared sleeves, deck boxes and playmats (through the tunnel the login decides).
+ * options.poll: true for a call a timer makes (not the viewer): it's marked X-Deck-Lab-Poll: 1, so the
+ * server doesn't count it as use and a PC that sleeps when idle may sleep (wake-on-request).
+ * options.wakeHop: false for a call that counts as use but must never leave the page (a watched run's
+ * refresh). Only a read the viewer made (no poll, not aborted, method GET or HEAD) that can't reach the
+ * PC may open the page through the wake gate; a write never does (its draft stays on the page). */
 async function api(path, options = {}) {
   let response;
   const viewer = state.profile ? { "X-Deck-Lab-Viewer": state.profile.id } : {};
+  const { poll, wakeHop, ...fetchOptions } = options;
+  const marked = poll === true ? { "X-Deck-Lab-Poll": "1" } : {};
   try {
-    response = await fetch(path, { ...options,
-      headers: { Accept: "application/json", ...viewer, ...(options.headers || {}) } });
+    response = await fetch(path, { ...fetchOptions,
+      headers: { Accept: "application/json", ...viewer, ...marked, ...(options.headers || {}) } });
   } catch (e) {
+    const aborted = (e && e.name === "AbortError") || Boolean(options.signal && options.signal.aborted);
+    const method = String(options.method || "GET").toUpperCase();
+    const read = method === "GET" || method === "HEAD";
+    if (!aborted && read && poll !== true && wakeHop !== false && await openWakeGate()) {
+      throw new ApiError(0, WAKING_MESSAGE);
+    }
     throw new ApiError(0, "The Deck Lab server can't be reached. Check that it's running on the PC " +
       "and that this device is on the home network.");
   }
@@ -880,13 +893,17 @@ async function api(path, options = {}) {
 }
 
 /** A write to the Deck Lab API: JSON with the header the server's write check needs (so another web
- * page open on the phone can't make changes), and for a POST the profile making the change. */
-function apiWrite(path, body, method = "POST") {
+ * page open on the phone can't make changes), and for a POST the profile making the change. options:
+ * api()'s poll and wakeHop. */
+function apiWrite(path, body, method = "POST", options = {}) {
   const data = method === "POST" ? { profile: state.profile && state.profile.id, ...body } : body;
+  const { poll, wakeHop } = options || {};
   return api(path, {
     method,
     headers: { Accept: "application/json", "Content-Type": "application/json", "X-Deck-Lab": "1" },
     body: JSON.stringify(data),
+    ...(poll === undefined ? {} : { poll }),
+    ...(wakeHop === undefined ? {} : { wakeHop }),
   });
 }
 
@@ -940,8 +957,9 @@ async function load(path, token, draw, { title = "This page couldn't be loaded",
       if (!(e instanceof ApiError)) throw e;
       if (e.status === 503 && e.data?.reason !== "database") {
         waited = true;
-        await waitForCards(main, e.message, token,
-          e.data?.reason === "off" ? "Deck Lab is off" : "The card data isn't ready yet");
+        const waking = e.data?.reason === "waking";
+        await waitForCards(main, waking ? WAKING_MESSAGE : e.message, token,
+          waking ? "Deck Lab is waking up" : e.data?.reason === "off" ? "Deck Lab is off" : "The card data isn't ready yet");
         if (token !== routeToken) return;
         continue;
       }
@@ -968,8 +986,54 @@ function errorBox(title, error, retry = route, back = retry === null ? null : ["
       way) : null);
 }
 
+/** What the page says while the PC is asleep and being woken (a 503 with reason "waking" from the off
+ * page's Worker, wake-on-request). */
+const WAKING_MESSAGE = "Deck Lab is waking up. This usually takes under a minute.";
+
+/** The wake gate on the home network (config.json's "wake" "gate", sent in /api/status to home
+ * pages), kept on the device so it's known even when the PC no longer answers. Called with each real
+ * /api/status answer: one without a gate forgets the stored one. */
+function rememberWakeGate(gate) {
+  if (typeof gate === "string" && /^https?:\/\//.test(gate)) local.set("wakeGate", gate);
+  else local.remove("wakeGate");
+}
+
+/** How long the gate has to answer /__status before the page gives up on it. */
+const WAKE_GATE_TIMEOUT_MS = 3000;
+
+/** When something the viewer did can't reach the PC at home, it's probably asleep: open the same page
+ * through the wake gate, which wakes the PC and comes back. Only when the gate answers /__status (a CORS
+ * read it allows only from the PC's own origin) naming this page's origin as the PC it sends back to, so
+ * a stale or foreign gate never takes the page anywhere. Timer polls never do this (an open tab must let
+ * the PC sleep), nor twice within a minute. Resolves true when it's on its way to the gate. */
+async function openWakeGate() {
+  const gate = local.get("wakeGate");
+  if (!gate || navigator.onLine === false) return false;
+  let url;
+  try { url = new URL(gate); } catch (e) { return false; }
+  if (url.origin === location.origin) return false;
+  const tried = Number(session.get("wakeGateTried") || 0);
+  if (Date.now() - tried < 60000) return false;
+  const controller = new AbortController();
+  const deadline = setTimeout(() => controller.abort(), WAKE_GATE_TIMEOUT_MS);
+  try {
+    const answer = await fetch(url.origin + "/__status", { mode: "cors", cache: "no-store", signal: controller.signal });
+    if (!answer.ok) return false;
+    const status = await answer.json();
+    if (!status || typeof status.pc !== "string" || status.pc !== location.origin) return false;
+  } catch (e) {
+    return false;
+  } finally {
+    clearTimeout(deadline);
+  }
+  session.set("wakeGateTried", String(Date.now()));
+  location.assign(url.origin + location.pathname + location.search + location.hash);
+  return true;
+}
+
 /** Show why the card data isn't ready (or, with reason "off" from the off page's Worker, that Deck Lab
- * isn't running at home), count down, and resolve when it's time to retry. */
+ * isn't running at home; with "waking", that the PC is being woken), count down, and resolve when it's
+ * time to retry. */
 function waitForCards(main, message, token, title = "The card data isn't ready yet") {
   return new Promise((resolve) => {
     let left = RETRY_SECONDS;

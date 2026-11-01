@@ -127,11 +127,13 @@ function packQueueTicks(view, changes) {
 }
 
 /** Requests are serial within a device. Newer local toggles overlay each response until saved;
- * a late poll therefore cannot undo a click, and two devices patching different tasks both survive. */
-async function packSync(view) {
+ * a late poll therefore cannot undo a click, and two devices patching different tasks both survive.
+ * resync: the timer's or a resumed phone's check, not the viewer's; one carrying no tick changes is
+ * marked as a poll, so it doesn't count as use (wake-on-request). */
+async function packSync(view, { resync = false } = {}) {
   const p = view.progress;
   if (!p || !packProgressOwner(view)) return;
-  if (p.busy) { p.again = true; return; }
+  if (p.busy) { p.again = true; if (!resync) p.againUse = true; return; }
   if (!assemblyActive(view) && !p.pending.size) return;
   clearTimeout(p.timer);
   const changes = [...p.pending].map(([id, change]) => ({ id, ...change }));
@@ -146,11 +148,12 @@ async function packSync(view) {
   }
   p.busy = true;
   p.again = false;
+  p.againUse = false;
   packBulkProgress(view);
   try {
     const body = { ids };
     if (changes.length) body.changes = changes.map(({ id, done }) => ({ id, done }));
-    const answer = await apiWrite("/api/assembly/ticks", body);
+    const answer = await apiWrite("/api/assembly/ticks", body, "POST", { poll: resync && !changes.length });
     if (!packProgressOwner(view)) return;
     if (!Array.isArray(answer.ticks)) throw new Error("The shared ticks couldn't be read. Try again.");
     if (p.scope === activityScope) p.activity = exactActivityScope ? answer.activity || null : null;
@@ -168,7 +171,7 @@ async function packSync(view) {
     if (packProgressOwner(view)) {
       if (assemblyActive(view)) packApplyTicks(view);
       if (!p.error && (p.pending.size || p.again)) {
-        packSync(view);
+        packSync(view, { resync: !p.pending.size && !p.againUse });
       } else if (assemblyActive(view) && packingProgressView === view) packScheduleTicks(view);
     }
   }
@@ -178,7 +181,7 @@ function packScheduleTicks(view) {
   clearTimeout(view.progress.timer);
   view.progress.timer = setTimeout(() => {
     if (!assemblyActive(view) || !packProgressOwner(view)) return;
-    if (!document.hidden && !view.saving) packSync(view);
+    if (!document.hidden && !view.saving) packSync(view, { resync: true });
     else packScheduleTicks(view);
   }, PACK_SYNC_MS);
 }
@@ -257,5 +260,5 @@ function packBulkTicks(view, group) {
 // A locked phone resumes with the server's latest checks, without waiting for the next poll.
 document.addEventListener("visibilitychange", () => {
   const view = packingProgressView;
-  if (!document.hidden && view && assemblyActive(view) && !view.saving) packSync(view);
+  if (!document.hidden && view && assemblyActive(view) && !view.saving) packSync(view, { resync: true });
 });

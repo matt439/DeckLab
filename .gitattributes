@@ -1,0 +1,2 @@
+# The NAS wake gate runs on Linux: keep its files LF on every checkout
+decklab/wakegate/** text eol=lf

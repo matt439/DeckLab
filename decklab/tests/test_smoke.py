@@ -136,6 +136,48 @@ class RunnerTests(unittest.TestCase):
         with self.assertRaises(smoke.Skip):
             smoke.step_server(smoke.Result("x", "X"), ctx)
 
+    def test_wake_skips_without_a_wake_block(self):
+        from unittest import mock
+        ctx = {"args": _args(), "doctor": {"config": "ready"}}
+        with mock.patch("decklab.lib.config.load", return_value={"port": 8642}), self.assertRaises(smoke.Skip):
+            smoke.step_wake(smoke.Result("x", "X"), ctx)
+
+    def test_wake_checks_the_gate(self):
+        import http.server
+        import threading
+        from unittest import mock
+        awake = {"value": True}
+
+        class Gate(http.server.BaseHTTPRequestHandler):
+            def do_GET(self):
+                body = json.dumps({"awake": awake["value"], "waking": False, "since": None}).encode()
+                self.send_response(200 if self.path == "/__status" else 404)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(body)
+
+            def log_message(self, *args):
+                pass
+
+        server = http.server.HTTPServer(("127.0.0.1", 0), Gate)
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+        self.addCleanup(server.server_close)
+        self.addCleanup(server.shutdown)
+        gate = f"http://127.0.0.1:{server.server_address[1]}"
+        ctx = {"args": _args(), "doctor": {"config": "ready"}}
+        with mock.patch("decklab.lib.config.load", return_value={"wake": {"gate": gate}}):
+            r = smoke.Result("x", "X")
+            smoke.step_wake(r, ctx)
+            self.assertEqual(r.status, smoke.PASS)
+            awake["value"] = False
+            r = smoke.Result("x", "X")
+            smoke.step_wake(r, ctx)
+            self.assertEqual(r.status, smoke.FAIL)
+        with mock.patch("decklab.lib.config.load", return_value={"wake": {"gate": "http://127.0.0.1:1"}}):
+            r = smoke.Result("x", "X")
+            smoke.step_wake(r, ctx)
+            self.assertEqual(r.status, smoke.FAIL)
+
     def test_forge_skips_when_it_isnt_installed(self):
         ctx = {"args": _args(), "doctor": {"config": "ready", "forge": "needs_setup"}}
         with self.assertRaises(smoke.Skip):

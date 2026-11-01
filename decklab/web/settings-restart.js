@@ -101,7 +101,7 @@ async function waitForRestart(before, since, wentDown) {
     return;
   }
   try {
-    const s = await api("/api/status");
+    const s = await api("/api/status", { poll: true });
     const started = s.build && s.build.started_at;
     if (before ? started && started !== before : wentDown) {
       reloadDeckLab();

@@ -62,7 +62,18 @@ def _main(argv):
     for add, _ in COMMANDS.values():
         add(sub)
     args = parser.parse_args(argv)
-    return COMMANDS[args.command][1](args)
+    run = COMMANDS[args.command][1]
+    if args.command in _QUICK_COMMANDS:
+        return run(args)
+    # A command that may play games holds the PC awake (wake-on-request) until it ends, as the
+    # server does for its runs: a no-op off Windows, and harmless beside the server's hold.
+    from decklab.lib import keepawake
+    with keepawake.hold_while():
+        return run(args)
+
+
+# Commands that only read or move saved files: they don't hold the PC awake.
+_QUICK_COMMANDS = frozenset({"status", "audit", "list", "cards", "slots", "pool", "pilots", "staged-move", "decisions"})
 
 
 # Preserve the existing CLI names and mock.patch.object(cli, name) targets without

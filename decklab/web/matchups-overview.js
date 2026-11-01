@@ -64,7 +64,7 @@ function watchMatchupUpdates({ token, host, url, active, interval = POLL_MS * LI
     let timedOut = false;
     const deadline = setTimeout(() => { timedOut = true; controller.abort(); }, 12000);
     try {
-      const answer = await api(url, { signal: controller.signal });
+      const answer = await api(url, { signal: controller.signal, poll: !active() });     // idle: not use
       if (!present() || controller.signal.aborted || held) return;
       await onFresh(answer, { signal: controller.signal });
       if (!present() || controller.signal.aborted || held) return;
