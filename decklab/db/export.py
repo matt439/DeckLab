@@ -400,11 +400,21 @@ def _psycopg_errors():
 
 
 def run_export(repo=None, push=True, say=backup.say):
-    """The export command. Returns 0, or 1 when writing, committing or pushing failed
-    (recorded in ops.backup_run either way)."""
-    repo = Path(repo or db.settings()["export_repo"])
+    """The export command. Returns 0, or 1 when writing, committing or pushing failed, or
+    (off Windows) the settings' export_repo is relative or looks like a Windows path
+    (conn.path_setting); recorded in ops.backup_run either way."""
     started = datetime.now()
     size, made = None, None
+    if repo:
+        repo = Path(os.path.expanduser(str(repo)))
+    else:
+        s = db.settings()
+        try:
+            repo = Path(db.path_setting("export_repo", s) or db.DEFAULTS["export_repo"])
+        except ValueError as e:              # off Windows, a relative or Windows-looking export_repo
+            backup.record("export", started, False, s.get("export_repo"), None, str(e))
+            say(f"Export failed: {e}")
+            return 1
     try:
         made = ensure_repo(repo)
         size = write_tables(repo)
