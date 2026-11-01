@@ -89,8 +89,14 @@ def _step(label, func):
 
 
 def _restore_check_if_due():
+    """The restore check, when the last that worked is restore_check_days old, or the newest
+    one failed (so a failure is tried again the next night, not left until the days pass)."""
     s = db.settings()
     last = backup.last_ok()["restore_check"]
+    newest = backup.latest(("restore_check",))["restore_check"]
+    if newest is not None and not newest["ok"]:
+        db.log("Nightly: restore check again tonight, as the last one failed.")
+        return backup.run_restore_check()
     if not restore_check_due(last, datetime.now().astimezone(), float(s["restore_check_days"])):
         db.log(f"Nightly: no restore check tonight (the last one worked on {last.astimezone():%Y-%m-%d}).")
         return 0

@@ -17,6 +17,7 @@ CHECKS = (
     ("forge", "Forge installation files", "optional", ("config",)),
     ("ocr", "Photo scanning engine", "optional", ()),
     ("timezone", "Time zone", "optional", ("config",)),
+    ("backups", "Backup folders", "optional", ("config",)),
 )
 SIMULATION_FILES = ("java", "forge")     # the optional checks optional_files_status sums up
 
@@ -124,6 +125,22 @@ OUTCOMES = MappingProxyType({
     "timezone_unknown": ("unverified", "This PC has no data for config.json's timezone, so it can't be compared.",
                          "On Linux install the tzdata package; on Windows this check needs Python's tzdata "
                          "package, and Deck Lab's own dates use UTC+10 without it."),
+    "backups_ready": ("ready", "The backup folder settings can be used here and backup_dir is on a disk of its "
+                      "own; no backup was made.", None),
+    "backups_local_only": ("ready", "No backup_dir is set, so each night's dump stays on this PC only; no backup "
+                           "was made.", None),
+    "backups_setting_invalid": ("needs_setup", "A folder setting in config.json's database block can't be used on "
+                                "this PC, so backups, prune, the restore check or the export fail.",
+                                "Give backup_dir, staging_dir, export_repo and pg_bin as absolute paths for this "
+                                "system (python -m decklab.db backup names the one it refuses); see SELF-HOSTING.md "
+                                "step 9."),
+    "backups_unreachable": ("needs_setup", "backup_dir's folder (or the folder it would be made in) can't be "
+                            "reached, so every backup's copy fails.",
+                            "Mount the share or make the parent folder, then run the preflight again."),
+    "backups_same_device": ("needs_setup", "backup_dir is on the same disk as the staging folder (is the NAS share "
+                            "mounted?), so every backup, prune and restore check is refused.",
+                            "Mount the share, or set \"backup_same_device_ok\": true in config.json's database "
+                            "block if a second folder on this disk is really meant."),
     "probe_unverified": ("unverified", "This preflight check did not return a verified result.",
                          "Review the local setup and retry the preflight; no raw adapter error is included."),
 })
@@ -144,6 +161,8 @@ ALLOWED = MappingProxyType({
     "ocr": frozenset({"ocr_ready", "ocr_missing", "ocr_no_language", "ocr_unusable"}),
     "timezone": frozenset({"timezone_not_set", "timezone_matches", "timezone_differs", "timezone_invalid",
                            "timezone_unknown"}),
+    "backups": frozenset({"backups_ready", "backups_local_only", "backups_setting_invalid", "backups_unreachable",
+                          "backups_same_device"}),
 })
 
 

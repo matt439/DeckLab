@@ -68,8 +68,9 @@ def _listed(items, shown=SHOWN):
     return text
 
 
-def _plural(n, word):
-    return f"{n} {word}{'' if n == 1 else 's'}"
+def _plural(n, word, plural=None):
+    """n and the word, made plural with an s unless given its plural ("alias", "aliases")."""
+    return f"{n} {word if n == 1 else plural or word + 's'}"
 
 
 class _Run:
@@ -205,7 +206,7 @@ def _deck_aliases(c):
             if target not in active and rows and rows[max(rows)] != "D":
                 wrong.append(f"{target} is missing its current deck without a retirement")
         return not wrong, False, (_listed(wrong) if wrong
-                                  else f"deck lineages remain separate ({_plural(len(aliases), 'alias')})")
+                                  else f"deck lineages remain separate ({_plural(len(aliases), 'alias', 'aliases')})")
     return work
 
 

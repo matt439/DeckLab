@@ -65,7 +65,8 @@ def java_release(home):
 
 def _posix_candidates():
     """Off Windows: [(java, its major version or None)] from JAVA_HOME, the usual JDK folders
-    (_posix_java_roots) and the java on the PATH with its links followed, each once."""
+    (_posix_java_roots) and the java on the PATH with its links followed, each once. A JDK folder
+    that is a link (a distribution's alias) is given as the folder it links to."""
     homes = []
     if os.environ.get("JAVA_HOME"):
         homes.append(Path(os.environ["JAVA_HOME"]))
@@ -82,6 +83,11 @@ def _posix_candidates():
             pass
     found, seen = [], set()
     for home in homes:
+        try:
+            if home.is_symlink():       # Ubuntu's java-1.21.0-openjdk-amd64 -> java-21-openjdk-amd64:
+                home = home.resolve()   # report and use the real folder, which the doctor accepts
+        except (OSError, RuntimeError):
+            continue
         java = home / "bin" / "java"
         try:
             if not java.is_file():
@@ -148,6 +154,19 @@ def find_java(setting=None):
     if home and (Path(home) / "bin" / exe).is_file():
         return Path(home) / "bin" / exe
     return None
+
+
+def not_installed_problem(settings, windows=None):
+    """Why Forge can't run when settings' forge_dir holds no Forge jar: the folder config.json
+    names, or, when it names none, the default folder Deck Lab looked in (shown with ~, never the
+    PC's own user name, as the page shows it too)."""
+    from decklab.lib import config
+    if settings.get("forge_dir") != config.DEFAULTS["forge_dir"]:
+        return "Forge isn't installed at the folder config.json names."
+    windows = _windows() if windows is None else windows
+    shown = r"C:\Tools\forge-decklab" if windows else "~/tools/forge-decklab"
+    return (f"Forge isn't installed in {shown}, the folder Deck Lab looks in when config.json sets no "
+            "forge_dir (SELF-HOSTING.md step 8).")
 
 
 def no_java_problem(setting=None):
@@ -272,8 +291,7 @@ def _setup(forge_dir=None, remember=True):
     forge_dir = Path(settings["forge_dir"] if forge_dir is None else forge_dir)
     jar, version = _find_jar(forge_dir)
     if jar is None:
-        raise ForgeError("Forge isn't installed at the folder config.json names." if remember
-                         else f"Forge isn't installed at {forge_dir}.")
+        raise ForgeError(not_installed_problem(settings) if remember else f"Forge isn't installed at {forge_dir}.")
     if remember:
         _remember_version(version)
     if not (forge_dir / SCRIPTS_ZIP).is_file():
@@ -553,7 +571,7 @@ def script_index():
     forge_dir = Path(settings["forge_dir"])
     _, version = _find_jar(forge_dir)
     if version is None:
-        raise ForgeError("Forge isn't installed at the folder config.json names.")
+        raise ForgeError(not_installed_problem(settings))
     zip_path = forge_dir / SCRIPTS_ZIP
     try:
         stat = zip_path.stat()

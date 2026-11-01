@@ -141,7 +141,8 @@ def _token_entry(entry, printings):
 class Local:
     def __init__(self, root=None, *, version=None, platform=None, environ=None,
                  read_file=None, find_driver=None, import_driver=None, connect=None,
-                 base_executable=None, search_path=None, scan_status=None, zone_check=None):
+                 base_executable=None, search_path=None, scan_status=None, zone_check=None,
+                 posix=None, stat=None):
         self.root = Path(root) if root is not None else ROOT
         self.version = tuple(sys.version_info[:2] if version is None else version[:2])
         self.platform = sys.platform if platform is None else platform
@@ -154,6 +155,8 @@ class Local:
         self.search_path = search_path
         self.scan_status = scan_status
         self.zone_check = zone_check
+        self.posix = posix              # None: this system's (lib/pathsetting.on_posix)
+        self.stat = os.stat if stat is None else stat
         self._settings = None
         self._loaded_driver = None
         self._results = {}
@@ -164,7 +167,7 @@ class Local:
         return self._settings
 
     def probe(self, check_id):
-        if check_id not in ("runtime", "config", "driver", "database", "cards", "ocr", "timezone"):
+        if check_id not in ("runtime", "config", "driver", "database", "cards", "ocr", "timezone", "backups"):
             raise ValueError("Unknown preflight check")
         if check_id not in self._results:
             self._results[check_id] = getattr(self, "_" + check_id)()
@@ -195,6 +198,33 @@ class Local:
         except LookupError:
             return "timezone_unknown"
         return "timezone_differs" if differs else "timezone_matches"
+
+    def _backups(self):
+        """The database block's folder settings as backup and prune use them (lib/pathsetting.py,
+        backup.same_device_problem): only stats folders, never makes or writes one."""
+        from decklab.db import backup, conn
+        from decklab.lib import pathsetting
+        block = {**conn.DEFAULTS, **((self._settings or {}).get("database") or {})}
+        if block.get("staging_dir") is None:
+            block["staging_dir"] = conn.DEFAULTS["staging_dir"]
+        try:
+            found = {key: pathsetting.normalise(f"database.{key}", block.get(key), posix=self.posix)
+                     for key in ("backup_dir", "staging_dir", "export_repo", "pg_bin")}
+        except (pathsetting.PathSettingError, AttributeError, TypeError):
+            return "backups_setting_invalid"
+        dest = found["backup_dir"]
+        if dest is None:
+            return "backups_local_only"
+        try:
+            try:
+                self.stat(dest)
+            except FileNotFoundError:
+                self.stat(os.path.dirname(dest.rstrip("/\\")) or dest)
+        except OSError:
+            return "backups_unreachable"
+        if backup.same_device_problem(dest, found["staging_dir"], block, stat=self.stat, posix=self.posix):
+            return "backups_same_device"
+        return "backups_ready"
 
     def _runtime(self):
         return "runtime_ready" if self.version == (3, 14) and self.platform in ("win32", "linux", "darwin") \

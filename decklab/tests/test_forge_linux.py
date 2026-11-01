@@ -259,6 +259,13 @@ class FindJavaOffWindowsTests(unittest.TestCase):
                 self.assertEqual(forge.install.java_release(self.tmp), version)
         self.assertIsNone(forge.install.java_release(self.tmp / "missing"))
 
+    @unittest.skipIf(os.name == "nt", "symbolic links need a privilege on Windows")
+    def test_an_aliased_jdk_folder_is_given_as_its_real_folder(self):
+        real = self.jdk("java-21-openjdk-amd64", "21.0.9")
+        os.symlink(real.parent.parent, self.root / "java-1.21.0-openjdk-amd64")    # sorts first
+        self.assertEqual(forge.find_java(), real.parent.parent.resolve() / "bin" / "java")
+        self.assertEqual(len(forge.install._posix_candidates()), 1)
+
     @unittest.skipIf(os.name == "nt", "Windows takes java's tools beside it as given")
     def test_the_tools_are_the_linked_javas_own(self):
         real = self.jdk("jdk-21", "21")

@@ -498,7 +498,7 @@ def check_addresses(network, hostname, mdns, port):
     host = f"{hostname.lower()}.local"
     out = []
     if address:
-        out.append(line(OK, area, f"From a phone or the iPad: http://{address['address']}:{port}/"))
+        out.append(line(OK, area, f"From a phone or tablet: http://{address['address']}:{port}/"))
     if mdns.get("answered"):
         mine = address and address["address"] in mdns.get("addresses", [])
         if mine or not address:

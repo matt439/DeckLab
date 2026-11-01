@@ -207,6 +207,11 @@ class RunnerTests(unittest.TestCase):
         lines = self.scan({"engine": "tesseract", "available": True, "reason": "ready"}, ocr)
         self.assertEqual(seen, [b"\x89PNG\r\n\x1a\n"])
         self.assertEqual(lines, [(smoke.PASS, "The tesseract engine read a test card's bottom line (227, FDN)")])
+        # A set code one OCR confusion away is what the scan's proposals look up too.
+        lines = self.scan({"engine": "tesseract", "available": True, "reason": "ready"}, lambda path: ["R O227", "FON EN"])
+        self.assertEqual(lines[0][0], smoke.PASS)
+        lines = self.scan({"engine": "tesseract", "available": True, "reason": "ready"}, lambda path: ["R 0227", "XYZ EN"])
+        self.assertEqual(lines[0][0], smoke.WARN)
 
     def test_scan_misread_warns_and_a_broken_engine_fails(self):
         from decklab.lib import scan

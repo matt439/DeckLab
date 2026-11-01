@@ -379,6 +379,9 @@ def windows_ocr(path):
 # each line inverted (white on black, as a card's bottom line is). One thread, so a scan doesn't
 # fight Forge's workers for every core.
 TESSERACT_ARGS = ("stdout", "-l", "eng", "--psm", "11", "tsv")
+# The second pass when the first finds no collector number or set line: uniform blocks of text,
+# which reads a card's lines that sparse mode misses (E11-S58's WSL qualification, Tesseract 5.5).
+TESSERACT_FALLBACK = ("stdout", "-l", "eng", "--psm", "6", "tsv")
 MIN_CONF = 30               # Tesseract's word confidence (0-100) below which a word is art, not text
 LINE_GAP = 2                # word heights apart that two pieces of one line may be
 _MARKS = "•·★☆*"            # marks kept though they're no letter or digit: a set line's dot or foil star
@@ -411,10 +414,17 @@ def _same_line(a, b):
     return middles <= height / 2 and gap <= LINE_GAP * height
 
 
+def _printing_text(words):
+    """Whether words ([(left, word)]) read left to right are a set line or collector number."""
+    read = read_lines([" ".join(word for _, word in sorted(words, key=lambda w: w[0]))])
+    return bool(read["sets"] or read["numbers"])
+
+
 def _tsv_lines(text):
     """The lines in Tesseract's TSV output, in reading order, as Windows' engine gives them.
 
-    Its words (level 5) of confidence MIN_CONF or more, with a letter, digit or one of _MARKS,
+    Its words (level 5) of confidence MIN_CONF or more, with a letter, digit or one of _MARKS
+    (or every such word of a line that reads as a set line or number only with its fainter ones),
     are put in Tesseract's own lines (block, paragraph and line numbers); lines side by side
     are joined again (sparse mode splits "R" from "0227" and "FDN" from "EN"), each line's
     words left to right, and the lines sorted top to bottom, then left to right, so the card's
@@ -440,15 +450,25 @@ def _tsv_lines(text):
             key = tuple(cells[at[name]] for name in ("page_num", "block_num", "par_num", "line_num"))
         except (IndexError, ValueError):
             continue
-        if conf < MIN_CONF or not word or not any(ch.isalnum() or ch in _MARKS for ch in word):
+        if not word or not any(ch.isalnum() or ch in _MARKS for ch in word):
             continue
         line = groups.setdefault(key, {"left": left, "top": top, "right": left + width, "bottom": top + height,
-                                       "words": []})
+                                       "words": [], "faint": []})
         line.update(left=min(line["left"], left), top=min(line["top"], top),
                     right=max(line["right"], left + width), bottom=max(line["bottom"], top + height))
-        line["words"].append((left, word))
+        line["faint"].append((left, word))
+        if conf >= MIN_CONF:
+            line["words"].append((left, word))
+    pieces = []
+    for piece in groups.values():
+        # Tesseract 5 may give a card's printed set line ("FDN-EN") confidence 0: a line of words
+        # under MIN_CONF is kept whole when it reads as a set line or collector number, never as a name.
+        if _printing_text(piece["faint"]) and not _printing_text(piece["words"]):
+            piece["words"] = piece["faint"]
+        if piece["words"]:
+            pieces.append(piece)
     lines = []
-    for piece in sorted(groups.values(), key=lambda g: (g["left"], g["top"])):
+    for piece in sorted(pieces, key=lambda g: (g["left"], g["top"])):
         line = next((line for line in lines if _same_line(line, piece)), None)
         if line is None:
             lines.append({**piece, "words": list(piece["words"])})
@@ -461,11 +481,23 @@ def _tsv_lines(text):
 
 
 def tesseract_ocr(path):
-    """The lines Tesseract reads in the photo at path, when it's installed."""
+    """The lines Tesseract reads in the photo at path, when it's installed: sparse text first,
+    then, when that finds no collector number or no set line, uniform blocks, keeping the pass
+    that read more of the printing (the first on a tie)."""
     exe = _tesseract()
     if exe is None:
         raise OcrMissing("Tesseract isn't installed.")
-    return _tsv_lines(_run([exe, str(path), *TESSERACT_ARGS], env=_tesseract_env(), explain=_tesseract_error))
+    lines = _tsv_lines(_run([exe, str(path), *TESSERACT_ARGS], env=_tesseract_env(), explain=_tesseract_error))
+    if _printing_found(lines) == 2:
+        return lines
+    again = _tsv_lines(_run([exe, str(path), *TESSERACT_FALLBACK], env=_tesseract_env(), explain=_tesseract_error))
+    return again if _printing_found(again) > _printing_found(lines) else lines
+
+
+def _printing_found(lines):
+    """How much of a printing lines read: 1 for a collector number, 1 for a set line."""
+    read = read_lines(lines)
+    return bool(read["numbers"]) + bool(read["sets"])
 
 
 ENGINES = {"windows": windows_ocr, "tesseract": tesseract_ocr}

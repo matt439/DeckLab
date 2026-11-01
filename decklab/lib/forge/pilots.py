@@ -246,6 +246,20 @@ def problems():
     return answer
 
 
+def lists_not_here(names):
+    """The list ids among names whose deck (or a former id of it) isn't in this install's
+    inventory, such as a pilot another household adopted in the shared simulation.json; an
+    empty set when the inventory can't be read, so nothing is hidden on a guess."""
+    from decklab.lib import inventory
+    try:
+        inv = inventory.current()
+        here = set(inv.decks) | set(inv.deck_aliases)
+    except Exception:                   # noqa: BLE001 - a CLI listing mustn't fail on an unreadable inventory
+        return set()
+    return {name for name in names
+            if name.partition("@")[0] not in here and not name.partition("@")[0].startswith("pairing/")}
+
+
 def is_default(pilot):
     """Is pilot Forge's Default profile with no switches (or missing)?"""
     return not pilot or (pilot.get("profile", DEFAULT_PROFILE) == DEFAULT_PROFILE and not pilot.get("switches"))

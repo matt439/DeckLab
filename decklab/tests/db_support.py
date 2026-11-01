@@ -1,5 +1,6 @@
-"""What the database tests share (test_db_core.py, test_db_ops.py, test_db_phase2.py,
-test_state_contract.py, test_inventory_contract.py): skipping when there's no database to use,
+"""What the database tests share (every decklab/tests/test_*.py that imports this module, such as
+test_db_core.py, test_db_ops.py, test_state_contract.py and test_inventory_contract.py; README,
+"Database integration tests", has the command that runs them all): skipping when there's no database to use,
 throwaway databases copied from a template, and reset() between tests that share one.
 
 The template, decklab_tmpl_<8 hex>, is this worktree's (the hex is a hash of the repo path, so
@@ -44,6 +45,11 @@ _COMMENT = "Deck Lab test database, made at "
 _state = {"reason": None, "checked": False, "cleaned": False, "n": 0}
 
 
+def venv_python(name=None):
+    """The .venv's python as this OS names it, for the install hint."""
+    return r".venv\Scripts\python" if (name or os.name) == "nt" else ".venv/bin/python"
+
+
 def unavailable():
     """Why the database tests can't run here, or None when they can (checked once a process).
     The server's port is probed first with a short timeout, so a stopped PostgreSQL skips at
@@ -54,7 +60,7 @@ def unavailable():
     try:
         import psycopg  # noqa: F401
     except ImportError:
-        _state["reason"] = (r"psycopg isn't installed for this Python (install it with .venv\Scripts\python "
+        _state["reason"] = (f"psycopg isn't installed for this Python (install it with {venv_python()} "
                             "-m pip install -r decklab/requirements.txt)")
         return _state["reason"]
     from decklab.db import conn as db

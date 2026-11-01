@@ -62,8 +62,11 @@ def _main(argv):
     parser.add_argument("--json", action="store_true", help="print the whole result as JSON")
     parser.add_argument("--no-cache", action="store_true", help="simulate even if a result is saved")
     parser.add_argument("--all", action="store_true", help="headline numbers for every deck")
-    parser.add_argument("--halves", action="store_true", help="with --all: the Beginner Box halves too")
-    parser.add_argument("--pairings", action="store_true", help="with --all: the 45 Beginner Box pairings too")
+    parser.add_argument("--halves", action="store_true",
+                        help="with --all: the Foundations Beginner Box's halves too, when that product is recorded")
+    parser.add_argument("--pairings", action="store_true",
+                        help="with --all: the 45 pairings of the Foundations Beginner Box's halves too, when it's "
+                             "recorded")
     args = parser.parse_args(argv)
     if not args.all and not args.deck_id:
         parser.error("give a deck id or --all")

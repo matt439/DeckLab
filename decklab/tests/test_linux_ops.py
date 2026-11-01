@@ -452,6 +452,46 @@ class UpdatePsycopgTests(unittest.TestCase):
         self.assertEqual(self.run_after_pull(True), ["Stop Deck Lab to replace psycopg", "Reinstall psycopg"])
 
 
+class UpdateRestartTests(unittest.TestCase):
+    def steps(self, done, required=False, pending=(), files=()):
+        steps = []
+        args = types.SimpleNamespace(no_forge=True, no_restart=False, no_smoke=True)
+        with mock.patch.object(update, "changed_files", return_value=list(files)), \
+                mock.patch.object(update, "git", return_value="abc"), \
+                mock.patch.object(update, "server_answers", return_value=True), \
+                mock.patch.object(update, "psycopg_mismatch", return_value=False), \
+                mock.patch.object(update, "server_restart_required", return_value=required), \
+                mock.patch.object(update, "step", side_effect=lambda argv, what, timeout=None: steps.append(what)), \
+                mock.patch("decklab.lib.venv.activate", return_value=None), \
+                mock.patch("decklab.db.migrate.pending", return_value=list(pending)), \
+                mock.patch.object(update, "say"):
+            update._after_pull(args, "abc", set(done))
+        return steps
+
+    def test_nothing_changed_keeps_the_server_running(self):
+        self.assertEqual(self.steps(set()), [])
+
+    def test_a_change_or_a_stale_server_restarts_it(self):
+        restart = ["Restart the background server"]
+        self.assertEqual(self.steps({"pulled"}), restart)
+        self.assertEqual(self.steps({"forge"}), restart)
+        self.assertEqual(self.steps(set(), required=True), restart)
+        self.assertEqual(self.steps(set(), pending=[{"name": "0021_x.sql"}]),
+                         ["Back up before migrating", "Migrate"] + restart)
+
+
+class ServiceWordingTests(unittest.TestCase):
+    def test_the_description_names_deck_lab_once_and_old_ones_still_match(self):
+        from decklab.lib.homenet import service
+        text = service.unit_text("/usr/bin/python3.14", "/srv/DeckLab", ["--background"])
+        self.assertIn("Description=Deck Lab (python -m decklab.lib.homenet install)\n", text)
+        older = text.replace("Description=Deck Lab (python", "Description=Deck Lab (Deck Lab; python")
+        self.assertTrue(service._same_unit(older, text))
+        self.assertFalse(service._same_unit(older.replace("/srv/DeckLab", "/srv/Moved"), text))
+        self.assertIn("Description=Deck Lab (Other) (python",
+                      service.unit_text("/usr/bin/python3.14", "/srv/DeckLab", ["--background"], task="Other"))
+
+
 class LauncherTests(unittest.TestCase):
     PATH = REPO / "scripts" / "decklab"
 
