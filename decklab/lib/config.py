@@ -124,12 +124,20 @@ def load():
 def records_dir(root=None):
     """Where the repo-relative research files that sources name (magic/buylists/..., magic/reports/...)
     are looked for: config.json's records_repo, the household's own private repo, when root is this
-    checkout (or None); otherwise root itself, so a test's temporary repo never reads the real one."""
+    checkout (or None); otherwise root itself, so a test's temporary repo never reads the real one.
+    A leading ~ is expanded. Off Windows a relative or Windows-looking value can't be used
+    (lib/pathsetting.py): it's said once on stderr and kept as written, so the files it names are
+    simply not found there (the smoke test fails on it too)."""
+    from decklab.lib import pathsetting
     root = Path(REPO if root is None else root)
     if root.resolve() == CHECKOUT.resolve():
         setting = load().get("records_repo")
         if isinstance(setting, str) and setting.strip():
-            return Path(setting.strip())
+            try:
+                return Path(pathsetting.normalise("records_repo", setting))
+            except pathsetting.PathSettingError as e:
+                _say_once(("records_repo", setting), str(e))
+                return Path(setting.strip())
     return root
 
 

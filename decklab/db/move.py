@@ -185,7 +185,15 @@ def run_restore(dump, expect=None, replace=False, force=False, say=print):
             return 1
     with db.connect("owner", dbname="postgres", autocommit=True) as c:
         c.execute(sql.SQL("drop database if exists {}").format(ident(restoring)))
-        c.execute(sql.SQL("create database {} encoding 'UTF8' template template0").format(ident(restoring)))
+        try:
+            c.execute(sql.SQL("create database {} encoding 'UTF8' template template0").format(ident(restoring)))
+        except Error as e:
+            hint = db.locale_hint(e)
+            if not hint:
+                raise
+            say(f"The restore didn't work, so {name} is unchanged: {restoring} couldn't be made: "
+                f"{str(e).strip()}.{hint}")
+            return 1
 
     def give_up(detail):
         with db.connect("owner", dbname="postgres", autocommit=True) as c:

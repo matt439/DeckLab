@@ -7,5 +7,6 @@ backups to the NAS and the export repo (backup.py, export.py, nightly.py, schedu
 
 The running Deck Lab server doesn't use any of it yet: no module outside this package imports
 psycopg or decklab.db, and nothing on the page changes. psycopg isn't in the standard library,
-so everything here runs from the repo's .venv (.venv\\Scripts\\python -m decklab.db ...).
+so everything here runs from the repo's .venv (.venv\\Scripts\\python -m decklab.db ... on Windows,
+.venv/bin/python elsewhere).
 """

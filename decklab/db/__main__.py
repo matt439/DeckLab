@@ -1,5 +1,5 @@
 """The database's commands: `python -m decklab.db <command>` (the system python finds .venv's
-psycopg through lib/venv.py; .venv\\Scripts\\python works as well).
+psycopg through lib/venv.py; .venv\\Scripts\\python, or .venv/bin/python off Windows, works as well).
 
   setup            make the roles, their pgpass lines, the database, migrations and profiles
   migrate          apply pending migrations

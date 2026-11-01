@@ -301,7 +301,8 @@ class _OpsDb(_QuietLog, db_support.DbTestCase):
         super().setUp()
         real = db.settings()
         self.settings = dict(real, backup_dir=str(self.tmp / "nas"), staging_dir=str(self.tmp / "staging"),
-                             export_repo=str(self.tmp / "not-the-export-repo"))
+                             export_repo=str(self.tmp / "not-the-export-repo"),
+                             backup_same_device_ok=True)     # one temporary disk for both folders
         patcher = mock.patch.object(db, "settings", lambda: dict(self.settings))
         patcher.start()
         self.addCleanup(patcher.stop)

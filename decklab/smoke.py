@@ -278,11 +278,21 @@ def step_backups(r, ctx):
         else:
             r.note(PASS, f"{name} {major} at {path}")
     s = db.settings()
+    places = {}
     for key in ("staging_dir", "backup_dir"):
-        folder = s.get(key)
+        try:
+            folder = db.path_setting(key, s)
+        except ValueError as e:         # off Windows, a relative or Windows-looking folder
+            r.note(FAIL, f"Backups can't use {key}: {e}")
+            continue
         if not folder:
             continue
-        place = Path(os.path.expanduser(str(folder)))
+        place = places[key] = Path(folder)
+        problem = (backup.same_device_problem(place, places.get("staging_dir") or db.DEFAULTS["staging_dir"], s)
+                   if key == "backup_dir" else None)
+        if problem:
+            r.note(FAIL, f"Backups can't be copied: {problem}")
+            continue
         existing = next((p for p in (place, *place.parents) if p.is_dir()), None)
         try:
             if existing is None:
@@ -594,10 +604,15 @@ def step_wake(r, ctx):
 def step_records(r, ctx):
     _needs(ctx, "config")
     from decklab.lib import config
+    from decklab.lib import pathsetting
     records = config.load().get("records_repo")
     if not records:
         raise Skip("no records_repo in config.json")
-    place = Path(str(records))
+    try:
+        place = Path(pathsetting.normalise("records_repo", records) or str(records))
+    except pathsetting.PathSettingError as e:
+        r.note(FAIL, str(e))
+        return
     if (place / ".git").exists():
         r.note(PASS, f"records_repo {place} is a git checkout")
     else:
