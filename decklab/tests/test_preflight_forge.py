@@ -1,6 +1,7 @@
 """Optional preflight checks inspect an injected filesystem, never installed tools."""
 from contextlib import ExitStack
 import itertools
+import os
 from pathlib import Path
 import socket
 import stat
@@ -247,11 +248,14 @@ class OptionalFilesTests(unittest.TestCase):
                 node.st_mode = stat.S_IFLNK
                 self.fs.reads.clear()
                 self.fs.lists.clear()
-                self.assertEqual("forge_unavailable", self.adapter.probe("forge"))
+                # Off Windows a link is its own finding, naming the fix (the real path).
+                linked = "forge_unavailable" if os.name == "nt" else "forge_linked"
+                self.assertEqual(linked, self.make_adapter().probe("forge"))
                 self.assertNotIn(path, [p for p, limit in self.fs.reads])
                 if path in (folder, folder.parent):
                     self.assertFalse(self.fs.lists)
                     self.assertFalse(self.fs.reads)
+                self.assertEqual("forge_unavailable", self.make_adapter(platform="nt").probe("forge"))
                 node.st_mode = old_mode
 
     def test_windows_reparse_parents_and_leaves_are_not_followed(self):
@@ -272,10 +276,20 @@ class OptionalFilesTests(unittest.TestCase):
                 old_mode = node.st_mode
                 node.st_mode = stat.S_IFLNK
                 self.fs.reads.clear()
-                expected = "java_version_unknown" if path == self.release else "java_unavailable"
-                self.assertEqual(expected, self.adapter.probe("java"))
+                linked = "java_unavailable" if os.name == "nt" else "java_linked"
+                expected = "java_version_unknown" if path == self.release else linked
+                self.assertEqual(expected, self.make_adapter().probe("java"))
                 self.assertFalse(self.fs.reads)
+                if path != self.release:
+                    self.assertEqual("java_unavailable", self.make_adapter(platform="nt").probe("java"))
                 node.st_mode = old_mode
+
+    def test_linked_codes_name_the_real_path_fix(self):
+        for ident in ("java", "forge"):
+            status, message, next_step = preflight.OUTCOMES[ident + "_linked"]
+            self.assertEqual(status, "unverified")
+            self.assertIn("readlink -f", next_step)
+            self.assertIn(ident + "_linked", preflight.ALLOWED[ident])
 
     def test_generated_candidate_paths_reject_controls_before_read(self):
         folder = self.forge()

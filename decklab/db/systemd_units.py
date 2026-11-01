@@ -49,8 +49,22 @@ def _time(value):
     return value
 
 
-def nightly_units(python, workdir, at=DEFAULT_AT):
+def _zone(value):
+    """An IANA zone name for OnCalendar ("Australia/Sydney"), or "" for the host's own zone."""
+    if value in (None, ""):
+        return ""
+    from decklab.lib import hometime
+    if not hometime.valid_name(value):
+        raise ValueError("the time zone must be a name such as Australia/Sydney.")
+    return value
+
+
+def nightly_units(python, workdir, at=DEFAULT_AT, zone=None):
     """Return two fixed filenames mapped to complete unit text, without reading or writing.
+
+    zone: config.json's "timezone" (an IANA name), written after the time so the timer runs at
+    `at` in that zone whatever the host's own zone is (systemd 235 or later); None or "" runs it
+    in the host's zone, as before.
 
     The ':' command prefix disables environment expansion, including dollar signs in the
     executable name. Percent specifiers are escaped in both path directives. No shell is
@@ -60,6 +74,7 @@ def nightly_units(python, workdir, at=DEFAULT_AT):
     program = _path(python, "--python", executable=True).replace("%", "%%")
     directory = _path(workdir, "--workdir").replace("%", "%%")
     at = _time(at)
+    zone = _zone(zone)
     return {
         SERVICE: f"""[Unit]
 Description=Deck Lab nightly maintenance
@@ -79,7 +94,7 @@ UMask=0077
 Description=Deck Lab nightly maintenance schedule
 
 [Timer]
-OnCalendar=*-*-* {at}:00
+OnCalendar=*-*-* {at}:00{' ' + zone if zone else ''}
 Persistent=true
 Unit={SERVICE}
 

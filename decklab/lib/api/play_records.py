@@ -48,9 +48,9 @@ import hashlib
 import json
 import uuid
 from collections import Counter
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, timezone
 
-from decklab.lib import cards, decks, inventory, permissions, spaces, state
+from decklab.lib import cards, decks, hometime, inventory, permissions, spaces, state
 from decklab.lib.state import pods, rules
 from .card_lookup import _line_json
 from .common import ApiError, _keys, _parse_body, _public, state_errors
@@ -68,7 +68,8 @@ def _hash(value):
 
 
 def _play_today():
-    return datetime.now(timezone(timedelta(hours=10))).date().isoformat()
+    """The household's date (config.json's "timezone", else UTC+10)."""
+    return hometime.household_today()
 
 
 def _text(value, label, limit=2000, required=False):

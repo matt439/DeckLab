@@ -298,6 +298,56 @@ def platform_power():
     return _NoPower()
 
 
+TRIAL_TIMEOUT = 10                  # seconds for capability()'s systemd-inhibit trial
+
+
+def _trial_run(argv):
+    """(exit code, first line it said) of a short command; OSError and a timeout are failures."""
+    try:
+        done = subprocess.run(argv, stdin=subprocess.DEVNULL, capture_output=True, text=True,
+                              encoding="utf-8", errors="replace", timeout=TRIAL_TIMEOUT)
+    except subprocess.TimeoutExpired:
+        return None, f"it didn't finish within {TRIAL_TIMEOUT} s"
+    except OSError as e:
+        return None, str(e)
+    said = next((text.strip() for text in ((done.stderr or "") + "\n" + (done.stdout or "")).splitlines()
+                 if text.strip()), "")
+    return done.returncode, said
+
+
+def capability(platform=None, which=shutil.which, run=_trial_run, power=None):
+    """Whether this PC lets Deck Lab hold it awake, tried once and let go at once:
+    {"kind", "ok", "why"} (why: None when ok, else plain words). On Linux a systemd-inhibit
+    block inhibitor around `true` (it ends when true does, so nothing is left held); on Windows
+    a power request made and cleared; elsewhere kind "none" with ok None (nothing to try).
+    platform, which, run and power are for tests."""
+    platform = sys.platform if platform is None else platform
+    if platform.startswith("linux"):
+        program = which("systemd-inhibit")
+        if not program:
+            return {"kind": "none", "ok": False, "why": "systemd-inhibit isn't installed"}
+        code, said = run([program, "--what=sleep:idle", "--who=Deck Lab",
+                          "--why=Checking that Deck Lab may hold the PC awake", "--mode=block", "true"])
+        if code == 0:
+            return {"kind": _LinuxInhibit.kind, "ok": True, "why": None}
+        return {"kind": _LinuxInhibit.kind, "ok": False,
+                "why": said or (f"exit code {code}" if code is not None else "it couldn't run")}
+    if platform == "win32":
+        power = power or _WindowsPower()
+        try:
+            power.hold()
+            ok = bool(power.held)
+        except Exception as e:              # noqa: BLE001 - a refusal is the answer
+            return {"kind": _WindowsPower.kind, "ok": False, "why": str(e) or type(e).__name__}
+        finally:
+            try:
+                power.release()
+            except Exception:               # noqa: BLE001
+                pass
+        return {"kind": _WindowsPower.kind, "ok": ok, "why": None if ok else "the power request wasn't held"}
+    return {"kind": _NoPower.kind, "ok": None, "why": "keeping the PC awake isn't supported on this system"}
+
+
 @contextlib.contextmanager
 def hold_while(power=None):
     """Keep the PC awake for the with block (a command line's process: the nightly run),

@@ -68,23 +68,33 @@ def _processes():
         except (OSError, subprocess.TimeoutExpired, ValueError, KeyError, TypeError):
             raise ValueError("Interpreter processes cannot be checked; removal is refused.") from None
     if sys.platform.startswith("linux"):
-        found = {}
-        try:
-            for folder in Path("/proc").iterdir():
-                if not folder.name.isdigit():
-                    continue
-                try:
-                    name = (folder / "comm").read_text().strip().casefold()
-                    if not name.startswith(("python", "pypy")):
-                        continue
-                    values = (folder / "stat").read_text().rsplit(")", 1)[1].split()
-                    found[int(folder.name)] = int(values[1])
-                except FileNotFoundError:
-                    continue                         # a process that ended during the scan
-        except (OSError, ValueError, IndexError):
-            raise ValueError("Interpreter processes cannot be checked; removal is refused.") from None
-        return found
+        return _linux_processes()
     raise ValueError("Interpreter process checks are unavailable on this platform; removal is refused.")
+
+
+def _linux_processes(root="/proc", uid=None):
+    """{pid: parent pid} of this user's Python interpreters, from /proc (root: a fake tree, for
+    tests). Another user's processes (a shared server's other services, say) can't be Deck Lab
+    running as this user, so they don't block removal; any of this user's still do."""
+    uid = os.getuid() if uid is None else uid
+    found = {}
+    try:
+        for folder in Path(root).iterdir():
+            if not folder.name.isdigit():
+                continue
+            try:
+                if folder.stat().st_uid != uid:
+                    continue
+                name = (folder / "comm").read_text(encoding="utf-8", errors="replace").strip().casefold()
+                if not name.startswith(("python", "pypy")):
+                    continue
+                values = (folder / "stat").read_text(encoding="utf-8", errors="replace").rsplit(")", 1)[1].split()
+                found[int(folder.name)] = int(values[1])
+            except FileNotFoundError:
+                continue                         # a process that ended during the scan
+    except (OSError, ValueError, IndexError):
+        raise ValueError("Interpreter processes cannot be checked; removal is refused.") from None
+    return found
 
 
 def require_ready(results_dir=None):

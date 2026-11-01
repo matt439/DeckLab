@@ -1,2 +1,5 @@
 # The NAS wake gate runs on Linux: keep its files LF on every checkout
 decklab/wakegate/** text eol=lf
+# Shell scripts run on Linux and macOS: keep them LF on every checkout
+*.sh text eol=lf
+scripts/decklab text eol=lf

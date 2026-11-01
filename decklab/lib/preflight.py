@@ -16,6 +16,7 @@ CHECKS = (
     ("java", "Java runtime files", "optional", ("config",)),
     ("forge", "Forge installation files", "optional", ("config",)),
     ("ocr", "Photo scanning engine", "optional", ()),
+    ("timezone", "Time zone", "optional", ("config",)),
 )
 SIMULATION_FILES = ("java", "forge")     # the optional checks optional_files_status sums up
 
@@ -86,6 +87,10 @@ OUTCOMES = MappingProxyType({
                              "Review the selected Java installation using SELF-HOSTING.md step 8."),
     "java_version_unsupported": ("needs_setup", "The selected Java runtime is older than Java 21; simulations are optional.",
                                  "Select Java 21 or later using SELF-HOSTING.md step 8."),
+    "java_linked": ("unverified", "The selected Java runtime's path goes through a symbolic link, which this "
+                    "preflight doesn't follow; simulations are optional.",
+                    "Set forge_java to the real path, as readlink -f prints it (for example "
+                    "/usr/lib/jvm/java-21-openjdk-amd64/bin/java rather than /usr/bin/java)."),
     "forge_files_ready": ("ready", "Forge jar and card-script files are present; archive contents and games were not qualified.", None),
     "forge_missing": ("needs_setup", "Forge installation files are missing; the core app does not require simulations.",
                       "Follow SELF-HOSTING.md step 8 to install the expected Forge build and set forge_dir."),
@@ -95,6 +100,9 @@ OUTCOMES = MappingProxyType({
                       "Review the selected Forge folder using SELF-HOSTING.md step 8."),
     "forge_unavailable": ("unverified", "The selected Forge installation files could not be read safely.",
                           "Review local access to the selected Forge folder using SELF-HOSTING.md step 8."),
+    "forge_linked": ("unverified", "The selected Forge folder's path goes through a symbolic link, which this "
+                     "preflight doesn't follow; simulations are optional.",
+                     "Set forge_dir to the real path, as readlink -f prints it."),
     "ocr_ready": ("ready", "An OCR engine for Scan cards and Scan token cards was found; no photo was read.", None),
     "ocr_missing": ("needs_setup", "No OCR engine was found, so Scan cards and Scan token cards offer only typed names; "
                     "scanning is optional.",
@@ -104,6 +112,18 @@ OUTCOMES = MappingProxyType({
                         "Install the tesseract-ocr-eng package, then run the preflight again."),
     "ocr_unusable": ("unverified", "An OCR engine was found but did not answer; scanning is optional.",
                      "Check that tesseract --list-langs runs, then run the preflight again."),
+    "timezone_not_set": ("ready", "No timezone is set in config.json, so dates and the nightly run follow this PC's "
+                         "own clock.", None),
+    "timezone_matches": ("ready", "This PC's clock keeps config.json's timezone.", None),
+    "timezone_differs": ("needs_setup", "This PC's clock doesn't keep config.json's timezone, so the dates Deck Lab "
+                         "writes may be a day out.",
+                         "Set this PC's time zone to the configured one (on Linux: sudo timedatectl set-timezone "
+                         "followed by the zone's name), or correct \"timezone\" in decklab/config.json."),
+    "timezone_invalid": ("needs_setup", "config.json's timezone isn't a time zone name.",
+                         "Use a name such as Australia/Sydney (timedatectl list-timezones lists them on Linux)."),
+    "timezone_unknown": ("unverified", "This PC has no data for config.json's timezone, so it can't be compared.",
+                         "On Linux install the tzdata package; on Windows this check needs Python's tzdata "
+                         "package, and Deck Lab's own dates use UTC+10 without it."),
     "probe_unverified": ("unverified", "This preflight check did not return a verified result.",
                          "Review the local setup and retry the preflight; no raw adapter error is included."),
 })
@@ -118,9 +138,12 @@ ALLOWED = MappingProxyType({
                            "database_schema_unavailable", "database_uninitialized", "database_catalog_invalid"}),
     "cards": frozenset({"cards_ready", "cards_missing", "cards_invalid", "cards_unavailable", "cards_oversized"}),
     "java": frozenset({"java_files_ready", "java_missing", "java_incomplete", "java_unavailable",
-                      "java_version_unknown", "java_version_unsupported"}),
-    "forge": frozenset({"forge_files_ready", "forge_missing", "forge_incomplete", "forge_invalid", "forge_unavailable"}),
+                      "java_version_unknown", "java_version_unsupported", "java_linked"}),
+    "forge": frozenset({"forge_files_ready", "forge_missing", "forge_incomplete", "forge_invalid", "forge_unavailable",
+                        "forge_linked"}),
     "ocr": frozenset({"ocr_ready", "ocr_missing", "ocr_no_language", "ocr_unusable"}),
+    "timezone": frozenset({"timezone_not_set", "timezone_matches", "timezone_differs", "timezone_invalid",
+                           "timezone_unknown"}),
 })
 
 

@@ -13,9 +13,9 @@ from decklab.lib import preflight
 
 READY = {"runtime": "runtime_ready", "config": "config_ready", "driver": "driver_ready",
          "database": "database_ready", "cards": "cards_ready", "java": "java_files_ready", "forge": "forge_files_ready",
-         "ocr": "ocr_ready"}
-ORDER = ["runtime", "config", "driver", "database", "cards", "java", "forge", "ocr"]
-LOCAL = ORDER[:5] + ["ocr"]     # the checks the local adapter answers (java and forge are preflight_forge's)
+         "ocr": "ocr_ready", "timezone": "timezone_matches"}
+ORDER = ["runtime", "config", "driver", "database", "cards", "java", "forge", "ocr", "timezone"]
+LOCAL = ORDER[:5] + ["ocr", "timezone"]     # the checks the local adapter answers (java and forge are preflight_forge's)
 SECRET = "PRIVATE_VALUE user1@example.com C:/private/fixture password=fixture"
 
 
@@ -46,7 +46,7 @@ class PreflightReportTests(unittest.TestCase):
         self.assertEqual(result["exit_code"], 0)
         self.assertEqual(result["optional_files_status"], "present")
         self.assertEqual(result["simulation_execution"], "not_performed")
-        self.assertEqual([row["scope"] for row in result["checks"]], ["core"] * 5 + ["optional"] * 3)
+        self.assertEqual([row["scope"] for row in result["checks"]], ["core"] * 5 + ["optional"] * 4)
         rendered = preflight.text(result)
         self.assertIn("Core preflight: ready.", rendered)
         self.assertIn("Simulation execution qualification: not performed.", rendered)
@@ -71,7 +71,7 @@ class PreflightReportTests(unittest.TestCase):
         result = preflight.report(codes)
         self.assertEqual(result["exit_code"], 1)
         self.assertFalse(result["core_ready"])
-        self.assertEqual(codes.calls, ["runtime", "config", "cards", "java", "forge", "ocr"])
+        self.assertEqual(codes.calls, ["runtime", "config", "cards", "java", "forge", "ocr", "timezone"])
         self.assertEqual(self.row(result, "driver")["blocked_by"], ["runtime"])
         self.assertEqual(self.row(result, "database")["blocked_by"], ["driver"])
         self.assertEqual(self.row(result, "database")["code"], "dependency_blocked")
@@ -82,6 +82,7 @@ class PreflightReportTests(unittest.TestCase):
         codes = Codes({"config": "config_missing"})
         result = preflight.report(codes)
         self.assertEqual(codes.calls, ["runtime", "config", "driver", "cards", "ocr"])
+        self.assertEqual(self.row(result, "timezone")["blocked_by"], ["config"])
         self.assertEqual(result["exit_code"], 1)
         self.assertEqual(self.row(result, "database")["blocked_by"], ["config"])
         self.assertEqual(self.row(result, "java")["blocked_by"], ["config"])

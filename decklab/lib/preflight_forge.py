@@ -25,6 +25,10 @@ class _Unavailable(Exception):
     pass
 
 
+class _Linked(_Unavailable):
+    """Off Windows, a symbolic link in the path: it isn't followed, but the finding says so."""
+
+
 def _names(path):
     with os.scandir(path) as entries:
         for entry in entries:
@@ -42,7 +46,8 @@ class ForgeFiles:
     stat_path uses lstat semantics, list_names yields direct child names, and
     read_bytes accepts a byte limit. java_path, when supplied, returns an already
     selected runtime path; this adapter never searches PATH, JAVA_HOME or host
-    installation folders. Symlink paths are left unverified rather than followed.
+    installation folders. Symlink paths are left unverified rather than followed; off
+    Windows that's its own code (java_linked, forge_linked), naming the fix (the real path).
     """
 
     def __init__(self, settings, root=None, *, stat_path=None, list_names=None,
@@ -68,6 +73,8 @@ class ForgeFiles:
             if self._config is None:
                 return check_id + "_unavailable"
             return self._java() if check_id == "java" else self._forge()
+        except _Linked:
+            return check_id + "_linked"
         except Exception:
             return check_id + "_unavailable"
 
@@ -102,12 +109,18 @@ class ForgeFiles:
         # parent directory. Never turn an apparently local name into a network read.
         for parent in reversed(path.parents):
             info = self.stat_path(parent)
+            self._refuse_link(info)
             if not stat.S_ISDIR(info.st_mode) or self._reparse(info):
                 raise _Unavailable
         info = self.stat_path(path)
-        if stat.S_ISLNK(info.st_mode) or self._reparse(info):
+        self._refuse_link(info)
+        if self._reparse(info):
             raise _Unavailable
         return info
+
+    def _refuse_link(self, info):
+        if stat.S_ISLNK(info.st_mode):
+            raise _Unavailable if self.windows else _Linked
 
     @staticmethod
     def _reparse(info):

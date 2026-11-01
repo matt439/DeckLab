@@ -3,9 +3,11 @@
 For a PC that serves Deck Lab and only pulls updates (the code is developed and tested on
 another PC). In order, stopping at the first failure:
 
-  1. refuse a checkout with changed tracked files, then git fetch and show what's coming
+  1. refuse a checkout with changed tracked files, or a Python the .venv (and, on Linux, the
+     background service and nightly timer) wasn't made with; then git fetch and show what's coming
   2. git merge --ff-only with the branch's upstream (never a merge commit or a rebase)
-  3. reinstall psycopg into the .venv when requirements.txt changed (or doesn't match)
+  3. reinstall psycopg into the .venv when requirements.txt changed (or doesn't match); on Windows
+     the running server is stopped first, since it keeps psycopg's DLLs locked
   4. with migrations pending: a backup (python -m decklab.db backup), then python -m decklab.db migrate
   5. when this Deck Lab expects another Forge build than forge_dir holds: download the release,
      check its SHA-256, unzip it beside the old one and point config.json's forge_dir at it
@@ -40,6 +42,10 @@ CONFIG = ROOT / "decklab" / "config.json"
 REQUIREMENTS = "decklab/requirements.txt"
 MIGRATIONS = "decklab/db/migrations/"
 _SPAWN = {"creationflags": subprocess.CREATE_NO_WINDOW} if os.name == "nt" else {}
+# Windows keeps a running server's psycopg DLLs locked, so it's stopped while pip replaces them;
+# Linux and macOS replace a loaded .so file without trouble, so the server keeps running there
+# until step 6's restart loads the new one.
+PIP_NEEDS_STOP = os.name == "nt"
 
 
 class Failed(Exception):
@@ -230,10 +236,107 @@ def _update_forge(dry_run, release):
         "is left in place: delete it once the smoke test passes).")
 
 
+# ---------------------------------------------------------------- the Python it runs on
+
+def _venv_config(root=None):
+    """.venv/pyvenv.cfg's "key = value" lines (lowercase keys), or None when there isn't one."""
+    path = Path(root or ROOT) / ".venv" / "pyvenv.cfg"
+    try:
+        text = path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return None
+    out = {}
+    for line in text.splitlines():
+        key, sep, value = line.partition("=")
+        if sep:
+            out[key.strip().lower()] = value.strip()
+    return out
+
+
+def venv_base_python(values, windows=None):
+    """The Python the .venv was made from, from pyvenv.cfg's values (its home folder and
+    version), or None when they don't say."""
+    windows = os.name == "nt" if windows is None else windows
+    home = (values or {}).get("home")
+    if not home:
+        return None
+    if windows:
+        return str(Path(home) / "python.exe")
+    version = ".".join(((values or {}).get("version") or (values or {}).get("version_info") or "").split(".")[:2])
+    return f"{home.rstrip('/')}/python{version or '3'}"
+
+
+def _same_python(a, b):
+    if os.path.normcase(os.path.abspath(a)) == os.path.normcase(os.path.abspath(b)):
+        return True
+    try:
+        return os.path.samefile(a, b)
+    except OSError:
+        return False
+
+
+def _installed_units():
+    """[(what, its unit's Python, the command that installs it again)] for the Linux systemd
+    units that run Deck Lab: the background service and the nightly timer's service."""
+    from decklab.lib import systemd
+    from decklab.lib.homenet import service
+    found = []
+    for what, name, again in (("The background service", service.service_name(), "-m decklab.lib.homenet install"),
+                              ("The nightly timer", "decklab-nightly.service", "-m decklab.db schedule install")):
+        try:
+            text = (systemd.unit_dir() / name).read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            continue
+        parts = service.unit_parts(text)
+        if parts and parts.get("program"):
+            found.append((what, parts["program"], again))
+    return found
+
+
+def interpreter_problem(executable=None, activate=None, venv=None, units=None, platform=None):
+    """Why this update shouldn't run on this Python, or None. Checked before anything is fetched,
+    since the pulled code runs on the same Python and would only fail later (the migrations can't
+    be checked without the .venv's psycopg), leaving the server unrestarted.
+
+    - .venv was made from another Python (pyvenv.cfg's home and version; lib/venv.py): the
+      update must run on that one. No .venv at all is left to the smoke test, as before.
+    - on Linux, the background service's or nightly timer's unit runs another Python: after the
+      update it would run without the .venv's packages, so it's installed again first.
+
+    executable, activate (venv.activate), venv (pyvenv.cfg's values), units (_installed_units)
+    and platform are for tests."""
+    executable = executable or sys.executable
+    platform = sys.platform if platform is None else platform
+    values = _venv_config() if venv is None else venv
+    if values:
+        if activate is None:
+            from decklab.lib import venv as venv_module
+            activate = venv_module.activate
+        reason = activate()
+        if reason:
+            base = venv_base_python(values, windows=platform == "win32")
+            run_with = (f"run the update with that Python instead: {base} -m decklab.update" if base else
+                        "run the update with the Python the .venv was made from")
+            return (f"This update runs on {executable}, but {reason}, so the pulled code couldn't use the "
+                    f"database. Nothing was fetched: {run_with} (or make the .venv again with this Python: "
+                    "SELF-HOSTING.md step 3).")
+    if platform.startswith("linux"):
+        for what, program, again in (_installed_units() if units is None else units):
+            if not _same_python(program, executable):
+                return (f"{what} runs {program}, not this Python ({executable}), so after the update it would "
+                        "start without the .venv's packages. Nothing was fetched: install it again with this "
+                        f"Python first ({executable} {again}, with the options it was installed with), then "
+                        "update again.")
+    return None
+
+
 # ---------------------------------------------------------------- the steps
 
 def before_pull(args):
     """Steps 1-2, in the code as it was. Returns the exit code of the rest (or 0 for a dry run)."""
+    problem = interpreter_problem()
+    if problem:
+        raise Failed(problem)
     dirty = git("status", "--porcelain", "--untracked-files=no")
     if dirty:
         raise Failed("Tracked files are changed here, so nothing was pulled (a server PC runs committed code "
@@ -334,13 +437,14 @@ def _after_pull(args, old, done):
         pip = venv_python()
         if pip is None:
             raise Failed("There's no .venv to install psycopg into: SELF-HOSTING.md step 3")
-        if running:     # Windows keeps a running server's psycopg DLLs locked
+        stop = running and PIP_NEEDS_STOP
+        if stop:
             step([python, "-m", "decklab.lib.homenet", "stop"], "Stop Deck Lab to replace psycopg", timeout=120)
             done.add("server-stopped")
         try:
             step([str(pip), "-m", "pip", "install", "-r", str(ROOT / REQUIREMENTS)], "Reinstall psycopg", timeout=900)
         except Failed:
-            if running:
+            if stop:
                 step([python, "-m", "decklab.lib.homenet", "start"], "Start Deck Lab again", timeout=120)
                 done.discard("server-stopped")
             raise

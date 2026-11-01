@@ -57,12 +57,12 @@ def _homenet():
     return commands
 
 
-def preview_systemd(unit, python, workdir, at=None, say=print):
+def preview_systemd(unit, python, workdir, at=None, say=print, zone=None):
     """Print one unit preview. This never inspects the host, reads data or installs units."""
     from decklab.db import systemd_units
     if unit not in ("service", "timer"):
         raise ValueError("preview-systemd requires --unit service or --unit timer.")
-    units = systemd_units.nightly_units(python, workdir, AT if at is None else at)
+    units = systemd_units.nightly_units(python, workdir, AT if at is None else at, zone)
     name = systemd_units.SERVICE if unit == "service" else systemd_units.TIMER
     say(units[name].rstrip("\n"))
     return 0
@@ -334,10 +334,21 @@ def _systemd():
     return systemd
 
 
+def _zone():
+    """config.json's "timezone" (lib/hometime.py), or None when it's unset or not a zone name."""
+    from decklab.lib import hometime
+    return hometime.configured()
+
+
+def _at_text(zone):
+    return f"{AT} {zone} time" if zone else AT
+
+
 def _units():
-    """The service and timer as install writes them now: this Python, this repo, AT."""
+    """The service and timer as install writes them now: this Python, this repo, AT (in
+    config.json's "timezone", when it's set)."""
     from decklab.db import systemd_units
-    return systemd_units.nightly_units(sys.executable, config.REPO.as_posix(), AT)
+    return systemd_units.nightly_units(sys.executable, config.REPO.as_posix(), AT, _zone())
 
 
 def install_systemd(say=print):
@@ -362,7 +373,7 @@ def install_systemd(say=print):
         say(f"The nightly timer was written but couldn't be enabled: {systemd.said(out, err, code)}")
         return 1
     folder = systemd.unit_dir()
-    say(f"Installed the nightly timer: every day at {AT} (or as soon as the PC is on after that), "
+    say(f"Installed the nightly timer: every day at {_at_text(_zone())} (or as soon as the PC is on after that), "
         f"{systemd_units.SERVICE} runs")
     say(f"  {sys.executable} {ARGUMENTS}")
     say(f"  in {config.REPO}. Its units are in {folder}; its log: decklab/data/logs/db.log "
@@ -442,7 +453,7 @@ def status_systemd(wake=None):
     timer_file, service_file = folder / systemd_units.TIMER, folder / systemd_units.SERVICE
     if not timer_file.exists() or not service_file.exists():
         return [f"Nightly timer: {systemd_units.TIMER} isn't installed (python -m decklab.db schedule install)."]
-    lines = [f"Nightly timer: {systemd_units.TIMER} runs {systemd_units.SERVICE} daily at {AT}, catching up "
+    lines = [f"Nightly timer: {systemd_units.TIMER} runs {systemd_units.SERVICE} daily at {_at_text(_zone())}, catching up "
              f"after the PC was off ({folder})."]
     timer = systemd.show(systemd_units.TIMER, "UnitFileState", "ActiveState", "NextElapseUSecRealtime",
                          "LastTriggerUSec")

@@ -1,7 +1,8 @@
 {
   "database": {"backup_dir": "\\\\NAS\\Backups\\DeckLab"},
   "records_repo": "C:\\Projects\\MyCardRecords",
-  "allowed_hosts": ["decklab.example.com", "www.decklab.example.com"],
+  "timezone": "Australia/Sydney",
+  "allowed_hosts":["decklab.example.com", "www.decklab.example.com"],
   "tunnel": {"config": "~/.cloudflared/config.yml", "hostname": "decklab.example.com"},
   "access": {
     "team": "your-team",

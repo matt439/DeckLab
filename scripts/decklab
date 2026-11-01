@@ -1,0 +1,26 @@
+#!/bin/sh
+# Start Deck Lab's background server from any folder (Linux and macOS; decklab.cmd on Windows).
+#   decklab            starts it (same as "decklab start")
+#   decklab stop|restart|status|...   passes through to python -m decklab.lib.homenet
+# It runs on the Python the repo's .venv was made from (.venv/pyvenv.cfg's home and version),
+# the one homenet install and schedule install must use too; DECKLAB_PYTHON overrides it, and
+# without a .venv it's python3.
+here=$(dirname -- "$0")
+cd -- "$here/.." || exit 1
+python=${DECKLAB_PYTHON:-}
+if [ -z "$python" ] && [ -f .venv/pyvenv.cfg ]; then
+    home=$(sed -n 's/^home[[:space:]]*=[[:space:]]*//p' .venv/pyvenv.cfg | head -n 1)
+    version=$(sed -n 's/^version\(_info\)\{0,1\}[[:space:]]*=[[:space:]]*\([0-9][0-9]*\.[0-9][0-9]*\).*/\2/p' \
+        .venv/pyvenv.cfg | head -n 1)
+    for candidate in "$home/python$version" "$home/python3" "$home/python"; do
+        if [ -n "$home" ] && [ -x "$candidate" ]; then
+            python=$candidate
+            break
+        fi
+    done
+fi
+python=${python:-python3}
+if [ "$#" -eq 0 ]; then
+    exec "$python" -m decklab.lib.homenet start
+fi
+exec "$python" -m decklab.lib.homenet "$@"
