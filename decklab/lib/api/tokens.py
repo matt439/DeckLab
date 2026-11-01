@@ -56,7 +56,7 @@ from decklab.lib.inventory import rules
 from decklab.lib.tokens import ops as token_ops
 
 from . import common, guard, saving
-from .collection import space_param as _space
+from .collection import scan_flag, space_param as _space
 from .commits import _when
 from .card_lookup import image_url
 from .common import ApiError, _keys, _parse_body, _public, _scrub, _unique
@@ -203,7 +203,8 @@ def tokens_view(space=None):
     (pending token orders: {order, component, path, cards, rows}),
     face_names (for the sheet's suggestions; [] while the card index isn't
     ready), keywords (those a details part may list, lower case, for the
-    sheet's "Read as" line, as parse_details reads them), problems (rows of tokens.csv that can't be read) and info}. One
+    sheet's "Read as" line, as parse_details reads them), problems (rows of tokens.csv that can't be read), info
+    and, where the visitor may change them, scan (collection.scan_flag: whether Scan token cards can read photos)}. One
     inventory snapshot answers it all. 403 for a space whose inventory the visitor may not see
     (guard.require_sees_inventory)."""
     space = _space(space)
@@ -254,7 +255,8 @@ def _tokens_view(space):
             "cards": sum(int(row["quantity"]) for row in inv.rows),
             "missing": missing, "incoming": _incoming_json(found), "face_names": face_names,
             "keywords": sorted(tokens._keywords()), "problems": _unique(_scrub(inv.problems)),
-            "info": _unique(_scrub(incoming_problems + warnings + info))}
+            "info": _unique(_scrub(incoming_problems + warnings + info)),
+            **({"scan": scan_flag()} if guard.allowed(guard.viewer(), "tokens.edit", space) else {})}
 
 
 def _seen_use(use, sees):

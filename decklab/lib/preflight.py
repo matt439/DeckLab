@@ -15,7 +15,9 @@ CHECKS = (
     ("cards", "Card cache", "core", ()),
     ("java", "Java runtime files", "optional", ("config",)),
     ("forge", "Forge installation files", "optional", ("config",)),
+    ("ocr", "Photo scanning engine", "optional", ()),
 )
+SIMULATION_FILES = ("java", "forge")     # the optional checks optional_files_status sums up
 
 # Each outcome contains only public, fixed wording. The adapter's submitted
 # values, paths, exception messages and configuration never enter the report.
@@ -93,6 +95,15 @@ OUTCOMES = MappingProxyType({
                       "Review the selected Forge folder using SELF-HOSTING.md step 8."),
     "forge_unavailable": ("unverified", "The selected Forge installation files could not be read safely.",
                           "Review local access to the selected Forge folder using SELF-HOSTING.md step 8."),
+    "ocr_ready": ("ready", "An OCR engine for Scan cards and Scan token cards was found; no photo was read.", None),
+    "ocr_missing": ("needs_setup", "No OCR engine was found, so Scan cards and Scan token cards offer only typed names; "
+                    "scanning is optional.",
+                    "On Linux install the tesseract-ocr package (sudo apt install tesseract-ocr); on Windows 10 or 11, "
+                    "Windows' own engine needs Windows PowerShell."),
+    "ocr_no_language": ("needs_setup", "Tesseract has no English language data; scanning is optional.",
+                        "Install the tesseract-ocr-eng package, then run the preflight again."),
+    "ocr_unusable": ("unverified", "An OCR engine was found but did not answer; scanning is optional.",
+                     "Check that tesseract --list-langs runs, then run the preflight again."),
     "probe_unverified": ("unverified", "This preflight check did not return a verified result.",
                          "Review the local setup and retry the preflight; no raw adapter error is included."),
 })
@@ -109,6 +120,7 @@ ALLOWED = MappingProxyType({
     "java": frozenset({"java_files_ready", "java_missing", "java_incomplete", "java_unavailable",
                       "java_version_unknown", "java_version_unsupported"}),
     "forge": frozenset({"forge_files_ready", "forge_missing", "forge_incomplete", "forge_invalid", "forge_unavailable"}),
+    "ocr": frozenset({"ocr_ready", "ocr_missing", "ocr_no_language", "ocr_unusable"}),
 })
 
 
@@ -138,7 +150,7 @@ def report(probe):
         checks.append(row)
         by_id[ident] = row
     core = [row for row in checks if row["scope"] == "core"]
-    optional = [row for row in checks if row["scope"] == "optional"]
+    optional = [row for row in checks if row["id"] in SIMULATION_FILES]
     core_ready = all(row["status"] == "ready" for row in core)
     exit_code = 0 if core_ready else 2 if any(row["status"] == "unverified" for row in core) else 1
     files = ("present" if all(row["status"] == "ready" for row in optional) else "not_verified"

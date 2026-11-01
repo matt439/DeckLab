@@ -10,10 +10,13 @@ and sends it as a JPEG, decklab/design/scanning-spike.md). It needs collection.e
 own people, home's Matt and User1, a member's only that member, and no admin override), so the
 refusal for anyone else is the same 403 a hidden collection gets, before the photo is looked at.
 
-The photo is written to a temporary folder only while OCR reads it (lib/scan.py: Windows' own
-engine, else Tesseract), then deleted; it's never kept, and nothing in the inventory, the audit
-trail or the raw imports changes. OCR is the engine, scan.ocr; the tests replace it, so they never
-run Windows' engine (CI is Linux). One photo is read at a time (429 while another is).
+The photo is written to a temporary folder only while OCR reads it (lib/scan.py: on Windows its
+own engine, else Tesseract; elsewhere Tesseract), then deleted; it's never kept, and nothing in the
+inventory, the audit trail or the raw imports changes. OCR is the engine, scan.ocr; the tests
+replace it, so they never run a real engine. One photo is read at a time (429 while another is).
+Its lines are cut to MAX_LINES keeping the top and the bottom (cut_lines). Whether this server
+has an engine at all is the Collection and Tokens views' scan.available (collection.scan_flag), so
+a page can say so before a photo is taken.
 
 The answer is {ok, space, lines (what was read, at most MAX_LINES lines of MAX_LINE characters),
 read ({name, numbers, sets, foil, language}, or null when nothing could be read), proposals
@@ -49,6 +52,7 @@ MAX_PHOTO = accessory_fetch.MAX_IMAGE           # bytes of a photo (4 MiB), as t
 MAX_SCAN_BODY = accessory_upload.MAX_BASE64 + 4096
 MAX_SIDE = 10000                                # pixels a side: Windows' engine reads no bigger
 MAX_LINES = 60                                  # lines read that are answered and proposed from
+HEAD_LINES = 20                                 # of them from the top (the name); the rest from the bottom (the printing)
 MAX_LINE = 200                                  # characters of each
 OCR = scan.ocr                                  # path -> lines read; the tests replace it
 TOO_BIG = "That photo is more than 4 MiB. Take it again, or choose a smaller one (JPEG or PNG)."
@@ -88,6 +92,14 @@ def _read_photo(data, ext, ocr=None):
         return (ocr or OCR)(path)
 
 
+def cut_lines(lines):
+    """At most MAX_LINES lines of at most MAX_LINE characters: the first HEAD_LINES and the last
+    ones when there are more, since the name is at the top and the set code and number at the
+    bottom (sparse OCR reads a lot of card art as text in between)."""
+    lines = [str(line)[:MAX_LINE] for line in list(lines)]
+    return lines if len(lines) <= MAX_LINES else lines[:HEAD_LINES] + lines[HEAD_LINES - MAX_LINES:]
+
+
 def _proposals(found, space):
     """scan.propose's proposals with each printing's finishes, small picture and the copies the space has."""
     rows, _ = _read(space)
@@ -124,7 +136,7 @@ def scan_photo(body):
                     "message": _public(e), "unread": True}
         except OSError as e:
             raise ApiError(500, f"The photo couldn't be read on the PC: {_public(e)}") from None
-        lines = [str(line)[:MAX_LINE] for line in list(lines)[:MAX_LINES]]
+        lines = cut_lines(lines)
         try:
             answer = scan.propose(lines)
         except (FileNotFoundError, RuntimeError):

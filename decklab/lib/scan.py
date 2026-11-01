@@ -8,15 +8,21 @@ into printings: the set code and number name one printing, and the name says
 whether it's the right card. A card printed before the set code (2015) gives
 only its name, so every paper printing of it is offered.
 
-OCR: Windows' own engine (Windows.Media.Ocr, part of Windows 10 and 11, through
-PowerShell; nothing to install), else Tesseract when it's on the PATH. Neither
-is a Python package and nothing is fetched. Without one, OcrUnavailable says so
-in plain words; propose() works on any text, so a phone's own text reading or a
-typed line can feed it too. The findings are in decklab/design/scanning-spike.md.
+OCR: on Windows, Windows' own engine (Windows.Media.Ocr, part of Windows 10 and
+11, through PowerShell; nothing to install), else Tesseract when it's on the
+PATH; on Linux and macOS, Tesseract only (Debian and Ubuntu's tesseract-ocr
+package, which brings its English data). Neither is a Python package and
+nothing is fetched. Tesseract's TSV output is regrouped into lines in reading
+order (_tsv_lines), as Windows' engine gives them. When no engine is on this
+host, OcrUnavailable says so in one fixed sentence (NOT_SET_UP) and
+engine_status() says why; propose() works on any text, so a phone's own text
+reading or a typed line can feed it too. The findings are in
+decklab/design/scanning-spike.md.
 
     python -m decklab.lib.scan PHOTO [PHOTO ...] [--json] [--engine auto|windows|tesseract]
     python -m decklab.lib.scan --text FILE      # lines already read, one per line
     python -m decklab.lib.scan PHOTO --tokens   # a token card: propose token, emblem and reminder faces
+    python -m decklab.lib.scan --status [--json] # whether this PC has an engine (exit 1 if not)
 """
 import argparse
 import base64
@@ -27,6 +33,8 @@ import re
 import shutil
 import subprocess
 import sys
+import threading
+import time
 import unicodedata
 from pathlib import Path
 
@@ -51,12 +59,24 @@ _SET_SWAPS = {"0": "OD", "O": "0D", "D": "O0", "1": "IL", "I": "1L", "L": "I1", 
 _NUM = r"[0-9OoDQIl|i]{1,4}"
 _RARITY_FIRST = re.compile(rf"^([{RARITIES}])\s+({_NUM}[a-z]?)\b", re.IGNORECASE)
 _NUMBER_FIRST = re.compile(rf"^({_NUM}[a-z]?)(?:\s*/\s*({_NUM}))?(?:\s+([{RARITIES}]))?\b", re.IGNORECASE)
-_SET_LINE = re.compile(r"^([A-Z0-9]{3,5})\s*(?:[•·*★☆.,]\s*)?([A-Z]{2})\b")
+# Between the set code and the language: a dot, which OCR may read as another mark ("-", "+", "°",
+# "»"), as a lone "e" or "o" (only with spaces round it) or not at all. Only a star makes the card foil.
+_SET_LINE = re.compile(r"^([A-Z0-9]{3,5})(?:\s*[•·*★☆.,+°»\-]\s*|\s+[eo]\s+|\s*)([A-Z]{2})\b")
 _STARS = "★☆*"
+NOT_SET_UP = "Scanning isn't set up on this server. Type the card's name instead."
 
 
 class OcrUnavailable(Exception):
-    """No OCR engine could read the photo; the message says why in plain words."""
+    """No OCR engine could read the photo; the message says why in plain words. detail, when
+    given, is fix-it text for the PC's command line and doctor, never sent to a page."""
+
+    def __init__(self, message, detail=None):
+        super().__init__(message)
+        self.detail = detail
+
+
+class OcrMissing(OcrUnavailable):
+    """The engine isn't on this host at all (rather than there and failing on the photo)."""
 
 
 def _clean(line):
@@ -317,7 +337,9 @@ def _powershell():
     return shutil.which("powershell") or shutil.which("powershell.exe")
 
 
-def _run(command, env=None):
+def _run(command, env=None, explain=None):
+    """The engine's stdout as text. explain(stderr) gives the plain reason a failed run names
+    (None for none); without it, the last plain stderr line is the reason."""
     try:
         done = subprocess.run(command, capture_output=True, timeout=OCR_TIMEOUT, env=env,
                               creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
@@ -326,50 +348,228 @@ def _run(command, env=None):
     except OSError as e:
         raise OcrUnavailable(f"The OCR engine couldn't start ({e.strerror or e}).") from None
     if done.returncode != 0:
-        # Only plain lines: PowerShell's CLIXML records (a "#< CLIXML" line, then
-        # one "<Objs ...>" line) are never shown.
-        error = [line.strip() for line in done.stderr.decode("utf-8", "replace").splitlines()
-                 if line.strip() and not line.lstrip().startswith(("#< CLIXML", "<Objs", "<"))]
-        raise OcrUnavailable("The OCR engine couldn't read the photo"
-                             + (f": {error[-1]}." if error else "."))
-    return [line for line in done.stdout.decode("utf-8-sig", "replace").splitlines() if line.strip()]
+        stderr = done.stderr.decode("utf-8", "replace")
+        if explain is not None:
+            reason = explain(stderr)
+        else:
+            # Only plain lines: PowerShell's CLIXML records (a "#< CLIXML" line, then
+            # one "<Objs ...>" line) are never shown.
+            error = [line.strip() for line in stderr.splitlines()
+                     if line.strip() and not line.lstrip().startswith(("#< CLIXML", "<Objs", "<"))]
+            reason = error[-1] if error else None
+        reason = (reason or "").rstrip(". ")
+        raise OcrUnavailable("The OCR engine couldn't read the photo" + (f": {reason}." if reason else "."))
+    return done.stdout.decode("utf-8-sig", "replace")
 
 
 def windows_ocr(path):
     """The lines Windows' OCR engine reads in the photo at path."""
     shell = _powershell()
     if shell is None:
-        raise OcrUnavailable("Windows' OCR engine is only on Windows.")
+        raise OcrMissing("Windows' OCR engine is only on Windows.")
     encoded = base64.b64encode(_WINDOWS_OCR.encode("utf-16-le")).decode("ascii")
     env = dict(os.environ, DECKLAB_SCAN_IMAGE=str(Path(path).resolve()) if path else "")
-    return _run([shell, "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
-                 "-EncodedCommand", encoded], env=env)
+    output = _run([shell, "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
+                   "-EncodedCommand", encoded], env=env)
+    return [line for line in output.splitlines() if line.strip()]
+
+
+# Tesseract (the tesseract-ocr package): English, sparse text (a card's lines are scattered over
+# its art), TSV output so the words' positions rebuild the lines. Tesseract 4 and 5 already try
+# each line inverted (white on black, as a card's bottom line is). One thread, so a scan doesn't
+# fight Forge's workers for every core.
+TESSERACT_ARGS = ("stdout", "-l", "eng", "--psm", "11", "tsv")
+MIN_CONF = 30               # Tesseract's word confidence (0-100) below which a word is art, not text
+LINE_GAP = 2                # word heights apart that two pieces of one line may be
+_MARKS = "•·★☆*"            # marks kept though they're no letter or digit: a set line's dot or foil star
+_TSV_KEYS = ("level", "page_num", "block_num", "par_num", "line_num", "left", "top", "width", "height", "conf", "text")
+
+
+def _tesseract():
+    return shutil.which("tesseract")
+
+
+def _tesseract_env():
+    return dict(os.environ, OMP_THREAD_LIMIT="1")
+
+
+def _tesseract_error(stderr):
+    """The plain reason a failed Tesseract run names, or None: never its own (Leptonica's) words."""
+    if "Failed loading language" in stderr or "Error opening data file" in stderr:
+        return "Tesseract has no English language data (install tesseract-ocr-eng)"
+    if any(word in stderr for word in ("pixRead", "Unknown format", "Unsupported image type", "image file not found")):
+        return "it isn't a picture Tesseract can open (JPEG or PNG)"
+    return None
+
+
+def _same_line(a, b):
+    """Whether two pieces of text sit on one line: their middles within half a word's height,
+    and at most LINE_GAP word heights apart side by side."""
+    height = max(a["bottom"] - a["top"], b["bottom"] - b["top"], 1)
+    middles = abs((a["top"] + a["bottom"]) - (b["top"] + b["bottom"])) / 2
+    gap = max(a["left"], b["left"]) - min(a["right"], b["right"])
+    return middles <= height / 2 and gap <= LINE_GAP * height
+
+
+def _tsv_lines(text):
+    """The lines in Tesseract's TSV output, in reading order, as Windows' engine gives them.
+
+    Its words (level 5) of confidence MIN_CONF or more, with a letter, digit or one of _MARKS,
+    are put in Tesseract's own lines (block, paragraph and line numbers); lines side by side
+    are joined again (sparse mode splits "R" from "0227" and "FDN" from "EN"), each line's
+    words left to right, and the lines sorted top to bottom, then left to right, so the card's
+    name comes first and its bottom line last. Raises OcrUnavailable for output that isn't TSV."""
+    rows = text.splitlines()
+    header = next((i for i, row in enumerate(rows) if row.split("\t")[:1] == ["level"]), None)
+    if header is None:
+        if any(row.strip() for row in rows):
+            raise OcrUnavailable("The OCR engine couldn't read the photo.")
+        return []
+    at = {name: i for i, name in enumerate(rows[header].split("\t"))}
+    if any(key not in at for key in _TSV_KEYS):
+        raise OcrUnavailable("The OCR engine couldn't read the photo.")
+    groups = {}
+    for row in rows[header + 1:]:
+        cells = row.split("\t")
+        try:
+            if cells[at["level"]] != "5":
+                continue
+            word = _clean(cells[at["text"]] if at["text"] < len(cells) else "")
+            conf = float(cells[at["conf"]])
+            left, top, width, height = (int(cells[at[key]]) for key in ("left", "top", "width", "height"))
+            key = tuple(cells[at[name]] for name in ("page_num", "block_num", "par_num", "line_num"))
+        except (IndexError, ValueError):
+            continue
+        if conf < MIN_CONF or not word or not any(ch.isalnum() or ch in _MARKS for ch in word):
+            continue
+        line = groups.setdefault(key, {"left": left, "top": top, "right": left + width, "bottom": top + height,
+                                       "words": []})
+        line.update(left=min(line["left"], left), top=min(line["top"], top),
+                    right=max(line["right"], left + width), bottom=max(line["bottom"], top + height))
+        line["words"].append((left, word))
+    lines = []
+    for piece in sorted(groups.values(), key=lambda g: (g["left"], g["top"])):
+        line = next((line for line in lines if _same_line(line, piece)), None)
+        if line is None:
+            lines.append({**piece, "words": list(piece["words"])})
+            continue
+        line.update(left=min(line["left"], piece["left"]), top=min(line["top"], piece["top"]),
+                    right=max(line["right"], piece["right"]), bottom=max(line["bottom"], piece["bottom"]))
+        line["words"] += piece["words"]
+    lines.sort(key=lambda line: (line["top"], line["left"]))
+    return [" ".join(word for _, word in sorted(line["words"], key=lambda w: w[0])) for line in lines]
 
 
 def tesseract_ocr(path):
     """The lines Tesseract reads in the photo at path, when it's installed."""
-    exe = shutil.which("tesseract")
+    exe = _tesseract()
     if exe is None:
-        raise OcrUnavailable("Tesseract isn't installed.")
-    return _run([exe, str(path), "stdout", "--psm", "11"])
+        raise OcrMissing("Tesseract isn't installed.")
+    return _tsv_lines(_run([exe, str(path), *TESSERACT_ARGS], env=_tesseract_env(), explain=_tesseract_error))
 
 
 ENGINES = {"windows": windows_ocr, "tesseract": tesseract_ocr}
 
 
+def platform_engines(platform=None):
+    """The engines "auto" tries on this platform, in order: Windows' own, then Tesseract on
+    Windows; only Tesseract elsewhere."""
+    return ("windows", "tesseract") if (platform or sys.platform) == "win32" else ("tesseract",)
+
+
 def ocr(path, engine="auto"):
     """The lines read in the photo at path, by the engine named or the first one
-    that works. Raises OcrUnavailable, naming each engine's problem."""
+    that works. Raises OcrUnavailable naming each engine's problem when one is here
+    but failed; OcrMissing with NOT_SET_UP (its detail naming each) when none is."""
     if not Path(path).is_file():
         raise OcrUnavailable(f"No photo at {path}.")
-    names = list(ENGINES) if engine == "auto" else [engine]
-    problems = []
+    names = platform_engines() if engine == "auto" else [engine]
+    problems, failed = [], False
     for name in names:
         try:
             return ENGINES[name](path)
+        except OcrMissing as e:
+            problems.append(str(e))
         except OcrUnavailable as e:
             problems.append(str(e))
+            failed = True
+    if not failed:
+        raise OcrMissing(NOT_SET_UP, detail=" ".join(problems))
     raise OcrUnavailable(" ".join(problems) + " Type the card's name instead.")
+
+
+# --- Whether this server can scan ------------------------------------------
+
+STATUS_TTL = 60             # seconds engine_status() is kept, so installing Tesseract shows without a restart
+LIST_TIMEOUT = 5            # seconds `tesseract --list-langs` may take
+_status = {"at": None, "value": None}
+_status_lock = threading.Lock()
+
+
+def _tesseract_languages(exe):
+    """The language data Tesseract has (a set of codes), or None when it didn't answer."""
+    try:
+        done = subprocess.run([exe, "--list-langs"], capture_output=True, timeout=LIST_TIMEOUT,
+                              env=_tesseract_env(), creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if done.returncode != 0:
+        return None
+    # Its list ("List of available languages ..." then a code a line) is on stdout, or stderr before 4.1.
+    text = (done.stdout + b"\n" + done.stderr).decode("utf-8", "replace")
+    return {line.strip() for line in text.splitlines() if line.strip() and " " not in line.strip()}
+
+
+def status_detail(reason, platform=None):
+    """Fix-it text for engine_status's reason, for the PC's command line and doctor only."""
+    windows = (platform or sys.platform) == "win32"
+    return {
+        "ready": None,
+        "missing": ("Windows' OCR engine needs Windows PowerShell, and Tesseract isn't installed." if windows
+                    else "Tesseract isn't installed: install the tesseract-ocr package (sudo apt install tesseract-ocr)."),
+        "no_language": "Tesseract has no English language data: install the tesseract-ocr-eng package.",
+        "unusable": "Tesseract is installed but didn't answer: check that tesseract --list-langs runs.",
+    }.get(reason, "The OCR engine couldn't be checked.")
+
+
+def _probe():
+    problem = None
+    for name in platform_engines():
+        if name == "windows":
+            if _powershell():
+                return {"engine": "windows", "available": True, "reason": "ready"}
+            continue
+        exe = _tesseract()
+        if exe is None:
+            continue
+        languages = _tesseract_languages(exe)
+        if languages is None:
+            problem = problem or "unusable"
+        elif "eng" not in languages:
+            problem = problem or "no_language"
+        else:
+            return {"engine": "tesseract", "available": True, "reason": "ready"}
+    return {"engine": None, "available": False, "reason": problem or "missing"}
+
+
+def engine_status(refresh=False):
+    """{engine ("windows", "tesseract" or None), available, reason ("ready", "missing",
+    "no_language" or "unusable"), detail (status_detail's, None when ready)}: whether "auto"
+    has an engine to read photos with on this server. Cheap checks only (the PATH, and
+    Tesseract's language list once), kept STATUS_TTL seconds; nothing is read or written.
+    Only available is ever sent to a page: the rest names the PC's software."""
+    now = time.monotonic()
+    with _status_lock:
+        if not refresh and _status["value"] is not None and now - _status["at"] < STATUS_TTL:
+            return dict(_status["value"])
+    try:
+        value = _probe()
+    except Exception:           # noqa: BLE001 - a broken check is "can't scan", never a failed page
+        value = {"engine": None, "available": False, "reason": "unusable"}
+    value["detail"] = status_detail(value["reason"])
+    with _status_lock:
+        _status.update(at=now, value=dict(value))
+    return value
 
 
 def main(argv=None):
@@ -382,7 +582,17 @@ def main(argv=None):
     parser.add_argument("--engine", choices=("auto", *ENGINES), default="auto")
     parser.add_argument("--json", action="store_true", help="print the answers as JSON")
     parser.add_argument("--tokens", action="store_true", help="the photos are of token cards: propose token faces")
+    parser.add_argument("--status", action="store_true", help="say whether this PC has an OCR engine (exit 1 if not)")
     args = parser.parse_args(argv)
+    if args.status:
+        found = engine_status(refresh=True)
+        if args.json:
+            print(json.dumps(found, indent=1))
+        else:
+            engine = {"windows": "Windows' own", "tesseract": "Tesseract's"}.get(found["engine"], found["engine"])
+            print(f"Photo scanning is set up: {engine} OCR engine reads the photos." if found["available"] else
+                  f"Photo scanning isn't set up. {found['detail']}")
+        return 0 if found["available"] else 1
     if not args.photos and not args.text:
         parser.error("give a photo or --text FILE")
     jobs = [(args.text, None)] if args.text else [(photo, args.engine) for photo in args.photos]
@@ -392,7 +602,8 @@ def main(argv=None):
             lines = (Path(source).read_text(encoding="utf-8-sig").splitlines() if engine is None
                      else ocr(source, engine))
         except (OcrUnavailable, OSError) as e:
-            answers.append({"source": source, "error": str(e)})
+            answers.append({"source": source, "error": str(e),
+                            **({"detail": e.detail} if getattr(e, "detail", None) else {})})
             status = 1
             continue
         try:
@@ -407,6 +618,8 @@ def main(argv=None):
         print(f"{answer['source']}:")
         if "error" in answer:
             print(f"  {answer['error']}")
+            if answer.get("detail"):
+                print(f"  {answer['detail']}")
             continue
         print(f"  read: {' | '.join(answer['lines']) or '(nothing)'}")
         print(f"  {answer['message']}")

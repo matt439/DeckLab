@@ -141,7 +141,7 @@ def _token_entry(entry, printings):
 class Local:
     def __init__(self, root=None, *, version=None, platform=None, environ=None,
                  read_file=None, find_driver=None, import_driver=None, connect=None,
-                 base_executable=None, search_path=None):
+                 base_executable=None, search_path=None, scan_status=None):
         self.root = Path(root) if root is not None else ROOT
         self.version = tuple(sys.version_info[:2] if version is None else version[:2])
         self.platform = sys.platform if platform is None else platform
@@ -152,6 +152,7 @@ class Local:
         self.connect = connect
         self.base_executable = base_executable
         self.search_path = search_path
+        self.scan_status = scan_status
         self._settings = None
         self._loaded_driver = None
         self._results = {}
@@ -162,11 +163,22 @@ class Local:
         return self._settings
 
     def probe(self, check_id):
-        if check_id not in ("runtime", "config", "driver", "database", "cards"):
+        if check_id not in ("runtime", "config", "driver", "database", "cards", "ocr"):
             raise ValueError("Unknown preflight check")
         if check_id not in self._results:
             self._results[check_id] = getattr(self, "_" + check_id)()
         return self._results[check_id]
+
+    def _ocr(self):
+        """Whether photo scanning has an engine here (scan.engine_status: the PATH and Tesseract's
+        language list only; no photo is read)."""
+        if self.scan_status is None:
+            from decklab.lib import scan
+            found = scan.engine_status(refresh=True)
+        else:
+            found = self.scan_status()
+        return {"ready": "ocr_ready", "missing": "ocr_missing", "no_language": "ocr_no_language",
+                "unusable": "ocr_unusable"}.get(found.get("reason"), "probe_unverified")
 
     def _runtime(self):
         return "runtime_ready" if self.version == (3, 14) and self.platform in ("win32", "linux", "darwin") \

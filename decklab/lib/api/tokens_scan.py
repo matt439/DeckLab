@@ -85,7 +85,7 @@ def scan_token(body):
                     "message": _public(e).replace("the card's name", "the token's name"), "unread": True}
         except OSError as e:
             raise ApiError(500, f"The photo couldn't be read on the PC: {_public(e)}") from None
-        lines = [str(line)[:collection_scan.MAX_LINE] for line in list(lines)[:collection_scan.MAX_LINES]]
+        lines = collection_scan.cut_lines(lines)
         try:
             answer = scan.propose_tokens(lines)
         except (FileNotFoundError, RuntimeError):

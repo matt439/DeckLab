@@ -120,7 +120,7 @@ from decklab.lib.inventory import rules
 
 from . import common, guard
 from .carddata import _index_info, _require_cards
-from .collection import space_param
+from .collection import scan_flag, space_param
 from .common import MAX_NAME, NUMBER_RE, SET_RE, _CONTROL_RE, ApiError, _keys, _parse_body, _public, _unique
 from .settings import _web_actor, _writer
 # Parser helpers have one implementation; their limits and matching stay here.
@@ -432,7 +432,8 @@ def rows_view(space=None):
     """GET /api/collection/rows?space=<id>: {space, sha256 (of the collection
     rendered as collection.csv; of nothing while it has no cards), rows (its
     eight columns, as text, sorted), pictures (_pictures), prices (_prices),
-    storage (_storage), locations and storage_box (collection_locations) and editable (may this visitor change it)}. 403 for a space whose inventory the visitor may not see
+    storage (_storage), locations and storage_box (collection_locations), editable (may this visitor change it)
+    and, where it may, scan (collection.scan_flag)}. 403 for a space whose inventory the visitor may not see
     (guard.require_sees_inventory)."""
     space = space_param(space)
     guard.require_sees_inventory(space)
@@ -440,8 +441,9 @@ def rows_view(space=None):
         sheet = inventory.current().collection(space)
     rows, sha = _view(sheet)
     shown = _rows_json(rows)
+    may = guard.allowed(guard.viewer(), "collection.edit", space)
     return {"space": space, "sha256": sha, "rows": shown, "pictures": _pictures(shown), **_extras(space, shown),
-            "editable": guard.allowed(guard.viewer(), "collection.edit", space)}
+            "editable": may, **({"scan": scan_flag()} if may else {})}
 
 
 def download_view(space=None):
