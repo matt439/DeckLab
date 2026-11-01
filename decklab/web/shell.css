@@ -339,7 +339,10 @@ svg.icon-more { stroke-width: 4; }
 .settings-members-form .field > :where(input, select) { min-width: 0; max-width: 100%; width: 100%; }
 .settings-member-review, .settings-member-result { min-width: 0; overflow-wrap: anywhere; }
 .commander-night-range { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-3); }
-.commander-night-form .field > :where(input, select, textarea) { justify-self: stretch; }
+/* Safari keeps a select as wide as its longest option ("No published range recorded") unless it may shrink: without
+   min-width: 0 the two range selects ran past a phone's edge and the Settings page scrolled sideways. */
+.commander-night-form .field { min-width: 0; }
+.commander-night-form .field > :where(input, select, textarea) { justify-self: stretch; min-width: 0; max-width: 100%; }
 .visits-list { display: grid; gap: var(--s-4); }
 .visits-person h3 { margin: 0; font-size: var(--fs-md); }
 .visits-person p { margin: var(--s-1) 0 0; }

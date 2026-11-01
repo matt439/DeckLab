@@ -255,5 +255,14 @@ class CommanderNightUiTests(unittest.TestCase):
         """)
 
 
+class CommanderNightLayoutTests(unittest.TestCase):
+    def test_the_forms_controls_may_shrink_on_a_phone(self):
+        # Safari sizes a select by its longest option and, without min-width: 0, won't shrink it: the two
+        # Published range selects (half the panel each) ran past an iPhone's edge and Settings scrolled sideways.
+        css = (WEB / "shell.css").read_text(encoding="utf-8")
+        self.assertRegex(css, r"\.commander-night-form \.field \{[^}]*min-width: 0")
+        self.assertRegex(css, r"\.commander-night-form \.field > :where\(input, select, textarea\) \{[^}]*min-width: 0[^}]*max-width: 100%")
+
+
 if __name__ == "__main__":
     unittest.main()
