@@ -20,15 +20,25 @@ server restarts the tunnel at once, its connections being stale). On Windows
 that's read without the wall clock (which a time sync or a manual change can
 move): GetTickCount64 counts on through sleep, QueryUnbiasedInterruptTime
 stops while asleep, so the gap between them grows only by the time spent
-asleep (sleep_counter). Elsewhere the wall clock jumping much further than
-INTERVAL means a sleep, and a backwards jump is ignored.
+asleep (sleep_counter). On Linux CLOCK_BOOTTIME counts on through a suspend and
+CLOCK_MONOTONIC stops, so their gap is the same count. Elsewhere the wall clock jumping
+much further than INTERVAL means a sleep, and a backwards jump is ignored.
 
 On Windows the request is PowerCreateRequest / PowerSetRequest
 (PowerRequestSystemRequired) / PowerClearRequest with the reason "Deck Lab is
 in use" (powercfg /requests lists it); if those aren't available,
 SetThreadExecutionState(ES_CONTINUOUS | ES_SYSTEM_REQUIRED), which belongs to
 the thread that set it, so it's set and cleared on the controller's own thread.
-Elsewhere nothing is held: Linux would use systemd-inhibit (not implemented).
+
+On Linux (when systemd-inhibit is installed) it's a child process,
+`systemd-inhibit --what=sleep:idle --who="Deck Lab" --why=<reason> --mode=block cat`, whose
+cat reads a pipe only this process holds: releasing closes the pipe, and so does this process
+dying in any way (a kill included), so nothing is ever left holding the PC awake. A block
+inhibitor stops any suspend (logind's IdleAction, and also `systemctl suspend` unless it's
+given -i); systemd-inhibit --list shows it. A child that exits at once was refused (polkit,
+or no logind or system bus): hold() raises OSError saying why, which KeepAwake logs once,
+and it's tried again after RETRY_AFTER seconds. Elsewhere nothing is held, and status() says
+so ("kind": "none", "holding": false).
 
 hold_while() is the same primitive for a command line's process (the nightly
 database run, a command-line Forge run), released when it ends.
@@ -36,6 +46,8 @@ database run, a command-line Forge run), released when it ends.
     "wake": {"idle_minutes": 20, "gate": "http://<nas address>:8650"}
 """
 import contextlib
+import shutil
+import subprocess
 import sys
 import threading
 import time
@@ -102,6 +114,8 @@ class _WindowsPower:
     """A power request on Windows: hold() and release(), idempotent. Must be used from one
     thread when it falls back to SetThreadExecutionState (KeepAwake's own thread does)."""
 
+    kind = "windows-power-request"
+
     def __init__(self, reason=REASON):
         self.reason = reason
         self._handle = None
@@ -156,21 +170,132 @@ class _WindowsPower:
         self.held = False
 
 
-class _NoPower:
-    """Elsewhere: nothing is held (Linux would use systemd-inhibit; not implemented)."""
+class _LinuxInhibit:
+    """A block inhibitor on Linux: a systemd-inhibit child running cat on a pipe that only
+    this process holds (the module docstring says why). hold() and release() are idempotent
+    and may be called from any thread; held is True only while the child is running. popen
+    and monotonic are injectable for tests."""
 
+    kind = "systemd-inhibit"
+    START_WAIT = 0.5                # seconds: a child still running by then holds the inhibitor
+    STOP_WAIT = 2                   # seconds for each step of release()
+    RETRY_AFTER = 300               # seconds before trying again after a refusal
+    SHORT_LIFE = 60                 # seconds: a child that stopped sooner was refused, not interrupted
+
+    def __init__(self, reason=REASON, *, program="systemd-inhibit", popen=None, monotonic=time.monotonic):
+        self.reason, self.program = reason, program
+        self._popen = popen or subprocess.Popen
+        self._monotonic = monotonic
+        self._proc = None
+        self._started = None        # when the running child started
+        self._refused = None        # (why, when) after a refusal
+        self._lock = threading.Lock()
+
+    def argv(self):
+        return [self.program, "--what=sleep:idle", "--who=Deck Lab", "--why=" + self.reason,
+                "--mode=block", "cat"]
+
+    @property
+    def held(self):
+        proc = self._proc
+        return proc is not None and proc.poll() is None
+
+    def hold(self):
+        with self._lock:
+            if self.held:
+                return
+            if self._proc is not None:      # it died (logind restarted, say): start another
+                proc, self._proc = self._proc, None
+                if self._monotonic() - self._started < self.SHORT_LIFE:
+                    # A refusal that came after START_WAIT: count it as one, so it isn't retried every check.
+                    why = self._first_error_line(proc)
+                    self._close(proc)
+                    self._refused = (f"systemd-inhibit stopped at once (exit code {proc.returncode}): {why}",
+                                     self._monotonic())
+                    raise OSError(self._refused[0])
+                self._close(proc)
+            if self._refused is not None and self._monotonic() - self._refused[1] < self.RETRY_AFTER:
+                raise OSError(self._refused[0])
+            try:
+                proc = self._popen(self.argv(), stdin=subprocess.PIPE, stdout=subprocess.DEVNULL,
+                                   stderr=subprocess.PIPE, close_fds=True)
+            except OSError as e:
+                self._refused = (f"systemd-inhibit couldn't be started: {e}", self._monotonic())
+                raise OSError(self._refused[0]) from None
+            try:
+                proc.wait(timeout=self.START_WAIT)
+            except subprocess.TimeoutExpired:
+                self._proc, self._refused, self._started = proc, None, self._monotonic()
+                return
+            why = self._first_error_line(proc)
+            self._close(proc)
+            self._refused = (f"systemd-inhibit refused (exit code {proc.returncode}): {why}", self._monotonic())
+            raise OSError(self._refused[0])
+
+    @staticmethod
+    def _first_error_line(proc):
+        try:
+            _, err = proc.communicate(timeout=1)
+        except (subprocess.TimeoutExpired, OSError, ValueError):
+            err = b""
+        if isinstance(err, bytes):
+            err = err.decode("utf-8", "replace")
+        return next((text.strip() for text in (err or "").splitlines() if text.strip()), "it said nothing")
+
+    @staticmethod
+    def _close(proc):
+        for pipe in (proc.stdin, proc.stderr):
+            try:
+                if pipe is not None:
+                    pipe.close()
+            except OSError:
+                pass
+
+    def release(self):
+        with self._lock:
+            proc, self._proc = self._proc, None
+            if proc is None:
+                return
+            try:
+                if proc.stdin is not None:
+                    proc.stdin.close()      # cat reads the end of its input; systemd-inhibit lets go
+            except OSError:
+                pass
+            for stop in (None, proc.terminate, proc.kill):
+                try:
+                    if stop is not None:
+                        stop()
+                    proc.wait(timeout=self.STOP_WAIT)
+                    break
+                except subprocess.TimeoutExpired:
+                    continue
+                except OSError:
+                    break
+            self._close(proc)
+
+
+class _NoPower:
+    """Elsewhere (or Linux without systemd-inhibit): nothing is held, and held stays False."""
+
+    kind = "none"
     held = False
 
     def hold(self):
-        self.held = True
+        pass
 
     def release(self):
-        self.held = False
+        pass
 
 
 def platform_power():
-    """The power primitive for this platform: an object with hold() and release()."""
-    return _WindowsPower() if sys.platform == "win32" else _NoPower()
+    """The power primitive for this platform: an object with kind, held, hold() and release()."""
+    if sys.platform == "win32":
+        return _WindowsPower()
+    if sys.platform.startswith("linux"):
+        program = shutil.which("systemd-inhibit")
+        if program:
+            return _LinuxInhibit(program=program)
+    return _NoPower()
 
 
 @contextlib.contextmanager
@@ -216,13 +341,32 @@ def _windows_sleep_counter():
     return counter
 
 
+def _linux_sleep_counter():
+    """A callable returning the seconds this Linux PC has spent suspended since it started:
+    CLOCK_BOOTTIME (counting through a suspend) minus CLOCK_MONOTONIC (stopped while
+    suspended). Raises AttributeError where time has no CLOCK_BOOTTIME, OSError when it can't
+    be read."""
+    if not hasattr(time, "CLOCK_BOOTTIME") or not hasattr(time, "clock_gettime"):
+        raise AttributeError("time.CLOCK_BOOTTIME isn't available here")
+    boot, monotonic = time.CLOCK_BOOTTIME, time.CLOCK_MONOTONIC
+
+    def counter():
+        return time.clock_gettime(boot) - time.clock_gettime(monotonic)
+    counter()                               # fails here, not on the first tick
+    return counter
+
+
 def sleep_counter():
-    """The platform's counter of seconds spent asleep (only Windows has one), or None: then
+    """The platform's counter of seconds spent asleep (Windows' and Linux's), or None: then
     KeepAwake goes by the wall clock."""
-    if sys.platform != "win32":
+    if sys.platform == "win32":
+        make = _windows_sleep_counter
+    elif sys.platform.startswith("linux"):
+        make = _linux_sleep_counter
+    else:
         return None
     try:
-        return _windows_sleep_counter()
+        return make()
     except (OSError, AttributeError, ValueError):
         return None
 
@@ -336,10 +480,14 @@ class KeepAwake:
         return bool(getattr(self.power, "held", False))
 
     def status(self):
-        """{"holding", "reasons", "idle_minutes", "idle_seconds"} for /api/status's script view."""
+        """{"holding", "wanted", "kind", "reasons", "idle_minutes", "idle_seconds"} for /api/status's
+        script view. wanted: there's a reason to hold; holding: the power primitive really holds
+        (a refused systemd-inhibit is wanted but not holding); kind: the primitive's
+        ("windows-power-request", "systemd-inhibit" or "none"; None before the first check)."""
         with self._lock:
             reasons = list(self._reasons)
-        return {"holding": self.holding(), "reasons": reasons, "idle_minutes": self.idle_minutes,
+        return {"holding": self.holding(), "wanted": bool(reasons), "kind": getattr(self.power, "kind", None),
+                "reasons": reasons, "idle_minutes": self.idle_minutes,
                 "idle_seconds": round(max(0.0, self.monotonic() - self._last_activity))}
 
     def _run(self):

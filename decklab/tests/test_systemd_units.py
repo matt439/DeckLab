@@ -26,6 +26,9 @@ ExecStart=":/opt/python3.14/bin/python" -m decklab.db nightly
 TimeoutStartSec=2h
 Restart=no
 RemainAfterExit=no
+Nice=10
+IOSchedulingClass=idle
+UMask=0077
 ''')
 
     def test_daily_local_calendar_catchup_and_explicit_target(self):
@@ -115,6 +118,58 @@ WantedBy=timers.target
                 self.render(at=at)
         for at in ("00:00", "23:59"):
             self.assertIn("OnCalendar=*-*-* " + at + ":00\n", self.render(at=at)[units.TIMER])
+
+
+class WakeUnitsTests(unittest.TestCase):
+
+    def test_wake_time_is_a_minute_before_wrapping_midnight(self):
+        self.assertEqual(units.wake_time(), "03:29")
+        self.assertEqual(units.wake_time("00:00"), "23:59")
+        self.assertEqual(units.wake_time("10:00"), "09:59")
+        for at in ("24:00", "3:30", "03:30\nWakeSystem=false"):
+            with self.subTest(at=at), self.assertRaisesRegex(ValueError, "HH:MM"):
+                units.wake_time(at)
+
+    def test_complete_system_units(self):
+        rendered = units.wake_units("04:07")
+        self.assertEqual(set(rendered), {"decklab-wake.service", "decklab-wake.timer"})
+        self.assertEqual(rendered[units.WAKE_SERVICE], """[Unit]
+Description=Wake the PC for Deck Lab's nightly maintenance (does nothing itself)
+
+[Service]
+Type=oneshot
+ExecStart=/bin/true
+""")
+        self.assertEqual(rendered[units.WAKE_TIMER], """[Unit]
+Description=Wake the PC a minute before Deck Lab's nightly maintenance
+
+[Timer]
+OnCalendar=*-*-* 04:06:00
+WakeSystem=true
+Persistent=false
+AccuracySec=1s
+Unit=decklab-wake.service
+
+[Install]
+WantedBy=timers.target
+""")
+
+    def test_install_commands_write_each_unit_with_sudo_tee_then_enable(self):
+        commands = units.wake_install_commands()
+        rendered = units.wake_units()
+        text = "\n".join(commands)
+        for name in (units.WAKE_SERVICE, units.WAKE_TIMER):
+            start = f"sudo tee /etc/systemd/system/{name} >/dev/null <<'EOF'\n"
+            self.assertIn(start + rendered[name] + "EOF\n", text + "\n")
+        self.assertEqual(commands[-2:], ["sudo systemctl daemon-reload", "sudo systemctl enable --now decklab-wake.timer"])
+        self.assertEqual(commands.count("EOF"), 2)
+        self.assertEqual(units.wake_remove_commands()[0], "sudo systemctl disable --now decklab-wake.timer")
+
+    def test_nightly_service_runs_out_of_the_way_and_private(self):
+        text = units.nightly_units("/usr/bin/python3", "/srv/DeckLab")[units.SERVICE]
+        for wanted in ("Nice=10\n", "IOSchedulingClass=idle\n", "UMask=0077\n"):
+            self.assertIn(wanted, text)
+        self.assertNotIn("WakeSystem", units.nightly_units("/usr/bin/python3", "/srv/DeckLab")[units.TIMER])
 
 
 if __name__ == "__main__":

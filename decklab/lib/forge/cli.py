@@ -66,7 +66,8 @@ def _main(argv):
     if args.command in _QUICK_COMMANDS:
         return run(args)
     # A command that may play games holds the PC awake (wake-on-request) until it ends, as the
-    # server does for its runs: a no-op off Windows, and harmless beside the server's hold.
+    # server does for its runs: a power request on Windows, a systemd-inhibit block on Linux
+    # (nothing elsewhere), best effort, and harmless beside the server's hold.
     from decklab.lib import keepawake
     with keepawake.hold_while():
         return run(args)
