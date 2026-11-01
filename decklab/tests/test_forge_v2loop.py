@@ -95,7 +95,7 @@ def setUpModule():
     prefs.parent.mkdir(parents=True)
     prefs.write_text(runner.PREFERENCES.replace("PERFORMANCE_MODE=true\n", "") + "PERFORMANCE_MODE=true\n",
                      encoding="utf-8", newline="\n")
-    perf_env = dict(os.environ, APPDATA=str(perf_user), LOCALAPPDATA=str(perf_user))
+    perf_env = dict(os.environ, APPDATA=str(perf_user), LOCALAPPDATA=str(perf_user), FAKE_FORGE_OS="windows")
     unittest.addModuleCleanup(runner._tidy_user_dir, setup["user_dir"])
     env = runner._prepare_user_dir(setup["user_dir"])
     S.update(setup=dict(setup, decks_dir=folder, card_log=log), folder=folder, env=env, perf_env=perf_env,

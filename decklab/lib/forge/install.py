@@ -32,17 +32,105 @@ def _version_tuple(text):
     return tuple(int(part) if part.isdigit() else 0 for part in re.split(r"[.+_-]", text))
 
 
+def _windows():
+    """Whether find_java searches as on Windows (a function, so the tests run each OS's branch)."""
+    return os.name == "nt"
+
+
+def _posix_java_roots():
+    """(folder, glob) pairs off Windows where JDKs are usually installed: the distributions'
+    packages, /opt, SDKMAN's and IntelliJ's downloads."""
+    home = Path.home()
+    return ((Path("/usr/lib/jvm"), "*"), (Path("/usr/lib64/jvm"), "*"), (Path("/opt/java"), "*"),
+            (Path("/opt"), "jdk*"), (home / ".sdkman" / "candidates" / "java", "*"), (home / ".jdks", "*"))
+
+
+RELEASE_MAX = 64 * 1024             # a JDK's release file is a few hundred bytes
+_RELEASE_VERSION = re.compile(r'^JAVA_VERSION\s*=\s*"(?:1\.)?(\d{1,3})(?:[._+\-][^"\r\n]{0,80})?"\s*$', re.M)
+
+
+def java_release(home):
+    """The major Java version a JDK or JRE folder's release file declares (21), or None when
+    it has none that can be read."""
+    try:
+        with open(Path(home) / "release", "rb") as f:
+            raw = f.read(RELEASE_MAX + 1)
+    except OSError:
+        return None
+    if len(raw) > RELEASE_MAX:
+        return None
+    found = _RELEASE_VERSION.findall(raw.decode("utf-8", "replace"))
+    return int(found[0]) if len(found) == 1 else None
+
+
+def _posix_candidates():
+    """Off Windows: [(java, its major version or None)] from JAVA_HOME, the usual JDK folders
+    (_posix_java_roots) and the java on the PATH with its links followed, each once."""
+    homes = []
+    if os.environ.get("JAVA_HOME"):
+        homes.append(Path(os.environ["JAVA_HOME"]))
+    for root, pattern in _posix_java_roots():
+        try:
+            homes.extend(sorted(root.glob(pattern)))
+        except OSError:
+            pass
+    on_path = shutil.which("java")
+    if on_path:
+        try:
+            homes.append(Path(on_path).resolve().parent.parent)
+        except (OSError, RuntimeError):
+            pass
+    found, seen = [], set()
+    for home in homes:
+        java = home / "bin" / "java"
+        try:
+            if not java.is_file():
+                continue
+            key = java.resolve()
+        except (OSError, RuntimeError):
+            continue
+        if key in seen:
+            continue
+        seen.add(key)
+        found.append((java, java_release(home)))
+    return found
+
+
+def _find_posix_java():
+    """(the java to use or None, [(java, version)] passed over as older than JAVA_MIN). A java
+    whose release file says JAVA_MIN or later comes first, one with javac beside it before a JRE,
+    then the newest; one whose version can't be read only when there's none of those (as
+    before, so a JDK without a release file still runs)."""
+    good, unknown, old = [], [], []
+    for java, version in _posix_candidates():
+        javac = (java.parent / "javac").is_file()
+        if version is None:
+            unknown.append((javac, java))
+        elif version >= JAVA_MIN:
+            good.append((javac, version, java))
+        else:
+            old.append((java, version))
+    if good:
+        return max(good, key=lambda c: (c[0], c[1]))[2], old
+    if unknown:
+        return max(unknown, key=lambda c: c[0])[1], old
+    return None, old
+
+
 def find_java(setting=None):
-    """The java.exe to run Forge with: setting (config forge_java) when given, else the
-    newest JDK's in C:\\Program Files (JAVA_FOLDERS: Oracle's, Temurin's, Microsoft's, Zulu's,
-    Corretto's; Java JAVA_MIN or later, one with javac before a JRE), else JAVA_HOME's, else (off Windows) the java on
-    the PATH with its links followed, so javac and jar are beside it. On Windows the PATH's
-    java.exe is never used: it's a launcher that starts the real one as a second process.
-    None if there's none."""
+    """The java.exe to run Forge with: setting (config forge_java) when given, else on Windows
+    the newest JDK's in C:\\Program Files (JAVA_FOLDERS: Oracle's, Temurin's, Microsoft's, Zulu's,
+    Corretto's; Java JAVA_MIN or later, one with javac before a JRE), else JAVA_HOME's. On Windows
+    the PATH's java.exe is never used: it's a launcher that starts the real one as a second process.
+    Off Windows (_find_posix_java): JAVA_HOME's, the usual JDK folders' (/usr/lib/jvm and others)
+    and the PATH's with its links followed; those whose release file says Java JAVA_MIN or later
+    first, one with javac before a JRE, then the newest. None if there's none."""
     if setting:
         path = Path(setting)
         return path if path.is_file() else None
-    exe = "java.exe" if os.name == "nt" else "java"
+    if not _windows():
+        return _find_posix_java()[0]
+    exe = "java.exe"
     root = Path(os.environ.get("ProgramFiles") or r"C:\Program Files")
     found = []
     for vendor, pattern in JAVA_FOLDERS:
@@ -51,7 +139,7 @@ def find_java(setting=None):
                 java = folder / "bin" / exe
                 version = _version_tuple(re.sub(r"^\D+", "", folder.name))
                 if java.is_file() and version[0] >= JAVA_MIN:
-                    found.append(((folder / "bin" / exe.replace("java", "javac")).is_file(), version, java))
+                    found.append(((folder / "bin" / "javac.exe").is_file(), version, java))
         except OSError:
             pass
     if found:
@@ -59,11 +147,19 @@ def find_java(setting=None):
     home = os.environ.get("JAVA_HOME")
     if home and (Path(home) / "bin" / exe).is_file():
         return Path(home) / "bin" / exe
-    if os.name != "nt":
-        on_path = shutil.which("java")
-        if on_path:
-            return Path(on_path).resolve()
     return None
+
+
+def no_java_problem(setting=None):
+    """Why Forge can't run when find_java finds none: "Java wasn't found, so Forge can't run.",
+    or off Windows, when only older Javas were found, which ones."""
+    if setting or _windows():
+        return "Java wasn't found, so Forge can't run."
+    _, old = _find_posix_java()
+    if not old:
+        return "Java wasn't found, so Forge can't run."
+    seen = "; ".join(f"Java {version} at {java}" for java, version in old[:3])
+    return f"Java {JAVA_MIN} or later wasn't found, so Forge can't run (found {seen})."
 
 
 def _find_jar(forge_dir):
@@ -184,7 +280,7 @@ def _setup(forge_dir=None, remember=True):
         raise ForgeError("Forge's card scripts are missing from its folder, so it can't play.")
     java = find_java(settings.get("forge_java"))
     if java is None:
-        raise ForgeError("Java wasn't found, so Forge can't run.")
+        raise ForgeError(no_java_problem(settings.get("forge_java")))
     numbers = {}
     for name in ("forge_workers", "forge_clock_s"):     # not forge_batch_games, which no longer counts
         try:
