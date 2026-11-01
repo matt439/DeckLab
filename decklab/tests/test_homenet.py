@@ -947,12 +947,13 @@ class PatchTargetTests(unittest.TestCase):
     nothing (and letting the real schtasks, PowerShell, stop requests or
     multicast through)."""
 
-    MODULES = ("common", "task", "commands", "gather", "mdns", "checks", "watchdog", "service")
+    MODULES = ("common", "task", "commands", "gather", "mdns", "checks", "watchdog", "service", "linux_facts")
     REPLACED = {
         "commands": ("control", "_schtasks", "_start_task", "find_server", "probe", "local_ipv4", "file_exists",
                      "pythonw_path", "task_user", "pc_name", "this_pythons", "newest_code_mtime", "cmd_status",
                      "cmd_stop", "cmd_start", "cmd_remove", "time", "uses_systemd"),
         "gather": ("run_powershell", "gather_facts"),
+        "linux_facts": ("read_facts",),
         "mdns": ("MDNS_GROUP", "mdns_lookup"),
     }
 

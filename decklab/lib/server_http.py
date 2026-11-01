@@ -22,8 +22,8 @@ from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-from decklab.lib import (access, api, build, config, dbstatus, inventory, keepawake, permissions, state, visibility,
-                         visits)
+from decklab.lib import (access, api, build, config, dbstatus, home_scope, inventory, keepawake, permissions, state,
+                         visibility, visits)
 
 WEB_DIR = config.DECKLAB / "web"
 IMAGE_MAX_AGE = 7 * 24 * 60 * 60    # a printing's image never changes
@@ -110,7 +110,9 @@ def host_allowed(host, extra=()):
     """True for a Host header naming this server the way the home network
     does: an IP address, localhost, this PC's name alone or with a home
     network suffix (homepc, HomePC.local, homepc.lan, ...), or a name in
-    extra. No header (HTTP/1.0) is allowed too."""
+    extra. No header (HTTP/1.0) is allowed too. A name Linux gives as a
+    full name (homepc.home.arpa) counts whole and by its first label
+    (homepc, homepc.local: what avahi announces)."""
     if not host:
         return True
     name = host_name(host)
@@ -119,8 +121,10 @@ def host_allowed(host, extra=()):
         return True
     except ValueError:
         pass
-    pc = socket.gethostname().lower()
-    names = {"localhost", pc} | {f"{pc}.{suffix}" for suffix in HOME_SUFFIXES}
+    full = socket.gethostname().lower().rstrip(".")
+    names = {"localhost", full}
+    for pc in {full, full.split(".", 1)[0]}:
+        names |= {pc} | {f"{pc}.{suffix}" for suffix in HOME_SUFFIXES}
     return name in names or name.endswith(".localhost") or name in {h.lower() for h in extra}
 
 
@@ -308,6 +312,8 @@ class Handler(BaseHTTPRequestHandler):
             if len(hosts) > 1:
                 raise api.ApiError(400, "More than one Host header")
             host = hosts[0] if hosts else None
+            if not self.server.remote:
+                self._home_network_only()
             if self.server.remote:
                 self.identity = self._identify(host)
             else:
@@ -366,16 +372,29 @@ class Handler(BaseHTTPRequestHandler):
         if host and host_name(host) in self.server.tunnel_hosts:
             raise api.ApiError(421, TUNNEL_ONLY)
 
+    def _home_network_only(self):
+        """On the home listener: 403 naming nobody for a visit from outside the home networks
+        (home_scope: loopback, private, link-local and unique local addresses, and config.json's
+        "home_networks"), logged once per address."""
+        client = self.client_address[0]
+        if home_scope.allowed(client, self.server.home_networks):
+            return
+        if self.server.refusals.first(client):
+            log(f"{datetime.now():%Y-%m-%d %H:%M:%S} Refused visits from {self._printable(client, 60)}: it isn't "
+                'on a home network (add it to "home_networks" in config.json if it should be).')
+        raise Refused(403, home_scope.REFUSED)
+
     def _is_script(self, viewer):
         """True for a script's request (access.script()): on the home listener, from loopback
         (127.0.0.1 or ::1; the PC asking its own LAN address isn't), with exactly one
-        X-Deck-Lab-Script: 1 and no viewer named. The tunnel's listener is on 127.0.0.1 too,
-        so the header gets nothing there."""
+        X-Deck-Lab-Script: 1 and no viewer named, and on Linux from this user's own socket
+        (script_peer_ok). The tunnel's listener is on 127.0.0.1 too, so the header gets
+        nothing there."""
         if self.server.remote or viewer:
             return False
         if (self.headers.get_all(access.SCRIPT_HEADER) or []) != ["1"]:
             return False
-        return self.client_address[0] in LOOPBACK
+        return self.client_address[0] in LOOPBACK and script_peer_ok(self)
 
     def _home_only(self, profile_id):
         """On the home listener, 403 "Sign in through decklab.example.com" for a request naming a
@@ -840,6 +859,31 @@ class Handler(BaseHTTPRequestHandler):
         return self._send(200, body, content_type, headers)
 
 
+_OTHER_USERS = set()               # uids whose script requests were refused (logged once each)
+
+
+def script_peer_ok(handler):
+    """True when the loopback connection handler answers may be a script's: always off Linux;
+    on Linux only when the client's socket belongs to this user (home_scope.same_user), so
+    another user of the PC, or their service, gets nothing from the header."""
+    if not sys.platform.startswith("linux"):
+        return True
+    try:
+        server_end = handler.connection.getsockname()[:2]
+    except (AttributeError, OSError):
+        return False
+    client = tuple(handler.client_address[:2])
+    owner = home_scope.peer_uid(client, server_end)
+    if owner is not None and owner == os.getuid():
+        return True
+    if owner not in _OTHER_USERS and len(_OTHER_USERS) < home_scope.REMEMBERED:
+        _OTHER_USERS.add(owner)
+        log(f"{datetime.now():%Y-%m-%d %H:%M:%S} A script's request (X-Deck-Lab-Script) came from "
+            + (f"another user's connection (uid {owner})" if owner is not None else
+               "a connection whose owner couldn't be found") + ": it's answered as naming nobody.")
+    return False
+
+
 class Server(ThreadingHTTPServer):
     daemon_threads = True
     # socketserver's default backlog of 5 refuses connections when a cold page
@@ -850,11 +894,15 @@ class Server(ThreadingHTTPServer):
     # silently; elsewhere it only allows a quick restart.
     allow_reuse_address = os.name != "nt"
 
-    def __init__(self, address, web_dir=None, allowed_hosts=(), access=None, tunnel_hosts=()):
+    def __init__(self, address, web_dir=None, allowed_hosts=(), access=None, tunnel_hosts=(), home_networks=None):
         """access: the access.Verifier of the tunnel's listener (every request
         then needs a Cloudflare Access login, for one of tunnel_hosts), or None
-        for the home listener (which refuses tunnel_hosts with 421)."""
+        for the home listener (which refuses tunnel_hosts with 421, and
+        visits from outside home_networks with 403: home_scope.networks,
+        its built-in home networks by default)."""
         self.web_dir = Path(web_dir or WEB_DIR)
+        self.home_networks = tuple(home_networks) if home_networks is not None else home_scope.BUILT_IN
+        self.refusals = home_scope.Refusals()
         self.allowed_hosts = tuple(allowed_hosts)
         self.access = access
         self.remote = access is not None
@@ -880,7 +928,8 @@ class Server(ThreadingHTTPServer):
         log(f"Error with a request from {client_address[0]}:\n{traceback.format_exc()}")
 
 
-def make_server(host, port, web_dir=None, allowed_hosts=(), access=None, tunnel_hosts=()):
+def make_server(host, port, web_dir=None, allowed_hosts=(), access=None, tunnel_hosts=(), home_networks=None):
     """A Server bound to (host, port); port 0 picks a free one (server.server_address).
-    With access (an access.Verifier) it's the tunnel's listener (Server)."""
-    return Server((host, port), web_dir, allowed_hosts, access, tunnel_hosts)
+    With access (an access.Verifier) it's the tunnel's listener (Server). home_networks:
+    the home listener's networks (home_scope.networks; its built-in ones by default)."""
+    return Server((host, port), web_dir, allowed_hosts, access, tunnel_hosts, home_networks)

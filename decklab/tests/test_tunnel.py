@@ -57,7 +57,9 @@ class StartTests(unittest.TestCase):
         folder = tempfile.TemporaryDirectory()
         self.addCleanup(folder.cleanup)
         self.config_file = Path(folder.name) / "config.yml"
-        self.config_file.write_text(GOOD_YML)
+        self.credentials = Path(folder.name) / "x.json"
+        self.credentials.write_text("{}")
+        self.config_file.write_text(GOOD_YML.replace("C:\\x.json", str(self.credentials)))
         self.program = Path(folder.name) / "cloudflared.exe"
         self.program.write_text("")
         self.settings = {"tunnel": {"config": str(self.config_file), "hostname": "decklab.example.com"},
@@ -102,6 +104,46 @@ class StartTests(unittest.TestCase):
         self.assertIsNone(self.start(listener_port=None))
         self.assertIn("NOT STARTED", self.logged[-1])
         self.assertIn("no listener for the tunnel", self.logged[-1])
+
+    def test_not_without_its_credentials_file(self):
+        self.credentials.unlink()
+        self.assertIsNone(self.start())
+        self.assertIn("NOT STARTED", self.logged[-1])
+        self.assertIn(f"credentials file {self.credentials}", self.logged[-1])
+        self.assertIn("isn't there", self.logged[-1])
+        self.assertIn("isn't there", tunnel.credentials_problem(self.settings))
+
+    def test_a_windows_credentials_path_off_windows(self):
+        self.config_file.write_text(GOOD_YML)                   # credentials-file: C:\x.json
+        with mock.patch.object(tunnel.sys, "platform", "linux"):
+            self.assertIn("a Windows path", tunnel.credentials_problem(self.settings))
+        with mock.patch.object(tunnel.sys, "platform", "win32"):
+            problem = tunnel.credentials_problem(self.settings, is_file=lambda path: False)
+            self.assertIn("isn't there", problem)
+            self.assertIsNone(tunnel.credentials_problem(self.settings, is_file=lambda path: True))
+        # Not named (cloudflared looks beside its config), or no tunnel: nothing to say.
+        self.config_file.write_text("tunnel: x\n  credentials-file: nested\n")
+        self.assertIsNone(tunnel.credentials_problem(self.settings))
+        self.assertIsNone(tunnel.credentials_problem({}))
+        self.assertEqual(tunnel.top_level("a: 1\ncredentials-file: '~/c.json'  # mine\n", "credentials-file"),
+                         "~/c.json")
+
+    def test_install_places_and_hint_follow_the_system(self):
+        with mock.patch.object(tunnel.sys, "platform", "win32"):
+            self.assertEqual(tunnel.install_places(), tunnel.INSTALL_PLACES)
+            self.assertIn("winget install Cloudflare.cloudflared", tunnel.install_hint())
+        with mock.patch.object(tunnel.sys, "platform", "linux"):
+            self.assertIn("/usr/bin/cloudflared", tunnel.install_places())
+            self.assertIn("/usr/local/bin/cloudflared", tunnel.install_places())
+            self.assertIn("pkg.cloudflare.com", tunnel.install_hint())
+            self.assertNotIn("winget", tunnel.install_hint())
+            place = tunnel.install_places()[0]
+            with mock.patch.object(tunnel.shutil, "which", return_value=None), \
+                    mock.patch.object(tunnel.Path, "is_file", lambda path: path == Path(place)):
+                self.assertEqual(tunnel.find_cloudflared({}), Path(place))
+            settings = {**self.settings, "cloudflared": str(self.program) + ".no"}
+            self.assertIsNone(self.start(settings))
+            self.assertIn("pkg.cloudflare.com", self.logged[-1])
 
     def test_not_when_cloudflared_still_sends_it_to_the_home_port(self):
         self.config_file.write_text(OLD_YML)
@@ -247,6 +289,15 @@ class TunnelLineTests(unittest.TestCase):
                          [OK, OK, PROBLEM])
         self.assertEqual([l["level"] for l in check_tunnel(SETTINGS, ("login", "x"), [], ("closed", "x"))],
                          [OK, OK, WARN])
+
+    def test_credentials_problem_and_platform_wording(self):
+        lines = check_tunnel(SETTINGS, ("login", "x"), [], None, "the tunnel's credentials file /x.json isn't there")
+        self.assertEqual([l["level"] for l in lines], [PROBLEM, OK, OK])
+        self.assertIn("doesn't start the tunnel", lines[0]["text"])
+        for platform, words in (("linux", "ss -ltnp 'sport = :8644'"), ("win32", "Resource Monitor")):
+            with self.subTest(platform=platform), mock.patch("decklab.lib.homenet.commands.sys.platform", platform):
+                fix = check_tunnel(SETTINGS, ("login", "x"), [], ("open", "x"))[-1]["fix"]
+                self.assertIn(words, fix)
 
 
 if __name__ == "__main__":

@@ -72,6 +72,22 @@ def pc_name():
     return socket.gethostname()
 
 
+def _linux():
+    return sys.platform.startswith("linux")
+
+
+def _console():
+    """Where a server started by hand runs: a terminal on Linux, a window on Windows."""
+    return "terminal" if _linux() else "window"
+
+
+def _who_holds_port(port):
+    """How to find the program holding a port, in this system's words."""
+    if _linux():
+        return f"ss -ltnp 'sport = :{port}' shows which"
+    return "Resource Monitor > Network > Listening Ports shows which"
+
+
 def file_exists(path):
     return os.path.exists(path)
 
@@ -274,7 +290,7 @@ def find_server(port):
 def describe_running(state, answer, port):
     """A sentence about the server that's already there on port."""
     if state:
-        where = "in the background" if state.get("background") else "in a window"
+        where = "in the background" if state.get("background") else f"in a {_console()}"
         return (f"Deck Lab is already running (process {state.get('pid')}, started "
                 f"{_when(state.get('started'))}, {where}).")
     if answer.get("deck_lab"):
@@ -288,6 +304,8 @@ def how_to_stop(state, answer):
     if state:
         return "Stop it first with: python -m decklab.lib.homenet stop (or use restart)."
     if answer.get("deck_lab"):
+        if _linux():
+            return "Stop it by pressing Ctrl+C in its terminal, then try again."
         return "Stop it by pressing Ctrl+C in its window (or closing the window), then try again."
     return 'Close that program, or change "port" in decklab/config.json.'
 
@@ -307,8 +325,9 @@ def local_ipv4():
 
 
 def urls(port, address=None, hostname=None):
-    """The addresses to open the page at: this PC, the IP address, the .local name."""
-    hostname = (hostname or pc_name()).lower()
+    """The addresses to open the page at: this PC, the IP address, the .local name
+    (the first label of a full name, box.home.arpa: box.local, as avahi announces it)."""
+    hostname = (hostname or pc_name()).lower().split(".", 1)[0]
     out = [("On this PC", f"http://localhost:{port}/")]
     if address:
         out.append(("From a phone or the iPad", f"http://{address}:{port}/"))
@@ -573,6 +592,12 @@ def cmd_stop(port):
                                          if answer["answered"] else ""))
         return 0
     if result == "timeout":
+        if _linux():
+            how = (f"stop it with kill {pid}" if pid else "stop the program using the port")
+            say(f"Deck Lab was asked to stop but was still running after {STOP_WAIT} seconds"
+                + (f" (process {pid})." if pid else ".")
+                + f" If it doesn't stop, {how} (systemctl --user kill decklab.service for the service).")
+            return 1
         say(f"Deck Lab was asked to stop but was still running after {STOP_WAIT} seconds"
             + (f" (process {pid})." if pid else ".")
             + f" If it doesn't stop, end {program} in Task Manager.")
@@ -684,12 +709,14 @@ def check_server(state, answer, port, log_file, code_mtime=None, other_state=Non
     area = "Server"
     restart = "python -m decklab.lib.homenet restart"
     if state and answer.get("deck_lab"):
-        where = ("in the background (no window)" if state.get("background")
+        console = _console()
+        where = ("in the background" + ("" if _linux() else " (no window)") if state.get("background")
+                 else "in a terminal (Ctrl+C there stops it)" if _linux()
                  else "in a window (closing that window stops it)")
         log_path = state.get("log")
         text = (f"Running since {_when(state.get('started'))} (process {state.get('pid')}), {where}"
                 + ("; card data ready" if answer.get("cards_ready") else "") + ". "
-                + (f"Log: {log_path}" if log_path else "Its log is in its window."))
+                + (f"Log: {log_path}" if log_path else f"Its log is in its {console}."))
         out = [line(OK, area, text)]
         if loopback(state.get("host")):
             out.append(line(PROBLEM, area, f"It listens on {state.get('host')} only, so only this PC can "
@@ -717,15 +744,18 @@ def check_server(state, answer, port, log_file, code_mtime=None, other_state=Non
             return [line(WARN, area, f"Deck Lab answers on port {port}, but it didn't record itself in "
                                      f"{_repo_rel(control.STATE_FILE)} (it was started before Milestone 6, "
                                      "or from another copy of the repo), so stop and restart can't reach it.",
-                         "Press Ctrl+C in its window (or close it), then: python -m decklab.lib.homenet start")]
+                         ("Press Ctrl+C in its terminal" if _linux() else "Press Ctrl+C in its window (or close it)")
+                         + ", then: python -m decklab.lib.homenet start")]
         return [line(PROBLEM, area, f"Another program answers on port {port}, so Deck Lab can't use it.",
                      'Close that program, or change "port" in decklab/config.json.')]
     if answer.get("listening"):
         return [line(PROBLEM, area, f"Something has port {port} open but doesn't answer ({answer.get('error')}): "
                                     "a Deck Lab server that's stuck, or another program.",
-                     "If it's Deck Lab in a window, press Ctrl+C there; otherwise end the program using the "
-                     "port in Task Manager (Resource Monitor > Network > Listening Ports shows which), "
-                     "then: python -m decklab.lib.homenet start")]
+                     (f"If it's Deck Lab in a terminal, press Ctrl+C there; otherwise stop the program using the "
+                      f"port ({_who_holds_port(port)}), " if _linux() else
+                      "If it's Deck Lab in a window, press Ctrl+C there; otherwise end the program using the "
+                      f"port in Task Manager ({_who_holds_port(port)}), ")
+                     + "then: python -m decklab.lib.homenet start")]
     text = f"Deck Lab isn't running on port {port}, so the page can't open ({answer.get('error') or 'no answer'})."
     if other_state:
         text += f" A Deck Lab server is recorded on port {other_state.get('port')} instead."
@@ -857,19 +887,24 @@ def _last_run_line(info, at_logon=False):
                 f"Its log may say why: {control.LOG_FILE}")
 
 
-def check_tunnel(settings, result, ingress=None, listener=None):
+def check_tunnel(settings, result, ingress=None, listener=None, credentials=None):
     """The Tunnel lines: whether the public address (config.json's "tunnel")
     shows Cloudflare Access's login; result is tunnel.check_public's answer
     (None when there's no tunnel set up, or the check didn't finish). With
     "access" in config.json, also where cloudflared's config sends the
     hostnames (ingress: tunnel.ingress_problems' list) and whether the
     tunnel's listener refuses a visit without a login (listener:
-    tunnel.check_listener's answer, None when it wasn't asked)."""
+    tunnel.check_listener's answer, None when it wasn't asked). credentials
+    is tunnel.credentials_problem's answer (None: fine, or not named)."""
     setup = tunnel.settings_of(settings)
     if setup is None:
         return []
     area = "Tunnel"
     lines = []
+    if credentials:
+        lines.append(line(PROBLEM, area, f"{credentials}, so Deck Lab doesn't start the tunnel.",
+                          f"Fix credentials-file in {setup['config']} (cloudflared tunnel list names the tunnel), "
+                          "then python -m decklab.lib.homenet restart."))
     if not setup["hostname"]:
         lines.append(line(WARN, area, """config.json's "tunnel" has no "hostname", so the public address isn't """
                                       """checked."""))
@@ -908,7 +943,7 @@ def check_tunnel(settings, result, ingress=None, listener=None):
             lines.append(line(OK, area, text + "."))
         elif kind == "open":
             lines.append(line(PROBLEM, area, f"{text}: something other than Deck Lab's check answers there.",
-                              f"Find what listens on port {port} (Resource Monitor > Network > Listening Ports) "
+                              f"Find what listens on port {port} ({_who_holds_port(port)}) "
                               f"and stop it, or change \"access\" \"port\" in config.json."))
         else:
             lines.append(line(WARN, area, f"{text} (is Deck Lab running?)."))
@@ -986,7 +1021,7 @@ def cmd_status(name, port):
     if wake is not None and sys.platform == "win32":
         lines += check_wake(facts, wake["gate"], found.get("gate"))
     lines += check_tunnel(settings, found.get("public"), tunnel.ingress_problems(settings, port),
-                          found.get("listener"))
+                          found.get("listener"), tunnel.credentials_problem(settings))
     seconds = time.monotonic() - started
     header = (f"Deck Lab status, {datetime.now().strftime('%Y-%m-%d %H:%M')} (port {port}; checked in "
               f"{seconds:.1f} s, of which PowerShell {facts.get('seconds', 0):.1f} s)")
@@ -1010,7 +1045,8 @@ def main(argv=None):
                         help="ensure is what the watchdog task runs (install --at-logon sets it up)")
     parser.add_argument("--no-start", action="store_true", help="install: register the task but don't start it")
     parser.add_argument("--at-logon", action="store_true",
-                        help="install: also start Deck Lab at every logon (off unless this is given)")
+                        help="install: also start Deck Lab at every logon (off unless this is given; on Linux "
+                             "when your user manager starts: at login, or at boot with loginctl enable-linger)")
     parser.add_argument("--port", type=int, default=None,
                         help=f"the server's port (default {default_port}, from decklab/config.json)")
     parser.add_argument("--task", default=TASK_NAME, help=f'the task\'s name (default "{TASK_NAME}"; for testing)')

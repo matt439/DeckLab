@@ -21,6 +21,7 @@ import tempfile
 import threading
 import time
 import traceback
+import types
 import unittest
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -42,6 +43,13 @@ def free_port():
 
 def now_iso(seconds=0):
     return (datetime.now().astimezone() + timedelta(seconds=seconds)).isoformat(timespec="seconds")
+
+
+def own_state(**fields):
+    """A state file's fields naming this process, with its start since boot on Linux
+    ("start_ticks", which control.read_state checks there, as the server records it)."""
+    ticks = control.process_ticks(fields.get("pid", os.getpid()))
+    return {**fields, **({"start_ticks": ticks} if ticks is not None else {})}
 
 
 def sleeper(test, seconds=120):
@@ -102,8 +110,9 @@ class TempCase(unittest.TestCase):
 class StateTests(TempCase):
 
     def state(self, **changes):
-        return {"version": 1, "pid": os.getpid(), "host": "127.0.0.1", "port": 50001, "started": now_iso(),
-                "python": sys.executable, "log": None, "background": False, **changes}
+        return own_state(**{"version": 1, "pid": os.getpid(), "host": "127.0.0.1", "port": 50001,
+                            "started": now_iso(), "python": sys.executable, "log": None, "background": False,
+                            **changes})
 
     def test_round_trip_atomic_and_in_a_new_folder(self):
         state = self.state()
@@ -269,7 +278,7 @@ class ProcessTests(unittest.TestCase):
             with self.subTest(pid=pid):
                 self.assertFalse(control.process_alive(pid))
 
-    @unittest.skipUnless(WINDOWS, "Windows only")
+    @unittest.skipUnless(WINDOWS or sys.platform.startswith("linux"), "Windows and Linux only")
     def test_process_started(self):
         started = control.process_started(os.getpid())
         self.assertLessEqual(started, time.time())
@@ -385,6 +394,92 @@ class StopTests(TempCase):
         self.assertFalse(listener._thread.is_alive())
         self.assertEqual(control.request_stop(port, wait=1, path=self.state_file), "not running")
         self.assertEqual(stops, [])
+
+
+class LinuxProcessTests(unittest.TestCase):
+    """Linux's /proc reads (process_ticks, process_started, read_state's reused-pid checks)
+    from canned files, so they run on every system."""
+
+    def setUp(self):
+        folder = tempfile.TemporaryDirectory()
+        self.addCleanup(folder.cleanup)
+        self.proc = Path(folder.name)
+        (self.proc / "stat").write_text("cpu  1 2 3\nbtime 1790000000\nprocesses 9\n", encoding="utf-8")
+        self.stat(4321, 123456, name="python3 (Deck) Lab)")
+        for target, name, value in ((control.sys, "platform", "linux"), (control, "PROC", self.proc),
+                                    (control, "_clock_ticks", lambda: 100)):
+            patch = mock.patch.object(target, name, value)
+            patch.start()
+            self.addCleanup(patch.stop)
+
+    def stat(self, pid, ticks, name="python3", script="decklab/server.py"):
+        folder = self.proc / str(pid)
+        folder.mkdir(exist_ok=True)
+        # Field 22 is the start; the name (field 2) may hold spaces and brackets.
+        fields = ["S", "1", "1", "1", "0", "-1", "4194560"] + ["0"] * 12 + [str(ticks), "1000", "200"]
+        (folder / "stat").write_text(f"{pid} ({name}) {' '.join(fields)}\n", encoding="utf-8")
+        (folder / "cmdline").write_bytes(b"\0".join([b"/usr/bin/python3", script.encode(), b"--background"]) + b"\0")
+
+    def test_ticks_and_start(self):
+        self.assertEqual(control.process_ticks(4321), 123456)
+        self.assertAlmostEqual(control.process_started(4321), 1790000000 + 1234.56, places=3)
+        self.assertIsNone(control.process_ticks(9999))              # no such process
+        self.assertIsNone(control.process_started(9999))
+        self.assertIsNone(control.process_ticks(None))
+        (self.proc / "4321" / "stat").write_text("4321 (broken", encoding="utf-8")
+        self.assertIsNone(control.process_ticks(4321))
+        with mock.patch.object(control.sys, "platform", "win32"):
+            self.assertIsNone(control.process_ticks(4321))
+
+    def test_read_state_trusts_only_the_same_process(self):
+        folder = tempfile.TemporaryDirectory()
+        self.addCleanup(folder.cleanup)
+        path = Path(folder.name) / "server.json"
+        started = datetime.fromtimestamp(1790000000 + 1234).astimezone().isoformat(timespec="seconds")
+        alive = mock.patch.object(control, "process_alive", return_value=True)
+        alive.start()
+        self.addCleanup(alive.stop)
+        state = {"version": 1, "pid": 4321, "port": 8642, "started": started, "start_ticks": 123456}
+        control.write_state(state, path)
+        self.assertEqual(control.read_state(path), state)
+        # The process id now belongs to a process that started later: whatever the clock says.
+        self.stat(4321, 999999)
+        self.assertIsNone(control.read_state(path))
+        # A file without start_ticks (an older server): a Deck Lab server that started before it.
+        control.write_state({k: v for k, v in state.items() if k != "start_ticks"}, path)
+        self.stat(4321, 123456)
+        self.assertEqual(control.read_state(path)["pid"], 4321)
+        self.stat(4321, 123456, script="/usr/bin/sleep")            # another program now has the id
+        self.assertIsNone(control.read_state(path))
+        self.stat(4321, 900000)                                     # a server, but a newer one
+        self.assertIsNone(control.read_state(path))
+
+    def test_sighup_stops_like_sigterm_unless_ignored(self):
+        handlers, default, ignore = {}, object(), object()
+        fake = types.SimpleNamespace(SIGTERM=15, SIGHUP=1, SIG_DFL=default, SIG_IGN=ignore,
+                                     getsignal=lambda n: handlers.get(n, default))
+
+        def set_handler(number, handler):
+            before = handlers.get(number, default)
+            handlers[number] = handler
+            return before
+        fake.signal = set_handler
+        stops = []
+        with mock.patch.object(control, "signal", fake):
+            listener = control._SignalListener(lambda: stops.append(1))
+            self.assertEqual(set(handlers), {15, 1})
+            handlers[1](1, None)
+            handlers[15](15, None)                                  # heard once, either way
+            self.assertTrue(wait_until(lambda: stops == [1]))
+            listener.close()
+            self.assertEqual(handlers, {15: default, 1: default})
+            # nohup (or a service manager) ignores SIGHUP: it stays ignored.
+            handlers.clear()
+            handlers[1] = ignore
+            listener = control._SignalListener(lambda: None)
+            self.assertIs(handlers[1], ignore)
+            listener.close()
+            self.assertEqual(handlers, {15: default, 1: ignore})
 
 
 class OffWindowsTests(unittest.TestCase):

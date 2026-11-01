@@ -303,9 +303,12 @@ def local():
 def script():
     """True for a script (access.script()): code outside any request (a job
     thread, a test), or a request on the home listener from loopback
-    (127.0.0.1 or ::1) that sends X-Deck-Lab-Script: 1 and names nobody.
-    Naming nobody, it sees and may do everything, as the command line does.
-    The tunnel's listener (on 127.0.0.1 too) never makes one."""
+    (127.0.0.1 or ::1) that sends X-Deck-Lab-Script: 1 and names nobody,
+    and on Linux comes from a socket of the user the server runs as
+    (server_http.script_peer_ok, home_scope.same_user: other users of the
+    PC reach 127.0.0.1 too). Naming nobody, it sees and may do everything,
+    as the command line does. The tunnel's listener (on 127.0.0.1 too)
+    never makes one."""
     return access.script()
 
 

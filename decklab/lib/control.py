@@ -36,7 +36,13 @@ The server's side (server.py main()):
   server that ended without cleaning up (a hard kill, a power cut) leaves it
   behind; read_state() then returns None, because its process is gone, or
   its process id now belongs to a process that started after the server did
-  (Windows reuses process ids quickly). read_state() never deletes the file.
+  (Windows reuses process ids quickly). On Linux the server also records its
+  process's start in clock ticks since boot ("start_ticks", from
+  /proc/<pid>/stat), and read_state() trusts the file only while that
+  process id still has the same start (immune to the clock being set after
+  boot); a file without it is trusted only while /proc shows a Deck Lab
+  server (_is_server) that started before the file says. read_state() never
+  deletes the file.
   The environment variable DECKLAB_STATE_FILE moves it, for tests only: the
   end-to-end tests run real servers, which must never touch the real file.
 - Stopping: every server creates a named Windows event,
@@ -81,8 +87,12 @@ The server's side (server.py main()):
   disk, a locked file) is dropped rather than raised, so logging can never
   break a request.
 
-Off Windows, listen_for_stop() and watch_session_end() do nothing and
-request_stop() answers "unsupported" (stop the server with Ctrl+C there).
+On Linux listen_for_stop() hears SIGTERM (and, for a server run in a
+terminal, SIGHUP: the terminal closing or an SSH session dropping), and
+request_stop() sends SIGTERM; watch_session_end() does nothing (systemd's
+SIGTERM at logout or shutdown is the stop). On other systems
+listen_for_stop() and watch_session_end() do nothing and request_stop()
+answers "unsupported" (stop the server with Ctrl+C there).
 """
 import io
 import itertools
@@ -114,6 +124,7 @@ STARTED_SLACK = 5                   # seconds: "started" is cut to the second, a
 WINDOW_CLASS = "DeckLabServer"      # the hidden session-end window's class (tests find it by this)
 CLOSE_JOIN = 5                      # seconds close() waits for a listener's thread
 REPLACE_TRIES = 20                  # os.replace/unlink attempts while another program reads the file
+PROC = Path("/proc")                # Linux's process folder (tests point it at canned files)
 
 # Windows constants.
 PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
@@ -278,6 +289,14 @@ def read_state(path=None):
     pid = state.get("pid")
     if not process_alive(pid):
         return None
+    if sys.platform.startswith("linux"):
+        ticks = state.get("start_ticks")
+        if ticks is not None:
+            # The process's start since boot, as the server recorded it: a reused process id
+            # starts later, whatever the clock did since.
+            return state if ticks == process_ticks(pid) else None
+        if PROC.is_dir() and not _is_server(pid):
+            return None                     # not a Deck Lab server: the process id was reused
     started, created = _timestamp(state.get("started")), process_started(pid)
     if sys.platform == "win32" and created is None:
         return None                         # not a process this user started, so not a server of theirs
@@ -433,9 +452,46 @@ def process_alive(pid):
     return True
 
 
-def process_started(pid):
-    """When process pid started, in seconds since 1970, or None (not Windows,
-    no such process, or not ours to look at)."""
+def _clock_ticks():
+    """Linux's clock ticks a second (USER_HZ), for /proc's times."""
+    try:
+        return os.sysconf("SC_CLK_TCK")
+    except (AttributeError, ValueError, OSError):
+        return 100
+
+
+def process_ticks(pid, proc=None):
+    """When process pid started, in clock ticks since boot (field 22 of Linux's
+    /proc/<pid>/stat), or None (not Linux, no such process, unreadable). The
+    process's name (field 2, in brackets) may hold spaces and brackets, so the
+    fields are counted from its last ")"."""
+    if not sys.platform.startswith("linux") or not _valid_pid(pid):
+        return None
+    try:
+        text = (Path(proc or PROC) / str(pid) / "stat").read_text(encoding="utf-8", errors="replace")
+        return int(text[text.rindex(")") + 1:].split()[19])
+    except (OSError, ValueError, IndexError):
+        return None
+
+
+def _boot_time(proc=None):
+    """When Linux booted, in seconds since 1970 (/proc/stat's btime), or None."""
+    try:
+        for row in (Path(proc or PROC) / "stat").read_text(encoding="utf-8", errors="replace").splitlines():
+            if row.startswith("btime "):
+                return int(row.split()[1])
+    except (OSError, ValueError, IndexError):
+        pass
+    return None
+
+
+def process_started(pid, proc=None):
+    """When process pid started, in seconds since 1970, or None (not Windows or
+    Linux, no such process, or not ours to look at). On Linux it's boot time
+    plus the process's start since boot (process_ticks)."""
+    if sys.platform.startswith("linux"):
+        ticks, boot = process_ticks(pid, proc), _boot_time(proc)
+        return None if ticks is None or boot is None else boot + ticks / _clock_ticks()
     if sys.platform != "win32" or not _valid_pid(pid):
         return None
     win = _win()
@@ -544,11 +600,16 @@ def listen_for_stop(port, on_stop):
 class _SignalListener:
     """listen_for_stop()'s answer on Linux: SIGTERM calls on_stop() once, in a
     thread of its own (it may wait for serve_forever(), which the main thread
-    runs), until close() puts the earlier handler back."""
+    runs), until close() puts the earlier handlers back. SIGHUP (a terminal
+    closing, an SSH session dropping) does the same, unless something chose to
+    ignore it (nohup, a service manager): its handler is left as it was then."""
 
     def __init__(self, on_stop):
         self._on_stop, self._lock, self._called = on_stop, threading.Lock(), False
-        self._before = signal.signal(signal.SIGTERM, self._heard)
+        self._before = {signal.SIGTERM: signal.signal(signal.SIGTERM, self._heard)}
+        hangup = getattr(signal, "SIGHUP", None)
+        if hangup is not None and signal.getsignal(hangup) is signal.SIG_DFL:
+            self._before[hangup] = signal.signal(hangup, self._heard)
 
     def _heard(self, signum, frame):
         with self._lock:
@@ -564,9 +625,10 @@ class _SignalListener:
             _log(f"Stopping failed:\n{traceback.format_exc()}")
 
     def close(self):
-        if self._before is not None and threading.current_thread() is threading.main_thread():
-            signal.signal(signal.SIGTERM, self._before)
-            self._before = None
+        if self._before and threading.current_thread() is threading.main_thread():
+            for number, handler in self._before.items():
+                signal.signal(number, handler)
+            self._before = {}
 
 
 def _event_exists(name):
@@ -629,7 +691,7 @@ def _is_server(pid):
     """True when Linux's /proc shows process pid runs decklab/server.py, so a
     process id reused since the state file was written is never signalled."""
     try:
-        args = Path(f"/proc/{int(pid)}/cmdline").read_bytes().split(b"\0")
+        args = (PROC / str(int(pid)) / "cmdline").read_bytes().split(b"\0")
     except (OSError, ValueError):
         return False
     return any(Path(os.fsdecode(a)).name == "server.py" for a in args if a)
