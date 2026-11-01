@@ -9,6 +9,8 @@ psycopg through lib/venv.py; .venv\\Scripts\\python works as well).
   backup           pg_dump to the staging folder, then to backup_dir if set (--dest DIR instead)
   prune            delete dumps outside the 14-daily / 8-weekly retention
   restore-check    restore the newest dump into a scratch database and compare row counts and contents
+  digest           every table's row count and content digest (move.py), --compare FILE to check a moved copy
+  restore          restore a dump in place of the database, checked against a digest (move.py)
   export           write the tables as CSV into the export repo, commit and push
   check            check the data: the rule checks, the decks' invariants and a files round trip
                    (--history: the recent runs)
@@ -178,6 +180,16 @@ def _visits(args):
     return 0
 
 
+def _digest(args):
+    from decklab.db import move
+    return move.run_digest(output=args.output, against=args.compare)
+
+
+def _restore(args):
+    from decklab.db import move
+    return move.run_restore(args.dump, expect=args.expect, replace=args.replace, force=args.force)
+
+
 def _nightly(args):
     from decklab.db import nightly
     return nightly.run()
@@ -250,6 +262,16 @@ def parser():
     command("prune", _prune, "Delete dumps outside the daily and weekly retention.")
     command("restore-check", _restore_check, "Restore the newest dump into a scratch database and "
                                              "compare row counts and contents.")
+    sp = command("digest", _digest, "Every table's row count and content digest, read-only in one snapshot "
+                                    "(to compare a database moved to another PC).")
+    sp.add_argument("-o", "--output", metavar="FILE", help="write the digest to FILE as JSON")
+    sp.add_argument("--compare", metavar="FILE", help="compare with a digest file; exit 1 if anything differs")
+    sp = command("restore", _restore, "Restore a dump into a new database, check it, then put it in place of "
+                                      "the settings' database and apply pending migrations.")
+    sp.add_argument("dump", help="the dump file (decklab-YYYY-MM-DD-HHMMSS.dump)")
+    sp.add_argument("--expect", metavar="FILE", help="a digest file from the old PC the restored data must match")
+    sp.add_argument("--replace", action="store_true", help="replace the database when it exists")
+    sp.add_argument("--force", action="store_true", help="with --replace: even when it holds decks or cards")
     sp = command("export", _export, "Write the tables as CSV into the export repo, commit and push.")
     sp.add_argument("--repo", metavar="DIR", help="the export repo to use instead of the settings' one")
     sp.add_argument("--no-push", action="store_true", help="commit but don't push")

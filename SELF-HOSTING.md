@@ -220,7 +220,7 @@ Deck Lab runs up to 16 Forge workers at once, each with up to 1 GB of memory. Un
   Without it the dumps stay in `decklab/data/backups/` only, on the same disk as the database, and `backup` says so.
 - **The nightly job:** `python -m decklab.db nightly` runs the backup, its pruning, a restore check now and then, and the data's check. It also exports the data as plain files into a git repo of their own, `../DeckLabData` beside this repo, unless `database.export_repo` says where. `python -m decklab.db schedule install` runs it every night at 03:30: on Windows as a Task Scheduler task, on Linux as a systemd user timer (`decklab-nightly.timer` and `decklab-nightly.service` in `~/.config/systemd/user`), which catches up a night the computer was off, as soon as it's on again. `schedule status` shows the next and last run, and `schedule remove` takes it away. Run `schedule install` with the Python you run Deck Lab with, after installing psycopg (step 3), and again after moving the repo or upgrading Python; `status` warns when its units are out of date. Lingering (above) lets it run while you're logged out. On macOS, schedule it with cron.
 - **pg_dump:** Deck Lab finds it in `C:\Program Files\PostgreSQL\<version>\bin` or on the PATH. Set `database.pg_bin` to its folder if it's somewhere else.
-- **Updating:** `git pull`, then `python -m decklab.db migrate`, then restart the server.
+- **Updating:** `python -m decklab.update` (see "Updating" below), or by hand: `git pull`, `python -m decklab.db migrate`, `python -m decklab.lib.homenet restart`, then the smoke test below.
 
 To see the nightly units without installing anything (for another computer, say), `schedule preview-systemd` prints one, for the paths you give:
 
@@ -231,9 +231,111 @@ python -m decklab.db schedule preview-systemd --unit timer --python /usr/bin/pyt
 
 To check the Linux services on your computer from end to end, `scripts/linux_services_check.sh` installs the timer and the service on port 18642, restarts the server, kills it to see systemd start it again, stops it and removes both (`PYTHON=<your python> scripts/linux_services_check.sh`).
 
+### Check the whole install: the smoke test
+
+Once the server runs in the background (or before, to see what's left), and again after every update:
+
+```
+python -m decklab.smoke
+```
+
+It takes under a minute on a typical PC and needs no test suite. The doctor (step 7) only reads files. This command goes further, and actually:
+
+- connects as each of Deck Lab's three database roles, read-only, and checks that every migration is applied;
+- runs `pg_dump` and `pg_restore` (their version must be at least the server's), and checks that the backup folders are writable and when the last backup worked;
+- looks up real cards in the card index;
+- reaches Scryfall, the exchange-rate site, EDHREC and the two shops;
+- starts a throwaway server on a spare port on `127.0.0.1`, loads the page with every file it links to, and makes read-only API calls;
+- asks the background server on your configured port whether it's running, and whether it runs older code than the checkout (after a `git pull` without a restart);
+- runs `homenet status` and `schedule status` (their warnings are passed on), checks the tunnel's `cloudflared`, its config and that the server would really start it (an `access` listener, and cloudflared's config sending the hostname there) when `config.json` has a tunnel, and checks that `records_repo` is a git checkout when it's set;
+- plays one real Forge game twice with the card log on (`forge engine-check`), and checks that Forge is the build this Deck Lab expects (skipped when Forge isn't installed, since it's optional).
+
+Each part says PASS, WARN, FAIL or SKIP, with what to do. A warning (no backup yet, the nightly task not installed, the server not running yet) doesn't fail the run. The exit code is `0` with no failures and `1` with any. `--json` prints the results as JSON. `--offline` skips the network, `--no-forge` skips Forge and `--no-server` skips the throwaway server.
+
+It never writes to the database or changes your cards, decks or settings, and it never stops or restarts the background server. It writes only temporary files and Forge's own caches under `decklab/data/forge`. Unlike the test suite, which uses stand-ins, it uses your real `config.json`, PostgreSQL and Forge, so it shows whether this PC works, not whether the code does. The test suite is for the PC the code is developed on.
+
+### Updating
+
+```
+python -m decklab.update --dry-run     # what's coming, changing nothing
+python -m decklab.update
+```
+
+It's for a PC that serves Deck Lab and only takes updates, with the code written and tested on another computer. It refuses a checkout with changed tracked files, or with commits its upstream doesn't have, so it never merges or loses anything. Then, stopping at the first step that fails:
+
+1. fetches, shows the new commits, and fast-forwards (`git merge --ff-only`);
+2. reinstalls psycopg into the `.venv` when `decklab/requirements.txt` changed;
+3. with migrations pending, makes a backup (`python -m decklab.db backup`), then migrates;
+4. when the new Deck Lab expects another Forge build than `forge_dir` holds, downloads that release, checks its SHA-256, unzips it beside the old folder and points `forge_dir` in `config.json` at it (the old `config.json` is kept as `config.json.before-forge-update`, and the old Forge folder is left for you to delete). Nothing happens to Forge when it isn't installed;
+5. restarts the background server, if it's running;
+6. runs the smoke test.
+
+Steps 2 to 6 run in the code just pulled. When a step fails, it says how to go back: `git reset --hard <the old commit>` and a restart for the code. Migrations aren't undone, so the backup from step 3 is the way back for the data (`python -m decklab.db restore`, below). `--no-forge`, `--no-restart` and `--no-smoke` skip those steps.
+
 ## 10. From outside your home (optional)
 
 Deck Lab can start a Cloudflare Tunnel itself, behind Cloudflare Access's email login. That needs a domain on Cloudflare, `cloudflared`, and `allowed_hosts`, `tunnel` and `access` blocks in `config.json` (see `config.full.example.json`, and the reference's "From outside the home"). Leave those blocks out of `config.json` until you set this up. Without them, Deck Lab serves your home network only.
+
+## 11. Moving Deck Lab to another PC
+
+For moving a working Deck Lab, with its data, to another computer (a spare PC that will be the server, say). The data moves as one database dump, checked on arrival against a digest of every table taken on the old PC. Deck Lab is off from the start of step B until step C's smoke test.
+
+### A. Set up the new PC (the old one keeps running)
+
+1. Follow steps 1 to 8 on the new PC, with these differences:
+   - **PostgreSQL:** the same major version as the old PC, or newer (`python -m decklab.db sql "select version()"` on the old PC says which). A dump from a newer PostgreSQL can't be restored into an older one.
+   - **The code:** on the same commit as the old PC, or newer. `restore` refuses a dump with migrations the checkout doesn't have.
+   - **`config.json` (step 4):** copy it from the old PC, then change what's different there: `forge_dir`, `database.pg_bin`, `database.backup_dir`, `database.staging_dir`, `database.export_repo`, `records_repo` and the tunnel's `cloudflared` path, if set. While both PCs exist, give the new one its own `backup_dir` (a subfolder will do), so their nightly runs never prune each other's dumps.
+   - **Take the `tunnel` block out for now.** Two PCs running the same tunnel share its visitors between two databases. If the old PC runs a tunnel, install `cloudflared` on the new one now (`winget install Cloudflare.cloudflared`, or your distribution's package) and check `cloudflared --version`.
+2. `python -m decklab.db setup` makes the database roles and their pgpass lines, and an empty database that step B replaces.
+3. Clone the repos the old PC uses beside the code: the export repo (`database.export_repo`, by default `../DeckLabData`, from its private remote) and `records_repo`, if set. Store the export repo's git credentials for the user the nightly task runs as, so its push never asks for a sign-in.
+4. Don't install the background server or the nightly task yet. `python -m decklab.smoke --no-server` should pass, apart from warnings about what isn't installed yet.
+
+### B. Move the data
+
+On the old PC, turn off everything that could start Deck Lab or write to its data again, then take the dump and the digest:
+
+```
+python -m decklab.lib.homenet remove
+python -m decklab.db schedule remove
+python -m decklab.db backup --dest <a folder to carry>
+python -m decklab.db digest -o <that folder>/digest.json
+```
+
+Take the `tunnel` block out of the old PC's `config.json` too. (`homenet stop` alone isn't enough: a server installed `--at-logon` starts again at the next logon, and with it its tunnel.) To go back to the old PC at any point before the switch-over, undo these: `homenet install --at-logon`, `schedule install`, and the `tunnel` block back.
+
+`backup` prints the dump's name (`decklab-YYYY-MM-DD-HHMMSS.dump`). Take the folder to the new PC (a USB stick, or a share both reach), with these folders of `decklab/data` if you want them: `forge/results` (saved matchups), `forge/experiments` (Lab experiments) and `goldfish` (practice-hand results). The rest of `decklab/data` is caches the new PC fills itself, or settings of the old PC's own.
+
+On the new PC:
+
+```
+python -m decklab.db restore <the folder>/decklab-....dump --expect <the folder>/digest.json --replace
+```
+
+It restores into a database of its own first, checks every table's row count and contents against the digest, checks that this checkout knows every migration the dump has and applies any newer ones, and only then swaps it in: the database it replaces is renamed `decklab_before_restore` (kept until the next restore), and the restored one takes its name. If anything fails, the new PC's database is left as it was. `--replace` is needed because `setup` made one. A database already holding decks or cards needs `--force` as well. `python -m decklab.db digest --compare <the folder>/digest.json` checks it again any time.
+
+### C. Switch over
+
+On the new PC:
+
+1. Put the `tunnel` block back in `config.json`, and copy the tunnel's files from the old PC: its config (`tunnel.config`, such as `~/.cloudflared/config.yml`) and the credentials file it names, fixing that path for this PC.
+2. Bring the export repo up to date with the old PC's last export: `git -C <export_repo> pull --ff-only`.
+3. Install the background server and the nightly task, so they come back by themselves after a restart (step 9, and the reference's "Network setup (once, as administrator)" for the firewall):
+   ```
+   python -m decklab.lib.homenet install --at-logon
+   python -m decklab.db schedule install
+   ```
+   On Windows both run in your signed-in session, so a server PC should sign in by itself after a restart (or stay signed in). On Linux, turn on lingering (`loginctl enable-linger`) so they start at boot.
+4. Copy the folders from `decklab/data` into the same places, if you brought them.
+5. `python -m decklab.smoke`. Every part should pass now; a warning that no backup has worked yet goes after the first nightly run, or a `python -m decklab.db backup`.
+6. Phones and tablets on the Wi-Fi need the new PC's address (`homenet status` lists it). The tunnel's address doesn't change.
+
+On the old PC, once the new one works:
+
+1. Rename its copy of the database, so no command there writes to the old data by mistake. On Windows: `& "C:\Program Files\PostgreSQL\18\bin\psql.exe" -h localhost -U decklab_owner -d postgres -c "alter database decklab rename to decklab_before_move"` (the folder of your version, or `database.pg_bin`). On Linux and macOS, `psql` with the same arguments. Every `python -m decklab.db` command there then says the database can't be reached. Drop it when you no longer want it as a fallback.
+2. If the old PC is where the code is written, keep PostgreSQL installed there: the database integration tests make throwaway databases on the server `config.json` names, so never point that config at the new PC's live database.
+
+The command line's inventory, deck and wishlist commands work on the database `config.json` names, so after the move run them on the new PC (in person, or over Remote Desktop or SSH).
 
 ## When something goes wrong
 
