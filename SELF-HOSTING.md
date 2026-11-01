@@ -220,7 +220,7 @@ Deck Lab runs up to 16 Forge workers at once, each with up to 1 GB of memory. Un
   Without it the dumps stay in `decklab/data/backups/` only, on the same disk as the database, and `backup` says so.
 - **The nightly job:** `python -m decklab.db nightly` runs the backup, its pruning, a restore check now and then, and the data's check. It also exports the data as plain files into a git repo of their own, `../DeckLabData` beside this repo, unless `database.export_repo` says where. `python -m decklab.db schedule install` runs it every night at 03:30: on Windows as a Task Scheduler task, on Linux as a systemd user timer (`decklab-nightly.timer` and `decklab-nightly.service` in `~/.config/systemd/user`), which catches up a night the computer was off, as soon as it's on again. `schedule status` shows the next and last run, and `schedule remove` takes it away. Run `schedule install` with the Python you run Deck Lab with, after installing psycopg (step 3), and again after moving the repo or upgrading Python; `status` warns when its units are out of date. Lingering (above) lets it run while you're logged out. On macOS, schedule it with cron.
 - **pg_dump:** Deck Lab finds it in `C:\Program Files\PostgreSQL\<version>\bin` or on the PATH. Set `database.pg_bin` to its folder if it's somewhere else.
-- **Updating:** `git pull`, then `python -m decklab.db migrate`, then restart the server.
+- **Updating:** `git pull`, then `python -m decklab.db migrate`, then restart the server (`python -m decklab.lib.homenet restart`), then run the smoke test below.
 
 To see the nightly units without installing anything (for another computer, say), `schedule preview-systemd` prints one, for the paths you give:
 
@@ -230,6 +230,29 @@ python -m decklab.db schedule preview-systemd --unit timer --python /usr/bin/pyt
 ```
 
 To check the Linux services on your computer from end to end, `scripts/linux_services_check.sh` installs the timer and the service on port 18642, restarts the server, kills it to see systemd start it again, stops it and removes both (`PYTHON=<your python> scripts/linux_services_check.sh`).
+
+### Check the whole install: the smoke test
+
+Once the server runs in the background (or before, to see what's left), and again after every update:
+
+```
+python -m decklab.smoke
+```
+
+It takes under a minute on a typical PC and needs no test suite. The doctor (step 7) only reads files. This command goes further, and actually:
+
+- connects as each of Deck Lab's three database roles, read-only, and checks that every migration is applied;
+- runs `pg_dump` and `pg_restore` (their version must be at least the server's), and checks that the backup folders are writable and when the last backup worked;
+- looks up real cards in the card index;
+- reaches Scryfall, the exchange-rate site, EDHREC and the two shops;
+- starts a throwaway server on a spare port on `127.0.0.1`, loads the page with every file it links to, and makes read-only API calls;
+- asks the background server on your configured port whether it's running, and whether it runs older code than the checkout (after a `git pull` without a restart);
+- runs `homenet status` and `schedule status` (their warnings are passed on), checks the tunnel's `cloudflared`, its config and that the server would really start it (an `access` listener, and cloudflared's config sending the hostname there) when `config.json` has a tunnel, and checks that `records_repo` is a git checkout when it's set;
+- plays one real Forge game twice with the card log on (`forge engine-check`), and checks that Forge is the build this Deck Lab expects (skipped when Forge isn't installed, since it's optional).
+
+Each part says PASS, WARN, FAIL or SKIP, with what to do. A warning (no backup yet, the nightly task not installed, the server not running yet) doesn't fail the run. The exit code is `0` with no failures and `1` with any. `--json` prints the results as JSON. `--offline` skips the network, `--no-forge` skips Forge and `--no-server` skips the throwaway server.
+
+It never writes to the database or changes your cards, decks or settings, and it never stops or restarts the background server. It writes only temporary files and Forge's own caches under `decklab/data/forge`. Unlike the test suite, which uses stand-ins, it uses your real `config.json`, PostgreSQL and Forge, so it shows whether this PC works, not whether the code does. The test suite is for the PC the code is developed on.
 
 ## 10. From outside your home (optional)
 

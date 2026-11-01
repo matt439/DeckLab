@@ -2,6 +2,13 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## The post-install smoke test (2026-11-01)
+
+- `python -m decklab.smoke [--json] [--offline] [--no-forge] [--no-server]` (`decklab/smoke.py`) checks a server PC end to end, for moving the household's server to a spare PC that only pulls updates and can't run the 3-hour suite. After the doctor's core checks it connects as `decklab_app`, `decklab_ro` and `decklab_owner` with `default_transaction_read_only`, compares the migrations, runs `pg_dump`/`pg_restore --version` against the server's major version, checks the backup folders and the last good dump, looks up cards, and reaches Scryfall, Frankfurter, EDHREC, MTGMate and Games Portal. It then starts a throwaway server (`--host 127.0.0.1`, a free port, `--no-update`, `DECKLAB_STATE_FILE` and `DECKLAB_DB_LOG` in a temp folder, no overrides deployment, as the lifecycle tests do), loads `/` with every file it links to and nine read-only API calls with the script header, then stops it with `server.py --stop`. It reads the configured server's `/api/status` (`build.restart_required`, the database, the cards), runs `homenet status` and `schedule status` (problems are warnings), checks `cloudflared`, the tunnel's config and `records_repo`, and plays one Constructed game twice with `forge engine-check --old <forge_dir> --games 1 --commander-games 0` after `release_check`.
+- A failure in any part exits 1. Warnings are things a fresh or half-set-up server legitimately has: no backup yet, the nightly task or background server not installed, a server running older code. On this PC it ran in 26 s with every part passing, apart from a warning that the running server's code was older than the checkout.
+- Tests: `test_smoke.py` covers the runner (a crashing step becomes a failure, skips, worst status, text and JSON output, exit codes) and the pure helpers. The steps themselves need the real config, database and Forge, so the fixture runner doesn't run them.
+- Not run: the spare PC itself, Linux.
+
 ## The export's git identity and kit owners from the profiles (2026-10-31; E11-S48 slice 3)
 
 - **The nightly export** commits with a fixed identity, `Deck Lab <decklab@localhost>` (`export.IDENTITY`), for whichever of `user.name` and `user.email` git has none of (or an empty one) in the export repo, passed as `git -c` for that commit only (`export._identity`). Before, a new install's git without them failed every night's commit. An owner's own identity is kept, so this PC's export commits are unchanged.

@@ -4,6 +4,8 @@ A web page for Magic decks: the deck library, personal card wishlists, shared sh
 
 ## Start it
 
+To check a whole install end to end (database roles, backups, card lookups, the network, a throwaway server's page and API, the background server and nightly task, the tunnel and one real Forge game), run `python -m decklab.smoke` (SELF-HOSTING.md, "Check the whole install"). It's read-only, takes under a minute, and is meant for a server PC after setup and after each `git pull`, where the full test suite is too slow.
+
 For a new setup or a setup problem, `python -m decklab.doctor` reports the core
 runtime, configuration, driver, database metadata and card-index checks with next
 steps; `--json` gives the same fixed findings. It contacts the configured database
