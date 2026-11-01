@@ -1,4 +1,5 @@
-"""Pure previews of the nightly job's systemd user service and timer.
+"""Pure previews of the nightly job's systemd user service and timer, and of the root-installed
+system timer that wakes the PC for it (wake_units).
 
 These functions neither inspect the host nor install anything. Paths describe the target
 POSIX machine explicitly, even when the preview is made on Windows. Unit syntax follows
@@ -12,6 +13,9 @@ from pathlib import PurePosixPath
 SERVICE = "decklab-nightly.service"
 TIMER = "decklab-nightly.timer"
 DEFAULT_AT = "03:30"
+WAKE_SERVICE = "decklab-wake.service"
+WAKE_TIMER = "decklab-wake.timer"
+SYSTEM_DIR = "/etc/systemd/system"
 
 
 def _path(value, name, executable=False):
@@ -67,6 +71,9 @@ ExecStart=":{program}" -m decklab.db nightly
 TimeoutStartSec=2h
 Restart=no
 RemainAfterExit=no
+Nice=10
+IOSchedulingClass=idle
+UMask=0077
 """,
         TIMER: f"""[Unit]
 Description=Deck Lab nightly maintenance schedule
@@ -80,3 +87,63 @@ Unit={SERVICE}
 WantedBy=timers.target
 """,
     }
+
+
+def wake_time(at=DEFAULT_AT):
+    """The minute before at (HH:MM), wrapping past midnight: when the wake timer fires."""
+    hours, minutes = map(int, _time(at).split(":"))
+    total = (hours * 60 + minutes - 1) % (24 * 60)
+    return f"{total // 60:02d}:{total % 60:02d}"
+
+
+def wake_units(at=DEFAULT_AT):
+    """The system timer that wakes a sleeping PC a minute before the nightly run at `at`, and
+    the do-nothing service it starts: {filename: unit text}, without reading or writing.
+
+    A user timer can't wake the PC (WakeSystem= needs CAP_WAKE_ALARM, which only the system
+    manager has), so these are installed once by root in SYSTEM_DIR. Once the PC is awake, the
+    user's nightly timer fires on time and the nightly run holds the PC awake while it works.
+    """
+    wake = wake_time(at)
+    return {
+        WAKE_SERVICE: """[Unit]
+Description=Wake the PC for Deck Lab's nightly maintenance (does nothing itself)
+
+[Service]
+Type=oneshot
+ExecStart=/bin/true
+""",
+        WAKE_TIMER: f"""[Unit]
+Description=Wake the PC a minute before Deck Lab's nightly maintenance
+
+[Timer]
+OnCalendar=*-*-* {wake}:00
+WakeSystem=true
+Persistent=false
+AccuracySec=1s
+Unit={WAKE_SERVICE}
+
+[Install]
+WantedBy=timers.target
+""",
+    }
+
+
+def wake_install_commands(at=DEFAULT_AT):
+    """The shell commands (as lines) that install wake_units as root: each unit written with
+    sudo tee from a quoted here-document, then the timer enabled. Nothing is run here."""
+    units = wake_units(at)
+    lines = []
+    for name in (WAKE_SERVICE, WAKE_TIMER):
+        lines.append(f"sudo tee {SYSTEM_DIR}/{name} >/dev/null <<'EOF'")
+        lines.extend(units[name].rstrip("\n").split("\n"))      # fixed text: no line reads EOF
+        lines.append("EOF")
+    lines += ["sudo systemctl daemon-reload", f"sudo systemctl enable --now {WAKE_TIMER}"]
+    return lines
+
+
+def wake_remove_commands():
+    """The shell commands (as lines) that take the wake timer away again."""
+    return [f"sudo systemctl disable --now {WAKE_TIMER}",
+            f"sudo rm {SYSTEM_DIR}/{WAKE_TIMER} {SYSTEM_DIR}/{WAKE_SERVICE}",
+            "sudo systemctl daemon-reload"]

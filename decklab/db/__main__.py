@@ -204,6 +204,10 @@ def _schedule(args):
             sys.stdout.reconfigure(encoding="utf-8", errors="strict", newline="\n")
         return schedule.preview_systemd(getattr(args, "unit", None), getattr(args, "python", None),
                                         getattr(args, "workdir", None), getattr(args, "at", None))
+    if args.action == "wake-timer":
+        if any(getattr(args, name, None) is not None for name in ("unit", "python", "workdir")):
+            raise ValueError("--unit, --python and --workdir are only for schedule preview-systemd.")
+        return schedule.wake_timer(getattr(args, "at", None))
     if any(getattr(args, name, None) is not None for name in ("unit", "python", "workdir", "at")):
         raise ValueError("--unit, --python, --workdir and --at are only for schedule preview-systemd.")
     if args.action == "install":
@@ -286,12 +290,14 @@ def parser():
                     help="the window for days visited and the pages opened most (1-366, default 30)")
     sp.add_argument("--profile", metavar="P", help="only this profile's visits")
     sp = command("schedule", _schedule, "Manage the nightly Task Scheduler task, or print a systemd user "
-                                      "unit preview without installing anything.")
-    sp.add_argument("action", choices=("install", "remove", "status", "preview-systemd"))
+                                      "unit preview (or, wake-timer, the root timer that wakes a sleeping "
+                                      "Linux PC for it) without installing anything.")
+    sp.add_argument("action", choices=("install", "remove", "status", "preview-systemd", "wake-timer"))
     sp.add_argument("--unit", choices=("service", "timer"), help="which systemd user unit to print")
     sp.add_argument("--python", metavar="PATH", help="preview: absolute POSIX path to the target Python")
     sp.add_argument("--workdir", metavar="DIR", help="preview: absolute POSIX path to the target repo")
-    sp.add_argument("--at", metavar="HH:MM", help="preview: daily local time (default 03:30)")
+    sp.add_argument("--at", metavar="HH:MM", help="preview and wake-timer: the nightly run's daily local time "
+                                               "(default 03:30)")
     from decklab.db import wishlist_cli
     wishlist_cli.add_parser(sub)
     from decklab.db import visibility_cli
