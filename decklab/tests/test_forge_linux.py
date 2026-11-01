@@ -295,17 +295,21 @@ class DefaultsTests(unittest.TestCase):
         self.assertEqual(config._default_forge_dir(windows=False), str(Path.home() / "tools" / "forge-decklab"))
         self.assertEqual(config.DEFAULTS["forge_dir"], config._default_forge_dir())
 
-    def test_the_slots_folder_follows_xdg_data_home(self):
+    def test_the_slots_folder_ignores_xdg_data_home(self):
+        # One folder for every process on the PC: the server's service has no XDG_DATA_HOME even
+        # when a login shell sets it, and both must lock the same slots.
         base = Path(__file__).resolve().parent / "xdg-data"      # only worked out: nothing is made
+        share = Path(os.path.expanduser("~")) / ".local" / "share" / "DeckLab" / "forge-slots"
         with mock.patch.dict(os.environ, {"XDG_DATA_HOME": str(base)}):
             for name in (slots.ENV, "LOCALAPPDATA"):
                 os.environ.pop(name, None)
-            self.assertEqual(slots.folder(), base / "DeckLab" / "forge-slots")
-            os.environ["XDG_DATA_HOME"] = "relative/data"         # not absolute: the XDG rules ignore it
-            self.assertEqual(slots.folder(), Path(os.path.expanduser("~")) / ".local" / "share" / "DeckLab"
-                             / "forge-slots")
+            self.assertEqual(slots.folder(), share)
+            os.environ.pop("XDG_DATA_HOME")
+            self.assertEqual(slots.folder(), share)
             os.environ["LOCALAPPDATA"] = str(base / "local")      # Windows' own folder first
             self.assertEqual(slots.folder(), base / "local" / "DeckLab" / "forge-slots")
+            os.environ[slots.ENV] = str(base / "named")
+            self.assertEqual(slots.folder(), base / "named")
 
 
 class UpgradePlanTests(unittest.TestCase):

@@ -68,14 +68,17 @@ def preview_systemd(unit, python, workdir, at=None, say=print, zone=None):
     return 0
 
 
-def wake_timer(at=None, say=print):
+def wake_timer(at=None, say=print, zone=None):
     """Print the root wake timer's units as the sudo commands that install them, and those that
-    remove them again. Nothing is read, run or installed."""
+    remove them again. Nothing is run or installed; only config.json's "timezone" is read
+    (zone: a zone name to use instead, "" for the host's own zone)."""
     from decklab.db import systemd_units
     at = AT if at is None else at
-    commands = systemd_units.wake_install_commands(at)
-    say(f"A user timer can't wake a sleeping PC, so with \"wake\" in config.json the nightly run at {at} "
-        f"needs a system timer that wakes the PC at {systemd_units.wake_time(at)}. To install it, run "
+    zone = _zone() if zone is None else (zone or None)
+    commands = systemd_units.wake_install_commands(at, zone)
+    when = f" {zone} time" if zone else ""
+    say(f"A user timer can't wake a sleeping PC, so with \"wake\" in config.json the nightly run at {at}{when} "
+        f"needs a system timer that wakes the PC at {systemd_units.wake_time(at)}{when}. To install it, run "
         "these in a terminal (sudo asks for your password):")
     say("")
     for text in commands:

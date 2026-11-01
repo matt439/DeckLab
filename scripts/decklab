@@ -5,7 +5,17 @@
 # It runs on the Python the repo's .venv was made from (.venv/pyvenv.cfg's home and version),
 # the one homenet install and schedule install must use too; DECKLAB_PYTHON overrides it, and
 # without a .venv it's python3.
-here=$(dirname -- "$0")
+# Follow symlinks first (such as one in ~/.local/bin), so the repo is the script's own folder's
+# parent, not the link's; plain readlink, without -f, as old macOS has it.
+self=$0
+while [ -L "$self" ]; do
+    link=$(readlink -- "$self") || break
+    case $link in
+        /*) self=$link ;;
+        *) self=$(dirname -- "$self")/$link ;;
+    esac
+done
+here=$(dirname -- "$self")
 cd -- "$here/.." || exit 1
 python=${DECKLAB_PYTHON:-}
 if [ -z "$python" ] && [ -f .venv/pyvenv.cfg ]; then

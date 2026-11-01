@@ -203,12 +203,14 @@ class CliTests(unittest.TestCase):
         import decklab.db as pkg
         with mock.patch.dict(sys.modules, mods), \
                 mock.patch.multiple(pkg, create=True, backup=backup, export=export, nightly=nightly,
-                                    schedule=schedule):
+                                    schedule=schedule),                 mock.patch.object(cli.os, "umask") as umask:        # never this test process's own
             codes = [cli.main(a) for a in (["backup", "--dest", "D"], ["prune"], ["restore-check"],
                                             ["export", "--no-push"], ["nightly"], ["schedule", "install"])]
         self.assertEqual(codes, [0, 0, 1, 0, 0, 0])
         self.assertEqual(calls, [("backup", "D"), ("prune",), ("restore",), ("export", None, False),
                                  ("nightly",), ("install",)])
+        # Off Windows, backup, restore-check, export and nightly make their files private (077).
+        self.assertEqual(umask.call_args_list, [] if os.name == "nt" else [mock.call(0o077)] * 4)
 
 
 class TriggerTests(db_support.DbTestCase):

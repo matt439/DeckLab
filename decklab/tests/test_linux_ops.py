@@ -132,6 +132,65 @@ class NightlyZoneTests(unittest.TestCase):
                                      zone="Australia/Sydney")
         self.assertIn("03:30:00 Australia/Sydney", said[0])
 
+    def run_cli(self, args):
+        import io
+        from contextlib import redirect_stderr, redirect_stdout
+        from decklab.db import __main__ as cli
+        out, err = io.StringIO(), io.StringIO()
+        with redirect_stdout(out), redirect_stderr(err):
+            code = cli.main(args)
+        return code, out.getvalue(), err.getvalue()
+
+    def test_preview_zone_option_matches_install(self):
+        args = ["schedule", "preview-systemd", "--unit", "timer", "--python", "/usr/bin/python3.14",
+                "--workdir", "/home/a/DeckLab"]
+        with mock.patch("decklab.lib.config.load", side_effect=AssertionError("read")):
+            code, out, err = self.run_cli(args + ["--zone", "Australia/Perth"])
+            self.assertEqual((code, err), (0, ""))
+            self.assertEqual(out, systemd_units.nightly_units("/usr/bin/python3.14", "/home/a/DeckLab",
+                                                               zone="Australia/Perth")[systemd_units.TIMER])
+            code, out, err = self.run_cli(args + ["--zone", "bad zone!"])
+            self.assertEqual((code, out), (1, ""))
+            self.assertIn("--zone", err)
+        code, out, err = self.run_cli(["schedule", "status", "--zone", "UTC"])
+        self.assertEqual((code, out), (1, ""))
+        self.assertIn("only for schedule preview-systemd", err)
+
+    def test_wake_timer_counts_in_the_configured_zone(self):
+        rendered = systemd_units.wake_units("00:00", "Australia/Sydney")[systemd_units.WAKE_TIMER]
+        self.assertIn("OnCalendar=*-*-* 23:59:00 Australia/Sydney\n", rendered)
+        self.assertIn("OnCalendar=*-*-* 03:29:00\n", systemd_units.wake_units()[systemd_units.WAKE_TIMER])
+        self.assertIn("23:59:00 Australia/Sydney", "\n".join(
+            systemd_units.wake_install_commands("00:00", "Australia/Sydney")))
+        with mock.patch("decklab.lib.config.load", return_value={"timezone": "Australia/Perth"}), \
+                mock.patch.object(subprocess, "run", side_effect=AssertionError("run")):
+            code, out, err = self.run_cli(["schedule", "wake-timer"])
+            self.assertEqual((code, err), (0, ""))
+            self.assertIn("OnCalendar=*-*-* 03:29:00 Australia/Perth\n", out)
+            self.assertIn("03:30 Australia/Perth time", out)
+            self.assertIn("at 03:29 Australia/Perth time", out)
+            said = []
+            schedule.wake_timer(say=said.append, zone="")       # "": the host's own zone
+            self.assertIn("OnCalendar=*-*-* 03:29:00", said)
+        with mock.patch("decklab.lib.config.load", return_value={}):
+            code, out, _ = self.run_cli(["schedule", "wake-timer", "--zone", "UTC"])
+            self.assertEqual(code, 0)
+            self.assertIn("OnCalendar=*-*-* 03:29:00 UTC\n", out)
+
+
+class PrivateFilesTests(unittest.TestCase):
+    def test_backups_and_exports_are_private_off_windows_only(self):
+        from argparse import Namespace
+        from decklab.db import __main__ as cli
+        private = (cli._backup, cli._export, cli._restore_check, cli._restore, cli._nightly)
+        for func in private + (cli._prune, cli._sql, cli._schedule):
+            for windows in (True, False):
+                calls = []
+                cli._private_files(Namespace(func=func), windows=windows, umask=calls.append)
+                with self.subTest(func=func.__name__, windows=windows):
+                    self.assertEqual(calls, [0o077] if func in private and not windows else [])
+        cli._private_files(Namespace(), windows=False, umask=self.fail)     # no command: nothing
+
 
 class DoctorZoneTests(unittest.TestCase):
     def local(self, settings, check=None):
@@ -439,6 +498,18 @@ class LauncherTests(unittest.TestCase):
             out = subprocess.run(["/bin/sh", str(launcher), "status", "--port", "1"], capture_output=True,
                                  text=True, env=env, cwd="/", timeout=30).stdout
             self.assertEqual(out.strip(), f"{fake} -m decklab.lib.homenet status --port 1")
+            # Through a symlink in another folder (~/.local/bin/decklab), absolute and relative,
+            # and a link to that link: the repo is still the script's own.
+            bin_dir = root / "home" / ".local" / "bin"
+            bin_dir.mkdir(parents=True)
+            (bin_dir / "decklab").symlink_to(launcher)
+            (bin_dir / "relative").symlink_to(os.path.relpath(launcher, bin_dir))
+            (bin_dir / "chained").symlink_to("relative")
+            for name in ("decklab", "relative", "chained"):
+                with self.subTest(link=name):
+                    out = subprocess.run(["/bin/sh", str(bin_dir / name), "status"], capture_output=True,
+                                         text=True, env=env, cwd="/", timeout=30).stdout
+                    self.assertEqual(out.strip(), f"{fake} -m decklab.lib.homenet status")
 
 
 class OwnProcessesTests(unittest.TestCase):

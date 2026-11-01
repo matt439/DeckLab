@@ -55,7 +55,7 @@ def _zone(value):
         return ""
     from decklab.lib import hometime
     if not hometime.valid_name(value):
-        raise ValueError("the time zone must be a name such as Australia/Sydney.")
+        raise ValueError("--zone (or config.json's \"timezone\") must be a time zone name such as Australia/Sydney.")
     return value
 
 
@@ -111,15 +111,19 @@ def wake_time(at=DEFAULT_AT):
     return f"{total // 60:02d}:{total % 60:02d}"
 
 
-def wake_units(at=DEFAULT_AT):
+def wake_units(at=DEFAULT_AT, zone=None):
     """The system timer that wakes a sleeping PC a minute before the nightly run at `at`, and
     the do-nothing service it starts: {filename: unit text}, without reading or writing.
+
+    zone: as nightly_units', so both timers count `at` in the same zone (config.json's
+    "timezone") whatever the host's own zone is.
 
     A user timer can't wake the PC (WakeSystem= needs CAP_WAKE_ALARM, which only the system
     manager has), so these are installed once by root in SYSTEM_DIR. Once the PC is awake, the
     user's nightly timer fires on time and the nightly run holds the PC awake while it works.
     """
     wake = wake_time(at)
+    zone = _zone(zone)
     return {
         WAKE_SERVICE: """[Unit]
 Description=Wake the PC for Deck Lab's nightly maintenance (does nothing itself)
@@ -132,7 +136,7 @@ ExecStart=/bin/true
 Description=Wake the PC a minute before Deck Lab's nightly maintenance
 
 [Timer]
-OnCalendar=*-*-* {wake}:00
+OnCalendar=*-*-* {wake}:00{' ' + zone if zone else ''}
 WakeSystem=true
 Persistent=false
 AccuracySec=1s
@@ -144,10 +148,10 @@ WantedBy=timers.target
     }
 
 
-def wake_install_commands(at=DEFAULT_AT):
+def wake_install_commands(at=DEFAULT_AT, zone=None):
     """The shell commands (as lines) that install wake_units as root: each unit written with
     sudo tee from a quoted here-document, then the timer enabled. Nothing is run here."""
-    units = wake_units(at)
+    units = wake_units(at, zone)
     lines = []
     for name in (WAKE_SERVICE, WAKE_TIMER):
         lines.append(f"sudo tee {SYSTEM_DIR}/{name} >/dev/null <<'EOF'")
