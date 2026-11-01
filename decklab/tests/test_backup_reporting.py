@@ -87,10 +87,11 @@ class NightlyRestoreCheckTests(unittest.TestCase):
 
 class TimerTimesTests(unittest.TestCase):
     def test_unix_times_show_in_the_configured_zone(self):
+        from decklab.lib import hometime
+        if hometime.zone("Australia/Sydney") is None:    # Windows without the tzdata package (CI)
+            self.skipTest("no time zone data here")
         at = int(datetime(2026, 11, 2, 16, 30, tzinfo=timezone.utc).timestamp())    # 03:30 in Sydney (AEDT)
         shown = schedule._when(f"@{at}", "Australia/Sydney")
-        if shown.startswith("@"):
-            self.skipTest("no time zone data here")
         self.assertTrue(shown.startswith("Tue 2026-11-03 03:30 Australia/Sydney"), shown)
 
     def test_other_text_is_kept(self):
