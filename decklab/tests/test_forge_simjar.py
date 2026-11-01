@@ -922,7 +922,7 @@ class ForkSwitchTests(SimjarCase):
         self.assertEqual(unready, [])
 
     def test_the_forks_list_is_deck_labs(self):
-        """The fork's decklab/ai-switches.txt (DECKLAB_FORGE_FORK, default C:/VSProjects/forge) names exactly
+        """The fork's decklab/ai-switches.txt (DECKLAB_FORGE_FORK, default the forge folder beside this repo) names exactly
         pilots.FORK_SWITCHES."""
         path = FORK / "forge-ai" / "src" / "main" / "resources" / "decklab" / "ai-switches.txt"
         if not path.is_file():

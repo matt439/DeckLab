@@ -9,7 +9,7 @@ Deck Lab's changes to Forge's own classes (Forge's AbstractMulligan without its 
 per mulligan; AiController with each AI decision's eval on a virtual thread; AiAttackController
 with its forced-attacker checks run in turn, in attacker order; Match building each library in
 its .dck's line order, deck-order-1) are in Forge itself: Deck Lab runs its own build of Forge,
-from the fork's decklab branch (github.com/matt439/forge, cloned at C:/VSProjects/forge, whose
+from the fork's decklab branch (github.com/matt439/forge, cloned at C:/Projects/forge, whose
 decklab/install.py builds and installs it in C:/Tools/forge-decklab). Until 2026-10-11 they were
 copies compiled into this jar, ahead of Forge's on the class path, used only when Forge's jar
 held the very class files they were copied from. Forge's jar lists them (FORGE_PATCH_LIST,
@@ -100,7 +100,7 @@ MAIN = "decklab.DeckLabSim"
 JAVA = Path(__file__).resolve().parent / "java"     # Deck Lab's Java sources, in folders by package
 SOURCE = JAVA / "decklab" / "DeckLabSim.java"
 # Deck Lab's changes to Forge's own classes live in Forge itself, on its fork's decklab branch
-# (github.com/matt439/forge, cloned at C:/VSProjects/forge; its decklab/install.py installs a
+# (github.com/matt439/forge, cloned at C:/Projects/forge; its decklab/install.py installs a
 # build). Forge's jar lists them in FORGE_PATCH_LIST, "<class file> <id>" a line: the id names a
 # change to the games Forge plays for a seed, the name the v2 engine id records it by (engine.py),
 # a new one for every change to what it plays; "-" for one that plays the same games, faster,

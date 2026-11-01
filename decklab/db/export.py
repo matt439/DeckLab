@@ -1,5 +1,5 @@
 """The database as plain files: each table in TABLES written as CSV into the export repo
-(C:\\VSProjects\\DeckLabData unless config.json says otherwise), committed, and pushed when the
+(C:\\Projects\\DeckLabData unless config.json says otherwise), committed, and pushed when the
 repo has a remote called origin. It's the readable, diffable history beside the pg_dump
 backups: git shows what changed from night to night, and the files open without PostgreSQL.
 

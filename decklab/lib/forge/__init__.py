@@ -259,7 +259,7 @@ Running Forge (HISTORY.md "Installing and running Forge")
     jar><os.pathsep><Forge jar> decklab.DeckLabSim sim ... with the same arguments (a v2
     run's one-shot process adds -dlgame <stream> <first>, with -s the result's seed base).
     Deck Lab runs its own build of Forge, from the fork's decklab branch (github.com/
-    matt439/forge, cloned at C:/VSProjects/forge; its decklab/install.py installs it in
+    matt439/forge, cloned at C:/Projects/forge; its decklab/install.py installs it in
     C:/Tools/forge-decklab), which holds Deck Lab's changes to Forge's own classes
     (AbstractMulligan without its 100 ms sleep per mulligan; AiController with each AI
     decision's eval on a virtual thread, R14a; AiAttackController with its forced-attacker

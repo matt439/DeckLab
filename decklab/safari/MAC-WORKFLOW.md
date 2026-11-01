@@ -51,7 +51,7 @@ the commands throughout this guide.
 
 | Item | Working value |
 | --- | --- |
-| Windows checkout | `C:\VSProjects\TradingCardCollection` |
+| Windows checkout | `C:\Projects\DeckLab` |
 | Mac SSH account and address | `<mac-user>@<mac-address>` |
 | Mac checkout | `/Users/<mac-user>/DeckLabSafari/source-1b39515` |
 | Mac launcher | `/Users/<mac-user>/DeckLabSafari/run-safari` |
@@ -154,7 +154,7 @@ Run these blocks in **Windows PowerShell**, stopping if a command fails.
 ### Check both checkouts
 
 ```powershell
-Set-Location C:\VSProjects\TradingCardCollection
+Set-Location C:\Projects\DeckLab
 if (git status --porcelain) { throw 'Commit or resolve local changes first.' }
 $pcRevision = git rev-parse HEAD
 if ($LASTEXITCODE -ne 0) { throw 'Cannot read the Windows revision.' }
@@ -265,7 +265,7 @@ no unavailable configurations, no setup errors and no cleanup notes.
 In **Windows PowerShell**, copy the entire chosen run:
 
 ```powershell
-Set-Location C:\VSProjects\TradingCardCollection
+Set-Location C:\Projects\DeckLab
 $runId = '20261015T051426Z-59b4e5' # Replace with the new run's actual ID.
 $resultsRoot = Join-Path (Get-Location) 'decklab\data\safari\macbook'
 New-Item -ItemType Directory -Force -Path $resultsRoot | Out-Null

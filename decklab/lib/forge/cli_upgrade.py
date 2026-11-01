@@ -173,7 +173,7 @@ def _plan(tag, staged=None):
     return "\n".join(line.replace("<scratch folder>", staged) if staged else line for line in [
         f"Moving Deck Lab's Forge onto {tag} (decklab/README.md, \"Deck Lab's own Forge\"). Nothing here is run "
         "for you:",
-        f"  1. In C:\\VSProjects\\forge, rebase the decklab branch onto the tag {tag} (or merge it in) and fix any "
+        f"  1. In C:\\Projects\\forge, rebase the decklab branch onto the tag {tag} (or merge it in) and fix any "
         "conflicts.",
         f"  2. Update BASE_TAG in the fork's decklab/install.py to {tag}.",
         "  3. Build it into a scratch folder: python decklab/install.py --out <scratch folder> (Maven is at "
