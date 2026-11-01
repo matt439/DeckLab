@@ -30,11 +30,12 @@ class StatusLineTests(unittest.TestCase):
     def test_failed_newest_dump_shows_at_once(self):
         last = {"dump": NOW - timedelta(hours=2), "export": NOW - timedelta(hours=2),
                 "restore_check": None, "check": None}
-        lines = self.status({"dump": _run(False, 1, "copy to /mnt/nas failed: no"),
+        lines = self.status({"dump": _run(False, 1, 'copy to /mnt/nas failed: no; rows: {"public.deck": 2}'),
                              "export": _run(True, 2, "ok")}, last)
         dump = next(line for line in lines if "last dump" in line)
         self.assertIn("FAILED: copy to /mnt/nas failed: no", dump)
         self.assertIn("(the last that worked: ", dump)
+        self.assertNotIn("rows:", dump)
         export = next(line for line in lines if "last export" in line)
         self.assertNotIn("FAILED", export)
 

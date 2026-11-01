@@ -125,8 +125,8 @@ OUTCOMES = MappingProxyType({
     "timezone_unknown": ("unverified", "This PC has no data for config.json's timezone, so it can't be compared.",
                          "On Linux install the tzdata package; on Windows this check needs Python's tzdata "
                          "package, and Deck Lab's own dates use UTC+10 without it."),
-    "backups_ready": ("ready", "The backup folder settings can be used here and backup_dir is on a disk of its "
-                      "own; no backup was made.", None),
+    "backups_ready": ("ready", "The backup folder settings can be used here, and backup_dir is on a disk of its "
+                      "own or backup_same_device_ok allows the same one; no backup was made.", None),
     "backups_local_only": ("ready", "No backup_dir is set, so each night's dump stays on this PC only; no backup "
                            "was made.", None),
     "backups_setting_invalid": ("needs_setup", "A folder setting in config.json's database block can't be used on "

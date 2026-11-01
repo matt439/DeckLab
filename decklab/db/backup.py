@@ -675,7 +675,8 @@ def status(dbname=None, now=None):
         run = newest.get(kind)
         if run is None or run["ok"]:
             return f"  {label}: {at.astimezone():%Y-%m-%d %H:%M}" if at else f"  {label}: never"
-        line = f"  {label}: {run['started_at'].astimezone():%Y-%m-%d %H:%M}, FAILED: {run['detail']}"
+        why = str(run["detail"] or "").split("; " + _ROWS, 1)[0]      # a failed dump's counts aren't the news
+        line = f"  {label}: {run['started_at'].astimezone():%Y-%m-%d %H:%M}, FAILED: {why}"
         return line + (f" (the last that worked: {at.astimezone():%Y-%m-%d %H:%M})" if at else "")
 
     def restore_line():
