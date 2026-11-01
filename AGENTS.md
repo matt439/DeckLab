@@ -78,7 +78,7 @@ decklab/                # Deck Lab, the home-network deck page: what is still to
                         #   its Activity page (#/activity) lists the database's changes, each viewer seeing only what they may; Settings (#/settings, admins) holds the simulations setting, recorded database-maintenance history, Visits (who has used Deck Lab and which pages they opened; python -m decklab.db visits [--days N] [--profile P] on the PC), the version and a home admin's Restart Deck Lab (homenet restart run on the PC; refused with uncommitted code; never migrates)
   cloudflare/           # the "Deck Lab is off" Worker in front of decklab.example.com (E11-S02; deployed by Matt with npx wrangler deploy, README "From outside the home")
   forge-trial/          # Forge simulation prototypes and notes from Milestone 0
-                        # Forge itself: Deck Lab runs its own build of a fork (C:/VSProjects/forge, decklab branch; installed in C:/Tools/forge-decklab), which holds every change to Forge (decklab/README.md, "Deck Lab's own Forge")
+                        # Forge itself: Deck Lab runs its own build of a fork (C:/Projects/forge, decklab branch; installed in C:/Tools/forge-decklab), which holds every change to Forge (decklab/README.md, "Deck Lab's own Forge")
   data/                 # gitignored cache: Scryfall bulk data, images, simulation output
 .venv/                  # gitignored Python environment with psycopg; the system python uses its packages (decklab/lib/venv.py)
 ```

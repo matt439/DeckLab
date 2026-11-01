@@ -2,7 +2,7 @@
 
 This guide sets up Deck Lab on your own computer, from nothing, for you and your household. It covers the parts every install needs (Python, PostgreSQL, the card data, the first run) and then the optional parts: Forge simulations, starting in the background, and reaching it from outside your home.
 
-[decklab/README.md](decklab/README.md) is the full reference for every page and command. It was written for one household's PC, so it names that PC's folders (`C:\VSProjects\...`, `C:\Tools\...`) and people. Wherever it does, use your own.
+[decklab/README.md](decklab/README.md) is the full reference for every page and command. It was written for one household's PC, so it names that PC's folders (`C:\Projects\...`, `C:\Tools\...`) and people. Wherever it does, use your own.
 
 ## What runs where
 
