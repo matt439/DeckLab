@@ -782,18 +782,20 @@ function drawShopping(data) {
     if (later.length) longSlot.append(shopSection("shop-long-term", "Long-term plan", 0,
       `${plural(later.reduce((sum, r) => sum + (r.quantity || 0), 0), "card")} for decks to build later. Add them to an order when the shop has them, to share its postage.`,
       shopLongTerm(later, view)));
-    clear(missingSlot); add(missingSlot, [shopMissingCards(view)]);
+    const combined = typeof shopCombinedSection === "function" ? shopCombinedSection(view) : null;   // shopping-combined.js
+    clear(missingSlot); add(missingSlot, [shopMissingCards(view), combined]);
     clear(storeSlot); add(storeSlot, [shopByShop(view)]);
     clear(jumpSlot);
     const missing = data.missing_cards;
     const missingShown = missing && (!missing.ready || (missing.rows || []).length || (missing.errors || []).length || (missing.warnings || []).length);
-    sideNode.hidden = !immediate.length && !decks.length && !later.length && !missingShown;
-    pageEmpty.hidden = Boolean(waiting.length || followUps.length || immediate.length || later.length || decks.length || missingShown);
+    sideNode.hidden = !immediate.length && !decks.length && !later.length && !missingShown && !combined;
+    pageEmpty.hidden = Boolean(waiting.length || followUps.length || immediate.length || later.length || decks.length || missingShown || combined);
     const jumps = shopJumps([
       { id: "shop-on-the-way", label: "On the way", count: waiting.length, number: waiting.length },
       { id: "shop-to-buy", label: "To buy", count: immediate.length, number: immediate.length },
       { id: "shop-decks", label: "Decks missing cards", count: decks.length, number: decks.length },
       { id: "shop-missing-cards", label: "Missing cards", count: missingShown, number: (missing?.rows || []).length },
+      { id: "shop-combined", label: "Build together", count: combined ? 1 : 0, number: 0 },
       { id: "shop-by-shop", label: "By shop", count: queue.length, number: 0 },
       { id: "shop-follow-ups", label: "Follow-ups", count: followUps.length, number: followUps.length },
       { id: "shop-long-term", label: "Long-term plan", count: later.length, number: 0 },

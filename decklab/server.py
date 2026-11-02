@@ -114,6 +114,9 @@ inventory writes answer 503 with "reason": "database":
     POST /api/shopping/check             body {"profile", "order", "component", "check"}: a received
                                          delivery's open check marked done (order.checks resolve, one
                                          change); an admin's, who sees home (lib/api/shopping.py)
+    GET  /api/shopping/combined?decks=a,b two or more home decks' missing cards built together, each free
+                                         copy counted once (read-only, Shopping's readers only;
+                                         lib/api/shopping_combined.py)
     GET  /api/receipt?order=<id>         a recorded delivery for the Receipts page, with the inventory's
                                          revision as "fingerprint" (lib/api/receipts.py; home's)
     POST /api/receipt/preview            body {"profile", "order", "fingerprint", "received_on",
