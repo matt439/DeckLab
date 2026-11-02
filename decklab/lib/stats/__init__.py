@@ -253,6 +253,11 @@ Result (every key is always there; None where it doesn't apply)
                           or either older_than_announcement,
                           "game_changers": [card], "mass_land_denial",
                           "extra_turns": [card] or None (no tag data),
+                          "tutors" (E9-S29; counted only, never raising the
+                          minimum): {"checked": True, "cards": [card],
+                          "count", "land_searches": [card] (searches for
+                          lands only, not counted), "tags_date"} or
+                          {"checked": False, "reason", "tags_date"},
                           "combos": {"checked": True, "list_date", "version",
                           "matches": [{"names": [the two cards' names], "results":
                           [str], "class" (combos.CLASSES), "standalone": False when

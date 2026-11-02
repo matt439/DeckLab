@@ -73,7 +73,7 @@ SOURCES = {
         "date": "effective 2026-09-25",
         "url": "https://media.wizards.com/2026/downloads/MagicCompRules%2020260925.txt"},
     "tagger": {
-        "title": "Scryfall Tagger oracle tags mass-land-denial and extra-turn",
+        "title": "Scryfall Tagger oracle tags mass-land-denial, extra-turn and tutor",
         "date": "oracle_tags bulk file of 2026-09-28",
         "url": "https://tagger.scryfall.com/tags/card/mass-land-denial"},
     # Its date is the downloaded list's own (bracket.combos.list_date): deck_stats

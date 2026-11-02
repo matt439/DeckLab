@@ -660,6 +660,35 @@ def tag_members(slugs, path=None):
     return {slug: known[slug] for slug in slugs}
 
 
+def tag_branches(slug, path=None):
+    """(the oracle ids tagged with slug itself, {child slug: frozenset of
+    oracle ids}) for the tags directly below a Scryfall oracle tag, each
+    child with every tag below it (as tag_members counts them). Reads and
+    caches the file as tag_members does (the answers share its cache, under
+    ("branches", slug)); raises KeyError for a slug the file doesn't have and
+    OSError when there's no tag file."""
+    path = Path(path) if path is not None else bulk_path("oracle_tags")
+    stat = path.stat()
+    key = (str(path.resolve()), stat.st_mtime_ns, stat.st_size)
+    cache_key = ("branches", slug)
+    with _tag_lock:
+        known = _tag_cache.get(key, {})
+        if cache_key not in known:
+            tags, by_slug = card_index._read_tag_tree(path)
+            if slug not in by_slug:
+                raise KeyError(f"No oracle tag {slug!r} in {path}")
+            slug_of = {tag_id: s for s, tag_id in by_slug.items()}
+            children, direct = tags[by_slug[slug]]
+            branches = {slug_of[child]: frozenset(card_index._tag_closure(tags, child))
+                        for child in children if child in slug_of}
+            known = dict(known)
+            known[cache_key] = (frozenset(direct), branches)
+            _tag_cache.clear()
+            _tag_cache[key] = known
+    direct, branches = known[cache_key]
+    return direct, dict(branches)
+
+
 def price_date():
     """The date Scryfall's prices in the index were pulled (default_cards updated_at)."""
     return _get().data["bulk"].get("default_cards", "")[:10]
