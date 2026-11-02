@@ -4,7 +4,7 @@
 
 
 /** The price table (the owned-vs-needed numbers): folded behind one line, "Price table: 32 missing, about
- * A$40.26", or the on-the-way copies; just "Nothing to buy" when all are here. Then the table being out of date,
+ * A$40.26 at the cheapest printings", or the on-the-way copies; just "Nothing to buy" when all are here. Then the table being out of date,
  * the cards other decks hold, names that aren't Scryfall's and the collection's warnings. null when the
  * answer has no "owned" at all: the server leaves it out for a visitor who may not see the collection. */
 function ownedSection(data) {
@@ -20,7 +20,9 @@ function ownedSection(data) {
   const priceNote = el("p", { class: "price-note" }, o.price_error
     ? `No A$ estimates: ${o.price_error}`
     : `A$ prices are estimates: the cheapest non-foil printing's US price on Scryfall (prices of ${o.price_date}) ` +
-      `× 1 USD = ${o.rate} AUD (ECB rate of ${o.rate_date}). Check a shop such as MTGMate before buying.`,
+      `× 1 USD = ${o.rate} AUD (ECB rate of ${o.rate_date}). ` +
+      (o.rows.some((r) => r.listed_printing) ? '"As listed" is the printing and finish your list names. ' : "") +
+      "Check a shop such as MTGMate before buying.",
   t.unpriced && t.unpriced.length ? ` No price for: ${t.unpriced.join(", ")}.` : "");
   if (!t.missing) {
     section.append(el("p", { class: "deck-prices-none" },
@@ -28,7 +30,7 @@ function ownedSection(data) {
   }
   const coming = deckAvailability(o).coming;
   if (t.missing || coming) {
-    const cost = t.missing && !o.price_error ? `, about ${aud(t.aud_missing)}` : "";
+    const cost = t.missing && !o.price_error ? `, about ${aud(t.aud_missing)} at the cheapest printings` : "";
     const summary = t.missing ? `${t.missing} missing${cost}` : `${coming} on the way`;
     const details = el("details", { class: "more deck-price-table" },
       el("summary", { text: `Price table: ${summary}` }),
@@ -46,6 +48,14 @@ function ownedSection(data) {
   }
   add(section, [warningsBox(o.warnings, "Warnings about the collection")]);
   return section;
+}
+
+/** "As listed (FIC 207 foil): A$560.00 each" for a missing row whose list names a printing priced
+ * differently from the cheapest (lib/listed_prices.py); null otherwise. */
+function listedPriceWords(r) {
+  if (!(r && r.missing > 0 && typeof r.listed_printing === "string" && Number.isFinite(r.listed_aud_each))) return null;
+  if (r.listed_aud_each === r.aud_each) return null;
+  return `As listed (${r.listed_printing}): ${aud(r.listed_aud_each)} each`;
 }
 
 /** A row's labels as the deck's table would have them (api: pool.row_labels). */
@@ -138,6 +148,8 @@ function ownedRow(r, usable, priceError = false) {
   for (const [deck, n] of own.in_use) labels.push(status("warn", `${n} in use in ${deck}`));
   const priced = !priceError && Number.isFinite(r.aud_each) && r.aud_each >= 0;
   if (r.priced_finish && r.priced_finish !== "nonfoil" && priced) labels.push(status("plain", `${r.priced_finish} price`));
+  const listed = !priceError && listedPriceWords(r);
+  if (listed) labels.push(status(r.listed_material ? "warn" : "plain", listed));
   const reprints = r.missing > 0 ? reprintInfo(r) : null;
   const savedShop = Number.isSafeInteger(r.missing) && r.missing > 0 && Object.hasOwn(r, "shop_snapshot") && typeof shopMissingSnapshotLine === "function"
     ? shopMissingSnapshotLine(r) : null;

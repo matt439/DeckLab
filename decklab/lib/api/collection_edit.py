@@ -262,15 +262,10 @@ def _prices(rows):
     except RuntimeError as e:          # offline with no cached rate
         answer["price_error"] = _public(e)
         return answer
-    finishes = dict(cards.PRICE_FINISHES)
     try:
         answer.update(rate=rate, rate_date=rate_date, price_date=cards.price_date() or None)
         for row in rows:
-            key = finishes.get(row.get("finish") or "nonfoil")
-            if not (key and row.get("set") and row.get("collector_number")):
-                continue
-            p = cards.printing(row["set"], row["collector_number"])
-            usd = p.get(key) if p else None
+            usd = cards.printing_usd(row.get("set"), row.get("collector_number"), row.get("finish") or "nonfoil")
             if usd is not None:
                 answer["rows"][_picture_key(row)] = {"usd": usd, "aud": round(usd * rate, 2)}
     except RuntimeError:                # the index went away meanwhile: no prices, the rows still show
