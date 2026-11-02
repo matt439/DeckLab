@@ -7,8 +7,11 @@ api.MAX_EDIT_BODY bytes, except routes with their explicit bound, including
 pod records (play_pods.MAX_BODY), import previews (collection_edit.MAX_IMPORT_BODY), scanned photos
 (collection_scan.MAX_SCAN_BODY, for cards and token cards), scanned token lists (tokens_scan.MAX_ADD_BODY), editor drafts kept for later (deck_drafts.MAX_BODY), field choices
 (field_choices.MAX_BODY), a restart (server_restart.MAX_BODY)
-and accessory saves with a local picture (accessories.MAX_SAVE_BODY).
+and accessory saves with a local picture (accessories.MAX_SAVE_BODY). The gauntlet's view, run and
+stop (api/gauntlet_page.py) answer 202 while its run waits or plays, as the field's do.
 """
+
+GAUNTLET_WAITING = ("queued", "running")       # a gauntlet answer's statuses sent with 202
 
 
 def _field_membership_view(**params):
@@ -50,6 +53,36 @@ def _sideboard_tests(**params):
 def _start_sideboard_test(body):
     from decklab.lib.api.sideboard_test import start_sideboard_test
     return start_sideboard_test(body)
+
+
+def _gauntlet_view(**params):
+    """The deck page's "Against popular decks" (api/gauntlet_page.py), loaded only when asked for."""
+    from decklab.lib.api.gauntlet_page import gauntlet_view
+    return gauntlet_view(**params)
+
+
+def _gauntlet_catalogue(**params):
+    from decklab.lib.api.gauntlet_page import catalogue_view
+    return catalogue_view(**params)
+
+
+def _gauntlet_run(body):
+    from decklab.lib.api.gauntlet_page import run_gauntlet
+    return run_gauntlet(body)
+
+
+def _gauntlet_stop(body):
+    from decklab.lib.api.gauntlet_page import stop_gauntlet
+    return stop_gauntlet(body)
+
+
+GAUNTLET_ROUTES = {("gauntlet",), ("gauntlet", "run"), ("gauntlet", "stop")}
+
+
+def _status(key, answer):
+    """200, or 202 for a gauntlet answer whose run waits or plays."""
+    waiting = key in GAUNTLET_ROUTES and isinstance(answer, dict) and answer.get("status") in GAUNTLET_WAITING
+    return 202 if waiting else 200
 
 
 def dispatch(handler, route, query):
@@ -106,6 +139,8 @@ def dispatch(handler, route, query):
         ("activity", "mixed-undo"): (activity_mixed_undo.mixed_undo_view, ("id",)),
         ("visits",): (visits.visits_view, ("days", "who")),
         ("search",): (_global_search, ("q", "group", "limit")),
+        ("gauntlet",): (_gauntlet_view, ("id", "version", "sample", "size", "colours", "styles", "tiers", "profile")),
+        ("gauntlet", "catalogue"): (_gauntlet_catalogue, ("format",)),
     }
     posts = {
         ("activity", "undo"): activity_undo.apply_undo,
@@ -170,6 +205,8 @@ def dispatch(handler, route, query):
         ("deck", "rename"): rename.rename_deck,
         ("deck", "restore"): retirement.restore_deck,
         ("server", "restart"): (server_restart.restart, server_restart.MAX_BODY),     # a named home admin's
+        ("gauntlet", "run"): _gauntlet_run,        # run.start (require_start), after the deck's 404
+        ("gauntlet", "stop"): (_gauntlet_stop, MAX_BODY),     # run.stop: its starter, its deck's space or an admin
         ("visit",): (visits.beacon, MAX_BODY),      # not a data write: no guard rule, the requester's own visit
     }
     key = tuple(route)
@@ -182,12 +219,14 @@ def dispatch(handler, route, query):
                                          ("play", "sideboard-tests")}:
             params["deck_id"] = handler._deck_id(params) if "id" in params else None
             params.pop("id", None)
-        handler._send_json(200, function(**params))
+        answer = function(**params)
+        handler._send_json(_status(key, answer), answer)
         return True
     if key in posts:
         handler._allow("POST")
         handler._no_query(query)
         function, limit = posts[key] if isinstance(posts[key], tuple) else (posts[key], None)
-        handler._send_json(200, function(handler._write_body(limit)))
+        answer = function(handler._write_body(limit))
+        handler._send_json(_status(key, answer), answer)
         return True
     return False
