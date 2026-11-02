@@ -202,6 +202,20 @@ def entry_from_dck(path):
             "source": _source(None, path) if rel != path.name else None, "pilot": pilots.default_pilot()}
 
 
+def entry_from_cards(deck_id, title, kind, listed, source=None):
+    """A list from card lines kept outside the library (the gauntlet's catalogue): listed is
+    {"Commander": [[qty, name]], "Main": [...]}, kind "commander" or "constructed". It plays the
+    lines as given (Forge's names), with the default pilot as entry_from_dck's lists do; its
+    version is "target" and its source the caller's (a plain dict, or None)."""
+    from . import pilots            # pilots.py comes after this part
+    cards = {section: [[int(qty), str(name)] for qty, name in (listed or {}).get(section) or []]
+             for section in ("Commander", "Main")}
+    text, card_sha, count = _list_text(cards, kind)
+    return {"id": deck_id, "version": "target", "title": title, "kind": kind, "card_sha": card_sha,
+            "card_count": count, "dck": _dck(text, card_sha), "cards": cards, "source": source,
+            "pilot": pilots.default_pilot()}
+
+
 def matchup_key(entry_a, entry_b):
     """The matchup's key (64 hex): the same for (a, b) and (b, a). Raises ForgeError when
     one list is a Commander deck and the other isn't. It's the key of the engine a run

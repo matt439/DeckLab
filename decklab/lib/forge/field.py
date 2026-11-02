@@ -432,14 +432,14 @@ def _alloc_left(pairs, floor, target):
 
 
 def plan(entry, budget, results_dir=None, opponents=None, *, space="home", public=None, visible=None,
-         keep=None, product_notes=True):
+         keep=None, product_notes=True, opponent_entries=None):
     """What a field run of entry with budget would play now (nothing plays): {"budget",
     "per_opponent", "floor", "allocate" (APT's games, not yet given to opponents), "new_games",
     "pairs": [{"opponent": entry, "key", "have", "floor", "games"}]}, each pair's "games" its
     floor games plus an even share of APT's (for time estimates)."""
     floor, target, fixed = _budget(budget)
-    opps = _opponents(entry, opponents, field_lists(lists.fmt_for(entry["kind"]), space=space, public=public,
-                                                   visible=visible, product_notes=product_notes))
+    opps = _opponents(entry, opponents, list(opponent_entries) if opponent_entries is not None else field_lists(
+        lists.fmt_for(entry["kind"]), space=space, public=public, visible=visible, product_notes=product_notes))
     pairs = [dict(_pair_state(entry, o, results_dir, keep=keep), opponent=o) for o in opps]
     for p in pairs:
         p["floor_games"] = max(0, floor - p["n"])
@@ -824,7 +824,7 @@ class _FieldRun:
 @lifecycle.writing("entry", "opponents")
 def run_field(entry, budget="standard", *, by, progress=None, results_dir=None, pool=None, local=False,
               seed_base=None, log_dir=None, log_every=1, inflight=None, opponents=None, space="home",
-              public=None, visible=None, keep=None, product_notes=True):
+              public=None, visible=None, keep=None, product_notes=True, opponent_entries=None):
     """Play entry against the field of its format (section 10.3): a floor of games against each
     opponent (FIELD_FLOOR, or fewer for a smaller budget), then APT rounds (seqstats.apt_pick, each
     pick FIELD_STEP games) until the budget's games are played. Each pair is an ordinary matchup
@@ -845,12 +845,14 @@ def run_field(entry, budget="standard", *, by, progress=None, results_dir=None, 
     "budget", "planned", "played", "wall_s", "stopped", "per_opponent": {key: games played},
     "deck": {"id", "version", "title"}, "dropped": {key: sentence}, "error": sentence or None}.
     ValueError for a budget or opponent names that don't suit, ForgeError when the field has no
-    opponent for it or home's saved field choices can't be read (it fails closed, E3-S23)."""
+    opponent for it or home's saved field choices can't be read (it fails closed, E3-S23).
+    opponent_entries, when given, replace the field (the gauntlet's sample; no field policy applies)."""
     from . import pool as pools         # pool.py comes after lists; field comes after both
     _budget(budget)
     fmt = lists.fmt_for(entry["kind"])
-    opps = _opponents(entry, opponents, _run_field_lists(fmt, True, space=space, public=public, visible=visible,
-                                                         product_notes=product_notes))
+    opps = _opponents(entry, opponents, list(opponent_entries) if opponent_entries is not None else
+                      _run_field_lists(fmt, True, space=space, public=public, visible=visible,
+                                       product_notes=product_notes))
     if not opps:
         raise ForgeError(NO_OPPONENTS.format(fmt=fmt))
     inflight = int(inflight) if inflight is not None else _inflight_setting()

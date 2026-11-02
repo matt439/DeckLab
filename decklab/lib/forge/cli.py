@@ -1,7 +1,7 @@
 """Forge command-line entry point and compatibility facade.
 
 Commands and helpers live in cli_shared, cli_output, cli_checks, cli_commands,
-cli_results, cli_evaluate, cli_soak, cli_engine and cli_upgrade. Existing cli.<name> reads and
+cli_results, cli_evaluate, cli_gauntlet, cli_soak, cli_engine and cli_upgrade. Existing cli.<name> reads and
 patches forward to their owner; no function or mutable state is copied into this module."""
 import types
 
@@ -11,6 +11,7 @@ from . import cli_checks as _checks
 from . import cli_commands as _commands
 from . import cli_results as _results
 from . import cli_evaluate as _evaluate
+from . import cli_gauntlet as _gauntlet
 from . import cli_soak as _soak
 from . import cli_engine as _engine
 from . import cli_upgrade as _upgrade
@@ -45,6 +46,7 @@ COMMANDS = {
     "field": (_evaluate._field_args, _evaluate._cmd_field),
     "variant": (_evaluate._variant_args, _evaluate._cmd_variant),
     "experiment": (_evaluate._experiment_args, _evaluate._cmd_experiment),
+    "gauntlet": (_gauntlet._gauntlet_args, _gauntlet._cmd_gauntlet),
     "pilots": (_commands._pilots_args, _commands._cmd_pilots),
     "overrides": (_commands._overrides_args, _commands._cmd_overrides),
     "staged-move": (_results._staged_move_args, _results._cmd_staged_move),
@@ -63,7 +65,7 @@ def _main(argv):
         add(sub)
     args = parser.parse_args(argv)
     run = COMMANDS[args.command][1]
-    if args.command in _QUICK_COMMANDS:
+    if args.command in _QUICK_COMMANDS or (args.command, getattr(args, "action", None)) in _QUICK_ACTIONS:
         return run(args)
     # A command that may play games holds the PC awake (wake-on-request) until it ends, as the
     # server does for its runs: a power request on Windows, a systemd-inhibit block on Linux
@@ -75,6 +77,7 @@ def _main(argv):
 
 # Commands that only read or move saved files: they don't hold the PC awake.
 _QUICK_COMMANDS = frozenset({"status", "audit", "list", "cards", "slots", "pool", "pilots", "staged-move", "decisions"})
+_QUICK_ACTIONS = frozenset({("gauntlet", "list"), ("gauntlet", "show")})
 
 
 # Preserve the existing CLI names and mock.patch.object(cli, name) targets without

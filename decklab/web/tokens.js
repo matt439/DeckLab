@@ -2,10 +2,9 @@
  * each, the kinds of token the decks need and nobody owns, and the token cards on the way. Works on
  * phones as well as desktops. A double-sided card counts once and shows one face at a time.
  *
- * Also the pieces other pages use (deck.js, library.js and assembly.js):
+ * Also the pieces other pages use (deck-tokens.js, library.js and assembly.js):
  *     tokenThumb(url, px, pt)         a token's small picture from Deck Lab's /img/ route, with a fallback
  *     tokenStateChip(state, words)    a need's state as a chip: "Have it: 8 cards", "None owned", ...
- *     tokenNeedList(needs, faces)     a deck's needs as a list (lib/tokens deck_tokens's "needs")
  *     tokFacesUsed(needs)             the faces of each token card a deck uses, for tokSides
  *     tokSides(card, faces)           "Zombie side only, can be sleeved" or "both sides used"
  *
@@ -121,87 +120,6 @@ function tokNeedWords(need) {
   const keywords = (need.keywords || []).map((k) => String(k).toLowerCase());
   const parts = [need.pt, need.kind === "token" || need.kind == null ? colours : "", what].filter(Boolean);
   return parts.join(" ") + (keywords.length ? ` with ${keywords.join(", ")}` : "");
-}
-
-/** "Made by Hornet Queen and Mitotic Slime", the rest folded away after two ("and 3 more"). */
-function tokMadeBy(madeBy) {
-  const names = (madeBy || []).map((m) => m.section === "Sideboard" ? `${m.name} (sideboard)` : m.name);
-  if (!names.length) return null;
-  if (names.length <= 2) return el("p", { class: "token-need-made", text: `Made by ${names.join(" and ")}` });
-  return el("div", { class: "token-need-made" }, el("span", { text: `Made by ${names.slice(0, 2).join(", ")} ` }),
-    el("details", {}, el("summary", { text: `and ${names.length - 2} more` }),
-      el("p", { text: names.slice(2).join(", ") })));
-}
-
-/** One need of a deck: picture, name and characteristics, who makes it, its state, the cards to grab and
- * the stand-ins, with why each stand-in differs. faces (tokFacesUsed of all the deck's needs) adds whether
- * a double-sided card to grab is needed both ways up. */
-function tokenNeed(need, faces = null) {
-  const cards = need.cards || [], standIns = need.stand_ins || [], incoming = need.incoming || [];
-  const desc = need.key && String(need.key).startsWith("name:") ? "" : tokNeedWords(need);
-  // A token without a picture of its own shows example art of a token with its name, labelled as such.
-  const example = !need.image && need.example ? need.example : null;
-  return el("li", { class: `token-need token-need-${need.state}` },
-    example ? el("span", { class: "token-need-pic" }, tokenThumb(example, 64, need.pt),
-      el("small", { class: "token-need-example", text: "Example art" })) : tokenThumb(need.image, 64, need.pt),
-    el("div", { class: "token-need-body" },
-      el("p", { class: "token-need-name" }, el("b", { text: need.name }), desc ? ` ${desc}` : null),
-      tokMadeBy(need.made_by),
-      // Whose side it lands on, read from the cards' text (E7-S23): said only when it may be the opponent's.
-      need.side_words ? el("p", { class: `token-need-side token-need-side-${need.side}`, text: need.side_words }) : null,
-      el("p", { class: "token-need-state" }, tokenStateChip(need.state, need.words)),
-      need.forge && typeof tokenPeakLine === "function" ? tokenPeakLine(need.forge) : null,   // E7-S08, token-peaks.js
-      cards.length ? el("ul", { class: "token-grab", "aria-label": "Grab" }, cards.map((card) => el("li", {},
-        `Grab ${tokCardWords(card, faces)}`,
-        card.also_for && card.also_for.length ? ` (same card as for ${card.also_for.join(" and ")})` : null,
-        card.shared && card.shared.length ? el("small", { class: "tok-shared",
-          text: `Also used by ${card.shared.map((h) => h.title).join(" and ")}, with too few cards for all of them` }) : null,
-        card.verdict === "check" && card.why && card.why.length ? el("small", { text: card.why.join("; ") }) : null))) : null,
-      (need.in_use || []).length ? el("ul", { class: "token-grab", "aria-label": "In use" }, need.in_use.map((item) =>
-        el("li", { text: `In use: ${tokLabel(item)} ×${item.quantity}, packed in ${item.decks.join(" and ")}` }))) : null,
-      incoming.length ? el("ul", { class: "token-grab", "aria-label": "On the way" }, incoming.map((item) => el("li", {
-        text: `On the way: ${tokLabel(item)} ×${item.quantity} (order ${item.order})` }))) : null,
-      standIns.length ? el("div", { class: "token-stand-ins" }, el("p", { class: "sub", text: "Stand-ins" }),
-        el("ul", { class: "token-grab" }, standIns.map((card) => el("li", {}, tokCardWords(card),
-          card.why && card.why.length ? el("small", { text: card.why.join("; ") }) : null)))) : null));
-}
-
-/** The counters and dice a deck's cards call for (deck_tokens's "counters", lib/tokens/counters.py, E7-S24),
- * read-only and approximate: each kind with the cards that use it, the rest folded away after two. null when
- * there are none. Owned dice and counters aren't recorded yet, so nothing says whether they're covered. */
-function tokenCountersPart(counters) {
-  const needs = (counters && counters.needs) || [];
-  if (!needs.length) return null;
-  const where = { player: " (on players)", die: "" };
-  const usedBy = (madeBy) => {
-    const names = (madeBy || []).map((m) => m.section === "Sideboard" ? `${m.name} (sideboard)` : m.name);
-    return names.length <= 2 ? `Used by ${names.join(" and ")}`
-      : `Used by ${names.slice(0, 2).join(", ")} and ${plural(names.length - 2, "more card")}`;
-  };
-  return el("div", { class: "deck-counters" },
-    el("h3", { class: "deck-tokens-group", text: "Counters and dice" }),
-    el("ul", { class: "token-counters" }, needs.map((need) => el("li", { class: `token-counter token-counter-${need.group}` },
-      el("b", { text: `${need.name}${where[need.group] || ""}` }),
-      need.sideboard_only ? " (sideboard only)" : null,
-      need.cover ? [" ", diceCoverChip(need.cover)] : null,
-      el("small", { class: "token-need-made", text: usedBy(need.made_by) }),
-      need.cover && need.cover.words ? el("small", { class: "token-need-cover", text: need.cover.words }) : null))),
-    counters.owned && counters.owned.words ? el("p", { class: "sub dice-owned", text: counters.owned.words }) : null,
-    counters.note ? el("details", { class: "more token-note" }, el("summary", { text: "How are counters worked out?" }),
-      el("p", { class: "sub", text: counters.note })) : null);
-}
-
-/** A deck's token needs (deck_tokens's "needs") as a list, in the server's order. faces: tokFacesUsed of
- * all the deck's needs (tokenNeed). */
-function tokenNeedList(needs, faces = null) {
-  return el("ul", { class: "token-needs" }, (needs || []).map((need) => tokenNeed(need, faces)));
-}
-
-/** "4 ready · 1 to check · 1 you don't have" from a deck_tokens result's counts. */
-function tokCountWords(counts) {
-  const c = counts || {};
-  return [[c.ready, "ready"], [c.check, "to check"], [c.differs, "different"], [c.incoming, "on the way"],
-    [c.none, "you don't have"]].filter(([n]) => n > 0).map(([n, words]) => `${n} ${words}`).join(" · ");
 }
 
 /** Text to compare names by: no accents, no case, no space at the ends (like cards.fold on the server). */

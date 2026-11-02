@@ -490,22 +490,57 @@ class TokensUiTests(unittest.TestCase):
           const section = tokensSection({tokens: deckTokensResult});
           main.append(section);
           const text = section.textContent;
-          for (const words of ['Tokens and reminders', "2 ready · 1 to check · 1 different · 1 on the way · 1 you don't have",
-                               'Raccoon 3/3 green creature', 'Made by Sylvan Scavenging, B ', 'and 2 more',
+          for (const words of ['Tokens and reminders', "1 to check · 1 different · 1 on the way · 1 you don't have",
+                               'Raccoon 3/3', '3/3 green creature', 'Made by Sylvan Scavenging, B, C, D',
                                'None owned · closest: Rabbit / Rabbit ×2', 'Stand-ins', 'Rabbit / Rabbit ×2, Rabbit side',
                                'On the way: Fish ×2 (order 2026-10-07-shop-a)', 'None owned yet: 2 on the way',
-                               'Insect 1/1 green creature with flying, deathtouch',
+                               '1/1 green creature with flying, deathtouch',
                                'Different token: your card says no deathtouch',
                                'Grab Elf Warrior / Cat ×1, Cat side', 'colour not recorded',
                                'Grab Zombie / Zombie Knight ×8, Zombie side only, can be sleeved (same card as for The Monarch)',
-                               'Have it: 8 cards', 'Only for sideboard cards', 'Grab Ooze ×1', 'Makes copies: 1 card',
-                               'Gandalf, Westward Voyager', "May also make things Scryfall doesn't link: 1 card", 'Elrond',
-                               'Edit your tokens']) {
+                               'Have it: 8 cards', 'Only for sideboard cards (1)', 'Grab Ooze ×1', "What Deck Lab can't see, and how it works these out",
+                               'Makes copies (1 card): ', 'Gandalf, Westward Voyager', "May also make things Scryfall doesn't link (1 card): ",
+                               'Elrond', 'Worked out from Scryfall links.', 'Edit your tokens']) {
             assert(text.includes(words), words);
           }
+          assert(!section.querySelector('.deck-tokens-summary').textContent.includes('ready'), 'only what needs a look');
           assert.equal(section.id, 'sec-tokens');
           assert(section.querySelector('.token-note'));
           assert.equal(section.querySelectorAll('.token-needs').length, 2);     // the sideboard's group apart
+          // E7-S33: one compact row per token, a native <details>: the summary has the picture, name and P/T, a
+          // chip only when it isn't ready (TOK_STATES' short words) and a short count; the body has the rest.
+          const rows = section.querySelectorAll('.token-need');
+          const rowOf = (name) => rows.find(r => r.querySelector('.token-need-name').querySelector('b').textContent === name);
+          const head = (name) => rowOf(name).querySelector('.token-row');
+          for (const r of rows) {
+            const details = r.children.find(c => c.tag === 'details');
+            assert(details, 'each row is a details');
+            assert.equal(details.getAttribute('open'), null);
+            assert.equal(details.children[0].tag, 'summary');
+            assert(details.children[0].querySelector('.tok-thumb'));
+          }
+          same(['Raccoon', 'Fish', 'Insect', 'Cat', 'Zombie'].map(n => head(n).querySelectorAll('.status').map(c => c.textContent)),
+               [['None owned'], ['On the way'], ['Different token'], ['Details to check'], []]);
+          assert.equal(head('Zombie').querySelector('.token-row-count').textContent, '8 cards');
+          assert.equal(head('Ooze').querySelector('.token-row-count').textContent, '1 card');
+          assert.equal(head('Raccoon').querySelector('.token-row-count'), null);
+          assert(!head('Raccoon').textContent.includes('green creature'));
+          const body = rowOf('Raccoon').querySelector('.token-need-body');
+          for (const words of ['3/3 green creature', 'Made by Sylvan Scavenging, B, C, D', 'None owned · closest: Rabbit / Rabbit ×2',
+                               'Stand-ins', 'a close name']) assert(body.textContent.includes(words), words);
+          assert.equal(rowOf('Zombie').querySelector('.token-need-state').textContent, 'Have it: 8 cards');
+          // The sideboard's group is a closed disclosure with its count.
+          const groups = section.querySelectorAll('.deck-tokens-group');
+          assert.equal(groups[0].tag, 'details');
+          assert.equal(groups[0].getAttribute('open'), null);
+          assert.equal(groups[0].querySelector('summary').textContent, 'Only for sideboard cards (1)');
+          const unseen = section.querySelector('.deck-tokens-more');
+          assert.equal(unseen.tag, 'details');
+          assert.equal(unseen.querySelector('summary').textContent, "What Deck Lab can't see, and how it works these out");
+          // Every token ready: no summary line, and no chip on the row.
+          const ready = tokensSection({tokens: {...deckTokensResult, needs: [needs[4]], counts: {kinds: 1, ready: 1}}});
+          assert.equal(ready.querySelector('.deck-tokens-summary'), null);
+          assert.equal(ready.querySelector('.token-row').querySelectorAll('.status').length, 0);
           // No tokens, unavailable, or an error: one line each; a pairing (null) has no part.
           for (const [tokens, words] of [[{needs: [], copies: [], unlisted: [], note: 'n', counts: {kinds: 0}},
                                           'No tokens or reminders are linked'],
@@ -534,6 +569,33 @@ class TokensUiTests(unittest.TestCase):
           assert.equal(tokenStateChip('none').textContent, 'None owned');
         """)
 
+    def test_deck_page_token_rows_keep_forge_estimates_short(self):
+        self.run_js(self.TOKENS + """
+          // E7-S33: the row's summary has a short labelled estimate, its body the full sentence; where the counts
+          // come from (or why there are none) is in the one closed "What Deck Lab can't see, and how it works these out" disclosure.
+          clear(main);
+          const words = 'Forge games peaked at 7; most games at most 4 (10 games of 100 made one)';
+          const zed = need('Zombie', 'ready', 'Have it: 8 cards', {usable: 8, cards: [card('Zombie', '', 8, 'front', 'exact')],
+            forge: {name: 'Zombie', games: 10, of: 100, peak: 7, most: 4, together: false, more: 0, words}});
+          const section = tokensSection({tokens: {...deckTokensResult, needs: [zed], copies: [], unlisted: [], note: '',
+            counts: {kinds: 1, ready: 1}, forge: {games: 100, matchups: 2, untallied: 0, note: 'Peaks from the card log.'}}});
+          const head = section.querySelector('.token-row');
+          assert.equal(head.querySelector('.token-row-count').textContent, '8 cards');
+          assert.equal(head.querySelector('.token-row-forge').textContent, 'Forge est. ≤4');
+          assert(!head.textContent.includes('peaked'));
+          const body = section.querySelector('.token-need-body');
+          assert(body.textContent.includes('Estimate from simulated games: ' + words));
+          const unseen = section.querySelectorAll('.deck-tokens-more');
+          assert.equal(unseen.length, 1);
+          assert(unseen[0].textContent.includes('Suggested counts from 100 simulated Forge games in 2 matchups: approximate'));
+          assert(unseen[0].textContent.includes('Peaks from the card log.'));
+          // No saved games: the reason is folded there too, and the row has no estimate.
+          const none = tokensSection({tokens: {...deckTokensResult, needs: [{...zed, forge: undefined}], copies: [], unlisted: [],
+            note: '', counts: {kinds: 1, ready: 1}, forge: {games: 0, why: 'No suggested counts yet.'}}});
+          assert.equal(none.querySelector('.token-row-forge'), null);
+          assert(none.querySelector('.deck-tokens-more').textContent.includes('No suggested counts yet.'));
+        """)
+
     def test_deck_page_says_when_a_token_may_be_the_opponents(self):
         self.run_js(self.TOKENS + """
           // E7-S23: the server's side words under "Made by", only for a token that may land on the other side.
@@ -544,20 +606,29 @@ class TokensUiTests(unittest.TestCase):
             need('Elf', 'none', 'None owned', {side: 'own', side_from: [], side_words: null}),
             need('Treasure', 'none', 'None owned')]}});
           main.append(section);
-          const lines = section.querySelectorAll('.token-need-side');
-          assert.equal(lines.length, 1);
-          assert.equal(lines[0].textContent, words);
-          assert(lines[0].getAttribute('class').includes('token-need-side-opponent'));
-          // Slice 2: the opponent's token under its own heading, after the deck's own; "either" stays with them.
-          const heads = section.querySelectorAll('h3').map(h => h.textContent);
-          assert(heads.includes('For your opponent (approximate)'), heads);
+          // Slice 2: the opponent's token in its own closed group, after the deck's own; the group's heading says
+          // whose it is, so its row has no side line (E7-S33). "either" stays with the deck's own, marked.
+          assert.equal(section.querySelectorAll('.token-need-side').length, 0);
+          assert(!section.textContent.includes(words));
+          const groups = section.querySelectorAll('.deck-tokens-opponent');
+          assert.equal(groups.length, 1);
+          assert.equal(groups[0].tag, 'details');
+          assert.equal(groups[0].getAttribute('open'), null);
+          assert.equal(groups[0].querySelector('summary').textContent, 'For your opponent (1, approximate)');
+          assert(groups[0].textContent.includes('hand them across the table'));
           const lists = section.querySelectorAll('.token-needs');
           assert.equal(lists.length, 2);
           same(lists[0].querySelectorAll('.token-need-name').map(n => n.querySelector('b').textContent), ['Elf', 'Treasure']);
           same(lists[1].querySelectorAll('.token-need-name').map(n => n.querySelector('b').textContent), ['Spirit']);
+          const maybeWords = "Maybe your opponent's: X's text can give it to another player (approximate)";
           const maybe = tokensSection({tokens: {...deckTokensResult, needs: [need('Insect', 'none', 'None owned',
-            {side: 'either', side_words: "Maybe your opponent's: X's text can give it to another player (approximate)"})]}});
-          assert(!maybe.textContent.includes('For your opponent (approximate)'));
+            {side: 'either', side_words: maybeWords})]}});
+          assert(!maybe.textContent.includes('For your opponent ('));
+          same(maybe.querySelector('.token-row').querySelectorAll('.status').map(c => c.textContent), ['None owned', "Maybe opponent's"]);
+          const side = maybe.querySelectorAll('.token-need-side');
+          assert.equal(side.length, 1);
+          assert.equal(side[0].textContent, maybeWords);
+          assert(side[0].getAttribute('class').includes('token-need-side-either'));
           // The Overview's chip leaves the opponent's token out: only Elf and Treasure are the deck's problems.
           const spirit = need('Spirit', 'none', 'None owned', {side: 'opponent'});
           assert.equal(deckTokensChip({tokens: {needs: [spirit, need('Elf', 'none', 'None owned', {side: 'own'})],
@@ -602,6 +673,12 @@ class TokensUiTests(unittest.TestCase):
           assert.equal(items[2].querySelector('small').textContent, 'Used by Roller');
           assert(section.textContent.includes('Read from the cards.'));
           assert(section.textContent.includes('No tokens or reminders are linked'));
+          // E7-S33: one closed disclosure whose summary lists the kinds; no chip when nothing says it's not covered.
+          const part = section.querySelector('.deck-counters');
+          assert.equal(part.tag, 'details');
+          assert.equal(part.getAttribute('open'), null);
+          assert.equal(part.querySelector('summary').textContent, 'Counters and dice: +1/+1, Poison, d20');
+          assert.equal(part.querySelector('summary').querySelectorAll('.status').length, 0);
           // None (or an older answer without the key): no part at all.
           for (const c of [{needs: [], note: 'x'}, undefined]) {
             section = tokensSection({tokens: {...deckTokensResult, counters: c}});
@@ -623,10 +700,31 @@ class TokensUiTests(unittest.TestCase):
           const section = tokensSection(data);
           main.append(section);
           const text = section.textContent;
-          for (const words of ['Packed: 2 Zombie // Zombie Knight (Zombie side only, can be sleeved); 1 Treasure (no token card matches)',
+          for (const words of ['Packed: 2 Zombie // Zombie Knight; 1 Treasure (no token card matches)',
+                               '2 Zombie // Zombie Knight: Zombie side only, can be sleeved',
                                'In use: Spirit ×1, packed in Other Deck', 'All yours are packed in Other Deck']) {
             assert(text.includes(words), words);
           }
+          // The sleeving words are folded under the packed line (E7-S33); the Zombie row counts what this box packs.
+          assert.equal(section.querySelector('.deck-tokens-packed-sides').tag, 'details');
+          assert.equal(section.querySelector('.deck-tokens-packed-sides').querySelector('summary').textContent,
+            'Packed: 2 Zombie // Zombie Knight; 1 Treasure (no token card matches)');
+          const named = (name) => section.querySelectorAll('.token-need').find(r => r.querySelector('.token-need-name').querySelector('b').textContent === name);
+          assert.equal(named('Zombie').querySelector('.token-row-count').textContent, 'Packed 2');
+          same(named('Spirit').querySelector('.token-row').querySelectorAll('.status').map(c => c.textContent), ['Packed in other decks']);
+          // The summary counts that token as its row does, not as one "you don't have".
+          const lone = tokensSection({...data, tokens: {...data.tokens, needs: [used], counts: {kinds: 1, none: 1}}});
+          assert.equal(lone.querySelector('.deck-tokens-summary').textContent, '1 packed in other decks');
+          assert.equal(tokCountWords({none: 2}, [used]), "1 you don't have · 1 packed in other decks");
+          // Two Zombie rows that read the same are one Grab line, but "Packed N" counts what the line packs of both.
+          const twoRows = need('Zombie', 'ready', 'Have it: 8 cards', {usable: 8, cards: [
+            {...card('Zombie', '', 4, 'front', 'exact'), row: 1}, {...card('Zombie', '', 4, 'front', 'exact'), row: 2}]});
+          const both = {...packed, lines: [{text: '4 Zombie', quantity: 4, rows: [{row: 1, front: 'Zombie', back: '', quantity: 2},
+            {row: 2, front: 'Zombie', back: '', quantity: 2}]}]};
+          const merged = tokensSection({...data, tokens: {...data.tokens, packed: both, needs: [twoRows], counts: {kinds: 1, ready: 1}}});
+          assert.equal(merged.querySelectorAll('.token-grab')[0].querySelectorAll('li').length, 1);
+          assert(merged.textContent.includes('Grab Zombie ×8'));
+          assert.equal(merged.querySelector('.token-row-count').textContent, 'Packed 4');
           const sent = [];
           apiWrite = async (path, body) => { sent.push([path, body]); return {saved: true}; };
           route = () => {};
@@ -716,7 +814,7 @@ class TokensUiTests(unittest.TestCase):
             lines: [{text: '2 Zombie // Zombie Knight', quantity: 2, rows: [{row: 0, front: 'Zombie', back: 'Zombie Knight', quantity: 2}]}]};
           const section = tokensSection({summary: {id: 'casual/zed', player: 'user'}, tokens: {...deckTokensResult, needs: both, packed}});
           const text = section.textContent;
-          for (const words of ['Packed: 2 Zombie // Zombie Knight (both sides used)',
+          for (const words of ['Packed: 2 Zombie // Zombie Knight', '2 Zombie // Zombie Knight: both sides used',
                                'Grab Zombie / Zombie Knight ×8, Zombie side (both sides used)',
                                'Grab Zombie / Zombie Knight ×8, Zombie Knight side (both sides used)']) {
             assert(text.includes(words), words);

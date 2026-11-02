@@ -99,9 +99,13 @@ class DiceUiTests(unittest.TestCase):
           const section = tokensSection({tokens: {...deckTokensResult, needs: [], counters}});
           main.append(section);
           const items = [...section.querySelectorAll('.token-counter')];
-          assert.deepEqual(items.map((i) => i.querySelector('.dice-cover').textContent),
-            ['Covered', 'Any-kind stands in', 'Not covered']);
+          // E7-S33: a chip only where nothing covers the need, in the row and on the part's closed summary.
+          assert.deepEqual(items.map((i) => i.querySelector('.dice-cover')?.textContent ?? null), [null, null, 'Not covered']);
           assert(items[2].querySelector('.status-warn'));
+          const summary = section.querySelector('.deck-counters').querySelector('summary');
+          assert.equal(summary.textContent, 'Counters and dice: Poison, +1/+1, d6 Not covered');
+          assert.equal(summary.querySelectorAll('.status').length, 1);
+          assert.equal(items[1].querySelector('.token-need-cover').textContent, 'A die or generic counter stands in');
           assert.equal(items[0].querySelector('.token-need-cover').textContent, 'You have 5 poison counters');
           assert(section.textContent.includes('You have 2 dice and 5 counters'));
         """)

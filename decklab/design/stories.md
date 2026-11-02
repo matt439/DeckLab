@@ -37,18 +37,18 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 |---|---:|---:|---:|---:|---:|
 | [E1: Find, plan and choose decks](#e1-find-plan-and-choose-decks) | 18 | 17 | 0 | 1 | 0 |
 | [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 21 | 18 | 2 | 0 | 1 |
-| [E3: Test a deck](#e3-test-a-deck) | 18 | 15 | 3 | 0 | 0 |
+| [E3: Test a deck](#e3-test-a-deck) | 22 | 17 | 3 | 2 | 0 |
 | [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 23 | 19 | 1 | 2 | 1 |
-| [E5: Decide what to buy](#e5-decide-what-to-buy) | 28 | 21 | 0 | 5 | 2 |
+| [E5: Decide what to buy](#e5-decide-what-to-buy) | 29 | 22 | 0 | 5 | 2 |
 | [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 23 | 21 | 0 | 0 | 2 |
-| [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 28 | 27 | 1 | 0 | 0 |
+| [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 29 | 28 | 1 | 0 | 0 |
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 19 | 16 | 0 | 1 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 24 | 18 | 0 | 5 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 35 | 31 | 1 | 1 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 53 | 36 | 5 | 9 | 3 |
-| **Total** | **290** | **239** | **13** | **24** | **14** |
+| **Total** | **296** | **243** | **13** | **26** | **14** |
 
-Counted from the story headers on 2026-10-29 after the source-aware two-player and pod counters, alongside the current feature and maintenance work. The reviews added five feature stories and eight hygiene stories, then the fixture-only entry-point story E11-S44, and corrected E1-S12 from missing to partial. Rechecked 2026-10-29: E1-S12 is built and E11-S39 partial (its database qualification pending). The TODO audit of 2026-10-29 added fifteen missing stories (twelve from the audit: E1-S27, E1-S28, E2-S27, E3-S25, E3-S26, E5-S25, E6-S25, E6-S26, E9-S26, E9-S27, E11-S45, E11-S46), then Matt's three UI requests (E3-S27, E5-S26, E6-S27), and corrected E7-S32 from missing to partial (its recognition spike and CLI are built). Matt closed E11-S16 as built the same day, and E3-S27, E5-S26, E6-S25, E6-S27 and E11-S46 were built the same day (E11-S12 stays partial after a further slice). Later the same day E5-S25 and E6-S26 were built, E1-S27's first slice (the library) made it partial, and E11-S12 and E3-S26 were built. E1-S27's Overview slices then finished it, and E2-S27 and E9-S27 were built. E1-S28 was built the same day. E3-S25's first slice (its replacements API, 2026-10-29) made it partial. Its dual-lands slice (2026-10-29) finished it. E11-S45 was built the same day. Recounted 2026-10-30: E7-S23's first slice (the token side on deck pages and the printout) made it partial. E7-S24's read-only slice (the counters and dice a deck's cards use) made it partial too. E9-S26's free cards by role on the Stats tab made it partial, leaving its cited role targets to Matt's choice of template; with the Command Zone template's targets (2026-10-31) it is built. Recounted 2026-10-31: E11-S47 (built 2026-10-30) was missing from the E11 row. E4-S16 was built (sideboard-plan tests). E7-S23's second slice (the opponent's tokens under their own heading and counted apart in the library line and the packing ticks) finished it. E7-S08 was built (token counts suggested from saved Forge games), and E9-S07 too (new decks and narrowed pages). Later on 2026-10-31 E11-S39 was built (its database qualification ran), E11-S31 became partial (global search built, its device check left), E11-S30 kept its device gate, and E7-S24 was built once migration 0020 was applied. Matt's self-hosting decisions of 2026-10-31 (Windows first; strangers install their own, family and friends join as members; release zips; currency as a setting) added E11-S48 to E11-S53, all missing; E11-S48 was built the same day, in three slices. Matt's expansion review of 2026-10-31 added twelve missing stories for work no story covered: E1-S29, E4-S27, E5-S27 to E5-S30, E9-S28, E9-S29 and E11-S54 to E11-S57. Matt's request of 2026-11-01 to run the live server on Linux added E11-S58, built the same day.
+Counted from the story headers on 2026-10-29 after the source-aware two-player and pod counters, alongside the current feature and maintenance work. The reviews added five feature stories and eight hygiene stories, then the fixture-only entry-point story E11-S44, and corrected E1-S12 from missing to partial. Rechecked 2026-10-29: E1-S12 is built and E11-S39 partial (its database qualification pending). The TODO audit of 2026-10-29 added fifteen missing stories (twelve from the audit: E1-S27, E1-S28, E2-S27, E3-S25, E3-S26, E5-S25, E6-S25, E6-S26, E9-S26, E9-S27, E11-S45, E11-S46), then Matt's three UI requests (E3-S27, E5-S26, E6-S27), and corrected E7-S32 from missing to partial (its recognition spike and CLI are built). Matt closed E11-S16 as built the same day, and E3-S27, E5-S26, E6-S25, E6-S27 and E11-S46 were built the same day (E11-S12 stays partial after a further slice). Later the same day E5-S25 and E6-S26 were built, E1-S27's first slice (the library) made it partial, and E11-S12 and E3-S26 were built. E1-S27's Overview slices then finished it, and E2-S27 and E9-S27 were built. E1-S28 was built the same day. E3-S25's first slice (its replacements API, 2026-10-29) made it partial. Its dual-lands slice (2026-10-29) finished it. E11-S45 was built the same day. Recounted 2026-10-30: E7-S23's first slice (the token side on deck pages and the printout) made it partial. E7-S24's read-only slice (the counters and dice a deck's cards use) made it partial too. E9-S26's free cards by role on the Stats tab made it partial, leaving its cited role targets to Matt's choice of template; with the Command Zone template's targets (2026-10-31) it is built. Recounted 2026-10-31: E11-S47 (built 2026-10-30) was missing from the E11 row. E4-S16 was built (sideboard-plan tests). E7-S23's second slice (the opponent's tokens under their own heading and counted apart in the library line and the packing ticks) finished it. E7-S08 was built (token counts suggested from saved Forge games), and E9-S07 too (new decks and narrowed pages). Later on 2026-10-31 E11-S39 was built (its database qualification ran), E11-S31 became partial (global search built, its device check left), E11-S30 kept its device gate, and E7-S24 was built once migration 0020 was applied. Matt's self-hosting decisions of 2026-10-31 (Windows first; strangers install their own, family and friends join as members; release zips; currency as a setting) added E11-S48 to E11-S53, all missing; E11-S48 was built the same day, in three slices. Matt's expansion review of 2026-10-31 added twelve missing stories for work no story covered: E1-S29, E4-S27, E5-S27 to E5-S30, E9-S28, E9-S29 and E11-S54 to E11-S57. Matt's request of 2026-11-01 to run the live server on Linux added E11-S58, built the same day. Matt's deck-page question of 2026-11-02 added E5-S31, built the same day. Recounted 2026-11-02: E7-S33 (built 2026-11-02) was missing from the E7 row. The gauntlet design of 2026-11-02 added E3-S28 to E3-S31; E3-S28 and E3-S29 were built the same day, and E3-S30 and E3-S31 are missing.
 
 ---
 
@@ -719,9 +719,9 @@ Now: built 2026-10-29 ([HISTORY.md](../HISTORY.md#departed-cards-in-how-to-play-
 
 ## E3: Test a deck
 
-How a player finds out whether a deck works before playing or buying cards: instant stats on the deck page's Stats tab, practice games on the Practice tab, Forge matchups and Rankings (#/matchups, #/matchup), the field rank on the Matchups tab, paired tests of a change from the editor (#/variant), and the simulations setting on #/settings. Matchups, fields, rankings and tests follow deck privacy: each viewer sees only results whose every side they may see, a member's field is their own space plus Public spaces, and a run may be stopped by whoever started it, anyone whose space's deck it uses, or an admin. Not yet covered: 4-player Commander pods, sideboard testing, comparing real games with Forge's predictions, and members asking for a run while only admins may start one. Forge results are files outside the database's backups by decision, since they can be replayed.
+How a player finds out whether a deck works before playing or buying cards: instant stats on the deck page's Stats tab, practice games on the Practice tab, Forge matchups and Rankings (#/matchups, #/matchup), the field rank and the gauntlet against popular outside decks on the Matchups tab, paired tests of a change from the editor (#/variant), and the simulations setting on #/settings. Matchups, fields, rankings and tests follow deck privacy: each viewer sees only results whose every side they may see, a member's field is their own space plus Public spaces, and a run may be stopped by whoever started it, anyone whose space's deck it uses, or an admin. Not yet covered: 4-player Commander pods, sideboard testing, comparing real games with Forge's predictions, and members asking for a run while only admins may start one. Forge results are files outside the database's backups by decision, since they can be replayed.
 
-Open: E3-S13, E3-S19, E3-S23.
+Open: E3-S13, E3-S19, E3-S23, E3-S30, E3-S31.
 
 **E3-S01** · Matt · must · M · built
 
@@ -921,7 +921,7 @@ Evidence:
 - `decklab/web/matchups-overview.js`: matrixDecks (built from the viewer's visible library)
 - `decklab/lib/forge/cli_evaluate.py`: `forge field --opponents` (command line only)
 
-Gap: there's no group run of chosen opponents or averaged view on the page (criterion 2); the command line's `forge field --opponents` only narrows a field run to lists already in the field. This needs the same chosen-field mechanism as E3-S23.
+Gap: there's no group run of chosen opponents or averaged view on the page (criterion 2); the command line's `forge field --opponents` only narrows a field run to lists already in the field. This needs the same chosen-field mechanism as E3-S23; E3-S31 builds it on the gauntlet's `opponent_entries`.
 
 **E3-S20** · Claude Code · should · L · built
 
@@ -1051,6 +1051,61 @@ As a deck builder reading the Matchups tab, I want the "Show matchups for" picke
 Evidence of the gap (Matt, 2026-10-29): `decklab/web/matchups-overview.js` drawHome builds a native `<select id="mu-deck-pick">` whose options hold only `shortNames(decks)` text, with the title as a tooltip; a native option can't show art or pips. The library already has each deck's colours and picture.
 
 Built (2026-10-29): `web/deck-picker.js` `deckListbox` replaces the select with a button and popover listbox (`aria-activedescendant`, arrows, Home/End, type-ahead, Escape), drawing each deck's picture (`library.js` `deckArtThumb`, falling back to its tint) and pips; held Enter after a choice doesn't reopen it (`keyboardMenuButton`). `HOME_DECK_KEY`, `choose()` and the decks offered are unchanged. Tests: `decklab/tests/test_matchup_deck_picker_ui.py`. The two-deck Play pickers can adopt it later. See [HISTORY.md](../HISTORY.md#matchups-deck-picker-with-pictures-and-pips-2026-10-29-e3-s27).
+
+**E3-S28** · Matt · should · L · built
+
+As a deck builder whose field holds only a handful of household decks, I want to play a deck against a balanced sample of popular outside decks and read the results by colour and style, so that I know what kinds of deck it beats and loses to, not just how it ranks at home.
+
+- Given the command line on the PC, when I run `python -m decklab.lib.forge gauntlet build`, then a catalogue is written of EDHREC's average decks for its top commanders (`core` and `upgraded`), the newest MTGJSON Commander precons and Forge's bundled 60-card decks, each fixed, screened for the AI, tagged with its colours and style, and the build prints its counts and every deck left out with why; no page request ever fetches.
+- Given EDHREC, when the build fetches, then it asks one request a second and caches the pages (average decks 30 days), and a failed fetch keeps the older copy.
+- Given a `core` deck or precon whose minimum bracket is above 2, when it's catalogued, then it's re-tiered to `upgraded` with the reason in its fixes.
+- Given filters, a size and a seed, when I run `gauntlet sample`, then the same sample is drawn every time, covering the colour groups and styles where it can, and saved under an id the page plays too.
+- Given a house deck and a sample, when I run `gauntlet play` and `gauntlet view`, then its games are saved apart from the matchups' results (never in the field, Rankings, the ratings or per-card stats), and the view shows each opponent and each group's average with its range, saying it covers the sampled opponents only.
+
+Now: built 2026-11-02 to the design in [gauntlet.md](gauntlet.md) ([HISTORY.md](../HISTORY.md#the-gauntlet-a-deck-against-popular-outside-decks-2026-11-02-e3-s28-e3-s29)); its decks are gitignored files, never Deck Lab decks or inventory. A parallel Commander run's throughput isn't measured yet, and the live server PC has no catalogue until one is built there.
+
+Evidence:
+- `decklab/lib/gauntlet/catalogue.py`: build, load, save; `edhrec_source.py`, `precon_source.py`, `forge_source.py`, `fixing.py` (retier, MAX_UNPLAYABLE_SHARE)
+- `decklab/lib/gauntlet/tags.py`: tag, STYLES; `decklab/lib/gauntlet/sample.py`: choose, sample_id, DEFAULT_SIZE
+- `decklab/lib/forge/gauntlet.py`: RESULTS_DIR, entries, plan, run, view; `decklab/lib/forge/field.py`: run_field's `opponent_entries`; `decklab/lib/forge/lists.py`: entry_from_cards
+- `decklab/lib/forge/cli_gauntlet.py`: `gauntlet build|list|show|sample|plan|play|view`
+- `decklab/tests/test_gauntlet_sources.py`, `test_gauntlet_fixing.py`, `test_gauntlet_tags.py`, `test_gauntlet_sample.py`, `test_gauntlet_run.py`, `test_gauntlet_together.py`
+
+**E3-S29** · Matt · should · M · built
+
+As a deck builder on the deck page, I want an "Against popular decks" part on the Matchups tab, so that I can start a gauntlet run and read its groups without the command line.
+
+- Given a deck page's Matchups tab, when the format's catalogue exists, then "Against popular decks" offers a sample's size, colour, style and tier choices (in a closed disclosure that says them) and a budget (Quick look, Settle it or Precise: 50, 100 or 200 games an opponent, each with its time estimate), then **Play**; before a catalogue exists it shows the command that builds one.
+- Given the simulations setting, when a viewer can't start runs, then Play is disabled with the reason, naming nobody; a running gauntlet can be stopped by whoever started it, someone of the deck's space or an admin.
+- Given saved results, when shown, then they're grouped by colour, style, tier and number of colours, each group with its opponents, games, range and spread, and a group of one says it isn't a group; then each opponent, hardest first, with where it's from (an EDHREC average deck, linked, with its rank and deck count; an MTGJSON precon; a Forge deck), and EDHREC credited. Opponent rows don't link to matchup pages: they aren't house decks.
+- Given a gauntlet run playing, then the Running list names it ("Gauntlet run of <deck>", linking to the part) to the deck's space, and to an admin of another space only anonymously.
+- Given a deck the viewer may not see, then the answer is the missing deck's 404, and the part never names another house deck.
+
+Now: built 2026-11-02 alongside E3-S28 ([HISTORY.md](../HISTORY.md#the-gauntlet-a-deck-against-popular-outside-decks-2026-11-02-e3-s28-e3-s29)).
+
+Evidence:
+- `decklab/lib/api/gauntlet_page.py`: `GET /api/gauntlet`, `GET /api/gauntlet/catalogue`, `POST /api/gauntlet/run`, `POST /api/gauntlet/stop` (lazy routes in `decklab/lib/feature_routes.py`)
+- `decklab/web/gauntlet.js`, `decklab/web/gauntlet.css` (mounted from `decklab/web/deck.js`)
+- `decklab/lib/api/forge_runs.py`: the Running list's `gauntlet` kind
+- `decklab/tests/test_gauntlet_api.py`, `decklab/tests/test_gauntlet_ui.py`
+
+**E3-S30** · Matt · could · M · missing
+
+As a deck builder testing a swap, I want Test this change to play against a gauntlet sample, so that I know whether the change helps against outside decks as well as the household's.
+
+- Given the editor's Test this change or `forge variant`, when I choose a saved gauntlet sample as what to test against, then the changed list plays the base list's own gauntlet games (the same seeds and seats) from the gauntlet's results folder.
+- Given the answer, when shown, then it gives the difference against the sample and by group, saying it covers those sampled opponents only.
+
+Gap: `variants._opponent_entries` has no `against="gauntlet:<sample>"` yet ([gauntlet.md](gauntlet.md), section 6, "Fit with other work").
+
+**E3-S31** · Matt · could · M · missing
+
+As a player preparing against a space member's Public decks, I want E3-S19's group run of chosen opponents to reuse the gauntlet's run and group view, so that it doesn't need a second chosen-field mechanism.
+
+- Given chosen house or Public decks the viewer may see, when a group run starts, then it plays them through `run_field`'s `opponent_entries` into the ordinary results folder, so its games count in the ratings.
+- Given the results, when shown, then one view gives the deck's average against the chosen group, as the gauntlet's view does.
+
+Gap: no page, API or command passes chosen house decks as `opponent_entries` yet; this closes E3-S19's criterion 2.
 
 ## E4: Get ready, play and learn
 
@@ -1899,6 +1954,17 @@ As a themed-deck player with a wishlist, I want my wishlist cards shown while I 
 
 Gap: the Add panel's ticks are Free copies only, My collection and EDHREC ideas (`web/editor-cards.js`); the Wishlist page (`web/wishlist.js`) doesn't read decks. Owner-only reads keep it inside E10-S11. First slice: the Wishlist page's "short of this card" line.
 
+**E5-S31** · Matt · should · S · built
+
+As a buyer reading a deck's missing cost, I want to know it's for the cheapest printings and what the printings my list names would cost, so that a dear foil commander still to buy doesn't hide behind a small total.
+
+- Given a deck with missing cards, when I see its banner, then the total says it's at the cheapest printings ("12 missing, about A$14.18 at the cheapest printings"), as every live A$ figure prices them (AGENTS.md's default).
+- Given missing copies of a card whose every line names one printing other than the priced one, then the Cards tab's price table and the editor's missing list show its price as listed ("As listed (FIC 207 foil): A$560.00 each"); owned and on-the-way copies aren't counted.
+- Given the listed copies would cost at least A$5 more and at least 50% more than the cheapest for that card, then the banner adds a second line naming the dearest three ("As listed: Y'shtola, Night's Blessed (FIC 207 foil) about A$560.00"), then "and N more" and the total as listed.
+- Given a viewer who may not see the deck's space's inventory, then none of it shows, as the missing counts don't.
+
+Built 2026-11-02: `cards.printing_usd` / `cards.price_aud_printing` (the Collection's own-printing prices use it too), `lib/listed_prices.py` (pool.compare's live rows for a Planned list only, the deck page's and the editor's; never the Play-now list, swaps or precons: `listed_printing`, `listed_finish`, `listed_aud_each`, `listed_aud_missing`, `listed_material`, and `totals.as_listed` / `aud_missing_as_listed` only when material), `web/deck-availability.js`, `web/deck-prices.js`, `web/editor-save.js`. The saved deck text and its table keep the cheapest printing. A card listed in several printings, or with a line naming none, keeps only the cheapest price.
+
 ---
 
 ## E6: Record orders and receive cards
@@ -2615,8 +2681,8 @@ Evidence:
 - `decklab/lib/tokens/__init__.py`: the note that some listed tokens appear only for the opponent; all_parts links don't say who gets the token
 - `decklab/lib/tokens/sides.py` (`card_side`, `side`): reads each making card's rules text sentence by sentence (the sentences naming the token first, else every sentence that creates a token) and says whether the token lands on the deck's own side, the opponent's ("target opponent creates", "under an opponent's control") or either ("its controller creates", "each player creates"), reading only the subject after a clause's last "and" unless it's a joint "you and target opponent each"; a token several cards make is the deck's own only when every card makes it for the deck
 - `decklab/lib/tokens/__init__.py` (`deck_tokens`): each need's `side` (`own`, `opponent` or `either`), `side_from` (the cards that may give it away) and `side_words` ("For your opponent: …" or "Maybe your opponent's: …", always "(approximate)"; None for the deck's own), and the deck printout's line
-- `decklab/web/tokens.js` (`tokenNeed`): the words under a need's "Made by" on the deck page's Tokens part, only when it may be the opponent's
-- `decklab/web/deck.js` (`tokensSection`, `deckTokensChip`): the opponent's tokens under their own "For your opponent (approximate)" heading after the deck's own (an "either" token stays with the deck's own, marked), and left out of the Overview's chip
+- `decklab/web/tokens.js` (`tokenNeed`): the words under a need's "Made by" on the deck page's Tokens part, only when it may be the opponent's. Now (2026-11-02): moved to `decklab/web/deck-tokens.js` (E7-S33), in the opened row's body
+- `decklab/web/deck.js` (`tokensSection`, `deckTokensChip`): the opponent's tokens under their own "For your opponent (approximate)" heading after the deck's own (an "either" token stays with the deck's own, marked), and left out of the Overview's chip. Now (2026-11-02): `tokensSection` moved to `decklab/web/deck-tokens.js` (E7-S33), and the heading is a closed "For your opponent (N, approximate)" disclosure
 - `decklab/lib/tokens/needs.py` (`brief`): the library brief's "opponent", the uncovered tokens only the opponent gets, left out of "none", "differs" and "incoming"; `decklab/web/library.js` (`deckTokens`): their own "For your opponent: …" chip
 - `decklab/web/assembly.js` (`assemblyTokenTasks`): Build decks' and the Packing plan's lines for the opponent's tokens after the deck's own, each starting "For your opponent: ", with the same tick ids
 - `decklab/tests/test_token_sides.py`: the classifier's sentences, the needs' sides from test cards added to the fixture index, the printout, the brief counting them apart, and no token part or brief (so no side) for a viewer outside the space; `test_feature_ui_tokens.py`: the deck page's line and heading, the Overview chip, the library chip and the packing lines; `golden_p4.py`'s "opponent-token-defaults"
@@ -2636,7 +2702,7 @@ As a player, I want our dice and counters recorded and checked against what deck
 Evidence:
 - `decklab/lib/tokens/counters.py` (`text_kinds`, `card_kinds`, `deck_counters`): the counter kinds and dice a list's cards call for, read from each card's (and face's) rules text, reminder text included: the word or P/T right before "counter(s)" ("a shield counter", "a -1/-1 counter", Scryfall's minus sign too), unless it only counts, points or counters a spell ("another counter", "may counter target spell", "Zack Fair's counters"); {E} as energy; "roll a d20" or "two six-sided dice" as a die; planeswalkers' loyalty, battles' defense and Sagas' lore from the type line; and Scryfall keywords printed without their reminder text (undying +1/+1, persist -1/-1, infect -1/-1 and poison, toxic poison, suspend time, ...). Each kind is grouped as on permanents, on players (poison, energy, experience, rad, ticket) or a die, with the cards that use it and whether only sideboard cards do; approximate, and never a count
 - `decklab/lib/tokens/__init__.py` (`deck_tokens`): the result's `counters`, so only viewers who may see the space's inventory get them, as with the deck's tokens; the deck printout's "Counters and dice (approximate)" lines. `lib/api/assembly_ticks.py` leaves them out of the packing plan
-- `decklab/web/tokens.js` (`tokenCountersPart`) and `deck.js`: the deck page's Tokens part lists them under "Counters and dice", read-only, also when the list makes no tokens
+- `decklab/web/tokens.js` (`tokenCountersPart`) and `deck.js`: the deck page's Tokens part lists them under "Counters and dice", read-only, also when the list makes no tokens. Now (2026-11-02): moved to `decklab/web/deck-tokens.js` (E7-S33), one closed "Counters and dice: …" disclosure
 - `decklab/tests/test_token_counters.py`: the kinds and non-kinds from sentences, types, faces and keywords, a deck's needs from test cards added to the fixture index (order, grouping, sideboard-only, nothing else in the tokens answer changing), the printout, and no token part (so no counters) for a viewer outside the space; `test_feature_ui_tokens.py`: the deck page's list; `golden_p4.py`'s "counter-defaults"
 - `decklab/lib/inventory/dice_rules.py`, `ops_dice.py` (`dice.add`, `dice.edit`, `dice.remove`), `pg_dice.py` and migration `0020_dice_counters.sql` (applied 2026-10-31): owned dice and counters as their own per-space inventory part (`dice.csv`, the audited `dice_counter` table), read as none and refused with the migration's name until 0020 is applied; nothing in a decklist, the pool or a table changes (criterion 3)
 - `decklab/lib/api/dice.py` (`GET /api/dice`, `POST /api/dice/save`, the token cards' privacy) and `decklab/web/dice.js`: the Tokens page's Dice and counters panel (criterion 1); `lib/tokens/dice_cover.py` and `deck_page._with_dice`: each counter need marked covered, any-kind stands in or not covered, for the Tokens part's readers only (criterion 2); `python -m decklab.db dice list|add|edit|remove` (`db/inv_dice.py`)
@@ -2811,6 +2877,24 @@ Evidence:
 Gap: Not yet tried on real phone photos or the household's phones (foils, sleeves, glare), for cards or token cards (whose bottom-line layouts are untried). Scanning needs Windows' engine or Tesseract, so a Linux host needs `tesseract-ocr` installed.
 
 Next slice: try it on 10 to 20 real photos on each household phone (a few foils, sleeved and old cards, and a few token cards).
+
+**E7-S33** · Matt · should · S · built
+
+As a player looking at a deck's Cards tab, I want its Tokens part to be short, so that I can see at a glance which tokens need a look without reading a paragraph per token.
+
+- Given every token is ready, when I open the Tokens part, then there's no summary line and no chip on any row; otherwise the summary line names only what needs a look ("1 to check · 1 you don't have"), counting a token whose cards are all packed in other decks as "packed in other decks", as its row says.
+- Given a token, then it's one compact row (at least 44px to tap): a small picture, its name with P/T, a chip in the short state words only when it isn't ready (or "Maybe opponent's" for a token either player may get), and on the right a short count ("8 cards", "Packed 4") and Forge's short estimate ("Forge est. ≤4") when there is one.
+- Given a row, when I open it, then it shows what the token is, everything that makes it, whose side it may land on, the full state words, the full estimate sentence, the cards to grab, in use and on the way, and the stand-ins with why each differs.
+- Given the sideboard-only tokens, the opponent's tokens and the counters and dice, then each is a closed disclosure with its count or kinds ("For your opponent (3, approximate)"; "Counters and dice: +1/+1, Poison", with a chip only for Not covered), and the opponent's rows don't repeat whose they are.
+- Given what Scryfall's links and the saved games can't say (copies, unlinked tokens, how needs are worked out, where suggested counts come from or why there are none), then it's one closed "What Deck Lab can't see, and how it works these out" disclosure.
+- Given an intact product's deck page, then its whole-product packed record is shown once above the rows and each row shows its card count, never "Packed N": the record covers all the product's decks, so a per-deck count would claim more than this deck holds.
+
+Evidence:
+- `decklab/web/deck-tokens.js` (`tokensSection`, `tokenNeedList`, `tokenNeed`, `tokPackedHere`, `tokenCountersPart`, `tokenUnseenPart`, `deckPackedTokens`, with `openPackedTokens` and `mergedTokenCards` moved from `deck.js`): native `<details>` rows, so the words stay on the page for find-in-page and the keyboard; `tokCountWords` now leaves out "ready" and counts a token packed only in other decks apart; "Packed N" is worked out before `mergedTokenCards` joins cards that read the same
+- `decklab/web/token-peaks.js` (`tokenPeakShort`; `tokenPeaksPart` without its own disclosure); `decklab/web/deck.css` (`.token-row`, `.deck-tokens-group`)
+- `decklab/tests/test_feature_ui_tokens.py` (no ready chip or summary, the compact row, the body's words, the groups, the packed line's folded sleeving words, the short estimate, a merged card's packed count, the summary for a token packed elsewhere), `test_product_tokens_ui.py` (a product's rows: card counts, no "Packed N", its record drawn once), `test_dice_counters_ui.py`, `test_token_peaks.py`, `test_deck_page_ui.py`, `test_web_pages.py`
+
+Now (2026-11-02): built ([HISTORY.md](../HISTORY.md#a-shorter-tokens-part-on-the-cards-tab-2026-11-02-e7-s33)). No API change; the Packing plan, Build decks and the Tokens page keep their words.
 
 ---
 

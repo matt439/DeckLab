@@ -1,0 +1,26 @@
+{
+ "header": "Top Commanders",
+ "description": "",
+ "container": {
+  "breadcrumb": [{"/commanders/year": "Commanders"}],
+  "description": null,
+  "json_dict": {
+   "cardlists": [
+    {
+     "header": "Past 2 Years",
+     "tag": "past2years",
+     "cardviews": [
+      {"id": "c7f2c2d5-e052-49e8-b5de-712858c2ea78", "name": "Y'shtola, Night's Blessed", "sanitized": "yshtola-nights-blessed", "slug": "yshtola-nights-blessed", "url": "/commanders/yshtola-nights-blessed", "num_decks": 58631, "potential_decks": 0, "rank": 1},
+      {"id": "a577ba08-0aa8-45be-aa83-d5078770127c", "name": "Edgar Markov", "sanitized": "edgar-markov", "slug": "edgar-markov", "url": "/commanders/edgar-markov", "num_decks": 52441, "potential_decks": 0, "rank": 2},
+      {"name": "Not a commander", "sanitized": "Bad Slug!", "rank": 3},
+      {"id": "00000000-0000-4000-8000-0000000000f5", "name": "Frodo, Adventurous Hobbit // Sam, Loyal Attendant", "sanitized": "frodo-adventurous-hobbit-sam-loyal-attendant", "slug": "frodo-adventurous-hobbit-sam-loyal-attendant", "url": "/commanders/frodo-adventurous-hobbit-sam-loyal-attendant", "num_decks": 20000, "potential_decks": 0, "rank": 40}
+     ],
+     "total_pages": 70,
+     "more": "commanders/year-past2years-1.json"
+    }
+   ]
+  },
+  "keywords": "Top,Commanders",
+  "title": "Top Commanders"
+ }
+}

@@ -26,7 +26,7 @@ Loaded after core.js, library.js and deck-availability.js (the banner and incomi
 core.js's helpers, cards-ui.js's cardRow and cardTile, and once the page runs stats.js's statsSection,
 statsVerdict, tile and drawCharts, guide.js, practice.js, hands.js,
 deck-tools.js's deckTools pieces and deckMatchupsPart, accessories.js's accessoryThumb, kitChip and kitPicker,
-tokens.js's tokenNeedList (token-peaks.js's tokenPeaksPart), editor-deckpage.js's deckActions, savedBox and staleTableBox, and app.js's
+deck-tokens.js's tokensSection, editor-deckpage.js's deckActions, savedBox and staleTableBox, and app.js's
 playerWords and jumpTo. app.js's route() calls showDeck(), and start() calls setUpPeek(). Its card helpers
 (typeGroup, manaCost, cardLink, cardNames, cardThumb, peekLayout, peekable, ...) and pairingLinks() are used
 by stats.js, practice.js, the editor's scripts and the matchup scripts. Nothing here runs at load but its
@@ -68,10 +68,13 @@ function showDeck(params, token) {
   });
 }
 
-/** The tab and filter an address asks for: ?tab= (an old ?part=field link opens Matchups) and ?filter=. */
+/** The tab and filter an address asks for: ?tab= (a ?part=field or ?part=gauntlet link opens Matchups, where
+ * those parts are) and ?filter=. */
 function deckViewOf(params) {
   let tab = params.get("tab");
-  if (!DECK_TABS.some(([name]) => name === tab)) tab = params.get("part") === "field" ? "matchups" : "overview";
+  if (!DECK_TABS.some(([name]) => name === tab)) {
+    tab = ["field", "gauntlet"].includes(params.get("part")) ? "matchups" : "overview";
+  }
   const filter = params.get("filter");
   return { tab, filter: CARD_FILTERS.some(([name]) => name === filter) ? filter : "all" };
 }
@@ -218,7 +221,7 @@ function deckTabParts(name, data, screen) {
   if (name === "cards") return cardsParts(data, screen);
   if (name === "stats") return [statsSection(data)];
   if (name === "practice") return [manualHandsSection(data), practiceSection(data)];
-  return [deckMatchupsPart(data), fieldSection(data), variantTestsSection(data)];     // deck-tools.js, field.js, variant.js
+  return [deckMatchupsPart(data), fieldSection(data), gauntletSection(data), variantTestsSection(data)];     // deck-tools.js, field.js, gauntlet.js, variant.js
 }
 
 /** Write the tab (and the Cards filter) into the address in place: Back still leaves the deck in one step. */
@@ -1050,143 +1053,4 @@ function deckTokensChip(data) {
     : `${plural(nDiffers, "token")} different`);
   return el("p", { class: "deck-tokens-chip" }, el("button", { type: "button", class: "btn btn-quiet",
     onclick: () => openDeckTab("cards", { to: "sec-tokens" }) }, status("warn", parts.join(" · "))));
-}
-
-/** The Tokens part: the tokens and reminders the list's cards make (lib/tokens deck_tokens, for the
- * version shown), each against the token cards owned, then what Scryfall's links can't say. Missing or
- * different tokens are never warnings: at home a stand-in is fine. null for a pairing (no tokens). */
-function tokensSection(data) {
-  const t = data.tokens;
-  if (!t) return null;
-  const section = el("section", { class: "deck-section token-part", id: "sec-tokens", "aria-labelledby": "h-tokens" },
-    el("h2", { id: "h-tokens", text: "Tokens and reminders" }));
-  const edit = el("p", { class: "deck-tokens-edit" }, el("a", { href: "#/tokens", text: "Edit your tokens" }));
-  // Not for this viewer: a plain explanation. A failure is a notice (it came with the page: no Try again).
-  if (t.unavailable || t.error) {
-    section.append(t.unavailable ? el("p", { class: "sub", text: t.unavailable })
-      : el("div", { class: "note note-warn", role: "alert" }, el("p", { text: t.error })));
-    return section;
-  }
-  const needs = t.needs || [], copies = t.copies || [], unlisted = t.unlisted || [];
-  if (!needs.length) {
-    if (t.packed?.product) add(section, [deckPackedTokens(data)]);
-    section.append(el("p", { class: "sub", text: "No tokens or reminders are linked to this list's cards on Scryfall." }));
-  } else {
-    const faces = tokFacesUsed(needs);
-    const merged = needs.map(mergedTokenCards);
-    // E7-S23: a token the cards' text gives only to the opponent has its own heading; "either" stays here.
-    const theirs = merged.filter((n) => n.side === "opponent"), ours = merged.filter((n) => n.side !== "opponent");
-    const main = ours.filter((n) => !n.sideboard_only), side = ours.filter((n) => n.sideboard_only);
-    const words = tokCountWords(t.counts);
-    if (words) section.append(el("p", { class: "deck-tokens-summary", text: words }));
-    if (t.packed) add(section, [deckPackedTokens(data, faces)]);
-    if (main.length) section.append(tokenNeedList(main, faces));
-    if (side.length) {
-      section.append(el("h3", { class: "deck-tokens-group", text: "Only for sideboard cards" }), tokenNeedList(side, faces));
-    }
-    if (theirs.length) {
-      section.append(el("h3", { class: "deck-tokens-group deck-tokens-opponent", text: "For your opponent (approximate)" }),
-        el("p", { class: "sub", text: "The cards' text gives these to the other player: hand them across the table." }),
-        tokenNeedList(theirs, faces));
-    }
-  }
-  add(section, [tokenPeaksPart(t.forge), tokenCountersPart(t.counters)]);   // E7-S08's Forge estimates, E7-S24's counters
-  if (copies.length) {
-    section.append(el("details", { class: "more deck-tokens-more" }, el("summary", { text: `Makes copies: ${plural(copies.length, "card")}` }),
-      el("p", { text: `${copies.join(", ")}. Use a Copy token card, or any spare token, and say what it copies.` })));
-  }
-  if (unlisted.length) {
-    section.append(el("details", { class: "more deck-tokens-more" },
-      el("summary", { text: `May also make things Scryfall doesn't link: ${plural(unlisted.length, "card")}` }),
-      el("p", { text: `${unlisted.join(", ")}. Their text mentions a token or reminder that isn't listed above.` })));
-  }
-  if (t.note) section.append(el("details", { class: "more token-note" }, el("summary", { text: "How are these worked out?" }),
-    el("p", { class: "sub", text: t.note })));
-  section.append(edit);
-  return section;
-}
-
-/** A built deck's packed token cards (its text's Token cards line, lib/api/deck_page.py _packed): what its
- * deck box holds, which the other decks count as in use, with "Change…" for whoever may change the deck.
- * faces (tokFacesUsed of the deck's needs) says of each double-sided card whether the deck needs both
- * sides or only one, which can be sleeved. */
-function deckPackedTokens(data, faces = null) {
-  const p = data.tokens.packed;
-  if (p.product) return productPackedTokens(data);
-  const lines = p.lines || [];
-  const sides = (line) => [...new Set(line.rows.map((row) => tokSides(row, faces)).filter(Boolean))];
-  const label = (line) => !line.rows.length ? `${line.text} (no token card matches)`
-    : sides(line).length ? `${line.text} (${sides(line).join("; ")})` : line.text;
-  const words = p.error ? `The Token cards line can't be read: ${p.error}`
-    : lines.length ? `Packed: ${lines.map(label).join("; ")}`
-    : p.written ? "Packed: no token cards." : "Packed token cards aren't recorded yet.";
-  const may = canEditDeck(data.summary) && (p.choices || []).length && !p.error;
-  return el("div", { class: "deck-tokens-packed" },
-    el("p", { class: p.error ? "box box-warn" : "sub", text: words }),
-    may ? el("button", { type: "button", class: "btn btn-quiet", text: "Change packed token cards…",
-      onclick: () => openPackedTokens(data) }) : null);
-}
-
-/** The sheet choosing a built deck's packed token cards: a count per token card it could use (at most what
- * other decks leave of it), saved as one change (POST /api/deck/token-cards). */
-function openPackedTokens(data) {
-  const p = data.tokens.packed, s = data.summary;
-  const sheet = openSheet({ title: "Packed token cards" });
-  const inputs = [];
-  sheet.body.append(el("p", { class: "sub", text: "The token cards in this deck's box. Other decks count them as in use." }),
-    el("ul", { class: "pack-plain deck-packed-choices" }, (p.choices || []).map((c) => {
-      const id = `packed-${sheet.heading.id}-${c.row}`;
-      const input = el("input", { id, type: "number", inputmode: "numeric", min: 0, max: c.free, step: 1,
-        value: String(Math.min(c.packed, c.free)) });
-      inputs.push([c, input]);
-      const name = `${c.back ? `${c.front} / ${c.back}` : c.front}${c.set ? ` (${c.set.toUpperCase()} ${c.number})` : ""}`;
-      const rest = c.free < c.quantity ? `, ${num(c.quantity - c.free)} in other decks` : "";
-      return el("li", {}, el("label", { for: id, text: `${name}: ${plural(c.quantity, "card")}${rest}` }), " ", input);
-    })));
-  const message = el("p", { class: "box box-crit", hidden: true });
-  sheet.body.append(message);
-  const save = () => {
-    const cards = [];
-    for (const [c, input] of inputs) {
-      const n = Number(input.value);
-      if (!Number.isInteger(n) || n < 0 || n > c.free) {
-        message.textContent = `Choose 0 to ${c.free} for ${c.front}.`;
-        message.hidden = false;
-        input.focus();
-        return;
-      }
-      if (n) cards.push({ row: c.row, quantity: n });
-    }
-    apiWrite("/api/deck/token-cards", { id: s.id, expect: p.expect, tokens_sha256: p.tokens_sha256, cards })
-      .then(() => {
-        sheet.close();
-        toast("Packed token cards saved");
-        const here = parseHash();
-        if (here.path === "deck" && addressDeckId(here.params.get("id") || "") === s.id) route();
-      })
-      .catch((e) => {
-        if (!(e instanceof ApiError)) throw e;
-        message.textContent = e.message;
-        message.hidden = false;
-      });
-  };
-  sheetActions(sheet, [{ text: "Cancel", onclick: () => sheet.close() },
-    { text: "Save", kind: "primary", value: "save", onclick: save }]);
-  return sheet;
-}
-
-/** A token need with its token cards to grab that read the same ("Dog / Beast ×1, Dog side", for two rows
- * whose printings aren't recorded) as one line with their copies added up. */
-function mergedTokenCards(need) {
-  const cards = need.cards || [];
-  if (cards.length < 2) return need;
-  const byWords = new Map();
-  for (const card of cards) {
-    const key = JSON.stringify([card.front, card.back || "", card.side || "", card.verdict || "", card.why || [],
-      card.also_for || [], (card.shared || []).map((h) => h.deck || h.title)]);
-    const same = byWords.get(key);
-    if (same) same.quantity = (Number(same.quantity) || 0) + (Number(card.quantity) || 0);
-    else byWords.set(key, { ...card });
-  }
-  return byWords.size === cards.length ? need : { ...need, cards: [...byWords.values()] };
 }

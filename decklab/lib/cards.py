@@ -762,6 +762,30 @@ def price_aud(name):
                  price_date(), set_code, number, finish)
 
 
+def printing_usd(set_code, collector_number, finish="nonfoil"):
+    """Scryfall's USD price of this exact printing in this finish (blank: non-foil), or None for a
+    missing set or number, an unknown printing or finish, or no price in that finish. Not the
+    cheapest printing's (cheapest_usd): what that copy itself is listed at."""
+    key = dict(PRICE_FINISHES).get(finish or "nonfoil")
+    if not (key and set_code and collector_number):
+        return None
+    p = printing(set_code, collector_number)
+    return p.get(key) if p else None
+
+
+def price_aud_printing(set_code, collector_number, finish="nonfoil", rate=None):
+    """AUD estimate (a Price) for this exact printing and finish (see printing_usd), or None without
+    a USD price. rate: (AUD per USD, its date), when the caller already has it (usd_to_aud
+    otherwise, which raises RuntimeError with no rate)."""
+    usd = printing_usd(set_code, collector_number, finish)
+    if usd is None:
+        return None
+    rate, rate_date = rate if rate is not None else usd_to_aud()
+    printed = printing_card(set_code, collector_number)
+    return Price(printed["name"] if printed else "", round(usd * rate, 2), usd, rate, rate_date,
+                 price_date(), set_code.lower(), str(collector_number), finish or "nonfoil")
+
+
 # --- Images -----------------------------------------------------------------
 
 _WINDOWS_RESERVED = {"con", "prn", "aux", "nul"} | {f"{p}{n}" for p in ("com", "lpt") for n in range(10)}

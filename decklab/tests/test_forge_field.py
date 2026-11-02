@@ -664,3 +664,33 @@ class CliTests(FieldTestCase):
         code, _, err = self.run_cli("casual/alpha", "--opponents", "casual/nope", "--results-dir", str(self.results))
         self.assertEqual(code, 1)
         self.assertIn("casual/nope", err)
+
+
+class OpponentEntriesTests(FieldTestCase):
+    """run_field's and plan's opponent_entries (the gauntlet, decklab/design/gauntlet.md section 6):
+    None is the field exactly as before; a list replaces the field, still without the deck's own."""
+
+    def test_none_is_the_field(self):
+        a = self.entry("casual/alpha")
+        self.fake.add_games(a, self.entry("casual/gamma"), 150)
+        self.assertEqual(field.plan(a, "standard", opponent_entries=None), field.plan(a, "standard"))
+        first = self.play()
+        calls, self.fake.calls = list(self.fake.calls), []
+        self.fake.store.clear()
+        self.fake.add_games(a, self.entry("casual/gamma"), 150)
+        second = self.play(opponent_entries=None)
+        self.assertEqual(self.fake.calls, calls)
+        for key in ("played", "planned", "stopped", "per_opponent", "deck", "dropped", "error"):
+            self.assertEqual(second[key], first[key], key)
+
+    def test_a_list_replaces_the_field(self):
+        a = self.entry("casual/alpha")
+        given = [a, lists.entry_from_cards("gauntlet:test/one", "One", "constructed", {"Main": [[24, "Forest"]]}),
+                 lists.entry_from_cards("gauntlet:test/two", "Two", "constructed", {"Main": [[24, "Island"]]})]
+        planned = field.plan(a, "fixed:50", opponent_entries=given)
+        self.assertEqual([p["opponent"]["id"] for p in planned["pairs"]], ["gauntlet:test/one", "gauntlet:test/two"])
+        note = self.play(budget="fixed:50", opponent_entries=given)
+        self.assertEqual(sorted(c[0] for c in self.fake.calls), ["gauntlet:test/one", "gauntlet:test/two"])
+        self.assertEqual(note["played"], 100)
+        with self.assertRaisesRegex(common.ForgeError, "no other deck"):
+            self.play(opponent_entries=[a])

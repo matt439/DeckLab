@@ -58,11 +58,11 @@ class MatchupFileTests(unittest.TestCase):
         self.assertIn('{ path: "matchups", label: "Matchups"', app)
         self.assertNotIn('href: "#/matchups"', _function(app, "drawLibrary"))     # the shell has it, not the page
         # The deck page's tabs: Matchups after Practice, drawn when it opens (the matchups part, the field and
-        # the tests of changes). The price table is on the Cards tab, null for a visitor who may not see the
+        # popular decks, and the tests of changes). The price table is on the Cards tab, null for a visitor who may not see the
         # deck's collection.
         tabs = re.search(r"const DECK_TABS = \[(.*?)\];", app, re.S).group(1)
         self.assertLess(tabs.index('"practice"'), tabs.index('["matchups", "Matchups"]'))
-        self.assertIn("return [deckMatchupsPart(data), fieldSection(data), variantTestsSection(data)];",
+        self.assertIn("return [deckMatchupsPart(data), fieldSection(data), gauntletSection(data), variantTestsSection(data)];",
                       _function(app, "deckTabParts"))
         self.assertIn("ownedSection(data)", _function(app, "cardsParts"))
         self.assertIn('if (!("owned" in data)) return null;', _function(app, "ownedSection"))

@@ -130,6 +130,11 @@ older code (the committed tests/fixtures/inventory_goldens):
   configured home profiles. Covered rows, members/outside viewers, other paths and all saved,
   malformed or additional facts still compare. test_golden_shop_prices checks this boundary;
   deck shop-price tests separately check production prices and permissions.
+- "listed-printings": E5-S31 adds the listed printing's price beside the cheapest to deck pages'
+  live owned-vs-needed rows (and the gate's owned_vs_needed_priced). Only the additive row fields listed_printing, listed_finish,
+  listed_aud_each, listed_aud_missing and listed_material and the totals' as_listed and
+  aud_missing_as_listed are dropped; every count, cheapest price and label still compares.
+  test_listed_prices checks the fields themselves.
 """
 import copy
 import re
@@ -839,6 +844,32 @@ def assembly_section_defaults(dump):
                 summary.pop("assembled")
 
 
+LISTED_ROW_FIELDS = ("listed_printing", "listed_finish", "listed_aud_each", "listed_aud_missing",
+                     "listed_material")
+
+
+def listed_printings(dump):
+    """Drop only E5-S31's listed-printing fields from deck pages' owned-vs-needed answers and the
+    gate's priced owned-vs-needed item."""
+    answers = []
+    for mine in [dump, *((dump.get("by_viewer") or {}).values())]:
+        views = mine.get("deck_view") if isinstance(mine, dict) else None
+        answers += [view.get("owned") for view in views.values() if isinstance(view, dict)] if isinstance(views, dict) else []
+        priced = mine.get("owned_vs_needed_priced") if isinstance(mine, dict) else None
+        answers += list(priced.values()) if isinstance(priced, dict) else []
+    for owned in answers:
+        if not isinstance(owned, dict):
+            continue
+        for row in owned.get("rows") or []:
+            if isinstance(row, dict):
+                for field in LISTED_ROW_FIELDS:
+                    row.pop(field, None)
+        totals = owned.get("totals")
+        if isinstance(totals, dict):
+            totals.pop("as_listed", None)
+            totals.pop("aud_missing_as_listed", None)
+
+
 def absent_shop_prices(dump):
     golden_shop_prices.normalise(dump, _profiles())
 
@@ -856,7 +887,8 @@ EXPECTED_P5 = (("deck-id-messages", deck_id_messages), ("phase-5-wording", phase
                ("storage-location-defaults", storage_location_defaults), ("played-defaults", played_defaults),
                ("departed-defaults", departed_defaults), ("counter-defaults", counter_defaults),
                ("opponent-token-defaults", opponent_token_defaults), ("token-peak-defaults", token_peak_defaults),
-               ("absent-shop-prices", absent_shop_prices), ("role-target-defaults", role_target_defaults))
+               ("absent-shop-prices", absent_shop_prices), ("role-target-defaults", role_target_defaults),
+               ("listed-printings", listed_printings))
 
 
 def normalise(dump):

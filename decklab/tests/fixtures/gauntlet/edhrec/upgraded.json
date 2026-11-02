@@ -1,0 +1,26 @@
+{
+ "deck": {
+  "commander": ["Y'shtola, Night's Blessed"],
+  "commander_v2": [["Y'shtola, Night's Blessed", 1]],
+  "cards": {
+   "Artifact": [["Arcane Signet", 1], ["Sol Ring", 1]],
+   "Enchantment": [["Rhystic Study", 1]],
+   "Instant": [["Counterspell", 1], ["Cyclonic Rift", 1], ["Lightning Bolt", 1]],
+   "Land": [["Command Tower", 1], ["Island", 7], ["Plains", 4], ["Swamp", 4]]
+  }
+ },
+ "header": "Average Deck for Y'shtola, Night's Blessed - Upgraded",
+ "panels": {
+  "taglinks": [
+   {"count": 2000, "slug": "control", "value": "Control"},
+   {"count": 1500, "slug": "spellslinger", "value": "Spellslinger"}
+  ]
+ },
+ "container": {
+  "json_dict": {
+   "cardlists": [],
+   "card": {"num_decks": 6976, "name": "Y'shtola, Night's Blessed", "sanitized": "yshtola-nights-blessed"}
+  },
+  "title": "Average Deck for Y'shtola, Night's Blessed - Upgraded"
+ }
+}

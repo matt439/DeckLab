@@ -125,7 +125,7 @@ from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import Path, PurePosixPath
 
-from decklab.lib import cards, decks, inventory, spaces
+from decklab.lib import cards, decks, inventory, listed_prices, spaces
 from decklab.lib.config import REPO  # noqa: F401  (nothing here reads it; tests not yet ported patch it)
 from decklab.lib.decks.identity import CardIdentityError, deck_colors
 from decklab.lib.inventory import entry, rules, unreadable
@@ -690,12 +690,13 @@ def _printing_label(price):
     return f"{price.set.upper()} {price.collector_number}{finish}"
 
 
-def compare(sections, pool, exclude=(), prices=True):
+def compare(sections, pool, exclude=(), prices=True, listed=False):
     """Owned vs needed for a decklist {section: [DeckLine]} against a Pool.
 
     exclude holds the in-use deck ids that are this deck (see self_ids), so an
-    unsaved list from the editor can be checked too. Returns the dict that
-    owned_vs_needed() describes, without deck_id and version.
+    unsaved list from the editor can be checked too. listed: sections is a
+    Planned list, so its named printings are priced too (lib/listed_prices.py).
+    Returns the dict that owned_vs_needed() describes, without deck_id and version.
     """
     exclude = set(exclude)
     unresolved = {}
@@ -754,15 +755,19 @@ def compare(sections, pool, exclude=(), prices=True):
     conflicts.sort(key=lambda c: c["name"])
 
     buying = [r for r in rows if r["missing"]]
+    totals = {
+        "cards": len(rows),
+        "need": sum(r["need"] for r in rows),
+        "missing": sum(r["missing"] for r in buying),
+        "aud_missing": round(sum(r["aud_missing"] or 0 for r in buying), 2) if prices else None,
+        "unpriced": [r["name"] for r in buying if r["aud_each"] is None] if prices else [],
+    }
+    if listed and prices and buying:    # the Planned list's printings beside the cheapest (E5-S31)
+        listed_prices.annotate(rows, totals, sections, lambda n: _canonical(n, "decklist", {}),
+                               (result["rate"], result["rate_date"]))
     result.update(
         rows=rows,
-        totals={
-            "cards": len(rows),
-            "need": sum(r["need"] for r in rows),
-            "missing": sum(r["missing"] for r in buying),
-            "aud_missing": round(sum(r["aud_missing"] or 0 for r in buying), 2) if prices else None,
-            "unpriced": [r["name"] for r in buying if r["aud_each"] is None] if prices else [],
-        },
+        totals=totals,
         conflicts=conflicts,
         unresolved=sorted({(name, where) for name, places in unresolved.items() for where in places}
                           | {(name, where) for name, places in pool.unresolved.items() for where in places}),
@@ -784,8 +789,16 @@ def owned_vs_needed(deck_id, version="target", pool=None, prices=True):
             copies)], available, missing, aud_each, aud_missing and
             priced_printing ("NCC 316", or "M20 282 foil" for a card with no
             non-foil price) and priced_finish; the prices are None without a price.
+            In the Planned list (version target), a missing row whose list names
+            another printing also has listed_printing, listed_finish,
+            listed_aud_each, listed_aud_missing and listed_material
+            (lib/listed_prices.py; only the missing copies are priced).
       totals: cards, need, missing, aud_missing, unpriced (missing cards with
-            no price)
+            no price); as_listed and aud_missing_as_listed only when a listed
+            printing costs materially more: every missing copy, each annotated
+            row at its listed price (material or not, and a row unpriced at
+            the cheapest but priced as listed included), the rest at the
+            cheapest (lib/listed_prices.py)
       rate, rate_date, price_date: the USD->AUD rate, its ECB date and the date
             Scryfall's prices were pulled; price_error says why they're None
       conflicts: cards this deck needs that other built or intact decks hold:
@@ -803,7 +816,7 @@ def owned_vs_needed(deck_id, version="target", pool=None, prices=True):
     sections = decks.load_deck(deck_id, version)
     pool = for_space(spaces.space_of(deck_id), pool)
     result = {"deck_id": deck_id, "version": version}
-    result.update(compare(sections, pool, self_ids(deck_id), prices))
+    result.update(compare(sections, pool, self_ids(deck_id), prices, listed=version == "target"))
     return result
 
 
