@@ -206,6 +206,8 @@ called as before (from decklab.lib import api; api.<name>). Each part:
                      between the existing purchase categories, with an expected inventory revision
     shopping_queue_missing.py POST /api/shopping/queue/missing: review_missing(), a home deck's
                      missing Planned cards to queue; save_queue_state's add_many saves them (E5-S25)
+    shopping_combined.py GET /api/shopping/combined?decks=ID,ID: combined_view(), what two or more
+                     chosen home decks miss when built together, each free copy counted once (E5-S28)
     receipts.py      the Receipts page: receipt_view(), preview_receipt(), apply_receipt(), on
                      lib/inventory/receive.py (shared with python -m decklab.db receive)
     assembly.py      the packing plan (Plan decks): assembly_view(), assembly_preview(), over

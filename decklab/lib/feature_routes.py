@@ -55,6 +55,12 @@ def _start_sideboard_test(body):
     return start_sideboard_test(body)
 
 
+def _shopping_combined(**params):
+    """Shopping's decks built together (api/shopping_combined.py, E5-S28): read-only."""
+    from decklab.lib.api.shopping_combined import combined_view
+    return combined_view(**params)
+
+
 def _gauntlet_view(**params):
     """The deck page's "Against popular decks" (api/gauntlet_page.py), loaded only when asked for."""
     from decklab.lib.api.gauntlet_page import gauntlet_view
@@ -141,6 +147,7 @@ def dispatch(handler, route, query):
         ("search",): (_global_search, ("q", "group", "limit")),
         ("gauntlet",): (_gauntlet_view, ("id", "version", "sample", "size", "colours", "styles", "tiers", "profile")),
         ("gauntlet", "catalogue"): (_gauntlet_catalogue, ("format",)),
+        ("shopping", "combined"): (_shopping_combined, ("decks",)),
     }
     posts = {
         ("activity", "undo"): activity_undo.apply_undo,

@@ -332,6 +332,14 @@ keep explicit errors. The selected shop and open fold survive a local queue redr
 not navigation or reload. Price, shop and checked date stay visible without a card
 picture and describe recorded research rather than live retailer stock.
 
+`shopping-combined.js` follows `shopping-buying.js`. Its Build decks together section
+(E5-S28) appears under Missing cards across decks when Shopping offers two or more home
+decks: Choose decks… ticks 2 to 12 in a sheet (Show what to buy stays `aria-disabled`
+until enough are ticked), then GET `/api/shopping/combined` lists what to buy to build
+them all at once, each free copy counted once, with each card's decks, copies on the way
+and other holders. It is read-only (no queue action yet); the choice and answer survive a
+local queue redraw, not navigation, and a late answer checks its view, route and profile.
+
 `shopping-reprints.js` follows `shopping-buying.js`. Its shared `reprintInfo` draws
 known upcoming paper-printing set/date evidence as a sibling of the card viewer
 button, also in missing deck-price rows. Source and coverage exposes the actual
