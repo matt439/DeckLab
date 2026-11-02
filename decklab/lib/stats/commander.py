@@ -1,7 +1,8 @@
 """Commander deck rules and the minimum Commander Bracket: the deck size,
 who can be a commander (and which two can be commanders together), one copy
 of each card, colour identity, the ban list, Game Changers, mass land denial,
-extra turns and two-card combos (Commander Spellbook's list, decklab.lib.combos).
+extra turns, tutors (counted only, decklab.lib.stats.tutors) and two-card
+combos (Commander Spellbook's list, decklab.lib.combos).
 The package docstring (decklab/lib/stats/__init__.py) describes the result."""
 from collections import Counter
 from datetime import date, datetime, timezone
@@ -14,6 +15,7 @@ from .constants import (
     DECK_COPIES_RE, EXTRA_TURN_TAG, MASS_LAND_DENIAL_TAG, NUMBER_WORDS, OFF_BATTLEFIELD_CREATURE_RE,
     PARTNER_TEXT_RE, PARTNER_WITH_RE, REMINDER_RE, UPGRADED_MAX_GAME_CHANGERS)
 from .cardtext import card_list, colour_label, colour_words, front_text, subtypes, type_words
+from .tutors import tutor_check
 
 # Read only by _commander_checks below. Tests patch it here, on
 # decklab.lib.stats.commander: the package doesn't re-export it, so a patch
@@ -395,10 +397,12 @@ def _commander_checks(by_section, sections, unresolved, warnings):
         mld = [e for e in in_deck if e.card["oracle_id"] in tags[MASS_LAND_DENIAL_TAG]]
         extra_turns = [e for e in in_deck if e.card["oracle_id"] in tags[EXTRA_TURN_TAG]]
     except (OSError, KeyError, ValueError) as error:
-        warnings.append(f"Scryfall's oracle tags couldn't be read ({error}), so mass land denial "
-                        f"and extra turns weren't counted for the bracket.")
+        warnings.append(f"Scryfall's oracle tags couldn't be read ({error}), so mass land denial, "
+                        f"extra turns and tutors weren't counted for the bracket.")
         mld = extra_turns = tags = None
     two_card = _combo_check(by_section)
+    data = _data_dates(two_card.get("list_date"))
+    tutors = tutor_check(in_deck + companions, TAG_FILE, data["tags_date"])
     found = two_card["matches"] if two_card["checked"] else []
     infinite_combos, land_combos = ([" + ".join(m["names"]) for m in found if m["floor"] == floor]
                                     for floor in (3, 4))
@@ -432,7 +436,11 @@ def _commander_checks(by_section, sections, unresolved, warnings):
     elif not reasons:
         reasons.append("No Game Changers.")
     if mld is None:
-        reasons.append("Mass land denial and extra turns weren't counted (no tag data).")
+        reasons.append("Mass land denial, extra turns and tutors weren't counted (no tag data)."
+                       if not tutors["checked"] else
+                       "Mass land denial and extra turns weren't counted (no tag data).")
+    elif not tutors["checked"]:
+        reasons.append("Tutors weren't counted (no tutor tag data).")
     if not two_card["checked"]:
         reasons.append("Two-card combos weren't checked (the combo list can't be read).")
         warnings.append(f"{two_card['reason']}, so two-card combos weren't checked for the bracket.")
@@ -461,12 +469,13 @@ def _commander_checks(by_section, sections, unresolved, warnings):
         "bracket": {
             "minimum": bracket, "cards_minimum": cards_bracket, "label": BRACKET_LABELS[bracket],
             "reasons": reasons,
-            "data": _data_dates(two_card.get("list_date")),
+            "data": data,
             "unknown_cards": sorted({name for section, name in unresolved
                                      if section in ("Commander", "Deck", "Companion")}),
             "game_changers": card_list(game_changers),
             "mass_land_denial": None if mld is None else card_list(mld),
             "extra_turns": None if extra_turns is None else card_list(extra_turns),
+            "tutors": tutors,
             "combos": two_card,
             "not_automatic": list(BRACKET_NOT_AUTOMATIC),
             "brackets": [dict(b) for b in BRACKETS],
