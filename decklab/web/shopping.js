@@ -784,7 +784,7 @@ function drawShopping(data) {
       shopLongTerm(later, view)));
     const combined = typeof shopCombinedSection === "function" ? shopCombinedSection(view) : null;   // shopping-combined.js
     clear(missingSlot); add(missingSlot, [shopMissingCards(view), combined]);
-    clear(storeSlot); add(storeSlot, [shopByShop(view)]);
+    clear(storeSlot); add(storeSlot, [shopByShop(view), shopBaskets(view)]);
     clear(jumpSlot);
     const missing = data.missing_cards;
     const missingShown = missing && (!missing.ready || (missing.rows || []).length || (missing.errors || []).length || (missing.warnings || []).length);
@@ -797,6 +797,7 @@ function drawShopping(data) {
       { id: "shop-missing-cards", label: "Missing cards", count: missingShown, number: (missing?.rows || []).length },
       { id: "shop-combined", label: "Build together", count: combined ? 1 : 0, number: 0 },
       { id: "shop-by-shop", label: "By shop", count: queue.length, number: 0 },
+      { id: "shop-baskets", label: "Baskets", count: Boolean(data.baskets) && seesHomeInventory(state.may), number: 0 },
       { id: "shop-follow-ups", label: "Follow-ups", count: followUps.length, number: followUps.length },
       { id: "shop-long-term", label: "Long-term plan", count: later.length, number: 0 },
     ]);

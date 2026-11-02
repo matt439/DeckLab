@@ -342,3 +342,20 @@ table.shop-queue-table .shop-queue-lab-row > td { border-bottom: 0; box-shadow: 
   .shop-queue-table.shop-queue-no-for { min-width: 800px; }
   .shop-q-name .card-row > :is(.thumb, .thumb-missing) { width: 30px; height: 42px; }
 }
+/* Baskets (E5-S27): one card a shop, the rows inside as plain lines (shopping-baskets.js). */
+.shop-baskets { display: grid; gap: var(--s-3); min-width: 0; }
+.shop-basket, .shop-basket-unavailable { display: grid; gap: var(--s-2); min-width: 0; padding: var(--s-3);
+  border: 1px solid var(--border); border-radius: var(--r-panel); background: var(--surface); }
+.shop-basket-unavailable { margin-top: var(--s-3); }
+.shop-basket-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--s-1) var(--s-3); }
+.shop-basket h3, .shop-basket-unavailable h3 { margin: 0; font-size: var(--fs-meta); font-weight: var(--fw-bold); }
+.shop-basket h4 { margin: 0; font-size: var(--fs-sm); font-weight: var(--fw-semibold); }
+.shop-basket-head .shop-snapshot-when { color: var(--ink-2); font-size: var(--fs-xs); }
+.shop-basket-total { margin: 0; font-weight: var(--fw-semibold); font-variant-numeric: tabular-nums; }
+.shop-basket-rows, .shop-basket-gaps { margin: 0; padding: 0; list-style: none; display: grid; gap: var(--s-1); min-width: 0; }
+.shop-basket-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-1) var(--s-2); min-width: 0; }
+.shop-basket-name { overflow-wrap: anywhere; }
+.shop-basket-facts, .shop-basket-gaps { color: var(--ink-2); font-size: var(--fs-sm); overflow-wrap: anywhere; }
+.shop-basket-row .shop-snapshot-when { color: var(--ink-2); font-size: var(--fs-xs); }
+.shop-basket-copy { justify-self: start; }
+.shop-basket-addons { display: grid; gap: var(--s-1); padding-top: var(--s-2); border-top: 1px solid var(--divider); }
