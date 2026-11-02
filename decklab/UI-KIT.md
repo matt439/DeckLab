@@ -339,11 +339,16 @@ until enough are ticked), then GET `/api/shopping/combined` lists what to buy to
 them all at once, each free copy counted once, with each card's decks, copies on the way
 and other holders. It is read-only (no queue action yet); the choice and answer survive a
 local queue redraw, not navigation, and a late answer checks its view, route and profile.
+Show what to buy and Try again put focus on the redrawn Change decks… (an answer arriving
+after focus moved elsewhere leaves it there). A deck link filters to Missing only when that
+deck misses something on its own. The section counts as Shopping's content only once decks
+are chosen: an otherwise empty page keeps its empty state, with a Build decks together… button.
 
 `shopping-baskets.js` follows `shopping-snapshot.js` (E5-S27's first slice). `shopBaskets(view)`
 draws Shopping's Baskets after By shop from the answer's `baskets` (`lib/api/shop_baskets.py`),
 only for home-record readers and only while some shop has a saved snapshot: one card a shop with
-its ready rows in stock (price each, stock, fetch time), a total over priced rows naming how many
+its ready rows in stock (price each, stock, fetch time; an `any` row the cheapest listing can't
+fill names the further printings it takes, "also 3 × M19 314"), a total over priced rows naming how many
 have none, the rows it couldn't speak for (printing not confirmed, couldn't be read, not checked),
 and add-ons in stock marked Add-on; then the ready rows no checked shop has. Copy this shop's list
 reuses `shopCopyShop` with the basket's own `shopCopyRows` list (ready rows only, the copies the

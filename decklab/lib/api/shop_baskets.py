@@ -19,7 +19,10 @@ records an order or stores a price paid; Shopping's guard (home's records) alrea
 An exact row counts only a listing of its printing (set, collector number and finish, nonfoil
 when blank); when the snapshot has in-stock listings it can't tell the printing of, or the row
 names no printing, the printing is unconfirmed. Any other row takes lib/shops.pick's choice: the
-cheapest in-stock nonfoil, else the cheapest in-stock listing.
+cheapest in-stock nonfoil, else the cheapest in-stock listing; at a shop that counts its stock,
+when that listing has too few copies, the next cheapest in-stock listings of the same scope (nonfoil
+when the choice is) fill the rest ("more", each with the copies taken), and "line_aud" adds them up
+(None when one of them shows no price). "short" says the whole scope still has too few.
 """
 from decimal import Decimal, InvalidOperation
 
@@ -90,14 +93,47 @@ def line(row, adapter, data):
         return shown
     quantity = _quantity(row)
     stock = matched.get("stock") or 0
-    copies = min(quantity, stock) if adapter.counts_stock else quantity
     price = _price(matched.get("price_aud"))
-    shown.update(listing={"set": matched["set"], "collector_number": matched["collector_number"],
-                          "finish": matched["finish"], "price_aud": matched["price_aud"] if price is not None else None,
-                          "stock": stock if adapter.counts_stock else None, "url": matched["url"]},
-                 copies=copies, short=adapter.counts_stock and stock < quantity,
-                 line_aud=_money(price * copies) if price is not None else None)
+    first = {"set": matched["set"], "collector_number": matched["collector_number"], "finish": matched["finish"],
+             "price_aud": matched["price_aud"] if price is not None else None,
+             "stock": stock if adapter.counts_stock else None, "url": matched["url"]}
+    if not adapter.counts_stock:
+        shown.update(listing=first, more=[], stock=None, copies=quantity, short=False,
+                     line_aud=_money(price * quantity) if price is not None else None)
+        return shown
+    used = [(first, price, min(quantity, stock))]
+    left = quantity - used[0][2]
+    for extra in _more_listings(row, entry, matched) if left > 0 else ():
+        take = min(left, extra.get("stock") or 0)
+        extra_price = _price(extra.get("price"))
+        used.append(({"set": extra.get("set"), "collector_number": extra.get("number"), "finish": extra.get("finish"),
+                      "price_aud": extra.get("price") if extra_price is not None else None,
+                      "stock": extra.get("stock") or 0, "url": extra.get("url")}, extra_price, take))
+        left -= take
+        if left <= 0:
+            break
+    copies = sum(taken for _, _, taken in used)
+    for listing, _, taken in used:
+        listing["copies"] = taken
+    priced = all(each is not None for _, each, _ in used)
+    shown.update(listing=first, more=[listing for listing, _, _ in used[1:]],
+                 stock=sum(listing["stock"] for listing, _, _ in used), copies=copies, short=copies < quantity,
+                 line_aud=_money(sum((each * taken for _, each, taken in used), Decimal(0))) if priced else None)
     return shown
+
+
+def _more_listings(row, entry, chosen):
+    """An any-printing row's other in-stock listings, cheapest first, the shop fills it from once the
+    cheapest runs out: of the chosen listing's finish when it's nonfoil (pick's preference), else any."""
+    if row.get("printing") == "exact" or not isinstance(entry, dict):
+        return []
+    listings = [item for item in entry.get("listings") or () if isinstance(item, dict) and (item.get("stock") or 0) > 0]
+    if chosen.get("finish") == "nonfoil":
+        listings = [item for item in listings if item.get("finish") == "nonfoil"]
+    same = (chosen.get("set"), str(chosen.get("collector_number") or ""), chosen.get("finish"))
+    rest = [item for item in listings if (item.get("set"), str(item.get("number") or ""), item.get("finish")) != same]
+    return sorted(rest, key=lambda item: (_price(item.get("price")) is None, _price(item.get("price")) or 0,
+                                          str(item.get("set") or ""), str(item.get("number") or "")))
 
 
 def _totals(lines):

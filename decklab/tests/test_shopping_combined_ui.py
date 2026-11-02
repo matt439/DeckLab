@@ -98,6 +98,78 @@ class ShoppingCombinedTests(unittest.TestCase):
           assert(section().textContent.includes("No deck 'casual/beta'"));
         """)
 
+    def test_focus_moves_to_the_redrawn_change_decks_after_show_and_after_retry(self):
+        self.run_combined_js("""
+          const isChoose = () => document.activeElement && document.activeElement.isConnected
+            && (document.activeElement.getAttribute("class") || "").includes("shop-combined-choose");
+          let fail = true;
+          api = async () => { if (fail) throw new ApiError(500, "Broken"); return answer; };
+          drawShopping(data());
+          section().querySelector(".shop-combined-choose").click();
+          tick("casual/alpha"); tick("casual/beta"); primary().click();
+          assert(isChoose(), "focus is on the busy section's button, not the body");
+          await null; await null; await null;
+          assert(section().querySelector(".load-failed"));
+          assert(isChoose(), "focus survives the failed answer's redraw");
+          fail = false;
+          const retry = section().querySelector(".load-failed").querySelector("button");
+          retry.focus(); retry.click();
+          await null; await null; await null;
+          assert(section().textContent.includes("7 copies to buy"));
+          assert(isChoose(), "focus survives Retry and the answer's redraw");
+          assert.equal(section().querySelector(".shop-combined-choose").textContent, "Change decks…");
+        """)
+
+    def test_an_answer_does_not_take_focus_moved_elsewhere(self):
+        self.run_combined_js("""
+          let finish;
+          api = () => new Promise(resolve => {finish = resolve;});
+          drawShopping(data());
+          section().querySelector(".shop-combined-choose").click();
+          tick("casual/alpha"); tick("casual/beta"); primary().click();
+          const elsewhere = main.querySelector("#shop-on-the-way") || main.querySelector("a");
+          elsewhere.focus();
+          finish(answer);
+          await null; await null; await null;
+          assert(section().textContent.includes("7 copies to buy"));
+          assert.equal(document.activeElement, elsewhere);
+        """)
+
+    def test_deck_links_filter_to_missing_only_where_the_deck_misses_something_alone(self):
+        self.run_combined_js("""
+          api = async () => ({...answer,
+            decks: [{id: "casual/alpha", title: "Alpha", missing_alone: 7}, {id: "casual/beta", title: "Beta", missing_alone: 0}],
+            rows: [{...answer.rows[0], decks: [{id: "casual/alpha", title: "Alpha", need: 5, missing_alone: 4},
+                                                {id: "casual/beta", title: "Beta", need: 3, missing_alone: 0}]}]});
+          drawShopping(data());
+          section().querySelector(".shop-combined-choose").click();
+          tick("casual/alpha"); tick("casual/beta"); primary().click();
+          await null; await null; await null;
+          const hrefs = node => node.querySelectorAll("a").map(a => a.getAttribute("href"));
+          same(hrefs(section().querySelector(".shop-combined-decks")),
+               [deckHref("casual/alpha") + "&tab=cards&filter=missing", deckHref("casual/beta") + "&tab=cards"]);
+          same(hrefs(section().querySelector(".shop-missing-decks")),
+               [deckHref("casual/alpha") + "&tab=cards&filter=missing", deckHref("casual/beta") + "&tab=cards"]);
+        """)
+
+    def test_an_otherwise_empty_page_keeps_its_empty_state_with_a_way_in(self):
+        self.run_combined_js("""
+          api = async () => answer;
+          drawShopping(data({decks_missing: []}));
+          assert(main.textContent.includes("Nothing to buy, and nothing on the way."));
+          assert.equal(main.querySelector(".empty").querySelector("a").getAttribute("href"), "#/wishlist");
+          assert(!section(), "no two-pane layout for the chooser alone");
+          assert(!main.querySelectorAll("a").some(a => a.getAttribute("href") === "#shop-combined"));
+          const start = main.querySelector(".shop-combined-start");
+          assert.equal(start.textContent, "Build decks together…");
+          start.focus(); start.click();
+          tick("casual/alpha"); tick("casual/beta"); primary().click();
+          await null; await null; await null;
+          assert(section().textContent.includes("7 copies to buy"));
+          assert.equal(main.querySelector(".empty").hidden, true);
+          assert((document.activeElement.getAttribute("class") || "").includes("shop-combined-choose"));
+        """)
+
     def test_a_late_answer_after_navigation_draws_nothing(self):
         self.run_combined_js("""
           let finish;

@@ -736,8 +736,9 @@ function drawShopping(data) {
   const followUps = checks.filter((check) => check.status === "received");
   const onArrival = (order) => checks.filter((check) => check.order_id === order.id && check.status === "pending");
   const decks = data.decks_missing || [];
+  const emptyCombined = el("div", { class: "shop-empty-combined" });
   const pageEmpty = el("div", { class: "empty shop-empty" }, el("p", { text: "Nothing to buy, and nothing on the way." }),
-    el("a", { class: "btn", href: "#/wishlist", text: "Open your wishlist" }));
+    el("a", { class: "btn", href: "#/wishlist", text: "Open your wishlist" }), emptyCombined);
   const buySlot = el("div", { class: "shop-queue-slot" });
   const deckSlot = el("div", { class: "shop-queue-slot" });
   const longSlot = el("div", { class: "shop-long-slot" });
@@ -788,14 +789,17 @@ function drawShopping(data) {
     clear(jumpSlot);
     const missing = data.missing_cards;
     const missingShown = missing && (!missing.ready || (missing.rows || []).length || (missing.errors || []).length || (missing.warnings || []).length);
-    sideNode.hidden = !immediate.length && !decks.length && !later.length && !missingShown && !combined;
-    pageEmpty.hidden = Boolean(waiting.length || followUps.length || immediate.length || later.length || decks.length || missingShown || combined);
+    // Build decks together counts as content only once decks are chosen; until then an empty page keeps its own state.
+    const chosen = combined && shopCombinedChosen(view);
+    sideNode.hidden = !immediate.length && !decks.length && !later.length && !missingShown && !chosen;
+    pageEmpty.hidden = Boolean(waiting.length || followUps.length || immediate.length || later.length || decks.length || missingShown || chosen);
+    clear(emptyCombined); if (combined && !pageEmpty.hidden) add(emptyCombined, [shopCombinedStart(view)]);
     const jumps = shopJumps([
       { id: "shop-on-the-way", label: "On the way", count: waiting.length, number: waiting.length },
       { id: "shop-to-buy", label: "To buy", count: immediate.length, number: immediate.length },
       { id: "shop-decks", label: "Decks missing cards", count: decks.length, number: decks.length },
       { id: "shop-missing-cards", label: "Missing cards", count: missingShown, number: (missing?.rows || []).length },
-      { id: "shop-combined", label: "Build together", count: combined ? 1 : 0, number: 0 },
+      { id: "shop-combined", label: "Build together", count: combined && pageEmpty.hidden ? 1 : 0, number: 0 },
       { id: "shop-by-shop", label: "By shop", count: queue.length, number: 0 },
       { id: "shop-baskets", label: "Baskets", count: Boolean(data.baskets) && seesHomeInventory(state.may), number: 0 },
       { id: "shop-follow-ups", label: "Follow-ups", count: followUps.length, number: followUps.length },

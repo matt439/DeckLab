@@ -68,13 +68,30 @@ class CombinedShortfallTests(_Combined, unittest.TestCase):
     def test_a_chosen_built_deck_counts_its_own_copies(self):
         answer = self.combined("casual/alpha", "casual/holding")
         rows = by_name(answer)
-        # Holding's one Elves is its own: 4 owned less the product's 2 leaves 2 for 6 wanted.
+        # Holding's one Elves is its own: 4 owned less the product's 2 leaves 2 for 6 wanted. Alone,
+        # each deck is counted against that same pool, so Alpha alone misses 3 and Holding none:
+        # together it's one more, the copy Holding keeps.
         elves = rows["Llanowar Elves"]
-        self.assertEqual((elves["need"], elves["available"], elves["missing"], elves["missing_alone"]), (6, 2, 4, 4))
+        self.assertEqual((elves["need"], elves["available"], elves["missing"], elves["missing_alone"]), (6, 2, 4, 3))
         self.assertEqual([(deck["id"], deck["missing_alone"]) for deck in elves["decks"]],
-                         [("casual/alpha", 4), ("casual/holding", 0)])
+                         [("casual/alpha", 3), ("casual/holding", 0)])
         self.assertNotIn("Holding", [held["title"] for held in elves["held_elsewhere"]])
-        self.assertEqual(answer["totals"]["copies"], answer["totals"]["copies_alone"])
+        self.assertEqual((answer["totals"]["copies"], answer["totals"]["copies_alone"]), (7, 6))
+
+    def test_the_combined_total_is_never_below_the_single_deck_sum(self):
+        # Built Owned-only, its Play-now list holds the only Rider, which its Planned list doesn't
+        # want; together with Beta, which wants a Rider, that copy is free for Beta. Both want Mystic.
+        self.case.deck("owned-only", "Owned Only", "built", "Deck\n2 Elvish Mystic\n",
+                       owned=f"Deck\n1 {RIDER}\n", built_version="owned-only")
+        answer = self.combined("casual/owned-only", "casual/beta")
+        self.assertTrue(answer["ready"], answer)
+        rows = by_name(answer)
+        self.assertNotIn(RIDER, rows)
+        self.assertEqual({name: (row["missing"], row["missing_alone"]) for name, row in rows.items()},
+                         {"Llanowar Elves": (2, 2), "Elvish Mystic": (1, 0)})
+        self.assertEqual([(deck["id"], deck["missing_alone"]) for deck in answer["decks"]],
+                         [("casual/owned-only", 0), ("casual/beta", 2)])
+        self.assertEqual((answer["totals"]["copies"], answer["totals"]["copies_alone"]), (3, 2))
 
     def test_basic_lands_are_left_out_and_the_pool_is_read_once_without_prices(self):
         with mock.patch.object(pool, "load_pool", wraps=pool.load_pool) as load, \
@@ -89,7 +106,8 @@ class CombinedShortfallTests(_Combined, unittest.TestCase):
 
         def unknown(sections, supply, exclude=(), prices=True, listed=False):
             result = real(sections, supply, exclude, prices, listed)
-            if "casual/beta" in exclude and len(exclude) == 1:
+            alone = not any(isinstance(key, tuple) for key in sections)
+            if alone and any(getattr(line, "name", None) == RIDER for lines in sections.values() for line in lines):
                 result["unresolved"] = [("Not A Card", "decklist")]
             return result
         with mock.patch.object(pool, "compare", side_effect=unknown):

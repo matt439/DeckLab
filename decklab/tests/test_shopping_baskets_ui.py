@@ -109,6 +109,25 @@ class ShoppingBasketsTests(unittest.TestCase):
           assert.equal(main.querySelectorAll('.shop-queue-write').length, 0);
         """)
 
+    def test_an_any_row_filled_from_several_printings_names_each_and_copies_every_copy(self):
+        self.run_baskets_js(r"""
+          drawShopping(answer({shops: [basket('mtgmate', 'MTGMate', {rows: [
+            line('Elves', 1, {quantity: '4', copies: 4, stock: 4, line_aud: '1.90',
+              listing: {set: 'fdn', collector_number: '227', finish: 'nonfoil', price_aud: '0.40', stock: 1, copies: 1,
+                url: 'https://www.mtgmate.com.au/cards/X/FDN/227'},
+              more: [{set: 'm19', collector_number: '314', finish: 'nonfoil', price_aud: '0.50', stock: 3, copies: 3,
+                url: 'https://www.mtgmate.com.au/cards/X/M19/314'}]})], total_aud: '1.90', priced: 1, cards: 4})]}));
+          const text = shopNode('mtgmate').textContent;
+          assert(text.includes('4 × Elves'), text);
+          assert(text.includes('1 × FDN 227'), text);
+          assert(text.includes('4 in stock across 2 printings'), text);
+          assert(text.includes('also 3 × M19 314 A$0.50 each'), text);
+          assert(text.includes('A$1.90'), text);
+          assert(!text.includes('only'), text);
+          copyButton('MTGMate').click(); await settle();
+          same(copies, ['4 Elves\n']);
+        """)
+
     def test_a_changed_queue_disables_copy_until_shopping_is_refreshed(self):
         self.run_baskets_js(r"""
           const view = drawShopping(answer({shops: [basket('mtgmate', 'MTGMate', {rows: [line('Ready', 1)]})]}));

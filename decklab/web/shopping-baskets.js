@@ -32,22 +32,36 @@ function shopBasketCopyList(view, key) {
   return shopCopyRows(basket.rows.map(row => ({...row, quantity: row.copies})));
 }
 
-/** One row's listing words: "2 × Name", the printing, the price each and the stock. */
+/** One row's listing words: "2 × Name", the printing, the price each and the stock, then any further
+ * listings an any-printing row is filled from ("also 1 × M19 314 A$0.50 each") and the line's total. */
 function shopBasketLine(row, basket) {
   const listing = row.listing || {};
   const price = shopBasketAud(listing.price_aud);
   const printing = listing.set ? `${String(listing.set).toUpperCase()} ${listing.collector_number || ""}`.trim()
     + (listing.finish && listing.finish !== "nonfoil" ? ` ${listing.finish}` : "") : null;
   const each = price ? `${price} each` : "price not shown";
-  const stock = basket.counts_stock ? (row.short ? `only ${listing.stock} of ${row.quantity} in stock`
-    : `${listing.stock} in stock`) : "in stock (count not shown)";
+  const more = Array.isArray(row.more) ? row.more.filter(item => item && item.set) : [];
+  const counted = Number.isInteger(row.stock) ? row.stock : listing.stock;
+  const stock = basket.counts_stock ? (row.short ? `only ${counted} of ${row.quantity} in stock`
+    : more.length ? `${counted} in stock across ${more.length + 1} printings` : `${listing.stock} in stock`)
+    : "in stock (count not shown)";
   const total = shopBasketAud(row.line_aud);
+  const also = more.map(item => {
+    const name = `${String(item.set).toUpperCase()} ${item.collector_number || ""}`.trim()
+      + (item.finish && item.finish !== "nonfoil" ? ` ${item.finish}` : "");
+    const itemPrice = shopBasketAud(item.price_aud);
+    return el("span", {class: "shop-basket-more", "data-basket-more": name},
+      ` · also ${item.copies} × `, shopSnapshotLink({shop: basket.shop, url: item.url}, name),
+      ` ${itemPrice ? `${itemPrice} each` : "price not shown"}`);
+  });
   return el("li", {class: "shop-basket-row", "data-basket-row": row.name, "data-basket-status": row.status},
     row.add_on ? status("outline", "Add-on") : null,
     el("span", {class: "shop-basket-name", text: `${row.copies} × ${row.name}`}),
     el("span", {class: "shop-basket-facts"},
+      more.length && Number.isInteger(listing.copies) ? `${listing.copies} × ` : null,
       printing ? shopSnapshotLink({shop: basket.shop, url: listing.url}, printing) : null,
-      el("span", {text: ` ${each} · ${stock}${total && row.copies > 1 ? ` · ${total}` : ""}`}),
+      el("span", {text: ` ${each} · ${stock}`}), ...also,
+      total && row.copies > 1 ? el("span", {text: ` · ${total}`}) : null,
       row.printing === "exact" ? el("small", {text: " exact printing"}) : null,
       row.carried ? el("small", {text: " from an earlier run"}) : null),
     shopSnapshotWhen(row.fetched_at));

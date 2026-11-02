@@ -146,6 +146,34 @@ class BasketTests(unittest.TestCase):
         line = mtg["rows"][0]
         self.assertEqual((line["copies"], line["short"], line["line_aud"], line["quantity"]), (1, True, "2.00", "4"))
 
+    def test_an_any_printing_row_is_filled_from_the_shops_other_in_stock_printings(self):
+        cards = {"Llanowar Elves": entry(listing("0.40", 1), listing("0.50", 3, set_code="m19", number="314"),
+                                         listing("0.10", 9, finish="foil", set_code="dom", number="168"),
+                                         listing("0.20", 0, set_code="m20", number="1"))}
+        mtg = self.basket(self.build([row("Llanowar Elves", 1, quantity="4")], mtgmate(cards)), "mtgmate")
+        line = mtg["rows"][0]
+        self.assertEqual((line["copies"], line["short"], line["stock"], line["line_aud"]), (4, False, 4, "1.90"))
+        self.assertEqual((line["listing"]["set"], line["listing"]["copies"]), ("fdn", 1))
+        # nonfoil chosen, so only nonfoil listings fill it; the out-of-stock one never does
+        self.assertEqual([(item["set"], item["copies"], item["price_aud"]) for item in line["more"]], [("m19", 3, "0.50")])
+        self.assertEqual((mtg["cards"], mtg["total_aud"]), (4, "1.90"))
+
+    def test_an_any_printing_row_is_short_only_when_every_printing_together_is(self):
+        cards = {"Elves": entry(listing("0.40", 1), listing("0.50", 1, set_code="m19"))}
+        line = self.basket(self.build([row("Elves", 1, quantity="4")], mtgmate(cards)), "mtgmate")["rows"][0]
+        self.assertEqual((line["copies"], line["short"], line["stock"], line["line_aud"]), (2, True, 2, "0.90"))
+
+    def test_a_filling_listing_without_a_price_leaves_the_line_unpriced(self):
+        cards = {"Elves": entry(listing("0.40", 1), listing(None, 2, set_code="m19"))}
+        line = self.basket(self.build([row("Elves", 1, quantity="3")], mtgmate(cards)), "mtgmate")["rows"][0]
+        self.assertEqual((line["copies"], line["line_aud"], line["more"][0]["price_aud"]), (3, None, None))
+
+    def test_an_exact_row_is_never_filled_from_another_printing(self):
+        exact = dict(printing="exact", set="fdn", collector_number="227", finish="nonfoil", quantity="3")
+        cards = {"Wanted": entry(listing("3.00", 1), listing("0.10", 9, set_code="m19"))}
+        line = self.basket(self.build([row("Wanted", 1, **exact)], mtgmate(cards)), "mtgmate")["rows"][0]
+        self.assertEqual((line["copies"], line["short"], line["more"], line["line_aud"]), (1, True, [], "3.00"))
+
     def test_inputs_are_never_changed(self):
         rows = [row("Sol Ring", 1)]
         data = {"mtgmate": mtgmate({"Sol Ring": entry(listing())})}

@@ -11,8 +11,9 @@ chosen deck are excluded from the holders). Copies on the way count as available
 the deck tables count them (E5-S04), and are labelled on the way.
 
 Each card names the chosen decks that need it, with each deck's own shortfall alone
-(pool.compare for that deck by itself), so where the decks compete for the same free
-copies the combined shortfall is more than the single-deck shortfalls added up.
+(pool.compare for that deck by itself, against the same pool: every chosen deck's holdings
+free), so the combined shortfall is never below the single-deck shortfalls added up, and is
+more than them where the decks compete for the same copies.
 
 Shopping's readers only (home's records and inventory, as GET /api/shopping); a deck
 the viewer may not see answers as a missing deck (404), before anything is counted.
@@ -133,11 +134,13 @@ def _combined(ids):
     if warnings:
         return _unavailable("Missing cards cannot be counted until the home card pool is complete.",
                             chosen, warnings=warnings)
-    alone, own = {}, set()
+    # Each deck alone is counted against the same pool as the decks together (every chosen deck's
+    # holdings free), so the combined shortfall is never below the single-deck sum: a chosen built
+    # deck's copies its Planned list doesn't want would otherwise count against the others alone.
+    own = set().union(*(pool.self_ids(deck["id"]) for deck in chosen))
+    alone = {}
     for deck in chosen:
-        ids_of = pool.self_ids(deck["id"])
-        own |= ids_of
-        result = pool.compare(lists[deck["id"]], supply, ids_of, prices=False)
+        result = pool.compare(lists[deck["id"]], supply, own, prices=False)
         if result["unresolved"]:
             names = sorted({name for name, _ in result["unresolved"]})
             errors.append({"id": deck["id"], "title": deck["title"],

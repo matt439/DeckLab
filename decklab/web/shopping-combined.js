@@ -87,7 +87,8 @@ async function shopCombinedLoad(view, ids) {
   combined.result = combined.error = null;
   combined.busy = true;
   const ask = combined.request = {};
-  view.redraw();
+  // Show what to buy and Retry act from a control the redraw replaces: focus moves to the new Change decks….
+  shopCombinedRedraw(view, true);
   let result = null, error = null;
   try {
     result = await api(`/api/shopping/combined?decks=${encodeURIComponent(ids.join(","))}`);
@@ -98,7 +99,41 @@ async function shopCombinedLoad(view, ids) {
   combined.busy = false;
   combined.result = result;
   combined.error = error;
+  shopCombinedRedraw(view, shopCombinedOwnsFocus());
+}
+
+/** True while focus is still on this section's controls (or was lost with a replaced one): not elsewhere. */
+function shopCombinedOwnsFocus() {
+  const active = document.activeElement;
+  if (!active || active === document.body || !active.isConnected) return true;
+  return Boolean(active.closest && (active.closest(".shop-combined-content") || active.closest(".shop-combined-start")));
+}
+
+/** Redraw Shopping and, when the section had focus, put it on the redrawn Choose/Change decks… button. */
+function shopCombinedRedraw(view, keepFocus) {
   view.redraw();
+  if (!keepFocus) return;
+  const target = (view.root || document.body).querySelector(".shop-combined-choose");
+  if (target && target.isConnected) target.focus();
+}
+
+/** True once decks are chosen: only then does the section count as Shopping's content (an empty page
+ * keeps its own empty state, with shopCombinedStart's button, until a choice is made). */
+function shopCombinedChosen(view) {
+  return Boolean(view.combined && view.combined.chosen.length);
+}
+
+/** The empty page's way in: Build decks together… when there are two or more decks to choose. */
+function shopCombinedStart(view) {
+  if (shopCombinedChoices(view).length < SHOP_COMBINED_MIN) return null;
+  return el("p", {class: "shop-combined-start-line"}, el("button", {type: "button", class: "btn btn-quiet shop-combined-start",
+    text: "Build decks together…", onclick: () => shopCombinedSheet(view)}));
+}
+
+/** A deck's Cards tab, filtered to Missing only when that deck misses something on its own (a card
+ * short only because the chosen decks share it isn't in the deck's own Missing filter). */
+function shopCombinedDeckHref(deck) {
+  return `${deckHref(deck.id)}&tab=cards${deck.missing_alone > 0 ? "&filter=missing" : ""}`;
 }
 
 /** The chosen decks, the totals beside the single-deck sum, then one row per card still to buy. */
@@ -107,7 +142,7 @@ function shopCombinedResult(result) {
   const decks = result.decks || [];
   out.push(el("p", {class: "shop-combined-decks"}, "For ", ...decks.flatMap((deck, i) => [
     i ? (i === decks.length - 1 ? " and " : ", ") : null,
-    el("a", {href: `${deckHref(deck.id)}&tab=cards&filter=missing`, text: deck.title})]).filter(Boolean), "."));
+    el("a", {href: shopCombinedDeckHref(deck), text: deck.title})]).filter(Boolean), "."));
   if (!result.ready) {
     out.push(el("div", {class: "note note-warn", role: "status"},
       el("p", {text: "These decks could not be counted together."}),
@@ -139,7 +174,7 @@ function shopCombinedRow(item) {
     meta: `${plural(item.missing, "copy", "copies")} to buy · ${item.need} wanted, ${item.available} free`,
     unknownMeta: "Missing from the chosen Planned lists", viewerGroup: "shopping-combined"});
   const wants = el("ul", {class: "shop-missing-decks"}, (item.decks || []).map(deck => el("li", {},
-    el("a", {href: `${deckHref(deck.id)}&tab=cards&filter=missing`, text: deck.title}),
+    el("a", {href: shopCombinedDeckHref(deck), text: deck.title}),
     el("span", {class: "shop-missing-count", text: ` ×${deck.need}`}))));
   const chips = [competing > 0 ? status("warn", `${competing} more because the decks share it`) : null,
     ...(item.on_the_way || []).map(way => status("info", `${way.copies} on the way (${way.source})`))].filter(Boolean);
