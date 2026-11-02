@@ -210,6 +210,9 @@ inventory writes answer 503 with "reason": "database":
     GET  /api/cards/printings?name=<name>   the printing picker: owned counts, prices
     GET  /api/cards/rulings?name=<name>    the card viewer's: {"name", "available", "updated", "rulings":
                                          [{"date", "source", "text"}]} (lib/api/card_rulings.py)
+    GET  /api/cards/decks?name=<name>[&space=<id>]   the card viewer's line (E1-S29): the space's decks that
+                                         hold or want the card and its free copies (lib/api/card_decks.py;
+                                         403 as /api/collection)
     GET  /api/printings?name=<exact name>   the Add card sheet's: {"name", "printings": [{"set", "set_name",
                                          "collector_number", "finishes", "released"}]}, newest first
     GET  /api/collection?space=<id>&q=&color=&type=&role=&mv=&availability=&page=&limit=
