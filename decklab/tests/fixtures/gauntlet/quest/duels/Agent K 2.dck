@@ -1,0 +1,20 @@
+[duel]
+[metadata]
+Name=Agent K 2
+Title=Agent K
+Difficulty=medium
+Description=Mono B fixture duel, the medium version.
+Icon=Agent K.jpg
+Deck Type=constructed
+[main]
+23 Swamp
+1 Swamp|M10
+4 Gravedigger
+4 Doom Blade
+4 Mind Rot
+4 Duress
+4 Vampire Nighthawk
+4 Sign in Blood
+4 Dark Ritual
+4 Hypnotic Specter
+4 Nantuko Shade

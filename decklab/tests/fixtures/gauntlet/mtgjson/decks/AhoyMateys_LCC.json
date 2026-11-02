@@ -1,0 +1,23 @@
+{
+ "meta": {"date": "2026-10-21", "version": "5.3.0+20261021"},
+ "data": {
+  "code": "LCC", "name": "Ahoy Mateys", "releaseDate": "2023-11-17", "type": "Commander Deck",
+  "source": "https://magic.wizards.com/en/news/announcements/the-lost-caverns-of-ixalan-commander-decklists",
+  "commander": [
+   {"name": "Admiral Brass, Unsinkable", "setCode": "LCC", "number": "1", "count": 1, "isFoil": true, "isEtched": false}
+  ],
+  "displayCommander": [],
+  "mainBoard": [
+   {"name": "Arcane Signet", "setCode": "LCC", "number": "235", "count": 1, "isFoil": false, "isEtched": false},
+   {"name": "Sol Ring", "setCode": "LCC", "number": "237", "count": 1, "isFoil": false, "isEtched": false},
+   {"name": "Counterspell", "setCode": "LCC", "number": "150", "count": 1, "isFoil": false, "isEtched": false},
+   {"name": "Baleful Strix", "setCode": "LCC", "number": "290", "count": 1, "isFoil": false, "isEtched": false},
+   {"name": "Command Tower", "setCode": "LCC", "number": "320", "count": 1, "isFoil": false, "isEtched": false},
+   {"name": "Island", "setCode": "LCC", "number": "340", "count": 32, "isFoil": false, "isEtched": false},
+   {"name": "Swamp", "setCode": "LCC", "number": "345", "count": 31, "isFoil": false, "isEtched": false},
+   {"name": "Mountain", "setCode": "LCC", "number": "350", "count": 31, "isFoil": false, "isEtched": false}
+  ],
+  "sideBoard": [],
+  "tokens": [{"name": "Treasure", "setCode": "TLCC", "number": "12", "count": 4}]
+ }
+}
