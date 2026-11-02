@@ -17,7 +17,6 @@ from pathlib import Path
 from . import slug
 
 DIFFICULTIES = ("easy", "medium", "hard", "very hard")
-PREFERRED = "medium"                # one version per duel Title: the closest to this, ties to the harder
 MIN_MAIN = 60                       # a constructed gauntlet deck's main deck
 MAX_FILE_BYTES = 256 * 1024
 SECTIONS = {"[commander]": "Commander", "[main]": "Main"}
@@ -91,20 +90,15 @@ def _record(folder, path, root, parsed, tier):
             "cards": parsed["cards"]["Commander"] + parsed["cards"]["Main"], "themes": [], "problems": problems}
 
 
-def _distance(tier):
-    """How far a duel's difficulty is from PREFERRED, a tie going to the harder."""
-    at, want = DIFFICULTIES.index(tier), DIFFICULTIES.index(PREFERRED)
-    return (abs(at - want), -at)
-
-
 def _files(folder):
     return sorted(p for p in folder.glob("*.dck") if p.is_file()) if folder.is_dir() else []
 
 
 def constructed_decks(root=None, log=print):
-    """(records, excluded): Forge's duels, one per Title (_distance), and its quest precons."""
+    """(records, excluded): Forge's duels, every difficulty version (each record's duel_title
+    names its Title: a sample takes one version of a Title, sample.choose), and its quest precons."""
     root = quest_dir(root)
-    records, excluded, by_title = [], [], {}
+    records, excluded = [], []
     for path in _files(root / "duels"):
         deck_id = f"gauntlet:forge/duels/{slug(path.stem)}"
         try:
@@ -116,14 +110,7 @@ def constructed_decks(root=None, log=print):
         if tier not in DIFFICULTIES:
             excluded.append((deck_id, f"its Difficulty {tier or '(none)'!r} isn't one Deck Lab knows"))
             continue
-        record = _record("duels", path, root, parsed, tier)
-        by_title.setdefault(record["duel_title"].casefold(), []).append(record)
-    for versions in by_title.values():
-        versions.sort(key=lambda r: (_distance(r["tier"]), r["id"]))
-        records.append(versions[0])
-        for other in versions[1:]:
-            excluded.append((other["id"], f"another version of {versions[0]['duel_title']} "
-                                          f"({versions[0]['tier']}) is kept"))
+        records.append(_record("duels", path, root, parsed, tier))
     for path in _files(root / "precons"):
         deck_id = f"gauntlet:forge/precons/{slug(path.stem)}"
         try:

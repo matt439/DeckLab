@@ -228,6 +228,42 @@ class CliTests(GauntletCase):
             out.flush()
         return code, out.buffer.getvalue().decode("utf-8"), err.getvalue()
 
+    def test_build_only_the_formats_its_sources_serve(self):
+        from decklab.lib.gauntlet import catalogue as built
+        calls = []
+
+        def build(fmt, **options):
+            calls.append((fmt, options["sources"]))
+            if not built.applicable(fmt, options["sources"]):
+                raise built.GauntletError(f"None is a source of the {fmt} gauntlet.")
+            return {}
+        with mock.patch.object(gauntlet, "_build_catalogue", build):
+            self.assertEqual(self.run_cli("build", "--source", "edhrec")[0], 0)
+            self.assertEqual(calls, [("commander", ("edhrec",))])
+            calls.clear()
+            self.assertEqual(self.run_cli("build", "--source", "forge", "--dry-run")[0], 0)
+            self.assertEqual(calls, [("constructed", ("forge",))])
+            calls.clear()
+            self.assertEqual(self.run_cli("build")[0], 0)
+            self.assertEqual([fmt for fmt, _ in calls], ["commander", "constructed"])
+            code, _, err = self.run_cli("build", "--format", "commander", "--source", "forge")
+            self.assertEqual(code, 1)
+            self.assertIn("source of the commander gauntlet", err)
+            code, _, err = self.run_cli("build", "--source", "moxfield")
+            self.assertEqual(code, 1)
+
+    def test_build_all_reports_a_format_that_failed(self):
+        from decklab.lib.gauntlet import catalogue as built
+
+        def build(fmt, **options):
+            if fmt == "commander":
+                raise built.GauntletError("edhrec gave no commander decks")
+            return {}
+        with mock.patch.object(gauntlet, "_build_catalogue", build):
+            code, _, err = self.run_cli("build")
+        self.assertEqual(code, 1)
+        self.assertIn("edhrec gave no commander decks", err)
+
     def test_list_show_and_sample(self):
         code, out, err = self.run_cli("list", "--format", "constructed")
         self.assertEqual(code, 0, err)

@@ -11,7 +11,7 @@ You play one house deck against a balanced sample of these decks and read the re
 ## 2. Storage: gitignored files, no database
 
 Recommendation: keep everything under the gitignored `decklab/data/` (`.gitignore:12`).
-- `data/gauntlet/sources/{edhrec,mtgjson,forge}/`: raw cached fetches.
+- `data/gauntlet/sources/edhrec/`: EDHREC's raw cached fetches (MTGJSON's lists stay in `precons.py`'s own cache).
 - `data/gauntlet/catalogue-<commander|constructed>.json`: the normalised, tagged decks (schema below).
 - `data/gauntlet/samples/<sample-id>.json`: saved sweep definitions.
 - `data/forge/gauntlet/results/`: a **separate results folder**. Today's folder is `DATA_DIR/"results"` (`forge/common.py:26,53-54`).
@@ -44,6 +44,7 @@ Why files:
 Usage: `gauntlet build [--format commander|constructed|all] [--source edhrec,precons,forge] [--top 100] [--refresh] [--dry-run]`.
 - It runs only from the command line on the PC. No page request ever fetches.
 - It writes a new catalogue atomically, then prints counts by tier, colour and style, plus each excluded deck with the reason.
+- `--format all` builds only the formats a chosen source serves; an explicit format none of them serves is refused. A build of some of a format's sources keeps the saved catalogue's decks of the others. A source that gives no deck at all (a failed fetch with no cached copy) saves nothing, keeping the old catalogue, and exits 1.
 
 **EDHREC**
 - Fetch order: `pages/commanders/year.json`, then each commander's page (for its themes), `average-decks/<slug>/core.json` and `.../upgraded.json`.
@@ -74,6 +75,7 @@ Usage: `gauntlet build [--format commander|constructed|all] [--source edhrec,pre
 **AI-unplayable screening**
 - Use `ai.ai_limits(sections, kind)` (`ai.py:147`) for `cannot_play` (AI:RemoveDeck:All, `forge/__init__.py:404`), `unknown` and `pilot.poor`.
 - The deck is excluded (`playable: false`) when the commander is unplayable, when any card is unknown to Forge, or when more than 3 copies are unplayable. Otherwise only a problem is recorded.
+- When Forge's card scripts can't be read (`ai_limits`' `screened` is false), the deck is excluded as "not screened": nothing about it could be checked.
 
 **MTGJSON precons**
 - Use `precons.deck_list()` filtered to "Commander Deck" (`precons.py:64,207`), then `precons.deck()` and `precons.cards_of()` (`precons.py:249,292`).
@@ -83,7 +85,7 @@ Usage: `gauntlet build [--format commander|constructed|all] [--source edhrec,pre
 **Forge .dck files**
 - Parse them as `lists.entry_from_dck` does (`lists.py:176-203`): only `[Commander]` and `[Main]`, with `|SET` stripped. Also read `[metadata]` `Name`, `Title`, `Difficulty` and `Set`.
 - Constructed decks need a main deck of at least 60 cards.
-- Keep one difficulty version per `Title`, the one closest to the requested tier, so variants of the same deck aren't near-duplicates.
+- Keep every difficulty version, tagged with its `Title` (`duel_title`). A sample takes one version per `Title`, the one nearest the requested tiers, so variants of the same deck aren't near-duplicates (built 2026-11-02; likewise one deck per commander, so a re-tiered core deck and the same commander's upgraded deck never both go in).
 
 **Running entries**
 - Add `lists.entry_from_cards(id, title, kind, listed, source)` alongside `entry()` (`lists.py:156`). It reuses `_list_text` and `_dck` (`lists.py:41,57`).
@@ -161,7 +163,7 @@ Defaults:
   - `POST /api/gauntlet/run`
   - `POST /api/gauntlet/stop`
 - These are lazy routes in `feature_routes.py` (pattern at `feature_routes.py:14-29,60,110`).
-- Run, like `run_field` (`field_page.py:242-290`): `guard.require_start` (`guard.py:329`), the optional `expected_card_sha` 409, the Forge-ready 503, and a `COORD_JOBS` job keyed `gauntlet:<space>:<card_sha>:<sample>`. Its `via` links to `#/deck?id=…&part=gauntlet`.
+- Run, like `run_field` (`field_page.py:242-290`): `guard.require_start` (`guard.py:329`), the optional `expected_card_sha` 409, the Forge-ready 503, and a `COORD_JOBS` job keyed `gauntlet:<space>:<card_sha>:<sample>`. Its `via` links to `#/deck?id=…&part=gauntlet`, which opens the Matchups tab (as `part=field` does) and scrolls to the part. A run of another sample of the same list while one waits or plays is refused (409), and Stop stops every run of the list.
 - Stop uses the field's starter / own-space / admin rule (`field_page.py:292-315`).
 
 **Fit with other work**

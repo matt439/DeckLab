@@ -29,10 +29,12 @@ its deck's space, or an admin). Nothing here writes the database, so nothing is 
 """
 import importlib
 import re
+import threading
 import traceback
 from urllib.parse import quote
 
 from decklab.lib import jobs, permissions
+from decklab.lib.gauntlet import is_gauntlet_id
 
 from . import common, field_page, forge_runs, guard
 from .common import MAX_BODY, MAX_EDIT_BODY, ApiError, _keys, _parse_body, _public, _SHA_RE
@@ -53,6 +55,8 @@ CREDIT = ("Average decks from EDHREC (edhrec.com), Commander precons from MTGJSO
 SAMPLE_RE = re.compile(r"sample:[0-9a-f]{12}")
 GAUNTLET_BUSY = ("4 field runs, gauntlet runs or tests of changes are already waiting to be played. Try again "
                  "when one of them has finished.")
+ALREADY_PLAYING = "A gauntlet run of this list is already playing (another sample): stop it first."
+_SUBMIT_LOCK = threading.Lock()     # the check for another sample's run and the submit, as one step
 GAUNTLET_FAILED = ("Something went wrong on the PC while Forge was playing the gauntlet. Try again; if it keeps "
                    "happening, the server window says why.")
 NO_VIEW = "The gauntlet's results can't be worked out on the PC now (the server log says why)."
@@ -181,7 +185,7 @@ def _keep(entry):
             return False
         mine = [s for s in sides if s.get("card_sha") == sha]
         other = [s for s in sides if s.get("card_sha") != sha]
-        return bool(mine) and len(other) <= 1 and all(str(s.get("id") or "").startswith("gauntlet:") for s in other)
+        return bool(mine) and len(other) <= 1 and all(is_gauntlet_id(s.get("id")) for s in other)
     return keep
 
 
@@ -192,11 +196,17 @@ def _sees_job(seen, job):
     return isinstance(entry, dict) and (seen.everything or seen.historical(entry.get("id")))
 
 
+def _active(entry):
+    """The list's gauntlet jobs waiting or playing, any sample."""
+    prefix = _prefix(entry)
+    return [j for j in forge_runs.COORD_JOBS.active() if j.key.startswith(prefix)]
+
+
 def _find_job(entry, sample_id, seen):
     """(job, snapshot) of this list's gauntlet run: one waiting or playing (any sample) first, else
     the last one of sample_id; (None, None) when there's none the viewer sees."""
     prefix = _prefix(entry)
-    job = next((j for j in forge_runs.COORD_JOBS.active() if j.key.startswith(prefix)), None)
+    job = next(iter(_active(entry)), None)
     if job is None and sample_id:
         job = forge_runs.COORD_JOBS.get(prefix + sample_id)
     if job is None or not _sees_job(seen, job):
@@ -343,10 +353,11 @@ def _visible_first(data, profile):
 def run_gauntlet(body):
     """POST /api/gauntlet/run: play the deck's list against the sample (the saved one named, else one
     drawn and saved now from the filters) with budget (fixed:N, one of BUDGETS). A run of the same
-    list and sample already waiting or playing is joined. Returns gauntlet_view's answer. ApiError
+    list and sample already waiting or playing is joined; one of another sample is a 409. Returns gauntlet_view's answer. ApiError
     404 for a deck the profile may not see (before anything else), 403 without a profile or while
     the simulations setting refuses (guard.require_start), 400 for a choice that isn't one or a
-    sample with no decks, 409 when expected_card_sha (64 lowercase hex characters) isn't the saved
+    sample with no decks, 409 when a run of the list against another sample is waiting or playing
+    or when expected_card_sha (64 lowercase hex characters) isn't the saved
     list's, and 503 when there's no catalogue, Forge isn't ready, COORD_JOBS has 4 waiting or the
     server is stopping."""
     data = _parse_body(body, MAX_EDIT_BODY)
@@ -386,15 +397,21 @@ def run_gauntlet(body):
         raise ApiError(400, _public(e)) from None
     seen = forge_runs._Seen(profile)
     run = _GauntletJob(g, entry, chosen, budget, profile["name"], profile["id"])
-    try:
-        forge_runs.COORD_JOBS.submit(job_key(entry, chosen["id"]), run, rerun=True)
-    except jobs.Busy as e:
-        raise ApiError(503, forge_runs.MATCHUP_STOPPING if e.stopping else GAUNTLET_BUSY) from None
+    key = job_key(entry, chosen["id"])
+    with _SUBMIT_LOCK:
+        # One gauntlet run of a list at a time: another sample's would play beside it into the same
+        # results folder, and the page (and Stop) would see only the first.
+        if any(j.key != key for j in _active(entry)):
+            raise ApiError(409, ALREADY_PLAYING)
+        try:
+            forge_runs.COORD_JOBS.submit(key, run, rerun=True)
+        except jobs.Busy as e:
+            raise ApiError(503, forge_runs.MATCHUP_STOPPING if e.stopping else GAUNTLET_BUSY) from None
     return _answer(forge, g, entry, dict(choices, sample=chosen["id"]), seen)
 
 
 def stop_gauntlet(body):
-    """POST /api/gauntlet/stop {"profile", "id", "version"?, "sample"?}: Stop the list's gauntlet run
+    """POST /api/gauntlet/stop {"profile", "id", "version"?, "sample"?}: Stop the list's gauntlet runs
     waiting or playing (any sample; every game that finished is kept). Stopping when nothing waits or
     plays changes nothing. Returns gauntlet_view's answer. ApiError 404 first for a deck the profile
     may not see, then run.stop's 403 (its starter, its deck's space or an admin)."""
@@ -407,10 +424,12 @@ def stop_gauntlet(body):
     g = _gauntlet(forge)
     choices = _choices(_format(entry), data.get("sample"))
     seen = forge_runs._Seen(profile)
-    job = next((j for j in forge_runs.COORD_JOBS.active() if j.key.startswith(_prefix(entry))), None)
-    if job is not None:
+    playing = _active(entry)
+    for job in playing:
         seen.require_stop(job, _sees_job(seen, job), forge_runs.MATCHUP_NO_KEY)
+    for job in playing:          # every run of the list (normally one: run_gauntlet refuses a second)
         if forge_runs.COORD_JOBS.cancel(job.key, by=profile["name"]):
             job.wait(forge_runs.STOP_WAIT)
-        choices["sample"] = job.fn.sample["id"]
+    if playing:
+        choices["sample"] = playing[0].fn.sample["id"]
     return _answer(forge, g, entry, choices, seen)

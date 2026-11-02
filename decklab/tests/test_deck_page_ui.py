@@ -67,6 +67,8 @@ class DeckPageUiTests(unittest.TestCase):
           assert(location.hash.endsWith('&tab=practice'));
           // An old ?part=field link opens Matchups; an unknown tab the Overview.
           same(deckViewOf(new URLSearchParams('id=a&part=field')), {tab: 'matchups', filter: 'all'});
+          // The Running list's "Gauntlet run of ..." link (part=gauntlet) opens Matchups, where its part is.
+          same(deckViewOf(new URLSearchParams('id=a&v=target&part=gauntlet')), {tab: 'matchups', filter: 'all'});
           same(deckViewOf(new URLSearchParams('id=a&tab=nope&filter=nope')), {tab: 'overview', filter: 'all'});
         """)
 

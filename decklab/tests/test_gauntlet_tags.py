@@ -115,6 +115,15 @@ class TagTests(unittest.TestCase):
         self.assertEqual(tags.tag("constructed", RAMP)["metrics"]["tutors"], 0)
         self.assertEqual(tags.tag("constructed", TUTORS)["metrics"]["tutors"], 4)
 
+    def test_a_basic_land_type_search_is_not_a_tutor(self):
+        for text in ("Search your library for a Forest card and put it onto the battlefield tapped.",
+                     "Search your library for a Plains, Island, Swamp, or Mountain card, put it onto the battlefield.",
+                     "Search your library for up to two Forest cards, put them onto the battlefield.",
+                     "Search your library for a basic Wastes card, reveal it, put it into your hand."):
+            self.assertFalse(tags._is_tutor({"oracle_text": text}), text)
+        self.assertTrue(tags._is_tutor({"oracle_text": "Search your library for a card, put that card into your hand."}))
+        self.assertTrue(tags._is_tutor({"oracle_text": "Search your library for a creature card, reveal it."}))
+
     def test_metrics(self):
         m = tags.tag("constructed", AGGRO)["metrics"]
         self.assertEqual((m["cards"], m["nonland"], m["creatures"], m["unknown"]), (60, 36, 28, 0))

@@ -173,12 +173,15 @@ class ForgeSource(GauntletCase):
         self.assertIn([4, "Counterspell"], parsed["cards"]["Main"])        # "Counterspell+|TMP": foil
         self.assertEqual(sum(q for q, _ in parsed["cards"]["Main"]), 60)
 
-    def test_one_duel_per_title_and_the_precons(self):
+    def test_every_duel_version_and_the_precons(self):
         records, excluded = forge_source.constructed_decks(QUEST, log=lambda *a: None)
-        self.assertEqual([r["id"] for r in records], ["gauntlet:forge/duels/agent-k-2", "gauntlet:forge/precons/aerodoom"])
-        self.assertEqual([r["tier"] for r in records], ["medium", "precon"])
-        self.assertEqual(excluded, [("gauntlet:forge/duels/agent-k-1", "another version of Agent K (medium) is kept")])
-        self.assertEqual(records[0]["cards"][0], [24, "Swamp"])
+        self.assertEqual([r["id"] for r in records], ["gauntlet:forge/duels/agent-k-1", "gauntlet:forge/duels/agent-k-2",
+                                                      "gauntlet:forge/precons/aerodoom"])
+        self.assertEqual([r["duel_title"] for r in records[:2]], ["Agent K", "Agent K"])
+        self.assertEqual(records[1]["tier"], "medium")
+        self.assertEqual(records[2]["tier"], "precon")
+        self.assertEqual(excluded, [])
+        self.assertEqual(records[1]["cards"][0], [24, "Swamp"])
 
     def test_short_main_deck_is_a_problem(self):
         parsed = forge_source.parse_dck("[metadata]\nName=Tiny\n[main]\n20 Swamp\n")
@@ -211,7 +214,7 @@ class Catalogue(GauntletCase):
         self.assertIn("Not Scryfall cards: Fog Elemental.", aero["problems"])
         self.assertEqual(built["sha"], catalogue.catalogue_sha(built["decks"]))
         self.assertEqual(built["card_data"], "2026-11-01")
-        self.assertTrue(any(line.startswith("Left out: gauntlet:forge/duels/agent-k-1") for line in self.log))
+        self.assertEqual(by_id["gauntlet:forge/duels/agent-k-1"]["duel_title"], "Agent K")
         self.assertTrue(any(line.startswith("Not playable: gauntlet:forge/precons/aerodoom") for line in self.log))
 
     def test_commander_build(self):
@@ -233,6 +236,40 @@ class Catalogue(GauntletCase):
         self.assertEqual({e["id"] for e in built["excluded"]},
                          {"gauntlet:edhrec/edgar-markov-core", "gauntlet:edhrec/edgar-markov-upgraded",
                           "gauntlet:precon/SpellcraftScions_FDC"})
+
+    def test_no_source_of_the_format_refuses(self):
+        with self.assertRaises(catalogue.GauntletError):
+            catalogue.build("constructed", sources=("edhrec",), log=self.log.append)
+        with self.assertRaises(catalogue.GauntletError):
+            catalogue.build("commander", sources=("forge",), log=self.log.append)
+        self.assertIsNone(catalogue.load("constructed"))
+
+    def test_a_source_that_gives_no_deck_keeps_the_saved_catalogue(self):
+        before = catalogue.build("constructed", log=self.log.append)
+        self.patch(forge_source, "constructed_decks", lambda *a: ([], [("gauntlet:forge", "unreadable")]))
+        with self.assertRaises(catalogue.GauntletError) as raised:
+            catalogue.build("constructed", log=self.log.append)
+        self.assertIn("kept as it was", str(raised.exception))
+        self.assertEqual(catalogue.load("constructed"), before)
+
+    def test_edhrec_unreachable_keeps_the_commander_catalogue(self):
+        shutil.copytree(GAUNTLET / "mtgjson", self.tmp / "mtgjson")
+        before = catalogue.build("commander", top=2, log=self.log.append)
+        self.patch(edhrec, "get_json", lambda path: (_ for _ in ()).throw(edhrec.EdhrecError("down")))
+        shutil.rmtree(gauntlet.sources_dir("edhrec"))         # no cached copy to fall back on
+        with self.assertRaises(catalogue.GauntletError):
+            catalogue.build("commander", top=2, log=self.log.append)
+        self.assertEqual(catalogue.load("commander"), before)
+
+    def test_a_build_of_one_source_keeps_the_others_decks(self):
+        shutil.copytree(GAUNTLET / "mtgjson", self.tmp / "mtgjson")
+        catalogue.build("commander", top=2, log=self.log.append)
+        built = catalogue.build("commander", sources=("edhrec",), top=2, log=self.log.append)
+        ids = {d["id"] for d in built["decks"]}
+        self.assertIn("gauntlet:precon/AhoyMateys_LCC", ids)
+        self.assertIn("gauntlet:edhrec/yshtola-nights-blessed-core", ids)
+        self.assertIn("gauntlet:precon/SpellcraftScions_FDC", {e["id"] for e in built["excluded"]})
+        self.assertEqual(catalogue.load("commander"), built)
 
     def test_dry_run_saves_nothing(self):
         catalogue.build("constructed", dry_run=True, log=self.log.append)

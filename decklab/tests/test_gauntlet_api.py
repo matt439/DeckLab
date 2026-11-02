@@ -295,6 +295,23 @@ class GauntletRunTests(GauntletApiTestCase):
         done = self.call("matt", gauntlet_page.gauntlet_view, GRUUL, "target")
         self.assertEqual((done["status"], done["job"], done["games"]), ("done", None, 600))
 
+    def test_another_samples_run_of_the_list_is_refused_and_stop_stops_it(self):
+        self.set_mode("everyone")
+        self.playing()
+        self.assertIsInstance(self.run_as("matt", GRUUL), dict)
+        self.assertTrue(self.g.started.wait(WAIT))
+        self.assertEqual(self.run_as("user1", GRUUL, styles="aggro"), 409)       # another sample of the same list
+        with self.as_("user1"):
+            with self.assertRaises(api.ApiError) as raised:
+                api_run(body("user1", id=GRUUL, styles="aggro"))
+        self.assertEqual(str(raised.exception), gauntlet_page.ALREADY_PLAYING)
+        self.assertIsInstance(self.run_as("user1", GRUUL), dict)                  # the same sample joins
+        answer = self.call("matt", api_stop, body("matt", id=GRUUL))
+        self.assertEqual(answer["status"], "none")
+        self.assertEqual(api.forge_runs.COORD_JOBS.active(), [])
+        self.finish()
+        self.assertEqual([r[1] for r in self.g.runs], [SAMPLE])
+
     def test_the_saved_list_must_match(self):
         self.set_mode("everyone")
         self.forge.ready = False

@@ -5,13 +5,17 @@ From code:
     from decklab.lib.gauntlet import sample
     chosen = sample.choose(catalogue["decks"], 20, tiers=["core"], seed="")
     sid = sample.sample_id(catalogue["sha"], filters, 20, "")
-    saved = sample.make("commander", catalogue, size=20, tiers=["core"])   # chooses and names it
-    sample.save_sample("commander", saved); sample.load_sample(saved["id"])
+    sample.save_sample("commander", drawn); sample.load_sample(drawn["id"])   # drawn: forge/gauntlet.draw's
+
+(lib/forge/gauntlet.draw chooses, names and saves a sample with the format's defaults.)
 
 The choice is deterministic: the same decks, filters, size and seed always give the same
 sample, in the same order.
 1. Filter: playable decks only, then tier, colours (the identity within the filter's colours;
-   colourless decks always fit) and primary style.
+   colourless decks always fit) and primary style. Then one deck of each family, the most
+   popular (so the version nearest the requested tiers): a Commander deck's commanders (an
+   EDHREC core deck re-tiered to upgraded and the same commander's upgraded deck are one), a
+   Forge duel's Title (its difficulty versions are one).
 2. Colour pass: walk BUCKETS in order (each colour, the ten pairs, the five shards, the five
    wedges, four or five colours, colourless) and take one deck from each, the one adding a
    primary style the sample hasn't got yet.
@@ -34,7 +38,6 @@ from decklab.lib import gauntlet
 from decklab.lib.gauntlet.tags import STYLES, WUBRG
 
 DEFAULT_SIZE = {"commander": 20, "constructed": 24}
-DEFAULT_TIERS = {"commander": ("core",), "constructed": ("medium", "hard")}
 STYLE_FLOOR = 2
 
 PAIRS = ("WU", "UB", "BR", "RG", "WG", "WB", "UR", "BG", "WR", "UG")
@@ -106,9 +109,31 @@ def candidates(decks, colours=None, styles=None, tiers=None):
     return out
 
 
+def family(deck):
+    """What makes decks near-duplicates: a Commander deck's commanders, a Forge duel's Title, else
+    the deck's own id."""
+    if deck.get("duel_title"):
+        return "title:" + str(deck["duel_title"]).casefold()
+    commanders = sorted(str(n) for _, n in ((deck.get("cards") or {}).get("Commander") or ()))
+    if deck.get("kind") == "commander" and commanders:
+        return "commander:" + "|".join(commanders)
+    return "id:" + str(deck.get("id"))
+
+
+def _one_per_family(pool):
+    """pool (most popular first) with only the first deck of each family."""
+    seen, out = set(), []
+    for deck in pool:
+        key = family(deck)
+        if key not in seen:
+            seen.add(key)
+            out.append(deck)
+    return out
+
+
 def choose(decks, size, colours=None, styles=None, tiers=None, seed=""):
     """The sample: at most size decks of the candidates, chosen as the module docstring says."""
-    pool = sorted(candidates(decks, colours, styles, tiers), key=lambda d: popularity(d, seed))
+    pool = _one_per_family(sorted(candidates(decks, colours, styles, tiers), key=lambda d: popularity(d, seed)))
     chosen, taken = [], set()
 
     def take(deck):
@@ -146,17 +171,6 @@ def sample_id(catalogue_sha, filters, size, seed):
     return "sample:" + hashlib.sha256(text.encode("utf-8")).hexdigest()[:12]
 
 
-def make(fmt, catalogue, size=None, colours=None, styles=None, tiers=None, seed=""):
-    """A sample of a catalogue, named and ready to save. size defaults to DEFAULT_SIZE[fmt]."""
-    size = DEFAULT_SIZE[fmt] if size is None else int(size)
-    filters = normalise_filters(colours, styles, tiers)
-    chosen = choose(catalogue.get("decks", []), size, filters["colours"], filters["styles"],
-                    filters["tiers"], seed)
-    return {"id": sample_id(catalogue.get("sha"), filters, size, seed), "format": fmt,
-            "catalogue_sha": catalogue.get("sha"), "filters": filters, "size": size,
-            "seed": str(seed), "decks": [d["id"] for d in chosen]}
-
-
 def _path(sid):
     match = _SAMPLE_ID.fullmatch(sid) if isinstance(sid, str) else None
     if match is None:
@@ -165,7 +179,7 @@ def _path(sid):
 
 
 def save_sample(fmt, sample):
-    """Write a sample (make's shape) to its file, replacing the file whole. Returns the path."""
+    """Write a sample (forge/gauntlet.draw's shape) to its file, replacing the file whole. Returns the path."""
     if fmt not in gauntlet.FORMATS:
         raise ValueError(f"Unknown gauntlet format {fmt!r}")
     path = _path(sample.get("id"))

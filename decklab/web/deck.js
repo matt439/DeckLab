@@ -68,10 +68,13 @@ function showDeck(params, token) {
   });
 }
 
-/** The tab and filter an address asks for: ?tab= (an old ?part=field link opens Matchups) and ?filter=. */
+/** The tab and filter an address asks for: ?tab= (a ?part=field or ?part=gauntlet link opens Matchups, where
+ * those parts are) and ?filter=. */
 function deckViewOf(params) {
   let tab = params.get("tab");
-  if (!DECK_TABS.some(([name]) => name === tab)) tab = params.get("part") === "field" ? "matchups" : "overview";
+  if (!DECK_TABS.some(([name]) => name === tab)) {
+    tab = ["field", "gauntlet"].includes(params.get("part")) ? "matchups" : "overview";
+  }
   const filter = params.get("filter");
   return { tab, filter: CARD_FILTERS.some(([name]) => name === filter) ? filter : "all" };
 }

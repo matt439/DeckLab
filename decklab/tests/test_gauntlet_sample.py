@@ -34,6 +34,26 @@ def one_per_bucket():
 
 
 class ChooseTests(unittest.TestCase):
+    def test_one_deck_per_commander(self):
+        core = entry("k-core", "G", tier="upgraded", rank=1)        # a core deck re-tiered to upgraded
+        upgraded = entry("k-upgraded", "G", tier="upgraded", rank=1)
+        for deck in (core, upgraded):
+            deck["cards"] = {"Commander": [[1, "Kodama"]], "Main": []}
+        other = entry("other-upgraded", "R", tier="upgraded", rank=2)
+        chosen = sample.choose([core, upgraded, other], 5, tiers=["upgraded"])
+        self.assertEqual(len(chosen), 2)
+        self.assertEqual(sum(d["id"] in (core["id"], upgraded["id"]) for d in chosen), 1)
+
+    def test_one_version_per_duel_title_nearest_the_tiers(self):
+        def duel(name, tier):
+            made = entry(name, "B", tier=tier)
+            made.update(kind="constructed", duel_title="Agent K", source={"kind": "forge"})
+            return made
+        versions = [duel("k-easy", "easy"), duel("k-medium", "medium"), duel("k-hard", "hard")]
+        self.assertEqual([d["tier"] for d in sample.choose(versions, 5, tiers=["easy"])], ["easy"])
+        self.assertEqual([d["tier"] for d in sample.choose(versions, 5, tiers=["medium", "hard"])], ["medium"])
+        self.assertEqual([d["tier"] for d in sample.choose(versions, 5)], ["medium"])
+
     def test_buckets(self):
         self.assertEqual(len(sample.BUCKETS), 27)
         self.assertEqual(len(set(sample.BUCKETS)), 27)
@@ -123,12 +143,11 @@ class SampleFileTests(unittest.TestCase):
         self.assertNotEqual(sid, sample.sample_id("abc", {**filters, "tiers": None}, 20, ""))
 
     def test_save_and_load(self):
-        catalogue = {"format": 1, "kind": "commander", "sha": "f" * 64, "decks": one_per_bucket()}
-        made = sample.make("commander", catalogue, tiers=["core"])
-        self.assertEqual(made["size"], sample.DEFAULT_SIZE["commander"])
+        filters = sample.normalise_filters(tiers=["core"])
+        chosen = sample.choose(one_per_bucket(), 20, **filters)
+        made = {"id": sample.sample_id("f" * 64, filters, 20, ""), "format": "commander", "catalogue_sha": "f" * 64,
+                "filters": filters, "size": 20, "seed": "", "decks": [d["id"] for d in chosen]}
         self.assertEqual(len(made["decks"]), 20)
-        self.assertEqual(made["filters"], {"colours": None, "styles": None, "tiers": ["core"]})
-        self.assertEqual(made["id"], sample.sample_id(catalogue["sha"], made["filters"], 20, ""))
         path = sample.save_sample("commander", made)
         self.assertEqual(path.parent, gauntlet.DATA / "samples")
         self.assertNotIn(":", path.name)

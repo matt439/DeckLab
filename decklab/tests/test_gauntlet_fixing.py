@@ -141,10 +141,33 @@ class Screening(GauntletCase):
         self.assertIn("Forge's AI can't play Counterspell.", problems)
         self.assertTrue(any("pilots it poorly" in p for p in problems))
 
-    def test_forge_missing_is_a_problem_not_an_exclusion(self):
-        reason, problems = fixing.screen(self.LISTED, "commander", fake_limits(problem="Forge isn't installed."))
+    def test_a_screening_problem_alone_is_only_a_problem(self):
+        reason, problems = fixing.screen(self.LISTED, "commander", fake_limits(problem="No oracle tags."))
         self.assertIsNone(reason)
+        self.assertEqual(problems, ["AI screening: No oracle tags."])
+
+    def test_forge_scripts_unread_excludes_as_not_screened(self):
+        reason, problems = fixing.screen(self.LISTED, "commander",
+                                         fake_limits(problem="Forge isn't installed.", screened=False))
+        self.assertIn("Not screened", reason)
         self.assertEqual(problems, ["AI screening: Forge isn't installed."])
+
+
+class ForgeLimits(GauntletCase):
+    def test_no_card_scripts_means_not_screened(self):
+        from unittest import mock
+        from decklab.lib.forge import ai, install
+        from decklab.lib.forge.common import ForgeError
+        limits = {"cannot_play": [], "unknown": [], "commander_unplayable": False, "pilot": None,
+                  "team_pump": None, "problem": "Forge isn't installed.", "games": 0}
+
+        def missing():
+            raise ForgeError("Forge isn't installed.")
+        with mock.patch.object(ai, "ai_limits", lambda sections, kind: dict(limits)),                 mock.patch.object(install, "script_index", missing):
+            reason, problems = fixing.screen(Screening.LISTED, "commander")
+        self.assertIn("Not screened", reason)
+        with mock.patch.object(ai, "ai_limits", lambda sections, kind: dict(limits, problem=None)),                 mock.patch.object(install, "script_index", lambda: {}):
+            self.assertEqual(fixing.screen(Screening.LISTED, "commander"), (None, []))
 
 
 class Entries(GauntletCase):

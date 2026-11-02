@@ -254,15 +254,31 @@ def retier(tier, measured):
 
 # ------------------------------------------------------------ AI screening
 
+def _forge_limits(sections, kind):
+    """forge.ai.ai_limits, with "screened" False when Forge's card scripts can't be read: ai_limits
+    then leaves "cannot_play" and "unknown" empty for want of them, saying so only in "problem"."""
+    from decklab.lib.forge import ai, install
+    from decklab.lib.forge.common import ForgeError
+    found = dict(ai.ai_limits(sections, kind))
+    try:
+        install.script_index()
+    except ForgeError:
+        found["screened"] = False
+    return found
+
+
 def screen(listed, kind, limits=None):
     """(excluded reason or None, [problems]) of Forge's AI limits on a list. limits stands in for
-    forge.ai.ai_limits (the tests' fake script table)."""
+    _forge_limits (the tests' fake script table). A list that couldn't be screened (no card
+    scripts) is excluded: whether Forge knows its cards isn't known."""
     if limits is None:
-        from decklab.lib.forge.ai import ai_limits as limits
+        limits = _forge_limits
     found = limits(_sections(listed), kind)
     problems = []
     if found.get("problem"):
         problems.append(f"AI screening: {found['problem']}")
+    if found.get("screened") is False:
+        return "Not screened: Forge's card scripts couldn't be read, so whether its AI can play it isn't known.",             problems
     if found.get("commander_unplayable"):
         return "Forge's AI can't play its commander.", problems
     unknown = found.get("unknown") or []

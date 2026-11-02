@@ -50,7 +50,8 @@ def _gauntlet_args(sub):
     build.add_argument("--format", choices=("commander", "constructed", "all"), default="all")
     build.add_argument("--source", default=",".join(SOURCES), help="comma-separated: edhrec, precons, forge")
     build.add_argument("--top", type=shared._positive, default=100, help="EDHREC's top commanders (default 100)")
-    build.add_argument("--refresh", action="store_true", help="fetch again, ignoring the caches")
+    build.add_argument("--refresh", action="store_true", help="fetch EDHREC's pages again unless fetched in the last hour (MTGJSON's precons keep "
+                            "their own cache)")
     build.add_argument("--dry-run", action="store_true", help="work it out, but write no catalogue")
     listed = actions.add_parser("list", help="the catalogue's decks")
     listed.add_argument("--format", choices=("commander", "constructed"), default="commander")
@@ -103,16 +104,24 @@ def _build_catalogues(args):
     unknown = [s for s in sources if s not in SOURCES]
     if unknown or not sources:
         raise shared._CliError(f"A source is one of {', '.join(SOURCES)}, not {', '.join(unknown) or 'none'}.")
-    from decklab.lib.gauntlet.catalogue import GauntletError
-    formats = _g().FORMATS if args.format == "all" else (args.format,)
+    from decklab.lib.gauntlet.catalogue import GauntletError, applicable
+    if args.format == "all":
+        # only the formats one of the sources serves: --source edhrec leaves the 60-card catalogue alone
+        formats = [fmt for fmt in _g().FORMATS if applicable(fmt, sources)]
+    else:
+        formats = [args.format]
+    failed = []
     for fmt in formats:
         try:
             _g()._build_catalogue(fmt, sources=sources, top=args.top, refresh=args.refresh,
                                   dry_run=args.dry_run, log=print)
         except GauntletError as e:
-            raise shared._CliError(str(e)) from None
+            if len(formats) == 1:
+                raise shared._CliError(str(e)) from None
+            print(e, file=shared.sys.stderr)
+            failed.append(fmt)
         # catalogue.build logs its own summary: counts by tier, identity and style, and what was left out
-    return 0
+    return 1 if failed else 0
 
 
 def _within(deck, colours):

@@ -82,6 +82,9 @@ INTERACTION_ROLES = ("removal", "counterspell", "board wipe")
 _PIP = re.compile(r"\{([^}]*)\}")
 _CREATES_TOKEN = re.compile(r"\bcreates?\b[^.]*\btokens?\b", re.IGNORECASE)
 _TUTOR = re.compile(r"search(?:es)? (?:your|their) library for ([^.]*?)\bcards?\b", re.IGNORECASE)
+# What a land search names: "land", "basic", or a basic land type (Three Visits' "a Forest card",
+# Farseek's "a Plains, Island, Swamp, or Mountain card"): ramp, not a tutor.
+_LAND_SEARCH = re.compile(r"\b(?:lands?|basic|plains|islands?|swamps?|mountains?|forests?|wastes)\b", re.IGNORECASE)
 
 
 def _ordered(letters):
@@ -122,8 +125,8 @@ def _cost_colours(card):
 
 
 def _is_tutor(card):
-    """Text that searches the library for a card that isn't a land."""
-    return any("land" not in m.group(1).lower() for m in _TUTOR.finditer(card.get("oracle_text", "")))
+    """Text that searches the library for a card that isn't a land (nor a basic land type)."""
+    return any(not _LAND_SEARCH.search(m.group(1)) for m in _TUTOR.finditer(card.get("oracle_text", "")))
 
 
 def _entries(listed):

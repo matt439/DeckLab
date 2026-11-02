@@ -30,7 +30,6 @@ from . import sources_dir
 TOP_PATH = "commanders/year.json"
 AVERAGE_PATH = "average-decks/{slug}/{tier}.json"
 AVERAGE_SITE = "https://edhrec.com/average-decks/{slug}/{tier}"
-TOP_SITE = "https://edhrec.com/commanders/year"
 TIERS = ("core", "upgraded")
 TOP_MAX_AGE = timedelta(days=7)
 AVERAGE_MAX_AGE = timedelta(days=30)

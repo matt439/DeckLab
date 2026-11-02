@@ -47,7 +47,8 @@ function gtUrl(ctx) {
     q.set("size", String(c.size));
     if (c.colours) q.set("colours", c.colours);
     if (c.styles.length) q.set("styles", c.styles.join(","));
-    if (c.tiers.length) q.set("tiers", c.tiers.join(","));
+    const tiers = gtTiersAsked(c, ctx.answer);
+    if (tiers.length) q.set("tiers", tiers.join(","));
   }
   if (state.profile) q.set("profile", state.profile.id);
   return `/api/gauntlet?${q}`;
@@ -111,6 +112,12 @@ function gtDraw(ctx, a) {
 }
 
 /** The choices the server drew its sample from, as the controls hold them. */
+/** The tiers to ask for: the chips ticked, or with none ticked every tier the format has ("every tier", as the
+ * summary says; asking for none would give the server's default tiers). */
+function gtTiersAsked(c, a) {
+  return c.tiers.length ? c.tiers : [...(((a || {}).options || {}).tiers || [])];
+}
+
 function gtChoiceOf(a) {
   const f = (a.sample || {}).filters || {};
   return { size: (a.sample || {}).size || a.default_size || 12, colours: f.colours || "",
@@ -326,7 +333,8 @@ async function gtWrite(ctx, path, body) {
 
 function gtPlay(ctx) {
   const a = ctx.answer || {}, c = ctx.choice || gtChoiceOf(a);
-  const body = { budget: ctx.budget, size: c.size, colours: c.colours, styles: c.styles.join(","), tiers: c.tiers.join(",") };
+  const body = { budget: ctx.budget, size: c.size, colours: c.colours, styles: c.styles.join(","),
+    tiers: gtTiersAsked(c, a).join(",") };
   if (a.deck && a.deck.card_sha) body.expected_card_sha = a.deck.card_sha;
   return gtWrite(ctx, "/api/gauntlet/run", body);
 }

@@ -18,6 +18,7 @@ import sys
 import traceback
 
 from decklab.lib import config, decks, jobs, live_ranges, permissions
+from decklab.lib.gauntlet import is_gauntlet_id
 
 from . import common, practice
 from .common import MAX_BODY, _SHA_RE, ApiError, _keys, _parse_body, _public
@@ -122,7 +123,7 @@ class _Seen:
         return not isinstance(pairs, dict) or all(
             self.historical(opponent) for pair in pairs.values() if isinstance(pair, dict)
             for opponent in [(pair.get("opponent") or {}).get("id")]
-            if not str(opponent or "").startswith("gauntlet:"))     # a gauntlet's public sparring decks
+            if not is_gauntlet_id(opponent))        # a gauntlet's public sparring decks
 
     def stop_target(self, job, visible):
         """The pure run.stop target: original decks and starter, never a displayed alias."""

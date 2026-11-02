@@ -53,6 +53,28 @@ class GauntletUiTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(result.stdout.strip(), "ok")
 
+    def test_the_running_lists_link_opens_matchups_at_the_gauntlet(self):
+        self.run_js("""
+          answers=[base()];const jumps=[];jumpTo=(id)=>jumps.push(id);
+          open('#/deck?id=casual%2Ftest&v=target&part=gauntlet');await settle();
+          flushTimers();
+          assert.equal(panel('matchups').hidden,false);assert.equal(panel('overview').hidden,true);
+          assert(panel('matchups').querySelector('#sec-gauntlet'));
+          same(jumps,['sec-gauntlet']);
+          assert(!location.hash.includes('part='));assert(location.hash.includes('tab=matchups'));
+        """)
+
+    def test_no_tier_ticked_asks_for_every_tier(self):
+        self.run_js("""
+          const c={size:24,colours:'',styles:[],tiers:[]};
+          same(gtTiersAsked(c,base()),['precon','easy','medium','hard','very hard']);
+          same(gtTiersAsked({...c,tiers:['hard']},base()),['hard']);
+          assert(gtChoiceWords(c,base()).includes('every tier'));
+          answers=[base()];const node=await draw();
+          const ctx={answer:base(),choice:c,budget:'fixed:100',id:'casual/test',version:'target'};
+          assert(gtUrl(ctx).includes('tiers=precon%2Ceasy%2Cmedium%2Chard%2Cvery+hard'),gtUrl(ctx));
+        """)
+
     def test_a_missing_catalogue_shows_the_command_and_no_play(self):
         self.run_js("""
           answers=[base({catalogue:null,sample:null,budgets:{}})];

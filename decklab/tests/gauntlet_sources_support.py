@@ -113,7 +113,7 @@ class GauntletCase(unittest.TestCase):
         self.addCleanup(p.stop)
 
 
-def fake_limits(cannot=(), unknown=(), commander=(), poor=False, problem=None, calls=None):
+def fake_limits(cannot=(), unknown=(), commander=(), poor=False, problem=None, calls=None, screened=True):
     """A stand-in for forge.ai.ai_limits over a fake script table: cards named in cannot are
     AI:RemoveDeck:All, those in unknown have no script, commander names unplayable commanders."""
     def limits(sections, kind):
@@ -125,5 +125,5 @@ def fake_limits(cannot=(), unknown=(), commander=(), poor=False, problem=None, c
                 "unknown": [{"name": n, "qty": q} for q, n in rows if n in unknown],
                 "commander_unplayable": kind == "commander" and bool(names & set(commander)),
                 "pilot": {"poor": poor, "why": "fixture" if poor else None}, "team_pump": None,
-                "problem": problem, "games": 0}
+                "problem": problem, "games": 0, "screened": screened}
     return limits

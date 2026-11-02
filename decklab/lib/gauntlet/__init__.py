@@ -11,7 +11,7 @@ AI can't play, tags each deck's colours and style (tags.py) and saves the catalo
 catalogue_path(fmt). Gauntlet decks are never decks, inventory, Rankings or Bradley-Terry data.
 
 Files (all under DATA, config.DATA / "gauntlet"):
-    sources/{edhrec,mtgjson,forge}/     raw cached fetches
+    sources/edhrec/                     EDHREC's raw cached fetches (MTGJSON's: lib/precons.py's cache)
     catalogue-<commander|constructed>.json
     samples/<sample-id>.json            saved sweeps (sample.py)
 """

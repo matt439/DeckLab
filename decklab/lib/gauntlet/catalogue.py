@@ -83,12 +83,15 @@ def _card_sha(listed, kind):
 
 
 def _entry(record, listed, tagged, fixes, problems, playable, tier, measured):
-    return {"id": record["id"], "title": record["title"], "kind": record["kind"],
+    made = {"id": record["id"], "title": record["title"], "kind": record["kind"],
             "card_sha": _card_sha(listed, record["kind"]), "source": dict(record["source"]),
             "tier": tier, "bracket": measured,
             "identity": tagged["identity"], "colours": tagged["colours"], "style": tagged["style"],
             "metrics": tagged["metrics"], "fixes": fixes, "problems": problems, "playable": playable,
             "cards": listed}
+    if record.get("duel_title"):
+        made["duel_title"] = record["duel_title"]     # a Forge duel's Title: a sample takes one version of it
+    return made
 
 
 def _commander_entry(record, limits):
@@ -151,11 +154,22 @@ def entry(record, limits=None):
 
 # ------------------------------------------------------------ the build
 
+SOURCE_PREFIX = {"edhrec": "gauntlet:edhrec/", "precons": "gauntlet:precon/", "forge": "gauntlet:forge/"}
+
+
+def applicable(fmt, sources):
+    """The sources of sources that serve the format, in sources' order."""
+    return tuple(s for s in sources if s in FORMAT_SOURCES[fmt])
+
+
+def _source_of(deck_id):
+    return next((s for s, prefix in SOURCE_PREFIX.items() if str(deck_id).startswith(prefix)), None)
+
+
 def _records(fmt, sources, top, refresh, offline, log):
-    records, excluded = [], []
-    for source in sources:
-        if source not in FORMAT_SOURCES[fmt]:
-            continue
+    """(records, excluded, [sources that gave no deck but left some out: a failed fetch])."""
+    records, excluded, failed = [], [], []
+    for source in applicable(fmt, sources):
         if source == "edhrec":
             found = edhrec_source.decks(top, refresh, offline, log)
         elif source == "precons":
@@ -165,9 +179,26 @@ def _records(fmt, sources, top, refresh, offline, log):
                 found = forge_source.constructed_decks(FORGE_ROOT, log)
             except (OSError, KeyError) as e:
                 found = [], [("gauntlet:forge", f"Forge's decks couldn't be read ({e})")]
+        if not found[0] and found[1]:
+            failed.append(source)
         records += found[0]
         excluded += found[1]
-    return records, excluded
+    return records, excluded, failed
+
+
+def _kept(fmt, sources, log):
+    """(decks, excluded) of the saved catalogue from the format's sources not being rebuilt, so a
+    build of one source keeps the others' decks."""
+    others = [s for s in FORMAT_SOURCES[fmt] if s not in sources]
+    old = load(fmt) if others else None
+    if not old:
+        return [], []
+    decks = [d for d in old["decks"] if _source_of(d.get("id")) in others]
+    excluded = [(e["id"], e["reason"]) for e in old.get("excluded") or []
+                if isinstance(e, dict) and _source_of(e.get("id")) in others]
+    if decks:
+        log(f"Kept {len(decks)} decks of the saved catalogue's {', '.join(others)} (not rebuilt).")
+    return decks, excluded
 
 
 def _card_data(fmt, log):
@@ -208,14 +239,21 @@ def summary(catalogue):
 def build(fmt, sources=SOURCES, top=100, refresh=False, dry_run=False, log=print):
     """Build a format's catalogue from its sources (edhrec and precons for Commander, forge for
     60-card) and save it, unless dry_run, which fetches nothing (cached copies only) and saves
-    nothing. Prints the summary. Returns the catalogue."""
+    nothing. Prints the summary. Returns the catalogue. The decks of the format's sources not
+    asked for are kept from the saved catalogue. GauntletError (and nothing saved) when none of
+    sources serves the format, or a source gave no deck at all (a failed fetch with no cached
+    copy): the saved catalogue stays as it was."""
     if fmt not in FORMATS:
         raise GauntletError(f"format must be one of {', '.join(FORMATS)}, not {fmt!r}")
     unknown = [s for s in sources if s not in SOURCES]
     if unknown:
         raise GauntletError(f"Unknown source {unknown[0]!r}: choose from {', '.join(SOURCES)}")
+    if not applicable(fmt, sources):
+        raise GauntletError(f"None of {', '.join(sources)} is a source of the {fmt} gauntlet "
+                            f"(its sources are {', '.join(FORMAT_SOURCES[fmt])}).")
     card_data = _card_data(fmt, log)
-    records, left_out = _records(fmt, sources, top, refresh, dry_run, log)
+    records, left_out, failed = _records(fmt, sources, top, refresh, dry_run, log)
+    kept, kept_out = _kept(fmt, sources, log)
     decks, seen = [], set()
     for record in records:
         if record["id"] in seen:
@@ -223,6 +261,8 @@ def build(fmt, sources=SOURCES, top=100, refresh=False, dry_run=False, log=print
             continue
         seen.add(record["id"])
         decks.append(entry(record, LIMITS))
+    decks += [d for d in kept if d["id"] not in seen]
+    left_out += kept_out
     decks.sort(key=lambda d: d["id"])
     catalogue = {"format": CATALOGUE_FORMAT, "kind": fmt,
                  "built": datetime.now(timezone.utc).isoformat(timespec="seconds"), "card_data": card_data,
@@ -230,6 +270,9 @@ def build(fmt, sources=SOURCES, top=100, refresh=False, dry_run=False, log=print
                  "excluded": [{"id": i, "reason": r} for i, r in left_out]}
     for line in summary(catalogue):
         log(line)
+    if failed:
+        raise GauntletError(f"{', '.join(failed)} gave no {fmt} decks (see above), so nothing was saved: "
+                            f"{catalogue_path(fmt)} is kept as it was.")
     if dry_run:
         log(f"Dry run: nothing saved (the catalogue would be {catalogue_path(fmt)}).")
     else:
