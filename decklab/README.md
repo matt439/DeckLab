@@ -1075,6 +1075,41 @@ The editor's **Test this change** (since wave 3) answers "does swapping these ca
 - From the command line: `python -m decklab.lib.forge variant casual/gruul-ramp --remove "1 Fiery Annihilation" --add "1 Rabid Gnaw" --field` (or `--against <deck>`; `--list FILE` for a whole changed decklist; `--quick` or `--games N`; `--more <test id>` to play on).
 - It needs Deck Lab's Forge, whose engine includes `deck-order-1` (the `Match` change in "Deck Lab's own Forge" above); with a Forge build without it, tests refuse to start.
 
+### The gauntlet
+
+The gauntlet (E3-S28, E3-S29; design in [design/gauntlet.md](design/gauntlet.md)) plays one house deck against a balanced sample of public sparring decks from outside Deck Lab and reads the results by colour, number of colours, style and tier:
+
+- **Commander:** EDHREC's average decks of its top 100 commanders, `core` (Bracket 2) and `upgraded` (Bracket 3), plus the newest 60 Wizards Commander precons from MTGJSON as a Bracket 2 anchor. Each average deck is fixed to exactly 100 cards inside its commander's colour identity, and every fix is recorded. A `core` deck or precon whose minimum bracket is above 2 is re-tiered to `upgraded`, with the reason. Games are 1v1, like every Commander matchup.
+- **60-card:** Forge's bundled quest precons and duels (tiers `precon`, `easy`, `medium`, `hard` and `very hard`), keeping one difficulty of each duel title.
+- A deck the AI can't pilot (its commander unplayable, a card Forge doesn't know, more than 3 copies it won't play) or with a name that isn't Scryfall's is left out, and the build says why. Each kept deck is tagged with its colours and a primary style (`aggro`, `midrange`, `control`, `combo` or `ramp`, from approximate thresholds), plus EDHREC's themes for Commander.
+- The gauntlet decks are never Deck Lab decks or inventory, and their games go to their own folder (`decklab/data/forge/gauntlet/results/`), so they never join the field, Rankings, the ratings or per-card stats. A group's range covers **the sampled opponents only**, not every deck of that colour or style.
+
+**Building and refreshing the catalogue** (command line only; no page ever fetches):
+
+```
+python -m decklab.lib.forge gauntlet build [--format commander|constructed|all] [--source edhrec,precons,forge] [--top 100] [--refresh] [--dry-run]
+```
+
+It writes `decklab/data/gauntlet/catalogue-commander.json` and `catalogue-constructed.json` (the raw fetches cached under `decklab/data/gauntlet/sources/`), then prints the counts by tier, colour and style and each deck left out with why. EDHREC is asked one request a second: a first Commander build is about 300 requests, so about 5 minutes. The top list is cached 7 days, each average deck 30 days (they change slowly, and a stable catalogue keeps its results' keys stable), and a failed fetch keeps the older copy. `--refresh` fetches again; `--dry-run` reads only the cached copies and writes nothing. It needs the card data (`python -m decklab.lib.cards update`) and, for 60-card, Deck Lab's Forge. The catalogue is a file on the PC that builds it, so the live server PC needs its own build.
+
+**Looking and sampling:** `gauntlet list [--format F] [--tier T] [--colours WUB] [--styles S] [--all] [--json]` and `gauntlet show <gauntlet id> [--json]`. `gauntlet sample [--format F] [--size N] [--colours WUB] [--styles aggro,control] [--tier T] [--seed S] [--json]` draws and saves a sample (`decklab/data/gauntlet/samples/`), deterministically: one deck per colour group first (mono, pairs, shards, wedges, four or five colours, colourless), then every style to at least 2 decks where it can, then the most popular. The defaults are 20 `core` decks for Commander and 24 `medium` and `hard` duels for 60-card. Its id, `sample:<12 hex>`, names the catalogue version, filters, size and seed, so the page and the command line play the same set.
+
+**Playing and reading:**
+
+- `gauntlet plan <deck-id> [--owned] [--sample ID | filters] [--budget fixed:N]` prints what a run would play and its time; `gauntlet play <deck-id> [same options] [--inflight N] [--local]` plays it (the default budget is `fixed:100`, 100 games against each opponent); `gauntlet view <deck-id> [--sample ID | filters] [--by colour|identity_size|style|tier|opponent] [--json]` shows the results. Without `--sample`, the filters draw (and save) a sample.
+- The view gives each opponent's win rate, hardest first, and each group's equal-weight average with its range and the spread across its opponents. A group of one says "one opponent, not a group".
+- The deck page's Matchups tab has the same as **Against popular decks** (E3-S29): a sample's size, colour and style filters and budget, the estimate, then **Play** and Stop, which follow the simulations setting as Play the field does, and the results by colour, style, tier and number of colours (`/api/gauntlet`, `/api/gauntlet/catalogue`, `/api/gauntlet/run`, `/api/gauntlet/stop`). The gauntlet's decks are public data; its results follow the house deck's privacy.
+
+**Time estimates** (the dev PC, 16 workers; the live spare PC is slower and untested):
+
+| Run | Games | Time |
+|---|---:|---|
+| 60-card, 24 opponents × `fixed:200` | 4,800 | about 5–6 minutes |
+| 60-card, 24 opponents × `fixed:400` | 9,600 | about 11–12 minutes |
+| Commander, 20 opponents × `fixed:100` | 2,000 | about 67 minutes one game at a time (about 2 s a game); in parallel not yet measured |
+
+At 100 games an opponent, each opponent's range is about ±10 points, and a group of 5 about ±4–5 points from game noise alone. `plan` uses the saved rates once there are any and says "not yet measured" until then. Commander gauntlets are best run on the dev PC from the command line; the page defaults to 12 Commander opponents at `fixed:100`.
+
 ### AI fixes: card-script overrides and pilots
 
 Forge's computer players misplay some cards, and Deck Lab has two ways to help them (since wave 3). Both change the games, so neither is used until the owner adopts it, from an experiment's numbers.
