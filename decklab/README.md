@@ -1106,7 +1106,7 @@ It writes `decklab/data/gauntlet/catalogue-commander.json` and `catalogue-constr
 |---|---:|---|
 | 60-card, 24 opponents × `fixed:200` | 4,800 | about 5–6 minutes |
 | 60-card, 24 opponents × `fixed:400` | 9,600 | about 11–12 minutes |
-| Commander, 20 opponents × `fixed:100` | 2,000 | about 67 minutes one game at a time (about 2 s a game); in parallel not yet measured |
+| Commander, 20 opponents × `fixed:100` | 2,000 | about 67 minutes one game at a time (about 2 s a game); in parallel, a first run on the dev PC (4 opponents × 10 games, 2026-11-02) played about 40 games a minute, so roughly 50 minutes; larger samples not yet measured |
 
 At 100 games an opponent, each opponent's range is about ±10 points, and a group of 5 about ±4–5 points from game noise alone. `plan` uses the saved rates once there are any and says "not yet measured" until then. Commander gauntlets are best run on the dev PC from the command line; the page defaults to 12 Commander or 24 60-card opponents at `fixed:100` (Settle it).
 
