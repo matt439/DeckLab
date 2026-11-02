@@ -194,7 +194,7 @@ function showCollection(params, token) {
   return load(colPath("/api/collection", space, asked), token, (data) => colOpenAsked(drawCollection(data, query, space, token), open));
 }
 
-/** #/collection?open=precon|import (the empty library's ways to start, E11-S56): that sheet, once, where the
+/** #/collection?open=precon or ?open=import, the empty library's ways to start (E11-S56): that sheet, once, where the
  * visitor may change this collection, after load() has focused the page; the address loses ?open= first, so
  * Back or a reload doesn't reopen it. */
 function colOpenAsked(cv, open) {
