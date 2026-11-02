@@ -336,6 +336,31 @@ class GauntletRunTests(GauntletApiTestCase):
         self.assertIn("stopped by User1", answer["notice"])
 
 
+    def test_the_running_list_shows_a_gauntlet_run(self):
+        # The Running list (forge_runs) names a gauntlet run to its own space; an admin of another
+        # space sees it only anonymously, and a member of none of it not at all.
+        self.set_mode("everyone")
+        self.playing()
+        self.run_as("matt", GRUUL)
+        self.assertTrue(self.g.started.wait(WAIT))
+        with self.as_("user1"):
+            items = api.forge_runs._running_items()
+        self.assertEqual([(i["kind"], i["title"], i["link"], i.get("hidden")) for i in items],
+                         [("gauntlet", "Gauntlet run of Gruul Test", "#/deck?id=casual%2Fgruul-test&v=target&part=gauntlet",
+                           None)])
+        self.assertTrue(items[0]["may_stop"])
+        with self.as_("user2"):
+            self.assertEqual(api.forge_runs._running_items(), [])
+        self.finish()
+        self.playing()
+        self.run_as("user2", R_ELVES)
+        self.assertTrue(self.g.started.wait(WAIT))
+        with self.as_("matt"):
+            hidden = api.forge_runs._running_items()
+        self.assertEqual([(i["kind"], i["hidden"], i["link"]) for i in hidden], [("gauntlet", True, None)])
+        self.assertNotIn("R Elves", json.dumps(hidden))
+
+
 class GauntletRouteTests(GauntletApiTestCase):
 
     def test_waiting_answers_are_202(self):

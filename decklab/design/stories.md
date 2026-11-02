@@ -1075,9 +1075,10 @@ Evidence:
 
 As a deck builder on the deck page, I want an "Against popular decks" part on the Matchups tab, so that I can start a gauntlet run and read its groups without the command line.
 
-- Given a deck page's Matchups tab, when the format's catalogue exists, then "Against popular decks" offers a sample's size, colour and style filters and budget, the estimate, then **Play**.
+- Given a deck page's Matchups tab, when the format's catalogue exists, then "Against popular decks" offers a sample's size, colour, style and tier choices (in a closed disclosure that says them) and a budget (Quick look, Settle it or Precise: 50, 100 or 200 games an opponent, each with its time estimate), then **Play**; before a catalogue exists it shows the command that builds one.
 - Given the simulations setting, when a viewer can't start runs, then Play is disabled with the reason, naming nobody; a running gauntlet can be stopped by whoever started it, someone of the deck's space or an admin.
-- Given saved results, when shown, then they're grouped by colour, style, tier and number of colours, each group with its opponents, games, range and spread, and a group of one says it isn't a group.
+- Given saved results, when shown, then they're grouped by colour, style, tier and number of colours, each group with its opponents, games, range and spread, and a group of one says it isn't a group; then each opponent, hardest first, with where it's from (an EDHREC average deck, linked, with its rank and deck count; an MTGJSON precon; a Forge deck), and EDHREC credited. Opponent rows don't link to matchup pages: they aren't house decks.
+- Given a gauntlet run playing, then the Running list names it ("Gauntlet run of <deck>", linking to the part) to the deck's space, and to an admin of another space only anonymously.
 - Given a deck the viewer may not see, then the answer is the missing deck's 404, and the part never names another house deck.
 
 Now: built 2026-11-02 alongside E3-S28 ([HISTORY.md](../HISTORY.md#the-gauntlet-a-deck-against-popular-outside-decks-2026-11-02-e3-s28-e3-s29)).
@@ -1085,7 +1086,8 @@ Now: built 2026-11-02 alongside E3-S28 ([HISTORY.md](../HISTORY.md#the-gauntlet-
 Evidence:
 - `decklab/lib/api/gauntlet_page.py`: `GET /api/gauntlet`, `GET /api/gauntlet/catalogue`, `POST /api/gauntlet/run`, `POST /api/gauntlet/stop` (lazy routes in `decklab/lib/feature_routes.py`)
 - `decklab/web/gauntlet.js`, `decklab/web/gauntlet.css` (mounted from `decklab/web/deck.js`)
-- `decklab/tests/test_gauntlet_api.py`
+- `decklab/lib/api/forge_runs.py`: the Running list's `gauntlet` kind
+- `decklab/tests/test_gauntlet_api.py`, `decklab/tests/test_gauntlet_ui.py`
 
 **E3-S30** · Matt · could · M · missing
 

@@ -1098,7 +1098,7 @@ It writes `decklab/data/gauntlet/catalogue-commander.json` and `catalogue-constr
 
 - `gauntlet plan <deck-id> [--owned] [--sample ID | filters] [--budget fixed:N]` prints what a run would play and its time; `gauntlet play <deck-id> [same options] [--inflight N] [--local]` plays it (the default budget is `fixed:100`, 100 games against each opponent); `gauntlet view <deck-id> [--sample ID | filters] [--by colour|identity_size|style|tier|opponent] [--json]` shows the results. Without `--sample`, the filters draw (and save) a sample.
 - The view gives each opponent's win rate, hardest first, and each group's equal-weight average with its range and the spread across its opponents. A group of one says "one opponent, not a group".
-- The deck page's Matchups tab has the same as **Against popular decks** (E3-S29): a sample's size, colour and style filters and budget, the estimate, then **Play** and Stop, which follow the simulations setting as Play the field does, and the results by colour, style, tier and number of colours (`/api/gauntlet`, `/api/gauntlet/catalogue`, `/api/gauntlet/run`, `/api/gauntlet/stop`). The gauntlet's decks are public data; its results follow the house deck's privacy.
+- The deck page's Matchups tab has the same as **Against popular decks** (E3-S29): a sample's size, colour, style and tier (in a closed disclosure), a budget (**Quick look**, **Settle it** or **Precise**: `fixed:50`, `fixed:100` or `fixed:200`, each with its estimate), then **Play** and Stop, which follow the simulations setting as Play the field does, and the results by colour, style, tier and number of colours, then each opponent hardest first with where it's from (EDHREC, linked, with its rank and deck count; an MTGJSON precon; a Forge deck) and EDHREC's credit (`/api/gauntlet`, `/api/gauntlet/catalogue`, `/api/gauntlet/run`, `/api/gauntlet/stop`). Before a catalogue exists it shows the build command. A sample drawn from the page's choices is saved only when it's played. While a run plays, the Running list names it as "Gauntlet run of <deck>". The gauntlet's decks are public data; its results follow the house deck's privacy.
 
 **Time estimates** (the dev PC, 16 workers; the live spare PC is slower and untested):
 
@@ -1108,7 +1108,7 @@ It writes `decklab/data/gauntlet/catalogue-commander.json` and `catalogue-constr
 | 60-card, 24 opponents × `fixed:400` | 9,600 | about 11–12 minutes |
 | Commander, 20 opponents × `fixed:100` | 2,000 | about 67 minutes one game at a time (about 2 s a game); in parallel not yet measured |
 
-At 100 games an opponent, each opponent's range is about ±10 points, and a group of 5 about ±4–5 points from game noise alone. `plan` uses the saved rates once there are any and says "not yet measured" until then. Commander gauntlets are best run on the dev PC from the command line; the page defaults to 12 Commander opponents at `fixed:100`.
+At 100 games an opponent, each opponent's range is about ±10 points, and a group of 5 about ±4–5 points from game noise alone. `plan` uses the saved rates once there are any and says "not yet measured" until then. Commander gauntlets are best run on the dev PC from the command line; the page defaults to 12 Commander or 24 60-card opponents at `fixed:100` (Settle it).
 
 ### AI fixes: card-script overrides and pilots
 

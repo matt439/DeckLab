@@ -120,7 +120,9 @@ class _Seen:
         detail = COORD_JOBS.snapshot(job)["detail"]
         pairs = detail.get("pairs") if isinstance(detail, dict) else None
         return not isinstance(pairs, dict) or all(
-            self.historical((pair.get("opponent") or {}).get("id")) for pair in pairs.values() if isinstance(pair, dict))
+            self.historical(opponent) for pair in pairs.values() if isinstance(pair, dict)
+            for opponent in [(pair.get("opponent") or {}).get("id")]
+            if not str(opponent or "").startswith("gauntlet:"))     # a gauntlet's public sparring decks
 
     def stop_target(self, job, visible):
         """The pure run.stop target: original decks and starter, never a displayed alias."""
@@ -494,22 +496,29 @@ def _job_json(job, snap, flip, key=None, sides=None):
 
 
 def _coord_kind(job):
-    """"field" or "variant" for a COORD_JOBS job (its key's prefix), else None."""
+    """"field", "variant" or "gauntlet" for a COORD_JOBS job (its key's prefix), else None."""
     prefix = str(getattr(job, "key", "")).split(":", 1)[0]
-    return prefix if prefix in ("field", "variant") else None
+    return prefix if prefix in ("field", "variant", "gauntlet") else None
 
 
 def _coord_title(job, detail):
-    """A coordinator job's title: "Field run of <deck>" or "Test of a change to <deck>"."""
+    """A coordinator job's title: "Field run of <deck>", "Gauntlet run of <deck>" or "Test of a
+    change to <deck>"."""
     deck = detail.get("deck") if isinstance(detail.get("deck"), dict) else {}
     title = deck.get("title") or "a deck"
-    return f"Field run of {title}" if _coord_kind(job) == "field" else f"Test of a change to {title}"
+    kind = _coord_kind(job)
+    if kind == "gauntlet":
+        return f"Gauntlet run of {title}"
+    return f"Field run of {title}" if kind == "field" else f"Test of a change to {title}"
 
 
 def _coord_link(job, detail):
     """Where a coordinator job's page is: the deck page's field section, or the test's page."""
     if _coord_kind(job) == "variant":
         return "#/variant?test=" + job.key.split(":", 1)[1]
+    if _coord_kind(job) == "gauntlet":
+        via = getattr(job.fn, "via", None)
+        return via.get("link") if isinstance(via, dict) else None
     deck = detail.get("deck") if isinstance(detail.get("deck"), dict) else {}
     if not deck.get("id"):
         return None
@@ -554,7 +563,7 @@ def _running_json(job, first_sha=None):
     its sides and wins with the deck listed first when it was asked for
     first, or with first_sha's list first (the deck page), and waiting and
     fallback as _job_json gives them. Wave 3 (section 10.5): every item has "kind"
-    ("matchup", "field" or "variant"), "title" and "link"; a matchup run's
+    ("matchup", "field", "variant" or "gauntlet"), "title" and "link"; a matchup run's
     also its "mode", "plan" and "eta_s" (forge's estimate of the seconds
     left, for the run activity's details, or None); a coordinator job (COORD_JOBS) is
     {"key", "kind", "title", "by", "done", "total", "link", "status",
@@ -1056,7 +1065,7 @@ def stop_matchup(body):
     data = _parse_body(body, MAX_BODY)
     profile = _writer(data)
     _keys(data, ("profile", "key"), ("a", "av", "b", "bv"))
-    if isinstance(data["key"], str) and data["key"].startswith(("field:", "variant:")):
+    if isinstance(data["key"], str) and data["key"].startswith(("field:", "variant:", "gauntlet:")):
         seen = _Seen(profile)
         job = COORD_JOBS.get(data["key"])
         if job is None:
