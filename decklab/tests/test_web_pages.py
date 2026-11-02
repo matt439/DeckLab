@@ -116,9 +116,9 @@ class PageSourceTests(unittest.TestCase):
     def test_the_tokens_page(self):
         # The Tokens page (tokens.js, tokens-edit.js, tokens-page.css): its route, the globals the deck page, library and packing plan
         # use, the endpoints it calls, the active-page guard on writes, and the phone-first layout.
-        script = _scripts(("tokens.js", "tokens-edit.js"))
+        script = _scripts(("tokens.js", "tokens-edit.js", "deck-tokens.js"))
         for name in ("showTokens", "drawTokens", "updateTokens", "tokensActive", "tokenStateChip", "tokenNeedList",
-                     "tokenThumb", "openTokenSheet"):
+                     "tokenThumb", "openTokenSheet", "tokensSection"):
             with self.subTest(name=name):
                 self.assertRegex(script, rf"(?m)^(?:async )?function {name}\(")
         self.assertIn('if (path === "tokens") return showTokens(token, params);', _function(_text("app.js"), "route"))
@@ -175,7 +175,7 @@ class PageSourceTests(unittest.TestCase):
         cards = _function(_text("deck.js"), "cardsParts")
         self.assertIn("return [screen.cardsBar, list, deckConsideringSection(data), deckEdhrecSection(data), deckSwapsSection(data), tokensSection(data),\n"
                       "    deckPrintingsSection(data), ownedSection(data)];", cards)
-        self.assertIn('id: "sec-tokens"', _function(_text("deck.js"), "tokensSection"))
+        self.assertIn('id: "sec-tokens"', _function(_text("deck-tokens.js"), "tokensSection"))
         # The shell's navigation (core.js's routes table) and the packing plan link to it.
         self.assertIn('{ path: "tokens", label: "Tokens"', _text("core.js"))
         self.assertIn('href: "#/tokens"', _function(_text("assembly.js"), "drawAssembly"))

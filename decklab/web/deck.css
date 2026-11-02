@@ -252,24 +252,33 @@
 .deck-tokens-chip .btn { padding-left: 0; }
 .deck-tokens-chip .status { white-space: normal; }
 .deck-tokens-summary { color: var(--ink-2); margin: 0 0 var(--s-2); }
-.deck-tokens-group { margin: var(--s-4) 0 var(--s-1); font-size: var(--fs-md); }
+/* Disclosures in the part (E7-S33): the sideboard's and the opponent's tokens, counters and dice. */
+.deck-tokens-group { margin: var(--s-3) 0 0; }
+.deck-tokens-group > summary { display: flex; align-items: center; flex-wrap: wrap; gap: var(--s-1); min-height: var(--tap); font-weight: var(--fw-semibold); }
+.deck-tokens-group > summary .status { white-space: normal; }
+.deck-tokens-group > .sub { margin: 0 0 var(--s-1); }
 .deck-tokens-more p { margin: var(--s-1) 0 0; overflow-wrap: break-word; }
 .deck-tokens-edit a { display: inline-flex; align-items: center; min-height: var(--tap); }
+.deck-tokens-packed-sides > summary { display: flex; align-items: center; min-height: var(--tap); margin: 0; }
 .token-note { font-size: var(--fs-sm); margin: var(--s-3) 0 0; }
 .token-needs { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: minmax(0, 1fr); }
-.token-need { display: flex; align-items: flex-start; gap: var(--s-3); padding: var(--s-3) 0; border-bottom: 1px solid var(--border); min-width: 0; }
-.token-need-pic { display: flex; flex: none; flex-direction: column; align-items: center; gap: var(--s-1); }
-.token-need-example { color: var(--ink-2); font-size: var(--fs-sm); line-height: var(--lh-tight); text-align: center; }
-.token-need-body { display: flex; flex-direction: column; gap: var(--s-1); min-width: 0; flex: 1; }
+.token-need { border-bottom: 1px solid var(--border); min-width: 0; }
+/* One compact row per token: a summary at least --tap high, its body under it when opened. */
+.token-row { display: flex; align-items: center; gap: var(--s-2); min-height: var(--tap); padding: 2px 0; min-width: 0; }
+.token-row .tok-thumb { flex: none; }
+.token-row .token-need-name { flex: 1 1 auto; min-width: 0; overflow-wrap: break-word; }
+.token-row .status { flex: none; }
+.token-row-end { display: flex; flex-direction: column; align-items: flex-end; flex: none; margin-left: auto; text-align: right; }
+.token-row-count { color: var(--ink-2); font-size: var(--fs-sm); font-variant-numeric: tabular-nums; }
+.token-row-forge { color: var(--ink-2); font-size: var(--fs-sm); }
+.token-need-example { color: var(--ink-2); font-size: var(--fs-sm); line-height: var(--lh-tight); }
+.token-need-body { display: flex; flex-direction: column; gap: var(--s-1); min-width: 0; padding: 0 0 var(--s-3) var(--s-5); }
 .token-need-body p { margin: 0; overflow-wrap: break-word; }
 .token-need-name b { font-weight: var(--fw-bold); }
 .token-need-made { color: var(--ink-2); font-size: var(--fs-sm); }
-.token-need-made details { display: inline; }
-.token-need-made summary { display: inline; color: var(--link); }
 .token-counters { list-style: none; padding: 0; margin: 0; display: grid; gap: var(--s-1); }
 .token-counter small { display: block; overflow-wrap: break-word; }
 .token-need-side { color: var(--ink-2); font-size: var(--fs-sm); font-style: italic; }
-.token-need-state .status { white-space: normal; }
 .token-need-forge { color: var(--ink-2); }
 .token-grab { list-style: none; padding: 0; margin: 0; font-size: var(--fs-sm); display: grid; gap: 2px; }
 .token-grab li { overflow-wrap: break-word; }

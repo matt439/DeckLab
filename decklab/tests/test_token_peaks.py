@@ -297,8 +297,8 @@ const context = {
 };
 vm.createContext(context);
 vm.runInContext(fs.readFileSync(web + "/token-peaks.js", "utf8"), context);
-const line = vm.runInContext("tokenPeakLine", context), part = vm.runInContext("tokenPeaksPart", context);
-process.stdout.write(JSON.stringify(cases.map(([which, value]) => (which === "line" ? line : part)(value))));
+const pieces = { line: "tokenPeakLine", short: "tokenPeakShort", part: "tokenPeaksPart" };
+process.stdout.write(JSON.stringify(cases.map(([which, value]) => vm.runInContext(pieces[which], context)(value))));
 """
 
 
@@ -333,6 +333,23 @@ class PageTests(unittest.TestCase):
                                           "games didn't count tokens): approximate", peaks.NOTE])
         self.assertEqual(texts(made[3]), [peaks.NO_GAMES])
         self.assertIsNone(made[4])
+
+    def test_the_compact_row_gets_a_short_labelled_estimate(self):
+        # E7-S33: the deck page's token row shows "Forge est. ≤4" (the full sentence is in the row's body);
+        # nothing when no saved game made one, and "N+" at the server's cap.
+        cap = peaks.PEAK_CAP
+        made = self.run_page([
+            ["short", {"games": 10, "of": 100, "peak": 7, "most": 4,
+                       "words": "Forge games peaked at 7; most games at most 4 (10 games of 100 made one)"}],
+            ["short", {"games": 3, "of": 20, "peak": cap, "most": cap,
+                       "words": f"Forge games peaked at {cap} or more; most games at most {cap} or more (3 games of 20 made one)"}],
+            ["short", {"games": 0, "of": 20, "peak": 0, "most": 0, "words": "No Forge game of the 20 put one on the battlefield"}],
+            ["short", None]])
+        self.assertEqual(texts(made[0]), ["Forge est. ≤4"])
+        self.assertEqual(made[0]["class"], "token-row-forge")
+        self.assertEqual(texts(made[1]), [f"Forge est. {cap}+"])
+        self.assertIsNone(made[2])
+        self.assertIsNone(made[3])
 
 
 if __name__ == "__main__":

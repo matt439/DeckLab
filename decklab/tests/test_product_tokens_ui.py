@@ -39,6 +39,27 @@ class ProductTokensUiTests(unittest.TestCase):
           same(counts(sheet).map(input=>input.value),['2','1']);assert(sheet.body.textContent.includes('2 in other holders'));
         ''')
 
+    def test_product_rows_show_card_counts_and_the_record_once_above_them(self):
+        # E7-S33: an intact product's record covers all its decks, so each row shows its card count, never
+        # "Packed N", and the record is drawn once, above the rows.
+        self.run_js(r'''
+          closeProductStorageSheets();clear(main);as('matt',MAY.admin);
+          const zed={key:'k-Zombie',name:'Zombie',kind:'token',pt:'2/2',made_by:[{name:'Maker',quantity:1,section:'Deck'}],
+            sideboard_only:false,state:'ready',words:'Have it: 8 cards',usable:8,cards:[{row:3,front:'Zombie',back:'Zombie Knight',
+            side:'front',quantity:8,verdict:'exact',why:[],also_for:[]}],stand_ins:[],incoming:[],faces:[]};
+          const p=packed({lines:[{text:'2 Zombie // Zombie Knight (TST) 3',quantity:2,rows:[{row:3,front:'Zombie',back:'Zombie Knight',quantity:2}]}]});
+          const data={summary:{id:'product/starter/green',space:'home',read_only:true,player:null},
+            tokens:{needs:[zed],copies:[],unlisted:[],counts:{kinds:1,ready:1},packed:p}};
+          deckScreen={data};const section=tokensSection(data);main.append(section);
+          assert.equal(section.querySelectorAll('.product-tokens').length,1);
+          const kids=section.children,record=kids.findIndex(c=>c.querySelector?.('.product-tokens')||String(c.getAttribute?.('class')||'').includes('product-tokens'));
+          const rows=kids.findIndex(c=>String(c.getAttribute?.('class')||'').includes('token-needs'));
+          assert(record>=0&&rows>record,'the record comes before the rows');
+          assert.equal(section.querySelector('.token-row-count').textContent,'8 cards');
+          assert(!section.textContent.includes('Packed 2'));
+          assert.equal(section.querySelector('.token-row').querySelectorAll('.status').length,0);
+        ''')
+
     def test_legacy_record_is_unknown_and_does_not_prefill_estimates_as_verified_quantities(self):
         self.run_js(r'''
           const {root,sheet}=open({written:false,lines:[]});assert(root.textContent.includes('No packed token cards recorded'));

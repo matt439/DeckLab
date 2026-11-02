@@ -302,6 +302,10 @@ class DeckPageUiTests(unittest.TestCase):
             {key: 'name:Mystery', name: 'Mystery', state: 'none', image: null, cards: []}]);
           const needs = list.querySelectorAll('.token-need');
           assert.equal(needs[0].querySelector('.token-need-example').textContent, 'Example art');
+          // E7-S33: the small picture is in the compact row's summary, the label in its body.
+          assert(needs[0].querySelector('.token-row').querySelector('img'));
+          assert.equal(needs[0].querySelector('.token-row').querySelector('.token-need-example'), null);
+          assert(needs[0].querySelector('.token-need-body').querySelector('.token-need-example'));
           assert.equal(needs[0].querySelector('img').getAttribute('src'), '/img/tx/9/small');
           assert.equal(needs[1].querySelector('.token-need-example'), null);
           assert.equal(needs[1].querySelector('img').getAttribute('src'), '/img/tm/1/small');
