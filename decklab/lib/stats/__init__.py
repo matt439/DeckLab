@@ -149,7 +149,9 @@ AGENTS.md says to ignore ban lists and legality for casual decks)
     Lutri, which is only banned as a companion) and not_legal ones; Game
     Changers (Scryfall's game_changer flag, the list cards.game_changers()
     returns), mass land denial and extra-turn cards (Scryfall oracle tags
-    mass-land-denial and extra-turn, read with cards.tag_members), and the
+    mass-land-denial and extra-turn, read with cards.tag_members), tutors
+    (the tutor tag's branches apart from tutor-land, cards.tag_branches;
+    counted only), and the
     minimum bracket they allow. Two-card combos come from Commander
     Spellbook's list (bracket.combos); combos of three or more cards, intent
     and whether extra turns chain can't be judged from a list; the result

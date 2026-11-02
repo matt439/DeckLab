@@ -58,8 +58,8 @@ An index of open work, one row per item; each row points to the doc that owns th
 |---|---|---|---|---|
 | `E5-S15` | DEFERRED | should | M | User1 asks from the page for a card or a Forge run, Matt approves (`E3-S13`); not urgent. |
 | `E7-S32` | OPEN | could | L | Scan cards sheet and `POST /api/collection/scan` built, with each pending card's printing picker and language, and Tokens' Scan token cards (`POST /api/tokens/scan`, one-change add) (fixture-tested); next real phone photos of cards and token cards on the household's phones. |
-| `E5-S27` | OPEN | should | M | Shopping proposes per-shop baskets from the daily snapshot: ready rows in stock, totals, long-term add-ons; postage rules as settings later (with `E11-S53`). First slice, the baskets without postage rules. |
-| `E5-S28` | OPEN | should | M | Pick decks on Shopping and see the shortfall to build them all at once (free copies counted once), then Queue these; first slice, the read-only combined list. |
+| `E5-S27` | OPEN | should | M | Shopping's Baskets built without postage (2026-11-02). Left: postage rules per shop as a setting (with `E11-S53`), add-ons that reach a free-postage threshold, and the fewest-shops plan. |
+| `E5-S28` | OPEN | should | M | Build decks together's read-only combined list built (2026-11-02). Left: Queue these (one reviewed queue change, `for` naming the decks) and each card's matching queue rows. |
 | `E5-S29` | DECISION | could | S | Dated price and stock history for queued cards only (the snapshot keeps one previous reading); Matt decides whether it's wanted beside `E5-S21`. |
 | `E5-S30` | OPEN | could | S | A My wishlist tick in the editor's Add panel and "short of this card" on the owner's Wishlist page; first slice, the Wishlist page's line. |
 
@@ -71,7 +71,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 |---|---|---|---|---|
 | `E9-S11` | DEFERRED | could | L+pc | Four-player pod runs from the page (with `E9-S21` win shares and `E9-S22` why-not by Start); after `FG#2`. First `lib/forge/pods.py` from the prototype, fixtures only. |
 | `E9-S28` | OPEN | could | M | Commanders we could build: free legendary creatures ranked by the free pool's role coverage in their colours, EDHREC on demand; first slice, the ranked list without EDHREC. |
-| `E9-S29` | OPEN | should | S | Count the deck's tutors from oracle tags in the bracket check, with what the official text says; first slice, the count and list on the Stats tab. |
+| `E9-S29` | OPEN | should | S | Tutor count and list on the Stats tab built (2026-11-02). Left: the Overview's sentence, What opponents will face and the printout; the official text on tutors (needs its source); a Checks warning where it sets a number. |
 
 ## Deck Lab: testing and Forge
 

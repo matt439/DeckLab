@@ -2,6 +2,32 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Shopping's Baskets from the daily snapshot (2026-11-02; E5-S27 first slice)
+
+- Sharing postage was hand work in Claude's buylists. GET `/api/shopping` now carries a `baskets` field (`lib/api/shop_baskets.py`), only for home-record readers and only while some shop has a saved snapshot, built from the snapshot capture Shopping already makes, so no shop is contacted.
+- Each shop (MTGMate, then Games Portal) lists the ready rows in stock there with the listing found, its A$ price (or "price not shown"), stock (Games Portal's "count not shown") and fetch time; MTGMate's short stock counts only the copies it has ("only N of Q in stock"). A total covers the priced rows and names how many have none. Rows it can't vouch for (printing not confirmed, couldn't be read, not checked) claim no stock, and long-term and waiting rows in stock there are marked Add-on with their own total; deferred rows are left out. A shop whose snapshot couldn't be read says so, and the ready rows no checked shop has are listed with each shop's reason.
+- An exact row counts only a listing of its set, number and finish; an `any` row takes the existing matcher's choice (the cheapest in-stock non-foil, else the cheapest in stock).
+- The page (`web/shopping-baskets.js`) draws Baskets after By shop, with a jump link. Copy this shop's list reuses E5-S24's copy (`shopCopyRows` split out of `shopCopyShop`): the basket's ready rows at the copies it counts, not the add-ons, and disabled after a local queue change until a refresh. Nothing is written.
+- Tests: `test_shop_baskets.py` (14) and `test_shopping_baskets_ui.py` (6).
+- Not done yet: postage rules per shop as a setting, add-ons that reach a free-postage threshold, and the fewest-shops plan.
+
+## Build decks together on Shopping (2026-11-02; E5-S28 first slice)
+
+- Missing cards across decks sums each deck's own shortfall, so two unbuilt decks wanting the same free copy both look covered. GET `/api/shopping/combined?decks=ID,ID[,...]` (`lib/api/shopping_combined.py`, routed in `feature_routes.py`) adds 2 to 12 chosen home decks' Planned lists and compares them once with home's pool (`pool.compare`): each free copy counted once, copies held by other built decks and intact products not free, a chosen built deck keeping its own, cards on the way counted and labelled with their order, plain basics left out, the pool read once and no prices fetched.
+- Each card gives the combined want, free and missing copies, the single-deck shortfalls' sum, each chosen deck's need and shortfall, copies on the way and the other holders (a deck the viewer can't see as "one of the home decks"); the totals say where the combined list is above the single-deck sum. An incomplete pool, an unreadable deck, a deck with no Planned list or an unknown card makes the answer not ready, with no cards, rather than a total that's too low.
+- Readers are those of GET `/api/shopping`; anyone else gets 403 before any read. A hidden or missing deck answers as a missing deck (404); products, pairings, member decks, a deck chosen twice or fewer than 2 or more than 12 get 400. Nothing is written.
+- The page (`web/shopping-combined.js`): Build decks together under Missing cards across decks when there are two decks to choose; Choose decks… ticks them in a sheet (each with its own missing count), and the list names each card's decks, a "N more because the decks share it" chip, an on-the-way chip and Held by. A late answer after leaving the page is ignored, and a local queue redraw keeps the choice and result.
+- Tests: `test_shopping_combined.py` (11) and `test_shopping_combined_ui.py` (4).
+- Not done yet: Queue these, one reviewed queue change with each row's `for` naming the decks, and each card's matching queue rows as Missing cards shows them.
+
+## Tutors counted in the bracket check (2026-11-02; E9-S29 first slice)
+
+- The bracket check read oracle tags for mass land denial and extra turns but not tutors. `lib/stats/tutors.py` counts a card as a tutor when Scryfall tags it anywhere under `tutor`, unless it is only under `tutor-land` (a land search: Rampant Growth, Cultivate, fetchlands, Expedition Map), which are named apart. The `tutor-to` tags say where a card goes, not what it finds, so they never make a land search a tutor; a card also under another tutor tag (Tolaria West) still counts. This matches how the gauntlet's tags leave land searches out. On the real tag file: 639 tutors and 590 land searches.
+- `cards.tag_branches(slug)` returns the cards under each tag directly below a tag, sharing `tag_members`' cache. `commander.py` adds `bracket["tutors"]` (checked, cards, count, land searches, the tag data's date), and the Stats tab's Minimum bracket shows "Tutors found: N", the cards and the date (`tutorFindings` in `stats.js`).
+- The count only informs: it never changes the minimum bracket or blocks anything, and says nothing about the official text on tutors, since the official-lists source keeps only the announcement's date and link. Without the tag file the reasons say "Mass land denial, extra turns and tutors weren't counted (no tag data)"; a readable file with no `tutor` tag says "Tutors weren't counted (no tutor tag data)." without a new warning. Casual decks and older answers are unchanged.
+- Tests: `test_stats.py` (7 new) and `test_stats_tutors_ui.py`.
+- Not done yet: the Overview's bracket sentence, What opponents will face and the printout; the official text on tutors at the target bracket (it would need reading from Wizards' own page); a Checks warning where that text sets a number.
+
 ## The gauntlet: a deck against popular outside decks (2026-11-02; E3-S28, E3-S29)
 
 - The field holds only a handful of household decks, so a field rank says little about what kinds of deck a list beats. The gauntlet ([design/gauntlet.md](design/gauntlet.md)) plays a house deck against a balanced sample of public sparring decks and reads the results by colour, number of colours, style and tier. Built in five slices against one contract (sources and catalogue, tagging and sampling, runs and commands, the page, these docs), then fitted together.
