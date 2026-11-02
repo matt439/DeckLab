@@ -12,40 +12,46 @@ and only when the owner may see that space's inventory (guard.sees_inventory): o
 nothing is said. The answer is worked out for the wishlist's owner, never for whoever else
 the request might stand for, and never names another space's deck.
 """
-from decklab.lib import cards, decks, inventory, pool, spaces
+from decklab.lib import buying_needs, cards, decks, inventory, pool, spaces
 
 from . import common, guard
 
-# Shown once in the wishlist's warnings when the decks can't be counted.
+# Shown once in the wishlist's short_warnings (not its card-details warnings) when the decks can't be
+# counted, or some of them couldn't be. None names a deck.
 UNCOUNTED = "Which of your decks are short of these cards can't be worked out right now."
 INCOMPLETE = ("Which of your decks are short of these cards can't be worked out until the card pool's "
               "problems are fixed.")
+PARTIAL = "Some of your decks couldn't be counted, so they may also be short of these cards."
 
 
 def _own_decks(space, profile):
-    """The library summaries of space's own decks (no products or pairings) with a Planned list,
-    that profile may see."""
-    out = []
+    """(summaries, skipped): the library summaries of space's own decks (no products or pairings)
+    with a Planned list that profile may see, and how many such decks couldn't be read (a summary
+    with an "error")."""
+    out, skipped = [], 0
     for summary in decks.list_decks():
-        if summary.get("error") or "target" not in summary.get("versions", []):
-            continue
         try:
             deck_space, kind, _ = spaces.split_deck_id(summary.get("id"))
         except ValueError:
             continue
         if deck_space != space or summary.get("space", space) != space or kind not in decks.KINDS:
             continue
-        if guard.sees_deck(summary, profile):
+        if not guard.sees_deck(summary, profile):
+            continue
+        if summary.get("error"):
+            skipped += 1
+        elif "target" in summary.get("versions", []):
             out.append(summary)
-    return out
+    return out, skipped
 
 
 def short_decks(profile, names, supply, warnings):
     """{exact card name: [{id, title, missing}]} for the wished names (exact Scryfall names), every
     name with a list (empty when no deck is short of it); None when nothing may be said (the owner
     can't see the space's inventory) or it can't be worked out (supply None, an incomplete pool,
-    the decks unreadable: then a warning says so). Each card's decks come most copies short first,
-    then by title."""
+    the decks unreadable: then a warning says so). A deck that can't be counted (unreadable, its
+    count failing or itself incomplete, as Shopping skips one) is left out and PARTIAL says so,
+    naming no deck. Each card's decks come most copies short first, then by title."""
     if not profile or not names:
         return None
     space = profile.get("space") or spaces.HOME
@@ -59,7 +65,7 @@ def short_decks(profile, names, supply, warnings):
     wanted = set(names)
     found = {name: [] for name in wanted}
     try:
-        summaries = _own_decks(space, profile)
+        summaries, skipped = _own_decks(space, profile)
     except inventory.Unavailable:
         raise
     except Exception as error:  # noqa: BLE001 - the list itself stays available
@@ -73,6 +79,12 @@ def short_decks(profile, names, supply, warnings):
             raise
         except Exception as error:  # noqa: BLE001 - one unreadable deck leaves the others counted
             common._log(f"Wishlist: {summary['id']} couldn't be counted: {error}")
+            skipped += 1
+            continue
+        problem = buying_needs.incomplete(result, common._public)
+        if problem:
+            common._log(f"Wishlist: {summary['id']} couldn't be counted: {problem}")
+            skipped += 1
             continue
         for row in result["rows"]:
             if row["missing"] <= 0:
@@ -81,6 +93,8 @@ def short_decks(profile, names, supply, warnings):
             if name in wanted:
                 found[name].append({"id": summary["id"], "title": summary.get("title") or summary["id"],
                                     "missing": row["missing"]})
+    if skipped:
+        warnings.append(PARTIAL)
     for listed in found.values():
         listed.sort(key=lambda deck: (-deck["missing"], deck["title"].casefold(), deck["id"]))
     return found

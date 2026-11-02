@@ -101,7 +101,9 @@ def _view(profile_id, entries, warnings):
     User1, a person's own collection for someone with their own space.
     "short_in" lists the owner's own decks whose Planned list is short of the
     card ([{id, title, missing}], most short first; [] for none), or is None
-    when that can't or may not be said (wishlist_short.short_decks, E5-S30)."""
+    when that can't or may not be said (wishlist_short.short_decks, E5-S30);
+    "short_warnings" says why it couldn't be, or that some decks weren't counted,
+    apart from the card-details "warnings"."""
     ready = True
     try:
         _require_cards()
@@ -115,7 +117,8 @@ def _view(profile_id, entries, warnings):
     except Exception as error:          # the decks can't be read: sources show as written
         common._log(f"Can't read the decks for wishlist sources: {error}")
         inv = None
-    short = _short(profile, entries, p, warnings) if ready else None
+    short_warnings = []
+    short = _short(profile, entries, p, short_warnings) if ready else None
     out = []
     for entry in entries:
         item = dict(entry, card=None, have={"owned": None, "on_the_way": None},
@@ -146,7 +149,8 @@ def _view(profile_id, entries, warnings):
                 common._log(f"Can't enrich wishlist card {entry['name']}: {error}")
                 warnings.append(f"Card details for {entry['name']} are unavailable; it stays on your wishlist.")
         out.append(item)
-    return {"profile": profile_id, "entries": out, "warnings": _unique(_scrub(warnings))}
+    return {"profile": profile_id, "entries": out, "warnings": _unique(_scrub(warnings)),
+            "short_warnings": _unique(short_warnings)}
 
 
 def _short(profile, entries, p, warnings):

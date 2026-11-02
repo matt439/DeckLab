@@ -143,6 +143,9 @@ function updateWishlist(view) {
   clear(view.warnings);
   const warning = warningsBox(view.data.warnings, "Some card details aren't available");
   if (warning) view.warnings.append(warning);
+  // E5-S30: why the decks short of these cards can't all be said, apart from the card details.
+  const short = warningsBox(view.data.short_warnings, "Some decks short of these cards may not be shown");
+  if (short) view.warnings.append(short);
   const entries = view.data.entries || [];
   view.count.textContent = entries.length ? `${plural(entries.length, "card")}` : "Your wishlist";
   clear(view.cards);

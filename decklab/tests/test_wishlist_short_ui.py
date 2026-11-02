@@ -70,3 +70,25 @@ class WishlistShortUiTests(unittest.TestCase):
             clear(main);
           }
         """)
+
+    def test_short_warnings_have_their_own_box_and_heading(self):
+        self.run_js("""
+          const answer = (warnings, short_warnings) => drawWishlist({profile: "user1", entries: [entry(alpha)],
+            warnings, short_warnings}, state.profile, routeToken);
+          const headings = (view) => view.warnings.querySelectorAll("h2").map((h) => h.textContent);
+          const skipped = "Some of your decks couldn't be counted, so they may also be short of these cards.";
+          let view = answer(["No card details for 'X'; it stays on your wishlist."], [skipped]);
+          same(headings(view), ["Some card details aren't available", "Some decks short of these cards may not be shown"]);
+          const boxes = view.warnings.querySelectorAll(".box-warn");
+          assert(!boxes[0].textContent.includes(skipped));
+          assert(boxes[1].textContent.includes(skipped));
+          clear(main);
+          view = answer([], [skipped]);
+          same(headings(view), ["Some decks short of these cards may not be shown"]);
+          clear(main);
+          for (const short_warnings of [[], undefined]) {
+            view = answer([], short_warnings);
+            same(headings(view), []);
+            clear(main);
+          }
+        """)

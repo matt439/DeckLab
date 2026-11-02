@@ -4,12 +4,13 @@ A wished card is short in a deck when its Planned list is missing copies (pool.o
 counted in the wishlist owner's own space only, for decks the owner may see, and only when the
 owner may see that space's inventory; another space's decks are never named."""
 import json
+from types import SimpleNamespace
 from unittest import mock
 
 from decklab.lib import access, api, config, inventory, pool
 from decklab.lib.api import guard, library, wishlist_short, wishlists
 from decklab.lib.inventory.files import FileInventory
-from decklab.tests.test_api import ApiTestCase, _write
+from decklab.tests.test_api import GRUUL, ApiTestCase, _write
 from decklab.tests.test_collection_edit import ROLES
 
 HEADER = "name,set,collector_number,finish,quantity,condition,language,notes\n"
@@ -50,6 +51,9 @@ class WishlistShortTests(ApiTestCase):
                HEADER + "Llanowar Elves,fdn,227,nonfoil,4,NM,en,\nRhystic Study,wot,25,nonfoil,1,NM,en,\n")
         # An unreadable deck leaves home's pool incomplete, which says nothing (see the incomplete test).
         (box.magic / "decks" / "casual" / "broken.md").unlink()
+        # Gruul Test's Opt isn't in the fixture card index, and a deck with an unknown card isn't counted
+        # (as Shopping skips it: see the unknown-cards test), so its line goes here.
+        _write(box.magic / "decks" / "casual" / "gruul-test.md", GRUUL.replace("1 Opt (FDN) 512\n", ""))
         for target, name, value in ((config, "REPO", box.root), (config, "DATA", box.data)):
             patcher = mock.patch.object(target, name, value)
             patcher.start()
@@ -143,7 +147,8 @@ class WishlistShortTests(ApiTestCase):
         with mock.patch.object(wishlists, "_load_pool", side_effect=incomplete):
             answer = self.get("user1")
         self.assertIsNone(answer["entries"][0]["short_in"])
-        self.assertIn(wishlist_short.INCOMPLETE, answer["warnings"])
+        self.assertEqual(answer["short_warnings"], [wishlist_short.INCOMPLETE])
+        self.assertNotIn(wishlist_short.INCOMPLETE, answer["warnings"])
 
     def test_unreadable_decks_keep_the_wishlist(self):
         self.seed("user1", [RIDER])
@@ -151,9 +156,11 @@ class WishlistShortTests(ApiTestCase):
             answer = self.get("user1")
         self.assertEqual(answer["entries"][0]["name"], RIDER)
         self.assertIsNone(answer["entries"][0]["short_in"])
-        self.assertIn(wishlist_short.UNCOUNTED, answer["warnings"])
+        self.assertEqual(answer["short_warnings"], [wishlist_short.UNCOUNTED])
+        self.assertNotIn(wishlist_short.UNCOUNTED, answer["warnings"])
         self.assertNotIn("secret", json.dumps(answer))
-        # One deck that can't be counted leaves the others' lines.
+        # One deck that can't be counted leaves the others' lines, and a warning (naming no deck) says
+        # the answer may be missing a deck: Elf Commander is in fact short of Ghalta.
         real = pool.owned_vs_needed
 
         def counted(deck_id, *args, **kwargs):
@@ -165,10 +172,55 @@ class WishlistShortTests(ApiTestCase):
             short = self.short(self.get("user1"))
         self.assertEqual([d["id"] for d in short[RIDER]], ["casual/gruul-test"])
         self.assertEqual(short["Ghalta, Primal Hunger"], [])
+        with mock.patch.object(wishlist_short.pool, "owned_vs_needed", side_effect=counted):
+            answer = self.get("user1")
+        self.assertEqual(answer["short_warnings"], [wishlist_short.PARTIAL])
+        self.assertNotIn("Elf Commander", json.dumps(answer))
 
-    def test_the_inventory_goldens_drop_exactly_these_warnings(self):
-        from decklab.tests import golden_p4
-        self.assertEqual(set(golden_p4.WISHLIST_SHORT_WARNINGS), {wishlist_short.UNCOUNTED, wishlist_short.INCOMPLETE})
+    def test_a_deck_with_unknown_cards_is_skipped_and_said(self):
+        # Shopping skips a deck whose own count is incomplete; so does the wishlist, saying so.
+        self.seed("user1", [RIDER, "Ghalta, Primal Hunger"])
+        real = pool.owned_vs_needed
+
+        def unresolved(deck_id, *args, **kwargs):
+            result = real(deck_id, *args, **kwargs)
+            if deck_id == "commander/elf-commander":
+                result = dict(result, unresolved=[("Not A Card", deck_id)])
+            return result
+        with mock.patch.object(wishlist_short.pool, "owned_vs_needed", side_effect=unresolved):
+            answer = self.get("user1")
+        short = self.short(answer)
+        self.assertEqual([d["id"] for d in short[RIDER]], ["casual/gruul-test"])
+        self.assertEqual(short["Ghalta, Primal Hunger"], [])
+        self.assertEqual(answer["short_warnings"], [wishlist_short.PARTIAL])
+        self.assertNotIn("Not A Card", json.dumps(answer))
+
+    def test_an_unreadable_own_deck_is_said_but_another_space_is_not(self):
+        self.seed("user1", [RIDER])
+        self.seed("user2", ["Rhystic Study"])
+        real = wishlist_short.decks
+
+        def listing(*extra):
+            # Only the wishlist's listing has them (the pool's own would call itself incomplete).
+            return SimpleNamespace(list_decks=lambda: [*real.list_decks(), *extra], KINDS=real.KINDS)
+        home_error = {"id": "casual/unreadable", "title": "Unreadable", "error": "bad text"}
+        with mock.patch.object(wishlist_short, "decks", listing(home_error)):
+            answer = self.get("user1")
+            theirs = self.get("user2")
+        self.assertEqual(answer["short_warnings"], [wishlist_short.PARTIAL])
+        self.assertEqual([d["id"] for d in self.short(answer)[RIDER]], ["casual/gruul-test"])
+        self.assertNotIn("Unreadable", json.dumps(answer))
+        # Another space's unreadable deck is neither counted nor hinted at; one's own is said.
+        self.assertEqual(theirs["short_warnings"], [])
+        self.assertEqual(len(self.short(theirs)["Rhystic Study"]), 1)
+        mine = {"id": "user2/casual/theirs", "space": "user2", "title": "Theirs", "error": "bad text"}
+        with mock.patch.object(wishlist_short, "decks", listing(mine)):
+            self.assertEqual(self.get("user2")["short_warnings"], [wishlist_short.PARTIAL])
+
+    def test_a_complete_count_has_no_short_warnings(self):
+        self.seed("user1", [RIDER])
+        answer = self.get("user1")
+        self.assertEqual(answer["short_warnings"], [])
 
     def test_offline_cards_say_nothing(self):
         self.seed("user1", [RIDER])
