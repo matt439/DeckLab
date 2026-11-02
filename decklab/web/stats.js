@@ -822,6 +822,22 @@ function checkItem(ok, what, ...detail) {
     detail.length ? el("div", { class: "detail" }, detail) : null);
 }
 
+/** The Minimum bracket part's tutor count (E9-S29): counted from Scryfall's oracle tags, informing only. */
+function tutorFindings(br) {
+  const t = br.tutors;
+  if (!t || typeof t !== "object") return null;
+  if (!t.checked) return null;     // the reasons above say tutors weren't counted
+  const found = Array.isArray(t.cards) ? t.cards : [];
+  const land = Array.isArray(t.land_searches) ? t.land_searches : [];
+  const dated = t.tags_date ? `Scryfall's oracle tags of ${t.tags_date}` : "Scryfall's oracle tags (date unknown)";
+  return el("div", { class: "tutor-count" },
+    el("p", {}, el("b", { text: `Tutors found: ${Number.isInteger(t.count) ? t.count : found.length}` })),
+    found.length ? cardNames(found) : null,
+    el("p", { class: "sub", text: `Cards ${dated} call tutors. Searches for lands only aren't counted` +
+      (land.length ? ` (${land.length}: ${land.map((c) => c.name).join(", ")}).` : ".") +
+      " The count informs only: it doesn't change the minimum bracket." }));
+}
+
 function commanderPanel(st, summary) {
   const k = st.commander;
   const br = k.bracket || {};
@@ -859,6 +875,7 @@ function commanderPanel(st, summary) {
     el("div", { class: "formula", style: "margin-top: 12px" },
       el("p", {}, el("b", { text: "Minimum bracket: " }), br.label || "?"),
       (br.reasons || []).map((r) => el("p", { class: "sub", text: r })),
+      tutorFindings(br),
       target ? el("p", { class: "sub", text: `The deck aims for Bracket ${target}.` }) : null));
   panel.append(explain("What are the rules and brackets?", "A Commander deck has exactly 100 cards including the " +
     "commander, one copy of each card (basic lands excepted), and only cards within the commander's colours. Brackets " +

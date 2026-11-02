@@ -14,7 +14,8 @@ with a Background, Doctor's companion with a Doctor and with a Time Lord who
 isn't one, plus Grist, the Hunger Tide (a creature card off the battlefield)
 and Once More with Feeling (only one copy in a deck).
 fixtures/stats_tags.jsonl is a made-up tag tree that uses the real slugs
-(the role tags, mass-land-denial and extra-turn).
+(the role tags, mass-land-denial, extra-turn and a small tutor tree: The
+Seriema a creature tutor, the land searches only under tutor-land).
 
 The expected numbers are worked out by hand in the comments, from Karsten's
 formulas and tables as lib/stats/constants.py quotes them.
@@ -33,6 +34,7 @@ from unittest import mock
 
 from decklab.lib import cards, decks, stats
 from decklab.lib.stats import commander as stats_commander     # where TAG_FILE, COMBO_FILE and OFFICIAL_FILE are read
+from decklab.lib.stats import tutors as stats_tutors
 
 FIXTURES = Path(__file__).parent / "fixtures"
 CARDS_FILE = FIXTURES / "stats_cards.jsonl"
@@ -628,6 +630,82 @@ class TestCommander(unittest.TestCase):
 
     def test_plain_json(self):
         json.dumps(self.result, allow_nan=False)
+
+    def test_tutors_are_counted_apart_from_land_searches(self):
+        # E9-S29: The Seriema is tagged tutor-creature-legendary; Primeval Titan only tutor-land-any
+        # (and the tutor-to zone tags), so it's a land search, not a tutor.
+        result = run("Commander\n1 The Seriema\n\nDeck\n1 Primeval Titan\n1 Rampant Growth\n97 Plains\n",
+                     "commander")
+        bracket = result["commander"]["bracket"]
+        tutors = bracket["tutors"]
+        self.assertTrue(tutors["checked"])
+        self.assertEqual(tutors["cards"], [{"name": "The Seriema", "qty": 1}])
+        self.assertEqual(tutors["count"], 1)
+        self.assertEqual(tutors["land_searches"], [{"name": "Primeval Titan", "qty": 1},
+                                                   {"name": "Rampant Growth", "qty": 1}])
+        self.assertEqual(tutors["tags_date"], bracket["data"]["tags_date"])
+        self.assertFalse(any("utor" in reason for reason in bracket["reasons"]))
+
+    def test_tutors_never_raise_the_minimum(self):
+        plain = run("Commander\n1 The Seriema\n\nDeck\n99 Plains\n", "commander")["commander"]["bracket"]
+        self.assertEqual(plain["tutors"]["count"], 1)
+        self.assertEqual(plain["minimum"], 1)
+
+    def test_no_tutors(self):
+        tutors = self.checks["bracket"]["tutors"]
+        self.assertEqual((tutors["checked"], tutors["cards"], tutors["count"]), (True, [], 0))
+        self.assertEqual(tutors["land_searches"], [{"name": "Primeval Titan", "qty": 1}])
+
+    def test_tutors_without_tag_data(self):
+        with mock.patch.object(stats_commander, "TAG_FILE", FIXTURES / "no-such-tags.jsonl"):
+            bracket = run(PROBLEM_DECK, "commander")["commander"]["bracket"]
+        self.assertFalse(bracket["tutors"]["checked"])
+        self.assertIn("Mass land denial, extra turns and tutors weren't counted (no tag data).",
+                      bracket["reasons"])
+
+    def test_tutors_without_a_tutor_tag(self):
+        # A tag file without the tutor tag still counts mass land denial and extra turns.
+        lines = [line for line in TAGS_FILE.read_text(encoding="utf-8").splitlines()
+                 if '"slug": "tutor' not in line]
+        path = _tmp / "no-tutor-tags.jsonl"
+        path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        with mock.patch.object(stats_commander, "TAG_FILE", path):
+            bracket = run(PROBLEM_DECK, "commander")["commander"]["bracket"]
+        self.assertFalse(bracket["tutors"]["checked"])
+        self.assertEqual(bracket["mass_land_denial"], [{"name": "Armageddon", "qty": 1}])
+        self.assertIn("Tutors weren't counted (no tutor tag data).", bracket["reasons"])
+
+
+class TestTutorTags(unittest.TestCase):
+    """stats.tutors.tutor_ids over a small tag tree written for each test."""
+
+    def tree(self, extra_land=(), extra_typed=()):
+        def tag(n, slug, children, oracle):
+            return json.dumps({"object": "tag", "id": f"t{n}", "label": slug, "slug": slug, "type": "oracle",
+                               "parent_ids": [], "child_ids": [f"t{c}" for c in children], "aliases": [],
+                               "taggings": [{"oracle_id": o} for o in oracle]})
+        lines = [tag(1, "tutor", [2, 3, 5], ["direct"]),
+                 tag(2, "tutor-card", [], ["demonic", *extra_typed]),
+                 tag(3, "tutor-land", [4], ["map", *extra_land]),
+                 tag(4, "tutor-land-basic", [], ["growth"]),
+                 tag(5, "tutor-to", [6], []),
+                 tag(6, "tutor-to-hand", [], ["growth", "demonic", "zone-only"])]
+        folder = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, folder, True)
+        path = folder / "tags.jsonl"
+        path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        return path
+
+    def test_land_searches_are_left_out_unless_also_another_tutor(self):
+        found, land = stats_tutors.tutor_ids(self.tree(extra_land=["both"], extra_typed=["both"]))
+        self.assertEqual(found, {"direct", "demonic", "both", "zone-only"})
+        self.assertEqual(land, {"map", "growth"})
+
+    def test_cached_until_the_file_changes(self):
+        path = self.tree()
+        first = stats_tutors.tutor_ids(path)
+        with mock.patch.object(cards.card_index, "_read_tag_tree", side_effect=AssertionError("re-read")):
+            self.assertEqual(stats_tutors.tutor_ids(path), first)
 
 
 class TestDeckRules(unittest.TestCase):

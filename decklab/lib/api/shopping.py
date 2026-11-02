@@ -44,6 +44,8 @@ def shopping_overview():
         queued card's "shop_snapshot", what it says about that row (lib/shops.match); left out without one;
       - "shop_snapshots": the same for every shop with a snapshot (MTGMate, Games Portal), a list on the
         answer and on each queued card, each shop's with its own fetch time; left out without any;
+      - "baskets": a proposed basket for each snapshot shop (shop_baskets.py, E5-S27): the ready rows in stock
+        there with prices and a total, add-ons in stock, and the ready rows no read shop has; left out without any;
       - "decks_missing": the home decks whose planned list still misses cards;
       - "missing_cards": {ready, rows, warnings, errors, totals}, one canonical card
         per row with summed individual deck shortfalls, wanting decks and every matching
@@ -90,6 +92,8 @@ def _overview():
             errors=deck_errors)
     reprints.enrich(answer["missing_cards"].get("rows", []), cache=reprint_cache)
     shop_prices.enrich_missing(answer, data=shop_data)
+    from . import shop_baskets
+    shop_baskets.enrich(answer, data=shop_data)
     return answer
 
 

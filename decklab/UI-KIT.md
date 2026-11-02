@@ -332,6 +332,28 @@ keep explicit errors. The selected shop and open fold survive a local queue redr
 not navigation or reload. Price, shop and checked date stay visible without a card
 picture and describe recorded research rather than live retailer stock.
 
+`shopping-combined.js` follows `shopping-buying.js`. Its Build decks together section
+(E5-S28) appears under Missing cards across decks when Shopping offers two or more home
+decks: Choose decks… ticks 2 to 12 in a sheet (Show what to buy stays `aria-disabled`
+until enough are ticked), then GET `/api/shopping/combined` lists what to buy to build
+them all at once, each free copy counted once, with each card's decks, copies on the way
+and other holders. It is read-only (no queue action yet); the choice and answer survive a
+local queue redraw, not navigation, and a late answer checks its view, route and profile.
+Show what to buy and Try again put focus on the redrawn Change decks… (an answer arriving
+after focus moved elsewhere leaves it there). A deck link filters to Missing only when that
+deck misses something on its own. The section counts as Shopping's content only once decks
+are chosen: an otherwise empty page keeps its empty state, with a Build decks together… button.
+
+`shopping-baskets.js` follows `shopping-snapshot.js` (E5-S27's first slice). `shopBaskets(view)`
+draws Shopping's Baskets after By shop from the answer's `baskets` (`lib/api/shop_baskets.py`),
+only for home-record readers and only while some shop has a saved snapshot: one card a shop with
+its ready rows in stock (price each, stock, fetch time; an `any` row the cheapest listing can't
+fill names the further printings it takes, "also 3 × M19 314"), a total over priced rows naming how many
+have none, the rows it couldn't speak for (printing not confirmed, couldn't be read, not checked),
+and add-ons in stock marked Add-on; then the ready rows no checked shop has. Copy this shop's list
+reuses `shopCopyShop` with the basket's own `shopCopyRows` list (ready rows only, the copies the
+basket counts), disabled once the queue revision moves on. No postage, no writes.
+
 `shopping-reprints.js` follows `shopping-buying.js`. Its shared `reprintInfo` draws
 known upcoming paper-printing set/date evidence as a sibling of the card viewer
 button, also in missing deck-price rows. Source and coverage exposes the actual

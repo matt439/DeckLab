@@ -139,7 +139,11 @@ function shopApplyMatches(view) {
 /** One shop's current queue, coalescing only identical requested cards/printings without changing the rows. */
 function shopCopyList(view, shop) {
   if (!shop) return null;
-  const rows = (view.data.to_buy || []).filter(row => shopQueueShop(row) === shop);
+  return shopCopyRows((view.data.to_buy || []).filter(row => shopQueueShop(row) === shop));
+}
+
+/** Queue-shaped rows as copy text ("<quantity> <name>", exact printings with set, number and finish), or null. */
+function shopCopyRows(rows) {
   const entries = new Map();
   let cards = 0;
   for (const row of rows) {
@@ -160,14 +164,17 @@ function shopCopyList(view, shop) {
   return cards ? {cards, text: [...entries.values()].map(item => `${item.quantity} ${item.text}`).join("\n") + "\n"} : null;
 }
 
-/** Copying is a read action for home viewers, bound to the current page, control and displayed queue. */
-async function shopCopyShop(view, shop, button) {
+/** Copying is a read action for home viewers, bound to the current page, control and displayed queue.
+ * options (a basket's, shopping-baskets.js): list() its own copy list, note the fallback's words, and
+ * selector the class of its controls (for focus after a redraw closes the fallback). */
+async function shopCopyShop(view, shop, button, options = {}) {
   const owned = () => button?.isConnected && shopQueueActive(view) && seesHomeInventory(state.may);
   if (!owned() || button.disabled || view.busy || view.stale) return;
-  const list = shopCopyList(view, shop), revision = view.data.queue_revision;
+  const listFor = options.list || (() => shopCopyList(view, shop));
+  const list = listFor(), revision = view.data.queue_revision;
   if (!list) { toast("That shop's list isn't available. Refresh Shopping and check its rows."); return; }
   const current = () => owned() && !view.busy && !view.stale && view.data.queue_revision === revision
-    && shopCopyList(view, shop)?.text === list.text;
+    && listFor()?.text === list.text;
   button.disabled = true;
   try {
     if (!navigator.clipboard?.writeText) throw new Error("Clipboard unavailable");
@@ -179,12 +186,13 @@ async function shopCopyShop(view, shop, button) {
       if (owned() && !document.querySelector("dialog[open]")) button.focus({preventScroll: true});
     }}), view);
     sheet.shopCopy = shop;
+    sheet.shopCopySelector = options.selector || ".shop-store-copy";
     sheet.queueBusy = () => { if (!current()) sheet.close(); };
     const area = el("textarea", {readonly: "", rows: 12, class: "export-copy shop-copy-text",
       "aria-label": `List for ${shop}`, spellcheck: "false"});
     area.value = list.text;
     sheet.body.append(el("p", {text: "Select and copy the list below."}),
-      el("p", {class: "sub", text: `${plural(list.cards, "card")} from all queue categories, including long-term plans. ` +
+      el("p", {class: "sub", text: `${plural(list.cards, "card")} ${options.note || "from all queue categories, including long-term plans"}. ` +
         "Exact printing requests include the set, collector number and finish."}), area);
     sheetActions(sheet, [{text: "Close", onclick: () => sheet.close()}]);
     area.focus(); area.select();
@@ -203,7 +211,7 @@ function shopCloseCopySheets(view) {
       const active = document.activeElement;
       if (!shopQueueActive(view) || !seesHomeInventory(state.may)
           || active?.isConnected && active !== document.body && active !== focused) return;
-      const button = Array.from(view.root.querySelectorAll(".shop-store-copy"))
+      const button = Array.from(view.root.querySelectorAll(sheet.shopCopySelector || ".shop-store-copy"))
         .find(candidate => candidate.dataset.copyShop === sheet.shopCopy);
       (button || view.root.querySelector(".shop-store-radio"))?.focus({preventScroll: true});
     });
