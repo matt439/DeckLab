@@ -663,7 +663,7 @@ Not a user.
 
 ### Frustrations
 
-- Deck Lab never flags banned or rotated cards in casual decks and has no metagame data.
+- Deck Lab never flags banned or rotated cards in casual decks and has no tournament metagame data: its gauntlet uses EDHREC's popular commanders and Forge's bundled decks as sparring partners, never as metagame shares or legality.
 
 ### Behaviours
 
@@ -688,7 +688,7 @@ None.
 
 - **Check:** no legality or ban badge ever appears on a casual 60-card deck.
 - **Check:** Commander decks show only the Commander ban list, colour identity and the bracket checks.
-- Strength is measured only against the household's decks, never a public metagame.
+- Strength is measured against the household's decks and, in the gauntlet (E3-S28), against a sample of public sparring decks, never against a public metagame's shares.
 
 ---
 
