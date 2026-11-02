@@ -256,11 +256,13 @@ class Catalogue(GauntletCase):
         with self.assertRaises(catalogue.GauntletError):
             catalogue.build("constructed", sources=("moxfield",))
 
-    def test_fallback_tagging(self):
-        tagged = catalogue.fallback_tag("commander", {"Commander": [[1, YSHTOLA]], "Main": [[1, "Counterspell"]]},
-                                        ["Control"])
-        self.assertEqual(tagged, {"identity": "WUB", "colours": "WUB", "metrics": {},
-                                  "style": {"primary": "midrange", "tags": [], "themes": ["Control"]}})
+    def test_tagging_is_tags_tag(self):
+        from decklab.lib.gauntlet import tags
+        listed = {"Commander": [[1, YSHTOLA]], "Main": [[1, "Counterspell"]]}
+        tagged = catalogue._tag("commander", listed, ["Control"])
+        self.assertEqual(tagged, tags.tag("commander", listed, ["Control"]))
+        self.assertEqual(tagged["identity"], "WUB")
+        self.assertEqual(tagged["style"]["themes"], ["Control"])
 
 
 if __name__ == "__main__":

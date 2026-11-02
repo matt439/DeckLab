@@ -19,7 +19,7 @@ from datetime import datetime, timezone
 
 from decklab.lib import cards
 
-from . import CATALOGUE_FORMAT, FORMATS, catalogue_path, edhrec_source, fixing, forge_source, precon_source
+from . import CATALOGUE_FORMAT, FORMATS, catalogue_path, edhrec_source, fixing, forge_source, precon_source, tags
 
 SOURCES = ("edhrec", "precons", "forge")
 FORMAT_SOURCES = {"commander": ("edhrec", "precons"), "constructed": ("forge",)}
@@ -71,28 +71,8 @@ def catalogue_sha(decks):
 # ------------------------------------------------------------ tagging
 
 def _tag(kind, listed, themes):
-    """tags.tag (slice B's), or the identity-only fallback while it isn't there."""
-    try:
-        from . import tags
-    except ImportError:
-        return fallback_tag(kind, listed, themes)
+    """tags.tag's identity, colours, style and metrics (themes already cut to the 25% share)."""
     return tags.tag(kind, listed, themes)
-
-
-def fallback_tag(kind, listed, themes=()):
-    """FALLBACK ONLY, until lib/gauntlet/tags.py is merged: identity and colours from the card
-    data, every deck "midrange", no tags or metrics."""
-    names = [n for _, n in listed.get("Commander", [])] if kind == "commander" else \
-        [n for _, n in listed.get("Commander", []) + listed.get("Main", [])]
-    identity = fixing.identity_of(names)
-    colours = set()
-    for _, name in listed.get("Commander", []) + listed.get("Main", []):
-        card = cards.card(name) or {}
-        if not fixing.is_land(card):
-            colours.update(c for c in card.get("colors", []) if c in fixing.WUBRG)
-    order = lambda letters: "".join(c for c in fixing.WUBRG if c in letters)     # noqa: E731
-    return {"identity": order(identity), "colours": order(colours & identity if kind == "commander" else colours),
-            "style": {"primary": "midrange", "tags": [], "themes": list(themes)}, "metrics": {}}
 
 
 # ------------------------------------------------------------ one deck

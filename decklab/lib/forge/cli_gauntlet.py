@@ -98,37 +98,20 @@ def _cmd_gauntlet(args):
 
 # ------------------------------------------------------------ build, list, show, sample
 
-def _counts(decks, read):
-    found = {}
-    for deck in decks:
-        key = read(deck)
-        found[key] = found.get(key, 0) + 1
-    return ", ".join(f"{k} {n}" for k, n in sorted(found.items(), key=lambda kv: (-kv[1], kv[0])))
-
-
-def _print_built(fmt, cat, dry_run):
-    decks = cat.get("decks") or []
-    good = [d for d in decks if d.get("playable")]
-    print(f"{fmt}: {len(good)} playable decks of {len(decks)}" + (" (dry run: nothing written)" if dry_run else ""))
-    if good:
-        print("  by tier: " + _counts(good, lambda d: d.get("tier") or "unknown"))
-        print("  by colour identity: " + _counts(good, lambda d: d.get("identity") or "colourless"))
-        print("  by style: " + _counts(good, lambda d: (d.get("style") or {}).get("primary") or "unknown"))
-    for d in decks:
-        if not d.get("playable"):
-            print(f"  left out: {d.get('title')} ({d.get('id')}): " + "; ".join(d.get("problems") or ["no reason"]))
-
-
 def _build(args):
     sources = tuple(_words(args.source) or ())
     unknown = [s for s in sources if s not in SOURCES]
     if unknown or not sources:
         raise shared._CliError(f"A source is one of {', '.join(SOURCES)}, not {', '.join(unknown) or 'none'}.")
+    from decklab.lib.gauntlet.catalogue import GauntletError
     formats = _g().FORMATS if args.format == "all" else (args.format,)
     for fmt in formats:
-        cat = _g()._build_catalogue(fmt, sources=sources, top=args.top, refresh=args.refresh,
-                                    dry_run=args.dry_run, log=print)
-        _print_built(fmt, cat or {}, args.dry_run)
+        try:
+            _g()._build_catalogue(fmt, sources=sources, top=args.top, refresh=args.refresh,
+                                  dry_run=args.dry_run, log=print)
+        except GauntletError as e:
+            raise shared._CliError(str(e)) from None
+        # catalogue.build logs its own summary: counts by tier, identity and style, and what was left out
     return 0
 
 
