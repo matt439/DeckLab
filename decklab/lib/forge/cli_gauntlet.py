@@ -88,7 +88,7 @@ def _gauntlet_args(sub):
 
 
 def _cmd_gauntlet(args):
-    run = {"build": _build, "list": _list, "show": _show, "sample": _sample, "plan": _plan, "play": _play,
+    run = {"build": _build_catalogues, "list": _list, "show": _show, "sample": _sample, "plan": _plan, "play": _play,
            "view": _view}[args.action]
     try:
         return run(args)
@@ -98,7 +98,7 @@ def _cmd_gauntlet(args):
 
 # ------------------------------------------------------------ build, list, show, sample
 
-def _build(args):
+def _build_catalogues(args):
     sources = tuple(_words(args.source) or ())
     unknown = [s for s in sources if s not in SOURCES]
     if unknown or not sources:

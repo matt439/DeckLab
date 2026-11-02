@@ -343,7 +343,7 @@ class CommandLineTests(unittest.TestCase):
     def test_the_commands(self):
         self.assertEqual(list(forge.cli.COMMANDS), ["status", "audit", "play", "list", "cards", "cardlog-check",
                                                     "slots", "replay", "pool", "serve-check", "field", "variant",
-                                                    "experiment", "pilots", "overrides", "staged-move", "soak-probe",
+                                                    "experiment", "gauntlet", "pilots", "overrides", "staged-move", "soak-probe",
                                                     "engine-check", "decisions", "upgrade-check"])
         # Each wave 2 command is tested by its owner: replay by EP's test_forge_replay, pool by PP's
         # test_forge_pool, serve-check by PJ's test_forge_servecheck.
