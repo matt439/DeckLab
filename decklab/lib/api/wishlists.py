@@ -17,7 +17,7 @@ from decklab.lib import access, cards, inventory, spaces, state
 from decklab.lib.inventory import paths
 from decklab.lib.state import rules
 
-from . import common, guard
+from . import common, guard, wishlist_short
 from .card_lookup import _card_json, _pickable, _shown_printing
 from .carddata import _INDEX_ERRORS, _require_cards
 from .common import (MAX_BODY, MAX_NAME, NUMBER_RE, SET_RE, _CONTROL_RE, ApiError,
@@ -98,7 +98,12 @@ def _source_deck(source, inv):
 def _view(profile_id, entries, warnings):
     """Card enrichment can fail without taking the saved list away. "have"
     counts the profile's own space (lib/spaces.py): home's pool for Matt and
-    User1, a person's own collection for someone with their own space."""
+    User1, a person's own collection for someone with their own space.
+    "short_in" lists the owner's own decks whose Planned list is short of the
+    card ([{id, title, missing}], most short first; [] for none), or is None
+    when that can't or may not be said (wishlist_short.short_decks, E5-S30);
+    "short_warnings" says why it couldn't be, or that some decks weren't counted,
+    apart from the card-details "warnings"."""
     ready = True
     try:
         _require_cards()
@@ -112,10 +117,12 @@ def _view(profile_id, entries, warnings):
     except Exception as error:          # the decks can't be read: sources show as written
         common._log(f"Can't read the decks for wishlist sources: {error}")
         inv = None
+    short_warnings = []
+    short = _short(profile, entries, p, short_warnings) if ready else None
     out = []
     for entry in entries:
         item = dict(entry, card=None, have={"owned": None, "on_the_way": None},
-                    source_deck=_source_deck(entry.get("source"), inv))
+                    source_deck=_source_deck(entry.get("source"), inv), short_in=None)
         if ready:
             try:
                 exact = cards.resolve(entry["name"])
@@ -136,11 +143,28 @@ def _view(profile_id, entries, warnings):
                         incoming = sum(qty for _, qty in p.on_the_way.get(exact, []))
                         item["have"] = {"owned": max(0, p.owned.get(exact, 0) - incoming),
                                         "on_the_way": incoming}
+                    if short is not None:
+                        item["short_in"] = short.get(exact, [])
             except _INDEX_ERRORS as error:
                 common._log(f"Can't enrich wishlist card {entry['name']}: {error}")
                 warnings.append(f"Card details for {entry['name']} are unavailable; it stays on your wishlist.")
         out.append(item)
-    return {"profile": profile_id, "entries": out, "warnings": _unique(_scrub(warnings))}
+    return {"profile": profile_id, "entries": out, "warnings": _unique(_scrub(warnings)),
+            "short_warnings": _unique(short_warnings)}
+
+
+def _short(profile, entries, p, warnings):
+    """wishlist_short.short_decks for the entries' exact names, worked out for the list's owner;
+    None (nothing said) when it can't be."""
+    try:
+        names = {exact for exact in (cards.resolve(entry["name"]) for entry in entries) if exact}
+        return wishlist_short.short_decks(profile, names, p, warnings)
+    except inventory.Unavailable:
+        raise
+    except Exception as error:  # noqa: BLE001 - the list and its counts stay available
+        common._log(f"Wishlist: the decks short of its cards couldn't be worked out: {error}")
+        warnings.append(wishlist_short.UNCOUNTED)
+        return None
 
 
 def get_wishlist(profile_id):

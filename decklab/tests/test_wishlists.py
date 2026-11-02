@@ -53,14 +53,14 @@ class WishlistTests(ApiTestCase):
         self.assertIn("oracle_text", found[0]["card"])
         self.assertEqual(found[0]["have"], {"owned": 5, "on_the_way": 0})
         self.assertEqual(found[1]["have"], {"owned": 0, "on_the_way": 1})
-        self.assertEqual(set(answer), {"profile", "entries", "warnings"})
+        self.assertEqual(set(answer), {"profile", "entries", "warnings", "short_warnings"})
 
     def test_add_is_canonical_and_duplicate_preserves_notes(self):
         first = api.change_wishlist("user1", body(name="llanowar elves", set="fdn", number="227"))
         self.assertTrue(first["saved"])
         self.assertTrue(first["changed"])
         self.assertEqual(first["entries"][0]["name"], "Llanowar Elves")
-        self.assertEqual(set(first), {"profile", "entries", "warnings", "saved", "changed"})
+        self.assertEqual(set(first), {"profile", "entries", "warnings", "short_warnings", "saved", "changed"})
         self.seed()
         duplicate = api.change_wishlist("user1", body(name="LLANOWAR ELVES"))
         self.assertFalse(duplicate["changed"])
