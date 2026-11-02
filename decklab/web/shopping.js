@@ -783,7 +783,7 @@ function drawShopping(data) {
       `${plural(later.reduce((sum, r) => sum + (r.quantity || 0), 0), "card")} for decks to build later. Add them to an order when the shop has them, to share its postage.`,
       shopLongTerm(later, view)));
     clear(missingSlot); add(missingSlot, [shopMissingCards(view)]);
-    clear(storeSlot); add(storeSlot, [shopByShop(view)]);
+    clear(storeSlot); add(storeSlot, [shopByShop(view), shopBaskets(view)]);
     clear(jumpSlot);
     const missing = data.missing_cards;
     const missingShown = missing && (!missing.ready || (missing.rows || []).length || (missing.errors || []).length || (missing.warnings || []).length);
@@ -795,6 +795,7 @@ function drawShopping(data) {
       { id: "shop-decks", label: "Decks missing cards", count: decks.length, number: decks.length },
       { id: "shop-missing-cards", label: "Missing cards", count: missingShown, number: (missing?.rows || []).length },
       { id: "shop-by-shop", label: "By shop", count: queue.length, number: 0 },
+      { id: "shop-baskets", label: "Baskets", count: Boolean(data.baskets) && seesHomeInventory(state.may), number: 0 },
       { id: "shop-follow-ups", label: "Follow-ups", count: followUps.length, number: followUps.length },
       { id: "shop-long-term", label: "Long-term plan", count: later.length, number: 0 },
     ]);

@@ -332,6 +332,15 @@ keep explicit errors. The selected shop and open fold survive a local queue redr
 not navigation or reload. Price, shop and checked date stay visible without a card
 picture and describe recorded research rather than live retailer stock.
 
+`shopping-baskets.js` follows `shopping-snapshot.js` (E5-S27's first slice). `shopBaskets(view)`
+draws Shopping's Baskets after By shop from the answer's `baskets` (`lib/api/shop_baskets.py`),
+only for home-record readers and only while some shop has a saved snapshot: one card a shop with
+its ready rows in stock (price each, stock, fetch time), a total over priced rows naming how many
+have none, the rows it couldn't speak for (printing not confirmed, couldn't be read, not checked),
+and add-ons in stock marked Add-on; then the ready rows no checked shop has. Copy this shop's list
+reuses `shopCopyShop` with the basket's own `shopCopyRows` list (ready rows only, the copies the
+basket counts), disabled once the queue revision moves on. No postage, no writes.
+
 `shopping-reprints.js` follows `shopping-buying.js`. Its shared `reprintInfo` draws
 known upcoming paper-printing set/date evidence as a sibling of the card viewer
 button, also in missing deck-price rows. Source and coverage exposes the actual
