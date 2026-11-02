@@ -166,6 +166,10 @@ class WishlistShortTests(ApiTestCase):
         self.assertEqual([d["id"] for d in short[RIDER]], ["casual/gruul-test"])
         self.assertEqual(short["Ghalta, Primal Hunger"], [])
 
+    def test_the_inventory_goldens_drop_exactly_these_warnings(self):
+        from decklab.tests import golden_p4
+        self.assertEqual(set(golden_p4.WISHLIST_SHORT_WARNINGS), {wishlist_short.UNCOUNTED, wishlist_short.INCOMPLETE})
+
     def test_offline_cards_say_nothing(self):
         self.seed("user1", [RIDER])
         with self.box.no_index():

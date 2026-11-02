@@ -33,7 +33,8 @@ older code (the committed tests/fixtures/inventory_goldens):
   the new words.
 - "ui-additions": the fields the UI redesign added to the page answers (ui_additions()): a deck's
   "cover", "colors", "revision", "cover_card" and "edited" in the library and the deck page, the
-  packing plan's "cards" and a wishlist entry's "source_deck" are dropped.
+  packing plan's "cards", a wishlist entry's "source_deck" and "short_in" (E5-S30) and the wishlist
+  warnings that its decks can't be counted are dropped.
 - "kit-editability": E10-S33 adds Boolean summary.kit.editable to deck-view answers so public
   kit readers get no Choose controls. Only that exact additive field is dropped; every kit value,
   warning and other editable field still compares. test_golden_kit_editability checks this boundary
@@ -364,6 +365,10 @@ def phase5_reworded(dump):
 
 # The page answers' fields the UI redesign (stage 2, 2026-10) added; nothing they already had changed.
 UI_SUMMARY = ("cover", "colors", "revision", "cover_card", "edited")
+# E5-S30's wishlist warnings for decks short of a card that can't be worked out (lib/api/wishlist_short.py).
+WISHLIST_SHORT_WARNINGS = (
+    "Which of your decks are short of these cards can't be worked out right now.",
+    "Which of your decks are short of these cards can't be worked out until the card pool's problems are fixed.")
 
 
 def ui_additions(dump):
@@ -390,6 +395,9 @@ def ui_additions(dump):
             for entry in (view.get("entries") or []) if isinstance(view, dict) else []:
                 if isinstance(entry, dict):
                     entry.pop("source_deck", None)
+                    entry.pop("short_in", None)         # E5-S30: the owner's decks short of the card
+            if isinstance(view, dict) and isinstance(view.get("warnings"), list):
+                view["warnings"] = [w for w in view["warnings"] if w not in WISHLIST_SHORT_WARNINGS]
 
 
 def kit_editability(dump):
