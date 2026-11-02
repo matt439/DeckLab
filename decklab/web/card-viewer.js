@@ -8,6 +8,10 @@ card is in the middle with Previous and Next beside it, and the arrow keys (Home
 Escape closes. A double-faced card has Flip, which shows its back's picture. The card's rules text is a
 panel: beside the picture from 1,000 px, behind the Text button on smaller screens. Under the words are the
 card's Scryfall rulings, dated and folded away (GET /api/cards/rulings).
+Opened from the deck page or the Collection page, a line under the list's own chips names the decks of that
+space which hold or want the card, built decks first, and its free copies there (E1-S29, GET /api/cards/decks),
+only for a viewer who may see that space's inventory (viewerUseSpace); a basic land's line says its copies in
+decks aren't tracked, as the Card list's In decks column does.
 On portrait touch screens Text overlays the picture instead of shrinking it; each new opening starts closed. The cards either side
 are already drawn, and the next two are fetched ahead, so a swipe never waits for its picture.
 
@@ -37,6 +41,8 @@ let viewerState = null;         // the open viewer: its items, the card shown, t
 let viewerTextOpen = false;     // Text stays open from card to card within this opening
 let viewerSeq = 0;              // each opening's own mark on its history entry (history.state.cardViewer)
 const viewerRulings = new Map(); // card name -> the promise of its rulings' answer (viewerRulingsPart)
+const viewerUses = new Map();    // space + card name -> the promise of its decks' answer, for one opening (viewerUsePart)
+const VIEWER_USE_DECKS = 4;      // decks the use line names before "and 3 more decks"
 
 
 /** The card overlay every page uses: card big, or card's viewer group (cards-ui.js viewerItem) when trigger
@@ -57,7 +63,10 @@ function openCardViewer(items, start = 0, opts = {}) {
   if (!list.length) return null;
   const dom = viewerDom || (viewerDom = buildViewer());
   const open = Boolean(viewerState && dom.dialog.open);
-  if (!open) viewerTextOpen = false; // A newly opened list starts with the full picture.
+  if (!open) {
+    viewerTextOpen = false;         // A newly opened list starts with the full picture,
+    viewerUses.clear();             // and asks afresh which decks use its cards (a save may have changed them).
+  }
   viewerState = {
     items: list, index: Math.max(0, Math.min(list.length - 1, Number(start) || 0)), face: 0,
     caption: typeof opts.caption === "function" ? opts.caption : null,
@@ -134,7 +143,10 @@ function buildViewer() {
   // counter, so a missing card doesn't look owned once it's big.
   d.marks = el("div", { class: "viewer-marks" });
   d.hint = el("p", { class: "viewer-swipe-hint", text: "Swipe left or right" });
-  d.foot = el("div", { class: "viewer-foot" }, d.count, d.hint, d.marks);
+  // Which of the space's decks hold or want the card, and its free copies (viewerUsePart), under the chips.
+  d.use = el("p", { class: "viewer-use" });
+  d.use.hidden = true;
+  d.foot = el("div", { class: "viewer-foot" }, d.count, d.hint, d.marks, d.use);
   d.live = el("p", { class: "sr-only", "aria-live": "polite" });
   d.slides = [-1, 0, 1].map((at) => el("figure", { class: "viewer-slide", "data-at": String(at) }));
   d.track = el("div", { class: "viewer-track" }, d.slides);
@@ -195,6 +207,7 @@ function drawViewer() {
   const marks = typeof item.status === "function" ? item.status() || [] : [];
   add(clear(d.marks), marks);
   d.marks.hidden = !marks.length;
+  viewerUsePart(d.use, card);
   d.text.scrollTop = 0;
   d.live.textContent = n > 1 ? `Card ${s.index + 1} of ${n}: ${card.name}` : "";
   // The cards two away too, so a quick run of swipes never waits.
@@ -360,6 +373,68 @@ function viewerRulingsParts(data) {
       String(r.text || "").split("\n").filter((line) => line.trim())
         .map((line) => el("p", { class: "viewer-ruling-text" }, renderSymbols(line)))))),
     el("p", { class: "viewer-rulings-note" }, "From Scryfall", data.updated ? `, ${data.updated}` : "", "."));
+}
+
+
+// ------------------------------------------------------------- deck use
+
+/** The space whose decks the use line names: the deck page's deck's, or the Collection page's (colSpace), and
+ * only while the viewer may see that space's inventory (core.js seesInventory, the server's R6d); null on
+ * every other page, which asks nothing. */
+function viewerUseSpace() {
+  if (typeof parseHash !== "function") return null;         // app.js
+  const { path, params } = parseHash();
+  const space = path === "deck" && params.get("id") ? deckSpaceOf(params.get("id"))
+    : path !== "collection" ? null
+      : typeof colSpace === "function" ? colSpace(params) : params.get("space") || ownSpace();
+  return space && seesInventory(space) ? space : null;
+}
+
+/** Fills box with card's use line when the server's answer comes (each card is asked once an opening); only
+ * the card still shown gets it, so a quick swipe never shows another card's decks. */
+function viewerUsePart(box, card) {
+  clear(box);
+  box.hidden = true;
+  const token = box.useToken = {};
+  const space = viewerUseSpace(), name = card && card.name;
+  if (!space || !name) return;
+  const key = `${space}\n${name}`;
+  let answer = viewerUses.get(key);
+  if (!answer) {
+    const query = new URLSearchParams({ name });
+    if (space !== HOME_SPACE) query.set("space", space);
+    answer = api(`/api/cards/decks?${query}`).catch((e) => {
+      viewerUses.delete(key);
+      return { error: e };
+    });
+    viewerUses.set(key, answer);
+  }
+  answer.then((data) => {
+    if (box.useToken !== token || !viewerState) return;
+    const words = viewerUseWords(data);
+    if (!words) return;
+    box.textContent = words;
+    box.hidden = false;
+  });
+}
+
+/** The use line for the server's answer (or {error}): "In decks: Elf Stompy holds 1, Bird Tribal wants 4 ·
+ * 3 free · 1 on the way", or null when there's nothing to say (a refusal, a name that isn't a card). */
+function viewerUseWords(data) {
+  if (!data || data.error) {
+    const status = data && data.error ? data.error.status : 404;
+    return status === 403 || status === 404 ? null : "Which decks use this card couldn't load.";
+  }
+  if (data.basic) return "Basic land: its copies in decks aren't tracked.";
+  const decks = [...(data.holds || []).map((d) => `${d.title} holds ${num(d.copies)}`),
+    ...(data.wants || []).map((d) => `${d.title} wants ${num(d.copies)}`)];
+  const rest = Math.max(0, decks.length - VIEWER_USE_DECKS);
+  const more = rest ? `, and ${num(rest)}${data.more ? "+" : ""} more deck${rest === 1 && !data.more ? "" : "s"}` : "";
+  const parts = [decks.length ? `In decks: ${decks.slice(0, VIEWER_USE_DECKS).join(", ")}${more}` : "In no decks"];
+  if (data.owned || data.free) parts.push(`${num(data.free)} free`);
+  else if (!data.incoming) parts.push("none in the collection");
+  if (data.incoming) parts.push(`${num(data.incoming)} on the way`);
+  return parts.join(" \u00b7 ");
 }
 
 

@@ -272,6 +272,12 @@ dialog.viewer::backdrop { background: var(--scrim-strong); }
 .viewer-marks { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--s-1); }
 .viewer-marks[hidden] { display: none; }
 .viewer-marks .status { white-space: normal; text-align: center; }
+/* Which of the space's decks hold or want the card, and its free copies (card-viewer.js viewerUsePart). */
+.viewer-use {
+  margin: 0; max-width: 40rem; padding: 0 var(--s-3);
+  color: var(--on-scrim); font-size: var(--fs-sm); text-align: center; overflow-wrap: anywhere;
+}
+.viewer-use[hidden] { display: none; }
 .viewer-swipe-hint { margin: 0; color: var(--on-scrim-2); font-size: var(--fs-sm); }
 @media (hover: hover) and (pointer: fine) { .viewer-swipe-hint { display: none; } }
 .viewer.is-single .viewer-nav, .viewer.is-single .viewer-count, .viewer.is-single .viewer-swipe-hint { display: none; }

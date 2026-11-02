@@ -38,6 +38,12 @@ def _global_search(**params):
     return search_view(**params)
 
 
+def _card_decks(**params):
+    """One card's use in a space for the card viewer (api/card_decks.py, E1-S29): inventory readers only."""
+    from decklab.lib.api.card_decks import card_decks
+    return card_decks(**params)
+
+
 def _sideboard_preview(**params):
     """Load the sideboard preview, which reads Forge's paired-game budgets, only when asked for."""
     from decklab.lib.api.sideboard_preview import preview_sideboard
@@ -145,6 +151,7 @@ def dispatch(handler, route, query):
         ("activity", "mixed-undo"): (activity_mixed_undo.mixed_undo_view, ("id",)),
         ("visits",): (visits.visits_view, ("days", "who")),
         ("search",): (_global_search, ("q", "group", "limit")),
+        ("cards", "decks"): (_card_decks, ("name", "space")),
         ("gauntlet",): (_gauntlet_view, ("id", "version", "sample", "size", "colours", "styles", "tiers", "profile")),
         ("gauntlet", "catalogue"): (_gauntlet_catalogue, ("format",)),
         ("shopping", "combined"): (_shopping_combined, ("decks",)),
