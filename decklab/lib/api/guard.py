@@ -114,6 +114,9 @@ upkeep in another space; the command line writes every space.
     POST /api/matchup/run, /api/field/run, /api/variant/run|more
                                                   run.start (require_start: the simulations setting,
                                                   api/simulations.py)
+    POST /api/gauntlet/run                        the deck seen first (its 404), then run.start as
+                                                  /api/field/run (api/gauntlet_page.py)
+    POST /api/gauntlet/stop                       the deck seen first, then run.stop as /api/field/stop
     POST /api/play/sideboard-test                 the plan preview's reading rule (its own space, both
                                                   lists visible), then run.start as /api/variant/run
     PUT  /api/simulations                         simulations.edit (an admin, by role)

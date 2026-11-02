@@ -218,7 +218,7 @@ function deckTabParts(name, data, screen) {
   if (name === "cards") return cardsParts(data, screen);
   if (name === "stats") return [statsSection(data)];
   if (name === "practice") return [manualHandsSection(data), practiceSection(data)];
-  return [deckMatchupsPart(data), fieldSection(data), variantTestsSection(data)];     // deck-tools.js, field.js, variant.js
+  return [deckMatchupsPart(data), fieldSection(data), gauntletSection(data), variantTestsSection(data)];     // deck-tools.js, field.js, gauntlet.js, variant.js
 }
 
 /** Write the tab (and the Cards filter) into the address in place: Back still leaves the deck in one step. */
