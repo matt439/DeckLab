@@ -131,9 +131,19 @@ class Screening(GauntletCase):
         reason, _ = fixing.screen(self.LISTED, "commander", fake_limits(unknown={"Counterspell"}))
         self.assertIn("Counterspell", reason)
 
-    def test_more_than_three_unplayable_copies_excludes(self):
-        reason, _ = fixing.screen(self.LISTED, "commander", fake_limits(cannot={"Doom Blade"}))
-        self.assertIn("4 of its cards", reason)
+    def test_more_unplayable_copies_than_five_percent_excludes(self):
+        listed = {"Commander": [[1, YSHTOLA]], "Main": [[1, "Counterspell"], [6, "Doom Blade"], [92, "Island"]]}
+        reason, _ = fixing.screen(listed, "commander", fake_limits(cannot={"Doom Blade"}))
+        self.assertIn("6 of its cards (more than 5)", reason)
+        constructed = {"Main": [[4, "Doom Blade"], [56, "Island"]]}
+        reason, _ = fixing.screen(constructed, "constructed", fake_limits(cannot={"Doom Blade"}))
+        self.assertIn("4 of its cards (more than 3)", reason)
+
+    def test_five_unplayable_copies_of_a_hundred_only_a_problem(self):
+        self.assertEqual(fixing.max_unplayable(self.LISTED), 5)
+        reason, problems = fixing.screen(self.LISTED, "commander", fake_limits(cannot={"Doom Blade"}))
+        self.assertIsNone(reason)
+        self.assertIn("Forge's AI can't play Doom Blade.", problems)
 
     def test_a_few_unplayable_copies_only_a_problem(self):
         reason, problems = fixing.screen(self.LISTED, "commander", fake_limits(cannot={"Counterspell"}, poor=True))

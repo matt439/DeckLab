@@ -74,7 +74,7 @@ Usage: `gauntlet build [--format commander|constructed|all] [--source edhrec,pre
 
 **AI-unplayable screening**
 - Use `ai.ai_limits(sections, kind)` (`ai.py:147`) for `cannot_play` (AI:RemoveDeck:All, `forge/__init__.py:404`), `unknown` and `pilot.poor`.
-- The deck is excluded (`playable: false`) when the commander is unplayable, when any card is unknown to Forge, or when more than 3 copies are unplayable. Otherwise only a problem is recorded.
+- The deck is excluded (`playable: false`) when the commander is unplayable, when any card is unknown to Forge, or when more copies are unplayable than 5% of the list (3 of 60 cards, 5 of 100). Otherwise only a problem is recorded.
 - When Forge's card scripts can't be read (`ai_limits`' `screened` is false), the deck is excluded as "not screened": nothing about it could be checked.
 
 **MTGJSON precons**

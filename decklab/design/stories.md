@@ -1065,7 +1065,7 @@ As a deck builder whose field holds only a handful of household decks, I want to
 Now: built 2026-11-02 to the design in [gauntlet.md](gauntlet.md) ([HISTORY.md](../HISTORY.md#the-gauntlet-a-deck-against-popular-outside-decks-2026-11-02-e3-s28-e3-s29)); its decks are gitignored files, never Deck Lab decks or inventory. A parallel Commander run's throughput isn't measured yet, and the live server PC has no catalogue until one is built there.
 
 Evidence:
-- `decklab/lib/gauntlet/catalogue.py`: build, load, save; `edhrec_source.py`, `precon_source.py`, `forge_source.py`, `fixing.py` (retier, MAX_UNPLAYABLE)
+- `decklab/lib/gauntlet/catalogue.py`: build, load, save; `edhrec_source.py`, `precon_source.py`, `forge_source.py`, `fixing.py` (retier, MAX_UNPLAYABLE_SHARE)
 - `decklab/lib/gauntlet/tags.py`: tag, STYLES; `decklab/lib/gauntlet/sample.py`: choose, sample_id, DEFAULT_SIZE
 - `decklab/lib/forge/gauntlet.py`: RESULTS_DIR, entries, plan, run, view; `decklab/lib/forge/field.py`: run_field's `opponent_entries`; `decklab/lib/forge/lists.py`: entry_from_cards
 - `decklab/lib/forge/cli_gauntlet.py`: `gauntlet build|list|show|sample|plan|play|view`

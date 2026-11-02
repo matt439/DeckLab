@@ -16,8 +16,8 @@ extra turns and Commander Spellbook's two-card combos, through stats/commander.m
 core deck or precon measured above Bracket 2 is re-tiered to "upgraded" (its bracket says which).
 
 AI screening (forge/ai.ai_limits): a deck is excluded when its commander is unplayable, any card
-is unknown to Forge, or more than MAX_UNPLAYABLE copies are unplayable; otherwise only a
-problem is noted.
+is unknown to Forge, or more copies are unplayable than MAX_UNPLAYABLE_SHARE of the list (5%:
+3 of 60 cards, 5 of 100; max_unplayable()); otherwise only a problem is noted.
 """
 import re
 from collections import Counter
@@ -26,7 +26,7 @@ from decklab.lib import cards
 
 SIZE = 100
 LAND_FLOOR = 33
-MAX_UNPLAYABLE = 3
+MAX_UNPLAYABLE_SHARE = 0.05     # 3 of a 60-card list, 5 of a 100-card one
 BASICS = {"W": "Plains", "U": "Island", "B": "Swamp", "R": "Mountain", "G": "Forest", "C": "Wastes"}
 WUBRG = "WUBRG"
 SYMBOL_RE = re.compile(r"\{([^}]+)\}")
@@ -267,6 +267,13 @@ def _forge_limits(sections, kind):
     return found
 
 
+def max_unplayable(listed):
+    """The most copies Forge's AI can't play that a list may hold: MAX_UNPLAYABLE_SHARE of its
+    cards, rounded down (3 of 60, 5 of 100)."""
+    total = sum(qty for lines in listed.values() for qty, _ in lines)
+    return int(total * MAX_UNPLAYABLE_SHARE)
+
+
 def screen(listed, kind, limits=None):
     """(excluded reason or None, [problems]) of Forge's AI limits on a list. limits stands in for
     _forge_limits (the tests' fake script table). A list that couldn't be screened (no card
@@ -287,8 +294,9 @@ def screen(listed, kind, limits=None):
         return f"Forge doesn't know {len(unknown)} of its cards: {names}.", problems
     cannot = found.get("cannot_play") or []
     copies = sum(c.get("qty", 1) for c in cannot)
-    if copies > MAX_UNPLAYABLE:
-        return f"Forge's AI can't play {copies} of its cards (more than {MAX_UNPLAYABLE}).", problems
+    allowed = max_unplayable(listed)
+    if copies > allowed:
+        return f"Forge's AI can't play {copies} of its cards (more than {allowed}).", problems
     if cannot:
         problems.append("Forge's AI can't play " + ", ".join(sorted({c["name"] for c in cannot})) + ".")
     pilot = found.get("pilot") or {}
