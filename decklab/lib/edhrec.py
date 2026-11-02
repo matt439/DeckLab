@@ -139,20 +139,39 @@ def commander_slugs(names):
 def _get(slug):
     """EDHREC's page for slug as parsed JSON. NoPage for a commander it has no page for (403, 404);
     EdhrecError for anything else that goes wrong."""
+    return _request(PAGE_URL.format(slug=slug), slug)
+
+
+JSON_ROOT = "https://json.edhrec.com/pages/"
+_JSON_PATH = re.compile(r"[a-z0-9]+(?:[-_][a-z0-9]+)*(?:/[a-z0-9]+(?:[-_][a-z0-9]+)*)*\.json")
+
+
+def get_json(path):
+    """Any page of EDHREC's JSON site as parsed JSON, such as "commanders/year.json" or
+    "average-decks/<slug>/core.json" (the gauntlet's sources, lib/gauntlet/edhrec_source.py),
+    asked for as politely as a commander page: the same User-Agent, MIN_GAP, TIMEOUT and
+    MAX_BYTES. Nothing is cached here. NoPage for a page EDHREC hasn't got (403, 404);
+    EdhrecError for anything else, a path that isn't a plain lowercase .json path included."""
+    if not isinstance(path, str) or len(path) > 300 or not _JSON_PATH.fullmatch(path):
+        raise EdhrecError(f"{path!r} isn't an EDHREC page Deck Lab would ask for")
+    return _request(JSON_ROOT + path, path)
+
+
+def _request(url, what):
+    """The JSON at url (one of EDHREC's), what naming it in NoPage's words."""
     global _last_request
     wait = _last_request + MIN_GAP - time.monotonic()
     if wait > 0:
         time.sleep(wait)
     _last_request = time.monotonic()
-    request = urllib.request.Request(PAGE_URL.format(slug=slug),
-                                     headers={"User-Agent": USER_AGENT, "Accept": "application/json"})
+    request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT, "Accept": "application/json"})
     try:
         with urllib.request.urlopen(request, timeout=TIMEOUT) as response:
             data = response.read(MAX_BYTES + 1)
     except urllib.error.HTTPError as e:
         e.close()
         if e.code in (403, 404):
-            raise NoPage(f"EDHREC has no page for {slug}") from None
+            raise NoPage(f"EDHREC has no page for {what}") from None
         raise EdhrecError(f"EDHREC answered {e.code}") from None
     except (urllib.error.URLError, OSError) as e:
         reason = getattr(e, "reason", None) or e

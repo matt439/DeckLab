@@ -1,0 +1,25 @@
+[shop]
+WinsToUnlock=0
+Credits=1200
+[metadata]
+Name=Aerodoom
+Description=A blue-black control fixture deck (trimmed from Forge's).
+Deck Type=constructed
+Set=BTD
+[main]
+4 Island|TMP|1
+4 Island|TMP|2
+3 Island|TMP|3
+4 Swamp|TMP|1
+4 Swamp|TMP|2
+3 Swamp|TMP|3
+4 Counterspell+|TMP
+4 Doom Blade
+4 Baleful Strix
+4 Gravedigger
+4 Mind Rot
+4 Duress
+4 Sign in Blood
+4 Dark Ritual
+4 Hypnotic Specter
+2 Fog Elemental|WTH

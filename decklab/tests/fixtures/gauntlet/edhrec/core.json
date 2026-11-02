@@ -1,0 +1,38 @@
+{
+ "creature": 1, "instant": 2, "sorcery": 1, "artifact": 2, "enchantment": 0, "land": 15,
+ "bracket_counts": {"1": 70, "2": 2027, "3": 6976, "4": 4486, "5": 1064},
+ "tag_counts": [{"count": 209, "slug": "control", "value": "Control"}],
+ "deck": {
+  "commander": ["Y'shtola, Night's Blessed"],
+  "commander_v2": [["Y'shtola, Night's Blessed", 1]],
+  "cards": {
+   "Artifact": [["Arcane Signet", 1], ["Sol Ring", 1]],
+   "Land": [["Command Tower", 1], ["Island", 6], ["Plains", 4], ["Swamp", 4]],
+   "Creature": [["Baleful Strix", 1]],
+   "Instant": [["Counterspell", 1], ["Swords to Plowshares", 1]],
+   "Sorcery": [["Vindicate", 1]]
+  }
+ },
+ "header": "Average Deck for Y'shtola, Night's Blessed - Core",
+ "panels": {
+  "taglinks": [
+   {"count": 209, "slug": "control", "value": "Control"},
+   {"count": 201, "slug": "spellslinger", "value": "Spellslinger"},
+   {"count": 80, "slug": "lifegain", "value": "Lifegain"}
+  ],
+  "mana_curve": {"1": 5, "2": 13, "3": 22}
+ },
+ "description": "",
+ "container": {
+  "breadcrumb": [{"/average-decks": "Decks"}],
+  "json_dict": {
+   "cardlists": [
+    {"header": "Creatures", "tag": "creatures", "cardviews": [{"name": "Baleful Strix", "sanitized": "baleful-strix", "label": "Baleful Strix"}]},
+    {"header": "Basics", "tag": "basics", "cardviews": [{"name": "Island", "sanitized": "island", "label": "6 Island"}]}
+   ],
+   "card": {"num_decks": 2027, "rank": 1, "name": "Y'shtola, Night's Blessed", "color_identity": ["W", "U", "B"],
+            "sanitized": "yshtola-nights-blessed", "is_commander": true, "legal_commander": true}
+  },
+  "title": "Average Deck for Y'shtola, Night's Blessed - Core"
+ }
+}

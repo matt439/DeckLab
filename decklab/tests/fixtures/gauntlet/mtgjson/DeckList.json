@@ -1,0 +1,8 @@
+{
+ "meta": {"date": "2026-10-21", "version": "5.3.0+20261021"},
+ "data": [
+  {"code": "LCC", "fileName": "AhoyMateys_LCC", "name": "Ahoy Mateys", "releaseDate": "2023-11-17", "source": "https://magic.wizards.com/en/news/announcements/the-lost-caverns-of-ixalan-commander-decklists", "type": "Commander Deck"},
+  {"code": "FDC", "fileName": "SpellcraftScions_FDC", "name": "Spellcraft Scions", "releaseDate": "2026-10-02", "source": "https://magic.wizards.com/en/news/announcements/example-decklists", "type": "Commander Deck"},
+  {"code": "FDN", "fileName": "StarterKit_FDN", "name": "Starter Kit", "releaseDate": "2026-11-01", "source": "", "type": "Starter Kit"}
+ ]
+}
