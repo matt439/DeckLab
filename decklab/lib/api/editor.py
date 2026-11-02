@@ -540,7 +540,7 @@ def check_draft(body):
     preview = None
     availability = {"target": None, "owned": None}
     if p is not None:
-        preview = _owned_json(pool.compare(target, p, pool.self_ids(deck_id) if deck_id else ()), p)
+        preview = _owned_json(pool.compare(target, p, pool.self_ids(deck_id) if deck_id else (), listed=True), p)
         availability["target"] = preview
         if owned is not None:
             availability["owned"] = _owned_json(pool.compare(owned, p, pool.self_ids(deck_id) if deck_id else ()), p)

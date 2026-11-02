@@ -35,6 +35,24 @@ function incomingBannerSources(owned) {
 
 // ------------------------------------------------------------- availability
 
+/** "2 Y'shtola (FIC 207 foil) about A$1,120.00": one listed printing that costs materially more (E5-S31). */
+function asListedWords(d) {
+  return `${d.missing > 1 ? `${d.missing} ` : ""}${d.name} (${d.printing}) about ${aud(d.aud_missing)}`;
+}
+
+/** The banner's second line, only when the list's own printings would cost materially more than the
+ * cheapest ones (totals.as_listed, lib/listed_prices.py): the dearest 3 cards, then "and N more". */
+function asListedLine(owned) {
+  const listed = owned && owned.totals && Array.isArray(owned.totals.as_listed) ? owned.totals.as_listed
+    .filter((d) => d && typeof d.name === "string" && typeof d.printing === "string" && Number.isFinite(d.aud_missing)) : [];
+  if (!listed.length) return null;
+  const shown = listed.slice(0, 3).map(asListedWords).join("; ");
+  const rest = listed.length > 3 ? ` and ${listed.length - 3} more` : "";
+  const total = Number.isFinite(owned.totals.aud_missing_as_listed) && listed.length > 1
+    ? `. About ${aud(owned.totals.aud_missing_as_listed)} in all as listed` : "";
+  return el("p", { class: "sub deck-avail-listed", text: `As listed: ${shown}${rest}${total}.` });
+}
+
 /** A historical date is displayed only as an actual calendar day; it certifies no current contents. */
 function boxCheckDate(value) {
   if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value) || Number(value.slice(0, 4)) < 1) return null;
@@ -81,7 +99,7 @@ function availabilityBanner(data, screen) {
     more.push("The warnings below say why.");
   } else if (a.missing > 0) {
     kind = "warn";
-    head = `${a.missing} missing` + (a.aud != null ? `, about ${aud(a.aud)}${a.priced ? "" : " and more"}` : "");
+    head = `${a.missing} missing` + (a.aud != null ? `, about ${aud(a.aud)} at the cheapest printings${a.priced ? "" : ", and more"}` : "");
     if (a.held) more.push(`${a.held} held by other decks`);
     if (a.coming) more.push(`${plural(a.coming, "card")} on the way`);
     action = el("button", { type: "button", class: "btn deck-avail-action", text: "Show missing",
@@ -103,6 +121,7 @@ function availabilityBanner(data, screen) {
     el("div", { class: "deck-avail-text" },
       el("p", { class: "deck-avail-head" }, el("b", { text: head + which }),
         more.length ? el("span", { class: "deck-avail-more", text: more.join(" · ") }) : null),
+      a && a.missing > 0 && a.aud != null ? asListedLine(data.owned) : null,
       a && a.coming ? incomingBannerSources(data.owned) : null,
       boxCheckDateNote(data),
       assembled ? el("p", { class: "sub deck-avail-assembled", text: assembledStateWords(assembled) + "." }) : null),

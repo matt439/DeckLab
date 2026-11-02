@@ -74,7 +74,7 @@ class DeckPageUiTests(unittest.TestCase):
         self.run_js("""
           open('#/deck?id=casual%2Ftest&v=target');
           const banner = main.querySelector('.deck-avail');
-          assert(banner.textContent.includes('3 missing, about A$3.75 (planned list)'), banner.textContent);
+          assert(banner.textContent.includes('3 missing, about A$3.75 at the cheapest printings (planned list)'), banner.textContent);
           assert(banner.textContent.includes('1 held by other decks · 2 cards on the way'));
           assert(banner.querySelector('.segmented'));          // the two lists' picker is folded in
           const info = banner.querySelector('.deck-lists-info');
@@ -199,7 +199,7 @@ class DeckPageUiTests(unittest.TestCase):
           assert.equal(cards.querySelectorAll('.card-tile-open')[0].getAttribute('data-viewer'), 'deck');
           // The price table is folded, with only the cards worth a look.
           const prices = cards.querySelector('#sec-owned');
-          assert(prices.textContent.includes('Price table: 3 missing, about A$3.75'));
+          assert(prices.textContent.includes('Price table: 3 missing, about A$3.75 at the cheapest printings'));
           assert(!prices.querySelector('table').textContent.includes('Forest'));
         """)
 

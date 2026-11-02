@@ -2,6 +2,12 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## The listed printing's price beside the cheapest (2026-11-02; E5-S31)
+
+- Matt's question on the deck page: a Commander deck said "12 missing, about $14.18" though its foil commander (about A$560 in AU shops) was still to buy. The commander was counted, but every live A$ figure prices the cheapest paper non-foil printing, and the decklist's own printing and finish were never priced.
+- `cards.printing_usd` and `cards.price_aud_printing` price an exact printing and finish; the Collection's own-printing estimates (`api/collection_edit._prices`) now use the first, unchanged. `lib/listed_prices.py`, called by `pool.compare` when it prices a Planned list (`listed=True`: the deck page's target list and the editor's; not the Play-now list, swaps or precons), adds the listed printing's price to each missing row whose every line names one printing other than the priced one, counting only the missing copies. A row is material at A$5 and 50% more; only then do the totals carry `as_listed` and `aud_missing_as_listed`. The cheapest stays the default figure, and the saved deck text and tables are unchanged.
+- The banner says its total is at the cheapest printings and, when material, adds "As listed: ..." for the dearest three cards; the Cards tab's price table and the editor's missing list show "As listed (SET N foil): A$X each" where it differs. Only inventory readers see them, as before.
+
 ## Live server on Linux (2026-11-01; E11-S58)
 
 - Matt's request: move the live server from the Windows spare PC to a Linux PC. An audit listed every Windows-only gap. Five slices were built on their own branches (data safety, Forge, keep-awake and wake, scanning, the service), merged into `work/linux-server` without conflicts, then wired together. Windows behaves as before, apart from the home listener's new address scope and `backup_dir`'s parent folder below.
