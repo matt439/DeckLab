@@ -318,8 +318,10 @@ class JudgingTests(unittest.TestCase):
         def adapter(**options):
             return [x for x in self.lines(FakeHost(**options)) if x["area"] == "Wake"][1]
         self.assertIn("isn't set to wake", adapter(runs={"ethtool": (0, "\tSupports Wake-on: pumbg\n\tWake-on: d\n", "")})["text"])
-        self.assertIn("802-3-ethernet.wake-on-lan magic",
-                      adapter(runs={"ethtool": (0, "\tSupports Wake-on: pumbg\n\tWake-on: d\n", "")})["fix"])
+        unarmed = adapter(runs={"ethtool": (0, "\tSupports Wake-on: pumbg\n\tWake-on: d\n", "")})["fix"]
+        self.assertIn("802-3-ethernet.wake-on-lan magic", unarmed)           # NetworkManager
+        self.assertIn("set-name: eno1 and wakeonlan: true", unarmed)         # netplan, Ubuntu Server's default
+        self.assertIn("sudo ethtool eno1", unarmed)
         self.assertIn("can't wake", adapter(runs={"ethtool": (0, "\tSupports Wake-on: d\n\tWake-on: d\n", "")})["text"])
         denied = adapter(runs={"ethtool": (75, ETHTOOL_USER, "Cannot get wake-on-lan settings: Operation not permitted")})
         self.assertEqual(denied["level"], OK)       # power/wakeup is enabled

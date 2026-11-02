@@ -46,9 +46,14 @@ WAKE_TIMER_FIX = "python -m decklab.db schedule wake-timer prints the commands t
 
 
 def wol_fix(interface):
-    return ("Turn on wake-on-LAN in the BIOS/UEFI, then keep it on at every boot: sudo nmcli connection modify "
-            "<connection> 802-3-ethernet.wake-on-lan magic (nmcli connection show lists them), or a "
-            f"systemd-networkd .link file with WakeOnLan=magic. Check with sudo ethtool {interface or '<adapter>'}.")
+    adapter = interface or "<adapter>"
+    return ("Turn on wake-on-LAN in the BIOS/UEFI, then keep it on at every boot: with netplan (Ubuntu Server), "
+            "a file of its own such as /etc/netplan/60-wake-on-lan.yaml matching the adapter by MAC address, "
+            f"with set-name: {adapter} and wakeonlan: true, "
+            "then sudo netplan generate (SELF-HOSTING.md, step 12); with NetworkManager, sudo nmcli connection "
+            "modify <connection> 802-3-ethernet.wake-on-lan magic (nmcli connection show lists them); with "
+            "systemd-networkd alone, a .link file with WakeOnLan=magic. "
+            f"Check with sudo ethtool {adapter}.")
 
 
 def polkit_fix(user):
