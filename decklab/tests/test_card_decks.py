@@ -40,6 +40,17 @@ Deck
 """
 
 
+def two_lists(title, status, planned, play_now, built_version=None):
+    """A deck whose Planned and Play-now lists differ, both in the fixture's card index."""
+    header = f"- **Format:** casual\n- **Played by:** user\n- **Status:** {status}\n"
+    if built_version:
+        header += f"- **Built version:** {built_version}\n"
+    return (f"# {title}\n\n{header}\n## Decklist\n\n```\nDeck\n{planned}\n```\n\n"
+            f"### Substitute version (owned and incoming cards)\n\n```\nDeck\n{play_now}\n```\n\n"
+            "## Owned vs needed\n\n| Card | Need | Owned | Missing | ~AUD each | ~AUD missing | Notes |\n"
+            "|---|---|---|---|---|---|---|\n")
+
+
 class CardDecksTestCase(GlobalSearchTestCase):
 
     def ask(self, profile, name="Llanowar Elves", space=None):
@@ -74,6 +85,37 @@ class AnswerTests(CardDecksTestCase):
         self.assertEqual(lotus["holds"], [])
         self.assertEqual([d["id"] for d in lotus["wants"]], ["casual/gruul-test"])     # not elf-stompy's Considering
         self.assertEqual(lotus["free"], 1)
+
+    def test_a_built_deck_whose_built_list_lacks_the_card_wants_it_last(self):
+        # Built from its Play-now list (Elvish Mystic), it holds no Llanowar Elves; its Planned list wants 4.
+        _write(self.box.magic / "decks" / "casual" / "a-mystic-build.md",
+               two_lists("A Mystic Build", "built", "4 Llanowar Elves", "1 Elvish Mystic", "owned-only"))
+        answer = self.ask("matt")
+        self.assertNotIn("casual/a-mystic-build", [d["id"] for d in answer["holds"]])
+        self.assertEqual([(d["id"], d["status"], d["copies"]) for d in answer["wants"]],
+                         [("casual/gruul-test", "building", 6), ("commander/elf-commander", "idea", 1),
+                          ("casual/a-mystic-build", "built", 4)])
+        self.assertEqual(answer["free"], 3)            # its built list holds none of them
+        mystic = self.ask("matt", "Elvish Mystic")
+        self.assertIn(("casual/a-mystic-build", "built", 1), [(d["id"], d["why"], d["copies"]) for d in mystic["holds"]])
+        self.assertNotIn("casual/a-mystic-build", [d["id"] for d in mystic["wants"]])
+
+    def test_the_play_now_list_counts_when_the_planned_list_lacks_the_card(self):
+        _write(self.box.magic / "decks" / "casual" / "a-stand-in.md",
+               two_lists("A Stand-in", "building", "3 Elvish Mystic", "2 Llanowar Elves"))
+        wants = {d["id"]: d["copies"] for d in self.ask("matt")["wants"]}
+        self.assertEqual(wants["casual/a-stand-in"], 2)
+        self.assertEqual({d["id"]: d["copies"] for d in self.ask("matt", "Elvish Mystic")["wants"]}["casual/a-stand-in"], 3)
+
+    def test_each_list_stops_at_max_decks_and_more_says_so(self):
+        with mock.patch.object(cd, "MAX_DECKS", 1):
+            answer = self.ask("matt")
+        self.assertEqual([d["id"] for d in answer["holds"]], ["product/fdn-beginner-box/cats"])
+        self.assertEqual([d["id"] for d in answer["wants"]], ["casual/gruul-test"])
+        self.assertTrue(answer["more"])
+        self.assertEqual(answer["free"], 3, "a cut list still counts every holder's copies")
+        with mock.patch.object(cd, "MAX_DECKS", 2):
+            self.assertFalse(self.ask("matt")["more"])
 
     def test_a_basic_land_says_its_copies_in_decks_arent_tracked(self):
         answer = self.ask("matt", "Forest")

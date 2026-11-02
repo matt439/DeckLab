@@ -4,10 +4,40 @@ functions and deterministic API promises: which pages ask, the words, a quick sw
 Run from the repo root: python scripts/test_fixtures.py decklab.tests.test_card_viewer_use_ui
 """
 import json
+import re
 import subprocess
 import unittest
 
 from decklab.tests.test_workspace_ui import NODE, RUNNER, WEB
+
+
+class ViewerUseLayoutTests(unittest.TestCase):
+    """The use line has a grid row of its own (cards-ui.css): in no layout may it share a column with Previous
+    or Next, which it would run under on a portrait phone if it sat in the counter's auto-width column."""
+
+    def test_every_viewer_layout_keeps_the_use_line_clear_of_the_buttons(self):
+        css = re.sub(r"/\*.*?\*/", "", (WEB / "cards-ui.css").read_text(encoding="utf-8"), flags=re.S)
+        self.assertRegex(re.search(r"\.viewer-use\s*\{([^}]+)\}", css).group(1), r"grid-area:\s*use;")
+        layouts = re.findall(r"grid-template-areas:\s*((?:\"[^\"]*\"\s*)+);", css)
+        viewer = [rows for rows in layouts if "count" in rows]
+        self.assertEqual(len(viewer), 5, viewer)
+        for areas in viewer:
+            with self.subTest(areas=areas):
+                grid = [row.split() for row in re.findall(r'"([^"]*)"', areas)]
+                columns = [set(column) for column in zip(*grid)]
+                rows = [row for row in grid if "use" in row]
+                self.assertTrue(rows, "the layout has no row for the use line")
+                # A row with the line holds Previous or Next only where they have a column of their own (a phone
+                # on its side), never as the 1fr tracks either side of the counter's auto-width one.
+                for row in rows:
+                    for button in ("prev", "next"):
+                        for i, cell in enumerate(row):
+                            if cell == button:
+                                self.assertEqual(columns[i], {button}, f"{button} shares a row with the use line")
+
+    def test_the_line_keeps_its_room_while_it_loads(self):
+        css = (WEB / "cards-ui.css").read_text(encoding="utf-8")
+        self.assertRegex(css, r"\.viewer-use\.is-loading\s*\{\s*visibility:\s*hidden;\s*\}")
 
 
 @unittest.skipUnless(NODE, "Node.js isn't installed")
@@ -30,7 +60,7 @@ class ViewerUseLineTests(unittest.TestCase):
           const show = (items) => { openCardViewer(items, 0); viewerDom.dialog.open = true; };
           const shut = () => { viewerDom.dialog.open = false; viewerClosed(); };
           const line = () => viewerDom.use;
-          const shown = () => (line().hidden ? null : line().textContent);
+          const shown = () => (line().hidden || line().classList.contains("is-loading") ? null : line().textContent);
           const answer = (extra = {}) => ({name: "Llanowar Elves", space: "home", basic: false, more: false,
             holds: [{id: "casual/elf-stompy", title: "Elf Stompy", why: "built", copies: 1},
                     {id: "product/fdn-beginner-box/cats", title: "Cats", why: "intact product", copies: 1}],
@@ -50,9 +80,10 @@ class ViewerUseLineTests(unittest.TestCase):
           await flush();
           assert.deepEqual(reads, [path("Llanowar Elves")]);
           assert.equal(shown(), "In decks: Elf Stompy holds 1, Cats holds 1, Gruul Test wants 6 \\u00b7 3 free");
-          // The line sits in the viewer's foot, after the opening list's own chips.
-          const foot = viewerDom.foot.children;
-          assert.equal(foot.indexOf(line()), foot.indexOf(viewerDom.marks) + 1);
+          // The line is a row of its own, after the foot with the opening list's own chips.
+          const kids = viewerDom.dialog.children;
+          assert.equal(kids.indexOf(line()), kids.indexOf(viewerDom.foot) + 1);
+          assert.ok(!viewerDom.foot.children.includes(line()));
           // The same card again in this opening isn't asked twice; a new opening asks afresh.
           show([elves]);
           await flush();
@@ -127,6 +158,10 @@ class ViewerUseLineTests(unittest.TestCase):
             ? new Promise((resolve) => { release = () => resolve(answer()); })
             : Promise.resolve(answer({name: "Black Lotus", holds: [], wants: [], owned: 1, free: 1})); };
           show([elves, lotus]);
+          // While its answer loads, the line keeps its room, unseen.
+          assert.equal(line().hidden, false);
+          assert.ok(line().classList.contains("is-loading"));
+          assert.equal(shown(), null);
           goViewer(1);
           await flush();
           assert.equal(shown(), "In no decks \\u00b7 1 free");
@@ -142,6 +177,7 @@ class ViewerUseLineTests(unittest.TestCase):
           show([elves]);
           await flush();
           assert.equal(shown(), null);
+          assert.equal(line().hidden, true, "a refusal gives the room back");
           shut();
           answers[path("Black Lotus")] = new ApiError(503, "The card data isn't ready yet.");
           show([lotus]);

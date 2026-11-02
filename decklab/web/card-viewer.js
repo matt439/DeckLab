@@ -143,10 +143,11 @@ function buildViewer() {
   // counter, so a missing card doesn't look owned once it's big.
   d.marks = el("div", { class: "viewer-marks" });
   d.hint = el("p", { class: "viewer-swipe-hint", text: "Swipe left or right" });
-  // Which of the space's decks hold or want the card, and its free copies (viewerUsePart), under the chips.
+  // Which of the space's decks hold or want the card, and its free copies (viewerUsePart): a row of its own
+  // under Previous, the counter and Next (cards-ui.css), so a long line never runs under the buttons.
   d.use = el("p", { class: "viewer-use" });
   d.use.hidden = true;
-  d.foot = el("div", { class: "viewer-foot" }, d.count, d.hint, d.marks, d.use);
+  d.foot = el("div", { class: "viewer-foot" }, d.count, d.hint, d.marks);
   d.live = el("p", { class: "sr-only", "aria-live": "polite" });
   d.slides = [-1, 0, 1].map((at) => el("figure", { class: "viewer-slide", "data-at": String(at) }));
   d.track = el("div", { class: "viewer-track" }, d.slides);
@@ -154,7 +155,7 @@ function buildViewer() {
   d.text = el("section", { id: "viewer-text", class: "viewer-text", "aria-label": "Card text", tabindex: "-1" });
   d.dialog = el("dialog", { class: "viewer", "aria-labelledby": "viewer-title" },
     el("header", { class: "viewer-head" }, d.title, d.flip, d.textBtn, d.close),
-    d.stage, d.prev, d.next, d.foot, d.text, d.live);
+    d.stage, d.prev, d.next, d.foot, d.use, d.text, d.live);
   document.body.append(d.dialog);
 
   d.dialog.addEventListener("cancel", (e) => { e.preventDefault(); closeViewer(); });    // Escape
@@ -395,9 +396,14 @@ function viewerUseSpace() {
 function viewerUsePart(box, card) {
   clear(box);
   box.hidden = true;
+  box.classList.remove("is-loading");
   const token = box.useToken = {};
   const space = viewerUseSpace(), name = card && card.name;
   if (!space || !name) return;
+  // Keep the line's room while the answer loads (unseen), so the card isn't drawn smaller once it comes.
+  box.textContent = "\u00a0";
+  box.classList.add("is-loading");
+  box.hidden = false;
   const key = `${space}\n${name}`;
   let answer = viewerUses.get(key);
   if (!answer) {
@@ -412,9 +418,9 @@ function viewerUsePart(box, card) {
   answer.then((data) => {
     if (box.useToken !== token || !viewerState) return;
     const words = viewerUseWords(data);
-    if (!words) return;
-    box.textContent = words;
-    box.hidden = false;
+    box.classList.remove("is-loading");
+    box.textContent = words || "";
+    box.hidden = !words;
   });
 }
 
