@@ -75,7 +75,11 @@ def decks_index():
 
     missing, on_the_way, availability_confirmed, assembled and tokens are left out of a
     deck whose space's inventory the visitor may not see (the phase 4
-    design's R6d, guard.sees_inventory), and that space's pool isn't read."""
+    design's R6d, guard.sees_inventory), and that space's pool isn't read.
+
+    "own_collection_empty" (E11-S56) is whether the viewer's own space's collection has no
+    cards (_own_collection_empty), for the library's empty-space start; left out for a script,
+    nobody chosen, a viewer who may not see that collection, or one that can't be read."""
     _require_cards()
     summaries = [dict(summary) for summary in guard.visible_decks(decks.list_decks())]
     opponents = usual_opponent_ids(summaries)
@@ -106,10 +110,36 @@ def decks_index():
     played_extras(summaries)
     halves = [{"id": s["id"], "title": _half_title(s)} for s in summaries
               if s["id"].startswith(f"product/{decks.BEGINNER_BOX}/") and not s.get("error")]
-    return {"decks": summaries, "halves": halves, "warnings": _unique(_scrub(warnings)),
-            "decks_revision": viewer_decks_revision(summaries),
-            "usual_opponents": {deck_id: ids for deck_id, ids in opponents.items()
-                                if deck_id.startswith("pairing/") and ids}}
+    answer = {"decks": summaries, "halves": halves, "warnings": _unique(_scrub(warnings)),
+              "decks_revision": viewer_decks_revision(summaries),
+              "usual_opponents": {deck_id: ids for deck_id, ids in opponents.items()
+                                  if deck_id.startswith("pairing/") and ids}}
+    empty = _own_collection_empty()
+    if empty is not None:
+        answer["own_collection_empty"] = empty
+    return answer
+
+
+def _own_collection_empty():
+    """True when the viewer's own space's collection has no cards, False when it has some (E11-S56).
+    None (left out) when no profile is named (a script, or a home page before "Who are you?"),
+    the viewer may not see that space's collection (guard.sees_inventory), or it can't be read:
+    only its own people learn whether a collection is empty, and nothing else about it."""
+    try:
+        profile = guard.viewer()
+    except ApiError:
+        return None
+    space = profile.get("space") if isinstance(profile, dict) else None
+    if not isinstance(space, str) or not space or not guard.sees_inventory(space, profile):
+        return None
+    try:
+        sheet = inventory.current().collection(space)
+    except Exception:           # the library still shows, with the usual empty state
+        common._log("The collection couldn't be read for the library:\n" + traceback.format_exc())
+        return None
+    if sheet.exists and sheet.error is not None:
+        return None
+    return not sheet.rows
 
 
 def _index_counts(summary, p, warnings):
