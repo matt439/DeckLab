@@ -25,6 +25,8 @@
 .wishlist-sheet-facts p { margin: 0; }
 .wishlist-source { color: var(--ink-2); font-size: var(--fs-sm); overflow-wrap: break-word; }
 .wishlist-source a { display: inline-flex; align-items: center; min-height: var(--tap); }
+.wishlist-short { overflow-wrap: break-word; }
+.wishlist-short a { display: inline-flex; align-items: center; min-height: var(--tap); }
 .wishlist-sheet { display: grid; gap: var(--s-4); }
 .wishlist-sheet textarea { width: 100%; }
 .wishlist-printing-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s-2); }
