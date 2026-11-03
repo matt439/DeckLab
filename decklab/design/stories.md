@@ -12,7 +12,7 @@ Its acceptance criteria use Given / When / Then: the starting state, the action,
 
 Each story's first line gives:
 
-- **Persona**: from [personas.md](personas.md). Matt, User1, the space members (User2, User3, User4), User5 (`user5`, the first real member, whose setup is the template for every member: [member-template.md](member-template.md)), Claude Code (the command-line operator), and two outside roles: the Commander table (strangers at the shop's pods) and the tournament grinder (an anti-persona, for things deliberately not wanted).
+- **Persona**: from [personas.md](personas.md). Matt, User1, the space members (User2, User3, User4), User5 (`user5`, the first real member, whose setup is the template for every member: [member-template.md](member-template.md)), Claude Code (the command-line operator), the Self-hoster (someone outside the household running their own Deck Lab), and two outside roles: the Commander table (strangers at the shop's pods) and the tournament grinder (an anti-persona, for things deliberately not wanted).
 - **Priority** (MoSCoW): `must`, `should`, `could`, or `wont` (not wanted, kept as a recorded decision).
 - **Size**: `S` (a day or so), `M` (a few days), `L` (a week or more), `XL` (too big for one story; should be split).
 - **Status**:
@@ -45,10 +45,10 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 20 | 17 | 0 | 1 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 24 | 18 | 1 | 4 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 35 | 31 | 1 | 1 | 2 |
-| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 53 | 37 | 5 | 7 | 4 |
-| **Total** | **305** | **253** | **19** | **17** | **16** |
+| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 55 | 38 | 6 | 7 | 4 |
+| **Total** | **307** | **254** | **20** | **17** | **16** |
 
-Counted from the story headers on 2026-10-29 after the source-aware two-player and pod counters, alongside the current feature and maintenance work. The reviews added five feature stories and eight hygiene stories, then the fixture-only entry-point story E11-S44, and corrected E1-S12 from missing to partial. Rechecked 2026-10-29: E1-S12 is built and E11-S39 partial (its database qualification pending). The TODO audit of 2026-10-29 added fifteen missing stories (twelve from the audit: E1-S27, E1-S28, E2-S27, E3-S25, E3-S26, E5-S25, E6-S25, E6-S26, E9-S26, E9-S27, E11-S45, E11-S46), then Matt's three UI requests (E3-S27, E5-S26, E6-S27), and corrected E7-S32 from missing to partial (its recognition spike and CLI are built). Matt closed E11-S16 as built the same day, and E3-S27, E5-S26, E6-S25, E6-S27 and E11-S46 were built the same day (E11-S12 stays partial after a further slice). Later the same day E5-S25 and E6-S26 were built, E1-S27's first slice (the library) made it partial, and E11-S12 and E3-S26 were built. E1-S27's Overview slices then finished it, and E2-S27 and E9-S27 were built. E1-S28 was built the same day. E3-S25's first slice (its replacements API, 2026-10-29) made it partial. Its dual-lands slice (2026-10-29) finished it. E11-S45 was built the same day. Recounted 2026-10-30: E7-S23's first slice (the token side on deck pages and the printout) made it partial. E7-S24's read-only slice (the counters and dice a deck's cards use) made it partial too. E9-S26's free cards by role on the Stats tab made it partial, leaving its cited role targets to Matt's choice of template; with the Command Zone template's targets (2026-10-31) it is built. Recounted 2026-10-31: E11-S47 (built 2026-10-30) was missing from the E11 row. E4-S16 was built (sideboard-plan tests). E7-S23's second slice (the opponent's tokens under their own heading and counted apart in the library line and the packing ticks) finished it. E7-S08 was built (token counts suggested from saved Forge games), and E9-S07 too (new decks and narrowed pages). Later on 2026-10-31 E11-S39 was built (its database qualification ran), E11-S31 became partial (global search built, its device check left), E11-S30 kept its device gate, and E7-S24 was built once migration 0020 was applied. Matt's self-hosting decisions of 2026-10-31 (Windows first; strangers install their own, family and friends join as members; release zips; currency as a setting) added E11-S48 to E11-S53, all missing; E11-S48 was built the same day, in three slices. Matt's expansion review of 2026-10-31 added twelve missing stories for work no story covered: E1-S29, E4-S27, E5-S27 to E5-S30, E9-S28, E9-S29 and E11-S54 to E11-S57. Matt's request of 2026-11-01 to run the live server on Linux added E11-S58, built the same day. Matt's deck-page question of 2026-11-02 added E5-S31, built the same day. Recounted 2026-11-02: E7-S33 (built 2026-11-02) was missing from the E7 row. The gauntlet design of 2026-11-02 added E3-S28 to E3-S31; E3-S28 and E3-S29 were built the same day, and E3-S30 and E3-S31 are missing. Later on 2026-11-02 the first slices of E5-S27 (Shopping's Baskets), E5-S28 (Build decks together) and E9-S29 (tutors on the Stats tab) made them partial, as the first slices of E1-S29 (the card viewer's decks line) and E5-S30 (the Wishlist page's short decks) made them, and E11-S56 (an empty space's start) was built. Matt's report of 2026-11-02 that the Against popular decks box is too wide added E3-S32, missing. On 2026-11-03 Matt decided E5-S29 is wanted (it stays missing, now ready) and E11-S54 and E4-S27 aren't (not wanted). Later on 2026-11-03 E3-S32 was built, E5-S29's first slice (the 90-day history and `shops history`) made it partial, and E1-S29 gained global search's short form (still partial). Matt's gauntlet decisions of 2026-11-03 (it's the lead feature; a standard sample of 20 core and upgraded Commander opponents; runs up to every playable deck, overnight; Matchups to be renamed Testing) added E3-S33 to E3-S38: E3-S33 and E3-S38 were built the same day, and E3-S34 to E3-S37 are missing. Later on 2026-11-03 E3-S34 was built, then E3-S35 (Matchups renamed Testing, next to Decks, with the Popular decks board), then E3-S36 (the popular-decks figure in the library) and E3-S37 (an editor choice to test against popular decks after saving). Matt's request of 2026-11-03 to try a precon before buying it added E3-S39, built the same day.
+Counted from the story headers on 2026-10-29 after the source-aware two-player and pod counters, alongside the current feature and maintenance work. The reviews added five feature stories and eight hygiene stories, then the fixture-only entry-point story E11-S44, and corrected E1-S12 from missing to partial. Rechecked 2026-10-29: E1-S12 is built and E11-S39 partial (its database qualification pending). The TODO audit of 2026-10-29 added fifteen missing stories (twelve from the audit: E1-S27, E1-S28, E2-S27, E3-S25, E3-S26, E5-S25, E6-S25, E6-S26, E9-S26, E9-S27, E11-S45, E11-S46), then Matt's three UI requests (E3-S27, E5-S26, E6-S27), and corrected E7-S32 from missing to partial (its recognition spike and CLI are built). Matt closed E11-S16 as built the same day, and E3-S27, E5-S26, E6-S25, E6-S27 and E11-S46 were built the same day (E11-S12 stays partial after a further slice). Later the same day E5-S25 and E6-S26 were built, E1-S27's first slice (the library) made it partial, and E11-S12 and E3-S26 were built. E1-S27's Overview slices then finished it, and E2-S27 and E9-S27 were built. E1-S28 was built the same day. E3-S25's first slice (its replacements API, 2026-10-29) made it partial. Its dual-lands slice (2026-10-29) finished it. E11-S45 was built the same day. Recounted 2026-10-30: E7-S23's first slice (the token side on deck pages and the printout) made it partial. E7-S24's read-only slice (the counters and dice a deck's cards use) made it partial too. E9-S26's free cards by role on the Stats tab made it partial, leaving its cited role targets to Matt's choice of template; with the Command Zone template's targets (2026-10-31) it is built. Recounted 2026-10-31: E11-S47 (built 2026-10-30) was missing from the E11 row. E4-S16 was built (sideboard-plan tests). E7-S23's second slice (the opponent's tokens under their own heading and counted apart in the library line and the packing ticks) finished it. E7-S08 was built (token counts suggested from saved Forge games), and E9-S07 too (new decks and narrowed pages). Later on 2026-10-31 E11-S39 was built (its database qualification ran), E11-S31 became partial (global search built, its device check left), E11-S30 kept its device gate, and E7-S24 was built once migration 0020 was applied. Matt's self-hosting decisions of 2026-10-31 (Windows first; strangers install their own, family and friends join as members; release zips; currency as a setting) added E11-S48 to E11-S53, all missing; E11-S48 was built the same day, in three slices. Matt's expansion review of 2026-10-31 added twelve missing stories for work no story covered: E1-S29, E4-S27, E5-S27 to E5-S30, E9-S28, E9-S29 and E11-S54 to E11-S57. Matt's request of 2026-11-01 to run the live server on Linux added E11-S58, built the same day. Matt's deck-page question of 2026-11-02 added E5-S31, built the same day. Recounted 2026-11-02: E7-S33 (built 2026-11-02) was missing from the E7 row. The gauntlet design of 2026-11-02 added E3-S28 to E3-S31; E3-S28 and E3-S29 were built the same day, and E3-S30 and E3-S31 are missing. Later on 2026-11-02 the first slices of E5-S27 (Shopping's Baskets), E5-S28 (Build decks together) and E9-S29 (tutors on the Stats tab) made them partial, as the first slices of E1-S29 (the card viewer's decks line) and E5-S30 (the Wishlist page's short decks) made them, and E11-S56 (an empty space's start) was built. Matt's report of 2026-11-02 that the Against popular decks box is too wide added E3-S32, missing. On 2026-11-03 Matt decided E5-S29 is wanted (it stays missing, now ready) and E11-S54 and E4-S27 aren't (not wanted). Later on 2026-11-03 E3-S32 was built, E5-S29's first slice (the 90-day history and `shops history`) made it partial, and E1-S29 gained global search's short form (still partial). Matt's gauntlet decisions of 2026-11-03 (it's the lead feature; a standard sample of 20 core and upgraded Commander opponents; runs up to every playable deck, overnight; Matchups to be renamed Testing) added E3-S33 to E3-S38: E3-S33 and E3-S38 were built the same day, and E3-S34 to E3-S37 are missing. Later on 2026-11-03 E3-S34 was built, then E3-S35 (Matchups renamed Testing, next to Decks, with the Popular decks board), then E3-S36 (the popular-decks figure in the library) and E3-S37 (an editor choice to test against popular decks after saving). Matt's request of 2026-11-03 to try a precon before buying it added E3-S39, built the same day. Later on 2026-11-03 E8-S24 was built (kit on a deck being built). The persona and story review of 2026-11-04 added E11-S59 (wake-on-request, partial: built in code, not yet set up for real) and E11-S60 (the server PC's updater, smoke test and database move, built) for work no story covered, moved the self-hosting stories E11-S50 to E11-S53, E11-S56 and E11-S57 to the new Self-hoster persona, and cut stale Gap lines from twelve stories.
 
 ---
 
@@ -345,7 +345,7 @@ As a deck builder sharing one pool, I want any card I open, from the card viewer
 - Given a deck the viewer may not see, then it is never named or counted (E10-S30).
 - Given a basic land, then the line says its copies in decks aren't tracked, as the Card list does.
 
-Gap: `web/card-viewer.js` shows only what the opening list said about the card, and `lib/api/global_search.py` answers names and printings without deck use; the Card list's In decks column (`web/collection-rows.js`) and `deck_line` already hold the answer. First slice: the card viewer's line on the deck page and the Collection page, from the Card list's In decks calculation.
+Gap: the card viewer shows the decks line only when it is opened from the deck page or the Collection page; opened from any other list it shows only what that list said about the card.
 
 Built (2026-11-02): the first slice. GET `/api/cards/decks` (`lib/api/card_decks.py`) answers one card's use in a space, only to viewers who may see that space's inventory (the Collection page's 403 otherwise), never naming or counting a deck the viewer can't see. Opened from the deck page or the Collection page, the card viewer shows it in a row of its own under Previous and Next: the decks that hold the card (built decks first, then intact products) or want it, with copies, and its free copies; a basic land says its copies in decks aren't tracked. Left: the viewer opened from other pages. Tests: `decklab/tests/test_card_decks.py`, `test_card_viewer_use_ui.py`. See [HISTORY.md](../HISTORY.md#card-viewer-which-decks-use-the-card-2026-11-02-e1-s29-first-slice).
 
@@ -1118,8 +1118,6 @@ As a deck builder reading the Matchups tab, I want the "Against popular decks" p
 - Given a deck page's Matchups tab on a wide screen, when "Against popular decks" is shown (its play box, groups and opponents), then it is no wider than the tab's other parts, its lines stay at a readable length, and the page never scrolls sideways because of it (today it does).
 - Given a phone or a narrow window, then the part still fills the column as it does now.
 
-Gap: Matt reported on 2026-11-02 that the box is too wide, so the whole page scrolls sideways (`decklab/web/gauntlet.css`, `.gt-*`, mounted from `decklab/web/deck.js`). One slice: find which box overflows or stretches at desktop widths, cap or match its width to the tab's other parts, and check both densities and themes.
-
 Built (2026-11-03): `.gt-content`'s children kept a grid item's automatic minimum width, so the empty state's build command could push the page sideways, and on desktop the play box, text and group bars stretched across the whole wrap. In `web/gauntlet.css` the part is now one `minmax(0, 1fr)` column whose children may shrink, the build command and long names wrap, the part stops at 1,400 px (as `.mu-pair-body`), text at 72ch, the one-column play box at 40rem and the group list at 46rem; only widths and wrapping changed, so both themes and densities are as before. A headless check of a fixture page found no overflow at 500 to 2,560 px; the sideways scroll on Matt's desktop wasn't reproduced with synthetic data, so look at the live page once deployed. Tests: `decklab/tests/test_gauntlet_width_ui.py`. See [HISTORY.md](../HISTORY.md#against-popular-decks-at-the-matchups-tabs-width-2026-11-03-e3-s32).
 
 **E3-S33** · Matt · should · M · built
@@ -1149,8 +1147,6 @@ As a deck builder who has just changed a list, I want its old popular-decks figu
 - Given a list changed since its last standard-sample test, when the summary, the Overview panel or the Matchups part shows, then the previous list's figure stays, muted, with "The list changed since its last test (<date>). Before: <rate> (<range>)."
 - Given results from an older Forge or an older catalogue, then they're marked as such ("Results from an older Forge aren't shown.") instead of disappearing without a word.
 - Given a re-test of the changed list, then the answer shows "Before this change <rate> (<range>) · Now <rate> (<range>), same <N> opponents", and an opponent row is marked moved only when its two ranges don't overlap; no significance is claimed.
-
-Gap: results are keyed by the list's `card_sha`, the Forge version and the catalogue, so today any edit or engine change empties the figure. First slice: the summary finds the previous `card_sha` from the deck's saved revisions (results are saved per pair, so the old list's games are still there) and answers a `stale_list` state with the old figure. The Forge and catalogue states need the engine key and catalogue sha recorded with each result. Wanted before `FG#2` (mid-November) clears every result.
 
 Now: built 2026-11-03 ([HISTORY.md](../HISTORY.md#against-popular-decks-kept-through-a-change-2026-11-03-e3-s34)). The summary and `GET /api/gauntlet` answer `before`, `compare` and `older`, and the summary's state gains `stale_list` (the current list has no games, an earlier list has standard-sample games) and `stale_older` (no games under today's keys, but older results exist). The previous list is the most recent earlier saved revision whose playable list (`card_sha`'s sections) differs and has standard-sample games, at most 200 revisions read in pages of 25 and 20 distinct earlier lists (table-only revisions not parsed again), stopping at a deletion unless the next revision restores it, and at most 3 lists viewed, only lists with run notes in the deck's space; a bound that ends the search says "The list's older versions weren't all looked at.", and if the revisions can't be read, the answer says "The list's earlier versions can't be read now." The before and now figures average only the opponents both lists have rates against; a row is `moved` only when its two ranges don't overlap and both are meaningful. Older results are grouped by one engine (the newest group, never mixed) and given a reason: an older Forge, other settings, another AI pilot, an opponent's list changed in a catalogue rebuild, or unknown when today's Forge can't be confirmed. The Overview panel and the Matchups part show the old figure muted with Play under it (never run automatically), and nothing names who edited, a revision or who started a run. A run's notes now record its sample, the catalogue sha and whether it was the standard sample, for later use. The view's `_keep` never matched a saved result before (it read `side["id"]`, but saved sides keep their ids under `seen_as`), so until this fix the page and summary counted no saved games. Older results leave out opponents re-tested under today's Forge, and when the list and Forge both changed the earlier list's older results are said (`older.earlier`); the run-independent parts are kept a minute so Matchups' polls during a run don't redo them.
 
@@ -1947,7 +1943,7 @@ Evidence:
 - `decklab/web/shopping-snapshot.js`: shopSnapshotLine, shopSnapshotBack; `decklab/web/shopping.js`, `decklab/web/shopping-queue.js`: the `shop-queue-back` highlight in both densities
 - `decklab/tests/test_shops.py`: test_a_waiting_row_found_in_stock_is_back_and_newly_in_stock; `decklab/tests/test_shopping_snapshot_ui.py`: test_a_waiting_row_back_in_stock_is_marked
 
-Gap: the mark shows when Shopping is opened; nothing is pushed to a phone or e-mailed, and only MTGMate is checked.
+Gap: the mark shows when Shopping is opened; nothing is pushed to a phone or e-mailed (phone notifications, E11-S54, aren't wanted). Both MTGMate and Games Portal are checked since 2026-10-31 (E5-S08).
 
 **E5-S20** · Matt · wont · S · not_wanted
 
@@ -2059,7 +2055,7 @@ As a buyer ordering from several Australian shops, I want Shopping to propose th
 - Given a shop the snapshot couldn't read, or a row it didn't check, then the basket says so and claims no stock.
 - Given a basket, then Copy this shop's list (E5-S24) copies exactly its rows, and nothing here changes the queue, records an order or stores a price paid.
 
-Gap: Shopping's By shop groups rows by the recorded `listed_at` shop, and the snapshot shows one line a shop beside each row; nothing knows a shop's postage or proposes a basket. Postage rules need a settings home, which E11-S53's shops setting would give. The "Share postage" rule in AGENTS.md stays Claude's where research goes beyond the checked shops. First slice: the per-shop baskets from the snapshot alone (ready rows in stock, totals, add-ons), without postage rules.
+Gap: postage rules per shop (a flat postage and a free-postage threshold, with a settings home such as E11-S53's), add-ons judged against a shop's free-postage threshold, and the fewest-shops plan that weighs postage saved against price.
 
 Built (2026-11-02): the first slice. GET `/api/shopping` gains a `baskets` field (`lib/api/shop_baskets.py`, home-record readers only, while some shop has a saved snapshot; no shop is contacted), drawn as Shopping's Baskets after By shop (`web/shopping-baskets.js`). Each shop (MTGMate, then Games Portal) lists its ready rows in stock with the listing found, price, stock and fetch time, MTGMate's short stock counted as only the copies it has, a total over the priced rows naming how many have no price, the rows it can't vouch for (printing not confirmed, couldn't be read, not checked) claiming no stock, and long-term and waiting rows in stock marked Add-on with their own total (deferred rows left out). A shop whose snapshot couldn't be read says so; the ready rows no checked shop has are listed with each shop's reason. An exact row counts only its printing; an `any` row takes the matcher's choice. Copy this shop's list (E5-S24) copies the basket's ready rows at the copies it counts, and is disabled after a local queue change until a refresh. Nothing is written. Left: postage rules per shop (a Settings home, with E11-S53), the add-ons' free-postage threshold, and the fewest-shops plan. Tests: `decklab/tests/test_shop_baskets.py`, `test_shopping_baskets_ui.py`. See [HISTORY.md](../HISTORY.md#shoppings-baskets-from-the-daily-snapshot-2026-11-02-e5-s27-first-slice).
 
@@ -2072,7 +2068,7 @@ As a buyer with several unbuilt decks drawing on one pool, I want to pick decks 
 - Given the result, then Queue these (E5-S25's write) puts the combined shortfall on the queue in one reviewed change, each row's `for` naming the decks.
 - Given a viewer who may not see home's inventory, then the control is absent, as the rest of Shopping is.
 
-Gap: `lib/api/shopping_missing.py` sums each deck's own shortfall (the gap analysis: "not a concurrent-build requirement"); the Packing plan's chooser already works out concurrent pulls for the decks it packs (`lib/api/assembly.py` and its intent and sections modules). First slice: the read-only combined list for a chosen set.
+Gap: Queue these (one reviewed queue change, each row's `for` naming the decks) and each card's matching queue rows aren't built; the combined list is read-only.
 
 Built (2026-11-02): the first slice. GET `/api/shopping/combined?decks=ID,ID[,...]` (`lib/api/shopping_combined.py`; the readers of GET `/api/shopping`, anyone else 403 before any read; a hidden or missing deck the usual 404; 2 to 12 home decks, no products, pairings or member decks) adds the chosen decks' Planned lists and compares them once with home's pool: each free copy counted once, other built decks' and intact products' copies not free, a chosen built deck keeping its own, cards on the way counted and labelled, plain basics left out, no prices. Each card gives the combined want, free and missing, the single-deck shortfalls' sum, the chosen decks that want it and the other holders (a hidden deck as "one of the home decks"); an incomplete pool or an unreadable deck makes the answer not ready rather than too low. Shopping's Build decks together (`web/shopping-combined.js`), under Missing cards across decks, chooses the decks in a sheet and draws the list. Left: Queue these (one reviewed queue change, each row's `for` naming the decks) and the matching queue rows beside each card. Tests: `decklab/tests/test_shopping_combined.py`, `test_shopping_combined_ui.py`. See [HISTORY.md](../HISTORY.md#build-decks-together-on-shopping-2026-11-02-e5-s28-first-slice).
 
@@ -2088,7 +2084,7 @@ Decided (Matt, 2026-11-03): wanted, to see whether a queued card's price is tren
 
 First slice: the nightly snapshot keeps each day's reading per shop and card name for 90 days (pruned with the queue), and `python -m decklab.lib.shops history NAME` prints it; Shopping's row comes next.
 
-Gap: `lib/shops/__init__.py` keeps one `previous` snapshot beside the current one, enough for Back in stock (E5-S19) and nothing older.
+Gap: Shopping's row doesn't show the history yet; only `python -m decklab.lib.shops history NAME` on the PC prints it.
 
 Built (2026-11-03): the first slice. Each nightly snapshot also keeps the day's reading of every queued name in a compact history file beside that shop's snapshot (`mtgmate.history.json`, `gamesportal.history.json`; `lib/shops/history.py`), one reading a day (a second run that day replaces it), 90 days, and only while the name is on the queue: a name that leaves it, and everything once the queue is empty, goes at the next run. The snapshot readers (Shopping, deck Prices, Baskets) never load it. `python -m decklab.lib.shops history NAME [--shop KEY] [--json]` prints each day's price and stock at each shop, the lowest in-stock price marked. Left: Shopping's row showing the history. Tests: `decklab/tests/test_shops_history.py`. See [HISTORY.md](../HISTORY.md#a-queued-cards-price-history-2026-11-03-e5-s29-first-slice).
 
@@ -2100,7 +2096,7 @@ As a themed-deck player with a wishlist, I want my wishlist cards shown while I 
 - Given my Wishlist page, when a listed card is in the Planned list of a deck I may see and that deck is short of it, then the entry says so ("The Free Peoples is short of this card"), under the inventory rule for counts.
 - Given anyone else, then nothing of my wishlist shows: both views read only the signed-in profile's own list (E5-S14, E10-S11).
 
-Gap: the Add panel's ticks are Free copies only, My collection and EDHREC ideas (`web/editor-cards.js`); the Wishlist page (`web/wishlist.js`) doesn't read decks. Owner-only reads keep it inside E10-S11. First slice: the Wishlist page's "short of this card" line.
+Gap: the editor's Add panel has no My wishlist tick yet.
 
 Built (2026-11-02): the first slice. Each wishlist entry carries `short_in` (`lib/api/wishlist_short.py`), the owner's own space's decks they may see whose Planned list is short of the card, worked out against the one pool the wishlist already loads, only when the owner may see that space's collection; a deck it can't fully count is skipped and `short_warnings` says some couldn't be counted, naming none. The page shows a "Short in N decks" chip and, in the card's sheet, "A (2 copies) and B are short of this card." with each deck linked. Left: the editor Add panel's My wishlist tick. Tests: `decklab/tests/test_wishlist_short.py`, `test_wishlist_short_ui.py`. See [HISTORY.md](../HISTORY.md#wishlist-decks-short-of-a-wished-card-2026-11-02-e5-s30-first-slice).
 
@@ -2816,8 +2812,6 @@ Evidence:
 - `decklab/tests/test_inventory_undo_trade.py`, `test_activity_trade_undo_api.py`, `test_activity_trade_undo_ui.py`, `test_inventory_undo_mixed_pg.py`: the whole-trade Undo's preview, exact inverse, later-change and held-card refusals, the trade's reason and words (a `collection apply` with a trade's reason isn't one), own space's people only and the review sheet, also through the real audit trail
 
 Now (2026-10-28): `collection trade` on the PC ([HISTORY.md](../HISTORY.md#record-a-trade-from-the-pc-2026-10-27-e7-s22)), the Collection page's Record a trade ([HISTORY.md](../HISTORY.md#record-a-trade-on-the-collection-page-2026-10-27-e7-s22)) and Activity's [whole-trade Undo](../HISTORY.md#undo-a-whole-trade-2026-10-28-e7-s22) are built.
-
-Next slice: a whole-trade Undo beside the import Undo.
 
 **E7-S23** · Matt · could · M · built
 
@@ -3814,7 +3808,7 @@ As a player bringing a deck to a social bracket, I want the bracket check to cou
 - Given a tutor count, then nothing is blocked: it informs the sentence, and the Checks panel warns only where the official text sets a number.
 - Given a casual deck, then nothing changes.
 
-Gap: `lib/stats/commander.py` reads oracle tags for mass land denial and extra turns and says tutors, longer combos and intent aren't checked; the `oracle_tags` bulk file Deck Lab already downloads has the tutor tags. First slice: the count and list on the Stats tab.
+Gap: the tutors found show only on the Stats tab: the Overview's bracket sentence, What opponents will face and the printout don't name them; the official text on tutors isn't read from a source yet, and so no Checks warning where it sets a number.
 
 Built (2026-11-02): the first slice. `lib/stats/tutors.py` counts a card as a tutor when Scryfall's oracle tags put it anywhere under `tutor`, other than only under `tutor-land` (land searches, named apart; the `tutor-to` tags never make a land search a tutor), through a new `cards.tag_branches`; `commander.py` adds `bracket["tutors"]`, and the Stats tab's Minimum bracket shows "Tutors found: N", the cards and the tag data's date. It never raises the minimum bracket or blocks anything. Without the tag file the reasons say tutors weren't counted, with mass land denial and extra turns; a file without a `tutor` tag says so too. Casual decks are unchanged. Left: the Overview's bracket sentence, What opponents will face and the printout; what the official bracket text says about tutors (Deck Lab keeps only the announcement's date and link, not its text); and a Checks warning where that text sets a number. Tests: `decklab/tests/test_stats.py`, `test_stats_tutors_ui.py`. See [HISTORY.md](../HISTORY.md#tutors-counted-in-the-bracket-check-2026-11-02-e9-s29-first-slice).
 
@@ -4884,8 +4878,6 @@ Evidence:
 - `decklab/tests/test_homenet_watchdog.py`, `test_control.py` (StopMarkerTests), `test_server_lifecycle.py` (CtrlCTests, MainTests)
 - `decklab/README.md`, "Start it", "Stop, start and restart", "The log", "When a phone can't reach it"
 
-Gap: not turned on yet on Matt's PC (install --at-logon --no-start, then restart).
-
 **E11-S27** · User1 · wont · M · not_wanted
 
 As a member away from home, I want my phone to show the last-seen state of a deck (its list and missing cards, labelled with when they were saved) while Deck Lab's PC is off, so that I can still check a deck.
@@ -5353,7 +5345,7 @@ Decided (Matt, 2026-10-31): publish versioned release zips; installs and updates
 
 Gap: CI has only `tests.yml` and `lint.yml`; `lib/build.py` reads the version from git and `lib/api/server_restart.py` refuses a restart when it can't.
 
-**E11-S50** · Matt · could · L · missing
+**E11-S50** · Self-hoster · could · L · missing
 
 As a newcomer who isn't comfortable with git or a terminal, I want one Windows installer that sets Deck Lab up from start to finish, so that I can try it on my PC and my phones without following a long guide.
 
@@ -5367,7 +5359,7 @@ Decided (Matt, 2026-10-31): Windows only for now; this is the strangers' route (
 
 Gap: the only route is SELF-HOSTING.md's manual steps (about 14 to the first page, about 23 with phones and backups); the pieces exist (`db setup`, `homenet install`, `schedule install`, `network-setup.ps1 -Yes -Pythonw`, `doctor --json`) but nothing runs them in order.
 
-**E11-S51** · Matt · could · M · missing
+**E11-S51** · Self-hoster · could · M · missing
 
 As a self-hoster who installed from a release, I want one update command, so that I get Deck Lab's fixes without git, migrations or restarts by hand.
 
@@ -5378,7 +5370,7 @@ As a self-hoster who installed from a release, I want one update command, so tha
 
 Gap: updates are `git pull`, `db migrate` and a restart by hand (SELF-HOSTING.md); depends on E11-S49.
 
-**E11-S52** · Matt · could · L · missing
+**E11-S52** · Self-hoster · could · L · missing
 
 As a newcomer who has just installed Deck Lab, I want a first-run setup page on the PC, so that I can name the household's players and turn on simulations without editing JSON.
 
@@ -5389,7 +5381,7 @@ As a newcomer who has just installed Deck Lab, I want a first-run setup page on 
 
 Gap: profiles come only from a hand-edited `config.json`; Settings' Members panel adds only members with their own space; the Forge steps are manual (SELF-HOSTING.md, "Forge simulations").
 
-**E11-S53** · Matt · could · M · missing
+**E11-S53** · Self-hoster · could · M · missing
 
 As a self-hoster outside Australia, I want my currency and price-check shops to be settings, so that prices are in my money and the nightly check doesn't query shops I can't buy from.
 
@@ -5424,7 +5416,7 @@ As the household admin whose members use phones and whose pages serve beginners,
 
 Gap: UI-KIT.md covers focus, announcements and reduced motion for the card viewer and the run pill and gives the tiles' screen-reader words, but no page-wide audit exists and no test checks contrast. First slice: the audit of the library, the deck page and the Game log on a phone, written up before any fix.
 
-**E11-S56** · Matt · could · S · built
+**E11-S56** · Self-hoster · could · S · built
 
 As a newcomer who has just installed Deck Lab and sees an empty library, I want the empty state to say how to get my first cards and deck in, so that I see Deck Lab working before I've typed anything.
 
@@ -5433,11 +5425,9 @@ As a newcomer who has just installed Deck Lab and sees an empty library, I want 
 - Given a member's empty space, then the same empty state shows for them (their own Collection page has both sheets).
 - Given a space with decks or cards, then nothing changes.
 
-Gap: `web/library.js`'s empty state says "You don't play any decks yet." and offers Show every deck or New deck; Add a precon and Import cards are reachable only from the Collection page's More menu. Independent of the installer (E11-S50) and the first-run page (E11-S52), which names only the players. One slice.
-
 Built (2026-11-02): GET `/api/decks` says `own_collection_empty` only to a named viewer who may see their own space's collection. With no deck in the viewer's own space, an empty collection and no filter or search, the library shows "There are no decks or cards here yet." with Add a precon, Import cards and New deck, a line each, each offered only when allowed; the first two open the Collection page's sheets through `#/collection?open=precon|import`, which opens once and drops the parameter. Members' empty spaces get the same. Tests: `decklab/tests/test_library_start_api.py`, `test_library_start_ui.py`. See [HISTORY.md](../HISTORY.md#an-empty-spaces-library-shows-how-to-start-2026-11-02-e11-s56).
 
-**E11-S57** · Matt · could · L · missing
+**E11-S57** · Self-hoster · could · L · missing
 
 As a self-hoster on Linux, I want one install route, so that I don't follow SELF-HOSTING.md's manual steps by hand.
 
@@ -5472,3 +5462,40 @@ Evidence:
 - `SELF-HOSTING.md` ("From a Windows server to a Linux one", step 12's Linux steps)
 
 Qualified in WSL2 Ubuntu 26.04 (2026-11-02, a throwaway install with systemd, PostgreSQL 18, Tesseract 5.5 and OpenJDK 21): the database setup, backups, restore and the 1,897 database integration tests; the release Forge install, cardlog-check, upgrade-check and real Forge games, from the command line and the background service's warm pool; the systemd user service and nightly timer; `systemd-inhibit` under a polkit rule from the user service; `decklab.update`; and the smoke test and doctor. Its findings were fixed the same day (scanning's second Tesseract pass and faint set lines, the doctor's backup folders, `db status`'s failed dumps, Forge's default folder, and wording). Gap: still to qualify on the real Linux server PC: real suspend and wake (magic packet and the root wake timer), phones against it, and Tesseract on real card photos. Not built: Linux core pinning, parent-death safety for Forge started from a terminal, the profiles' sync retrying once the database comes up, and the gate's own wake time.
+
+**E11-S59** · Matt · could · L · partial
+
+As Matt, serving Deck Lab from a spare PC that uses power all day, I want the PC to sleep when nobody is using it and wake whenever anyone opens Deck Lab, at home or through decklab.example.com, so that it costs little to run without anyone having to switch it on.
+
+- Given a `"wake"` block in `config.json`, when no real request has come for `idle_minutes` and nothing is busy (a Forge or practice job, the card update, a held Forge slot, the nightly), then Deck Lab stops holding the PC awake; the footer's and pill's timer polls (`X-Deck-Lab-Poll: 1`), `GET /api/status` and static files never count as use.
+- Given the PC asleep, when someone opens Deck Lab on the home network, then the page goes through the NAS's wake gate, which sends a magic packet and shows a "Deck Lab is waking up" page until the PC answers, keeping the page's address; a poll, a write or a timer retry never wakes it.
+- Given the PC asleep, when a signed-in visitor opens decklab.example.com, then the Worker asks the gate to wake the PC (with the Access service token) and shows the waking page, and the API answers `reason: "waking"`; an open tab's polls let the PC sleep.
+- Given the PC has just woken, then the tunnel restarts at once, and `homenet status` checks Sleep and Wake (a sleep timeout, S3, a wake-armed device, the gate answering); the smoke test checks the gate sees the PC awake.
+
+Now: built in code 2026-11-01 ([HISTORY.md](../HISTORY.md#wake-on-request-a-server-pc-that-sleeps-when-idle-2026-11-01)); Linux's `systemd-inhibit` hold came with E11-S58.
+
+Evidence:
+- `decklab/lib/keepawake.py`, `decklab/lib/server_run.py` (`_start_keep_awake`), `decklab/lib/server_http.py`; `decklab/tests/test_keepawake.py`
+- `decklab/wakegate/` (`wakegate.py`, `compose.yaml`); `decklab/tests/test_wakegate.py`
+- `decklab/cloudflare/worker.mjs`, `waking-page.mjs`; `decklab/cloudflare/test/`
+- `decklab/web/core.js` (the wake hop); `decklab/tests/test_wake_hop_ui.py`
+- `decklab/README.md` and `SELF-HOSTING.md`, "Sleeping and waking on request"
+
+Gap: not yet set up for real: the gate and its tunnel on the NAS, the service token and the Worker's secrets and deploy, the PC's BIOS and adapter settings, and a real wake timed end to end on the server PC.
+
+**E11-S60** · Matt · should · M · built
+
+As Matt, keeping Deck Lab on a server PC that only takes updates and can't run the full test suite, I want one command to update it, a quick end-to-end check of it, and a safe way to move its database to another PC, so that an update or a move never leaves the household's data half-migrated or the server quietly broken.
+
+- Given a clean checkout with an upstream, when I run `python -m decklab.update`, then it fast-forwards, reinstalls psycopg if it changed, backs up before pending migrations and migrates, installs the Forge release Deck Lab expects, restarts the server and runs the smoke test; it refuses changed tracked files and local commits, and `--dry-run` only says what it would do.
+- Given a server PC, when I run `python -m decklab.smoke`, then it checks the database roles and migrations, backups, card data, the network sources, a throwaway server, the services and one real Forge game, and exits 1 on a failure; warnings are what a half-set-up server legitimately has.
+- Given a move, when I run `db digest -o` on the old PC and `db restore DUMP --expect FILE --replace` on the new one, then the restore goes into a separate database, is compared row for row with the digest, gets any newer migrations, and only then takes the old one's place; it refuses a dump from a newer PostgreSQL, a database in use, and replacing one that holds decks without `--force`.
+- Given SELF-HOSTING.md, then it has "Updating" and "Moving Deck Lab to another PC", including stopping the old PC writing to its stale copy.
+
+Now: built 2026-11-01 ([HISTORY.md, updater and move](../HISTORY.md#the-server-pcs-updater-and-the-database-move-2026-11-01), [smoke test](../HISTORY.md#the-post-install-smoke-test-2026-11-01)); Linux came with E11-S58. Not yet run on the spare PC itself.
+
+Evidence:
+- `decklab/update.py`; `decklab/tests/test_update.py`
+- `decklab/smoke.py`; `decklab/tests/test_smoke.py`
+- `decklab/db/move.py` (`digest`, `restore`)
+- `SELF-HOSTING.md` ("Updating", "11. Moving Deck Lab to another PC"); `decklab/README.md` (`digest`, `restore`)

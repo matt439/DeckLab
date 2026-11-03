@@ -1,12 +1,12 @@
 # Deck Lab personas
 
-> **Dated 2026-10-13.** Part of Deck Lab's design set: [README.md](README.md) (method and index), personas (this file), [journeys.md](journeys.md), [stories.md](stories.md) and [gap-analysis.md](gap-analysis.md). The deck states, page names and permissions below describe Deck Lab on that date. Matt's answers to the open questions, given the same day, are worked in as facts sourced "Matt, 2026-10-13" and listed under [Answered 2026-10-13](#answered-2026-10-13). Updated 2026-10-18 for the member template ([member-template.md](member-template.md)): User5 joins as the member persona, "visible to the family" becomes **public** (read-only to everyone signed in), and Matt's decisions A to K are under [Answered 2026-10-18](#answered-2026-10-18). Updated 2026-10-19 to match [stories.md](stories.md): private by default, the Public / Private switches and member departure are built and live (migrations 0012 and 0013 applied 2026-10-19), nothing is switched Public yet, and gaps that have since been built are marked so.
+> **Dated 2026-10-13.** Part of Deck Lab's design set: [README.md](README.md) (method and index), personas (this file), [journeys.md](journeys.md), [stories.md](stories.md) and [gap-analysis.md](gap-analysis.md). The deck states, page names and permissions below describe Deck Lab on that date. Matt's answers to the open questions, given the same day, are worked in as facts sourced "Matt, 2026-10-13" and listed under [Answered 2026-10-13](#answered-2026-10-13). Updated 2026-10-18 for the member template ([member-template.md](member-template.md)): User5 joins as the member persona, "visible to the family" becomes **public** (read-only to everyone signed in), and Matt's decisions A to K are under [Answered 2026-10-18](#answered-2026-10-18). Updated 2026-10-19 to match [stories.md](stories.md): private by default, the Public / Private switches and member departure are built and live (migrations 0012 and 0013 applied 2026-10-19), nothing is switched Public yet, and gaps that have since been built are marked so. Updated 2026-11-04 after a review against the code: the self-hoster persona was added (Matt's choice of 2026-11-04), the stranger narrowed to people wanting into Matt's instance, and Matt's devices brought up to the spare server PC.
 
 ## What a persona is here
 
 A persona is a short description of one kind of person (or actor) that Deck Lab is built for, or deliberately not built for. It sums up who they are, what they want from Deck Lab, what gets in their way and what that means for the pages. The [user stories](stories.md) and [journeys](journeys.md) are written for these personas, and the [gap analysis](gap-analysis.md) checks Deck Lab against them.
 
-These personas aren't composites of interviewed strangers. Deck Lab has a handful of real users, the household plus a few members (User5 since 2026-10-18), so each human persona is a real person or a small group of real people, and the anti-personas are kinds of user Deck Lab turns away on purpose.
+These personas aren't composites of interviewed strangers. Deck Lab has a handful of real users, the household plus a few members (User5 since 2026-10-18), so each human persona is a real person or a small group of real people, and the anti-personas are kinds of user Deck Lab turns away on purpose. The one exception is [the self-hoster](#the-self-hoster) (added 2026-11-04), a kind of person who runs their own copy: nobody is known to be one yet, so most of that persona is assumption.
 
 ### How they were built
 
@@ -32,10 +32,11 @@ Elsewhere in each persona, goals, frustrations and behaviours that are assumptio
 | [User5, the member](#user5-the-member) | Secondary | The first real member; his setup is the template for every member. Tunnel only, everything private to start. |
 | [User2, User3 and User4, the person-space members](#user2-user3-and-user4-the-person-space-members) | Secondary | Members with their own space, collection and Commander deck each; on the same terms as User5; occasional users at most, on phones. |
 | [The Commander-night table](#the-commander-night-table-served-persona) | Supplementary (served) | The players at a social Commander night who face the decks Deck Lab helps build, but never open it. |
+| [The self-hoster](#the-self-hoster) | Secondary | Someone outside the household who installs and runs their own Deck Lab for their own household; never a member of Matt's. |
 | [Claude Code, the command-line operator](#claude-code-the-command-line-operator) | Non-human actor | The AI assistant on Matt's PC that does most inventory, order and deck work through `python -m decklab.db`. |
 | [The value collector](#the-value-collector-anti-persona) | Anti-persona | Collects cards as assets; Deck Lab tracks no value, spending or price history. |
 | [The tournament grinder](#the-tournament-grinder-anti-persona) | Anti-persona | Tunes for a sanctioned metagame; Deck Lab ignores legality for casual decks. |
-| [The stranger on the internet](#the-stranger-on-the-internet-anti-persona) | Anti-persona | Anyone not invited; Deck Lab has no pages open to the internet. |
+| [The stranger on the internet](#the-stranger-on-the-internet-anti-persona) | Anti-persona | Anyone not invited who wants into Matt's instance or a public deck site; no pages are open to the internet. |
 
 ---
 
@@ -96,7 +97,7 @@ Australian, thinks in AUD. Plays mostly Commander now (Matt, 2026-10-31), includ
 
 ### Devices and context
 
-A phone, a tablet, a laptop, and a Windows PC with QHD monitors (owner notes). The PC hosts Deck Lab, Postgres and Forge, so Deck Lab is reachable only while the PC is on and he has logged on (the server starts at logon since 2026-10-13). The PC stays logged on while it's on, so in practice it's reachable whenever the PC is on (Matt, 2026-10-13). When it's off, a plain "Deck Lab is off" message is enough for him (Matt, 2026-10-13). He reaches it on the home network (port 8642) or at decklab.example.com behind Cloudflare Access.
+A phone, a tablet, a laptop, and a Windows PC with QHD monitors (owner notes). Deck Lab, Postgres and Forge are moving from that PC to a spare server PC that only takes updates (`python -m decklab.update`, E11-S60), which may run Linux (E11-S58, 2026-11-01) and is to sleep when idle and wake when anyone opens Deck Lab (E11-S59, built in code 2026-11-01, not yet set up). Development stays on his own PC. Until then Deck Lab is reachable whenever his PC is on: it starts at logon and the PC stays logged on while it's on (Matt, 2026-10-13). When it's off, a plain "Deck Lab is off" message is enough for him (Matt, 2026-10-13). He reaches it on the home network (port 8642) or at decklab.example.com behind Cloudflare Access.
 
 Contexts: at the PC with Claude for building and buying; on a tablet for editing; on the phone in a shop or at the table (the last is an assumption).
 
@@ -136,6 +137,8 @@ Contexts: at the PC with Claude for building and buying; on a tablet for editing
 | The PC stays logged on while it's on, so it is either logged on or off; the nightly backup needn't run without a logon (it catches up after the PC was off). | Matt, 2026-10-13; `decklab/db/schedule.py:79` (StartWhenAvailable) |
 | As admin, needs usage visibility: whether members use Deck Lab and which pages they open, as evidence for which features are worth building. | Matt, 2026-10-13; built the same day (E10-S25) |
 | Forge results don't need backing up; they can be regenerated. | Matt, 2026-10-13 |
+| The household's server moves to a spare PC that sleeps when idle and wakes on any visit, at home or through Cloudflare, with no wake button. | Matt, 2026-11-01; [HISTORY.md](../HISTORY.md#wake-on-request-a-server-pc-that-sleeps-when-idle-2026-11-01) |
+| Deck Lab's repo is public; a stranger who wants Deck Lab installs their own (Windows first), while family, friends and coworkers join his instance as members. | Matt, 2026-10-31; [stories.md](stories.md), E11-S48 |
 
 ### Assumptions
 
@@ -521,6 +524,78 @@ Mixed, from beginners to experienced (assumption).
 
 ---
 
+## The self-hoster
+
+**Kind:** secondary
+
+### Summary
+
+Someone outside the household who heard of Deck Lab (at a Commander night, or from the public repo) and runs their own copy on their own PC, for their own household. They never join Matt's instance: family, friends and coworkers join that as members instead (Matt, 2026-10-31). Matt serves them by publishing Deck Lab, not by hosting it.
+
+### Role in Deck Lab
+
+On their own install they are the admin, with every role this file gives Matt; nothing about them reaches Matt's server, database or tunnel. The stories written for them are about getting Deck Lab installed, set up and kept up to date without the knowledge Matt and Claude bring: E11-S50 (one Windows installer), E11-S51 (an update command for release installs), E11-S52 (a first-run setup page), E11-S53 (currency and shops as settings), E11-S56 (an empty library that says how to start) and E11-S57 (a Linux install route). Matt's own stories E11-S48 (defaults that fit any household) and E11-S49 (release zips) prepare for them.
+
+### Background
+
+Unknown beyond the decision: a Magic player who plays with physical cards and liked what Deck Lab does. They may not live in Australia.
+
+### Goals
+
+- **End goal:** try Deck Lab on their own PC and phones without following a long guide.
+- **End goal:** keep it updated without git, migrations or restarts by hand.
+- **End goal:** prices in their own money, from shops they can buy from.
+- **Experience goal:** see it working with their own cards before typing much.
+
+### Frustrations
+
+- Today the only route is SELF-HOSTING.md's manual steps: Python, PostgreSQL, a git clone, a hand-edited `config.json` (assumption that this is a barrier: no stranger has tried it yet).
+- Prices are AUD and the nightly shop check reads two Australian shops (E11-S53, missing).
+- The reference docs name Matt's PC's folders and people (SELF-HOSTING.md says so).
+
+### Behaviours
+
+- Installs on Windows first (Matt's choice of first platform, 2026-10-31); some will use Linux (E11-S57).
+- Uses phones on their home Wi-Fi; may or may not set up a Cloudflare tunnel (assumption).
+
+### Devices and context
+
+Their own Windows or Linux PC and phones, on their own home network.
+
+### Skill level
+
+- **Magic:** any.
+- **Tech:** not comfortable with git or a terminal (E11-S50's newcomer; assumption for design).
+
+### Illustrative quote
+
+> *Illustrative, not a real quote:* "I just want to point my phone at it and see my decks."
+
+### Facts
+
+| Claim | Source |
+|---|---|
+| A stranger tries Deck Lab on their own PC, Windows first; family, friends and coworkers join Matt's instance as members instead. | Matt, 2026-10-31; [stories.md](stories.md), E11-S48 |
+| Versioned release zips are to be published, so installs and updates stop assuming a git checkout. | Matt, 2026-10-31; [stories.md](stories.md), E11-S49 |
+| SELF-HOSTING.md sets Deck Lab up from nothing on Windows, Linux or macOS. | [SELF-HOSTING.md](../../SELF-HOSTING.md) |
+| A fresh database starts with an empty inventory, and an empty space's library says how to start. | [stories.md](stories.md), E11-S56; [HISTORY.md](../HISTORY.md) |
+
+### Assumptions
+
+- Nobody outside the household is known to have installed Deck Lab yet.
+- They are less technical than Matt and have no Claude Code at the PC.
+- Some live outside Australia.
+
+### Design implications
+
+- **Basis:** Matt's 2026-10-31 decisions; every other need here is an assumption until a real self-hoster tries it.
+- **Check:** a new install's defaults fit any household: no setting that only fits Matt's PC (E11-S48).
+- **Check:** nothing in the pages or the defaults names Matt's household, its people or its domain (E10-S39 already checks the page's code).
+- **Check:** a fresh install with no cards shows how to get the first cards and deck in (E11-S56).
+- Matt's own instance is never their way in: a stranger asking for an account there is [the stranger](#the-stranger-on-the-internet-anti-persona).
+
+---
+
 ## Claude Code, the command-line operator
 
 **Kind:** non-human actor
@@ -700,7 +775,7 @@ None.
 
 ### Summary
 
-Anyone not invited who finds decklab.example.com or wants a public deck site. Deck Lab is a private tool for the household and the members Matt invites (User5 since 2026-10-18), not a public service. "Public" in Deck Lab's switches means read-only to everyone signed in, never to this persona.
+Anyone not invited who finds decklab.example.com or wants a public deck site. Matt's Deck Lab is a private tool for the household and the members he invites (User5 since 2026-10-18), not a public service. Someone who wants Deck Lab for themselves is welcome to install their own copy: that's [the self-hoster](#the-self-hoster), not this persona (Matt, 2026-10-31). "Public" in Deck Lab's switches means read-only to everyone signed in, never to this persona.
 
 ### Role in Deck Lab
 
@@ -794,6 +869,11 @@ User3 opens Deck Lab for the first time and lands on his Commander deck, with it
 **commander-table-1. Sitting down in a pod** (future-state)
 At a Commander night, a staff member seats Matt in a pod of four. Someone asks what bracket his deck is. Deck Lab's check showed the deck's minimum bracket and listed the cards behind it (no Game Changers, no mass land denial, no extra turns) and said that tutors and combos aren't checked, so he answers honestly and mentions the one tutor he knows is in it. The table gets the evening they expected.
 
+### The self-hoster
+
+**self-hoster-1. Trying Deck Lab at home** (future-state)
+After a Commander night, a player who saw Matt's deck page downloads Deck Lab's release onto their Windows PC and runs the installer. It sets up Python, PostgreSQL and the service, asks who plays, and prints the phone address. On their phone the empty library offers Add a precon; they add the precon they own and see its deck page straight away, in their own currency. Today they would follow SELF-HOSTING.md by hand (E11-S49 to E11-S53 are missing).
+
 ### Claude Code
 
 **claude-1. Receiving a delivery for Matt**
@@ -851,6 +931,7 @@ Matt accepted every recommendation of [member-template.md](member-template.md) o
 3. Do User2, User3 and User4 sign in at all, and would any of them want a larger collection in Deck Lab?
 4. Will the household play at other venues, and do their house rules need respecting?
 5. ~~With several decks in one sleeve design, should Deck Lab warn at all (E8-S20)?~~ *Answered (Matt, 2026-10-19): warn when sleeves or a deck box already in use are chosen. Sleeves now warn every time they're chosen for a second holder; a deck box still can't be chosen once every box is in use, and one with a spare box free doesn't warn.*
-6. Does Deck Lab's pricing need live AU retailer prices, or are the dated watchlist reference prices enough?
+6. ~~Does Deck Lab's pricing need live AU retailer prices, or are the dated watchlist reference prices enough?~~ *Overtaken by what was built: the nightly snapshot reads MTGMate and Games Portal for every queued card (E5-S08, 2026-10-28 and 2026-10-31), shown beside the dated reference prices.*
 7. Are there other anti-personas Matt wants named (for example, a trader or an online-only player)?
 8. **User5** (asked once he has used Deck Lab): which devices he uses, how much Magic he plays and with whom, and what he'd want public.
+9. **The self-hoster** (asked once someone outside the household installs Deck Lab): which system and phones, whether they found SELF-HOSTING.md enough, their currency and shops, and whether they set up the tunnel.
