@@ -167,7 +167,7 @@ function runDetailsParts(runs) {
         el("span", { class: "run-waiting-ahead", text: run.ahead > 0 ? `${plural(run.ahead, "run")} ahead` : "next" }),
         runStop(run, named))))) : null,
     el("p", { class: "run-details-foot" }, el("a", { class: "btn btn-quiet btn-inline", href: "#/matchups",
-      "data-focus": "matchups", text: "Every run on Matchups", onclick: () => closeRunDetails(false) }))];
+      "data-focus": "matchups", text: "Every run on Testing", onclick: () => closeRunDetails(false) }))];
 }
 
 /** One run playing: "Forge playing: A vs B" (its status line), its progress ring and "game 37 of 200", about how

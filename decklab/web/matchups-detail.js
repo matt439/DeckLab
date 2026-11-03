@@ -7,7 +7,7 @@ and matchups-cards.js. The classic scripts share helpers; resultPart is called o
 
 // A matchup page that can't be drawn: its error, and the way back to Matchups (asking again can't help
 // with a bad address or a matchup that isn't there, so errorBox leaves "Try again" out for those).
-const MATCHUP_ERROR = { title: "This matchup couldn't be opened", back: ["#/matchups", "Back to Matchups"] };
+const MATCHUP_ERROR = { title: "This matchup couldn't be opened", back: ["#/matchups", "Back to Testing"] };
 
 function showMatchup(params, token) {
   const q = new URLSearchParams();

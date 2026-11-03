@@ -73,6 +73,24 @@ def _gauntlet_view(**params):
     return gauntlet_view(**params)
 
 
+def _gauntlet_summary(**params):
+    """A deck's headline against the standard sample (api/gauntlet_page.py), saved games only."""
+    from decklab.lib.api.gauntlet_page import gauntlet_summary
+    return gauntlet_summary(**params)
+
+
+def _gauntlet_board(**params):
+    """The Testing page's Popular decks board (api/gauntlet_board.py, E3-S35): saved games only."""
+    from decklab.lib.api.gauntlet_board import board_view
+    return board_view(**params)
+
+
+def _library_gauntlet(**params):
+    """The library's popular-decks line (api/library_gauntlet.py, E3-S36): the board's cached rows."""
+    from decklab.lib.api.library_gauntlet import library_gauntlet_view
+    return library_gauntlet_view(**params)
+
+
 def _gauntlet_catalogue(**params):
     from decklab.lib.api.gauntlet_page import catalogue_view
     return catalogue_view(**params)
@@ -139,6 +157,7 @@ def dispatch(handler, route, query):
         ("rankings",): (rankings.rankings_view, ("format",)),
         ("field", "membership"): (_field_membership_view, ("id", "version")),
         ("library", "forge"): (library_forge.library_forge_view, ()),
+        ("library", "gauntlet"): (_library_gauntlet, ()),
         ("product",): (products.product_state, ("stem",)),
         ("accessories",): (accessories.accessories_view, ()),
         ("tokens",): (tokens.tokens_view, ("space",)),
@@ -153,7 +172,9 @@ def dispatch(handler, route, query):
         ("search",): (_global_search, ("q", "group", "limit")),
         ("cards", "decks"): (_card_decks, ("name", "space")),
         ("gauntlet",): (_gauntlet_view, ("id", "version", "sample", "size", "colours", "styles", "tiers", "profile")),
+        ("gauntlet", "summary"): (_gauntlet_summary, ("id", "version", "profile")),
         ("gauntlet", "catalogue"): (_gauntlet_catalogue, ("format",)),
+        ("gauntlet", "board"): (_gauntlet_board, ("format", "profile")),
         ("shopping", "combined"): (_shopping_combined, ("decks",)),
     }
     posts = {

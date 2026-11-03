@@ -448,7 +448,7 @@ To read anything else in the database, use `python -m decklab.db sql "select ...
 
 ### The gauntlet
 
-- `python -m decklab.lib.forge gauntlet` plays a house deck against a balanced sample of outside decks (decklab/README.md, "The gauntlet"): for Commander, EDHREC's average decks of its top 100 commanders (`core` and `upgraded`) and the newest MTGJSON Commander precons; for 60-card, Forge's bundled quest precons and duels. The deck page's Matchups tab shows the results as **Against popular decks**.
+- `python -m decklab.lib.forge gauntlet` plays a house deck against a balanced sample of outside decks (decklab/README.md, "The gauntlet"): for Commander, EDHREC's average decks of its top 100 commanders (`core` and `upgraded`) and the newest MTGJSON Commander precons; for 60-card, Forge's bundled quest precons and duels. The deck page's Testing tab shows the results as **Against popular decks**, and the Testing page's (`#/matchups`) Popular decks view lists every deck's standing against them.
 - They're catalogue files under the gitignored `decklab/data/gauntlet/`, never a deck or inventory: they never reach the pool, the tables, the audit trail or the privacy switches. Their games go to their own results folder, so they never join the field, Rankings, the ratings or per-card stats.
 - The catalogue is built only by hand, from the command line (`gauntlet build`), politely (one EDHREC request a second) and cached (average decks 30 days). No page fetches. The server reads the catalogue on its own PC, so on the live server PC build it there too.
 - A `core` deck or precon whose minimum bracket is above 2 is re-tiered to `upgraded`, with the reason in its `fixes`.

@@ -31,7 +31,7 @@ SETUP = r"""
     return url==='/api/decks'?library():answer();};
   apiWrite=async()=>{writes++;throw new Error('Read-only fixture');};
   runGate=()=>({may:false,why:'Fixture only'});runsAllowed=()=>false;noteRuns=()=>{};
-  const open=()=>{location.hash='#/matchups';drawMatchups(library(),answer(),new URLSearchParams(),routeToken);};
+  const open=()=>{location.hash='#/matchups';drawMatchups(library(),answer(),new URLSearchParams('view=matchups'),routeToken);};
   const button=()=>main.querySelector('#mu-deck-pick');
   const list=()=>main.querySelector('#mu-deck-pick-list');
   const options=()=>main.querySelectorAll('.deck-pick-option');

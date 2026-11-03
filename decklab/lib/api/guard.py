@@ -286,7 +286,9 @@ that's checked before anything of the deck is read and before any 403 or
   and /api/variants carry only the results, runs and tests whose every
   side the viewer sees, names from other spaces as "someone", and an
   admin's running list the other runs as anonymous items; for now only an
-  admin stops a run ("run.stop").
+  admin stops a run ("run.stop");
+- GET /api/gauntlet/board (api/gauntlet_board.py, E3-S35) lists only those decks
+  (visible_decks), never reading, counting or naming a hidden one.
 Until E10-S28's switches (public_deck_spaces) a deck is public nowhere.
 """
 from decklab.lib import access, permissions

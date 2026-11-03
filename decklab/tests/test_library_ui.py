@@ -231,7 +231,9 @@ class LibraryShelfTests(_Shelf):
     def test_tested_decks_have_a_forge_line_tiles_rows_and_detail(self):
         # E11-S30 slice 8 (4.1, 4.2): the field average from /api/library/forge, drawn in once it comes. A tile
         # has a Forge line only when tested; a lab row has the column, "—" for an untested casual deck and blank
-        # for a Commander deck; the detail pane has the summary with the way to the field view.
+        # for a Commander deck while its popular-decks numbers aren't known (this stub refuses
+        # /api/library/gauntlet: E3-S36's test is below); the detail pane has the summary with the way to the
+        # field view.
         self.run_js("""
           as("matt", MAY.admin);
           const asked = [];
@@ -269,7 +271,7 @@ class LibraryShelfTests(_Shelf):
           assert(cell("casual/otters").querySelector(".fresh").getAttribute("class").includes("fresh-row"));
           assert.equal(cell("casual/angels").textContent, "—");               // tested but no rate yet
           assert.equal(cell("casual/gruul").textContent, "—");                // not in the answer
-          assert.equal(cell("commander/giada").textContent, "");              // Commander: blank
+          assert.equal(cell("commander/giada").textContent, "");              // Commander: blank (no numbers)
           main.querySelectorAll(".deck-row").find((r) => r.getAttribute("data-id") === "casual/otters")
             .fire("click", { detail: 1, button: 0 });
           const summary = main.querySelector(".lib-detail-forge");
@@ -289,6 +291,132 @@ class LibraryShelfTests(_Shelf):
           drawLibrary(DATA, libraryFilters(new URLSearchParams("all=1")));
           await flush();
           assert.equal(main.querySelectorAll(".deck-row-untested").length, 0);
+        """)
+
+    def test_popular_decks_figures_tiles_rows_detail_and_sort(self):
+        # E3-S36: /api/library/gauntlet's standing, once per draw: a Commander tile's Forge line, its lab row's cell
+        # ("—" untested), its detail pane's hero with the way to its Testing tab; a muted figure from before the
+        # list's last change; a 60-card deck's second line; another profile's answer never shown.
+        self.run_js("""
+          as("matt", MAY.admin);
+          const asked = [];
+          const when = new Date(Date.now() - 2 * 864e5).toISOString();
+          const fig = (rate) => ({ rate, low: rate - 0.1, high: rate + 0.1 });
+          const extra = [
+            deck("commander/zada", "Zada", { kind: "commander", ...counts(0), colors: ["R"] }),
+            deck("commander/yuma", "Yuma", { kind: "commander", ...counts(0), colors: ["R"] }),
+            deck("commander/xira", "Xira", { kind: "commander", ...counts(0), colors: ["B"] })];
+          const data = { warnings: [], halves: [], decks: [...DECKS, ...extra] };
+          const GT = { error: null, notes: [], formats: { commander: { state: "ok", size: 20 },
+              constructed: { state: "ok", size: 24 } }, decks: {
+            "commander/giada": { format: "commander", state: "partial", overall: fig(0.55), played: 12, of: 20,
+              games: 1200, updated: when, before: null, older: null },
+            "commander/zada": { format: "commander", state: "stale_list", overall: null, played: 0, of: 20, games: 0,
+              updated: null, before: { ...fig(0.7), updated: when }, older: null },
+            "commander/yuma": { format: "commander", state: "done", overall: fig(0.6), played: 20, of: 20,
+              games: 2000, updated: when, before: null, older: null },
+            "casual/otters": { format: "constructed", state: "done", overall: fig(0.48), played: 24, of: 24,
+              games: 2400, updated: when, before: null, older: null } } };
+          api = async (path) => {
+            asked.push(path);
+            if (path === "/api/library/gauntlet") return GT;
+            if (path === "/api/library/forge") return { error: null, decks: {} };
+            throw new Error("not in this test");
+          };
+          drawLibrary(data, libraryFilters(new URLSearchParams("all=1")));
+          assert.equal(main.querySelectorAll(".lib-gauntlet").length, 0);     // nothing until the numbers come
+          await flush();
+          assert.equal(asked.filter((p) => p === "/api/library/gauntlet").length, 1);
+          const giada = tile("Giada");
+          assert.equal(giada.querySelectorAll("a").length, 0);                // still one link
+          assert.equal(giada.querySelector(".wr-value").textContent, "55%");
+          assert.equal(giada.querySelector(".wr-caption").textContent, "vs popular decks");
+          assert(giada.querySelector(".wr").getAttribute("aria-label").startsWith("Win rate against popular decks 55 percent"));
+          const zada = tile("Zada").querySelector(".lib-gauntlet");
+          assert(zada.getAttribute("class").includes("is-stale"));
+          assert.equal(zada.querySelector(".fresh-words").textContent, "before the last change");
+          assert.equal(tile("Xira").querySelector(".lib-gauntlet"), null);    // untested: no line
+          assert.equal(tile("Otters").querySelector(".lib-gauntlet"), null);  // 60-card tiles: the field's line only
+          // The lab: the Commander cells, then the detail panes.
+          const wide = window.matchMedia(LIB_LAB_QUERY);
+          wide.matches = true;
+          wide.fire("change");
+          const row = (id) => main.querySelectorAll(".deck-row").find((r) => r.getAttribute("data-id") === id);
+          const cell = (id) => row(id).querySelector(".deck-row-forge");
+          assert.equal(cell("commander/yuma").querySelector(".wr-value").textContent, "60%");
+          assert.equal(cell("commander/xira").textContent, "—");
+          assert.equal(cell("commander/xira").querySelector(".deck-row-untested").getAttribute("aria-label"),
+                       "Not tested against popular decks");
+          assert(cell("commander/zada").getAttribute("class").includes("is-stale"));
+          row("commander/giada").fire("click", { detail: 1, button: 0 });
+          let part = main.querySelector(".lib-detail").querySelector(".lib-gauntlet");
+          assert.equal(part.querySelector(".lib-detail-label").textContent, "vs popular decks");
+          assert(part.querySelector(".wr").getAttribute("class").includes("wr-hero"));
+          assert.equal(part.querySelector(".lib-detail-forge-note").textContent, "Against 12 of the 20 popular decks so far.");
+          assert.equal(part.querySelector(".btn").getAttribute("href"),
+                       deckHref("commander/giada", "target") + "&tab=matchups&part=gauntlet");
+          assert.equal(part.querySelector(".btn").textContent, "Popular decks view");
+          row("commander/xira").fire("click", { detail: 1, button: 0 });
+          part = main.querySelector(".lib-detail").querySelector(".lib-gauntlet");
+          assert(part.textContent.includes("Not tested against popular decks yet."));
+          assert(part.querySelector(".btn"));
+          row("commander/zada").fire("click", { detail: 1, button: 0 });
+          part = main.querySelector(".lib-detail").querySelector(".lib-gauntlet");
+          assert(part.textContent.includes("The list changed since its last test"));
+          row("casual/otters").fire("click", { detail: 1, button: 0 });
+          part = main.querySelector(".lib-detail").querySelector(".lib-gauntlet");
+          assert(part.getAttribute("class").includes("lib-gauntlet-second"));
+          assert.equal(part.querySelector(".wr-value").textContent, "48%");
+          assert.equal(part.querySelector(".btn").getAttribute("href"),
+                       deckHref("casual/otters", "target") + "&tab=matchups&part=gauntlet");
+          row("casual/gruul").fire("click", { detail: 1, button: 0 });
+          assert(main.querySelector(".lib-detail").querySelector(".lib-gauntlet").textContent
+                 .includes("Not tested against popular decks yet."));
+          // The sort: current figures by rate, then the out-of-date, then untested.
+          same(sortDecks([...extra, DECKS[4]], "popular").map((d) => d.title), ["Yuma", "Giada", "Zada", "Xira"]);
+          same(libraryFilters(new URLSearchParams("sort=popular")).sort, "popular");
+          // Another profile's answer, a format without a catalogue: not known, so nothing (never untested).
+          state.libraryGauntlet.profile = "user1";
+          assert.equal(libGauntlet(DECKS[4]), undefined);
+          state.libraryGauntlet.profile = "matt";
+          state.libraryGauntlet.formats.commander = { state: "no_catalogue", size: null };
+          assert.equal(libGauntlet(extra[2]), undefined);
+          assert.equal(libGauntletRowCell(extra[2]).textContent, "");
+          assert.equal(libDetailGauntlet(extra[2]), null);
+        """)
+
+    def test_late_numbers_keep_the_focused_tile_or_row(self):
+        # E3-S36 review: the popular-decks answer (and the Forge one) redraws the shelf after it was drawn; the
+        # tile, row or link that had keyboard focus keeps it rather than dropping to the page.
+        self.run_js("""
+          as("matt", MAY.admin);
+          let answer = null;
+          api = (path) => path === "/api/library/gauntlet" ? new Promise((resolve) => { answer = resolve; })
+            : Promise.resolve({ error: null, decks: {} });
+          const GT = { error: null, notes: [], formats: { commander: { state: "ok", size: 20 },
+            constructed: { state: "ok", size: 24 } }, decks: {} };
+          drawLibrary(DATA, libraryFilters(new URLSearchParams("all=1")));
+          await flush();
+          const giada = tile("Giada");
+          giada.focus();
+          answer(GT);
+          await flush();
+          assert(!giada.isConnected);                                           // drawn again
+          assert(document.activeElement.isConnected && document.activeElement !== giada);
+          assert.equal(document.activeElement.getAttribute("href"), giada.getAttribute("href"));
+          // The lab: a focused row keeps its focus through a redraw.
+          const wide = window.matchMedia(LIB_LAB_QUERY);
+          wide.matches = true;
+          wide.fire("change");
+          const row = (id) => main.querySelectorAll(".deck-row").find((r) => r.getAttribute("data-id") === id);
+          row("commander/giada").focus();
+          libRefreshKeepingFocus(main.querySelector("#library-results"), () => {
+            drawLibraryResults(main.querySelector("#library-results"), DATA,
+              libraryFilters(new URLSearchParams("all=1")), { picking: false, select: () => {} }, () => true);
+            return true;
+          });
+          assert(document.activeElement.isConnected);
+          assert.equal(document.activeElement.getAttribute("data-id"), "commander/giada");
         """)
 
     def test_the_token_line_names_each_token_once(self):
@@ -371,7 +499,7 @@ class LibraryShelfTests(_Shelf):
           assert(sheet.textContent.includes("Format") && sheet.textContent.includes("Sort"));
           // The sheet's sort field has its label shown, so its options don't repeat "Sort:" (the row's do).
           same(sheet.querySelector("#sheet-filter-sort").querySelectorAll("option").map((o) => o.textContent),
-               ["Ready first", "Recently changed", "Not played lately", "Name"]);
+               ["Ready first", "Recently changed", "Not played lately", "Strongest vs popular decks", "Name"]);
           assert.equal(main.querySelector("#filter-sort").querySelector("option").textContent, "Sort: Ready first");
           const format = sheet.querySelector("#sheet-filter-format");
           format.focus();

@@ -6,6 +6,9 @@ import unittest
 from decklab.tests.test_deck_page_ui import PAGE
 from decklab.tests.test_workspace_ui import NODE, WEB, RUNNER
 
+# A fixed 2 Nov of this year at noon UTC: 2 Nov in every time zone the PC and CI run in, and no year shown.
+DAY = "const day=`${new Date().getFullYear()}-11-02T12:00:00Z`;const hasClass=(n,c)=>!!n&&(n.getAttribute('class')||'').split(' ').includes(c);"
+
 
 @unittest.skipUnless(NODE, "Node.js isn't installed")
 class DeckOverviewUiTests(unittest.TestCase):
@@ -259,4 +262,171 @@ class DeckOverviewUiTests(unittest.TestCase):
           part = draw({last: '2026-10-20', games: 2, since: {version: 'target', more: 1, changes: []}}, {read_only: true});
           assert.equal(part.querySelector('a'), null);
           assert(part.textContent.includes('And 1 more change.'));
+        """)
+
+    # ------------------------------------------------------------------ E3-S33: Against popular decks
+
+    GAUNTLET = """
+      const calls = [], writes = [];
+      let summary = null;
+      apiWrite = async (path, body) => { writes.push(path); return {}; };
+      api = async (url) => { calls.push(url);
+        if (url.startsWith('/api/gauntlet/summary?')) return structuredClone(summary);
+        if (url.startsWith('/api/field')) return {format: 'casual', opponents: []};
+        return {tests: []}; };
+      const settle = async () => { for (let i = 0; i < 6; i++) await Promise.resolve(); };
+      const commanderPage = () => { const page = makePage();
+        page.summary = {...page.summary, id: 'commander/test', kind: 'commander'}; return page; };
+      const show = async (page = makePage()) => { clear(main);
+        location.hash = `#/deck?id=${encodeURIComponent(page.summary.id)}&v=target`;
+        drawDeck(page, deckViewOf(parseHash().params)); await settle();
+        return panel('overview').querySelector('.deck-overview-gauntlet'); };
+      const now = new Date().toISOString();
+      const done = (extra = {}) => ({deck: {id: 'commander/test', version: 'target'}, format: 'commander',
+        state: 'done', playing: null, overall: {key: 'all', label: 'All these opponents', opponents: 20, games: 2000,
+          rate: .47, low: .39, high: .55}, played: 20, of: 20, games: 2000,
+        tally: {ahead: 3, even: 14, behind: 3, unsettled: 0},
+        hardest: [{title: 'Krenko, Mob Boss', tier: 'core', style: 'aggro', rate: .31, low: .22, high: .41,
+          verdict: 'behind', source: {kind: 'edhrec'}}], updated: now,
+        sample: {id: 'sample:40d5bec2d5ad', size: 20, tiers: ['core', 'upgraded']}, note: null, notes: [],
+        build_command: null, ...extra});
+    """
+
+    def test_popular_decks_lead_a_commander_overview_and_follow_the_field_for_60_card(self):
+        self.run_js(self.GAUNTLET + """
+          summary = done();
+          await show(commanderPage());
+          const order = () => panel('overview').querySelector('.deck-overview-sims').children
+            .map((n) => n.getAttribute('class').split(' ').find((c) => c.startsWith('deck-overview-')));
+          same(order(), ['deck-overview-gauntlet', 'deck-overview-forge']);
+          summary = done({format: 'constructed'});
+          await show();
+          same(order(), ['deck-overview-forge', 'deck-overview-gauntlet']);
+          const page = makePage(); page.summary.id = BOX_PREFIX + 'cats';
+          assert.equal(deckOverviewGauntlet(page), null); assert.equal(deckOverviewStrength(page), null);
+        """)
+
+    def test_a_tested_deck_shows_its_headline_hardest_and_caveat_from_one_read(self):
+        self.run_js(self.GAUNTLET + """
+          summary = done();
+          const part = await show(commanderPage());
+          const head = part.querySelector('.gt-headline-panel');
+          assert(head.textContent.includes('Against 20 popular Commander decks:'), head.textContent);
+          assert(head.textContent.includes('47')); assert(head.textContent.includes('2,000 games'));
+          assert(head.querySelector('.fresh'));
+          assert.equal(head.querySelector('.gt-tally').textContent, 'Ahead of 3 · even with 14 · behind 3');
+          assert(part.textContent.includes('Hardest here:'));
+          assert(part.querySelector('.deck-overview-hardest').textContent.includes('Krenko, Mob Boss'));
+          assert(part.querySelector('.deck-overview-hardest').textContent.includes(', behind'));
+          assert(part.textContent.includes("These 20 sampled opponents only, not every deck of that colour or style. " +
+            "Forge's AI, best of one, 1v1."));
+          // Figures in ink: no strong or weak colours, no flags.
+          assert(!part.querySelector('.flag')); assert(!part.querySelector('.is-good'));
+          // One read, with the list and the viewer; no timer, no write.
+          const reads = calls.filter((u) => u.startsWith('/api/gauntlet'));
+          same(reads, ['/api/gauntlet/summary?id=commander%2Ftest&version=target&profile=matt']);
+          flushTimers(); await settle();
+          assert.equal(calls.filter((u) => u.startsWith('/api/gauntlet')).length, 1);
+          assert.equal(writes.length, 0);
+          // Its button opens Matchups at the part, and starts nothing.
+          const button = buttonText(part, 'Popular decks'); assert(button && !button.hidden);
+          button.click(); await settle();
+          assert.equal(tab('matchups').getAttribute('aria-selected'), 'true');
+          assert(main.querySelector('#sec-gauntlet'));
+          assert.equal(writes.length, 0);
+        """)
+
+    def test_each_state_of_the_popular_decks_panel(self):
+        self.run_js(self.GAUNTLET + """
+          summary = done({state: 'partial', played: 5, tally: {ahead: 1, even: 3, behind: 1, unsettled: 0}});
+          let part = await show(commanderPage());
+          assert(part.textContent.includes('5 of 20 opponents tested so far.'));
+          assert(buttonText(part, 'Popular decks'));
+          summary = done({state: 'untested', overall: null, played: 0, games: 0, hardest: [], updated: null,
+            tally: {ahead: 0, even: 0, behind: 0, unsettled: 0}});
+          part = await show(commanderPage());
+          assert(part.textContent.includes('Not tested against popular decks yet.'));
+          assert(!part.querySelector('.gt-headline-panel'));
+          const choose = buttonText(part, 'Choose opponents'); assert(choose);
+          summary = done({state: 'untested', overall: null, played: 0, games: 0, hardest: [],
+            playing: {status: 'running', done: 40, total: 2000, standard: true}});
+          part = await show(commanderPage());
+          assert(part.textContent.includes('A popular-decks run is in progress.'));
+          assert(!part.textContent.includes('Matt'));
+          // No catalogue: a member sees only that; an admin also gets the command that builds it.
+          summary = done({state: 'no_catalogue', overall: null, played: 0, of: 0, sample: null, hardest: []});
+          part = await show(commanderPage());
+          assert(part.textContent.includes("Popular decks aren't set up on this PC yet."));
+          assert.equal(part.querySelector('code'), null);
+          assert.equal(buttonText(part, 'Popular decks').hidden, true);
+          summary = done({state: 'no_catalogue', overall: null, played: 0, of: 0, sample: null, hardest: [],
+            build_command: 'python -m decklab.lib.forge gauntlet build --format commander'});
+          part = await show(commanderPage());
+          assert.equal(part.querySelector('code').textContent, 'python -m decklab.lib.forge gauntlet build --format commander');
+        """)
+
+    def test_a_late_popular_decks_read_draws_nothing_on_another_page(self):
+        self.run_js(self.GAUNTLET + """
+          let release;
+          api = (url) => url.startsWith('/api/gauntlet/summary?') ? new Promise((resolve) => { release = resolve; })
+            : Promise.resolve(url.startsWith('/api/field') ? {format: 'casual', opponents: []} : {tests: []});
+          clear(main); location.hash = '#/deck?id=commander%2Ftest&v=target';
+          drawDeck(commanderPage(), deckViewOf(parseHash().params));
+          const part = panel('overview').querySelector('.deck-overview-gauntlet');
+          const before = part.textContent;
+          routeToken += 1; release(done()); await settle();
+          assert.equal(part.textContent, before);
+        """)
+
+    # ------------------------------------------------------------------ E3-S34: kept through a change
+
+    def test_a_changed_list_shows_its_old_figure_and_test_the_new_list_starts_nothing(self):
+        self.run_js(DAY + self.GAUNTLET + """
+          summary = done({state: 'stale_list', overall: null, played: 0, games: 0, hardest: [], updated: null,
+            tally: {ahead: 0, even: 0, behind: 0, unsettled: 0},
+            before: {rate: .41, low: .33, high: .49, played: 20, of: 20, games: 2000, updated: day},
+            compare: null, older: null});
+          const part = await show(commanderPage());
+          assert.equal(part.querySelector('.gt-before').querySelector('p').textContent,
+            'The list changed since its last test (2 Nov). Before: 41% (33–49).');
+          assert(hasClass(part.querySelector('.range-bar'),'is-muted')); assert(hasClass(part.querySelector('.fresh'),'is-stale'));
+          assert(!part.querySelector('.gt-headline-panel'));
+          assert(!part.textContent.includes('Not tested against popular decks yet.'));
+          const button = buttonText(part, 'Test the new list'); assert(button && !button.hidden);
+          flushTimers(); await settle(); assert.equal(writes.length, 0);
+          button.click(); await settle();
+          assert.equal(tab('matchups').getAttribute('aria-selected'), 'true');
+          assert(main.querySelector('#sec-gauntlet'));
+          assert.equal(writes.length, 0);
+        """)
+
+    def test_the_compare_line_and_older_results_on_the_overview(self):
+        self.run_js(DAY + self.GAUNTLET + """
+          summary = done({before: {rate: .41, low: .33, high: .49, played: 20, of: 20, games: 2000, updated: now},
+            compare: {same: 20, before: {rate: .41, low: .33, high: .49}, now: {rate: .47, low: .39, high: .55}, moved: 0},
+            older: {reason: 'forge', opponents: 20, of: 20, updated: now, overall: null}});
+          let part = await show(commanderPage());
+          assert.equal(part.querySelector('.gt-before').textContent,
+            'Before this change 41% (33–49) · Now 47% (39–55), same 20 opponents.');
+          assert(part.querySelector('.gt-headline-panel'));
+          assert.equal(part.querySelector('.gt-older').textContent, "Results from an older Forge aren't shown.");
+          assert(buttonText(part, 'Popular decks'));
+          summary = done({state: 'stale_older', overall: null, played: 0, games: 0, hardest: [], updated: null,
+            before: null, compare: null,
+            older: {reason: 'forge', opponents: 18, of: 20, updated: day,
+              overall: {rate: .41, low: .33, high: .49}}});
+          part = await show(commanderPage());
+          assert(part.textContent.includes("Results from an older Forge aren't shown."));
+          assert(part.textContent.includes('With the older Forge: 41% (33–49), 18 of 20 opponents (2 Nov).'));
+          assert(buttonText(part, 'Test it again'));
+          assert(!part.textContent.includes("aren't set up on this PC"));
+          // An earlier list's older results: the list changed too, so the button tests the new list.
+          summary = done({state: 'stale_older', overall: null, played: 0, games: 0, hardest: [], updated: null,
+            before: null, compare: null,
+            older: {reason: 'forge', opponents: 18, of: 20, updated: day, earlier: true,
+              overall: {rate: .41, low: .33, high: .49}}});
+          part = await show(commanderPage());
+          assert(part.textContent.includes("The list changed since its last test. Results from an older Forge"));
+          assert(buttonText(part, 'Test the new list'));
+          assert.equal(writes.length, 0);
         """)

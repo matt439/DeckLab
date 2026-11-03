@@ -64,7 +64,8 @@ class GauntletCase(FieldTestCase):
                    (lists, "matchup_key", FakeField.key), (gauntlet, "RESULTS_DIR", self.gauntlet_dir),
                    (gauntlet, "_load_catalogue", lambda fmt: CATALOGUE if fmt == "constructed" else None),
                    (gauntlet, "_choose", lambda decks, size, **kw: [d for d in decks if d["playable"]][:size]),
-                   (gauntlet, "_sample_id", lambda sha, filters, size, seed: f"sample:{size:012d}"),
+                   (gauntlet, "_sample_id", lambda sha, filters, size, seed, every=False:
+                    f"sample:{'a' if every else ''}{size:0{11 if every else 12}d}"),
                    (gauntlet, "_save_sample", lambda fmt, found: self.samples.__setitem__(found["id"], found)),
                    (gauntlet, "_load_sample", lambda sample_id: self.samples.get(sample_id))]
         for target, name, value in patches:
@@ -125,6 +126,29 @@ class EntryTests(GauntletCase):
         self.assertEqual(self.samples[found["id"]], found)
         self.assertEqual(gauntlet.draw("constructed")["size"], 24)
 
+    def test_the_standard_sample_is_the_default_draw(self):
+        # E3-S33/E3-S38 (Matt, 2026-11-03): Commander's is 20 core and upgraded decks, 60-card's 24
+        # medium and hard ones, seed "".
+        self.assertEqual(gauntlet.DEFAULT_TIERS, {"commander": ("core", "upgraded"), "constructed": ("medium", "hard")})
+        found = gauntlet.standard("constructed")
+        self.assertEqual(found, gauntlet.draw("constructed", save=False))
+        self.assertEqual((found["size"], found["seed"], found["filters"]),
+                         (24, "", {"colours": None, "styles": None, "tiers": ["hard", "medium"]}))
+        self.assertEqual(self.samples, {})                  # not saved unless asked
+        gauntlet.standard("constructed", save=True)
+        self.assertIn(found["id"], self.samples)
+        # A catalogue already loaded is used as it is (the page's answer reads the file once).
+        with mock.patch.object(gauntlet, "_load_catalogue", side_effect=AssertionError("read again")):
+            self.assertEqual(gauntlet.standard("constructed", cat=CATALOGUE), found)
+            self.assertEqual(gauntlet.view(self.alpha, found, cat=CATALOGUE)["sample"], found["id"])
+
+    def test_all_is_every_playable_deck_of_the_filters(self):
+        found = gauntlet.draw("constructed", size="all", save=False)
+        self.assertEqual((sorted(found["decks"]), found["size"], found["all"]), (sorted(IDS), 4, True))
+        self.assertEqual(found["id"], "sample:a00000000004")      # never a balanced sample's id
+        self.assertNotIn("all", gauntlet.draw("constructed", size=4, save=False))
+        self.assertEqual(gauntlet.draw("constructed", size="all", styles=["control"], save=False)["size"], 2)
+
 
 class RunTests(GauntletCase):
 
@@ -174,7 +198,8 @@ class ViewTests(GauntletCase):
         for deck_id, rate in rates.items():
             self.gfake.add_games(self.alpha, self.opponent(deck_id), 100, rate=rate)
         found = gauntlet.view(self.alpha, self.sample)
-        self.assertEqual(set(found), {"deck", "sample", "format", "opponents", "groups", "games", "note", "notes"})
+        self.assertEqual(set(found), {"deck", "sample", "format", "opponents", "groups", "overall", "played", "of",
+                                      "tally", "updated", "games", "note", "notes"})
         self.assertEqual((found["deck"], found["sample"], found["games"]), ("casual/alpha", self.sample["id"], 400))
         self.assertEqual(found["notes"], [])
         self.assertIn("these 4 sampled opponents only", found["note"])
@@ -203,6 +228,35 @@ class ViewTests(GauntletCase):
                 self.assertEqual(set(g), {"key", "label", "opponents", "games", "rate", "low", "high", "spread",
                                           "note"})
         json.dumps(found, allow_nan=False)
+
+    def test_overall_tally_verdicts_and_dates(self):
+        rates = {IDS[0]: 0.9, IDS[1]: 0.1, IDS[2]: 0.5}
+        for deck_id, rate in rates.items():
+            stored = self.gfake.add_games(self.alpha, self.opponent(deck_id), 400, rate=rate)
+            stored["updated"] = f"2026-11-0{IDS.index(deck_id) + 1}T10:00:00+00:00"
+        found = gauntlet.view(self.alpha, self.sample)
+        self.assertEqual((found["played"], found["of"], found["updated"]), (3, 4, "2026-11-03T10:00:00+00:00"))
+        by_id = {o["id"]: o for o in found["opponents"]}
+        self.assertEqual(by_id[IDS[0]]["verdict"], gauntlet.verdict(by_id[IDS[0]]["lead"]))
+        self.assertEqual((by_id[IDS[0]]["verdict"], by_id[IDS[1]]["verdict"]), ("ahead", "behind"))
+        self.assertEqual(by_id[IDS[0]]["updated"], "2026-11-01T10:00:00+00:00")
+        self.assertIsNone(by_id[IDS[3]]["verdict"])
+        self.assertIsNone(by_id[IDS[3]]["updated"])
+        expected = {"ahead": 0, "even": 0, "behind": 0, "unsettled": 0}
+        for o in found["opponents"]:
+            if o["verdict"]:
+                expected[gauntlet.TALLY[o["verdict"]]] += 1
+        self.assertEqual(found["tally"], expected)
+        self.assertEqual((found["tally"]["ahead"], found["tally"]["behind"]), (1, 1))
+        overall = found["overall"]
+        self.assertEqual((overall["key"], overall["label"], overall["opponents"], overall["games"]),
+                         ("all", "All these opponents", 4, 1200))
+        values = [o["rate"]["value"] for o in found["opponents"] if o["rate"]]
+        self.assertAlmostEqual(overall["rate"], sum(values) / 3, places=3)      # equal weight, of those with games
+        self.assertLess(overall["low"], overall["rate"])
+        self.assertGreater(overall["high"], overall["rate"])
+        self.assertEqual(overall["spread"], [min(values), max(values)])
+        self.assertIn("based on 3 of 4 opponents", overall["note"])
 
     def test_a_group_without_games_and_a_changed_catalogue(self):
         self.gfake.add_games(self.alpha, self.opponent(IDS[0]), 100, rate=0.6)
@@ -308,3 +362,19 @@ class CliTests(GauntletCase):
         code, _, err = self.run_cli("view", "casual/alpha", "--sample", "sample:nope")
         self.assertEqual(code, 1)
         self.assertIn("no saved gauntlet sample", err)
+
+    def test_standard_and_all_on_the_command_line(self):
+        code, out, err = self.run_cli("plan", "casual/alpha", "--standard", "--budget", "50", "--json")
+        self.assertEqual(code, 0, err)
+        standard = gauntlet.standard("constructed")
+        self.assertEqual(json.loads(out)["sample"], standard["id"])
+        self.assertIn(standard["id"], self.samples)          # saved, so the page sees the same set
+        code, out, err = self.run_cli("play", "casual/alpha", "--standard", "--budget", "fixed:10", "--inflight", "2")
+        self.assertEqual(code, 0, err)
+        self.assertIn(f"against {standard['id']}", out)
+        code, _, err = self.run_cli("view", "casual/alpha", "--standard", "--size", "4")
+        self.assertEqual(code, 1)
+        self.assertIn("leave out --size", err)
+        code, out, err = self.run_cli("sample", "--format", "constructed", "--size", "all", "--json")
+        self.assertEqual(code, 0, err)
+        self.assertEqual((json.loads(out)["size"], json.loads(out)["all"]), (4, True))

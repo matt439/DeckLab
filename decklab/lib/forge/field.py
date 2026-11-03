@@ -824,7 +824,7 @@ class _FieldRun:
 @lifecycle.writing("entry", "opponents")
 def run_field(entry, budget="standard", *, by, progress=None, results_dir=None, pool=None, local=False,
               seed_base=None, log_dir=None, log_every=1, inflight=None, opponents=None, space="home",
-              public=None, visible=None, keep=None, product_notes=True, opponent_entries=None):
+              public=None, visible=None, keep=None, product_notes=True, opponent_entries=None, note_extra=None):
     """Play entry against the field of its format (section 10.3): a floor of games against each
     opponent (FIELD_FLOOR, or fewer for a smaller budget), then APT rounds (seqstats.apt_pick, each
     pick FIELD_STEP games) until the budget's games are played. Each pair is an ordinary matchup
@@ -846,7 +846,8 @@ def run_field(entry, budget="standard", *, by, progress=None, results_dir=None, 
     "deck": {"id", "version", "title"}, "dropped": {key: sentence}, "error": sentence or None}.
     ValueError for a budget or opponent names that don't suit, ForgeError when the field has no
     opponent for it or home's saved field choices can't be read (it fails closed, E3-S23).
-    opponent_entries, when given, replace the field (the gauntlet's sample; no field policy applies)."""
+    opponent_entries, when given, replace the field (the gauntlet's sample; no field policy applies);
+    note_extra, a dict, is added to the note (the gauntlet's sample id and catalogue sha)."""
     from . import pool as pools         # pool.py comes after lists; field comes after both
     _budget(budget)
     fmt = lists.fmt_for(entry["kind"])
@@ -876,6 +877,7 @@ def run_field(entry, budget="standard", *, by, progress=None, results_dir=None, 
             "error": coordinator.error}
     if interrupt is not None and coordinator.stopped_by:
         note["stopped_by"] = coordinator.stopped_by
+    note.update(note_extra or {})
     _append_note(entry, results_dir, note, space=space)
     if interrupt is not None:
         try:
@@ -1019,23 +1021,28 @@ def _rows(entry, opps, results_dir, keep):
             pair = _pair_state(entry, o, results_dir, keep=keep)
         except ForgeError as e:
             pair, problem = {"key": None, "n": 0, "pi": None, "meaningful": True, "result": None}, str(e)
-        result, games = pair["result"], _games(pair["result"])
-        numbers = lead = None
-        if games:
-            p = views._perspective(result, entry["card_sha"])
-            rates = views._winrate(games, p)
-            lead = views._lead(games, p, rates["winrate"], views._comparison(games, p))
-            try:
-                numbers = seqstats.field_row(games, p)
-            except NotImplementedError:
-                w = rates["winrate"]
-                numbers = {"n": len(games), "value": w["value"] if w.get("balanced") else None,
-                           "low": w["low"] if w.get("balanced") else None,
-                           "high": w["high"] if w.get("balanced") else None, "pi": None, "se": None, "d": None}
-        rows.append({"opponent": o, "key": pair["key"], "n": pair["n"], "numbers": numbers, "lead": lead,
-                     "not_meaningful": not pair["meaningful"], "problem": problem,
-                     "updated": result.get("updated") if games else None})
+        rows.append(_row(entry, o, pair, problem))
     return rows
+
+
+def _row(entry, o, pair, problem=None):
+    """_rows' row of opponent o from its pair (_numbers'), also for a saved result found another way."""
+    result, games = pair["result"], _games(pair["result"])
+    numbers = lead = None
+    if games:
+        p = views._perspective(result, entry["card_sha"])
+        rates = views._winrate(games, p)
+        lead = views._lead(games, p, rates["winrate"], views._comparison(games, p))
+        try:
+            numbers = seqstats.field_row(games, p)
+        except NotImplementedError:
+            w = rates["winrate"]
+            numbers = {"n": len(games), "value": w["value"] if w.get("balanced") else None,
+                       "low": w["low"] if w.get("balanced") else None,
+                       "high": w["high"] if w.get("balanced") else None, "pi": None, "se": None, "d": None}
+    return {"opponent": o, "key": pair["key"], "n": pair["n"], "numbers": numbers, "lead": lead,
+            "not_meaningful": not pair["meaningful"], "problem": problem,
+            "updated": result.get("updated") if games else None}
 
 
 def _average(rows):

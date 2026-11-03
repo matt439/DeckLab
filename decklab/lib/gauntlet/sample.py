@@ -6,6 +6,8 @@ From code:
     chosen = sample.choose(catalogue["decks"], 20, tiers=["core"], seed="")
     sid = sample.sample_id(catalogue["sha"], filters, 20, "")
     sample.save_sample("commander", drawn); sample.load_sample(drawn["id"])   # drawn: forge/gauntlet.draw's
+    sample.standard_sample(catalogue, "commander")      # the standard sample (STANDARD), not saved
+    sample.every(catalogue["decks"], tiers=["core"])    # "All": every playable deck of the filters
 
 (lib/forge/gauntlet.draw chooses, names and saves a sample with the format's defaults.)
 
@@ -21,6 +23,9 @@ sample, in the same order.
    primary style the sample hasn't got yet.
 3. Style pass: bring every style to at least STYLE_FLOOR decks where the candidates allow.
 4. Fill to the size by popularity.
+"All" (every(), E3-S38) is no sample: every playable deck the filters allow, near-duplicates
+included (a commander's core and upgraded decks are both played), most popular first. Its id
+says so (sample_id's every), so it never shares an id with a balanced sample of the same size.
 Ties go to popularity (EDHREC rank, then deck count, then tier: for Forge's decks the duels by
 difficulty, then the precons), then to sha256(seed + id).
 
@@ -38,6 +43,11 @@ from decklab.lib import gauntlet
 from decklab.lib.gauntlet.tags import STYLES, WUBRG
 
 DEFAULT_SIZE = {"commander": 20, "constructed": 24}
+# The standard sample (E3-S33, Matt 2026-11-03): every deck's headline figure is against this one, so
+# figures compare across decks and before and after an edit. It's the default draw: DEFAULT_SIZE,
+# these tiers (forge/gauntlet's DEFAULT_TIERS), no colour or style filter, seed "".
+STANDARD = {"commander": {"size": 20, "tiers": ("core", "upgraded")},
+            "constructed": {"size": 24, "tiers": ("hard", "medium")}}
 STYLE_FLOOR = 2
 
 PAIRS = ("WU", "UB", "BR", "RG", "WG", "WB", "UR", "BG", "WR", "UG")
@@ -161,13 +171,36 @@ def choose(decks, size, colours=None, styles=None, tiers=None, seed=""):
     return chosen
 
 
-def sample_id(catalogue_sha, filters, size, seed):
-    """"sample:<12 hex>", a sha256 of the catalogue's version, the filters, the size and the seed."""
+def every(decks, colours=None, styles=None, tiers=None, seed=""):
+    """"All": every playable deck that passes the filters, near-duplicates included, most popular
+    first."""
+    return sorted(candidates(decks, colours, styles, tiers), key=lambda d: popularity(d, seed))
+
+
+def standard_sample(catalogue, fmt):
+    """The format's standard sample of a catalogue (STANDARD), as forge/gauntlet.draw makes it:
+    {"id", "format", "catalogue_sha", "filters", "size", "seed": "", "decks": [ids]}. Not saved
+    (a sample is saved only when it's played)."""
+    if fmt not in STANDARD:
+        raise ValueError(f"Unknown gauntlet format {fmt!r}")
+    size = STANDARD[fmt]["size"]
+    filters = normalise_filters(tiers=STANDARD[fmt]["tiers"])
+    chosen = choose((catalogue or {}).get("decks") or [], size, seed="", **filters)
+    return {"id": sample_id((catalogue or {}).get("sha"), filters, size, ""), "format": fmt,
+            "catalogue_sha": (catalogue or {}).get("sha"), "filters": filters, "size": size, "seed": "",
+            "decks": [d["id"] for d in chosen]}
+
+
+def sample_id(catalogue_sha, filters, size, seed, every=False):
+    """"sample:<12 hex>", a sha256 of the catalogue's version, the filters, the size and the seed
+    (and, for "All", every: True; a balanced sample's id is as it always was)."""
     if not isinstance(filters, dict):
         filters = {}
     normal = normalise_filters(filters.get("colours"), filters.get("styles"), filters.get("tiers"))
-    text = json.dumps({"catalogue_sha": catalogue_sha, "filters": normal, "size": int(size),
-                       "seed": str(seed)}, sort_keys=True, separators=(",", ":"))
+    named = {"catalogue_sha": catalogue_sha, "filters": normal, "size": int(size), "seed": str(seed)}
+    if every:
+        named["every"] = True
+    text = json.dumps(named, sort_keys=True, separators=(",", ":"))
     return "sample:" + hashlib.sha256(text.encode("utf-8")).hexdigest()[:12]
 
 

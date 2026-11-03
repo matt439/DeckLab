@@ -132,11 +132,16 @@ def revision(c, deck_id, number):
     return None if row is None else _revision(row[:-1], row[-1])
 
 
-def revisions_with_text(c, deck_id, limit):
-    """The newest limit DeckRevisions of a deck with their texts, newest first, in one query."""
+def revisions_with_text(c, deck_id, limit, before=None):
+    """The newest limit DeckRevisions of a deck with their texts, newest first, in one query; with
+    before, only the revisions numbered below it (the next page)."""
+    if before is None:
+        return [_revision(r[:-1], r[-1]) for r in c.execute(
+            f"select {REVISION_COLUMNS}, text from deck_revision where deck_id = any(%s) order by revision desc "
+            "limit %s", (pg_aliases.lineage(c, deck_id), limit)).fetchall()]
     return [_revision(r[:-1], r[-1]) for r in c.execute(
-        f"select {REVISION_COLUMNS}, text from deck_revision where deck_id = any(%s) order by revision desc limit %s",
-        (pg_aliases.lineage(c, deck_id), limit)).fetchall()]
+        f"select {REVISION_COLUMNS}, text from deck_revision where deck_id = any(%s) and revision < %s "
+        "order by revision desc limit %s", (pg_aliases.lineage(c, deck_id), int(before), limit)).fetchall()]
 
 
 def last(c, deck_id):

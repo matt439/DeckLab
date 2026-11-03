@@ -49,7 +49,7 @@ class DeckPageUiTests(unittest.TestCase):
     def test_tabs_are_lazy_and_in_the_address(self):
         self.run_js("""
           open('#/deck?id=casual%2Ftest&v=target');
-          same(main.querySelectorAll('[role=tab]').map((b) => b.textContent), ['Overview', 'Cards', 'Stats', 'Practice', 'Matchups']);
+          same(main.querySelectorAll('[role=tab]').map((b) => b.textContent), ['Overview', 'Cards', 'Stats', 'Practice', 'Testing']);
           assert.equal(tab('overview').getAttribute('aria-selected'), 'true');
           assert.equal(panel('overview').hidden, false);
           assert.equal(panel('cards').hidden, true);
@@ -67,9 +67,12 @@ class DeckPageUiTests(unittest.TestCase):
           assert(location.hash.endsWith('&tab=practice'));
           // An old ?part=field link opens Matchups; an unknown tab the Overview.
           same(deckViewOf(new URLSearchParams('id=a&part=field')), {tab: 'matchups', filter: 'all'});
-          // The Running list's "Gauntlet run of ..." link (part=gauntlet) opens Matchups, where its part is.
+          // The Running list's "Gauntlet run of ..." link (part=gauntlet) opens Testing, where its part is.
           same(deckViewOf(new URLSearchParams('id=a&v=target&part=gauntlet')), {tab: 'matchups', filter: 'all'});
           same(deckViewOf(new URLSearchParams('id=a&tab=nope&filter=nope')), {tab: 'overview', filter: 'all'});
+          // E3-S35: the tab is called Testing; ?tab=testing opens it too, and the board's Details link lands on it.
+          same(deckViewOf(new URLSearchParams('id=a&tab=testing')), {tab: 'matchups', filter: 'all'});
+          same(deckViewOf(new URLSearchParams('id=a&v=target&tab=matchups&part=gauntlet')), {tab: 'matchups', filter: 'all'});
         """)
 
     def test_banner_answers_can_i_build_it(self):

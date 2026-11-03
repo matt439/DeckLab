@@ -26,7 +26,7 @@ SHOP = r"""
   const actualPage=owned=>{const page=makePage();page.owned=owned;
     deckSwapFinder=()=>{}; // unrelated Missing-filter suggestions have their own API fixtures
     deckOverviewSwap=()=>null; // the Overview's independent swap request is outside cached Prices
-    deckNeighbours=()=>null;deckOverviewForge=()=>null;deckSideboardSection=()=>null;
+    deckNeighbours=()=>null;deckOverviewForge=()=>null;deckOverviewGauntlet=()=>null;deckSideboardSection=()=>null;
     page.sections={Deck:owned.rows.map(row=>({name:row.name,qty:row.need,set:null,number:null,finish:'nonfoil',
       card:card(row.name,'Creature',1)}))};clear(main);location.hash='#/deck?id=casual%2Ftest&tab=cards';
     drawDeck(page,deckViewOf(parseHash().params));return{page,table:main.querySelector('.owned-table')};};

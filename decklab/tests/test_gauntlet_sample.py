@@ -123,6 +123,71 @@ class ChooseTests(unittest.TestCase):
         self.assertEqual([d["title"] for d in order], ["r", "c", "t", "p"])
 
 
+def standard_catalogue():
+    """A Commander catalogue of core, upgraded and precon decks, ranked, over every bucket, with one
+    commander's core and upgraded decks (a family) and one unplayable deck."""
+    decks = []
+    for i, key in enumerate(sample.BUCKETS):
+        identity = "WUBRG" if key == sample.FOUR_PLUS else key
+        tier = ("core", "upgraded", "precon")[i % 3]
+        decks.append(entry(f"s{i:02d}-{identity or 'c'}-{tier}", identity, sample.STYLES[i % 5], tier=tier,
+                           rank=i + 1))
+    for deck_id, tier in (("kodama-core", "core"), ("kodama-upgraded", "upgraded")):
+        made = entry(deck_id, "G", "ramp", tier=tier, rank=2)
+        made["cards"] = {"Commander": [[1, "Kodama"]], "Main": []}
+        decks.append(made)
+    decks += [entry(f"extra{i}-core", "WU"[i % 2], sample.STYLES[i % 5], rank=100 + i) for i in range(5)]
+    decks.append(entry("broken-core", "W", rank=1, playable=False))
+    return {"sha": "5" * 64, "decks": decks}
+
+
+# The standard Commander sample of standard_catalogue(), pinned (E3-S33): a change to the sample
+# rules, STANDARD or the default draw that moves it shows here.
+PINNED_STANDARD = ["s00-W-core", "s01-U-upgraded", "s03-R-core", "kodama-core", "s06-UB-core", "s07-BR-upgraded",
+                   "s09-WG-core", "s10-WB-upgraded", "s12-BG-core", "s13-WR-upgraded", "s15-WUG-core",
+                   "s16-WUB-upgraded", "s18-BRG-core", "s19-WRG-upgraded", "s21-WUR-core", "s22-UBG-upgraded",
+                   "s24-URG-core", "s25-WUBRG-upgraded", "s04-G-upgraded", "extra0-core"]
+
+
+class StandardTests(unittest.TestCase):
+    def test_standard_is_twenty_core_and_upgraded_commander_decks(self):
+        self.assertEqual(sample.STANDARD, {"commander": {"size": 20, "tiers": ("core", "upgraded")},
+                                           "constructed": {"size": 24, "tiers": ("hard", "medium")}})
+        found = sample.standard_sample(standard_catalogue(), "commander")
+        self.assertEqual((found["format"], found["size"], found["seed"], found["catalogue_sha"]),
+                         ("commander", 20, "", "5" * 64))
+        self.assertEqual(found["filters"], {"colours": None, "styles": None, "tiers": ["core", "upgraded"]})
+        self.assertEqual(found["id"], sample.sample_id("5" * 64, found["filters"], 20, ""))
+        self.assertEqual(found["id"], sample.standard_sample(standard_catalogue(), "commander")["id"])     # stable
+        by_id = {d["id"]: d for d in standard_catalogue()["decks"]}
+        self.assertTrue(all(by_id[i]["tier"] in ("core", "upgraded") and by_id[i]["playable"] for i in found["decks"]))
+        self.assertLessEqual(sum(i.endswith(("kodama-core", "kodama-upgraded")) for i in found["decks"]), 1)
+        self.assertEqual([i.rsplit("/", 1)[1] for i in found["decks"]], PINNED_STANDARD)
+        with self.assertRaises(ValueError):
+            sample.standard_sample(standard_catalogue(), "pauper")
+
+    def test_standard_is_the_default_draw_of_forge_gauntlet(self):
+        from decklab.lib.forge import gauntlet as forge_gauntlet
+        cat = standard_catalogue()
+        with mock.patch.object(forge_gauntlet, "_load_catalogue", lambda fmt: cat), \
+                mock.patch.object(forge_gauntlet, "_save_sample", lambda fmt, found: None):
+            for fmt in ("commander", "constructed"):
+                with self.subTest(fmt=fmt):
+                    self.assertEqual(forge_gauntlet.standard(fmt), sample.standard_sample(cat, fmt))
+                    self.assertEqual(forge_gauntlet.draw(fmt, save=False), sample.standard_sample(cat, fmt))
+
+    def test_every_is_all_the_playable_decks_and_has_its_own_id(self):
+        cat = standard_catalogue()
+        found = sample.every(cat["decks"], tiers=["core", "upgraded"])
+        self.assertEqual(len(found), 25)            # 18 bucket decks of those tiers, both Kodama decks, 5 extras
+        self.assertIn("gauntlet:edhrec/kodama-core", [d["id"] for d in found])
+        self.assertIn("gauntlet:edhrec/kodama-upgraded", [d["id"] for d in found])
+        self.assertEqual(found, sorted(found, key=sample.popularity))
+        filters = sample.normalise_filters(tiers=["core"])
+        self.assertNotEqual(sample.sample_id("a", filters, 20, "", every=True), sample.sample_id("a", filters, 20, ""))
+        self.assertEqual(sample.sample_id("a", filters, 20, "", every=False), sample.sample_id("a", filters, 20, ""))
+
+
 class SampleFileTests(unittest.TestCase):
     def setUp(self):
         tmp = tempfile.TemporaryDirectory()

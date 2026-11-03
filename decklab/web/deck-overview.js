@@ -53,6 +53,80 @@ function deckOverviewForge(data) {
   return section;
 }
 
+/** The Overview's Forge panels, stacked: for a Commander deck the popular decks first (E3-S33: the house Commander
+   field is only a handful of decks), for a 60-card deck the field first. Null for a Beginner Box half. */
+function deckOverviewStrength(data) {
+  const field = deckOverviewForge(data), popular = deckOverviewGauntlet(data);
+  if (!field && !popular) return null;
+  return el("div", { class: "deck-overview-sims" },
+    data.summary.kind === "commander" ? [popular, field] : [field, popular]);
+}
+
+/** How the list does against its format's standard sample of popular decks (E3-S33), from one read of
+   /api/gauntlet/summary (saved games only: nothing plays, no timer). Its button opens Matchups at the part, where
+   runs start; it never starts one. Null for a Beginner Box half. */
+function deckOverviewGauntlet(data) {
+  if (data.summary.id.startsWith(BOX_PREFIX)) return null;
+  const body = el("div", { class: "deck-overview-gauntlet-body" },
+    loadingBox("Loading how it does against popular decks…", { small: true }));
+  const button = el("button", { type: "button", class: "btn", text: "Popular decks",
+    onclick: () => openDeckTab("matchups", { to: "sec-gauntlet" }) });
+  const section = el("section", { class: "deck-section deck-overview-gauntlet", "aria-labelledby": "h-overview-gauntlet" },
+    el("div", { class: "deck-section-head" }, el("h2", { id: "h-overview-gauntlet", text: "Against popular decks" }),
+      button), body);
+  const context = deckOverviewContext();
+  const profile = context.profile ? `&profile=${encodeURIComponent(context.profile)}` : "";
+  const load = async () => {
+    try {
+      const answer = await api(`/api/gauntlet/summary?id=${encodeURIComponent(data.summary.id)}` +
+        `&version=${data.version}${profile}`);
+      if (!deckOverviewHere(section, context)) return;
+      clear(body);
+      add(body, deckOverviewGauntletBody(answer, button));
+    } catch (error) {
+      if (!deckOverviewHere(section, context)) return;
+      clear(body).append(loadFailed("How it does against popular decks", error, () => {
+        if (!deckOverviewHere(section, context)) return;
+        clear(body).append(loadingBox("Loading how it does against popular decks…", { small: true }));
+        load();
+      }));
+    }
+  };
+  load();
+  return section;
+}
+
+/** The summary's state in words: no catalogue (an admin gets the build command), not tested (Choose opponents), or
+   the headline (gauntlet.js gtHeadline), the hardest opponents and the caveat; a run in progress says so. E3-S34: a
+   changed list's figure before the change, or results an older Forge played, muted (gtBeforeLine, gtOlderLine). */
+function deckOverviewGauntletBody(a, button) {
+  const playing = a.playing ? el("p", { class: "sub", text: "A popular-decks run is in progress." }) : null;
+  if (a.state === "no_catalogue" || !["untested", "partial", "done", "stale_list", "stale_older"].includes(a.state)) {
+    button.hidden = true;
+    return [el("p", { class: "empty", text: "Popular decks aren't set up on this PC yet." }),
+      a.build_command ? el("pre", { class: "gt-command" }, el("code", { text: a.build_command })) : null];
+  }
+  if (a.state === "untested") {
+    button.textContent = "Choose opponents";
+    return [el("p", { class: "empty", text: "Not tested against popular decks yet." }), playing];
+  }
+  // E3-S34: no games for this list under today's Forge: the old figure muted and the button to test it (Matchups;
+  // nothing plays from here).
+  if (a.state === "stale_list" || a.state === "stale_older") {
+    button.textContent = a.state === "stale_list" || (a.older && a.older.earlier) ? "Test the new list"
+      : "Test it again";
+    return [gtBeforeLine(a), gtOlderLine(a), playing];
+  }
+  const hardest = (a.hardest || []).map((o) => el("li", {}, el("span", { class: "gt-name", text: o.title }), " ",
+    winRateFigure(gtRate(o.rate, o.low, o.high), { what: `Win rate against ${o.title}` }),
+    o.verdict ? `, ${o.verdict}` : ""));
+  return [gtHeadline(a, { cls: "gt-headline-panel" }), gtBeforeLine(a), gtOlderLine(a, { note: true }), playing,
+    hardest.length ? el("div", { class: "deck-overview-hardest" },
+      el("p", { class: "sub", text: "Hardest here:" }), el("ul", {}, hardest)) : null,
+    el("p", { class: "sub", text: `These ${a.of} sampled opponents only, not every deck of that colour or style. ` +
+      "Forge's AI, best of one, 1v1." })];
+}
+
 /** Matchups' poor-AI caveat (matchups-results.js pilotReason) for the list the field line is about; null
    for a list Forge pilots normally, or when how it pilots it isn't known (no claim either way). */
 function deckOverviewPilot(pilot) {

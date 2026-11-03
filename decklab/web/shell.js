@@ -3,13 +3,13 @@ the phone's top bar and bottom tab bar with its More sheet, the shopping badge, 
 choice. core.js's routes table (ROUTES) says what each page is called, where it sits and who sees it.
 
   From 1000 px (the lab, and a phone on its side): a sticky 56 px top bar: the logo, round nav pills
-  Decks · Collection · Shopping (a count of deliveries waiting) · Matchups · More ▾ (the rest), the page's
-  section marked with aria-current on --accent-soft; a slot for the run activity (#shell-status: Forge's
+  Decks · Testing (Forge's simulations, at #/matchups) · Collection · Shopping (a count of deliveries waiting) ·
+  More ▾ (the rest), the page's section marked with aria-current on --accent-soft; a slot for the run activity (#shell-status: Forge's
   turning ring while a run plays), the global search (#global-search, global-search.js: E11-S31), then the avatar.
   Under 1000 px (casual: the phone, and the iPad in portrait; design/visual-design.md section 6 decision 5):
   a 56 px header (the way back, or the logo; the page's title once its heading has scrolled away; the run
-  activity; the avatar) and a tab bar fixed to the bottom (Decks, Collection, Shopping, Matchups, More)
-  above the safe-area inset, under every page's own bar. More opens a sheet with the rest.
+  activity; the avatar) and a tab bar fixed to the bottom (Decks, Testing, Collection, Shopping, More; a
+  member's has no Shopping) above the safe-area inset, under every page's own bar. More opens a sheet with the rest.
   The avatar menu: Theme (Auto, Light, Dark), Switch person and "This is my device" (on the home network
   only: over the tunnel the login is the person), and Settings and About for an admin.
 
@@ -37,7 +37,7 @@ const ICONS = {
   settings: "M4 7h10M18 7h2M4 17h2M10 17h10M16 5v4M8 15v4",
   more: "M5 12h.01M12 12h.01M19 12h.01",
 };
-const TAB_COUNT = 4;                    // the tab bar's pages before More: Decks, Collection, Shopping, Matchups
+const TAB_COUNT = 4;                    // the tab bar's pages before More: Decks, Testing, Collection, Shopping
 const MY_DEVICE = "myDevice";           // local storage: the id of the profile whose device this is
 const DELIVERIES_MS = 60000;            // how long a count of deliveries waiting is good for
 let shellDeliveries = { at: 0, count: 0, request: null };

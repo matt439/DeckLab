@@ -66,8 +66,18 @@ class GauntletWidthTests(unittest.TestCase):
         self.assertRegex(self.css, r"\.gt-play\s*\{[^}]*max-width:\s*40rem;")
         wide = re.search(r"@media \(min-width: 1600px\)\s*\{(.*?)\n\}", self.css, flags=re.S)
         self.assertIsNotNone(wide)
-        self.assertRegex(wide.group(1), r"\.gt-layout\s*\{[^}]*grid-template-columns:\s*minmax\(300px, 380px\) minmax\(0, 1fr\)")
+        # E3-S33: the results stay first, so the play box's column is the second.
+        self.assertRegex(wide.group(1), r"\.gt-layout\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\) minmax\(300px, 380px\)")
         self.assertRegex(wide.group(1), r"\.gt-play\s*\{\s*max-width:\s*none;\s*\}")
+        # Alone (a run playing before any games), the play box keeps its one-column cap.
+        self.assertRegex(wide.group(1), r"\.gt-side:only-child > \.gt-play\s*\{\s*max-width:\s*40rem;\s*\}")
+
+    def test_the_headline_and_run_time_wrap_and_stop_at_the_groups_width(self):
+        for sel in (".gt-headline", ".gt-headline-panel"):
+            self.assertEqual(_decl(self.rule(sel), "min-width"), "0", sel)
+            self.assertEqual(_decl(self.rule(sel), "max-width"), "46rem", sel)
+        for sel in (".gt-tally", ".gt-time", ".gt-overnight"):
+            self.assertEqual(_decl(self.rule(sel), "overflow-wrap"), "anywhere", sel)
 
     def test_no_fixed_widths_or_nowrap(self):
         """Nothing in the part has a fixed width or refuses to wrap, which would outgrow a phone's column."""

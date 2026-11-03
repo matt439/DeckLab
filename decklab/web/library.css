@@ -262,7 +262,8 @@ button.deck-row { cursor: pointer; }
 .deck-row-end .deck-owned-words > .fact-line-in { justify-content: flex-end; }
 .deck-row-end .deck-missing { justify-content: flex-end; }
 /* The Forge field column (library.js deckRowForge): the inline win rate and range, a compact range bar and the
-   freshness; "—" for a casual deck without a result, blank for a Commander deck. */
+   freshness; "—" for a deck without a result (a Commander deck's is its popular-decks figure, E3-S36); blank while
+   the numbers load. */
 .deck-row-forge { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 2px var(--s-2); min-width: 0;
   font-size: var(--fs-meta); }
 .deck-row-forge > .fresh { grid-column: 1 / -1; justify-self: start; color: var(--ink-3); }
@@ -322,6 +323,11 @@ button.deck-row { cursor: pointer; }
 .lib-detail-forge-figure { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s-2) var(--s-3); }
 .lib-detail-forge-note { margin: 0; color: var(--ink-2); font-size: var(--fs-meta); }
 .lib-detail-forge > .btn { justify-self: start; }
+/* The popular-decks part (library-gauntlet.js, E3-S36): a Commander deck's figure on its tile, row and detail pane;
+   a 60-card deck's second line in the pane, its figure inline. A figure from before the list's last change is
+   muted ("before the last change"). */
+.lib-gauntlet.is-stale .wr-value, .lib-gauntlet .is-stale .wr-value { color: var(--ink-3); }
+.lib-gauntlet-second .lib-detail-forge-figure { justify-content: flex-start; }
 
 /* The parts library-glance.js fills in once the deck has loaded: the stats in brief with a small mana curve, the
    play guide's opening and the key cards. Under the summary in a narrow pane (the iPad, 1000-1280 px); in a pane

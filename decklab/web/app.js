@@ -248,8 +248,11 @@ function drawWho() {
 function parseHash() {
   const raw = location.hash.replace(/^#\/?/, "");
   const q = raw.indexOf("?");
-  const path = (q < 0 ? raw : raw.slice(0, q)) || "library";
-  return { path, params: new URLSearchParams(q < 0 ? "" : raw.slice(q + 1)) };
+  let path = (q < 0 ? raw : raw.slice(0, q)) || "library";
+  // #/testing is Testing's other address (E3-S35): the page stays at #/matchups, where older links go.
+  const alias = path === "testing";
+  if (alias) path = "matchups";
+  return { path, alias, params: new URLSearchParams(q < 0 ? "" : raw.slice(q + 1)) };
 }
 
 function route() {
@@ -267,7 +270,11 @@ function route() {
   closeReceiptSheets();
   stopMatchupRefresh();
   const token = ++routeToken;
-  const { path, params } = parseHash();
+  const { path, params, alias } = parseHash();
+  if (alias) {
+    const query = params.toString();
+    history.replaceState(history.state, "", `#/matchups${query ? `?${query}` : ""}`);
+  }
   boxCollectionRoute(path, token);
   boxEditorRoute(path, token);
   closeEditor(path);                // editor.js: the editor on screen is left (its draft stays)

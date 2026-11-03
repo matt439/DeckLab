@@ -14,18 +14,20 @@ selection. Products stay tiles in both.
 Decks are grouped by whose they are: the home decks first, then each person's (their own space, lib/spaces.py),
 by name, in a part that folds away; within each, Commander then 60-card (kind "casual"). Products (sealed decks, read only)
 come last, folded until opened (remembered on this device). The filters (whose decks, format, status,
-colour identity, archetype, availability) and the sort (Ready first, Recently changed, Name) are kept in the address; on a phone they're
+colour identity, archetype, availability) and the sort (Ready first, Recently changed, Not played lately, Strongest vs
+popular decks, Name) are kept in the address; on a phone they're
 behind a "Filter" sheet. Title search stays in sight, with its query in the address too. "Mine" is the
 decks Played by the visitor at home, or a person's own decks.
 
 Loaded after core.js, whose helpers (el, load, state, deckHref, pairingId, warningsBox, ...) it uses, and
 library-glance.js (the detail pane's key cards, stats and play guide, libGlance), library-tables.js (the Tables out
-of date list, libTablesPanel) and cover.js (openCoverPicker) after it. app.js's route() calls showLibrary(), and its deckPlayerWords() names who
+of date list, libTablesPanel), library-gauntlet.js (the popular-decks line, E3-S36) and cover.js (openCoverPicker) after it. app.js's route() calls showLibrary(), and its deckPlayerWords() names who
 plays each deck. Nothing here runs at load.
 */
 "use strict";
 
-const LIB_SORTS = { ready: "Ready first", recent: "Recently changed", played: "Not played lately", name: "Name" };
+const LIB_SORTS = { ready: "Ready first", recent: "Recently changed", played: "Not played lately",
+  popular: "Strongest vs popular decks", name: "Name" };
 // The deck kinds' groups, in the order they show (decided 2026-10-27: Commander first).
 const LIB_KIND_ORDER = ["commander", "casual"];
 // The availability filter's words are the tiles' chips' words: "3 on the way", "8 to get", "Availability
@@ -215,7 +217,10 @@ function drawLibrary(data, filters) {
   };
   libWatchDensity(results, refresh);
   libKeys(results, view);
-  libLoadForge(data, refresh);
+  // The numbers come after the shelf is drawn: their redraw keeps the focused tile, row or link (library-gauntlet.js).
+  const refreshKept = () => libRefreshKeepingFocus(results, refresh);
+  libLoadForge(data, refreshKept);
+  libLoadGauntlet(data, refreshKept);                   // library-gauntlet.js
   const set = (key, value) => {
     if (!view.current?.()) return;
     if (key === "box_check" && value !== "before") filters.checked_before = "";
@@ -490,6 +495,10 @@ function sortDecks(decks, sort) {
     if (sort === "recent") {
       const ea = libTime(a.d.edited), eb = libTime(b.d.edited);
       return (ea === eb ? 0 : ea < eb ? 1 : -1) || title(a.d, b.d);
+    }
+    if (sort === "popular") {
+      const ga = libGauntletRank(a.d), gb = libGauntletRank(b.d);
+      return ga[0] - gb[0] || ga[1] - gb[1] || ga[2] - gb[2] || title(a.d, b.d);
     }
     if (sort === "played") {
       const [ra, la] = libPlayedRank(a.d), [rb, lb] = libPlayedRank(b.d);
@@ -808,7 +817,7 @@ function deckCard(d, product, compact, kitShown = false, ctx = {}) {
       owned,
       d.error ? el("span", { class: "deck-error", text: `Can't be read: ${d.error}` })
         : chip ? el("span", { class: "deck-missing" }, chip) : null,
-      d.error ? null : deckForgeLine(d),
+      d.error ? null : deckForgeLine(d) || libGauntletLine(d),
       deckTokens(d.tokens),
       kitShown ? null : deckSleeve(d.kit))];
   if (ctx.picking) {
@@ -903,6 +912,7 @@ function libDetail(d, ctx) {
         d.assembled && "missing" in d && (d.assembled.sideboard_intended || d.assembled.sideboard_count || d.assembled.changed)
           ? el("p", { class: "deck-assembled", text: assembledStateWords(d.assembled) }) : null,
         d.error ? null : libDetailForge(d),
+        d.error ? null : libDetailGauntlet(d),
         deckTokens(d.tokens),
         deckSleeve(d.kit),
         libBoxSelectedNote(d),
@@ -925,7 +935,8 @@ function libLoadForge(data, refresh) {
 }
 
 /** A deck's Forge numbers ({version, rate, partial, counted, of, games, tested}), null for a casual deck with none
- * (not in the field, or not tested), or undefined while they aren't known or for a Commander deck (4.2: blank). */
+ * (not in the field, or not tested), or undefined while they aren't known or for a Commander deck (whose figure is
+ * its popular-decks one, libGauntlet). */
 function libForge(d) {
   const known = state.libraryForge;
   if (!known || known.profile !== (state.profile ? state.profile.id : null) || d.kind !== "casual") return undefined;
@@ -943,8 +954,10 @@ function deckForgeLine(d) {
 }
 
 /** A lab row's Forge field column (4.2): the inline win rate, its range and the freshness; "—" for a casual deck
- * without a field result; blank for a Commander deck (and while the numbers are on their way). */
+ * without a field result; a Commander deck's popular-decks figure (library-gauntlet.js); blank while the numbers are
+ * on their way. */
 function deckRowForge(d) {
+  if (d.kind === "commander") return libGauntletRowCell(d);      // E3-S36: its popular-decks figure
   const cell = el("span", { class: "deck-row-forge" });
   const n = libForge(d);
   if (n === undefined) return cell;

@@ -44,7 +44,7 @@ const TYPE_PRIORITY = [["Creature", "Creatures"], ["Land", "Lands"], ["Planeswal
   ["Artifact", "Artifacts"], ["Enchantment", "Enchantments"]];
 // The deck page's tabs: [name in the address, words].
 const DECK_TABS = [["overview", "Overview"], ["cards", "Cards"], ["stats", "Stats"], ["practice", "Practice"],
-  ["matchups", "Matchups"]];
+  ["matchups", "Testing"]];  // Testing keeps its key: ?tab=matchups (and tab=testing)
 // The Cards tab's filters: [name in the address, words, what a card's marks must have].
 const CARD_FILTERS = [["all", "All"], ["missing", "Missing"], ["coming", "On the way"], ["held", "In other decks"]];
 const KEY_CARDS = 6;                    // the Overview's big pictures
@@ -68,10 +68,11 @@ function showDeck(params, token) {
   });
 }
 
-/** The tab and filter an address asks for: ?tab= (a ?part=field or ?part=gauntlet link opens Matchups, where
+/** The tab and filter an address asks for: ?tab= (a ?part=field or ?part=gauntlet link opens Testing, where
  * those parts are) and ?filter=. */
 function deckViewOf(params) {
   let tab = params.get("tab");
+  if (tab === "testing") tab = "matchups";
   if (!DECK_TABS.some(([name]) => name === tab)) {
     tab = ["field", "gauntlet"].includes(params.get("part")) ? "matchups" : "overview";
   }
@@ -221,7 +222,11 @@ function deckTabParts(name, data, screen) {
   if (name === "cards") return cardsParts(data, screen);
   if (name === "stats") return [statsSection(data)];
   if (name === "practice") return [manualHandsSection(data), practiceSection(data)];
-  return [deckMatchupsPart(data), fieldSection(data), gauntletSection(data), variantTestsSection(data)];     // deck-tools.js, field.js, gauntlet.js, variant.js
+  // deck-tools.js, field.js, gauntlet.js, variant.js; a Commander deck's popular decks first (E3-S33)
+  if (data.summary.kind === "commander") {
+    return [gauntletSection(data), deckMatchupsPart(data), fieldSection(data), variantTestsSection(data)];
+  }
+  return [deckMatchupsPart(data), fieldSection(data), gauntletSection(data), variantTestsSection(data)];
 }
 
 /** Write the tab (and the Cards filter) into the address in place: Back still leaves the deck in one step. */
@@ -405,7 +410,7 @@ function overviewParts(data) {
     commanderReadiness(data),
     deckAssemblySection(data),
     deckOverviewPlayed(data),
-    el("div", { class: "deck-overview-panels" }, deckOverviewForge(data), deckOverviewCurve(data), deckOverviewSwap(data)),
+    el("div", { class: "deck-overview-panels" }, deckOverviewStrength(data), deckOverviewCurve(data), deckOverviewSwap(data)),
     verdict ? el("section", { class: "deck-section deck-overview-stats", "aria-label": "At a glance" }, verdict,
       el("button", { type: "button", class: "btn btn-quiet deck-more-link", text: "All the stats",
         onclick: () => openDeckTab("stats", { to: "deck-panel-stats" }) })) : null,

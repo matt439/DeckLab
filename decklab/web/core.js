@@ -413,10 +413,10 @@ the phone's tab bar (shell.js), the crumbs, document.title and who sees which pa
 Pages refine the tab title with their subject (setTitle). */
 const ROUTES = [
   { path: "library", label: "Decks", h1: "Decks", title: "Decks", icon: "decks", nav: "main" },
+  { path: "matchups", label: "Testing", h1: "Testing", title: "Testing", icon: "matchups", nav: "main" },
   { path: "collection", label: "Collection", h1: "Collection", title: "Collection", icon: "collection", nav: "main" },
   { path: "shopping", label: "Shopping", h1: "Shopping", title: "Shopping", icon: "shopping", nav: "main",
     visible: (profile, may) => seesHomeInventory(may) },
-  { path: "matchups", label: "Matchups", h1: "Matchups", title: "Matchups", icon: "matchups", nav: "main" },
   { path: "tokens", label: "Tokens", h1: "Tokens", title: "Tokens", icon: "tokens", nav: "more" },
   { path: "accessories", label: "Sleeves & boxes", h1: "Sleeves & boxes", title: "Sleeves & boxes", icon: "sleeves",
     nav: "more", visible: (profile, may) => may ? may.see_accessories !== false : seesAccessoriesAs(profile) },

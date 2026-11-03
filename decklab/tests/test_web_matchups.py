@@ -524,7 +524,7 @@ class RunsPillTests(unittest.TestCase):
 
     def test_the_details(self):
         # Each run playing (its status line, "game N of M" and about how long is left, a progress ring, its page and
-        # Stop when the server lets this viewer stop it), the runs waiting, and the way to Matchups.
+        # Stop when the server lets this viewer stop it), the runs waiting, and the way to Testing.
         walk = "globalThis.walk = (n) => [n, ...(n.children || []).flatMap(walk)]; "
         parts = f"runDetailsParts({json.dumps([self.RUN, self.FIELD])})"
         text, ring, stops, links = _run_page([
@@ -537,7 +537,7 @@ class RunsPillTests(unittest.TestCase):
             ".map((n) => n.getAttribute('href')).join(' '); })()"], self.NAMES)[1:]
         self.assertIn("Forge playing: Gruul Ramp vs Izzet Otters (play-now)game 640 of ~1,100 · about 6 min left", text)
         self.assertIn("WaitingField run of Gruul Rampnext", text)
-        self.assertIn("Every run on Matchups", text)
+        self.assertIn("Every run on Testing", text)
         self.assertEqual(ring, "58 | Games played: 640 of ~1,100")
         self.assertEqual(stops, "Stop the Forge run: Gruul Ramp vs Izzet Otters (play-now)")
         self.assertEqual(links, "#/matchup?key=k #/matchups")
