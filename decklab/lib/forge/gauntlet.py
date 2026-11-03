@@ -474,21 +474,24 @@ def _when(result):
     return str(result.get("updated") or "")
 
 
-def older(deck_entry, chosen, keep=None, cat=None, today_keys=(), space="home", limit=300):
+def older(deck_entry, chosen, keep=None, cat=None, today_keys=(), space="home", limit=300, played=()):
     """The list's saved results against the sample's decks that today's keys don't find (an older
     Forge, other settings, another pilot, or an opponent's list changed in a rebuild), from its
     run notes in the space (at most limit keys): None when there are none; {"reason": "unknown",
     ...} when today's engine can't be confirmed; else {"reason", "opponents", "of", "updated",
     "overall"} of the newest group of one engine (the newest result per opponent; "overall" its
     equal-weight figure {"rate", "low", "high"}, None without a rate). Several engines are never
-    mixed into one figure. keep as view's; today_keys the view's keys, left out."""
+    mixed into one figure. keep as view's; today_keys the view's keys, left out; played the
+    opponents' ids today's keys already have games against, whose older results are replaced and
+    so left out too (None once every one is)."""
     _check(deck_entry, chosen)
     cat = cat if cat is not None else catalogue(chosen["format"])
     pairs, _ = _picked(cat, chosen.get("decks") or [])
     by_id = {deck["id"]: (deck, e) for deck, e in pairs}
-    skip = set(today_keys or ())
+    skip, replaced = set(today_keys or ()), set(played or ())
+    by_id = {i: pair for i, pair in by_id.items() if i not in replaced}
     stale = []
-    for key in notes_keys(deck_entry, space, limit):
+    for key in notes_keys(deck_entry, space, limit) if by_id else ():
         if key in skip:
             continue
         result = saved.load(key, results_dir())

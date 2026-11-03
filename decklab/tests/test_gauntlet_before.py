@@ -165,6 +165,16 @@ class OlderTests(EngineCase):
         # Unread by the view: today's key finds nothing.
         self.assertEqual(gauntlet.view(self.alpha, self.sample, keep=self.keep(self.alpha))["played"], 0)
 
+    def test_opponents_played_today_replace_their_older_results(self):
+        keys = []
+        for deck_id in IDS[:3]:
+            keys.append(self.old_key(deck_id))
+            self.games(self.alpha, deck_id, 200, 0.5, key=keys[-1], eng=OLD)
+        self.note(self.alpha, keys)
+        found = gauntlet.older(self.alpha, self.sample, keep=self.keep(self.alpha), played=IDS[:1])
+        self.assertEqual(found["opponents"], 2)
+        self.assertIsNone(gauntlet.older(self.alpha, self.sample, keep=self.keep(self.alpha), played=IDS))
+
     def test_settings_pilot_and_the_order_of_reasons(self):
         self.games(self.alpha, IDS[0], 100, 0.5, key=self.old_key(IDS[0]), eng=dict(TODAY, clock_s=60))
         self.note(self.alpha, [self.old_key(IDS[0])])
@@ -217,6 +227,7 @@ class ByListGauntlet(FakeGauntlet):
     def __init__(self, forge, results):
         super().__init__(forge, results)
         self.per, self.views, self.noted, self.older_answer, self.olders = {}, [], [], None, []
+        self.not_meaningful, self.older_by, self.compared = set(), {}, 0
 
     def plan(self, entry, chosen, budget):
         return {"pairs": []}
@@ -230,6 +241,7 @@ class ByListGauntlet(FakeGauntlet):
         opponents = [{"id": d, "title": d.rsplit("/", 1)[1], "key": f"{entry['card_sha'][:8]}-{d}",
                       "games": 100 if self._rate(entry["card_sha"], d) else 0, "rate": self._rate(entry["card_sha"], d),
                       "updated": "2026-11-02T10:00:00" if self._rate(entry["card_sha"], d) else None,
+                      "not_meaningful": (entry["card_sha"], d) in self.not_meaningful,
                       "source": {"kind": "forge"}} for d in chosen["decks"]]
         played = [o for o in opponents if o["rate"]]
         overall = None
@@ -241,6 +253,7 @@ class ByListGauntlet(FakeGauntlet):
                 "updated": "2026-11-02T10:00:00" if played else None, "note": None, "notes": []}
 
     def compare(self, entry, before, chosen, keep_now=None, keep_before=None, cat=None):
+        self.compared += 1
         ids = [d for d in chosen["decks"] if self._rate(entry["card_sha"], d) and self._rate(before["card_sha"], d)]
         if not ids:
             return None
@@ -254,9 +267,9 @@ class ByListGauntlet(FakeGauntlet):
         self.noted.append((entry["card_sha"], space))
         return entry["card_sha"] in self.per
 
-    def older(self, entry, chosen, keep=None, cat=None, today_keys=(), space="home", limit=300):
+    def older(self, entry, chosen, keep=None, cat=None, today_keys=(), space="home", limit=300, played=()):
         self.olders.append((list(today_keys), space, limit))
-        return self.older_answer
+        return self.older_by.get(entry["card_sha"], self.older_answer)
 
 
 class ApiCase(GauntletApiTestCase):
@@ -313,6 +326,15 @@ class PreviousListTests(ApiCase):
         self.assertEqual(view["compare"], found["compare"])
         self.assertEqual(view["before"], found["before"])
 
+    def test_not_meaningful_rows_are_never_moved(self):
+        self.g.per = {self.sha(8): {i: 0.41 for i in self.ids}, self.sha(9): {self.ids[0]: 0.8, self.ids[1]: 0.8}}
+        self.g.not_meaningful = {(self.sha(9), self.ids[0]), (self.sha(8), self.ids[1])}
+        rows = {o["id"]: o for o in self.view()["opponents"]}
+        self.assertFalse(rows[self.ids[0]]["moved"])            # today's isn't meaningful
+        self.assertFalse(rows[self.ids[1]]["moved"])            # nor the earlier one's
+        self.assertIsNone(rows[self.ids[1]]["before"])
+        self.assertEqual(rows[self.ids[0]]["before"]["rate"], 0.41)
+
     def test_a_reverted_list_is_skipped(self):
         # Revisions A, B, A: today's list is A again, so the previous one is B.
         self.history({GRUUL: [revision(GRUUL, 1, _text(9), op="A"), revision(GRUUL, 2, _text(8)),
@@ -329,15 +351,70 @@ class PreviousListTests(ApiCase):
         asked = []
         real = inventory.deck_revisions_with_text
 
-        def counted(deck_id, limit):
-            asked.append(limit)
-            return real(deck_id, limit)
+        def counted(deck_id, limit, before=None):
+            asked.append((limit, before))
+            return real(deck_id, limit, before)
         self.g.has_notes = lambda entry, space: True        # every list has notes, but none has games
         with mock.patch.object(inventory, "deck_revisions_with_text", counted):
             found = self.summary()
-        self.assertEqual(asked, [gauntlet_before.MAX_REVISIONS + 1])
+        self.assertEqual(asked, [(gauntlet_before.PAGE, None)])
         self.assertEqual(len(self.g.views), 1 + gauntlet_before.MAX_VIEWS)
         self.assertEqual(found["state"], "untested")
+        self.assertIn(gauntlet_before.NOT_ALL, found["notes"])      # never silent about the lists left
+
+    def test_table_only_revisions_dont_use_up_the_bound(self):
+        # 60 table refreshes and reprices of today's list after the change: the earlier list is still found.
+        today = [revision(GRUUL, n, _text(9) + f"\n| Table row {n} |\n") for n in range(3, 63)]
+        self.history({GRUUL: [revision(GRUUL, 1, _text(8), op="A"), revision(GRUUL, 2, _text(9))] + today})
+        self.g.per = {self.sha(8): {self.ids[0]: 0.5}}
+        parsed = []
+        real = gauntlet_before._sections
+        with mock.patch.object(gauntlet_before, "_sections", lambda *a: parsed.append(1) or real(*a)):
+            found = self.summary()
+        self.assertEqual((found["state"], found["before"]["rate"]), ("stale_list", 0.5))
+        self.assertLessEqual(len(parsed), 3)                # the same lists aren't parsed again
+
+    def test_the_revisions_read_are_bounded_and_said(self):
+        same = [revision(GRUUL, n, _text(9) + f"\n| Table row {n} |\n") for n in range(2, 260)]
+        self.history({GRUUL: [revision(GRUUL, 1, _text(8), op="A")] + same})
+        self.g.per = {self.sha(8): {self.ids[0]: 0.5}}
+        asked = []
+        real = inventory.deck_revisions_with_text
+
+        def counted(deck_id, limit, before=None):
+            asked.append(limit)
+            return real(deck_id, limit, before)
+        with mock.patch.object(inventory, "deck_revisions_with_text", counted):
+            found = self.summary()
+        self.assertEqual(sum(asked[:-1]), gauntlet_before.MAX_REVISIONS)
+        self.assertEqual(asked[-1], 1)                      # only whether more are left
+        self.assertIsNone(found["before"])
+        self.assertIn(gauntlet_before.NOT_ALL, found["notes"])
+
+    def test_the_lists_looked_at_are_bounded_and_said(self):
+        lists = [revision(GRUUL, n, _text(10 + n), op="A" if n == 1 else "M") for n in range(1, 30)]
+        self.history({GRUUL: lists + [revision(GRUUL, 30, _text(9))]})
+        self.g.per = {self.sha(11): {self.ids[0]: 0.5}}      # the oldest list, past MAX_LISTS
+        found = self.summary()
+        self.assertIsNone(found["before"])
+        self.assertIn(gauntlet_before.NOT_ALL, found["notes"])
+
+    def test_the_kept_parts_are_cached_while_a_run_plays(self):
+        self.g.per = {self.sha(8): {i: 0.41 for i in self.ids}, self.sha(9): {self.ids[0]: 0.6}}
+        reads = []
+        real = inventory.deck_revisions_with_text
+        with mock.patch.object(inventory, "deck_revisions_with_text",
+                               lambda *a: reads.append(1) or real(*a)):
+            self.summary()
+            views, olders, compared = len(self.g.views), len(self.g.olders), self.g.compared
+            again = self.summary()                         # a poll: nothing new played
+            self.assertEqual((len(reads), len(self.g.views), len(self.g.olders), self.g.compared),
+                             (1, views + 1, olders, compared))
+            self.g.per[self.sha(9)][self.ids[1]] = 0.5     # a game lands: compare and older again
+            after = self.summary()
+        self.assertEqual(len(reads), 1)
+        self.assertEqual((again["compare"]["same"], after["compare"]["same"]), (1, 2))
+        self.assertEqual(len(self.g.olders), olders + 1)
 
     def test_lists_without_notes_are_never_viewed(self):
         self.history({GRUUL: [revision(GRUUL, n, _text(10 + n), op="A" if n == 1 else "M") for n in range(1, 8)]
@@ -348,13 +425,26 @@ class PreviousListTests(ApiCase):
         self.assertEqual(self.g.views, [self.sha(9), self.sha(11)])
         self.assertTrue(all(space == "home" for _, space in self.g.noted))
 
-    def test_deletions_unreadable_text_and_no_decklist_are_skipped(self):
-        self.history({GRUUL: [revision(GRUUL, 1, _text(8), op="A"), revision(GRUUL, 2, _text(7), op="D"),
-                              revision(GRUUL, 3, None), revision(GRUUL, 4, "# Gruul Test\n\nNo list.\n"),
+    def test_unreadable_text_and_no_decklist_are_skipped(self):
+        self.history({GRUUL: [revision(GRUUL, 1, _text(8), op="A"), revision(GRUUL, 2, None),
+                              revision(GRUUL, 3, "# Gruul Test\n\nNo list.\n"), revision(GRUUL, 4, _text(9))]})
+        self.g.per = {self.sha(8): {self.ids[0]: 0.5}}
+        self.assertEqual(self.summary()["before"]["rate"], 0.5)
+
+    def test_a_restore_goes_on_past_its_retirement(self):
+        self.history({GRUUL: [revision(GRUUL, 1, _text(8), op="A"), revision(GRUUL, 2, _text(7)),
+                              revision(GRUUL, 3, _text(7), op="D"), revision(GRUUL, 4, _text(7), op="A"),
                               revision(GRUUL, 5, _text(9))]})
-        self.g.per = {self.sha(7): {self.ids[0]: 0.3}, self.sha(8): {self.ids[0]: 0.5}}
+        self.g.per = {self.sha(8): {self.ids[0]: 0.5}}
+        self.assertEqual(self.summary()["before"]["rate"], 0.5)
+
+    def test_a_deck_made_again_under_the_id_is_another_deck(self):
+        # The old deck was deleted and a new one made under its id: its results are never "before".
+        self.history({GRUUL: [revision(GRUUL, 1, _text(8), op="A"), revision(GRUUL, 2, _text(8), op="D"),
+                              revision(GRUUL, 3, _text(7), op="A"), revision(GRUUL, 4, _text(9))]})
+        self.g.per = {self.sha(8): {self.ids[0]: 0.5}}
         found = self.summary()
-        self.assertEqual(found["before"]["rate"], 0.5)
+        self.assertEqual((found["before"], found["state"], found["notes"]), (None, "untested", []))
 
     def test_unreadable_revisions_leave_a_note(self):
         self.g.per = {self.sha(8): {self.ids[0]: 0.5}}
@@ -402,6 +492,20 @@ class OlderApiTests(ApiCase):
         self.g.per = {self.sha(8): {self.ids[0]: 0.5}}
         self.g.older_answer = {"reason": "pilot", "opponents": 1, "of": 3, "updated": None, "overall": None}
         self.assertEqual(self.summary()["state"], "stale_list")
+
+    def test_an_earlier_list_under_an_older_forge_is_said(self):
+        # The list changed and Forge too: the earlier list has notes, but no games under today's key.
+        self.g.has_notes = lambda entry, space: entry["card_sha"] == self.sha(8)
+        self.g.older_by = {self.sha(8): {"reason": "forge", "opponents": 3, "of": 3, "updated": "2026-11-01T10:00:00",
+                                         "overall": {"rate": 0.41, "low": 0.33, "high": 0.49}}}
+        found = self.summary()
+        self.assertEqual(found["state"], "stale_older")
+        self.assertEqual((found["older"]["reason"], found["older"]["earlier"]), ("forge", True))
+        self.assertIsNone(found["before"])
+        self.assertTrue(self.view()["older"]["earlier"])
+        # Once today's list has games, an earlier list's older results aren't claimed.
+        self.g.per = {self.sha(9): {self.ids[0]: 0.5}}
+        self.assertIsNone(self.summary()["older"])
 
     def test_an_older_failure_is_logged_not_raised(self):
         def broken(*args, **kwargs):

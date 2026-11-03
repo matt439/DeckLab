@@ -113,7 +113,8 @@ function deckOverviewGauntletBody(a, button) {
   // E3-S34: no games for this list under today's Forge: the old figure muted and the button to test it (Matchups;
   // nothing plays from here).
   if (a.state === "stale_list" || a.state === "stale_older") {
-    button.textContent = a.state === "stale_list" ? "Test the new list" : "Test it again";
+    button.textContent = a.state === "stale_list" || (a.older && a.older.earlier) ? "Test the new list"
+      : "Test it again";
     return [gtBeforeLine(a), gtOlderLine(a), playing];
   }
   const hardest = (a.hardest || []).map((o) => el("li", {}, el("span", { class: "gt-name", text: o.title }), " ",

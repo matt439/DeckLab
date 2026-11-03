@@ -420,6 +420,13 @@ class GauntletUiTests(unittest.TestCase):
           answers=[older('unknown',{opponents:null,overall:null})];node=await draw();
           assert.equal(node.querySelector('.gt-older').textContent,
             "Forge's version on the PC can't be confirmed now, so older results can't be matched.");
+          // An earlier list's older results (the list and Forge both changed) say the list changed first.
+          answers=[older('forge',{earlier:true})];node=await draw();
+          part=node.querySelector('.gt-older');
+          assert.equal(part.querySelectorAll('p')[0].textContent,
+            "The list changed since its last test. Results from an older Forge aren't shown.");
+          assert.equal(part.querySelectorAll('p')[1].textContent,
+            'Before the change, with the older Forge: 41% (33–49), 18 of 20 opponents (2 Nov).');
           assert.equal(writes.length,0);
           // With games for this list, the sentence is a small note under the headline, without the old figure.
           const a=played();

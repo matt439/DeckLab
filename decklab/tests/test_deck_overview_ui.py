@@ -420,5 +420,13 @@ class DeckOverviewUiTests(unittest.TestCase):
           assert(part.textContent.includes('With the older Forge: 41% (33–49), 18 of 20 opponents (2 Nov).'));
           assert(buttonText(part, 'Test it again'));
           assert(!part.textContent.includes("aren't set up on this PC"));
+          // An earlier list's older results: the list changed too, so the button tests the new list.
+          summary = done({state: 'stale_older', overall: null, played: 0, games: 0, hardest: [], updated: null,
+            before: null, compare: null,
+            older: {reason: 'forge', opponents: 18, of: 20, updated: day, earlier: true,
+              overall: {rate: .41, low: .33, high: .49}}});
+          part = await show(commanderPage());
+          assert(part.textContent.includes("The list changed since its last test. Results from an older Forge"));
+          assert(buttonText(part, 'Test the new list'));
           assert.equal(writes.length, 0);
         """)

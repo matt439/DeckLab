@@ -276,8 +276,9 @@ function gtBeforeLine(a) {
 }
 
 /** The list's saved results today's keys don't find (an older Forge, other settings, another pilot, opponents
- * rebuilt), said plainly, with the newest single-engine group's figure muted when there is one. note: only the
- * sentence, small, under a headline. Null without any. */
+ * rebuilt), said plainly, with the newest single-engine group's figure muted when there is one; an earlier list's
+ * (older.earlier: the list changed too) says the list changed first. note: only the sentence, small, under a
+ * headline. Null without any. */
 function gtOlderLine(a, { note = false } = {}) {
   const o = a.older;
   if (!o || !o.reason) return null;
@@ -287,10 +288,15 @@ function gtOlderLine(a, { note = false } = {}) {
       "when popular decks were rebuilt, so their results aren't shown."
     : GT_OLDER[o.reason];
   if (!text) return null;
-  if (note) return el("p", { class: "gt-small gt-older" }, simNumbers(text));
+  // earlier: an earlier list's results, which today's list has none of yet (the list and Forge both changed).
+  const said = o.earlier ? `The list changed since its last test. ${text}` : text;
+  if (note) return el("p", { class: "gt-small gt-older" }, simNumbers(said));
   const figure = GT_OLDER_WITH[o.reason] ? gtFigureWords(o.overall) : null, when = gtWhen(o.updated);
-  return el("div", { class: "gt-before gt-older" }, el("p", {}, simNumbers(text)),
-    figure ? el("p", {}, simNumbers(`${GT_OLDER_WITH[o.reason]}: ${figure}, ${n} of ${o.of || n} opponents` +
+  const label = o.earlier && GT_OLDER_WITH[o.reason]
+    ? `Before the change, ${GT_OLDER_WITH[o.reason].charAt(0).toLowerCase()}${GT_OLDER_WITH[o.reason].slice(1)}`
+    : GT_OLDER_WITH[o.reason];
+  return el("div", { class: "gt-before gt-older" }, el("p", {}, simNumbers(said)),
+    figure ? el("p", {}, simNumbers(`${label}: ${figure}, ${n} of ${o.of || n} opponents` +
       `${when ? ` (${when})` : ""}.`)) : null,
     figure ? gtBeforeBar(o.overall) : null);
 }

@@ -17,7 +17,7 @@ from pathlib import Path
 from unittest import mock
 
 from decklab.lib import access, api, jobs
-from decklab.lib.api import gauntlet_page, guard
+from decklab.lib.api import gauntlet_before, gauntlet_page, guard
 from decklab.lib import feature_routes
 from decklab.tests.test_api_permissions import PermissionTestCase
 
@@ -131,6 +131,8 @@ class GauntletApiTestCase(PermissionTestCase):
 
     def setUp(self):
         super().setUp()
+        gauntlet_before.clear_cache()           # E3-S34's kept parts: never from another test
+        self.addCleanup(gauntlet_before.clear_cache)
         self.forge = self.box.forge
         tmp = tempfile.TemporaryDirectory(prefix="decklab-gauntlet-api-")
         self.addCleanup(tmp.cleanup)

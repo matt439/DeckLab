@@ -365,16 +365,20 @@ def deck_revision(deck_id, number):
     return backend().deck_revision(deck_id, number)
 
 
-def deck_revisions_with_text(deck_id, limit):
+def deck_revisions_with_text(deck_id, limit, before=None):
     """The newest limit model.DeckRevisions of a deck with their texts, newest first, read at
     once where the backend can (the database: one query); a backend without that call reads
-    deck_revisions() and then each one's text. [] from the files backend."""
+    deck_revisions() and then each one's text. With before, only the revisions numbered below
+    it (the next page of a longer read). [] from the files backend."""
     current = backend()
     read = getattr(current, "deck_revisions_with_text", None)
     if read is not None:
-        return read(deck_id, limit)
+        return read(deck_id, limit) if before is None else read(deck_id, limit, before)
     found = []
-    for rev in current.deck_revisions(deck_id)[:limit]:
+    listed = current.deck_revisions(deck_id)
+    if before is not None:
+        listed = [rev for rev in listed if rev.revision < int(before)]
+    for rev in listed[:limit]:
         full = current.deck_revision(deck_id, rev.revision)
         found.append(rev if full is None else full)
     return found

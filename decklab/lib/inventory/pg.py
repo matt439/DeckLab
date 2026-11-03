@@ -491,9 +491,10 @@ class PgInventory:
         """The DeckRevision number of a deck with its text, or None."""
         return self._history(lambda c: pg_decks.revision(c, deck_id, int(number)), None)
 
-    def deck_revisions_with_text(self, deck_id, limit):
-        """The newest limit DeckRevisions of a deck with their texts, newest first: one connection, one query."""
-        return self._history(lambda c: pg_decks.revisions_with_text(c, deck_id, int(limit)), [])
+    def deck_revisions_with_text(self, deck_id, limit, before=None):
+        """The newest limit DeckRevisions of a deck with their texts, newest first (with before, those
+        numbered below it): one connection, one query."""
+        return self._history(lambda c: pg_decks.revisions_with_text(c, deck_id, int(limit), before), [])
 
     def last_revision(self, deck_id):
         """The newest DeckRevision of a deck, without its text, or None."""
