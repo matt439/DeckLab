@@ -136,7 +136,7 @@ class EditViewTests(EditorTestCase):
                                           "sleeves": None, "deck_box": None})
         self.assertEqual(view["accessories"], {"sleeves": [], "deck_box": []})
         self.assertEqual(view["field_text"]["Played by"], "either")
-        self.assertEqual(view["editable_fields"], ["status", "player", "archetype"])
+        self.assertEqual(view["editable_fields"], ["status", "player", "archetype", "sleeves", "deck_box"])    # building: kit offered
         self.assertEqual(view["sections"], ["Deck", "Sideboard"])
         self.assertEqual(lines(view["lists"]["owned"]), [(4, "Llanowar Elves", "fdn", "227", "nonfoil")])
         self.assertEqual(view["lists"]["target"]["Deck"][0]["card"]["name"], "Llanowar Elves")
@@ -855,7 +855,7 @@ class PersonSpaceTests(EditorTestCase):
 
 class KitOrderTests(EditorTestCase):
     """The order of deck.save and kit.set in one save (saving._KitThenSave), with a stand-in kit.set
-    that, like the real one, gives sleeves or a deck box only to a built deck."""
+    that, like the real one, gives sleeves or a deck box only to a building or built deck."""
 
     def setUp(self):
         super().setUp()
@@ -870,8 +870,9 @@ class KitOrderTests(EditorTestCase):
             parsed = ops_decks.parsed_deck(deck)
             self.calls.append(("kit.set", parsed.status, [(c["field"], c["value"]) for c in changes]))
             for change in changes:
-                if change["value"] is not None and parsed.status != "built":
-                    raise ops_decks.DeckRefused("Only a built deck has sleeves or a deck box", 400, "kit", [deck.id])
+                if change["value"] is not None and parsed.status not in decks.HOLDER_STATUSES:
+                    raise ops_decks.DeckRefused("Only a deck being built or built has sleeves or a deck box", 400,
+                                                "kit", [deck.id])
                 (decks.set_sleeves if change["field"] == "sleeves" else decks.set_deck_box)(parsed, change["value"])
             return inv.with_deck(deck.replace(text=decks.render_deck_file(parsed))), inventory.Summary("kit")
 
@@ -885,6 +886,8 @@ class KitOrderTests(EditorTestCase):
         self.addCleanup(patcher.stop)
 
     def test_making_a_deck_built_saves_it_then_chooses_its_kit(self):
+        self.save("casual/gruul-test", fields={"status": "idea"})
+        self.calls.clear()
         answer = self.save("casual/gruul-test", fields={"status": "built", "built_version": "owned",
                                                         "sleeves": "Green"})
         self.assertEqual(self.calls, [("deck.save",), ("kit.set", "built", [("sleeves", "Green")])])
@@ -893,8 +896,35 @@ class KitOrderTests(EditorTestCase):
         self.assertIn("- **Sleeves:** Green", text)
         self.assertEqual(answer["sha256"], self.sha("casual/gruul-test"))      # as stored
 
+    def test_an_idea_made_building_saves_it_then_chooses_its_kit(self):
+        self.save("casual/gruul-test", fields={"status": "idea"})
+        self.calls.clear()
+        self.save("casual/gruul-test", fields={"status": "building", "sleeves": "Green"})
+        self.assertEqual(self.calls, [("deck.save",), ("kit.set", "building", [("sleeves", "Green")])])
+        text = self.text("casual/gruul-test")
+        self.assertIn("- **Status:** building", text)
+        self.assertIn("- **Sleeves:** Green", text)
+
+    def test_a_building_deck_chooses_its_kit_then_keeps_it_when_built(self):
+        self.save("casual/gruul-test", fields={"sleeves": "Green"})          # gruul-test is building
+        self.assertEqual(self.calls, [("kit.set", "building", [("sleeves", "Green")]), ("deck.save",)])
+        self.calls.clear()
+        self.save("casual/gruul-test", fields={"status": "built", "built_version": "owned"})
+        self.assertEqual(self.calls, [("deck.save",)])                      # no kit change: nothing to choose
+        text = self.text("casual/gruul-test")
+        self.assertIn("- **Status:** built", text)
+        self.assertIn("- **Sleeves:** Green", text)
+
+    def test_a_building_deck_made_an_idea_clears_its_kit_first(self):
+        self.save("casual/gruul-test", fields={"sleeves": "Green"})
+        self.calls.clear()
+        self.save("casual/gruul-test", fields={"status": "idea"})
+        self.assertEqual(self.calls, [("kit.set", "building", [("sleeves", None)]), ("deck.save",)])
+        self.assertNotIn("Sleeves", self.text("casual/gruul-test"))
+
     def test_taking_a_deck_apart_clears_its_kit_first(self):
         self.save("casual/gruul-test", fields={"status": "built", "built_version": "owned", "sleeves": "Green"})
+        self.assertEqual(self.calls[0], ("kit.set", "building", [("sleeves", "Green")]))   # chosen while building
         self.calls.clear()
         answer = self.save("casual/gruul-test", fields={"status": "building"})
         self.assertEqual(self.calls, [("kit.set", "built", [("sleeves", None)]), ("deck.save",)])

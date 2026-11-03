@@ -133,6 +133,16 @@ class FileRetirementTests(_Fixture, unittest.TestCase):
         self.assert_api_error(409, self.retire)
         self.assert_unchanged(before)
 
+    def test_building_deck_holding_kit_cannot_be_retired(self):
+        # A deck being built may hold kit (an accessory id): it must be cleared before retirement.
+        self.put(DECK_ID, deck_text(status="building").replace(
+            "- **Status:** building\n", "- **Status:** building\n- **Deck box:** some-box\n"))
+        before = self.backend.load()
+        preview = retirement.retirement_view(DECK_ID)
+        self.assertFalse(preview["may_retire"])
+        self.assert_api_error(409, self.retire)
+        self.assert_unchanged(before)
+
     def test_member_permissions_apply_on_the_home_network_and_to_preview(self):
         before = self.backend.load()
         with mock.patch.object(access, "viewer", return_value="user1"):

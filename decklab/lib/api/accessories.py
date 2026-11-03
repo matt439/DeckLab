@@ -69,7 +69,9 @@ _STATUS_TITLE = "The products list"
 # ---- reading
 
 def _holder_rows(found):
-    """The holders lib/accessories._scan found, as the page lists them."""
+    """The holders lib/accessories._scan found, as the page lists them: status is a deck's
+    ("building" or "built"; a building deck is listed with or without kit, its need its Planned
+    list), None for a product."""
     inv = inventory.current()
     products = None
     out = []
@@ -81,7 +83,8 @@ def _holder_rows(found):
         else:
             deck = inv.deck(h["holder"])
             sha = deck.sha256 if deck is not None and deck.error is None else None
-        out.append({"id": h["holder"], "title": h["title"], "kind": h["kind"], "owner": h["owner"],
+        out.append({"id": h["holder"], "title": h["title"], "kind": h["kind"], "status": h.get("status"),
+                    "owner": h["owner"],
                     "need": accessories.sleeve_need(h["sections"]), "sleeves": h["sleeves"] or None,
                     "deck_box": h["deck_box"] or None, "holder_sha256": sha})
     return out
@@ -134,8 +137,9 @@ def accessories_view():
     every owner's, whether there's a list at all), items: [row + label, owner_name, image_url, used_by [{holder (None
     for a holder the viewer can't see), title, kind, need}], short], owners ([{id, name}] a row
     may be given), products (owned intact ones: {file, holder, title, sleeves: Ref, deck_box:
-    Ref, need, holder_sha256}), holders_options (every built deck and intact product: {id,
-    title, kind, owner, need, sleeves, deck_box, holder_sha256}), problems}. ApiError 403 for a
+    Ref, need, holder_sha256}), holders_options (every building or built deck and intact product:
+    {id, title, kind, status (a deck's "building" or "built", None for a product), owner, need,
+    sleeves, deck_box, holder_sha256}), problems}. ApiError 403 for a
     visitor who may not see the accessories (guard.sees_accessories). Only the rows, holders and
     products whose owner the viewer sees are listed (guard.accessory_owners)."""
     guard.require_sees_accessories()
@@ -525,7 +529,7 @@ def assign_accessory(body):
     inventory, as the page loaded it), "move_from"?
     (the holder those sleeves are taken from, cleared in the same change)}.
 
-    One kit.set operation: only a built deck or an owned product kept intact
+    One kit.set operation: only a building or built deck or an owned product kept intact
     takes sleeves or a deck box (clearing works on any), and only its owner's
     or shared ones (guard.holder_owner); the writer must see the holder's
     owner, the row's and move_from's (403, or 400 for the row, otherwise),

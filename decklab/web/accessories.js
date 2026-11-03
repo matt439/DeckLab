@@ -1,6 +1,6 @@
 /* The Accessories page (#/accessories): the sleeves, deck boxes and playmats saved in Deck Lab,
- * with their pictures, which built deck or intact product uses each, and the sleeves and deck box of
- * each product kept intact. Works on phones as well as desktops.
+ * with their pictures, which deck (being built or built) or intact product uses each, and the sleeves
+ * and deck box of each product kept intact. Works on phones as well as desktops.
  *
  * Also the pieces other pages use (deck.js, library.js, assembly.js and the editor):
  *     openAccessorySheet({kind, onSaved})   add an accessory (or, with row, edit one) in a sheet
@@ -346,9 +346,12 @@ function accCard(view, item) {
     chips.length ? el("div", { class: "chips acc-chips" }, chips) : null);
 }
 
-/** "Built decks without sleeves (N)": each built deck the viewer sees with no sleeves chosen, with Choose…. */
+/** "Built decks without sleeves (N)": each built deck the viewer sees with no sleeves chosen, with Choose….
+ * A deck being built is a holder too (holders_options' status "building"), but it may have no sleeves yet,
+ * so it isn't listed; an option without a status is a built deck's (an older answer). */
 function accUnsleevedPanel(view) {
-  const decks = (view.data.holders_options || []).filter((o) => o.kind !== "product" && !o.sleeves);
+  const decks = (view.data.holders_options || [])
+    .filter((o) => o.kind !== "product" && !o.sleeves && (o.status || "built") === "built");
   if (!decks.length) return null;
   return el("section", { class: "panel acc-unsleeved", "aria-labelledby": "acc-unsleeved-title" },
     el("h2", { id: "acc-unsleeved-title", text: `Built decks without sleeves (${decks.length})` }),
@@ -390,7 +393,7 @@ function accProductsPanel(view) {
     })));
 }
 
-/** Open the kit picker for a holder (a built deck or an intact product); its save shows the list again. */
+/** Open the kit picker for a holder (a deck being built or built, or an intact product); its save shows the list again. */
 function accChoose(view, holder, field, current) {
   if (!accessoriesActive(view) || view.busy) return;
   kitPicker({ holder: holder.holder, field, need: holder.need, current, holderSha: holder.holder_sha256, title: holder.title,
@@ -853,7 +856,7 @@ function showAccessoryConflict(ctx, error, body) {
 
 // ------------------------------------------------------------ the kit picker
 
-/** Choose a holder's sleeves or deck box in a sheet (any device): holder is a built deck's id or a
+/** Choose a holder's sleeves or deck box in a sheet (any device): holder is a building or built deck's id or a
  * product's ("product/<stem>"; a product deck's id works too), field "sleeves" or "deck_box", need the
  * sleeves its list needs, current its Ref (or value) now, holderSha the sha256 of its file as the page
  * loaded it (left out: the list's own). Sleeves another holder has ask whether to share them or move them

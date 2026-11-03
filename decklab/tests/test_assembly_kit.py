@@ -153,6 +153,37 @@ class AssemblyKitTests(_KitFixtures, PreparationCase):
         self.mark({**body, "kit": {"casual/a": self.choices("hers")}})
         self.assertEqual((self.parsed("a").sleeves, self.parsed("a").deck_box), ("hers", "box"))
 
+    def test_a_building_decks_chosen_kit_is_prefilled_and_kept(self):
+        # Kit chosen while building (linked ids) is the review's starting choice, and Finish building keeps it;
+        # the deck's own box (the only one) is never counted against itself.
+        self.make_deck("a", kit={"Sleeves": "mine", "Deck box": "box"})
+        plan, body = self.request()
+        self.assertEqual(plan["completion"]["decks"][0]["kit"],
+                         {"sleeves": "mine", "deck_box": "box", "need": 22, "editable": True})
+        self.mark(body)
+        after = self.parsed("a")
+        self.assertEqual((after.status, after.sleeves, after.deck_box), ("built", "mine", "box"))
+        self.make_deck("a", kit={"Sleeves": "mine", "Deck box": "box"})
+        _, body = self.request()
+        self.mark({**body, "kit": {"casual/a": self.choices("mine", "box")}})        # chosen again: still its own
+        self.assertEqual((self.parsed("a").status, self.parsed("a").deck_box), ("built", "box"))
+
+    def test_a_building_deck_holding_the_only_box_keeps_it_from_another(self):
+        self.make_deck("b", kit={"Deck box": "box"})                                  # building, not finishing
+        _, body = self.request("a")
+        before = inventory.current()
+        with self.assertRaises(ApiError) as caught:
+            self.mark({**body, "kit": {"casual/a": self.choices()}})
+        self.assertEqual(caught.exception.status, 409)
+        self.assertEqual(caught.exception.extra["taken_by"], [{"holder": "casual/b", "title": "B"}])
+        self.assertEqual(inventory.current(), before)
+
+    def test_a_building_deck_can_hand_its_box_to_another_finishing_with_it(self):
+        self.make_deck("a", kit={"Sleeves": "mine", "Deck box": "box"})
+        _, body = self.request("a", "b")
+        self.mark({**body, "kit": {"casual/a": self.choices("mine", None), "casual/b": self.choices("shared", "box")}})
+        self.assertEqual((self.parsed("a").deck_box, self.parsed("b").deck_box), (None, "box"))
+
     def test_two_decks_cannot_take_the_single_box_and_all_changes_roll_back(self):
         _, body = self.request("a", "b")
         before = inventory.current()

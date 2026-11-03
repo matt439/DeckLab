@@ -22,9 +22,8 @@ DECK = """# Player kit fixture
 
 - **Format:** Casual 60-card, 1v1
 - **Played by:** {player}
-- **Status:** built
-- **Built version:** target
-{kit}
+- **Status:** {status}
+{built}{kit}
 ## Decklist
 
 ```
@@ -47,6 +46,8 @@ Keep this fixture prose.
 
 
 class PlayerKitSaveTests(PermissionTestCase):
+    STATUS = "built"
+
     def setUp(self):
         super().setUp()
         sandbox_accessories(self)
@@ -71,7 +72,8 @@ class PlayerKitSaveTests(PermissionTestCase):
     def write_deck(self, player, sleeves=None, deck_box=None):
         kit = "".join(f"- **{header}:** {value}\n" for header, value in
                       (("Sleeves", sleeves), ("Deck box", deck_box)) if value)
-        _write(self.deck_path, DECK.format(player=player, kit=kit))
+        built = "- **Built version:** target\n" if self.STATUS == "built" else ""
+        _write(self.deck_path, DECK.format(player=player, kit=kit, status=self.STATUS, built=built))
 
     def saved_deck(self):
         saved = self.backend.load().deck(DECK_ID)
@@ -92,7 +94,7 @@ class PlayerKitSaveTests(PermissionTestCase):
     def assert_fields(self, player, sleeves, deck_box):
         deck = self.saved_deck()
         self.assertEqual((deck.player, deck.status, deck.sleeves, deck.deck_box),
-                         (player, "built", sleeves, deck_box))
+                         (player, self.STATUS, sleeves, deck_box))
         self.assertIn("Keep this fixture prose.", self.deck_path.read_text(encoding="utf-8"))
 
     def assert_one_apply(self, applied):
@@ -446,3 +448,16 @@ class PlayerKitSaveTests(PermissionTestCase):
         for hidden in ("private-sleeves", "private-deck-box", "Fixture private"):
             self.assertNotIn(hidden, json.dumps(answer))
         self.assertEqual(files.render(self.backend.load()), before)
+
+
+class BuildingPlayerKitSaveTests(PlayerKitSaveTests):
+    """Every transition above on a deck being built that holds kit (E8-S15's review applies alike):
+    a Played by change hands its kit on, or refuses, exactly as a built deck's."""
+    STATUS = "building"
+
+    def test_making_a_building_deck_an_idea_frees_its_kit_without_a_kit_choice(self):
+        self.write_deck("wife", "private-sleeves", "private-deck-box")
+        # Freeing someone else's kit isn't choosing it: it needs only deck.edit (Matt, an admin here).
+        self.save_player({"status": "idea"})
+        deck = self.saved_deck()
+        self.assertEqual((deck.status, deck.sleeves, deck.deck_box), ("idea", None, None))

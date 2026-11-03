@@ -1,4 +1,4 @@
-"""The unbuilt deck's kit guidance and sleeve choices in the real UI scripts."""
+"""A deck idea's kit guidance, a building or built deck's kit tiles and sleeve choices in the real UI scripts."""
 import json
 import subprocess
 import unittest
@@ -29,13 +29,13 @@ class DeckKitUiTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(result.stdout.strip(), "ok")
 
-    def test_an_unbuilt_overview_explains_when_and_where_kit_is_chosen(self):
+    def test_an_idea_overview_explains_when_and_where_kit_is_chosen(self):
         self.run_js("""
           api = async () => ({lists: [], sideboards: [], games: [], warnings: [], decks: {}});
-          const page = withKit(); page.version = 'owned';
+          const page = withKit(); page.version = 'owned'; page.summary.status = 'idea';
           clear(main); drawDeck(page);
           const kit = panel('overview').querySelector('.deck-kit');
-          assert(kit.textContent.includes('Choose sleeves and a deck box when you mark this deck built'));
+          assert(kit.textContent.includes('An idea has no sleeves or deck box: choose them once you start building it'));
           assert.equal(kit.querySelector('a').getAttribute('href'), '#/assembly?deck=casual%2Ftest&version=owned');
           assert.equal(kit.querySelectorAll('button').length, 0, 'the hint does not choose kit early');
           assert.equal(kit.querySelectorAll('.deck-kit-tile').length, 0);
@@ -43,7 +43,7 @@ class DeckKitUiTests(unittest.TestCase):
 
     def test_the_hint_respects_space_visibility_and_edit_rights(self):
         self.run_js("""
-          const page = withKit();
+          const page = withKit(); page.summary.status = 'idea';
           page.summary.kit = null;
           assert.equal(deckKit(page), null, 'hidden or unavailable kit is not inferred');
           page.summary.kit = withKit().summary.kit;
@@ -54,7 +54,7 @@ class DeckKitUiTests(unittest.TestCase):
           assert.equal(deckKit(page), null, 'a personal deck never receives home kit guidance');
           delete page.summary.space;
           assert.equal(deckKit(page), null, 'old summaries use the deck id to check space');
-          page.summary = withKit().summary;
+          page.summary = withKit().summary; page.summary.status = 'idea';
           state.may = {see_accessories: true, deck_spaces: [], home_player: 'wife'};
           assert.equal(deckKit(page), null, 'someone unable to mark this deck built gets no action hint');
           state.may.home_player = 'user';
@@ -68,7 +68,28 @@ class DeckKitUiTests(unittest.TestCase):
           const page = withKit(); page.summary.status = 'built';
           const kit = deckKit(page);
           assert.equal(kit.querySelectorAll('.deck-kit-tile').length, 2);
-          assert(!kit.textContent.includes('when you mark this deck built'));
+          assert(!kit.textContent.includes('when you mark it built'));
+        """)
+
+    def test_a_building_deck_shows_its_tiles_and_chooses_its_kit(self):
+        # A deck being built may hold sleeves and a deck box (chosen before it's marked built).
+        self.run_js("""
+          api = async () => ({lists: [], sideboards: [], games: [], warnings: [], decks: {}});
+          const page = withKit(); page.summary.holder_sha256 = 'a'.repeat(64);
+          assert.equal(page.summary.status, 'building');
+          clear(main); drawDeck(page);
+          let kit = panel('overview').querySelector('.deck-kit');
+          assert.equal(kit.querySelectorAll('.deck-kit-tile').length, 2);
+          assert.equal(kit.querySelectorAll('.deck-kit-choose').length, 2, 'Choose… for sleeves and the deck box');
+          assert(!kit.textContent.includes('An idea has no sleeves'));
+          page.summary.read_only = true;
+          kit = deckKit(page);
+          assert.equal(kit.querySelectorAll('.deck-kit-tile').length, 2);
+          assert.equal(kit.querySelectorAll('.deck-kit-choose').length, 0, 'read-only: tiles without Choose…');
+          page.summary.read_only = false; page.summary.kit.editable = false;
+          assert.equal(deckKit(page).querySelectorAll('.deck-kit-choose').length, 0, 'kit of another owner is not chosen here');
+          page.summary.kit.editable = true; page.summary.space = 'user2'; page.summary.id = 'user2/casual/test';
+          assert.equal(deckKit(page), null, 'a personal deck never shows home kit');
         """)
 
     def test_shared_sleeves_are_named_plainly_on_the_tile(self):

@@ -337,7 +337,7 @@ class ContractAdditionTests(EditorTestCase):
 
 
 class SleevesTests(EditorTestCase):
-    """The Sleeves header field: a built deck's sleeve colour, edited like Built version."""
+    """The Sleeves header field: a building or built deck's sleeve colour, edited like Built version."""
 
     NO_SLEEVES = "This deck is built: set Sleeves to the colour of its sleeves"
 
@@ -345,7 +345,7 @@ class SleevesTests(EditorTestCase):
         return [w for w in answer["warnings"] if "Sleeves" in w or "sleeves too" in w]
 
     def test_set_change_and_remove(self):
-        self.assertNotIn("sleeves", api.edit_view("casual/gruul-test")["editable_fields"])
+        self.assertIn("sleeves", api.edit_view("casual/gruul-test")["editable_fields"])       # a deck being built
         answer = self.save("casual/gruul-test", fields={"status": "built", "built_version": "target",
                                                         "sleeves": "  Dragon  Shield red "})
         self.assertIn("- **Status:** built\n- **Built version:** target\n- **Sleeves:** Dragon Shield red\n\n",
@@ -384,8 +384,10 @@ class SleevesTests(EditorTestCase):
                     id="casual/gruul-test", sha256=self.sha("casual/gruul-test"), fields={"sleeves": blank}))
                 self.assertEqual(error.extra["blocks"][0]["field"], "sleeves")
         _write(self.path("casual/gruul-test"), before)
-        # Only a built deck has sleeves.
+        # Only a deck being built or built has sleeves: a deck idea doesn't.
         check = api.check_draft(self.body(id="casual/table-test", fields={"sleeves": "Red"}))
+        self.assertEqual(check["blocks"], [])                       # table-test is building
+        check = api.check_draft(self.body(id="casual/table-test", fields={"status": "idea", "sleeves": "Red"}))
         self.assertEqual([b["field"] for b in check["blocks"]], ["sleeves"])
         # Other unknown fields are still refused.
         self.assertApiError(400, api.check_draft, self.body(id="casual/gruul-test", fields={"colour": "Red"}))
@@ -410,6 +412,30 @@ class SleevesTests(EditorTestCase):
                          ["field"], "sleeves")
         self.save("casual/gruul-test", fields={"sleeves": None})
         self.assertNotIn("Sleeves", self.text("casual/gruul-test"))
+
+    def test_a_building_deck_keeps_its_sleeves_until_made_an_idea(self):
+        answer = self.save("casual/gruul-test", fields={"sleeves": "Green"})         # gruul-test is building
+        self.assertIn("- **Status:** building\n", self.text("casual/gruul-test"))
+        self.assertIn("- **Sleeves:** Green\n", self.text("casual/gruul-test"))
+        self.assertEqual(self.sleeve_warnings(answer), [])
+        # Without sleeves, a deck being built isn't nagged to choose them.
+        self.assertFalse(any(w.startswith(self.NO_SLEEVES) for w in api.check_draft(
+            self.body(id="casual/table-test"))["warnings"]))
+        # Built, it keeps them; made an idea, they go.
+        self.save("casual/gruul-test", fields={"status": "built", "built_version": "target"})
+        self.assertIn("- **Sleeves:** Green\n", self.text("casual/gruul-test"))
+        # Taken apart with a new choice in the same save: blocked, as taking it apart frees its kit.
+        check = api.check_draft(self.body(id="casual/gruul-test", fields={"status": "building", "sleeves": "Red"}))
+        self.assertFalse(check["ok"])
+        self.assertEqual([(b["field"], b["problem"].startswith("Taken apart")) for b in check["blocks"]],
+                         [("sleeves", True)])
+        self.save("casual/gruul-test", fields={"status": "building"})                 # taken apart: freed
+        self.assertNotIn("Sleeves", self.text("casual/gruul-test"))
+        self.save("casual/gruul-test", fields={"sleeves": "Green"})
+        view = api.edit_view("casual/gruul-test")
+        answer = self.save("casual/gruul-test", fields=view["fields"] | {"status": "idea"})
+        self.assertNotIn("Sleeves", self.text("casual/gruul-test"))
+        self.assertEqual(answer["deck"]["fields"]["sleeves"], None)
 
     def test_warnings_for_no_colour_and_a_colour_another_built_deck_has(self):
         answer = self.save("casual/table-test", fields={"status": "built"})
@@ -443,13 +469,18 @@ class SleevesTests(EditorTestCase):
         error = self.assertApiError(400, api.create_deck, self.body(title="Unbuilt", kind="casual",
                                                                     fields={"sleeves": "Purple"}))
         self.assertEqual(error.extra["blocks"][0]["field"], "sleeves")
+        answer = api.create_deck(self.body(title="Underway", kind="casual",
+                                           fields={"status": "building", "sleeves": "Purple"}))
+        self.assertIn("- **Status:** building\n- **Sleeves:** Purple\n", self.text("casual/underway"))
+        self.assertFalse(any(w.startswith(self.NO_SLEEVES) for w in answer["warnings"]))
 
 
 class DeckBoxTests(EditorTestCase):
-    """The Deck box header field: kept like Sleeves (built decks only, gone when taken apart)."""
+    """The Deck box header field: kept like Sleeves (building and built decks only, gone when taken
+    apart or made an idea)."""
 
     def test_set_after_sleeves_changed_and_removed(self):
-        self.assertNotIn("deck_box", api.edit_view("casual/gruul-test")["editable_fields"])
+        self.assertIn("deck_box", api.edit_view("casual/gruul-test")["editable_fields"])      # a deck being built
         answer = self.save("casual/gruul-test", fields={"status": "built", "built_version": "target",
                                                         "sleeves": "Red", "deck_box": " Green  box "})
         self.assertIn("- **Sleeves:** Red\n- **Deck box:** Green box\n\n", self.text("casual/gruul-test"))
@@ -469,8 +500,11 @@ class DeckBoxTests(EditorTestCase):
                 self.assertEqual([b["field"] for b in check["blocks"]], ["deck_box"])
         self.assertTrue(api.check_draft(self.body(id="casual/gruul-test", fields={"deck_box": "x" * 40}))["ok"])
         check = api.check_draft(self.body(id="casual/table-test", fields={"deck_box": "Box"}))
+        self.assertEqual(check["blocks"], [])                       # table-test is building
+        check = api.check_draft(self.body(id="casual/table-test", fields={"status": "idea", "deck_box": "Box"}))
         self.assertEqual([(b["field"], b["problem"]) for b in check["blocks"]],
-                         [("deck_box", "Deck box is the box a built deck is kept in, so it's only for a built deck")])
+                         [("deck_box", "Deck box is the box a deck is kept in, so it's only for a deck being built "
+                                       "or built, not a deck idea")])
 
     def test_taking_a_built_deck_apart_removes_its_deck_box(self):
         self.save("casual/gruul-test", fields={"status": "built", "built_version": "target", "sleeves": "Red",
@@ -493,6 +527,8 @@ class DeckBoxTests(EditorTestCase):
         error = self.assertApiError(400, api.create_deck, self.body(title="Unbuilt", kind="casual",
                                                                     fields={"deck_box": "Box"}))
         self.assertEqual(error.extra["blocks"][0]["field"], "deck_box")
+        api.create_deck(self.body(title="Underway", kind="casual", fields={"status": "building", "deck_box": "Box"}))
+        self.assertIn("- **Status:** building\n- **Deck box:** Box\n", self.text("casual/underway"))
 
 
 ACCESSORIES = """id,kind,brand,name,colour,quantity,image,link,image_source,notes
@@ -597,15 +633,38 @@ class SleevesPageTests(unittest.TestCase):
              # Tiles: None, the older free text kept as "Keep" tiles (the file's and the draft's), "+ Add".
              "SleevesNoneNot recorded yetKeep “Blue”Not in the accessories listKeep “Green”"
              "Not in the accessories list+ Add new sleevesOther decks' sleeves: Red (Gruul Ramp).",
-             "false", '{"status":"idea","sleeves":null}', "Sleeves: “Blue” → removed (only a built deck has one)"])
-        stray = dict(built, status="building")
-        self.assertEqual(self.run_editor(stray, [
+             "false", '{"status":"idea","sleeves":null}', "Sleeves: “Blue” → removed (an idea has none)"])
+        # Taken apart (Built to Building): the line goes too, its cards back into storage unsleeved.
+        self.assertEqual(self.run_editor(built, [
+            "editor.fields.status = 'building'; String(fieldOffered('sleeves'))", "JSON.stringify(changedFields())",
+            "fieldChangeWords('sleeves', null)"]),
+            ["false", '{"status":"building","sleeves":null}',
+             "Sleeves: “Blue” → removed (taken apart: its cards go back into storage unsleeved)"])
+        # A deck being built holds kit too: its line is a real value, picked, changed or kept as it's built.
+        building = dict(built, status="building")
+        self.assertEqual(self.run_editor(building, [
             "String(fieldOffered('sleeves'))", "JSON.stringify(changedFields())",
-            "editor.fields.sleeves = null; JSON.stringify(changedFields())"]),
-            ["true", "{}", '{"sleeves":null}'])
-        self.assertEqual(self.run_editor(dict(stray, sleeves=None), [
-            "String(fieldOffered('sleeves'))", "editor.fields.status = 'built'; String(fieldOffered('sleeves'))"]),
-            ["false", "true"])
+            "editor.fields.sleeves = 'Green'; JSON.stringify(changedFields())",
+            "editor.fields.status = 'built'; String(fieldOffered('sleeves'))", "JSON.stringify(changedFields())",
+            "editor.fields.sleeves = null; fieldChangeWords('sleeves', null)",
+            # Made an idea: the line goes (an idea has no sleeves).
+            "editor.fields.status = 'idea'; String(fieldOffered('sleeves'))", "JSON.stringify(changedFields())",
+            "fieldChangeWords('sleeves', null)"]),
+            ["true", "{}", '{"sleeves":"Green"}', "true", '{"status":"built","sleeves":"Green"}',
+             "Sleeves: “Blue” → removed", "false", '{"status":"idea","sleeves":null}',
+             "Sleeves: “Blue” → removed (an idea has none)"])
+        self.assertEqual(self.run_editor(dict(building, sleeves=None), [
+            "String(fieldOffered('sleeves'))", "editor.fields.status = 'built'; String(fieldOffered('sleeves'))",
+            "editor.fields.status = 'idea'; String(fieldOffered('sleeves'))"]),
+            ["true", "true", "false"])
+        # An idea's line is stray: offered only to keep or remove it.
+        idea = dict(built, status="idea")
+        self.assertEqual(self.run_editor(idea, [
+            "String(fieldOffered('sleeves'))", "String(strayKit('sleeves'))",
+            "editor.fields.sleeves = null; JSON.stringify(changedFields())", "fieldChangeWords('sleeves', null)",
+            "editor.fields.status = 'building'; String(strayKit('sleeves'))"]),
+            ["true", "true", '{"sleeves":null}', "Sleeves: “Blue” → removed (an idea has none)", "false"])
+        self.assertEqual(self.run_editor(dict(idea, sleeves=None), ["String(fieldOffered('sleeves'))"]), ["false"])
 
     def test_a_deck_box_from_the_accessories_list(self):
         # A linked row reads as its name; taking the deck apart drops both kit lines.
@@ -631,6 +690,20 @@ class SleevesPageTests(unittest.TestCase):
             ["", "true", '{"deck_box":"boulder"}', "Deck box: not set → Ultimate Guard Boulder 100+ (black)",
              "[false,false]", "null|HHeld (blue)100 sleevesAlso used by Gruul Ramp", "75", "false",
              '{"status":"idea","sleeves":null}'])
+        # A deck being built chooses a deck box too, and needs sleeves for its Planned list, every section,
+        # even while the Play-now list is the one being edited.
+        building = dict(built, status="building", deck_box="boulder")
+        self.assertEqual(self.run_editor(building, [
+            f"editor.view.accessories = {json.dumps(rows)}; editor.id = 'casual/me'; ''",
+            "String(fieldOffered('deck_box'))", "fieldValueWords('deck_box', 'boulder')",
+            "JSON.stringify(kitTaken('deck_box', kitRows('deck_box')[0]))",
+            "editor.lists = { Deck: [{ qty: 60 }], Sideboard: [{ qty: 15 }] }; String(kitNeed())",
+            "editor.version = 'owned'; editor.view.lists = { owned: { Deck: [{ qty: 40 }] }, "
+            "target: { Deck: [{ qty: 58 }], Sideboard: [{ qty: 2 }] } }; String(kitNeed())",
+            "editor.fields.status = 'built'; JSON.stringify(changedFields())",
+            "editor.fields.status = 'idea'; JSON.stringify(changedFields())"]),
+            ["", "true", "Ultimate Guard Boulder 100+ (black)", '{"others":[],"none":false,"taken":false}', "75",
+             "60", '{"status":"built"}', '{"status":"idea","sleeves":null,"deck_box":null}'])
 
     def test_sleeves_another_deck_uses_are_warned_about_before_they_are_chosen(self):
         # Matt, 2026-10-19: choosing sleeves already in use asks first; free sleeves are chosen at once.
@@ -671,12 +744,19 @@ class SleevesPageTests(unittest.TestCase):
             "editor.fields.deck_box = null; JSON.stringify(changedFields())",
             "fieldChangeWords('deck_box', null)", "fieldChangeWords('sleeves', null)",
             "fieldChangeWords('built_version', null)",
+            "editor.fields.status = 'building'; fieldChangeWords('deck_box', null)",
             "editor.fields.status = 'idea'; fieldChangeWords('deck_box', null)",
             "fieldChangeWords('built_version', null)"]),
             ["", '{"deck_box":null}', "Deck box: Ultimate Guard Boulder 100+ (black) → removed",
              "Sleeves: “Blue” → removed", "Built version: planned list → removed",
-             "Deck box: Ultimate Guard Boulder 100+ (black) → removed (only a built deck has one)",
+             "Deck box: Ultimate Guard Boulder 100+ (black) → removed (taken apart: its cards go back into storage)",
+             "Deck box: Ultimate Guard Boulder 100+ (black) → removed (an idea has none)",
              "Built version: planned list → removed (only a built deck has one)"])
+        # On a deck that stays being built, None is simply removed too.
+        self.assertEqual(self.run_editor(dict(built, status="building", built_version=None), [
+            f"editor.view.accessories = {json.dumps(rows)}; editor.id = 'casual/me'; ''",
+            "editor.fields.deck_box = null; JSON.stringify(changedFields())", "fieldChangeWords('deck_box', null)"]),
+            ["", '{"deck_box":null}', "Deck box: Ultimate Guard Boulder 100+ (black) → removed"])
 
     def test_a_deck_box_with_quantity_0_says_none_left(self):
         built = {"status": "built", "player": "user", "archetype": None, "built_version": None,
@@ -722,29 +802,44 @@ class SleevesPageTests(unittest.TestCase):
             ("core.js", "accessories.js", "accessory-pictures.js")),
             ["[0.1,0.2,0.5,0.25]", "[null,null,null]", url, f"{url}#crop=0.1,0.1,0.5,0.5", "0.1235,0,0.5,0.3333", ""])
 
-    def test_back_from_built_a_stray_line_goes_back_to_the_files_value(self):
-        # A colour typed (or a list picked) while the status was Built isn't sent once it isn't: the
-        # stray line is offered only as Keep / Remove, which wouldn't show the typed value.
-        stray = {"status": "building", "player": "user", "archetype": None, "built_version": "target",
+    def test_back_to_idea_a_stray_line_goes_back_to_the_files_value(self):
+        # A colour typed (or a list picked) while the status was Building or Built isn't sent once it's an idea
+        # again: the stray line is offered only as Keep / Remove, which wouldn't show the typed value.
+        stray = {"status": "idea", "player": "user", "archetype": None, "built_version": "target",
                  "target_bracket": None, "sleeves": "Red"}
         self.assertEqual(self.run_editor(stray, [
             "globalThis.changed = () => {}; ''",
             "setField('status', 'built', false); editor.fields.sleeves = 'Blue'; "
             "editor.fields.built_version = 'owned'; JSON.stringify(changedFields())",
             "setField('status', 'idea', false); JSON.stringify(changedFields())",
+            "setField('status', 'building', false); editor.fields.sleeves = 'Blue'; JSON.stringify(changedFields())",
+            "setField('status', 'idea', false); JSON.stringify(changedFields())",
             # Remove it, picked before or after, stays picked.
-            "editor.fields.sleeves = null; setField('status', 'built', false); setField('status', 'building', false); "
+            "editor.fields.sleeves = null; setField('status', 'built', false); setField('status', 'idea', false); "
             "JSON.stringify(changedFields())"]),
-            ["", '{"status":"built","sleeves":"Blue"}', '{"status":"idea"}', '{"sleeves":null}'])
+            ["", '{"status":"built","sleeves":"Blue"}', '{}', '{"status":"building","sleeves":"Blue"}',
+             '{}', '{"sleeves":null}'])
+        # A deck being built keeps a value picked while it's built or being built; an idea in between drops it.
+        building = dict(stray, status="building", built_version=None)
+        self.assertEqual(self.run_editor(building, [
+            "globalThis.changed = () => {}; ''",
+            "editor.fields.sleeves = 'Blue'; JSON.stringify(changedFields())",
+            "setField('status', 'built', false); JSON.stringify(changedFields())",
+            "setField('status', 'idea', false); JSON.stringify(changedFields())",
+            "setField('status', 'building', false); JSON.stringify(changedFields())"]),
+            ["", '{"sleeves":"Blue"}', '{"status":"built","sleeves":"Blue"}', '{"status":"idea","sleeves":null}',
+             '{"sleeves":"Blue"}'])
 
     def test_a_new_deck(self):
         calls = ["editor = { mode: 'new', kind: 'casual', view: null, fields: { title: 'X', kind: 'casual', "
                  "archetype: '', player: 'user', status: 'idea', target_bracket: 2, sleeves: ' Pink ' } }; ''",
                  "String(fieldOffered('sleeves'))", "JSON.stringify(newDeckFields())",
-                 "editor.fields.status = 'built'; String(fieldOffered('sleeves'))", "JSON.stringify(newDeckFields())"]
+                 "editor.fields.status = 'built'; String(fieldOffered('sleeves'))", "JSON.stringify(newDeckFields())",
+                 "editor.fields.status = 'building'; String(fieldOffered('sleeves'))", "JSON.stringify(newDeckFields())"]
         self.assertEqual(_run_page(calls, ("core.js", "editor.js", "editor-drafts.js", "editor-considering.js", "editor-screen.js"))[1:],
                          ["false", '{"player":"user","status":"idea"}', "true",
-                          '{"player":"user","status":"built","sleeves":"Pink"}'])
+                          '{"player":"user","status":"built","sleeves":"Pink"}', "true",
+                          '{"player":"user","status":"building","sleeves":"Pink"}'])
 
     def test_a_new_decks_review_lists_its_sleeves(self):
         calls = ["editor = { mode: 'new', kind: 'casual', view: null, fields: { title: 'X', kind: 'casual', "
@@ -752,10 +847,11 @@ class SleevesPageTests(unittest.TestCase):
                  "globalThis.playerWords = (p) => p; ''",     # app.js's
                  "JSON.stringify(newDeckFacts().map(([k]) => k))",
                  "editor.fields.status = 'built'; JSON.stringify(newDeckFacts().filter(([k]) => k === 'Sleeves'))",
+                 "editor.fields.status = 'building'; JSON.stringify(newDeckFacts().filter(([k]) => k === 'Sleeves'))",
                  "editor.fields.sleeves = ''; JSON.stringify(newDeckFacts().filter(([k]) => k === 'Sleeves'))"]
         self.assertEqual(_run_page(calls, ("core.js", "editor.js", "editor-drafts.js", "editor-considering.js", "editor-screen.js", "editor-details.js", "editor-save.js"))[1:],
                          ['["Title","Format","Played by","Status","Archetype"]', '[["Sleeves","Pink"]]',
-                          '[["Sleeves","not set"]]'])
+                          '[["Sleeves","Pink"]]', '[["Sleeves","not set"]]'])
 
 
 

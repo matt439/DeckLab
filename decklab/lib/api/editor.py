@@ -64,10 +64,11 @@ def _file_edit_json(deck, p, warnings):
         editable_fields.append("built_version")
     if deck.kind == "commander":
         editable_fields.append("target_bracket")
-    # Sleeves likewise: a built deck's, or one left on a deck that isn't built.
-    if (deck.status == "built" and home) or deck.get_field("Sleeves") is not None:
+    # Sleeves likewise: a building or built home deck's, or one left on a deck idea.
+    holds_kit = deck.status in decks.HOLDER_STATUSES and home
+    if holds_kit or deck.get_field("Sleeves") is not None:
         editable_fields.append("sleeves")
-    if (deck.status == "built" and home) or deck.get_field("Deck box") is not None:
+    if holds_kit or deck.get_field("Deck box") is not None:
         editable_fields.append("deck_box")
     deck_id = deck.deck_id
     answer = {
@@ -138,7 +139,7 @@ def edit_view(deck_id):
     "name"}] of the Commander Brackets, for the bracket picker) and warnings.
     editable_fields has built_version for a built deck with both lists, and
     for any deck whose file has a Built version (so a stray one can be removed);
-    sleeves and deck_box likewise for a built deck or a file with that line
+    sleeves and deck_box likewise for a building or built home deck or a file with that line
     (fields.sleeves and fields.deck_box are an accessory id, or older free
     text). other_sleeves lists the sleeves other holders use ([{"id",
     "title", "sleeves"}], drafts.built_sleeves), for the Sleeves hint.

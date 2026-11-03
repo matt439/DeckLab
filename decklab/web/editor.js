@@ -67,7 +67,7 @@ const NEW_FIELDS = ["title", "kind", "archetype", "player", "status", "target_br
 const FIELD_WORDS = { title: "Title", kind: "Format", status: "Status", player: "Played by",
   archetype: "Archetype", built_version: "Built version", target_bracket: "Target bracket", sleeves: "Sleeves",
   deck_box: "Deck box", prose: "Write-up" };
-// A built deck's kit: header lines holding an accessory id (the accessories, in the database) or older free text.
+// A building or built deck's kit: header lines holding an accessory id (the accessories, in the database) or older free text.
 const KIT_FIELDS = ["sleeves", "deck_box"];
 const KIND_WORDS = { casual: "60-card, 1v1", commander: "Commander (100 cards)" };
 const OFFERED_SECTIONS = { casual: ["Deck", "Sideboard"], commander: ["Commander", "Deck", "Sideboard"] };
@@ -316,19 +316,26 @@ function builtVersionGoes() {
     && ed.base.fields.built_version != null;
 }
 
-/** True when this edit takes a built deck apart and its text has a Sleeves (or, key "deck_box", Deck box)
- * line: it goes too, since the cards go back into storage unsleeved (the server removes it as well). */
-function kitGo(key) {
+/** True when this edit frees a deck's kit: it takes a built deck apart (Status from Built to Building or Idea:
+ * its cards go back into storage unsleeved) or makes a deck being built an idea again (an idea holds no kit). */
+function kitLeaves() {
   const ed = editor;
-  return ed.mode === "edit" && ed.base.fields.status === "built" && ed.fields.status !== "built"
-    && ed.base.fields[key] != null;
+  if (ed.mode !== "edit") return false;
+  const was = ed.base.fields.status, now = ed.fields.status;
+  return (was === "built" && now !== "built") || (holdsKit(was) && !holdsKit(now));
 }
 
-/** A Sleeves or Deck box line the deck's text has although the deck isn't built: the editor offers it only to
- * remove it. */
+/** True when this edit frees the deck's kit (kitLeaves) and its text has a Sleeves (or, key "deck_box", Deck
+ * box) line: it goes too (the server removes it as well). */
+function kitGo(key) {
+  return kitLeaves() && editor.base.fields[key] != null;
+}
+
+/** A Sleeves or Deck box line the deck's text has although the deck is an idea (neither being built nor built)
+ * and stays one: the editor offers it only to remove it. */
 function strayKit(key) {
   const ed = editor;
-  return ed.mode === "edit" && ed.base.fields.status !== "built" && ed.fields.status !== "built"
+  return ed.mode === "edit" && !holdsKit(ed.base.fields.status) && !holdsKit(ed.fields.status)
     && ed.base.fields[key] != null;
 }
 
@@ -347,7 +354,8 @@ function fieldOffered(key) {
   // Nor are they shown to a person-space profile (mayDo("see_accessories")); the server leaves them out too.
   if (KIT_FIELDS.includes(key)) {
     if (!mayDo("see_accessories")) return false;
-    return (ed.fields.status === "built" && (!ed.space || ed.space === HOME_SPACE)) || strayKit(key);
+    // A deck being built or built picks them, unless this save frees its kit (kitLeaves: taken apart, or an idea).
+    return (holdsKit(ed.fields.status) && !kitLeaves() && (!ed.space || ed.space === HOME_SPACE)) || strayKit(key);
   }
   if (ed.mode === "new") return key !== "built_version" && (key !== "target_bracket" || ed.fields.kind === "commander");
   if (key === "built_version") return (ed.fields.status === "built" && hasBothLists()) || strayBuiltVersion();
@@ -370,15 +378,21 @@ function changedFields() {
   return out;
 }
 
-/** "Built version: owned-only version → removed (only a built deck has one)": a header change in words. */
+/** "Built version: owned-only version → removed (only a built deck has one)": a header change in words
+ * (a kit line freed by the status: "Sleeves: “Red” → removed (an idea has none)"). */
 function fieldChangeWords(key, value) {
   const was = fieldValueWords(key, editor.base.fields[key]);
   if (value == null && editor.base.fields[key] != null) {
-    // Only when the line goes because the deck isn't (or won't be) built: None picked on a deck that
-    // stays built, or a Built version cleared because the deck has one list now, is simply removed.
-    const unbuilt = key === "built_version" ? builtVersionGoes() || strayBuiltVersion()
-      : KIT_FIELDS.includes(key) && (kitGo(key) || strayKit(key));
-    return `${FIELD_WORDS[key]}: ${was} → removed` + (unbuilt ? " (only a built deck has one)" : "");
+    // Only when the line goes because of the status (a Built version off a deck that won't be built, kit off a
+    // deck taken apart or made an idea): None picked on a deck that keeps its kit, or a Built version cleared
+    // because the deck has one list now, is simply removed.
+    if (key === "built_version") {
+      return `${FIELD_WORDS[key]}: ${was} → removed` + (builtVersionGoes() || strayBuiltVersion() ? " (only a built deck has one)" : "");
+    }
+    const why = !KIT_FIELDS.includes(key) ? "" : strayKit(key) || (kitGo(key) && !holdsKit(editor.fields.status))
+      ? " (an idea has none)" : !kitGo(key) ? ""
+        : key === "sleeves" ? " (taken apart: its cards go back into storage unsleeved)" : " (taken apart: its cards go back into storage)";
+    return `${FIELD_WORDS[key]}: ${was} → removed` + why;
   }
   return `${FIELD_WORDS[key]}: ${was} → ${fieldValueWords(key, value)}`;
 }
@@ -394,7 +408,7 @@ function newDeckFields() {
   if (f.kind === "commander" && f.target_bracket) out.target_bracket = f.target_bracket;
   for (const key of KIT_FIELDS) {
     const value = norm(key, f[key]);
-    if (f.status === "built" && value) out[key] = value;
+    if (holdsKit(f.status) && value) out[key] = value;
   }
   return out;
 }
@@ -498,7 +512,7 @@ function kitTaken(key, row) {
 
 /** The sleeves the deck needs as this save would leave it: every card (sideboard and basics included) of
  * its built list, the Built version's or, without one, the owned-only version's when there is one
- * (drafts._built_sections' rule). */
+ * (drafts._built_sections' rule); a deck being built, its Planned list's. */
 function kitNeed() {
   const ed = editor;
   if (ed.mode === "edit" && ed.fields.status === "built" && Number.isInteger(ed.view?.assembled_need)) {
@@ -506,7 +520,8 @@ function kitNeed() {
   }
   let lists = ed.lists || {};
   if (ed.mode === "edit") {
-    const version = ed.fields.built_version || (hasBothLists() ? "owned" : "target");
+    const version = ed.fields.status === "building" ? "target"
+      : ed.fields.built_version || (hasBothLists() ? "owned" : "target");
     if (version !== ed.version) lists = (ed.view.lists && ed.view.lists[version]) || {};
   }
   return Object.values(lists).reduce((n, lines) => n + (lines || []).reduce((m, l) => m + (l.qty || 0), 0), 0);

@@ -284,6 +284,17 @@ class AccessoryKitTests(PreparationCase):
         self.assertEqual((deck["sleeves_need"], deck["kit"]["short"]), (24, 4))
         self.assertTrue(deck["kit"]["warnings"][0].startswith("Not enough sleeves: this deck needs 24"))
 
+    def test_a_building_deck_shows_its_linked_kit(self):
+        # Kit chosen while building is shown in the plan: its need is the selected list, and its box counts as held.
+        self.sleeved("a", "katana-black", status="building", target="Deck\n24 Forest\n")
+        self.sleeved("b", "katana-black", target="Deck\n12 Forest\n")
+        deck = self.preview(("a", "target"))["decks"][0]
+        self.assertEqual((deck["sleeves"], deck["sleeves_need"]), ("KMC Katana (Black)", 24))
+        self.assertEqual((deck["kit"]["short"], deck["kit"]["deck_box"]["label"]),
+                         (4, "Ultimate Guard Boulder 100+ (black)"))
+        self.assertEqual(deck["kit"]["shared_with"], ["B"])
+        self.assertIn("2 decks use Ultimate Guard Boulder 100+ (black) but 1 is recorded.", deck["kit"]["warnings"])
+
     def test_decks_in_the_same_sleeves_get_a_note_not_a_block(self):
         # E8-S20: one design may sleeve several decks; chosen together, the plan notes it.
         self.sleeved("a", "katana-black", target="Deck\n12 Forest\n")

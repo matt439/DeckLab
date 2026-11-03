@@ -76,10 +76,11 @@ class _KitThenSave:
     change (inventory.apply runs any object with run(inv)): a save that chooses, changes or
     clears a deck's kit (deck.save alone refuses any change to those lines, ops_decks.same_kit).
     The order follows the deck's status, since kit.set gives sleeves or a deck box only to a
-    built deck: a save that makes a deck built saves the text first (with the kit lines as they
-    were) and then chooses its kit; any other (a deck taken apart, or one that stays built) has
-    its kit changed first, then the text saved on what that leaves. A built deck changing
-    player clears its old kit, saves the new player without kit, then assigns the final
+    building or built deck: a save that makes an idea building or built saves the text first
+    (with the kit lines as they were) and then chooses its kit; any other (a deck taken apart or
+    made an idea, or one that stays building or built) has its kit changed first, then the text
+    saved on what that leaves. A building or built deck changing player (and keeping kit)
+    clears its old kit, saves the new player without kit, then assigns the final
     kit against that player, with every step inside the same inventory operation."""
     kind = "deck.save"
 
@@ -279,7 +280,9 @@ def save_deck(body):
 
     An empty target list for a deck that has cards needs "confirm_empty":
     true (a block otherwise). Taking a built deck apart (status built ->
-    building or idea) removes its Built version, Sleeves and Deck box."""
+    building or idea) removes its Built version, Sleeves and Deck box; a
+    building deck made an idea loses its Sleeves and Deck box too (a deck
+    being built keeps any it was given)."""
     data = _parse_body(body)
     profile = _writer(data)
     _keys(data, ("profile", "id", "sha256"), ("lists", "fields", "confirm_empty", "prose", "mark_current", "kit_rows"))
@@ -333,8 +336,10 @@ def save_deck(body):
     if out != stored.text:
         kit = _kit_changes(deck_id, before, decks.parse_deck(out.encode("utf-8"), slug, kind, path, deck.space))
         # A kit only freed (a deck taken apart) is no choice to check: anyone who may edit the deck may.
-        building = before.status != "built" and deck.status == "built"
-        handoff = before.status == deck.status == "built" and before.player != deck.player \
+        # kit.set gives kit only to a building or built deck: an idea made one is saved first.
+        building = before.status not in decks.HOLDER_STATUSES and deck.status in decks.HOLDER_STATUSES
+        keeps = before.status in decks.HOLDER_STATUSES and not decks.frees_kit(before.status, deck.status)
+        handoff = keeps and before.player != deck.player \
             and bool(any(ops_decks.kit_of(before)) or any(ops_decks.kit_of(deck)))
         known = ({(field, " ".join(value.split())) for field, value in zip(ops_decks.KIT_FIELDS, ops_decks.kit_of(deck))
                   if value and " ".join(value.split()) in {row.text("id") for row in inventory.current().accessories.rows}}
@@ -374,15 +379,16 @@ def _with_prose(out, prose, deck, slug, kind, path):
 
 
 def _require_kit_moves(profile, deck, fields):
-    """A save changing the Played by of a built deck that holds Sleeves or a Deck box hands that
+    """A save changing the Played by of a building or built deck that holds Sleeves or a Deck box
+    (and keeps holding them: not taken apart, nor made an idea) hands that
     kit to the new owner, so it's an accessories change: the profile must see the stored owner's
     kit (guard.sees_kit; 403 otherwise, without naming it) and may choose it for the new owner
     (guard.require_kit_choice over the kit the deck keeps)."""
     from decklab.lib import accessories
     if "player" not in fields or fields["player"] == deck.player:
         return
-    if (fields.get("status") or deck.status) != "built":
-        return                          # taken apart: its kit is freed, not handed on
+    if decks.frees_kit(deck.status, fields.get("status") or deck.status):
+        return                          # taken apart or made an idea: its kit is freed, not handed on
     kit = {key: fields[key] if key in fields else getattr(deck, key, None) for key in accessories.HOLDER_FIELDS}
     stored = [getattr(deck, key, None) for key in accessories.HOLDER_FIELDS]
     if not any(stored):
@@ -402,8 +408,8 @@ def create_deck(body):
     any library deck ("from": a product deck, Beginner Box half or pairing;
     the kind follows it). lists holds only "target" (default: the source's
     list, or empty). fields: archetype, player (default: the profile's
-    plays_as), status (default idea), sleeves and deck_box (a built deck's:
-    an accessory id, or free text) and, for Commander, target_bracket
+    plays_as), status (default idea), sleeves and deck_box (a building or
+    built deck's: an accessory id, or free text) and, for Commander, target_bracket
     (default 2). space (lib/spaces.py) is whose deck it is: "home" or a
     person's space (ApiError 404 for one config.json doesn't list); by
     default the profile's own (drafts._new_space). A member may create only

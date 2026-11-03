@@ -51,7 +51,7 @@ The routes and what each checks:
     POST /api/deck/save                           deck.edit on the deck as stored and as saved;
                                                   require_kit_choice too when Sleeves or Deck box
                                                   change (accessories_changed), or when Played by
-                                                  changes on a built deck holding them (the
+                                                  changes on a building or built deck holding them (the
                                                   stored owner's kit must be the profile's to see,
                                                   saving._require_kit_moves)
     POST /api/deck/cover                          deck.edit on the deck as stored (as a save of its text)
@@ -360,9 +360,12 @@ def accessories_changed(deck, fields):
     Deck box (deck: the DeckFile as it is on disk, None for a new deck), so
     the save needs accessories.edit as well: a member may edit their deck
     but not hand out the home's sleeves and boxes. Taking a built deck apart
-    (status built -> building or idea) clears both, and that alone doesn't
-    count: it frees them rather than choosing them."""
-    taken_apart = deck is not None and deck.status == "built" and fields.get("status") not in (None, "built")
+    (status built -> building or idea), or making a building deck an idea,
+    clears both, and that alone doesn't count: it frees them rather than
+    choosing them."""
+    from decklab.lib import decks
+    taken_apart = deck is not None and deck.status in decks.HOLDER_STATUSES and fields.get("status") is not None \
+        and decks.frees_kit(deck.status, fields["status"])
     for key in ("sleeves", "deck_box"):
         if key not in fields:
             continue

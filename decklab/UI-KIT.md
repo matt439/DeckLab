@@ -143,7 +143,8 @@ without replaying old instructions. Tests are `test_assembly_preferences.py` and
 `test_assembly_preference_ui.py`.
 
 `assembly-sheets.js` follows the progress script. Its final review collects the
-built list and kit for one save, and its stand-in chooser saves only planned
+built list and kit for one save (kit a building deck already holds is prefilled
+and kept unless changed; its own box isn't counted against it), and its stand-in chooser saves only planned
 physical markers. Sheets close on plan, route, person and away-lock changes;
 late work checks the original viewer, route and plan. Anonymous spare markers
 have required card-task ticks; optional kit and token ticks stay optional.
@@ -593,7 +594,8 @@ More's **Retire deck…** opens a sheet for an editable unbuilt saved deck
 (`deck-retirement.js`). Read its current eligibility, SHA and revision first;
 require a reason and explicit confirmation. Retiring retains its history and
 saved matchup links, with a link to History after success. Built decks and held
-kit must be taken apart or cleared by their owner first. A stale confirmation
+kit (a building deck's sleeves and deck box too) must be taken apart or cleared
+by their owner first. A stale confirmation
 requires a fresh read. Close the sheet on navigation, profile changes and the
 away lock, and ignore late responses from its old context.
 
@@ -723,6 +725,7 @@ Per-viewer conveniences only, through core.js's `local` (every key gets the pref
 ## Other shared pieces added by the pages
 
 - Build decks (`assembly.js`) sorts each storage group by ascending mana value, then name, with unknown values last. Card-step and group headings count copies, including basic lands; totals stay fixed as ticks change. Per-deck `finishes` describe the selected list: uniform foil/etched uses `cardTile`'s finish chip, mixed finishes show the list quantities. Returns never inherit target-list finishes. The sticky bar's **Mark as built** action is enabled after the card tasks are checked and the server confirms availability and edit permission; optional token and kit ticks do not block it. Saving keeps the checked checklist visible and shows Built on each saved deck. Selection changes disable completion until the new preview arrives, and failed saves retain ticks with an inline Refresh plan action.
+- `holdsKit(status)` (core.js) is the one test of whether a deck status may hold sleeves and a deck box: true for `building` and `built` (E8-S24), matching the server's `HOLDER_STATUSES`. The editor, deck page, Packing plan and Sleeves & boxes page use it; an idea never shows kit pickers, only Keep / Remove for a stray line.
 - `accessoryThumb` (accessories.js) draws a dashed "None chosen" slot when nothing is chosen, on the deck page, Build decks, the kit pickers and the editor's Sleeves and Deck box tiles (its None tile; older free text shows its first letter).
 - `tokenThumb(url, px, pt)` (tokens.js) is a token's picture or, with none or one that won't load, the token placeholder of `design/visual-design.md` 4.10: a white disc with an `--ink-3` ring and the P/T inside (a target glyph when the P/T isn't known). A token with no printing shows example art of a token with that name, labelled "Example art": on the Tokens page's tiles (`tokTileParts`) beside the picture; on the deck page's token rows (the API's `example` beside a need's `image`) the closed row's 28px thumb is unlabelled and the label sits in the opened row's body.
 - The deck page's Tokens part (`deck-tokens.js`, E7-S33) draws each token as a compact native `<details>` row (`.token-row`, at least `--tap` high): the 28px `tokenThumb`, the name with its P/T, `tokenStateChip`'s short words only when the token isn't ready, and a short count and `tokenPeakShort` estimate on the right; the full words are in the row's body, so they stay in the DOM. Groups and side notes are closed disclosures (`.deck-tokens-group`, and one "What Deck Lab can't see, and how it works these out"), never extra headings or paragraphs.

@@ -28,8 +28,9 @@ class AccessoriesUiTests(unittest.TestCase):
         products:[{file:'la.csv',holder:'product/la',title:'Lightning Aggro',need:75,holder_sha256:'b'.repeat(64),
           sleeves:{value:'red',id:null,state:'text',label:'red'},deck_box:null}],
         holders_options:[{id:'casual/izzet-otters',title:'Izzet Otters',kind:'deck',need:75,sleeves:'ds-black',
-          deck_box:null,holder_sha256:'c'.repeat(64)},{id:'casual/gruul',title:'Gruul',kind:'deck',need:60,
-          sleeves:null,deck_box:null,holder_sha256:'d'.repeat(64)}]};
+          deck_box:null,holder_sha256:'c'.repeat(64),status:'built'},{id:'casual/gruul',title:'Gruul',kind:'deck',need:60,
+          sleeves:null,deck_box:null,holder_sha256:'d'.repeat(64)},{id:'casual/slow-build',title:'Slow Build',kind:'deck',
+          need:61,sleeves:null,deck_box:null,holder_sha256:'e'.repeat(64),status:'building'}]};
     """
 
     def test_accessories_page_draws_and_goes_busy(self):
@@ -44,6 +45,8 @@ class AccessoriesUiTests(unittest.TestCase):
                                'Built decks without sleeves (1)', 'Gruul']) {
             assert(text.includes(words), words);
           }
+          // A deck being built may have no sleeves yet, so it isn't nagged (Gruul's option has no status: a built deck's).
+          assert(!main.querySelector('.acc-unsleeved').textContent.includes('Slow Build'));
           // Unused is the usual case, so it has no chip.
           for (const words of ['Free', 'Not in use', '“red” (not in the list)']) assert(!text.includes(words), words);
           const labelled = (label) => main.querySelectorAll('button').find(b => b.getAttribute('aria-label') === label);

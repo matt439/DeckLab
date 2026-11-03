@@ -138,6 +138,9 @@ older code (the committed tests/fixtures/inventory_goldens):
   test_listed_prices checks the fields themselves.
 - "trial-defaults": E3-S39 adds a deck summary's "trial" (the precon file of a trial deck);
   only a None "trial" is dropped (trial_defaults()), so a golden still compares every other field.
+- "building-holders": a deck being built may hold kit (building_holders()): the scan's and the
+  Accessories page's additive holder "status", building decks holding no kit there, and the need
+  of a building deck page's kit holding none (now its Planned list's) are dropped.
 """
 import copy
 import re
@@ -880,6 +883,43 @@ def absent_shop_prices(dump):
     golden_shop_prices.normalise(dump, _profiles())
 
 
+def building_holders(dump):
+    """"building-holders": a deck being built may hold kit (E8-S24), so accessories._scan lists
+    every building deck as a holder and gives each deck holder its "status", and the Accessories
+    page's holders_options gives each option its "status"; a building deck's page counts its
+    kit's need from its Planned list, whichever list is shown. Only that additive "status", the
+    building decks holding no kit (no golden scenario has one with kit) and the need of a
+    building deck page's kit holding none are dropped."""
+    def keep(entry):
+        return not (isinstance(entry, dict) and entry.get("status") == "building"
+                    and not entry.get("sleeves") and not entry.get("deck_box"))
+
+    for mine in [dump, *((dump.get("by_viewer") or {}).values())]:
+        views = mine.get("deck_view") if isinstance(mine, dict) else None
+        for view in views.values() if isinstance(views, dict) else []:
+            summary = view.get("summary") if isinstance(view, dict) else None
+            kit = summary.get("kit") if isinstance(summary, dict) else None
+            if isinstance(kit, dict) and summary.get("status") == "building" \
+                    and not kit.get("sleeves") and not kit.get("deck_box"):
+                kit.pop("need", None)
+
+    def walk(value):
+        if isinstance(value, dict):
+            for key in ("found", "holders_options"):
+                entries = value.get(key)
+                if isinstance(entries, list):
+                    value[key] = [entry for entry in entries if keep(entry)]
+                    for entry in value[key]:
+                        if isinstance(entry, dict) and ("sections" in entry or "holder_sha256" in entry):
+                            entry.pop("status", None)
+            for item in value.values():
+                walk(item)
+        elif isinstance(value, list):
+            for item in value:
+                walk(item)
+    walk(dump)
+
+
 def trial_defaults(dump):
     """Drop only E3-S39's additive deck-summary "trial" when it's None (no deck in a golden is a
     trial deck): any dict with an "id" whose "trial" is None, wherever the summaries are."""
@@ -909,7 +949,8 @@ EXPECTED_P5 = (("deck-id-messages", deck_id_messages), ("phase-5-wording", phase
                ("departed-defaults", departed_defaults), ("counter-defaults", counter_defaults),
                ("opponent-token-defaults", opponent_token_defaults), ("token-peak-defaults", token_peak_defaults),
                ("absent-shop-prices", absent_shop_prices), ("role-target-defaults", role_target_defaults),
-               ("listed-printings", listed_printings), ("trial-defaults", trial_defaults))
+               ("listed-printings", listed_printings), ("trial-defaults", trial_defaults),
+               ("building-holders", building_holders))
 
 
 def normalise(dump):

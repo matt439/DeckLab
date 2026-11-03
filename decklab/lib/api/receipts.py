@@ -121,7 +121,7 @@ def receipt_view(order=None):
       card has no matching deck; the whole list is None for tokens, while the card data isn't
       ready, or when the decks can't be read; colors is the same Planned identity as the library,
       from the target sections already read (None unknown, [] known colourless);
-    - "kits": {deck id: {"sleeves": name}} for the built decks those name, only where this viewer
+    - "kits": {deck id: {"sleeves": name}} for the building and built decks those name, only where this viewer
       sees that deck's sleeves (guard.sees_kit, the accessories' owner rule), for "Where these go";
     - "face_names": Scryfall's token face names when the order has a tokens component ([] while
       the card data isn't ready), for the token sheet's suggestions;
@@ -346,10 +346,11 @@ def _incoming_label(inv, component):
 
 
 def _kits(uses):
-    """{deck id: {"sleeves": name}} of the built decks in uses whose sleeves this viewer sees
-    (guard.sees_kit); none for a viewer who sees no accessories."""
+    """{deck id: {"sleeves": name}} of the building and built decks in uses whose sleeves this
+    viewer sees (guard.sees_kit); none for a viewer who sees no accessories."""
+    from decklab.lib import decks
     built = {summary["id"]: summary for found in uses.values() for summary, _ in found
-             if summary["status"] == "built"}
+             if summary["status"] in decks.HOLDER_STATUSES}
     owners = guard.accessory_readers()
     if not built or (owners is not None and not owners):
         return {}

@@ -156,7 +156,7 @@ class FeatureUiTests(unittest.TestCase):
           }
           assert(main.querySelectorAll('a').some(a => a.getAttribute('href') === '#/accessories'));
           assert.equal(main.querySelectorAll('.assembly-kit').flatMap(k => k.querySelectorAll('.box-warn')).length, 1);
-          // No sleeves recorded on a deck that isn't built: a way to the deck, not a picker.
+          // No sleeves recorded on a deck that isn't building or built (or isn't a choice): a way to the deck, not a picker.
           const none = main.querySelectorAll('.assembly-kit')[2];
           assert.equal(none.querySelector('a').getAttribute('href'), '#/deck?id=casual%2Fnone&v=target');
         """)
@@ -176,6 +176,16 @@ class FeatureUiTests(unittest.TestCase):
           assert.equal(choose.textContent, 'Choose sleeves');
           choose.click();
           same(picked.map(o => [o.holder, o.field, o.need, o.title]), [['casual/gruul', 'sleeves', 60, 'Gruul']]);
+          // A deck being built may hold kit too: the same picker; an idea gets a way to the deck.
+          for (const [status, picks] of [['building', true], ['idea', false]]) {
+            clear(main);
+            drawAssembly({choices:[{id:'casual/gruul',title:'Gruul',status,versions:['target']}],rows:[],ready:true,
+              counts_confirmed:true,unresolved:[],warnings:[],note:'',token_note:'',totals:{waiting:0,missing:0},tokens:[],
+              token_plan:[],decks:[deck]},routeToken);
+            const kit = main.querySelector('.assembly-kit');
+            assert.equal(Boolean(kit.querySelector('button')), picks, status);
+            if (!picks) assert.equal(kit.querySelector('a').textContent, 'Open the deck');
+          }
         """)
 
     def test_packing_plan_steps_tiles_progress_and_shared_ticks(self):
@@ -341,9 +351,11 @@ class FeatureUiTests(unittest.TestCase):
           same([opened.holder, opened.field, opened.need, opened.holderSha, opened.current.value],
                ['casual/otters','sleeves',75,'c'.repeat(64),'red']);
           assert(labelled(head, 'Choose a deck box for Otters'));
-          // An unbuilt editable deck explains when kit is chosen (E8-S05).
+          // An editable deck idea explains when kit is chosen (E8-S05); a deck being built chooses it.
           clear(main);
-          assert(deckKit({...page, summary: {...summary, status: 'building'}}).textContent.includes('Choose sleeves and a deck box when you mark this deck built'));
+          assert(deckKit({...page, summary: {...summary, status: 'idea'}}).textContent.includes('choose them once you start building it'));
+          head = deckKit({...page, summary: {...summary, status: 'building'}});
+          assert(labelled(head, 'Choose sleeves for Otters') && labelled(head, 'Choose a deck box for Otters'));
           // A product gets Choose… once the accessories list says it's kept intact.
           clear(main);
           api = async (path) => { assert.equal(path, '/api/accessories');

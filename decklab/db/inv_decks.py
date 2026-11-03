@@ -42,8 +42,9 @@ decklist and remove that line, deck push.
 
 new makes a deck from FILE (read as push reads it) in the space (home by default): the slug must
 be a valid one, not taken in that space by a deck of either kind (compared without case). delete
-removes a deck (its history stays; a built deck holding sleeves or a deck box must be taken apart
-first). A deck can't be renamed: make the new one and delete the old.
+removes a deck (its history stays; a building or built deck holding sleeves or a deck box must
+have them cleared first, a built one by taking it apart). A deck can't be renamed: make the new
+one and delete the old.
 
 history lists a deck's saved revisions, newest first (a deleted deck's too), with who saved each,
 when (in this PC's time zone) and its whole message; revision prints (or writes to FILE) one
@@ -454,16 +455,16 @@ def expected(deck, expect):
 def _push_op(inv, *, deck_id, text, base_sha256, changes):
     """push's operation when the Sleeves or Deck box lines change: kit.set chooses them (with the
     picker's checks) and deck.save writes the rest of the text, in one change. kit.set gives kit
-    only to a built deck, and deck.save keeps the kit lines as they are, so a push that makes the
-    deck built first saves the text with the deck's current kit lines, then runs kit.set, then
-    saves the text as pushed; any other push runs kit.set first (a deck losing its kit as it stops
-    being built must be cleared while still built)."""
+    only to a building or built deck, and deck.save keeps the kit lines as they are, so a push
+    that makes an idea building or built first saves the text with the deck's current kit lines,
+    then runs kit.set, then saves the text as pushed; any other push runs kit.set first (a deck
+    losing its kit as it's taken apart or made an idea must be cleared while it still holds it)."""
     from decklab.lib import decks
     from decklab.lib.inventory import Summary, ops_accessories, ops_decks
     deck = inv.deck(deck_id)
     before = ops_decks.parsed_deck(deck)
     found = decks.parse_deck(text.encode("utf-8"), deck.slug, deck.kind, None, deck.space)
-    if before is not None and before.status != "built" and found.status == "built":
+    if before is not None and before.status not in decks.HOLDER_STATUSES and found.status in decks.HOLDER_STATUSES:
         old_sleeves, old_box = ops_decks.kit_of(before)
         decks.set_sleeves(found, old_sleeves or None)
         decks.set_deck_box(found, old_box or None)
@@ -604,7 +605,8 @@ def after_notes(deck_id, verbose=False):
             print(f"Tokens: couldn't be checked ({e}).")
     try:
         titles = {h["title"] for entries in accessories.holders().values() for h in entries}
-        # A kit line on a deck that isn't built is named by the deck's id ("casual/x has Sleeves ...").
+        # A kit line on a deck idea is named by the deck's id ("casual/x has Sleeves ..."); a building or
+        # built deck's kit problems by its title.
         problems = [p for p in accessories.check()
                     if names_holder(p, found.title, titles) or p.startswith(f"{deck_id} has ")]
     except Exception as e:              # noqa: BLE001 - notes only

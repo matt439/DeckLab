@@ -470,7 +470,8 @@ def _with_examples(result):
 def _view_kit(summary, sections, warnings):
     """(kit, holder_sha256) for deck_view: accessories.kit() with the need
     counted from the built version for a built deck file (and a product's
-    whole list), else from the version shown ("would need"); and the sha256
+    whole list), from the Planned list for a deck being built, else from the
+    version shown ("would need"); and the sha256
     of the file an assign must still match (the deck file, or a product's
     status.csv as rendered from the inventory; None for a pairing). kit is None when it can't be worked
     out, and for a deck in a person's space (accessories are home's), with
@@ -487,7 +488,8 @@ def _view_kit(summary, sections, warnings):
             holder_sha = deck.sha256 if deck is not None and deck.error is None else None
     except (decks.DeckNotFound, OSError, StateError):
         pass
-    built = summary.get("status") == "built" and not deck_id.startswith(("product/", "pairing/"))
+    # A building deck's own default is its Planned list (accessories.kit), whichever list is shown.
+    built = summary.get("status") in decks.HOLDER_STATUSES and not deck_id.startswith(("product/", "pairing/"))
     try:
         from .accessories import read_kit
         kit = read_kit(deck_id, None if built else sections)

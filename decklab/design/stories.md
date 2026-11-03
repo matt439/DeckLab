@@ -42,11 +42,11 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E5: Decide what to buy](#e5-decide-what-to-buy) | 29 | 22 | 4 | 1 | 2 |
 | [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 23 | 21 | 0 | 0 | 2 |
 | [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 29 | 28 | 1 | 0 | 0 |
-| [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 19 | 16 | 0 | 1 | 2 |
+| [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 20 | 17 | 0 | 1 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 24 | 18 | 1 | 4 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 35 | 31 | 1 | 1 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 53 | 37 | 5 | 7 | 4 |
-| **Total** | **304** | **252** | **19** | **17** | **16** |
+| **Total** | **305** | **253** | **19** | **17** | **16** |
 
 Counted from the story headers on 2026-10-29 after the source-aware two-player and pod counters, alongside the current feature and maintenance work. The reviews added five feature stories and eight hygiene stories, then the fixture-only entry-point story E11-S44, and corrected E1-S12 from missing to partial. Rechecked 2026-10-29: E1-S12 is built and E11-S39 partial (its database qualification pending). The TODO audit of 2026-10-29 added fifteen missing stories (twelve from the audit: E1-S27, E1-S28, E2-S27, E3-S25, E3-S26, E5-S25, E6-S25, E6-S26, E9-S26, E9-S27, E11-S45, E11-S46), then Matt's three UI requests (E3-S27, E5-S26, E6-S27), and corrected E7-S32 from missing to partial (its recognition spike and CLI are built). Matt closed E11-S16 as built the same day, and E3-S27, E5-S26, E6-S25, E6-S27 and E11-S46 were built the same day (E11-S12 stays partial after a further slice). Later the same day E5-S25 and E6-S26 were built, E1-S27's first slice (the library) made it partial, and E11-S12 and E3-S26 were built. E1-S27's Overview slices then finished it, and E2-S27 and E9-S27 were built. E1-S28 was built the same day. E3-S25's first slice (its replacements API, 2026-10-29) made it partial. Its dual-lands slice (2026-10-29) finished it. E11-S45 was built the same day. Recounted 2026-10-30: E7-S23's first slice (the token side on deck pages and the printout) made it partial. E7-S24's read-only slice (the counters and dice a deck's cards use) made it partial too. E9-S26's free cards by role on the Stats tab made it partial, leaving its cited role targets to Matt's choice of template; with the Command Zone template's targets (2026-10-31) it is built. Recounted 2026-10-31: E11-S47 (built 2026-10-30) was missing from the E11 row. E4-S16 was built (sideboard-plan tests). E7-S23's second slice (the opponent's tokens under their own heading and counted apart in the library line and the packing ticks) finished it. E7-S08 was built (token counts suggested from saved Forge games), and E9-S07 too (new decks and narrowed pages). Later on 2026-10-31 E11-S39 was built (its database qualification ran), E11-S31 became partial (global search built, its device check left), E11-S30 kept its device gate, and E7-S24 was built once migration 0020 was applied. Matt's self-hosting decisions of 2026-10-31 (Windows first; strangers install their own, family and friends join as members; release zips; currency as a setting) added E11-S48 to E11-S53, all missing; E11-S48 was built the same day, in three slices. Matt's expansion review of 2026-10-31 added twelve missing stories for work no story covered: E1-S29, E4-S27, E5-S27 to E5-S30, E9-S28, E9-S29 and E11-S54 to E11-S57. Matt's request of 2026-11-01 to run the live server on Linux added E11-S58, built the same day. Matt's deck-page question of 2026-11-02 added E5-S31, built the same day. Recounted 2026-11-02: E7-S33 (built 2026-11-02) was missing from the E7 row. The gauntlet design of 2026-11-02 added E3-S28 to E3-S31; E3-S28 and E3-S29 were built the same day, and E3-S30 and E3-S31 are missing. Later on 2026-11-02 the first slices of E5-S27 (Shopping's Baskets), E5-S28 (Build decks together) and E9-S29 (tutors on the Stats tab) made them partial, as the first slices of E1-S29 (the card viewer's decks line) and E5-S30 (the Wishlist page's short decks) made them, and E11-S56 (an empty space's start) was built. Matt's report of 2026-11-02 that the Against popular decks box is too wide added E3-S32, missing. On 2026-11-03 Matt decided E5-S29 is wanted (it stays missing, now ready) and E11-S54 and E4-S27 aren't (not wanted). Later on 2026-11-03 E3-S32 was built, E5-S29's first slice (the 90-day history and `shops history`) made it partial, and E1-S29 gained global search's short form (still partial). Matt's gauntlet decisions of 2026-11-03 (it's the lead feature; a standard sample of 20 core and upgraded Commander opponents; runs up to every playable deck, overnight; Matchups to be renamed Testing) added E3-S33 to E3-S38: E3-S33 and E3-S38 were built the same day, and E3-S34 to E3-S37 are missing. Later on 2026-11-03 E3-S34 was built, then E3-S35 (Matchups renamed Testing, next to Decks, with the Popular decks board), then E3-S36 (the popular-decks figure in the library) and E3-S37 (an editor choice to test against popular decks after saving). Matt's request of 2026-11-03 to try a precon before buying it added E3-S39, built the same day.
 
@@ -221,7 +221,7 @@ As a deck builder, I want to rename a deck and to retire one I no longer want, f
 
 - Given a deck I may change (not a product or pairing), when I rename it from More > Rename deck…, then after a reviewed preview and confirmation its title and id change within its space and format, and its revisions and matchup results come with it; the old address still opens the deck.
 - Given a deck that isn't built, when I retire it from More > Retire deck… with a reason, then it leaves the library, its history stays readable and it can be restored from History.
-- Given a built deck, when I look, then Retire isn't offered; the server refuses a built deck (take it apart first) or one still holding sleeves or a deck box (clear them first), and `deck delete` refuses a built deck holding kit.
+- Given a built deck, when I look, then Retire isn't offered; the server refuses a built deck (take it apart first) or one still holding sleeves or a deck box (clear them first), and `deck delete` refuses any deck holding kit, building or built (E8-S24).
 
 Now: Retire built 2026-10-15 ([HISTORY.md, Retire and restore deck ideas](../HISTORY.md#retire-and-restore-deck-ideas-2026-10-15)); rename built 2026-10-16 ([HISTORY.md, Rename decks with retained history and links](../HISTORY.md#rename-decks-with-retained-history-and-links-2026-10-16)).
 
@@ -407,7 +407,7 @@ As a themed-deck player on my phone, I want to change my deck's cards, notes, he
 
 - Given a phone under 600px (or on its side), when I tap Edit on a deck I may edit, then the Quick edit opens with compact rows and steppers, and Add cards opens a search sheet that stays open for the next card.
 - Given the Quick edit, when I open my deck, then I can edit its Notes and Substitutes and press Mark write-up as current.
-- Given the Quick edit, when I open its details, then I can set Archetype and Built version, and for a built home deck its Sleeves and Deck box, as on the tablet.
+- Given the Quick edit, when I open its details, then I can set Archetype and Built version, and for a building or built home deck its Sleeves and Deck box, as on the tablet.
 - Given the Quick edit, when I choose Paste a list, then I get the same Add or Replace preview as the full editor.
 - Given I press Save, when the save succeeds, then a toast confirms it and the change shows in History under my name.
 
@@ -578,7 +578,7 @@ Evidence:
 As a deck builder finishing a deck, I want to set a deck's status, player, archetype, built version, sleeves and deck box while editing, so that the deck's header matches the physical deck.
 
 - Given Deck details, when I set Status, Played by (home only), Archetype and Target bracket, then they are saved in the header lines.
-- Given a built home deck, when I open the Sleeves or Deck box picker, then tiles show only accessories its player may use (their own and shared), with '75 needed · 100 owned · 25 spare', and a design other holders also use says "Also used by X" and can still be chosen.
+- Given a building or built home deck, when I open the Sleeves or Deck box picker, then tiles show only accessories its player may use (their own and shared), with '75 needed · 100 owned · 25 spare', and a design other holders also use says "Also used by X" and can still be chosen.
 - Given I move a deck from Built back to Building, when I save, then Built version, Sleeves and Deck box are removed.
 - Given a person's deck, when it is saved with Played by, Sleeves or Deck box, then the save is refused.
 
@@ -1295,7 +1295,7 @@ Evidence:
 
 As a player who has just finished putting a deck together, I want to record from the packing plan that the deck is now physically built, with its sleeves and deck box, so that the shared pool counts its cards as in use and the library shows it as built, without a separate trip to the editor.
 
-- Given every card check of a deck in the plan is ticked, when I choose Mark as built, then a review asks for its sleeves and deck box (its owner's or shared ones), and the deck's status becomes built in the same change.
+- Given every card check of a deck in the plan is ticked, when I choose Mark as built, then a review asks for its sleeves and deck box (its owner's or shared ones; kit already chosen while it was being built is prefilled and kept unless changed), and the deck's status becomes built in the same change.
 - Given the deck has both lists, then the review asks which list was built (Built version); changing it returns to fresh card checks.
 - Given the change is saved, then the affected decks' availability tables are refreshed in the same change; if a table can't be refreshed, then the result says so and links to Tables out of date.
 - Given I cancel the review, then nothing is written; ticks alone never change a deck's status.
@@ -3124,16 +3124,16 @@ Evidence:
 
 As User1, who has finished putting one of her decks together, I want to choose its sleeves and deck box from my phone, so that the deck records the kit it's actually in, without needing the iPad or the PC.
 
-- Given a built deck I may change, when I tap Choose… under Sleeves on its Overview, then a picker shows my and shared designs with '75 needed · 100 owned · 25 spare' or 'N short'.
-- Given a deck that isn't built, when I open its Overview, then it says sleeves and a box are chosen when it's marked built.
+- Given a building or built deck I may change, when I tap Choose… under Sleeves on its Overview, then a picker shows my and shared designs with '75 needed · 100 owned · 25 spare' or 'N short'.
+- Given a deck idea, when I open its Overview, then it says an idea has no sleeves or deck box and they're chosen once I start building it or when it's marked built.
 - Given I pick a deck box, when its capacity is smaller than the deck, then the tile says 'Too small: holds 80' as a warning, not a refusal.
 - Given I save, then the deck text's Sleeves and Deck box lines hold accessory ids and the change is one revision.
-- Given a built deck, when I set its status back to building or idea and save it on the page, then its Built version, Sleeves and Deck box lines are removed and its kit is free again.
+- Given a built deck, when I set its status back to building or idea and save it on the page, then its Built version, Sleeves and Deck box lines are removed and its kit is free again; a building deck made an idea loses its Sleeves and Deck box lines the same way.
 
 Evidence:
 - `decklab/web/deck.js`: deckKit, deckKitTile; `decklab/web/accessories.js`: kitChip, drawKitPicker
 - `decklab/lib/api/accessories.py`: assign_accessory; `decklab/lib/api/drafts.py` (kit lines cleared when a deck is taken apart)
-- `decklab/tests/test_deck_kit_ui.py`: test_an_unbuilt_overview_explains_when_and_where_kit_is_chosen, test_the_sleeve_picker_shows_spare_zero_and_short_after_this_decks_need
+- `decklab/tests/test_deck_kit_ui.py`: test_an_idea_overview_explains_when_and_where_kit_is_chosen, test_the_sleeve_picker_shows_spare_zero_and_short_after_this_decks_need
 - `decklab/tests/test_assembly_sections_safeguards.py`: test_take_apart_clears_only_physical_state_and_rebuild_installs_a_new_generation
 
 **E8-S07** · Matt · wont · S · not_wanted
@@ -3167,7 +3167,7 @@ As Matt, keeping a product intact, I want a product kept intact to have one slee
 
 - Given an owned product kept intact, when I open Products kept intact on #/accessories or the product's deck page, then I can Choose… its sleeves and deck box.
 - Given its sleeves, then the need is the total of all its decks.
-- Given a product that isn't owned and intact, when I try to give it sleeves, then it's refused ('Only a built deck or a product kept intact has sleeves or a deck box').
+- Given a product that isn't owned and intact, when I try to give it sleeves, then it's refused ('Only a deck being built or built, or a product kept intact, has sleeves or a deck box').
 - Given an intact product, then only shared accessories are offered, and its design may also be one a built deck uses.
 
 Evidence:
@@ -3272,14 +3272,14 @@ As Claude Code, working for Matt at the PC, I want typed commands to list, check
 - Given a removal, when I omit `--reason`, then it's refused; a row a holder uses can't be removed.
 - Given `accessories check`, when a rule is broken, then it prints each problem and exits 1.
 - Given `product kit STEM` printed a sha for an owned intact product, when I run `product set-kit STEM --expect SHA` with one or both kit choices and a nonblank `-m`, then those choices save in one change, `none` clears one, an omitted one stays, and a stale sha is refused.
-- Given a deck holding sleeves or a deck box, when I run `deck delete`, then it's refused until the deck is unbuilt.
+- Given a deck holding sleeves or a deck box (building or built), when I run `deck delete`, then it's refused until its kit is cleared (a built deck taken apart).
 
 Evidence:
 - `decklab/db/inv_accessories.py`: _check, _write, expected
 - `decklab/db/product_kit.py`: show, save
 - `decklab/tests/test_inventory_accessories.py`: test_a_token_is_the_viewers_and_a_stale_one_refuses, test_a_used_row_cant_be_removed_change_kind_or_owner
 - `decklab/tests/test_product_kit_cli.py`: test_set_both_then_clear_one_preserves_omitted_field_and_other_data, test_short_prefix_and_uppercase_work_but_stale_or_malformed_tokens_do_not
-- `decklab/tests/test_inventory_decks.py`: test_delete_refuses_a_built_deck_with_a_kit
+- `decklab/tests/test_inventory_decks.py`: test_delete_refuses_a_built_deck_with_a_kit, test_delete_refuses_a_building_deck_with_a_kit
 
 **E8-S19** · Matt · could · M · built
 
@@ -3306,7 +3306,7 @@ Scope: the Card list's labelled known-loose-copy scenario meets the stated crite
 
 As Matt, with more decks than sleeve designs, I want several built decks and intact products to use the same sleeves row, so that I can sleeve decks in the sleeves we have, and it's up to us not to play two decks in the same sleeves against each other.
 
-- Given a built deck, when I open the Sleeves picker on the deck page or in the editor, then a design other holders use can be chosen as it is, and its tile names those holders ('Also used by X', or 'one of User1's decks' for a holder I can't see).
+- Given a building or built deck, when I open the Sleeves picker on the deck page or in the editor, then a design other holders use can be chosen as it is, and its tile names those holders ('Also used by X', or 'one of User1's decks' for a holder I can't see).
 - Given I choose a design another holder already uses, on the deck page, in the editor or on Finish building, when I pick it, then I'm warned first ("Use X here too?", naming the other holders, a hidden one as "one of User1's decks") and it's saved only if I confirm; both holders then keep it in one change.
 - Given `deck push`, `deck new` or `product set-kit` gives a holder a design another holder already uses, when it saves (or previews), then it's accepted and prints a warning naming the other holders.
 - Given two holders in the same sleeves, or with the same sleeve colour, when `accessories check` or a deck's kit warnings run, then neither is reported as a problem, and the deck page's Sleeves tile names the other holders plainly ("Also sleeves X").
@@ -3393,6 +3393,34 @@ Evidence:
 - `api/collection_locations.py`, `feature_routes.py`, `inventory/ops_collection.py`: the protected `POST /api/collection/locations/bulk` route and pure `collection.locations` operation (`refresh=False`).
 - Protected runs passed 41 focused backend, 59 existing collection-edit and 106 UI/source checks, without skips. Independent backend/UI review and root review are clear; source files remain below 1,200 lines.
 - [HISTORY.md](../HISTORY.md#reviewed-bulk-storage-locations-2026-10-28-e8-s23) records the initial fixture-selector correction and separate parallel script-list integration. Genuine PostgreSQL audit/rollback and browser/device qualification remain unverified; no household migration or server action was performed.
+
+---
+
+**E8-S24** · Matt · should · M · built
+
+As Matt, sleeving a deck while I'm still putting it together, I want to choose its sleeves and deck box while its status is building, so that the kit it's going into is recorded and kept for it before the deck is finished.
+
+- Given a home deck whose status is building, when I open its Overview, the editor's Deck details, the Quick edit or the Packing plan, then I can choose its sleeves and deck box as for a built deck, with the same owner and visibility rules; a deck idea is still refused ('Only a deck being built or built, or a product kept intact, has sleeves or a deck box').
+- Given a building deck holding kit, then its sleeve need and deck box capacity are counted from its Planned list (every section) whichever list is shown, its deck box counts toward the box's quantity, sharing warnings name it, a row it uses can't be removed, re-kinded or given to an owner it can't use, and `accessories check` doesn't call its lines strays (an idea's lines still are).
+- Given a building deck without kit, then it raises no new warning or problem and still reserves no cards; the "no sleeves" reminder and the Sleeves & boxes page's **Built decks without sleeves** list stay built-only, though its pickers offer the building deck.
+- Given a building deck holding kit, when I mark it built (Finish building, the editor or `deck push`), then its kit is prefilled and kept unless I change it, and its own deck box isn't counted against it.
+- Given a built deck taken apart (back to building), or any deck made an idea, when it's saved, then its Sleeves and Deck box lines are removed; a text save or `deck push` keeping them is refused, and `deck new` refuses kit on an idea.
+- Given a building deck holding kit, when its Played by changes, then the same player-and-kit review as a built deck's (E8-S15) applies; when I delete or retire it, then it's refused until its kit is cleared.
+- Given a delivery bringing cards for a building deck holding sleeves, then Receive delivery's **Where these go** names those sleeves.
+
+Decided (Matt, 2026-11-03): the holder statuses are building and built (`HOLDER_STATUSES`); taking a built deck apart still clears its kit, since its cards go back into storage unsleeved; building decks reserve no cards.
+
+Now: built 2026-11-03 ([HISTORY.md](../HISTORY.md#sleeves-and-a-deck-box-while-a-deck-is-being-built-2026-11-03-e8-s24)); not yet tried on the household's devices.
+
+Evidence:
+- `decklab/lib/decks/deckfile.py`: HOLDER_STATUSES, frees_kit; `decklab/lib/accessories.py`: _scan, kit, check; `decklab/lib/inventory/ops_accessories.py`: _Holder.can_hold; `decklab/lib/inventory/ops_decks.py`: same_kit, delete, create
+- `decklab/lib/api/saving.py`, `drafts.py`, `editor.py`, `guard.py` (accessories_changed), `deck_page.py` (_view_kit), `receipts.py`, `accessories.py` (holders_options' `status`); `decklab/db/inv_decks.py`: _push_op
+- `decklab/web/core.js`: holdsKit; `editor.js`, `editor-details.js`, `editor-save.js`, `deck.js` (deckKit), `assembly.js` (assemblyKit), `accessories.js`
+- `decklab/tests/test_accessories.py`: test_building_decks_hold_their_planned_list, test_a_building_deck_counts_toward_a_deck_box, test_a_building_deck_without_kit_makes_no_problem, test_holder_statuses_agree
+- `decklab/tests/test_api_accessories.py`: test_a_building_deck_takes_kit_for_its_planned_list, test_a_deck_idea_is_400, test_holders_options_list_building_decks_with_their_status; `test_inventory_accessories.py`: test_a_building_deck_holds_kit_and_its_deck_box
+- `decklab/tests/test_inventory_decks.py`: test_delete_refuses_a_building_deck_with_a_kit, test_a_building_deck_keeps_its_kit_until_it_is_made_an_idea, test_create_refuses_kit_on_an_idea; `test_inv_decks.py`: test_push_gives_a_building_deck_kit_and_refuses_an_idea_kit, test_new_refuses_kit_on_an_idea
+- `decklab/tests/test_editor.py`: test_a_building_deck_chooses_its_kit_then_keeps_it_when_built, test_a_building_deck_made_an_idea_clears_its_kit_first; `test_editor_player_kit.py` (every case also on a building deck); `test_api_permissions_inventory.py` (kit visibility also on building decks)
+- `decklab/tests/test_assembly_kit.py`: test_a_building_decks_chosen_kit_is_prefilled_and_kept; `test_deck_kit_ui.py`: test_a_building_deck_shows_its_tiles_and_chooses_its_kit; `test_deck_retirement.py`: test_building_deck_holding_kit_cannot_be_retired; `test_receipts_api.py`: test_sleeves_show_for_building_decks_too_but_never_ideas
 
 ---
 
