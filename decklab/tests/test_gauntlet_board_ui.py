@@ -178,6 +178,53 @@ class GauntletBoardUiTests(unittest.TestCase):
           assert.equal(main.querySelector('.gb-command').textContent,'python -m decklab.lib.forge gauntlet build');
         """)
 
+    def test_older_counts_and_row_notes_show(self):
+        self.run_js("""
+          api=async()=>board('commander',[
+            row('commander/o','Older',{state:'stale_older',older:{reason:'forge',opponents:12,of:20,
+              overall:{rate:.41,low:.33,high:.49},updated:'2026-11-02T00:00:00Z',earlier:false}}),
+            row('commander/k','Rebuilt',{state:'stale_older',older:{reason:'catalogue',opponents:12,of:20,overall:null,
+              updated:null,earlier:false}}),
+            row('commander/u','Unread',{notes:["The list's earlier versions can't be read now."]})]);
+          open();await settle();
+          const items=main.querySelectorAll('.gb-row');
+          assert(items[0].textContent.includes('12 of 20 opponents'),items[0].textContent);
+          assert(items[1].textContent.includes("12 opponents' lists changed"));
+          assert(items[2].textContent.includes("The list's earlier versions can't be read now."));
+          assert(items[2].textContent.includes('Not tested against popular decks yet.'));
+        """)
+
+    def test_a_redraw_keeps_the_focus_on_the_same_rows_control(self):
+        self.run_js("""
+          let playing=null;const calls=[];
+          api=async url=>{calls.push(url);return board('commander',[tested('commander/c','Commander C',.6,{playing}),
+            tested('commander/d','Commander D',.5)]);};
+          open();await settle();
+          const view={mode:'popular',token:routeToken,profile:'matt',gbEntries:new Map(),gbFormat:'commander',
+            gbHost:main.querySelector('.gb')};
+          view.gbEntries.set('commander',{answer:board('commander',[tested('commander/c','Commander C',.6),
+            tested('commander/d','Commander D',.5)]),error:null,asked:1});
+          gbDrawEntry(view,view.gbEntries.get('commander'));
+          const second=main.querySelectorAll('.gb-row')[1];
+          const details=second.querySelectorAll('a').find(a=>a.textContent==='Details');details.focus();
+          const pending=[];api=(url)=>new Promise(resolve=>pending.push(resolve));
+          gbRefresh(view,null,{force:true});
+          assert.equal(main.querySelectorAll('.gb-row')[1],second);     // a read starting doesn't redraw
+          pending[0](board('commander',[tested('commander/c','Commander C',.6),tested('commander/d','Commander D',.5)]));
+          await settle();
+          assert.notEqual(main.querySelectorAll('.gb-row')[1],second);
+          assert.equal(document.activeElement.dataset.focus,'details:commander/d');
+          assert(main.contains(document.activeElement));
+          // Play focused, then the row plays: the focus goes to its Details.
+          button(main.querySelectorAll('.gb-row')[0],'Play').focus();
+          api=async()=>board('commander',[tested('commander/c','Commander C',.6,
+            {playing:{status:'queued',done:0,total:2000,standard:true}}),tested('commander/d','Commander D',.5)]);
+          gbRefresh(view,null,{force:true});await settle();
+          assert.equal(document.activeElement.dataset.focus,'details:commander/c');
+          assert(main.contains(document.activeElement));
+          clearTimeout(view.gbTimer);
+        """)
+
     def test_a_run_starting_or_ending_reads_the_board_again(self):
         self.run_js("""
           const calls=[];api=async url=>{calls.push(url);return board('commander',[tested('commander/c','Commander C',.6)]);};

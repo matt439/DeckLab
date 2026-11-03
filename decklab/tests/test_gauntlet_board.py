@@ -25,7 +25,7 @@ from decklab.tests.test_gauntlet_api import (ELVES, GRUUL, POPULAR, R_ELVES, SAM
 IDS = [p[0] for p in POPULAR]
 TWO = "casual/gruul-two"
 ROW_KEYS = {"deck", "state", "problem", "overall", "played", "of", "games", "updated", "hardest", "before",
-            "older", "playing"}
+            "older", "notes", "playing"}
 
 
 class BoardGauntlet(FakeGauntlet):
@@ -229,8 +229,53 @@ class BoardRowTests(BoardTestCase):
                                side_effect=AssertionError("no history walk")):
             row = next(r for r in self.board("matt")["rows"] if r["deck"]["id"] == GRUUL)
         self.assertEqual(row["state"], "stale_older")
-        self.assertEqual(row["older"], {"reason": "forge", "overall": {"rate": 0.45, "low": 0.3, "high": 0.6},
+        self.assertEqual(row["older"], {"reason": "forge", "opponents": 2, "of": 3,
+                                        "overall": {"rate": 0.45, "low": 0.3, "high": 0.6},
                                         "updated": "2026-10-01T10:00:00", "earlier": False})
+
+    def test_a_list_with_notes_but_no_games_is_still_walked(self):
+        # A run stopped or failed before its first game leaves the list's notes: the deck page still walks.
+        self.g.notes = {self.sha(GRUUL)}
+        self.g.orphans = {"home": {"d" * 64: (1, 2)}}
+        before = {"rate": 0.55, "low": 0.45, "high": 0.65, "played": 3, "of": 3, "games": 300,
+                  "updated": "2026-10-20T10:00:00"}
+        fields = {"before": before, "compare": None, "older": None, "notes": [], "rows": {}}
+        with mock.patch.object(gauntlet_board.gauntlet_page.gauntlet_before, "fields", return_value=fields) as walked:
+            row = next(r for r in self.board("matt")["rows"] if r["deck"]["id"] == GRUUL)
+        self.assertTrue(walked.called)
+        self.assertEqual(row["state"], "stale_list")
+
+    def test_an_unread_history_says_so_and_is_not_kept(self):
+        self.g.orphans = {"home": {"d" * 64: (1, 2)}}
+        no_history = gauntlet_board.gauntlet_page.gauntlet_before.NO_HISTORY
+        unread = {"before": None, "compare": None, "older": None, "notes": [no_history], "rows": {}}
+        with mock.patch.object(gauntlet_board.gauntlet_page.gauntlet_before, "fields", return_value=unread) as walked:
+            found = self.board("matt")
+            row = next(r for r in found["rows"] if r["deck"]["id"] == GRUUL)
+            self.assertEqual((row["state"], row["notes"]), ("untested", [no_history]))
+            calls = walked.call_count
+            self.board("matt")                      # neither the row nor the answer was kept
+            self.assertGreater(walked.call_count, calls)
+        before = {"rate": 0.55, "low": 0.45, "high": 0.65, "played": 3, "of": 3, "games": 300,
+                  "updated": "2026-10-20T10:00:00"}
+        back = {"before": before, "compare": None, "older": None, "notes": [], "rows": {}}
+        with mock.patch.object(gauntlet_board.gauntlet_page.gauntlet_before, "fields", return_value=back):
+            row = next(r for r in self.board("matt")["rows"] if r["deck"]["id"] == GRUUL)
+        self.assertEqual((row["state"], row["notes"]), ("stale_list", []))
+
+    def test_a_hidden_decks_list_is_not_an_orphan(self):
+        # The same space's decks the viewer doesn't see still say which noted lists are some deck's today, so
+        # the walks don't depend on the viewer (and never name the hidden deck).
+        two = self.sha(TWO)
+        self.g.orphans = {"home": {two: (1, 2)}}
+        real = guard.visible_decks
+        with mock.patch.object(guard, "visible_decks", side_effect=lambda s, *a: [d for d in real(s, *a) if
+                                                                                    (d if isinstance(d, str) else d["id"]) != TWO]), \
+                mock.patch.object(gauntlet_board.gauntlet_page.gauntlet_before, "fields") as walked:
+            found = self.board("matt")
+        self.assertFalse(walked.called)
+        self.assertNotIn(TWO, self.ids(found))
+        self.assertNotIn("Gruul Two", json.dumps(found))
 
     def test_no_history_walk_without_orphan_notes(self):
         with mock.patch.object(gauntlet_board.gauntlet_page.gauntlet_before, "_earlier",

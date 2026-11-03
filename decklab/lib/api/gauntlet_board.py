@@ -15,13 +15,15 @@ Imported when first asked for, by feature_routes.dispatch.
                          "hardest": {"title", "tier", "style", "rate", "low", "high", "verdict",
                                      "source"} or None (a gauntlet deck: public data),
                          "before": {"rate", "low", "high", "updated"} or None,
-                         "older": {"reason", "overall", "updated", "earlier"} or None,
+                         "older": {"reason", "opponents", "of", "overall", "updated", "earlier"} or None,
+                         "notes": [why the list's earlier versions weren't (all) looked at, ...],
                          "playing": None or {"status", "done", "total", "standard"}}
 
 Which decks: guard.visible_decks over the library (the viewer's own space and the public spaces;
 every deck for a script naming nobody), the format's decks only, no Beginner Box half (one plays
-only in a pairing) and none that can't be read. A deck the viewer may not see is never read,
-counted or named. Each row is the Planned list's (the summary's and the Overview's). Nothing
+only in a pairing) and none that can't be read. A deck the viewer may not see is never counted or
+named; it is read only in a space the viewer sees part of (a public space's product decks), and only
+to tell which noted lists are some deck's today (_orphans), so the walks don't depend on the viewer. Each row is the Planned list's (the summary's and the Overview's). Nothing
 inventory-derived (owned, missing, status, versions) is in the answer, nor any revision, Rankings or
 field number, starter's name or other house deck (hardest is a gauntlet deck).
 
@@ -37,10 +39,14 @@ It never plays, plans, estimates or saves a sample. Its work is cached at two le
   unchanged, at most CACHE_S; two reads of one key build it once.
 A row's "playing" (COORD_JOBS, never who started it) and the build command are never cached.
 
-E3-S34's history walk (gauntlet_before.fields) is done only for an untested list with no run notes
-of its own while the space has run notes of a list no deck has today; at most MAX_WALKS a
-request. A row past the bound shows as untested, isn't cached, and the answer says
-STILL_LOOKING; a later read fills it in.
+E3-S34's history walk (gauntlet_before.fields) is done only for a list with no games under today's
+keys while the space has run notes of a list no deck of the space has today (its own notes alone
+don't skip it: a run stopped or failed before its first game leaves a note too); at most MAX_WALKS a
+request. A row past the bound shows as untested (or with its own older results), isn't cached, and
+the answer says STILL_LOOKING; a later read fills it in. A row whose history couldn't be read
+(gauntlet_before.NO_HISTORY: the database) says so in its notes, and neither it nor the answer is
+cached. A list whose earlier version is exactly another deck's list today isn't walked (the deck's
+Testing tab still walks it): telling that apart needs every deck's history read on each build.
 """
 import threading
 import time
@@ -60,6 +66,7 @@ CACHE_S = 600
 UNREADABLE = "Forge can't read this list."
 NO_ROW = "Its results can't be worked out on the PC now."
 STILL_LOOKING = "Some lists' earlier results are still being looked at."
+HISTORY_NOTES = (gauntlet_page.gauntlet_before.NO_HISTORY, gauntlet_page.gauntlet_before.NOT_ALL)
 
 _rows = OrderedDict()               # row key -> (fingerprint, time, row)
 _answers = {}                       # answer key -> (fingerprint, time, (rows, notes))
@@ -91,7 +98,8 @@ def _deck(summary, entry):
 
 def _blank(summary, entry, state="untested", problem=None):
     return {"deck": _deck(summary, entry), "state": state, "problem": problem, "overall": None, "played": 0,
-            "of": 0, "games": 0, "updated": None, "hardest": None, "before": None, "older": None, "playing": None}
+            "of": 0, "games": 0, "updated": None, "hardest": None, "before": None, "older": None, "notes": [],
+            "playing": None}
 
 
 def _figure(found, *extra):
@@ -103,11 +111,14 @@ def _figure(found, *extra):
 def _row_of(summary, entry, fields):
     """A board row from _summary_of's fields."""
     older = fields.get("older")
+    notes = [n for n in fields.get("notes") or () if n in HISTORY_NOTES]
     return dict(_blank(summary, entry), state=fields["state"], overall=_figure(fields.get("overall")),
                 played=fields["played"], of=fields["of"], games=fields["games"], updated=fields.get("updated"),
                 hardest=(fields.get("hardest") or [None])[0], before=_figure(fields.get("before"), "updated"),
-                older=None if not older else {"reason": older.get("reason"), "overall": _figure(older.get("overall")),
-                                              "updated": older.get("updated"), "earlier": bool(older.get("earlier"))})
+                older=None if not older else {"reason": older.get("reason"), "opponents": older.get("opponents"),
+                                              "of": older.get("of"), "overall": _figure(older.get("overall")),
+                                              "updated": older.get("updated"), "earlier": bool(older.get("earlier"))},
+                notes=notes)
 
 
 def _space(summary):
@@ -128,8 +139,9 @@ def _entries(forge, visible):
     return out
 
 
-def _orphans(g, fmt, made):
-    """{space: stamps of the run notes of lists no deck of the space has today} for the spaces in made."""
+def _orphans(g, fmt, made, others=()):
+    """{space: stamps of the run notes of lists no deck of the space has today} for the spaces in made;
+    others: [(summary, entry)] of the spaces' decks the viewer doesn't see (only their lists are used)."""
     noted = getattr(g, "noted", None)
     out = {}
     for space in {_space(s) for s, _ in made}:
@@ -141,7 +153,7 @@ def _orphans(g, fmt, made):
         except Exception:
             common._log(f"The gauntlet's run notes can't be listed:\n{traceback.format_exc()}")
             found = {}
-        today = {e["card_sha"] for s, e in made if e and _space(s) == space}
+        today = {e["card_sha"] for s, e in (*made, *others) if e and _space(s) == space}
         out[space] = tuple(sorted((sha, stat) for sha, stat in found.items() if sha not in today))
     return out
 
@@ -168,11 +180,11 @@ def _work_row(forge, g, summary, entry, cat, standard, space, walk):
     def before(played):
         if played:
             return False
-        if has_notes is not None and has_notes(entry, space):
-            return "older"
-        if walk != "no":
-            what.append("walked" if walk == "yes" else "later")
-        return walk == "yes"
+        own = "older" if has_notes is not None and has_notes(entry, space) else False
+        if walk == "no":
+            return own
+        what.append("walked" if walk == "yes" else "later")
+        return True if walk == "yes" else own
     try:
         fields = gauntlet_page._summary_of(forge, g, summary, entry, cat, standard, before=before)
     except Exception:
@@ -181,10 +193,11 @@ def _work_row(forge, g, summary, entry, cat, standard, space, walk):
     return _row_of(summary, entry, fields), (what or [None])[0]
 
 
-def _rows_of(forge, g, fmt, cat, standard, made, snapshot):
-    """(rows, notes) of the visible lists, rows sorted, as the module docstring says; inside _held."""
-    orphans = _orphans(g, fmt, made)
-    rows, walks, later = [], 0, False
+def _rows_of(forge, g, fmt, cat, standard, made, snapshot, others=()):
+    """(rows, notes, keep) of the visible lists, rows sorted, as the module docstring says (keep: False
+    when the answer mustn't be cached); inside _held."""
+    orphans = _orphans(g, fmt, made, others)
+    rows, walks, later, unread = [], 0, False, False
     for summary, entry in made:
         if entry is None:
             rows.append(_blank(summary, None, "unreadable", UNREADABLE))
@@ -204,11 +217,13 @@ def _rows_of(forge, g, fmt, cat, standard, made, snapshot):
         walks += what == "walked"
         if what == "later":
             later = True            # not kept: a later read looks at its history
+        elif gauntlet_page.gauntlet_before.NO_HISTORY in row["notes"]:
+            unread = True           # not kept: the database may be back on the next read
         elif fingerprint is not None and row["state"] != "unreadable":
             _keep_row(key, fingerprint, row)
         rows.append(row)
     rows.sort(key=_order)
-    return rows, [STILL_LOOKING] if later else []
+    return rows, [STILL_LOOKING] if later else [], not (later or unread)
 
 
 def _stored(snapshot, deck_id):
@@ -256,18 +271,23 @@ def _order(row):
 # ============================================================ the answer
 
 def _visible(fmt):
-    return [s for s in guard.visible_decks(decks.list_decks()) if _usable(s, fmt)]
+    """(the viewer's visible decks of the format, the same spaces' decks of it the viewer doesn't see)."""
+    every = [s for s in decks.list_decks() if _usable(s, fmt)]
+    visible = guard.visible_decks(every)
+    shown, spaces = {s["id"] for s in visible}, {_space(s) for s in visible}
+    return visible, [s for s in every if s["id"] not in shown and _space(s) in spaces]
 
 
-def _built(forge, g, fmt, cat, standard, seen, visible):
-    """(rows, notes) for the viewer's visible decks, kept as the module docstring says."""
+def _built(forge, g, fmt, cat, standard, seen, visible, hidden=()):
+    """(rows, notes) for the viewer's visible decks, kept as the module docstring says; hidden: the
+    same spaces' decks the viewer doesn't see (for _orphans only)."""
     try:
         snapshot = inventory.current()
     except Exception:
         snapshot = None
     public = frozenset(guard.public_deck_spaces())
     key = (fmt, seen.space, seen.everything, public)
-    revision = viewer_decks_revision(visible, snapshot) if snapshot is not None else None
+    revision = viewer_decks_revision([*visible, *hidden], snapshot) if snapshot is not None else None
     fingerprint = None if revision is None else (revision, (cat or {}).get("sha"), standard["id"],
                                                  _stamp(g.results_dir()))
     with _lock:
@@ -279,8 +299,9 @@ def _built(forge, g, fmt, cat, standard, seen, visible):
             return hit[2]
         with gauntlet_page._held(forge):
             made = _entries(forge, visible)
-            rows, notes = _rows_of(forge, g, fmt, cat, standard, made, snapshot)
-        if fingerprint is not None and not notes:
+            others = _entries(forge, hidden)
+            rows, notes, keep = _rows_of(forge, g, fmt, cat, standard, made, snapshot, others)
+        if fingerprint is not None and keep:
             with _lock:
                 _answers[key] = (fingerprint, time.monotonic(), (rows, notes))
         return rows, notes
@@ -308,7 +329,7 @@ def board_view(format="commander", profile=None):
         return out
     out["note"] = (f"Each figure is the list's average win rate against these {len(standard['decks'])} popular "
                    "decks only: not a rating, and apart from Rankings.")
-    rows, notes = _built(forge, g, fmt, cat, standard, seen, _visible(fmt))
+    rows, notes = _built(forge, g, fmt, cat, standard, seen, *_visible(fmt))
     out["notes"] = list(notes)
     out["rows"] = [dict(row, playing=gauntlet_page._playing(row["deck"], standard["id"], seen)
                         if row["deck"]["card_sha"] else None) for row in rows]

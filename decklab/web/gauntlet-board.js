@@ -9,7 +9,9 @@ Popular decks, the list watcher's checks to gbRefresh, and a pause to gbCancel.
 
 The board's read is single-flight with a deadline, and dropped when the page, the profile or the view has moved on.
 It reads again when a run starts or ends (the watcher's running list), every GB_POLL_MS while a row plays, and on a
-view or format change. Before a Play it never plans or estimates: the deck's Testing tab says how long.
+view or format change. Before a Play it never plans or estimates: the deck's Testing tab says how long. A read
+that starts redraws only when nothing of its format is on screen yet, and a redraw puts the keyboard focus back on
+the same row's Details or Play (or its Details when its Play has gone: it's playing now).
 
 Loaded after gauntlet.js (gtBeforeLine, gtOlderLine, gtFigureWords) and sim-ui.js (winRateFigure, rangeBar,
 freshnessBadge); editor.js supplies ask().
@@ -104,7 +106,7 @@ async function gbRefresh(view, fresh = null, { force = false } = {}) {
     } };
   const deadline = setTimeout(() => request.abort(true), GB_DEADLINE_MS);
   view.gbRequest = request; entry.asked = Date.now(); entry.loading = true;
-  gbDrawEntry(view, entry);
+  if (!entry.answer && !entry.error) gbDrawEntry(view, entry);
   try {
     const answer = await Promise.race([api(`/api/gauntlet/board?format=${encodeURIComponent(format)}`,
       { signal: controller.signal }), cancelled]);
@@ -149,6 +151,7 @@ function gbDrawEntry(view, entry) {
   const a = entry.answer, words = gbFormatWords(view.gbFormat);
   const failed = entry.error ? loadFailed("Popular decks", { message: entry.error },
     () => gbRefresh(view, null, { force: true })) : null;
+  const focused = host.contains(document.activeElement) ? document.activeElement.dataset.focus : null;
   const draw = () => {
     clear(host);
     if (!a || a.format !== view.gbFormat) {
@@ -157,6 +160,15 @@ function gbDrawEntry(view, entry) {
     add(host, [failed, gbBoard(view, a, words)]);
   };
   typeof keepPlace === "function" ? keepPlace(draw) : draw();
+  if (focused) gbFocus(host, focused);
+}
+
+/** Put the focus back on the control a redraw replaced (data-focus "details:<id>" or "play:<id>"), else on the
+ * same row's Details. */
+function gbFocus(host, key) {
+  const find = (k) => [...host.querySelectorAll("[data-focus]")].find((n) => n.dataset.focus === k);
+  const again = find(key) || find(key.replace(/^play:/, "details:"));
+  if (again) again.focus({ preventScroll: true });
 }
 
 /** The answer: the words over it, its notes and one row a deck; no Play all. */
@@ -194,6 +206,7 @@ function gbRow(view, row) {
   if (row.state === "partial") facts.push(status("warn", "Partly tested"));
   if (row.state === "stale_list") facts.push(gtBeforeLine(row));
   if (row.state === "stale_older") facts.push(gtOlderLine(row));
+  for (const n of row.notes || []) facts.push(el("p", { class: "gt-small gb-note", text: n }));
   return el("li", { class: "gb-row", "data-deck": d.id, "data-state": row.state },
     el("div", { class: "gb-name" }, el("h3", { class: "gb-title", text: d.title }), facts),
     rate ? el("div", { class: "gb-score" },
@@ -201,7 +214,7 @@ function gbRow(view, row) {
       rangeBar(rate, { compact: true, decorative: true }), freshnessBadge(row.updated, { size: "row" })) : null,
     el("div", { class: "gb-actions" }, gbPlaying(row),
       el("a", { class: "btn", href: `${deckHref(d.id, "target")}&tab=matchups&part=gauntlet`, text: "Details",
-        "aria-label": `Details: ${d.title}` }),
+        "aria-label": `Details: ${d.title}`, "data-focus": `details:${d.id}` }),
       gbPlayButton(view, row)));
 }
 
@@ -218,7 +231,7 @@ function gbPlaying(row) {
 function gbPlayButton(view, row) {
   if (row.playing || row.state === "unreadable" || !row.deck?.card_sha || !runGate().may) return null;
   return el("button", { type: "button", class: "btn", text: "Play", "aria-label": `Play ${row.deck.title} against popular decks`,
-    onclick: () => gbPlay(view, row) });
+    "data-focus": `play:${row.deck.id}`, onclick: () => gbPlay(view, row) });
 }
 
 /** Ask first, then start the standard sample through the usual run endpoint, bound to the list on screen. */
