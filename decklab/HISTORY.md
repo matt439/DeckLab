@@ -2,6 +2,28 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Against popular decks at the Matchups tab's width (2026-11-03; E3-S32)
+
+- Matt reported that the Matchups tab's Against popular decks part was too wide and made the page scroll sideways. Two causes: `.gt-content`'s children kept a grid item's automatic minimum width (their min-content), so the empty state's build command could push the page sideways, and on desktop the play box, text and one-column group bars stretched across the whole wrap.
+- `web/gauntlet.css`: the part is one `minmax(0, 1fr)` column whose children may shrink; the build command, names, notes and caveats wrap; the part stops at 1,400 px (as `.mu-pair-body`), text and the empty state at 72ch, the one-column play box at 40rem (filling its side column again from 1,600 px), the group list at 46rem. Only widths and wrapping changed, so both themes and densities are unaffected.
+- A headless check on a fixture page (real CSS and scripts, stubbed answers) found the empty state overflowing at 500 px before and nothing overflowing at 500 to 2,560 px after. The desktop scroll Matt saw wasn't reproduced with synthetic data: check the live page once deployed.
+- Tests: `test_gauntlet_width_ui.py` (6), reading the stylesheet.
+
+## A queued card's price history (2026-11-03; E5-S29 first slice)
+
+- Each nightly shops snapshot also keeps the day's reading of every queued name, per shop, in a compact history file beside the snapshot (`decklab/data/shops/mtgmate.history.json`, `gamesportal.history.json`; `lib/shops/history.py`): one reading a day (a second run the same day replaces it), kept 90 days and only while the name is on the queue. A name that leaves the queue goes at the next run, and an empty queue empties the history; nothing is kept for owned cards (E5-S21).
+- Snapshot readers (Shopping, deck Prices, Baskets) never load the history file, so their pages parse only the day's snapshot.
+- `python -m decklab.lib.shops history NAME [--shop KEY] [--json]` prints each day's price and stock at each shop, with no network; the lowest price on an in-stock day is marked.
+- Tests: `test_shops_history.py` (16).
+- Not done yet: Shopping's row showing the history.
+
+## Global search: a card's deck use (2026-11-03; E1-S29)
+
+- To a viewer who may see the space's inventory, each card result under In your collection and Other cards now says how many of the space's decks hold or want it and its free copies, in short form ("in 2 decks · 1 free"); a basic land says its use in decks isn't tracked. Anyone else gets none of the new fields.
+- `lib/api/card_decks.py`'s calculation now takes many names (`deck_use`, each deck's lists read once); GET `/api/cards/decks` is unchanged. Global search works it out only for the results shown, and a deck the viewer can't see is never counted.
+- Tests: `test_global_search_use.py` (8) and `test_global_search_ui.py`.
+- Not done yet: the card viewer's line when opened from pages other than the deck page and Collection.
+
 ## An empty space's library shows how to start (2026-11-02; E11-S56)
 
 - A newcomer's empty library said only "You don't play any decks yet." With no deck in the visitor's own space, no cards in its collection and no filter or search, the library now lists Add a precon, Import cards and New deck, a line each, each offered only to whoever may do it (`libStartBox` in `web/library.js`).
