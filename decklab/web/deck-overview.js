@@ -97,10 +97,11 @@ function deckOverviewGauntlet(data) {
 }
 
 /** The summary's state in words: no catalogue (an admin gets the build command), not tested (Choose opponents), or
-   the headline (gauntlet.js gtHeadline), the hardest opponents and the caveat; a run in progress says so. */
+   the headline (gauntlet.js gtHeadline), the hardest opponents and the caveat; a run in progress says so. E3-S34: a
+   changed list's figure before the change, or results an older Forge played, muted (gtBeforeLine, gtOlderLine). */
 function deckOverviewGauntletBody(a, button) {
   const playing = a.playing ? el("p", { class: "sub", text: "A popular-decks run is in progress." }) : null;
-  if (a.state === "no_catalogue" || !["untested", "partial", "done"].includes(a.state)) {
+  if (a.state === "no_catalogue" || !["untested", "partial", "done", "stale_list", "stale_older"].includes(a.state)) {
     button.hidden = true;
     return [el("p", { class: "empty", text: "Popular decks aren't set up on this PC yet." }),
       a.build_command ? el("pre", { class: "gt-command" }, el("code", { text: a.build_command })) : null];
@@ -109,10 +110,16 @@ function deckOverviewGauntletBody(a, button) {
     button.textContent = "Choose opponents";
     return [el("p", { class: "empty", text: "Not tested against popular decks yet." }), playing];
   }
+  // E3-S34: no games for this list under today's Forge: the old figure muted and the button to test it (Matchups;
+  // nothing plays from here).
+  if (a.state === "stale_list" || a.state === "stale_older") {
+    button.textContent = a.state === "stale_list" ? "Test the new list" : "Test it again";
+    return [gtBeforeLine(a), gtOlderLine(a), playing];
+  }
   const hardest = (a.hardest || []).map((o) => el("li", {}, el("span", { class: "gt-name", text: o.title }), " ",
     winRateFigure(gtRate(o.rate, o.low, o.high), { what: `Win rate against ${o.title}` }),
     o.verdict ? `, ${o.verdict}` : ""));
-  return [gtHeadline(a, { cls: "gt-headline-panel" }), playing,
+  return [gtHeadline(a, { cls: "gt-headline-panel" }), gtBeforeLine(a), gtOlderLine(a, { note: true }), playing,
     hardest.length ? el("div", { class: "deck-overview-hardest" },
       el("p", { class: "sub", text: "Hardest here:" }), el("ul", {}, hardest)) : null,
     el("p", { class: "sub", text: `These ${a.of} sampled opponents only, not every deck of that colour or style. ` +

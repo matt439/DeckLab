@@ -6,6 +6,9 @@ import unittest
 from decklab.tests.test_deck_page_ui import PAGE
 from decklab.tests.test_workspace_ui import NODE, WEB, RUNNER
 
+# A fixed 2 Nov of this year at noon UTC: 2 Nov in every time zone the PC and CI run in, and no year shown.
+DAY = "const day=`${new Date().getFullYear()}-11-02T12:00:00Z`;const hasClass=(n,c)=>!!n&&(n.getAttribute('class')||'').split(' ').includes(c);"
+
 
 @unittest.skipUnless(NODE, "Node.js isn't installed")
 class DeckOverviewUiTests(unittest.TestCase):
@@ -373,4 +376,49 @@ class DeckOverviewUiTests(unittest.TestCase):
           const before = part.textContent;
           routeToken += 1; release(done()); await settle();
           assert.equal(part.textContent, before);
+        """)
+
+    # ------------------------------------------------------------------ E3-S34: kept through a change
+
+    def test_a_changed_list_shows_its_old_figure_and_test_the_new_list_starts_nothing(self):
+        self.run_js(DAY + self.GAUNTLET + """
+          summary = done({state: 'stale_list', overall: null, played: 0, games: 0, hardest: [], updated: null,
+            tally: {ahead: 0, even: 0, behind: 0, unsettled: 0},
+            before: {rate: .41, low: .33, high: .49, played: 20, of: 20, games: 2000, updated: day},
+            compare: null, older: null});
+          const part = await show(commanderPage());
+          assert.equal(part.querySelector('.gt-before').querySelector('p').textContent,
+            'The list changed since its last test (2 Nov). Before: 41% (33–49).');
+          assert(hasClass(part.querySelector('.range-bar'),'is-muted')); assert(hasClass(part.querySelector('.fresh'),'is-stale'));
+          assert(!part.querySelector('.gt-headline-panel'));
+          assert(!part.textContent.includes('Not tested against popular decks yet.'));
+          const button = buttonText(part, 'Test the new list'); assert(button && !button.hidden);
+          flushTimers(); await settle(); assert.equal(writes.length, 0);
+          button.click(); await settle();
+          assert.equal(tab('matchups').getAttribute('aria-selected'), 'true');
+          assert(main.querySelector('#sec-gauntlet'));
+          assert.equal(writes.length, 0);
+        """)
+
+    def test_the_compare_line_and_older_results_on_the_overview(self):
+        self.run_js(DAY + self.GAUNTLET + """
+          summary = done({before: {rate: .41, low: .33, high: .49, played: 20, of: 20, games: 2000, updated: now},
+            compare: {same: 20, before: {rate: .41, low: .33, high: .49}, now: {rate: .47, low: .39, high: .55}, moved: 0},
+            older: {reason: 'forge', opponents: 20, of: 20, updated: now, overall: null}});
+          let part = await show(commanderPage());
+          assert.equal(part.querySelector('.gt-before').textContent,
+            'Before this change 41% (33–49) · Now 47% (39–55), same 20 opponents.');
+          assert(part.querySelector('.gt-headline-panel'));
+          assert.equal(part.querySelector('.gt-older').textContent, "Results from an older Forge aren't shown.");
+          assert(buttonText(part, 'Popular decks'));
+          summary = done({state: 'stale_older', overall: null, played: 0, games: 0, hardest: [], updated: null,
+            before: null, compare: null,
+            older: {reason: 'forge', opponents: 18, of: 20, updated: day,
+              overall: {rate: .41, low: .33, high: .49}}});
+          part = await show(commanderPage());
+          assert(part.textContent.includes("Results from an older Forge aren't shown."));
+          assert(part.textContent.includes('With the older Forge: 41% (33–49), 18 of 20 opponents (2 Nov).'));
+          assert(buttonText(part, 'Test it again'));
+          assert(!part.textContent.includes("aren't set up on this PC"));
+          assert.equal(writes.length, 0);
         """)

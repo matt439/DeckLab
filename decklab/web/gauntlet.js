@@ -11,6 +11,10 @@ how many it's ahead of, even with and behind. Once there are games the results c
 sample stays in the address as &gsample=<id> (deck.js's deckAddress keeps it), with Back to the standard sample.
 E3-S38: up to every playable deck of the chosen tiers ("All", Commander only), the run's time said plainly above
 Play, and over the server's overnight_minutes that it's an overnight run that keeps the PC awake.
+E3-S34: results are never deleted. When the list changed since its last test, its figure before the change
+(gtBeforeLine, muted), then once re-tested both over the same opponents, an opponent marked Moved only when its two
+ranges don't overlap; saved results an older Forge, other settings, another pilot or a rebuilt catalogue played
+are said plainly (gtOlderLine). Play stays the usual button: nothing plays by itself.
 Every class this file and gauntlet.css add starts with "gt-"; it also uses the page's shared ones (deck-section,
 segmented, filter-chips, box, btn, sub, empty, more). Uses core.js's helpers, sim-ui.js's winRateFigure and
 rangeBar, matchups.js's runChoiceControl, runsAllowed, metaWords and gamesWords, editor.js's ask() and app.js's
@@ -130,6 +134,7 @@ function gtDraw(ctx, a) {
   if (!ctx.choice) ctx.choice = gtChoiceOf(a);
   if (!ctx.budget) ctx.budget = a.default_budget || "fixed:100";
   const played = (a.games || 0) > 0;
+  const stale = !played && (a.before || a.older);
   add(ctx.content, [
     el("p", { class: "sub", text: "How this list does against popular decks from outside the house, from Forge's AI " +
       "playing them (best of one). They never count in Rankings." }),
@@ -137,8 +142,14 @@ function gtDraw(ctx, a) {
     // Results first at every width (E3-S33); from 1,600 px the play box sits to their right.
     played || gtPlaying(a)
       ? el("div", { class: "gt-layout" },
-        played ? el("div", { class: "gt-main" }, gtHeadline(a), gtGroups(ctx, a), gtRows(a)) : null,
-        el("div", { class: "gt-side" }, gtPlayBox(ctx, a)))
+        played ? el("div", { class: "gt-main" }, gtHeadline(a), gtBeforeLine(a), gtOlderLine(a, { note: true }),
+          gtGroups(ctx, a), gtRows(a)) : null,
+        el("div", { class: "gt-side" }, stale ? [gtBeforeLine(a), gtOlderLine(a)] : null, gtPlayBox(ctx, a)))
+      // E3-S34: the list changed, or its results are from an older Forge: the old figure muted, then Play as usual.
+      : stale ? el("div", { class: "gt-empty gt-stale" }, gtBeforeLine(a), gtOlderLine(a),
+        el("p", { class: "sub", text: `Play ${plural((a.sample || {}).decks || 0, "popular deck")} to test this list ` +
+          "with today's Forge." }),
+        gtPlayBox(ctx, a, { inEmpty: true }))
       : el("div", { class: "empty gt-empty" },
         el("p", { text: "No games against popular decks yet." }),
         el("p", { class: "sub", text: `Play ${plural((a.sample || {}).decks || 0, "popular deck")} to see how this ` +
@@ -212,6 +223,78 @@ function gtHeadline(a, { cls = "gt-headline" } = {}) {
     a.played < a.of ? el("p", { class: "gt-small", text: `${a.played} of ${a.of} opponents tested so far.` }) : null);
 }
 
+// ------------------------------------------------------------------ E3-S34: kept through a change
+
+// The older results today's keys don't find (the answer's older.reason), in words; catalogue's names a count.
+const GT_OLDER = { forge: "Results from an older Forge aren't shown.",
+  settings: "Results played with other Forge settings aren't shown.",
+  pilot: "Results played with another AI pilot aren't shown.",
+  unknown: "Forge's version on the PC can't be confirmed now, so older results can't be matched." };
+const GT_OLDER_WITH = { forge: "With the older Forge", settings: "With the other settings", pilot: "With the other pilot" };
+
+/** {rate, low, high} -> "41% (33–49)", or null without a rate. */
+function gtFigureWords(f) {
+  if (!f || f.rate == null) return null;
+  const range = simRange(f);
+  return range ? `${simPoints(f.rate)}% (${range})` : `${simPoints(f.rate)}%`;
+}
+
+/** A result's time as "2 Nov", or null. */
+function gtWhen(when) {
+  const d = when ? new Date(when) : null;
+  return d && !Number.isNaN(d.getTime()) ? simDay(d) : null;
+}
+
+/** A muted range bar (no band: the figure is out of date), beside a badge when given. */
+function gtBeforeBar(f, badge = null) {
+  const rate = gtRate(f.rate, f.low, f.high);
+  return el("div", { class: "gt-before-bar" }, rangeBar(rate, { compact: true, muted: true, decorative: true }), badge);
+}
+
+/** The list's figure before its last change (E3-S34), muted and in words: after a re-test "Before this change 41%
+ * (33–49) · Now 47% (39–55), same 20 opponents." (and how many moved: ranges that don't overlap); with no games
+ * for the new list yet "The list changed since its last test (2 Nov). Before: 41% (33–49)." Null without a before. */
+function gtBeforeLine(a) {
+  const c = a.compare, b = a.before;
+  const then = c && gtFigureWords(c.before), now = c && gtFigureWords(c.now);
+  if (c && c.same && then && now) {
+    return el("div", { class: "gt-before" },
+      el("p", {}, simNumbers(`Before this change ${then} · Now ${now}, same ${plural(c.same, "opponent")}.`)),
+      c.moved ? el("p", { class: "gt-small" }, simNumbers(`${plural(c.moved, "opponent")} moved: the two ranges ` +
+        "don't overlap.")) : null);
+  }
+  if (!b) return null;
+  const figure = gtFigureWords(b), when = gtWhen(b.updated);
+  if ((a.games || 0) > 0 || a.played) {
+    return figure ? el("div", { class: "gt-before" },
+      el("p", {}, simNumbers(`Before this change ${figure}${when ? ` (${when})` : ""}.`))) : null;
+  }
+  return el("div", { class: "gt-before" },
+    el("p", {}, simNumbers(`The list changed since its last test${when ? ` (${when})` : ""}.` +
+      (figure ? ` Before: ${figure}.` : ""))),
+    figure ? gtBeforeBar(b, freshnessBadge(b.updated, { changed: true })) : null);
+}
+
+/** The list's saved results today's keys don't find (an older Forge, other settings, another pilot, opponents
+ * rebuilt), said plainly, with the newest single-engine group's figure muted when there is one. note: only the
+ * sentence, small, under a headline. Null without any. */
+function gtOlderLine(a, { note = false } = {}) {
+  const o = a.older;
+  if (!o || !o.reason) return null;
+  const n = Number(o.opponents) || 0;
+  const text = o.reason === "catalogue"
+    ? `${n ? (n === 1 ? "1 opponent's list" : `${thousands(n)} opponents' lists`) : "Some opponents' lists"} changed ` +
+      "when popular decks were rebuilt, so their results aren't shown."
+    : GT_OLDER[o.reason];
+  if (!text) return null;
+  if (note) return el("p", { class: "gt-small gt-older" }, simNumbers(text));
+  const figure = GT_OLDER_WITH[o.reason] ? gtFigureWords(o.overall) : null, when = gtWhen(o.updated);
+  return el("div", { class: "gt-before gt-older" }, el("p", {}, simNumbers(text)),
+    figure ? el("p", {}, simNumbers(`${GT_OLDER_WITH[o.reason]}: ${figure}, ${n} of ${o.of || n} opponents` +
+      `${when ? ` (${when})` : ""}.`)) : null,
+    figure ? gtBeforeBar(o.overall) : null);
+}
+
 // ------------------------------------------------------------------ the results
 
 /** One group kind at a time (Colour, Colours, Style or Tier), each group's equal-weight rate over its opponents,
@@ -257,7 +340,9 @@ function gtRows(a) {
     el("h3", { text: "Against each deck, hardest first" }),
     el("ul", { class: "gt-rows" }, played.map((o) => {
       const what = `Win rate against ${o.title}`;
-      const chips = o.not_meaningful ? [status("crit", "Not meaningful")] : [];
+      const chips = [o.not_meaningful ? status("crit", "Not meaningful") : null,
+        o.moved ? status("info", "Moved") : null].filter(Boolean);
+      const before = gtFigureWords(o.before);
       return el("li", { class: o.not_meaningful ? "gt-row gt-muted" : "gt-row" },
         el("span", { class: "gt-name", text: o.title }),
         el("span", { class: "gt-barline" },
@@ -266,7 +351,7 @@ function gtRows(a) {
         el("span", { class: "gt-meta" },
           deckColourPieces((o.identity || "").split("")).pips(16),
           el("span", { text: metaWords(o.verdict ? capitalise(o.verdict) : null, GT_STYLES[o.style] || o.style,
-            GT_TIERS[o.tier] || o.tier, gamesWords(o.games), o.problem) }), chips,
+            GT_TIERS[o.tier] || o.tier, gamesWords(o.games), before ? `Before: ${before}` : null, o.problem) }), chips,
           freshnessBadge(o.updated, { size: "row" })),
         gtSource(o.source));
     })),

@@ -12,6 +12,9 @@ import unittest
 from decklab.tests.test_deck_page_ui import PAGE
 from decklab.tests.test_workspace_ui import NODE, RUNNER, WEB
 
+# A fixed 2 Nov of this year at noon UTC: 2 Nov in every time zone the PC and CI run in, and no year shown.
+DAY = "const day=`${new Date().getFullYear()}-11-02T12:00:00Z`;const hasClass=(n,c)=>!!n&&(n.getAttribute('class')||'').split(' ').includes(c);"
+
 
 SETUP = PAGE + """
   clear(main);editor=null;state.profile={id:'matt',name:'Matt'};state.may=null;
@@ -341,4 +344,97 @@ class GauntletUiTests(unittest.TestCase):
           answers=[base({budgets:{'fixed:100':{games:100,new_games:2400,minutes:[180,300],overnight:true}}})];
           const node=await draw();
           assert.equal(node.querySelector('.gt-time-part').hidden,true);
+        """)
+
+    # ------------------------------------------------------------------ E3-S34: kept through a change
+
+    def test_a_changed_list_shows_its_figure_before_the_change_muted_and_plays_only_when_asked(self):
+        self.run_js(DAY + """
+          const std={id:'sample:0123456789ab',size:24,tiers:['hard','medium']};
+          answers=[base({standard:std,is_standard:true,before:{rate:.41,low:.33,high:.49,played:3,of:3,games:300,
+            updated:day},compare:null,older:null})];
+          const node=await draw();
+          const before=node.querySelector('.gt-stale').querySelector('.gt-before');
+          assert.equal(before.querySelector('p').textContent,'The list changed since its last test (2 Nov). Before: 41% (33–49).');
+          const bar=before.querySelector('.range-bar');assert(bar.getAttribute('class').split(' ').includes('is-muted'));
+          assert(!bar.querySelector('.range-band'));
+          assert(hasClass(before.querySelector('.fresh'),'is-stale'));
+          assert(!node.textContent.includes('No games against popular decks yet.'));
+          assert(node.textContent.includes("Play 3 popular decks to test this list with today's Forge."));
+          // Figures in ink: no strong or weak colours.
+          assert(!node.querySelector('.flag'));assert(!node.querySelector('.is-good'));
+          // Nothing plays by itself; Play is the usual button.
+          flushTimers();await settle();assert.equal(writes.length,0);
+          buttonText(node,'Play them').click();await settle();
+          assert.equal(writes.length,1);assert.equal(writes[0].path,'/api/gauntlet/run');
+        """)
+
+    def test_after_a_retest_both_lists_over_the_same_opponents_and_moved_only_when_set(self):
+        self.run_js(DAY + """
+          const a=played();
+          Object.assign(a,{overall:{key:'all',opponents:3,games:300,rate:.47,low:.39,high:.55},played:3,of:3,
+            tally:{ahead:1,even:1,behind:1,unsettled:0},updated:new Date().toISOString(),is_standard:true,
+            standard:{id:'sample:0123456789ab',size:24,tiers:['hard','medium']},
+            before:{rate:.41,low:.33,high:.49,played:3,of:3,games:300,updated:day},
+            compare:{same:3,before:{rate:.41,low:.33,high:.49},now:{rate:.47,low:.39,high:.55},moved:1}});
+          a.opponents[0].before={rate:.6,low:.52,high:.68};a.opponents[0].moved=true;
+          a.opponents[1].before={rate:.48,low:.4,high:.56};a.opponents[1].moved=false;
+          answers=[a];
+          const node=await draw();
+          const results=node.querySelector('.gt-main');
+          const line=results.querySelector('.gt-before');
+          assert.equal(results.children[1],line);
+          assert.equal(line.querySelector('p').textContent,'Before this change 41% (33–49) · Now 47% (39–55), same 3 opponents.');
+          assert(line.textContent.includes("1 opponent moved: the two ranges don't overlap."));
+          assert(!/significan|better|worse/i.test(line.textContent),line.textContent);
+          const rows=node.querySelector('.gt-rows').querySelectorAll('.gt-row');
+          assert(rows[0].textContent.includes('Moved'));assert(rows[0].textContent.includes('Before: 60% (52–68)'));
+          assert(!rows[1].textContent.includes('Moved'));assert(rows[1].textContent.includes('Before: 48% (40–56)'));
+          assert(!rows[2].textContent.includes('Before:'));
+          assert.equal(rows[0].querySelector('.status-info').textContent,'Moved');
+          // Fewer opponents compared than tested: the sentence says how many.
+          answers=[{...a,played:2,compare:{...a.compare,same:2,moved:0}}];
+          const again=await draw();
+          assert(again.textContent.includes('same 2 opponents.'));assert(again.textContent.includes('2 of 3 opponents tested so far.'));
+          assert(!again.querySelector('.gt-before').textContent.includes('moved'));
+        """)
+
+    def test_older_results_are_said_plainly_for_each_reason(self):
+        self.run_js(DAY + """
+          const older=(reason,extra={})=>base({is_standard:true,before:null,compare:null,
+            older:{reason,opponents:18,of:20,updated:day,overall:{rate:.41,low:.33,high:.49},...extra}});
+          answers=[older('forge')];let node=await draw();
+          let part=node.querySelector('.gt-older');
+          assert.equal(part.querySelectorAll('p')[0].textContent,"Results from an older Forge aren't shown.");
+          assert.equal(part.querySelectorAll('p')[1].textContent,'With the older Forge: 41% (33–49), 18 of 20 opponents (2 Nov).');
+          assert(hasClass(part.querySelector('.range-bar'),'is-muted'));
+          answers=[older('forge',{overall:null})];node=await draw();
+          assert.equal(node.querySelector('.gt-older').textContent,"Results from an older Forge aren't shown.");
+          answers=[older('settings',{overall:null})];node=await draw();
+          assert(node.textContent.includes("Results played with other Forge settings aren't shown."));
+          answers=[older('pilot',{overall:null})];node=await draw();
+          assert(node.textContent.includes("Results played with another AI pilot aren't shown."));
+          answers=[older('catalogue',{opponents:3})];node=await draw();
+          assert.equal(node.querySelector('.gt-older').textContent,
+            "3 opponents' lists changed when popular decks were rebuilt, so their results aren't shown.");
+          answers=[older('unknown',{opponents:null,overall:null})];node=await draw();
+          assert.equal(node.querySelector('.gt-older').textContent,
+            "Forge's version on the PC can't be confirmed now, so older results can't be matched.");
+          assert.equal(writes.length,0);
+          // With games for this list, the sentence is a small note under the headline, without the old figure.
+          const a=played();
+          Object.assign(a,{overall:{key:'all',opponents:3,games:300,rate:.47,low:.39,high:.55},played:3,of:3,
+            older:{reason:'forge',opponents:3,of:3,updated:null,overall:{rate:.41,low:.33,high:.49}}});
+          answers=[a];node=await draw();
+          const note=node.querySelector('.gt-main').querySelector('.gt-older');
+          assert.equal(note.textContent,"Results from an older Forge aren't shown.");
+          assert(!node.textContent.includes('With the older Forge'));
+        """)
+
+    def test_no_before_fields_draw_nothing_new(self):
+        self.run_js(DAY + """
+          answers=[played()];const node=await draw();
+          assert(!node.querySelector('.gt-before'));assert(!node.textContent.includes('Moved'));
+          assert(!node.textContent.includes('Before:'));
+          assert.equal(gtBeforeLine({}),null);assert.equal(gtOlderLine({older:{reason:'nonsense'}}),null);
         """)
