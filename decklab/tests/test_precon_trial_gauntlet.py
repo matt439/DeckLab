@@ -97,7 +97,7 @@ class MirrorTests(unittest.TestCase):
         with mock.patch.object(forge_gauntlet, "entries", lambda fmt, ids: asked.append(list(ids)) or []), \
                 mock.patch.object(field, "plan", return_value={}), \
                 mock.patch.object(field, "run_field", return_value={}), \
-                mock.patch.object(forge_gauntlet, "results_dir", return_value=mock.MagicMock()):
+                mock.patch.object(forge_gauntlet, "results_dir", return_value=mock.MagicMock()),                 mock.patch.object(forge_gauntlet, "standard", return_value={"id": "sample:other"}):
             forge_gauntlet.plan(house, chosen, exclude_ids=(PRECON,))
             forge_gauntlet.run(house, chosen, exclude_ids=(PRECON,))
         self.assertEqual(asked, [["gauntlet:forge/duels/x"]] * 2)
