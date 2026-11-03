@@ -75,6 +75,25 @@ class ShellUiTests(unittest.TestCase):
           assert.equal(reloads, 1);
         """)
 
+    def test_keyboard_shortcuts_are_offered_only_with_a_mouse_or_trackpad(self):
+        self.run_js("""
+          document.body.append(el("button", { id: "menu-shortcuts" }));
+          const fine = window.matchMedia("(any-pointer: fine)");
+          fine.matches = false;                         // a phone: touch only
+          as("matt", false);
+          setUpShell(); drawShell();
+          assert.equal(byId("menu-shortcuts").hidden, true);
+          fine.matches = true; fine.fire("change");     // a trackpad keyboard plugged into an iPad
+          assert.equal(byId("menu-shortcuts").hidden, false);
+          fine.matches = false; fine.fire("change");
+          assert.equal(byId("menu-shortcuts").hidden, true);
+        """)
+
+    def test_an_open_dialog_holds_the_page_still_both_ways(self):
+        css = (WEB / "base.css").read_text(encoding="utf-8")
+        self.assertIn(":root:has(dialog[open]) { overflow: hidden; }", css)
+        self.assertIn("dialog[open] { overscroll-behavior: contain; }", css)
+
     def test_one_name_per_page_from_the_routes_table(self):
         self.run_js("""
           const names = Object.fromEntries(ROUTES.map((r) => [r.path, r.label]));
