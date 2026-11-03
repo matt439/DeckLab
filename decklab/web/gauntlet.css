@@ -1,15 +1,23 @@
 /* The deck view's "Against popular decks" part (gauntlet.js). Every class starts with "gt-".
 Phone first (one column); from 1,000 px the opponents go in two columns; from 1,600 px the play box sits beside
-the results. */
+the results.
+E3-S32: the part never makes the page scroll sideways and reads at the tab's other parts' widths. Every child of
+.gt-content may shrink below its content (min-width: 0: a grid item's automatic minimum is its min-content, which
+let the empty state's build command push the page wider than a phone), the whole part stops at 1,400 px (the
+pair page's cap, .mu-pair-body) on a wide screen, words stop at 72ch, and the one-column play box, groups and
+empty state keep to the widths of the matchup controls (.mu-run-buttons, .card-groups). */
 
-.gt-content { display: grid; gap: var(--s-2); }
+.gt-content { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s-2); max-width: 1400px; }
+.gt-content > * { min-width: 0; max-width: 100%; }
 .gt-section { min-width: 0; }
-.gt-layout { display: grid; gap: var(--s-3); }
+.gt-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s-3); }
 .gt-side, .gt-main { display: grid; gap: var(--s-3); align-content: start; min-width: 0; }
 .gt-main h3 { margin: 0; }
+.gt-content > .sub, .gt-small, .gt-caveat, .gt-credit { max-width: 72ch; }
+.gt-content > .gt-empty { max-width: 72ch; }
 .gt-empty > .gt-play { margin-top: var(--s-3); }
-.gt-command { margin: var(--s-2) 0 0; padding: var(--s-2) var(--s-3); overflow-x: auto; border-radius: var(--r-md);
-  background: var(--surface-2); }
+.gt-command { max-width: 100%; margin: var(--s-2) 0 0; padding: var(--s-2) var(--s-3); overflow-x: auto;
+  white-space: pre-wrap; overflow-wrap: anywhere; border-radius: var(--r-md); background: var(--surface-2); }
 
 .gt-play {
   display: grid; gap: var(--s-2);
@@ -17,12 +25,14 @@ the results. */
   border: 1px solid var(--border);
   border-radius: var(--r-lg);
   background: var(--surface);
+  min-width: 0; max-width: 40rem;
 }
 .gt-play > h3 { margin: 0; }
 .gt-choices > summary { min-height: 44px; align-content: center; }
 .gt-control { display: grid; gap: var(--s-1); margin-top: var(--s-2); }
 
-.gt-groups-part { display: grid; gap: var(--s-2); }
+.gt-groups-part { display: grid; gap: var(--s-2); min-width: 0; max-width: 46rem; }
+.gt-groups-part > .segmented { justify-self: start; }
 .gt-groups, .gt-rows { list-style: none; display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s-2);
   margin: 0; padding: 0; }
 .gt-group, .gt-row {
@@ -34,13 +44,13 @@ the results. */
   background: var(--surface);
   box-shadow: var(--shadow-1);
 }
-.gt-name { font-weight: var(--fw-semibold); line-height: var(--lh-tight); }
+.gt-name { font-weight: var(--fw-semibold); line-height: var(--lh-tight); overflow-wrap: anywhere; }
 .gt-barline { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--s-3); }
 .gt-pct { min-width: 5.5em; text-align: right; }   /* room for "76% 71–80", so the bars line up */
-.gt-meta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-1) var(--s-2); font-size: var(--fs-sm); color: var(--ink-2); }
+.gt-meta { display: flex; min-width: 0; overflow-wrap: anywhere; flex-wrap: wrap; align-items: center; gap: var(--s-1) var(--s-2); font-size: var(--fs-sm); color: var(--ink-2); }
 .gt-source { font-size: var(--fs-sm); color: var(--ink-2); }
 .gt-source a { display: inline-block; min-height: var(--tap); align-content: center; }
-.gt-small, .gt-caveat { margin: 0; font-size: var(--fs-sm); color: var(--ink-2); }
+.gt-small, .gt-caveat { margin: 0; overflow-wrap: anywhere; font-size: var(--fs-sm); color: var(--ink-2); }
 .gt-credit { margin-top: var(--s-2); }
 .gt-muted { opacity: 0.6; }
 
@@ -50,4 +60,5 @@ the results. */
 
 @media (min-width: 1600px) {
   .gt-layout { grid-template-columns: minmax(300px, 380px) minmax(0, 1fr); align-items: start; }
+  .gt-play { max-width: none; }
 }
