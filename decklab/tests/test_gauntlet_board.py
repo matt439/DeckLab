@@ -25,7 +25,7 @@ from decklab.tests.test_gauntlet_api import (ELVES, GRUUL, POPULAR, R_ELVES, SAM
 IDS = [p[0] for p in POPULAR]
 TWO = "casual/gruul-two"
 ROW_KEYS = {"deck", "state", "problem", "overall", "played", "of", "games", "updated", "hardest", "before",
-            "older", "notes", "playing"}
+            "older", "notes", "playing", "trial"}
 
 
 class BoardGauntlet(FakeGauntlet):

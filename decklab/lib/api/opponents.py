@@ -9,6 +9,7 @@ from .saving import _deck_refused, apply_op
 from .settings import _writer
 
 MAX_OPPONENTS = 64
+NOT_AT_THE_TABLE = "A trial deck isn't played at the table, so it has no usual opponents."
 
 
 def _space(summary):
@@ -16,10 +17,12 @@ def _space(summary):
 
 
 def _catalog(summaries=None):
+    """{id: summary} of the decks that can be usual opponents: readable, with a list, no Beginner
+    Box half and no trial deck (E3-S39: a precon not owned is never played at the table)."""
     listed = list(decks.list_decks() if summaries is None else summaries)
     listed.extend(decks.beginner_box_pairings())
     return {item["id"]: item for item in listed
-            if not item.get("error") and item.get("versions") and not is_half(item)}
+            if not item.get("error") and item.get("versions") and not is_half(item) and not item.get("trial")}
 
 
 def _declared(summary):
@@ -79,7 +82,8 @@ def _visible_summary(deck_id):
 
 
 def opponents_view(deck_id=None):
-    """GET /api/deck/opponents?id: declarations, reciprocal-only links and same-space choices.
+    """GET /api/deck/opponents?id: declarations, reciprocal-only links and same-space choices
+    (a trial deck's are read-only: NOT_AT_THE_TABLE, as save_opponents' 400).
 
     ``opponents`` contains only visible declarations. Saving replaces those visible
     choices, retaining existing hidden declarations and pruning deleted references.
@@ -92,6 +96,8 @@ def opponents_view(deck_id=None):
         editable = kind in decks.KINDS and not summary.get("read_only")
         why = permissions.reason(guard.viewer(), "deck.edit", summary, script=guard.script()) if editable else \
             "Product decks and pairings keep their published lists."
+        if summary.get("trial"):         # a precon not owned (E3-S39): read-only, nothing to keep
+            why = NOT_AT_THE_TABLE
         editable = editable and why is None
         stored = inventory.current().deck(summary["id"])
         chosen = declared.get(summary["id"], [])
@@ -134,6 +140,8 @@ def save_opponents(body):
     with common.state_errors():
         deck_aliases.reject_alias(data["id"], profile)
         summary = _visible_summary(data["id"])
+        if summary.get("trial"):
+            raise ApiError(400, NOT_AT_THE_TABLE)
         kind, slug, path = _deck_file(summary["id"])
         stored = _stored(summary["id"], viewer=profile)
         deck = _parse_file(stored.data, kind, slug, path, summary["id"])

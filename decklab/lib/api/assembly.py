@@ -181,7 +181,8 @@ def assembly_view(deck=None, version="target"):
         summaries.extend(item for item in decks.beginner_box_pairings() if item["id"] in pairings)
         add_usual_opponents(summaries, opponents)
         choices = [{key: item.get(key) for key in ("id", "title", "versions", "status", "error", "usual_opponents")}
-                   for item in summaries if item.get("space", "home") == "home"]
+                   for item in summaries if item.get("space", "home") == "home"
+                   and not item.get("trial")]     # a trial deck (E3-S39): a precon not owned, never built
         for choice in choices:
             choice["sideboards"] = {}
             if choice["id"].startswith(("product/", "pairing/")):

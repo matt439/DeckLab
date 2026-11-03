@@ -194,7 +194,7 @@ function gbBoard(view, a, words) {
 function gbRow(view, row) {
   const d = row.deck || {}, o = row.overall;
   const rate = o && o.rate != null ? gtRate(o.rate, o.low, o.high) : null;
-  const facts = [];
+  const facts = row.trial || d.trial ? [ptrNotOwnedChip()] : [];     // precon-trial.js: a precon trial (E3-S39)
   if (row.state === "unreadable") facts.push(el("p", { class: "gb-state", text: row.problem || "Forge can't read this list." }));
   else if (!rate && !row.before && !row.older) facts.push(el("p", { class: "gb-state", text: "Not tested against popular decks yet." }));
   if (rate) {

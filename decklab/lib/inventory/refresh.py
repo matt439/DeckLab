@@ -26,6 +26,10 @@ space's pool has warnings or unknown cards, or a deck file can't be read, has no
 owned-vs-needed table or unknown cards: tables from an incomplete pool would be wrong. It stops at
 the first; table_blockers() lists them all, from the same checks (_read_deck, _list_problems,
 _pool_problem), for the Decks page's "Tables out of date" list and the command lines.
+
+A trial deck (E3-S39, decks/trial.py: a precon the space doesn't own) is left out of both: an
+inventory change never refreshes its table and it never blocks another deck's; its deck page's
+Update the table (api/saving.update_tables) and `deck tables ID --reprice` still update it.
 """
 import re
 
@@ -176,6 +180,8 @@ def table_blockers(given=None, only=None):
                                       "why": problem})
         for space, path in files:
             deck_id, _, deck, problem = _read_deck(snapshot, space, path)
+            if deck is not None and decks.trial_of(deck) is not None:
+                continue
             problems = [problem] if problem else _list_problems(deck_id, deck)
             title = deck.title if deck is not None else deck_id
             for problem in problems:
@@ -197,11 +203,12 @@ def plan_refresh(only=None):
     return [(path, raw.encode("utf-8"), out.encode("utf-8")) for _, path, _, raw, out in _plan(only)]
 
 
-def plan_texts(only=None):
+def plan_texts(only=None, include=()):
     """[(deck id, title, text now, text after)] of every deck whose tables plan_refresh would
     change, in its order; the same refusals (ValueError, DeckFileError). only: only the decks
-    (and pools) of these spaces, every space when None."""
-    return [(deck_id, title, raw, out) for deck_id, _, title, raw, out in _plan(only)]
+    (and pools) of these spaces, every space when None. A trial deck (E3-S39) is left out unless
+    include (deck ids) names it, as `deck tables <id>` does."""
+    return [(deck_id, title, raw, out) for deck_id, _, title, raw, out in _plan(only, include)]
 
 
 def spaces_of(rels):
@@ -225,11 +232,11 @@ def spaces_of(rels):
     return out
 
 
-def _plan(only=None):
-    """[(deck id, path, title, text now, text after)]: plan_refresh's work."""
+def _plan(only=None, include=()):
+    """[(deck id, path, title, text now, text after)]: plan_refresh's work (include: plan_texts')."""
     if not inventory.is_pinned():
         with inventory.pinned():
-            return _plan(only)
+            return _plan(only, include)
     cards.info()                 # load the local index on first use
     snapshot = inventory.current()
     wanted = None if only is None else set(only)
@@ -241,6 +248,8 @@ def _plan(only=None):
         if wanted is not None and space not in wanted:
             continue
         deck_id, found, deck, problem = _read_deck(snapshot, space, path)     # table_blockers' checks
+        if deck is not None and decks.trial_of(deck) is not None and deck_id not in include:
+            continue
         if problem:
             raise problem.error
         supply = _supply(space, supplies)

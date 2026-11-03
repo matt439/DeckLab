@@ -9,7 +9,7 @@ from unittest import mock
 
 from decklab.lib import config, pool
 from decklab.lib.api import (accessories, activity, activity_undo, assembly, assembly_completion, assembly_ticks, collection, compare, cover, editor, history, play_records,
-                             precon_coverage, receipts, shopping, shopping_order_changes, shopping_orders, shopping_queue, tokens)
+                             precon_coverage, precon_trial, receipts, shopping, shopping_order_changes, shopping_orders, shopping_queue, tokens)
 from decklab.tests.test_server import ServerTestCase, WRITE
 
 
@@ -36,6 +36,8 @@ GETS = (
      {"space": "user2", "format": "commander", "type": "Theme Deck", "limit": "5"}),
     ("/api/precons/coverage/deck", precon_coverage, "coverage_deck", "file=TestDinos_TST&space=user2",
      {"file": "TestDinos_TST", "space": "user2"}),
+    ("/api/precons/trial", precon_trial, "trial_view", "file=TestDinos_TST&space=user2",
+     {"file": "TestDinos_TST", "space": "user2"}),
 )
 POSTS = (
     ("/api/activity/undo", activity_undo, "apply_undo"),
@@ -57,6 +59,8 @@ POSTS = (
     ("/api/accessories/assign", accessories, "assign_accessory"),
     ("/api/tokens/save", tokens, "save_token"),
     ("/api/precons/start", precon_coverage, "start_deck"),
+    ("/api/precons/trial", precon_trial, "start_trial"),
+    ("/api/precons/trial/keep", precon_trial, "keep_trial"),
 )
 
 

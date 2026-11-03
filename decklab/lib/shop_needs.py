@@ -116,6 +116,8 @@ def _summaries(snapshot):
             if stored.error is not None or stored.data is None:
                 raise ValueError("unreadable home deck")
             parsed = decks.parse_deck(stored.data, stored.slug, stored.kind, space=spaces.HOME)
+            if decks.trial_of(parsed) is not None:
+                continue    # a trial deck (E3-S39): a precon not bought, so none of its cards are needs
             found.append({"id": canonical, "title": parsed.title, "kind": stored.kind,
                           "player": parsed.player, "status": parsed.status,
                           "versions": ["target"] if parsed.has_decklist else []})

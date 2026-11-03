@@ -186,6 +186,9 @@ called as before (from decklab.lib import api; api.<name>). Each part:
                      add_precon() (the cards and the deck in one inventory change)
     precon_coverage.py   the Collection page's "Precons we could build" (E1-S24): coverage_view(),
                      coverage_deck(), start_deck() (a new idea deck). Imported when first asked
+    precon_trial.py  Try a precon before buying it (E3-S39): GET /api/precons/trial trial_view(), POST
+                     /api/precons/trial start_trial() (a trial idea deck), POST /api/precons/trial/keep
+                     keep_trial() (no longer a trial). Imported when first asked
     compare.py       GET /api/compare/shared: shared_view(), the compare page's cards both lists use
                      with the pool's cover for both (E1-S13). Imported when first asked
     cover.py         GET /api/deck/cards: cover_cards(), the picture picker's cards; POST

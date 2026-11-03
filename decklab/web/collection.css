@@ -257,6 +257,13 @@ button.col-find-open { cursor: pointer; }
 .pcov-pick-words small, .pcov-missing { color: var(--ink-2); font-size: var(--fs-sm); }
 .pcov-share { display: block; font-variant-numeric: tabular-nums; }
 .pcov-rate { margin-top: 0; }
+/* Try a precon (precon-trial.js, E3-S39): the sheet, a trial deck's Overview notice and the saved box's offer. */
+.ptr-search { display: grid; gap: var(--s-2); }
+.ptr-search .sub, .ptr-meta { margin: 0; }
+.ptr-area { display: grid; gap: var(--s-2); }
+.ptr-area > p { margin: 0; }
+.ptr-actions { flex-wrap: wrap; gap: var(--s-2); }
+.ptr-notice .ptr-actions, .ptr-bought .ptr-actions { margin-top: var(--s-2); }
 
 @media (forced-colors: active) {
   .col-import-table tr.col-problem td { outline: 1px solid CanvasText; }

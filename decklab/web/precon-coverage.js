@@ -167,8 +167,9 @@ function drawCoveragePrecon(ctx) {
     p.may_start ? el("label", { class: "field precon-title", for: titleInput.id }, el("span", { text: "New deck's title" }), titleInput) : null,
     p.may_start ? ctx.titleNote : null,
     p.may_start ? el("p", { class: "sub", text: "Start a deck from it makes an idea deck with this list, to build from what you have. Nothing is added to the collection." })
-      : el("p", { class: "box box-info", text: "You can't start decks here." })]);
-  sheetActions(ctx.sheet, [ctx.back,
+      : el("p", { class: "box box-info", text: "You can't start decks here." }),
+    ptrCoverageNotes(p)]);        // precon-trial.js: can it be tried, and may this viewer start runs (E3-S39)
+  sheetActions(ctx.sheet, [ctx.back, ptrCoverageAction(ctx, p),        // precon-trial.js (E3-S39)
     p.may_start ? { text: "Start a deck from it", kind: "primary", value: "start", onclick: () => startCoverageDeck(ctx) } : null]);
 }
 

@@ -8,7 +8,8 @@ load and a board load of the same viewer build once). Saved games only: it never
                                                                    "size": the standard sample's decks or None}},
                          "decks": {deck id: {"format", "state", "overall": {rate, low, high} or None, "played",
                                              "of", "games", "updated", "before": {rate, low, high, updated} or None,
-                                             "older": {reason, opponents, of, overall, updated, earlier} or None}},
+                                             "older": {reason, opponents, of, overall, updated, earlier} or None,
+                                             "trial": True for a trial deck (E3-S39: "Not owned")}},
                          "notes": [gauntlet_board.STILL_LOOKING?], "error": None or NO_NUMBERS}
 
 The decks are the board's (guard.visible_decks: the viewer's own space and the public spaces, every deck for a
@@ -22,7 +23,7 @@ from . import common, forge_runs, gauntlet_board, gauntlet_page
 
 FORMATS = ("commander", "constructed")
 NO_NUMBERS = "The popular-decks numbers can't be worked out on the PC now."
-FIELDS = ("state", "overall", "played", "of", "games", "updated", "before", "older")
+FIELDS = ("state", "overall", "played", "of", "games", "updated", "before", "older", "trial")
 
 
 def library_gauntlet_view():

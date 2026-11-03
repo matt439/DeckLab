@@ -1138,7 +1138,7 @@ async function addPrecon(ctx) {
     const filing = colFilingSnapshot(answer.collection, cv, "precon");
     state.saved = { hash, profile: state.profile?.id, version: "target", mode: "new", answer: { ...answer.deck,
       precon: { name: p.deck.name, whose: ctx.whose, cards: added ? added.cards : 0,
-        ...(filing ? { filing } : {}),
+        ...(filing ? { filing } : {}), ...(answer.trials?.length ? { trials: answer.trials } : {}),
         ...(tokensChosen ? { tokens: tokenCount, tokens_uncertain: tokenCount === null } : {}) } } };
     state.scroll.delete(hash);        // open the deck at the top, where the box is
     toast("");                        // an older note would cover the box

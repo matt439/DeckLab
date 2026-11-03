@@ -29,8 +29,12 @@ def _excluded(summary, version, selected, removed):
     return "This list is not selected for the current field."
 
 
-def _catalog(fmt, visible=None, eng=None, field_options=None, *, exclusions=None):
-    """All visible current lists, plus exact existing-field membership and reasons."""
+def _catalog(fmt, visible=None, eng=None, field_options=None, *, exclusions=None, trials=None, trial_ids=None):
+    """All visible current lists, plus exact existing-field membership and reasons. trials: a set
+    that gets the card_shas of fmt's visible trial decks' lists (E3-S39), which are no rows;
+    trial_ids: a set that gets those decks' ids. A trial the viewer can't see is never collected,
+    so another space's trial of a list never changes this viewer's rankings (its own games have
+    no visible side anyway)."""
     visible = visible or (lambda deck_id: True)
     exclusions = exclusions if exclusions is not None else field_exclusions.observation(visible)
     selected, field_notes = field._field(fmt, **{**(field_options or {}), "exclusions": exclusions})
@@ -42,7 +46,15 @@ def _catalog(fmt, visible=None, eng=None, field_options=None, *, exclusions=None
         notes.append("Some field lists could not be loaded; unavailable lists have no rating.")
     summaries = [*decks.list_decks(), *decks.beginner_box_pairings()]
     for summary in summaries:
-        if not visible(summary["id"]) or lists.fmt_for(decks.engine_kind(summary)) != fmt:
+        if lists.fmt_for(decks.engine_kind(summary)) != fmt:
+            continue
+        if not visible(summary["id"]):
+            continue
+        if summary.get("trial"):         # a trial deck (E3-S39) is no node of the rankings
+            if trials is not None:
+                trials.update(_trial_list(summary))
+            if trial_ids is not None:
+                trial_ids.add(summary["id"])
             continue
         chosen = [item for item in selected if field._same_id(item["id"], summary["id"])]
         chosen_ids = {field._side_id(item, eng) for item in chosen}
@@ -73,6 +85,41 @@ def _catalog(fmt, visible=None, eng=None, field_options=None, *, exclusions=None
             if side is not None:
                 aliases[side] = row
     return rows, notes
+
+
+def _trial_list(summary):
+    """{card_sha} of a trial deck's Planned list, or an empty set when it can't be read."""
+    if summary.get("error"):
+        return set()
+    try:
+        return {field._entry(summary, "target")["card_sha"]}
+    except (decks.DeckNotFound, decks.DeckFileError, OSError, ValueError, common.ForgeError):
+        return set()
+
+
+def _names_trial(side, trial_ids):
+    """True when a stored side was saved as (or seen as) one of trial_ids' decks."""
+    aliases = [*(side.get("seen_as") or []), side]
+    return any(alias.get("id") and field._same_id(alias["id"], tid) for alias in aliases for tid in trial_ids)
+
+
+def _without_trials(keep, trials, trial_ids=(), ranked=()):
+    """keep(result), also refusing a result with a side of a trial list (_catalog's trials), or a
+    side saved as a trial deck (trial_ids) whose list no ranked row has (ranked: their card_shas),
+    such as a trial's earlier list. A list a ranked deck has now (the bought deck) is kept."""
+    if not trials and not trial_ids:
+        return keep
+
+    def kept(result):
+        for side in result.get("sides") or ():
+            if not isinstance(side, dict):
+                continue
+            if side.get("card_sha") in trials:
+                return False
+            if trial_ids and side.get("card_sha") not in ranked and _names_trial(side, trial_ids):
+                return False
+        return keep is None or keep(result)
+    return kept
 
 
 def _seen_result(visible):
@@ -112,8 +159,12 @@ def _historical(rows, fmt, results_dir, eng, keep=None):
 def _view(fmt, results_dir, visible, field_options=None, keep=None):
     eng = engine.read_only_today()
     exclusions = field_exclusions.observation(visible)
-    rows, notes = _catalog(fmt, visible, eng, field_options, exclusions=exclusions)
-    keep = _seen_result(visible) if keep is None else keep
+    trials, trial_ids = set(), set()
+    rows, notes = _catalog(fmt, visible, eng, field_options, exclusions=exclusions, trials=trials,
+                           trial_ids=trial_ids)
+    ranked = {row["card_sha"] for row in rows}
+    trials -= ranked      # a list a ranked deck shares stays in the graph
+    keep = _without_trials(_seen_result(visible) if keep is None else keep, trials, trial_ids, ranked)
     data = field._bt_data(fmt, results_dir, current_engine=eng, keep=keep)
     stale = _historical(rows, fmt, results_dir, eng, keep)
     if eng.get("kind") != engine.KIND_DECKLAB or not eng.get("complete"):

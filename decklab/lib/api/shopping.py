@@ -83,8 +83,9 @@ def _overview():
     shop_prices.enrich(answer, data=shop_data)
     if cards_ready:
         _add_pictures(answer)
+        # A trial deck (E3-S39) is a precon not bought: its cards aren't missing from anything.
         answer["missing_cards"], answer["decks_missing"] = shopping_missing.gather(
-            summaries, answer.get("to_buy", []), _card_for, errors=deck_errors)
+            [s for s in summaries if not s.get("trial")], answer.get("to_buy", []), _card_for, errors=deck_errors)
     else:
         answer["decks_missing"] = []
         answer["missing_cards"] = shopping_missing.unavailable(

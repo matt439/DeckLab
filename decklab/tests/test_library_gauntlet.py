@@ -17,7 +17,7 @@ from decklab.tests import test_server as support
 from decklab.tests.test_gauntlet_api import GRUUL, R_ELVES
 from decklab.tests.test_gauntlet_board import IDS, BoardTestCase
 
-FIELDS = {"format", "state", "overall", "played", "of", "games", "updated", "before", "older"}
+FIELDS = {"format", "state", "overall", "played", "of", "games", "updated", "before", "older", "trial"}
 
 
 class LibraryGauntletTests(BoardTestCase):
@@ -35,6 +35,7 @@ class LibraryGauntletTests(BoardTestCase):
         self.assertEqual(set(row), FIELDS)
         self.assertEqual((row["format"], row["state"], row["played"], row["of"], row["games"]),
                          ("constructed", "done", 3, 3, 300))
+        self.assertIs(row["trial"], False)         # E3-S39: True only for a precon trial ("Not owned")
         self.assertEqual(row["overall"], {"rate": 0.6, "low": 0.5, "high": 0.7})
         self.assertFalse(any(i.startswith("product/fdn-beginner-box/") for i in found["decks"]))
         text = json.dumps(found, allow_nan=False)

@@ -36,7 +36,8 @@ const LIB_READINESS = { ready: "All cards here", waiting: "Cards on the way", mi
   unknown: "Availability needs checking" };
 const LIB_PRODUCTS_KEY = "library.products.open";      // "1" when the products part is open (folded by default)
 const LIB_LAB_QUERY = "(min-width: 1000px)";           // the lab: rows and the detail pane beside them
-const LIB_STATUS_GROUPS = [["built", "Built"], ["building", "Building"], ["idea", "Ideas"]];
+const LIB_STATUS_GROUPS = [["built", "Built"], ["building", "Building"], ["idea", "Ideas"], ["trial", "Trying out"]];
+const libStatusOf = (d) => d.trial ? "trial" : d.status;      // a precon trial (E3-S39, precon-trial.js) is its own group
 let libTitleSearchOwner = null;                    // the exact retained input of the current library draw
 
 /** True at lab width (LIB_LAB_QUERY). */
@@ -532,8 +533,8 @@ function kindGroups(decks, tag, ctx) {
  * the rows have no pill. A deck with no status (it can't be read) comes last, under no heading. */
 function statusRows(decks, ctx) {
   const known = new Set(LIB_STATUS_GROUPS.map(([status]) => status));
-  const parts = [...LIB_STATUS_GROUPS.map(([status, words]) => [status, words, decks.filter((d) => d.status === status)]),
-    [null, null, decks.filter((d) => !known.has(d.status))]];
+  const parts = [...LIB_STATUS_GROUPS.map(([status, words]) => [status, words, decks.filter((d) => libStatusOf(d) === status)]),
+    [null, null, decks.filter((d) => !known.has(libStatusOf(d)))]];
   return parts.filter(([, , group]) => group.length).map(([status, words, group]) => el("div", { class: "deck-rows-group" },
     words ? el("p", { class: `lib-status-head lib-status-${status}` }, words,
       el("span", { class: "lib-status-count", text: String(group.length) })) : null,
@@ -736,6 +737,7 @@ function deckCover(d, colours = libColours(d), wide = false) {
  * has none, as chips are for exceptions); always in the lab's detail pane. Products have none. */
 function deckStatusPill(d, always = false) {
   if (!d.status || d.read_only || (d.status === "built" && !always)) return null;
+  if (d.trial) return ptrTrialPill();
   return el("span", { class: `deck-status deck-status-${d.status}`, text: STATUS_WORDS[d.status] || d.status });
 }
 
@@ -992,7 +994,7 @@ function libDetailForge(d) {
 function libRowOrder(decks, sort) {
   const spaceKey = (d) => { const space = d.space || deckSpaceOf(d.id); return space === HOME_SPACE ? "" : spaceName(space); };
   const kindAt = (d) => LIB_KIND_ORDER.indexOf(d.kind);
-  const statusAt = (d) => { const i = LIB_STATUS_GROUPS.findIndex(([status]) => status === d.status); return i < 0 ? 9 : i; };
+  const statusAt = (d) => { const i = LIB_STATUS_GROUPS.findIndex(([status]) => status === libStatusOf(d)); return i < 0 ? 9 : i; };
   const at = new Map(sortDecks(decks, sort).map((d, i) => [d.id, i]));
   return decks.filter((d) => kindAt(d) >= 0).sort((a, b) => spaceKey(a).localeCompare(spaceKey(b))
     || kindAt(a) - kindAt(b) || statusAt(a) - statusAt(b) || at.get(a.id) - at.get(b.id));

@@ -17,7 +17,9 @@ Imported when first asked for, by feature_routes.dispatch.
                          "before": {"rate", "low", "high", "updated"} or None,
                          "older": {"reason", "opponents", "of", "overall", "updated", "earlier"} or None,
                          "notes": [why the list's earlier versions weren't (all) looked at, ...],
-                         "playing": None or {"status", "done", "total", "standard"}}
+                         "playing": None or {"status", "done", "total", "standard"},
+                         "trial": True for a trial deck (E3-S39: a precon not owned; its own precon
+                                  is left out of its sample, gauntlet.trial_excluded)}
 
 Which decks: guard.visible_decks over the library (the viewer's own space and the public spaces;
 every deck for a script naming nobody), the format's decks only, no Beginner Box half (one plays
@@ -54,6 +56,7 @@ import traceback
 from collections import OrderedDict
 
 from decklab.lib import decks, inventory, permissions
+from decklab.lib.gauntlet import trial_excluded, without
 
 from . import common, forge_runs, gauntlet_page, guard
 from .common import ApiError
@@ -97,7 +100,7 @@ def _deck(summary, entry):
 
 
 def _blank(summary, entry, state="untested", problem=None):
-    return {"deck": _deck(summary, entry), "state": state, "problem": problem, "overall": None, "played": 0,
+    return {"deck": _deck(summary, entry), "trial": bool(summary.get("trial")), "state": state, "problem": problem, "overall": None, "played": 0,
             "of": 0, "games": 0, "updated": None, "hardest": None, "before": None, "older": None, "notes": [],
             "playing": None}
 
@@ -203,17 +206,18 @@ def _rows_of(forge, g, fmt, cat, standard, made, snapshot, others=()):
             rows.append(_blank(summary, None, "unreadable", UNREADABLE))
             continue
         space = _space(summary)
+        mine = without(standard, trial_excluded(summary))      # a trial deck's: not its own precon
         stored = _stored(snapshot, summary["id"])
         walkable = bool(orphans.get(space))
         key = (summary["id"], space, entry["card_sha"], stored, (cat or {}).get("sha"), standard["id"], walkable)
-        stamps = _stamps(g, entry, standard, cat, space)
+        stamps = _stamps(g, entry, mine, cat, space)
         fingerprint = None if stamps is None else (stamps, orphans.get(space) if walkable else None)
         hit = _row_hit(key, fingerprint)
         if hit is not None:
-            rows.append(dict(hit, deck=_deck(summary, entry)))
+            rows.append(dict(hit, deck=_deck(summary, entry), trial=bool(summary.get("trial"))))
             continue
         walk = "no" if not walkable else "yes" if walks < MAX_WALKS else "later"
-        row, what = _work_row(forge, g, summary, entry, cat, standard, space, walk)
+        row, what = _work_row(forge, g, summary, entry, cat, mine, space, walk)
         walks += what == "walked"
         if what == "later":
             later = True            # not kept: a later read looks at its history

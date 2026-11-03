@@ -336,7 +336,7 @@ class DeckTablesTests(_Tree):
         self.assertIn("keep this hand note", text)
         self.write("decks/commander/other.md", support.deck_md("Other", "building", "Deck\n1 Pick Your Poison (MKM) 170\n"))
         from decklab.lib.inventory import refresh
-        with mock.patch.object(refresh, "plan_texts", lambda: []):     # (its plan refuses a deck without a table)
+        with mock.patch.object(refresh, "plan_texts", lambda **kwargs: []):     # (its plan refuses a deck without a table)
             code, out, err = run("deck", "tables", "commander/other", "--reprice")
         self.assertEqual(code, 0, err)
         self.assertIn("Not changed: commander/other (Other); it has no owned-vs-needed table", out)

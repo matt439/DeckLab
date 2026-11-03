@@ -259,8 +259,9 @@ def precon_preview(file=None, space=None):
     space = space_param(space)
     guard.require_space_write(guard.viewer(), "collection.edit", space)
     built = _build(_entry(file), space)
-    slug = decks.title_slug(built["title"])
-    return {"deck": built["entry"], "kind": built["kind"], "title": built["title"],
+    title = _free_title(built, space)
+    slug = decks.title_slug(title)
+    return {"deck": built["entry"], "kind": built["kind"], "title": title,
             "exists": (decks.existing_deck_id(slug, space)
                        if decks.valid_slug(slug) and guard.sees_deck({"space": space}) else None),
             "lists": _lists_with_cards(built["sections"]),
@@ -270,6 +271,29 @@ def precon_preview(file=None, space=None):
             "dropped_basics": built["dropped"], "left_out": built["left_out"], "tokens": built["tokens"],
             "ready": not built["problems"] and not built["deck_problems"], "sha256": built["sha256"],
             "editable": _may_add(space), "token_import": _token_import(built, space, guard.viewer())}
+
+
+def _free_title(built, space, profile=False):
+    """built's suggested title, unless a trial deck of this precon (E3-S39) that this request (or
+    profile, as precon_trial.trials) sees already has it, as a trial made with the default title
+    does: then the first of "<title> 2", "<title> 3", ... that no deck of the space has, so the
+    bought precon's deck can be added beside its trial (whose games follow the list)."""
+    title = built["title"]
+    slug = decks.title_slug(title)
+    taken = decks.existing_deck_id(slug, space) if decks.valid_slug(slug) else None
+    if taken is None:
+        return title
+    from .precon_trial import trials
+    with common.state_errors():
+        if taken not in {t["id"] for t in trials(built["entry"]["file"], space, profile)}:
+            return title
+        for n in range(2, 100):
+            suffix = f" {n}"
+            candidate = title[:saving.MAX_TITLE - len(suffix)].rstrip() + suffix
+            slug = decks.title_slug(candidate)
+            if decks.valid_slug(slug) and decks.existing_deck_id(slug, space) is None:
+                return candidate
+    return title
 
 
 def _token_words(built):
@@ -313,7 +337,8 @@ def add_precon(body):
     default), in one change (precon.add). sha256 is the collection's, as the
     preview gave it. Returns {"collection": import/apply's answer without
     its rows, or None when only plain basics were left to add,
-    "deck": POST /api/decks's answer}. 400 with "problems" for a precon that
+    "deck": POST /api/decks's answer, "trials": [{"id", "title"}] of the space's trial decks of
+    this precon the viewer sees (E3-S39: the page offers to retire them)}. 400 with "problems" for a precon that
     can't be added as it is; 409 for a changed collection ({error, sha256,
     rows}) or a taken title ({error, conflict}); 403 without collection.edit
     and deck.create. Nothing is saved when anything is refused."""
@@ -362,8 +387,10 @@ def add_precon(body):
             except Exception:      # optional advice cannot fail a saved precon or encourage adding it twice
                 added["filing"] = collection_filing.unknown(space, profile, facts, counts["cards"])
                 added["filing"]["message"] = collection_filing.PRECON_UNKNOWN
+        from .precon_trial import trials
         return {"collection": added,
                 "deck": saving.created_answer(made["plan"], made["deck_id"], made["table"], made["text"]),
+                "trials": trials(made["built"]["entry"]["file"], space, profile),
                 **({"tokens": {"cards": summary.counts["token_cards"], "rows": summary.counts["token_rows"]}} if add_tokens else {})}
 
 
@@ -375,7 +402,8 @@ def plan_add(space, file, title, fields, profile, author, sha=None, *, add_token
     {"built" (_build's), "plan" (saving.plan_new_deck's), "whose", "deck_id", "table", "text"
     (the deck's, its table worked out against the collection as the import leaves it), "op"
     (the precon.add operation to apply), "message" (the page's words for the change),
-    "refused" (_precon_refused, for saving.apply_op)}. profile: whose rights the checks are
+    "refused" (_precon_refused, for saving.apply_op), "trials" (precon_trial.trials: the
+    space's trial decks of this precon that profile sees, left for retiring)}. profile: whose rights the checks are
     made with (None: a script naming nobody, such as the command line, which may do
     everything); title: the deck's (None: the preview's suggestion); author: the name in the
     deck's Notes ("by Matt"); sha: the collection's
@@ -421,7 +449,8 @@ def plan_add(space, file, title, fields, profile, author, sha=None, *, add_token
             except ValueError as e:
                 raise ApiError(400, str(e)) from None
         token_params = {"token_rows": [item["row"] for item in built["token_candidates"]["rows"]], "tokens_sha256": expected}
-    request = {"title": built["title"] if title is None else title, "kind": built["kind"], "space": space,
+    title = _free_title(built, space, profile) if title is None else title
+    request = {"title": title, "kind": built["kind"], "space": space,
                "fields": {"status": "built", **(fields or {})}, "lists": {"target": built["sections"]}}
     plan = saving.plan_new_deck(request, profile, notes=_notes(built, author, add_tokens, confirmed))
     saving.check_free(plan)
@@ -453,8 +482,11 @@ def plan_add(space, file, title, fields, profile, author, sha=None, *, add_token
                else f"add the {name} precon's deck {plan['title']} to {whose}")
     if add_tokens:
         message += f"; add {built['token_candidates']['cards']} token cards with printing and reverse face unconfirmed"
+    from .precon_trial import trials
+    with common.state_errors():
+        found = trials(built["entry"]["file"], space, profile)
     return {"built": built, "plan": plan, "whose": whose, "deck_id": deck_id, "table": table, "text": text,
-            "op": op, "message": message, "refused": refused}
+            "op": op, "message": message, "refused": refused, "trials": found}
 
 
 def _token_stale():

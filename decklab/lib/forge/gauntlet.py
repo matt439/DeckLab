@@ -40,6 +40,8 @@ wrappers below, which the tests replace."""
 import json
 from pathlib import Path
 
+from decklab.lib.gauntlet import without
+
 from . import common, engine, field, lists, saved, seqstats
 from .common import ForgeError
 
@@ -231,10 +233,12 @@ def _check(deck_entry, chosen):
 
 # ============================================================ planning and running
 
-def plan(deck_entry, chosen, budget=DEFAULT_BUDGET):
+def plan(deck_entry, chosen, budget=DEFAULT_BUDGET, exclude_ids=()):
     """What a gauntlet run of deck_entry against the sample would play now (nothing plays):
-    field.plan's answer over the sample's decks and the gauntlet's results, with "sample"."""
+    field.plan's answer over the sample's decks and the gauntlet's results, with "sample".
+    exclude_ids: sample decks left out (a trial deck's own precon, gauntlet.trial_excluded)."""
     _check(deck_entry, chosen)
+    chosen = without(chosen, exclude_ids)
     opponents = entries(chosen["format"], chosen["decks"])
     found = field.plan(deck_entry, budget, results_dir=results_dir(), opponent_entries=opponents)
     found["sample"] = chosen["id"]
@@ -242,13 +246,15 @@ def plan(deck_entry, chosen, budget=DEFAULT_BUDGET):
 
 
 def run(deck_entry, chosen, budget=DEFAULT_BUDGET, inflight=None, progress=None, stop=None, *,
-        by="command line", local=False, pool=None, seed_base=None, log_dir=None, log_every=1, space="home"):
+        by="command line", local=False, pool=None, seed_base=None, log_dir=None, log_every=1, space="home",
+        exclude_ids=()):
     """Play deck_entry against the sample (field.run_field with the sample's decks as its
     opponents and the gauntlet's results folder): its note. stop, an Event, stops it at the next
     progress report as the page's Stop does (common.Stopped, raised again once every pair run has
     saved its games). ValueError for a budget or a sample of the other format, ForgeError as
-    run_field's and entries'."""
+    run_field's and entries'. exclude_ids as plan's."""
     _check(deck_entry, chosen)
+    chosen = without(chosen, exclude_ids)
     opponents = entries(chosen["format"], chosen["decks"])
     folder = results_dir()
     folder.mkdir(parents=True, exist_ok=True)
@@ -354,15 +360,17 @@ def _groups(members):
     return out
 
 
-def view(deck_entry, chosen, keep=None, cat=None):
+def view(deck_entry, chosen, keep=None, cat=None, exclude_ids=()):
     """deck_entry against the sample (it never plays a game): {"deck": id, "sample": id, "format",
     "opponents": [rows, hardest first (lowest range low)], "groups" (_groups), "overall" (a group
     row over every opponent: the equal-weight average), "played" (opponents with games), "of" (the
     sample's opponents in the catalogue now), "tally" (_tally), "updated" (the newest opponent's
     "updated", or None), "games", "note" (the caveat: these sampled opponents only), "notes" (decks
     gone from the catalogue, a rebuilt catalogue)}. cat as draw's (the sample's format's). ValueError
-    for a sample of the other format, ForgeError with no catalogue."""
+    for a sample of the other format, ForgeError with no catalogue. exclude_ids as plan's; a sample
+    deck with deck_entry's own list (a mirror) is left out too (_members)."""
     _check(deck_entry, chosen)
+    chosen = without(chosen, exclude_ids)
     fmt = chosen["format"]
     cat = cat if cat is not None else catalogue(fmt)
     missing, members = _members(deck_entry, chosen, keep, cat)
@@ -383,9 +391,19 @@ def view(deck_entry, chosen, keep=None, cat=None):
             "note": CAVEAT.format(m=len(members)), "notes": notes}
 
 
+def _unmirrored(deck_entry, pairs):
+    """pairs ([(catalogue deck, entry)]) without one whose list is deck_entry's own (a mirror):
+    the opponents view, older and stamps count."""
+    sha = deck_entry.get("card_sha")
+    return [(deck, e) for deck, e in pairs if not (sha and e.get("card_sha") == sha)]
+
+
 def _members(deck_entry, chosen, keep, cat):
-    """([sample ids not playable in cat], [(catalogue entry, field._rows row)] in the sample's order)."""
+    """([sample ids not playable in cat], [(catalogue entry, field._rows row)] in the sample's order),
+    without a sample deck whose list is deck_entry's own (the same card_sha: a mirror, as
+    field._opponents leaves out of a run)."""
     pairs, missing = _picked(cat, chosen.get("decks") or [])
+    pairs = _unmirrored(deck_entry, pairs)
     rows = field._rows(deck_entry, [e for _, e in pairs], results_dir(), keep)
     return missing, [(deck, row) for (deck, _), row in zip(pairs, rows)]
 
@@ -438,7 +456,7 @@ def stamps(deck_entry, chosen, cat, space="home"):
     (matchup key, (mtime_ns, size) or None) per playable sample opponent, in the sample's order,
     the keys field._pair_state reads (today's engine's: call it inside engine.held()), then
     ("notes", ...) of the list's run notes in the space. The same stamps mean the same view."""
-    pairs, _ = _picked(cat, chosen.get("decks") or [])
+    pairs = _unmirrored(deck_entry, _picked(cat, chosen.get("decks") or [])[0])
     folder = results_dir()
     out = []
     for _, opponent in pairs:
@@ -537,7 +555,7 @@ def older(deck_entry, chosen, keep=None, cat=None, today_keys=(), space="home", 
     so left out too (None once every one is)."""
     _check(deck_entry, chosen)
     cat = cat if cat is not None else catalogue(chosen["format"])
-    pairs, _ = _picked(cat, chosen.get("decks") or [])
+    pairs = _unmirrored(deck_entry, _picked(cat, chosen.get("decks") or [])[0])     # view's "of"
     by_id = {deck["id"]: (deck, e) for deck, e in pairs}
     skip, replaced = set(today_keys or ()), set(played or ())
     by_id = {i: pair for i, pair in by_id.items() if i not in replaced}

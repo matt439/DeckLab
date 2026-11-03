@@ -19,7 +19,8 @@ printing's USD price at the ECB rate, with the rate and dates).
 Starting a deck is POST /api/decks's path (saving.plan_new_deck and
 write_new_deck: deck.create on the space, a free name, a list every new deck
 may have), with status idea and the precon's list as Add a precon would make
-it (api/precons._build); nothing goes into the collection.
+it (api/precons._build); nothing goes into the collection. Its parts (built_list, create_idea,
+list_source) also make a trial deck (api/precon_trial.py, E3-S39).
 """
 import csv
 
@@ -34,6 +35,7 @@ from .settings import _writer
 
 LIMIT = 60
 MAX_LIMIT = 200
+MIN_CASUAL = 60          # the 60-card field and gauntlet are 60-card decks (a trial's test, E3-S39)
 
 
 def _pool(space):
@@ -89,6 +91,23 @@ def _sections(read, kind):
     return sections
 
 
+def kind_and_cards(entry, sections):
+    """(kind, cards in Commander and Deck) of a precon's sections, as Add a precon makes its deck."""
+    has_commander = bool(sections.get("Commander"))
+    kind = "commander" if entry["type"] == "Commander Deck" and has_commander else "casual"
+    count = sum(line.quantity for section in ("Commander", "Deck") for line in sections.get(section, []))
+    return kind, count
+
+
+def why_not_testable(kind, count):
+    """Why a precon of that kind and size can't be tried in Forge (E3-S39), or None: a Commander
+    precon always can; another needs a Deck of at least MIN_CASUAL cards, as the 60-card field
+    and gauntlet are."""
+    if kind == "commander" or count >= MIN_CASUAL:
+        return None
+    return f"Its {count}-card list is too small to test against {MIN_CASUAL}-card decks."
+
+
 def _card(name):
     from .card_lookup import _card_json, _shown_printing
     exact = cards.resolve(name)
@@ -102,7 +121,8 @@ def coverage_deck(file=None, space=None):
     ([{"name", "need", "free", "missing", "aud_each", "aud_missing", "priced_printing", "card"}],
     the dearest first, unpriced last), "totals" ({"missing", "aud_missing", "unpriced"}),
     "rate", "rate_date", "price_date", "price_error" (pool.compare's), "problems" (cards of
-    MTGJSON's list that can't be read), "may_start"}. 403 as coverage_view; 404 for a deck
+    MTGJSON's list that can't be read), "may_start", "testable" and "why_not_testable" (whether
+    Try it in Forge can test it, as POST /api/precons/trial: E3-S39)}. 403 as coverage_view; 404 for a deck
     MTGJSON doesn't list; 502 when its list can't be had."""
     space = space_param(space)
     guard.require_sees_inventory(space)
@@ -126,21 +146,57 @@ def coverage_deck(file=None, space=None):
     missing.sort(key=lambda r: (r["aud_missing"] is None, -(r["aud_missing"] or 0), r["name"]))
     commanders = [line.name for line in sections.get("Commander", [])]
     title = f"{' & '.join(add._short(n) for n in commanders)}: {entry['name']}" if commanders else entry["name"]
+    why = why_not_testable(*kind_and_cards(entry, sections))
     return {"deck": entry, "kind": kind, "title": title[:saving.MAX_TITLE], "cards": total, "covered": covered,
             "share": round(covered / total, 4) if total else None, "missing": missing,
             "totals": {k: result["totals"][k] for k in ("missing", "aud_missing", "unpriced")},
             "rate": result["rate"], "rate_date": result["rate_date"], "price_date": result["price_date"],
-            "price_error": result["price_error"], "problems": read["problems"], "may_start": _may_start(space)}
+            "price_error": result["price_error"], "problems": read["problems"], "may_start": _may_start(space),
+            "testable": why is None, "why_not_testable": why}
+
+
+def list_source(entry):
+    """The Notes' last sentence: "The list is MTGJSON's, from Wizards' published list: <url>." (or its
+    other source, or none)."""
+    source = entry["source"]
+    return ("The list is MTGJSON's"
+            + ((f", from Wizards' published list: {source}" if precons.from_wizards(source) else f", from {source}")
+               if source else "") + ".")
 
 
 def _notes(entry, author):
     released = f", released {entry['released']}" if entry["released"] else ""
-    source = entry["source"]
     return (f"Started in Deck Lab on {add._added_on()} by {author} from the {entry['name']} precon's list "
             f"({entry['set_name'] or entry['code'].upper()}, {entry['type']}{released}), to build from the "
-            "collection; none of its cards were added to the collection. The list is MTGJSON's"
-            + ((f", from Wizards' published list: {source}" if precons.from_wizards(source) else f", from {source}")
-               if source else "") + ".")
+            "collection; none of its cards were added to the collection. " + list_source(entry))
+
+
+def built_list(file, space, refusal="A deck can't be started from"):
+    """api/precons._build's list of the precon file for a new deck in space, or 400 with "problems",
+    its message beginning with refusal, when no deck can be made of it (cards Scryfall's data
+    can't match, a list a new deck can't have); 404 for a file MTGJSON doesn't list, 502 when
+    it can't be had."""
+    built = add._build(add._entry(file), space)
+    name = built["entry"]["name"]
+    if built["problems"]:
+        raise ApiError(400, f"{refusal} {name} yet: Deck Lab can't match "
+                            f"{len(built['problems'])} of its cards to Scryfall's data.", problems=built["problems"])
+    if built["deck_problems"]:
+        raise ApiError(400, f"{refusal} {name}: its list can't be made into a deck "
+                            f"({built['deck_problems'][0]['message']}).", problems=built["deck_problems"])
+    return built
+
+
+def create_idea(built, title, space, profile, notes, trial=None):
+    """Save an idea deck of the built list (built_list's) through POST /api/decks's path
+    (saving.plan_new_deck and write_new_deck), with notes as its Notes and, for trial (a precon
+    file), its Trial line (decks/trial.py). Returns POST /api/decks's answer."""
+    request = {"title": title, "kind": built["kind"], "space": space, "fields": {"status": "idea"},
+               "lists": {"target": built["sections"]}}
+    plan = saving.plan_new_deck(request, profile, notes=notes)
+    if trial is not None:
+        decks.set_trial(plan["deck"], trial)
+    return saving.write_new_deck(plan)
 
 
 def start_deck(body):
@@ -156,15 +212,5 @@ def start_deck(body):
     # The rules plan_new_deck asks again, first: nothing of the space is read for someone who can't.
     saving.require_sees_space(space, profile)
     guard.require(profile, "deck.create", {"space": space, "player": None})
-    built = add._build(add._entry(data["file"]), space)
-    name = built["entry"]["name"]
-    if built["problems"]:
-        raise ApiError(400, f"A deck can't be started from {name} yet: Deck Lab can't match "
-                            f"{len(built['problems'])} of its cards to Scryfall's data.", problems=built["problems"])
-    if built["deck_problems"]:
-        raise ApiError(400, f"A deck can't be started from {name}: its list can't be made into a deck "
-                            f"({built['deck_problems'][0]['message']}).", problems=built["deck_problems"])
-    request = {"title": data["title"], "kind": built["kind"], "space": space, "fields": {"status": "idea"},
-               "lists": {"target": built["sections"]}}
-    plan = saving.plan_new_deck(request, profile, notes=_notes(built["entry"], profile["name"]))
-    return saving.write_new_deck(plan)
+    built = built_list(data["file"], space)
+    return create_idea(built, data["title"], space, profile, _notes(built["entry"], profile["name"]))

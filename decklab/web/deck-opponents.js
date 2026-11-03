@@ -9,7 +9,7 @@ function closeDeckOpponentSheets() {
 }
 
 function deckOpponentsSection(data) {
-  const editable = !data.summary.read_only && canEditDeck(data.summary);
+  const editable = !data.summary.read_only && !data.summary.trial && canEditDeck(data.summary);   // a trial: none (E3-S39)
   if (!(data.usual_opponents || []).length && !editable) return null;
   const section = el("section", { class: "deck-section", id: "sec-opponents", "aria-labelledby": "h-opponents" });
   const token = routeToken, profile = state.profile?.id;

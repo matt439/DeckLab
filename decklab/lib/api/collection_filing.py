@@ -78,6 +78,8 @@ def _candidate_decks(after, space, profile, work, *, cli_owned=False):
         if work[0] > MAX_WORK:
             raise ValueError("Too much filing work")
         parsed = decks.parse_deck(record.data, record.slug, record.kind, space=space)
+        if decks.trial_of(parsed) is not None:
+            continue        # a trial deck (E3-S39): a precon not owned, so no card is filed into it
         if not parsed.has_decklist:
             raise ValueError("A candidate has no Planned list")
         work[0] += sum(len(lines) for lines in parsed.target.values())

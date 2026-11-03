@@ -289,8 +289,8 @@ def _deck_uses(inv, view, by_id):
                     continue
                 if (space == spaces.HOME and summary.get("space", space) == spaces.HOME
                         and kind in ("casual", "commander") and summary.get("kind") == kind
-                        and not summary.get("error") and sees(summary)):
-                    summaries.append(summary)
+                        and not summary.get("error") and sees(summary) and not summary.get("trial")):
+                    summaries.append(summary)       # never a trial deck (E3-S39): no delivery is for it
         found = pool.load_pool() if summaries else None
         uses = {}           # name -> [(summary, owned-vs-needed row)]
         for summary in summaries:

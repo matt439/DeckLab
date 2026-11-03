@@ -746,7 +746,8 @@ def plan_tables(ids=(), reprice=False, unchanged=None):
     unknown = [i for i in ids if inv.deck(i) is None]
     if unknown:
         raise NoSuchDeck(f"there's no deck {', '.join(unknown)}")
-    planned = {deck_id: (title, raw, out, None) for deck_id, title, raw, out in refresh.plan_texts()}
+    planned = {deck_id: (title, raw, out, None)          # a trial deck only when named (E3-S39)
+               for deck_id, title, raw, out in refresh.plan_texts(include=set(ids))}
     if reprice:
         for deck_id in ids or sorted(inv.decks):
             deck = inv.deck(deck_id)

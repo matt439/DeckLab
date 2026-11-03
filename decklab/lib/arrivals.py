@@ -61,12 +61,13 @@ def _here(row):
 
 
 def _home_decks():
-    """{deck id: (player, built)} of home's Casual and Commander decks with a Played by, from current()."""
+    """{deck id: (player, built)} of home's Casual and Commander decks with a Played by, from current();
+    never a trial deck (E3-S39: a precon not bought, which no delivery is for)."""
     from decklab.lib import decks, spaces
     out = {}
     for summary in decks.list_decks():
         if (summary.get("space") == spaces.HOME and summary.get("kind") in KINDS and not summary.get("error")
-                and summary.get("player") in PLAYERS):
+                and summary.get("player") in PLAYERS and not summary.get("trial")):
             out[summary["id"]] = (summary["player"], summary.get("status") == "built")
     return out
 

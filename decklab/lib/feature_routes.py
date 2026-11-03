@@ -44,6 +44,24 @@ def _card_decks(**params):
     return card_decks(**params)
 
 
+def _precon_trial(name):
+    """One of api/precon_trial.py's functions (E3-S39, Try a precon), imported when first asked for."""
+    from decklab.lib.api import precon_trial
+    return getattr(precon_trial, name)
+
+
+def _trial_view(**params):
+    return _precon_trial("trial_view")(**params)
+
+
+def _trial_start(body):
+    return _precon_trial("start_trial")(body)
+
+
+def _trial_keep(body):
+    return _precon_trial("keep_trial")(body)
+
+
 def _sideboard_preview(**params):
     """Load the sideboard preview, which reads Forge's paired-game budgets, only when asked for."""
     from decklab.lib.api.sideboard_preview import preview_sideboard
@@ -132,6 +150,7 @@ def dispatch(handler, route, query):
         ("precons", "preview"): (precons.precon_preview, ("file", "space")),
         ("precons", "coverage"): (precon_coverage.coverage_view, ("space", "format", "type", "limit")),
         ("precons", "coverage", "deck"): (precon_coverage.coverage_deck, ("file", "space")),
+        ("precons", "trial"): (_trial_view, ("file", "space")),
         ("assembly",): (assembly.assembly_view, ("deck", "version")),
         ("compare", "shared"): (compare.shared_view, ("a", "av", "b", "bv")),
         ("play",): (play_records.play_overview, ("id",)),
@@ -223,6 +242,8 @@ def dispatch(handler, route, query):
         ("collection", "trade"): (collection_trade.save_trade, collection_trade.MAX_TRADE_BODY),
         ("precons", "add"): precons.add_precon,
         ("precons", "start"): precon_coverage.start_deck,
+        ("precons", "trial"): _trial_start,       # deck.create, as POST /api/precons/start
+        ("precons", "trial", "keep"): _trial_keep,      # deck.edit on the trial deck
         ("field", "policy", "preview"): (_field_choice_preview, 8192),     # a review: nothing is written
         ("field", "policy"): (_field_choice_save, 8192),                  # field.edit: a home admin's
         ("deck", "cover"): cover.save_cover,
