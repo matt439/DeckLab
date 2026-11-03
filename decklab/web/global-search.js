@@ -5,7 +5,7 @@ One search from any page, over GET /api/search?q=: the decks the viewer may see,
 about 5 of each with a See all (Decks: the library filtered by title; In your collection: the Collection page's
 search; Other cards: the card viewer over up to 50 matches). The server leaves out what the viewer may not
 see, so nothing here filters or names anything itself. To a viewer who may see the space's inventory, a card
-result also says its deck use in short form ("in 2 decks · 1 free", E1-S29); a basic land's isn't tracked.
+result also says its deck use in short form ("in 2 decks · 1 free", E1-S29); a basic land's "in decks not tracked".
 
   A search field before the avatar in the lab from 1000 px and the casual header from 600 px (300 px on the
   iPad in portrait, 16 px text so iOS doesn't zoom), its results in a panel under it; under 600 px, and on a
@@ -242,9 +242,11 @@ function gsItem(box, group, item) {
 }
 
 /** A card's deck use in short form (E1-S29, the card viewer's use line shortened): "in 2 decks · 1 free",
- * "in no decks · none free"; "" when the server sent none (a viewer outside the space's inventory, a basic land). */
+ * "in no decks · none free"; a basic land "in decks not tracked", as the Card list says; "" when the server
+ * sent none (a viewer outside the space's inventory, or a deck list it couldn't read). */
 function gsUse(item) {
-  if (item.basic || item.decks == null) return "";
+  if (item.basic === true) return "in decks not tracked";
+  if (item.decks == null) return "";
   const decks = item.decks ? `in ${plural(item.decks, "deck")}` : "in no decks";
   return `${decks} · ${item.free ? `${num(item.free)} free` : "none free"}`;
 }

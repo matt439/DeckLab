@@ -96,7 +96,7 @@ class GlobalSearchUiTests(unittest.TestCase):
           const meta = box().results.querySelectorAll(".gs-item").slice(1).map((b) => b.querySelector(".gs-meta").textContent);
           same(meta, ["in 2 decks · 1 free · 1 on the way", "3 owned · in decks not tracked",
             "in 1 deck · none free · Creature — Elf Druid", "in no decks · none free · Instant",
-            "Basic Land — Forest", "Sorcery"]);
+            "in decks not tracked · Basic Land — Forest", "Sorcery"]);
         ''')
 
     def test_collection_see_all_goes_to_the_collection_search(self):
