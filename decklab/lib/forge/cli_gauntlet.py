@@ -233,10 +233,17 @@ def _deck(args):
     return shared._cli_entry(args.deck, args.owned)
 
 
+def _house_sample(args, a):
+    """The sample args choose for the deck a, without a trial deck's own precon (E3-S39)."""
+    from decklab.lib import decks
+    from decklab.lib.gauntlet import trial_excluded, without
+    return without(_draw(args, _g().format_of(a)), trial_excluded(decks.find_summary(a["id"])))
+
+
 def _plan(args):
     from . import estimate
     a = _deck(args)
-    chosen = _draw(args, _g().format_of(a))
+    chosen = _house_sample(args, a)
     planned = _g().plan(a, chosen, args.budget)
     minutes = evaluate._field_minutes(estimate, [(a, p["opponent"], p["games"]) for p in planned["pairs"]
                                                  if p["games"] > 0], str(_g().results_dir()))
@@ -258,7 +265,7 @@ def _plan(args):
 
 def _play(args):
     a = _deck(args)
-    chosen = _draw(args, _g().format_of(a))
+    chosen = _house_sample(args, a)
     if args.seed_base is not None and args.seed_base < 0:
         raise shared._CliError("The seed base must be 0 or more (--seed-base).")
     shown = [0.0]
@@ -289,7 +296,7 @@ def _play(args):
 
 def _view(args):
     a = _deck(args)
-    chosen = _draw(args, _g().format_of(a))
+    chosen = _house_sample(args, a)
     found = _g().view(a, chosen)
     if args.json:
         print(shared.json.dumps(found, ensure_ascii=False))

@@ -912,4 +912,6 @@ def _add_precon(args):
               "printing and reverse face unconfirmed.")
     print(f"Added {_plural(added, 'card')} ({counts.get('added_rows', 0) if good else 0} new rows) to {whose} "
           f"and made {made['deck_id']}.")
+    for trial in made.get("trials") or []:      # E3-S39: it's bought now, so its trial can go
+        print(f"The trial deck {trial['id']} of this precon is still in the library: retire it on its deck page.")
     return 0

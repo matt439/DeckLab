@@ -80,6 +80,7 @@ function savedBox(id) {
       el("ul", { class: "sources-list" }, others.map((w) => el("li", { text: w })))) : null,
     a.stale_tables && a.stale_tables.length ? staleTablesPart(a.stale_tables) : null]);
   if (a.precon?.filing) add(box, [colFilingSavedBox(saved, box)]);
+  if (a.precon?.trials) add(box, [ptrTrialsPart(a.precon.trials)]);     // precon-trial.js (E3-S39)
   return box;
 }
 

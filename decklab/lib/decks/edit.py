@@ -69,8 +69,12 @@ def _set_leading_word(deck, key, word, words):
 
 
 def set_status(deck, status):
-    """Set Status to idea / building / built, keeping any text after the word."""
+    """Set Status to idea / building / built, keeping any text after the word. A status other
+    than idea also removes a Trial line (trial.py: someone is building the deck now)."""
     _set_leading_word(deck, "Status", status, STATUSES)
+    if status != "idea":
+        from . import trial
+        trial.set_trial(deck, None)
     if status != "built":
         from . import assembled
         assembled.clear(deck)

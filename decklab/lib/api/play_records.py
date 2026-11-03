@@ -656,8 +656,8 @@ def play_overview(deck_id=None):
         stored = {kind: state.store().play_list(kind) for kind in ("games", "sideboards")}
     snapshots, pod_lists, warnings, about = [], [], [], {}
     for summary in guard.visible_decks(decks.list_decks(), viewer):     # before any snapshot (E10-S30)
-        if summary.get("error") or is_half(summary):
-            continue
+        if summary.get("error") or is_half(summary) or summary.get("trial"):
+            continue        # a trial deck (E3-S39) is a precon not owned: never played at the table
         about[summary["id"]] = {"player": summary.get("player"), "status": summary.get("status"),
                                  "can_record": guard.allowed(viewer, "play.record", [summary])}
         for version in summary["versions"]:

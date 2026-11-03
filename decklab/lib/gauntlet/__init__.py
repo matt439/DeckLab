@@ -48,3 +48,27 @@ def slug(text):
 def is_gauntlet_id(value):
     """True for a gauntlet deck's id ("gauntlet:edhrec/...", "gauntlet:precon/...", ...)."""
     return isinstance(value, str) and value.startswith(ID_PREFIX)
+
+
+def precon_id(file):
+    """The gauntlet id of an MTGJSON Commander precon: "gauntlet:precon/<file>" (precon_source.py)."""
+    return f"{ID_PREFIX}precon/{file}"
+
+
+def trial_excluded(summary):
+    """The gauntlet ids a deck's gauntlet leaves out (E3-S39): a trial deck's own precon
+    (decks/trial.py; its catalogue copy may be fixed to a list other than the trial's, so its
+    card_sha alone wouldn't find it), as a tuple; () for any other deck or no summary."""
+    file = (summary or {}).get("trial")
+    return (precon_id(file),) if isinstance(file, str) and file else ()
+
+
+def without(sample, exclude_ids):
+    """A sample (sample.py's dict) without the decks exclude_ids names: the same dict when none of
+    them is in it, else a copy with the rest of its "decks" in order (its id and filters kept, so
+    its saved games and runs are still found by its id)."""
+    exclude = set(exclude_ids or ())
+    listed = (sample or {}).get("decks") or []
+    if not exclude or not any(deck_id in exclude for deck_id in listed):
+        return sample
+    return dict(sample, decks=[deck_id for deck_id in listed if deck_id not in exclude])

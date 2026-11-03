@@ -99,6 +99,8 @@ The routes and what each checks:
                                                   deck.create as POST /api/decks (its fields)
     POST /api/precons/start                       deck.create on the body's "space" as POST /api/decks
                                                   (the space's decks seen first); nothing is added
+    POST /api/precons/trial                       the same (E3-S39: a trial deck of the precon)
+    POST /api/precons/trial/keep                  deck.edit on the trial deck (a hidden one: 404)
 
 A space's collection and tokens are changed only by its own profiles: an
 admin only his own space's, a home member (User1) home's as Matt can

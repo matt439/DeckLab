@@ -1,4 +1,4 @@
-# Deck Lab gauntlet: design (E3-S28 to E3-S38)
+# Deck Lab gauntlet: design (E3-S28 to E3-S39)
 
 ## 1. What it is
 
@@ -261,3 +261,12 @@ Matt decided on 2026-11-03 that Against popular decks is Deck Lab's lead feature
 **Larger runs** (E3-S38; Matt, 2026-11-03): Commander offers 6, 12, 20, 40 or **All**, every playable deck of the chosen tiers, colours and styles with both of a commander's decks included (about 201 in the dev PC's catalogue: 59 core, 110 upgraded, 32 precon); 60-card offers 12, 24, 36, 72 or 144 (no All: about 1,280 decks). Games an opponent stay 50, 100 or 200. The API takes 1 to 300 (`MAX_SIZE`) or `all`. An All sample hashes `every` into its id, so it never shares an id with a normal sample. The page shows the run's opponents, new games and time above Play, and over 2 hours (`OVERNIGHT_MINUTES`) says it's an overnight run and that Deck Lab keeps the PC awake while it plays: gauntlet runs are coordinator jobs, which the keep-awake provider (`server_run._forge_runs_busy`) counts as busy. Drawing and estimating All costs what a normal sample does.
 
 **Open:** whether the nightly task should top up stale or untested built Commander decks on the standard sample (a recommendation, not decided): only once the live server has a catalogue and a measured throughput (TODO.md, `FG#4`), at most a deck or two a night, skipped when simulations are paused.
+
+## 12. Mirrors and trial houses (E3-S39)
+
+Matt decided on 2026-11-03 that a published precon a space doesn't own can be tried before it's bought: it's saved as an ordinary `idea` deck of the space with a `- **Trial:** precon <FILE>` line (`decks/trial.py`), so it's a house deck like any other and its gauntlet runs, privacy and simulations checks are the usual ones. That made two exclusions necessary.
+
+- **No mirror, for every house deck:** `field._opponents` (a run's opponents) and `forge/gauntlet._members` (the view, `older` and `stamps`, so "of" counts what's played) leave out any opponent whose `card_sha` is the house list's own. `api/gauntlet_page._keep` refuses a saved result with no other side (an exact mirror). A house deck identical to a catalogue deck (a bought precon, unchanged) therefore never plays itself.
+- **A trial's own precon:** a trial of FILE also leaves out `gauntlet:precon/<FILE>`, whose catalogue copy `fixing.fix_commander` may have changed to another `card_sha`, so the mirror rule alone wouldn't find it. The id comes from the deck's summary in the API layer (`gauntlet.trial_excluded`) and is passed explicitly: `forge/gauntlet.plan`, `run` and `view` take `exclude_ids`, and `gauntlet.without` drops those ids from a sample while keeping its id, so its saved games are still found. The deck page's view and run, the summary, the Popular decks board, the library's figure and the command line's `plan|play|view` (`cli_gauntlet._house_sample`) all apply it, and the standard sample's "of" counts the rest (19 of 20 when the precon was in it).
+- **Jobs:** a trial's run key carries its exclusion (`job_key`'s `|x=<ids>`), so a deck of the same list without the exclusion (the bought precon) never joins a run that leaves one of its opponents out.
+- **Where trials show:** a trial's own field and gauntlet play as any deck's, and its rows on the Popular decks board and in the library say `trial` ("Not owned"); it's never another deck's field opponent or a Rankings node. Its games follow its list, so a bought deck of the same list keeps them.

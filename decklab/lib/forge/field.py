@@ -192,6 +192,8 @@ def _field(fmt, *, space="home", public=None, visible=None, product_notes=True, 
                 (visible is not None and not visible(deck_id)):
             continue
         house = spaces.split_deck_id(deck_id)[1] in decks.KINDS
+        if house and summary.get("trial"):
+            continue        # a trial deck (E3-S39) is never an opponent; its own run still plays this field
         if house:
             if summary.get("error"):
                 if (spaces.split_deck_id(deck_id)[1] == "commander" and fmt == "Commander") or \
@@ -315,8 +317,11 @@ def field_notes(fmt, *, space="home", public=None, visible=None, product_notes=T
 
 
 def _opponents(entry, names, field):
-    """opponents() over a field already worked out."""
-    out = [e for e in field if not _same_id(e["id"], entry["id"])]
+    """opponents() over a field already worked out: never the house deck itself, nor a list
+    identical to it (the same card_sha: a mirror, such as a deck that is exactly a gauntlet
+    precon)."""
+    sha = entry.get("card_sha")
+    out = [e for e in field if not _same_id(e["id"], entry["id"]) and not (sha and e.get("card_sha") == sha)]
     if names is None:
         return out
     wanted = [_split_name(name) for name in names if name and name.strip()]

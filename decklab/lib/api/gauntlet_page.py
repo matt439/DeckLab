@@ -43,7 +43,7 @@ import traceback
 from urllib.parse import quote
 
 from decklab.lib import jobs, permissions
-from decklab.lib.gauntlet import is_gauntlet_id
+from decklab.lib.gauntlet import is_gauntlet_id, trial_excluded, without
 from decklab.lib.gauntlet.sample import STANDARD
 
 from . import common, field_page, forge_runs, gauntlet_before, guard
@@ -102,9 +102,11 @@ def _prefix(entry):
     return f"gauntlet:{_space(entry)}:{entry['card_sha']}:"
 
 
-def job_key(entry, sample_id):
-    """The COORD_JOBS key: "gauntlet:<space>:<card_sha>:<sample id>"."""
-    return _prefix(entry) + sample_id
+def job_key(entry, sample_id, exclude=()):
+    """The COORD_JOBS key: "gauntlet:<space>:<card_sha>:<sample id>", plus "|x=<ids>" for a trial
+    deck's run (exclude: the catalogue ids it leaves out, gauntlet.trial_excluded), so a deck of
+    the same list (the bought precon) never joins a run that leaves one of its opponents out."""
+    return _prefix(entry) + sample_id + ("|x=" + ",".join(sorted(exclude)) if exclude else "")
 
 
 # ============================================================ the request's choices
@@ -241,7 +243,8 @@ def _side_ids(side):
 def _keep(entry):
     """Saved results the view may use: this list's games against a gauntlet deck (by card_sha, so no
     house deck's title is ever read from them). The other side's ids must all be gauntlet ids, and
-    there must be one (E3-S34 fixed this: real sides keep their ids under seen_as only)."""
+    there must be one (E3-S34 fixed this: real sides keep their ids under seen_as only), with a
+    list of its own: an exact mirror (both sides this list) is never one (E3-S39)."""
     sha = entry["card_sha"]
 
     def keep(result):
@@ -250,7 +253,7 @@ def _keep(entry):
             return False
         mine = [s for s in sides if s.get("card_sha") == sha]
         other = [s for s in sides if s.get("card_sha") != sha]
-        if not mine or len(other) > 1:
+        if not mine or len(other) != 1:
             return False
         return all(bool(ids) and all(is_gauntlet_id(i) for i in ids) for ids in map(_side_ids, other))
     return keep
@@ -267,6 +270,11 @@ def _kept(forge, g, summary, entry, standard, cat, found):
     return gauntlet_before.fields(forge, g, summary, entry, standard, cat, found, _keep)
 
 
+def _full(job):
+    """A gauntlet job's sample before any trial exclusion (_GauntletJob.full)."""
+    return getattr(job.fn, "full", None) or job.fn.sample
+
+
 def _sees_job(seen, job):
     """True when the viewer sees a gauntlet job: the house deck that started it (its opponents are
     public gauntlet decks)."""
@@ -280,13 +288,12 @@ def _active(entry):
     return [j for j in forge_runs.COORD_JOBS.active() if j.key.startswith(prefix)]
 
 
-def _find_job(entry, sample_id, seen):
+def _find_job(entry, sample_id, seen, exclude=()):
     """(job, snapshot) of this list's gauntlet run: one waiting or playing (any sample) first, else
-    the last one of sample_id; (None, None) when there's none the viewer sees."""
-    prefix = _prefix(entry)
+    the last one of sample_id (exclude: job_key's); (None, None) when there's none the viewer sees."""
     job = next(iter(_active(entry)), None)
     if job is None and sample_id:
-        job = forge_runs.COORD_JOBS.get(prefix + sample_id)
+        job = forge_runs.COORD_JOBS.get(job_key(entry, sample_id, exclude))
     if job is None or not _sees_job(seen, job):
         return None, None
     return job, forge_runs.COORD_JOBS.snapshot(job)
@@ -356,19 +363,22 @@ def _base(forge, entry, fmt, seen):
 
 def _answer(forge, g, entry, choices, seen, summary=None):
     """gauntlet_view's answer for entry and the request's choices, as seen may see it (summary,
-    the deck's library summary, for the standard sample's before-figure: none without it)."""
+    the deck's library summary, for the standard sample's before-figure: none without it). A trial
+    deck's samples leave out its own precon (gauntlet.trial_excluded: "of" counts the rest)."""
     fmt = _format(entry)
+    exclude = trial_excluded(summary)
     out = _base(forge, entry, fmt, seen)
-    job, snap = _find_job(entry, choices["sample"], seen)
+    job, snap = _find_job(entry, choices["sample"], seen, exclude)
     playing = snap is not None and snap["status"] in forge_runs.MATCHUP_WAITING
     try:
         cat = g.catalogue(fmt)
-        chosen = job.fn.sample if playing else _draw(g, fmt, choices, save=False, cat=cat)
-        standard = _standard(g, fmt, cat, chosen, choices, playing)
+        # A run's whole sample (a trial's run plays it without its precon): this deck's own exclusion.
+        chosen = without(_full(job) if playing else _draw(g, fmt, choices, save=False, cat=cat), exclude)
+        standard = without(_standard(g, fmt, cat, chosen, choices, playing), exclude)
     except forge.ForgeError:
         return out                      # no catalogue yet: the page shows build_command (to an admin)
     if not playing and job is None:
-        job, snap = _find_job(entry, chosen["id"], seen)
+        job, snap = _find_job(entry, chosen["id"], seen, exclude)
     out["catalogue"] = _catalogue_json(cat)
     # saved: the sample comes back by its id (the page's address keeps only such a one).
     out["sample"] = {"id": chosen["id"], "size": chosen.get("size"), "filters": chosen.get("filters"),
@@ -523,7 +533,7 @@ def gauntlet_summary(deck_id, version="target", profile=None):
            "build_command": _build_command(fmt, seen), "before": None, "compare": None, "older": None}
     try:
         cat = g.catalogue(fmt)
-        standard = g.standard(fmt, cat=cat)
+        standard = without(g.standard(fmt, cat=cat), trial_excluded(summary))
     except forge.ForgeError:
         return out
     out["sample"] = standard_json(standard)
@@ -582,8 +592,9 @@ class _GauntletJob:
 
     kind = "gauntlet"
 
-    def __init__(self, g, entry, sample, budget, by, by_id):
+    def __init__(self, g, entry, sample, budget, by, by_id, full=None):
         self.g, self.entry, self.sample, self.budget, self.by, self.by_id = g, entry, sample, budget, by, by_id
+        self.full = sample if full is None else full        # the sample before a trial's exclusion
         self.space = _space(entry)
         self.via = {"kind": "gauntlet", "title": f"Gauntlet run of {entry['title']}",
                     "link": f"#/deck?id={quote(entry['id'], safe='')}&v={entry['version']}&part=gauntlet"}
@@ -638,15 +649,17 @@ def run_gauntlet(body):
     if not state.get("ready"):
         raise ApiError(503, state.get("problem") or "Forge isn't ready to play games on the PC.")
     try:
-        chosen = _draw(g, fmt, choices, save=True)
+        drawn = _draw(g, fmt, choices, save=True)
+        exclude = trial_excluded(summary)
+        chosen = without(drawn, exclude)
         if not chosen.get("decks"):
             raise ApiError(400, NO_DECKS)
         g.entries(fmt, chosen["decks"])         # every deck still playable in today's catalogue
     except (ValueError, forge.ForgeError) as e:
         raise ApiError(400, _public(e)) from None
     seen = forge_runs._Seen(profile)
-    run = _GauntletJob(g, entry, chosen, budget, profile["name"], profile["id"])
-    key = job_key(entry, chosen["id"])
+    run = _GauntletJob(g, entry, chosen, budget, profile["name"], profile["id"], full=drawn)
+    key = job_key(entry, chosen["id"], exclude)
     with _SUBMIT_LOCK:
         # One gauntlet run of a list at a time: another sample's would play beside it into the same
         # results folder, and the page (and Stop) would see only the first.

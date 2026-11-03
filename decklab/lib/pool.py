@@ -931,8 +931,9 @@ def stale_tables(pool=None, exclude=(), only=None):
     [{"id", "title", "sha256", "count", "changes"}] in library order (see
     table_changes). A save can cause this in other files: a built deck's list,
     status or built version changes what they can use. Files Deck Lab can't
-    write (a name that isn't a slug, a file that can't be read) and ids in
-    exclude are left out. Every space's decks are checked (only: just these
+    write (a name that isn't a slug, a file that can't be read), trial decks
+    (E3-S39: a precon not owned, whose table only its own deck page updates)
+    and ids in exclude are left out. Every space's decks are checked (only: just these
     spaces'), each against its own space's pool (pool is used for its space,
     the others are loaded); a space whose pool can't be loaded is left out
     (table_blockers names it)."""
@@ -949,6 +950,8 @@ def stale_tables(pool=None, exclude=(), only=None):
             try:
                 deck = decks.read_deck_file(path, space=space)
             except (decks.DeckFileError, OSError):
+                continue
+            if decks.trial_of(deck) is not None:
                 continue
             if space not in pools:
                 try:

@@ -248,6 +248,12 @@ inventory writes answer 503 with "reason": "database":
     GET  /api/precons/coverage/deck?file=<f>&space=<id>   one precon's missing cards, with estimated AUD costs
     POST /api/precons/start              body {"profile", "space", "file", "title"}: a new idea deck from
                                          its list, as POST /api/decks makes one (nothing is added)
+    GET  /api/precons/trial?file=<f>&space=<id>   whether a precon can be tried in Forge before it's bought
+                                         (E3-S39, lib/api/precon_trial.py), and its trial deck in the space
+    POST /api/precons/trial              body {"profile", "space"?, "file", "title"?}: its trial deck, an idea
+                                         deck with a Trial line (409 {"existing"} when there's one)
+    POST /api/precons/trial/keep         body {"profile", "id", "expected_sha"}: a trial deck kept as an
+                                         ordinary idea (its Trial line removed)
     GET  /api/play[?id=<deck id>]        list snapshots, and the played games and sideboard plans the
                                          viewer may see (permissions.sees_play_record: those with a deck
                                          of their own space; an admin or a script every one)

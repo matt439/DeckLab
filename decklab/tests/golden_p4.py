@@ -136,6 +136,8 @@ older code (the committed tests/fixtures/inventory_goldens):
   listed_aud_each, listed_aud_missing and listed_material and the totals' as_listed and
   aud_missing_as_listed are dropped; every count, cheapest price and label still compares.
   test_listed_prices checks the fields themselves.
+- "trial-defaults": E3-S39 adds a deck summary's "trial" (the precon file of a trial deck);
+  only a None "trial" is dropped (trial_defaults()), so a golden still compares every other field.
 """
 import copy
 import re
@@ -878,6 +880,21 @@ def absent_shop_prices(dump):
     golden_shop_prices.normalise(dump, _profiles())
 
 
+def trial_defaults(dump):
+    """Drop only E3-S39's additive deck-summary "trial" when it's None (no deck in a golden is a
+    trial deck): any dict with an "id" whose "trial" is None, wherever the summaries are."""
+    def walk(value):
+        if isinstance(value, dict):
+            if "id" in value and "trial" in value and value["trial"] is None:
+                value.pop("trial")
+            for item in value.values():
+                walk(item)
+        elif isinstance(value, list):
+            for item in value:
+                walk(item)
+    walk(dump)
+
+
 EXPECTED_P4 = (("no-git", no_git), ("deck-ids", deck_ids), ("hidden-inventory", hidden_inventory),
                ("per-viewer-accessory-token", per_viewer_accessory_token))
 EXPECTED_P5 = (("deck-id-messages", deck_id_messages), ("phase-5-wording", phase5_reworded),
@@ -892,7 +909,7 @@ EXPECTED_P5 = (("deck-id-messages", deck_id_messages), ("phase-5-wording", phase
                ("departed-defaults", departed_defaults), ("counter-defaults", counter_defaults),
                ("opponent-token-defaults", opponent_token_defaults), ("token-peak-defaults", token_peak_defaults),
                ("absent-shop-prices", absent_shop_prices), ("role-target-defaults", role_target_defaults),
-               ("listed-printings", listed_printings))
+               ("listed-printings", listed_printings), ("trial-defaults", trial_defaults))
 
 
 def normalise(dump):

@@ -190,6 +190,7 @@ function deckOverviewCurve(data) {
  * game (played.since, from the deck's own revisions). Nothing when the games couldn't be read (never "not
  * played"), and no change line when the list it was played with can't be found. */
 function deckOverviewPlayed(data) {
+  if (data.summary.trial) return ptrDeckNotice(data);         // precon-trial.js: a trial isn't played at home (E3-S39)
   const p = data.played;
   if (!p) return null;
   const parts = [el("div", { class: "deck-section-head" }, el("h2", { id: "h-overview-played", text: "Played at home" }))];

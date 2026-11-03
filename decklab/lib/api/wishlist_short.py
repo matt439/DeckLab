@@ -27,7 +27,7 @@ PARTIAL = "Some of your decks couldn't be counted, so they may also be short of 
 def _own_decks(space, profile):
     """(summaries, skipped): the library summaries of space's own decks (no products or pairings)
     with a Planned list that profile may see, and how many such decks couldn't be read (a summary
-    with an "error")."""
+    with an "error"). A trial deck (E3-S39: a precon not owned) is never short of anything."""
     out, skipped = [], 0
     for summary in decks.list_decks():
         try:
@@ -36,7 +36,7 @@ def _own_decks(space, profile):
             continue
         if deck_space != space or summary.get("space", space) != space or kind not in decks.KINDS:
             continue
-        if not guard.sees_deck(summary, profile):
+        if not guard.sees_deck(summary, profile) or summary.get("trial"):
             continue
         if summary.get("error"):
             skipped += 1

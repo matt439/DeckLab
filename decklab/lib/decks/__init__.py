@@ -114,7 +114,7 @@ from decklab.lib.config import MAGIC, REPO
 
 # The parts in their own files. Their names are all here too, so callers
 # keep using decks.<name>.
-from . import cover, deckfile, decklist, edit, printings, render, tokencards
+from . import cover, deckfile, decklist, edit, printings, render, tokencards, trial
 from .cover import (COVER_FIELD, COVER_SECTIONS, auto_cover_line, cover_field, format_cover, parse_cover, set_cover)
 from .tokencards import (TOKEN_CARDS_FIELD, TokenCardLine, format_token_cards, has_token_cards,
                          parse_token_cards, set_token_cards, token_cards)
@@ -122,6 +122,7 @@ from .printings import (PRINTINGS_FIELD, PrintingLine, format_printings, has_pri
                         set_printings)
 from .opponents import USUAL_OPPONENTS_FIELD, parse_usual_opponents, set_usual_opponents
 from .considering import format_considering, parse_considering
+from .trial import TRIAL_FIELD, format_trial, parse_trial, set_trial, trial_of
 from .deckfile import (
     _ABOUT, _AMOUNT_AFTER_RE, _AMOUNT_BEFORE_RE, _CONTEXT_START_RE, _CUR, _NUM, _ONE, _QUOTE_CUT_RE,
     BUILT_VERSIONS, COUNT_RE, DATE_RE, FIELD_RE, FORMATS, HEADING_RE, KINDS, MARKER, MARKER_RE,
@@ -415,7 +416,7 @@ def _summary(deck, **extra):
     summary = {
         "id": deck["id"], "space": spaces.HOME, "title": deck["title"], "kind": deck["kind"],
         "format": deck["format"], "player": None, "status": None, "built_version": None,
-        "source": deck["source"], "read_only": True,
+        "source": deck["source"], "read_only": True, "trial": None,
         "card_count": card_count(sections),
         "sideboard_count": card_count(sections, ("Sideboard",)),
         "versions": [] if deck.get("error") else ["target"],
@@ -527,7 +528,7 @@ def list_decks():
             "id": deck_id, "space": space, "title": slug, "kind": kind,
             "format": None,
             "player": None, "status": None, "built_version": None, "built_version_text": None,
-            "source": deck_id,
+            "source": deck_id, "trial": None,
             "read_only": not valid_slug(slug), "card_count": 0, "sideboard_count": 0,
             "versions": [],
         }
@@ -540,7 +541,7 @@ def list_decks():
                 title=deck.title, format=deck.format, player=deck.player, status=deck.status,
                 built_version=deck.built_version, built_version_text=deck.get_field("Built version"),
                 sleeves=deck.get_field("Sleeves"), deck_box=deck.get_field("Deck box"),
-                cover_card=deck.get_field(COVER_FIELD))
+                cover_card=deck.get_field(COVER_FIELD), trial=trial_of(deck))
             if deck.kind == "commander":
                 summary["target_bracket"] = deck.target_bracket
             if deck.has_decklist:

@@ -533,6 +533,7 @@ function drawMatchups(library, matchups, params, token) {
     gate.may ? null : el("p", { class: "run-blocked mu-gate", text: gate.why }),
     forgeBox(data.forge),
     updates.node, lists]);
+  if (typeof ptrTestingButton === "function") ptrTestingButton(main, params, token);   // precon-trial.js: Try a precon… (E3-S39)
   const needsLibrary = fresh => typeof fresh.decks_revision === "string" && fresh.decks_revision !== library.decks_revision;
   const prepare = async (fresh, { signal }) => {
     if (!needsLibrary(fresh)) return false;
@@ -838,7 +839,7 @@ function deckPicker(n, library, onChange) {
     clear(select);
     for (const [label, members] of groups) {
       const shown = members.filter(fits);
-      if (shown.length) select.append(el("optgroup", { label }, shown.map((d) => el("option", { value: d.id, text: d.title }))));
+      if (shown.length) select.append(el("optgroup", { label }, shown.map((d) => el("option", { value: d.id, text: d.trial ? ptrPickerTitle(d) : d.title }))));
     }
     if (only !== true && halves.length > 1) {
       const keptPair = !preferred.has(was) && !decks.some(deck => deck.id === was) && pairingChoice(was);

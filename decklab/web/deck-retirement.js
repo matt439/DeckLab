@@ -41,11 +41,13 @@ function retirementContext(kind, id, title) {
   return ctx;
 }
 
-function openRetireDeck(data) {
+/** opts.onRetired(meta): called in place of the "Deck retired" page when the retirement saves, for a sheet opened
+ * from another deck's page (precon-trial.js ptrRetireTrial: the bought precon's page stays). */
+function openRetireDeck(data, opts = {}) {
   if (!canRetireDeck(data) || !state.profile) return null;
   const ctx = retirementContext("retire", data.summary.id, data.summary.title);
   if (ctx.data) return ctx;
-  ctx.data = data; loadRetireDeck(ctx);
+  ctx.data = data; ctx.onRetired = typeof opts.onRetired === "function" ? opts.onRetired : null; loadRetireDeck(ctx);
   return ctx;
 }
 
@@ -107,6 +109,7 @@ async function sendRetireDeck(ctx) {
     if (!retirementPageHere(ctx)) return;
     if (!retirementHere(ctx)) { location.hash = deckHistoryHref(ctx.id); return; }
     ctx.sheet.close();
+    if (ctx.onRetired) { ctx.onRetired(ctx.meta); return; }
     add(clear($("#main")), [pageHead({ crumb: ["#/library", "Decks"], title: "Deck retired" }),
       el("p", { text: `${ctx.meta.title} has left the library. Its history and matchup results are kept.` }),
       el("div", { class: "actions" }, el("a", { class: "btn btn-primary", href: deckHistoryHref(ctx.id), text: "View retained history" }),

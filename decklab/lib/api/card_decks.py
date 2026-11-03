@@ -80,7 +80,8 @@ def deck_use(p, summaries, names, space, sees=None, records=None):
         except ValueError:
             continue
         # Deck files only: a product's list is what came in the box, not a want; an intact one holds.
-        if kind not in decks.KINDS or not sees(summary):
+        # A trial deck (E3-S39) is a precon not owned: trying it out wants nothing of the shelf.
+        if kind not in decks.KINDS or not sees(summary) or summary.get("trial"):
             continue
         for name in use:
             if deck_id in holding.get(name, ()):

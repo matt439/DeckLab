@@ -42,7 +42,7 @@ def _shown(found, viewer):
     sees = guard.deck_reader(viewer)
     with inventory.pinned() as current:
         inv = current()
-        summaries = {s["id"]: s for s in decks.list_decks() if not s.get("error")}
+        summaries = {s["id"]: s for s in decks.list_decks() if not s.get("error") and not s.get("trial")}
         out = []
         for notice in found:
             shown = []
