@@ -84,6 +84,20 @@ class GauntletUiTests(unittest.TestCase):
           assert(!buttonText(node,'Play them'));
           assert.equal(calls.length,1);assert(calls[0].startsWith('/api/gauntlet?id=casual%2Ftest&version=target'));
           assert.equal(writes.length,0);
+          // Anyone but an admin gets no command (the server gives none).
+          answers=[base({catalogue:null,sample:null,budgets:{},build_command:null})];
+          const member=await draw();
+          assert(member.textContent.includes('An admin builds them once on the PC.'));
+          assert(!member.querySelector('code'));
+        """)
+
+    def test_a_playing_other_sample_has_no_back_to_the_standard_sample(self):
+        self.run_js("""
+          answers=[base({standard:{id:'sample:ffffffffffff',size:24,tiers:['hard','medium']},is_standard:false,
+            status:'running',job:{status:'running',done:0,total:100,ahead:0,pairs:{}},budgets:{}})];
+          const node=await draw();
+          assert(!buttonText(node,'Back to the standard sample'));
+          assert(node.textContent.includes('Not the standard sample. The standard sample shows again when this run ends.'));
         """)
 
     def test_the_empty_state_plays_its_choices_with_the_saved_list(self):
@@ -218,7 +232,8 @@ class GauntletUiTests(unittest.TestCase):
     def test_another_sample_stays_in_the_address_and_back_to_the_standard_sample(self):
         self.run_js("""
           const std={id:'sample:ffffffffffff',size:24,tiers:['hard','medium']};
-          const other=base({standard:std,is_standard:false});
+          const saved={...base().sample,saved:true};
+          const other=base({standard:std,is_standard:false,sample:saved});
           answers=[other];
           open('#/deck?id=casual%2Ftest&v=target&tab=matchups&gsample=sample:0123456789ab');await settle();
           const asked=calls.filter(c=>c.startsWith('/api/gauntlet?'));
@@ -234,11 +249,16 @@ class GauntletUiTests(unittest.TestCase):
           buttonText(node,'Play them').click();await settle();
           same(writes.at(-1).body,{id:'casual/test',version:'target',budget:'fixed:100',sample:'sample:0123456789ab',
             expected_card_sha:sha});
-          // A choice draws again from the filters.
+          // A choice draws again from the filters; that sample isn't saved, so the address doesn't keep its id.
           answers=[base({standard:std,is_standard:false,sample:{id:'sample:aaaaaaaaaaaa',size:24,
-            filters:{colours:null,styles:['control'],tiers:['hard','medium']},decks:3}})];
+            filters:{colours:null,styles:['control'],tiers:['hard','medium']},decks:3,saved:false}})];
           buttonText(node,'Control').click();await settle();
           assert(!calls.at(-1).includes('sample='));assert(calls.at(-1).includes('styles=control'));
+          assert(!location.hash.includes('gsample'),location.hash);
+          // Once played (saved), it does.
+          answers=[base({standard:std,is_standard:false,sample:{id:'sample:aaaaaaaaaaaa',size:24,
+            filters:{colours:null,styles:['control'],tiers:['hard','medium']},decks:3,saved:true}})];
+          buttonText(node,'Control').click();await settle();buttonText(node,'Control').click();await settle();
           assert(location.hash.includes('gsample=sample%3Aaaaaaaaaaaaa'),location.hash);
           // Back to the standard sample: no choices, so the server's standard sample, and none in the address.
           answers=[base({standard:{...std,id:'sample:0123456789ab'},is_standard:true})];
@@ -257,6 +277,8 @@ class GauntletUiTests(unittest.TestCase):
           assert(calls[0].includes('sample=sample%3A0123456789ab'));assert(!calls[1].includes('sample='));
           assert(!node.textContent.includes("couldn't be loaded"));
           assert(!location.hash.includes('gsample'),location.hash);
+          assert(node.textContent.includes("That sample isn't saved on the PC. The standard sample: the same 24"),
+            node.textContent);
           // A bad id in the address isn't asked for at all.
           calls.length=0;location.hash='#/deck?id=casual%2Ftest&v=target&gsample=nonsense';
           answers=[base()];await draw();

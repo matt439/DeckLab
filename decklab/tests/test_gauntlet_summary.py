@@ -30,7 +30,7 @@ class PerOpponentGauntlet(FakeGauntlet):
     def plan(self, *args, **kwargs):
         raise AssertionError("the summary never plans")
 
-    def view(self, entry, chosen, keep=None):
+    def view(self, entry, chosen, keep=None, cat=None):
         self.keeps.append(keep)
         opponents = []
         for deck_id in chosen["decks"]:

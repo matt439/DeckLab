@@ -137,6 +137,10 @@ class EntryTests(GauntletCase):
         self.assertEqual(self.samples, {})                  # not saved unless asked
         gauntlet.standard("constructed", save=True)
         self.assertIn(found["id"], self.samples)
+        # A catalogue already loaded is used as it is (the page's answer reads the file once).
+        with mock.patch.object(gauntlet, "_load_catalogue", side_effect=AssertionError("read again")):
+            self.assertEqual(gauntlet.standard("constructed", cat=CATALOGUE), found)
+            self.assertEqual(gauntlet.view(self.alpha, found, cat=CATALOGUE)["sample"], found["id"])
 
     def test_all_is_every_playable_deck_of_the_filters(self):
         found = gauntlet.draw("constructed", size="all", save=False)

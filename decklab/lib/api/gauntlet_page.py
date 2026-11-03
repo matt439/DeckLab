@@ -40,6 +40,7 @@ from urllib.parse import quote
 
 from decklab.lib import jobs, permissions
 from decklab.lib.gauntlet import is_gauntlet_id
+from decklab.lib.gauntlet.sample import STANDARD
 
 from . import common, field_page, forge_runs, guard
 from .common import MAX_BODY, MAX_EDIT_BODY, ApiError, _keys, _parse_body, _public, _SHA_RE
@@ -142,9 +143,10 @@ def _choices(fmt, sample=None, size=None, colours=None, styles=None, tiers=None)
             "styles": _words(styles, STYLES, "styles"), "tiers": _words(tiers, TIERS[fmt], "tiers")}
 
 
-def _draw(g, fmt, choices, save):
-    """The sample the choices name (a saved one, or one drawn now); ApiError 404 for a sample id
-    that isn't saved, 400 for one of the other format; forge's ForgeError when there's no catalogue."""
+def _draw(g, fmt, choices, save, cat=None):
+    """The sample the choices name (a saved one, or one drawn now from cat, the catalogue already
+    loaded, when given); ApiError 404 for a sample id that isn't saved, 400 for one of the other
+    format; forge's ForgeError when there's no catalogue."""
     if choices["sample"]:
         try:
             found = g.sample(choices["sample"])
@@ -154,7 +156,32 @@ def _draw(g, fmt, choices, save):
             raise ApiError(400, f"That sample is of {found.get('format')} decks, but this deck plays {fmt}.")
         return found
     return g.draw(fmt, size=choices["size"], colours=choices["colours"], styles=choices["styles"],
-                  tiers=choices["tiers"], save=save)
+                  tiers=choices["tiers"], save=save, cat=cat)
+
+
+def _is_standard_draw(fmt, choices):
+    """True when the choices draw the standard sample (lib/gauntlet/sample.STANDARD: its size and
+    tiers, no colour, style or saved sample), so the answer needn't draw it twice."""
+    std = STANDARD[fmt]
+    return (not choices["sample"] and choices["size"] == std["size"] and not choices["colours"]
+            and not choices["styles"] and sorted(choices["tiers"] or std["tiers"]) == sorted(std["tiers"]))
+
+
+def _standard(g, fmt, cat, chosen, choices, playing):
+    """The format's standard sample: chosen when the choices drew it, else drawn from cat (no
+    second read of the catalogue)."""
+    if not playing and _is_standard_draw(fmt, choices):
+        return chosen
+    return g.standard(fmt, cat=cat)
+
+
+def _is_saved(g, sample_id):
+    """True when the sample is saved on the PC (a run saves its sample; a draw for the view doesn't)."""
+    try:
+        g.sample(sample_id)
+    except ValueError:
+        return False
+    return True
 
 
 def _catalogue_json(cat):
@@ -171,14 +198,20 @@ def _catalogue_json(cat):
             "playable": len(playable), **counts, "credit": CREDIT}
 
 
+def _build_command(fmt, seen):
+    """The catalogue's build command, for an admin only (it's run on the PC): None for anyone else."""
+    return BUILD.format(fmt=fmt) if seen.admin else None
+
+
 def catalogue_view(format="commander"):
     """GET /api/gauntlet/catalogue?format=: the format's catalogue counts (public data: no deck is
-    involved), or {"built": None, "build_command"} before one is built. 400 for another format."""
+    involved), or {"built": None, "build_command"} before one is built (the command for an admin,
+    None for anyone else). 400 for another format."""
     if format not in TIERS:
         raise ApiError(400, "format must be commander or constructed")
     forge = forge_runs._forge_module()
     g = _gauntlet(forge)
-    out = {"format": format, "build_command": BUILD.format(fmt=format), "credit": CREDIT}
+    out = {"format": format, "build_command": _build_command(format, forge_runs._Seen()), "credit": CREDIT}
     try:
         cat = g.catalogue(format)
     except forge.ForgeError:
@@ -276,39 +309,42 @@ def _progress(job, snap, seen):
     return out
 
 
-def _base(forge, entry, fmt):
+def _base(forge, entry, fmt, seen):
     return {"deck": {k: entry[k] for k in ("id", "version", "title", "card_sha")}, "format": fmt,
-            "build_command": BUILD.format(fmt=fmt), "credit": CREDIT,
+            "build_command": _build_command(fmt, seen), "credit": CREDIT,
             "options": {"sizes": list(SIZES[fmt]), "colours": "WUBRG", "styles": list(STYLES),
                         "tiers": list(TIERS[fmt]), "budgets": list(BUDGETS),
                         "overnight_minutes": OVERNIGHT_MINUTES},
             "default_budget": DEFAULT_BUDGET, "default_size": DEFAULT_SIZE[fmt], "forge": forge.status(),
             "catalogue": None, "sample": None, "standard": None, "is_standard": False, "opponents": [], "groups": {},
             "games": 0, "note": None, "notes": [], "status": "none", "job": None, "notice": None, "error": None,
-            "budgets": {}}
+            "budgets": {}, "overall": None, "played": 0, "of": 0,
+            "tally": {"ahead": 0, "even": 0, "behind": 0, "unsettled": 0}, "updated": None}
 
 
 def _answer(forge, g, entry, choices, seen):
     """gauntlet_view's answer for entry and the request's choices, as seen may see it."""
     fmt = _format(entry)
-    out = _base(forge, entry, fmt)
+    out = _base(forge, entry, fmt, seen)
     job, snap = _find_job(entry, choices["sample"], seen)
     playing = snap is not None and snap["status"] in forge_runs.MATCHUP_WAITING
     try:
         cat = g.catalogue(fmt)
-        chosen = job.fn.sample if playing else _draw(g, fmt, choices, save=False)
+        chosen = job.fn.sample if playing else _draw(g, fmt, choices, save=False, cat=cat)
+        standard = _standard(g, fmt, cat, chosen, choices, playing)
     except forge.ForgeError:
-        return out                      # no catalogue yet: the page shows build_command
+        return out                      # no catalogue yet: the page shows build_command (to an admin)
     if not playing and job is None:
         job, snap = _find_job(entry, chosen["id"], seen)
     out["catalogue"] = _catalogue_json(cat)
+    # saved: the sample comes back by its id (the page's address keeps only such a one).
     out["sample"] = {"id": chosen["id"], "size": chosen.get("size"), "filters": chosen.get("filters"),
-                     "decks": len(chosen.get("decks") or []), "all": bool(chosen.get("all"))}
-    standard = g.standard(fmt)
+                     "decks": len(chosen.get("decks") or []), "all": bool(chosen.get("all")),
+                     "saved": bool(choices["sample"]) or job is not None or _is_saved(g, chosen["id"])}
     out.update(standard=standard_json(standard), is_standard=chosen["id"] == standard["id"])
     if chosen.get("decks"):
         try:
-            found = g.view(entry, chosen, keep=_keep(entry))
+            found = g.view(entry, chosen, keep=_keep(entry), cat=cat)
         except (ValueError, forge.ForgeError) as e:
             raise ApiError(400, _public(e)) from None
         except Exception:
@@ -317,6 +353,9 @@ def _answer(forge, g, entry, choices, seen):
         out.update(opponents=[dict(o, source=_source(o.get("source"))) for o in found.get("opponents") or []],
                    groups=found.get("groups") or {}, games=found.get("games") or 0, note=found.get("note"),
                    notes=list(found.get("notes") or []))
+        played = int(found.get("played") or 0)      # the headline's (E3-S33), as the summary gives it
+        out.update(overall=found.get("overall") if played else None, played=played, of=int(found.get("of") or 0),
+                   tally=found.get("tally") or out["tally"], updated=found.get("updated"))
     if playing:
         out.update(status=snap["status"], job=seen.mask(_progress(job, snap, seen)))
         return out
@@ -424,9 +463,10 @@ def gauntlet_summary(deck_id, version="target", profile=None):
            "playing": None, "overall": None, "played": 0, "of": 0, "games": 0,
            "tally": {"ahead": 0, "even": 0, "behind": 0, "unsettled": 0}, "hardest": [], "updated": None,
            "sample": None, "note": None, "notes": [],
-           "build_command": BUILD.format(fmt=fmt) if seen.admin else None}
+           "build_command": _build_command(fmt, seen)}
     try:
-        standard = g.standard(fmt)
+        cat = g.catalogue(fmt)
+        standard = g.standard(fmt, cat=cat)
     except forge.ForgeError:
         return out
     out["sample"] = standard_json(standard)
@@ -435,7 +475,7 @@ def gauntlet_summary(deck_id, version="target", profile=None):
         out["state"] = "untested"
         return out
     try:
-        found = g.view(entry, standard, keep=_keep(entry))
+        found = g.view(entry, standard, keep=_keep(entry), cat=cat)
     except (ValueError, forge.ForgeError) as e:
         raise ApiError(400, _public(e)) from None
     except Exception:

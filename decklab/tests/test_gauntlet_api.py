@@ -40,7 +40,7 @@ class FakeGauntlet:
         self.gate, self.started = threading.Event(), threading.Event()
         self.plans, self.have = [], {}
         self.gate.set()
-        self.runs, self.saved, self.keeps, self.games, self.draws = [], {}, [], 0, []
+        self.runs, self.saved, self.keeps, self.games, self.draws, self.cats = [], {}, [], 0, [], []
 
     def results_dir(self):
         return self.results
@@ -59,8 +59,9 @@ class FakeGauntlet:
         return {"format": 1, "kind": fmt, "built": "2026-11-01T00:00:00", "card_data": "2026-10-30",
                 "sha": "c" * 64, "decks": decks}
 
-    def draw(self, fmt, size=None, colours=None, styles=None, tiers=None, seed="", save=True):
+    def draw(self, fmt, size=None, colours=None, styles=None, tiers=None, seed="", save=True, cat=None):
         self.draws.append(size)
+        self.cats.append(cat)
         size = size or 24
         decks = [d for d in self.catalogue(fmt)["decks"] if (not styles or d["style"]["primary"] in styles)
                  and (not colours or set(d["identity"]) <= set(colours))]
@@ -77,8 +78,8 @@ class FakeGauntlet:
             self.saved[found["id"]] = found
         return found
 
-    def standard(self, fmt):
-        return self.draw(fmt, size=24, save=False)
+    def standard(self, fmt, cat=None):
+        return self.draw(fmt, size=24, save=False, cat=cat)
 
     def sample(self, sample_id):
         if sample_id not in self.saved:
@@ -95,8 +96,9 @@ class FakeGauntlet:
         return {"per_opponent": per, "new_games": per * len(opps),
                 "pairs": [{"opponent": o, "have": self.have.get(o["id"], 0), "games": per} for o in opps]}
 
-    def view(self, entry, chosen, keep=None):
+    def view(self, entry, chosen, keep=None, cat=None):
         self.keeps.append(keep)
+        self.cats.append(cat)
         opponents = [{"id": d, "title": d.rsplit("/", 1)[1], "tier": "medium", "identity": "R", "style": "aggro",
                       "games": self.games, "rate": {"value": 0.4, "low": 0.3, "high": 0.5} if self.games else None,
                       "lead": None, "not_meaningful": False, "problem": None,
@@ -207,6 +209,10 @@ class GauntletViewTests(GauntletApiTestCase):
         self.assertEqual(set(self.estimated), {self.g.results})       # the gauntlet's own results folder
         self.assertEqual(answer["deck"]["id"], GRUUL)
         self.assertEqual(self.g.saved, {})          # a sample drawn for the view isn't saved
+        self.assertFalse(answer["sample"]["saved"])
+        # The standard sample is drawn once, and the catalogue read once is passed on (no second read).
+        self.assertEqual(self.g.draws, [24])
+        self.assertTrue(self.g.cats and all(c is not None for c in self.g.cats))
         # Sources keep only safe links and never a file path on the PC.
         source = answer["opponents"][0]["source"]
         self.assertIsNone(source["url"])
@@ -226,6 +232,25 @@ class GauntletViewTests(GauntletApiTestCase):
         self.assertIn("gauntlet build", caught.exception.message)
         self.assertEqual(self.g.runs, [])
         self.assertIsNone(gauntlet_page.catalogue_view("constructed")["built"])
+        # Only an admin gets the build command (it's run on the PC).
+        member = self.call("user2", gauntlet_page.gauntlet_view, R_ELVES, "target")
+        self.assertIsNone(member["catalogue"])
+        self.assertIsNone(member["build_command"])
+        self.assertIsNone(self.call("user2", gauntlet_page.catalogue_view, "constructed")["build_command"])
+
+    def test_the_view_gives_the_headline(self):
+        # E3-S33: the Matchups part's headline reads the view's overall, played, of, tally and updated.
+        before = self.call("matt", gauntlet_page.gauntlet_view, GRUUL, "target")
+        self.assertEqual((before["overall"], before["played"], before["updated"]), (None, 0, None))
+        self.assertEqual(before["tally"], {"ahead": 0, "even": 0, "behind": 0, "unsettled": 0})
+        overall = {"key": "all", "rate": 0.4, "low": 0.3, "high": 0.5}
+        tally = {"ahead": 1, "even": 1, "behind": 1, "unsettled": 0}
+        with mock.patch.object(self.g, "view", side_effect=lambda entry, chosen, keep=None, cat=None: {
+                "opponents": [], "groups": {}, "games": 300, "note": None, "notes": [], "overall": overall,
+                "played": 3, "of": 3, "tally": tally, "updated": "2026-11-03T09:00:00"}):
+            answer = self.call("matt", gauntlet_page.gauntlet_view, GRUUL, "target")
+        self.assertEqual((answer["overall"], answer["played"], answer["of"], answer["tally"], answer["updated"]),
+                         (overall, 3, 3, tally, "2026-11-03T09:00:00"))
 
     def test_catalogue_counts_are_public(self):
         found = self.call("user2", gauntlet_page.catalogue_view, "constructed")
@@ -339,6 +364,7 @@ class GauntletRunTests(GauntletApiTestCase):
         self.assertIn(SAMPLE, self.g.saved)                     # a played sample is saved
         done = self.call("matt", gauntlet_page.gauntlet_view, GRUUL, "target")
         self.assertEqual((done["status"], done["job"], done["games"]), ("done", None, 600))
+        self.assertTrue(done["sample"]["saved"])                # so the page's address may keep its id
 
     def test_another_samples_run_of_the_list_is_refused_and_stop_stops_it(self):
         self.set_mode("everyone")

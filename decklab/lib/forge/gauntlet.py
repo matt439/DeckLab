@@ -171,13 +171,13 @@ def filters(fmt, colours=None, styles=None, tiers=None):
     return {"colours": colours, "styles": styles, "tiers": tiers}
 
 
-def draw(fmt, size=None, colours=None, styles=None, tiers=None, seed="", save=True):
+def draw(fmt, size=None, colours=None, styles=None, tiers=None, seed="", save=True, cat=None):
     """A sample of the format's catalogue (lib/gauntlet/sample.choose with these filters; the
     default tiers and size when not given), saved unless save is False: the contract's sample
     dict. size "all" is every playable deck the filters allow, near-duplicates included
-    (sample.every; the dict's size their number, and "all": True). ForgeError when there's no
-    catalogue."""
-    cat = catalogue(fmt)
+    (sample.every; the dict's size their number, and "all": True). cat, the format's catalogue
+    already loaded, saves reading it again. ForgeError when there's no catalogue."""
+    cat = cat if cat is not None else catalogue(fmt)
     chosen_filters = filters(fmt, colours, styles, tiers)
     every = size == "all"
     if every:
@@ -197,11 +197,11 @@ def draw(fmt, size=None, colours=None, styles=None, tiers=None, seed="", save=Tr
     return found
 
 
-def standard(fmt, save=False):
+def standard(fmt, save=False, cat=None):
     """The format's standard sample: the default draw (DEFAULT_TIERS, the default size, no colour or
     style filter, seed ""), the same deck set as lib/gauntlet/sample.standard_sample. Not saved
-    unless save. ForgeError when there's no catalogue."""
-    return draw(fmt, seed="", save=save)
+    unless save; cat as draw's. ForgeError when there's no catalogue."""
+    return draw(fmt, seed="", save=save, cat=cat)
 
 
 def sample(sample_id):
@@ -338,17 +338,17 @@ def _groups(members):
     return out
 
 
-def view(deck_entry, chosen, keep=None):
+def view(deck_entry, chosen, keep=None, cat=None):
     """deck_entry against the sample (it never plays a game): {"deck": id, "sample": id, "format",
     "opponents": [rows, hardest first (lowest range low)], "groups" (_groups), "overall" (a group
     row over every opponent: the equal-weight average), "played" (opponents with games), "of" (the
     sample's opponents in the catalogue now), "tally" (_tally), "updated" (the newest opponent's
     "updated", or None), "games", "note" (the caveat: these sampled opponents only), "notes" (decks
-    gone from the catalogue, a rebuilt catalogue)}. ValueError for a sample of the other format,
-    ForgeError with no catalogue."""
+    gone from the catalogue, a rebuilt catalogue)}. cat as draw's (the sample's format's). ValueError
+    for a sample of the other format, ForgeError with no catalogue."""
     _check(deck_entry, chosen)
     fmt = chosen["format"]
-    cat = catalogue(fmt)
+    cat = cat if cat is not None else catalogue(fmt)
     pairs, missing = _picked(cat, chosen.get("decks") or [])
     notes = []
     if missing:

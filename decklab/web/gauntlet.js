@@ -101,12 +101,13 @@ function gtSchedule(ctx) {
   }, GT_POLL_MS);
 }
 
-/** The sample in the address: &gsample=<id> for one that isn't the standard sample, nothing for it. */
+/** The sample in the address: &gsample=<id> for a saved one that isn't the standard sample, nothing otherwise (a
+ * sample drawn from the choices isn't saved until it's played, so its id wouldn't come back). */
 function gtAddress(ctx, a) {
   if (!gtHere(ctx) || typeof parseHash !== "function") return;
   const { path, params } = parseHash();
   if (path !== "deck" || params.get("id") !== ctx.id) return;
-  const id = a.catalogue && a.sample && !a.is_standard ? a.sample.id : null;
+  const id = a.catalogue && a.sample && a.sample.saved && !a.is_standard ? a.sample.id : null;
   if (id) params.set("gsample", id); else params.delete("gsample");
   const hash = `#/deck?${params.toString()}`;
   if (hash !== location.hash) history.replaceState(history.state, "", hash);
@@ -120,8 +121,10 @@ function gtDraw(ctx, a) {
   if (!a.catalogue) {
     ctx.content.append(el("div", { class: "empty gt-empty" },
       el("p", { text: `There are no popular ${a.format === "commander" ? "Commander" : "60-card"} decks on the PC yet.` }),
-      el("p", { class: "sub", text: "Build them once on the PC (it takes a few minutes):" }),
-      el("pre", { class: "gt-command" }, el("code", { text: a.build_command || "" }))));
+      a.build_command
+        ? el("p", { class: "sub", text: "Build them once on the PC (it takes a few minutes):" })
+        : el("p", { class: "sub", text: "An admin builds them once on the PC." }),
+      a.build_command ? el("pre", { class: "gt-command" }, el("code", { text: a.build_command })) : null));
     return;
   }
   if (!ctx.choice) ctx.choice = gtChoiceOf(a);
@@ -158,17 +161,23 @@ function gtChoiceOf(a) {
     styles: Array.isArray(f.styles) ? [...f.styles] : [], tiers: Array.isArray(f.tiers) ? [...f.tiers] : [] };
 }
 
-/** Whether this is the standard sample: a line saying so, or for another sample Back to the standard sample. */
+/** Whether this is the standard sample: a line saying so (after "That sample isn't saved on the PC." when the
+ * address named one that isn't), or for another sample Back to the standard sample (not while it plays: a list
+ * shows its playing run's sample until the run ends). */
 function gtStandardLine(ctx, a) {
   const std = a.standard;
   if (!std) return null;
   if (a.is_standard) {
     const tiers = (std.tiers || []).map((t) => (GT_TIERS[t] || t).toLowerCase()).join(" and ");
-    return el("p", { class: "gt-small gt-standard", text: `The standard sample: the same ${std.size} ` +
+    return el("p", { class: "gt-small gt-standard", text: `${ctx.lost ? "That sample isn't saved on the PC. " : ""}` +
+      `The standard sample: the same ${std.size} ` +
       `${tiers ? `${tiers} ` : ""}opponents for every ${GT_FORMATS[a.format] || ""} deck, so their results compare.` });
   }
-  return el("p", { class: "gt-small gt-standard" },
-    ctx.lost ? "That sample isn't saved on the PC. " : "Not the standard sample. ",
+  if (gtPlaying(a)) {
+    return el("p", { class: "gt-small gt-standard",
+      text: "Not the standard sample. The standard sample shows again when this run ends." });
+  }
+  return el("p", { class: "gt-small gt-standard" }, "Not the standard sample. ",
     el("button", { type: "button", class: "btn btn-quiet btn-inline", text: "Back to the standard sample",
       onclick: () => { Object.assign(ctx, { sample: null, choice: null, lost: false }); gtRefresh(ctx); } }));
 }
