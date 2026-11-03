@@ -385,6 +385,40 @@ class LibraryShelfTests(_Shelf):
           assert.equal(libDetailGauntlet(extra[2]), null);
         """)
 
+    def test_late_numbers_keep_the_focused_tile_or_row(self):
+        # E3-S36 review: the popular-decks answer (and the Forge one) redraws the shelf after it was drawn; the
+        # tile, row or link that had keyboard focus keeps it rather than dropping to the page.
+        self.run_js("""
+          as("matt", MAY.admin);
+          let answer = null;
+          api = (path) => path === "/api/library/gauntlet" ? new Promise((resolve) => { answer = resolve; })
+            : Promise.resolve({ error: null, decks: {} });
+          const GT = { error: null, notes: [], formats: { commander: { state: "ok", size: 20 },
+            constructed: { state: "ok", size: 24 } }, decks: {} };
+          drawLibrary(DATA, libraryFilters(new URLSearchParams("all=1")));
+          await flush();
+          const giada = tile("Giada");
+          giada.focus();
+          answer(GT);
+          await flush();
+          assert(!giada.isConnected);                                           // drawn again
+          assert(document.activeElement.isConnected && document.activeElement !== giada);
+          assert.equal(document.activeElement.getAttribute("href"), giada.getAttribute("href"));
+          // The lab: a focused row keeps its focus through a redraw.
+          const wide = window.matchMedia(LIB_LAB_QUERY);
+          wide.matches = true;
+          wide.fire("change");
+          const row = (id) => main.querySelectorAll(".deck-row").find((r) => r.getAttribute("data-id") === id);
+          row("commander/giada").focus();
+          libRefreshKeepingFocus(main.querySelector("#library-results"), () => {
+            drawLibraryResults(main.querySelector("#library-results"), DATA,
+              libraryFilters(new URLSearchParams("all=1")), { picking: false, select: () => {} }, () => true);
+            return true;
+          });
+          assert(document.activeElement.isConnected);
+          assert.equal(document.activeElement.getAttribute("data-id"), "commander/giada");
+        """)
+
     def test_the_token_line_names_each_token_once(self):
         self.run_js("""
           as("matt", MAY.admin);

@@ -217,8 +217,10 @@ function drawLibrary(data, filters) {
   };
   libWatchDensity(results, refresh);
   libKeys(results, view);
-  libLoadForge(data, refresh);
-  libLoadGauntlet(data, refresh);                       // library-gauntlet.js
+  // The numbers come after the shelf is drawn: their redraw keeps the focused tile, row or link (library-gauntlet.js).
+  const refreshKept = () => libRefreshKeepingFocus(results, refresh);
+  libLoadForge(data, refreshKept);
+  libLoadGauntlet(data, refreshKept);                   // library-gauntlet.js
   const set = (key, value) => {
     if (!view.current?.()) return;
     if (key === "box_check" && value !== "before") filters.checked_before = "";

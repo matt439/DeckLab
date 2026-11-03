@@ -31,6 +31,25 @@ function libLoadGauntlet(data, refresh) {
   }).catch(() => {});
 }
 
+/** Redraw the shelf for numbers that came after it was drawn, putting keyboard focus back on the same tile, row,
+ * button or link (matched by its kind, href, deck and words) so a late answer never drops it to the page. */
+function libRefreshKeepingFocus(results, refresh) {
+  const active = document.activeElement;
+  const key = active && active !== document.body && results.contains(active) ? libFocusKey(active) : null;
+  const done = refresh();
+  if (done && key && !results.contains(document.activeElement)) {
+    const again = Array.from(results.querySelectorAll(key.tag)).find((n) => libFocusKey(n).id === key.id);
+    if (again) again.focus();
+  }
+  return done;
+}
+
+function libFocusKey(node) {
+  const tag = (node.tagName || node.tag || "").toLowerCase(), holder = node.closest ? node.closest("[data-id]") : null;
+  return { tag, id: JSON.stringify([tag, node.getAttribute("class") || "", node.getAttribute("href") || "",
+    holder ? holder.getAttribute("data-id") : "", node.getAttribute("href") ? "" : node.textContent]) };
+}
+
 /** The gauntlet format of a deck kind: "commander", "constructed" (a 60-card deck) or null. */
 function libGauntletFormat(d) {
   return d.kind === "commander" ? "commander" : d.kind === "casual" ? "constructed" : null;

@@ -213,8 +213,11 @@ class EditorRetestTests(unittest.TestCase):
 
     def test_a_pause_before_saving_sends_no_run_and_says_why(self):
         self.run_js(r'''
-          const ed=await readyPopular();state.simulations={may_start:false,why_not:'Simulations are paused.'};
-          await doSave(null,ed.dom.barParts.save);await drain();
+          // A pause during the save itself: the save stands, no run is sent, and the notice says why.
+          const ed=await readyPopular(),base=apiWrite;
+          apiWrite=async(path,body)=>{if(path==='/api/deck/save')state.simulations={may_start:false,why_not:'Simulations are paused.'};
+            return base(path,body);};
+          await doSave(null,ed.dom.barParts.save);await drain();apiWrite=base;
           same(writes.map(w=>w.path),['/api/deck/save']);
           assert(editor.dom.banners.textContent.includes("its popular-decks test wasn't started. Simulations are paused."));
           const again=await readyPopular();renderSimulations({may_start:false,why_not:'Only an admin can start simulations right now.'});
@@ -222,6 +225,34 @@ class EditorRetestTests(unittest.TestCase):
           renderSimulations({may_start:true});delete saveAnswer.deck.forge_lists;
           await doSave(null,again.dom.barParts.save);await drain();
           assert(editor.dom.banners.textContent.includes("its list couldn't be confirmed for testing. Start it from its Testing tab."));
+        ''')
+
+    def test_a_remembered_tick_asks_for_nothing_while_runs_are_refused_and_comes_back_after(self):
+        self.run_js(r'''
+          const ed=await readyPopular(),profile=ed.profile,popular=ed.dom.forgeSummary.popular;
+          renderSimulations({may_start:false,why_not:'Simulations are paused.'});
+          assert(!popular.choice.hidden&&popular.input.disabled&&!popular.input.checked);
+          assert(!ed.dom.forgeSummary.reason.hidden);
+          assert.equal(editorPopularReviewLine(ed),null);assert.equal(editorRetestIntent(ed),null);
+          await doSave(null,ed.dom.barParts.save);await drain();
+          same(writes.map(w=>w.path),['/api/deck/save']);
+          assert(!editor.dom.banners.textContent.includes('popular-decks test'));
+          assert(!editor.dom.banners.querySelector('.box-warn'));
+          assert.equal(store.get(STORE+`editor.testPopular.${profile}`),'1');   // kept for later
+          const again=await readyPopular();renderSimulations({may_start:true});
+          assert(again.dom.forgeSummary.popular.input.checked&&!again.dom.forgeSummary.popular.input.disabled);
+          assert(editorPopularReviewLine(again));
+        ''')
+
+    def test_a_remembered_tick_waits_for_a_list_change_not_prose_or_details(self):
+        self.run_js(r'''
+          await readyPopular();state.simulations={may_start:true};
+          const ed=full({forge_lists:{target:oldSha,owned:oldSha}}),popular=ed.dom.forgeSummary.popular;
+          ed.prose.notes+=' A typo fixed.';changed({list:false});await drain();
+          assert(ed.dirty&&popular.choice.hidden);
+          assert.equal(editorPopularReviewLine(ed),null);assert.equal(editorRetestIntent(ed),null);
+          setQty(ed.lists.Deck[0].uid,5);await drain();
+          assert(!popular.choice.hidden&&popular.input.checked);assert(editorPopularReviewLine(ed));
         ''')
 
     def test_popular_choice_is_hidden_without_a_catalogue_or_off_the_saved_planned_full_editor(self):

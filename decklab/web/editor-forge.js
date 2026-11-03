@@ -86,11 +86,14 @@ function syncEditorForgeSummary(ed = editor) {
     context.reason.textContent = gate.why || "";
     const popular = context.popular;
     if (popular) {
-      // Offered only once the catalogue answered with a standard sample, read once the list is first
-      // changed (no read for a page only looked at); the gate's reason line is shared.
-      if (!context.choice.hidden && !popular.asked) editorPopularCatalogue(ed, context);
-      popular.choice.hidden = context.choice.hidden || !popular.size;
-      popular.input.checked = !!popular.checked;
+      // Offered only once the Planned list itself has changed (a prose or details edit leaves the tested list
+      // as it was) and the catalogue answered with a standard sample, read on that first change (no read for a
+      // page only looked at). While the setting refuses runs it shows unticked and disabled with the shared
+      // reason line; the remembered tick is kept for when runs are allowed again.
+      const listMoved = !context.choice.hidden && editorPopularListMoved(ed);
+      if (listMoved && !popular.asked) editorPopularCatalogue(ed, context);
+      popular.choice.hidden = !listMoved || !popular.size;
+      popular.input.checked = !!popular.checked && gate.may;
       popular.input.disabled = context.input.disabled;
     }
   }
@@ -218,9 +221,16 @@ function editorPopularCatalogue(ed, context) {
   }).catch(() => {});
 }
 
+/** Only the playable Planned list's own change asks for a new test (listChanged reads the open editor). */
+function editorPopularListMoved(ed) {
+  return ed === editor && typeof listChanged === "function" && listChanged();
+}
+
+/** Counted only while the setting allows runs and the list has changed: the remembered tick alone never asks. */
 function editorPopularTicked(context) {
   const popular = context?.popular;
-  return !!(popular && popular.size && popular.checked && !popular.choice.hidden && context.version === "target");
+  return !!(popular && popular.size && popular.checked && !popular.choice.hidden && context.version === "target"
+    && simulationsGate().may && editorPopularListMoved(context.ed));
 }
 
 /** The review sheet's words, or null when this save won't ask for a popular-decks run. */
