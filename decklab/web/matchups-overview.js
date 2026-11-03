@@ -6,7 +6,7 @@ all deferred scripts have loaded. */
 
 const MATRIX_FORMATS = [["Constructed", "60-card"], ["Commander", "Commander"]];
 const HOME_FORMAT_KEY = "matchups.format";      // local storage: the format the Matchups home shows
-const HOME_VIEW_KEY = "matchups.view";        // ... matrix/phone matchups or saved field rankings
+const HOME_VIEW_KEY = "testing.view";         // ... Popular decks (gauntlet-board.js), matchups or rankings
 const HOME_DECK_KEY = "matchups.deck";          // ... and the deck its phone list shows
 
 
@@ -26,7 +26,7 @@ function matchupRefreshStatus() {
     node: el("div", { class: "mu-refresh" }, problem),
     busy() {},
     fresh() {
-      problem.textContent = failed ? "Connected again. Matchups are up to date." : "";
+      problem.textContent = failed ? "Connected again. Results are up to date." : "";
       failed = false;
     },
     lost(error) {
@@ -373,7 +373,7 @@ async function showMatchups(params, token) {
   // answer 503, and the page still works with the matchup answers' defaults. The loading state shows
   // at once, so a slow answer doesn't leave the last page on screen.
   const pending = api(`/api/profiles/${encodeURIComponent(state.profile.id)}/settings`).catch(() => null);
-  clear($("#main")).append(loadingBox("Loading matchups…"));
+  clear($("#main")).append(loadingBox("Loading Testing…"));
   const mine = await pending;
   if (token !== routeToken) return;
   return load(["/api/decks", "/api/matchups"], token, ([library, matchups]) => {
@@ -520,7 +520,7 @@ function drawMatchups(library, matchups, params, token) {
   const gate = runGate();
   const updates = matchupRefreshStatus();
   const lists = el("div", { class: "mu-lists" });
-  const view = { format: null, deck: null, mode: local.get(HOME_VIEW_KEY) === "rankings" ? "rankings" : "matchups",
+  const view = { format: null, deck: null, mode: gbInitialView(params),
     token, profile: state.profile?.id, rankings: new Map() };
   const opener = () => openPlaySheet(library, () => data, token, {}, view.format);
   // The empty states' Play a matchup (drawHome), with a deck picked or this format's first.
@@ -528,8 +528,8 @@ function drawMatchups(library, matchups, params, token) {
   const play = gate.may ? el("button", { type: "button", class: "btn btn-primary", text: "Play a matchup",
     onclick: opener }) : null;
   add(main, [
-    pageHead({ title: routeH1("matchups"), description: "Forge, a free Magic rules engine, plays two decks " +
-      "against each other on the PC, hundreds of times, and counts who wins.", primary: play, badge: simulationsChip() }),
+    pageHead({ title: routeH1("matchups"), description: "Forge, a free Magic rules engine, plays your decks on " +
+      "the PC, hundreds of times: against popular decks from outside the house and against each other, and counts who wins.", primary: play, badge: simulationsChip() }),
     gate.may ? null : el("p", { class: "run-blocked mu-gate", text: gate.why }),
     forgeBox(data.forge),
     updates.node, lists]);
@@ -542,11 +542,11 @@ function drawMatchups(library, matchups, params, token) {
     library = current; state.library = current;
     return true;
   };
-  if (needsLibrary(data)) lists.append(loadingBox("Updating the decks in Matchups…"));
+  if (needsLibrary(data)) lists.append(loadingBox("Updating the decks…"));
   else drawHome(lists, data, library, view);
   const watcher = followList(lists, token, data, updates, (fresh) => { data = fresh; }, (fresh) => drawHome(lists, fresh, library, view),
-    fresh => { if (view.mode === "rankings") muRefreshRankings(view, fresh); else muRefreshSelectedSummary(view); },
-    () => { muCancelRankings(view); muCancelSelectedSummary(view); }, prepare);
+    fresh => { if (view.mode === "rankings") muRefreshRankings(view, fresh); else if (view.mode === "popular") gbRefresh(view, fresh); else muRefreshSelectedSummary(view); },
+    () => { muCancelRankings(view); muCancelSelectedSummary(view); gbCancel(view); }, prepare);
   if (needsLibrary(data)) watcher.refresh();
   // The deck page's "Play a matchup" link (?a=&av=) opens the sheet with that deck picked.
   if (params.get("a") && gate.may) openPlaySheet(library, () => data, token, { a: params.get("a"), av: params.get("av"),
@@ -560,20 +560,20 @@ function drawHome(host, data, library, view) {
   const running = data.running || [], results = data.results || [];
   if (running.length) host.append(el("section", { class: "mu-group", "aria-labelledby": "h-running" },
     el("h2", { id: "h-running", text: "Playing now" }), el("ul", { class: "mu-list" }, running.map(r => runningRow(r)))));
-  view.mode = view.mode === "rankings" ? "rankings" : "matchups";
-  const formats = view.mode === "rankings" ? MATRIX_FORMATS
+  view.mode = GB_VIEWS.includes(view.mode) ? view.mode : "matchups";
+  const formats = view.mode === "popular" ? [] : view.mode === "rankings" ? MATRIX_FORMATS
     : MATRIX_FORMATS.filter(([format]) => matrixDecks(library, results, format).length > 1);
-  if (!formats.some(([f]) => f === view.format)) {
+  if (view.mode !== "popular" && !formats.some(([f]) => f === view.format)) {
     const kept = local.get(HOME_FORMAT_KEY);
     view.format = formats.some(([f]) => f === kept) ? kept : (formats[0] || MATRIX_FORMATS[0])[0];
   }
   const section = el("section", { class: "mu-group mu-home", "aria-labelledby": "h-results" });
   const head = el("div", { class: "mu-home-head" }, el("h2", { id: "h-results", text: "Results" }),
     el("div", { class: "segmented mu-view", role: "group", "aria-label": "Results view" },
-      [["matchups", "Matchups"], ["rankings", "Rankings"]].map(([mode, text]) => el("button", { type: "button", text,
+      [["popular", "Popular decks"], ["matchups", "Matchups"], ["rankings", "Rankings"]].map(([mode, text]) => el("button", { type: "button", text,
         "aria-pressed": String(view.mode === mode), onclick: () => {
           if (view.token != null && (view.token !== routeToken || view.profile !== state.profile?.id)) return;
-          view.mode = mode; if (mode !== "rankings") muCancelRankings(view); view.rankingsForce = true; local.set(HOME_VIEW_KEY, mode); drawHome(host, data, library, view);
+          view.mode = mode; if (mode !== "rankings") muCancelRankings(view); if (mode !== "popular") gbCancel(view); view.rankingsForce = true; gbWriteView(mode); drawHome(host, data, library, view);
         } }))));
   if (formats.length > 1) head.append(el("div", { class: "segmented mu-format", role: "group", "aria-label": "Format" },
     formats.map(([format, words]) => el("button", { type: "button", text: words, "aria-pressed": String(format === view.format),
@@ -582,6 +582,7 @@ function drawHome(host, data, library, view) {
         view.format = format; view.deck = null; view.rankingsForce = true; local.set(HOME_FORMAT_KEY, format); drawHome(host, data, library, view);
       } }))));
   section.append(head); host.append(section);
+  if (view.mode === "popular") { muCancelRankings(view); muCancelSelectedSummary(view); return gbDraw(section, view, head); }
   if (view.mode === "rankings") {
     muCancelSelectedSummary(view);
     view.token ??= routeToken; view.profile ??= state.profile?.id; view.rankings ||= new Map();

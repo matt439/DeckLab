@@ -59,7 +59,7 @@ class EditorRetestTests(unittest.TestCase):
             assert(editor===current);assert.equal(current.sha256,newSha);assert.equal(JSON.stringify(draftBody()),later);
             assert(current.dom.banners.textContent.includes('The deck was saved'));
             assert(current.dom.banners.textContent.includes('could not be confirmed'));
-            assert(current.dom.banners.textContent.includes('Check Matchups before starting another run'));
+            assert(current.dom.banners.textContent.includes('Check Testing before starting another run'));
             assert.equal(writes.length,count);
           }
         ''')

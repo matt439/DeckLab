@@ -70,7 +70,7 @@ class FeatureUiTests(unittest.TestCase):
           // The nine-button row is gone: the shell's nav (core.js's ROUTES) has every page, under one name each.
           for(const name of ['Accessories','Plan decks','Played games','Activity']) assert(!main.textContent.includes(name), name);
           same([...navRoutes('main'), ...navRoutes('more')].map(r => r.label),
-            ['Decks','Collection','Shopping','Matchups','Tokens','Sleeves & boxes','Build decks','Game log','Wishlist','Activity']);
+            ['Decks','Testing','Collection','Shopping','Tokens','Sleeves & boxes','Build decks','Game log','Wishlist','Activity']);
           assert.equal(main.querySelector('#filter-readiness').value,'ready');
           let seen=[];
           showCollection=()=>seen.push('collection'); showAssembly=()=>seen.push('assembly');
@@ -83,6 +83,11 @@ class FeatureUiTests(unittest.TestCase):
             location.hash=hash; route();
           }
           same(seen,['collection','assembly','play','history','receipt','accessories','tokens','activity']);
+          // E3-S35: #/testing opens Testing (#/matchups) and leaves only that address, its query kept.
+          const replaced=[];history.replaceState=(s,t,url)=>replaced.push(url);
+          let shown=null;showMatchups=(params)=>{shown=params.get('view');};
+          location.hash='#/testing?view=popular'; route();
+          assert.equal(shown,'popular'); same(replaced,['#/matchups?view=popular']);
         """)
 
     def test_assembly_verified_single_sided_token_label(self):

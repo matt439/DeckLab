@@ -78,7 +78,7 @@ class ShellUiTests(unittest.TestCase):
     def test_one_name_per_page_from_the_routes_table(self):
         self.run_js("""
           const names = Object.fromEntries(ROUTES.map((r) => [r.path, r.label]));
-          same(names, { library: "Decks", collection: "Collection", shopping: "Shopping", matchups: "Matchups",
+          same(names, { library: "Decks", collection: "Collection", shopping: "Shopping", matchups: "Testing",
             tokens: "Tokens", accessories: "Sleeves & boxes", assembly: "Build decks", play: "Game log",
             wishlist: "Wishlist", activity: "Activity", visibility: "Who sees what", settings: "Settings", deck: "Deck", edit: "Edit deck",
             new: "New deck", history: "History", compare: "Compare decks", variant: "Test of a change", receipt: "Receive delivery",
@@ -90,6 +90,15 @@ class ShellUiTests(unittest.TestCase):
           assert.equal(routeSection("receipt").path, "shopping");
           assert.equal(routeSection("matchup").path, "matchups");
           assert.equal(routeSection("nowhere").path, "library");
+          // E3-S35: Testing keeps its address, #/matchups; #/testing is its other one, rewritten to it.
+          assert.equal(routeFor("matchups").h1, "Testing");
+          assert.equal(routeFor("matchups").title, "Testing");
+          location.hash = "#/testing?view=rankings";
+          const parsed = parseHash();
+          assert.equal(parsed.path, "matchups"); assert.equal(parsed.alias, true);
+          assert.equal(parsed.params.get("view"), "rankings");
+          location.hash = "#/matchups";
+          assert.equal(parseHash().alias, false);
           // The lists' names (decision 2), for every page.
           same(LIST_NAME, { target: "Planned list", owned: "Play-now list" });
           assert.equal(listName("owned"), "Play-now list");
@@ -106,9 +115,9 @@ class ShellUiTests(unittest.TestCase):
           location.hash = "#/library";
           drawShell(); await flush();
           const nav = document.getElementById("main-nav"), bar = document.getElementById("tabbar");
-          same(labels(nav), ["Decks", "Collection", "Shopping", "Matchups", "Tokens", "Sleeves & boxes", "Build decks",
+          same(labels(nav), ["Decks", "Testing", "Collection", "Shopping", "Tokens", "Sleeves & boxes", "Build decks",
             "Game log", "Wishlist", "Activity"]);
-          same(labels(bar), ["Decks", "Collection", "Shopping", "Matchups"]);
+          same(labels(bar), ["Decks", "Testing", "Collection", "Shopping"]);
           assert(bar.textContent.includes("More"));
           same(labels(document.getElementById("more-list")), ["Tokens", "Sleeves & boxes", "Build decks",
             "Game log", "Wishlist", "Activity", "Settings"]);
@@ -140,11 +149,11 @@ class ShellUiTests(unittest.TestCase):
           assert.equal(document.getElementById("menu-settings").hidden, true);
           assert(!labels(document.getElementById("more-list")).includes("Settings"));
           assert(labels(nav).includes("Shopping"));
-          // User2 (his own space): nothing of home's shopping, packing plan or sleeves; Matchups is the third tab.
+          // User2 (his own space): nothing of home's shopping, packing plan or sleeves; Testing is the second tab.
           as("user2");
           drawShell(); await flush();
-          same(labels(nav), ["Decks", "Collection", "Matchups", "Tokens", "Game log", "Wishlist", "Activity"]);
-          same(labels(bar), ["Decks", "Collection", "Matchups"]);
+          same(labels(nav), ["Decks", "Testing", "Collection", "Tokens", "Game log", "Wishlist", "Activity"]);
+          same(labels(bar), ["Decks", "Testing", "Collection"]);
           assert.equal(document.getElementById("my-device").hidden, true);       // over the tunnel: the login is him
           hideShell();
           assert.equal(document.getElementById("main-nav").hidden, true);

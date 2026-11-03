@@ -44,7 +44,7 @@ const TYPE_PRIORITY = [["Creature", "Creatures"], ["Land", "Lands"], ["Planeswal
   ["Artifact", "Artifacts"], ["Enchantment", "Enchantments"]];
 // The deck page's tabs: [name in the address, words].
 const DECK_TABS = [["overview", "Overview"], ["cards", "Cards"], ["stats", "Stats"], ["practice", "Practice"],
-  ["matchups", "Matchups"]];
+  ["matchups", "Testing"]];  // Testing keeps its key: ?tab=matchups (and tab=testing)
 // The Cards tab's filters: [name in the address, words, what a card's marks must have].
 const CARD_FILTERS = [["all", "All"], ["missing", "Missing"], ["coming", "On the way"], ["held", "In other decks"]];
 const KEY_CARDS = 6;                    // the Overview's big pictures
@@ -68,10 +68,11 @@ function showDeck(params, token) {
   });
 }
 
-/** The tab and filter an address asks for: ?tab= (a ?part=field or ?part=gauntlet link opens Matchups, where
+/** The tab and filter an address asks for: ?tab= (a ?part=field or ?part=gauntlet link opens Testing, where
  * those parts are) and ?filter=. */
 function deckViewOf(params) {
   let tab = params.get("tab");
+  if (tab === "testing") tab = "matchups";
   if (!DECK_TABS.some(([name]) => name === tab)) {
     tab = ["field", "gauntlet"].includes(params.get("part")) ? "matchups" : "overview";
   }

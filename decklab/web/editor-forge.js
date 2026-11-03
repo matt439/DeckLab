@@ -109,10 +109,10 @@ async function queueEditorRetest(intent, answer) {
   try {
     await apiWrite("/api/field/run", { profile: intent.profile, id: answer.id, version: context.version,
       expected_card_sha: expected });
-    return { kind: "info", text: "Field re-test requested for the saved list. See Matchups for progress." };
+    return { kind: "info", text: "Field re-test requested for the saved list. See Testing for progress." };
   } catch (error) {
     // A lost response may follow a successful submission. Do not turn a queue retry into a second save/run.
-    return refused(`The deck was saved; its field re-test could not be confirmed. ${error.message || "The server did not answer."} Check Matchups before starting another run.`);
+    return refused(`The deck was saved; its field re-test could not be confirmed. ${error.message || "The server did not answer."} Check Testing before starting another run.`);
   }
 }
 
@@ -149,5 +149,5 @@ function observeEditorRetest(task, answer, owner) {
     }
   };
   task.then(publish, () => publish({ kind: "warn",
-    text: "The deck was saved; its field re-test could not be confirmed. Check Matchups before starting another run." }));
+    text: "The deck was saved; its field re-test could not be confirmed. Check Testing before starting another run." }));
 }

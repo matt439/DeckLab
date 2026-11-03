@@ -55,13 +55,13 @@ class MatchupFileTests(unittest.TestCase):
         route = _function(app, "route")
         self.assertIn('path === "matchups"', route)
         self.assertIn('path === "matchup"', route)
-        self.assertIn('{ path: "matchups", label: "Matchups"', app)
+        self.assertIn('{ path: "matchups", label: "Testing"', app)
         self.assertNotIn('href: "#/matchups"', _function(app, "drawLibrary"))     # the shell has it, not the page
         # The deck page's tabs: Matchups after Practice, drawn when it opens (the matchups part, the field and
         # popular decks, and the tests of changes). The price table is on the Cards tab, null for a visitor who may not see the
         # deck's collection.
         tabs = re.search(r"const DECK_TABS = \[(.*?)\];", app, re.S).group(1)
-        self.assertLess(tabs.index('"practice"'), tabs.index('["matchups", "Matchups"]'))
+        self.assertLess(tabs.index('"practice"'), tabs.index('["matchups", "Testing"]'))
         parts = _function(app, "deckTabParts")
         self.assertIn("return [deckMatchupsPart(data), fieldSection(data), gauntletSection(data), variantTestsSection(data)];",
                       parts)
@@ -269,7 +269,7 @@ class MatchupFileTests(unittest.TestCase):
         self.assertLess(show.index("/^[0-9a-f]{64}$/i.test("), show.index("load("))
         self.assertIn("That link isn't a matchup's address", show)
         self.assertIn("MATCHUP_ERROR);", show)
-        self.assertIn('back: ["#/matchups", "Back to Matchups"]', script)
+        self.assertIn('back: ["#/matchups", "Back to Testing"]', script)
 
     def test_pairing_links_name_both_halves(self):
         # PAGE-11: "+ Vampires" looked like an "add" button and read as "plus Vampires"; the Matchups part

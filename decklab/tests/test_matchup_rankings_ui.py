@@ -49,7 +49,7 @@ class MatchupRankingsUiTests(unittest.TestCase):
           assert.equal(button(host,'Rankings').getAttribute('aria-pressed'),'true');
           assert.equal(button(host,'Matchups').getAttribute('aria-pressed'),'false');
           assert(host.querySelector('.mu-rankings'));assert(!host.querySelector('.mu-opponents'));
-          assert.equal(storage.get('decklab.matchups.view'),'rankings');
+          assert.equal(storage.get('decklab.testing.view'),'rankings');
           assert(!host.querySelector('[data-run]'));
         """)
 
