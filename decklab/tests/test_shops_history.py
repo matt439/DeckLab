@@ -12,7 +12,7 @@ from unittest import mock
 
 from decklab.lib import shops
 from decklab.lib.shops import gamesportal, history, mtgmate
-from decklab.tests.test_shops import SOL_RING, FakeShop, entry, page, session
+from decklab.tests.test_shops import SOL_RING, Clock, FakeShop, entry, page, session
 from decklab.tests.test_shops_missing import NightlyMissingRefreshTests, plan
 from decklab.tests.test_shops_two_shops import TwoShopTestCase
 
@@ -65,6 +65,31 @@ class RecordTests(unittest.TestCase):
         self.assertEqual([item["on"] for item in kept["sol ring"]], ["2026-08-05"])
         self.assertEqual(history.record(previous, {}, [], date(2026, 11, 2)), {})
 
+    def test_a_queued_name_the_run_did_not_reach_keeps_its_history_unchanged(self):
+        previous = {"cards": {}, "history": {"Not Reached": [reading("2026-11-01", "2.00")],
+                                             "Sol Ring": [reading("2026-11-01", "4.50")]}}
+        clock = Clock()
+        data = shops.take(["Sol Ring", "Not Reached"], session=session(FakeShop({"Sol%20Ring": SOL_RING}), clock),
+                          previous=previous, budget=100, now=lambda: at(2))
+        self.assertEqual(data["cards"]["Not Reached"]["status"], "error", "no carried entry: unknown this time")
+        self.assertEqual(data["history"]["Not Reached"], previous["history"]["Not Reached"])
+        self.assertEqual([item["on"] for item in data["history"]["Sol Ring"]], ["2026-11-01", "2026-11-02"])
+
+    def test_history_keys_keep_the_queues_spelling(self):
+        previous = {"history": {"SOL RING": [reading("2026-11-01", "4.50")]}}
+        cards = {"sol ring": {"status": "ok", "at": at(2).isoformat(), "listings": []}}
+        kept = history.record(previous, cards, ["Sol Ring"], date(2026, 11, 2))
+        self.assertEqual(list(kept), ["Sol Ring"])
+        self.assertEqual([item["on"] for item in kept["Sol Ring"]], ["2026-11-01", "2026-11-02"])
+
+    def test_the_lowest_counts_only_days_a_copy_was_in_stock(self):
+        days = [reading("2026-11-01", "4.00", 2), reading("2026-11-02", "2.50", 0), reading("2026-11-03", "4.00", 1)]
+        answer = history.report("Sol Ring", [(mtgmate.ADAPTER, {"history": {"Sol Ring": days}})], shops.pick)
+        self.assertEqual([day["lowest"] for day in answer["shops"][0]["days"]], [True, False, True])
+        none_in_stock = [reading("2026-11-01", "4.00", 0)]
+        answer = history.report("Sol Ring", [(mtgmate.ADAPTER, {"history": {"Sol Ring": none_in_stock}})], shops.pick)
+        self.assertEqual([day["lowest"] for day in answer["shops"][0]["days"]], [False])
+
     def test_a_name_read_but_not_queued_keeps_no_history(self):
         data = taken(["Sol Ring", "Nothing"], {"Sol%20Ring": SOL_RING}, 1, queued=["Sol Ring"])
         self.assertEqual(list(data["history"]), ["Sol Ring"])
@@ -89,14 +114,37 @@ class NightlyHistoryTests(unittest.TestCase):
         self.assertEqual(self.refresh(include_missing=True), 0)
         data = shops.load(self.path)
         self.assertEqual(set(data["cards"]), {"Sol Ring", "New missing"})
-        self.assertEqual(list(data["history"]), ["Sol Ring"])
+        self.assertEqual(list(shops.load_history(path=self.path)), ["Sol Ring"])
 
     def test_a_card_that_leaves_the_queue_loses_its_history_at_the_next_snapshot(self):
         self.assertEqual(self.refresh(), 0)
-        self.assertIn("Sol Ring", shops.load(self.path)["history"])
+        self.assertIn("Sol Ring", shops.load_history(path=self.path))
         self.backend.load.return_value = self.make_snapshot([{"name": "Other"}])
         self.assertEqual(self.refresh(force=True), 0)
-        self.assertEqual(list(shops.load(self.path)["history"]), ["Other"])
+        self.assertEqual(list(shops.load_history(path=self.path)), ["Other"])
+
+    def test_the_history_is_its_own_file_that_the_snapshot_readers_never_parse(self):
+        self.assertEqual(self.refresh(), 0)
+        self.assertNotIn("history", json.loads(self.path.read_text(encoding="utf-8")))
+        self.assertNotIn("history", shops.load(self.path))
+        self.assertEqual(shops.history_path(path=self.path).name, "shop.history.json")
+        self.assertNotIn(chr(10), shops.history_path(path=self.path).read_text(encoding="utf-8"), "written compact")
+
+    def test_an_emptied_queue_still_prunes_the_history(self):
+        self.assertEqual(self.refresh(), 0)
+        self.assertIn("Sol Ring", shops.load_history(path=self.path))
+        self.backend.load.return_value = self.make_snapshot([])
+        self.assertEqual(self.refresh(force=True), 0)
+        self.assertIn("The purchase queue is empty; nothing to look up.", self.said)
+        self.assertEqual(shops.load_history(path=self.path), {})
+        self.assertEqual(self.shop.urls, [], "no shop asked")
+
+    def test_an_emptied_queue_and_no_missing_names_still_prune_on_the_nightly_path(self):
+        self.assertEqual(self.refresh(), 0)
+        self.backend.load.return_value = self.make_snapshot([])
+        self.needs.names.return_value = plan([])
+        self.assertEqual(self.refresh(force=True, include_missing=True), 0)
+        self.assertEqual(shops.load_history(path=self.path), {})
 
 
 class CommandTests(TwoShopTestCase):
@@ -115,9 +163,9 @@ class CommandTests(TwoShopTestCase):
         self.write(gamesportal.ADAPTER, [reading("2026-11-01", "3.00", 1), reading("2026-11-02", "3.50", 0)])
         lines = self.run_command("sol ring").splitlines()
         self.assertEqual(lines[0], "MTGMate: 2 days")
-        self.assertEqual(lines[1], "  2026-11-01  A$4.00, 3 in stock (40K 249 nonfoil)  lowest")
+        self.assertEqual(lines[1], "  2026-11-01  A$4.00, 3 in stock (40K 249 nonfoil)  lowest in stock")
         self.assertEqual(lines[2], "  2026-11-02  A$4.50, 2 in stock (40K 249 nonfoil)")
-        self.assertEqual(lines[4], "  2026-11-01  A$3.00, in stock (40K 249 nonfoil)  lowest",
+        self.assertEqual(lines[4], "  2026-11-01  A$3.00, in stock (40K 249 nonfoil)  lowest in stock",
                          "Games Portal says only in stock or not")
         self.assertEqual(lines[5], "  2026-11-02  A$3.50, out of stock (40K 249 nonfoil)")
 

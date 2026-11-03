@@ -16,12 +16,13 @@ shop that can't be read leaves only its own prices unknown:
      "crawl_delay": seconds, "cards": {name: {"status": "ok" | "not_listed" | "error",
        "at": ISO, "listings": [{"set", "number", "finish", "price", "stock", "condition", "url"}],
        "error": words}},
-     "previous": {name: {"at": ISO, "listings": [...]}},
-     "history": {name: [{"on": "YYYY-MM-DD", "at": ISO, "listings": [...]}]}}
+     "previous": {name: {"at": ISO, "listings": [...]}}}
 
 "previous" is the snapshot before (its names that were read), so a row can say it is newly
-in stock. "history" keeps one reading a day of each name still on the queue for 90 days
-(history.py, E5-S29); a file without it loads as before. Prices are each shop's own, in AUD (a listing's price None when it showed none).
+in stock. Each day's reading of a name still on the queue is kept 90 days in a file of its
+own beside the snapshot (history_path(): mtgmate.history.json, history.py, E5-S29), so the
+snapshot Shopping and deck pages parse stays one day's size. Prices are each shop's own, in
+AUD (a listing's price None when it showed none).
 
 How it asks: one request per card name, the shop's page of every printing with that name
 (the adapter's name_url; MTGMate's NAME_PATH, the same page its card links lead to), never its
@@ -175,14 +176,59 @@ def load(path=None, adapter=None):
         return None
     if adapter is not None and data.get("shop", adapter.name) != adapter.name:
         return None
+    data.pop("history", None)               # the daily readings live in history_path()'s file
     return data
 
 
-def _write(data, path):
+def history_path(adapter=None, path=None):
+    """The daily readings' own file beside a snapshot (path, else the adapter's):
+    mtgmate.json's is mtgmate.history.json. Only the history command reads it."""
+    path = path or snapshot_path(adapter)
+    return path.with_name(f"{path.stem}.history{path.suffix or '.json'}")
+
+
+def load_history(adapter=None, path=None):
+    """{name: readings} from the history file ({} when there's none or it can't be read)."""
+    try:
+        data = json.loads(history_path(adapter, path).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    return _history.of(data)
+
+
+def _replace(path, text):
     path.parent.mkdir(parents=True, exist_ok=True)
     temp = path.with_name(path.name + ".tmp")
-    temp.write_text(json.dumps(data, indent=1, sort_keys=True), encoding="utf-8")
+    temp.write_text(text, encoding="utf-8")
     os.replace(temp, path)
+
+
+def _write(data, path):
+    """Saves a snapshot; its "history" (take()'s) goes to its own file, compact, not the snapshot."""
+    data = dict(data)
+    if "history" in data:
+        _write_history(data.pop("history"), path=path)
+    _replace(path, json.dumps(data, indent=1, sort_keys=True))
+
+
+def _prune_history(adapter, on_queue, today):
+    """Drops the history of names off the queue and readings past 90 days when no run takes a
+    snapshot (an empty queue), under the shop's lock; nothing when another run holds it."""
+    old = load_history(adapter)
+    if not old:
+        return
+    lock = _lock(adapter)
+    if lock is None:
+        return
+    try:
+        _write_history(_history.record({"history": load_history(adapter)}, {}, on_queue, today), adapter)
+    finally:
+        _unlock(lock)
+
+
+def _write_history(readings, adapter=None, path=None):
+    _replace(history_path(adapter, path), json.dumps({"version": 1, "history": readings}, sort_keys=True,
+                                                     separators=(",", ":")))
 
 
 def fresh(data, now):
@@ -218,9 +264,11 @@ def oldest_first(names, previous):
 OUT_OF_TIME = "out of time"
 
 
-def take(names, *, session=None, previous=None, now=None, progress=None, budget=None, started=None, queued=None):
+def take(names, *, session=None, previous=None, now=None, progress=None, budget=None, started=None, queued=None,
+         history=None):
     """A new snapshot of names. previous is the snapshot before (or None). queued: the queue's
-    names, the only ones whose daily readings are kept (history.py; names by default). budget: the most
+    names, the only ones whose daily readings are kept (history.py; names by default); history:
+    the readings so far (load_history(); else previous's own, an older file's). budget: the most
     seconds of requests after robots.txt; a name the run can't reach in it keeps what the
     snapshot before read, with its time ("carried"), else is unknown. started(delay) is told
     the delay robots.txt gave, once it's read."""
@@ -276,7 +324,8 @@ def take(names, *, session=None, previous=None, now=None, progress=None, budget=
         if isinstance(entry, dict) and entry.get("status") in ("ok", "not_listed"):
             kept[name] = {"at": entry.get("at"), "listings": entry.get("listings") or []}
     finished = now()
-    kept_history = _history.record(previous, cards_out, names if queued is None else queued, finished.date())
+    prior = previous if history is None else {"history": history}
+    kept_history = _history.record(prior, cards_out, names if queued is None else queued, finished.date())
     return {"version": 1, "shop": shop.name, "site": shop.site, "started_at": _iso(begun), "fetched_at": _iso(finished),
             "crawl_delay": session.delay, "cards": cards_out, "previous": kept, "history": kept_history}
 
@@ -468,6 +517,7 @@ def refresh(*, force=False, say=print, progress=True, session=None, budget=None,
             _not_due(previous, say, shop)
             return 0
         if not names and not include_missing:
+            _prune_history(adapter, on_queue, now.date())
             say("The purchase queue is empty; nothing to look up.")
             return 0
         lock = _lock(adapter)
@@ -497,6 +547,9 @@ def refresh(*, force=False, say=print, progress=True, session=None, budget=None,
             # inventory read or card lookup is deferred into Session/robots work.
             capture.close()
             if not names:
+                old = load_history(adapter)
+                if old:
+                    _write_history(_history.record({"history": old}, {}, on_queue, now.date()), adapter)
                 say("The purchase queue is empty; nothing to look up.")
                 return 0
             names = tuple(oldest_first(names, previous))
@@ -514,7 +567,8 @@ def refresh(*, force=False, say=print, progress=True, session=None, budget=None,
                     words = f"not reached; kept the result read {entry.get('at')}"
                 say(f"  {count}/{total} {name}: {words}")
             data = take(names, session=session or Session(adapter=adapter), previous=previous,
-                        progress=step if progress else None, budget=budget, started=started, queued=on_queue)
+                        progress=step if progress else None, budget=budget, started=started, queued=on_queue,
+                        history=load_history(adapter) or None)
             _write(data, snapshot_path(adapter))
         finally:
             _unlock(lock)
@@ -652,7 +706,7 @@ def _lookup(args):
 
 def _history_command(args):
     adapters = _chosen(args)
-    answer = _history.report(args.name, [(adapter, load(adapter=adapter) or {}) for adapter in adapters], pick)
+    answer = _history.report(args.name, [(adapter, {"history": load_history(adapter)}) for adapter in adapters], pick)
     if args.json:
         print(json.dumps(answer, indent=1))
     else:

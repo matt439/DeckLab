@@ -1,6 +1,7 @@
 """Each day's shop reading of a queued card, kept 90 days (E5-S29's first slice).
 
-A shop's snapshot file (decklab/lib/shops/__init__.py) also keeps, under "history", one
+Each shop's history file beside its snapshot (decklab/lib/shops/__init__.py's history_path(),
+mtgmate.history.json; written compact, and never read by Shopping or deck pages) keeps one
 reading a day for each card name still on the purchase queue:
 
     "history": {name: [{"on": "YYYY-MM-DD", "at": ISO, "listings": [{"set", "number", "finish",
@@ -10,9 +11,9 @@ A reading is what a run read of that name ("ok" or "not_listed", the latter with
 a name the run couldn't read or didn't reach adds nothing that day. A second run on the same day
 replaces that day's reading. Each snapshot drops readings older than KEEP_DAYS and every name no
 longer on the queue (a card bought or removed loses its history with the next snapshot; the
-nightly step's saved-home missing names, never queued, get none). Listings keep only what a
-price trend needs: no links. Games Portal's stock is only 1 or 0 (in stock or not). A file
-written before this has no "history" and loads as before.
+nightly step's saved-home missing names, never queued, get none; a run that finds the queue
+empty prunes it too). Listings keep only what a price trend needs: no links. Games Portal's
+stock is only 1 or 0 (in stock or not). A missing history file is an empty history.
 """
 from datetime import date, timedelta
 
@@ -105,14 +106,16 @@ def day_summary(reading, pick):
 
 def report(name, snapshots, pick):
     """{"name", "shops": [{"shop", "counts_stock", "days": [day_summary + "lowest"]}]} for each
-    (adapter, data) in snapshots. lowest marks the day (or days) with that shop's lowest price."""
+    (adapter, data) in snapshots. lowest marks the day (or days) with that shop's lowest price a
+    copy could be bought at: only days whose chosen listing was in stock count, never an
+    out-of-stock fallback's price."""
     out = []
     for adapter, data in snapshots:
         days = [day_summary(reading, pick) for reading in find(data, name)]
-        prices = [_price(day) for day in days if _price(day) is not None]
+        prices = [_price(day) for day in days if day["in_stock"] and _price(day) is not None]
         low = min(prices) if prices else None
         for day in days:
-            day["lowest"] = low is not None and _price(day) == low
+            day["lowest"] = low is not None and day["in_stock"] and _price(day) == low
         out.append({"shop": adapter.name, "counts_stock": adapter.counts_stock, "days": days})
     return {"name": name, "shops": out}
 
@@ -137,5 +140,5 @@ def lines(answer):
             else:
                 stock = "in stock"
             where = f"{str(day['set'] or '').upper()} {day['number']} {day['finish']}"
-            said.append(f"  {day['on']}  {price}, {stock} ({where}){'  lowest' if day['lowest'] else ''}")
+            said.append(f"  {day['on']}  {price}, {stock} ({where}){'  lowest in stock' if day['lowest'] else ''}")
     return said
