@@ -91,6 +91,27 @@ class CollectionTests(PreparationCase):
         self.assertIsNone(row["free_now"])
         self.assertIsNone(row["held"])
 
+    def test_pictures_show_the_recorded_printing(self):
+        # A card shows the printing its records name: owned copies first, else the one on order
+        # (Matt, 2026-11-03: an ordered full-art card showed as another printing).
+        def picture(name):
+            row = next(row for row in collection.collection_view()["cards"] if row["name"] == name)
+            return row["card"]["img"]
+        printing = next((s, n) for s, n in cards.card("Llanowar Elves")["printings"]
+                        if s != "fdn" and (cards.printing(s, n) or {}).get("image_normal")
+                        and not cards.printing(s, n)["digital"] and "paper" in cards.printing(s, n)["games"])
+        other = f"/img/{printing[0]}/{printing[1].replace('★', '%E2%98%85')}/normal"
+        self.cards_csv("collection.csv", ("Elvish Mystic", "cmm", "648", "nonfoil", 1))
+        self.cards_csv("orders/arrival.csv", ("Llanowar Elves", printing[0], printing[1], "nonfoil", 1))
+        self.assertEqual(picture("Llanowar Elves"), other)
+        # An owned printing comes before the one on order.
+        self.cards_csv("collection.csv", ("Llanowar Elves", "fdn", "227", "nonfoil", 1))
+        self.assertEqual(picture("Llanowar Elves"), "/img/fdn/227/normal")
+        # Most owned copies win.
+        self.cards_csv("collection.csv", ("Llanowar Elves", "fdn", "227", "nonfoil", 1),
+                       ("Llanowar Elves", printing[0], printing[1], "nonfoil", 2))
+        self.assertEqual(picture("Llanowar Elves"), other)
+
     def test_bad_filters_refused(self):
         for kwargs in ({"page": "0"}, {"limit": "101"}, {"mv": "nan"}, {"mv": "-1"},
                        {"availability": "owned"}, {"color": "X"}, {"color": "WW"}, {"color": "CW"},

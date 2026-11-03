@@ -60,6 +60,28 @@ def _special_basics(space=spaces.HOME):
     return owned, incoming
 
 
+def recorded_printings(space=spaces.HOME):
+    """{card name: printing} of the printing a space's own records name for each card, so the
+    Collection page shows the card it holds or is waiting for, not a generic one: the printing
+    with the most copies owned, else (no owned copy of it is recorded) the one with the most on
+    the way (pool.printing_counts: home's pending orders and ordered products). Only printings
+    worth showing (card_lookup._showable); a card none of whose recorded printings is one isn't
+    in it, so the caller falls back to _shown_printing."""
+    from .card_lookup import _showable
+    best = {}
+    for (set_code, number, _finish), counts in pool.printing_counts(space).items():
+        p = cards.printing(set_code, number)
+        if p is None or not _showable(p):
+            continue
+        name = cards.resolve(p["name"])
+        if not name:
+            continue
+        rank = (counts["owned"], counts["on_the_way"])
+        if name not in best or rank > best[name][0]:
+            best[name] = (rank, p)
+    return {name: p for name, (_, p) in best.items()}
+
+
 def space_choices():
     """[{"id", "name"}] of every space whose inventory this request sees
     (guard.sees_inventory), home first (named "Home")."""
@@ -150,7 +172,7 @@ def collection_view(q=None, color=None, type=None, role=None, mv=None,
         p = pool.load_pool() if space == spaces.HOME else pool.load_pool(space)
         special, special_incoming = _special_basics(space)
         answer = _collection(p, special, special_incoming, q, color, type, role, mv,
-                             availability, page, limit, guard.deck_reader())
+                             availability, page, limit, guard.deck_reader(), recorded_printings(space))
     except (ValueError, OSError, csv.Error) as error:
         if space == spaces.HOME and not guard.sees_home_records():
             raise ApiError(409, "The collection couldn't be read.") from None
@@ -208,7 +230,7 @@ def _holders(p, name, sees):
 
 
 def _collection(p, special, special_incoming, q, color, type, role, mv, availability, page, limit,
-                sees=lambda deck_id: True):
+                sees=lambda deck_id: True, recorded=None):
     from .library import visible_unresolved, visible_warnings
     names = set(p.owned) | set(special) | set(special_incoming)
     rows, roles, types = [], set(), set()
@@ -246,7 +268,9 @@ def _collection(p, special, special_incoming, q, color, type, role, mv, availabi
     shown = rows[(page - 1) * limit:page * limit]
     for row in shown:
         if row["card"]:
-            row["card"] = _card_json(row["card"], _shown_printing(row["card"]))
+            # The printing the space's records name (owned first, then on the way), else a generic one.
+            shown_printing = (recorded or {}).get(row["name"]) or _shown_printing(row["card"])
+            row["card"] = _card_json(row["card"], shown_printing)
     # Only the warnings and unknown names this viewer may be told (E10-S29): none about a deck it
     # can't see, none about home's orders and products unless it sees home's records.
     warnings = visible_warnings(p)
