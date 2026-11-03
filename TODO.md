@@ -24,6 +24,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 - **`E11-S58`: the Linux server PC's own checks.** WSL already qualified the database, backups, the services, `systemd-inhibit` under polkit and real Forge games (2026-11-02). After the move (SELF-HOSTING.md, "From a Windows server to a Linux one"), run `python -m decklab.smoke` there, try it from the phones, scan a few real card photos with Tesseract, and let the PC sleep and wake through the gate and the wake timer.
 - **`E7-S32`: real photos for Scan cards.** Take 10 to 20 photos of cards (a few foils, a few sleeved, one old card) with Collection's **Scan cards…** on each phone, plus a few token cards with Tokens' **Scan token cards…**, or copy them to the PC for `python -m decklab.lib.scan` (`--tokens` for token cards); the sheets and their APIs are fixture-tested only.
 - **`FG#4`: the gauntlet on the live server.** With Matt's OK, build the catalogues on the Linux spare PC, measure its Commander throughput and play a first standard run per Commander deck (PLAN.md, Still to do, item 12).
+- **`E11-S59`: wake-on-request, set up for real.** Built in code (2026-11-01): put the wake gate and its tunnel on the NAS, make the Access service token, deploy the Worker with its secrets, set the server PC's BIOS and adapter to wake, then time a real wake (decklab/README.md, "Sleeping and waking on request").
 - **`E11-S28`: User2's user-testing session.** Confirm his device, then use the prepared [checklist](decklab/design/user-testing-user2.md).
 
 **Activation:** migrations `0012` and `0013` were applied and the server restarted on committed code on 2026-10-19, so the privacy code and guarded member removal are live. No visibility choice or real member removal has been made.
@@ -101,6 +102,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 | `E11-S51` | DEFERRED | could | M | Update command for release installs (backup, replace, migrate, restart); after `E11-S49`. |
 | `E11-S52` | DEFERRED | could | L | First-run setup page on the PC (home profiles, optional Enable simulations); after `E11-S50`. |
 | `E11-S53` | OPEN | could | M | Currency and price-check shops as settings, default AUD; first slice, a shops setting the nightly task honours. |
+| `E11-S59` | DECISION | could | L | Wake-on-request built in code (2026-11-01): Matt sets up the NAS gate, the service token, the Worker's secrets and the PC's wake settings, then times a real wake. |
 | `E11-S02` | DECISION | should | S | The "Deck Lab is off" Worker is deployed (`decklab/cloudflare/`): Matt checks a signed-in save, a photo upload, and the page with Deck Lab stopped. |
 | `E11-S55` | OPEN | could | M | An accessibility pass: contrast, names, focus and reduced motion over every page in both densities and themes; first slice, the audit of the library, deck page and Game log on a phone. |
 | `E11-S57` | DEFERRED | could | L | A Linux install route (a script or container); after `E11-S50` (Windows first, Matt, 2026-10-31) and `E11-S49`. |
