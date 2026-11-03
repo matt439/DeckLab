@@ -85,6 +85,12 @@ def _gauntlet_board(**params):
     return board_view(**params)
 
 
+def _library_gauntlet(**params):
+    """The library's popular-decks line (api/library_gauntlet.py, E3-S36): the board's cached rows."""
+    from decklab.lib.api.library_gauntlet import library_gauntlet_view
+    return library_gauntlet_view(**params)
+
+
 def _gauntlet_catalogue(**params):
     from decklab.lib.api.gauntlet_page import catalogue_view
     return catalogue_view(**params)
@@ -151,6 +157,7 @@ def dispatch(handler, route, query):
         ("rankings",): (rankings.rankings_view, ("format",)),
         ("field", "membership"): (_field_membership_view, ("id", "version")),
         ("library", "forge"): (library_forge.library_forge_view, ()),
+        ("library", "gauntlet"): (_library_gauntlet, ()),
         ("product",): (products.product_state, ("stem",)),
         ("accessories",): (accessories.accessories_view, ()),
         ("tokens",): (tokens.tokens_view, ("space",)),

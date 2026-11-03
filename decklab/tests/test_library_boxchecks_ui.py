@@ -10,7 +10,7 @@ class LibraryBoxChecksUiTests(_Shelf):
     def run_js(self, scenario):
         super().run_js(r'''
           as('matt',MAY.admin);location.hash='#/library?all=1';
-          libLoadForge=()=>{};libTablesPanel=()=>null;libGlance=()=>({facts:null,cards:null});
+          libLoadForge=()=>{};libLoadGauntlet=()=>{};libTablesPanel=()=>null;libGlance=()=>({facts:null,cards:null});
           const checked=(id,title,date,extra={})=>deck(id,title,{status:'built',box_check:{checked_on:date},...counts(0),...extra});
           const data={...DATA,decks:[checked('casual/early','Early','2026-01-10',{colors:['U','B'],archetype:'Tempo'}),
             checked('casual/on','On cutoff','2026-02-01'),checked('casual/recent','Recent','2026-03-01'),checked('casual/never','Unrecorded',null),

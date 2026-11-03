@@ -144,6 +144,8 @@ called as before (from decklab.lib import api; api.<name>). Each part:
                      stop_matchup(), stop_jobs(); COORD_JOBS (wave 3's coordinators)
     field_page.py    the field view (wave 3): field_view(), run_field(), stop_field()
     library_forge.py the library's Forge line: library_forge_view(), each casual list's cached field average
+    library_gauntlet.py the library's popular-decks line (E3-S36): library_gauntlet_view(), the board's
+                     cached rows (gauntlet_board.standing), imported when first asked for
     variant_page.py  paired variant tests (wave 3): variant_view(), variant_estimate(),
                      variant_tests(), run_variant(), stop_variant(), more_variant()
     drafts.py        reading and checking an editor draft, the deck rules, brackets

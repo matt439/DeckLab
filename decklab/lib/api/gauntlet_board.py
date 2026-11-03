@@ -307,6 +307,24 @@ def _built(forge, g, fmt, cat, standard, seen, visible, hidden=()):
         return rows, notes
 
 
+def standing(fmt, forge, g, seen):
+    """(the format's standard sample or None without a catalogue, rows, notes): the viewer's visible
+    decks of fmt against it, built and kept as the module docstring says. The board and the library's
+    popular-decks line (api/library_gauntlet.py, E3-S36) share it, so one read builds both."""
+    try:
+        cat = g.catalogue(fmt)
+        standard = g.standard(fmt, cat=cat)
+    except forge.ForgeError:
+        return None, [], []
+    if not standard.get("decks"):
+        return standard, [], []
+    visible, hidden = _visible(fmt)
+    if not visible:
+        return standard, [], []
+    rows, notes = _built(forge, g, fmt, cat, standard, seen, visible, hidden)
+    return standard, rows, list(notes)
+
+
 def board_view(format="commander", profile=None):
     """GET /api/gauntlet/board?format=commander|constructed[&profile=]: the module docstring's
     answer (200 always, but 400 for another format). profile is accepted for the page's usual query
@@ -319,19 +337,15 @@ def board_view(format="commander", profile=None):
     seen = forge_runs._Seen()
     out = {"format": fmt, "state": "no_catalogue", "build_command": gauntlet_page._build_command(fmt, seen),
            "sample": None, "default_budget": gauntlet_page.DEFAULT_BUDGET, "note": None, "notes": [], "rows": []}
-    try:
-        cat = g.catalogue(fmt)
-        standard = g.standard(fmt, cat=cat)
-    except forge.ForgeError:
+    standard, rows, notes = standing(fmt, forge, g, seen)
+    if standard is None:
         return out
     out.update(state="ok", sample=gauntlet_page.standard_json(standard))
     if not standard.get("decks"):
         return out
     out["note"] = (f"Each figure is the list's average win rate against these {len(standard['decks'])} popular "
                    "decks only: not a rating, and apart from Rankings.")
-    rows, notes = _built(forge, g, fmt, cat, standard, seen, *_visible(fmt))
-    out["notes"] = list(notes)
+    out["notes"] = notes
     out["rows"] = [dict(row, playing=gauntlet_page._playing(row["deck"], standard["id"], seen)
                         if row["deck"]["card_sha"] else None) for row in rows]
     return out
-
