@@ -20,7 +20,8 @@ own results folder, so Rankings and the ratings never see its games).
                         opponent's "before" and "moved"; None and False for any other sample.
     gauntlet_summary(deck_id, version="target", profile=None)
                         the deck's headline against the standard sample, from saved games only (no
-                        estimate, no sample saved, nothing played; its docstring has the answer)
+                        estimate, no sample saved, nothing played; its docstring has the answer);
+                        _summary_of is its work, which the board (api/gauntlet_board.py) shares
     catalogue_view(format)
                         a catalogue's public counts and credit, or "built": None
     run_gauntlet(body)  body {"profile", "id", "version"?, "budget"?, "expected_card_sha"?, "sample"?,
@@ -526,25 +527,45 @@ def gauntlet_summary(deck_id, version="target", profile=None):
         return out
     try:
         with _held(forge):
-            found = g.view(entry, standard, keep=_keep(entry), cat=cat)
-            kept = _kept(forge, g, summary, entry, standard, cat, found)
+            out.update(_summary_of(forge, g, summary, entry, cat, standard))
     except (ValueError, forge.ForgeError) as e:
         raise ApiError(400, _public(e)) from None
     except Exception:
         common._log(f"The gauntlet summary of {entry['id']} can't be worked out:\n{traceback.format_exc()}")
         raise ApiError(500, NO_VIEW) from None
+    return out
+
+
+NO_KEPT = {"before": None, "compare": None, "older": None, "notes": []}
+
+
+def _summary_of(forge, g, summary, entry, cat, standard, before=True):
+    """The summary's fields worked out from the list's view of the standard sample ("state",
+    "overall", "played", "of", "games", "tally", "hardest", "updated", "note", "notes", "before",
+    "compare", "older"), inside _held. before says which of E3-S34's fields to look for: True for
+    all of them (gauntlet_before.fields: the history walk), "older" for the list's own older
+    results only, False for none; or a function of the opponents played that gives one of those
+    (the board's: GET /api/gauntlet/board). ValueError or ForgeError as g.view's."""
+    found = g.view(entry, standard, keep=_keep(entry), cat=cat)
     played, of = int(found.get("played") or 0), int(found.get("of") or 0)
+    mode = before(played) if callable(before) else before
+    if mode is True:
+        kept = _kept(forge, g, summary, entry, standard, cat, found)
+    elif mode == "older" and not played:
+        kept = dict(NO_KEPT, older=gauntlet_before._older(g, entry, standard, cat, found, _keep))
+    else:
+        kept = NO_KEPT
     state = "partial" if played and played < of else "done" if played else "untested"
     if not played and kept["before"]:
         state = "stale_list"
     elif not played and kept["older"]:
         state = "stale_older"
-    out.update(overall=found.get("overall") if played else None, played=played, of=of,
-               games=found.get("games") or 0, tally=found.get("tally") or out["tally"],
-               hardest=_hardest(found.get("opponents") or []), updated=found.get("updated"),
-               note=found.get("note"), notes=list(found.get("notes") or []) + kept["notes"], state=state,
-               before=kept["before"], compare=kept["compare"], older=kept["older"])
-    return out
+    return {"overall": found.get("overall") if played else None, "played": played, "of": of,
+            "games": found.get("games") or 0, "tally": found.get("tally") or {"ahead": 0, "even": 0, "behind": 0,
+                                                                              "unsettled": 0},
+            "hardest": _hardest(found.get("opponents") or []), "updated": found.get("updated"),
+            "note": found.get("note"), "notes": list(found.get("notes") or []) + kept["notes"], "state": state,
+            "before": kept["before"], "compare": kept["compare"], "older": kept["older"]}
 
 
 # ============================================================ run and stop

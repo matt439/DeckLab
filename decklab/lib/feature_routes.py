@@ -79,6 +79,12 @@ def _gauntlet_summary(**params):
     return gauntlet_summary(**params)
 
 
+def _gauntlet_board(**params):
+    """The Testing page's Popular decks board (api/gauntlet_board.py, E3-S35): saved games only."""
+    from decklab.lib.api.gauntlet_board import board_view
+    return board_view(**params)
+
+
 def _gauntlet_catalogue(**params):
     from decklab.lib.api.gauntlet_page import catalogue_view
     return catalogue_view(**params)
@@ -161,6 +167,7 @@ def dispatch(handler, route, query):
         ("gauntlet",): (_gauntlet_view, ("id", "version", "sample", "size", "colours", "styles", "tiers", "profile")),
         ("gauntlet", "summary"): (_gauntlet_summary, ("id", "version", "profile")),
         ("gauntlet", "catalogue"): (_gauntlet_catalogue, ("format",)),
+        ("gauntlet", "board"): (_gauntlet_board, ("format", "profile")),
         ("shopping", "combined"): (_shopping_combined, ("decks",)),
     }
     posts = {

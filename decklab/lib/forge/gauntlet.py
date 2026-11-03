@@ -27,6 +27,10 @@ range covers those sampled opponents only.
                             two lists' figures over the opponents both have rates against (E3-S34)
     has_notes(deck_entry, space), notes_keys(deck_entry, space, limit)
                             whether a list has run notes in the space, and the keys its runs played
+    stamps(deck_entry, sample, cat, space), noted(fmt, space)
+                            what the board's caches go by (E3-S35): each opponent's saved result
+                            file and the list's run notes, as (mtime, size); the lists with run
+                            notes in the space
     older(deck_entry, sample, keep, today_keys, space)
                             the list's results under an older engine, pilot or catalogue (E3-S34):
                             why they aren't shown, and the newest single-engine group's figure
@@ -418,6 +422,53 @@ def compare(deck_entry, before_entry, chosen, keep_now=None, keep_before=None, c
 def has_notes(deck_entry, space="home"):
     """True when a list ({"card_sha", "kind"} will do) has gauntlet run notes in the space."""
     return field._notes_path(deck_entry, results_dir(), space=space).exists()
+
+
+def _stat(path):
+    """(mtime_ns, size) of a file, or None when there's none (or it can't be read)."""
+    try:
+        found = path.stat()
+    except OSError:
+        return None
+    return found.st_mtime_ns, found.st_size
+
+
+def stamps(deck_entry, chosen, cat, space="home"):
+    """What the list's view of the sample is worked out from, as stats (it reads no file): one
+    (matchup key, (mtime_ns, size) or None) per playable sample opponent, in the sample's order,
+    the keys field._pair_state reads (today's engine's: call it inside engine.held()), then
+    ("notes", ...) of the list's run notes in the space. The same stamps mean the same view."""
+    pairs, _ = _picked(cat, chosen.get("decks") or [])
+    folder = results_dir()
+    out = []
+    for _, opponent in pairs:
+        try:
+            key = lists.matchup_key(deck_entry, opponent)
+        except ForgeError:
+            out.append((None, None))
+            continue
+        out.append((key, _stat(folder / f"{key}.json")))
+    out.append(("notes", _stat(field._notes_path(deck_entry, folder, space=space))))
+    return tuple(out)
+
+
+def noted(fmt, space="home"):
+    """{card_sha: (mtime_ns, size)} of the lists with gauntlet run notes of the format in the
+    space (their file names only: nothing is read)."""
+    suffix = f"-{lists.fmt_for(_fmt(fmt))}-{space}.json"
+    folder = common._results_dir(results_dir()) / field.NOTES_DIR
+    out = {}
+    try:
+        paths = list(folder.glob(f"*{suffix}"))
+    except OSError:
+        return out
+    for path in paths:
+        sha = path.name[:-len(suffix)]
+        if len(sha) == 64 and all(c in "0123456789abcdef" for c in sha):
+            stat = _stat(path)
+            if stat is not None:
+                out[sha] = stat
+    return out
 
 
 def notes_keys(deck_entry, space="home", limit=300):
